@@ -2,6 +2,20 @@
 
 versions=$(shell grep '^Build-Depends:' debian/control | sed -e 's/^Build-Depends: //' -e 's/,//g' -e  's/-dev//g' -e 's/python//g' -e 's/fortune-mod//')
 
+DOC=usr/share/doc
+
+DEFAULT=2.2
+DEFAULTPACKAGE=python$(DEFAULT)-twisted
+
+indeppackages=twisted python-twisted python-twisted-conch twisted-doc \
+         twisted-quotes \
+         $(addsuffix -twisted $(addprefix python versions)) \
+         $(addsuffix -twisted-conch $(addprefix python versions))
+
+archpackages=$(addsuffix -twisted-bin $(addprefix python versions))
+
+packages=$(indeppackages) $(archpackages)
+
 build: build-stamp
 build-stamp:
 	set -e; for version in $(versions); \
@@ -14,28 +28,68 @@ clean:
 	rm -rf build
 	find . -name "*.pyc" |xargs -r rm
 	# Add here commands to clean up after the build process.
-	rm -rf debian/python*-twisted debian/python*-twisted-bin debian/twisted-doc debian/twisted-quotes debian/twisted debian/python*-twisted-conch
+        for package in $(packages);\
+		do rm -rf debian/$$package;\
+	done
 	rm -rf debian/files debian/substvars
 
-DOC=usr/share/doc
 
 install: install-stamp
 install-stamp: build-stamp 
-	chmod +x debian/scripts/*
-	set -e; for version in $(versions); \
-		do rm -rf debian/python$$version-twisted; \
-		install -d debian/python$$version-twisted; \
-		/usr/bin/python$$version setup.py install \
-                   --no-compile --root debian/python$$version-twisted; \
-		debian/scripts/install $$version; \
-		binpackage=python$$version-twisted-bin;\
-		install -d debian/$$binpackage/${DOC}/$$binpackage/;\
-		install -d debian/$$binpackage/DEBIAN; \
-		install -m 644 debian/copyright \
-		      debian/$$binpackage/${DOC}/$$binpackage/; \
+
+        set -e;for package in $(packages);\
+		do install -d debian/$$package/DEBIAN/;\
+		install -d debian/$$package/usr/share/doc/$$package/;\
+		install -m 644 \
+		      debian/copyright debian/$$package/${DOC}/$$packag/;\
 		install -m 644 debian/changelog \
-		      debian/$$binpackage/${DOC}/$$binpackage/changelog.Debian;\
-		gzip -9 debian/$$binpackage/${DOC}/$$binpackage/changelog.Debian;\
+	               debian/$$package/${DOC}/$$package/changelog.Debian;\
+		gzip -9 debian/$$package/${DOC}/$$package/changelog.Debian;\
+	done
+
+	set -e; for version in $(versions); \
+		do package=python$$version-twisted;\
+		rm -rf debian/$package;\
+		/usr/bin/python$$version setup.py install \
+                   --no-compile --root debian/$$package; \
+		install -d debian/$$package/usr/share/man/man1;\
+		install -d debian/$$package/usr/lib/menu/;\
+		install -d debian/$$package/usr/bin/;\
+		install -m 644 ChangeLog debian/$$package/$$doc/changelog;\
+		gzip -9 debian/$$package/$$doc/changelog;\
+		install -m 644 TODO README CREDITS debian/$$package/$$doc/;\
+		set -e;for file in debian/$$package/usr/bin;\
+			do sed "1s|.*|#!/usr/bin/python$$version" $$file >\
+			   $$file$$version;\
+			rm $$file;\
+			chmod 755 $$file$$version;\
+		done;\
+		set -e;for file in doc/man/*.1;\
+    			target=`basename $$file .1`$$version.1;\
+			install -m 644 $$file \
+			        debian/$$package/usr/share/man/man1/$$target;\
+		done;\
+		gzip -9 debian/$$package/usr/share/man/man1/*.1
+		sed "s/@VERSION@/$$version/g" debian/python-twisted.menu.in >\
+		    debian/$$package/usr/lib/menu/$$package;\
+		set -e;for maint in prerm postrm postinst;\
+			do sed -e "s/@VERSION@/$$version/g" \
+			debian/python-twisted.$$maint.in > \
+			debian/$$package/DEBIAN/$$maint;\
+			chmod 755 debian/$$package/DEBIAN/$$maint;\
+		done;\
+	done
+
+	set -e;for file in debian/$(DEFAULTPACKAGE)/usr/bin/*;\
+		do target=`echo $$file | sed "s/$$version//"`;\
+		ln -s `basename $$file` $$target;\
+		ln -s `basename $$file`.1.gz \
+		      debian/$(DEFAULTPACKAGE/usr/share/man/man1/`basename $$target`.1.gz;\
+	done
+
+	set -e; for version in $(versions);\
+		package=python$$version-twisted;\
+		binpackage=python$$version-twisted-bin;\
 		for file in `find debian/python$$version-twisted -name "*.so"`;\
 			do target=`echo $$file | sed 's/twisted/twisted-bin/'`;\
 			if [ ! -d `dirname $$target` ]; then\
@@ -44,20 +98,12 @@ install-stamp: build-stamp
 			mv $$file $$target; \
 		done; \
 	done
-	debian/scripts/defaultpy 2.2
 
 	set -e; for version in $(versions); \
 		do \
 		package=python$$version-twisted-conch;\
 		tpackage=python$$version-twisted;\
 		dir=usr/lib/python$$version/site-packages;\
-		install -d debian/$$package/${DOC}/$$package/;\
-		install -d debian/$$package/DEBIAN; \
-		install -m 644 debian/copyright \
-		      debian/$$package/${DOC}/$$package/; \
-		install -m 644 debian/changelog \
-		      debian/$$package/${DOC}/$$package/changelog.Debian;\
-		gzip -9 debian/$$package/${DOC}/$$package/changelog.Debian;\
 		install -d debian/$$package/$$dir/twisted/scripts; \
 		install -d debian/$$package/usr/bin; \
 		install -d debian/$$package/usr/share/man/man1; \
@@ -80,120 +126,50 @@ install-stamp: build-stamp
 	done
 		
 
-	install -d debian/twisted-doc/DEBIAN/
-	install -d debian/twisted-doc/usr/share/doc/twisted-doc/
 	install -d debian/twisted-doc/usr/share/doc/twisted-doc/examples
 	install -d debian/twisted-doc/usr/share/doc/twisted-doc/howto
 	install -d debian/twisted-doc/usr/share/doc/twisted-doc/specifications
 	install -d debian/twisted-doc/usr/share/doc/twisted-doc/img
 	install -d debian/twisted-doc/usr/share/doc/twisted-doc/api
-	install -m 644 debian/copyright \
-	               debian/twisted-doc/usr/share/doc/twisted-doc/
-	install -m 644 debian/changelog \
-	               debian/twisted-doc/usr/share/doc/twisted-doc/changelog.Debian
-	gzip -9 debian/twisted-doc/usr/share/doc/twisted-doc/changelog.Debian
 	install -m 644 doc/howto/*.html \
-	               debian/twisted-doc/usr/share/doc/twisted-doc/howto/
-	cp -ar doc/howto/listings/ \
-	               debian/twisted-doc/usr/share/doc/twisted-doc/howto/
+	               debian/twisted-doc/${DOC}/twisted-doc/howto/
+	cp -ar doc/howto/listings/ debian/twisted-doc/${DOC}/twisted-doc/howto/
 	install -m 644 doc/specifications/*.html \
-	               debian/twisted-doc/usr/share/doc/twisted-doc/specifications/
-	install -m 644 doc/img/*.png \
-	               debian/twisted-doc/usr/share/doc/twisted-doc/img/
-	install -m 644 doc/img/*.bmp \
-	               debian/twisted-doc/usr/share/doc/twisted-doc/img/
-	cp -ar doc/api/* debian/twisted-doc/usr/share/doc/twisted-doc/api/
+	               debian/twisted-doc/${DOC}/twisted-doc/specifications/
+	install -m 644 doc/img/*.png debian/twisted-doc/${DOC}/twisted-doc/img/
+	install -m 644 doc/img/*.bmp debian/twisted-doc/${DOC}/twisted-doc/img/
+	cp -ar doc/api/* debian/twisted-doc/${DOC}/twisted-doc/api/
 	install -m 644  doc/examples/*.py \
-	                debian/twisted-doc/usr/share/doc/twisted-doc/examples/
+	                debian/twisted-doc/${DOC}/twisted-doc/examples/
 
-	install -d debian/python-twisted/usr/share/doc/python-twisted
-	install -d debian/python-twisted/DEBIAN
-	install -m 644 debian/copyright \
-	               debian/python-twisted/usr/share/doc/python-twisted/
-	install -m 644 debian/changelog \
-	               debian/python-twisted/usr/share/doc/python-twisted/changelog.Debian
-	gzip -9 debian/python-twisted/usr/share/doc/python-twisted/changelog.Debian
 	install -m 644 debian/python-twisted.README.Debian \
-	               debian/python-twisted/usr/share/doc/python-twisted/README.Debian
+	               debian/python-twisted/${DOC}/README.Debian
 
-	install -d debian/python-twisted-conch/usr/share/doc/python-twisted-conch
-	install -d debian/python-twisted-conch/DEBIAN
-	install -m 644 debian/copyright \
-	               debian/python-twisted-conch/usr/share/doc/python-twisted-conch/
-	install -m 644 debian/changelog \
-	               debian/python-twisted-conch/usr/share/doc/python-twisted-conch/changelog.Debian
-	gzip -9 debian/python-twisted-conch/usr/share/doc/python-twisted-conch/changelog.Debian
-
-	install -d debian/twisted/usr/share/doc/twisted
-	install -d debian/twisted/DEBIAN
-	install -m 644 debian/copyright \
-	               debian/twisted/usr/share/doc/twisted/
-	install -m 644 debian/changelog \
-	               debian/twisted/usr/share/doc/twisted/changelog.Debian
-	gzip -9 debian/twisted/usr/share/doc/twisted/changelog.Debian
-
-	install -d debian/twisted-quotes/usr/share/doc/twisted-quotes
-	install -d debian/twisted-quotes/DEBIAN
-	install -m 644 debian/copyright \
-	               debian/twisted-quotes/usr/share/doc/twisted-quotes/
-	install -m 644 debian/changelog \
-	               debian/twisted-quotes/usr/share/doc/twisted-quotes/changelog.Debian
-	gzip -9 debian/twisted-quotes/usr/share/doc/twisted-quotes/changelog.Debian
 	install -d debian/twisted-quotes/usr/share/games/fortunes/
 	install -m 644 doc/fun/Twisted.Quotes \
-	               debian/twisted-quotes/usr/share/games/fortunes/twisted-quotes
+	          debian/twisted-quotes/usr/share/games/fortunes/twisted-quotes
 	strfile debian/twisted-quotes/usr/share/games/fortunes/twisted-quotes
 	touch install-stamp
 
 
 binary-indep: build install
-	dpkg-gencontrol -isp -ptwisted-doc -Pdebian/twisted-doc
-	chown -R root.root debian/twisted-doc
-	chmod -R go=rX debian/twisted-doc
-	dpkg --build debian/twisted-doc ..
-
-	dpkg-gencontrol -isp -ptwisted-quotes -Pdebian/twisted-quotes
-	chown -R root.root debian/twisted-quotes
-	chmod -R go=rX debian/twisted-quotes
-	dpkg --build debian/twisted-quotes ..
-
-	dpkg-gencontrol -isp -ptwisted -Pdebian/twisted
-	chown -R root.root debian/twisted
-	chmod -R go=rX debian/twisted
-	dpkg --build debian/twisted ..
-
-	dpkg-gencontrol -isp -ppython-twisted -Pdebian/python-twisted
-	chown -R root.root debian/python-twisted
-	chmod -R go=rX debian/python-twisted
-	dpkg --build debian/python-twisted ..
-
-	for ver in $(versions); \
-	do dpkg-gencontrol -isp -ppython$$ver-twisted -Pdebian/python$$ver-twisted;\
-	chown -R root.root debian/python$$ver-twisted;\
-	chmod -R go=rX debian/python$$ver-twisted;\
-	dpkg --build debian/python$$ver-twisted ..;\
-	done
-
-	dpkg-gencontrol -isp -ppython-twisted-conch -Pdebian/python-twisted-conch
-	chown -R root.root debian/python-twisted-conch
-	chmod -R go=rX debian/python-twisted-conch
-	dpkg --build debian/python-twisted-conch ..
-
-	for ver in $(versions); \
-	do dpkg-gencontrol -isp -ppython$$ver-twisted-conch -Pdebian/python$$ver-twisted-conch;\
-	chown -R root.root debian/python$$ver-twisted-conch;\
-	chmod -R go=rX debian/python$$ver-twisted-conch;\
-	dpkg --build debian/python$$ver-twisted-conch ..;\
+	set -e;for package in $(indeppackages);\
+		do dpkg-gencontrol -isp -p$$package -Pdebian/$$package;\
+		chown -R root.root debian/$$package;\
+		chmod -R go=rX debian/$$package;\
+		dpkg --build debian/$$package ..;\
 	done
 
 binary-arch: build install
+	find debian -name "*.so" | xargs -n 1 strip --remove-section=.comment \
+                                                    --remove-section=.note \
+	                                            --strip-unneeded
 	find debian -name "*.so" | xargs -n 1 dpkg-shlibdeps
-
-	for ver in $(versions); \
-	do dpkg-gencontrol -isp -ppython$$ver-twisted-bin -Pdebian/python$$ver-twisted-bin;\
-	chown -R root.root debian/python$$ver-twisted-bin;\
-	chmod -R go=rX debian/python$$ver-twisted-bin;\
-	dpkg --build debian/python$$ver-twisted-bin ..;\
+	set -e;for package in $(archpackages);\
+		do dpkg-gencontrol -isp -p$$package -Pdebian/$$package;\
+		chown -R root.root debian/$$package;\
+		chmod -R go=rX debian/$$package;\
+		dpkg --build debian/$$package ..;\
 	done
 
 binary: binary-indep binary-arch
