@@ -461,7 +461,7 @@ class SSHTransportTestCase(unittest.TestCase):
         fac = SSHTestFactory()
         fac.authorizer = auth
         theTest.fac = fac
-        host = reactor.listenTCP(0, fac).getHost()
+        host = reactor.listenTCP(0, fac, interface="127.0.0.1").getHost()
         port = host[2]
         cfac = SSHTestClientFactory()
         def _failTest():
@@ -501,7 +501,7 @@ class SSHTransportTestCase(unittest.TestCase):
         fac = SSHTestFactory()
         fac.authorizer = auth
         theTest.fac = fac
-        host = reactor.listenTCP(0, fac).getHost()
+        host = reactor.listenTCP(0, fac, interface="127.0.0.1").getHost()
         port = host[2]
         ssh_path = None
         for p in ['/usr', '', '/usr/local']:

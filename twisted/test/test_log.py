@@ -43,4 +43,3 @@ class LogTest(unittest.TestCase):
             i = self.catcher.pop()
             self.assertEquals(i['isError'], 1)
             log.flushErrors(ig)
-

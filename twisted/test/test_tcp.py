@@ -93,7 +93,7 @@ class ListeningTestCase(PortCleanerUpper):
 
     def testListen(self):
         f = MyServerFactory()
-        p1 = reactor.listenTCP(0, f) 
+        p1 = reactor.listenTCP(0, f, interface="127.0.0.1") 
         p1.stopListening()
 
     def testNumberedInterface(self):
@@ -116,7 +116,7 @@ class LoopbackTestCase(PortCleanerUpper):
 
     def testClosePortInProtocolFactory(self):
         f = ClosingFactory()
-        port = reactor.listenTCP(0, f)
+        port = reactor.listenTCP(0, f, interface="127.0.0.1")
         self.n = port.getHost()[2]
         self.ports.append(port)
         f.port = port
@@ -135,7 +135,7 @@ class LoopbackTestCase(PortCleanerUpper):
 
     def testTcpNoDelay(self):
         f = MyServerFactory()
-        port = reactor.listenTCP(0, f)
+        port = reactor.listenTCP(0, f, interface="127.0.0.1")
         self.n = port.getHost()[2]
         self.ports.append(port)
         clientF = MyClientFactory()
@@ -173,7 +173,7 @@ class LoopbackTestCase(PortCleanerUpper):
     def testConnectByService(self):
         serv = socket.getservbyname
         s = MyServerFactory()
-        port = reactor.listenTCP(0, s)
+        port = reactor.listenTCP(0, s, interface="127.0.0.1")
         self.n = port.getHost()[2]
         socket.getservbyname = lambda s, p,n=self.n: s == 'http' and p == 'tcp' and n or 10
         self.ports.append(port)
@@ -478,7 +478,7 @@ class WriteDataTestCase(PortCleanerUpper):
         f.protocol = WriterProtocol
         f.done = 0
         f.problem = 0
-        p = reactor.listenTCP(0, f)
+        p = reactor.listenTCP(0, f, interface="127.0.0.1")
         n = p.getHost()[2]
         self.ports.append(p)
         clientF = WriterClientFactory()
@@ -507,7 +507,7 @@ class ProperlyCloseFilesTestCase(unittest.TestCase):
     def setUp(self):
         f = protocol.ServerFactory()
         f.protocol = protocol.Protocol
-        self.listener = reactor.listenTCP(0, f)
+        self.listener = reactor.listenTCP(0, f, interface="127.0.0.1")
         
         f = protocol.ClientFactory()
         f.protocol = ConnectionLosingProtocol

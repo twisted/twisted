@@ -60,7 +60,7 @@ class Test(XMLRPC):
 class XMLRPCTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.p = reactor.listenTCP(0, server.Site(Test()))
+        self.p = reactor.listenTCP(0, server.Site(Test()), interface="127.0.0.1")
         self.port = self.p.getHost()[2]
 
     def tearDown(self):

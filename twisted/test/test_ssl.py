@@ -33,7 +33,7 @@ class StolenTCPTestCase(test_tcp.ProperlyCloseFilesTestCase, test_tcp.WriteDataT
         f = protocol.ServerFactory()
         f.protocol = protocol.Protocol
         self.listener = reactor.listenSSL(
-            0, f, ssl.DefaultOpenSSLContextFactory(certPath, certPath)
+            0, f, ssl.DefaultOpenSSLContextFactory(certPath, certPath), interface="127.0.0.1",
         )
         
         f = protocol.ClientFactory()
@@ -44,7 +44,7 @@ class StolenTCPTestCase(test_tcp.ProperlyCloseFilesTestCase, test_tcp.WriteDataT
         def connector():
             p = self.listener.getHost()[2]
             ctx = ssl.ClientContextFactory()
-            return reactor.connectSSL('0.0.0.0', p, f, ctx)
+            return reactor.connectSSL('127.0.0.1', p, f, ctx)
         self.connector = connector
 
         self.totalConnections = 0

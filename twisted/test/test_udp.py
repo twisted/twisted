@@ -54,7 +54,7 @@ class UDPTestCase(unittest.TestCase):
 
     def testStartStop(self):
         server = Server()
-        port1 = reactor.listenUDP(0, server)
+        port1 = reactor.listenUDP(0, server, interface="127.0.0.1")
         client = Client()
         port2 = reactor.connectUDP("127.0.0.1", 8888, client)
 
@@ -102,7 +102,7 @@ class UDPTestCase(unittest.TestCase):
 
     def testSendPackets(self):
         server = Server()
-        port1 = reactor.listenUDP(0, server)
+        port1 = reactor.listenUDP(0, server, interface="127.0.0.1")
         client = Client()
         port2 = reactor.connectUDP("127.0.0.1", server.transport.getHost()[2], client)
         reactor.iterate()
@@ -135,6 +135,7 @@ class MulticastTestCase(unittest.TestCase):
     def setUp(self):
         self.server = Server()
         self.client = Client()
+        # multicast won't work if we listen over loopback, apparently
         self.port1 = reactor.listenMulticast(0, self.server)
         self.port2 = reactor.connectMulticast("127.0.0.1", self.server.transport.getHost()[2], self.client)
         reactor.iterate()
@@ -185,6 +186,3 @@ class MulticastTestCase(unittest.TestCase):
             iters += 1
         self.assertEquals(self.server.packets[0][0], "hello world")
         p.stopListening()
-
-        
-        

@@ -124,11 +124,11 @@ class ServerDNSTestCase(unittest.TestCase):
             test_domain_com, reverse_domain
         ], verbose=2)
         
-        self.listenerTCP = reactor.listenTCP(0, self.factory)
+        self.listenerTCP = reactor.listenTCP(0, self.factory, interface="127.0.0.1")
         port = self.listenerTCP.getHost()[2]
 
         p = dns.DNSDatagramProtocol(self.factory)
-        self.listenerUDP = reactor.listenUDP(port, p)
+        self.listenerUDP = reactor.listenUDP(port, p, interface="127.0.0.1")
         
         self.resolver = client.Resolver(servers=[('127.0.0.1', port)])
 

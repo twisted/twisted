@@ -108,7 +108,7 @@ class ThrottlingTestCase(unittest.TestCase):
         server = Server()
         c1, c2, c3, c4 = [SimpleProtocol() for i in range(4)]
         tServer = policies.ThrottlingFactory(server, 2)
-        p = reactor.listenTCP(0, tServer)
+        p = reactor.listenTCP(0, tServer, interface="127.0.0.1")
         n = p.getHost()[2]
         self.doIterations()
 
@@ -141,7 +141,7 @@ class ThrottlingTestCase(unittest.TestCase):
         now = time.time()
 
         tServer = policies.ThrottlingFactory(server, writeLimit=10)
-        port = reactor.listenTCP(0, tServer)
+        port = reactor.listenTCP(0, tServer, interface="127.0.0.1")
         n = port.getHost()[2]
         reactor.iterate(); reactor.iterate()
         for c in c1, c2:
@@ -199,7 +199,7 @@ class ThrottlingTestCase(unittest.TestCase):
         c1, c2 = SimpleProtocol(), SimpleProtocol()
         now = time.time()
         tServer = policies.ThrottlingFactory(server, readLimit=10)
-        port = reactor.listenTCP(0, tServer)
+        port = reactor.listenTCP(0, tServer, interface="127.0.0.1")
         n = port.getHost()[2]
         self.doIterations()
         for c in c1, c2:
@@ -249,7 +249,7 @@ class TimeoutTestCase(unittest.TestCase):
     def testTimeout(self):
         # Create a server which times out inactive connections
         server = policies.TimeoutFactory(Server(), 3)
-        port = reactor.listenTCP(0, server)
+        port = reactor.listenTCP(0, server, interface="127.0.0.1")
 
         # Create a client tha sends and receive nothing
         client = SimpleProtocol()
@@ -273,7 +273,7 @@ class TimeoutTestCase(unittest.TestCase):
     def testThatSendingDataAvoidsTimeout(self):
         # Create a server which times out inactive connections
         server = policies.TimeoutFactory(Server(), 2)
-        port = reactor.listenTCP(0, server)
+        port = reactor.listenTCP(0, server, interface="127.0.0.1")
 
         # Create a client that sends and receive nothing
         client = SimpleSenderProtocol(self)
