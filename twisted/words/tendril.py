@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: tendril.py,v 1.22 2002/08/31 00:19:55 acapnotic Exp $
+# $Id: tendril.py,v 1.23 2002/08/31 23:37:42 acapnotic Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -54,6 +54,7 @@ _LOGALL = False
 # XXX FIXME -- This will need to be fixed to work asynchronously in order to
 # support multiple-server twisted.words and database access to accounts
 
+# TODO: Use words 'Policy' to get Perspectives.
 
 class TendrilFactory(protocol.ClientFactory, reflect.Accessor):
     """I build Tendril clients for a words service.
@@ -194,13 +195,13 @@ class TendrilIRC(irc.IRCClient, styles.Ephemeral):
 
     realname = 'Tendril'
     versionName = 'Tendril'
-    versionNum = '$Revision: 1.22 $'[11:-2]
+    versionNum = '$Revision: 1.23 $'[11:-2]
     versionEnv = copyright.longversion
 
     helptext = TendrilFactory.helptext
 
     words = None
-    
+
     def __init__(self):
         """Create a new Tendril IRC client."""
         self.dcc_sessions = {}
@@ -613,7 +614,7 @@ class TendrilWords(wordsService.WordsClient):
     def setupBot(self, perspective):
         self.perspective = perspective
         self.joinGroup(self.errorGroup)
-        
+
     def attachToWords(self):
         """Get my perspective on the Words service; attach as a client.
         """
