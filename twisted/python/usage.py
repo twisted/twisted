@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: usage.py,v 1.31 2002/09/01 10:40:50 acapnotic Exp $
+# $Id: usage.py,v 1.32 2002/09/23 17:11:00 moshez Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -149,6 +149,7 @@ class Options(UserDict.UserDict):
             raise AttributeError("%s instance has no attribute '%s'" % (self.__class__, attr))
 
     def opt_help(self):
+        """Display this help and exit."""
         print self.__str__()
         sys.exit(0)
 
