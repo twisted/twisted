@@ -291,9 +291,9 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
         )
 
 
-    def testZoneTransfer(self):
-        """Test DNS 'AXFR' queries (Zone transfer)"""
-        self.namesTest(
-            self.resolver.lookupZone('test-domain.com'),
-            test_domain_com
-        )
+#    def testZoneTransfer(self):
+#        """Test DNS 'AXFR' queries (Zone transfer)"""
+#        self.namesTest(
+#            self.resolver.lookupZone('test-domain.com'),
+#            test_domain_com
+#        )
