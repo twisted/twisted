@@ -171,3 +171,21 @@ register("Twisted DNS Server",
          description="A Domain Name Server",
          type="tap",
          tapname="dns")
+
+register("Lore",
+         "twisted.lore.default",
+         description="Lore format",
+         type="lore",
+         tapname="lore")
+
+register("Math-Lore",
+         "twisted.lore.math",
+         description="Lore format with LaTeX formula",
+         type="lore",
+         tapname="mlore")
+
+register("Man",
+         "twisted.lore.man2lore",
+         description="UNIX Man pages",
+         type="lore",
+         tapname="man")

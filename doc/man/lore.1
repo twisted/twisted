@@ -1,0 +1,47 @@
+.TH GENERATELORE "1" "October 2002" "" ""
+.SH NAME
+lore \- convert documentations formats
+.SH SYNOPSIS
+.B lore [-l \fIlinkrel\fR] [-d \fIdocsdir\fR]  [-i \fIinput\fR] [-o \fIoutput\fR] [--config attribute[=value] [...]] [-p] [file [...]]
+.PP
+.B lore --help
+.SH DESCRIPTION
+.PP
+The \fB\--help\fR prints out a usage message to standard output.
+.TP
+\fB-p\fR, \fB--plain\fR
+Use non-flashy progress bar \- one file per line.
+.TP
+\fI-l\fR, \fI--linkrel\fR
+Where non-document links should be relative to.
+.TP
+\fI-d\fR, \fI--docsdir\fR
+Where to look for \fB.html\fR files if no files are given.
+.TP
+\fI-i\fR, \fI--input\fR
+Input format. New input formats can be dynamically registered. Lore itself
+comes with "lore" (the standard format), "mlore" (allows LaTeX equations)
+and "man" (man page format).
+.TP
+\fI-o\fR, \fI--output\fR
+Output format. Available output formats depend on the input. For the core
+formats, lore and mlore support html, latex and lint, while man allows
+lore.
+.TP
+\fI--config\fR
+Add input/output-specific information. In the core Lore, it doesn't
+depend on the input at all: HTML output allows for 'ext=<extension>',
+'template=<template>' and 'baseurl=<format string for API URLs>'. LaTeX
+output allows for 'section', and Lore output allows for 'ext=<extension>'.
+.SH DESCRIPTION
+The exact HTML syntax to follow is documented in Twisted's doc-standard.html.
+If no files are given, all *.html documents in docsdir will be processed.
+.SH AUTHOR
+Written by Moshe Zadka
+.SH "REPORTING BUGS"
+Report bugs to <twisted-python@twistedmatrix.com>.
+.SH COPYRIGHT
+Copyright \(co 2003 Matthew W. Lefkowitz
+.br
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
