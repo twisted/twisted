@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.74 2002/11/20 20:58:18 z3p Exp $
+$Id: setup.py,v 1.75 2002/11/26 19:15:21 glyph Exp $
 """
 
 import distutils, os, sys, string
@@ -262,26 +262,14 @@ else:
 # is required for sdist to work.
 
 #X-platform:
-setup_args['ext_modules'] = [
-    Extension("twisted.spread.cBanana",
-              ["twisted/spread/cBanana.c"],
-              define_macros=define_macros),
-# this breaks Mac OS X, alas - uncomment to make bdist_rpm work
-# or better yet, use spec in admin/.
-##     Extension("twisted.inetd.portmap",
-##               ["twisted/inetd/portmap.c"],
-##               define_macros=define_macros),
-##     Extension("twisted.internet.cReactor",
-##               ["twisted/internet/cReactor/cReactorModule.c",
-##                "twisted/internet/cReactor/cReactor.c",
-##                "twisted/internet/cReactor/cReactorTime.c",
-##                "twisted/internet/cReactor/cReactorTCP.c",
-##                "twisted/internet/cReactor/cReactorTransport.c",
-##                "twisted/internet/cReactor/cReactorBuffer.c",
-##                "twisted/internet/cReactor/cReactorUtil.c",
-##                "twisted/internet/cReactor/cReactorThread.c"],
-##              define_macros=define_macros)    
+if not (sys.argv.count("bdist_wininst") and os.name != 'nt'):
+    setup_args['ext_modules'] = [
+        Extension("twisted.spread.cBanana",
+                  ["twisted/spread/cBanana.c"],
+                  define_macros=define_macros),
     ]
+else:
+    setup_args['ext_modules'] = []
 
 if __name__ == '__main__':
     apply(setup, (), setup_args)
