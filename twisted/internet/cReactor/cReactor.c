@@ -33,7 +33,6 @@
 /* Forward declare the cReactor type object. */
 staticforward PyTypeObject cReactorType;
 
-
 /* Available methods on the cReactor. */
 static PyMethodDef cReactor_methods[] = 
 {
@@ -833,6 +832,12 @@ cReactor_getattr(PyObject *self, char *attr_name)
     }
     /* Py_FindMethod raises an exception if it does not find the mthod */
     PyErr_Clear();
+
+    /* Special case!  Woo */
+    if (!strcmp("__dict__", attr_name))
+    {
+        return reactor->attr_dict;
+    }
 
     /* Now check the attribute dictionary. */
     obj = PyDict_GetItemString(reactor->attr_dict, attr_name);
