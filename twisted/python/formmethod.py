@@ -277,10 +277,17 @@ class Submit(Choice):
     """Submit button or a reasonable facsimile thereof."""
 
     def __init__(self, name, choices=[("Submit", "submit", "Submit form")],
-                 reset=0, shortDesc=None, longDesc=None):
+                 reset=0, shortDesc=None, longDesc=None, allowNone=0):
         Choice.__init__(self, name, choices=choices, shortDesc=shortDesc,
                         longDesc=longDesc)
+        self.allowNone = allowNone
         self.reset = reset
+
+    def coerce(self, value):
+        if self.allowNone and value == None:
+            return None
+        else:
+            return Choice.coerce(self, value)
 
 
 class PresentationHint:

@@ -6,7 +6,7 @@ L{UsernamePasswordWrapper}.
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.28 $"[11:-2]
+__version__ = "$Revision: 1.29 $"[11:-2]
 
 import random
 import time
@@ -321,7 +321,7 @@ newLoginSignature = fm.MethodSignature(
               "Username", "Your user name."),
     fm.Password("password", "",
                 "Password", "Your password."),
-    fm.Submit("submit", choices=[("Login", "", "")]),
+    fm.Submit("submit", choices=[("Login", "", "")], allowNone=1),
     )
 
 from twisted.cred.credentials import UsernamePassword, Anonymous
