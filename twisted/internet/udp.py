@@ -132,8 +132,6 @@ class Port(base.BasePort):
         @param addr: should be a tuple (ip, port), can be None in connected mode.
         """
         if self._connected:
-            if self._connectedAddr == None:
-                raise error.ConnectInProgressError
             assert addr in (None, self._connectedAddr)
             try:
                 return self.socket.send(datagram)
@@ -168,19 +166,12 @@ class Port(base.BasePort):
     def connect(self, host, port):
         """'Connect' to remote server."""
         if self._connected:
-            raise RuntimeError, "already connected"
+            raise RuntimeError, "already connected, reconnecting is not currently supported"
+        if not abstract.isIPAddress(host):
+            raise ValueError, "please pass only IP addresses, not domain names"
         self._connected = True
-        if abstract.isIPAddress(host):
-            return defer.maybeDeferred(self._connectDone, host, port)
-        else:
-            d = self.reactor.resolve(host)
-            d.addCallback(self._connectDone, port)
-            return d
-    
-    def _connectDone(self, host, port):
         self._connectedAddr = (host, port)
         self.socket.connect((host, port))
-        return self._connectedAddr
     
     def loseConnection(self):
         """Stop accepting connections on this port.

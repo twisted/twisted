@@ -1039,8 +1039,7 @@ class IUDPTransport(Interface):
         @param addr: a tuple of (ip, port). For connected transports must
                      be the address the transport is connected to, or None.
                      In non-connected mode this is mandatory.
-        @raise L{MessageLengthError<twisted.internet.error.MessageLengthError>},
-               L{ConnectInProgressError<twisted.internet.error.ConnectInProgressError>}
+        @raise L{MessageLengthError<twisted.internet.error.MessageLengthError>}
         """
 
     def connect(self, host, port):
@@ -1051,12 +1050,12 @@ class IUDPTransport(Interface):
         the protocol's connectionRefused method might get called if destination
         is not receiving datagrams.
 
-        @return Deferred which triggers once we're connected. Failure will usually
-        be do to DNS lookup error.
+        @param host: an IP address, not a domain name ('127.0.0.1', not 'localhost')
+        @param port: port to connect to.
         """
     
     def getHost(self):
-        """Returns UNIXAddress."""
+        """Returns IPv4Address."""
 
 
 class IUDPConnectedTransport(Interface):

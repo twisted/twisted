@@ -224,6 +224,7 @@ class PosixReactorBase(ReactorBase):
 
         EXPERIMENTAL.
         """
+        warnings.warn("use listenMulticast and then transport.connect().", DeprecationWarning, stacklevel=2)
         p = udp.ConnectedMulticastPort((remotehost, remoteport), localport, protocol, interface, maxPacketSize, self)
         p.startListening()
         return p

@@ -176,14 +176,6 @@ class UDPTestCase(unittest.TestCase):
         reactor.iterate()
         reactor.iterate()
 
-    def testDNSFailure(self):
-        client = GoodClient()
-        p = reactor.listenUDP(0, client)
-        # if this domain exists, shoot your sysadmin
-        d = client.transport.connect("xxxxxxxxx.zzzzzzzzz.yyyyy.", 8888)
-        unittest.deferredError(d).trap(error.DNSLookupError)
-        p.stopListening()
-
     def testSendPackets(self):
         server = Server()
         port1 = reactor.listenUDP(0, server, interface="127.0.0.1")
@@ -191,10 +183,9 @@ class UDPTestCase(unittest.TestCase):
         port2 = reactor.listenUDP(0, client, interface="127.0.0.1")
         reactor.iterate()
         reactor.iterate()
-        d = client.transport.connect("127.0.0.1", server.transport.getHost().port)
-        serverAddress = server.transport.getHost()
-        self.assertEquals(unittest.deferredResult(d), (serverAddress.host, serverAddress.port))
+        client.transport.connect("127.0.0.1", server.transport.getHost().port)
         clientAddr = client.transport.getHost()
+        serverAddress = server.transport.getHost()
         server.transport.write("hello", (clientAddr.host, clientAddr.port))
         client.transport.write("a")
         client.transport.write("b", None)
@@ -226,6 +217,16 @@ class UDPTestCase(unittest.TestCase):
         port.stopListening()
         port2.stopListening()
         reactor.iterate(); reactor.iterate()
+
+    def testBadConnect(self):
+        client = GoodClient()
+        port = reactor.listenUDP(0, client, interface="127.0.0.1")
+        self.assertRaises(ValueError, client.transport.connect, "localhost", 80)
+        client.transport.connect("127.0.0.1", 80)
+        self.assertRaises(RuntimeError, client.transport.connect, "127.0.0.1", 80)
+        port.stopListening()
+        reactor.iterate()
+        reactor.iterate()
 
 
 class MulticastTestCase(unittest.TestCase):
