@@ -2,20 +2,20 @@
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001-2002 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-# 
+#
 
 """Micro Document Object Model: a partial DOM implementation with SUX.
 
@@ -118,7 +118,7 @@ class Node(object):
 
     def __hash__(self):
         return id(self)
-    
+
     def isEqualToNode(self, n):
         for a, b in zip(self.childNodes, n.childNodes):
             if not a == b:
@@ -145,7 +145,7 @@ class Node(object):
             return 1
         else:
             return 0
-    
+
     def appendChild(self, child):
         assert isinstance(child, Node)
         self.childNodes.append(child)
@@ -174,7 +174,7 @@ class Node(object):
 
     def lastChild(self):
         return self.childNodes[-1]
-    
+
     def firstChild(self):
         if len(self.childNodes):
             return self.childNodes[0]
@@ -183,7 +183,7 @@ class Node(object):
     #def get_ownerDocument(self):
     #   """This doesn't really get the owner document; microdom nodes
     #   don't even have one necessarily.  This gets the root node,
-    #   which is usually what you really meant. 
+    #   which is usually what you really meant.
     #   *NOT DOM COMPLIANT.*
     #   """
     #   node=self
@@ -235,7 +235,7 @@ class Document(Node):
     # of dubious utility (?)
     def createElement(self, name):
         return Element(name)
-    
+
     def createTextNode(self, text):
         return Text(text)
 
@@ -263,12 +263,12 @@ class EntityReference(Node):
 
     def __eq__(self, n):
         return self.isEqualToEntityReference(n) and self.isEqualToNode(n)
-    
+
     def isEqualToEntityReference(self, n):
         if not isinstance(n, EntityReference):
             return 0
         return (self.eref == n.eref) and (self.nodeValue == n.nodeValue)
-        
+
     def writexml(self, stream, indent='', addindent='', newl='', strip=0):
         stream.write(self.nodeValue)
 
@@ -349,9 +349,9 @@ class Element(Node):
 
     preserveCase = 0
     caseInsensitive = 1
-    
-    def __init__(self, tagName, attributes=None, parentNode=None, 
-                        filename=None, markpos=None, 
+
+    def __init__(self, tagName, attributes=None, parentNode=None,
+                        filename=None, markpos=None,
                         caseInsensitive=1, preserveCase=0):
         Node.__init__(self, parentNode)
         self.preserveCase = preserveCase or not caseInsensitive
@@ -396,16 +396,16 @@ class Element(Node):
         if self.caseInsensitive:
             return getElementsByTagNameNoCase(self, name)
         return getElementsByTagName(self, name)
-    
+
     def hasAttributes(self):
         return 1
-    
+
     def getAttribute(self, name, default=None):
         return self.attributes.get(name, default)
 
     def getAttributeNode(self, name):
         return _Attr(self.getAttribute(name), self)
-        
+
     def setAttribute(self, name, attr):
         self.attributes[name] = attr
 
@@ -416,7 +416,7 @@ class Element(Node):
     def removeAttribute_has_key(self, name):
         if self.attributes.has_key(name):
             del self.attributes[name]
-            
+
     def hasAttribute(self, name):
         return name in self.attributes
 
@@ -430,8 +430,8 @@ class Element(Node):
     def writexml(self, stream, indent='', addindent='', newl='', strip=0):
         # write beginning
         NEVERSINGLETON = ('a', 'li', 'div', 'span', 'title', 'script',
-                          'textarea')
-        # this should never be necessary unless people start 
+                          'textarea', 'select')
+        # this should never be necessary unless people start
         # changing .tagName on the fly(?)
         if not self.preserveCase:
             self.endTagName = self.tagName
@@ -492,7 +492,7 @@ class MicroDOMParser(XMLParser):
     # <dash> glyph: a quick scan thru the DTD says BODY, AREA, LINK, IMG, HR,
     # P, DT, DD, LI, INPUT, OPTION, THEAD, TFOOT, TBODY, COLGROUP, COL, TR, TH,
     # TD, HEAD, BASE, META, HTML all have optional closing tags
-    
+
     soonClosers = 'area link br img hr input base meta'.split()
     laterClosers = {'p': ['p'],
                     'dt': ['dt','dd'],
@@ -547,7 +547,7 @@ class MicroDOMParser(XMLParser):
             self.gotTagEnd(parent.tagName)
             parent = self._getparent()
         el = Element(name, _unescapeDict(attributes), parent,
-                     self.filename, self.saveMark(), 
+                     self.filename, self.saveMark(),
                      caseInsensitive=self.caseInsensitive,
                      preserveCase=self.preserveCase)
         self.elementstack.append(el)
@@ -638,7 +638,7 @@ def parse(readable, *args, **kwargs):
 
     if not mdp.documents:
         raise ParseError(mdp.filename, 0, 0, "No top-level Nodes in document")
-    
+
     if mdp.beExtremelyLenient:
         if len(mdp.documents) == 1:
             d = mdp.documents[0]
@@ -680,7 +680,7 @@ def parseXMLString(st):
 
 class lmx:
     """Easy creation of XML."""
-    
+
     def __init__(self, node='div'):
         if isinstance(node, StringTypes):
             node = Element(node)
