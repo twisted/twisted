@@ -20,8 +20,7 @@
 
 import types
 from twisted.trial import unittest
-from twisted.spread import newjelly as jelly
-from twisted.spread import pb
+from twisted.spread import newjelly, pb
 
 from twisted.python.compat import bool
 
@@ -73,13 +72,14 @@ class JellyTestCase(unittest.TestCase):
     """
     testcases for `jelly' module serialization.
     """
+    jc = newjelly
 
     def testMethodSelfIdentity(self):
         a = A()
         b = B()
         a.bmethod = b.bmethod
         b.a = a
-        im_ = jelly.unjelly(jelly.jelly(b)).a.bmethod
+        im_ = self.jc.unjelly(self.jc.jelly(b)).a.bmethod
         self.assertEquals(im_.im_class, im_.im_self.__class__)
 
     if haveObject:
@@ -89,8 +89,8 @@ class JellyTestCase(unittest.TestCase):
             n2 = NewStyle()
             n.n2 = n2
             n.n3 = n2
-            c = jelly.jelly(n)
-            m = jelly.unjelly(c)
+            c = self.jc.jelly(n)
+            m = self.jc.unjelly(c)
             self.failUnless(isinstance(m, NewStyle))
             self.assertIdentical(m.n2, m.n3)
 
@@ -100,8 +100,8 @@ class JellyTestCase(unittest.TestCase):
         """
         self.failUnless(SimpleJellyTest('a', 'b').isTheSameAs(SimpleJellyTest('a', 'b')))
         a = SimpleJellyTest(1, 2)
-        cereal = jelly.jelly(a)
-        b = jelly.unjelly(cereal)
+        cereal = self.jc.jelly(a)
+        b = self.jc.unjelly(cereal)
         self.failUnless(a.isTheSameAs(b))
 
     def testIdentity(self):
@@ -114,22 +114,22 @@ class JellyTestCase(unittest.TestCase):
         x.append(y)
         self.assertIdentical(x[0], x[1])
         self.assertIdentical(x[0][0], x)
-        s = jelly.jelly(x)
-        z = jelly.unjelly(s)
+        s = self.jc.jelly(x)
+        z = self.jc.unjelly(s)
         self.assertIdentical(z[0], z[1])
         self.assertIdentical(z[0][0], z)
 
     def testUnicode(self):
         if hasattr(types, 'UnicodeType'):
             x = 'blah'
-            self.assertEquals(jelly.unjelly(jelly.jelly(unicode(x))), x)
+            self.assertEquals(self.jc.unjelly(self.jc.jelly(unicode(x))), x)
 
     def testStressReferences(self):
         reref = []
         toplevelTuple = ({'list': reref}, reref)
         reref.append(toplevelTuple)
-        s = jelly.jelly(toplevelTuple)
-        z = jelly.unjelly(s)
+        s = self.jc.jelly(toplevelTuple)
+        z = self.jc.unjelly(s)
         self.assertIdentical(z[0]['list'], z[1])
         self.assertIdentical(z[0]['list'][0], z)
 
@@ -137,20 +137,20 @@ class JellyTestCase(unittest.TestCase):
         a = []
         t = (a,)
         a.append((t,))
-        s = jelly.jelly(t)
-        z = jelly.unjelly(s)
+        s = self.jc.jelly(t)
+        z = self.jc.unjelly(s)
         self.assertIdentical(z[0][0][0], z)
 
     def testTypeSecurity(self):
         """
         test for type-level security of serialization
         """
-        taster = jelly.SecurityOptions()
-        dct = jelly.jelly({})
+        taster = self.jc.SecurityOptions()
+        dct = self.jc.jelly({})
         try:
-            jelly.unjelly(dct, taster)
+            self.jc.unjelly(dct, taster)
             self.fail("Insecure Jelly unjellied successfully.")
-        except jelly.InsecureJelly:
+        except self.jc.InsecureJelly:
             # OK, works
             pass
 
@@ -159,11 +159,11 @@ class JellyTestCase(unittest.TestCase):
         test for all types currently supported in jelly
         """
         a = A()
-        jelly.unjelly(jelly.jelly(a))
-        jelly.unjelly(jelly.jelly(a.amethod))
+        self.jc.unjelly(self.jc.jelly(a))
+        self.jc.unjelly(self.jc.jelly(a.amethod))
         items = [afunc, [1, 2, 3], not bool(1), bool(1), 'test', 20.3, (1,2,3), None, A, unittest, {'a':1}, A.amethod]
         for i in items:
-            self.assertEquals(i, jelly.unjelly(jelly.jelly(i)))
+            self.assertEquals(i, self.jc.unjelly(self.jc.jelly(i)))
     
     def testSetState(self):
         global TupleState
@@ -181,14 +181,14 @@ class JellyTestCase(unittest.TestCase):
         t2 = TupleState(a)
         t3 = TupleState((t1, t2))
         d = {t1: t1, t2: t2, t3: t3, "t3": t3}
-        t3prime = jelly.unjelly(jelly.jelly(d))["t3"]
+        t3prime = self.jc.unjelly(self.jc.jelly(d))["t3"]
         self.assertIdentical(t3prime.other[0].other, t3prime.other[1].other)
 
     def testClassSecurity(self):
         """
         test for class-level security of serialization
         """
-        taster = jelly.SecurityOptions()
+        taster = self.jc.SecurityOptions()
         taster.allowInstancesOf(A, B)
         a = A()
         b = B()
@@ -200,22 +200,22 @@ class JellyTestCase(unittest.TestCase):
         a.x = b
         b.c = c
         # first, a friendly insecure serialization
-        friendly = jelly.jelly(a, taster)
-        x = jelly.unjelly(friendly, taster)
-        self.failUnless(isinstance(x.c, jelly.Unpersistable),
+        friendly = self.jc.jelly(a, taster)
+        x = self.jc.unjelly(friendly, taster)
+        self.failUnless(isinstance(x.c, self.jc.Unpersistable),
                         "C came back: %s" % x.c.__class__)
         # now, a malicious one
-        mean = jelly.jelly(a)
+        mean = self.jc.jelly(a)
         try:
-            x = jelly.unjelly(mean, taster)
+            x = self.jc.unjelly(mean, taster)
             self.fail("x came back: %s" % x)
-        except jelly.InsecureJelly:
+        except self.jc.InsecureJelly:
             # OK
             pass
         self.assertIdentical(x.x, x.b, "Identity mismatch")
         #test class serialization
-        friendly = jelly.jelly(A, taster)
-        x = jelly.unjelly(friendly, taster)
+        friendly = self.jc.jelly(A, taster)
+        x = self.jc.unjelly(friendly, taster)
         self.assertIdentical(x, A, "A came back: %s" % x)
 
 class ClassA(pb.Copyable, pb.RemoteCopy):
@@ -227,8 +227,9 @@ class ClassB(pb.Copyable, pb.RemoteCopy):
         self.ref = ref
 
 class CircularReferenceTestCase(unittest.TestCase):
+    jc = newjelly
     def testSimpleCircle(self):
-        a = jelly.unjelly(jelly.jelly(ClassA()))
+        a = self.jc.unjelly(self.jc.jelly(ClassA()))
         self.failUnless(a.ref.ref is a, "Identity not preserved in circular reference")
 
 testCases = [JellyTestCase, CircularReferenceTestCase]
