@@ -167,14 +167,12 @@ class CannotBindTestCase (unittest.TestCase):
 
         # listen on port 9990
         p1 = reactor.listenTCP(9990, f, interface='127.0.0.1')
-        assert p1.getHost() == ("INET", "127.0.0.1", 9990,)
-                                
-        # Now the reactor will have bound port 9995.
+        self.assertEquals(p1.getHost(), ("INET", "127.0.0.1", 9990,))
+        
+        # make sure new listen raises error
+        self.assertRaises(CannotListenError, reactor.listenTCP, 9990, f, interface='127.0.0.1')
 
-        try:
-            p2 = reactor.listenTCP(9990, f, interface='127.0.0.1')
-            self.fail("startListening() should have raised an exception, and it didn't.")
-        except CannotListenError, le:
-            # print "good work!  You raised: ", le
-            pass
+        p1.stopListening()
+
+
 
