@@ -514,7 +514,7 @@ class Port(abstract.FileDescriptor):
         self.stopReading()
         if self.connected:
             self.reactor.callLater(0, self.connectionLost,
-                                   main.CONNECTION_DONE)
+                                   failure.Failure(main.CONNECTION_DONE))
 
     stopListening = loseConnection
 

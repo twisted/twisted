@@ -35,10 +35,12 @@ TEST, TEST.
  * switch to a new tmp directory and `cvs export release-X_X_X'.
 
  * Alright, we're ready to pack it up!
- * from one directory above "Twisted" CVS repos, run './Twisted/admin/release-twisted -v <version>'
+ * from one directory above "Twisted" CVS module, run './Twisted/admin/release-twisted -v <version>'
    * note that <version> must match the version number in twisted/copyright.py; I made
      the mistake of forgetting to update copyright once and this will prevent that :-)
  * There are a number of options available for 'release-twisted', use them if desired
+
+ * run 'md5sums ~/Releases/Twisted*', and 'gpg --clearsign' the output. update /products/download/md5sums.txt on the website.
 
  * Time to deploy!
  * su root

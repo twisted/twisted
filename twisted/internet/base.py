@@ -28,7 +28,7 @@ from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorUNIX
 from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorSSL
 from twisted.internet.interfaces import IReactorProcess
 from twisted.internet import main, error
-from twisted.python import threadable, log
+from twisted.python import threadable, log, failure
 from twisted.internet.defer import Deferred, DeferredList
 
 
@@ -183,7 +183,7 @@ class ReactorBase:
         for reader in selectables:
             try:
                 log.logOwner.own(reader)
-                reader.connectionLost(main.CONNECTION_LOST)
+                reader.connectionLost(failure.Failure(main.CONNECTION_LOST))
                 log.logOwner.disown(reader)
             except:
                 log.deferr()
