@@ -26,7 +26,7 @@ inherits from twisted.protocol.protocol.Factory. The default factory class
 just  instantiates each Protocol, and then sets on it an attribute called 
 <CODE>factory</CODE> which points to itself. This lets every 
 <CODE>Protocol</CODE> access, and possibly modify, 
-the persistent configuration. </P>
+the persistent configuration.</P>
 
 <p>It is frequently needed to serve the same thing on two or more different 
 ports or network addresses. This is why the Factory does not listen to 
@@ -34,7 +34,7 @@ connections,
 and in fact does not know anything about the network. This is the job of 
 a Port class. Usually, the class twisted.internet.tcp.Port will be used, 
 but there are several alternatives like twisted.internet.udp.Port and 
-twisted.internet.ssl.Port.</CODE>
+twisted.internet.ssl.Port.</CODE></P>
 
 <p>Because of this multi-faceted aspect to writing servers, it is useful 
 to have some place where all this things are bound together - using a 
@@ -109,6 +109,36 @@ class Echo(Protocol):
 cooperate to keep a count of the 
 active protocols in the factory. <CODE>connectionMade</CODE> immediately 
 closes the connection if there are too many active protocols.</P>
+
+<H3>Using the Protocol -- An Interlude</H3>
+
+<P>In this section, I will explain how to test your protocol easily.
+You'll still need to read the rest of the document to run a production-grade
+Twisted server, though.</P>
+
+<P>Here is code that will run the QOTD server discussed earlier</P>
+
+<PRE>
+from twisted.protocols.protocol import Protocol, Factory
+from twisted.internet.main import Application
+
+class QOTD(Protocol):
+
+    def connectionMade(self):
+        self.transport.write("An apple a day keeps the doctor away\r\n") 
+        self.transport.loseConnction()
+
+# Next lines are magic:
+factory = Factory()
+factory.protocol = QOTD
+app = Application("QOTD")
+# 8007 is the port you want to run under. Choose something >1024
+app.listenTCP(8007, factory)
+app.run()
+</PRE>
+
+<P>Don't worry about the last 6 magic lines -- you will understand
+what they do later in the document.</P>
 
 <H3>Helper Protocols</H3>
 
@@ -237,6 +267,36 @@ class LogfileFactory(Factory):
         self.fp.close()
 </PRE>
 
+<H3>Putting it All Together -- Another Interlude</H3>
+
+<P>So, you know what factories are, and want to run the QOTD
+with configurable quote server, do you? No problems, here is
+an example.</P>
+
+<PRE>
+from twisted.internet.protocols.protocol import Factory, Protocol
+from twisted.internet.main import Application
+
+class QOTD(Protocol):
+
+    def connectionMade(self):
+        self.transport.write(self.factory.quote+'\r\n')
+        self.transport.loseConnection()
+
+
+def makeQOTDFactory(quote=None):
+    factory = Factory()
+    factory.protocol = QOTD
+    factory.quote = quote or 'An apple a day keeps the doctor away'
+    return factory
+
+app = Application("QOTD-with-factory")
+app.listenTCP(8007, makeQOTDFactory("configurable quote"))
+app.run()
+</PRE>
+
+<P>And that's it!</P>
+
 <H2>Ports</H2>
 
 <P>While more ports can be written, it is a less frequent operation
@@ -313,7 +373,35 @@ class Options(usage.Options):
 
 def getPorts(app, config):
     factory = makeQOTDFactory(config.quote)
-    return [(int(config.port), factory]
+    return [(int(config.port), factory)]
 </PRE>
+
+<H2>Putting it All Together</H2>
+
+Well, now that you have all that, you're probably wondering, what do
+we do now to actually run the server? Well, nothing could be simpler.
+
+<PRE>
+% mktap quote --quote "Twisted is coolness personified"
+% su
+# twistd -f quote.tap
+# exit
+%
+</PRE>
+
+You need to run <CODE>twistd</CODE> as root, because it needs to bind
+to a privileged port. Don't worry -- it'll shed privileges and suid to
+the user you ran <CODE>mktap</CODE> as soon enough. It is not very 
+hard to configure it to run as any other user:
+
+<PRE>
+% mktap --uid 33 --gid 33 quote --quote "Twisted is coolness personified"
+% su
+# twistd -f quote.tap
+# exit
+%
+</PRE>
+
+Will run it as <CODE>www-data</CODE> on Debian systems, for example.
 
 </BODY></HTML>
