@@ -94,10 +94,10 @@ class Controller(resource.Resource):
             try:
                 controller = cm(request, node, model)
             except TypeError:
+                controller = cm(model)
                 warnings.warn("A Controller Factory takes "
                               "(request, node, model) "
                               "now instead of (model)", DeprecationWarning)
-                controller = controllerFactory(model)
         return controller
 
     def setSubcontrollerFactory(self, name, factory, setup=None):
