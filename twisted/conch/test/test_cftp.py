@@ -16,12 +16,12 @@ except ImportError:
     Crypto = None
 
 from twisted.cred import portal
-from twisted.internet import reactor, protocol, interfaces
+from twisted.internet import reactor, protocol, interfaces, defer
 from twisted.internet.utils import getProcessOutputAndValue
 from twisted.python import log, failure
 from twisted.test import test_process
 
-import test_conch
+import test_ssh, test_conch
 from test_filetransfer import SFTPTestBase, FileTransferTestAvatar
 import sys, os, os.path, time, tempfile
 
@@ -59,29 +59,27 @@ class SFTPTestProcess(protocol.ProcessProtocol):
 class CFTPClientTestBase(SFTPTestBase):
 
     def setUpClass(self):
-        open('dsa_test.pub','w').write(test_conch.publicDSA_openssh)
-        open('dsa_test','w').write(test_conch.privateDSA_openssh)
+        open('dsa_test.pub','w').write(test_ssh.publicDSA_openssh)
+        open('dsa_test','w').write(test_ssh.privateDSA_openssh)
         os.chmod('dsa_test', 33152)
-        open('kh_test','w').write('localhost '+test_conch.publicRSA_openssh)
+        open('kh_test','w').write('localhost '+test_ssh.publicRSA_openssh)
 
     def startServer(self):
-        test_conch.theTest = self
         realm = FileTransferTestRealm()
         p = portal.Portal(realm)
-        p.registerChecker(test_conch.ConchTestPublicKeyChecker())
-        fac = test_conch.SSHTestFactory()
+        p.registerChecker(test_ssh.ConchTestPublicKeyChecker())
+        fac = test_ssh.ConchTestServerFactory()
         fac.portal = p
-        self.fac = fac
         self.server = reactor.listenTCP(0, fac, interface="127.0.0.1")
 
     def stopServer(self):
-        try:
-            self.fac.proto.done = 1
-            self.fac.proto.transport.loseConnection()
-        except AttributeError:
-            pass
+        if hasattr(self.server.factory, 'proto'):
+            self.server.factory.proto.expectedLoseConnection = 1
+            self.server.factory.proto.transport.loseConnection()
+            util.spinWhile(lambda:self.server.factory.proto.transport.connected)
         self.server.stopListening()
         util.spinWhile(lambda:self.server.connected)
+        reactor.iterate()
        
     def tearDownClass(self):
         for f in ['dsa_test.pub', 'dsa_test', 'kh_test']:
@@ -125,7 +123,6 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, CFTPClientTestBase):
             self.skip = "couldn't start process"
         else:
             self.processProtocol.clearBuffer()
-            self.fac.proto.expectedLoseConnection = 1
 
     def tearDownClass(self):
         if hasattr(self, 'skip'):
@@ -302,9 +299,9 @@ class TestOurServerBatchFile(test_process.SignalMixin, CFTPClientTestBase):
         d.setTimeout(10)
         d.addBoth(l.append)
         while not l:
+            if hasattr(self.server.factory, 'proto'):
+                self.server.factory.proto.expectedLoseConnection = 1
             reactor.iterate(0.1)
-            if hasattr(self.fac, 'proto'):
-                self.fac.proto.expectedLoseConnection = 1
         os.remove(fn)
         result = l[0]
         if isinstance(result, failure.Failure):
@@ -382,9 +379,9 @@ class TestOurServerUnixClient(test_process.SignalMixin, CFTPClientTestBase):
         d.setTimeout(10)
         d.addBoth(l.append)
         while not l:
+            if hasattr(self.server.factory, 'proto'):
+                self.server.factory.proto.expectedLoseConnection = 1
             reactor.iterate(0.1)
-            if hasattr(self.fac, 'proto'):
-                self.fac.proto.expectedLoseConnection = 1
         os.remove(fn)
         result = l[0]
         if isinstance(result, failure.Failure):
@@ -408,11 +405,9 @@ exit
 """
         res = self._getBatchOutput(cmds)
         self.failIf(res.find('sftp_test') == -1)
-        self.stopServer()
         self.conn.transport.loseConnection()
-        reactor.iterate()
-        reactor.iterate()
-        reactor.iterate()
+        util.spinWhile(lambda:not self.conn.transport.transport.connected)
+        self.stopServer()
  
 if not unix or not Crypto or not interfaces.IReactorProcess(reactor, None):
     TestOurServerCmdLineClient.skip = "don't run w/o spawnprocess or PyCrypto"

@@ -179,6 +179,7 @@ def onConnect():
             log.msg('asking for remote forwarding for %s:%s' %
                     (remotePort, hostport))
             conn.requestRemoteForwarding(remotePort, hostport)
+        reactor.addSystemEventTrigger('before', 'shutdown', beforeShutdown)
     if not options['noshell'] or options['agent']:
         conn.openChannel(SSHSession())
     if options['fork']:
@@ -192,11 +193,14 @@ def onConnect():
                 import errno
                 if e.errno != errno.EBADF:
                     raise
-def stopConnection():
+
+def beforeShutdown():
     remoteForwards = options.remoteForwards
     for remotePort, hostport in remoteForwards:
         log.msg('cancelling %s:%s' % (remotePort, hostport))
         conn.cancelRemoteForwarding(remotePort)
+
+def stopConnection():
     if not options['reconnect']:
         reactor.callLater(0.1, _stopReactor)
 

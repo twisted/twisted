@@ -92,6 +92,11 @@ class SSHUserAuthServer(service.SSHService):
         d.addErrback(self._ebBadAuth)
 
     def _cbFinishedAuth(self, (interface, avatar, logout)):
+        self.transport.isAuthorized = True
+        service = self.transport.factory.getService(self.transport, 
+                self.nextService)
+        if not service:
+            raise ConchError('could not get next service: %s'%self.nextService)
         log.msg('%s authenticated with %s' % (self.user, self.method))
         if self.cancelLoginTimeout:
             self.cancelLoginTimeout.cancel()
@@ -99,7 +104,7 @@ class SSHUserAuthServer(service.SSHService):
         self.transport.sendPacket(MSG_USERAUTH_SUCCESS, '')
         self.transport.avatar = avatar
         self.transport.logoutFunction = logout
-        self.transport.setService(self.transport.factory.services[self.nextService]())
+        self.transport.setService(service())
 
     def _ebMaybeBadAuth(self, reason):
         reason.trap(error.NotEnoughAuthentication)
