@@ -1,3 +1,12 @@
+2003-04-09  Andrew Bennetts  <spiv@twistedmatrix.com>
+
+	* twisted/protocols/ftp.py (FTPClient):
+	Added STOR support to FTPClient, as well as support for using
+	Producers or Consumers instead of Protocols for uploading/downloading.
+	* twisted/protocols/policies.py (TimeoutWrapper):
+	Added a timeout policy that can be used to automatically disconnect
+	inactive connections.
+
 2003-04-07  Brian Warner  <warner@lothar.com>
 
 	* twisted/test/test_banana.py (BananaTestCase): add Acapnotic's
