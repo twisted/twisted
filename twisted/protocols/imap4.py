@@ -1814,7 +1814,7 @@ class IMAP4Client(basic.LineReceiver):
         message numbers to retrieved data, or whose errback is invoked
         if there is an error.
         """
-        fmt = 'BODY%s[%s%s%s]%s'
+        fmt = '%s BODY%s[%s%s%s]%s'
         if headerNumber is None:
             number = ''
         elif isinstance(headerNumber, types.IntType):
@@ -1838,7 +1838,7 @@ class IMAP4Client(basic.LineReceiver):
             extra = ''
         else:
             extra = '<%d.%d>' % (offset, length)
-        cmd = fmt % (peek and '.PEEK' or '', number, header, payload, extra)
+        cmd = fmt % (messages, peek and '.PEEK' or '', number, header, payload, extra)
         d = self.sendCommand(Command('FETCH', cmd, wantResponse=('FETCH',)))
         d.addCallback(self.__cbFetchSpecific)
         return d
@@ -1858,7 +1858,7 @@ class IMAP4Client(basic.LineReceiver):
         return info
 
     def _fetch(self, messages, **terms):
-        cmd = ' '.join([s.upper() for s in terms.keys()])
+        cmd = '%s %s' % (message, ' '.join([s.upper() for s in terms.keys()]))
         d = self.sendCommand(Command('FETCH', cmd, wantResponse=('FETCH',)))
         return d
 
