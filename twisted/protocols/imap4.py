@@ -1496,6 +1496,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         return to.lower().find(query.pop(0).lower()) != -1
 
     def search_UID(self, query, id, msg):
+        c = query.pop(0)
         m = parseIdList(c)
         return msg.getUID() in m
 
@@ -4185,7 +4186,7 @@ def getBodyStructure(msg, extended=False):
             i = 0
             while True:
                 submsg = msg.getSubPart(i)
-                L.append(getBodyStructure(submsg))
+                result.append(getBodyStructure(submsg))
                 i += 1
         except IndexError:
             result.append(minor)
