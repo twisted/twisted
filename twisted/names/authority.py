@@ -23,7 +23,7 @@ from twisted.protocols import dns
 from twisted.internet import defer
 from twisted.python import failure
 
-import common, bind
+import common
 
 #class LookupCacherMixin(object):
 #    _cache = None
