@@ -1367,11 +1367,12 @@ class AuthServ(Referenceable):
         return defr
 
     def mkchallenge(self, ident):
-        challenge = passport.challenge()
         if type(ident) == types.StringType:
             # it's an error, so we must fail.
+            challenge = passport.challenge()
             return challenge, AuthChallenger(None, self, challenge)
         else:
+            challenge = ident.challenge()
             return challenge, AuthChallenger(ident, self, challenge)
 
 class _ObjectRetrieval:

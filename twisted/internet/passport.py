@@ -191,9 +191,6 @@ def respond(challenge, password):
 
 def challenge():
     """I return some random data.
-
-    This is a method rather than a module-level function because it is
-    anticipated that we will want to change this to store salted passwords.
     """
     crap = ''
     for x in range(random.randrange(15,25)):
@@ -271,6 +268,11 @@ class Identity:
         self.hashedPassword = cyphertext
 
     def challenge(self):
+        """I return some random data.
+        
+        This is a method in addition to the module-level function because it is
+        anticipated that we will want to change this to store salted passwords.
+        """
         return challenge()
 
     def verifyPassword(self, challenge, hashedPassword):
