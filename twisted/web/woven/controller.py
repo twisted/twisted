@@ -171,7 +171,8 @@ class Controller(resource.Resource):
         self._invalid[input] = data
 
     def process(self, request, **kwargs):
-        log.msg("Processing results: ", kwargs)
+        if kwargs:
+            log.msg("Processing results: ", kwargs)
 
     def setSubmodel(self, submodel):
         self.submodel = submodel

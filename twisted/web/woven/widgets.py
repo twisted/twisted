@@ -276,7 +276,7 @@ class Widget(view.View):
             log.msg(template)
         if not self.tagName:
             self.tagName = self.templateNode.tagName
-        if node is not self.templateNode:
+        if node is not self.templateNode or self.tagName != self.templateNode.tagName:
             parent = node.parentNode
             node = document.createElement(self.tagName)
             node.parentNode = parent
@@ -366,7 +366,8 @@ class Widget(view.View):
                                             sm, name, self.templateNode)
                     if default is _RAISE:
                         raise Exception(msg)
-                    warnings.warn(msg)
+                    if DEBUG:
+                        warnings.warn(msg)
                     return default
                 slots = [node]
             self.slots[name] = slots
@@ -715,21 +716,21 @@ class List(Widget):
     A List should be specified in the template HTML as so::
 
        | <ul model="blah" view="List">
-       |     <li id="emptyList">This will be displayed if the list
+       |     <li pattern="emptyList">This will be displayed if the list
        |         is empty.</li>
-       |     <li id="listItem" view="Text">Foo</li>
+       |     <li pattern="listItem" view="Text">Foo</li>
        | </ul>
 
     If you have nested lists, you may also do something like this::
 
        | <table model="blah" view="List">
-       |     <tr class="listHeader"><th>A</th><th>B</th></tr>
-       |     <tr class="emptyList"><td colspan='2'>***None***</td></tr>
-       |     <tr class="listItem">
+       |     <tr pattern="listHeader"><th>A</th><th>B</th></tr>
+       |     <tr pattern="emptyList"><td colspan='2'>***None***</td></tr>
+       |     <tr pattern="listItem">
        |         <td><span view="Text" model="1" /></td>
        |         <td><span view="Text" model="2" /></td>
        |     </tr>
-       |     <tr class="listFooter"><td colspan="2">All done!</td></tr>
+       |     <tr pattern="listFooter"><td colspan="2">All done!</td></tr>
        | </table>
 
     Where blah is the name of a list on the model; eg::
@@ -797,9 +798,9 @@ class KeyedList(List):
     A KeyedList should be specified in the template HTML as so::
 
        | <ul model="blah" view="List">
-       |     <li id="emptyList">This will be displayed if the list is
+       |     <li pattern="emptyList">This will be displayed if the list is
        |         empty.</li>
-       |     <li id="listItem" view="Text">Foo</li>
+       |     <li pattern="keyedListItem" view="Text">Foo</li>
        | </ul>
 
     I can take advantage of C{listHeader}, C{listFooter} and C{emptyList}

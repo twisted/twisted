@@ -1,6 +1,8 @@
 from twisted.web.woven import model, page
 
-model = model.Model()
+# The AttributeModel sets submodels as attributes of itself.
+# May not be secure theoretically, but we're using it for simple purposes here.
+model = model.AttributeModel()
 
 model.setSubmodel("greeting", "Hello, world!")
 model.setSubmodel("anInt", 5465465)
