@@ -1053,9 +1053,12 @@ class RegisterProxy(Proxy):
                 d = self.registry.registerAddress(message.uri, toURL, contactURL)
             else:
                 d = self.registry.getRegistrationInfo(toURL)
-            d.addCallbacks(self._registeredResult, self._registerError, callbackArgs=(message,))
+            d.addCallbacks(self._cbRegister, self._ebRegister,
+                callbackArgs=(message,),
+                errbackArgs=(message,)
+            )
 
-    def _registeredResult(self, registration, message):
+    def _cbRegister(self, registration, message):
         response = self.responseFromRequest(200, message)
         if registration.contactURL != None:
             response.addHeader("contact", registration.contactURL.toString())
@@ -1063,7 +1066,7 @@ class RegisterProxy(Proxy):
         response.addHeader("content-length", "0")
         self.deliverResponse(response)
 
-    def _registerError(self, error):
+    def _ebRegister(self, error, message):
         error.trap(RegistrationError, LookupError)
         # XXX return error message, and alter tests to deal with
         # this, currently tests assume no message sent on failure
@@ -1080,16 +1083,16 @@ class RegisterProxy(Proxy):
                 else:
                     name, contactURL, params = parseAddress(contact)
                 d = self.registry.unregisterAddress(message.uri, toURL, contactURL)
-                d.addCallback(self._cbUnregistered, message
-                    ).addErrback(self._ebUnregistered, message
+                d.addCallback(self._cbUnregister, message
+                    ).addErrback(self._ebUnregister, message
                     )
 
-    def _cbUnregistered(self, registration, message):
+    def _cbUnregister(self, registration, message):
         msg = self.responseFromRequest(200, message)
         msg.headers.setdefault('contact', []).append(registration.contactURL)
         self.deliverResponse(msg)
 
-    def _ebUnregistered(self, registration, message):
+    def _ebUnregister(self, registration, message):
         pass
 
 
