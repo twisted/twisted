@@ -17,7 +17,7 @@
 #
 # to run test, use 'trial test_flow.py'
 #
-
+from __future__ import generators
 from __future__ import nested_scopes
 import flow
 from twisted.trial import unittest
@@ -107,6 +107,38 @@ class badgen:
     def next(self):
         return self.state()
 
+class buildlist:
+    """ building a list
+
+        def buildlist(src):
+            out = []
+            yield src
+            for itm in src:
+                out.append(itm)
+                yield src
+            yield out
+    """
+    def __init__(self, src):
+        self.src  = src
+    def __iter__(self):
+        self.out  = []
+        self.state = self.yield_src
+        return self
+    def yield_src(self):
+        self.state = self.yield_append
+        return self.src
+    def yield_append(self):
+        try:
+            self.out.append(self.src.next())
+        except flow.StopIteration: 
+            self.state = self.yield_finish
+            return self.out
+        return self.src
+    def yield_finish(self):
+        raise flow.StopIteration
+    def next(self):
+        return self.state()
+
 class FlowTest(unittest.TestCase):
     def testBasic(self):
         lhs = [1,2,3]
@@ -139,6 +171,23 @@ class FlowTest(unittest.TestCase):
         lhs = ['Title', (1,'one'),(2,'two'),(3,'three')]
         d = flow.Deferred(consumer())
         self.assertEquals(lhs, unittest.deferredResult(d))
+
+    def testBuildList(self):
+        src = flow.wrap([1,2,3])
+        out = flow.Block(buildlist(src)).next()
+        self.assertEquals(out,[1,2,3])
+
+    def testCallback(self):
+        cb = flow.Callback()
+        d = flow.Deferred(buildlist(cb))
+        def startFlow():
+            for x in range(9):
+                cb.callback(x)
+            cb.finish()
+        from twisted.internet import reactor
+        reactor.callLater(0, startFlow)
+        rhs = unittest.deferredResult(d)
+        self.assertEquals([range(9)],rhs)
 
     def testFailure(self):
         #

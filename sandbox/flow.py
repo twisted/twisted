@@ -349,6 +349,42 @@ class Block(Stage):
                 raise TypeError("Unsupported flow instruction")
             return stage.next()
 
+class CooperateCallback(Cooperate):
+    """ Cooperate, with indirect rescheduling
+
+        This is similar to cooperate, in that all objects on the
+        call stack are popped; but differs in that it uses the 
+        callback function to resume the Flow.
+    """
+    def __init__(self, results, finished):
+        Cooperate.__init__(self)
+        self._results = results
+        self._finished = finished
+    def finish(self):
+        self._finished.append(1)
+        self.execute()
+    def callback(self, value):
+        self._results.append(value)
+        self.execute()
+
+class Callback(Stage):
+    """ Converts a single-thread push interface into a pull interface """
+    def __init__(self, *trap):
+        Stage.__init__(self, *trap)
+        self._results    = []
+        self._finished   = []
+        self._cooperate  = CooperateCallback(self._results, self._finished)
+        self.callback    = self._cooperate.callback
+        self.finish      = self._cooperate.finish
+    def _yield(self):
+        Stage._yield(self)
+        if self.stop or self._finished:
+            self.stop = 1
+            return
+        if not self._results: 
+            return self._cooperate
+        self.result = self._results.pop(0)
+
 class CooperateDeferred(Cooperate):
     """ Cooperate, with indirect rescheduling
 
@@ -388,6 +424,7 @@ class DeferredWrapper(Stage):
         if self._result:
             self.result = self._result
             self._stop_next = 1
+
 #
 # Items following this comment depend upon twisted.internet
 #
@@ -490,10 +527,13 @@ class Deferred(defer.Deferred):
                 return
             if result:
                 if isinstance(result, Cooperate):
+                    if isinstance(result, CooperateCallback):
+                        result.execute = self._execute
+                        return
                     if isinstance(result, CooperateDeferred):
                         result.deferred.addBoth(self._execute)
-                    else:
-                        reactor.callLater(result.timeout, self._execute)
+                        return
+                    reactor.callLater(result.timeout, self._execute)
                     return
                 raise TypeError("Unsupported flow instruction")
             if not self.failureAsResult: 
