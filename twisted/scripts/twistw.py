@@ -1,5 +1,4 @@
-
-# Copyright (C) 2001 Matthew W. Lefkowitz
+# Copyright (C) 2003 Matthew W. Lefkowitz
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
@@ -13,6 +12,7 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
 from twisted.python import log
 from twisted.application import app, service, internet
 import sys, os
@@ -20,6 +20,9 @@ import sys, os
 class ServerOptions(app.ServerOptions):
     synopsis = "Usage: twistw [options]"
 
+    optFlags = [['nodaemon','n',  "(for backwards compatability)."],
+                ]
+    
     def opt_version(self):
         """Print version information and exit.
         """
