@@ -17,7 +17,8 @@
 from pyunit import unittest
 from twisted.protocols import ftp, loopback
 from twisted.internet import reactor
-from twisted.internet.protocol import Protocol, FileWrapper, Factory
+from twisted.internet.protocol import Protocol, FileWrapper, Factory, \
+                                      ClientFactory
 
 try:
     from cStringIO import StringIO
@@ -121,7 +122,9 @@ class FTPClientAndServerTests(FTPServerTests):
 
         # Connect
         client = ftp.FTPClient(passive=self.passive)
-        reactor.clientTCP('localhost', FTP_PORT, client)
+        factory = ClientFactory()
+        factory.buildProtocol = lambda s, c=client: c
+        reactor.connectTCP('localhost', FTP_PORT, factory)
 
         # Issue the command and set the callbacks
         fileList = ftp.FTPFileListProtocol()
@@ -151,7 +154,9 @@ class FTPClientAndServerTests(FTPServerTests):
 
         # Connect
         client = ftp.FTPClient(passive=self.passive)
-        reactor.clientTCP('localhost', FTP_PORT, client)
+        factory = ClientFactory()
+        factory.buildProtocol = lambda s, c=client: c
+        reactor.connectTCP('localhost', FTP_PORT, factory)
 
         # Download this module's file (test_ftp.py/.pyc/.pyo)
         import test_ftp
@@ -211,7 +216,9 @@ class FTPClientAndServerTests(FTPServerTests):
         d = client.list('.', ftp.FTPFileListProtocol()) 
         d.addCallbacks(badResult, gotError, errbackArgs=(1,))
 
-        reactor.clientTCP('localhost', FTP_PORT, client)
+        factory = ClientFactory()
+        factory.buildProtocol = lambda s,c=client: c
+        reactor.connectTCP('localhost', FTP_PORT, factory)
         while None in errors and not self.callbackException:
             reactor.iterate()
 
