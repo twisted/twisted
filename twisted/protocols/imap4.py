@@ -28,6 +28,7 @@ from __future__ import nested_scopes
 from twisted.protocols import basic
 from twisted.internet import defer
 from twisted.python import log, components
+from twisted.python.compat import *
 
 import binascii, operator, re, string, types, rfc822
 
@@ -571,7 +572,11 @@ class IMAP4Server(basic.LineReceiver):
             self._cbFetch(d, tag)
     
     def _cbFetch(self, results, tag):
-        pass
+        for ((mId, part), value) in results.items():
+            self.sendUntaggedResponse(
+                '%d %s %s' % (mId, part, collapseNestedLists(value))
+            )
+        self.sendPositiveResponse(tag, 'FETCH completed')
 
     def _ebFetch(self, failure, tag):
         self.sendBadResponse(tag, 'FETCH failed: ' + str(failure))
@@ -1710,7 +1715,10 @@ def Query(**kwarg):
     @return: The formatted query string
     """
     cmd = []
-    for (k, v) in kwarg.items():
+    keys = kwarg.keys() # Not strictly necessary - but useful
+    keys.sort()
+    for k in keys:
+        v = kwarg[k]
         k = k.upper()
         if k in _SIMPLE_BOOL and v:
            cmd.append(k)
@@ -1856,6 +1864,30 @@ def parseNestedParens(s):
     if len(contentStack) != 1:
         raise MismatchedNesting(s)
     return collapseStrings(contentStack[0])
+
+def collapseNestedLists(items):
+    """Turn a nested list structure into an s-exp-like string.
+    
+    @type items: Any iterable
+    
+    @rtype: C{str}
+    """
+    pieces = []
+    for i in items:
+        if i is None:
+            pieces.extend([' ', 'NIL'])
+        elif isinstance(i, types.StringTypes):
+            if '\n' in i:
+                pieces.extend([' ', '{%d}' % (len(i),), IMAP4ServerProtocol.delimiter, i])
+            elif ' ' in i or '\t' in i:
+                pieces.extend([' ', '"%s"' % (i,)])
+            else:
+                pieces.extend([' ', i])
+        elif pieces and pieces[-1].upper() == 'BODY.PEEK':
+            pieces.append('[%s]' % (collapseNestedLists(i),))
+        else:
+            pieces.extend([' ', '(%s)' % (collapseNestedLists(i),)])
+    return ''.join(pieces[1:])
 
 
 class AuthenticationError(IMAP4Exception): pass

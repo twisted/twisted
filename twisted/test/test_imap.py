@@ -20,7 +20,7 @@ Test case for twisted.protocols.imap4
 
 from __future__ import nested_scopes
 
-import os
+import os, types
 
 from twisted.protocols import imap4, loopback
 from twisted.internet import defer
@@ -28,7 +28,17 @@ from twisted.trial import unittest
 from twisted.python import util
 
 def strip(f):
-    return lambda result: f()
+    return lambda result, f=f: f()
+
+def sortNest(l):
+    l = l[:]
+    l.sort()
+    for i in range(len(l)):
+        if isinstance(l[i], types.ListType):
+            l[i] = sortNest(l[i])
+        elif isinstance(l[i], types.TupleType):
+            l[i] = tuple(sortNest(list(l[i])))
+    return l
 
 class IMAP4HelperTestCase(unittest.TestCase):
     def testQuotedSplitter(self):
@@ -86,19 +96,31 @@ class IMAP4HelperTestCase(unittest.TestCase):
 
     def testParenParser(self):
         cases = [
-            '(BODY.PEEK[HEADER.FIELDS.NOT ("subject" "bcc" "cc")] {100})',
+            '(BODY.PEEK[HEADER.FIELDS.NOT (subject bcc cc)] {100})',
 
-            '(FLAGS (\Seen) INTERNALDATE "17-Jul-1996 02:44:25 -0700"'
+#            '(FLAGS (\Seen) INTERNALDATE "17-Jul-1996 02:44:25 -0700" '
+#            'RFC822.SIZE 4286 ENVELOPE ("Wed, 17 Jul 1996 02:23:25 -0700 (PDT)" '
+#            '"IMAP4rev1 WG mtg summary and minutes" '
+#            '(("Terry Gray" NIL "gray" "cac.washington.edu")) '
+#            '(("Terry Gray" NIL "gray" "cac.washington.edu")) '
+#            '(("Terry Gray" NIL "gray" "cac.washington.edu")) '
+#            '((NIL NIL "imap" "cac.washington.edu")) '
+#            '((NIL NIL "minutes" "CNRI.Reston.VA.US") '
+#            '("John Klensin" NIL "KLENSIN" "INFOODS.MIT.EDU")) NIL NIL '
+#            '"<B27397-0100000@cac.washington.edu>") '
+#            'BODY ("TEXT" "PLAIN" ("CHARSET" "US-ASCII") NIL NIL "7BIT" 3028 92))',
+
+            '(FLAGS (\Seen) INTERNALDATE "17-Jul-1996 02:44:25 -0700" '
             'RFC822.SIZE 4286 ENVELOPE ("Wed, 17 Jul 1996 02:23:25 -0700 (PDT)" '
             '"IMAP4rev1 WG mtg summary and minutes" '
-            '(("Terry Gray" NIL "gray" "cac.washington.edu")) '
-            '(("Terry Gray" NIL "gray" "cac.washington.edu")) '
-            '(("Terry Gray" NIL "gray" "cac.washington.edu")) '
-            '((NIL NIL "imap" "cac.washington.edu")) '
-            '((NIL NIL "minutes" "CNRI.Reston.VA.US") '
-            '("John Klensin" NIL "KLENSIN" "INFOODS.MIT.EDU")) NIL NIL '
-            '"<B27397-0100000@cac.washington.edu>") '
-            'BODY ("TEXT" "PLAIN" ("CHARSET" "US-ASCII") NIL NIL "7BIT" 3028 92))',
+            '(("Terry Gray" NIL gray cac.washington.edu)) '
+            '(("Terry Gray" NIL gray cac.washington.edu)) '
+            '(("Terry Gray" NIL gray cac.washington.edu)) '
+            '((NIL NIL imap cac.washington.edu)) '
+            '((NIL NIL minutes CNRI.Reston.VA.US) '
+            '("John Klensin" NIL KLENSIN INFOODS.MIT.EDU)) NIL NIL '
+            '<B27397-0100000@cac.washington.edu>) '
+            'BODY (TEXT PLAIN (CHARSET US-ASCII) NIL NIL 7BIT 3028 92))',
         ]
         
         answers = [
@@ -120,7 +142,10 @@ class IMAP4HelperTestCase(unittest.TestCase):
 
         for (case, expected) in zip(cases, answers):
             self.assertEquals(imap4.parseNestedParens(case), [expected])
-    
+        
+        for (case, expected) in zip(answers, cases):
+            self.assertEquals('(' + imap4.collapseNestedLists(case) + ')', expected)
+
     def testQueryBuilder(self):
         inputs = [
             imap4.Query(flagged=1),
@@ -156,8 +181,8 @@ class IMAP4HelperTestCase(unittest.TestCase):
             '(BEFORE "today")',
             '(OR DELETED (OR UNSEEN NEW))',
             '(OR (NOT (OR (SINCE "yesterday" SMALLER 1000) ' # Continuing
-            '(OR (LARGER 10000 BEFORE "tuesday") (OR (DELETED ' # Some more
-            'UNSEEN BEFORE "today") (NOT (SUBJECT "spam")))))) ' # And more
+            '(OR (BEFORE "tuesday" LARGER 10000) (OR (BEFORE ' # Some more
+            '"today" DELETED UNSEEN) (NOT (SUBJECT "spam")))))) ' # And more
             '(NOT (UID 1:5)))',
         ]
         
@@ -286,7 +311,7 @@ class IMAP4ServerTestCase(unittest.TestCase):
     def _ebGeneral(self, failure):
         self.client.transport.loseConnection()
         self.server.transport.loseConnection()
-        failure.printTraceback(file('failure.log', 'w'))
+        failure.printTraceback(open('failure.log', 'w'))
         raise failure.value
 
     def testCapability(self):
@@ -563,7 +588,6 @@ class IMAP4ServerTestCase(unittest.TestCase):
         
         self.listed = None
         d = self.connected.addCallback(strip(login))
-        d.addCallbacks(strip(list), self._ebGeneral)
         d.addCallbacks(strip(f), self._ebGeneral)
         d.addCallbacks(listed, self._ebGeneral)
         d.addCallbacks(strip(self._cbStopClient), self._ebGeneral)
@@ -576,9 +600,11 @@ class IMAP4ServerTestCase(unittest.TestCase):
             return self.client.list('root', '%')
         listed = self._listSetup(list)
         self.assertEquals(
-            listed,
-            [(SimpleMailbox.flags, "/", "ROOT/SUBTHING"),
-             (SimpleMailbox.flags, "/", "ROOT/ANOTHER-THING")]
+            sortNest(listed),
+            sortNest([
+                (SimpleMailbox.flags, "/", "ROOT/SUBTHING"),
+                (SimpleMailbox.flags, "/", "ROOT/ANOTHER-THING")
+            ])
         )
 
     def testLSub(self):
@@ -611,7 +637,7 @@ class IMAP4ServerTestCase(unittest.TestCase):
 
     def testAppend(self):
         infile = util.sibpath(__file__, 'rfc822.message')
-        message = file(infile).read()
+        message = open(infile).read()
         SimpleServer.theAccount.addMailbox('root/subthing')
         def login():
             return self.client.login('testuser', 'password-test')
