@@ -273,8 +273,8 @@ class Proxy(Referenced):
     This can be useful when dealing with Perspectives, Copieds, and Cacheds.
     It is legal to implement a method as such on a perspective::
 
-      def perspective_getProxyForOther(self, name):
-          return Proxy(self, self.service.getPerspectiveNamed(name))
+     | def perspective_getProxyForOther(self, name):
+     |     return Proxy(self, self.service.getPerspectiveNamed(name))
 
     This will allow you to have references to Perspective objects in two
     different ways.  One is through the initial 'attach' call -- each peer will
@@ -597,14 +597,14 @@ class Reference(Serializable, styles.Ephemeral):
     callback in as a 'pbcallback'.  Errors can be detected with a 'pberrback'.
     For example::
 
-      def doIt(reference):
-          reference.doIt("hello","world", frequency=2,
-                         pbcallback=didIt,
-                         pberrback=couldntDoIt)
-      def didIt(result):
-          print 'I did it and the answer was: %s'% result
-      def couldntDoIt(traceback):
-          print 'I couldn't do it and the traceback was: %s' % traceback
+      | def doIt(reference):
+      |     reference.doIt("hello","world", frequency=2,
+      |                   pbcallback=didIt,
+      |                    pberrback=couldntDoIt)
+      | def didIt(result):
+      |     print 'I did it and the answer was: %s'% result
+      | def couldntDoIt(traceback):
+      |     print 'I couldn't do it and the traceback was: %s' % traceback
 
     This snippet of code will execute a method and report feedback.
     """
