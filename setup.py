@@ -275,8 +275,8 @@ desktop environments, and your toaster.
     ],
     'scripts' : [
         'bin/manhole', 'bin/mktap', 'bin/twistd',
-        'bin/im', 'bin/t-im', 'bin/tap2deb', 'bin/tap2rpm',
-        'bin/tapconvert', 'bin/websetroot',
+        'bin/t-im', 'bin/tap2deb', 'bin/tap2rpm',
+        'bin/tapconvert', 
         'bin/lore/lore',
         'bin/tkmktap', 'bin/conch/conch', 'bin/conch/ckeygen',
         'bin/conch/tkconch', 'bin/trial', 'bin/mail/mailmail'
@@ -339,7 +339,6 @@ wovenFiles = ['FlashConduitGlue.html', 'WebConduitGlue.html',
 internetPath = os.path.join("twisted", "internet")
 
 setup_args['data_files']=[
-    (imPath, [os.path.join(imPath, 'instancemessenger.glade')]),
     (pbuiPath, [os.path.join(pbuiPath, 'login2.glade')]),
     (manuiPath, [os.path.join(manuiPath, 'gtk2manhole.glade')]),
     (lorePath, [os.path.join(lorePath, "template.mgp")]),
