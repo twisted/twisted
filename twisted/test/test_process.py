@@ -21,7 +21,7 @@ Test running processes.
 
 from pyunit import unittest
 
-import cStringIO, gzip, os
+import cStringIO, gzip, os, popen2, time, sys
 
 # Twisted Imports
 from twisted.internet import process, main
@@ -34,7 +34,7 @@ class ProcessTestCase(unittest.TestCase):
     
     def testProcess(self):
         f = cStringIO.StringIO()
-        p = process.Process("/bin/gzip", ["-"], {}, "/tmp")
+        p = process.Process("/bin/gzip", ["/bin/gzip", "-"], {}, "/tmp")
         p.handleChunk = f.write
         p.write(s)
         p.closeStdin()
@@ -43,6 +43,17 @@ class ProcessTestCase(unittest.TestCase):
         f.seek(0, 0)
         gf = gzip.GzipFile(fileobj=f)
         self.assertEquals(gf.read(), s)
+    
+    def testStderr(self):
+        # we assume there is no file named ZZXXX..., both in . and in /tmp
+        err = popen2.popen3("/bin/ls ZZXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")[2].read()
+        f = cStringIO.StringIO()
+        p = process.Process('/bin/ls', ["/bin/ls", "ZZXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"], {}, "/tmp")
+        p.handleError = f.write
+        p.closeStdin()
+        while hasattr(p, 'writer'):
+            main.iterate()
+        self.assertEquals(err, f.getvalue())
 
 
 if os.name != 'posix':
