@@ -123,13 +123,13 @@ if hasattr(socket, 'inet_ntop'):
         for r in answers:
             if r.name == name and r.type == dns.A6:
                 return socket.inet_ntop(socket.AF_INET6, r.payload.address)
-        for r in ans:
+        for r in answers:
             if r.name == name and r.type == dns.AAAA:
                 return socket.inet_ntop(socket.AF_INET6, r.payload.address)
-        for r in ans:
+        for r in answers:
             if r.name == name and r.type == dns.A:
                 return socket.inet_ntop(socket.AF_INET, r.payload.address)
-        for r in ans:
+        for r in answers:
             if r.name == name and r.type == dns.CNAME:
                 result = extractRecord(resolver, r.payload.name, answers, level - 1)
                 if not result:
