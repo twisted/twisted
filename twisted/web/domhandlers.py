@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from twisted.web.dominput import *
+from twisted.web.woven.input import *
 from twisted.python import log
 
-log.msg("twisted.web.domhandlers is deprecated; it has been renamed dominput")
+log.msg("DeprecationWarning: twisted.web.domhandlers has been renamed twisted.web.woven.input.\n")
