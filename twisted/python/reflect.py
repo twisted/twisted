@@ -213,9 +213,11 @@ def refrump(obj):
 
 def macro(name, filename, source, **identifiers):
     """macro(name, source, **identifiers)
-    This allows you to create macro-like behaviors in python.  See twisted.hook
-    for an example of its usage.
+
+    This allows you to create macro-like behaviors in python.  See
+    twisted.python.hook for an example of its usage.
     """
+
     if not identifiers.has_key('name'):
         identifiers['name'] = name
     source = source % identifiers
@@ -246,7 +248,7 @@ def prefixedMethodNames(classObj, prefix):
     dct = {}
     addMethodNamesToDict(classObj, dct, prefix)
     return dct.keys()
-    
+
 def addMethodNamesToDict(classObj, dict, prefix, baseClass=None):
     """
     addMethodNamesToDict(classObj, dict, prefix, baseClass=None) -> dict
@@ -259,7 +261,7 @@ def addMethodNamesToDict(classObj, dict, prefix, baseClass=None):
     """
     for base in classObj.__bases__:
         addMethodNamesToDict(base, dict, prefix, baseClass)
-        
+
     if baseClass is None or baseClass in classObj.__bases__:
         for name, method in classObj.__dict__.items():
             optName = name[len(prefix):]
@@ -267,7 +269,7 @@ def addMethodNamesToDict(classObj, dict, prefix, baseClass=None):
                 and (name[:len(prefix)] == prefix)
                 and (len(optName))):
                 dict[optName] = 1
-                
+
 
 def accumulateClassDict(classObj, attr, dict, baseClass=None):
     """ TODO: Undocumented """
