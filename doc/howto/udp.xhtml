@@ -81,7 +81,8 @@ from twisted.internet import reactor
 class Helloer(DatagramProtocol):
 
     def startProtocol(self):
-        self.transport.connect("www.example.com", 1234).addCallback(self._cbConnected)
+        d = self.transport.connect("www.example.com", 1234)
+        d.addCallback(self._cbConnected)
 
     def _cbConnected(self, (host, port)):
         print "we can only send to %s now" % str((host, port))
