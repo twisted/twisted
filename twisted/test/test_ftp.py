@@ -41,7 +41,8 @@ class FTPTest(unittest.TestCase):
         self.serverPort = reactor.listenTCP(FTP_PORT, self.serverFactory)
 
     def tearDown(self):
-        self.serverPort.loseConnection()
+        #self.serverPort.loseConnection()
+        self.serverPort.stopListening()
         # Make sure the port really is closed, to avoid "address already in use"
         # errors.
         reactor.iterate()
