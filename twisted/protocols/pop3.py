@@ -28,8 +28,10 @@ import md5
 from twisted.protocols import basic
 from twisted.internet import protocol
 from twisted.internet import defer
+from twisted.internet import interfaces
 from twisted.python import components
 from twisted.python import log
+
 from twisted import cred
 import twisted.cred.error
 import twisted.cred.credentials
@@ -66,6 +68,8 @@ class POP3Error(Exception):
     pass
 
 class POP3(basic.LineReceiver):
+
+    __implements__ = (interfaces.IProducer,)
 
     magic = None
     _userIs = None
@@ -178,18 +182,27 @@ class POP3(basic.LineReceiver):
             return
         size = max(int(size), resp)
         self.successResponse(size)
-        while size:
-            line = fp.readline()
-            if not line:
-                break
-            if line[-1] == '\n':
-                line = line[:-1]
-            if line[:1] == '.':
-                line = '.'+line
-            self.sendLine(line[:size])
-            size = size-len(line[:size])
-        self.sendLine('.')
+        self.msgFile = fp
+        self.transport.registerProducer(self, 0)
+    
+    def resumeProducing(self):
+        if self.msgFile:
+            chunk = self.msgFile.read(8192)
+        if not self.msgFile or not chunk:
+            self.mailFile = None
+            self.transport.unregisterProducer()
+            if self.lastsent != '\n':
+                line = '\r\n.'
+            else:
+                line = '.'
+            self.sendLine('.')
+            return
 
+        chunk = chunk.replace('\n', '\r\n')
+        chunk = chunk.replace('\r\n.', '\r\n..')
+        self.transport.write(chunk)
+        self.lastsent = chunk[-1]
+        
     def do_RETR(self, i):
         self.highest = max(self.highest, i)
         resp, fp = self.getMessageFile(i)
