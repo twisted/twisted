@@ -22,8 +22,10 @@ class TimeoutError(Exception): pass
 class SimpleRoot(pb.Root):
     def remote_poop(self):
         return defer.fail(failure.Failure(PoopError("Someone threw poopie at me!")))
+
     def remote_fail(self):
         raise FailError("I'm a complete failure! :(")
+
     def remote_die(self):
         raise DieError("*gack*")
 
@@ -32,54 +34,61 @@ class PBFailureTest(unittest.TestCase):
 
     compare = unittest.TestCase.assertEquals
     unsafeTracebacks = 0
-    
+
     def setUp(self):
-        self.results = [42000, 4200, 420, 42]
-        
+        self._setUpServer()
+        self._setUpClient()
+
+    def _setUpServer(self):
+        self.serverFactory = pb.PBServerFactory(SimpleRoot())
+        self.serverFactory.unsafeTracebacks = self.unsafeTracebacks
+        self.serverPort = reactor.listenTCP(0, self.serverFactory, interface="127.0.0.1")
+
+    def _setUpClient(self):
+        portNo = self.serverPort.getHost().port
+        self.clientFactory = pb.PBClientFactory()
+        self.clientConnector = reactor.connectTCP("127.0.0.1", portNo, self.clientFactory)
+
+    def tearDown(self):
+        return defer.gatherResults([
+            self._tearDownServer(),
+            self._tearDownClient()])
+
+    def _tearDownServer(self):
+        return self.serverPort.stopListening()
+
+    def _tearDownClient(self):
+        self.clientConnector.disconnect()
+        return defer.succeed(None)
+
     def testPBFailures(self):
-        factory = pb.PBServerFactory(SimpleRoot())
-        factory.unsafeTracebacks = self.unsafeTracebacks
-        p = reactor.listenTCP(0, factory, interface="127.0.0.1")
-        self.port = p.getHost().port
-        self.runClient()
-        reactor.run()
-        p.stopListening()
-        log.flushErrors(PoopError, FailError, DieError, AttributeError)
+        d = self.clientFactory.getRootObject()
+        d.addCallback(self.connected)
+        d.addCallback(self.cleanupLoggedErrors)
+        return d
 
-    def runClient(self):
-        f = pb.PBClientFactory()
-        reactor.connectTCP("127.0.0.1", self.port, f)
-        f.getRootObject().addCallbacks(self.connected, self.notConnected)
-        self.id = reactor.callLater(10, self.timeOut)
-
-    def a(self, d):
+    def addFailingCallbacks(self, remoteCall, expectedResult):
         for m in (self.failurePoop, self.failureFail, self.failureDie, self.failureNoSuch, lambda x: x):
-            d.addCallbacks(self.success, m)
-
-    def stopReactor(self):
-        self.id.cancel()
-        reactor.crash()
+            remoteCall.addCallbacks(self.success, m, callbackArgs=(expectedResult,))
+        return remoteCall
 
     ##
     # callbacks
     ##
 
+    def cleanupLoggedErrors(self, ignored):
+        errors = log.flushErrors(PoopError, FailError, DieError, AttributeError)
+        self.assertEquals(len(errors), 4)
+        return ignored
+
     def connected(self, persp):
-        self.a(persp.callRemote('poop'))
-        self.a(persp.callRemote('fail'))
-        self.a(persp.callRemote('die'))
-        self.a(persp.callRemote("nosuch"))
+        methods = (('poop', 42), ('fail', 420), ('die', 4200), ('nosuch', 42000))
+        return defer.gatherResults([
+            self.addFailingCallbacks(persp.callRemote(meth), result) for (meth, result) in methods])
 
-    def notConnected(self, fail):
-        self.stopReactor()
-        raise pb.Error("There's probably something wrong with your environment"
-                       ", because I couldn't connect to myself.")
-
-    def success(self, result):
-        if result == self.results[-1]:
-            self.results.pop()
-        if not self.results:
-            self.stopReactor()
+    def success(self, result, expectedResult):
+        self.assertEquals(result, expectedResult)
+        return result
 
     def failurePoop(self, fail):
         fail.trap(PoopError)
@@ -102,10 +111,6 @@ class PBFailureTest(unittest.TestCase):
         fail.trap(AttributeError)
         self.compare(fail.traceback, "Traceback unavailable\n")
         return 42000
-        
-    def timeOut(self):
-        reactor.crash()
-        raise TimeoutError("Never got all three failures!")
 
 
 class PBFailureTestUnsafe(PBFailureTest):
