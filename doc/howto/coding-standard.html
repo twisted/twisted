@@ -286,6 +286,15 @@ except ImportError:
     Underscores in method names in twisted code are therefore
     expected to have some semantic associated with them.</p>
 
+    <h2>Special Methods</h2>
+
+    <p>The augmented assignment protocol, defined by __iadd__ and other
+    similarly named methods, can be used to allow objects to be modified in
+    place or to rebind names if an object is immutable -- both through use
+    of the same operator.  This can lead to confusing code, which in turn
+    leads to buggy code.  For this reason, methods of the augmented
+    assignment protocol should not be used in Twisted.</p>
+
     <h2>Functions</h2>
 
     <p>Functions should be named similiarly to methods.</p>
