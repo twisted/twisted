@@ -193,7 +193,7 @@ class DOMTemplate(Resource):
         self.outstandingCallbacks = 0
         self.failed = 0
 
-    def render(self, request, block=1):
+    def render(self, request):
         template = self.getTemplate(request)
         if template:
             self.d = microdom.parseString(template)
@@ -201,13 +201,7 @@ class DOMTemplate(Resource):
             if not self.templateFile:
                 raise AttributeError, "%s does not define self.templateFile to operate on" % self.__class__
             self.d = self.lookupTemplate(request)
-        if block:
-            self.handleDocument(request, self.d)
-        else:
-            # Schedule processing of the document for later...
-            reactor.callLater(0, self.handleDocument, request, self.d)
-
-        # So we can return NOT_DONE_YET
+        self.handleDocument(request, self.d)
         return NOT_DONE_YET
 
     def getTemplate(self, request):

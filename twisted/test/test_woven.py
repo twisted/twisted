@@ -34,7 +34,7 @@ class WovenTC(unittest.TestCase):
         self.t = self.resourceFactory(self.m)
         self.r = test_web.DummyRequest([])
         self.prerender()
-        self.t.render(self.r, block=1)
+        self.t.render(self.r)
         
         self.channel = "a fake channel"
         self.output = ''.join(self.r.written)

@@ -17,7 +17,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.54 $"[11:-2]
+__version__ = "$Revision: 1.55 $"[11:-2]
 
 # Sibling imports
 import interfaces
@@ -96,7 +96,7 @@ class View(template.DOMTemplate):
         self.viewStack.push(namespace)
         return self
 
-    def render(self, request, doneCallback=None, block=1):
+    def render(self, request, doneCallback=None):
         request.currentId = 0
         request.currentPage = self
         if self.controller is None:
@@ -105,7 +105,7 @@ class View(template.DOMTemplate):
             self.doneCallback = doneCallback
         else:
             self.doneCallback = doSendPage
-        return template.DOMTemplate.render(self, request, block=block)
+        return template.DOMTemplate.render(self, request)
 
     def modelChanged(self, changed):
         """

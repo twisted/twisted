@@ -17,7 +17,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.28 $"[11:-2]
+__version__ = "$Revision: 1.29 $"[11:-2]
 
 import cgi
 import types
@@ -137,7 +137,7 @@ class Controller(resource.Resource):
         else:
             return resource.Resource.getChild(self, name, request)
 
-    def render(self, request, block=0):
+    def render(self, request):
         """
         Trigger any inputhandlers that were passed in to this Page,
         then delegate to the View for traversing the DOM. Finally,
@@ -153,13 +153,13 @@ class Controller(resource.Resource):
         for key, value in self._valid.items():
             key.commit(request, None, value)
         self._valid = {}
-        return self.renderView(request, block=block)
+        return self.renderView(request)
 
-    def renderView(self, request, block=0):
+    def renderView(self, request):
         if self.view is None:
             self.setView(components.getAdapter(self.model, interfaces.IView, None))
             self.view.setController(self)
-        return self.view.render(request, doneCallback=self.gatheredControllers, block=block)
+        return self.view.render(request, doneCallback=self.gatheredControllers)
 
     def gatheredControllers(self, v, d, request):
         process = {}
