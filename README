@@ -1,9 +1,12 @@
-Twisted 0.11.0
+Twisted 0.12.0
 
 Quote of the Release:
 
-  Adventure, excitement... a Jedi craves not these things.
-        -- Silent Bob, in "Mallrats"
+  <gt3> holy snickers, its so foggy outside
+  <gt3> my gf just got a kick ass job
+  <gt3> im jealous
+  <gt3> but i dont care i'd rather code
+        -- poetry night on #python
 
 What is this?
 
@@ -32,32 +35,16 @@ What is this?
   
   For more information, visit http://www.twistedmatrix.com.
 
-What's new in 0.11.0?
+What's new in 0.12.0?
 
-  twisted servers can now run using jython, albeit in an inefficient manner.
+  A major refactor to Twisted's threading and logging infrastructure.
   
-  twisted.names, a DNS system, was checked in. It is still being worked on.
-
-  SSL support is now much more robust, and dirdbm works much better as well.
-
-  LineReceiver (used by HTTP, SMTP, etc.) limits line length, preventing
-  DoS attacks. SafeNetstringReceiver serves a similar purpose for netstring
-  based protocols.
-
-  Servers -- especially Web servers or others that open and close connections
-  frequently -- under high loads should run faster, since multiple accept()
-  calls are done per select(). Threaded apps might run faster as well.
-
-  Enhanced the twisted.web.widgets API to accomodate multiple deferreds.
-
-  Protocol revision in PB, refactoring authentication into simply being an
-  object one can connect to.
-
-  New connection API for PB, simplifying and reducing the number of potential
-  failure points in the process of writing a PB client.
-
-  Much more example code for PB, including some simple examples involving
-  web.widgets and GTK clients for PB services.
+  Merged internet.threadtask into internet.task.
+  
+  Made a new threadtask - a threadpool subclass that integrates with
+  twisted's event loop.
+  
+  Many fixes to words, twisted's IM client.
 
 What can I do with it?
 
