@@ -44,7 +44,9 @@ except ImportError:
     import os
     for randSource in ('random', 'srandom', 'urandom'):
         try:
-            file('/dev/random').close()
+            f = file('/dev/random')
+            f.read(2)
+            f.close()
         except:
             pass
         else:
