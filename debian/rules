@@ -14,7 +14,7 @@ clean:
 	rm -rf build
 	find . -name "*.pyc" |xargs -r rm
 	# Add here commands to clean up after the build process.
-	rm -rf debian/python*-twisted debian/python*-twisted-bin debian/twisted-doc debian/twisted-quotes debian/twisted
+	rm -rf debian/python*-twisted debian/python*-twisted-bin debian/twisted-doc debian/twisted-quotes debian/twisted debian/python*-twisted-conch
 	rm -rf debian/files debian/substvars
 
 DOC=usr/share/doc
@@ -29,13 +29,13 @@ install-stamp: build-stamp
                    --no-compile --root debian/python$$version-twisted; \
 		debian/scripts/install $$version; \
 		binpackage=python$$version-twisted-bin;\
-		install -d debian/$$binpackage/$DOC/$$binpackage/;\
+		install -d debian/$$binpackage/${DOC}/$$binpackage/;\
 		install -d debian/$$binpackage/DEBIAN; \
 		install -m 644 debian/copyright \
-		      debian/$$binpackage/$DOC/$$binpackage/; \
+		      debian/$$binpackage/${DOC}/$$binpackage/; \
 		install -m 644 debian/changelog \
-		      debian/$$binpackage/$DOC/$$binpackage/changelog.Debian;\
-		gzip -9 debian/$$binpackage/$DOC/$$binpackage/changelog.Debian;\
+		      debian/$$binpackage/${DOC}/$$binpackage/changelog.Debian;\
+		gzip -9 debian/$$binpackage/${DOC}/$$binpackage/changelog.Debian;\
 		for file in `find debian/python$$version-twisted -name "*.so"`;\
 			do target=`echo $$file | sed 's/twisted/twisted-bin/'`;\
 			if [ ! -d `dirname $$target` ]; then\
@@ -51,13 +51,13 @@ install-stamp: build-stamp
 		package=python$$version-twisted-conch;\
 		tpackage=python$$version-twisted;\
 		dir=usr/lib/python$$version/site-packages;\
-		install -d debian/$$package/$DOC/$$package/;\
+		install -d debian/$$package/${DOC}/$$package/;\
 		install -d debian/$$package/DEBIAN; \
 		install -m 644 debian/copyright \
-		      debian/$$package/$DOC/$$package/; \
+		      debian/$$package/${DOC}/$$package/; \
 		install -m 644 debian/changelog \
-		      debian/$$package/$DOC/$$package/changelog.Debian;\
-		gzip -9 debian/$$package/$DOC/$$package/changelog.Debian;\
+		      debian/$$package/${DOC}/$$package/changelog.Debian;\
+		gzip -9 debian/$$package/${DOC}/$$package/changelog.Debian;\
 		install -d debian/$$package/$$dir/twisted/scripts; \
 		install -d debian/$$package/usr/bin; \
 		install -d debian/$$package/usr/share/man/man1; \
@@ -66,9 +66,9 @@ install-stamp: build-stamp
 		mv debian/$$tpackage/$$dir/twisted/scripts/conch.py \
 		   debian/$$package/$$dir/twisted/scripts;\
 		mv debian/$$tpackage/usr/bin/conch* \
-		mv debian/$$package/usr/bin/; \
+		   debian/$$package/usr/bin/; \
 		mv debian/$$tpackage/usr/share/man/man1/conch* \
-		mv debian/$$package/usr/share/man/man1/; \
+		   debian/$$package/usr/share/man/man1/; \
 		for maint in postinst prerm; \
 			do sed -e "s/@VERSION@/$$version/g" \
 			       -e "s/twisted/twisted-conch/"\
