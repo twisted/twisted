@@ -54,7 +54,27 @@ class Service:
         self.running = 1
 
 
+class IServiceCollection(components.Interface):
+
+    def getService(self, idx):
+        pass
+
+    def getServiceNamed(self, name):
+        pass
+
+    def __iter__(self):
+        pass
+
+    def addService(self, service):
+        pass
+
+    def removeService(self, service):
+        pass
+
+
 class MultiService(Service):
+
+    __implements__ = Service.__implements__, IServiceCollection
 
     def __init__(self):
         self.services = []
@@ -78,6 +98,9 @@ class MultiService(Service):
 
     def getService(self, idx):
         return self.services[idx]
+
+    def getServiceNamed(self, name):
+        return self.namedServices[name]
 
     def __iter__(self):
         return iter(self.services)
