@@ -116,7 +116,6 @@ def _hook(iface, ob, lookup=globalRegistry.lookup1):
     # http://collector.zope.org/Zope3-dev/349
     if hasattr(ob, '__class__'):
         fixClassImplements(ob.__class__)
-    fixClassImplements
     factory = lookup(declarations.providedBy(ob), iface)
     if factory is None:
         return None
