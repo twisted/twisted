@@ -286,7 +286,7 @@ def doFile(filename, linkrel, ext, url, templ, options={}, outfileGenerator=getO
     doc = parseFileAndReport(filename)
     slides = munge(doc, templ, linkrel, os.path.dirname(filename), filename, ext, url, options)
     for slide, index in zip(slides, range(len(slides))):
-        newFilename = getOutputFileName(filename, ext, index)
+        newFilename = outfileGenerator(filename, ext, index)
         makeSureDirectoryExists(newFilename)
         slide.dom.writexml(open(newFilename, 'wb'))
 
