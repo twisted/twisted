@@ -18,7 +18,7 @@ from __future__ import nested_scopes
 
 """Generic TCP tests."""
 
-import socket
+import socket, time
 from twisted.trial import unittest
 
 from twisted.internet import protocol, reactor
@@ -161,12 +161,13 @@ class LoopbackTestCase(PortCleanerUpper):
     def testFailing(self):
         clientF = MyClientFactory()
         reactor.connectTCP("localhost", 0, clientF, timeout=5)
-
+        start = time.time()
+        
         while not clientF.failed:
             reactor.iterate()
 
         clientF.reason.trap(error.ConnectionRefusedError)
-    
+        self.assert_(time.time() - start < 0.1)
     
     def testConnectByService(self):
         serv = socket.getservbyname
