@@ -61,7 +61,10 @@ OUTFLAGS = gobject.IO_OUT | POLL_DISCONNECTED
 def _our_mainquit():
     # XXX: gtk.main_quit() (which is used for crash()) raises an exception if
     # gtk.main_level() == 0; however, all the tests freeze if we use this
-    # function to stop the reactor.  what gives?
+    # function to stop the reactor.  what gives?  (I believe this may have been
+    # a stupid mistake where I forgot to import gtk here... I will remove this
+    # comment if the tests pass)
+    import gtk
     if gtk.main_level():
         gtk.main_quit()
 
@@ -87,7 +90,7 @@ class Gtk2Reactor(posixbase.PosixReactorBase):
             import gtk
             self.__pending = gtk.events_pending
             self.__iteration = gtk.main_iteration
-            self.__crash = gtk.main_quit # <- makes crash() raise exceptions
+            self.__crash = _our_mainquit
             self.__run = gtk.main
 
     def initThreads(self):
