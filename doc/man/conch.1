@@ -86,6 +86,17 @@ To disable connecting over a multiplexed connection, do not include
 .Ql unix
 in the preference list.
 .Pp
+As an example of how connection sharing works, to speed up CVS over SSH:
+.Pp
+.Nm
+--noshell --fork -l cvs_user cvs_host
+.br
+set CVS_RSH=\fBconch\fR
+.Pp
+Now, when CVS connects to cvs_host as cvs_user, instead of making a new connection to the server,
+.Nm
+will add a new channel to the existing connection.  This saves the cost of repeatedly negotiating the cryptography and authentication.
+.Pp
 The options are as follows:
 .Bl -tag -width Ds
 .It Fl A
