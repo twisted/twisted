@@ -349,7 +349,7 @@ class IMAP4Server(basic.LineReceiver):
             self.sendUntaggedResponse(str(mbox.getMessageCount()) + ' EXISTS')
             self.sendUntaggedResponse(str(mbox.getRecentCount()) + ' RECENT')
             self.sendUntaggedResponse('FLAGS (%s)' % ' '.join(flags))
-            self.sendPositiveResponse(None, '[UIDVALIDITY %d]' % mbox.getUID())
+            self.sendPositiveResponse(None, '[UIDVALIDITY %d]' % mbox.getUIDValidity())
 
             if mbox.isWriteable():
                 s = 'READ-WRITE'
@@ -374,7 +374,7 @@ class IMAP4Server(basic.LineReceiver):
             self.sendUntaggedResponse(str(mbox.getMessageCount()) + ' EXISTS')
             self.sendUntaggedResponse(str(mbox.getRecentCount()) + ' RECENT')
             self.sendUntaggedResponse('FLAGS (%s)' % ' '.join(flags))
-            self.sendPositiveResponse(None, '[UIDVALIDITY %d]' % mbox.getUID())
+            self.sendPositiveResponse(None, '[UIDVALIDITY %d]' % mbox.getUIDValidity())
 
             if self.mbox:
                 self.mbox.removeListener(self)
