@@ -13,7 +13,10 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-"""An asynchronous mapping to DB-API."""
+"""
+An asynchronous mapping to U{DB-API 2.0<http://www.python.org/topics/
+database/DatabaseAPI-2.0.html>}.
+"""
 
 from twisted.spread import pb
 from twisted.internet import task, main, defer
@@ -174,8 +177,8 @@ class Augmentation:
 
     Conventional usage of me is to write methods that look like
 
-      |  def getSomeData(self, critereon):
-      |      return self.runQuery("SELECT * FROM FOO WHERE BAR LIKE '%%%s%%'" % critereon).addCallback(self.processResult)
+      >>>  def getSomeData(self, critereon):
+      >>>      return self.runQuery("SELECT * FROM FOO WHERE BAR LIKE '%%%s%%'" % critereon).addCallback(self.processResult)
 
     '''
 
