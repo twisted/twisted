@@ -4,7 +4,10 @@
 
 #
 
-"""Resource limiting policies."""
+"""Resource limiting policies.
+
+@seealso: See also L{twisted.protocols.htb} for rate limiting.
+"""
 
 # system imports
 import sys, operator, time
