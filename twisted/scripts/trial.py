@@ -21,6 +21,7 @@
 from twisted.python import usage, reflect, failure
 from twisted.trial import unittest, util, reporter as reps
 import sys, os, types, inspect
+import re
 
 class Options(usage.Options):
     synopsis = """%s [options] [[file|package|module|TestCase|testmethod]...]
@@ -62,14 +63,26 @@ class Options(usage.Options):
         
     def opt_testmodule(self, file):
         "Module to find a test case for"
-        m = [line.split()[3] for line in open(file).readlines()
-                    if line.startswith('# -*- test-case-name: ')]
-        for module in m:
-            self['modules'].append(module)
-        m = [line.split()[2] for line in open(file).readlines()
-                    if line.startswith('# test-case-name: ')]
-        for module in m:
-            self['modules'].append(module[1:-1])
+        # only look at the first two lines of the file. Try to behave as
+        # much like emacs local-variables scanner as is sensible
+        f = open(file, "r")
+        lines = [f.readline(), f.readline()]
+        f.close()
+        m = []
+        for line in lines:
+            # insist upon -*- delimiters
+            res = re.search(r'-\*-(.*)-\*-', line)
+            if res:
+                # handle multiple variables
+                for var in res.group(1).split(";"):
+                    bits = var.split(":")
+                    # ignore malformed variables
+                    if len(bits) == 2 and bits[0].strip() == "test-case-name":
+                        for module in bits[1].split(","):
+                            module = module.strip()
+                            # avoid duplicates
+                            if module not in self['modules']:
+                                self['modules'].append(module)
 
     def opt_module(self, module):
         "Module to test"

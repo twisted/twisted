@@ -1,3 +1,17 @@
+2003-05-21  Brian Warner  <warner@lothar.com>
+
+	* doc/howto/test-standard.html: document test-case-name format
+
+	* doc/howto/coding-standard.html: encourage test-case-name tags
+
+	* twisted/protocols/htb.py, twisted/protocols/irc.py,
+	twisted/protocols/pcp.py, twisted/python/text.py,
+	twisted/spread/pb.py, twisted/trial/remote.py: clean up
+	test-case-name tags
+
+	* twisted/scripts/trial.py (Options.opt_testmodule): try to handle
+	test-case-name tags the same way emacs does
+
 2003-05-21  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* bin/coil: removed. Coil isn't being maintained, pending a total

@@ -1,5 +1,5 @@
-# -*- test-case-name: "twisted.test.test_pb" -*-
-
+# -*- test-case-name: twisted.test.test_pb -*-
+#
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -52,7 +52,7 @@ applied when serializing arguments.
 # Future Imports
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.125 $"[11:-2]
+__version__ = "$Revision: 1.126 $"[11:-2]
 
 
 # System Imports

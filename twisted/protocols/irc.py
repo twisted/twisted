@@ -1,4 +1,5 @@
-# -*- Python -*-
+# -*- test-case-name: twisted.test.test_irc -*-
+#
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -42,7 +43,7 @@ Test coverage needs to be better.
 <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-__version__ = '$Revision: 1.82 $'[11:-2]
+__version__ = '$Revision: 1.83 $'[11:-2]
 
 from twisted.internet import reactor, protocol
 from twisted.persisted import styles
@@ -1886,8 +1887,3 @@ symbolic_to_numeric = {
 numeric_to_symbolic = {}
 for k, v in symbolic_to_numeric.items():
     numeric_to_symbolic[v] = k
-
-
-# Local Variables:
-# test-case-name: "twisted.test.test_irc"
-# End:

@@ -30,7 +30,7 @@ shaper for the Linux kernel<http://luxik.cdi.cz/~devik/qos/htb/>}.
 
 from __future__ import nested_scopes
 
-__version__ = '$Revision: 1.2 $'[11:-2]
+__version__ = '$Revision: 1.3 $'[11:-2]
 
 from twisted.python.components import Interface
 
@@ -279,9 +279,3 @@ class ShapedProtocolFactory:
             return origMakeConnection(shapedTransport)
         proto.makeConnection = makeConnection
         return proto
-
-
-
-# Local Variables:
-# test-case-name: "twisted.test.test_htb"
-# End:

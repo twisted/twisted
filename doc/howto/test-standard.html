@@ -101,6 +101,49 @@ $ Twisted/admin/runtests
     conventions, <code class="shell">runtests</code> will be smart
     enough to pick up any new tests you write.</p>
 
+<h2>Associating Test Cases With Source Files</h2>
+
+<p>Please add a <code>test-case-name</code> tag to the source file that is
+covered by your new test. This is a comment at the beginning of the file
+which looks like one of the following:</p>
+
+<pre class="python">
+# -*- test-case-name: twisted.test.test_defer -*-
+</pre>
+
+<p>or</p>
+
+<pre class="python">
+#!/usr/bin/python
+# -*- test-case-name: twisted.test.test_defer -*-
+</pre>
+
+<p>This format is understood by emacs to mark <q>File Variables</q>. The
+intention is to accept <code>test-case-name</code> anywhere emacs would on
+the first or second line of the file (but not in the <code>File
+Variables:</code> block that emacs accepts at the end of the file). If you
+need to define other emacs file variables, you can either put them in the
+<code>File Variables:</code> block or use a semicolon-separated list of
+variable definitions:</p>
+
+<pre class="python">
+# -*- test-case-name: twisted.test.test_defer; fill-column: 75; -*-
+</pre>
+
+<p>If the code is exercised by multiple test cases, those may be marked by
+using a comma-separated list of tests, as follows: (NOTE: not all tools can
+handle this yet.. trial --testmodule does, though)</p>
+
+<pre class="python">
+# -*- test-case-name: twisted.test.test_defer,twisted.test.test_tcp -*-
+</pre>
+
+<p>The <code>test-case-name</code> tag will allow <code class="shell">trial
+--testmodule twisted/dir/myfile.py</code> to determine which test cases need
+to be run to exercise the code in <code>myfile.py</code>. Several tools (as
+well as <code>twisted-dev.el</code>'s F9 command) use this to automatically
+run the right tests.</p>
+
     <h2 id="links">Links</h2><a name="links"></a>
     <ul>
       <li>A chapter on <a href=

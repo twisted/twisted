@@ -1,4 +1,5 @@
-
+# -*- test-case-name: twisted.test.test_text -*-
+#
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -212,8 +213,3 @@ def splitQuoted(s):
                 phrase.append(word)
 
     return out
-
-
-# Local Variables:
-# test-case-name: "twisted.test.test_text"
-# End:

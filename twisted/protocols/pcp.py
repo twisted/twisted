@@ -18,7 +18,7 @@
 
 """Producer-Consumer Proxy."""
 
-__version__ = '$Revision: 1.1 $'[11:-2]
+__version__ = '$Revision: 1.2 $'[11:-2]
 
 from twisted.python.compat import *
 from twisted.python import log
@@ -218,8 +218,3 @@ class ProducerConsumerProxy(BasicProducerConsumerProxy):
             return 0
         self.consumer.write(data)
         return len(data)
-    
-
-# Local Variables:
-# test-case-name: "twisted.test.test_pcp"
-# End:

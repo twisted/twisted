@@ -260,6 +260,3 @@ def demo():
     print "demo saved to tdemo.tap"
 
 
-# Local Variables:
-# test-case-name: "twisted.test.test_trial"
-# End:
