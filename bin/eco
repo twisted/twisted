@@ -33,7 +33,7 @@ if string.find(os.path.abspath(sys.argv[0]),'Twisted') != -1:
 ### end of preamble
 
 from twisted.eco import eco, sexpy
-
+import traceback
 
 def interpret():
     """Run a command-line intepreter for ECO."""
@@ -53,13 +53,16 @@ def interpret():
         if not line:
             sys.stdout.write("\n")
             return
-        parser.dataReceived(line)
-        if l:
-            value = l.pop()
-            sys.stdout.write("%s\n" % eco.evalExp(eco.consify(value), env))
-            continuation = 0
-        else:
-            continuation = 1
+        try:
+            parser.dataReceived(line)
+            if l:
+                value = l.pop()
+                sys.stdout.write("%s\n" % eco.evalExp(eco.consify(value), env))
+                continuation = 0
+            else:
+                continuation = 1
+        except:
+            traceback.print_exc()
 
 
 if __name__ == '__main__':
