@@ -175,10 +175,10 @@ def convert(oldApp):
     for (name, klass) in mapping:
         for args in getattr(oldApp, name):
             klass(*args).setServiceParent(service.IServiceCollection(ret))
-    for service in IServiceCollection(ret):
-        if isinstance(service, internet._AbstractServer):
-            service.privileged = 1
-    for service in oldApp.services.values():
-        service.disownServiceParent()
-        service.setServiceParent(service.IServiceCollection(ret))
+    for s in IServiceCollection(ret):
+        if isinstance(s, internet._AbstractServer):
+            s.privileged = 1
+    for s in oldApp.services.values():
+        s.disownServiceParent()
+        s.setServiceParent(service.IServiceCollection(ret))
     return ret
