@@ -1,16 +1,16 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -95,7 +95,7 @@ class Perspective:
 
     I am the interface through which most 'external' code should interact with
     a service; I represent the actions a user may perform upon a service, and
-    the state associated with that user for that service.
+     the state associated with that user for that service.
     """
     def __init__(self, perspectiveName, service, identityName="Nobody"):
         """Create me.
@@ -135,6 +135,8 @@ class Perspective:
 
         This will return a value such that
         self.service.getPerspectiveNamed(value) is self.
+
+        (XXX: That's assuming I have been addPerspective'd to my service.)
         """
         return self.perspectiveName
 
@@ -269,7 +271,7 @@ class Identity:
 
     def challenge(self):
         """I return some random data.
-        
+
         This is a method in addition to the module-level function because it is
         anticipated that we will want to change this to store salted passwords.
         """
@@ -324,7 +326,7 @@ class Authorizer:
 
 
 class DefaultAuthorizer(Authorizer):
-    
+
     """I am an authorizer which requires no external dependencies.
 
     I am implemented as a hash of Identities.
