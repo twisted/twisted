@@ -9,7 +9,9 @@
   </head>
 
   <body bgcolor="white">
-    <div><span>Previous: <a class="previous"></a></span><br /><span>Next: <a class="next"></a></span></div>
+    <div><span>Previous: <a class="previous"><span class="previous" /></a></span>
+         <br />
+	 <span>Next: <a class="next"><span class="next" /></a></span></div>
     <h1 class="title"></h1>
     <div class="body">
 	

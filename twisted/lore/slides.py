@@ -225,9 +225,11 @@ def insertPrevNextLinks(slides, filename, ext):
             if (slide.pos > 0 and name == "previous") or \
                (slide.pos < len(slides)-1 and name == "next"):
                 for node in domhelpers.findElementsWithAttribute(slide.dom, "class", name):
-                    node.appendChild(microdom.Text(slides[slide.pos+offset].title))
-                    node.setAttribute('href', '%s-%d%s'
-                                      % (filename[0], slide.pos+offset, ext))
+                    if node.tagName == 'a':
+                        node.setAttribute('href', '%s-%d%s'
+                                          % (filename[0], slide.pos+offset, ext))
+                    else:
+                        node.appendChild(microdom.Text(slides[slide.pos+offset].title))
             else:
                 for node in domhelpers.findElementsWithAttribute(slide.dom, "class", name):
                     pos = 0
