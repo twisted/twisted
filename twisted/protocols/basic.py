@@ -320,3 +320,37 @@ class StatefulStringProtocol:
             self.state = statehandler(string)
             if self.state == 'done':
                 self.transport.loseConnection()
+
+class TimeoutMixin:
+    """Mixin for protocols which wish to timeout connections
+    
+    @cvar timeOut: The number of seconds after which to timeout the connection
+    """
+    timeOut = None
+
+    def connectionMade(self):
+        self.resetTimeout(self.timeOut)
+    
+    def connectionLost(self, reason):
+        self.resetTimeout(None)
+    
+    def resetTimeout(self, N):
+        """Cancel the current timeout and schedule a new one
+        
+        @type N: C{int} or C{NoneType}
+        @param N: The number of seconds in the future to schedule the timeout.
+        If C{N} is C{None}, the timeout will be cancelled and not rescheduled.
+        """
+        if self.__timeoutCall is not None:
+            self.__timeoutCall.cancel()
+            if N is None:
+                self.__timeoutCall = None
+            else:
+                self.__timeoutCall = reactor.callLater(N, self.timeoutConnection)
+    
+    def timeoutConnection(self):
+        """Called when the connection times out.
+        
+        Override to define behavior other than dropping the connection.
+        """
+        self.transport.loseConnection()
