@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_tendril -*-
-# $Id: tendril.py,v 1.24 2002/09/01 09:07:10 glyph Exp $
+# $Id: tendril.py,v 1.25 2002/09/01 10:26:44 acapnotic Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -56,7 +56,7 @@ _LOGALL = False
 
 # TODO: Use words 'Policy' to get Perspectives.
 
-class TendrilFactory(protocol.ClientFactory, reflect.Accessor):
+class TendrilFactory(protocol.ReconnectingClientFactory, reflect.Accessor):
     """I build Tendril clients for a words service.
 
     All of a tendril's configurable state is stored here with me.
@@ -195,7 +195,7 @@ class TendrilIRC(irc.IRCClient, styles.Ephemeral):
 
     realname = 'Tendril'
     versionName = 'Tendril'
-    versionNum = '$Revision: 1.24 $'[11:-2]
+    versionNum = '$Revision: 1.25 $'[11:-2]
     versionEnv = copyright.longversion
 
     helptext = TendrilFactory.helptext
@@ -376,6 +376,7 @@ class TendrilIRC(irc.IRCClient, styles.Ephemeral):
         """Join my groupList once I've signed on.
         """
         self.log("Welcomed by IRC server.", 'info')
+        self.factory.resetDelay()
         for group in self.words.groupList:
             self.join(groupToChannelName(group))
 

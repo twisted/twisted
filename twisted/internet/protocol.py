@@ -54,13 +54,13 @@ class Factory:
         if not self.numPorts:
             log.msg("Stopping factory %s" % self)
             self.stopFactory()
-    
+
     def startFactory(self):
         """This will be called before I begin listening on a Port or Connector.
 
         It will only be called once, even if the factory is connected
         to multiple ports.
-        
+
         This can be used to perform 'unserialization' tasks that
         are best put off until things are actually running, such
         as connecting to a database, opening files, etcetera.
@@ -121,7 +121,74 @@ class ClientFactory(Factory):
 
         reason is a Failure object.
         """
-        
+
+
+class ReconnectingClientFactory(ClientFactory):
+    """My clients auto-reconnect with an exponential back-off.
+
+    Note that clients should call my resetDelay method after they have
+    connected successfully.
+    """
+    maxDelay = 3600
+    initalDelay = 1.0
+    factor = 2.7182818284590451 # (math.e)
+    # Phi = 1.6180339887498948
+
+    delay = initalDelay
+    retries = 0
+    maxRetries = None
+    _callID = None
+    connector = None
+
+    def clientConnectionFailed(self, connector, reason):
+        self.connector = connector
+        if not reason.check(error.UserError):
+            self.retry()
+
+    def clientConnectionLost(self, connector, unused_reason):
+        self.connector = connector
+        self.retry()
+
+    def retry(self, connector=None):
+        """Have this connector connect again, after a suitable delay.
+        """
+        if connector is None:
+            if self.connector is None:
+                raise ValueError("no connector to retry")
+            else:
+                connector = self.connector
+
+        self.retries += 1
+        if self.maxRetries is not None and (self.retries > self.maxRetries):
+            log.msg("Abandoning %s after %d retries." %
+                    (connector, self.retries))
+            return
+
+        self.delay = min(self.delay * self.factor, self.maxDelay)
+        log.msg("%s will retry in %d seconds" % (connector, self.delay,))
+        from twisted.internet import reactor
+        self._callID = reactor.callLater(self.delay, connector.connect)
+
+    def stopTrying(self):
+        """I put a stop to any attempt to reconnect in progress.
+        """
+        # ??? Is this function really stopFactory?
+        if self._callID:
+            self._callID.cancel()
+        if self.connector and self.connector.state == "connecting":
+            # Hopefully this doesn't just make clientConnectionFailed
+            # retry again.
+            self.connector.stopConnecting()
+
+    def resetDelay(self):
+        """Call me after a successful connection to reset.
+
+        I reset the delay and the retry counter.
+        """
+        self.delay = self.initalDelay
+        self.retries = 0
+        self._callID = None
+
 
 class ServerFactory(Factory):
     """Subclass this to indicate that your protocol.Factory is only usable for servers.
@@ -170,7 +237,7 @@ class BaseProtocol:
 
 
 class Protocol(BaseProtocol):
-    
+
     def dataReceived(self, data):
         """Called whenever data is received.
 
@@ -208,10 +275,10 @@ class Protocol(BaseProtocol):
 class ProcessProtocol(BaseProtocol):
     """Processes have some additional methods besides receiving data.
     """
-    
+
     def outReceived(self, data):
         """Some data was received from stdout."""
-    
+
     def errReceived(self, data):
         """Some data was received from stderr.
         """
@@ -225,7 +292,7 @@ class ProcessProtocol(BaseProtocol):
 
     def inConnectionLost(self):
         """Called when stdin is shut down."""
-    
+
     def processEnded(self, reason):
         """This will be called when the subprocess is finished.
 
@@ -238,12 +305,12 @@ class FileWrapper:
     """
 
     __implements__ = interfaces.ITransport
-    
+
     closed = 0
     disconnecting = 0
     producer = None
     streamingProducer = 0
-    
+
     def __init__(self, file):
         self.file = file
 
