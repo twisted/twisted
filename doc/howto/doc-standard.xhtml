@@ -33,7 +33,7 @@
 from twisted.web import resource
 
 class MyResource(resource.Resource):
-    def render(self, request):
+    def render_GET(self, request):
         return "Hello, world!"
     &lt;/pre&gt;
 </pre>
@@ -43,7 +43,7 @@ class MyResource(resource.Resource):
 from twisted.web import resource
 
 class MyResource(resource.Resource):
-    def render(self, request):
+    def render_GET(self, request):
         return "Hello, world!"
    
 </pre>
@@ -57,10 +57,10 @@ class MyResource(resource.Resource):
     &lt;pre class="python-interpreter"&gt;
     &amp;gt;&amp;gt;&amp;gt; from twisted.web import resource
     &amp;gt;&amp;gt;&amp;gt; class MyResource(resource.Resource):
-    ...     def render(self, request):
+    ...     def render_GET(self, request):
     ...         return "Hello, world!"
     ...
-    &amp;gt;&amp;gt;&amp;gt; MyResource().render(None)
+    &amp;gt;&amp;gt;&amp;gt; MyResource().render_GET(None)
     "Hello, world!"
     &lt;/pre&gt;
 </pre>
@@ -68,10 +68,10 @@ class MyResource(resource.Resource):
 <pre class="python-interpreter">
 &gt;&gt;&gt; from twisted.web import resource
 &gt;&gt;&gt; class MyResource(resource.Resource):
-...     def render(self, request):
+...     def render_GET(self, request):
 ...         return "Hello, world!"
 ...
-&gt;&gt;&gt; MyResource().render(None)
+&gt;&gt;&gt; MyResource().render_GET(None)
 "Hello, world!"
 </pre>
 

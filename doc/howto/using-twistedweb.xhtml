@@ -52,7 +52,7 @@ from twisted.internet import reactor
 
 class Simple(resource.Resource):
     isLeaf = True
-    def render(self, request):
+    def render_GET(self, request):
         return "&lt;html&gt;Hello, world!&lt;/html&gt;"
 
 site = server.Site(Simple())
@@ -65,7 +65,7 @@ reactor.run()
 
 <p><code>Resource</code> objects represent a single URL segment of a site. During URL parsing, <code>getChild</code> is called on the current <code>Resource</code> to produce the next <code>Resource</code> object.</p>
 
-<p>When the leaf Resource is reached, either because there were no more URL segments or a Resource had isLeaf set to True, the leaf Resource is rendered by calling <code>render(request)</code>.</p>
+<p>When the leaf Resource is reached, either because there were no more URL segments or a Resource had isLeaf set to True, the leaf Resource is rendered by calling <code>render(request)</code>. See <q>Resource Rendering</q> below for more about this.</p>
 
 <p>During the Resource location process, the URL segments which have already been processed and those which have not yet been processed are available in <code>request.prepath</code> and <code>request.postpath</code>.</p>
 
@@ -87,7 +87,7 @@ class Hello(Resource):
         return Resource.getChild(
             self, name, request)
 
-        def render(self, request):
+        def render_GET(self, request):
             return """&lt;html&gt;
       Hello, world! I am located at %r.
     &lt;/html&gt;""" % (request.prepath) 
@@ -128,7 +128,7 @@ root.putChild('bob', Hello())
 
 <pre class="python">
 class MyResource(resource.Resource):
-    def render(self, request):
+    def render_GET(self, request):
         return "&lt;html&gt;Hello, world!&lt;/html&gt;"
 
 resource = MyResource()
@@ -155,7 +155,7 @@ resource = myresource.MyResource()
 <h3>Resource rendering</h3>
 <a name="rendering" />
 
-<p>Resource rendering occurs when Twisted Web locates a leaf Resource object to handle a web request. A Resource object may do various things to produce output which will be sent back to the browser:</p>
+<p>Resource rendering occurs when Twisted Web locates a leaf Resource object to handle a web request. A Resource's <code>render</code> method may do various things to produce output which will be sent back to the browser:</p>
 
 <ul>
 <li>Return a string</li>
@@ -163,6 +163,26 @@ resource = myresource.MyResource()
 
 <li>Request a <code>Deferred</code>, return <code>server.NOT_DONE_YET</code>, and call <code>request.write("stuff")</code> and <code>request.finish()</code> later, in a callback on the <code>Deferred</code>.</li>
 </ul>
+
+<p>
+
+The <code class="API" base="twisted.web.resource">Resource</code>
+class, which is usually what one's Resource classes subclass, has a
+convenient default implementation of <code
+class="python">render</code>. It will call a method named <code
+class="python">self.render_METHOD</code> where <q>METHOD</q> is
+whatever HTTP method was used to request this resource. Examples:
+request_GET, request_POST, request_HEAD, and so on. It is recommended
+that you have your resource classes subclass <code class="API"
+base="twisted.web.resource">Resource</code> and implement <code
+class="python">render_METHOD</code> methods as opposed to <code
+class="python">render</code> itself. Note that for certain resources,
+<code class="python">request_POST = request_GET</code> may be
+desirable in case one wants to process arguments passed to the
+resource regardless of whether they used GET
+(<code>?foo=bar&amp;baz=quux</code>, and so forth) or POST.
+
+</p>
 
 <h3>Session</h3>
 <a name="sessions" />
@@ -429,7 +449,7 @@ installed Twisted.</p>
 <pre class="python">
 from twisted.web import resource
 class MyGreatResource(resource.Resource):
-    def render(self, request):
+    def render_GET(self, request):
         return "&lt;html&gt;foo&lt;/html&gt;"
 
 resource = MyGreatResource()
@@ -448,7 +468,7 @@ if not counter:
 counter = registry.getComponent(Counter)
 
 class MyResource(resource.Resource):
-    def render(self, request):
+    def render_GET(self, request):
         counter.increment()
         return "you are visitor %d" % counter.getValue()
 
@@ -622,7 +642,7 @@ from twisted.python.util import println
 
 class ExampleResource(Resource):
 
-    def render(self, request):
+    def render_GET(self, request):
         request.write("hello world")
         d = request.notifyFinish()
         d.addCallback(lambda _: println("finished normally"))
