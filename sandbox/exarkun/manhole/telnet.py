@@ -4,7 +4,7 @@ import struct
 from twisted.application import internet
 from twisted.internet import protocol
 from twisted.protocols import telnet
-from twisted.python import components
+from twisted.python import components, log
 
 MODE = '\x01'
 EDIT = 1
@@ -105,6 +105,17 @@ class TelnetListener:
         pass
 
 class Telnet(protocol.Protocol):
+    commandMap = {
+        NOP: 'NOP',
+        DM: 'DM',
+        BRK: 'BRK',
+        IP: 'IP',
+        AO: 'AO',
+        AYT: 'AYT',
+        EC: 'EC',
+        EL: 'EL',
+        GA: 'GA'}
+
     # One of a lot of things
     state = 'data'
 
@@ -126,13 +137,14 @@ class Telnet(protocol.Protocol):
                 elif b == SB:
                     self.state = 'subnegotiation'
                     self.commands = []
-                elif b in (NOP, DM, BREAK, IP, AO, AYT, EC, EL, GA):
+                elif b in (NOP, DM, BRK, IP, AO, AYT, EC, EL, GA):
+                    self.state = 'data'
                     self.telnetCommandReceived(b, None)
                 elif b in (WILL, WONT, DO, DONT):
                     self.state = 'command'
                     self.command = b
                 else:
-                    raise ValueError("Stumped")
+                    raise ValueError("Stumped", b)
             elif self.state == 'command':
                 self.state = 'data'
                 command = self.command
@@ -158,17 +170,18 @@ class Telnet(protocol.Protocol):
         pass
 
     def telnetCommandReceived(self, command, argument):
-        cmdfunc = self.commandMap.get(command)
-        if cmdfunc is None:
+        cmdName = self.commandMap.get(command)
+        if cmdName is None:
             # Some ill-formed command.  Return us to the data state.
             # After complaining.
             log.msg("Client (%r) sent a bad command: %d" % (self.transport.getPeer(), ord(command)))
             self.state = 'data'
         else:
+            cmdFunc = getattr(self, 'telnet_' + cmdName)
             if argument is None:
-                cmdfunc()
+                cmdFunc()
             else:
-                cmdfunc(argument)
+                cmdFunc(argument)
 
     def telnet_NOP(self):
         pass
@@ -176,7 +189,7 @@ class Telnet(protocol.Protocol):
     def telnet_DM(self):
         pass
 
-    def telnet_BREAK(self):
+    def telnet_BRK(self):
         pass
 
     def telnet_IP(self):
@@ -200,27 +213,11 @@ class Telnet(protocol.Protocol):
     # DO/DONT WILL/WONT are a bit more complex.  They require us to
     # track state to avoid negotiation loops and the like.
 
-    # options is a dict mapping options, as identified by length one
-    # strings, to their current state.  The state of an option is
-    # composed of four pieces of information, represented by a four
-    # tuple.  The first element of the tuple is our view of the state
-    # of the option.  The possible values for it are the strings no,
-    # wantno, yes, wantyes.  The second element is a boolean
-    # indicating a queued state change request.  It only has meaning
-    # if the first element is wantno or wantyes.  If it is False,
-    # no state change is queued.  If it is True, a state change to
-    # the opposite state is queued. The third element indicates the
-    # peer's state of this option, and may also be no, wantno, yes,
-    # or wantyes.  The fourth element is a boolean indicating a queued
-    # state change request.  It only has meaning if the third element
-    # is wantno or wantyes.  If it is False, no state change is queued.
-    # If it is True, a state change is queued on the peer.
-
-    # Options default to disabled.
-
     class _OptionState:
         class _Perspective:
-            state = stateq = False
+            # 'no', 'yes', 'wantno', 'wantyes'
+            state = 'no'
+            stateq = False
         def __init__(self):
             self.us = _Perspective()
             self.him = _Perspective()
@@ -330,6 +327,9 @@ class Telnet2(Telnet):
     def connectionMade(self):
         self.handler = self.handlerFactory(self, *self.handlerArgs, **self.handlerKwArgs)
         self.handler.connectionMade()
+        for cmdName in 'NOP', 'DM', 'BRK', 'IP', 'AO', 'AYT', 'EC', 'EL', 'GA':
+            fname = 'telnet_' + cmdName
+            setattr(self, fname, getattr(self.handler, fname, lambda: None))
 
     def applicationByteReceived(self, bytes):
         self.handler.dataReceived(bytes)

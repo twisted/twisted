@@ -5,18 +5,33 @@ from twisted.trial import unittest
 from twisted.test import proto_helpers
 
 class TestHandler:
-    bytes = ''
+    def __init__(self, proto):
+        self.bytes = ''
+        self.calls = []
+
+    def connectionMade(self):
+        pass
+
     def dataReceived(self, bytes):
         self.bytes += bytes
+
+    def connectionLost(self, reason):
+        pass
+
+    def __getattr__(self, name):
+        if name.startswith('telnet_'):
+            return lambda: self.calls.append(name)
+        raise AttributeError(name)
 
 class TelnetTestCase(unittest.TestCase):
     def setUp(self):
         self.p = telnet.Telnet2()
+        self.p.handlerFactory = TestHandler
         self.t = proto_helpers.StringTransport()
         self.p.makeConnection(self.t)
 
     def testRegularBytes(self):
-        h = self.p.handler = TestHandler()
+        h = self.p.handler
 
         L = ["here are some bytes la la la",
              "some more arrive here",
@@ -30,7 +45,7 @@ class TelnetTestCase(unittest.TestCase):
         self.assertEquals(h.bytes, ''.join(L))
 
     def testIACEscape(self):
-        h = self.p.handler = TestHandler()
+        h = self.p.handler
 
         L = ["here are some bytes\xff\xff with an embedded IAC",
              "and here is a test of a border escape\xff",
@@ -41,3 +56,42 @@ class TelnetTestCase(unittest.TestCase):
 
         self.assertEquals(h.bytes, ''.join(L).replace('\xff\xff', '\xff'))
 
+    def _simpleCommandTest(self, cmdName):
+        h = self.p.handler
+
+        cmd = telnet.IAC + getattr(telnet, cmdName)
+        L = ["Here's some bytes, tra la la",
+             "But ono!" + cmd + " an interrupt"]
+
+        for b in L:
+            self.p.dataReceived(b)
+
+        self.assertEquals(h.calls, ['telnet_' + cmdName])
+        self.assertEquals(h.bytes, ''.join(L).replace(cmd, ''))
+
+    def testInterrupt(self):
+        self._simpleCommandTest("IP")
+
+    def testNoOperation(self):
+        self._simpleCommandTest("NOP")
+
+    def testDataMark(self):
+        self._simpleCommandTest("DM")
+
+    def testBreak(self):
+        self._simpleCommandTest("BRK")
+
+    def testAbortOutput(self):
+        self._simpleCommandTest("AO")
+
+    def testAreYouThere(self):
+        self._simpleCommandTest("AYT")
+
+    def testEraseCharacter(self):
+        self._simpleCommandTest("EC")
+
+    def testEraseLine(self):
+        self._simpleCommandTest("EL")
+
+    def testGoAhead(self):
+        self._simpleCommandTest("GA")
