@@ -546,6 +546,8 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
             self.processEnded(status)
             del reapProcessHandlers[pid]
 
+    # PTYs do not have stdin/stdout/stderr. They only have in and out, just
+    # like sockets. You cannot close one without closing off the entire PTY.
     def closeStdin(self):
         pass
 
@@ -554,9 +556,6 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
 
     def closeStderr(self):
         pass
-
-    def loseConnection(self):
-        os.close(self.fd)
 
     def signalProcess(self, signalID):
         if signalID in ('HUP', 'STOP', 'INT', 'KILL'):
@@ -585,8 +584,9 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
         # two things must happen before we call the ProcessProtocol's
         # processEnded method. 1: the child process must die and be reaped
         # (which calls our own processEnded method). 2: the child must close
-        # their stdout, causing the pty to close, causing our connectionLost
-        # method to be called.
+        # their stdin/stdout/stderr fds, causing the pty to close, causing
+        # our connectionLost method to be called. #2 can also be triggered
+        # by calling .loseConnection().
         if self.lostProcess == 2:
             try:
                 exitCode = sig = None
@@ -609,6 +609,7 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
         """I call this to clean up when one or all of my connections has died.
         """
         abstract.FileDescriptor.connectionLost(self, reason)
+        os.close(self.fd)
         self.lostProcess +=1
         self.maybeCallProcessEnded()
 
