@@ -116,6 +116,13 @@ class TagChecker:
                     self._reportError(filename, node, 
                                       'invalid python code:' + str(e))
 
+    def check_anchor_in_heading(self, dom, filename):
+        headingNames = ['h%d' % n for n in range(1,7)]
+        for hname in headingNames:
+            for node in domhelpers.findNodesNamed(dom, hname):
+                if domhelpers.findNodesNamed(node, 'a'):
+                    self._reportError(filename, node, 'anchor in heading')
+
 
 def list2dict(l):
     d = {}
