@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.136 2003/09/21 16:43:44 itamarst Exp $
+$Id: setup.py,v 1.137 2003/09/22 01:19:38 exarkun Exp $
 """
 
 import distutils, os, sys, string
@@ -126,6 +126,20 @@ class build_ext_twisted(build_ext):
         """
         self.compiler.announce("checking for %s ..." % header_name, 0)
         return self._compile_helper("#include <%s>\n" % header_name)
+
+    def _check_struct_member(self, include_files, struct, member):
+        """
+        Check that given member is present in the given struct when the
+        specified headers are included.
+        """
+        self.compiler.announce(
+            "checking for %s in struct %s..." % (struct, member), 0)
+        return self._compile_helper("""\
+%s
+int main(int argc, char **argv)
+{ struct %s foo, bar;  foo.%s = bar.%s;  return(0); }
+""" % ('\n'.join(['#include <%s>' % n for n in include_files]), struct, member,
+        member))
     
     def _detect_modules(self):
         """
@@ -192,11 +206,10 @@ class build_ext_twisted(build_ext):
                                 define_macros=define_macros) )
 
         # opendir/readdir/scandir wrapper
-        # dirent.h exists on windows, but is totally different.
-        # _check_header doesn't catch this, so disable building
-        # _c_dir on windows
-        if (os.name != "nt" and self._check_header("dirent.h")
-            and self._check_define(["dirent.h"], "_DIRENT_HAVE_D_TYPE")):
+        # Only build it if dirent.h defines "struct dirent" with the fields
+        # d_name and d_type.
+        if (self._check_struct_member(["dirent.h"], 'dirent', 'd_name')
+            and self._check_struct_member(["dirent.h"], 'dirent', 'd_type')):
             exts.append( Extension("twisted.python._c_dir",
                                     ["twisted/python/_c_dir.c"],
                                     define_macros=define_macros) )
