@@ -44,10 +44,14 @@ class DoomProtocol(SimpleProtocol):
     i = 0
     def lineReceived(self, line):
         self.i += 1
-        self.sendLine("Hello %d" % self.i)
+        if self.i < 4:
+            # by this point we should have connection closed,
+            # but just in case we didn't we won't ever send 'Hello 4'
+            self.sendLine("Hello %d" % self.i)
         SimpleProtocol.lineReceived(self, line)
-        if len(self.lines) >= 3:
+        if self.lines[-1] == "Hello 3":
             self.transport.loseConnection()
+
 
 class LoopbackTestCase(unittest.TestCase):
     loopbackFunc = loopback.loopback
@@ -82,7 +86,4 @@ class LoopbackTestCase(unittest.TestCase):
 class LoopbackTCPTestCase(LoopbackTestCase):
     loopbackFunc = loopback.loopbackTCP
 
-    def testSneakyHiddenDoom(self):
-        LoopbackTestCase.testSneakyHiddenDoom(self)
-    testSneakyHiddenDoom.todo = 1
 
