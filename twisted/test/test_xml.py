@@ -115,18 +115,25 @@ class MicroDOMTest(TestCase):
         c = e.childNodes[0]
         self.assert_(isinstance(c, microdom.Comment))
         self.assertEquals(c.value, "<foo />")
+        c2 = c.cloneNode()
+        self.assert_(c is not c2)
+        self.assertEquals(c2.toxml(), "<!--<foo />-->")
 
     def testText(self):
         d = microdom.parseString("<bar>xxxx</bar>").documentElement
         text = d.childNodes[0]
         self.assert_(isinstance(text, microdom.Text))
         self.assertEquals(text.value, "xxxx")
-        
+        clone = text.cloneNode()
+        self.assert_(clone is not text)
+        self.assertEquals(clone.toxml(), "xxxx")
+    
     def testEntities(self):
         nodes = microdom.parseString("<b>&amp;&#12AB;</b>").documentElement.childNodes
         self.assertEquals(len(nodes), 2)
         self.assertEquals(nodes[0].data, "&amp;")
         self.assertEquals(nodes[1].data, "&#12AB;")
+        self.assertEquals(nodes[0].cloneNode().toxml(), "&amp;")
         for n in nodes:
             self.assert_(isinstance(n, microdom.EntityReference))
 
@@ -135,7 +142,8 @@ class MicroDOMTest(TestCase):
         cdata = microdom.parseString(s).documentElement.childNodes[0]
         self.assert_(isinstance(cdata, microdom.CDATASection))
         self.assertEquals(cdata.data, "</x>\r\n & foo")
-
+        self.assertEquals(cdata.cloneNode().toxml(), "<![CDATA[</x>\r\n & foo]]>")
+    
     def testSingletons(self):
         s = "<foo><b/><b /><b\n/></foo>"
         nodes = microdom.parseString(s).documentElement.childNodes

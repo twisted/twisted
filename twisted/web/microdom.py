@@ -192,6 +192,9 @@ class EntityReference(Node):
     def writexml(self, stream, indent='', addindent='', newl='', strip=0):
         stream.write(self.nodeValue)
 
+    def cloneNode(self, deep=0, parent=None):
+        return EntityReference(self.eref, parent)
+
 
 class CharacterData(Node):
 
@@ -205,6 +208,9 @@ class Comment(CharacterData):
 
     def writexml(self, stream, indent='', addindent='', newl='', strip=0):
         stream.write("<!--%s-->" % self.data)
+
+    def cloneNode(self, deep=0, parent=None):
+        return Comment(self.nodeValue, parent)
 
 
 class Text(CharacterData):
