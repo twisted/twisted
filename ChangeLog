@@ -1,3 +1,10 @@
+2002-04-03  Chris Armstrong  <carmstro@twistedmatrix.com>
+
+	* twisted/python/usage.py, twisted/test/test_usage.py, bin/mktap, twisted/tap/*.py:
+	Made the usage.Options interface better -- options are now stored in the
+	'opts' dict. This is backwards compatible, and I added a deprecation warning.
+	
+
 2002-04-01  Chris Armstrong  <carmstro@twistedmatrix.com>
 
 	* .: Releasing Twisted 0.16.0.

@@ -386,7 +386,7 @@ class Options:
                  'short': longToShort[opt],
                  'doc': self.docs[opt],
                  'optType': optType,
-                 'default': getattr(self, opt, None)
+                 'default': self.opts.get(opt, None)
                  })
 
         synopsis = getattr(self, "synopsis",
