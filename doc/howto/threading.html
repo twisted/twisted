@@ -18,7 +18,7 @@
     start of your program:</p>
 <pre class="python">
 from twisted.python import threadable
-threadable.init(1)
+threadable.init()
 </pre>
 
     <p>This will make certain parts of Twisted thread-safe so you
@@ -44,6 +44,49 @@ def notThreadSafe(x):
 def threadSafeScheduler():
     """Run in thread-safe manner."""
     reactor.callFromThread(notThreadSafe, 3) # will run 'notThreadSafe(3)' in the event loop
+</pre>
+
+<h2>Running code in threads</h2>
+
+<p>
+Sometimes we may want to run methods in threads - for example, in order to access blocking
+APIs. Twisted provides methods for doing so using the IReactorThreads API
+(<code class="API">twisted.internet.interfaces.IReactorThreads</code>). Additional utility
+functions are provided in <code class="API">twisted.internet.threads</code>. Basically,
+these methods allow you to queue methods to be run by a thread pool.
+</p>
+
+<p>For example, to run a method in a thread we can do:</p>
+
+<pre class="python">
+from twisted.internet import reactor
+
+def aSillyBlockingMethod(x):
+    import time
+    time.sleep(2)
+    print x
+
+# run method in thread
+reactor.callInThread(aSillyBlockingMethod, "2 seconds have passed")
+</pre>
+
+<p>For functions whose results we wish to get, we can have the result returned as a
+Deferred:</p>
+
+<pre class="python">
+from twisted.internet import threads
+
+def doLongCalculation():
+    # .... do long calculation here ...
+    return 3
+
+def printResult(x):
+    print x
+
+# run method in thread and get result as defer.Deferred
+d = threads.deferToThread(doLongCalculation)
+d.addCallback(printResult)
+d.arm()
 </pre>
   </body>
 </html>
