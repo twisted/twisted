@@ -32,7 +32,7 @@ consumer which is a stream, so that other producers can write to it.
 
 from __future__ import generators
 
-import copy,os
+import copy, os, types
 from zope.interface import Interface, Attribute, implements
 from twisted.internet.defer import Deferred
 from twisted.internet import interfaces as ti_interfaces, defer, reactor, protocol, error
@@ -249,7 +249,7 @@ class MemoryStream(SimpleStream):
         SimpleStream.close(self)
 
 components.registerAdapter(MemoryStream, str, IByteStream)
-components.registerAdapter(MemoryStream, buffer, IByteStream)
+components.registerAdapter(MemoryStream, types.BufferType, IByteStream)
 
 
 class CompoundStream:
