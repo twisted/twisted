@@ -348,6 +348,7 @@ class DeferredList(Deferred):
                 self.errback(failure.Failure((result, index)))
             elif None not in self.resultList:
                 self.callback(self.resultList)
+        return result
 
 
 
