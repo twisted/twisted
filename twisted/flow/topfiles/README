@@ -1,6 +1,6 @@
-Twisted Flow
+Twisted Flow SVN-Trunk
 
-Flow was recently split out of Twisted. This needs more work.
+Flow was recently split out of Twisted.
 
-Twisted Flow depends on Twisted. It optionally uses twisted.web if you
-want to use the twisted.flow.web module.
+Twisted Flow depends on twisted.web if you want to use the
+twisted.flow.web module.

@@ -18,5 +18,4 @@ from twisted.python import compat
 del compat
 
 # setup version
-from twisted import copyright
-__version__ = copyright.version
+__version__ = 'SVN-Trunk'

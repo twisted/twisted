@@ -1,6 +1,6 @@
-Twisted News
+Twisted News SVN-Trunk
 
-News was recently split out of Twisted. This needs more work.
+News was recently split out of Twisted.
 
 News depends on Twisted, and, if you want to use the moderation
 features, Twisted Mail.

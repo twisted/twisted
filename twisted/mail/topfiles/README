@@ -1,5 +1,5 @@
-Twisted Mail
+Twisted Mail SVN-Trunk
 
-Mail was recently split out of Twisted. This needs more work.
+Mail was recently split out of Twisted.
 
-Twisted Mail depends on Twisted and Twisted Names.
+Twisted Mail depends on Twisted and (sometimes) Twisted Names.

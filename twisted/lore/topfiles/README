@@ -1,5 +1,5 @@
-Twisted Lore
+Twisted Lore SVN-Trunk
 
-Lore was recently split out of Twisted. This needs more work.
+Lore was recently split out of Twisted.
 
 Twisted Lore depends on Twisted and Twisted Web.

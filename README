@@ -9,6 +9,22 @@ you. Run the command "python setup.py --help" for more information.
 For information about the Twisted split that happened before 2.0, see
 http://twistedmatrix.com/products/splitfaq
 
+This release of Twisted Sumo, constructed on SUMO-Date, 
+contains the following:
+
+Twisted Core SVN-Core
+Twisted Conch SVN-Conch
+Twisted Flow SVN-Flow
+Twisted Lore SVN-Lore
+Twisted Mail SVN-Mail
+Twisted Names SVN-Names
+Twisted News SVN-News
+Twisted Pair SVN-Pair
+Twisted Runner SVN-Runner
+Twisted Web SVN-Web
+Twisted Words SVN-Words
+Twisted Xish SVN-Xish
+
 Below is an explanation of the layout of this tarball (as well as the
 SVN repository).
 

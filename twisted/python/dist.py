@@ -14,6 +14,18 @@ twisted_subprojects = ["conch", "flow", "lore", "mail", "names",
 
 
 def setup(**kw):
+    """
+    An alternative to distutils' setup() which is specially designed
+    for Twisted subprojects.
+
+    Pass twisted_subproject=projname if you want package and data
+    files to automatically be found for you.
+
+    Pass detectExtensions=detecterFunction if your project has
+    extension modules. detecterFunction will be called called with an
+    instance of build_ext_twisted and should return a list of
+    distutils Extensions.
+    """
     if 'twisted_subproject' in kw:
         if 'twisted' not in os.listdir('.'):
             raise RuntimeError("Sorry, you need to run setup.py from the "
@@ -122,6 +134,11 @@ def getDataFiles(dname, ignore=None, parent=None):
     return result
 
 def getPackages(dname, pkgname=None, results=None, ignore=None, parent=None):
+    """
+    Get all packages which are under dname. This is necessary for
+    Python 2.2's distutils. Pretty similar arguments to getDataFiles,
+    including 'parent'.
+    """
     parent = parent or ""
     prefix = []
     if parent:
@@ -148,8 +165,15 @@ def getPackages(dname, pkgname=None, results=None, ignore=None, parent=None):
 
 
 def getScripts(projname):
+    """
+    Returns a list of scripts for a Twisted subproject; this works in
+    any of an SVN checkout, a project-specific tarball, or the Sumo
+    tarball.
+    """
     scriptdir = os.path.join('bin', projname)
     if not os.path.isdir(scriptdir):
+        # Probably a project-specific tarball, in which case only this
+        # project's bins are included in 'bin'
         scriptdir = 'bin'
     thingies = os.listdir(scriptdir)
     if '.svn' in thingies:
