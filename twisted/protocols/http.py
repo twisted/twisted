@@ -226,7 +226,9 @@ class HTTP(basic.LineReceiver):
                 parts.append('HTTP/0.9') # isn't backwards compat great!
             if len(parts) != 3:
                 self.sendError(405, 'Bad command')
-                raise ValueError(str(parts))
+                #raise ValueError(repr(parts))
+                self.transport.loseConnection()
+                return
             command, request, version = parts
             self.__command = command
             self.__path = request
