@@ -352,8 +352,19 @@ def makeDebs(opts):
     sh('tar xzf %(tgz)s Twisted-%(ver)s/admin' % vars())
     sh('mv Twisted-%(ver)s/admin/override .' % vars())
     sh('./Twisted-%(ver)s/admin/createpackages override'% vars())
+    sh('rm -rf woody')
+    os.mkdir('woody')
+    sh('cp *.orig.tar.gz *.diff.gz *.dsc woody/')
+    os.chdir('woody/twisted-%(ver)s' % vars())
+    replaceInFile('debian/changelog', ver+'-1', ver+'-1woody')
+    replaceInFile('debian/control', 'python2.3-dev', '')
+    sh('debuild -us -uc')
+    os.chdir('..')
+    sh('rm -rf twisted-%(ver)s' % vars())
+    sh('../Twisted-%(ver)s/admin/createpackages ../override'% vars())
     sh('rm -rf Twisted-%(ver)s' % vars())
     sh('rm -rf /sid-chroot/tmp/%s' % unique)
+    
     
 
 if __name__=='__main__':
