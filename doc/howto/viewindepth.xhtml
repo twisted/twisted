@@ -6,6 +6,16 @@
 
 <h1>View In Depth</h1>
 
+<div class="note">
+<p>
+This HOWTO documents the View class, part of the Woven framework. The Woven framework should not be used for new projects. The newer <a href="http://stewstuff.com/doc/nevow.xhtml">Nevow</a> framework, available as part of the <a href="http://www.divmod.org/Quotient/">Quotient</a> project, is a simpler framework with consistent semantics and better testing and is strongly recommended over Woven.
+</p>
+
+<p>
+The Woven documentation below is maintained only for users with an existing Woven codebase.
+</p>
+</div>
+
 <img title="View in Relation to Controller and Model" src="../img/view.png" />
 
 <p>View objects are given a Model and a template DOM node, and use the DOM api to insert the given Model data into the DOM. Views are where you manipulate the HTML, in the form of DOM, which will be sent to the web browser.</p>
