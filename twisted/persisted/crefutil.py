@@ -62,6 +62,7 @@ class _Tuple(NotKnown):
         for idx in xrange(len(l)):
             if not isinstance(l[idx], NotKnown):
                 self.locs.remove(idx)
+            else:
                 l[idx].addDependant(self, idx)
         if not self.locs:
             self.resolveDependants(tuple(self.l))
