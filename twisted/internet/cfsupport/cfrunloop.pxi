@@ -1,4 +1,5 @@
 import _CarbonEvt
+import traceback
 
 # possibly figure out how to subclass these or something
 
@@ -14,7 +15,7 @@ cdef class PyCFRunLoopTimer:
         self.context.retain = NULL
         self.context.release = NULL
         self.context.copyDescription = NULL
-        self.cf = CFRunLoopTimerCreate(kCFAllocatorDefault, fireDate, interval, 0, 0, <CFRunLoopTimerCallBack>&runLoopTimerCallBack, &self.context)
+        self.cf = CFRunLoopTimerCreate(kCFAllocatorDefault, fireDate, interval, 0, 0, <CFRunLoopTimerCallBack>&gilRunLoopTimerCallBack, &self.context)
         if self.cf == NULL:
             raise ValueError("Invalid Socket")
         
@@ -34,8 +35,17 @@ cdef class PyCFRunLoopTimer:
 cdef void runLoopTimerCallBack(CFRunLoopTimerRef timer, void *info):
     cdef PyCFRunLoopTimer obj
     obj = <PyCFRunLoopTimer>info
-    if obj.callout:
-        obj.callout()
+    try:
+        if obj.callout:
+            obj.callout()
+    except:
+        traceback.print_exc()
+
+cdef void gilRunLoopTimerCallBack(CFRunLoopTimerRef timer, void *info):
+    cdef PyGILState_STATE gil
+    gil = PyGILState_Ensure()
+    runLoopTimerCallBack(timer, info)
+    PyGILState_Release(gil)
 
 cdef class PyCFRunLoop:
     cdef public object cf

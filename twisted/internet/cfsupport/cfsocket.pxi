@@ -1,3 +1,5 @@
+import traceback
+
 cdef class PyCFSocket
 
 cdef void socketCallBack(CFSocketRef s, CFSocketCallBackType _type, CFDataRef address, void *data, void *info):
@@ -6,20 +8,28 @@ cdef void socketCallBack(CFSocketRef s, CFSocketCallBackType _type, CFDataRef ad
     cdef int mask
     socket = (<PyCFSocket>info)
     #print "fileno = %r" % (socket.fileno,)
-    if _type == kCFSocketReadCallBack:
-        if socket.readcallback:
-            socket.readcallback()
-    elif _type == kCFSocketWriteCallBack:
-        if socket.writecallback:
-            socket.writecallback()
-    elif _type == kCFSocketConnectCallBack:
-        if data == NULL:
-            res = 0
-        else:
-            res = (<int*>data)[0]
-        if socket.connectcallback:
-            socket.connectcallback(res)
+    try:
+        if _type == kCFSocketReadCallBack:
+            if socket.readcallback:
+                socket.readcallback()
+        elif _type == kCFSocketWriteCallBack:
+            if socket.writecallback:
+                socket.writecallback()
+        elif _type == kCFSocketConnectCallBack:
+            if data == NULL:
+                res = 0
+            else:
+                res = (<int*>data)[0]
+            if socket.connectcallback:
+                socket.connectcallback(res)
+    except:
+        traceback.print_exc()
     
+cdef void gilSocketCallBack(CFSocketRef s, CFSocketCallBackType _type, CFDataRef address, void *data, void *info):
+    cdef PyGILState_STATE gil
+    gil = PyGILState_Ensure()
+    socketCallBack(s, _type, address, data, info)
+    PyGILState_Release(gil)
 
 cdef class PyCFSocket:
     cdef public object readcallback
@@ -45,7 +55,7 @@ cdef class PyCFSocket:
         self.context.copyDescription = NULL
         self.reading = False
         self.writing = False
-        self.cf = CFSocketCreateWithNative(kCFAllocatorDefault, fileno, kCFSocketConnectCallBack | kCFSocketReadCallBack | kCFSocketWriteCallBack, <CFSocketCallBack>&socketCallBack, &self.context)
+        self.cf = CFSocketCreateWithNative(kCFAllocatorDefault, fileno, kCFSocketConnectCallBack | kCFSocketReadCallBack | kCFSocketWriteCallBack, <CFSocketCallBack>&gilSocketCallBack, &self.context)
         if self.cf == NULL:
             raise ValueError("Invalid Socket")
         self.source = CFSocketCreateRunLoopSource(kCFAllocatorDefault, self.cf, 10000)
