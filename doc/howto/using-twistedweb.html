@@ -252,6 +252,33 @@ default_root = rewrite.RewriterResource(default, rewrite.tildeToUsers)
 it gives a configuration similar to the classical configuration of
 web server, common since the first NCSA servers.</p>
 
+<h2>Knowing When We're Not Wanted</h2>
+
+<p>Sometimes it is useful to know when the other side has broken the connection.
+Here is an example which does that:</p>
+
+<pre class="python">
+from twisted.web.resource import Resource
+from twisted.web import server
+from twisted.internet import reactor
+from twisted.python.util import println
+
+
+class ExampleResource(Resource):
+
+    def render(self, request):
+        request.write("hello world")
+        d = request.notifyFinish()
+        d.addCallback(lambda _: println("finished normally"))
+        d.addErrback(println, "error")
+        reactor.callLater(10, request.finish)
+        return server.NOT_DONE_YET
+
+resource = ExampleResource()
+</pre>
+
+<p>This will allow us to run statistics on the log-file to see how many users
+are frustrated after merely 10 seconds.</p>
 
 </body>
 </html>

@@ -42,7 +42,7 @@ NOT_DONE_YET = 1
 
 # Twisted Imports
 from twisted.spread import pb, refpath
-from twisted.internet import reactor, protocol
+from twisted.internet import reactor, protocol, defer
 from twisted.protocols import http
 from twisted.python import log, reflect, roots, failure, components
 from twisted import copyright
@@ -93,6 +93,10 @@ class Request(pb.Copyable, http.Request):
 
     site = None
     __pychecker__ = 'unusednames=issuer'
+
+    def __init__(self, *args, **kw):
+        http.Request.__init__(self, *args, **kw)
+        self.notifications = []
 
     def getStateToCopyFor(self, issuer):
         x = self.__dict__.copy()
@@ -234,6 +238,21 @@ class Request(pb.Copyable, http.Request):
         self.write(body)
         self.finish()
         return reason
+
+    def notifyFinish(self):
+        self.notifications.append(defer.Deferred())
+        return self.notifications[-1]
+
+    def connectionLost(self, reason):
+        for d in self.notifications:
+            d.errback(reason)
+        self.notifications = []
+
+    def finish(self):
+        http.Request.finish(self)
+        for d in self.notifications:
+            d.callback(None)
+        self.notifications = []
 
     def view_write(self, issuer, data):
         """Remote version of write; same interface.
