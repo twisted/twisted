@@ -884,6 +884,7 @@ class Gadget(resource.Resource):
     def render(self, request):
         #Redirect to view this entity as a collection.
         request.setResponseCode(http.TEMPORARY_REDIRECT)
+        # TODO who says it's not https?
         request.setHeader("location","http://%s%s/" % (
             request.getHeader("host"),
             (string.split(request.uri,'?')[0])))
@@ -955,7 +956,7 @@ class Gadget(resource.Resource):
         elif path == '__reload__':
             return self.pageFactory(Reloader(map(reflect.namedModule, [self.__module__] + self.modules)))
         else:
-            return error.NoResource()
+            return error.NoResource("No such child resource in gadget.")
 
 
 class TitleBox(Presentation):
