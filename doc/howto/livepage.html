@@ -1,0 +1,48 @@
+<html>
+<head><title>LivePage</title></head>
+
+<body>
+
+<h1>LivePage</h1>
+
+<div class="note"><p>This is just a quick bootstrap page for now.</p></div>
+
+<img title="Overview of LivePage" alt="Overview of LivePage"
+src="../img/livepage.png" />
+
+<p>To use LivePage, subclass or instantiate <code class="API"
+base="twisted.web.woven.page">LivePage</code> instead of <code class="API"
+base="twisted.web.woven.page">Page</code>. Then, in your HTML template, include
+the following HTML fragment somewhere towards the bottom of the page:</p>
+
+<pre>
+  &lt;span view="webConduitGlue" /&gt;
+</pre>
+
+<p>Then, <a href="controller.html#eventhandlers">Event handlers</a> can forward
+client-side JavaScript events to the Server, and you can send JavaScript to the
+browser after a page has already loaded. Example:</p>
+
+<pre>
+class Foo(page.LivePage):
+    template = ('&lt;html&gt;&lt;body&gt;'
+                'Nothing here!&lt;span view="webConduitGlue" /&gt;'
+		'&lt;/body&gt;&lt;/html&gt;')
+    def setUp(self, request):
+        global currentPage
+
+        # don't save this in a global but somewhere your code can get
+        # to it later
+        currentPage = request.getSession(interfaces.IWovenLivePage)
+
+# then later, in response to some server-side event
+def fooHappened():
+    global currentPage
+
+    currentPage.sendScript("alert('hello, world!')")
+</pre>
+
+</body>
+
+</html>
+

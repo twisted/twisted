@@ -1,0 +1,235 @@
+<html>
+  <head><title>Controllers in Depth</title></head>
+<body>
+
+<h1>Controllers in Depth</h1>
+
+<img alt="Controller" title="Controller in Relation to View and Model"
+src="../img/controller.png" />
+
+<p>Controller objects are a way to generalize and reuse input handling logic. In
+Twisted Web, form input is passed to a Resource instance in request.args. You
+can create controller classes to encapsulate generic request.args handling, and
+perform validation and Model updating tasks.</p>
+
+<h2>Main Concepts</h2>
+
+<ul>
+  <li><a href="#controllerfactories">Controller factories</a> provide the glue
+  from a DOM node with a 'controller=' directive to an instance of a Controller
+  class.</li>
+
+  <li><a href="#handle">handle</a> is the method which is called on the
+  Controller instance to handle a node.</li>
+
+  <li><a href="#inputhandlers">InputHandlers</a> are Controllers which have
+  (somewhat) convenient syntax for handling a node.</li>
+
+  <li><a href="#eventhandlers">Event handlers</a>, when used with <a
+  href="livepage.html">LivePage</a>, are a brain-exploding way of handling
+  JavaScript events in your pages with server-side Python code.</li>
+</ul>
+
+<h2>Controller factories</h2><a name="controllerfactories" />
+
+<p>Controller factories provide the glue between a <code>controller=</code>
+directive on a DOM node and a Controller instance. When a DOM node with a
+<code>controller=</code> directive is encountered, Woven looks for a
+corresponding <code>wcfactory_</code> method on your Page instance. A Controller
+factory is required to return an object which implements the interface <code
+class="API" base="twisted.web.woven.interfaces">IController</code>.</p>
+
+<pre class="python">
+    class MyController(controller.Controller):
+        pass
+
+    class MyPage(page.Page):
+      def wcfactory_foo(self, request, node, model):
+        return MyController(model)
+</pre>
+
+<h2>Handle</h2><a name="handle" />
+
+<p>Handle is the API your controller must implement to handle a node. It's
+return value may be a Deferred if you wish to pause the rendering of the View
+until some data is ready, or it may be None</p>
+
+<pre class="python">
+    class MyController(controller.Controller):
+      def handle(self, request, node):
+        name = request.args.get("name", [None])[0]
+        print "HOORJ! YOUR NAME IS %s" % name
+</pre>
+
+<h2>InputHandlers</h2><a name="inputhandlers" />
+
+<p>InputHandlers are defined in <code class="API"
+base="twisted.web">woven.input</code>.  They were an early attempt to create a
+class which made it easy to create new input validators and input committers. It
+is usable in its current state, although the API is a bit baroque. Subclasses of
+<code class="API" base="twisted.web.woven">input.InputHandler</code> can
+override the following methods to decide what to do with data</p>
+
+<dl>
+  <dt><code class="API"
+  base="twisted.web.woven.input.InputHandler">initialize()</code></dt>
+  <dd>initialize this Controller. This is most useful for registering event
+  handlers on the View with <a href="#eventhandlers">addEventHandler</a>,
+  discussed below.</dd>
+
+  <dt><code class="API"
+  base="twisted.web.woven.input.InputHandler">getInput</code><code>(self,
+  request)</code></dt>
+  <dd>get input from the request and return it. Return None to indicate no data
+  was available for this InputHandler to handle.</dd>
+
+  <dt><code class="API"
+  base="twisted.web.woven.input.InputHandler">check</code><code>(self,
+  request, data)</code></dt>
+  <dd>Check the input returned from getInput and return:
+    <ul>
+    <li>None if no data was submitted (data was None), or</li>
+    <li>True if the data that was submitted was valid, or</li>
+    <li>False if the data that was submitted was not valid.</li>
+    </ul>
+  </dd>
+
+  <dt><code class="API"
+  base="twisted.web.woven.input.InputHandler">handleValid</code><code>(self,
+  request, data)</code></dt>
+  <dd>handle the valid submission of some data. By default this calls
+  <code>self.parent.aggregateValid</code>.</dd>
+
+  <dt><code class="API"
+  base="twisted.web.woven.input.InputHandler">aggregateValid</code><code>(self,
+  request, inputhandler, data)</code></dt>
+  <dd>Some input was validated by a child Controller. This is generally
+  implemented on a controller which is placed on a <code>&lt;form&gt;</code> to gather input
+  from controllers placed on <code>&lt;input&gt;</code> nodes.</dd>
+
+  <dt><code class="API"
+  base="twisted.web.woven.input.InputHandler">handleInvalid</code><code>(self,
+  request, data)</code></dt>
+  <dd>handle the invalid submission of some data. By default this calls
+  <code>self.parent.aggregateInvalid</code>.</dd>
+
+  <dt><code class="API"
+  base="twisted.web.woven.input.InputHandler">aggregateInvalid</code><code>(self,
+  request, inputhandler, data)</code></dt>
+  <dd>Some input was declared invalid by a child Controller. This is generally
+  implemented on a controller which is placed on a <code>&lt;form&gt;</code> to gather input
+  from controllers placed on <code>&lt;input&gt;</code> nodes.</dd>
+
+  <dt><code class="API"
+  base="twisted.web.woven.input.InputHandler">commit</code><code>(self,
+  request, node, data)</code></dt>
+  <dd>Enough valid input was gathered to allow us to change the Model.</dd>
+
+</dl>
+
+<p>InputHandlers have been parameterized enough so you may simply use a generic
+InputHandler rather than subclassing and overriding:</p>
+
+<pre class="python">
+  class MyPage(page.Page):
+    def checkName(self, request, name):
+      if name is None: return None
+      # No fred allowed
+      if name == 'fred':
+        return False
+      return True
+    
+    def commitName(self, request, name=""):
+      ctx = getContext()
+      ctx.execute("insert into people (name) values %s", name)
+
+    def wcfactory_addPerson(self, request, node, model):
+        return input.InputHandler(
+            model, 
+            name="name", # The name of the argument in the request to check
+            check=self.checkName, 
+            commit=self.commitName)
+</pre>
+
+<h2>Event handlers</h2><a name="eventhandlers" />
+
+<div class="note"><p>In order for Event Handlers to work, you must be using <a
+href="livepage.html">LivePage</a>, and include the webConduitGlue View in your HTML
+template.</p></div>
+
+<p>Event handlers give you the powerful ability to respond to in-browser
+JavaScript event handlers with server-side Python code. Event handlers are
+registered on the View instance; in some cases, it may make most sense for your
+View instances to implement their own event handlers. However, in order to
+support good separation of concerns and code reuse, you may want to consider
+implementing your event handlers on a Controller instance.</p>
+
+<p>The easiest way to achieve this is to subclass <code class="API"
+base="twisted.web.woven">input.Anything</code> (XXX: this
+should just be controller.Controller) and override <code class="API"
+base="twisted.web.woven.input.Anything">initialize</code> (XXX: this should
+be setUp):</p>
+
+<pre class="python">
+  class MyEventHandler(input.Anything):
+    def initialize(self):
+        self.view.addEventHandler("onclick", self.onClick)
+        self.view.addEventHandler("onmouseover", self.onMouseOver, "'HELLO'")
+    
+    def onClick(self, request, widget):
+        print self, "CLICKED!!!"
+
+    def onMouseOver(self, request, widget, argument):
+        print self, "MOUSE OVER!!!", argument
+</pre>
+
+<p>Note that the first argument to addEventHandler is the JavaScript event name,
+and the second argument is the python function or method which will handle this
+event. You may also pass any additional arguments you desire. These arguments
+must be valid JavaScript, and will be evaluated in the browser context. The
+results of these JavaScript expressions will be passed to your Python event
+handler.</p>
+
+<p>Note that when we passed an extra argument when adding an
+<code>onmouseover</code> event handler, we passed a string enclosed in two sets
+of quotes. This is because the result of evaluating <code>"'HELLO'"</code> as
+JavaScript in the browser is the string <code>'HELLO'</code>, which is then
+passed to the Python event handler. If we had simply passed <code>"HELLO"</code>
+to addEventHandler, Woven would have evaluated <code>"HELLO"</code> in the
+browser context, resulting in an error because the variable <code>HELLO</code>
+is not defined.</p>
+
+<p>Any normal client-side JavaScript object may be accessed, such as
+<code>document</code> and <code>window</code>. Also, the JavaScript variable
+<code>node</code> is defined as the DOM node on which the event handler is
+operating. This is useful for examining the current value of an
+<code>&lt;input&gt;</code> node.</p>
+
+<p>Here are some examples of useful Event handlers:</p>
+
+<pre class="python">
+  class Redirect(input.Anything):
+    def initialize(self):
+        self.view.addEventHandler(
+            "onclick", 
+            self.onClick, 
+            "window.location = 'http://www.google.com'")
+
+    def onClick(self, request, widget, arg):
+        print "The window was redirected."
+
+  class OnChanger(input.Anything):
+    def initialize(self):
+        self.view.addEventHandler(
+            "onchange",
+            self.changed,
+            "node.value")
+    
+    def changed(self, request, widget, newValue):
+        print "The input box changed to", newValue
+</pre>
+
+</body>
+
+</html>
+

@@ -1,0 +1,198 @@
+<html><head><title>Model In Depth</title></head><body>
+
+<h1>Model In Depth</h1>
+
+<img title="Model in Relation to Controller and View" src="../img/model.png" />
+
+<p>Model objects provide data to View objects as a Page is being rendered.</p>
+
+<h2>Main Concepts</h2>
+
+<ul>
+
+<li>Root Models are the data entry point for every woven Page. All Model data for display on a Page should be made available through this Root Model. Described further in the <a href="page#rootmodels">Page section</a>.</li>
+
+<li><a href="#submodelpaths">Submodel Paths</a> allow Woven to locate the correct Model data for a node.</li>
+
+<li><a href="#modelstack">The Model Stack</a> is how Woven keeps track of which Model object is currently <q>in scope</q>. Instead of specifying <code>model=</code> attributes in the Template with <q>absolute submodel paths</q>, you can specify a model relative to the top of the <q>Model stack</q> with a <q>relative submodel path</q>.</li>
+
+<li><a href="#imodel">IModel Adapters</a> allow you to write wrappers for existing objects. Subclassing a base Model in the <code>models</code> module will make writing an IModel Adapter easier.</li>
+
+<li><a href="#modelfactories">Model Factories</a> allow you to produce Model objects on demand with a Python method.</li>
+
+</ul>
+
+<h2>Submodel Paths</h2><a name="submodelpaths" />
+
+  <p>Each Model Woven has access to in the tree has a <q>submodel path</q>. Submodel paths start at the Root Model and specify each segment Woven must follow to locate the Model. Submodel paths are slash-separated strings similar to filesystem paths. For the basic Python container types, Dictionaries and Lists, a submodel path segment is simply the key into the container. Given the model:</p>
+
+<pre class="python">
+model = {'name': "Donovan",
+         'interests': ["Computers", "Music"],
+         'inventory': {'dresser': ['socks','shirts'],
+                       'studio': ['Audiowerk8', '800mhz PC', 'iMac'],
+                      }
+         }
+</pre>
+
+<img title="Model Tree Diagram" src="../img/plone_root_model.png" />
+
+<p>The following submodel paths are valid:</p>
+ 
+<ul>
+
+<li><code>/</code> specifies the Root Model, a Dictionary</li>
+ 
+<li><code>/name</code> specifies the <code>name</code> entry in the Dictionary, a String</li>
+ 
+<li><code>/interests</code> specifies the <code>interests</code> entry in the Dictionary, a List</li>
+ 
+<li><code>/interests/0</code> specifies the first element of the <code>interests</code> list, a String</li>
+ 
+<li><code>/interests/1</code> specifies the second element of the <code>interests</code> list, a String</li>
+ 
+<li><code>/inventory/dresser/0</code> specifies the first element of the <code>dresser</code> list in the <code>inventory</code> dictionary, a String</li>
+
+</ul>
+
+<p>etc...</p>
+
+<p>When woven encouters a <code>model=</code> directive on a node, it will look up the model and pass it to the View object that will render the node:</p>
+
+<pre>
+&lt;html&gt;
+    &lt;body&gt;
+        &lt;h3 model="/interests/3" view="Text" /&gt;
+    &lt;/body&gt;
+&lt;/html&gt;
+</pre>
+
+<h2>The Model Stack and Relative Submodel Paths</h2><a name="modelstack" />
+
+  <p>While <q>absolute model paths</q> are useful for specifying exactly which Model data you want associated with a node, the more frequent use case is to specify a <q>relative model path</q> which is a path relative to the Model currently on top of the <q>Model stack</q>. Relative model paths are easy to distinguish because they do not begin with a slash.</p>
+
+<p>When Woven encounters a node with a <code>model=</code> attribute, it looks up the Model object and places it on top of the <q>Model stack</q>. During the processing of this node and all of the node's child nodes, this Model object remains on the top of the stack. Once all child nodes have completed processing, it is popped off of the Model stack.</p>
+
+<p>This means that child nodes can refer to elements of the Model on top of the Model stack with relative submodel paths. For example, we may wish to render the <q>interests</q> list from the above example as two separate HTML elements. To do so, we first place the <q>interests</q> list on top of the Model stack, and then refer to elements of this list:</p>
+
+<pre>
+&lt;html&gt;
+  I am interested in:
+  &lt;div model="interests" view="None"&gt;
+    &lt;p&gt;First thing: &lt;span model="0" view="Text" /&gt;&lt;/p&gt;
+    &lt;p&gt;Second thing: &lt;span model="1" view="Text" /&gt;&lt;/p&gt;
+  &lt;/div&gt;
+&lt;/html&gt;
+</pre>
+
+<p>In this case, the <q>interests</q> list was in scope for the duration of the &lt;div&gt; tag, and the individual interest strings were in scope for the duration of the individual &lt;span&gt; tags.</p>
+
+<p>The List widget uses this Stack concept to operate on DOM nodes abstractly, without knowing or caring what directives will occur when the child nodes it returns are handled. We can also use the familiar <code>.</code> and <code>..</code> concepts from unix shell syntax to refer to Models:</p>
+
+<pre>
+&lt;html&gt;
+  &lt;div model="interests" view="List"&gt;
+    &lt;h3 pattern="listHeader" model="../name" view="Text" /&gt;&gt;
+    &lt;p pattern="listItem" view="Text" /&gt;
+    &lt;h6 pattern="listFooter" model="." view="Text" /&gt;
+  &lt;/div&gt;
+&lt;html&gt;
+</pre>
+
+<p>The List widget makes copies of the <code>pattern</code> nodes without knowing or caring which directives have been placed on them, or how many children are contained within the node. It then simply sets the <code>model=</code> attribute of each of the nodes to the correct index into the list. More about pattern directives is available in the <a href="02view_in_depth">Views</a> section.</p>
+
+<p>In the above example, even though the <code>interests</code> list had been placed on the Model stack, we were able to access the <code>name</code> string without knowing its absolute path by using the relative path <code>../name</code>, and we were able to render the <code>interests</code> list with a different View Widget using the relative path <code>.</code>.</p>
+
+<p>The output from generating the above HTML will look like this:</p>
+
+<pre>
+&lt;html&gt;
+  &lt;div&gt;
+    &lt;h3&gt;Donovan&lt;/h3&gt;
+    &lt;p&gt;Computers&lt;/p&gt;
+    &lt;p&gt;Music&lt;/p&gt;
+    &lt;h6&gt;['Computers', 'Music']&lt;/h6&gt;
+    &lt;/div&gt;
+&lt;/html&gt;
+</pre>
+
+<h2>IModel Adapters</h2><a name="imodel" />
+
+  <p>The IModel interface is documented in <code class="API">twisted.web.woven.interfaces.IModel</code>. It describes the interfaces Models must implement in order to participate in the Woven Model stack. If you are inheriting from <code class="API">twisted.web.woven.model.Model</code>, most of these interfaces will be implemented for you.</p>
+
+<p>The interfaces that we will be most interested in implementing are those that are designed to be overridden for customization, getData and setData.</p>
+
+<p>For example, we may wish to create a wrapper for some data which we will retrieve out of a SQL database. To do so, we create a subclass of Model:</p>
+
+<pre>
+class DatabaseJunk(model.Model):
+    def getData(self, request):
+        someCursor.execute("select * from foo")
+        return someCursor.fetchall()
+    
+    def getSubmodel(self, request, name):
+        row = self.getData(request)[int(name)]
+        return RowUpdater(row)
+  
+class RowUpdater(model.Model):
+    def __init__(self, id):
+        self.row = row
+   
+    def getData(self, request):
+        return self.row
+    
+    def setData(self, request, data):
+        someCursor.execute(
+        "update foo set bar=%s, baz=%s where id = %s", 
+        (data[0], data[1], self.row[0]))
+</pre>
+
+<p>The result of getData must be an IModel implementor, or may be a Deferred. Thus you may use the IModel interface to produce data from an adbapi call, a pb call, etc. When the data returned is a Deferred, Woven will pause rendering of the current node until the data is available.</p>
+
+<h2>Registering an IModel adapter for a class</h2>
+
+  <p>Woven makes use of the twisted component system. Components, which are discussed in the <a href="components">Components</a> section, allow classes to declare that they implement a specific Interface for another class. This is useful if you already have classes in which you store data, and wish to create thin IModel adapter wrappers around them:</p>
+
+<pre class="python">
+class MyData:
+    def __init__(self, something=""):
+        self.something = something
+    
+class MyDataModel(models.MethodModel):
+    ## When the MyDataModel adapter is wrapped around an instance
+    ## of MyData, the original MyData instance will be stored in 'orig'
+    def wmfactory_something(self, request):
+        return self.orig.something
+    
+from twisted.python import components
+from twisted.web.woven import interfaces
+    
+components.registerAdapter(MyDataModel, MyData, interfaces.IModel)
+</pre>
+
+<h2>Model Factories</h2><a name="modelfactories" />
+
+  <p>Using a separate Model class for each individual piece of data in the system makes sense when you are able to generalize your Model classes enough so they are reusable. However, it is often easier, especially if you need to perform highly varied SQL calls to produce your data, to use a Model which supports Model factories.</p>
+
+<p>There are two ways to use Model factories. The first is to have a separate Model class which subclasses <code class="API" base="twisted.web.woven">model.MethodModel</code>. The second is to simply not pass any Model at all to the Page instance, in which case the Page itself will act as a MethodModel.</p>
+
+<p>MethodModel classes should provide methods prefixed with <code>wmfactory_</code>, which will be called when the directive <code>model=</code> is present in a template. For example, given the node <code>&lt;div model="foo" /&gt;</code>, a method named <code>wmfactory_foo</code> will be called:</p>
+
+<pre class="python">
+class MyModel(model.MethodModel):
+    def wmfactory_foo(self, request):
+        return ['foo', 'bar', 'baz']
+</pre>
+
+<p>If you did not pass any Model object when you created your Page instance, the Page class will act as a MethodModel. Thus, you can place your <code>wmfactory_</code> methods directly on your Page subclass:</p>
+
+<pre class="python">
+class MyPage(page.Page):
+    def wmfactory_foo(self, request):
+        return ['foo', 'bar', 'baz']
+</pre>
+
+<p>Model factories are a useful way to write some Python code which generates your page model data, for pages which need to look up or calculate data in some way.</p>
+
+</body></html>
+

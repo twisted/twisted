@@ -1,0 +1,231 @@
+<html><head><title>Page In Depth</title></head><body>
+
+<h1>Page In Depth</h1>
+
+<p>Page objects are the glue between a web request, a Model object, and a Template.</p>
+
+<h2>Main Concepts</h2>
+
+<ul>
+  <li><a href="#rootmodels">Root Models</a> are passed to Page objects when they
+  are constructed. If no Model is passed, a Page will act as its own Root
+  Model.</li>
+
+  <li><a href="#templates">Templates</a> for Page objects can be specified in
+  various ways.</li>
+
+  <li><a href="#children">Child Pages</a> for handling the next URL segment can
+  be constructed using a convenient syntax supported by Page.</li>
+
+  <li><a href="#factories">Factories</a> for View and Controller objects are
+  contained in the Page. The View factories and Controller factories will be
+  matched up with <code>view=</code> and <code>controller=</code> directives
+  located in the template during the rendering process.</li>
+</ul>
+
+<h2>Root Models</h2><a name="rootmodels" />
+
+  <p>A Root Model is the base of a Woven Model tree. All Model data that the Page will use for rendering should be made available through this Model. Any Python object can be used as a Model within Woven, even Dictionaries, Lists, Strings, Integers, and Floats. This is accomplished through the use of IModel adapters, which normalize Model access methods.</p>
+
+<p>A Root Model is passed to the Page constructor as the first argument:</p>
+
+<pre class="python">
+model = {'name': 'Donovan',
+               'interests': ['Computers', 'Music', 'Bling Bling']
+               }
+
+resource = page.Page(model)
+</pre>
+
+<p>If no Model object is passed as the first argument to the Page constructor, the Page object itself will be treated like a MethodModel. See <a href="models">Models</a> for more information about Model objects.</p>
+
+<p>Using a Page object as a Model factory (by not passing a Root Model) is discussed below in <a href="#factories">Factories</a>.</p>
+
+<h2>Templates</h2><a name="templates" />
+
+  <p>The Template a page will render can be specified in various ways.</p>
+
+<ul>
+<li>Passing <code>template="&lt;html&gt;Hello&lt;/html&gt;"</code></li>
+
+<li>Passing <code>templateFile="Template.html"</code></li>
+
+<li>Passing both templateFile and <code>templateDirectory="/Users/dsp/Templates"</code></li>
+</ul>
+
+<p>Every Page object must be able to find a Template in order to render itself. There are three main ways a template can be specified. The first is simply by passing the template as a keyword argument to the Page constructor:</p>
+
+<pre class="python">
+resource = page.Page(template="&lt;html&gt;Hello world!&lt;/html&gt;")
+</pre>
+
+<p>However, it is desireable to store templates as separate HTML files on disk, where they can be edited easily by an external HTML editor. This can be accomplished by placing the template next to the .rpy script in the twisted.web directory and passing templateFile to the Page constructor:</p>
+
+<pre class="python">
+resource = page.Page(templateFile="MyTemplate.html")
+</pre>
+
+<p>Finally, you may wish to place templates in a specific location, away from the python code entirely. To do so, pass both templateFile and templateDirectory to the Page constructor, indicating where you would like the template to be found:</p>
+
+<pre class="python">
+resource = page.Page(
+  templateFile="MyTemplate.html", 
+  templateDirectory="/Users/dsp/Templates")
+</pre>
+
+<p>If you are subclassing Page to provide child, model, view, or controller factories (discussed below), you may wish instead to specify a Page's template using a class attribute:</p>
+
+<pre class="python">
+class MyPage(page.Page):
+    templateFile = "MyTemplate.html"
+</pre>
+
+<p>A useful technique for storing your templates in a place where they are conveniently located next to your Python modules is to define templateDirectory as a class attribute, using Python's introspection abilities to discover where your Python module is located:</p>
+
+<pre class="python">
+class MyPage(page.Page):
+    templateFile = "MyTemplate.html"
+    templateDirectory = os.path.join(os.path.split(__file__)[0], "templates")
+</pre>
+
+<p>How you manage your templates is up to you.</p>
+
+<h2>Child Pages</h2><a name="children" />
+
+  <p>As discussed in the <a href="twistedweb">Twisted Web</a> section of the documentation, Resource objects provide access to their children by providing a getChild method which returns the next Resource object in the URL tree. Woven Page instances implement IResource and thus follow the same rules as any other Resource instance.</p>
+
+<p>Woven Page instances can be built into Resource Trees in the same manner as regular Resources, using putChild. However, it is often convenient to construct a Page instance on the fly with a method.</p>
+
+<p>Page instances with methods prefixed with <code>wchild_</code> will be invoked in getChild if there is a method matching the requested name. For example, if an instance of this class is used as the root Resource object, several URLs will be valid:</p>
+
+<pre class="python">
+class MyPage(page.Page):
+    template = """&lt;html&gt;
+        Root Page
+        &lt;p&gt;&lt;a href="fred"&gt;Fred&lt;/a&gt;&lt;/p&gt;
+        &lt;p&gt;&lt;a href="bob"&gt;Bob&lt;/a&gt;&lt;/p&gt;
+    &lt;/html&gt;"""
+
+    def wchild_fred(self, request):
+        return page.Page(template="&lt;html&gt;Fred!&lt;/html&gt;")
+    
+    def wchild_bob(self, request):
+        return page.Page(template="&lt;html&gt;Bob!&lt;/html&gt;")
+</pre>
+
+<p>The following URLs would then be valid:</p>
+
+<ul>
+
+<li><code>http://example.com/</code></li>
+
+<li><code>http://example.com/fred</code></li>
+
+<li><code>http://example.com/bob</code></li>
+
+<li><code>http://example.com/fred/</code></li>
+
+<li><code>http://example.com/bob/</code></li>
+
+</ul>
+
+<p>There is one special wchild method for when the URL ends in a slash. When <code>twisted.web</code> calls <code>getChild</code> with an empty string (when the URL ends in a slash), the wchild method that is called is <code>wchild_index</code>.</p>
+
+<p>By default, all Page instances will attempt to add a slash to the end of the URL if they are visited through the web. Thus, visiting <code>http://example.com/fred</code> in the above example will redirect your browser to <code>http://example.com/fred/</code>. This generally makes writing relative links to other pages easier.</p>
+
+<p>If this is not the behavior you would like, define the class attribute <code>addSlash</code> to be false:</p>
+
+<pre class="python">
+class MyPage(page.Page):
+    addSlash = False
+    template = "&lt;html&gt;No slash for you!&lt;/html&gt;"
+</pre>
+
+<h2>Factories</h2><a name="factories" />
+
+<p>So far, we have observed the use of the special <code>model=</code>,
+<code>view=</code>, and <code>controller=</code> attributes (<q>directives</q>)
+in Woven templates, but have not discussed how these attributes are translated
+to Python code.</p>
+
+<p>There are three types of Woven factories:</p>
+
+<ol>
+<li><a href="#viewfactories">View factories</a></li>
+
+<li><a href="#controllerfactories">Controller factories</a></li>
+
+<li><a href="#modelfactories">Model factories</a></li>
+
+</ol>
+
+<h3>View factories</h3><a name="viewfactories" />
+  
+    <p>When a view directive is encountered in a Woven template, it is translated into a <code>wvfactory_</code> call. For example, the node <code>&lt;div view="cool" /&gt;</code> will cause the method <code>wvfactory_cool</code> to be called on your Page instance. View factories are methods which have the following signature, and must return an IView implementor:</p>
+
+<pre class="python">
+    def wvfactory_cool(self, request, node, model):
+        return widgets.Text(model)
+</pre>
+
+    <p>Widget subclasses are the most common return value from <code>wvfactory_</code> methods. Widgets are discussed in the <a href="views">Views</a> section. However, Page is also an implementor of IView, and you may take advantage of this to insert HTML fragments from other locations into a page which is being rendered:</p>
+
+<pre class="python">
+class MyPage(page.Page):
+    template = """&lt;html&gt;
+    &lt;body&gt;
+        Some stuff goes here.
+        &lt;div view="header" /&gt;
+        Some more stuff goes here.
+        &lt;div view="body" /&gt;
+        Even more stuff goes here.
+    &lt;/body&gt;
+&lt;/html&gt;"""
+
+    def wvfactory_header(self, request, node, model):
+        return page.Page(template="&lt;div&gt;This is the header.&lt;/div&gt;")
+    
+    def wvfactory_body(self, request, node, model):
+        return page.Page(template="&lt;div&gt;This is the body.&lt;/div&gt;")
+</pre>
+
+    <p>There is also a convenient special method, <code>wvupdate_</code>, which reduces the amount of boilerplate code required to quickly modify the template. <code>wvupdate_</code> methods have a slightly different signature; instead of being passed the DOM node which contained the <code>view=</code> directive, they are passed an instance of the generic Widget class, and they are passed the unwrapped Model data rather than the IModel wrapper:</p>
+
+<pre class="python">
+    def wvupdate_red(self, request, widget, data):
+        widget.setAttribute('style', 'color: red')
+</pre>
+
+    <p>See the <a href="views">Views</a> section for more information on writing your application's View code.</p>
+
+    <p>Note that if an appropriately named View factory is not found on your page class, Woven will look for the name in the <code>widgets</code> module before giving up and raising an exception. This is why we have been able to create templates that have nodes like <code>&lt;div view="Text" /&gt;</code> and <code>&lt;div view="List" /&gt;</code> without getting exceptions.</p>
+
+<h3>Controller factories</h3><a name="controllerfactories" />
+
+    <p>When a controller directive is encountered in a Woven template, it is translated into a <code>wcfactory_</code> call. For example, the node <code>&lt;input type="text" name="foo" controller="number" /&lt;</code> will cause the method <code>wcfactory_number</code> to be called on your Page instance. Controller factories are methods which have the following signature, and must return an IController implementor:</p>
+
+<pre class="python">
+    def wcfactory_number(self, request, node, model):
+        return input.Integer(model)
+</pre>
+
+    <p>The IController implementation classes which validate input currently live in the <code>input</code> module. This will probably be changed in the future.</p>
+
+    <p>See the <a href="controllers">Controllers</a> section for more information on writing your application's Controller code.</p>
+
+    <p>Note that if an appropriately named Controller factory is not found on your page class, Woven will look for the name in the <code>input</code> module before giving up and raising an exception.</p>
+
+<h3>Model factories</h3><a name="modelfactories" />
+    
+    <p>If your Page instance is passed a Root Model composed of basic python types, Woven is able to use IModel adapters to allow your Template to access the entire Model tree automatically. However, often it can be useful to produce your model data in some sort of method call which retrieves the data.</p>
+
+    <p>If your Page instance was initialized without a Root Model object, Woven will use the Page instance itself as a MethodModel. When a model directive is encountered in a Woven template, it will be translated into a <code>wmfactory_</code> call on your Page instance. For example, the node <code>&lt;div model="name" /&gt;</code> will cause the method <code>wmfactory_name</code> to be called. Model factories are methods which have the following signature, and may return any Python object:</p>
+
+<pre class="python">
+    def wmfactory_name(self, request):
+        return "Fred Bob"
+</pre>
+
+    <p>See the <a href="models">Models</a> section for more information on writing your application's <code>IModel</code> adapters.</p>
+
+</body></html>

@@ -12,11 +12,22 @@
 
 <dl>
 
+<dt><a name="AbsoluteSubmodelPaths">Absolute submodel paths</a></dt>
+<dd>
+  The full path to a <a href="#model">Model</a> object, starting at the root.
+  For example, <code>/foo/bar/baz</code>
+</dd>
+
+<dt><a name="daptee">adaptee</a></dt>
+<dd>
+  An object that has been adapted, also called <q>original</q>.  See <a
+  href="#Adapter">Adapter</a>.
+</dd>
+
 <dt><a name="Adapter"><code noexpand="1" class="API" base="twisted.python.components">Adapter</code></a></dt>
 <dd>
-  An object which wraps another object to conform to a particular
-  <a href="#Interface">Interface</a>, when some code requests the interface
-  from an object.  See <code class="API">twisted.python.components</code>.
+  An object whose sole purpose is to implement an Interface for another object.
+  See <a href="components.html">Interfaces and Adapters</a>.
 </dd>
 
 <dt><a name="Application"><code noexpand="1" class="API" base="twisted.internet.app">Application</code></a></dt>
@@ -45,6 +56,13 @@
   broker for <a href="#Spread">Twisted Spread</a>.
 </dd>
 
+<dt><a name="cache">cache</a></dt>
+<dd>
+  A way to store data in readily accessible place for later reuse. Caching data
+  is often done because the data is expensive to produce or access. Caching data
+  risks being stale, or out of sync with the original data.
+</dd>
+
 <dt><a name="COIL">COIL</a></dt>
 <dd>
   <q>COnfiguration ILlumination</q>.  It is a (stagnant and
@@ -56,7 +74,8 @@
 <dd>
   A special kind of (persistent) <code class="API"
   base="twisted.python.components">Adapter</code> that works with a <code
-  class="API">twisted.python.components.Componentized</code>.
+  class="API">twisted.python.components.Componentized</code>.  See also <a
+  href="components.html">Interfaces and Adapters</a>.
 </dd>
 
 <dt><a name="Componentized"><code noexpand="1" class="API" base="twisted.python.components">Componentized</code></a></dt>
@@ -66,8 +85,8 @@
   together and refer to each other.
   Each object is an <code class="API"
   base="twisted.python.components">Adapter</code>, which, in the
-  context of Componentized, we call
-  <q>components</q>.
+  context of Componentized, we call <q>components</q>.  See also <a
+  href="components.html">Interfaces and Adapters</a>.
 </dd>
 
 <dt><a name="conch"><code noexpand="1" class="API" base="twisted">conch</code></a></dt>
@@ -86,6 +105,13 @@
 <dd>
   An object that consumes data from a <a href="#Producer">Producer</a>.  See 
   <code class="API">twisted.internet.interfaces.IConsumer</code>.
+</dd>
+
+<dt><a name="controller">controller</a></dt>
+<dd>
+  (In <a href="#Woven">Woven</a>) an object which accepts input from the user in
+  the form of mouse clicks, keypresses, and web form submissions, and updates
+  the <a href="#model">Model</a> component.
 </dd>
 
 <dt><a name="Cred">Cred</a></dt>
@@ -164,7 +190,8 @@
 <dd>
   A class that defines and documents methods that a class conforming to that
   interface needs to have.  A collection of core twisted.internet interfaces can
-  be found in <code class="API">twisted.internet.interfaces</code>.
+  be found in <code class="API">twisted.internet.interfaces</code>.  See also <a
+  href="components.html">Interfaces and Adapters</a>.
 </dd>
 
 <dt><a name="Jelly">Jelly</a></dt>
@@ -202,8 +229,38 @@ the <a href="doc-standard.html">Twisted Documentation Standard</a>.</dd>
   class="API">twisted.web.microdom</code>.
 </dd>
 
+<dt><a name="model">model</a></dt>
+<dd>
+  An object that contains data and business logic for manipulating this data.
+</dd>
+
+<dt><a name="modelStack">model stack</a></dt>
+<dd>
+  A stack of <a href="#model">Model</a> instances which keeps track of the Model
+  that is currently in scope during the <a href="#Woven">Woven</a> Page
+  rendering process.
+</dd>
+
 <dt><a name="Names">Names</a></dt>
 <dd>Twisted's DNS server, found in <code class="API">twisted.names</code>.</dd>
+
+<dt><a name="overrides">overrides</a></dt>
+<dd>
+  (In <a href="#Woven">Woven</a>)  A way to add data to cached data. Overrides
+  are not replaced when base data is updated.
+</dd>
+
+<dt><a name="pattern">pattern</a></dt>
+<dd>
+  A node in a <a href="#Woven">Woven</a> HTML template whose sole purpose is to
+  be copied and filled with data by a View component.
+</dd>
+
+<dt><a name="relativeSubmodelPath">relative submodel path</a></dt>
+<dd>
+  A partial path to a <a href="#model">Model</a> object, relative to the top of
+  the Model stack.
+</dd>
 
 <dt><a name="PB">PB</a></dt>
 <dd>
@@ -288,6 +345,13 @@ with Perspective Broker</a>.</dd>
 <dd>A persistent reference manager for <a href="#PerspectiveBroker">PB</a>.
 See <code class="API">twisted.spread.sturdy</code>.</dd>
 
+<dt><a name="submodelPaths">submodel paths</a></dt>
+<dd>
+  A path to a <a href="#model">Model</a> object. A way of referring to a piece
+  of data in a <a href="#Woven">Woven</a> template that allows Python to locate
+  the data in a tree of python objects.
+</dd>
+
 <dt><a name="SUX">SUX</a></dt>
 <dd><em>S</em>mall <em>U</em>ncomplicated <em>X</em>ML, Twisted's simple XML
 parser written in pure Python.  See 
@@ -327,6 +391,33 @@ Twisted's <a href="test-standard.html">Test Standard</a>.</dd>
 the standard <code>getopt</code> module for parsing command-lines which is much
 easier to work with.  See <a href="options.html">Parsing command-lines</a>.</dd>
 
+<dt><a name="wcfactory">wcfactory</a></dt>
+<dd>
+  A <a href="#Factory">factory</a> method for producing <a
+  href="#controller">Controller</a> objects when a <code>controller=</code>
+  directive is encountered in a <a href="#Woven">Woven</a> Template.
+</dd>
+
+<dt><a name="wchild">wchild</a></dt>
+<dd>
+  In <a href="#Woven">Woven</a>, a <a href="#Factory">factory</a> method for
+  producing objects which represent URL segments below the current object.
+</dd>
+
+<dt><a name="widgets">widgets</a></dt>
+<dd>
+  In <a href="#Woven">Woven</a>, a <code class="API"
+  base="twisted.web.woven.view">View</code> subclass which specializes in
+  rendering a fragment of the DOM tree.
+</dd>
+
+<dt><a name="wmfactory">wmfactory</a></dt>
+<dd>
+  A <a href="#Factory">factory</a> method for producing <a
+  href="#model">Model</a> objects when a <code>model=</code> directive is
+  encountered in a <a href="#Woven">Woven</a> Template.
+</dd>
+
 <dt><a name="Words">Words</a></dt>
 <dd>Twisted Words is a multi-protocol chat server that uses the 
 <a href="#PerspectiveBroker">Perspective Broker</a> protocol as its native
@@ -337,6 +428,13 @@ communication style.  See <code class="API">twisted.words</code>.</dd>
 A web templating system based on XML and the Model-View-Controller design
 pattern.  See <a href="woven.html">Developing Componentized Applications using
 Woven</a>.</dd>
+
+<dt><a name="wvfactory">wvfactory</a></dt>
+<dd>
+  A <a href="#Factory">factory</a> method for producing View objects when a
+  <code>view=</code> directive is encoutered in a <a
+  href="#Woven">Woven</a>Template.
+</dd>
 
 <dt><a name="Zoot">Zoot</a></dt>
 <dd>Twisted's Gnutella implementation (currently very incomplete).  See 
