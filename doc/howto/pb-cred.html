@@ -1,0 +1,553 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<title>twisted.cred: Authorization and Identities</title>
+</head>
+
+<body>
+<h1>PB Walking Tour Part Two: twisted.cred</h1>
+
+<ol>
+  <li> <a href="#cred">Authentication, Identities, and Perspectives:
+  twisted.cred</a> </li>
+  <br />
+  <li> <a href="#cred/motivation">Motivation</a> </li>
+  <li> <a href="#cred/sample">Sample app</a> </li>
+  <li> <a href="#cred/perspectives">Introducing Perspectives</a> </li>
+  <li> <a href="#cred/overview">Class Overview</a> </li>
+  <li> <a href="#cred/responsibilities">Class Responsibilities</a> </li>
+  <li> <a href="#cred/example">How that example worked</a> </li>
+  <li> <a href="#cred/walkthrough">Walking through pb.connect</a> </li>
+</ol>
+
+
+<a name="cred"><h2>Authentication, Identities, and Perspectives</h2></a>
+
+<p>This next section is an exciting ride. Keep your arms and legs inside the
+car at all times, you must be *this* tall to get on board, and we cannot be
+responsible for any lost or stolen articles. Permanecen sentados, por
+favor.</p>
+
+<a name="cred/motivation"><h3>Motivation</h3></a>
+
+<p>So now that you've gotten through the <a href="pb-tour.html">PB Walking
+Tour</a>, you've become a master at distributed objects and remote method
+calls. What you've got so far is a really clean way to get objects and
+references thrown around from one process to another. You've written a chat
+server, and see the power of easy remote method calls.</p>
+
+<p>But there were some problems. You had to trust the user when they said
+their name was 'bob': no passwords or anything. If you wanted a direct-send
+one-to-one message feature, you might have implemented it by handing a User
+reference directly off to another User. (so they could invoke
+.remote_sendMessage() on the receiving User): but that lets them do anything
+else to that user too, things that should probably be restricted to the
+"owner" user, like .remote_joinGroup() or .remote_quit().</p>
+
+<p>And there were probably places where the easiest implementation was to
+have the client send a message that included their own name as an argument.
+Sending a message to the group could just be:</p>
+
+<pre class="python">
+class Group(pb.Referenceable):
+  ...
+  def remote_sendMessage(self, from_user, message):
+    for user in self.users:
+      user.callRemote("sendMessage", "&lt;%s&gt;: %s" % (from_user, message))
+</pre>
+
+<p>But obviously this lets users spoof each other: there's no reason that
+Alice couldn't do:</p>
+
+<pre class="python">
+remotegroup.callRemote("sendMessage", "bob", "i like pork")
+</pre>
+
+<p>much to the horror of Bob's vegetarian friends.</p>
+
+<p>(In general, learn to get suspicious if you see "groupName" or "userName"
+in an argument list).</p>
+
+<p>You could fix this by adding more classes (with fewer remotely-invokable
+methods), and making sure that the reference you give to Alice won't let her
+pretend to be anybody else. You'd probably give Alice an object that had her
+name buried inside:</p>
+
+<pre class="python">
+class User(pb.Referenceable):
+  def __init__(self, name):
+    self.name = name
+  def remote_sendMessage(self, group, message):
+    g = findgroup(group)
+    for user in g.users:
+      user.callRemote("sendMessage", "&lt;%s&gt;: %s" % (self.name, message)
+</pre>
+
+<p>But now she could sneak into another group. So you might have to have an
+object per-group-per-user:</p>
+
+
+<pre class="python">
+class UserGroup(pb.Referenceable):
+  def __init__(self, group, user):
+    self.group = group
+    self.user = user
+  def remote_sendMessage(self, message):
+    name = self.user.name
+    for user in self.group.users:
+      user.callRemote("sendMessage", "&lt;%s&gt;: %s" % (name, message)
+</pre>
+
+
+<p>But that means more code, and more code is bad, especially when it's a
+common problem (everybody designs with security in mind, right? Right??). <a
+name="F1"><a href="#f1" >[1]</a></a> </p>
+
+
+<p>So we have a security problem. We need a way to ask for and verify a
+password, so we know that Bob is really Bob and not Alice wearing her "Hi,
+my name is Bob" t-shirt. And it would make the code cleaner (read: fewer
+classes) if some methods could know *who* is calling them. You could add
+that layer of password checking to your application, but once again the
+basement denizens at Twisted Matrix Laboratories have beaten you to it.</p>
+
+
+<a name="cred/sample"><h3>A sample application</h3></a>
+
+<p>As a framework for this chapter, we'll be referring to a hypothetical
+game implemented by several programs using the Twisted framework. This game
+is sort of a MUD-like thing, where users log in using their client programs,
+and there is a server, and users can do some things but not others. <a
+name="F2"><a href="#f2" >[2]</a></a></p>
+
+<p>Let's say the players make moves in this game by invoking remote methods
+on objects that live in the server. The clients can't really be relied upon
+to tell the server who they are with each move they make: they might get it
+wrong, or (horrors!) lie to mess up the other player.</p>
+
+<p>Actually, let's simplify it to a server-based game of Go (if that can be
+considered simple). Go has two players, white and black, who take turns
+placing stones of their own color at the intersections of a 19x19 grid. If
+we represent the game and board as an object in the server called Game, then
+the players might interact with it using something like this:</p>
+
+<pre class="python">
+class Game(pb.Referenceable):
+  def remote_getBoard(self):
+    return self.board # a dict, with the state of the board
+  def remote_move(self, playerName, x, y):
+    self.board[x,y] = playerName
+</pre>
+
+<p>"But Wait", you say, yes that method takes a playerName, which means they
+could cheat and move for the other player. So instead, do this:</p>
+
+<pre class="python">
+class Game(pb.Referenceable):
+  def remote_getBoard(self):
+    return self.board # a dict, with the state of the board
+  def move(self, playerName, x, y):
+    self.board[x,y] = playerName
+</pre>
+
+<p>and move the responsibility (and capability) for calling Game.move() out
+to a different class. That class is a pb.Perspective.</p>
+
+<a name="cred/perspectives"><h3>Perspectives</h3></a>
+
+<p>pb.Perspective (and some related classes: Identity, Authorizer, and
+Service) is a layer on top of the basic PB system that handles
+username/password checking. The basic idea is that there is a Perspective
+object (probably a subclass you've created) for each user <a name="F3"><a
+href="#f3" >[3]</a></a>, and <b>only</b> the authorized user gets a remote
+reference to that Perspective object. Your code can then look like this:</p>
+
+<pre class="python">
+class Game:
+  def getBoard(self):
+    return self.board # a dict, with the state of the board
+  def move(self, playerName, x, y):
+    self.board[x,y] = playerName
+
+class PlayerPerspective(pb.Perspective):
+  def __init__(self, playerName, game):
+    self.playerName = playerName
+    self.game = game
+  def perspective_move(self, x, y):
+    self.game.move(self.playerName, x, y)
+  def perspective_getBoard(self):
+    return self.game.getBoard()
+</pre>
+
+<p>The code on the server side creates the PlayerPerspective object, giving
+it the right playerName and a reference to the Game object. The remote
+player doesn't get a reference to the Game object, only their own
+PlayerPerspective, so they don't have an opportunity to lie about their
+name: it comes from the .playerName attribute, not an argument of their
+remote method call.</p>
+
+<p>Here is a brief example of using a Perspective. Most of the support code
+is magic for now: we'll explain it later. <a name="F4"><a
+href="#f4">[4]</a></a> </p>
+
+<a href="listings/pb/pb5server.py" class="py-listing">pb5server.py</a>
+<a href="listings/pb/pb5client.py" class="py-listing">pb5client.py</a>
+
+<p>Note that once this example has done the method call, you'll have to
+terminate both ends yourself. Also note that the Perspective's .attached()
+and .detached() methods are run when the client connects and disconnects.
+The base class implementations of these methods just prints a message.</p>
+
+<p>Ok, so that wasn't really very exciting. It doesn't accomplish much more
+than the first PB example, and used a lot more code to do it. Let's try it
+again with two users this time, each with their own Perspective. We also
+override .attached() and .detached(), just to see how they are called.</p>
+
+<p>[[[Footnote: the 'clientref' argument to .attached will hold a remote
+reference to an object provided by the client, in the pb.connect's optional
+argument 'client'. The server-side Perspective can use it to do remote
+methods on something in the client, so that the client doesn't always have
+to drive the interaction. In a chat server, the client object would be the
+one to which "display text" messages were sent. In a game, this would
+provide a way to tell the clients that someone has made a move, so they can
+update their game boards. Note: to actually use it, you'd probably want to
+subclass Perspective and change the .attached method to stash the clientref
+somewhere.]]]</p>
+
+<p>[[[Footnote: 'attached' has the opportunity to return a different
+Perspective, if it so chooses, based upon something in the Identity. The
+client will get a reference to whatever .attached() returns, so the default
+case is to 'return self'.]]]</p>
+
+<p>[[[Footnote: 'detached' will be called with the same 'clientref' object
+that was given to the original 'attached' call.]]]</p>
+
+
+<a href="listings/pb/pb6server.py" class="py-listing">pb6server.py</a>
+<a href="listings/pb/pb6client1.py" class="py-listing">pb6client1.py</a>
+<a href="listings/pb/pb6client2.py" class="py-listing">pb6client2.py</a>
+
+<p>While pb6server.py is running, try starting pb6client1, then pb6client2.
+Compare the argument passed by the .callRemote() in each client. You can see
+how each client logs into a different Perspective.</p>
+
+
+<a name="cred/overview"><h3>Class Overview</h3></a>
+
+<p>Now that we've seen some of the motivation behind the Perspective class,
+let's start to de-mystify some of the parts labeled "magic" in pb6server.py.
+Here are the major classes involved:</p>
+
+<ul>
+  <li><code class="API" base="twisted.internet.app">Application</code></li>
+  <li><code class="API" base="twisted.cred.service">Service</code></li>
+  <li><code class="API" base="twisted.cred.authorizer">Authorizer</code></li>
+  <li><code class="API" base="twisted.cred.identity">Identity</code></li>
+  <li><code class="API" base="twisted.cred.pb">Perspective</code></li>
+</ul>
+
+<p>You've already seen <code>Application</code>. It holds the program-wide
+settings, like which uid/gid it should run under, and contains a list of
+ports that it should listen on (with a Factory for each one to create
+Protocol objects). When used for PB, we put a pb.BrokerFactory on the
+port.</p>
+
+<p>A <code>Service</code> is, well, a service. A web server would be a
+<code>Service</code>, as would a chat server, or any other kind of server
+you might choose to run. What's the difference between a
+<code>Service</code> and an <code>Application</code>? You can have multiple
+<code>Service</code>s in a single <code>Application</code>: perhaps both a
+web-based chat service and an IM server in the same program, that let you
+exchange message between the two. Or your program might provide different
+kinds of interfaces to different classes of users: administrators could get
+one <code>Service</code>, while mere end-users get a less-powerful
+<code>Service</code>.</p>
+
+<p>[[[Footnote: Note that the <code>Service</code> is a server of some sort,
+but that doesn't mean there's a one-to-one relationship between the
+<code>Service</code> and the TCP port that's being listened to. Several
+different <code>Service</code>s can hang off the same TCP port. Look at the
+MultiService class for details.]]]</p>
+
+<p>The <code>Service</code> is reponsible for providing
+<code>Perspective</code> objects. More on that later.</p>
+
+<p>The <code>Authorizer</code> is a class that provides
+<code>Identity</code> objects. The abstract base class is
+twisted.cred.authorizer.Authorizer, and for simple purposes you can just use
+DefaultAuthorizer, which is a subclass that stores pre-generated Identities
+in a simple dict (indexed by username). The <code>Authorizer</code>'s
+purpose in life is to implement the .getIdentityRequest() method, which
+takes a user name and (eventually) returns the corresponding
+<code>Identity</code> object.</p>
+
+<p>Each <code>Identity</code> object represents a single user, with a
+username and a password of some sort. Its job is to talk to the
+as-yet-anonymous remote user and verify that they really are who they claim
+to be. The default <code class="API">twisted.cred.authorizer.Identity</code>
+class implements MD5-hashed challenge-response password authorization, much
+like the HTTP MD5-Authentication method: the server sends a random challenge
+string, the client concatenates a hash of their password with the challenge
+string, and sends back a hash of the result. At this point the client is
+said to be "authorized" for access to that <code>Identity</code>, and they
+are given a remote reference to the <code>Identity</code> (actually a
+wrapper around it), giving them all the privileges of that
+<code>Identity</code>.</p>
+
+<p>Those privileges are limited to requesting <code>Perspective</code>s. The
+<code>Identity</code> object also has a "keyring", which is a list of
+(serviceName, perspectiveName) pairs that the corresponding authorized user
+is allowed to access. Once the user has been authenticated, the
+<code>Identity</code>'s job is to implement .requestPerspectiveForKey(),
+which it does by verifying the "key" exists on the keyring, then asking the
+matching <code>Service</code> to do .getPerspectiveForIdentity().</p>
+
+<p>Finally, the <code>Perspective</code> is the subclass of pb.Perspective
+that implements whatever 'perspective_*' methods you wish to expose to an
+authenticated remote user. It also implements .attached() and .detached(),
+which are run when the user connects (actually when they finish the
+authentication sequence) or disconnects.</p>
+
+<a name="cred/responsibilities"><h3>Class Responsibilities</h3></a>
+
+<p>Now that we've gone over the classes and objects involved, let's look at
+the specific responsibilities of each. Most of these classes are on the hook
+to implement just one or two particular methods, and the rest of the class
+is just support code (or the main method has been broken up for ease of
+subclassing). This section indicates what those main methods are and when
+they get called.</p>
+
+<p>The <code>Authorizer</code> has to provide <code>Identity</code> objects
+(requested by name) by implementing .getIdentityRequest(). The
+DefaultAuthorizer class just looks up the name in a dict called
+self.identities, so when you use it, you have to make the Identities ahead
+of time (using <code class="python">i = auth.createIdentity()</code>) and
+store them in that dict (by giving them to <code
+class="python">auth.addIdentity(i)</code>).</p>
+
+<p>However, you can make a subclass of <code>Authorizer</code> with a
+.getIdentityRequest method that behaves differently: your version could look
+in /etc/passwd, or do an SQL database lookup [[[Footnote: see
+twisted.enterprise.dbcred for a module that does exactly that]]], or create
+new Identities for anyone that asks (with a really secret password like
+'1234' that the user will probably never change, even if you ask them to).
+The Identities could be created by your server at startup time and stored in
+a dict, or they could be pickled and stored in a file until needed (in which
+case .getIdentityRequest() would use the username to find a file, unpickle
+the contents, and return the <code>Identity</code> object that results), or
+created brand-new based upon whatever data you want. Any function that
+returns a Deferred (that will eventually get called back with the
+<code>Identity</code> object) can be used here.</p>
+
+<p>[[[Footnote: for static Identities that are available right away, the
+Deferred's callback() method is called right away. This is why the interface
+of .getIdentityRequest() specifies that its Deferred is returned unarmed, so
+that the caller has a chance to actually add a callback to it before the
+callback gets run.]]]</p>
+
+<p>The <code>Identity</code> object thus returned has two responsibilities.
+The first is to authenticate the user. It does this by implementing
+.verifyPassword, which is called by IdentityWrapper (wait for it) as part of
+the challenge-response sequence. The second is to provide
+<code>Perspective</code>s: the authenticated user provides a service name
+and a perspective name, and .requestPerspectiveForKey() is invoked to
+retrieve the given <code>Perspective</code>. You could subclass
+<code>Identity</code> to change the behavior of either of these, but chances
+are you won't bother. The only reason to change .verifyPassword() would be
+to replace it with some kind of public-key verification scheme (and that
+would require changes to pb.IdentityWrapper too). Any changes you might want
+to make to .requestPerspectiveForKey() are probably more appropriate to put
+in the Service's .getPerspectiveForIdentity instead.</p>
+
+<p>The Service object's job is to provide <code>Perspective</code>s, by
+implementing .getPerspectiveForIdentity(). The default implementation (in
+twisted.spread.pb.Service) retrieves static pre-generated
+<code>Perspective</code>s from a dict (indexed by perspective name), much
+like DefaultAuthorizer does with Identities. And like
+<code>Authorizer</code>, it is very useful to subclass pb.Service to change
+the way .getPerspectiveForIdentity works: to create
+<code>Perspective</code>s out of persistent data or database lookups, to set
+extra attributes in the <code>Perspective</code>, etc.</p>
+
+<p>In the default implementation, you need to create the
+<code>Perspective</code>s at startup time, by calling .createPerspective().
+This uses an attribute of the Service object named .perspectiveClass when
+creating the objects, so you can simply change that to have it build your
+own <code>Perspective</code>-derivatives instead of the default type.</p>
+
+
+<a name="cred/example"><h3>How that example worked</h3></a>
+
+
+<p>Ok, so that's what everything is supposed to do. Now you can walk through
+the previous example and see what was going on: we created a subclass called
+MyPerspective, made a DefaultAuthorizer and added it to the
+<code>Application</code>, created a Service and told it to make
+MyPerspectives, used .createPerspective() to build a few, for each one we
+made an <code>Identity</code> (with a username and password), and allowed
+that <code>Identity</code> to access a single MyPerspective by adding it to
+the keyring. We added the Identities to the <code>Authorizer</code>, and
+then glued the authorizer to the pb.BrokerFactory.</p>
+
+<p>How did that last bit of magic glue work? I won't tell you here</p>
+
+[[[Footnote: but I will tell you here:
+
+<pre class="python">
+app.listenTCP(8800, pb.BrokerFactory(pb.AuthRoot(auth)))
+</pre>
+
+<p>pb.AuthRoot() provides objects that are subclassed from pb.Root, so as we
+saw in the first example, they can be served up by pb.BrokerFactory().
+AuthRoot happens to use the .rootObject hook described earlier to serve up
+an AuthServ object, which wraps the <code>Authorizer</code> and offers a
+method called .remote_username, which is called by the client to declare
+which <code>Identity</code> it claims to be. That method starts the
+challenge-response sequence.</p>
+
+]]]
+
+<p>, because it isn't very useful to override it, but you effectively hang
+an <code>Authorizer</code> off of a TCP port. The combination of the object
+and methods exported by the pb.AuthRoot object works together with the code
+inside the pb.connect() function to implement both sides of the
+challenge-response sequence. When you (as the client) use pb.connect() to
+get to a given host/port, you end up talking to a single
+<code>Authorizer</code>. The username/password you give get matched against
+the Identities provided by that authorizer, and then the
+servicename/perspectivename you give are matched against the ones authorized
+by the <code>Identity</code> (in its .keyring attribute). You eventually get
+back a remote reference to a Perspective provided by the Service that you
+named.</p>
+
+
+<a name="cred/walkthrough"><h3>Walkthrough</h3></a>
+
+<p>So, now that you've seen the complete sequence, it's time for some code
+walkthrough. This will give you a chance to see the places where you might
+write subclasses to implement different behaviors. We will look at what
+happens when pb6client1.py meets pb6server.py. We tune in just as the client
+has run the pb.connect() call.</p>
+
+<p>The client-side code can be summarized by the following sequence of
+function calls, all implemented in twisted/spread/pb.py . pb.connect() calls
+getObjectAt() directly, afterwards each step is executed as a callback when
+the previous step completes.</p>
+
+<pre>
+ getObjectAt(host,port,timeout)
+ logIn(): authServRef.callRemote('username', username)
+ _cbLogInRespond(): challenger.callRemote('respond', f[challenge,password])
+ _cbLogInResponded(): identity.callRemote('attach', servicename,
+                                          perspectivename, client)
+ usercallback(perspective)
+</pre>
+
+<p>The client does getObjectAt() to connect to the given host and port, and
+retrieve the object named "root". On the server side, the BrokerFactory
+accepts the connection, asks the pb.AuthRoot() object for its .rootObject(),
+getting an AuthServ() object (containing both the authorizer and the Broker
+protocol object). It gives a remote reference to that AuthServ out to the
+client.</p>
+
+<p>Now the client invokes the 'remote_username' method on that AuthServ. The
+AuthServ asks the <code>Authorizer</code> to .getIdentityRequest: this
+retrieves (or creates) the <code>Identity</code>. When that finishes, it
+asks the <code>Identity</code> to create a random challenge (usually just a
+random string). The client is given back both the challenge and a reference
+to a new AuthChallenger object which will only accept a response that
+matches that exact challenge.</p>
+
+<p>The client does its part of the MD5 challenge-response protocol and sends
+the response to the AuthChallenger's .remote_response() method. The
+AuthChallenger verifies the response: if it is valid then it gives back a
+reference to an IdentityWrapper, which contains an internal reference to the
+<code>Identity</code> that we now know matches the user at the other end of
+the connection.</p>
+
+<p>The client then invokes the 'remote_attach' method on that
+IdentityWrapper, passing in a serviceName, perspectiveName, and remoteRef.
+The wrapper asks the <code>Identity</code> to get a perspective using
+identity.requestPerspectiveForKey, which does the "is this user allowed to
+get this service/perspective" check by looking at the tuples on its
+.keyring, and if that is allowed then it gets the Service (by giving
+serviceName to the authorizer), then asks the Service to provide the
+perspective (with svc.getPerspectiveForIdentity). The default Service will
+ignore the identity object and just look for Perspectives by
+perspectiveName. The Service looks up or creates the Perspective and returns
+it. The remote_attach method runs the Perspective's .attached method
+(although there are some intermediate steps, in IdentityWrapper._attached,
+to make sure .detached will eventually be run, and the Perspective's
+.brokerAttached method is executed to give it a chance to return some other
+Perspective instead). Finally a remote reference to the Perspective is
+returned to the client.</p>
+
+<p>The client gives the Perspective reference to the callback that was
+attached to the Deferred that pb.connect() returned, which brings us back up
+to the code visible in pb6client1.py.</p>
+
+
+
+<hr width="50%" />
+
+<p>That's the end of the tour. If you have any questions, the folks at the
+welcome office will be more than happy to help. Don't forget to stop at the
+gift store on your way out, and have a really nice day. Buh-bye now!</p>
+
+<hr />
+
+<h2>Footnotes</h2>
+
+
+
+<a  name="f1"><a href="#F1">[1]</a></a>
+
+<p>Footnote: third party references</p>
+
+<p>Note that the reference that the server gives to the client is only
+useable by that one client: if it tries to hand it off to a third party,
+they'll get an exception (XXX: which?). This appears to help: only the
+client you gave the reference to can cause any damage with it. Of course,
+the client might agree to do anything the third party wants. If you don't
+trust them, don't give them that reference.</p>
+
+<p>Also note that the design of the serialization mechanism (XXX: pb.jelly?)
+makes it impossible for the client to obtain a reference that they weren't
+explicitly given. References passed over the wire are given id numbers and
+recorded in a per-connection dictionary. If you didn't give them the
+reference, the id number won't be in the dict, and no amount of id guessing
+by a malicious client will give them anything else.</p>
+
+<a  name="f2"><a href="#F2">[2]</a></a>
+
+<p>There actually exists such a thing. It's called twisted.reality, and was
+the whole reason Twisted was created. I haven't played it yet: I'm too
+afraid </p>
+
+<a  name="f3"><a href="#F3">[3]</a></a>
+
+<p>actually there is a perspective per user*service, but we'll get into that
+later</p>
+
+<a  name="f4"><a href="#F4">[4]</a></a>
+
+<p>This example has more support code than you'd actually need. If you only
+have one Service, then there's probably a one-to-one relationship between
+your Identities and your Perspectives. If that's the case, you can use a
+utility method called Perspective.makeIdentity() instead of creating the
+perspectives and identities in separate steps. This is shorter, but hides
+some of the details that are useful here to explain what's going on. Again,
+this will make more sense later. </p>
+
+<hr />
+<address>
+ <a href="http://www.lothar.com">Brian Warner</a> &lt;warner@lothar.com&gt;
+</address>
+<!-- hhmts start -->
+Last modified: Mon Oct  7 23:42:29 PDT 2002 
+<!-- hhmts end -->
+</body> </html>
