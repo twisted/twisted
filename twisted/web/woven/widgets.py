@@ -522,6 +522,8 @@ class Input(Widget):
                 id = self.attributes.get('id', node.getAttribute('id'))
             self['name'] = id
         mVal = self.getData()
+        if mVal is None:
+            mVal = ''
         assert mVal is not None
         if not self.attributes.has_key('value'):
             self['value'] = str(mVal)
@@ -751,7 +753,9 @@ class KeyedList(List):
         """
         currentListItem = 0
         keys = data.keys()
-        keys.sort()
+        # Keys may be a tuple, if this is not a true dictionary but a dictionary-like object
+        if hasattr(keys, 'sort'):
+            keys.sort()
         for key in keys:
             newNode = self.getPattern('keyedListItem')
             if not newNode:
