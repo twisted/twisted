@@ -28,7 +28,7 @@ class PathArgs(Resource):
     def __init__(self,eat=[]):
         Resource.__init__(self)
         self.eat = eat
-    def getChild(self,path,request):
+    def getChildPathArgs(self,path,request):
         pair = path.split(':')
         if 2 == len(pair):
             (key,val) = pair
@@ -40,7 +40,11 @@ class PathArgs(Resource):
             if x == path:
                 request.root += "%s/" % path
                 return self
-        return Resource.getChild(self,path,request)
+    def getChild(self,path,request):
+        ret = self.getChildPathArgs(path,request)
+        if not ret: 
+            ret = Resource.getChild(self,path,request)
+        return ret 
     def getChildWithDefault(self,path,request):
         if not(hasattr(request,'root')):
             request.root = "/"
