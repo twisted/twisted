@@ -16,4 +16,6 @@
 # 
 '''
 The Twisted Documentation Generation System
+
+Maintainer: U{Andrew Bennetts<spiv@twistedmatrix.com>}
 '''
