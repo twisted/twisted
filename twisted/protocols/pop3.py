@@ -281,7 +281,7 @@ class POP3(basic.LineReceiver):
             return self.portal.login(
                 cred.credentials.UsernamePassword(user, password),
                 None,
-                Mailbox
+                IMailbox
             )
         return defer.fail(cred.error.UnauthorizedLogin())
 
