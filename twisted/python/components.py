@@ -175,19 +175,6 @@ def classToInterfaces(k):
     l.insert(0, k)
     return l
 
-class _ThingWithTwoSlots(object):
-    __slots__ = 'a b'.split()
-
-    def __init__(self, a, b):
-        self.a = a
-        self.b = b
-
-    def __eq__(self, other):
-        return ((self.a is other.a) and
-                (self.b is other.b))
-
-    def __hash__(self):
-        return hash((id(self.a),self.b))
 
 class AdapterRegistry:
 
@@ -197,7 +184,7 @@ class AdapterRegistry:
         self.adapterPersistence = weakref.WeakValueDictionary()
 
     def persistAdapter(self, original, iface, adapter):
-        self.adapterPersistence[_ThingWithTwoSlots(original, iface)] = adapter
+        self.adapterPersistence[(id(original), iface)] = adapter
 
     def registerAdapter(self, adapterFactory, origInterface, *interfaceClasses):
         """Register an adapter class.
@@ -265,7 +252,7 @@ class AdapterRegistry:
             return obj
 
         if persist != False:
-            pkey = _ThingWithTwoSlots(obj, interfaceClass)
+            pkey = (id(obj), interfaceClass)
             if self.adapterPersistence.has_key(pkey):
                 return self.adapterPersistence[pkey]
 
