@@ -37,7 +37,6 @@ from twisted.web import resource, server
 
 # system imports
 import urlparse
-import string
 
 
 class ProxyClient(http.HTTPClient):
@@ -47,6 +46,9 @@ class ProxyClient(http.HTTPClient):
         self.father = father
         self.command = command
         self.rest = rest
+        if headers.has_key("proxy-connection"):
+            del headers["proxy-connection"]
+        headers["connection"] = "close"
         self.headers = headers
         self.data = data
 
@@ -66,10 +68,12 @@ class ProxyClient(http.HTTPClient):
     def handleEndHeaders(self):
         self.father.transport.write("\r\n")
 
+    def connectionLost(self, reason):
+        self.father.transport.loseConnection()
+    
     def handleResponse(self, buffer):
         self.father.transport.write(buffer)
-        self.transport.loseConnection()
-        self.father.transport.loseConnection()
+        self.transport.loseConnection()    
 
 
 class ProxyClientFactory(protocol.ClientFactory):
@@ -109,7 +113,7 @@ class ProxyRequest(http.Request):
         host = parsed[1]
         port = self.ports[protocol]
         if ':' in host:
-            host, port = string.split(host, ':')
+            host, port = host.split(':')
             port = int(port)
         rest = urlparse.urlunparse(('','')+parsed[2:])
         if not rest:
@@ -123,6 +127,7 @@ class ProxyRequest(http.Request):
         clientFactory = class_(self.method, rest, self.clientproto, headers,
                                s, self)
         reactor.connectTCP(host, port, clientFactory)
+
 
 class Proxy(http.HTTPChannel):
     """This class implements a simple web proxy.
