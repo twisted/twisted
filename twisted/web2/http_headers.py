@@ -1,3 +1,5 @@
+from __future__ import generators
+
 import types
 from calendar import timegm
 from time import gmtime, time
