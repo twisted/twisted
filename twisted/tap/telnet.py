@@ -16,36 +16,23 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 """
-I am the support module for making a telnet server with mktap.
+Support module for making a telnet server with mktap.
 """
 
 from twisted.manhole import telnet
 from twisted.python import usage
-from twisted.application import internet
-
+from twisted.application import strports
 
 class Options(usage.Options):
     synopsis = "Usage: mktap telnet [options]"
-    optParameters = [["username", "u", "admin","set the login username"],
-                  ["password", "w", "changeme","set the password"]]
-
     longdesc = "Makes a telnet server to a Python shell."
-
-    def opt_port(self, opt):
-        """set the port to listen on
-        """
-        try:
-            self['port'] = int(opt)
-        except ValueError:
-            raise usage.error("Invalid argument to 'port'!")
-    opt_p = opt_port
+    optParameters = [
+         ["username", "u", "admin","set the login username"],
+         ["password", "w", "changeme","set the password"],
+         ["port", "p", "4040", "port to listen on"],
+    ]
 
 def makeService(config):
     t = telnet.ShellFactory()
-    t.username = config['username']
-    t.password = config['password']
-    try:
-        portno = config['port']
-    except KeyError:
-        portno = 4040
-    return internet.TCPServer(portno, t)
+    t.username, t.password = config['username'], config['password']
+    return strports.service(config['port'], t)
