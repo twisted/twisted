@@ -4,7 +4,7 @@
 #include <windows.h>
 #define EXTERN_API __declspec(dllexport)
 #else
-#define EXTERN_API 
+#define EXTERN_API
 #endif
 
 #include <Python.h>
@@ -191,7 +191,7 @@ int gotPythonItem(PyObject *object, struct listItem *currentList, PyObject *expr
       //printf("Couldn't add item to tuple\n");
       return 0;
     }
-    
+
     /*printf("Calling expressionReceived.\n");*/
     result = PyObject_CallObject(expressionReceived, args);
     if (!result) {
@@ -285,7 +285,7 @@ extern EXTERN_API PyObject *dataReceived( PyObject *self, PyObject *args )
     Py_INCREF(Py_None);
     return Py_None;
   }
-  
+
   if ((stateobj == NULL) || ((stateobj->ob_type) != (&cBananaStateType))) {
     printf("state object wasn't\n");
     Py_INCREF(Py_None);
@@ -317,12 +317,12 @@ extern EXTERN_API PyObject *dataReceived( PyObject *self, PyObject *args )
     nEndPos = pos;
     typeByte = buffer[pos];
     pos++;
-    
+
     switch (typeByte) {
     case LIST: {
       int num = b1282int(buffer, nBeginPos, nEndPos);
       if (!state->currentList)	{
-	state->currentList = (struct listItem *)malloc(sizeof(struct listItem)); 
+	state->currentList = (struct listItem *)malloc(sizeof(struct listItem));
 	state->currentList->lastList = NULL;
 	state->currentList->size = num;
 	state->currentList->thisList = PyList_New(0);
@@ -349,7 +349,7 @@ extern EXTERN_API PyObject *dataReceived( PyObject *self, PyObject *args )
       }
       break;
     }
-      
+
     case STRING: {
       int len = b1282int(buffer, nBeginPos, nEndPos);
       /* printf("String length: %d\n", len); */
@@ -367,7 +367,7 @@ extern EXTERN_API PyObject *dataReceived( PyObject *self, PyObject *args )
       pos = pos + len;
       break;
     }
-      
+
     case SYMBOL:
     case VOCAB: {
       // SYBMOL and VOCAB are the same??
@@ -382,7 +382,7 @@ extern EXTERN_API PyObject *dataReceived( PyObject *self, PyObject *args )
       }
       break;
     }
-      
+
     case FLOAT: {
       // TODO: optimize floats
       char* numBuffer;
@@ -400,7 +400,7 @@ extern EXTERN_API PyObject *dataReceived( PyObject *self, PyObject *args )
       gotItemFloat(num, state->currentList, expressionReceived);
       break;
     }
-      
+
     default: {
       PyErr_SetString(BananaError, "Invalid Type Byte");
       return NULL;
@@ -412,12 +412,12 @@ extern EXTERN_API PyObject *dataReceived( PyObject *self, PyObject *args )
       while (state->currentList && PyList_Size(state->currentList->thisList) == state->currentList->size) {
 	PyObject *list;
 	struct listItem *tmp;
-	
+
 	list = state->currentList->thisList;
 	tmp = state->currentList->lastList;
 	free(state->currentList);
 	state->currentList = tmp;
-	
+
 	if (!gotItemList(list, state->currentList, expressionReceived)) {
 	  return NULL;
 	}

@@ -78,7 +78,7 @@ class IRCGateway(irc.IRCClient,gateway.Gateway):
         pass
 
     def removeContact(self,contact):
-       pass
+        pass
 
     def changeStatus(self, newStatus):
         if newStatus=="Online":
