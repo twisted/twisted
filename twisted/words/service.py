@@ -86,6 +86,12 @@ class Participant(pb.Perspective):
                 return
         raise pb.Error("You're not in that group.")
 
+    def getGroupMembers(self, groupName):
+        for group in self.groups:
+            if group.name == groupName:
+                return group.members
+        eaise pb.Error("You're not in that group.")
+
     def receiveDirectMessage(self, sender, message):
         if self.client:
             self.client.receiveDirectMessage(sender.name, message)
@@ -120,6 +126,7 @@ class Participant(pb.Perspective):
     perspective_removeContact = removeContact
     perspective_groupMessage = groupMessage
     perspective_leaveGroup = leaveGroup
+    perspective_getGroupMembers = getGroupMembers
 
 class Group(pb.Cached):
 
