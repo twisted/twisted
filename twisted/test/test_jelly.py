@@ -23,6 +23,8 @@ from pyunit import unittest
 from twisted.spread import jelly
 #from twisted import sexpy
 
+from twisted.python.compat import bool
+
 class A:
     """
     dummy class
@@ -179,7 +181,7 @@ class JellyTestCase(unittest.TestCase):
         a = A()
         jelly.unjelly(jelly.jelly(a))
         jelly.unjelly(jelly.jelly(a.amethod))
-        items = [afunc, [1, 2, 3], 'test', 20.3, (1,2,3), None, A, unittest, {'a':1}, A.amethod]
+        items = [afunc, [1, 2, 3], not bool(1), bool(1), 'test', 20.3, (1,2,3), None, A, unittest, {'a':1}, A.amethod]
         for i in items:
             self.assertEquals(i, jelly.unjelly(jelly.jelly(i)))
     

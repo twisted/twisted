@@ -35,6 +35,8 @@ readability, and portability to other environments.
 
 This is how Jelly converts various objects to s-expressions:
 
+Boolean: True --> ['boolean', 'true']
+
 Integer: 1 --> 1
 
 List: [1, 2] --> ['list', 1, 2]
@@ -89,6 +91,11 @@ from types import NoneType
 from types import ClassType
 import copy
 
+try:
+    from types import BooleanType
+except ImportError:
+    BooleanType = None
+
 from new import instance
 from new import instancemethod
 
@@ -97,6 +104,7 @@ from new import instancemethod
 from twisted.python.reflect import namedObject, namedModule, qual
 from twisted.persisted.crefutil import NotKnown, _Tuple, _InstanceMethod, _DictKeyAndValue, _Dereference
 from twisted.python import runtime
+from twisted.python.compat import bool
 
 if runtime.platform.getType() == "java":
     from org.python.core import PyStringMap
@@ -399,6 +407,8 @@ class _Jellier:
                         name]
             elif objType is ModuleType:
                 return ['module', obj.__name__]
+            elif objType is BooleanType:
+                return ['boolean', obj and 'true' or 'false']
             elif objType is ClassType:
                 return ['class', qual(obj)]
             else:
@@ -530,6 +540,13 @@ class _Unjellier:
     def _unjelly_unicode(self, exp):
         if UnicodeType:
             return unicode(exp[0], "UTF-8")
+        else:
+            return Unpersistable(exp[0])
+
+    def _unjelly_boolean(self, exp):
+        if BooleanType:
+            assert exp[0] in ('true', 'false')
+            return exp[0] == 'true'
         else:
             return Unpersistable(exp[0])
 
@@ -726,6 +743,7 @@ class SecurityOptions:
         # I don't believe any of these types can ever pose a security hazard,
         # except perhaps "reference"...
         self.allowedTypes = {"None": 1,
+                             "boolean": 1,
                              "string": 1,
                              "str": 1,
                              "int": 1,
