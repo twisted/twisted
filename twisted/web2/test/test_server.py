@@ -3,7 +3,8 @@ A test harness for the twisted.web2 server.
 """
 
 from zope.interface import implements
-from twisted.web2 import http, http_headers, iweb, server, responsecode
+from twisted.web2 import http, http_headers, iweb, server
+from twisted.web2 import resource, responsecode, stream
 from twisted.trial import unittest, util, assertions
 from twisted.internet import defer
 
@@ -57,13 +58,10 @@ class TestChanRequest:
     def unregisterProducer(self):
         pass
 
-from twisted.web2 import resource
-from twisted.web2 import stream
-from twisted.web2 import http
-from twisted.web2 import responsecode
 
 
-class TestResource(resource.Resource):
+
+class BaseTestResource(resource.Resource):
     responseCode = 200
     responseText = 'This is a fake resource.'
     addSlash = True
@@ -73,19 +71,6 @@ class TestResource(resource.Resource):
 
     def responseStream(self):
         return stream.MemoryStream(self.responseText)
-
-    def child_validChild(self, ctx):
-        f = TestResource()
-        f.responseCode = 200
-        f.responseText = 'This is a valid child resource.'
-        return f
-
-    def child_missingChild(self, ctx):
-        f = TestResource()
-        f.responseCode = 404
-        f.responseStream = lambda self: None
-        return f
-
 
 
 class BaseCase(unittest.TestCase):
@@ -124,7 +109,21 @@ class BaseCase(unittest.TestCase):
 
 
 class SampleWebTest(BaseCase):
-    root = TestResource()
+    class SampleTestResource(BaseTestResource):
+        def child_validChild(self, ctx):
+            f = BaseTestResource()
+            f.responseCode = 200
+            f.responseText = 'This is a valid child resource.'
+            return f
+
+        def child_missingChild(self, ctx):
+            f = BaseTestResource()
+            f.responseCode = 404
+            f.responseStream = lambda self: None
+            return f
+
+    def setUp(self):
+        self.root = self.SampleTestResource()
 
     def test_root(self):
         self.assertResponse(
@@ -141,3 +140,25 @@ class SampleWebTest(BaseCase):
             (self.root, 'http://host/invalidChild'),
             (404, {}, None))
 
+
+class TestDeferredRendering(BaseCase):
+    class ResourceWithDeferreds(BaseTestResource):
+        responseText = 'I should be wrapped in a Deferred.'
+        def render(self, ctx):
+            from twisted.internet import reactor
+            d = defer.Deferred()
+            reactor.callLater(0, d.callback, BaseTestResource.render(self, ctx))
+            return d
+
+        def child_deferred(self, ctx):
+            return self
+        
+    def test_deferredRootResource(self):
+        self.assertResponse(
+            (self.ResourceWithDeferreds(), 'http://host/'),
+            (200, {}, 'I should be wrapped in a Deferred.'))
+
+    def test_deferredChild(self):
+        self.assertResponse(
+            (self.ResourceWithDeferreds(), 'http://host/deferred'),
+            (200, {}, 'I should be wrapped in a Deferred.'))
