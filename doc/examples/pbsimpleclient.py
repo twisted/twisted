@@ -28,6 +28,6 @@ def gotNoObject(reason):
     reactor.stop()
 
 factory = pb.PBClientFactory()
-reactor.connectTCP("localhost", 8789)
+reactor.connectTCP("localhost", 8789, factory)
 factory.getRootObject().addCallbacks(gotObject, gotNoObject)
 reactor.run()

@@ -20,6 +20,7 @@ factory = pb.PBClientFactory()
 reactor.connectTCP(
     "localhost", # host name
     pb.portno, # port number
+    factory, # factory
     )
 factory.getPerspective(
     "guest", # identity name
