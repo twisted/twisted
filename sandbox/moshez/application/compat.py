@@ -88,22 +88,28 @@ class ServiceNetwork:
         self.app = service.IServiceCollection(app)
 
     def listenWith(self, portType, *args, **kw):
-        internet.GenericServer(portType, *args, **kw).setServiceParent(self.app)
+        s = internet.GenericServer(portType, *args, **kw)
+        s.privileged = 1
+        s.setServiceParent(self.app)
 
     def listenTCP(self, port, factory, backlog=5, interface=''):
         s = internet.TCPServer(port, factory, backlog, interface)
+        s.privileged = 1
         s.setServiceParent(self.app)
 
     def listenUNIX(self, filename, factory, backlog=5, mode=0666):
         s = internet.UNIXServer(filename, factory, backlog, mode)
+        s.privileged = 1
         s.setServiceParent(self.app)
 
     def listenUDP(self, port, proto, interface='', maxPacketSize=8192):
         s = internet.UDPServer(port, proto, interface, maxPacketSize)
+        s.privileged = 1
         s.setServiceParent(self.app)
 
     def listenSSL(self, port, factory, ctxFactory, backlog=5, interface=''):
         s = internet.SSLServer(port, factory, ctxFactory, backlog, interface)
+        s.privileged = 1
         s.setServiceParent(self.app)
 
     def connectWith(self, connectorType, *args, **kw):
