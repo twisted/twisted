@@ -455,7 +455,7 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
         return f
 
 
-from twisted.web import widgets
+import widgets
 
 class DirectoryListing(widgets.StreamWidget, styles.Versioned):
     """DEPRECATED."""
