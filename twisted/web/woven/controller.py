@@ -17,7 +17,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.32 $"[11:-2]
+__version__ = "$Revision: 1.33 $"[11:-2]
 
 import os
 import cgi
@@ -28,6 +28,7 @@ from twisted.python import components
 from twisted.web import resource, server, static
 from twisted.web.woven import interfaces, utils
 from twisted.web import woven
+from twisted.web.static import redirectTo, addSlash
 
 import warnings
 from time import time as now
@@ -51,7 +52,9 @@ class Controller(resource.Resource):
     __implements__ = (interfaces.IController, resource.IResource)
     setupStacks = 1
     controllerLibraries = []
-    def __init__(self, m, inputhandlers=None, view=None, controllers=None):
+    viewFactory = None
+    templateDirectory = ""
+    def __init__(self, m, inputhandlers=None, view=None, controllers=None, templateDirectory = None):
         #self.start = now()
         resource.Resource.__init__(self)
         self.model = m
@@ -68,6 +71,8 @@ class Controller(resource.Resource):
             self._inputhandlers = inputhandlers
         else:
             self._inputhandlers = controllers
+        if templateDirectory is not None:
+            self.templateDirectory = templateDirectory
         self._valid = {}
         self._invalid = {}
         self._process = {}
@@ -157,9 +162,20 @@ class Controller(resource.Resource):
         self._valid = {}
         return self.renderView(request)
 
+    def makeView(self, model, name, parentCount=0):
+        v = self.viewFactory(model, name)
+        v.parentCount = parentCount
+        v.templateDirectory = self.templateDirectory
+        v.tapestry = self
+        v.importViewLibrary(self)
+        return v
+
     def renderView(self, request):
         if self.view is None:
-            self.setView(components.getAdapter(self.model, interfaces.IView, None))
+            if self.viewFactory is not None:
+                self.setView(self.makeView(self.model, None))
+            else:
+                self.setView(components.getAdapter(self.model, interfaces.IView, None))
             self.view.setController(self)
         return self.view.render(request, doneCallback=self.gatheredControllers)
 

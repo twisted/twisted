@@ -17,7 +17,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.59 $"[11:-2]
+__version__ = "$Revision: 1.60 $"[11:-2]
 
 # Sibling imports
 import interfaces
@@ -90,7 +90,7 @@ class View:
 
     viewLibraries = []
     setupStacks = 1
-    def __init__(self, m, templateFile=None, controller=None, doneCallback=None, modelStack=None, viewStack=None, controllerStack=None):
+    def __init__(self, m, templateFile=None, templateDirectory=None, controller=None, doneCallback=None, modelStack=None, viewStack=None, controllerStack=None):
         """
         A view must be told what its model is, and may be told what its
         controller is, but can also look up its controller if none specified.
@@ -112,6 +112,8 @@ class View:
                 self.doneCallback = doneCallback
         if templateFile:
             self.templateFile = templateFile
+        if templateDirectory:
+            self.templateDirectory = templateDirectory
 
         self.outstandingCallbacks = 0
         self.outstandingNodes = []
