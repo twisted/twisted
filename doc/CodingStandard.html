@@ -48,21 +48,44 @@
         include more related functionality in that module.
       </p>
       <p>
-        I realize that different ways to import a module have different
-        semantics, so this rule is flexible, but: it is preferred that modules
-        be imported directly into the namespace of the referencing module, and
-        references to functionality in that module be prefixed with the module
-        name.
+        <em>Note that this rule is a change from previous versions of Twisted,
+        so a lot of code does not yet adhere to it.</em>
       </p>
       <p>
-        For example, <code>from twisted import reality; reality.Thing()</code>,
-        not <code> import twisted.reality; twisted.reality.Thing()</code> or
-        <code> from twisted.reality import Thing; Thing()</code>.
+        By default, objects from modules in Twisted ought to be imported
+        directly into the namespace of the module that uses them, like this:
+        <code>from twisted.python.defer import Deferred</code>
       </p>
       <p>
-        Unfortunately, sibling imports within a package may be required when
-        circular module imports exist. Only use them in that case, and make
-        sure module names are not ambiguous with other modules.
+        In some cases, however, Twisted takes advantage of the dynamic binding
+        of Python in order to provide an interface through a module that may be
+        imported -- we call these "volatile" modules, because their internals
+        are subject to change without warning.  In these cases, it is
+        desireable to import the module itself into the user's namespace, so
+        that things bound to it will be looked up on each call.  For obvious
+        reasons, classes in volatile modules should never be subclassed.
+      </p>
+      <p>
+        Volatile modules will have a __volatile__ attribute set to 1, and
+        should always have a docstring snippet like the one that follows:
+        
+        <blockquote>
+          <pre>
+"""
+NOTE: this is a __volatile__ module.  This means that if you are using it
+externally, you should know that its contents may change at any time.  In
+general, all this means is that you must not use it like this::
+
+    from twisted.package.module import Class
+    Class()
+
+but instead like this::
+
+    from twisted.package import module
+    module.Class()
+"""
+          </pre>
+        </blockquote>
       </p>
       <h3>Packages</h3>
       <p>
@@ -177,6 +200,13 @@ def foo2bar(f):
           <li> twisted.spread.pb.ViewPoint </li>
           <li> twisted.parser.patterns.Pattern </li>
         </ul>
+        An effort should be made to prevent class names from clashing with each
+        other between modules, to reduce the need for qualification when
+        importing.  For example, a Service subclass for Forums might be named
+        twisted.forum.service.ForumService, and a Service subclass for Words
+        might be twisted.words.service.WordsService.  Since neither of these
+        modules are volatile <i>(see above)</i> the classes may be imported
+        directly into the user's namespace and not cause confusion.
       </p>
 
       <h3>Methods</h3>
@@ -288,7 +318,7 @@ def foo2bar(f):
     <address><a href="mailto:glyph@helix.twistedmatrix.com">Glyph Lefkowitz</a></address>
 <!-- Created: Thu Apr 26 07:53:26 CDT 2001 -->
 <!-- hhmts start -->
-Last modified: Tue Dec 18 10:55:52 CST 2001
+Last modified: Fri Jan 25 18:04:28 CST 2002
 <!-- hhmts end -->
   </body>
 </html>
