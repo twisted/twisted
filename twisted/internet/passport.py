@@ -69,7 +69,10 @@ class Service:
     def createPerspective(self, name):
         """Create a perspective from self.perspectiveClass and add it to this service.
         """
-        self.perspectives[name] = self.perspectiveClass(name)
+        p = self.perspectiveClass(name)
+        self.perspectives[name] = p
+        p.setService(self)
+        return p
 
     def addPerspective(self, perspective):
         """Add a perspective to this Service.
