@@ -185,8 +185,12 @@ def notes(document):
     for note in notes:
         note.childNodes.insert(0, notePrefix)
 
+def fixRelativeLinks(document, linkrel):
+    for node in domhelpers.findElementsWithAttribute(document, "href"):
+        node.setAttribute("href", linkrel+node.getAttribute("href"))
 
 def munge(document, template, linkrel, d, fullpath, ext, url):
+    fixRelativeLinks(template, linkrel)
     addMtime(template, fullpath)
     removeH1(document)
     expandAPI(document)
@@ -223,8 +227,8 @@ def parseFileAndReport(fn):
     except microdom.ParseError, e:
         print e
 
-def doFile(fn, docsdir, ext, url, templ):
+def doFile(fn, docsdir, ext, url, templ, linkrel=''):
     doc = parseFileAndReport(fn)
     cn = templ.cloneNode(1)
-    munge(doc, cn, '', docsdir, fn, ext, url)
+    munge(doc, cn, linkrel, docsdir, fn, ext, url)
     cn.writexml(open(os.path.splitext(fn)[0]+ext, 'wb'))

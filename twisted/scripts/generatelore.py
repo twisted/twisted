@@ -32,10 +32,11 @@ def dircount(d):
 
 class Walker:
 
-    def __init__(self, templ, baseurl, ext):
+    def __init__(self, templ, baseurl, ext, linkrel):
         self.templ = templ
         self.baseurl = baseurl
         self.ext = ext
+        self.linkrel = linkrel
         self.walked = []
 
     def walkdir(self, topdir):
@@ -54,9 +55,10 @@ class Walker:
     def walkAround(self):
         i = 0
         for linkrel, fname, fullpath, d in self.walked:
+            linkrel = self.linkrel + linkrel
             i += 1
             self.percentdone((float(i) / len(self.walked)), fname)
-            tree.doFile(fullpath, d, self.ext, self.baseurl, self.templ)
+            tree.doFile(fullpath, d, self.ext, self.baseurl, self.templ,linkrel)
         self.percentdone(1., "*Done*")
 
     def percentdone(self, percent, fname):
@@ -75,6 +77,7 @@ class Options(usage.Options):
     optParameters = [["template", "t", "template.tpl",
                       "The template to follow for generating content."],
                      ["docsdir", "d", None],
+                     ["linkrel", "l", ''],
                      ["ext", "e", ".xhtml",
                       "The extension of output files (and thus what links are "
                       "munged to)"],
@@ -102,8 +105,8 @@ def run():
     if opt['files']:
         for fn in opt['files']:
             tree.doFile(fn, opt['docsdir'] or os.path.dirname(fn),
-                        ext, opt['baseurl'], templ)
+                        ext, opt['baseurl'], templ, opt['linkrel'])
     else:
-        w = Walker(templ, opt['baseurl'], ext)
+        w = Walker(templ, opt['baseurl'], ext, opt['linkrel'])
         w.walkdir(opt['docsdir'] or '.')
         print
