@@ -61,6 +61,7 @@ class MicroDOMTest(TestCase):
         d = microdom.parseString(s)
         self.failUnless(not d.documentElement.hasChildNodes(),
                         d.documentElement.childNodes)
+        self.failUnlessEqual(d, microdom.parseString('<hello></hello>'))
     
     def testTameDocument(self):
         s = """
@@ -149,11 +150,14 @@ class MicroDOMTest(TestCase):
     
     def testSingletons(self):
         s = "<foo><b/><b /><b\n/></foo>"
+        s2 = "<foo><b/><b/><b/></foo>"
         nodes = microdom.parseString(s).documentElement.childNodes
+        nodes2 = microdom.parseString(s2).documentElement.childNodes
         self.assertEquals(len(nodes), 3)
-        for n in nodes:
+        for (n, n2) in zip(nodes, nodes2):
             self.assert_(isinstance(n, microdom.Element))
             self.assertEquals(n.nodeName, "b")
+            self.assertEquals(n, n2)
 
     def testAttributes(self):
         s = '<foo a="b" />'
@@ -180,7 +184,11 @@ class MicroDOMTest(TestCase):
 
     def testMutate(self):
         s = "<foo />"
+        s1 = '<foo a="b"><bar/><foo/></foo>'
+        s2 = '<foo a="b">foo</foo>'
         d = microdom.parseString(s).documentElement
+        d1 = microdom.parseString(s1).documentElement
+        d2 = microdom.parseString(s2).documentElement
 
         d.appendChild(d.cloneNode())
         d.setAttribute("a", "b")
@@ -193,6 +201,7 @@ class MicroDOMTest(TestCase):
         self.assertEquals(d.childNodes[1], child)
         for n in d.childNodes:
             self.assertEquals(n.parentNode, d)
+        self.assertEquals(d, d1)
         
         d.removeChild(child)
         self.assertEquals(len(d.childNodes), 1)
@@ -201,6 +210,7 @@ class MicroDOMTest(TestCase):
         t = microdom.Text("foo")
         d.replaceChild(t, d.firstChild())
         self.assertEquals(d.firstChild(), t)
+        self.assertEquals(d, d2)
 
     def testSearch(self):
         s = "<foo><bar id='me' /><baz><foo /></baz></foo>"
@@ -214,9 +224,13 @@ class MicroDOMTest(TestCase):
         s = ('<?xml version="1.0"?>'
         '<!DOCTYPE foo PUBLIC "baz" "http://www.example.com/example.dtd">'
         '<foo />')
+        s2 = '<foo/>'
         d = microdom.parseString(s)
+        d2 = microdom.parseString(s2)
         self.assertEquals(d.doctype, 'foo PUBLIC "baz" "http://www.example.com/example.dtd"')
         self.assertEquals(d.toxml(), s)
+        self.failIfEqual(d, d2)
+        self.failUnlessEqual(d.documentElement, d2.documentElement)
 
     samples = [("<foo/>", "<foo />"),
                ("<foo A='b'>x</foo>", '<foo A="b">x</foo>'),
@@ -227,8 +241,10 @@ class MicroDOMTest(TestCase):
     def testOutput(self):
         for s, out in self.samples:
             d = microdom.parseString(s, caseInsensitive=0)
+            d2 = microdom.parseString(out, caseInsensitive=0)
             testOut = d.documentElement.toxml()
             self.assertEquals(out, testOut)
+            self.assertEquals(d, d2)
 
     def testErrors(self):
         for s in ["<foo>&am</foo>", "<foo", "<f>&</f>", "<() />"]:
@@ -236,8 +252,17 @@ class MicroDOMTest(TestCase):
 
     def testCaseInsensitive(self):
         s = "<foo a='b'><BAx>x</bax></FOO>"
+        s2 = '<foo a="b"><bax>x</bax></foo>'
+        s3 = "<FOO a='b'><BAx>x</BAx></FOO>"
+        d = microdom.parseString(s)
+        d2 = microdom.parseString(s2)
+        d3 = microdom.parseString(s3, caseInsensitive=1)
         out = microdom.parseString(s).documentElement.toxml()
-        self.assertEquals(out, '<foo a="b"><bax>x</bax></foo>')
+        self.assertRaises(microdom.MismatchedTags, microdom.parseString, 
+            s, caseInsensitive=0)
+        self.assertEquals(out, s2)
+        self.failUnlessEqual(d, d2)
+        self.failUnlessEqual(d, d3)
 
     def testCloneNode(self):
         s = '<foo a="b"><bax>x</bax></foo>'

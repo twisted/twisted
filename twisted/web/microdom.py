@@ -94,6 +94,17 @@ class Node:
         self.parentNode = parentNode
         self.childNodes = []
 
+    def __eq__(self, n):
+        if not isinstance(n, Node):
+            return 0
+        return self.isEqualToNode(n)
+
+    def isEqualToNode(self, n):
+        for a, b in zip(self.childNodes, n.childNodes):
+            if not a == b:
+                return 0
+        return 1
+
     def writexml(self, stream, indent='', addindent='', newl='', strip=0):
         raise NotImplementedError()
 
@@ -168,6 +179,14 @@ class Document(Node, Accessor):
 
     doctype = None
 
+    def __eq__(self, n):
+        if not isinstance(n, Document):
+            return 0
+        return self.isEqualToDocument(n) and self.isEqualToNode(n)
+
+    def isEqualToDocument(self, n):
+        return (self.doctype == n.doctype)
+
     def get_documentElement(self):
         return self.childNodes[0]
 
@@ -208,6 +227,14 @@ class EntityReference(Node):
         self.eref = eref
         self.nodeValue = self.data = "&" + eref + ";"
 
+    def __eq__(self, n):
+        return self.isEqualToEntityReference(n) and self.isEqualToNode(n)
+    
+    def isEqualToEntityReference(self, n):
+        if not isinstance(n, EntityReference):
+            return 0
+        return (self.eref == n.eref) and (self.nodeValue == n.nodeValue)
+        
     def writexml(self, stream, indent='', addindent='', newl='', strip=0):
         stream.write(self.nodeValue)
 
@@ -220,6 +247,14 @@ class CharacterData(Node):
     def __init__(self, data, parentNode=None):
         Node.__init__(self, parentNode)
         self.value = self.data = self.nodeValue = data
+
+    def __eq__(self, n):
+        if not isinstance(n, CharacterData):
+            return 0
+        return self.isEqualToCharacterData(n) and self.isEqualToNode(n)
+
+    def isEqualToCharacterData(self, n):
+        return self.value == n.value
 
 
 class Comment(CharacterData):
@@ -283,6 +318,14 @@ class Element(Node):
         self.nodeName = self.tagName = tagName
         self._filename = filename
         self._markpos = markpos
+
+    def __eq__(self, n):
+        if not isinstance(n, Element):
+            return 0
+        return self.isEqualToElement(n) and self.isEqualToNode(n)
+
+    def isEqualToElement(self, n):
+        return (self.attributes == n.attributes) and (self.nodeName == n.nodeName)
 
     def cloneNode(self, deep=0, parent=None):
         clone = Element(self.tagName, parentNode=parent)
