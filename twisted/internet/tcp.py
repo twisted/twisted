@@ -215,9 +215,9 @@ class Client(Connection):
         try:
             self.socket.connect(self.realAddress)
         except socket.error, se:
-            if se.args[0] in (EISCONN, EINPROGRESS, EALREADY):
+            if se.args[0] in (EISCONN, EALREADY):
                 pass
-            elif se.args[0] in (EWOULDBLOCK, EINVAL):
+            elif se.args[0] in (EWOULDBLOCK, EINVAL, EINPROGRESS):
                 self.startReading()
                 self.startWriting()
                 return

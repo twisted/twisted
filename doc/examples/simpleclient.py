@@ -36,6 +36,7 @@ class EchoClient(Protocol):
         self.transport.loseConnection()
     
     def connectionLost(self):
+        print "connection lost"
         from twisted.internet import reactor
         reactor.stop()
 

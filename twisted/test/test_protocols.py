@@ -1,4 +1,3 @@
-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -178,36 +177,3 @@ class NetstringReceiverTestCase(unittest.TestCase):
                 raise AssertionError("connection wasn't closed on illegal netstring %s" % repr(s))
 
 
-class ClosingFactory(protocol.ServerFactory):
-    """Factory that closes port immediatley."""
-    
-    def buildProtocol(self, conn):
-        self.port.loseConnection()
-        return
-
-class ClosingProtocol(protocol.Protocol):
-
-    closed = 0
-    
-    def connectionLost(self):
-        self.closed = 1
-
-    connectionFailed = connectionLost
-
-
-class LoopbackTestCase(unittest.TestCase):
-    """Test loopback connections."""
-    
-    def testClosePortInProtocolFactory(self):
-        f = ClosingFactory()
-        port = reactor.listenTCP(10080, f)
-        f.port = port
-        client = ClosingProtocol()
-        reactor.clientTCP("localhost", 10080, client)
-        
-        while not client.closed:
-            reactor.iterate()
-        reactor.iterate()
-        reactor.iterate()
-        
-        self.assert_(port.disconnected)
