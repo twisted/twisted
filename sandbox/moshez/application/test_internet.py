@@ -41,3 +41,12 @@ class TestInternet(unittest.TestCase):
         while factory.line is None:
             reactor.iterate(0.1)
         self.assertEqual(factory.line, 'lalala')
+
+    def testTimer(self):
+        l = []
+        t = internet.TimerService(1, l.append, "hello")
+        t.startService()
+        while not l:
+            reactor.iterate(0.1)
+        t.stopService()
+        self.assertEqual(l, ["hello"])
