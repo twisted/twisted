@@ -20,8 +20,7 @@ A simple port forwarder.
 """
 
 # Twisted imports
-from twisted.internet import reactor
-from twisted.protocols import protocol
+from twisted.internet import reactor, protocol
 
 
 class Proxy(protocol.Protocol):

@@ -22,7 +22,7 @@ These protocols are either provided by inetd, or are not provided at all.
 import time, struct
 
 # twisted import
-from twisted.protocols import protocol
+from twisted.internet import protocol
 
 
 class Echo(protocol.Protocol):

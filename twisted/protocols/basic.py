@@ -24,7 +24,7 @@ import re
 import struct
 
 # Twisted imports
-from twisted.protocols import protocol
+from twisted.internet import protocol
 from twisted.python import log
 
 

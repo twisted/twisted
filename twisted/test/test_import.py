@@ -48,7 +48,9 @@ class AtLeastImportTestCase(unittest.TestCase):
         from twisted.internet import task
         from twisted.internet import threadtask
         from twisted.internet import udp
-
+        from twisted.internet import protocol
+        from twisted.internet import defer
+    
     def test_spread(self):
         """Test importing spreadables
         """
@@ -69,7 +71,6 @@ class AtLeastImportTestCase(unittest.TestCase):
         from twisted.python import threadable
         from twisted.python import threadpool
         from twisted.python import usage
-        from twisted.python import defer
         from twisted.python import otp
     
     
@@ -81,7 +82,6 @@ class AtLeastImportTestCase(unittest.TestCase):
         from twisted.protocols import http
         from twisted.protocols import irc
         from twisted.protocols import pop3
-        from twisted.protocols import protocol
         from twisted.protocols import smtp
         from twisted.protocols import telnet
         from twisted.protocols import oscar

@@ -26,9 +26,9 @@ References:
    http://www.irchelp.org/irchelp/rfc/ctcpspec.html
 """
 
-from twisted.internet import reactor
+from twisted.internet import reactor, protocol
 from twisted.persisted import styles
-from twisted.protocols import basic, protocol
+from twisted.protocols import basic
 from twisted.python import log, reflect
 
 # System Imports

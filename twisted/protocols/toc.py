@@ -23,8 +23,7 @@ info,dir: see how gaim connects for this...it may never work if it tries to conn
 """
 
 # twisted imports
-import protocol
-from twisted.internet import reactor
+from twisted.internet import reactor, protocol
 
 # base imports
 import struct

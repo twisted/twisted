@@ -66,11 +66,10 @@ import StringIO
 from math import floor
 
 # Twisted Imports
-from twisted.internet import abstract, reactor
+from twisted.internet import abstract, reactor, protocol
 from twisted.internet.interfaces import IProducer
 from twisted.protocols import basic
-from twisted.protocols import protocol
-from twisted.protocols.protocol import ServerFactory, Protocol
+from twisted.internet.protocol import ServerFactory, Protocol
 from twisted import internet
 from twisted.python.defer import Deferred, DeferredList, FAILURE
 from twisted.python.failure import Failure

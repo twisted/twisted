@@ -27,12 +27,9 @@ from cStringIO import StringIO
 # Twisted Imports
 from twisted import copyright
 from twisted.python import log, failure
-
-# Sibling Imports
-import protocol
+from twisted.internet import protocol
 
 # Some utility chars.
-
 ESC =            chr(27) # ESC for doing fanciness
 BOLD_MODE_ON =   ESC+"[1m" # turn bold on
 BOLD_MODE_OFF=   ESC+"[m"  # no char attributes
