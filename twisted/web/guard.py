@@ -179,13 +179,22 @@ class WidgetGuard(widgets.Widget):
 # or with session expiry.
 
 class ResourceGuard(resource.Resource):
+
     isLeaf = 1
+
     def __init__(self, res, service, sessionIdentity=None, sessionPerspective=None):
+        resource.Resource.__init__(self)
         self.res = res
         self.service = service
         self.sessionPerspective = sessionPerspective
         self.sessionIdentity = sessionIdentity
 
+    def __getattr__(self, k):
+        return getattr(self.res, k)
+    
+    def listNames(self):
+        return self.res.listNames()
+    
     def reallyRender(self, request):
         # it's authenticated already...
         res = self.res.getChildForRequest(request)
