@@ -32,7 +32,7 @@ import os
 
 from twisted.web import microdom
 from twisted.python import reflect
-from twisted.protocols import sux
+from twisted.web import sux
 
 from twisted.lore import default, tree, process
 
