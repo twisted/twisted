@@ -131,7 +131,7 @@ class Gtk2Reactor(default.PosixReactorBase):
         # nothing to do, must delay
         if delay == 0:
             return # shouldn't delay, so just return
-        self.doIterationTimer = gtk.timeout_add(delay * 1000,
+        self.doIterationTimer = gtk.timeout_add(int(delay * 1000),
                                                 self.doIterationTimeout)
         # This will either wake up from IO or from a timeout.
         gtk.main_iteration(1) # block
@@ -198,7 +198,8 @@ class Gtk2Reactor(default.PosixReactorBase):
         timeout = min(self.timeout(), 0.1)
         if timeout is None:
             timeout = 0.1
-        _simtag = gtk.timeout_add(timeout * 1010, self.simulate) # grumble
+        # grumble
+        _simtag = gtk.timeout_add(int(timeout * 1010), self.simulate)
 
 
 class PortableGtkReactor(default.SelectReactor):
@@ -225,7 +226,8 @@ class PortableGtkReactor(default.SelectReactor):
         timeout = min(self.timeout(), 0.1)
         if timeout is None:
             timeout = 0.1
-        _simtag = gtk.timeout_add(timeout * 1010, self.simulate) # grumble
+        # grumble
+        _simtag = gtk.timeout_add(int(timeout * 1010), self.simulate)
 
 
 def install():
