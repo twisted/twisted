@@ -193,7 +193,7 @@ def fixRelativeLinks(document, linkrel):
     for attr in 'src', 'href':
         for node in domhelpers.findElementsWithAttribute(document, attr):
             href = node.getAttribute(attr)
-            if not href.startswith('http'):
+            if not href.startswith('http') and not href.startswith('/'):
                 node.setAttribute(attr, linkrel+node.getAttribute(attr))
 
 def setTitle(template, title):
