@@ -133,7 +133,7 @@ class DefaultHandler(Controller):
 
 
 class DefaultWidget(domwidgets.Widget):
-    def generateDOM(self, request, node):
+    def generate(self, request, node):
         return node
 
     def setSubmodel(self, submodel):
@@ -371,20 +371,20 @@ class DOMTemplate(Resource, View):
         view = DefaultWidget(self.model)
         viewMethod = self.templateMethods.getMethodForNode(node)
         if viewMethod:
-            log.msg("getTemplateMethods is deprecated. Please switch from using class or id to using the model attribute, and prefix your methods with factory_*.")
+            log.msg("getTemplateMethods is deprecated. Please switch from using class or id to using the view attribute, and prefix your methods with factory_*.")
         else:
-            viewMethod = view.generateDOM
+            viewMethod = view.generate
             if viewName:
                 viewMethod = getattr(self, 'factory_' + viewName, None)
                 if viewMethod is None:
                     view = getattr(domwidgets, viewName, DefaultWidget)(self.model)
-                    viewMethod = view.generateDOM
+                    viewMethod = view.generate
                 else:
                     # Check to see if the viewMethod returns a widget. (Use IWidget instead?)
                     maybeWidget = viewMethod(request, node)
                     if isinstance(maybeWidget, domwidgets.Widget):
                         view = maybeWidget
-                        viewMethod = view.generateDOM
+                        viewMethod = view.generate
                     else:
                         result = maybeWidget
                         viewMethod = None

@@ -1,10 +1,12 @@
 # DOMWidgets
 
+import traceback
 import urllib
 from twisted.web.microdom import parseString
 
 from twisted.python.mvc import View, Model
 from twisted.python import domhelpers, log
+from twisted.internet import defer
 
 document = parseString("<xml />")
 
@@ -98,6 +100,29 @@ class Widget(View):
             node.removeAttribute('view')
         return node
 
+    def generate(self, request, node):
+        data = self.getData()
+        if isinstance(data, defer.Deferred):
+            data.addCallback(self.callback, request, node)
+            return data
+        self.setUp(request, node, data)
+        return self.generateDOM(request, node)
+    
+    def callback(self, result, request, node):
+        setattr(self.model, self.submodel, result)
+        self.setUp(request, node, result)
+        return self.generateDOM(request, node)
+    
+    def setUp(self, request, node, data):
+        """Override this setUp method to do any work your widget
+        needs to do prior to rendering.
+        
+        data is the Model data this Widget is meant to operate upon.
+        
+        Overriding this method deprecates overriding generateDOM directly.
+        """
+        pass
+    
     def generateDOM(self, request, node):
         if DEBUG:
             template = node.toxml()
