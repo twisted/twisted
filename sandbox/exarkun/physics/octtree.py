@@ -26,6 +26,11 @@ class _TerminalNode(object):
             if distance(o.position, center) < radius:
                 yield o
 
+def fmt(left, front, bottom):
+    return ' '.join((left and 'left' or 'right',
+                     front and 'front' or 'back',
+                     bottom and 'bottom' or 'top'))
+
 class OctTree(object):
     def __init__(self, center, width, depth, height, n=0):
         self.center = center
@@ -78,7 +83,7 @@ class OctTree(object):
                                                     depth,
                                                     height,
                                                     self.n + 1)
-            return child
+        return child
 
     def add(self, obj):
         child = self._getChild(obj.position)
@@ -129,11 +134,11 @@ class OctTree(object):
             return
 
         children = []
-        f = lambda *a: children.append(self._children[a])
+        f = lambda *a: children.append(self._children.get(a))
         if left:
             if front:
                 if bottom:
-                    f(True, True, False)
+                    f(True, True, True)
                 if top:
                     f(True, True, False)
             if back:
