@@ -1,6 +1,15 @@
 Requirements
 
   Python 2.2 or later.
+  ZopeInterfaces (http://zope.org/Products/ZopeInterface) - if you
+  have Zope3 installed that should work too.
+
+  On Windows win32all is recommended (or ActivePython)
+      http://starship.python.net/crew/mhammond/win32/Downloads.html
+
+  In addition to the above, a number of other packages are required
+  for additional functionality provided by Twisted. You must install
+  them if you wish to use the applicable functionality.
 
   SSL/TLS: PyOpenSSL 0.5.1 or later (http://pyopenssl.sf.net)
   Serial: PySerial (http://pyserial.sf.net)
@@ -9,9 +18,6 @@ Requirements
         GMPy (optional - http://gmpy.sf.net)
         PyShadow (optional -
             http://www.twistedmatrix.com/users/z3p/files/pyshadow-0.2.tar.gz)
-  On Windows win32all is recommended (or ActivePython)
-      http://starship.python.net/crew/mhammond/win32/Downloads.html
-
 
 Installation
 
