@@ -27,6 +27,8 @@ it should be secure, high-performance, and overloaded with stupid features.
 The client is probably fairly final, but should share more code with the
 server, and some details could still change.
 
+Warning: The FTP server is probably insecure, don't use it on open networks.
+
 Server TODO:
 
  * Authorization
@@ -689,7 +691,11 @@ class FTPFactory(protocol.Factory):
     otp = 0
     root = '/var/www'
     useranonymous = 'anonymous'
- 
+
+    def __init__(self):
+        import warnings
+        warnings.warn("The FTP server is INSECURE, please don't run it on the internet")
+    
     def buildProtocol(self, addr):
         p=FTP()
         p.factory = self
