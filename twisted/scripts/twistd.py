@@ -43,7 +43,7 @@ reactorTypes = {
 
 
 class ServerOptions(usage.Options):
-    synopsis = "Usage: twistd [options]"
+    synopsis = "Usage: twistd [options] [start|stop]"
 
     optFlags = [['nodaemon','n',  "don't daemonize"],
                 ['savestats', None, "save the Stats object rather than the text output of the profiler."],
@@ -86,6 +86,14 @@ class ServerOptions(usage.Options):
                    'This should not be combined with other profiling options.  '
                    'This will only take effect if the application to be run has an application '
                    'name.']]
+
+    subCommands = [['start', None, usage.Options, 
+                    'starts the application requested (default)'],
+                   ['stop', None, usage.Options,
+                    'shuts the given application down if it is running'],
+                  # ['restart',None, usage.Options,
+                  #  'restarts the application']
+                  ] 
 
     def opt_plugin(self, pkgname):
         """read config.tac from a plugin package, as with -y
@@ -211,6 +219,33 @@ def debugSignalHandler(*args):
     import pdb
     pdb.set_trace()
 
+def signalApp(config, signal = 0):
+    if os.path.exists(config['pidfile']):
+        try:
+            pid = int(open(config['pidfile']).read())
+        except ValueError:
+            msg = 'Pidfile %s contains non numeric value'
+            sys.exit(msg % config['pidfile'])
+
+        try:
+            os.kill(pid, signal)
+        except OSError, why:
+            if why[0] == errno.ESRCH:
+                # The pid doesnt exists.
+                if not config['quiet']:
+                    print 'Removing stale pidfile %s' % config['pidfile']
+                    os.remove(config['pidfile'])
+            else:
+                msg = 'Can\'t check status of PID %s from pidfile %s: %s'
+                sys.exit(msg % (pid, config['pidfile'], why[1]))
+        else:
+            if not(signal):
+                sys.exit("""\
+Another twistd server is running, PID %s\n
+This could either be a previously started instance of your application or a
+different application entirely. To start a new one, either run it in some other
+directory, or use my --pidfile and --logfile parameters to avoid clashes.
+""" %  pid)
 
 def runApp(config):
     global initRun
@@ -248,29 +283,7 @@ def runApp(config):
     # This will fix up accidental function definitions in evaluation spaces
     # and the like.
     initRun = 0
-    if os.path.exists(config['pidfile']):
-        try:
-            pid = int(open(config['pidfile']).read())
-        except ValueError:
-            sys.exit('Pidfile %s contains non numeric value' % config['pidfile'])
-
-        try:
-            os.kill(pid, 0)
-        except OSError, why:
-            if why[0] == errno.ESRCH:
-                # The pid doesnt exists.
-                if not config['quiet']:
-                    print 'Removing stale pidfile %s' % config['pidfile']
-                    os.remove(config['pidfile'])
-            else:
-                sys.exit('Can\'t check status of PID %s from pidfile %s: %s' % (pid, config['pidfile'], why[1]))
-        else:
-            sys.exit("""\
-Another twistd server is running, PID %s\n
-This could either be a previously started instance of your application or a
-different application entirely. To start a new one, either run it in some other
-directory, or use my --pidfile and --logfile parameters to avoid clashes.
-""" %  pid)
+    signalApp(config)
 
     if config['logfile'] == '-':
         if not config['nodaemon']:
@@ -457,6 +470,21 @@ directory, or use my --pidfile and --logfile parameters to avoid clashes.
             log.err("--report-profile specified but application has no name (--appname unspecified)")
     log.msg("Server Shut Down.")
 
+def stopApp(config):
+    from signal import SIGTERM
+    from os.path import exists
+    from time import sleep
+    signalApp(config, SIGTERM)
+    nWait = 0  # processes do not die instantly
+    while exists(config['pidfile']) and nWait < 20:
+        sleep(.1)
+        nWait += 1
+
+def restartApp(config):
+    #TODO: find out what the app's name is and then load from 
+    #      app-shutdown.tap if it exists.
+    stopApp(config)
+    runApp(config)
 
 def run():
     # make default be "--help"
@@ -471,4 +499,7 @@ def run():
         print "%s: %s" % (sys.argv[0], ue)
         os._exit(1)
 
+    cmd = getattr(config,'subCommand','start')
+    if 'stop'    == cmd: return stopApp(config)
+    if 'restart' == cmd: return restartApp(config)
     runApp(config)
