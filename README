@@ -39,11 +39,11 @@ What can I do with it?
   Although there is lots of infrastructure support in Twisted, the immediately
   useful application for the end-user is Twisted Web.  Twisted Web is
   a webserver, written entirely in python, which is designed to be "zero
-  maintenance".  The built-in scripts are probably only appropriate for a
-  small-to-medium website, and the server can comfortably handle 50
-  dynamic-content requests per second on middle-of-the-road hardware; however,
-  since Twisted is entirely in Python, it's quite easy to script the webserver
-  to do whatever you like!
+  maintenance".  We run the twistedmatrix.com website from it, and I can
+  testify that it has met its goals at least for me! The server can comfortably
+  handle 50 dynamic-content requests per second on fairly old hardware (I have
+  a Pentium II/333); however, since Twisted is entirely in Python, it's quite
+  easy to script the webserver to do whatever you like!
 
 Unit Tests
 
