@@ -85,7 +85,9 @@ class PosixReactorBase(ReactorBase):
     def _handleSignals(self):
         """Install the signal handlers for the Twisted event loop."""
         import signal
-        signal.signal(signal.SIGINT, self.sigInt)
+        if signal.getsignal(signal.SIGINT) == signal.default_int_handler:
+            # only handle if there isn't already a handler, e.g. for Pdb.
+            signal.signal(signal.SIGINT, self.sigInt)
         signal.signal(signal.SIGTERM, self.sigTerm)
 
         # Catch Ctrl-Break in windows (only available in Python 2.2 and up)

@@ -70,6 +70,24 @@ def runWithHotshot(reactor, config):
         sys.stdout, tmp = tmp, sys.stdout
         tmp.close()
 
+def fixPdb():
+    def do_stop(self, arg):
+        self.clear_all_breaks()
+        self.set_continue()
+        from twisted.internet import reactor
+        reactor.callLater(0, reactor.stop)
+        return 1
+
+    def help_stop(self):
+        print """stop - Continue execution, then cleanly shutdown the twisted reactor."""
+    
+    def set_quit(self):
+        os._exit(0)
+
+    pdb.Pdb.set_quit = set_quit
+    pdb.Pdb.do_stop = do_stop
+    pdb.Pdb.help_stop = help_stop
+
 def runReactorWithLogging(config, oldstdout, oldstderr):
     from twisted.internet import reactor, defer
     try:
@@ -84,7 +102,9 @@ def runReactorWithLogging(config, oldstdout, oldstderr):
             sys.stdout = oldstdout
             sys.stderr = oldstderr
             if runtime.platformType == 'posix':
-                signal.signal(signal.SIGUSR2, lambda *args: reactor.callLater(0, pdb.set_trace))
+                signal.signal(signal.SIGUSR2, lambda *args: pdb.set_trace())
+                signal.signal(signal.SIGINT, lambda *args: pdb.set_trace())
+            fixPdb()
             pdb.runcall(reactor.run)
         else:
             reactor.run()
