@@ -391,7 +391,7 @@ class TkConfigFrame(Tkinter.Frame):
                 for (flag, _, desc) in flags:
                     b = Tkinter.BooleanVar()
                     c = Tkinter.Checkbutton(f, text=desc, variable=b, wraplen=200)
-                    c.pack()
+                    c.pack(anchor=Tkinter.W)
                     self.optFlags.append((flag, b))
                 f.grid(row=1, column=1)
 

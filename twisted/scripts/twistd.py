@@ -72,7 +72,7 @@ class ServerOptions(usage.Options):
                    'Change to a supplied directory before running'],
                   ['chroot', None, None,
                    'Chroot to a supplied directory before running'],
-                  ['reactor', 'r', 'default',
+                  ['reactor', 'r', None,
                    'Which reactor to use out of: %s.' % ', '.join(reactorTypes.keys())]]
 
     def opt_plugin(self, pkgname):
@@ -202,21 +202,9 @@ def debugSignalHandler(*args):
     pdb.set_trace()
 
 
-def run():
+def runApp(config):
     global initRun
-    # make default be "--help"
-    if len(sys.argv) == 1:
-        sys.argv.append("--help")
-
     platformType = runtime.platform.getType()
-
-    config = ServerOptions()
-    try:
-        config.parseOptions()
-    except usage.error, ue:
-        config.opt_help()
-        print "%s: %s" % (sys.argv[0], ue)
-        os._exit(1)
 
     register.checkLicenseFile()
     sys.path.append(config['rundir'])
@@ -224,13 +212,17 @@ def run():
     # Install a reactor immediately.  The application will not load properly
     # unless this is done FIRST; otherwise the first 'reactor' import would
     # trigger an automatic installation of the default reactor.
+    
+    # To make this callable from within a running Twisted app, allow as the
+    # reactor None to bypass this and use whatever reactor is currently in use.
 
-    if platformType == 'java':
-        from twisted.internet import javareactor
-        javareactor.install()
-    else:
-        from twisted.python.reflect import namedModule
-        namedModule(reactorTypes[config['reactor']]).install()
+    if config['reactor']:
+        if platformType == 'java':
+            from twisted.internet import javareactor
+            javareactor.install()
+        else:
+            from twisted.python.reflect import namedModule
+            namedModule(reactorTypes[config['reactor']]).install()
 
     if platformType != 'posix' or config['debug']:
         # only posix can fork, and debugging requires nodaemon
@@ -401,3 +393,19 @@ def run():
     if usepid:
         os.unlink(config['pidfile'])
     log.msg("Server Shut Down.")
+
+
+def run():
+    # make default be "--help"
+    if len(sys.argv) == 1:
+        sys.argv.append("--help")
+
+    config = ServerOptions()
+    try:
+        config.parseOptions()
+    except usage.error, ue:
+        config.opt_help()
+        print "%s: %s" % (sys.argv[0], ue)
+        os._exit(1)
+
+    runApp(config)
