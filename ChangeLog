@@ -1,3 +1,10 @@
+2003-04-21  Bob Ippolito <bob@redivi.com>
+
+	* twisted/web/static.py (File, DirectoryListing): DirectoryListing
+	now gets the directory listing from File.listNames, and no longer
+	calls os.listdir directly (unless a directory listing is not
+	specified in the DirectoryListing constructor).
+
 2003-04-19  Brian Warner  <warner@lothar.com>
 
 	* twisted/trial/remote.py (JellyReporter.cleanResults): handle

@@ -501,6 +501,7 @@ class File(resource.Resource, styles.Versioned):
 
 class DirectoryListing(widgets.StreamWidget):
     def __init__(self, pathname, dirs=None):
+        # dirs allows usage of the File to specify what gets listed
         self.dirs = dirs
         self.path = pathname
 
