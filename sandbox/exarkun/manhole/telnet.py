@@ -198,7 +198,8 @@ class TelnetError(Exception):
     pass
 
 class NegotiationError(TelnetError):
-    pass
+    def __str__(self):
+        return self.__class__.__module__ + '.' + self.__class__.__name__ + ':' + repr(self.args[0])
 
 class OptionRefused(NegotiationError):
     pass
@@ -479,7 +480,7 @@ class Telnet(protocol.Protocol):
         d = state.him.onResult
         state.him.onResult = None
         d.callback(True)
-        assert self.enableRemote(option), "enableRemote must return True in this context"
+        assert self.enableRemote(option), "enableRemote must return True in this context (for option %r)" % (option,)
 
     def will_yes_false(self, state, option):
         # He is unilaterally offering to enable an already-enabled option.
@@ -643,6 +644,8 @@ class TelnetTransport(Telnet, ProtocolTransportMixin):
     to pass to protocolFactory.
     """
 
+    disconnecting = False
+
     protocol = None
 
     def __init__(self, protocolFactory, *a, **kw):
@@ -727,7 +730,11 @@ class TelnetBootstrapProtocol(TelnetProtocol, ProtocolTransportMixin):
     def dataReceived(self, data):
         self.protocol.dataReceived(data)
 
-class StatefulTelnetProtocol(basic.LineReceiver):
+from twisted.protocols import basic
+
+class StatefulTelnetProtocol(basic.LineReceiver, TelnetProtocol):
+    delimiter = '\n'
+
     state = 'Discard'
 
     def lineReceived(self, line):
@@ -738,8 +745,11 @@ class StatefulTelnetProtocol(basic.LineReceiver):
     def telnet_Discard(self, line):
         pass
 
-class AuthenticatingTelnetProtocol(StatefulTelnetProtocol, ProtocolTransportMixin):
+from twisted.cred import credentials
+
+class AuthenticatingTelnetProtocol(StatefulTelnetProtocol):
     state = "User"
+    protocol = None
 
     def __init__(self, portal, protocolFactory, *args, **kw):
         self.portal = portal
@@ -759,24 +769,37 @@ class AuthenticatingTelnetProtocol(StatefulTelnetProtocol, ProtocolTransportMixi
     def telnet_Password(self, line):
         username, password = self.username, line
         del self.username
-        self.transport.wont(ECHO)
-        d = self.portal.login(credentials.UsernamePassword(username, password),
-                              None,
-                              IManhole)
-        d.addCallback(self._cbLogin)
-        d.addErrback(self._ebLogin)
+        def login(ignored):
+            creds = credentials.UsernamePassword(username, password)
+            d = self.portal.login(creds, None, ITelnetProtocol)
+            d.addCallback(self._cbLogin)
+            d.addErrback(self._ebLogin)
+        self.transport.wont(ECHO).addCallback(login)
         return 'Discard'
 
     def _cbLogin(self, ial):
         interface, avatar, logout = ial
-        assert interface is IManhole
+        assert interface is ITelnetProtocol
         self.avatar = avatar
         self.logout = logout
         self.state = 'Command'
 
-        self.protocol = self.protocolFactory(**self.protocolArgs, *self.protocolKwArgs)
-        self.protocol.makeConnection(self)
-        self.dataReceived = self.protocol.dataReceived
+        self.protocol = self.protocolFactory(*self.protocolArgs, **self.protocolKwArgs)
+        self.protocol.makeConnection(self.transport)
+        self.transport.protocol = self.protocol
+
+    def _ebLogin(self, failure):
+        self.transport.write("Authentication failed\n")
+        self.transport.write("Username: ")
+        return "User"
+
+    def connectionLost(self, reason):
+        if self.protocol is not None:
+            self.protocol.connectionLost(reason)
+            self.logout()
+            del self.protocol
+            del self.avatar, self.logout
+        del self.protocolFactory, self.protocolArgs, self.protocolKwArgs
 
 __all__ = [
     # Exceptions

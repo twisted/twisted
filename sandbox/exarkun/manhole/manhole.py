@@ -98,9 +98,13 @@ class ManholeInterpreter(code.InteractiveInterpreter):
         self.handler.addOutput(data, async)
 
 class Manhole(recvline.HistoricRecvLine):
+    def __init__(self, namespace):
+        recvline.HistoricRecvLine.__init__(self, namespace)
+        self.namespace = namespace.copy()
+
     def connectionMade(self):
         recvline.HistoricRecvLine.connectionMade(self)
-        self.interpreter = ManholeInterpreter(self)
+        self.interpreter = ManholeInterpreter(self, self.namespace)
         self.keyHandlers['\x03'] = self.handle_INT
         self.keyHandlers['\x04'] = self.handle_QUIT
         self.keyHandlers['\x1c'] = self.handle_QUIT
