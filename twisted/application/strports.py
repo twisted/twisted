@@ -124,7 +124,7 @@ def parse(description, factory, default=None):
     socket with the given factory.
 
     An argument with no colons means a default port. Usually the default
-    port is C{tcp}, but passing a non-C{None} value as C{default} will
+    type is C{tcp}, but passing a non-C{None} value as C{default} will
     set that as the default. Otherwise, it is a colon-separated string.
     The first part means the type -- currently,
     it can only be ssl, unix or tcp. After that, comes a list of
