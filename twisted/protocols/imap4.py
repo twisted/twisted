@@ -504,9 +504,10 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def capabilities(self):
         cap = {'AUTH': self.challengers.keys()}
-        if self.ctx and self.canStartTLS and not self.startedTLS:
-            cap['LOGINDISABLED'] = None
-            cap['STARTTLS'] = None
+        if self.ctx and self.canStartTLS:
+            if not self.startedTLS and self.transport.getHost()[0] != 'SSL':
+                cap['LOGINDISABLED'] = None
+                cap['STARTTLS'] = None
         cap['NAMESPACE'] = None
         cap['IDLE'] = None
         return cap
@@ -1251,11 +1252,11 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def do_STATUS(self, tag, mailbox, names):
         mailbox = self._parseMbox(mailbox)
         maybeDeferred(self.account.select, mailbox, 0
-            ).addCallback(self._cbStatusGotMailbox, tag, names
+            ).addCallback(self._cbStatusGotMailbox, tag, mailbox, names
             ).addErrback(self._ebStatusGotMailbox, tag
             )
 
-    def _cbStatusGotMailbox(self, mbox, tag, names):
+    def _cbStatusGotMailbox(self, mbox, tag, mailbox, names):
         if mbox:
             maybeDeferred(mbox.requestStatus, names).addCallbacks(
                 self.__cbStatus, self.__ebStatus,
