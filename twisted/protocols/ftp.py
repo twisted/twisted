@@ -921,7 +921,6 @@ class FTPClient(basic.LineReceiver):
         factory = FTPDataPortFactory()
         listener = reactor.listenTCP(0, factory)
         factory.port = listener
-        listener.startListening()
 
         # Ensure we close the listening port if something goes wrong
         def listenerFail(error, listener=listener):
