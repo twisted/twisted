@@ -1,4 +1,6 @@
 
+from twisted.python import log
+
 class Task:
     """I am a set of steps that get executed.
 
