@@ -1,0 +1,59 @@
+
+cReactor: fast reactor core written in C
+
+STATUS: unmaintained, causes build problems, doesn't actually work.
+
+Actually, the TCP server pieces probably work. Much of the test suite fails
+because it does not offer all the functionality of the other reactors:
+client support, UNIX sockets, UDP, and probably others.
+
+It needs to be redesigned and rewritten.
+
+This module used to live in twisted/internet/cReactor/ with the following
+files at the following old revisions:
+
+.cvsignore                                          1.1        Up-to-date
+cDelayedCall.c                                      1.3        Up-to-date
+cReactor.c                                          1.14       Up-to-date
+cReactor.h                                          1.12       Up-to-date
+cReactorBuffer.c                                    1.2        Up-to-date
+cReactorModule.c                                    1.4        Up-to-date
+cReactorTCP.c                                       1.10       Up-to-date
+cReactorThread.c                                    1.3        Up-to-date
+cReactorTime.c                                      1.5        Up-to-date
+cReactorTransport.c                                 1.3        Up-to-date
+cReactorUtil.c                                      1.5        Up-to-date
+cSystemEvent.c                                      1.3        Up-to-date
+
+To compile it, the following clause was present in setup.py (v1.147), in the
+_detect_modules() method:
+
+
+        # The C reactor
+        # if python has poll support, no doubt OS supports
+        try:
+            import select
+        except:
+            select = None
+        try:
+            import thread
+        except:
+            thread = None
+        if hasattr(select, "poll") and thread and not sys.platform=='darwin':
+            exts.append( Extension("twisted.internet.cReactor",
+                                    [
+                                        "twisted/internet/cReactor/cReactorModule.c",
+                                        "twisted/internet/cReactor/cReactor.c",
+                                        "twisted/internet/cReactor/cReactorTime.c",
+                                        "twisted/internet/cReactor/cReactorTCP.c",
+                                        "twisted/internet/cReactor/cReactorTransport.c",
+                                        "twisted/internet/cReactor/cReactorBuffer.c",
+                                        "twisted/internet/cReactor/cReactorUtil.c",
+                                        "twisted/internet/cReactor/cReactorThread.c",
+                                        "twisted/internet/cReactor/cDelayedCall.c",
+                                        "twisted/internet/cReactor/cSystemEvent.c",
+                                    ],
+                                    define_macros=define_macros) )
+        else:
+            self.announce("The C reactor is unavailable on this system (this is fine, don't worry about it, everything will still work).")
+

@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.147 2003/10/13 18:43:40 etrepum Exp $
+$Id: setup.py,v 1.148 2003/10/15 09:41:10 warner Exp $
 """
 
 import distutils, os, sys, string
@@ -164,34 +164,6 @@ int main(int argc, char **argv)
                       ["twisted/spread/cBanana.c"],
                       define_macros=define_macros),
             ]
-
-        # The C reactor
-        # if python has poll support, no doubt OS supports
-        try:
-            import select
-        except:
-            select = None
-        try:
-            import thread
-        except:
-            thread = None
-        if hasattr(select, "poll") and thread and not sys.platform=='darwin':
-            exts.append( Extension("twisted.internet.cReactor",
-                                    [
-                                        "twisted/internet/cReactor/cReactorModule.c",
-                                        "twisted/internet/cReactor/cReactor.c",
-                                        "twisted/internet/cReactor/cReactorTime.c",
-                                        "twisted/internet/cReactor/cReactorTCP.c",
-                                        "twisted/internet/cReactor/cReactorTransport.c",
-                                        "twisted/internet/cReactor/cReactorBuffer.c",
-                                        "twisted/internet/cReactor/cReactorUtil.c",
-                                        "twisted/internet/cReactor/cReactorThread.c",
-                                        "twisted/internet/cReactor/cDelayedCall.c",
-                                        "twisted/internet/cReactor/cSystemEvent.c",
-                                    ],
-                                    define_macros=define_macros) )
-        else:
-            self.announce("The C reactor is unavailable on this system (this is fine, don't worry about it, everything will still work).")
 
         # The portmap module (for inetd)
         if self._check_header("rpc/rpc.h"):

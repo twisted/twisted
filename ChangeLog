@@ -1,3 +1,7 @@
+2003-10-15  Brian Warner  <warner@lothar.com>
+
+	* setup.py: remove cReactor/ to the sandbox. Closes issue318.
+
 2003-10-14  Itamar Shtull-Trauring  <itamar@sheriffpony>
 
 	* twisted/web/static.py: registry no longer has support for
