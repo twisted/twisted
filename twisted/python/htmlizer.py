@@ -55,7 +55,10 @@ class HTMLWriter:
 def filter(inp, out):
     out.write('<pre>\n')
     printer = TokenPrinter(HTMLWriter(out.write).write).printtoken
-    tokenize.tokenize(inp.readline, printer)
+    try:
+        tokenize.tokenize(inp.readline, printer)
+    except tokenize.TokenError:
+        pass
     out.write('</pre>\n')
 
 def main():
