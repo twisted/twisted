@@ -154,8 +154,7 @@ this file directly.
     C. Generate unit tests for encoding/decoding
     D. Figure a user interface for DNS serving
     E. Figure a caching strategy
-    F. Figure an algorithm to decide which "additional answers" to give
-    G. Write acceptance tests (probably via dig(1))
+    F. Write acceptance tests (probably via dig(1))
 
 031 Abstract notion of "a group of people", at a higher level than a chat
     group.
