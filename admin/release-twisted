@@ -118,8 +118,10 @@ def makeDocs(opts):
     os.system('happydoc --author="Glyph Lefkowitz <glyph@twistedmatrix.com>" '
               '--no_comments -t "Twisted Documentation" Twisted-%s > /dev/null' % ver)
 
-
-
+    print "generate-domdocsing!"
+    os.chdir("Twisted-%s" % ver)
+    os.system('./admin/generate-domdocs -v %s' % ver)
+    os.chdir("..")
     
 
 
