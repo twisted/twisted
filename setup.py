@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.109 2003/04/28 05:16:19 exarkun Exp $
+$Id: setup.py,v 1.110 2003/04/29 18:03:25 moshez Exp $
 """
 
 import distutils, os, sys, string
@@ -34,6 +34,10 @@ from distutils.command.install_data import install_data
 from distutils.ccompiler import new_compiler
 from distutils.errors import CompileError
 from distutils.command.build_ext import build_ext
+
+if sys.version_info<(2,2):
+    print >>sys.stderr, "You must use at least Python 2.2 for Twisted"
+    sys.exit(3)
 
 from twisted import copyright
 
