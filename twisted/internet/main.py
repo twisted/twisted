@@ -73,9 +73,11 @@ def shutDown(*ignored):
     the process to exit.  It can also be called directly in order
     to trigger a clean shutdown.
     """
+    warnings.warn("Please use reactor methods instead of twisted.internet.main")
     _getReactor().stop()
 
 def stopMainLoop(*ignored):
+    warnings.warn("Please use reactor methods instead of twisted.internet.main")
     global running
     running = 0
     log.msg("Stopping main loop.")
@@ -83,10 +85,11 @@ def stopMainLoop(*ignored):
 def _getReactor():
     import twisted.internet
     if not hasattr(twisted.internet, 'reactor'):
+        warnings.warn("Please use reactor methods instead of twisted.internet.main")
         # Work on Jython
         if platform.getType() == 'java':
-            import jnternet
-            # XXX make jnternet a Reactor
+            import javareactor
+            javareactor.install()
         else:
             import default
             default.install()
@@ -94,10 +97,9 @@ def _getReactor():
 
 
 def run(installSignalHandlers=1):
-    """Run input/output and dispatched/delayed code.
+    """Run input/output and dispatched/delayed code. Don't call this directly.
 
-    This call \"never\" returns.  It is the main loop which runs delayed timers
-    (see twisted.python.delay and addDelayed), and the I/O monitor (doSelect).
+    This call \"never\" returns.  
     """
     global running
     running = 1
@@ -198,6 +200,7 @@ class Delayeds:
         self.delayeds = []
 
     def addDelayed(self, d):
+        warnings.warn("Delayeds are deprecated. use reactor.callLater instead.")
         self.delayeds.append(d)
 
     def removeDelayed(self, d):
