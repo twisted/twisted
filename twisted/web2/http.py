@@ -881,8 +881,8 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             
             # resume reading if allowed to
             if(self.persistent != PERSIST_NO_PIPELINE and
-               len(self.requests < self.maxPipeline)):
-                self.resumeProducing
+               len(self.requests) < self.maxPipeline):
+                self.resumeProducing()
         else:
             if self._savedTimeOut:
                 self.setTimeout(self._savedTimeOut)

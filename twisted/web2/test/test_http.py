@@ -258,7 +258,10 @@ class TestClient(protocol.Protocol):
     def connectionLost(self, reason):
         self.done = True
         self.transport.loseConnection()
-        
+
+    def loseConnection(self):
+        self.done = True
+        self.transport.loseConnection()
 
 class TestConnection:
     def __init__(self):
@@ -266,7 +269,7 @@ class TestConnection:
         self.client = None
 
 class CoreHTTPTestCase(unittest.TestCase):
-    def connect(self, logFile=None):
+    def connect(self, logFile=None, maxPipeline=4):
         cxn = TestConnection()
 
         def makeTestRequest(*args):
@@ -275,6 +278,7 @@ class CoreHTTPTestCase(unittest.TestCase):
         
         factory = http.HTTPFactory()
         factory.requestFactory = makeTestRequest
+        factory.maxPipeline = maxPipeline
         
         cxn.client = TestClient()
         cxn.server = factory.buildProtocol(address.IPv4Address('TCP', '127.0.0.1', 2345))
@@ -300,9 +304,9 @@ class CoreHTTPTestCase(unittest.TestCase):
         self.assertEquals([req.cmds for req in cxn.requests], cmds)
         self.assertEquals(cxn.client.data, data)
 
-    def assertDone(self, cxn):
+    def assertDone(self, cxn, done=True):
         self.iterate(cxn)
-        self.assert_(cxn.client.done)
+        self.assertEquals(cxn.client.done, done)
         
     # Note: these tests compare the client output using string
     #       matching. It is acceptable for this to change and break
@@ -354,7 +358,7 @@ class CoreHTTPTestCase(unittest.TestCase):
         cxn.requests[0].acceptData()
         cxn.requests[0].write("")
         
-        data +="HTTP/1.1 200 OK\r\nYo: One\r\nYo: Two\r\nConnection: close\r\n\r\n"
+        data += "HTTP/1.1 200 OK\r\nYo: One\r\nYo: Two\r\nConnection: close\r\n\r\n"
         self.compareResult(cxn, cmds, data)
         
         cxn.requests[0].write("Output")
@@ -373,6 +377,8 @@ class CoreHTTPTestCase(unittest.TestCase):
 
         cxn.client.write("GET / HTTP/1.0\r\nConnection: keep-alive\r\nContent-Length: 5\r\nHost: localhost\r\n\r\nInput")
         cxn.client.write("GET /two HTTP/1.0\r\n\r\n")
+        # Third request shouldn't be handled
+        cxn.client.write("GET /three HTTP/1.0\r\n\r\n")
         
         cmds[0] += [('init', 'GET', '/', (1,0),
                      (('Content-Length', ['5']), ('Host', ['localhost']),)),
@@ -385,7 +391,7 @@ class CoreHTTPTestCase(unittest.TestCase):
         cxn.requests[0].acceptData()
         cxn.requests[0].write("")
         
-        data +="HTTP/1.1 200 OK\r\nContent-Length: 6\r\nYo: One\r\nYo: Two\r\nConnection: Keep-Alive\r\n\r\n"
+        data += "HTTP/1.1 200 OK\r\nContent-Length: 6\r\nYo: One\r\nYo: Two\r\nConnection: Keep-Alive\r\n\r\n"
         self.compareResult(cxn, cmds, data)
         
         cxn.requests[0].write("Output")
@@ -393,7 +399,7 @@ class CoreHTTPTestCase(unittest.TestCase):
         self.compareResult(cxn, cmds, data)
         
         cxn.requests[0].finish()
-
+        
         # Now for second request:
         cmds.append([])
         cmds[1] += [('init', 'GET', '/two', (1,0), ()),
@@ -409,4 +415,86 @@ class CoreHTTPTestCase(unittest.TestCase):
         cxn.requests[1].finish()
         
         self.assertDone(cxn)
+
+    def testHTTP1_1_pipelining(self):
+        cxn = self.connect(maxPipeline=2)
+        cmds = []
+        data = ""
+
+        # Both these show up immediately.
+        cxn.client.write("GET / HTTP/1.1\r\nContent-Length: 5\r\nHost: localhost\r\n\r\nInput")
+        cxn.client.write("GET /two HTTP/1.1\r\nHost: localhost\r\n\r\n")
+        # Doesn't show up until the first is done.
+        cxn.client.write("GET /three HTTP/1.1\r\nHost: localhost\r\n\r\n")
+        # Doesn't show up until the second is done.
+        cxn.client.write("GET /four HTTP/1.1\r\nHost: localhost\r\n\r\n")
+
+        cmds.append([])
+        cmds[0] += [('init', 'GET', '/', (1,1),
+                     (('Content-Length', ['5']), ('Host', ['localhost']),)),
+                    ('contentChunk', 'Input'),
+                    ('contentComplete',)]
+        cmds.append([])
+        cmds[1] += [('init', 'GET', '/two', (1,1),
+                     (('Host', ['localhost']),)),
+                    ('contentComplete',)]
         
+        self.compareResult(cxn, cmds, data)
+        
+        cxn.requests[0].out_headers.setRawHeaders("Content-Length", ("6", ))
+        cxn.requests[0].acceptData()
+        cxn.requests[0].write("")
+        
+        data += "HTTP/1.1 200 OK\r\nContent-Length: 6\r\n\r\n"
+        self.compareResult(cxn, cmds, data)
+        
+        cxn.requests[0].write("Output")
+        data += "Output"
+        self.compareResult(cxn, cmds, data)
+        
+        cxn.requests[0].finish()
+        
+        # Now the third request gets read:
+        cmds.append([])
+        cmds[2] += [('init', 'GET', '/three', (1,1),
+                     (('Host', ['localhost']),)),
+                    ('contentComplete',)]
+        self.compareResult(cxn, cmds, data)
+
+        # Let's write out the third request before the second.
+        # This should not cause anything to be written to the client.
+        cxn.requests[2].out_headers.setRawHeaders("Content-Length", ("5", ))
+        cxn.requests[2].acceptData()
+        cxn.requests[2].write("Three")
+        cxn.requests[2].finish()
+        
+        self.compareResult(cxn, cmds, data)
+        
+        cxn.requests[1].out_headers.setRawHeaders("Content-Length", ("3", ))
+        cxn.requests[1].acceptData()
+        cxn.requests[1].write("Two")
+        
+        data += "HTTP/1.1 200 OK\r\nContent-Length: 3\r\n\r\nTwo"
+        self.compareResult(cxn, cmds, data)
+        
+        cxn.requests[1].finish()
+        
+        # Fourth request shows up
+        cmds.append([])
+        cmds[3] += [('init', 'GET', '/four', (1,1),
+                     (('Host', ['localhost']),)),
+                    ('contentComplete',)]
+        data += "HTTP/1.1 200 OK\r\nContent-Length: 5\r\n\r\nThree"
+        self.compareResult(cxn, cmds, data)
+        
+        cxn.requests[3].out_headers.setRawHeaders("Content-Length", ("0",))
+        cxn.requests[3].acceptData()
+        cxn.requests[3].finish()
+        
+        data += "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n"
+        self.compareResult(cxn, cmds, data)
+
+        self.assertDone(cxn, done=False)
+        cxn.client.loseConnection()
+        self.assertDone(cxn)
+
