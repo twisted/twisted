@@ -12,13 +12,13 @@
 
     <h2>Introduction</h2>
 
-    <p>Twisted 1.0 is not going to be stable. What is going to be
-    stable are specific APIs, namely twisted.internet. Other parts
-    of Twisted are still too immature to be considered stable, and
-    will be worked on in later versions.</p>
+    <p>All of the APIs in Twisted 1.0 are not going to be stable. What
+    is going to be stable are specific APIs, namely twisted.internet.
+    Other parts of Twisted may still be too immature to be considered
+    stable, and will be worked on in later versions.</p>
 
     <p>The goal of this release, then, is to have <code
-    class="python">twisted.internet</code> in a state where it is a
+    class="API">twisted.internet</code> in a state where it is a
     suitable replacement for asyncore/Medusa. That means it should
     be stable API-wise, have as many tests as we can possibly write
     for it, and be well documented.</p>
@@ -26,14 +26,14 @@
     <h2>Process</h2>
 
     <p>We will, as soon as the <code
-    class="python">twisted.internet</code> APIs are stable, switch
-    to version 0.99.0. At this point, our goal is to document,
+    class="API">twisted.internet</code> APIs are stable, switch
+    to version 0.99.0. At this point, our goal will be to document,
     write tests and fix bugs in <code
-    class="python">twisted.internet</code> - all changes must API
+    class="API">twisted.internet</code> - all changes must be API
     compatible from this point onwards.</p>
 
-    <p>Changes to other parts of Twisted are acceptable, as long as
-    they follow are usual policies.</p>
+    <p>Changes to other parts of Twisted will continue to be
+    acceptable, as long as they follow our usual policies.</p>
 
     <p>1.0 will be released when we feel that the level of bugs is
     sufficiently low, and the amount of documentation and unit
@@ -42,19 +42,18 @@
     <h2>Requirements for 0.99</h2>
 
     <ul>
-      <li>Clean up connectors.</li>
-
-      <li>New UDP API. [Possibly this will be done post-1.0]</li>
+      <li>Clean up connectors. [Done]</li>
 
       <li>Make necessary changes to Application - whatever changes
       glyph wanted to make with authorizers and services.</li>
 
-      <li>Finalize Deferred APIs. [Done, I think - glyph?]</li>
+      <li>Finalize Deferred APIs. [Done]</li>
 
       <li>Low-level socket APIs - people want to turn off Nagle's
       algorithm and set other settings on sockets that are
       currently not supported. we need to formalize a method for
-      this. [Can be done post-1.0, Nagle will be checked in right after 0.19.0]</li>
+      this. [Can be done post-1.0, Disabling Nagle's is possible
+      in releases after 0.19.0]</li>
 
       <li>Support binding client sockets to specific
       interfaces.</li>
@@ -68,7 +67,13 @@
 
     <p>So, another requirement is marking all modules whose API is
     stable as such, the rest of the modules can be left
-    unmarked.</p>
+    unmarked.  We currently anticipate these modules to be: </p>
+
+    <ul>
+      <li><code class="API">twisted.internet</code></li>
+      <li>All of <code class="API">twisted.enterprise</code>,
+        except for <code class="API">twisted.enterprise.row</code>.</li>
+    </ul>
 
     <h2>Requirements for 1.0</h2>
 
@@ -78,6 +83,16 @@
     <ul>
       <li>Move all bin/ scripts to twisted/scripts.</li>
     </ul>
+
+    <h2>Post 1.0 Features</h2>
+
+    <p>These are features that will likely be added after
+    the 1.0 release.</p>
+
+    <ul>
+      <li>New UDP API.</li>
+    </ul>
+
   </body>
 </html>
 
