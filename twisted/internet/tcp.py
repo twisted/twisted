@@ -300,6 +300,7 @@ class Port(abstract.FileDescriptor):
         """
         s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
         s.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
+        s.setblocking(0)
         return s
 
     def __getstate__(self):
@@ -335,11 +336,8 @@ class Port(abstract.FileDescriptor):
         self.connected = 1
         self.socket = skt
         self.fileno = self.socket.fileno
+        self.numberAccepts = 100
         self.startReading()
-
-    def getSocket(self):
-        skt,addr = self.socket.accept()
-        return skt, addr
 
     def doRead(self):
         """Called when my socket is ready for reading.
@@ -348,12 +346,21 @@ class Port(abstract.FileDescriptor):
         wire-level protocol.
         """
         try:
-            skt, addr = self.getSocket()
-            protocol = self.factory.buildProtocol(addr)
-            s = self.sessionno
-            self.sessionno = s+1
-            transport = self.transport(skt, protocol, addr, self, s)
-            protocol.makeConnection(transport, self)
+            for i in range(self.numberAccepts):
+                try:
+                    skt,addr = self.socket.accept()
+                except socket.error, e:
+                    if e.args[0] == EWOULDBLOCK:
+                        self.numberAccepts = i
+                        break
+                    raise
+                protocol = self.factory.buildProtocol(addr)
+                s = self.sessionno
+                self.sessionno = s+1
+                transport = self.transport(skt, protocol, addr, self, s)
+                protocol.makeConnection(transport, self)
+            else:
+                self.numberAccepts = self.numberAccepts+20
         except:
             traceback.print_exc(file=log.logfile)
 
