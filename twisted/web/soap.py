@@ -142,15 +142,18 @@ class Proxy:
     will call foobar with named argument 'x'.
     """
 
-    # at some point this should have namespace, encoding etc. kwargs
-    def __init__(self, url):
+    # at some point this should have encoding etc. kwargs
+    def __init__(self, url, namespace=None, header=None):
         self.url = url
+        self.namespace = namespace
+        self.header = header
 
     def _cbGotResult(self, result):
         return SOAPpy.parseSOAPRPC(result).Result
         
     def callRemote(self, method, *args, **kwargs):
-        payload = SOAPpy.buildSOAP(args=args, kw=kwargs, method=method)
+        payload = SOAPpy.buildSOAP(args=args, kw=kwargs, method=method,
+                                   header=self.header, namespace=self.namespace)
         return client.getPage(self.url, postdata=payload, method="POST",
                               headers={'content-type': 'text/xml'}
                               ).addCallback(self._cbGotResult)
