@@ -105,7 +105,7 @@ def main():
         d[command](opts)
 
 
-def export(opts):
+def exportCVS(opts):
     root = opts['cvsroot']
     ver = opts['version']
     os.system('cvs -d%s export -r release-%s Twisted' % (root, ver.replace('.', '_')))
