@@ -178,13 +178,13 @@ class OutputConsole(gtk.GtkText):
                 # the backdrop.
                 self.insert(style.font, style.fg[gtk.STATE_NORMAL],
                             None, s)
+            l = self.get_length()
+            diff = self.maxBufSz - l
+            if diff < 0:
+                diff = - diff
+                self.delete_text(0,diff)
         finally:
             self.thaw()
-        l = self.get_length()
-        diff = self.maxBufSz - l
-        if diff < 0:
-            diff = - diff
-            self.delete_text(0,diff)
         a = self.get_vadjustment()
         a.set_value(a.upper - a.page_size)
 
