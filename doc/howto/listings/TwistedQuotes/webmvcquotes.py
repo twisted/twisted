@@ -64,7 +64,7 @@ class NewQuoteHandler(domhandlers.SingleValue):
     def commit(self, request, node, newQuote):
         print "committing new quote", `newQuote`
         file = open(self.model.getQuoteFilename(), 'a')
-        file.write('\n%'  + newQuote)
+        file.write('\n%\n'  + newQuote)
 
 
 class CQuote(wmvc.WController):
