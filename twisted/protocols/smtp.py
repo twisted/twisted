@@ -18,14 +18,37 @@
 """Simple Mail Transfer Protocol implementation.
 """
 
-from twisted.protocols import basic
-import protocol
+from twisted.protocols import basic, protocol
+from twisted.python import defer
+
 import os, time, string, operator
 
 class SMTPError(Exception):
     pass
 
 COMMAND, DATA = range(2)
+
+class NDeferred:
+
+    def __init__(self, n, deferred):
+        self.n = n
+        self.deferred = deferred
+        self.done = 0
+
+    def callback(self, arg):
+        if self.done:
+            return
+        self.n = self.n - 1
+        if self.n == 0:
+            self.deferred.callback(arg)
+            self.done = 1
+
+    def errback(self, arg):
+        if self.done:
+            return
+        self.deferred.errback(arg)
+        self.done = 1
+
 
 class User:
 
@@ -38,6 +61,25 @@ class User:
         self.helo = helo
         self.protocol = protocol
         self.orig = orig
+
+
+class IMessage:
+
+    def lineReceived(self, line):
+        """handle another line"""
+
+    def eomReceived(self):
+        """handle end of message
+
+        return a deferred. The deferred should be called with either:
+        callback(string) or errback(string)
+        """
+
+    def connectionLost(self):
+        """handle message truncated
+
+        semantics should be to discard the message
+        """
 
 class SMTP(basic.LineReceiver):
 
@@ -104,9 +146,17 @@ class SMTP(basic.LineReceiver):
         if self.__from is None or not self.__to:  
             self.sendCode(550, 'Must have valid receiver and originator')
             return
-        self.__buffer = []
         self.mode = DATA
+        helo, origin, recipients = self.__helo, self.__from, self.__to
+        self.__from = None
+        self.__to = ()
+        self.__messages = self.handleMessageStart(recipients)
         self.sendCode(354, 'Continue')
+
+    def connectionLost(self):
+        if self.mode is DATA:
+            for message in self.__messages:
+                message.handleTrunc()
 
     def do_RSET(self, rest):
         self.__init__()
@@ -116,22 +166,28 @@ class SMTP(basic.LineReceiver):
         if line[:1] == '.':
             if line == '.':
                 self.mode = COMMAND
-                helo, origin, recipients = self.__helo, self.__from, self.__to
-                message = string.join(self.__buffer, '\n')+'\n'
-                self.__from = None
-                self.__to = ()
-                del self.__buffer
-                success = self._messageHandled
-                failure = self._messageNotHandled
-                self.handleMessage(recipients, message, success, failure)
+                if not self.__messages:
+                    self._messageHandled("thrown away")
+                    return
+                deferred = defer.Deferred()
+                deferred.addCallback(self._messageHandled)
+                deferred.addErrback(self._messageNotHandled)
+                deferred.arm()
+                ndeferred = NDeferred(len(self.__messages), deferred)
+                for message in self.__messages:
+                    deferred = message.eomReceived()
+                    deferred.addCallback(ndeferred.callback)
+                    deferred.addErrback(ndeferred.errback)
+                    deferred.arm()
                 return
             line = line[1:]
-        self.__buffer.append(line)
+        for message in self.__messages:
+            message.lineReceived(line)
 
-    def _messageHandled(self):
+    def _messageHandled(self, _):
         self.sendCode(250, 'Delivery in progress')
 
-    def _messageNotHandled(self):
+    def _messageNotHandled(self, _):
         self.sendCode(550, 'Could not send e-mail')
 
     # overridable methods:
@@ -141,9 +197,9 @@ class SMTP(basic.LineReceiver):
     def validateTo(self, user, success, failure):
         success(user)
 
-    def handleMessage(self, recipients, message, 
-                      success, failure):
-        success()
+    def handleMessageStart(self, recipients):
+        return []
+
 
 
 class DomainSMTP(SMTP):
@@ -154,10 +210,11 @@ class DomainSMTP(SMTP):
             return
         self.factory.domains[user.domain].exists(user, success, failure)
 
-    def handleMessage(self, users, message, success, failure):
+    def handleMessageStart(self, users):
+        ret = []
         for user in users:
-            self.factory.domains[user.domain].saveMessage(user, message)
-        success()
+            ret.append(self.factory.domains[user.domain].startMessage(user))
+        return ret
 
 
 class SMTPClient(basic.LineReceiver):

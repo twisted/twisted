@@ -18,6 +18,8 @@
 """Support for relaying mail for twisted.mail"""
 
 from twisted.protocols import smtp
+from twisted.mail import mail
+
 import os, time, cPickle
 
 class DomainPickler:
@@ -52,46 +54,57 @@ class DomainPickler:
         peer = protocol.transport.getPeer()
         return peer[0] != 'INET' or peer[1] == '127.0.0.1'
 
-    def saveMessage(self, user, message):
+    def startMessage(self, user):
         """save a relayable pickle of the message
 
         The filename is uniquely chosen.
         The pickle contains a tuple: from, to, message
         """
-        fname = "%s_%s_%s" % (os.getpid(), time.time(), self.n)
+        fname = "%s_%s_%s_%s" % (os.getpid(), time.time(), self.n, id(self))
         self.n = self.n+1
-        fp = open(os.path.join(self.path, fname), 'w')
+        fp = open(os.path.join(self.path, fname+'-H'), 'w')
         try:
-            cPickle.dump((user.orig, '%s@%s' % (user.name, user.domain), 
-                                             message), fp)
+            cPickle.dump([user.orig, '%s@%s' % (user.name, user.domain)], fp)
         finally:
             fp.close()
+        fp = open(os.path.join(self.path, fname+'-C'), 'w')
+        return mail.FileMessage(fp, os.path.join(self.path, fname+'-C'), 
+                                    os.path.join(self.path, fname+'-D'))
 
 
 class SMTPRelayer(smtp.SMTPClient):
 
     def __init__(self, messages):
         self.messages = []
+        self.names = []
         for message in messages:
-            fp = open(message)
+            fp = open(message+'-H')
             try:
                 messageContents = cPickle.load(fp)
             finally:
                 fp.close()
-            self.messages.append((message, messageContents))
+            fp = open(message+'-D')
+            try:
+                messageContents.append(fp.read())
+            finally:
+                fp.close()
+            self.messages.append(messageContents)
+            self.names.append(message)
 
     def getMailFrom(self):
         if not self.messages:
             return None
-        return self.messages[0][1][0]
+        return self.messages[0][0]
 
     def getMailTo(self):
-        return [self.messages[0][1][1]]
+        return [self.messages[0][1]]
 
     def getMailData(self):
-        return self.messages[0][1][2]
+        return self.messages[0][2]
 
     def sentMail(self, addresses):
         if addresses:
-            os.remove(self.messages[0][0])
+            os.remove(self.names[0]+'-D')
+            os.remove(self.names[0]+'-H')
         del self.messages[0]
+        del self.names[0]

@@ -60,7 +60,7 @@ class SMTPManagedRelayer(relay.SMTPRelayer):
 
         we will always get 0 or 1 addresses.
         '''
-        message = self.messages[0][0]
+        message = self.names[0]
         relay.SMTPRelayer.sentMail(self, addresses)
 	if addresses: 
 	    self.manager.notifySuccess(self, message)
@@ -161,6 +161,10 @@ class SmartHostSMTPRelayingManager:
         ''' 
 	self.messages = {}
 	for message in os.listdir(self.directory):
+            # Skip non data files
+            if message[-2:]!='-D':
+                continue
+            message = message[:-2]
 	    if not self.relayingMessages.has_key(message):
 	        self.messages[message] = 1
 

@@ -23,8 +23,27 @@ from pyunit import unittest
 import twisted.protocols.protocol, twisted.protocols.smtp
 from twisted import protocols
 from twisted.protocols import loopback, smtp, protocol
+from twisted.python import defer
 from twisted.test.test_protocols import StringIOWithoutClosing
 import string
+
+
+class DummyMessage:
+
+    def __init__(self, domain, user):
+        self.domain = domain
+        self.user = user
+        self.buffer = []
+
+    def lineReceived(self, line):
+        self.buffer.append(line)
+
+    def eomReceived(self):
+        message = string.join(self.buffer, '\n')+'\n'
+        self.domain.messages[self.user.name].append(message)
+        deferred = defer.Deferred()
+        deferred.callback("saved")
+        return deferred
 
 
 class DummyDomain:
@@ -40,9 +59,8 @@ class DummyDomain:
        else:
            failure(user)
 
-
-   def saveMessage(self, user, message):
-       self.messages[user.name].append(message)
+   def startMessage(self, user):
+       return DummyMessage(self, user)
 
 class SMTPTestCase(unittest.TestCase):
 
@@ -146,19 +164,35 @@ QUIT\r
             raise AssertionError(`self.output.getvalue()`)
 
 
+class DummySMTPMessage:
+
+    def __init__(self, protocol, users):
+        self.protocol = protocol
+        self.users = users
+        self.buffer = []
+
+    def lineReceived(self, line):
+        self.buffer.append(line)
+
+    def eomReceived(self):
+        message = string.join(self.buffer, '\n')+'\n'
+        helo, origin = self.users[0].helo, self.users[0].orig
+        recipients = []
+        for user in self.users:
+            recipients.append(user.name+'@'+user.domain)
+        self.protocol.messages.append((helo, origin, recipients, message))
+        deferred = defer.Deferred()
+        deferred.callback("saved")
+        return deferred
+
 class DummySMTP(smtp.SMTP):
 
     def connectionMade(self):
         smtp.SMTP.connectionMade(self)
         self.messages = []
 
-    def handleMessage(self, users, message, success, failure):
-        helo, origin = users[0].helo, users[0].orig
-        recipients = []
-        for user in users:
-            recipients.append(user.name+'@'+user.domain)
-        self.messages.append((helo, origin, recipients, message))
-        success()
+    def handleMessageStart(self, users):
+        return [DummySMTPMessage(self, users)]
 
 
 class AnotherSMTPTestCase(unittest.TestCase):

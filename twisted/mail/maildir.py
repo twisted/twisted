@@ -19,9 +19,10 @@
 """
 
 import stat, os, socket, time, md5, string
-from twisted.protocols import pop3
+from twisted.protocols import pop3, smtp
 from twisted.persisted import dirdbm
 from twisted.manhole import coil
+from twisted.mail import mail
 
 
 n = 0
@@ -61,7 +62,7 @@ class AbstractMaildirDomain:
         else:
             failure(user)
 
-    def saveMessage(self, user, message):
+    def startMessage(self, user):
         """Save a message for a given user
         """
         name, domain = user.name, user.domain
@@ -69,12 +70,8 @@ class AbstractMaildirDomain:
         fname = _generateMaildirName() 
         filename = os.path.join(dir, 'tmp', fname)
         fp = open(filename, 'w')
-        try:
-            fp.write("Delivered-To: %(name)s@%(domain)s\n" % vars())
-            fp.write(message)
-        finally:
-            fp.close()
-        os.rename(filename, os.path.join(dir, 'new', fname))
+        fp.write("Delivered-To: %(name)s@%(domain)s\n" % vars())
+        return mail.FileMessage(fp, filename, os.path.join(dir, 'new', fname))
 
 
 class MaildirMailbox(pop3.Mailbox):
