@@ -43,7 +43,7 @@ elif platformType != 'java':
     from errno import EWOULDBLOCK, EINTR, EMSGSIZE, ECONNREFUSED, EAGAIN
 
 # Twisted Imports
-from twisted.internet import protocol, base
+from twisted.internet import protocol, base, defer
 from twisted.persisted import styles
 from twisted.python import log, reflect
 
@@ -143,7 +143,9 @@ class Port(base.BasePort):
         self.stopReading()
         if self.connected:
             from twisted.internet import reactor
+            self.d = defer.Deferred()
             reactor.callLater(0, self.connectionLost)
+            return self.d
 
     stopListening = loseConnection
     
@@ -160,6 +162,8 @@ class Port(base.BasePort):
         self.socket.close()
         del self.socket
         del self.fileno
+        self.d.callback(None)
+        del self.d
 
     def setLogStr(self):
         self.logstr = reflect.qual(self.protocol.__class__) + " (UDP)"
