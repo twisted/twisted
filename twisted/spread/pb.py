@@ -67,7 +67,7 @@ applied when serializing arguments.
 @author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
 
-__version__ = "$Revision: 1.151 $"[11:-2]
+__version__ = "$Revision: 1.152 $"[11:-2]
 
 
 # System Imports
@@ -1724,7 +1724,6 @@ class _PortalAuthChallenger(Referenceable):
         self.challenge = challenge
     
     def remote_respond(self, response, mind):
-        print 'MIND for REMOTE_RESPOND', mind
         self.response = response
         d = self.portalWrapper.portal.login(self, mind, IPerspective)
         d.addCallback(self._loggedIn)
