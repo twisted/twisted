@@ -12,11 +12,11 @@
 
 <h2>Introduction</h2>
 
-<p>There are three ways to write network programs:</p>
+<p>There are many ways to write network programs.  The main ones are:</p>
 
 <ol>
     <li>Handle each connection in a separate process</li>
-    <li>Handle each connection in a separate thread</li>
+    <li>Handle each connection in a separate thread[<a href="#footnote1">1</a>]</li>
     <li>Use non-blocking system calls to handle all connections
         in one thread.</li>
 </ol>
@@ -28,14 +28,16 @@ registered function when each connection is ready to for
 reading or writing -- commonly known as asynchronous, event-driven or
 callback-based programming.</p>
 
-<p>Since multi-threaded programming is often tricky, even with
-high level abstractions, and since forking Python processes has
-many disadvantages, like Python's reference counting not
-playing well with copy-on-write and problems with shared state,
-it was felt the best option was an event-driven framework. A
-benefit of such approach is that by letting other event-driven
-frameworks take over the main loop, server and client code are
-essentially the same - making peer-to-peer a reality.</p>
+<p>Multi-threaded programming is tricky, even with high level
+abstractions, and Python's 
+<a href="http://www.python.org/doc/current/api/threads.html">Global
+Interpreter Lock</a> limits the potential performance gain. Forking
+Python processes also has many disadvantages, such as Python's reference
+counting not playing well with copy-on-write and problems with shared
+state. Consequently, it was felt the best option was an event-driven
+framework. A benefit of such an approach is that by letting other
+event-driven frameworks take over the main loop, server and client
+code are essentially the same -- making peer-to-peer a reality.</p>
 
 <p>However, event-driven programming still contains some tricky
 aspects. As each callback must be finished as soon as possible,
@@ -46,11 +48,15 @@ handlers being recursive-descent parsers. Event-driven programming has
 a reputation of being hard to use due to the frequent need to
 write state machines. Twisted was built with the assumption
 that with the right library, event-driven programming is easier
-then multi-threaded programming.</p>
+than multi-threaded programming.</p>
+
+<p>Note that Twisted still allows the use of threads if you really 
+need them, usually to interface with synchronous legacy code.  See 
+<a href="threading">Using Threads</a> for details.</p>
 
 <h2>Async Design Issues</h2>
 
-<p>In Python, many time code is divided into a generic class calling
+<p>In Python, code is often divided into a generic class calling
 overridable methods which subclasses implement. In that, and similar,
 cases, it is important to think about likely implementations. If it is
 conceivable that an implementation might perform an action which takes
@@ -65,7 +71,7 @@ where recursion would have been tempting, it is usually necessary to keep
 stacks manually, using Python's list and the <code>.append</code> and
 <code>.pop</code> method. Because those state machines frequently get
 non-trivial, it is better to layer them such that each one state machine
-does one thing --- converting events from one level of abstraction to the
+does one thing -- converting events from one level of abstraction to the
 next higher level of abstraction. This allows the code to be clearer, as
 well as easier to debug.</p>
 
@@ -82,6 +88,13 @@ the method <code>"do_%s_%s" % (self.state, responseCode)</code>. This
 eliminates the requirement for registering the callback or adding to
 large if/else chains. In addition, subclasses can easily override or
 change the actions when receiving some responses, with no additional
-harness code.</p>
+harness code.  The SMTP client implementation can be found in 
+<code>twisted/protocols/smtp.py</code>.</p>
+
+<hr />
+
+<p><a name="footnote1" />[1] There are variations on this method, such
+as a limited-size pool of threads servicing all connections, which are
+essentially just optimizations of the same idea.</p>
 
 </body></html>
