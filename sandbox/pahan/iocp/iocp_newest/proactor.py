@@ -1,11 +1,13 @@
 from twisted.internet import defer, base, main
-from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorTCP, IReactorUDP
+from twisted.internet.interfaces import IReactorTCP, IReactorUDP
 from twisted.python import threadable, log
 
 import tcp#, udp
 from iocpcore import iocpcore
 
 class Proactor(iocpcore, base.ReactorBase):
+    # TODO: IReactorArbitrary, IReactorUDP, IReactorMulticast,
+    # IReactorSSL (or leave it until exarkun finishes TLS)
     __implements__ = base.ReactorBase.__implements__ + (IReactorTCP,)#IReactorUDP)
     handles = None
     iocp = None

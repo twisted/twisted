@@ -2,13 +2,13 @@ import socket
 
 from twisted.persisted import styles
 from twisted.internet.base import BaseConnector
-from twisted.internet import defer, error, interfaces
+from twisted.internet import defer, interfaces
 from twisted.python import failure
 
 from abstract import ConnectedSocket
 from ops import ConnectExOp
 from util import StateEventMachineType
-import address
+import address, error
 
 class ClientSocket(ConnectedSocket):
     def __init__(self, sock, protocol, sf):
@@ -58,11 +58,11 @@ class _SubConnector:
 
         self.sf.connectionSuccess()
 
-    def connectErr(self, ret, bytes):
+    def connectErr(self, err):
         if self.state == "dead":
             return
 
-        self.sf.connectionFailed(error.ConnectError()) # TODO: translate the Windows error appropriately
+        self.sf.connectionFailed(err)
 
 class SocketConnector(styles.Ephemeral, object):
     __metaclass__ = StateEventMachineType
@@ -81,7 +81,7 @@ class SocketConnector(styles.Ephemeral, object):
         self.reactor = reactor
 
     def handle_connecting_stopConnecting(self):
-        self.connectionFailed(error.UserError())
+        self.connectionFailed(failure.Failure(error.UserError()))
 
     handle_connecting_disconnect = handle_connecting_stopConnecting
 
@@ -95,18 +95,26 @@ class SocketConnector(styles.Ephemeral, object):
             self.factoryStarted = True
 
         if self.timeout is not None:
-            self.timeoutID = self.reactor.callLater(self.timeout, self.connectionFailed, error.TimeoutError())
-
-        self.factory.startedConnecting(self)
+            self.timeoutID = self.reactor.callLater(self.timeout, self.connectionFailed, failure.Failure(error.TimeoutError()))
 
         self.sub = _SubConnector(self)
         self.sub.startConnecting()
+
+        self.factory.startedConnecting(self)
 
     def prepareAddress(self):
         raise NotImplementedError
 
     def getDestination(self):
         return address.getFull(self.addr, self.sockinfo)
+
+    def connectionLost(self, reason):
+        self.state = "disconnected"
+        self.factory.clientConnectionLost(self, reason)
+        if self.state == "disconnected":
+            # factory hasn't called our connect() method
+            self.factory.doStop()
+            self.factoryStarted = 0
 
     def connectionFailed(self, reason):
         if self.sub.socket:

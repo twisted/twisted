@@ -1,5 +1,9 @@
-import struct, socket
+import struct, socket, os
+
+from twisted.python import failure
+
 from iocpcore import have_connectex
+import error
 
 SO_UPDATE_ACCEPT_CONTEXT = 0x700B
 SO_UPDATE_CONNECT_CONTEXT = 0x7010
@@ -38,11 +42,18 @@ class WriteFileOp(OverlappedOp):
 
 class AcceptExOp(OverlappedOp):
     def ovDone(self, ret, bytes, (handle, buffer, acc_sock)):
-        if ret:
+        if ret == 64: # ERROR_NETNAME_DELETED
+            # yay, recursion
+            self.initiateOp(handle)
+        elif ret:
             self.transport.acceptErr(ret, bytes)
         else:
-            acc_sock.setsockopt(socket.SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, struct.pack("I", handle))
-            self.transport.acceptDone(acc_sock, acc_sock.getpeername())
+            try:
+                acc_sock.setsockopt(socket.SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, struct.pack("I", handle))
+            except socket.error, se:
+                self.transport.acceptErr(ret, bytes)
+            else:
+                self.transport.acceptDone(acc_sock, acc_sock.getpeername())
 
     def initiateOp(self, handle):
         max_addr, family, type, protocol = self.reactor.getsockinfo(handle)
@@ -51,13 +62,19 @@ class AcceptExOp(OverlappedOp):
         self.reactor.issueAcceptEx(handle, acc_sock.fileno(), self.ovDone, (handle, buffer, acc_sock), buffer)
 
 class ConnectExOp(OverlappedOp):
-    def ovDone(self, ret, bytes, (handle, sock)): # change this signature
+    def ovDone(self, ret, bytes, (handle, sock)):
         if ret:
-            self.transport.connectErr(ret, bytes)
+            self.transport.connectErr(failure.Failure(error.ConnectError)) # finish the mapping in error.py
         else:
             if have_connectex:
                 sock.setsockopt(socket.SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, "")
             self.transport.connectDone()
+
+    def threadedDone(self, _):
+        self.transport.connectDone()
+
+    def threadedErr(self, err):
+        self.transport.connectErr(err)
 
     def initiateOp(self, sock, addr):
         handle = sock.fileno()
@@ -66,12 +83,12 @@ class ConnectExOp(OverlappedOp):
             self.reactor.issueConnectEx(handle, family, addr, self.ovDone, (handle, sock))
         else:
             from twisted.internet.threads import deferToThread
-            from twisted.python import log
             d = deferToThread(self.threadedThing, sock, addr)
-            d.addCallback(self.ovDone, None, (None, None))
-            d.addErrback(log.err) # should not occur
+            d.addCallback(self.threadedDone)
+            d.addErrback(self.threadedErr)
 
     def threadedThing(self, sock, addr):
         res = sock.connect_ex(addr)
-        return res
+        if res:
+            raise error.getConnectError((res, os.strerror(res)))
 

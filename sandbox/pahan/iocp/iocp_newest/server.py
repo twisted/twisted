@@ -1,14 +1,14 @@
 from sets import Set
 import socket
 
-from twisted.internet import interfaces, error
+from twisted.internet import interfaces
 from twisted.persisted import styles
 from twisted.python import log, reflect
 
 from ops import AcceptExOp
 from abstract import ConnectedSocket
 from util import StateEventMachineType
-import address
+import address, error
 
 class ServerSocket(ConnectedSocket):
     def __init__(self, sock, protocol, sf, sessionno):
@@ -22,7 +22,7 @@ class ServerSocket(ConnectedSocket):
 class ListeningPort(log.Logger, styles.Ephemeral, object):
     __metaclass__ = StateEventMachineType
     __implements__ = interfaces.IListeningPort,
-    events = ["startListening", "stopListening", "acceptDone", "acceptErr"]
+    events = ["startListening", "stopListening", "loseConnection", "acceptDone", "acceptErr"]
     sockinfo = None
     transport = ServerSocket
     sessionno = 0
@@ -62,15 +62,18 @@ class ListeningPort(log.Logger, styles.Ephemeral, object):
             self.sessionno = s+1
             transport = self.transport(sock, protocol, self, s)
             protocol.makeConnection(transport)
-        self.startAccepting()
+        if self.state == "listening":
+            self.startAccepting()
 
     def handle_disconnected_acceptDone(self, sock, addr):
         sock.close()
 
     def handle_listening_acceptErr(self, ret, bytes):
+#        print "ono acceptErr", ret, bytes
         self.stopListening()
 
     def handle_disconnected_acceptErr(self, ret, bytes):
+#        print "ono acceptErr", ret, bytes
         pass
 
     def handle_listening_stopListening(self):
@@ -78,6 +81,8 @@ class ListeningPort(log.Logger, styles.Ephemeral, object):
         self.socket.close()
         log.msg('(Port %r Closed)' % address.getPort(self.addr, self.sockinfo))
         self.factory.doStop()
+
+    handle_listening_loseConnection = handle_listening_stopListening
 
     def logPrefix(self):
         """Returns the name of my class, to prefix log entries with.
@@ -89,4 +94,10 @@ class ListeningPort(log.Logger, styles.Ephemeral, object):
 
     def getPeer(self):
         return address.getFull(self.socket.getpeername(), self.sockinfo)
+
+    def connectionLost(self, reason):
+        pass
+
+    # stupid workaround for test_tcp.LoopbackTestCase.testClosePortInProtocolFactory
+    disconnected = property(lambda self: self.state == "disconnected")
 

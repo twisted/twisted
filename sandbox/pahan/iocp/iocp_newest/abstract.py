@@ -1,7 +1,7 @@
 from sets import Set
 import warnings
 
-from twisted.internet import interfaces, defer, main, error
+from twisted.internet import interfaces, defer, main
 from twisted.persisted import styles
 from twisted.python import log, failure
 
@@ -19,7 +19,6 @@ class ConnectedSocket(log.Logger, styles.Ephemeral, object):
     reading = False
     write_shutdown = False
     read_shutdown = False
-    disconnecting = 0 # groan, stupid LineReceiver and LineOnlyReceiver want to see this in a transport
     def __init__(self, socket, protocol, sockfactory):
         self.state = "connected"
         from twisted.internet import reactor
@@ -72,9 +71,8 @@ class ConnectedSocket(log.Logger, styles.Ephemeral, object):
         if self.writing:
             self.addBufferCallback(self._cbDisconnecting, "buffer empty")
             self.state = "disconnecting"
-            self.disconnecting = 1
         else:
-            self.connectionLost(error.UserError())
+            self.connectionLost(failure.Failure(main.CONNECTION_DONE))
             return None
 
     def _cbWriteShutdown(self):
@@ -93,8 +91,8 @@ class ConnectedSocket(log.Logger, styles.Ephemeral, object):
                 self.socket.shutdown(1)
 
     def connectionLost(self, reason):
+#        log.msg("connectionLost called with reason", reason)
         self.state = "disconnected"
-        self.disconnecting = 0
         protocol = self.protocol
         del self.protocol
         # XXX: perhaps the following needs to be around to avoid resetting the connection ungracefully
@@ -105,6 +103,7 @@ class ConnectedSocket(log.Logger, styles.Ephemeral, object):
         # this should call closesocket() and kill it dead!
         self.socket.close()
         del self.socket
+        self.sf.connectionLost(reason)
         try:
             protocol.connectionLost(reason)
         except TypeError, e:
@@ -122,9 +121,9 @@ class ConnectedSocket(log.Logger, styles.Ephemeral, object):
         self.reading = True
         try:
             self.read_op.initiateOp(self.socket.fileno(), self.readbuf)
-        except Exception:
-            log.err()
-            self.loseConnection()
+        except WindowsError, we:
+#            log.msg("initiating read failed with args %s" % (we,))
+            self.connectionLost(failure.Failure(main.CONNECTION_DONE))
 
     def stopReading(self):
         self.reading = False
@@ -138,11 +137,15 @@ class ConnectedSocket(log.Logger, styles.Ephemeral, object):
         pass # a leftover read op from before we began disconnecting
 
     def handle_connected_readErr(self, ret, bytes):
-        self.loseConnection()
+#        log.msg("read failed with err %s" % (ret,))
+        self.connectionLost(failure.Failure(main.CONNECTION_DONE))
 
     handle_disconnecting_readErr = handle_connected_readErr
     
     def handle_disconnected_readErr(self, ret, bytes):
+        pass # no kicking the dead horse
+
+    def handle_disconnected_readDone(self, bytes):
         pass # no kicking the dead horse
 
     def startWriting(self):
@@ -150,9 +153,9 @@ class ConnectedSocket(log.Logger, styles.Ephemeral, object):
         b = buffer(self.writebuf[0], self.offset)
         try:
             self.write_op.initiateOp(self.socket.fileno(), b)
-        except Exception:
-            log.err()
-            self.loseConnection()
+        except WindowsError, we:
+#            log.msg("initiating write failed with args %s" % (we,))
+            self.connectionLost(failure.Failure(main.CONNECTION_DONE))
 
     def stopWriting(self):
         self.writing = False
@@ -172,11 +175,14 @@ class ConnectedSocket(log.Logger, styles.Ephemeral, object):
     handle_disconnecting_writeDone = handle_connected_writeDone
 
     def handle_connected_writeErr(self, ret, bytes):
-        self.loseConnection(failure.Failure(main.CONNECTION_DONE))
+        self.connectionLost(failure.Failure(main.CONNECTION_DONE))
 
     handle_disconnecting_writeErr = handle_connected_writeErr
     
     def handle_disconnected_writeErr(self, ret, bytes):
+        pass # no kicking the dead horse
+
+    def handle_disconnected_writeDone(self, bytes):
         pass # no kicking the dead horse
 
     # consumer interface implementation
@@ -234,4 +240,7 @@ class ConnectedSocket(log.Logger, styles.Ephemeral, object):
 
     def logPrefix(self):
         return self.logstr
+
+    # groan, stupid LineReceiver and LineOnlyReceiver want to see this in a transport
+    disconnecting = property(lambda self: self.state == "disconnecting")
 

@@ -1,11 +1,10 @@
 import types, socket, operator
 
 from twisted.internet.abstract import isIPAddress # would rather not import "abstract"
-from twisted.internet.error import ServiceNameUnknownError
 from twisted.internet import defer, interfaces
 from twisted.python import log
 
-import server, client
+import server, client, error
 import iocpdebug
 
 class TcpMixin:
@@ -34,11 +33,11 @@ class Port(server.ListeningPort):
             try:
                 port = socket.getservbyname(port, 'tcp')
             except socket.error, e:
-                raise ServiceNameUnknownError(string=str(e))
+                raise error.ServiceNameUnknownError(string=str(e))
         server.ListeningPort.__init__(self, (host, port), factory, backlog)
 
 class ClientSocket(client.SocketConnector.transport, TcpMixin):
-    pass
+    __implements__ = client.SocketConnector.transport.__implements__ + (interfaces.ITCPTransport,)
 
 class Connector(client.SocketConnector):
     sockinfo = (socket.AF_INET, socket.SOCK_STREAM, 0)
@@ -55,7 +54,7 @@ class Connector(client.SocketConnector):
             try:
                 port = socket.getservbyname(port, 'tcp')
             except socket.error, e:
-                return defer.fail(ServiceNameUnknownError(string=str(e)))
+                return defer.fail(error.ServiceNameUnknownError(string=str(e)))
         self.addr= (host, port)
         if isIPAddress(host):
             return self.addr
