@@ -35,7 +35,7 @@ from __future__ import generators
 import copy, os, types
 from zope.interface import Interface, Attribute, implements
 from twisted.internet.defer import Deferred
-from twisted.internet import interfaces as ti_interfaces, defer, reactor, protocol, error
+from twisted.internet import interfaces as ti_interfaces, defer, reactor, protocol, error as ti_error
 from twisted.python import components
 from twisted.python.failure import Failure
 
@@ -416,7 +416,23 @@ def readIntoFile(stream, outFile):
         return _
     return readStream(stream, outFile.write).addBoth(done)
 
+def connectStream(inputStream, factory):
+    """Connect a protocol constructed from a factory to stream.
 
+    Returns an output stream from the protocol.
+
+    The protocol's transport will have a finish() method it should
+    call when done writing.
+    """
+    # XXX deal better with addresses
+    p = factory.buildProtocol(None)
+    out = ProducerStream()
+    p.makeConnection(out)
+    readStream(inputStream, lambda _: p.dataReceived(_)).addCallbacks(
+        lambda _: p.connectionLost(ti_error.ConnectionDone()), lambda _: p.connectionLost(_))
+    return out
+
+    
 def fallbackSplit(stream, point):
     after = PostTruncaterStream(stream, point)
     before = TruncaterStream(stream, point, after)
@@ -673,12 +689,16 @@ class StreamProducer:
         self.paused = False
         if self.deferred is not None:
             return
-        
-        data = self.stream.read()
+
+        try:
+            data = self.stream.read()
+        except:
+            self.stopProducing(Failure())
+            return
         
         if isinstance(data, Deferred):
             # FIXME: what about errback?
-            self.deferred = data.addCallback(self._doWrite)
+            self.deferred = data.addCallbacks(self._doWrite, self.stopProducing)
         else:
             self._doWrite(data)
 
@@ -704,12 +724,11 @@ class StreamProducer:
     def pauseProducing(self):
         self.paused = True
 
-    def stopProducing(self):
+    def stopProducing(self, failure=ti_error.ConnectionLost()):
         if self.consumer is not None:
             self.consumer.unregisterProducer()
         if self.finishedCallback is not None:
-            from twisted.internet import main
-            self.finishedCallback.errback(main.CONNECTION_LOST)
+            self.finishedCallback.errback(failure)
         self.paused = True
         if self.stream is not None:
             self.stream.close()
@@ -774,7 +793,7 @@ class ProcessStreamer:
         # XXX what happens if spawn fails?
         reactor.spawnProcess(self._protocol, self._program, self._args, env=self._env)
         del self._env
-        return self._protocol.resultDeferred.addErrback(lambda _: _.trap(error.ProcessDone))
+        return self._protocol.resultDeferred.addErrback(lambda _: _.trap(ti_error.ProcessDone))
 
     def getPID(self):
         """Return the PID of the process."""
