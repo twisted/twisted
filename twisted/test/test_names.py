@@ -124,15 +124,19 @@ class ServerDNSTestCase(unittest.TestCase):
             test_domain_com, reverse_domain
         ], verbose=2)
         
-        self.listenerTCP = reactor.listenTCP(0, self.factory, interface="127.0.0.1")
-        port = self.listenerTCP.getHost()[2]
-
         p = dns.DNSDatagramProtocol(self.factory)
-        # FIXME!  Just because a TCP port number was free doesn't mean the same
-        #         UDP port number will be too.  This causes occasional test
-        #         failures.
-        self.listenerUDP = reactor.listenUDP(port, p, interface="127.0.0.1")
         
+        while 1:
+            self.listenerTCP = reactor.listenTCP(0, self.factory, interface="127.0.0.1")
+            port = self.listenerTCP.getHost()[2]
+
+            try:
+                self.listenerUDP = reactor.listenUDP(port, p, interface="127.0.0.1")
+            except error.CannotListenError:
+                self.listenerTCP.stopListening()
+            else:
+                break
+
         self.resolver = client.Resolver(servers=[('127.0.0.1', port)])
 
 
