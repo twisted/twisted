@@ -177,7 +177,7 @@ class File(resource.Resource, styles.Versioned):
             request.setHeader("location","http://%s%s/" % (
                 request.getHeader("host"),
                 (string.split(request.uri,'?')[0])))
-            request.setResponseCode(http.MOVED_PERMANENTLY)
+            request.setResponseCode(http.TEMPORARY_REDIRECT)
             return " "
         request.setHeader('accept-ranges','bytes')
         request.setHeader('last-modified', server.date_time_string(mtime))

@@ -791,8 +791,7 @@ class WidgetPage(Page):
     }
     '''
 
-    template = '''
-    <html>
+    template = '''<html>
     <style>
     %%%%self.stylesheet%%%%
     </style>
@@ -841,7 +840,7 @@ class Gadget(resource.Resource):
 
     def render(self, request):
         #Redirect to view this entity as a collection.
-        request.setResponseCode(http.MOVED_PERMANENTLY)
+        request.setResponseCode(http.TEMPORARY_REDIRECT)
         request.setHeader("location","http://%s%s/" % (
             request.getHeader("host"),
             (string.split(request.uri,'?')[0])))
@@ -956,7 +955,7 @@ class Reloader(Presentation):
 
     def reload(self, request):
         request.setHeader("location", "..")
-        request.setResponseCode(http.MOVED_PERMANENTLY)
+        request.setResponseCode(http.TEMPORARY_REDIRECT)
         x = []
         write = x.append
         for module in self.modules:

@@ -599,7 +599,7 @@ class Site(protocol.Factory, roots.Collection):
         request.setHeader("location","http://%s%s/" % (
             request.getHeader("host"),
             (string.split(request.uri,'?')[0])))
-        request.setResponseCode(http.MOVED_PERMANENTLY)
+        request.setResponseCode(http.TEMPORARY_REDIRECT)
         return 'redirect!'
 
     def getChildWithDefault(self, pathEl, request):
