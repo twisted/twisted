@@ -86,3 +86,70 @@ class LocalAsyncForwarder:
         else:
             return defer.succeed(None)
 
+
+class Pager:
+    """I am an object which pages out information.
+    """
+    def __init__(self, collector):
+        """Create a pager with a Reference to a remote collector.
+        """
+        self._stillPaging = 1
+        self.collector = collector
+        collector.broker.registerPageProducer(self)
+
+    def stillPaging(self):
+        """(internal) Method called by Broker.
+        """
+        if not self._stillPaging:
+            self.collector.callRemote("endedPaging")
+        return self._stillPaging
+
+    def sendNextPage(self):
+        """(internal) Method called by Broker.
+        """
+        self.collector.callRemote("gotPage", self.nextPage())
+
+    def nextPage(self):
+        """Override this to return an object to be sent to my collector.
+        """
+        raise NotImplementedError()
+    
+    def stopPaging(self):
+        """Call this when you're done paging.
+        """
+        self._stillPaging = 0
+
+class StringPager(Pager):
+    """A simple pager that splits a string into chunks.
+    """
+    def __init__(self, collector, st, chunkSize=8192):
+        self.string = st
+        self.pointer = 0
+        self.chunkSize = chunkSize
+        Pager.__init__(self, collector)
+
+    def nextPage(self):
+        val = self.string[self.pointer:self.pointer+self.chunkSize]
+        self.pointer += self.chunkSize
+        if self.pointer >= len(self.string):
+            self.stopPaging()
+        return val
+
+### Utility paging stuff.
+from twisted.spread import pb
+class CallbackPageCollector(pb.Referenceable):
+
+    def __init__(self, callback):
+        self.pages = []
+        self.callback = callback
+    def remote_gotPage(self, page):
+        self.pages.append(page)
+    def remote_endedPaging(self):
+        self.callback(self.pages)
+
+def getAllPages(referenceable, methodName, *args, **kw):
+    """A utility method that will call a remote method which expects a
+    PageCollector as the first argument."""
+    d = defer.Deferred()
+    referenceable.callRemote(methodName, CallbackPageCollector(d.callback), *args, **kw)
+    return d

@@ -435,6 +435,31 @@ class Broker(banana.Banana):
         self.connects = []
         self.localObjects = {}
         self.security = security
+        self.pageProducers = []
+
+    def resumeProducing(self):
+        """Called when the consumer attached to me runs out of buffer.
+        """
+        # Go backwards over the list so we can remove indexes from it as we go
+        for pageridx in xrange(len(self.pageProducers)-1, -1, -1):
+            pager = self.pageProducers[pageridx]
+            pager.sendNextPage()
+            if not pager.stillPaging():
+                del self.pageProducers[pageridx]
+        if not self.pageProducers:
+            self.transport.unregisterProducer()
+
+    # Streaming producer methods; not necessary to implement.
+    def pauseProducing(self):
+        pass
+
+    def stopProducing(self):
+        pass
+
+    def registerPageProducer(self, pager):
+        self.pageProducers.append(pager)
+        if len(self.pageProducers) == 1:
+            self.transport.registerProducer(self, 0)
 
     def expressionReceived(self, sexp):
         """Evaluate an expression as it's received.

@@ -214,15 +214,40 @@ class FileWrapper:
     
     closed = 0
     disconnecting = 0
+    producer = None
+    streamingProducer = 0
     
     def __init__(self, file):
         self.file = file
 
     def write(self, data):
+        # print 'w', repr(data)
         try:
             self.file.write(data)
         except:
             self.handleException()
+        # self._checkProducer()
+
+    def _checkProducer(self):
+        # Cheating; this is called at "idle" times to allow producers to be
+        # found and dealt with
+        if self.producer:
+            self.producer.resumeProducing()
+
+    def registerProducer(self, producer, streaming):
+        """From abstract.FileDescriptor
+        """
+        self.producer = producer
+        self.streamingProducer = streaming
+        if not streaming:
+            producer.resumeProducing()
+
+    def unregisterProducer(self):
+        self.producer = None
+
+    def stopConsuming(self):
+        self.unregisterProducer()
+        self.loseConnection()
 
     def loseConnection(self):
         self.closed = 1

@@ -86,6 +86,8 @@ class IOPump:
         self.serverIO.seek(0)
         self.clientIO.truncate()
         self.serverIO.truncate()
+        self.client.transport._checkProducer()
+        self.server.transport._checkProducer()
         for byte in cData:
             self.server.dataReceived(byte)
         for byte in sData:
@@ -579,7 +581,26 @@ class BrokerTestCase(unittest.TestCase):
         pump.pump()
         pump.pump()
         assert self.thunkResult == ID, "ID not correct on factory object %s" % self.thunkResult
-        
+
+from twisted.spread.util import Pager, StringPager, getAllPages
+
+bigString = "helloworld" * 50
+
+class Pagerizer(pb.Referenceable):
+    def remote_getPages(self, collector):
+        StringPager(collector, bigString, 100)
+
+class PagingTestCase(unittest.TestCase):
+    def testPaging(self):
+        c, s, pump = connectedServerAndClient()
+        s.setNameForLocal("foo", Pagerizer())
+        x = c.remoteForName("foo")
+        l = []
+        getAllPages(x, "getPages").addCallback(l.append)
+        while not l:
+            pump.pump()
+        assert ''.join(l[0]) == bigString
+
 from twisted.spread import publish
 
 class DumbPublishable(publish.Publishable):
