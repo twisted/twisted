@@ -424,8 +424,8 @@ class ProcessProtocol(BaseProtocol):
         """
 
 
-class DatagramProtocol:
-    """Protocol for datagram-oriented transport, e.g. UDP."""
+class AbstractDatagramProtocol:
+    """Abstract protocol for datagram-oriented transports, e.g. IP, ICMP, ARP, UDP."""
 
     transport = None
     numPorts = 0
@@ -480,6 +480,9 @@ class DatagramProtocol:
         @param datagram: the string received from the transport.
         @param addr: tuple of source of datagram.
         """
+
+class DatagramProtocol(AbstractDatagramProtocol):
+    """Protocol for datagram-oriented transport, e.g. UDP."""
 
 
 class ConnectedDatagramProtocol(DatagramProtocol):
