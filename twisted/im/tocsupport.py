@@ -44,7 +44,9 @@ class TOCPerson:
         self.status=status
         getContactsList().setContactStatus(self)
 
-    def sendMessage(self, text):
+    def sendMessage(self, text, meta={}):
+        if meta.get("style", None) == "emote":
+            text="* "+text+"* "
         self.account.say(self.name,html(text))
         return succeed(text)
 
@@ -54,7 +56,9 @@ class TOCGroup:
         self.account=tocClient
         self.roomID=self.account.roomID[name]
 
-    def sendGroupMessage(self, text):
+    def sendGroupMessage(self, text, meta={}):
+        if meta.get("style", None) == "emote":
+            text="* "+text+"* "
         self.account.chat_say(self.roomID,html(text))
         return succeed(text)
 
@@ -78,7 +82,7 @@ class TOCProto(toc.TOCClient):
         return getPerson(name,self,TOCPerson)
 
     def onLine(self):
-        self.account.online = 1
+        self.account.isOnline = 1
         #print '$$!&*$&!(@$*& TOC ONLINE *!#@&$(!*%&'
 
     def gotConfig(self, mode, buddylist, permit, deny):
@@ -170,7 +174,7 @@ class TOCAccount:
         return self.__dict__
 
     def isOnline(self):
-        return self.online
+        return self.isOnline
 
     def logOn(self):
         tcp.Client(self.host, self.port, TOCProto(self))

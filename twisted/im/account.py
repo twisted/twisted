@@ -131,7 +131,9 @@ def unregisterAccount(account):
 
 from twisted.im.pbsupport import PBAccountForm
 from twisted.im.tocsupport import TOCAccountForm
+from twisted.im.ircsupport import IRCAccountForm
 
 registeredTypes = [ ("Twisted", PBAccountForm),
                     ("AOL Instant Messenger", TOCAccountForm),
+                    ["IRC", IRCAccountForm],
                     ("Dummy", DummyAccountForm) ]
