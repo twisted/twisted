@@ -59,7 +59,7 @@ if ext == '.c' or ext == '.h':
 else:
     cpy = ''
     for line in string.split(copyright, '\n'):
-        cpy = cpy + '# ' + line + '\n'
+        cpy = (cpy + '# ' + line).strip() + '\n'
     copyright = cpy
     
 
