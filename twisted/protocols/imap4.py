@@ -1157,6 +1157,20 @@ class IMAP4Client(basic.LineReceiver):
         will be invoked if there is an error.
         """
         d = self.sendCommand('SEARCH', ' '.join(queries))
+        d.addCallback(self._cbSearch)
+        return d
+    
+    def _cbSearch(self, (lines, end)):
+        ids = []
+        for line in lines:
+            parts = line.split(None, 1)
+            if len(parts) == 2:
+                if parts[0] == 'SEARCH':
+                    try:
+                        ids.extend(map(int, parts[1].split()))
+                    except ValueError:
+                        raise IllegalServerResponse, line
+        return ids
 
 class IllegalQueryError(IMAP4Exception): pass
 
@@ -1280,6 +1294,8 @@ def Query(**kwarg):
            cmd.append(k)
         elif k not in _NO_QUOTES:
            cmd.extend([k, '"%s"' % (v,)])
+        elif k == 'HEADER':
+            cmd.extend([k, v[0], '"%s"' % (v[1],)])
         else:
            cmd.extend([k, '%s' % (v,)])
     if len(cmd) > 1:
