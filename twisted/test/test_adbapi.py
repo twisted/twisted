@@ -273,7 +273,7 @@ class GadflyConnector(DBTestConnector):
     escape_slashes = False
     good_sql = 'select * from simple where 1=0'
 
-    num_iterations = 10 # slow
+    num_iterations = 1 # slow
 
     def can_connect(self):
         try: import gadfly
@@ -305,6 +305,8 @@ class SQLiteConnector(DBTestConnector):
     DB_DIR = "./sqliteDB"
 
     escape_slashes = False
+
+    num_iterations = 1 # slow
 
     def can_connect(self):
         try: import sqlite
