@@ -23,14 +23,19 @@ resources for logged-in and non-logged-in users:</p>
 from twisted.cred import portal, checkers
 from twisted.web import resource, static
 
+def noLogout():
+    pass
+
 class Realm:
     __implements__ = portal.IRealm
     def requestAvatar(self, avatarId, mind, *interfaces):
         if resource.IResource not in interfaces:
             raise NotImplementedError
         if avatarId is checkers.ANONYMOUS:
-            return static.Data("Who are you?", 'text/html')
-        return static.Data("The answer is 42", 'text/html')
+            avatar = static.Data("Who are you?", 'text/html')
+        else:
+            avatar = static.Data("The answer is 42", 'text/html')
+        return (resource.IResource, avatar, noLogout)
 </pre>
 
 <p>This realm makes sure that only non-anonymous users will know
@@ -57,15 +62,20 @@ from twisted.web.woven import guard
 login='&lt;a href="%s">login&lt;/a>' % guard.PERSPECTIVE_INIT
 logout='&lt;a href="%s">logout&lt;/a>' % guard.PERSPECTIVE_DESTROY
 
+def noLogout():
+    pass
+
 class Realm:
     __implements__ = portal.IRealm
     def requestAvatar(self, avatarId, mind, *interfaces):
         if resource.IResource not in interfaces:
             raise NotImplementedError
         if avatarId is checkers.ANONYMOUS:
-            return static.Data("Who are you?&lt;br>"+login, 'text/html')
-        return static.Data("The answer is 42, %s&lt;br>%s" % (avatarId, logout),
-                           'text/html')
+            avatar = static.Data("Who are you?&lt;br>"+login, 'text/html')
+        else:
+            avatar = static.Data("The answer is 42, %s&lt;br>%s" % (avatarId,
+                                 logout), 'text/html')
+        return (resource.IResource, avatar, noLogout)
 </pre>
 
 <p>Once the realm is written, it is possible to generate a resource
