@@ -1,3 +1,7 @@
+2003-01-31  Cory Dodt <corydodt@yahoo.com>
+    * twisted/lore/latex.py:  Don't treat comments like text nodes, just
+      drop them.
+
 2003-01-30  Kevin Turner  <acapnotic@twistedmatrix.com>
 
 	* twisted/manhole/service.py (IManholeClient.console): 1.35

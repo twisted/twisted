@@ -51,6 +51,8 @@ class BaseLatexSpitter:
         self.filename = filename
 
     def visitNode(self, node):
+        if isinstance(node, microdom.Comment):
+            return
         if not hasattr(node, 'tagName'):
             self.writeNodeData(node)
             return
