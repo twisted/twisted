@@ -16,8 +16,8 @@
 # 
 from twisted.trial import unittest
 
-from twisted.internet import protocol, reactor, error, defer
-from twisted.python import failure
+from twisted.internet import protocol, reactor, error, defer, interfaces
+from twisted.python import failure, components
 
 
 class Mixin:
@@ -213,3 +213,9 @@ class MulticastTestCase(unittest.TestCase):
             iters += 1
         self.assertEquals(self.server.packets[0][0], "hello world")
         p.stopListening()
+
+if not components.implements(reactor, interfaces.IReactorUDP):
+    UDPTestCase.skip = "This reactor does not support UDP"
+if not components.implements(reactor, interfaces.IReactorMulticast):
+    MulticastTestCase.skip = "This reactor does not support multicast"
+

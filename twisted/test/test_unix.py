@@ -106,7 +106,7 @@ class DatagramUnixSocketTestCase(unittest.TestCase):
     # test connecting to bound and connected (somewhere else) address
 
 if not components.implements(reactor, interfaces.IReactorUNIX):
-    del UnixSocketTestCase
+    UnixSocketTestCase.skip = "This reactor does not support UNIX domain sockets"
 if not components.implements(reactor, interfaces.IReactorUNIXDatagram):
-    del DatagramUnixSocketTestCase
+    DatagramUnixSocketTestCase.skip = "This reactor does not support UNIX datagram sockets"
 
