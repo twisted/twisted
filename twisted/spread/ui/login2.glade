@@ -128,10 +128,10 @@
       <child>
 	<widget class="GtkTable" id="table1">
 	  <property name="visible">True</property>
-	  <property name="n_rows">7</property>
+	  <property name="n_rows">6</property>
 	  <property name="n_columns">2</property>
 	  <property name="homogeneous">False</property>
-	  <property name="row_spacing">0</property>
+	  <property name="row_spacing">2</property>
 	  <property name="column_spacing">0</property>
 
 	  <child>
@@ -149,8 +149,8 @@
 	      <property name="ypad">0</property>
 	      <property name="mnemonic_widget">hostEntry</property>
 	      <accessibility>
-		<atkrelation target="portEntry" type="label-for"/>
 		<atkrelation target="hostEntry" type="label-for"/>
+		<atkrelation target="portEntry" type="label-for"/>
 	      </accessibility>
 	    </widget>
 	    <packing>
@@ -318,53 +318,6 @@
 	  </child>
 
 	  <child>
-	    <widget class="GtkLabel" id="serviceLabel">
-	      <property name="visible">True</property>
-	      <property name="label" translatable="yes">_Service:</property>
-	      <property name="use_underline">True</property>
-	      <property name="use_markup">False</property>
-	      <property name="justify">GTK_JUSTIFY_LEFT</property>
-	      <property name="wrap">False</property>
-	      <property name="selectable">False</property>
-	      <property name="xalign">0.9</property>
-	      <property name="yalign">0.5</property>
-	      <property name="xpad">0</property>
-	      <property name="ypad">0</property>
-	      <property name="mnemonic_widget">serviceNameEntry</property>
-	    </widget>
-	    <packing>
-	      <property name="left_attach">0</property>
-	      <property name="right_attach">1</property>
-	      <property name="top_attach">3</property>
-	      <property name="bottom_attach">4</property>
-	      <property name="x_options">fill</property>
-	      <property name="y_options"></property>
-	    </packing>
-	  </child>
-
-	  <child>
-	    <widget class="GtkEntry" id="serviceNameEntry">
-	      <property name="visible">True</property>
-	      <property name="tooltip" translatable="yes">A Service to log in to.</property>
-	      <property name="can_focus">True</property>
-	      <property name="editable">True</property>
-	      <property name="visibility">True</property>
-	      <property name="max_length">0</property>
-	      <property name="text" translatable="yes"></property>
-	      <property name="has_frame">True</property>
-	      <property name="invisible_char" translatable="yes">*</property>
-	      <property name="activates_default">True</property>
-	    </widget>
-	    <packing>
-	      <property name="left_attach">1</property>
-	      <property name="right_attach">2</property>
-	      <property name="top_attach">3</property>
-	      <property name="bottom_attach">4</property>
-	      <property name="y_options"></property>
-	    </packing>
-	  </child>
-
-	  <child>
 	    <widget class="GtkLabel" id="perspectiveLabel">
 	      <property name="label" translatable="yes">Perspective:</property>
 	      <property name="use_underline">False</property>
@@ -380,8 +333,8 @@
 	    <packing>
 	      <property name="left_attach">0</property>
 	      <property name="right_attach">1</property>
-	      <property name="top_attach">6</property>
-	      <property name="bottom_attach">7</property>
+	      <property name="top_attach">5</property>
+	      <property name="bottom_attach">6</property>
 	      <property name="x_options">fill</property>
 	      <property name="y_options"></property>
 	    </packing>
@@ -402,8 +355,8 @@
 	    <packing>
 	      <property name="left_attach">1</property>
 	      <property name="right_attach">2</property>
-	      <property name="top_attach">6</property>
-	      <property name="bottom_attach">7</property>
+	      <property name="top_attach">5</property>
+	      <property name="bottom_attach">6</property>
 	      <property name="y_options"></property>
 	    </packing>
 	  </child>
@@ -457,8 +410,8 @@
 	    <packing>
 	      <property name="left_attach">0</property>
 	      <property name="right_attach">2</property>
-	      <property name="top_attach">5</property>
-	      <property name="bottom_attach">6</property>
+	      <property name="top_attach">4</property>
+	      <property name="bottom_attach">5</property>
 	      <property name="x_options">fill</property>
 	      <property name="y_options">fill</property>
 	    </packing>
@@ -489,8 +442,8 @@
 	    <packing>
 	      <property name="left_attach">0</property>
 	      <property name="right_attach">2</property>
-	      <property name="top_attach">4</property>
-	      <property name="bottom_attach">5</property>
+	      <property name="top_attach">3</property>
+	      <property name="bottom_attach">4</property>
 	      <property name="y_options"></property>
 	    </packing>
 	  </child>
