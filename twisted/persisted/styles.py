@@ -148,7 +148,7 @@ upgraded = {}
 
 def doUpgrade():
     global versionedsToUpgrade, upgraded
-    for versioned in versionedsToUpgrade.itervalues():
+    for versioned in versionedsToUpgrade.values():
         requireUpgrade(versioned)
     versionedsToUpgrade = {}
     upgraded = {}

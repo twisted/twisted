@@ -99,7 +99,28 @@ class VersionTestCase(unittest.TestCase):
         self.assertEquals(v2.unique, 'v2')
         self.failUnless(v1.upgraded)
         self.failUnless(v2.upgraded)
-        
+    
+    def testUpgradeDeserializesObjectsRequiringUpgrade(self):
+        global ToyClassA, ToyClassB
+        class ToyClassA(styles.Versioned):
+            pass
+        class ToyClassB(styles.Versioned):
+            pass
+        x = ToyClassA()
+        y = ToyClassB()
+        pklA, pklB = pickle.dumps(x), pickle.dumps(y)
+        del x, y
+        ToyClassA.persistenceVersion = 1
+        def upgradeToVersion1(self):
+            self.y = pickle.loads(pklB)
+            styles.doUpgrade()
+        ToyClassA.upgradeToVersion1 = upgradeToVersion1
+        ToyClassB.persistenceVersion = 1
+        ToyClassB.upgradeToVersion1 = lambda self: setattr(self, 'upgraded', True)
+
+        x = pickle.loads(pklA)
+        styles.doUpgrade()
+        self.failUnless(x.y.upgraded)
 
 class MyEphemeral(styles.Ephemeral):
 
