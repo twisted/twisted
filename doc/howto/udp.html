@@ -39,7 +39,7 @@
 from twisted.internet.protocol import DatagramProtocol
 from twisted.internet import reactor
 
-class Echo(Protocol):
+class Echo(DatagramProtocol):
     
     def datagramReceived(self, data, (host, port)):
         print "received %r from %s:%d" % (data, host, port)
