@@ -85,6 +85,13 @@ class Password(String):
     """
 
 
+class Hidden(String):
+    """A string which is not displayed.
+
+    The passed default is used as the value.
+    """
+
+
 class Integer(Argument):
     """A single integer.
     """

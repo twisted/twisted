@@ -82,6 +82,11 @@ class FormFillerWidget(widgets.Widget):
             nn.text(label)
         return content
 
+    def input_hidden(self, request, content, arg):
+        return content.input(type="hidden",
+                             name=arg.name,
+                             value=arg.default)
+    
     def createInput(self, request, shell, arg):
         tr = shell.tr()
         tr.td(align="right", valign="top").text(arg.getShortDescription()+":")
@@ -261,7 +266,8 @@ class FormProcessor(resource.Resource):
     mangle_float = mangle_single
     mangle_choice = mangle_single
     mangle_boolean = mangle_single
-
+    mangle_hidden = mangle_single
+    
     def mangle_flags(self, args):
         if args is None:
             return []
