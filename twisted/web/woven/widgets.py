@@ -377,8 +377,8 @@ class List(Widget):
        | <table model="blah" view="List">
        |     <tr class="listHeader"><th>A</th><th>B</th></tr>
        |     <tr class="listItem">
-       |         <td><span view="Text" model="1" />
-       |         <td><span view="Text" model="2" />
+       |         <td><span view="Text" model="1" /></td>
+       |         <td><span view="Text" model="2" /></td>
        |     </tr>
        | </table>
 
