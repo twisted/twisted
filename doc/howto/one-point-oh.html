@@ -38,6 +38,10 @@ low, and the amount of documentation and unit tests is sufficiently high.</p>
 <li>Make necessary changes to Application - whatever changes
     glyph wanted to make with authorizers and services.</li>
 <li>Finalize Deferred APIs.</li>
+<li>Low-level socket APIs - people want to turn off Nagle's algorithm and set other
+    settings on sockets that are currently not supported. we need to formalize a
+    method for this.</li>
+<li>Support binding client sockets to specific interfaces.</li>
 </ul>
 
 <p>I don't think we need to mark all modules for API stability level. I think 
