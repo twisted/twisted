@@ -554,6 +554,9 @@ class FancyEqMixin:
                 return False
         return True
 
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
 def dsu(list, key):
     L2 = [(key(e), i, e) for (i, e) in zip(range(len(list)), list)]
     L2.sort()

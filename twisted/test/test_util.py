@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.test.test_util -*-
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -249,3 +250,27 @@ class IntervalDifferentialTestCase(unittest.TestCase):
         d.removeInterval(5)
         self.assertEquals(d.next(), (10, None))
         self.assertRaises(ValueError, d.removeInterval, 10)
+
+
+class EQ(object, util.FancyEqMixin):
+    compareAttributes = ('a', 'b')
+    def __init__(self, a, b):
+        self.a, self.b = a, b
+
+class Bar(object):
+    pass
+
+class TestFancyEqMixin(unittest.TestCase):
+            
+    def testIsInstance(self):
+        eq = EQ(8, 9)
+        f = Bar()
+        self.failIfEqual(eq, f)
+
+    def testEquality(self):
+        ea, eb = EQ(1, 2), EQ(1, 2)
+
+        self.failUnlessEqual(ea, eb)
+        self.failUnlessEqual(eb, ea)
+        self.failUnlessEqual((ea != eb), False)
+        self.failUnlessEqual((eb != ea), False)
