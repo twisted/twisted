@@ -1247,15 +1247,19 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         except StopIteration:
             self.sendPositiveResponse(tag, 'FETCH completed')
         else:
-            if uid:
-                if 'UID' not in parts:
-                    parts['UID'] = str(msgId)
             finalParts = []
+            sawUID = False
             for p in query:
+                key = str(p)
+                ukey = key.upper()
+                if ukey == 'UID':
+                    sawUID = True
                 try:
-                    finalParts.extend((str(p).upper(), parts[str(p)]))
+                    finalParts.extend((ukey, parts[key]))
                 except KeyError:
                     log.err("imap4.IMailbox.fetch() did not return %s response" % (str(p),))
+            if uid and not sawUID:
+                finalParts[:0] = ['UID', str(msgId)]
             self.sendUntaggedResponse(
                 '%d FETCH %s' % (msgId, collapseNestedLists([finalParts]))
             )
