@@ -27,5 +27,5 @@ sys.path.insert(0, os.curdir)
 ### end of preamble
 
 
-from twisted.scripts.ssh import run
+from twisted.scripts.conch import run
 run()

@@ -130,11 +130,11 @@ class SSHTransportBase(protocol.Protocol):
         else:
             first = self.buf[:bs]
         packetLen, randomLen = struct.unpack('!LB',first[:5])
-        if packetLen > 1048576: # 1024 ** 2
-            self.sendDisconnect(DISCONNECT_PROTOCOL_ERROR, 'bad packet length')
-            return           
+        #if packetLen > 1048576: # 1024 ** 2
+        #    self.sendDisconnect(DISCONNECT_PROTOCOL_ERROR, 'bad packet length')
+        #    return           
         if (packetLen+4)%bs != 0:
-            self.sendDisconnect(DISCONNECT_PROTOCOL_ERROR, 'bad packet length')
+            self.sendDisconnect(DISCONNECT_PROTOCOL_ERROR, 'bad packet mod')
             return
         if len(self.buf) < packetLen: return # not enough packet
         encData, self.buf = self.buf[:4+packetLen], self.buf[4+packetLen:]
