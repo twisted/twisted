@@ -28,6 +28,18 @@ namespace Twisted {
 	virtual void dealloc(char* buf) {}
     };
 
+    // Hold on to object for lifetime of dealloactor.
+    // Mostly useful for smart pointers.
+    template <class T>
+    class LifetimeDeallocator : public Deallocator
+    {
+    private:
+	T m_object;
+    public:
+	LifetimeDeallocator(T o) : m_object(o) {}
+	virtual void dealloc(char* buf) {}
+    };
+
     inline object import(char* module)
     {
 	PyObject* m = PyImport_ImportModule(module);
@@ -39,6 +51,7 @@ namespace Twisted {
     private:
 	object m_delayed;
     public:
+	DelayedCall() {} // for default objects create in e.g. std::map
 	DelayedCall(object d) : m_delayed(d) {}
 	void cancel() { m_delayed.attr("cancel")(); }
 	bool active() { return extract<bool>(m_delayed.attr("active")()); }
