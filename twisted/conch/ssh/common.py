@@ -62,6 +62,11 @@ def getMP(data):
     length=struct.unpack('>L',data[:4])[0]
     return Util.number.bytes_to_long(data[4:4+length]),data[4+length:]
 
+def _MPpow(x, y, z):
+    """return the MP version of (x**y)%z
+    """
+    return MP(pow(x,y,z))
+
 def ffs(c, s):
     """
     first from second
@@ -70,3 +75,15 @@ def ffs(c, s):
     for i in c:
         if i in s: return i
 
+getMP_py = getMP
+MP_py = MP
+_MPpow_py = _MPpow
+
+try:
+    import _common
+    getMP = _common.getMP
+    MP = _common.MP
+    _MPpow = _common._MPpow
+    __builtins__['pow'] = _common.pow # this is probably evil
+except ImportError:
+    pass

@@ -39,7 +39,7 @@ from twisted.internet import protocol
 from twisted.python import log
 
 # sibling importsa
-from common import NS, getNS, MP, getMP, ffs, entropy # ease of use
+from common import NS, getNS, MP, getMP, _MPpow, ffs, entropy # ease of use
 import keys
 
 
@@ -324,7 +324,7 @@ class SSHServerTransport(SSHTransportBase):
             clientDHPubKey, foo = getMP(packet)
             y = Util.number.getRandomNumber(16, entropy.get_bytes)
             f = pow (DH_GENERATOR, y, DH_PRIME)
-            sharedSecret = MP(pow(clientDHPubKey, y, DH_PRIME))
+            sharedSecret = _MPpow(clientDHPubKey, y, DH_PRIME)
             h = sha.new()
             h.update(NS(self.otherVersionString))
             h.update(NS(self.ourVersionString))
@@ -358,7 +358,7 @@ class SSHServerTransport(SSHTransportBase):
         clientDHPubKey, foo = getMP(packet)
         y = Util.number.getRandomNumber(16, entropy.get_bytes)
         f = pow (self.g, y, self.p)
-        sharedSecret = MP(pow(clientDHPubKey, y, self.p)) 
+        sharedSecret = _MPpow(clientDHPubKey, y, self.p)
         h = sha.new()
         h.update(NS(self.otherVersionString))
         h.update(NS(self.ourVersionString))
@@ -453,7 +453,7 @@ class SSHClientTransport(SSHTransportBase):
             signature, packet = getNS(packet)
             serverKey = keys.getPublicKeyObject(data=pubKey)
             fingerprint = ':'.join(map(lambda c:'%02x'%ord(c),md5.new(pubKey).digest()))
-            sharedSecret = MP(pow(f, self.x, DH_PRIME))
+            sharedSecret = _MPpow(f, self.x, DH_PRIME)
             if not self.verifyHostKey(pubKey, fingerprint):
                 self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED, 'bad fingerprint')
                 return
@@ -472,18 +472,19 @@ class SSHClientTransport(SSHTransportBase):
                 return
             self._keySetup(sharedSecret, exchangeHash)
             return
-        self.p, rest = getMP(packet)
-        self.g, rest = getMP(rest)
-        self.x = Util.number.getRandomNumber(512, entropy.get_bytes)
-        self.DHpubKey = pow(self.g, self.x, self.p)
-        self.sendPacket(MSG_KEX_DH_GEX_INIT, MP(self.DHpubKey))
+        else:
+            self.p, rest = getMP(packet)
+            self.g, rest = getMP(rest)
+            self.x = getMP('\x00\x00\x00\x40'+entropy.get_bytes(64))[0]
+            self.DHpubKey = pow(self.g, self.x, self.p)
+            self.sendPacket(MSG_KEX_DH_GEX_INIT, MP(self.DHpubKey))
 
     def ssh_KEX_DH_GEX_REPLY(self, packet):
         pubKey, packet = getNS(packet)
         f, packet = getMP(packet)
         signature, packet = getNS(packet)
         serverKey = keys.getPublicKeyObject(data = pubKey)
-        sharedSecret = MP(pow(f, self.x, self.p))
+        sharedSecret = _MPpow(f, self.x, self.p)
         fingerprint = ':'.join(map(lambda c:'%02x'%ord(c),md5.new(pubKey).digest()))
         if not self.verifyHostKey(pubKey, fingerprint):
             self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED, 'bad host key')
