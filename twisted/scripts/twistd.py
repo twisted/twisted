@@ -45,7 +45,6 @@ class ServerOptions(usage.Options):
     synopsis = "Usage: twistd [options]"
 
     optFlags = [['nodaemon','n',  "don't daemonize"],
-                ['profile','p',   "run profiler"],
                 ['debug', 'b',    "run the application in the Python Debugger (implies nodaemon), sending SIGINT will drop into debugger"],
                 ['quiet','q',     "be a little more quiet"],
                 ['no_save','o',   "do not save state on shutdown"],
@@ -59,6 +58,8 @@ class ServerOptions(usage.Options):
 
     optParameters = [['logfile','l', None,
                    "log to a specified file, - for stdout"],
+                  ['profile', 'p', None,
+                   "Run in profile mode, dumping results to specified file"],
                   ['file','f','twistd.tap',
                    "read the given .tap file"],
                   ['prefix', None,'twisted',
@@ -376,10 +377,14 @@ def runApp(config):
 
     try:
         if config['profile']:
-            # XXX - Is this right?
-            import profile, __main__
-            __main__.application = application
-            profile.run("application.run(%d)" % (not config['no_save']))
+            import profile
+            p = profile.Profile()
+            p.runctx("application.run(%d)" % (not config['no_save']), globals(), locals())
+            # XXX - omfg python sucks
+            tmp, sys.stdout = sys.stdout, open(config['profile'], 'a')
+            p.print_stats()
+            sys.stdout, tmp = tmp, sys.stdout
+            tmp.close()
         elif config['debug']:
             import pdb
             sys.stdout = oldstdout
