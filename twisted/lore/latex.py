@@ -16,6 +16,7 @@
 # 
 
 from twisted.web import microdom, domhelpers
+from twisted.python import text
 import os, re
 from cStringIO import StringIO
 
@@ -75,7 +76,7 @@ class LatexSpitter:
         self.writer('\\begin{verbatim}\n')
         buf = StringIO()
         getLatexText(node, buf.write)
-        self.writer(removeLeadingTrailingBlanks(buf.getvalue()))
+        self.writer(text.removeLeadingTrailingBlanks(buf.getvalue()))
         self.writer('\\end{verbatim}\n')
 
     def visitNode_code(self, node):
@@ -233,20 +234,6 @@ class SectionLatexSpitter(LatexSpitter):
     mapStart_title = mapEnd_title = mapEnd_body = mapStart_body = None
     mapStart_html = None
 
-
-def removeLeadingBlanks(lines):
-    ret = []
-    for line in lines:
-        if ret or line.strip():
-            ret.append(line)
-    return ret
-
-def removeLeadingTrailingBlanks(s):
-    lines = removeLeadingBlanks(s.split('\n'))
-    lines.reverse()
-    lines = removeLeadingBlanks(lines)
-    lines.reverse()
-    return '\n'.join(lines)+'\n'
 
 def processFile(spitter, fin):
     dom = microdom.parse(fin).documentElement

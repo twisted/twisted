@@ -162,3 +162,17 @@ def greedyWrap(inString, width=80):
 
 
 wordWrap = greedyWrap
+
+def removeLeadingBlanks(lines):
+    ret = []
+    for line in lines:
+        if ret or line.strip():
+            ret.append(line)
+    return ret
+
+def removeLeadingTrailingBlanks(s):
+    lines = removeLeadingBlanks(s.split('\n'))
+    lines.reverse()
+    lines = removeLeadingBlanks(lines)
+    lines.reverse()
+    return '\n'.join(lines)+'\n'
