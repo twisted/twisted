@@ -1,3 +1,11 @@
+2003-12-01  Jp Calderone  <exarkun@twistedmatrix.com>
+
+	* twisted/python/runtime.py: Added seconds method to Platform
+	class.
+
+	* twisted/internet/base.py, twisted/internet/task.py: Changed
+	use of time.time() to use Platform.seconds() instead.
+	
 2003-11-24  Jp Calderone  <exarkun@twistedmatrix.com>
 
 	* twisted/internet/abstract.py: Changed FileDescriptor's
