@@ -62,7 +62,8 @@ twisted.web.test in it."""
     opt_i = opt_index
         
     def opt_user(self):
-        """Makes a server with ~/public_html and ~/.twistd-web-service support for users.
+        """Makes a server with ~/public_html and ~/.twistd-web-pb support for
+        users.
         """
         self.opts['root'] = distrib.UserDirectory()
 
