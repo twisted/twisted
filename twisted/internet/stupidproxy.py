@@ -38,7 +38,6 @@ class StupidProtocol(protocol.Protocol):
         del self.peer
 
     def dataReceived(self, data):
-        print `data`
         self.peer.write(data)
 
 
