@@ -357,7 +357,8 @@ def run():
             import pdb
             sys.stdout = oldstdout
             sys.stderr = oldstderr
-            pdb.run("application.run(%d)" % (not config.opts['no_save']))
+            pdb.run("application.run(%d)" % (not config.opts['no_save']),
+                    globals(), locals())
         else:
             application.run(not config.opts['no_save'])
     except:
