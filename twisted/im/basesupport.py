@@ -116,13 +116,16 @@ class AbstractAccount:
         return self._isOnline
 
     def startLogOn(self, chatui):
+        """Should return Deferred whose errback indicates connection failed."""
         raise NotImplementedError()
 
+    def _loginFailed(self, reason):
+        self._isConnecting = 0
+        self._isOnline = 0 # just in case
+    
     def logOn(self, chatui):
         if (not self._isConnecting) and (not self._isOnline):
             self._isConnecting = 1
-            self.startLogOn(chatui)
+            self.startLogOn(chatui).addErrback(self._loginFailed)
         else:
             print 'already connecting'
-
-

@@ -198,10 +198,9 @@ class PBAccount(basesupport.AbstractAccount):
 
     def startLogOn(self, chatui):
         print 'Connecting...',
-        pb.getObjectAt(self.host, self.port).addCallbacks(self._cbConnected,
-                                                          self._ebConnected,
-              
-                                            callbackArgs=(chatui,))
+        return pb.getObjectAt(self.host, self.port).addCallbacks(self._cbConnected,
+                                                                 self._ebConnected,
+                                                                 callbackArgs=(chatui,))
 
     def _cbConnected(self, root, chatui):
         print 'Connected!'

@@ -244,5 +244,5 @@ class IRCAccount(basesupport.AbstractAccount):
         self._isOnline = 0
 
     def startLogOn(self, chatui):
-        protocol.ClientCreator(reactor, IRCProto, self, chatui).connectTCP(self.host, self.port)
+        return protocol.ClientCreator(reactor, IRCProto, self, chatui).connectTCP(self.host, self.port)
 

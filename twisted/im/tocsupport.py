@@ -212,5 +212,5 @@ class TOCAccount(basesupport.AbstractAccount):
         self.port = port
 
     def startLogOn(self, chatui):
-        protocol.ClientCreator(reactor, TOCProto, self, chatui).connectTCP(self.host, self.port)
+        return protocol.ClientCreator(reactor, TOCProto, self, chatui).connectTCP(self.host, self.port)
 
