@@ -222,11 +222,6 @@ class AdapterRegistry(ZopeAdapterRegistry):
         """
         assert interfaceClasses, "You need to pass an Interface"
         global ALLOW_DUPLICATES
-        for interfaceClass in interfaceClasses:
-            # XXX NOT WORKING :(
-            factory = self.getAdapterFactory(origInterface, interfaceClass, False)
-            if (factory and not ALLOW_DUPLICATES):
-                raise ValueError("an adapter (%s) was already registered." % (factory, ))
 
         # deal with class->interface adapters:
         if not issubclass(origInterface, Interface):
@@ -235,6 +230,11 @@ class AdapterRegistry(ZopeAdapterRegistry):
                 for i in tupleTreeToList(origInterface.__implements__):
                     declarations.classImplements(origInterface, i)
             origInterface = declarations.implementedBy(origInterface)
+
+        for interfaceClass in interfaceClasses:
+            factory = self.get(origInterface).selfImplied.get(interfaceClass, {}).get('')
+            if (factory and not ALLOW_DUPLICATES):
+                raise ValueError("an adapter (%s) was already registered." % (factory, ))
 
         self.register([origInterface], interfaceClasses[0], '', adapterFactory)
     
