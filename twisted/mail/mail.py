@@ -152,7 +152,7 @@ class IAliasableDomain(IDomain):
     def setAliasGroup(self, aliases):
         """Set the group of defined aliases for this domain
         
-        @type alias: Implementor of C{IAlias}
+        @type aliases: list of implementors of C{IAlias}
         """
     
     def exists(self, user, memo=None):
@@ -235,10 +235,6 @@ class MailService(app.MultiService):
         """
         @type name: C{str}
         @param name: This service's name
-        
-        @type portal: C{twisted.cred.portal.Portal}
-        @param portal: The portal to use to authenticate incoming SMTP and
-        ESMTP connections.
         """
         app.MultiService.__init__(self, name)
 
