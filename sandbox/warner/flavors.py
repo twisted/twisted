@@ -31,7 +31,7 @@ class RemoteInterfaceClass(interface.InterfaceClass):
             try:
                 registerRemoteInterface(self, remote_name)
             except:
-                print "error registering RemoteInterface"
+                print "error registering RemoteInterface '%s'" % remote_name
                 raise
 
     def _parseRemoteInterface(self, iname, attrs):
