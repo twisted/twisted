@@ -15,8 +15,9 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import gtk, string, sys, traceback
+import gtk, string, sys, traceback, types
 
+from twisted.python import explorer
 from twisted.spread.ui import gtkutil
 from twisted.internet import ingtkernet
 from twisted.spread import pb
@@ -152,6 +153,45 @@ class Interaction(gtk.GtkWindow):
         a.set_value(a.upper - a.page_size)
         self.input.grab_focus()
 
+    def browseObjectReceived(self, obj):
+        """Display a browser ObjectLink.
+        """
+        # This is a stop-gap implementation.  Ideally, everything
+        # would be nicely formatted with pretty colours and you could
+        # select referenced objects to browse them with
+        # browse(selectedLink.identifier)
+
+        if obj.type in map(explorer.typeString, [type.FunctionType,
+                                                 type.MethodType]):
+            arglist = []
+            for arg in obj.value['signature']:
+                if arg.has_key('default'):
+                    a = "%s=%s" % (arg['name'], arg['default'])
+                elif arg.has_key('list'):
+                    a = "*%s" % (arg['name'],)
+                elif arg.has_key('keywords'):
+                    a = "**%s" % (arg['name'],)
+                else:
+                    a = arg['name']
+                arglist.append(a)
+
+            things = ''
+            if obj.value.has_key('class'):
+                things = "Class: %s\n" % (obj.value['class'],)
+            if obj.value.has_key('self'):
+                things = things + "Self: %s\n" % (obj.value['self'],)
+
+            s = "%(name)s(%(arglist)s)\n%(things)s\n%(doc)s\n" % {
+                'name': obj.value['name'],
+                'doc': obj.value['doc'],
+                'things': things,
+                'arglist': string.join(arglist,", "),
+                }
+        else:
+            s = str(obj) + '\n'
+
+        self.messageReceived([('out',s)])
+
     blockcount = 0
 
     def sendMessage(self, unused_data=None):
@@ -165,17 +205,27 @@ class Interaction(gtk.GtkWindow):
         self.history.append(text)
         self.histpos = len(self.history)
         self.messageReceived([['command',fmt % text]])
+
+        method = self.perspective.do
+        callback = self.messageReceived
+
+        split = string.split(text,' ',1)
+        if len(split) == 2:
+            (statement, remainder) = split
+            if statement == 'browse':
+                method = self.perspective.browse
+                text = remainder
+                callback = self.browseObjectReceived
+
         try:
-            self.perspective.do(text,
-                                pbcallback=self.messageReceived)
+            method(text, pbcallback=callback)
         except pb.ProtocolError:
             # ASSUMPTION: pb.ProtocolError means we lost our connection.
-            self.hide()
             (eType, eVal, tb) = sys.exc_info()
+            del tb
             s = string.join(traceback.format_exception_only(eType, eVal),
                             '')
-            self.loginWindow.loginReport(s)
-            self.loginWindow.show()
+            self.connectionLost(s)
         except:
             traceback.print_exc()
             gtk.mainquit()
@@ -185,6 +235,7 @@ class Interaction(gtk.GtkWindow):
         self.loginWindow.hide()
         self.name = self.loginWindow.username.get_text()
         self.hostname = self.loginWindow.hostname.get_text()
+        perspective.broker.notifyOnDisconnect(self.connectionLost)
         self.perspective = perspective
         self.show_all()
         self.set_title("Manhole: %s@%s" % (self.name, self.hostname))
@@ -197,3 +248,21 @@ class Interaction(gtk.GtkWindow):
         self.textStyles = {"out": black,   "err": orange,
                            "result": blue, "error": red,
                            "command": gray}
+
+    def connectionLost(self, reason=None):
+        if not reason:
+            reason = "Connection Lost"
+        self.loginWindow.loginReport(reason)
+        self.hide()
+        self.loginWindow.show()
+
+class ObjectLink(pb.RemoteCopy, explorer.ObjectLink):
+    """RemoteCopy of explorer.ObjectLink"""
+
+    def __init__(self):
+        pass
+
+    __str__ = explorer.ObjectLink.__str__
+
+pb.setCopierForClass('twisted.python.explorer.ObjectLink',
+                     ObjectLink)

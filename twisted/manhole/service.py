@@ -16,7 +16,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from twisted.spread import pb
-from twisted.python import log
+from twisted.python import explorer, log
 
 import string
 from cStringIO import StringIO
@@ -38,10 +38,15 @@ class FakeStdIO:
 
 class Perspective(pb.Perspective):
     def __init__(self, perspectiveName, identityName="Nobody"):
-        pb.Perspective.__init__(self, perspectiveName,
-                                service, identityName)
+        pb.Perspective.__init__(self, perspectiveName, identityName)
         self.localNamespace = {
             }
+
+        self.browser = explorer.ObjectBrowser(None, self.localNamespace)
+
+    def setService(self, service):
+        pb.Perspective.setService(self, service)
+        self.browser.globalNamespace = service.namespace
 
     def perspective_do(self, mesg):
         """returns a list of ["type", "message"] pairs to the client for
@@ -105,6 +110,14 @@ class Perspective(pb.Perspective):
             errfile.write(s)
         log.msg("<<<")
         return output
+
+    def perspective_browse(self, identifier):
+        """Returns documentation and stuff for the specified identifier.
+        """
+
+        retval = self.browser.browseIdentifier(identifier)
+        print "Browse %s returns:\n%s" % (identifier, retval)
+        return retval
 
 class Service(pb.Service):
     # By default, "guest"/"guest" will work as login and password, though you
