@@ -149,10 +149,12 @@ class IDomain(components.Interface):
         """
 
 class IAliasableDomain(IDomain):
-    def setAliasGroup(self, alias):
+    def setAliasGroup(self, aliases):
         """Set the group of defined aliases for this domain
         
-        @type alias: implementor of C{IAlias}
+        @type aliases: C{dict}
+        @param aliases: Mapping of domain names to objects implementing
+        C{IAlias}
         """
     
     def exists(self, user, memo=None):
