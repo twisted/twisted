@@ -9,11 +9,22 @@
 
 <h1>Asynchronous Programming with Twisted</h1>
 
-<h2>Introduction</h2>
-
 <p>This document is a introduction to the asynchronous programming model, and
 to Twisted's Deferred abstraction, which symbolises a 'promised' result and
 which can pass an eventual result to handler functions.</p>
+
+<p>This document is for readers new to Twisted who are familiar with the
+Python programming language and, at least conceptually, with core networking
+conepts such as servers, clients and sockets. This document will give you a
+high level overview of concurrent programming (interleaving several tasks) and
+of Twisted's concurrency model: <strong>non-blocking code</strong> or
+<strong>asynchronous code</strong>.</p>
+
+<p>After discussing the concurrency model of which Deferreds are a part, it
+will introduce the methods of handling results when a function returns a
+Deferred object.</p>
+
+<h2>Introduction to concurrent programming</h2>
 
 <p>
 Many computing tasks take some time to complete, and there are two reasons
@@ -27,12 +38,6 @@ and requires a certain amount of CPU time to calculate the answer; or</li>
 available to produce a result.</li>
 </ol>
 
-<p>
-It is the second class of problem &mdash; non-computationally intensive tasks
-that involve an appreciable delay &mdash; that Deferreds are designed to help solve.
-Functions that wait on hard drive access, database access,
-and network access all fall into this class, although the time delay varies.
-</p>
 <h3>Waiting for answers</h3>
 
 <p>A fundamental feature of network programming is that of waiting for data.
@@ -100,21 +105,59 @@ next part of its job until the connection is open, the rest of the program can
 do other tasks, like begin the opening sequence for other email connections.
 Hence, the entire program is not waiting for the connection.</p>
 
+<h3>Callbacks</h3>
+
+<p>The typical asynchronous model for alerting an application that some data
+is ready for it is known as a <em>callback</em>. The application calls a
+function to request some data, and in this call, it also passes a
+callback function that should be called when the data is ready with the data
+as an argument. The callback function should therefore perform whatever tasks
+it was that the application needed that data for.</p>
+
+<p>In synchonous programming, a function requests data, waits for the data,
+and then processes it. In asynchronous programming, a function requests the
+data, and lets the library call the callback function when the data is
+ready.</p>
+
+<h2>Deferreds</h2>
+
+<p>Twisted uses the <code class="API"
+base="twisted.internet.defer">Deferred</code> object to manage the callback
+sequence. The client application attaches a series of functions to the
+deferred to be called in order when the results of the asychronous request are
+available (this series of functions is known as a series of
+<strong>callbacks</strong>, or a <strong>callback chain</strong>), together
+with a series of functions to be called if there is an error in the
+asychronous request (known as a series of <strong>errbacks</strong> or an
+<strong>errback chain</strong>). The asychronous library code calls the first
+callback when the result is available, or the first errback when an error
+occurs, and the <code>Deferred</code> object then hands the results of each
+callback or errback function to the next function in the chain.</p> 
+
 <h2>The Problem that Deferreds Solve</h2>
 
-<p>
-Deferreds are designed to enable Twisted programs to wait for data without
-hanging until that data arrives.
-</p>
+<p> It is the second class of concurrency problem &mdash; non-computationally
+intensive tasks that involve an appreciable delay &mdash; that Deferreds are
+designed to help solve.  Functions that wait on hard drive access, database
+access, and network access all fall into this class, although the time delay
+varies.  </p>
 
-<p>
-The basic idea behind Deferreds, and other solutions to this
-problem, is to keep the CPU as active as possible.
-If one task is waiting on data, rather than have the CPU (and the program!)
-idle waiting for that data (a process normally called &quot;blocking&quot;), the program performs other operations in the
-meantime, and waits for some signal that data is ready to be processed before
-returning to that process.
-</p>
+<p> Deferreds are designed to enable Twisted programs to wait for data without
+hanging until that data arrives. They do this by giving a callback simple management
+interface to libraries and applications. Libraries know that they always make
+their results available by calling <code class="API"
+base="twisted.internet.defer">Deferred.callback</code> and errors by calling
+<code class="API"
+base="twisted.internet.defer">Deferred.errback</code>. Applications set up
+result handlers by attaching callbacks and errbacks to deferreds in the order
+they want them called.</p>
+
+<p> The basic idea behind Deferreds, and other solutions to this problem, is
+to keep the CPU as active as possible.  If one task is waiting on data, rather
+than have the CPU (and the program!) idle waiting for that data (a process
+normally called &quot;blocking&quot;), the program performs other operations
+in the meantime, and waits for some signal that data is ready to be processed
+before returning to that process.  </p>
 
 <p>
 In Twisted, a function signals to the calling function that it is waiting by
@@ -266,8 +309,26 @@ deferred.addErrback(errorHandler)
 reactor.run()
 </pre>
 
+<h2>Conclusion</h2>
 
-<h2>See also</h2>
+<p>In this document, you have:</p>
+
+<ol>
+<li>seen why non-trivial network programs need to have some form of concurrency;</li>
+<li>learnt that the Twisted framework supports concurrency in the form of
+asynchronous calls;</li>
+<li>learnt that the Twisted framework has Deferred objects that manage callback
+chains;</li>
+<li>seen how the <code class="API" base="twisted.web.client">getPage</code>
+function returns a Deferred object;</li>
+<li>attached callbacks and errbacks to that Deferred; and</li>
+<li>seen the Deferred's callback chain and errback chain fire.</li>
+</ol>
+
+<h3>See also</h3>
+
+<p>Since the Deferred abstraction is such a core part of programming with
+Twisted, there are several other detailed guides to it:</p>
 
 <ol>
 <li><a href="defer.xhtml">Using Deferreds</a>, a more complete guide to
