@@ -881,8 +881,3 @@ CAP_GET_FILE = '\011F\023HL\177\021\321\202"DEST\000\000'
 CAP_SEND_FILE = '\011F\023CL\177\021\321\202"DEST\000\000'
 CAP_GAMES = '\011F\023GL\177\021\321\202"DEST\000\000'
 CAP_SEND_LIST = '\011F\023KL\177\021\321\202"DEST\000\000'
-
-#if __name__=="__main__":
-#    from twisted.internet import main
-#    tcp.Client("login.icq.com",6290,OscarAuthenticator("149456654","moomoo",icq=1))
-#    main.run()
