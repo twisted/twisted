@@ -27,6 +27,10 @@ if hasattr(os, "getuid") and os.getuid() != 0:
     sys.path.insert(0, os.curdir)
 ### end of preamble
 
+from twisted.python.runtime import platformType
+if platformType == "win32":
+    from twisted.scripts.twistw import run
+else:
+    from twisted.scripts.twistd import run
 
-from twisted.scripts.twistd import run
 run()
