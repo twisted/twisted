@@ -8,7 +8,7 @@ from twisted.trial import unittest
 from twisted.python import util
 from twisted.python.runtime import platformType
 import os.path, sys
-import shutil
+import shutil, errno
 
 class UtilTestCase(unittest.TestCase):
 
@@ -26,6 +26,24 @@ class UtilTestCase(unittest.TestCase):
             pass
         else:
             raise unittest.FailTest, "util.raises didn't raise when it should have"
+   
+    def testUninterruptably(self):
+        def f(a, b):
+            self.calls += 1
+            exc = self.exceptions.pop()
+            if exc is not None:
+                raise exc(errno.EINTR, "Interrupted system call!")
+            return a + b
+        
+        self.exceptions = [None]
+        self.calls = 0
+        self.assertEquals(util.uninterruptably(f, 1, 2), 3)
+        self.assertEquals(self.calls, 1)
+        
+        self.exceptions = [None, OSError, IOError]
+        self.calls = 0
+        self.assertEquals(util.uninterruptably(f, 2, 3), 5)
+        self.assertEquals(self.calls, 3)
 
 class OrderedDictTest(unittest.TestCase):
     def testOrderedDict(self):

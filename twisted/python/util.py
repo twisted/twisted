@@ -683,6 +683,15 @@ that package.
     return
 
 
+def uninterruptably(f, *a, **kw):
+    while True:
+        try:
+            return f(*a, **kw)
+        except (IOError, OSError), e:
+            if e.args[0] == errno.EINTR:
+                continue
+            raise
+
 __all__ = [
     "uniquify", "padTo", "getPluginDirs", "addPluginDir", "sibpath",
     "getPassword", "dict", "println", "keyed_md5", "makeStatBar",
