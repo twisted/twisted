@@ -37,21 +37,9 @@ theApplication = None
 
 # Twisted Imports
 
-from twisted.python import threadable, log, delay
+from twisted.python import threadable, log
 from twisted.persisted import styles
 from twisted.python.defer import Deferred, DeferredList
-
-# Sibling Imports
-
-theTimeouts = delay.Time() # A delay for non-peristent delayed actions
-
-def addTimeout(method, seconds):
-    """Add a method which will time out after a given interval.
-
-    The given method will always time out before a server shuts down,
-    and will never persist.
-    """
-    theTimeouts.runLater(seconds, method)
 
 
 class DummyResolver:
@@ -73,7 +61,6 @@ class DummyResolver:
 
 running = None
 shuttingDown = None
-delayeds = [theTimeouts]
 beforeShutdown = []
 duringShutdown = []
 afterShutdown = []
@@ -118,32 +105,6 @@ def stopMainLoop(*ignored):
     running = 0
     log.msg("Stopping main loop.")
 
-def runUntilCurrent():
-    """Run all delayed loops and return a timeout for when the next call expects to be made.
-    """
-    # This code is duplicated for efficiency later.
-    timeout = None
-    for delayed in delayeds:
-        delayed.runUntilCurrent()
-    for delay in delayeds:
-        newTimeout = delayed.timeout()
-        if ((newTimeout is not None) and
-            ((timeout is None) or
-             (newTimeout < timeout))):
-            timeout = newTimeout
-    return timeout
-
-def iterate(timeout=0.):
-    """Do one iteration of the main loop.
-
-    I will run any simulated (delayed) code, and process any pending I/O.
-    I will not block.  This is meant to be called from a high-freqency
-    updating loop function like the frame-processing function of a game.
-    """
-    for delayed in delayeds:
-        delayed.runUntilCurrent()
-    doSelect(timeout)
-
 
 def handleSignals():
     """Install the signal handlers for the Twisted event loop."""
@@ -171,6 +132,7 @@ def run(installSignalHandlers=1):
         import default
         reactor = default.SelectReactor()
         reactor.install()
+    self = twisted.internet.reactor
     
     global running
     running = 1
@@ -189,17 +151,9 @@ def run(installSignalHandlers=1):
             while running:
                 # Advance simulation time in delayed event
                 # processors.
-                timeout = None
-                for delayed in delayeds:
-                    delayed.runUntilCurrent()
-                for delayed in delayeds:
-                    newTimeout = delayed.timeout()
-                    if ((newTimeout is not None) and
-                        ((timeout is None) or
-                         (newTimeout < timeout))):
-                        timeout = newTimeout
-
-                doSelect(running and timeout)
+                self.runUntilCurrent()
+                timeout = self.timeout()                
+                self.doIteration(running and timeout)
         except:
             log.msg("Unexpected error in main loop.")
             log.deferr()
@@ -274,18 +228,6 @@ def callAfterShutdown(function):
 def removeCallAfterShutdown(function):
     duringShutdown.remove(function)
 
-def addDelayed(delayed):
-    """Add an object implementing the IDelayed interface to the event loop.
-
-    See twisted.python.delay.IDelayed for more details.
-    """
-    delayeds.append(delayed)
-
-def removeDelayed(delayed):
-    """Remove a Delayed object from the event loop.
-    """
-    delayeds.remove(delayed)
-
 
 # Sibling Import
 import process
@@ -297,4 +239,40 @@ if platform.getType() == 'java':
 # backward compatibility stuff
 import app
 Application = app.Application
+
+
+class Delayeds:
+    """Wrapper for twisted.python.delay.IDelayed objects, so they use IReactorTime."""
+
+    def __init__(self):
+        self.delayeds = []
+
+    def addDelayed(self, d):
+        self.delayeds.append(d)
+
+    def removeDelayed(self, d):
+        self.delayeds.remove(d)
+
+    def timeout(self):
+        """Return timeout until next run."""
+        timeout = 1.0
+        for delay in self.delayeds:
+            newTimeout = delay.timeout()
+            if ((newTimeout is not None) and
+                ((timeout is None) or
+                 (newTimeout < timeout))):
+                timeout = newTimeout
+        return timeout
+
+    def runUntilCurrent(self):
+        """Run delayeds."""
+        for d in self.delayeds:
+            d.runUntilCurrent()
+
+
+# delayeds backwards compatability - this will be done in default.ReactorBase
+# once we get e.g. the task module to not call main.addDelayed on import
+_delayeds = Delayeds()
+addDelayed = _delayeds.addDelayed
+removeDelayed = _delayeds.removeDelayed
 

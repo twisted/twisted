@@ -39,7 +39,6 @@ import main, default
 
 reads = default.reads
 writes = default.writes
-delayeds = main.delayeds
 hasReader = reads.has_key
 hasWriter = writes.has_key
 
@@ -130,8 +129,8 @@ class QTReactor(default.ReactorBase):
     def simulate(self):
         global _timer
         if _timer: _timer.stop()
-
-        timeout = (main.runUntilCurrent() or 0.1) * 1010
+        self.runUntilCurrent()
+        timeout = min(self.timeout(), 0.1) * 1010
 
         if not _timer:
             _timer = QTimer()

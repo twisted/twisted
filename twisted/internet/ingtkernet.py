@@ -41,7 +41,6 @@ import main, default
 
 reads = default.reads
 writes = default.writes
-delayeds = main.delayeds
 hasReader = reads.has_key
 hasWriter = writes.has_key
 
@@ -114,7 +113,8 @@ class GtkReactor(default.ReactorBase):
         global _simtag
         if _simtag is not None:
             gtk.timeout_remove(_simtag)
-        timeout = main.runUntilCurrent() or 0.1
+        self.runUntilCurrent()
+        timeout = min(self.timeout(), 0.1)
         _simtag = gtk.timeout_add(timeout * 1010, self.simulate) # grumble
 
 

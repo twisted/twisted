@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.4 2002/05/01 15:57:09 itamarst Exp $
+# $Id: default.py,v 1.5 2002/05/02 12:36:18 itamarst Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -142,6 +142,7 @@ class ReactorBase:
         self._installSignalHandlers = installSignalHandlers
         self._eventTriggers = {}
         self._pendingTimedCalls = []
+        self._delayeds = main._delayeds
         threadable.whenThreaded(self.initThreads)
 
     # override in subclasses
@@ -201,16 +202,16 @@ class ReactorBase:
         twisted.internet.reactor = self
         sys.modules['twisted.internet.reactor'] = self
 
-        # and this stuff is still yucky workarounds specific to the default case.
-        main.addDelayed(self)
-
         # install stuff for backwards compatability
+        import main
         main.addReader = self.addReader
         main.addWriter = self.addWriter
         main.removeWriter = self.removeWriter
         main.removeReader = self.removeReader
         main.removeAll = self.removeAll
-        main.doSelect = self.doIteration
+        main.iterate = self.iterate
+        main.addTimeout = lambda m, t, f=self.callLater: f(t, m)
+        
         if hasattr(self, "waker"):
             main.waker = self.waker
         main.wakeUp = self.wakeUp
@@ -239,7 +240,8 @@ class ReactorBase:
     def iterate(self, delay=0):
         """See twisted.internet.interfaces.IReactorCore.iterate.
         """
-        main.iterate(delay)
+        self.runUntilCurrent()
+        self.doIteration(delay)
 
     def callFromThread(self, callable, *args, **kw):
         """See twisted.internet.interfaces.IReactorCore.callFromThread.
@@ -316,16 +318,18 @@ class ReactorBase:
         """
         self._pendingTimedCalls.remove(callID)
 
-
-    # making myself look like a Delayed
-
     def timeout(self):
         if self._pendingTimedCalls:
-            return max(self._pendingTimedCalls[0][0] - time(), 0)
+            t = self._pendingTimedCalls[0][0] - time()
+            if t < 0:
+                return 0
+            else:
+                return min(t, self._delayeds.timeout())
         else:
-            return None
+            return self._delayeds.timeout()
 
     def runUntilCurrent(self):
+        """Run all pending timed calls."""
         now = time()
         while self._pendingTimedCalls and (self._pendingTimedCalls[0][0] < now):
             seconds, func, args, kw = self._pendingTimedCalls.pop()
@@ -333,6 +337,7 @@ class ReactorBase:
                 apply(func, args, kw)
             except:
                 log.deferr()
+        self._delayeds.runUntilCurrent()
 
 
     # IReactorProcess ## XXX TODO!
@@ -497,3 +502,5 @@ class SelectReactor(ReactorBase):
             if writes.has_key(reader):
                 del writes[reader]
         return readers
+
+

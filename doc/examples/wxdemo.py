@@ -17,8 +17,11 @@
 
 from wxPython.wx import *
 
-from twisted.internet import main, wxinternet
+from twisted.internet import main, wxinternet, default
 from twisted.python.delay import Delayed
+
+reactor = default.SelectReactor()
+reactor.install()
 
 # set up so that "hello, world" is printed once a second
 def helloWorld():
@@ -29,6 +32,10 @@ d.ticktime = 1
 d.loop(helloWorld, 1)
 main.addDelayed(d)
 
+def twoSecondsPassed():
+    print "two seconds passed"
+
+main.addTimeout(twoSecondsPassed, 2)
 
 ID_EXIT  = 101
 
