@@ -41,10 +41,17 @@ What's new in 0.12.0?
   
   Merged internet.threadtask into internet.task.
   
-  Made a new threadtask - a threadpool subclass that integrates with
-  twisted's event loop.
+  Made a new twisted.internet.threadtask - a threadpool subclass that
+  integrates with twisted's event loop. twisted.python.timeoutqueue implements
+  a Queue subclass that lets you wait with a timeout until it has data.
   
   Many fixes to words, twisted's IM client.
+
+  Added XML-RPC web resource, and fixed a few issues in twisted.web.
+  
+  Major speed improvement to twisted on jython.
+  
+  Updates to twisted.python.usage.
 
 What can I do with it?
 
