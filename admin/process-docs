@@ -8,9 +8,8 @@ baseurl=http://twistedmatrix.com/documents/TwistedDocs/TwistedDocs-$1/api/%s.htm
 templ=doc/howto/template.tpl
 for doc in doc/man doc/howto doc/specifications; do
   ./bin/hlint -p $doc/*.html
-  ./bin/generatelore -p --docsdir $doc -t $templ --baseurl $baseurl \
-                    -l ../howto/ $doc/*.html
-  ./bin/html2latex -p -s --docsdir $doc $doc/*.html
+  ./bin/generatelore -p -t $templ --baseurl $baseurl -l ../howto/ $doc/*.html
+  ./bin/html2latex -p -s $doc/*.html
 done
 cp admin/book.tex doc/howto
 cd doc/howto
