@@ -251,20 +251,28 @@ class Presentation(Widget):
 
 def htmlFor_hidden(write, name, value):
     write('<INPUT TYPE="hidden" NAME="%s" VALUE="%s">' % (name, value))
+
 def htmlFor_file(write, name, value):
     write('<INPUT SIZE=60 TYPE="file" NAME="%s">' % name)
+
 def htmlFor_string(write, name, value):
     write('<INPUT SIZE=60 TYPE="text" NAME="%s" VALUE="%s">' % (name, value))
+
 def htmlFor_password(write, name, value):
     write('<INPUT SIZE=60 TYPE="password" NAME=%s>' % name)
+
 def htmlFor_text(write, name, value):
     write('<TEXTAREA COLS="60" ROWS="10" NAME="%s" WRAP="virtual">%s</textarea>' % (name, value))
+
 def htmlFor_menu(write, name, value):
     "Value of the format [(optionName, displayName), ...]"
     write('  <SELECT NAME="%s">\n' % name)
     for optionName, displayName in value:
         write('    <OPTION VALUE="%s">%s</option>\n' % (optionName, displayName))
+    if not value:
+        write('    <OPTION VALUE=""></option>\n')
     write("  </select>\n")
+
 def htmlFor_checkbox(write, name, value):
     "A checkbox."
     if value:
