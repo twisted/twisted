@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.52 $"[11:-2]
+__version__ = "$Revision: 1.53 $"[11:-2]
 
 import os
 import cgi
@@ -251,7 +251,7 @@ class Controller(resource.Resource):
         """
         By default, we don't do anything
         """
-        return (None, None)
+        pass
 
     def domChanged(self, request, widget, node):
         parent = getattr(self, '_parent', None)
@@ -353,7 +353,7 @@ class LiveController(Controller):
             if page is None:
                 return
             nodeId = node.getAttribute('id')
-            print "DOM for %r is changing to %s" % (nodeId, node.toprettyxml())
+            #logger.warn("DOM for %r is changing to %s", nodeId, node.toprettyxml())
             nodeXML = node.toxml()
             nodeXML = nodeXML.replace('\n', '')
             nodeXML = nodeXML.replace('\r', '')
