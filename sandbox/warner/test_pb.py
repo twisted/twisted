@@ -348,6 +348,9 @@ class TestInterface(unittest.TestCase, TargetMixin):
         ilist = pb.getRemoteInterfaces(t)
         self.failIf(ilist)
 
+class Unsendable:
+    pass
+
 class TestCall(unittest.TestCase, TargetMixin):
     def setUp(self):
         self.setupBrokers()
@@ -432,6 +435,48 @@ class TestCall(unittest.TestCase, TargetMixin):
         f = unittest.deferredError(d, 2)
         self.failUnless(f.check(Violation))
         self.failUnless("INT token rejected by StringConstraint in inbound method results" in f.value.args[0])
+
+    def defer(self, arg):
+        rr, target = self.setupTarget(HelperTarget())
+        d = rr.callRemote("defer", obj=arg)
+        res = dr(d)
+        return res
+
+    def testDefer(self):
+        res = self.defer(12)
+        self.failUnlessEqual(res, 12)
+
+    def testDisconnect1(self):
+        rr, target = self.setupTarget(HelperTarget())
+        d = rr.callRemote("hang")
+        rr.broker.transport.loseConnection(RuntimeError("lost connection"))
+        why = de(d)
+        self.failUnless(why.check(RuntimeError))
+
+    def disconnected(self):
+        self.lost = 1
+
+    def testDisconnect2(self):
+        rr, target = self.setupTarget(HelperTarget())
+        self.lost = 0
+        rr.notifyOnDisconnect(self.disconnected)
+        rr.broker.transport.loseConnection("lost")
+        self.failUnless(self.lost)
+
+    def testDisconnect3(self):
+        rr, target = self.setupTarget(HelperTarget())
+        self.lost = 0
+        rr.notifyOnDisconnect(self.disconnected)
+        rr.dontNotifyOnDisconnect(self.disconnected)
+        rr.broker.transport.loseConnection("lost")
+        self.failIf(self.lost)
+
+    def testUnsendable(self):
+        rr, target = self.setupTarget(HelperTarget())
+        d = rr.callRemote("set", obj=Unsendable())
+        why = de(d)
+        self.failUnless(why.check(Violation))
+        self.failUnless("cannot serialize" in why.value.args[0])
 
 
 
@@ -621,41 +666,6 @@ class TestReferenceable(unittest.TestCase, TargetMixin):
         d = rr.callRemote("echo", obj=arg)
         res = dr(d)
         return res
-
-    def defer(self, arg):
-        rr, target = self.setupTarget(HelperTarget())
-        d = rr.callRemote("defer", obj=arg)
-        res = dr(d)
-        return res
-
-    def testDefer(self):
-        res = self.defer(12)
-        self.failUnlessEqual(res, 12)
-
-    def testDisconnect1(self):
-        rr, target = self.setupTarget(HelperTarget())
-        d = rr.callRemote("hang")
-        rr.broker.transport.loseConnection(RuntimeError("lost connection"))
-        why = de(d)
-        self.failUnless(why.check(RuntimeError))
-
-    def disconnected(self):
-        self.lost = 1
-
-    def testDisconnect2(self):
-        rr, target = self.setupTarget(HelperTarget())
-        self.lost = 0
-        rr.notifyOnDisconnect(self.disconnected)
-        rr.broker.transport.loseConnection("lost")
-        self.failUnless(self.lost)
-
-    def testDisconnect3(self):
-        rr, target = self.setupTarget(HelperTarget())
-        self.lost = 0
-        rr.notifyOnDisconnect(self.disconnected)
-        rr.dontNotifyOnDisconnect(self.disconnected)
-        rr.broker.transport.loseConnection("lost")
-        self.failIf(self.lost)
 
     def testRef1(self):
         # Referenceables turn into RemoteReferences
@@ -873,7 +883,6 @@ class Test3Way(unittest.TestCase):
 # TODO: tests to port from oldpb suite
 # testTooManyRefs: sending pb.MAX_BROKER_REFS across the wire should die
 # testFactoryCopy?
-# testBadSerialization: make sure deferred is errbacked
 
 # tests which aren't relevant right now but which might be once we port the
 # corresponding functionality:

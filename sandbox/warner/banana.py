@@ -222,7 +222,7 @@ class Banana(protocol.Protocol):
                 if lastOpenID is not None:
                     if self.debugSend:
                         print "  sending ABORT(%s)" % lastOpenID
-                    self.sendAbort()
+                    self.sendAbort(lastOpenID)
 
             # should we pop the Slicer? yes
             if doPop:
