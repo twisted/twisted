@@ -221,6 +221,11 @@ class SimpleMailbox:
     flags = ('\\Flag1', 'Flag2', '\\AnotherSysFlag', 'LastFlag')
     messages = []
     mUID = 0
+    
+    def __init__(self):
+        self.listeners = []
+        self.addListener = self.listeners.append
+        self.removeListener = self.listeners.remove
 
     def getFlags(self):
         return self.flags

@@ -76,6 +76,23 @@ class IllegalClientResponse(IMAP4Exception): pass
 
 class IllegalOperation(IMAP4Exception): pass
 
+class IMailboxListener(components.Interface):
+    def modeChanged(self, writeable):
+        """Indicates that the write status of a mailbox has changed.
+        
+        @type writeable: C{bool}
+        @param writeable: A true value if write is now allowed, false
+        otherwise.
+        """
+    
+    def flagsChanged(self, newFlags):
+        """Indicates that the flags of one or more messages have changed.
+        
+        @type newFlags: C{dict}
+        @param newFlags: A mapping of message identifiers to tuples of flags
+        new set on that message.
+        """
+
 class IMAP4Server(basic.LineReceiver):
     """
     Protocol implementation for an IMAP4rev1 server.
@@ -86,6 +103,8 @@ class IMAP4Server(basic.LineReceiver):
         Selected
         Logout
     """
+    __implements__ = (IMailboxListener,)
+
     # Capabilities supported by this server
     CAPABILITIES = {}
 
@@ -338,8 +357,9 @@ class IMAP4Server(basic.LineReceiver):
                 s = 'READ-ONLY'
 
             if self.mbox:
-                self.account.release(mbox)
+                self.mbox.removeListener(self)
             self.mbox = mbox
+            self.mbox.addListener(self)
             self.sendPositiveResponse(tag, '[%s] SELECT successful' % s)
     select_SELECT = auth_SELECT
 
@@ -357,8 +377,9 @@ class IMAP4Server(basic.LineReceiver):
             self.sendPositiveResponse(None, '[UIDVALIDITY %d]' % mbox.getUID())
 
             if self.mbox:
-                self.account.release(mbox)
+                self.mbox.removeListener(self)
             self.mbox = mbox
+            self.mbox.addListener(self)
             self.sendPositiveResponse(tag, '[READ-ONLY] EXAMINE successful')
     select_EXAMINE = auth_EXAMINE
 
@@ -544,13 +565,13 @@ class IMAP4Server(basic.LineReceiver):
             maybeDeferred(d, self._cbClose, self._ebClose, (tag,), (tag,))
         else:
             self.sendPositiveResponse(tag, 'CLOSE completed')
-            self.account.release(self.mbox)
+            self.mbox.removeListener(self)
             self.mbox = None
             self.state = 'auth'
 
     def _cbClose(self, result, tag):
         self.sendPositiveResponse(tag, 'CLOSE completed')
-        self.account.release(self.mbox)
+        self.mbox.removeListener(self)
         self.mbox = None
         self.state = 'auth'
 
@@ -563,7 +584,7 @@ class IMAP4Server(basic.LineReceiver):
             maybeDeferred(d, self._cbExpunge, self._ebExpunge, (tag,), (tag,))
         else:
             self.sendPositiveResponse(tag, 'CLOSE completed')
-            self.account.release(self.mbox)
+            self.mbox.removeListener(self)
             self.mbox = None
             self.state = 'auth'
 
@@ -571,7 +592,7 @@ class IMAP4Server(basic.LineReceiver):
         for e in result:
             self.sendUntaggedResponse('%d EXPUNGE' % e)
         self.sendPositiveResponse(tag, 'EXPUNGE completed')
-        self.account.release(self.mbox)
+        self.mbox.removeListener(self)
         self.mbox = None
         self.state = 'auth'
 
@@ -700,7 +721,6 @@ class IMAP4Server(basic.LineReceiver):
             self.sendNegativeResponse(tag, '[ALERT] Some messages were not copied')
         else:
             self.sendPositiveResponse(tag, 'COPY completed')
-        self.account.release(mbox)
 
     def select_UID(self, tag, args):
         parts = args.split(None, 1)
@@ -2280,9 +2300,6 @@ class Account:
     def select(self, name, readwrite=1):
         return self.mailboxes.get(name.upper())
 
-    def release(self, mbox):
-        pass
-
     def delete(self, name):
         name = name.upper()
         # See if this mailbox exists at all
@@ -2410,6 +2427,25 @@ class IMailbox(components.Interface):
         requested names is returned.  If the process of looking this
         information up would be costly, a deferred whose callback will
         eventually be passed this dictionary is returned instead.
+        """
+
+    def addListener(self, listener):
+        """Add a mailbox change listener
+        
+        @param listener: Any object which implements C{IMailboxListener}
+        @param listener: An object to add to the set of those which will
+        be notified when the contents of this mailbox change.
+        """
+    
+    def removeListener(self, listener):
+        """Remove a mailbox change listener
+        
+        @type listener: Any object previously added to and not removed from
+        this mailbox as a listener.
+        @param listener: The object to remove from the set of listeners.
+        
+        @raise ValueError: Raised when the given object is not a listener for
+        this mailbox.
         """
 
     def addMessage(self, message, flags = (), date = None):
