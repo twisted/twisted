@@ -517,6 +517,7 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
 
     def lineReceived(self, line):
         self.resetTimeout()
+        # print 'S:', repr(line)
         return getattr(self, 'state_' + self.mode)(line)
     
     def state_COMMAND(self, line):
@@ -1081,13 +1082,23 @@ class SMTPClient(basic.LineReceiver):
         raise NotImplementedError
 
 class ESMTPClient(SMTPClient):
+    # Fall back to HELO if the server does not support EHLO
     heloFallback = 1
+
+    # Refuse to proceed if authentication cannot be performed
     requireAuthentication = 0
 
-    def __init__(self, secret, *args, **kw):
+    # Refuse to proceed if TLS is not available
+    requireTransportSecurity = 0
+
+    # ClientContextFactory to use for STARTTLS
+    context = None
+
+    def __init__(self, secret, contextFactory = None, *args, **kw):
         SMTPClient.__init__(self, *args, **kw)
         self.authenticators = {}
         self.secret = secret
+        self.context = contextFactory
 
     def registerAuthenticator(self, auth):
         self.authenticators[auth.getName().upper()] = auth
@@ -1105,20 +1116,45 @@ class ESMTPClient(SMTPClient):
             self._failresponse = self.smtpState_helo
 
     def esmtpState_auth(self, code, resp):
-        items = resp.splitlines()
-        for e in items:
-            e = e.split(None, 1)
-            if e[0] == 'AUTH' and len(e) > 1:
-                schemes = e[1].split()
-                for s in schemes:
-                    s = s.upper()
-                    if s in self.authenticators:
-                        self.sendLine('AUTH ' + s)
-                        self._expected = [334]
-                        self._okresponse = self.esmtpState_challenge
-                        self._authinfo = self.authenticators[s]
-                        return
+        scheme = None
+        items = {}
+        for line in resp.splitlines():
+            e = line.split(None, 1)
+            if len(e) > 1:
+                items[e[0]] = e[1]
+            else:
+                items[e[0]] = None
+
+        if self.context and 'STARTTLS' in items:
+            self._expected = [220]
+            self._okresponse = self.esmtpState_starttls
+            self._carryon = items
+        elif self.requireTransportSecurity:
+            log.msg("TLS required but not available: closing connection")
+            self.sendLine('QUIT')
+            self._expected = xrange(0, 1000)
+            self._okresponse = self.smtpState_disconnect
+        else:
+            self.authenticate(code, resp, items)
+    
+    def esmtpState_starttls(self, code, resp):
+        self.transport.startTLS(self.context)
+        items = self._carryon
+        self._carryon = None
+        self.authenticate(code, resp, items)
+    
+    def authenticate(self, code, resp, items):
+        if items.get('AUTH'):
+            schemes = items['AUTH'].split()
+            for s in schemes:
+                if s.upper() in self.authenticators:
+                    self.sendLine('AUTH ' + s)
+                    self._expected = [334]
+                    self._okresponse = self.esmtpState_challenge
+                    self._authinfo = self.authenticators[s]
+                    return
         if self.requireAuthentication:
+            log.msg("Authentication but none available: closing connection")
             self.sendLine('QUIT')
             self._expected = xrange(0, 1000)
             self._okresponse = self.smtpState_disconnect
@@ -1152,16 +1188,17 @@ class ESMTP(SMTP):
     startedTLS = False
     
     portal = None
+    _onLogout = None
     authenticated = False
     delivery = None
 
-    def __init__(self, chal = None, ctx = None):
+    def __init__(self, chal = None, contextFactory = None):
         SMTP.__init__(self)
         if chal is None:
             chal = {}
         self.challengers = chal
         self.authenticated = False
-        self.ctx = ctx
+        self.ctx = contextFactory
 
     def connectionMade(self):
         SMTP.connectionMade(self)
@@ -1262,7 +1299,6 @@ class ESMTP(SMTP):
         self.challenger = None
     
     def _ebAuthenticated(self, reason):
-        import pdb; pdb.set_trace()
         self.challenge = None
         if reason.check(cred.error.UnauthorizedLogin):
             self.sendCode(535, 'Authentication failed')

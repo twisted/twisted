@@ -51,10 +51,7 @@ class StolenTCPTestCase(test_tcp.ProperlyCloseFilesTestCase, test_tcp.WriteDataT
 
         self.totalConnections = 0
 
-class ClientTLSContext(ssl.ClientContextFactory):
-    isClient = 1
-    def getContext(self):
-        return SSL.Context(ssl.SSL.TLSv1_METHOD)
+from ssl_helpers import ClientTLSContext
 
 class UnintelligentProtocol(basic.LineReceiver):
     pretext = [
@@ -196,16 +193,17 @@ class TLSTestCase(unittest.TestCase):
 
 class SingleLineServerProtocol(protocol.Protocol):
     def connectionMade(self):
+        self.transport.identifier = 'SERVER'
         self.transport.write("+OK <some crap>\r\n")
 
 class RecordingClientProtocol(protocol.Protocol):
     def connectionMade(self):
+        self.transport.identifier = 'CLIENT'
         self.buffer = []
     
     def dataReceived(self, data):
         self.factory.buffer.append(data)
         
-
 class BufferingTestCase(unittest.TestCase):
     def testOpenSSLBuffering(self):
         server = protocol.ServerFactory()
@@ -224,7 +222,7 @@ class BufferingTestCase(unittest.TestCase):
         port = reactor.listenSSL(0, server, sCTX, interface='127.0.0.1')
         reactor.connectSSL('127.0.0.1', port.getHost()[2], client, cCTX)
         
-        for i in range(100):
+        for i in range(50):
             reactor.iterate()
         
         self.assertEquals(client.buffer, ["+OK <some crap>\r\n"])

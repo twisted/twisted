@@ -36,6 +36,8 @@ import twisted.cred.portal
 import twisted.cred.checkers
 import twisted.cred.credentials
 
+from ssl_helpers import ClientTLSContext, ServerTLSContext
+
 import re
 
 try:
@@ -146,8 +148,8 @@ class MySMTPClient(MyClient, smtp.SMTPClient):
         MyClient.__init__(self)
 
 class MyESMTPClient(MyClient, smtp.ESMTPClient):
-    def __init__(self, secret = ''):
-        smtp.ESMTPClient.__init__(self, secret, 'foo.baz')
+    def __init__(self, secret = '', contextFactory = None):
+        smtp.ESMTPClient.__init__(self, secret, contextFactory, 'foo.baz')
         MyClient.__init__(self)
 
 class LoopbackMixin:
@@ -238,7 +240,7 @@ class DummySMTPMessage:
 
 class Dummy:
     def connectionMade(self):
-        smtp.SMTP.connectionMade(self)
+        self.dummyMixinBase.connectionMade(self)
         self.message = None
 
     def startMessage(self, users):
@@ -254,10 +256,10 @@ class Dummy:
         return origin
 
 class DummySMTP(Dummy, smtp.SMTP):
-    pass
+    dummyMixinBase = smtp.SMTP
 
 class DummyESMTP(Dummy, smtp.ESMTP):
-    pass
+    dummyMixinBase = smtp.ESMTP
 
 class AnotherTestCase:
     serverClass = None
@@ -394,6 +396,26 @@ class AuthTestCase(unittest.TestCase, LoopbackMixin):
         self.loopback(server, client)
 
         self.assertEquals(server.authenticated, 1)
+
+class NoticeTLSClient(MyESMTPClient):
+    tls = False
+    def esmtpState_starttls(self, code, resp):
+        MyESMTPClient.esmtpState_starttls(self, code, resp)
+        self.tls = True
+
+class TLSTestCase(unittest.TestCase, LoopbackMixin):
+    def testTLS(self):
+        clientCTX = ClientTLSContext()
+        serverCTX = ServerTLSContext()
+        
+        client = NoticeTLSClient(contextFactory=clientCTX)
+        server = DummyESMTP(contextFactory=serverCTX)
+        
+        self.loopback(server, client)
+        
+        self.assertEquals(client.tls, True)
+        self.assertEquals(server.startedTLS, True)
+    testTLS.skip = "SSL wrongly buffers, hanging this test"
 
 class SMTPHelperTestCase(unittest.TestCase):
     def testMessageID(self):

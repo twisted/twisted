@@ -43,19 +43,7 @@ import twisted.cred.checkers
 import twisted.cred.credentials
 import twisted.cred.portal
 
-from test_ssl import ClientTLSContext
-
-class ServerTLSContext:
-    isClient = 0
-    
-    def __init__(self, filename = sibpath(__file__, 'server.pem')):
-        self.filename = filename
-
-    def getContext(self):
-        ctx = SSL.Context(SSL.TLSv1_METHOD)
-        ctx.use_certificate_file(self.filename)
-        ctx.use_privatekey_file(self.filename)
-        return ctx
+from ssl_helpers import ClientTLSContext, ServerTLSContext
 
 def strip(f):
     return lambda result, f=f: f()
