@@ -331,36 +331,51 @@ class SSHConnection(service.SSHService):
         We return either a subclass of SSHChannel, or a tuple of
         (errorCode, errorMessage).
 
+        By default, this dispatches to a method 'channel_channelType' with any
+        -'s in the channelType replace with _'s.  If it cannot find a suitable
+        method, it returns an OPEN_UNKNOWN_CHANNEL_TYPE error.  The method is
+        called with arguments of windowSize, maxPacket, data.
+
         @type channelType:  C{str}
         @type windowSize:   C{int}
         @type maxPacket:    C{int}
         @type data:         C{str}
         @rtype:             subclass of C{SSHChannel}/C{tuple}
         """
-        if self.transport.isClient and channelType != 'forwarded-tcpip':
-            return OPEN_ADMINISTRATIVELY_PROHIBITED, 'not on the client bubba'
-        if channelType == 'session':
-            return session.SSHSession(remoteWindow = windowSize, 
-                                      remoteMaxPacket = maxPacket, 
-                                      conn = self)
-        elif channelType == 'forwarded-tcpip':
-            remoteHP, origHP = forwarding.unpackOpen_forwarded_tcpip(data)
-            if self.remoteForwards.has_key(remoteHP[1]):
-                connectHP = self.remoteForwards[remoteHP[1]]
-                return forwarding.SSHConnectForwardingChannel(connectHP,
-                                                    remoteWindow = windowSize,
-                                                    remoteMaxPacket = maxPacket,
-                                                    conn = self)
-            else:
-                return OPEN_CONNECT_FAILED, "don't know about that port"
-        elif channelType == 'direct-tcpip':
-            remoteHP, origHP = forwarding.unpackOpen_direct_tcpip(data)
-            return forwarding.SSHConnectForwardingChannel(remoteHP,
+        channelType = channelType.replace('-','_')
+        f = getattr(self, 'channel_%s' % channelType, None)
+        if not f:
+            return OPEN_UNKNOWN_CHANNEL_TYPE, "don't know that channel"
+        return f(windowSize, maxPacket, data)
+
+    def channel_session(self, windowSize, maxPacket, data):
+        if self.transport.isClient:
+            return OPEN_ADMINISTRATIVELY_PROHIBITED, 'not on the client'
+        return session.SSHSession(remoteWindow = windowSize,
+                                  remoteMaxPacket = maxPacket,
+                                  conn = self)
+
+    def channel_forwarded_tcp(self, windowSize, maxPacket, data):
+        remoteHP, origHP = forwarding.unpackOpen_forwarded_tcpip(data)
+        if self.remoteForwards.has_key(remoteHP[1]):
+            connectHP = self.remoteForwards[remoteHP[1]]
+            return forwarding.SSHConnectForwardingChannel(connectHP,
                                                 remoteWindow = windowSize,
                                                 remoteMaxPacket = maxPacket,
                                                 conn = self)
         else:
-            return OPEN_UNKNOWN_CHANNEL_TYPE, "don't know %s"%channelType
+            return OPEN_CONNECT_FAILED, "don't know about that port"
+        if self.transport.isClient and channelType != 'forwarded-tcpip':
+            return OPEN_ADMINISTRATIVELY_PROHIBITED, 'not on the client bubba'
+
+    def channel_direct_tcpip(self, windowSize, maxPacket, data):
+        if self.transport.isClient:
+            return OPEN_ADMINITRATIVELY_PROHIBITED, 'not on the client'
+        remoteHP, origHP = forwarding.unpackOpen_direct_tcpip(data)
+        return forwarding.SSHConnectForwardingChannel(remoteHP,
+                                            remoteWindow = windowSize,
+                                            remoteMaxPacket = maxPacket,
+                                            conn = self)
 
     def gotGlobalRequest(self, requestType, data):
         """
@@ -371,39 +386,48 @@ class SSHConnection(service.SSHService):
             - 1, <data>: request accepted with request specific data
             - 0: request denied
 
+        By default, this dispatches to a method 'global_requestType' with
+        -'s in requestType replaced with _'s.  The found method is passed data.
+        If this method cannot be found, this method returns 0.  Otherwise, it 
+        returns the return value of that method.
+
         @type requestType:  C{str}
         @type data:         C{str}
         @rtype:             C{int}/C{tuple}
         """
+        requestType = requestType.replace('-','_')
+        f = getattr(self, 'global_%s' % requestType, None)
+        if not f:
+            return 0
+        return f(data)
+
+    def global_tcpip_forward(data):
         if self.transport.isClient:
             return 0 # no such luck
-        elif requestType == 'tcpip-forward':
-            hostToBind, portToBind = forwarding.unpackGlobal_tcpip_forward(data)
-            if portToBind < 1024:
-                return 0 # fix this later, for now don't even try
-            from twisted.internet import reactor
-            listener = reactor.listenTCP(portToBind, 
-                            forwarding.SSHListenForwardingFactory(self,
-                                (hostToBind, portToBind),
-                                forwarding.SSHListenServerForwardingChannel), 
-                            interface = hostToBind)
-            self.listeners[(hostToBind, portToBind)] = listener
-            if portToBind == 0:
-                portToBind = listener.getHost()[2] # the port
-                return 1, struct.pack('>L', portToBind)
-            else:
-                return 1
-        elif requestType == 'cancel-tcpip-forward':
-            hostToBind, portToBind = forwarding.unpackGlobal_tcpip_forward(data)
-            listener = self.listeners.get((hostToBind, portToBind), None)
-            if not listener:
-                return 0
-            del self.listeners[(hostToBind, portToBind)]
-            listener.stopListening()
-            return 1
+        hostToBind, portToBind = forwarding.unpackGlobal_tcpip_forward(data)
+        if portToBind < 1024:
+            return 0 # fix this later, for now don't even try
+        from twisted.internet import reactor
+        listener = reactor.listenTCP(portToBind, 
+                        forwarding.SSHListenForwardingFactory(self,
+                            (hostToBind, portToBind),
+                            forwarding.SSHListenServerForwardingChannel), 
+                        interface = hostToBind)
+        self.listeners[(hostToBind, portToBind)] = listener
+        if portToBind == 0:
+            portToBind = listener.getHost()[2] # the port
+            return 1, struct.pack('>L', portToBind)
         else:
-            log.msg('ignoring unknown global request %s'%requestType)
+            return 1
+
+    def global_cancel_tcpip_forward(self, data):
+        hostToBind, portToBind = forwarding.unpackGlobal_tcpip_forward(data)
+        listener = self.listeners.get((hostToBind, portToBind), None)
+        if not listener:
             return 0
+        del self.listeners[(hostToBind, portToBind)]
+        listener.stopListening()
+        return 1
 
 MSG_GLOBAL_REQUEST = 80
 MSG_REQUEST_SUCCESS = 81
