@@ -67,7 +67,7 @@ MAXUINT8=(2**8)-1
 
 def is_ipv4(s):
     """
-    @return true if and only if s is a canonical IPv4 address
+    @return: true if and only if s is a canonical IPv4 address
     """
     ns = string.split(s, '.')
     if len(ns) != 4:
@@ -184,7 +184,7 @@ class GnutellaTalker(LineReceiver):
         assert (type(descriptorId) is types.StringType) and (len(descriptorId) == DESCRIPTORLENGTH), "precondition failure: " + "descriptorId must be a string of length DESCRIPTORLENGTH." + " -- " + "descriptorId: %s :: %s" % (repr(descriptorId), str(type(descriptorId)),)
         log.msg("%s.queryReceived(%s, %s, %s, searchCriteria=%s, minimumSpeed=%s" % (str(self), repr(descriptorId), str(ttl), str(hops), str(searchCriteria), str(minimumSpeed),))
                                                                                           
-    def queryHitReceived(self, descriptorId, ttl, hops, ipAddress, port, resultSet, serventIdentifer, speed):
+    def queryHitReceived(self, descriptorId, ttl, hops, ipAddress, port, resultSet, serventIdentifier, speed):
         """
         Override this to handle query hit messages.
 
@@ -199,7 +199,7 @@ class GnutellaTalker(LineReceiver):
         assert (type(descriptorId) is types.StringType) and (len(descriptorId) == DESCRIPTORLENGTH), "precondition failure: " + "descriptorId must be a string of length DESCRIPTORLENGTH." + " -- " + "descriptorId: %s :: %s" % (repr(descriptorId), str(type(descriptorId)),)
         log.msg("%s.queryHitReceived(%s, %s, %s, ipAddress=%s, port=%s, resultSet=%s, serventIdentifier=%s, speed=%s" % (str(self), repr(descriptorId), str(ttl), str(hops), str(ipAddress), str(port), str(resultSet), str(serventIdentifier), str(speed),))
     
-    def pushReceived(descriptorId, ttl, hops, ipAddress, port, serventIdentifer, fileIndex):
+    def pushReceived(descriptorId, ttl, hops, ipAddress, port, serventIdentifier, fileIndex):
         """
         Override this to handle push messages.
         
@@ -311,16 +311,16 @@ class GnutellaTalker(LineReceiver):
             return
 
         ipAddress = string.join(map(str, (ipA0, ipA1, ipA2, ipA3,)), '.')
-        self.queryHitReceived(descriptorId, ttl, hops, ipAddress, port, resultSet, serventIdentifer, speed)
+        self.queryHitReceived(descriptorId, ttl, hops, ipAddress, port, resultSet, serventIdentifier, speed)
          
     def handlePush(self, descriptorId, ttl, hops, payload):
         try:
-            (serventIdentifer, fileIndex, ipA0, ipA1, ipA2, ipA3, port,) = struct.unpack(PUSHPAYLOADENCODING, payload)
+            (serventIdentifier, fileIndex, ipA0, ipA1, ipA2, ipA3, port,) = struct.unpack(PUSHPAYLOADENCODING, payload)
         except struct.error, le:
             self._abortConnection("Received ill-formatted Push payload.  Closing connection.  i: %s, ill-formed part of query hit payload: %s" % (str(i), str(payload[i:]),))
             return
         ipAddress = string.join(map(str, (ipA0, ipA1, ipA2, ipA3,)), '.')
-        self.pushReceived(descriptorId, ttl, hops, ipAddress, port, serventIdentifer, fileIndex)
+        self.pushReceived(descriptorId, ttl, hops, ipAddress, port, serventIdentifier, fileIndex)
 
     def descriptorReceived(self, descriptor):
         """
