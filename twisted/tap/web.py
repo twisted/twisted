@@ -46,24 +46,6 @@ This creates a web.tap file that can be used by twistd.  If you specify
 no arguments, it will be a demo webserver that has the Test class from
 twisted.web.test in it."""
 
-    def opt_module(self, identifier):
-        """<modulename:classname> modulename is a python module without
-        the .py extension.  This module does not have to be in the PATH
-        or even PYTHONPATH. classname is the name of the class inside
-        the module that you want to be the root of the web server.
-        """
-
-        modulename, classname = string.split(identifier, ':')
-        modulename = os.path.abspath(modulename)
-        directory, filename = os.path.split(modulename)
-
-        sys.path.append(directory)
-        module = __import__(filename)
-        classobj = getattr(module, classname)
-        self.root = classobj()
-
-    opt_m = opt_module
-
     #def opt_help(self):
     #    print usage_message
     #    sys.exit(0)
