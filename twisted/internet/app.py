@@ -20,9 +20,6 @@
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
-import warnings
-warnings.warn("twisted.internet.app is deprecated, use twisted.application instead.", DeprecationWarning)
-
 
 # System Imports
 import os
@@ -63,12 +60,19 @@ def encrypt(passphrase, data):
     return cipher.new(md5.new(passphrase).digest()[:16]).encrypt(data)
 
 
+def quieterWarning():
+    import warnings
+    warnings.warn("twisted.internet.app is deprecated, use twisted.application instead.", DeprecationWarning, stacklevel=4)
+    global quieterWarning
+    quieterWarning = lambda: None
+
 class _AbstractServiceCollection:
     __implements__ = (interfaces.IServiceCollection, )
 
     def __init__(self):
         """Create an abstract service collection.
         """
+        quieterWarning()
         self.services = {}
 
     def getServiceNamed(self, serviceName):
@@ -116,6 +120,7 @@ class ApplicationService(Accessor, styles.Versioned):
 
         Arguments: application, a twisted.internet.app.Application instance.
         """
+        quieterWarning()
         if not isinstance(serviceName, types.StringTypes):
             raise TypeError("%s is not a string." % serviceName)
         self.serviceName = serviceName
