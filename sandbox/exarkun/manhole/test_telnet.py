@@ -361,3 +361,17 @@ class TelnetTestCase(unittest.TestCase):
         s.state = 'yes'
         d = self.p.requestEnable('\xab')
         self.assertRaises(telnet.AlreadyEnabled, util.wait, d)
+
+    def testLostConnectionFailsDeferreds(self):
+        d1 = self.p.requestEnable('\x12')
+        d2 = self.p.requestEnable('\x23')
+        d3 = self.p.requestEnable('\x34')
+
+        class TestException(Exception):
+            pass
+
+        self.p.connectionLost(TestException("Total failure!"))
+
+        self.assertRaises(TestException, util.wait, d1)
+        self.assertRaises(TestException, util.wait, d2)
+        self.assertRaises(TestException, util.wait, d3)

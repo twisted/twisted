@@ -261,6 +261,13 @@ class Telnet(protocol.Protocol):
             else:
                 raise ValueError("How'd you do this?")
 
+    def connectionLost(self, reason):
+        for state in self.options.values():
+            if state.onResult is not None:
+                d = state.onResult
+                state.onResult = None
+                d.errback(reason)
+
     def applicationByteReceived(self, byte):
         """Called with application-level data.
         """
@@ -499,6 +506,7 @@ class TelnetTransport(Telnet):
         self.protocol.dataReceived(bytes)
 
     def connectionLost(self, reason):
+        Telnet.connectionLost(self, reason)
         self.protocol.connectionLost(reason)
         del self.protocol
 
