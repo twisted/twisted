@@ -1,5 +1,14 @@
 2003-10-01  Brian Warner  <warner@lothar.com>
 
+	* twisted/web/client.py (HTTPDownloader): accept either a filename
+	or a file-like object (it must respond to .write and .close, and
+	partial requests will not be used with file-like objects). errback
+	the deferred if an IOError occurs in .open, .write. or .close,
+	usually something like "permission denied" or "file system full".
+	Closes issue234.
+	* twisted/test/test_webclient.py (WebClientTestCase.write): verify
+	that the errback gets called
+
 	* twisted/scripts/trial.py (run): add --until-failure option to
 	re-run the test until something fails. Closes issue87.
 

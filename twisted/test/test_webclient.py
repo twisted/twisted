@@ -95,6 +95,39 @@ class WebClientTestCase(unittest.TestCase):
         r = unittest.deferredResult(client.downloadPage(self.getURL("file"), name))
         self.assertEquals(open(name, "rb").read(), "0123456789")
 
+    def testDownloadPageError1(self):
+        class errorfile:
+            def write(self, data):
+                raise IOError, "badness happened during write"
+            def close(self):
+                pass
+        ef = errorfile()
+        d = client.downloadPage(self.getURL("file"), ef)
+        f = unittest.deferredError(d)
+        self.failUnless(f.check(IOError))
+
+    def testDownloadPageError2(self):
+        class errorfile:
+            def write(self, data):
+                pass
+            def close(self):
+                raise IOError, "badness happened during close"
+        ef = errorfile()
+        d = client.downloadPage(self.getURL("file"), ef)
+        f = unittest.deferredError(d)
+        self.failUnless(f.check(IOError))
+
+    def testDownloadPageError3(self):
+        # make sure failures in open() are caught too. This is tricky.
+        # Might only work on posix.
+        tmpfile = open("unwritable", "wb")
+        tmpfile.close()
+        os.chmod("unwritable", 0) # make it unwritable (to us)
+        d = client.downloadPage(self.getURL("file"), "unwritable")
+        f = unittest.deferredError(d)
+        self.failUnless(f.check(IOError))
+        os.unlink("unwritable")
+
     def testError(self):
         f = unittest.deferredError(client.getPage(self.getURL("nosuchfile")))
         f.trap(error.Error)
