@@ -91,6 +91,7 @@ class ConnectionState:
     macSecret = None
     sequenceNumber = None    
 
+
 class TLSRecordLayer:
     CHANGE_CIPHER_SPEC = 20
     ALERT = 21
@@ -101,16 +102,47 @@ class TLSRecordLayer:
     # Two 8 bit unsigned integers indicating the protocol version
     version = (3, 1)
 
-    # 16 bit unsigned integer indicating the length of this record
-    length = None
-    
+    maxFragmentSize = 2 ** 14
+
     # The data associated with this record
     fragment = None
 
+    def __init__(self, contentType, bytes):
+        self.contentType = contentType
+        self.fragment = bytes
+
+class TLSRecordLayerPacket:
+    def __init__(self, type, version, fragment):
+        self.type = type
+        self.version = version
+        self.fragment = fragment
+
+    def encode(self):
+        v1, v2 = self.version
+        hdr = struct.pack('>BBBH', self.type, v1, v2, len(self.fragment))
+        return hdr + self.fragment
+
+class _PlaintextIterator:
+    def __init__(self, record):
+        self.contentType = record.contentType
+        self.version = record.version
+        self.bytes = record.fragment
+        self.maxChunkSize = record.maxFragmentSize
+        
+    def next(self):
+        if not self.bytes:
+            raise StopIteration
+        bytes = self.bytes[:self.maxChunkSize]
+        self.bytes = self.bytes[self.maxChunkSize:]
+        return TLSRecordLayerPacket(self.contentType, self.version, bytes)
 
 class TLSPlaintext(TLSRecordLayer):
     """A packet of information on the TLS Record Layer
     """
+
+    def __iter__(self):
+        return _PlaintextIterator(self)
+
 
 class TLSCompressed(TLSRecordLayer):
     """A packet of compressed information on the TLS Record Layer
@@ -197,6 +229,8 @@ class Alert(TLSRecordLayer):
     alertDescription = None
 
 class Handshake:
+    CONTENT_TYPE = TLSRecordLayer.HANDSHAKE
+
     HELLO_REQUEST = 0
     CLIENT_HELLO = 1
     SERVER_HELLO = 2
@@ -210,6 +244,12 @@ class Handshake:
     
     def __init__(self, type):
         self.handshakeType = type
+
+    def encode(self):
+        body = self.handshake_encode()
+        high = (len(body) >> 8) & 0xffff
+        low = len(body) & 0xff
+        return struct.pack('>BHB', self.handshakeType, high, low) + body
     
 class ClientHello(Handshake):
     def __init__(self, bytes):
@@ -217,8 +257,8 @@ class ClientHello(Handshake):
         self.gmt_unix_time = int(time.time())
         self.bytes = bytes
     
-    def encode(self):
-        return struct.pack('>BI', self.handshakeType, self.gmt_unix_time) + self.bytes
+    def handshake_encode(self):
+        return struct.pack('>I', self.gmt_unix_time) + self.bytes
 
 import sys
 sys.path.append('../../pahan')
@@ -239,12 +279,14 @@ class TLSClient(ImplicitStateProtocol):
                         chr(22): ('Handshake', ),
                         chr(23): ('ApplicationData', )}
 
-    def write(self, bytes):
-        print 'Sending', repr(bytes)
-        self.transport.write(bytes)
+    def write(self, packets):
+        L = list(packets)
+        bytes = [x.encode() for x in L]
+        print 'Sending', repr(''.join(bytes))
+        self.transport.writeSequence(bytes)
 
     def send(self, record):
-        self.write(record.encode())
+        self.write(TLSPlaintext(record.CONTENT_TYPE, record.encode()))
 
     def dataReceived(self, data):
         print 'Received', repr(data)
