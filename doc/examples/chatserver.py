@@ -1,0 +1,31 @@
+"""The most basic chat protocol possible.
+
+run me with twistd -y chatserver.py, and then connect with multiple
+telnet clients to port 1025
+"""
+
+from twisted.protocols import basic
+
+
+
+class MyChat(basic.LineReceiver):
+    def connectionMade(self):
+        self.factory.clients.append(self)
+
+    def lineReceived(self, line):
+        print "received", repr(line)
+        for c in self.factory.clients:
+            c.message(line)
+
+    def message(self, message):
+        self.transport.write(message + '\n')
+
+
+from twisted.internet import protocol, app
+
+factory = protocol.ServerFactory()
+factory.protocol = MyChat
+factory.clients = []
+
+application = app.Application('chat')
+application.listenTCP(1025, factory)
