@@ -296,7 +296,8 @@ class Group(pb.Cacheable):
 
     def __getstate__(self):
         state = self.__dict__.copy()
-        self.members = []
+        state.['members'] = []
+        return state
 
     def getStateToCopyFor(self, participant):
         assert participant in self.members, "illegal copy of group"
