@@ -71,6 +71,7 @@ class LatexSpitter(XMLParser):
             return
         target = os.path.join(self.currDir, os.path.basename(target)+'.eps')
         m(fileName, target)
+        target = os.path.basename(target)
         self.writer('\\includegraphics{%s}\n' % target)
 
     def convert_png(self, src, target):
