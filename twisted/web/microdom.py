@@ -636,6 +636,9 @@ def parse(readable, *args, **kwargs):
     return doc
 
 def parseString(st, *args, **kw):
+    if isinstance(st, UnicodeType):
+        # this isn't particularly ideal, but it does work.
+        return parse(StringIO(st.encode('UTF-16')), *args, **kw)
     return parse(StringIO(st), *args, **kw)
 
 
