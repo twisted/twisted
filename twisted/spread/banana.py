@@ -31,10 +31,7 @@ def int2b128(integer, stream):
         integer = integer >> 7
 
 def b1282int(st):
-    if len(st) > 5:
-        oneHundredAndTwentyEight = 128l
-    else:
-        oneHundredAndTwentyEight = 128
+    oneHundredAndTwentyEight = 128l
     i = 0
     place = 0
     for char in st:
@@ -50,26 +47,65 @@ def b1282int(st):
 LIST     = chr(0x80)
 INT      = chr(0x81)
 STRING   = chr(0x82)
-SYMBOL   = chr(0x83)
-NEG      = chr(0x84)
-VOCAB    = chr(0x85)
-FLOAT    = chr(0x86)
-# This will make it easier for people writing low-level implementations.
-LONGINT  = chr(0x87)
-LONGNEG  = chr(0x88)
+NEG      = chr(0x83)
+FLOAT    = chr(0x84)
+# "optional" -- these might be refused by a low-level implementation.
+LONGINT  = chr(0x85)
+LONGNEG  = chr(0x86)
+# really optional; this is is part of the 'pb' vocabulary
+VOCAB    = chr(0x87)
 
 HIGH_BIT_SET = chr(0x80)
 
 class Banana(protocol.Protocol, styles.Ephemeral):
+    knownDialects = ["pb", "none"]
+
+    def connectionReady(self):
+        """Surrogate for connectionMade
+        Called after protocol negotiation.
+        """
+
+    def _selectDialect(self, dialect):
+        self.currentDialect = dialect
+        self.connectionReady()
+
+    def callExpressionReceived(self, obj):
+        if self.currentDialect:
+            self.expressionReceived(obj)
+        else:
+            # this is the first message we've received
+            if self.isClient:
+                # if I'm a client I have to respond
+                for serverVer in obj:
+                    if serverVer in self.knownDialects:
+                        self.sendEncoded(serverVer)
+                        self._selectDialect(serverVer)
+                        break
+                else:
+                    # I can't speak any of those dialects.
+                    print 'error losing'
+                    self.transport.loseConnection()
+            else:
+                if obj in self.knownDialects:
+                    self._selectDialect(obj)
+                else:
+                    # the client just selected a protocol that I did not suggest.
+                    print 'freaky losing'
+                    self.transport.loseConnection()
+
+
     def connectionMade(self):
         self.listStack = []
+        self.currentDialect = None
+        if not self.isClient:
+            self.sendEncoded(self.knownDialects)
 
     def gotItem(self, item):
         l = self.listStack
         if l:
             l[-1][1].append(item)
         else:
-            self.expressionReceived(item)
+            self.callExpressionReceived(item)
 
     buffer = ''
 
@@ -123,14 +159,10 @@ class Banana(protocol.Protocol, styles.Ephemeral):
                 buffer = rest
                 num = -b1282int(num)
                 gotItem(num)
-            elif typebyte == SYMBOL:
-                buffer = rest
-                num = b1282int(num)
-                gotItem(self.incomingVocabulary[num])
             elif typebyte == VOCAB:
                 buffer = rest
                 num = b1282int(num)
-                gotItem(self.incomingVocabulary[-num])
+                gotItem(self.incomingVocabulary[num])
             elif typebyte == FLOAT:
                 if len(rest) >= 8:
                     buffer = rest[8:]
@@ -144,6 +176,7 @@ class Banana(protocol.Protocol, styles.Ephemeral):
                 gotItem(item)
         self.buffer = ''
 
+
     def expressionReceived(self, lst):
         """Called when an expression (list, string, or int) is received.
         """
@@ -152,50 +185,51 @@ class Banana(protocol.Protocol, styles.Ephemeral):
 
     outgoingVocabulary = {
         # Jelly Data Types
-        'None'           :  -1,
-        'class'          :  -2,
-        'dereference'    :  -3,
-        'reference'      :  -4,
-        'dictionary'     :  -5,
-        'function'       :  -6,
-        'instance'       :  -7,
-        'list'           :  -8,
-        'module'         :  -9,
-        'persistent'     : -10,
-        'tuple'          : -11,
-        'unpersistable'  : -12,
+        'None'           :  1,
+        'class'          :  2,
+        'dereference'    :  3,
+        'reference'      :  4,
+        'dictionary'     :  5,
+        'function'       :  6,
+        'instance'       :  7,
+        'list'           :  8,
+        'module'         :  9,
+        'persistent'     : 10,
+        'tuple'          : 11,
+        'unpersistable'  : 12,
 
         # PB Data Types
-        'copy'           : -13,
-        'cache'          : -14,
-        'cached'         : -15,
-        'remote'         : -16,
-        'local'          : -17,
-        'lcache'         : -18,
+        'copy'           : 13,
+        'cache'          : 14,
+        'cached'         : 15,
+        'remote'         : 16,
+        'local'          : 17,
+        'lcache'         : 18,
 
         # PB Protocol Messages
-        'version'        : -19,
-        'login'          : -20,
-        'password'       : -21,
-        'challenge'      : -22,
-        'logged_in'      : -23,
-        'not_logged_in'  : -24,
-        'cachemessage'   : -25,
-        'message'        : -26,
-        'answer'         : -27,
-        'error'          : -28,
-        'decref'         : -29,
-        'decache'        : -30,
-        'uncache'        : -31,
+        'version'        : 19,
+        'login'          : 20,
+        'password'       : 21,
+        'challenge'      : 22,
+        'logged_in'      : 23,
+        'not_logged_in'  : 24,
+        'cachemessage'   : 25,
+        'message'        : 26,
+        'answer'         : 27,
+        'error'          : 28,
+        'decref'         : 29,
+        'decache'        : 30,
+        'uncache'        : 31,
         }
 
     incomingVocabulary = {}
     for k, v in outgoingVocabulary.items():
         incomingVocabulary[v] = k
 
-    def __init__(self):
+    def __init__(self, isClient=1):
         self.outgoingSymbols = copy.copy(self.outgoingVocabulary)
         self.outgoingSymbolCount = 0
+        self.isClient = isClient
 
     def sendEncoded(self, obj):
         io = cStringIO.StringIO()
@@ -227,14 +261,11 @@ class Banana(protocol.Protocol, styles.Ephemeral):
             write(FLOAT)
             write(struct.pack("!d", obj))
         elif isinstance(obj, types.StringType):
-            if self.outgoingSymbols.has_key(obj):
+            # TODO: an API for extending banana...
+            if (self.currentDialect == "pb") and self.outgoingSymbols.has_key(obj):
                 symbolID = self.outgoingSymbols[obj]
-                if symbolID < 0:
-                    int2b128(-symbolID, write)
-                    write(VOCAB)
-                else:
-                    int2b128(symbolID, write)
-                    write(SYMBOL)
+                int2b128(symbolID, write)
+                write(VOCAB)
             else:
                 int2b128(len(obj), write)
                 write(STRING)
@@ -243,29 +274,34 @@ class Banana(protocol.Protocol, styles.Ephemeral):
             raise RuntimeError, "could not send object: %s" % repr(obj)
 
 class Canana(Banana):
+
     def connectionMade(self):
         self.state = cBanana.newState()
+        # self._encode = cBanana.encode
+        Pynana.connectionMade(self)
 
     def dataReceived(self, chunk):
         buffer = self.buffer + chunk
-        processed = cBanana.dataReceived(self.state, buffer, self.expressionReceived)
+        processed = cBanana.dataReceived(self.state, buffer, self.callExpressionReceived)
         self.buffer = buffer[processed:]
 
 Pynana = Banana
 
 # cBanana is currently out of sync with python Banana
-#try:
-#    import cBanana
-#except ImportError:
-#    #print 'using python banana'
-#    pass
-#else:
-#    #print 'using C banana'
-#    Banana = Canana
+try:
+    import cBanana
+    cBanana.pyb1282int = b1282int
+except ImportError:
+    print 'using python banana'
+    pass
+else:
+    print 'using C banana'
+    Banana = Canana
 
 # For use from the interactive interpreter
 _i = Banana()
 _i.connectionMade()
+_i._selectDialect("none")
 
 def encode(lst):
     io = cStringIO.StringIO()

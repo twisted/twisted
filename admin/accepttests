@@ -198,7 +198,7 @@ def runAllTests():
     message('All tests run.')
 
 
-twistedBinDir = os.path.dirname(sys.argv[0]) or '.'
+twistedBinDir = os.path.join(os.path.dirname(sys.argv[0]), '..', 'bin')
 try:
     block = sys.argv[1] == "-b"
 except IndexError:

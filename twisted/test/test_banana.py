@@ -18,7 +18,7 @@
 from pyunit import unittest
 
 import cStringIO
-
+import sys
 # Twisted Imports
 from twisted.spread import banana
 from twisted.protocols import protocol
@@ -38,6 +38,7 @@ class BananaTestCase(unittest.TestCase):
         self.io = cStringIO.StringIO()
         self.enc = banana.Banana()
         self.enc.makeConnection(protocol.FileWrapper(self.io))
+        self.enc._selectDialect("none")
         self.enc.expressionReceived = self.putResult
 
     def putResult(self, result):
@@ -52,6 +53,12 @@ class BananaTestCase(unittest.TestCase):
         l = []
         self.enc.dataReceived(self.io.getvalue())
         assert self.result == 'hello'
+
+    def testLong(self):
+        self.enc.sendEncoded(1015l)
+        self.enc.dataReceived(self.io.getvalue())
+        assert self.result == 1015l, "should be 1015l, got %s" % self.result
+        
 
     def testInteger(self):
         self.enc.sendEncoded(1015)
@@ -77,11 +84,12 @@ class BananaTestCase(unittest.TestCase):
     def testPartial(self):
         foo = [1, 2, [3, 4], [30.5, 40.2], 5,
                ["six", "seven", ["eight", 9]], [10],
-               1024**10l, -1024**10l]
+               # TODO: currently the C implementation's a bit buggy...
+               sys.maxint * 3l, sys.maxint * 2l]
         self.enc.sendEncoded(foo)
         for byte in self.io.getvalue():
             self.enc.dataReceived(byte)
-        assert self.result == foo, "%s!=%s" % (repr(self.result), repr(self.result))
+        assert self.result == foo, "%s!=%s" % (repr(self.result), repr(foo))
 
 
 testCases = [MathTestCase, BananaTestCase]

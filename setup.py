@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (c) 2001 by Twisted Matrix Laboratories
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.24 2002/03/19 22:15:29 jh Exp $
+$Id: setup.py,v 1.25 2002/03/21 01:06:24 glyph Exp $
 """
 
 import distutils, os, sys, string
@@ -241,9 +241,9 @@ def extpath(path):
 
 # cBanana is currently broken
 
-#setup_args['ext_modules'] = [
-#    Extension("twisted.spread.cBanana", [extpath("twisted/spread/cBanana.c")]),
-#    ]
+setup_args['ext_modules'] = [
+    Extension("twisted.spread.cBanana", [extpath("twisted/spread/cBanana.c")]),
+    ]
 
 apply(setup, (), setup_args)
 

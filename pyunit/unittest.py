@@ -200,6 +200,8 @@ class TestCase:
                 return
 
             ok = 0
+            from twisted.python.log import msg
+            msg("---- Running Test: %s.%s ----- " % (self.__class__, self.__testMethodName))
             try:
                 testMethod()
                 ok = 1

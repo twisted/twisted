@@ -451,8 +451,8 @@ class Broker(banana.Banana):
     version = 5
     username = None
 
-    def __init__(self):
-        banana.Banana.__init__(self)
+    def __init__(self, isClient=1):
+        banana.Banana.__init__(self, isClient)
         self.disconnected = 0
         self.disconnects = []
         self.failures = []
@@ -497,9 +497,9 @@ class Broker(banana.Banana):
         this will probably be changed to close the connection or raise
         an exception in the future.)
         """
-        log.msg("Didn't understand command:", repr(command))
+        log.msg("Didn't understand command: %r" % command)
 
-    def connectionMade(self):
+    def connectionReady(self):
         """Initialize.
         """
 
@@ -509,7 +509,6 @@ class Broker(banana.Banana):
         #        connection. type "int"
         #  GUID: (not used yet) globally unique ID; an ID for an object which
         #        may be on a redirected or meta server.  Type as yet undecided.
-        banana.Banana.connectionMade(self)
         self.sendCall("version", self.version)
         self.currentRequestID = 0
         self.currentLocalID = 0
@@ -922,7 +921,7 @@ class BrokerFactory(protocol.Factory, styles.Versioned):
     def buildProtocol(self, addr):
         """Return a Broker attached to me (as the service provider).
         """
-        proto = Broker()
+        proto = Broker(0)
         proto.factory = self
         proto.setNameForLocal("root",
                               self.objectToBroker.rootObject(proto))
@@ -1071,7 +1070,7 @@ def getObjectAt(host, port, timeout=None):
       a PB server.x
     """
     d = defer.Deferred()
-    b = Broker()
+    b = Broker(1)
     _ObjectRetrieval(b, d)
     tcp.Client(host, port, b, timeout)
     return d
