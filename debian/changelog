@@ -1,10 +1,10 @@
-twisted (0.15.1) unstable; urgency=low
+twisted (0.15.1-1) unstable; urgency=low
 
   * New upstream release
 
  -- Moshe Zadka <moshez@debian.org>  Tue, 12 Feb 2002 20:36:38 +0200
 
-twisted (0.15.0) unstable; urgency=low
+twisted (0.15.0-1) unstable; urgency=low
 
   * New upstream release
   * IM application: many improvements, new GTK+ client
@@ -21,7 +21,7 @@ twisted (0.15.0) unstable; urgency=low
 
  -- Moshe Zadka <moshez@debian.org>  Wed,  6 Feb 2002 14:38:38 +0200
 
-twisted (0.13.0) unstable; urgency=low
+twisted (0.13.0-1) unstable; urgency=low
 
   * New upstream version 
   * New forum
