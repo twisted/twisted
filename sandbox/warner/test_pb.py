@@ -83,7 +83,9 @@ class ConnectionTestCase(unittest.TestCase):
     def testReconnecting(self):
         f = Reconnecting()
         f.factor = 0.5 # speed up reconnection speed. But be careful about
-                       # your Internet!
+                       # your Internet! (note that this is actually
+                       # logarithmic backoff instead of exponential backoff,
+                       # very bad)
         reactor.connectTCP("127.0.0.1", self.portno, f)
 
         limit = time.time() + 1
