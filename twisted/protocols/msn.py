@@ -16,59 +16,72 @@
 #
 
 """
-MSNP7 Protocol (client only)
+MSNP8 Protocol (client only) - semi-experimental
 
 Stability: unstable.
 
-This module provides support for clients using the MSN Protocol (MSNP7).
+This module provides support for clients using the MSN Protocol (MSNP8).
 There are basically 3 servers involved in any MSN session:
 
-  1. I{Dispatch server}
+I{Dispatch server}
 
-    The MSNDispatchClient class handles connections to the dispatch server,
-    which basically delegates users to a suitable notification server.
+The DispatchClient class handles connections to the
+dispatch server, which basically delegates users to a
+suitable notification server.
 
-    You will want to subclass this and handle the gotReferral method appropriately.
+You will want to subclass this and handle the gotNotificationReferral
+method appropriately.
     
-  2. I{Notification Server}
+I{Notification Server}
 
-    The MSNNotificationClient class handles connections to the notification server,
-    which acts as a session server (state updates, message negotiation etc...)
+The NotificationClient class handles connections to the
+notification server, which acts as a session server
+(state updates, message negotiation etc...)
 
-  3. I{Switcboard Server}
+I{Switcboard Server}
 
-    The MSNSwitchboardClient handles connections to switchboard servers which are used
-    to conduct conversations with other users.
+The SwitchboardClient handles connections to switchboard
+servers which are used to conduct conversations with other users.
 
-There are also two classes (MSNFileSend and MSNFileReceive) used for file transfers.
+There are also two classes (FileSend and FileReceive) used
+for file transfers.
 
 Clients handle events in two ways.
 
-  - each client request requiring a response will return a Deferred, the callback for same will be fired
-    when the server sends the required response
-    .
-  - Events which are not in response to any client request have respective methods
-    which should be overridden and handled in an adequate manner
+  - each client request requiring a response will return a Deferred,
+    the callback for same will be fired when the server sends the
+    required response
+  - Events which are not in response to any client request have
+    respective methods which should be overridden and handled in
+    an adequate manner
 
-Most client request callbacks require more than one argument, and since Deferreds can only pass
-the callback one result, most of the time the callback argument will be a tuple of values (documented in
-the respective request method). To make reading/writing code easier, callbacks can be defined in a number of ways
-to handle this 'cleanly'. One way would be to define methods like: def callBack(self, (arg1, arg2, arg)): ... another
-way would be to do something like d.addCallback(lambda result: myCallback(*result)).
+Most client request callbacks require more than one argument,
+and since Deferreds can only pass the callback one result,
+most of the time the callback argument will be a tuple of
+values (documented in the respective request method).
+To make reading/writing code easier, callbacks can be defined in
+a number of ways to handle this 'cleanly'. One way would be to
+define methods like: def callBack(self, (arg1, arg2, arg)): ...
+another way would be to do something like:
+d.addCallback(lambda result: myCallback(*result)).
 
-If the server sends an error response to a client request, the errback of the
-corresponding Deferred will be called, the argument being the corresponding error code.
+If the server sends an error response to a client request,
+the errback of the corresponding Deferred will be called,
+the argument being the corresponding error code.
 
-B{NOTE}
-Due to the lack of an 'official' spec for MSNP7, extra checking than may be deemed necessary often
-takes place considering the server is never 'wrong'. Thus, if gotBadLine (in any of the 3 main clients)
-is called, or an MSNProtocolError is raised, it's probably a good idea to submit a bug report. ;)
+B{NOTE}:
+Due to the lack of an official spec for MSNP8, extra checking
+than may be deemed necessary often takes place considering the
+server is never 'wrong'. Thus, if gotBadLine (in any of the 3
+main clients) is called, or an MSNProtocolError is raised, it's
+probably a good idea to submit a bug report. ;)
+Use of this module requires that PyOpenSSL is installed.
 
 TODO
 ====
 - check message hooks with invalid x-msgsinvite messages.
 - font handling
-- create factories for each respective client
+- switchboard factory
 
 @author: U{Sam Jordan<mailto:sam@twistedmatrix.com>}
 """
@@ -77,27 +90,36 @@ from __future__ import nested_scopes
 
 # Sibling imports
 from basic import LineReceiver
+from http import HTTPClient
 
 # Twisted imports
 from twisted.internet import reactor
 from twisted.internet.defer import Deferred
-from twisted.python import log
+from twisted.internet.protocol import ClientFactory
+from twisted.internet.ssl import ClientContextFactory
+from twisted.python import failure, log
 
 # System imports
-import md5, types, operator, os
+import types, operator, os, md5
 from random import randint
 from urllib import quote, unquote
 
-MSN_PROTOCOL_VERSION  = "MSNP7"             # protocol version
-MSN_PORT               = 1863               # default dispatch server port
-MSN_MAX_MESSAGE        = 1664               # max message length
-MSN_CHALLENGE_STR      = "Q1P7W2E4J9R8U3S5" # used for server challenges
+MSN_PROTOCOL_VERSION = "MSNP8 CVR0"       # protocol version
+MSN_PORT             = 1863               # default dispatch server port
+MSN_MAX_MESSAGE      = 1664               # max message length
+MSN_CHALLENGE_STR    = "Q1P7W2E4J9R8U3S5" # used for server challenges
+MSN_CVR_STR          = "0x0409 win 4.10 i386 MSNMSGR 5.0.0544 MSMSGS" # :(
+
+# auth constants
+LOGIN_SUCCESS  = 1
+LOGIN_FAILURE  = 2
+LOGIN_REDIRECT = 3
 
 # list constants
-FORWARD_LIST = 'fl'
-ALLOW_LIST   = 'al'
-REVERSE_LIST = 'rl'
-BLOCK_LIST   = 'bl'
+FORWARD_LIST = 1
+ALLOW_LIST   = 2
+BLOCK_LIST   = 4
+REVERSE_LIST = 8
 
 # phone constants
 HOME_PHONE   = "PHH"
@@ -123,11 +145,156 @@ def checkParamLen(num, expected, cmd, error=None):
     if error == None: error = "Invalid Number of Parameters for %s" % cmd
     if num != expected: raise MSNProtocolError, error
 
+def _parseHeader(h, v):
+    """
+    Split a certin number of known
+    header values with the format:
+    field1=val,field2=val,field3=val into
+    a dict mapping fields to values.
+    @param h: the header's key
+    @param v: the header's value as a string
+    """
+
+    if h in ('passporturls','authentication-info','www-authenticate'):
+        v = v.replace('Passport1.4','').lstrip()
+        fields = {}
+        for fieldPair in v.split(','):
+            try:
+                field,value = fieldPair.split('=',1)
+                fields[field.lower()] = value
+            except ValueError:
+                fields[field.lower()] = ''
+        return fields
+    else: return v
+
+def _parsePrimitiveHost(host):
+    # Ho Ho Ho
+    h,p = host.replace('https://','').split('/',1)
+    p = '/' + p
+    return h,p
+
+def _login(userHandle, passwd, nexusServer, cached=0, authData=''):
+    """
+    This function is used internally and should not ever be called
+    directly.
+    """
+    cb = Deferred()
+    def _cb(server, auth):
+        loginFac = ClientFactory()
+        loginFac.protocol = lambda : PassportLogin(cb, userHandle, passwd, server, auth)
+        reactor.connectSSL(_parsePrimitiveHost(server)[0], 443, loginFac, ClientContextFactory())
+
+    if cached:
+        _cb(nexusServer, authData)
+    else:
+        fac = ClientFactory()
+        d = Deferred()
+        d.addCallbacks(_cb, callbackArgs=(authData,))
+        d.addErrback(lambda f: cb.errback(f))
+        fac.protocol = lambda : PassportNexus(d, nexusServer)
+        reactor.connectSSL(_parsePrimitiveHost(nexusServer)[0], 443, fac, ClientContextFactory())
+    return cb
+
+
+class PassportNexus(HTTPClient):
+    
+    """
+    Used to obtain the URL of a valid passport
+    login HTTPS server.
+
+    This class is used internally and should
+    not be instantiated directly -- that is,
+    The passport logging in process is handled
+    transparantly by NotificationClient.
+    """
+
+    def __init__(self, deferred, host):
+        self.deferred = deferred
+        self.host, self.path = _parsePrimitiveHost(host)
+
+    def connectionMade(self):
+        HTTPClient.connectionMade(self)
+        self.sendCommand('GET', self.path)
+        self.sendHeader('Host', self.host)
+        self.endHeaders()
+        self.headers = {}
+
+    def handleHeader(self, header, value):
+        h = header.lower()
+        self.headers[h] = _parseHeader(h, value)
+
+    def handleEndHeaders(self):
+        if self.connected: self.transport.loseConnection()
+        if not self.headers.has_key('passporturls') or not self.headers['passporturls'].has_key('dalogin'):
+            self.deferred.errback(failure.Failure(failure.DefaultException("Invalid Nexus Reply")))
+        self.deferred.callback('https://' + self.headers['passporturls']['dalogin'])
+
+class PassportLogin(HTTPClient):
+    """
+    This class is used internally to obtain
+    a login ticket from a passport HTTPS
+    server -- it should not be used directly.
+    """
+
+    _finished = 0
+
+    def __init__(self, deferred, userHandle, passwd, host, authData):
+        self.deferred = deferred
+        self.userHandle = userHandle
+        self.passwd = passwd
+        self.authData = authData
+        self.host, self.path = _parsePrimitiveHost(host)
+
+    def connectionMade(self):
+        self.sendCommand('GET', self.path)
+        self.sendHeader('Authorization', 'Passport1.4 OrgVerb=GET,OrgURL=http://messenger.msn.com,' +
+                                         'sign-in=%s,pwd=%s,%s' % (quote(self.userHandle), self.passwd,self.authData))
+        self.sendHeader('Host', self.host)
+        self.endHeaders()
+        self.headers = {}
+
+    def handleHeader(self, header, value):
+        h = header.lower()
+        self.headers[h] = _parseHeader(h, value)
+
+    def handleEndHeaders(self):
+        if self._finished: return
+        self._finished = 1 # I think we need this because of HTTPClient
+        if self.connected: self.transport.loseConnection()
+        authHeader = 'authentication-info'
+        _interHeader = 'www-authenticate'
+        if self.headers.has_key(_interHeader): authHeader = _interHeader
+        try:
+            info = self.headers[authHeader]
+            status = info['da-status']
+            handler = getattr(self, 'login_%s' % (status,), None)
+            if handler:
+                handler(info)
+            else: raise Exception()
+        except Exception, e:
+            self.deferred.errback(failure.Failure(e))
+
+    def handleResponse(self, r): pass
+
+    def login_success(self, info):
+        ticket = info['from-pp']
+        ticket = ticket[1:len(ticket)-1]
+        self.deferred.callback((LOGIN_SUCCESS, ticket))
+
+    def login_failed(self, info):
+        self.deferred.callback((LOGIN_FAILURE, unquote(info['cbtxt'])))
+
+    def login_redir(self, info):
+        self.deferred.callback((LOGIN_REDIRECT, self.headers['location'], self.authData))
+
 class MSNProtocolError(Exception):
-    """ This Exception is basically used for debugging purposes, as the
-        official MSN server should never send anything _wrong_ and nobody in
-        their right mind would run their B{own} MSN server...if it is raised by default
-        command handlers (handle_BLAH) the error will be logged.
+    """
+    This Exception is basically used for debugging
+    purposes, as the official MSN server should never
+    send anything _wrong_ and nobody in their right
+    mind would run their B{own} MSN server.
+    If it is raised by default command handlers
+    (handle_BLAH) the error will be logged.
     """
     pass
 
@@ -144,13 +311,17 @@ class MSNMessage:
     @ivar headers: The message headers
     @type headers: dict
     @ivar length: The message length (including headers and line endings)
-    @ivar ack: This variable is used to tell the server how to respond once the message
-               has been sent.  If set to MESSAGE_ACK (default) the server will respond with an ACK
-               upon receiving the message, if set to MESSAGE_NACK the server will respond with
-               a NACK upon failure to receive the message.  If set to MESSAGE_ACK_NONE the server
-               will do nothing.  This is relevant for the return value of MSNSwitchboardClient.sendMessage (which will return
-               a Deferred if ack is set to either MESSAGE_ACK or MESSAGE_NACK and will fire when the respective
-               ACK or NCK is received).  If set to MESSAGE_ACK_NONE sendMessage will return None.
+    @ivar ack: This variable is used to tell the server how to respond
+               once the message has been sent. If set to MESSAGE_ACK
+               (default) the server will respond with an ACK upon receiving
+               the message, if set to MESSAGE_NACK the server will respond
+               with a NACK upon failure to receive the message.
+               If set to MESSAGE_ACK_NONE the server will do nothing.
+               This is relevant for the return value of
+               SwitchboardClient.sendMessage (which will return
+               a Deferred if ack is set to either MESSAGE_ACK or MESSAGE_NACK  
+               and will fire when the respective ACK or NACK is received).
+               If set to MESSAGE_ACK_NONE sendMessage will return None.
     """
     MESSAGE_ACK      = 'A'
     MESSAGE_NACK     = 'N'
@@ -167,8 +338,9 @@ class MSNMessage:
         self.readPos = 0
 
     def _calcMessageLen(self):
-        """ used to calculte the number to send
-            as the message length when sending a message.
+        """
+        used to calculte the number to send
+        as the message length when sending a message.
         """
         return reduce(operator.add, [len(x[0]) + len(x[1]) + 4  for x in self.headers.items()]) + len(self.message) + 2
 
@@ -177,8 +349,9 @@ class MSNMessage:
         self.headers[header] = value
 
     def getHeader(self, header):
-        """ get the desired header value
-            @raise KeyError: if no such header exists.
+        """
+        get the desired header value
+        @raise KeyError: if no such header exists.
         """
         return self.headers[header]
 
@@ -196,40 +369,46 @@ class MSNMessage:
 
 class MSNContact:
     
-    """ This class represents a contact (user).
+    """
+    This class represents a contact (user).
 
-        @ivar userHandle: The contact's user handle (passport).
-        @ivar screenName: The contact's screen name.
-        @ivar group: The group ID.
-        @type group: int if contact is in a group, None otherwise.
-        @ivar status: The contact's status code.
-        @type status: str if contact's status is known, None otherwise.
+    @ivar userHandle: The contact's user handle (passport).
+    @ivar screenName: The contact's screen name.
+    @ivar groups: A list of all the group IDs which this
+                  contact belongs to.
+    @ivar lists: An integer representing the sum of all lists
+                 that this contact belongs to.
+    @ivar status: The contact's status code.
+    @type status: str if contact's status is known, None otherwise.
 
-        @ivar homePhone: The contact's home phone number.
-        @type homePhone: str if known, otherwise None.
-        @ivar workPhone: The contact's work phone number.
-        @type workPhone: str if known, otherwise None.
-        @ivar mobilePhone: The contact's mobile phone number.
-        @type mobilePhone: str if known, otherwise None.
-        @ivar hasPager: Whether or not this user has a mobile pager (true=yes, false=no)
+    @ivar homePhone: The contact's home phone number.
+    @type homePhone: str if known, otherwise None.
+    @ivar workPhone: The contact's work phone number.
+    @type workPhone: str if known, otherwise None.
+    @ivar mobilePhone: The contact's mobile phone number.
+    @type mobilePhone: str if known, otherwise None.
+    @ivar hasPager: Whether or not this user has a mobile pager
+                    (true=yes, false=no)
     """
     
-    def __init__(self, userHandle="", screenName="", listType=None, group=None, status=None):
+    def __init__(self, userHandle="", screenName="", lists=0, groups=[], status=None):
         self.userHandle = userHandle
         self.screenName = screenName
-        self.list  = listType     # list ('fl','rl','bl','al')
-        self.group = group        # group id (if applicable)
-        self.status = status      # current status
+        self.lists = lists
+        self.groups = [] # if applicable
+        self.status = status # current status
 
         # phone details
         self.homePhone   = None
         self.workPhone   = None
         self.mobilePhone = None
-        self.hasPager   = None
+        self.hasPager    = None
 
     def setPhone(self, phoneType, value):
-        """ set phone numbers/values for this specific user ..
-            for phoneType check the *_PHONE constants and HAS_PAGER """
+        """
+        set phone numbers/values for this specific user.
+        for phoneType check the *_PHONE constants and HAS_PAGER
+        """
 
         t = phoneType.upper()
         if t == HOME_PHONE: self.homePhone = value
@@ -238,116 +417,134 @@ class MSNContact:
         elif t == HAS_PAGER: self.hasPager = value
         else: raise ValueError, "Invalid Phone Type"
 
+    def addToList(self, listType):
+        """
+        Update the lists attribute to
+        reflect being part of the
+        given list.
+        """
+        self.lists |= listType
+
+    def removeFromList(self, listType):
+        """
+        Update the lists attribute to
+        reflect being removed from the
+        given list.
+        """
+        self.lists ^= listType
+
 class MSNContactList:
-    """ This class represents a basic MSN contact list.
+    """
+    This class represents a basic MSN contact list.
 
-        @ivar contacts: The forward list (users on my list)
-        @type contacts: dict (mapping user handles to MSNContact objects)
-        
-        @ivar authorizedContacts: Contacts that I have allowed to be notified when
-                                  my state changes (allow list)
-        @type authorizedContacts: dict (mapping user handles to MSNContact objects)
-        
-        @ivar reverseContacts: Contacts who have added me to their list
-        @type reverseContacts: dict (mapping user handles to MSNContact objects)
-        
-        @ivar blockedContacts: Contacts not allowed to see state changes nor talk to me
-        @type blockedContacts: dict (mapping user handles to MSNContact objects)
-        
-        @ivar version: The current contact list version (used for list syncing)
-        @ivar groups: a mapping of group ids to group names (groups can only exist on the forward list)
-        @type groups: dict
+    @ivar contacts: All contacts on my various lists
+    @type contacts: dict (mapping user handles to MSNContact objects)
+    @ivar version: The current contact list version (used for list syncing)
+    @ivar groups: a mapping of group ids to group names
+                  (groups can only exist on the forward list)
+    @type groups: dict
 
-        B{Note}: This is used only for storage and doesn't effect the server's contact list.
+    B{Note}:
+    This is used only for storage and doesn't effect the
+    server's contact list.
     """
 
     def __init__(self):
         self.contacts = {}
-        self.authorizedContacts   = {}
-        self.reverseContacts = {}
-        self.blockedContacts   = {}
         self.version = 0
         self.groups = {}
+        self.autoAdd = 0
+        self.privacy = 0
 
-    def addContact(self, listType, contact, force=0):
-        """ Add a contact to the desired list.
-            @param listType: Which underlying contact list to add the user to:
-              - FORWARD_LIST - 'B{fl}': the forward list
-              - ALLOW_LIST   - 'B{al}': the allow list
-              - REVERSE_LIST - 'B{rl}': the reverse list
-              - BLOCK_LIST   - 'B{bl}': the block list
-              The above are defined in the *_LIST constants.
-            @param contact: the contact to add
-            @type contact: MSNContact object
-            @param force: Should we overwrite an existing contact? (1=yes, 0=no(default))
-
-            NOTE: this changes nothing on the server, it only effects _this_ list.
+    def _getContactsFromList(self, listType):
         """
-        
-        listType = listType.lower()
-        if listType == 'rl':
-            if not self.reverseContacts.has_key(contact.userHandle) or force:
-                self.reverseContacts[contact.userHandle] = contact
-                return 1
-            return 0
-        elif listType == 'bl':
-            if not self.blockedContacts.has_key(contact.userHandle) or force:
-                self.blockedContacts[contact.userHandle] = contact
-                return 1
-            return 0
-        elif listType == 'al':
-            if not self.authorizedContacts.has_key(contact.userHandle) or force:
-                self.authorizedContacts[contact.userHandle] = contact
-                return 1
-            return 0
-        elif listType == 'fl':
-            if not self.contacts.has_key(contact.userHandle) or force:
-                self.contacts[contact.userHandle] = contact
-                return 1
-            return 0
-        else: raise ValueError, "Invalid Contact List Type"
-
-    def removeContact(self, listType, contact):
-        """ Remove a contact from the desired list.
-            @param listType: Which underlying contact list to remove the user from:
-              - FORWARD_LIST - 'B{fl}': the forward list
-              - ALLOW_LIST   - 'B{al}': the allow list
-              - REVERSE_LIST - 'B{rl}': the reverse list
-              - BLOCK_LIST   - 'B{bl}': the block list
-              The above are defined in the *_LIST constants.
-            @param contact: the contact to remove
-            @type contact: MSNContact object
-
-            NOTE: this changes nothing on the server, it only effects _this_ list.
+        Obtain all contacts which belong
+        to the given list type.
         """
-        
-        listType = listType.lower()
-        if listType == 'rl':
-            try:
-                del self.reverseContacts[contact.userHandle] 
-                return 1
-            except KeyError: return 0
-        elif listType == 'bl':
-            try:
-                del self.blockedContacts[contact.userHandle]
-                return 1
-            except KeyError: return 0
-        elif listType == 'al':
-            try:
-                del self.authorizedContacts[contact.userHandle]
-                return 1
-            except KeyError: return 0
-        elif listType == 'fl':
-            try:
-                del self.contacts[contact.userHandle]
-                return 1
-            except KeyError: return 0
-        else: raise ValueError, "Invalid UserList Type"
+        return dict([(uH,obj) for uH,obj in self.contacts.items() if obj.lists & listType])
+
+    def addContact(self, contact):
+        """
+        Add a contact
+        """
+        self.contacts[contact.userHandle] = contact
+
+    def remContact(self, userHandle):
+        """
+        Remove a contact
+        """
+        try:
+            del self.contacts[userHandle]
+        except KeyError: pass
+
+    def getContact(self, userHandle):
+        """
+        Obtain the MSNContact object
+        associated with the given
+        userHandle.
+        @return: the MSNContact object if
+                 the user exists, or None.
+        """
+        try:
+            return self.contacts[userHandle]
+        except KeyError:
+            return None
+
+    def getBlockedContacts(self):
+        """
+        Obtain all the contacts on my block list
+        """
+        return self._getContactsFromList(BLOCK_LIST)
+
+    def getAuthorizedContacts(self):
+        """
+        Obtain all the contacts on my auth list.
+        (These are contacts which I have verified
+        can view my state changes).
+        """
+        return self._getContactsFromList(ALLOW_LIST)
+
+    def getReverseContacts(self):
+        """
+        Get all contacts on my reverse list.
+        (These are contacts which have added me
+        to their forward list).
+        """
+        return self._getContactsFromList(REVERSE_LIST)
+
+    def getContacts(self):
+        """
+        Get all contacts on my forward list.
+        (These are the contacts which I have added
+        to my list).
+        """
+        return self._getContactsFromList(FORWARD_LIST)
+
+    def setGroup(self, id, name):
+        """
+        Keep a mapping from the given id
+        to the given name.
+        """
+        self.groups[id] = name
+
+    def remGroup(self, id):
+        """
+        Removed the stored group
+        mapping for the given id.
+        """
+        try:
+            del self.groups[id]
+        except KeyError: pass
+        for c in self.contacts:
+            if id in c.groups: c.groups.remove(id)
+
 
 class MSNEventBase(LineReceiver):
-    """ This class provides support for handling / dispatching events and is the
-        base class of the three main client protocols (MSNDispatchClient, MSNNotificationClient,
-        MSNSwitchboardClient) """
+    """
+    This class provides support for handling / dispatching events and is the
+    base class of the three main client protocols (DispatchClient,
+    NotificationClient, SwitchboardClient)
+    """
 
     def __init__(self):
         self.ids = {} # mapping of ids to Deferreds
@@ -364,8 +561,10 @@ class MSNEventBase(LineReceiver):
         self.connected = 1
 
     def _fireCallback(self, id, *args):
-        """ Fire the callback for the given id
-            if one exists and return 1, else return false """
+        """
+        Fire the callback for the given id
+        if one exists and return 1, else return false
+        """
         if self.ids.has_key(id):
             self.ids[id][0].callback(args)
             del self.ids[id]
@@ -379,16 +578,20 @@ class MSNEventBase(LineReceiver):
         return self.currentID
 
     def _createIDMapping(self, data=None):
-        """ return a unique transaction ID that is mapped internally to a
-            deferred .. also store arbitrary data if it is needed """
+        """
+        return a unique transaction ID that is mapped internally to a
+        deferred .. also store arbitrary data if it is needed
+        """
         id = self._nextTransactionID()
         d = Deferred()
         self.ids[id] = (d, data)
         return (id, d)
 
     def checkMessage(self, message):
-        """ process received messages to check for file invitations and typing notifications
-            and other control type messages """
+        """
+        process received messages to check for file invitations and
+        typing notifications and other control type messages
+        """
         raise NotImplementedError
 
     def lineReceived(self, line):
@@ -462,7 +665,10 @@ class MSNEventBase(LineReceiver):
     ### callbacks
 
     def gotMessage(self, message):
-        """ called when we receive a message - override in notification and switchboard clients """
+        """
+        called when we receive a message - override in notification
+        and switchboard clients
+        """
         raise NotImplementedError
 
     def gotBadLine(self, line, why):
@@ -470,15 +676,20 @@ class MSNEventBase(LineReceiver):
         log.msg('Error in line: %s (%s)' % (line, why))
 
     def gotError(self, errorCode):
-        """ called when the server sends an error which is not in response to a sent
-            command (ie. it has no matching transaction ID) """
+        """
+        called when the server sends an error which is not in
+        response to a sent command (ie. it has no matching transaction ID)
+        """
         log.msg('Error %s' % (errorCodes[errorCode]))
 
-class MSNDispatchClient(MSNEventBase):
-    """ This class provides support for clients connecting to the dispatch server
-        @ivar userHandle: your user handle (passport) needed before connecting.
+class DispatchClient(MSNEventBase):
     """
-    
+    This class provides support for clients connecting to the dispatch server
+    @ivar userHandle: your user handle (passport) needed before connecting.
+    """
+
+    # eventually this may become an attribute of the
+    # factory.
     userHandle = ""
 
     def connectionMade(self):
@@ -489,22 +700,14 @@ class MSNDispatchClient(MSNEventBase):
 
     def handle_VER(self, params):
         versions = params[1:]
-        if versions is None or versions[0].upper() != MSN_PROTOCOL_VERSION:
+        if versions is None or ' '.join(versions) != MSN_PROTOCOL_VERSION:
             self.transport.loseConnection()
-            raise MSNProtocolError, "Version Mismatch"
+            raise MSNProtocolError, "Invalid version response"
         id = self._nextTransactionID()
-        self.sendLine("INF %s" % id)
+        self.sendLine("CVR %s %s %s" % (id, MSN_CVR_STR, self.userHandle))
 
-    def handle_INF(self, params):
-        try:
-            mechanism = params[1]
-        except IndexError:
-            raise MSNProtocolError, "Invalid parameters for INF"
-        if mechanism.upper() != "MD5":
-            self.transport.loseConnection()
-            raise MSNProtocolError, "Unknown Auth Mechanism Specified by Server"
-        id = self._nextTransactionID()
-        self.sendLine("USR %s MD5 I %s" % (id, self.userHandle))
+    def handle_CVR(self, params):
+        self.sendLine("USR %s TWN I %s" % (self._nextTransactionID(), self.userHandle))
 
     def handle_XFR(self, params):
         if len(params) < 4: raise MSNProtocolError, "Invalid number of parameters for XFR"
@@ -521,61 +724,52 @@ class MSNDispatchClient(MSNEventBase):
     ### callbacks
 
     def gotNotificationReferral(self, host, port):
-        """ called when we get a referral to the notification server.
+        """
+        called when we get a referral to the notification server.
 
-            @param host: the notification server's hostname
-            @param port: the port to connect to
+        @param host: the notification server's hostname
+        @param port: the port to connect to
         """
         pass
 
-class MSNNotificationClient(MSNEventBase):
-    """ This class provides support for clients connecting to the notification server.
-        @ivar userHandle: your user handle.
-        @ivar screenName: your screen name
-        @ivar password: MSN password
+
+class NotificationClient(MSNEventBase):
     """
+    This class provides support for clients connecting
+    to the notification server.
+    """
+
+    factory = None # sssh pychecker
+
     def __init__(self, currentID=0):
         MSNEventBase.__init__(self)
-        self.userHandle = ""
-        self.screenName = ""
-        self.password = ""
         self.currentID = currentID
+        self._state = ['DISCONNECTED', {}]
 
-        # SYN/LST buffering
-        self.listState = (None, None) # keep last id and whether or not it was the end of the LST
-        self._pendingLists  = {}
-        self._pendingState  = {}
-        self._pendingGroups = {}
+    def _setState(self, state):
+        self._state[0] = state
+
+    def _getState(self):
+        return self._state[0]
+
+    def _getStateData(self, key):
+        return self._state[1][key]
+
+    def _setStateData(self, key, value):
+        self._state[1][key] = value
+
+    def _remStateData(self, *args):
+        for key in args: del self._state[1][key]
 
     def connectionMade(self):
         MSNEventBase.connectionMade(self)
+        self._setState('CONNECTED')
         self.sendLine("VER %s %s" % (self._nextTransactionID(), MSN_PROTOCOL_VERSION))
 
-    def _createUserFromListReply(self, params):
-        numParams = len(params)
-        if numParams == 6:
-            if params[0] == "FL": raise MSNProtocolError, "Invalid Parameters for LST"
-            user = MSNContact(userHandle=params[4], screenName=unquote(params[5]), listType=params[0])
-            return user
-        elif numParams == 7:
-            if params[0] != "FL": raise MSNProtocolError, "Invalid Parameters for LST"
-            user = MSNContact(userHandle=params[4], screenName=unquote(params[5]), listType='FL', group=int(params[6]))
-            return user
-        elif numParams == 4:
-            return 0
-        else:
-            raise MSNProtocolError, "Invalid Parameters for LST"
-
-    def _createListFromPending(self, pending):
-        """ create an MSNContactList object from the pending list given.
-            @param pending: a list of contacts
-            @type pending: list of MSNContact objects.
-            @return the created contact list
-            @rtype MSNContactList
-        """
-        contactList = MSNContactList()
-        map(lambda contact: contactList.addContact(contact.list, contact, force=1), pending)
-        return contactList
+    def connectionLost(self, reason):
+        self._setState('DISCONNECTED')
+        self._state[1] = {}
+        MSNEventBase.connectionLost(self, reason)
 
     def checkMessage(self, message):
         """ hook used for detecting specific notification messages """
@@ -589,38 +783,50 @@ class MSNNotificationClient(MSNEventBase):
 
     def handle_VER(self, params):
         versions = params[1:]
-        if versions is None or versions[0] != MSN_PROTOCOL_VERSION:
+        if versions is None or ' '.join(versions) != MSN_PROTOCOL_VERSION:
             self.transport.loseConnection()
             raise MSNProtocolError, "Invalid version response"
-        self.sendLine("INF %s" % self._nextTransactionID())
+        self.sendLine("CVR %s %s %s" % (self._nextTransactionID(), MSN_CVR_STR, self.factory.userHandle))
 
-    def handle_INF(self, params):
-        try:
-            mechanism = params[1]
-        except IndexError:
-            raise MSNProtocolError, "Invalid auth mechanism supplied by server"
-        if mechanism.upper() != "MD5": raise MSNProtocolError, "Invalid auth mechanism supplied by server"
-        self.sendLine("USR %s MD5 I %s" % (self._nextTransactionID(), self.userHandle))
+    def handle_CVR(self, params):
+        self.sendLine("USR %s TWN I %s" % (self._nextTransactionID(), self.factory.userHandle))
 
     def handle_USR(self, params):
-        if len(params) != 4 and len(params) != 5:
+        if len(params) != 4 and len(params) != 6:
             raise MSNProtocolError, "Invalid Number of Parameters for USR"
 
         mechanism = params[1]
         if mechanism == "OK":
             self.loggedIn(params[2], unquote(params[3]), int(params[4]))
         elif params[2].upper() == "S":
-            self.sendLine("USR %s MD5 S %s" % (self._nextTransactionID(),
-                                               md5.md5(params[3]+self.password).hexdigest().lower()))
+            # we need to obtain auth from a passport server
+            f = self.factory
+            d = _login(f.userHandle, f.password, f.passportServer, authData=params[3])
+            d.addCallback(self._passportLogin)
+            d.addErrback(self._passportError)
+
+    def _passportLogin(self, result):
+        if result[0] == LOGIN_REDIRECT:
+            d = _login(self.factory.userHandle, self.factory.password,
+                       result[1], cached=1, authData=result[2])
+            d.addCallback(self._passportLogin)
+            d.addErrback(self._passportError)
+        elif result[0] == LOGIN_SUCCESS:
+            self.sendLine("USR %s TWN S %s" % (self._nextTransactionID(), result[1]))
+        elif result[0] == LOGIN_FAILURE:
+            self.loginFailure(result[1])
+
+    def _passportError(self, failure):
+        self.loginFailure("Exception while authenticating: %s" % failure)
 
     def handle_CHG(self, params):
-        checkParamLen(len(params), 2, 'CHG')
+        checkParamLen(len(params), 3, 'CHG')
         id = int(params[0])
         if not self._fireCallback(id, params[1]):
             self.statusChanged(params[1])
 
     def handle_ILN(self, params):
-        checkParamLen(len(params), 4, 'ILN')
+        checkParamLen(len(params), 5, 'ILN')
         self.gotContactStatus(params[1], params[2], unquote(params[3]))
 
     def handle_CHL(self, params):
@@ -632,7 +838,7 @@ class MSNNotificationClient(MSNEventBase):
         pass
 
     def handle_NLN(self, params):
-        checkParamLen(len(params), 3, 'NLN')
+        checkParamLen(len(params), 4, 'NLN')
         self.contactStatusChanged(params[0], params[1], unquote(params[2]))
 
     def handle_FLN(self, params):
@@ -640,119 +846,93 @@ class MSNNotificationClient(MSNEventBase):
         self.contactOffline(params[0])
 
     def handle_LST(self, params):
-        id = int(params[0])
-        if not self.ids.has_key(id): return # XXX: should we raise an exception?
-        if self.ids[id][1]:  syn = 1     # part of a syn response
-        else: syn = 0                    # part of a lst response
-
-        user = self._createUserFromListReply(params[1:])
-        if user:
-            if self._pendingLists.has_key(id): self._pendingLists[id].append(user)
-            else: self._pendingLists[id] = [user]
-            self.listState = (None, id)
-        if not syn and (params[3] == params[4]): # end of LST reply
-            if params[1] == "FL": # we will now need to handle a BPR as well
-                self.listState = (1, id)
-            else:
-                self._fireCallback(id, self._pendingLists[id])
-                del self._pendingLists[id]
-                self.listState = (None, None)
-
-        elif syn and (params[1] == 'RL' and params[3] == params[4]): # end of SYN reply
-            newList = self._createListFromPending(self._pendingLists[id])
-            newList.groups = self._pendingGroups
-            newList.version = int(params[2])
-            state = self._pendingState
-            self._pendingState = {}
-            self._pendingGroups = {}
-            del self._pendingLists[id]
-            self._fireCallback(id, newList, state)
-            self.listState = (None, None)
+        # support no longer exists for manually
+        # requesting lists - why do I feel cleaner now?
+        if self._getState() != 'SYNC': return
+        contact = MSNContact(userHandle=params[0], screenName=unquote(params[1]),
+                             lists=int(params[2]))
+        if contact.lists & FORWARD_LIST:
+            contact.groups.extend(map(int, params[3].split(',')))
+        self._getStateData('list').addContact(contact)
+        self._setStateData('last_contact', contact)
+        sofar = self._getStateData('lst_sofar') + 1
+        if sofar == self._getStateData('lst_reply'):
+            # this is the best place to determine that
+            # a syn realy has finished - msn _may_ send
+            # BPR information for the last contact
+            # which is unfortunate because it means
+            # that the real end of a syn is non-deterministic.
+            # to handle this we'll keep 'last_contact' hanging
+            # around in the state data and update it if we need
+            # to later.
+            self._setState('SESSION')
+            contacts = self._getStateData('list')
+            phone = self._getStateData('phone')
+            id = self._getStateData('synid')
+            self._remStateData('lst_reply', 'lsg_reply', 'lst_sofar', 'phone', 'synid', 'list')
+            self._fireCallback(id, contacts, phone)
+        else:
+            self._setStateData('lst_sofar',sofar)
 
     def handle_BLP(self, params):
-        checkParamLen(len(params), 3, 'BLP')
-        id = int(params[0])
-        if self.ids.has_key(id):
-            # check to see if this is in response to a SYN
-            if self.ids[id][1]:
-                self._pendingState['privacy'] = params[2].lower()
-            else:
-                self._fireCallback(id, int(params[1]), params[2].lower())
+        # check to see if this is in response to a SYN
+        if self._getState() == 'SYNC':
+            self._getStateData('list').privacy = listCodeToID[params[0].lower()]
+        else:
+            id = int(params[0])
+            self._fireCallback(id, int(params[1]), listCodeToID[params[2].lower()])
 
     def handle_GTC(self, params):
-        numParams = len(params)
-        if numParams < 2: raise MSNProtocolError, "Invalid Number of Paramaters for GTC" # debug
-        id = int(params[0])
-        if self.ids.has_key(id):
-            # check to see if this is in response to a SYN
-            if self.ids[id][1]:
-                checkParamLen(numParams, 3, 'GTC') # debug
-                if params[2].lower() == "a": self._pendingState['autoAdd'] = 0
-                elif params[2].lower() == "n": self._pendingState['autoAdd'] = 1
-                else: raise MSNProtocolError, "Invalid Paramater for GTC" # debug
-            else:
-                if params[1].lower() == "a": self._fireCallback(id, 0)
-                elif params[1].lower() == "n": self._fireCallback(id, 1)
-                else: raise MSNProtocolError, "Invalid Paramater for GTC" # debug
+        # check to see if this is in response to a SYN
+        if self._getState() == 'SYNC':
+            if params[0].lower() == "a": self._getStateData('list').autoAdd = 0
+            elif params[0].lower() == "n": self._getStateData('list').autoAdd = 1
+            else: raise MSNProtocolError, "Invalid Paramater for GTC" # debug
+        else:
+            id = int(params[0])
+            if params[1].lower() == "a": self._fireCallback(id, 0)
+            elif params[1].lower() == "n": self._fireCallback(id, 1)
+            else: raise MSNProtocolError, "Invalid Paramater for GTC" # debug
 
     def handle_SYN(self, params):
-        checkParamLen(len(params), 2, 'SYN') # debug
         id = int(params[0])
-        if self.ids.has_key(id):
-            # check to see if they are about to send the whole list or not
-            # ie. if we have the up-to-date contact list
-            if self.ids[id][1] == params[1]: self._fireCallback(id, None, None)
+        if len(params) == 2:
+            self._setState('SESSION')
+            self._fireCallback(id, None, None)
+        else:
+            contacts = MSNContactList()
+            contacts.version = int(params[1])
+            self._setStateData('list', contacts)
+            self._setStateData('lst_reply', int(params[2]))
+            self._setStateData('lsg_reply', int(params[3]))
+            self._setStateData('lst_sofar', 0)
+            self._setStateData('phone', [])
 
     def handle_LSG(self, params):
-        checkParamLen(len(params), 7, 'LSG')
-        id = int(params[0])
-        if self.ids.has_key(id):
-            # check to see if this is in response to a SYN
-            if self.ids[id][1]:
-                self._pendingGroups[int(params[4])] = unquote(params[5])
-            else:
-                # i'm not even sure if explicitly requesting the list groups works, but we'll
-                # add support for it anyway.
-                self._pendingGroups[int(params[4])] = unquote(params[5])
-                if params[3] == params[4]: # this was the last group
-                    self._fireCallback(id, self._pendingGroups, int(params[1]))
-                    self._pendingGroups = {}
+        if self._getState() == 'SYNC':
+            self._getStateData('list').groups[int(params[0])] = unquote(params[1])
+
+        # Please see the comment above the requestListGroups / requestList methods
+        # regarding support for this
+        #
+        #else:
+        #    self._getStateData('groups').append((int(params[4]), unquote(params[5])))
+        #    if params[3] == params[4]: # this was the last group
+        #        self._fireCallback(int(params[0]), self._getStateData('groups'), int(params[1]))
+        #        self._remStateData('groups')
 
     def handle_PRP(self, params):
-        numParams = len(params)
-        if numParams < 3: raise MSNProtocolError, "Invalid Number of Paramaters for PRP" # debug
-        id = int(params[0])
-        if numParams == 4:
-            if not params[2].upper() in ('PHH', 'PHW', 'PHM', 'MOB', 'MBE'):
-                raise MSNProtocolError, "Invalid Phone Type" # debug
-            # is this a response to a SYN ?
-            if self.ids.has_key(id):
-                if self.ids[id][1]:
-                    self._pendingState[params[2]] = unquote(params[3])
-                else:
-                    self._fireCallback(id, int(params[1]), unquote(params[3]))
-
-        elif numParams == 3 and self.ids[id][1]:
-            # we'll assume this can only happen in response to a SYN
-            # (or at least, that's all we'll care about for now)
-            self._pendingState[params[2]] = None
-        else: raise MSNProtocolError, "Invalid Number of Parameters for PRP" # debug
+        if self._getState() == 'SYNC':
+            self._getStateData('phone').append((params[0], unquote(params[1])))
+        else:
+            self._fireCallback(int(params[0]), int(params[1]), unquote(params[3]))
 
     def handle_BPR(self, params):
-        id = self.listState[1]
         numParams = len(params)
-        if numParams == 4:
-            if not id:
-                self.gotPhoneNumber(int(params[0]), params[1], params[2], unquote(params[3]))
-                return
-            self._pendingLists[id][-1].setPhone(params[2], unquote(params[3]))
-            if self.listState[0]: # handle end of normal list
-                self._fireCallback(id, self._pendingLists[id])
-                del self._pendingLists[id]
-                self.listState = (None, None)
-
-        elif numParams == 3: pass # do nothing if they send no number at the moment
-        else: raise MSNProtocolError, "Invalid Number of Parameters for BPR" # debug
+        if numParams == 2: # part of a syn
+            self._getStateData('last_contact').setPhone(params[0], unquote(params[1]))
+        elif numParams == 4:
+            self.gotPhoneNumber(int(params[0]), params[1], params[2], unquote(params[3]))
 
     def handle_ADG(self, params):
         checkParamLen(len(params), 5, 'ADG')
@@ -777,14 +957,14 @@ class MSNNotificationClient(MSNEventBase):
         if numParams < 5 or params[1].upper() not in ('AL','BL','RL','FL'):
             raise MSNProtocolError, "Invalid Paramaters for ADD" # debug
         id = int(params[0])
-        listType = params[1]
+        listType = params[1].lower()
         listVer = int(params[2])
         userHandle = params[3]
         groupID = None
         if numParams == 6: # they sent a group id
             if params[1].upper() != "FL": raise MSNProtocolError, "Only forward list can contain groups" # debug
             groupID = int(params[5])
-        if not self._fireCallback(id, listType, userHandle, listVer, groupID):
+        if not self._fireCallback(id, listCodeToID[listType], userHandle, listVer, groupID):
             self.userAddedMe(userHandle, unquote(params[4]), listVer)
 
     def handle_REM(self, params):
@@ -792,14 +972,14 @@ class MSNNotificationClient(MSNEventBase):
         if numParams < 4 or params[1].upper() not in ('AL','BL','FL','RL'):
             raise MSNProtocolError, "Invalid Paramaters for REM" # debug
         id = int(params[0])
-        listType = params[1]
+        listType = params[1].lower()
         listVer = int(params[2])
         userHandle = params[3]
         groupID = None
         if numParams == 5:
             if params[1] != "FL": raise MSNProtocolError, "Only forward list can contain groups" # debug
             groupID = int(params[4])
-        if not self._fireCallback(id, listType, userHandle, listVer, groupID):
+        if not self._fireCallback(id, listCodeToID[listType], userHandle, listVer, groupID):
             if listType.upper() == "RL": self.userRemovedMe(userHandle, listVer)
 
     def handle_REA(self, params):
@@ -841,159 +1021,255 @@ class MSNNotificationClient(MSNEventBase):
     # callbacks
 
     def loggedIn(self, userHandle, screenName, verified):
-        """ called when the client has logged in
+        """
+        Called when the client has logged in.
+        The default behaviour of this method is to
+        update the factory with our screenName and
+        to sync the contact list (factory.contacts).
+        When this is complete self.listSynchronized
+        will be called.
 
-            @param userHandle: our userHandle
-            @param screenName: our screenName
-            @param verified: 1 if our passport has been (verified), 0 if not.
-                             (i'm not sure of the significace of this)
-            @type verified: int
+        @param userHandle: our userHandle
+        @param screenName: our screenName
+        @param verified: 1 if our passport has been (verified), 0 if not.
+                         (i'm not sure of the significace of this)
+        @type verified: int
+        """
+        self.factory.screenName = screenName
+        if not self.factory.contacts: listVersion = 0
+        else: listVersion = self.factory.contacts.version
+        self.syncList(listVersion).addCallback(self.listSynchronized)
+
+    def loginFailure(self, message):
+        """
+        Called when the client fails to login.
+
+        @param message: a message indicating the problem that was encountered
         """
         pass
 
     def gotProfile(self, message):
-        """ called after logging in when the server sends an initial message with MSN/passport specific
-            profile information such as country, number of kids, etc... Check the message headers for the
-            specific values.
+        """
+        Called after logging in when the server sends an initial
+        message with MSN/passport specific profile information
+        such as country, number of kids, etc.
+        Check the message headers for the specific values.
 
-            @param message: The profile message
+        @param message: The profile message
+        """
+        pass
+
+    def listSynchronized(self, *args):
+        """
+        Lists are now synchronized by default upon logging in, this
+        method is called after the synchronization has finished
+        and the factory now has the up-to-date contacts.
         """
         pass
 
     def statusChanged(self, statusCode):
-        """ called when our status changes and it isn't in response to
-            a client command.
-
-            @param statusCode: 3-letter status code
         """
-        pass
+        Called when our status changes and it isn't in response to
+        a client command. By default we will update the status
+        attribute of the factory.
+
+        @param statusCode: 3-letter status code
+        """
+        self.factory.status = statusCode
 
     def gotContactStatus(self, statusCode, userHandle, screenName):
-        """ called after loggin in when the server sends status of online contacts.
-
-            @param statusCode: 3-letter status code
-            @param userHandle: the contact's user handle (passport)
-            @param screenName: the contact's screen name
         """
-        pass
+        Called after loggin in when the server sends status of online contacts.
+        By default we will update the status attribute of the contact stored
+        on the factory.
+
+        @param statusCode: 3-letter status code
+        @param userHandle: the contact's user handle (passport)
+        @param screenName: the contact's screen name
+        """
+        self.factory.contacts.getContact(userHandle).status = statusCode
 
     def contactStatusChanged(self, statusCode, userHandle, screenName):
-        """ called when we're notified that a contact's status has changed.
-
-            @param statusCode: 3-letter status code
-            @param userHandle: the contact's user handle (passport)
-            @param screenName: the contact's screen name
         """
-        pass
+        Called when we're notified that a contact's status has changed.
+        By default we will update the status attribute of the contact
+        stored on the factory.
+
+        @param statusCode: 3-letter status code
+        @param userHandle: the contact's user handle (passport)
+        @param screenName: the contact's screen name
+        """
+        self.factory.contacts.getContact(userHandle).status = statusCode
 
     def contactOffline(self, userHandle):
-        """ called when a contact goes offline.
-
-            @param userHandle: the contact's user handle
         """
-        pass
+        Called when a contact goes offline. By default this method
+        will update the status attribute of the contact stored
+        on the factory.
+
+        @param userHandle: the contact's user handle
+        """
+        self.factory.contacts.getContact(userHandle).status = STATUS_OFFLINE
 
     def gotPhoneNumber(self, listVersion, userHandle, phoneType, number):
-        """ called when the server sends us phone details about a specific user (for example after
-            a user is added the server will send their status, phone details etc ...
-
-            @param listVersion: the new list version
-            @param userHandle: the contact's user handle (passport)
-            @param phoneType: the specific phoneType (*_PHONE constants or HAS_PAGER)
-            @param number: the value/phone number.
         """
-        pass
+        Called when the server sends us phone details about
+        a specific user (for example after a user is added
+        the server will send their status, phone details etc.
+        By default we will update the list version for the
+        factory's contact list and update the phone details
+        for the specific user.
+
+        @param listVersion: the new list version
+        @param userHandle: the contact's user handle (passport)
+        @param phoneType: the specific phoneType
+                          (*_PHONE constants or HAS_PAGER)
+        @param number: the value/phone number.
+        """
+        self.factory.contacts.version = listVersion
+        self.factory.contacts.getContact(userHandle).setPhone(phoneType, number)
 
     def userAddedMe(self, userHandle, screenName, listVersion):
-        """ called when a user adds me to their list. (ie. they have been added to
-            the reverse list.
-
-            @param userHandle: the userHandle of the user
-            @param screenName: the screen name of the user
-            @param listVersion: the new list version
-            @type listVersion: int
         """
-        pass
+        Called when a user adds me to their list. (ie. they have been added to
+        the reverse list. By default this method will update the version of
+        the factory's contact list -- that is, if the contact already exists
+        it will update the associated lists attribute, otherwise it will create
+        a new MSNContact object and store it.
+
+        @param userHandle: the userHandle of the user
+        @param screenName: the screen name of the user
+        @param listVersion: the new list version
+        @type listVersion: int
+        """
+        self.factory.contacts.version = listVersion
+        c = self.factory.contacts.getContact(userHandle)
+        if not c:
+            c = MSNContact(userHandle=userHandle, screenName=screenName)
+            self.factory.contacts.addContact(c)
+        c.addToList(REVERSE_LIST)
 
     def userRemovedMe(self, userHandle, listVersion):
-        """ called when a user removes us from their contact list (they are no longer on our reverseContacts list
-            and changes to the underlying list should be made to reflect this).
-
-            @param userHandle: the contact's user handle (passport)
-            @param listVersion: the new list version
         """
-        pass
+        Called when a user removes us from their contact list
+        (they are no longer on our reverseContacts list.
+        By default this method will update the version of
+        the factory's contact list -- that is, the user will
+        be removed from the reverse list and if they are no longer
+        part of any lists they will be removed from the contact
+        list entirely.
+
+        @param userHandle: the contact's user handle (passport)
+        @param listVersion: the new list version
+        """
+        self.factory.contacts.version = listVersion
+        c = self.factory.contacts.getContact(userHandle)
+        c.removeFromList(REVERSE_LIST)
+        if c.lists == 0: self.factory.contacts.remContact(c.userHandle)
 
     def gotSwitchboardInvitation(self, sessionID, host, port,
                                  key, userHandle, screenName):
-        """ called when we get an invitation to a switchboard server.
-            This happens when a user requests a chat session with us.
+        """
+        Called when we get an invitation to a switchboard server.
+        This happens when a user requests a chat session with us.
 
-            @param sessionID: session ID number, must be remembered for logging in
-            @param host: the hostname of the switchboard server
-            @param port: the port to connect to
-            @param key: used for authorization when connecting
-            @param userHandle: the user handle of the person who invited us
-            @param screenName: the screen name of the person who invited us
+        @param sessionID: session ID number, must be remembered for logging in
+        @param host: the hostname of the switchboard server
+        @param port: the port to connect to
+        @param key: used for authorization when connecting
+        @param userHandle: the user handle of the person who invited us
+        @param screenName: the screen name of the person who invited us
         """
         pass
 
     def multipleLogin(self):
-        """ called when the server says there has been another login
-            under our account, the server should disconnect us right away.
+        """
+        Called when the server says there has been another login
+        under our account, the server should disconnect us right away.
         """
         pass
 
     def serverGoingDown(self):
-        """ called when the server has notified us that it is going down for
-            maintenance.
+        """
+        Called when the server has notified us that it is going down for
+        maintenance.
         """
         pass
 
     # api calls
 
     def changeStatus(self, status):
-        """ change my current status.
+        """
+        Change my current status. This method will add
+        a default callback to the returned Deferred
+        which will update the status attribute of the
+        factory.
 
-            @param status: 3-letter status code (as defined by the STATUS_* constants)
-            @return: A Deferred, the callback of which will be fired when the server confirms
-                     the change of status.  The callback argument will be a tuple with the new status
-                     code as the only element.
+        @param status: 3-letter status code (as defined by
+                       the STATUS_* constants)
+        @return: A Deferred, the callback of which will be
+                 fired when the server confirms the change
+                 of status.  The callback argument will be
+                 a tuple with the new status code as the
+                 only element.
         """
         
         id, d = self._createIDMapping()
         self.sendLine("CHG %s %s" % (id, status))
-        return d
+        def _cb(r):
+            self.factory.status = r[0]
+            return r
+        return d.addCallback(_cb)
 
-    def requestList(self, listType):
-        """ request the desired list type
+    # I am no longer supporting the process of manually requesting
+    # lists or list groups -- as far as I can see this has no use
+    # if lists are synchronized and updated correctly, which they
+    # should be. If someone has a specific justified need for this
+    # then please contact me and i'll re-enable/fix support for it.
 
-            @param listType: 2-letter list type (as defined by the *_LIST constants)
-            @return: A Deferred, the callback of which will be fired when the list has
-                     been retrieved.  The callback argument will be a tuple with the only element
-                     being a list of MSNContact objects.
-        """
-        # this doesn't need to ever be used if you sync and update correctly.
-        id, d = self._createIDMapping()
-        self.sendLine("LST %s %s" % (id, listType.upper()))
-        return d
+    #def requestList(self, listType):
+    #    """
+    #    request the desired list type
+    #
+    #    @param listType: (as defined by the *_LIST constants)
+    #    @return: A Deferred, the callback of which will be
+    #             fired when the list has been retrieved.
+    #             The callback argument will be a tuple with
+    #             the only element being a list of MSNContact
+    #             objects.
+    #    """
+    #    # this doesn't need to ever be used if syncing of the lists takes place
+    #    # i.e. please don't use it!
+    #    warnings.warn("Please do not use this method - use the list syncing process instead")
+    #    id, d = self._createIDMapping()
+    #    self.sendLine("LST %s %s" % (id, listIDToCode[listType].upper()))
+    #    self._setStateData('list',[])
+    #    return d
 
     def setPrivacyMode(self, privLevel):
-        """ set my privacy mode on the server.
+        """
+        Set my privacy mode on the server.
 
-            B{Note}: This only keeps the current privacy setting on the server for later
-            retrieval, it does not effect the way the server works at all.
+        B{Note}:
+        This only keeps the current privacy setting on
+        the server for later retrieval, it does not
+        effect the way the server works at all.
 
-            @param privLevel: This parameter can be true, in which case the server will
-                              keep the state as 'al' which the official client interprets as ->
-                              allow messages from only users on the allow list.  Alternatively
-                              it can be false, in which case the server will keep the state as 'bl'
-                              which the official client interprets as -> allow messages from all users
-                              except those on the block list.
-
-            @return: A Deferred, the callback of which will be fired when the server replies with the
-                     new privacy setting.  The callback argument will be a tuple, the 2 elements of which
-                     being the list version and either ALLOW_LIST or BLOCK_LIST (the new privacy setting).
+        @param privLevel: This parameter can be true, in which
+                          case the server will keep the state as
+                          'al' which the official client interprets
+                          as -> allow messages from only users on
+                          the allow list.  Alternatively it can be
+                          false, in which case the server will keep
+                          the state as 'bl' which the official client
+                          interprets as -> allow messages from all
+                          users except those on the block list.
+                          
+        @return: A Deferred, the callback of which will be fired when
+                 the server replies with the new privacy setting.
+                 The callback argument will be a tuple, the 2 elements
+                 of which being the list version and either 'al'
+                 or 'bl' (the new privacy setting).
         """
 
         id, d = self._createIDMapping()
@@ -1002,157 +1278,278 @@ class MSNNotificationClient(MSNEventBase):
         return d
 
     def syncList(self, version):
-        """ used for keeping an up-to-date contact list.
-
-            @param version: The current known list version
-
-            @return: A Deferred, the callback of which will be fired when the server sends an adequate reply.
-                     The callback argument will be a tuple with two elements, the new list (MSNContactList) and
-                     your current state (a dictionary).  If the version you sent _was_ the latest list version,
-                     both elements will be None. To just request the list send a version of 0.
         """
-        
+        Used for keeping an up-to-date contact list.
+        A callback is added to the returned Deferred
+        that updates the contact list on the factory
+        and also sets my state to STATUS_ONLINE.
+
+        B{Note}:
+        This is called automatically upon signing
+        in using the version attribute of
+        factory.contacts, so you may want to persist
+        this object accordingly. Because of this there
+        is no real need to ever call this method
+        directly.
+
+        @param version: The current known list version
+
+        @return: A Deferred, the callback of which will be
+                 fired when the server sends an adequate reply.
+                 The callback argument will be a tuple with two
+                 elements, the new list (MSNContactList) and
+                 your current state (a dictionary).  If the version
+                 you sent _was_ the latest list version, both elements
+                 will be None. To just request the list send a version of 0.
+        """
+
+        self._setState('SYNC')
         id, d = self._createIDMapping(data=str(version))
+        self._setStateData('synid',id)
         self.sendLine("SYN %s %s" % (id, version))
-        return d
+        def _cb(r):
+            self.changeStatus(STATUS_ONLINE)
+            if r[0] is not None:
+                self.factory.contacts = r[0]
+            return r
+        return d.addCallback(_cb)
 
-    def requestListGroups(self):
-        """ Request (forward) list groups.
 
-            @return: A Deferred, the callback for which will be called when the server responds
-                     with the list groups.  The callback argument will be a tuple with two elements,
-                     a dictionary mapping group IDs to group names and the current list version.
-        """
-        
-        # this doesn't necessarily need to be used if syncing of the lists takes place (which it SHOULD!)
-        id, d = self._createIDMapping()
-        self.sendLine("LSG %s" % id)
-        return d
+    # I am no longer supporting the process of manually requesting
+    # lists or list groups -- as far as I can see this has no use
+    # if lists are synchronized and updated correctly, which they
+    # should be. If someone has a specific justified need for this
+    # then please contact me and i'll re-enable/fix support for it.
+                    
+    #def requestListGroups(self):
+    #    """
+    #    Request (forward) list groups.
+    #
+    #    @return: A Deferred, the callback for which will be called
+    #             when the server responds with the list groups.
+    #             The callback argument will be a tuple with two elements,
+    #             a dictionary mapping group IDs to group names and the
+    #             current list version.
+    #    """
+    #    
+    #    # this doesn't need to be used if syncing of the lists takes place (which it SHOULD!)
+    #    # i.e. please don't use it!
+    #    warnings.warn("Please do not use this method - use the list syncing process instead")
+    #    id, d = self._createIDMapping()
+    #    self.sendLine("LSG %s" % id)
+    #    self._setStateData('groups',{})
+    #    return d
 
     def setPhoneDetails(self, phoneType, value):
-        """ Set/change my phone numbers stored on the server.
-
-            @param phoneType: phoneType can be one of the following constants - HOME_PHONE, WORK_PHONE,
-                              MOBILE_PHONE, HAS_PAGER.  These are pretty self-explanatory, except maybe HAS_PAGER which
-                              refers to whether or not you have a pager.
-            @param value: for all of the *_PHONE constants the value is a phone number (str), for HAS_PAGER accepted
-                          values are 'Y' (for yes) and 'N' (for no).
-
-            @return: A Deferred, the callback for which will be fired when the server confirms the change has been made.
-                     The callback argument will be a tuple with 2 elements, the first being the new list version (int) and
-                     the second being the new phone number value (str).
         """
+        Set/change my phone numbers stored on the server.
+
+        @param phoneType: phoneType can be one of the following
+                          constants - HOME_PHONE, WORK_PHONE,
+                          MOBILE_PHONE, HAS_PAGER.
+                          These are pretty self-explanatory, except
+                          maybe HAS_PAGER which refers to whether or
+                          not you have a pager.
+        @param value: for all of the *_PHONE constants the value is a
+                      phone number (str), for HAS_PAGER accepted values
+                      are 'Y' (for yes) and 'N' (for no).
+
+        @return: A Deferred, the callback for which will be fired when
+                 the server confirms the change has been made. The
+                 callback argument will be a tuple with 2 elements, the
+                 first being the new list version (int) and the second
+                 being the new phone number value (str).
+        """
+        # XXX: Add a default callback which updates
+        # factory.contacts.version and the relevant phone
+        # number
         id, d = self._createIDMapping()
         self.sendLine("PRP %s %s %s" % (id, phoneType, quote(value)))
         return d
 
     def addListGroup(self, name):
-        """ used to create a new list group.
+        """
+        Used to create a new list group.
+        A default callback is added to the
+        returned Deferred which updates the
+        contacts attribute of the factory.
 
-            @param name: The desired name of the new group.
+        @param name: The desired name of the new group.
 
-            @return: A Deferred, the callbacck for which will be called when the server
-                     clarifies that the new group has been created.  The callback argument
-                     will be a tuple with 3 elements: the new list version (int), the new group name (str)
-                     and the new group ID (int).
+        @return: A Deferred, the callbacck for which will be called
+                 when the server clarifies that the new group has been
+                 created.  The callback argument will be a tuple with 3
+                 elements: the new list version (int), the new group name
+                 (str) and the new group ID (int).
         """
 
         id, d = self._createIDMapping()
         self.sendLine("ADG %s %s 0" % (id, quote(name)))
-        return d
+        def _cb(r):
+            self.factory.contacts.version = r[0]
+            self.factory.contacts.setGroup(r[1], r[2])
+            return r
+        return d.addCallback(_cb)
 
     def remListGroup(self, groupID):
-        """ used to remove a list group.
+        """
+        Used to remove a list group.
+        A default callback is added to the
+        returned Deferred which updates the
+        contacts attribute of the factory.
 
         @param groupID: the ID of the desired group to be removed.
 
-        @return: A Deferred, the callback for which will be called when the server
-                 clarifies the deletion of the group.  The callback argument will be a tuple
-                 with 2 elements: the new list version (int) and the group ID (int) of the removed group.
+        @return: A Deferred, the callback for which will be called when
+                 the server clarifies the deletion of the group.
+                 The callback argument will be a tuple with 2 elements:
+                 the new list version (int) and the group ID (int) of
+                 the removed group.
         """
 
         id, d = self._createIDMapping()
         self.sendLine("RMG %s %s" % (id, groupID))
-        return d
+        def _cb(r):
+            self.factory.contacts.version = r[0]
+            self.factory.contacts.remGroup(r[1])
+            return r
+        return d.addCallback(_cb)
 
     def renameListGroup(self, groupID, newName):
-        """ used to rename an existing list group.
+        """
+        Used to rename an existing list group.
+        A default callback is added to the returned
+        Deferred which updates the contacts attribute
+        of the factory.
 
-            @param groupID: the ID of the desired group to rename.
-            @param newName: the desired new name for the group.
+        @param groupID: the ID of the desired group to rename.
+        @param newName: the desired new name for the group.
 
-            @return: A Deferred, the callback for which will be called when the server
-            clarifies the renaming.  The callback argument will be a tuple of 3 elements,
-            the new list version (int), the group id (int) and the new group name (str).
+        @return: A Deferred, the callback for which will be called
+                 when the server clarifies the renaming.
+                 The callback argument will be a tuple of 3 elements,
+                 the new list version (int), the group id (int) and
+                 the new group name (str).
         """
         
         id, d = self._createIDMapping()
         self.sendLine("REG %s %s %s 0" % (id, groupID, quote(newName)))
-        return d
+        def _cb(r):
+            self.factory.contacts.version = r[0]
+            self.factory.contacts.setGroup(r[1], r[2])
+            return r
+        return d.addCallback(_cb)
 
     def addContact(self, listType, userHandle, groupID=0):
-        """ used to add a contact to the desired list.
+        """
+        Used to add a contact to the desired list.
+        A default callback is added to the returned
+        Deferred which updates the contacts attribute of
+        the factory with the new contact information.
 
-            @param listType: 2-letter list type (as defined by the *_LIST constants)
-            @param userHandle: the user handle (passport) of the contact that is being added
-            @param groupID: the group ID for which to associate this contact with. (default 0 - no group).
-                            Groups are only valid in the forward list.
+        @param listType: (as defined by the *_LIST constants)
+        @param userHandle: the user handle (passport) of the contact
+                           that is being added
+        @param groupID: the group ID for which to associate this contact
+                        with. (default 0 - no group). Groups are only
+                        valid for FORWARD_LIST.
 
-            @return: A Deferred, the callback for which will be called when the server has clarified
-                     that the user has been added.  The callback argument will be a tuple with 4 elements:
-                     the list type, the contact's user handle, the new list version, and the group id (if relevant,
-                     otherwise it will be None)
+        @return: A Deferred, the callback for which will be called when
+                 the server has clarified that the user has been added.
+                 The callback argument will be a tuple with 4 elements:
+                 the list type, the contact's user handle, the new list
+                 version, and the group id (if relevant, otherwise it
+                 will be None)
         """
         
         id, d = self._createIDMapping()
-        if listType.upper() == "FL":
+        listType = listIDToCode[listType].upper()
+        if listType == "FL":
             self.sendLine("ADD %s FL %s %s %s" % (id, userHandle, userHandle, groupID))
         else:
-            self.sendLine("ADD %s %s %s %s" % (id, listType.upper(), userHandle, userHandle))
-        return d
+            self.sendLine("ADD %s %s %s %s" % (id, listType, userHandle, userHandle))
+
+        def _cb(r):
+            self.factory.contacts.version = r[2]
+            c = self.factory.contacts.getContact(r[1])
+            if not c:
+                c = MSNContact(userHandle=r[1])
+            if r[3]: c.groups.append(r[3])
+            c.addToList(r[0])
+            return r
+        return d.addCallback(_cb)
 
     def remContact(self, listType, userHandle, groupID=0):
-        """ used to remove a contact from the desired list.
+        """
+        Used to remove a contact from the desired list.
+        A default callback is added to the returned deferred
+        which updates the contacts attribute of the factory
+        to reflect the new contact information.
 
-            @param listType: 2-letter list type (as defined by the *_LIST constants)
-            @param userHandle: the user handle (passport) of the contact being removed
-            @param groupID: the ID of the group to which this contact belongs (only relevant
-                            in the forward list, default is 0)
+        @param listType: (as defined by the *_LIST constants)
+        @param userHandle: the user handle (passport) of the
+                           contact being removed
+        @param groupID: the ID of the group to which this contact
+                        belongs (only relevant for FORWARD_LIST,
+                        default is 0)
 
-            @return: A Deferred, the callback for which will be called when the server has clarified
-                     that the user has been removed.  The callback argument will be a tuple of 4 elements:
-                     the list type, the contact's user handle, the new list version, and the group id (if relevant,
-                     otherwise it will be None)
+        @return: A Deferred, the callback for which will be called when
+                 the server has clarified that the user has been removed.
+                 The callback argument will be a tuple of 4 elements:
+                 the list type, the contact's user handle, the new list
+                 version, and the group id (if relevant, otherwise it will
+                 be None)
         """
         
         id, d = self._createIDMapping()
-        if listType.upper() == "FL":
+        listType = listIDToCode[listType].upper()
+        if listType == "FL":
             self.sendLine("REM %s FL %s %s" % (id, userHandle, groupID))
         else:
-            self.sendLine("REM %s %s %s" % (id, listType.upper(), userHandle))
-        return d
+            self.sendLine("REM %s %s %s" % (id, listType, userHandle))
+
+        def _cb(r):
+            l = self.factory.contacts
+            l.version = r[2]
+            c = l.getContact(r[1])
+            c.removeFromList(r[0])
+            if c.lists == 0: l.remContact(c.userHandle)
+            return r
+        return d.addCallback(_cb)
 
     def changeScreenName(self, newName):
-        """ used to change your current screen name.
+        """
+        Used to change your current screen name.
+        A default callback is added to the returned
+        Deferred which updates the screenName attribute
+        of the factory and also updates the contact list
+        version.
 
-            @param newName: the new screen name
+        @param newName: the new screen name
 
-            @return: A Deferred, the callback for which will be called when the server sends an adequate
-                     reply.  The callback argument will be a tuple of 2 elements: the new list version and
-                     the new screen name.
+        @return: A Deferred, the callback for which will be called
+                 when the server sends an adequate reply.
+                 The callback argument will be a tuple of 2 elements:
+                 the new list version and the new screen name.
         """
 
         id, d = self._createIDMapping()
-        self.sendLine("REA %s %s %s" % (id, self.userHandle, quote(newName)))
-        return d
+        self.sendLine("REA %s %s %s" % (id, self.factory.userHandle, quote(newName)))
+        def _cb(r):
+            self.factory.contacts.version = r[0]
+            self.factory.screenName = r[1]
+            return r
+        return d.addCallback(_cb)
 
     def requestSwitchboardServer(self):
-        """ used to request a switchboard server to use for conversations.
+        """
+        Used to request a switchboard server to use for conversations.
 
-            @return: A Deferred, the callback for which will be called when the server responds
-                     with the switchboard information. The callback argument will be a tuple with
-                     3 elements: the host of the switchboard server, the port and a key used for
-                     logging in.
+        @return: A Deferred, the callback for which will be called when
+                 the server responds with the switchboard information.
+                 The callback argument will be a tuple with 3 elements:
+                 the host of the switchboard server, the port and a key
+                 used for logging in.
         """
 
         id, d = self._createIDMapping()
@@ -1160,26 +1557,73 @@ class MSNNotificationClient(MSNEventBase):
         return d
 
     def logOut(self):
-        """ used to log out of the notification server.  After running the method
-            the server is expected to close the connection.
+        """
+        Used to log out of the notification server.
+        After running the method the server is expected
+        to close the connection.
         """
         
         self.sendLine("OUT")
 
-class MSNSwitchboardClient(MSNEventBase):
-    """ this class provides support for clients connecting to a switchboard server.
+class NotificationFactory(ClientFactory):
+    """
+    Factory for the NotificationClient protocol.
+    This is basically responsible for keeping
+    the state of the client and thus should be used
+    in a 1:1 situation with clients.
 
-        Switchboard servers are used for conversations with other people on the MSN network.
-        This means that the number of conversations at any given time will be directly proportional
-        to the number of connections to varioius switchboard servers.  MSN makes no distinction between
-        single and group conversations, so any number of users may be invited to join a specific conversation
-        taking place on a switchboard server.
+    @ivar contacts: An MSNContactList instance reflecting
+                    the current contact list -- this is
+                    generally kept up to date by the default
+                    command handlers.
+    @ivar userHandle: The client's userHandle, this is expected
+                      to be set by the client and is used by the
+                      protocol (for logging in etc).
+    @ivar screenName: The client's current screen-name -- this is
+                      generally kept up to date by the default
+                      command handlers.
+    @ivar password: The client's password -- this is (obviously)
+                    expected to be set by the client.
+    @ivar passportServer: This must point to an msn passport server
+                          (the whole URL is required)
+    @ivar status: The status of the client -- this is generally kept
+                  up to date by the default command handlers
+    """
 
-        @ivar key: authorization key, obtained when receiving invitation / requesting switchboard server.
-        @ivar userHandle: your user handle (passport)
-        @ivar sessionID: unique session ID, used if you are replying to a switchboard invitation
-        @ivar reply: set this to 1 in connectionMade or before to signifiy that you are replying to a
-                     switchboard invitation.
+    contacts = None
+    userHandle = ''
+    screenName = ''
+    password = ''
+    passportServer = 'https://nexus.passport.com/rdr/pprdr.asp'
+    status = 'FLN'
+    protocol = NotificationClient
+
+
+# XXX: A lot of the state currently kept in
+# instances of SwitchboardClient is likely to
+# be moved into a factory at some stage in the
+# future
+
+class SwitchboardClient(MSNEventBase):
+    """
+    This class provides support for clients connecting to a switchboard server.
+
+    Switchboard servers are used for conversations with other people
+    on the MSN network. This means that the number of conversations at
+    any given time will be directly proportional to the number of
+    connections to varioius switchboard servers.
+
+    MSN makes no distinction between single and group conversations,
+    so any number of users may be invited to join a specific conversation
+    taking place on a switchboard server.
+
+    @ivar key: authorization key, obtained when receiving
+               invitation / requesting switchboard server.
+    @ivar userHandle: your user handle (passport)
+    @ivar sessionID: unique session ID, used if you are replying
+                     to a switchboard invitation
+    @ivar reply: set this to 1 in connectionMade or before to signifiy
+                 that you are replying to a switchboard invitation.
     """
 
     key = 0
@@ -1196,6 +1640,7 @@ class MSNSwitchboardClient(MSNEventBase):
 
     def connectionMade(self):
         MSNEventBase.connectionMade(self)
+        print 'sending initial stuff'
         self._sendInit()
 
     def connectionLost(self, reason):
@@ -1204,8 +1649,9 @@ class MSNSwitchboardClient(MSNEventBase):
         MSNEventBase.connectionLost(self, reason)
 
     def _sendInit(self):
-        """ send initial data based on whether we are replying to an invitation
-            or starting one.
+        """
+        send initial data based on whether we are replying to an invitation
+        or starting one.
         """
         id = self._nextTransactionID()
         if not self.reply:
@@ -1267,7 +1713,10 @@ class MSNSwitchboardClient(MSNEventBase):
         return 1
 
     def checkMessage(self, message):
-        """ hook for detecting any notification type messages (e.g. file transfer) """
+        """
+        hook for detecting any notification type messages
+        (e.g. file transfer)
+        """
         cTypes = [s.lstrip() for s in message.getHeader('Content-Type').split(';')]
         if self._checkTyping(message, cTypes): return 0
         if 'text/x-msmsgsinvite' in cTypes:
@@ -1310,9 +1759,7 @@ class MSNSwitchboardClient(MSNEventBase):
     # finished listing users
     def handle_ANS(self, params):
         checkParamLen(len(params), 2, 'ANS')
-        id = int(params[0])
         if params[1] == "OK":
-            #self._fireCallback(id)
             self.loggedIn()
 
     def handle_ACK(self, params):
@@ -1330,73 +1777,83 @@ class MSNSwitchboardClient(MSNEventBase):
     # callbacks
 
     def loggedIn(self):
-        """ called when all login details have been negotiated.
-            Messages can now be sent, or new users invited.
+        """
+        called when all login details have been negotiated.
+        Messages can now be sent, or new users invited.
         """
         pass
 
     def gotChattingUsers(self, users):
-        """ called after connecting to an existing chat session.
+        """
+        called after connecting to an existing chat session.
 
-            @param users: A dict mapping usre handles to screen names (current users
-                          taking part in the conversation)
+        @param users: A dict mapping user handles to screen names
+                      (current users taking part in the conversation)
         """
         pass
 
     def userJoined(self, userHandle, screenName):
-        """ called when a user has joined the conversation.
+        """
+        called when a user has joined the conversation.
 
-            @param userHandle: the user handle (passport) of the user
-            @param screenName: the screen name of the user
+        @param userHandle: the user handle (passport) of the user
+        @param screenName: the screen name of the user
         """
         pass
 
     def userLeft(self, userHandle):
-        """ called when a user has left the conversation.
+        """
+        called when a user has left the conversation.
 
-            @param userHandle: the user handle (passport) of the user.
+        @param userHandle: the user handle (passport) of the user.
         """
         pass
 
     def gotMessage(self, message):
-        """ called when we receive a message.
+        """
+        called when we receive a message.
 
-            @param message: the associated MSNMessage object
+        @param message: the associated MSNMessage object
         """
         pass
 
     def userTyping(self, message):
-        """ called when we receive the special type of message notifying us that
-            a user is typing a message.
+        """
+        called when we receive the special type of message notifying
+        us that a user is typing a message.
 
-            @param message: the associated MSNMessage object
+        @param message: the associated MSNMessage object
         """
         pass
 
     def gotSendRequest(self, fileName, fileSize, iCookie, message):
-        """ called when a contact is trying to send us a file.  To accept or reject
-            this transfer see the fileInvitationReply method.
+        """
+        called when a contact is trying to send us a file.
+        To accept or reject this transfer see the
+        fileInvitationReply method.
 
-            @param fileName: the name of the file
-            @param fileSize: the size of the file
-            @param iCookie: the invitation cookie, used so the client can match up
-                            your reply with this request.
-            @param message: the MSNMessage object which brought about this invitation
-                            (it may contain more information)
+        @param fileName: the name of the file
+        @param fileSize: the size of the file
+        @param iCookie: the invitation cookie, used so the client can
+                        match up your reply with this request.
+        @param message: the MSNMessage object which brought about this
+                        invitation (it may contain more information)
         """
         pass
 
     # api calls
 
     def inviteUser(self, userHandle):
-        """ used to invite a user to the current switchboard server.
+        """
+        used to invite a user to the current switchboard server.
 
-            @param userHandle: the user handle (passport) of the desired user.
+        @param userHandle: the user handle (passport) of the desired user.
 
-            @return: A Deferred, the callback for which will be called when the server
-                     notifies us that the user has indeed been invited.  The callback argument
-                     will be a tuple with 1 element, the sessionID given to the invited user.  I'm
-                     not sure if this is useful or not.
+        @return: A Deferred, the callback for which will be called
+                 when the server notifies us that the user has indeed
+                 been invited.  The callback argument will be a tuple
+                 with 1 element, the sessionID given to the invited user.
+                 I'm not sure if this is useful or not.
         """
 
         id, d = self._createIDMapping()
@@ -1404,14 +1861,18 @@ class MSNSwitchboardClient(MSNEventBase):
         return d
 
     def sendMessage(self, message):
-        """ used to send a message.
+        """
+        used to send a message.
 
-            @param message: the corresponding MSNMessage object.
+        @param message: the corresponding MSNMessage object.
 
-            @return: Depending on the value of message.ack.  If set to MSNMessage.MESSAGE_ACK or
-                     MSNMessage.MESSAGE_NACK a Deferred will be returned, the callback for which will
-                     be fired when an ACK or NCK is received - the callback argument will be (None,).  If set to
-                     MSNMessage.MESSAGE_ACK_NONE then the return value is None.
+        @return: Depending on the value of message.ack.
+                 If set to MSNMessage.MESSAGE_ACK or
+                 MSNMessage.MESSAGE_NACK a Deferred will be returned,
+                 the callback for which will be fired when an ACK or
+                 NACK is received - the callback argument will be
+                 (None,). If set to MSNMessage.MESSAGE_ACK_NONE then
+                 the return value is None.
         """
 
         if message.ack not in ('A','N'): id, d = self._nextTransactionID(), None
@@ -1429,10 +1890,12 @@ class MSNSwitchboardClient(MSNEventBase):
         return d
 
     def sendTypingNotification(self):
-        """ used to send a typing notification.  Upon receiving this message the official
-            client will display a 'user is typing' message to all other users in the chat session
-            for 10 seconds.  The official client sends one of these every 5 seconds (I think) as long
-            as you continue to type.
+        """
+        used to send a typing notification. Upon receiving this
+        message the official client will display a 'user is typing'
+        message to all other users in the chat session for 10 seconds.
+        The official client sends one of these every 5 seconds (I think)
+        as long as you continue to type.
         """
         m = MSNMessage()
         m.ack = m.MESSAGE_ACK_NONE
@@ -1442,17 +1905,23 @@ class MSNSwitchboardClient(MSNEventBase):
         self.sendMessage(m)
 
     def sendFileInvitation(self, fileName, fileSize):
-        """ send an notification that we want to send a file.
+        """
+        send an notification that we want to send a file.
 
-            @param fileName: the file name
-            @param fileSize: the file size
+        @param fileName: the file name
+        @param fileSize: the file size
 
-            @return: A Deferred, the callback of which will be fired when the user responds to this
-                     invitation with an appropriate message.  The callback argument will be a tuple with 3
-                     elements, the first being 1 or 0 depending on whether they accepted the transfer (1=yes, 0=no),
-                     the second being an invitation cookie to identify your follow-up responses and the third being
-                     the message 'info' which is a dict of information they sent in their reply (this doesn't really
-                     need to be used).  If you wish to proceed with the transfer see the sendTransferInfo method.
+        @return: A Deferred, the callback of which will be fired
+                 when the user responds to this invitation with an
+                 appropriate message. The callback argument will be
+                 a tuple with 3 elements, the first being 1 or 0
+                 depending on whether they accepted the transfer
+                 (1=yes, 0=no), the second being an invitation cookie
+                 to identify your follow-up responses and the third being
+                 the message 'info' which is a dict of information they
+                 sent in their reply (this doesn't really need to be used).
+                 If you wish to proceed with the transfer see the
+                 sendTransferInfo method.
         """
         cookie = self._newInvitationCookie()
         d = Deferred()
@@ -1470,17 +1939,23 @@ class MSNSwitchboardClient(MSNEventBase):
         return d
 
     def fileInvitationReply(self, iCookie, accept=1):
-        """ used to reply to a file transfer invitation.
+        """
+        used to reply to a file transfer invitation.
 
-            @param iCookie: the invitation cookie of the initial invitation
-            @param accept: whether or not you accept this transfer, 1 = yes, 0 = no, default = 1.
+        @param iCookie: the invitation cookie of the initial invitation
+        @param accept: whether or not you accept this transfer,
+                       1 = yes, 0 = no, default = 1.
 
-            @return: A Deferred, the callback for which will be fired when the user responds with the
-                     transfer information. The callback argument will be a tuple with 5 elements, whether
-                     or not they wish to proceed with the transfer (1=yes, 0=no), their ip, the port, the
-                     authentication cookie (see MSNFileReceive/MSNFileSend) and the message info (dict) (in case they
-                     send extra header-like info like Internal-IP, this doesn't necessarily need to be used).
-                     If you wish to proceed with the transfer see MSNFileReceive.
+        @return: A Deferred, the callback for which will be fired when
+                 the user responds with the transfer information.
+                 The callback argument will be a tuple with 5 elements,
+                 whether or not they wish to proceed with the transfer
+                 (1=yes, 0=no), their ip, the port, the authentication
+                 cookie (see FileReceive/FileSend) and the message
+                 info (dict) (in case they send extra header-like info
+                 like Internal-IP, this doesn't necessarily need to be
+                 used). If you wish to proceed with the transfer see
+                 FileReceive.
         """
         d = Deferred()
         m = MSNMessage()
@@ -1497,13 +1972,17 @@ class MSNSwitchboardClient(MSNEventBase):
         return d
 
     def sendTransferInfo(self, accept, iCookie, authCookie, ip, port):
-        """ send information relating to a file transfer session.
+        """
+        send information relating to a file transfer session.
 
-            @param accept: whether or not to go ahead with the transfer (1=yes, 0=no)
-            @param iCookie: the invitation cookie of previous replies relating to this transfer
-            @param authCookie: the authentication cookie obtained from an MSNFileSend instance
-            @param ip: your ip
-            @param port: the port on which an MSNFileSend protocol is listening.
+        @param accept: whether or not to go ahead with the transfer
+                       (1=yes, 0=no)
+        @param iCookie: the invitation cookie of previous replies
+                        relating to this transfer
+        @param authCookie: the authentication cookie obtained from
+                           an FileSend instance
+        @param ip: your ip
+        @param port: the port on which an FileSend protocol is listening.
         """
         m = MSNMessage()
         m.setHeader('Content-Type', 'text/x-msmsgsinvite; charset=UTF-8')
@@ -1516,24 +1995,27 @@ class MSNSwitchboardClient(MSNEventBase):
         m.ack = m.MESSAGE_NACK
         self.sendMessage(m)
 
-class MSNFileReceive(LineReceiver):
-    """ This class provides support for receiving files from contacts.
+class FileReceive(LineReceiver):
+    """
+    This class provides support for receiving files from contacts.
 
-        @ivar fileSize: the size of the receiving file. (you will have to set this)
-        @ivar connected: true if a connection has been established.
-        @ivar completed: true if the transfer is complete.
-        @ivar bytesReceived: number of bytes (of the file) received.  This does not
-                             include header data.
-        """
+    @ivar fileSize: the size of the receiving file. (you will have to set this)
+    @ivar connected: true if a connection has been established.
+    @ivar completed: true if the transfer is complete.
+    @ivar bytesReceived: number of bytes (of the file) received.
+                         This does not include header data.
+    """
 
     def __init__(self, auth, myUserHandle, file, directory="", overwrite=0):
-        """ @param auth: auth string received in the file invitation.
-            @param myUserHandle: your userhandle.
-            @param file: A string or file object represnting the file to save data to.
-            @param directory: optional parameter specifiying the directory. Defaults to the
-                              current directory.
-            @param overwrite: if true and a file of the same name exists on your system, it will
-                              be overwritten. (0 by default)
+        """
+        @param auth: auth string received in the file invitation.
+        @param myUserHandle: your userhandle.
+        @param file: A string or file object represnting the file
+                     to save data to.
+        @param directory: optional parameter specifiying the directory.
+                          Defaults to the current directory.
+        @param overwrite: if true and a file of the same name exists on
+                          your system, it will be overwritten. (0 by default)
         """
         self.auth = auth
         self.myUserHandle = myUserHandle
@@ -1649,19 +2131,22 @@ class MSNFileReceive(LineReceiver):
         """ called when a segment (block) of data arrives. """
         self.file.write(data)
 
-class MSNFileSend(LineReceiver):
-    """ This class provides support for sending files to other contacts.
+class FileSend(LineReceiver):
+    """
+    This class provides support for sending files to other contacts.
 
-        @ivar bytesSent: the number of bytes that have currently been sent.
-        @ivar completed: true if the send has completed.
-        @ivar connected: true if a connection has been established.
-        @ivar targetUser: the target user (contact).
-        @ivar segmentSize: the segment (block) size.
-        @ivar auth: the auth cookie (number) to use when sending the transfer invitation
+    @ivar bytesSent: the number of bytes that have currently been sent.
+    @ivar completed: true if the send has completed.
+    @ivar connected: true if a connection has been established.
+    @ivar targetUser: the target user (contact).
+    @ivar segmentSize: the segment (block) size.
+    @ivar auth: the auth cookie (number) to use when sending the
+                transfer invitation
     """
     
     def __init__(self, file):
-        """ @param file: A string or file object represnting the file to send.
+        """
+        @param file: A string or file object represnting the file to send.
         """
 
         if isinstance(file, types.StringType):
@@ -1811,3 +2296,20 @@ statusCodes = {
     STATUS_LUNCH   : "Out to Lunch"
 
 }
+
+# mapping of list ids to list codes
+listIDToCode = {
+
+    FORWARD_LIST : 'fl',
+    BLOCK_LIST : 'bl',
+    ALLOW_LIST   : 'al',
+    REVERSE_LIST : 'rl'
+
+}
+
+# mapping of list codes to list ids
+listCodeToID = {}
+for id,code in listIDToCode.items():
+    listCodeToID[code] = id
+
+del id, code
