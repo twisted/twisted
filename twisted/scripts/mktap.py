@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: mktap.py,v 1.37 2003/07/30 16:08:33 moshez Exp $
+# $Id: mktap.py,v 1.38 2003/07/30 16:09:56 moshez Exp $
 
 """ Implementation module for the `mktap` command.
 """
@@ -44,9 +44,6 @@ from twisted.python import log
 # !!! This code should be refactored; also,
 # I bet that it shares a lot with other scripts
 # (i.e. is badly cut'n'pasted).
-
-def findAGoodName(x):
-    return getattr(x, 'tapname', getattr(x, 'name', getattr(x, 'module')))
 
 def loadPlugins(debug = None, progress = None):
     try:
