@@ -670,7 +670,7 @@ class SecurityOptions:
 
     basicTypes = ["dictionary", "list", "tuple",
                   "reference", "dereference", "unpersistable",
-                  "persistent", "long_int"]
+                  "persistent", "long_int", "long", "dict"]
 
     def __init__(self):
         """SecurityOptions()
@@ -682,7 +682,8 @@ class SecurityOptions:
                              "string": 1,
                              "str": 1,
                              "int": 1,
-                             "float": 1}
+                             "float": 1,
+                             "NoneType": 1}
         if hasattr(types, 'UnicodeType'):
             self.allowedTypes['unicode'] = 1
         self.allowedModules = {}
