@@ -95,6 +95,7 @@ class TestSuite:
         self.testClasses = {}
         self.numTests = 0
         self.couldNotImport = {}
+        self.testMethods = []
 
     def getMethods(self, klass, prefix):
         testMethodNames = [ name for name in dir(klass)
@@ -103,6 +104,15 @@ class TestSuite:
         testMethods = [ getattr(klass, name) for name in testMethodNames
                         if type(getattr(klass, name)) is types.MethodType ]
         return testMethods
+
+    def addMethod(self, method):
+        """Add a single method of a test case class to this test suite.
+        """
+        assert type(method) is types.StringType
+        klass = reflect.namedObject('.'.join(method.split('.')[:-1]))
+        methodName = method.split('.')[-1]
+        self.testMethods.append((klass, methodName))
+        self.numTests += 1
 
     def addTestClass(self, testClass):
         methods = self.getMethods(testClass, self.methodPrefix)
@@ -223,6 +233,13 @@ class TestSuite:
             r = random.Random(seed)
             r.shuffle(testClasses)
             output.writeln('Running tests shuffled with seed %d' % seed)
+        
+        ## Run all the single-method tests we want to run.
+        for testClass, methodName in self.testMethods:
+            testCase  = testClass()
+            method = getattr(testClass, methodName)
+            output.reportStart(testClass, method)
+            self.runOneTest(testClass, testCase, method, output)
 
         for testClass in testClasses:
             testCase = testClass()

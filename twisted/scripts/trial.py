@@ -41,6 +41,7 @@ class Options(usage.Options):
         self['modules'] = []
         self['packages'] = []
         self['testcases'] = []
+        self['methods'] = []
 
     def opt_module(self, module):
         "Module to test"
@@ -59,9 +60,15 @@ class Options(usage.Options):
         from twisted.python import reflect
         self['modules'].append(reflect.filenameToModuleName(filename))
 
+    def opt_method(self, method):
+        "Method to test"
+        self['methods'].append(method)
+
     opt_m = opt_module
     opt_p = opt_package
     opt_c = opt_testcase
+    opt_M = opt_method
+    
     opt_f = opt_file
 
     def postOptions(self):
@@ -102,6 +109,8 @@ def run():
         case = reflect.namedObject(testcase)
         if type(case) is types.ClassType and unittest.isTestClass(case):
             suite.addTestClass(case)
+    for testmethod in config['methods']:
+        suite.addMethod(testmethod)
     
     testdir = "_trial_temp"
     if os.path.exists(testdir):
