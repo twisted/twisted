@@ -2472,9 +2472,7 @@ class IMAP4Client(basic.LineReceiver):
                 UIDVALIDITY: An integer uniquely identifying this mailbox.
         """
         cmd = 'SELECT'
-        args = mailbox.encode('imap4-utf-7')
-        if _needsQuote(args):
-            args = _quote(args)
+        args = _prepareMailboxName(mailbox)
         resp = ('FLAGS', 'EXISTS', 'RECENT', 'UNSEEN', 'PERMANENTFLAGS', 'UIDVALIDITY')
         d = self.sendCommand(Command(cmd, args, wantResponse=resp))
         d.addCallback(self.__cbSelect, 1)
@@ -2512,9 +2510,7 @@ class IMAP4Client(basic.LineReceiver):
             'UIDVALIDITY': An integer uniquely identifying this mailbox.
         """
         cmd = 'EXAMINE'
-        args = mailbox.encode('imap4-utf-7')
-        if _needsQuote(args):
-            args = _quote(args)
+        args = _prepareMailboxName(mailbox)
         resp = ('FLAGS', 'EXISTS', 'RECENT', 'UNSEEN', 'PERMANENTFLAGS', 'UIDVALIDITY')
         d = self.sendCommand(Command(cmd, args, wantResponse=resp))
         d.addCallback(self.__cbSelect, 0)
@@ -2590,7 +2586,7 @@ class IMAP4Client(basic.LineReceiver):
         @return: A deferred whose callback is invoked if the mailbox creation
         is successful and whose errback is invoked otherwise.
         """
-        return self.sendCommand(Command('CREATE', name.encode('imap4-utf-7')))
+        return self.sendCommand(Command('CREATE', _prepareMailboxName(name)))
 
     def delete(self, name):
         """Delete a mailbox
@@ -2604,7 +2600,7 @@ class IMAP4Client(basic.LineReceiver):
         @return: A deferred whose calblack is invoked if the mailbox is
         deleted successfully and whose errback is invoked otherwise.
         """
-        return self.sendCommand(Command('DELETE', name.encode('imap4-utf-7')))
+        return self.sendCommand(Command('DELETE', _prepareMailboxName(name)))
 
     def rename(self, oldname, newname):
         """Rename a mailbox
@@ -2621,8 +2617,8 @@ class IMAP4Client(basic.LineReceiver):
         @return: A deferred whose callback is invoked if the rename is
         successful and whose errback is invoked otherwise.
         """
-        oldname = oldname.encode('imap4-utf-7')
-        newname = newname.encode('imap4-utf-7')
+        oldname = _prepareMailboxName(oldname)
+        newname = _prepareMailboxName(newname)
         return self.sendCommand(Command('RENAME', ' '.join((oldname, newname))))
 
     def subscribe(self, name):
@@ -2637,7 +2633,7 @@ class IMAP4Client(basic.LineReceiver):
         @return: A deferred whose callback is invoked if the subscription
         is successful and whose errback is invoked otherwise.
         """
-        return self.sendCommand(Command('SUBSCRIBE', name.encode('imap4-utf-7')))
+        return self.sendCommand(Command('SUBSCRIBE', _prepareMailboxName(name)))
 
     def unsubscribe(self, name):
         """Remove a mailbox from the subscription list
@@ -2651,7 +2647,7 @@ class IMAP4Client(basic.LineReceiver):
         @return: A deferred whose callback is invoked if the unsubscription
         is successful and whose errback is invoked otherwise.
         """
-        return self.sendCommand(Command('UNSUBSCRIBE', name.encode('imap4-utf-7')))
+        return self.sendCommand(Command('UNSUBSCRIBE', _prepareMailboxName(name)))
 
     def list(self, reference, wildcard):
         """List a subset of the available mailboxes
@@ -2726,7 +2722,7 @@ class IMAP4Client(basic.LineReceiver):
         if the command is successful and whose errback is invoked otherwise.
         """
         cmd = 'STATUS'
-        args = "%s (%s)" % (mailbox.encode('imap4-utf-7'), ' '.join(names))
+        args = "%s (%s)" % (_prepareMailboxName(mailbox), ' '.join(names))
         resp = ('STATUS',)
         d = self.sendCommand(Command(cmd, args, wantResponse=resp))
         d.addCallback(self.__cbStatus)
@@ -2779,7 +2775,7 @@ class IMAP4Client(basic.LineReceiver):
         else:
             date = ''
         cmd = fmt % (
-            mailbox.encode('imap4-utf-7'), ' '.join(flags),
+            _prepareMailboxName(mailbox), ' '.join(flags),
             date, L
         )
         d = self.sendCommand(Command('APPEND', cmd, (), self.__cbContinueAppend, message))
@@ -3440,7 +3436,7 @@ class IMAP4Client(basic.LineReceiver):
             cmd = 'UID COPY'
         else:
             cmd = 'COPY'
-        args = '%s %s' % (messages, mailbox.encode('imap4-utf-7'))
+        args = '%s %s' % (messages, _prepareMailboxName(mailbox))
         return self.sendCommand(Command(cmd, args))
 
     #
@@ -3830,6 +3826,12 @@ def _needsQuote(s):
         if c in _ATOM_SPECIALS:
             return 1
     return 0
+
+def _prepareMailboxName(name):
+    name = name.encode('imap4-utf-7')
+    if _needsQuote(name):
+        return _quote(name)
+    return name
 
 def _needsLiteral(s):
     # Change this to "return 1" to wig out stupid clients
