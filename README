@@ -2,9 +2,14 @@ Twisted 1.0.6
 
 Quote of the Release:
 
-<chrchr> datazone-work: Some people dominate the world because they
-         can't hold down a regular job and like the flexible hours that world
-         domination offers.
+<allexpro> why does twisted want to destroy the sun?
+<MFen> give it a gimmick in the overcrowded python network framework
+       market?
+<MFen> you know, those feature checkboxes on those comparison pages. 
+       [x] tcp [x] udp [x] asynchronous [x] destroyed the sun
+<MFen> and on the right it would be like competitor ------ 
+       [x] tcp [x]  udp [x] asynchronous [ ] destroyed the sun
+
 
 For information on what's new in Twisted 1.0.6, see the ChangeLog file
 that comes with the distribution, or http://twistedmatrix.com/ChangeLog.txt.
