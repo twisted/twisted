@@ -12,7 +12,7 @@ from twisted.trial import unittest
 
 dr = unittest.deferredResult
 
-import schema, pb, flavors
+import schema, pb, flavors, tokens
 from tokens import BananaError, Violation, INT, STRING, OPEN
 from slicer import UnbananaFailure
 from debug import LoggingBroker
@@ -153,8 +153,10 @@ class Loopback:
             # isolate exceptions
             self.peer.dataReceived(data)
         except Exception, e:
-            print "Loopback.write exception", e
-            log.err()
+            f = failure.Failure()
+            log.err(f)
+            print "Loopback.write exception"
+            self.loseConnection(f)
 
     def loseConnection(self, why):
         self.protocol.connectionLost(why)
@@ -433,7 +435,10 @@ class MyRemoteCopy2(pb.RemoteCopy):
         self.d = state["b"]
 pb.registerRemoteCopy("MyCopyable2name", MyRemoteCopy2)
 
+
 class MyCopyable3(MyCopyable2):
+    def getTypeToCopy(self):
+        return "MyCopyable3name"
     def getAlternateCopyableState(self):
         return {"e": 2}
 
@@ -445,12 +450,26 @@ class MyCopyable3Slicer(flavors.CopyableSlicer):
         for k,v in state.iteritems():
             yield k
             yield v
-# register MyCopyable3Slicer as an ISlicer adapter for MyCopyable3, so we
-# can verify that it overrides the inherited CopyableSlicer behavior
-# TODO: registerAdapter(MyCopyable3Slicer, 
-#pb.registerUnslicer(    
 
-class HelperTarget(pb.Referenceable):
+class MyRemoteCopy3(pb.RemoteCopy):
+    pass
+class MyRemoteCopy3Unslicer(flavors.RemoteCopyUnslicer):
+    def __init__(self):
+        self.factory = MyRemoteCopy3
+        self.schema = None
+    def receiveClose(self):
+        obj = flavors.RemoteCopyUnslicer.receiveClose(self)
+        obj.f = "yes"
+        return obj
+
+# register MyCopyable3Slicer as an ISlicer adapter for MyCopyable3, so we
+# can verify that it overrides the inherited CopyableSlicer behavior. We
+# also register an Unslicer to create the results.
+components.registerAdapter(MyCopyable3Slicer, MyCopyable3, tokens.ISlicer)
+pb.registerRemoteCopy("MyCopyable3name", MyRemoteCopy3Unslicer)
+
+
+class CopyableHelperTarget(pb.Referenceable):
     def remote_store(self, obj):
         self.obj = obj
         return True
@@ -463,7 +482,7 @@ class TestCopyable(unittest.TestCase, TargetMixin):
             print
             self.callingBroker.doLog = "TX"
             self.targetBroker.doLog = " rx"
-        rr, target = self.setupTarget(HelperTarget())
+        rr, target = self.setupTarget(CopyableHelperTarget())
         d = rr.callRemote("store", obj=arg)
         self.failUnless(dr(d))
         return target.obj
@@ -496,3 +515,24 @@ class TestCopyable(unittest.TestCase, TargetMixin):
         self.failUnless(isinstance(res, MyRemoteCopy1))
         self.failUnlessEqual(res.a, 12)
         self.failUnlessEqual(res.b, "foo")
+
+    def testCopy2(self):
+        obj = MyCopyable2() # has a custom getStateToCopy
+        obj.a = 12 # ignored
+        obj.b = "foo"
+        res = self.send(obj)
+        self.failUnless(isinstance(res, MyRemoteCopy2))
+        self.failUnlessEqual(res.c, 1)
+        self.failUnlessEqual(res.d, "foo")
+        self.failIf(hasattr(res, "a"))
+
+    def testCopy3(self):
+        obj = MyCopyable3() # has a custom Slicer
+        obj.a = 12 # ignored
+        obj.b = "foo" # ignored
+        res = self.send(obj)
+        self.failUnless(isinstance(res, MyRemoteCopy3))
+        self.failUnlessEqual(res.e, 2)
+        self.failUnlessEqual(res.f, "yes")
+        self.failIf(hasattr(res, "a"))
+        
