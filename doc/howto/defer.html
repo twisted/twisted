@@ -335,8 +335,8 @@ for its use.</p>
   <code class="py-prototype">callback(result)</code> 
   
   <p>Run success callbacks with the given result. <em>This
-  can only be run once.</em> Running it twice will raise
-  <code
+  can only be run once.</em> Later calls to this or
+  <code>errback</code> will raise <code
   class="API">twisted.internet.defer.AlreadyCalledError</code>.
   If further callbacks or errbacks are added after this
   point, addCallbacks will run the callbacks immediately.</p>
@@ -346,7 +346,8 @@ for its use.</p>
   <code class="py-prototype">errback(failure)</code> 
   
   <p>Run error callbacks with the given failure. <em>This can
-  only be run once.</em> Running it twice will raise <code
+  only be run once.</em> Later calls to this or
+  <code>callback</code> will raise <code
   class="API">twisted.internet.defer.AlreadyCalledError</code>.
   If further callbacks or errbacks are added after this
   point, addCallbacks will run the callbacks immediately.</p>
