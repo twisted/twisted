@@ -13,23 +13,11 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-from twisted import copyright
 from twisted.python import usage, util, runtime, log, logfile
 from twisted.application import apprun
 import sys, os, pdb, profile, getpass
 
 util.addPluginDir()
-
-reactorTypes = {
-    'gtk': 'twisted.internet.gtkreactor',
-    'gtk2': 'twisted.internet.gtk2reactor',
-    'glade': 'twisted.internet.gladereactor',
-    'default': 'twisted.internet.default',
-    'poll': 'twisted.internet.pollreactor',
-    'qt': 'twisted.internet.qtreactor',
-    'c' : 'twisted.internet.cReactor',
-    }
-
 
 class ServerOptions(apprun.ServerOptions):
     synopsis = "Usage: twistw [options]"
@@ -43,7 +31,7 @@ class ServerOptions(apprun.ServerOptions):
 
 
 def startLogging(logfilename):
-    if logfilename == '-' or not logfile:
+    if logfilename == '-' or not logfilename:
         logFile = sys.stdout
     else:
         logPath = os.path.abspath(logfilename or 'twistd.log')

@@ -15,7 +15,21 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 from twisted.python import runtime, log, usage
 from twisted.persisted import styles
+from twisted import copyright
 import sys, os, pdb, profile, getpass, md5, traceback
+
+reactorTypes = {
+    'gtk': 'twisted.internet.gtkreactor',
+    'gtk2': 'twisted.internet.gtk2reactor',
+    'glade': 'twisted.internet.gladereactor',
+    'default': 'twisted.internet.default',
+    'win32': 'twisted.internet.win32eventreactor',
+    'win': 'twisted.internet.win32eventreactor',
+    'poll': 'twisted.internet.pollreactor',
+    'qt': 'twisted.internet.qtreactor',
+    'c' : 'twisted.internet.cReactor',
+    'kqueue': 'twisted.internet.kqreactor'
+    }
 
 def decrypt(passphrase, data):
     from Crypto.Cipher import AES

@@ -13,7 +13,6 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-from twisted import copyright
 from twisted.python import util, runtime, reflect, log, logfile, syslog
 from twisted.python import failure
 from twisted.persisted import styles
@@ -23,17 +22,6 @@ import cStringIO as StringIO
 import traceback, imp, sys, os, errno, signal, pdb, profile, getpass
 
 util.addPluginDir()
-
-reactorTypes = {
-    'gtk': 'twisted.internet.gtkreactor',
-    'gtk2': 'twisted.internet.gtk2reactor',
-    'glade': 'twisted.internet.gladereactor',
-    'default': 'twisted.internet.default',
-    'poll': 'twisted.internet.pollreactor',
-    'qt': 'twisted.internet.qtreactor',
-    'c' : 'twisted.internet.cReactor',
-    'kqueue': 'twisted.internet.kqreactor'
-    }
 
 
 class ServerOptions(apprun.ServerOptions):
@@ -113,7 +101,7 @@ def startLogging(logfilename, syslog, prefix, nodaemon):
             print 'daemons cannot log to stdout'
             os._exit(1)
         logFile = sys.stdout
-    elif nodaemon and not logfile:
+    elif nodaemon and not logfilename:
         logFile = sys.stdout
     elif syslog:
         syslog.startLogging(prefix)
