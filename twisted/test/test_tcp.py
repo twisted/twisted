@@ -52,7 +52,11 @@ class LoopbackTestCase(unittest.TestCase):
         port = reactor.listenTCP(10080, f)
         f.port = port
         client = ClosingProtocol()
-        reactor.clientTCP("localhost", 10080, client)
+        try:
+            reactor.clientTCP("localhost", 10080, client)
+        except:
+            port.stopListening()
+            raise
         
         while not client.closed:
             reactor.iterate()
@@ -71,3 +75,52 @@ class LoopbackTestCase(unittest.TestCase):
             if client.closed:
                 raise ValueError, "connectionLost called instead of connectionFailed"
         self.assert_(not client.made)
+
+
+class StartStopFactory(protocol.Factory):
+
+    started = 0
+    stopped = 0
+    
+    def startFactory(self):
+        if self.started or self.stopped:
+            raise RuntimeError
+        self.started = 1
+
+    def stopFactory(self):
+        if not self.started or self.stopped:
+            raise RuntimeError
+        self.stopped = 1
+
+
+class FactoryTestCase(unittest.TestCase):
+    """Tests for factories."""
+
+    def testStartStop(self):
+        f = StartStopFactory()
+
+        # listen on port
+        p1 = reactor.listenTCP(9995, f, interface='127.0.0.1')
+        reactor.iterate()
+        reactor.iterate()
+        self.assertEquals((f.started, f.stopped), (1, 0))
+        
+        # listen on two more ports
+        p2 = reactor.listenTCP(9996, f, interface='127.0.0.1')
+        p3 = reactor.listenTCP(9997, f, interface='127.0.0.1')
+        reactor.iterate()
+        reactor.iterate()
+        self.assertEquals((f.started, f.stopped), (1, 0))
+
+        # close two ports
+        p1.stopListening()
+        p2.stopListening()
+        reactor.iterate()
+        reactor.iterate()
+        self.assertEquals((f.started, f.stopped), (1, 0))
+
+        # close last port
+        p3.stopListening()
+        reactor.iterate()
+        reactor.iterate()
+        self.assertEquals((f.started, f.stopped), (1, 1))

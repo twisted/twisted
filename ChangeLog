@@ -1,3 +1,10 @@
+2002-06-02  Itamar Shtull-Trauring  <twisted@itamarst.org>
+
+	* twisted.internet: changed protocol factory interface - it now has
+	doStop and doStart which are called in reactors, not app.Application.
+	This turns start/stopFactory into an implementation-specific feature,
+	and also ensures they are only called once.
+
 2002-06-01  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* .: Releasing Twisted 0.18.0

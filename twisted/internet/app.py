@@ -242,7 +242,6 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
         self.tcpPorts.append((port, factory, backlog, interface))
         if self.running:
             from twisted.internet import reactor
-            factory.startFactory()
             reactor.listenTCP(port, factory, backlog, interface)
 
     def dontListenTCP(self, portno):
@@ -255,7 +254,6 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
         from twisted.internet import reactor
         self.udpPorts.append((port, factory, interface, maxPacketSize))
         if self.running:
-            factory.startFactory()
             reactor.listenUDP(port, factory, interface, maxPacketSize)
 
     def dontListenUDP(self, portno):
@@ -332,15 +330,6 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
                 os.setuid(self.uid)
                 log.msg('set uid/gid %s/%s' % (self.uid, self.gid))
 
-    def shutDownSave(self):
-        """Persist a pickle, then stop all protocol factories.
-
-        The pickle will be named \"%(self.name)s-shutdown.tap\".  First, all
-        currently active factories will have thier stopFactory method called.
-        """
-        self.save("shutdown")
-        for port, factory, i, b in self.tcpPorts:
-            factory.stopFactory()
 
     asXML = 0
 
@@ -397,7 +386,7 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
 
     def _afterShutDown(self):
         if self._save:
-            self.shutDownSave()
+            self.save("shutdown")
 
 
     def run(self, save=1, installSignalHandlers=1):
@@ -419,14 +408,12 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
             main.callAfterShutdown(self._afterShutDown)
             for port, factory, backlog, interface in self.tcpPorts:
                 try:
-                    factory.startFactory()
                     reactor.listenTCP(port, factory, backlog, interface)
                 except socket.error, msg:
                     log.msg('error on TCP port %s: %s' % (port, msg))
                     return
             for port, factory, interface, maxPacketSize in self.udpPorts:
                 try:
-                    factory.startFactory()
                     reactor.listenUDP(port, factory, interface, maxPacketSize)
                 except socket.error, msg:
                     log.msg('error on UDP port %s: %s' % (port, msg))

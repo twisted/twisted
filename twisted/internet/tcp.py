@@ -418,6 +418,7 @@ class Port(abstract.FileDescriptor):
         server to begin listening on the specified port.
         """
         log.msg("%s starting on %s"%(self.factory.__class__, self.port))
+        self.factory.doStart()
         if type(self.port) == types.StringType:
             skt = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -502,7 +503,7 @@ class Port(abstract.FileDescriptor):
             os.unlink(self.port)
         del self.socket
         del self.fileno
-        self.factory.stopFactory()
+        self.factory.doStop()
 
     def logPrefix(self):
         """Returns the name of my class, to prefix log entries with.

@@ -26,9 +26,28 @@ from twisted.python import log, components
 
 class IFactory(components.Interface):
     """Interface for protocol factories.
-
-    Must implement startFactory, stopFactory and buildProtocol.
     """
+
+    def buildProtocol(self, addr):
+        """Return an object implementing IProtocol, or None.
+
+        This method will be called when a connection has been established
+        to addr.
+        
+        If None is returned, the connection is assumed to have been refused,
+        and the Port will close the connection.
+        
+        TODO:
+         * Document 'addr' argument -- what format is it in?
+         * Is the phrase \"incoming server connection\" correct when Factory
+           is a ClientFactory?
+        """
+
+    def doStart(self):
+        """Called every time this is connected to a Port or Connector."""
+
+    def doStop(self):
+        """Called every time this is unconnected from a Port or Connector."""
 
 
 class Factory:
@@ -40,26 +59,45 @@ class Factory:
 
     __implements__ = IFactory
 
+    # put a subclass of Protocol here:
     protocol = None
 
-    def startFactory(self):
-        """This will be called before I begin listening on a Port.
+    numPorts = 0
 
+    def doStart(self):
+        """Make sure startFactory is called."""
+        if not self.numPorts:
+            log.msg("Starting factory %s" % self)
+            self.startFactory()
+        self.numPorts = self.numPorts + 1
+
+    def doStop(self):
+        """Make sure stopFactory is called."""
+        assert self.numPorts > 0
+        self.numPorts = self.numPorts - 1
+        if not self.numPorts:
+            log.msg("Stopping factory %s" % self)
+            self.stopFactory()
+    
+    def startFactory(self):
+        """This will be called before I begin listening on a Port or Connector.
+
+        It will only be called once, even if the factory is connected
+        to multiple ports.
+        
         This can be used to perform 'unserialization' tasks that
         are best put off until things are actually running, such
         as connecting to a database, opening files, etcetera.
-
-        It will be called both after an application has been unserialized and
-        before all the ports begin accepting connections.
         """
 
     def stopFactory(self):
-        """This will be called before I stop listening on a Port.
+        """This will be called before I stop listening on all Ports/Connectors.
 
         This can be used to perform 'shutdown' tasks such as disconnecting
         database connections, closing files, etc.
 
-        It will be called before an application shuts down.
+        It will be called, for example, before an application shuts down,
+        if it was connected to a port.
         """
 
     def buildProtocol(self, addr):
@@ -67,15 +105,9 @@ class Factory:
 
         The returned instance will handle input on an incoming server
         connection, and an attribute \"factory\" pointing to the creating
-        factory. If None is returned, the connection is assumed to have
-        been refused, and the Port will close the connection.
+        factory.
 
         Override this method to alter how Protocol instances get created.
-
-        TODO:
-         * Document 'addr' argument -- what format is it in?
-         * Is the phrase \"incoming server connection\" correct when Factory
-           is a ClientFactory?
         """
         p = self.protocol()
         p.factory = self

@@ -174,6 +174,7 @@ class Port(abstract.FileDescriptor):
         server to begin listening on the specified port.
         """
         log.msg("%s starting on %s"%(self.factory.__class__, self.port))
+        self.factory.doStart()
         skt = self.createInternetSocket()
         skt.bind( (self.interface ,self.port) )
         self.connected = 1
@@ -223,6 +224,7 @@ class Port(abstract.FileDescriptor):
         """
         log.msg('(Port %s Closed)' % self.port)
         abstract.FileDescriptor.connectionLost(self)
+        self.factory.doStop()
         self.connected = 0
         self.socket.close()
         del self.socket
