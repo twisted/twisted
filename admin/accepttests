@@ -33,6 +33,12 @@ def twistdg(g):
     cmd("twistd -g %s" %g)
     time.sleep(0.5)
 
+def twistdy(y):
+    cmd("twistd -y %s" % (y,))
+    time.sleep(0.5)
+    scmd("telnet localhost 8899")
+    killit()
+
 def killit():
     scmd("kill `cat twistd.pid`")
     # Give it a sec to come down.
@@ -51,6 +57,11 @@ def GUITest():
     message("Running wxPython app.")
     scmd("python %s/wxdemo.py" % examplesDir)
     
+def basicToolTest():
+    message("You will now be connected to an echo server")
+    twistdy("echo.py")
+
+
 def basicWebTest():
     message("Running Basic Web Test")
     cmd("mktap web")
@@ -224,6 +235,7 @@ All your dependents are belong to us
 def runAllTests():
     message("Starting test.")
     GUITest()
+    basicToolTest()
     basicWebTest()
     staticWebTest()
     sslWebTest()
