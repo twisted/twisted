@@ -477,7 +477,6 @@ class SSHClientTransport(SSHTransportBase):
             self.sendPacket(MSG_KEX_DH_GEX_INIT, MP(self.DHpubKey))
 
     def _continueGEX_GROUP(self, ignored, pubKey, f, signature):
-        log.msg('continuing gex group')
         serverKey = keys.getPublicKeyObject(data = pubKey)
         sharedSecret = _MPpow(f, self.x, DH_PRIME)
         h = sha.new()
@@ -505,7 +504,6 @@ class SSHClientTransport(SSHTransportBase):
         d.addErrback(lambda x, self=self: self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED, 'bad host key'))
 
     def _continueGEX_REPLY(self, ignored, pubKey, f, signature):
-        log.msg('continuing gex reply %s'%ignored)
         serverKey = keys.getPublicKeyObject(data = pubKey)
         sharedSecret = _MPpow(f, self.x, self.p)
         h = sha.new()
