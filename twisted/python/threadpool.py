@@ -26,7 +26,6 @@ import Queue
 import threading
 import threadable
 import traceback
-import sys
 import copy
 
 # Twisted Imports
@@ -37,6 +36,9 @@ class error(Exception):
 
 WorkerStop = None
 
+# initialize threading
+threadable.init(1)
+
 
 class ThreadPool:
     """
@@ -44,20 +46,38 @@ class ThreadPool:
     threads to which work can be dispatched.
     """
     __inited = 0
+    min = 5
+    qlen = 0
     synchronized = ['_startSomeWorkers', 'stop']
     
     def __init__(self, minthreads=5, maxthreads=20, qlen=0):
         assert minthreads <= maxthreads, 'minimum is greater than maximum'
         self.q = Queue.Queue(qlen)
+        self.qlen = qlen
+        self.min = minthreads
         self.max = maxthreads
         self.waiters = []
         self.threads = []
         self.working = {}
-        self.workers = minthreads
+        self._initWorkers()
+    
+    def _initWorkers(self):
+        self.workers = self.min
         self.joined = 0
-        for i in range(minthreads):
+        for i in range(self.min):
             threading.Thread(target=self._worker).start()
 
+    def __setstate__(self, dict):
+        self.__dict__ = dict
+        self.__init__(minthreads=self.min, maxthreads=self.max, qlen=self.qlen)
+    
+    def __getstate__(self):
+        state = {}
+        state['min'] = self.min
+        state['max'] = self.max
+        state['qlen'] = self.qlen
+        return state
+    
     def _startSomeWorkers(self):
         if not self.waiters:
             if self.workers < self.max:
@@ -115,8 +135,7 @@ class ThreadPool:
     
     def stop(self):
         """Shutdown the threads in the threadpool."""
-        self.dumpStats()
-        self.joined=1
+        self.joined = 1
         threads = copy.copy(self.threads)
         for thread in range(self.workers):
             self.q.put(WorkerStop)
