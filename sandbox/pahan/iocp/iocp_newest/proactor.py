@@ -72,7 +72,7 @@ class Proactor(iocpcore, base.ReactorBase):
         p.startListening()
         return p
 
-    def connectUDP(self, remotehost, remoteport, protocol, localport=0,
+    def connectUDPblah(self, remotehost, remoteport, protocol, localport=0,
                   interface='', maxPacketSize=8192):
         p = udp.ConnectedPort((remotehost, remoteport), (interface, localport), protocol, maxPacketSize)
         p.startListening()
