@@ -345,8 +345,6 @@ class Request(object):
         d = stream.StreamProducer(response.stream).beginProducing(self.chanRequest)
         d.addCallback(self._finished).addErrback(self._error)
 
-components.backwardsCompatImplements(Request)
-
 class AbortedException(Exception):
     pass
 
@@ -389,9 +387,9 @@ class HTTPChannelRequest:
 
         # Parse the initial request line
         if len(parts) != 3:
-            if len(parts) < 3:
-                if len(parts) < 2:
-                    parts.append('/')
+            if len(parts) == 1:
+                parts.append('/')
+            if len(parts) == 2:
                 parts.append('HTTP/0.9')
             else:
                 self._abortWithError(responsecode.BAD_REQUEST, 'Bad request line: %s' % initialLine)
@@ -467,6 +465,8 @@ class HTTPChannelRequest:
                 # await raw data as content
                 self.channel.setRawMode()
                 # Should I do self.pauseProducing() here?
+            self.request.process()
+
         elif line[0] in ' \t':
             # Append a header continuation
             self.partialHeader = self.partialHeader+line
@@ -532,7 +532,6 @@ class HTTPChannelRequest:
         
         self.connHeaders = connHeaders
         self.request = request
-        self.request.process()
         
     def allContentReceived(self):
         self.finishedReading = True
@@ -725,11 +724,12 @@ class HTTPChannelRequest:
     def _abortWithError(self, errorcode, text=''):
         """Handle low level protocol errors."""
         headers = http_headers.Headers()
-        headers.setHeader('Content-Length', len(text))
+        headers.setHeader('Content-Length', len(text)+1)
         
         self.abortConnection(closeWrite=False)
         self.writeHeaders(errorcode, headers)
         self.write(text)
+        self.write("\n")
         self.finish()
         raise AbortedException
     
@@ -787,7 +787,7 @@ class HTTPChannelRequest:
 
     def unregisterProducer(self):
         """Unregister the producer."""
-        if not self.queued:        
+        if not self.queued:
             self.transport.unregisterProducer()
         self.producer = None
 
@@ -809,7 +809,7 @@ class HTTPChannelRequest:
         if not self.finishedReading:
             self.channel.stopProducing()
     
-class HTTPChannel(object, basic.LineReceiver, policies.TimeoutMixin):
+class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin, object):
     """A receiver for HTTP requests. Handles splitting up the connection
     for the multiple HTTPChannelRequests that may be in progress on this
     channel.
@@ -827,16 +827,25 @@ class HTTPChannel(object, basic.LineReceiver, policies.TimeoutMixin):
     
     implements(interfaces.IHalfCloseableProtocol)
     
-    # these two are generally overridden by the defaults set in HTTPFactory
-    timeOut = 60 * 4
-    maxPipeline = 4
+    ## Configuration parameters. Set in instances or subclasses.
     
-    # set in instances or subclasses
-    maxHeaderLength = 10240 # maximum length of headers (10KiB)
+    # How many simultaneous requests to handle.
+    maxPipeline = 4
+
+    # Timeout when between two requests
+    betweenRequestsTimeOut = 15
+    # Timeout between lines or bytes while reading a request
+    inputTimeOut = 60 * 4
+
+    # maximum length of headers (10KiB)
+    maxHeaderLength = 10240
+
+    # ChannelRequest
     chanRequestFactory = HTTPChannelRequest
+    requestFactory = Request
+    
     
     _first_line = 2
-    _savedTimeOut = None
     persistent = True
     
     _readLost = False
@@ -847,12 +856,12 @@ class HTTPChannel(object, basic.LineReceiver, policies.TimeoutMixin):
     def __init__(self):
         # the request queue
         self.requests = []
-        
-    def connectionMade(self):
-        self.setTimeout(self.timeOut)
 
+    def connectionMade(self):
+        self.setTimeout(self.inputTimeOut)
+    
     def lineReceived(self, line):
-        self.resetTimeout()
+        self.setTimeout(self.inputTimeOut)
         if self._first_line:
             # if this connection is not persistent, drop any data which
             # the client (illegally) sent after the last request.
@@ -888,7 +897,7 @@ class HTTPChannel(object, basic.LineReceiver, policies.TimeoutMixin):
             pass
             
     def rawDataReceived(self, data):
-        self.resetTimeout()
+        self.setTimeout(self.inputTimeOut)
         try:
             self.chanRequest.rawDataReceived(data)
         except AbortedException:
@@ -911,8 +920,8 @@ class HTTPChannel(object, basic.LineReceiver, policies.TimeoutMixin):
         
         # Disable the idle timeout, in case this request takes a long
         # time to finish generating output.
-        if self.timeOut:
-            self._savedTimeOut = self.setTimeout(None)
+        if len(self.requests) > 0:
+            self.setTimeout(None)
         
     def _startNextRequest(self):
         # notify next request, if present, it can start writing
@@ -929,9 +938,8 @@ class HTTPChannel(object, basic.LineReceiver, policies.TimeoutMixin):
             # No more incoming data, they already closed!
             self.transport.loseConnection()
         else:
-            if self._savedTimeOut:
-                self.setTimeout(self._savedTimeOut)
             # no requests in queue, resume reading
+            self.setTimeout(self.betweenRequestsTimeOut)
             self.resumeProducing()
 
     def requestWriteFinished(self, request, persistent):
@@ -986,8 +994,12 @@ class HTTPChannel(object, basic.LineReceiver, policies.TimeoutMixin):
     def writeConnectionLost(self):
         # Okay, all data has been written
         # In 20 seconds, actually close the socket
-        self._lingerTimer = reactor.callLater(20, self.transport.loseConnection)
+        self._lingerTimer = reactor.callLater(20, self._lingerClose)
 
+    def _lingerClose(self):
+        self._lingerTimer = None
+        self.transport.loseConnection()
+        
     def readConnectionLost(self):
         """Read connection lost"""
         # If in the lingering-close state, lose the socket.
@@ -1000,7 +1012,10 @@ class HTTPChannel(object, basic.LineReceiver, policies.TimeoutMixin):
         # If between requests, drop connection
         # when all current requests have written their data.
         self._readLost = True
-        
+        if not self.requests:
+            # No requests in progress, lose now.
+            self.transport.loseConnection()
+            
         # If currently in the process of reading a request, this is
         # probably a client abort, so lose the connection.
         if self.chanRequest:
@@ -1019,25 +1034,17 @@ class HTTPFactory(protocol.ServerFactory):
     """Factory for HTTP server."""
 
     protocol = HTTPChannel
-    requestFactory = Request
     
-    timeOut = 60 * 4
-
-    # Maximum number of requests the client can queue up
-    # before we stop reading.
-    maxPipeline = 4
+    protocolArgs = None
     
-    def __init__(self, timeout=60*4):
-        self.timeOut = timeout
+    def __init__(self, **kwargs):
+        self.protocolArgs = kwargs
 
     def buildProtocol(self, addr):
         p = protocol.ServerFactory.buildProtocol(self, addr)
 
-        p.requestFactory = self.requestFactory
-        # timeOut needs to be on the Protocol instance cause
-        # TimeoutMixin expects it there
-        p.timeOut = self.timeOut
-        p.maxPipeline = self.maxPipeline
+        for arg,value in self.protocolArgs.iteritems():
+            setattr(p, arg, value)
         return p
     
 

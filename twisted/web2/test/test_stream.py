@@ -233,3 +233,8 @@ class FallbackSplitTest(unittest.TestCase):
         assertEquals(left.read(), None)
         
         assertEquals(s.closeCalled, 1)
+
+# TODO: 
+# CompoundStreamTest
+# ProducerStreamTest
+# StreamProducerTest

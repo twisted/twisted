@@ -512,11 +512,13 @@ class ProducerStream:
             self.buffer.append(data)
             if(self.producer is not None and self.streamingProducer
                and len(self.buffer) > self.bufferSize):
-                producer.pauseProducing()
+                self.producer.pauseProducing()
                 self.producerPaused = True
 
     def finish(self):
         self.closed = True
+        if not self.buffer:
+            self.length = 0
         if self.deferred is not None:
             deferred = self.deferred
             self.deferred = None
@@ -586,7 +588,7 @@ class StreamProducer:
         self.deferred = None
         if self.enforceStr:
             # XXX: sucks that we have to do this. make transport.write(buffer) work!
-            data = str(data)
+            data = str(buffer(data))
         self.consumer.write(data)
         
         if not self.paused:
@@ -596,14 +598,14 @@ class StreamProducer:
         self.paused = True
 
     def stopProducing(self):
+        if self.consumer is not None:
+            self.consumer.unregisterProducer()
         if self.finishedCallback is not None:
             from twisted.internet import main
-            self.finishedCallback.callback(main.CONNECTION_LOST)
+            self.finishedCallback.errback(main.CONNECTION_LOST)
         self.paused = True
         if self.stream is not None:
             self.stream.close()
-        if self.consumer is not None:
-            self.consumer.unregisterProducer()
             
         self.finishedCallback = self.deferred = self.consumer = self.stream = None
 

@@ -4,10 +4,10 @@
 """
 
 from twisted.python import components
-from zope.interface import Attribute
+from zope.interface import Attribute, Interface
 
 # server.py interfaces
-class IResource(components.Interface):
+class IResource(Interface):
     """
         I am a web resource.
     """
@@ -73,13 +73,13 @@ class ICurrentSegments(components.Interface):
 
 
 # http.py interfaces
-class IResponse(components.Interface):
+class IResponse(Interface):
     """I'm a response."""
     code = Attribute("The HTTP response code")
     headers = Attribute("A http_headers.Headers instance of headers to send")
     stream = Attribute("A stream.IByteStream of outgoing data, or else None.")
 
-class IRequest(components.Interface):
+class IRequest(Interface):
     """I'm a request for a web resource
     """
 
@@ -96,9 +96,168 @@ class IRequest(components.Interface):
     chanRequest = Attribute("The ChannelRequest. I wonder if this is public really?")
 
 class IOldRequest(components.Interface):
-    """I'm an old request, completely unspecified. :("""
+    # Shared interface with inevow.ICurrentSegments
+    """An old HTTP request.
 
-class IChanRequestCallbacks(components.Interface):
+    Subclasses should override the process() method to determine how
+    the request will be processed.
+    
+    @ivar method: The HTTP method that was used.
+    @ivar uri: The full URI that was requested (includes arguments).
+    @ivar path: The path only (arguments not included).
+    @ivar args: All of the arguments, including URL and POST arguments.
+    @type args: A mapping of strings (the argument names) to lists of values.
+                i.e., ?foo=bar&foo=baz&quux=spam results in
+                {'foo': ['bar', 'baz'], 'quux': ['spam']}.
+    @ivar received_headers: All received headers
+    """
+    # Methods for received request
+    def getHeader(self, key):
+        """Get a header that was sent from the network.
+        """
+        
+    def getCookie(self, key):
+        """Get a cookie that was sent from the network.
+        """    
+
+
+    def getAllHeaders(self):
+        """Return dictionary of all headers the request received."""
+
+    def getRequestHostname(self):
+        """Get the hostname that the user passed in to the request.
+
+        This will either use the Host: header (if it is available) or the
+        host we are listening on if the header is unavailable.
+        """
+
+    def getHost(self):
+        """Get my originally requesting transport's host.
+
+        Don't rely on the 'transport' attribute, since Request objects may be
+        copied remotely.  For information on this method's return value, see
+        twisted.internet.tcp.Port.
+        """
+        
+    def getClientIP(self):
+        pass
+    def getClient(self):
+        pass
+    def getUser(self):
+        pass
+    def getPassword(self):
+        pass
+    def isSecure(self):
+        pass
+
+    def getSession(self, sessionInterface = None):
+        pass
+    
+    def URLPath(self):
+        pass
+
+    def prePathURL(self):
+        pass
+
+    def rememberRootURL(self):
+        """
+        Remember the currently-processed part of the URL for later
+        recalling.
+        """
+        
+    def getRootURL(self):
+        """
+        Get a previously-remembered URL.
+        """
+        
+    # Methods for outgoing request
+    def finish(self):
+        """We are finished writing data."""
+
+    def write(self, data):
+        """
+        Write some data as a result of an HTTP request.  The first
+        time this is called, it writes out response data.
+        """
+
+    def addCookie(self, k, v, expires=None, domain=None, path=None, max_age=None, comment=None, secure=None):
+        """Set an outgoing HTTP cookie.
+
+        In general, you should consider using sessions instead of cookies, see
+        twisted.web.server.Request.getSession and the
+        twisted.web.server.Session class for details.
+        """
+
+    def setResponseCode(self, code, message=None):
+        """Set the HTTP response code.
+        """
+
+    def setHeader(self, k, v):
+        """Set an outgoing HTTP header.
+        """
+
+    def redirect(self, url):
+        """Utility function that does a redirect.
+
+        The request should have finish() called after this.
+        """
+
+    def setLastModified(self, when):
+        """Set the X{Last-Modified} time for the response to this request.
+
+        If I am called more than once, I ignore attempts to set
+        Last-Modified earlier, only replacing the Last-Modified time
+        if it is to a later value.
+
+        If I am a conditional request, I may modify my response code
+        to L{NOT_MODIFIED} if appropriate for the time given.
+
+        @param when: The last time the resource being returned was
+            modified, in seconds since the epoch.
+        @type when: number
+        @return: If I am a X{If-Modified-Since} conditional request and
+            the time given is not newer than the condition, I return
+            L{http.CACHED<CACHED>} to indicate that you should write no
+            body.  Otherwise, I return a false value.
+        """
+
+    def setETag(self, etag):
+        """Set an X{entity tag} for the outgoing response.
+
+        That's \"entity tag\" as in the HTTP/1.1 X{ETag} header, \"used
+        for comparing two or more entities from the same requested
+        resource.\"
+
+        If I am a conditional request, I may modify my response code
+        to L{NOT_MODIFIED} or L{PRECONDITION_FAILED}, if appropriate
+        for the tag given.
+
+        @param etag: The entity tag for the resource being returned.
+        @type etag: string
+        @return: If I am a X{If-None-Match} conditional request and
+            the tag matches one in the request, I return
+            L{http.CACHED<CACHED>} to indicate that you should write
+            no body.  Otherwise, I return a false value.
+        """
+
+    def setHost(self, host, port, ssl=0):
+        """Change the host and port the request thinks it's using.
+
+        This method is useful for working with reverse HTTP proxies (e.g.
+        both Squid and Apache's mod_proxy can do this), when the address
+        the HTTP client is using is different than the one we're listening on.
+
+        For example, Apache may be listening on https://www.example.com, and then
+        forwarding requests to http://localhost:8080, but we don't want HTML produced
+        by Twisted to say 'http://localhost:8080', they should say 'https://www.example.com',
+        so we do::
+
+           request.setHost('www.example.com', 443, ssl=1)
+
+        This method is experimental.
+        """
+
+class IChanRequestCallbacks(Interface):
     """The bits that are required of a Request for interfacing with a
     IChanRequest object"""
 
@@ -119,7 +278,7 @@ class IChanRequestCallbacks(components.Interface):
         """Called if the connection was lost."""
         
     
-class IChanRequest(components.Interface):
+class IChanRequest(Interface):
     def writeIntermediateResponse(code, headers=None):
         """Write a non-terminating response.
         

@@ -162,15 +162,14 @@ class WebContext(object):
             remembrances=remembrances,
         )
 
-    def getComponent(self, interface, registry=None, default=None):
+    def __conform__(self, interface):
         """Support IFoo(ctx) syntax.
         """
         try:
             return self.locate(interface)
         except KeyError:
-            return default
-
-
+            return None
+        
 class FactoryContext(WebContext): 
     """A context which allows adapters to be registered against it so that an object 
     can be lazily created and returned at render time. When ctx.locate is called
@@ -178,6 +177,8 @@ class FactoryContext(WebContext):
     and the result returned.
     """
     cache = None
+    inLocate = 0
+    
     def locate(self, interface, depth=1):
         if self.cache is None: self.cache = {}
         else:
@@ -185,23 +186,21 @@ class FactoryContext(WebContext):
             if adapter is not None:
                 return adapter
 
-        ## Prevent infinite recursion from interface(self) calling self.getComponent calling self.locate
-        ## Shadow the class getComponent
-        def shadow(interface, registry=None, default=None):
-            if registry:
-                return registry.getAdapter(self, interface, default)
-            return default
-        self.getComponent = shadow
+        ## Prevent infinite recursion from interface(self) calling self.__conform__ calling self.locate
+        self.inLocate += 1
         adapter = interface(self, None)
         ## Remove shadowing
-        if getattr(self, 'getComponent', None) is shadow:
-            del self.getComponent
+        self.inLocate -= 1
 
         if adapter is not None:
             self.cache[interface] = adapter
             return adapter
         return WebContext.locate(self, interface, depth)
 
+    def __conform__(self, interface):
+        if self.inLocate:
+            return None
+        return WebContext.__conform__(self, interface)
 
 class SiteContext(FactoryContext):
     """A SiteContext is created and installed on a NevowSite upon initialization.

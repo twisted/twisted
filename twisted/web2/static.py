@@ -6,48 +6,25 @@
 """
 
 # System Imports
-import os, stat, string
-import cStringIO as StringIO
-import traceback
-import warnings
-import types
-import urllib
-import time
+import os, time
 
 # Sibling Imports
-from twisted.web2 import error, http_headers
-from twisted.web2 import http, iweb, stream, responsecode, server
+from twisted.web2 import http_headers, resource
+from twisted.web2 import http, iweb, stream, responsecode
 
 # Twisted Imports
-from twisted.python import threadable, components, filepath
+from twisted.python import components, filepath
 from twisted.python.util import InsensitiveDict
 from twisted.python.runtime import platformType
 from zope.interface import implements
 
 dangerousPathError = http.HTTPError(responsecode.NOT_FOUND) #"Invalid request URL."
 
-def redirectTo(URL, request):
-    # FIXME:
-    request.code = FOUND
-    request.setHeader("location", url)
-    return """
-<html>
-    <head>
-        <meta http-equiv=\"refresh\" content=\"0;URL=%(url)s\">
-    </head>
-    <body bgcolor=\"#FFFFFF\" text=\"#000000\">
-    <a href=\"%(url)s\">click here</a>
-    </body>
-</html>
-""" % {'url': URL}
-
-
 def isDangerous(path):
     return path == '..' or '/' in path or os.sep in path
 
 
-class Data:
-    implements(iweb.IResource)
+class Data(resource.Resource):
     
     """
     This is a static, in-memory resource.
@@ -56,36 +33,18 @@ class Data:
     def __init__(self, data, type):
         self.data = data
         self.type = type
-
-    def renderHTTP(self, ctx):
+    
+    def render(self, ctx):
         response = http.Response()
         response.headers.setRawHeaders("content-type", (self.type, ))
         response.stream = stream.MemoryStream(self.data)
         return response
 
-components.backwardsCompatImplements(Data)
-
 def addSlash(request):
     return "http%s://%s%s/" % (
         request.isSecure() and 's' or '',
         request.getHeader("host"),
-        (string.split(request.uri,'?')[0]))
-
-class Registry(components.Componentized):
-    """
-    I am a Componentized object that will be made available to internal Twisted
-    file-based dynamic web content such as .rpy and .epy scripts.
-    """
-
-    def __init__(self):
-        components.Componentized.__init__(self)
-        self._pathCache = {}
-
-    def cachePath(self, path, rsrc):
-        self._pathCache[path] = rsrc
-
-    def getCachedPath(self, path):
-        return self._pathCache.get(path)
+        (request.uri.split('?')[0]))
 
 def loadMimeTypes(mimetype_locations=['/etc/mime.types']):
     """
@@ -135,9 +94,8 @@ def getTypeAndEncoding(filename, types, encodings, defaultType):
     type = types.get(ext, defaultType)
     return type, enc
 
-from twisted.web2 import resource
 
-class File:
+class File(resource.Resource):
     """
     File is a resource that represents a plain non-interpreted file
     (although it can look for an extension like .rpy or .cgi and hand the
@@ -155,7 +113,6 @@ class File:
     return the contents of /tmp/foo/bar.html .
     """
 
-    implements(iweb.IResource)
     
     contentTypes = loadMimeTypes()
 
@@ -170,14 +127,13 @@ class File:
 
     type = None
 
-    def __init__(self, path, defaultType="text/plain", ignoredExts=(), registry=None, processors=None, indexNames=None):
+    def __init__(self, path, defaultType="text/plain", ignoredExts=(), processors=None, indexNames=None):
         """Create a file with the given path.
         """
         self.fp = filepath.FilePath(path)
         # Remove the dots from the path to split
         self.defaultType = defaultType
         self.ignoredExts = list(ignoredExts)
-        self.registry = registry or Registry()
         self.children = {}
         if processors is not None:
             self.processors = processors
@@ -237,12 +193,12 @@ class File:
                 processor = self.processors.get(fpath.splitext()[1])
             if processor:
                 return (
-                    processor(fpath.path, self.registry),
+                    processor(fpath.path),
                     segments[1:])
 
         return self.createSimilarFile(fpath.path), segments[1:]
 
-    def renderHTTP(self, ctx):
+    def render(self, ctx):
         """You know what you doing."""
         self.fp.restat()
         request = iweb.IRequest(ctx)
@@ -296,7 +252,7 @@ class File:
         return response
 
     def redirectWithSlash(self, request):
-        return redirectTo(addSlash(request), request)
+        return error.redirect(addSlash(request))
 
     def listNames(self):
         if not self.fp.isdir():
@@ -306,7 +262,7 @@ class File:
         return directory
 
     def createSimilarFile(self, path):
-        return self.__class__(path, self.defaultType, self.ignoredExts, self.registry,
+        return self.__class__(path, self.defaultType, self.ignoredExts,
                               self.processors, self.indexNames[:])
 
 """I contain AsIsProcessor, which serves files 'As Is'
@@ -316,19 +272,15 @@ class File:
 class ASISProcessor:
     implements(iweb.IResource)
     
-    def __init__(self, path, registry=None):
+    def __init__(self, path):
         self.path = path
-        self.registry = registry or Registry()
 
     def renderHTTP(self, request):
         request.startedWriting = 1
-        return File(self.path, registry=self.registry)
+        return File(self.path)
 
     def locateChild(self, request):
         return FourOhFour(), ()
-
-components.backwardsCompatImplements(ASISProcessor)
-
 
 # Test code
 if __name__ == '__builtin__':

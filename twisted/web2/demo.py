@@ -36,5 +36,5 @@ if __name__ == '__builtin__':
     from twisted.web2 import server
     res = Test()
     application = service.Application("demo")
-    s = strports.service('8080', server.Site(res))
+    s = strports.service('tcp:8080:backlog=50', server.Site(res))
     s.setServiceParent(application)

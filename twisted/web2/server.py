@@ -24,7 +24,7 @@ except ImportError:
 from zope.interface import implements
 # Twisted Imports
 from twisted.internet import reactor, defer
-from twisted.python import log, components, failure
+from twisted.python import log, failure
 from twisted import copyright
 
 # Sibling Imports
@@ -33,13 +33,14 @@ from twisted.web2.responsecode import *
 from twisted.web2 import http_headers, context, error, stream
 
 from twisted.web2 import version as web2_version
+from twisted import __version__ as twisted_version
 
-
+VERSION = "Twisted/%s TwistedWeb/%s" % (twisted_version, web2_version)
 _errorMarker = object()
 
 def defaultHeadersFilter(request, response):
     if not response.headers.hasHeader('server'):
-        response.headers.setHeader('server', web2_version)
+        response.headers.setHeader('server', VERSION)
     if not response.headers.hasHeader('date'):
         response.headers.setHeader('date', time.time())
     return response
@@ -129,6 +130,23 @@ defaultErrorHandler.handleErrors = True
 
 import rangefilter
 
+def doTrace(request):
+    request = iweb.IRequest(request)
+    response = http.Response(OK)
+    response.headers.setHeader('content-type', http_headers.MimeType('message', 'http'))
+    txt = "%s %s HTTP/%d.%d\r\n" % (request.method, request.uri,
+                                    request.clientproto[0], request.clientproto[1])
+
+    l=[]
+    for name, valuelist in request.headers.getAllRawHeaders():
+        for value in valuelist:
+            l.append("%s: %s\r\n" % (name, value))
+    txt += ''.join(l)
+
+    import stream
+    response.stream = stream.MemoryStream(txt)
+    return response
+                    
 class Request(http.Request):
     implements(iweb.IRequest)
     
@@ -192,18 +210,31 @@ class Request(http.Request):
         
         try:
             self.checkExpect()
+            resp = self.preprocessRequest()
+            if resp is not None:
+                self._cbFinishRender(resp, requestContext).addErrback(self._processingFailed, requestContext)
+                return
             self.parseURL()
             self.host = self.getHost()
         except:
             self._processingFailed(failure.Failure(), requestContext)
             return
+
         
         deferredContext = self._getChild(requestContext,
                                               self.site.getRootResource(),
                                               self.postpath)
         deferredContext.addErrback(self._processingFailed, requestContext)
         deferredContext.addCallback(self._renderAndFinish)
-        
+
+    def preprocessRequest(self):
+        if self.method == "OPTIONS" and self.uri == "*":
+            response = http.Response(OK)
+            response.headers.setHeader('Allow', ('GET', 'HEAD', 'OPTIONS', 'TRACE'))
+            return response
+        # This is where CONNECT would go if we wanted it
+        return None
+    
     def _getChild(self, ctx, res, path):
         """Create a PageContext for res, call res.locateChild, and pass the
         result on to _handleSegment."""
@@ -243,9 +274,9 @@ class Request(http.Request):
                 lambda actualRes: self._handleSegment(
                     (actualRes, newpath), path, pageContext))
 
-        newres = iweb.IResource(newres, persist=True)
+        newres = iweb.IResource(newres)
         if newres is pageContext.tag:
-            assert not newpath is path, "URL traversal cycle detected when attempting to locateChild %r from resource %r." % (path, res)
+            assert not newpath is path, "URL traversal cycle detected when attempting to locateChild %r from resource %r." % (path, pageContext.tag)
             assert  len(newpath) < len(path), "Infinite loop impending..."
 
         ## We found a Resource... update the request.prepath and postpath
@@ -312,6 +343,7 @@ class Request(http.Request):
             for f in self.responseFilters:
                 d.addCallback(filterit, f)
             d.addCallback(self.writeResponse)
+            return d
         else:
             resource = iweb.IResource(result, None)
             if resource:
@@ -321,7 +353,6 @@ class Request(http.Request):
                 return d
             else:
                 raise TypeError("html is not a resource or a response")
-        return
     
     def notifyFinish(self):
         """Notify when finishing the request
@@ -349,21 +380,27 @@ class Request(http.Request):
 class Site(http.HTTPFactory):
 
     counter = 0
-    requestFactory = Request
     version = "TwistedWeb/%s" % copyright.version
     
-    def __init__(self, resource, timeout=60*60*12):
+    def __init__(self, resource, **kwargs):
         """Initialize.
         """
-        http.HTTPFactory.__init__(self, timeout=timeout)
+        if not 'requestFactory' in kwargs:
+            kwargs['requestFactory'] = Request
+        http.HTTPFactory.__init__(self, **kwargs)
         self.sessions = {}
+        self.context = context.SiteContext()
         self.resource = resource
 
-    def __getstate__(self):
-        d = self.__dict__.copy()
-        d['sessions'] = {}
-        return d
+    def remember(self, obj, inter=None):
+        """Remember the given object for the given interfaces (or all interfaces
+        obj implements) in the site's context.
 
+        The site context is the parent of all other contexts. Anything
+        remembered here will be available throughout the site.
+        """
+        self.context.remember(obj, inter)
+        
     def mkuid(self):
         """Generate an opaque, unique ID for a user's session."""
         import md5, random

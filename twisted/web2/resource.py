@@ -11,7 +11,8 @@
 from twisted.python import components
 from zope.interface import implements
 
-from twisted.web2 import iweb
+from twisted.web2 import iweb, http, http_headers
+from twisted.web2.responsecode import *
 
 class Resource(object):
     """I define a web-accessible resource.
@@ -24,6 +25,7 @@ class Resource(object):
     implements(iweb.IResource)
 
     addSlash = False
+    allowedMethods = ('GET', 'HEAD', 'OPTIONS', 'TRACE')
     
     # Concrete HTTP interface
 
@@ -50,10 +52,9 @@ class Resource(object):
     def child_(self, ctx):
         """I'm how requests for '' (urls ending in /) get handled :)
         """
-        if self.addSlash and iweb.ICurrentSegments(ctx)[-1] != '':
-            request.redirect(request.URLPath().child(''))
-            return ''
-        return self
+        if self.addSlash and len(inevow.IRemainingSegments(ctx)) == 1:
+            return self
+        return None
         
     def putChild(self, path, child):
         """Register a static child. "o.putChild('foo', something)" is the
@@ -66,7 +67,7 @@ class Resource(object):
         setattr(self, 'child_%s' % (path, ), child)
 
     
-    def renderHTTP(self, context):
+    def renderHTTP(self, ctx):
         """Render a given resource. See L{IResource}'s render method.
 
         I delegate to methods of self with the form 'http_METHOD'
@@ -81,7 +82,8 @@ class Resource(object):
         """
         m = getattr(self, 'http_' + iweb.IRequest(ctx).method, None)
         if not m:
-            raise error.MethodNotAllowed(getattr(self, 'allowedMethods', ()))
+            # FIXME: duplication between 'allowedMethods' and method impls...
+            return error.MethodNotAllowed(self.allowedMethods)
         return m(ctx)
 
     def http_HEAD(self, ctx):
@@ -94,9 +96,21 @@ class Resource(object):
     
     def http_GET(self, ctx):
         """Ensures there is no incoming body data, and calls render."""
-        self.rejectData()
-        return self.render(self, ctx)
+        request = iweb.IRequest(ctx)
+        if request.stream.length != 0:
+            print request.stream.length
+            return http.Response(REQUEST_ENTITY_TOO_LARGE)
+        return self.render(ctx)
 
+    def http_OPTIONS(self, ctx):
+        """Sends back OPTIONS response."""
+        response = http.Response(OK)
+        response.headers.setHeader('Allow', self.allowedMethods)
+        return response
+
+    def http_TRACE(self, ctx):
+        return server.doTrace(ctx)
+    
     def render(self, ctx):
         """Your class should implement this method to do default page rendering.
         """
@@ -112,16 +126,10 @@ class PostableResource(Resource):
         
         return self.render(self, ctx)
     
-components.backwardsCompatImplements(Resource)
-
 class LeafResource(Resource):
-    implements(iweb.IResource)
-
     def __init__(self):
         self.postpath = []
 
     def locateChild(self, request, segments):
         self.postpath = list(segments)
         return self, ()
-
-components.backwardsCompatImplements(LeafResource)

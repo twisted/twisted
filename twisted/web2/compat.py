@@ -8,6 +8,7 @@ from cStringIO import StringIO
 from twisted.web2 import http_headers, iweb, http, stream
 from twisted.web import http as old_http
 from twisted.internet import defer
+from twisted.python import components
 
 from zope.interface import implements
 
@@ -43,7 +44,7 @@ class HeaderAdapter(UserDict.DictMixin):
     def has_key(self, name):
         return self._headers.hasHeader(name)
 
-class OldRequestAdapter(object):
+class OldRequestAdapter(components.Componentized):
     """Adapt old requests to new request
     """
 

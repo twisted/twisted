@@ -273,10 +273,13 @@ class LoopbackRelay(loopback.LoopbackRelay):
             self.loseConnection()
 
 class TestRequest(http.Request):
-    def process(self):
+    def __init__(self, *args, **kwargs):
+        http.Request.__init__(self, *args, **kwargs)
         self.cmds = []
         self.cmds.append(('init', self.method, self.uri, self.clientproto, tuple(self.headers.getAllRawHeaders())))
         
+    def process(self):
+        pass
     def handleContentChunk(self, data):
         self.cmds.append(('contentChunk', data))
         
@@ -329,17 +332,17 @@ class TestConnection:
         self.client = None
 
 class HTTPTests(unittest.TestCase):
-    def connect(self, logFile=None, maxPipeline=4, timeOut=60000):
+    def connect(self, logFile=None, maxPipeline=4,
+                inputTimeOut=60000, betweenRequestsTimeOut=600000):
         cxn = TestConnection()
 
         def makeTestRequest(*args):
             cxn.requests.append(TestRequest(*args))
             return cxn.requests[-1]
         
-        factory = http.HTTPFactory()
-        factory.requestFactory = makeTestRequest
-        factory.maxPipeline = maxPipeline
-        factory.timeOut = timeOut
+        factory = http.HTTPFactory(requestFactory=makeTestRequest, maxPipeline=maxPipeline,
+                                   inputTimeOut=inputTimeOut,
+                                   betweenRequestsTimeOut=betweenRequestsTimeOut)
         
         cxn.client = TestClient()
         cxn.server = factory.buildProtocol(address.IPv4Address('TCP', '127.0.0.1', 2345))
@@ -660,11 +663,11 @@ class CoreHTTPTestCase(HTTPTests):
 
     def testTimeout_immediate(self):
         # timeout 0 => timeout on first iterate call
-        cxn = self.connect(timeOut = 0)
+        cxn = self.connect(inputTimeOut = 0)
         self.assertDone(cxn)
 
     def testTimeout_inRequest(self):
-        cxn = self.connect(timeOut = 0.3)
+        cxn = self.connect(inputTimeOut = 0.3)
         cmds = [[]]
         data = ""
 
@@ -673,7 +676,7 @@ class CoreHTTPTestCase(HTTPTests):
         self.assertDone(cxn)
         
     def testTimeout_betweenRequests(self):
-        cxn = self.connect(timeOut = 0.3)
+        cxn = self.connect(betweenRequestsTimeOut = 0.3)
         cmds = [[]]
         data = ""
         
@@ -873,16 +876,9 @@ class SimpleRequest(http.Request):
         response.finish()
         self.writeResponse(response)
         
-    def handleContentChunk(self, data):
-        pass
-        
-    def handleContentComplete(self):
-        pass
-        
 class TCPServerTest(unittest.TestCase):
     def setUp(self):
-        factory=SimpleFactory()
-        factory.requestFactory = SimpleRequest
+        factory=SimpleFactory(requestFactory=SimpleRequest)
 
         factory.testcase = self
         self.factory = factory
@@ -905,7 +901,7 @@ class TCPServerTest(unittest.TestCase):
         if code != 0:
             print "Error output: \n", err
         self.assertEquals(code, 0)
-        self.assertEquals(out, "HTTP/1.1 402 Payment Required\r\nConnection: close\r\n\r\n")
+        self.assertEquals(out, "HTTP/1.1 402 Payment Required\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
 
     def testLingeringClose(self):
         out,err,code = wait(
@@ -913,7 +909,7 @@ class TCPServerTest(unittest.TestCase):
         if code != 0:
             print "Error output: \n", err
         self.assertEquals(code, 0)
-        self.assertEquals(out, "HTTP/1.1 402 Payment Required\r\nConnection: close\r\n\r\n")
+        self.assertEquals(out, "HTTP/1.1 402 Payment Required\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
 
 
 certPath = util.sibpath(__file__, "server.pem")
@@ -922,8 +918,7 @@ sCTX = DefaultOpenSSLContextFactory(certPath, certPath)
 
 class SSLServerTest(unittest.TestCase):
     def setUp(self):
-        factory=SimpleFactory()
-        factory.requestFactory = SimpleRequest
+        factory=SimpleFactory(requestFactory=SimpleRequest)
 
         factory.testcase = self
         self.factory = factory
@@ -946,7 +941,7 @@ class SSLServerTest(unittest.TestCase):
         if code != 0:
             print "Error output: \n", err
         self.assertEquals(code, 0)
-        self.assertEquals(out, "HTTP/1.1 402 Payment Required\r\nConnection: close\r\n\r\n")
+        self.assertEquals(out, "HTTP/1.1 402 Payment Required\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
 
     def testLingeringClose(self):
         out,err,code = wait(
@@ -954,5 +949,5 @@ class SSLServerTest(unittest.TestCase):
         if code != 0:
             print "Error output: \n", err
         self.assertEquals(code, 0)
-        self.assertEquals(out, "HTTP/1.1 402 Payment Required\r\nConnection: close\r\n\r\n")
+        self.assertEquals(out, "HTTP/1.1 402 Payment Required\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
 
