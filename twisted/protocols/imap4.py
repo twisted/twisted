@@ -845,16 +845,17 @@ class IMAP4Client(basic.LineReceiver):
                     # Give them this last line, too
                     cmd.finish(line, self._extraInfo)
                 else:
-                    d.errback(IMAP4Exception(line))
+                    cmd.defer.errback(IMAP4Exception(line))
                 del self.tags[tag]
                 self.waiting = None
                 self._flushQueue()
 
     def _flushQueue(self):
         if self.queued:
-            d, t, command, args, continuation, wantResp = self.queued.pop(0)
-            self.tags[t] = (d, [], continuation, wantResp)
-            self.sendLine(' '.join((t, command, args)))
+            cmd = self.queued.pop(0)
+            t = self.makeTag()
+            self.tags[t] = cmd
+            self.sendLine(' '.join((t, cmd.command, cmd.args)))
             self.waiting = t
     
     def _extraInfo(self, lines):
@@ -862,10 +863,10 @@ class IMAP4Client(basic.LineReceiver):
 
     def sendCommand(self, cmd):
         cmd.defer = defer.Deferred()
-        t = self.makeTag()
         if self.waiting:
             self.queued.append(cmd)
             return cmd.defer
+        t = self.makeTag()
         self.tags[t] = cmd
         self.sendLine(' '.join((t, cmd.command, cmd.args)))
         self.waiting = t
@@ -1012,7 +1013,7 @@ class IMAP4Client(basic.LineReceiver):
         """
         cmd = 'SELECT'
         args = mailbox
-        resp = ('FLAGS', 'EXISTS', 'RECENT', 'UNSEEN', 'PERMANENTFLAGS')
+        resp = ('FLAGS', 'EXISTS', 'RECENT', 'UNSEEN', 'PERMANENTFLAGS', 'UIDVALIDITY')
         d = self.sendCommand(Command(cmd, args, wantResponse=resp))
         d.addCallback(self._cbSelect)
         return d
@@ -2244,7 +2245,6 @@ class Account:
     def __init__(self):
         self.mailboxes = {}
         self.subscriptions = []
-        self.addMailbox('INBOX')
 
     def allocateID(self):
         id = self.top_id

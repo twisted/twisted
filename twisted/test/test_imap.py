@@ -274,6 +274,10 @@ class SimpleMailbox:
             self.messages.remove(i)
         return [i[3] for i in delete]
     
+class Account(imap4.Account):
+    def _emptyMailbox(self, name, id):
+        return SimpleMailbox()
+
 class SimpleServer(imap4.IMAP4Server):
     def authenticateLogin(self, username, password):
         if username == 'testuser' and password == 'password-test':
@@ -295,7 +299,7 @@ class IMAP4ServerTestCase(unittest.TestCase):
         self.client = SimpleClient(d)
         self.connected = d
 
-        theAccount = imap4.Account()
+        theAccount = Account()
         theAccount.mboxType = SimpleMailbox
         SimpleServer.theAccount = theAccount
 
@@ -425,8 +429,8 @@ class IMAP4ServerTestCase(unittest.TestCase):
         })
 
     def testCreate(self):
-        succeed = ('testbox', 'test/box', 'test/', 'test/box/box')
-        fail = ('INBOX', 'testbox', 'test/box')
+        succeed = ('testbox', 'test/box', 'test/', 'test/box/box', 'INBOX')
+        fail = ('testbox', 'test/box')
         
         def cb(): self.result.append(1)
         def eb(failure): self.result.append(0)
@@ -721,7 +725,7 @@ class AuthenticatorTestCase(unittest.TestCase):
         self.client = SimpleClient(d)
         self.connected = d
 
-        theAccount = imap4.Account()
+        theAccount = Account()
         theAccount.mboxType = SimpleMailbox
         SimpleServer.theAccount = theAccount
 
