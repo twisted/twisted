@@ -3,7 +3,8 @@
 # See LICENSE for details.
 # 
 from twisted.web.resource import Resource
-from twisted.web.error import ErrorPage
+from twisted.internet import defer
+from twisted.web.error import Error, ErrorPage
 import md5, time, random
     
 def digestPassword(username, realm, password):
@@ -28,38 +29,9 @@ class DigestAuthenticator:
          ', nonce="%s", opaque="%s"%s') % (self.realm,nonce,opaque,stale))
         self.nonce[nonce] = 0
         request.setResponseCode(401)
-           
-    def authenticate(self, request):
-        method = request.method
-        auth = request.getHeader('Authorization')
-        if not auth:
-            self.requestAuthentication(request)
-            return
-        (authtype, auth) = auth.split(" ", 1)
-        if 'Digest' != authtype:
-            request.setResponseCode(400)
-            return
-        amap = {}
-        for itm in auth.split(", "):
-            (k,v) = [s.strip() for s in itm.split("=",1)]
-            amap[k] = v.replace('"','')
-        try:
-            username = amap['username']
-            uri      = amap['uri']
-            nonce    = amap['nonce']
-            realm    = amap['realm']
-            assert uri == request.uri
-            assert realm == self.realm
-            qop      = amap.get('qop','')
-            cnonce   = amap.get('cnonce','')
-            nc       = amap.get('nc','00000000')
-            if qop:
-                assert 'auth' == qop
-                assert nonce and nc
-        except:
-            request.setResponseCode(400)
-            return
-        ha1 = self.userfunc(realm,username)
+
+    def compute(self, request, ha1, method, uri, nonce, nc, 
+                cnonce, qop, response):
         if not ha1:
             self.requestAuthentication(request)
             return
@@ -68,7 +40,7 @@ class DigestAuthenticator:
             chk = "%s:%s:%s:%s:%s:%s" % (ha1,nonce,nc,cnonce,qop,ha2)
         else:
             chk = "%s:%s:%s" % (ha1,nonce,ha2)
-        if amap['response'] != md5.md5(chk).hexdigest():
+        if response != md5.md5(chk).hexdigest():
             if nonce in self.nonce:
                 del self.nonce[nonce]
             self.requestAuthentication(request)
@@ -81,10 +53,44 @@ class DigestAuthenticator:
         self.nonce[nonce] = nc
         return True
     
+    def authenticate(self, request):
+        method = request.method
+        auth = request.getHeader('Authorization')
+        if not auth:
+            self.requestAuthentication(request)
+            return defer.succeed(False)
+        (authtype, auth) = auth.split(" ", 1)
+        if 'Digest' != authtype:
+            raise Error(400,"unknown authorization type")
+        amap = {}
+        for itm in auth.split(", "):
+            (k,v) = [s.strip() for s in itm.split("=",1)]
+            amap[k] = v.replace('"','')
+        try:
+            username = amap['username']
+            uri      = amap['uri']
+            nonce    = amap['nonce']
+            realm    = amap['realm']
+            response = amap['response']
+            assert uri == request.uri
+            assert realm == self.realm
+            qop      = amap.get('qop','')
+            cnonce   = amap.get('cnonce','')
+            nc       = amap.get('nc','00000000')
+            if qop:
+                assert 'auth' == qop
+                assert nonce and nc
+        except:
+            raise Error(400,"malformed credentials")
+        d = defer.maybeDeferred(self.userfunc,realm,username)
+        d.addCallback(lambda ha1: self.compute(request,ha1,method,uri,
+                                      nonce,nc,cnonce,qop,response))
+        return d
+    
     __call__ = authenticate
 
 class DigestResource(Resource):
-    def __init__(self, realm, userfunc, authpage = None, failpage = None):
+    def __init__(self, realm, userfunc, authpage = None):
         Resource.__init__(self)
         self.__authenticate = DigestAuthenticator(realm, userfunc)
         self.__authpage = authpage or \
@@ -95,15 +101,14 @@ class DigestResource(Resource):
               "credentials (e.g., bad password), or your "
               "browser doesn't understand how to supply "
               "the credentials required.")
-        self.__failpage  = failpage  or \
-            ErrorPage(400,'Bad Authentication','Bad Authentication')
 
     def getChildWithDefault(self,path,request):
-        if self.__authenticate(request):
+        d = self.__authenticate(request)
+        assert d.called, "digest resource doesn't work with deferreds"
+        if d.result:
             return Resource.getChildWithDefault(self,path,request)
-        if 401 == request.code:
+        else:
             return self.__authpage
-        return self.__failpage
 
 def test():
     from twisted.internet import reactor
