@@ -86,7 +86,7 @@ def relativeTo(base, relativee):
     relativee = os.path.abspath(relativee)
     if relativee.startswith(basepath):
         relative = relativee[len(basepath):]
-        if relative.startswith('/'):
+        if relative.startswith(os.sep):
             relative = relative[1:]
         return os.path.join(base, relative)
     raise ValueError("%s is not a subpath of %s" % (relativee, basepath))
