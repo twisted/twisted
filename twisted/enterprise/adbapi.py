@@ -36,6 +36,9 @@ class Transaction:
 
 class ConnectionPool(pb.Referenceable):
     """I represent a pool of connections to a DB-API 2.0 compliant database.
+
+    You can pass keywords args cp_min and cp_max that will specify the size
+    of the thread pool used to serve database requests.
     """
     def __init__(self, dbapiName, *connargs, **connkw):
         """See ConnectionPool.__doc__
@@ -50,7 +53,17 @@ class ConnectionPool(pb.Referenceable):
         import thread
         self.threadID = thread.get_ident
         self.connections = {}
-        self.dispatcher = ThreadDispatcher(3, 5)
+        if connkw.has_key('cp_min'):
+            min = connkw['cp_min']
+            del connkw['cp_min']
+        else:
+            min = 3
+        if connkw.has_key('cp_max'):
+            max = connkw['cp_max']
+            del connkw['cp_max']
+        else:
+            max = 5
+        self.dispatcher = ThreadDispatcher(min, max)
         main.callDuringShutdown(self.close)
 
     def __getstate__(self):
