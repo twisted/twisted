@@ -1098,7 +1098,7 @@ class DNSDatagramProtocol(protocol.DatagramProtocol):
         if self.liveMessages.has_key(m.id) and m.answer:
             d = self.liveMessages[m.id]
             del self.liveMessages[m.id]
-            # XXX we shouldn't need this hack
+            # XXX we shouldn't need this hack of catching exceptioon on callback()
             try:
                 d.callback(m)
             except:
