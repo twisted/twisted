@@ -7,6 +7,7 @@ Options:
      -q --quiet       be a little more quiet
      -n --nodaemon    don't daemonize
      -p --profile     run profiler
+     -o --no_save     do not save state on shutdown        
      -l --logfile     log to a specified file, - for stdout
                         (default twistd.log)
         --pidfile     use a pidfile
@@ -39,7 +40,8 @@ class ServerOptions(usage.Options):
     optFlags = [['nodaemon','n'],
                 ['profile','p'],
                 ['threaded','t'],
-                ['quiet','q']]
+                ['quiet','q'],
+                ['no_save','o']]
     optStrings = [['logfile','l','twistd.log'],
                   ['file','f','twistd.spl'],
                   ['python','y',''],
@@ -123,9 +125,9 @@ open(config.pidfile,'wb').write(str(os.getpid()))
 try:
     if config.profile:
         import profile
-        profile.run("application.run()")
+        profile.run("application.run(%d)" % (not config.no_save))
     else:
-        application.run()
+        application.run(not config.no_save)
 except:
     if config.nodaemon:
         file = oldstdout
