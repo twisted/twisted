@@ -37,7 +37,6 @@ if os.name == 'nt':
             sys.stdout=stdout_save
             output.close()
             for f in files:
-                print f
                 assert os.path.exists(f)
 
         def testRemove(self):
