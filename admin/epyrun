@@ -31,7 +31,6 @@ def myimport(*args):
             setattr(sys.modules[args[0][:i]], args[0][i+1:], mod)
         return mod
 
-
 class FakeModule:
 
     def __init__(self, name, level):
@@ -41,6 +40,9 @@ class FakeModule:
     def __repr__(self):
         return '<Fake %s>' % self.__name__
     __str__ = __repr__
+
+    def __nonzero__(self):
+        return 1
 
     def __call__(self, *args, **kw):
         pass #print 'Called:', args
@@ -55,6 +57,22 @@ class FakeModule:
             return -1
         return cmp(self.__name__, other.__name__)
 
+def fakeOut(modname):
+    modpath = modname.split('.')
+    prevmod = None
+    for m in range(len(modpath)):
+        mp = '.'.join(modpath[:m+1])
+        nm = FakeModule(mp, 4)
+        if prevmod:
+            setattr(prevmod, modpath[m], nm)
+        sys.modules[mp] = nm
+        prevmod = nm
+        print mp
+
+if not os.environ.get("DISPLAY"):
+    fakeOut("gnome.ui")
+    fakeOut("pygtk")
+    fakeOut("gtk")
 
 # initial twisted
 from twisted.python import reflect
