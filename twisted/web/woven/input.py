@@ -28,7 +28,7 @@ from twisted.python.reflect import qual
 from twisted.web import domhelpers
 from twisted.web.woven import template, controller, utils
 
-__version__ = "$Revision: 1.31 $"[11:-2]
+__version__ = "$Revision: 1.32 $"[11:-2]
 
 controllerFactory = controller.controllerFactory
 
@@ -231,48 +231,6 @@ class Float(SingleValue):
 class List(InputHandler):
     def check(self, request, data):
         return None
-
-
-class NewObject(SingleValue):
-    """
-    Check to see if the name the user entered is valid.
-    If it is, create the object. If not, tell the user why.
-    """
-    classToCreate = None
-
-    def check(self, request, name):
-        """
-        Check to see if the name the user typed is a valid object name.
-        """
-        if name is None: return None
-
-        if name[0] is '_':
-            self.errorReason = "An object's name must not start with an underscore."
-            return 0
-        parentRef = request.pathRef().parentRef()
-        if name + '.trp' not in os.listdir(parentRef.diskPath()):
-            return 1
-        else:
-            self.errorReason = "The name %s is already in use." % name
-        return 0
-
-    def handleValid(self, request, name):
-        """
-        The user has entered a valid project name and chosen to create the project.
-        Get a reference to the parent folder, create a new Project instance, and
-        pickle it.
-        """
-        assert self.classToCreate is not None, "To use the NewObject handler, you must supply a classToCreate."
-        parent = request.pathRef().parentRef().getObject()
-        project = self.classToCreate(projectName = name)
-        parent.createPickleChild(name, project)
-
-    def handleInvalid(self, request, name):
-        """
-        The user has entered an invalid project name.
-        """
-        self.invalidErrorText = self.errorReason
-        SingleValue.handleInvalid(self, request, data)
 
 
 class DictAggregator(Anything):
