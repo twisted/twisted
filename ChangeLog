@@ -1,3 +1,7 @@
+2003-08-29  Christopher Armstrong  <radix@twistedmatrix.com>
+
+	* .: Releasing Twisted 1.0.7rc1.
+
 2003-08-26  Dave Peticolas  <dave@krondo.com>
 
 	* doc/howto/xmlrpc.html: document sub-handler and introspection
