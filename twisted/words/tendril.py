@@ -29,7 +29,7 @@ import string
 import sys
 import traceback
 
-_LOGALL = 1
+_LOGALL = 0
 
 class ProxiedParticipant(wordsService.WordsClientInterface,
                          styles.Ephemeral):
@@ -68,7 +68,7 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
 
     realname = 'Tendril'
     versionName = 'Tendril'
-    versionNum = '$Revision: 1.8 $'[11:-2]
+    versionNum = '$Revision: 1.9 $'[11:-2]
     versionEnv = copyright.longversion
 
     helptext = (
