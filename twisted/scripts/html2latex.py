@@ -37,10 +37,7 @@ def run():
     else:
         klass = latex.LatexSpitter
     for file in opt['files']:
-        fin = open(file)
         fout = open(os.path.splitext(file)[0]+'.tex', 'w')
         dir = opt['dir'] or os.path.dirname(file)
         spitter = klass(fout.write, dir, os.path.basename(file))
-        latex.processFile(spitter, fin)
-        fin.close()
-        fout.close()
+        latex.processFile(spitter, open(file))
