@@ -19,23 +19,35 @@ import sys, os
 from twisted.trial import unittest
 
 from twisted.protocols import xmlstream
+from twisted.xish import utility
 
 class AuthStandin(xmlstream.Authenticator):
     namespace = "testns"
     def __init__(self, testcase):
         xmlstream.Authenticator.__init__(self, "foob")
         self.testcase = testcase
-        self.started = False
     
     def streamStarted(self, rootelem):
-        self.started = True
+        self.testcase.streamStarted = True
         self.testcase.assertEquals(rootelem["id"], "12345")
         self.testcase.assertEquals(rootelem["from"], "testharness")
 
 class XmlStreamTest(unittest.TestCase):
-    # Stand-in method to make this object look like a transport
+    def setUp(self):
+        self.errorOccurred = False
+        self.streamStarted = False
+        self.streamEnded = False
+        self.outlist = []
+        self.xmlstream = xmlstream.XmlStream(AuthStandin(self))
+        self.xmlstream.send = self.outlist.append
+        self.xmlstream.transport = self
+
+    def tearDown(self):
+        pass
+    
+    # Auxilary methods 
     def loseConnection(self):
-        self.protocol.connectionLost("no reason")
+        self.xmlstream.connectionLost("no reason")
     
     def streamErrorEvent(self, errelem):
         self.errorOccurred = True
@@ -45,20 +57,7 @@ class XmlStreamTest(unittest.TestCase):
         self.streamEnded = True
         
     def testBasicOp(self):
-        # Setup
-        self.errorOccurred = False
-        self.streamEnded = False
-        outlist = []
-        as = AuthStandin(self)
-        xs = xmlstream.XmlStream(as)
-
-        # Crazy mixup here to get all the transport/protocol emulation
-        # setup
-        self.protocol = xs
-        xs.transport = self
-        
-        # Override send method, so we can examine output
-        xs.send = outlist.append
+        xs = self.xmlstream
         xs.addObserver(xmlstream.STREAM_ERROR_EVENT,
                        self.streamErrorEvent)
         xs.addObserver(xmlstream.STREAM_END_EVENT,
@@ -66,13 +65,58 @@ class XmlStreamTest(unittest.TestCase):
 
         # Go...
         xs.connectionMade()
-        self.assertEquals(outlist[0], "<stream:stream xmlns='testns' xmlns:stream='http://etherx.jabber.org/streams' to='foob'>")
+        self.assertEquals(self.outlist[0], "<stream:stream xmlns='testns' xmlns:stream='http://etherx.jabber.org/streams' to='foob'>")
         
         xs.dataReceived("<stream:stream xmlns='testns' xmlns:stream='http://etherx.jabber.org/streams' from='testharness' id='12345'>")
-        self.assertEquals(as.started, True)
+        self.assertEquals(self.streamStarted, True)
 
         self.assertEquals(self.errorOccurred, False)
         self.assertEquals(self.streamEnded, False)
         xs.dataReceived("<stream:error id='123'/>")
         self.assertEquals(self.errorOccurred, True)
         self.assertEquals(self.streamEnded, True)
+
+    def selectDispatcher(self, element):
+        if element.hasAttribute("to"):
+            return self.secondaryDispatcher
+        else:
+            return None
+
+    def usedStreamDispatcher(self, _):
+        self.streamMatched = True
+
+    def usedSecondaryDispatcher(self, _):
+        self.secondaryMatched = True
+
+    def testDispatchSelector(self):
+        xs = self.xmlstream
+        self.secondaryMatched = False
+        self.streamMatched = False
+        self.secondaryDispatcher = utility.EventDispatcher()
+        self.secondaryDispatcher.addObserver("/message", self.usedSecondaryDispatcher)
+        xs.dispatchSelectorFn = self.selectDispatcher
+        xs.addObserver("/message", self.usedStreamDispatcher)
+
+        # Go...
+        xs.connectionMade()
+        self.assertEquals(self.outlist[0], "<stream:stream xmlns='testns' xmlns:stream='http://etherx.jabber.org/streams' to='foob'>")
+        
+        xs.dataReceived("<stream:stream xmlns='testns' xmlns:stream='http://etherx.jabber.org/streams' from='testharness' id='12345'>")
+        self.assertEquals(self.streamStarted, True)
+
+        # Send a packet that should use the stream dispatcher
+        xs.dataReceived("<message/>")
+
+        self.assertEquals(self.streamMatched, True)
+        self.assertEquals(self.secondaryMatched, False)
+
+        # Reset and send a packet that should use the secondary dispatcher
+        self.streamMatched = False
+        self.secondaryMatched = False
+        xs.dataReceived("<message to='bar'/>")
+        self.assertEquals(self.streamMatched, False)
+        self.assertEquals(self.secondaryMatched, True)
+        
+        
+        
+        

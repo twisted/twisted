@@ -85,8 +85,8 @@ class DomishTestCase(unittest.TestCase):
 xml1 = """<stream:stream xmlns:stream='etherx' xmlns='jabber'>
              <message to='bar'><x xmlns='xdelay'>some&amp;data&gt;</x></message>
           </stream:stream>"""
-query1_root = xpath.internQuery("/stream[@xmlns='etherx']")    
-query1_elem1 = xpath.internQuery("/message[@to='bar']/x[@xmlns='xdelay'][text()='some&data>']")
+query1_root = xpath.intern("/stream[@xmlns='etherx']")    
+query1_elem1 = xpath.intern("/message[@to='bar']/x[@xmlns='xdelay'][text()='some&data>']")
 
 class DomishStreamTestCase(unittest.TestCase):    
     def __init__(self):

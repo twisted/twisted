@@ -88,7 +88,7 @@ class EventDispatcher:
                 observers = self._eventObservers
             else:
                 # Treat as xpath
-                event = xpath.internQuery(event)
+                event = xpath.intern(event)
                 observers = self._xpathObservers
         else:
             # Treat as xpath
@@ -115,7 +115,7 @@ class EventDispatcher:
             if self.prefix == event[0:len(self.prefix)]:
                 observers = self._eventObservers
             else:
-                event = xpath.internQuery(event)
+                event = xpath.intern(event)
                 observers = self._xpathObservers
         else:
             observers = self._xpathObservers

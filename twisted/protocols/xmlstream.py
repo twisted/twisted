@@ -102,6 +102,7 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
         self.stream = None
         self.authenticator = authenticator
         self.sid = None
+        self.dispatchSelectorFn = None
 
         # Reset the authenticator
         authenticator.associateWithStream(self)
@@ -157,7 +158,14 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
         self.dispatch(self, STREAM_START_EVENT)    
 
     def onElement(self, element):
-        self.dispatch(element)
+        if self.dispatchSelectorFn:
+            d = self.dispatchSelectorFn(element)
+            if d:
+                d.dispatch(element)
+            else:
+                self.dispatch(element)
+        else:
+            self.dispatch(element)
 
     def onDocumentEnd(self):
         self.transport.loseConnection()
@@ -177,6 +185,7 @@ class XmlStreamFactory(protocol.ReconnectingClientFactory):
         self.bootstraps = []
         self.host = host or authenticator.streamHost
         self.port = port
+        self.dispatchSelectorFn = None
 
     def buildProtocol(self, _):
         self.resetDelay()
@@ -184,10 +193,13 @@ class XmlStreamFactory(protocol.ReconnectingClientFactory):
         xs = XmlStream(self.authenticator)
         xs.factory = self
         for event, fn in self.bootstraps: xs.addObserver(event, fn)
+        xs.dispatchSelectorFn = self.dispatchSelectorFn
         return xs
 
     def addBootstrap(self, event, fn):
         self.bootstraps.append((event, fn))
+
+
 
 
         

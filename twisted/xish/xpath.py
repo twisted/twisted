@@ -195,7 +195,7 @@ class XPathQuery:
 
 __internedQueries = {}
 
-def internQuery(queryString):
+def intern(queryString):
     if queryString not in __internedQueries:
         __internedQueries[queryString] = XPathQuery(queryString)
     return __internedQueries[queryString]
