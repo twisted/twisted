@@ -1,3 +1,5 @@
+# -*- test-case-name: twisted.test.test_xml -*-
+#
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001-2002 Matthew W. Lefkowitz
 # 
@@ -18,30 +20,22 @@
 """
 *S*mall, *U*ncomplicated *X*ML.
 
-This is a very simple implementation of XML as a network protocol.  It is not
-at all clever.  Its main features are that it does not:
+This is a very simple implementation of XML/HTML as a network
+protocol.  It is not at all clever.  Its main features are that it
+does not:
 
   - support namespaces
   - mung mnemonic entity references
   - validate
   - perform *any* external actions (such as fetching URLs or writing files)
     under *any* circumstances
-
-If you're looking for an XML parser that *does* do any of these things, I
-strongly recommend the various parsers in PyXML.
-
-TODO:
-
-  - real tests (currently we're just hoping Marmalade tests are good enough)
-  - better error messages
-
+  - has lots and lots of horrible hacks for supporting broken HTML (as an
+    option, they're not on by default).
 """
 
-from __future__ import nested_scopes
 from twisted.internet.protocol import Protocol, FileWrapper
 from twisted.python.reflect import prefixedMethodNames
 
-import string
 
 identChars = '.-_:'
 lenientIdentChars = identChars + ';+#' 
