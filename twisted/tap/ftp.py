@@ -31,7 +31,7 @@ class Options(usage.Options):
     WARNING: This FTP server currently is very simple and will
     not work with a number of clients. We are working on making
     it more interoperable."""
-    optStrings = [["port", "p", "2121", "set the port number"],
+    optParameters = [["port", "p", "2121", "set the port number"],
                   ["root", "r", "/usr/local/ftp",
                    "define the root of the ftp-site."],
                   ["useranonymous", "", "anonymous"]]

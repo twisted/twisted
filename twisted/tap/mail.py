@@ -31,7 +31,7 @@ import sys
 class Options(usage.Options):
     synopsis = "Usage: mktap mail [options]"
 
-    optStrings = [["pop", "p", 8110, "Port to start the POP3 server on."],
+    optParameters = [["pop", "p", 8110, "Port to start the POP3 server on."],
                   ["smtp", "s", 8025,
                    "Port to start the SMTP server on."],
                   ["telnet", "t", None,

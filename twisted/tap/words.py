@@ -29,7 +29,7 @@ import sys
 
 class Options(usage.Options):
     synopsis = "Usage: mktap words [options]"
-    optStrings = [["irc", "i", "6667", "Port to run the IRC server on."],
+    optParameters = [["irc", "i", "6667", "Port to run the IRC server on."],
                   ["port", "p", str(pb.portno),
                    "Port to run the Words service on."],
                   ["web", "w", "8080",

@@ -31,7 +31,7 @@ import sys
 
 class Options(usage.Options):
     synopsis = "Usage: mktap web [options]"
-    optStrings = [["port", "p", "8080","Port to start the server on."],
+    optParameters = [["port", "p", "8080","Port to start the server on."],
                   ["telnet", "t", None,
                    "Run a telnet server on this port."]]
     optFlags = [["personal", "",

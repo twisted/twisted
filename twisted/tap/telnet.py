@@ -27,7 +27,7 @@ import sys
 
 class Options(usage.Options):
     synopsis = "Usage: mktap telnet [options]"
-    optStrings = [["username", "u", "admin","set the login username"],
+    optParameters = [["username", "u", "admin","set the login username"],
 		  ["password", "w", "changeme","set the password"]]
 
     longdesc = "Makes a telnet server to a Python shell."

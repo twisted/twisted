@@ -26,7 +26,7 @@ import sys
 
 class Options(usage.Options):
     synopsis = "Usage: mktap toc [-p <port>]"
-    optStrings = [["port", "p", 5190]]
+    optParameters = [["port", "p", 5190]]
 
     longdesc = "Makes a TOC server."
 

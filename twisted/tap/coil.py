@@ -29,7 +29,7 @@ from twisted.python import usage
 
 class Options(usage.Options):
     synopsis = "Usage: mktap coil [options]"
-    optStrings = [["port", "p", "9080","Port to start the server on."],]
+    optParameters = [["port", "p", "9080","Port to start the server on."],]
 
     longdesc = """\
 This creates a coil.tap file that can be used by twistd."""

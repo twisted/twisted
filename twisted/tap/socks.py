@@ -26,7 +26,7 @@ import sys
 
 class Options(usage.Options):
     synopsis = "Usage: mktap socks [-i <interface>] [-p <port>] [-l <file>]"
-    optStrings = [["interface", "i", "127.0.0.1", "local interface to which we listen"],
+    optParameters = [["interface", "i", "127.0.0.1", "local interface to which we listen"],
                   ["port", "p", 1080],
                   ["log", "l", "None", "file to log connection data to"]]
 

@@ -32,7 +32,7 @@ from twisted.spread import pb
 
 class Options(usage.Options):
     synopsis="Usage: mktap reality -m *map.rpl*"
-    optStrings = [["map", "m", None]]
+    optParameters = [["map", "m", None]]
 
     longdesc = """Reality PickLe files are created using the 'gnusto'
 utility on a build_map file from a Twisted Reality distribution.  Some

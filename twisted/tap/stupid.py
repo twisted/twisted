@@ -27,7 +27,7 @@ import sys
 class Options(usage.Options):
     synopsis = "Usage: mktap stupid [options]"
 
-    optStrings = [["port", "p", 6666,"Set the port number."],
+    optParameters = [["port", "p", 6666,"Set the port number."],
 	  ["host", "h", "localhost","Set the host."],
 	  ["dest_port", "d", 6665,"Set the destination port."]]
 

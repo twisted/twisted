@@ -27,7 +27,7 @@ import sys
 
 
 class Options(usage.Options):
-    optStrings = [["password", "w", "admin"],
+    optParameters = [["password", "w", "admin"],
                   ["user", "u", "admin"]]
     def opt_port(self, opt):
         try:
