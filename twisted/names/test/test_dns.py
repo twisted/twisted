@@ -1,4 +1,3 @@
-
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -21,21 +20,21 @@ from twisted.names.test.test_names import IPv6
 
 class RoundtripDNSTestCase(unittest.TestCase):
     """Encoding and then decoding various objects."""
-    
+
     names = ["example.org", "go-away.fish.tv", "23strikesback.net"]
-    
+
     def testName(self):
         for n in self.names:
             # encode the name
             f = StringIO()
             dns.Name(n).encode(f)
-            
+
             # decode the name
             f.seek(0, 0)
             result = dns.Name()
             result.decode(f)
             self.assertEquals(result.name, n)
-    
+
     def testQuery(self):
         for n in self.names:
             for dnstype in range(1, 17):
@@ -43,7 +42,7 @@ class RoundtripDNSTestCase(unittest.TestCase):
                     # encode the query
                     f = StringIO()
                     dns.Query(n, dnstype, dnscls).encode(f)
-                    
+
                     # decode the result
                     f.seek(0, 0)
                     result = dns.Query()
@@ -51,12 +50,12 @@ class RoundtripDNSTestCase(unittest.TestCase):
                     self.assertEquals(result.name.name, n)
                     self.assertEquals(result.type, dnstype)
                     self.assertEquals(result.cls, dnscls)
-    
+
     def testRR(self):
         # encode the RR
         f = StringIO()
         dns.RRHeader("test.org", 3, 4, 17).encode(f)
-        
+
         # decode the result
         f.seek(0, 0)
         result = dns.RRHeader()
@@ -91,7 +90,7 @@ class RoundtripDNSTestCase(unittest.TestCase):
             dns.Record_WKS, dns.Record_SRV, dns.Record_AFSDB, dns.Record_RP,
             dns.Record_HINFO, dns.Record_MINFO, dns.Record_MX, dns.Record_TXT
         ]
-        
+
         if IPv6:
             records.extend([dns.Record_AAAA, dns.Record_A6])
 
