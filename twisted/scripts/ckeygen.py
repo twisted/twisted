@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: ckeygen.py,v 1.5 2002/12/27 01:12:50 z3p Exp $
+# $Id: ckeygen.py,v 1.6 2003/01/08 03:05:26 z3p Exp $
 
 #""" Implementation module for the `ckeygen` command.
 #"""
@@ -102,7 +102,7 @@ def printFingerprint(options):
         options['filename'] += '.pub'
     try:
         string = keys.getPublicKeyString(options['filename'])
-        obj = keys.getPublicKeyObject(options['filename'])
+        obj = keys.getPublicKeyObject(string)
         print '%s %s %s' % (
             obj.size()+1,
             ':'.join(['%02x' % ord(x) for x in md5.new(string).digest()]),
