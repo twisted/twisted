@@ -130,9 +130,8 @@ class IRCChatter(irc.IRC):
                 #  I'll have to guess at all the values"
                 #    -- epic
                 self.sendMessage(irc.RPL_MYINFO,
-                                 ":%s %s %s %s" %
-                                 (self.servicename, copyright.version,
-                                  'w', 'n')) # user and channel modes
+                                 self.servicename, copyright.version,
+                                  'w', 'n') # user and channel modes
                 if self.passwd is None:
                     self.receiveDirectMessage("*login*", "Password?")
 ##                self.sendLine(":*login*!*login*@%s NOTICE %s :You 'must /msg *login* <your password>' to use this server" %
