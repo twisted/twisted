@@ -60,7 +60,13 @@ class IService(components.Interface):
         """
 
     def disownServiceParent(self):
-        """Remove the parent of the service."""
+        """Remove the parent of the service.
+
+        @rtype: C{Deferred}
+        @return: a deferred which is triggered when the service has
+        finished shutting down. If shutting down is immediate,
+        a value can be returned (usually, None).
+        """
 
     def startService(self):
         """Start the the service."""
@@ -116,8 +122,9 @@ class Service:
         self.parent.addService(self)
 
     def disownServiceParent(self):
-        self.parent.removeService(self)
+        d = self.parent.removeService(self)
         self.parent = None
+        return d
 
     def privilegedStartService(self):
         pass
@@ -137,7 +144,7 @@ class IServiceCollection(components.Interface):
     Services can be accessed by name if they have a name, and it
     is always possible to iterate over them.
     """
-    
+
     def getServiceNamed(self, name):
         """Get the child service with a given name.
 
@@ -160,9 +167,13 @@ class IServiceCollection(components.Interface):
 
     def removeService(self, service):
         """Remove a child service.
-        
+
         @type service: C{IService}
         @raise L{ValueError}: Raised if the given service is not a child.
+        @rtype: C{Deferred}
+        @return: a deferred which is triggered when the service has
+        finished shutting down. If shutting down is immediate,
+        a value can be returned (usually, None).
         """
 
 
@@ -224,7 +235,11 @@ class MultiService(Service):
             del self.namedServices[service.name]
         self.services.remove(service)
         if self.running:
-            service.stopService()
+            # Returning this so as not to lose information from the
+            # MultiService.stopService deferred.
+            return service.stopService()
+        else:
+            return None
 
 
 class IProcess(components.Interface):
@@ -259,7 +274,7 @@ class Process:
         """
         self.uid = uid or 0
         self.gid = gid or 0
-    
+
 
 def Application(name, uid=None, gid=None):
     """Return a compound class.

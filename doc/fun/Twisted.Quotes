@@ -4461,6 +4461,10 @@ person.
 %
  * warner wishes for the zillionth time that he could just grep his closet
 %
+<dash> isn't it cute?
+<spiv> dash: Cute like a baby choking on an ice-cream cone that's been rammed down it's throat.
+<dash> spiv: "frees up your hands from holding the ice cream cone, but leaves the bottom soggy"?
+%
 <itamar> is there a libmandelbrot?
 <exarkun> itamar: people who write re-usable software don't spend years hand-tuning a 6 instruction inner loop!
 <exarkun> And vice versa
@@ -4479,6 +4483,8 @@ person.
 %
 <exarkun> today's lesson
 <exarkun> don't strace X in an xterm
+%
+<glyph> exarkun: any thoughts on what to do about actions having consequences?
 %
 <Pahan> glyph: I have no time for your Zen crap! I have hardware to burn.
 %

@@ -1,3 +1,9 @@
+2004-02-19  Kevin Turner  <acapnotic@twistedmatrix.com>
+
+	* twisted/application/service.py (IService.disownServiceParent)
+	(IServiceCollection.removeService): These may return Deferred if they
+	have asynchronous side effects.
+
 2004-02-18  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* .: Releasing Twisted 1.2.0rc2. Brown-paper bag release bug.
@@ -1093,7 +1099,7 @@
 2003-05-13 Jonathan Lange <jml@twistedmatrix.com>
 
 	* twisted/trial/unittest.py twisted/scripts/trial.py
-      	doc/man/trial.1: Add --recurse option to make trial search within
+	doc/man/trial.1: Add --recurse option to make trial search within
 	sub-packages for test modules.
 
 2003-5-12  Moshe Zadka <moshez@twistedmatrix.com>
