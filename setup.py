@@ -251,7 +251,6 @@ desktop environments, and your toaster.
         "twisted.persisted",
         "twisted.persisted.journal",
         "twisted.protocols",
-        "twisted.protocols.jabber",
         "twisted.protocols.gps",
         "twisted.protocols.mice",
         "twisted.python",
