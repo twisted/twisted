@@ -166,15 +166,17 @@ def setUnjellyableForClass(classname, unjellyable):
     globalSecurity.allowTypes(classname)
 
 def setUnjellyableFactoryForClass(classname, copyFactory):
-    """Set the factory to construct a remote instance of a type.
+    """
+    Set the factory to construct a remote instance of a type::
 
         jellier.setFactoryForClass('module.package.Class', MyFactory)
 
-    Call this at the module level immediately after its class definition. copyFactory
-    should return an instance or subclass of RemoteCopy.
+    Call this at the module level immediately after its class definition.
+    C{copyFactory} should return an instance or subclass of
+    L{RemoteCopy<pb.RemoteCopy>}.
 
-    Similar to setUnjellyableForClass except it uses a factory instead of creating
-    an instance.
+    Similar to L{setUnjellyableForClass} except it uses a factory instead
+    of creating an instance.
     """
 
     global unjellyableFactoryRegistry
@@ -184,7 +186,9 @@ def setUnjellyableFactoryForClass(classname, copyFactory):
         
     
 def setUnjellyableForClassTree(module, baseClass, prefix=None):
-    """Set all classes in a module derived from baseClass as copiers for a corresponding remote class.
+    """
+    Set all classes in a module derived from C{baseClass} as copiers for
+    a corresponding remote class.
 
     When you have a heirarchy of Copyable (or Cacheable) classes on
     one side, and a mirror structure of Copied (or RemoteCache)

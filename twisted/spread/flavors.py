@@ -258,7 +258,9 @@ class Copyable(Serializable):
         return self.__dict__
 
     def getStateToCopyFor(self, perspective):
-        """Gather state to send when I am serialized for a particular perspective.
+        """
+        Gather state to send when I am serialized for a particular
+        perspective.
 
         I will default to calling L{getStateToCopy}.  Override this to
         customize this behavior.
@@ -312,13 +314,15 @@ class Cacheable(Copyable):
     """
 
     def getStateToCacheAndObserveFor(self, perspective, observer):
-        """Get state to cache on the client and client-cache reference to observe locally.
+        """
+        Get state to cache on the client and client-cache reference
+        to observe locally.
 
         This is similiar to getStateToCopyFor, but it additionally
         passes in a reference to the client-side RemoteCache instance
         that will be created when it is unserialized.  This allows
         Cacheable instances to keep their RemoteCaches up to date when
-        they change, such that no changes can occurr between the point
+        they change, such that no changes can occur between the point
         at which the state is initially copied and the client receives
         it that are not propogated.
         """
