@@ -22,7 +22,7 @@ from StringIO import StringIO
 import zope.interface as zi
 
 from pprint import pprint
-import sys, os, os.path as osp, itertools
+import sys, os, os.path as osp
 from os.path import join as opj
 from sets import Set
 
