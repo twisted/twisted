@@ -802,9 +802,7 @@ class AuthenticatingTelnetProtocol(StatefulTelnetProtocol):
         if self.protocol is not None:
             self.protocol.connectionLost(reason)
             self.logout()
-            del self.protocol
-            del self.avatar, self.logout
-        del self.protocolFactory, self.protocolArgs, self.protocolKwArgs
+            del self.protocol, self.logout
 
 __all__ = [
     # Exceptions
