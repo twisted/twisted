@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.15 2002/11/29 19:44:55 z3p Exp $
+# $Id: conch.py,v 1.16 2002/11/30 18:07:35 z3p Exp $
 
 #""" Implementation module for the `ssh` command.
 #"""
@@ -25,7 +25,7 @@ from twisted.conch.ssh import session, forwarding
 from twisted.internet import reactor, stdio, defer, protocol
 from twisted.python import usage, log
 
-import os, sys, getpass, struct, tty, fcntl, base64
+import os, sys, getpass, struct, tty, fcntl, base64, signal
 
 class GeneralOptions(usage.Options):
     synopsis = """Usage:    ssh [options] host [command]
@@ -33,6 +33,7 @@ class GeneralOptions(usage.Options):
 
     optParameters = [['user', 'l', None, 'Log in using this user name.'],
                     ['identity', 'i', '~/.ssh/identity', 'Identity for public key authentication'],
+                    ['escape', 'e', '~', "Set escape character; ``none'' = disable"],
                     ['cipher', 'c', None, 'Select encryption algorithm.'],
                     ['macs', 'm', None, 'Specify MAC algorithms for protocol version 2.'],
                     ['port', 'p', None, 'Connect to this port.  Server must be on the same port.'],
@@ -47,7 +48,7 @@ class GeneralOptions(usage.Options):
                 ['compress', 'C', 'Enable compression.'],
                 ['noshell', 'N', 'Do not execute a shell or command.'],
                 ['subsystem', 's', 'Invoke command (mandatory) as SSH2 subsystem.'],
-                ['log', '', 'Log to stderr']]
+                ['log', 'v', 'Log to stderr']]
 
     identitys = ['~/.ssh/id_rsa', '~/.ssh/id_dsa']
     localForwards = []
@@ -55,6 +56,26 @@ class GeneralOptions(usage.Options):
 
     def opt_identity(self, i):
         self.identitys.append(i)
+
+    def opt_escape(self, esc):
+        if esc == 'none':
+            self['escape'] = None
+        elif esc[0] == '^':
+            self['escape'] = chr(ord(esc[1])-64)
+        else:
+            self['escape'] = esc
+
+    def opt_cipher(self, cipher):
+        if cipher in SSHClientTransport.supportedCiphers:
+            SSHClientTransport.supportedCiphers = [cipher]
+        else:
+            sys.exit("Unknown cipher type '%s'" % cipher)
+
+    def opt_mac(self, mac):
+        if mac in SSHClientTransport.supportedMACs:
+            SSHClientTransport.supportedMACs = [mac]
+        else:
+            sys.exit("Unknown mac type '%s'" % mac)
 
     def opt_localforward(self, f):
         localPort, remoteHost, remotePort = f.split(':') # doesn't do v6 yet
@@ -68,13 +89,15 @@ class GeneralOptions(usage.Options):
         connPort = int(connPort)
         self.remoteForwards.append((remotePort, (connHost, connPort)))
 
+    def opt_compress(self):
+        SSHClientTransport.supportedCompressions[0:1] = ['zlib']
 
     def parseArgs(self, host, *command):
         self['host'] = host
         self['command'] = ' '.join(command)
 
 # Rest of code in "run"
-options = {}
+options = None
 exitStatus = 0
 
 def run():
@@ -112,7 +135,7 @@ def run():
         reactor.run()
     finally:
         if old:
-            tty.tcsetattr(fd, tty.TCSADRAIN, old)
+            tty.tcsetattr(fd, tty.TCSANOW, old)
     return exitStatus
 
 class SSHClientFactory(protocol.ClientFactory):
@@ -244,7 +267,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
 
 class SSHConnection(connection.SSHConnection):
     def serviceStarted(self):
-        if not options['notty']:
+        if not options['noshell']:
             self.openChannel(SSHSession())
         if options.localForwards:
             for localPort, hostport in options.localForwards:
@@ -267,7 +290,8 @@ class SSHSession(session.SSHChannel):
         #global globalSession
         #globalSession = self
         # turn off local echo
-        fd = sys.stdin.fileno()
+        self.escapeMode = 1
+        fd = 0 #sys.stdin.fileno()
         try:
             new = tty.tcgetattr(fd)
         except:
@@ -279,22 +303,58 @@ class SSHSession(session.SSHChannel):
             tty.tcsetattr(fd, tty.TCSANOW, new)
             tty.setraw(fd)
         c = session.SSHSessionClient()
-        c.dataReceived = self.write
+        if options['escape']:
+            c.dataReceived = self.handleInput
+        else:
+            c.dataReceived = self.write
         c.connectionLost = self.sendEOF
         stdio.StandardIO(c)
         if options['subsystem']:
             self.conn.sendRequest(self, 'subsystem', \
                 common.NS(options['command']))
         elif options['command']:
+            if options['tty']:
+                term = os.environ['TERM']
+                winsz = fcntl.ioctl(fd, tty.TIOCGWINSZ, '12345678')
+                winSize = struct.unpack('4H', winsz)
+                ptyReqData = session.packRequest_pty_req(term, winSize, '')
+                self.conn.sendRequest(self, 'pty-req', ptyReqData)                
             self.conn.sendRequest(self, 'exec', \
                 common.NS(options['command']))
         else:
-            term = os.environ['TERM']
-            winsz = fcntl.ioctl(fd, tty.TIOCGWINSZ, '12345678')
-            winSize = struct.unpack('4H', winsz)
-            ptyReqData = session.packRequest_pty_req(term, winSize, '')
-            self.conn.sendRequest(self, 'pty-req', ptyReqData)
+            if not options['notty']:
+                term = os.environ['TERM']
+                winsz = fcntl.ioctl(fd, tty.TIOCGWINSZ, '12345678')
+                winSize = struct.unpack('4H', winsz)
+                ptyReqData = session.packRequest_pty_req(term, winSize, '')
+                self.conn.sendRequest(self, 'pty-req', ptyReqData)
             self.conn.sendRequest(self, 'shell', '')
+
+    def handleInput(self, char):
+        #log.msg('handling %s' % repr(char))
+        if char in ('\n', '\r'):
+            self.escapeMode = 1
+            self.write(char)
+        elif self.escapeMode == 1 and char == options['escape']:
+            self.escapeMode = 2
+        elif self.escapeMode == 2:
+            self.escapeMode = 1 # so we can chain escapes together
+            if char == '.': # disconnect
+                log.msg('disconnecting from escape')
+                reactor.stop()
+                return
+            elif char == '\x1a': # ^Z, suspend
+                # following line courtesy of Erwin@freenode
+                os.kill(os.getpid(), signal.SIGSTOP)
+                return
+            elif char == 'R': # rekey connection
+                log.msg('rekeying connection')
+                self.conn.transport.sendKexInit()
+                return
+            self.write('~' + char)
+        else:
+            self.escapeMode = 0
+            self.write(char)
 
     def dataReceived(self, data):
         sys.stdout.write(data)
