@@ -159,6 +159,18 @@ class IReactorThreads(Interface):
         """Run the callable object in a separate thread.
         """
 
+    def callFromThread(self, callable, *args, **kw):
+        """Call a function from within another thread.
+
+        This should wake up the main thread (where run() is executing) and run
+        the given function.
+
+        I hope it is obvious from this description that this method must be
+        thread safe.  (If you want to call a method in the next mainloop
+        iteration, but you're in the same thread, use callLater with a delay of
+        0.)
+        """
+
     def suggestThreadPoolSize(self, size):
         """Suggest the size of the thread pool.
         """
@@ -195,18 +207,6 @@ class IReactorCore(Interface):
 
         This is most useful in applications where the UI is being drawn "as
         fast as possible", such as games.
-        """
-
-    def callFromThread(self, callable, *args, **kw):
-        """Call a function from within another thread.
-
-        This should wake up the main thread (where run() is executing) and run
-        the given function.
-
-        I hope it is obvious from this description that this method must be
-        thread safe.  (If you want to call a method in the next mainloop
-        iteration, but you're in the same thread, use callLater with a delay of
-        0.)
         """
 
     def fireSystemEvent(self, eventType):
