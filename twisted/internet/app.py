@@ -308,7 +308,7 @@ class Application(log.Logger, styles.Versioned,
         self.extraConnectors = []
         self.unixPorts = []
         self.udpConnectors = []
-        
+
         toRemove = []
         for t in self.tcpPorts:
             port, factory, backlog, interface = t
@@ -508,7 +508,7 @@ class Application(log.Logger, styles.Versioned,
     def connectWith(self, connectorType, *args, **kw):
         """
         Start an instance of the given C{connectorType} connecting.
-        
+
         @type connectorType: type which implements C{IConnector}
         """
         self.extraConnectors.append((connectorType, args, kw))
@@ -519,7 +519,7 @@ class Application(log.Logger, styles.Versioned,
     def connectUDP(self, remotehost, remoteport, protocol, localport=0,
                   interface='', maxPacketSize=8192):
         """Connects a L{ConnectedDatagramProtocol} instance to a UDP port.
-        
+
         EXPERIMENTAL.
         """
         self.udpConnectors.append((
@@ -585,7 +585,7 @@ class Application(log.Logger, styles.Versioned,
             main.removeDelayed(delayed)
 
     def setEUID(self):
-        """Retrieve persistent uid/gid pair (if possible) and set the current 
+        """Retrieve persistent uid/gid pair (if possible) and set the current
         process's euid/egid.
         """
         if hasattr(os, 'getgid'):
@@ -688,7 +688,7 @@ class Application(log.Logger, styles.Versioned,
             log.logOwner.own(self)
             for delayed in self.delayeds:
                 main.addDelayed(delayed)
-            
+
             for filename, factory, backlog, mode in self.unixPorts:
                 try:
                     self._listenerDict[filename] = reactor.listenUNIX(filename, factory, backlog, mode)
@@ -714,7 +714,10 @@ class Application(log.Logger, styles.Versioned,
                     log.msg('error on SSL port %s: %s' % (port, msg))
                     return
             for portType, args, kw in self.extraPorts:
-                self._extraListeners[(portType, args, kw)] = reactor.listenWith(portType, *args, **kw)
+                # The tuple(kw.items()) is because we can't use a dictionary
+                # or a list in a dictionary key.
+                self._extraListeners[(portType, args, tuple(kw.items()))] = (
+                    reactor.listenWith(portType, *args, **kw))
 
             for host, port, factory, ctxFactory, timeout, bindAddress in self.sslConnectors:
                 reactor.connectSSL(host, port, factory, ctxFactory, timeout, bindAddress)
