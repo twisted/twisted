@@ -3,7 +3,7 @@ from twisted.protocols import wire
 from twisted.internet import protocol
 from twisted.python import util
 
-appl = service.Application('test')
+application = service.Application('test')
 factory = protocol.ServerFactory()
 factory.protocol = wire.Echo
 compat.IOldApplication(appl).listenTCP(8080, factory)
@@ -28,4 +28,3 @@ class FooService(service.Service):
 foo = FooService()
 foo.setName('foo')
 foo.setServiceParent(appl)
-application = compat.IOldApplication(appl)
