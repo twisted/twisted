@@ -41,7 +41,7 @@ from twisted.internet.defer import maybeDeferred
 from twisted.python import log, components, util, failure
 from twisted.cred import perspective
 from twisted.python.components import implements
-from twisted.internet.interfaces import ITLSTransport
+from twisted.internet import interfaces
 
 from twisted import cred
 import twisted.cred.error
@@ -506,7 +506,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def connectionMade(self):
         self.tags = {}
-        self.canStartTLS = implements(self.transport, ITLSTransport)
+        self.canStartTLS = implements(self.transport, interfaces.ITLSTransport)
         self.setTimeout(self.timeOut)
         self.sendServerGreeting()
     
@@ -529,6 +529,18 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if passon is not None:
             self.setLineMode(passon)
 
+    # Avoid processing commands while buffers are being dumped to
+    # our transport
+    blocked = None
+
+    def _unblock(self):
+        commands = self.blocked
+        self.blocked = None
+        while commands and self.blocked is None:
+            self.lineReceived(commands.pop(0))
+        if self.blocked is not None:
+            self.blocked.extend(commands)
+
 #    def sendLine(self, line):
 #        print 'C:', repr(line)
 #        return basic.LineReceiver.sendLine(self, line)
@@ -536,6 +548,10 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def lineReceived(self, line):
 #        print 'S:', repr(line)
         self.resetTimeout()
+        
+        if self.blocked is not None:
+            self.blocked.append(line)
+            return
         
         f = getattr(self, 'parse_' + self.parseState)
         try:
@@ -1306,8 +1322,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 (tag, self.mbox, uid), None, (tag,), None
             )
         else:
-            s = MessageSet()
-            s.add(1)
+            s = parseIdList('1:*')
             maybeDeferred(self.mbox.fetch, s, uid=uid).addCallbacks(
                 self.__cbManualSearch, self.__ebSearch,
                 (tag, self.mbox, query, uid), None, (tag,), None
@@ -1326,12 +1341,14 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if searchResults is None:
             searchResults = []
         for (i, (id, msg)) in zip(range(5), result):
+            print i, id, msg
             if self.searchFilter(query, id, msg):
                 if uid:
                     searchResults.append(str(msg.getUID()))
                 else:
                     searchResults.append(str(id))
         if i == 4:
+            from twisted.internet import reactor
             reactor.callLater(0, self.__cbManualSearch, result, tag, mbox, query, uid, searchResults)
         else:
             if searchResults:
@@ -1510,24 +1527,26 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     select_FETCH = (do_FETCH, arg_seqset, arg_fetchatt)
 
     def __cbFetch(self, results, tag, query, uid):
-        self._consumeMessageIterable(results, tag, query, uid)
+        return self._consumeMessageIterable(results, tag, query, uid
+            ).addErrback(self.__ebFetch, tag
+            )
 
-    def _consumeMessageIterable(self, results, tag, query, uid):
+    def _consumeMessageIterable(self, results, tag, query, uid, d=None):
+        def next():
+            return deferToFuture(0, self._consumeMessageIterable, results, tag, query, uid)
         try:
             msgId, msg = results.next()
         except StopIteration:
             self.sendPositiveResponse(tag, 'FETCH completed')
+            self._unblock()
+            return defer.succeed(None)
         else:
-            try:
-                self._sendMessageFetchResponse(msgId, msg, query, uid)
-            except:
-                log.err()
-            from twisted.internet import reactor
-            reactor.callLater(0, self._consumeMessageIterable, results, tag, query, uid)
+            return self._sendMessageFetchResponse(msgId, msg, query, uid
+                ).addCallback(lambda _: next()
+                )
 
     def _sendMessageFetchResponse(self, msgId, msg, query, uid):
         D = DontQuoteMe
-
         seenUID = False
         response = []
         for part in query:
@@ -1545,9 +1564,8 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             elif part.type == 'rfc822size':
                 response.extend((D('RFC822.SIZE'), msg.getSize()))
             elif part.type == 'rfc822':
-                hdrs = _formatHeaders(msg.getHeaders(True))
-                body = msg.getBodyFile().read()
-                response.extend((D('RFC822'),  hdrs + '\r\n' + body))
+                response.append(D('RFC822'))
+                response.append(_wholeMessage(msg))
             elif part.type == 'uid':
                 seenUID = True
                 response.extend((D('UID'), msg.getUID()))
@@ -1559,24 +1577,30 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                     subMsg = subMsg.getSubPart(p)
                 if part.header:
                     if not part.header.fields:
-                        response.extend((D(part), _formatHeaders(msg.getHeaders(True))))
+                        response.extend((D(part), _formatHeaders(subMsg.getHeaders(True))))
                     else:
                         hdrs = subMsg.getHeaders(part.header.negate, *part.header.fields)
                         response.extend((D(part), _formatHeaders(hdrs, part.header.fields)))
                 elif part.text:
                     response.extend((D(part), subMsg.getBodyFile()))
                 elif part.mime:
-                    response.extend((D(part), _formatHeaders(msg.getHeaders(True))))
+                    response.extend((D(part), _formatHeaders(subMsg.getHeaders(True))))
                 elif part.empty:
-                    response.extend((D(part), _formatHeaders(msg.getHeaders(True)) + '\r\n' + subMsg.getBodyFile().read()))
+                    response.append(D(part))
+                    response.append(_wholeMessage(subMsg))
                 else:
                     # Simplified bodystructure request
-                    response.extend((D('BODY'), getBodyStructure(msg, False)))
+                    response.extend((D('BODY'), getBodyStructure(subMsg, False)))
 
         if uid and not seenUID:
             response[:0] = [D('UID'), msg.getUID()]
-
-        self.sendUntaggedResponse("%d FETCH %s" % (msgId, collapseNestedLists([response])))
+        
+        L = [D('* %d FETCH' % msgId), response]
+        self.blocked = []
+        return ProducerChain(
+            ).beginProducing(self.transport, produceNestedLists(L)
+            ).addCallback(lambda r: (self.transport.write('\r\n'), r)[1]
+            )
 
     def __ebFetch(self, failure, tag):
         log.err(failure)
@@ -1630,7 +1654,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         addedIDs = []
         failures = []
         for (id, msg) in messages:
-            body = StringIO.StringIO(_formatHeaders(msg.getHeaders(True)) + '\r\n' + msg.getBodyFile().read())
+            body = msg.getMessageFile()
             flags = msg.getFlags()
             date = msg.getInternalDate()
             try:
@@ -1779,9 +1803,9 @@ class IMAP4Client(basic.LineReceiver):
             self._parts.append(rest.read())
             self.setLineMode(passon.lstrip('\r\n'))
 
-#    def sendLine(self, line):
-#        print 'S:', repr(line)
-#        return basic.LineReceiver.sendLine(self, line)
+    def sendLine(self, line):
+        print 'S:', repr(line)
+        return basic.LineReceiver.sendLine(self, line)
 
     def _setupForLiteral(self, rest, octets):
         self._pendingBuffer = self.messageFile(octets)
@@ -1790,7 +1814,7 @@ class IMAP4Client(basic.LineReceiver):
         self.setRawMode()
 
     def lineReceived(self, line):
-#        print 'C: ' + repr(line)
+        print 'C: ' + repr(line)
         if self._parts is None:
             lastPart = line.rfind(' ')
             if lastPart != -1:
@@ -2053,7 +2077,7 @@ class IMAP4Client(basic.LineReceiver):
                 break
         else:
             if 'STARTTLS' in caps:
-                if implements(self.transport, ITLSTransport):
+                if implements(self.transport, interfaces.ITLSTransport):
                     ctx = self._getContextFactory()
                     if ctx:
                         d = self.sendCommand(Command('STARTTLS'))
@@ -2130,7 +2154,7 @@ class IMAP4Client(basic.LineReceiver):
             return context
 
     def __cbLoginCaps(self, capabilities, username, password):
-        tryTLS = 'STARTTLS' in capabilities and implements(self.transport, ITLSTransport)
+        tryTLS = 'STARTTLS' in capabilities and implements(self.transport, interfaces.ITLSTransport)
         if tryTLS:
             ctx = self._getContextFactory()
             if ctx:
@@ -3573,6 +3597,10 @@ class DontQuoteMe:
     def __str__(self):
         return str(self.value)
 
+class Coalesce:
+    def __init__(self, value):
+        self.value = value
+
 _ATOM_SPECIALS = '(){ %*"'
 def _needsQuote(s):
     if s == '':
@@ -3626,6 +3654,88 @@ def collapseNestedLists(items):
         else:
             pieces.extend([' ', '(%s)' % (collapseNestedLists(i),)])
     return ''.join(pieces[1:])
+
+def produceNestedLists(items):
+    """Turn a nested list structure into a producer.
+
+    Strings in C{items} will be sent as literals if they contain CR or LF,
+    otherwise they will be quoted.  References to None in C{items} will be
+    translated to the atom NIL.  Objects with a 'read' attribute will have
+    it called on them with no arguments and the returned string will be
+    inserted into the output as a literal.  Integers will be converted to
+    strings and inserted into the output unquoted.  Instances of
+    C{DontQuoteMe} will be converted to strings and inserted into the output
+    unquoted.  Instances of C{Coalesce} will be treated as single entities
+    which must be sent as literals.
+    
+    This function used to be much nicer, and only quote things that really
+    needed to be quoted (and C{DontQuoteMe} did not exist), however, many
+    broken IMAP4 clients were unable to deal with this level of sophistication,
+    forcing the current behavior to be adopted for practical reasons.
+
+    @type items: Any iterable
+
+    @rtype: C{str}
+    """
+    top = True
+    pieces = []
+    for i in items:
+        if i is None:
+            pieces.extend([' ', 'NIL'])
+        elif isinstance(i, (DontQuoteMe, int, long)):
+            pieces.extend([' ', str(i)])
+        elif isinstance(i, types.StringTypes):
+            if _needsLiteral(i):
+                pieces.extend([' ', '{', str(len(i)), '}', IMAP4Server.delimiter, i])
+            else:
+                pieces.extend([' ', _quote(i)])
+        elif hasattr(i, 'read'):
+            b = i.tell()
+            i.seek(0, 2)
+            e = i.tell()
+            i.seek(b, 0)
+            pieces.extend([' ', '{', str(e - b), '}', IMAP4Server.delimiter])
+            if top:
+                top = False
+                pieces.pop(0)
+            yield StringProducer(''.join(pieces))
+            pieces = []
+            yield FileProducer(i)
+        elif isinstance(i, Coalesce):
+            L = 0
+            for e in i.value:
+                if isinstance(e, types.StringType): 
+                    L += len(e)
+                else:
+                    B = e.tell()
+                    e.seek(0, 2)
+                    E = e.tell()
+                    e.seek(B, 0)
+                    L += (E - B)
+            pieces.extend((' ', '{%d}%s' % (L, IMAP4Server.delimiter)))
+            if top:
+                top = False
+                pieces.pop(0)
+            yield StringProducer(''.join(pieces))
+            pieces = []
+            for e in i.value:
+                if isinstance(e, types.StringType): 
+                    yield StringProducer(e)
+                else:
+                    yield FileProducer(e)
+        else:
+            if pieces and top:
+                top = False
+                pieces.pop(0)
+            yield StringProducer(''.join(pieces) + ' (')
+            pieces = []
+            for p in produceNestedLists(i):
+                yield p
+            yield StringProducer(')')
+    if pieces and top:
+        top = False
+        pieces.pop(0)
+    yield StringProducer(''.join(pieces))
 
 class IClientAuthentication(components.Interface):
     def getName(self):
@@ -4144,7 +4254,7 @@ def getBodyStructure(msg, extended=False):
 
     return result
 
-class IMessage(components.Interface):
+class IMessagePart(components.Interface):
     def getHeaders(self, negate, *names):
         """Retrieve a group of message headers.
         
@@ -4159,6 +4269,34 @@ class IMessage(components.Interface):
         @return: A mapping of header field names to header field values
         """ 
 
+    def getBodyFile(self):
+        """Retrieve a file object containing only the body of this message.
+        """
+
+    def getSize(self):
+        """Retrieve the total size, in octets, of this message.
+        
+        @rtype: C{int}
+        """
+
+    def getSubPart(self, part):
+        """Retrieve a MIME sub-message
+        
+        @type part: C{int}
+        @param part: The number of the part to retrieve, indexed from 0.
+
+        @raise C{IndexError}: Raised if the specified part does not exist.
+        @raise C{TypeError}: Raised if this message is not multipart.
+        
+        @rtype: Any object implementing C{IMessagePart}.
+        @return: The specified sub-part.
+        """
+
+class IMessage(IMessagePart):
+    def getUID(self):
+        """Retrieve the unique identifier associated with this message.
+        """
+
     def getFlags(self):
         """Retrieve the flags associated with this message.
         
@@ -4171,33 +4309,6 @@ class IMessage(components.Interface):
         
         @rtype: C{str}
         @return: An RFC822-formatted date string.
-        """
-
-    def getBodyFile(self):
-        """Retrieve a file object containing the body of this message.
-        """
-
-    def getSize(self):
-        """Retrieve the total size, in octets, of this message.
-        
-        @rtype: C{int}
-        """
-
-    def getUID(self):
-        """Retrieve the unique identifier associated with this message.
-        """
-
-    def getSubPart(self, part):
-        """Retrieve a MIME sub-message
-        
-        @type part: C{int}
-        @param part: The number of the part to retrieve, indexed from 0.
-
-        @raise C{IndexError}: Raised if the specified part does not exist.
-        @raise C{TypeError}: Raised if this message is not multipart.
-        
-        @rtype: Any object implementing C{IMessage}.
-        @return: The specified sub-part.
         """
 
 class ISearchableMailbox(components.Interface):
@@ -4413,6 +4524,22 @@ def _formatHeaders(headers, order=None):
     hdrs = [': '.join((k.title(), '\r\n'.join(v.splitlines()))) for (k, v) in items]
     hdrs = '\r\n'.join(hdrs) + '\r\n'
     return hdrs
+
+def _wholeMessage(msg):
+    parts = [_formatHeaders(msg.getHeaders(True)) + '\r\n']
+    try:
+        i = 0
+        while True:
+            submsg = msg.getSubPart(i)
+            parts.extend(_wholeMessage(submsg))
+            i += 1
+    except TypeError:
+        # Not multipart
+        parts.append(msg.getBodyFile())
+    except IndexError:
+        # Got all the parts
+        pass
+    return Coalesce(parts)
 
 class _FetchParser:
     class Envelope:
@@ -4720,6 +4847,83 @@ class _FetchParser:
         self.pending_body.partialLength = length
         
         return end + 1
+
+class ProducerChain:
+    """Jam a pile of producers down a consumer's throat.
+    
+    Producers must have a "finishedProducing" attribute that is true
+    once they have no more data to produce.
+    """
+    __implements__ = (interfaces.IProducer,)
+
+    _onDone = None
+
+    def beginProducing(self, consumer, producers):
+        assert not self._onDone
+        self.consumer = consumer
+        self.producers = iter(producers)
+        
+        self.prod = self.producers.next()
+        self.prod.produce = lambda s: self.consumer.write(s)
+        d = self._onDone = defer.Deferred()
+        self.consumer.registerProducer(self, False)
+        return d
+
+    def resumeProducing(self):
+        while True:
+            self.prod.resumeProducing()
+            if getattr(self.prod, 'finishedProducing', False):
+                try:
+                    self.prod = self.producers.next()
+                except StopIteration:
+                    self.consumer.unregisterProducer()
+                    self._onDone.callback(self)
+                    self._onDone = self.consumer = self.prod = None
+                    break
+                else:
+                    self.prod.produce = self.consumer.write
+
+    def pauseProducing(self):
+        pass
+
+    def stopProducing(self):
+        if self._onDone:
+            self._onDone.errback(Exception())
+            self._onDone = None
+
+class StringProducer:
+    finishedProducing = False
+    
+    def __init__(self, s):
+        self.s = s
+    
+    def resumeProducing(self):
+        self.finishedProducing = True
+        self.produce(self.s)
+        self.s = None
+
+class FileProducer:
+    CHUNK_SIZE = 2 ** 2 ** 2 ** 2
+    finishedProducing = False
+    
+    def __init__(self, f):
+        self.f = f
+    
+    def resumeProducing(self):
+        b = self.f.read(self.CHUNK_SIZE)
+        if not b:
+            self.finishedProducing = True
+            self.f = None
+        else:
+            self.produce(b)
+
+def deferToFuture(delay, f, *a, **k):
+    d = defer.Deferred()
+    def go():
+        d.callback(f(*a, **k))
+    from twisted.internet import reactor
+    reactor.callLater(delay, go)
+    return d
 
 def parseTime(s):
     # XXX - This may require localization :(

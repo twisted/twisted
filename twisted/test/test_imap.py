@@ -420,6 +420,17 @@ class IMAP4HelperTestCase(unittest.TestCase):
         
         self.assertEquals(imap4.collapseNestedLists(inputStructure), output)
 
+    def testProducerChain(self):
+        g = imap4.produceNestedLists([
+            'foo', 'bar', 'baz', StringIO('this is a file\r\n'), 'buz'
+        ])
+        
+        self.assertEquals(g.next().s, '"foo" "bar" "baz" {16}\r\n')
+        self.assertEquals(g.next().f.read(), 'this is a file\r\n')
+        self.assertEquals(g.next().s, ' "buz"')
+        self.assertRaises(StopIteration, g.next)
+        
+        
     def testQuoteAvoider(self):
         input = [
             'foo', imap4.DontQuoteMe('bar'), "baz", StringIO('this is a file\r\n'),
@@ -1510,6 +1521,8 @@ class FakeyServer(imap4.IMAP4Server):
 
 class FakeyMessage:
     __implements__ = (imap4.IMessage,)
+
+    subpart = None
     
     def __init__(self, headers, flags, date, body, uid, subpart):
         self.headers = headers
@@ -1518,7 +1531,8 @@ class FakeyMessage:
         self.size = len(body)
         self.date = date
         self.uid = uid
-        self.subpart = subpart
+        if subpart:
+            self.subpart = [subpart]
         
     def getHeaders(self, negate, *names):
         self.got_headers = negate, names
@@ -1541,7 +1555,9 @@ class FakeyMessage:
     
     def getSubPart(self, part):
         self.got_subpart = part
-        return self.subpart
+        if self.subpart is None:
+            raise TypeError
+        return self.subpart[part]
 
 class NewStoreTestCase(unittest.TestCase, IMAP4HelperMixin):
     result = None
@@ -1607,7 +1623,8 @@ class NewStoreTestCase(unittest.TestCase, IMAP4HelperMixin):
 class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
     def setUp(self):
         self.received_messages = self.received_uid = None
-        
+        self.result = None
+
         self.server = imap4.IMAP4Server()
         self.server.state = 'select'
         self.server.mbox = self
