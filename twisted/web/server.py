@@ -55,7 +55,7 @@ from twisted.cred import util
 from twisted.persisted import styles
 
 # Sibling Imports
-import error
+import error, resource
 from twisted.web import util as webutil
 
 
@@ -500,7 +500,7 @@ class Site(http.HTTPFactory):
         # Sitepath is used to determine cookie names between distributed
         # servers and disconnected sites.
         request.sitepath = copy.copy(request.prepath)
-        return self.resource.getChildForRequest(request)
+        return resource.getChildForRequest(self.resource, request)
 
 
 import html

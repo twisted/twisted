@@ -16,7 +16,7 @@
 from twisted.trial import unittest
 import string, random, copy
 
-from twisted.web import server, resource, widgets, guard
+from twisted.web import server, resource, widgets, guard, util
 from twisted.internet import app, defer
 from twisted.cred import service, identity, perspective, authorizer
 from twisted.protocols import http, loopback
@@ -411,3 +411,19 @@ class TestRequest(unittest.TestCase):
         request.gotLength(0)
         request.requestReceived('GET', '/foo/bar', 'HTTP/1.0')
         self.assertEqual(request.prePathURL(), 'https://example.com:81/foo/bar')
+
+class SDResource(resource.Resource):
+    def __init__(self,default):  self.default=default
+    def getChildWithDefault(self,name,request):
+        d=defer.succeed(self.default)
+        return util.DeferredResource(d).getChildWithDefault(name, request)
+
+class SDTest(unittest.TestCase):
+
+    def testDeferredResource(self):
+        r = resource.Resource()
+        r.isLeaf = 1
+        s = SDResource(r)
+        d = DummyRequest(['foo', 'bar', 'baz'])
+        resource.getChildForRequest(s, d)
+        self.assertEqual(d.postpath, ['bar', 'baz'])

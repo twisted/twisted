@@ -209,7 +209,7 @@ class ResourceGuard(resource.Resource):
     
     def reallyRender(self, request):
         # it's authenticated already...
-        res = self.res.getChildForRequest(request)
+        res = resource.getChildForRequest(self.res, request)
         val = res.render(request)
         if val != NOT_DONE_YET:
             request.write(val)

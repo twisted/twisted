@@ -54,6 +54,15 @@ class IResource(components.Interface):
         """
 
 
+def getChildForRequest(resource, request):
+    """Traverse resource tree to find who will handle the request."""
+    while request.postpath and not resource.isLeaf:
+        pathElement = request.postpath.pop(0)
+        request.prepath.append(pathElement)
+        resource = resource.getChildWithDefault(pathElement, request)
+    return resource
+
+
 class Resource:
     """I define a web-accessible resource.
 
@@ -153,19 +162,10 @@ class Resource:
         return self.getChild(path, request)
 
     def getChildForRequest(self, request):
-        """(internal) Get a child of mine dependant on a particular request.
-
-        This will be called on me as a top-level resource of a site in order to
-        retrieve my appropriate child or grandchild to display.
-        """
-        res = self
-        while request.postpath and not res.isLeaf:
-            pathElement = request.postpath.pop(0)
-            request.prepath.append(pathElement)
-            res = res.getChildWithDefault(pathElement, request)
-        return res
-
-
+        import warnings
+        warnings.warn("Please use module level getChildForRequest.", DeprecationWarning, 2)
+        return getChildForRequest(self, request)
+    
     def putChild(self, path, child):
         """Register a static child.
         """
