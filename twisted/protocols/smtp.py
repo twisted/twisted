@@ -105,7 +105,7 @@ class DomainSMTP(SMTP):
             return 0
         if not self.factory.domains.has_key(domain):
             return 0
-        if not self.factory.domains[domain].exists(user, domain):
+        if not self.factory.domains[domain].exists(user, domain, self):
             return 0
         return 1
 
