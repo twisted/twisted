@@ -366,7 +366,7 @@ class SSHSession(channel.SSHChannel):
     def closed(self):
         global old
         log.msg('closed %s' % self)
-        if len(self.conn.channels) == 1 and not (options['noshell'] and not options['nocache']): # just us left
+        if len(self.conn.channels) == 0 and not (options['noshell'] and not options['nocache']): # just us left
             stopConnection()
         elif not options['nocache']: # fork into the background
             if os.fork():
@@ -411,14 +411,14 @@ class SSHListenClientForwardingChannel(forwarding.SSHListenClientForwardingChann
 
     def closed(self):
         forwarding.SSHListenClientForwardingChannel.closed(self)
-        if len(self.conn.channels) == 1 and not (options['noshell'] and not options['nocache']): # just us left
+        if len(self.conn.channels) == 0 and not (options['noshell'] and not options['nocache']): # just us left
             stopConnection()
 
 class SSHConnectForwardingChannel(forwarding.SSHConnectForwardingChannel):
 
     def closed(self):
         forwarding.SSHConnectForwardingChannel.closed(self)
-        if len(self.conn.channels) == 1 and not (options['noshell'] and not options['nocache']): # just us left
+        if len(self.conn.channels) == 0 and not (options['noshell'] and not options['nocache']): # just us left
             stopConnection()
 
 def _leaveRawMode():
