@@ -15,14 +15,25 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from twisted.trial import unittest
-from twisted.web import server, static, client, error, util
-from twisted.internet import reactor
+from twisted.web import server, static, client, error, util, resource
+from twisted.internet import reactor, defer
 
 import os
 
+serverCallID = None
+
+class LongTimeTakingResource(resource.Resource):
+    def render(self, request):
+        global serverCallID
+        serverCallID =  reactor.callLater(1, self.writeIt, request)
+        return server.NOT_DONE_YET
+
+    def writeIt(self, request):
+        request.write("hello!!!")
+        request.finish()
 
 class WebClientTestCase(unittest.TestCase):
-    
+
     def setUp(self):
         name = str(id(self)) + "_webclient"
         if not os.path.exists(name):
@@ -32,13 +43,17 @@ class WebClientTestCase(unittest.TestCase):
             f.close()
         r = static.File(name)
         r.putChild("redirect", util.Redirect("/file"))
-        self.port = reactor.listenTCP(0, server.Site(r), interface="127.0.0.1")
+        r.putChild("wait", LongTimeTakingResource())
+        self.port = reactor.listenTCP(0, server.Site(r, timeout=None), interface="127.0.0.1")
         reactor.iterate(); reactor.iterate()
         self.portno = self.port.getHost()[2]
 
     def tearDown(self):
+
+        if serverCallID and serverCallID.active():
+            serverCallID.cancel()
         self.port.stopListening()
-        reactor.iterate(); reactor.iterate()
+        reactor.iterate(); reactor.iterate();
         del self.port
 
     def getURL(self, path):
@@ -47,6 +62,12 @@ class WebClientTestCase(unittest.TestCase):
     def testGetPage(self):
         self.assertEquals(unittest.deferredResult(client.getPage(self.getURL("file"))),
                           "0123456789")
+
+    def testTimeout(self):
+        r = unittest.deferredResult(client.getPage(self.getURL("wait"), timeout=1.5))
+        self.assertEquals(r, 'hello!!!')
+        f = unittest.deferredError(client.getPage(self.getURL("wait"), timeout=0.5))
+        f.trap(defer.TimeoutError)
 
     def testDownloadPage(self):
         name = self.mktemp()

@@ -100,6 +100,11 @@ class HTTPPageGetter(http.HTTPClient):
         else:
             self.factory.page(response)
 
+    def timeout(self):
+        self.quietLoss = True
+        self.transport.loseConnection()
+        self.factory.noPage(defer.TimeoutError("Getting %s took longer than %s seconds." % (self.factory.url, self.factory.timeout)))
+
 
 class HTTPPageDownloader(HTTPPageGetter):
 
@@ -128,7 +133,11 @@ class HTTPClientFactory(protocol.ClientFactory):
 
     protocol = HTTPPageGetter
 
-    def __init__(self, host, url, method='GET', postdata=None, headers=None, agent="Twisted PageGetter"):
+    def __init__(self, host, url, method='GET', postdata=None, headers=None, agent="Twisted PageGetter", timeout=0):
+        self.timeout = timeout
+        self.agent = agent
+        self.url = url
+
         self.cookies = {}
         if headers is not None:
             self.headers = headers
@@ -144,10 +153,15 @@ class HTTPClientFactory(protocol.ClientFactory):
         else:
             self.host = host
             self.port = 80
-        self.url = url
-        self.agent = agent
+
         self.waiting = 1
         self.deferred = defer.Deferred()
+
+    def buildProtocol(self, addr):
+        p = protocol.ClientFactory.buildProtocol(self, addr)
+        if self.timeout:
+            reactor.callLater(self.timeout, p.timeout)
+        return p
 
     def gotHeaders(self, headers):
         if headers.has_key('set-cookie'):

@@ -1,5 +1,11 @@
 2003-07-18  Christopher Armstrong  <radix@twistedmatrix.com>
 
+	* twisted/web/client.py: Added a `timeout' keyword argument to
+	getPage; If the web page takes longer than `timeout' to fetch,
+	defer.TimeoutError is errbacked.
+
+2003-07-18  Christopher Armstrong  <radix@twistedmatrix.com>
+
 	* .: Releasing Twisted 1.0.7alpha1.
 
 2003-07-17  Jp Calderone  <exarkun@twistedmatrix.com>
