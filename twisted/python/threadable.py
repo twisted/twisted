@@ -187,7 +187,10 @@ class _XLock:
 
 def _synchPre(self, *a, **b):
     if not self.__dict__.has_key('_threadable_lock'):
-        self.__dict__['_threadable_lock'] = XLock()
+        _synchLockCreator.acquire()
+        if not self.__dict__.has_key('_threadable_lock'):
+            self.__dict__['_threadable_lock'] = XLock()
+        _synchLockCreator.release()
     self._threadable_lock.acquire()
 
 def _synchPost(self, *a, **b):
@@ -229,7 +232,7 @@ def init(with_threads=1):
     """Initialize threading. Should be run once, at the beginning of program.
     """
     global threaded, _to_be_synched, Waiter
-    global threadingmodule, threadmodule, XLock
+    global threadingmodule, threadmodule, XLock, _synchLockCreator
     if threaded == with_threads:
         return
     elif threaded:
@@ -237,13 +240,14 @@ def init(with_threads=1):
     threaded = with_threads
     if threaded:
         log.msg('Enabling Multithreading.')
-        Waiter = _ThreadedWaiter
-        XLock = _XLock
-        synchronize(*_to_be_synched)
-        _to_be_synched = []
         import thread, threading
         threadmodule = thread
         threadingmodule = threading
+        Waiter = _ThreadedWaiter
+        XLock = _XLock
+        _synchLockCreator = XLock()
+        synchronize(*_to_be_synched)
+        _to_be_synched = []
         for cb in threadCallbacks:
             cb()
     else:
