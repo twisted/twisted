@@ -123,6 +123,8 @@ Basic Servers
   administration port.  Web administration can be conducted on port 8080, the
   IRC server on 6667, and a PB service on port 8787.
 
+
+
   You'll need to create an account with the web tool before you can log in,
   even using IRC (a "bot" will ask you for your password upon connection).
 

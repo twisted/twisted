@@ -28,7 +28,6 @@ import time
 import threadable
 import failure
 
-
 StringIO = cStringIO
 del cStringIO
 
@@ -283,6 +282,15 @@ class Log:
         else:
             self.__dict__[attr] = value
 
+    def __getstate__(self):
+        d = self.__dict__.copy()
+        d['file'] = d['file'].name
+        return d
+
+    def __setstate__(self, state):
+        self.__dict__ = state
+        self.file = open(state['file'], 'a') # XXX - open() shouldn't be here
+
     def write(self,bytes):
         if not bytes:
             return
@@ -328,7 +336,6 @@ def startLogging(file):
     global logfile
     logfile = sys.stdout = sys.stderr = Log(file, logOwner)
     msg("Log opened.")
-
 
 
 __all__ = ["logOwner", "Log", "Logger", "startLogging", "msg", "write"]

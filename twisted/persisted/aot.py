@@ -429,6 +429,7 @@ class AOTJellier:
         # dict of {id(obj): (obj, node)}
         self.prepared = {}
         self._ref_id = 0
+        self.stack = []
 
     def prepareForRef(self, aoref, object):
         """I prepare an object for later referencing, by storing it's id()
@@ -438,6 +439,7 @@ class AOTJellier:
     def jellyToAO(self, obj):
         """I turn an object into an AOT and return it."""
         objType = type(obj)
+        self.stack.append(repr(obj))
 
         #immutable: We don't care if these have multiple refs!
         if objType in [types.NoneType, types.StringType, types.UnicodeType,
@@ -514,9 +516,13 @@ class AOTJellier:
             else:
                 raise "Unsupported type: %s" % objType.__name__
 
+        del self.stack[-1]
         return retval
 
     def jelly(self, obj):
-        ao = self.jellyToAO(obj)
-        return ao
-
+        try:
+            ao = self.jellyToAO(obj)
+            return ao
+        except:
+            print string.join(self.stack, '\n')
+            raise
