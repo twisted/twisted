@@ -223,18 +223,19 @@ class SymbolicExpressionReceiver(protocol.Protocol):
                                                        
 class _fromString(SymbolicExpressionReceiver):
 
-    def symbolicExpressionReceived(self, expr):
-        self.exp = expr
-    
     def __init__(self, st):
+        self.exps = []
         SymbolicExpressionReceiver.__init__(self)
         self.connectionMade()
         self.dataReceived(st)
         self.connectionLost()
 
-def fromString(st):
+    def symbolicExpressionReceived(self, expr):
+        self.exps.append(expr)
     
+
+def fromString(st):    
     f = _fromString(st)
-    return f.exp
+    return f.exps
 
 

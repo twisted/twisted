@@ -66,4 +66,17 @@ def interpret():
 
 
 if __name__ == '__main__':
-    interpret()
+    if len(sys.argv) > 1:
+        try:
+            f = open(sys.argv[1])
+        except IOError:
+            print "Couldn't open %s for reading." % sys.argv[1]
+            sys.exit()
+        except OSError:
+            print "Couldn't open %s for reading." % sys.argv[1]
+            sys.exit()
+
+        print eco.evalFile(f)
+        sys.exit()
+    else:
+        interpret()

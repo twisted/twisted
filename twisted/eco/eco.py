@@ -36,9 +36,15 @@ def consify(sexp):
 
 # And then came the evaluator. There was much rejoicing!
 def eval(string):
-    c = consify(sexpy.fromString(string))
+    forms = sexpy.fromString(string)
     env = (ValueEnvironment(), FunctionEnvironment())
-    return evalExp(c, env)
+    for form in forms:
+        c = consify(form)
+        ret = evalExp(c, env)
+    return ret
+
+def evalFile(fileObj):
+    return eval(fileObj.read())
 
 def evalExp(exp, env):
     if isinstance(exp, sexpy.Atom):
