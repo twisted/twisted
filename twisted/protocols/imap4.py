@@ -4302,6 +4302,11 @@ def getLineCount(msg):
         lines += 1
     return lines
 
+def unquote(s):
+    if s[0] == s[-1] == '"':
+        return s[1:-1]
+    return s
+
 def getBodyStructure(msg, extended=False):
     # XXX - This does not properly handle multipart messages
     # BODYSTRUCTURE is obscenely complex and criminally under-documented.
@@ -4330,12 +4335,13 @@ def getBodyStructure(msg, extended=False):
 
 
     size = str(msg.getSize())
+    unquotedAttrs = [(k, unquote(v)) for (k, v) in attrs.iteritems()]
     result = [
         major, minor,                       # Main and Sub MIME types
-        attrs.items(),                      # content-type parameter list
-        headers.get('content-id'),          # Duh
-        headers.get('content-description'), # Duh
-        headers.get('content-transfer-encoding'), # Duh
+        unquotedAttrs,                      # content-type parameter list
+        headers.get('content-id'),
+        headers.get('content-description'),
+        headers.get('content-transfer-encoding'),
         size,                               # Number of octets total
     ]
 

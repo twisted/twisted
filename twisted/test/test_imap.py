@@ -1849,7 +1849,7 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
         self.function = self.client.fetchBodyStructure
         self.messages = '3:9,10:*'
         self.msgObjs = [FakeyMessage({
-                'content-type': 'text/plain; name=thing; key=value',
+                'content-type': 'text/plain; name=thing; key="value"',
                 'content-id': 'this-is-the-content-id',
                 'content-description': 'describing-the-content-goes-here!',
                 'content-transfer-encoding': '8BIT',
@@ -1862,7 +1862,7 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
 
     def testFetchBodyStructureUID(self):
         self.testFetchBodyStructure(1)
-
+    
     def testFetchSimplifiedBody(self, uid=0):
         self.function = self.client.fetchSimplifiedBody
         self.messages = '21'
