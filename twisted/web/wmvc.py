@@ -25,6 +25,7 @@ from twisted.python import mvc
 from twisted.python import components
 from twisted.web import domwidgets
 from twisted.web import domhandlers
+from twisted.web import resource
 
 
 WModel = mvc.Model
@@ -37,4 +38,5 @@ def registerViewForModel(view, model):
 
 def registerControllerForModel(controller, model):
     components.registerAdapter(controller, model, mvc.IController)
+    components.registerAdapter(controller, model, resource.IResource)
 

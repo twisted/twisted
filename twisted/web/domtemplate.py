@@ -86,6 +86,7 @@ from twisted.python import log
 
 from server import NOT_DONE_YET
 STOP_RENDERING = 1
+RESTART_RENDERING = 2
 
 class MethodLookup:
     def __init__(self):
@@ -150,8 +151,9 @@ class DOMTemplate(Resource, View):
 
     def __init__(self, model = None):
         Resource.__init__(self)
-        self.model = model
+        View.__init__(self, model)
         self.controller = self
+        self.model = model
         self.templateMethods = MethodLookup()
         self.setTemplateMethods( self.getTemplateMethods() )
         
@@ -421,6 +423,11 @@ class DOMTemplate(Resource, View):
             request.write(page)
             request.finish()
             return page
+        elif stop == RESTART_RENDERING:
+            # Start the whole damn thing again with fresh state
+            selfRef = request.pathRef()
+            otherSelf = selfRef.getObject()
+            otherSelf.render(request)
 
     def handleFailures(self, request, failures):
         print "There were failures: ", failures
@@ -463,3 +470,4 @@ class DOMController(mvc.Controller, Resource):
 
     def process(self, request, **kwargs):
         print "Processing results: ", kwargs
+        return RESTART_RENDERING
