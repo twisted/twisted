@@ -2,6 +2,7 @@
 
 import gc
 
+from zope.interface import implements, implementsOnly
 from twisted.python import components
 from twisted.trial import unittest
 
@@ -143,7 +144,7 @@ class TestAnswer(unittest.TestCase):
 
 #from twisted.internet import interfaces
 class Loopback:
-#    __implements__ = interfaces.ITransport
+#   implements(interfaces.ITransport)
     def write(self, data):
         self.peer.dataReceived(data)
 
@@ -172,7 +173,8 @@ class IMyTarget3(IMyTarget):
 pb.registerRemoteInterface(IMyTarget3)
 
 class Target(pb.Referenceable):
-    __implements__ = (IMyTarget,)
+    implements(IMyTarget)
+
     def __init__(self):
         self.calls = []
     def getMethodSchema(self, methodname):
@@ -184,12 +186,12 @@ class Target(pb.Referenceable):
         return 24
 
 class TargetWithoutInterfaces(Target):
-    # twisted-1.3.0 has a bug which hits when __implements__ is empty. This
-    # is a workaround.
-    __implements__ = components.Interface,
+    # undeclare the IMyTarget interface
+    implementsOnly()
 
 class BrokenTarget(pb.Referenceable):
-    __implements__ = (IMyTarget,)
+    implements(IMyTarget)
+
     def remote_add(self, a, b):
         return "error"
 
@@ -197,7 +199,7 @@ class IFoo(components.Interface):
     pass
 
 class Target2(Target):
-    __implements__ = (IMyTarget, IFoo, IMyTarget2)
+    implements(IMyTarget, IFoo, IMyTarget2)
 
 class TargetMixin:
 
@@ -239,17 +241,16 @@ class TestInterface(unittest.TestCase, TargetMixin):
         self.setupBrokers()
         rr, target = self.setupTarget(Target())
         ilist = pb.getRemoteInterfaces(target)
-        self.failUnlessEqual(ilist, [IMyTarget, pb.IRemoteInterface])
+        self.failUnlessEqual(ilist, [IMyTarget])
         inames = pb.getRemoteInterfaceNames(target)
-        self.failUnlessEqual(inames, ["IMyTarget", "IRemoteInterface"])
+        self.failUnlessEqual(inames, ["IMyTarget"])
         self.failUnlessIdentical(pb.remoteInterfaceRegistry["IMyTarget"],
                                  IMyTarget)
         
         rr, target = self.setupTarget(Target2())
         ilist = pb.getRemoteInterfaceNames(target)
         self.failUnlessEqual(ilist, ["IMyTarget",
-                                     "IMyTargetInterface2",
-                                     "IRemoteInterface"])
+                                     "IMyTargetInterface2"])
         self.failUnlessIdentical(\
             pb.remoteInterfaceRegistry["IMyTargetInterface2"], IMyTarget2)
 

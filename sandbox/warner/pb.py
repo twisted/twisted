@@ -594,7 +594,7 @@ registerRemoteCopy(FailureSlicer.classname, CopiedFailure)
 remoteInterfaceRegistry = {}
 def registerRemoteInterface(iface):
     """Call this to register each subclass of IRemoteInterface."""
-    name = iface.__remote_name__ or iface.__name__
+    name = iface.remoteGetRemoteName()
     remoteInterfaceRegistry[name] = iface
 
 class DecRefSlicer(slicer.BaseSlicer):

@@ -9,79 +9,65 @@ registerAdapter = components.registerAdapter
 from tokens import ISlicer
 import schema, slicer
 
-## class RemoteMetaInterface(components.MetaInterface):
-##     def __init__(self, iname, bases, dct):
-##         components.MetaInterface.__init__(self, iname, bases, dct)
-##         # determine all remotely-callable methods
-##         methods = [name for name in dct.keys()
-##                    if ((type(dct[name]) == types.FunctionType and
-##                         not name.startswith("_")) or
-##                        schema.IConstraint.providedBy(dct[name]))]
-##         self.methods = methods
-##         # turn them into constraints
-##         for name in methods:
-##             m = dct[name]
-##             if not schema.IConstraint.providedBy(m):
-##                 s = schema.RemoteMethodSchema(method=m)
-##                 #dct[name] = s  # this doesn't work, dct is copied
-##                 setattr(self, name, s)
+class RemoteInterfaceClass(InterfaceClass):
+    def __init__(self, iname, bases=(), attrs=None, __module__=None):
+        if attrs is not None:
+            # determine all remotely-callable methods
+            methods = [name for name in attrs.keys()
+                       if ((type(attrs[name]) == types.FunctionType and
+                            not name.startswith("_")) or
+                           schema.IConstraint.providedBy(attrs[name]))]
 
-## class IRemoteInterface(Interface, object):
-##     __remote_name__ = None
-##     __metaclass__ = RemoteMetaInterface
+            # turn them into constraints
+            constraints = {}
+            for name in methods:
+                m = attrs[name]
+                if not schema.IConstraint.providedBy(m):
+                    m = schema.RemoteMethodSchema(method=m)
+                constraints[name] = m
+                # delete the methods, so zope's InterfaceClass doesn't see them
+                del attrs[name]
 
-# this doesn't work. I don't know how to make a proper metaclass which can
-# walk through the attributes and turn all the method definitions into
-# constraints (this may be fundamentally incompatible with what
-# zope.interface does). When I cheat and make IRemoteInterface less magical
-# (using a metaclass which knows about pb-specific stuff but not
-# zope.interface.Interface -type stuff), that breaks the providedBy() call
-# used in getRemoteInterfaces(), below.
+            # and see if there is a __remote_name__ . We delete it because
+            # InterfaceClass doesn't like arbitrary attributes
+            remote_name = attrs.get("__remote_name__", iname)
+            if attrs.has_key("__remote_name__"):
+                del attrs["__remote_name__"]
+                
+            self.__remote_stuff__ = (methods, constraints, remote_name)
+        
+        # now let InterfaceClass at it
+        InterfaceClass.__init__(self, iname, bases, attrs, __module__)
 
-class RemoteMetaInterface(type):
-    def __init__(self, iname, bases, attrs):
-        # determine all remotely-callable methods
-        methods = [name for name in attrs.keys()
-                   if ((type(attrs[name]) == types.FunctionType and
-                        not name.startswith("_")) or
-                       schema.IConstraint.providedBy(attrs[name]))]
-        self.methods = methods
-        # turn them into constraints
-        for name in methods:
-            m = attrs[name]
-            if not schema.IConstraint.providedBy(m):
-                s = schema.RemoteMethodSchema(method=m)
-                #attrs[name] = s  # this doesn't work, attrs is copied
-                setattr(self, name, s)
-        return type.__init__(self, iname, bases, attrs)
-#IRemoteInterface = RemoteInterfaceClass("IRemoteInterface",
-#                                        __module__="flavors")
-#IRemoteInterface.__remote_name__ = None
+    def remoteGetMethodNames(self):
+        return self.__remote_stuff__[0]
+    def remoteGetMethodConstraint(self, name):
+        return self.__remote_stuff__[1][name]
+    def remoteGetRemoteName(self):
+        return self.__remote_stuff__[2]
 
-class IRemoteInterface(object):
-    __remote_name__ = None
-    __metaclass__ = RemoteMetaInterface
-
-#IRemoteInterface = Interface
+IRemoteInterface = RemoteInterfaceClass("IRemoteInterface",
+                                        __module__="pb.flavors")
 
 def getRemoteInterfaces(obj):
     """Get a list of all RemoteInterfaces supported by the object."""
-    interfaces = providedBy(obj)
+    interfaces = list(providedBy(obj))
     # TODO: versioned Interfaces!
     ilist = []
     for i in interfaces:
-        if issubclass(i, IRemoteInterface):
+        if isinstance(i, RemoteInterfaceClass):
             if i not in ilist:
                 ilist.append(i)
     def getname(i):
-        return i.__remote_name__ or i.__name__
-    ilist.sort(lambda x,y: cmp(getname(x), getname(y)))
+        return i.remoteGetRemoteName()
+    ilist.sort(lambda x,y: cmp(x.remoteGetRemoteName(),
+                               y.remoteGetRemoteName()))
     # TODO: really? both sides must match
     return ilist
 
 def getRemoteInterfaceNames(obj):
     """Get the names of all RemoteInterfaces supported by the object."""
-    return [i.__remote_name__ or i.__name__ for i in getRemoteInterfaces(obj)]
+    return [i.remoteGetRemoteName() for i in getRemoteInterfaces(obj)]
 
 class ICopyable(Interface):
     """I represent an object which is passed-by-value across PB connections.
@@ -268,7 +254,7 @@ class Referenceable(object):
         # create and return a RemoteReferenceSchema for us
         if not self.refschema:
             interfaces = dict([
-                (iface.__remote_name__ or iface.__name__, iface)
+                (iface.remoteGetRemoteName(), iface)
                 for iface in getRemoteInterfaces(self)])
             self.refschema = schema.RemoteReferenceSchema(interfaces)
         return self.refschema

@@ -753,10 +753,10 @@ class RemoteReferenceSchema:
         for iface in interfaces.values():
             if not iface:
                 continue
-            for name in iface.methods:
+            for name in iface.remoteGetMethodNames():
                 assert(name not in self.methods,
                        "overlapping method '%s'" % name)
-                m = iface.__dict__[name]
+                m = iface.remoteGetMethodConstraint(name)
                 assert(isinstance(m, RemoteMethodSchema),
                        "method %s is %s" % (name, m))
                 self.methods[name] = m
