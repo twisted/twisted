@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.90 $"[11:-2]
+__version__ = "$Revision: 1.91 $"[11:-2]
 
 # Sibling imports
 import interfaces
@@ -472,7 +472,7 @@ class View:
             else:
                 raise NotImplementedError(
                     "You specified view name %s on a node %s, but no "
-                    "wvfactory_%s method was found in %s.  (Or maybe they were"
+                    "wvfactory_%s method was found in %s.  (Or maybe they were "
                     "found but they returned None.)" % (
                     viewName, node, viewName,
                     filterStack(self.viewStack)))
