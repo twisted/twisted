@@ -6,6 +6,17 @@ from twisted.internet import defer
 from twisted.python import failure
 
 class ThreadWrapper(object):
+    """Wrap an object which presents an asynchronous interface (via Deferreds).
+    
+    The wrapped object will present the same interface, but all methods will
+    return results, rather than Deferreds.
+    
+    This also makes it safe to call non-threadsafe methods from threads
+    other than the IO thread.
+    
+    This is only useful for wrapping objects accessed by threads other than
+    the IO thread.
+    """
     def __init__(self, wrappee):
         self.wrappee = wrappee
     
