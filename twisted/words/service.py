@@ -160,7 +160,7 @@ class Participant(pb.Perspective, styles.Versioned):
         """
         if ((self.client is not None)
             and self.client.__class__ != styles.Ephemeral):
-            raise authorizer.Unauthorized("duplicate login not permitted.")
+            self.detached(client, identity)
         log.msg("attached: %s" % self.name)
         self.client = client
         client.receiveContactList(map(lambda contact: (contact.name,
