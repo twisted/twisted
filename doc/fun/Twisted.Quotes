@@ -12,7 +12,7 @@ Washort says, "Oh, did i ever tell you about the Java assignment i had at the be
 Washort says, "I was bored so i did it without any loops or temp variables."
 Washort says, "so... don't tell ME about bad style. ;)"
 %
-<glyph_> it's times like this when I wish I could just swallow my pride and use a standard thing like asyncore :)
+<glyph> it's times like this when I wish I could just swallow my pride and use a standard thing like asyncore :)
 %
 <jedin> Since it's completely unsolicited, I'd just like to add that anyone who tries implementing Keynesian economics in this game will be put behind the door with the Elder Sign....
 %
@@ -4373,12 +4373,12 @@ experience is characterised by waves of confusion and euphoria."
 <kwaker>	and my hard drive to burn in flames
 <fzZzy>	yes
 %
-<exarkun> slyphon: Nagle is a little gnome who ships inside every TCP stack
-<exarkun> slyphon: He grabs your sockets and squeezes them
-<exarkun> slyphon: So the bits can't fit through
-<exarkun> slyphon: Later, he lets go
-<exarkun> slyphon: Turning off TCP_NODELAY hits Nagle with a sledge hammer.
-<exarkun> slyphon: While he's unconscious, no one does the job of squeezing your sockets.  
+<exarkun> Nagle is a little gnome who ships inside every TCP stack
+<exarkun> He grabs your sockets and squeezes them
+<exarkun> So the bits can't fit through
+<exarkun> Later, he lets go
+<exarkun> Turning off TCP_NODELAY hits Nagle with a sledge hammer.
+<exarkun> While he's unconscious, no one does the job of squeezing your sockets.  
 %
 <PenguinOfDoom> dash left me!
 <PenguinOfDoom> aaaaaaaa
@@ -4394,4 +4394,9 @@ experience is characterised by waves of confusion and euphoria."
 <frankie> say something nice, plz :)
 <aj> hello, this is the Debian Release Manager, please, please
      try a different distro! (arrrggh, the pressure, the pressure!)
+%
+<zooko> I think there should be a "maybe" button next to "ok", "cancel" in all dialogs.
+<zooko> [okay] [cancel] [I'm not sure]
+<LotR> and the dialog would vanish and then reappear?
+<zooko> I'm not sure.
 %
