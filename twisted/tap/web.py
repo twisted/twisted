@@ -64,10 +64,10 @@ twisted.web.test in it."""
 
     opt_u = opt_user
 
-    def opt_static(self, path):
+    def opt_path(self, path):
         """<path> is either a specific file or a directory to
         be set as the root of the web server. Use this if you
-        have a directory full of HTML, cgi, or php3 files or
+        have a directory full of HTML, cgi, php3, epy, or rpy files or
         any other files that you want to be served up raw.
         """
 
@@ -78,18 +78,27 @@ twisted.web.test in it."""
             '.epy': script.PythonScript
             }
 
+    def opt_static(self, path):
+        """Same as --path, this is deprecated and will be removed in a
+        future release."""
+        print ("WARNING: --static is deprecated and will be removed in"
+               "a future release. Please use --path.")
+        self.opt_path(path)
+    opt_s = opt_static
+
+    
     def opt_class(self, className):
         """Create a Resource subclass with a zero-argument constructor.
         """
         classObj = reflect.namedClass(className)
         self.opts['root'] = classObj()
 
-    opt_s = opt_static
+
 
     def opt_mime_type(self, defaultType):
         """Specify the default mime-type for static files."""
         if not isinstance(self.opts['root'], static.File):
-            print "You can only use --mime_type after --static."
+            print "You can only use --mime_type after --path."
             sys.exit(2)
         self.opts['root'].defaultType = defaultType
     opt_m = opt_mime_type
@@ -98,7 +107,7 @@ twisted.web.test in it."""
     def opt_allow_ignore_ext(self):
         """Specify wether or not a request for 'foo' should return 'foo.ext'"""
         if not isinstance(self.opts['root'], static.File):
-            print "You can only use --allow_ignore_ext after --static."
+            print "You can only use --allow_ignore_ext after --path."
             sys.exit(2)
         self.opts['root'].allowExt = 1
 

@@ -48,21 +48,30 @@ Listen locally on \fI<port>\fR
 .TP
 \fB\-u\fR, \fB\--user\fR
 Makes a server with ~/public_html and
-~/.twistd-web-service support for users.
+~/.twistd-web-pb support for users.
 .TP
 \fB\--personal\fR
 Instead of generating a webserver, generate a
-ResourcePublisher which listens on ~/.twistd-web-service
+ResourcePublisher which listens on ~/.twistd-web-pb
 .TP
-\fB\-s\fR, \fB\--static\fR \fI<path>\fR
+\fB\-s\fR, \fB\--path\fR \fI<path>\fR
 <path> is either a specific file or a directory to be
 set as the root of the web server. Use this if you
-have a directory full of HTML, cgi, or php3 files or
+have a directory full of HTML, cgi, php3, epy, or rpy files or
 any other files that you want to be served up raw.
 .TP
 \fB\-p\fR, \fB\--port\fR \fI<port>\fR
 <port> is a number representing which port you want to
 start the server on.
+.TP
+\fB\-p\fR, \fB\--mime_type\fR \fI<mimetype>\fR
+<mimetype> is the default MIME type to use for
+files in a --path web server when none can be determined
+for a particular extension. The default is 'text/html'.
+.TP
+\fB\-p\fR, \fB\--allow_ignore_ext\fR
+Specify wether or not a request for 'foo' should return 'foo.ext'.
+Default is off.
 .TP
 \fB\-t\fR, \fB\--telnet\fR \fI<port>\fR
 Run a telnet server on <port>, for additional

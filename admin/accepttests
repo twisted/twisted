@@ -52,7 +52,7 @@ def basicWebTest():
 
 def staticWebTest():
     message("Running Static Web Test")
-    cmd("mktap web --static %s/../static" % twistedBinDir)
+    cmd("mktap web --path %s/../static" % twistedBinDir)
     twistdf("web")
     message("You should see an 'it worked' page now.",
             "(depending on your browser, you may need to reload)")

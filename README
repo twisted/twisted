@@ -95,12 +95,13 @@ Basic Servers
   The normal type of server to create is a webserver.  You can run this
   command::
 
-    % mktap web --static static
+    % mktap web --path static
 
-  which will make a "static" webserver (one that reads from the filesystem) and
-  serve pages from the provided 'static' directory.  This creates a file named
-  'web.tap'.  By default, this server will run on port 8080, but you can change
-  it with the --port option.
+  which will make a path-based webserver (one that reads from the filesystem)
+  and serve pages from the provided 'static' directory.  This will
+  automatically execute CGIs, epys, rpys, and php files.  This creates a file
+  named 'web.tap'.  By default, this server will run on port 8080, but you can
+  change it with the --port option.
 
   You can also create a telnet server::
 

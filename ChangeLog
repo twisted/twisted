@@ -5,6 +5,10 @@
 	disabled by default. If you want a --static webserver that
 	uses this feature, use 'mktap web --static <dir> --allow_ignore_ext'.
 
+	* twisted/tap/web.py: Also switched --static to --path; it doesn't
+	make sense to call something that automatically executes cgis, epys,
+	rpys, php, etc., "static". :-)
+
 2002-04-14  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
 
 	* HTTP 1.1 now supports persistent and pipelined connections.
