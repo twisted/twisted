@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (c) 2001 by Twisted Matrix Laboratories
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.21 2002/03/18 23:36:57 jh Exp $
+$Id: setup.py,v 1.22 2002/03/19 20:46:55 jh Exp $
 """
 
 import distutils, os, sys, string
@@ -38,6 +38,19 @@ from twisted import copyright
 #############################################################################
 ### Helpers and distutil tweaks
 #############################################################################
+
+script_preamble = """
+### Twisted Preamble
+# This makes sure that users don't have to set up their environment
+# specially in order to run these programs from bin/.
+import sys,os,string
+
+if string.find(os.path.abspath(sys.argv[0]),'Twisted') != -1:
+    sys.path.append(os.path.dirname(
+        os.path.dirname(os.path.abspath(sys.argv[0]))))
+sys.path.append('.')
+### end of preamble
+"""
 
 class build_scripts_create(build_scripts):
     """ Overload the build_scripts command and create the scripts
@@ -84,6 +97,7 @@ class build_scripts_create(build_scripts):
                 'python': os.path.normpath(sys.executable),
                 'package': self.package_name,
                 'module': module,
+                'preamble': script_preamble,
             }
 
             self.announce("creating %s" % outfile)
@@ -96,6 +110,7 @@ class build_scripts_create(build_scripts):
                         % script_vars)
                 else:
                     file.write('#! %(python)s\n'
+                        '%(preamble)s\n'
                         'from %(package)s.scripts.%(module)s import run\n'
                         'run()\n'
                         % script_vars)

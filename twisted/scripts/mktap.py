@@ -15,27 +15,11 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: mktap.py,v 1.2 2002/03/19 00:03:14 jh Exp $
+# $Id: mktap.py,v 1.3 2002/03/19 20:46:57 jh Exp $
 
 """ Implementation module for the `mktap` command.
 """
 ## Copied from bin/mktap 1.26!
-
-"""
-This might have to be added to the stubs created in setup.py;
-since it does not say what it really does, I cannot say for now.
-
-### Twisted Preamble
-# This makes sure that users don't have to set up their environment
-# specially in order to run these programs from bin/.
-import sys,os,string
-
-if string.find(os.path.abspath(sys.argv[0]),'Twisted') != -1:
-    sys.path.append(os.path.dirname(
-        os.path.dirname(os.path.abspath(sys.argv[0]))))
-sys.path.append('.')
-### end of preamble
-"""
 
 from twisted.protocols import telnet
 from twisted.internet import app, tcp
