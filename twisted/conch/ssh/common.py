@@ -80,10 +80,15 @@ MP_py = MP
 _MPpow_py = _MPpow
 
 try:
-    import tcs_common
-    getMP = tcs_common.getMP
-    MP = tcs_common.MP
-    _MPpow = tcs_common._MPpow
-    __builtins__['pow'] = tcs_common.pow # this is probably evil
+    import tgmp
+    getMP = tgmp.getMP
+    MP = tgmp.MP
+    _MPpow = tgmp._MPpow
+    pyPow = pow
+    def tgmpPow(x, y, z = None):
+        if not z:
+            return pyPow(x, y) # tgmp.pow only does 3 args
+        return apply(tgmp.pow, map(long, (x,y,z)))
+    __builtins__['pow'] = tgmpPow # this is probably evil
 except ImportError:
     pass

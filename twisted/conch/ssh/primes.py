@@ -33,7 +33,7 @@ def parseModuliFile(filename):
             continue
         tim, typ, tst, tri, size, gen, mod = l.split()
         size = int(size) + 1
-        gen = int(gen)
+        gen = long(gen)
         mod = long(mod, 16)
         if not primes.has_key(size):
             primes[size] = []

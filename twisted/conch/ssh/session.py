@@ -25,7 +25,8 @@ Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 
 import struct
 
-from twisted.internet import protocol
+from twisted.internet import protocol, reactor
+from twisted.python import log
 
 import common
 from connection import SSHChannel # weird circular import
@@ -94,11 +95,11 @@ class SSHSession(SSHChannel):
 
     def request_pty_req(self, data):
         self.environ['TERM'], self.winSize, self.modes =  \
-                             parse_request_pty_req(data)
+                             parseRequest_pty_req(data)
         return 1
 
     def request_window_change(self, data):
-        parse_request_window_change(data)
+        parseRequest_window_change(data)
         fcntl.ioctl(self.pty.fileno(), tty.TIOCSWINSZ, 
                     struct.pack('4H', *self.winSize))
         return 1
