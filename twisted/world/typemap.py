@@ -282,14 +282,7 @@ class StorableListTypeMapper(ObjectTypeMapper):
         if isinstance(obj, list):
             from twisted.world.compound import StorableList
             st = StorableList(db, self.getType())
-            d = {}
-            d[st] = 1
-            assert st in d
-            assert st in db.identityToUID
-            for x in obj:
-                st.append(x)
-            assert st in d
-            assert st in db.identityToUID
+            st.extend(obj)
             return ObjectTypeMapper.highToLow(self, db, st)
         else:
             return ObjectTypeMapper.highToLow(self, db, obj)

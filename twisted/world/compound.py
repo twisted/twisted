@@ -46,8 +46,8 @@ class StorableList(Allocation):
 
     def __init__(self, db, typeMapper):
         self.typeMapper = typeMapper
-        Allocation.__init__(self, db,
-                            typeMapper.getPhysicalSize() * self.initialPad)
+        Allocation.__init__(self, db, 0)
+        # typeMapper.getPhysicalSize() * self.initialPad
 
     def updateFragData(self):
         #print self.allocBegin, self.allocLength, self.fragfile
@@ -211,11 +211,16 @@ class StorableList(Allocation):
 
     def append(self, o):
         if ((self.contentLength + 1) * self.fragdata.size) > self.allocLength:
-            self.expand()
+            self.expand(self.fragdata.size)
         self.contentLength += self.fragdata.size
         self[len(self) - 1] = o
 
     def extend(self, seq):
+        itl = len(seq)
+        deadspace = ((self.allocLength - self.contentLength) //
+                     self.fragdata.size)
+        if itl > deadspace:
+            self.expand((itl - deadspace) * self.fragdata.size)
         for o in seq:
             self.append(o)
 

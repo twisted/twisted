@@ -134,7 +134,7 @@ class StructuredFile:
             assert self.maxLength is None
             self.maxLength = self.maxSize // self.size
 
-        assert self.maxLength is None or self.maxLength > 0
+        assert self.maxLength is None or self.maxLength >= 0
 
         self.orig_offset = self.offset
         if not self.ignoreSchema:

@@ -32,6 +32,7 @@ from twisted.world.util import BoundProxy
 
 DEFAULT_MAX_ALLOCS = 5000                 # random number - currently small so testing is easy
 
+
 class FragmentFile(Storable):
     __schema__ = {
         'maxAllocs': int,
@@ -226,6 +227,13 @@ class Allocation(Storable):
         """I may or may not have a fragment file.  Allocate some space in one
         for me.
         """
+        if howBig == 0:
+            if self.fragfile:
+                self.free()
+            else:
+                self.allocLength = 0
+                self.allocBegin = 0
+                self.contentLength = 0
         db = self.getDatabase()
         fragFiles = db.queryClassSelect(FragmentFile)
         # TODO: scale better...
@@ -244,7 +252,11 @@ class Allocation(Storable):
             self.allocLength = actual
 
     def getDataFile(self):
-        return self.fragfile.getDataFile()
+        if self.fragfile is None:
+            import cStringIO
+            return cStringIO.StringIO('')
+        else:
+            return self.fragfile.getDataFile()
 ##         return WindowCheckingFile(self.fragfile.getDataFile(),
 ##                                   self.allocBegin, self.allocBegin + self.allocLength)
 
@@ -253,6 +265,8 @@ class Allocation(Storable):
         """
         if howMuch is None:
             howMuch = self.allocLength
+        if howMuch == 0:
+            howMuch = 10 # small initial pad
         oldAllocBegin = self.allocBegin
         oldAllocLength = self.allocLength
         oldFragFile = self.fragfile
