@@ -20,10 +20,7 @@ import sys
 import os.path
 join=os.path.join
 from distutils import sysconfig
-import twisted.copyright
-from twisted.python import runtime, zipstream, usage
 from twisted.scripts import tkunzip
-import compileall
 
 def run(argv=sys.argv):
     sitepackages=join(sysconfig.get_config_var('BINLIBDEST'),
