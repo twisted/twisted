@@ -654,6 +654,7 @@ if (runtime.platform.getType() != 'posix') or (not components.implements(reactor
     PosixProcessTestCase.skip = skipMessage
     PosixProcessTestCasePTY.skip = skipMessage
     TestTwoProcessesPosix.skip = skipMessage
+    FDTest.skip = skipMessage
 else:
     # do this before running the tests: it uses SIGCHLD and stuff internally
     lsOut = popen2.popen3("/bin/ls ZZXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")[2].read()
