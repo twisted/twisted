@@ -16,6 +16,9 @@
 %default 3 size 2, bar "gray70", vgap 10
 %default 4 size 1, fore "white", vgap 30, prefix " ", font "standard"
 %default 5 size 5
+%%tab 1 size 5, vgap 40, prefix "  ", icon box "green" 50
+%%tab 2 size 4, vgap 40, prefix "      ", icon arc "yellow" 50
+%%tab 3 size 3, vgap 40, prefix "            ", icon delta3 "white" 40
 %tab 1 size 5, vgap 40, prefix "  ", icon box "green" 50
-%tab 2 size 4, vgap 40, prefix "      ", icon arc "yellow" 50
-%tab 3 size 3, vgap 40, prefix "            ", icon delta3 "white" 40
+%tab 2 size 5, vgap 40, prefix "      ", icon arc "yellow" 50
+%tab 3 size 4, vgap 40, prefix "            ", icon delta3 "white" 40

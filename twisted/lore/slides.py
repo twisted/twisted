@@ -62,7 +62,7 @@ from twisted.python import text
 from twisted.lore.latex import BaseLatexSpitter, processFile, getLatexText
 from twisted.lore.tree import getHeaders
 
-import os, os.path
+import os, os.path, re
 from cStringIO import StringIO
 
 hacked_entities = { 'amp': ' &', 'gt': ' >', 'lt': ' <', 'quot': ' "',
@@ -77,7 +77,8 @@ class MagicpointOutput(BaseLatexSpitter):
     def writeNodeData(self, node):
         buf = StringIO()
         getLatexText(node, buf.write, entities=hacked_entities)
-        self.writer(buf.getvalue().rstrip())
+        data = buf.getvalue().rstrip().replace('\n', ' ')
+        self.writer(re.sub(' +', ' ', data))
 
     def visitNode_title(self, node):
         self.title = domhelpers.getNodeText(node)
@@ -86,6 +87,17 @@ class MagicpointOutput(BaseLatexSpitter):
         # Adapted from tree.generateToC
         self.fontStack = [('standard', None)]
 
+        # Title slide
+        self.writer(self.start_h2)
+        self.writer(self.title)
+        self.writer(self.end_h2)
+
+        self.writer('%center\n\n\n\n\n')
+        for authorNode in domhelpers.findElementsWithAttribute(node, 'class', 'author'):
+            getLatexText(authorNode, self.writer, entities=entities)
+            self.writer('\n')
+
+        # Table of contents
         self.writer(self.start_h2)
         self.writer(self.title)
         self.writer(self.end_h2)
@@ -97,6 +109,13 @@ class MagicpointOutput(BaseLatexSpitter):
             self.writer('\n')
 
         self.visitNodeDefault(node)
+
+    def visitNode_div_author(self, node):
+        # Skip this node; it's already been used by visitNode_body
+        pass
+
+    def visitNode_div_pause(self, node):
+        self.writer('%pause\n')
 
     def visitNode_pre(self, node):
         # TODO: Syntax highlighting
