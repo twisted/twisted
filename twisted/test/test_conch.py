@@ -206,7 +206,7 @@ class SSHTestClientFactory(protocol.ClientFactory):
         self.client = SSHTestClient()
         return self.client
 
-    def clientConnectionFailed(self, reason):
+    def clientConnectionFailed(self, connector, reason):
         global theTest
         theTest.fail('connection between client and server failed!')
         reactor.crash()
