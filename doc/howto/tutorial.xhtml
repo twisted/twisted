@@ -162,15 +162,15 @@ here, one truly usable class.</p>
 
 <p>Up until now, we faked. We kept using port 1079, because really,
 who wants to run a finger server with root privileges? Well, the
-common solution is <q>privilege shedding</q>: after binding to the network,
-become a different, less privileged user. We could have done it ourselves,
-but Twisted has a built-in way to do it. Create a snippet as above,
-defining an application object. That object will have uid and gid
-attributes. When running it (later we will see how) it will bind
-to ports, shed privileges and then run.</p>
+common solution is <q>privilege shedding</q>: after binding to the
+network, become a different, less privileged user. We could have done
+it ourselves, but Twisted has a built-in way to do it. We will create
+a snippet as above, but now we will define an application object. That
+object will have uid and gid attributes. When running it (later we
+will see how) it will bind to ports, shed privileges and then run.</p>
 
-<p>After saving the example below as <q>finger.tac</q>, read on to find out
-how to run this code using the twistd utility.</p>
+<p>After saving the next example (finger11.py) as <q>finger.tac</q>,
+read on to find out how to run this code using the twistd utility.</p>
 
 <a href="listings/finger/finger11.py" class="py-listing">finger11.py</a>
 
