@@ -89,8 +89,8 @@ it must have the directory <em>containing</em> the package in sys.path
 -- which is why I added /twisted/Twisted.</p>
 
 <pre class="python-interpreter">
-&gt;&gt;&gt; <em>from twisted.internet import app, tcp</em>
-&gt;&gt;&gt; <em>from twisted.protocols import telnet</em>
+&gt;&gt;&gt; <em>from twisted.internet import app</em>
+&gt;&gt;&gt; <em>from twisted.manhole import telnet</em>
 &gt;&gt;&gt; <em>application = app.Application('telnet')</em>
 &gt;&gt;&gt; <em>ts = telnet.ShellFactory()</em>
 &gt;&gt;&gt; <em>application.listenTCP(4040, ts)</em>
