@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = '$Revision: 1.33 $'[11:-2]
+__version__ = '$Revision: 1.34 $'[11:-2]
 
 import os, sys
 from UserDict import UserDict
@@ -55,9 +55,10 @@ class OrderedDict(UserDict):
         return list(self._order)
 
     def popitem(self):
-        item = self[self._order[-1]]
-        del self[item[0]]
-        return item
+        key = self._order[-1]
+        value = self[key]
+        del self[key]
+        return (key, value)
 
     def setdefault(self, item, default):
         if self.has_key(item):

@@ -51,6 +51,8 @@ class OrderedDictTest(unittest.TestCase):
         self.assertEquals(repr(d), "{'a': 'b', 'b': 'a', 1234: 4321}")
         self.assertEquals(d, {'a': 'b', 'b': 'a', 1234:4321})
         self.assertEquals(d.keys(), ['a', 'b', 1234])
+        item = d.popitem()
+        self.assertEquals(item, (1234, 4321))
 
     def testInitialization(self):
         d = util.OrderedDict({'monkey': 'ook',
