@@ -24,49 +24,45 @@ You then create methods beginning with <code>xmlrpc_</code>. The methods'
 arguments determine what arguments it will accept from XML-RPC clients.
 The result is what will be returned to the clients.</p>
 
-<p>Methods published via XML-RPC can return all the basic XML-RPC types,
-such as strings, lists and so on (just return a regular python integer, etc).
-They can also return Failure instances to indicate
-an error has occurred, or <code base="twisted.web.xmlrpc" class="API">Binary</code>, 
-<code base="twisted.web.xmlrpc" class="API">Boolean</code> or 
-<code base="twisted.web.xmlrpc" class="API">DateTime</code> instances (all of these
-are the same as the respective classes in xmlrpclib. In addition, XML-RPC
-published methods can return <code base="twisted.internet.defer" class="API">Deferred</code> 
-instances whose results are one of
-the above. This allows you to return results that can't be calculated immediately,
-such as database queries. See the <a href="defer.html">Deferred documentation</a> for more details.</p>
+<p>Methods published via XML-RPC can return all the basic XML-RPC
+types, such as strings, lists and so on (just return a regular python
+integer, etc).  They can also return Failure instances to indicate an
+error has occurred, or <code base="twisted.web.xmlrpc"
+class="API">Binary</code>, <code base="twisted.web.xmlrpc"
+class="API">Boolean</code> or <code base="twisted.web.xmlrpc"
+class="API">DateTime</code> instances (all of these are the same as
+the respective classes in xmlrpclib. In addition, XML-RPC published
+methods can return <code base="twisted.internet.defer"
+class="API">Deferred</code> instances whose results are one of the
+above. This allows you to return results that can't be calculated
+immediately, such as database queries. See the <a
+href="defer.html">Deferred documentation</a> for more details.</p>
 
-<p><code base="twisted.web.xmlrpc" class="API">XMLRPC</code> instances are Resource objects, and they can thus be published using
-a Site. The following example has two methods published via XML-RPC, 
-<code>add(a, b)</code> and <code>echo(x)</code>. You can run it directly
-or with <code class="shell">twistd -y script.py</code></p>
+<p><code base="twisted.web.xmlrpc" class="API">XMLRPC</code> instances
+are Resource objects, and they can thus be published using a Site. The
+following example has two methods published via XML-RPC, <code>add(a,
+b)</code> and <code>echo(x)</code>. You can run it directly or with
+<code class="shell">twistd -y script.py</code></p>
 
 <pre class="python">
 from twisted.web import xmlrpc, server
 
 class Example(xmlrpc.XMLRPC):
     """An example object to be published."""
-    
+
     def xmlrpc_echo(self, x):
         """Return all passed args."""
         return x
-    
+
     def xmlrpc_add(self, a, b):
         """Return sum of arguments."""
         return a + b
 
-
-def main():
-    from twisted.internet.app import Application
-    app = Application("xmlrpc")
-    r = Example()
-    app.listenTCP(7080, server.Site(r))
-    return app
-
-application = main()
-
 if __name__ == '__main__':
-    application.run(save=0)
+    from twisted.internet import reactor
+    r = Example()
+    reactor.listenTCP(7080, server.Site(r))
+    reactor.run()
 </pre>
 
 <p>After we run this command, we can connect with a client and send commands
@@ -85,6 +81,98 @@ to the server:</p>
 resource scripts. The following is an example of such a resource script:</p>
 
 <a href="listings/TwistedQuotes/xmlquote.rpy" class="py-listing">xmlquote.rpy</a>
+
+<h3>Using XML-RPC sub-handlers</h3>
+
+<p>XML-RPC resource can be nested so that one handler calls another if
+a method with a given prefix is called. For example, to add support for
+an XML-RPC method <code>date.time()</code> to the
+<code class="python">Example</code> class, you could do the following:</p>
+
+<pre class="python">
+import time
+from twisted.web import xmlrpc, server
+
+class Example(xmlrpc.XMLRPC):
+    """An example object to be published."""
+
+    def xmlrpc_echo(self, x):
+        """Return all passed args."""
+        return x
+
+    def xmlrpc_add(self, a, b):
+        """Return sum of arguments."""
+        return a + b
+
+class Date(xmlrpc.XMLRPC):
+    """Serve the XML-RPC 'time' method."""
+
+    def xmlrpc_time(self):
+        """Return UNIX time."""
+        return time.time()
+
+if __name__ == '__main__':
+    from twisted.internet import reactor
+    r = Example()
+    date = Date()
+    r.putSubHandler('date', date)
+    reactor.listenTCP(7080, server.Site(r))
+    reactor.run()
+</pre>
+
+<p>By default, a period ('.') separates the prefix from the method
+name, but you can use a different character by overriding the <code
+class="python">XMLRPC.separator</code> data member in your base
+XML-RPC server. XML-RPC servers may be nested to arbitrary depths
+using this method.</p>
+
+<h3>Adding XML-RPC Introspection support</h3>
+
+<p>XML-RPC has an informal <a href="http://ldp.kernelnotes.de/HOWTO/XML-RPC-HOWTO/xmlrpc-howto-interfaces.html">Introspection API</a> that specifies three
+methods in a <code>system</code> sub-handler which allow a client to query
+a server about the server's API. Adding Introspection support to the
+<code class="python">Example</code> class is easy using the
+<code base="twisted.web.xmlrpc" class="API">XMLRPCIntrospection</code>
+class:</p>
+
+<pre class="python">
+from twisted.web import xmlrpc, server
+
+class Example(xmlrpc.XMLRPC):
+    """An example object to be published."""
+
+    def xmlrpc_echo(self, x):
+        """Return all passed args."""
+        return x
+
+    xmlrpc_echo.signature = [['string', 'string'],
+                             ['int', 'int'],
+                             ['double', 'double'],
+                             ['array', 'array'],
+                             ['struct', 'struct']]
+
+    def xmlrpc_add(self, a, b):
+        """Return sum of arguments."""
+        return a + b
+
+    xmlrpc_add.signature = [['int', 'int', 'int'],
+                            ['double', 'double', 'double']]
+    xmlrpc_add.help = "Add the arguments and return the sum."
+
+if __name__ == '__main__':
+    from twisted.internet import reactor
+    r = Example()
+    xmlrpc.addIntrospection(r)
+    reactor.listenTCP(7080, server.Site(r))
+    reactor.run()
+</pre>
+
+<p>Note the method attributes <code class="python">help</code> and
+<code class="python">signature</code> which are used by the Introspection
+API methods <code>system.methodHelp</code> and
+<code>system.methodSignature</code> respectively. If no
+<code class="python">help</code> attribute is specified,
+the method's documentation string is used instead.</p>
 
 <h2>SOAP Support</h2>
 
@@ -166,4 +254,3 @@ Development</a> for more details about Resources.</p>
 
   </body>
 </html>
-

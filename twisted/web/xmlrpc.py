@@ -34,7 +34,7 @@ import urlparse
 # Sibling Imports
 from twisted.web import resource, server
 from twisted.internet import defer, protocol, reactor
-from twisted.python import log
+from twisted.python import log, reflect
 from twisted.protocols import http
 
 # These are deprecated, use the class level definitions
@@ -89,6 +89,10 @@ class XMLRPC(resource.Resource):
     Binary, Boolean, DateTime, Deferreds, or Handler instances.
 
     By default methods beginning with 'xmlrpc_' are published.
+
+    Sub-handlers for prefixed methods (e.g., system.listMethods)
+    can be added with putSubHandler. By default, prefixes are
+    separated with a '.'. Override self.separator to change this.
     """
 
     # Error codes for Twisted, if they conflict with yours then
@@ -97,7 +101,21 @@ class XMLRPC(resource.Resource):
     FAILURE = 8002
 
     isLeaf = 1
-    
+    separator = '.'
+
+    def __init__(self):
+        resource.Resource.__init__(self)
+        self.subHandlers = {}
+
+    def putSubHandler(self, prefix, handler):
+        self.subHandlers[prefix] = handler
+
+    def getSubHandler(self, prefix):
+        return self.subHandlers.get(prefix, None)
+
+    def getSubHandlerPrefixes(self):
+        return self.subHandlers.keys()
+
     def render(self, request):
         request.content.seek(0, 0)
         args, functionPath = xmlrpclib.loads(request.content.read())
@@ -116,7 +134,7 @@ class XMLRPC(resource.Resource):
                 self._cbRender, request
             )
         return server.NOT_DONE_YET
-    
+
     def _cbRender(self, result, request):
         if isinstance(result, Handler):
             result = result.result
@@ -136,22 +154,101 @@ class XMLRPC(resource.Resource):
             return failure.value
         log.err(failure)
         return Fault(self.FAILURE, "error")
-        
+
     def _getFunction(self, functionPath):
         """Given a string, return a function, or raise NoSuchFunction.
-        
+
         This returned function will be called, and should return the result
         of the call, a Deferred, or a Fault instance.
-        
+
         Override in subclasses if you want your own policy. The default
         policy is that given functionPath 'foo', return the method at
         self.xmlrpc_foo, i.e. getattr(self, "xmlrpc_" + functionPath).
+        If functionPath contains self.separator, the sub-handler for
+        the initial prefix is used to search for the remaining path.
         """
+        if functionPath.find(self.separator) >= 0:
+            prefix, functionPath = functionPath.split(self.separator, 2)
+            handler = self.getSubHandler(prefix)
+            if handler is None: raise NoSuchFunction
+            return handler._getFunction(functionPath)
+
         f = getattr(self, "xmlrpc_%s" % functionPath, None)
         if f and callable(f):
             return f
         else:
             raise NoSuchFunction
+
+    def _listFunctions(self):
+        """Return a list of the names of all xmlrpc methods."""
+        return reflect.prefixedMethodNames(self.__class__, 'xmlrpc_')
+
+
+class XMLRPCIntrospection(XMLRPC):
+    """Implement the XML-RPC Introspection API.
+
+    By default, the methodHelp method returns the 'help' method attribute,
+    if it exists, otherwise the __doc__ method attribute, if it exists,
+    otherwise the empty string.
+
+    To enable the methodSignature method, add a 'signature' method attribute
+    containing a list of lists. See methodSignature's documentation for the
+    format. Note the type strings should be XML-RPC types, not Python types.
+    """
+
+    def __init__(self, parent):
+        """Implement Introspection support for an XMLRPC server.
+
+        @param parent: the XMLRPC server to add Introspection support to.
+        """
+
+        XMLRPC.__init__(self)
+        self._xmlrpc_parent = parent
+
+    def xmlrpc_listMethods(self):
+        """Return a list of the method names implemented by this server."""
+        functions = []
+        todo = [(self._xmlrpc_parent, '')]
+        while todo:
+            obj, prefix = todo.pop(0)
+            functions.extend([ prefix + name for name in obj._listFunctions() ])
+            todo.extend([ (obj.getSubHandler(name),
+                           prefix + name + obj.separator)
+                          for name in obj.getSubHandlerPrefixes() ])
+        return functions
+
+    xmlrpc_listMethods.signature = [['array']]
+
+    def xmlrpc_methodHelp(self, method):
+        """Return a documentation string describing the use of the given method.
+        """
+        method = self._xmlrpc_parent._getFunction(method)
+        return (getattr(method, 'help', None)
+                or getattr(method, '__doc__', None) or '')
+
+    xmlrpc_methodHelp.signature = [['string', 'string']]
+
+    def xmlrpc_methodSignature(self, method):
+        """Return a list of type signatures.
+
+        Each type signature is a list of the form [rtype, type1, type2, ...]
+        where rtype is the return type and typeN is the type of the Nth
+        argument. If no signature information is available, the empty
+        string is returned.
+        """
+        method = self._xmlrpc_parent._getFunction(method)
+        return getattr(method, 'signature', None) or ''
+
+    xmlrpc_methodSignature.signature = [['array', 'string'],
+                                        ['string', 'string']]
+
+
+def addIntrospection(xmlrpc):
+    """Add Introspection support to an XMLRPC server.
+
+    @param xmlrpc: The xmlrpc server to add Introspection support to.
+    """
+    xmlrpc.putSubHandler('system', XMLRPCIntrospection(xmlrpc))
 
 
 class QueryProtocol(http.HTTPClient):
@@ -240,7 +337,8 @@ class Proxy:
         factory = QueryFactory(self.url, self.host, method, *args)
         if self.secure:
             from twisted.internet import ssl
-            reactor.connectSSL(self.host, self.port or 443, factory, ssl.ClientContextFactory())
+            reactor.connectSSL(self.host, self.port or 443,
+                               factory, ssl.ClientContextFactory())
         else:
             reactor.connectTCP(self.host, self.port or 80, factory)
         return factory.deferred

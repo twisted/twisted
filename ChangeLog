@@ -1,3 +1,12 @@
+2003-08-26  Dave Peticolas  <dave@krondo.com>
+
+	* doc/howto/xmlrpc.html: document sub-handler and introspection
+
+	* twisted/test/test_xmlrpc.py: test introspection support
+
+	* twisted/web/xmlrpc.py: implement sub-handlers and introspection
+	support
+
 2003-08-23  Brian Warner  <warner@lothar.com>
 
 	* twisted/internet/gtk2reactor.py: force timeout values to be
