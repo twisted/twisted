@@ -128,15 +128,5 @@ class MVCTestCase(unittest.TestCase):
         value = view.pushButton()
         self.assertEquals(value, view.random)
 
-    def testPersistence(self):
-        """See if the automatically-persisting model (persisted by the
-        controller) matches our live model"""
-        global persisted_model
-        
-        view = self.getView()
-        view.twiddleControl("ASDFASDF")
-        from cPickle import loads
-        loadedModel = loads(persisted_model)
-        self.assertEquals(loadedModel, self.model)
 
 testCases = [MVCTestCase]

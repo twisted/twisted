@@ -32,7 +32,8 @@ class WovenTC(unittest.TestCase):
     def setUp(self):
         self.m = self.modelFactory()
         self.t = self.resourceFactory(self.m)
-        self.r = test_web.DummyRequest([])
+        self.r = test_web.DummyRequest([''])
+        self.r.prepath = ['']
         self.prerender()
         self.t.render(self.r)
         

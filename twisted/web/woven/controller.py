@@ -17,7 +17,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.37 $"[11:-2]
+__version__ = "$Revision: 1.38 $"[11:-2]
 
 import os
 import cgi
@@ -156,6 +156,8 @@ class Controller(resource.Resource):
         DOM. gatheredControllers will render the page to the browser
         when it is done.
         """
+        if not request.prepath[-1] == '':
+            return redirectTo(addSlash(request), request)
         # Handle any inputhandlers that were passed in to the controller first
         for ih in self._inputhandlers:
             ih._parent = self
@@ -166,10 +168,11 @@ class Controller(resource.Resource):
         self._valid = {}
         return self.renderView(request)
 
-    def makeView(self, model, name, parentCount=0):
-        v = self.viewFactory(model, name)
+    def makeView(self, model, templateFile=None, parentCount=0):
+        if self.viewFactory is None:
+            self.viewFactory = self.__class__
+        v = self.viewFactory(model, templateFile=templateFile, templateDirectory=self.templateDirectory)
         v.parentCount = parentCount
-        v.templateDirectory = self.templateDirectory
         v.tapestry = self
         v.importViewLibrary(self)
         return v
@@ -262,7 +265,7 @@ class LiveController(Controller):
         if page is not None:
             page.view.unlinkViews()
             sess.setCurrentPage(None)
-        print "PAGE SESSION IS NONE"
+        #print "PAGE SESSION IS NONE"
         self.pageSession = None
         return Controller.render(self, request)
 
@@ -314,7 +317,7 @@ class LiveController(Controller):
     def wchild_WebConduit2_js(self, request):
         print "returning js file"
         h = request.getHeader("user-agent")
-        if h.count("MSIE"):
+        if h.count("MSIE") or h.count("Safari"):
             fl = "WebConduit2_msie.js"
         else:
             fl = "WebConduit2_mozilla.js"

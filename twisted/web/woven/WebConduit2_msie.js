@@ -50,8 +50,10 @@ function woven_clientToServerEventComplete() {
     } else {
         this.woven_eventQueueBusy = 0
     }
-    //var focus = document.getElementById('woven_firstResponder')
-    //focus.focus()
+    var focus = document.getElementById('woven_firstResponder')
+    if (focus)
+        focus.focus()
+    document.scrollTop = 999999999
 }
 
 function woven_attemptFocus(theNode) {
@@ -72,7 +74,21 @@ function woven_attemptFocus(theNode) {
 function woven_replaceElement(theId, htmlStr) {
     //alert(woven_eventQueue.length)
     var oldNode = document.getElementById(theId)
-    oldNode.outerHTML = htmlStr
+    var created = document.createElement('span')
+    created.innerHTML = htmlStr
+    oldNode.parentNode.replaceChild(created.firstChild, oldNode)
     var newNode = document.getElementById(theId)
     //woven_attemptFocus(newNode)
+}
+ 
+function woven_appendChild(theId, htmlStr) {
+    var container = document.getElementById(theId)
+    var newNode = document.createElement('span')
+    newNode.innerHTML = htmlStr
+    container.appendChild(newNode.firstChild)
+}
+
+function woven_removeChild(theId) {
+    var theElement = document.getElementById(theId)
+    theElement.parentNode.removeChild(theElement)
 }

@@ -61,6 +61,13 @@ function woven_replaceElement(theId, htmlStr) {
     woven_attemptFocus(newNode)
 }
 
+function woven_appendChild(theId, htmlStr) {
+    var container = document.getElementById(theId)
+    var newNode = document.createElement('span')
+    newNode.innerHTML = htmlStr
+    container.appendChild(newNode.firstChild)
+}
+
 function FlashConduit_swf_DoFScommand(cmd, arg) {
     alert("ha")
 }
