@@ -1,15 +1,15 @@
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -40,11 +40,12 @@ def makeConnection(im,server=None,port=None,**kw):
 
 class IRCGateway(irc.IRCClient,gateway.Gateway):
 
-    protocol=shortName 
-    
+    protocol=shortName
+
     def __init__(self,username=None,password="",realname=""):
         self._namreplies={}
         self.logonUsername=username
+        self.nickname=username
         self.name="%s (%s)"%(username,self.protocol)
         self.password=password
         self.realname=realname
@@ -78,7 +79,7 @@ class IRCGateway(irc.IRCClient,gateway.Gateway):
 
     def removeContact(self,contact):
        pass
-    
+
     def changeStatus(self, newStatus):
         if newStatus=="Online":
             self.setNick(self.logonUsername)
@@ -95,7 +96,7 @@ class IRCGateway(irc.IRCClient,gateway.Gateway):
 
     def leaveGroup(self,group):
         self.leave(group)
-                
+
     def getGroupMembers(self,group):
         pass # this gets automatically done
 
@@ -105,7 +106,7 @@ class IRCGateway(irc.IRCClient,gateway.Gateway):
     def groupMessage(self,groupName,message):
         self.say(groupName,message)
 
-    def irc_353(self,prefix,params):
+    def irc_RPL_NAMREPLY(self,prefix,params):
 	"""
 	RPL_NAMREPLY
 	>> NAMES #bnl
@@ -125,12 +126,12 @@ class IRCGateway(irc.IRCClient,gateway.Gateway):
             except:
                 self._ingroups[nickname]=[channel]
 
-    def irc_366(self,prefix,params):
+    def irc_RPL_ENDOFNAMES(self,prefix,params):
 	group=params[1][1:]
 	self.receiveGroupMembers(self._namreplies[string.lower(group)],group)
 	del self._namreplies[string.lower(group)]
 
-    def irc_301(self,prefix,params):
+    def irc_RPL_AWAY(self,prefix,params):
         nickname=params[1]
         message=params[2]
         self.receiveDirectMessage(nickname,"AWAY: %s"%message)
@@ -177,7 +178,7 @@ class IRCGateway(irc.IRCClient,gateway.Gateway):
 	else:
 	    self.receiveDirectMessage(nickname,message)
 
-    def irc_311(self,prefix,params):
+    def irc_RPL_WHOISUSER(self,prefix,params):
         """
         >>>WHOIS z3pfoo
         <<<:sagan.openprojects.net 311 z3pfoo z3pfoo z3p 66-44-50-121.s121.tnt6.lnhdc.md.di
@@ -194,18 +195,18 @@ me
         self.receiveDirectMessage("**irc**","%s (%s@%s) : %s" % (ircname,
                                     username,hostname,name))
 
-    def irc_312(self,prefix,params):
+    def irc_RPL_WHOISSERVER(self,prefix,params):
         ircname=params[1]
         server=params[2]
         serverinfo=params[3]
         self.receiveDirectMessage("**irc**","%s on server %s (%s)" % (ircname,
                                     server,serverinfo))
 
-    def irc_313(self,prefix,params):
+    def irc_RPL_WHOISOPERATOR(self,prefix,params):
         ircname=params[2]
         self.receiveDirectMessage("**irc**","%s is an IRC operator" % (ircname))
 
-    def irc_317(self,prefix,params):
+    def irc_RPL_WHOISIDLE(self,prefix,params):
         ircname=params[1]
         parts=string.split(params[-1],', ')
         foo=[]
@@ -219,7 +220,7 @@ me
         if foo:
             self.receiveDirectMessage("**irc**", "%s is %s" % (ircname, foo))
 
-    def irc_319(self,prefix,params):
+    def irc_RPL_WHOISCHANNELS(self,prefix,params):
         ircname=params[1]
         foo=[]
         for i in string.split(params[2]," "):
@@ -229,7 +230,7 @@ me
                 foo.append(i)
         self.receiveDirectMessage("**irc**","%s is on %s" % (ircname,
                                                 string.join(foo,",")))
-        
+
 
 def sendAction(im,gateway,group,currenttext,currentusers):
     return "\001ACTION %s\001"%currenttext
