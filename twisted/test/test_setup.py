@@ -14,10 +14,12 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import os
-import setup
+import os, sys
 from twisted.trial import unittest
 import twisted
+sys.path.insert(0, os.path.dirname(os.path.dirname(twisted.__file__)))
+import setup
+sys.path.pop(0)
 
 class CheckingPackagesTestCase(unittest.TestCase):
 
