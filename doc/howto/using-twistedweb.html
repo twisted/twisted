@@ -81,10 +81,11 @@
 
 <p> A Resource script is a Python file ending with the extension <code>.rpy</code>, which is required to create an instance of a (subclass of a) <code class="API">twisted.web.resource.Resource</code>. </p>
 
-<p> Resource scripts have 2 special variables: </p>
+<p> Resource scripts have 3 special variables: </p>
 
-<ul>
+<ol>
   <li> <code class="py-src-identifier">__file__</code>: The name of the .rpy file, including the full path.  This variable is automatically defined and present within the namespace.  </li>
+  <li> <code class="py-src-identifier">registry</code>: An object of class <code class="API" base="twisted.web">static.Registry</code>. It can be used to access and set persistent data keyed by a class.</li>
   <li> <code class="py-src-identifier">resource</code>: The variable which must be defined by the script and set to the resource instance that will be used to render the page. </li>
 </ul>
 
@@ -98,6 +99,27 @@ class MyGreatResource(resource.Resource):
 
 resource = MyGreatResource()
 </pre>
+
+<p> A slightly more complicated resource script, which accesses some
+persistent data, might look like:</p>
+
+<pre class="python">
+from twisted.web import resource
+from SillyWeb import Counter
+
+counter = registry.getComponent(Counter)
+if not counter:
+   registry.setComponent(Counter, Counter())
+counter = registry.getComponent(Counter)
+
+class MyResource(resource.Resource):
+    def render(self, request):
+        counter.increment()
+        return "you are visitor %d" % counter.getValue()
+
+resource = MyResource()
+</pre>
+
 
 <h3>DOM Templates</h3>
 
