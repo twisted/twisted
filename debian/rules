@@ -4,11 +4,7 @@
 # Sample debian/rules that uses debhelper. GNU copyright 1997 by Joey Hess.
 # Some lines taken from debmake, by Christoph Lameter.
 
-ifeq ($(TWISTED_2_3),1)
 versions=2.1 2.2 2.3
-else
-versions=2.1 2.2
-endif
 
 build: build-stamp
 build-stamp:
