@@ -38,6 +38,10 @@ class Failure:
 
     This is necessary because Python's built-in error mechanisms are
     inconvenient for asynchronous communication.
+
+    The exception instance responsible for this failure, and the type
+    of the exception, can be accessed through my 'value' and 'type'
+    attributes.
     """
 
     pickled = 0
