@@ -13,6 +13,7 @@ import stat
 import socket
 import time
 import md5
+import cStringIO
 
 from zope.interface import implements
 
@@ -23,10 +24,12 @@ except ImportError:
 
 from twisted.mail import pop3
 from twisted.mail import smtp
+from twisted.protocols import basic
 from twisted.persisted import dirdbm
-from twisted.python import log
+from twisted.python import log, failure
 from twisted.mail import mail
 from twisted.mail import alias
+from twisted.internet import interfaces, defer, reactor
 from twisted.python.components import backwardsCompatImplements
 
 from twisted import cred
@@ -125,7 +128,7 @@ class AbstractMaildirDomain:
         try:
             a = self.alias[user.dest.local]
         except:
-            raise smtp.SMTPBadRcpt(user)            
+            raise smtp.SMTPBadRcpt(user)
         else:
             aliases = a.resolve(self.alias, memo)
             if aliases:
@@ -146,22 +149,116 @@ class AbstractMaildirDomain:
         fp = open(filename, 'w')
         return MaildirMessage('%s@%s' % (name, domain), fp, filename,
                               os.path.join(dir, 'new', fname))
-    
+
     def willRelay(self, user, protocol):
         return False
 
     def addUser(self, user, password):
         raise NotImplementedError
-    
+
     def getCredentialsCheckers(self):
         raise NotImplementedError
     ##
     ## end of IDomain
     ##
 
+class _MaildirMailboxAppendMessageTask:
+    implements(interfaces.IConsumer)
+
+    osopen = staticmethod(os.open)
+    oswrite = staticmethod(os.write)
+    osclose = staticmethod(os.close)
+    osrename = staticmethod(os.rename)
+
+    def __init__(self, mbox, msg):
+        self.mbox = mbox
+        self.defer = defer.Deferred()
+        self.openCall = None
+        if not hasattr(msg, "read"):
+            msg = StringIO.StringIO(msg)
+        self.msg = msg
+        # This is needed, as this startup phase might call defer.errback and zero out self.defer
+        # By doing it on the reactor iteration appendMessage is able to use .defer without problems.
+        reactor.callLater(0, self.startUp)
+
+    def startUp(self):
+        self.createTempFile()
+        if self.fh != -1:
+            self.filesender = basic.FileSender()
+            self.filesender.beginFileTransfer(self.msg, self)
+
+    def registerProducer(self, producer, streaming):
+        self.myproducer = producer
+        self.streaming = streaming
+        if not streaming:
+            self.prodProducer()
+
+    def prodProducer(self):
+        self.openCall = None
+        if self.myproducer is not None:
+            self.openCall = reactor.callLater(0, self.prodProducer)
+            self.myproducer.resumeProducing()
+
+    def unregisterProducer(self):
+        self.myproducer = None
+        self.streaming = None
+        self.osclose(self.fh)
+        self.moveFileToNew()
+
+    def write(self, data):
+        try:
+            self.oswrite(self.fh, data)
+        except:
+            self.fail()
+
+    def fail(self, err=None):
+        if err is None:
+            err = failure.Failure()
+        if self.openCall is not None:
+            self.openCall.cancel()
+        self.defer.errback(err)
+        self.defer = None
+
+    def moveFileToNew(self):
+        while True:
+            newname = os.path.join(self.mbox.path, "new", _generateMaildirName())
+            try:
+                self.osrename(self.tmpname, newname)
+                break
+            except OSError, (err, estr):
+                import errno
+                # if the newname exists, retry with a new newname.
+                if err != errno.EEXIST:
+                    self.fail()
+                    newname = None
+                    break
+        if newname is not None:
+            self.mbox.list.append(newname)
+            self.defer.callback(None)
+            self.defer = None
+
+    def createTempFile(self):
+        attr = (os.O_RDWR | os.O_CREAT | os.O_EXCL
+                | getattr(os, "O_NOINHERIT", 0)
+                | getattr(os, "O_NOFOLLOW", 0))
+        tries = 0
+        self.fh = -1
+        while True:
+            self.tmpname = os.path.join(self.mbox.path, "tmp", _generateMaildirName())
+            try:
+                self.fh = self.osopen(self.tmpname, attr, 0600)
+                return None
+            except OSError:
+                tries += 1
+                if tries > 500:
+                    self.defer.errback(RuntimeError("Could not create tmp file for %s" % self.mbox.path))
+                    self.defer = None
+                    return None
+
 class MaildirMailbox(pop3.Mailbox):
     """Implement the POP3 mailbox semantics for a Maildir mailbox
     """
+    AppendFactory = _MaildirMailboxAppendMessageTask
 
     def __init__(self, path):
         """Initialize with name of the Maildir mailbox
@@ -239,29 +336,34 @@ class MaildirMailbox(pop3.Mailbox):
                     self.list.append(real)
         self.deleted.clear()
 
+    def appendMessage(self, txt):
+        """Appends a message into the mailbox."""
+        task = self.AppendFactory(self, txt)
+        return task.defer
+
 class StringListMailbox:
     implements(pop3.IMailbox)
-    
+
     def __init__(self, msgs):
         self.msgs = msgs
-    
+
     def listMessages(self, i=None):
         if i is None:
             return map(len, self.msgs)
         return len(self.msgs[i])
-    
+
     def getMessage(self, i):
         return StringIO.StringIO(self.msgs[i])
-    
+
     def getUidl(self, i):
         return md5.new(self.msgs[i]).hexdigest()
-    
+
     def deleteMessage(self, i):
         pass
-    
+
     def undeleteMessages(self):
         pass
-    
+
     def sync(self):
         pass
 backwardsCompatImplements(StringListMailbox)
@@ -269,12 +371,12 @@ backwardsCompatImplements(StringListMailbox)
 class MaildirDirdbmDomain(AbstractMaildirDomain):
     """A Maildir Domain where membership is checked by a dirdbm file
     """
-    
+
     implements(cred.portal.IRealm, mail.IAliasableDomain)
-    
+
     portal = None
     _credcheckers = None
-    
+
     def __init__(self, service, root, postmaster=0):
         """Initialize
 
@@ -318,7 +420,7 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
         self.dbm[user] = password
         # Ensure it is initialized
         self.userDirectory(user)
-    
+
     def getCredentialsCheckers(self):
         if self._credcheckers is None:
             self._credcheckers = [DirdbmDatabase(self.dbm)]
@@ -334,7 +436,7 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
             mbox = StringListMailbox([INTERNAL_ERROR])
         else:
             mbox = MaildirMailbox(os.path.join(self.root, avatarId))
-        
+
         return (
             pop3.IMailbox,
             mbox,
@@ -344,15 +446,15 @@ backwardsCompatImplements(MaildirDirdbmDomain)
 
 class DirdbmDatabase:
     implements(cred.checkers.ICredentialsChecker)
-    
+
     credentialInterfaces = (
         cred.credentials.IUsernamePassword,
         cred.credentials.IUsernameHashedPassword
     )
-    
+
     def __init__(self, dbm):
         self.dirdbm = dbm
-    
+
     def requestAvatarId(self, c):
         if c.username in self.dirdbm:
             if c.checkPassword(self.dirdbm[c.username]):
