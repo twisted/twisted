@@ -52,7 +52,7 @@ applied when serializing arguments.
 # Future Imports
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.132 $"[11:-2]
+__version__ = "$Revision: 1.133 $"[11:-2]
 
 
 # System Imports
@@ -1384,10 +1384,14 @@ class IdentityConnector:
              self._identityWrapper.broker.transport.loseConnection()
 
 
-class ClientBroker(protocol.ClientFactory):
+# this is the new shiny API you should be using:
+
+class PBClientFactory(protocol.ClientFactory):
     """Client factory for PB brokers.
 
-    This is the new shiny API everyone should use. Work in progress.
+    As with all client factories, use with reactor.connectTCP/SSL/etc..
+    getPerspective and getRootObject can be called either before or
+    after the connect.
     """
 
     protocol = Broker
@@ -1422,7 +1426,10 @@ class ClientBroker(protocol.ClientFactory):
             d.callback(self._root)
     
     def getRootObject(self):
-        """Get root object of remote PB server."""
+        """Get root object of remote PB server.
+
+        @return Deferred of the root object.
+        """
         if self._broker:
            return defer.succeed(self._root)
         d = defer.Deferred()
@@ -1431,7 +1438,10 @@ class ClientBroker(protocol.ClientFactory):
     
     def getPerspective(self, username, password, serviceName,
                        perspectiveName=None, client=None):
-        """Get perspective from remote PB server."""
+        """Get perspective from remote PB server.
+
+        @return Deferred of RemoteReference to the perspective.
+        """
         d = self.getRootObject()
         d.addCallback(self._cbAuthIdentity, username, password)
         d.addCallback(self._cbGetPerspective, serviceName, perspectiveName, client)
@@ -1447,3 +1457,13 @@ class ClientBroker(protocol.ClientFactory):
     def _cbGetPerspective(self, identityWrapper, serviceName, perspectiveName, client):
         return identityWrapper.callRemote(
             "attach", serviceName, perspectiveName, client)
+
+    def disconnect(self):
+        """If the factory is connected, close the connection.
+
+        Note that if you set up the factory to reconnect, you will need to
+        implement extra logic to prevent automatic reconnection after this
+        is called.
+        """
+        if self._broker:
+            self._broker.transport.loseConnection()

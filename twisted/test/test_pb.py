@@ -808,7 +808,7 @@ class ConnectionTestCase(unittest.TestCase):
     # tests for new, shiny API:
     def testGoodGetObject(self):
         # we test getting both before and after connection
-        factory = pb.ClientBroker()
+        factory = pb.PBClientFactory()
         d = factory.getRootObject()
         reactor.connectTCP("127.0.0.1", self.portno, factory)
         root = dR(d)
@@ -819,7 +819,7 @@ class ConnectionTestCase(unittest.TestCase):
     
     def testGoodPerspective(self):
         # we test getting both before and after connection
-        factory = pb.ClientBroker()
+        factory = pb.PBClientFactory()
         d = factory.getPerspective("guest", "guest", "test", perspectiveName="any")
         reactor.connectTCP("127.0.0.1", self.portno, factory)
         p = dR(d)
@@ -830,9 +830,19 @@ class ConnectionTestCase(unittest.TestCase):
         p.broker.transport.loseConnection()
     
     def testGoodFailedConnect(self):
-        factory = pb.ClientBroker()
+        factory = pb.PBClientFactory()
         d = factory.getPerspective("guest", "guest", "test", perspectiveName="any")
         reactor.connectTCP("127.0.0.1", 69, factory)
         f = unittest.deferredError(d)
         from twisted.internet import error
         f.trap(error.ConnectError)
+
+    def testDisconnect(self):
+        factory = pb.PBClientFactory()
+        d = factory.getPerspective("guest", "guest", "test", perspectiveName="any")
+        reactor.connectTCP("127.0.0.1", self.portno, factory)
+        p = dR(d)
+        d = dR(p.callRemote("getDummyViewPoint")) # just to check it's working
+        factory.disconnect()
+        reactor.iterate(); reactor.iterate(); reactor.iterate()
+        self.assertRaises(pb.DeadReferenceError, p.callRemote, "getDummyViewPoint")
