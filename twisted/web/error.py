@@ -23,9 +23,9 @@ import resource
 from twisted.protocols import http
 
 class Error(Exception):
-    def __init__(self, code, message = None):
+    def __init__(self, code, message = None, response = None):
         message = message or http.responses.get(code)
-        Exception.__init__(self, code, message)
+        Exception.__init__(self, code, message, response)
 
     def __str__(self):
         return '%s %s' % (self[0], self[1])
