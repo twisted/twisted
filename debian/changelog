@@ -7,8 +7,11 @@ twisted (1.0.1alpha1-1) unstable; urgency=low
     * Installing xhtml versions of everything
     * Distributing ps and pdf versions of book
     * doc-base support
+  * Split out doc-api
+    * It's HUGE and many people don't need it (since it is available on the
+      web) 
 
- -- Moshe Zadka <moshez@debian.org>  Fri,  8 Nov 2002 17:11:59 -0600
+ -- Moshe Zadka <moshez@debian.org>  Tue, 12 Nov 2002 02:59:56 -0600
 
 twisted (1.0.0-2) unstable; urgency=low
 

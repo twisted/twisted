@@ -3,7 +3,6 @@ set -e
 
 if [ "$1" = remove -o "$1" = upgrade ]; then
 	if command -v install-docs >/dev/null 2>&1; then
-		install-docs -r twisted-api
-		install-docs -r twisted-book
+		install-docs -r @CONTROL@
 	fi
 fi

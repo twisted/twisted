@@ -11,7 +11,7 @@ DEFAULT=2.2
 DEFAULTPACKAGE=python$(DEFAULT)-twisted
 
 indeppackages=twisted python-twisted python-twisted-conch twisted-doc \
-         twisted-quotes \
+         twisted-quotes twisted-doc-api\
          $(addsuffix -twisted,$(addprefix python,$(versions))) \
          $(addsuffix -twisted-conch,$(addprefix python,$(versions)))
 
@@ -133,21 +133,33 @@ install-indep-stamp: install-base-stamp
 		done;\
 	done
 		
-	set -e;for subdir in examples howto specifications img api;\
+	set -e;for subdir in examples howto specifications img;\
 		do install -d $(docdir)/$$subdir;\
 	done
 	install -d debian/twisted-doc/usr/share/doc-base/
-	install -m 644 debian/twisted-api debian/twisted-book \
+	install -m 644 debian/twisted-book \
 	               debian/twisted-doc/usr/share/doc-base/
 	install -m 644 doc/howto/*.xhtml doc/howto/book.* $(docdir)/howto/
+	gzip -9 $(docdir)/howto/book.ps
 	cp -ar doc/howto/listings/ $(docdir)/howto/
 	install -m 644 doc/specifications/*.xhtml $(docdir)/specifications/
 	install -m 644 doc/img/*.png doc/img/*.bmp $(docdir)/img/
-	cp -ar doc/api/* $(docdir)/api/
 	install -m 644  doc/examples/*.* $(docdir)/examples/
 	set -e;for maint in postinst prerm;\
-		do install -m 755 debian/twisted-doc.$$maint \
-	                          debian/twisted-doc/DEBIAN/$$maint;\
+		do sed 's/@CONTROL/twisted-book/' debian/twisted-doc.$$maint > \
+		           debian/twisted-doc/DEBIAN/$$maint;\
+		chmod 755 debian/twisted-doc/DEBIAN/$$maint;\
+	done
+
+	install -d debian/twisted-doc-api/usr/share/doc-base/
+	install -d debian/twisted-doc-api/${DOC}/twisted-doc/
+	cp -ar doc/api/ debian/twisted-doc-api/${DOC}/twisted-doc/
+	install -m 644 debian/twisted-api \
+	               debian/twisted-doc-api/usr/share/doc-base/
+	set -e;for maint in postinst prerm;\
+		do sed 's/@CONTROL/twisted-api/' debian/twisted-doc.$$maint > \
+		           debian/twisted-doc-api/DEBIAN/$$maint;\
+		chmod 755 debian/twisted-doc-api/DEBIAN/$$maint;\
 	done
 
 	install -m 644 debian/python-twisted.README.Debian \
