@@ -21,7 +21,7 @@ crazy shit
 __all__ = ['install']
 
 # Twisted Imports
-from twisted.python import log, threadable, runtime, failure
+from twisted.python import log, threadable, runtime, failure, util, reflect
 from twisted.internet.interfaces import IReactorFDSet
 
 # Sibling Imports
@@ -31,10 +31,6 @@ from gtk2reactor import Gtk2Reactor as sup
 import gtk
 import gobject
 import gtk.glade
-from twisted.python import util, reflect
-
-def c(*a, **b):
-    return a, b
 
 COLUMN_DESCRIPTION = 0
 COLUMN_TRANSPORT = 1
@@ -163,13 +159,6 @@ class GladeReactor(sup):
             write = max(write, 0)
             if read or write:
                 self.model.append((reader,reader,read,write))
-##             self.model[-1][2] = read
-##             self.model[-1][3] = write
-            
-##         for x in self.model:
-##             print '--mark'
-##             for y in x:
-##                 print repr(y)
 
     def addWriter(self, writer):
         sup.addWriter(self, writer)

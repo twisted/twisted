@@ -1,3 +1,10 @@
+2003-08-08  Dave Peticolas  <dave@krondo.com>
+
+	* twisted/internet/base.py: remove unused internal function.
+
+	* twisted/internet/gladereactor.py: remove unused internal function.
+	clean up imports.
+
 2003-08-07  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* .: Releasing Twisted 1.0.7alpha4.

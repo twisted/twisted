@@ -42,19 +42,10 @@ from twisted.internet.defer import Deferred, DeferredList
 from twisted.persisted import styles
 
 
-def _nmin(a, b):
-    if a is None:
-        return b
-    if b is None:
-        return a
-    return min(a, b)
-
-
-
 class DelayedCall(styles.Ephemeral):
-    
+
     __implements__ = IDelayedCall
-    
+
     def __init__(self, time, func, args, kw, cancel, reset):
         self.time, self.func, self.args, self.kw = time, func, args, kw
         self.resetter = reset
