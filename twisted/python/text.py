@@ -214,14 +214,18 @@ def splitQuoted(s):
 
     return out
 
-def strFile(p, f):
+def strFile(p, f, caseSensitive=True):
     """Find whether string p occurs in a read()able object f
     @rtype: C{bool}
     """
     buf = ""
     buf_len = max(len(p), 2**2**2**2)
+    if not caseSensitive:
+        p = p.lower()
     while 1:
         r = f.read(buf_len-len(p))
+        if not caseSensitive:
+            r = r.lower()
         bytes_read = len(r)
         if bytes_read == 0:
             return False

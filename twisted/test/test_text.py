@@ -160,6 +160,9 @@ class StrFileTest(unittest.TestCase):
 
     def test_self(self):
         self.assertEquals(True, text.strFile("this is a test string", self.io))
+    
+    def test_insensitive(self):
+        self.assertEquals(True, text.strFile("ThIs is A test STRING", self.io, False))
 
 testCases = [WrapTest, SplitTest, StrFileTest]
 
