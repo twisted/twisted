@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_tendril -*-
-# $Id: tendril.py,v 1.28 2002/09/05 23:55:38 acapnotic Exp $
+# $Id: tendril.py,v 1.29 2002/09/23 03:35:00 itamarst Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -71,7 +71,7 @@ class TendrilFactory(protocol.ReconnectingClientFactory, reflect.Accessor):
 
     protocol = None # will be set to TendrilIRC as soon as it's defined.
     _groupList = ['tendril_test']
-    errorGroup = 'TendrilErrors'
+    _errorGroup = 'TendrilErrors'
 
     helptext = (
         "Hi, I'm a Tendril bridge between here and %(service)s.",
@@ -195,7 +195,7 @@ class TendrilIRC(irc.IRCClient, styles.Ephemeral):
 
     realname = 'Tendril'
     versionName = 'Tendril'
-    versionNum = '$Revision: 1.28 $'[11:-2]
+    versionNum = '$Revision: 1.29 $'[11:-2]
     versionEnv = copyright.longversion
 
     helptext = TendrilFactory.helptext
