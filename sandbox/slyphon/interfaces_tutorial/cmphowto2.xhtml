@@ -43,85 +43,32 @@
 <h2>What are interfaces?</h2>
 <p>An interface in the general sense is the publicly defined API for your
 class. It lets everyone know what methods and attributes are intended to
-be accessed on a given object. With a component system, this concept plays
-an important role, as we will be <em>applying</em> this interface to instances
-of objects that don't provide them according to their original definition.</p>
+be accessed on a given object. A good example of an interface is the
+<em>file-like</em> objects in the stdlib, the builtin <code>file</code> and
+the <code>StringIO</code> objects. They are two completely different classes,
+one to deal with the filesystem, and one to deal with string construction, but
+they share a common <em>interface</em>. In most cases, your programs won't care
+if they're handed a real file object or a StringIO object, because the methods
+used to manipulate those instances are the same.
+</p>
 
+<p>With a component system, this concept of interface plays an important role,
+as we <em>apply</em> an interface to instances
+of objects that don't provide them according to their original definition. When
+we wrap an object in an interface, we make a request of the
+component architecture. The component system looks at two things, the class
+of interface we're attempting to wrap an instance in, and the type of the object
+being wrapped. If we have <em>registered</em> an adapter to use for this
+combination of Interface and instance, the component system calls the adapter
+with the instance as it's first (and only) argument.</p>
 
-  <h2>A simple example</h2>
+<h2>A simple example</h2>
 
-  <p>This first example is a chunk of runnable code to show you
-  what it's possible to do with the component architecture.</p>
-  <pre class="python">
-#!/usr/bin/env python
+<a href="cmplist1.py" class="py-listing"></a>
 
-import os, os.path, types
+<h2>A slightly more involved example</h2>
 
-from twisted.python.util import sibpath
-
-from twisted.python import components
-import zope.interface as zi
-
-# the interface we'll be adapting instances to
-
-class IFilePath(components.Interface):
-    def getPath():
-        """i return a string that represents a file path"""
-
-
-# here are some adapters to IFilePath
-
-class ModulePath(components.Adapter):
-    zi.implements(IFilePath)
-    def getPath(self):
-        return os.path.abspath(self.original.__file__)
-
-class ListPath(components.Adapter):
-    zi.implements(IFilePath)
-    def getPath(self):
-        return os.path.join(*self.original)
-
-class StringPath(components.Adapter):
-    zi.implements(IFilePath)
-    def getPath(self):
-        return os.path.basename(self.original)
-
-
-class KlassPath(components.Adapter):
-    zi.implements(IFilePath)
-    def getPath(self):
-        return os.path.abspath(__import__(self.original.__module__).__file__)
-
-
-# here is where we hook together all the pieces
-
-for _adapter, _original, _interface in [ ( ModulePath, types.ModuleType, IFilePath ),
-                                         ( ListPath,   types.ListType,   IFilePath ),
-                                         ( StringPath, types.StringType, IFilePath ),
-                                         ( KlassPath,  types.ClassType,  IFilePath ) ]:
-
-    components.registerAdapter(_adapter, _original, _interface)
-
-
-def main():
-    aString = "/foo/bar/baz"
-    aList = ['path', 'to', 'knowhere']
-    aModule = __import__('twisted')
-    aKlass = StringPath
-
-    # if you've ever been in a situation where you were just *dying* to use isinstance()
-    # you actually wanted interfaces and adapters
-
-
-    # XXX: write this part out and make what's happening _very explicit_
-    for original in [aString, aList, aModule, aKlass]:
-        adapterToIFilePath = IFilePath(original)
-        adapterToIFilePath.getPath() 
-
-if __name__ == '__main__':
-    main()
-
-</pre>
+<a href="simple_interface.py" class="py-listing"></a>
 
 <h3>Explanation</h3>
 
