@@ -50,7 +50,7 @@ class TerminalRealm:
                 return (iconch.IConchUser, TerminalUser(), lambda: None)
         raise NotImplementedError()
 
-class _Ugg:
+class _Glue:
     def __init__(self, **kw):
         self.__dict__.update(kw)
 
@@ -66,10 +66,10 @@ class TerminalSessionTransport:
         self.chainedProtocol = self.protocolFactory()
 
         session = self.proto.session
-        self.proto.makeConnection(_Ugg(write=self.chainedProtocol.dataReceived,
+        self.proto.makeConnection(_Glue(write=self.chainedProtocol.dataReceived,
                                        loseConnection=lambda: avatar.conn.sendClose(session),
                                        name="SSH Proto Transport"))
-        self.chainedProtocol.makeConnection(_Ugg(write=self.proto.write,
+        self.chainedProtocol.makeConnection(_Glue(write=self.proto.write,
                                                  loseConnection=self.proto.loseConnection,
                                                  name="Chained Proto Transport"))
 
