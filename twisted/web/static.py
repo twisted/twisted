@@ -458,9 +458,9 @@ class ASISProcessor(resource.Resource):
     def __init__(self, path, registry=None):
         resource.Resource.__init__(self)
         self.path = path
-        self.registry = registry or static.Registry()
+        self.registry = registry or Registry()
 
     def render(self, request):
         request.startedWriting = 1
-        res = static.File(self.path, self.registry)
+        res = File(self.path, registry=self.registry)
         return res.render(request)

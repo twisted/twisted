@@ -325,11 +325,11 @@ class ASISProcessor:
     
     def __init__(self, path, registry=None):
         self.path = path
-        self.registry = registry or static.Registry()
+        self.registry = registry or Registry()
 
     def renderHTTP(self, request):
         request.startedWriting = 1
-        return static.File(self.path, self.registry)
+        return File(self.path, registry=self.registry)
 
     def locateChild(self, request):
         return FourOhFour(), ()
