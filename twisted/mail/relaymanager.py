@@ -15,6 +15,7 @@ for the twisted.mail SMTP server
 '''
 from twisted.python import delay, log
 from twisted.mail import relay
+from twisted.internet import tcp
 import os
 
 class SMTPManagedRelayer(relay.SMTPRelayer):
@@ -25,6 +26,8 @@ class SMTPManagedRelayer(relay.SMTPRelayer):
     and broken connections
     '''
 
+    identity = 'foo.bar'
+
     def __init__(self, messages, manager):
         '''initialize with list of messages and a manager
 
@@ -32,7 +35,7 @@ class SMTPManagedRelayer(relay.SMTPRelayer):
         manager should support .notifySuccess, .notifyFailure
         and .notifyDone
         '''
-        SMTPRelayer.__init__(self, messages)
+        relay.SMTPRelayer.__init__(self, messages)
         self.manager = manager
 
     def sentMail(self, addresses):
@@ -40,11 +43,12 @@ class SMTPManagedRelayer(relay.SMTPRelayer):
 
         we will always get 0 or 1 addresses.
         '''
-        SMTPRelayer.sentMail(self, addresses)
+        message = self.messages[0][0]
+        relay.SMTPRelayer.sentMail(self, addresses)
 	if addresses: 
-	    self.manager.notifySuccess(self, self.messages[0][0])
+	    self.manager.notifySuccess(self, message)
 	if addresses: 
-	    self.manager.notifyFailure(self, self.messages[0][0])
+	    self.manager.notifyFailure(self, message)
 
     def connectionLost(self):
         '''called when connection is broken
@@ -96,7 +100,7 @@ class SmartHostSMTPRelayingManager:
 	del self.relayingMessages[message]
 
     def notifyFailure(self, relay, message):
-        log.log("could not relay "+message)
+        log.msg("could not relay "+message)
         self.notifySuccess(relay, message)
 
     def notifyDone(self, relay):
@@ -138,9 +142,8 @@ class SmartHostSMTPRelayingManager:
         synchronize with the state of the world, and maybe launch
         a new relay
         '''
-        log.msg("waking up")
 	self.readDirectory() 
-	if self.messages:
+	if not self.messages:
 	    return
         if len(self.managed) >= self.maxConnections:
 	    return
@@ -152,7 +155,8 @@ class SmartHostSMTPRelayingManager:
 	    toRelay.append(os.path.join(self.directory, message))
         protocol = SMTPManagedRelayer(toRelay, self)
 	self.managed[protocol] = nextMessages
-	transport = tcp.Client(smartHostAddr[0], smartHostAddr[1], protocol)
+	transport = tcp.Client(self.smartHostAddr[0], int(self.smartHostAddr[1]), 
+                               protocol)
 
 
 # It's difficult to pickle methods

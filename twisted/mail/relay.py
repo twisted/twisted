@@ -62,14 +62,15 @@ class SMTPRelayer(smtp.SMTPClient):
     def getMailFrom(self):
         if not self.messages:
             return None
-        return self.messages[1][0]
+        return self.messages[0][1][0]
 
     def getMailTo(self):
-        return [self.messages[1][1]]
+        return [self.messages[0][1][1]]
 
     def getMailData(self):
-        return self.messages[1][2]
+        return self.messages[0][1][2]
 
     def sentMail(self, addresses):
         if addresses:
-            os.remove(self.messages[0])
+            os.remove(self.messages[0][0])
+        del self.messages[0]
