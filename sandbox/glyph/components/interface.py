@@ -42,7 +42,7 @@ class MetaInterface(zii.InterfaceClass):
         globalRegistry.register(required=[originalSpec], provided=self,
                                 name='', value=adapterFactory)
 
-Interface = MetaInterface('Interface', __module__='components')
+Interface = MetaInterface('Interface', __module__=__name__)
 
 def test():
     class ITo(Interface):
