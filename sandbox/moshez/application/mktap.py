@@ -90,27 +90,18 @@ class FirstPassOptions(usage.Options):
                            "file begin with 'e')"],
         ['debug', 'd',     "Show debug information for plugin loading"],
         ['progress', 'p',  "Show progress information for plugin loading"],
+        ['help', 'h',  "Display this message"],
     ]
 
     def init(self, tapLookup):
-        self.subCommands = []
-        for (x, y) in tapLookup.items():
-            self.subCommands.append(
-                [x,
-                 None,
-                 (lambda obj = y: obj.load().Options()),
-                 getattr(y, 'description', '')]
-             )
-        self.subCommands.sort()
-        self['help'] = 0 # default
+        sc = [ [name, None, (lambda obj=module:obj.load().Options()),
+                getattr(module, 'description', '')]
+                                     for name, module in tapLookup.items()]
+        sc.sort()
+        self.subCommands = sc
 
-    def opt_help(self):
-        """Display this message"""
-        self['help'] = 1
-    opt_h = opt_help
-    
     def parseArgs(self, *rest):
-        self.params = self.params+rest
+        self.params += rest
 
     def _reportDebug(self, info):
         print 'Debug: ', info
