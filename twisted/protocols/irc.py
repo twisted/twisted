@@ -141,7 +141,7 @@ class IRC(protocol.Protocol):
                 self.irc_unknown(prefix, command, params)
 
 
-class IRCClient(basic.LineReceiver, log.Logger):
+class IRCClient(basic.LineReceiver):
     """Internet Relay Chat client protocol, with sprinkles.
 
     In addition to providing an interface for an IRC client protocol,
@@ -176,6 +176,11 @@ class IRCClient(basic.LineReceiver, log.Logger):
         """Called when I have a message from a user to me or a channel.
         """
         pass
+
+    def noticed(self, user, channel, message):
+        """Called when I have a notice from a user to me or a channel.
+        """
+        self.privmsg(user, channel, message)
 
     def action(self, user, channel, data):
         """Called when I see a user perform an ACTION on a channel.
@@ -280,7 +285,7 @@ class IRCClient(basic.LineReceiver, log.Logger):
     ### You might want to fiddle with these,
     ### but it is safe to leave them alone.
 
-    def irc_ERR_USERONCHANNEL(self, prefix, params):
+    def irc_ERR_NICKNAMEINUSE(self, prefix, params):
         self.setNick(self.nickname+'_')
 
     def irc_RPL_WELCOME(self, prefix, params):
@@ -324,7 +329,7 @@ class IRCClient(basic.LineReceiver, log.Logger):
 
             message = string.join(m['normal'], ' ')
 
-        self.privmsg(user, channel, message)
+        self.noticed(user, channel, message)
 
     def irc_unknown(self, prefix, command, params):
         pass
@@ -534,7 +539,7 @@ class IRCClient(basic.LineReceiver, log.Logger):
                                    "%s %s: Unknown query '%s'"
                                    % (tag, data, tag))])
 
-        self.log("Unknown CTCP query from %s: %s %s\n"
+        log.msg("Unknown CTCP query from %s: %s %s\n"
                  % (user, tag, data))
 
     def ctcpMakeReply(self, user, messages):
@@ -585,7 +590,7 @@ class IRCClient(basic.LineReceiver, log.Logger):
         this method should probably show the responses to
         them instead of treating them as anomolies.
         """
-        self.log("Unknown CTCP reply from %s: %s %s\n"
+        log.msg("Unknown CTCP reply from %s: %s %s\n"
                  % (user, tag, data))
 
     ### Error handlers
@@ -594,8 +599,8 @@ class IRCClient(basic.LineReceiver, log.Logger):
     def badMessage(self, line, excType, excValue, tb):
         """When I get a message that's so broken I can't use it.
         """
-        self.log(line)
-        self.log(string.join(traceback.format_exception(excType,
+        log.msg(line)
+        log.msg(string.join(traceback.format_exception(excType,
                                                         excValue,
                                                         tb),''))
 
@@ -603,7 +608,7 @@ class IRCClient(basic.LineReceiver, log.Logger):
         """This is called when I receive a message which is peculiar,
         but not wholly indecipherable.
         """
-        self.log(s + '\n')
+        log.msg(s + '\n')
 
     ### Protocool methods
 
