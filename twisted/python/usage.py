@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: usage.py,v 1.44 2003/07/19 10:43:30 tv Exp $
+# $Id: usage.py,v 1.45 2003/07/20 09:55:01 tv Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -89,7 +89,14 @@ class Options(UserDict.UserDict):
     is parsed, and all options following it are passed to its parser.  If a
     subcommand is found, the subCommand attribute is set to its name and the
     subOptions attribute is set to the Option instance that parsers the
-    remaining options.
+    remaining options. If a subcommand is not given to parseOptions,
+    the subCommand attribute will be None. You can also mark one of
+    the subCommands to be the default.
+
+    | defaultSubCommand = 'holyquest'
+
+    In this case, the subCommand attribute will never be None, and
+    the subOptions attribute will always be set.
 
     If you want to handle your own options, define a method named
     C{opt_paramname} that takes C{(self, option)} as arguments. C{option}
