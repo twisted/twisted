@@ -1,3 +1,8 @@
+2004-05-21  Itamar Shtull-Trauring  <itamar@itamarst.org>
+
+	* twisted/internet/gtk2reactor.py: use glib event loop directly
+	instead of gtk2's event loop if possible.
+
 2004-05-04  Jp Calderone  <exarkun@twistedmatrix.com>
 
 	* twisted.news, twisted.protocols.nntp: Moved back into trunk

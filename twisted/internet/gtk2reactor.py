@@ -15,7 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 """
-This module provides support for Twisted to interact with the PyGTK2 mainloop.
+This module provides support for Twisted to interact with the glib/gtk2 mainloop.
 
 In order to use this support, simply do the following::
 
@@ -24,6 +24,9 @@ In order to use this support, simply do the following::
 
 Then use twisted.internet APIs as usual.  The other methods here are not
 intended to be called directly.
+
+The reactor will only use gtk+ if it's already been imported, otherwise
+it will run directly on the gobject event loop.
 
 API Stability: stable
 
@@ -34,6 +37,7 @@ __all__ = ['install']
 
 # System Imports
 import sys, time
+import gobject
 try:
     if not hasattr(sys, 'frozen'):
         # Don't want to check this for py2exe
@@ -41,7 +45,6 @@ try:
         pygtk.require('2.0')
 except ImportError, AttributeError:
     pass # maybe we're using pygtk before this hack existed.
-import gtk
 
 # Twisted Imports
 from twisted.python import log, threadable, runtime, failure
@@ -57,14 +60,13 @@ hasWriter = writes.has_key
 
 # the next callback
 _simtag = None
-POLL_DISCONNECTED = gtk._gobject.IO_HUP | gtk._gobject.IO_ERR | \
-                    gtk._gobject.IO_NVAL
+POLL_DISCONNECTED = gobject.IO_HUP | gobject.IO_ERR | gobject.IO_NVAL
 
-# gtk's iochannel sources won't tell us about any events that we haven't
+# glib's iochannel sources won't tell us about any events that we haven't
 # asked for, even if those events aren't sensible inputs to the poll()
 # call.
-INFLAGS = gtk._gobject.IO_IN | POLL_DISCONNECTED
-OUTFLAGS = gtk._gobject.IO_OUT | POLL_DISCONNECTED
+INFLAGS = gobject.IO_IN | POLL_DISCONNECTED
+OUTFLAGS = gobject.IO_OUT | POLL_DISCONNECTED
 
 
 class Gtk2Reactor(default.PosixReactorBase):
@@ -72,6 +74,11 @@ class Gtk2Reactor(default.PosixReactorBase):
     """
 
     __implements__ = (default.PosixReactorBase.__implements__, IReactorFDSet)
+
+    def __init__(self):
+        self.context = gobject.main_context_default()
+        self.loop = gobject.MainLoop()
+        default.PosixReactorBase.__init__(self)
 
     # The input_add function in pygtk1 checks for objects with a
     # 'fileno' method and, if present, uses the result of that method
@@ -87,10 +94,9 @@ class Gtk2Reactor(default.PosixReactorBase):
             # handle python objects
             def wrapper(source, condition, real_s=source, real_cb=callback):
                 return real_cb(real_s, condition)
-            return gtk._gobject.io_add_watch(source.fileno(), condition,
-                                             wrapper)
+            return gobject.io_add_watch(source.fileno(), condition, wrapper)
         else:
-            return gtk._gobject.io_add_watch(source, condition, callback)
+            return gobject.io_add_watch(source, condition, callback)
 
     def addReader(self, reader):
         if not hasReader(reader):
@@ -108,12 +114,12 @@ class Gtk2Reactor(default.PosixReactorBase):
 
     def removeReader(self, reader):
         if hasReader(reader):
-            gtk.input_remove(reads[reader])
+            gobject.source_remove(reads[reader])
             del reads[reader]
 
     def removeWriter(self, writer):
         if hasWriter(writer):
-            gtk.input_remove(writes[writer])
+            gobject.source_remove(writes[writer])
             del writes[writer]
 
     doIterationTimer = None
@@ -121,51 +127,58 @@ class Gtk2Reactor(default.PosixReactorBase):
     def doIterationTimeout(self, *args):
         self.doIterationTimer = None
         return 0 # auto-remove
+    
     def doIteration(self, delay):
         # flush some pending events, return if there was something to do
-        # don't use the usual "while gtk.events_pending(): mainiteration()"
+        # don't use the usual "while self.context.pending(): self.context.iteration()"
         # idiom because lots of IO (in particular test_tcp's
         # ProperlyCloseFilesTestCase) can keep us from ever exiting.
         log.msg(channel='system', event='iteration', reactor=self)
-        if gtk.events_pending():
-            gtk.main_iteration(0)
+        if self.context.pending():
+            self.context.iteration(0)
             return
         # nothing to do, must delay
         if delay == 0:
             return # shouldn't delay, so just return
-        self.doIterationTimer = gtk.timeout_add(int(delay * 1000),
+        self.doIterationTimer = gobject.timeout_add(int(delay * 1000),
                                                 self.doIterationTimeout)
         # This will either wake up from IO or from a timeout.
-        gtk.main_iteration(1) # block
+        self.context.iteration(1) # block
         # note: with the .simulate timer below, delays > 0.1 will always be
         # woken up by the .simulate timer
         if self.doIterationTimer:
             # if woken by IO, need to cancel the timer
-            gtk.timeout_remove(self.doIterationTimer)
+            gobject.source_remove(self.doIterationTimer)
             self.doIterationTimer = None
 
     def crash(self):
-        gtk.main_quit()
+        self.__crash()
 
     def run(self, installSignalHandlers=1):
         self.startRunning(installSignalHandlers=installSignalHandlers)
         self.simulate()
-        gtk.main()
-
+        if sys.modules.has_key("gtk"):
+            import gtk
+            self.__crash = gtk.main_quit
+            gtk.main()
+        else:
+            self.__crash = self.loop.quit
+            self.loop.run()
+    
     def _doReadOrWrite(self, source, condition, faildict={
         error.ConnectionDone: failure.Failure(error.ConnectionDone()),
         error.ConnectionLost: failure.Failure(error.ConnectionLost())  }):
         why = None
         if condition & POLL_DISCONNECTED and \
-               not (condition & gtk._gobject.IO_IN):
+               not (condition & gobject.IO_IN):
             why = main.CONNECTION_LOST
         else:
             try:
                 didRead = None
-                if condition & gtk._gobject.IO_IN:
+                if condition & gobject.IO_IN:
                     why = source.doRead()
                     didRead = source.doRead
-                if not why and condition & gtk._gobject.IO_OUT:
+                if not why and condition & gobject.IO_OUT:
                     # if doRead caused connectionLost, don't call doWrite
                     # if doRead is doWrite, don't call it again.
                     if not source.disconnected and source.doWrite != didRead:
@@ -184,7 +197,6 @@ class Gtk2Reactor(default.PosixReactorBase):
             else:
                 source.connectionLost(failure.Failure(why))
 
-
     def callback(self, source, condition):
         log.callWithLogger(source, self._doReadOrWrite, source, condition)
         self.simulate() # fire Twisted timers
@@ -195,13 +207,13 @@ class Gtk2Reactor(default.PosixReactorBase):
         """
         global _simtag
         if _simtag is not None:
-            gtk.timeout_remove(_simtag)
+            gobject.source_remove(_simtag)
         self.runUntilCurrent()
         timeout = min(self.timeout(), 0.1)
         if timeout is None:
             timeout = 0.1
         # grumble
-        _simtag = gtk.timeout_add(int(timeout * 1010), self.simulate)
+        _simtag = gobject.timeout_add(int(timeout * 1010), self.simulate)
 
 
 class PortableGtkReactor(default.SelectReactor):
@@ -211,9 +223,11 @@ class PortableGtkReactor(default.SelectReactor):
     """
 
     def crash(self):
+        import gtk
         gtk.mainquit()
 
     def run(self, installSignalHandlers=1):
+        import gtk
         self.startRunning(installSignalHandlers=installSignalHandlers)
         self.simulate()
         gtk.mainloop()
@@ -223,13 +237,13 @@ class PortableGtkReactor(default.SelectReactor):
         """
         global _simtag
         if _simtag is not None:
-            gtk.timeout_remove(_simtag)
+            gobject.source_remove(_simtag)
         self.iterate()
         timeout = min(self.timeout(), 0.1)
         if timeout is None:
             timeout = 0.1
         # grumble
-        _simtag = gtk.timeout_add(int(timeout * 1010), self.simulate)
+        _simtag = gobject.timeout_add(int(timeout * 1010), self.simulate)
 
 
 def install():
