@@ -30,7 +30,8 @@ class TagChecker:
             method(dom, filename)
 
     def _reportError(self, filename, element, error):
-        t = (filename,)+element._markpos+(error,)
+        pos = getattr(element, '_markpos', None) or (0, 0)
+        t = (filename,)+pos+(error,)
         print ("%s:%s:%s: %s" % t)
 
     def check_disallowedElements(self, dom, filename):
@@ -73,6 +74,19 @@ class TagChecker:
                 and node.childNodes[0].data == ''):
                 continue
             self._reportError(filename, node, 'hand hacked style')
+
+    def check_title(self, dom, filename):
+        nodes = domhelpers.findNodesNamed(dom, 'title')
+        if len(nodes)!=1:
+            return self._reportError(filename, dom, 'not exactly one title')
+        title = nodes[0]
+        nodes = domhelpers.findNodesNamed(dom, 'h1')
+        if len(nodes)!=1:
+            return self._reportError(filename, dom, 'not exactly one h1')
+        h1 = nodes[0]
+        if domhelpers.getNodeText(h1) != domhelpers.getNodeText(title):
+            self._reportError(filename, h1, 'title and h1 text differ')
+
 
 def list2dict(l):
     d = {}
