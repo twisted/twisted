@@ -183,10 +183,21 @@ ServerName example.com
 &lt;/VirtualHost&gt;
 </pre>
 
-<p>Naturally, mutatis-mutandis if you use Twisted.Web itself to do the
-reverse proxying (though in that case, consider if you're not better off
-using Twisted's internal distributed web facilities), Squid reverse proxying
-or any other tool.</p>
+<p>Here is an example for Twisted.Web's reverse proxy:</p>
+
+<pre>
+from twisted.internet import app
+from twisted.web import proxy, server, vhost
+vhostName = 'example.com'
+reverseProxy = proxy.ReverseProxyResource('internal', 8538,
+                                          '/vhost.rpy/http/'+vhostName+'/')
+root = vhost.NamedVirtualHost()
+root.addHost(vhostName, reverseProxy)
+site = server.Site(root)
+application = app.Application('web-proxy')
+application.listenTCP(80, site)
+</pre>
+
 
 </body>
 </html>
