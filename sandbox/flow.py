@@ -171,6 +171,20 @@ class Stage(Instruction):
                      result = iterable.next() 
                      // handle good result or SpamError or EggsError
 
+        For many generators, the results become available in chunks
+        of rows.  While the default value is to get one row at a time,
+        there is a 'chunked' property which allows them to be 
+        returned via the next() method as many rows rather than
+        row by row.
+
+             iterable = DerivedStage(...)
+             iterable.chunked = 1
+             for results in iterable:
+                 for result in results:
+                      // handle good result
+                 yield iterable
+
+
         For those wishing more control at the cost of a painful experience,
         the following member variables can be used to great effect:
 
@@ -205,7 +219,6 @@ class Stage(Instruction):
                      for result in iterable.results:
                          // handle good result
                      iterable.results = []
-                     break
                  if iterable.stop:
                      break
                  if iterable.failure:
@@ -218,6 +231,7 @@ class Stage(Instruction):
         self.stop = False
         self.failure = None
         self.results = []
+        self.chunked = False
     
     def __iter__(self):
         return self
@@ -232,7 +246,12 @@ class Stage(Instruction):
             called before the stage is yielded. 
         """
         if self.results:
-            return self.results.pop(0)
+            if self.chunked:
+                ret = self.results
+                self.results = []
+                return ret
+            else:
+                return self.results.pop(0)
         if self.stop:
             raise StopIteration()
         if self.failure:
@@ -418,6 +437,9 @@ class Concurrent(Stage):
             instruction = curr._yield()
             if curr.results:
                 self.results.append(curr)
+            if curr.failure:
+                self.failure = curr.failure
+                return
             if curr.stop:
                 exit = None
                 if self.results:
