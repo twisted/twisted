@@ -70,7 +70,7 @@ class DatabaseAuthorizer(passport.Authorizer, adbapi.Augmentation):
         if len(identData) == 0:
             # no rows! User doesnt exist
             raise KeyError("Identity not found" )
-        
+
         realIdentName = identData[0][0]
         base64pass = identData[0][1]
         hashedPass = base64.decodestring(base64pass)

@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
 import random
 import time
 
@@ -26,7 +27,7 @@ def getTestValue():
     return value
 
 c = client.MetricsClientComponent(7, "localhost", 8787)
-c.doLogin("test", "sss")
+c.doLogin("localMachine", "pass")
 
 c.createStateVariable("state", getTestValue, 10)
 c.createCounterVariable("counter1", 3)
@@ -42,6 +43,20 @@ while 1:
         r = random.random() * 40
         if r < 10:
             c.incrementCounterVariable("counter1")
+            c.incrementCounterVariable("counter1")
+            c.incrementCounterVariable("counter1")
+            c.incrementCounterVariable("counter1")
+            c.incrementCounterVariable("counter1")
+            c.incrementCounterVariable("counter1")
+            c.incrementCounterVariable("counter1")
+            c.incrementCounterVariable("counter1")
+            c.incrementCounterVariable("counter1")
+            c.incrementCounterVariable("counter1")
+            c.incrementCounterVariable("counter1")
+            c.incrementCounterVariable("counter1")
+            c.incrementCounterVariable("counter1")
+            c.incrementCounterVariable("counter1")
+            c.incrementCounterVariable("counter1")            
 
         r = random.random() * 40
         if r < 20:

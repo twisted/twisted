@@ -24,6 +24,7 @@ can be viewed by a web interface...?)
 
 """
 import time
+import copy
 
 from twisted.internet import passport
 from twisted.spread import pb
@@ -33,32 +34,47 @@ from twisted.python import defer
 import metricsdb
 
 class MetricsManagerService(pb.Service):
-
+    """On initialization, load the set of metrics sources and the set of
+    metrics variables from the database.
+    """
     def __init__(self, name, app, dbpool):
         pb.Service.__init__(self, name, app)
         self.dbpool = dbpool
-        self.sourcesCache = {}  # holds the last value of each metrics item for each source.
-                                # this is a hash of source_ids.
-                                # each map item is a map of name to value.
-                                
-        self.sources = {}       # map of sources by source_id
+        self.sources = {}       # map of known sources by name
+        self.variables = {}     # map of known variables by name
 
         self.manager = metricsdb.MetricsDB(dbpool)
-        #self.loadSources()
+
+    def delayedInit(self):
+        self.loadVariables()
+
+    def loadVariables(self):
+        """Load all the metrics variables from the db.
+        """
+        d = self.manager.getAllVariables(self.gotVariables, self.sourceError)
+        d.arm() ## NOTE: does this need to be done?!?
+        return d
 
     def loadSources(self):
-        #NOTE: THIS DOES NOT EVER WORK!!!
+        """Load all the metrics sources from the db.
+        """
         print "Loading metrics sources:"        
-        return self.manager.getAllSources(self.gotSources, self.sourceError)
-        
+        d =  self.manager.getAllSources(self.gotSources, self.sourceError)
+        d.arm()
+        return d
+
+    def gotVariables(self, data):
+        for (name, threshold) in data:
+            print "Loaded variables: (%s) threashold = %d"  % (name, threshold)
+            self.variables[name] = threshold
+        self.loadSources()
         
     def gotSources(self, data):
-        print "gotSources:"
-        for (source_id, name, host, server_type, shard) in data:
-            print "Loaded source: (%d) %s %s" % (source_id, host, shard)
-            self.sources[source_id] = (name, host, server_type, shard)
+        for (name, host, server_group, server_type) in data:
+            print "Loaded source: (%s) %s %s" % (name, host, server_group)
+            self.sources[name] = MetricsSource(name, host, server_group, server_type, self.variables, self)
         print "Loaded all metrics sources"
-
+            
     def sourceError(self, error):
         print "ERROR loading sources", repr(error)
 
@@ -70,26 +86,88 @@ class MetricsManagerService(pb.Service):
         p.setService(self)
         return p
 
-    def insertMetricsItem(self, source_id, name, value):
+    def insertMetricsItem(self, sourceName, name, value):
         # make a local copy
-        if self.sourcesCache.has_key(source_id):
-            source = self.sourcesCache[source_id]
-            source[name] = (value, time.asctime())
+        if self.sources.has_key(sourceName):
+            source = self.sources[sourceName]
+            source.cache(name, value, time.asctime())
         else:
-            source = {}
-            source[name] = (value, time.asctime())
-            self.sourcesCache[source_id] = source
+            print "ERROR: unknown source", sourceName
         # push to the database
-        self.manager.insertMetricsItem(source_id, name, value)
-        
+        self.manager.insertMetricsItem(sourceName, name, value)
+
+    def registerWith(self, authorizer):
+        authorizer.registerService(self.serviceName, self.createPerspective)
+
+    def setActive(self, perspectiveName, value):
+        self.sources[perspectiveName].setActive(value)
+
 class MetricsClient(pb.Perspective):
 
     def perspective_submitItems(self, metricsItems):
-        self.source_id = 1 #TODO: make this real
         for (name, value, when) in metricsItems:
-            self.service.insertMetricsItem(self.source_id, name, value)
+            self.service.insertMetricsItem(self.perspectiveName, name, value)
 
     def perspective_submitEvent(self, name, when):
-        self.source_id = 1 #TODO: make this real
-        self.service.manager.insertMetricsEvent(self.source_id, name, when)
+        self.service.manager.insertMetricsEvent(self.perspectiveName, name, when)
+
+    def attached(self, reference, identity):
+        self.service.setActive(self.perspectiveName, 1)
+        return pb.Perspective.attached(self, reference, identity)
+
+    def detached(self, reference, identity):
+        self.service.setActive(self.perspectiveName, 0)        
+        return pb.Perspective.detached(self, reference, identity)
+    
+class MetricsSource:
+    def __init__(self, name, hostname, server_group, server_type, variables, service):
+        self.name = name
+        self.hostname = hostname
+        self.server_group = server_group
+        self.server_type = server_type
+        self.service = service
         
+        self.active = 0
+        self.alert = 0
+        self.alertString = ""
+
+        self.variables = {}
+        for k in self.service.variables.keys():
+            self.variables[k] = 0
+        
+
+    def setActive(self, value):
+        print "Setting %s to %d"  %( self.name, value)
+        self.active = value
+        if value == 0:
+            self.alert = 0
+
+    def getActiveString(self):
+        if self.active:
+            return "Active"
+        else:
+            return "--"
+
+    def getStatusString(self):
+        if self.alert:
+            return "<b>ALERT: %s</b>" % self.alertString
+        else:
+            return "--"
+
+    def cache(self, name, value, when):
+        if self.variables.has_key(name):
+            self.variables[name] = value
+            self.checkAlertStatus()
+        else:
+            print "ERROR: unknown variable ", name
+
+    def checkAlertStatus(self):
+        self.alert = 0
+        self.alertString = ""
+        for name in self.variables.keys():
+            value = self.variables[name]
+            if value > self.service.variables[name]:
+                self.alert = 1
+                self.alertString = "%s is at %s (%s)" %  (name, value, self.service.variables[name])
+                
+                

@@ -17,27 +17,24 @@
 
 from twisted.internet import main, passport
 from twisted.spread import pb
-from twisted.enterprise import adbapi
+from twisted.enterprise import adbapi, dbpassport
 from twisted.web import widgets, server
+from twisted.python import delay
 
 from twisted.metrics import metricserv
 from twisted.metrics import gadgets
 
-# Create Twisted application object
-application = main.Application("metrics-manager")
 
 # Connect to a database.
-dbpool = adbapi.ConnectionPool("pyPgSQL.PgSQL", database="twisted")
+dbpool = adbapi.ConnectionPool("pyPgSQL.PgSQL", "localhost:5432", database="sean")
+auth = dbpassport.DatabaseAuthorizer(dbpool)
+
+# Create Twisted application object
+application = main.Application("metrics-manager", authorizer=auth)
 
 # Create the service
-metricsService = metricserv.MetricsManagerService("metrics", application, dbpool)
+metricsService = metricserv.MetricsManagerService("twisted.metrics", application, dbpool)
 
-# Create a user
-ident = passport.Identity("test", application)
-ident.setPassword("sss")
-client = metricsService.createPerspective("test")
-ident.addKeyForPerspective(client)
-application.authorizer.addIdentity(ident)
 
 # Create Metrics object
 gdgt = gadgets.MetricsGadget(application, metricsService)
@@ -49,3 +46,16 @@ r = pb.AuthRoot(application)
 application.listenOn(pb.portno, pb.BrokerFactory(r))
 
 # Done.
+
+
+def delayedInit():
+    global metricsService
+    metricsService.delayedInit()
+
+
+ticker = delay.Delayed()
+ticker.ticktime = 1
+ticker.later(func=delayedInit, args=(), ticks=1)
+application.addDelayed(ticker)
+
+

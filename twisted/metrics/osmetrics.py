@@ -1,18 +1,19 @@
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
 """ module to gather operating system statistics for use in twisted.metrics.
 The stats that will be gathered are:
 
@@ -47,13 +48,13 @@ class Win2kMetricsCollector(MetricsCollector):
         ("syscalls"    ,"System",            "System Calls/sec")
         ]
 
-    collectFrequency = 3 # how often to collect the values for the above items
+    collectFrequency = 7 # how often to collect the values for the above items
     
     def __init__(self, reportFrequency, hostname, port):
 
         # create the metrics client
         self.metricsClient = client.MetricsClientComponent( reportFrequency, hostname, port)
-        self.metricsClient.doLogin("test", "sss")
+        self.metricsClient.doLogin("localMachine", "pass")
 
         # setup variables
         self.metricsClient.createStateVariable("cpu", self.getCPU,self.collectFrequency)

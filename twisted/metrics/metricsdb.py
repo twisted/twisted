@@ -30,76 +30,86 @@ class MetricsDB(adbapi.Augmentation):
     """
 
     schema = """
-    CREATE TABLE metrics_sources
+    CREATE TABLE metrics_perspectives
     (
-    source_id    int,
-    source_name  varchar(32),
-    hostname     varchar(32),
-    server_type  int,
-    shard        varchar(32)
+      identity_name  varchar(64),
+      hostname       varchar(64),
+      server_group   varchar(64),    
+      server_type    integer
     );
     
     CREATE TABLE metrics_items
     (
-    source_id	int,
-    item_name  varchar(32),
-    item_value int,
-    collected  timestamp
+      source_name    varchar(62),
+      item_name      varchar(32),
+      item_value     integer,
+      collected      timestamp
     );
     
     CREATE TABLE metrics_events
     (
-    source_id   int,
-    event_name  varchar(32),
-    event_time  timestamp
+      source_name    varchar(64),
+      event_name     varchar(32),
+      event_time     timestamp
     );
+
+    CREATE TABLE metrics_variables
+    (
+      variable_name  varchar(32),
+      threshold      integer
+    );
+    
     """
 
     def getAllSources(self, callbackIn, errbackIn):
         """Loads all the known metrics sources.
-        """        
-        sql = "SELECT source_id, source_name, hostname, server_type, shard from metrics_sources"
+        """
+        sql = """SELECT identity_name, hostname, server_group, server_type
+                 FROM metrics_perspectives"""
+        return self.runQuery(sql, callbackIn, errbackIn)
+
+    def getAllVariables(self, callbackIn, errbackIn):
+        """Loads all metrics variables.
+        """
+        sql = """SELECT variable_name, threshold FROM metrics_variables"""
         return self.runQuery(sql, callbackIn, errbackIn)
         
     def getSourceInfo(self, source_name, callbackIn, errbackIn):
         """This gets the information for a metrics source by it's name. The info will be used
         to verify the connecting source.
         """
-
-        sql = """SELECT source_id, source_name, hostname, server_type, shard
+        sql = """SELECT source_name, source_name, hostname, server_type, shard
                from metrics_sources
                WHERE source_name = '%s'""" % (source_name)
         return self.runQuery(sql, callbackIn, errbackIn)
 
-    def insertMetricsItem(self, source_id, item_name, item_value):
+    def insertMetricsItem(self, source_name, item_name, item_value):
         """Inserts a value for metrics item into the database.
         """
-
         sql = "INSERT INTO metrics_items\
-               (source_id, item_name, item_value, collected)\
+               (source_name, item_name, item_value, collected)\
                VALUES\
-               (%d, '%s', %d, now())" % (source_id, item_name, item_value)
+               ('%s', '%s', %d, now())" % (source_name, item_name, item_value)
 
         return self.runOperation(sql)
 
-    def insertMetricsEvent(self, source_id, event_name):
+    def insertMetricsEvent(self, source_name, event_name):
         """Inserts a metrics event into the database.
         """
-
         sql = "INSERT INTO metrics_events\
-               (source_id, event_name, event_time)\
+               (source_name, event_name, event_time)\
                VALUES\
-               (%d, '%s', now())" % (source_id, event_name)
+               ('%s', '%s', now())" % (source_name, event_name)
 
         return self.runOperation(sql)
 
-    def getHistory(self, source_id, name, callbackIn, errbackIn):
+    def getHistory(self, source_name, name, callbackIn, errbackIn):
         """Get the history of values for this item from this source
         """        
         sql = "SELECT item_value, collected\
                FROM metrics_items\
-               WHERE source_id = %d\
-               AND item_name = '%s'" % (source_id, name)
+               WHERE source_name = '%s'\
+               AND item_name = '%s'" % (source_name, name)
         
         # use a defered
         return self.runQuery(sql, callbackIn, errbackIn)
