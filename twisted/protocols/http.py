@@ -433,6 +433,9 @@ class Request:
 
     def _cleanup(self):
         """Called when have finished responding and are no longer queued."""
+        if self.producer:
+            log.err(RuntimeError("Producer was not unregistered for %s" % request.uri))
+            self.unregisterProducer()
         self.channel.requestDone(self)
         del self.channel
         try:
@@ -463,7 +466,7 @@ class Request:
             self.transport.write(data)
 
         # if we have producer, register it with transport
-        if self.producer is not None and not self.finished:
+        if self.producer is not None:
             self.transport.registerProducer(self.producer, self.streamingProducer)
 
         # if we're finished, clean up
