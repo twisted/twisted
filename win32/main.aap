@@ -60,6 +60,7 @@ SCP=bash admin/aapscp
         return getValueFromReg(r'Software\Python\PythonCore\%s\InstallPath' %
                                ver, None, r'C:\pythonxx')
 
+# get the version of twisted from the tree being built, not sys.path
 version=`getBuildingTwistedVersion(_top.TOPDIR)`
 
 # PyVersion is variant rather than a regular string variable so the script
@@ -86,10 +87,11 @@ innohome=`getValueFromReg(r'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\
 iscc='$innohome\ISCC.exe'
 
 all: dist/$(setupbase)-$(version).win32-py$(pyversion).exe
-    # :publish {scp://shell.sf.net//home/groups/t/tw/twisted/htdocs/$(nodisttarget)} $(target)
     :print : Done building $(target)
 
+# find all the files that can cause a rebuild with setup.py
 :syseval find twisted -name '*.c' -o -name '*.h' | :assign csources
+# don't try to build the .c files automatically...
 :attr {filetype = ignore} $(csources)
 
 :syseval find twisted -name '*.py' -o -name '*.sql' -o -name '*.glade*'  | :assign twsources
@@ -103,26 +105,36 @@ twsources+=twisted/plugins.tml
            twisted/xish/xpathparser.g
            $(csources)
 
+# only run setup.py when needed
 build/lib.win32-$(pyversion): $twsources
     :sys $(pyexe) setup.py -q clean --all build --compiler=mingw32
 
+# publish to sf.net
+:attr {publish=scp://shell.sf.net//home/groups/t/tw/twisted/htdocs/$(setupbase)-$(version).win32-py$(pyversion).exe} dist/$(setupbase)-$(version).win32-py$(pyversion).exe
+
+# build with inno
 dist/Twisted-$(version).win32-py$(pyversion).exe: doc/twisteddoc.zip 
                                                   py$(pyversion)-$(DoDocs).iss
                                                   build/lib.win32-$(pyversion)
     :sys $(iscc) py$(pyversion)-withdocs.iss
 
+# build with inno
 dist/Twisted_NoDocs-$(version).win32-py$(pyversion).exe: py$(pyversion)-$(DoDocs).iss
-    :sys $(pyexe) setup.py -q clean --all build --compiler=mingw32
+                                                         build/lib.win32-$(pyversion)
     :sys $(iscc) py$(pyversion)-nodocs.iss
 
+
+# fetch docs from latest release (this better be there)
 :attr {fetch=scp://shell.sf.net//home/groups/t/tw/twisted/htdocs/TwistedDocs-$(version).tar.bz2} doc/TwistedDocs-$(version).tar.bz2
 
+# uncompress and rezip doc
 doc/twisteddoc.zip: doc/TwistedDocs-$(version).tar.bz2
     :chdir doc
     :sys tar xfj TwistedDocs-$(version).tar.bz2
     :chdir TwistedDocs-$(version)
     :sys zip -rq ../twisteddoc.zip *
 
+# generate iss files
 py$(pyversion)-$(DoDocs).iss: win32/pyx.x-foo.iss.template
     @docs=(_top.DoDocs == 'withdocs')
     # file2string is fucked, don't use
