@@ -237,7 +237,6 @@ class DOMTemplate(Resource):
         Also, handle all childNodes of this node using recursion.
         """
         result = None
-        deferrer = None
         if node.nodeName and node.nodeName[0] != '#':
             method = self.templateMethods.getMethodForNode(node)
             if method:
@@ -310,7 +309,8 @@ class DOMTemplate(Resource):
 
     def processNode(self, request, newnode, oldnode):
         if newnode is not oldnode:
-            newnode = self.d.importNode(newnode, 1)
+            if hasattr(self.d, 'importNode'):
+                newnode = self.d.importNode(newnode, 1)
             oldnode.parentNode.replaceChild(newnode, oldnode)
         return newnode
 
@@ -323,4 +323,3 @@ class DOMTemplate(Resource):
             if child.nodeValue:
                 child.replaceData(0, len(child.nodeValue), child.nodeValue % subs)
             self.substitute(request, child, subs)
-    
