@@ -409,16 +409,16 @@ class FTP(protocol.Protocol, DTPFactory):
         wd = os.path.normpath(params)
         if not os.path.isabs(wd):
             wd = os.path.normpath(self.wd + '/' + wd)
-        wd = wd.replace('\\','/')
-        while wd.find('//') > -1:
-            wd = wd.replace('//','/')
+        wd = string.replace(wd, '\\','/')
+        while string.find(wd, '//') > -1:
+            wd = string.replace(wd, '//','/')
         # '..', '\\', and '//' is there just to prevent stop hacking :P
-        if (not os.path.isdir(self.root + wd)) or (wd.find('..') > 0) or \
-            (wd.find('\\') > 0) or (wd.find('//') > 0): 
+        if (not os.path.isdir(self.root + wd)) or (string.find(wd, '..') > 0) or \
+            (string.find(wd, '\\') > 0) or (string.find(wd, '//') > 0): 
             self.reply('nodir', params)
             return
         else:
-            wd = wd.replace('\\','/')
+            wd = string.replace(wd, '\\','/')
             self.wd = wd
             self.reply('cwdok')
 
