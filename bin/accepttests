@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import os, sys, shutil, time
+import os, sys, shutil, time, string
 
 
 def cmd(st):
@@ -152,6 +152,29 @@ def runExampleTest():
     pause()
     killit()
 
+def runMailTest():
+    message("Starting mail test")
+    os.mkdir("dump")
+    os.mkdir("dump2")
+    scmd("./bin/mktap mail --domain foo.bar=dump --user postmaster=postmaster")
+    scmd("./bin/mktap --append mail.tap mail --relay 127.0.0.1,8025=dump2 "
+         "            --smtp 8026 --pop 8111")
+    twistdf("mail")
+    import smtplib, poplib
+    s = smtplib.SMTP('127.0.0.1', 8026)
+    s.sendmail("m@moshez.org", ['postmaster@foo.bar'], '''\
+Subject: How are you gentlemen?
+
+All your base are belong to us
+''')
+    s.quit()
+    time.sleep(10)
+    p = poplib.POP3('127.0.0.1', 8110)
+    p.apop('postmaster@foo.bar', 'postmaster')
+    print string.join(p.retr(1)[1], '\n')
+    p.quit()
+    killit()
+    
 
 def runAllTests():
     message("Starting test.")
@@ -163,6 +186,7 @@ def runAllTests():
     runWordsTest()
     runRealityTest()
     runExampleTest()
+    runMailTest()
     message('All tests run.')
 
 

@@ -62,7 +62,7 @@ class DomainPickler:
         self.n = self.n+1
         fp = open(os.path.join(self.path, fname), 'w')
         try:
-            cPickle.dump((origin, '%s@%s' % (user.name, user.domain), 
+            cPickle.dump((user.orig, '%s@%s' % (user.name, user.domain), 
                                              message), fp)
         finally:
             fp.close()

@@ -182,7 +182,7 @@ def checkState(manager):
     '''cause a manager to check the state'''
     manager.checkState()
 
-def attachManagerToDelayed(manager, delayed, time=60):
+def attachManagerToDelayed(manager, delayed, time=1):
     '''attach a a manager to a Delayed
 
     manager should be an SMTPRelayManager, delayed should be a 
