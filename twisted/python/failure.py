@@ -21,6 +21,10 @@ import traceback
 import linecache
 import string
 from cStringIO import StringIO
+import types
+
+#sibling imports
+import reflect
 
 count = 0
 
@@ -68,6 +72,14 @@ class Failure:
                 globalz.items(),
                 ])
             tb = tb.tb_next
+        if isinstance(self.type, types.ClassType):
+            parentCs = reflect.allYourBase(self.type)
+            self.parents = map(reflect.qual, parentCs)
+            self.parents.append(reflect.qual(self.type))
+        else:
+            self.parents = [self.type]
+
+        
 
     def getErrorMessage(self):
         if isinstance(self.value, Failure):
@@ -80,12 +92,14 @@ class Failure:
         This allows you to trap a Failure in an error callback.  It will be
         automatically re-raised if it is not a type that you expect.
         """
-        for errorType in errorTypes:
-            if (self.type == errorType or
-                issubclass(self.type, errorType)):
-                break
+        for error in errorTypes:
+            if not isinstance(error, types.StringType) and issubclass(error, Exception):
+                error = reflect.qual(error)
+            if error in self.parents:
+                return self.type
         else:
             raise self
+            
 
     def getBriefTraceback(self):
         io = StringIO()
