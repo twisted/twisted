@@ -34,5 +34,5 @@ class Options(usage.Options):
     longdesc = 'Port Forwarder.'
 
 def updateApplication(app, config):
-    s = portforward.ProxyFactory(config.opts['host'], int(config.opts['dest_port']))
-    app.listenTCP(int(config.opts['port']), s)
+    s = portforward.ProxyFactory(config['host'], int(config['dest_port']))
+    app.listenTCP(int(config['port']), s)

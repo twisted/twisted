@@ -50,14 +50,14 @@ twisted.web.test in it."""
 
     def __init__(self):
         usage.Options.__init__(self)
-        self.opts['indexes'] = []
-        self.opts['root'] = None
+        self['indexes'] = []
+        self['root'] = None
 
     def opt_index(self, indexName):
         """Add the name of a file used to check for directory indexes.
         [default: index, index.html]
         """
-        self.opts['indexes'].append(indexName)
+        self['indexes'].append(indexName)
 
     opt_i = opt_index
         
@@ -65,7 +65,7 @@ twisted.web.test in it."""
         """Makes a server with ~/public_html and ~/.twistd-web-pb support for
         users.
         """
-        self.opts['root'] = distrib.UserDirectory()
+        self['root'] = distrib.UserDirectory()
 
     opt_u = opt_user
 
@@ -76,8 +76,8 @@ twisted.web.test in it."""
         any other files that you want to be served up raw.
         """
 
-        self.opts['root'] = static.File(os.path.abspath(path))
-        self.opts['root'].processors = {
+        self['root'] = static.File(os.path.abspath(path))
+        self['root'].processors = {
             '.cgi': twcgi.CGIScript,
             '.php3': twcgi.PHP3Script,
             '.php': twcgi.PHPScript,
@@ -90,10 +90,10 @@ twisted.web.test in it."""
         """`ext=class' where `class' is added as a Processor for files ending
         with `ext'.
         """
-        if not isinstance(self.opts['root'], static.File):
+        if not isinstance(self['root'], static.File):
             raise usage.UsageError("You can only use --processor after --path.")
         ext, klass = proc.split('=', 1)
-        self.opts['root'].processors[ext] = reflect.namedClass(klass)
+        self['root'].processors[ext] = reflect.namedClass(klass)
 
     def opt_static(self, path):
         """Same as --path, this is deprecated and will be removed in a
@@ -108,43 +108,43 @@ twisted.web.test in it."""
         """Create a Resource subclass with a zero-argument constructor.
         """
         classObj = reflect.namedClass(className)
-        self.opts['root'] = classObj()
+        self['root'] = classObj()
 
 
     def opt_resource_script(self, name):
         """An .rpy file to be used as the root resource of the webserver."""
-        self.opts['root'] = script.ResourceScriptWrapper(name)
+        self['root'] = script.ResourceScriptWrapper(name)
 
 
     def opt_mime_type(self, defaultType):
         """Specify the default mime-type for static files."""
-        if not isinstance(self.opts['root'], static.File):
+        if not isinstance(self['root'], static.File):
             raise usage.UsageError("You can only use --mime_type after --path.")
-        self.opts['root'].defaultType = defaultType
+        self['root'].defaultType = defaultType
     opt_m = opt_mime_type
 
 
     def opt_allow_ignore_ext(self):
         """Specify whether or not a request for 'foo' should return 'foo.ext'"""
-        if not isinstance(self.opts['root'], static.File):
+        if not isinstance(self['root'], static.File):
             raise usage.UsageError("You can only use --allow_ignore_ext "
                                    "after --path.")
-        self.opts['root'].ignoreExt('*')
+        self['root'].ignoreExt('*')
 
     def opt_ignore_ext(self, ext):
         """Specify an extension to ignore.  These will be processed in order.
         """
-        if not isinstance(self.opts['root'], static.File):
+        if not isinstance(self['root'], static.File):
             raise usage.UsageError("You can only use --ignore_ext "
                                    "after --path.")
-        self.opts['root'].ignoreExt(ext)
+        self['root'].ignoreExt(ext)
 
     def opt_flashconduit(self, port=None):
         """Start a flashconduit on the specified port.
         """
         if not port:
             port = "4321"
-        self.opts['flashconduit'] = port
+        self['flashconduit'] = port
 
     def postOptions(self):
         if self['https']:
@@ -155,14 +155,14 @@ twisted.web.test in it."""
 
 
 def updateApplication(app, config):
-    if config.opts['telnet']:
+    if config['telnet']:
         from twisted.protocols import telnet
         factory = telnet.ShellFactory()
-        app.listenTCP(int(config.opts['telnet']), factory)
-    if config.opts['root']:
-        root = config.opts['root']
-        if config.opts['indexes']:
-            config.opts['root'].indexNames = config.opts['indexes']
+        app.listenTCP(int(config['telnet']), factory)
+    if config['root']:
+        root = config['root']
+        if config['indexes']:
+            config['root'].indexNames = config['indexes']
     else:
         # This really ought to be web.Admin or something
         root = test.Test()
@@ -170,12 +170,12 @@ def updateApplication(app, config):
     if isinstance(root, static.File):
         root.registry.setComponent(interfaces.IServiceCollection, app)
     
-    if config.opts['logfile']:
-        site = server.Site(root, logPath=config.opts['logfile'])
+    if config['logfile']:
+        site = server.Site(root, logPath=config['logfile'])
     else:
         site = server.Site(root)
 
-    if config.opts['personal']:
+    if config['personal']:
         import pwd,os
 
         pw_name, pw_passwd, pw_uid, pw_gid, pw_gecos, pw_dir, pw_shell \
@@ -189,9 +189,9 @@ def updateApplication(app, config):
             app.listenSSL(int(config['https']), site,
                           DefaultOpenSSLContextFactory(config['privkey'],
                                                        config['certificate']))
-        app.listenTCP(int(config.opts['port']), site)
+        app.listenTCP(int(config['port']), site)
     
-    flashport = config.opts.get('flashconduit', None)
+    flashport = config.get('flashconduit', None)
     if flashport:
         from twisted.web.woven.flashconduit import FlashConduitFactory
         app.listenTCP(int(flashport), FlashConduitFactory(site))

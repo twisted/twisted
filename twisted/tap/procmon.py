@@ -35,16 +35,16 @@ named service exists, the process is added to that ProcessMonitor.
 """
 
     def parseArgs(self, processName, command, *args):
-        self.opts['processname'] = processName
-        self.opts['command'] = (command,)+args
+        self['processname'] = processName
+        self['command'] = (command,)+args
 
 import twisted.internet.app
 
 def updateApplication(app, config):
     svc = None
-    svc = app.services.get(config.opts['service-name'])
+    svc = app.services.get(config['service-name'])
     if svc is None:
-        svc = procmon.ProcessMonitor(config.opts['service-name'], app)
+        svc = procmon.ProcessMonitor(config['service-name'], app)
     if not isinstance(svc, procmon.ProcessMonitor):
         raise usage.UsageError("Service %r is not a ProcessMonitor service." % svc)
-    svc.addProcess(config.opts['processname'], config.opts['command'])
+    svc.addProcess(config['processname'], config['command'])
