@@ -54,7 +54,7 @@ class NewCredTest(unittest.TestCase):
         p.registerChecker(up)
 
     def testListCheckers(self):
-        self.assertEquals(self.portal.listCheckers(), [credentials.IUsernamePassword])
+        self.assertEquals(self.portal.listCredentialsInterfaces(), [credentials.IUsernamePassword])
     
     def testBasicLogin(self):
         l = []; f = []
