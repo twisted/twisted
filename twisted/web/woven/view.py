@@ -249,7 +249,7 @@ class WView(template.DOMTemplate):
             self.sendPage(request)
 
     def handleProcessCallback(self, result, request):
-        self.sendPage(request, result)
+        self.sendPage(request)
 
 
 def registerViewForModel(view, model):
