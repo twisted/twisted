@@ -1,10 +1,9 @@
-Twisted 0.12.2
+Twisted 0.12.3
 
 Quote of the Release:
 
-<mbac> strange
-<mbac> all my life i've hated object oriented programming
-<mbac> when the problem was simply that i was using C++
+<Intention> Twisted did raise me from the dead after two weeks. It is a 
+miracle of software engineering.
 
 What is this?
 
@@ -33,22 +32,22 @@ What is this?
   
   For more information, visit http://www.twistedmatrix.com.
 
-What's new in 0.12.2?
+What's new in 0.12.3?
 
-  Removed some broken and/or experimental code.
-  
-  Added poll() based event loop implementation.
+  This is mainly a maintenance release; there are a bunch of bugfixes, but some
+  really cool new things.
 
-  New minimal documentation for WebWidgets and Manhole in the doc/ directory.
-  
-  Made some changes to the listen API -- changed from listenOn to listenTCP,
-  listenUDP, and listenSSL.
+  A Configuration System. This is going to be the Next Big Thing in Twisted - 
+  right now, it's not used anywhere visibly, but the idea is a unified
+  interface for Twisted that will replace things like 'mktap'. We have a basic
+  dependancy system down, and a simple Web UI.
 
-  Some UI changes for InstanceMessenger.
+  A few bugfixes for TK InstanceMessenger.
 
-  Some caching support for static files in twisted.web.
-  
-  Tons of fixed bugs.
+  Docs for Delayeds: Itamar wrote up a small HTML document on how to use
+  Delayeds. Look in the 'doc/' subdirectory.
+
+  Other general bugfixes.
 
 What can I do with it?
 
