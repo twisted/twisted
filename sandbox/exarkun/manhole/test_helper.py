@@ -192,7 +192,7 @@ class BufferTestCase(unittest.TestCase):
             g = g == G0 and G1 or G0
             h += 1
 
-    def testGraphicsRendition(self):
+    def testGraphicRendition(self):
         self.term.selectGraphicRendition(BOLD, UNDERLINE, BLINK, REVERSE_VIDEO)
         self.term.write('W')
         self.term.selectGraphicRendition(NORMAL)
@@ -229,3 +229,38 @@ class BufferTestCase(unittest.TestCase):
         self.failUnless(ch[1].bold)
         self.failIf(ch[1].underline)
         self.failIf(ch[1].reverseVideo)
+
+    def testEraseLine(self):
+        s1 = 'line 1'
+        s2 = 'line 2'
+        s3 = 'line 3'
+        self.term.write('\n'.join((s1, s2, s3)) + '\n')
+        self.term.cursorPosition(1, 1)
+        self.term.eraseLine()
+
+        self.assertEquals(
+            str(self.term),
+            s1 + (self.term.fill * (WIDTH - len(s1))) + '\n' +
+            (self.term.fill * WIDTH) + '\n' +
+            s3 + (self.term.fill * (WIDTH - len(s3))) + '\n' +
+            '\n'.join([self.term.fill * WIDTH for i in xrange(HEIGHT - 3)]))
+
+    def testEraseToLineEnd(self):
+        s = 'Hello, world.'
+        self.term.write(s)
+        self.term.cursorBackward(5)
+        self.term.eraseToLineEnd()
+        self.assertEquals(
+            str(self.term),
+            s[:-5] + (self.term.fill * (WIDTH - (len(s) - 5))) + '\n' +
+            '\n'.join([self.term.fill * WIDTH for i in xrange(HEIGHT - 1)]))
+
+    def testEraseToLineBeginning(self):
+        s = 'Hello, world.'
+        self.term.write(s)
+        self.term.cursorBackward(5)
+        self.term.eraseToLineBeginning()
+        self.assertEquals(
+            str(self.term),
+            (self.term.fill * (len(s) - 4)) + s[-4:] + (self.term.fill * (WIDTH - len(s))) + '\n' +
+            '\n'.join([self.term.fill * WIDTH for i in xrange(HEIGHT - 1)]))
