@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from twisted.conch.ssh import transport, userauth, connection, common, keys
+from twisted.conch.ssh import transport, userauth, connection, common, keys, channel
 from twisted.internet import defer, protocol, reactor
 from twisted.python import log
 import struct, sys, getpass, os
@@ -22,13 +22,13 @@ class SimpleUserAuth(userauth.SSHUserAuthClient):
         return defer.succeed(getpass.getpass("%s@%s's password: " % (USER, HOST)))
 
     def getPublicKey(self):
-        path = os.path.expanduser('~/.ssh/id_dsa.pub') 
+        path = os.path.expanduser('~/.ssh/id_dsa') 
         # this works with rsa too
         # just change the name here and in getPrivateKey
         if not os.path.exists(path) or hasattr(self, 'lastPublicKey'):
             # the file doesn't exist, or we've tried a public key
             return
-        return keys.getPublicKeyString(path)
+        return keys.getPublicKeyString(path+'.pub')
 
     def getPrivateKey(self):
         path = os.path.expanduser('~/.ssh/id_dsa')
@@ -40,7 +40,7 @@ class SimpleConnection(connection.SSHConnection):
         self.openChannel(FalseChannel(2**16, 2**15, self))
         self.openChannel(CatChannel(2**16, 2**15, self))
 
-class TrueChannel(connection.SSHChannel):
+class TrueChannel(channel.SSHChannel):
     name = 'session' # needed for commands
 
     def openFailed(self, reason):
@@ -54,7 +54,7 @@ class TrueChannel(connection.SSHChannel):
         print 'true status was: %s' % status
         self.loseConnection()
 
-class FalseChannel(connection.SSHChannel):
+class FalseChannel(channel.SSHChannel):
     name = 'session'
 
     def openFailed(self, reason):
@@ -68,7 +68,7 @@ class FalseChannel(connection.SSHChannel):
         print 'false status was: %s' % status
         self.loseConnection()
 
-class CatChannel(connection.SSHChannel):
+class CatChannel(channel.SSHChannel):
     name = 'session'
 
     def openFailed(self, reason):
