@@ -132,7 +132,7 @@ class Janitor(object):
         # don't import reactor when module is loaded
         from twisted.internet import reactor
         s = None
-        reactor.iterate(0.1) # flush short-range timers
+        reactor.iterate(0.01) # flush short-range timers
         pending = reactor.getDelayedCalls()
         if pending:
             s = PENDING_TIMED_CALLS_MSG
