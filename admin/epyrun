@@ -67,18 +67,11 @@ fakeOut("pygtk")
 fakeOut("gtk")
 fakeOut("wxPython.wx")
 
-# HACK: make Twisted Interfaces not use __metaclass__ =
-# MetaInterface. Epydoc barfs on any classes whose type isn't
-# TypeType.
-
-from twisted.python import components
-
-class Interface:
-    pass
-
-Interface.__module__ = 'twisted.python.components'
-Interface.__doc__ = components.Interface.__doc__
-components.Interface = Interface
+## HACK: This is a nasty one! Replace TypeType with (TypeType,
+## InterfaceClass) so epydoc will try to document Interfaces.
+from zope.interface.interface import InterfaceClass
+import types
+types.TypeType = (types.TypeType, InterfaceClass)
 
 # initial twisted
 from twisted.python import reflect
