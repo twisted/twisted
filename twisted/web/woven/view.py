@@ -241,7 +241,7 @@ class View(template.DOMTemplate):
         setupMethod = getattr(self, 'wvupdate_' + viewName, None)
         if setupMethod:
             if view is None:
-                view = widgets.Widget(self.model)
+                view = widgets.Widget(model)
             view.setupMethods.append(setupMethod)
         return view
 
