@@ -513,13 +513,13 @@ class ThreadedIterator:
     """
      
     def __init__(self, data = None):
-        from twisted.internet.reactor import callInThread
         self.data = data  
         tunnel = _TunnelIterator(self)
         self._tunnel = tunnel
-        callInThread(tunnel.process)
      
     def __iter__(self): 
+        from twisted.internet.reactor import callInThread
+        callInThread(self._tunnel.process)
         return self._tunnel
      
     def next(self):
@@ -580,12 +580,12 @@ class _TunnelIterator:
 
 class QueryIterator(ThreadedIterator):
     def __init__(self, pool, sql, fetchall=0):
+        ThreadedIterator.__init__(self)
         self.curs = None
         self.sql  = sql
         self.pool = pool
         self.data = None
         self.fetchall = fetchall
-        ThreadedIterator.__init__(self)
      
     def __call__(self,data):
         self.data = data
