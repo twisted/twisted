@@ -37,10 +37,16 @@
   situation where you thought, <em>"Wow, I really need isinstance()
   here, but everyone in #python is telling me that sucks..."</em> you could
   have made good use of a component architecture. The conceptual
-  item that allows you to do this is an <code class="API" base=
-  "twisted.python.components">Interface</code>.</p>
+  item that allows you to do this is an 
+  <code class="API" base="twisted.python.components">Interface</code>.</p>
 
-<strong>XXX: insert a brief introduction to what an interface is here</strong>
+<h2>What are interfaces?</h2>
+<p>An interface in the general sense is the publicly defined API for your
+class. It lets everyone know what methods and attributes are intended to
+be accessed on a given object. With a component system, this concept plays
+an important role, as we will be <em>applying</em> this interface to instances
+of objects that don't provide them according to their original definition.</p>
+
 
   <h2>A simple example</h2>
 
