@@ -225,7 +225,7 @@ class SSHTransportBase(protocol.Protocol):
         
     # client methods
     def receiveError(self, reasonCode, description):
-        print 'Got remote error, code %s\nreason: %s' % (reasonCode, description)
+        log.msg('Got remote error, code %s\nreason: %s' % (reasonCode, description))
 
     def receiveUnimplemented(self, seqnum):
         log.msg('other side unimplemented packet #%s' % seqnum)

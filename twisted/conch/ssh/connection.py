@@ -217,7 +217,7 @@ class SSHChannel:
 
     def requestReceived(self, requestType, data):
         foo = requestType.replace('-','_')
-        f = getattr(self,'request_%s' % foo)
+        f = getattr(self,'request_%s' % foo, None)
         if f:
             return f(data)
         log.msg('unhandled request for %s' % requestType)
@@ -259,7 +259,7 @@ class SSHSession(SSHChannel):
 
     def request_subsystem(self, data):
         subsystem = common.getNS(data)[0]
-        f = getattr(self,'subsystem_%s' % subsystem)
+        f = getattr(self,'subsystem_%s' % subsystem, None)
         if f:
             log.msg('starting subsystem %s' % subsystem)
             self.client = f()
