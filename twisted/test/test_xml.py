@@ -75,14 +75,6 @@ class MicroDOMTest(TestCase):
     def testEmptyError(self):
         self.assertRaises(sux.ParseError, microdom.parseString, "")
 
-    def testEatingWhitespace(self):
-        s = """<hello>
-        </hello>"""
-        d = microdom.parseString(s)
-        self.failUnless(not d.documentElement.hasChildNodes(),
-                        d.documentElement.childNodes)
-        self.failUnless(d.isEqualToDocument(microdom.parseString('<hello></hello>')))
-
     def testTameDocument(self):
         s = """
         <test>
@@ -98,7 +90,6 @@ class MicroDOMTest(TestCase):
         d = microdom.parseString(s)
         self.assertEquals(
             domhelpers.gatherTextNodes(d.documentElement).strip() ,'test')
-
 
     def testAwfulTagSoup(self):
         s = """
@@ -137,7 +128,7 @@ alert("I hate you");
         d = microdom.parseString(s, beExtremelyLenient=1)
         self.assertEquals(d.firstChild().firstChild().firstChild().data,
                           "(foo < bar) and (bar > foo)")
-        self.assertEquals(d.firstChild().childNodes[1].firstChild().data,
+        self.assertEquals(d.firstChild().getElementsByTagName("script")[1].firstChild().data,
                           "foo </scrip bar ")
 
     def testScriptLeniencyIntelligence(self):
@@ -369,6 +360,30 @@ alert("I hate you");
         self.assertEquals(d4.documentElement.toxml(), '<foo A="b">x</foo>')
         self.assertEquals(d5.documentElement.toxml(), '<foo a="b">x</foo>')
 
+    def testLenientAmpersand(self):
+        prefix = "<?xml version='1.0'?>"
+        # we use <pre> so space will be preserved
+        for i, o in [("&", "&amp;"),
+                     ("& ", "&amp; "),
+                     ("&amp;", "&amp;"),
+                     ("&hello monkey", "&amp;hello monkey")]:
+            d = microdom.parseString("%s<pre>%s</pre>" % (prefix, i), beExtremelyLenient=1)
+            self.assertEquals(d.documentElement.toxml(), "<pre>%s</pre>" % o)
+        # non-space preserving
+        d = microdom.parseString("%s<t>hello & there</t>", beExtremelyLenient=1)
+        self.assertEquals(d.documentElement.toxml(), "<t>hello &amp; there</t>")
+    
+    def testInsensitiveLenient(self):
+        # testing issue #537
+        d = microdom.parseString("<?xml version='1.0'?><bar><xA><y>c</Xa> <foo></bar>", beExtremelyLenient=1)
+        self.assertEquals(d.documentElement.firstChild().toxml(), "<xa><y>c</y></xa>")
+
+    def testSpacing(self):
+        # testing issue #414
+        s = "<?xml version='1.0'?><p><q>smart</q> <code>HairDryer</code></p>"
+        d = microdom.parseString(s, beExtremelyLenient=1)
+        self.assertEquals(d.documentElement.toxml(), "<p><q>smart</q> <code>HairDryer</code></p>")
+    
     def testUnicodeTolerance(self):
         import struct
         s = '<foo><bar><baz /></bar></foo>'
@@ -488,15 +503,15 @@ alert("I hate you");
         s2 = d.toprettyxml()
         self.assertEquals(d.documentElement.namespace,
                           "base")
-        self.assertEquals(d.documentElement.childNodes[0].namespace,
+        self.assertEquals(d.documentElement.getElementsByTagName("y")[0].namespace,
                           "base")
-        self.assertEquals(d.documentElement.childNodes[1].getAttributeNS('base','q'),
+        self.assertEquals(d.documentElement.getElementsByTagName("y")[1].getAttributeNS('base','q'),
                           '1')
         
         d2 = microdom.parseString(s2)
         self.assertEquals(d2.documentElement.namespace,
                           "base")
-        self.assertEquals(d2.documentElement.childNodes[0].namespace,
+        self.assertEquals(d2.documentElement.getElementsByTagName("y")[0].namespace,
                           "base")
-        self.assertEquals(d2.documentElement.childNodes[1].getAttributeNS('base','q'),
+        self.assertEquals(d2.documentElement.getElementsByTagName("y")[1].getAttributeNS('base','q'),
                           '1')

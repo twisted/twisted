@@ -526,21 +526,31 @@ class XMLParser(Protocol):
 
     def begin_entityref(self, byte):
         self.erefbuf = ''
-
+        self.erefextra = '' # extra bit for lenient mode
+    
     def do_entityref(self, byte):
-        if byte.isspace():
+        if byte.isspace() or byte == "<":
             if self.beExtremelyLenient:
+                # '&foo' probably was '&amp;foo'
+                if self.erefbuf and self.erefbuf != "amp":
+                    self.erefextra = self.erefbuf
                 self.erefbuf = "amp"
-                return 'bodydata'
+                if byte == "<":
+                    return "tagstart"
+                else:
+                    self.erefextra += byte
+                    return 'bodydata'
             self._parseError("Bad entity reference")
-        if byte != ';':
+        elif byte != ';':
             self.erefbuf += byte
         else:
             return 'bodydata'
 
     def end_entityref(self):
         self.gotEntityReference(self.erefbuf)
-
+        if self.beExtremelyLenient and self.erefextra:
+            self.gotText(self.erefextra)
+            self.erefextra = None
     # Sorta SAX-ish API
     
     def gotTagStart(self, name, attributes):

@@ -695,7 +695,9 @@ class MicroDOMParser(XMLParser):
             self.documents.append(te)
 
     def gotText(self, data):
-        if data.strip() or self.shouldPreserveSpace():
+        if not data.strip() and len(data) >= 1:
+            self._gotStandalone(Text, " ")
+        elif data.strip() or self.shouldPreserveSpace():
             self._gotStandalone(Text, data)
 
     def gotComment(self, data):
@@ -742,7 +744,7 @@ class MicroDOMParser(XMLParser):
                 if self.elementstack:
                     lastEl = self.elementstack[0]
                     for idx in xrange(len(self.elementstack)):
-                        if self.elementstack[-(idx+1)].tagName == name:
+                        if self.elementstack[-(idx+1)].tagName == cname:
                             self.elementstack[-(idx+1)].endTag(name)
                             break
                     else:
