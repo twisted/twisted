@@ -99,7 +99,7 @@ class Failure:
         global count
         count = count + 1
         self.count = count
-        self.type, self.value, tb = None, None, None
+        self.type = self.value = tb = None
 
         #strings Exceptions/Failures are bad, mmkay?
         if ((isinstance(exc_value, types.StringType) or
