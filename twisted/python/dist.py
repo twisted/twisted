@@ -69,7 +69,7 @@ def _filterNames(names):
                  if (not fnmatch.fnmatch(n, pattern)) and (not n.endswith('.py'))]
     return names
 
-def relativeTo(basepath, relativee):
+def relativeTo(base, relativee):
     """
     Gets 'relativee' relative to 'basepath'.
 
@@ -82,13 +82,13 @@ def relativeTo(basepath, relativee):
 
     The 'relativee' must be a child of 'basepath'.
     """
-    basepath = os.path.abspath(basepath)
+    basepath = os.path.abspath(base)
     relativee = os.path.abspath(relativee)
     if relativee.startswith(basepath):
         relative = relativee[len(basepath):]
         if relative.startswith('/'):
             relative = relative[1:]
-        return relative
+        return os.path.join(base, relative)
     raise ValueError("%s is not a subpath of %s" % (relativee, basepath))
 
 
@@ -125,7 +125,8 @@ def getDataFiles(dname, ignore=None, parent=None):
             resultfiles.append(filename)
         if resultfiles:
             result.append((relativeTo(parent, directory),
-                           [relativeTo(parent, os.path.join(directory, filename))
+                           [relativeTo(parent,
+                                       os.path.join(directory, filename))
                             for filename in resultfiles]))
     return result
 
