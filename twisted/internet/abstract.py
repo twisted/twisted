@@ -131,22 +131,7 @@ class FileDescriptor(log.Logger, styles.Ephemeral):
         if not self.connected:
             return
         if data:
-            if (not self.dataBuffer) and (self.producer is None):
-                l = self.writeSomeData(data)
-                if l == len(data):
-                    # all data was sent, our work here is done
-                    return
-                elif not isinstance(l, Exception) and l > 0:
-                    # some data was sent
-                    self.dataBuffer = data
-                    self.offset = l
-                else:
-                    # either no data was sent, or we were disconnected.
-                    # if we were disconnected we still continue, so that
-                    # the event loop can figure it out later on.
-                    self.dataBuffer = data
-            else:
-                self.dataBuffer = self.dataBuffer + data
+            self.dataBuffer = self.dataBuffer + data
             if self.producer is not None:
                 if len(self.dataBuffer) > self.bufferSize:
                     self.producerPaused = 1
