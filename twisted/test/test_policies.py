@@ -276,14 +276,16 @@ class TimeoutTestCase(unittest.TestCase):
 
         self.failUnlessEqual(self.failed, 0)
         self.failUnlessEqual(client.data, 'foo'*4)
+        port.stopListening()
 
     def testThatReadingDataAvoidsTimeout(self):
         # Create a server that sends occasionally
         server = SillyFactory(SimpleSenderProtocol(self))
-        port = reactor.listenTCP(0, server, interface='127.0.0.1')
+        sport = reactor.listenTCP(0, server, interface='127.0.0.1')
 
         clientFactory = policies.WrappingFactory(SillyFactory(SimpleProtocol()))
-        port = reactor.connectTCP('127.0.0.1', port.getHost().port, clientFactory)
+        cport = reactor.connectTCP('127.0.0.1', sport.getHost().port,
+                                   clientFactory)
 
         reactor.iterate()
         reactor.iterate()
@@ -291,6 +293,7 @@ class TimeoutTestCase(unittest.TestCase):
         reactor.run()
 
         self.failUnlessEqual(self.failed, 0)
+        sport.stopListening()
 
 class TimeoutTester(protocol.Protocol, policies.TimeoutMixin):
     timeOut  = 3
