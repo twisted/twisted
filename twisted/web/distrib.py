@@ -170,7 +170,6 @@ class ResourcePublisher(pb.Root, styles.Versioned):
     def __init__(self, site):
         self.site = site
 
-    notActualDiskFile = 1
     persistenceVersion = 2
 
     def upgradeToVersion2(self):
