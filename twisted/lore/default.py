@@ -30,10 +30,6 @@ class ProcessingFunctionFactory:
         n = htmlDefault.copy()
         n.update(d)
         d = n
-        if d['ext'] == "None":
-            ext = ""
-        else:
-            ext = d['ext']
         try:
             fp = open(d['template'])
             templ = microdom.parse(fp)
@@ -41,7 +37,7 @@ class ProcessingFunctionFactory:
             raise process.NoProcessorError(e.filename+": "+e.strerror)
         except sux.ParseError, e:
             raise process.NoProcessorError(str(e))
-        df = lambda file, linkrel: self.doFile[0](file, linkrel, ext,
+        df = lambda file, linkrel: self.doFile[0](file, linkrel, d['ext'],
                                            d['baseurl'], templ)
         return df
 
