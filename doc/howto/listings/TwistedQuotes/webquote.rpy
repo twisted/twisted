@@ -7,5 +7,6 @@ from TwistedQuotes import webquoteresource
 import os
 quotefile = os.path.join(os.path.split(__file__)[0], "quotes.txt")
 
-#ResourceScript requires us to define 'resource'. This resource is used to render the page.
+#ResourceScript requires us to define 'resource'.
+#This resource is used to render the page.
 resource = webquoteresource.QuoteResource([quotefile])
