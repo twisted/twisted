@@ -254,7 +254,7 @@ class DOMTemplate(Resource):
             self.outstandingCallbacks += 1
             result.addCallbacks(self.callback, callbackArgs=(request, node))
             # Got to wait until the callback comes in
-            return None
+            return result
         elif isinstance(result, types.StringType):
             return self.processString(request, result, node)
 
@@ -368,7 +368,7 @@ class DOMTemplate(Resource):
     def mutateDOM(self, request, node, viewMethod):
         result = viewMethod(request, node)
         returnNode = self.dispatchResult(request, node, result)
-        if returnNode is not None:
+        if not isinstance(returnNode, Deferred):
             node = returnNode
             self.recurseChildren(request, node)
 
