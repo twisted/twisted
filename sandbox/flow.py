@@ -470,6 +470,7 @@ class QueryIterator:
                     self.curs = None
                 else:
                     self.rows = self.curs.fetchmany()
+                self.rows = list(self.rows)
                 self.rows.reverse()
         if self.rows:
            return self.rows.pop()
