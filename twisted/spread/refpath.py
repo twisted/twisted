@@ -160,14 +160,14 @@ class PathReferenceAcquisitionContext(PathReferenceContext):
         upPath.extend(relPath)
         return "/".join(upPath)
 
-    def locate(self, name, debug=1):
+    def locate(self, name, debug=0):
         """
         Get a reference to an object with the given name which is somewhere
         on the path above us.
         """
         return self._lookup(name, debug=debug)
 
-    def acquire(self, name, debug=1):
+    def acquire(self, name, debug=0):
         """
         Look for an attribute or element by name in all of our parents
         """
