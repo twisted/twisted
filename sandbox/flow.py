@@ -141,10 +141,9 @@ class Stage(Instruction):
                      // handle iterable.result
 
     """      
-    def __init__(self, *trap, **kwargs):
+    def __init__(self, *trap):
         self._ready = 0
         self._trap = trap
-        self.chunked = kwargs.get('chunked', 0)
         self.stop   = 0
         self.result = None
     
