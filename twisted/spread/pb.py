@@ -64,7 +64,7 @@ applied when serializing arguments.
 @author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
 
-__version__ = "$Revision: 1.145 $"[11:-2]
+__version__ = "$Revision: 1.146 $"[11:-2]
 
 
 # System Imports
@@ -1628,14 +1628,15 @@ class IPerspective(Interface):
     This is a Perspective Broker specific wrapper for an avatar. That
     is to say, a PB-published view on to the business logic for the
     system's concept of a 'user'.
-    
-    Expected to have methods beginning with 'perspective_' that will
-    be published remotely, and to be a subclass of Perspective class,
-    at least for the moment.
 
     The concept of attached/detached is no longer implemented by
     the framework. The realm is expected to do so if relevant.
     """
+
+    def perspectiveMessageReceived(self, broker, message, args, kwargs):
+        """
+        This method is called when a network message is received.
+        """
 
 
 class _PortalRoot:
