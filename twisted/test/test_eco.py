@@ -46,4 +46,23 @@ class EcoTestCase(unittest.TestCase):
         assert eco.eval('[+ 1 1] [+ 2 2]') == 4
         assert eco.eval('[def fn add [x y] [+ x y]] [add 2 3]') == 5
 
+    def testCDooDads(self):
+        ack = """
+[cdefun [int] Ack [[[int] M] [[int] N]]
+  [return [expr-if M 
+            [call Ack [- M 1] [expr-if N  
+                                [call Ack M [- N 1]] 
+                               1]] 
+           [+ N 1]]]]
+
+[defmain 
+  [cdeclare  [int] [= n [expr-if [== argc 2] 
+                            [call atoi [aref argv 1]]
+                          1]]]
+  [call printf "Ack(3,%d): %d\\n" n  [call Ack 3 n]]
+  [comment "sleep long enough so we can measure memory usage"]
+  [call sleep 1]
+  [return 0]]"""
+  assert eco.eval(ack) == 'int main(int argc, char * * argv) {\nint  n = ((argc == 2) ? (atoi(argv[1])) : (1));;\nprintf("Ack(3,%d): %d\\n", n, Ack(3, n));\n/* sleep long enough so we can measure memory usage */;\nsleep(1);\nreturn 0}'
+  
 testCases = [EcoTestCase]

@@ -72,7 +72,7 @@ def atom(st):
     return Atom(st)
 
 # SYMBOL = re.compile(r'[a-zA-Z]([a-zA-Z0-9]|\\.)*')
-ATOM = re.compile(r'[^ \-\n\r\t0-9"\\()]([^ \n\r\t"\[\]()\\]|\\.)*')
+ATOM = re.compile(r'[^ \n\r\t0-9"\\()]([^ \n\r\t"\[\]()\\]|\\.)*')
 STRING = re.compile(r'"([^\\"]|\\.)*"')
 NUMBER = re.compile(r'-?[0-9]+(\.[0-9]*)?')
 WHITESPACE = re.compile('[ \n\r\t]+')

@@ -18,6 +18,9 @@ import sexpy
 import operator
 import types
 import pprint
+import string
+import sys
+atom = sexpy.Atom
 
 ## special prefixes:
 # eval_foo(exp, env); special form
@@ -47,7 +50,7 @@ def evalFile(fileObj):
     return eval(fileObj.read())
 
 def evalExp(exp, env):
-    if isinstance(exp, sexpy.Atom):
+    if isinstance(exp, atom):
         return lookup(exp, env, VAR)
     elif isinstance(exp, types.ListType):
         if func_null(exp):
@@ -190,7 +193,7 @@ def eval_backquote(exp, env):
 
 def backquotize(exp, env):
     if func_consp(exp):
-        if isinstance(car(exp), sexpy.Atom):
+        if isinstance(car(exp), atom):
             if car(exp).string == "unquote":
                 return func_list(evalExp(cadr(exp), env))
             elif car(exp).string == "unquote-splice":
@@ -215,14 +218,16 @@ def eval_let(exp, env):
 def eval_def(exp, env):
     f = globals().get("def_" + car(exp).string)
     if f:
-        f(cadr(exp).string, cddr(exp), env)
+        return f(cadr(exp).string, cddr(exp), env)
         
 def def_fn(name, forms, env):
-    globalFunctions[name] = Function(forms, env)
-
+    x =  Function(forms, env)
+    globalFunctions[name] = x
+    return x
 def def_macro(name, forms, env):
-    globalFunctions[name] = Macro(forms, env)
-
+    x = Macro(forms, env)
+    globalFunctions[name] = x
+    return x
 
 ## python-defined functions
 
@@ -260,7 +265,7 @@ def func_macroexpand(sexp):
     if func_consp(sexp):
         a = car(sexp)
         d = cdr(sexp)
-        if isinstance(a, sexpy.Atom):
+        if isinstance(a, atom):
             m = globalFunctions.get(a.string)
             if isinstance(m, Macro):
                 args = func_map(func_macroexpand, d)
@@ -406,3 +411,239 @@ globalValues = {"nil" : []}
 nil = []
 VAR = 0
 FUN = 1
+
+##############################################################################
+# Here comes the fun part.
+
+def cMacroExpand(form):
+    if isinstance(form, types.StringType):
+        return func_macroexpand(func_list(atom("cstring"), form))
+    elif func_consp(form):
+        if car(form) == 'comment':
+            return func_list(atom('comment'), cadr(form))
+        else:
+            return cMacroExpand1(cons(car(form), func_map(cMacroExpand, cdr(form))))
+    elif isinstance(form, atom):
+        return form.string
+    else:
+        return form
+
+def zoot(x):
+    if func_consp(x):
+        return cMacroExpand1(x)
+    elif isinstance(x, atom):
+        return x.string
+    else:
+        return x
+
+func_cmacroexpand = cMacroExpand
+def cMacroExpand1(form):
+
+    a = 'cgen_' + car(form).string
+    y = globals().get(a)
+    if y:
+        args = []
+        i  = cdr(form)
+        while i:
+            args.append(zoot(car(i)))
+            i = cdr(i)
+        z = apply(y, args)
+        if func_consp(z):
+            return cMacroExpand1(z)
+        else:
+            return func_macroexpand(z)
+    else:
+        return func_macroexpand(form)
+
+
+gensymCounter = 1
+
+includes = sys.stdout
+
+def cgen_cgensym(name=None):
+    return(atom('_%s_%s' % (name or 'G', gensymCounter)))
+def cgen_include(file):
+    includes.write('\n#include "%s"\n' % file)
+def cgen_sysinclude(file):
+    includes.write("\n#include <%s>\n" % file)
+globals()['func_sys-include'] = cgen_sysinclude
+
+def prepArglist(specs):
+    x = []
+    while specs:
+        t = []
+        s = car(specs)
+        while s:
+            t.append(car(s))
+            s = cdr(s)            
+        x.append(string.join(map(lambda a: a.string, t), ' '))
+        specs = cdr(specs)
+    return string.join(x, ', ')
+def mixCommas(args):
+    return string.join(map(str, args), ", ")
+
+def func_comment(text):
+    return "/* %s */" % text
+
+def cgen_cstring(text):
+    return '"%s"' % text 
+
+def cgen_cblock(*statements):
+    return "{%s}" % string.join(statements, ";\n")
+def cgen_call(funcname, *args):
+    return "%s(%s)" % (funcname, mixCommas(args))
+def cgen_cdeclare(type, variables):
+    a = []
+    while type !=nil:
+        a.append(car(type).string + " ")
+        type = cdr(type)    
+    if func_consp(variables):        
+        while variables != nil:
+            a.append(car(variables))
+            variables=cdr(variables)
+    else:
+        a.append(variables+";")
+    return string.join(a,' ')
+
+# XXX insert struct/typedef stuff here.
+
+def cgen_enum(name,lst=None):
+    if func_consp(name):
+        a = ['enum']
+        while name != nil:
+            a.append(car(name))
+            name=cdr(name)
+    else:
+        a = ['enum',name]
+        if lst:
+            while lst !=nil:
+                while lst !=nil:
+                    l = car(lst)
+                    while l != nil:
+                        a.append(car(l))
+                        l = cdr(l)
+                    lst=cdr(lst)                    
+    return string.join(a, ' ')
+
+def cgen_function(type,name,args, *body):
+    a = []
+    while type!=nil:
+        a.append(car(type))
+        type=cdr(type)        
+    return "%s %s(%s) {\n%s}" % (string.join(map(lambda x: x.string, a), ' '), name, prepArglist(args), string.join(body,';\n'))
+
+globalFunctions['c-function'] = cgen_function
+
+def cgen_aref(name, index):
+    return "%s[%s]" % (name, index)
+
+def cgen_cast(type,body):
+    return "((%s)%s)" % (type, body)
+
+def cgen_deref(body):
+    return "*" + body
+def cgen_ref(body):
+    return '&' + body
+def cgen_pos(body):
+    return '+' + body
+def cgen_neg(body):
+    return '-' + body
+def cgen_tilde(body):
+    return '~' + body
+def cgen_bang(body):
+    return '!' + body
+
+def cgen_case(val,stmt):
+    return "case %s: %s" % (val, stmt)
+
+def cgen_default(stmt):
+    return "default: " + stmt
+
+def cgen_switch (val, *cases):
+    return "switch (%s) {\n %s }\n" % (val, string.join(cases, '\n'))
+
+def cgen_if(test, then, els=None):
+    if els:
+        x = ";}\n else " + els
+    else:
+        x = ";}\n"
+    return "if (%s)\n {%s%s" % (test, then, x)
+
+def cgen_for(init, test, iterate, body):
+    return "for (%s;%s;%s) %s" % (init or '',test or '',iterate or '',body or '')
+
+def cgen_do(stmt, test):
+    return "do %s while (%s)" % (stmt, test)
+
+def cgen_while(test, stmt):
+    return "while (%s) %s" % (test, stmt)
+
+def cgen_label(label,stmt):
+    return "%s: %s" % (label, stmt)
+
+def cgen_break():
+    return "break"
+
+def cgen_goto(label):
+    return "goto " + label
+
+def cgen_continue():
+    return "continue"
+
+def cgen_return(expr=""):
+    return "return %s" % expr
+
+def cgen_sizeof(value):
+    return "sizeof " + value
+
+globals()['cgen_sizeof-type'] = lambda type: "sizeof (%s)" % type
+globals()['cgen_expr-if'] = lambda test,then,els:"((%s) ? (%s) : (%s))" % (test, then, els)
+globals()['cgen_.'] = lambda x,y: "%s.%s" % (x,y)
+globals()['cgen_->'] = lambda x,y: "%s->%s" % (x,y)
+globals()['cgen_='] = lambda x,y: "%s = %s" % (x,y)
+globals()['cgen_*='] = lambda x,y: "%s *= %s" % (x,y)
+globals()['cgen_+='] = lambda x,y: "%s += %s" % (x,y)
+globals()['cgen_-='] = lambda x,y: "%s -= %s" % (x,y)
+globals()['cgen_/='] = lambda x,y: "%s /= %s" % (x,y)
+globals()['cgen_&='] = lambda x,y: "%s &= %s" % (x,y)
+globals()['cgen_^='] = lambda x,y: "%s ^= %s" % (x,y)
+globals()['cgen_<<='] = lambda x,y: "%s <<= %s" % (x,y)
+globals()['cgen_>>='] = lambda x,y: "%s >>= %s" % (x,y)
+globals()['cgen_|='] = lambda x,y: "%s |= %s" % (x,y)
+globals()['cgen_!='] = lambda x,y: "%s != %s" % (x,y)
+globals()['cgen_=='] = lambda x,y: "%s == %s" % (x,y)
+globals()['cgen_+'] = lambda x,y: "%s + %s" % (x,y)
+globals()['cgen_^'] = lambda x,y: "%s ^ %s" % (x,y)
+globals()['cgen_-'] = lambda x,y: "%s - %s" % (x,y)
+globals()['cgen_*'] = lambda x,y: "%s * %s" % (x,y)
+globals()['cgen_/'] = lambda x,y: "%s / %s" % (x,y)
+globals()['cgen_%'] = lambda x,y: "%s % %s" % (x,y)
+globals()['cgen_<<'] = lambda x,y: "%s << %s" % (x,y)
+globals()['cgen_>>'] = lambda x,y: "%s >> %s" % (x,y)
+globals()['cgen_<='] = lambda x,y: "%s <= %s" % (x,y)
+globals()['cgen_>='] = lambda x,y: "%s >= %s" % (x,y)
+globals()['cgen_&&'] = lambda x,y: "%s && %s" % (x,y)
+globals()['cgen_||'] = lambda x,y: "%s || %s" % (x,y)
+
+class PyMacro(Macro):
+    def __init__(self, func):
+        self.func = func
+        self.env = (globalValues, globalFunctions)
+
+    def expand(self, args):
+        return apply(self.func, args)
+    #def __call__(self, env, *args):
+    #    return cMacroExpand(self.expand(args))
+
+def cdefun(type, name, args, forms):
+    return  func_nconc(func_list(atom('c-function'), func_list(atom('quote'),type), func_list(atom('quote'),name), func_list(atom('backquote'), func_map(lambda a: func_nconc(car(a),cdr(a)), args))), func_map(cMacroExpand, forms))
+globalFunctions['cdefun'] = PyMacro(cdefun)
+
+def cdeclare(type, vars):
+    return func_list(atom('print'), func_list(atom('format'), "%s;", func_list(atom('cdeclare'), type, func_map(cMacroExpand, vars))))
+globalFunctions['cdeclare'] = PyMacro(cdeclare)
+def defmain(*forms):
+    return func_list(atom('cdefun'), func_list(atom('int')), atom('main'), func_list(func_list(func_list(atom('int')), atom('argc')), func_list(func_list(atom('char'), atom('*'), atom('*')), atom('argv'))), apply(func_list, forms))
+globalFunctions['defmain'] = PyMacro(defmain)
+
+
