@@ -31,7 +31,7 @@ the addition of more methods in the base Identity.
 """
 
 # System Imports
-import md5, types
+import md5, types, sys
 
 # Twisted Imports
 from twisted.python import failure
@@ -106,7 +106,7 @@ class Identity:
         try:
             check = self.keyring[(serviceName, perspectiveName)]
         except KeyError:
-            e = error.KeyNotFound(serviceName, perspectiveName)
+            e = KeyNotFound(serviceName, perspectiveName)
             return defer.fail(failure.Failure(e, KeyNotFound,
                                               sys.exc_info()[2]))
         return self.authorizer.getServiceNamed(serviceName).getPerspectiveForIdentity(perspectiveName, self)
