@@ -326,7 +326,9 @@ PyIOVector_write(PyIOVector* self, PyObject* args) {
     }
     
     /* I really don't know if threads can be allowed here. */
+    Py_BEGIN_ALLOW_THREADS
     self->head = IOVectors_writev(self->head, fileno, &result);
+    Py_END_ALLOW_THREADS
     if (result == -1) {
         return PyErr_SetFromErrno(iovec_error);
     } else if (self->head == NULL) {
