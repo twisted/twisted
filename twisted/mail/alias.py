@@ -177,6 +177,10 @@ class FileWrapper:
         self.fp.close()
         self.fp = None
 
+    def __str__(self):
+        return '<FileWrapper %s>' % (self.finalname,)
+
+
 class FileAlias(AliasBase):
 
     __implements__ = (IAlias,)
@@ -247,7 +251,7 @@ class ProcessAlias(AliasBase):
     def createMessageReceiver(self):
         from twisted.internet import reactor
         p = ProcessAliasProtocol()
-        m = MessageWrapper(p)
+        m = MessageWrapper(p, self.path)
         fd = reactor.spawnProcess(p, '/bin/sh', ('/bin/sh', '-c', self.path))
         return m
 
@@ -271,6 +275,9 @@ class MultiWrapper:
     def connectionLost(self):
         for o in self.objs:
             o.connectionLost()
+    
+    def __str__(self):
+        return '<GroupWrapper %r>' % (map(str, self.objs),)
 
 class AliasGroup(AliasBase):
     """An alias which points to more than one recipient"""

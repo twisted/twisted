@@ -1025,11 +1025,12 @@ class AliasTestCase(unittest.TestCase):
             'alias2': A2,
             'alias3': A3,
         })
-        
+
         r1 = map(str, A1.resolve(aliases).objs)
         r1.sort()
         p = process.Process(*([None] * 7))
         expected = map(str, [
+            mail.alias.AddressAlias('user1', None, None),
             mail.alias.MessageWrapper(p, 'process'),
             mail.alias.FileWrapper('/file'),
         ])
@@ -1046,7 +1047,13 @@ class AliasTestCase(unittest.TestCase):
         self.assertEquals(r2, expected)
 
         r3 = map(str, A3.resolve(aliases).objs)
-        expected = map(str, [A3])
+        r3.sort()
+        expected = map(str, [
+            mail.alias.AddressAlias('user1', None, None),
+            mail.alias.MessageWrapper(p, 'process'),
+            mail.alias.FileWrapper('/file'),
+        ])
+        expected.sort() 
         self.assertEquals(r3, expected)
 
     def testCyclicAlias(self):
@@ -1068,10 +1075,13 @@ class AliasTestCase(unittest.TestCase):
         A4 = mail.alias.AliasGroup(['|process', 'alias1'], domain, 'alias4')
         aliases['alias4'] = A4
         
-        self.assertEquals(
-            map(str, A4.resolve(aliases).objs),
-            map(str, [mail.alias.ProcessAlias('process', None, None)])
-        )
+        p = process.Process(*([None] * 7))
+        r = map(str, A4.resolve(aliases).objs)
+        r.sort()
+        expected = map(str, [
+            mail.alias.MessageWrapper(p, 'process')
+        ])
+        self.assertEquals(r, expected)
 
 class TestDomain:
     def __init__(self, aliases, users):
@@ -1081,13 +1091,13 @@ class TestDomain:
     def exists(self, user, memo=None):
         user = user.dest.local
         if user in self.users:
-            return lambda: None
+            return lambda: mail.alias.AddressAlias(user, None, None)
         try:
             a = self.aliases[user]
         except:
             raise smtp.SMTPBadRcpt(user)            
         else:
             aliases = a.resolve(self.aliases, memo)
-            if not aliases:
-                raise smtp.SMTPBadRcpt(user)
-            return lambda: alias.MultiWrapper([a.createMessageReceiver() for a in aliases])
+            if aliases:
+                return lambda: aliases
+            raise smtp.SMTPBadRcpt(user)
