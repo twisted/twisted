@@ -127,6 +127,25 @@ class XMLParser(Protocol):
             data = unicode(data, encoding)
         return data
 
+    def maybeBodyData(self):
+        if self.endtag:
+            return 'bodydata'
+
+        # Get ready for fun! We're going to allow
+        # <script>if (foo < bar)</script> to work!
+        # We do this by making everything between <script> and
+        # </script> a Text
+        # BUT <script src="foo"> will be special-cased to do regular,
+        # lenient behavior, because those may not have </script>
+        # -radix
+
+        if (self.tagName == 'script'
+            and not self.tagAttributes.has_key('src')):
+            return 'waitforendscript'
+        return 'bodydata'
+
+        
+
     def dataReceived(self, data):
         stateTable = self._buildStateTable()
         if not self.state:
@@ -184,12 +203,6 @@ class XMLParser(Protocol):
             self._parseError("First char of document [%r] wasn't <" % (byte,))
         return 'tagstart'
 
-    def begin_tagstart(self, byte):
-        self.tagName = ''               # name of the tag
-        self.tagAttributes = {}         # attributes of the tag
-        self.termtag = 0                # is the tag self-terminating
-        self.endtag = 0
-
     def begin_comment(self, byte):
         self.commentbuf = ''
 
@@ -198,6 +211,12 @@ class XMLParser(Protocol):
         if self.commentbuf.endswith('-->'):
             self.gotComment(self.commentbuf[:-3])
             return 'bodydata'
+
+    def begin_tagstart(self, byte):
+        self.tagName = ''               # name of the tag
+        self.tagAttributes = {}         # attributes of the tag
+        self.termtag = 0                # is the tag self-terminating
+        self.endtag = 0
 
     def do_tagstart(self, byte):
         if byte.isalnum() or byte in identChars:
@@ -216,9 +235,10 @@ class XMLParser(Protocol):
         elif byte == '>':
             if self.endtag:
                 self.gotTagEnd(self.tagName)
+                return 'bodydata'
             else:
                 self.gotTagStart(self.tagName, {})
-            return 'bodydata'
+                return (not self.beExtremelyLenient) and 'bodydata' or self.maybeBodyData()
         elif byte == '/':
             if self.tagName:
                 return 'afterslash'
@@ -283,7 +303,7 @@ class XMLParser(Protocol):
             return
         elif byte == '>':
             self.gotTagStart(self.tagName, self.tagAttributes)
-            return 'bodydata'
+            return (not self.beExtremelyLenient) and 'bodydata' or self.maybeBodyData()
         elif byte == '/':
             return 'afterslash'
         elif self.beExtremelyLenient:
@@ -306,7 +326,9 @@ class XMLParser(Protocol):
 
     def do_waitforgt(self, byte):
         if byte == '>':
-            return 'bodydata'
+            if self.endtag or not self.beExtremelyLenient:
+                return 'bodydata'
+            return self.maybeBodyData()
 
     def begin_attrname(self, byte):
         self.attrname = byte
@@ -335,7 +357,8 @@ class XMLParser(Protocol):
                 self.gotTagStart(self.tagName, self.tagAttributes)
                 if self._attrname_termtag:
                     self.gotTagEnd(self.tagName)
-                return 'bodydata'
+                    return 'bodydata'
+                return self.maybeBodyData()
         self._parseError("Invalid attribute name: %r %r" % (self.attrname, byte))
 
     def do_beforeattrval(self, byte):
@@ -350,12 +373,12 @@ class XMLParser(Protocol):
                 self.attrval = 'True'
                 self.tagAttributes[self.attrname] = self.attrval
                 self.gotTagStart(self.tagName, self.tagAttributes)
-                return 'bodydata'
+                return self.maybeBodyData()
             if byte == '\\':
                 # I saw this in actual HTML once:
                 # <font size=\"3\"><sup>SM</sup></font>
                 return
-        self._parseError("Invalid initial attribute value: %r" % byte)
+        self._parseError("Invalid initial attribute value: %r; Attribute values must be quoted." % byte)
 
     attrname = ''
     attrval = ''
@@ -379,7 +402,8 @@ class XMLParser(Protocol):
                 self.gotTagStart(self.tagName, self.tagAttributes)
                 if self._beforeeq_termtag:
                     self.gotTagEnd(self.tagName)
-                return 'bodydata'
+                    return 'bodydata'
+                return self.maybeBodyData()
             elif byte == '/':
                 self._beforeeq_termtag = 1
                 return
@@ -413,7 +437,8 @@ class XMLParser(Protocol):
             self.gotTagStart(self.tagName, self.tagAttributes)
             if endTag:
                 self.gotTagEnd(self.tagName)
-            return 'bodydata'
+                return 'bodydata'
+            return self.maybeBodyData()
         else:
             self.attrval += byte
 
@@ -433,7 +458,9 @@ class XMLParser(Protocol):
         self._after_slash_closed = 1
         self.gotTagStart(self.tagName, self.tagAttributes)
         self.gotTagEnd(self.tagName)
-        return 'bodydata'
+        # don't need maybeBodyData here because there better not be
+        # any javascript code after a <script/>... we'll see :(
+        return 'bodydata' 
 
     def begin_bodydata(self, byte):
         self.bodydata = ''
@@ -448,6 +475,58 @@ class XMLParser(Protocol):
     def end_bodydata(self):
         self.gotText(self.bodydata)
         self.bodydata = ''
+
+    begin_waitforendscript = begin_bodydata
+
+    def do_waitforendscript(self, byte):
+        if byte == '<':
+            return 'waitscriptendtag'
+        self.bodydata += byte
+
+    def begin_waitscriptendtag(self, byte):
+        self.temptagdata = ''
+        self.tagName = ''
+        self.endtag = 0
+
+    def do_waitscriptendtag(self, byte):
+        # 1 enforce / as first byte read
+        # 2 enforce following bytes to be subset of "script" until
+        #   tagName == "script"
+        #   2a when that happens, gotText(self.bodydata) and gotTagEnd(self.tagName)
+        # 3 spaces can happen anywhere, they're ignored
+        #   e.g. < / script >
+        # 4 anything else causes all data I've read to be moved to the
+        #   bodydata, and switch back to waitforendscript state
+
+        # If it turns out this _isn't_ a </script>, we need to
+        # remember all the data we've been through so we can append it
+        # to bodydata
+        self.temptagdata += byte
+
+        # 1
+        if byte == '/':
+            self.endtag = True
+        elif not self.endtag:
+            self.bodydata += self.temptagdata
+            return 'waitforendscript'
+        # 2
+        elif byte.isalnum() or byte in identChars:
+            self.tagName += byte
+            if not 'script'.startswith(self.tagName):
+                self.bodydata += self.temptagdata
+                return 'waitforendscript'
+            elif self.tagName == 'script':
+                self.gotText(self.bodydata)
+                self.gotTagEnd(self.tagName)
+                return 'waitforgt'
+        # 3
+        elif byte.isspace():
+            return 'waitscriptendtag'
+        # 4
+        else:
+            self.bodydata += self.temptagdata
+            return 'waitforendscript'
+
 
     def begin_entityref(self, byte):
         self.erefbuf = ''

@@ -1,3 +1,9 @@
+2003-07-16  Christopher Armstrong  <radix@twistedmatrix.com>
+
+	* twisted/protocols/sux.py: In beExtremelyLenient mode, all data
+	in script elements is considered plain text and will not be parsed
+	for tags or entity references.
+
 2003-07-15  Dave Peticolas  <dave@krondo.com>
 
 	* twisted/persisted/styles.py: better debugging output
