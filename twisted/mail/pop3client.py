@@ -86,7 +86,7 @@ class POP3Client(basic.LineOnlyReceiver):
 
     # Regular expression to match the challenge string in the
     # server greeting line.
-    challengeMagicRe = re.compile('<([^>]+)>')
+    challengeMagicRe = re.compile('(<[^>]+>)')
 
     # Challenge received from the server; set by the default
     # serverGreeting implementation.

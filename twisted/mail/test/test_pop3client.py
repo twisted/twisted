@@ -90,13 +90,13 @@ class POP3ClientLoginTestCase(unittest.TestCase):
         self.failIfIn('serverChallenge', vars(p))
         p.dataReceived("+OK <here is the challenge>\r\n")
         # Make sure it *is* in the instance dict and is what we sent
-        self.assertEquals(vars(p)['serverChallenge'], "here is the challenge")
+        self.assertEquals(vars(p)['serverChallenge'], "<here is the challenge>")
 
     def testAPOP(self):
         p, t = setUp()
         p.dataReceived("+OK <challenge string goes here>\r\n")
         d = p.login("username", "password")
-        self.assertEquals(t.value(), "APOP username 97d2e519bbf4a11acb72c45456cf3e90\r\n")
+        self.assertEquals(t.value(), "APOP username f34f1e464d0d7927607753129cabe39a\r\n")
         p.dataReceived("+OK Welcome!\r\n")
         return d.addCallback(unittest.assertEqual, "Welcome!")
 
