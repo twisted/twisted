@@ -1,16 +1,16 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -28,6 +28,7 @@ import string
 import socket
 import traceback
 import types
+import operator
 import os
 import sys
 import urllib
@@ -40,7 +41,7 @@ import time
 from twisted.spread import pb
 from twisted.internet import tcp, passport
 from twisted.protocols import http, protocol
-from twisted.python import log, threadable, reflect
+from twisted.python import log, reflect
 from twisted import copyright
 
 # Sibling Imports
@@ -54,6 +55,36 @@ weekdayname = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 monthname = [None,
              'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
              'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+# Support for other methods may be implemented on a per-resource basis.
+supportedMethods = ('GET', 'HEAD', 'POST')
+
+class UnsupportedMethod(Exception):
+    """Raised by a resource when faced with a strange request method.
+
+    RFC 2616 (HTTP 1.1) gives us two choices when faced with this
+    situtation: If the type of request is know to us, but not allowed
+    for the requested resource, respond with NOT_ALLOWED.  Otherwise,
+    if the request is something we don't know how to deal with in any
+    case, respond with NOT_IMPLEMENTED.
+
+    When this exception is raised by a Resource's render method, the
+    server will make the appropriate response.
+
+    This exception's first argument MUST be a sequence of the methods
+    the resource *does* support.
+    """
+
+    allowedMethods = ()
+
+    def __init__(self, allowedMethods, *args):
+        apply(Exception.__init__, [self, allowedMethods] + args)
+
+        if not operator.isSequenceType(allowedMethods):
+            why = "but my first argument is not a sequence."
+            s = ("First argument must be a sequence of"
+                 " supported methods, %s" % (why,))
+            raise TypeError, s
 
 
 def date_time_string(msSinceEpoch=None):
@@ -75,6 +106,7 @@ class Request(pb.Copyable, http.HTTP):
     method = "(no method yet)"
     clientproto = "(no clientproto yet)"
     uri = "(no uri yet)"
+    site = None
 
     def getStateToCopyFor(self, issuer):
         x = copy.copy(self.__dict__)
@@ -132,7 +164,8 @@ class Request(pb.Copyable, http.HTTP):
             self.path = urllib.unquote(self.uri)
         else:
             if len(x) != 2:
-                log.msg("May ignore parts of this invalid URI:",repr(self.uri))
+                log.msg("May ignore parts of this invalid URI:",
+                        repr(self.uri))
             self.path, argstring = urllib.unquote(x[0]), x[1]
             self._parse_argstring(argstring)
 
@@ -148,8 +181,8 @@ class Request(pb.Copyable, http.HTTP):
         # Log the request to a file.
         log.msg( self )
 
-        # cache the client information, we'll need this later to be pickled and
-        # sent with the request so CGIs will work remotely
+        # cache the client information, we'll need this later to be
+        # pickled and sent with the request so CGIs will work remotely
         self.client = self.transport.getPeer()
 
         # set various default headers
@@ -176,8 +209,8 @@ class Request(pb.Copyable, http.HTTP):
 
             # Resource Identification
             self.server_port = 80
-            # XXX ^^^^^^^^^^ Obviously it's not always 80.  figure it out from
-            # the URI.
+            # XXX ^^^^^^^^^^ Obviously it's not always 80.  figure it
+            # out from the URI.
             self.prepath = []
             self.postpath = string.split(self.path[1:], '/')
             resrc = self.site.getResourceFor(self)
@@ -195,17 +228,72 @@ class Request(pb.Copyable, http.HTTP):
             body = "<HTML><BODY>You're not cleared for that.</BODY></HTML>"
             self.setResponseCode(http.UNAUTHORIZED)
             self.setHeader('content-type',"text/html")
+        except UnsupportedMethod, e:
+            allowedMethods = e.allowedMethods
+            if (self.method == "HEAD") and ("GET" in allowedMethods):
+                # We must support HEAD (RFC 2616, 5.1.1).  If the resource
+                # doesn't, fake it by giving the resource a 'GET' request
+                # and then return only the headers -- not the body.
+
+                log.msg("Using GET to fake a HEAD request for %s" % resrc)
+                self.method == "GET"
+                body = resrc.render(self)
+
+                if body is NOT_DONE_YET:
+                    log.msg("Tried to fake a HEAD request for %s, but "
+                            "it got away from me." % resrc)
+                    # Oh well, I guess we won't include the content
+                    # length then.
+                else:
+                    # XXX: What's this "minus one" for?
+                    self.setHeader('content-length', str(len(body)-1))
+
+                self.write('')
+                self.finish()
+
+            if self.method in (supportedMethods):
+                # We MUST include an Allow header
+                # (RFC 2616, 10.4.6 and 14.7)
+                self.setHeader('Allow', allowedMethods)
+                s = ('''Your browser approached me (at %(URI)s) with'''
+                     ''' the method "%(method)s".  I only allow'''
+                     ''' the method%(plural)s %(allowed) here.''' % {
+                    'URI': self.uri,
+                    'method': self.method,
+                    'plural': ((len(allowedMethods) > 1) and 's') or '',
+                    'allowed': string.join(allowedMethods, ', ')
+                    })
+                epage = error.ErrorPage(http.NOT_ALLOWED,
+                                        "Method Not Allowed", s)
+                body = epage.render(self)
+            else:
+                epage = error.ErrorPage(http.NOT_IMPLEMENTED, "Huh?",
+                                        """I don't know how to treat a"""
+                                        """ %s request."""
+                                        % (self.method))
+                body = epage.render(self)
         except:
             io = StringIO.StringIO()
             traceback.print_exc(file=io)
-            body = "<HTML><BODY><br>web.Server Traceback \n\n" + html.PRE(io.getvalue()) + "\n\n</body></html>\n"
+            body = ("<HTML><BODY><br>web.Server Traceback \n\n"
+                    "%s\n\n</body></html>\n"
+                    % (html.PRE(io.getvalue()),))
             log.msg( "Traceback Follows:" )
             log.msg(io.getvalue())
             self.setResponseCode(http.INTERNAL_SERVER_ERROR)
             self.setHeader('content-type',"text/html")
 
+        # XXX: What's this "minus one" for?
         self.setHeader('content-length',str(len(body)-1))
-        self.write(body)
+
+        if self.method == "HEAD" and len(body) > 0:
+            # This is a Bad Thing (RFC 2616, 9.4)
+            log.msg("Warning: HEAD request %s for resource %s is"
+                    " returning a message body.  I think I'll eat it."
+                    % (self, resc))
+            self.write('')
+        else:
+            self.write(body)
         self.finish()
 
     startedWriting = 0
@@ -357,8 +445,8 @@ class Request(pb.Copyable, http.HTTP):
 class Session:
     """A user's session with a system.
 
-    This utility class contains no functionality, but is used to represent a
-    session.
+    This utility class contains no functionality, but is used to
+    represent a session.
     """
     def __init__(self, uid):
         """Initialize a session with a unique ID for that session.
@@ -433,8 +521,8 @@ class Site(protocol.Factory):
 class HTTPClient(tcp.Client):
     """A client for HTTP connections.
 
-    My implementation is deprecated, since it doesn't use Protocols, but my
-    interface should not be.  Consider me to be a class in flux.
+    My implementation is deprecated, since it doesn't use Protocols, but
+    my interface should not be.  Consider me to be a class in flux.
     """
     # initial state
     handling_header = 1
@@ -495,7 +583,8 @@ class HTTPClient(tcp.Client):
                 for header in headers:
                     splitAt = string.find(header, ': ')
                     if splitAt == -1:
-                        log.msg( "Invalid HTTP response header: %s" % repr(header) )
+                        log.msg("Invalid HTTP response header: %s"
+                                % repr(header) )
                     else:
                         hkey = header[:splitAt]
                         hval = header[splitAt+2:]
@@ -517,10 +606,11 @@ class HTTPClient(tcp.Client):
 class HTTPCallback(HTTPClient):
     """An HTTP client that will issue a callback when the server responds.
 
-    The request has been completed.  The constructor takes a callback, which
-    must have the signature callback(code, headers, data), where "code" is the
-    integer response code (-1 if the request did not complete), "headers" is a
-    list of HTTP headers, and "data" is the body of the page response.
+    The request has been completed.  The constructor takes a callback,
+    which must have the signature callback(code, headers, data), where
+    "code" is the integer response code (-1 if the request did not
+    complete), "headers" is a list of HTTP headers, and "data" is the
+    body of the page response.
     """
     data = ''
     def __init__(self, url, callback, headers={}):
