@@ -20,6 +20,9 @@ def f(s):
     print "this will run 3.5 seconds after it was scheduled: %s" % s
 
 reactor.callLater(3.5, f, "hello, world")
+
+# f() will only be called if the event loop was started:
+reactor.run()
 </pre>
 
     <p>If we want a task to run every X seconds repeatedly, we can
@@ -35,6 +38,7 @@ l = task.LoopingCall(runEverySecond)
 l.start(1.0) # call every second
 
 # l.stop() will stop the looping calls
+reactor.run()
 </pre>
 
     <p>If we want to cancel a task that we've scheduled:</p>
@@ -46,8 +50,10 @@ def f():
 
 callID = reactor.callLater(5, f)
 callID.cancel()
+reactor.run()
 </pre>     
 
+    <p>As with all reactor-based code, in order for scheduling to work the reactor must be started using <code class="python">reactor.run()</code>.</p>
   </body>
 </html>
 
