@@ -49,8 +49,6 @@ class Scheduler:
         self.threadTasks[thread].append((function, args, kwargs))
 
         if hadNoTasks:
-            # import here to prevent circular import
-            import main
             main.wakeUp()
 
     def timeout(self):
@@ -75,3 +73,6 @@ theScheduler = Scheduler()
 def schedule(function, args=[], kwargs={}):
     global theScheduler
     theScheduler.addTask(function, args, kwargs)
+
+# sibling import - done here to prevent circular import
+import main
