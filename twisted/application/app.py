@@ -7,7 +7,7 @@ from twisted.python import runtime, log, usage, reflect, failure, util, logfile
 from twisted.persisted import sob
 from twisted.application import compat, service
 from twisted import copyright
-import sys, os, pdb, profile, getpass, traceback, signal, threading
+import sys, os, pdb, profile, getpass, traceback, signal
 
 reactorTypes = {
     'wx': 'twisted.internet.wxreactor',
@@ -199,6 +199,10 @@ class ServerOptions(usage.Options):
         """Print an insanely verbose log of everything that happens.  Useful
         when debugging freezes or locks in complex code."""
         sys.settrace(util.spewer)
+        try:
+            import threading
+        except ImportError:
+            return
         threading.settrace(util.spewer)
 
     def parseOptions(self, options=None):
