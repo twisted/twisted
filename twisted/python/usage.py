@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: usage.py,v 1.33 2002/10/04 23:39:53 bruce Exp $
+# $Id: usage.py,v 1.34 2002/11/05 23:04:48 exarkun Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -70,7 +70,7 @@ class Options(UserDict.UserDict):
     C{optParameters} is much the same, except the list also contains
     a default value::
 
-    | optParameters = [['outfile', 'O', 'outfile.log, 'Description...']]
+    | optParameters = [['outfile', 'O', 'outfile.log', 'Description...']]
 
     subCommands is a list of 4-tuples of (command name, command shortcut,
     parser class, documentation).  If the first non-option argument found is
