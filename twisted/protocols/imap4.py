@@ -432,7 +432,7 @@ class IMAP4Server(basic.LineReceiver):
 
     def auth_RENAME(self, tag, args):
         names = parseNestedParens(args)
-        if len(name) != 2 or isinstance(names[0], types.ListType) or isinstance(names[1], types.ListType):
+        if len(names) != 2 or isinstance(names[0], types.ListType) or isinstance(names[1], types.ListType):
             raise IllegalClientResponse, args
         try:
             self.account.rename(*names)
@@ -469,18 +469,18 @@ class IMAP4Server(basic.LineReceiver):
     select_UNSUBSCRIBE = auth_UNSUBSCRIBE
 
     def auth_LIST(self, tag, args):
-        args = splitQuoted(args)
-        if len(args) != 2:
+        parts = parseNestedParens(args)
+        if len(parts) != 2 or isinstance(args[0], types.ListType) or isinstance(args[1], types.ListType):
             self.sendBadResponse(tag, 'Incorrect usage')
         else:
-            ref, mbox = args
+            ref, mbox = parts
             mailboxes = self.account.listMailboxes(ref, mbox)
             for (name, box) in mailboxes:
                 flags = '(%s)' % ' '.join(box.getFlags())
                 delim = box.getHierarchicalDelimiter()
                 self.sendUntaggedResponse('LIST %s "%s" %s' % (flags, delim, name))
             self.sendPositiveResponse(tag, 'LIST completed')
-    select_UNSUBSCRIBE = auth_UNSUBSCRIBE
+    select_LIST = auth_LIST
 
     def auth_LSUB(self, tag, args):
         args = splitQuoted(args)
