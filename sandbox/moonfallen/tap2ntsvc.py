@@ -168,7 +168,7 @@ Could not create directory %s because: %s" % (o['dirname'], e.strerr))
             pass
         else:
             sys.exit("\
-Could not copy file %s because: %s" % (o['conffile'], e.strerr))
+Could not copy file %s because: %s" % (o['conffile'], e.strerror))
 
     # invoke the packaging tools
     if not o['skip-py2exe']:
