@@ -79,7 +79,7 @@ class TestWSGIEnvironment(BaseCase):
             (WSGI(self.envApp(*keys)), uri),
             (200, {}, envstring))
 
-    def test_url_scheme(self):
+    def test_wsgi_url_scheme(self):
         """wsgi.url_scheme"""
         self.assertEnv('https://host/', {'wsgi.url_scheme': 'https'})
         self.assertEnv('http://host/', {'wsgi.url_scheme': 'http'})

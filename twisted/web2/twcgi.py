@@ -39,10 +39,10 @@ def createCGIEnvironment(ctx, request=None):
     if request is None:
         request = iweb.IRequest(ctx)
     
-    script_name = "/" + string.join(request.prepath, '/')
-    python_path = string.join(sys.path, os.pathsep)
-    server_name = request.getHost().split(':')[0]
-    server_port = (request.getHost().split(':')+[''])[1]
+    script_name = '/' + os.sep.join(request.prepath)
+    python_path = os.pathsep.join(sys.path)
+    server_name = request.host.split(':')[0]
+    server_port = (request.host.split(':')+[''])[1]
 
     # See http://hoohoo.ncsa.uiuc.edu/cgi/env.html for CGI interface spec
     env = os.environ.copy()
