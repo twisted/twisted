@@ -27,7 +27,9 @@ class Attributes:
 X = Attributes(
     ('hello', str),
     ('goodbye', int),
-    ('next', Narf),
+    ('next', Shared(Narf)),             # allow the possibility of multiple or circular references
+                                        # the default is to make multiple copies
+                                        # to avoid making the serializer do extra work
     ('asdf', ListOf(Narf, maxLength=30)),
     ('fdsa', (Narf, String(maxLength=5), int)),
     ('qqqq', DictOf(str, Narf)),
@@ -57,7 +59,10 @@ class Narf(Remoteable):
             barID = Arg(WhateverID, default=None)
             __return__ = Reference(Narf)
 
-    # step 3
+    # step 3 - this is the only example that shows argument order, which we
+    # _do_ need in order to translate positional arguments to callRemote, so
+    # don't take the nested-classes example too seriously.
+
     schema = """
     int add (int a, int b)
     """
@@ -97,10 +102,10 @@ class Narf(Remoteable):
     # other way or 
 
     def getPlayerInfo(self, playerID):
-        return Copy(self.players[playerID])
+        return CopyOf(self.players[playerID])
 
     def getRemoteThingy(self, fooID, barID):
-        return Reference(self.players[selfPlayerID])
+        return ReferenceTo(self.players[selfPlayerID])
 
 
 class RemoteNarf(Remoted):
@@ -108,8 +113,52 @@ class RemoteNarf(Remoted):
     # or, example of a difference between local and remote
     class schema:
         class getRemoteThingy:
-            __return__ Reference(RemoteNarf)
+            __return__ = Reference(RemoteNarf)
+        class movementUpdate:
+            posX = int
+            posY = int
+            __return__ = None           # No return value
+            __wait__ = False            # Don't wait for the answer
+            __reliable__ = False        # Feel free to send this over UDP
+            __ordered__ = True          # but send in order!
+            __priority__ = 3            # use priority queue / stream 3
+            __failure__ = FullFailure   # allow full serialization of failures
+            __failure__ = ErrorMessage  # default: trivial failures, or str or int
+
+            # These options may imply different method names - e.g. '__wait__ =
+            # False' might imply that you can't use callRemote, you have to
+            # call 'sendRemote' instead... __reliable__ = False might be
+            # 'callRemoteUnreliable' (longer method name to make it less
+            # convenient to call by accident...)
+
 
 ## (and yes, donovan, we know that TypedInterface exists and we are going to
 ## use it.  we're just screwing around with other syntaxes to see what about PB
 ## might be different.)
+
+"""
+Common banana sequences:
+
+A reference to a remote object.
+   (On the sending side: Referenceable or ReferenceTo(aRemoteable)
+    On the receiving side: RemoteReference)
+('remote', reference-id, interface, version, interface, version, ...)
+
+
+A call to a remote method:
+('fastcall', request-id, reference-id, method-name, 'arg-name', arg1, 'arg-name', arg2)
+
+A call to a remote method with extra spicy metadata:
+('call', request-id, reference-id, interface, version, method-name, 'arg-name', arg1, 'arg-name', arg2)
+
+Special hack: request-id of 0 means 'do not answer this call, do not acknowledge', etc.
+
+Answer to a method call:
+('answer', request-id, response)
+('error', request-id, response)
+
+Decrement a reference incremented by 'remote' command:
+('decref', reference-id)
+
+
+"""
