@@ -14,6 +14,7 @@ from twisted.protocols import basic
 from twisted.protocols import policies
 from twisted.internet import protocol
 from twisted.internet import defer
+from twisted.internet import error
 from twisted.internet import reactor
 from twisted.internet.interfaces import ITLSTransport
 from twisted.python import log
@@ -27,7 +28,7 @@ import twisted.cred.checkers
 import twisted.cred.credentials
 
 # System imports
-import time, string, re, base64, types, socket, os, random
+import time, string, re, base64, types, socket, os, random, hmac
 import MimeWriter, tempfile, rfc822
 import warnings
 import binascii
@@ -126,11 +127,26 @@ class SMTPError(Exception):
     pass
 
 class SMTPClientError(SMTPError):
-    def __init__(self, code, resp, log=None, addresses=None):
+    """Base class for SMTP client errors.
+    """
+    def __init__(self, code, resp, log=None, addresses=None, isFatal=False, retry=False):
+        """
+        @param code: The SMTP response code associated with this error.
+        @param resp: The string response associated with this error.
+        @param log: A string log of the exchange leading up to and including the error.
+
+        @param isFatal: A boolean indicating whether this connection can proceed
+        or not.  If True, the connection will be dropped.
+        @param retry: A boolean indicating whether the delivery should be retried.
+        If True and the factory indicates further retries are desirable, they will
+        be attempted, otherwise the delivery will be failed.
+        """
         self.code = code
         self.resp = resp
         self.log = log
         self.addresses = addresses
+        self.isFatal = isFatal
+        self.retry = retry
 
     def __str__(self):
         if self.code > 0:
@@ -142,14 +158,78 @@ class SMTPClientError(SMTPError):
             res.append(self.log)
         return '\n'.join(res)
 
+
+class ESMTPClientError(SMTPClientError):
+    """Base class for ESMTP client errors.
+    """
+
+class EHLORequiredError(ESMTPClientError):
+    """The server does not support EHLO.
+
+    This is considered a non-fatal error (the connection will not be
+    dropped).
+    """
+
+class AUTHRequiredError(ESMTPClientError):
+    """Authentication was required but the server does not support it.
+
+    This is considered a non-fatal error (the connection will not be
+    dropped).
+    """
+
+class TLSRequiredError(ESMTPClientError):
+    """Transport security was required but the server does not support it.
+
+    This is considered a non-fatal error (the connection will not be
+    dropped).
+    """
+
+class AUTHDeclinedError(ESMTPClientError):
+    """The server rejected our credentials.
+
+    Either the username, password, or challenge response
+    given to the server was rejected.
+
+    This is considered a non-fatal error (the connection will not be
+    dropped).
+    """
+
+class AuthenticationError(ESMTPClientError):
+    """An error ocurred while authenticating.
+
+    Either the server rejected our request for authentication or the
+    challenge received was malformed.
+
+    This is considered a non-fatal error (the connection will not be
+    dropped).
+    """
+
+class TLSError(ESMTPClientError):
+    """An error occurred while negiotiating for transport security.
+
+    This is considered a non-fatal error (the connection will not be
+    dropped).
+    """
+
 class SMTPConnectError(SMTPClientError):
-    pass
+    """Failed to connect to the mail exchange host.
+
+    This is considered a fatal error.  A retry will be made.
+    """
+    def __init__(self, code, resp, log=None, addresses=None, isFatal=True, retry=True):
+        SMTPClientError.__init__(self, code, resp, log, addresses, isFatal, retry)
 
 class SMTPProtocolError(SMTPClientError):
-    pass
+    """The server sent a mangled response.
+
+    This is considered a fatal error.  A retry will not be made.
+    """
+    def __init__(self, code, resp, log=None, addresses=None, isFatal=True, retry=False):
+        SMTPClientError.__init__(self, code, resp, log, addresses, isFatal, retry)
 
 class SMTPDeliveryError(SMTPClientError):
-    pass
+    """Indicates that a delivery attempt has had an error.
+    """
 
 class SMTPServerError(SMTPError):
     def __init__(self, code, resp):
@@ -844,6 +924,9 @@ class SMTPFactory(protocol.ServerFactory):
 class SMTPClient(basic.LineReceiver):
     """SMTP client for sending emails."""
 
+    # If enabled then log SMTP client server communication
+    debug = True
+
     def __init__(self, identity, logsize=10):
         self.identity = identity or ''
         self.toAddressesResult = []
@@ -851,12 +934,13 @@ class SMTPClient(basic.LineReceiver):
         self._from = None
         self.resp = []
         self.code = -1
-        self.lastfailed = 0
         self.log = util.LineLog(logsize)
 
     def sendLine(self, line):
-        "Logging sendLine"
-        self.log.append('>>> ' + line)
+        # Log sendLine only if you are in debug mode for performance
+        if self.debug:
+            self.log.append('>>> ' + line)
+
         basic.LineReceiver.sendLine(self,line)
 
     def connectionMade(self):
@@ -865,17 +949,18 @@ class SMTPClient(basic.LineReceiver):
         self._failresponse = self.smtpConnectionFailed
 
     def lineReceived(self, line):
+        # Log lineReceived only if you are in debug mode for performance
+        if self.debug:
+            self.log.append('<<< ' + line)
+
         why = None
 
-        self.log.append('<<< ' + line)
         try:
             self.code = int(line[:3])
         except ValueError:
-            self.code = -1
-            self.resp = []
-            return self._failresponse(
-                -1, "Invalid response from SMTP server: %s" % line)
-
+            # This is a fatal error and will disconnect the transport lineReceived will not be called again
+            self.sendError(SMTPProtocolError(-1, "Invalid response from SMTP server: %s" % line, self.log.str()))
+            return
 
         if line[0] == '0':
             # Verbose informational message, ignore it
@@ -889,28 +974,21 @@ class SMTPClient(basic.LineReceiver):
 
         if self.code in self._expected:
             why = self._okresponse(self.code,'\n'.join(self.resp))
-            self.lastfailed = 0
-        elif not self.lastfailed:
-            why = self._failresponse(self.code,'\n'.join(self.resp))
-            self.lastfailed += 1
         else:
-            self.sendLine('QUIT')
-            self._expected = xrange(0,1000)
-            self._okresponse = self.smtpState_disconnect
-            self.lastfailed = 0
+            why = self._failresponse(self.code,'\n'.join(self.resp))
 
         self.code = -1
         self.resp = []
         return why
 
     def smtpConnectionFailed(self, code, resp):
-        return SMTPConnectError(code, resp, str(self.log))
+        self.sendError(SMTPConnectError(code, resp, self.log.str()))
 
     def smtpTransferFailed(self, code, resp):
         if code < 0:
-            # protocol error
-            return SMTPProtocolError(code, resp, str(self.log))
-        return self.smtpState_msgSent(code, resp)
+            self.sendError(SMTPProtocolError(code, resp, self.log.str()))
+        else:
+            self.smtpState_msgSent(code, resp)
 
     def smtpState_helo(self, code, resp):
         self.sendLine('HELO ' + self.identity)
@@ -925,9 +1003,8 @@ class SMTPClient(basic.LineReceiver):
             self._expected = [250]
             self._okresponse = self.smtpState_to
         else:
-            self.sendLine('QUIT')
-            self._expected = xrange(0,1000)
-            self._okresponse = self.smtpState_disconnect
+            # All messages have been sent, disconnect
+            self._disconnectFromServer()
 
     def smtpState_disconnect(self, code, resp):
         self.transport.loseConnection()
@@ -954,7 +1031,7 @@ class SMTPClient(basic.LineReceiver):
                 self._expected = [ 354 ]
                 self._okresponse = self.smtpState_data
             else:
-                return self.smtpState_msgSent(-1,'No recipients accepted')
+                return self.smtpState_msgSent(code,'No recipients accepted')
         else:
             self.sendLine('RCPT TO:%s' % quoteaddr(self.lastAddress))
 
@@ -968,7 +1045,6 @@ class SMTPClient(basic.LineReceiver):
 
     def smtpState_msgSent(self, code, resp):
         if self._from is not None:
-            # If there was a pending message
             self.sentMail(code, resp, len(self.successAddresses),
                           self.toAddressesResult, self.log)
 
@@ -1012,6 +1088,23 @@ class SMTPClient(basic.LineReceiver):
         """
         raise NotImplementedError
 
+    def sendError(self, exc):
+        """If an error occurs before a mail message is sent sendError will be called.
+           This base class method sends a QUIT if the error is non-fatal
+           and disconnects the connection.
+
+           @param exc: The SMTPClientError (or child class) raised
+           @type exc: C{SMTPClientError}
+        """
+        assert isinstance(exc, SMTPClientError)
+
+        if exc.isFatal:
+            # If the error was fatal then the communication channel with the SMTP Server is
+            # broken so just close the transport connection
+            self.smtpState_disconnect(-1, None)
+        else:
+            self._disconnectFromServer()
+
     def sentMail(self, code, resp, numOk, addresses, log):
         """Called when an attempt to send an email is completed.
 
@@ -1019,14 +1112,19 @@ class SMTPClient(basic.LineReceiver):
         to the DATA command. If no addresses were accepted, code is -1
         and resp is an informative message.
 
+        @param code: the code returned by the SMTP Server
+        @param resp: The string response returned from the SMTP Server
         @param numOK: the number of addresses accepted by the remote host.
-
         @param addresses: is a list of tuples (address, code, resp) listing
-            the response to each RCPT command.
-
+                          the response to each RCPT command.
         @param log: is the SMTP session log
         """
         raise NotImplementedError
+
+    def _disconnectFromServer(self):
+        self._expected = xrange(0, 1000)
+        self._okresponse = self.smtpState_disconnect
+        self.sendLine('QUIT')
 
 class ESMTPClient(SMTPClient):
     # Fall back to HELO if the server does not support EHLO
@@ -1046,13 +1144,53 @@ class ESMTPClient(SMTPClient):
 
     def __init__(self, secret, contextFactory=None, *args, **kw):
         SMTPClient.__init__(self, *args, **kw)
-        self.authenticators = {}
+        self.authenticators = []
         self.secret = secret
         self.context = contextFactory
         self.tlsMode = False
 
+    def esmtpEHLORequired(self, code=-1, resp=None):
+        self.sendError(EHLORequiredError(502, "Server does not support ESMTP Authentication", self.log.str()))
+
+    def esmtpAUTHRequired(self, code=-1, resp=None):
+        tmp = []
+
+        for a in self.authenticators:
+            tmp.append(a.getName().upper())
+
+        auth = "[%s]" % ', '.join(tmp)
+
+        self.sendError(AUTHRequiredError(502, "Server does not support Client Authentication schemes %s" % auth,
+                                         self.log.str()))
+
+    def esmtpTLSRequired(self, code=-1, resp=None):
+        self.sendError(TLSRequiredError(502, "Server does not support secure communication via TLS / SSL", 
+                                        self.log.str()))
+
+    def esmtpTLSFailed(self, code=-1, resp=None):
+        self.sendError(TLSError(code, "Could not complete the SSL/TLS handshake", self.log.str()))
+
+    def esmtpAUTHDeclined(self, code=-1, resp=None):
+        self.sendError(AUTHDeclinedError(code, resp, self.log.str()))
+
+    def esmtpAUTHMalformedChallenge(self, code=-1, resp=None):
+        str =  "Login failed because the SMTP Server returned a malformed Authentication Challenge"
+        self.sendError(AuthenticationError(501, str, self.log.str()))
+
+    def esmtpAUTHServerError(self, code=-1, resp=None):
+        self.sendError(AuthenticationError(code, resp, self.log.str()))
+
     def registerAuthenticator(self, auth):
-        self.authenticators[auth.getName().upper()] = auth
+        """Registers an Authenticator with the ESMTPClient. The ESMTPClient
+           will attempt to login to the SMTP Server in the order the
+           Authenticators are registered. The most secure Authentication
+           mechanism should be registered first.
+
+           @param auth: The Authentication mechanism to register
+           @type auth: class implementing C{IClientAuthentication}
+        """
+
+        self.authenticators.append(auth)
 
     def connectionMade(self):
         self._expected = [220]
@@ -1060,14 +1198,15 @@ class ESMTPClient(SMTPClient):
         self._failresponse = self.smtpConnectionFailed
 
     def esmtpState_ehlo(self, code, resp):
-        self.sendLine('EHLO ' + self.identity)
         self._expected = SUCCESS
 
         self._okresponse = self.esmtpState_serverConfig
+        self._failresponse = self.esmtpEHLORequired
 
         if self.heloFallback:
             self._failresponse = self.smtpState_helo
 
+        self.sendLine('EHLO ' + self.identity)
 
     def esmtpState_serverConfig(self, code, resp):
         items = {}
@@ -1087,60 +1226,67 @@ class ESMTPClient(SMTPClient):
         if self.context and 'STARTTLS' in items:
             self._expected = [220]
             self._okresponse = self.esmtpState_starttls
+            self._failresponse = self.esmtpTLSFailed
             self.sendLine('STARTTLS')
         elif self.requireTransportSecurity:
             self.tlsMode = False
-            log.msg("TLS required but not available: closing connection")
-            self.sendLine('QUIT')
-            self._expected = xrange(0, 1000)
-            self._okresponse = self.smtpState_disconnect
+            self.esmtpTLSRequired()
         else:
             self.tlsMode = False
             self.authenticate(code, resp, items)
 
     def esmtpState_starttls(self, code, resp):
-        self.transport.startTLS(self.context)
-        self.tlsMode = True
+        try:
+            self.transport.startTLS(self.context)
+            self.tlsMode = True
+        except:
+            log.err()
+            self.esmtpTLSFailed(451)
 
-        """Send another EHLO  once TLS has been started to
-           get the TLS / AUTH schemes"""
+        # Send another EHLO once TLS has been started to
+        # get the TLS / AUTH schemes. Some servers only allow AUTH in TLS mode.
         self.esmtpState_ehlo(code, resp)
 
     def authenticate(self, code, resp, items):
         if self.secret and items.get('AUTH'):
             schemes = items['AUTH'].split()
+            tmpSchemes = {}
 
+            #XXX: May want to come up with a more efficient way to do this
             for s in schemes:
-                if s.upper() in self.authenticators:
-                    self._authinfo = self.authenticators[s]
+                tmpSchemes[s.upper()] = 1
 
-                    """Special condition handled"""
-                    if s.upper() == "PLAIN":
+            for a in self.authenticators:
+                auth = a.getName().upper()
+
+                if auth in tmpSchemes:
+                    self._authinfo = a
+
+                    # Special condition handled
+                    if auth  == "PLAIN":
                         self._okresponse = self.smtpState_from
                         self._failresponse = self._esmtpState_plainAuth
                         self._expected = [235]
                         challenge = encode_base64(self._authinfo.challengeResponse(self.secret, 1), eol="")
-                        self.sendLine('AUTH ' + s + ' ' + challenge)
-
+                        self.sendLine('AUTH ' + auth + ' ' + challenge)
                     else:
-                        self.sendLine('AUTH ' + s)
                         self._expected = [334]
                         self._okresponse = self.esmtpState_challenge
-                        self._authinfo = self.authenticators[s]
-
+                        # If some error occurs here, the server declined the AUTH
+                        # before the user / password phase. This would be
+                        # a very rare case
+                        self._failresponse = self.esmtpAUTHServerError
+                        self.sendLine('AUTH ' + auth)
                     return
 
         if self.requireAuthentication:
-            log.msg("Authentication required but none available: closing connection")
-            self.sendLine('QUIT')
-            self._expected = xrange(0, 1000)
-            self._okresponse = self.smtpState_disconnect
+            self.esmtpAUTHRequired()
         else:
             self.smtpState_from(code, resp)
 
     def _esmtpState_plainAuth(self, code, resp):
         self._okresponse = self.smtpState_from
-        self._failresponse = self.smtpState_disconnect
+        self._failresponse = self.esmtpAUTHDeclined
         self._expected = [235]
         challenge = encode_base64(self._authinfo.challengeResponse(self.secret, 2), eol="")
         self.sendLine('AUTH PLAIN ' + challenge)
@@ -1151,20 +1297,19 @@ class ESMTPClient(SMTPClient):
         self._authResponse(auth, resp)
 
     def _authResponse(self, auth, challenge):
+        self._failresponse = self.esmtpAUTHDeclined
+
         try:
             challenge = base64.decodestring(challenge)
-
         except binascii.Error, e:
             # Illegal challenge, give up, then quit
             self.sendLine('*')
-            self._okresponse = self.smtpState_disconnect
-            self._failresponse = self.smtpState_disconnect
-
+            self._okresponse = self.esmtpAUTHMalformedChallenge
+            self._failresponse = self.esmtpAUTHMalformedChallenge
         else:
             resp = auth.challengeResponse(self.secret, challenge)
             self._expected = [235]
             self._okresponse = self.smtpState_from
-            self._failresponse = self.smtpState_disconnect
             self.sendLine(encode_base64(resp, eol=""))
 
         if auth.getName() == "LOGIN" and challenge == "Username:":
@@ -1306,17 +1451,30 @@ class SenderMixin:
     def getMailData(self):
         return self.factory.file
 
+    def sendError(self, exc):
+        # Call the base class to close the connection with the SMTP server
+        SMTPClient.sendError(self, exc)
+
+        #  Do not retry to connect to SMTP Server if:
+        #   1. No more retries left (This allows the correct error to be returned to the errorback)
+        #   2. The error is of base type SMTPClientError and retry is false
+        #   3. The error code is not in the 4xx range (Communication Errors)
+
+        if isinstance(exc, SMTPClientError):
+            if self.factory.retries >= 0 or (not exc.retry and not (exc.code >= 400 and exc.code < 500)):
+                self.factory.sendFinished = 1
+                self.factory.result.errback(exc)
+
     def sentMail(self, code, resp, numOk, addresses, log):
+        # Do not retry the SMTP Server responsed to the request
         self.factory.sendFinished = 1
         if code not in SUCCESS:
-            # Failure
             errlog = []
             for addr, acode, aresp in addresses:
                 if code not in SUCCESS:
                     errlog.append("%s: %03d %s" % (addr, acode, aresp))
 
-            if numOk:
-                errlog.append(str(log))
+            errlog.append(log.str())
 
             exc = SMTPDeliveryError(code, resp, '\n'.join(errlog), addresses)
             self.factory.result.errback(exc)
@@ -1361,22 +1519,32 @@ class SMTPSenderFactory(protocol.ClientFactory):
         self.result = deferred
         self.result.addBoth(self._removeDeferred)
         self.sendFinished = 0
+
+        assert isinstance(retries, (int, long))
         self.retries = -retries
 
     def _removeDeferred(self, argh):
         del self.result
         return argh
 
-    def clientConnectionFailed(self, connector, error):
-        self.result.errback(error)
+    def clientConnectionFailed(self, connector, err):
+        self._processConnectionError(connector, err)
 
-    def clientConnectionLost(self, connector, error):
-        # if email wasn't sent, try again
+    def clientConnectionLost(self, connector, err):
+        self._processConnectionError(connector, err)
+
+    def _processConnectionError(self, connector, err):
         if self.retries < self.sendFinished <= 0:
-            connector.connect() # reconnect to SMTP server
+            log.msg("SMTP Client retrying server. Retry: %s" % -self.retries)
+
+            connector.connect()
+            self.retries += 1
         elif self.sendFinished <= 0:
-            self.result.errback(error)
-        self.sendFinished -= 1
+            # If we were unable to communicate with the SMTP server a ConnectionDone will be
+            # returned. We want a more clear error message for debugging
+            if err.check(error.ConnectionDone):
+                err.value = SMTPConnectError(-1, "Unable to connect to server.")
+            self.result.errback(err.value)
 
     def buildProtocol(self, addr):
         p = self.protocol(self.domain, self.nEmails*2+2)
@@ -1463,6 +1631,7 @@ class ESMTPSender(SenderMixin, ESMTPClient):
         self._registerAuthenticators()
 
     def _registerAuthenticators(self):
+        # Register Authenticator in order from most secure to least secure
         self.registerAuthenticator(CramMD5ClientAuthenticator(self.username))
         self.registerAuthenticator(LOGINAuthenticator(self.username))
         self.registerAuthenticator(PLAINAuthenticator(self.username))
@@ -1502,7 +1671,7 @@ class ESMTPSenderFactory(SMTPSenderFactory):
         self._requireTransportSecurity = requireTransportSecurity
 
     def buildProtocol(self, addr):
-        p = self.protocol(self.username, self.password, self._contextFactory, self.domain, len(self.toEmail)*2+2)
+        p = self.protocol(self.username, self.password, self._contextFactory, self.domain, self.nEmails*2+2)
         p.heloFallback = self._heloFallback
         p.requireAuthentication = self._requireAuthentication
         p.requireTransportSecurity = self._requireTransportSecurity
