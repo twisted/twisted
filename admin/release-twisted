@@ -101,7 +101,7 @@ class Options(usage.Options):
 
         self['full-version'] = (self['base-version']
                            + self['type']
-                           + self['tinyver'])
+                           + (self['tinyver'] or ''))
 
         self['trunkurl'] = self['svnurl'] + '/trunk'
         self['wipurl'] = '%s/branches/wip-%s' % (self['svnurl'],
