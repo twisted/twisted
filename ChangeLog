@@ -1,3 +1,9 @@
+2003-04-07  Brian Warner  <warner@lothar.com>
+
+	* twisted/test/test_process.py (TwoProcessProtocol): add test to make
+	sure killing one process doesn't take out a second one
+	(PosixProcessTestCasePTY): add variant that sets usePTY=1
+
 2003-04-06  Brian Warner  <warner@lothar.com>
 
 	* twisted/trial/{unittest.py,remote.py}, twisted/test/test_trial.py:

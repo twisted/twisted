@@ -139,6 +139,134 @@ class ProcessTestCase(unittest.TestCase):
             reactor.iterate(0.01)
         self.assertEquals(len(p.buffer), len(p.s * 10))
 
+class TwoProcessProtocol(protocol.ProcessProtocol):
+    finished = 0
+    num = -1
+    def outReceived(self, data):
+        pass
+    def processEnded(self, reason):
+        print "TwoProcessProtocol.processEnded [%d]" % self.num
+        self.finished = 1
+        self.check()
+        
+class TestTwoProcessesBase:
+    def setUp(self):
+        self.processes = [None, None]
+        self.pp = [None, None]
+        self.done = 0
+        self.timeout = None
+        self.verbose = 0
+    def tearDown(self):
+        if self.timeout:
+            self.timeout.cancel()
+            self.timeout = None
+        # I don't think I can use os.kill outside of POSIX, so skip cleanup
+
+    def createProcesses(self, usePTY=0):
+        exe = sys.executable
+        scriptPath = util.sibpath(__file__, "process_reader.py")
+        for num in (0,1):
+            self.pp[num] = TrivialProcessProtocol()
+            self.pp[num].num = num 
+            p = reactor.spawnProcess(self.pp[num],
+                                     exe, [exe, "-u", scriptPath],
+                                     usePTY=usePTY)
+            self.processes[num] = p
+
+    def close(self, num):
+        if self.verbose: print "closing stdin [%d]" % num
+        p = self.processes[num]
+        pp = self.pp[num]
+        self.failIf(pp.finished, "Process finished too early")
+        p.loseConnection()
+        if self.verbose: print self.pp[0].finished, self.pp[1].finished
+
+    def giveUp(self):
+        self.timeout = None
+        self.done = 1
+        if self.verbose: print "timeout"
+        self.fail("timeout")
+        
+    def check(self):
+        #print self.pp[0].finished, self.pp[1].finished
+        #print "  ", self.pp[0].num, self.pp[1].num
+        if self.pp[0].finished and self.pp[1].finished:
+            self.done = 1
+            
+    def testClose(self):
+        if self.verbose: print "starting processes"
+        self.createProcesses()
+        reactor.callLater(1, self.close, 0)
+        reactor.callLater(2, self.close, 1)
+        self.timeout = reactor.callLater(5, self.giveUp)
+        self.check()
+        while not self.done:
+            reactor.iterate(0.01)
+            self.check()
+
+class TestTwoProcessesNonPosix(TestTwoProcessesBase, unittest.TestCase):
+    pass
+
+class TestTwoProcessesPosix(TestTwoProcessesBase, unittest.TestCase):
+    def tearDown(self):
+        TestTwoProcessesBase.tearDown(self)
+        self.check()
+        if self.done:
+            return
+        import signal
+        for i in (0,1):
+            pp, process = self.pp[i], self.processes[i]
+            if not pp.finished:
+                os.kill(process.pid, signal.SIGTERM)
+        now = time.time()
+        self.check()
+        while not self.done or (time.time() > now + 5):
+            reactor.iterate(0.01)
+            self.check()
+        if not self.done:
+            print "unable to shutdown child processes"
+
+    def kill(self, num):
+        if self.verbose: print "kill [%d] with SIGTERM" % num
+        p = self.processes[num]
+        pp = self.pp[num]
+        self.failIf(pp.finished, "Process finished too early")
+        os.kill(p.pid, signal.SIGTERM)
+        if self.verbose: print self.pp[0].finished, self.pp[1].finished
+
+    def testKill(self):
+        if self.verbose: print "starting processes"
+        self.createProcesses(usePTY=0)
+        reactor.callLater(1, self.kill, 0)
+        reactor.callLater(2, self.kill, 1)
+        self.timeout = reactor.callLater(5, self.giveUp)
+        self.check()
+        while not self.done:
+            reactor.iterate(0.01)
+            self.check()
+
+    def testClosePty(self):
+        if self.verbose: print "starting processes"
+        self.createProcesses(usePTY=1)
+        reactor.callLater(1, self.close, 0)
+        reactor.callLater(2, self.close, 1)
+        self.timeout = reactor.callLater(5, self.giveUp)
+        self.check()
+        while not self.done:
+            reactor.iterate(0.01)
+            self.check()
+    testClosePty.todo = "still doesn't work yet"
+    
+    def testKillPty(self):
+        if self.verbose: print "starting processes"
+        self.createProcesses(usePTY=1)
+        reactor.callLater(1, self.kill, 0)
+        reactor.callLater(2, self.kill, 1)
+        self.timeout = reactor.callLater(5, self.giveUp)
+        self.check()
+        while not self.done:
+            reactor.iterate(0.01)
+            self.check()
 
 class Accumulator(protocol.ProcessProtocol):
     """Accumulate data from a process."""
@@ -172,13 +300,15 @@ class Accumulator(protocol.ProcessProtocol):
 
 class PosixProcessTestCase(unittest.TestCase):
     """Test running processes."""
-
+    usePTY = 0
+        
     def testStdio(self):
         """twisted.internet.stdio test."""
         exe = sys.executable
         scriptPath = util.sibpath(__file__, "process_twisted.py")
         p = Accumulator()
-        reactor.spawnProcess(p, exe, [exe, "-u", scriptPath], None, None)
+        reactor.spawnProcess(p, exe, [exe, "-u", scriptPath], None, None,
+                             usePTY=self.usePTY)
         p.transport.write("hello, world")
         p.transport.write("abc")
         p.transport.write("123")
@@ -193,7 +323,8 @@ class PosixProcessTestCase(unittest.TestCase):
         else: raise RuntimeError("gzip not found in /bin or /usr/bin")
         s = "there's no place like home!\n" * 3
         p = Accumulator()
-        reactor.spawnProcess(p, cmd, [cmd, "-c"], {}, "/tmp")
+        reactor.spawnProcess(p, cmd, [cmd, "-c"], {}, "/tmp",
+                             usePTY=self.usePTY)
         p.transport.write(s)
         p.transport.closeStdin()
 
@@ -209,7 +340,8 @@ class PosixProcessTestCase(unittest.TestCase):
         if not os.path.exists('/bin/ls'): raise RuntimeError("/bin/ls not found")
 
         p = Accumulator()
-        reactor.spawnProcess(p, '/bin/ls', ["/bin/ls", "ZZXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"], {}, "/tmp")
+        reactor.spawnProcess(p, '/bin/ls', ["/bin/ls", "ZZXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"], {}, "/tmp",
+                             usePTY=self.usePTY)
 
         while not p.closed:
             reactor.iterate(0.01)
@@ -222,7 +354,8 @@ class PosixProcessTestCase(unittest.TestCase):
         else: raise RuntimeError("true not found in /bin or /usr/bin")
 
         p = TrivialProcessProtocol()
-        reactor.spawnProcess(p, cmd, ['true'])
+        reactor.spawnProcess(p, cmd, ['true'],
+                             usePTY=self.usePTY)
 
         while not p.finished:
             reactor.iterate(0.01)
@@ -237,7 +370,8 @@ class PosixProcessTestCase(unittest.TestCase):
         else: raise RuntimeError("false not found in /bin or /usr/bin")
 
         p = TrivialProcessProtocol()
-        reactor.spawnProcess(p, cmd, ['false'])
+        reactor.spawnProcess(p, cmd, ['false'],
+                             usePTY=self.usePTY)
 
         while not p.finished:
             reactor.iterate(0.01)
@@ -252,12 +386,27 @@ class PosixProcessTestCase(unittest.TestCase):
         protocols = []
         for sig in signals:
             p = SignalProtocol(sig)
-            reactor.spawnProcess(p, exe, [exe, "-u", scriptPath, sig])
+            reactor.spawnProcess(p, exe, [exe, "-u", scriptPath, sig],
+                                 usePTY=self.usePTY)
             protocols.append(p)
 
         while reduce(lambda a,b:a+b,[p.going for p in protocols]):
             reactor.iterate()
 
+class PosixProcessTestCasePTY(PosixProcessTestCase):
+    """Just like PosixProcessTestCase, but use ptys instead of pipes."""
+    usePTY = 1
+    def testStderr(self):
+        # pass-through method to give us something to hang the .todo from
+        PosixProcessTestCase.testStderr(self)
+    testStderr.todo = "still broken"
+    def testProcess(self):
+        PosixProcessTestCase.testProcess(self)
+    testProcess.todo = "still broken"
+    def testStdio(self):
+        PosixProcessTestCase.testStdio(self)
+    testStdio.skip = "hangs completely"
+    
 class Win32ProcessTestCase(unittest.TestCase):
     """Test process programs that are packaged with twisted."""
 
@@ -277,6 +426,8 @@ class Win32ProcessTestCase(unittest.TestCase):
 
 if runtime.platform.getType() != 'posix':
     del PosixProcessTestCase
+    del PosixProcessTestCasePTY
+    del TestTwoProcessesPosix
 else:
     lsOut = popen2.popen3("/bin/ls ZZXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")[2].read()
     # make sure SIGCHLD handler is installed, as it should be on reactor.run().
@@ -287,6 +438,7 @@ else:
 
 if runtime.platform.getType() != 'win32':
     del Win32ProcessTestCase
+    del TestTwoProcessesNonPosix
 else:
     def testEcho(self): raise RuntimeError, "this test is disabled since it goes into infinite loop on windows :("
     ProcessTestCase.testEcho = testEcho
