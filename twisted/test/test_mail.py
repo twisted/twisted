@@ -604,6 +604,9 @@ class DirectoryQueueTestCase(unittest.TestCase):
             msgF.lineReceived('body: %d' % (m,))
             msgF.eomReceived()
         self.queue.readDirectory()
+    
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir)
 
     def testWaiting(self):
         self.failUnless(self.queue.hasWaiting())
