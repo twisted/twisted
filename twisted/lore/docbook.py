@@ -35,6 +35,8 @@ class DocbookSpitter(latex.BaseLatexSpitter):
     def visitNodeHeader(self, node):
         level = int(node.tagName[1])
         difference, self.currentLevel = level-self.currentLevel, level
+        if not difference:
+            self.writer('</section>\n<section>')
         self.writer('<section>'*difference+'</section>'*-difference+'<title>')
         self.visitNodeDefault(node)
 
@@ -51,17 +53,17 @@ class DocbookSpitter(latex.BaseLatexSpitter):
         self.visitNodeDefault(node)
 
     visitNode_h2 = visitNode_h3 = visitNode_h4 = visitNodeHeader
-    end_h2 = end_h3 = end_h4 = '</title>'
-    start_title, end_title = '<section><title>', '</title>'
+    end_h2 = end_h3 = end_h4 = '</title><para />'
+    start_title, end_title = '<section><title>', '</title><para />'
     start_p, end_p = '<para>', '</para>'
-    start_strong, end_strong = start_em, end_emp = '<emphasis>', '</emphasis>'
-    start_span_footnote, end_span_footnote = '<footnote>', '</footnote>'
+    start_strong, end_strong = start_em, end_em = '<emphasis>', '</emphasis>'
+    start_span_footnote, end_span_footnote = '<footnote><para>', '</para></footnote>'
     start_q = end_q = '"'
-    start_pre = end_pre = '<programlisting>', '</programlisting>'
-    start_div_note, end_div_note = '<note>', '</note>'
-    start_li, end_li = '<listitem>', '</listitem>'
+    start_pre, end_pre = '<programlisting>', '</programlisting>'
+    start_div_note, end_div_note = '<note><para>', '</para></note>'
+    start_li, end_li = '<listitem><para>', '</para></listitem>'
     start_ul, end_ul = '<itemizedlist>', '</itemizedlist>'
     start_ol, end_ol = '<orderedlist>', '</orderedlist>'
     start_dl, end_dl = '<variablelist>', '</variablelist>'
     start_dt, end_dt = '<varlistentry><term>', '</term>'
-    start_dd, end_dd = '<listitem>', '</listitem></varlistentry>'
+    start_dd, end_dd = '<listitem><para>', '</para></listitem></varlistentry>'
