@@ -577,8 +577,8 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         except OperationFailedError, (e,):
             log.debug(e)
             self.reply(REQ_ACTN_NOT_TAKEN, '')
-        except Exception, (e,):
-            log.err()
+        except Exception, e:
+            log.err(e)
             self.reply(REQ_ACTN_NOT_TAKEN, 'internal server error')
             raise
 
@@ -713,7 +713,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
     def finishedFileTransfer(self, *arg):
         """called back when a file transfer has been completed by the dtp"""
         log.debug('finishedFileTransfer! cleaning up DTP')
-        if self.fp is not None:
+        if self.fp is not None and not self.fp.closed:
             if self.fp.tell() == self.fpsize:
                 log.debug('transfer completed okay :-)')
                 self.reply(TXFR_COMPLETE_OK)
@@ -1240,8 +1240,8 @@ class FTPAnonymousShell(object):
             uid = os.getuid()
             self.user = pwd.getpwuid(os.getuid())[0]
             self.getUserUIDAndGID()
-        if self.tld is not None:
-            self.filepath = python.FilePath(self.tld)
+        #if self.tld is not None:
+            #self.filepath = python.FilePath(self.tld)
 
     def getUserUIDAndGID(self):
         """used to set up permissions checking. finds the uid and gid of 
@@ -1320,9 +1320,9 @@ We will continue using the user %s.
             raise FileNotFoundError(cpath)
         try:
             return (file(spath, 'rb'), os.path.getsize(spath))
-        except OSError, (e,):
+        except (IOError, OSError), (e,):
             log.debug(e)
-            raise OperationFailedError('')
+            raise OperationFailedError('An OSError occurred %s' % e)
 
     def stor(self, params):
         raise AnonUserDeniedError()
