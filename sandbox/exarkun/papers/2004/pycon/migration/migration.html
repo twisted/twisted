@@ -5,22 +5,22 @@
 
 <h3>What Is Migration?</h3>
 
-<p><i>Service migration</i> is the term coined for the process involving the
+<p><i>Service migration</i> is a term coined for the process involving a
 hand-off of application-level duties from one process to another.
 Historically this has typically been achieved by stopping one process and
 then starting another.  In the case of certain platforms, wider reaching
-<i>restart</i> procedures have been required, but ultimate the effect on the
-user has been the same: application state must be saved or lost, a period of
-absence of service must be tolerated, and finally application state must be
-reloaded or recreated.</p>
+<i>restart</i> procedures (such as system reboots) have been required,
+but ultimately the effect on the user has been the same: application state
+must be saved or lost, a period of absence of service must be tolerated,
+and finally application state must be reloaded or recreated.</p>
 
 <p>Examples of service migration are widespread and exist anywhere software
 is in use.  From a desktop user loading a new version of a word processing
 tool, to a system administrator upgrading a company's web server, to a phone
 company rolling over the software that drives millions of telephone calls
-every day; the fundamental requirement of using new code to process old data
-is the same in each case even though the risk, difficulty, and consequences
-differ greatly.</p>
+every day; the fundamental requirement of using new software to process old
+data is the same in each case even though the risk, difficulty, and
+consequences differ greatly.</p>
 
 <h3>Why Translucent Migration?</h3>
 
@@ -28,19 +28,20 @@ differ greatly.</p>
 running application <i>without</i> interrupting the service of those clients
 who are using it at the time.  In high load environments, it is often the
 case that there will always be a significant number of users relying on the
-service. In these environments, the simplistic approach of waiting for the
-service to become quiescent, then shutting down and restarting the server
-software is not feasible.</p>
+service at all times. In these environments, the simplistic approach of
+waiting for the service to become quiescent, then shutting down and
+restarting the server software is not feasible.</p>
 
 <p>Translucent migration removes the most user-visible portion of the
 migration process: absence of service.  Instead of starting a new process
 after the old process has been shut down, the order is reversed causing the
 new and old processes to exist at the same time.  During this overlap,
-required state can be moved between the two processes.  Expensive
-operations, such as opening a database, establishing connections to remote
-hosts, or building in-memory caches can all be performed by the new process
-while the old is still responding to user requests, minimizing the time
-during which the application is non-responsive.</p>
+required state can be moved between the two processes <i>while one of the
+processes continues to serve user requests</i>.  Expensive operations,
+such as opening a database, establishing connections to remote hosts, or
+building in-memory caches can all be performed by the new process while
+the old is still responding to user requests, minimizing the time during
+which the application is non-responsive.</p>
 
 <h2>Application Requirements</h2>
 
@@ -56,39 +57,43 @@ to as <i>translucent</i>.</p>
 socket providing virtual circuit capabilities.  In the demonstration, a
 stream oriented UNIX socket (<code>AF_UNIX</code>, <code>SOCK_STREAM</code>)
 is used, but a TCP/IP socket (<code>AF_INET</code>,
-<code>SOCK_STREAM</code>) would work equally as well.  When migration is to
+<code>SOCK_STREAM</code>) would work equally well.  When migration is to
 occur, the process assuming responsibility for services (henceforth referred
 to as the <i>service recipient</i>) will connect to this server to initiate
-the migration procedure.  The server must be made aware of all objects which
-represent services (henceforth referred to as <i>service object graphs</i>)
-to be made available for migration.  Each of these service object graphs
-will be transferred to the new process separately from the others, though
-typically they will all be transferred in rapid succession.</p>
+the migration procedure.  The server must be made aware of all groupings of
+objects which represent services (henceforth referred to as <i>service object
+graphs</i>) to be made available for migration.  Each of these service object
+graphs will be transferred to the new process separately from the others,
+though typically they will all be transferred in rapid succession.</p>
 
 <h3>Serializability</h3>
 
-<p>The second requirement is that every service object graph well as all
-must be serializable <a name="1_backref"><a href="#1">[1]</a></a>.  This is
-necessary so that they can be conveyed over a socket as a stream of bytes to
-the service recipient.  Serializers for instances of most built-in types,
-including ints, strings, lists, and dicts, are provided by framework code.
-Additionally, instances of most user-defined classes can also be serialized
-by using the fully qualified name of their class and the contents of their
-instance <code>__dict__</code>.  Since the focus of this migration technique
-is internet servers, a serializer for file-like objects which have been
-wrapped in a <code>twisted.internet.abstract.FileDescriptor</code> object is
-provided as well.  This allows sockets to be migrated without special
-consideration from application-level code.</p>
+<p>The second requirement is that every service object graph must be
+serializable <a name="1_backref"><a href="#1">[1]</a></a>.  This is
+necessary so that they can be migrated to another process.  Most objects
+will be serialized as a simple byte stream and sent over a stream-oriented
+socket, but some may be serialized in more exotic manners.  Serializers
+for instances of most built-in types, including ints, strings, lists,
+and dicts, are provided by framework code.  Additionally, instances of
+most user-defined classes can also be serialized by using the fully
+qualified name of their class and the contents of their instance <code>
+__dict__</code>.  Since the focus of this migration technique is internet
+ servers, a serializer for file-like objects which have been wrapped in
+a <code>twisted.internet.abstract.FileDescriptor</code> object is provided
+as well.  This allows sockets to be migrated without special consideration
+from application-level code.</p>
 
 <h3>Migration Client</h3>
 
 <p>The final requirement is placed upon the service recipient rather than
-the service originator.  It must be capable of issuing requests to service
+the service originator.  It must be capable of issuing requests to a service
 originator to take responsibility for a service.  As previously mentioned,
 responsibility for a service is assumed by connecting to a server running in
 the process which is to give up the service in question.  At this point, a
 sequence of events which ultimately result in the state of one or more
 services being transferred to a new process occurs.</p>
+
+<h4>Authentication</h4>
 
 <p>First, if desired, the client can be required to authenticate with the
 server, proving its identity.  While UNIX sockets already provide some level
@@ -98,6 +103,8 @@ different user, a process which would be otherwise unable to access a socket
 restricted by filesystem permissions, or a process for which filesystem
 permissions alone are too coarsely grained to prevent access.</p>
 
+<h4>Secondary Transports</h4>
+
 <p>Second, secondary transports are established, providing a path for objects
 which cannot be serialized solely as a bytestream to be transported over.
 There is one example of this in the current implementation: a second UNIX
@@ -105,6 +112,8 @@ socket is opened and used to pass file descriptors (via sendmsg(2) and
 recvmsg(2)) to the process assuming responsibility.  Passing such things as
 POSIX capabilities (via the same mechanism) is another use-case for UNIX
 sockets as secondary transports.</p>
+
+<h4>Service Object Graph Migration</h4>
 
 <p>Next, the actual migration occurs.  The client selects a service from
 among those the server publishes as available for migration.  The server
@@ -128,16 +137,10 @@ failure.  If the migration is successful, then the client has assumed full
 responsibility for the service and the server simply discards all objects
 related to that service.</p>
 
+<h4>Shutdown</h4>
+
 <p>Once all services have been migrated out of a process, the process may
 terminate normally.</p>
-
-<!-- Where does this really belong? -->
-
-<p>It is significant to note that services can be transferred not only
-between two versions of the same application, but also between otherwise
-unrelated applications, so long as all the necessary deserializers are
-present in the receiving application.  This has useful consequences which
-will discussed further below.</p>
 
 <h2>Serializers</h2>
 
@@ -382,6 +385,32 @@ state has successfully migrated to the service recipient.  Finally,
 the new value of <code>sys.version</code> indicates that an entirely
 different version of the Python interpreter is now handling this telnet
 session.</p>
+
+<p>It is significant to note that services can be transferred not only
+between two versions of the same application, but also between otherwise
+unrelated applications, so long as all the necessary deserializers are
+present in the receiving application.  In the above demonstration, all
+of the application logic was actually carried along with the service
+object graph.  The service recipient used was extremely generic and had
+no code relating to telnet or interactive Python shells until it received
+the service and deserialized the <code>ShellFactory</code> it contained.
+This should further underscore the need for authentication before migrating
+services: this process relies on the client deserializing an arbitrary
+object graph, one which a malicious server could manipulate to gain
+control over the client.</p>
+
+<h2>Conclusions</h2>
+
+<p>Upgrading software in a production environment can be a dauting prospect;
+even in the best case, when software can be upgraded and restarted without
+incident, customers are always unhappy with service outages.  Translucent
+service migration can provide a way to test software updates on a live
+system before enacting them as well as a way to minimize user-visible system
+downtime.</p>
+
+<p></p>
+
+<h2>Footnotes</h2>
 
 <ol>
 <li><a name="1">The initial implementation of this migration technique uses
