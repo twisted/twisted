@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.77 $"[11:-2]
+__version__ = "$Revision: 1.78 $"[11:-2]
 
 # Sibling imports
 import interfaces
@@ -522,6 +522,7 @@ class View:
                 #print "SET AN ID", theId
             self.subviews[theId] = view
             view.parent = peek(self.viewStack)
+            view.parent.subviews[theId] = view
             # If a Widget was constructed directly with a model that so far
             # is not in modelspace, we should put it on the stack so other
             # Widgets below this one can find it.
@@ -551,6 +552,7 @@ class View:
             controllerResult = controller.handle(request)
             if controllerResult is not None:
                 ## It's a deferred
+                controller
                 self.outstandingCallbacks += 1
                 controllerResult.addCallback(
                     self.handleControllerResults,
@@ -607,10 +609,11 @@ class View:
         pass
 
     def unlinkViews(self):
-        print "unlinking views"
+        #print "unlinking views"
         self.model.removeView(self)
         for key, value in self.subviews.items():
-            value.model.removeView(value)
+            value.unlinkViews()
+#            value.model.removeView(value)
 
     def dispatchResultCallback(self, result, request, node):
         """Deal with a callback from a deferred, dispatching the result

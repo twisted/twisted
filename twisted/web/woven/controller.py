@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.54 $"[11:-2]
+__version__ = "$Revision: 1.55 $"[11:-2]
 
 import os
 import cgi
@@ -311,7 +311,11 @@ class LiveController(Controller):
         sess = request.getSession(interfaces.IWovenLivePage)
         self.view = sess.getCurrentPage().view
         #request.d = self.view.d
+        print "clientToServerEvent", eventTarget
         target = self.view.subviews[eventTarget]
+        print "target, parent", target, target.parent
+        target.parent = self.view
+        target.controller._parent = self
 
         ## From the time we call onEvent until it returns, we want all
         ## calls to IWovenLivePage.sendScript to be appended to this
@@ -345,6 +349,7 @@ class LiveController(Controller):
 
     def domChanged(self, request, widget, node):
         sess = request.getSession(interfaces.IWovenLivePage)
+        print "domchanged"
         if sess is not None:
             if not hasattr(node, 'getAttribute'):
                 return
@@ -361,8 +366,20 @@ class LiveController(Controller):
             js = "top.woven_replaceElement('%s', '%s')" % (nodeId, nodeXML)
             #for key in widget.subviews.keys():
             #    view.subviews[key].unlinkViews()
+            oldNode = page.view.subviews[nodeId]
+            for id, subview in oldNode.subviews.items():
+                subview.unlinkViews()
+            topSubviews = page.view.subviews
+            #print "Widgetid, subviews", id(widget), widget.subviews
             if widget.subviews:
-                page.view.subviews.update(widget.subviews)
+                def recurseSubviews(w):
+                    #print "w.subviews", w.subviews
+                    topSubviews.update(w.subviews)
+                    for id, sv in w.subviews.items():
+                        recurseSubviews(sv)
+                #print "recursing"
+                recurseSubviews(widget)
+                #page.view.subviews.update(widget.subviews)
             sess.sendScript(js)
 
     def wchild_WebConduit2_js(self, request):

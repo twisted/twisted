@@ -78,11 +78,17 @@ function woven_attemptFocus(theNode) {
 function woven_replaceElement(theId, htmlStr) {
     //alert(woven_eventQueue.length)
     var oldNode = document.getElementById(theId)
-    var created = document.createElement('span')
-    created.innerHTML = htmlStr
-    oldNode.parentNode.replaceChild(created.firstChild, oldNode)
-    var newNode = document.getElementById(theId)
-    //woven_attemptFocus(newNode)
+    if (oldNode) {
+        if (oldNode.parentNode) {
+            var created = document.createElement('span')
+            created.innerHTML = htmlStr
+            if (created.firstChild) {
+                oldNode.parentNode.replaceChild(created.firstChild, oldNode)
+                var newNode = document.getElementById(theId)
+                //woven_attemptFocus(newNode)
+            }
+        }
+    }
 }
  
 function woven_appendChild(theId, htmlStr) {
