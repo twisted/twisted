@@ -202,9 +202,19 @@ that name will be recorded in the pickled <code>.tap</code> file. When the
 
 <p>Here is a short example of this technique:</p>
 
-<a class="py-listing" skipLines="18" href="../examples/echoserv.py" 
->doc/examples/echoserv.py</a>
-
+<pre class="py-listing">
+# file dummy.py
+from twisted.internet import protocol
+class Dummy(protocol.Protocol): pass
+if __name__ == '__main__':
+    from twisted.application import service, internet
+    a = service.Application("dummy")
+    import dummy
+    f = protocol.Factory()
+    f.protocol = dummy.Dummy # Note! Not "Dummy"
+    internet.TCPServer(2000, f).setServiceParent(service.IServiceCollect(a))
+    a.save()
+</pre>
 
 <h3>I get <q>Interrupted system call</q> errors when I use <code
 class="python">os.popen2</code>.  How do I read results from a sub-process in
