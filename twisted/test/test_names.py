@@ -143,6 +143,7 @@ class ServerDNSTestCase(unittest.TestCase):
     def tearDown(self):
         self.listenerTCP.stopListening()
         self.listenerUDP.stopListening()
+        self.resolver._parseCall.cancel()
 
 
     def namesTest(self, d, r):
