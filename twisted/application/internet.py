@@ -62,6 +62,8 @@ class _AbstractServer(_VolatileDataService):
 
     def stopService(self):
         service.Service.stopService(self)
+        # TODO: if startup failed, should shutdown skip stopListening?
+        # _port won't exist
         d = self._port.stopListening()
         del self._port
         return d
@@ -85,7 +87,7 @@ class _AbstractClient(_VolatileDataService):
 
     def stopService(self):
         service.Service.stopService(self)
-        #self._connection.stopConnecting()
+        #self._connection.disconnect()  #TODO: needs testing
 
     def _getConnection(self):
         from twisted.internet import reactor
@@ -110,6 +112,12 @@ stop listening. See twisted.internet.interfaces for documentation
 on arguments to the reactor method.
 """,
 }
+
+# TCPServer TCPClient UNIXServer UNIXClient SSLServer SSLClient
+# UDPServer UDPClient UNIXDatagramServer UNIXDatagramClient
+# MulticastServer MulticastClient
+#
+# This message brought to you by the Twisted Committee for Better Grepping
 
 import new
 for tran in 'Generic TCP UNIX SSL UDP UNIXDatagram Multicast'.split():
