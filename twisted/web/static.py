@@ -317,7 +317,7 @@ class File(resource.Resource, styles.Versioned):
             fl.write(child)
         else:
             if '.' not in name:
-                name += '.trp'
+                name = name + '.trp'
             fl = open(os.path.join(self.path, name), 'w')
             from pickle import Pickler
             pk = Pickler(fl)
@@ -338,7 +338,7 @@ class DirectoryListing(File, widgets.StreamWidget):
         for path in directory:
             url = urllib.quote(path, "/:")
             if os.path.isdir(os.path.join(self.path, path)):
-                url +='/'
+                url = url + '/'
             write('<LI><A HREF="%s">%s</a>' % (url, path))
         write("</UL>\n")
 

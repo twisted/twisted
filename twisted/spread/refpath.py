@@ -117,7 +117,7 @@ class PathReferenceAcquisitionContext(PathReferenceContext):
         self.getObject()
         pathList = [self.root.path]
         pathList.extend(self.path)
-        return os.path.join(*pathList)
+        return apply(os.path.join, pathList)
 
     def relativePath(self, request):
         """
