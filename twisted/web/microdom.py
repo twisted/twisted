@@ -31,10 +31,10 @@ sample of XML.
 
 """
 
-from twisted.protocols.sux import XMLParser
+from twisted.protocols.sux import XMLParser, ParseError
 from twisted.python import reflect
 
-class ParseError(Exception):
+class MismatchedTags(Exception):
 
     def __init__(self, expect, got, endLine, endCol, begLine, begCol):
        (self.expect, self.got, self.begLine, self.begCol, self.endLine,
