@@ -1,5 +1,5 @@
 
-import os
+import os, traceback, socket
 
 from twisted.internet.app import Application
 from twisted.internet import reactor
@@ -9,36 +9,41 @@ from twisted.python import log, usage
 import inetdconf
 
 
-class ServiceProcess(ProcessProtocol):
-    def __init__(self, inetdProtocol):
-        self.inetdProtocol = inetdProtocol
-
-    def outReceived(self, data):
-        # Pass the data back to the network client
-        self.inetdProtocol.transport.write(data)
-
-    def errReceived(self, data):
-        log.msg("Process wrote to stderr:", repr(data))
-
-    def processEnded(self, reason):
-        self.inetdProtocol.transport.loseConnection()
-    
-
 class InetdProtocol(Protocol):
     def connectionMade(self):
+        # This is half-cannibalised from twisted.internet.process.Process
         service = self.factory.service
-        self.process = ServiceProcess(self)
-        # FIXME: set uid/gid
-        reactor.spawnProcess(self.process, service.program, 
-                             args=service.programArgs, env=os.environ)
-        
-    def dataReceived(self, data):
-        # Pass the data to the process's stdin
-        self.process.transport.write(data)
-        
-    def connectionLost(self, reason):
-        self.process.transport.loseConnection()
+        pid = os.fork()
+        if pid == 0:    # Child
+            try:
+                # Close stdin/stdout
+                for fd in range(2):
+                    os.close(fd)
+                os.dup(self.transport.fileno())   # Should be fd 0
+                os.dup(self.transport.fileno())   # Should be fd 1
+                for fd in range(3, 256):
+                    try: os.close(fd)
+                    except: pass
+                # FIXME: set uid/gid
+                os.execvpe(service.program, service.programArgs, os.environ)
+            except:
+                # If anything goes wrong, just die.
+                stderr = os.fdopen(2, 'w')
+                stderr.write('Unable to spawn child:\n')
+                traceback.print_exc(file=stderr)
 
+                # Close the socket so the client doesn't think it's still
+                # connected to a server
+                try:
+                    s = socket.fromfd(0, socket.AF_INET, socket.SOCK_STREAM)
+                    s.shutdown(2)
+                except:
+                    pass
+            os._exit(1)
+        else:           # Parent
+            reactor.removeReader(self.transport)
+            reactor.removeWriter(self.transport)
+        
 
 class InetdFactory(ServerFactory):
     protocol = InetdProtocol
