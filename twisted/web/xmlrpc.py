@@ -97,33 +97,47 @@ class XMLRPC(resource.Resource):
     FAILURE = 8002
 
     isLeaf = 1
-        
+    
     def render(self, request):
         request.content.seek(0, 0)
         args, functionPath = xmlrpclib.loads(request.content.read())
         try:
             function = self._getFunction(functionPath)
         except NoSuchFunction:
-            result = Fault(self.NOT_FOUND, "no such function %s" % functionPath)
+            self._cbRender(
+                Fault(self.NOT_FOUND, "no such function %s" % functionPath),
+                request
+            )
         else:
-            try:
-                result = apply(function, args)
-            except:
-                log.deferr()
-                result = Fault(self.FAILURE, "error")
-        
-        request.setHeader("content-type", "text/xml")
+            request.setHeader("content-type", "text/xml")
+            defer.maybeDeferred(None, function, *args).addErrback(
+                self._ebRender
+            ).addCallback(
+                self._cbRender, request
+            )
+        return server.NOT_DONE_YET
+    
+    def _cbRender(self, result, request):
         if isinstance(result, Handler):
             result = result.result
-        if isinstance(result, defer.Deferred):
-            responder = _DeferredResult(self, request)
-            result.addCallbacks(responder.gotResult, responder.gotFailure)
-            return server.NOT_DONE_YET
-        else:
-            if not isinstance(result, Fault):
-                result = (result,) # wrap as tuple
-            return xmlrpclib.dumps(result, methodresponse=1)
-    
+        if not isinstance(result, Fault):
+            result = (result,)
+        try:
+            s = xmlrpclib.dumps(result, methodresponse=1)
+        except:
+            f = Fault(self.FAILURE, "can't serialize output")
+            s = xmlrpclib.dumps(f, methodresponse=1)
+        request.write(s)
+        request.finish()
+
+    def _ebRender(self, failure):
+        if isinstance(failure.value, Fault):
+            return failure.value
+        # XXX - This causes bad things to happen
+        # XXX - But throwing away this information is bad
+        # log.err(failure)
+        return Fault(self.FAILURE, "error")
+        
     def _getFunction(self, functionPath):
         """Given a string, return a function, or raise NoSuchFunction.
         
@@ -139,37 +153,6 @@ class XMLRPC(resource.Resource):
             return f
         else:
             raise NoSuchFunction
-
-
-class _DeferredResult:
-    """The deferred result of an XML-RPC request."""
-
-    def __init__(self, resource, request):
-        self.FAILURE = resource.FAILURE
-        self.request = request
-
-    def gotResult(self, result):
-        """Callback for when request finished."""
-        if not isinstance(result, Fault):
-            result = (result,)
-        self.finish(result)
-
-    def gotFailure(self, error):
-        """Callback for when request failed."""
-        if error.value and isinstance(error.value, Fault):
-            f = error.value
-        else:
-            f = Fault(self.FAILURE, "error")
-        self.finish(f)
-
-    def finish(self, result):
-        try:
-            output = xmlrpclib.dumps(result, methodresponse=1)
-        except:
-            fault = Fault(self.FAILURE, "can't serialize output")
-            output = xmlrpclib.dumps(fault, methodresponse=1)
-        self.request.write(output)
-        self.request.finish()
 
 
 class QueryProtocol(http.HTTPClient):

@@ -70,6 +70,32 @@ def execute(callable, *args, **kw):
     else:
         return succeed(result)
 
+def maybeDeferred(deferred, func, *args, **kw):
+    """Invoke a function that may or may not return a deferred.
+    
+    Call the given function with the given arguments.  If the returned
+    object is a Deferred, chain it with the C{deferred} parameter, otherwise
+    if it is not a C{Failure}, pass it to C{deferred.callback}.  If a
+    C{Failure} is returned, pass it to C{deferred.callback}, and do likewise
+    for any exception raised after wrapping it in a C{Failure}.
+    
+    If C{deferred} is C{None}, a new C{Deferred} is instantiated and used
+    instead.  This C{Deferred} is returned.
+    """
+    if deferred is None:
+        deferred = Deferred()
+    try:
+        result = func(*args, **kw)
+    except:
+        deferred.errback(failure.Failure())
+    else:
+        if isinstance(result, Deferred):
+            result.chainDeferred(deferred)
+        elif isinstance(result, failure.Failure):
+            deferred.errback(result)
+        else:
+            deferred.callback(result)
+    return deferred
 
 def timeout(deferred):
     deferred.errback(failure.Failure(TimeoutError("Callback timed out")))

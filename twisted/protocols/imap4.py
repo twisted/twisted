@@ -18,7 +18,7 @@
 """
 An IMAP4 protocol implementation
 
-API Stability: Unstable
+API Stability: Semi-stable
 
 @author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
 """
@@ -27,17 +27,11 @@ from __future__ import nested_scopes
 
 from twisted.protocols import basic
 from twisted.internet import defer
-from twisted.python import log, components, util
+from twisted.internet.defer import maybeDeferred
+from twisted.python import log, components, util, failure
 from twisted.python.compat import *
 
 import base64, binascii, operator, re, string, time, types, rfc822, random
-
-
-def maybeDeferred(obj, cb, eb, cbArgs, ebArgs):
-    if isinstance(obj, defer.Deferred):
-        obj.addCallbacks(cb, eb, callbackArgs=cbArgs, errbackArgs=ebArgs)
-    else:
-        cb(obj, *cbArgs)
 
 class Command:
     _1_RESPONSES = ('CAPABILITY', 'FLAGS', 'LIST', 'LSUB', 'STATUS', 'SEARCH')
@@ -328,8 +322,9 @@ class IMAP4Server(basic.LineReceiver):
         if len(args) != 2:
             self.sendBadResponse(tag, 'Wrong number of arguments')
         else:
-            d = self.authenticateLogin(*args)
-            maybeDeferred(d, self._cbLogin, self._ebLogin, (tag,), (tag,))
+            maybeDeferred(None, self.authenticateLogin, *args).addCallbacks(
+                self._cbLogin, self._ebLogin, (tag,), None, (tag,), None
+            )
 
     def authenticateLogin(self, user, passwd):
         """Lookup the account associated with the given parameters
@@ -482,10 +477,9 @@ class IMAP4Server(basic.LineReceiver):
         names = names[1]
         mbox = self.account.select(mailbox, 0)
         if mbox:
-            d = mbox.requestStatus(names)
-            maybeDeferred(
-                d, self._cbStatus, self._ebStatus,
-                (tag, mailbox), (tag, mailbox)
+            maybeDeferred(None, mbox.requestStatus, names).addCallbacks(
+                self._cbStatus, self._ebStatus,
+                (tag, mailbox), None, (tag, mailbox), None
             )
         else:
             self.sendNegativeResponse(tag, str(e))
@@ -576,8 +570,9 @@ class IMAP4Server(basic.LineReceiver):
 
     def select_CLOSE(self, tag, args):
         if self.mbox.isWriteable():
-            d = self.mbox.expunge()
-            maybeDeferred(d, self._cbClose, self._ebClose, (tag,), (tag,))
+            maybeDeferred(None, self.mbox.expunge).addCallbacks(
+                self._cbClose, self._ebClose, (tag,), None, (tag,), None
+            )
         else:
             self.sendPositiveResponse(tag, 'CLOSE completed')
             self.mbox.removeListener(self)
@@ -595,8 +590,9 @@ class IMAP4Server(basic.LineReceiver):
 
     def select_EXPUNGE(self, tag, args):
         if self.mbox.isWriteable():
-            d = self.mbox.expunge()
-            maybeDeferred(d, self._cbExpunge, self._ebExpunge, (tag,), (tag,))
+            maybeDeferred(None, self.mbox.expunge).addCallbacks(
+                self._cbExpunge, self._ebExpunge, (tag,), None, (tag,), None
+            )
         else:
             self.sendPositiveResponse(tag, 'CLOSE completed')
             self.mbox.removeListener(self)
@@ -616,8 +612,10 @@ class IMAP4Server(basic.LineReceiver):
 
     def select_SEARCH(self, tag, args, uid=0):
         query = parseNestedParens(args)
-        d = self.mbox.search(query)
-        maybeDeferred(d, self._cbSearch, self._ebSearch, (tag, uid), (tag,))
+        maybeDeferred(None, self.mbox.search, query).addCallbacks(
+            self._cbSearch, self._ebSearch,
+            (tag, uid), None, (tag,), None
+        )
 
     def _cbSearch(self, result, tag, uid):
         if uid:
@@ -642,8 +640,10 @@ class IMAP4Server(basic.LineReceiver):
         if uid:
             topPart = ~(self.mbox.getUIDValidity() << 16)
             messages = map(topPart.__and__, messages)
-        d = self.mbox.fetch(messages, query)
-        maybeDeferred(d, self._cbFetch, self._ebFetch, (tag, uid), (tag,))
+        maybeDeferred(None, self.mbox.fetch, messages, query).addCallbacks(
+            self._cbFetch, self._ebFetch,
+            (tag, uid), None, (tag,), None
+        )
 
     def _cbFetch(self, results, tag, uid):
         for (mId, parts) in results.items():
@@ -687,8 +687,9 @@ class IMAP4Server(basic.LineReceiver):
         else:
             mode = 0
 
-        d = self.mbox.store(messages, flags, mode)
-        maybeDeferred(d, self._cbStore, self._ebStore, (tag, silent), (tag,))
+        maybeDeferred(None, self.mbox.store, messages, flags, mode).addCallbacks(
+            self._cbStore, self._ebStore, (tag, silent), None, (tag,), None
+        )
 
     def _cbStore(self, result, tag, silent):
         if not silent:
@@ -714,8 +715,12 @@ class IMAP4Server(basic.LineReceiver):
                 topPart = self.mbox.getUIDValidity() << 16
                 for i in range(len(messages)):
                     messages[i] = messages[i] | topPart
-            d = self.mbox.fetch(messages, ['BODY', [], 'INTERNALDATE', 'FLAGS'])
-            maybeDeferred(d, self._cbCopy, self._ebCopy, (tag, mbox), (tag, mbox))
+            maybeDeferred(None,
+                self.mbox.fetch, messages,
+                ['BODY', [], 'INTERNALDATE', 'FLAGS']
+            ).addCallbacks(
+                self._cbCopy, self._ebCopy, (tag, mbox), None, (tag, mbox), None
+            )
 
     def _cbCopy(self, messages, tag, mbox):
         # XXX - This should handle failures with a rollback or something
