@@ -502,7 +502,7 @@ class Element(Node):
             begin = [newl, indent] + begin
         bext = begin.extend
         writeattr = lambda _atr, _val: bext((' ', _atr, '="', escape(_val), '"'))
-        if namespace != self.namespace:
+        if namespace != self.namespace and self.namespace:
             if nsprefixes.has_key(self.namespace):
                 prefix = nsprefixes[self.namespace]
                 bext(prefix+':'+self.tagName)
