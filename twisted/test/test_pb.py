@@ -308,9 +308,7 @@ class BrokerTestCase(unittest.TestCase):
             x.setNameForLocal("foo", foo)
             bar = y.remoteForName("foo")
             self.expectedThunkResult = 8
-            bar.thunk(self.expectedThunkResult - 1,
-                      pbcallback=self.thunkResultGood,
-                      pberrback=self.thunkErrorBad)
+            bar.thunk(self.expectedThunkResult - 1).addCallbacks(self.thunkResultGood, self.thunkErrorBad)
             # Send question.
             pump.pump()
             # Send response.
@@ -327,8 +325,7 @@ class BrokerTestCase(unittest.TestCase):
         foo = NestedCopy()
         s.setNameForLocal("foo", foo)
         x = c.remoteForName("foo")
-        x.getCopy(pbcallback=self.thunkResultGood,
-                  pberrback=self.thunkErrorBad)
+        x.getCopy().addCallbacks(self.thunkResultGood, self.thunkErrorBad)
         pump.pump()
         pump.pump()
         assert self.thunkResult.check() == 1, "check failed"
@@ -361,7 +358,7 @@ class BrokerTestCase(unittest.TestCase):
         e = c.remoteForName("d")
         pump.pump(); pump.pump()
         results = []
-        e.doItLater(pbcallback=results.append)
+        e.doItLater().addCallback(results.append)
         pump.pump(); pump.pump()
         assert not d.run, "Deferred method run too early."
         d.d.callback(5)
@@ -374,8 +371,7 @@ class BrokerTestCase(unittest.TestCase):
         foo = NestedRemote()
         s.setNameForLocal("foo", foo)
         bar = c.remoteForName("foo")
-        bar.getSimple(pbcallback=self.refcountResult,
-                      pberrback = self.thunkErrorBad)
+        bar.getSimple().addCallbacks(self.refcountResult, self.thunkErrorBad)
 
         # send question
         pump.pump()
@@ -407,10 +403,10 @@ class BrokerTestCase(unittest.TestCase):
         o2 = c.remoteForName("obj")
         o3 = c.remoteForName("xxx")
         coll = []
-        o2.getCache(pbcallback=coll.append)
-        o2.getCache(pbcallback=coll.append)
+        o2.getCache().addCallback(coll.append)
+        o2.getCache().addCallback(coll.append)
         complex = []
-        o3.getCache(pbcallback=complex.append)
+        o3.getCache().addCallback(complex.append)
         pump.pump() # ask for first cache
         pump.pump() # respond with it
         pump.pump() # ask for second cache
@@ -430,7 +426,7 @@ class BrokerTestCase(unittest.TestCase):
         # assert cp.__class__ is pb.RemoteCacheProxy, "class was %s" % str(cp.__class__)
         # assert cp._RemoteCacheProxy__instance is coll[1][0]._RemoteCacheProxy__instance
         col2 = []
-        o2.putCache(cp, pbcallback = col2.append)
+        o2.putCache(cp).addCallback(col2.append)
         # now, refcounting (similiar to testRefCount)
         luid = cp.luid
         assert s.remotelyCachedObjects.has_key(luid), "remote cache doesn't have it"
@@ -464,16 +460,16 @@ class BrokerTestCase(unittest.TestCase):
         accum = []
         pb.logIn(authRef, None, "test", "guest", "guest", "any").addCallbacks(accum.append, self.whatTheHell)
         # ident = c.remoteForName("identity")
-        # ident.attach("test", "any", None, pbcallback=accum.append)
+        # ident.attach("test", "any", None).addCallback(accum.append)
         pump.pump() # send call
         pump.pump() # get response
         while pump.pump(): # uh, do it more
             pass
         test = accum.pop() # okay, this should be our perspective...
-        test.getDummyViewPoint(pbcallback=accum.append)
+        test.getDummyViewPoint().addCallback(accum.append)
         pump.pump() # send call
         pump.pump() # get response
-        accum.pop().doNothing(pbcallback=accum.append)
+        accum.pop().doNothing().addCallback(accum.append)
         pump.pump()
         pump.pump()
         assert accum.pop() == 'hello world!', 'oops...'
