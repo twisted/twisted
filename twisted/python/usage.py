@@ -104,7 +104,7 @@ class Options(dict):
 
     Advanced functionality is covered in the howto documentation,
     available at U{http://twistedmatrix.com/documents/howto/options}, or
-    doc/howto/options.html in you Twisted directory.
+    doc/howto/options.html in your Twisted directory.
     """
 
     subCommand = None
