@@ -112,8 +112,19 @@ class Hose(telnet.Telnet):
     def telnet_Command(self, cmd):
         """Execute a command as a player.
         """
+
+        #unyuckifying broadcast commands.
+        if cmd[:3] == 'say':
+            cmd = 'say "%s"' % cmd[4:].replace('"', r'\"')
+        if cmd[:5] == 'emote':
+            cmd = 'emote %s' % cmd[6:].replace('"', r'\"')
+
+        #shortcut translations.
         if cmd[0] == '"':
             cmd = 'say "%s"' % cmd[1:].replace('"', r'\"')
+        if cmd[0] == ':':
+            cmd = 'emote "%s"' % cmd[1:].replace('"', r'\"')
+
         self.player.execute(cmd)
         return "Command"
 
