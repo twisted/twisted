@@ -305,24 +305,31 @@ class TimeoutProtocol(ProtocolWrapper):
 
         @param factory: An L{IFactory}.
         @param wrappedProtocol: A L{Protocol} to wrapp.
-        @param timeoutPeriod: Number of seconds to wait for activity before timing out.
+        @param timeoutPeriod: Number of seconds to wait for activity before
+            timing out.
         """
         ProtocolWrapper.__init__(self, factory, wrappedProtocol)
         self.timeoutCall = None
         self.setTimeout(timeoutPeriod)
 
-    def setTimeout(self, timeoutPeriod):
+    def setTimeout(self, timeoutPeriod=None):
         """Set a timeout.
         
-        This will cancel any existing timeouts."""
+        This will cancel any existing timeouts.
+
+        @param timeoutPeriod: If not C{None}, change the timeout period.
+            Otherwise, use the existing value.
+        """
         self.cancelTimeout()
-        self.timeoutPeriod = timeoutPeriod
-        self.timeoutCall = reactor.callLater(self.timeoutPeriod, self.loseConnection)
+        if timeoutPeriod is not None:
+            self.timeoutPeriod = timeoutPeriod
+        self.timeoutCall = reactor.callLater(self.timeoutPeriod, self.timeoutFunc)
 
     def cancelTimeout(self):
         """Cancel the timeout.
         
-        If the timeout was already cancelled, this does nothing."""
+        If the timeout was already cancelled, this does nothing.
+        """
         if self.timeoutCall:
             try:
                 self.timeoutCall.cancel()
@@ -350,6 +357,15 @@ class TimeoutProtocol(ProtocolWrapper):
     def connectionLost(self, reason):
         self.cancelTimeout()
         ProtocolWrapper.connectionLost(self, reason)
+
+    def timeoutFunc(self):
+        """This method is called when the timeout is triggered.
+
+        By default it calls L{loseConnection}.  Override this if you want
+        something else to happen.
+        """
+        self.loseConnection()
+
 
 class TimeoutFactory(WrappingFactory):
     protocol = TimeoutProtocol
