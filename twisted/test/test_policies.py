@@ -126,8 +126,8 @@ class ThrottlingTestCase(unittest.TestCase):
         
         c1.transport.write("0123456789")
         c2.transport.write("abcdefghij")
-        reactor.iterate(); reactor.iterate()
-        reactor.iterate(); reactor.iterate()
+        while len(c1.buffer) < 10 and len(c2.buffer) < 10:
+            reactor.iterate()
 
         self.assertEquals(c1.buffer, "0123456789")
         self.assertEquals(c2.buffer, "abcdefghij")
@@ -180,8 +180,10 @@ class ThrottlingTestCase(unittest.TestCase):
 
         c1.transport.write("0123456789")
         c2.transport.write("abcdefghij")
-        reactor.iterate(); reactor.iterate()
-        reactor.iterate(); reactor.iterate()
+
+        while len(c1.buffer) < 10 and len(c2.buffer) < 10:
+            reactor.iterate()
+
         self.assertEquals(c1.buffer, "0123456789")
         self.assertEquals(c2.buffer, "abcdefghij")
         self.assertEquals(tServer.readThisSecond, 20)
@@ -195,8 +197,10 @@ class ThrottlingTestCase(unittest.TestCase):
         # write some more - data should *not* get written for another second
         c1.transport.write("0123456789")
         c2.transport.write("abcdefghij")
-        reactor.iterate(); reactor.iterate()
-        reactor.iterate(); reactor.iterate()
+
+        while len(c1.buffer) < 10 and len(c2.buffer) < 10:
+            reactor.iterate()
+
         self.assertEquals(c1.buffer, "0123456789")
         self.assertEquals(c2.buffer, "abcdefghij")
         self.assertEquals(tServer.readThisSecond, 0)
