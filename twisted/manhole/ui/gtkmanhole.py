@@ -73,6 +73,7 @@ class Interaction(gtk.GtkWindow, pb.Referenceable):
     def __init__(self):
         gtk.GtkWindow.__init__(self, gtk.WINDOW_TOPLEVEL)
         self.set_title("Manhole Interaction")
+        self.set_usize(300,300)
         self['name'] = "Manhole"
 
         vbox = gtk.GtkVBox()
