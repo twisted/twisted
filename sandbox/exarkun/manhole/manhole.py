@@ -84,10 +84,12 @@ class ManholeInterpreter(code.InteractiveInterpreter):
     def _cbDisplayDeferred(self, result, k):
         self.write("Deferred #%d called back: %r" % (k, result), True)
         del self._pendingDeferreds[k]
+        return result
 
     def _ebDisplayDeferred(self, failure, k):
         self.write("Deferred #%d failed: %r" % (k, failure.getErrorMessage()), True)
         del self._pendingDeferreds[k]
+        return failure
 
     def write(self, data, async=False):
         self.handler.addOutput(data, async)
