@@ -174,6 +174,16 @@ class DefaultTagChecker(TagChecker):
                             '  Use skipLines="%d".'
                             % (fn, int(node.getAttribute('skipLines',0))+num+1))
 
+    def check_lists(self, dom, filename):
+        for node in (domhelpers.findNodesNamed(dom, 'ul')+
+                     domhelpers.findNodesNamed(dom, 'ol')):
+            if not node.childNodes:
+                self._reportError(filename, node, 'empty list')
+            for child in node.childNodes:
+                if child.nodeName != 'li':
+                    self._reportError(filename, node,
+                                      'only list items allowed in lists')
+
 
 def list2dict(l):
     d = {}
