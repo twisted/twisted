@@ -60,10 +60,19 @@ class GetPasswordTest(unittest.TestCase):
     def testStdIn(self):
         """Making sure getPassword accepts a password from standard input.
         """
-        script = "from twisted.test import test_util; print test_util.reversePassword()"
+        from os import path
+        # Fun path games because for my sub-process, 'import twisted'
+        # doesn't always point to the package containing this test
+        # module.
+        script = """\
+import sys
+sys.path.insert(0, "%(dir)s")
+import test_util
+print test_util.reversePassword()
+""" % {'dir': path.dirname(__file__)}
         cmd_in, cmd_out, cmd_err = os.popen3("%(python)s -c '%(script)s'" %
                                              {'python': sys.executable,
-                                              'script': script}, 'rw')
+                                              'script': script})
         cmd_in.write("secret\n")
         cmd_in.close()
         # stripping print's trailing newline.
