@@ -185,8 +185,7 @@ class IMAP4Server(basic.LineReceiver):
             self._pendingLiteral = None
             rest.seek(0, 0)
             callback(rest)
-            if passon:
-                self.setLineMode(passon)
+            self.setLineMode(passon)
 
     def lineReceived(self, line):
         # print 'S: ' + line.replace('\r', '\\r')
@@ -844,6 +843,8 @@ class IMAP4Client(basic.LineReceiver):
     # lookups
     _capCache = None
 
+    _memoryFileLimit = 1024 * 1024 * 10
+
     # Authentication is pluggable.  This maps names to IClientAuthentication
     # objects.
     authenticators = None
@@ -890,16 +891,16 @@ class IMAP4Client(basic.LineReceiver):
             rest = self._pendingBuffer
             self._pendingBuffer = None
             self._pendingSize = None
-            self._parts.append(rest)
+            rest.seek(0, 0)
+            self._parts.append(rest.read())
+            self.setLineMode(passon)
 
     def lineReceived(self, line):
         # print 'C: ' + line
         lastPart = line.rfind(' ')
         if lastPart != -1:
-            # print '1'
-            lastPart = line[lastPart:]
+            lastPart = line[lastPart + 1:]
             if lastPart.startswith('{') and lastPart.endswith('}'):
-                # print '2'
                 # It's a literal a-comin' in
                 try:
                     octets = int(lastPart[1:-1])
@@ -910,26 +911,22 @@ class IMAP4Client(basic.LineReceiver):
                 return
             else:
                 # It isn't a literal at all
-                # print '6'
                 parts = line.split(None, 1)
                 if len(parts) != 2:
                     raise IllegalServerResponse, line
                 tag, rest = parts
                 self.dispatchCommand(tag, rest)
         else:
-            # print '3'
             if self._parts:
-                # print '4'
                 # If an expression is in progress, no tag is required here
                 # Since we didn't find a literal indicator, this expression
                 # is done.
                 self._parts.append(line)
-                # print ' '.join(self._parts)
+                print ' '.join(self._parts)
                 tag, rest = self._tag, ' '.join(self._parts)
                 self._tag, self._parts = None, []
                 self.dispatchCommand(tag, rest)
             else:
-                # print '5'
                 # Otherwise, this line stands alone!
                 parts = line.split(None, 1)
                 if len(parts) != 2:
@@ -942,6 +939,21 @@ class IMAP4Client(basic.LineReceiver):
         self._pendingSize = octets
         self._parts = [rest]
         self.setRawMode()
+
+    def messageFile(self, octets):
+        """Create a file to which an incoming message may be written.
+        
+        @type octets: C{int}
+        @param octets: The number of octets which will be written to the file
+        
+        @rtype: Any object which implements C{write(string)} and
+        C{seek(int, int)}
+        @return: A file-like object
+        """
+        if octets > self._memoryFileLimit:
+            return tempfile.TemproraryFile()
+        else:
+            return StringIO.StringIO()
 
     def makeTag(self):
         tag = '%0.4X' % self.tagID
