@@ -52,7 +52,7 @@ def main():
     for tag in ("html", "title", "head", "body", "h1", "h2", "h3", "ol", "ul",
                 "dl", "li", "dt", "dd", "p", "code", "img", "blockquote", "a",
                 "cite", "div", "span", "strong", "em", "pre", "q", "table",
-                "tr", "td", "th"):
+                "tr", "td", "th", "style"):
         allowed[tag] = None
     checker = TagChecker(allowed.has_key)
     for file in sys.argv[1:]:
