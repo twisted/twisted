@@ -146,11 +146,11 @@ class FormFillerWidget(widgets.Widget):
                 inputNode, errorNode = self.createInput(request, shell, remArg)
                 errorNodes[remArg.name] = errorNode
                 inputNodes[remArg.name] = inputNode
-        # web browsers are wonky
-        if len(inputNodes) > 1:
-            # TODO: 'submit' hint to make a list of multiple buttons
-            # clear button
-            lmn.input(type="submit")
+
+        # TODO: 'submit' hint to make a list of multiple buttons
+        # clear button
+        lmn.input(type="submit")
+
 
 class FormErrorWidget(FormFillerWidget):
     def setUp(self, request, node, data):
