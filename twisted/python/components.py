@@ -176,16 +176,28 @@ def classToInterfaces(k):
     return l
 
 
+class _Wrapper(object):
+    """Makes any object be able to be dict key."""
+
+    __slots__ = ["a"]
+
+    def __init__(self, a):
+        self.a = a
+
+
 class AdapterRegistry:
 
     def __init__(self):
         # mapping between (<class>, <interface>) and <adapter class>
         self.adapterRegistry = {}
         self.adapterPersistence = weakref.WeakValueDictionary()
-
+        self.adapterOrigPersistence = weakref.WeakValueDictionary()
+    
     def persistAdapter(self, original, iface, adapter):
         self.adapterPersistence[(id(original), iface)] = adapter
-
+        # make sure as long as adapter is alive the original object is alive
+        self.adapterOrigPersistence[_Wrapper(original)] = adapter
+    
     def registerAdapter(self, adapterFactory, origInterface, *interfaceClasses):
         """Register an adapter class.
 
