@@ -24,7 +24,7 @@ from OpenSSL import SSL
 import socket
 
 # sibling imports
-import tcp, main
+import tcp, main, interfaces
 
 # Twisted imports
 from twisted.python import log
@@ -79,8 +79,14 @@ class Connection(tcp.Connection):
     """I am an SSL connection.
     """
 
+    __implements__ = tcp.Connection.__implements__, interfaces.ISSLTransport
+    
     writeBlockedOnRead = 0
     readBlockedOnWrite= 0
+
+    def getPeerCertificate(self):
+        """Return the certificate for the peer."""
+        return self.socket.get_peer_certificate()
     
     def doRead(self):
         """See tcp.Connection.doRead for details.
