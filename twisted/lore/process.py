@@ -100,9 +100,10 @@ def fooAddingGenerator(originalFileName, outputExtension):
 
 def outputdirGenerator(originalFileName, outputExtension, inputdir, outputdir):
     originalFileName = os.path.abspath(originalFileName)
-    if os.path.commonprefix((originalFileName, inputdir)) != inputdir:
+    abs_inputdir = os.path.abspath(inputdir)
+    if os.path.commonprefix((originalFileName, abs_inputdir)) != abs_inputdir:
         raise ValueError("Original file name '" + originalFileName +
-              "' not under input directory '" + inputdir + "'")
+              "' not under input directory '" + abs_inputdir + "'")
 
     adjustedPath = os.path.join(outputdir, os.path.basename(originalFileName))
     return tree.getOutputFileName(adjustedPath, outputExtension)

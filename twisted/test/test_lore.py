@@ -144,11 +144,13 @@ class TestFactory(unittest.TestCase):
         self.assertEqualFiles('good_simple.xhtml', 'simple4foo.xhtml')
 
     def test_outputdirGenerator(self):
-        inputdir  = os.path.normpath(os.path.join("/", 'home', 'joe'))
-        outputdir = os.path.normpath(os.path.join("/", 'away', 'joseph'))
-        actual = process.outputdirGenerator(os.path.join("/", 'home', 'joe', "myfile.html"), '.xhtml',
-                                            inputdir, outputdir)
-        self.assertEquals(os.path.join("/", 'away', 'joseph', 'myfile.xhtml'), actual)
+        normp = os.path.normpath; join = os.path.join
+        inputdir  = normp(join("/", 'home', 'joe'))
+        outputdir = normp(join("/", 'away', 'joseph'))
+        actual = process.outputdirGenerator(join("/", 'home', 'joe', "myfile.html"), 
+                                            '.xhtml', inputdir, outputdir)
+        expected = normp(join("/", 'away', 'joseph', 'myfile.xhtml'))
+        self.assertEquals(expected, actual)
         
     def test_outputdirGeneratorBadInput(self):
         options = {'outputdir': '/away/joseph/', 'inputdir': '/home/joe/' }
