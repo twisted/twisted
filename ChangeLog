@@ -1,3 +1,8 @@
+2003-07-19  Christopher Armstrong  <radix@twistedmatrix.com>
+
+	* .: Releasing Twisted 1.0.7alpha3 (for form and twisted.names
+	updates mentioned below).
+
 2003-07-19  Ying Li <cyli@ai.mit.edu>
 
 	* twisted/web/woven/form.py:  Changed form widgets so that if the 
