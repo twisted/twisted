@@ -245,7 +245,18 @@ class TelnetTestCase(unittest.TestCase):
 
     def testAcceptWill(self):
         # Same as testAcceptDo, but reversed.
-        pass
+        cmd = telnet.IAC + telnet.WILL + '\x91'
+        bytes = 'header' + cmd + 'padding'
+
+        h = self.p.protocol
+        h.remoteEnableable = ('\x91',)
+        self.p.dataReceived(bytes)
+
+        self.assertEquals(self.t.value(), telnet.IAC + telnet.DO + '\x91')
+        self.assertEquals(h.enabledLocal, [])
+        self.assertEquals(h.enabledRemote, ['\x91'])
+        self.assertEquals(h.disabledLocal, [])
+        self.assertEquals(h.disabledRemote, [])
 
     def testAcceptWont(self):
         # Try to disable an option.  The server must allow any option to
