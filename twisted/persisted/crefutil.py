@@ -63,6 +63,8 @@ class _Tuple(NotKnown):
             if not isinstance(l[idx], NotKnown):
                 self.locs.remove(idx)
                 l[idx].addDependant(self, idx)
+        if not self.locs:
+            self.resolveDependants(tuple(self.l))
 
     def __setitem__(self, n, obj):
         self.l[n] = obj
