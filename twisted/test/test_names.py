@@ -34,8 +34,14 @@ try:
     client.theResolver.resolvers[2]._parseCall.cancel()
 except:
     pass
-# Contort ourselves horribly until inet_pton is standard
-IPV6 = hasattr(socket, 'AF_INET6')
+
+# IPv6 support is spotty at best!
+try:
+    socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+except socket.error:
+    IPV6 = False
+else:
+    IPv6 = True
 
 def justPayload(results):
     return [r.payload for r in results[0]]
