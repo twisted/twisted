@@ -62,7 +62,7 @@ between steps for James and Wendy's request.  In effect, the requests
 are done in a parallel, cooperative manner.   While this is a good start,
 it isn't perfect as the event loop is stopped with a hard-coded timeout.
 It would be better for each Request object to signal when it is completed 
-so that the event loop can be shuot down sooner.
+so that the event loop can be shuot down sooner.</p>
 
 <h3>Deferred Callbacks</h3>
 
@@ -178,7 +178,7 @@ print list(States())
 iterators... generators.   When a generator is first executed, an iterator
 is returned.  And from there on, each invocation of <code>next()</code>
 gives the subsequent value produced by the <code>yield</code> statement.
-With generators, the two iterators above become very easy to express.
+With generators, the two iterators above become very easy to express.</p>
 
 <pre class="python">
 from __future__ import generators 
@@ -249,7 +249,7 @@ is not available, re-scheduling the operation to be executed later.</p>
 
 <pre>
 from __future__ import generators
-<font color="blue">import flow</font>
+import flow
 
 def Counter(count):
     while count &gt; 0:
@@ -257,14 +257,12 @@ def Counter(count):
         count -= 1
 
 def Consumer():
-  <font color="blue">
     producer = flow.wrap(Counter(3))
     yield producer
-  </font>
     for result in producer:
         if 2 != result:
             yield result
-        <font color="blue">yield producer</font>
+        yield producer
 
 print list(flow.Block(Consumer))
 
@@ -416,7 +414,7 @@ print "Merge", list(flow.Block(flow.Merge(Right,Left)))
 <p>While <code>flow.Block</code> is useful for understanding how flow
 works, it undermines the whole purpose by sleeping during Cooperate
 and blocking other operations.   Following are numerous examples of how
-to integrate flow with the Twisted framework in a non-blocking manner.
+to integrate flow with the Twisted framework in a non-blocking manner.</p>
 
 <h3>Deferred Flow</h3>
 
