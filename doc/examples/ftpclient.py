@@ -21,8 +21,9 @@ An example of using the FTP client
 
 # Twisted imports
 from twisted.protocols.ftp import FTPClient, FTPFileListProtocol
-from twisted.internet.protocol import Protocol
+from twisted.internet.protocol import Protocol, ClientCreator
 from twisted.python import usage
+from twisted.internet import reactor
 
 # Standard library imports
 import string
@@ -80,8 +81,6 @@ class Options(usage.Options):
     
 # this connects the protocol to an FTP server running locally
 def run():
-    from twisted.internet import reactor
-    
     # Get config
     config = Options()
     config.parseOptions()
@@ -90,11 +89,14 @@ def run():
     config.opts['debug'] = int(config.opts['debug'])
     
     # Create the client
-    ftpClient = FTPClient(config.opts['username'], config.opts['password'], 
-                          passive=config.opts['passive'])
-    ftpClient.debug = config.opts['debug']
-    reactor.clientTCP(config.opts['host'], config.opts['port'], ftpClient, 10.0)
+    FTPClient.debug = config.opts['debug']
+    creactor = ClientCreator(reactor, FTPClient, config.opts['username'],
+                             config.opts['password'], passive=config.opts['passive'])
+    creactor.connectTCP(config.opts['host'], config.opts['port']).addCallback(connectionMade)
+    reactor.run()
 
+
+def connectionMade(ftpClient):
     # Get the current working directory
     ftpClient.pwd().addCallbacks(success, fail)
 
@@ -114,7 +116,6 @@ def run():
     d.addCallbacks(showBuffer, fail, callbackArgs=(proto,))
     d.addCallback(lambda result: reactor.stop())
 
-    reactor.run()
 
 # this only runs if the module was *not* imported
 if __name__ == '__main__':

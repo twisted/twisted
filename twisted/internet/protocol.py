@@ -29,7 +29,7 @@ import random
 
 # Twisted Imports
 from twisted.python import log, failure
-from twisted.internet import interfaces, error
+from twisted.internet import interfaces, error, defer
 
 
 class Factory:
@@ -130,6 +130,43 @@ class ClientFactory(Factory):
 
         reason is a Failure object.
         """
+
+
+class _InstanceFactory(ClientFactory):
+    """Factory used by ClientCreator."""
+    
+    def __init__(self, reactor, instance, deferred):
+        self.reactor = reactor
+        self.instance = instance
+        self.deferred = deferred
+
+    def buildProtocol(self, addr):
+        self.reactor.callLater(0, self.deferred.callback, self.instance)
+        return self.instance
+
+    def clientConnectionFailed(self, connector, reason):
+        self.reactor.callLater(0, self.deferred.errback, reason)
+
+
+class ClientCreator:
+    """Useful for cases when we don't really need a factory.
+
+    Mainly this is when there is no shared state between protocol instances
+    (e.g. protocols that work in a way similar to httplib or smtplib).
+    """
+
+    def __init__(self, reactor, protocolClass, *args, **kwargs):
+        self.reactor = reactor
+        self.protocolClass = protocolClass
+        self.args = args
+        self.kwargs = kwargs
+
+    def connectTCP(self, host, port, timeout=30, bindAddress=None):
+        """Connect to remote host, return Deferred of resulting protocol instance."""
+        d = defer.Deferred()
+        f = _InstanceFactory(self.reactor, self.protocolClass(*self.args, **self.kwargs), d)
+        self.reactor.connectTCP(host, port, f, timeout=timeout, bindAddress=bindAddress)
+        return d
 
 
 class ReconnectingClientFactory(ClientFactory):
