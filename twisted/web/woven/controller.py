@@ -17,7 +17,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.43 $"[11:-2]
+__version__ = "$Revision: 1.44 $"[11:-2]
 
 import os
 import cgi
@@ -140,7 +140,7 @@ class Controller(resource.Resource):
         if not name:
             method = "index"
         else:
-            method = name
+            method = name.replace('.', '_')
         f = getattr(self, "wchild_%s" % method, None)
         if f:
             return f(request)
