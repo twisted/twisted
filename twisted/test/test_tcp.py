@@ -885,14 +885,15 @@ class HalfClose2TestCase(unittest.TestCase):
         # XXX we don't test server side yet since we don't do it yet
         d = protocol.ClientCreator(reactor, MyProtocol).connectTCP(
             p.getHost().host, p.getHost().port)
-        self.client = unittest.deferredResult(d)
+        d.addCallback(self._gotClient)
+        return d
+
+    def _gotClient(self, client):
+        self.client = client
 
     def tearDown(self):
         self.client.transport.loseConnection()
-        self.p.stopListening()
-        reactor.iterate()
-        reactor.iterate()
-        reactor.iterate()
+        return self.p.stopListening()
 
     def testNoNotification(self):
         client = self.client
