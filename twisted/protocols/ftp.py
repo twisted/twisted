@@ -187,10 +187,12 @@ class AnonUserDeniedError(FTPCmdError):
     """
     errorCode = ANON_USER_DENIED
 
-class IsNotADirectoryError(Exception):
+class IsNotADirectoryError(FTPCmdError):
     """raised when RMD is called on a path that isn't a directory
     """
-    pass
+    # XXX: This error is currently unused!
+    #        - spiv, 2005-04-02
+    errorCode = IS_NOT_A_DIR
 
 class OperationFailedError(FTPCmdError):
     """raised when a command like rmd or mkdir fails for a reason other than permissions errors
