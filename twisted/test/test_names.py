@@ -33,9 +33,9 @@ from twisted.python import log, failure
 try:
     socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
 except:
-    IPV6 = False
+    IPv6 = False
 else:
-    IPV6 = True
+    IPv6 = True
 
 def justPayload(results):
     return [r.payload for r in results[0]]
@@ -93,7 +93,7 @@ test_domain_com = NoFileAuthority(
             dns.Record_MB('mailbox.test-domain.com'),
             dns.Record_MG('mail.group.someplace'),
             dns.Record_TXT('A First piece of Text', 'a SecoNd piece')
-        ] + (IPV6 and [
+        ] + (IPv6 and [
             dns.Record_A6(0, 'ABCD::4321', ''),
             dns.Record_A6(12, '0:0069::0', 'some.network.tld'),
             dns.Record_A6(8, '0:5634:1294:AFCB:56AC:48EF:34C3:01FF', 'tra.la.la.net')
@@ -104,7 +104,7 @@ test_domain_com = NoFileAuthority(
             dns.Record_AFSDB(subtype=1, hostname='afsdb.test-domain.com'),
             dns.Record_RP(mbox='whatever.i.dunno', txt='some.more.text'),
             dns.Record_WKS('12.54.78.12', socket.IPPROTO_TCP, '\x12\x01\x16\xfe\xc1\x00\x01'),
-        ] + (IPV6 and [dns.Record_AAAA('AF43:5634:1294:AFCB:56AC:48EF:34C3:01FF')] or []),
+        ] + (IPv6 and [dns.Record_AAAA('AF43:5634:1294:AFCB:56AC:48EF:34C3:01FF')] or []),
         'http.tcp.test-domain.com': [
             dns.Record_SRV(257, 16383, 43690, 'some.other.place.fool')
         ],
@@ -351,7 +351,7 @@ class ServerDNSTestCase(unittest.TestCase):
 
 
 
-    if IPV6:
+    if IPv6:
         def testAAAA(self):
             """Test DNS 'AAAA' record queries (IPv6)"""
             self.namesTest(
