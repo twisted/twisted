@@ -623,13 +623,16 @@ class Banana(protocol.Protocol):
                 buffer = rest
                 self.inboundOpenCount = header
                 if rejected:
+                    if self.debugReceive:
+                        print "DROP (OPEN)"
                     if self.inOpen:
                         # we are discarding everything at the old level, so
                         # discard everything in the new level too
                         self.discardCount += 1
                         if self.debugReceive:
-                            print "discardCount++ (OPEN), now %d" \
+                            print "++discardCount (OPEN), now %d" \
                                   % self.discardCount
+                        self.inOpen = False
                     else:
                         # the checkToken handleViolation has already started
                         # discarding this new sequence, we don't have to
@@ -645,7 +648,7 @@ class Banana(protocol.Protocol):
                 if self.discardCount:
                     self.discardCount -= 1
                     if self.debugReceive:
-                        print "discardCount-- (CLOSE), now %d" \
+                        print "--discardCount (CLOSE), now %d" \
                               % self.discardCount
                 else:
                     self.handleClose(count)
@@ -882,9 +885,9 @@ class Banana(protocol.Protocol):
             log.err(f)
 
         if inOpen:
-            if self.debugReceive:
-                print "  discardCount++ (inOpen), now %d" % self.discardCount
             self.discardCount += 1
+            if self.debugReceive:
+                print "  ++discardCount (inOpen), now %d" % self.discardCount
 
         while True:
             # tell the parent that their child is dead. This is useful for
@@ -894,16 +897,18 @@ class Banana(protocol.Protocol):
             f = self.receiveStack[-1].reportViolation(f)
             if not f:
                 # they absorbed the failure
+                if self.debugReceive:
+                    print "  buck stopped, error absorbed"
                 break
 
             # the old top wants to propagate it upwards
             if self.debugReceive:
                 print "  popping %s" % self.receiveStack[-1]
             if not inClose:
-                if self.debugReceive:
-                    print "  discardCount++ (pop, not inClose), now %d" \
-                          % self.discardCount
                 self.discardCount += 1
+                if self.debugReceive:
+                    print "  ++discardCount (pop, not inClose), now %d" \
+                          % self.discardCount
             inClose = False
 
             old = self.receiveStack.pop()

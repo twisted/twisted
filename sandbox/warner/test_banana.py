@@ -197,7 +197,8 @@ class TestBananaMixin:
         self.failUnless(obj is None,
                         "obj was '%s', not None" % (obj,))
         self.failIf(self.banana.transport.disconnectReason,
-                    "connection was dropped")
+                    "connection was dropped: %s" % \
+                    self.banana.transport.disconnectReason)
         self.failUnlessEqual(len(self.banana.receiveStack), 1)
         f = self.banana.violation
         if not f:
@@ -211,7 +212,9 @@ class TestBananaMixin:
     def shouldDropConnection(self, stream):
         self.banana.logReceiveErrors = False # trial hooks log.err
         obj = self.decode(stream)
-        self.failUnless(obj is None)
+        self.failUnless(obj is None,
+                        "decode worked! got '%s', expected dropConnection" \
+                        % obj)
         # the receiveStack is allowed to be non-empty here, since we've
         # dropped the connection anyway
         f = self.banana.transport.disconnectReason
@@ -829,7 +832,7 @@ class EncodeFailureTest(unittest.TestCase):
 #  typebyte == LIST (oldbanana)
 #  bad VOCAB key
 #  too-long vocab key
-#  bad FLOAT encoding
+#  bad FLOAT encoding  # I don't there is such a thing
 #  top.receiveClose
 #  top.finish
 #  top.reportViolation
@@ -841,28 +844,42 @@ class EncodeFailureTest(unittest.TestCase):
 class ErrorfulUnslicer(slicer.BaseUnslicer):
     debug = False
 
+    def doOpen(self, opentype):
+        if self.mode == "doOpen":
+            raise Violation("boom")
+        return slicer.BaseUnslicer.doOpen(self, opentype)
+
     def start(self, count):
         self.mode = self.protocol.mode
         self.ignoreChildDeath = self.protocol.ignoreChildDeath
         if self.debug:
             print "ErrorfulUnslicer.start, mode=%s" % self.mode
         self.list = []
+        if self.mode == "start":
+            raise Violation("boom")
 
     def openerCheckToken(self, typebyte, size, opentype):
-        if self.debug: print "ErrorfulUnslicer.openerCheckToken"
+        if self.debug:
+            print "ErrorfulUnslicer.openerCheckToken(%s)" \
+                  % tokens.tokenNames[typebyte]
         if self.mode == "openerCheckToken":
             raise Violation("boom")
-        else:
-            return slicer.BaseUnslicer.openerCheckToken(self, typebyte,
-                                                        size, opentype)
+        return slicer.BaseUnslicer.openerCheckToken(self, typebyte,
+                                                    size, opentype)
     def checkToken(self, typebyte, size):
+        if self.debug:
+            print "ErrorfulUnslicer.checkToken(%s)" \
+                  % tokens.tokenNames[typebyte]
         if self.mode == "checkToken":
             raise Violation("boom")
-        else:
-            return slicer.BaseUnslicer.checkToken(self, typebyte, size)
+        if self.mode == "checkToken-OPEN" and typebyte == tokens.OPEN:
+            raise Violation("boom")
+        return slicer.BaseUnslicer.checkToken(self, typebyte, size)
 
     def receiveChild(self, obj):
         if self.debug: print "ErrorfulUnslicer.receiveChild", obj
+        if self.mode == "receiveChild":
+            raise Violation("boom")
         self.list.append(obj)
 
     def reportViolation(self, why):
@@ -874,31 +891,66 @@ class ErrorfulUnslicer(slicer.BaseUnslicer):
         if self.debug: print "ErrorfulUnslicer.receiveClose"
         if self.protocol.mode == "receiveClose":
             raise Violation("boom")
-        else:
-            return self.list
+        return self.list
+
+    def finish(self):
+        if self.debug: print "ErrorfulUnslicer.receiveClose"
+        if self.protocol.mode == "finish":
+            raise Violation("boom")
 
     def describe(self):
         return "errorful"
+
+class FailingUnslicer(slicer.TupleUnslicer):
+    def receiveChild(self, obj):
+        if self.protocol.mode != "success":
+            raise Violation("foom")
+        return slicer.TupleUnslicer.receiveChild(self, obj)
+    def describe(self):
+        return "failing"
 
 class DecodeFailureTest(TestBananaMixin, unittest.TestCase):
     listStream = join(bOPEN("errorful", 0), bINT(1), bINT(2), bCLOSE(0))
     nestedStream = join(bOPEN("errorful", 0), bINT(1),
                         bOPEN("list", 1), bINT(2), bINT(3), bCLOSE(1),
                         bCLOSE(0))
+    nestedStream2 = join(bOPEN("failing", 0), bSTR("a"),
+                          bOPEN("errorful", 1), bINT(1),
+                           bOPEN("list", 2), bINT(2), bINT(3), bCLOSE(2),
+                          bCLOSE(1),
+                          bSTR("b"),
+                          bCLOSE(0),
+                         )
 
     def setUp(self):
         TestBananaMixin.setUp(self)
-        self.banana.rootUnslicer.topRegistry[('errorful',)] = ErrorfulUnslicer
+        self.banana.rootUnslicer.topRegistry.update(
+            {('errorful',): ErrorfulUnslicer,
+             ('failing',): FailingUnslicer,
+             })
         self.banana.ignoreChildDeath = False
 
     def testSuccess1(self):
         self.banana.mode = "success"
         o = self.shouldDecode(self.listStream)
         self.failUnlessEqual(o, [1,2])
+        o = self.shouldDecode(self.nestedStream)
+        self.failUnlessEqual(o, [1,[2,3]])
+        o = self.shouldDecode(self.nestedStream2)
+        self.failUnlessEqual(o, ("a",[1,[2,3]],"b"))
 
     def testLongHeader(self):
         # would be a string but the header is too long
         s = "\x01" * 66 + "\x82" + "stupidly long string"
+        f = self.shouldDropConnection(s)
+        self.failUnlessEqual(f.value.args[0],
+                             "token prefix is limited to 64 bytes")
+
+    def testLongHeader2(self):
+        # bad string while discarding
+        s = "\x01" * 66 + "\x82" + "stupidly long string"
+        s = bOPEN("errorful",0) + bINT(1) + s + bINT(2) + bCLOSE(0)
+        self.banana.mode = "start"
         f = self.shouldDropConnection(s)
         self.failUnlessEqual(f.value.args[0],
                              "token prefix is limited to 64 bytes")
@@ -909,8 +961,113 @@ class DecodeFailureTest(TestBananaMixin, unittest.TestCase):
         f = self.shouldFail(self.nestedStream)
         self.failUnlessEqual(f.value.where, "root.errorful")
         self.failUnlessEqual(f.value.args[0], "boom")
+        self.testSuccess1()
 
+    def testCheckToken2(self):
+        # violation raised in top.openerCheckToken, but the error is
+        # absorbed
+        self.banana.mode = "openerCheckToken"
+        self.banana.ignoreChildDeath = True
+        o = self.shouldDecode(self.nestedStream)
+        self.failUnlessEqual(o, [1])
+        self.testSuccess1()
 
+    def testCheckToken3(self):
+        # violation raised in top.checkToken
+        self.banana.mode = "checkToken"
+        f = self.shouldFail(self.listStream)
+        self.failUnlessEqual(f.value.where, "root.errorful")
+        self.failUnlessEqual(f.value.args[0], "boom")
+        self.testSuccess1()
+
+    def testCheckToken4(self):
+        # violation raised in top.checkToken, but only for the OPEN that
+        # starts the nested list. The error is absorbed.
+        self.banana.mode = "checkToken-OPEN"
+        self.banana.ignoreChildDeath = True
+        o = self.shouldDecode(self.nestedStream)
+        self.failUnlessEqual(o, [1])
+        self.testSuccess1()
+
+    def testCheckToken5(self):
+        # violation raised in top.checkToken, while discarding
+        self.banana.mode = "checkToken"
+        #self.banana.debugReceive=True
+        f = self.shouldFail(self.nestedStream2)
+        self.failUnlessEqual(f.value.where, "root.failing")
+        self.failUnlessEqual(f.value.args[0], "foom")
+        self.testSuccess1()
+
+    def testReceiveChild1(self):
+        self.banana.mode = "receiveChild"
+        f = self.shouldFail(self.listStream)
+        self.failUnlessEqual(f.value.where, "root.errorful")
+        self.failUnlessEqual(f.value.args[0], "boom")
+        self.testSuccess1()
+
+    def testReceiveChild2(self):
+        self.banana.mode = "receiveChild"
+        f = self.shouldFail(self.nestedStream2)
+        self.failUnlessEqual(f.value.where, "root.failing")
+        self.failUnlessEqual(f.value.args[0], "foom")
+        self.testSuccess1()
+
+    def testReceiveClose1(self):
+        self.banana.mode = "receiveClose"
+        f = self.shouldFail(self.listStream)
+        self.failUnlessEqual(f.value.where, "root.errorful")
+        self.failUnlessEqual(f.value.args[0], "boom")
+        self.testSuccess1()
+
+    def testReceiveClose2(self):
+        self.banana.mode = "receiveClose"
+        f = self.shouldFail(self.nestedStream2)
+        self.failUnlessEqual(f.value.where, "root.failing")
+        self.failUnlessEqual(f.value.args[0], "foom")
+        self.testSuccess1()
+
+    def testFinish1(self):
+        self.banana.mode = "finish"
+        f = self.shouldFail(self.listStream)
+        self.failUnlessEqual(f.value.where, "root.errorful")
+        self.failUnlessEqual(f.value.args[0], "boom")
+        self.testSuccess1()
+
+    def testFinish2(self):
+        self.banana.mode = "finish"
+        f = self.shouldFail(self.nestedStream2)
+        self.failUnlessEqual(f.value.where, "root.failing")
+        self.failUnlessEqual(f.value.args[0], "foom")
+        self.testSuccess1()
+
+    def testStart1(self):
+        self.banana.mode = "start"
+        f = self.shouldFail(self.listStream)
+        self.failUnlessEqual(f.value.where, "root.errorful")
+        self.failUnlessEqual(f.value.args[0], "boom")
+        self.testSuccess1()
+
+    def testStart2(self):
+        self.banana.mode = "start"
+        f = self.shouldFail(self.nestedStream2)
+        self.failUnlessEqual(f.value.where, "root.failing")
+        self.failUnlessEqual(f.value.args[0], "foom")
+        self.testSuccess1()
+
+    def testDoOpen1(self):
+        self.banana.mode = "doOpen"
+        f = self.shouldFail(self.nestedStream)
+        self.failUnlessEqual(f.value.where, "root.errorful")
+        self.failUnlessEqual(f.value.args[0], "boom")
+        self.testSuccess1()
+
+    def testDoOpen2(self):
+        self.banana.mode = "doOpen"
+        f = self.shouldFail(self.nestedStream2)
+        self.failUnlessEqual(f.value.where, "root.failing")
+        self.failUnlessEqual(f.value.args[0], "foom")
+        self.testSuccess1()
+        
 class FailedInstanceTests(unittest.TestCase):
     # TODO: inherit from UnbananaTestMixin
     def setUp(self):
