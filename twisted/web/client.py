@@ -53,12 +53,6 @@ class HTTPClientFactory(protocol.ClientFactory):
 
 
 def getPage(url):
-    '''download a web page
-
-    Download a page. Return a deferred, which will
-    callback with a page or errback with a description
-    of the error.
-    '''
     parsed = urlparse.urlparse(url)
     url = urlparse.urlunparse(('','')+parsed[2:])
     host, port = parsed[1], 80
