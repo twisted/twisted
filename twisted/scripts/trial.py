@@ -48,7 +48,10 @@ class Options(usage.Options):
                       ", ".join(app.reactorTypes.keys()) + "."],
                      ["logfile", "l", "test.log", "log file name"],
                      ["random", "z", None,
-                      "Run tests in random order using the specified seed"]]
+                      "Run tests in random order using the specified seed"],
+                     ["coverage", None, None,
+                      "Generate coverage information in the given directory (relative to _trial_temp). Requires Python 2.3.3."],
+                     ]
 
     def __init__(self):
         usage.Options.__init__(self)
@@ -241,6 +244,23 @@ def run():
         print "%s: %s" % (sys.argv[0], ue)
         os._exit(1)
 
+    if config['coverage']:
+        import trace
+        abs = os.path.abspath
+
+        #countfile = abs(os.path.join('_trial_temp', 'coverage.count'))
+        coverdir = abs(os.path.join('_trial_temp', config['coverage']))
+        t = trace.Trace(count=1, trace=0)#, infile=countfile, outfile=countfile)
+        reporter = t.runfunc(reallyRun, config)
+        results = t.results()
+        results.write_results(show_missing=1, summary=False, coverdir=coverdir)
+    else:
+        reporter = reallyRun(config)
+
+    sys.exit(not reporter.allPassed())
+
+def reallyRun(config):
+
     suite = unittest.TestSuite(config['benchmark'])
     suite.couldNotImport.update(config['_couldNotImport'])
     if config['recurse']:
@@ -340,7 +360,7 @@ def run():
                                suite.run, reporter, config['random'])
         else:
             suite.run(reporter, config['random'])
-    sys.exit(not reporter.allPassed())
+    return reporter
 
 if __name__ == '__main__':
     run()

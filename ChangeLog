@@ -1,3 +1,10 @@
+2004-01-23  Christopher Armstrong  <radix@twistedmatrix.com>
+
+	* twisted/scripts/trial.py: trial now supports a --coverage
+	option, requiring Python 2.3.3. Give it a directory name (relative
+	to _trial_temp) to put code-coverage info in. It uses the stdlib
+	'trace' module.
+
 2004-01-21  Pavel Pergamenshchik  <pp64@cornell.edu>
 
 	* twisted/protocols/stateful.py: A new way to write protocols!
