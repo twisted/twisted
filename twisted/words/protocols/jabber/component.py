@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.test.test_jabbercomponent -*-
 #
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2005 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -26,10 +26,10 @@ class ConnectComponentAuthenticator(xmlstream.ConnectAuthenticator):
 
     def __init__(self, componentjid, password):
         """
-        @type componentjid: C{str}
+        @type componentjid: L{str}
         @param componentjid: Jabber ID that this component wishes to bind to.
 
-        @type password: C{str}
+        @type password: L{str}
         @param password: Password/secret this component uses to authenticate.
         """
         xmlstream.ConnectAuthenticator.__init__(self, componentjid)
@@ -156,7 +156,8 @@ class ServiceManager(service.MultiService):
 
 
 def buildServiceManager(jid, password, strport):
-    """ Constructs a pre-built C{component.ServiceManager}, using the specified strport string.    
+    """ Constructs a pre-built L{ServiceManager}, using the specified strport
+        string.    
     """
     svc = ServiceManager(jid, password)
     client_svc = jstrports.client(strport, svc.getFactory())

@@ -1,15 +1,14 @@
 # -*- test-case-name: twisted.xish.test.test_xishutil -*-
 #
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2005 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
 def _isStr(s):
-    """Internal method to determine if an object is a string """
+    """ Internal method to determine if an object is a string """
     return isinstance(s, type('')) or isinstance(s, type(u''))
 
 class _MethodWrapper(object):
-    """Internal class for tracking method calls """
+    """ Internal class for tracking method calls """
     def __init__(self, method, *args, **kwargs):
         self.method = method
         self.args = args

@@ -1,8 +1,7 @@
 # -*- test-case-name: twisted.test.test_xmlstream -*-
 #
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2005 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 from twisted.internet import protocol
 from twisted.xish import domish, utility
@@ -27,26 +26,26 @@ class Authenticator:
     types of stream hosts (such as clients, components, etc.).
 
     Rules:
-      1. The Authenticator MUST dispatch a L{STREAM_AUTHD_EVENT} when the stream
-         has been completely authenticated.
+      1. The Authenticator MUST dispatch a L{STREAM_AUTHD_EVENT} when the
+         stream has been completely authenticated.
       2. The Authenticator SHOULD reset all state information when
          L{associateWithStream} is called.
       3. The Authenticator SHOULD override L{streamStarted}, and start
          authentication there.
 
 
-    @type namespace: C{str}
+    @type namespace: L{str}
     @cvar namespace: Default namespace for the XmlStream
 
-    @type version: C{int}
+    @type version: L{int}
     @cvar version: Version attribute for XmlStream. 0.0 will cause the
                    XmlStream to not include a C{version} attribute in the
                    header.
 
-    @type streamHost: C{str}
+    @type streamHost: L{str}
     @ivar streamHost: Target host for this stream (used as the 'to' attribute)
 
-    @type xmlstream: C{XmlStream}
+    @type xmlstream: L{XmlStream}
     @ivar xmlstream: The XmlStream that needs authentication
     """
 
@@ -73,7 +72,7 @@ class Authenticator:
         Called by the XmlStream when it has received a root element from
         the connected peer. 
         
-        @type rootelem: C{Element}
+        @type rootelem: L{domish.Element}
         @param rootelem: The root element of the XmlStream received from
                          the streamHost
         """
@@ -87,7 +86,7 @@ class Authenticator:
         The default implementation just saves a handle to the new
         XmlStream.
 
-        @type xmlstream: C{XmlStream}
+        @type xmlstream: L{XmlStream}
         @param xmlstream: The XmlStream that will be passing events to this
                           Authenticator.
         
@@ -159,7 +158,7 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
     ### --------------------------------------------------------------
     def onDocumentStart(self, rootelem):
         if rootelem.hasAttribute("id"):
-            self.sid = rootelem["id"]                  # Extract stream identifier
+            self.sid = rootelem["id"]              # Extract stream identifier
         self.authenticator.streamStarted(rootelem) # Notify authenticator
         self.dispatch(self, STREAM_START_EVENT)    
 
@@ -204,7 +203,3 @@ class XmlStreamFactory(protocol.ReconnectingClientFactory):
     def removeBootstrap(self, event, fn):
         self.bootstraps.remove((event, fn))
 
-
-
-
-        

@@ -1,11 +1,10 @@
 # -*- test-case-name: twisted.words.test.test_jabbercomponent -*-
 #
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2005 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
-from twisted.xish import domish, xpath, utility
-from twisted.protocols import xmlstream
+from twisted.xish import domish, xpath, utility, xmlstream
 
 DigestAuthQry = xpath.internQuery("/iq/query/digest")
 PlaintextAuthQry = xpath.internQuery("/iq/query/password")
@@ -17,21 +16,20 @@ def basicClientFactory(jid, secret):
 class IQ(domish.Element):
     """ Wrapper for a Info/Query packet
 
-    This provides the necessary functionality to send IQs and get notified
-    when a result comes back. It's a subclass from domish.Element, so you can
-    use the standard DOM manipulation calls to add data to the outbound
-    request.
+    This provides the necessary functionality to send IQs and get notified when
+    a result comes back. It's a subclass from L{domish.Element}, so you can use
+    the standard DOM manipulation calls to add data to the outbound request.
 
-    @type callbacks: C{hemp.utility.CallbackList}
+    @type callbacks: L{utility.CallbackList}
     @cvar callbacks: Callback list to be notified when response comes back
     
     """    
     def __init__(self, xmlstream, type = "set"):
         """
-        @type xmlstream: C{XmlStream}
+        @type xmlstream: L{xmlstream.XmlStream}
         @param xmlstream: XmlStream to use for transmission of this IQ
 
-        @type type: C{str}
+        @type type: L{str}
         @param type: IQ type identifier ('get' or 'set')
 
         """
@@ -53,16 +51,16 @@ class IQ(domish.Element):
         """
         Call this method to send this IQ request via the associated XmlStream
 
-        @type to: C{str}
-        @type to: Jabber ID of the entity to send the request to
+        @param to: Jabber ID of the entity to send the request to
+        @type to: L{str}
 
-        @returns: Callback list for this IQ. Any callbacks added to this list will
-                  be fired when the result comes back.
+        @returns: Callback list for this IQ. Any callbacks added to this list
+                  will be fired when the result comes back.
         """
         if to != None:
             self["to"] = to
         self._xmlstream.addOnetimeObserver("/iq[@id='%s']" % self["id"], \
-                                    self._resultEvent)
+                                                             self._resultEvent)
         self._xmlstream.send(self.toXml())
 
     def _resultEvent(self, iq):
@@ -73,20 +71,21 @@ class BasicAuthenticator(xmlstream.ConnectAuthenticator):
     """ Authenticates an XmlStream against a Jabber server as a Client
 
     This only implements non-SASL authentication, per
-    U{JEP 78<http://www.jabber.org/jeps/jep-0078.html>}. Additionally, this
+    U{JEP-0078<http://www.jabber.org/jeps/jep-0078.html>}. Additionally, this
     authenticator provides the ability to perform inline registration, per
-    U{JEP 77<http://www.jabber.org/jeps/jep-0077.html>}.
+    U{JEP-0077<http://www.jabber.org/jeps/jep-0077.html>}.
 
-    Under normal circumstances, the BasicAuthenticator generates the L{STREAM_AUTHD_EVENT}
-    once the stream has authenticated. However, it can also generate other events, such
-    as:
+    Under normal circumstances, the BasicAuthenticator generates the
+    L{xmlstream.STREAM_AUTHD_EVENT} once the stream has authenticated. However,
+    it can also generate other events, such as:
       - L{INVALID_USER_EVENT} : Authentication failed, due to invalid username
       - L{AUTH_FAILED_EVENT} : Authentication failed, due to invalid password
       - L{REGISTER_FAILED_EVENT} : Registration failed
 
-    If authentication fails for any reason, you can attempt to register by calling
-    the L{registerAccount} method. If the registration succeeds, a L{STREAM_AUTHD_EVENT}
-    will be fired. Otherwise, one of the above errors will be generated (again).
+    If authentication fails for any reason, you can attempt to register by
+    calling the L{registerAccount} method. If the registration succeeds, a
+    L{xmlstream.STREAM_AUTHD_EVENT} will be fired. Otherwise, one of the above
+    errors will be generated (again).
     
     """
     namespace = "jabber:client"
@@ -118,7 +117,8 @@ class BasicAuthenticator(xmlstream.ConnectAuthenticator):
         
             # Prefer digest over plaintext
             if DigestAuthQry.matches(iq):
-                digest = xmlstream.hashPassword(self.xmlstream.sid, self.password)
+                digest = xmlstream.hashPassword(self.xmlstream.sid,
+                                                self.password)
                 reply.query.addElement("digest", content = digest)
             else:
                 reply.query.addElement("password", content = self.password)
@@ -134,7 +134,8 @@ class BasicAuthenticator(xmlstream.ConnectAuthenticator):
 
     def _authResultEvent(self, iq):
         if iq["type"] == "result":
-            self.xmlstream.dispatch(self.xmlstream, xmlstream.STREAM_AUTHD_EVENT)
+            self.xmlstream.dispatch(self.xmlstream,
+                                    xmlstream.STREAM_AUTHD_EVENT)
         else:
             self.xmlstream.dispatch(iq, self.AUTH_FAILED_EVENT)
 

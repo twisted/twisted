@@ -54,17 +54,16 @@ class Scanner:
     """
     
     def __init__(self, patterns, ignore, input):
-        """Initialize the scanner.
+        """ Initialize the scanner.
 
-        Parameters:
-          patterns : [(terminal, uncompiled regex), ...] or None
-          ignore : [terminal,...]
-          input : string
+        @param patterns: [(terminal, uncompiled regex), ...] or C{None}
+        @param ignore: [terminal,...]
+        @param input: string
 
-        If patterns is None, we assume that the subclass has
-        defined self.patterns : [(terminal, compiled regex), ...].
-        Note that the patterns parameter expects uncompiled regexes,
-        whereas the self.patterns field expects compiled regexes.
+        If patterns is C{None}, we assume that the subclass has defined
+        C{self.patterns} : [(terminal, compiled regex), ...]. Note that the
+        patterns parameter expects uncompiled regexes, whereas the
+        C{self.patterns} field expects compiled regexes.
         """
         self.tokens = [] # [(begin char pos, end char pos, token name, matched text), ...]
         self.restrictions = []
@@ -115,15 +114,15 @@ class Scanner:
     def token(self, i, restrict=None):
         """Get the i'th token in the input.
 
-        If i is one past the end, then scan for another token.
-        
-        Args:
 
-        restrict : [token, ...] or None; if restrict is None, then any
-        token is allowed.  You may call token(i) more than once.
-        However, the restrict set may never be larger than what was
-        passed in on the first call to token(i).
-        
+        If L{i} is one past the end, then scan for another token.
+       
+        @param i: token index
+        @param restrict: [token, ...] or C{None}; if restrict is C{None},
+                         then any token is allowed. You may call token(i) more
+                         than once.  However, the restrict set may never be
+                         larger than what was passed in on the first call to
+                         token(i).
         """
         if i == len(self.tokens):
             self.scan(restrict)
@@ -221,12 +220,13 @@ class Context:
     def __init__(self, parent, scanner, tokenpos, rule, args=()):
         """Create a new context.
 
-        Args:
-        parent: Context object or None
-        scanner: Scanner object
-        pos: integer (scanner token position)
-        rule: string (name of the rule)
-        args: tuple listing parameters to the rule
+        @param parent: Context object or C{None}
+        @param scanner: Scanner object
+        @param tokenpos: scanner token position
+        @type tokenpos: L{int}
+        @param rule: name of the rule
+        @type rule: L{str}
+        @param args: tuple listing parameters to the rule
 
         """
         self.parent = parent

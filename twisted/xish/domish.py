@@ -1,8 +1,7 @@
 # -*- test-case-name: twisted.test.test_domish -*-
 #
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2005 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 from __future__ import generators
 
@@ -14,7 +13,8 @@ except ImportError:
     import StringIO
 
 def _splitPrefix(name):
-    """Internal method for splitting a prefixed Element name into its respective parts """
+    """ Internal method for splitting a prefixed Element name into its
+        respective parts """
     ntok = name.split(":", 1)
     if len(ntok) == 2:
         return ntok
@@ -186,13 +186,14 @@ class _ListSerializer:
 SerializerClass = _Serializer
 
 def escapeToXml(text, isattrib = 0):
-    """Escape text to proper XML form, per section 2.3 in the XML specification.
+    """ Escape text to proper XML form, per section 2.3 in the XML specification.
 
-     @type text: L{str}
-     @param text: Text to escape
+    @type text: L{str}
+    @param text: Text to escape
 
-     @type isattrib: L{Boolean}
-     @param isattrib: Triggers escaping of characters necessary for use as attribute values
+    @type isattrib: L{bool}
+    @param isattrib: Triggers escaping of characters necessary for use as
+                     attribute values
     """
     text = text.replace("&", "&amp;")
     text = text.replace("<", "&lt;")
@@ -218,14 +219,13 @@ def generateOnlyKlass(list, klass):
             yield n
 
 def generateElementsQNamed(list, name, uri):
-    """ Filters Element items in a list with matching name and URI
-    """
+    """ Filters Element items in a list with matching name and URI. """
     for n in list:
         if n.__class__ == Element and n.name == name and n.uri == uri:
             yield n
 
 def generateElementsNamed(list, name):
-    """ Filters Element items in a list with matching name, regardless of URI
+    """ Filters Element items in a list with matching name, regardless of URI.
     """
     for n in list:
         if n.__class__ == Element and n.name == name:
@@ -233,13 +233,12 @@ def generateElementsNamed(list, name):
 
 
 class SerializedXML(str):
-    """ Marker class for pre-serialized XML in the DOM """
+    """ Marker class for pre-serialized XML in the DOM. """
     pass
 
         
 class Namespace:
-    """ Convenience object for tracking namespace declarations
-    """
+    """ Convenience object for tracking namespace declarations. """
     def __init__(self, uri):
         self._uri = uri
     def __getattr__(self, n):
@@ -249,28 +248,28 @@ class Namespace:
 
 
 class Element(object):
-    """Object representing a container (a.k.a. tag or element) in an HTML or XML document.
+    """ Object representing a container (a.k.a. tag or element) in an HTML or XML document.
 
-    An Element contains a series of attributes (name/value pairs),
-    content (character data), and other child Element objects. When building a document
+    An Element contains a series of attributes (name/value pairs), content
+    (character data), and other child Element objects. When building a document
     with markup (such as HTML or XML), use this object as the starting point.
 
-    @type uri: C{str}
+    @type uri: L{str}
     @ivar uri: URI of this Element's name
 
-    @type defaultUri: C{str}
+    @type defaultUri: L{str}
     @ivar defaultUri: URI this Element exists within
 
-    @type name: C{str}
+    @type name: L{str}
     @ivar name: Name of this Element
 
-    @type children: C{list}
+    @type children: L{list}
     @ivar children: List of child Elements and content
 
-    @type parent: C{Element}
+    @type parent: L{Element}
     @ivar parent: Reference to the parent Element, if any.
 
-    @type attributes: C{dict}
+    @type attributes: L{dict}
     @ivar attributes: Dictionary of attributes associated with this Element.
 
     """
@@ -278,7 +277,8 @@ class Element(object):
     def __init__(self, qname, defaultUri = None, attribs = None):
         """
         @param qname: Tuple of (uri, name)
-        @param defaultUri: The default URI of the element; defaults to the URI specified in L{qname}
+        @param defaultUri: The default URI of the element; defaults to the URI
+                           specified in L{qname}
         @param attribs: Dictionary of attributes
         """
         self.uri, self.name = qname
@@ -314,40 +314,43 @@ class Element(object):
         return ""
 
     def _dqa(self, attr):
-        """Dequalify an attribute key as needed"""
+        """ Dequalify an attribute key as needed """
         if isinstance(attr, types.TupleType) and attr[0] == self.uri:
             return attr[1]
         else:
             return attr
 
     def getAttribute(self, attribname, default = None):
-        """Retrieve the value of attribname, if it exists """
+        """ Retrieve the value of attribname, if it exists """
         return self.attributes.get(attribname, default)
 
     def hasAttribute(self, attrib):
-        """Determine if the specified attribute exists """
+        """ Determine if the specified attribute exists """
         return self.attributes.has_key(self._dqa(attrib))
     
     def compareAttribute(self, attrib, value):
-        """Safely compare the value of an attribute against a provided value; None-safe. """
+        """ Safely compare the value of an attribute against a provided value.
+        
+        C{None}-safe.
+        """
         return self.attributes.get(self._dqa(attrib), None) == value
 
     def swapAttributeValues(self, left, right):
-        """Swap the values of two attribute"""
+        """ Swap the values of two attribute. """
         d = self.attributes
         l = d[left]
         d[left] = d[right]
         d[right] = l
 
     def addChild(self, node):
-        """Add a child to this Element"""
+        """ Add a child to this Element. """
         if node.__class__ == Element:
             node.parent = self
         self.children.append(node)
         return self.children[-1]
 
     def addContent(self, text):
-        """Add some text data to this element"""
+        """ Add some text data to this Element. """
         c = self.children
         if len(c) > 0 and isinstance(c[-1], types.StringTypes):
             c[-1] = c[-1] + text
@@ -356,7 +359,9 @@ class Element(object):
         return c[-1]
 
     def addElement(self, name, defaultUri = None, content = None):
-        """Add a new child Element to this Element; preferred method
+        """ Add a new child Element to this Element.
+        
+        Preferred method.
         """
         result = None
         if isinstance(name, type(())):
@@ -375,21 +380,22 @@ class Element(object):
         return result
 
     def addRawXml(self, rawxmlstring):
-        """Add a pre-serialized chunk o' XML as a child of this Element.
-        """
+        """ Add a pre-serialized chunk o' XML as a child of this Element. """
         self.children.append(SerializedXML(rawxmlstring))
 
     def addUniqueId(self):
-        """Add a unique (across a given Python session) id attribute to this Element"""
+        """ Add a unique (across a given Python session) id attribute to this
+            Element.
+        """
         self.attributes["id"] = "H_%d" % Element._idCounter
         Element._idCounter = Element._idCounter + 1
 
     def elements(self):
-        """Iterate across all children of this Element that are Elements"""
+        """ Iterate across all children of this Element that are Elements. """
         return generateOnlyKlass(self.children, Element)
 
     def toXml(self, prefixes = None, closeElement = 1):
-        """Serialize this Element and all children to a string """
+        """ Serialize this Element and all children to a string. """
         s = SerializerClass(prefixes)
         s.serialize(self, closeElement)
         return s.getValue()

@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.xish.test.test_xpath -*-
 #
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2005 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -155,7 +155,8 @@ class _AnyLocation:
         parentlist.append(elem.name)
 
     def isRootMatch(self, elem):
-        if (self.elementName == None or self.elementName == elem.name) and self.matchesPredicates(elem):
+        if (self.elementName == None or self.elementName == elem.name) and \
+           self.matchesPredicates(elem):
             if self.childLocation != None:
                 for c in elem.elements():
                     if self.childLocation.matches(c):
@@ -165,7 +166,8 @@ class _AnyLocation:
         return False
 
     def findFirstRootMatch(self, elem):
-        if (self.elementName == None or self.elementName == elem.name) and self.matchesPredicates(elem):
+        if (self.elementName == None or self.elementName == elem.name) and \
+           self.matchesPredicates(elem):
             # Thus far, the name matches and the predicates match,
             # now check into the children and find the first one
             # that matches the rest of the structure
