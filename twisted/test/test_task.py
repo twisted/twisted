@@ -24,6 +24,7 @@ class Clock(object):
         while timings:
             self.adjust(timings.pop())
             reactor.iterate()
+            reactor.iterate()
 
 class TestException(Exception):
     pass
