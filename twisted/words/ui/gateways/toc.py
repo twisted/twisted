@@ -67,6 +67,9 @@ class TOCGateway(gateway.Gateway,toc.TOCClient):
         self.im.connectionLost(self,"Connection lost.")
         self.im.detachGateway(self)
 
+    def loseConnection(self):
+        self.transport.loseConnection()
+
     def gotConfig(self,mode,buddylist,permit,deny):
         users=[]
         for k in buddylist.keys():

@@ -37,19 +37,20 @@ class makeConnection:
         b.notifyOnDisconnect(self.connectionLost)
         tcp.Client(server,int(port),b)
         self.connected=1
+        self.b=b
 
     def connectionFailed(self,tb):
         if self.connected:
             self.im.connectionFailed(self.ref,"Could not connect to host!\n"+tb)
             if self.attached:
-                self.im.detachGateway(self)
+                self.im.detachGateway(self.ref)
         self.connected=0
 
     def connectionLost(self):
         if self.connected:
             self.im.connectionLost(self.ref,"Connection lost.")
             if self.attached:
-                self.im.detachGateway(self)
+                self.im.detachGateway(self.ref)
         self.connected=0
     
     def gotIdentity(self,identity):
@@ -58,6 +59,7 @@ class makeConnection:
     def pbCallback(self,perspective):
         self.im.attachGateway(self.ref)
         self.ref.connected(perspective)
+        self.ref.b=self.b
         self.attached=1
         
 class WordsGateway(gateway.Gateway,pb.Referenced):
@@ -72,6 +74,9 @@ class WordsGateway(gateway.Gateway,pb.Referenced):
         self._connected=0
         self._list=()
         self._changes=[]
+
+    def loseConnection(self):
+        self.b.transport.loseConnection()
         
 #The PB interface.
     def connected(self, perspective):

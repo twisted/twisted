@@ -462,12 +462,8 @@ class AccountManager(Toplevel):
         if online=="False":
             self.logonGateway(options)
         else:
-            for g in self.im.gateways.values():
-                if g.username==username and g.protocol==gateway:
-                    self.im.addCallback(g,"error", \
-                        self.handleDisconnectGracefully)
-                    g.transport.loseConnection()
-    
+            self.logoffGateway(username,gateway)
+                
     def logonGateway(self,options):
         gateway=options[3]
         username=options[0]["username"]
@@ -482,15 +478,18 @@ class AccountManager(Toplevel):
                     self.gateways[gateway+" "+username][0][key]=value
         apply(gateways.__gateways__[gateway].makeConnection,(self.im,),options[0])
     
+    def logoffGateway(self,username,gateway):
+        for g in self.im.gateways.values():
+            if g.username==username and g.protocol==gateway:
+                self.im.addCallback(g,"error", \
+                    self.handleDisconnectGracefully)
+                g.loseConnection()
+    
     def deleteGateway(self):
         index=self.list.index(ACTIVE)
         username,online,auto,gateway=self.list.get(index)
         self.list.delete(index)
-        for g in self.im.gateways.values():
-            if g.protocol==gateway and g.username==username:
-                self.im.addCallback(g,"error", \
-                    self.handleDisconnectGracefully)
-                g.transport.loseConnection()
+        self.logoffGateway(username,gateway)
         try:
             del self.gateways[gateway+" "+username]
         except:
@@ -504,8 +503,8 @@ class AccountManager(Toplevel):
     def handleDetached(self,im,gateway,event):
         if im.cl!=None: im.cl.removeGateway(gateway)
         try:
-            options=self.gateways[gatway.protocol+" "+gateway.username]
-        except:
+            options=self.gateways[gateway.protocol+" "+gateway.username]
+        except KeyError:
             return
         self._modifygateway(gateway.protocol,options[0],options[1],options[2],"False")
 
@@ -527,14 +526,14 @@ def main():
     im=im2.InstanceMessenger()
     im.am=AccountManager(im)
     try:
-        f=open(os.path.expanduser("~/.imsaved"),"r")
+        f=open(os.path.expanduser("~"+os.sep+".imsaved"),"r")
     except:
         pass
     else:
         im.am.loadState(f)
     mainloop()
     tkinternet.stop()
-    f=open(os.path.expanduser("~/.imsaved"),"w")
+    f=open(os.path.expanduser("~"+os.sep+".imsaved"),"w")
     im.am.saveState(f)
 
 if __name__=="__main__":main()
