@@ -46,28 +46,28 @@ class XPathTestCase(unittest.TestCase):
         self.assertEquals(xp.queryForNodes(e), [bar1, bar2, bar3])
 
         xp = XPathQuery("/foo/*[@attrib2='value2']")
-        assert xp.matches(e) == True
-        assert xp.queryForNodes(e) == [bar2]
+        self.assertEquals(xp.matches(e), True)
+        self.assertEquals(xp.queryForNodes(e), [bar2])
 
         xp = XPathQuery("/foo/bar[2]")
-        assert xp.matches(e) == 1
-        assert xp.queryForNodes(e) == [bar1]
+        self.assertEquals(xp.matches(e), 1)
+        self.assertEquals(xp.queryForNodes(e), [bar1])
 
         xp = XPathQuery("/foo[@xmlns='testns']/bar2")
-        assert xp.matches(e) == 1
+        self.assertEquals(xp.matches(e), 1)
 
         xp = XPathQuery("/foo[@xmlns='badns']/bar2")
-        assert xp.matches(e) == 0
+        self.assertEquals(xp.matches(e), 0)
 
         xp = XPathQuery("/foo[@attrib1='value1']")
-        assert xp.matches(e) == 1
+        self.assertEquals(xp.matches(e), 1)
 
         xp = XPathQuery("/foo")
-        assert xp.queryForString(e) == "somecontent"
-        assert xp.queryForStringList(e) == ["somecontent", "somemorecontent"]
+        self.assertEquals(xp.queryForString(e), "somecontent")
+        self.assertEquals(xp.queryForStringList(e), ["somecontent", "somemorecontent"])
 
         xp = XPathQuery("/foo/bar")
-        assert xp.queryForNodes(e) == [bar1, bar3]
+        self.assertEquals(xp.queryForNodes(e), [bar1, bar3])
 
         xp = XPathQuery("/foo[text() = 'somecontent']")
         self.assertEquals(xp.matches(e), True)

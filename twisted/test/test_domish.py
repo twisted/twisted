@@ -23,29 +23,29 @@ from twisted.xish import domish, xpath
 class DomishTestCase(unittest.TestCase):
     def testEscaping(self):
         s = "&<>'\""
-        assert domish.escapeToXml(s) == "&amp;&lt;&gt;'\""
-        assert domish.escapeToXml(s, 1) == "&amp;&lt;&gt;&apos;&quot;"
+        self.assertEquals(domish.escapeToXml(s), "&amp;&lt;&gt;'\"")
+        self.assertEquals(domish.escapeToXml(s, 1), "&amp;&lt;&gt;&apos;&quot;")
 
     def testSerialization(self):
         e = domish.Element(("testns", "foo"))
-        assert e.toXml() == "<foo/>"
-        assert e.toXml(closeElement = 0) == "<foo>"
+        self.assertEquals(e.toXml(), "<foo/>")
+        self.assertEquals(e.toXml(closeElement = 0), "<foo>")
 
     def testNamespaceObject(self):
         ns = domish.Namespace("testns")
-        assert ns.foo == ("testns", "foo")
+        self.assertEquals(ns.foo, ("testns", "foo"))
 
     def testElementInit(self):
         e = domish.Element(("testns", "foo"))
-        assert e.name == "foo"
-        assert e.uri == "testns"
-        assert e.defaultUri == "testns"
-        assert e.parent == None
+        self.assertEquals(e.name, "foo")
+        self.assertEquals(e.uri, "testns")
+        self.assertEquals(e.defaultUri, "testns")
+        self.assertEquals(e.parent, None)
 
         e = domish.Element(("testns", "foo"), "test2ns")
-        assert e.name == "foo"
-        assert e.uri == "testns"
-        assert e.defaultUri == "test2ns"
+        self.assertEquals(e.name, "foo")
+        self.assertEquals(e.uri, "testns")
+        self.assertEquals(e.defaultUri, "test2ns")
 
     def testChildOps(self):
         e = domish.Element(("testns", "foo"))
@@ -60,27 +60,27 @@ class DomishTestCase(unittest.TestCase):
         e.addContent("123")
 
         # Check content merging
-        assert e.children[-1] == "abc123"
+        self.assertEquals(e.children[-1], "abc123")
 
         # Check str()/content extraction
-        assert str(e) == "somecontent"
+        self.assertEquals(str(e), "somecontent")
 
         # Check direct child accessor
-        assert e.bar2 == b2
+        self.assertEquals(e.bar2, b2)
         e.bar2.addContent("subcontent")
         e.bar2["bar2value"] = "somevalue"
 
         # Check child ops
-        assert e.children[1] == e.bar2
-        assert e.children[2] == e.bar
+        self.assertEquals(e.children[1], e.bar2)
+        self.assertEquals(e.children[2], e.bar)
         
         # Check attribute ops
-        assert e["attrib1"] == "value1"
+        self.assertEquals(e["attrib1"], "value1")
         del e["attrib1"]
-        assert e.hasAttribute("attrib1") == 0
-        assert e["attrib3"] == "value3"
-        assert e.hasAttribute("attrib2") == 0
-        assert e[("testns2", "attrib2")] == "value2"
+        self.assertEquals(e.hasAttribute("attrib1"), 0)
+        self.assertEquals(e["attrib3"], "value3")
+        self.assertEquals(e.hasAttribute("attrib2"), 0)
+        self.assertEquals(e[("testns2", "attrib2")], "value2")
 
 xml1 = """<stream:stream xmlns:stream='etherx' xmlns='jabber'>
              <message to='bar'><x xmlns='xdelay'>some&amp;data&gt;</x></message>
