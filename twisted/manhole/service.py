@@ -4,6 +4,8 @@ import cStringIO
 StringIO = cStringIO
 del cStringIO
 
+import traceback
+
 class Perspective(pb.Perspective):
     def perspective_do(self, mesg):
         fn = "$manhole"
