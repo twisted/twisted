@@ -242,11 +242,15 @@ class SimpleDomain:
         self.name = name
         self.ip = string.join(map(chr, map(int, string.split(ip, '.'))), '')
 
-    def getAnswer(self, name, type):
+    def getAnswers(self, message, name, type):
         if type == dns.MX:
-            return MX(name, type=dns.MX, cls=dns.IN, data=(5, self.name))
+            message.answers.append(MX(name, type=dns.MX, cls=dns.IN, 
+                                      data=(5, self.name)))
+            message.add.append(dns.RR(self.name, type=dns.A, cls=dns.IN, 
+                                      data=self.ip))
         if type == dns.A:
-            return dns.RR(name, type=dns.A, cls=dns.IN, data=self.ip)
+            message.answers.append(dns.RR(name, type=dns.A, cls=dns.IN, 
+                                          data=self.ip))
 
 
 class DNSServerBoss(DNSBoss):
@@ -271,7 +275,6 @@ class DNSServerBoss(DNSBoss):
                 name = string.split(name, '.', 1)[1]
             if not name:
                 continue
-            message.answers.append(self.domains[name].getAnswer(query.name.name,
-                                                                query.type))
+            self.domains[name].getAnswers(message, query.name.name, query.type)
         protocol.writeMessage(message)
         protocol.transport.loseConnection()
