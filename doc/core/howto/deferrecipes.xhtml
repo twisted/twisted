@@ -1,0 +1,111 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Asynchronous Recipes</title>
+</head>
+
+<body>
+
+<h1>Asynchronous Recipes</h1>
+
+<p>This document contains a series of 'recipes' or accepted ways to use
+<code
+class="API" base="twisted.internet.defer">Deferred</code> objects and related
+ideas in Twisted
+code.</p>
+
+<h2>Assumed knowledge</h2>
+
+<p>This document assumes that you are familiar with the basic principle that
+the Twisted framework is structured around: asynchronous, callback-based
+programming, where instead of having blocking code in your program or using
+threads to run blocking code, you have functions that return immediately and
+then begin a callback chain when data is available.</p>
+
+<p>It also assumes that you are familiar with creating and calling back 
+Deferred objects.</p>
+
+<p>See these documents for more information:</p>
+
+<ul>
+<li><a href="async.xhtml">Asynchronous Programming with Twisted</a></li>
+</ul>
+
+<h2>Setting timeouts</h2>
+
+<p>
+In some cases, you will want to regard an asynchronous operation as having
+failed after a certain amount of time has passed. The standard way to set such
+a timeout is to explicitly use <code class="API"
+base="twisted.internet">reactor.callLater</code> to set up your timeout:
+</p>
+
+<pre class="python">
+
+from __future__ import nested_scopes
+from twisted.internet import defer, reactor
+
+def getDummyDeferred():
+    """
+    This function is a dummy: a stand in for whatever function you're
+    calling to generate your Deferred
+    """
+    d = defer.Deferred()
+    # simulates delaying the result somewhat, this figure won't trigger
+    # the timeout handler below
+    DUMMYTIME = 3
+    reactor.callLater(DUMMYTIME, d.callback, "RESULT")
+    
+def timeoutHandler():
+    """
+    This is the function that gets called when your predetermined timeout
+    passes.
+
+    The implementation will be dependent on the task you're performing.
+    Most likely you should have some way to end the task
+    dummyDeferredGeneratingFunction set up here -- perhaps end a connection to
+    a remote server or send a "never mind" message to it. You may also have local
+    tasks that need doing: perhaps you need to tell your user that their request
+    has timed out, or raise some kind of alarm
+    """
+    #replace with implementation!
+    print "Timeout occured"
+
+def getTimeoutCancelFunction(delayedCall):
+    """
+    Return a function which will cancel the delayedCall
+    """
+    def cancelTimeout(deferredResult):
+         if delayedCall.active():
+             delayedCall.cancel()
+        # return the deferredResult for processing by further
+        # callbacks/errbacks
+        return deferredResult
+
+    return cancelTimeout
+
+def timeoutSetter():
+    """
+    This is your application function that gets the Deferred, sets up the
+    timeout and the callbacks
+    """
+    # get our deferred
+    d = getDummyDeferred()
+
+    # tell the reactor to call our timeout function after TIMEOUT seconds have passed
+    TIMEOUT = 10
+    delayedCall = reactor.callLater(TIMEOUT, timeoutHandler)
+
+    # make sure the timeout gets cancelled as soon as the deferred fires,
+    # either with an error or with a successful result
+    d.addBoth(getTimeoutCancelFunction)
+    # add further callbacks and errbacks to d here
+    # ...
+</pre>
+
+</body>
+</html>
+
