@@ -1,6 +1,71 @@
 <html><head><title>Guard In Depth</title></head><body>
 <h1>Guard In Depth</h1>
 
-<p>XXX: To be written</p>
+<p>Woven guard is founded on the <a href="newcred.xhtml">twisted.cred</a>
+framework, and it is important to be somewhat familiar with it to
+work with guard. As always, when using this framework, start
+by writing a <code>IRealm</code>. The guard module expects the
+realm to respond to the <code>resource.IResource</code> interace.</p>
+
+<p>Usually, one or more custom resource classes will be written
+when using guard, but it is not necessary. For example, a guard
+intended to protect a certain directory can use a
+<code>static.File</code> resource. Note that the <code>IRealm</code>
+should be prepared to get the <code>ANONYMOUS</code> avatar ID,
+and handle it correctly. From whatever resource the anonymous
+avatar gets, a link should point to <code>guard.INIT_PERSPECTIVE</code>
+relative to the guard root. This is the only way users can
+log in. From whatever resources the
+non-anonymous avatars get it is strongly recommended to link to
+<code>guard.DESTROY_PERSPECTIVE</code>. This is the only way
+users can log out.</p>
+
+<p>Once the realm is written, it is possible to generate a resource
+which will wrap it with appropriate code to manage users, sessions
+and authentication. But, as always, nothing deals with the realm
+directly -- all the rest of the code deals with a <code>Portal</code>
+which wraps the realm.</p>
+
+<div class="note">
+You will almost always want to put <code>checkers.AllowAnonymousAccess<code>
+in the checkers registered for the <code>Portal</code>, otherwise it
+will be impossible to log in.</div>
+
+<p>The canonical thing is to use
+<code>resource=guard.SessionWrapper(guard.UsernamePasswordWrapper(portal,
+                 callback=callback)</code>.
+The <code>callback</code> is used to redirect the request to
+the appropriate place after a successful login. Usually, you
+will want to redirect to the parent:</p>
+
+<pre>
+def parentRedirect(_):
+    return util.ParentRedirect()
+</pre>
+
+<p>Note that in resources which are children of the guarded resources,
+<code>request.getSession</code> automatically returns the Woven session.
+Since it is a <code>Componentized</code>, it is possible to use
+<code>getComponent</code> and <code>setComponent</code> to keep
+state related to a user in the session.</code>
+
+<p>For simple cases, the approach described here leads to quite a bit
+of boiler-plate code (about 30 lines or so). If a web application has
+simple authentication needs, it is possible to use <code>simpleguard</code>,
+which allows you to skip implementing a realm yourself.</p>
+
+<p>The important function in <code>simpleguard</code> is
+<code>resource=guardResource(resource, checkers, nonauthenticated=None)</code>.
+<code>checkers</code> should be a list of <code>ICredentialChecker</code>s.
+It is not necessary to put <code>AllowAnonymousAccess</code> here --
+it will be added automatically. This allow you to differentiate in resources
+only based on authenticated/anonymous users, without finer distinction.
+However, in the given resources, and their children, it is possible
+to use <code>request.getComponent(simpleguard.Authenticated)</code>. This
+will return <code>None</code> if the request is anonymous, or an instance
+with a <code>.name</code> attribute, which is the avatar ID. This can
+allow the application to personalize parts of it.</p>
+
+<code>TODO: describe modifying the login form.</code>
 
 </body></html>
