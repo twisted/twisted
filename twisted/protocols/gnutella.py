@@ -162,12 +162,12 @@ class GnutellaTalker(LineReceiver):
         """
         Override this to handle pong messages.
 
+        Precondition: descriptorId must be a string of length DESCRIPTORLENGTH.: (type(descriptorId) is types.StringType) and (len(descriptorId) == DESCRIPTORLENGTH): "descriptorId: %s :: %s" % (repr(descriptorId), str(type(descriptorId)),)
+
         @param ipAddress: a string representing an IPv4 address like this "140.184.83.37"; This is the representation that the Python Standard Library's socket.connect() expects.
         @param port: an integer port number
         @param numberOfFilesShared: a long
         @param kbShared: a long
-
-        Precondition: descriptorId must be a string of length DESCRIPTORLENGTH.: (type(descriptorId) is types.StringType) and (len(descriptorId) == DESCRIPTORLENGTH): "descriptorId: %s :: %s" % (repr(descriptorId), str(type(descriptorId)),)
         """
         assert (type(descriptorId) is types.StringType) and (len(descriptorId) == DESCRIPTORLENGTH), "precondition failure: " + "descriptorId must be a string of length DESCRIPTORLENGTH." + " -- " + "descriptorId: %s :: %s" % (repr(descriptorId), str(type(descriptorId)),)
         log.msg("%s.pongReceived(%s, %s, %s, ipAddress=%s, port=%s, numberOfFilesShared=%s, kbShared=%s)" % (str(self), repr(descriptorId), str(ttl), str(hops), str(ipAddress), str(port), str(numberOfFilesShared), str(kbShared), ))
