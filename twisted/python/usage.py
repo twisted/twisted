@@ -185,7 +185,7 @@ class Options:
     def _generic_parameter(self, parameterName, value):
         if value in ('', None):
             raise UsageError, ("Parameter '%s' requires an argument."
-                               % (flagName,))
+                               % (parameterName,))
         setattr(self, parameterName, value)
 
     def _gather_flags(self):
@@ -303,6 +303,25 @@ class Options:
                 if takesArg:
                     name = name + '='
                 longOpt.append(name)
+
+        reverse_dct = {}
+        # Map synonyms
+        for name in dct.keys():
+            method = getattr(self, 'opt_'+name)
+            if not reverse_dct.has_key(method):
+                reverse_dct[method] = []
+            reverse_dct[method].append(name)
+
+        cmpLength = lambda a, b: cmp(len(a), len(b))
+
+        for method, names in reverse_dct.items():
+            if len(names) < 2:
+                continue
+            names_ = names[:]
+            names_.sort(cmpLength)
+            longest = names_.pop()
+            for name in names_:
+                synonyms[name] = longest
 
         return longOpt, shortOpt, docs, settings, synonyms, dispatch
 
