@@ -76,7 +76,7 @@ class JConnection(abstract.FileDescriptor,
             self.producer.resumeProducing()
 
     factory = None # if this attribute is set then we're a client connection
-    
+
     def connectionLost(self, arg=None):
         if not self.disconnected:
             self.disconnected = 1
@@ -228,7 +228,7 @@ class JReactor(ReactorBase):
 
     def wakeUp(self):
         self.q.put(lambda x: x, None)
-    
+
     def run(self, **kwargs):
         import main
         main.running = 1
@@ -239,11 +239,12 @@ class JReactor(ReactorBase):
             timeout = self.timeout()
             if timeout is None:
                 timeout = 1.0
-            
+
             self.doIteration(timeout)
 
     def doIteration(self, timeout):
         # wait at most `timeout` seconds for action to be added to queue
+        log.msg(channel='system', event='iteration', reactor=self)
         try:
             self.q.wait(timeout)
         except timeoutqueue.TimedOut:

@@ -1,15 +1,15 @@
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -96,7 +96,7 @@ class Win32Reactor(default.PosixReactorBase):
     __implements__ = (default.PosixReactorBase.__implements__, IReactorFDSet)
 
     dummyEvent = CreateEvent(None, 0, 0, None)
-    
+
     def _makeSocketEvent(self, fd, action, why, events=events):
         """Make a win32 event object for a socket."""
         event = CreateEvent(None, 0, 0, None)
@@ -148,6 +148,7 @@ class Win32Reactor(default.PosixReactorBase):
     def doWaitForMultipleEvents(self, timeout,
                                 reads=reads,
                                 writes=writes):
+        log.msg(channel='system', event='iteration', reactor=self)
         if timeout is None:
             #timeout = INFINITE
             timeout = 100
@@ -236,29 +237,29 @@ class Process(abstract.FileDescriptor):
      - stdin close is actually signalled by process shutdown, which is wrong.
        Solution is to register stdin pipe with event loop and check for the
        correct event type - this needs to be implemented.
-    
+
     If your subprocess is a python program, you need to:
-    
+
      - Run python.exe with the '-u' command line option - this turns on
        unbuffered I/O. Buffering stdout/err/in can cause problems, see e.g.
        http://support.microsoft.com/default.aspx?scid=kb;EN-US;q1903
-    
+
      - If you don't want Windows messing with data passed over
        stdin/out/err, set the pipes to be in binary mode::
-    
+
         import os, sys, mscvrt
         msvcrt.setmode(sys.stdin.fileno(), os.O_BINARY)
         msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
         msvcrt.setmode(sys.stderr.fileno(), os.O_BINARY)
-    
+
     """
-    
+
     buffer = ''
-    
+
     def __init__(self, reactor, protocol, command, args, environment, path):
         self.reactor = reactor
         self.protocol = protocol
-        
+
         # security attributes for pipes
         sAttrs = win32security.SECURITY_ATTRIBUTES()
         sAttrs.bInheritHandle = 1
@@ -267,33 +268,33 @@ class Process(abstract.FileDescriptor):
         self.hStdoutR, hStdoutW = win32pipe.CreatePipe(sAttrs, 0)
         self.hStderrR, hStderrW = win32pipe.CreatePipe(sAttrs, 0)
         hStdinR,  self.hStdinW  = win32pipe.CreatePipe(sAttrs, 0)
-        
+
         # set the info structure for the new process.
         StartupInfo = win32process.STARTUPINFO()
         StartupInfo.hStdOutput = hStdoutW
         StartupInfo.hStdError  = hStderrW
         StartupInfo.hStdInput  = hStdinR
         StartupInfo.dwFlags = win32process.STARTF_USESTDHANDLES
-        
+
         # Create new handles whose inheritance property is false
         pid = win32api.GetCurrentProcess()
 
         tmp = win32api.DuplicateHandle(pid, self.hStdoutR, pid, 0, 0, win32con.DUPLICATE_SAME_ACCESS)
         win32file.CloseHandle(self.hStdoutR)
         self.hStdoutR = tmp
-        
+
         tmp = win32api.DuplicateHandle(pid, self.hStderrR, pid, 0, 0, win32con.DUPLICATE_SAME_ACCESS)
         win32file.CloseHandle(self.hStderrR)
         self.hStderrR = tmp
-        
+
         tmp = win32api.DuplicateHandle(pid, self.hStdinW, pid, 0, 0, win32con.DUPLICATE_SAME_ACCESS)
         win32file.CloseHandle(self.hStdinW)
         self.hStdinW = tmp
-        
+
         # create the process
         cmdline = "%s %s" % (command, string.join(args[1:], ' '))
         self.hProcess, hThread, dwPid, dwTid = win32process.CreateProcess(None, cmdline, None, None, 1, 0, environment, path, StartupInfo)
-        
+
         # close handles which only the child will use
         win32file.CloseHandle(hStderrW)
         win32file.CloseHandle(hStdoutW)
@@ -314,11 +315,11 @@ class Process(abstract.FileDescriptor):
     def signalProcess(self, signalID):
         if signalID in ("INT", "TERM", "KILL"):
             win32process.TerminateProcess(self.hProcess, 1)
-    
+
     def write(self, data):
         """Write data to the process' stdin."""
         self.outQueue.put(data)
-    
+
     def closeStdin(self):
         """Close the process' stdin."""
         self.outQueue.put(None)
@@ -327,18 +328,18 @@ class Process(abstract.FileDescriptor):
         if hasattr(self, "hStderrR"):
             win32file.CloseHandle(self.hStderrR)
             del self.hStderrR
-    
+
     def closeStdout(self):
         if hasattr(self, "hStdoutR"):
             win32file.CloseHandle(self.hStdoutR)
             del self.hStdoutR
-    
+
     def loseConnection(self):
         """Close the process' stdout, in and err."""
         self.closeStdin()
         self.closeStdout()
         self.closeStderr()
-    
+
     def outConnectionLost(self):
         self.closeStdout() # in case process closed it, not us
         self.protocol.outConnectionLost()
@@ -366,7 +367,7 @@ class Process(abstract.FileDescriptor):
         if self.closedNotifies == 3:
             self.closed = 1
             self.connectionLost()
-    
+
     def connectionLost(self, reason=None):
         """Shut down resources."""
         exitCode = win32process.GetExitCodeProcess(self.hProcess)
@@ -377,7 +378,7 @@ class Process(abstract.FileDescriptor):
         else:
             err = error.ProcessTerminated(exitCode)
         self.protocol.processEnded(failure.Failure(err))
-    
+
     def doWrite(self):
         """Runs in thread."""
         while 1:
@@ -390,7 +391,7 @@ class Process(abstract.FileDescriptor):
                 break
 
         self._closeStdin()
-    
+
     def doReadOut(self):
         """Runs in thread."""
         while 1:
@@ -405,11 +406,11 @@ class Process(abstract.FileDescriptor):
                 finished = 1
             else:
                 self.reactor.callFromThread(self.protocol.outReceived, data)
-            
+
             if finished:
                 self.reactor.callFromThread(self.outConnectionLost)
                 return
-    
+
     def doReadErr(self):
         """Runs in thread."""
         while 1:
@@ -424,12 +425,11 @@ class Process(abstract.FileDescriptor):
                 finished = 1
             else:
                 self.reactor.callFromThread(self.protocol.errReceived, data)
-            
+
             if finished:
                 self.reactor.callFromThread(self.errConnectionLost)
                 return
-            
+
 
 
 __all__ = ["Win32Reactor", "install"]
-

@@ -120,7 +120,7 @@ class QTReactor(default.PosixReactorBase):
         if app is None:
             app = QApplication([])
         self.qApp = app
-    
+
     def addReader(self, reader):
         if not hasReader(reader):
             reads[reader] = TwistedSocketNotifier(self, reader, QSocketNotifier.Read)
@@ -129,12 +129,12 @@ class QTReactor(default.PosixReactorBase):
         if not hasWriter(writer):
             writes[writer] = TwistedSocketNotifier(self, writer, QSocketNotifier.Write)
 
-    def removeReader(self, reader): 
+    def removeReader(self, reader):
         if hasReader(reader):
             reads[reader].shutdown()
             del reads[reader]
 
-    def removeWriter(self, writer): 
+    def removeWriter(self, writer):
         if hasWriter(writer):
             writes[writer].shutdown()
             del writes[writer]
@@ -166,17 +166,18 @@ class QTReactor(default.PosixReactorBase):
 
     def cleanup(self):
         global _timer
-        if _timer: 
+        if _timer:
             _timer.stop()
             _timer = None
 
     def doIteration(self, delay=0.0):
+        log.msg(channel='system', event='iteration', reactor=self)
         if delay is None:
             delay = 1000
         else:
             delay = int(delay * 1000)
         self.qApp.processEvents(delay)
-    
+
     def run(self, installSignalHandlers=1):
         self.running = 1
         self.startRunning(installSignalHandlers=installSignalHandlers)
