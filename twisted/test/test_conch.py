@@ -122,6 +122,28 @@ class SSHKeysHandlingTestCase(unittest.TestCase):
                                      passphrase = 'test').__getstate__(),
             privKey.__getstate__())
 
+    def doWarnerTest(self, randData):
+        import sha
+        from Crypto import Util
+        privKey = keys.getPrivateKeyObject(data = privateDSA_openssh)
+        pubStr = keys.getPublicKeyString(data = publicDSA_openssh)
+        pubKey = keys.getPublicKeyObject(pubStr)
+        testData = 'this is the test data'
+        # this follows the sequence from ssh.keys.signData_dsa
+        objType = keys.objectType(privKey)
+        sigData = sha.new(testData).digest()
+        sig = privKey.sign(sigData, randData)
+        sig = common.NS(objType) + common.NS(''.join(map(Util.number.long_to_bytes, sig)))
+        self.assert_(keys.verifySignature(privKey, sig, testData),
+                     'verifying with private %s failed' %
+                     keys.objectType(privKey))
+    def testWarner1(self):
+        # this works
+        self.doWarnerTest('\xb4\x19\xf7\x9a\xbd\xdf\xcc\xd6\xb2\xd8\xe5\xdb\xc9\x864\x1cd\xa6<')
+    def testWarner2(self):
+        # this fails
+        self.doWarnerTest('\xb4\x19\xf7\x9a\xbd\xdf\xcc\xd6\xb2\xd8\xe5\xdb\xc9\x864\x1cd\xa5<')
+    testWarner2.todo = "always fails, not sure why"
 
 theTest = None
 
