@@ -41,7 +41,7 @@ except AttributeError:
 
 try:
     bool = bool
-except AttributeError:
+except NameError:
     def bool(value):
         """Demote a value to 0 or 1, depending on its truth value
         

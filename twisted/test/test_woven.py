@@ -500,7 +500,7 @@ class GuardTest(unittest.TestCase):
         da = static.Data("b","text/plain")
         q = static.Data("you should never see this either", "text/plain")
         q.putChild("yyy", static.Data("YES", "text/plain"))
-        authFactory = lambda p: q
+        authFactory = lambda p, q=q: q
         pwrap = guard.PerspectiveWrapper(svc, sessWrapped, authFactory)
         swrap = guard.SessionWrapper(pwrap)
         da.putChild("xxx", swrap)

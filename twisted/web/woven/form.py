@@ -3,6 +3,8 @@
 # WORK IN PROGRESS: HARD HAT REQUIRED
 # 
 
+from __future__ import nested_scopes
+
 # Twisted Imports
 
 from twisted.python import formmethod, failure
