@@ -290,7 +290,11 @@ class DOMTemplate(Resource, View):
         if not isinstance(result, defer.Deferred):
             adapter = components.getAdapter(result, INodeMutator, None, components.getAdapterClassWithInheritance)
             if adapter is None:
-                raise NotImplementedError("Your factory method returned a %s instance, but there is no INodeMutator adapter registerred for that type." % type(result))
+                raise NotImplementedError(
+                    "Your factory method returned %s, but there is no "
+                    "INodeMutator adapter registerred for %s." %
+                    (result, getattr(result, "__class__",
+                                     None) or type(result)))
             adapter.d = self.d
             result = adapter.generate(request, node)
         if isinstance(result, defer.Deferred):

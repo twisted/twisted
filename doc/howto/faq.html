@@ -84,13 +84,17 @@ to trigger the bug, etc.) to the <a href="http://twistedmatrix.com/cgi-bin/mailm
 
 <h2>How do I serve PHP/Perl/CGI files with twisted.web?</h2>
 
-<p><code>twisted.web</code> allows you to serve any CGI programs. By default twisted.web serves .cgi-files, .php,
-and .php3 in addition to twisted-specific kinds of resources. Therefore, if your language is represented you'll want to setup a
-webserver as explained in <a href="using-twistedweb.html">Using Twisted.Web Server.</a>, and point your browser
-at your files and see if they render properly.<br/>
-Everything related to CGI is located in the <code>twisted.web.twcgi</code>, and it's here you'll find the classes that you need to subclass in 
-order to support the language of your (or somebody elses) taste. You'll also need to create your own kind of resource if you are using
-a non-unix operatingsystem (such as Windows), or if the default resources has wrong pathnames to the parsers.</p>
+<p><code>twisted.web</code> allows you to serve any CGI programs. By default
+twisted.web serves .cgi-files, .php, and .php3 in addition to twisted-specific
+kinds of resources. Therefore, if your language is represented you'll want to
+setup a webserver as explained in <a href="using-twistedweb.html">Using
+Twisted.Web Server.</a>, and point your browser at your files and see if they
+render properly.<br/> Everything related to CGI is located in the
+<code>twisted.web.twcgi</code>, and it's here you'll find the classes that you
+need to subclass in order to support the language of your (or somebody elses)
+taste. You'll also need to create your own kind of resource if you are using a
+non-unix operatingsystem (such as Windows), or if the default resources has
+wrong pathnames to the parsers.</p>
 
 <p>The following snippet is a .rpy that serves perl-files. Look at <code>twisted.web.twcgi</code>
 for more examples regarding twisted.web and CGI.</p>
@@ -108,4 +112,14 @@ resource.processors = {".pl": PerlScript} # Files that end with .pl will be proc
 resource.indexNames = ['index.pl']
 </pre>
 
-</body></html>
+<h2>I've been using Woven since before it was called Woven.  I just upgraded
+and now I'm getting a confusing traceback talking about INodeMutator. What
+gives?</h2>
+
+<p>You probably have code that's survived the upgrade from PyXML's
+<code>minidom</code> to Twisted's <code>microdom</code>.  Try deleting any
+<code>.pxp</code> files that you have lying around and the error will probably
+go away.</p>
+
+</body>
+</html>
