@@ -64,7 +64,7 @@ class PollReactor(default.PosixReactorBase):
     def _dictRemove(self, selectable, mdict):
         try:
             # the easy way
-            fd = reader.fileno()
+            fd = selectable.fileno()
         except:
             # the hard way: necessary because fileno() may disappear at any
             # moment, thanks to python's underlying sockets impl
