@@ -129,11 +129,12 @@ class WebClientTestCase(unittest.TestCase):
     def testGetPage(self):
         return client.getPage(self.getURL("file")).addCallback(self.assertEquals, "0123456789")
 
-    def testTimeout(self):
+    def testTimeoutNotTriggering(self):
         # Test that when the timeout doesn't trigger, things work as expected.
         d = client.getPage(self.getURL("wait"), timeout=100)
         self.assertEquals(unittest.wait(d), "hello!!!")
 
+    def testTimeoutTriggering(self):
         # Test that when the timeout does trigger, we get a defer.TimeoutError.
         return unittest.assertFailure(
             client.getPage(self.getURL("wait"), timeout=0.5),
