@@ -222,8 +222,10 @@ class BufferingTestCase(unittest.TestCase):
         
         port = reactor.listenSSL(0, server, sCTX, interface='127.0.0.1')
         reactor.connectSSL('127.0.0.1', port.getHost()[2], client, cCTX)
-        
-        for i in range(500):
+
+        i = 0
+        while i < 5000 and not client.buffer:
+            i += 1
             reactor.iterate()
         
         self.assertEquals(client.buffer, ["+OK <some crap>\r\n"])
