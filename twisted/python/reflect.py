@@ -263,7 +263,12 @@ def isinst(inst,clazz):
 
 def namedModule(name):
     """Return a module give its name."""
-    return __import__(name, {}, {}, 'x')
+    topLevel = __import__(name)
+    packages = name.split(".")[1:]
+    m = topLevel
+    for p in packages:
+        m = getattr(m, p)
+    return m
 
 def namedObject(name):
     """Get a fully named module-global object.
