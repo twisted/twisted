@@ -146,6 +146,7 @@ class ThreadPool:
                 except:
                     context.call(ctx, log.deferr)
                 self.working.remove(ct)
+                del o, ctx, function, args, kwargs
             self.waiters.append(ct)
             o = self.q.get()
             self.waiters.remove(ct)
