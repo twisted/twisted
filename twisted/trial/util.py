@@ -30,7 +30,8 @@ class SignalStateManager:
 
     def save(self):
         for signum in [getattr(signal, n) for n in dir(signal)
-                       if n.startswith('SIG') and n[3] != '_']:
+                       if n.startswith('SIG') and n[3] != '_'
+                       and n not in ("SIGKILL", "SIGSTOP")]:
             self._store[signum] = signal.getsignal(signum)
 
     def restore(self):

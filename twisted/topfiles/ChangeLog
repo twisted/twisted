@@ -1,3 +1,9 @@
+2004-11-27  Brian Warner  <warner@lothar.com>
+
+	* util.py (SignalStateManager.save): don't save signal handlers
+	for SIGKILL and SIGSTOP, since we can't set them anyway.
+	Python2.4c1 raises an error when you try.
+
 2004-11-07  Brian Warner  <warner@lothar.com>
 
 	* twisted/test/test_internet.py: correctly check for SSL support.
