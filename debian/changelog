@@ -1,3 +1,16 @@
+twisted (0.10.1-1) unstable; urgency=low
+
+  * New upstream release 
+  * Massive renaming in prespective broker classes
+  * web proxying
+  * TCP connection forwarding
+  * Lots of new protocols: LDAP, finger and obscure RFCs
+  * --plugin option to twistd
+  * web widgets
+  * twisted.enterprise improved a lot 
+
+ -- Moshe Zadka <moshez@debian.org>  Fri, 31 Aug 2001 06:49:00 +0300
+
 twisted (0.10.0-1) unstable; urgency=low
 
   * New upstream release
