@@ -720,6 +720,7 @@ class IPullProducer(IProducer):
         """
     
 class IProtocol(Interface):
+    
     def dataReceived(self, data):
         """Called whenever data is received.
 
@@ -734,11 +735,14 @@ class IProtocol(Interface):
             differing chunk sizes, down to one byte at a time.
         """
 
-    def connectionLost(self, reason="A sensible default value goes here."):
+    def connectionLost(self, reason):
         """Called when the connection is shut down.
 
         Clear any circular references here, and any external references
-        to this Protocol.  The connection has been closed.
+        to this Protocol.  The connection has been closed. The reason
+        Failure wraps a L{twisted.internet.error.ConnectionDone} or
+        L{twisted.internet.error.ConnectionLost} instance (or a subclass
+        of one of those).
 
         @type reason: L{twisted.python.failure.Failure}
         """
@@ -757,7 +761,6 @@ class IProtocol(Interface):
         stops blocking and a socket has been received.  If you need to
         send any greeting or initial message, do it here.
         """
-
 
 
 class IProtocolFactory(Interface):
