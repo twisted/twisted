@@ -17,8 +17,9 @@
 
 
 """
-Different styles of peristed objects.
+Different styles of persisted objects.
 """
+
 # System Imports
 import types
 import cStringIO
