@@ -218,12 +218,12 @@ class DNSClientFactory(protocol.ClientFactory):
 
 
 def createResolver():
-    import resolver, cache
+    import resolve, cache
     if platform.getType() == 'posix':
         theResolver = Resolver('/etc/resolv.conf')
     else:
         theResolver = ThreadedResolver()
-    return resolver.ResolverChain([cache.CacheResolver(), theResolver])
+    return resolve.ResolverChain([cache.CacheResolver(), theResolver])
 
 try:
     theResolver
