@@ -204,7 +204,7 @@ class FileDescriptor(log.Logger, styles.Ephemeral):
         producer is finished. Therefore, make sure you unregister your producer
         when it's finished, or the connection will never close.
         """
-        if self.connected:
+        if self.connected and not self.disconnecting:
             if self._writeDisconnected:
                 # doWrite won't trigger the connection close anymore
                 self.stopReading()
