@@ -419,7 +419,7 @@ class Element(Node):
     def writexml(self, stream, indent='', addindent='', newl='', strip=0):
         # write beginning
         NEVERSINGLETON = ('a', 'li', 'div', 'span', 'title', 'script',
-                          'textarea')
+                          'textarea', 'td')
         # this should never be necessary unless people start 
         # changing .tagName on the fly(?)
         if not self.preserveCase:
@@ -431,12 +431,14 @@ class Element(Node):
         for attr, val in self.attributes.items():
             bext((' ', attr, '="', escape(val), '"'))
         w(j(begin))
-        if self.childNodes or self.tagName.lower() in NEVERSINGLETON:
+        if self.childNodes:
             w(">")
             newindent = indent + addindent
             for child in self.childNodes:
                 child.writexml(stream, newindent, addindent, newl, strip)
             w(j((newl, indent, "</", self.endTagName, '>')))
+        elif self.tagName.lower() in NEVERSINGLETON:
+            w(j(('></', self.endTagName, '>')))
         else:
             w(" />")
 
