@@ -1,0 +1,306 @@
+# Twisted, the Framework of Your Internet
+# Copyright (C) 2001-2002 Matthew W. Lefkowitz
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+"""Tests for twisted.enterprise reflectors."""
+
+from twisted.trial import unittest
+
+import os, random
+
+from twisted.enterprise.row import RowObject
+from twisted.enterprise.reflector import *
+from twisted.enterprise.xmlreflector import XMLReflector
+from twisted.enterprise.sqlreflector import SQLReflector
+from twisted.enterprise import util
+from twisted.trial.util import deferredResult, deferredError
+from twisted.test.test_adbapi import makeSQLTests
+
+tableName = "testTable"
+childTableName = "childTable"
+
+class TestRow(RowObject):
+    rowColumns = [("key_string",      "varchar"),
+                  ("col2",            "int"),
+                  ("another_column",  "varchar"),
+                  ("Column4",         "varchar"),
+                  ("column_5_",       "int")]
+    rowKeyColumns = [("key_string", "varchar")]
+    rowTableName  = tableName
+
+class ChildRow(RowObject):
+    rowColumns    = [("childId",  "int"),
+                     ("foo",      "varchar"),
+                     ("test_key", "varchar"),
+                     ("stuff",    "varchar"),
+                     ("gogogo",   "int"),
+                     ("data",     "varchar")]
+    rowKeyColumns = [("childId", "int")]
+    rowTableName  = childTableName
+    rowForeignKeys = [(tableName,
+                       [("test_key","varchar")],
+                       [("key_string","varchar")],
+                       None, 1)]
+
+main_table_schema = """
+CREATE TABLE testTable (
+  key_string     varchar(64),
+  col2           integer,
+  another_column varchar(64),
+  Column4        varchar(64),
+  column_5_      integer
+)
+"""
+
+child_table_schema = """
+CREATE TABLE childTable (
+  childId        integer,
+  foo            varchar(64),
+  test_key       varchar(64),
+  stuff          varchar(64),
+  gogogo         integer,
+  data           varchar(64)
+)
+"""
+
+def randomizeRow(row, nulls_ok=True, trailing_spaces_ok=True):
+    values = {}
+    for name, type in row.rowColumns:
+        if util.getKeyColumn(row, name):
+            values[name] = getattr(row, name)
+            continue
+        elif nulls_ok and random.randint(0, 9) == 0:
+            value = None # null
+        elif type == 'int':
+            value = random.randint(-10000, 10000)
+        else:
+            if random.randint(0, 9) == 0:
+                value = ''
+            else:
+                value = ''.join(map(lambda i:chr(random.randrange(32,127)),
+                                    xrange(random.randint(1, 64))))
+            if not trailing_spaces_ok:
+                value = value.rstrip()
+        setattr(row, name, value)
+        values[name] = value
+    return values
+
+def rowMatches(row, values):
+    for name, type in row.rowColumns:
+        if getattr(row, name) != values[name]:
+            print ("Mismatch on column %s: |%s| (row) |%s| (values)" %
+                   (name, getattr(row, name), values[name]))
+            return False
+    return True
+
+class ReflectorTestBase:
+    """Base class for testing reflectors."""
+
+    count = 100 # a parameter used for running iterative tests
+
+    def randomizeRow(self, row):
+        return randomizeRow(row, self.nulls_ok, self.trailing_spaces_ok)
+
+    def setUp(self):
+        self.reflector = self.createReflector()
+
+    def tearDown(self):
+        self.destroyReflector()
+
+    def destroyReflector(self):
+        pass
+
+    def testReflector(self):
+        # create one row to work with
+        row = TestRow()
+        row.assignKeyAttr("key_string", "first")
+        values = self.randomizeRow(row)
+
+        # save it
+        deferredResult(self.reflector.insertRow(row))
+
+        # now load it back in
+        whereClause = [("key_string", EQUAL, "first")]
+        d = self.reflector.loadObjectsFrom(tableName, whereClause=whereClause)
+        d.addCallback(self.gotData)
+        deferredResult(d)
+
+        # make sure it came back as what we saved
+        self.failUnless(len(self.data) == 1, "no row")
+        parent = self.data[0]
+        self.failUnless(rowMatches(parent, values), "no match")
+
+        # create some child rows
+        child_values = {}
+        for i in range(0, self.num_iterations):
+            row = ChildRow()
+            row.assignKeyAttr("childId", i)
+            values = self.randomizeRow(row)
+            values['test_key'] = row.test_key = "first"
+            child_values[i] = values
+            deferredResult(self.reflector.insertRow(row))
+            row = None
+
+        d = self.reflector.loadObjectsFrom(childTableName, parentRow=parent)
+        d.addCallback(self.gotData)
+        deferredResult(d)
+
+        self.failUnless(len(self.data) == self.num_iterations,
+                        "no rows on query")
+        self.failUnless(len(parent.childRows) == self.num_iterations,
+                        "did not load child rows: %d" % len(parent.childRows))
+        for child in parent.childRows:
+            self.failUnless(rowMatches(child, child_values[child.childId]),
+                            "child %d does not match" % child.childId)
+
+        # loading these objects a second time should not re-add them
+        # to the parentRow.
+        d = self.reflector.loadObjectsFrom(childTableName, parentRow=parent)
+        d.addCallback(self.gotData)
+        deferredResult(d)
+
+        self.failUnless(len(self.data) == self.num_iterations,
+                        "no rows on query")
+        self.failUnless(len(parent.childRows) == self.num_iterations,
+                        "child rows added twice!: %d" % len(parent.childRows))
+
+        # now change the parent
+        values = self.randomizeRow(parent)
+        deferredResult(self.reflector.updateRow(parent))
+        parent = None
+
+        # now load it back in
+        whereClause = [("key_string", EQUAL, "first")]
+        d = self.reflector.loadObjectsFrom(tableName, whereClause=whereClause)
+        d.addCallback(self.gotData)
+        deferredResult(d)
+
+        # make sure it came back as what we saved
+        self.failUnless(len(self.data) == 1, "no row")
+        parent = self.data[0]
+        self.failUnless(rowMatches(parent, values), "no match")
+
+        # save parent
+        test_values = {}
+        test_values[parent.key_string] = values
+        parent = None
+
+        # save some more test rows
+        for i in range(0, self.num_iterations):
+            row = TestRow()
+            row.assignKeyAttr("key_string", "bulk%d"%i)
+            test_values[row.key_string] = self.randomizeRow(row)
+            deferredResult(self.reflector.insertRow(row))
+            row = None
+
+        # now load them all back in
+        d = self.reflector.loadObjectsFrom("testTable")
+        d.addCallback(self.gotData)
+        deferredResult(d)
+
+        # make sure they are the same
+        self.failUnless(len(self.data) == self.num_iterations + 1,
+                        "query did not get rows")
+        for row in self.data:
+            self.failUnless(rowMatches(row, test_values[row.key_string]),
+                            "child %s does not match" % row.key_string)
+
+        # now change them all
+        for row in self.data:
+            test_values[row.key_string] = self.randomizeRow(row)
+            deferredResult(self.reflector.updateRow(row))
+        self.data = None
+
+        # load'em back
+        d = self.reflector.loadObjectsFrom("testTable")
+        d.addCallback(self.gotData)
+        deferredResult(d)
+
+        # make sure they are the same
+        self.failUnless(len(self.data) == self.num_iterations + 1,
+                        "query did not get rows")
+        for row in self.data:
+            self.failUnless(rowMatches(row, test_values[row.key_string]),
+                            "child %s does not match" % row.key_string)
+
+        # now delete them
+        for row in self.data:
+            deferredResult(self.reflector.deleteRow(row))
+        self.data = None
+
+        # load'em back
+        d = self.reflector.loadObjectsFrom("testTable")
+        d.addCallback(self.gotData)
+        deferredResult(d)
+
+        self.failUnless(len(self.data) == 0, "rows were not deleted")
+
+        # create one row to work with
+        row = TestRow()
+        row.assignKeyAttr("key_string", "first")
+        values = self.randomizeRow(row)
+
+        # save it
+        deferredResult(self.reflector.insertRow(row))
+
+        # delete it
+        deferredResult(self.reflector.deleteRow(row))
+
+    def gotData(self, data):
+        self.data = data
+
+
+class XMLReflectorTestCase(ReflectorTestBase, unittest.TestCase):
+    """Test cases for the XML reflector. """
+
+    DB = "./xmlDB"
+
+    nulls_ok = True
+    trailing_spaces_ok = True
+
+    num_iterations = 10 # slow
+
+    def createReflector(self):
+        return XMLReflector(self.DB, [TestRow, ChildRow])
+
+
+class SQLReflectorTestBase(ReflectorTestBase):
+    """Base class for the SQL reflector."""
+
+    def createReflector(self):
+        self.startDB()
+        self.dbpool = self.makePool()
+        self.dbpool.start()
+        deferredResult(self.dbpool.runOperation(main_table_schema))
+        deferredResult(self.dbpool.runOperation(child_table_schema))
+        reflectorClass = self.escape_slashes and SQLReflector \
+                         or NoSlashSQLReflector
+        return reflectorClass(self.dbpool, [TestRow, ChildRow])
+
+    def destroyReflector(self):
+        deferredResult(self.dbpool.runOperation('DROP TABLE testTable'))
+        deferredResult(self.dbpool.runOperation('DROP TABLE childTable'))
+        self.dbpool.close()
+        self.stopDB()
+
+# GadflyReflectorTestCase SQLiteReflectorTestCase PyPgSQLReflectorTestCase
+# PsycopgReflectorTestCase MySQLReflectorTestCase FirebirdReflectorTestCase
+makeSQLTests(SQLReflectorTestBase, 'ReflectorTestCase', globals())
+
+class NoSlashSQLReflector(SQLReflector):
+    """An sql reflector that only escapes single quotes."""
+
+    def escape_string(self, text):
+        return text.replace("'", "''")

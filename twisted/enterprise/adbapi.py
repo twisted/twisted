@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_enterprise -*-
+# -*- test-case-name: twisted.test.test_adbapi -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
