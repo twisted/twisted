@@ -1,6 +1,7 @@
 TEST, TEST.
  
  * run the unit tests.
+./admin/runtests
  * run the accepttests. I use:
 WEBBROWSER='galeon -n' IRCCLIENT=epic4 admin/accepttests -b
  * make sure distributed web servers are working; test on zaibach.
@@ -35,14 +36,18 @@ kill `cat twistd.pid`
        (same as above, I've gotta automate this)
 
  * OK, so everything's working, time to update release documents
- * README: add a new Quote of the Release, update all mentions of last version 
-   number (use your editor's search function, there are several of them)
- * doc/howto/installing-twisted
  * ChangeLog: Browse through twisted-commits; if you see any updates that are
    significant but weren't mentioned in ChangeLog, retroactively add them
- * ChangeLog: Add an entry: * .: Releasing Twisted <version>
- * twisted/copyright.py: Update the version number.
- * cvs commit README doc/howto/installing-twisted ChangeLog twisted/copyright.py
+ * README: add a new Quote of the Release
+
+ * --- All the way from here to the SF hell is supposed to be automated ---
+ * The other things here are done by release-twisted's upver functionality:
+   * README: update all mentions of last version 
+     number (use your editor's search function, there are several of them)
+   * doc/howto/installing-twisted.html
+   * ChangeLog: Add an entry: * .: Releasing Twisted <version>
+   * twisted/copyright.py: Update the version number.
+   * cvs commit README doc/howto/installing-twisted.html ChangeLog twisted/copyright.py
 
 
  * After ensuring we're really ready to dist:
