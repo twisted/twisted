@@ -138,6 +138,3 @@ class NNTPTestCase(unittest.TestCase):
         #         reactor.iterate(1) # fetchGroup()
         #         reactor.iterate(1) # postArticle()
 
-    def tearDown(self):
-        # Clean up the pickle file
-        shutil.rmtree('news.db')

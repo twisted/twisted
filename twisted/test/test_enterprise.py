@@ -83,15 +83,6 @@ class EnterpriseTestCase(unittest.TestCase):
             self.reflector.insertRow(row)
             self.childRows.append(row)
             
-    def tearDown(self):
-        # cleans up the XML db from the file system
-        self.reflector.deleteRow(self.newRow)
-        for row in self.childRows:
-            self.reflector.deleteRow(row)
-        os.rmdir(self.DB + "/" + tableName)
-        os.rmdir(self.DB + "/" + childTableName)
-        os.rmdir(self.DB)
-    
     def testQuery(self):
         self.reflector.insertRow(self.newRow)
         self.reflector.loadObjectsFrom(childTableName, parentRow=self.newRow).addCallback(self.gotData)

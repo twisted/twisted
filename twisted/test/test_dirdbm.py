@@ -30,11 +30,6 @@ class DirDbmTestCase(unittest.TestCase):
         self.dbm = dirdbm.open(self.path)
         self.items = (('abc', 'foo'), ('/lalal', '\000\001'), ('\000\012', 'baz'))
     
-    def tearDown(self):
-        shutil.rmtree(self.path)
-        if os.path.isdir('dirdbm.rebuild.test'):
-            shutil.rmtree('dirdbm.rebuild.test')
-        
     def testRebuildInteraction(self):
         from twisted.persisted import dirdbm
         from twisted.python import rebuild
