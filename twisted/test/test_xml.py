@@ -54,6 +54,24 @@ class SUXTest(TestCase):
 
 class MicroDOMTest(TestCase):
 
+    def testCaseSensitiveSoonCloser(self):
+	s = """
+	      <HTML><BODY>
+	      <P ALIGN="CENTER">
+		<A HREF="http://www.apache.org/"><IMG SRC="/icons/apache_pb.gif"></A>
+	      </P>
+
+	      <P>
+		This is an insane set of text nodes that should NOT be gathered under
+		the A tag above.
+	      </P>
+	      </BODY></HTML>
+	    """
+	d = microdom.parseString(s, beExtremelyLenient=1)
+        l = domhelpers.findNodesNamed(d.documentElement, 'a')
+	n = domhelpers.gatherTextNodes(l[0],1).replace('&nbsp;',' ')
+	self.assertEquals(n.find('insane'), -1)
+
     def testEmptyError(self):
         self.assertRaises(sux.ParseError, microdom.parseString, "")
 

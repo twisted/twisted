@@ -683,7 +683,7 @@ class MicroDOMParser(XMLParser):
         self.elementstack.append(el)
         if parent:
             parent.appendChild(el)
-        if (self.beExtremelyLenient and name in self.soonClosers):
+        if (self.beExtremelyLenient and el.tagName in self.soonClosers):
             self.gotTagEnd(name)
 
     def _gotStandalone(self, factory, data):
