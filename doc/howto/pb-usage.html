@@ -42,7 +42,7 @@ request references to the objects you want to provide it: this helps you
 implement your security model. Because it is so common to export just a single
 object (and because a <code>remote_*</code> method on that one can return a
 reference to any other object you might want to give out), the simplest example
-is one where the <code class="API" base="twisted.spread">BrokerFactory</code>
+is one where the <code class="API" base="twisted.spread.pb">BrokerFactory</code>
 is given the root object, and the client retrieves it.</p>
 
 <p>The client side uses
