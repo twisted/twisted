@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_rawudp -*-
+# -*- test-case-name: twisted.pair.test.test_rawudp -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001-2002 Matthew W. Lefkowitz
 #
@@ -22,6 +22,8 @@ import struct
 
 from twisted.internet import protocol
 from twisted.pair import raw
+from twisted.python import components
+from zope.interface import implements
 
 class UDPHeader:
     def __init__(self, data):
@@ -30,7 +32,7 @@ class UDPHeader:
                  = struct.unpack("!HHHH", data[:8])
 
 class RawUDPProtocol(protocol.AbstractDatagramProtocol):
-    __implements__ = raw.IRawDatagramProtocol
+    implements(raw.IRawDatagramProtocol)
     def __init__(self):
         self.udpProtos = {}
 
@@ -64,3 +66,5 @@ class RawUDPProtocol(protocol.AbstractDatagramProtocol):
         for proto in self.udpProtos.get(header.dest, ()):
             proto.datagramReceived(data[8:],
                                    (source, header.source))
+
+components.backwardsCompatImplements(RawUDPProtocol)

@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.pair.test.test_ethernet -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001-2002 Matthew W. Lefkowitz
 #
@@ -14,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# -*- test-case-name: twisted.pair.test.test_ethernet -*-
+
 
 """Support for working directly with ethernet frames"""
 
@@ -24,6 +25,8 @@ import struct
 from twisted.internet import protocol
 from twisted.pair import raw
 from twisted.python import components
+from zope.interface import implements
+
 
 class IEthernetProtocol(components.Interface):
     """An interface for protocols that handle Ethernet frames"""
@@ -40,7 +43,9 @@ class EthernetHeader:
                     = struct.unpack("!6s6sH", data[:6+6+2])
 
 class EthernetProtocol(protocol.AbstractDatagramProtocol):
-    __implements__ = IEthernetProtocol
+
+    implements(IEthernetProtocol)
+    
     def __init__(self):
         self.etherProtos = {}
 
@@ -62,3 +67,5 @@ class EthernetProtocol(protocol.AbstractDatagramProtocol):
                                    dest=header.dest,
                                    source=header.source,
                                    protocol=header.proto)
+
+components.backwardsCompatImplements(EthernetProtocol)

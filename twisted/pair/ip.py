@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.pair.test.test_ip -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001-2002 Matthew W. Lefkowitz
 #
@@ -14,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# -*- test-case-name: twisted.pair.test.test_ip -*-
+
 
 """Support for working directly with IP packets"""
 
@@ -24,6 +25,8 @@ import socket
 from twisted.internet import protocol
 from twisted.pair import raw
 from twisted.python import components
+from zope.interface import implements
+
 
 class IPHeader:
     def __init__(self, data):
@@ -42,7 +45,7 @@ class IPHeader:
 MAX_SIZE = 2L**32
 
 class IPProtocol(protocol.AbstractDatagramProtocol):
-    __implements__ = raw.IRawPacketProtocol
+    implements(raw.IRawPacketProtocol)
 
     def __init__(self):
         self.ipProtos = {}
@@ -80,3 +83,5 @@ class IPProtocol(protocol.AbstractDatagramProtocol):
                                    more_fragments=header.more_fragments,
                                    ttl=header.ttl,
                                    )
+
+components.backwardsCompatImplements(IPProtocol)

@@ -19,9 +19,11 @@ from twisted.trial import unittest
 from twisted.internet import protocol, reactor, error
 from twisted.python import failure, components
 from twisted.pair import ethernet, raw
+from zope.interface import implements
 
 class MyProtocol:
-    __implements__ = raw.IRawPacketProtocol
+    implements(raw.IRawPacketProtocol)
+    
     def __init__(self, expecting):
         self.expecting = list(expecting)
 
