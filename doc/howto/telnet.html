@@ -106,11 +106,13 @@ we create a new telnet Shell Factory, and we tell the
 application to listen on TCP port 4040 with the ShellFactory
 we've created.</p>
 
-<p>Now let's start the application. This causes all ports on
-the application to start listening for incoming connections.
+<p>Now let's enable logging and start the application. This causes all
+ports on the application to start listening for incoming connections.
 This step is basically what the 'twistd' utility does.</p>
 
 <pre class="python-interpreter">
+&gt;&gt;&gt; <em>from twisted.python import log</em>
+&gt;&gt;&gt; <em>log.startLogging(sys.stdout)</em>
 &gt;&gt;&gt; <em>application.run()</em>
 twisted.protocols.telnet.ShellFactory starting on 4040
 </pre>
