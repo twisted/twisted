@@ -427,7 +427,7 @@ class RegistrationTestCase(unittest.TestCase):
         r = TestRealm()
         p = cred.portal.Portal(r)
         c = cred.checkers.InMemoryUsernamePasswordDatabaseDontUse()
-        c.addUser('userXname', 'passXword')
+        c.addUser('userXname@127.0.0.1', 'passXword')
         p.registerChecker(c)
         self.proxy.portal = p
 
