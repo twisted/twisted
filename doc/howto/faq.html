@@ -88,6 +88,16 @@ the module is unstable.</p>
 But as always, the only accurate way of knowing a module's stability is reading
 the module's docstrings.</p>
 
+<h2>Installation</h2>
+
+<h3>I run mktap (from site-packages/twisted/scripts/mktap.py)
+and nothing happens!</h3>
+
+<p>Don't run scripts out of <code>site-packages</code>.  The Windows
+installer should install executable scripts to someplace like
+<code>C:\Python22\scripts\</code>, *nix installers put them in
+<code>$PREFIX/bin</code>, which should be in your $PATH.</p>
+
 <h2>Core Twisted</h2>
 
 <h3>How can I access self.factory from my Protocol's __init__?</h3>
