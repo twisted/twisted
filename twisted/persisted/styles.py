@@ -259,7 +259,7 @@ class Versioned:
                 persistVers = persistVers + 1
                 method = base.__dict__.get('upgradeToVersion%s' % persistVers, None)
                 if method:
-                    log.msg( "Upgrading %s to version %s" % (base, persistVers) )
+                    log.msg( "Upgrading %s (of %s @ %s) to version %s" % (reflect.qual(base), reflect.qual(self.__class__), id(self), persistVers) )
                     method(self)
                 else:
                     log.msg( 'Warning: cannot upgrade %s to version %s' % (base, persistVers) )
