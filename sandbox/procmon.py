@@ -14,6 +14,35 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
+"""
+ProcessMonitor: run processes, monitor progress, and restart when
+they die.
+
+The ProcessMonitor will not attempt to restart a process that appears
+to die instantly -- with each "instant" death (less than 1 second, by
+default), it will delay approximately twice as long before restarting
+it. A successful run will reset the counter.
+
+The primary interface is "addProcess" and "removeProcess". When the
+service is active (that is, when the application it is attached to
+is running), adding a process automatically starts it.
+
+Each process has a name (a string). This string must uniquely identify
+the process. In particular, attempting to add two processes with the
+same name will result in a key error.
+
+The arguments to addProcess are:
+- name -- a string, uniquely specifying the process
+- args -- a list of arguments. the first will be used to determine the
+          executable
+- optionally, the uid and gid this process should be run as (by default,
+  it does not change uid/gid before running processes).
+
+Note that args are passed to the system call, not to the shell. If running
+the shell is desired, the common idiom is to use
+.addProcess("name", ['/bin/sh', '-c', shell_script])
+"""
+
 import os, time
 from twisted.python import log
 from twisted.internet import app, protocol, reactor
