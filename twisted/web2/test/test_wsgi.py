@@ -1,9 +1,14 @@
+
 import time
 from twisted.web2.test.test_server import BaseCase
-from twisted.web2 import resource, wsgi
+from twisted.web2 import resource
 from twisted.trial import util
+from twisted.internet import reactor, interfaces
 
-WSGI = wsgi.WSGIResource
+if interfaces.IReactorThreads(reactor, None) is not None:
+    from twisted.web2.wsgi import WSGIResource as WSGI
+else:
+    WSGI = None
 
 class TestContainer(BaseCase):
     wait_timeout = 10.0
@@ -95,5 +100,6 @@ class TestWSGIEnvironment(BaseCase):
         self.assertEnv('https://host/', {'SERVER_PORT': ''})
         self.assertEnv('https://host:523/', {'SERVER_PORT': '523'})
 
-
-    
+if WSGI is None:
+    for cls in (TestContainer, TestWSGIEnvironment):
+        setattr(cls, 'skip', 'Required thread support is missing, skipping')
