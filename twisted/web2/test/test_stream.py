@@ -3,7 +3,7 @@ import tempfile, operator, sys, os
 from twisted.trial import unittest
 from twisted.trial.util import wait, spinUntil
 from twisted.trial.assertions import *
-from twisted.internet import defer
+from twisted.internet import reactor, defer, interfaces
 
 from zope.interface import Interface, Attribute, implements
 
@@ -235,6 +235,9 @@ class FallbackSplitTest(unittest.TestCase):
 
 
 class ProcessStreamerTest(unittest.TestCase):
+
+    if interfaces.IReactorProcess(reactor, None) is None:
+        skip = "Platform lacks spawnProcess support, can't test process streaming."
 
     def runCode(self, code, inputStream=None):
         if inputStream is None:
