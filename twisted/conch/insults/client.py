@@ -71,7 +71,7 @@ class InsultsClient(protocol.Protocol):
 
     def writeStr(self, s):
         """Write a string to the screen.  This does not wrap a the edge of the
-        screen, and stops at \r and \n.
+        screen, and stops at \\r and \\n.
         """
         s = s[:self.width-self.xpos]
         if '\n' in s:
