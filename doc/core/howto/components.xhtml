@@ -338,7 +338,7 @@ automatically looked up an adapter for the socket you tried to plug it into:</p>
 class HairDryer:
     def plug(self, socket):
         adapted = IAmericanSocket(socket)
-        assert socket.voltage() == 110, "BOOM"
+        assert adapted.voltage() == 110, "BOOM"
         print "I was plugged in properly and am operating"
 </pre>
 
