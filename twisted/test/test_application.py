@@ -18,6 +18,7 @@ from twisted.trial import unittest
 from twisted.application import service, compat, internet, app
 from twisted.persisted import sob
 from twisted.python import components
+from twisted.python.runtime import platformType
 from twisted.internet import utils, interfaces, defer
 from twisted.protocols import wire, basic
 from twisted.internet import protocol, reactor
@@ -145,8 +146,13 @@ class TestService(unittest.TestCase):
         self.assert_(not s1.running)
         self.assert_(s.running)
 
-curuid = os.getuid()
-curgid = os.getgid()
+
+if hasattr(os, "getuid"):
+    curuid = os.getuid()
+    curgid = os.getgid()
+else:
+    curuid = curgid = 0
+
 
 class TestProcess(unittest.TestCase):
 
@@ -165,7 +171,7 @@ class TestProcess(unittest.TestCase):
         p = service.Process()
         self.assertEqual(p.uid, curuid)
         self.assertEqual(p.gid, curgid)
-
+    
     def testProcessName(self):
         p = service.Process()
         self.assertEqual(p.processName, None)

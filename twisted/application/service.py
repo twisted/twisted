@@ -32,6 +32,8 @@ import os
 from twisted.python import components
 from twisted.internet import defer
 from twisted.persisted import sob
+from twisted.python.runtime import platformType
+
 
 class IService(components.Interface):
 
@@ -261,7 +263,6 @@ class IProcess(components.Interface):
 
 
 class Process:
-
     """Process running parameters
 
     Sets up uid/gid in the constructor, and has a default
@@ -271,16 +272,21 @@ class Process:
     processName = None
 
     def __init__(self, uid=None, gid=None):
-        """Set uid and gid
+        """Set uid and gid.
 
-        By default, uid or gid will be 0 (superuser)
+        By default, uid or gid will be the current user's if run on POSIX,
+        or 0 if run on Windows.
         """
-        if uid is None:
-            uid = os.getuid()
-        if gid is None:
-            gid = os.getgid()
-        self.uid = uid
-        self.gid = gid
+        if platformType == "posix":
+            if uid is None:
+                uid = os.getuid()
+            if gid is None:
+                gid = os.getgid()
+            self.uid = uid
+            self.gid = gid
+        else:
+            self.uid = uid or 0
+            self.gid = gid or 0
 
 
 def Application(name, uid=None, gid=None):
