@@ -44,9 +44,10 @@ class TOCPerson:
         self.status=status
         getContactsList().setContactStatus(self)
 
-    def sendMessage(self, text, meta={}):
-        if meta.get("style", None) == "emote":
-            text="* "+text+"* "
+    def sendMessage(self, text, meta=None):
+        if meta:
+            if meta.get("style", None) == "emote":
+                text="* "+text+"* "
         self.account.say(self.name,html(text))
         return succeed(text)
 
@@ -56,9 +57,10 @@ class TOCGroup:
         self.account=tocClient
         self.roomID=self.account.roomID[name]
 
-    def sendGroupMessage(self, text, meta={}):
-        if meta.get("style", None) == "emote":
-            text="* "+text+"* "
+    def sendGroupMessage(self, text, meta=None):
+        if meta:
+            if meta.get("style", None) == "emote":
+                text="* "+text+"* "
         self.account.chat_say(self.roomID,html(text))
         return succeed(text)
 
