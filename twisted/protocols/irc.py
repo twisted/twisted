@@ -208,24 +208,35 @@ class IRCClient(basic.LineReceiver):
     dcc_destdir = '.'
     dcc_sessions = None
     
-    # Delay between sending lines
-    lineRate = 1
+    # If this is false, no attempt will be made to identify
+    # ourself to the server.
+    performLogin = 1
+    
+    # Delay between sending lines, default to no throttling
+    # to retain traditional behavior
+    lineRate = None
+    queue = None
+    sendDelay = 0
 
     __pychecker__ = 'unusednames=params,prefix,channel'
 
-    def __init__(self):
-        self.queue = []
-        reactor.callLater(self.lineRate, self._sendLine)
 
-    # Don't flood!
     def sendLine(self, line):
-        self.queue.append(line)
+        if self.lineRate is None:
+            basic.LineReceiver.sendLine(self, lowQuote(line))
+        else:
+            self.queue.append(line)
+            if len(self.queue) == 1:
+                delay, self.sendDelay = self.sendDelay, 0
+                reactor.callLater(delay, self._sendLine)
 
-    
+
     def _sendLine(self):
+        basic.LineReceiver.sendLine(self, lowQuote(self.queue.pop(0)))
         if len(self.queue):
-            basic.LineReceiver.sendLine(self, self.queue.pop(0))
-        reactor.callLater(self.lineRate, self._sendLine)
+            reactor.callLater(self.lineRate, self._sendLine)
+        else:
+            self.sendDelay = self.lineRate
 
 
     ### Interface level client->user output methods
@@ -763,7 +774,10 @@ class IRCClient(basic.LineReceiver):
     ### Protocool methods
 
     def connectionMade(self):
-        self.register(self.nickname)
+        self.queue = []
+        if self.performLogin:
+            self.register(self.nickname)
+
 
     def lineReceived(self, line):
         # some servers (dalnet!) break RFC and send their first few lines just delimited by \n
@@ -781,9 +795,6 @@ class IRCClient(basic.LineReceiver):
                   self.irc_unknown(prefix, command, params)
           except IRCBadMessage:
               apply(self.badMessage, (line,) + sys.exc_info())
-
-    def sendLine(self, line):
-        basic.LineReceiver.sendLine(self, lowQuote(line))
 
     def __getstate__(self):
         dct = self.__dict__.copy()

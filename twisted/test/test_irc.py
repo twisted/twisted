@@ -47,11 +47,8 @@ class QuotingTest(unittest.TestCase):
             self.failUnlessEqual(s, irc.ctcpDequote(irc.ctcpQuote(s)))
 
 class IRCClientWithoutLogin(irc.IRCClient):
-    def connectionMade(self):
-        """Normally, this does a little login dance.
+    performLogin = 0
 
-        But that's not what we're looking for in this test.
-        """
 
 class CTCPTest(unittest.TestCase):
     def setUp(self):
