@@ -22,7 +22,7 @@ enough for converting fairly simple man pages.
 """
 from __future__ import nested_scopes
 
-import re
+import re, os
 quoteRE = re.compile('"(.*?)"')
 
 def escape(text):
@@ -149,8 +149,9 @@ class ManConverter:
 class ProcessingFunctionFactory:
 
     def generate_lore(self, d):
-        return lambda file,_: ManConvertor().convert(open(file),
-                                    open(os.path.splitext(file)+d['ext'], 'w'))
+        ext = d.get('ext', '.html')
+        return lambda file,_: ManConverter().convert(open(file),
+                                    open(os.path.splitext(file)[0]+ext, 'w'))
 
 factory = ProcessingFunctionFactory()
 
