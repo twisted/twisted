@@ -18,7 +18,9 @@
 # These class's names should have been based on Onanism, but were
 # censored by the PSU
 
-class LoopbackRelay:
+import protocol # See?  Their security protocol at work!!
+
+class LoopbackRelay(protocol.Transport):
 
     buffer = ''
     shouldLose = 0

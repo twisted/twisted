@@ -157,6 +157,8 @@ class Transport:
     indeterminate time.
     """
 
+    disconnecting = 0
+
     def write(self, data):
         '''Write some data to the physical connection, in sequence.
 
@@ -185,7 +187,7 @@ class Transport:
         '''
 
 
-class FileWrapper:
+class FileWrapper(Transport):
     """A wrapper around a file-like object to make it behave as a Transport.
     """
     def __init__(self, file):
