@@ -41,7 +41,6 @@ from cStringIO import StringIO
 # Twisted Imports
 from twisted.protocols.sux import XMLParser, ParseError
 from twisted.python import reflect
-from twisted.python.reflect import Accessor
 from twisted.python.compat import isinstance, StringTypes
 
 # create NodeList class
@@ -105,7 +104,7 @@ class MismatchedTags(Exception):
         return "expected </%s>, got </%s> line: %s col: %s, began line: %s col: %s" % (self.expect, self.got, self.endLine, self.endCol, self.begLine, self.begCol)
 
 
-class Node:
+class Node(object):
     nodeName = "Node"
 
     def __init__(self, parentNode=None):
@@ -181,8 +180,19 @@ class Node:
             return self.childNodes[0]
         return None
 
+    #def get_ownerDocument(self):
+    #   """This doesn't really get the owner document; microdom nodes
+    #   don't even have one necessarily.  This gets the root node,
+    #   which is usually what you really meant. 
+    #   *NOT DOM COMPLIANT.*
+    #   """
+    #   node=self
+    #   while (node.parentNode): node=node.parentNode
+    #   return node
+    #ownerDocument=node.get_ownerDocument()
+    # leaving commented for discussion; see also domhelpers.getParents(node)
 
-class Document(Node, Accessor):
+class Document(Node):
 
     def __init__(self, documentElement=None):
         Node.__init__(self)
@@ -210,6 +220,7 @@ class Document(Node, Accessor):
 
     def get_documentElement(self):
         return self.childNodes[0]
+    documentElement=property(get_documentElement)
 
     def appendChild(self, c):
         assert not self.childNodes, "Only one element per document."
