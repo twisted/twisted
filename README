@@ -1,22 +1,22 @@
-Twisted 0.10.2
+Twisted 0.10.3
 
 Quote of the Release:
 
-  <dash> web in my head get it out get it out
+  Adventure, excitement... a Jedi craves not these things.
+        -- Silent Bob, in "Mallrats"
 
-What's new in 0.10.2?
+What's new in 0.10.3?
 
-  twisted.web.guard, password protection for portions of a website.
+  twisted.names, a DNS system, was checked in. It is still being worked on.
 
-  twisted.protocols.ftp works!
+  SSL support is now much more robust, and dirdbm works much better as well.
 
-  twisted.protocols.ftp now has MD5 hashed passwords using OTP.
+  LineReceiver (used by HTTP, SMTP, etc.) limits line length, preventing
+  DoS attacks. SafeNetstringReceiver serves a similar purpose for netstring
+  based protocols.
 
-  twisted.protocols.smtp and twisted.mail changed API in a backwards
-  incompatible way. Now you can have LDAP lookups or PB-based domains
- 
-  Many fixes were made to twisted.internet to cope with obscure socket failure
-  modes in various versions of Windows.
+  Servers under high loads should run faster, since multiple accept() calls
+  are done per select(). Threaded apps might run faster as well.
 
 What is this?
 
