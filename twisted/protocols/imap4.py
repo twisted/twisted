@@ -799,8 +799,10 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def __cbFetch(self, results, tag):
         for (mId, parts) in results.items():
+            P = []
+            map(P.extend, parts.items())
             self.sendUntaggedResponse(
-                '%d FETCH %s' % (mId, collapseNestedLists([parts]))
+                '%d FETCH %s' % (mId, collapseNestedLists([P]))
             )
         self.sendPositiveResponse(tag, 'FETCH completed')
 
@@ -1159,7 +1161,7 @@ class IMAP4Client(basic.LineReceiver):
                 for (mId, fetched) in self.__cbFetch(([L], None)).items():
                     sum = []
                     for f in fetched.get('FLAGS', []):
-                        sum.extend(f)
+                        sum.append(f)
                     flags.setdefault(mId, []).extend(sum)
             else:
                 log.msg('Unhandled unsolicited response: ' + repr(L))
@@ -1433,7 +1435,7 @@ class IMAP4Client(basic.LineReceiver):
                     log.err('Unhandled SELECT response (1): ' + parts)
             elif split[0].upper().strip() == 'FLAGS':
                 split = parts.split(None, 1)
-                datum['FLAGS']= tuple(parseNestedParens(split[1])[0])
+                datum['FLAGS'] = tuple(parseNestedParens(split[1])[0])
             elif split[0].upper().strip() == 'OK':
                 begin = parts.find('[')
                 end = parts.find(']')
@@ -2082,7 +2084,7 @@ class IMAP4Client(basic.LineReceiver):
                         while data:
                             if len(data) < 2:
                                 raise IllegalServerResponse, "Not enough arguments", data
-                            flags.setdefault(id, {}).setdefault(data[0], []).append(data[1])
+                            flags.setdefault(id, {})[data[0]] = data[1]
                             del data[:2]
                 else:
                     print '(2)Ignoring ', parts
