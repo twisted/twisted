@@ -5294,12 +5294,32 @@ def imap4_utf_7(name):
 codecs.register(imap4_utf_7)
 
 __all__ = [
-    'IMAP4Server', 'IMAP4Client', 'IMAP4Exception', 'IllegalClientResponse',
-    'IllegalOperation', 'IllegalMailboxEncoding', 'IMailboxListener',
-    'UnhandledResponse', 'NegativeResponse', 'NoSupportedAuthentication',
-    'IllegalServerResponse', 'IllegalIdentifierError', 'IllegalQueryError',
-    'MismatchedNesting', 'MismatchedQuoting', 'IClientAuthentication',
-    'CramMD5ClientAuthenticator', 'MailboxException', 'MailboxCollision',
-    'NoSuchMailbox', 'ReadOnlyMailbox', 'IAccount', 'MemoryAccount',
-    'IMailbox', 'statusRequestHelper', 'INamespacePresenter',
+    # Protocol classes
+    'IMAP4Server', 'IMAP4Client',
+    
+    # Interfaces
+    'IMailboxListener', 'IClientAuthentication', 'IAccount', 'IMailbox',
+    'INamespacePresenter', 'ICloseableMailbox', 'IMailboxInfo',
+    'IMessage', 'IMessageCopier', 'IMessageFile', 'ISearchableMailbox',
+
+    # Exceptions
+    'IMAP4Exception', 'IllegalClientResponse', 'IllegalOperation',
+    'IllegalMailboxEncoding', 'UnhandledResponse', 'NegativeResponse',
+    'NoSupportedAuthentication', 'IllegalServerResponse',
+    'IllegalIdentifierError', 'IllegalQueryError', 'MismatchedNesting',
+    'MismatchedQuoting', 'MailboxException', 'MailboxCollision',
+    'NoSuchMailbox', 'ReadOnlyMailbox',
+
+    # Auth objects
+    'CramMD5ClientAuthenticator', 'PLAINAuthenticator', 'LOGINAuthenticator',
+    'PLAINCredentials', 'LOGINCredentials',
+
+    # Simple query interface
+    'Query', 'Not', 'Or', 
+    
+    # Miscellaneous
+    'MemoryAccount',
+    'statusRequestHelper',
+    
+    
 ]
