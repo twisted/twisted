@@ -71,5 +71,6 @@ class ImageDisplay(page.Page):
 
 site = server.Site(DirectoryListing(directory=rootDirectory))
 application = service.Application("ImagePool") 
-service.IService(application).addService(internet.TCPServer(8088, site))
+parent = service.IServiceCollection(application)
+internet.TCPServer(8088, site).setServiceParent(parent)
 
