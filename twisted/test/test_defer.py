@@ -232,17 +232,16 @@ class LogTestCase(unittest.TestCase):
     
     def testErrorLog(self):
         c = self.c
-        d = defer.Deferred()
-        d.addCallback(lambda x: 1/0)
-        d.callback(1)
-        del d
-        locals()
+        defer.Deferred().addCallback(lambda x: 1/0).callback(1)
+# do you think it is rad to have memory leaks glyph
+##        d = defer.Deferred()
+##        d.addCallback(lambda x: 1/0)
+##        d.callback(1)
+##        del d
         c2 = [e for e in c if e["isError"]]
         self.assertEquals(len(c2), 1)
         c2[0]["failure"].trap(ZeroDivisionError)
         log.flushErrors(ZeroDivisionError)
-
-    testErrorLog.todo = "fails for me, damn"
 
 
 class DeferredTestCaseII(unittest.TestCase):
