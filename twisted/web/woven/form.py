@@ -193,8 +193,8 @@ class FormFillerWidget(widgets.Widget):
             tr = shell.tr()
             tr.td(align="right", valign="top").text(arg.getShortDescription()+":")
             content = tr.td(valign="top")
-            return (imeth(request, content, arg).node,
-                    content.div(style="color: green").
+            return (imeth(request, content, arg).node, 
+                    content.div(_class="formDescription"). # because class is a keyword
                     text(arg.getLongDescription()).node)
 
     def setUp(self, request, node, data):
@@ -252,7 +252,7 @@ class FormErrorWidget(FormFillerWidget):
             en = self.errorNodes[k]
             tn = self.inputNodes[k]
             for n in en, tn:
-                n.setAttribute('style', "color: red")
+                n.setAttribute('class', "formError")
             en.childNodes[:]=[] # gurfle, CLEAR IT NOW!@#
             if isinstance(f, failure.Failure):
                 f = f.getErrorMessage()
