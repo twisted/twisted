@@ -18,7 +18,7 @@
 from twisted.trial import unittest
 
 # system imports
-import os, tempfile, shutil
+import os, tempfile, shutil, time
 
 # twisted imports
 from twisted.python import logfile
@@ -161,4 +161,63 @@ class LogFileTestCase(unittest.TestCase):
         os.chmod(self.dir, 777)
 
         
+class RiggedDailyLogFile(logfile.DailyLogFile):
+    _clock = 0.0
+
+    def _openFile(self):
+        logfile.DailyLogFile._openFile(self)
+        # rig the date to match _clock, not mtime
+        self.lastDate = self.toDate()
+
+    def toDate(self, *args):
+        if args:
+            return time.gmtime(*args)[:3]
+        return time.gmtime(self._clock)[:3]
+
+class DailyLogFileTestCase(unittest.TestCase):
+    """Test the rotating log file."""
+    
+    def setUp(self):
+        self.dir = tempfile.mktemp()
+        os.makedirs(self.dir)
+        self.name = "testdaily.log"
+        self.path = os.path.join(self.dir, self.name)
+    
+    def tearDown(self):
+        #shutil.rmtree(self.dir)
+        pass
+    
+    def testWriting(self):
+        log = RiggedDailyLogFile(self.name, self.dir)
+        log.write("123")
+        log.write("456")
+        log.flush()
+        log.write("7890")
+        log.close()
         
+        f = open(self.path, "r")
+        self.assertEquals(f.read(), "1234567890")
+        f.close()
+    
+    def testRotation(self):
+        # this logfile should rotate every 10 bytes
+        log = RiggedDailyLogFile(self.name, self.dir)
+        days = [(self.path + '.' + log.suffix(day * 86400)) for day in range(3)]
+        
+        # test automatic rotation
+        log._clock = 0.0    # 1970/01/01 00:00.00
+        log.write("123")
+        log._clock = 43200  # 1970/01/01 12:00.00
+        log.write("4567890")
+        log._clock = 86400  # 1970/01/02 00:00.00
+        log.write("1" * 11)
+        self.assert_(os.path.exists(days[0]))
+        self.assert_(not os.path.exists(days[1]))
+        log._clock = 172800 # 1970/01/03 00:00.00
+        log.write('')
+        self.assert_(os.path.exists(days[0]))
+        self.assert_(os.path.exists(days[1]))
+        self.assert_(not os.path.exists(days[2]))
+        log._clock = 259199 # 1970/01/03 23:59.59
+        log.write("3")
+        self.assert_(not os.path.exists(days[2]))
