@@ -46,7 +46,7 @@ class POP3(basic.LineReceiver):
     def lineReceived(self, line):
 #        print 'Received ', repr(line)
         try:
-            return apply(self.processCommand, tuple(string.split(line)))
+            return self.processCommand(*line.split())
         except (ValueError, AttributeError, POP3Error, TypeError), e:
             self.failResponse('bad protocol or server: %s: %s' % (e.__class__.__name__, e))
     
@@ -60,7 +60,7 @@ class POP3(basic.LineReceiver):
             raise POP3Error("not authenticated yet: cannot do %s" % command)
         f = getattr(self, 'do_' + command, None)
         if f:
-            return apply(getattr(self, 'do_'+command), args)
+            return f(*args)
         raise POP3Error("Unknown protocol command: " + command)
 
     def do_APOP(self, user, digest):
