@@ -1,7 +1,8 @@
 #compdef pyhtmlizer
-_arguments -s \
-'--version[version]' \
-'--help[Display this help and exit.]' \
+_arguments -s -A "-*" \
+"1:source python file:_files -g '*.py'" \
 '(--stylesheet)-s[URL of stylesheet to link to.]:stylesheet:_files' \
 '(-s)--stylesheet=[URL of stylesheet to link to.]:stylesheet:_files' \
+'--version[version]' \
+'--help[Display this help and exit.]' \
 && return 0

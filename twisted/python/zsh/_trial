@@ -1,57 +1,58 @@
 #compdef trial
-_arguments -s \
-'(--help)-h[Display this help and exit.]' \
-'(-h)--help[Display this help and exit.]' \
-'(--rterrors)-e[realtime errors, print out tracebacks as soon as they occur]' \
-'(-e)--rterrors[realtime errors, print out tracebacks as soon as they occur]' \
-"(--debug)-b[Run tests in the Python debugger. Will load '.pdbrc' from current directory if it exists.]" \
-"(-b)--debug[Run tests in the Python debugger. Will load '.pdbrc' from current directory if it exists.]" \
-"--nopm[don't automatically jump into debugger for postmorteming of exceptions]" \
-'(--dry-run)-n[do everything but run the tests]' \
-'(-n)--dry-run[do everything but run the tests]' \
+_arguments -s -A "-*" \
+"*:file|module|package|TestCase|testMethod:_files -g '*.py'" \
 '--profile[Run tests under the Python profiler]' \
-'--benchmark[Run performance tests instead of unit tests.]' \
-'(--until-failure)-u[Repeat test until it fails]' \
-'(-u)--until-failure[Repeat test until it fails]' \
-'(--recurse)-R[Search packages recursively]' \
-'(-R)--recurse[Search packages recursively]' \
-'--psyco[run tests with psyco.full() (EXPERIMENTAL)]' \
-'(--verbose)-v[verbose color output (default)]' \
-'(-v)--verbose[verbose color output (default)]' \
-'(--bwverbose)-o[Colorless verbose output]' \
-'(-o)--bwverbose[Colorless verbose output]' \
-'(--summary)-s[minimal summary output]' \
-'(-s)--summary[minimal summary output]' \
-'(--text)-t[terse text output]' \
-'(-t)--text[terse text output]' \
-'--timing[Timing output]' \
-'--suppresswarnings[Only print warnings to log, not stdout]' \
-'--spew[Print an insanely verbose log of everything that happens.  Useful]' \
-'--version[version]' \
-'--disablegc[Disable the garbage collector]' \
-'(--reactor)-r[Which reactor to use out of: kqueue, poll, qt, default, win, cfreactor, gtk, cf, glade, win32, gtk2, iocp, glib2, wx.]:reactor:(kqueue poll qt default win cfreactor gtk cf glade win32 gtk2 iocp glib2 wx)' \
-'(-r)--reactor=[Which reactor to use out of: kqueue, poll, qt, default, win, cfreactor, gtk, cf, glade, win32, gtk2, iocp, glib2, wx.]:reactor:(kqueue poll qt default win cfreactor gtk cf glade win32 gtk2 iocp glib2 wx)' \
-'(--logfile)-l[log file name]:log file name:_files' \
-'(-l)--logfile=[log file name]:log file name:_files' \
-'(--random)-z[Run tests in random order using the specified seed]:random seed:_files' \
-'(-z)--random=[Run tests in random order using the specified seed]:random seed:_files' \
 "--reporter-args=[a string passed to the reporter's 'args' kwarg]:reporter-args:_files" \
 "--trialdebug=[turn on trial's internal debugging flags]:trialdebug:_files" \
+'(--dry-run)-n[do everything but run the tests]' \
+'(-n)--dry-run[do everything but run the tests]' \
+'(--reactor)-r[Which reactor to use out of: kqueue, poll, qt, default, win, cfreactor, gtk, cf, glade, win32, gtk2, iocp, glib2, wx.]:reactor:(kqueue poll qt default win cfreactor gtk cf glade win32 gtk2 iocp glib2 wx)' \
+'(-r)--reactor=[Which reactor to use out of: kqueue, poll, qt, default, win, cfreactor, gtk, cf, glade, win32, gtk2, iocp, glib2, wx.]:reactor:(kqueue poll qt default win cfreactor gtk cf glade win32 gtk2 iocp glib2 wx)' \
+'--suppresswarnings[Only print warnings to log, not stdout]' \
 '(--extra)-x[Add an extra argument.  (This is a hack necessary for interfacing with]:extra:_files' \
 '(-x)--extra=[Add an extra argument.  (This is a hack necessary for interfacing with]:extra:_files' \
+'(--text)-t[terse text output]' \
+'(-t)--text[terse text output]' \
+'(--random)-z[Run tests in random order using the specified seed]:random seed:_files' \
+'(-z)--random=[Run tests in random order using the specified seed]:random seed:_files' \
+'--benchmark[Run performance tests instead of unit tests.]' \
 '(--module)-m[Module to test (DEPRECATED)]:module:_files' \
 '(-m)--module=[Module to test (DEPRECATED)]:module:_files' \
+'--psyco[run tests with psyco.full() (EXPERIMENTAL)]' \
 '(--file)-f[Filename of module to test (DEPRECATED)]:file:_files' \
 '(-f)--file=[Filename of module to test (DEPRECATED)]:file:_files' \
-'--recursionlimit=[see sys.setrecursionlimit()]:recursionlimit:_files' \
-'(--method)-M[Method to test (DEPRECATED)]:method:_files' \
-'(-M)--method=[Method to test (DEPRECATED)]:method:_files' \
-'--reporter=[the fully-qualified name of the class to use as the reporter for]:reporter:_files' \
-'--coverage=[Generate coverage information in the given directory]:coverage:_files' \
-"--tbformat=[Specify the format to display tracebacks with. Valid formats are 'plain', 'emacs',]:tbformat:_files" \
-'(--package)-p[Package to test (DEPRECATED)]:package:_files' \
-'(-p)--package=[Package to test (DEPRECATED)]:package:_files' \
-'--testmodule=[Module to find a test case for]:testmodule:_files' \
+'--timing[Timing output]' \
+'(--logfile)-l[log file name]:log file name:_files' \
+'(-l)--logfile=[log file name]:log file name:_files' \
+'(--help)-h[Display this help and exit.]' \
+'(-h)--help[Display this help and exit.]' \
+'(--verbose -v --bwverbose)-o[Colorless verbose output]' \
+'(--verbose -v -o)--bwverbose[Colorless verbose output]' \
 '(--testcase)-c[TestCase to test (DEPRECATED)]:testcase:_files' \
 '(-c)--testcase=[TestCase to test (DEPRECATED)]:testcase:_files' \
+"--tbformat=[Specify the format to display tracebacks with. Valid formats are 'plain', 'emacs',]:tbformat:_files" \
+'(--bwverbose -o --verbose)-v[verbose color output (default)]' \
+'(--bwverbose -o -v)--verbose[verbose color output (default)]' \
+'(--package)-p[Package to test (DEPRECATED)]:package:_files' \
+'(-p)--package=[Package to test (DEPRECATED)]:package:_files' \
+'--spew[Print an insanely verbose log of everything that happens.  Useful]' \
+'--reporter=[the fully-qualified name of the class to use as the reporter for]:reporter:_files' \
+'(--recurse)-R[Search packages recursively]' \
+'(-R)--recurse[Search packages recursively]' \
+'--testmodule=[Module to find a test case for]:testmodule:_files' \
+'(--summary)-s[minimal summary output]' \
+'(-s)--summary[minimal summary output]' \
+'(--until-failure)-u[Repeat test until it fails]' \
+'(-u)--until-failure[Repeat test until it fails]' \
+'--version[version]' \
+"--nopm[don't automatically jump into debugger for postmorteming of exceptions]" \
+'--disablegc[Disable the garbage collector]' \
+'--recursionlimit=[see sys.setrecursionlimit()]:recursionlimit:_files' \
+"(--debug)-b[Run tests in the Python debugger. Will load '.pdbrc' from current directory if it exists.]" \
+"(-b)--debug[Run tests in the Python debugger. Will load '.pdbrc' from current directory if it exists.]" \
+'--coverage=[Generate coverage information in the given directory]:coverage:_files' \
+'(--rterrors)-e[realtime errors, print out tracebacks as soon as they occur]' \
+'(-e)--rterrors[realtime errors, print out tracebacks as soon as they occur]' \
+'(--method)-M[Method to test (DEPRECATED)]:method:_files' \
+'(-M)--method=[Method to test (DEPRECATED)]:method:_files' \
 && return 0

@@ -1,45 +1,45 @@
 #compdef twistd
-_arguments -s \
-'--savestats[save the Stats object rather than the text output of the profiler.]' \
-'(--no_save)-o[do not save state on shutdown]' \
-'(-o)--no_save[do not save state on shutdown]' \
-'(--encrypted)-e[The specified tap/aos/xml file is encrypted.]' \
-'(-e)--encrypted[The specified tap/aos/xml file is encrypted.]' \
-"--nothotshot[Don't use the 'hotshot' profiler even if it's available.]" \
-"(--nodaemon)-n[don't daemonize]" \
-"(-n)--nodaemon[don't daemonize]" \
-'(--quiet)-q[No-op for backwards compatability.]' \
-'(-q)--quiet[No-op for backwards compatability.]' \
-"--originalname[Don't try to change the process name]" \
-'--syslog[Log to syslog, not to file]' \
-'(--)--euid[Set only effective user-id rather than real user-id. (This option has no effect unless the server is running as root, in which case it means not to shed all privileges after binding ports, retaining the option to regain privileges in cases such as spawning processes. Use with caution.)]' \
-'(--debug)-b[run the application in the Python Debugger (implies nodaemon),]' \
-'(-b)--debug[run the application in the Python Debugger (implies nodaemon),]' \
-'--spew[Print an insanely verbose log of everything that happens.]' \
-'--version[Print version information and exit.]' \
-'--help[Display this help and exit.]' \
-'(--logfile)-l[log to a specified file, - for stdout]:logfile:_files' \
-'(-l)--logfile=[log to a specified file, - for stdout]:logfile:_files' \
+_arguments -s -A "-*" \
 '(--profile)-p[Run in profile mode, dumping results to specified file]:profile:_files' \
 '(-p)--profile=[Run in profile mode, dumping results to specified file]:profile:_files' \
-'(--python --xml --source -y -x -s --file)-f[read the given .tap file]:file:_files -g "*.tap"' \
-'(--python --xml --source -y -x -s -f)--file=[read the given .tap file]:file:_files -g "*.tap"' \
-'(--file --xml --source -f -x -s --python)-y[read an application from within a Python file]:python:_files -g "*.(tac|py)"' \
-'(--file --xml --source -f -x -s -y)--python=[read an application from within a Python file]:python:_files -g "*.(tac|py)"' \
-'(--file --python --source -f -y -s --xml)-x[Read an application from a .tax file (Marmalade format).]:xml:_files -g "*.tax"' \
-'(--file --python --source -f -y -s -x)--xml=[Read an application from a .tax file (Marmalade format).]:xml:_files -g "*.tax"' \
-'(--file --python --xml -f -y -x --source)-s[Read an application from a .tas file (AOT format).]:source:_files -g "*.tas"' \
-'(--file --python --xml -f -y -x -s)--source=[Read an application from a .tas file (AOT format).]:source:_files -g "*.tas"' \
-'(--rundir)-d[Change to a supplied directory before running]:rundir:_dirs' \
-'(-d)--rundir=[Change to a supplied directory before running]:rundir:_dirs' \
 '(--reactor)-r[Which reactor to use out of: kqueue, poll, qt, default, win, cfreactor, gtk, cf, glade, win32, gtk2, iocp, glib2, wx.]:reactor:(kqueue poll qt default win cfreactor gtk cf glade win32 gtk2 iocp glib2 wx)' \
 '(-r)--reactor=[Which reactor to use out of: kqueue, poll, qt, default, win, cfreactor, gtk, cf, glade, win32, gtk2, iocp, glib2, wx.]:reactor:(kqueue poll qt default win cfreactor gtk cf glade win32 gtk2 iocp glib2 wx)' \
-'--report-profile=[E-mail address to use when reporting dynamic execution profiler stats.  This should not be combined with other profiling options.  This will only take effect if the application to be run has an application name.]:report-profile:_files' \
+'(--file --xml --source -f -x -s --python)-y[read an application from within a Python file]:python:_files -g "*.(tac|py)"' \
+'(--file --xml --source -f -x -s -y)--python=[read an application from within a Python file]:python:_files -g "*.(tac|py)"' \
+'(--encrypted)-e[The specified tap/aos/xml file is encrypted.]' \
+'(-e)--encrypted[The specified tap/aos/xml file is encrypted.]' \
+'--syslog[Log to syslog, not to file]' \
 '--prefix=[Use the given prefix when syslogging (default: twisted)]:prefix:_files' \
-'(--)--pidfile=[Name of the pidfile (default: twistd.pid)]:pidfile:_files -g "*.pid"' \
-'--chroot=[Chroot to a supplied directory before running]:chroot directory:_dirs' \
+'--report-profile=[E-mail address to use when reporting dynamic execution profiler stats.  This should not be combined with other profiling options.  This will only take effect if the application to be run has an application name.]:report-profile:_files' \
+'--euid[Set only effective user-id rather than real user-id. (This option has no effect unless the server is running as root, in which case it means not to shed all privileges after binding ports, retaining the option to regain privileges in cases such as spawning processes. Use with caution.)]' \
+'(--python --xml --source -y -x -s --file)-f[read the given .tap file]:file:_files -g "*.tap"' \
+'(--python --xml --source -y -x -s -f)--file=[read the given .tap file]:file:_files -g "*.tap"' \
+"--originalname[Don't try to change the process name]" \
+'(--rundir)-d[Change to a supplied directory before running]:rundir:_dirs' \
+'(-d)--rundir=[Change to a supplied directory before running]:rundir:_dirs' \
+'(--logfile)-l[log to a specified file, - for stdout]:logfile:_files' \
+'(-l)--logfile=[log to a specified file, - for stdout]:logfile:_files' \
+"(--nodaemon)-n[don't daemonize]" \
+"(-n)--nodaemon[don't daemonize]" \
 '(--uid)-u[The uid to run as.]:uid:_files' \
 '(-u)--uid=[The uid to run as.]:uid:_files' \
+'(--file --python --source -f -y -s --xml)-x[Read an application from a .tax file (Marmalade format).]:xml:_files -g "*.tax"' \
+'(--file --python --source -f -y -s -x)--xml=[Read an application from a .tax file (Marmalade format).]:xml:_files -g "*.tax"' \
+'--chroot=[Chroot to a supplied directory before running]:chroot directory:_dirs' \
+'(--no_save)-o[do not save state on shutdown]' \
+'(-o)--no_save[do not save state on shutdown]' \
+'--spew[Print an insanely verbose log of everything that happens.]' \
+'--help[Display this help and exit.]' \
+'(--quiet)-q[No-op for backwards compatability.]' \
+'(-q)--quiet[No-op for backwards compatability.]' \
+'(--file --python --xml -f -y -x --source)-s[Read an application from a .tas file (AOT format).]:source:_files -g "*.tas"' \
+'(--file --python --xml -f -y -x -s)--source=[Read an application from a .tas file (AOT format).]:source:_files -g "*.tas"' \
+"--nothotshot[Don't use the 'hotshot' profiler even if it's available.]" \
 '(--gid)-g[The gid to run as.]:gid:_files' \
 '(-g)--gid=[The gid to run as.]:gid:_files' \
+'--savestats[save the Stats object rather than the text output of the profiler.]' \
+'--version[Print version information and exit.]' \
+'(--debug)-b[run the application in the Python Debugger (implies nodaemon),]' \
+'(-b)--debug[run the application in the Python Debugger (implies nodaemon),]' \
+'--pidfile=[Name of the pidfile (default: twistd.pid)]:pidfile:_files -g "*.pid"' \
 && return 0

@@ -1,17 +1,17 @@
 #compdef tapconvert
-_arguments -s \
-'(--decrypt)-d[The specified tap/aos/xml file is encrypted.]' \
-'(-d)--decrypt[The specified tap/aos/xml file is encrypted.]' \
+_arguments -s -A "-*" \
+"(--typeout)-t[The output format to use; this can be 'pickle', 'xml', or 'source'.]:typeout:(pickle xml source)" \
+"(-t)--typeout=[The output format to use; this can be 'pickle', 'xml', or 'source'.]:typeout:(pickle xml source)" \
 '(--encrypt)-e[Encrypt file before writing]' \
 '(-e)--encrypt[Encrypt file before writing]' \
 '--version[version]' \
-'--help[Display this help and exit.]' \
 '(--in)-i[The filename of the tap to read from]:tap file to read from:_files' \
 '(-i)--in=[The filename of the tap to read from]:tap file to read from:_files' \
-'(--out)-o[A filename to write the tap to]:tap file to write to:_files' \
-'(-o)--out=[A filename to write the tap to]:tap file to write to:_files' \
+'--help[Display this help and exit.]' \
 "(--typein)-f[The  format to use; this can be 'guess', 'python', 'pickle', 'xml', or 'source'.]:typein:(guess python pickle xml source)" \
 "(-f)--typein=[The  format to use; this can be 'guess', 'python', 'pickle', 'xml', or 'source'.]:typein:(guess python pickle xml source)" \
-"(--typeout)-t[The output format to use; this can be 'pickle', 'xml', or 'source'.]:typeout:(pickle xml source)" \
-"(-t)--typeout=[The output format to use; this can be 'pickle', 'xml', or 'source'.]:typeout:(pickle xml source)" \
+'(--decrypt)-d[The specified tap/aos/xml file is encrypted.]' \
+'(-d)--decrypt[The specified tap/aos/xml file is encrypted.]' \
+'(--out)-o[A filename to write the tap to]:tap file to write to:_files' \
+'(-o)--out=[A filename to write the tap to]:tap file to write to:_files' \
 && return 0
