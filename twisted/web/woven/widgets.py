@@ -933,17 +933,23 @@ class ExpandMacro(Widget):
             <h3><span slot="greeting" />, <span slot="greetee" />!</h3>
         </div>
     """
-    def __init__(self, model, macroFile="", macroFileDirectory="", macroName="", **kwargs):
+    def __init__(self, model, macroTemplate = "", macroFile="", macroFileDirectory="", macroName="", **kwargs):
+        self.macroTemplate = macroTemplate
         self.macroFile=macroFile
         self.macroFileDirectory=macroFileDirectory
         self.macroName=macroName
         Widget.__init__(self, model, **kwargs)
 
     def generate(self, request, node):
-        templ = view.View(
-            self.model,
-            templateFile=self.macroFile, 
-            templateDirectory=self.macroFileDirectory).lookupTemplate(request)
+        if self.macroTemplate:
+            templ = view.View(
+                self.model,
+                template = self.macroTemplate).lookupTemplate(request)
+        else:
+            templ = view.View(
+                self.model,
+                templateFile=self.macroFile,
+                templateDirectory=self.macroFileDirectory).lookupTemplate(request)
 
         ## We are going to return the macro node from the metatemplate,
         ## after replacing any slot= nodes in it with fill-slot= nodes from `node'
