@@ -25,6 +25,8 @@ from twisted.python import timeoutqueue, log
 
 # Java Imports
 from java.net import Socket, ServerSocket, SocketException, InetAddress
+import java.io.InterruptedIOException
+import java.io.IOException
 from java.lang import System
 import jarray
 
@@ -105,6 +107,11 @@ class Blocker(threading.Thread):
             obj = self.block()
             if obj:
                 self.q.put(obj)
+        self.q.put((self.blockerFinished, None))
+
+    def blockerFinished(self, ignore):
+        """Called in main thread when blocker finishes."""
+        pass
 
     def run(self):
         self.blockForever()
@@ -175,8 +182,14 @@ class AcceptBlocker(Blocker):
         self.svr = svr
 
     def block(self):
-        skt = self.svr.sskt.accept()
-        return (self.svr.gotSocket, skt)
+        while 1:
+            try:
+                skt = self.svr.sskt.accept()
+                return (self.svr.gotSocket, skt)
+            except (java.io.InterruptedIOException, java.io.IOException):
+                if not self.svr.isListening:
+                    self.svr.sskt.close()
+                    return
 
 
 class JReactor(ReactorBase):
@@ -193,7 +206,7 @@ class JReactor(ReactorBase):
 
     def wakeUp(self):
         self.q.put(lambda x: x, None)
-
+    
     def run(self, **kwargs):
         import main
         main.running = 1
@@ -203,18 +216,21 @@ class JReactor(ReactorBase):
             self.runUntilCurrent()
             timeout = self.timeout()
             if timeout is None:
-                timeout = 1000
+                timeout = 1.0
+            
+            self.doIteration(timeout)
 
-            # wait at most `timeout` seconds for action to be added to queue
-            try:
-                self.q.wait(timeout)
-            except timeoutqueue.TimedOut:
-                pass
+    def doIteration(self, timeout):
+        # wait at most `timeout` seconds for action to be added to queue
+        try:
+            self.q.wait(timeout)
+        except timeoutqueue.TimedOut:
+            pass
 
-            # run actions in queue
-            for i in range(self.q.qsize()):
-                meth, arg = self.q.get()
-                meth(arg)
+        # run actions in queue
+        for i in range(self.q.qsize()):
+            meth, arg = self.q.get()
+            meth(arg)
 
 
     def listenTCP(self, port, factory, backlog=5, interface=''):
@@ -241,13 +257,19 @@ class JavaPort:
         self.isListening = 1
 
     def startListening(self):
+        self.factory.doStart()
         sskt = ServerSocket(self.port, self.backlog)
+        sskt.setSoTimeout(100)
         self.sskt = sskt
         AcceptBlocker(self, self.reactor.q).start()
         log.msg("%s starting on %s"%(self.factory.__class__, self.port))
 
     def stopListening(self):
         self.isListening = 0
+
+    def blockerFinished(self, ignore):
+        """Called when AcceptBlocker is finished."""
+        self.factory.doStop()
 
     def gotSocket(self, skt):
         # make this into an address...
@@ -260,6 +282,7 @@ class JavaPort:
         wb.start()
         transport.writeBlocker = wb
         ReadBlocker(transport, self.reactor.q).start()
+
 
 def install():
     reactor = JReactor()
