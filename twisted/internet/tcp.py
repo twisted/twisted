@@ -237,7 +237,7 @@ class BaseClient(Connection):
         self.stopReading()
         self.stopWriting()
         self.startReading()
-        self.protocol = self.connector.buildProtocol(self.getHost())
+        self.protocol = self.connector.buildProtocol(self.getPeer())
         self.protocol.makeConnection(self)
         self.logstr = self.protocol.__class__.__name__+",client"
     
