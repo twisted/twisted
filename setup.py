@@ -268,7 +268,7 @@ desktop environments, and your toaster.
         'bin/tapconvert', 'bin/websetroot',
         'bin/lore',
         'bin/tkmktap', 'bin/conch', 'bin/ckeygen',
-        'bin/tkconch', 'bin/trial', 'bin/mailmail'
+        'bin/tkconch', 'bin/trial', 'bin/mail/mailmail'
     ],
     'cmdclass': {
         'build_scripts': build_scripts_twisted,
