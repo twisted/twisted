@@ -1,4 +1,5 @@
 #!/bin/sh
+set -e
 cp sandbox/book.tex doc/howto
 cd doc/howto
 for file in *.html
@@ -6,6 +7,7 @@ for file in *.html
 done
 latex book.tex
 dvips -o book.ps book.dvi
+ps2pdf13 book.ps book.pdf
 rm -f book.ps.bz2
 bzip2 -9 book.ps
 rm *.eps *.tex *.aux *.log book.dvi
