@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.42 2002/07/12 05:54:21 krz Exp $
+$Id: setup.py,v 1.43 2002/07/17 08:52:44 jh Exp $
 """
 
 import distutils, os, sys, string
@@ -146,10 +146,9 @@ twisted_scripts = map(scriptname, glob('twisted/scripts/[!_]*.py'))
 class install_data_twisted(install_data):
     def finalize_options (self):
         self.set_undefined_options('install',
-            ('install_lib', 'install_dir'),
-            ('root', 'root'),
-            ('force', 'force'),
+            ('install_lib', 'install_dir')
         )
+        install_data.finalize_options(self)
 
 
 # Custom build_ext command simlar to the one in Python2.1/setup.py.  This
