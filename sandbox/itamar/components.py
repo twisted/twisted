@@ -142,6 +142,14 @@ class MetaInterface(interface.InterfaceClass):
         registry = theAdapterRegistry
         registry.register([self], to, '', using)
 
+    def __getattr__(self, attr):
+        warnings.warn("Don't get attributes off Interface, use .queryDescriptionFor() etc. instead", DeprecationWarning)
+        result = self.queryDescriptionFor(attr)
+        if result == None:
+            raise AttributeError, attr
+        return result
+
+
 Interface = MetaInterface("Interface", __module__="twisted.python.components")
 
 def tupleTreeToList(t, l=None):
