@@ -17,6 +17,9 @@
 # These class's names should have been based on Onanism, but were
 # censored by the PSU
 
+# system imports
+import tempfile
+
 # Twisted Imports
 from twisted.internet import interfaces, protocol, main
 from twisted.python import hook, failure
@@ -106,6 +109,24 @@ def loopbackTCP(server, client, port=64124):
     reactor.iterate()
     clientF = LoopbackClientFactory(client)
     reactor.connectTCP('127.0.0.1', port, clientF)
+    
+    while not clientF.disconnected:
+        reactor.iterate()
+
+    serverPort.stopListening()
+    reactor.iterate()
+
+
+def loopbackUNIX(server, client):
+    """Run session between server and client protocol instances over UNIX socket."""
+    path = tempfile.mktemp()
+    from twisted.internet import reactor
+    f = protocol.Factory()
+    f.buildProtocol = lambda addr, p=server: p
+    serverPort = reactor.listenUNIX(path, f)
+    reactor.iterate()
+    clientF = LoopbackClientFactory(client)
+    reactor.connectUNIX(path, clientF)
     
     while not clientF.disconnected:
         reactor.iterate()

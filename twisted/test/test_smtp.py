@@ -128,6 +128,9 @@ class MySMTPClient(protocols.smtp.SMTPClient):
 
 class LoopbackSMTPTestCase(unittest.TestCase):
 
+    def loopback(self, server, client):
+        loopback.loopbackTCP(server, client)
+        
     def testMessages(self):
         factory = internet.protocol.Factory()
         factory.domains = {}
@@ -136,7 +139,7 @@ class LoopbackSMTPTestCase(unittest.TestCase):
         protocol =  DomainSMTP()
         protocol.service = factory
         clientProtocol = MySMTPClient()
-        loopback.loopbackTCP(protocol, clientProtocol)
+        self.loopback(protocol, clientProtocol)
 
 
 class FakeSMTPServer(protocols.basic.LineReceiver):
