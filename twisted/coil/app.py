@@ -198,7 +198,7 @@ class ApplicationConfig(coil.StaticCollection):
         l.putEntity("tcp", PortCollection(self.app, 'tcp'))
         try:
             l.putEntity("ssl", PortCollection(self.app, 'ssl'))
-        except ImportError:
+        except (ImportError, AttributeError):
             pass
         l.putEntity("udp", PortCollection(self.app, 'udp'))
         l.lock()
