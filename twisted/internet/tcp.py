@@ -194,10 +194,12 @@ class Connection(abstract.FileDescriptor):
 
         def startTLS(self, ctx):
             assert not self.TLS
-
+            self.stopReading()
+            self.stopWriting()
             self._startTLS()
             self.socket = SSL.Connection(ctx.getContext(), self.socket)
             self.fileno = self.socket.fileno
+            self.startReading()
 
         def _startTLS(self):
             self.TLS = 1
