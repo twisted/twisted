@@ -18,6 +18,8 @@
 
 from __future__ import nested_scopes
 
+__version__ = '$Revision: 1.26 $'[11:-2]
+
 import os, sys
 from UserDict import UserDict
 

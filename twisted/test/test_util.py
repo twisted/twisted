@@ -64,10 +64,14 @@ class GetPasswordTest(unittest.TestCase):
         # Fun path games because for my sub-process, 'import twisted'
         # doesn't always point to the package containing this test
         # module.
+        # (XXX: Does that mean that when sub-process imports this module
+        # and it does 'from twisted.python import util', it's going to get
+        # the wrong version of that too?)
         script = """\
 import sys
-sys.path.insert(0, "%(dir)s")
+sys.path.insert(0, \"%(dir)s\")
 import test_util
+print test_util.util.__version__
 print test_util.reversePassword()
 """ % {'dir': path.dirname(__file__)}
         cmd_in, cmd_out, cmd_err = os.popen3("%(python)s -c '%(script)s'" %
@@ -75,6 +79,11 @@ print test_util.reversePassword()
                                               'script': script})
         cmd_in.write("secret\n")
         cmd_in.close()
+        uversion = cmd_out.readline()[:-1]
+        self.failUnlessEqual(uversion, util.__version__,
+                             "I want to test module version %r, "
+                             "but the subprocess is using version %r." %
+                             (util.__version__, uversion))
         # stripping print's trailing newline.
         secret = cmd_out.read()[:-1]
         errors = cmd_err.read()
