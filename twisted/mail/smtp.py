@@ -44,7 +44,12 @@ import MimeWriter, tempfile, rfc822
 import warnings
 import binascii
 import sys
-from email.base64MIME import encode as encode_base64
+
+try:
+    from email.base64MIME import encode as encode_base64
+except ImportError:
+    def encode_base64(s, eol='\n'):
+        return s.encode('base64').rstrip() + eol
 
 try:
     from cStringIO import StringIO
