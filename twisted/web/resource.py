@@ -148,10 +148,11 @@ class Resource(coil.ConfigCollection):
 
         The return value of this method will be the rendered page, unless the
         return value is twisted.web.server.NOT_DONE_YET, in which case it is
-        this class's responsability to write the results to
+        this class's responsibility to write the results to
         request.write(data), then call request.finish().
         """
-        raise NotImplementedError("%s.render called" % reflect.qual(self.__class__))
+        raise NotImplementedError("%s.render called" %
+                                  reflect.qual(self.__class__))
 
 
 #t.w imports
