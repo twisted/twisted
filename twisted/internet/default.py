@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.65 2003/02/21 19:30:18 exarkun Exp $
+# $Id: default.py,v 1.66 2003/03/04 21:36:38 exarkun Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -377,6 +377,9 @@ if platform.getType() == "win32":
 else:
     _select = select.select
 
+# Exceptions that doSelect might return frequently
+_NO_FILENO = error.ConnectionFdescWentAway('Handler has no fileno method')
+_NO_FILEDESC = error.ConnectionFdescWentAway('Filedescriptor went away')
 
 class SelectReactor(PosixReactorBase):
     """A select() based reactor - runs on all POSIX platforms and on Win32.
@@ -451,23 +454,25 @@ class SelectReactor(PosixReactorBase):
                 # This for pausing input when we're not ready for more.
                 log.logOwner.own(selectable)
                 try:
-                    why = getattr(selectable, method)()
-                    handfn = getattr(selectable, 'fileno', None)
-                    if not handfn:
-                        why = error.ConnectionFdescWentAway('Handler has no fileno method')
-                    elif handfn() == -1:
-                        why = error.ConnectionFdescWentAway('Filedescriptor went away')
-                except:
-                    log.deferr()
-                    why = sys.exc_value
-                if why:
-                    self.removeReader(selectable)
-                    self.removeWriter(selectable)
                     try:
-                        selectable.connectionLost(failure.Failure(why))
+                        why = getattr(selectable, method)()
+                        handfn = getattr(selectable, 'fileno', None)
+                        if not handfn:
+                            why = _NO_FILENO
+                        elif handfn() == -1:
+                            why = _NO_FILEDESC
                     except:
                         log.deferr()
-                log.logOwner.disown(selectable)
+                        why = sys.exc_value
+                    if why:
+                        self.removeReader(selectable)
+                        self.removeWriter(selectable)
+                        try:
+                            selectable.connectionLost(failure.Failure(why))
+                        except:
+                            log.deferr()
+                finally:
+                    log.logOwner.disown(selectable)
 
     doIteration = doSelect
 
