@@ -342,7 +342,7 @@ class Request(pb.Copyable, http.Request, components.Componentized):
         return self.session
 
     def prePathURL(self):
-        inet, addr, port = self.getHost()
+        port = self.getHost().port
         if self.isSecure():
             default = 443
         else:
