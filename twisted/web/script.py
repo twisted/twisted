@@ -31,15 +31,15 @@ del cStringIO
 import traceback
 
 def PyCompiler(path):
-	"""
-	I am a normal py file which will define a "resource" global upon completion
-	The resource global should be an instance of Resource, and will be returned
-	"""
-	globals = {}
+    """
+    I am a normal py file which will define a "resource" global upon completion
+    The resource global should be an instance of Resource, and will be returned
+    """
+    globals = {}
 
-	execfile(path, globals, globals)
-	
-	return globals['resource']
+    execfile(path, globals, globals)
+    
+    return globals['resource']
 
 class PythonScript(resource.Resource):
     """I am an extremely simple dynamic resource; an embedded python script.

@@ -26,6 +26,6 @@ from twisted.python.components import implements, getAdapter
 from twisted.web.resource import IResource
 
 def ResourceUnpickler(path):
-	fl = open(path)
-	result = Unpickler(fl).load()
-	return result
+    fl = open(path)
+    result = Unpickler(fl).load()
+    return result

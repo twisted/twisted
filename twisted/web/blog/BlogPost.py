@@ -20,11 +20,11 @@ A simple Blog Post object.
 from time import ctime
 
 class BlogPost:
-	"""
-	A data-bearing class that represents a single Blog post.
-	"""
-	def __init__(self, topic="", body="", user=None):
-		self.topic = topic
-		self.body = body
-		self.user = user
-		self.timestamp = ctime()
+    """
+    A data-bearing class that represents a single Blog post.
+    """
+    def __init__(self, topic="", body="", user=None):
+        self.topic = topic
+        self.body = body
+        self.user = user
+        self.timestamp = ctime()
