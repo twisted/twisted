@@ -17,6 +17,8 @@
 
 from twisted.python import log
 from twisted.cred import identity
+import types
+
 
 class Perspective:
     """I am an Identity's view onto a service.
@@ -36,16 +38,24 @@ class Perspective:
         I participate in.  (My identity name will be 'Nobody' by
         default, which will normally not resolve.)
         """
+        if not isinstance(perspectiveName, types.StringType):
+            raise TypeError
+        if not isinstance(identityName, types.StringType):
+            raise TypeError
         self.perspectiveName = perspectiveName
         self.identityName = identityName
 
     def setIdentityName(self, name):
+        if not isinstance(name, types.StringType):
+            raise TypeError
         self.identityName = name
 
-    def setIdentity(self, identity):
+    def setIdentity(self, ident):
         """Determine which identity I connect to.
         """
-        self.setIdentityName(identity.name)
+        if not isinstance(ident, identity.Identity):
+            raise TypeError
+        self.setIdentityName(ident.name)
 
     def makeIdentity(self, password):
         """Make an identity from this perspective with a password.
@@ -54,6 +64,8 @@ class Perspective:
         where the distinction between Perspective and Identity is weak,
         such as single-Service servers.
         """
+        if not isinstance(password, types.StringType):
+            raise TypeError
         ident = identity.Identity(self.perspectiveName, self.service.application)
         self.setIdentityName(self.perspectiveName)
         ident.setPassword(password)

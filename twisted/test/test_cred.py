@@ -1,11 +1,29 @@
 
+# Twisted, the Framework of Your Internet
+# Copyright (C) 2001 Matthew W. Lefkowitz
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+"""
+Tests for twisted.cred.
+"""
+
 from pyunit import unittest
 from types import *
 from twisted.internet import app
 from twisted.cred import authorizer, identity, perspective, service
 
-
-EXCLUDE_FROM_BIGSUITE="Incapable test author."
 
 class ForeignObject:
     "A strange object which shouldn't rightly be accepted by anything."
@@ -44,6 +62,7 @@ class AppForServiceTest(Stubby, app.Application):
 
 class ServiceTestCase(unittest.TestCase):
     App = AppForServiceTest
+    
     def setUp(self):
         self.service = service.Service("test service")
 
@@ -84,23 +103,27 @@ class ServiceTestCase(unittest.TestCase):
         app1 = self.App("test app for service-test")
         app2 = self.App("another app?")
         self.service.setApplication(app1)
-        self.assertRaises(AssertationError, self.service.setApplication,
+        self.assertRaises(RuntimeError, self.service.setApplication,
                           app2)
 
-    def testaddPerspective(self):
-        p = perspectve.Perspective("perspective for service-test")
-        self.service.addPerspective(p)
-
     def testgetPerspective(self):
-        pname = "perspective for service-test"
-        p = perspectve.Perspective(pname)
+        self.pname = pname = "perspective for service-test"
+        self.p = p = perspective.Perspective(pname)
         self.service.addPerspective(p)
-        self.service.getPerspective(pname)
+        d = self.service.getPerspectiveRequest(pname)
+        d.addCallback(self._checkPerspective)
+        d.arm()
+    
+    def _checkPerspective(self, q):
+        self.assertEquals(self.p, q)
+        self.assertEquals(self.pname, q.getPerspectiveName())
+        del self.p
+        del self.pname
 
     def testGetSetPerspetiveSanity(self):
         # XXX OBSOLETE
         pname = "perspective for service-test"
-        p = perspectve.Perspective(pname)
+        p = perspective.Perspective(pname)
         self.service.addPerspective(p)
         q = self.service.getPerspectiveNamed(pname)
         self.assertEqual(pname, q.getPerspectiveName())
@@ -134,6 +157,8 @@ class AppForPerspectiveTest(Stubby, app.Application):
     def __init__(self, name, *a, **kw):
         self.name = name
         self.authorizer = "Stub depth exceeded"
+        self.authorizer = authorizer.DefaultAuthorizer()
+        self.authorizer.setApplication(self)
 
 class ServiceForPerspectiveTest(Stubby, service.Service):
     def __init__(self, name, appl):
@@ -157,7 +182,7 @@ class PerspectiveTestCase(unittest.TestCase):
         self.service = self.Service("service for perspective-test",
                                     self.app)
         self.perspective = perspective.Perspective("test perspective")
-
+        self.perspective.setService(self.service)
 
     def testConstruction(self):
         perspective.Perspective("test perspective")
@@ -199,35 +224,23 @@ class PerspectiveTestCase(unittest.TestCase):
                           ForeignObject("not an Identity"))
 
     def testmakeIdentity(self):
-        self.perspective.makeIdentity("password")
-        self.perspective.makeIdentity(None)
-
+        self.ident = ident = self.perspective.makeIdentity("password")
+        self.assert_(ident.verifyPlainPassword("password"))
+        d = self.perspective.getIdentityRequest()
+        d.addCallback(self._gotIdentity)
+        d.arm()
+    
+    def _gotIdentity(self, ident):
+        self.assertEquals(self.ident, ident)
+        del self.ident
+        
     def testmakeIdentity_invalid(self):
         self.assertRaises(TypeError, self.perspective.makeIdentity,
                           ForeignObject("Illegal Passkey"))
 
-    def testmakeIdentity_exists(self):
-        """Does the identity added by makeIdentity actually exist?"""
-
-        raise NotImplementedError, "Um.  How do I do an async unit-test?"
-
-    def testmakeIdentity_password(self):
-        """Is the newly created identity's password correct?"""
-
-        raise NotImplementedError, "Um.  How do I do an async unit-test?"
-
-    def testgetPerspectiveName(self):
-        name = self.perspective.getPerspectiveName()
-        # self.assert_(
-        #    self.service.getPerspectiveNamed(name) is self.perspective)
-
     def testgetService(self):
         s = self.perspective.getService()
         self.assert_(s is self.service)
-
-    def testgetIdentityRequest(self):
-        i = self.perspective.getIdentityRequest()
-        # XXX - is the return value sane?
 
     def testattached(self):
         raise NotImplementedError, \
@@ -294,7 +307,7 @@ class IdentityTestCase(unittest.TestCase):
 
     def test_addKeyForPerspective(self):
         service = self.Service("one", self.app)
-        perspective = self.Perspective("two")
+        perspective = self.Perspective("two", service)
 
         self.ident.addKeyForPerspective(perspective)
         self.assert_(("one", "two") in self.ident.getAllKeys())
@@ -305,12 +318,12 @@ class IdentityTestCase(unittest.TestCase):
         service = self.Service("one", self.app)
 
         for n in ("p1","p2","p3"):
-            perspective = self.Perspective(n)
+            perspective = self.Perspective(n, service)
             self.ident.addKeyForPerspective(perspective)
 
         keys = self.ident.getAllKeys()
 
-        self.assertEqual(keys, 3)
+        self.assertEqual(len(keys), 3)
 
         for n in ("p1","p2","p3"):
             self.assert_(("one", n) in keys)

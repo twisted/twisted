@@ -16,7 +16,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 # System Imports
-import md5
+import md5, types
 
 # Twisted Imports
 from twisted.python import defer, failure
@@ -41,6 +41,11 @@ class Identity:
         I must have a name, and a backreference to the Application that the
         Keys on my keyring make reference to.
         """
+        if not isinstance(name, types.StringType):
+            raise TypeError
+        from twisted.internet import app
+        if not isinstance(application, app.Application):
+            raise TypeError
         self.name = name
         self.application = application
         self.keyring = {}

@@ -25,6 +25,10 @@ from twisted.python import defer
 # Sibling Imports
 from perspective import Perspective
 
+# System Imports
+import types
+
+
 class Service:
     """I am a service that internet applications interact with.
 
@@ -45,6 +49,8 @@ class Service:
 
         Arguments: application, a twisted.internet.app.Application instance.
         """
+        if not isinstance(serviceName, types.StringType):
+            raise TypeError
         self.serviceName = serviceName
         self.perspectives = {}
         self.setApplication(application)
@@ -69,8 +75,11 @@ class Service:
                 del self.perspectives[perspective.perspectiveName]
 
     def setApplication(self, application):
-        if self.application is not application:
-            assert not self.application, "Application already set!"
+        from twisted.internet import app
+        if application and not isinstance(application, app.Application):
+            raise TypeError
+        if self.application and self.application is not application:
+            raise RuntimeError, "Application already set!"
         if application:
             self.application = application
             application.addService(self)
@@ -86,6 +95,8 @@ class Service:
     def addPerspective(self, perspective):
         """Add a perspective to this Service.
         """
+        if not isinstance(perspective, Perspective):
+            raise TypeError
         perspective.setService(self)
         self.perspectives[perspective.getPerspectiveName()] = perspective
 
@@ -126,3 +137,4 @@ class Service:
         """Get a string describing the type of this service.
         """
         return self.serviceType or str(self.__class__)
+
