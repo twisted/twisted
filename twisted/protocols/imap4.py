@@ -325,6 +325,18 @@ class IMAP4Server(basic.LineReceiver):
         else:
             self.sendPositiveResponse(tag, 'Mailbox deleted')
     select_DELETE = auth_DELETE
+    
+    
+    def auth_RENAME(self, tag, args):
+        try:
+            self.account.rename(*args.strip().split())
+        except TypeError:
+            self.sendBadResponse(tag, 'Invalid command syntax')
+        except MailboxException, m:
+            self.sendNegativeResponse(tag, str(m))
+        else:
+            self.sendPositiveResponse(tag, 'Mailbox renamed')
+    select_RENAME = auth_RENAME
 
 class UnhandledResponse(IMAP4Exception): pass
 
@@ -712,6 +724,23 @@ class IMAP4Client(basic.LineReceiver):
         deleted successfully and whose errback is invoked otherwise.
         """
         return self.sendCommand('DELETE', name)
+    
+    def rename(self, oldname, newname):
+        """Rename a mailbox
+        
+        This command is allowed in the Authenticated and Selected states.
+        
+        @type oldname: C{str}
+        @param oldname: The current name of the mailbox to rename.
+        
+        @type newname: C{str}
+        @param newname: The new name to give the mailbox.
+        
+        @rtype: C{Deferred}
+        @return: A deferred whose callback is invoked if the rename is
+        successful and whose errback is invoked otherwise.
+        """
+        return self.sendCommand('RENAME', ' '.join((oldname, newname)))
 
 class MismatchedNesting(Exception):
     pass
@@ -886,7 +915,7 @@ class Account:
 
     def create(self, pathspec):
         paths = filter(None, pathspec.split('/'))
-        for accum in range(1, len(paths) - 1):
+        for accum in range(1, len(paths)):
             try:
                 self.addMailbox('/'.join(paths[:accum]))
             except MailboxCollision:
@@ -909,7 +938,7 @@ class Account:
     def delete(self, name):
         name = name.upper()
         # See if this mailbox exists at all
-        mbox = self.select(name)
+        mbox = self.mailboxes.get(name)
         if not mbox:
             raise MailboxException, "No such mailbox"
         # See if this box is flagged \Noselect
@@ -920,8 +949,36 @@ class Account:
                 if others != name and others.startswith(name):
                     raise MailboxException, "Hierarchically inferior mailboxes exist and \\Noselect is set"
         mbox.destroy()
+        
+        # iff there are no hierarchically inferior names, we will
+        # delete it from our ken.
+        if self._inferiorNames(name) > 1:
+            del self.mailboxes[name]
 
+    def rename(self, oldname, newname):
+        oldname = oldname.upper()
+        newname = newname.upper()
+        if not self.mailboxes.has_key(oldname):
+            raise NoSuchMailbox, oldname
+        
+        inferiors = self._inferiorNames(oldname)
+        inferiors = [(o, o.replace(oldname, newname, 1)) for o in inferiors]
+        
+        for (old, new) in inferiors:
+            if self.mailboxes.has_key(new):
+                raise MailboxCollision, new
 
+        for (old, new) in inferiors:
+            self.mailboxes[new] = self.mailboxes[old]
+            del self.mailboxes[old]
+
+    def _inferiorNames(self, name):
+        inferiors = []
+        for infname in self.mailboxes.keys():
+            if infname.startswith(name):
+                inferiors.append(infname)
+        return inferiors
+        
 class IMailbox(components.Interface):
     def getUIDValidity(self):
         """Return the unique validity identifier for this mailbox.

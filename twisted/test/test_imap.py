@@ -333,7 +333,7 @@ class IMAP4ServerTestCase(unittest.TestCase):
         def delete():
             return self.client.delete('delete/me')
         d = self.connected.addCallbacks(strip(login))
-        d.addCallback(strip(delete))
+        d.addCallbacks(strip(delete), self._ebGeneral)
         d.addCallbacks(strip(self._cbStopClient), self._ebGeneral)
         loopback.loopback(self.server, self.client)
         
@@ -355,7 +355,6 @@ class IMAP4ServerTestCase(unittest.TestCase):
         
         self.assertEquals(str(self.failure.value), 'No such mailbox')
 
-
     def testIllegalDelete(self):
         m = SimpleMailbox()
         m.flags = (r'\Noselect',)
@@ -376,3 +375,35 @@ class IMAP4ServerTestCase(unittest.TestCase):
         loopback.loopback(self.server, self.client)
         
         self.assertEquals(str(self.failure.value), "Hierarchically inferior mailboxes exist and \\Noselect is set")
+
+    def testRename(self):
+        SimpleServer.theAccount.addMailbox('oldmbox')
+        def login():
+            return self.client.login('testuser', 'password-test')
+        def rename():
+            return self.client.rename('oldmbox', 'newname')
+        
+        d = self.connected.addCallback(strip(login))
+        d.addCallbacks(strip(rename), self._ebGeneral)
+        d.addCallbacks(strip(self._cbStopClient), self._ebGeneral)
+        loopback.loopback(self.server, self.client)
+        
+        self.assertEquals(SimpleServer.theAccount.mailboxes.keys(), ['NEWNAME'])
+    
+    def testHierarchicalRename(self):
+        SimpleServer.theAccount.create('oldmbox/m1')
+        SimpleServer.theAccount.create('oldmbox/m2')
+        def login():
+            return self.client.login('testuser', 'password-test')
+        def rename():
+            return self.client.rename('oldmbox', 'newname')
+        
+        d = self.connected.addCallback(strip(login))
+        d.addCallbacks(strip(rename), self._ebGeneral)
+        d.addCallbacks(strip(self._cbStopClient), self._ebGeneral)
+        loopback.loopback(self.server, self.client)
+        
+        mboxes = SimpleServer.theAccount.mailboxes.keys()
+        expected = ['newname', 'newname/m1', 'newname/m2']
+        mboxes.sort()
+        self.assertEquals(mboxes, [s.upper() for s in expected])
