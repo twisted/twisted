@@ -941,7 +941,7 @@ def makeProtocol(controller, baseClass = protocol.Protocol,
             def echoServer(conn):
                 yield conn
                 for data in conn:
-                    yield data  # or conn.write(data)
+                    conn.write(data)
                     yield conn
             
             def echoClient(conn):
@@ -985,12 +985,11 @@ def makeProtocol(controller, baseClass = protocol.Protocol,
             # simply comment out the line breaker line to see
             # how the server behaves without the filter...
             def echoServer(conn):
-                conn = flow.wrap(lineBreaker(conn))
-                yield conn
-                for data in conn:
-                    print "received", data
-                    yield data 
-                    yield conn
+                lines = flow.wrap(lineBreaker(conn))
+                yield lines
+                for data in lines:
+                    conn.write(data)
+                    yield lines
             
             # and the only thing that is changed is that we
             # are sending data in strange chunks, and even
