@@ -47,6 +47,9 @@ class Request(pb.RemoteCopy, server.Request):
         self.setResponseCode  = self.remote.remoteMethod('setResponseCode')
         self.registerProducer = self.remote.remoteMethod('registerProducer')
 
+    def prePathURL(self):
+        return self.remote._prePathURL
+
 
 pb.setCopierForClass(str(server.Request), Request)
 

@@ -140,6 +140,7 @@ class Request(pb.Copyable, http.HTTP):
         del x['server']
         del x['site']
         x['remote'] = pb.ViewPoint(issuer, self)
+        x['_prePathURL'] = self.prePathURL()
         return x
 
     # HTML generation helpers
