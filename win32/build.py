@@ -104,7 +104,7 @@ def run(argv=sys.argv):
     from twisted.copyright import version
 
     twisteddist='Twisted-%s.win32-py2.2.exe' %  version
-    twisteddistnodocs='Twisted%s-%s.win32-py2.2.exe' % ('NoDocs', version)
+    twisteddistnodocs='Twisted_%s-%s.win32-py2.2.exe' % ('NoDocs', version)
 
     shpath=os.environ['PATH']
     os.environ['PATH']='%s;%s' % (shpath,
