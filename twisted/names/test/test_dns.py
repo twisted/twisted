@@ -1,6 +1,6 @@
+# test-case-name: twisted.names.test.test_dns
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 """
 Tests for twisted.names.dns.
