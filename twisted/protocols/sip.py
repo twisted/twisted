@@ -574,11 +574,22 @@ class Base(protocol.DatagramProtocol):
         for m in self.messages:
             if self.debug:
                 log.msg("Received %r from %r" % (m, addr))
+            self._fixupNAT(m, addr)
             if isinstance(m, Request):
                 self.handle_request(m, addr)
             else:
                 self.handle_response(m, addr)
         self.messages[:] = []
+
+    def _fixupNAT(self, message, (srcHost, srcPort)):
+        # RFC 2543 6.40.2
+        senderVia = parseViaHeader(message.headers["via"][0])
+        if senderVia.host != srcHost:
+            senderVia.received = srcHost
+        if senderVia.port != srcPort:
+            senderVia.rport = srcPort
+        if senderVia.received is not None or senderVia.rport is not None:
+            message.headers["via"][0] = senderVia.toString()
 
     def deliverResponse(self, responseMessage):
         """Deliver response.
@@ -715,14 +726,6 @@ class Proxy(Base):
             log.msg("Dropping looped message.")
             return
 
-        # RFC 2543 6.40.2
-        senderVia = parseViaHeader(message.headers["via"][0])
-        if senderVia.host != srcHost:
-            senderVia.received = srcHost
-        if senderVia.port != srcPort:
-            senderVia.rport = srcPort
-        if senderVia.received is not None or senderVia.rport is not None:
-            message.headers["via"][0] = senderVia.toString()
         message.headers["via"].insert(0, viaHeader.toString())
         name, uri, tags = parseAddress(message.headers["to"][0], clean=1)
         d = self.locator.getAddress(uri)
