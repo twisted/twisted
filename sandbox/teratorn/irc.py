@@ -1369,7 +1369,7 @@ class IRCClient(basic.LineReceiver):
         except ValueError:
             return
         # lets see which outgoingFile this goes to
-        for f in self.outgoingDccFiles:
+        for f in self._outgoingDccFiles:
             if f.user == user and f.port == port:
                 f._gotResumeRequest(filename, resumePos)
                 return
