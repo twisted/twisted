@@ -33,13 +33,15 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 __all__ = ['install']
 
 # System Imports
+import sys, time
 try:
-    import pygtk
-    pygtk.require('2.0')
+    if hasattr(sys, 'frozen'):
+        # Don't want to check this for py2exe
+        import pygtk
+        pygtk.require('2.0')
 except ImportError, AttributeError:
     pass # maybe we're using pygtk before this hack existed.
 import gtk
-import sys, time
 
 # Twisted Imports
 from twisted.python import log, threadable, runtime, failure
