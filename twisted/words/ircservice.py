@@ -61,23 +61,26 @@ class IRCChatter(irc.IRC):
                       (member, member, self.servicename, group))
 
 
-    def receiveDirectMessage(self, senderName, message):
+    def receiveDirectMessage(self, senderName, message, metadata=None):
         #>> :glyph_!glyph@adsl-64-123-27-108.dsl.austtx.swbell.net PRIVMSG glyph_ :hello
         #>> :glyph!glyph@adsl-64-123-27-108.dsl.austtx.swbell.net PRIVMSG glyph_ :hello
 
-        lines = string.split(message, '\n')
-        for line in lines:
-            self.sendLine(":%s!%s@%s PRIVMSG %s :%s" %
-                          (senderName, senderName, self.servicename,
-                           self.nickname, line))
+        if (metadata is not None) and (metadata['style'] == 'emote'):
+            message = irc.ctcpStringify([('ACTION', message)])
+            
+        self.sendLine(":%s!%s@%s PRIVMSG %s :%s" %
+                      (senderName, senderName, self.servicename,
+                       self.nickname, irc.lowQuote(message)))
 
 
-    def receiveGroupMessage(self, sender, group, message):
+    def receiveGroupMessage(self, sender, group, message, metadata=None):
+        if (metadata is not None) and (metadata['style'] == 'emote'):
+            message = irc.ctcpStringify([('ACTION', message)])
+
         if sender is not self:
-            lines = string.split(message, '\n')
-            for line in lines:
-                self.sendLine(":%s!%s@%s PRIVMSG #%s :%s" %
-                              (sender, sender, self.servicename, group, line))
+            self.sendLine(":%s!%s@%s PRIVMSG #%s :%s" %
+                          (sender, sender, self.servicename,
+                           group, irc.lowQuote(message)))
 
     def setGroupMetadata(self, metadata, groupName):
         if metadata.has_key('topic'):
@@ -436,6 +439,30 @@ class IRCChatter(irc.IRC):
         name = params[0]
         text = params[-1]
         if self.participant:
+            # CTCP -> Words.metadata conversion
+            if text[0]==irc.X_DELIM:
+                if name[0] == '#':
+                    name_ = name[1:]
+                    msgMethod = self.participant.groupMessage
+                else:
+                    name_ = name
+                    msgMethod = self.participant.directMessage
+                    
+                m = irc.ctcpExtract(text)
+                print "from _%s_ got %s" % (text, m)
+                for tag, data in m['extended']:
+                    metadata = {'style': ctcpToWords(tag)}
+                    try:
+                        msgMethod(name_, data, metadata)
+                    except pb.Error, e:
+                        self.receiveDirectMessage("*error*", str(e))
+                        print 'error sending CTCP query:',str(e)
+
+                if not m['normal']:
+                    return
+
+                text = string.join(m['normal'], ' ')
+            
             ## 'bot' handling
             if name == 'ContactServ':
                 # crude contacts interface
@@ -466,7 +493,7 @@ class IRCChatter(irc.IRC):
                     self.sendMessage(irc.ERR_NOSUCHNICK, name,
                                      ":%s" % (e,))
         else:
-            
+
             if name == 'NickServ':
                 self.logInAs(self.pendingLogin, text)
             else:
@@ -801,5 +828,12 @@ class IRCGateway(protocol.Factory, coil.Configurable):
         i = IRCChatter()
         i.service = self.service
         return i
+
+mapCtcpToWords = {
+    'ACTION': 'emote',
+    }
+
+def ctcpToWords(query_tag):
+    return mapCtcpToWords.get(query_tag, query_tag)
 
 coil.registerClass(IRCGateway)
