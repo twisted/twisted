@@ -257,7 +257,6 @@ class Tester:
         
 
 class TestSuite:
-    methodPrefix = 'test'
     moduleGlob = 'test_*.py'
     sortTests = 1
 
