@@ -155,9 +155,16 @@ class FileDescriptor(log.Logger, styles.Ephemeral):
             self.startWriting()
 
     def writeSequence(self, iovec):
+        if not self.connected or not iovec:
+            return
         self._tempDataBuffer.extend(iovec)
         for i in iovec:
             self._tempDataLen += len(i)
+        if self.producer is not None:
+            if len(self.dataBuffer) + self._tempDataLen > self.bufferSize:
+                self.producerPaused = 1
+                self.producer.pauseProducing()
+        self.startWriting()
     
     def loseConnection(self):
         """Close the connection at the next available opportunity.
