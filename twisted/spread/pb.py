@@ -86,7 +86,10 @@ from twisted.internet import reactor, defer, protocol, error
 from twisted.cred import authorizer, service, perspective, identity
 from twisted.cred.portal import Portal
 from twisted.persisted import styles
-from twisted.python.components import Interface, registerAdapter
+from twisted.python.components import Interface, registerAdapter, backwardsCompatImplements
+from twisted.python.components import backwardsCompatImplements
+
+from zope.interface import implements
 
 # Sibling Imports
 from twisted.spread.interfaces import IJellyable, IUnjellyable
@@ -1722,7 +1725,7 @@ class _PortalWrapper(Referenceable):
 class _PortalAuthChallenger(Referenceable):
     """Called with response to password challenge."""
 
-    __implements__ = (Referenceable.__implements__, IUsernameHashedPassword, IUsernameMD5Password)
+    implements(IUsernameHashedPassword, IUsernameMD5Password)
 
     def __init__(self, portalWrapper, username, challenge):
         self.portalWrapper = portalWrapper
@@ -1750,3 +1753,5 @@ class _PortalAuthChallenger(Referenceable):
         md.update(self.challenge)
         correct = md.digest()
         return self.response == correct
+
+backwardsCompatImplements(_PortalAuthChallenger)
