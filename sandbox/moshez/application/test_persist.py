@@ -36,3 +36,8 @@ class PersistTestCase(unittest.TestCase):
                 p.save(filename='persisttest.'+style)
                 o1 = persist.load('persisttest.'+style, style)
                 self.failUnlessEqual(o, o1)
+
+    def testPython(self):
+        open("persisttest.python", 'w').write('foo=[1,2,3]')
+        o = persist.loadValueFromFile('persisttest.python', 'foo')
+        self.failUnlessEqual(o, [1,2,3])
