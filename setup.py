@@ -22,14 +22,14 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.131 2003/08/12 19:58:42 moonfallen Exp $
+$Id: setup.py,v 1.132 2003/08/13 20:20:41 moonfallen Exp $
 """
 
 import distutils, os, sys, string
 from glob import glob
 
 from distutils.core import setup, Extension
-from distutils.command.install_scripts import install_scripts
+from distutils.command.build_scripts import build_scripts
 from distutils.command.install_data import install_data
 from distutils.ccompiler import new_compiler
 from distutils.errors import CompileError
@@ -46,15 +46,21 @@ from twisted import copyright
 ### Helpers and distutil tweaks
 #############################################################################
 
-class install_scripts_twisted(install_scripts):
+class build_scripts_twisted(build_scripts):
     """Renames scripts so they end with '.py' on Windows."""
 
     def run(self):
-        install_scripts.run(self)
+        build_scripts.run(self)
         if os.name == "nt":
-            for file in self.get_outputs():
-                if not file.endswith(".py"):
-                    os.rename(file, file + ".py")
+            for f in os.listdir(self.build_dir):
+                fpath=os.path.join(self.build_dir, f)
+                if not fpath.endswith(".py"):
+                    try:
+                        os.unlink(fpath + ".py")
+                    except EnvironmentError, e:
+                        if e.args[1]=='No such file or directory':
+                            pass
+                    os.rename(fpath, fpath + ".py")
 
 
 # make sure data files are installed in twisted package
@@ -253,7 +259,7 @@ desktop environments, and your toaster.
         'bin/tkconch', 'bin/trial', 'bin/mailmail'
     ],
     'cmdclass': {
-        'install_scripts': install_scripts_twisted,
+        'build_scripts': build_scripts_twisted,
         'install_data': install_data_twisted,
         'build_ext' : build_ext_twisted,
     },

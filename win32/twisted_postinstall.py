@@ -25,13 +25,22 @@ from twisted.scripts import tkunzip
 def run(argv=sys.argv):
     sitepackages=join(sysconfig.get_config_var('BINLIBDEST'),
                       "site-packages")
-    install(sitepackages)
+    scripts=join(sysconfig.get_config_var('prefix'), 'scripts')
+    install(sitepackages, scripts)
 
 
-def install(sitepackages):
+def install(sitepackages, scripts):
+    # bat files for pys so twisted command prompt works
+    for bat in """twistd.bat mktap.bat websetroot.bat lore.bat 
+               manhole.bat tapconvert.bat trial.bat coil.bat""".split():
+        f=join(scripts, bat)
+        scriptpy=f.replace('.bat', '.py')
+        file(f, 'w').write("@%s %s" % (sys.executable, scriptpy))
+
     args=['tkunzip']
     doczip=join(sitepackages, 'twisteddoc.zip')
     docdir=join(sitepackages, 'TwistedDocs')
+    # FIXME - should be able to do it this way (one invocation)
 #    if os.path.isfile(doczip):
 #        args.extend(['--zipfile', doczip, '--ziptargetdir', docdir])
     args.extend(['--compiledir', join(sitepackages, 'twisted')])
@@ -39,7 +48,7 @@ def install(sitepackages):
 
     if os.path.isfile(doczip):
         tkunzip.run(['tkunzip', '--zipfile', doczip, '--ziptargetdir', docdir])
-
+                                       
   
 
 if __name__=='__main__':

@@ -19,6 +19,7 @@ Source: "%(twhome)s\build\lib.win32-%(pyversion)s\*.*"; DestDir: "{app}"; Flags:
 %(docfile)s
 Source: "%(twhome)s\build\scripts-%(pyversion)s\*.*"; DestDir: "%(pykey)s\scripts"; Flags: ignoreversion recursesubdirs
 Source: "win32\twistenv.bat"; DestDir: "{app}\twisted"; Flags: ignoreversion
+%(datafiles)s
 
 [UninstallDelete]
 ; *.pyc keeps this directory around

@@ -2,7 +2,9 @@
 SCP=bash admin/aapscp
 
 :python
+    from __future__ import generators
     import sys
+    import os.path
     import winreg
 
     def quickdict(initial={}, *args, **kwargs):
@@ -10,17 +12,37 @@ SCP=bash admin/aapscp
         new.update(kwargs)
         return new
 
+    def renderDatafilesToIss(data_files):
+        """Iterate a distutils-style data_files list, yielding strings
+        suitable for inserting into the [Files] section of a .iss
+        """
+        itemtmpl=r'Source: "%(twhome)s\%(what)s"; DestDir: "{app}\%(where)s"; Flags: ignoreversion'
+        for dirset in data_files:
+            dirname=dirset[0]
+            idct=quickdict(where=dirname, twhome=_top.TOPDIR)
+            filenames=dirset[1]
+            for f in filenames:
+                normf=os.path.normpath(f)
+                i2dct=quickdict(idct, what=normf)
+                yield itemtmpl % i2dct
+        
+
     def geniss(iss_template, dodocs):
         """Return the inno setup file"""
-        tdct=quickdict(setupbase=_top.setupbase, version=_top.version,
+        tdct=quickdict(setupbase=_top.setupbase, version=_top.Version,
                        pyversion=_top.pyversion)
         template='%(setupbase)s-%(version)s.win32-py%(pyversion)s' % tdct
         
-        docdct=quickdict(pyversion=_top.pyversion, twversion=_top.version, 
+        import setup
+        df=list(renderDatafilesToIss(setup.setup_args['data_files']))
+        data_files='\n'.join(df)
+
+        docdct=quickdict(pyversion=_top.pyversion, twversion=_top.Version, 
                          twhome=_top.TOPDIR, 
                          pykey=r"{reg:HKLM\Software\Python\PythonCore\%s\InstallPath,|ACK}" % _top.pyversion,
                          docfile=r'Source: "%s\doc\twisteddoc.zip"; DestDir: "{app}"' % _top.TOPDIR,
                          outputbasefilename=template,
+                         datafiles=data_files,
                          )
         nodocdct=quickdict(docdct, docfile='')
 
@@ -61,7 +83,7 @@ SCP=bash admin/aapscp
                                ver, None, r'C:\pythonxx')
 
 # get the version of twisted from the tree being built, not sys.path
-version=`getBuildingTwistedVersion(_top.TOPDIR)`
+Version=`getBuildingTwistedVersion(_top.TOPDIR)`
 
 # PyVersion is variant rather than a regular string variable so the script
 # will accept only one of these two values
@@ -86,16 +108,16 @@ innohome=`getValueFromReg(r'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\
                           r'C:\Program Files\Inno Setup 3')`
 iscc='$innohome\ISCC.exe'
 
-all: dist/$(setupbase)-$(version).win32-py$(pyversion).exe
+all: dist/$(setupbase)-$(Version).win32-py$(pyversion).exe
     :print : Done building $(target)
 
 # find all the files that can cause a rebuild with setup.py
-:syseval find twisted -name '*.c' -o -name '*.h' | :assign csources
+:syseval find twisted -name '*.c' -o -name '*.h' | :assign CSources
 # don't try to build the .c files automatically...
-:attr {filetype = ignore} $(csources)
+:attr {filetype = ignore} $(CSources)
 
-:syseval find twisted -name '*.py' -o -name '*.sql' -o -name '*.glade*'  | :assign twsources
-twsources+=twisted/plugins.tml
+:syseval find twisted -name '*.py' -o -name '*.sql' -o -name '*.glade*'  | :assign TwSources
+TwSources+=twisted/plugins.tml
            twisted/lore/template.mgp
            twisted/test/process.alias.sh
            twisted/test/rfc822.message
@@ -103,35 +125,37 @@ twsources+=twisted/plugins.tml
            twisted/web/woven/FlashConduit*
            twisted/web/woven/WebConduit*
            twisted/xish/xpathparser.g
-           $(csources)
-
-# only run setup.py when needed
-build/lib.win32-$(pyversion): $twsources
-    :sys $(pyexe) setup.py -q clean --all build --compiler=mingw32
+           $(CSources)
+           win32/twisted_postinstall.py
 
 # publish to sf.net
-:attr {publish=scp://shell.sf.net//home/groups/t/tw/twisted/htdocs/$(setupbase)-$(version).win32-py$(pyversion).exe} dist/$(setupbase)-$(version).win32-py$(pyversion).exe
+:attr {publish=scp://shell.sf.net//home/groups/t/tw/twisted/htdocs/$(setupbase)-$(Version).win32-py$(pyversion).exe} dist/$(setupbase)-$(Version).win32-py$(pyversion).exe
+
+# only run setup.py when needed
+build/scripts-$(pyversion) build/lib.win32-$(pyversion): $TwSources
+    :sys $(pyexe) setup.py -q clean --all build --compiler=mingw32
 
 # build with inno
-dist/Twisted-$(version).win32-py$(pyversion).exe: doc/twisteddoc.zip 
-                                                  py$(pyversion)-$(DoDocs).iss
-                                                  build/lib.win32-$(pyversion)
+ExeDeps=py$(pyversion)-$(DoDocs).iss
+        build/lib.win32-$(pyversion)
+        build/scripts-$(pyversion)
+
+dist/Twisted-$(Version).win32-py$(pyversion).exe: doc/twisteddoc.zip $(ExeDeps)
     :sys $(iscc) py$(pyversion)-withdocs.iss
 
 # build with inno
-dist/Twisted_NoDocs-$(version).win32-py$(pyversion).exe: py$(pyversion)-$(DoDocs).iss
-                                                         build/lib.win32-$(pyversion)
+dist/Twisted_NoDocs-$(Version).win32-py$(pyversion).exe: $(ExeDeps)
     :sys $(iscc) py$(pyversion)-nodocs.iss
 
 
 # fetch docs from latest release (this better be there)
-:attr {fetch=scp://shell.sf.net//home/groups/t/tw/twisted/htdocs/TwistedDocs-$(version).tar.bz2} doc/TwistedDocs-$(version).tar.bz2
+:attr {fetch=scp://shell.sf.net//home/groups/t/tw/twisted/htdocs/TwistedDocs-$(Version).tar.bz2} doc/TwistedDocs-$(Version).tar.bz2
 
 # uncompress and rezip doc
-doc/twisteddoc.zip: doc/TwistedDocs-$(version).tar.bz2
+doc/twisteddoc.zip: doc/TwistedDocs-$(Version).tar.bz2
     :chdir doc
-    :sys tar xfj TwistedDocs-$(version).tar.bz2
-    :chdir TwistedDocs-$(version)
+    :sys tar xfj TwistedDocs-$(Version).tar.bz2
+    :chdir TwistedDocs-$(Version)
     :sys zip -rq ../twisteddoc.zip *
 
 # generate iss files

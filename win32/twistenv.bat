@@ -1,7 +1,6 @@
 @echo off
 rem Pass me the location of Python (e.g. c:\python22)
 
-set PATHEXT=%PATHEXT%;.py
 set PATH=%1;%PATH%
 set PATH
 echo -:- -:- -:- -:- -:--:- -:- -:- -:- -:--:- -:- -:- -:- -:-
