@@ -145,7 +145,21 @@ class TestSuite(Timed):
         if isinstance(module, types.ModuleType):
             _dbgPA("adding module: %r" % module)
             self.tests.append(module)
+        
+        if hasattr(module, '__doctests__'):
+            vers = sys.version_info[0:2]
+            if vers[0] >= 2 and vers[1] >= 3:
+                runner = itrial.ITestRunner(getattr(module, '__doctests__'))
+                self.tests.append(runner)
+            else:
+                warnings.warn(("trial's doctest support only works with "
+                               "python 2.3 or later, not running doctests"))
 
+    def addDoctest(self, obj):
+        # XXX: this is a crap adaptation, ListType is adapted to 
+        # ITestRunner by tdoctest.ModuleDocTestsRunner
+        # it is crappy crap, awful dreadful crap
+        self.tests.append(itrial.ITestRunner([obj]))
 
     def addPackage(self, package):
         modGlob = os.path.join(os.path.dirname(package.__file__),
@@ -415,7 +429,13 @@ class TestModuleRunner(TestRunnerBase):
             self._tClasses = []
             mod = self.original
             if hasattr(mod, '__tests__'):
+                warnings.warn(("to allow for compatibility with python2.4's "
+                               "doctest module, please use a __unittests__ "
+                               "module attribute instead of __tests__"),
+                               DeprecationWarning)
                 objects = mod.__tests__
+            elif hasattr(mod, '__unittests__'):
+                objects = mod.__unittests__
             else:
                 names = dir(mod)
                 objects = [getattr(mod, name) for name in names]
@@ -423,7 +443,6 @@ class TestModuleRunner(TestRunnerBase):
             for obj in objects:
                 if isinstance(obj, (components.MetaInterface, zi.Interface)):
                     continue
-
                 try:
                     if ITestCaseFactory.providedBy(obj):
                         self._tClasses.append(obj)
@@ -435,6 +454,7 @@ class TestModuleRunner(TestRunnerBase):
 
         return self._tClasses
 
+
     def runTests(self, randomize=False):
         reporter = self.getReporter()
         reporter.startModule(self.original)
@@ -443,11 +463,24 @@ class TestModuleRunner(TestRunnerBase):
         tests = self._testClasses()
         if randomize:
             random.shuffle(tests)
+
         for testClass in tests:
             runner = itrial.ITestRunner(testClass)
             self.children.append(runner)
+
+#:        if hasattr(self.module, '__doctests__'):
+#:            vers = sys.version_info[0:2]
+#:            if vers[0] >= 2 and vers[1] >= 3:
+#:                runner = itrial.ITestRunner(getattr(self.module, '__doctests__'))
+#:                self.children.append(runner)
+#:            else:
+#:                warnings.warn(("trial's doctest support only works with "
+#:                               "python 2.3 or later, not running doctests"))
+
+        for runner in self.children:
             runner.parent = self.parent
             runner.runTests(randomize)
+
             for k, v in runner.methodsWithStatus.iteritems():
                 self.methodsWithStatus.setdefault(k, []).extend(v)
 
@@ -457,10 +490,9 @@ class TestModuleRunner(TestRunnerBase):
 
 
 class TestClassAndMethodBase(TestRunnerBase):
-    """provides the basic functionality for running test methods
-    this includes providing the testCaseInstance, finding the appropriate
-    setUpModule, tearDownModule classes, and running the appropriate 
-    prefixed-methods as tests
+    """base class for *Runner classes providing the testCaseInstance, finding
+    the appropriate setUpModule, tearDownModule classes, and running the
+    appropriate prefixed-methods as tests
     """
     _module = _tcInstance = None
     
@@ -485,20 +517,21 @@ class TestClassAndMethodBase(TestRunnerBase):
         return getattr(self.module, 'tearDownModule', _bogusCallable)
     tearDownModule = property(tearDownModule)
 
+    def _apply(self, f):                  # XXX: need to rename this
+        for mname in self.methodNames:
+            m = getattr(self._testCase, mname)
+            tm = adaptWithDefault(itrial.ITestMethod, m, default=None)
+            if tm == None:
+                continue
+
+            tm.parent = self
+            self.children.append(tm)
+            f(tm)
+
     def runTests(self, randomize=False):
         reporter = self.getReporter()
         janitor = self.getJanitor()
 
-        def _apply(f):                  # XXX: need to rename this
-            for mname in self.methodNames:
-                m = getattr(self._testCase, mname)
-                tm = adaptWithDefault(itrial.ITestMethod, m, default=None)
-                if tm == None:
-                    continue
-
-                tm.parent = self
-                self.children.append(tm)
-                f(tm)
         
         tci = self.testCaseInstance
         self.startTime = time.time()
@@ -532,7 +565,7 @@ class TestClassAndMethodBase(TestRunnerBase):
                         self.methodsWithStatus.setdefault(tm.status,
                                                           []).append(tm)
                         reporter.endTest(tm)
-                    return _apply(_setUpClassError) # and we're done
+                    return self._apply(_setUpClassError) # and we're done
 
             # --- run methods ----------------------------------------------
 
@@ -549,7 +582,7 @@ class TestClassAndMethodBase(TestRunnerBase):
                 self.methodsWithStatus.setdefault(testMethod.status,
                                                   []).append(testMethod)
 
-            _apply(_runTestMethod)
+            self._apply(_runTestMethod)
 
             # --- tearDownClass ---------------------------------------------
 
@@ -644,10 +677,30 @@ class BenchmarkCaseRunner(TestCaseRunner):
             trial.registerAdapter(None, types.MethodType, itrial.ITestMethod)
             trial.registerAdapter(TestMethod, types.MethodType, itrial.ITestMethod)
         
+class StatusMixin:
+    _status = None
 
-class TestMethod(MethodInfoBase, ParentAttributeMixin):
+    def _getStatus(self):
+        if self._status is None:
+            if self.todo is not None and (self.failures or self.errors):
+                self._status = self._checkTodo()
+            elif self.skip is not None:
+                self._status = SKIP
+            elif self.errors:
+                self._status = ERROR
+            elif self.failures:
+                self._status = FAILURE
+            elif self.todo:
+                self._status = UNEXPECTED_SUCCESS
+            else:
+                self._status = SUCCESS
+        return self._status
+    status = property(_getStatus)
+
+
+class TestMethod(MethodInfoBase, ParentAttributeMixin, StatusMixin):
     zi.implements(itrial.ITestMethod, itrial.IMethodInfo, itrial.ITimeout)
-    _status = parent = todo = timeout = None
+    parent = todo = timeout = None
 
     def __init__(self, original):
         super(TestMethod, self).__init__(original)
@@ -682,22 +735,6 @@ class TestMethod(MethodInfoBase, ParentAttributeMixin):
                 return ERROR
         return EXPECTED_FAILURE
 
-    def _getStatus(self):
-        if self._status is None:
-            if self.todo is not None and (self.failures or self.errors):
-                self._status = self._checkTodo()
-            elif self.skip is not None:
-                self._status = SKIP
-            elif self.errors:
-                self._status = ERROR
-            elif self.failures:
-                self._status = FAILURE
-            elif self.todo:
-                self._status = UNEXPECTED_SUCCESS
-            else:
-                self._status = SUCCESS
-        return self._status
-    status = property(_getStatus)
         
     def _getSkip(self):
         return (getattr(self.original, 'skip', None) \

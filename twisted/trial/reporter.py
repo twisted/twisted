@@ -11,7 +11,7 @@ from __future__ import generators
 import sys, time, pdb, string, types
 import traceback, os.path as osp, warnings
 
-from twisted.python import reflect, failure, log
+from twisted.python import reflect, failure, log, util as tputil
 from twisted.python.compat import adict
 from twisted.internet import defer
 from twisted.trial import itrial, util
@@ -130,11 +130,12 @@ class TestStats(TestStatsBase):
     def numTests(self):
         n = 0
         for r in self.original.children:
-            n += itrial.ITestStats(r).numTests
+            ts = itrial.ITestStats(r)
+            n += ts.numTests()
         return n
-    numTests = property(numTests)
 
     def allPassed(self):
+#:        import pdb;pdb.Pdb().set_trace()
         for r in self.original.children:
             if not itrial.ITestStats(r).allPassed:
                 return False
@@ -142,7 +143,6 @@ class TestStats(TestStatsBase):
             return False
         return True
     allPassed = property(allPassed)
-       
 
 class TestCaseStats(TestStatsBase):
     def _collect(self, status):
@@ -150,8 +150,10 @@ class TestCaseStats(TestStatsBase):
         return self.original.methodsWithStatus.get(status, [])
 
     def numTests(self):
-        return len(self.original.children)
-    numTests = property(numTests)
+        n = len(self.original.children)
+#:        if n <= 0:
+#:            import pdb;pdb.Pdb().set_trace()
+        return n
 
     def allPassed(self):
         for status in (ERROR, FAILURE):
@@ -160,33 +162,10 @@ class TestCaseStats(TestStatsBase):
         return True
     allPassed = property(allPassed)
 
-
-
-def formatError(tm, tbformat=None):
-    ret = [DOUBLE_SEPARATOR,
-           '%s: %s (%s)\n' % (WORDS[tm.status], tm.name,
-                              reflect.qual(tm.klass))]
-
-    ret.extend([(msg + '\n')
-                for msg in (tm.skip, itrial.ITodo(tm.todo).msg)
-                if msg is not None])
-
-    if tm.status not in (SUCCESS, SKIP, UNEXPECTED_SUCCESS):
-        return "%s\n\n%s" % ('\n'.join(ret),
-                             itrial.IFormattedFailure(tm.errors + tm.failures))
-    return '\n'.join(ret)
-    
-
-def formatImportError(name, error):
-    ret = [DOUBLE_SEPARATOR, '\nIMPORT ERROR:\n\n']
-    if isinstance(error, failure.Failure):
-        what = itrial.IFormattedFailure(error)
-    elif type(error) == types.TupleType:
-        what = error.args[0]
-    else:
-        what = "%s\n" % error
-    ret.append("Could not import %s: \n%s\n" % (name, what))
-    return ''.join(ret)
+class DocTestRunnerStats(TestCaseStats):
+    def numTests(self):
+        """DocTestRunners are singleton runners"""
+        return 1
 
 
 class BrokenTestCaseWarning(Warning):
@@ -281,15 +260,15 @@ class Reporter(object):
 
     def _reportFailures(self, tstats):
         for meth in getattr(tstats, "get_%s" % SKIP)():
-            self.write(formatError(meth))
+            self.write(itrial.IErrorReport(meth))
 
         for status in [EXPECTED_FAILURE, FAILURE, ERROR]:
             for meth in getattr(tstats, "get_%s" % status)():
                 if meth.hasTbs:
-                    self.write(formatError(meth, self.tbformat))
+                    self.write(itrial.IErrorReport(meth))
 
         for name, error in tstats.importErrors:
-            self.write(formatImportError(name, error))
+            self.write(itrial.IImportErrorReport((name, error)))
 
     def endSuite(self, suite):
         tstats = itrial.ITestStats(suite)
@@ -297,7 +276,7 @@ class Reporter(object):
         self._reportFailures(tstats)
 
         self.write("%s\n" % SEPARATOR)
-        self.write('Ran %d tests in %.3fs\n', tstats.numTests,
+        self.write('Ran %d tests in %.3fs\n', tstats.numTests(),
                    tstats.runningTime)
         self.write('\n')
         self._reportStatus(suite)
@@ -306,7 +285,7 @@ class Reporter(object):
 class MinimalReporter(Reporter):
     def endSuite(self, suite):
         tstats = itrial.ITestStats(suite)
-        t = (tstats.runningTime, tstats.numTests, tstats.numTests,
+        t = (tstats.runningTime, tstats.numTests(), tstats.numTests(),
              # XXX: expectedTests == runTests
              len(tstats.importErrors), len(tstats.get_errors()),
              len(tstats.get_failures()), len(tstats.get_skips()))
