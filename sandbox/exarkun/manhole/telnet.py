@@ -82,14 +82,20 @@ IAC =           chr(255)  # Data Byte 255.
 
 class ITelnetListener(components.Interface):
     def connectionMade(self):
-        pass
+        """A connection has been established.
+        """
 
     def dataReceived(self, bytes):
         """Some data arrived.
         """
 
+    def subnegotiationCommandReceived(self, bytes):
+        """A subnegotiation command was received.
+        """
+
     def connectionLost(self, reason):
-        pass
+        """The connection was lost.
+        """
 
 class TelnetListener:
     def __init__(self, proto):
@@ -99,6 +105,9 @@ class TelnetListener:
         pass
 
     def dataReceived(self, data):
+        pass
+
+    def subnegotiationCommandReceived(self, bytes):
         pass
 
     def connectionLost(self, reason):
@@ -115,6 +124,9 @@ class Telnet(protocol.Protocol):
         EC: 'EC',
         EL: 'EL',
         GA: 'GA'}
+
+    subcommandMap = {
+        }
 
     # One of a lot of things
     state = 'data'
@@ -210,6 +222,19 @@ class Telnet(protocol.Protocol):
     def telnet_GA(self):
         pass
 
+    def subnegotiationCommandReceived(self, bytes):
+        if not bytes:
+            log.msg("Funny subnegotiation (no payload!)")
+        else:
+            cmdName = self.subcommandMap.get(bytes[0])
+            if cmdName is None:
+                log.msg("Unhandled subnegotiation thingy: %d %r" % (ord(bytes[0]), bytes[1:]))
+            else:
+                self.negotiate(cmdName, bytes[1:])
+
+    def negotiate(self, command, payload):
+        pass
+
     # DO/DONT WILL/WONT are a bit more complex.  They require us to
     # track state to avoid negotiation loops and the like.
 
@@ -254,7 +279,8 @@ class Telnet(protocol.Protocol):
         self._dodontwillwont(option, s, 'dowill')
 
     def _dowill_no(self, option, state):
-        if self._shouldAllowEnable(option):
+        if self.allowEnable(option):
+            self.enable(option)
             state.state = 'yes'
             self.do(option)
         else:
@@ -333,6 +359,9 @@ class Telnet2(Telnet):
 
     def applicationByteReceived(self, bytes):
         self.handler.dataReceived(bytes)
+
+    def negotiate(self, command, payload):
+        getattr(self.handler, 'subcmd_' + command.upper())(payload)
 
     def connectionLost(self, reason):
         self.handler.connectionLost(reason)

@@ -7,7 +7,11 @@ from twisted.test import proto_helpers
 class TestHandler:
     def __init__(self, proto):
         self.bytes = ''
+        self.subcmd = ''
         self.calls = []
+
+        d = proto.subcommandMap = {}
+        d['\x12'] = 'test_command'
 
     def connectionMade(self):
         pass
@@ -22,6 +26,9 @@ class TestHandler:
         if name.startswith('telnet_'):
             return lambda: self.calls.append(name)
         raise AttributeError(name)
+
+    def subcmd_TEST_COMMAND(self, payload):
+        self.subcmd = payload
 
 class TelnetTestCase(unittest.TestCase):
     def setUp(self):
@@ -95,3 +102,30 @@ class TelnetTestCase(unittest.TestCase):
 
     def testGoAhead(self):
         self._simpleCommandTest("GA")
+
+    def testSubnegotiation(self):
+        h = self.p.handler
+
+        cmd = telnet.IAC + telnet.SB + '\x12hello world' + telnet.SE
+        L = ["These are some bytes but soon" + cmd,
+             "there will be some more"]
+
+        for b in L:
+            self.p.dataReceived(b)
+
+        self.assertEquals(h.bytes, ''.join(L).replace(cmd, ''))
+        self.assertEquals(h.subcmd, list("hello world"))
+
+    def testSubnegotiationWithEscape(self):
+        h = self.p.handler
+
+        cmd = telnet.IAC + telnet.SB + '\x12' + telnet.IAC + telnet.SE + telnet.SE
+        L = ["Some bytes are here" + cmd + "and here",
+             "and here"]
+
+        for b in L:
+            self.p.dataReceived(b)
+
+        self.assertEquals(h.bytes, ''.join(L).replace(cmd, ''))
+        self.assertEquals(h.subcmd, [telnet.SE])
+
