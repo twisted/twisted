@@ -23,25 +23,33 @@ from twisted.protocols import ftp
 from twisted.internet import tcp
 from twisted.python import usage
 import sys
-
+import os.path
 
 usage_message = """
 usage: mktap ftp [OPTIONS]
 
 Options are as follows:
-        --port <#>, -p:         set the port number to <#>.
+        -p, --port <#>:         set the port number to <#>.
+        -r, --root <path>:      define the root of the ftp-site.
+        
+        -a, --anonymous:        allow anonymous logins
+        -3, --thirdparty:       allow third-party connections
+        
 """
 
 class Options(usage.Options):
-    def opt_port(self, opt):
-        try:
-	    self.portno = int(opt)
-	except ValueError:
-	    raise usage.error("Invalid argument to 'port'!")
-    opt_p = opt_port
+    optStrings = [["port", "p", "2121"],
+                  ["root", "r", "/usr/local/ftp"],
+                  ["useranonymous", "", "anonymous"]]
+    optFlags = [["anonymous", "a"],
+                ["thirdparty", "3"]]
 
 def getPorts(app, config):
     t = ftp.ShellFactory()
+    # adding a default user
+    t.userdict = {}
+    t.userdict["twisted"] = "twisted"
+    t.config = config
     try:
         portno = config.portno
     except AttributeError:
