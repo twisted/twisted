@@ -114,7 +114,7 @@ if __name__ == '__main__':
     f = LogBotFactory(sys.argv[1], sys.argv[2])
 
     # connect factory to this host and port
-    reactor.connectTCP("irc.openprojects.net", 6667, f)
+    reactor.connectTCP("irc.freenode.net", 6667, f)
 
     # run bot
     reactor.run()
