@@ -156,7 +156,6 @@ class Stage(Instruction):
         self._ready = 1
         self.result = None
 
-
 class Iterable(Stage):
     """ Wraps iterables (generator/iterator) for use in a flow """      
     def __init__(self, iterable, trap):
@@ -202,8 +201,6 @@ class Iterable(Stage):
                         continue
                     return result
                 self.result = result
-            except Cooperate, coop: 
-                return coop
             except StopIteration:
                 self.stop = 1
             except Failure, fail:
@@ -298,11 +295,12 @@ class Threaded(Stage):
         inherited code implementing next(), and using init() for
         initialization code to be run in the thread.
     """
-    def __init__(self, iterable, trap = None, extend = 0):
+    def __init__(self, iterable, trap = None, extend = 0, delay = 0):
         Stage.__init__(self, trap)
         self._iterable  = iterable
         self._stop      = 0
         self._buffer    = []
+        self._cooperate = Cooperate(delay)
         if extend:
             self._append = self._buffer.extend
         else:
@@ -332,7 +330,7 @@ class Threaded(Stage):
         if self._stop:
             self.stop = 1
             return
-        return Cooperate()
+        return self._cooperate
 
 from twisted.internet import defer
 class Deferred(defer.Deferred):
