@@ -255,4 +255,5 @@ class ConnectedSocket(log.Logger, styles.Ephemeral, object):
 
     # groan, stupid LineReceiver and LineOnlyReceiver want to see this in a transport
     disconnecting = property(lambda self: self.state == "disconnecting")
+    connected = property(lambda self: self.state == "connected")
 
