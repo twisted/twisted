@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:nevow="http://nevow.com/ns/nevow/0.1">
+  <head>
+    <title>Log In</title>
+  </head>
+  <body>
+    <form name="login" method="post" action="PLACEHOLDER" nevow:render="form">
+      <nevow:attr name="action"><nevow:slot name="action-url"/></nevow:attr>
+      <p>
+	<label for="username">Username: </label>
+	<input id="username" name="username" type="text"/>
+      </p>
+      <p>
+	<label for="password">Password: </label>
+	<input id="password" name="password" type="password"/>
+      </p>
+      <p>
+	<input type="submit"/>
+      </p>
+    </form>
+  </body>
+</html>

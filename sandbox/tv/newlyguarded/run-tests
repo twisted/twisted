@@ -1,0 +1,50 @@
+#!/bin/sh
+set -e
+export PYTHONPATH="$HOME/src/nevow/Nevow:$HOME/src/mechanize/ClientCookie-0.4.19:$HOME/src/mechanize/ClientForm-0.1.16:$HOME/src/mechanize/pullparser-0.0.5b:$HOME/src/mechanize/mechanize-0.0.8a"
+
+#trial test.test_web.BrowsingTest.test_auth_traversal
+#trial test.test_web.BrowsingTest.test_auth_secret
+#trial test.test_web.BrowsingTest.test_auth_another
+trial test
+
+
+exit
+
+test_auth_secret:
+127.0.0.1 - - [27/Jun/2004:12:07:29 +0000] "GET /__session_key__3083cc50d7e1ae2c25b27edadf3a01aa/ HTTP/1.0" 200 287 "-" "Python-urllib/2.1"
+XXX 1
+urlsession ('__session_key__3083cc50d7e1ae2c25b27edadf3a01aa', 'secret', 'stuff', 'stuff', 'stuff')
+checkLogin OTHER ('secret', 'stuff', 'stuff', 'stuff')
+HISTORY ['secret', 'stuff', 'stuff', 'stuff']
+ACTION 1 http://localhost:8081/__session_key__3083cc50d7e1ae2c25b27edadf3a01aa/secret/stuff/stuff/stuff
+ACTION 2 http://localhost:8081/__session_key__3083cc50d7e1ae2c25b27edadf3a01aa/
+ACTION 3 http://localhost:8081/__session_key__3083cc50d7e1ae2c25b27edadf3a01aa/__login__
+ACTION 4 http://localhost:8081/__session_key__3083cc50d7e1ae2c25b27edadf3a01aa/__login__/secret/stuff/stuff/stuff
+"GET /__session_key__3083cc50d7e1ae2c25b27edadf3a01aa/secret/stuff/stuff/stuff HTTP/1.0" 200 531 "http://localhost:8081/__session_key__3083cc50d7e1ae2c25b27edadf3a01aa/" "Python-urllib/2.1"
+XXX 1
+urlsession ('__session_key__3083cc50d7e1ae2c25b27edadf3a01aa', '__login__', 'secret', 'stuff', 'stuff', 'stuff')
+checkLogin LOGIN ('__login__', 'secret', 'stuff', 'stuff', 'stuff')
+['secret'] ['__login__'] ['stuff', 'stuff', 'stuff']
+"POST /__session_key__3083cc50d7e1ae2c25b27edadf3a01aa/__login__/secret/stuff/stuff/stuff HTTP/1.0" 302 250 "http://localhost:8081/__session_key__3083cc50d7e1ae2c25b27edadf3a01aa/secret/stuff/stuff/stuff" "Python-urllib/2.1"
+
+
+test_auth_traversal:
+127.0.0.1 - - [27/Jun/2004:12:07:59 +0000] "GET /__session_key__8c4906d6a8c21a818e3b59d39e7584ee/ HTTP/1.0" 200 287 "-" "Python-urllib/2.1"
+XXX 1
+urlsession ('__session_key__8c4906d6a8c21a818e3b59d39e7584ee', 'secret')
+checkLogin OTHER ('secret',)
+HISTORY ['secret']
+ACTION 1 http://localhost:8081/__session_key__8c4906d6a8c21a818e3b59d39e7584ee/secret
+ACTION 2 http://localhost:8081/__session_key__8c4906d6a8c21a818e3b59d39e7584ee/secret
+ACTION 3 http://localhost:8081/__session_key__8c4906d6a8c21a818e3b59d39e7584ee/secret/__login__
+ACTION 4 http://localhost:8081/__session_key__8c4906d6a8c21a818e3b59d39e7584ee/secret/__login__/secret
+"GET /__session_key__8c4906d6a8c21a818e3b59d39e7584ee/secret HTTP/1.0" 200 520 "http://localhost:8081/__session_key__8c4906d6a8c21a818e3b59d39e7584ee/" "Python-urllib/2.1"
+XXX 1
+urlsession ('__session_key__8c4906d6a8c21a818e3b59d39e7584ee', 'secret', '__login__', 'secret')
+checkLogin OTHER ('secret', '__login__', 'secret')
+HISTORY ['secret', '__login__', 'secret']
+ACTION 1 http://localhost:8081/__session_key__8c4906d6a8c21a818e3b59d39e7584ee/secret/__login__/secret
+ACTION 2 http://localhost:8081/__session_key__8c4906d6a8c21a818e3b59d39e7584ee/
+ACTION 3 http://localhost:8081/__session_key__8c4906d6a8c21a818e3b59d39e7584ee/__login__
+ACTION 4 http://localhost:8081/__session_key__8c4906d6a8c21a818e3b59d39e7584ee/__login__/secret/__login__/secret
+"POST /__session_key__8c4906d6a8c21a818e3b59d39e7584ee/secret/__login__/secret HTTP/1.0" 200 530 "http://localhost:8081/__session_key__8c4906d6a8c21a818e3b59d39e7584ee/secret" "Python-urllib/2.1"
