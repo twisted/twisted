@@ -44,6 +44,22 @@ def logError(err):
     return err
 
 def succeed(result):
+    """
+    Return a Deferred that has already had '.callback(result)' called.
+
+    This is useful when you're writing synchronous code to an
+    asynchronous interface: i.e., some code is calling you expecting a
+    Deferred result, but you don't actually need to do anything
+    asynchronous. Just return defer.succeed(theResult).
+
+    See L{fail} for a version of this function that uses a failing
+    Deferred rather than a successful one.
+
+    @param result: The result to give to the Deferred's 'callback'
+           method.
+
+    @rtype: L{Deferred}
+    """
     d = Deferred()
     d.callback(result)
     return d
@@ -51,6 +67,15 @@ def succeed(result):
 class _nothing: pass
 
 def fail(result=_nothing):
+    """
+    Return a Deferred that has already had '.errback(result)' called.
+
+    See L{succeed}'s docstring for rationale.
+
+    @param result: The same argument that L{Deferred.errback<twisted.internet.defer.Deferred.errback>} takes.
+
+    @rtype: L{Deferred}
+    """
     if result is _nothing:
         result = failure.Failure()
     d = Deferred()
