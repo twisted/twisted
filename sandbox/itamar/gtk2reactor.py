@@ -191,22 +191,20 @@ class Gtk2Reactor(default.PosixReactorBase):
         if timeout == 0:
             if self.context.pending():
                 import gtk
-                gtk.main_iteration()#self.context.iteration(0)
+                self.context.iteration(0)
             return
         gobject.timeout_add(int(1000 * timeout), lambda: False)
-        import gtk
-        gtk.main_iteration(1)
-        #self.context.iteration(1)
+        self.context.iteration(1)
     
     def crash(self):
         self.__crash()
 
     def run(self, installSignalHandlers=1):
         self.startRunning(installSignalHandlers=installSignalHandlers)
-        if 1:#sys.modules.has_key("gtk"):
+        if sys.modules.has_key("gtk"):
             import gtk
             self.__crash = gtk.main_quit
-            gtk.main()
+            #gtk.main()
         else:
             self.__crash = self.loop.quit
             self.loop.run()
