@@ -254,14 +254,14 @@ class ReactorBase:
     def stop(self):
         """See twisted.internet.interfaces.IReactorCore.stop.
         """
-        if self.running:
+        if not self.running:
             raise RuntimeError, "can't stop reactor that isn't running"
         self.fireSystemEvent("shutdown")
 
     def crash(self):
         """See twisted.internet.interfaces.IReactorCore.crash.
         """
-        if self.running:
+        if not self.running:
             raise RuntimeError, "can't stop reactor that isn't running"
         self.running = 0
 
