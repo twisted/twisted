@@ -122,6 +122,7 @@ def daemonize():
         except OSError, e:
             if e.errno != errno.EBADF:
                 raise
+    os.close(null)
 
 def shedPrivileges(euid, uid, gid):
     switchUID(uid, gid, euid)
