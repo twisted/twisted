@@ -39,12 +39,12 @@ table that class corresponds to. The required class attributes
 are:</p>
 
 <ul>
-  <li>rowColumns - list of the column names and types in the table with the correct
-  case</li>
+  <li>rowColumns - list of the column names and types in the table with
+  the correct case</li>
   <li>rowKeyColumns - list of key columns in form: [(columnName,
   typeName)]</li>
   <li>rowTableName - the name of the database table</li>
-</UL>
+</ul>
 
 <p>There are also two optional class attributes that can be specified:</p>
 
@@ -68,9 +68,9 @@ class RoomRow(row.RowObject):
                         ("posy",    "int"),
                         ("width",   "int"),
                         ("height",  "int")]
-    rowKeyColumns    = [("id", "int4")]
+    rowKeyColumns    = [("roomId",  "int4")]
     rowTableName     = "testrooms"
-    rowFactoryMethod = [myRowFactory]
+    rowFactoryMethod = [testRoomFactory]
 </pre>
 
 <p>The items in the rowColumns list will become data members of
