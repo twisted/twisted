@@ -95,7 +95,7 @@ _doc={
 'Client':
 """Connect to %(tran)s
 
-Call connect%(method)s when the service starts, with the
+Call reactor.connect%(method)s when the service starts, with the
 arguments given to the constructor.
 """,
 'Server':
