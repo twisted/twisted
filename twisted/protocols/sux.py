@@ -40,6 +40,8 @@ TODO:
 from twisted.internet.protocol import Protocol, FileWrapper
 
 import string
+import sys
+noNestedFunctionScopes = sys.version_info < (2,2,2)
 
 identChars = '.-_:'
 lenientIdentChars = identChars + ';+#' 
@@ -85,9 +87,12 @@ class XMLParser(Protocol):
         stateFn = getattr(self, 'do_' + curState)
         lineno, colno = self.lineno, self.colno
         _saveMark = self.saveMark
-        def saveMark():
-            return (lineno, colno)
-        self.saveMark = saveMark
+        if noNestedFunctionScopes:
+            self.saveMark = lambda: (lineno, colno)
+        else:
+            def saveMark():
+                return (lineno, colno)
+            self.saveMark = saveMark
         try:
             for byte in data:
                 # do newline stuff
