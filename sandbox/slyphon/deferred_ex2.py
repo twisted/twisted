@@ -36,7 +36,7 @@ def failAtHandlingResult(result):
 
 
 
-def nonDeferredExample(result):
+def behindTheScenes(result):
     # equivalent to d.callback(result)
 
     # now, let's make the error happen in the first callback
@@ -82,7 +82,7 @@ def deferredExample():
 
 
 if __name__ == '__main__':
-    nonDeferredExample("success")
+    behindTheScenes("success")
     print "\n-------------------------------------------------\n"
     Counter.num = 0
     deferredExample()

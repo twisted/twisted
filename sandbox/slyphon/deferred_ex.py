@@ -21,7 +21,7 @@ def handleResult(result):
     return "yay! handleResult was successful!"
 
 
-def nonDeferredExample(result):
+def behindTheScenes(result):
     # equivalent to d.callback(result)
 
     if not isinstance(result, failure.Failure): 
@@ -51,7 +51,7 @@ def deferredExample():
 
 
 if __name__ == '__main__':
-    nonDeferredExample("success")
+    behindTheScenes("success")
     print "\n-------------------------------------------------\n"
     global num; num = 0
     deferredExample()

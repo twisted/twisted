@@ -30,7 +30,7 @@ def failAtHandlingResult(result):
     raise RuntimeError, "whoops! we encountered an error"
 
 
-def nonDeferredExample(result):
+def behindTheScenes(result):
     if not isinstance(result, failure.Failure): 
         try:
             result = handleResult(result)
@@ -64,7 +64,7 @@ if __name__ == '__main__':
         raise RuntimeError, "*doh*! failure!"
     except:
         result = failure.Failure()
-    nonDeferredExample(result)
+    behindTheScenes(result)
     print "\n-------------------------------------------------\n"
     Counter.num = 0
     deferredExample(result)

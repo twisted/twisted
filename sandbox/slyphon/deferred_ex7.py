@@ -29,7 +29,6 @@ def failAtHandlingResult(result):
     print "\tabout to raise exception"
     raise RuntimeError, "whoops! we encountered an error"
 
-
 def deferredExample1():
     # this is another common idiom, since all add* methods
     # return the deferred instance, you can just chain your
@@ -41,7 +40,6 @@ def deferredExample1():
 
     d.callback("success")
 
-
 def deferredExample2():
     d = defer.Deferred()
 
@@ -51,7 +49,6 @@ def deferredExample2():
     d.addCallback(handleResult)
     d.addErrback(handleFailure)
 
-    
 
 if __name__ == '__main__':
     deferredExample1()

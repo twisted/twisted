@@ -56,7 +56,7 @@ def noDecisionPassthru(result):
     return result
     
 
-def nonDeferredExample(result):
+def behindTheScenes(result):
 
     if not isinstance(result, failure.Failure): # ---- callback
         try:
@@ -135,7 +135,7 @@ def deferredExample():
 
 
 if __name__ == '__main__':
-    nonDeferredExample("success")
+    behindTheScenes("success")
     print "\n-------------------------------------------------\n"
     Counter.num = 0
     deferredExample()

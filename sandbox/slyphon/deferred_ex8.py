@@ -46,7 +46,6 @@ def mainCb_1(result):
                        ).addCallback(subCb_B)
     d.callback(result)
     return d
-    
 
 def mainCb_2(result):
     Counter.num += 1
