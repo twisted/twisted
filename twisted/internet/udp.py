@@ -51,12 +51,13 @@ class Port(base.BasePort):
     addressFamily = socket.AF_INET
     socketType = socket.SOCK_DGRAM
     
-    def __init__(self, port, protocol, interface='', maxPacketSize=8192, reactor=None):
+    def __init__(self, port, proto, interface='', maxPacketSize=8192, reactor=None):
         """Initialize with a numeric port to listen on.
         """
+        assert isinstance(proto, protocol.DatagramProtocol)
         base.BasePort.__init__(self, reactor)
         self.port = port
-        self.protocol = protocol
+        self.protocol = proto
         self.maxPacketSize = maxPacketSize
         self.interface = interface
         self.setLogStr()
@@ -161,8 +162,9 @@ class ConnectedPort(Port):
 
     __implements__ = Port.__implements__, interfaces.IUDPConnectedTransport
         
-    def __init__(self, (remotehost, remoteport), port, protocol, interface='', maxPacketSize=8192, reactor=None):
-        Port.__init__(self, port, protocol, interface, maxPacketSize, reactor)
+    def __init__(self, (remotehost, remoteport), port, proto, interface='', maxPacketSize=8192, reactor=None):
+        assert isinstance(proto, protocol.ConnectedDatagramProtocol)
+        Port.__init__(self, port, proto, interface, maxPacketSize, reactor)
         self.remotehost = remotehost
         self.remoteport = remoteport
     
