@@ -38,6 +38,9 @@ from twisted.internet import defer
 viewFactory = view.viewFactory
 document = parseString("<xml />")
 
+missingPattern = document.createElement("div")
+missingPattern.setAttribute("style", "border: dashed red 1px; margin: 4px")
+
 """
 DOMWidgets are views which can be composed into bigger views.
 """
@@ -115,21 +118,11 @@ class Widget(view.View):
         """
         pass
 
-
-    def setId(self, id):
-        """
-        I use the ID to know which attribute in self.model I am responsible for
-        """
-        log.msg("setId is deprecated; please use setSubmodel.")
-        self.submodel = id
-
     def setSubmodel(self, submodel):
         """
         I use the submodel to know which attribute in self.model I am responsible for
         """
         self.submodel = submodel
-
-    _getMyModel = utils._getModel
 
     def getData(self):
         """
@@ -141,23 +134,12 @@ class Widget(view.View):
         L{setData} will be called once the result is available.
         """
         return self.model.getData()
-#         currentModel = self._getMyModel()
-#         print "widget.getData currentModel submodel", currentModel, self.submodel
-#         if currentModel is None:
-#             return None
-#         if hasattr(currentModel, 'getData'):
-#             return currentModel.getData()
-#         # Must have been set to a simple type, or a Deferred...
-#         return currentModel
 
     def setData(self, data):
         """
         If the return value of L{getData} is a Deferred, I am called
         when the result of the Deferred is available.
         """
-#         currentModel = self._getMyModel()
-#         if currentModel is None:
-#             raise NotImplementedError, "Can't set the data when there's no model to set it on."
         self.model.setData(data)
 
     def add(self, item):
@@ -346,7 +328,7 @@ class Widget(view.View):
         self.become = self.errorFactory(self.model, message)
 #        self.modelChanged({'request': request})
 
-    def getPattern(self, name, default=None, clone=1):
+    def getPattern(self, name, default=missingPattern, clone=1):
         """Get a named slot from the incoming template node. Returns a copy
         of the node and all its children. If there was more than one node with
         the same slot identifier, they will be returned in a round-robin fashion.
@@ -362,24 +344,16 @@ class Widget(view.View):
                 if not node:
                     msg = 'WARNING: No template nodes were found '\
                               '(tagged %s="%s"'\
-                              ' or pattern="%s") for node %s' % (name + "Of",
-                                            sm, name, self.templateNode)
-                    # TODO: this is normally the default, and therefore you see
-                    # a huge ugly traceback rather than your page (and I note
-                    # that all of the traceback is *inside woven* where you
-                    # couldn't possibly care less) if you make a typo in your
-                    # template.  More sensible would be to make some flashing
-                    # red text and stick it into the template so that the rest
-                    # of the page could render properly most of the time.  This
-                    # would have the side effect of making errors with woven
-                    # look much more "harmless" than with other web toolkit
-                    # frameworks.  (We could even have a "production mode"
-                    # switch which did some introspection and automatically
-                    # selected a vanilla "pattern" node for you.)  --glyph
+                              ' or pattern="%s") for node %s (full submodel path %s)' % (name + "Of",
+                                            sm, name, self.templateNode, `self.submodel`)
                     if default is _RAISE:
                         raise Exception(msg)
                     if DEBUG:
                         warnings.warn(msg)
+                    if default is missingPattern:
+                        newNode = missingPattern.cloneNode(1)
+                        newNode.appendChild(document.createTextNode(msg))
+                        return newNode
                     return default
                 slots = [node]
             self.slots[name] = slots
@@ -427,8 +401,6 @@ class Widget(view.View):
                 
         eventHandler(request, self, *args)
 
-wvfactory_Widget = viewFactory(Widget)
-
 
 class DefaultWidget(Widget):
     def generate(self, request, node):
@@ -452,9 +424,6 @@ class DefaultWidget(Widget):
         """We're not concerned if the model has changed.
         """
         pass
-
-wvfactory_DefaultWidget = viewFactory(DefaultWidget)
-wvfactory_None = viewFactory(DefaultWidget)
 
 
 class Text(Widget):
@@ -494,8 +463,6 @@ class Text(Widget):
             else:
                 return document.createTextNode(self.text)
 
-wvfactory_Text = viewFactory(Text)
-
 
 class Image(Text):
     """
@@ -516,8 +483,6 @@ class Image(Text):
         node.setAttribute('src', data)
         return node
 
-wvfactory_Image = viewFactory(Image)
-
 
 class Error(Widget):
     tagName = 'span'
@@ -530,25 +495,17 @@ class Error(Widget):
         self.add(Text(" " + self.message))
         return Widget.generateDOM(self, request, node)
 
-wvfactory_Error = viewFactory(Error)
-
 
 class Div(Widget):
     tagName = 'div'
-
-wvfactory_Div = viewFactory(Div)
 
 
 class Span(Widget):
     tagName = 'span'
 
-wvfactory_Span = viewFactory(Span)
-
 
 class Br(Widget):
     tagName = 'br'
-
-wvfactory_Br = viewFactory(Br)
 
 
 class Input(Widget):
@@ -570,42 +527,30 @@ class Input(Widget):
             self['value'] = str(mVal)
         return Widget.generateDOM(self, request, node)
 
-wvfactory_Input = viewFactory(Input)
-
 
 class CheckBox(Input):
     def initialize(self):
         self['type'] = 'checkbox'
-
-wvfactory_CheckBox = viewFactory(CheckBox)
 
 
 class RadioButton(Input):
     def initialize(self):
         self['type'] = 'radio'
 
-wvfactory_RadioButton = viewFactory(RadioButton)
-
 
 class File(Input):
     def initialize(self):
         self['type'] = 'file'
-
-wvfactory_File = viewFactory(File)
 
 
 class Hidden(Input):
     def initialize(self):
         self['type'] = 'hidden'
 
-wvfactory_Hidden = viewFactory(Hidden)
-
 
 class InputText(Input):
     def initialize(self):
         self['type'] = 'text'
-
-wvfactory_InputText = viewFactory(InputText)
 
 
 class PasswordText(Input):
@@ -615,20 +560,14 @@ class PasswordText(Input):
     def initialize(self):
         self['type'] = 'password'
 
-wvfactory_PasswordText = viewFactory(PasswordText)
-
 
 class Button(Input):
     def initialize(self):
         self['type'] = 'button'
 
-wvfactory_Button = viewFactory(Button)
-
 
 class Select(Input):
     tagName = 'select'
-
-wvfactory_Select = viewFactory(Select)
 
 
 class Option(Input):
@@ -648,8 +587,6 @@ class Option(Input):
     def generateDOM(self, request, node):
         self.add(Text(self.text or self.getData()))
         return Input.generateDOM(self, request, node)
-
-wvfactory_Option = viewFactory(Option)
 
 
 class Anchor(Widget):
@@ -702,13 +639,9 @@ class SubAnchor(Anchor):
         return Widget.generateDOM(self, request, node)
 
 
-wvfactory_Anchor = viewFactory(Anchor)
-
 
 class DirectoryAnchor(Anchor):
     trailingSlash = '/'
-
-wvfactory_DirectoryAnchor = viewFactory(DirectoryAnchor)
 
 
 def appendModel(newNode, modelName):
@@ -783,14 +716,7 @@ class List(Widget):
             # here because handleNode will then recurse into
             # the newly appended nodes
 
-            newNode = self.getPattern('listItem', default = None)
-            if not newNode:
-                newNode = self.getPattern('item', default = _RAISE)
-                if newNode:
-                    warnings.warn("itemOf= is deprecated, "
-                                        "please use listItemOf instead",
-                                        DeprecationWarning)
-
+            newNode = self.getPattern('listItem')
             seq = domhelpers.getIfExists(newNode,'listIndex')
             if seq:
                 seq.setAttribute('value',str(itemNum))
@@ -798,8 +724,6 @@ class List(Widget):
             if not newNode.getAttribute("view"):
                 newNode.setAttribute("view", self.defaultItemView)
             parentNode.appendChild(newNode)
-
-wvfactory_List = viewFactory(List)
 
 
 class KeyedList(List):
@@ -839,8 +763,6 @@ class KeyedList(List):
                 newNode.setAttribute("view", "DefaultWidget")
             parentNode.appendChild(newNode)
 
-wvfactory_KeyedList = viewFactory(KeyedList)
-
 
 class ColumnList(List):
     def __init__(self, model, columns=1, start=0, end=0, *args, **kwargs):
@@ -870,17 +792,11 @@ class ColumnList(List):
             listSize = len(self.getData())
         for itemNum in range(listSize):
             if itemNum % self.columns == 0:
-                row = self.getPattern('listRow')
+                row = self.getPattern('columnListRow')
                 domhelpers.clearNode(row)
                 node.appendChild(row)
 
             newNode = self.getPattern('columnListItem')
-            if not newNode:
-                newNode = self.getPattern('item', _RAISE)
-                if newNode:
-                    warnings.warn("itemOf= is deprecated, "
-                                        "please use listItemOf instead",
-                                        DeprecationWarning)
 
             appendModel(newNode, itemNum + self.start)
             if not newNode.getAttribute("view"):
@@ -888,41 +804,27 @@ class ColumnList(List):
             row.appendChild(newNode)
         return node
 
-wvfactory_ColumnList = viewFactory(ColumnList)
-
 
 class Bold(Widget):
     tagName = 'b'
-
-wvfactory_Bold = viewFactory(Bold)
 
 
 class Table(Widget):
     tagName = 'table'
 
-wvfactory_Table = viewFactory(Table)
-
 
 class Row(Widget):
     tagName = 'tr'
 
-wvfactory_Row = viewFactory(Row)
-
 
 class Cell(Widget):
     tagName = 'td'
-
-wvfactory_Cell = viewFactory(Cell)
 
 
 class RawText(Widget):
     def generateDOM(self, request, node):
         self.node = domhelpers.RawText(self.getData())
         return self.node
-
-wvfactory_RawText = viewFactory(RawText)
-
-defaultWidgetInstance = DefaultWidget()
 
 
 view.registerViewForModel(Text, model.StringModel)
