@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-"""This module is deprecated, use twisted.internet.threads instead.
+"""This module is deprecated, use reactor or twisted.internet.threads instead.
 
 A thread pool that is integrated with the Twisted event loop.
 """
@@ -23,7 +23,9 @@ A thread pool that is integrated with the Twisted event loop.
 from twisted.python import threadpool, threadable, log, failure
 from twisted.internet import reactor, main
 threadable.init(1)
-log.msg("twisted.internet.threadtask is deprecated, use .threads instead.")
+
+import warnings
+warnings.warn("Use twisted.internet.threads or reactor APIs - twisted.internet.threadtask is deprecated.", stacklevel=2)
 
 
 class ThreadDispatcher(threadpool.ThreadPool):

@@ -20,5 +20,7 @@
 """Deprecated, use twisted.internet.defer instead."""
 
 from twisted.internet.defer import *
-from twisted.python import log
-log.msg("Use twisted.internet.defer - twisted.python.defer is deprecated.")
+
+import warnings
+warnings.warn("Use twisted.internet.defer - twisted.python.defer is deprecated.", stacklevel=2)
+

@@ -19,5 +19,7 @@
 """
 
 from twisted.internet.protocol import *
-from twisted.python import log
-log.msg("Use twisted.internet.protocol - twisted.protocols.protocol is deprecated.")
+
+import warnings
+warnings.warn("Use twisted.internet.protocol - twisted.protocols.protocol is deprecated.", stacklevel=2)
+
