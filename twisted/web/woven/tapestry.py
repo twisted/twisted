@@ -62,12 +62,19 @@ class ModelLoader(Resource):
                                                 self.templateFile))
         return _ChildJuggler(d)
 
+    def loadModelNow(self, path, request):
+        """Override this rather than loadModel if your model-loading is
+        synchronous.
+        """
+        raise NotImplementedError("%s.loadModelNow" % (reflect.qual(self.__class__)))
+
     def loadModel(self, path, request):
         """Load a model, for the given path and request.
 
         @rtype: L{Deferred}
         """
-        raise NotImplementedError("%s.loadModel" % (reflect.qual(self.__class__)))
+        from twisted.internet.defer import execute
+        return execute(self.loadModelNow, path, request)
 
 
 class Tapestry(Resource):
