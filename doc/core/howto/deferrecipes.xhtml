@@ -67,9 +67,9 @@ def timeoutHandler():
     The implementation will be dependent on the task you're performing.
     Most likely you should have some way to end the task
     dummyDeferredGeneratingFunction set up here -- perhaps end a connection to
-    a remote server or send a "never mind" message to it. You may also have local
-    tasks that need doing: perhaps you need to tell your user that their request
-    has timed out, or raise some kind of alarm
+    a remote server or send a "never mind" message to it. You may also have
+    local tasks that need doing: perhaps you need to tell your user that their
+    request has timed out, or raise some kind of alarm
     """
     #replace with implementation!
     print "Timeout occured"
@@ -79,8 +79,8 @@ def getTimeoutCancelFunction(delayedCall):
     Return a function which will cancel the delayedCall
     """
     def cancelTimeout(deferredResult):
-         if delayedCall.active():
-             delayedCall.cancel()
+        if delayedCall.active():
+            delayedCall.cancel()
         # return the deferredResult for processing by further
         # callbacks/errbacks
         return deferredResult
@@ -95,7 +95,8 @@ def timeoutSetter():
     # get our deferred
     d = getDummyDeferred()
 
-    # tell the reactor to call our timeout function after TIMEOUT seconds have passed
+    # tell the reactor to call our timeout function after TIMEOUT seconds have
+    # passed
     TIMEOUT = 10
     delayedCall = reactor.callLater(TIMEOUT, timeoutHandler)
 
