@@ -431,6 +431,6 @@ class TestZIBC(unittest.TestCase):
     def testAttributes(self):
         class IFoo(components.Interface):
             a = 3
-        self.assertEquals(IFoo, 3)
+        self.assertEquals(IFoo.a, 3)
 
     testAttributes.todo = "Fix this itamar!"
