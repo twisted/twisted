@@ -63,6 +63,7 @@ What can I do with it?
   can support Twisted's own chat service, Twisted Words, Internet Relay Chat
   (IRC), and AOL Instant Messenger (with the TOC protocol).
 
+
 Unit Tests
 
   See our unit tests run in a lovely Tkinter GUI, proving that the software is
@@ -88,29 +89,17 @@ Basic Servers
   Pickle file; your servers and all of their component objects are saved in
   that file, and can be loaded with the Twisted Daemon.
 
-  Note that the following examples only create the .tap files with the servers
-  inside of them: to actually run the servers, see "Running Servers" below.
-  Also note that the commands used (mktap, coil, twistd, etc) can be found
-  in the bin directory of your Twisted installation.
+  See http://twistedmatrix.com/documents/howto/basics, or in your archive 
+  doc/howto/basics.xhtml for more information. 
 
   The normal type of server to create is a webserver.  You can run this
   command::
 
     % mktap web --path static
 
-  which will make a path-based webserver (one that reads from the filesystem)
-  and serve pages from the provided 'static' directory.  This will
-  automatically execute CGIs, epys, rpys, and php files.  This creates a file
-  named 'web.tap'.  By default, this server will run on port 8080, but you can
-  change it with the --port option.
-
-  You can also create a telnet server::
-
-    % mktap telnet -p 8023 -u username -w password
-
-  which will create a python-console telnet server listening on port 8023,
-  which you can log into with the username "username" and the password
-  "password".  This creates a file called 'telnet.tap'
+  See http://twistedmatrix.com/documents/howto/using-twistedweb, or in your 
+  archive doc/howto/using-twistedweb.xhtml for more information about using
+  the web server.
 
   A generic chat server::
 
@@ -119,8 +108,6 @@ Basic Servers
   This creates a chat server application, with 2 different interfaces and a web
   administration port.  Web administration can be conducted on port 8080, the
   IRC server on 6667, and a PB service on port 8787.
-
-
 
   You'll need to create an account with the web tool before you can log in,
   even using IRC (a "bot" will ask you for your password upon connection).
@@ -142,17 +129,6 @@ Basic Servers
   log in with the username and password you want.  If the name is not already
   taken on the server, it is created.  This creates a file called 'toc.tap'
   
-Running Servers
-
-  In order to run any of these servers, run this command::
-
-    % twistd -f [application name].tap
-
-  You can stop the server at any time by going back to the directory you
-  started it in and running the command::
-
-    % kill `cat twistd.pid`
-
 Configuring Servers
 
   Once you've created a tap file, you can use a browser based interface to
@@ -165,47 +141,29 @@ Configuring Servers
   terminal where you run coil in order to shutdown the web server and save
   your changes.
 
-"Spreadable" Webserver
-
-  The web server can also host a telnet server as well as other services;
-  mktap web --help can detail some of those options.  One of the most
-  interesting applications, however, is the distributed webserver; multiple
-  servers can all answer requests on the same port, using the twisted.spread
-  package for "spreadable" computing.  In two different directories, run the
-  commands::
-
-    % mktap web --user
-    % mktap web --personal [other options, if you desire]
-
-  Both of these create a 'web.tap'; you need to run both at the same time.
-  Once you have, go to http://localhost:8080/your_username.twistd/ -- you will
-  see the front page from the server you created with the --personal option.
-  What's happening here is that the request you've sent is being relayed from
-  the central (User) server to your own (Personal) server, over a PB
-  connection.  This technique can be highly useful for small "community" sites;
-  using the code that makes this demo work, you can connect one HTTP port to
-  multiple resources running with different permissions on the same machine, on
-  different local machines, or even over the internet to a remote site.
 
 Documentation and Support
 
   Although this is far from enough, some examples on how to use basic Twisted
   APIs are located in doc/examples; this might ease the learning curve a
   little bit, since all these files are kept as short as possible.
+  The file doc/howto/index.xhtml contains an index of all the HOWTOs: this
+  should be your starting point when looking for documentation.
 
   As of this release, I realize that Twisted's documentation is rather sparse.
   I encourage you to read the source code and docstrings, but if you're curious
-  as to what Twisted can do, please feel free to join the mailing list:
+  as to what Twisted can do, please feel free to join the mailing list::
 
     http://twistedmatrix.com/cgi-bin/mailman/listinfo/twisted-python
   
-  or to join #python on irc.openprojects.net for some live help.
+  or to join #twisted on irc.openprojects.net for some live help.
 
   Part of the problem with documentation on a project like this is that
   everything seems obvious to me :-).  If you have trouble with a particular
   aspect of the Twisted system, I'd like to hear about what was confusing and
   why.  The process of your learning may be the material I build a tutorial
   from, so don't hesitate to ask!
+
 
 Copyright
 
@@ -218,6 +176,7 @@ Copyright
 
   Twisted is made available under version 2.1 of the GNU Lesser General Public
   License.  The included LICENSE file describes this in detail.
+
 
 Warranty
 
@@ -232,4 +191,3 @@ Warranty
   DAMAGES.
 
   Again, see the included LICENSE file for specific legal details.
-
