@@ -382,11 +382,11 @@ class Element(Node):
         self._markpos = markpos
         self.namespace = namespace
 
-    def addPrefixes(self, **kw):
+    def addPrefixes(self, pfxs):
         if self.nsprefixes is None:
-            self.nsprefixes = kw
+            self.nsprefixes = pfxs
         else:
-            self.nsprefixes.update(kw)
+            self.nsprefixes.update(pfxs)
 
     def endTag(self, endTagName):
         if not self.preserveCase:
@@ -696,7 +696,7 @@ class MicroDOMParser(XMLParser):
                      preserveCase=self.preserveCase,
                      namespace=namespaces.get(''))
         revspaces = _reverseDict(newspaces)
-        el.addPrefixes(**revspaces)
+        el.addPrefixes(revspaces)
         
         if newspaces:
             rscopy = self.nsstack[-1][2].copy()
