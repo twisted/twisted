@@ -7,6 +7,8 @@ del cStringIO
 import traceback
 
 class Perspective(pb.Perspective):
+    def __init__(self):
+        self.namespace = {}
     def perspective_do(self, mesg):
         fn = "$manhole"
         try:
@@ -19,7 +21,7 @@ class Perspective(pb.Perspective):
                 traceback.print_exc(file=io)
                 return io.getvalue()
         try:
-            val = eval(code)
+            val = eval(code, self.namespace)
         except:
             io = StringIO.StringIO()
             traceback.print_exc(file=io)
