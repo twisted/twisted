@@ -19,6 +19,8 @@
 Test cases for twisted.mail.smtp module.
 """
 
+from zope.interface import implements
+
 from twisted.trial import unittest
 from twisted import protocols
 from twisted import internet
@@ -362,7 +364,7 @@ class AnotherSMTPTestCase(AnotherTestCase, unittest.TestCase):
 
 
 class DummyChecker:
-    __implements__ = (cred.checkers.ICredentialsChecker,)
+    implements(cred.checkers.ICredentialsChecker)
     
     users = {
         'testuser': 'testpassword'
@@ -381,7 +383,7 @@ class DummyChecker:
         raise cred.error.UnauthorizedLogin()
 
 class DummyDelivery:
-    __implements__ = (smtp.IMessageDelivery,)
+    implements(smtp.IMessageDelivery)
     
     def validateTo(self, user):
         return user
@@ -472,7 +474,7 @@ if ClientTLSContext is None:
     for case in (TLSTestCase,):
         case.skip = "OpenSSL not present"
 
-if not components.implements(reactor, interfaces.IReactorSSL):
+if not interfaces.IReactorSSL.providedBy(reactor):
     for case in (TLSTestCase,):
         case.skip = "Reactor doesn't support SSL"
 

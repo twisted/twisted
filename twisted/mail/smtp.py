@@ -44,6 +44,7 @@ import MimeWriter, tempfile, rfc822
 import warnings
 import binascii
 import sys
+from zope.interface import implements
 
 try:
     from email.base64MIME import encode as encode_base64
@@ -1201,7 +1202,7 @@ class ESMTP(SMTP):
 
     def connectionMade(self):
         SMTP.connectionMade(self)
-        self.canStartTLS = components.implements(self.transport, ITLSTransport)
+        self.canStartTLS = ITLSTransport.providedBy(self.transport)
         self.canStartTLS = self.canStartTLS and (self.ctx is not None)
 
     def extensions(self):
@@ -1390,7 +1391,7 @@ class IClientAuthentication(components.Interface):
 
 
 class CramMD5ClientAuthenticator:
-    __implements__ = (IClientAuthentication,)
+    implements(IClientAuthentication)
 
     def __init__(self, user):
         self.user = user
@@ -1402,9 +1403,11 @@ class CramMD5ClientAuthenticator:
         response = hmac.HMAC(secret, chal).hexdigest()
         return '%s %s' % (self.user, response)
 
+components.backwardsCompatImplements(CramMD5ClientAuthenticator)
+
 
 class LOGINAuthenticator:
-    __implements__ = (IClientAuthentication,)
+    implements(IClientAuthentication)
 
     def __init__(self, user):
         self.user = user
@@ -1418,9 +1421,10 @@ class LOGINAuthenticator:
         elif chal == 'Password:':
             return secret
 
+components.backwardsCompatImplements(LOGINAuthenticator)
 
 class PLAINAuthenticator:
-    __implements__ = (IClientAuthentication,)
+    implements(IClientAuthentication)
 
     def __init__(self, user):
         self.user = user
@@ -1433,6 +1437,8 @@ class PLAINAuthenticator:
            return "%s\0%s\0%s" % (self.user, self.user, secret)
         else:
            return "%s\0%s" % (self.user, secret)
+
+components.backwardsCompatImplements(PLAINAuthenticator)
 
 
 class ESMTPSender(SenderMixin, ESMTPClient):
