@@ -1266,19 +1266,19 @@ class HandCraftedTestCase(unittest.TestCase):
         transport = StringTransport()
         c = imap4.IMAP4Client()
         c.makeConnection(transport)
-        c.lineReceived('* OK SERVER BANNER')
+        c.lineReceived('* OK [IMAP4rev1]')
 
         d = c.login('blah', 'blah')
-        c.dataReceived('0001 OK CAPABILITY\r\n0002 OK LOGIN\r\n')
+        c.dataReceived('0001 OK LOGIN\r\n')
         self.failUnless(unittest.deferredResult(d))
         
         d = c.select('inbox')
-        c.lineReceived('0003 OK SELECT')
+        c.lineReceived('0002 OK SELECT')
         self.failUnless(unittest.deferredResult(d))
         
         d = c.fetchMessage('1')
         c.dataReceived('* 1 FETCH (RFC822 {10}\r\n0123456789\r\n RFC822.SIZE 10)\r\n')
-        c.dataReceived('0004 OK FETCH\r\n')
+        c.dataReceived('0003 OK FETCH\r\n')
         self.failUnless(unittest.deferredResult(d))
 
 class FakeyServer(imap4.IMAP4Server):

@@ -1659,7 +1659,7 @@ class IMAP4Client(basic.LineReceiver):
                 self.transport.loseConnection()
                 raise IllegalServerResponse(tag + ' ' + rest)
             
-            self.serverGreeting(self.__cbCapabilities((rest, None)))
+            self.serverGreeting(self.__cbCapabilities(([rest], None)))
         else:
             self._defaultHandler(tag, rest)
 
