@@ -30,6 +30,25 @@ import widgets
 from server import NOT_DONE_YET
 
 
+class _Detacher:
+    """Detach a web session from an attached perspective.
+
+    This will happen when the session expires.
+    """
+    
+    def __init__(self, session, identity, perspective):
+        self.session = session
+        self.identity = identity
+        self.perspective = perspective
+        session.notifyOnExpire(self.detach)
+    
+    def detach(self):
+        self.perspective.detached(self.session, self.identity)
+        del self.session
+        del self.identity
+        del self.perspective
+
+
 class AuthForm(widgets.Form):
     formFields = [
         ['string','Identity','username',''],
@@ -74,6 +93,8 @@ class AuthForm(widgets.Form):
                     setattr(sess, self.sessionPerspective, perspective)
                 if self.sessionIdentity:
                     setattr(sess, self.sessionIdentity, ident)
+                p = perspective.attached(sess, ident)
+                _Detacher(sess, ident, p)
                 return self.reqauth.reallyRender(request)
         else:
             print 'password not verified'
