@@ -1016,7 +1016,7 @@ class DNSDatagramProtocol(protocol.DatagramProtocol):
     liveMessages = None
     
     timeout = 10
-    reissue = 1
+    reissue = 2
     
     def __init__(self, controller):
         self.controller = controller
@@ -1089,13 +1089,18 @@ class DNSDatagramProtocol(protocol.DatagramProtocol):
         if timeout is None:
             timeout = self.timeout
         if reissue is None:
-            reissue = self.reissue
+            if self.reissue is None:
+                counter = 0
+                reissue = timeout
+            else:
+                reissue = self.reissue
+                counter = int(timeout / float(self.reissue))
 
         d, _ = self.liveMessages[id] = (
             defer.Deferred(),
             reactor.callLater(
                 reissue, self._reissueQuery, m, address,
-                int(timeout / float(reissue)), reissue
+                counter, reissue
             )
         )
         self.writeMessage(m, address)
