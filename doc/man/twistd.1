@@ -29,6 +29,10 @@ The log file will be rotated on SIGUSR1.
 \fB\--pidfile\fR \fI<pidfile>\fR
 Save pid in specified file (default twistd.pid)
 .TP
+\fB\--chroot\fR \fI<directory>\fR
+Chroot to a supplied directory before running (default -- don't chroot).
+Chrooting is done before changing the current directory.
+.TP
 \fB\-d\fR, \fB\--rundir\fR \fI<directory>\fR
 Change to a supplied directory before running (default .)
 .TP

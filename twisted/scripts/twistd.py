@@ -70,6 +70,8 @@ class ServerOptions(usage.Options):
                    "Name of the pidfile"],
                   ['rundir','d','.',
                    'Change to a supplied directory before running'],
+                  ['chroot', None, None,
+                   'Chroot to a supplied directory before running'],
                   ['reactor', 'r', 'default',
                    'Which reactor to use out of: %s.' % ', '.join(reactorTypes.keys())]]
 
@@ -185,6 +187,8 @@ def run():
     if len(sys.argv) == 1:
         sys.argv.append("--help")
 
+    platformType = runtime.platform.getType()
+
     config = ServerOptions()
     try:
         config.parseOptions()
@@ -192,11 +196,6 @@ def run():
         config.opt_help()
         print "%s: %s" % (sys.argv[0], ue)
         os._exit(1)
-
-    platformType = runtime.platform.getType()
-    if platformType != 'java':
-        # java can't chdir
-        os.chdir(config.opts['rundir'])
 
     register.checkLicenseFile()
     sys.path.append(config.opts['rundir'])
@@ -290,6 +289,16 @@ def run():
         s = "Failed to load application: %s" % (e,)
         log.msg(s)
         sys.exit('\n' + s + '\n')
+
+    # If we're asked to chroot and os.chroot does not exist,
+    # just fail.
+    if config.opts['chroot'] is not None:
+        os.chroot(config.opts['chroot']) 
+
+    if platformType != 'java':
+        # java can't chdir
+        os.chdir(config.opts['rundir'])
+
 
     if not config.opts['nodaemon']:
         # Turn into a daemon.
