@@ -1,19 +1,4 @@
 #!/usr/bin/env python
-# Twisted, the Framework of Your Internet
-# Copyright (C) 2001 Matthew W. Lefkowitz
-# 
-# This library is free software; you can redistribute it and/or
-# modify it under the terms of version 2.1 of the GNU Lesser General Public
-# License as published by the Free Software Foundation.
-# 
-# This library is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-# Lesser General Public License for more details.
-# 
-# You should have received a copy of the GNU Lesser General Public
-# License along with this library; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 """S-expressions for python.
 
@@ -73,26 +58,19 @@ def atom(st):
     return Atom(st)
 
 # SYMBOL = re.compile(r'[a-zA-Z]([a-zA-Z0-9]|\\.)*')
-ATOM = re.compile(r'[^ \-\n\r\t0-9"\\()]([^ \n\r\t"\[\]\\]|\\.)*')
+ATOM = re.compile(r'[^ \-\n\r\t0-9"\\()]([^ \n\r\t"\[\]()\\]|\\.)*')
 STRING = re.compile(r'"([^\\"]|\\.)*"')
 NUMBER = re.compile(r'-?[0-9]+(\.[0-9]*)?')
 WHITESPACE = re.compile('[ \n\r\t]+')
 
 
 class SymbolicExpressionReceiver(protocol.Protocol):
-    """
-    A reader for lisp-style S-expressions.
-
-    Missing features:
-     * the octothorpe supposedly does something special...?
-     * symbols and strings are the same in python
-     * this doesn't actually run lisp code
-    """
     buffer = ''
 
     def __init__(self):
         self.expq = []
-
+        self.quoteLevel = 0
+        self.quotes = []
     # I don't ever want to buffer more than 64k of data before bailing.
     maxUnparsedBufferSize = 32 * 1024 
     
@@ -128,17 +106,37 @@ class SymbolicExpressionReceiver(protocol.Protocol):
             self.listStack[-1].append(newCurrentSexp)
         self.listStack.append(newCurrentSexp)
 
+    def openQuote(self, name):
+        newCurrentSexp = [Atom(name)]
+        self.quotes.append(newCurrentSexp)
+        if self.listStack:
+            self.listStack[-1].append(newCurrentSexp)
+        self.listStack.append(newCurrentSexp)
+
+
+
     def closeParen(self):
         aList = self.listStack.pop()
         if not self.listStack:
-            self.symbolicExpressionReceived(aList)
+            for i in range(len(self.quotes)):
+                if aList is self.quotes[i][1]:
+                    self.listStack.pop()
+                    del self.quotes[i]
+                    break
+            self._sexpRecv(aList)
 
     def _tokenReceived(self, tok):
+                
         if self.listStack:
             self.listStack[-1].append(tok)
+            if self.quotes and self.listStack[-1] is self.quotes[-1]:
+                del self.quotes[-1]
+                self.listStack.pop()
         else:
-            self.symbolicExpressionReceived(tok)
+            self._sexpRecv(tok)
 
+    def _sexpRecv(self, xp):
+        self.symbolicExpressionReceived(xp)
 
     def dataReceived(self, data):
         buffer = self.buffer + data
@@ -148,12 +146,40 @@ class SymbolicExpressionReceiver(protocol.Protocol):
             if m:
                 buffer = buffer[m.end():]
                 continue
+            
             if buffer[0] == '[':
                 self.openParen()
                 buffer = buffer[1:]
                 continue
             if buffer[0] == ']':
                 self.closeParen()
+                buffer = buffer[1:]
+                continue
+            if buffer[0] == '(':
+                self.quoteLevel = self.quoteLevel + 1
+                self.openParen()
+                self.listStack[-1].append(Atom("backquote"))
+                self.openParen()
+                buffer = buffer[1:]
+                continue
+            if buffer[0] == ')':
+                self.quoteLevel = self.quoteLevel - 1
+                if self.quoteLevel < 0:
+                    raise Error("Too many )s")
+                self.closeParen()
+                self.closeParen()
+                buffer = buffer[1:]
+                continue
+            if buffer[0] == ",":
+                if buffer[1] == "@":
+                    self.openQuote("unquote-splice")
+                    buffer = buffer[2:]
+                else:
+                    self.openQuote("unquote")
+                    buffer = buffer[1:]
+                continue
+            if buffer[0] == "'":
+                self.openQuote(Atom("quote"))
                 buffer = buffer[1:]
                 continue
             m = STRING.match(buffer)
@@ -186,6 +212,10 @@ class SymbolicExpressionReceiver(protocol.Protocol):
             raise SymbolicExpressionParseError("Too much unparsed data.")
         self.buffer = buffer
 
+    def connectionLost(self):
+        if self.listStack:
+            self.symbolicExpressionReceived(self.listStack[-1])
+                                                       
 class _fromString(SymbolicExpressionReceiver):
 
     def symbolicExpressionReceived(self, expr):
@@ -195,6 +225,7 @@ class _fromString(SymbolicExpressionReceiver):
         SymbolicExpressionReceiver.__init__(self)
         self.connectionMade()
         self.dataReceived(st)
+        self.connectionLost()
 
 def fromString(st):
     
