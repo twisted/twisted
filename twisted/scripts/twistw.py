@@ -8,7 +8,7 @@ from twisted import copyright
 import sys, os
 
 class ServerOptions(app.ServerOptions):
-    synopsis = "Usage: twistw [options]"
+    synopsis = "Usage: twistd [options]"
 
     optFlags = [['nodaemon','n',  "(for backwards compatability)."],
                 ]
@@ -16,7 +16,7 @@ class ServerOptions(app.ServerOptions):
     def opt_version(self):
         """Print version information and exit.
         """
-        print 'twistw (the Twisted Windows runner) %s' % copyright.version
+        print 'twistd (the Twisted Windows runner) %s' % copyright.version
         print copyright.copyright
         sys.exit()
 
