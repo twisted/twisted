@@ -23,8 +23,15 @@ from twisted.python.runtime import platformType
 from twisted.internet import utils, interfaces, defer
 from twisted.protocols import wire, basic
 from twisted.internet import protocol, reactor
-import copy, os, pickle, sys
+import copy, os, pickle, sys, warnings
 
+def maskOldAppWarnings():
+    warnings.filterwarnings('ignore', 'twisted.internet.app is deprecated',
+                            DeprecationWarning)
+
+def unmaskOldAppWarnings():
+    warnings.filters = warnings.filters[1:]
+    
 class Dummy:
     processName=None
 
@@ -311,6 +318,7 @@ class TestAppSupport(unittest.TestCase):
 class TestInternet(unittest.TestCase):
 
     def testUNIX(self):
+        maskOldAppWarnings()
         if not interfaces.IReactorUNIX(reactor, None):
             raise unittest.SkipTest, "This reactor does not support UNIX domain sockets"
         s = service.MultiService()
@@ -335,8 +343,10 @@ class TestInternet(unittest.TestCase):
             reactor.iterate(0.1)
         s.stopService()
         self.assertEqual(factory.line, 'lalala')
+        unmaskOldAppWarnings()
 
     def testTCP(self):
+        maskOldAppWarnings()
         s = service.MultiService()
         c = compat.IOldApplication(s)
         factory = protocol.ServerFactory()
@@ -358,8 +368,10 @@ class TestInternet(unittest.TestCase):
             reactor.iterate(0.1)
         s.stopService()
         self.assertEqual(factory.line, 'lalala')
+        unmaskOldAppWarnings()
 
     def testCalling(self):
+        maskOldAppWarnings()
         s = service.MultiService()
         c = compat.IOldApplication(s)
         c.listenWith(None)
@@ -388,16 +400,20 @@ class TestInternet(unittest.TestCase):
         for ch in s:
             self.failIf(ch.kwargs)
             self.assertEqual(ch.name, None)
+        unmaskOldAppWarnings()
 
     def testUnlistenersCallable(self):
+        maskOldAppWarnings()
         s = service.MultiService()
         c = compat.IOldApplication(s)
         self.assert_(callable(c.unlistenTCP))
         self.assert_(callable(c.unlistenUNIX))
         self.assert_(callable(c.unlistenUDP))
         self.assert_(callable(c.unlistenSSL))
+        unmaskOldAppWarnings()
 
     def testServices(self):
+        maskOldAppWarnings()
         s = service.MultiService()
         c = compat.IOldApplication(s)
         ch = service.Service()
@@ -406,13 +422,16 @@ class TestInternet(unittest.TestCase):
         self.assertEqual(c.getServiceNamed("lala"), ch)
         ch.disownServiceParent()
         self.assertEqual(list(s), [])
+        unmaskOldAppWarnings()
 
     def testInterface(self):
+        maskOldAppWarnings()
         s = service.MultiService()
         c = compat.IOldApplication(s)
         for key in compat.IOldApplication.__dict__.keys():
             if callable(getattr(compat.IOldApplication, key)):
                 self.assert_(callable(getattr(c, key)))
+        unmaskOldAppWarnings()
 
 
 class DummyApp:
@@ -688,6 +707,7 @@ class TestCompat(unittest.TestCase):
 
     def testService(self):
         # test old services with new application
+        maskOldAppWarnings()
         s = service.MultiService()
         c = compat.IOldApplication(s)
         from twisted.internet.app import ApplicationService
@@ -695,9 +715,12 @@ class TestCompat(unittest.TestCase):
         self.assertEquals(c.getServiceNamed("foo"), svc)
         self.assertEquals(s.getServiceNamed("foo").name, "foo")
         c.removeService(svc)
+        unmaskOldAppWarnings()
 
     def testOldApplication(self):
+        maskOldAppWarnings()
         from twisted.internet import app as oapp
         application = oapp.Application("HELLO")
         oapp.MultiService("HELLO", application)
         compat.convert(application)
+        unmaskOldAppWarnings()
