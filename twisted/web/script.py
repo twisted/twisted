@@ -30,6 +30,7 @@ import cStringIO
 StringIO = cStringIO
 del cStringIO
 import traceback
+import os
 import resource
 import static
 
@@ -112,6 +113,26 @@ class ResourceScriptWrapper(resource.Resource):
     def getChild(self, path, request):
         res = ResourceScript(self.path, self.registry)
         return res.getChild(path, request)
+
+
+
+class ResourceScriptDirectory(resource.Resource):
+    def __init__(self, pathname, registry=None):
+        resource.Resource.__init__(self)
+        self.path = pathname
+        self.registry = registry or static.Registry()
+
+    def getChild(self, path, request):
+        fn = os.path.join(self.path, path)
+
+        if os.path.isdir(fn):
+            return ResourceScriptDirectory(fn, self.registry)
+        if os.path.exists(fn):
+            return ResourceScript(fn, self.registry)
+        return error.NoResource()
+
+    def render(self, request):
+        return error.NoResource().render(request)
 
 
 class PythonScript(resource.Resource):
