@@ -764,7 +764,6 @@ class HTTPFactory(protocol.ServerFactory):
     logPath = None
     
     def __init__(self, logPath=None):
-        protocol.ServerFactory.__init__(self)
         self.logPath = logPath
 
     def startFactory(self):
