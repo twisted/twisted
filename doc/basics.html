@@ -1,0 +1,154 @@
+<h1>The basics</h1><br>
+<h3>What is a TAP?</h3>
+<p>
+A TAP is a pickle file that stores an instance of 
+twisted.internet.main.Application. An Application is basically a set of
+Twisted servers. The reason we have these is for persistence --
+when a Twisted process shuts down, it stores it's Application
+in a TAP named *-shutdown.tap. That way you can start up again without worrying
+about reconfiguring anything. This is the analogue of a configuration
+file for other applications, only we go a step further and store the
+<i>server itself</i> in the configuration file. ;-)
+</p>
+
+<h3>Creating TAP files</h3>
+<p>
+TAP files are generally created using the convenience scripts located in
+the bin/ directory of your Twisted installation. There are a number of
+these, for creating various types of servers -- Reality, Telnet, Web,
+IRC -- you name it, we've either got it, or we're working on it. 
+</p>
+
+<h3>Creating and working with a telnet server</h3>
+<p>
+Run 'mktap telnet -p 4040 -u admin -w woohoo' at your shell prompt. If you list
+the contents of your current directory, you'll notice a new file -- 
+'telnet.tap'. Congratulations! You just made your first TAP. After you
+do this, run 'twistd -f telnet.tap'. This command loads up your TAP file
+and starts the Twisted Application. Since the Application has a telnet
+server that you specified to be on port 4040, it will start listening
+for connections on this port. Try connecting with your favorite telnet
+utility to 127.0.0.1 port 4040.
+</p>
+
+<pre>
+$ <b>telnet localhost 4040</b>
+Trying 127.0.0.1...
+Connected to localhost.
+Escape character is '^]'.
+
+twisted.protocols.telnet.ShellFactory
+Twisted 0.9.5
+username: <b>admin</b>
+password: <b>******</b>
+</pre>
+
+<p>
+Ok, so I bet you're wondering why you're not seeing a prompt. For now, no one's
+implemented a nice shell for the telnet console, you'll just have to live
+without one. type dir() to see what's there to play with.
+</p>
+<pre>
+<b>dir()</b>
+['__builtins__']
+</pre>
+<p>
+Ok, not much. let's play a little more:
+</p>
+
+<pre>
+<b>import __main__</b>
+
+<b>dir(__main__)</b>
+['ServerOptions', '__builtins__', '__doc__', '__name__', 'application', 'config'
+, 'load', 'log', 'logFile', 'oldstderr', 'oldstdin', 'oldstdout', 'os', 'string'
+, 'sys', 'threadable', 'traceback', 'usage']
+<b>__main__.application</b>
+&lt;telnet app&gt;
+<b>dir(__main__.application)</b>
+['delayeds', 'gid', 'name', 'ports', 'running', 'uid', 'written']
+</pre>
+
+<p>
+From this session we learned that there is an application object stored
+in __main__ that's a telnet app, and it has some scary attributes that we're
+not going to worry about for now.
+</p>
+<p>
+Alright, so now you decided you hate Twisted and want to shut it down. Or
+you just want to go to bed. Either way, I'll tell you what to do. First,
+disconnect from your telnet server. Then, back at your system's shell prompt,
+type 'kill `cat twistd.pid`' (the quotes around "cat twistd.pid" are backticks,
+not single-quotes). If you list the contents of your current
+directory again, you'll notice that there will be a file named
+telnet-shutdown.tap. If you wanted to restart the server with exactly
+the same state as you left it, you could just run
+'twistd -f telnet-shutdown.tap'. This is why Twisted doesn't need any sort
+of configuration files -- all the configuration data is stored right in the
+objects!
+</p>
+
+<p>
+Now that you've learned how to create a telnet server with 'mktap telnet',
+we'll delve a little deeper and learn how one is created behind the scenes.
+Start up a python interpreter and make sure that the 'twisted' directory
+is in your module search path.
+</p>
+<pre>
+Python 1.5.2 (#0, Dec 27 2000, 13:59:38)  [GCC 2.95.2 20000220 (Debian GNU/Linux)] on linux2
+Copyright 1991-1995 Stichting Mathematisch Centrum, Amsterdam
+&gt;&gt;&gt; <b>import sys</b>
+&gt;&gt;&gt; <b>sys.path.append('/twisted/Twisted')</b>
+</pre>
+<p>
+I installed Twisted in /twisted, so the place where my 'twisted' package
+directory is at is /twisted/Twisted/twisted (confusing, I know). For Python
+to find the 'twisted' package, it must have the directory *containing* the
+package in sys.path -- which is why I added /twisted/Twisted.
+</p>
+<pre>
+&gt;&gt;&gt; <b>from twisted.internet import main,tcp</b>
+&gt;&gt;&gt; <b>from twisted.protocols import telnet</b>
+&gt;&gt;&gt; <b>app = main.Application('telnet')</b>
+&gt;&gt;&gt; <b>ts = telnet.ShellFactory()</b>
+&gt;&gt;&gt; <b>app.addPort(tcp.Port(4040, ts))</b>
+</pre>
+<p>
+The above is basically what 'mktap telnet' does. First we create a new
+Twisted Application, we create a new telnet Shell Factory, and we add
+a Port to that application. A "Port", in Twisted terminology, is basically
+something that sits on a TCP port and listens for incoming connections.
+In this case, the ShellFactory handles them.
+</p>
+<p>
+Now let's start the application. This causes all ports on the application
+to start listening for incoming connections. This step is basically
+what the 'twistd' utility does.
+</p>
+<pre>
+&gt;&gt;&gt; <b>app.run()</b>
+twisted.protocols.telnet.ShellFactory starting on 4040
+</pre>
+<p>
+You now have a functioning telnet server! You can connect with your
+telnet program and work with it just the same as you did before. When you're
+done using the telnet server, you can switch back to your python console
+and hit ctrl-C. The following should appear:
+</p>
+<pre>
+Starting Shutdown Sequence.
+Saving telnet application to telnet-shutdown.tap...
+Saved.
+Select loop terminated.
+(Port 8989 Closed)
+&gt;&gt;&gt;
+</pre>
+<p>
+Your server was pickled up again and saved to the telnet-shutdown.tap
+file, just like when you did 'kill `cat twistd.pid`'.
+</p>
+<p>
+Ok, now that we've scratched the surface with Twisted, you can go have fun
+and explore.<br><br>
+<a href="mailto:carmstro@twistedmatrix.com">Chris Armstrong</a>
+</p>
