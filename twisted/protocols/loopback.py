@@ -16,11 +16,10 @@ from zope.interface import implements
 from twisted.internet import interfaces, protocol, main
 from twisted.python import hook, failure, components
 
-
 class LoopbackRelay:
 
     implements(interfaces.ITransport, interfaces.IConsumer)
-    
+
     buffer = ''
     shouldLose = 0
     disconnecting = 0
@@ -58,12 +57,15 @@ class LoopbackRelay:
 
     def getPeer(self):
         return 'loopback'
-    
+
     def registerProducer(self, producer, streaming):
         self.producer = producer
-    
+
     def unregisterProducer(self):
         self.producer = None
+
+    def logPrefix(self):
+        return 'Loopback(%r)' % (self.target.__class__.__name__,)
 
 components.backwardsCompatImplements(LoopbackRelay)
 
