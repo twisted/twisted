@@ -82,7 +82,7 @@ class WovenLivePage:
 
     def sendScript(self, js):
         self.write(Script(js))
-        if self.output is not None:
+        if self.output is not None and not getattr(self.output, 'keepalive', None):
             print "## woot, teh connection was open"
             ## Close the connection; the javascript will have to open it again to get the next event.
             self.output.finish()
@@ -98,9 +98,10 @@ class WovenLivePage:
             self.write(text)
         if self.cached:
             self.cached = []
-            ## Close the connection; the javascript will have to open it again to get the next event.
-            request.finish()
-            self.output = None
+            if not getattr(self.output, 'keepalive', None):
+                ## Close the connection; the javascript will have to open it again to get the next event.
+                request.finish()
+                self.output = None
 
     def unhookOutputConduit(self):
         self.output = None

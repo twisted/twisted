@@ -17,7 +17,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.68 $"[11:-2]
+__version__ = "$Revision: 1.69 $"[11:-2]
 
 # Sibling imports
 import interfaces
@@ -641,8 +641,11 @@ class View:
 
 class LiveView(View):
     def wvfactory_webConduitGlue(self, request, node, m):
-        return View(m, templateFile="WebConduitGlue.html")
-    
+        if request.getHeader("user-agent").count("MSIE"):
+            return View(m, templateFile="FlashConduitGlue.html")
+        else:
+            return View(m, templateFile="WebConduitGlue.html")
+
     def wvupdate_woven_flashConduitSessionView(self, request, wid, mod):
         #print "updating flash thingie"
         uid = request.getSession().uid

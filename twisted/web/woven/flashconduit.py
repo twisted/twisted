@@ -6,6 +6,7 @@ from twisted.web.woven import interfaces
 
 class FlashConduit(LineReceiver):
     delimiter = '\0'
+    keepalive = 1
     def connectionMade(self):
         print "connection with flash movie opened"
         #self.transport.write("alert('helllllllo')\0")
