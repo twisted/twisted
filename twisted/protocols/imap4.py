@@ -3673,7 +3673,7 @@ class IMailbox(components.Interface):
             
             Text and MIME instances also have a part attribute with the same meaning
             as that on Header instances.
-            
+
         @type uid: C{bool}
         @param uid: If true, the IDs specified in the query are UIDs;
         otherwise they are message sequence IDs.
@@ -3716,29 +3716,42 @@ class IMailbox(components.Interface):
 
 
 class _FetchParser:
-    class All:
-        pass
-    class Fast:
-        pass
-    class Full:
-        pass
     class Envelope:
-        pass
+        # Response should be a list of fields from the message:
+        #   date, subject, from, sender, reply-to, to, cc, bcc, in-reply-to,
+        #   and message-id.
+        #
+        # from, sender, reply-to, to, cc, and bcc are themselves lists of
+        # address information:
+        #   personal name, source route, mailbox name, host name
+        #
+        # reply-to and sender must not be None.  If not present in a message
+        # they should be defaulted to the value of the from field.
+        type = 'envelope'
+
     class Flags:
-        pass
+        type = 'flags'
+
     class InternalDate:
-        pass
+        type = 'internaldate'
+
     class RFC822Header:
-        pass
+        type = 'rfc822header'
+
     class RFC822Text:
-        pass
+        type = 'rfc822text'
+
     class RFC822Size:
-        pass
+        type = 'rfc822size'
+
     class RFC822:
-        pass
+        type = 'rfc822'
+
     class UID:
-        pass
+        type = 'uid'
+
     class Body:
+        type = 'body'
         peek = False
         header = None
         partialBegin = None
@@ -3752,8 +3765,11 @@ class _FetchParser:
             if self.partialBegin is not None:
                 base += '<%d.%d>' % (self.partialBegin, self.partialLength)
             return base
+
     class BodyStructure:
-        pass
+        type = 'bodystructure'
+
+    # These three aren't top-level, they don't need type indicators
     class Header:
         negate = False
         fields = None
@@ -3768,8 +3784,10 @@ class _FetchParser:
             if self.part:
                 base = '.'.join(map(str, self.part)) + '.'
             return base
+
     class Text:
         part = None
+
     class MIME:
         part = None
 
@@ -3815,13 +3833,22 @@ class _FetchParser:
         
         l = s.lower()
         if l.startswith('all'):
-            self.result.append(self.All())
+            self.result.extend((
+                self.Flags(), self.InternalDate(),
+                self.RFC822Size(), self.Envelope()
+            ))
             return 3
         if l.startswith('full'):
-            self.result.append(self.Full())
+            self.result.extend((
+                self.Flags(), self.InternalDate(),
+                self.RFC822Size(), self.Envelope(),
+                self.Body()
+            ))
             return 4
         if l.startswith('fast'):
-            self.result.append(self.Fast())
+            self.result.extend((
+                self.Flags(), self.InternalDate(), self.RFC822Size(),
+            ))
             return 4
         
         if l.startswith('('):

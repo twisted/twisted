@@ -213,9 +213,6 @@ class IMAP4HelperTestCase(unittest.TestCase):
 
     def testFetchParserSimple(self):
         cases = [
-            ['ALL', 'All'],
-            ['FULL', 'Full'], 
-            ['FAST', 'Fast'],
             ['ENVELOPE', 'Envelope'],
             ['FLAGS', 'Flags'],
             ['INTERNALDATE', 'InternalDate'],
@@ -232,6 +229,22 @@ class IMAP4HelperTestCase(unittest.TestCase):
             p.parseString(inp)
             self.assertEquals(len(p.result), 1)
             self.failUnless(isinstance(p.result[0], getattr(p, outp)))
+
+    def testFetchParserMacros(self):
+        cases = [
+            ['ALL', (4, ['flags', 'internaldate', 'rfc822size', 'envelope'])],
+            ['FULL', (5, ['flags', 'internaldate', 'rfc822size', 'envelope', 'body'])], 
+            ['FAST', (3, ['flags', 'internaldate', 'rfc822size'])],
+        ]
+
+        for (inp, outp) in cases:
+            p = imap4._FetchParser()
+            p.parseString(inp)
+            self.assertEquals(len(p.result), outp[0])
+            p = [p.type for p in p.result]
+            p.sort()
+            outp[1].sort()
+            self.assertEquals(p, outp[1])
 
     def testFetchParserBody(self):
         P = imap4._FetchParser
@@ -1322,7 +1335,7 @@ class FetchSearchStoreCopyTestCase(unittest.TestCase, IMAP4HelperMixin):
 
     def fetch(self, messages, parts, uid):
         self.server_received_uid = uid
-        self.server_received_parts = [p.__class__.__name__.upper() for p in parts]
+        self.server_received_parts = [p.type.upper() for p in parts]
         self.server_received_messages = str(messages)
         return self.expected
     
