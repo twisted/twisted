@@ -54,7 +54,7 @@ class GladeKeeper:
         from gtk import glade
         self.glade = glade.XML(self.gladefile)
 
-        # mold can go away when we get a newer pygtk
+        # mold can go away when we get a newer pygtk (post 1.99.14)
         mold = {}
         for k in dir(self):
             mold[k] = getattr(self, k)
@@ -102,7 +102,7 @@ class LoginDialog(GladeKeeper):
         if not defaults.has_key('port'):
             defaults['port'] = str(pb.portno)
         elif isinstance(defaults['port'], (int, long)):
-            defaults['port'] = str(default['port'])
+            defaults['port'] = str(defaults['port'])
 
         for k, v in defaults.iteritems():
             if k in self.fields:
