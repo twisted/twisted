@@ -368,7 +368,6 @@ class TreeReporter(TextReporter):
         spaces = ' ' * (self.columns - len(self.currentLine) - len(message))
         self.write(spaces)
         self.writeln(self.color(message, color))
-        #self.writeln(string.rjust(str(message), self.columns - len(self.currentLine)))
 
     def reportSuccess(self, testCase, method):
         self.endLine('[OK]', self.GREEN)
@@ -379,7 +378,7 @@ class TreeReporter(TextReporter):
         Reporter.reportFailure(self, testCase, method, exc_info)
 
     def reportError(self, testCase, method, exc_info):
-        self.endLine('[ERROR]', self.YELLOW)
+        self.endLine('[ERROR]', self.RED)
         Reporter.reportError(self, testCase, method, exc_info)
 
     def reportSkip(self, testCase, method, exc_info):
