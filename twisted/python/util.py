@@ -78,3 +78,12 @@ def getPassword(prompt = ''):
             print "Passwords don't match, starting over"
             p = getpass.getpass(prompt)
         return p
+
+try:
+    dict = dict
+except NameError:
+    def dict(*args):
+        r = {}
+        for (k, v) in args:
+            r[k] = v
+        return r
