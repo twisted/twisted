@@ -92,6 +92,20 @@ class ServerOptions(usage.Options):
         print copyright.copyright
         sys.exit()
 
+    def opt_spew(self):
+        """Print an insanely verbose log of everything that happens.
+
+        Useful when debugging freezes or locks in complex code.
+        """
+        def spewer(frame, s, ignored):
+            from twisted.python import reflect
+            if frame.f_locals.has_key('self'):
+                se = frame.f_locals['self']
+                print 'method %s of %s at %s' % (
+                    frame.f_code.co_name, reflect.qual(se.__class__), id(se)
+                    )
+        sys.settrace(spewer)
+
     opt_g = opt_plugin
 
 
