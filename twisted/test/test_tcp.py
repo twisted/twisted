@@ -447,17 +447,11 @@ class CannotBindTestCase(PortCleanerUpper):
         reactor.iterate()
         self.assertEquals(factory.stopped, 1)
 
-class MyOtherClientProtocol(MyProtocol):
-    def connectionMade(self):
-        MyProtocol.connectionMade(self)
-        self.factory.peerAddress = self.transport.getPeer()
-
 class MyOtherClientFactory(protocol.ClientFactory):
     def buildProtocol(self, address):
         self.address = address
-        p = MyOtherClientProtocol()
-        p.factory = self
-        return p
+        self.protocol = MyProtocol()
+        return self.protocol
 
 
 class LocalRemoteAddressTestCase(PortCleanerUpper):
@@ -477,10 +471,10 @@ class LocalRemoteAddressTestCase(PortCleanerUpper):
             reactor.iterate(0.01)
 
         self.assertEquals(p1.getHost(), f2.address)
-        self.assertEquals(p1.getHost(), f2.peerAddress)
+        self.assertEquals(p1.getHost(), f2.protocol.transport.getPeer())
 
         p1.stopListening()
-        p2.transport.loseConnection()
+        p2.disconnect()
     
 
 class WriterProtocol(protocol.Protocol):
