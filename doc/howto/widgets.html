@@ -37,12 +37,12 @@
 
     <h3>Gadget</h3>
 
-    <p>A collection of widgets, like a "directory" of HTML files.
+    <p>A collection of widgets, like a <q>directory</q> of HTML files.
     You add widgets to it with <code
     class="python">self.putWidget("name", WidgetInstance())</code>.
     This widget will be rendered inside the Gadget-local page.
-    Also, if you make a Gadget that is also a subclass of "Widget",
-    then whenever the "index" (http://foo.com/foo/, "foo" being the
+    Also, if you make a Gadget that is also a subclass of <q>Widget</q>,
+    then whenever the <q>index</q> (http://foo.com/foo/, <q>foo</q> being the
     Gadget/Widget resource) is requested, the object will be
     rendered as a Widget inside of the Gadget-local page factory.
     The Gadget-local page factory is the '<code
@@ -51,7 +51,7 @@
     constructor, and displays that Widget in some form. So in your
     <code>__init__</code> method for your Gadget subclass, do <code
     class="python">self.pageFactory = SomeWidgetPageSubclass</code>
-    (see "WidgetPage" below) (note that it is <em>not</em> an instance,
+    (see <q>WidgetPage</q> below) (note that it is <em>not</em> an instance,
     but the actual class object).</p>
 
     <h3>Widget</h3>
@@ -93,8 +93,8 @@ template = '''\
     the widget you pass to it in it's '<code
     class="python">widget</code>' attribute, so remember that
     whenever you're making a customized template, use
-    <code>%%%%self.widget%%%%</code> to access it (see "Common
-    Pitfalls: WidgetPage" below).</p>
+    <code>%%%%self.widget%%%%</code> to access it (see <q>Common
+    Pitfalls: WidgetPage</q> below).</p>
 
     <h1>Common Pitfalls</h1>
 
