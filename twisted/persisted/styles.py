@@ -241,6 +241,10 @@ class Versioned:
             if highestBase:
                 self.__dict__['%s.persistenceVersion' % str(highestBase)] = pver
         for base in bases:
+            # ugly hack, but it's what the user expects, really
+            if (Versioned not in base.__bases__ and
+                not base.__dict__.has_key('persistenceVersion')):
+                continue
             currentVers = base.persistenceVersion
             pverName = '%s.persistenceVersion' % str(base)
             persistVers = (self.__dict__.get(pverName) or 0)

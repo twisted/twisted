@@ -194,13 +194,6 @@ class Perspective(pb.Perspective):
             del state['localNamespace']['__builtins__']
         return state
 
-    def __setstate__(self, state):
-        self.__dict__.update(state)
-        ### Aw shucks.  This don't work 'cuz I get unpickled before
-        ### my service does.
-        ## self.browser.globalNamespace = self.service.namespace
-        ## self.browser.localNamespace = self.localNamespace
-
     def setService(self, service):
         pb.Perspective.setService(self, service)
         # self.browser.globalNamespace = service.namespace
@@ -339,7 +332,7 @@ class Service(pb.Service):
         """
         # TODO -- refactor this and twisted.reality.author.Author to
         # use common functionality (perhaps the 'code' module?)
-        dict = self.__dict__
+        dict = pb.Service.__getstate__(self)
         ns = copy.copy(dict['namespace'])
         dict['namespace'] = ns
         if ns.has_key('__builtins__'):
