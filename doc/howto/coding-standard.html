@@ -90,7 +90,7 @@ might have trailing empty lines.</p>
     <p>In some cases, however, Twisted takes advantage of the
     dynamic binding of Python in order to provide an interface
     through a module that may be imported -- we call these
-    "volatile" modules, because their internals are subject to
+    <q>volatile</q> modules, because their internals are subject to
     change without warning. In these cases, it is desireable to
     import the module itself into the user's namespace, so that
     things bound to it will be looked up on each call. For obvious
@@ -295,7 +295,7 @@ def foo2bar(f):
     <code>displayMode</code>, <code>playerType</code>, or
     <code>inputBuffer</code>.</p>
 
-    <p>Do not use Python's "private" attribute syntax; prefix
+    <p>Do not use Python's <q>private</q> attribute syntax; prefix
     non-public attributes with a single leading underscore. Since
     several classes have the same name in Twisted, and they are
     distinguished by which package they come from, Python's
