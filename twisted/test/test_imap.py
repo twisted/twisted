@@ -1069,35 +1069,6 @@ class HandCraftedTestCase(unittest.TestCase):
         c.dataReceived('0004 OK FETCH\r\n')
         self.failUnless(unittest.deferredResult(d))
 
-class FakeyMessage:
-    def __init__(self, headers, body):
-        self.headers = headers
-        self.body = body
-    
-    def rfc822(self):
-        return '\n'.join([': '.join(x) for x in self.headers.items()]) + '\n' + self.body
-
-class FakeyMailbox(SimpleMailbox):
-    messages = [
-        FakeyMessage({"Subject": "First Message"}, "Here is body text"),
-        FakeyMessage({"Subject": "Second Message", "From": "Me"}, "Body Body Body"),
-        FakeyMessage({"Date": 'Wed, 17 Jul 1996 02:23:25 -0700 (PDT)'}, "Woo Woo"),
-    ]
-
-    messageUIDs = {
-        0x1234: 0,
-        0x1235: 1,
-        0x1256: 2,
-    }
-    
-    def __init__(self, expected, response):
-        self.e = expected
-        self.r = response
-    
-    def search(self, query, uid):
-        self.assertEquals((query, uid), self.e)
-        return 
-
 class FakeyServer(imap4.IMAP4Server):
     state = 'select'
     timeout = None
