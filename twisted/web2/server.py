@@ -125,8 +125,14 @@ def parsePOSTData(request):
         return getEntireStream(request.stream).addCallback(parser)
     return defer.succeed(None)
 
+
 class StopTraversal(object):
+    """
+    Indicates to Request._handleSegment that it should stop handling
+    path segments.
+    """
     pass
+
 
 class Request(http.Request):
     implements(iweb.IRequest)
@@ -204,8 +210,8 @@ class Request(http.Request):
 
 
         deferredContext = self._getChild(requestContext,
-                                              self.site.getRootResource(),
-                                              self.postpath)
+                                         self.site.getRootResource(),
+                                         self.postpath)
         deferredContext.addErrback(self._processingFailed, requestContext)
         deferredContext.addCallback(self._renderAndFinish)
 
