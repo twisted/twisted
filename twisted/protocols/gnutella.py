@@ -23,7 +23,7 @@ The "GnutellaRouter" and "GnutellaServent" classes are yet to be written.
 """
 
 # system imports
-import re, string, struct
+import random, re, string, struct
 
 # twisted import
 from twisted.protocols.basic import LineReceiver
@@ -32,7 +32,8 @@ from twisted.python import log
 true = 1
 false = 0
 
-CONNSTRING=re.compile("^GNUTELLA CONNECT/([^\r\n]*)")
+CONNSTRINGRE=re.compile("^GNUTELLA CONNECT/([^\r\n]*)")
+CONNSTRING="GNUTELLA CONNECT/0.4"
 ACKSTRING="GNUTELLA OK"
 
 HEADERLENGTH=23
@@ -78,61 +79,75 @@ class GnutellaTalker(LineReceiver):
     One constraint that it imposes which is not specified in the Gnutella 0.4 spec is that payload lengths must be less than or equal to 640 KB.  If the payload length is greater than that, GnutellaTalker closes the connection.
     """
     def __init__(self):
-        self.gothello = false
+        self.handshake = "start" # state transitions: "start" -> "hesaidhello", "hesaidhello" -> "completed", "start" -> "isaidhello", "isaidhello" -> "completed"
         self.gotver = None
+        self.secret = "geheim"
 
         self.buf = ''
+
+    def setSecret(self, secret):
+        self.secret = secret
+
+    # METHODS OF INTEREST TO CLIENTS (including subclasses)
+    def sendPing(self, ttl):
+        self.transport.write(struct.pack(HEADERENCODING, ""))
+        ### XXXX incomplete.  Zooko stopped here to go to bed after the first night of hacking this file.  --Zooko 2002-07-15
 
     # METHODS OF INTEREST TO SUBCLASSES
     def pingReceived(self, descriptorId, ttl, hops):
         """
         Override this to handle ping messages.
         """
+        log.msg("%s.pingReceived(%s, %s, %s)" % (str(self), str(descriptorId), str(ttl), str(hops),))
         pass
-
+    
     def pongReceived(self, descriptorId, ttl, hops, ipAddress, port, numberOfFilesShared, kbShared):
         """
         Override this to handle pong messages.
 
-        @param ipAddress a string representing an IPv4 address like this "140.184.83.37" (this is the representation that the Python Standard Library's socket.connect() expects)
+        @param ipAddress a string representing an IPv4 address like this "140.184.83.37"; This is the representation that the Python Standard Library's socket.connect() expects.
         @param port an integer port number
         @param numberOfFilesShared a long
         @param kbShared a long
         """
+        log.msg("%s.pongReceived(%s, %s, %s, ipAddress=%s, port=%s, numberOfFilesShared=%s, kbShared=%s)" % (str(self), str(descriptorId), str(ttl), str(hops), str(ipAddress), str(port), str(numberOfFilesShared), str(kbShared), ))
         pass
 
     def queryReceived(self, descriptorId, ttl, hops, searchCriteria, minimumSpeed):
         """
         Override this to handle query messages.
-
+        
         @param searchCriteria a string
         @param minimumSpeed integer KB/s -- you are not supposed to respond to this query if you can't serve at least this fast
         """
+        log.msg("%s.queryReceived(%s, %s, %s, searchCriteria=%s, minimumSpeed=%s" % (str(self), str(descriptorId), str(ttl), str(hops), str(searchCriteria), str(minimumSpeed),))
         pass
-      
+                                                                                          
     def queryHitReceived(self, descriptorId, ttl, hops, ipAddress, port, resultSet, serventIdentifer, speed):
         """
         Override this to handle query hit messages.
-
-        @param ipAddress a string representing an IPv4 address like this "140.184.83.37" (this is the representation that the Python Standard Library's socket.connect() expects)
+        
+        @param ipAddress a string representing an IPv4 address like this "140.184.83.37"; This is the representation that the Python Standard Library's socket.connect() expects.
         @param port an integer port number
         @param resultSet a list of tuples of (fileIndex, fileSize, fileName,) where fileIndex is a long, fileSize (in bytes) is a long, and fileName is a string
         @param serventIdentifier string of length 16
         @param speed integer KB/s claimed by the responding host
         """
+        log.msg("%s.queryHitReceived(%s, %s, %s, ipAddress=%s, port=%s, resultSet=%s, serventIdentifier=%s, speed=%s" % (str(self), str(descriptorId), str(ttl), str(hops), str(ipAddress), str(port), str(resultSet), str(serventIdentifier), str(speed),))
         pass
-
+    
     def pushReceived(descriptorId, ttl, hops, ipAddress, port, serventIdentifer, fileIndex):
         """
         Override this to handle push messages.
-
-        @param ipAddress a string representing an IPv4 address like this "140.184.83.37" (this is the representation that the Python Standard Library's socket.connect() expects)
+        
+        @param ipAddress a string representing an IPv4 address like this "140.184.83.37"; This is the representation that the Python Standard Library's socket.connect() expects.
         @param port an integer port number
         @param serventIdentifier string of length 16
         @param fileIndex a long
         """
+        log.msg("%s.pushReceived(%s, %s, %s, ipAddress=%s, port=%s, serventIdentifier=%s, fileIndex=%s" % (str(self), str(descriptorId), str(ttl), str(hops), str(ipAddress), str(port), str(serventIdentifier), str(fileIndex),))
         pass
-      
+    
     # METHODS OF INTEREST TO THIS CLASS ONLY
     def abortConnection(self, logmsg):
         log.msg(logmsg + ", self: %s" % str(self))
@@ -227,7 +242,7 @@ class GnutellaTalker(LineReceiver):
         @precondition descriptor must be a string of the right length to hold a payload of the encoded length.: len(descriptor) == (struct.unpack(PAYLOADENCODING, descriptors[PAYLOADLENGTHOFFSET:HEADERLENGTH])[0] + HEADERLENGTH): "self: %s, descriptor: %s" % (str(self), str(descriptor),)
         """
         assert len(descriptor) == (struct.unpack(PAYLOADENCODING, descriptors[PAYLOADLENGTHOFFSET:HEADERLENGTH])[0] + HEADERLENGTH), "precondition failure: descriptor must be a string of the right length to hold a payload of the encoded length." + " -- " + "self: %s, descriptor: %s" % (str(self), str(descriptor),)
-
+                                                                                          
         try:
             (descriptorId, payloadDescriptor, ttl, hops, payloadLength,) = struct.unpack(HEADERENCODING, descriptor[:HEADERLENGTH])
         except struct.error, le:
@@ -246,18 +261,27 @@ class GnutellaTalker(LineReceiver):
 
     def lineReceived(self, line):
         """
-        @precondition A GNUTELLA CONNECT must not already have been received.: not self.gothello: "line: %s" % str(line)
+        @precondition We must be expecting a GNUTELLA CONNECT handshake move.: self.handshake in ("start", "isaidhello",): "self.handshake: %s, line: %s" % (str(self.handshake), str(line),)
         """
-        assert not self.gothello, "precondition failure: A GNUTELLA CONNECT must not already have been received." + "--" + "line: %s" % str(line)
-        mo = CONNSTRING.match(line)
-        if not mo:
-            self.abortConnection("Received incorrect GNUTELLA HELLO.  Closing connection.  line: %s" % str(line))
-            return 
-       
-        self.gothello = true
-        self.gotver = mo.group(1)
-        self.sendLine(ACKSTRING)
-        self.setRawMode()
+        assert self.handshake in ("start", "isaidhello",), "precondition failure: We must be expecting a GNUTELLA CONNECT handshake move." + "--" + "self.handshake: %s, line: %s" % (str(self.handshake), str(line),)
+
+        if self.handshake == "start":
+            mo = CONNSTRINGRE.match(line)
+            if not mo:
+                self.abortConnection("Received incorrect GNUTELLA HELLO.  Closing connection.  line: %s" % str(line))
+                return 
+
+            self.handshake = "completed"
+            self.gotver = mo.group(1)
+            self.sendLine(ACKSTRING)
+            self.setRawMode()
+        else:
+            assert self.handshake == "isaidhello"
+            if line != ACKSTRING:
+                self.abortConnection("Received incorrect GNUTELLA OK.  Closing connection.  line: %s" % str(line))
+                return 
+            self.handshake = "completed"
+            self.setRawMode()
 
     def rawDataReceived(self, data):
         self.buf += data # XXX opportunity for future optimization  --Zooko 2002-07-15
@@ -275,3 +299,13 @@ class GnutellaTalker(LineReceiver):
             if len(self.buf) >= descriptorlength:
                 descriptor, self.buf = self.buf[:descriptorlength], self.buf[descriptorlength:]
                 self.descriptorReceived(descriptor)
+
+class GnutellaRouter(GnutellaTalker):
+    """
+    This is a well-behaved Gnutella servent that routes messages as it should.  It does not, however, serve any actual files.
+    If you want to run a Gnutella servent that serves files, try the GnutellaServent class.  If you want to use GnutellaRouter for something, subclass it and override the methods named {ping,pong,push,query,queryHit}Received().  But please remember that you have to call GnutellaRouter's `pingReceived()' from your overridden `pingReceived()' if you want it to route the ping!
+    """
+    def __init__(self):
+        GnutellaTalker.__init__(self)
+        ### XXXX incomplete.  Zooko stopped here to go to bed after the first night of hacking this file.  --Zooko 2002-07-15
+
