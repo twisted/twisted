@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.66 2003/03/04 21:36:38 exarkun Exp $
+# $Id: default.py,v 1.67 2003/03/05 17:16:21 itamarst Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -82,10 +82,6 @@ class PosixReactorBase(ReactorBase):
     if unixEnabled:
         __implements__ = __implements__ + (IReactorUNIX,)
 
-    def __init__(self, installSignalHandlers=1):
-        ReactorBase.__init__(self)
-        self._installSignalHandlers = installSignalHandlers
-
     def _handleSignals(self):
         """Install the signal handlers for the Twisted event loop."""
         import signal
@@ -99,17 +95,17 @@ class PosixReactorBase(ReactorBase):
         if platform.getType() == 'posix':
             signal.signal(signal.SIGCHLD, process.reapAllProcesses)
 
-    def startRunning(self):
+    def startRunning(self, installSignalHandlers=1):
         threadable.registerAsIOThread()
         self.fireSystemEvent('startup')
-        if self._installSignalHandlers:
+        if installSignalHandlers:
             self._handleSignals()
         if self.usingThreads:
             self.installWaker()
         self.running = 1
 
-    def run(self):
-        self.startRunning()
+    def run(self, installSignalHandlers=1):
+        self.startRunning(installSignalHandlers=installSignalHandlers)
         self.mainLoop()
 
     def mainLoop(self):
@@ -512,7 +508,7 @@ class SelectReactor(PosixReactorBase):
 def install():
     """Configure the twisted mainloop to be run using the select() reactor.
     """
-    reactor = SelectReactor(1)
+    reactor = SelectReactor()
     main.installReactor(reactor)
 
 

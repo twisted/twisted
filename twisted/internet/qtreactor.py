@@ -114,9 +114,9 @@ _timer = None
 class QTReactor(default.PosixReactorBase):
     """Qt based reactor."""
 
-    def __init__(self, installSignalHandlers=1, app=None):
+    def __init__(self, app=None):
         self.running = 1
-        default.PosixReactorBase.__init__(self, installSignalHandlers)
+        default.PosixReactorBase.__init__(self)
         if app is None:
             app = QApplication([])
         self.qApp = app
@@ -177,9 +177,9 @@ class QTReactor(default.PosixReactorBase):
             delay = int(delay * 1000)
         self.qApp.processEvents(delay)
     
-    def run(self):
+    def run(self, installSignalHandlers=1):
         self.running = 1
-        self.startRunning()
+        self.startRunning(installSignalHandlers=installSignalHandlers)
         self.simulate()
         self.qApp.enter_loop()
 

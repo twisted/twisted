@@ -83,17 +83,8 @@ def stopMainLoop(*ignored):
     log.msg("Stopping main loop.")
 
 def _getReactor():
-    import twisted.internet
-    if not hasattr(twisted.internet, 'reactor'):
-        warnings.warn("Please use reactor methods instead of twisted.internet.main")
-        # Work on Jython
-        if platform.getType() == 'java':
-            import javareactor
-            javareactor.install()
-        else:
-            import default
-            default.install()
-    return twisted.internet.reactor
+    from twisted.internet import reactor
+    return reactor
 
 
 def run(installSignalHandlers=1):
@@ -101,9 +92,10 @@ def run(installSignalHandlers=1):
 
     This call \"never\" returns.  
     """
+    warnings.warn("Please use reactor methods instead of twisted.internet.main")
     global running
     running = 1
-    _getReactor().run()
+    _getReactor().run(installSignalHandlers=installSignalHandlers)
 
 
 def installReactor(reactor):
@@ -149,6 +141,7 @@ def callWhenRunning(function):
     the system has not yet started running, the function will be queued to get
     run when the mainloop starts.
     """
+    warnings.warn("Please use reactor methods instead of twisted.internet.main")
     if running:
         function()
     else:
@@ -162,11 +155,13 @@ def callBeforeShutdown(function):
     running, so any function registered in this list may return a
     Deferred, which will delay the actual shutdown until later.
     """
+    warnings.warn("Please use reactor methods instead of twisted.internet.main")
     _getReactor().addSystemEventTrigger('before', 'shutdown', function)
 
 def removeCallBeforeShutdown(function):
     """Remove a function registered with callBeforeShutdown.
     """
+    warnings.warn("Please use reactor methods instead of twisted.internet.main")
     _getReactor().removeSystemEventTrigger(('before', 'shutdown',
                                             (function, (), {})))
 
@@ -176,18 +171,22 @@ def callDuringShutdown(function):
     These functions ought to shut down the event loop -- stopping
     thread pools, closing down all connections, etc.
     """
+    warnings.warn("Please use reactor methods instead of twisted.internet.main")
     _getReactor().addSystemEventTrigger('during', 'shutdown', function)
 
 
 def removeCallDuringShutdown(function):
+    warnings.warn("Please use reactor methods instead of twisted.internet.main")
     _getReactor().removeSystemEventTrigger(('during', 'shutdown',
                                             (function, (), {})))
 
 def callAfterShutdown(function):
+    warnings.warn("Please use reactor methods instead of twisted.internet.main")
     _getReactor().addSystemEventTrigger('after', 'shutdown', function)
 
 
 def removeCallAfterShutdown(function):
+    warnings.warn("Please use reactor methods instead of twisted.internet.main")
     _getReactor().removeSystemEventTrigger(('after', 'shutdown',
                                             (function, (), {})))
 
@@ -223,8 +222,7 @@ class Delayeds:
             d.runUntilCurrent()
 
 
-# delayeds backwards compatability - this will be done in base.ReactorBase
-# once we get e.g. the task module to not call main.addDelayed on import
+# delayeds backwards compatability - DO NOT USE THIS IT WILL DIE SOON
 _delayeds = Delayeds()
 addDelayed = _delayeds.addDelayed
 removeDelayed = _delayeds.removeDelayed

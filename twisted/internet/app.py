@@ -522,10 +522,7 @@ class Application(log.Logger, styles.Versioned,
 
     def connectUDP(self, remotehost, remoteport, protocol, localport=0,
                   interface='', maxPacketSize=8192):
-        """Connects a L{ConnectedDatagramProtocol} instance to a UDP port.
-
-        EXPERIMENTAL.
-        """
+        """Connects a L{ConnectedDatagramProtocol} instance to a UDP port."""
         self.udpConnectors.append((
             remotehost, remoteport, protocol,
             localport, interface, maxPacketSize
@@ -559,31 +556,17 @@ class Application(log.Logger, styles.Versioned,
             return reactor.connectUNIX(address, factory, timeout)
 
     def addDelayed(self, delayed):
-        """
-        Adds an object implementing delay.IDelayed for execution in my event loop.
-
-        The timeout for select() will be calculated based on the sum of
-        all Delayed instances attached to me, using their 'timeout'
-        method.  In this manner, delayed instances should have their
-        various callbacks called approximately when they're supposed to
-        be (based on when they were registered).
-
-        This is not hard realtime by any means; depending on server
-        load, the callbacks may be called in more or less time.
-        However, 'simulation time' for each Delayed instance will be
-        monotonically increased on a regular basis.
-
-        See the documentation for twisted.python.delay.Delayed and IDelayed
-        for details.
-        """
+        """This methods is deprecated."""
+        warnings.warn("twisted.python.delay is deprecated. Please use reactor methods.",
+                      DeprecationWarning, stacklevel=2)
         self.delayeds.append(delayed)
         if main.running and self.running:
             main.addDelayed(delayed)
 
     def removeDelayed(self, delayed):
-        """
-        Remove a Delayed previously added to the main event loop with addDelayed.
-        """
+        """This method is deprecated."""
+        warnings.warn("twisted.python.delay is deprecated. Please use reactor methods.",
+                      DeprecationWarning, stacklevel=2)
         self.delayeds.remove(delayed)
         if main.running and self.running:
             main.removeDelayed(delayed)
@@ -744,20 +727,22 @@ class Application(log.Logger, styles.Versioned,
         Run this application, running the main loop if necessary.
         If 'save' is true, then when this Application is shut down, it
         will be persisted to a pickle.
-        'installSignalHandlers' is passed through to main.run(), the
+        'installSignalHandlers' is passed through to reactor.run(), the
         function that starts the mainloop.
         """
+        from twisted.internet import reactor
         if not self._boundPorts:
             self.bindPorts()
         self._save = save
-        main.callBeforeShutdown(self._beforeShutDown)
-        main.callAfterShutdown(self._afterShutDown)
-        if not main.running:
-            log.logOwner.own(self)
-            global theApplication
-            theApplication = self
-            main.run(installSignalHandlers=installSignalHandlers)
-            log.logOwner.disown(self)
+        reactor.addSystemEventTrigger('before', 'shutdown', self._beforeShutDown)
+        reactor.addSystemEventTrigger('after', 'shutdown', self._afterShutDown)
+        global theApplication
+        log.logOwner.own(self)
+        theApplication = self
+        main.running = 1 # just in case
+        reactor.run(installSignalHandlers=installSignalHandlers)
+        log.logOwner.disown(self)
+
 
 #
 # These are dummy classes for backwards-compatibility!

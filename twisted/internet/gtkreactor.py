@@ -97,8 +97,8 @@ class GtkReactor(default.PosixReactorBase):
     def crash(self):
         gtk.mainquit()
 
-    def run(self):
-        self.startRunning()
+    def run(self, installSignalHandlers=1):
+        self.startRunning(installSignalHandlers=installSignalHandlers)
         self.simulate()
         gtk.mainloop()
 
@@ -160,8 +160,8 @@ class PortableGtkReactor(default.SelectReactor):
     def crash(self):
         gtk.mainquit()
 
-    def run(self):
-        self.startRunning()
+    def run(self, installSignalHandlers=1):
+        self.startRunning(installSignalHandlers=installSignalHandlers)
         self.simulate()
         gtk.mainloop()
 
