@@ -1082,7 +1082,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             self.mbox.removeListener(self)
             self.mbox = None
             self.state = 'auth'
-    
+
         name = self._parseMbox(name)
         defer.maybeDeferred(
             self.account.select, self._parseMbox(name), rw
@@ -1229,7 +1229,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             ).addCallback(self._cbListWork, tag, sub, cmdName
             ).addErrback(self._ebListWork, tag
             )
-    
+
     def _cbListWork(self, mailboxes, tag, sub, cmdName):
         for (name, box) in mailboxes:
             if not sub or self.account.isSubscribed(name):
@@ -2292,7 +2292,8 @@ class IMAP4Client(basic.LineReceiver):
                 log.err("Server wants us to use TLS, but we don't have "
                         "a Context Factory!")
         else:
-            log.msg("Server has no TLS support. logging in over cleartext!")
+            if self.transport.getHost()[0] != 'SSL':
+                log.msg("Server has no TLS support. logging in over cleartext!")
             args = ' '.join((username, password))
             return self.sendCommand(Command('LOGIN', args))
 
