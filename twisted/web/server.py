@@ -36,6 +36,7 @@ import cgi
 import cPickle
 import copy
 import time
+import calendar
 
 # Twisted Imports
 from twisted.spread import pb
@@ -98,6 +99,30 @@ def date_time_string(msSinceEpoch=None):
         hh, mm, ss)
     return s
 
+def timegm(year, month, day, hour, minute, second):
+    """Convert time tuple in GMT to seconds since epoch, GMT"""
+    EPOCH = 1970
+    assert year >= EPOCH
+    assert 1 <= month <= 12
+    days = 365*(year-EPOCH) + calendar.leapdays(EPOCH, year)
+    for i in range(1, month):
+        days = days + calendar.mdays[i]
+    if month > 2 and calendar.isleap(year):
+        days = days + 1
+    days = days + day - 1
+    hours = days*24 + hour
+    minutes = hours*60 + minute
+    seconds = minutes*60 + second
+    return seconds
+
+def string_date_time(dateString):
+    """Convert an HTTP date string to seconds since epoch."""
+    parts = string.split(dateString, ' ')
+    day = int(parts[1])
+    month = int(monthname.index(parts[2]))
+    year = int(parts[3])
+    hour, min, sec = map(int, string.split(parts[4], ':'))
+    return int(timegm(year, month, day, hour, min, sec))
 
 
 class Request(pb.Copyable, http.HTTP):

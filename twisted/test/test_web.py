@@ -1,9 +1,20 @@
 from pyunit import unittest
-import string
+import string, random
 
 from twisted.web import server, resource, widgets, guard
 from twisted.python import defer
 from twisted.internet import main, passport
+
+
+class DateTimeTest(unittest.TestCase):
+    """Test date parsing functions."""
+    
+    def testRoundtrip(self):
+        for i in range(10000):
+            time = random.randint(0, 2000000000)
+            timestr = server.date_time_string(time)
+            time2 = server.string_date_time(timestr)
+            self.assertEquals(time, time2)
 
 
 class DummyRequest:
@@ -116,4 +127,4 @@ class GuardTest(unittest.TestCase):
         print w
         assert d.written == ['correct'], "incorrect result: %s"% w
 
-testCases = [SiteTest, WidgetTest, GuardTest]
+testCases = [DateTimeTest, SiteTest, WidgetTest, GuardTest]
