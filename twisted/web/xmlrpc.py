@@ -252,8 +252,4 @@ class Proxy:
             reactor.connectTCP(self.host, self.port or 80, factory)
         return factory.deferred
 
-    def __getattr__(self, name):
-        return lambda *args: self.callMethod(name, *args)
-
-
 __all__ = ["XMLRPC", "Handler", "NoSuchFunction", "Fault", "Proxy"]
