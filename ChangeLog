@@ -1,3 +1,10 @@
+2003-03-31  Brian Warner  <warner@lothar.com>
+
+	* twisted/trial/unittest.py: use SkipTest's argument as a reason
+	and display it in the test results instead of the traceback. Allow
+	test methods and TestCase classes to define a .skip attribute
+	instead of raising SkipTest.
+
 2003-03-31  Kevin Turner  <acapnotic@twistedmatrix.com>
 
 	* twisted/trial/remote.py: machine-readable trial output to allow

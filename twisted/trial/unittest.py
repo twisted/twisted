@@ -20,6 +20,9 @@ log.startKeepingErrors()
 
 
 class SkipTest(Exception):
+    """Raise this (with a reason) to skip the current test. You may also set
+    method.skip to a reason string to skip it, or set class.skip to skip the
+    entire TestCase."""
     pass
 
 class FailTest(AssertionError):
@@ -154,14 +157,24 @@ class TestSuite:
             failingExceptionType = FailTest
 
         try:
+            if getattr(method, "skip", None):
+                raise SkipTest, method.skip
+            if getattr(testCase, "skip", None):
+                raise SkipTest, testCase.skip
             testCase.setUp()
             method(testCase)
         except failingExceptionType, e:
             output.reportFailure(testClass, method, sys.exc_info())
         except KeyboardInterrupt:
             raise
-        except SkipTest:
-            output.reportSkip(testClass, method, sys.exc_info())
+        except SkipTest, r:
+            reason = None
+            if len(r.args) > 0:
+                reason = r.args[0]
+            if reason:
+                output.reportSkip(testClass, method, reason)
+            else:
+                output.reportSkip(testClass, method, sys.exc_info())
         except:
             output.reportError(testClass, method, sys.exc_info())
         else:
@@ -403,8 +416,10 @@ class TextReporter(Reporter):
     def _formatError(self, flavor, (testClass, method, error)):
         if isinstance(error, failure.Failure):
             tb = error.getBriefTraceback()
-        else:
+        elif type(error) == types.TupleType:
             tb = string.join(apply(format_exception, error))
+        else:
+            tb = "%s\n" % error
 
         ret = ("%s\n%s: %s (%s)\n%s\n%s" %
                (self.DOUBLE_SEPARATOR,
