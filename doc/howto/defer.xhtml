@@ -543,6 +543,11 @@ dl = defer.DeferredList([deferred1, deferred2, deferred3])
 dl.addDeferred(deferred4)
 </pre>
 
+<p>Note that adding deferreds to a <code>DeferredList</code> that has
+been filled already will lead to unpredictable behavior. Only add
+deferreds to a list that you know has not been filled yet (you can
+check the <code>.called</code> attribute.</p>
+
 <p>You can now treat the DeferredList like an ordinary Deferred; you can call
 <code>addCallbacks</code> and so on.  The DeferredList will call its callback
 when all the deferreds have completed.  The callback will be called with a list
