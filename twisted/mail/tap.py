@@ -64,7 +64,7 @@ class Options(usage.Options):
         self.service.domains[name] = self.last_domain
         self.service.portals[name] = portal.Portal(self.last_domain)
         map(self.service.portals[name].registerChecker, self.last_domain.getCredentialsCheckers())
-    opt_d = opt_domain = opt_maildirdbmdomain
+    opt_d = opt_maildirdbmdomain
 
     def opt_user(self, user_pass):
         """add a user/password to the last specified domains
