@@ -436,18 +436,23 @@ class TestFixedClasses(unittest.TestCase):
             lst.list.pop()
         gc.collect()
         self.failUnlessEqual(len(lst.list), 5)
-        lst.list.append(Storable())
-        for x in range(1000):
-            lst.list.append(Storable())
+        for x in range(100):
+            lst.list.append(Node(str(x)))
         gc.collect()
-        self.failUnlessEqual(len(lst.list), 1006)
+        lst.list.insert(50, Node("special"))
+        self.assertEquals(lst.list[50].name, "special")
+        self.assertEquals(lst.list[49].name, "44")
+        self.assertEquals(lst.list[51].name, "45")
+        self.assertEquals(lst.list[100].name, "94")
+        self.assertEquals(lst.list[105].name, "99")
+        self.failUnlessEqual(len(lst.list), 106)
         del lst
         gc.collect()
         lst = self.db.retrieve(uid)
         #print lst, lst.list
         #print list(lst.list)
 
-        self.failUnlessEqual(len(lst.list), 1006)
+        self.failUnlessEqual(len(lst.list), 106)
         del lst.list[:]
         gc.collect()
         self.failUnlessEqual(len(lst.list), 0)
@@ -531,6 +536,7 @@ class TestFixedClasses(unittest.TestCase):
     def testSimpleFixed(self):
         f = Fixture(1, 2.0, None)
         uid = self.db.insert(f)
+        self.assertEquals(uid, f.storedUIDPath())
         whiteboxOid, whiteboxGenhash = struct.unpack("!ii", uid.decode("hex"))
         junkGenhash = whiteboxGenhash ^ 0xabcd
         junkuid = struct.pack("!ii", whiteboxOid,
