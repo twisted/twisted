@@ -18,7 +18,7 @@
 """Tests for Pespective Broker module.
 """
 
-import sys
+import sys, os
 
 from cStringIO import StringIO
 
@@ -391,7 +391,7 @@ class BrokerTestCase(unittest.TestCase):
         assert s.localObjects.has_key(rluid), "Should have key."
         del self.nestedRemote
         # nudge the gc
-        if sys.hexversion >= 0x2000000:
+        if sys.hexversion >= 0x2000000 and os.name != "java":
             import gc
             gc.collect()
         # try to nudge the GC even if we can't really
