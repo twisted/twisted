@@ -37,20 +37,45 @@ def installReactor(reactor):
     if reactor:
         reflect.namedModule(reactorTypes[reactor]).install()
 
+def runWithProfiler(reactor, config):
+    """Run reactor under standard profiler."""
+    p = profile.Profile()
+    p.runcall(reactor.run)
+    if config['savestats']:
+        p.dump_stats(config['profile'])
+    else:
+        # XXX - omfg python sucks
+        tmp, sys.stdout = sys.stdout, open(config['profile'], 'a')
+        p.print_stats()
+        sys.stdout, tmp = tmp, sys.stdout
+        tmp.close()
+
+def runWithHotshot(reactor, config):
+    """Run reactor under hotshot profiler."""
+    import hotshot, hotshot.stats
+    # this writes stats straight out
+    p = hotshot.Profile(config["profile"])
+    p.runcall(reactor.run)
+    if config["savestats"]:
+        # stats are automatically written to file, nothing to do
+        return
+    else:
+        s = hotshot.stats.load(config["profile"])
+        s.strip_dirs()
+        s.sort_stats(-1)
+        tmp, sys.stdout = sys.stdout, open(config['profile'], 'w')
+        s.print_stats()
+        sys.stdout, tmp = tmp, sys.stdout
+        tmp.close()
+
 def runReactorWithLogging(config, oldstdout, oldstderr):
     from twisted.internet import reactor
     try:
         if config['profile']:
-            p = profile.Profile()
-            p.runcall(reactor.run)
-            if config['savestats']:
-                p.dump_stats(config['profile'])
+            if sys.version_info[:2] > (2, 2):
+                runWithHotshot(reactor, config)
             else:
-                # XXX - omfg python sucks
-                tmp, sys.stdout = sys.stdout, open(config['profile'], 'a')
-                p.print_stats()
-                sys.stdout, tmp = tmp, sys.stdout
-                tmp.close()
+                runWithProfiler(reactor, config)
         elif config['debug']:
             failure.startDebugMode()
             sys.stdout = oldstdout
