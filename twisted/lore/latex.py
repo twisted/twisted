@@ -103,6 +103,9 @@ class LatexSpitter(XMLParser):
             self.writer('\\end{verbatim}')
             self.ignoring = 1
         elif attrs.has_key('href'):
+            if attrs.get('class', '').find('listing') != -1:
+                # Source listings aren't cross-references.
+                return
             href = attrs['href']
             if not href.startswith('http:') and not href.startswith('#'):
                 self.ref = href
