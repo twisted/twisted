@@ -226,6 +226,9 @@ class Process(styles.Ephemeral):
     on sockets...)
     """
 
+    debug = False
+    debug_child = False
+
     def __init__(self, reactor, command, args, environment, path, proto,
                  uid=None, gid=None, childFDs=None):
         """Spawn an operating-system process.
@@ -289,7 +292,7 @@ class Process(styles.Ephemeral):
                         2: "r", # and we read from their stderr
                         }
 
-        debug = False
+        debug = self.debug
         if debug: print "childFDs", childFDs
 
         # fdmap.keys() are filenos of pipes that are used by the child.
@@ -418,9 +421,10 @@ class Process(styles.Ephemeral):
 
         """
 
-        debug = False
+        debug = self.debug_child
         if debug:
-            errfd = open("/tmp/p.err", "a", 0)
+            #errfd = open("/tmp/p.err", "a", 0)
+            errfd = sys.stderr
             print >>errfd, "starting _setupChild"
 
         destList = fdmap.values()

@@ -390,6 +390,13 @@ class FDChecker(protocol.ProcessProtocol):
         self.done = True
 
 class FDTest(unittest.TestCase):
+    def setUp(self):
+        from twisted.internet import process
+        process.Process.debug_child = True
+    def tearDown(self):
+        from twisted.internet import process
+        process.Process.debug_child = False
+        
     def testFD(self):
         exe = sys.executable
         scriptPath = util.sibpath(__file__, "process_fds.py")
