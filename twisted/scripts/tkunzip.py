@@ -124,7 +124,7 @@ class Progressor:
         assert self.bar and self.iterator, "must setBar and setIterator"
         self.root=root
         root.title(self.title)
-        d = defer.Deferred()
+        d=defer.Deferred()
         reactor.callLater(0.1, self.processOne, d)
         return d
 
@@ -133,13 +133,14 @@ class Progressor:
             return deferred.callback(self.root)
         
         try:
-            self.remaining = self.iterator.next()
+            self.remaining=self.iterator.next()
         except StopIteration:
-            self.stopping = 1
+            self.stopping=1
+            
         except:
-            return deferred.errback(failure.Failure())
+            deferred.errback(failure.Failure())
         
-        if self.remaining%10 == 0:
+        if self.remaining%10==0:
             reactor.callLater(0, self.updateBar)
         reactor.callLater(0, self.processOne, deferred)
 
@@ -192,10 +193,15 @@ def run(argv=sys.argv):
     
     prog=ProgressBar(root, value=0, labelColor="black", width=200)    
     prog.pack()
-    root.deiconify()
 
     # callback immediately
     d=defer.succeed(root)
+
+    def deiconify(deferred):
+        root.deiconify()
+        return root
+
+    d.addCallback(deiconify).addErrback(util.println)
     
     if opt['zipfile']:
         uz=Progressor('Unzipping...')
