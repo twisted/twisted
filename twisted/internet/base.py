@@ -329,6 +329,8 @@ class ReactorBase:
     def cancelCallLater(self, callID):
         """See twisted.internet.interfaces.IReactorTime.cancelCallLater.
         """
+        # DO NOT DELETE THIS - this is documented in Python in a Nutshell, so we
+        # we can't get rid of it for a long time.
         warnings.warn("reactor.cancelCallLater(callID) is deprecated - use callID.cancel() instead")
         callID.cancel()
 
