@@ -65,7 +65,7 @@ Instance Method: s.center, where s is an instance of UserString.UserString:
 @author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
 
-__version__ = "$Revision: 1.42 $"[11:-2]
+__version__ = "$Revision: 1.43 $"[11:-2]
 
 # System Imports
 import string
@@ -378,9 +378,19 @@ class _Jellier:
     constantTypes = {types.StringType : 1, types.IntType : 1,
                      types.FloatType : 1, types.LongType : 1}
 
+    def _checkMutable(self,obj):
+        objId = id(obj)
+        if self.cooked.has_key(objId):
+            return self.cooked[objId]
+        if self.preserved.has_key(objId):
+            self._cook(obj)
+            return self.cooked[objId]
 
     def jelly(self, obj):
         if isinstance(obj, Jellyable):
+            preRef = self._checkMutable(obj)
+            if preRef:
+                return preRef
             return obj.jellyFor(self)
         objType = type(obj)
         if self.taster.isTypeAllowed(
@@ -413,12 +423,9 @@ class _Jellier:
             elif objType is ClassType:
                 return ['class', qual(obj)]
             else:
-                objId = id(obj)
-                if self.cooked.has_key(objId):
-                    return self.cooked[objId]
-                if self.preserved.has_key(objId):
-                    self._cook(obj)
-                    return self.cooked[objId]
+                preRef = self._checkMutable(obj)
+                if preRef:
+                    return preRef
                 # "Mutable" Types
                 sxp = self.prepare(obj)
                 if objType is ListType:
