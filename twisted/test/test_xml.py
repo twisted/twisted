@@ -340,6 +340,19 @@ class MicroDOMTest(TestCase):
         self.assertEquals(ud, sd)
         self.assertEquals(ud, urd)
 
+        # test that raw text still gets encoded
+        # test that comments get encoded
+        j3=microdom.parseString(u'<foo/>')
+        hdr='<?xml version="1.0"?>'
+        div=microdom.lmx().text(u'\u221a', raw=1).node
+        de=j3.documentElement
+        de.appendChild(div)
+        de.appendChild(j3.createComment(u'\u221a'))
+        self.assertEquals(j3.toxml(), hdr+
+                          u'<foo><div>\u221a</div><!--\u221a--></foo>'.encode('utf8'))
+
+        
+
     def testCloneNode(self):
         s = '<foo a="b"><bax>x</bax></foo>'
         node = microdom.parseString(s).documentElement
