@@ -57,6 +57,10 @@ reactor.run()
     will get called when the protocol is connected and disconnected
     from a UDP socket.</p>
 
+    <p>The protocol's <code class="python">transport</code> attribute will implement the
+    <code class="API">twisted.internet.interfaces.IUDPTransport</code>
+    interface.</p>
+
 
     <h2>Connected UDP</h2>
 
@@ -69,6 +73,10 @@ reactor.run()
     <p>Unlike a regular UDP protocol, we do not need to specify where to
     send datagrams to, and are not told where they came from since
     they can only come from address the socket is 'connected' to.</p>
+
+    <p>The protocol's <code class="python">transport</code> attribute will implement the
+    <code class="API">twisted.internet.interfaces.IUDPConnectedTransport</code>
+    interface.</p>
 
     <pre class="python">
 from twisted.internet.protocol import ConnectedDatagramProtocol
