@@ -4,12 +4,6 @@
 	now stored until next iteration before being written, and many
 	small writes are not expensive.
 
-2004-10-03  Jp Calderone  <exarkun@twistedmatrix.com>
-
-	* twisted/mail/pop3.py, twisted/mail/test/test_pop3client.py:
-	Added Quotient's nicer POP3 client and tests.  Deprecated the
-	old POP3Client.
-
 2004-09-30  Brian Warner  <warner@lothar.com>
 
 	* glib2reactor.py: new reactor that uses just glib2, not gtk2.
