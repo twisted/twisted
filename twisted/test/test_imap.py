@@ -85,7 +85,7 @@ class IMAP4HelperTestCase(unittest.TestCase):
         
         m2 = m2 + (1, 3)
         self.assertEquals(m1, m2)
-        self.assertEquals(list(m1 + m2), [1, 2, 3, 1, 2, 3])
+        self.assertEquals(list(m1 + m2), [1, 2, 3])
 
     def testQuotedSplitter(self):
         cases = [
@@ -273,20 +273,20 @@ class IMAP4HelperTestCase(unittest.TestCase):
         outputs = [
             MessageSet(1, None),
             MessageSet(5, None),
-            MessageSet(1, 2, 5, None),
-            MessageSet(1, 1),
-            MessageSet(1, 1, 2, 2),
-            MessageSet(1, 1, 3, 3, 5, 5),
+            MessageSet(5, None) + MessageSet(1, 2),
+            MessageSet(1),
+            MessageSet(1, 2),
+            MessageSet(1) + MessageSet(3) + MessageSet(5),
             MessageSet(1, 10),
-            MessageSet(1, 10, 11, 11),
-            MessageSet(1, 5, 10, 20),
-            MessageSet(1, 1, 5, 10),
-            MessageSet(1, 1, 5, 10, 15, 20),
-            MessageSet(1, 10, 15, 15, 20, 25),
+            MessageSet(1, 11),
+            MessageSet(1, 5) + MessageSet(10, 20),
+            MessageSet(1) + MessageSet(5, 10),
+            MessageSet(1) + MessageSet(5, 10) + MessageSet(15, 20),
+            MessageSet(1, 10) + MessageSet(15) + MessageSet(20, 25),
         ]
         
         lengths = [
-            sys.maxint, sys.maxint, sys.maxint,
+            None, None, None,
             1, 2, 3, 10, 11, 16, 7, 13, 17,
         ]
         
@@ -294,9 +294,12 @@ class IMAP4HelperTestCase(unittest.TestCase):
             self.assertEquals(imap4.parseIdList(input), expected)
 
         for (input, expected) in zip(inputs, lengths):
-            L = len(imap4.parseIdList(input))
+            try:
+                L = len(imap4.parseIdList(input))
+            except TypeError:
+                L = None
             self.assertEquals(L, expected,
-                "len(%r) = %d != %d" % (input, L, expected))
+                "len(%r) = %r != %r" % (input, L, expected))
 
 class SimpleMailbox:
     flags = ('\\Flag1', 'Flag2', '\\AnotherSysFlag', 'LastFlag')
@@ -810,6 +813,7 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
             message = file(infile)
             continuation = defer.Deferred()
             continuation.addCallback(self.client._IMAP4Client__cbContinueAppend, message)
+            continuation.addCallback(self.client._IMAP4Client__cbFinishAppend)
             continuation.addErrback(self.client._IMAP4Client__ebContinueAppend)
             return self.client.sendCommand(
                 imap4.Command(
@@ -1176,6 +1180,14 @@ class FetchSearchStoreCopyTestCase(unittest.TestCase, IMAP4HelperMixin):
         self.expected = [1, 2, 3]
         self._searchWork(1)
 
+    def getUID(self, msg):
+        try:
+            return self.expected[msg]['UID']
+        except (TypeError, IndexError):
+            return self.expected[msg-1]
+        except KeyError:
+            return 42
+
     def fetch(self, messages, parts, uid):
         self.server_received_uid = uid
         self.server_received_parts = parts
@@ -1202,7 +1214,8 @@ class FetchSearchStoreCopyTestCase(unittest.TestCase, IMAP4HelperMixin):
         self.assertEquals(self.result, self.expected)
         self.assertEquals(self.uid, self.server_received_uid)
         self.assertEquals(self.parts, self.server_received_parts)
-        self.assertEquals(self.messages, self.server_received_messages)
+        self.assertEquals(imap4.parseIdList(self.messages),
+                          imap4.parseIdList(self.server_received_messages))
 
     def testFetchUID(self):
         def fetch():
