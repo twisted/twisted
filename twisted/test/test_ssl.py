@@ -339,7 +339,7 @@ class ImmediateDisconnectTestCase(unittest.TestCase, ContextGeneratingMixin):
         return clientProtocolFactory.connectionDisconnected.addCallback(
             lambda ignoredResult: self.serverPort.stopListening())
 
-if SSL is None:
+if interfaces.IReactorSSL(reactor, None) is None:
     for tCase in [StolenTCPTestCase, TLSTestCase, SpammyTLSTestCase, 
                   BufferingTestCase, ImmediateDisconnectTestCase]:
-        tCase.skip = "OpenSSL not present, cannot run SSL tests"
+        tCase.skip = "Reactor does not support SSL, cannot run SSL tests"
