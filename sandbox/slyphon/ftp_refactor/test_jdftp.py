@@ -526,7 +526,7 @@ class TestFTPServer(unittest.TestCase):
         log.debug('ran ftp.PASV')
         iop.flush()
         
-        print ('log is %s' % log)
+        #print ('log is %s' % log)
         self.cnx.deferred.addCallback(lambda _:self._continueTestRETR)
         self.cnx.hookUpDTP()
 
@@ -546,7 +546,7 @@ class TestFTPServer(unittest.TestCase):
         iop.flush()
 
 
-    def _finishTestRETR(self):
+    #def _finishTestRETR(self):
         diop.flush()
         self.assert_(len(dc.lines) > 1)
         print 'dc.lines: %s' % dc.lines
