@@ -1,5 +1,6 @@
-from twisted.internet import event, passport, main
+from twisted.internet import passport, main
 from twisted.spread import pb
+from message_subscribe import event
 
 application = main.Application("event")
 i = passport.Identity("guest", application)
