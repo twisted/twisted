@@ -1,5 +1,10 @@
 2002-10-25  Moshe Zadka <moshez@twistedmatrix.com>
 
+	* twisted/web/domhelpers.py twisted/python/domhelpers.py
+	twisted/lore/tree.py twisted/web/woven/widgets.py: Moved domhelpers
+	to twisted.web, and add to it all the generic dom-query functions
+	from twisted.lore.tree
+
 	* twisted/scripts/generatelore.py twisted/scripts/html2latex.py
 	bin/html2latex bin/generatelore twisted/lore/__init__.py
 	twisted/lore/latex.py twisted/lore/tree.py: Add the document generation
