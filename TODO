@@ -93,3 +93,7 @@ this file directly.
 
 017 mod_pb, an apache module which allows communication with Twisted servers --
     hopefully compatible with the current twisted.web spread model.
+
+018 Better win32 integration. Support for running twisted servers as WinNT
+    services. twisted.internet support for the win32 event loop as provided by
+    win32all.
