@@ -395,9 +395,9 @@ class DictConstraint(Constraint):
     taster = openTaster
     opentypes = ["dict"]
 
-    def __init__(self, keyconstraint, valueconstraint, maxKeys=30):
-        self.keyconstraint = makeConstraint(keyconstraint)
-        self.valueconstraint = makeConstraint(valueconstraint)
+    def __init__(self, keyConstraint, valueConstraint, maxKeys=30):
+        self.keyConstraint = makeConstraint(keyConstraint)
+        self.valueConstraint = makeConstraint(valueConstraint)
         self.maxKeys = maxKeys
     def checkObject(self, obj):
         if type(obj) != types.DictType:
@@ -407,8 +407,8 @@ class DictConstraint(Constraint):
             raise Violation, "Dict keys=%d > maxKeys=%d" % (len(obj),
                                                             self.maxKeys)
         for key, value in obj.iteritems():
-            self.keyconstraint.checkObject(key)
-            self.valueconstraint.checkObject(value)
+            self.keyConstraint.checkObject(key)
+            self.valueConstraint.checkObject(value)
     def maxSize(self, seen=None):
         if not seen: seen = []
         if self in seen:
@@ -416,16 +416,16 @@ class DictConstraint(Constraint):
         seen.append(self)
         if self.maxKeys == None:
             raise UnboundedSchema
-        keySize = self.keyconstraint.maxSize(seen[:])
-        valueSize = self.valueconstraint.maxSize(seen[:])
+        keySize = self.keyConstraint.maxSize(seen[:])
+        valueSize = self.valueConstraint.maxSize(seen[:])
         return OPENBYTES("dict") + self.maxKeys * (keySize + valueSize)
     def maxDepth(self, seen=None):
         if not seen: seen = []
         if self in seen:
             raise UnboundedSchema # recursion
         seen.append(self)
-        keyDepth = self.keyconstraint.maxDepth(seen[:])
-        valueDepth = self.valueconstraint.maxDepth(seen[:])
+        keyDepth = self.keyConstraint.maxDepth(seen[:])
+        valueDepth = self.valueConstraint.maxDepth(seen[:])
         return 1 + max(keyDepth, valueDepth)
 
 DictOf = DictConstraint
