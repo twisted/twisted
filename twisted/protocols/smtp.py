@@ -311,7 +311,7 @@ class Address:
                     # Now in domain
                     domain = ['']  
             elif len(atl[0]) == 1 and not self.atomre.match(atl[0]) and atl[0] !=  '.':
-                raise AddressError, "Parse error at " + atl[0]
+                raise AddressError, "Parse error at %r of %r" % (atl[0], (addr, atl))
             else:
                 if not domain:
                     local.append(atl[0])
@@ -1193,6 +1193,7 @@ class ESMTP(SMTP):
     def connectionMade(self):
         SMTP.connectionMade(self)
         self.canStartTLS = components.implements(self.transport, ITLSTransport)
+        self.canStartTLS = self.canStartTLS and (self.ctx is not None)
 
     def extensions(self):
         ext = {'AUTH': self.challengers.keys()}
