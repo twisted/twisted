@@ -59,5 +59,5 @@ class Application(service.MultiService, components.Componentized):
 
     def scheduleSave(self):
         from twisted.internet import reactor
-        p = self.getComponent(persist.IPersistable)
+        p = persist.IPersistable(self)
         reactor.addSystemEventTrigger('after', 'shutdown', p.save, 'shutdown')
