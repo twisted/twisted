@@ -115,6 +115,9 @@ def format_exception(eType, eValue, tb, limit=None):
     but I screen out frames from the traceback that are part of
     the testing framework itself, leaving only the code being tested.
     """
+    result = [x.strip()+'\n' for x in
+              failure.Failure(eValue,eType,tb).getBriefTraceback().split('\n')]
+    return result
     # Only mess with tracebacks if they are from an explicitly failed
     # test.
     if eType != unittest.FailTest:
