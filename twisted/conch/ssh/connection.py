@@ -182,6 +182,15 @@ class SSHConnection(service.SSHService):
     # methods for users of the connection to call
 
     def sendGlobalRequest(self, request, data, wantReply = 0):
+        """
+        Send a global request for this connection.  Current this is only used
+        for remote->local TCP forwarding.
+
+        @type request:      C{str}
+        @type data:         C{str}
+        @type wantReply:    C{bool}
+        @rtype              C{Deferred}/C{None}
+        """
         self.transport.sendPacket(MSG_GLOBAL_REQUEST,
                                   common.NS(request)
                                   + (wantReply and '\xff' or '\x00')
@@ -192,6 +201,12 @@ class SSHConnection(service.SSHService):
             return d
 
     def openChannel(self, channel, extra = ''):
+        """
+        Open a new channel on this connection.
+
+        @type channel:  subclass of C{SSHChannel}
+        @type extra:    C{str}
+        """
         log.msg('opening channel %s with %s %s'%(self.localChannelID, 
                 channel.localWindowSize, channel.localMaxPacket))
         self.transport.sendPacket(MSG_CHANNEL_OPEN, common.NS(channel.name)
@@ -203,6 +218,15 @@ class SSHConnection(service.SSHService):
         self.localChannelID+=1
 
     def sendRequest(self, channel, requestType, data, wantReply = 0):
+        """
+        Send a request to a channel.
+
+        @type channel:      subclass of C{SSHChannel}
+        @type requestType:  C{str}
+        @type data:         C{str}
+        @type wantReply:    C{bool}
+        @rtype              C{Deferred}/C{None}
+        """
         if not self.channelsToRemoteChannel.has_key(channel):
             return
         log.logOwner.own(self.transport.transport)
@@ -218,6 +242,13 @@ class SSHConnection(service.SSHService):
             return d
 
     def adjustWindow(self, channel, bytesToAdd):
+        """
+        Tell the other side that we will receive more data.  This should not
+        normally need to be called as it is managed automatically.
+
+        @type channel:      subclass of C{SSHChannel}
+        @type bytesToAdd:   C{int}
+        """
         if not self.channelsToRemoteChannel.has_key(channel):
             return # we're already closed
         self.transport.sendPacket(MSG_CHANNEL_WINDOW_ADJUST, struct.pack('>2L', 
@@ -226,6 +257,13 @@ class SSHConnection(service.SSHService):
         channel.localWindowLeft+=bytesToAdd
 
     def sendData(self, channel, data):
+        """
+        Send data to a channel.  This should not normally be used: instead use
+        channel.write(data) as it manages the window automatically.
+
+        @type channel:  subclass of C{SSHChannel}
+        @type data:     C{str}
+        """
         if not self.channelsToRemoteChannel.has_key(channel):
             return # we're already closed
         self.transport.sendPacket(MSG_CHANNEL_DATA, struct.pack('>L', 
@@ -233,6 +271,15 @@ class SSHConnection(service.SSHService):
                                    common.NS(data))
 
     def sendExtendedData(self, channel, dataType, data):
+        """
+        Send extended data to a channel.  This should not normally be used:
+        instead use channel.writeExtendedData(data, dataType) as it manages
+        the window automatically.
+
+        @type channel:  subclass of C{SSHChannel}
+        @type dataType: C{int}
+        @type data:     C{str}
+        """
         if not self.channelsToRemoteChannel.has_key(channel):
             return # we're already closed
         self.transport.sendPacket(MSG_CHANNEL_DATA, struct.pack('>2L', 
@@ -240,12 +287,22 @@ class SSHConnection(service.SSHService):
                             + common.NS(data))
 
     def sendEOF(self, channel):
+        """
+        Send an EOF (End of File) for a channel.
+
+        @type channel:  subclass of C{SSHChannel}
+        """
         if not self.channelsToRemoteChannel.has_key(channel):
             return # we're already closed
         self.transport.sendPacket(MSG_CHANNEL_EOF, struct.pack('>L', 
                                     self.channelsToRemoteChannel[channel]))
 
     def sendClose(self, channel):
+        """
+        Close a channel.
+
+        @type channel:  subclass of C{SSHChannel}
+        """
         if not self.channelsToRemoteChannel.has_key(channel):
             return # we're already closed
         self.transport.sendPacket(MSG_CHANNEL_CLOSE, struct.pack('>L', 
@@ -254,14 +311,21 @@ class SSHConnection(service.SSHService):
 
     # methods to override
     def getChannel(self, channelType, windowSize, maxPacket, data):
-        """the other side requested a channel of some sort.
-        channelType is the string describing the channel
-        windowSize is the initial size of the remote window
-        maxPacket is the largest size of packet this channel should send
-        data is any other packet data
+        """
+        The other side requested a channel of some sort.
+        channelType is the type of channel being requested,
+        windowSize is the initial size of the remote window,
+        maxPacket is the largest packet we should send,
+        data is any other packet data (often nothing).
 
-        either this returns something that is a subclass of SSHChannel (although
-        this isn't enforced), or a tuple of errorCode, errorString.
+        We return either a subclass of SSHChannel, or a tuple of
+        (errorCode, errorMessage).
+
+        @type channelType:  C{str}
+        @type windowSize:   C{int}
+        @type maxPacket:    C{int}
+        @type data:         C{str}
+        @rtype:             subclass of C{SSHChannel}/C{tuple}
         """
         if self.transport.isClient and channelType != 'forwarded-tcpip':
             return OPEN_ADMINISTRATIVELY_PROHIBITED, 'not on the client bubba'
@@ -296,6 +360,10 @@ class SSHConnection(service.SSHService):
             - 1: request accepted
             - 1, <data>: request accepted with request specific data
             - 0: request denied
+
+        @type requestType:  C{str}
+        @type data:         C{str}
+        @rtype:             C{int}/C{tuple}
         """
         if self.transport.isClient:
             return 0 # no such luck
@@ -340,21 +408,54 @@ class SSHChannel:
         self.conn = conn
         self.specificData = ''
         self.buf = ''
+        self.extBuf = ''
 
     def channelOpen(self, specificData):
+        """
+        Called when the channel is opened.  specificData is any data that the
+        other side sent us when opening the channel.
+
+        @type specificData: C{str}
+        """
         log.msg('channel %s open'%self.id)
 
     def openFailed(self, reason):
+        """
+        Called when the the open failed for some reason.
+        reason.desc is a string descrption, reason.code the the SSH error code.
+
+        @type reason: C{error.ConchError}
+        """
         log.msg('other side refused channel %s\nreason: %s'%(self.id, reason))
 
     def addWindowBytes(self, bytes):
+        """
+        Called when bytes are added to the remote window.  By default it clears
+        the data buffers.
+
+        @type bytes:    C{int}
+        """
         self.remoteWindowLeft = self.remoteWindowLeft+bytes
         if self.buf:
             b = self.buf
             self.buf = ''
             self.write(b)
+        if self.extBuf:
+            b = self.extBuf
+            self.extBuf = None
+            map(self.writeExtended, b)
 
     def requestReceived(self, requestType, data):
+        """
+        Called when a request is sent to this channel.  By default it delegates
+        to self.request_<requestType>.
+        If this functio returns true, the request succeeded, otherwise it
+        failed.
+
+        @type requestType:  C{str}
+        @type data:         C{str}
+        @rtype:             C{bool}
+        """
         foo = requestType.replace('-', '_')
         f = getattr(self, 'request_%s'%foo, None)
         if f:
@@ -363,19 +464,42 @@ class SSHChannel:
         return 0
 
     def dataReceived(self, data):
+        """
+        Called when we receive data.
+
+        @type data: C{str}
+        """
         log.msg('got data %s'%repr(data))
 
     def extReceived(self, dataType, data):
+        """
+        Called when we receive extended data (usually standard error).
+
+        @type dataType: C{int}
+        @type data:     C{str}
+        """
         log.msg('got extended data %s %s'%(dataType, repr(data)))
 
     def eofReceived(self):
+        """
+        Called when the other side will send no more data.
+        """
         log.msg('channel %s remote eof'%self.id)
 
     def closed(self):
+        """
+        Called when the channel is closed.
+        """
         log.msg('channel %s closed'%self.id)
 
     # transport stuff
     def write(self, data):
+        """
+        Write some data to the channel.  If there is not enough remote window
+        available, buffer until it is.
+
+        @type data: C{str}
+        """
         if self.buf:
             self.buf += data
             return
@@ -389,18 +513,64 @@ class SSHChannel:
             self.remoteWindowLeft-=self.remoteMaxPacket
         if data:
             self.conn.sendData(self, data)
-        self.remoteWindowLeft-=len(data)
+            self.remoteWindowLeft-=len(data)
+
+    def writeExtended(self, dataType, data):
+        """
+        Send extended data to this channel.  If there is not enough remote
+        window available, buffer until there is.
+
+        @type dataType: C{int}
+        @type data:     C{str}
+        """
+        if self.extBuf:
+            if self.extBuf[-1][0] == dataType:
+                self.extBuf[-1][1]+=data
+            else:
+                self.extBuf.append((dataType, data))
+            return
+        if len(data) > self.remoteWindowLeft:
+            data, self.extBuf = data[:self.remoteWindowLeft], \
+                                [(dataType, data[self.remoteWindowLeft:])]
+        if not data: return
+        while len(data) > self.remoteMaxPacket:
+            self.conn.sendExtendedData(self, extType, 
+                                             data[:self.remoteMaxPacket])
+            data = data[self.remoteMaxPacket:]
+            self.remoteWindowLeft-=self.remoteMaxPacket
+        if data:
+            self.conn.sendExtendedData(self, extType, data)
+            self.remoteWindowLeft-=len(data)
 
     def writeSequence(self, data):
+        """
+        Part of the Transport interface.  Write a list of strings to the
+        channel.
+
+        @type data: C{list} of C{str}
+        """
         self.write(''.join(data))
 
     def loseConnection(self):
+        """
+        Close the channel.
+        """
         self.conn.sendClose(self)
 
     def getPeer(self):
+        """
+        Return a tuple describing the other side of the connection.
+
+        @rtype: C{tuple}
+        """
         return('SSH', )+self.conn.transport.getPeer()
 
     def getHost(self):
+        """
+        Return a tuple describing out side of the connection.
+
+        @rtype: C{tuple}
+        """
         return('SSH', )+self.conn.transport.getHost()
 
 MSG_GLOBAL_REQUEST = 80

@@ -48,6 +48,15 @@ class BadKeyError(Exception):
     """
 
 def getPublicKeyString(filename = None, line = 0, data = ''):
+    """
+    Return a public key string given a filename or data of an OpenSSH-style
+    public key.
+
+    @type filename: C{str}
+    @type line:     C{int}
+    @type data:     C{str}
+    @rtype:         C{str}
+    """
     if filename:
         lines = open(filename).readlines()
         data = lines[line]
@@ -57,6 +66,14 @@ def getPublicKeyString(filename = None, line = 0, data = ''):
     return base64.decodestring(fileData)
 
 def makePublicKeyString(obj, comment = ''):
+    """
+    Return an OpenSSH-style public key given a C{Crypto.PublicKey.pubkey.pubkey}
+    object.
+
+    @type obj:      C{Crypto.PublicKey.pubkey.pubkey}
+    @type comment:  C{str}
+    @rtype:         C{str}
+    """
     keyType = objectType(obj)
     if keyType == 'ssh-rsa':
         keyData = common.MP(obj.e) + common.MP(obj.n)
@@ -70,6 +87,16 @@ def makePublicKeyString(obj, comment = ''):
         
 
 def getPublicKeyObject(filename = None, line = 0, data = '', b64data = ''):
+    """
+    Return a C{Crypto.PublicKey.pubkey.pubkey} object corresponding to the
+    filename/public key data/OpenSSH public key data.
+
+    @type filename: C{str}
+    @type line:     C{int}
+    @type data:     C{str}
+    @type b64data:  C{str}
+    @rtype:         C{Crypto.PublicKey.pubkey.pubkey}  
+    """
     # b64data is the kind of data we'd get from reading a key file
     if data:
         publicKey = data
@@ -90,6 +117,16 @@ def getPublicKeyObject(filename = None, line = 0, data = '', b64data = ''):
         return DSA.construct((y, g, p, q))
 
 def getPrivateKeyObject(filename = None, data = '', passphrase = ''):
+    """
+    Return a C{Crypto.PublicKey.pubkey.pubkey} object corresponding to the
+    private key file/data.  If the private key is encrypted, passphrase B{must}
+    be specified, other wise a C{BadKeyError} will be raised.
+
+    @type filename:     C{str}
+    @type data:         C{str}
+    @type passphrase:   C{str}
+    @raises BadKeyError: if the key is invalid or a passphrase is not specified
+    """
     if filename:
         data = open(filename).readlines()
     else:
@@ -122,6 +159,15 @@ def getPrivateKeyObject(filename = None, data = '', passphrase = ''):
         return DSA.construct((y, g, p, q, x))
 
 def makePrivateKeyString(obj, passphrase = None):
+    """
+    Return an OpenSSH-style private key for a
+    C{Crypto.PublicKey.pubkey.pubkey} object.  If passphrase is given, encrypt
+    the private key with it.
+
+    @type obj:          C{Crypto.PublicKey.pubkey.pubkey}
+    @type passphrase:   C{str}/C{None}
+    @rtype:             C{str}
+    """
     keyType = objectType(obj)
     if keyType == 'ssh-rsa':
         keyData = '-----BEGIN RSA PRIVATE KEY-----\n'
@@ -154,6 +200,13 @@ def makePrivateKeyString(obj, passphrase = None):
     return keyData   
 
 def objectType(obj):
+    """
+    Return the SSH key type corresponding to a C{Crypto.PublicKey.pubkey.pubkey}
+    object.
+
+    @type obj:  C{Crypto.PublicKey.pubkey.pubkey}
+    @rtype:     C{str}
+    """
     keyDataMapping = {
         ('n', 'e', 'd', 'p', 'q'): 'ssh-rsa', 
         ('y', 'g', 'p', 'q', 'x'): 'ssh-dss'
@@ -172,8 +225,15 @@ def lenSig(obj):
     return obj.size()/8
 
 def signData(obj, data):
+    """
+    Sign the data with the given C{Crypto.PublicKey.pubkey.pubkey} object.
+
+    @type obj:  C{Crypto.PublicKey.pubkey.pubkey}
+    @type data: C{str}
+    @rtype:     C{str}
+    """
     mapping = {
-    'ssh-rsa': signData_rsa, 
+        'ssh-rsa': signData_rsa, 
         'ssh-dss': signData_dsa
     }
     objType = objectType(obj)
@@ -191,8 +251,16 @@ def signData_dsa(obj, data):
     return common.NS(''.join(map(Util.number.long_to_bytes, sig)))
 
 def verifySignature(obj, sig, data):
+    """
+    Verify that the signature for the data is valid.
+
+    @type obj:  C{Crypto.PublicKey.pubkey.pubkey}
+    @type sig:  C{str}
+    @type data: C{str}
+    @rtype:     C{bool}
+    """
     mapping = {
-    'ssh-rsa': verifySignature_rsa, 
+        'ssh-rsa': verifySignature_rsa, 
         'ssh-dss': verifySignature_dsa, 
      }
     objType = objectType(obj)
@@ -212,12 +280,17 @@ def verifySignature_dsa(obj, sig, data):
     return obj.verify(sha.new(data).digest(), sigTuple)
 
 def printKey(obj):
-    log.msg('%s %s (%s bits)'%(objectType(obj), 
+    """
+    Pretty print a C{Crypto.PublicKey.pubkey.pubkey} object.
+
+    @type obj: C{Crypto.PublicKey.pubkey.pubkey}
+    """
+    print '%s %s (%s bits)'%(objectType(obj), 
                                obj.hasprivate()and 'Private Key'or 'Public Key', 
-                               obj.size()))
+                               obj.size())
     for k in obj.keydata:
         if hasattr(obj, k):
-            log.msg('attr', k)
+            print 'attr', k
             by = common.MP(getattr(obj, k))[4:]
             while by:
                 m = by[: 15]
@@ -227,7 +300,7 @@ def printKey(obj):
                     o = o+'%02x:'%ord(c)
                 if len(m) < 15:
                     o = o[:-1]
-                log.msg('\t'+o)
+                print '\t'+o
 
 ID_SHA1 = '\x30\x21\x30\x09\x06\x05\x2b\x0e\x03\x02\x1a\x05\x00\x04\x14'
 

@@ -225,7 +225,8 @@ class SSHUserAuthClient(service.SSHService):
             self.authenticatedWith.append(self.lastAuth)
         for method in canContinue:
             if method not in self.authenticatedWith and self.tryAuth(method):
-                break
+                return 
+        self.transport.sendDisconnect(transport.DISCONNECT_NO_MORE_AUTH_METHODS_AVAILABLE, 'no more authentication methods available')
 
     def ssh_USERAUTH_PK_OK(self, packet):
         if self.lastAuth == 'publickey':
@@ -286,37 +287,44 @@ class SSHUserAuthClient(service.SSHService):
 
     def auth_password(self):
         d = self.getPassword()
-        d.addCallback(self._cbPassword)
-        return 1
+        if d:
+            d.addCallback(self._cbPassword)
+            return 1
+        else: # returned None, don't do password auth
+            return 0
 
     def _cbPassword(self, password):
         self.askForAuth('password', '\x00'+NS(password))
 
     def getPublicKey(self):
-        # XXX try to get public key
+        """
+        Return a public key for the user.  If no more public keys are
+        available, return None.
+
+        @rtype: C{str}/C{None}
+        """
         raise NotImplementedError
 
     def getPrivateKey(self):
-        # XXX try to get the private key
+        """
+        Return a C{Deferred} that will be called back with the private key
+        corresponding to the last public key from getPublicKey().
+        If the private key is not available, errback on the Deferred.
+
+        @rtype: C{Deferred}
+        """
         raise NotImplementedError
 
     def getPassword(self, prompt = None):
-        if not prompt:
-            prompt = 'Password for %s: ' % self.user
-        return defer.succeed(getpass(prompt))
+        """
+        Return a C{Deferred} that will be called back with a password.
+        prompt is a string to display for the password, or None for a generic
+        'user@hostname's password: '.
 
-def getpass(prompt = "Password: "):
-    import termios, sys
-    fd = sys.stdin.fileno()
-    old = termios.tcgetattr(fd)
-    new = termios.tcgetattr(fd)
-    new[3] = new[3] & ~termios.ECHO          # lflags
-    try:
-        termios.tcsetattr(fd, termios.TCSADRAIN, new)
-        passwd = raw_input(prompt)
-    finally:
-        termios.tcsetattr(fd, termios.TCSADRAIN, old)
-    return passwd
+        @type prompt: C{str}/C{None}
+        @rtype: C{Deferred}
+        """
+        raise NotImplementedError
 
 MSG_USERAUTH_REQUEST          = 50
 MSG_USERAUTH_FAILURE          = 51

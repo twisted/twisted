@@ -32,6 +32,15 @@ class OpenSSHConchAuthorizer(authorizer.DefaultAuthorizer):
     identityClass = identity.OpenSSHConchIdentity
 
     def getIdentityRequest(self, name):
+        """
+        Return a Deferred that will callback with an Identity for the given
+        name.  For the purposes of Conch, this should /always/ callback with
+        an Indentity to prevent attackers from learning what users are valid
+        and which aren't.
+
+        @type name: C{str}
+        @rtype:     C{Deferred}
+        """
         if not self.identities.has_key(name):
             log.msg('adding %s for %s' % (self.identityClass, name))
             self.addIdentity(self.identityClass(name, self))

@@ -468,7 +468,7 @@ class SSHClientTransport(SSHTransportBase):
             fingerprint = ':'.join(map(lambda c: '%02x'%ord(c), md5.new(pubKey).digest()))
             d = self.verifyHostKey(pubKey, fingerprint)
             d.addCallback(self._continueGEX_GROUP, pubKey, f, signature)
-            d.addErrback(lambda x,self=self:self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED, 'bad host key'))
+            d.addErrback(lambda x,self=self:self.sendDisconnect(DISCONNECT_HOST_KEY_NOT_VERIFIABLE, 'bad host key'))
         else:
             self.p, rest = getMP(packet)
             self.g, rest = getMP(rest)
@@ -501,7 +501,7 @@ class SSHClientTransport(SSHTransportBase):
         fingerprint = ':'.join(map(lambda c: '%02x'%ord(c), md5.new(pubKey).digest()))
         d = self.verifyHostKey(pubKey, fingerprint)
         d.addCallback(self._continueGEX_REPLY, pubKey, f, signature)
-        d.addErrback(lambda x, self=self: self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED, 'bad host key'))
+        d.addErrback(lambda x, self=self: self.sendDisconnect(DISCONNECT_HOST_KEY_NOT_VERIFIABLE, 'bad host key'))
 
     def _continueGEX_REPLY(self, ignored, pubKey, f, signature):
         serverKey = keys.getPublicKeyObject(data = pubKey)
@@ -559,6 +559,11 @@ class SSHClientTransport(SSHTransportBase):
         self.setService(self.instance)
 
     def requestService(self, instance):
+        """
+        Request that a service be run over this transport.
+
+        @type instance: subclass of C{twisted.conch.ssh.service.SSHService}
+        """
         self.sendPacket(MSG_SERVICE_REQUEST, NS(instance.name))
         self.instance = instance
 
@@ -566,11 +571,19 @@ class SSHClientTransport(SSHTransportBase):
     def verifyHostKey(self, hostKey, fingerprint):
         """Returns a Deferred that gets a callback if it is a valid key, or
         an errback if not.
+
+        @type hostKey:      C{str}
+        @type fingerprint:  C{str}
+        @rtype:             C{Deferred}
         """
         # return  if it's good
         return defer.fail(NotImplementedError)
 
     def connectionSecure(self):
+        """
+        Called when the encryption has been set up.  Generally, 
+        requestService() is called to run another service over the transport.
+        """
         raise NotImplementedError
 
 class SSHCiphers:

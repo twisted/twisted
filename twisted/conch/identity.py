@@ -61,34 +61,53 @@ class ConchIdentity(identity.Identity):
 
     def validatePublicKey(self, pubKeyString):
         """
-        this should return a Deferred, that gets either called or erred back,
-        depending on if this is a valid key for the user
+        This should return a Deferred, that gets either called or erred back,
+        depending on if this is a valid key for the user.
+
+        @type pubKeyString: C{str}
+        @rtype:             C{Deferred}
         """
         raise NotImplementedError
 
     def addServiceForSelf(self, serviceName):
-        """this will add the service, using our name as the name for the
-        perspective.
+        """
+        This will add the service, using our name as the name for the
+        perspective.  Currently unused.
+
+        @type serivceName:  C{str}
         """
         self.addKeyByString(serviceName, self.name)
 
     def addClientForService(self, serviceName, clientClass):
-        """adds a client class for the given service
+        """
+        Adds a client class for the given service.  Currently unused.
+
+        @type serviceName:  C{str}
+        @type clientClass:  C{class}
         """
         self.clients[serviceName] = clientClass
 
     def getUserGroupID(self):
-        """return a tuple of (uid, gid)
+        """
+        Return a uid and gid for this user as a tuple (uid, gid).
+
+        @rtype: C{tuple}
         """
         raise NotImplementedError
 
     def getHomeDir(self):
-        """return the users home directory
+        """
+        Return the users home directory.
+
+        @rtype: C{str}
         """
         raise NotImplementedError
 
     def getShell(self):
-        """return the users shell
+        """
+        Return the users shell.
+
+        @rtype: C{str}
         """
         raise NotImplementedError
 

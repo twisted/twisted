@@ -74,14 +74,53 @@ class SSHFactory(protocol.Factory):
         t.factory = self
         return t
 
-    def getFingerprint(self):
-        return ':'.join(map(lambda c:'%02x'%ord(c),md5.new(self.publicKey).digest()))
+    def getPublicKeys(self):
+        """
+        Called when the factory is started to get the public portions of the 
+        servers host keys.  Returns a dictionary mapping SSH key types  to 
+        public key strings.
+
+        @rtype: C{dict}
+        """
+        raise NotImplementedError
+
+    def getPrivateKeys(self):
+        """
+        Called when the factory is started to get the  private portions of the 
+        servers host keys.  Returns a dictionary mapping SSH key types to 
+        C{Crypto.PublicKey.pubkey.pubkey} objects.
+
+        @rtype: C{dict}
+        """
+        raise NotImplementedError
+
+    def getPrimes(self):
+        """
+        Called when the factory is started to get Diffie-Hellman generators and
+        primes to use.  Returns a dictionary mapping number of bits to lists
+        of tuple of (generator, prime).
+
+        @rtype: C{dict}
+        """
 
     def getDHPrime(self, bits):
-        # returns g, p
+        """
+        Return a tuple of (g, p) for a Diffe-Hellman process, with p being as
+        close to bits bits as possible.
+
+        @type bits: C{int}
+        @rtype:     C{tuple}
+        """
         return primes.getDHPrimeOfBits(self.primes, bits)
 
     def getService(self, transport, service):
+        """
+        Return a class to use as a service for the given transport.
+
+        @type transport:    C{transport.SSHServerTransport}
+        @type service:      C{stR}
+        @rtype:             subclass of {service.SSHService}
+        """
         if transport.isAuthorized or service == 'ssh-userauth':
             return self.services[service]
 
