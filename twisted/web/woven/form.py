@@ -131,7 +131,13 @@ class FormFillerWidget(widgets.Widget):
         return div
 
     def input_choice(self, request, content, model, templateAttributes={}):
-        s = content.select(name=model.name)
+        # am I not evil? allow onChange js events
+        arguments = {}
+        val = model.getHint("onChange", templateAttributes.get("onChange", None))
+        if val:
+            arguments["onChange"] = val
+        arguments["name"] = model.name
+        s = content.select(**arguments)
         default = self.getValues(request, model)
         for tag, value, desc in model.choices:
             kw = {}
