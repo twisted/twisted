@@ -120,7 +120,6 @@ class Unzipness:
 def run(argv=sys.argv):
     if len(argv)<=1:
         log.err("Need a filename")
-        frame.Close()
         return
     root=Tkinter.Tk()
     tksupport.install(root)
@@ -130,7 +129,7 @@ def run(argv=sys.argv):
 
     uz=Unzipness(argv[1], frame)
 
-    d=threads.deferToThread(uz.unzipAll())
+    d=threads.deferToThread(uz.unzipAll)
     d.addCallback(reactor.stop).addErrback(failure.Failure())
     
     reactor.run()
