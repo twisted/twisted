@@ -48,7 +48,7 @@ def readFromFD(fd, callback):
     """
     try:
         output = os.read(fd, 8192)
-    except IOError, ioe:
+    except (OSError, IOError), ioe:
         if ioe.args[0] == errno.EAGAIN:
             return
         else:
