@@ -469,8 +469,8 @@ class BrokerTestCase(unittest.TestCase):
         o2 = c.remoteForName("obj")
         o3 = c.remoteForName("xxx")
         coll = []
-        o2.callRemote("getCache").addCallback(coll.append)
-        o2.callRemote("getCache").addCallback(coll.append)
+        o2.callRemote("getCache").addCallback(coll.append).addErrback(coll.append)
+        o2.callRemote("getCache").addCallback(coll.append).addErrback(coll.append)
         complex = []
         o3.callRemote("getCache").addCallback(complex.append)
         o3.callRemote("getCache").addCallback(complex.append)
