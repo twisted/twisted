@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-__version__ = "$Revision: 1.45 $"[11:-2]
+__version__ = "$Revision: 1.46 $"[11:-2]
 
 import types
 import weakref
@@ -27,6 +27,7 @@ from twisted.internet import defer
 
 from twisted.web.woven import interfaces
 
+class _Nothing: pass
 
 def adaptToIModel(m, parent=None, submodel=None):
     adapted = components.getAdapter(m, interfaces.IModel, None, components.getAdapterClassWithInheritance)
@@ -261,8 +262,8 @@ class Model:
                 self.orig = self.original = self._getter()
         return self.original
 
-    def setData(self, request=None, data=None):
-        if data is None:
+    def setData(self, request=None, data=_Nothing):
+        if data is _Nothing:
             warnings.warn("Warning! setData should now take the request as the first argument")
             data = request
             request = None
@@ -503,8 +504,8 @@ class UnsafeObjectWrapper(ObjectWrapper):
 
 
 class DeferredWrapper(Wrapper):
-    def setData(self, request=None, data=None):
-        if data is None:
+    def setData(self, request=None, data=_Nothing):
+        if data is _Nothing:
             warnings.warn("setData should be called with request as first arg")
             data = request
             request = None
