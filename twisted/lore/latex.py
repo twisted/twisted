@@ -36,7 +36,7 @@ def getLatexText(node, writer, filter=lambda x:x):
         return writer(entities.get(node.eref, ''))
     if hasattr(node, 'data'):
         return writer(filter(node.data))
-    for child in node.childNodes :
+    for child in node.childNodes:
         getLatexText(child, writer, filter)
 
 class LatexSpitter:
@@ -51,8 +51,8 @@ class LatexSpitter:
     def writeNodeData(self, node):
         buf = StringIO()
         getLatexText(node, buf.write, latexEscape)
-        parents = domhelpers.getParents(node.parentNode)[:-1]
         text = buf.getvalue()
+        parents = domhelpers.getParents(node.parentNode)[:-1]
         if not [1 for n in parents if n.tagName in ('pre', 'code')]:
             text = text.replace('<', '$<$').replace('>', '$>$')
         self.writer(text)
@@ -81,8 +81,7 @@ class LatexSpitter:
     def visitNode_code(self, node):
         fout = StringIO()
         getLatexText(node, fout.write, latexEscape)
-        data = fout.getvalue()
-        data = lowerUpperRE.sub(r'\1\\linebreak[1]\2', data)
+        data = lowerUpperRE.sub(r'\1\\linebreak[1]\2', fout.getvalue())
         data = data[:1] + data[1:].replace('.', '.\\linebreak[1]')
         self.writer('\\texttt{'+data+'}')
 
