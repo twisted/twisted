@@ -244,7 +244,7 @@ class Request(pb.Copyable, http.Request):
         """
         self.finish()
 
-    def view_addCookie(self, k, v, **kwargs):
+    def view_addCookie(self, issuer, k, v, **kwargs):
         """Remote version of addCookie; same interface.
         """
         apply(self.addCookie, (k, v), kwargs)
