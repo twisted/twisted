@@ -154,8 +154,9 @@ def getAdapterClassWithInheritance(klass, interfaceClass, default):
         return adapterClass
     return default
 
+class _default: pass
 
-def getAdapter(obj, interfaceClass, default,
+def getAdapter(obj, interfaceClass, default=_default,
                adapterClassLocator=None):
     """Return an object that implements the given interface.
 
@@ -176,6 +177,10 @@ def getAdapter(obj, interfaceClass, default,
         klas, interfaceClass, None
                      )
     if adapterClass is None:
+        if default is _default:
+            raise NotImplementedError('%s instance does not implement %s, and '
+                                      'there is no registered adapter.' %
+                                      (obj, interfaceClass))
         return default
     else:
         return adapterClass(obj)
