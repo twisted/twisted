@@ -78,7 +78,9 @@ tags = list2dict(["html", "title", "head", "body", "h1", "h2", "h3", "ol", "ul",
 
 span = list2dict(['footnote', 'manhole-output'])
 
-allowed = {'code': classes.has_key, 'span': span.has_key }
+div = list2dict(['note', 'boxed', 'doit'])
+
+allowed = {'code': classes.has_key, 'span': span.has_key, 'div': div.has_key }
 
 def getDefaultChecker():
     return TagChecker(tags.has_key, allowed)
