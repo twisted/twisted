@@ -1,3 +1,5 @@
+# -*- test-case-name: twisted.web2.test -*-
+
 """
     I contain the interfaces for several web related objects including IRequest
     and IResource.  I am based heavily on ideas from nevow.inevow

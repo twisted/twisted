@@ -1,3 +1,5 @@
+# -*- test-case-name: twisted.web2.test.test_stream -*-
+
 from twisted.internet import interfaces
 import time, os
 

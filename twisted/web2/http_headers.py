@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.web2.test.test_http_headers -*-
 from __future__ import generators
 
 import types

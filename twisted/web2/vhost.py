@@ -1,7 +1,8 @@
-##### FIXME: this file probably doesn't work.
-
+# -*- test-case-name: twisted.web2.test.test_vhost -*-
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
+
+##### FIXME: this file probably doesn't work.
 
 
 """I am a virtual hosts implementation.

@@ -1,3 +1,5 @@
+# -*- test-case-name: twisted.web2.test.test_stream -*-
+
 """
 The stream module provides a simple abstraction of streaming
 data. While Twisted already has some provisions for handling this in
