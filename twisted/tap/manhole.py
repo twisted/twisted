@@ -63,8 +63,7 @@ class Options(usage.Options):
     def postOptions(self):
         if not self.opts.has_key('password'):
             self.opt_password('-')
-        print "password is", repr(self.opts['password'])
-            
+
     opt_p = opt_port
     opt_w = opt_password
 
