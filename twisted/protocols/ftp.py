@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.test.test_ftp -*-
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -903,7 +904,7 @@ class FTPClient(basic.LineReceiver):
             pasvCmd.deferred.addCallback(doPassive).addErrback(self.fail)
 
             # Ensure the connection is always closed
-            cmd.deferred.addBoth(lambda x, m=_mutable: m[0].disconnect() or x)
+            cmd.deferred.addBoth(lambda x, m=_mutable: m[0] and m[0].disconnect() or x)
 
             d = DeferredList([cmd.deferred, protocol.deferred],
                              fireOnOneErrback=1)
