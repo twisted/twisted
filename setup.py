@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.126 2003/07/31 00:54:56 spiv Exp $
+$Id: setup.py,v 1.127 2003/07/31 18:53:10 moonfallen Exp $
 """
 
 import distutils, os, sys, string
@@ -72,12 +72,19 @@ class install_data_twisted(install_data):
 
 class build_ext_twisted(build_ext):
 
+    def run(self):
+        # save the name of the compiler for later, because distutils
+        # does VERY EVIL THINGS and overwrites self.compiler (a
+        # string) with self.compiler (an instance of compiler)
+        self.compilername=self.compiler
+        build_ext.run(self)
+        
+
     def build_extensions(self):
         """
         Override the build_ext build_extensions method to call our module detection
         function before it trys to build the extensions.
         """
-
         self._detect_modules()
         build_ext.build_extensions(self)
 
@@ -87,7 +94,7 @@ class build_ext_twisted(build_ext):
         Check if the given header can be included by trying to compile a file
         that contains only an #include line.
         """
-        compiler = new_compiler()
+        compiler = new_compiler(compiler=self.compilername, verbose=self.verbose)
         compiler.announce("checking for %s ..." % header_name, 0)
 
         conftest = open("conftest.c", "w")
