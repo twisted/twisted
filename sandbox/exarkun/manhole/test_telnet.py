@@ -19,6 +19,7 @@ class TestProtocol:
             d[getattr(telnet, cmd)] = lambda arg, cmd=cmd: self.calls.append(cmd)
 
         self.enabled = []
+        self.disabled = []
 
     def makeConnection(self, transport):
         pass
@@ -39,7 +40,7 @@ class TestProtocol:
         self.enabled.append(option)
 
     def disable(self, option):
-        self.enabled.remove(option)
+        self.disabled.append(option)
 
 class TelnetTestCase(unittest.TestCase):
     def setUp(self):
@@ -201,7 +202,7 @@ class TelnetTestCase(unittest.TestCase):
         # such that it believes the option to have beenp previously enabled
         # via normal negotiation.
         s = self.p.getOptionState('\x29')
-        s.us.state = s.him.state = 'yes'
+        s.state = 'yes'
 
         bytes = "fiddle dee" + cmd
         self.p.dataReceived(bytes)
@@ -219,7 +220,7 @@ class TelnetTestCase(unittest.TestCase):
         # such that it believes the option to have beenp previously enabled
         # via normal negotiation.
         s = self.p.getOptionState('\x29')
-        s.us.state = s.him.state = 'yes'
+        s.state = 'yes'
 
         bytes = "fiddle dum " + cmd
         self.p.dataReceived(bytes)
@@ -260,7 +261,7 @@ class TelnetTestCase(unittest.TestCase):
         # such that it believes the option to have beenp previously enabled
         # via normal negotiation.
         s = self.p.getOptionState('\x56')
-        s.us.state = s.him.state = 'yes'
+        s.state = 'yes'
 
         bytes = "tra la la" + cmd + "dum de dum"
         self.p.dataReceived(bytes)
@@ -278,7 +279,7 @@ class TelnetTestCase(unittest.TestCase):
         # such that it believes the option to have beenp previously enabled
         # via normal negotiation.
         s = self.p.getOptionState('\x56')
-        s.us.state = s.him.state = 'yes'
+        s.state = 'yes'
 
         bytes = "tra la la" + cmd + "dum de dum"
         self.p.dataReceived(bytes)
@@ -299,7 +300,9 @@ class TelnetTestCase(unittest.TestCase):
 
         # XXX I want a construct for asserting that a Deferred _has_ fired
         # and examining its value _right now_.
-        self.assertEquals(d.result, None)
+        self.assertEquals(d.result, True)
+        self.assertEquals(self.p.protocol.enabled, ['\x42'])
+        self.assertEquals(self.p.protocol.disabled, [])
 
     def testRefusedEnableRequest(self):
         # Try to enable an option through the user-level API.  This
@@ -314,13 +317,18 @@ class TelnetTestCase(unittest.TestCase):
 
         # XXX I want a construct for asserting that a Deferred _has_ fired
         # and examining its value _right now_.
-        self.assertEquals(d.result.type, telnet.OptionRefused)
+        self.assertEquals(d.result, False)
+        self.assertEquals(self.p.protocol.enabled, [])
+        self.assertEquals(self.p.protocol.disabled, [])
 
     def testAcceptedDisableRequest(self):
         # Try to enable an option through the user-level API.  This
         # returns a Deferred that fires when negotiation about the option
         # finishes.  Make sure it fires, make sure state gets updated
         # properly, make sure the result indicates the option was enabled.
+        s = self.p.getOptionState('\x42')
+        s.state = 'yes'
+
         d = self.p.requestDisable('\x42')
 
         self.assertEquals(self.t.value(), telnet.IAC + telnet.DONT + '\x42')
@@ -329,4 +337,6 @@ class TelnetTestCase(unittest.TestCase):
 
         # XXX I want a construct for asserting that a Deferred _has_ fired
         # and examining its value _right now_.
-        self.assertEquals(d.result, None)
+        self.assertEquals(d.result, True)
+        self.assertEquals(self.p.protocol.enabled, [])
+        self.assertEquals(self.p.protocol.disabled, ['\x42'])

@@ -112,6 +112,21 @@ class ITelnetTransport(iinternet.ITransport):
     def requestDisable(self, option):
         pass
 
+class TelnetError(Exception):
+    pass
+
+class NegotiationError(TelnetError):
+    pass
+
+class AlreadyEnabled(NegotiationError):
+    pass
+
+class AlreadyDisabled(NegotiationError):
+    pass
+
+class AlreadyNegotiating(NegotiationError):
+    pass
+
 class TelnetProtocol(protocol.Protocol):
     def __init__(self, proto):
         self.proto = proto
@@ -130,7 +145,6 @@ class TelnetProtocol(protocol.Protocol):
 
     def disable(self, option):
         pass
-
 
 class Telnet(protocol.Protocol):
     """
@@ -181,49 +195,27 @@ class Telnet(protocol.Protocol):
 
     def requestEnable(self, option):
         s = self.getOptionState(option)
-        if s.us.state == 'no':
-            s.him.state = 'wantyes'
+        if s.state == 'yes':
+            return defer.fail(AlreadyEnabled(option))
+        elif s.negotiating:
+            return defer.fail(AlreadyNegotiating(option))
+        else:
+            s.negotiating = True
             s.onResult = d = defer.Deferred()
             self.do(option)
             return d
-        elif s.us.state == 'yes':
-            return defer.fail(AlreadyEnabled(option))
-        elif s.us.state == 'wantno':
-            if s.us.stateq:
-                return defer.fail(AlreadyQueued(option))
-            else:
-                s.him.stateq = True
-                s.onResult = d = defer.Deferred()
-                return d
-        elif s.us.state == 'wantyes':
-            if s.us.stateq:
-                s.him.stateq = False
-            else:
-                return defer.fail(AlreadyNegotiating(option))
-        else:
-            raise ValueError("Illegal state")
 
     def requestDisable(self, option):
         s = self.getOptionState(option)
-        if s.us.state == 'no':
+        if s.state == 'no':
             return defer.fail(AlreadyDisabled(option))
-        elif s.us.state == 'yes':
-            s.him.state = 'wantno'
+        elif s.negotiating:
+            return defer.fail(AlreadyNegotiating(option))
+        else:
+            s.negotiating = True
             s.onResult = d = defer.Deferred()
             self.dont(option)
             return d
-        elif s.us.state == 'wantno':
-            if s.us.stateq:
-                s.him.stateq = False
-            else:
-                return defer.fail(AlreadyNegotiating(option))
-        elif s.us.state == 'wantyes':
-            if s.us.stateq:
-                return defer.fail(AlreadyQueued(option))
-            else:
-                s.him.stateq = True
-        else:
-            raise ValueError("Illegal state")
 
     def dataReceived(self, data):
         # Most grossly inefficient implementation ever
@@ -299,15 +291,6 @@ class Telnet(protocol.Protocol):
     # DO/DONT WILL/WONT are a bit more complex.  They require us to
     # track state to avoid negotiation loops and the like.
 
-    class _OptionState:
-        class _Perspective:
-            # 'no', 'yes', 'wantno', 'wantyes'
-            state = 'no'
-            stateq = False
-        def __init__(self):
-            self.us = self._Perspective()
-            self.him = self._Perspective()
-
     def do(self, option):
         """Request an option be enabled.
         """
@@ -328,78 +311,132 @@ class Telnet(protocol.Protocol):
         """
         self.write(IAC + WONT + option)
 
+    class _OptionState:
+        state = 'no'
+        negotiating = False
+
     def getOptionState(self, opt):
         return self.options.setdefault(opt, self._OptionState())
 
-    def _dodontwillwont(self, option, s, pfx, ack, neg):
-        state = self.getOptionState(option)
-        view = getattr(state, s)
-        getattr(self, '_' + pfx + '_' + view.state)(option, view, ack, neg)
+    def telnet_WILL(self, option):
+        s = self.getOptionState(option)
+        self.willMap[s.state, s.negotiating](self, s, option)
 
-    def _dowill(self, option, s, ack, neg):
-        self._dodontwillwont(option, s, 'dowill', ack, neg)
-
-    def _dowill_no(self, option, state, ack, neg):
+    def will_no_false(self, state, option):
+        # Peer is requesting an option be enabled
         if self.allowEnable(option):
             self.enable(option)
             state.state = 'yes'
-            ack(option)
+            self.do(option)
         else:
-            neg(option)
+            self.dont(option)
 
-    def _dowill_yes(self, option, state, ack, neg):
+    def will_no_true(self, state, option):
+        # Peer agreed to enable an option
+        state.state = 'yes'
+        state.negotiating = False
+        d = state.onResult
+        state.onResult = None
+        d.callback(True)
+        self.enable(option)
+
+    def will_yes_false(self, state, option):
         pass
 
-    def _dowill_wantno(self, option, state, ack, neg):
-        # This is an error state.  The peer is defective.
-        if state.stateq:
-            state.state = 'yes'
-            state.stateq = False
-        else:
-            state.state = 'no'
-
-    def _dowill_wantyes(self, option, state, ack, neg):
-        if state.stateq:
-            state.state = 'wantno'
-            state.stateq = False
-            neg(option)
-        else:
-            state.state = 'yes'
-
-    def _dontwont(self, option, s, ack, neg):
-        self._dodontwillwont(option, s, 'dontwont', ack, neg)
-
-    def _dontwont_no(self, option, state, ack, neg):
+    def will_yes_true(self, state, option):
         pass
 
-    def _dontwont_yes(self, option, state, ack, neg):
-        state.state = 'no'
-        neg(option)
-
-    def _dontwont_wantno(self, option, state, ack, neg):
-        if state.stateq:
-            state.state = 'wantyes'
-            state.stateq = False
-            ack(option)
-        else:
-            state.state = 'no'
-
-    def _dontwont_wantyes(self, option, state, ack, neg):
-        state.state = 'no'
-        if state.stateq:
-            state.stateq = False
-
-    def telnet_WILL(self, option):
-        self._dowill(option, 'him', self.do, self.dont)
+    willMap = {('no', False): will_no_false,   ('no', True): will_no_true,
+               ('yes', False): will_yes_false, ('yes', True): will_yes_true}
 
     def telnet_WONT(self, option):
-        self._dontwont(option, 'him', self.do, self.dont)
+        s = self.getOptionState(option)
+        self.wontMap[s.state, s.negotiating](self, s, option)
+
+    def wont_no_false(self, state, option):
+        pass
+
+    def wont_no_true(self, state, option):
+        # Peer refused to enable an option
+        state.negotiating = False
+        d = state.onResult
+        state.onResult = None
+        d.callback(False)
+
+    def wont_yes_false(self, state, option):
+        # Peer is requesting an option be disabled
+        state.state = 'no'
+        self.disable(option)
+        self.dont(option)
+
+    def wont_yes_true(self, state, option):
+        # Peer agreed to disable an option
+        state.state = 'no'
+        state.negotiating = False
+        self.disable(option)
+        d = state.onResult
+        state.onResult = None
+        d.callback(True)
+
+    wontMap = {('no', False): wont_no_false,   ('no', True): wont_no_true,
+               ('yes', False): wont_yes_false, ('yes', True): wont_yes_true}
 
     def telnet_DO(self, option):
-        self._dowill(option, 'us', self.will, self.wont)
+        s = self.getOptionState(option)
+        self.doMap[s.state, s.negotiating](self, s, option)
+
+    def do_no_false(self, state, option):
+        # Peer is requesting an option be enabled
+        if self.allowEnable(option):
+            state.state = 'yes'
+            self.enable(option)
+            self.will(option)
+        else:
+            self.wont(option)
+
+    def do_no_true(self, state, option):
+        # Peer agreed to enable an option
+        state.state = 'yes'
+        state.negotiating = False
+        d = state.onResult
+        state.onResult = None
+        d.callback(True)
+
+    def do_yes_false(self, state, option):
+        pass
+
+    def do_yes_true(self, state, option):
+        pass
+
+    doMap = {('no', False): do_no_false,   ('no', True): do_no_true,
+             ('yes', False): do_yes_false, ('yes', True): do_yes_true}
 
     def telnet_DONT(self, option):
-        self._dontwont(option, 'us', self.will, self.wont)
+        s = self.getOptionState(option)
+        self.dontMap[s.state, s.negotiating](self, s, option)
+
+    def dont_no_false(self, state, option):
+        pass
+
+    def dont_no_true(self, state, option):
+        pass
+
+    def dont_yes_false(self, state, option):
+        # Peer is requesting to disable an option
+        state.state = 'no'
+        self.disable(option)
+        self.wont(option)
+
+    def dont_yes_true(self, state, option):
+        # Peer agreed to disable an option
+        state.state = 'no'
+        state.negotiating = False
+        d = state.onResult
+        state.onResult = d
+        d.callback(True)
+
+    dontMap = {('no', False): dont_no_false,   ('no', True): dont_no_true,
+               ('yes', False): dont_yes_false, ('yes', True): dont_yes_true}
 
     def allowEnable(self, option):
         return False
