@@ -29,6 +29,10 @@ class InvalidServicesConfError(InvalidConfError):
     """Invalid services file"""
 
 
+class InvalidRPCServicesConfError(InvalidConfError):
+    """Invalid rpc services file"""
+
+
 class UnknownService(Exception):
     """Unknown service name"""
 
@@ -38,12 +42,22 @@ class SimpleConfFile:
 
     Filters out comments and empty lines (which includes lines that only 
     contain comments).
+
+    To use this class, override parseLine or parseFields.
     """
     
     commentChar = '#'
+    defaultFilename = None
     
-    def parseFile(self, file):
-        """Parse a configuration file"""
+    def parseFile(self, file=None):
+        """Parse a configuration file
+        
+        If file is None and self.defaultFilename is set, it will open
+        defaultFilename and use it.
+        """
+        if file is None and self.defaultFilename:
+            file = open(self.defaultFilename,'r')
+            
         for line in file.readlines():
             # Strip out comments
             comment = line.find(self.commentChar)
@@ -60,6 +74,17 @@ class SimpleConfFile:
             self.parseLine(line)
 
     def parseLine(self, line):
+        """Override this.
+        
+        By default, this will split the line on whitespace and call
+        self.parseFields (catching any errors).
+        """
+        try:
+            self.parseFields(*line.split())
+        except ValueError:
+            raise InvalidInetdConfError, 'Invalid line: ' + repr(line)
+    
+    def parseFields(self, *fields):
         """Override this."""
 
 
@@ -89,8 +114,10 @@ class InetdService:
 
 class InetdConf(SimpleConfFile):
     """Configuration parser for a traditional UNIX inetd(8)"""
+
+    defaultFilename = '/etc/inetd.conf'
     
-    def __init__(self, knownServices = None):
+    def __init__(self, knownServices=None):
         self.services = []
         
         if knownServices is None:
@@ -98,28 +125,18 @@ class InetdConf(SimpleConfFile):
             knownServices.parseFile()
         self.knownServices = knownServices
 
-    def parseLine(self, line):
+    def parseFields(self, serviceName, socketType, protocol, wait, user,
+                    program, *programArgs):
         """Parse an inetd.conf file.
 
         Implemented from the description in the Debian inetd.conf man page.
         """
-        # Split the line into fields
-        fields = line.split()
-
-        # Raise an error if there aren't enough fields
-        if len(fields) < 6:
-            raise InvalidInetdConfError, 'Invalid line: ' + repr(line)
-
-        # Put the fields into variables
-        serviceName, socketType, protocol, wait, user, program = fields[:6]
-        programArgs = fields[6:]
-        
         # Extract user (and optional group)
         user, group = (user.split('.') + [None])[:2]
 
         # Find the port for a service
         port = self.knownServices.services.get((serviceName, protocol), None)
-        if not port:
+        if not port and protocol.startswith('rpc/'):
             # FIXME: Should this be discarded/ignored, rather than throwing
             #        an exception?
             raise UnknownService, "Unknown service: %s (%s)" \
@@ -137,25 +154,15 @@ class ServicesConf(SimpleConfFile):
         * self.services: dict mapping service names to (port, protocol) tuples.
     """
     
+    defaultFilename = '/etc/services'
+
     def __init__(self):
         self.services = {}
 
-    def parseFile(self, file=None):
-        if file is None:
-            file = open('/etc/services')
-        SimpleConfFile.parseFile(self, file)
-
-    def parseLine(self, line):
-        fields = line.split()
-        if len(fields) < 2:
-            raise InvalidServicesConfError, 'Invalid line:' + repr(line)
-
-        name, portAndProtocol = fields[:2]
-        aliases = fields[2:]
-        
+    def parseFields(self, name, portAndProtocol, *aliases):
         try:
             port, protocol = portAndProtocol.split('/')
-            port = int(port)
+            port = long(port)
         except:
             raise InvalidServicesConfError, 'Invalid port/protocol:' + \
                                             repr(portAndProtocol)
@@ -164,5 +171,27 @@ class ServicesConf(SimpleConfFile):
         for alias in aliases:
             self.services[(alias, protocol)] = port
 
+
+class RPCServicesConf(SimpleConfFile):
+    """/etc/rpc parser
+
+    Instance variables:
+        * self.services: dict mapping rpc service names to rpc ports.
+    """
+
+    defaultFilename = '/etc/rpc'
+
+    def __init__(self):
+        self.services = {}
+    
+    def parseFields(self, name, port, *aliases):
+        try:
+            port = long(port)
+        except:
+            raise InvalidRPCServicesConfError, 'Invalid port:' + repr(port)
+                        
+        self.services[name] = port
+        for alias in aliases:
+            self.services[alias] = port
 
 

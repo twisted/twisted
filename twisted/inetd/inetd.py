@@ -19,12 +19,11 @@ import os, pwd, grp, traceback, socket
 
 from twisted.internet.app import Application
 from twisted.internet import reactor
-from twisted.internet.protocol import Protocol, ServerFactory, ProcessProtocol
+from twisted.internet.protocol import Protocol, ServerFactory
 from twisted.python import log, usage
 from twisted.protocols import wire
 
 import inetdconf
-
 
 # A dict of known 'internal' services (i.e. those that don't involve spawning
 # another process.
@@ -85,10 +84,41 @@ class InetdProtocol(Protocol):
 
 class InetdFactory(ServerFactory):
     protocol = InetdProtocol
-    service = None
     
     def __init__(self, service):
         self.service = service
+
+
+class RPCFactory(ServerFactory):
+    protocol = InetdProtocol
+
+    def __init__(self, service, rpcPort, rpcVersions):
+        self.service = service
+        self.rpcPort = rpcPort
+        self.rpcVersions = rpcVersions
+
+    def setPort(self, portNo):
+        """Inform the portmapper daemon where this service is listening"""
+        service = self.service
+        # FIXME: ignores any errors
+        for version in self.rpcVersions:
+            pmap_set(self.rpcPort, version, service.protocol[4:], portNo,
+                     service.name)
+        
+class PortmapSetProtocol(Protocol):
+    """Simply dumps its arguments to the process's stdin and closes it."""
+    def __init__(self, *args):
+        self.args = args
+
+    def connectionMade(self):
+        self.transport.write(' '.join(self.args))
+        self.transport.loseConnection()
+
+
+def pmap_set(rpcPort, rpcVersion, ipProto, portNo, name):
+    return reactor.spawnProcess(PortmapSetProtocol(rpcPort, rpcVersion, 
+                                                   ipProto, portNo, name), 
+                                '/sbin/pmap_set')
 
 
 class InetdOptions(usage.Options):
@@ -96,18 +126,42 @@ class InetdOptions(usage.Options):
 
 
 def main(options=None):
+    # Parse options, read various config files
     if not options:
         options = InetdOptions()
         options.parseOptions()
     
     conf = inetdconf.InetdConf()
     conf.parseFile(open(options['file']))
+
+    rpcConf = inetdconf.RPCServicesConf()
+    try:
+        rpcConf.parseFile()
+    except:
+        # We'll survive even if we can't read /etc/rpc
+        log.deferr()
     
+    # RPC support requires running /sbin/pmap_set
+    rpcOk = os.access('/sbin/pmap_set', os.X_OK)
+
     app = Application('tinetd')
-    
+
     for service in conf.services:
-        if (service.protocol, service.socketType) not in [('tcp', 'stream'),
-                                                          ('udp', 'dgram')]:
+        rpc = service.protocol.startswith('rpc/')
+        protocol = service.protocol
+
+        if rpc and not rpcOk:
+            log.msg('Skipping rpc service due to lack of rpc support')
+            continue
+
+        if rpc:
+            if not rpcConf.services.has_key(service.name):
+                log.msg('Unknown RPC service: ' + repr(service.name))
+                continue
+            protocol = protocol[4:]     # trim 'rpc/'
+
+        if (protocol, service.socketType) not in [('tcp', 'stream'),
+                                                  ('udp', 'dgram')]:
             log.msg('Skipping unsupported type/protocol: %s/%s'
                     % (service.socketType, service.protocol))
             continue
@@ -136,6 +190,24 @@ def main(options=None):
                     log.msg('Unknown group: ' + service.group)
                     continue
 
+        log.msg('Adding service:', service.name, service.port, protocol)
+        if rpc:
+            # RPC has extra options, so extract that
+            try:
+                name, rpcVersions = service.name.split('rpc')
+            except ValueError:
+                log.msg('Bad RPC service/version: ' + service.name)
+                continue
+            try:
+                if '-' in rpcVersions:
+                    start, end = map(int, rpcVersions.split('-'))
+                    rpcVersions = range(start, end+1)
+                else:
+                    rpcVersions = [int(rpcVersions)]
+            except ValueError:
+                log.msg('Bad RPC versions: ' + str(rpcVersions))
+                continue
+            
         if service.program == 'internal':
             # Internal services can use a standard ServerFactory
             if not internalProtocols.has_key(service.name):
@@ -143,16 +215,20 @@ def main(options=None):
                 continue
             factory = ServerFactory()
             factory.protocol = internalProtocols[service.name]
+        elif rpc:
+            factory = RPCFactory(service, rpcConf[service.name], rpcVersions)
         else:
-            # Non-internal services use InetdFactory
+            # Non-internal non-rpc services use InetdFactory
             factory = InetdFactory(service)
 
-        log.msg('Adding service:', service.name, service.port, service.protocol)
-        if service.protocol == 'tcp':
-            app.listenTCP(service.port, factory)
-        elif service.protocol == 'udp':
-            app.listenUDP(service.port, factory)
+        if protocol == 'tcp':
+            p = app.listenTCP(service.port, factory)
+        elif protocol == 'udp':
+            p = app.listenUDP(service.port, factory)
     
+        if rpc:
+            factory.setPort(p.getHost()[2])
+            
     app.run(save=0)
 
 
