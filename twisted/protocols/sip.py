@@ -148,7 +148,9 @@ class MessagesParser(basic.LineReceiver):
     
     def lineReceived(self, line):
         if self.state == "firstline":
-            line = line.rstrip("\n\r")
+            while line.endswith("\n\r"):
+                line = line[:-2]
+            #line = line.rstrip("\n\r")
             if not line:
                 return
             try:
