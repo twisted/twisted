@@ -21,6 +21,8 @@ import cStringIO
 
 class NodeLookupError(Exception): pass
 
+from microdom import getElementsByTagName
+
 def substitute(request, node, subs):
     """
     Look through the given node's children for strings, and
@@ -130,18 +132,6 @@ def superAppendAttribute(node, key, value):
     if node.hasChildNodes():
         for child in node.childNodes:
             superAppendAttribute(child, key, value)
-
-def getElementsByTagName(iNode, name):
-    childNodes = iNode.childNodes[:]
-    gathered = []
-    while childNodes:
-        node = childNodes.pop(0)
-        if node.childNodes:
-            [childNodes.insert(0, ch_node) for ch_node in node.childNodes]
-        if node.nodeName == name:
-            gathered.append(node)
-    gathered.reverse()
-    return gathered
 
 def gatherTextNodes(iNode):
     """Visit each child node and collect its text data, if any, into a string.

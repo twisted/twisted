@@ -30,14 +30,14 @@ class DomHelpersTest(TestCase):
         doc1=microdom.parseString('<foo/>')
         actual=domhelpers.getElementsByTagName(doc1, 'foo')[0].nodeName
         expected='foo'
-        assert actual==expected, 'expected %s, got %s' % (expected, actual)
+        self.assertEquals(actual, expected)
 
         doc2_xml='<a><foo in="a"/><b><foo in="b"/></b><c><foo in="c"/></c><foo in="d"/><foo in="ef"/><g><foo in="g"/><h><foo in="h"/></h></g></a>'
         doc2=microdom.parseString(doc2_xml)
         tag_list=domhelpers.getElementsByTagName(doc2, 'foo')
         actual=''.join([node.getAttribute('in') for node in tag_list])
         expected='abcdefgh'
-        assert actual==expected, 'expected %s, got %s' % (expected, actual)
+        self.assertEquals(actual, expected)
 
         doc3_xml='''
 <a><foo in="a"/>
@@ -60,7 +60,15 @@ class DomHelpersTest(TestCase):
         tag_list=domhelpers.getElementsByTagName(doc3, 'foo')
         actual=''.join([node.getAttribute('in') for node in tag_list])
         expected='abdgheicfj'
-        assert actual==expected, 'expected %s, got %s' % (expected, actual)
+        self.assertEquals(actual, expected)
+
+        doc4_xml='<foo><bar></bar><baz><foo/></baz></foo>'
+        doc4=microdom.parseString(doc4_xml)
+        actual=domhelpers.getElementsByTagName(doc4, 'foo')
+        root=doc4.documentElement
+        expected=[root, root.lastChild().firstChild()]
+        self.assertEquals(actual, expected)
+
 
     def test_gatherTextNodes(self):
         doc1=microdom.parseString('<a>foo</a>')

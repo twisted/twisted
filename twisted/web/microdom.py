@@ -50,6 +50,18 @@ import html
 from types import ListType as NodeList
 from types import StringType
 
+def getElementsByTagName(iNode, name):
+    matches=[]
+    if iNode.nodeName==name:
+        matches.append(iNode)
+    slice=iNode.childNodes[:]
+    while len(slice)>0:
+        c=slice.pop(0)
+        if c.nodeName==name:
+            matches.append(c)
+        slice=c.childNodes+slice
+    return matches
+
 class MismatchedTags(Exception):
 
     def __init__(self, filename, expect, got, endLine, endCol, begLine, begCol):
@@ -162,15 +174,7 @@ class Document(Node, Accessor):
         return Text(text)
 
     def getElementsByTagName(self, name):
-        childNodes = self.childNodes[:]
-        gathered = []
-        while childNodes:
-            node = childNodes.pop(0)
-            if node.childNodes:
-                childNodes.extend(node.childNodes)
-            if node.nodeName == name:
-                gathered.append(node)
-        return gathered
+        return getElementsByTagName(self, name)
 
     def getElementById(self, id):
         childNodes = self.childNodes[:]
@@ -275,11 +279,7 @@ class Element(Node):
         return clone
 
     def getElementsByTagName(self, name):
-        import warnings
-        warnings.warn("This method is not recursive - use "
-                      "domhelpers.getElementsByTagName instead.",
-                      DeprecationWarning, stacklevel=2)
-        return [n for n in self.childNodes if n.nodeName == name]
+        return getElementsByTagName(self, name)
     
     def hasAttributes(self):
         return 1
