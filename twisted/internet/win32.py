@@ -56,7 +56,7 @@ import pywintypes
 import msvcrt
 
 # Twisted imports
-from twisted.internet import abstract, main, task, default
+from twisted.internet import abstract, main, task, default, process
 from twisted.python import log, threadable
 
 # System imports
@@ -193,7 +193,7 @@ class Win32Reactor(default.PosixReactorBase):
     doIteration = doWaitForMultipleEvents
 
     
-def install(self):
+def install():
     threadable.init(1)
     # change when we redo process stuff - process is probably
     # borked anyway.
@@ -268,8 +268,9 @@ class Process(abstract.FileDescriptor):
         self.outQueue = Queue.Queue()
         self.closed = 0
         self.closedNotifies = 0
-        
-        addEvent(self.hProcess, self, self.connectionLostNotify)
+
+        from twisted.internet import reactor
+        reactor.addEvent(self.hProcess, self, self.connectionLostNotify)
         threading.Thread(target=self.doWrite).start()
         threading.Thread(target=self.doReadOut).start()
         threading.Thread(target=self.doReadErr).start()
@@ -337,9 +338,5 @@ class Process(abstract.FileDescriptor):
             task.schedule(self.handleError, data)
 
 
-def install():
-    reactor = Win32Reactor()
-    reactor.install()
-
-__all__ = ["Win32Reactor"]
+__all__ = ["Win32Reactor", "install"]
 
