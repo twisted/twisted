@@ -88,3 +88,11 @@ class RountripDNSTestCase(unittest.TestCase):
             result = dns.SimpleRecord()
             result.decode(f)
             self.assertEquals(str(result.name), s)
+
+    def testHashable(self):
+        for k in dns.__dict__:
+            if k.startswith('Record_'):
+                klass = getattr(dns, k)
+                self.assertEquals(hash(klass()), hash(klass()))
+    testHashable.todo = "Fix this!"
+    
