@@ -1,3 +1,8 @@
+2002-12-29  Jp Calderone  <exarkun@twistedmatrix.com>
+
+	* twisted/python/compat.py: Single module where all compatability
+	code for supporting old Python versions should be placed.
+
 2002-12-28  Glyph Lefkowitz  <glyph@twistedmatrix.com>
 
 	* twisted/web/woven/guard.py: Newer, better wrappers for
