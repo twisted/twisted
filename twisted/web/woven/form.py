@@ -217,7 +217,9 @@ class FormFillerWidget(widgets.Widget):
             if isinstance(arg, formmethod.Submit):
                 hasSubmit = 1
             argz[arg.name] = arg
-        for inNode in domhelpers.getElementsByTagName(node, 'input'):
+        for inNode in domhelpers.findElementsWithAttribute(node, "name"):
+            if inNode.tagName.lower() not in ('textarea', 'select', 'input'):
+                continue
             if inNode.getAttribute("type").lower() == "submit":
                 hasSubmit = 1
             nName = inNode.getAttribute("name")
