@@ -22,9 +22,7 @@ from zope.interface import implements
 
 # Twisted Imports
 from twisted.internet import abstract, reactor, protocol, error, defer
-from twisted.internet.interfaces import IProducer, IConsumer, IProtocol, \
-                                        IFinishableConsumer, IListeningPort, \
-                                        IConnector
+from twisted.internet.interfaces import IProducer, IConsumer, IProtocol, IFinishableConsumer
 from twisted.protocols import basic, policies
 from twisted.internet.protocol import ClientFactory, ServerFactory, Protocol, \
                                       ConsumerToProtocolAdapter
@@ -618,7 +616,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             phost = self.transport.getPeer().host
             self.dtpFactory = DTPFactory(pi=self, peerHost=phost)
             self.dtpFactory.setTimeout(self.dtpTimeout)
-        if mode == PASV:
+        if mode == PASV:    
             self.dtpPort = reactor.listenTCP(0, self.dtpFactory)
         elif mode == PORT: 
             self.dtpPort = reactor.connectTCP(host, port, self.dtpFactory)
@@ -658,17 +656,20 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
 
         log.msg(self.dtpPort)
         dtpPort, self.dtpPort = self.dtpPort, None
-        if IListeningPort.providedBy(dtpPort):
+        try:
             dtpPort.stopListening()
-        elif IConnector.providedBy(dtpPort):
-            dtpPort.disconnect()
-        else:
-            assert False, "dtpPort should be an IListeningPort or IConnector, instead is %r" % (dtpPort,)
+        except AttributeError, (e,):
+            log.msg('Already Called dtpPort.stopListening!!!: %s' % e)
 
         self.dtpFactory.stopFactory()
-        self.dtpFactory = None
+        if self.dtpFactory is None:
+            log.debug('ftp.dtpFactory already set to None')
+        else:
+            self.dtpFactory = None
 
-        if self.dtpInstance is not None:
+        if self.dtpInstance is None:
+            log.debug('ftp.dtpInstance already set to None')
+        else:
             self.dtpInstance = None
 
     def _doDTPCommand(self, cmd, *arg): 
