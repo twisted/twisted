@@ -272,15 +272,7 @@ class Deferred:
         if self.called:
             if not self.debug:
                 raise AlreadyCalledError
-            extra = "\n"
-            if hasattr(self, "creator"):
-                extra += " C: Deferred was created:\n C:"
-                extra += "".join(self.creator).rstrip().replace("\n","\n C:")
-                extra += "\n"
-            if hasattr(self, "invoker"):
-                extra += " I: First Invoker was:\n I:"
-                extra += "".join(self.invoker).rstrip().replace("\n","\n I:")
-                extra += "\n"
+            extra = "\n" + self._debugInfo()
             raise AlreadyCalledError(extra)
         if self.debug:
             self.invoker = traceback.format_stack()[:-2]
@@ -295,6 +287,17 @@ class Deferred:
             del self.timeoutCall
         self._runCallbacks()
 
+    def _debugInfo(self):
+        info = ''
+        if hasattr(self, "creator"):
+            info += " C: Deferred was created:\n C:"
+            info += "".join(self.creator).rstrip().replace("\n","\n C:")
+            info += "\n"
+        if hasattr(self, "invoker"):
+            info += " I: First Invoker was:\n I:"
+            info += "".join(self.invoker).rstrip().replace("\n","\n I:")
+            info += "\n"
+        return info
 
     def _runCallbacks(self):
         if not self.paused:
@@ -374,6 +377,8 @@ class Deferred:
         if (self.called and
             isinstance(self.result, failure.Failure)):
             log.msg("Unhandled error in Deferred:")
+            if self.debug:
+                log.msg("(debug: " + self._debugInfo() + ")")
             log.err(self.result)
 
 
