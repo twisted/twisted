@@ -44,10 +44,17 @@ class URLPath:
         else:
             return result
 
-    def fromString(st):
+    def fromString(klass, st):
         t = urlparse.urlsplit(st)
-        u = URLPath(*t)
+        u = klass(*t)
         return u
+
+    fromString = classmethod(fromString)
+
+    def fromRequest(klass, request):
+        return klass.fromString(request.prePathURL())
+
+    fromRequest = classmethod(fromRequest)
 
     def _pathMod(self, newpathsegs, keepQuery):
         if keepQuery:
@@ -113,7 +120,7 @@ class URLPath:
                         query,
                         fragment)
 
-    fromString = staticmethod(fromString)
+
     
     def __str__(self):
         x = urlparse.urlunsplit((
@@ -122,4 +129,6 @@ class URLPath:
         return x
 
     def __repr__(self):
-        return repr(self.__dict__)
+        return ('URLPath(scheme=%r, netloc=%r, path=%r, query=%r, fragment=%r)'
+                % (self.scheme, self.netloc, self.path, self.query, self.fragment))
+
