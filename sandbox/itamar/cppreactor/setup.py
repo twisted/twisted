@@ -7,14 +7,34 @@ from distutils import sysconfig
 
 # break abstraction to set g++ as linker - is there better way?
 sysconfig._init_posix()
-sysconfig._config_vars["CC"] = "g++ -ftemplate-depth-50"
+compiler = "g++ -ftemplate-depth-50"
+
+# workaround for bugs in Redhat 7.3 compiler
+if os.popen("g++ --version").read().strip() == "2.96":
+    compiler += " -fno-inline"
+
+sysconfig._config_vars["CC"] = compiler
 sysconfig._config_vars["LDSHARED"] = "g++ -shared"
 
 ext_modules = []
+include_dirs = ["./include", "/usr/local/include"]
+if os.environ.has_key("BOOST_INCLUDE"):
+    include_dirs.append(os.environ["BOOST_INCLUDE"])
+
+libraries = []
+for libpath in (os.environ.get("LD_LIBRARY_PATH", "").split(":") + ["/usr/lib", "/lib", "/usr/local/lib"]):
+    if os.path.exists(os.path.join(libpath, "libboost_python.so")):
+        libraries.append("boost_python")
+        break
+else:
+    libraries.append("boost_python-gcc-mt")
+
+
 for name in ["tcp", "udp", "util"]:
     ext_modules.append(Extension("fusion." + name, [join("fusion", "%s.cpp" % name)],
-                                 libraries=["boost_python"],
-                                 include_dirs=["include"]))
+                                 libraries=libraries,
+                                 library_dirs=["/usr/local/lib"],
+                                 include_dirs=include_dirs))
 
 setup(
   name = "fusion",
