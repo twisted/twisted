@@ -50,7 +50,6 @@ def createApplicationDecoder(config):
                                config['source'] or config['file'])
     if config['python']:
         def decode(filename, data):
-            log.msg('Loading %s...' % (filename,))
             d = {'__file__': filename}
             exec data in d, d
             try:
@@ -59,7 +58,7 @@ def createApplicationDecoder(config):
                 raise RuntimeError(
                         "Error - python file %r must set a variable named "
                         "'application', which implements the Application "
-                        "protocol. No such variable " "was found!" % filename)
+                        "protocol. No such variable was found!" % filename)
     else:
         if config['xml']:
             from twisted.persisted.marmalade import unjellyFromXML as load
@@ -70,7 +69,6 @@ def createApplicationDecoder(config):
             mode = 'rb'
         mainMod = sys.modules['__main__']
         def decode(filename, data):
-            log.msg("Loading %s..." % (filename,))
             sys.modules['__main__'] = EverythingEphemeral()
             application = load(StringIO.StringIO(data))
             sys.modules['__main__'] = mainMod
@@ -87,7 +85,10 @@ def loadApplication(config, passphrase):
     if config['encrypted']:
         data = persist.decrypt(passphrase, data)
     try:
-        return decode(filename, data)
+        log.msg("Loading %s..." % (filename,))
+        d = decode(filename, data)
+        log.msg("Loaded.")
+        return d
     except:
         if config['encrypt']:
             log.msg("Error loading Application - "
@@ -150,7 +151,6 @@ def getApplication(config, passphrase):
         log.msg(s)
         log.deferr()
         sys.exit('\n' + s + '\n')
-    log.msg("Loaded.")
     initRun = 1
     return application
 
