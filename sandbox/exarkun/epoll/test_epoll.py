@@ -40,29 +40,33 @@ class EPoll(unittest.TestCase):
         server, addr = port.accept()
 
         p = _epoll.epoll(16)
-        p.control(_epoll.CTL_ADD, client.fileno(), _epoll.IN | _epoll.OUT)
-        p.control(_epoll.CTL_ADD, server.fileno(), _epoll.IN | _epoll.OUT)
+        p.control(_epoll.CTL_ADD, client.fileno(), _epoll.IN | _epoll.OUT | _epoll.ET)
+        p.control(_epoll.CTL_ADD, server.fileno(), _epoll.IN | _epoll.OUT | _epoll.ET)
 
         now = time.time()
-        events = p.wait(4, 1)
+        events = p.wait(4, 1000)
         then = time.time()
         self.failIf(then - now > 0.01)
-        self.assertEquals(events, [(client.fileno(), _epoll.OUT),
-                                   (server.fileno(), _epoll.OUT)])
+        self.assertEquals(
+            dict(events), 
+            {client.fileno(): _epoll.OUT,
+             server.fileno(): _epoll.OUT})
 
         now = time.time()
-        events = p.wait(4, 1)
+        events = p.wait(4, 200)
         then = time.time()
-        self.failUnless(then - now > 1)
+        self.failUnless(then - now > 0.1)
         self.failIf(events)
 
         client.send("Hello!")
         server.send("world!!!")
 
         now = time.time()
-        events = p.wait(4, 1)
+        events = p.wait(4, 1000)
         then = time.time()
         self.failIf(then - now > 0.01)
-        self.assertEquals(events, [(client.fileno(), _epoll.IN | _epoll.OUT),
-                                   (server.fileno(), _epoll.IN | _epoll.OUT)])
-
+        events.sort()
+        self.assertEquals(
+            dict(events), 
+            {client.fileno(): _epoll.IN | _epoll.OUT,
+             server.fileno(): _epoll.IN | _epoll.OUT})

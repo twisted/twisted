@@ -9,27 +9,29 @@ cdef extern from "errno.h":
 cdef extern from "string.h":
 	cdef extern void *memset(void* s, int c, int n)
 
-cdef enum:
-	EPOLL_CTL_ADD = 1
-	EPOLL_CTL_DEL = 2
-	EPOLL_CTL_MOD = 3
-
-cdef enum EPOLL_EVENTS:
-	EPOLLIN = 0x001
-	EPOLLPRI = 0x002
-	EPOLLOUT = 0x004
-	EPOLLRDNORM = 0x040
-	EPOLLRDBAND = 0x080
-	EPOLLWRNORM = 0x100
-	EPOLLWRBAND = 0x200
-	EPOLLMSG = 0x400
-	EPOLLERR = 0x008
-	EPOLLHUP = 0x010
-	EPOLLET = (1 << 31)
-
-cdef extern from "sys/epoll.h":
+cdef extern from "stdint.h":
 	ctypedef unsigned long uint32_t
 	ctypedef unsigned long long uint64_t
+
+cdef extern from "sys/epoll.h":
+
+	cdef enum:
+		EPOLL_CTL_ADD = 1
+		EPOLL_CTL_DEL = 2
+		EPOLL_CTL_MOD = 3
+
+	cdef enum EPOLL_EVENTS:
+		EPOLLIN = 0x001
+		EPOLLPRI = 0x002
+		EPOLLOUT = 0x004
+		EPOLLRDNORM = 0x040
+		EPOLLRDBAND = 0x080
+		EPOLLWRNORM = 0x100
+		EPOLLWRBAND = 0x200
+		EPOLLMSG = 0x400
+		EPOLLERR = 0x008
+		EPOLLHUP = 0x010
+		EPOLLET = (1 << 31)
 
 	ctypedef union epoll_data_t:
 		void *ptr
@@ -93,7 +95,7 @@ cdef class epoll:
 				raise IOError(result, os.strerror(result))
 			results = []
 			for i from 0 <= i < result:
-				results.append((events[i].data.fd, events[i].events))
+				results.append((events[i].data.fd, <int>events[i].events))
 			return results
 		finally:
 			free(events)
