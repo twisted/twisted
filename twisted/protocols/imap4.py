@@ -876,7 +876,7 @@ class IMAP4Client(basic.LineReceiver):
         self.authenticators[auth.getName()] = auth
 
     def lineReceived(self, line):
-        # print 'C: ' + line
+        print 'C: ' + line
         rest = None
         parts = line.split(None, 1)
         if len(parts) == 2:
@@ -1941,7 +1941,7 @@ class IMAP4Client(basic.LineReceiver):
 
     def _fetch(self, messages, useUID=0, **terms):
         fetch = useUID and 'UID FETCH' or 'FETCH'
-        cmd = '%s %s' % (message, ' '.join([s.upper() for s in terms.keys()]))
+        cmd = '%s %s' % (messages, ' '.join([s.upper() for s in terms.keys()]))
         d = self.sendCommand(Command(fetch, cmd, wantResponse=('FETCH',)))
         return d
 
