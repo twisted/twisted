@@ -22,7 +22,7 @@ def monkey():
             self.publicKeys = self.getPublicKeys()
         if not hasattr(self,'privateKeys'):
             self.privateKeys = self.getPrivateKeys()
-        if not self.publicKeys or not self.privateKeys: 
+        if not self.publicKeys or not self.privateKeys:
             raise error.ConchError('no host keys, failing')
         if not hasattr(self,'primes'):
             self.primes = self.getPrimes()
@@ -32,7 +32,7 @@ def monkey():
                     transport.SSHServerTransport.supportedKeyExchanges.remove('diffie-hellman-group-exchange-sha1')
                 except ValueError:
                     pass
-            else:  
+            else:
                 self.primesKeys = self.primes.keys()
     factory.SSHFactory.startFactory = startFactory
 monkey()
