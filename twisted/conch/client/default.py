@@ -102,7 +102,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
     def serviceStarted(self):
         if 'SSH_AUTH_SOCK' in os.environ:
             log.msg('using agent')
-            cc = protocol.ClientCreator(reactor, SSHAgentClient)
+            cc = protocol.ClientCreator(reactor, agent.SSHAgentClient)
             d = cc.connectUNIX(os.environ['SSH_AUTH_SOCK'])
             d.addCallback(self._setAgent)
             d.addErrback(self._ebSetAgent)
