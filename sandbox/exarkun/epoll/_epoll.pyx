@@ -54,7 +54,7 @@ cdef class epoll:
 	def __init__(self, int size):
 		self.fd = epoll_create(size)
 		if self.fd == -1:
-			raise OSError(errno, os.strerror(errno))
+			raise IOError(errno, os.strerror(errno))
 		self.initialized = 1
 
 	def __dealloc__(self):
@@ -77,7 +77,7 @@ cdef class epoll:
 		evt.data.fd = fd
 		result = epoll_ctl(self.fd, op, fd, &evt)
 		if result == -1:
-			raise OSError(errno, os.strerror(errno))
+			raise IOError(errno, os.strerror(errno))
 
 	def wait(self, unsigned int maxevents, int timeout):
 		cdef epoll_event *events
