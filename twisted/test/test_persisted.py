@@ -21,7 +21,7 @@ import cPickle
 import cStringIO
 
 # Twisted Imports
-from twisted.persisted import styles, marmalade
+from twisted.persisted import styles, marmalade, aot
 
 
 class VersionTestCase(unittest.TestCase):
@@ -248,6 +248,50 @@ class PicklingTestCase(unittest.TestCase):
         self.assertEquals(type(o), type(f))
         self.assertEquals(f.getvalue(), "abc")
 
+
+class EvilSourceror:
+    def __init__(self, x):
+        self.a = self
+        self.a.b = self
+        self.a.b.c = x
+
+
+class AOTTestCase(unittest.TestCase):
+    def testMethodSelfIdentity(self):
+        a = A()
+        b = B()
+        a.bmethod = b.bmethod
+        b.a = a
+        im_ = aot.unjellyFromSource(aot.jellyToSource(b)).a.bmethod
+        self.assertEquals(im_.im_class, im_.im_self.__class__)
+
+    def testBasicIdentity(self):
+        # Anyone wanting to make this datastructure more complex, and thus this
+        # test more comprehensive, is welcome to do so.
+        aj = aot.AOTJellier().jellyToAO
+        d = {'hello': 'world', "method": aj}
+        l = [1, 2, 3,
+             "he\tllo\n\n\"x world!",
+             u"goodbye \n\t\u1010 world!",
+             1, 1.0, 100 ** 100l, unittest, aot.AOTJellier, d,
+             funktion
+             ]
+        t = tuple(l)
+        l.append(l)
+        l.append(t)
+        l.append(t)
+        uj = aot.unjellyFromSource(aot.jellyToSource([l, l]))
+        assert uj[0] is uj[1]
+        assert uj[1][0:5] == l[0:5]
+
+    def testFunkyReferences(self):
+        o = EvilSourceror(EvilSourceror([]))
+
+        oj = aot.unjellyFromAOT(aot.jellyToAOT(o))
+
+        assert oj.a is oj
+        assert oj.a.b is oj.b
+        assert oj.c is not oj.c.c
 
 testCases = [VersionTestCase, EphemeralTestCase, PicklingTestCase]
 

@@ -23,7 +23,7 @@ identical.
 
 """
 
-from twisted.python.reflect import namedModule, namedClass, namedObject
+from twisted.python.reflect import namedModule, namedClass, namedObject, fullFuncName
 from twisted.persisted.crefutil import NotKnown, _Tuple, _InstanceMethod, _DictKeyAndValue, _Dereference, _Defer
 
 try:
@@ -34,7 +34,6 @@ except:
     instancemethod = PyMethod
 
 import types
-import pickle
 import copy_reg
 
 def getValueElement(node):
@@ -52,8 +51,6 @@ def getValueElement(node):
                 raise ValueError("Only one value node allowed per instance!")
     return valueNode
 
-def fullFuncName(func):
-    return (str(pickle.whichmodule(func, func.__name__)) + '.' + func.__name__)
 
 
 class DOMJellyable:
@@ -236,6 +233,7 @@ class DOMJellier:
         """Create a node representing the given object and return it.
         """
         objType = type(obj)
+        #immutable (We don't care if these have multiple refs)
         if objType is types.NoneType:
             node = self.document.createElement("None")
         elif objType is types.StringType:
@@ -282,6 +280,7 @@ class DOMJellier:
             node = self.document.createElement("function")
             node.setAttribute("name", fullFuncName(obj))
         else:
+            #mutable!
             if self.prepared.has_key(id(obj)):
                 oldNode = self.prepared[id(obj)][1]
                 if oldNode.hasAttribute("reference"):

@@ -26,6 +26,7 @@ import sys
 import types
 import cStringIO
 import string
+import pickle
 
 # Sibling Imports
 import reference
@@ -212,6 +213,10 @@ class ThreadAttr:
 ISNT=0
 WAS=1
 IS=2
+
+
+def fullFuncName(func):
+    return (str(pickle.whichmodule(func, func.__name__)) + '.' + func.__name__)
 
 def qual(clazz):
     return  clazz.__module__+'.'+clazz.__name__

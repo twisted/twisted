@@ -170,7 +170,7 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
         self.name = node.getAttribute("name")
         self.udpPorts = []
         self.sslPorts = []
-        self.asXML = 1
+        self.persistStyle = "xml"
         for subnode in self._getChildElements(node):
             if subnode.tagName == 'ssl':
                 self.sslPorts = []
@@ -216,7 +216,14 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
                 for delnode in self._getChildElements(subnode):
                     unjellier.unjellyLater(delnode).addCallback(self.addDelayed).arm()
 
-    persistenceVersion = 7
+    persistenceVersion = 8
+
+    def upgradeToVersion8(self):
+        self.persistStyle = "pickle"
+        if hasattr(self, 'asXML'):
+            if self.asXML:
+                self.persistStyle = "xml"
+            del self.asXML
 
     def upgradeToVersion7(self):
         print 'upgrading 7'
@@ -395,15 +402,20 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
                 log.msg('set uid/gid %s/%s' % (self.uid, self.gid))
 
 
-    asXML = 0
 
+    persistStyle = "pickle"
+    
     def save(self, tag=None, filename=None):
         """Save a pickle of this application to a file in the current directory.
         """
-        if self.asXML:
+        if self.persistStyle == "xml":
             from twisted.persisted.marmalade import jellyToXML
             dumpFunc = jellyToXML
             ext = "tax"
+        elif self.persistStyle == "aot":
+            from twisted.persisted.aot import jellyToSource
+            dumpFunc = jellyToSource
+            ext = "tas"            
         else:
             from cPickle import dump
             def dumpFunc(obj, file, _dump=dump):

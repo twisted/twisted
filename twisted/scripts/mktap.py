@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: mktap.py,v 1.11 2002/05/30 10:47:57 itamarst Exp $
+# $Id: mktap.py,v 1.12 2002/06/11 02:48:38 carmstro Exp $
 
 """ Implementation module for the `mktap` command.
 """
@@ -66,7 +66,8 @@ Usage::
     optStrings = [['uid', 'u', '0'],
                   ['gid', 'g', '0'],
                   ['append', 'a', None]]
-    optFlags = [['xml', None, "Output as XML, rather than pickle."]]
+    optFlags = [['xml', 'x', "Output as XML, rather than pickle."],
+                ['source', 's', "Output as Python source-code (AOT format), rather than pickle."]]
     help = 0
 
     def opt_help(self):
@@ -138,7 +139,9 @@ def run():
         for portno, factory in mod.getPorts():
             a.listenTCP(portno, factory)
     if options['xml']:
-        a.asXML = 1
+        a.persistStyle = 'xml'
+    elif options['source']:
+        a.persistStyle = 'aot'
     a.save()
 
 # Make it script-callable for testing purposes

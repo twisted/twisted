@@ -1,3 +1,16 @@
+2002-06-10  Christopher Armstrong <radix@twistedmatrix.com>
+
+	* twisted/persisted/aot.py, bin/twistd,mktap, twisted/internet/app.py:
+	AOT (Abstract Object Tree) source-persistence mechanism. This is a
+	more-concise, easier-to-edit alternative to Twisted's XML persistence,
+	for people who know how to edit Python code. Also added appropriate
+	options to mktap and twistd to load/save .tas (Twisted Application 
+	Source) files.
+
+	I will be working on making the formatting better, soon, but it's
+	workable for now.
+	
+
 2002-06-02  Itamar Shtull-Trauring  <twisted@itamarst.org>
 
 	* twisted.internet: changed protocol factory interface - it now has

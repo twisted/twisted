@@ -54,12 +54,14 @@ class ServerOptions(usage.Options):
                    "read an application from within a Python file"],
                   ['xml', 'x', None,
                    "Read an application from a .tax file (Marmalade format)."],
+                  ['source', 's', None,
+                   "Read an application from a .tas file (AOT format)."],
                   ['pidfile','','twistd.pid',
-                   "use a pidfile"],
+                   "Name of the pidfile"],
                   ['rundir','d','.',
-                   'change to a supplied directory before running'],
+                   'Change to a supplied directory before running'],
                   ['reactor', 'r', 'default',
-                   'What ReactorCore module to use.']]
+                   'Which ReactorCore module to use.']]
 
     def opt_plugin(self, pkgname):
         """read config.tac from a plugin package, as with -y
@@ -195,6 +197,8 @@ else:
 from twisted.internet import reactor
 log.msg('reactor class: %s' % reactor.__class__)
 
+#Application creation/unserializing
+
 if config.opts['python']:
     pyfile = os.path.abspath(config.opts['python'])
     print "Loading %s..." % pyfile
@@ -205,6 +209,7 @@ if config.opts['python']:
     except KeyError:
         log.msg("Error - python file %s must set a variable named 'application', an instance of twisted.internet.app.Application. No such variable was found!" % repr(pyfile))
         sys.exit()
+        
 elif config.opts['xml']:
     from twisted.persisted.marmalade import unjellyFromXML
     print '<Loading file="%s" />' % config.opts['xml']
@@ -212,6 +217,16 @@ elif config.opts['xml']:
     application = unjellyFromXML(open(config.opts['xml'], 'rb'))
     sys.modules['__main__'] = mainMod
     styles.doUpgrade()
+
+elif config.opts['source']:
+    from twisted.persisted.aot import unjellyFromSource
+    print "Loading %s..." % config.opts['source']
+    sys.modules['__main__'] = EverythingEphemeral()
+    application = unjellyFromSource(open(config.opts['source'], 'r'))
+    application.persistStyle = "aot"
+    sys.modules['__main__'] = mainMod
+    styles.doUpgrade()
+    
 else:
     print "Loading %s..." % config.opts['file']
     sys.modules['__main__'] = EverythingEphemeral()
