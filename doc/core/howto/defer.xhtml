@@ -40,21 +40,32 @@ blocking or delayed operations.</p>
 <pre class="python">
 from twisted.internet import reactor, defer
 
-class Getter:
-    def getData(self, x):
-        # this won't block
-        d = defer.Deferred()
-        reactor.callLater(2, d.callback, x * 3)
-        return d
+def getDummyData(self, x):
+    """
+    This function is a dummy which simulates a delayed result
+    and returns a Deferred which will fire with that result
+    """
+    d = defer.Deferred()
+    # simulate a delayed result by asking the reactor to fire the
+    # Deferred in 2 seconds time with the result x * 3
+    reactor.callLater(2, d.callback, x * 3)
+    return d
 
 def printData(d):
+    """
+    Data handling function to be added as a callback: handles the
+    data by printing the result
+    """
     print d
 
-g = Getter()
-d = g.getData(3)
+d = getDummyData(3)
 d.addCallback(printData)
 
-reactor.callLater(4, reactor.stop); reactor.run()
+# manually set up the end of the process by asking the reactor to
+# stop itself in 4 seconds time
+reactor.callLater(4, reactor.stop)
+# start up the Twisted reactor (event loop handler) manually
+reactor.run()
 </pre>
 
 <h3>Multiple callbacks</h3>
@@ -73,8 +84,13 @@ from twisted.internet import reactor, defer
 
 class Getter:
     def gotResults(self, x):
-        """The Deferred mechanism provides a mechanism to signal error
-           conditions.  In this case, odd numbers are bad.
+        """
+        The Deferred mechanism provides a mechanism to signal error
+        conditions.  In this case, odd numbers are bad.
+
+        This function demonstrates a more complex way of starting
+        the callback chain by checking for expected results and
+        choosing whether to fire the callback or errback chain
         """
         if x % 2 == 0:
             self.d.callback(x*3)
@@ -82,14 +98,28 @@ class Getter:
             self.d.errback(ValueError("You used an odd number!"))
 
     def _toHTML(self, r):
+        """
+        This function converts r to HTML.
+
+        It is added to the callback chain by getDummyData in
+        order to demonstrate how a callback passes its own result
+        to the next callback
+        """
         return "<p>Result: %s</p>" % r
 
-    def getData(self, x):
-        """The Deferred mechanism allows for chained callbacks.
-           In this example, the output of gotResults is first
-           passed through _toHTML on its way to printData.
+    def getDummyData(self, x):
+        """
+        The Deferred mechanism allows for chained callbacks.
+        In this example, the output of gotResults is first
+        passed through _toHTML on its way to printData.
+
+        Again this function is a dummy, simulating a delayed result
+        using callLater, rather than using a real asynchronous
+        setup.
         """
         self.d = defer.Deferred()
+        # simulate a delayed result by asking the reactor to schedule
+        # gotResults in 2 seconds time
         reactor.callLater(2, self.gotResults, x)
         self.d.addCallback(self._toHTML)
         return self.d
@@ -101,13 +131,13 @@ def printError(failure):
     import sys
     sys.stderr.write(str(failure))
 
-# this will print an error message
+# this series of callbacks and errbacks will print an error message
 g = Getter()
-d = g.getData(3)
+d = g.getDummyData(3)
 d.addCallback(printData)
 d.addErrback(printError)
 
-# this will print "<p>Result: 12</p>"
+# this series of callbacks and errbacks will print "<p>Result: 12</p>"
 g = Getter()
 d = g.getData(4)
 d.addCallback(printData)
