@@ -1174,9 +1174,9 @@ class ESMTP(SMTP):
         self._to = []
         self.sendCode(
             250,
-            '%s\n%s Hello %s, nice to meet you' % (
+            '%s Hello %s, nice to meet you\n%s' % (
+                self.host, peer,
                 self.listExtensions(),
-                self.host, peer
             )
         )
 
