@@ -61,9 +61,16 @@ class ResourceSubscription(resource.Resource):
         self.publisher = None
 
     def __getstate__(self):
+        """Get persistent state for this ResourceSubscription.
+        """
+        # When I unserialize,
         state = copy.copy(self.__dict__)
+        # Publisher won't be connected...
         state['publisher'] = None
+        # I won't be making a connection
         state['waiting'] = 0
+        # There will be no pending requests.
+        state['pending'] = []
         return state
 
     def connected(self, publisher):
