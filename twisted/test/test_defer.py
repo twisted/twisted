@@ -21,8 +21,7 @@ Test cases for defer module.
 """
 
 from pyunit import unittest
-from twisted.python import defer
-from twisted.internet import reactor
+from twisted.internet import reactor, defer
 
 
 class DeferredTestCase(unittest.TestCase):
@@ -90,6 +89,32 @@ class DeferredTestCase(unittest.TestCase):
         self.failUnlessEqual(result, [(defer.SUCCESS, 1),
                                       (defer.FAILURE, 2),
                                       (defer.SUCCESS, 3)])
+
+    def testDeferredListFireOnOneError(self):
+        defr1 = defer.Deferred()
+        defr2 = defer.Deferred()
+        defr3 = defer.Deferred()
+        dl = defer.DeferredList([defr1, defr2, defr3], fireOnOneErrback=1)
+        result = []
+        def eb(resultList, result=result):
+            result.append(resultList)
+        dl.addErrback(eb)
+        defr1.callback(1)
+        defr2.errback(2)
+        self.failUnlessEqual(result, [(2, 1)])
+
+    def testTimeOut(self):
+        d = defer.Deferred()
+        d.setTimeout(1.0)
+        l = []
+        d.addErrback(l.append)
+        # Make sure the reactor is shutdown
+        d.addBoth(lambda x, r=reactor: r.stop() or r)
+
+        self.assertEquals(l, [])
+        reactor.run()
+        self.assertEquals(len(l), 1)
+        self.assertEquals(l[0].type, defer.TimeoutError)
 
     def testImmediateSuccess(self):
         l = []

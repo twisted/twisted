@@ -255,12 +255,22 @@ class DeferredList(Deferred):
     I track a list of Deferreds for their callbacks, and make a single
     callback when they have all completed.
     """
-    def __init__(self, deferredList):
+
+    fireOnOneCallback = 0
+    fireOnOneErrback = 0
+
+    def __init__(self, deferredList, fireOnOneCallback=0, fireOnOneErrback=0):
         """Initialize a DeferredList.
 
         Arguments::
 
           deferredList: a list of Deferreds
+
+        Keyword arguments::
+          fireOnOneCallback: a flag indicating that only one callback needs to
+                             be fired for me to call my callback
+          fireOnOneErrback: a flag indicating that only one errback needs to
+                            be fired for me to call my errback
         """
         self.resultList = [None] * len(deferredList)
         Deferred.__init__(self)
@@ -270,13 +280,22 @@ class DeferredList(Deferred):
                                   callbackArgs=(index,SUCCESS),
                                   errbackArgs=(index,FAILURE))
             index = index + 1
+        
+        self.fireOnOneCallback = fireOnOneCallback
+        self.fireOnOneErrback = fireOnOneErrback
 
     def _cbDeferred(self, result, index, succeeded):
         """(internal) Callback for when one of my deferreds fires.
         """
         self.resultList[index] = (succeeded, result)
-        if not (None in self.resultList):
-            self.callback(self.resultList)
+        
+        if not self.called:
+            if succeeded == SUCCESS and self.fireOnOneCallback:
+                self.callback((result, index))
+            elif succeeded == FAILURE and self.fireOnOneErrback:
+                self.errback((result, index))
+            elif None not in self.resultList:
+                self.callback(self.resultList)
 
 
 # Constants for use with DeferredList
