@@ -72,4 +72,5 @@ def getProcessValue(executable, args=(), env={}, path='.'):
     return callProtocolWithDeferred(_ValueGetter, executable, args, env, path)
 
 def schedule(f, *args, **kw):
+    """reactor.callLater(0, f, *args, **kw)"""
     reactor.callLater(0, f, *args, **kw)
