@@ -82,6 +82,19 @@ the module is unstable.</p>
 But as always, the only accurate way of knowing a module's stability is reading
 the module's docstrings.</p>
 
+<h2>How can I access self.factory from my Protocol's __init__?</h2>
+
+<p>You can't.  A Protocol doesn't have a Factory when it is created.  Instead,
+you should probably be doing that in your Protocol's
+<code>connectionMade</code> method.</p>
+
+<p>Similarly you shouldn't be doing <q>real</q> work, like connecting to
+databases, in a Factory's <code>__init__</code> either.  Instead, do that in
+<code>startFactory</code>.
+
+<p>See <a href="servers.html">Writing Servers</a> and 
+<a href="clients.html">Writing Clients</a> for more details.</p>
+
 <h2>Is the Twisted web server a toy?</h2>
 
 <p>No. It is a production grade server. It is running continously on several
