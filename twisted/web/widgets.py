@@ -17,7 +17,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 # System Imports
-import string, time, types, traceback, copy, pprint, sys, os, string
+import string, time, types, traceback, pprint, sys, os
 import linecache
 import re
 from cStringIO import StringIO
@@ -29,6 +29,14 @@ from twisted.protocols import http
 
 # Sibling Imports
 import html, resource, error
+import util as webutil
+
+#backwards compatibility
+from util import formatFailure, htmlrepr, htmlUnknown, htmlDict, htmlList,\
+                 htmlInst, htmlString, htmlReprTypes
+              
+
+
 from server import NOT_DONE_YET
 
 True = (1==1)
@@ -57,107 +65,6 @@ def _ellipsize(x):
         return y[:1024]+"..."
     return y
 
-def htmlrepr(x):
-    return htmlReprTypes.get(type(x), htmlUnknown)(x)
-
-def htmlUnknown(x):
-    return '<CODE>'+html.escape(repr(x))+'</code>'
-
-def htmlDict(d):
-    io = StringIO()
-    w = io.write
-    w('<table bgcolor="#cccc99"><tr><th colspan="2" align="left">Dictionary %d</th></tr>' % id(d))
-    for k, v in d.items():
-        if k == '__builtins__':
-            v = 'builtin dictionary'
-        w('\n<tr bgcolor="#ffff99"><td valign="top"><b>%s</b></td>\n<td>%s</td></tr>\n' % (htmlrepr(k), htmlrepr(v)))
-    w('</table>')
-    return io.getvalue()
-
-def htmlList(l):
-    io = StringIO()
-    w = io.write
-    w('<table bgcolor="#7777cc"><tr><th colspan="2" align="left">List %d</th></tr>' % id(l))
-    for i in l:
-        w('<tr bgcolor="#9999ff"><td>%s</td></tr>\n' % htmlrepr(i))
-    w('</table>\n')
-    return io.getvalue()
-
-def htmlInst(i):
-    if hasattr(i, "__html__"):
-        s = i.__html__()
-    else:
-        s = '<code>'+html.escape(repr(i))+'</code>'
-    return '''<table bgcolor="#cc7777"><tr><td><b>%s</b> instance @ 0x%x</td></tr>
-              <tr bgcolor="#ff9999"><td>%s</td></tr>
-              </table>
-              ''' % (i.__class__, id(i), s)
-
-def htmlString(s):
-    return html.escape(repr(s))
-
-htmlReprTypes = {types.DictType: htmlDict,
-                 types.ListType: htmlList,
-                 types.InstanceType: htmlInst,
-                 types.StringType: htmlString}
-
-def formatFailure(myFailure):
-    if not isinstance(myFailure, failure.Failure):
-        return html.PRE(str(myFailure))
-    io = StringIO()
-    w = io.write
-    w("<table>")
-    w('<th align="left" colspan="3"><font color="red">%s: %s</font></th>' % (html.escape(str(myFailure.type)), html.escape(str(myFailure.value))))
-    line = 0
-    for method, filename, lineno, localVars, globalVars in myFailure.frames:
-        # Cheat to make tracebacks shorter.
-        if filename == '<string>':
-            continue
-        # file, line number
-        w('<tr bgcolor="#%s"><td colspan="2" valign="top">%s, line %s in <b>%s</b><br /><table width="100%%">' % (["bbbbbb", "cccccc"][line % 2], filename, lineno, method))
-        snippet = ''
-        for snipLineNo in range(lineno-2, lineno+2):
-            snipLine = linecache.getline(filename, snipLineNo)
-            snippet = snippet + snipLine
-            snipLine = string.replace(
-                string.replace(html.escape(string.rstrip(snipLine)),
-                               '  ','&nbsp;'),
-                '\t', '&nbsp; &nbsp; &nbsp; &nbsp; ')
-
-
-            if snipLineNo == lineno:
-                color = 'bgcolor="#ffffff"'
-            else:
-                color = ''
-            w('<tr %s><td>%s</td><td><code>%s</code></td></tr>' % (color, snipLineNo,snipLine))
-        w('</table></td></tr>')
-        # Self vars
-        w('<tr bgcolor="#%s">' % (["bbbbbb", "cccccc"][line % 2]))
-        w('<td valign="top" colspan="2"><table><tr><th align="left" colspan="2">'
-              'Self'
-              '</th></tr>')
-        for name, var in localVars:
-            if name == 'self' and hasattr(var, '__dict__'):
-                for key, value in var.__dict__.items():
-                    if re.search(r'\W'+'self.'+key+r'\W', snippet):
-                        w('<tr><td valign="top"><b>%s</b></td>'
-                            '<td>%s</td></tr>' % (key, htmlrepr(value)))
-        w('</table></td></tr>')
-        w('<tr bgcolor="#%s">' % (["bbbbbb", "cccccc"][line % 2]))
-        # Local and global vars
-        for nm, varList in ('Locals', localVars), ('Globals', globalVars):
-            w('<td valign="top"><table><tr><th align="left" colspan="2">'
-              '%s'
-              '</th></tr>' % nm)
-            for name, var in varList:
-                if re.search(r'\W'+name+r'\W', snippet):
-                    w('<tr><td valign="top"><b>%s</b></td>'
-                      '<td>%s</td></tr>' % (name, htmlrepr(var)))
-            w('</table></td>')
-        w('</tr>')
-        line = line + 1
-    w('</table>')
-    return io.getvalue()
 
 class Widget:
     """A component of a web page.
@@ -193,7 +100,7 @@ class StreamWidget(Widget):
                 return result
             return l
         except:
-            return [formatFailure(failure.Failure())]
+            return [webutil.formatFailure(failure.Failure())]
 
 class WidgetMixin(Widget):
     """A mix-in wrapper for a Widget.
@@ -272,9 +179,8 @@ class Presentation(Widget):
                 try:
                     x = eval(elem, namespace, namespace)
                 except:
-                    io = StringIO()
                     log.deferr()
-                    tm.append(formatFailure(failure.Failure()))
+                    tm.append(webutil.formatFailure(failure.Failure()))
                 else:
                     if isinstance(x, types.ListType):
                         tm.extend(x)
@@ -640,7 +546,6 @@ class Form(Widget):
 
     def display(self, request):
         """Display the form."""
-        result = []
         form = self.getFormFields(request)
         if isinstance(form, defer.Deferred):
             if self.shouldProcess(request):
@@ -791,7 +696,7 @@ class RenderSession:
                 if item[0] is sentinel:
                     break
         else:
-            raise 'Sentinel for Deferred not found!'
+            raise AssertionError('Sentinel for Deferred not found!')
 
         if done:
             self.lst[position:position+1] = result
@@ -830,7 +735,7 @@ class RenderSession:
                 if isinstance(item[0], self.Sentinel):
                     return
             elif isinstance(item, failure.Failure):
-                self.request.write(formatFailure(item))
+                self.request.write(webutil.formatFailure(item))
             else:
                 self.beforeBody = 0
                 unknown = html.PRE(repr(item))
@@ -847,6 +752,7 @@ class RenderSession:
 class WidgetResource(resource.Resource):
     def __init__(self, widget):
         self.widget = widget
+        resource.Resource.__init__(self)
 
     def render(self, request):
         RenderSession(self.widget.display(request), request)
