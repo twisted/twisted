@@ -222,7 +222,10 @@ qualities.</p>
 each time they traverse the wire. Classes which inherit from
 <code>pb.Copyable</code> are passed-by-value. Their
 <code>getTypeToCopy</code> and <code>getStateToCopy</code> methods are used
-to assemble the data that will be serialized.</p>
+to assemble the data that will be serialized. Rather than subclass
+<code>pb.Copyable</code>, you can also implement the
+<code>flavors.ICopyable</code> interface, or register an ICopyable
+adapter.</p>
 
 <p>The receiving side must register a <code>RemoteCopy</code> subclass under
 the same name as returned by the sender's <code>getTypeToCopy</code> value.

@@ -529,23 +529,23 @@ class PBRootUnslicer(slicer.RootUnslicer):
                 classname = opentype[1]
                 try:
                     factory = flavors.CopyableRegistry[classname]
-                    if tokens.IUnslicer.implementedBy(factory):
-                        child = factory()
-                        child.broker = self.broker
-                        return child
-                    if flavors.IRemoteCopy.implementedBy(factory):
-                        if factory.nonCyclic:
-                            child = flavors.NonCyclicRemoteCopyUnslicer(factory)
-                        else:
-                            child = flavors.RemoteCopyUnslicer(factory)
-                        child.broker = self.broker
-                        return child
-                    why = "RemoteCopy class '%s' has weird factory %s" \
-                                    % (classname, factory)
-                    raise Violation(why)
                 except KeyError:
                     raise Violation("unknown RemoteCopy class '%s'" \
                                     % classname)
+                if tokens.IUnslicer.implementedBy(factory):
+                    child = factory()
+                    child.broker = self.broker
+                    return child
+                if flavors.IRemoteCopy.implementedBy(factory):
+                    if factory.nonCyclic:
+                        child = flavors.NonCyclicRemoteCopyUnslicer(factory)
+                    else:
+                        child = flavors.RemoteCopyUnslicer(factory)
+                    child.broker = self.broker
+                    return child
+                why = "RemoteCopy class '%s' has weird factory %s" \
+                                % (classname, factory)
+                raise Violation(why)
             else:
                 return None # still need classname
         try:
