@@ -30,6 +30,13 @@ class IConnector(Interface):
     def stopConnecting(self):
         """Stop attempting to connect."""
 
+    def disconnect(self):
+        """Disconnect regardless of the connection state.
+
+        If we are connected, disconnect, if we are trying to connect,
+        stop trying.
+        """
+    
     def connect(self):
         """Try to connect to remote address."""
 

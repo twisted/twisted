@@ -843,14 +843,9 @@ class FTPClient(basic.LineReceiver):
             pasvCmd.deferred.addCallbacks(doPassive, self.fail)
 
             cmd = FTPCommand(command)
+            
             # Ensure the connection is always closed
-            def alwaysDisconnect(connector):
-                if connector.state == 'connecting':
-                    connector.stopConnecting()
-                elif connector.state == 'connected':
-                    connector.transport.loseConnection()
-            cmd.deferred.addBoth(lambda x, m=_mutable, a=alwaysDisconnect: 
-                                    a(m[0]) or x)
+            cmd.deferred.addBoth(lambda x, m=_mutable: m[0].disconnect() or x)
 
             d = DeferredList([cmd.deferred, protocol.deferred],
                              fireOnOneErrback=1)

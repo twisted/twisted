@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.28 2002/08/09 22:00:06 glyph Exp $
+# $Id: default.py,v 1.29 2002/08/13 15:34:48 itamarst Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -72,6 +72,13 @@ class BaseConnector:
         self.factory = factory
         self.timeout = timeout
 
+    def disconnect(self):
+        """Disconnect whatever our are state is."""
+        if self.state == 'connecting':
+            self.stopConnecting()
+        elif self.state == 'connected':
+            self.transport.loseConnection()
+    
     def connect(self):
         """Start connection to remote server."""
         if self.state != "disconnected":
