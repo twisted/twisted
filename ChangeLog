@@ -1,3 +1,8 @@
+2003-04-09  Jp Calderone <exarkun@twistedmatrix.com>
+	* twisted/internet/base.py: Change the sort order of DelayedCalls
+	and remove them from the end of the list instead of the beginning.
+	This changes O(n) complexity to O(1) complexity.
+
 2003-04-09  Brian Warner  <warner@lothar.com>
 
 	* twisted/test/test_jelly.py, test_newjelly: Test cleanup.
