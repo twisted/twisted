@@ -1,9 +1,9 @@
 #!/bin/sh
 set -e
-cp sandbox/book.tex doc/howto
+cp admin/book.tex doc/howto
 cd doc/howto
 for file in *.html
-    do ../../sandbox/latex.py $file
+    do ../../admin/latex.py $file
 done
 latex book.tex
 dvips -o book.ps book.dvi
