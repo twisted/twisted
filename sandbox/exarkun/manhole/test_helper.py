@@ -290,7 +290,7 @@ class BufferTestCase(unittest.TestCase):
     def testEraseToDisplayBeginning(self):
         s1 = "Hello world"
         s2 = "Goodbye world"
-        self.term.write('\n'.join((s1, s2, '')))
+        self.term.write('\n'.join((s1, s2)))
         self.term.cursorPosition(5, 1)
         self.term.eraseToDisplayBeginning()
 
@@ -298,4 +298,32 @@ class BufferTestCase(unittest.TestCase):
             str(self.term),
             self.term.fill * WIDTH + '\n' +
             (self.term.fill * 6) + s2[6:] + (self.term.fill * (WIDTH - len(s2))) + '\n' +
+            '\n'.join([self.term.fill * WIDTH for i in xrange(HEIGHT - 2)]))
+
+    def testLineInsertion(self):
+        s1 = "Hello world"
+        s2 = "Goodbye world"
+        self.term.write('\n'.join((s1, s2)))
+        self.term.cursorPosition(7, 1)
+        self.term.insertLine()
+
+        self.assertEquals(
+            str(self.term),
+            s1 + (self.term.fill * (WIDTH - len(s1))) + '\n' +
+            self.term.fill * WIDTH + '\n' +
+            s2 + (self.term.fill * (WIDTH - len(s2))) + '\n' +
+            '\n'.join([self.term.fill * WIDTH for i in xrange(HEIGHT - 3)]))
+
+    def testLineDeletion(self):
+        s1 = "Hello world"
+        s2 = "Middle words"
+        s3 = "Goodbye world"
+        self.term.write('\n'.join((s1, s2, s3)))
+        self.term.cursorPosition(9, 1)
+        self.term.deleteLine()
+
+        self.assertEquals(
+            str(self.term),
+            s1 + (self.term.fill * (WIDTH - len(s1))) + '\n' +
+            s3 + (self.term.fill * (WIDTH - len(s3))) + '\n' +
             '\n'.join([self.term.fill * WIDTH for i in xrange(HEIGHT - 2)]))
