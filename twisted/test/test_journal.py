@@ -44,6 +44,14 @@ class DeleteEntry:
             return 0
 
 
+class AddTime:
+
+    __implements__ = ICommand
+
+    def execute(self, svc, cmdtime):
+        svc.values["time"] = cmdtime
+
+
 class Service:
 
     def __init__(self, logpath, journalpath):
@@ -69,6 +77,10 @@ class Service:
     def get(self, key):
         """Return value of an entry."""
         return self.values[key]
+
+    def addtime(self):
+        """Set a key 'time' with the current time."""
+        self.journal.executeCommand(AddTime())
 
 
 class JournalTestCase(unittest.TestCase):
@@ -127,6 +139,11 @@ class JournalTestCase(unittest.TestCase):
         svc = Service(self.logpath, self.journalpath)
         self.assertEquals(svc.values, {1: "hello"})
 
-        
-        
-    
+    def testTime(self):
+        svc = self.svc
+        svc.addtime()
+        t = svc.get("time")
+
+        log = self.svc.journal.log
+        (t2, c), = log.getCommandsSince(1)
+        self.assertEquals(t, t2)
