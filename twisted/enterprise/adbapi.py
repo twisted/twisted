@@ -32,15 +32,6 @@ class Transaction:
 
     def __init__(self, pool, connection):
         self._connection = connection
-<<<<<<< adbapi.py
-        self.reopen()
-
-    def reopen(self):
-        if self._cursor is not None:
-            self._cursor.close()
-        self._cursor = self._connection.cursor()
-        
-=======
         self.reopen()
 
     def reopen(self):
@@ -48,7 +39,6 @@ class Transaction:
             self._cursor.close()
         self._cursor = self._connection.cursor()
 
->>>>>>> 1.48
     def __getattr__(self, name):
         return getattr(self._cursor, name)
 
