@@ -48,8 +48,10 @@ class NoFileAuthority(common.ResolverBase):
         self.soa, self.records = soa, records
 
     def _lookup(self, name, cls, type, timeout = 10):
-        if type == dns.SOA: return defer.succeed(self.soa[1])
-        return defer.succeed([r for r in self.records[name.lower()] if type == dns.ALL_RECORDS or r.TYPE == type])
+        if name.lower().endswith(self.soa[0].lower()):
+            l = [r for r in self.records[name.lower()] if type == dns.ALL_RECORDS or r.TYPE == type]
+            return defer.succeed(l)
+        return defer.fail(ValueError(dns.ENAME))
 
 soa_record = dns.Record_SOA(
                     mname = 'test-domain.com',
@@ -103,7 +105,8 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
                 soa = ('93.84.28.in-addr.arpa', reverse_soa),
                 records = {
                     '123.93.84.28.in-addr.arpa': [
-                        dns.Record_PTR('test.host-reverse.lookup.com')
+                        dns.Record_PTR('test.host-reverse.lookup.com'),
+                        reverse_soa
                     ]
                 }
             )
@@ -123,6 +126,7 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
 
 
     def testAddressRecord1(self):
+        """Test DNS 'A' record queries"""
         global gotResponse
         gotResponse = 0
         r = self.resolver
@@ -135,6 +139,7 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
 
 
     def testAddressRecord2(self):
+        """Test DNS 'A' record queries"""
         global gotResponse
         gotResponse = 0
         r = self.resolver
@@ -147,6 +152,7 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
 
 
     def testAdressRecord3(self):
+        """Test DNS 'A' record queries"""
         global gotResponse
         gotResponse = 0
         r = self.resolver
@@ -159,6 +165,7 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
 
 
     def testAuthority(self):
+        """Test DNS 'SOA' record queries"""
         global gotResponse
         gotResponse = 0
         r = self.resolver
