@@ -142,3 +142,14 @@ dd
 {
   margin-bottom: 1em;
   }
+
+div.note
+{
+  background-color: #FFFFCC;
+  margin-top: 1ex;
+  margin-left: 5%;
+  margin-right: 5%;
+  padding-left: 5%;
+  padding-right: 5%;
+  border: thin black solid;
+}
