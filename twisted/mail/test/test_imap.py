@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.mail.test.test_imap -*-
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
