@@ -299,10 +299,16 @@ class HTTPClient(basic.LineReceiver):
             self.setRawMode()
 
     def connectionLost(self, reason):
+        self.handleResponseEnd()
+
+    def handleResponseEnd(self):
         if self.__buffer:
             b = self.__buffer
             self.__buffer = ''
             self.handleResponse(b)
+
+    def handleResponsePart(self, data):
+        self.__buffer += data
 
     def connectionMade(self):
         pass
@@ -312,14 +318,12 @@ class HTTPClient(basic.LineReceiver):
     def rawDataReceived(self, data):
         if self.length is not None:
             data, rest = data[:self.length], data[self.length:]
-            self.length = self.length - len(data)
+            self.length -= len(data)
         else:
             rest = ''
-        self.__buffer = self.__buffer + data
+        self.handleResponsePart(data)
         if self.length == 0:
-            b = self.__buffer
-            self.__buffer = ''
-            self.handleResponse(b)
+            self.handleResponseEnd()
             self.setLineMode(rest)
 
 
