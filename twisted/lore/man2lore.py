@@ -36,6 +36,7 @@ def stripQuotes(s):
 
 class ManConverter:
     state = 'regular'
+    name = None
     tp = 0
     dl = 0
     para = 0
@@ -56,11 +57,23 @@ class ManConverter:
 
     def lineReceived(self, line):
         if line[0] == '.':
-            f = getattr(self, 'macro_' + line[1:3].rstrip(), None)
+            f = getattr(self, 'macro_' + line[1:3].rstrip().upper(), None)
             if f:
                 f(line[3:].strip())
         else:
             self.text(line)
+
+    def continueReceived(self, cont):
+        print 'FOO2', repr(cont)
+        if not cont:
+            return
+        if cont[0].isupper():
+            f = getattr(self, 'macro_' + cont[:2].rstrip().upper(), None)
+            print 'conting with', cont[:2].rstrip().upper(), f
+            if f:
+                f(cont[2:].strip())
+        else:
+            self.text(cont)
 
     def closeTags(self):
         if self.state != 'regular':
@@ -87,7 +100,9 @@ class ManConverter:
         self.write('<title>%s.%s</title>' % (title, manSection))
         self.write('</head>\n<body>\n\n')
         self.write('<h1>%s.%s</h1>\n\n' % (title, manSection))
-
+    
+    macro_DT = macro_TH
+    
     def macro_SH(self, line):
         self.closeTags()
         self.write('<h2>')
@@ -101,6 +116,44 @@ class ManConverter:
         words = line.split()
         words[0] = '\\fB' + words[0] + '\\fR '
         self.text(' '.join(words))
+
+    def macro_NM(self, line):
+        if not self.name:
+           self.name = line
+        self.text(self.name + ' ')
+
+    def macro_NS(self, line):
+        parts = line.split(' Ns ')
+        i = 0
+        for l in parts:
+            i = not i
+            if i:
+                self.text(l)
+            else:
+                self.continueReceived(l)
+
+    def macro_OO(self, line):
+        self.text('[')
+        self.continueReceived(line)
+
+    def macro_OC(self, line):
+        self.text(']')
+        self.continueReceived(line)
+
+    def macro_OP(self, line):
+        self.text('[')
+        self.continueReceived(line)
+        self.text(']')
+
+    def macro_FL(self, line):
+        parts = line.split()
+        self.text('\\fB-%s\\fR' % parts[0])
+        self.continueReceived(' '.join(parts[1:]))
+
+    def macro_AR(self, line):
+        parts = line.split()
+        self.text('\\fI %s\\fR' % parts[0])
+        self.continueReceived(' '.join(parts[1:]))
 
     def macro_PP(self, line):
         self.closeTags()
