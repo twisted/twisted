@@ -22,8 +22,8 @@ class Deferred:
 
         These will be executed when the 'master' callback is run.
         """
-        self.callbacks.append((callback, callbackArgs, callbackKeywords),
-                              (errback, errbackArgs, errbackKeywords))
+        self.callbacks.append(((callback, callbackArgs, callbackKeywords),
+                              (errback, errbackArgs, errbackKeywords)))
 
 
     def callback(self, result):

@@ -4,7 +4,7 @@ class Conversation:
     def __init__(self,im,gatewayname,target):
         raise NotImplementedError
 class ContactList:
-    def __init__(self,im,gatewayname):
+    def __init__(self,im):
         raise NotImplementedError
 class GroupSession:
     def __init__(self,name,im,gatewayname):
@@ -19,6 +19,7 @@ class InstanceMessenger(pb.Referenced):
         self.cl=None
         
     def attachGateway(self, gateway):
+        if not self.cl:self.cl=ContactList(self)
         self.gateways[gateway.name]=gateway
     
     def detachGateway(self, gatewayname):

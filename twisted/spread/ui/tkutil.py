@@ -87,15 +87,17 @@ class Login(Toplevel):
         pswd = self.password.get()
         b = pb.Broker()
         self.broker = b
-        b.requestPerspective(service, user, pswd,
-                             referenced = self.pbReferenced,
-                             callback   = self.pbCallback,
+        b.requestIdentity(user, pswd,
+                             callback   = self.gotIdentity,
                              errback    = self.couldNotConnect)
         b.notifyOnDisconnect(self.disconnected)
         tcp.Client(host, port, b)
 
-    def couldNotConnect(self):
+    def gotIdentity(self,identity):
+        identity.attach(self.service.get(),self.pbReferenced,pbcallback=self.pbCallback)
+
+    def couldNotConnect(self,*args):
         self.loginReport("could not connect.")
 
-    def disconnected(self):
+    def disconnected(self,*args):
         self.loginReport("disconnected from server.")
