@@ -83,7 +83,8 @@ class PortCleanerUpper(unittest.TestCase):
     def tearDown(self):
         for p in self.ports:
             try:
-                p.stopListening()
+                if self.connected:
+                    p.stopListening()
             except:
                 pass
         reactor.iterate()
