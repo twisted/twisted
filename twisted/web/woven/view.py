@@ -91,12 +91,16 @@ class WView(template.DOMTemplate):
         # Look up either a widget factory, or a dom-mutating method
         if viewName:
             namespaces = [self]
+            print "asdf"
             for namespace in namespaces:
                 viewMethod = getattr(namespace, 'factory_' + viewName, None)
                 if viewMethod is not None:
                     break
+            print "asdf"
             if viewMethod is None:
+                print "here"
                 view = getattr(widgets, viewName, None)
+                print "there"
                 if view is not None:
                     view = view(self.model)
             else:
@@ -148,14 +152,17 @@ class WView(template.DOMTemplate):
                 view.setSubmodel(submodel)
         
         controllerResult = controller.handle(request)
+        self.outstandingCallbacks += 1
         self.handleControllerResults(controllerResult, request, node, controller, view, NO_DATA_YET)
 
     def handleControllerResults(self, controllerResult, request, node, controller, view, success):
+        self.outstandingCallbacks -= 1
         if isinstance(controllerResult, type(())):
             success, data = controllerResult
         else:
             data = controllerResult
         if isinstance(data, defer.Deferred):
+            self.outstandingCallbacks += 1
             data.addCallback(self.handleControllerResults, request, node, controller, view, success)
             data.addErrback(template.renderFailure, request)
             return data
@@ -179,7 +186,9 @@ class WView(template.DOMTemplate):
             if successes:
                 process = self.handleSuccesses(request, successes)
                 stop = self.controller.process(request, **process)
-
+                if isinstance(stop, defer.Deferred):
+                    stop = template.STOP_RENDERING
+        
         if not stop:
             log.msg("Sending page!")
             page = str(self.d.toxml())
