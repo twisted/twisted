@@ -217,8 +217,8 @@ class InterfaceTestCase(unittest.TestCase):
 
         self.assertRaises(error.AlreadyCancelled, i.cancel)
 
-        start = time.time()
         i = reactor.callLater(0.5, self._callback, 1, a=1)
+        start = time.time()
 
         while time.time() - start < 0.6:
             reactor.iterate(0.01)
