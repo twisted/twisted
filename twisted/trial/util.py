@@ -20,7 +20,6 @@
 import traceback
 from twisted.python import components, failure
 from twisted.internet import interfaces
-from twisted.trial import runner
 
 # Methods in this list will be omitted from a failed test's traceback if
 # they are the final frame.
@@ -130,3 +129,4 @@ def format_exception(eType, eValue, tb, limit=None):
 
 # sibling imports, ugh.
 import unittest
+import runner
