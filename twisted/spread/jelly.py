@@ -743,6 +743,7 @@ class SecurityOptions:
         # I don't believe any of these types can ever pose a security hazard,
         # except perhaps "reference"...
         self.allowedTypes = {"None": 1,
+                             "bool": 1,
                              "boolean": 1,
                              "string": 1,
                              "str": 1,
