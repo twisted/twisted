@@ -417,7 +417,7 @@ class Address:
 
         self.local = ''.join(local)
         self.domain = ''.join(domain)
-        if self.domain == '':
+        if self.local != '' and self.domain == '':
             if defaultDomain is None:
                 defaultDomain = DNSNAME
             self.domain = defaultDomain
@@ -441,7 +441,10 @@ class Address:
         return ''.join(res)
 
     def __str__(self):
-        return '@'.join((self.local, self.domain))
+        if self.local or self.domain:
+            return '@'.join((self.local, self.domain))
+        else:
+            return ''
 
     def __repr__(self):
         return "%s.%s(%s)" % (self.__module__, self.__class__.__name__,

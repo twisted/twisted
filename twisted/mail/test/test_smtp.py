@@ -418,6 +418,8 @@ class SMTPHelperTestCase(unittest.TestCase):
             ['user@host.name', '<user@host.name>'],
             ['"User Name" <user@host.name>', '<user@host.name>'],
             [smtp.Address('someguy@someplace'), '<someguy@someplace>'],
+            ['', '<>'],
+            [smtp.Address(''), '<>'],
         ]
 
         for (c, e) in cases:
