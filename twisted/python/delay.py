@@ -19,12 +19,13 @@
 """
 twisted.delay: Support for delayed and execution of events.
 
-
-This is the standard for delayed method calls in twisted python, and is
-designed to interoperate with other portions of the codebase.  It works with
-twisted.reality and twisted.internet; see the documentation for
-twisted.reality.Reality and twisted.internet for details.
+DEPRECATED.
 """
+
+import warnings
+warnings.warn("twisted.python.delay is deprecated. Please use reactor methods.",
+              DeprecationWarning, stacklevel=2)
+
 
 # System Imports
 import os
