@@ -17,7 +17,7 @@
 """Test cases for Twisted component architecture."""
 
 from twisted.trial import unittest
-from twisted.python import components
+import components
 
 class IAdder(components.Interface):
     """A sample interface that adds stuff."""
@@ -81,14 +81,6 @@ class MultiplyAndAdd:
     def multiply(self, a, b):
         return a * b
 
-class Empty:
-    # no interfaces
-    pass
-
-class MoreEmpty:
-    __implements__ = ()
-    pass
-
 class IFoo(ISub):
     pass
 
@@ -105,7 +97,6 @@ class FooAdapterForMAA:
 components.registerAdapter(FooAdapterForMAA, MultiplyAndAdd, IFoo)
 
 
-
 class InterfacesTestCase(unittest.TestCase):
     """Test interfaces."""
 
@@ -120,10 +111,10 @@ class InterfacesTestCase(unittest.TestCase):
 
     def testClasses(self):
         # is this a right thing to do?
-        self.assert_( components.implements(MultiplyAndAdd, IMultiply) )
-        self.assert_( components.implements(MultiplyAndAdd, IAdder) )
-        self.assert_( components.implements(Sub, IAdder) )
-        self.assert_( components.implements(Sub, ISub) )
+        self.assert_( IMultiply.implementedBy(MultiplyAndAdd) )
+        self.assert_( IAdder.implementedBy(MultiplyAndAdd) )
+        self.assert_( IAdder.implementedBy(Sub) )
+        self.assert_( ISub.implementedBy(Sub) )
 
     def testInstances(self):
         o = MultiplyAndAdd()
@@ -133,12 +124,6 @@ class InterfacesTestCase(unittest.TestCase):
         o = Sub()
         self.assert_( components.implements(o, IAdder) )
         self.assert_( components.implements(o, ISub) )
-
-    def testInstanceOnlyImplements(self):
-        class Blah: pass
-        o = Blah()
-        o.__implements__ = IAdder
-        self.assert_( components.implements(o, IAdder) )
 
     def testOther(self):
         self.assert_( not components.implements(3, ISub) )
@@ -156,12 +141,6 @@ class InterfacesTestCase(unittest.TestCase):
         l2 = [IAdder, IMultiply]
         l2.sort()
         self.assertEquals(l, l2)
-
-        l = components.getInterfaces(Empty)
-        self.assertEquals(l, [])
-
-        l = components.getInterfaces(MoreEmpty)
-        self.assertEquals(l, [])
 
     def testSuperInterfaces(self):
         l = components.superInterfaces(ISub)
@@ -400,16 +379,6 @@ class TestMetaInterface(unittest.TestCase):
         IMeta(c).add(1)
         IMeta(c).add(1)
         self.assertEquals(IMeta(c).add(1), 3)
-        self.assertEquals(IMeta(c, persist=False).add(1), 1)
-        self.assertEquals(IMeta(c).add(1), 4)
-
-    def testCustomRegistry(self):
-        from twisted.python import context
-        n = MetaNumber(0)
-        myReg = components.AdapterRegistry()
-        myReg.registerAdapter(BackwardsAdder, MetaNumber, IMeta)
-        self.assertEquals(context.call({components.AdapterRegistry: myReg},
-                                       IMeta, n).add(2), -2)
 
     def testRegistryPersistence(self):
         n = MetaNumber(1)

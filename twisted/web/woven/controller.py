@@ -442,6 +442,6 @@ def registerControllerForModel(controller, model):
            subclass.
     """
     components.registerAdapter(controller, model, interfaces.IController)
-    if components.implements(controller, resource.IResource):
+    if resource.IResource.implementedBy(controller):
         components.registerAdapter(controller, model, resource.IResource)
 
