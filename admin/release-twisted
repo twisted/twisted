@@ -21,7 +21,7 @@ from __future__ import nested_scopes
 ### Twisted Preamble
 # This makes sure that users don't have to set up their environment
 # specially in order to run these programs from bin/.
-import sys, os, string, time
+import sys, os, string, time, glob
 if string.find(os.path.abspath(sys.argv[0]), os.sep+'Twisted') != -1:
     sys.path.insert(0, os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]), os.pardir, os.pardir)))
 sys.path.insert(0, os.curdir)
@@ -118,7 +118,7 @@ def main():
         sys.exit(2)
 
     if not opts['commands']:
-        opts['commands'] = ['upver', 'tag', 'exp', 'dist', 'docs', 'balls', 'rel']#, 'debian']
+        opts['commands'] = ['upver', 'tag', 'exp', 'dist', 'docs', 'balls', 'rel', 'debian']
 
     d = {'exp': exportCVS,
          'docs': makeDocs,
@@ -332,7 +332,7 @@ def makeDebs(opts):
     sh("ssh -p 9022 localhost "
               "'cd /tmp/%(unique)s;./Twisted-%(ver)s/admin/make-deb -a'"%vars())
     os.mkdir(os.path.join(rel, 'debian-%s' % ver))
-    for file in glob.glob('/tmp/%s/*' % unique):
+    for file in glob.glob('/sid-chroot/tmp/%s/*' % unique):
         sh('mv $(file)s $(rel)s' % vars())
     os.chdir("%(rel)s/debian-%(ver)s" % vars())
     sh('tar xzf %(tgz)s admin/override admin/createpackages')
