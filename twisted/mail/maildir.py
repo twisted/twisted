@@ -85,6 +85,7 @@ class MaildirMailbox(pop3.Mailbox):
         """
         self.path = path
         self.list = []
+        self.deleted = {}
         for name in ('cur', 'new'):
             for file in os.listdir(os.path.join(path, name)):
                 self.list.append(os.path.join(path, name, file))
@@ -119,10 +120,33 @@ class MaildirMailbox(pop3.Mailbox):
         This only moves a message to the .Trash/ subfolder,
         so it can be undeleted by an administrator.
         """
-        os.rename(self.list[i], 
-                  os.path.join(self.path, '.Trash', 'cur',
-                               os.path.basename(self.list[i])))
+        trashFile = os.path.join(
+            self.path, '.Trash', 'cur', os.path.basename(self.list[i])
+        )
+        os.rename(self.list[i], trashFile)
+        self.deleted[self.list[i]] = trashFile
         self.list[i] = 0
+    
+    def undeleteMessages(self):
+        """Undelete any deleted messages it is possible to undelete
+        
+        This moves any messages from .Trash/ subfolder back to their
+        original position, and empties out the deleted dictionary.
+        """
+        for (real, trash) in self.deleted.items():
+            try:
+                os.rename(trash, real)
+            except OSError, (err, str):
+                # If the file has been deleted from disk, oh well!
+                if err != errno.ENOENT:
+                    raise
+                # This is a pass
+            else:
+                try:
+                    self.list[self.list.index(0)] = real
+                except ValueError:
+                    self.list.append(real)
+        self.deleted.clear()
 
 
 class MaildirDirdbmDomain(AbstractMaildirDomain):

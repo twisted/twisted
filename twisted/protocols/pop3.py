@@ -136,6 +136,19 @@ class POP3(basic.LineReceiver):
         self.mbox.deleteMessage(i)
         self.successResponse()
 
+    def do_NOOP(self):
+        """Perform no operation.  Return a success code"""
+        self.successReponse()
+    
+    def do_RSET(self):
+        """Unset all deleted message flags"""
+        try:
+            self.mbox.undeleteMessages()
+        except:
+            self.failResponse()
+        else:
+            self.successResponse()
+
     def do_QUIT(self):
         self.mbox.sync()
         self.successResponse()
