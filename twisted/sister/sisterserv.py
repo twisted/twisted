@@ -148,13 +148,13 @@ class SisterService(Service, Perspective):
         """Call a distributed method on a resource managed by the
         sister network. This will call the method 'getResourceInfo' on
         the calling object which must return its resourceType and
-        resourceName to be identified by.  The final method being called will have
-        'sister_' prepended to its name and have the calling objects resourceType and
-        resourceName as the first arguments.
+        resourceName to be identified by.  The final method being called will
+        have 'sister_' prepended to its name and have the calling objects
+        resourceType and resourceName as the first arguments.
 
-        #NOTE: this method of identifying the calling object is temporary.. need to
-               establish a better way which includes allowing the calling object to
-               expose some data and/or functionality to the caller.
+        NOTE: this method of identifying the calling object is temporary..
+        need to establish a better way which includes allowing the calling
+        object to expose some data and/or functionality to the caller.
         """
         (srcResourceType, srcResourceName) = caller.getResourceInfo()
         if not self.ownedResources.has_key((srcResourceType,srcResourceName)):
