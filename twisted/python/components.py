@@ -609,4 +609,4 @@ class ReprableComponentized(Componentized):
 __all__ = ["Interface", "implements", "getInterfaces", "superInterfaces",
            "registerAdapter", "getAdapterClass", "getAdapter", "Componentized",
            "Adapter", "ReprableComponentized", "backwardsCompatImplements",
-           "fixClassImplements"]
+           "fixClassImplements", "MetaInterface", "getRegistry"]
