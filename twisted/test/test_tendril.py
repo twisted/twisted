@@ -21,91 +21,16 @@ from twisted.protocols import irc
 from twisted.internet import protocol
 import StringIO
 
-tendril._LOGALL = 0
+tendril._LOGALL = 1
 
-class NoOpper:
-    def __getattr__(self, key):
-        return self
-
-    def __call__(self, *a, **kw):
-        return self
-
-class DummyPerspective:
-    def __init__(self, name, service):
-        self.name = name
-        self.service = service
-        self.client = NoOpper()
-        self.dmessages = []
-
-    def receiveGroupMessage(self, sender, group, message):
-        self.client.receiveGroupMessage(sender.name, group.name, message)
-
+class MessageCatcher:
     def receiveDirectMessage(self, sender, message):
         self.dmessages.append((sender.name, message))
         self.client.receiveDirectMessage(sender.name, message)
 
-    def directMessage(self, recipientName, message):
-        recipient = self.service.getPerspectiveNamed(recipientName)
-        recipient.receiveDirectMessage(self, message)
-
-    def groupMessage(self, groupName, message):
-        group = self.service.getGroup(groupName)
-        group.sendMessage(self, message)
-
-    def attached(self, client, identity=None):
-        self.client = client
-
-    def detached(self, *unused):
-        pass
-
-    def joinGroup(self, groupName):
-        group = self.service.getGroup(groupName)
-        group.addMember(self)
-
-    def __str__(self):
-        return "<participant '%s' at %x>" % (self.name, id(self))
-
-class DummyGroup:
-    def __init__(self, name):
-        self.name = name
-        self.members = []
-        self.messages = []
-
-    def addMember(self, member):
-        self.members.append(member)
-
+class GroupMessageCatcher:
     def sendMessage(self, sender, message):
-        if self.name == 'TendrilErrors':
-            pass
         self.messages.append((sender.name, message))
-        for member in self.members:
-            member.receiveGroupMessage(sender, self, message)
-
-
-class DummyService:
-    def __init__(self, name):
-        self.serviceName = name
-        self.perspectives = {}
-        self.groups = {}
-
-    def getGroup(self, name):
-        group = self.groups.get(name)
-        if not group:
-            group = DummyGroup(name)
-            self.groups[name] = group
-        return group
-
-    def getPerspectiveNamed(self, name):
-        try:
-            p = self.perspectives[name]
-        except KeyError:
-            raise service.UserNonexistantError(name)
-        else:
-            return p
-
-    def createParticipant(self, name):
-        self.perspectives[name] = DummyPerspective(name, self)
-        return self.perspectives[name]
 
 class StringIOWithoutClosing(StringIO.StringIO):
     zeroAt = 0
@@ -124,20 +49,28 @@ class StringIOWithoutClosing(StringIO.StringIO):
 
 class TendrilTest(unittest.TestCase):
     def setUp(self):
-        self.service = DummyService("twisted.words.TendrilTest")
-        self.tendril = tendril.TendrilClient(
-            self.service, groupList=['tendriltest'],
-            networkSuffix='@unittest')
+        self.service = service.Service("EAT IT FATTY")
+        self.tendrilFactory = tendril.TendrilFactory(self.service)
+        self.tendrilFactory.nickname = 'tl'
+        self.tendrilFactory.groupList=['tendriltest']
+        self.tendrilFactory.networkSuffix='@unittest'
+        self.tendrilFactory.startFactory()
         self.file = StringIOWithoutClosing()
         self.transport = protocol.FileWrapper(self.file)
         self.transport.connected = 1
+        self.tendril = self.tendrilFactory.buildProtocol(None)
         self.tendril.makeConnection(self.transport)
 
         self.tendril.signedOn()
-        self.tendril.joinGroup('tendriltest')
+        self.tendrilFactory.wordsclient.joinGroup('tendriltest')
 
         self.group = self.service.getGroup('tendriltest')
         self.participant = self.service.createParticipant('TheParticipant')
+        self.participant.dmessages = []
+        self.group.messages = []
+        # ugh, this should be a bot or something, but it's easier this way
+        self.participant.receiveDirectMessage = lambda sender, message, metadata=None, m=self.participant.dmessages: m.append((sender.perspectiveName, message))
+        self.participant.receiveGroupMessage = lambda sender, group, message, metadata=None, m=self.group.messages: m.append((sender.perspectiveName, message))
         self.participant.joinGroup('tendriltest')
 
 

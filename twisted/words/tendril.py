@@ -1,5 +1,5 @@
-# -*- Python -*-
-# $Id: tendril.py,v 1.23 2002/08/31 23:37:42 acapnotic Exp $
+# -*- test-case-name: twisted.test.test_tendril -*-
+# $Id: tendril.py,v 1.24 2002/09/01 09:07:10 glyph Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -195,7 +195,7 @@ class TendrilIRC(irc.IRCClient, styles.Ephemeral):
 
     realname = 'Tendril'
     versionName = 'Tendril'
-    versionNum = '$Revision: 1.23 $'[11:-2]
+    versionNum = '$Revision: 1.24 $'[11:-2]
     versionEnv = copyright.longversion
 
     helptext = TendrilFactory.helptext
@@ -217,12 +217,7 @@ class TendrilIRC(irc.IRCClient, styles.Ephemeral):
     ### Protocol LineReceiver-level methods
 
     def lineReceived(self, line):
-        self.log(line, 'dump')
-
-        try:
-            irc.IRCClient.lineReceived(self, line)
-        except:
-            log.deferr()
+        irc.IRCClient.lineReceived(self, line)
 
     def sendLine(self, line):
         """Send a line through my transport, unless my transport isn't up.

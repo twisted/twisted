@@ -268,7 +268,7 @@ class SSHTransportTestCase(unittest.TestCase):
         global theTest
         theTest = self
         auth = ConchTestAuthorizer()
-        ident = ConchTestIdentity('testuser', app.Application('conchtest'))
+        ident = ConchTestIdentity('testuser', auth)
         auth.addIdentity(ident)
         fac = SSHTestFactory()
         fac.authorizer = auth

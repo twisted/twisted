@@ -316,8 +316,8 @@ class Service(pb.Service):
         "in %(app)s on %(host)s.\n"
         "%(longversion)s.\n\n")
 
-    def __init__(self, serviceName='twisted.manhole', application=None):
-        pb.Service.__init__(self, serviceName, application)
+    def __init__(self, serviceName='twisted.manhole', serviceParent=None, authorizer=None):
+        pb.Service.__init__(self, serviceName, serviceParent, authorizer)
 
         self.namespace = {
             # I'd specify __name__ so we don't get it from __builtins__,

@@ -54,7 +54,10 @@ class ManholeTest(unittest.TestCase):
     values.
     """
     def setUp(self):
-        self.service = service.Service("pb", application=DummyApp("myapp"))
+        from twisted.cred.authorizer import DefaultAuthorizer
+        ap = DummyApp("myapp")
+        au = DefaultAuthorizer()
+        self.service = service.Service("pb", ap, au)
         self.p = service.Perspective("UnitTest")
         self.p.setService(self.service)
         self.client = DummyManholeClient()

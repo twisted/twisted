@@ -20,11 +20,14 @@ from pyunit import unittest
 from twisted.spread import util
 from twisted.words import service
 from twisted.internet import app
+from twisted.cred.authorizer import DefaultAuthorizer
 
 class WordsTestCase(unittest.TestCase):
     def testWords(self):
-        a = app.Application("testwords")
-        s = service.Service('twisted.words',a)
+        
+        ap = app.Application("testwords")
+        au = DefaultAuthorizer()
+        s = service.Service('twisted.words', ap, au)
         s.createParticipant("glyph")
         s.createParticipant("sean")
         # XXX OBSOLETE: should be async getPerspectiveRequest
