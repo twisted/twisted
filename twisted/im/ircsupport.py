@@ -174,9 +174,12 @@ class IRCProto(basesupport.AbstractClientMixin, irc.IRCClient):
 
     def irc_QUIT(self,prefix,params):
         nickname=string.split(prefix,"!")[0]
-        for group in self._ingroups[nickname]:
-            self.getGroupConversation(group).memberLeft(nickname)
-        self._ingroups[nickname]=[]
+        if self._ingroups.has_key(nickname):
+            for group in self._ingroups[nickname]:
+                self.getGroupConversation(group).memberLeft(nickname)
+            self._ingroups[nickname]=[]
+        else:
+            print '*** WARNING: ingroups had no such key %s' % nickname
 
     # GTKIM calls
     def joinGroup(self,name):
