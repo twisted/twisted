@@ -52,11 +52,11 @@ except NameError:
     logfile = sys.stdout
 
 def write(stuff):
-    logfile.write(stuff)
+    logfile.write(str(stuff))
     logfile.flush()
 
 def msg(stuff):
-    logfile.write(stuff+"\n")
+    logfile.write(str(stuff)+"\n")
     logfile.flush()
 
 

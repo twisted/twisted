@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 
 """
 twisted.usage is a module for parsing/handling the command

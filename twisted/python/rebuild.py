@@ -6,6 +6,7 @@
 import sys
 import types
 import time
+import linecache
 
 # Sibling Imports
 import reflect
@@ -119,10 +120,11 @@ def rebuild(module, doLog=1):
                     sys.stdout.write("c")
                     sys.stdout.flush()
         elif type(v) == types.FunctionType:
-            functions[v] = 1
-            if doLog:
-                sys.stdout.write("f")
-                sys.stdout.flush()
+            if v.func_globals is module.__dict__:
+                functions[v] = 1
+                if doLog:
+                    sys.stdout.write("f")
+                    sys.stdout.flush()
 
     values.update(classes)
     values.update(functions)
@@ -130,11 +132,15 @@ def rebuild(module, doLog=1):
     classes = classes.keys()
     functions = functions.keys()
     
-    # Boom.
     if doLog:
         print
         print '  (reload   %s)' % str(module.__name__)
+        
+    # Boom.
     reload(module)
+    # Make sure that my traceback printing will at least be recent...
+    linecache.clearcache()
+    
     if doLog:
         print '  (cleaning %s): ' % str(module.__name__),
 
