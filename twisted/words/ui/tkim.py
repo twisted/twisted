@@ -655,18 +655,13 @@ class AccountManager(Toplevel):
                 if account.gatewayname==gateway.protocol and account.options["username"]==gateway.logonUsername:
                     self._modifyaccount(account,"False")
 
-im2.Conversation=Conversation
-im2.ContactList=ContactList
-im2.GroupSession=GroupSession
-im2.ErrorWindow=ErrorWindow
-
 def main():
     global im
     root=Tk()
     root.withdraw()
     tkinternet.install(root)
     root.withdraw()
-    im=im2.InstanceMessenger()
+    im=im2.InstanceMessenger(Conversation, ContactList, GroupSession, ErrorWindow)
     im.am=AccountManager(im)
     try:
         f=open(os.path.expanduser("~"+os.sep+".imsaved"),"r")

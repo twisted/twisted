@@ -140,21 +140,13 @@ def ErrorWindow(error,message):
     """
     raise NotImplementedError
 
-"""
-Conversation, ContactList, GroupSession, and ErrorWindow should be overridden by
-    GUI programs to implement the various windows, i.e in your client:
-
-import im2
-im2.Conversation=MyConversationClass
-im2.GroupSession=MyGroupSessionClass
-im2.ContactList=MyContactListClass
-im2.ErrorWindow=MyErrorWindowClass
-"""
 class InstanceMessenger:
     """This is the interface between Gateways (protocols) and the windows
     that make up IM.
     """
-    def __init__(self):
+    def __init__(self, Conversation, ContactList, GroupSession, ErrorWindow):
+        self.Conversation, self.ContactList, self.GroupSession, self.ErrorWindow = \
+            Conversation, ContactList, GroupSession, ErrorWindow
         self.gateways={}
         self.conversations = {}
         self.groups = {}
@@ -184,7 +176,7 @@ class InstanceMessenger:
         gateway := the gateway to attach (class Gateway)
         """
         self.sendEvent(gateway,"attached")
-        if not self.cl:self.cl=ContactList(self)
+        if not self.cl:self.cl=self.ContactList(self)
         self.gateways[gateway.name]=gateway
         gateway.attachIM(self)
     
@@ -205,7 +197,7 @@ class InstanceMessenger:
         """
         conv = self.conversations.get(str(gateway)+target)
         if not conv:
-            conv = Conversation(self,gateway,target)
+            conv = self.Conversation(self,gateway,target)
             self.conversations[str(gateway)+target] = conv
         return conv
 
@@ -245,7 +237,7 @@ class InstanceMessenger:
         contacts := a list of the contacts (list)
         """
         self.sendEvent(gateway,"receiveContactList",contacts)
-        if not self.cl: self.cl = ContactList(self)
+        if not self.cl: self.cl = self.ContactList(self)
         for contact,status in contacts:
             self.cl.changeContactStatus(gateway,contact,status)
 
@@ -269,7 +261,7 @@ class InstanceMessenger:
         contact := the contact whos status changed (string)
         newStatus := the new status of the contact (string)
         """
-        if not self.cl: self.cl=ContactList(self)
+        if not self.cl: self.cl=self.ContactList(self)
         self.sendEvent(gateway,"notifyStatusChanged",contact,newStatus)
         self.cl.changeContactStatus(gateway,contact,newStatus)
         conv=self.conversations.get(str(gateway)+contact)
@@ -310,7 +302,7 @@ class InstanceMessenger:
         """
         if self.sendEvent(gateway,"joinGroup",group):
             if not gateway.joinGroup(group): # if it returns true, don't join
-                self.groups[str(gateway)+group]=GroupSession(self,group,gateway)
+                self.groups[str(gateway)+group]=self.GroupSession(self,group,gateway)
                 self._log(gateway,group+".chat","Joined group!")
         
     def leaveGroup(self,gateway,group):
@@ -422,7 +414,7 @@ class InstanceMessenger:
         """
         
         if self.sendEvent(gateway,"error",CONNECTIONFAILED,message):
-            ErrorWindow("Connection Failed!",message)
+            self.ErrorWindow("Connection Failed!",message)
 
     def connectionLost(self,gateway,message):
         """
@@ -431,7 +423,7 @@ class InstanceMessenger:
         message := the reason the connection was lost (string)
         """
         if self.sendEvent(gateway,"error",CONNECTIONLOST,message):
-            ErrorWindow("Connection Lost!",message)
+            self.ErrorWindow("Connection Lost!",message)
 
     def addCallback(self,gateway,event,callback):
         """
