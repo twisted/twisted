@@ -229,8 +229,9 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
                     os.chdir(path)
                 # set the UID before I actually exec the process
                 if settingUID:
-                    os.setuid(uid)
                     os.setgid(gid)
+                    initgroups(pwd.getpwuid(uid)[0], gid)
+                    os.setuid(uid)
                 os.execvpe(command, args, environment)
             except:
                 # If there are errors, bail and try to write something
