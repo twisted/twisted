@@ -5,7 +5,7 @@
 import time
 
 from twisted.trial import unittest
-from twisted.conch.test.test_recvline import _TelnetMixin, _SSHMixin, _StdioMixin
+from twisted.conch.test.test_recvline import _TelnetMixin, _SSHMixin, _StdioMixin, stdio
 from twisted.conch import manhole
 
 ctrlc = '\x03'
@@ -127,5 +127,5 @@ class ManholeLoopbackSSH(_SSHMixin, unittest.TestCase, ManholeLoopbackMixin):
     pass
 
 class ManholeLoopbackStdio(_StdioMixin, unittest.TestCase, ManholeLoopbackMixin):
-    pass
-
+    if stdio is None:
+        skip = "Terminal requirements missing, can't run manhole tests over stdio"

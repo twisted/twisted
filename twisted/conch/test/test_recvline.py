@@ -422,7 +422,11 @@ class _TelnetMixin(_BaseMixin):
         self.clientTransport.clearBuffer()
         self.serverTransport.clearBuffer()
 
-from twisted.conch import stdio
+try:
+    from twisted.conch import stdio
+except ImportError:
+    stdio = None
+
 from twisted.test.test_process import SignalMixin
 
 class NotifyingTerminalBuffer(helper.TerminalBuffer):
@@ -577,7 +581,9 @@ class RecvlineLoopbackSSH(_SSHMixin, unittest.TestCase, RecvlineLoopbackMixin):
     pass
 
 class RecvlineLoopbackStdio(_StdioMixin, unittest.TestCase, RecvlineLoopbackMixin):
-    pass
+    if stdio is None:
+        skip = "Terminal requirements missing, can't run recvline tests over stdio"
+
 
 class HistoricRecvlineLoopbackMixin:
     serverProtocol = EchoServer
@@ -605,4 +611,5 @@ class HistoricRecvlineLoopbackSSH(_SSHMixin, unittest.TestCase, HistoricRecvline
     pass
 
 class HistoricRecvlineLoopbackStdio(_StdioMixin, unittest.TestCase, HistoricRecvlineLoopbackMixin):
-    pass
+    if stdio is None:
+        skip = "Terminal requirements missing, can't run historic recvline tests over stdio"
