@@ -10,6 +10,9 @@
   <body>
     <h1>Developing Componentized Web Applications using Woven, the Web Object Visualization Environment</h1>
 
+
+<h2>Introduction</h2>
+
 <p>
 DOMTemplate solves the problem of separating logic from
 presentation, and allows the template manipulation logic to be expressed in
@@ -17,9 +20,6 @@ Python code form using the DOM API. However, the DOM API is too low
 level and it quickly becomes tedious to use to build complicated HTML
 structures.
 </p>
-
-
-<h2>Twisted's Solution</h2>
 
 <p>
 Twisted's solution is to provide a Model-View-Controller based
@@ -43,7 +43,7 @@ of <code class="API" base="twisted.web">woven.widgets.Widget</code>) for
 display in HTML.
 </p>
 
-    <h3>Model-View-Controller</h3>
+<h2>Model-View-Controller</h2>
 
 <p>
 Model View Controller is a development strategy which
@@ -62,14 +62,14 @@ Woven's implementation of MVC uses
 the interface and component registry, to loosely couple the interacting objects.
 </p>
 
-<h3>Hello World with Page</h3>
+<h2>Hello World with Page</h2>
 
 <p>Let's start with the canonical Hello World example. We will use an instance
 of <code class="API" base="twisted.web">woven.page.Page</code> as our 
 <code class="API" base="twisted.web.resource">IResource</code> implementor. 
 <code class="API" base="twisted.web.resource">IResource</code> describes the
-interface objects are required to implement in order to publish themselves over
-the web in twisted.web. We will be instanciating a 
+interface that objects are required to implement in order to publish themselves
+over the web in twisted.web. We will be instanciating a 
 <code class="API" base="twisted.web">Page</code> instance in an .rpy
 script. An rpy is like a CGI script -- each time you visit the script, it is
 executed. However, an rpy script is merely responsible for instanciating a
@@ -204,7 +204,7 @@ is to create a class which implements
 woven uses to expose data to view widgets.
 </p>
 
-<h3>Implementing IModel</h3>
+<h2>Implementing IModel</h2>
 
 <p>
 The <code class="API" base="twisted.web.woven.model">IModel</code> interface is
