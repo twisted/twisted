@@ -913,6 +913,20 @@ class Link(Widget):
             domhelpers.clearNode(node)
             node.appendChild(txt)
 
+class RootRelativeLink(Link):
+    """
+    Just like a regular Link, only it makes the href relative to the
+    appRoot (that is, request.getRootPath()).
+    """
+    def setUp(self, request, node, data):
+        # hack, hack: some juggling so I can type less and share more
+        # code with Link
+        st = isinstance(data, StringType)
+        if st:
+            data = request.getRootPath() + '/' + data
+        Link.setUp(self, request, node, data)
+        if not st:
+            self['href'] = request.getRootPath() + '/' + self['href']
 
 class ExpandMacro(Widget):
     """A Macro expansion widget modeled after the METAL expander
