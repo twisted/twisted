@@ -16,9 +16,13 @@
 
 """Standard input/out/err support.
 
-API Stability: semi-stable
+API Stability: unstable (pending deprecation in favor of a reactor-based API)
 
-Future Plans: support for stderr, perhaps
+Future Plans:
+
+    support for stderr, perhaps
+    Rewrite to use the reactor instead of an ad-hoc mechanism for connecting
+        protocols to transport.
 
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
