@@ -82,7 +82,7 @@ class PersistTestCase(unittest.TestCase):
                 self.failUnlessEqual(o, o1)
 
     def testPython(self):
-        open("persisttest.python", 'w').write('foo=[1,2,3]')
+        open("persisttest.python", 'w').write('foo=[1,2,3] ')
         o = sob.loadValueFromFile('persisttest.python', 'foo')
         self.failUnlessEqual(o, [1,2,3])
 

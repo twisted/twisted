@@ -206,7 +206,7 @@ def loadValueFromFile(filename, variable, passphrase=None):
         mode = 'rb'
     else:
         mode = 'r'
-    data = open(filename, mode).read()
+    data = open(filename, mode).read() + '\n'
     if passphrase:
         data = _decrypt(passphrase, data)
     d = {'__file__': filename}
