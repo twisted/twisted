@@ -23,9 +23,10 @@ The "GnutellaRouter" and "GnutellaServent" classes are yet to be written.
 """
 
 # system imports
-import random, re, string, struct
+import random, re, string, struct, types
 
 # twisted import
+from twisted.internet import reactor
 from twisted.protocols.basic import LineReceiver
 from twisted.python import log
 
@@ -58,6 +59,29 @@ SERVENTIDENTIFIERENCODING="<%ds" % DESCRIPTORLENGTH # serventIdentifier
 
 PUSHPAYLOADENCODING="<%dsIBBBBH" % DESCRIPTORLENGTH # serventIdentifier, fileIndex, -- 4 octets of IPv4 address --, port
 
+MAXUINT32=(2**32)-1
+MAXUINT16=(2**16)-1
+MAXUINT8=(2**8)-1
+
+def is_ipv4(s):
+    """
+    @return true if and only if s is a canonical IPv4 address
+    """
+    ns = string.split(s, '.')
+    if len(ns) != 4:
+        return false
+    os = map(int, ns)
+    if len(filter(lambda x: (x >= 0) and (x < 256), os)) != 4:
+        return false
+    if string.join(map(str, os), '.') != s:
+        return false
+    return true
+
+PINGPD=0x00
+PONGPD=0x01
+PUSHPD=0x40
+QUERYPD=0x80
+QUERYHITPD=0x81
 payloadDescriptor2Name = {
     0x00: "Ping",
     0x01: "Pong",
@@ -96,21 +120,41 @@ class GnutellaTalker(LineReceiver):
 
     def sendPing(self, ttl):
         """
-        @precondition ttl must be > 0 and <= 256.: (ttl > 0) and (ttl <= 256): "ttl: %s" % str(ttl)
+        @precondition ttl must be > 0 and <= MAXUINT8.: (ttl > 0) and (ttl <= MAXUINT8): "ttl: %s" % str(ttl)
         """
-        assert (ttl > 0) and (ttl <= 256), "ttl must be > 0 and <= 256." + " -- " + "ttl: %s" % str(ttl)
-        self.transport.write(struct.pack(HEADERENCODING, (self._nextDescriptorId(), 0, ttl, 0, 0,)))
+        assert (ttl > 0) and (ttl <= MAXUINT8), "ttl must be > 0 and <= MAXUINT8." + " -- " + "ttl: %s" % str(ttl)
+        log.msg("%s.sendPing(%s)" % (str(self), str(ttl),))
+        self.sendDescriptor(self._nextDescriptorId(), PINGPD, ttl, "")
 
-    def sendPong(self, xxx):
-        pass
+    def sendPong(self, ttl, descriptorId, host, port, numberOfFilesShared, kbShared):
+        """
+        @precondition ttl must be > 0 and <= MAXUINT8.: (ttl > 0) and (ttl <= MAXUINT8): "ttl: %s" % str(ttl)
+        @precondition descriptorId must be a string of length DESCRIPTORLENGTH.: (type(descriptorId) is types.StringType) and (len(descriptorId) == DESCRIPTORLENGTH): "descriptorId: %s :: %s" % (str(descriptorId), str(type(descriptorId)),)
+        @precondition host must be a well-formed IPv4 address.: is_ipv4(host): "host: %s" % str(host)
+        @precondition port must be > 0 and <= MAXUINT16.: (port > 0) and (port <= MAXUINT16): "port: %s" % str(port)
+        @precondition numberOfFilesShared must be >0 and <= MAXUINT32.: (numberOfFilesShared > 0) and (numberOfFilesShared <= MAXUINT32): "numberOfFilesShared: %s" % str(numberOfFilesShared)
+        @precondition kbShared must be > 0 and <= MAXUINT32: (kbShared > 0) and (kbShared <= MAXUINT32): "kbShared: %s" % str(kbShared)
+        """
+        assert (ttl > 0) and (ttl <= MAXUINT8), "precondition failure: " + "ttl must be > 0 and <= MAXUINT8." + " -- " + "ttl: %s" % str(ttl)
+        assert (type(descriptorId) is types.StringType) and (len(descriptorId) == DESCRIPTORLENGTH), "precondition failure: " + "descriptorId must be a string of length DESCRIPTORLENGTH." + " -- " + "descriptorId: %s :: %s" % (str(descriptorId), str(type(descriptorId)),)
+        assert is_ipv4(host), "precondition failure: " + "host must be a well-formed IPv4 address" + " -- " + "host: %s" % str(host)
+        assert (port > 0) and (port <= MAXUINT16), "precondition failure: " + "port must be > 0 and <= MAXUINT16" + " -- " + "port: %s" % str(port)
+        assert (numberOfFilesShared > 0) and (numberOfFilesShared <= MAXUINT32), "precondition failure: " + "numberOfFilesShared must be <= MAXUINT32" + " -- " + "numberOfFilesShared: %s" % str(numberOfFilesShared)
+        assert (kbShared > 0) and (kbShared <= MAXUINT32), "precondition failure: " + "kbShared must be <= MAXUINT32" + " -- " + "kbShared: %s" % str(kbShared)
+
+        log.msg("%s.sendPong(%s, %s, %s, %s, %s, %s)" % (str(self,), str(ttl), str(descriptorId), str(host), str(port), str(numberOfFilesShared), str(kbShared),))
+
+        (ipA0, ipA1, ipA2, ipA3,) = map(int, string.split(host, '.'))
+        self.sendDescriptor(descriptorId, PONGPD, ttl, struct.pack(PONGPAYLOADENCODING, port, ipA0, ipA1, ipA2, ipA3, numberOfFilesShared, kbShared))
 
     # METHODS OF INTEREST TO SUBCLASSES
     def pingReceived(self, descriptorId, ttl, hops):
         """
         Override this to handle ping messages.
+        @precondition descriptorId must be a string of length DESCRIPTORLENGTH.: (type(descriptorId) is types.StringType) and (len(descriptorId) == DESCRIPTORLENGTH): "descriptorId: %s :: %s" % (str(descriptorId), str(type(descriptorId)),)
         """
+        assert (type(descriptorId) is types.StringType) and (len(descriptorId) == DESCRIPTORLENGTH), "precondition failure: " + "descriptorId must be a string of length DESCRIPTORLENGTH." + " -- " + "descriptorId: %s :: %s" % (str(descriptorId), str(type(descriptorId)),)
         log.msg("%s.pingReceived(%s, %s, %s)" % (str(self), str(descriptorId), str(ttl), str(hops),))
-        pass
     
     def pongReceived(self, descriptorId, ttl, hops, ipAddress, port, numberOfFilesShared, kbShared):
         """
@@ -120,9 +164,11 @@ class GnutellaTalker(LineReceiver):
         @param port an integer port number
         @param numberOfFilesShared a long
         @param kbShared a long
+
+        @precondition descriptorId must be a string of length DESCRIPTORLENGTH.: (type(descriptorId) is types.StringType) and (len(descriptorId) == DESCRIPTORLENGTH): "descriptorId: %s :: %s" % (str(descriptorId), str(type(descriptorId)),)
         """
+        assert (type(descriptorId) is types.StringType) and (len(descriptorId) == DESCRIPTORLENGTH), "precondition failure: " + "descriptorId must be a string of length DESCRIPTORLENGTH." + " -- " + "descriptorId: %s :: %s" % (str(descriptorId), str(type(descriptorId)),)
         log.msg("%s.pongReceived(%s, %s, %s, ipAddress=%s, port=%s, numberOfFilesShared=%s, kbShared=%s)" % (str(self), str(descriptorId), str(ttl), str(hops), str(ipAddress), str(port), str(numberOfFilesShared), str(kbShared), ))
-        pass
 
     def queryReceived(self, descriptorId, ttl, hops, searchCriteria, minimumSpeed):
         """
@@ -130,9 +176,11 @@ class GnutellaTalker(LineReceiver):
         
         @param searchCriteria a string
         @param minimumSpeed integer KB/s -- you are not supposed to respond to this query if you can't serve at least this fast
+
+        @precondition descriptorId must be a string of length DESCRIPTORLENGTH.: (type(descriptorId) is types.StringType) and (len(descriptorId) == DESCRIPTORLENGTH): "descriptorId: %s :: %s" % (str(descriptorId), str(type(descriptorId)),)
         """
+        assert (type(descriptorId) is types.StringType) and (len(descriptorId) == DESCRIPTORLENGTH), "precondition failure: " + "descriptorId must be a string of length DESCRIPTORLENGTH." + " -- " + "descriptorId: %s :: %s" % (str(descriptorId), str(type(descriptorId)),)
         log.msg("%s.queryReceived(%s, %s, %s, searchCriteria=%s, minimumSpeed=%s" % (str(self), str(descriptorId), str(ttl), str(hops), str(searchCriteria), str(minimumSpeed),))
-        pass
                                                                                           
     def queryHitReceived(self, descriptorId, ttl, hops, ipAddress, port, resultSet, serventIdentifer, speed):
         """
@@ -143,9 +191,11 @@ class GnutellaTalker(LineReceiver):
         @param resultSet a list of tuples of (fileIndex, fileSize, fileName,) where fileIndex is a long, fileSize (in bytes) is a long, and fileName is a string
         @param serventIdentifier string of length 16
         @param speed integer KB/s claimed by the responding host
+
+        @precondition descriptorId must be a string of length DESCRIPTORLENGTH.: (type(descriptorId) is types.StringType) and (len(descriptorId) == DESCRIPTORLENGTH): "descriptorId: %s :: %s" % (str(descriptorId), str(type(descriptorId)),)
         """
+        assert (type(descriptorId) is types.StringType) and (len(descriptorId) == DESCRIPTORLENGTH), "precondition failure: " + "descriptorId must be a string of length DESCRIPTORLENGTH." + " -- " + "descriptorId: %s :: %s" % (str(descriptorId), str(type(descriptorId)),)
         log.msg("%s.queryHitReceived(%s, %s, %s, ipAddress=%s, port=%s, resultSet=%s, serventIdentifier=%s, speed=%s" % (str(self), str(descriptorId), str(ttl), str(hops), str(ipAddress), str(port), str(resultSet), str(serventIdentifier), str(speed),))
-        pass
     
     def pushReceived(descriptorId, ttl, hops, ipAddress, port, serventIdentifer, fileIndex):
         """
@@ -155,15 +205,30 @@ class GnutellaTalker(LineReceiver):
         @param port an integer port number
         @param serventIdentifier string of length 16
         @param fileIndex a long
+
+        @precondition descriptorId must be a string of length DESCRIPTORLENGTH.: (type(descriptorId) is types.StringType) and (len(descriptorId) == DESCRIPTORLENGTH): "descriptorId: %s :: %s" % (str(descriptorId), str(type(descriptorId)),)
         """
+        assert (type(descriptorId) is types.StringType) and (len(descriptorId) == DESCRIPTORLENGTH), "precondition failure: " + "descriptorId must be a string of length DESCRIPTORLENGTH." + " -- " + "descriptorId: %s :: %s" % (str(descriptorId), str(type(descriptorId)),)
         log.msg("%s.pushReceived(%s, %s, %s, ipAddress=%s, port=%s, serventIdentifier=%s, fileIndex=%s" % (str(self), str(descriptorId), str(ttl), str(hops), str(ipAddress), str(port), str(serventIdentifier), str(fileIndex),))
-        pass
  
     # METHODS OF INTEREST TO THIS CLASS ONLY
     def _nextDescriptorId(self):
         return string.join(map(chr, map(random.randrange, [0]*DESCRIPTORLENGTH, [256]*DESCRIPTORLENGTH)), '')
 
+    def sendDescriptor(self, descriptorId, payloadDescriptor, ttl, payload):
+        """
+        @precondition descriptorId must be a string of length DESCRIPTORLENGTH.: (type(descriptorId) is types.StringType) and (len(descriptorId) == DESCRIPTORLENGTH): "descriptorId: %s :: %s" % (str(descriptorId), str(type(descriptorId)),)
+        @precondition payload must not be larger than MAXUINT32 bytes.: len(payload) <= MAXUINT32: "len(payload): %s"
+        """
+        assert (type(descriptorId) is types.StringType) and (len(descriptorId) == DESCRIPTORLENGTH), "precondition failure: " + "descriptorId must be a string of length DESCRIPTORLENGTH." + " -- " + "descriptorId: %s :: %s" % (str(descriptorId), str(type(descriptorId)),)
+        assert len(payload) <= MAXUINT32, "precondition failure: " + "payload must not be larger than MAXUINT32 bytes." + " -- " + "len(payload): %s"
+  
+        self.transport.write(struct.pack(HEADERENCODING, descriptorId, payloadDescriptor, ttl, 0, len(payload)))
+        self.transport.write(payload)
+
     def connectionMade(self):
+        log.msg("%s.connectionMade(); host: %s, peer: %s" % (str(self), str(self.transport.getHost()), str(self.transport.getPeer()),))
+        self.userapp.setHost(self.transport.getHost())
         if self.initiator:
             log.msg("sending %s" % CONNSTRING)
             self.sendLine(CONNSTRING)
@@ -263,6 +328,8 @@ class GnutellaTalker(LineReceiver):
         """
         assert len(descriptor) == (struct.unpack(PAYLOADENCODING, descriptors[PAYLOADLENGTHOFFSET:HEADERLENGTH])[0] + HEADERLENGTH), "precondition failure: descriptor must be a string of the right length to hold a payload of the encoded length." + " -- " + "self: %s, descriptor: %s" % (str(self), str(descriptor),)
                                                                                           
+        log.msg("%s.descriptorReceived(%s)" % (str(self), str(descriptor),))
+
         try:
             (descriptorId, payloadDescriptor, ttl, hops, payloadLength,) = struct.unpack(HEADERENCODING, descriptor[:HEADERLENGTH])
         except struct.error, le:
@@ -284,6 +351,7 @@ class GnutellaTalker(LineReceiver):
         @precondition We must be expecting a GNUTELLA CONNECT handshake move.: (self.initiator and (self.handshake == "initiatorsaidhello")) or ((not self.initiator) and (self.handshake == "start")): "self.initiator: %s, self.handshake: %s, line: %s" % (str(self.initiator), str(self.handshake), str(line),)
         """
         assert (self.initiator and (self.handshake == "initiatorsaidhello")) or ((not self.initiator) and (self.handshake == "start")), "precondition failure: We must be expecting a GNUTELLA CONNECT handshake move." + "--" + "self.initiator: %s, self.handshake: %s, line: %s" % (str(self.initiator), str(self.handshake), str(line),)
+        log.msg("%s.lineReceived(%s)" % (str(self), str(line),))
         if self.initiator:
             assert self.handshake == "initiatorsaidhello"
             if line != ACKSTRING:
@@ -305,6 +373,7 @@ class GnutellaTalker(LineReceiver):
             self.setRawMode()
 
     def rawDataReceived(self, data):
+        log.msg("%s.rawDataReceived(%s)" % (str(self), str(data),))
         self.buf += data # XXX opportunity for future optimization  --Zooko 2002-07-15
         if len(self.buf) >= HEADERLENGTH:
             try:
@@ -320,6 +389,32 @@ class GnutellaTalker(LineReceiver):
             if len(self.buf) >= descriptorlength:
                 descriptor, self.buf = self.buf[:descriptorlength], self.buf[descriptorlength:]
                 self.descriptorReceived(descriptor)
+
+class GnutellaPinger(GnutellaTalker):
+    """
+    Just for testing.  It does nothing but send PINGs.
+    """
+    def __init__(self):
+        GnutellaTalker.__init__(self)
+
+    def connectionMade(self):
+        GnutellaTalker.connectionMade(self)
+        self.loopAndSendPing()
+
+    def loopAndSendPing(self):
+        GnutellaTalker.sendPing(self, ttl=4)
+        reactor.callLater(4, self.loopAndSendPing)
+
+class GnutellaPonger(GnutellaTalker):
+    """
+    Just for testing.  It does nothing but PONG your PINGs.
+    """
+    def __init__(self):
+        GnutellaTalker.__init__(self)
+
+    def pingReceived(self, descriptorId, ttl, hops):
+        GnutellaTalker.pingReceived(self, descriptorId, ttl, hops)
+        self.sendPong(ttl=hops, host=self.userapp.getHost()[1], port=self.userapp.getHost()[2], numberOfFilesShared=0, kbShared=0)
 
 class GnutellaRouter(GnutellaTalker):
     """

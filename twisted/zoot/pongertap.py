@@ -16,11 +16,17 @@
 
 """Zooko's implementation of Gnutella."""
 
-class Zoot:
-    def __init__(self, app):
-        self.twistedapp = app
-        self.host = None # As soon as a connection is made, this will get filled in.  Future versions of Twisted may provide a nicer way to get this information, even before the first connection is established.
+from twisted.protocols.gnutella import GnutellaPonger
 
-    def setHost(self, host):
-        assert (self.host is None) or (self.host == host)
-        self.host = host
+from twisted.python import usage        # twisted command-line processing
+
+from twisted.zoot.AFactory import AFactory
+from twisted.zoot.zoot import Zoot
+
+class Options(usage.Options):
+    optParameters = [["port", "p", 3653, "Port number to listen on for Gnutella protocol."],]
+
+def updateApplication(app, config):
+    theBigZoot = Zoot(app)
+    f = AFactory(GnutellaPonger, theBigZoot)
+    app.listenTCP(int(config["port"]), f)

@@ -140,3 +140,15 @@ register("Zoot TAP Builder",
          description="Zoot TAP builder module",
          type='tap',
          tapname="zoot")
+
+register("Zoot Pinger TAP Builder",
+         "twisted.zoot.pingertap",
+         description="Zoot Pinger TAP builder module",
+         type='tap',
+         tapname="pinger")
+
+register("Zoot Ponger TAP Builder",
+         "twisted.zoot.pongertap",
+         description="Zoot Ponger TAP builder module",
+         type='tap',
+         tapname="ponger")
