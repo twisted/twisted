@@ -40,14 +40,14 @@ try:
 except ImportError, AttributeError:
     pass # maybe we're using pygtk before this hack existed.
 import gtk
-import sys
+import sys, time
 
 # Twisted Imports
 from twisted.python import log, threadable, runtime, failure
 from twisted.internet.interfaces import IReactorFDSet
 
 # Sibling Imports
-import main, default
+from twisted.internet import main, default
 
 reads = default.reads
 writes = default.writes
@@ -91,8 +91,14 @@ class GtkReactor(default.PosixReactorBase):
 
     def doIteration(self, delay=0.0):
         if delay != 0:
-            log.msg("Error, gtk doIteration() only supports delay of 0")
-        gtk.mainiteration()
+            # attempt to emulate the "don't chew 100% cpu" behavior implied
+            # by delay != 0
+            time.sleep(delay)
+        gtk.mainiteration(0) # 0=don't block
+        # could also try this, might be more appropriate to handle *all*
+        # events, particularly if we have gtk handle our timers too
+        #while gtk.events_pending():
+        #    gtk.mainiteration(0)
 
     def crash(self):
         gtk.mainquit()
@@ -103,40 +109,53 @@ class GtkReactor(default.PosixReactorBase):
         gtk.mainloop()
 
     def callback(self, source, condition):
-        methods = []
-        cbNames = []
+        log.logOwner.own(source)
 
-        if condition & gtk.GDK.INPUT_READ:
-            methods.append(getattr(source, 'doRead'))
-            cbNames.append('doRead')
+        # note: gtk-1.2's gtk_input_add presents an API in terms of gdk
+        # constants like INPUT_READ and INPUT_WRITE. Internally, it will add
+        # POLL_HUP and POLL_ERR to the poll() events, but if they happen it
+        # will turn them back into INPUT_READ and INPUT_WRITE. gdkevents.c
+        # maps IN/HUP/ERR to INPUT_READ, and OUT/ERR to INPUT_WRITE. This
+        # means there is no immediate way to detect a disconnected socket.
 
-        if (condition & gtk.GDK.INPUT_WRITE):
-            method = getattr(source, 'doWrite')
-            # if doRead is doWrite, don't add it again.
-            if not (method in methods):
-                methods.append(method)
-                cbNames.append('doWrite')
-
-        for method, cbName in zip(methods, cbNames):
-            why = None
+        # The g_io_add_watch() API is more suited to this task. I don't think
+        # pygtk exposes it, though.
+        
+        why = None
+        #if condition & POLL_DISCONNECTED and \
+        #       not (condition & gtk._gobject.IO_IN):
+        #    why = main.CONNECTION_LOST
+        if 0: pass
+        else:
             try:
-                why = method()
+                didRead = None
+                if condition & gtk.GDK.INPUT_READ:
+                    why = source.doRead()
+                    didRead = source.doRead
+                if not why and condition & gtk.GDK.INPUT_WRITE:
+                    # if doRead caused connectionLost, don't call doWrite
+                    # if doRead is doWrite, don't call it again.
+                    if not source.disconnected and source.doWrite != didRead:
+                        why = source.doWrite()
+#                if not source.fileno() == fd:
+#                    why = main.ConnectionFdescWentAway('Filedescriptor went away')
             except:
                 why = sys.exc_value
-                log.msg('Error In %s.%s' %(source,cbName))
+                log.msg('Error In %s' % source)
                 log.deferr()
-            if why:
-                try:
-                    source.connectionLost(failure.Failure(why))
-                except:
-                    log.deferr()
-                self.removeReader(source)
-                self.removeWriter(source)
-                break
-            elif source.disconnected:
-                # If source disconnected, don't call the rest of the methods.
-                break
-        self.simulate()
+
+        if why:
+            self.removeReader(source)
+            self.removeWriter(source)
+            try:
+                source.connectionLost(failure.Failure(why))
+            except:
+                log.deferr()
+
+        log.logOwner.disown(source)
+        
+        self.simulate() # fire Twisted timers
+        return 1 # 1=don't auto-remove the source
 
     def simulate(self):
         """Run simulation loops and reschedule callbacks.

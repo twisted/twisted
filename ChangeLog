@@ -6,6 +6,11 @@
 	internally). doIteration now calls gtk.main_iteration in a
 	non-blocking way. Attempt to emulate doIteration(delay!=0) by
 	using time.sleep().
+
+	* twisted/internet/gtkreactor.py: same fixes as for gtk2reactor.
+	Instead of a pygtk bug we've got the limited gtk_input_add API,
+	which hides POLLHUP/POLLERR, so detecting closed fds might not be
+	as reliable.
  
 2003-04-11  Andrew Bennetts  <spiv@twistedmatrix.com>
 
