@@ -23,6 +23,7 @@ import time
 import string
 import cPickle
 import StringIO
+import operator
 from twisted.web import widgets,error
 
 class CalendarWidget(widgets.StreamWidget):
@@ -62,7 +63,8 @@ class PostForm(widgets.Form):
 
     formFields = [
         ["intmenu","Day","day",map(str,range(1,32))],
-        ["menu","Month","month",calendar.month_name[1:]],
+        ["menu","Month","month",map(operator.getitem, [calendar.month_name]*12,
+                                                      range(1,13))],
         ["int","Year","year",str(time.localtime(time.time())[0])],
         ["string","Title","title",""],
         ["text","Data","data",""]
