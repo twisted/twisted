@@ -116,6 +116,49 @@ class IMAP4HelperTestCase(unittest.TestCase):
 
         for (case, expected) in zip(cases, answers):
             self.assertEquals(imap4.parseNestedParens(case), [expected])
+    
+    def testQueryBuilder(self):
+        inputs = [
+            imap4.Query(flagged=1),
+            imap4.Query(unflagged=1, deleted=1),
+            imap4.Or(imap4.Query(flagged=1), imap4.Query(deleted=1)),
+            imap4.Query(before='today'),
+            imap4.Or(
+                imap4.Query(deleted=1),
+                imap4.Query(unseen=1),
+                imap4.Query(new=1)
+            ),
+            imap4.Or(
+                imap4.Not(
+                    imap4.Or(
+                        imap4.Query(since='yesterday', smaller=1000),
+                        imap4.Query(before='tuesday', larger=10000),
+                        imap4.Query(unseen=1, deleted=1, before='today'),
+                        imap4.Not(
+                            imap4.Query(subject='spam')
+                        ),
+                    ),
+                ),
+                imap4.Not(
+                    imap4.Query(uid='1:5')
+                ),
+            )
+        ]
+        
+        outputs = [
+            'FLAGGED',
+            '(DELETED UNFLAGGED)',
+            '(OR FLAGGED DELETED)',
+            '(BEFORE "today")',
+            '(OR DELETED (OR UNSEEN NEW))',
+            '(OR (NOT (OR (SINCE "yesterday" SMALLER 1000) ' # Continuing
+            '(OR (LARGER 10000 BEFORE "tuesday") (OR (DELETED ' # Some more
+            'UNSEEN BEFORE "today") (NOT (SUBJECT "spam")))))) ' # And more
+            '(NOT (UID 1:5)))',
+        ]
+        
+        for (query, expected) in zip(inputs, outputs):
+            self.assertEquals(query, expected)
 
 class SimpleMailbox:
     flags = ('\\Flag1', 'Flag2', '\\AnotherSysFlag', 'LastFlag')
@@ -629,4 +672,5 @@ class IMAP4ServerTestCase(unittest.TestCase):
         
         self.assertEquals(self.results, [0, 2])
         
-            
+    def testSearch(self):
+        pass

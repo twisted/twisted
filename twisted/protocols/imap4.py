@@ -1142,7 +1142,161 @@ class IMAP4Client(basic.LineReceiver):
                     except ValueError:
                         raise IllegalServerResponse, line
         return ids
+    
+    def search(self, *queries):
+        """Search messages in the currently selected mailbox
+        
+        This command is allowed in the Selected state.
+        
+        Any non-zero number of queries are accepted by this method, as
+        returned by the C{Query}, C{Or}, and C{Not} functions.
+        
+        @rtype: C{Deferred}
+        @return: A deferred whose callback will be invoked with a list of all
+        the message sequence numbers return by the search, or whose errback
+        will be invoked if there is an error.
+        """
+        d = self.sendCommand('SEARCH', ' '.join(queries))
 
+class IllegalQueryError(IMAP4Exception): pass
+
+_SIMPLE_BOOL = (
+    'ALL', 'ANSWERED', 'DELETED', 'DRAFT', 'FLAGGED', 'NEW', 'OLD', 'RECENT',
+    'SEEN', 'UNANSWERED', 'UNDELETED', 'UNDRAFT', 'UNFLAGGED', 'UNSEEN'
+)
+
+_NO_QUOTES = (
+    'LARGER', 'SMALLER', 'UID'
+)
+
+def Query(**kwarg):
+    """Create a query string
+    
+    Among the accepted keywords are:
+
+        message_ids : An iterable of the sequence numbers of messages to
+                      include in the search
+        
+        all         : If set to a true value, search all messages in the
+                      current mailbox
+        
+        answered    : If set to a true value, search messages flagged with
+                      \\Answered
+        
+        bcc         : A substring to search the BCC header field for
+        
+        before      : Search messages with an internal date before this
+                      value
+                      
+        body        : A substring to search the body of the messages for
+        
+        cc          : A substring to search the CC header field for
+        
+        deleted     : If set to a true value, search messages flagged with
+                      \\Deleted
+        
+        draft       : If set to a true value, search messages flagged with
+                      \\Draft
+        
+        flagged     : If set to a true value, search messages flagged with
+                      \\Flagged
+        
+        from        : A substring to search the From header field for
+        
+        header      : A two-tuple of a header name and substring to search
+                      for in that header
+        
+        keyword     : Search for messages with the given keyword set
+        
+        larger      : Search for messages larger than this number of octets
+        
+        new         : If set to a true value, search messages flagged with
+                      \\Recent but not \\Seen
+        
+        old         : If set to a true value, search messages not flagged with
+                      \\Recent
+        
+        on          : Search messages with an internal date which is on this
+                      date
+        
+        not         : A dictionary of search queries, the conjunction of the
+                      negation of each of which messages will be tested against.
+        
+        or          : A dictionary of search queries, the disjunction of which
+                      messages will be tested against.
+        
+        recent      : If set to a true value, search for messages flagged with
+                      \\Recent
+        
+        seen        : If set to a true value, search for messages flagged with
+                      \\Seen
+        
+        sentbefore  : Search for messages with an RFC822 'Date' header before
+                      this date
+        
+        senton      : Search for messages with an RFC822 'Date' header which is
+                      on this date
+        
+        sentsince   : Search for messages with an RFC822 'Date' header which is
+                      after this date
+        
+        since       : Search for messages with an internal date that is after
+                      this date
+        
+        smaller     : Search for messages smaller than this number of octets
+        
+        subject     : A substring to search the 'subject' header for
+        
+        text        : A substring to search the entire message for
+        
+        to          : A substring to search the 'to' header for
+        
+        uid         : Search only the messages in the given message set
+        
+        unanswered  : If set to a true value, search for messages not
+                      flagged with \\Answered
+        
+        undeleted   : If set to a true value, search for messages not
+                      flagged with \\Deleted
+        
+        undraft     : If set to a true value, search for messages not
+                      flagged with \\Draft
+        
+        unflagged   : If set to a true value, search for messages not
+                      flagged with \\Flagged
+        
+        unkeyword   : Search for messages without the given keyword set
+        
+        unseen      : If set to a true value, search for messages not
+                      flagged with \\Seen
+
+    @rtype: C{str}
+    @return: The formatted query string
+    """
+    cmd = []
+    for (k, v) in kwarg.items():
+        k = k.upper()
+        if k in _SIMPLE_BOOL and v:
+           cmd.append(k)
+        elif k not in _NO_QUOTES:
+           cmd.extend([k, '"%s"' % (v,)])
+        else:
+           cmd.extend([k, '%s' % (v,)])
+    if len(cmd) > 1:
+        return '(%s)' % ' '.join(cmd)
+    else:
+        return ' '.join(cmd)
+
+def Or(*args):
+    if len(args) < 2:
+        raise IllegalQueryError, args
+    elif len(args) == 2:
+        return '(OR %s %s)' % args
+    else:
+        return '(OR %s %s)' % (args[0], Or(*args[1:]))
+
+def Not(query):
+    return '(NOT %s)' % (query,)
 
 class MismatchedNesting(Exception):
     pass
