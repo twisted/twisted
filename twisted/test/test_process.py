@@ -22,7 +22,12 @@ from __future__ import nested_scopes
 
 from twisted.trial import unittest
 
-import gzip, os, popen2, time, sys
+import gzip
+import os
+import popen2
+import time
+import sys
+import signal
 
 try:
     import cStringIO as StringIO
@@ -124,7 +129,21 @@ class SignalProtocol(protocol.ProcessProtocol):
                                    'SIG%s: %s' % (self.signal,
                                                   os.WTERMSIG(v.status)))
 
-class ProcessTestCase(unittest.TestCase):
+class SignalMixin:
+    sigchldHandler = None
+    
+    def setUpClass(self):
+        # make sure SIGCHLD handler is installed, as it should be on reactor.run().
+        # problem is reactor may not have been run when this test runs.
+        if hasattr(reactor, "_handleSigchld"):
+            from twisted.internet import process
+            self.sigchldHandler = signal.signal(signal.SIGCHLD, reactor._handleSigchld)
+    
+    def tearDownClass(self):
+        if self.sigchldHandler:
+            signal.signal(signal.SIGCHLD, self.sigchldHandler)
+
+class ProcessTestCase(SignalMixin, unittest.TestCase):
     """Test running a process."""
 
     def testProcess(self):
@@ -223,10 +242,10 @@ class TestTwoProcessesBase:
             reactor.iterate(0.01)
             self.check()
 
-class TestTwoProcessesNonPosix(TestTwoProcessesBase, unittest.TestCase):
+class TestTwoProcessesNonPosix(TestTwoProcessesBase, SignalMixin, unittest.TestCase):
     pass
 
-class TestTwoProcessesPosix(TestTwoProcessesBase, unittest.TestCase):
+class TestTwoProcessesPosix(TestTwoProcessesBase, SignalMixin, unittest.TestCase):
     def tearDown(self):
         TestTwoProcessesBase.tearDown(self)
         self.check()
@@ -234,7 +253,6 @@ class TestTwoProcessesPosix(TestTwoProcessesBase, unittest.TestCase):
             pp, process = self.pp[i], self.processes[i]
             if not pp.finished:
                 try:
-                    import signal
                     os.kill(process.pid, signal.SIGTERM)
                 except OSError:
                     print "OSError"
@@ -366,7 +384,7 @@ class PosixProcessBase:
         while reduce(lambda a,b:a+b,[p.going for p in protocols]):
             reactor.iterate(0.01)
 
-class PosixProcessTestCase(unittest.TestCase, PosixProcessBase):
+class PosixProcessTestCase(SignalMixin, unittest.TestCase, PosixProcessBase):
     # add three non-pty test cases
         
     def testStdio(self):
@@ -417,7 +435,7 @@ class PosixProcessTestCase(unittest.TestCase, PosixProcessBase):
         gf = gzip.GzipFile(fileobj=f)
         self.assertEquals(gf.read(), s)
     
-class PosixProcessTestCasePTY(unittest.TestCase, PosixProcessBase):
+class PosixProcessTestCasePTY(SignalMixin, unittest.TestCase, PosixProcessBase):
     """Just like PosixProcessTestCase, but use ptys instead of pipes."""
     usePTY = 1
     # PTYs are not pipes. What still makes sense?
@@ -427,7 +445,7 @@ class PosixProcessTestCasePTY(unittest.TestCase, PosixProcessBase):
     # testProcess, but not without p.transport.closeStdin
     #  might be solveable: TODO: add test if so
     
-class Win32ProcessTestCase(unittest.TestCase):
+class Win32ProcessTestCase(SignalMixin, unittest.TestCase):
     """Test process programs that are packaged with twisted."""
 
     def testStdinReader(self):
@@ -453,12 +471,6 @@ if (runtime.platform.getType() != 'posix') or (not components.implements(reactor
 else:
     # do this before running the tests: it uses SIGCHLD and stuff internally
     lsOut = popen2.popen3("/bin/ls ZZXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")[2].read()
-    # make sure SIGCHLD handler is installed, as it should be on reactor.run().
-    # problem is reactor may not have been run when this test runs.
-    if hasattr(reactor, "_handleSigchld"):
-        import signal
-        from twisted.internet import process
-        signal.signal(signal.SIGCHLD, reactor._handleSigchld)
 
 if (runtime.platform.getType() != 'win32') or (not components.implements(reactor, interfaces.IReactorProcess)):
     Win32ProcessTestCase.skip = skipMessage
