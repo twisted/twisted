@@ -88,16 +88,6 @@ class Node:
             return self.childNodes[0]
         return None
 
-class _tee:
-    def __init__(self, f):
-        self.f = f
-
-    def write(self, data):
-        import sys
-        self.f.write(data)
-        sys.stdout.write(data)
-        sys.stdout.flush()
-
 from twisted.python.reflect import Accessor
 class Document(Node, Accessor):
     def __init__(self, documentElement=None):
@@ -134,7 +124,7 @@ class EntityReference(Node):
 class CharacterData(Node):
     def __init__(self, data, parentNode=None):
         Node.__init__(self, parentNode)
-        self.data = self.nodeValue = data
+        self.value = self.data = self.nodeValue = data
 
 ##     def cloneNode(self, deep):
 ##         return self.__class__(self.data)
@@ -148,6 +138,9 @@ class CDATASection(CharacterData):
         stream.write("<![CDATA[")
         stream.write(self.nodeValue)
         stream.write("]]>")
+
+class _Attr(CharacterData):
+    "Support class for getAttributeNode."
 
 class Element(Node):
     def __init__(self, tagName, attributes=None, parentNode=None, filename=None, markpos=None):
@@ -167,6 +160,9 @@ class Element(Node):
     
     def getAttribute(self, name):
         return self.attributes.get(name, None)
+
+    def getAttributeNode(self, name):
+        return _Attr(self.getAttribute(name), self)
         
     def setAttribute(self, name, attr):
         self.attributes[name] = attr
