@@ -730,20 +730,6 @@ def makeProtocol(controller, baseClass = protocol.Protocol,
             reactor.connectTCP("localhost", PORT, client)
             reactor.run()
 
-
-                 yield iterable
-                 if iterable.results:
-                     for result in iterable.results:
-                         // handle good result
-                     iterable.results = []
-                     break
-                 if iterable.stop:
-                     break
-                 if iterable.failure:
-                     // handle iterable.failure
-                     iterable.stop = True
-                     break
-
     """
     if not callbacks:
         callbacks = ('dataReceived',)
