@@ -62,6 +62,7 @@ class TestLoader(unittest.TestLoader):
         else:
             test_files = glob.glob(testpath + '/test_*.py')
 
+        test_files.sort()
         test_mNames = map(reflect.filenameToModuleName, test_files) + modules
 
         if last_test in test_mNames:
