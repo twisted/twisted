@@ -543,11 +543,21 @@ class Request:
             mfd = 'multipart/form-data'
             key, pdict = cgi.parse_header(ctype)
             if key == 'application/x-www-form-urlencoded':
-                args.update(
-                    parse_qs(self.content.read(), 1))
+                args.update(parse_qs(self.content.read(), 1))
             elif key == mfd:
-                args.update(
-                    cgi.parse_multipart(self.content, pdict))
+                try:
+                    args.update(cgi.parse_multipart(self.content, pdict))
+                except KeyError, e:
+                    if e.args[0] == 'content-dispostion':
+                        # parse_multipart can't cope with missing
+                        # content-dispostion headers in multipart/form-data
+                        # parts, so we catch the exception and tell the client
+                        # it was a bad request.
+                        self.channel.transport.write(
+                                "HTTP/1.1 400 Bad Request\r\n\r\n")
+                        self.channel.transport.loseConnection()
+                        return
+                    raise
             else:
                 pass
 
