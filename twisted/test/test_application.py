@@ -304,7 +304,8 @@ class TestInternet(unittest.TestCase):
         s = service.MultiService()
         c = compat.IOldApplication(s)
         factory = protocol.ServerFactory()
-        factory.protocol = wire.Echo
+        factory.protocol = TestEcho
+        TestEcho.d = defer.Deferred()
         if os.path.exists('.hello.skt'):
             os.remove('hello.skt')
         c.listenUNIX('./hello.skt', factory)
@@ -313,6 +314,7 @@ class TestInternet(unittest.TestCase):
                 self.transport.write('lalala\r\n')
             def lineReceived(self, line):
                 self.factory.line = line
+                self.transport.loseConnection()
         factory = protocol.ClientFactory()
         factory.protocol = Foo
         factory.line = None
@@ -320,15 +322,19 @@ class TestInternet(unittest.TestCase):
         s.privilegedStartService()
         s.startService()
         util.spinWhile(lambda :factory.line is None)
-        s.stopService()
+        util.wait(defer.maybeDeferred(s.stopService))
         self.assertEqual(factory.line, 'lalala')
+
+        # Cleanup the reactor
+        util.wait(TestEcho.d)
     testUNIX = suppressOldApp(testUNIX)
 
     def testTCP(self):
         s = service.MultiService()
         c = compat.IOldApplication(s)
         factory = protocol.ServerFactory()
-        factory.protocol = wire.Echo
+        factory.protocol = TestEcho
+        TestEcho.d = defer.Deferred()
         c.listenTCP(0, factory)
         s.privilegedStartService()
         s.startService()
@@ -338,13 +344,17 @@ class TestInternet(unittest.TestCase):
                 self.transport.write('lalala\r\n')
             def lineReceived(self, line):
                 self.factory.line = line
+                self.transport.loseConnection()
         factory = protocol.ClientFactory()
         factory.protocol = Foo
         factory.line = None
         c.connectTCP('localhost', num, factory)
         util.spinWhile(lambda :factory.line is None)
-        s.stopService()
+        util.wait(defer.maybeDeferred(s.stopService))
         self.assertEqual(factory.line, 'lalala')
+
+        # Cleanup the reactor
+        util.wait(TestEcho.d)
     testTCP = suppressOldApp(testTCP)
 
     def testCalling(self):
