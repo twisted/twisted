@@ -1024,6 +1024,8 @@ class ProcessAliasTestCase(test_process.SignalMixin, unittest.TestCase):
 
     def tearDown(self):
         reactor.iterate()
+        reactor.iterate()
+        reactor.iterate()
 
     def testProcessAlias(self):
         path = util.sibpath(__file__, 'process.alias.sh')
