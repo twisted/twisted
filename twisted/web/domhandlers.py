@@ -15,6 +15,9 @@ class InputHandler(Controller):
     3) Use any special API of the view widget to change the view (other than what the
         view updates automatically from the model)
         e.g. in the case of an error, tell the view to report an error to the user
+    4) Return a success value; by default these values are simply recorded and
+        the page is rendered, but these values could be used to determine what
+        page to display next, etc
     """
     def setId(self, id):
         self.id = id
@@ -29,15 +32,7 @@ class InputHandler(Controller):
 
     def handle(self, request):
         data = self.getInput(request)
-        result = self.check(data)
-        if result is not None:
-            if result:
-                # success
-                self.handleValid(data, request)
-            else:
-                # fail
-                self.handleInvalid(data, request)
-        return self.view.render(request)
+        return (self.check(data), data)
     
     def check(self, data):
         """

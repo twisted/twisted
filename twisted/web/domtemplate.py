@@ -336,14 +336,9 @@ import domhandlers, domwidgets
 class DefaultHandler(Controller):
     def handle(self, request):
         """
-        By default, we don't do anything, and we return the default view.
+        By default, we don't do anything
         """
-        # support deferreds
-        # refactor to check if implements IWidget
-        if hasattr(self.view, 'render'):
-            return self.view.render(request)
-        else:
-            return self.view
+        return (None, None)
 
     def setId(self, id):
         self.id = id
@@ -393,9 +388,43 @@ class DOMView(DOMTemplate, View):
             view.setId(id)
             view.setNode(node)
         
-        result = controller.handle(request)
+        success, data = controller.handle(request)
+        if success is not None:
+            results = getattr(self, 'handlerResults', {})
+            resultList = results.get(success, [])
+            resultList.append((controller, data))
+            results[success] = resultList
+            setattr(self, 'handlerResults', results)
+        
+        result = view.render(request)
         returnNode = self.dispatchResult(request, node, result)
         if returnNode:
             node = returnNode
 
         self.recurseChildren(request, node)
+
+    def sendPage(self, request):
+        """
+        Check to see if handlers recorded any errors before sending the page
+        """
+        # First, check to see if any results were recorded by handlers
+        handlerResults = getattr(self, 'handlerResults', None)
+        if handlerResults:
+            # do something
+            failures = handlerResults.get(0, None)
+            if failures:
+                stop = self.handleFailures(request, failures)
+                if stop: return
+            successes = handlerResults.get(1, None)
+            if successes:
+                self.handleSuccesses(request, successes)
+        DOMTemplate.sendPage(self, request)
+    
+    def handleFailures(self, request, failures):
+        for controller, data in failures:
+            controller.handleInvalid(data, request)
+        return 0
+
+    def handleSuccesses(self, request, successes):
+        for controller, data in successes:
+            controller.handleValid(data, request)
