@@ -16,6 +16,8 @@ What's new in 0.9.3?
 
   debian packaging information.
 
+  NameVirtualHost bugfixes.
+
 What is this?
 
   Twisted is an event-based framework for internet applications.  It includes a
