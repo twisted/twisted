@@ -74,8 +74,11 @@ files in a --path web server when none can be determined
 for a particular extension. The default is 'text/html'.
 .TP
 \fB\--allow_ignore_ext\fR
-Specify wether or not a request for 'foo' should return 'foo.ext'.
+Specify whether or not a request for 'foo' should return 'foo.ext'.
 Default is off.
+.TP
+\fB\--ignore-ext \fI.<extension>\fR
+Specify that a request for 'foo' should return 'foo.\fI<extension>\fR'.
 .TP
 \fB\-t\fR, \fB\--telnet\fR \fI<port>\fR
 Run a telnet server on <port>, for additional
