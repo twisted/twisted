@@ -42,7 +42,7 @@ class Process:
                                     protocol.errReceived)
         self.stdout = ReactorBuffer(reactor, self.outConnectionLost,
                                     protocol.outReceived)
-        self.process = tmprocess.ProcessProxy([command] + args, mode='b', 
+        self.process = tmprocess.ProcessProxy([command] + list(args), mode='b', 
                                               cwd=path, env=environment,
                                               stdin=self.stdin,
                                               stderr=self.stderr,
