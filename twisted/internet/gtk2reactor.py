@@ -153,7 +153,7 @@ class Gtk2Reactor(default.PosixReactorBase):
             self.doIterationTimer = None
 
     def crash(self):
-        self.__crash()
+        gtk.main_quit() #self.__crash()
 
     def run(self, installSignalHandlers=1):
         self.startRunning(installSignalHandlers=installSignalHandlers)
