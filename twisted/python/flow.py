@@ -75,6 +75,10 @@ class Flow:
         stage = FlowMerge(accum, start, bucket)
         return self.append(stage)
 
+    def addMergeToList(self, bucket=None):
+        return self.addMerge(
+                   accum=lambda lst, val: lst.append(val) or lst,
+                   start=list(), bucket=bucket)
     def addChain(self, *args):
         return self.append(FlowChain(args))
     
@@ -385,7 +389,8 @@ class FlowIterator:
     #
     def next(self):
         ''' 
-            The method used to fetch the next value
+            The method used to fetch the next value, make sure
+            to return a list of rows, not just a row
         '''
         raise StopIteration
 
@@ -418,7 +423,7 @@ class _TunnelIterator:
         try:
             while 1:
                 val = self.source.next()
-                callFromThread(self.buff.append,val)
+                callFromThread(self.buff.extend,val)
         except StopIteration:
             callFromThread(self.stop)
     #
@@ -438,12 +443,13 @@ class _TunnelIterator:
         raise PauseFlow
 
 class FlowQueryIterator(FlowIterator):
-    def __init__(self, pool, sql):
+    def __init__(self, pool, sql, fetchall=0):
         FlowIterator.__init__(self)
         self.curs = None
         self.sql  = sql
         self.pool = pool
         self.data = None
+        self.fetchall = fetchall
     #
     def __call__(self,data):
         self.data = data
@@ -455,9 +461,12 @@ class FlowQueryIterator(FlowIterator):
             self.curs = conn.cursor()
             if self.data: self.curs.execute(self.sql % self.data) 
             else: self.curs.execute(self.sql)
-        res = self.curs.fetchone() # TODO: change to fetchmany
+        if self.fetchall:
+            res = self.curs.fetchall()
+        else:
+            res = self.curs.fetchmany()
         if not(res): 
-            self.curs.close()
+            #self.curs.close()
             raise StopIteration
         return res
 
