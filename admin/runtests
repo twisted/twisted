@@ -24,11 +24,13 @@ Run a python GUI which starts up a UnitTestRunner for the Twisted
 test-suite.
 
 Flags:
+ -h -- display this usage message
  -t -- always use text-mode (otherwise try GUI first)
  -v -- text-mode will be more verbose
  -q -- text-mode will be quieter (doesn't print progress dots)
  -Q -- text-mode will be even quieter
  --file -- path to a python file containing test cases
+ --module -- python module containing test cases (e.g. twisted.test.test_pb)
 """
 
 ### Twisted Preamble
@@ -53,7 +55,13 @@ class TestProgram:
             argv = ["runtests"]
 
         self.startupVerbosity = 1
-        opts, args = getopt.getopt(argv[1:], "tvqQ", ["file=","module="])
+        opts, args = getopt.getopt(argv[1:], "tvqQh",
+                                   ["file=","module=", "help"])
+
+        if ('-h', '') in opts or ('--help', '') in opts:
+            print __doc__
+            sys.exit(0)
+            
         if ('-t', '') in opts:
             text_mode = 'always'
         else:
