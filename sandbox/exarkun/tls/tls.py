@@ -321,15 +321,24 @@ if __name__ == '__main__':
     from twisted.internet import ssl
     from twisted.internet import reactor
     from twisted.internet import protocol
+
+    from twisted.python import log
+    import sys
+    log.startLogging(sys.stdout)
+
     sf = protocol.ServerFactory()
     cf = protocol.ClientFactory()
+    cf2 = protocol.ClientFactory()
 
     sf.protocol = protocol.Protocol
     cf.protocol = TLSClient
+    cf2.protocol = protocol.Protocol
 
     pem = '/home/exarkun/projects/python/Twisted/twisted/test/server.pem'
     port = reactor.listenSSL(0, sf, ssl.DefaultOpenSSLContextFactory(pem, pem), interface='127.0.0.1')
     conn = reactor.connectTCP('127.0.0.1', port.getHost()[2], cf)
+
+    conn2 = reactor.connectSSL('127.0.0.1', port.getHost()[2], cf2, ssl.ClientContextFactory())
 
     reactor.callLater(1, reactor.stop)
     reactor.run()
