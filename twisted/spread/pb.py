@@ -1120,7 +1120,11 @@ def getObjectAt(host, port, timeout=None):
     d = defer.Deferred()
     b = Broker(1)
     _ObjectRetrieval(b, d)
-    reactor.clientTCP(host, port, b, timeout)
+    if host == "unix":
+        # every time you use this, God kills a kitten
+        reactor.clientUNIX(port, b, timeout)
+    else:
+        reactor.clientTCP(host, port, b, timeout)
     return d
 
 def connect(host, port, username, password, serviceName,
