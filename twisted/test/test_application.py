@@ -19,6 +19,7 @@ from twisted.application import service, compat, internet, app
 from twisted.persisted import sob
 from twisted.python import components
 from twisted.internet import utils
+from twisted.internet import app as oapp
 from twisted.protocols import wire, basic
 from twisted.internet import protocol, reactor
 import copy, os, pickle, sys
@@ -608,3 +609,8 @@ class TestCompat(unittest.TestCase):
         self.assertEquals(c.getServiceNamed("foo"), svc)
         self.assertEquals(s.getServiceNamed("foo").name, "foo")
         c.removeService(svc)
+
+    def testOldApplication(self):
+        application = oapp.Application("HELLO")
+        oapp.MultiService("HELLO", application)
+        compat.convert(application)
