@@ -237,13 +237,18 @@ class SSHUserAuthClient(service.SSHService):
     def ssh_USERAUTH_PK_OK(self, packet):
         if self.lastAuth == 'publickey':
             # this is ok
-            d  = self.getPrivateKey()
+            publicKey = self.lastPublicKey
+            keyType =  getNS(publicKey)[0]
+            b = NS(self.transport.sessionID) + chr(MSG_USERAUTH_REQUEST) + \
+            NS(self.user) + NS(self.instance.name) + NS('publickey') + '\xff' +\
+            NS(keyType) + NS(publicKey)
+            d  = self.signData(publicKey, b)
             if not d:
                 self.askForAuth('none', '')
                 # this will fail, we'll move on
                 return
-            d.addCallback(self._cbPK_OK)
-            d.addErrback(self._ebPK_OK)
+            d.addCallback(self._cbSignedData)
+            d.addErrback(self._ebSignedData)
         elif self.lastAuth == 'password':
             prompt, language, rest = getNS(packet, 2)
             self._oldPass = self._newPass = None
@@ -254,16 +259,13 @@ class SSHUserAuthClient(service.SSHService):
             self.askForAuth('none', '')
             #return self.ssh_USERAUTH_INFO_RESPONSE(packet)
 
-    def _cbPK_OK(self, privateKey):
+    def _cbSignedData(self, signedData):
         publicKey = self.lastPublicKey
-        keyType =  keys.objectType(privateKey)
-        b = NS(self.transport.sessionID) + chr(MSG_USERAUTH_REQUEST) + \
-            NS(self.user) + NS(self.instance.name) + NS('publickey') + '\xff' + \
-            NS(keyType) + NS(publicKey)
+        keyType =  getNS(publicKey)[0]
         self.askForAuth('publickey', '\xff' + NS(keyType) + NS(publicKey) + \
-                        NS(keys.signData(privateKey, b)))
+                        NS(signedData))
 
-    def _ebPK_OK(self, ignored):
+    def _ebSignedData(self, ignored):
         self.askForAuth('none', '')
 
     def _setOldPass(self, op):
@@ -308,6 +310,19 @@ class SSHUserAuthClient(service.SSHService):
 
     def _cbPassword(self, password):
         self.askForAuth('password', '\x00'+NS(password))
+    
+    def signData(self, publicKey, signData):
+        """
+        Sign the given data with the given public key blob.
+        By default, this will call getPrivateKey to get the private key,
+        the sign the data using keys.signData.
+        However, this is factored out so that it can use alternate methods,
+        such as a key agent.
+        """
+        return self.getPrivateKey().addCallback(self._cbSignData, signData)
+
+    def _cbSignData(self, privateKey, signData):
+        return keys.signData(privateKey, signData)
 
     def getPublicKey(self):
         """
@@ -317,6 +332,7 @@ class SSHUserAuthClient(service.SSHService):
         @rtype: C{str}/C{None}
         """
         raise NotImplementedError
+
 
     def getPrivateKey(self):
         """

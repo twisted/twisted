@@ -385,7 +385,7 @@ class SSHServerTransport(SSHTransportBase):
         # TODO: This could be computed when self.p is set up
         #  or do as openssh does and scan f for a single '1' bit instead
 
-        minimum = math.floor(math.log(self.p) / math.log(2)) + 1
+        minimum = long(math.floor(math.log(self.p) / math.log(2)) + 1)
         tries = 0
         pSize = Util.number.size(self.p)
         y = Util.number.getRandomNumber(pSize, entropy.get_bytes)

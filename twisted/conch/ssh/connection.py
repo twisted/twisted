@@ -331,9 +331,9 @@ class SSHConnection(service.SSHService):
         (errorCode, errorMessage).
 
         By default, this dispatches to a method 'channel_channelType' with any
-        -'s in the channelType replace with _'s.  If it cannot find a suitable
-        method, it returns an OPEN_UNKNOWN_CHANNEL_TYPE error.  The method is
-        called with arguments of windowSize, maxPacket, data.
+        non-alphanumerics in the channelType replace with _'s.  If it cannot 
+        find a suitable method, it returns an OPEN_UNKNOWN_CHANNEL_TYPE error. 
+        The method is called with arguments of windowSize, maxPacket, data.
 
         @type channelType:  C{str}
         @type windowSize:   C{int}
@@ -341,7 +341,7 @@ class SSHConnection(service.SSHService):
         @type data:         C{str}
         @rtype:             subclass of C{SSHChannel}/C{tuple}
         """
-        channelType = channelType.replace('-','_')
+        channelType = channelType.translate(TRANSLATE_TABLE)
         f = getattr(self, 'channel_%s' % channelType, None)
         if not f:
             log.msg('got channel %s request, but it is unhandled' % channelType)
@@ -458,5 +458,14 @@ import connection
 for v in dir(connection):
     if v[: 4] == 'MSG_':
         messages[getattr(connection, v)] = v # doesn't handle doubles
+
+import string
+TRANSLATE_TABLE = ""
+alphanums = string.ascii_letters + string.digits
+for i in range(256):
+    if chr(i) not in alphanums:
+        TRANSLATE_TABLE += "_"
+    else:
+        TRANSLATE_TABLE += chr(i)
 
 SSHConnection.protocolMessages = messages

@@ -14,14 +14,14 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.60 2003/11/10 05:02:12 z3p Exp $
+# $Id: conch.py,v 1.61 2003/11/14 04:15:20 z3p Exp $
 
 #""" Implementation module for the `conch` command.
 #"""
 
 from twisted.conch.error import ConchError
 from twisted.conch.ssh import transport, userauth, connection, common, keys
-from twisted.conch.ssh import session, forwarding, channel
+from twisted.conch.ssh import session, forwarding, channel, agent
 from twisted.internet import reactor, stdio, defer, protocol
 from twisted.internet.error import CannotListenError
 from twisted.python import usage, log, util
@@ -59,7 +59,8 @@ class GeneralOptions(usage.Options):
                 ['subsystem', 's', 'Invoke command (mandatory) as SSH2 subsystem.'],
                 ['log', 'v', 'Log to stderr'],
                 ['nocache', 'I', 'Do not use an already existing connection if it exists.'],
-                ['nox11', 'x', 'Disable X11 connection forwarding (default)']]
+                ['nox11', 'x', 'Disable X11 connection forwarding (default)'],
+                ['agent', 'A', 'Enable authentication agent forwarding.']]
 
     identitys = []
     localForwards = []
@@ -120,6 +121,7 @@ class GeneralOptions(usage.Options):
 options = None
 conn = None
 exitStatus = 0
+keyAgent = None
 
 def run():
     global options
@@ -191,6 +193,9 @@ def doConnect():
         reactor.connectTCP(options['host'], options['port'], SSHClientFactory())
 
 def onConnect():
+#    if keyAgent and options['agent']:
+#        cc = protocol.ClientCreator(reactor, SSHAgentForwardingLocal, conn)
+#        cc.connectUNIX(os.environ['SSH_AUTH_SOCK'])
     if options.localForwards:
         for localPort, hostport in options.localForwards:
             reactor.listenTCP(localPort,
@@ -202,7 +207,7 @@ def onConnect():
             log.msg('asking for remote forwarding for %s:%s' %
                     (remotePort, hostport))
             conn.requestRemoteForwarding(remotePort, hostport)
-    if not options['noshell']:
+    if not options['noshell'] or options['agent']:
         conn.openChannel(SSHSession())
     if options['fork']:
         if os.fork():
@@ -620,6 +625,26 @@ class SSHClientTransport(transport.SSHClientTransport):
 class SSHUserAuthClient(userauth.SSHUserAuthClient):
     usedFiles = []
 
+    def serviceStarted(self):
+        if 'SSH_AUTH_SOCK' in os.environ:
+            log.msg('using agent')
+            cc = protocol.ClientCreator(reactor, SSHAgentClient)
+            d = cc.connectUNIX(os.environ['SSH_AUTH_SOCK'])
+            d.addCallback(self._setAgent)
+            d.addErrback(self._ebSetAgent)
+        else:
+            userauth.SSHUserAuthClient.serviceStarted(self)
+
+    def _setAgent(self, a):
+        global keyAgent
+        keyAgent = a
+        d = keyAgent.getPublicKeys()
+        d.addBoth(self._ebSetAgent)
+        return d
+
+    def _ebSetAgent(self, f):
+        userauth.SSHUserAuthClient.serviceStarted(self)
+
     def getPassword(self, prompt = None):
         if not prompt:
             prompt = "%s@%s's password: " % (self.user, options['host'])
@@ -635,6 +660,11 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
             return defer.fail(ConchError('PEBKAC'))
 
     def getPublicKey(self):
+        global keyAgent
+        if keyAgent:
+            blob = keyAgent.getPublicKey()
+            if blob:
+                return blob
         files = [x for x in options.identitys if x not in self.usedFiles]
         log.msg(str(options.identitys))
         log.msg(str(files))
@@ -651,6 +681,12 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
             return keys.getPublicKeyString(file)
         except:
             return self.getPublicKey() # try again
+
+    def signData(self, publicKey, signData):
+        if not self.usedFiles: # agent key
+            return keyAgent.signData(publicKey, signData)
+        else:
+            return userauth.SSHUserAuthClient.signData(self, publicKey, signData)
 
     def getPrivateKey(self):
         file = os.path.expanduser(self.usedFiles[-1])
@@ -679,8 +715,10 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
 
 class SSHConnection(connection.SSHConnection):
     def serviceStarted(self):
-        global conn
+        global conn, keyAgent
         conn = self
+        if keyAgent:
+            keyAgent.transport.loseConnection()
         onConnect()
 
     def requestRemoteForwarding(self, remotePort, hostport):
@@ -706,6 +744,14 @@ class SSHConnection(connection.SSHConnection):
         else:
             return connection.OPEN_CONNECT_FAILED, "don't know about that port"
 
+    def channel_auth_agent_openssh_com(self, windowSize, maxPacket, data):
+        if options['agent'] and keyAgent:
+            return SSHAgentForwardingChannel(remoteWindow = windowSize,
+                                             remoteMaxPacket = maxPacket,
+                                             conn = self)
+        else:
+            return connection.OPEN_CONNECT_FAILED, "don't have an agent"
+
 class SSHSession(channel.SSHChannel):
 
     name = 'session'
@@ -714,6 +760,10 @@ class SSHSession(channel.SSHChannel):
         #global globalSession
         #globalSession = self
         # turn off local echo
+        if options['agent']:
+            d = self.conn.sendRequest(self, 'auth-agent-req@openssh.com', '', wantReply=1)
+            d.addBoth(lambda x:log.msg(x))
+        if options['noshell']: return
         self.escapeMode = 1
         fd = 0 #sys.stdin.fileno()
         try:
@@ -834,6 +884,48 @@ class SSHConnectForwardingChannel(forwarding.SSHConnectForwardingChannel):
         forwarding.SSHConnectForwardingChannel.closed(self)
         if len(self.conn.channels) == 1 and not (options['noshell'] and not options['nocache']): # just us left
             stopConnection()
+
+class SSHAgentClient(agent.SSHAgentClient):
+    
+    def __init__(self):
+        agent.SSHAgentClient.__init__(self)
+        self.blobs = []
+
+    def getPublicKeys(self):
+        return self.requestIdentities().addCallback(self._cbPublicKeys)
+
+    def _cbPublicKeys(self, blobcomm):
+        log.msg('got %i public keys' % len(blobcomm))
+        self.blobs = [x[0] for x in blobcomm]
+
+    def getPublicKey(self):
+        if self.blobs:
+            return self.blobs.pop(0)
+        return None
+
+class SSHAgentForwardingChannel(channel.SSHChannel):
+
+    def channelOpen(self, specificData):
+        cc = protocol.ClientCreator(reactor, SSHAgentForwardingLocal)
+        d = cc.connectUNIX(os.environ['SSH_AUTH_SOCK'])
+        d.addCallback(self._cbGotLocal)
+        d.addErrback(lambda x:self.loseConnection())
+        self.buf = ''
+
+    def _cbGotLocal(self, local):
+        self.local = local
+        self.dataReceived = self.local.transport.write
+        self.local.dataReceived = self.write
+   
+    def dataReceived(self, data): 
+        self.buf += data
+
+    def closed(self):
+        if self.local:
+            self.local.loseConnection()
+            self.local = None
+
+class SSHAgentForwardingLocal(protocol.Protocol): pass
 
 if __name__ == '__main__':
     run()
