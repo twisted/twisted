@@ -145,6 +145,7 @@ class GroupSession(Toplevel):
         self.columnconfigure(3,weight=0)
         self.rowconfigure(2,weight=0)
         self.im.getGroupMembers(gateway,self.name)
+        self._out("You have just entered group %s."%name)
 
     def close(self):
         self.destroy()
@@ -183,15 +184,15 @@ class GroupSession(Toplevel):
         self._sortlist()
     
     def displayMessage(self,user,message):
-        self._out("<%s> %s\n"%(user,message))
+        self._out("\n<%s> %s"%(user,message))
     
     def memberJoined(self,user):
-        self._out("%s joined!\n"%user)
+        self._out("\n%s joined!"%user)
         self.list.insert(END,user)
         self._sortlist()
     
     def memberLeft(self,user):
-        self._out("%s left!\n"%user)
+        self._out("\n%s left!"%user)
         users=list(self.list.get(0,END))
         i=users.index(user)
         self.list.delete(i)
@@ -203,7 +204,7 @@ class GroupSession(Toplevel):
         except ValueError:
             pass
         else:
-            self._out("%s changed nick to %s.\n"%(user,newName))
+            self._out("\n%s changed nick to %s."%(user,newName))
             self.list.delete(i)
             self.list.insert(i,newName)
             self._sortlist()
@@ -213,7 +214,7 @@ class GroupSession(Toplevel):
         if not text: return
         self.input.delete("1.0",END)
         self.im.groupMessage(self.gateway,self.name,text)
-        self._out("<<%s>> %s\n"%(self.gateway.username,text))
+        self._out("\n<<%s>> %s"%(self.gateway.username,text))
         return "break"
 
     def autoComplete(self,*args):
@@ -308,13 +309,13 @@ class Conversation(Toplevel):
     
     def messageReceived(self,message,sender=None):
         y,mon,d,h,min,sec,ig,no,re=time.localtime(time.time())
-        text="%02i:%02i:%02i %s: %s\n"%(h,min,sec,sender or self.contact,message)
+        text="\n%02i:%02i:%02i %s: %s"%(h,min,sec,sender or self.contact,message)
         self._addtext(text)
         self.output.see(END)
 
     def changeName(self,newName):
         self.title("%s - Instance Messenger"%newName)
-        self._addtext("%s changed nick to %s.\n"%(self.contact,newName))
+        self._addtext("\n%s changed nick to %s."%(self.contact,newName))
         self.contact=newName
     
     def say(self,event):
@@ -333,10 +334,10 @@ class ContactList(Toplevel):
         self.config(menu=menu)
         myim=Menu(menu)
         menu.add_cascade(label="My IM",menu=myim)
-        #statuschange=Menu(myim)
-        #myim.add_cascade(label="Change Status",menu=statuschange)
-        #for k in service.statuses.keys():
-        #    statuschange.add_command(label=service.statuses[k],command=lambda im=self.im,status=k:im.remote.changeStatus(status))
+        statuschange=Menu(myim)
+        myim.add_cascade(label="Change Status",menu=statuschange)
+        for k in im2.STATUSES:
+            statuschange.add_command(label=k,command=lambda i=self.im,s=k:i.changeStatus(s))    
         myim.add_command(label="Account Manager...",command=lambda i=self.im:i.am.deiconify())
         myim.add_command(label="Start Conversation...",command=lambda i=self.im:StartConversation(i))
         bar=Scrollbar(self)
@@ -662,6 +663,8 @@ def main():
     except:
         pass        
     mainloop()
+    for g in im.gateways.values():
+        g.loseConnection()
     tkinternet.stop()
     f=open(os.path.expanduser("~"+os.sep+".imsaved"),"w")
     im2.saveState(f,im.am.getState())

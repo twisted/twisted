@@ -117,6 +117,9 @@ class IRCClient(basic.LineReceiver):
     def notice(self, user, message):
         self.sendLine("NOTICE %s :%s" % (user, message))
 
+    def away(self, message=''):
+        self.sendLine("AWAY :%s" % message)
+
     def setNick(self, nickname):
         self.nickname = nickname
         self.sendLine("NICK %s" % nickname)

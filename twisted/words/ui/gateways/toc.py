@@ -103,6 +103,8 @@ class TOCGateway(gateway.Gateway,toc.TOCClient):
         if autoreply: message="<AUTO-REPLY>: "+message
         self.updateName(user)
         self.receiveDirectMessage(user,message)
+        if self.isaway() and not autoreply:
+            self.say(user,self._awaymessage,1)
 
     def updateBuddy(self,user,online,evilness,signontime,idletime,userclass,away):
         state="Online"
@@ -162,7 +164,10 @@ class TOCGateway(gateway.Gateway,toc.TOCClient):
                     return
 
     def changeStatus(self,newStatus):
-        pass # XXX: need to define what newStatus is
+        if newStatus=="Online":
+            self.away('')
+        elif newStatus=="Away":
+            self.away("I'm not here right now.  Leave a message.")
 
     def joinGroup(self,groupname):
         n=toc.normalize(groupname)
@@ -189,17 +194,8 @@ class TOCGateway(gateway.Gateway,toc.TOCClient):
         if not id: return
         self.chat_say(id,message)
 
-def setAway(im,gateway,*args):
-    gateway.away("I'm not here right now, but leave a message")
-
-def setOnline(im,gateway,*args):
-    gateway.away("")
-
 groupExtras=[]
 
 conversationExtras=[]
 
-contactListExtras=[
-    ["Set As Away",setAway],
-    ["Set As Online",setOnline]
-]
+contactListExtras=[]

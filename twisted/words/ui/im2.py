@@ -22,7 +22,7 @@ from twisted.spread import pb
 from twisted.words.ui import gateways
 
 ERROR,CONNECTIONFAILED,CONNECTIONLOST=range(3) # the error codes
-STATUSES=["Offline","Online","Away"]
+STATUSES=["Online","Away"]
 
 class Conversation:
     def __init__(self,im,gateway,target):
@@ -226,6 +226,10 @@ class InstanceMessenger:
         contact := the contact to remove from the list (string)
         """
         gateway.removeContact(contact)
+
+    def changeStatus(self,newStatus):
+        for g in self.gateways.values():
+            g.changeStatus(newStatus)
     
     def receiveContactList(self,gateway,contacts):
         """

@@ -65,6 +65,7 @@ class IRCGateway(irc.IRCClient,gateway.Gateway):
         self.im.detachGateway(self)
 
     def loseConnection(self):
+        self.sendLine("QUIT :Goodbye!")
 	self.transport.loseConnection()
 
     def setNick(self,nick):
@@ -78,7 +79,12 @@ class IRCGateway(irc.IRCClient,gateway.Gateway):
        pass
     
     def changeStatus(self, newStatus):
-        pass 
+        if newStatus=="Online":
+            self.setNick(self.logonUsername)
+            self.away('')
+        elif newStatus=="Away":
+            self.away("I'm not here right now.  Leave a message.")
+            self.setNick(self.logonUsername+"|away")
 
     def joinGroup(self,group):
         if self._groups.has_key(string.lower(group)):
@@ -122,6 +128,11 @@ class IRCGateway(irc.IRCClient,gateway.Gateway):
 	group=params[1][1:]
 	self.receiveGroupMembers(self._namreplies[group],group)
 	del self._namreplies[group]
+
+    def irc_301(self,prefix,params):
+        nickname=params[1]
+        message=params[2]
+        self.receiveDirectMessage(nickname,"AWAY: %s"%message)
 
     def irc_NICK(self,prefix,params):
 	oldname=string.split(prefix,"!")[0]

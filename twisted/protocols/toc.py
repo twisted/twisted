@@ -663,7 +663,7 @@ class TOCClient(protocol.Protocol):
         self._receivedchatmembers={} # have we gotten who's in our room yet?
         self._denylist=[]
         self._buf='' # current data buffer
-        self._isaway=0
+        self._awaymessage=''
     def _debug(self,data):
         print data
     def sendFlap(self,type,data):
@@ -957,7 +957,7 @@ class TOCClient(protocol.Protocol):
         """
         return our away status
         """
-        return self._isaway
+        return len(self._awaymessage)>0
     def set_config(self,mode,buddylist,permit,deny):
         """
         set the server configuration
@@ -1045,10 +1045,9 @@ class TOCClient(protocol.Protocol):
         change away state
     message := the message, or '' to come back from awayness
         """
-        self._isaway=0
+        self._awaymessage=message
         if message: 
             message=' '+quote(message)
-            self._isaway=1
         self.sendFlap(2,"toc_set_away%s"%message)
     def chat_join(self,exchange,roomname):
         """
