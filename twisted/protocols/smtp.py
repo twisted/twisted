@@ -1280,7 +1280,8 @@ class ESMTP(SMTP):
         else:
             parts = uncoded.split(None, 1)
             if len(parts) != 2:
-                self._ebAuthenticated(failure.Failure(SMTPClientError("Invalid challenge response")))
+                self.sendCode(501, "Invalid challenge response")
+                return
                 
             self.challenger.username = parts[0]
             self.challenger.response = parts[1]
