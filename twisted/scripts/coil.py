@@ -18,7 +18,7 @@
 """
 
 # twisted imports
-from twisted.python import usage
+from twisted.python import usage, plugin
 from twisted.internet import app, main
 from twisted.web import server
 from twisted.coil import web
@@ -82,6 +82,11 @@ def run():
     # setup shutdown hook that saves the created tap
     f = lambda a=application, filename=tapFile: a.save(filename=filename)
     main.callBeforeShutdown(f)
+
+    # load plugins that come with Twisted
+    for p in plugin.getPlugIns('coil'):
+        if p.module[:21] == "twisted.coil.plugins." and not p.isLoaded():
+            p.load()
     
     # create the coil webserver
     coilApp = app.Application("coil")
