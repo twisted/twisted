@@ -383,6 +383,10 @@ class ISorter(Interface):
         """Save an item to a path on the filesystem.
         """
 
+    def removeItem(self, item, fullpath):
+        """Remove an item from the filesystem.
+        """
+
 
 class FilePile:
     """
@@ -461,13 +465,21 @@ class FilePile:
         return _Betweener(itemIter, self.sorter.compareItemToKey,
                           startKey, endKey, stopAfter)
 
-    def add(self, item):
+    def _fullPathFromItem(self, item):
         abstractPath = self.sorter.pathFromItem(item)
         if self.sorter.allowDuplicates:
             fullpath = self.numberedLink(*abstractPath)
         else:
             fullpath = self.itemPath(*abstractPath)
+        return fullpath
+
+    def add(self, item):
+        fullpath = self._fullPathFromItem(item)
         self.sorter.saveItem(item, fullpath)
+
+    def remove(self, item):
+        fullpath = self._fullPathFromItem(item)
+        self.sorter.removeItem(item, fullpath)
 
     def atKey(self, key):
         try:
@@ -568,6 +580,9 @@ class DefaultSorter:
     pathFromKey = str
 
     def saveItem(self, item, fullpath):
+        pass
+
+    def removeItem(self, item, fullpath):
         pass
 
 class DecimalSorter:
