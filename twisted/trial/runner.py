@@ -49,7 +49,7 @@
 #
 #  (more to follow)
 #
-
+from __future__ import generators
 
 
 import os, glob, types, warnings, time, sys, gc, cPickle as pickle, signal
@@ -69,7 +69,6 @@ from twisted.trial.reporter import SKIP, EXPECTED_FAILURE, FAILURE, \
      ERROR, UNEXPECTED_SUCCESS, SUCCESS
 import zope.interface as zi
 
-from __future__ import generators
 
 
 # --- Exceptions and Warnings ------------------------ 
