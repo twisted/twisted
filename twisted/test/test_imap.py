@@ -1391,12 +1391,13 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
     def fetch(self, messages, uid):
         self.received_messages = messages
         self.received_uid = uid
-        return iter([(self.msgObj.getUID(), self.msgObj)])
+        return iter(zip(range(len(self.msgObjs)), self.msgObjs))
 
     def _fetchWork(self, fetch, uid):
         if uid:
-            self.expected[self.msgObj.uid]['UID'] = str(self.msgObj.uid)
-    
+            for (i, msg) in zip(range(len(self.msgObjs)), self.msgObjs):
+                self.expected[i]['UID'] = str(msg.getUID())
+        
         def result(R):
             self.result = R
         
@@ -1413,8 +1414,16 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
             return self.client.fetchUID(self.messages)
         
         self.messages = '7'
-        self.msgObj = FakeyMessage({}, (), '', '', 12345, None)
-        self.expected = {12345: {'UID': '12345'}}
+        self.msgObjs = [
+            FakeyMessage({}, (), '', '', 12345, None),
+            FakeyMessage({}, (), '', '', 999, None),
+            FakeyMessage({}, (), '', '', 10101, None),
+        ]
+        self.expected = {
+            0: {'UID': '12345'},
+            1: {'UID': '999'},
+            2: {'UID': '10101'},
+        }
         self._fetchWork(fetch, 0)
         
     def testFetchFlags(self, uid=0):
@@ -1422,8 +1431,14 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
             return self.client.fetchFlags(self.messages, uid=uid)
         
         self.messages = '9'
-        self.msgObj = FakeyMessage({}, ['FlagA', 'FlagB', '\\FlagC'], '', '', 54321, None)
-        self.expected = {54321: {'FLAGS': ['FlagA', 'FlagB', '\\FlagC']}}
+        self.msgObjs = [
+            FakeyMessage({}, ['FlagA', 'FlagB', '\\FlagC'], '', '', 54321, None),
+            FakeyMessage({}, ['\\FlagC', 'FlagA', 'FlagB'], '', '', 12345, None),
+        ]
+        self.expected = {
+            0: {'FLAGS': ['FlagA', 'FlagB', '\\FlagC']},
+            1: {'FLAGS': ['\\FlagC', 'FlagA', 'FlagB']},
+        }
         self._fetchWork(fetch, uid)
         
     def testFetchFlagsUID(self):
@@ -1434,8 +1449,8 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
             return self.client.fetchInternalDate(self.messages, uid=uid)
         
         self.messages = '13'
-        self.msgObj = FakeyMessage({}, (), 'Tuesday', '', 23232, None)
-        self.expected = {23232: {'INTERNALDATE': 'Tuesday'}}
+        self.msgObjs = [FakeyMessage({}, (), 'Tuesday', '', 23232, None)]
+        self.expected = {0: {'INTERNALDATE': 'Tuesday'}}
         self._fetchWork(fetch, uid)
     
     def testFetchInternalDateUID(self):
@@ -1446,11 +1461,11 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
             return self.client.fetchEnvelope(self.messages, uid=uid)
         
         self.messages = '15'
-        self.msgObj = FakeyMessage({'from': 'user@domain', 
+        self.msgObjs = [FakeyMessage({'from': 'user@domain', 
             'to': 'resu@domain', 'date': 'thursday',
             'subject': 'it is a message', 'message-id': 'id-id-id-yayaya'},
-            (), '', '', 65656, None)
-        self.expected = {65656: {'ENVELOPE': [
+            (), '', '', 65656, None)]
+        self.expected = {0: {'ENVELOPE': [
             'thursday', 'it is a message', [[None, None, 'user', 'domain']],
             [[None, None, 'user', 'domain']], [[None, None, 'user', 'domain']],
             [[None, None, 'resu', 'domain']], None, None, None, 'id-id-id-yayaya']}}
@@ -1464,13 +1479,13 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
             return self.client.fetchBodyStructure(self.messages, uid=uid)
         
         self.messages = '3:9,10:*'
-        self.msgObj = FakeyMessage({
+        self.msgObjs = [FakeyMessage({
                 'content-type': 'text/plain; name=thing; key=value',
                 'content-id': 'this-is-the-content-id',
                 'content-description': 'describing-the-content-goes-here!',
                 'content-transfer-encoding': '8BIT',
-            }, (), '', 'Body\nText\nGoes\nHere\n', 919293, None)
-        self.expected = {919293: {'BODYSTRUCTURE': [
+            }, (), '', 'Body\nText\nGoes\nHere\n', 919293, None)]
+        self.expected = {0: {'BODYSTRUCTURE': [
             'text', 'plain', [['name', 'thing'], ['key', 'value']],
             'this-is-the-content-id', 'describing-the-content-goes-here!',
             '8BIT', '20', '4', None, None, None]}}
@@ -1484,12 +1499,12 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
             return self.client.fetchSimplifiedBody(self.messages, uid=uid)
         
         self.messages = '21'
-        self.msgObj = FakeyMessage({}, (), '', 'Yea whatever', 91825,
+        self.msgObjs = [FakeyMessage({}, (), '', 'Yea whatever', 91825,
             FakeyMessage({'content-type': 'image/jpg'}, (), '',
                 'Body Body Body', None, None
             )
-        )
-        self.expected = {91825: 
+        )]
+        self.expected = {0:
             {'BODY': 
                 [None, None, [], None, None, None,
                     '12'
@@ -1507,9 +1522,9 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
             return self.client.fetchSimplifiedBody(self.messages, uid=uid)
         
         self.messages = '21'
-        self.msgObj = FakeyMessage({'content-type': 'text/plain'},
-            (), '', 'Yea whatever', 91825, None)
-        self.expected = {91825: 
+        self.msgObjs = [FakeyMessage({'content-type': 'text/plain'},
+            (), '', 'Yea whatever', 91825, None)]
+        self.expected = {0: 
             {'BODY': 
                 ['text', 'plain', [], None, None, None,
                     '12', '1'
@@ -1527,13 +1542,13 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
             return self.client.fetchSimplifiedBody(self.messages, uid=uid)
         
         self.messages = '21'
-        self.msgObj = FakeyMessage({'content-type': 'message/rfc822'},
+        self.msgObjs = [FakeyMessage({'content-type': 'message/rfc822'},
             (), '', 'Yea whatever', 91825, 
             FakeyMessage({'content-type': 'image/jpg'}, (), '',
                 'Body Body Body', None, None
             )
-        )
-        self.expected = {91825: 
+        )]
+        self.expected = {0: 
             {'BODY': 
                 ['message', 'rfc822', [], None, None, None,
                     '12', [None, None, [[None, None, None]],
@@ -1618,9 +1633,8 @@ class FetchSearchStoreCopyTestCase(unittest.TestCase, IMAP4HelperMixin):
         except KeyError:
             return 42
 
-    def fetch(self, messages, parts, uid):
+    def fetch(self, messages, uid):
         self.server_received_uid = uid
-        self.server_received_parts = [str(p).upper() for p in parts]
         self.server_received_messages = str(messages)
         return self.expected
     
