@@ -5,7 +5,7 @@
 # Note: Because GTK 2.x Python bindings are only available for Python 2.2,
 # this code may use Python 2.2-isms.
 
-__version__ = '$Revision: 1.4 $'[11:-2]
+__version__ = '$Revision: 1.5 $'[11:-2]
 
 from twisted import copyright
 from twisted.internet import reactor
@@ -54,8 +54,9 @@ class ManholeWindow(components.Componentized, gtk2util.GladeKeeper):
     def login(self):
         client = self.getComponent(IManholeClient)
         d = gtk2util.login(client, **self.defaults)
-        d.addCallbacks(self._cbLogin, self._ebLogin)
+        d.addCallback(self._cbLogin)
         d.addCallback(client._cbLogin)
+        d.addErrback(self._ebLogin)
 
     def _cbDisconnected(self, perspective):
         self.output.append("%s went away. :(\n" % (perspective,), "local")
@@ -70,7 +71,6 @@ class ManholeWindow(components.Componentized, gtk2util.GladeKeeper):
 
     def _ebLogin(self, reason):
         self.output.append("Login FAILED %s\n" % (reason.value,), "exception")
-        return None
 
     def _on_aboutMenuItem_activate(self, widget, *unused):
         import sys
@@ -238,6 +238,7 @@ class ManholeClient(components.Adapter, pb.Referenceable):
     def _cbLogin(self, perspective):
         self.perspective = perspective
         perspective.notifyOnDisconnect(self._cbDisconnected)
+        return perspective
 
     def remote_console(self, messages):
         for kind, content in messages:
