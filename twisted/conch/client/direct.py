@@ -52,6 +52,7 @@ class SSHClientTransport(transport.SSHClientTransport):
         transport.SSHClientTransport.connectionLost(self, reason)
         if self.unixServer:
             self.unixServer.stopListening()
+            self.unixServer = None
 
     def receiveError(self, code, desc):
         if not self.factory.d: return
@@ -76,9 +77,9 @@ class SSHClientTransport(transport.SSHClientTransport):
                                           fingerprint)
 
     def setService(self, service):
+        log.msg('setting client server to %s' % service)
         transport.SSHClientTransport.setService(self, service)
-        if service.name != 'ssh-userauth':
-            if not self.factory.d: return
+        if service.name != 'ssh-userauth' and self.factory.d:
             d = self.factory.d
             self.factory.d = None
             d.callback(None)
@@ -90,6 +91,10 @@ class SSHClientTransport(transport.SSHClientTransport):
                 filename = os.path.expanduser("~/.conch-%s-%s-%i" % (user, peer.host, peer.port))
                 try:
                     u = unix.SSHUnixServerFactory(service)
+                    try:
+                        os.unlink(filename)
+                    except OSError:
+                        pass
                     self.unixServer = reactor.listenUNIX(filename, u, mode=0600, wantPID=1)
                 except Exception, e:
                     log.msg('error trying to listen on %s' % filename)

@@ -212,7 +212,7 @@ class _KeepAlive:
         d = self.conn.sendGlobalRequest("conch-keep-alive@twistedmatrix.com",
                 "", wantReply = 1)
         d.addBoth(self._cbGlobal)
-        self.globalTimeout = reactor.callLater(10, self._ebGlobal)
+        self.globalTimeout = reactor.callLater(30, self._ebGlobal)
 
     def _cbGlobal(self, res):
         if self.globalTimeout:
@@ -266,6 +266,7 @@ class SSHConnection(connection.SSHConnection):
         log.msg(repr(self.remoteForwards))
 
     def channel_forwarded_tcpip(self, windowSize, maxPacket, data):
+        log.msg('%s %s' % ('FTCP', repr(data)))
         remoteHP, origHP = forwarding.unpackOpen_forwarded_tcpip(data)
         log.msg(self.remoteForwards)
         log.msg(remoteHP)
@@ -294,7 +295,8 @@ class SSHConnection(connection.SSHConnection):
             log.msg('stopping connection')
             stopConnection()
         else:
-            connection.SSHConnection.channelClosed(self, channel)
+            # because of the unix thing
+            self.__class__.__bases__[0].channelClosed(self, channel)
  
 class SSHSession(channel.SSHChannel):
 

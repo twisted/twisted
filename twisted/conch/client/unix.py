@@ -77,9 +77,10 @@ class SSHUnixClientFactory(protocol.ClientFactory):
         obj.__class__ = newClass
         SSHUnixClientProtocol.__init__(obj)
         log.msg('returning %s' % obj)
-        d = self.d
-        self.d = None
-        d.callback(None)
+        if self.d:
+            d = self.d
+            self.d = None
+            d.callback(None)
         return obj
 
 class SSHUnixServerFactory(protocol.Factory):
@@ -154,6 +155,9 @@ class SSHUnixClientProtocol(SSHUnixProtocol):
         self.channelQueue = []
         self.channels = {}
 
+    def logPrefix(self):
+        return "SSHUnixClientProtocol (%i) on %s" % (id(self), self.transport.logPrefix())
+
     def connectionReady(self):
         log.msg('connection ready')
         self.serviceStarted()
@@ -182,7 +186,7 @@ class SSHUnixClientProtocol(SSHUnixProtocol):
     def sendRequest(self, channel, requestType, data, wantReply = 0):
         self.sendMessage('sendRequest', channel.id, requestType, data, wantReply)
         if wantReply:
-            self.returnDeferredLocal()
+            return self.returnDeferredLocal()
 
     def adjustWindow(self, channel, bytesToAdd):
         self.sendMessage('adjustWindow', channel.id, bytesToAdd)
@@ -239,12 +243,27 @@ class SSHUnixClientProtocol(SSHUnixProtocol):
 
     def msg_closeReceived(self, lst):
         channelID = lst[0]
-        self.channels[channelID].closeReceived()
+        channel = self.channels[channelID]
+        channel.remoteClosed = 1
+        channel.closeReceived()
 
     def msg_closed(self, lst):
         channelID = lst[0]
         channel = self.channels[channelID]
         self.channelClosed(channel)
+
+    def channelClosed(self, channel):
+        channel.localClosed = channel.remoteClosed = 1
+        del self.channels[channel.id]
+        log.callWithLogger(channel, channel.closed)
+
+    # just in case the user doesn't override
+    
+    def serviceStarted(self):
+        pass
+
+    def serviceStopped(self):
+        pass
 
 class SSHUnixServerProtocol(SSHUnixProtocol):
 
@@ -257,7 +276,10 @@ class SSHUnixServerProtocol(SSHUnixProtocol):
         for channel in self.conn.channels.values():
             if isinstance(channel, SSHUnixChannel) and channel.unix == self:
                 log.msg('forcibly closing %s' % channel)
-                self.conn.sendClose(channel)
+                try:
+                    self.conn.sendClose(channel)
+                except:
+                    pass
 
     def haveChannel(self, channelID):
         return self.conn.channels.has_key(channelID)

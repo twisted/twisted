@@ -6,6 +6,7 @@ from twisted.trial import unittest, util
 try:
     from twisted.conch import unix
     from twisted.conch.scripts import cftp
+    from twisted.conch.client import connect, default, options
 except ImportError:
     unix = None
 
@@ -55,17 +56,49 @@ class SFTPTestProcess(protocol.ProcessProtocol):
     def getBuffer(self):
         return self.buffer
 
-
-class TestOurServerCmdLineClient(test_process.SignalMixin, SFTPTestBase):
+class CFTPClientTestBase(SFTPTestBase):
 
     def setUpClass(self):
-        test_process.SignalMixin.setUpClass(self)
-
         open('dsa_test.pub','w').write(test_conch.publicDSA_openssh)
         open('dsa_test','w').write(test_conch.privateDSA_openssh)
         os.chmod('dsa_test', 33152)
         open('kh_test','w').write('localhost '+test_conch.publicRSA_openssh)
+
+    def startServer(self):
+        test_conch.theTest = self
+        realm = FileTransferTestRealm()
+        p = portal.Portal(realm)
+        p.registerChecker(test_conch.ConchTestPublicKeyChecker())
+        fac = test_conch.SSHTestFactory()
+        fac.portal = p
+        self.fac = fac
+        self.server = reactor.listenTCP(0, fac, interface="127.0.0.1")
+
+    def stopServer(self):
+        try:
+            self.fac.proto.done = 1
+            self.fac.proto.transport.loseConnection()
+        except AttributeError:
+            pass
+        self.server.stopListening()
+        util.spinWhile(lambda:self.server.connected)
+       
+    def tearDownClass(self):
+        for f in ['dsa_test.pub', 'dsa_test', 'kh_test']:
+            try:
+                os.remove(f)
+            except:
+                pass
+
+class TestOurServerCmdLineClient(test_process.SignalMixin, CFTPClientTestBase):
+
+    def setUpClass(self):
+        if hasattr(self, 'skip'):
+           return
+        test_process.SignalMixin.setUpClass(self)
+        CFTPClientTestBase.setUpClass(self)
         
+        self.startServer()
         cmd = ('%s %s -p %i -l testuser ' 
                '--known-hosts kh_test '
                '--user-authentications publickey '
@@ -75,14 +108,6 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, SFTPTestBase):
                '-a --nocache '
                '-v '
                'localhost')
-        test_conch.theTest = self
-        realm = FileTransferTestRealm()
-        p = portal.Portal(realm)
-        p.registerChecker(test_conch.ConchTestPublicKeyChecker())
-        fac = test_conch.SSHTestFactory()
-        fac.portal = p
-        self.fac = fac
-        self.server = reactor.listenTCP(0, fac, interface="127.0.0.1")
         port = self.server.getHost().port
         import twisted
         exe = sys.executable
@@ -100,16 +125,14 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, SFTPTestBase):
             self.skip = "couldn't start process"
         else:
             self.processProtocol.clearBuffer()
-            fac.proto.expectedLoseConnection = 1
+            self.fac.proto.expectedLoseConnection = 1
 
     def tearDownClass(self):
+        if hasattr(self, 'skip'):
+            return
         test_process.SignalMixin.tearDownClass(self)
-        self.server.stopListening()
-        for f in ['dsa_test.pub', 'dsa_test', 'kh_test']:
-            try:
-                os.remove(f)
-            except:
-                pass
+        CFTPClientTestBase.tearDownClass(self)
+        self.stopServer()
         try:
             os.kill(self.processProtocol.transport.pid, 9)
         except:
@@ -238,27 +261,20 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, SFTPTestBase):
         cmdRes = self._getCmdResult('!echo hello')
         self.failUnlessEqual(cmdRes, 'hello')
 
-class TestOurServerBatchFile(test_process.SignalMixin, SFTPTestBase):
+class TestOurServerBatchFile(test_process.SignalMixin, CFTPClientTestBase):
+
+    def setUpClass(self):
+        test_process.SignalMixin.setUpClass(self)
+        CFTPClientTestBase.setUpClass(self)
 
     def setUp(self):
-        SFTPTestBase.setUp(self)
-        open('dsa_test.pub','w').write(test_conch.publicDSA_openssh)
-        open('dsa_test','w').write(test_conch.privateDSA_openssh)
-        os.chmod('dsa_test', 33152)
-        open('kh_test','w').write('localhost '+test_conch.publicRSA_openssh)
-
-        test_conch.theTest = self
-        realm = FileTransferTestRealm()
-        p = portal.Portal(realm)
-        p.registerChecker(test_conch.ConchTestPublicKeyChecker())
-        fac = test_conch.SSHTestFactory()
-        fac.portal = p
-        self.fac = fac
-        self.server = reactor.listenTCP(0, fac, interface="127.0.0.1")
+        CFTPClientTestBase.setUp(self)
+        self.startServer()
         port = self.server.getHost().port
         import twisted
         twisted_path = os.path.dirname(twisted.__file__)
         cftp_path = os.path.abspath("%s/../bin/conch/cftp" % twisted_path)
+        exe = sys.executable
         self.cmd = ('%s -p %i -l testuser '
                     '--known-hosts kh_test '
                     '--user-authentications publickey '
@@ -267,12 +283,15 @@ class TestOurServerBatchFile(test_process.SignalMixin, SFTPTestBase):
                     '-i dsa_test '
                     '-a --nocache '
                     '-v -b %%s localhost') % (cftp_path, port)
-        log.msg('running %s %s' % (sys.executable, self.cmd))
+        log.msg('running %s %s' % (exe, self.cmd))
 
     def tearDown(self):
-        self.server.stopListening()
-        util.spinWhile(lambda:self.server.connected)
-        SFTPTestBase.tearDown(self)
+        CFTPClientTestBase.tearDown(self)
+        self.stopServer()
+
+    def tearDownClass(self):
+        test_process.SignalMixin.tearDownClass(self)
+        CFTPClientTestBase.tearDownClass(self)
 
     def _getBatchOutput(self, f):
         fn = tempfile.mktemp()
@@ -295,11 +314,14 @@ class TestOurServerBatchFile(test_process.SignalMixin, SFTPTestBase):
             return result[0]
 
     def testBatchFile(self):
-        cmds = """ls
+        cmds = """pwd
+ls
 exit
 """
         res = self._getBatchOutput(cmds).split('\n')
-        self.failUnlessEqual(res[1:-2], ['testDirectory', 'testRemoveFile', 'testRenameFile', 'testfile1'])
+        log.msg('RES %s' % str(res))
+        self.failUnless(res[1].find('sftp_test') != -1)
+        self.failUnlessEqual(res[3:-2], ['testDirectory', 'testRemoveFile', 'testRenameFile', 'testfile1'])
 
     def testError(self):
         cmds = """chown 0 missingFile
@@ -317,11 +339,81 @@ exit
         res = self._getBatchOutput(cmds)
         self.failIf(res.find('sftp_test') == -1)
 
-if not unix or not Crypto:
-    TestOurServerOurClient.skip = "don't run on non-posix"
-    TestOurServerCmdLineClient.skip = "don't run on non-posix"
-    TestOurServerBatchFile.skip = "don't run on non-posix"
+class TestOurServerUnixClient(test_process.SignalMixin, CFTPClientTestBase):
 
-if not interfaces.IReactorProcess(reactor, None):
+    def setUpClass(self):
+        if hasattr(self, 'skip'):
+            return
+        test_process.SignalMixin.setUpClass(self)
+        CFTPClientTestBase.setUpClass(self)
+        self.startServer()
+        cmd1 = ('-p %i -l testuser '
+                '--known-hosts kh_test '
+                '--host-key-algorithms ssh-rsa '
+                '-a '
+                '-K direct '
+                '-i dsa_test '
+                'localhost'
+                )
+        port = self.server.getHost().port
+        cmds1 = (cmd1 % port).split()
+        o = options.ConchOptions()
+        def _(host, *args):
+            o['host'] = host
+        o.parseArgs = _
+        o.parseOptions(cmds1)
+        vhk = default.verifyHostKey
+        self.conn = conn = test_conch.SSHTestConnectionForUnix(None)
+        uao = default.SSHUserAuthClient(o['user'], o, conn)
+        connect.connect(o['host'], int(o['port']), o, vhk, uao)
+
+    def tearDownClass(self):
+        test_process.SignalMixin.tearDownClass(self)
+        CFTPClientTestBase.tearDownClass(self)
+        self.stopServer()
+
+    def _getBatchOutput(self, f):
+        fn = tempfile.mktemp()
+        open(fn, 'w').write(f)
+        l = []
+        cmds = (self.cmd % fn).split()
+        d = getProcessOutputAndValue(sys.executable, cmds, env=None)
+        d.setTimeout(10)
+        d.addBoth(l.append)
+        while not l:
+            reactor.iterate(0.1)
+            if hasattr(self.fac, 'proto'):
+                self.fac.proto.expectedLoseConnection = 1
+        os.remove(fn)
+        result = l[0]
+        if isinstance(result, failure.Failure):
+            raise result.value
+        else:
+            log.msg(result[1])
+            return result[0]
+
+    def testBatchFile(self):
+        port = self.server.getHost().port
+        import twisted
+        twisted_path = os.path.dirname(twisted.__file__)
+        cftp_path = os.path.abspath('%s/../bin/conch/cftp' % twisted_path)
+        exe = sys.executable
+        self.cmd = ('%s -p %i -l testuser '
+                    '-K unix '
+                    '-b %%s localhost') % (cftp_path, port)
+        log.msg('running %s %s' % (exe, self.cmd))
+        cmds = """pwd
+exit
+"""
+        res = self._getBatchOutput(cmds)
+        self.failIf(res.find('sftp_test') == -1)
+        self.stopServer()
+        self.conn.transport.loseConnection()
+        reactor.iterate()
+        reactor.iterate()
+        reactor.iterate()
+ 
+if not unix or not Crypto or not interfaces.IReactorProcess(reactor, None):
     TestOurServerCmdLineClient.skip = "don't run w/o spawnprocess or PyCrypto"
-    TestOurServerBatchFile.skip = "don't run w/o/ spawnProcess or PyCrypto"
+    TestOurServerBatchFile.skip = "don't run w/o spawnProcess or PyCrypto"
+    TestOurServerUnixClient.skip = "don't run w/o spawnProcess or PyCrypto"

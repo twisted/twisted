@@ -279,6 +279,7 @@ def run():
         except ValueError:
             pass
     root = Tkinter.Tk()
+    root.withdraw()
     top = Tkinter.Toplevel()
     menu = TkConchMenu(top)
     menu.pack(side=Tkinter.TOP, fill=Tkinter.BOTH, expand=1)

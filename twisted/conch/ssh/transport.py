@@ -272,6 +272,9 @@ class SSHTransportBase(protocol.Protocol):
         else:
             raise TypeError, 'direction must be "out", "in", or "both"'
 
+    def loseConnection(self):
+        self.sendDisconnect(DISCONNECT_CONNECTION_LOST, "user closed connection")
+
 class SSHServerTransport(SSHTransportBase):
     isClient = 0
     def ssh_KEXINIT(self, packet):

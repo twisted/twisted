@@ -831,12 +831,16 @@ if Crypto:
 
     class SSHTestConnectionForUnix(connection.SSHConnection):
 
-        def __init__(self, p, exe, cmds):
+        def __init__(self, p, exe=None, cmds=None):
             connection.SSHConnection.__init__(self)
-            self.spawn = (p, exe, cmds)
+            if p:
+                self.spawn = (p, exe, cmds)
+            else:
+                self.spawn = None
 
         def serviceStarted(self):
-            reactor.callLater(0,reactor.spawnProcess, env=None, *self.spawn)
+            if self.spawn:
+                reactor.callLater(0,reactor.spawnProcess, env=None, *self.spawn)
 
 class SSHTransportTestCase(unittest.TestCase):
 

@@ -120,18 +120,25 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
     def _ebSetAgent(self, f):
         userauth.SSHUserAuthClient.serviceStarted(self)
 
-    def getPassword(self, prompt = None):
-        if not prompt:
-            prompt = "%s@%s's password: " % (self.user, self.transport.transport.getPeer().host)
+    def _getPassword(self, prompt):
         try:
             oldout, oldin = sys.stdout, sys.stdin
             sys.stdin = sys.stdout = open('/dev/tty','r+')
             p=getpass.getpass(prompt)
             sys.stdout,sys.stdin=oldout,oldin
-            return defer.succeed(p)
+            return p
         except (KeyboardInterrupt, IOError):
             print
-            return defer.fail(ConchError('PEBKAC'))
+            raise ConchError('PEBKAC')
+
+    def getPassword(self, prompt = None):
+        if not prompt:
+            prompt = "%s@%s's password: " % (self.user, self.transport.transport.getPeer().host)
+        try:
+            p = self._getPassword(prompt)
+            return defer.succeed(p)
+        except ConchError:
+            return defer.fail()
 
     def getPublicKey(self):
         if self.keyAgent:
@@ -172,13 +179,10 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
                 for i in range(3):
                     prompt = "Enter passphrase for key '%s': " % \
                            self.usedFiles[-1]
-                    oldout, oldin = sys.stdout, sys.stdin
-                    sys.stdin = sys.stdout = open('/dev/tty','r+')
-                    p=getpass.getpass(prompt)
-                    sys.stdout,sys.stdin=oldout,oldin
                     try:
+                        p = self._getPassword(prompt)
                         return defer.succeed(keys.getPrivateKeyObject(file, passphrase = p))
-                    except keys.BadKeyError:
+                    except (keys.BadKeyError, ConchError):
                         pass
                 return defer.fail(ConchError('bad password'))
             raise
