@@ -165,7 +165,8 @@ reactor.run()
     <code>lineReceived</code> will be called, once for each line.
     However, if <code>setRawMode</code> is called, the protocol
     will call <code>rawDataReceived</code> until
-    <code>setLineMode</code> is called again.</p>
+    <code>setLineMode</code> is called, which returns it to using
+    <code>lineReceived</code>.</p>
 
     <p>Here is an example for a simple use of the line
     receiver:</p>
