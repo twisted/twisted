@@ -49,11 +49,16 @@ class Platform:
     def isWinNT(self):
         """Are we running in Windows NT?"""
         if self.getType() == 'win32':
-            import win32api, win32con
-            return win32api.GetVersionEx()[3] == win32con.VER_PLATFORM_WIN32_NT
-        else:
-            raise ValueError, "this is not a Windows platform"
-
+            import _winreg
+            try:
+                k=_winreg.OpenKeyEx(_winreg.HKEY_LOCAL_MACHINE,
+                                    r'Software\Microsoft\Windows NT\CurrentVersion')
+                _winreg.QueryValueEx(k, 'SystemRoot')
+                return 1
+            except WindowsError:
+                return 0
+        # not windows at all...
+        return 0
 
 platform = Platform()
 platformType = platform.getType()
