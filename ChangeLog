@@ -1,7 +1,8 @@
 2003-09-29  Brian Warner  <warner@lothar.com>
 
 	* twisted/scripts/trial.py (Options.opt_reactor): make trial
-	accept the same reactor-name abbreviations as twistd does
+	accept the same reactor-name abbreviations as twistd does. Closes
+	issue69.
 	* doc/man/trial.1: document the change
 
 2003-09-28  Christopher Armstrong  <radix@twistedmatrix.com>
