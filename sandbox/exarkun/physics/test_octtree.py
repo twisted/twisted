@@ -1,3 +1,5 @@
+from math import pi
+
 from twisted.trial import unittest
 from zope import interface
 
