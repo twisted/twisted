@@ -590,7 +590,11 @@ bigString = "helloworld" * 50
 
 class Pagerizer(pb.Referenceable):
     def remote_getPages(self, collector):
-        StringPager(collector, bigString, 100)
+        self.finished = 0
+        StringPager(collector, bigString, 100, completed = self.finishedCallback)
+    
+    def finishedCallback(self):
+        self.finished = 1
 
 class PagingTestCase(unittest.TestCase):
     def testPaging(self):
@@ -601,7 +605,9 @@ class PagingTestCase(unittest.TestCase):
         getAllPages(x, "getPages").addCallback(l.append)
         while not l:
             pump.pump()
-        assert ''.join(l[0]) == bigString
+        assert ''.join(l[0]) == bigString, "Pages received not equal to pages sent!"
+        assert x.finished == 1, "Completed callback not invoked!"
+
 
 from twisted.spread import publish
 
