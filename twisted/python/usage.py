@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: usage.py,v 1.42 2003/05/20 00:41:20 acapnotic Exp $
+# $Id: usage.py,v 1.43 2003/07/19 10:39:16 tv Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -103,6 +103,7 @@ class Options(UserDict.UserDict):
     """
 
     subCommand = None
+    parent = None
     def __init__(self):
         UserDict.UserDict.__init__(self)
         self.opts = self.data
@@ -197,6 +198,7 @@ class Options(UserDict.UserDict):
                 if sub == cmd or sub == short:
                     self.subCommand = cmd
                     self.subOptions = parser()
+                    parser.parent = self
                     self.subOptions.parseOptions(rest)
                     break
             else:
@@ -380,11 +382,30 @@ class Options(UserDict.UserDict):
 
 
     def __str__(self, width=None):
+        return self.getSynopsis() + '\n' + self.getUsage(width=None)
 
+    def getSynopsis(self):
+        default = "%s%s" % (path.basename(sys.argv[0]),
+                            (self.longOpt and " [options]") or '')
+        if self.parent is None:
+            default = "Usage: %s%s" % (path.basename(sys.argv[0]),
+                                       (self.longOpt and " [options]") or '')
+        else:
+            default = '%s' % ((self.longOpt and "[options]") or '')
+        synopsis = getattr(self, "synopsis", default)
+
+        synopsis = synopsis.rstrip()
+
+        if self.parent is not None:
+            synopsis = ' '.join((self.parent.getSynopsis(), self.parent.subCommand, synopsis))
+
+        return synopsis
+
+    def getUsage(self, width=None):
         #If subOptions exists by now, then there was probably an error while
         #parsing its options.
         if hasattr(self, 'subOptions'):
-            return str(self.subOptions)
+            return self.subOptions.getUsage(width=width)
 
         if not width:
             width = int(os.environ.get('COLUMNS', '80'))
@@ -431,14 +452,6 @@ class Options(UserDict.UserDict):
                  'default': self.opts.get(opt, None)
                  })
 
-        synopsis = getattr(self, "synopsis",
-                           "Usage: %s%s"
-                           % (path.basename(sys.argv[0]),
-                              (optDicts and " [options]") or ''))
-
-        if not synopsis[-len('\n'):] == '\n':
-            synopsis = synopsis + '\n'
-
         if not (getattr(self, "longdesc", None) is None):
             longdesc = self.longdesc
         else:
@@ -458,7 +471,7 @@ class Options(UserDict.UserDict):
         else:
             s = "Options: None\n"
 
-        return synopsis + s + longdesc + commands
+        return s + longdesc + commands
 
     #def __repr__(self):
     #    XXX: It'd be cool if we could return a succinct representation
