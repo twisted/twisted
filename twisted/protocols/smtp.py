@@ -735,7 +735,7 @@ class SMTPClient(basic.LineReceiver):
     def smtpTransferFailed(self, code, resp):
         if code < 0:
             # protocol error
-            return SMTPProtcolError(code, resp, str(self.log))
+            return SMTPProtocolError(code, resp, str(self.log))
         return self.smtpState_msgSent(code, resp)
 
     def smtpState_helo(self, code, resp):
