@@ -1,3 +1,8 @@
+2003-05-08  Glyph Lefkowitz  <glyph@twistedmatrix.com>
+
+	* twisted/world: Added an object database to Twisted.  This is
+	still highly experimental!
+
 2003-5-6  Moshe Zadka <moshez@twistedmatrix.com>
 
 	* twisted/trial/reporter.py twisted/scripts/trial.py: Add --timing
