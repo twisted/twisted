@@ -247,13 +247,13 @@ class CFReactor(default.PosixReactorBase):
             wrapped.stopWriting()
 
     def removeAll(self):
-        r = readers.keys()
-        for s in readers.itervalues():
+        r = self.readers.keys()
+        for s in self.readers.itervalues():
             s.stopReading()
-        for s in writers.itervalues():
+        for s in self.writers.itervalues():
             s.stopWriting()
-        readers.clear()
-        writers.clear()
+        self.readers.clear()
+        self.writers.clear()
         return r
         
     def run(self, installSignalHandlers=1, withRunLoop=None):
