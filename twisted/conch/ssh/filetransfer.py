@@ -274,7 +274,7 @@ class FileTransferBase(protocol.Protocol):
 
     def __init__(self):
         self.buf = ''
-        otherVersion = None # this gets set
+        self.otherVersion = None # this gets set
 
     def sendPacket(self, kind, data):
         self.transport.write(struct.pack('!LB', len(data)+1, kind) + data)
