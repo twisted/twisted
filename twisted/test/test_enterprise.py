@@ -501,7 +501,7 @@ class FirebirdTestCase(SQLReflectorTestCase, unittest.TestCase):
     count = 2 # CHANGEME
     test_failures = 0 # failure testing causes problems
     reflectorClass = NoSlashSQLReflector
-    DB_DIR = tempfile.mkdtemp()
+    DB_DIR = tempfile.mktemp()
     DB_NAME = os.path.join(DB_DIR, SQLReflectorTestCase.DB_NAME)
 
     def startDB(self):
