@@ -189,19 +189,19 @@ def convert(oldApp):
     of the old application
     '''
     ret = service.Application(oldApp.name, oldApp.uid, oldApp.gid)
+    c = service.IServiceCollection(ret)
     service.IProcess(ret).processName = oldApp.processName
     for (pList, klass) in [(oldApp.extraPorts, internet.GenericServer),
                            (oldApp.extraConnectors, internet.GenericClient),]:
         for (portType, args, kw) in pList:
-            s = klass(portType, *args, **kw)
-            s.setServiceParent(service.IServiceCollection(ret))
+            klass(portType, *args, **kw).setServiceParent(c)
     for (name, klass) in mapping:
         for args in getattr(oldApp, name):
-            klass(*args).setServiceParent(service.IServiceCollection(ret))
-    for s in service.IServiceCollection(ret):
+            klass(*args).setServiceParent(c)
+    for s in c:
         if hasattr(s, 'privileged'):
             s.privileged = 1
     for s in oldApp.services.values():
         s.disownServiceParent()
-        s.setServiceParent(service.IServiceCollection(ret))
+        s.setServiceParent(c)
     return ret
