@@ -10,6 +10,16 @@ sys.modules['xml.dom'] = twisted.web
 twisted.web.minidom = twisted.web.microdom
 sys.modules['xml.dom.minidom'] = twisted.web.microdom
 
+#it'd be nice to get this working
+#im = __import__
+#def myimport(*args):
+#    try: 
+#        return im(*args)
+#    except:
+#        return FakeModule()
+
+#__builtins__.__import__ = myimport
+
 class FakeClass: pass
 class FakeModule:
     def __getattr__(self, attr):
