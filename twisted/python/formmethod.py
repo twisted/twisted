@@ -71,7 +71,7 @@ class Argument:
 
     def coerce(self, val):
         """Convert the value to the correct format."""
-        raise UnimplementedError, "implement in subclass"
+        raise NotImplementedError, "implement in subclass"
 
 
 class String(Argument):
