@@ -574,11 +574,9 @@ class Request:
 
     def unregisterProducer(self):
         """Unregister the producer."""
-        if self.queued:
-            del self.producer
-        else:
+        if not self.queued and self.producer:        
             self.transport.unregisterProducer()
-
+        self.producer = None
 
     # private http response methods
 
