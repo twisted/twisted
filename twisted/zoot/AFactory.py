@@ -20,9 +20,9 @@ from twisted.internet.protocol import Factory, Protocol
 from twisted.internet.app import Application
 
 class AFactory(Factory):
-    def __init__(self, protocol, appobject=None):
+    def __init__(self, protocol, application=None):
         self.protocol = protocol
-        self.application = appobject
+        self.application = application
 
     def buildProtocol(self, addr):
         p = Factory.buildProtocol(self, addr)
