@@ -1,96 +1,108 @@
-<html>
-<head>
-  <title>The World of Software is a World of Constant Change</title> </head>
-<body>
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
-<p> <em><strong>Note:</strong> This document is relevant for the version of
-Twisted that was current at <a href="http://www.python10.com" >IPC10</a>.  It
-has since been superseded by many changes to the Python API.  It is remaining
-unchanged for historical reasons, but please refer to documentation for the
-specific system you are looking for and not these papers for current
-information. </em> </p>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>The World of Software is a World of Constant
+    Change</title>
+  </head>
 
-      <h1> The World of Software is a World of Constant Change
-      </h1>
-      <p>
-        Twisted has undergone several major revisions since Moshe Zadka and I
-        wrote the <a href="ipc10paper.html">"The Twisted Network Framework"</a>.  Most of these changes have
-        not deviated from the central vision of the framework, but almost all
-        of the code listings have been re-visited and enhanced in some way.
-      </p>
-      <p>
-        So, while the paper was correct at the time that it was originally
-        written, a few things have changed which have invalidated portions of
-        it.
-      </p>
-      <p>
-        Most significant is the fact that almost all methods which pass
-        callbacks of some kind have been changed to take no callback or
-        error-callback arguments, and instead return an instance of a
-        <code class="API">twisted.python.defer.Deferred</code>.  This means that an
-        asynchronous function can be easily identified visually because it will
-        be of the form:
-        <code class="python">async_obj.asyncMethod("foo")<b>.addCallbacks(succeded,
-        failed)</b></code>.  There is also a utility method
-        <code class="python">addCallback</code> which makes it more convenient to pass
-        additional arguments to a callback function and omit special-case error
-        handling.
-      </p>
-      <p>
-        While it is still backwards compatible,
-        <code class="API">twisted.internet.passport</code> has been re-named to
-        <code class="API">twisted.cred</code>, and the various classes in it have been
-        split out into submodules of that package, and the various
-        remote-object superclasses have been moved out of twisted.spread.pb and
-        put into twisted.spread.flavors.
-      </p>
-      <p>
-        <code class="python">Application.listenOn</code> has been replaced with the more
-        descripively named <code class="python">Application.listenTCP</code>,
-        <code class="python">Application.listenUDP</code>, and
-        <code class="python">Application.listenSSL</code>.
-      </p>
-      <p>
-        <code class="API">twisted.web.widgets</code> has progressed quite far since the
-        paper was written!  One description specifically given in the paper is
-        no longer correct:
-        <blockquote>
-          The namespace for evaluating the template expressions is obtained by
-          scanning the class hierarchy for attributes, and getting each of
-          those attributes from the current instance.  This means that all
-          methods will be bound methods, so indicating "self" explicitly is not
-          required.  While it is possible to override the method for creating
-          namespaces, using this default has the effect of associating all
-          presentation code for a particular widget in one class, along with
-          its template.  If one is working with a non-programmer designer, and
-          the template is in an external file, it is always very clear to the
-          designer what functionality is available to them in any given scope,
-          because there is a list of available methods for any given class.
-        </blockquote>
-        This is still possible to avoid breakages in old code, but after some
-        experimentation, it became clear that simply passing <code
-        class="python">self</code> was an easier method for creating the
-        namespace, both for designers and programmers.
-      </p>
-      <p>
-        In addition, since the advent of Zope3, interoperability with Zope has
-        become increasingly interesting possibility for the Twisted development
-        team, since it would be desirable if Twisted could use their excellent
-        strategy for content-management, while still maintaining Twisted's
-        advantages in the arena of multi-protocol servers.  Of particular
-        interest has been Zope Presentation Templates, since they seem to be a
-        truly robust solution for keeping design discrete from code, compatible
-        with the event-based method in which twisted.web.widgets processes web
-        requests.  <code class="API">twisted.web.widgets.ZopePresentationTemplate</code>
-        may be opening soon in a theatre near you!
-      </p>
-      <p>
-        The following code examples are corrected or modernized versions of the
-        ones that appear in the paper.
-      </p>
-      <p>
-<blockquote>
-Listing 9: A remotely accessible object and accompanying call
+  <body>
+    <p><em><strong>Note:</strong> This document is relevant for the
+    version of Twisted that was current at <a
+    href="http://www.python10.com">IPC10</a>. It has since been
+    superseded by many changes to the Python API. It is remaining
+    unchanged for historical reasons, but please refer to
+    documentation for the specific system you are looking for and
+    not these papers for current information.</em></p>
+
+    <h1>The World of Software is a World of Constant Change</h1>
+
+    <p>Twisted has undergone several major revisions since Moshe
+    Zadka and I wrote the <a href="ipc10paper.html">"The Twisted
+    Network Framework"</a>. Most of these changes have not deviated
+    from the central vision of the framework, but almost all of the
+    code listings have been re-visited and enhanced in some
+    way.</p>
+
+    <p>So, while the paper was correct at the time that it was
+    originally written, a few things have changed which have
+    invalidated portions of it.</p>
+
+    <p>Most significant is the fact that almost all methods which
+    pass callbacks of some kind have been changed to take no
+    callback or error-callback arguments, and instead return an
+    instance of a <code
+    class="API">twisted.python.defer.Deferred</code>. This means
+    that an asynchronous function can be easily identified visually
+    because it will be of the form: <code
+    class="python">async_obj.asyncMethod("foo")<b>.addCallbacks(succeded,
+    failed)</b></code>. There is also a utility method <code
+    class="python">addCallback</code> which makes it more
+    convenient to pass additional arguments to a callback function
+    and omit special-case error handling.</p>
+
+    <p>While it is still backwards compatible, <code
+    class="API">twisted.internet.passport</code> has been re-named
+    to <code class="API">twisted.cred</code>, and the various
+    classes in it have been split out into submodules of that
+    package, and the various remote-object superclasses have been
+    moved out of twisted.spread.pb and put into
+    twisted.spread.flavors.</p>
+
+    <p><code class="python">Application.listenOn</code> has been
+    replaced with the more descripively named <code
+    class="python">Application.listenTCP</code>, <code
+    class="python">Application.listenUDP</code>, and <code
+    class="python">Application.listenSSL</code>.</p>
+
+    <p><code class="API">twisted.web.widgets</code> has progressed
+    quite far since the paper was written! One description
+    specifically given in the paper is no longer correct:</p>
+
+    <blockquote>
+      The namespace for evaluating the template expressions is
+      obtained by scanning the class hierarchy for attributes, and
+      getting each of those attributes from the current instance.
+      This means that all methods will be bound methods, so
+      indicating "self" explicitly is not required. While it is
+      possible to override the method for creating namespaces,
+      using this default has the effect of associating all
+      presentation code for a particular widget in one class, along
+      with its template. If one is working with a non-programmer
+      designer, and the template is in an external file, it is
+      always very clear to the designer what functionality is
+      available to them in any given scope, because there is a list
+      of available methods for any given class.
+    </blockquote>
+    This is still possible to avoid breakages in old code, but
+    after some experimentation, it became clear that simply passing
+    <code class="python">self</code> was an easier method for
+    creating the namespace, both for designers and programmers.
+    <br />
+    <br />
+     
+
+    <p>In addition, since the advent of Zope3, interoperability
+    with Zope has become increasingly interesting possibility for
+    the Twisted development team, since it would be desirable if
+    Twisted could use their excellent strategy for
+    content-management, while still maintaining Twisted's
+    advantages in the arena of multi-protocol servers. Of
+    particular interest has been Zope Presentation Templates, since
+    they seem to be a truly robust solution for keeping design
+    discrete from code, compatible with the event-based method in
+    which twisted.web.widgets processes web requests. <code
+    class="API">twisted.web.widgets.ZopePresentationTemplate</code>
+    may be opening soon in a theatre near you!</p>
+
+    <p>The following code examples are corrected or modernized
+    versions of the ones that appear in the paper.</p>
+
+    <blockquote>
+      Listing 9: A remotely accessible object and accompanying call
+      
 <pre class="python">
 # Server Side
 class MyObject(pb.Referenceable):
@@ -107,13 +119,13 @@ class MyObject(pb.Referenceable):
     myRemoteReference.doIt().addCallbacks(myCallback,
                                           myErrback)
 </pre>
+    </blockquote>
+    <br />
+    <br />
+     
 
-</blockquote>
-      </p>
-      <p>
-
-<blockquote>
-Listing 10: An object responding to its calling perspective
+    <blockquote>
+      Listing 10: An object responding to its calling perspective 
 <pre class="python">
 # Server Side
 class Greeter(pb.Viewable):
@@ -125,12 +137,13 @@ class Greeter(pb.Viewable):
     remoteGreeter.greet().addCallback(sys.stdout.write)
     ...
 </pre>
+    </blockquote>
+    <br />
+    <br />
+     
 
-</blockquote>
-      </p>
-      <p>
-<blockquote>
-Listing 12: A client for Echoer objects.
+    <blockquote>
+      Listing 12: A client for Echoer objects. 
 <pre class="python">
 from twisted.spread import pb
 from twisted.internet import main
@@ -146,11 +159,11 @@ def gotNoObject(reason):
 pb.getObjectAt("localhost", 8789, gotObject, gotNoObject, 30)
 main.run()
 </pre>
-</blockquote>
+    </blockquote>
 
-
-<blockquote>
-Listing 13: A PB server using twisted's "passport" authentication.
+    <blockquote>
+      Listing 13: A PB server using twisted's "passport"
+      authentication. 
 <pre class="python">
 from twisted.spread import pb
 from twisted.internet import main
@@ -168,11 +181,10 @@ if __name__ == '__main__':
     app.listenTCP(pb.portno, pb.BrokerFactory(pb.AuthRoot(app)))
     app.save("start")
 </pre>
+    </blockquote>
 
-</blockquote>
-
-<blockquote>
-Listing 14: Connecting to an Authorized Service
+    <blockquote>
+      Listing 14: Connecting to an Authorized Service 
 <pre class="python">
 from twisted.spread import pb
 from twisted.internet import main
@@ -191,11 +203,10 @@ pb.connect("localhost", pb.portno, "guest", "guest",
                                                failure)
 main.run()
 </pre>
+    </blockquote>
 
-</blockquote>
-
-<blockquote>
-Listing 15: A Twisted GUI application
+    <blockquote>
+      Listing 15: A Twisted GUI application 
 <pre class="python">
 from twisted.internet import main, ingtkernet
 from twisted.spread.ui import gtkutil
@@ -221,11 +232,10 @@ l = gtkutil.Login(EchoClient, None, initialService="pbecho")
 l.show_all()
 gtk.mainloop()
 </pre>
+    </blockquote>
 
-</blockquote>
-
-<blockquote>
-Listing 16: an event-based web widget.
+    <blockquote>
+      Listing 16: an event-based web widget. 
 <pre class="python">
 from twisted.spread import pb
 from twisted.python import defer
@@ -249,10 +259,9 @@ if __name__ == "__main__":
     a.listenTCP(8080, server.Site(EchoDisplay()))
     a.run()
 </pre>
-
-</blockquote>
-
-
-      </p>
-</body>
+    </blockquote>
+    <br />
+    <br />
+  </body>
 </html>
+

@@ -1,5 +1,8 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<html>
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <title>Overview of Twisted Web</title>
   </head>
@@ -8,57 +11,68 @@
     <h1>Overview of Twisted Web</h1>
 
     <h2>Abstract</h2>
-    <p>
-Twisted Web is a web application server written in pure Python, with APIs at
-multiple levels of abstraction to facilitate different kinds of web
-programming. The most useful for web application designers is <a
-href="widgets.html">Web Widgets</a>, a high-level class-and-template oriented
-system. There is also the Resource system, which Web Widgets is built on.
-    </p>
+
+    <p>Twisted Web is a web application server written in pure
+    Python, with APIs at multiple levels of abstraction to
+    facilitate different kinds of web programming. The most useful
+    for web application designers is <a href="widgets.html">Web
+    Widgets</a>, a high-level class-and-template oriented system.
+    There is also the Resource system, which Web Widgets is built
+    on.</p>
 
     <h2>Twisted Web's Structure</h2>
-    <p>
-<table border=0>
-<tr><td><img src="../img/web-overview.png" align="left" />
-When the Web Server receives a request from a Client, it creates a Request
-object and passes it on to the Resource system. The Resource system dispatches
-to the appropriate Resource object based on what path was requested by the
-client. The Resource is asked to render itself, and the result is returned to
-the client.
-</td></tr>
-</table>
-    </p>
+
+    <table border="0">
+      <tr>
+        <td><img src="../img/web-overview.png" align="left" /> When
+        the Web Server receives a request from a Client, it creates
+        a Request object and passes it on to the Resource system.
+        The Resource system dispatches to the appropriate Resource
+        object based on what path was requested by the client. The
+        Resource is asked to render itself, and the result is
+        returned to the client.</td>
+      </tr>
+    </table>
+    <br />
+    <br />
+     
 
     <h2>Resources</h2>
-    <p>
-Resources are the lowest-level abstraction for applications in the Twisted web
-server. Each Resource is a 1:1 mapping with a path that is requested: you can
-think of a Resource as a single "page" to be rendered. The interface for making
-Resources is very simple; they must have a method named <code>render</code>
-which takes a single argument, which is the Request object (an instance of
-<code class="API">twisted.web.server.Request</code>). This render method must return a
-string, which will be returned to the web browser making the
-request. Alternatively, they can return a special constant,
-<code class="API">twisted.web.server.NOT_DONE_YET</code>, which tells the web server not to
-close the connection; you must then use <code class="python">request.write(data)</code> to
-render the page, and call <code class="python">request.finish()</code> whenever you're
-done. There is more information about developing software with Resources in the
-<a href="resources.html">Resources, CGIs, Static Content, and Linking</a>
-document.
-</p>
 
+    <p>Resources are the lowest-level abstraction for applications
+    in the Twisted web server. Each Resource is a 1:1 mapping with
+    a path that is requested: you can think of a Resource as a
+    single "page" to be rendered. The interface for making
+    Resources is very simple; they must have a method named
+    <code>render</code> which takes a single argument, which is the
+    Request object (an instance of <code
+    class="API">twisted.web.server.Request</code>). This render
+    method must return a string, which will be returned to the web
+    browser making the request. Alternatively, they can return a
+    special constant, <code
+    class="API">twisted.web.server.NOT_DONE_YET</code>, which tells
+    the web server not to close the connection; you must then use
+    <code class="python">request.write(data)</code> to render the
+    page, and call <code class="python">request.finish()</code>
+    whenever you're done. There is more information about
+    developing software with Resources in the <a
+    href="resources.html">Resources, CGIs, Static Content, and
+    Linking</a> document.</p>
 
     <h2>Widgets</h2>
-<p>
-Web Widgets are an added layer of abstraction of Resources -- they're much
-nicer for most sorts of web applications. For more information on Widgets, see
-<a href="widgets.html">Introducing Web Widgets</a>.
-</p>
 
+    <p>Web Widgets are an added layer of abstraction of Resources
+    -- they're much nicer for most sorts of web applications. For
+    more information on Widgets, see <a
+    href="widgets.html">Introducing Web Widgets</a>.</p>
     <hr />
-    <address><a href="mailto:chris@twistedmatrix.com">Christopher Armstrong</a></address>
-<!-- hhmts start -->
-Last modified: Tue Mar 12 22:47:46 EST 2002
-<!-- hhmts end -->
+
+    <address>
+      <a href="mailto:chris@twistedmatrix.com">Christopher
+      Armstrong</a>
+    </address>
+    <!-- hhmts start -->
+    Last modified: Tue Mar 12 22:47:46 EST 2002 <!-- hhmts end -->
   </body>
 </html>
+

@@ -1,13 +1,18 @@
-<html>
-<head><title>Scheduling tasks for the future</title>
-</head>
-<body>
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
-<h2>Scheduling a task to be run in the future</h2>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>Scheduling tasks for the future</title>
+  </head>
 
-<p>Let's say you want to run a task X seconds in the future. The way to do that is defined
-in the reactor interface <code class="API">twisted.internet.interfaces.IReactorTime</code>:
+  <body>
+    <h2>Scheduling a task to be run in the future</h2>
 
+    <p>Let's say you want to run a task X seconds in the future.
+    The way to do that is defined in the reactor interface <code
+    class="API">twisted.internet.interfaces.IReactorTime</code>:</p>
 <pre class="python">
 from twisted.internet import reactor
 
@@ -17,12 +22,12 @@ def f(s):
 reactor.callLater(3.5, f, "hello, world")
 
 </pre>
-</p>
+    <br />
+    <br />
+     
 
-<p>
-If we want a task to run every X seconds repeatedly, we can just re-add it
-every time it's run:
-
+    <p>If we want a task to run every X seconds repeatedly, we can
+    just re-add it every time it's run:</p>
 <pre class="python">
 from twisted.internet import reactor
 
@@ -33,29 +38,33 @@ def runEverySecond():
 reactor.callLater(1, runEverySecond)
 
 </pre>
-</p>
+    <br />
+    <br />
+     
 
-<h2>Spreading tasks over time</h2>
+    <h2>Spreading tasks over time</h2>
 
-<p>
-<em>Note:</em> Delayeds may be deprecated in the future.
-</p>
+    <p><em>Note:</em> Delayeds may be deprecated in the future.</p>
 
-<p>
-Sometimes we want to schedule tasks to be run at intervals, e.g. a
-long calculation that might block twisted if the whole thing were to
-be run at once. We do this using objects that conform to the Delayed
-interface (see <code class="API">twisted.python.delay</code>).
-</p>
+    <p>Sometimes we want to schedule tasks to be run at intervals,
+    e.g. a long calculation that might block twisted if the whole
+    thing were to be run at once. We do this using objects that
+    conform to the Delayed interface (see <code
+    class="API">twisted.python.delay</code>).</p>
 
-<p>
-A delayed must define two functions:
-<ul>
-  <li><code class="python">timeout(self)</code> -- return maximum number of seconds until we should next run, or None if we have nothing to run.</li>
-  <li><code class="python">runUntilCurrent(self)</code> -- this command will be run at the very latest, but possibly before, the number of seconds returned by <code>timeout</code> has passed.</li>
-</ul>
+    <p>A delayed must define two functions:</p>
 
-For example:
+    <ul>
+      <li><code class="python">timeout(self)</code> -- return
+      maximum number of seconds until we should next run, or None
+      if we have nothing to run.</li>
+
+      <li><code class="python">runUntilCurrent(self)</code> -- this
+      command will be run at the very latest, but possibly before,
+      the number of seconds returned by <code>timeout</code> has
+      passed.</li>
+    </ul>
+    For example: 
 <pre class="python">
 class LongCalculation:
     """Runs at least 100 multipications a minute."""
@@ -74,7 +83,8 @@ from twisted.internet import main
 main.addDelayed(o)
 
 </pre>
+    <br />
+    <br />
+  </body>
+</html>
 
-</p>
-
-</body></html>

@@ -1,5 +1,8 @@
-<!DOCTYPE html PUBLIC "-//IETF//DTD HTML 2.0//EN">
-<html>
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta name="generator"
     content="HTML Tidy for Linux/x86 (vers 1st February 2002), see www.w3.org" />
@@ -12,12 +15,12 @@
 
     <h2>Multi-line Code Snippets</h2>
 
-    <p>Multi-line code snippets should be delimited with a &lt;pre&gt; tag,
-    with a mandatory 'class' attribute. The conventionalized classes are "python",
-    "python-interpreter", and "shell". For example:</p>
+    <p>Multi-line code snippets should be delimited with a
+    &lt;pre&gt; tag, with a mandatory 'class' attribute. The
+    conventionalized classes are "python", "python-interpreter",
+    and "shell". For example:</p>
 
-
-<h3>"python"</h3>
+    <h3>"python"</h3>
 <pre>
     &lt;p&gt;
     For example, this is how one defines a Resource:
@@ -31,28 +34,24 @@ class MyResource(resource.Resource):
         return "Hello, world!"
     &lt;/pre&gt;
 </pre>
+    <hr />
 
-<hr />
-
-    <p>
-    For example, this is how one defines a Resource:
-    </p>
-    <pre class="python">
+    <p>For example, this is how one defines a Resource:</p>
+<pre class="python">
 from twisted.web import resource
 
 class MyResource(resource.Resource):
     def render(self, request):
         return "Hello, world!"
-    </pre>
+   
+</pre>
+    <hr />
 
-<hr />
+    <p>Note that you should never have leading indentation inside a
+    &lt;pre&gt; block -- this makes it hard for readers to
+    copy/paste the code.</p>
 
-<p>
-Note that you should never have leading indentation inside a &lt;pre&gt; block -- this makes it hard for readers to copy/paste the code.
-</p>
-
-
-<h3>"python-interpreter"</h3>
+    <h3>"python-interpreter"</h3>
 <pre>
     &lt;pre class="python-interpreter"&gt;
     &amp;gt;&amp;gt;&amp;gt; from twisted.web import resource
@@ -64,8 +63,7 @@ Note that you should never have leading indentation inside a &lt;pre&gt; block -
     "Hello, world!"
     &lt;/pre&gt;
 </pre>
-
-<hr />
+    <hr />
 <pre class="python-interpreter">
 &gt;&gt;&gt; from twisted.web import resource
 &gt;&gt;&gt; class MyResource(resource.Resource):
@@ -75,24 +73,19 @@ Note that you should never have leading indentation inside a &lt;pre&gt; block -
 &gt;&gt;&gt; MyResource().render(None)
 "Hello, world!"
 </pre>
-<hr />
+    <hr />
 
-
-<h3>"shell"</h3>
+    <h3>"shell"</h3>
 <pre>
     &lt;pre class="shell"&gt;
     $ mktap web --path /var/www
     &lt;/pre&gt;
 </pre>
-
-<hr />
-
+    <hr />
 <pre class="shell">
 $ mktap web --path /var/www
 </pre>
-<hr />
-
-
+    <hr />
 
     <h2>Code inside paragraph text</h2>
 
@@ -105,7 +98,6 @@ $ mktap web --path /var/www
     reference an API document, then make sure you at least have a
     single module-name so that the processing code will be able to
     figure out which module or class you're referring to.</p>
-
 <pre>
         &lt;p&gt;
     To add a &lt;code class="API"&gt;twisted.web.widgets.Widget&lt;/code&gt;
@@ -133,42 +125,30 @@ $ mktap web --path /var/www
     <h2>XHTML</h2>
 
     <p>XHTML is mandatory. That means tags that don't have a
-    closing tag need a '/'; for example, 
-    <code>&lt;hr /&gt;</code>
-
-    . Also, tags which have "optional" closing tags in HTML 
-    <em>need</em>
-
-    to be closed in XHTML; for example, 
-    <code>&lt;li&gt;foo&lt;/li&gt;</code>
-    </p>
-
+    closing tag need a '/'; for example, <code>&lt;hr /&gt;</code>
+    . Also, tags which have "optional" closing tags in HTML
+    <em>need</em> to be closed in XHTML; for example,
+    <code>&lt;li&gt;foo&lt;/li&gt;</code></p>
 
     <h2>Tag Case</h2>
-    <p>
-      All tags will be done in lower-case. XHTML demands this, and so do I. :-)
-    </p>
 
-
+    <p>All tags will be done in lower-case. XHTML demands this, and
+    so do I. :-)</p>
 
     <h2>Suggestions</h2>
-    <p>
-      Use 'tidy -e -xml foo.html' before every commit! Also, tidy can be
-      utilized in other ways to auto-correct your XHTML (or convert HTML to
-      XHTML), but can sometimes cause undesirable effects, like converting some
-      <code>&lt;/p&gt;</code>s to <code>&lt;br /&gt;</code>s. 
-    </p>
 
-    <p>
-      Don't use tables for formatting. 'nuff said.
-    </p>
+    <p>Use 'tidy -e -xml foo.html' before every commit! Also, tidy
+    can be utilized in other ways to auto-correct your XHTML (or
+    convert HTML to XHTML), but can sometimes cause undesirable
+    effects, like converting some <code>&lt;/p&gt;</code>s to
+    <code>&lt;br /&gt;</code>s.</p>
 
-    
-
+    <p>Don't use tables for formatting. 'nuff said.</p>
     <hr />
-      <address>
-        <a href="mailto:radix@twistedmatrix.com">Chris Armstrong</a>
-      </address>
+
+    <address>
+      <a href="mailto:radix@twistedmatrix.com">Chris Armstrong</a>
+    </address>
   </body>
 </html>
 

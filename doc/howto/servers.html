@@ -1,68 +1,76 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 3.2//EN">
-<html>
-<head>
-<meta name="generator" content=
-"HTML Tidy for Linux/x86 (vers 1st February 2002), see www.w3.org" />
-<title>Writing Servers</title>
-</head>
-<body>
-<h1>Writing Servers</h1>
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
-<h2>Overview</h2>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta name="generator"
+    content="HTML Tidy for Linux/x86 (vers 1st February 2002), see www.w3.org" />
 
-<p>Twisted is a framework designed to be very flexible and let you
-write powerful servers. The cost of this flexibility is a few
-layers in the way to writing your server.</p>
+    <title>Writing Servers</title>
+  </head>
 
-<p>At the base, the place where you actually implement the protocol
-parsing and handling, is the protocol handler class. This class
-will usually be decended from
-<code class="API">twisted.protocols.protocol.Protocol</code>. Most protocol
-handlers inherit either from this class or from one of its
-convenience children. An instance of the protocol class will be
-instantiated per-connection, on demand, and it will go away when
-the connection is finished. This means that persistent
-configuration is not saved in the <code>Protocol</code>.</p>
+  <body>
+    <h1>Writing Servers</h1>
 
-<p>The persistent configuration is kept in a Factory class, which
-usually inherits from twisted.protocol.protocol.Factory. The
-default factory class just instantiates each Protocol, and then
-sets on it an attribute called <code>factory</code> which points to
-itself. This lets every <code>Protocol</code> access, and possibly
-modify, the persistent configuration.</p>
+    <h2>Overview</h2>
 
-<p>It is frequently needed to serve the same thing on two or more different
-ports or network addresses. This is why the Factory does not listen to
-connections, and in fact does not know anything about the network.  See <code
-class="API">twisted.internet.interfaces.IReactorTCP.listenTCP</code>, and the
-other <code>IReactor*.listen*</code> APIs for more information.</p>
+    <p>Twisted is a framework designed to be very flexible and let
+    you write powerful servers. The cost of this flexibility is a
+    few layers in the way to writing your server.</p>
 
-<p>Because of this multi-faceted aspect to writing servers, it is
-useful to have some place where all this things are bound together
-- using a specific Protocol class, with a specially initialized
-factory and a specific network interface on a specific port. For
-that, the twisted.tap package exists, which records "common server
-deployments". It creates a TAP (Twisted Application Pickle) which
-keeps the configuration information for a specific server.</p>
+    <p>At the base, the place where you actually implement the
+    protocol parsing and handling, is the protocol handler class.
+    This class will usually be decended from <code
+    class="API">twisted.protocols.protocol.Protocol</code>. Most
+    protocol handlers inherit either from this class or from one of
+    its convenience children. An instance of the protocol class
+    will be instantiated per-connection, on demand, and it will go
+    away when the connection is finished. This means that
+    persistent configuration is not saved in the
+    <code>Protocol</code>.</p>
 
-<p>So, in conclusion - most often, you will just have to write your
-Protocol class (which might get complicated, and you may want to
-write auxiliary classes for it) and then write a twisted.tap
-submodule which programmatically explains how to use this
-class.</p>
+    <p>The persistent configuration is kept in a Factory class,
+    which usually inherits from twisted.protocol.protocol.Factory.
+    The default factory class just instantiates each Protocol, and
+    then sets on it an attribute called <code>factory</code> which
+    points to itself. This lets every <code>Protocol</code> access,
+    and possibly modify, the persistent configuration.</p>
 
-<p>This document will explain each step of the way.</p>
+    <p>It is frequently needed to serve the same thing on two or
+    more different ports or network addresses. This is why the
+    Factory does not listen to connections, and in fact does not
+    know anything about the network. See <code
+    class="API">twisted.internet.interfaces.IReactorTCP.listenTCP</code>,
+    and the other <code>IReactor*.listen*</code> APIs for more
+    information.</p>
 
-<h2>Protocols</h2>
+    <p>Because of this multi-faceted aspect to writing servers, it
+    is useful to have some place where all this things are bound
+    together - using a specific Protocol class, with a specially
+    initialized factory and a specific network interface on a
+    specific port. For that, the twisted.tap package exists, which
+    records "common server deployments". It creates a TAP (Twisted
+    Application Pickle) which keeps the configuration information
+    for a specific server.</p>
 
-<p>As mentioned above, this, along with auxiliary classes and
-functions, is where most of the code is. A Twisted protocol handles
-data in an asynchronous manner. What this means is that the
-protocol never waits for an event, but rather responds to events as
-they arrive from the network.</p>
+    <p>So, in conclusion - most often, you will just have to write
+    your Protocol class (which might get complicated, and you may
+    want to write auxiliary classes for it) and then write a
+    twisted.tap submodule which programmatically explains how to
+    use this class.</p>
 
-<p>Here is a simple example:</p>
+    <p>This document will explain each step of the way.</p>
 
+    <h2>Protocols</h2>
+
+    <p>As mentioned above, this, along with auxiliary classes and
+    functions, is where most of the code is. A Twisted protocol
+    handles data in an asynchronous manner. What this means is that
+    the protocol never waits for an event, but rather responds to
+    events as they arrive from the network.</p>
+
+    <p>Here is a simple example:</p>
 <pre class="python">
 from twisted.protocols.protocol import Protocol 
 class Echo(Protocol):
@@ -71,11 +79,10 @@ class Echo(Protocol):
         self.transport.write(data)
 </pre>
 
-<p>This is one of the simplest protocols. It simply writes back
-whatever is written to it. There are many events it does not
-respond to. Here is an example of a Protocol responding to another
-event:</p>
-
+    <p>This is one of the simplest protocols. It simply writes back
+    whatever is written to it. There are many events it does not
+    respond to. Here is an example of a Protocol responding to
+    another event:</p>
 <pre class="python">
 from twisted.protocols.protocol import Protocol 
 class QOTD(Protocol):
@@ -85,15 +92,14 @@ class QOTD(Protocol):
         self.transport.loseConnection()
 </pre>
 
-<p>This protocol responds to the initial connection with a well
-known quote, and then terminates the connection.</p>
+    <p>This protocol responds to the initial connection with a well
+    known quote, and then terminates the connection.</p>
 
-<p>The connectionMade event is usually where set up of the
-connection object happens, as well as any initial greetings (as in
-the QOTD protocol above, which is actually based on RFC 865). The
-connectionLost event is where tearing down of any Protocol-specific
-objects is done. Here is an example:</p>
-
+    <p>The connectionMade event is usually where set up of the
+    connection object happens, as well as any initial greetings (as
+    in the QOTD protocol above, which is actually based on RFC
+    865). The connectionLost event is where tearing down of any
+    Protocol-specific objects is done. Here is an example:</p>
 <pre class="python">
 from twisted.protocols.protocol import Protocol 
 class Echo(Protocol):
@@ -111,19 +117,20 @@ class Echo(Protocol):
         self.transport.write(data)
 </pre>
 
-<p>Here <code>connectionMade</code> and <code>connectionLost</code>
-cooperate to keep a count of the active protocols in the factory.
-<code>connectionMade</code> immediately closes the connection if
-there are too many active protocols.</p>
+    <p>Here <code>connectionMade</code> and
+    <code>connectionLost</code> cooperate to keep a count of the
+    active protocols in the factory. <code>connectionMade</code>
+    immediately closes the connection if there are too many active
+    protocols.</p>
 
-<h3>Using the Protocol -- An Interlude</h3>
+    <h3>Using the Protocol -- An Interlude</h3>
 
-<p>In this section, I will explain how to test your protocol
-easily. You'll still need to read the rest of the document to run a
-production-grade Twisted server, though.</p>
+    <p>In this section, I will explain how to test your protocol
+    easily. You'll still need to read the rest of the document to
+    run a production-grade Twisted server, though.</p>
 
-<p>Here is code that will run the QOTD server discussed earlier</p>
-
+    <p>Here is code that will run the QOTD server discussed
+    earlier</p>
 <pre class="python">
 from twisted.protocols.protocol import Protocol, Factory
 from twisted.internet.app import Application
@@ -143,29 +150,30 @@ app.listenTCP(8007, factory)
 app.run()
 </pre>
 
-<p>Don't worry about the last 6 magic lines -- you will understand
-what they do later in the document.</p>
+    <p>Don't worry about the last 6 magic lines -- you will
+    understand what they do later in the document.</p>
 
-<h3>Helper Protocols</h3>
+    <h3>Helper Protocols</h3>
 
-<p>Many protocols build upon similar lower-level abstraction. The
-most popular in internet protocols is being line-based. Lines are
-usually terminated with a CR-LF combinations.</p>
+    <p>Many protocols build upon similar lower-level abstraction.
+    The most popular in internet protocols is being line-based.
+    Lines are usually terminated with a CR-LF combinations.</p>
 
-<p>However, quite a few protocols are mixed - they have line-based
-sections and then raw data sections. Examples include HTTP/1.1 and
-the Freenet protocol.</p>
+    <p>However, quite a few protocols are mixed - they have
+    line-based sections and then raw data sections. Examples
+    include HTTP/1.1 and the Freenet protocol.</p>
 
-<p>For those cases, there is the <code>LineReceiver</code>
-protocol. This protocol dispatches to two different event handlers
-- <code>lineReceived</code> and <code>rawDataReceived</code>. By
-default, only <code>lineReceived</code> will be called, once for
-each line. However, if <code>setRawMode</code> is called, the
-protocol will call <code>rawDataReceived</code> until
-<code>setLineMode</code> is called again.</p>
+    <p>For those cases, there is the <code>LineReceiver</code>
+    protocol. This protocol dispatches to two different event
+    handlers - <code>lineReceived</code> and
+    <code>rawDataReceived</code>. By default, only
+    <code>lineReceived</code> will be called, once for each line.
+    However, if <code>setRawMode</code> is called, the protocol
+    will call <code>rawDataReceived</code> until
+    <code>setLineMode</code> is called again.</p>
 
-<p>Here is an example for a simple use of the line receiver:</p>
-
+    <p>Here is an example for a simple use of the line
+    receiver:</p>
 <pre class="python">
 from twisted.protocols.basic import LineReceiver
 
@@ -180,43 +188,44 @@ class Answer(LineReceiver):
             self.sendLine(self.answers[None])
 </pre>
 
-<p>Note that the delimiter is not part of the line.</p>
+    <p>Note that the delimiter is not part of the line.</p>
 
-<p>Several other, less popular, helpers exist, such as a netstring
-based protocol and a prefixed-message-length protocol.</p>
+    <p>Several other, less popular, helpers exist, such as a
+    netstring based protocol and a prefixed-message-length
+    protocol.</p>
 
-<h3>State Machines</h3>
+    <h3>State Machines</h3>
 
-<p>Many Twisted protocol handlers need to write a state machine to
-record the state they are at. Here are some pieces of advice which
-help to write state machines:</p>
+    <p>Many Twisted protocol handlers need to write a state machine
+    to record the state they are at. Here are some pieces of advice
+    which help to write state machines:</p>
 
-<ul>
-<li>Don't write big state machines. Prefer to write a state machine
-which deals with one level of abstraction at a time.</li>
+    <ul>
+      <li>Don't write big state machines. Prefer to write a state
+      machine which deals with one level of abstraction at a
+      time.</li>
 
-<li>Use Python's dynamicity to create open ended state machines.
-See, for example, the code for the SMTP client.</li>
+      <li>Use Python's dynamicity to create open ended state
+      machines. See, for example, the code for the SMTP
+      client.</li>
 
-<li>Don't mix application-specific code with Protocol handling
-code. When the protocol handler has to make an application-specific
-call, keep it as a method call.</li>
-</ul>
+      <li>Don't mix application-specific code with Protocol
+      handling code. When the protocol handler has to make an
+      application-specific call, keep it as a method call.</li>
+    </ul>
 
-<h2>Factories</h2>
+    <h2>Factories</h2>
 
-<p>As mentioned before, usually the class
-<code class="API">twisted.internet.protocols.protocol.Protocol</code>
-works, and there is no need to override it. However, sometimes
-there can be factory-specific configuration of the protocols, or
-other considerations. In those cases, there is a need to subclass
-<code>Factory</code>.
- </p>
+    <p>As mentioned before, usually the class <code
+    class="API">twisted.internet.protocols.protocol.Protocol</code>
+    works, and there is no need to override it. However, sometimes
+    there can be factory-specific configuration of the protocols,
+    or other considerations. In those cases, there is a need to
+    subclass <code>Factory</code>.</p>
 
-<p>For a factory which simply instantiates instances of a specific
-protocol class, simply instantiate <code>Factory</code>, and sets
-its "protocol" attribute:</p>
-
+    <p>For a factory which simply instantiates instances of a
+    specific protocol class, simply instantiate
+    <code>Factory</code>, and sets its "protocol" attribute:</p>
 <pre class="python">
 from twisted.internet.protocols.protocol import Factory
 from twisted.internet.protocols.wire import Echo
@@ -225,9 +234,8 @@ myFactory = Factory()
 myFactory.protocol = Echo
 </pre>
 
-<p>If there is a need to easily construct factories for a specific
-configuration, a factory function is often useful:</p>
-
+    <p>If there is a need to easily construct factories for a
+    specific configuration, a factory function is often useful:</p>
 <pre class="python">
 from twisted.internet.protocols.protocol import Factory, Protocol
 
@@ -245,14 +253,13 @@ def makeQOTDFactory(quote=None):
     return factory
 </pre>
 
-<p>A Factory has two methods to perform application-specific
-building up and tearing down (since a Factory is frequently
-persisted, it is often not appropriate to do them in __init__ or
-__del__, and would frequently be too early or too late).</p>
+    <p>A Factory has two methods to perform application-specific
+    building up and tearing down (since a Factory is frequently
+    persisted, it is often not appropriate to do them in __init__
+    or __del__, and would frequently be too early or too late).</p>
 
-<p>Here is an example of a factory which allows its Protocols to
-write to a special log-file:</p>
-
+    <p>Here is an example of a factory which allows its Protocols
+    to write to a special log-file:</p>
 <pre class="python">
 from twisted.internet.protocols.protocol import Factory
 from twisted.internet.protocols.basic import LineReceiver
@@ -278,12 +285,11 @@ class LogfileFactory(Factory):
         self.fp.close()
 </pre>
 
-<h3>Putting it All Together -- Another Interlude</h3>
+    <h3>Putting it All Together -- Another Interlude</h3>
 
-<p>So, you know what factories are, and want to run the QOTD with
-configurable quote server, do you? No problems, here is an
-example.</p>
-
+    <p>So, you know what factories are, and want to run the QOTD
+    with configurable quote server, do you? No problems, here is an
+    example.</p>
 <pre class="python">
 from twisted.internet.protocols.protocol import Factory, Protocol
 from twisted.internet.app import Application
@@ -306,20 +312,20 @@ app.listenTCP(8007, makeQOTDFactory("configurable quote"))
 app.run()
 </pre>
 
-<p>And that's it!</p>
+    <p>And that's it!</p>
 
-<h2><code class="API">twisted.tap</code></h2>
+    <h2><code class="API">twisted.tap</code></h2>
 
-<p>As seen, many times the interplays between a specific Protocol
-class and a specific Factory class depend on quite a few attributes
-which all need to be set correctly. The <code class="API">twisted.tap</code>
-package allows a programmer to document it programmatically, while
-giving a naive user an easy way to generate configurations.</p>
+    <p>As seen, many times the interplays between a specific
+    Protocol class and a specific Factory class depend on quite a
+    few attributes which all need to be set correctly. The <code
+    class="API">twisted.tap</code> package allows a programmer to
+    document it programmatically, while giving a naive user an easy
+    way to generate configurations.</p>
 
-<p>Let us assume that a module, <code>twisted.quote</code>,
-included the following code, which has already been given as
-example:</p>
-
+    <p>Let us assume that a module, <code>twisted.quote</code>,
+    included the following code, which has already been given as
+    example:</p>
 <pre class="python">
 from twisted.internet.protocols.protocol import Factory, Protocol
 
@@ -337,17 +343,17 @@ def makeQOTDFactory(quote=None):
     return factory
 </pre>
 
-<p>We want a user to be able to generate a quote server easily. He
-should be able to give a quote, and optionally a port number. If no
-port number is given, the server should listen on port 17, the one
-mandated by the RFC.</p>
+    <p>We want a user to be able to generate a quote server easily.
+    He should be able to give a quote, and optionally a port
+    number. If no port number is given, the server should listen on
+    port 17, the one mandated by the RFC.</p>
 
-<p>We will have the configuration-creator accept the options
-<code>-q</code> or <code>--quote</code> to set the quote, and
-<code>-p</code> or <code>--port</code> to set the ports.</p>
+    <p>We will have the configuration-creator accept the options
+    <code>-q</code> or <code>--quote</code> to set the quote, and
+    <code>-p</code> or <code>--port</code> to set the ports.</p>
 
-<p>Here is an example (put this code in twisted/tap/quote.py):</p>
-
+    <p>Here is an example (put this code in
+    twisted/tap/quote.py):</p>
 <pre class="python">
 from twisted.python import usage
 from twisted.quote import makeQOTDFactory
@@ -367,12 +373,10 @@ def updateApplication(app, config):
     app.listenTCP(int(config.opts['port']), factory)
 </pre>
 
-<h2>Putting it All Together</h2>
-
-Well, now that you have all that, you're probably wondering, what
-do we do now to actually run the server? Well, nothing could be
-simpler. 
-
+    <h2>Putting it All Together</h2>
+    Well, now that you have all that, you're probably wondering,
+    what do we do now to actually run the server? Well, nothing
+    could be simpler. 
 <pre class="shell">
 % mktap quote --quote "Twisted is coolness personified"
 % su
@@ -380,12 +384,11 @@ simpler.
 # exit
 %
 </pre>
-
-You need to run <code>twistd</code> as root, because it needs to
-bind to a privileged port. Don't worry -- it'll shed privileges and
-suid to the user you ran <code>mktap</code> as soon as possible. It
-is not very hard to configure it to run as any other user: 
-
+    You need to run <code>twistd</code> as root, because it needs
+    to bind to a privileged port. Don't worry -- it'll shed
+    privileges and suid to the user you ran <code>mktap</code> as
+    soon as possible. It is not very hard to configure it to run as
+    any other user: 
 <pre class="shell">
 % mktap --uid 33 --gid 33 quote --quote "Twisted is coolness personified"
 % su
@@ -393,9 +396,8 @@ is not very hard to configure it to run as any other user:
 # exit
 %
 </pre>
-
-Will run it as <code>www-data</code> on Debian systems, for
-example.
-</body>
+    Will run it as <code>www-data</code> on Debian systems, for
+    example.
+  </body>
 </html>
 

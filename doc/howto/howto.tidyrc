@@ -1,0 +1,6 @@
+output-xml: yes
+output-xhtml: yes
+tidy-mark: no
+indent: auto
+gnu-emacs: yes
+add-xml-decl: yes
