@@ -29,6 +29,7 @@ class Options(usage.Options):
     optParameters = [
         ["interface", "i", "",   "The interface to which to bind"],
         ["port",      "p", "53", "The port on which to listen"],
+        ["resolv-conf", None, None, "Override location of resolv.conf"],
     ]
     
     optFlags = [
@@ -92,7 +93,7 @@ def updateApplication(app, config):
     if config['cache']:
         ca.append(cache.CacheResolver(verbose=config['verbose']))
     if config['recursive']:
-        cl.append(client.createResolver())
+        cl.append(client.createResolver(resolvconf=config['resolv-conf']))
 
     f = server.DNSServerFactory(config.zones, ca, cl, config['verbose'])
     p = dns.DNSDatagramProtocol(f)

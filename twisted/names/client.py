@@ -30,6 +30,8 @@ from __future__ import nested_scopes
 
 import socket
 import os
+import errno
+import time
 
 # Twisted imports
 from twisted.python.runtime import platform
@@ -48,9 +50,14 @@ class Resolver(common.ResolverBase):
 
     factory = None
     servers = None
+    dynamicServers = ()
     pending = None
     protocol = None
     connections = None
+
+    resolv = None
+    resolv_last_read = 0
+    resolv_read_interval = 60
 
     def __init__(self, resolv = None, servers = None, timeout = (1, 3, 11, 45)):
         """
@@ -78,10 +85,9 @@ class Resolver(common.ResolverBase):
         else:
             self.servers = servers
         
-        if resolv and os.path.exists(resolv):
-            self.parseConfig(resolv)
+        self.resolv = resolv
         
-        if not len(self.servers):
+        if not len(self.servers) and not resolv:
             raise ValueError, "No nameservers specified"
         
         self.factory = DNSClientFactory(self, timeout)
@@ -99,20 +105,38 @@ class Resolver(common.ResolverBase):
         d['connections'] = []
         return d
 
+    def maybeParseConfig(self):
+        if self.resolv_last_read + self.resolv_read_interval < time.time():
+            self.parseConfig()
 
-    def parseConfig(self, conf):
-        lines = open(conf).readlines()
+    def parseConfig(self):
+        if self.resolv is None:
+            return
+        try:
+            file = open(self.resolv)
+        except IOError, e:
+            if e.errno == errno.ENOENT:
+                return
+            else:
+                raise
+
+        lines = file.readlines()
+        self.resolv_last_read = os.fstat(file.fileno()).st_mtime
+        file.close()
+        servers = []
         for l in lines:
             l = l.strip()
             if l.startswith('nameserver'):
-                self.servers.append((l.split()[1], dns.PORT))
-                log.msg("Resolver added %r to server list" % (self.servers[-1],))
+                resolver = (l.split()[1], dns.PORT)
+                servers.append(resolver)
+                log.msg("Resolver added %r to server list" % (resolver,))
             elif l.startswith('domain'):
                 self.domain = l.split()[1]
                 self.search = None
             elif l.startswith('search'):
                 self.search = l.split()[1:]
                 self.domain = None
+        self.dynamicServers = servers
 
 
     def pickServer(self):
@@ -122,8 +146,15 @@ class Resolver(common.ResolverBase):
         TODO: Weight servers for response time so faster ones can be
         preferred.
         """
-        self.index = (self.index + 1) % len(self.servers)
-        return self.servers[self.index]
+        self.maybeParseConfig()
+        if not self.servers and not self.dynamicServers:
+            return None
+        self.index = ((self.index + 1)
+                      % (len(self.servers) + len(self.dynamicServers)))
+        if self.index < len(self.servers):
+            return self.servers[self.index]
+        else:
+            return self.dynamicServers[self.index - len(self.servers)]
 
 
     def connectionMade(self, protocol):
@@ -155,7 +186,10 @@ class Resolver(common.ResolverBase):
         if timeout is None:
             timeout = self.timeout
         address = self.pickServer()
-        d = self.protocol.query(address, queries, timeout[0])
+        if address is not None:
+            d = self.protocol.query(address, queries, timeout[0])
+        else:
+            d = defer.fail()
         d.addErrback(self._reissue, address, queries, timeout[1:])
         return d
 
@@ -186,7 +220,10 @@ class Resolver(common.ResolverBase):
         @rtype: C{Deferred}
         """
         if not len(self.connections):
-            host, port = self.pickServer()
+            address = self.pickServer()
+            if address is None:
+                return defer.fail()
+            host, port = address
             from twisted.internet import reactor
             reactor.connectTCP(host, port, self.factory)
             self.pending.append((defer.Deferred(), queries, timeout))
@@ -243,14 +280,18 @@ class DNSClientFactory(protocol.ClientFactory):
         return p
 
 
-def createResolver(servers = None):
+def createResolver(servers = None, resolvconf = None):
     import resolve, cache, hosts
     if platform.getType() == 'posix':
-        theResolver = Resolver('/etc/resolv.conf', servers)
+        if resolvconf is None:
+            resolvconf = '/etc/resolv.conf'
+        theResolver = Resolver(resolvconf, servers)
         hostResolver = hosts.Resolver()
     else:
+        if resolvconf is None:
+            resolvconf = r'c:\windows\hosts'
         theResolver = ThreadedResolver()
-        hostResolver = hosts.Resolver(r'c:\windows\hosts')
+        hostResolver = hosts.Resolver(resolvconf)
     return resolve.ResolverChain([hostResolver, cache.CacheResolver(), theResolver])
 
 try:
