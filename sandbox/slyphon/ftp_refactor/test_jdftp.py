@@ -37,6 +37,10 @@ class NonClosingStringIO(StringIO):
     def close(self):
         pass
 
+class CustomLogObserver(log.FileLogObserver):
+    '''a log observer that prints more than the default'''
+    def emit(self, eventDict):
+       pass
 
 # taken from t.test.test_pb
 class IOPump:
@@ -522,12 +526,12 @@ class TestFTPServer(unittest.TestCase):
         log.debug('ran ftp.PASV')
         iop.flush()
         
-        log.debug('log is %s' % log)
+        print ('log is %s' % log)
         self.cnx.deferred.addCallback(lambda _:self._continueTestRETR)
         self.cnx.hookUpDTP()
 
-    def _continueTestRETR(self, log): 
-        log.debug('_continueTestRETR')
+    def _continueTestRETR(self): 
+        print ('_continueTestRETR')
         dc, ds, diop = self.cnx.getDtpCSTuple()
         self.assert_(self.cnx.s.blocked is None)
         self.assert_(self.cnx.s.dtpTxfrMode == ftp.PASV)
@@ -535,16 +539,21 @@ class TestFTPServer(unittest.TestCase):
         self.assert_(self.cnx.ds.transport.connected is True)
         self.assert_(self.cnx.dc.transport.closed is False)
         self.assert_(self.cnx.dc.transport.connected is True)
+
+        self.cnx.ds.factory.deferred.addCallback(lambda _:self._finishTestRETR)
+        print 'about to send RETR command'
         self.cnx.cio.send('RETR /home/foo/foo.txt')
         iop.flush()
-        self.assert_(self.cnx.s.fp.tell() == 0)
+
+
+    def _finishTestRETR(self):
         diop.flush()
         self.assert_(len(dc.lines) > 1)
-        log.debug('dc.lines: %s' % dc.lines)
+        print 'dc.lines: %s' % dc.lines
         self.assert_(ds.transport.closed)
  
         
-    testRETR.todo = 'not quite there yet'
+    #testRETR.todo = 'not quite there yet'
 
 
     def testSYST(self):

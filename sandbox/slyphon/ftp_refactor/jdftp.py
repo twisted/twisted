@@ -6,7 +6,7 @@
 # This is a really crazy protocol, so i'm making some notes up here for myself
 # and whatever unlucky person is going to have to maintain this code after me.
 #
-# 
+# hoorj!
 
 
 # System Imports
