@@ -15,6 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 import tokenize, cgi, keyword
+import reflect
 
 class TokenPrinter:
 
@@ -54,21 +55,33 @@ class TokenPrinter:
 
 class HTMLWriter:
 
+    noSpan = []
+
     def __init__(self, writer):
         self.writer = writer
+        noSpan = []
+        reflect.accumulateClassList(self.__class__, "noSpan", noSpan)
+        self.noSpan = noSpan
 
     def write(self, token, type=None):
         token = cgi.escape(token)
-        if type is None:
+        if (type is None) or (type in self.noSpan):
             self.writer(token)
         else:
             self.writer('<span class="py-src-%s">%s</span>' %
                         (type, token))
 
 
-def filter(inp, out):
+class SmallerHTMLWriter(HTMLWriter):
+    """HTMLWriter that doesn't generate spans for some junk.
+
+    Results in much smaller HTML output.
+    """
+    noSpan = ["endmarker", "indent", "dedent", "op", "newline", "nl"]
+
+def filter(inp, out, writer=HTMLWriter):
     out.write('<pre>\n')
-    printer = TokenPrinter(HTMLWriter(out.write).write).printtoken
+    printer = TokenPrinter(writer(out.write).write).printtoken
     try:
         tokenize.tokenize(inp.readline, printer)
     except tokenize.TokenError:
