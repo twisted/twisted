@@ -137,6 +137,9 @@ def backwardsCompatImplements(klass):
            __implements__ = IBar, YourClass.__implements__
 
     """
+    for subclass in klass.__bases__:
+        fixClassImplements(subclass)
+    
     _fixedClasses[klass] = True # so fixClassImplements will skip it
     klass.__implements__ = _implementsTuple(declarations.implementedBy(klass))
 

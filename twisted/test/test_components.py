@@ -496,6 +496,12 @@ class SubZoper(Zoper):
     zinterface.implements(ISub)
 
 
+class OldStyle:
+    __implements__ = IAdder
+class NewSubOfOldStyle(OldStyle):
+    zinterface.implements(IZope)
+components.backwardsCompatImplements(NewSubOfOldStyle)
+
 class TestZope(unittest.TestCase):
 
     def testAdapter(self):
@@ -520,6 +526,11 @@ class TestZope(unittest.TestCase):
         self.assert_(components.implements(o, IZope))
         self.assert_(components.implements(o, ISub))
 
+    def testNewSubclassOfOld(self):
+        o = NewSubOfOldStyle()
+        self.assert_(components.implements(o, IZope))
+        self.assert_(components.implements(o, IAdder))
+        
     def testSignatureString(self):
         # Make sure it cuts off the self from old t.p.c signatures.
         self.assertEquals(IAdder['add'].getSignatureString(), "(a, b)")
