@@ -1,3 +1,14 @@
+2003-10-24  Brian Warner  <warner@lothar.com>
+
+	* twisted/internet/base.py (ReactorBase.callLater): prefix
+	"internal" parameter names with an underscore, to avoid colliding
+	with named parameters in the user's callback invocation. Closes
+	issue347.
+	(ReactorBase.addSystemEventTrigger)
+	(ReactorBase.callWhenRunning)
+	(ReactorBase.callInThread): same
+	* doc/howto/coding-standard.xhtml (Callback Arguments): explain why
+
 2003-10-22  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* .: Releasing Twisted 1.1.0rc2.

@@ -325,18 +325,18 @@ class ReactorBase:
                 except:
                     log.deferr()
 
-    def addSystemEventTrigger(self, phase, eventType, f, *args, **kw):
+    def addSystemEventTrigger(self, _phase, _eventType, _f, *args, **kw):
         """See twisted.internet.interfaces.IReactorCore.addSystemEventTrigger.
         """
-        assert callable(f), "%s is not callable" % f
-        if self._eventTriggers.has_key(eventType):
-            triglist = self._eventTriggers[eventType]
+        assert callable(_f), "%s is not callable" % _f
+        if self._eventTriggers.has_key(_eventType):
+            triglist = self._eventTriggers[_eventType]
         else:
             triglist = [[], [], []]
-            self._eventTriggers[eventType] = triglist
-        evtList = triglist[{"before": 0, "during": 1, "after": 2}[phase]]
-        evtList.append((f, args, kw))
-        return (phase, eventType, (f, args, kw))
+            self._eventTriggers[_eventType] = triglist
+        evtList = triglist[{"before": 0, "during": 1, "after": 2}[_phase]]
+        evtList.append((_f, args, kw))
+        return (_phase, _eventType, (_f, args, kw))
 
     def removeSystemEventTrigger(self, triggerID):
         """See twisted.internet.interfaces.IReactorCore.removeSystemEventTrigger.
@@ -347,23 +347,26 @@ class ReactorBase:
                                         "after":  2}[phase]
                                        ].remove(item)
 
-    def callWhenRunning(self, callable, *args, **kw):
+    def callWhenRunning(self, _callable, *args, **kw):
         """See twisted.internet.interfaces.IReactorCore.callWhenRunning.
         """
         if self.running:
-            callable(*args, **kw)
+            _callable(*args, **kw)
         else:
             return self.addSystemEventTrigger('after', 'startup',
-                                              callable, *args, **kw)
+                                              _callable, *args, **kw)
 
     # IReactorTime
 
-    def callLater(self, seconds, f, *args, **kw):
+    def callLater(self, _seconds, _f, *args, **kw):
         """See twisted.internet.interfaces.IReactorTime.callLater.
         """
-        assert callable(f), "%s is not callable" % f
-        assert sys.maxint >= seconds >= 0, "%s is not greater than or equal to 0 seconds" % (seconds,)
-        tple = DelayedCall(time() + seconds, f, args, kw, self._pendingTimedCalls.remove, self._resetCallLater)
+        assert callable(_f), "%s is not callable" % _f
+        assert sys.maxint >= _seconds >= 0, \
+               "%s is not greater than or equal to 0 seconds" % (_seconds,)
+        tple = DelayedCall(time() + _seconds, _f, args, kw,
+                           self._pendingTimedCalls.remove,
+                           self._resetCallLater)
         insort(self._pendingTimedCalls, tple)
         return tple
 
@@ -433,12 +436,12 @@ class ReactorBase:
         self.threadpool.start()
         self.addSystemEventTrigger('during', 'shutdown', self.threadpool.stop)
 
-    def callInThread(self, callable, *args, **kwargs):
+    def callInThread(self, _callable, *args, **kwargs):
         """See twisted.internet.interfaces.IReactorThreads.callInThread.
         """
         if not self.threadpool:
             self._initThreadPool()
-        self.threadpool.callInThread(callable, *args, **kwargs)
+        self.threadpool.callInThread(_callable, *args, **kwargs)
 
     def suggestThreadPoolSize(self, size):
         """See twisted.internet.interfaces.IReactorThreads.suggestThreadPoolSize.

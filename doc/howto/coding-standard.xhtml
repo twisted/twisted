@@ -313,6 +313,57 @@ except ImportError:
             .addCallback(wozers))
 </pre>
 
+    <h2>Callback Arguments</h2>
+
+    <p>There are several methods whose purpose is to help the user set up
+    callback functions, for example <code class="API"
+    base="twisted.internet.defer">Deferred.addCallback</code> or the
+    reactor's <code class="API"
+    base="twisted.internet.base.ReactorBase">callLater</code> method. To make
+    access to the callback as transparent as possible, most of these methods
+    use <code class="python">**kwargs</code> to capture arbitrary arguments
+    that are destined for the user's callback. This allows the call to the
+    setup function to look very much like the eventual call to the target
+    callback function.</p>
+
+    <p>In these methods, take care to not have other argument names that will
+    <q>steal</q> the user's callback's arguments. When sensible, prefix these
+    <q>internal</q> argument names with an underscore. For example, <code
+    class="API" base="twisted.spread.pb">RemoteReference.callRemote</code> is
+    meant to be called like this:</p>
+
+<pre class="python">
+myref.callRemote("addUser", "bob", "555-1212")
+
+# on the remote end, the following method is invoked:
+def addUser(name, phone):
+    ...
+</pre>
+
+    <p>where <q>addUser</q> is the remote method name. The user might also
+    choose to call it with named parameters like this:</p>
+
+<pre class="python">
+myref.callRemote("addUser", name="bob", phone="555-1212")
+</pre>
+
+    <p>In this case, <code>callRemote</code> (and any code that uses the
+    **kwargs syntax) must be careful to not use <q>name</q>, <q>phone</q>, or
+    any other name that might overlap with a user-provided named parameter.
+    Therefore, <code>callRemote</code> is implemented with the following
+    signature:</p>
+
+<pre class="python">
+def callRemote(self, _name, *args, **kw):
+   ...
+</pre>
+
+    <p>Do whatever you can to reduce user confusion. It may also be
+    appropriate to <code class="python">assert</code> that the kwargs
+    dictionary does not contain parameters with names that will eventually
+    cause problems.</p>
+
+
     <h2>Special Methods</h2>
 
     <p>The augmented assignment protocol, defined by __iadd__ and other
