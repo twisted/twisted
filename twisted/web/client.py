@@ -69,6 +69,7 @@ class HTTPPageGetter(http.HTTPClient):
     def handleStatus_200(self):
         pass
 
+    handleStatus_201 = lambda self: self.handleStatus_200()
     handleStatus_202 = lambda self: self.handleStatus_200()
 
     def handleStatusDefault(self):
@@ -102,7 +103,6 @@ class HTTPPageGetter(http.HTTPClient):
         self.transport.loseConnection()
 
     handleStatus_302 = lambda self: self.handleStatus_301()
-    handleStatus_201 = lambda self: self.handleStatus_301()
 
     def handleStatus_303(self):
         self.factory.method = 'GET'
