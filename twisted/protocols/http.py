@@ -493,7 +493,7 @@ class Request:
                 log.msg("May ignore parts of this invalid URI: %s"
                         % repr(self.uri))
             self.path, argstring = x[0], x[1]
-            self.args = cgi.parse_qs(argstring, 1)
+            self.args = self._parseQueryArguments(argstring, 1)
 
         # cache the client and server information, we'll need this later to be
         # serialized and sent with the request so CGIs will work remotely
@@ -508,7 +508,7 @@ class Request:
             key, pdict = cgi.parse_header(ctype)
             if key == 'application/x-www-form-urlencoded':
                 args.update(
-                    cgi.parse_qs(self.content.read(), 1))
+                    self._parseQueryArguments(self.content.read(), 1))
             elif key == mfd:
                 args.update(
                     cgi.parse_multipart(self.content, pdict))
@@ -516,6 +516,10 @@ class Request:
                 pass
 
         self.process()
+
+    def _parseQueryArguments(self, qs, keep_blank_values=0, strict_parsing=0):
+        """I parse query arguments like cgi.parse_qs"""
+        return cgi.parse_qs(qs, keep_blank_values, strict_parsing)
 
     def __repr__(self):
         return '<%s %s %s>'% (self.method, self.uri, self.clientproto)
