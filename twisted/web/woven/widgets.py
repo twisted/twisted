@@ -927,7 +927,7 @@ class ExpandMacro(Widget):
         self.macroFile=macroFile
         self.macroFileDirectory=macroFileDirectory
         self.macroName=macroName
-        widgets.Widget.__init__(self, model, **kwargs)
+        Widget.__init__(self, model, **kwargs)
 
     def generate(self, request, node):
         templ = view.View(
@@ -942,6 +942,7 @@ class ExpandMacro(Widget):
             "one macro named %s found." % self.macroName)
 
         macro = macrolist[0]
+        macro.removeAttribute('macro')
         slots = domhelpers.findElementsWithAttributeShallow(macro, "slot")
         for slot in slots:
             slotName = slot.getAttribute("slot")
@@ -949,6 +950,11 @@ class ExpandMacro(Widget):
             assert len(fillerlist) <= 1, "More than one fill-slot found with name %s" % slotName
             if len(fillerlist):
                 filler = fillerlist[0]
+                filler.tagName = filler.endTagName = slot.tagName
+                filler.removeAttribute('fill-slot')
+                slot.removeAttribute('slot')
+                for k, v in slot.attributes.items():
+                    filler.setAttribute(k, v)
                 slot.parentNode.replaceChild(filler, slot)
 
         return macro
