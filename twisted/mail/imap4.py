@@ -528,7 +528,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def capabilities(self):
         cap = {'AUTH': self.challengers.keys()}
         if self.ctx and self.canStartTLS:
-            if not self.startedTLS and self.transport.getHost()[0] != 'SSL':
+            if not self.startedTLS and interfaces.ISSLTransport(self.transport, None) is None:
                 cap['LOGINDISABLED'] = None
                 cap['STARTTLS'] = None
         cap['NAMESPACE'] = None
@@ -2376,8 +2376,16 @@ class IMAP4Client(basic.LineReceiver):
             return context
 
     def __cbLoginCaps(self, capabilities, username, password):
-        tryTLS = 'STARTTLS' in capabilities and (interfaces.ITLSTransport(self.transport, default=None) is not None)
-        if tryTLS:
+        # If the server advertises STARTTLS, we might want to try to switch to TLS
+        tryTLS = 'STARTTLS' in capabilities
+
+        # If our transport supports switching to TLS, we might want to try to switch to TLS.
+        tlsableTransport = interfaces.ITLSTransport(self.transport, default=None) is not None
+
+        # If our transport is not already using TLS, we might want to try to switch to TLS.
+        nontlsTransport = interfaces.ISSLTransport(self.transport, default=None) is None
+
+        if tryTLS and tlsableTransport and nontlsTransport:
             ctx = self._getContextFactory()
             if ctx:
                 d = self.sendCommand(Command('STARTTLS'))
@@ -2392,7 +2400,7 @@ class IMAP4Client(basic.LineReceiver):
                 log.err("Server wants us to use TLS, but we don't have "
                         "a Context Factory!")
         else:
-            if self.transport.getHost()[0] != 'SSL':
+            if nontlsTransport:
                 log.msg("Server has no TLS support. logging in over cleartext!")
             args = ' '.join((username, password))
             return self.sendCommand(Command('LOGIN', args))
