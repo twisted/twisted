@@ -24,12 +24,22 @@ internet to kill you.\" --glyph
 
 Stability: semi-stable
 
-Future Plans: 'connect' and 'IdentityConnector' will be gradually replaced with
-URLs, that will be able to extend resource location and discovery conversations
-and specify different authentication mechanisms besides username/password.
-This should only add to, and not change, the existing protocol.  There are no
-anticipated protocol-breaking changes before a complete finalization but we
-need more users before we can be totally sure of that.
+Future Plans: The connection APIs will be extended with support for
+URLs, that will be able to extend resource location and discovery
+conversations and specify different authentication mechanisms besides
+username/password.  This should only add to, and not change, the
+existing protocol.
+
+
+Important Changes
+=================
+
+New APIs have been added for serving and connecting. On the client
+side, use PBClientFactory.getPerspective() instead of connect(), and
+PBClientFactory.getRootObject() instead of getObjectAt().  Server side
+should switch to updated cred APIs by using PBServerFactory, at which
+point clients would switch to PBClientFactory.login().
+
 
 Introduction
 ============
@@ -49,10 +59,7 @@ applied when serializing arguments.
 @author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
 
-# Future Imports
-from __future__ import nested_scopes
-
-__version__ = "$Revision: 1.140 $"[11:-2]
+__version__ = "$Revision: 1.141 $"[11:-2]
 
 
 # System Imports
@@ -948,10 +955,15 @@ class Broker(banana.Banana):
 
 
 class BrokerFactory(protocol.Factory, styles.Versioned):
-    """I am a server for object brokerage.
+    """DEPRECATED, use PBServerFactory instead.
+
+    I am a server for object brokerage.
     """
+
     persistenceVersion = 3
+
     def __init__(self, objectToBroker):
+        warnings.warn("This is deprecated. Use PBServerFactory.", DeprecationWarning, 2)
         self.objectToBroker = objectToBroker
 
     def config_objectToBroker(self, newObject):
@@ -978,7 +990,9 @@ class BrokerFactory(protocol.Factory, styles.Versioned):
 ### DEPRECATED AUTH STUFF
 
 class AuthRoot(Root):
-    """I provide AuthServs as root objects to Brokers for a BrokerFactory.
+    """DEPRECATD.
+    
+    I provide AuthServs as root objects to Brokers for a BrokerFactory.
     """
 
     def __init__(self, auth):
@@ -991,6 +1005,8 @@ class AuthRoot(Root):
         return AuthServ(self.auth, broker)
 
 class _Detacher:
+    """DEPRECATED."""
+    
     def __init__(self, perspective, remoteRef, identity, broker):
         self.perspective = perspective
         self.remoteRef = remoteRef
@@ -1003,7 +1019,9 @@ class _Detacher:
                                         self.broker)
 
 class IdentityWrapper(Referenceable):
-    """I delegate most functionality to a L{twisted.cred.identity.Identity}.
+    """DEPRECATED.
+
+    I delegate most functionality to a L{twisted.cred.identity.Identity}.
     """
 
     def __init__(self, broker, identity):
@@ -1036,7 +1054,7 @@ class IdentityWrapper(Referenceable):
 
 
 class AuthChallenger(Referenceable):
-    """XXX
+    """DEPRECATED.
 
     See also: AuthServ
     """
@@ -1061,7 +1079,7 @@ class AuthChallenger(Referenceable):
         d.callback(None)
 
 class AuthServ(Referenceable):
-    """XXX
+    """DEPRECATED.
 
     See also: L{AuthRoot}
     """
@@ -1086,7 +1104,9 @@ class AuthServ(Referenceable):
 
     
 class _ObjectRetrieval:
-    """(Internal) Does callbacks for L{getObjectAt}.
+    """DEPRECATED.
+
+    (Internal) Does callbacks for L{getObjectAt}.
     """
 
     def __init__(self, broker, d):
@@ -1144,7 +1164,9 @@ class BrokerClientFactory(protocol.ClientFactory):
 
 
 def getObjectRetriever():
-    """Get a factory which retreives a root object from its client
+    """DEPRECATED.
+
+    Get a factory which retreives a root object from its client
 
     @returns: A pair: A ClientFactory and a Deferred which will be passed a
               remote reference to the root object of a PB server.x
@@ -1158,7 +1180,7 @@ def getObjectRetriever():
 
 
 def getObjectAt(host, port, timeout=None):
-    """Establishes a PB connection and returns with a L{RemoteReference}.
+    """DEPRECATED. Establishes a PB connection and returns with a L{RemoteReference}.
 
     @param host: the host to connect to
 
@@ -1180,7 +1202,7 @@ def getObjectAt(host, port, timeout=None):
     return bf.getRootObject()
 
 def getObjectAtSSL(host, port, timeout=None, contextFactory=None):
-    """Establishes a PB connection over SSL and returns with a RemoteReference.
+    """DEPRECATED. Establishes a PB connection over SSL and returns with a RemoteReference.
 
     @param host: the host to connect to
 
@@ -1205,7 +1227,7 @@ def getObjectAtSSL(host, port, timeout=None, contextFactory=None):
 
 def connect(host, port, username, password, serviceName,
             perspectiveName=None, client=None, timeout=None):
-    """Connects and authenticates, then retrieves a PB service.
+    """DEPRECATED. Connects and authenticates, then retrieves a PB service.
 
     Required arguments:
        - host -- the host the service is running on
@@ -1242,7 +1264,7 @@ def _connGotRoot(root, d, client, serviceName,
     logIn(root, client, serviceName, username, password, perspectiveName).chainDeferred(d)
 
 def authIdentity(authServRef, username, password):
-    """Return a Deferred which will do the challenge-response dance and
+    """DEPRECATED. Return a Deferred which will do the challenge-response dance and
     return a remote Identity reference.
     """
     warnings.warn("This is deprecated. Use PBClientFactory.", DeprecationWarning, 2)
@@ -1258,7 +1280,7 @@ def _cbRespondToChallenge((challenge, challenger), password, d):
         d.callback, d.errback)
 
 def logIn(authServRef, client, service, username, password, perspectiveName=None):
-    """I return a Deferred which will be called back with a Perspective.
+    """DEPRECATED. I return a Deferred which will be called back with a Perspective.
     """
     warnings.warn("This is deprecated. Use PBClientFactory.", DeprecationWarning, 2)
     d = defer.Deferred()
@@ -1284,7 +1306,8 @@ def _cbLogInResponded(identity, d, client, serviceName, perspectiveName):
         d.errback(cred.error.Unauthorized("invalid username or password"))
 
 class IdentityConnector:
-     """
+     """DEPRECATED.
+     
      I support connecting to multiple Perspective Broker services that are
      in a service tree.
      """
@@ -1539,7 +1562,8 @@ class PBServerFactory(protocol.ServerFactory):
     """Server factory for perspective broker.
 
     Login is done using a Portal object, whose realm is expected to return
-    avatars implementing IPerspective.
+    avatars implementing IPerspective. The credential checkers in the portal
+    should accept IUsernameHashedPassword or IUsernameMD5Password.
     """
 
     def __init__(self, portal):
@@ -1599,6 +1623,9 @@ class IPerspective(Interface):
     Expected to have methods beginning with 'perspective_' that will
     be published remotely, and to be a subclass of Perspective class,
     at least for the moment.
+
+    The concept of attached/detached is no longer implemented by
+    the framework. The realm is expected to do so if relevant.
     """
 
 
