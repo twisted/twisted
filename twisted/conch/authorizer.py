@@ -15,12 +15,10 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 # 
 
-"""Implementation of an Authorizer that uses /etc/passwd to generate Identitys..
+"""This module is deprecated."""
 
-This module is unstable.
-
-Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
-"""
+import warnings
+warnings.warn("twisted.conch.authorizer is deprecated", DeprecationWarning)
 
 from twisted.cred import authorizer
 from twisted.cred.error import Unauthorized

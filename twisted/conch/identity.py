@@ -15,12 +15,10 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 # 
 
-"""Identity for Conch.  This adds the method validatePublicKey which checks to see if a public key is a valid identifier for a user.
+"""This module is deprecated."""
 
-This module is unstable.
-
-Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
-"""
+import warnings
+warnings.warn("twisted.conch.identity is deprecated", DeprecationWarning)
 
 import os
 import base64
