@@ -481,6 +481,8 @@ class GuardTest(unittest.TestCase):
         url = "/"+(oldreq.headers['location'].split('http://fake.com/',1))[1]
         req = chan.makeFakeRequest(url)
         self.assertEquals(req.headers['location'], 'http://fake.com/xxx/')
+        for sz in swrap.sessions.values():
+            sz.expire()
 
     def testPerspectiveInit(self):
         # TODO: this is an awful lot of crap to have to import / do in order to
@@ -521,3 +523,5 @@ class GuardTest(unittest.TestCase):
         req = chan.makeFakeRequest("/xxx/yyy")
         self.assertEquals(req.written.getvalue(), "YES")
         # print req.session.services
+        for sz in swrap.sessions.values():
+            sz.expire()

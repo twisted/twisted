@@ -1,3 +1,9 @@
+2003-01-10  Dave Peticolas  <dave@krondo.com>
+
+	* twisted/test/test_woven.py: expire sessions to clean up timers
+
+	* twisted/web/woven/guard.py: stop timer when session expires
+
 2003-1-9  Moshe Zadka <moshez@twistedmatrix.com>
 
 	* twisted/web/google.py: Search google for best matches
