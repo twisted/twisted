@@ -18,7 +18,7 @@
   For example, <code>/foo/bar/baz</code>
 </dd>
 
-<dt><a name="daptee">adaptee</a></dt>
+<dt><a name="adaptee">adaptee</a></dt>
 <dd>
   An object that has been adapted, also called <q>original</q>.  See <a
   href="#Adapter">Adapter</a>.
@@ -40,8 +40,16 @@
 
 <dt><a name="Authorizer"><code noexpand="1" class="API" base="twisted.cred.authorizer">Authorizer</code></a></dt>
 <dd>
-  An object responsible for managing <a href="#Identity">Identities</a>.  See
+  (Deprecated; this is part old cred) An object responsible for managing 
+  <a href="#Identity">Identities</a>.  See 
   <code class="API">twisted.cred.authorizer</code>.
+</dd>
+
+<dt><a name="Avatar">avatar</a></dt>
+<dd>
+   (from <a href="#Cred">Twisted Cred</a>) business logic for specific user.
+   For example, in <a href="#pb">PB</a> these are perspectives, in pop3 these
+   are mailboxes, and so on.
 </dd>
 
 <dt><a name="Banana"><code noexpand="1" class="API" base="twisted.spread.banana">Banana</code></a></dt>
@@ -119,6 +127,18 @@
   Twisted's authentication API, <code class="API">twisted.cred</code>.  See 
   <a href="cred.html">Introduction to Twisted Cred</a> and 
   <a href="pb-cred.html">Twisted Cred usage</a>.
+</dd>
+
+<dt><a name="credentials">credentials</a></dt>
+<dd>
+  A username/password, public key, or some other information used for
+  authentication.
+</dd>
+
+<dt><a name="credential-checker">credential checker</a></dt>
+<dd>
+  Where authentication actually happens.  See 
+  <code class="API" base="twisted.cred.checkers">ICredentialChecker</code>.
 </dd>
 
 <dt><a name="CVSToys">CVSToys</a></dt>
@@ -283,6 +303,12 @@ the <a href="doc-standard.html">Twisted Documentation Standard</a>.</dd>
   referencing.  See <code class="API">twisted.spread.pb</code>.
 </dd>
 
+<dt><a name="Portal">Portal</a></dt>
+<dd>
+  Glues <a href="#credential-checkers">credential checkers</a> and 
+  <a href="#realm">realm</a>s together.
+</dd>
+
 <dt><a name="Producer">Producer</a></dt>
 <dd>
   An object that generates data a chunk at a time, usually to be processed by a
@@ -310,6 +336,13 @@ the <a href="doc-standard.html">Twisted Documentation Standard</a>.</dd>
 
 <dt><a name="Reality">Reality</a></dt>
 <dd>See <q><a href="#TwistedReality">Twisted Reality</a></q></dd>
+
+<dt><a name="realm">realm</a></dt>
+<dd>
+  (in <a href="#Cred">Twisted Cred</a>) stores <a href="#avatar">avatars</a>
+  and perhaps general business logic.  See 
+  <code class="API" base="twisted.cred.portal">IRealm</code>.
+</dd>
 
 <dt><a name="Resource"><code noexpand="1" class="API" base="twisted.web.resource">Resource</code></a></dt>
 <dd>
