@@ -7,7 +7,7 @@ from twisted.internet import defer
 
 from zope.interface import Interface, Attribute, implements
 
-
+from twisted.python.util import sibpath
 from twisted.web2 import stream
 
 def bufstr(data):
@@ -241,14 +241,14 @@ class CompoundStreamTest:
     CompoundStream lets you combine many streams into one continuous stream.
     For example, let's make a stream:
     >>> s = CompoundStream()
-
+    
     Then, add a couple streams:
     >>> s.addStream(MemoryStream("Stream1"))
     >>> s.addStream(MemoryStream("Stream2"))
-
+    
     The length is the sum of all the streams:
     >>> s.length
-    12
+    14
     
     We can read data from the stream:
     >>> str(s.read())
@@ -256,7 +256,7 @@ class CompoundStreamTest:
 
     After having read some data, length is now smaller, as you might expect:
     >>> s.length
-    6
+    7
 
     So, continue reading...
     >>> str(s.read())
@@ -271,19 +271,19 @@ class CompoundStreamTest:
     
     For a more complicated example, let's try reading from a file:
     >>> s = CompoundStream()
-    >>> s.addStream(FileStream(open("stream_data.txt")))
+    >>> s.addStream(FileStream(open(sibpath(__file__, "stream_data.txt"))))
     >>> s.addStr("================")
-    >>> s.addStream(FileStream(open("stream_data.txt")))
+    >>> s.addStream(FileStream(open(sibpath(__file__, "stream_data.txt"))))
 
     Again, the length is the sum:
     >>> s.length
-    56
+    58L
     
     >>> str(s.read())
-    We've got some text!
+    "We've got some text!\\n"
     >>> str(s.read())
-    ================
-
+    '================'
+    
     What if you close the stream?
     >>> s.close()
     >>> s.read() is None
