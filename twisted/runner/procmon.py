@@ -62,7 +62,7 @@ The following attributes on the monitor can be set to configure behaviour
 
 import os, time
 from twisted.python import log
-from twisted.internet import app, protocol, reactor
+from twisted.internet import app, protocol, reactor, process
 from twisted.protocols import basic
 
 class DummyTransport:
@@ -99,7 +99,7 @@ class LoggingProtocol(protocol.ProcessProtocol):
     def processEnded(self, reason):
         if not self.empty:
             self.output.dataReceived('\n')
-        self.service.connectionLost(self.name, self.transport.pid)
+        self.service.connectionLost(self.name)
 
 
 class ProcessMonitor(app.ApplicationService):
@@ -131,10 +131,11 @@ class ProcessMonitor(app.ApplicationService):
 
     def _checkConsistency(self):
         for name, protocol in self.protocols.items():
-            pid = protocol.transport.pid
+            proc = protocol.transport
             try:
-                os.kill(pid, 0)
-            except OSError:
+                proc.signalProcess(0)
+            except (OSError, process.ProcessExitedAlready):
+                log.msg("Lost process %r somehow, restarting." % name)
                 del self.protocols[name]
                 self.startProcess(name)
         self.consistency = reactor.callLater(self.consistencyDelay,
@@ -164,10 +165,10 @@ class ProcessMonitor(app.ApplicationService):
             self.stopProcess(name)
         self.consistency.cancel()
 
-    def connectionLost(self, name, pid):
-        if self.murder.has_key(pid):
-            self.murder[pid].cancel()
-            del self.murder[pid]
+    def connectionLost(self, name):
+        if self.murder.has_key(name):
+            self.murder[name].cancel()
+            del self.murder[name]
         if self.protocols.has_key(name):
             del self.protocols[name]
         if time.time()-self.timeStarted[name]<self.threshold:
@@ -187,14 +188,23 @@ class ProcessMonitor(app.ApplicationService):
         self.timeStarted[name] = time.time()
         reactor.spawnProcess(p, args[0], args, uid=uid, gid=gid)
 
+    def _forceStopProcess(self, proc):
+        try:
+            proc.signalProcess(9)
+        except process.ProcessExitedAlready:
+            pass
+
     def stopProcess(self, name):
         if not self.protocols.has_key(name):
             return
-        pid = self.protocols[name].transport.pid
-        del self.protocols[name] 
-        os.kill(pid, 15)
-        self.murder[pid] = reactor.callLater(self.killTime, os.kill, pid, 9)
-        
+        proc = self.protocols[name].transport
+        del self.protocols[name]
+        try:
+            proc.signalProcess(15)
+        except process.ProcessExitedAlready:
+            pass
+        else:
+            self.murder[name] = reactor.callLater(self.killTime, self._forceStopProcess, proc)
 
     def restartAll(self):
         for name in self.processes.keys():

@@ -176,6 +176,9 @@ class ProcessError(abstract.FileDescriptor):
         os.close(self.proc.stderr)
         self.proc.errConnectionLost()
 
+class ProcessExitedAlready(Exception):
+    """The process has already excited, and the operation requested can no longer be performed."""
+    pass
 
 class Process(abstract.FileDescriptor, styles.Ephemeral):
     """An operating-system Process.
@@ -330,6 +333,8 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
     def signalProcess(self, signalID):
         if signalID in ('HUP', 'STOP', 'INT', 'KILL'):
             signalID = getattr(signal, 'SIG'+signalID)
+        if self.pid is None:
+            raise ProcessExitedAlready
         os.kill(self.pid, signalID)
 
     def doError(self):
@@ -392,6 +397,7 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
     def processEnded(self, status):
         self.status = status
         self.lostProcess = 1
+        self.pid = None
         self.closeStdin()
         self.maybeCallProcessEnded()
     
