@@ -42,9 +42,6 @@ class XmlStreamTest(unittest.TestCase):
         self.xmlstream.send = self.outlist.append
         self.xmlstream.transport = self
 
-    def tearDown(self):
-        pass
-    
     # Auxilary methods 
     def loseConnection(self):
         self.xmlstream.connectionLost("no reason")
@@ -76,46 +73,7 @@ class XmlStreamTest(unittest.TestCase):
         self.assertEquals(self.errorOccurred, True)
         self.assertEquals(self.streamEnded, True)
 
-    def selectDispatcher(self, element):
-        if element.hasAttribute("to"):
-            return self.secondaryDispatcher
-        else:
-            return None
 
-    def usedStreamDispatcher(self, _):
-        self.streamMatched = True
-
-    def usedSecondaryDispatcher(self, _):
-        self.secondaryMatched = True
-
-    def testDispatchSelector(self):
-        xs = self.xmlstream
-        self.secondaryMatched = False
-        self.streamMatched = False
-        self.secondaryDispatcher = utility.EventDispatcher()
-        self.secondaryDispatcher.addObserver("/message", self.usedSecondaryDispatcher)
-        xs.dispatchSelectorFn = self.selectDispatcher
-        xs.addObserver("/message", self.usedStreamDispatcher)
-
-        # Go...
-        xs.connectionMade()
-        self.assertEquals(self.outlist[0], "<stream:stream xmlns='testns' xmlns:stream='http://etherx.jabber.org/streams' to='foob'>")
-        
-        xs.dataReceived("<stream:stream xmlns='testns' xmlns:stream='http://etherx.jabber.org/streams' from='testharness' id='12345'>")
-        self.assertEquals(self.streamStarted, True)
-
-        # Send a packet that should use the stream dispatcher
-        xs.dataReceived("<message/>")
-
-        self.assertEquals(self.streamMatched, True)
-        self.assertEquals(self.secondaryMatched, False)
-
-        # Reset and send a packet that should use the secondary dispatcher
-        self.streamMatched = False
-        self.secondaryMatched = False
-        xs.dataReceived("<message to='bar'/>")
-        self.assertEquals(self.streamMatched, False)
-        self.assertEquals(self.secondaryMatched, True)
         
         
         

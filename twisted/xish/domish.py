@@ -18,14 +18,12 @@
 
 from __future__ import generators
 
+import types
+
 try:
     import cStringIO as StringIO
 except ImportError:
     import StringIO
-
-def _isStr(s):
-    """ Internal method to determine if an object is a string """
-    return isinstance(s, type('')) or isinstance(s, type(u''))
 
 def _splitPrefix(name):
     """Internal method for splitting a prefixed Element name into its respective parts """
@@ -42,7 +40,7 @@ class _Serializer:
         self.prefixes = prefixes or {}
         self.prefixCounter = 0
 
-    def __str__(self):
+    def getValue(self):
         return self.cio.getvalue()
 
     def getPrefix(self, uri):
@@ -52,55 +50,144 @@ class _Serializer:
         return self.prefixes[uri]
 
     def serialize(self, elem, closeElement = 1):
+        # Optimization shortcuts
+        write = self.cio.write
+        
         # Shortcut, check to see if elem is actually a string (aka Cdata)
-        if _isStr(elem):
-            self.cio.write(escapeToXml(elem).encode("utf-8")) 
+        if isinstance(elem, types.StringTypes):
+            write(escapeToXml(elem).encode("utf-8")) 
             return
 
+        # Further optimizations
+        parent = elem.parent
+        name = elem.name
+        uri = elem.uri
+        defaultUri = elem.defaultUri
+
         # Shortcut, check to see if elem is actually a chunk o' serialized XML
-        if elem.__class__ == SerializedXML:
-            self.cio.write(elem.data.encode("utf-8"))
+        if isinstance(elem, SerializedXML):
+            write(elem.data.encode("utf-8"))
             return
         
         # Seralize element name
-        if elem.defaultUri == elem.uri:
-            if elem.parent == None or elem.defaultUri == elem.parent.defaultUri:
-                self.cio.write("<%s" % (elem.name))
+        if defaultUri == uri:
+            if parent == None or defaultUri == parent.defaultUri:
+                write("<%s" % (name))
             else:
-                self.cio.write("<%s xmlns='%s' " % (elem.name, elem.defaultUri))
+                write("<%s xmlns='%s' " % (name, defaultUri))
         else:
-            prefix = self.getPrefix(elem.uri)
-            if elem.parent == None or elem.defaultUri == elem.parent.defaultUri:
-                self.cio.write("<%s:%s xmlns:%s='%s'" % (prefix, elem.name, prefix, elem.uri))
+            prefix = self.getPrefix(uri)
+            if parent == None or elem.defaultUri == parent.defaultUri:
+                write("<%s:%s xmlns:%s='%s'" % (prefix, name, prefix, uri))
             else:
-               self.cio.write("<%s:%s xmlns:%s='%s' xmlns='%s'" % (prefix, elem.name, prefix, elem.uri, elem.defaultUri))
+               write("<%s:%s xmlns:%s='%s' xmlns='%s'" % (prefix, name, prefix, uri, defaultUri))
 
         # Serialize attributes
         for k,v in elem.attributes.items():
             # If the attribute name is a list, it's a qualified attribute
-            if k.__class__ == type(()):
-                self.cio.write(" %s:%s='%s'" % (self.getPrefix[k[0]], k[1], escapeToXml(v, 1)).encode("utf-8"))
+            if isinstance(k, types.TupleType):
+                write(" %s:%s='%s'" % (self.getPrefix[k[0]], k[1], escapeToXml(v, 1)).encode("utf-8"))
             else:
-                self.cio.write((" %s='%s'" % ( k, escapeToXml(v, 1))).encode("utf-8"))
+                write((" %s='%s'" % ( k, escapeToXml(v, 1))).encode("utf-8"))
 
         # Shortcut out if this is only going to return
         # the element (i.e. no children)
         if closeElement == 0:
-            self.cio.write(">")
+            write(">")
             return
 
         # Serialize children
         if len(elem.children) > 0:
-            self.cio.write(">")
+            write(">")
             for c in elem.children:
                 self.serialize(c)
             # Add closing tag
-            if elem.defaultUri == elem.uri:
-                self.cio.write("</%s>" % (elem.name))
+            if defaultUri == uri:
+                write("</%s>" % (name))
             else:
-                self.cio.write("</%s:%s>" % (self.getPrefix(elem.uri), elem.name))
+                write("</%s:%s>" % (self.getPrefix(uri), name))
         else:
-            self.cio.write("/>")
+            write("/>")
+
+class _ListSerializer:
+    """ Internal class which serializes an Element tree into a buffer """
+    def __init__(self, prefixes = None):
+        self.writelist = []
+        self.prefixes = prefixes or {}
+        self.prefixCounter = 0
+
+    def getValue(self):
+        d = "".join(self.writelist)
+        return d.encode("utf-8")
+
+    def getPrefix(self, uri):
+        if not self.prefixes.has_key(uri):
+            self.prefixes[uri] = "xn%d" % (self.prefixCounter)
+            self.prefixCounter = self.prefixCounter + 1
+        return self.prefixes[uri]
+
+    def serialize(self, elem, closeElement = 1):
+        # Optimization shortcuts
+        write = self.writelist.append
+        
+        # Shortcut, check to see if elem is actually a string (aka Cdata)
+        if isinstance(elem, types.StringTypes):
+            write(escapeToXml(elem))
+            return
+
+        # Further optimizations
+        parent = elem.parent
+        name = elem.name
+        uri = elem.uri
+        defaultUri = elem.defaultUri
+
+        # Shortcut, check to see if elem is actually a chunk o' serialized XML
+        if isinstance(elem, SerializedXML):
+            write(elem.data)
+            return
+        
+        # Seralize element name
+        if defaultUri == uri:
+            if parent == None or defaultUri == parent.defaultUri:
+                write("<%s" % (name))
+            else:
+                write("<%s xmlns='%s' " % (name, defaultUri))
+        else:
+            prefix = self.getPrefix(uri)
+            if parent == None or elem.defaultUri == parent.defaultUri:
+                write("<%s:%s xmlns:%s='%s'" % (prefix, name, prefix, uri))
+            else:
+               write("<%s:%s xmlns:%s='%s' xmlns='%s'" % (prefix, name, prefix, uri, defaultUri))
+
+        # Serialize attributes
+        for k,v in elem.attributes.items():
+            # If the attribute name is a list, it's a qualified attribute
+            if isinstance(k, types.TupleType):
+                write(" %s:%s='%s'" % (self.getPrefix[k[0]], k[1], escapeToXml(v, 1)))
+            else:
+                write((" %s='%s'" % ( k, escapeToXml(v, 1))))
+
+        # Shortcut out if this is only going to return
+        # the element (i.e. no children)
+        if closeElement == 0:
+            write(">")
+            return
+
+        # Serialize children
+        if len(elem.children) > 0:
+            write(">")
+            for c in elem.children:
+                self.serialize(c)
+            # Add closing tag
+            if defaultUri == uri:
+                write("</%s>" % (name))
+            else:
+                write("</%s:%s>" % (self.getPrefix(uri), name))
+        else:
+            write("/>")
+
+
+SerializerClass = _Serializer
 
 def escapeToXml(text, isattrib = 0):
     """Escape text to proper XML form, per section 2.3 in the XML specification.
@@ -165,7 +252,7 @@ class Namespace:
         return (self._uri, n)
 
 
-class Element:
+class Element(object):
     """Object representing a container (a.k.a. tag or element) in an HTML or XML document.
 
     An Element contains a series of attributes (name/value pairs),
@@ -209,11 +296,7 @@ class Element:
         for n in self.children:
             if n.__class__ == Element and n.name == key:
                 return n
-
-        # Only raise attribute errors on special methods
-        if key[0:2] == "__":
-            raise AttributeError, key
-
+            
         # Tweak the behaviour so that it's more friendly about not
         # finding elements -- we need to document this somewhere :)
         return None
@@ -231,21 +314,15 @@ class Element:
         """ Retrieve the first CData (content) node 
         """
         for n in self.children:
-            if _isStr(n): return n
+            if isinstance(n, types.StringTypes): return n
         return ""
 
     def _dqa(self, attr):
         """Dequalify an attribute key as needed"""
-        if isinstance(attr, type(())) and attr[0] == self.uri:
+        if isinstance(attr, types.TupleType) and attr[0] == self.uri:
             return attr[1]
         else:
             return attr
-
-    def __eq__(self, other):
-        return id(self) == id(other)
-
-    def __ne__(self, other):
-        return id(self) != id(other)
 
     def getAttribute(self, attribname, default = None):
         """Retrieve the value of attribname, if it exists """
@@ -276,7 +353,7 @@ class Element:
     def addContent(self, text):
         """Add some text data to this element"""
         c = self.children
-        if len(c) > 0 and _isStr(c[-1]):
+        if len(c) > 0 and isinstance(c[-1], types.StringTypes):
             c[-1] = c[-1] + text
         else:
             c.append(text)
@@ -317,9 +394,9 @@ class Element:
 
     def toXml(self, prefixes = None, closeElement = 1):
         """Serialize this Element and all children to a string """
-        s = _Serializer(prefixes)
+        s = SerializerClass(prefixes)
         s.serialize(self, closeElement)
-        return s.cio.getvalue()
+        return s.getValue()
 
     def firstChildElement(self):
         for c in self.children:
@@ -529,12 +606,11 @@ class ExpatElementStream:
 
         # Document already started
         if self.documentStarted == 1:
-            # Starting a new packet
-            if self.currElem == None:
-                self.currElem = e
-            # Adding to existing element
-            else:
-                self.currElem = self.currElem.addChild(e)
+            if self.currElem != None:
+                self.currElem.children.append(e)
+                e.parent = self.currElem
+            self.currElem = e
+
         # New document
         else:
             self.documentStarted = 1

@@ -102,7 +102,8 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
         self.stream = None
         self.authenticator = authenticator
         self.sid = None
-        self.dispatchSelectorFn = None
+        self.rawDataOutFn = None
+        self.rawDataInFn = None
 
         # Reset the authenticator
         authenticator.associateWithStream(self)
@@ -137,7 +138,7 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
 
     def dataReceived(self, buf):
         try:
-            self.dispatch(buf, RAWDATA_IN_EVENT)
+            if self.rawDataInFn: self.rawDataInFn(buf)
             self.stream.parse(buf)
         except domish.ParserError:
             self.dispatch(self, STREAM_ERROR_EVENT)
@@ -158,14 +159,7 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
         self.dispatch(self, STREAM_START_EVENT)    
 
     def onElement(self, element):
-        if self.dispatchSelectorFn:
-            d = self.dispatchSelectorFn(element)
-            if d:
-                d.dispatch(element)
-            else:
-                self.dispatch(element)
-        else:
-            self.dispatch(element)
+        self.dispatch(element)
 
     def onDocumentEnd(self):
         self.transport.loseConnection()
@@ -177,12 +171,14 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
         self.stream.ElementEvent = self.onElement
 
     def send(self, obj):
-        if obj.__class__ == domish.Element:
-            self.dispatch(obj.toXml(), RAWDATA_OUT_EVENT)
-            self.transport.write(obj.toXml())
-        else:
-            self.dispatch(obj, RAWDATA_OUT_EVENT)
-            self.transport.write(obj)
+        if isinstance(obj, domish.Element):
+            obj = obj.toXml()
+            
+        if self.rawDataOutFn:
+            self.rawDataOutFn(obj)
+            
+        self.transport.write(obj)
+
 
 
 class XmlStreamFactory(protocol.ReconnectingClientFactory):
@@ -191,7 +187,6 @@ class XmlStreamFactory(protocol.ReconnectingClientFactory):
         self.bootstraps = []
         self.host = host or authenticator.streamHost
         self.port = port
-        self.dispatchSelectorFn = None
 
     def buildProtocol(self, _):
         self.resetDelay()
@@ -199,7 +194,6 @@ class XmlStreamFactory(protocol.ReconnectingClientFactory):
         xs = XmlStream(self.authenticator)
         xs.factory = self
         for event, fn in self.bootstraps: xs.addObserver(event, fn)
-        xs.dispatchSelectorFn = self.dispatchSelectorFn
         return xs
 
     def addBootstrap(self, event, fn):
