@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: mktap.py,v 1.7 2002/04/21 18:24:51 carmstro Exp $
+# $Id: mktap.py,v 1.8 2002/04/21 19:32:30 carmstro Exp $
 
 """ Implementation module for the `mktap` command.
 """
@@ -25,7 +25,6 @@ from twisted.protocols import telnet
 from twisted.internet import app, tcp
 from twisted.python import usage
 from twisted.spread import pb
-del service
 
 import sys, traceback, os, cPickle, glob, string
 
