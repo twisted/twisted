@@ -14,4 +14,4 @@ if hasattr(sys, "setdlopenflags"):
     from fusion import _fusion
     sys.setdlopenflags(oldflags)
 
-__version__ = "0.1.2-post"
+__version__ = "0.2"
