@@ -14,6 +14,7 @@ from sendmsg import sendmsg
 from eunuchs.recvmsg import recvmsg
 
 from twisted.internet import protocol
+from twisted.internet import defer
 from twisted.internet import unix
 from twisted.python import log
 
@@ -26,7 +27,7 @@ class Server(unix.Server):
         """
         payload = struct.pack("%di" % len(fileno), *fileno)
         r = sendmsg(self.fileno(), data, 0, (socket.SOL_SOCKET, SCM_RIGHTS, payload))
-        print 'Sent', r
+        print 'Sent', fileno, '(', r, ')'
         return r
 
 
@@ -79,6 +80,7 @@ class FileDescriptorReceivingProtocol(protocol.Protocol):
         for f in fds:
             f = os.fdopen(f, 'r')
             print repr(f.read(80))
+        self.factory.rDeferred.callback(self)
 
 def main():
     log.startLogging(sys.stdout)
@@ -90,6 +92,7 @@ def main():
     
     f = protocol.ClientFactory()
     f.protocol = FileDescriptorReceivingProtocol
+    f.rDeferred = defer.Deferred().addCallback(lambda _: reactor.stop())
     c = reactor.connectWith(Connector, 'fd_control', f, 60, reactor=reactor)
 
     reactor.run()
