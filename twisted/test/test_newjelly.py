@@ -229,7 +229,21 @@ class ClassB(pb.Copyable, pb.RemoteCopy):
 class CircularReferenceTestCase(unittest.TestCase):
     jc = newjelly
     def testSimpleCircle(self):
+        self.jc.setUnjellyableForClass(ClassA, ClassA)
+        self.jc.setUnjellyableForClass(ClassB, ClassB)
         a = self.jc.unjelly(self.jc.jelly(ClassA()))
         self.failUnless(a.ref.ref is a, "Identity not preserved in circular reference")
 
+    def testCircleWithInvoker(self):
+        class dummyInvokerClass: pass
+        dummyInvoker = dummyInvokerClass()
+        dummyInvoker.serializingPerspective = None
+        a0 = ClassA()
+        self.jc.setUnjellyableForClass(ClassA, ClassA)
+        self.jc.setUnjellyableForClass(ClassB, ClassB)
+        j = self.jc.jelly(a0, invoker=dummyInvoker)
+        a1 = self.jc.unjelly(j)
+        self.failUnlessIdentical(a1.ref.ref, a1,
+                                 "Identity not preserved in circular reference")
+        
 testCases = [JellyTestCase, CircularReferenceTestCase]

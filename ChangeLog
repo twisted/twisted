@@ -1,3 +1,13 @@
+2003-04-14  Brian Warner  <warner@lothar.com>
+
+	* twisted/spread/flavors.py (Copyable.jellyFor): Use proper
+	jellier .prepare/.preserve dance when .invoker is non-None. This
+	fixes jellying of circular references when passed through PB
+	connections.
+
+	* twisted/test/test_newjelly.py: add test case that sets .invoker
+	to verify that code path too
+
 2003-04-14  Jonathan Lange  <jml@ids.org.au>
 	* twisted/web/woven/controller.py (Controller): now, if getChild
 	cannot find the requested child, it will ask getDynamicChild -- a

@@ -31,7 +31,7 @@ but may have a small impact on users who subclass and override methods.
 @author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
 
-__version__ = "$Revision: 1.28 $"[11:-2]
+__version__ = "$Revision: 1.29 $"[11:-2]
 
 # NOTE: this module should NOT import pb; it is supposed to be a module which
 # abstractly defines remotely accessible types.  Many of these types expect to
@@ -298,8 +298,11 @@ class Copyable(Serializable):
         if jellier.invoker is None:
             return getInstanceState(self, jellier)
         p = jellier.invoker.serializingPerspective
-        return (self.getTypeToCopyFor(p),
-                jellier.jelly(self.getStateToCopyFor(p)))
+        t = self.getTypeToCopyFor(p)
+        state = self.getStateToCopyFor(p)
+        sxp = jellier.prepare(self)
+        sxp.extend([t, jellier.jelly(state)])
+        return jellier.preserve(self, sxp)
 
 
 class Cacheable(Copyable):
