@@ -136,7 +136,7 @@ class ServiceNetwork:
         s.setServiceParent(self.app)
 
     def bindPorts(self):
-        self.app.preStartService()
+        self.app.privilegedStartService()
 
     def save(self, tag=None, filename=None, passphrase=None):
         persist.IPersistable(self.app).save(tag, filename, passphrase)

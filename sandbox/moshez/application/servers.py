@@ -31,8 +31,8 @@ class _AbstractServer(service.Service):
             del d['_port']
         return d
 
-    def preStartService(self):
-        service.Service.preStartService(self)
+    def privilegedStartService(self):
+        service.Service.privilegedStartService(self)
         if self.privileged:
             self._port = self.getPort()
 

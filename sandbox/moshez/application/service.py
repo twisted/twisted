@@ -27,7 +27,7 @@ class IService(components.Interface):
     def stopService(self):
         pass
 
-    def preStartService(self):
+    def privilegedStartService(self):
         pass
 
 
@@ -60,7 +60,7 @@ class Service:
         self.parent.removeService(self)
         self.parent = None
 
-    def preStartService(self):
+    def privilegedStartService(self):
         pass
 
     def startService(self):
@@ -97,10 +97,10 @@ class MultiService(Service):
         self.namedServices = {}
         self.parent = None
 
-    def preStartService(self):
-        Service.preStartService(self)
+    def privilegedStartService(self):
+        Service.privilegedStartService(self)
         for service in self:
-            service.preStartService()
+            service.privilegedStartService()
 
     def startService(self):
         Service.startService(self)
