@@ -223,8 +223,8 @@ class RootSlicer:
     slicerTable = {}
     debug = False
 
-    def __init__(self, sendbanana):
-        self.sendbanana = sendbanana
+    def __init__(self, protocol):
+        self.protocol = protocol
         self.sendQueue = []
 
     def registerReference(self, refid, obj):
@@ -258,7 +258,7 @@ class RootSlicer:
         if self.sendQueue:
             (obj, self.objectSentDeferred) = self.sendQueue.pop()
             return obj
-        if self.sendbanana.debugSend:
+        if self.protocol.debugSend:
             print "LAST BAG"
         self.producingDeferred = Deferred()
         return self.producingDeferred
@@ -271,7 +271,7 @@ class RootSlicer:
     def send(self, obj):
         # obj can also be a Slicer, say, a CallSlicer. We return a Deferred
         # which fires when the object has been fully serialized.
-        idle = (len(self.sendbanana.slicerStack) == 1) and not self.sendQueue
+        idle = (len(self.protocol.slicerStack) == 1) and not self.sendQueue
         objectSentDeferred = Deferred()
         self.sendQueue.append((obj, objectSentDeferred))
         if idle:
@@ -289,8 +289,8 @@ class UnsafeRootSlicer(RootSlicer):
 
 class StorageRootSlicer(UnsafeRootSlicer):
     # some pieces taken from ScopedSlicer
-    def __init__(self, sendbanana):
-        UnsafeRootSlicer.__init__(self, sendbanana)
+    def __init__(self, protocol):
+        UnsafeRootSlicer.__init__(self, protocol)
         self.references = {}
 
     def registerReference(self, refid, obj):
@@ -1227,7 +1227,10 @@ class UnsafeRootUnslicer(RootUnslicer):
     openRegistry = UnsafeUnslicerRegistry
 
 class StorageRootUnslicer(UnsafeRootUnslicer, ScopedUnslicer):
-    # this version tracks references for the entire lifetime of the protocol
+    # This version tracks references for the entire lifetime of the
+    # protocol. It is most appropriate for single-use purposes, such as a
+    # replacement for Pickle.
+
     def __init__(self):
         ScopedUnslicer.__init__(self)
         UnsafeRootUnslicer.__init__(self)

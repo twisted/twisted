@@ -82,13 +82,38 @@ def bytes_to_long(s):
 
 HIGH_BIT_SET = chr(0x80)
 
-class SendBanana:
+# Banana is a big class. It is split up into three sections: sending,
+# receiving, and connection setup. These used to be separate classes, but
+# the __init__ functions got too weird.
+
+class Banana(protocol.Protocol):
+
+    def __init__(self):
+        self.initSend()
+        self.initReceive()
+
+    ### connection setup
+
+    def connectionMade(self):
+        # prime the pump
+        self.produce()
+        # TODO: do setup/negotiation
+        # now tell anybody who cares that the connection is ready
+        self.connectionReady()
+
+    def connectionReady(self):
+        pass
+
+    ### SendBanana
+    # called by .send()
+    # calls transport.write() and transport.loseConnection()
+
     slicerClass = slicer.RootSlicer
     paused = False
     streamable = True
     debugSend = False
 
-    def __init__(self):
+    def initSend(self):
         self.rootSlicer = self.slicerClass(self)
         itr = self.rootSlicer.slice()
         next = iter(itr).next
@@ -96,20 +121,20 @@ class SendBanana:
         self.slicerStack = [top]
         self.openCount = 0
         self.outgoingVocabulary = {}
-        # prime the pump
-        self.produce()
 
     def send(self, obj):
+        if self.debugSend: print "Banana.send(%s)" % obj
         return self.rootSlicer.send(obj)
 
     def produce(self, dummy=None):
         # optimize: cache 'next' and 'streamable' because we get many more
         # tokens than stack pushes/pops
         while self.slicerStack and not self.paused:
+            if self.debugSend: print "produce.loop"
             try:
                 slicer, next, streamable, openID = self.slicerStack[-1]
                 obj = next()
-                if self.debugSend: print " obj", obj
+                if self.debugSend: print " produce.obj", obj
                 if isinstance(obj, defer.Deferred):
                     assert streamable
                     obj.addCallback(self.produce)
@@ -178,6 +203,7 @@ class SendBanana:
 
     def pushSlicer(self, slicer, obj):
         if self.debugSend: print "push", slicer
+        assert len(self.slicerStack) < 10000 # failsafe
         topSlicer = self.slicerStack[-1][0]
         slicer.parent = topSlicer
         streamable = self.slicerStack[-1][2]
@@ -286,14 +312,16 @@ class SendBanana:
             print "exception during self.transport.loseConnection"
             log.err()
 
+    ### ReceiveBanana
+    # called with dataReceived()
+    # calls self.receivedObject()
 
-class ReceiveBanana:
     unslicerClass = slicer.RootUnslicer
     debugReceive = False
     logViolations = False
     logDiscardCount = False
 
-    def __init__(self):
+    def initReceive(self):
         self.rootUnslicer = self.unslicerClass()
         self.rootUnslicer.protocol = self
         self.receiveStack = [self.rootUnslicer]
@@ -347,7 +375,6 @@ class ReceiveBanana:
             top.openerCheckToken(typebyte, size, self.opentype)
         else:
             top.checkToken(typebyte, size) # might raise Violation
-
 
     def dataReceived(self, chunk):
         # buffer, assemble into tokens
@@ -745,14 +772,7 @@ class ReceiveBanana:
         raise NotImplementedError
 
 
-class BaseBanana(SendBanana, ReceiveBanana, protocol.Protocol):
-    # lacks scoping on the roots, so it can't be used for looped object
-    # graphs. Use StorageBanana to handle arbitrary nested objects.
-    def __init__(self):
-        SendBanana.__init__(self)
-        ReceiveBanana.__init__(self)
-
-class StorageBanana(BaseBanana):
+class StorageBanana(Banana):
     # this is "unsafe", in that it will do import() and create instances of
     # arbitrary classes. It is also scoped at the root, so each
     # StorageBanana should be used only once.

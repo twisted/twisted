@@ -1,9 +1,11 @@
 #! /usr/bin/python
 
 from twisted.trial import unittest
+dr = unittest.deferredResult
+de = unittest.deferredError
 from twisted.python import reflect, log
 from twisted.python.components import registerAdapter
-from banana import StorageBanana, BananaError
+from banana import BananaError
 from tokens import ISlicer
 import slicer, schema, tokens, debug
 from slicer import UnbananaFailure
@@ -39,8 +41,7 @@ class TokenBanana(debug.TokenStorageBanana):
         assert len(self.slicerStack) == 1
         assert isinstance(self.slicerStack[0][0], slicer.RootSlicer)
         self.tokens = []
-        d = self.send(obj)
-        r = unittest.deferredResult(d)
+        dr(self.send(obj))
         assert len(self.slicerStack) == 1
         assert not self.rootSlicer.sendQueue
         assert isinstance(self.slicerStack[0][0], slicer.RootSlicer)
@@ -50,8 +51,7 @@ class TokenBanana(debug.TokenStorageBanana):
         assert len(self.slicerStack) == 1
         assert isinstance(self.slicerStack[0][0], slicer.RootSlicer)
         self.tokens = []
-        d = self.send(obj)
-        f = unittest.deferredError(d)
+        f = de(self.send(obj))
         assert len(self.slicerStack) == 1
         assert not self.rootSlicer.sendQueue
         assert isinstance(self.slicerStack[0][0], slicer.RootSlicer)
@@ -521,9 +521,10 @@ class TestBananaMixin:
     def setUp(self):
         self.banana = TestBanana()
         self.banana.transport = cStringIO.StringIO()
+        self.banana.connectionMade()
 
     def encode(self, obj):
-        self.banana.send(obj)
+        dr(self.banana.send(obj))
         return self.banana.transport.getvalue()
 
     def clearOutput(self):

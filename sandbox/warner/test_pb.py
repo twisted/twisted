@@ -8,14 +8,15 @@ import sys
 
 from zope.interface import implements, implementsOnly
 from twisted.python import components, failure
+from twisted.internet import reactor
 from twisted.trial import unittest
 
 dr = unittest.deferredResult
+de = unittest.deferredError
 
 import schema, pb, flavors, tokens
 from tokens import BananaError, Violation, INT, STRING, OPEN
 from slicer import UnbananaFailure
-from debug import LoggingBroker
 
 class TestBroker(pb.Broker):
     def gotAnswer(self, req, results):
@@ -62,7 +63,7 @@ class TestReferenceUnslicer(unittest.TestCase):
         u.receiveChild(12)
         u.checkToken(OPEN, 9999)
         # pretend we did a u.doOpen("list") here
-        interfaceNames = ["IFoo", "IBar"]
+        interfaceNames = ["IBar", "IFoo"]
         u.receiveChild(interfaceNames)
         rr1 = u.receiveClose()
         rr2 = self.broker.remoteReferences.get(12)
@@ -211,8 +212,8 @@ class Target2(Target):
 class TargetMixin:
 
     def setupBrokers(self):
-        self.targetBroker = LoggingBroker()
-        self.callingBroker = LoggingBroker()
+        self.targetBroker = pb.LoggingBroker()
+        self.callingBroker = pb.LoggingBroker()
         self.targetTransport = Loopback()
         self.targetTransport.peer = self.callingBroker
         self.targetBroker.transport = self.targetTransport
@@ -221,6 +222,8 @@ class TargetMixin:
         self.callingTransport.peer = self.targetBroker
         self.callingBroker.transport = self.callingTransport
         self.callingTransport.protocol = self.callingBroker
+        self.targetBroker.connectionMade()
+        self.callingBroker.connectionMade()
 
     def setupTarget(self, target):
         puid = target.processUniqueID()
@@ -246,6 +249,11 @@ class TargetMixin:
 
 
 class TestInterface(unittest.TestCase, TargetMixin):
+
+    def testTypes(self):
+        self.failUnless(isinstance(IMyTarget, flavors.RemoteInterfaceClass))
+        self.failUnless(isinstance(IMyTarget2, flavors.RemoteInterfaceClass))
+        self.failUnless(isinstance(IMyTarget3, flavors.RemoteInterfaceClass))
 
     def testRegister(self):
         reg = pb.RemoteInterfaceRegistry
@@ -595,4 +603,32 @@ class TestReferenceable(unittest.TestCase, TargetMixin):
         r = Target()
         res = self.echo(r)
         self.failUnlessIdentical(res, r)
+
+class TestFactory(unittest.TestCase):
+    def testCall(self):
+        t = Target()
+        s = pb.PBServerFactory(t)
+        port = reactor.listenTCP(0, s, interface="127.0.0.1")
+        portnum = port.getHost().port
+        d = pb.callRemoteURL_TCP("localhost", portnum, "",
+                                 IMyTarget, "add", a=1, b=2)
+        res = dr(d)
+        self.failUnlessEqual(res, 3)
+
+    def testError(self):
+        t = Target()
+        s = pb.PBServerFactory(t)
+        port = reactor.listenTCP(0, s, interface="127.0.0.1")
+        portnum = port.getHost().port
+        d = pb.callRemoteURL_TCP("localhost", portnum, "",
+                                 IMyTarget, "missing", a=1, b=2)
+        f = de(d)
+        # interesting. the Violation is local, so f.type is the actual
+        # tokens.Violation class (rather than just a string). If the failure
+        # is caught by the far side, I think we get a string. TODO: not sure
+        # how I feel about that being different.
+        self.failUnlessEqual(f.type, tokens.Violation)
+        # likewise, f.value is a Violation instance, not a string 
+        #self.failUnless(f.value.find("method 'missing' not defined") != -1)
+        self.failUnless(f.value.args[0].find("method 'missing' not defined") != -1)
 

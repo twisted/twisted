@@ -7,7 +7,7 @@ except ImportError:
     import StringIO
 
 from twisted.python import components, failure, log
-from twisted.internet import defer
+from twisted.internet import defer, protocol, reactor
 registerAdapter = components.registerAdapter
 
 import slicer, schema, tokens, banana, flavors
@@ -41,17 +41,21 @@ class PendingRequest(object):
             log.err(why)
 
 class RemoteReference(object):
-    def __init__(self, broker, refID, interfaceNames):
+    def __init__(self, broker, refID, interfaces):
+        # accepts either interface names or actual interfaces
         self.broker = broker
         self.refID = refID
-        self.interfaceNames = interfaceNames
 
-        # attempt to find interfaces which match
-        interfaces = {}
-        for name in interfaceNames:
-            interfaces[name] = RemoteInterfaceRegistry.get(name)
-
-        self.schema = schema.RemoteReferenceSchema(interfaces)
+        ifaces = {}
+        for i in interfaces:
+            if isinstance(i, flavors.RemoteInterfaceClass):
+                ifaces[i.remoteGetRemoteName()] = i
+            else:
+                # TODO: emit warning, should prefer actual interfaces
+                ifaces[i] = RemoteInterfaceRegistry.get(i)
+        self.interfaceNames = ifaces.keys()
+        self.interfaceNames.sort()
+        self.schema = schema.RemoteReferenceSchema(ifaces)
 
     def __del__(self):
         self.broker.freeRemoteReference(self.refID)
@@ -79,7 +83,7 @@ class RemoteReference(object):
             del kwargs["_resultConstraint"]
 
         try:
-            # newRequestID() could fail with a StaleBrokerError
+            # newRequestID() could fail with a DeadReferenceError
             reqID = self.broker.newRequestID()
         except:
             d = defer.Deferred()
@@ -633,13 +637,15 @@ class PBRootSlicer(slicer.RootSlicer):
         assert 0
 
 
-class Broker(banana.BaseBanana):
+class Broker(banana.Banana):
     slicerClass = PBRootSlicer
     unslicerClass = PBRootUnslicer
     unsafeTracebacks = True
+    disconnected = False
+    factory = None
 
     def __init__(self):
-        banana.BaseBanana.__init__(self)
+        banana.Banana.__init__(self)
         self.initBroker()
 
     def initBroker(self):
@@ -661,9 +667,14 @@ class Broker(banana.BaseBanana):
         # receiving side uses these
         self.activeLocalCalls = {} # the other side wants an answer from us
 
+    def connectionReady(self):
+        if self.factory: # in tests we won't have factory
+            self.factory.clientConnectionMade(self)
+
     def connectionLost(self, why):
+        self.disconnected = True
         self.abandonAllRequests(why)
-        banana.BaseBanana.connectionLost(self, why)
+        banana.Banana.connectionLost(self, why)
 
     # Referenceable handling, methods for the sending-side (the side that
     # holds the original Referenceable)
@@ -736,6 +747,9 @@ class Broker(banana.BaseBanana):
         # the WeakValueDictionary means we don't have to explicitly remove it
         #del self.remoteReferences[clid]
 
+        if type(clid) != int:
+            return # URL-refs aren't reference-counted
+
         try:
             self.send(DecRefSlicer(clid))
         except:
@@ -744,11 +758,15 @@ class Broker(banana.BaseBanana):
             print f.getTraceback()
             raise
 
+    def remoteReferenceForName(self, name, interfaces):
+        return RemoteReference(self, name, interfaces)
 
     # remote-method-invocation methods, calling side (RemoteReference):
     # RemoteReference.callRemote, gotAnswer, gotError
 
     def newRequestID(self):
+        if self.disconnected:
+            raise DeadReferenceError("Calling Stale Broker")
         self.currentRequestID = self.currentRequestID + 1
         return self.currentRequestID
 
@@ -812,3 +830,135 @@ class Broker(banana.BaseBanana):
         assert self.activeLocalCalls[reqID]
         self.send(ErrorSlicer(reqID, f))
         del self.activeLocalCalls[reqID]
+
+import debug
+class LoggingBroker(debug.LoggingBananaMixin, Broker):
+    pass
+
+class PBServerFactory(protocol.ServerFactory):
+    
+    protocol = Broker
+    #protocol = LoggingBroker
+
+    def __init__(self, root, unsafeTracebacks=True):
+        self.localObjects = {}
+        self.registerReferenceable("", root) # TODO: use IReferenceable(root)
+        self.unsafeTracebacks = unsafeTracebacks
+
+    def clientConnectionMade(self, broker):
+        # dummy because Brokers always call them
+        pass
+
+    def buildProtocol(self, addr):
+        """Return a Broker attached to me (as the service provider).
+        """
+        #print "building protocol"
+        proto = self.protocol()
+        #proto.doLog = " s"
+        proto.factory = self
+        proto.unsafeTracebacks = self.unsafeTracebacks
+        return proto
+
+    def registerReferenceable(self, name, obj):
+        self.localObjects[name] = obj
+    def getReferenceable(self, name):
+        return self.localObjects.get(name, None)
+
+class PBClientFactory(protocol.ClientFactory):
+    """Client factory for PB brokers.
+
+    As with all client factories, use with reactor.connectTCP/SSL/etc..
+    getPerspective and getRootObject can be called either before or
+    after the connect.
+    """
+
+    protocol = Broker
+    #protocol = LoggingBroker
+
+    def __init__(self):
+        self._reset()
+
+    def _reset(self):
+        self.onConnect = [] # list of deferreds
+        self._broker = None
+
+    def _failAll(self, reason):
+        deferreds = self.onConnect
+        self._reset()
+        for d in deferreds:
+            d.errback(reason)
+
+    def clientConnectionFailed(self, connector, reason):
+        self._failAll(reason)
+
+    def clientConnectionLost(self, connector, reason, reconnecting=0):
+        """Reconnecting subclasses should call with reconnecting=1."""
+        if reconnecting:
+            # any pending requests will go to next connection attempt
+            # so we don't fail them.
+            self._broker = None
+        else:
+            self._failAll(reason)
+
+    def clientConnectionMade(self, broker):
+        self._broker = broker
+        #broker.doLog = "c"
+        ds = self.onConnect
+        self.onConnect = []
+        for d in ds:
+            d.callback(self._broker)
+
+    def getBroker(self):
+        if self._broker and not self._broker.disconnected:
+            return defer.succeed(self._broker)
+        d = defer.Deferred()
+        self.onConnect.append(d)
+        return d
+
+    def getObjectNamed(self, name, interfaces):
+        # If called on a dead broker, you'll get a DeadReferenceError
+        # exception.
+        for i in interfaces:
+            assert isinstance(i, flavors.RemoteInterfaceClass)
+        # create a RemoteReference
+        d = self.getBroker()
+        d.addCallback(self._getObjectNamed, name, interfaces)
+        return d
+    def _getObjectNamed(self, broker, name, interfaces):
+        return broker.remoteReferenceForName(name, interfaces)
+
+    def getRootObject(self, interfaces):
+        """Get root object of remote PB server. Assume it implements the
+        given RemoteInterfaces.
+
+        @return Deferred of the root object.
+        """
+        return self.getObjectNamed("", interfaces)
+
+    def disconnect(self):
+        """If the factory is connected, close the connection.
+
+        Note that if you set up the factory to reconnect, you will need to
+        implement extra logic to prevent automatic reconnection after this
+        is called.
+        """
+        if self._broker:
+            self._broker.transport.loseConnection()
+
+def connect(host, port):
+    f = PBClientFactory()
+    d = f.getBroker()
+    reactor.connectTCP(host, port, f)
+    return d
+
+def getRemoteURL_TCP(host, port, pathname, interface):
+    f = PBClientFactory()
+    d = f.getObjectNamed(pathname, [interface])
+    reactor.connectTCP(host, port, f)
+    return d
+
+def callRemoteURL_TCP(_host, _port, _pathname,
+                      _interface, _methodname, **args):
+    d = getRemoteURL_TCP(_host, _port, _pathname, _interface)
+    d.addCallback(lambda ref: ref.callRemote(_methodname, **args))
+    return d
