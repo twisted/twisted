@@ -73,10 +73,11 @@ class DirTestCase(unittest.TestCase):
         d = self.d
         i = iter(d)
         l = d.tell()
-        i.next()
-        i.next()
-        d.seek(l)
-        self.assertEquals(d.tell(), l)
+        v = i.next()
+        for _ in range(100):
+            d.seek(l)
+            self.assertEquals(i.next(), v)
+        self.failIfEquals(v, i.next())
 
     def testScan(self):
         d = self.d
