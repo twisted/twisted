@@ -20,6 +20,26 @@ This module implements a description mini-language for ports, and provides
 functions to parse it and to use it to directly construct appropriate
 network server services or to directly listen on them.
 
+Here are some examples::
+ >>> s=service("80", server.Site())
+ >>> s=service("tcp:80", server.site())
+ >>> s=service("tcp:80:interface=127.0.0.1", server.Site())
+ >>> s=service("ssl:443", server.Site())
+ >>> s=service("ssl:443:privateKey=mykey.pem", server.Site())
+ >>> s=service("ssl:443:privateKey=mykey.pem:certKey=cert.pem", server.Site())
+ >>> s=service("unix:/var/run/finger", FingerFactory())
+ >>> s=service("unix:/var/run/finger:mode=660", FingerFactory())
+ >>> p=listen("80", server.Site())
+ >>> p=listen("tcp:80", server.site())
+ >>> p=listen("tcp:80:interface=127.0.0.1", server.Site())
+ >>> p=listen("ssl:443", server.Site())
+ >>> p=listen("ssl:443:privateKey=mykey.pem", server.Site())
+ >>> p=listen("ssl:443:privateKey=mykey.pem:certKey=cert.pem", server.Site())
+ >>> p=listen("unix:/var/run/finger", FingerFactory())
+ >>> p=listen("unix:/var/run/finger:mode=660", FingerFactory())
+
+See specific function documentation for more information.
+
 API Stability: unstable
 
 Maintainer: U{Moshe Zadka<mailto:moshez@twistedmatrix.com>}
