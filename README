@@ -25,7 +25,8 @@ What can I do with it?
   useful application for the end-user is Twisted Web.  Twisted Web is
   a webserver, written entirely in python, which is designed to be "zero
   maintenance".  The built-in scripts are probably only appropriate for a
-  small-to-medium website, with between 1-100 users producing content; however,
+  small-to-medium website, and the server can comfortably handle 50
+  dynamic-content requests per second on middle-of-the-road hardware; however,
   since Twisted is entirely in Python, it's quite easy to script the webserver
   to do whatever you like!
 

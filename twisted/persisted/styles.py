@@ -110,3 +110,10 @@ class Ephemeral:
     This type of object is never persisted; if possible, even references to it
     are eliminated.
     """
+    def __getstate__(self):
+        print "WARNING: serializing ephemeral", self
+        return None
+
+    def __setstate__(self, state):
+        print "WARNING: unserializing ephemeral", self.__class__
+        self.__class__ = Ephemeral
