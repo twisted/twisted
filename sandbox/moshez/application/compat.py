@@ -151,7 +151,8 @@ class ServiceNetwork:
         reactor.addSystemEventTrigger('before', 'shutdown',
                                       self.app.stopService)
         if save:
-            self.app.scheduleSave()
+            reactor.addSystemEventTrigger('after', 'shutdown',
+                                           self.save, 'shutdown')
         log.callWithLogger(self, reactor.run,
                            installSignalHandlers=installSignalHandlers)
 
