@@ -155,9 +155,19 @@ to the <code class="API" base="twisted.spread.pb">PBServerFactory</code>.)</p>
 class="py-listing">QuoteReader Root object</a>
 
 <p>For examples of these, we're returning to the TwistedQuotes project
-discussed in <a href="plugin.xhtml">Writing Plugins</a>.  The root object for
+discussed in <a href="plugin.xhtml">Writing Plugins</a>. To use the
+examples in this HOWTO, we need to make a TML file to refer to our new set
+of examples:
+</p>
+
+<a href="listings/TwistedQuotes/plugins2.tml" class="py-listing">Twisted Quotes
+Plug-in registration</a>
+
+<p>
+The root object for
 TwistedQuotes is pretty small.  The only thing it needs to keep track
-of for itself is the quoter object.</p>
+of for itself is the quoter object.
+</p>
 
 <p>The QuoteReader publishes one method. By subclassing <code class="API"
 base="twisted.spread.pb">Root</code>, we are declaring that all

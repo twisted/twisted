@@ -1,0 +1,8 @@
+register("Quote of the Day TAP Builder",
+         "TwistedQuotes.quotetap2",
+         description="""
+         Example of a TAP builder module.
+         """,
+         type="tap",
+         tapname="qotd")
+
