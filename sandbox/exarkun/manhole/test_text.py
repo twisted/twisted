@@ -46,3 +46,10 @@ class Serialization(unittest.TestCase):
                 A.bold[A.reverseVideo['Hello, ', A.normal['world'], '.']],
                 self.attrs),
             '\x1b[1;7mHello, \x1b[0mworld\x1b[1;7m.')
+
+    def testMinus(self):
+        self.assertEquals(
+            text.flatten(
+                A.bold[A.blink['Hello', -A.bold[' world'], '.']],
+                self.attrs),
+            '\x1b[1;5mHello\x1b[0;5m world\x1b[1;5m.')

@@ -46,16 +46,15 @@ class _OtherAttr(_Attribute):
         self.children = []
 
     def __neg__(self):
-        return _OtherAttr(self.attrname, not self.attrvalue)
+        result = _OtherAttr(self.attrname, not self.attrvalue)
+        result.children.extend(self.children)
+        return result
 
     def serialize(self, write, attrs):
-        if getattr(attrs, self.attrname) and not self.attrvalue:
-            # We have to turn everything off, then turn back on everything
-            # except this one attribute.
-            setattr(attrs, self.attrname, False)
-        elif not getattr(attrs, self.attrname) and self.attrvalue:
-            # We just need to turn on one little thing.
+        if self.attrvalue:
             setattr(attrs, self.attrname, True)
+        else:
+            setattr(attrs, self.attrname, False)
         super(_OtherAttr, self).serialize(write, attrs)
 
 class _ForegroundColorAttr(_Attribute):
