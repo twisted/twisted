@@ -57,3 +57,7 @@ class DistribTest(unittest.TestCase):
         res = util.wait(d, timeout=1.0)
         self.failUnlessEqual(res, "root")
 
+        # A bit of a hack: force the pb client to disconnect, for cleanup
+        # purposes.
+        sub.publisher.broker.transport.loseConnection()
+
