@@ -446,7 +446,7 @@ class SSHTransportTestCase(unittest.TestCase):
     def testOurServerOpenSSHClient(self):
         """test the SSH server against the OpenSSH client
         """
-        cmdline = '/usr/bin/ssh -l testuser -p %i -oUserKnownHostsFile=kh_test -oPasswordAuthentication=no -i dsa_test localhost echo hello'
+        cmdline = 'ssh -l testuser -p %i -oUserKnownHostsFile=kh_test -oPasswordAuthentication=no -i dsa_test localhost echo hello'
         global theTest
         theTest = self
         auth = ConchTestAuthorizer()
@@ -458,9 +458,16 @@ class SSHTransportTestCase(unittest.TestCase):
         theTest.fac = fac
         host = reactor.listenTCP(0, fac).getHost()
         port = host[2]
+        ssh_path = None
+        for p in ['/usr/local', '/usr', '']:
+            if os.path.exists(p+'/bin/ssh'):
+                ssh_path = p+'/bin/ssh'
+                break
+        if not ssh_path:
+            log.msg('skipping test, cannot find ssh')
         cmds = (cmdline % port).split()
         p = SSHTestOpenSSHProcess()
-        reactor.spawnProcess(p, 'ssh', cmds)
+        reactor.spawnProcess(p, ssh_path, cmds)
         reactor.run()
         # wait for process to finish
         while not p.done:
