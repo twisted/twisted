@@ -62,6 +62,8 @@ from twisted.python import text
 from twisted.lore.latex import BaseLatexSpitter, LatexSpitter, processFile, \
                                getLatexText, HeadingLatexSpitter
 from twisted.lore.tree import getHeaders
+from tree import removeH1, fixAPI, fontifyPython, \
+                     addPyListings, addHTMLListings, setTitle
 
 import os, os.path, re
 from cStringIO import StringIO
@@ -245,11 +247,8 @@ class HTMLSlide:
 
 def munge(document, template, linkrel, d, fullpath, ext, url, config):
     # FIXME: This has *way* to much duplicated crap in common with tree.munge
-    from tree import removeH1, expandAPI, fixAPI, fontifyPython, \
-                     addPyListings, addHTMLListings, setTitle
     #fixRelativeLinks(template, linkrel)
     removeH1(document)
-    expandAPI(document)
     fixAPI(document, url)
     fontifyPython(document)
     addPyListings(document, d)

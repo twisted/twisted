@@ -127,4 +127,10 @@ class AtLeastImportTestCase(unittest.TestCase):
         from twisted.enterprise import dbgadgets
         from twisted.enterprise import dbpassport
 
+    def test_lore(self):
+        from twisted.lore import tree
+        from twisted.lore import latex
+        from twisted.lore import slides
+        from twisted.lore import lmath
+
 testCases = [AtLeastImportTestCase]
