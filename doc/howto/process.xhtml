@@ -257,16 +257,21 @@ Main loop terminated.
 
 <h2>Doing it the Easy Way</h2>
 
-<p>Frequently, one just need a simple way to get all the output from a
-program. For those cases, the 
-<code class="API">twisted.internet.utils.getProcessOutput</code>
+<p>Frequently, one just needs a simple way to get all the output from a
+program. In the blocking world, you might use <code
+class="python">commands.getoutput</code> from the standard library, but
+using that in an event-driven program will cause everything else to stall
+until the command finishes. (in addition, the SIGCHLD handler used by that
+function does not play well with Twisted's own signal handling). For these
+cases, the <code class="API">twisted.internet.utils.getProcessOutput</code>
 function can be used. Here is a simple example:</p>
 
 <a href="listings/process/quotes.py" class="py-listing">quotes.py</a>
 
-<p>If you need to get just the final exit code, the 
-<code class="API">twisted.internet.utils.getProcessValue</code>
-function is useful. Here is an example:</p>
+<p>If you only need the final exit code (like <code
+class="python">commands.getstatusoutput(cmd)[0]</code>), the <code
+class="API">twisted.internet.utils.getProcessValue</code> function is
+useful. Here is an example:</p>
 
 <a href="listings/process/trueandfalse.py" class="py-listing">trueandfalse.py</a>
 
