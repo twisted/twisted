@@ -31,7 +31,6 @@ from twisted.python import log, components
 import jdftp as ftp
 import jdftp
 from jdftp import DTPFactory
-from twisted.protocols.ftp import FTPClient
 
 class NonClosingStringIO(StringIO):
     def close(self):
@@ -220,7 +219,7 @@ class ServerFactoryForTest(protocol.Factory):
         self.instances = []
         self.portal = portal
     
-class DummyClient(basic.LineReceiver):
+class Dummy(basic.LineReceiver):
     logname = None
     def __init__(self):
         self.lines = []
@@ -245,7 +244,7 @@ class ConnectedFTPServer(object):
     def __init__(self):
         self.deferred = defer.Deferred()
         s = ftp.FTP()
-        c = DummyClient()
+        c = Dummy()
         c.logname = 'ftp-pi'
         self.cio, self.sio = NonClosingStringIO(), NonClosingStringIO()
         s.factory = ServerFactoryForTest(getPortal())
@@ -253,7 +252,7 @@ class ConnectedFTPServer(object):
         s.factory.dtpTimeout = None
 
         c.factory = protocol.ClientFactory()
-        c.factory.protocol = DummyClient
+        c.factory.protocol = Dummy
 
         c.makeConnection(CustomFileWrapper(self.cio))
         s.makeConnection(CustomFileWrapper(self.sio))
@@ -277,10 +276,10 @@ class ConnectedFTPServer(object):
 
         ds.makeConnection(CustomFileWrapper(self.dsio))
         
-        dc = DummyClient()
+        dc = Dummy()
         dc.logname = 'ftp-dtp'
         dc.factory = protocol.ClientFactory()
-        dc.factory.protocol = DummyClient
+        dc.factory.protocol = Dummy
         dc.setRawMode()
         del dc.lines
         dc.makeConnection(CustomFileWrapper(self.dcio))
@@ -379,23 +378,27 @@ class BogusAvatar(object):
 
     def retr(self, path=None):
         log.debug('BogusAvatar.retr')
-        
-        self.path = path
-        
-        if self.filesize is not None:
-            size = self.filesize
-        else:
-            size = bogusfiles[0]['size']
 
-        endln = ['\r','\n']
-        text = []
-        for n in xrange(size/26):
-            line = [chr(x) for x in xrange(97,123)]
-            line.extend(endln)
-            text.extend(line)
-        
-        del text[(size - 2):]
-        text.extend(endln)
+        if path == 'ASCII':
+            text = """this is a line with a dos terminator\r\n
+this is a line with a unix terminator\n"""
+        else:
+            self.path = path
+            
+            if self.filesize is not None:   # self.filesize is used in the sanity check
+                size = self.filesize
+            else:
+                size = bogusfiles[0]['size']
+
+            endln = ['\r','\n']
+            text = []
+            for n in xrange(size/26):
+                line = [chr(x) for x in xrange(97,123)]
+                line.extend(endln)
+                text.extend(line)
+            
+            del text[(size - 2):]
+            text.extend(endln)
         
         sio = NonClosingStringIO(''.join(text))
         self.finalFileSize = len(sio.getvalue())
@@ -424,7 +427,6 @@ class BogusAvatar(object):
     def nlist(self, path):
         pass
 
-
 class FTPTestCase(unittest.TestCase):
     def setUp(self):
         self.cnx = ConnectedFTPServer()
@@ -440,6 +442,7 @@ class TestUtilityFunctions(unittest.TestCase):
         evil_paths = [r"..\/*/foobar/ding//dong/\\**"]
         for ep in evil_paths:
             log.msg(ftp.cleanPath(ep))
+        self.fail('this test needs more work')
 
 TestUtilityFunctions.todo = 'workin on it'
     
@@ -449,8 +452,10 @@ class TestFTPFactory(FTPTestCase):
         ftpf = ftp.FTPFactory()
         cinum = ftpf.currentInstanceNum
         p = ftpf.buildProtocol(('i', None, 30000))
-        self.failUnless(components.implements(ftpf, interfaces.IProtocolFactory))
-        self.failUnless(components.implements(p, interfaces.IProtocol))
+        self.failUnless(components.implements(ftpf, interfaces.IProtocolFactory), 
+                "FTPFactory does not implement interfaces.IProtocolFactory")
+        self.failUnless(components.implements(p, interfaces.IProtocol),
+                "protocol instance does not implement interfaces.IProtocol")
 
         self.failUnlessEqual(p.protocol, ftpf.protocol)
         self.failUnlessEqual(p.protocol, ftp.FTP)
@@ -463,7 +468,6 @@ class TestFTPFactory(FTPTestCase):
         self.failUnlessEqual(p.instanceNum, ftpf.currentInstanceNum)
         self.failUnlessEqual(len(ftpf.instances), 1)
         self.failUnlessEqual(ftpf.instances[0], p)
-
         
 class TestFTPServer(FTPTestCase):
     def testNotLoggedInReply(self):
@@ -474,7 +478,6 @@ class TestFTPServer(FTPTestCase):
             send(cmd)
             self.failUnless(cli.lines > 0)
             self.assertEqual(cli.lines[-1], ftp.RESPONSE[ftp.NOT_LOGGED_IN])
-    
 
     def testBadCmdSequenceReply(self):
         cli, sr, iop, send = self.cnx.getCSTuple()
@@ -482,7 +485,6 @@ class TestFTPServer(FTPTestCase):
         self.failUnless(cli.lines > 0)
         self.assertEqual(cli.lines[-1], 
                 ftp.RESPONSE[ftp.BAD_CMD_SEQ] % 'USER required before PASS')
-
 
     def testBadCmdSequenceReplyPartTwo(self):
         cli, sr, iop, send = self.cnx.getCSTuple()
@@ -509,7 +511,6 @@ class TestFTPServer(FTPTestCase):
         reply = cli.lines[-1]
         self.assert_(re.search(r'227 =.*,[0-2]?[0-9]?[0-9],[0-2]?[0-9]?[0-9]',cli.lines[-1]))
 
-
     def testTYPE(self):
         cli, sr, iop, send = self.cnx.getCSTuple()
         self.cnx.loadAvatar()
@@ -529,16 +530,24 @@ class TestFTPServer(FTPTestCase):
         self.cnx.hookUpDTP()
         dc, ds, diop = self.cnx.getDtpCSTuple()
         sr.dtpTxfrMode = ftp.PASV
+
+        sr.ftp_TYPE('A')        # set ascii mode
+        self.assertEquals(self.cnx.s.binary, False)
+
         iop.flush()
         diop.flush()
         log.debug('flushed buffers, about to run RETR')
-        sr.ftp_RETR('/home/foo/foo.txt')
+        sr.ftp_RETR('ASCII')
         iop.flush()
         diop.flush()
-        log.debug(dc.rawData)
         self.failUnless(len(dc.rawData) >= 1)
+        log.msg(dc.rawData)
+        rx = ''.join(dc.rawData)
+        log.msg(rx)
+        self.failUnlessEqual(rx.count('\r\n'), 2, "more than 2 \\r\\n's ")
+        self.fail('test is not complete')
 
-    #testTYPE.todo = 'ask someone about how to test if binary/ascii is working properly'
+    testTYPE.todo = 'rework tests to make sure only binary is supported'
 
     def testRETR(self):
         cli, sr, iop, send = self.cnx.getCSTuple()
@@ -563,7 +572,8 @@ class TestFTPServer(FTPTestCase):
         log.msg('dc.rawData: %s' % dc.rawData)
         self.assert_(len(dc.rawData) >= 1)
         self.failUnlessEqual(avatar.path, filename)
-        self.failUnlessEqual(''.join(dc.rawData), avatar.sentfile.getvalue())
+        rx = ''.join(dc.rawData)
+        self.failUnlessEqual(rx, avatar.sentfile.getvalue())
         
     #testRETR.todo = 'not quite there yet'
 
@@ -636,5 +646,91 @@ class TestDTPTesting(FTPTestCase):
         self.assertEquals(lenRxLines, avatar.finalFileSize)
 
 
+# --- Client Tests -------------------------------------------
+
+
+
+
+class ConnectedFTPClient(object):
+    c    = None
+    s    = None
+    iop  = None
+    dc   = None
+    ds   = None
+    diop = None
+
+    def __init__(self):
+        self.deferred = defer.Deferred()
+        s = Dummy()
+        c = ftp.FTPClient()
+
+        self.cio, self.sio = NonClosingStringIO(), NonClosingStringIO()
+        s.factory = protocol.ServerFactory()
+
+        c.factory = protocol.ClientFactory()
+        c.factory.maxProtocolInstances = 100000
+        c.factory.protocol = ftp.FTPClient
+
+        c.makeConnection(CustomFileWrapper(self.cio))
+        s.makeConnection(CustomFileWrapper(self.sio))
+
+        iop = IOPump(c, s, self.cio, self.sio)
+        self.c, self.s, self.iop = c, s, iop
+
+    def hookUpDTP(self):
+        raise NotImplementedException("don't do that, we're not ready")
+        log.debug('hooking up dtp')
+        self.dcio, self.dsio = NonClosingStringIO(), NonClosingStringIO()
+
+        ds = Dummy()
+        ds.pi = self.s
+
+        ds.factory = protocol.ServerFactory()
+        self.s.dtpFactory = ds.factory
+
+        ds.makeConnection(CustomFileWrapper(self.dsio))
+        
+        dc = DTP()
+        dc.logname = 'ftp-dtp'
+        dc.factory = protocol.ClientFactory()
+        dc.factory.protocol = Dummy
+        dc.setRawMode()
+        del dc.lines
+        dc.makeConnection(CustomFileWrapper(self.dcio))
+
+        iop = IOPump(dc, ds, self.dcio, self.dsio)
+        self.dc, self.ds, self.diop = dc, ds, iop
+        log.debug('flushing pi buffer')
+        self.iop.flush()
+        log.debug('hooked up dtp')
+        return
+
+    def getCSTuple(self):
+        return (self.c, self.s, self.iop)
+
+
+class FTPClientTestCase(unittest.TestCase):
+    def setUp(self):
+        self.cnx = ConnectedFTPClient()
+
+    def tearDown(self):
+        delayeds = reactor.getDelayedCalls()
+        for d in delayeds:
+            d.cancel()
+        self.cnx = None
+ 
+
+class TestFTPClient:#(FTPClientTestCase):
+    def testSanity(self):
+        pass
+
+    def testSendLine(self):
+        # more of a sanity check
+        c, s, iop = self.cnx.getCSTuple()
+        c.sendLine('test')
+        iop.flush()
+        self.assertEquals(s.lines[-1], 'test')
+    
+    
 
 
