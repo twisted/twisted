@@ -155,6 +155,18 @@ Running Servers
 
     % kill `cat twistd.pid`
 
+Configuring Servers
+
+  Once you've created a tap file, you can use a browser based interface to
+  configure it. Run this command::
+  
+    % coil [application name].tap
+
+  And then point your browser to http://localhost:9080 to see the config
+  interface. Once you've finished configuring the server, hit Ctrl-C in the
+  terminal where you run coil in order to shutdown the web server and save
+  your changes.
+
 "Spreadable" Webserver
 
   The web server can also host a telnet server as well as other services;
