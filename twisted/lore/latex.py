@@ -39,6 +39,14 @@ def getLatexText(node, writer, filter=lambda x:x):
     for child in node.childNodes :
         getLatexText(child, writer, filter)
 
+def getParents(node):
+    l = []
+    while node:
+        l.append(node)
+        node = node.parentNode
+    return l
+
+
 class LatexSpitter:
 
     baseLevel = 0
@@ -50,8 +58,22 @@ class LatexSpitter:
 
     def visitNode(self, node):
         if not hasattr(node, 'tagName'):
-            getLatexText(node, self.writer, latexEscape)
+            # Extract the text from this node
+            buf = StringIO()
+            getLatexText(node, buf.write, latexEscape)
+
+            # HACK: Check that we aren't inside a <code> or a <pre> tag
+            parents = getParents(node.parentNode)[:-1]
+            text = buf.getvalue()
+            if not filter(lambda n: n.tagName in ('pre', 'code'), parents):
+                # If we aren't in a <code> or a <pre>,
+                # then we need to escape "<" and ">"
+                text = text.replace('<', '$<$').replace('>', '$>$')
+
+            # Write the text
+            self.writer(text)
             return
+
         m = getattr(self, 'visitNode_'+node.tagName, self.visitNodeDefault)
         m(node)
 
