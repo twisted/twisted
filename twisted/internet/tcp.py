@@ -422,6 +422,10 @@ class Port(abstract.FileDescriptor):
                 # in an iteration of the event loop.
                 numAccepts = 1
             for i in range(numAccepts):
+                # we need this so we can deal with a factory's buildProtocol
+                # calling our loseConnection
+                if self.disconnecting:
+                    return
                 try:
                     skt,addr = self.socket.accept()
                 except socket.error, e:
@@ -452,11 +456,9 @@ class Port(abstract.FileDescriptor):
 
         This will shut down my socket and call self.connectionLost().
         """
-        # Since ports can't, by definition, write any data, we can just close
-        # instantly (no need for the more complex stuff for selectables which
-        # write)
+        self.disconnecting = 1
         self.stopReading()
-        self.connectionLost()
+        task.schedule(self.connectionLost)
 
     def connectionLost(self):
         """Cleans up my socket.
