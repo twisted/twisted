@@ -6,7 +6,14 @@ from twisted.web.resource import Resource
 from twisted.internet import defer
 from twisted.web.error import Error, ErrorPage
 import md5, time, random
-    
+   
+AuthenticationErrorPage = ErrorPage(401,'Authentication Required',"""
+This server could not verify that you are authorized to access 
+the document you requested.  Either you supplied the wrong 
+credentials (e.g., bad password), or your browser doesn't 
+understand how to supply the credentials required.
+""")
+
 def digestPassword(username, realm, password):
     return md5.md5("%s:%s:%s" % (username,realm,password)).hexdigest()
 
@@ -30,7 +37,7 @@ class DigestAuthenticator:
         self.nonce[nonce] = 0
         request.setResponseCode(401)
 
-    def compute(self, request, ha1, method, uri, nonce, nc, 
+    def compute(self, request, ha1, username, method, uri, nonce, nc, 
                 cnonce, qop, response):
         if not ha1:
             self.requestAuthentication(request)
@@ -51,7 +58,7 @@ class DigestAuthenticator:
             self.requestAuthentication(request, stale = True)
             return
         self.nonce[nonce] = nc
-        return True
+        return username
     
     def authenticate(self, request):
         method = request.method
@@ -61,7 +68,9 @@ class DigestAuthenticator:
             return defer.succeed(False)
         (authtype, auth) = auth.split(" ", 1)
         if 'Digest' != authtype:
-            raise Error(400,"unknown authorization type")
+            # is not there a better way to wrap an exception?
+            return defer.fail(defer.failure.Failure(
+                     Error(400,"unknown authorization type")))
         amap = {}
         for itm in auth.split(", "):
             (k,v) = [s.strip() for s in itm.split("=",1)]
@@ -73,7 +82,6 @@ class DigestAuthenticator:
             realm    = amap['realm']
             response = amap['response']
             assert uri == request.uri
-            assert realm == self.realm
             qop      = amap.get('qop','')
             cnonce   = amap.get('cnonce','')
             nc       = amap.get('nc','00000000')
@@ -81,10 +89,11 @@ class DigestAuthenticator:
                 assert 'auth' == qop
                 assert nonce and nc
         except:
-            raise Error(400,"malformed credentials")
+            return defer.fail(defer.failure.Failure(
+                     Error(400,"mailformed credentials")))
         d = defer.maybeDeferred(self.userfunc,realm,username)
-        d.addCallback(lambda ha1: self.compute(request,ha1,method,uri,
-                                      nonce,nc,cnonce,qop,response))
+        d.addCallback(lambda ha1: self.compute(request,ha1,username,method,
+                                      uri,nonce,nc,cnonce,qop,response))
         return d
     
     __call__ = authenticate
@@ -93,14 +102,7 @@ class DigestResource(Resource):
     def __init__(self, realm, userfunc, authpage = None):
         Resource.__init__(self)
         self.__authenticate = DigestAuthenticator(realm, userfunc)
-        self.__authpage = authpage or \
-            ErrorPage(401,'Authentication Required',
-              "This server could not verify that you "
-              "are authorized to access the document you "
-              "requested.  Either you supplied the wrong "
-              "credentials (e.g., bad password), or your "
-              "browser doesn't understand how to supply "
-              "the credentials required.")
+        self.__authpage = authpage or AuthenticationErrorPage
 
     def getChildWithDefault(self,path,request):
         d = self.__authenticate(request)
