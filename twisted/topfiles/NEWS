@@ -52,8 +52,8 @@ twisted.internet
  - gtk2reactor notifies gobject to initialize thread support
  - Fix registering a streaming producer on a transport.
  - Close client sockets explicitly after failed connections.
- - ReconnectingClientFactory now continues attempting to reconnect after
-   connection timeout errors.
+ - ReconnectingClientFactory now continues attempting to reconnect after all
+   errors, not just those which are not UserErrors.
 
 twisted.protocols
 -----------------
