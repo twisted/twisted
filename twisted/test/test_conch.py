@@ -16,7 +16,7 @@
 
 from __future__ import nested_scopes
 import os, struct, sys
-from twisted.conch import identity, error, checkers
+from twisted.conch import error, checkers
 from twisted.conch.ssh import keys, transport, factory, userauth, connection, common, session,channel
 from twisted.cred import portal
 from twisted.cred.credentials import IUsernamePassword
@@ -486,7 +486,7 @@ class SSHTransportTestCase(unittest.TestCase):
         fac.portal = p
         theTest.fac = fac
         self.server = reactor.listenTCP(0, fac, interface="127.0.0.1")
-        port = self.server.getHost()[2]
+        port = self.server.getHost().port
         cfac = SSHTestClientFactory()
         def _failTest():
             reactor.crash()
@@ -532,7 +532,7 @@ class SSHTransportTestCase(unittest.TestCase):
         fac.portal = p
         theTest.fac = fac
         self.server = reactor.listenTCP(0, fac, interface="127.0.0.1")
-        port = self.server.getHost()[2]
+        port = self.server.getHost().port
         ssh_path = None
         for p in ['/usr', '', '/usr/local']:
             if os.path.exists(p+'/bin/ssh'):
