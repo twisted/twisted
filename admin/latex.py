@@ -5,7 +5,8 @@ import os
 
 class LatexSpitter(XMLParser):
 
-    entities = { 'amp': '&', 'gt': '>', 'lt': '<', 'quot': '"', 'copy': '(C)'}
+    entities = { 'amp': '&', 'gt': '>', 'lt': '<', 'quot': '"',
+                 'copy': '\\copyright'}
 
     ignoring = 0
     normalizing = 1
