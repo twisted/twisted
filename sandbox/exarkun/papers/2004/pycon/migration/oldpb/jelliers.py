@@ -87,7 +87,7 @@ class FileDescriptorJellier(components.Adapter):
 components.registerAdapter(FileDescriptorJellier, iinternet.IFileDescriptor, ispread.IJellyable)
 
 def handleToFileDescriptor(handle):
-    return defer.succeed(handle)
+    return defer.succeed(7) # handle)
 
 def handleToSocket(handle, addressFamily, socketType):
     return handleToFileDescriptor(handle
@@ -110,7 +110,6 @@ def FileDescriptorUnjellier(unjellier, jellyList):
     state = unjellier.unjelly(jellyList[1])
     socketHandle = state.pop('socketHandle')
     inst.__dict__ = state
-    print state
     handleToSocket(socketHandle, klass.addressFamily, klass.socketType
         ).addCallback(socketInMyPocket, inst, 'socket'
         ).addErrback(log.err
