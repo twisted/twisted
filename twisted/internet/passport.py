@@ -256,15 +256,6 @@ class Identity:
         """
         self.keyring[(serviceName, perspectiveName)] = 1
 
-    def getPerspectiveForKey(self, serviceName, perspectiveName):
-        """Get a perspective for the given key.
-
-        If this identity does not have access to the given (serviceName,
-        perspectiveName) pair, I will raise KeyError.
-        """
-        check = self.keyring[(serviceName, perspectiveName)]
-        return self.application.getServiceNamed(serviceName).authorizedPerspective(perspectiveName)
-
     def requestPerspectiveForKey(self, serviceName, perspectiveName):
         """Get a perspective for the given key.
 
