@@ -1,10 +1,10 @@
 
-@supported_pythons = ('py2.2', 'py2.3')
+@supported_pythons = ('py2.3', 'py2.4')  # ('py2.2', 'py2.3', 'py2.4')
 
 all: ../main.aap
     @for p in _no.supported_pythons:
-    @  for d in ['withdocs', 'nodocs']:
-        :execute ../main.aap PyVersion=$p DoDocs=$d
+        @for d in ['nodocs']:     # @  for d in ['withdocs', 'nodocs']:
+            :execute ../main.aap PyVersion=$p DoDocs=$d
     :print * Done with build.
 
 ../main.aap: main.aap

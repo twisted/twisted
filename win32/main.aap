@@ -4,47 +4,33 @@ HERE=`os.getcwd()`
 :python
     from __future__ import generators
     import winreg
-    from aapwin import quickdict, getValueFromReg, pathdb
+    from aapwin import getValueFromReg, pathdb
 
+    # sys.path.insert(0, os.path.join(os.getcwd(), 'twisted', 'topfiles'))
     sys.path.insert(0, os.getcwd())
-
-    def renderDatafilesToIss(data_files):
-        """Iterate a distutils-style data_files list, yielding strings
-        suitable for inserting into the [Files] section of a .iss
-        """
-        itemtmpl=r'Source: "%(twhome)s\%(what)s"; DestDir: "{app}\%(where)s"; Flags: ignoreversion'
-        for dirset in data_files:
-            dirname=dirset[0]
-            idct=quickdict(where=dirname, twhome=_recipe.HERE)
-            filenames=dirset[1]
-            for f in filenames:
-                normf=os.path.normpath(f)
-                i2dct=quickdict(idct, what=normf)
-                yield itemtmpl % i2dct
 
 
     def geniss(iss_template, dodocs):
         """Return the inno setup file"""
-        tdct=quickdict(setupbase=_top.setupbase, version=_top.Version,
-                       pyversion=_top.pyversion)
-        template='%(setupbase)s-%(version)s.win32-py%(pyversion)s' % tdct
+        tdct = dict(setupbase=_top.setupbase, version=_top.Version,
+                    pyversion=_top.pyversion)
+        template = '%(setupbase)s-%(version)s.win32-py%(pyversion)s' % tdct
 
         import setup
-        df=list(renderDatafilesToIss(setup.setup_args['data_files']))
-        data_files='\n'.join(df)
 
-        docdct=quickdict(pyversion=_top.pyversion, twversion=_top.Version, 
-                         twhome=_recipe.HERE, 
-                         docfile=r'Source: "%s\doc\twisteddoc.zip"; DestDir: "{app}"' % _recipe.HERE,
-                         outputbasefilename=template,
-                         datafiles=data_files,
-                         )
-        nodocdct=quickdict(docdct, docfile='')
+        docdct = dict(pyversion=_top.pyversion,
+                      pyversion10=_top.pyversion10, twversion=_top.Version, 
+                      twhome=_recipe.HERE, 
+                      docfile=r'Source: "%s\doc\twisteddoc.zip"; DestDir: "{app}"' % _recipe.HERE,
+                      outputbasefilename=template,
+                      )
+        nodocdct = docdct.copy()
+        nodocdct['docfile'] = ''
 
         if dodocs:
-            dct=docdct
+            dct = docdct
         else:
-            dct=nodocdct
+            dct = nodocdct
 
         return iss_template % dct
 
@@ -64,11 +50,18 @@ Version=`getBuildingTwistedVersion()`
 :variant PyVersion
     py2.2
         pyversion=2.2
+        pyversion10=22
         pyhome=`_no.pathdb["python22"]`
         pyexe=$(pyhome)\python.exe
     py2.3
         pyversion=2.3
+        pyversion10=23
         pyhome=`_no.pathdb["python23"]`
+        pyexe=$(pyhome)\python.exe
+    py2.4
+        pyversion=2.4
+        pyversion10=24
+        pyhome=`_no.pathdb["python24"]`
         pyexe=$(pyhome)\python.exe
 
 :variant DoDocs
@@ -87,21 +80,20 @@ all: dist/$(setupbase)-$(Version).win32-py$(pyversion).exe
 :attr {filetype = ignore} $(CSources)
 
 :syseval find twisted -name '*.py' -o -name '*.sql' -o -name '*.glade*'  | :assign TwSources
-TwSources+=twisted/plugins.tml
-           twisted/lore/template.mgp
-           twisted/test/server.pem
-           twisted/web/woven/FlashConduit*
-           twisted/web/woven/WebConduit*
-           twisted/xish/xpathparser.g
-           $(CSources)
-           win32/twisted_postinstall.py
+TwSources += twisted/lore/template.mgp
+             twisted/test/server.pem
+             twisted/web/woven/FlashConduit*
+             twisted/web/woven/WebConduit*
+             twisted/xish/xpathparser.g
+             $(CSources)
+             win32/twisted_postinstall.py
 
 # publish to sf.net
 :attr {publish=scp://shell.sf.net//home/groups/t/tw/twisted/htdocs/$(setupbase)-$(Version).win32-py$(pyversion).exe} dist/$(setupbase)-$(Version).win32-py$(pyversion).exe
 
 # only run setup.py when needed
 build/scripts-$(pyversion) build/lib.win32-$(pyversion): $TwSources
-    :sys $(pyexe) setup.py -q  clean --all build --compiler=mingw32
+    :sys $(pyexe) setup.py all -q build --compiler=mingw32 install --root=win32dist
 
 # build with inno
 ExeDeps=py$(pyversion)-$(DoDocs).iss

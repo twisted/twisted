@@ -15,11 +15,10 @@ PrivilegesRequired=admin
 UninstallFilesDir={code:pythonRegKey}
 
 [Files]
-Source: "%(twhome)s\build\lib.win32-%(pyversion)s\*.*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs
+Source: "%(twhome)s\win32dist\PYTHON%(pyversion10)s\Lib\site-packages\*.*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs
 %(docfile)s
-Source: "%(twhome)s\build\scripts-%(pyversion)s\*.*"; DestDir: "{code:pythonRegKey}\scripts"; Flags: ignoreversion recursesubdirs
+Source: "%(twhome)s\win32dist\PYTHON%(pyversion10)s\Scripts\*.*"; DestDir: "{code:pythonRegKey}\scripts"; Flags: ignoreversion recursesubdirs
 Source: "win32\twistenv.bat"; DestDir: "{app}\twisted"; Flags: ignoreversion
-%(datafiles)s
 
 [UninstallDelete]
 ; *.pyc keeps this directory around

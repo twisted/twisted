@@ -1,13 +1,5 @@
 import os.path, winreg
 
-def quickdict(initial={}, **kwargs):
-    """Return a dict with the given keys/values, initalized from initial
-    (Like python2.3's somedict.update(dict(a=..., b=...))
-    """
-    new=dict(initial)
-    new.update(kwargs)
-    return new
-
 def getValueFromReg(key, valuename, default, hive=winreg.HKLM):
     """Pass valuename=None to get the (default) value."""
     try:
@@ -50,9 +42,9 @@ innohome=getValueFromReg(r'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\I
                           r'C:\Program Files\Inno Setup 4')
 
 
-pathdb=quickdict(innohome=innohome,
-                 iscc=os.path.join(innohome, "ISCC.exe"),
-                 python22=getPythonHomeForVersion('2.2'),
-                 python23=getPythonHomeForVersion('2.3'),
-                 
-                 )
+pathdb = dict(innohome=innohome,
+              iscc=os.path.join(innohome, "ISCC.exe"),
+              python22=getPythonHomeForVersion('2.2'),
+              python23=getPythonHomeForVersion('2.3'),
+              python24=getPythonHomeForVersion('2.4'),
+              )
