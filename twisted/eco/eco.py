@@ -44,7 +44,7 @@ def evalExp(exp, env):
     if isinstance(exp, sexpy.Atom):
         return lookup(exp, env, VAR)
     elif isinstance(exp, types.ListType):
-        if exp == []:
+        if func_null(exp):
             return exp
         n = exp[0].string
         specialForm = globals().get("eval_" + n)
@@ -60,7 +60,8 @@ def evalExp(exp, env):
 
 
 globalValues = {"nil" : []}
-globalFunctions = {}
+globalFunctions =  {"+": func_add, "-": func_subtract}
+nil = []
 
 VAR = 0
 FUN = 1
@@ -76,7 +77,7 @@ def lookup(exp, env, varOrFun):
     val = None
     while 1:
         val = vars[1].get(exp)
-        if val:
+        if val is not None:
             return val
         vars = vars[0]
         if not vars:
@@ -86,9 +87,9 @@ def extendEnv(varOrFun, oldEnv, bindings):
     d = {}
     while bindings:
         k = car(car(bindings))
-        v = cadr(car(bindings))
+        v = cdr(car(bindings))
         bindings = cdr(bindings)
-        d[k.string] = evalExp(v, oldEnv)
+        d[k.string] = v
 
     if varOrFun == VAR:
         e = ((oldEnv[0], d), oldEnv[1])
@@ -110,24 +111,33 @@ class Function:
         i = 0
         crap = self.llist
         while crap:
-            #print "crap is", crap
             var = car(crap)
-            #print "binding", var, "to", args[i]
-            bindings.append([var, args[i]])
+            bindings = cons(cons(var, args[i]), bindings)
             i = i + 1
             crap = cdr(crap)
 
-        if len(args) != len(bindings):
+        if i != len(args):
             raise TypeError("Wrong number of arguments!")
-        #pprint.pprint(bindings)
-        bindings = consify(bindings)
-        #pprint.pprint(bindings)
         
-        newEnv = extendEnv(VAR, self.env, bindings)
-        #print "evaluating", self.body
+        newEnv = extendEnv(VAR, self.env, lisp_map(lambda x, env=self.env: cons(car(x), evalExp(cadr(x), env)),  bindings))
         return evalExp(self.body, newEnv)
 
+class Macro(Function):
+    def __call__(self, env, *args):
+        bindings = []
+        i = 0
+        crap = self.llist
+        while crap:
+            var = car(crap)
+            bindings = cons(cons(var, args[i]), bindings)
+            i = i + 1
+            crap = cdr(crap)
 
+        if i != len(args):
+            raise TypeError("Wrong number of arguments!")
+        newEnv = extendEnv(VAR, self.env, bindings)
+        boz = evalExp(self.body, newEnv)
+        return evalExp(boz, env)
 
 ### Dispatched stuff.
 
@@ -138,27 +148,26 @@ class Function:
 eval_fn = Function
 
 def eval_apply(exp, env):
-    #lookup order: python-defined functions, eco-defined functions.
-    evaledList = []
+    #lookup order: python-defined functions, eco-defined functions/macros.
+    argVec = []
     args = cdr(exp)
-    while args:
-        evaledList.append(evalExp(car(args), env))
-        args = cdr(args)
-        
-    funkyDict = {"+": func_add, "-": func_subtract}
     name = car(exp).string
-    
+    while args:
+        argVec.append(car(args))
+        args = cdr(args)
     global_fun = globals().get('func_' + name)
-    funky_fun = funkyDict.get(name)
+
     try:
         local_fun = lookup(name, env, FUN)
     except NameError:
         local_fun = None
 
-    f = global_fun or funky_fun or local_fun
+    f = global_fun or local_fun
     if f:
-        return apply(f,
-                     evaledList)
+        if isinstance(f, Macro):
+            return apply(f, (env,) + tuple(argVec))
+        else:
+            return apply(f, map(lambda x, env=env: evalExp(x, env), argVec))
     else:
         raise NameError("No callable named %s" % name)
 
@@ -172,9 +181,30 @@ def eval_if(exp, env):
     else:
         return evalExp(els, env)
 
+def eval_quote(exp, env):
+    return car(exp)
 
+def eval_backquote(exp, env):
+    return func_mapcan(lambda x, env=env: backquotize(x, env), car(exp))
+
+def backquotize(exp, env):
+    if func_consp(exp):
+        if isinstance(car(exp), sexpy.Atom):
+            if car(exp).string == "unquote":
+                return func_list(evalExp(cadr(exp), env))
+            elif car(exp).string == "unquote-splice":
+                return evalExp(cadr(exp), env)
+            elif car(exp).string == "backquote":
+                return func_list(exp)
+            else:
+                return func_list(eval_backquote(func_list(exp), env))
+        else:
+            return func_list(eval_backquote(func_list(exp), env))
+    else:
+        return func_list(exp)
+            
 def eval_let(exp, env):
-    newEnv = extendEnv(VAR, env, car(exp))
+    newEnv = extendEnv(VAR, env, lisp_map(lambda x, env=env: cons(car(x), evalExp(cadr(x), env)), car(exp)))
     exp = cdr(exp)
     while exp:
         rv = evalExp(car(exp), newEnv)
@@ -189,15 +219,24 @@ def eval_def(exp, env):
 def def_fn(name, forms, env):
     globalFunctions[name] = Function(forms, env)
 
+def def_macro(name, forms, env):
+    globalFunctions[name] = Macro(forms, env)
 
 
 ## python-defined functions
 
 def func_map(fun, list):
     if list:
-        return [fun(car(list)), func_map(fun, cdr(list))]
+        return cons(fun(car(list)), func_map(fun, cdr(list)))
     else:
-        return []
+        return nil
+def func_mapcan(fun, list):
+    if list:
+        output = []
+        while list != nil:
+            output.append(fun(car(list)))
+            list = cdr(list)
+        return apply(func_nconc, output)
 
 def func_reduce(fun, list):
     if not list:
@@ -230,6 +269,7 @@ def cadr(x):
     return x[1][0]
 func_cadr = cadr
 
+
 def caddr(x):
     return x[1][1][0]
 func_caddr = caddr
@@ -237,8 +277,6 @@ func_caddr = caddr
 def cddr(x):
     return x[1][1]
 func_cddr = cddr
-
-
 
 def func_eq(a, b):
     return a == b
@@ -252,6 +290,10 @@ def func_add(*exp):
 def func_and(*exp):
     return reduce(operator.__and__, exp)
 
+def func_consp(exp):
+    return isinstance(exp, types.ListType) and len(exp) == 2 
+cons = func_cons
+
 def func_or(*exp):
     return reduce(operator.__or__, exp)
 
@@ -260,6 +302,12 @@ def func_not(a):
 
 def func_cons(car, cdr):
     return [car, cdr]
+
+def func_setcar(lst, newcar):
+    lst[0] = newcar
+
+def func_setcdr(lst, newcdr):
+    lst[1] = newcdr
 
 def func_list(*exp):
     head = lispList = []
@@ -270,6 +318,50 @@ def func_list(*exp):
         lispList = newLispList
     return head
 
+def func_nconc(*lists):
+    top = apply(func_list, lists)
+    while 1:
+        if not top:
+            return nil        
+        top_of_top = car(top)
+        if func_consp(top_of_top):
+            elements = cdr(top)
+            splice = top_of_top
+            while 1:
+                if not elements:
+                    break
+                ele = car(elements)
+                if func_consp(ele):
+                    func_setcdr(func_last(splice), ele)
+                    splice = ele
+                elif func_null(ele):
+                    func_setcdr(func_last(splice), ele)
+                else:
+                    if cdr(elements):
+                        raise "argument is not a list"
+                    else:
+                        func_setcdr(func_last(splice), ele)
+                    
+                elements = cdr(elements)
+            return top_of_top
+        elif func_null(top_of_top):
+            return nil
+        else:
+            if cdr(top):
+                raise "argument is not a list"
+            else:
+                return top_of_top            
+    top = cdr(top)
+
+def func_null(exp):
+    return exp == []
+
+def func_last(lst):
+    if func_null(cdr(lst)):
+        return lst
+    else:
+        return func_last(cdr(lst))
+    
 def func_subtract(*exp):
     return reduce(operator.sub, exp)
 

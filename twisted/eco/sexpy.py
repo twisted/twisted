@@ -117,12 +117,14 @@ class SymbolicExpressionReceiver(protocol.Protocol):
 
     def closeParen(self):
         aList = self.listStack.pop()
-        if not self.listStack:
-            for i in range(len(self.quotes)):
-                if aList is self.quotes[i][1]:
-                    self.listStack.pop()
-                    del self.quotes[i]
-                    break
+        for i in range(len(self.quotes)):
+            if aList is self.quotes[i][1]:                
+                del self.quotes[i]
+                i = self.listStack.pop()
+                if not self.listStack:
+                    self._sexpRecv(i)
+                break
+        if not self.listStack:                
             self._sexpRecv(aList)
 
     def _tokenReceived(self, tok):
@@ -131,9 +133,12 @@ class SymbolicExpressionReceiver(protocol.Protocol):
             self.listStack[-1].append(tok)
             if self.quotes and self.listStack[-1] is self.quotes[-1]:
                 del self.quotes[-1]
-                self.listStack.pop()
+                i = self.listStack.pop()
+                if not self.listStack:
+                    self._sexpRecv(i)
         else:
-            self._sexpRecv(tok)
+                self._sexpRecv(tok)
+
 
     def _sexpRecv(self, xp):
         self.symbolicExpressionReceived(xp)
@@ -179,7 +184,7 @@ class SymbolicExpressionReceiver(protocol.Protocol):
                     buffer = buffer[1:]
                 continue
             if buffer[0] == "'":
-                self.openQuote(Atom("quote"))
+                self.openQuote("quote")
                 buffer = buffer[1:]
                 continue
             m = STRING.match(buffer)
