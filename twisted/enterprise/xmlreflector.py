@@ -46,7 +46,8 @@ class XMLReflector(reflector.Reflector):
         try:
             os.mkdir(baseDir)
         except OSError, e:
-            print "Base Directory %s already exists" % baseDir
+            #print "Base Directory %s already exists" % baseDir
+            pass
         self.tableDirs = {}
         reflector.Reflector.__init__(self, rowClasses, populatedCallback)        
 
@@ -59,7 +60,8 @@ class XMLReflector(reflector.Reflector):
             try:
                 os.mkdir(newDir)
             except OSError, e:
-                print "Directory %s already exists." % newDir
+                #print "Directory %s already exists." % newDir
+                pass
 
             tableInfo = _TableInfo(rc)
             self.populateSchemaFor(tableInfo)
