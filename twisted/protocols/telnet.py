@@ -218,8 +218,11 @@ class Telnet(protocol.Protocol):
     def processLine(self, line):
         """I call a method that looks like 'telnet_*' where '*' is filled
         in by the current mode. telnet_* methods should return a string which
-        will become the new mode."""
-        self.mode = getattr(self, "telnet_"+self.mode)(line)
+        will become the new mode.  If None is returned, the mode will not change.
+        """
+        mode = getattr(self, "telnet_"+self.mode)(line)
+        if mode is not None:
+            self.mode = mode
 
     def telnet_User(self, user):
         """I take a username, set it to the 'self.username' attribute,
