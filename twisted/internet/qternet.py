@@ -46,8 +46,9 @@ hasWriter = writes.has_key
 class TwistedSocketNotifier(QSocketNotifier):
     '''Connection between an fd event and reader/writer callbacks'''
 
-    def __init__(self, watcher, type):
+    def __init__(self, reactor, watcher, type):
         QSocketNotifier.__init__(self, watcher.fileno(), type)
+        self.reactor = reactor
         self.watcher = watcher
         self.fn = None
         if type == QSocketNotifier.Read:
@@ -75,9 +76,9 @@ class TwistedSocketNotifier(QSocketNotifier):
                 w.connectionLost()
             except:
                 log.deferr()
-            removeReader(w)
-            removeWriter(w)
-        simulate()
+            self.reactor.removeReader(w)
+            self.reactor.removeWriter(w)
+        self.reactor.simulate()
 
     def write(self, sock):
         why = None
@@ -94,11 +95,11 @@ class TwistedSocketNotifier(QSocketNotifier):
                 w.connectionLost()
             except:
                 log.deferr()
-            removeReader(w)
-            removeWriter(w)
+            self.reactor.removeReader(w)
+            self.reactor.removeWriter(w)
         else:
             self.setEnabled(1)
-        simulate()
+        self.reactor.simulate()
 
 
 # global timer
@@ -110,11 +111,11 @@ class QTReactor(default.PosixReactorBase):
 
     def addReader(self, reader):
         if not hasReader(reader):
-            reads[reader] = TwistedSocketNotifier(reader, QSocketNotifier.Read)
+            reads[reader] = TwistedSocketNotifier(self, reader, QSocketNotifier.Read)
 
     def addWriter(self, writer):
         if not hasWriter(writer):
-            writes[writer] = TwistedSocketNotifier(writer, QSocketNotifier.Write)
+            writes[writer] = TwistedSocketNotifier(self, writer, QSocketNotifier.Write)
 
     def removeReader(self, reader): 
         if hasReader(reader):
@@ -130,7 +131,11 @@ class QTReactor(default.PosixReactorBase):
         global _timer
         if _timer: _timer.stop()
         self.runUntilCurrent()
-        timeout = min(self.timeout(), 0.1) * 1010
+
+        # gah
+        timeout = self.timeout()
+        if timeout is None: timeout = 1.0
+        timeout = min(timeout, 0.1) * 1010
 
         if not _timer:
             _timer = QTimer()
