@@ -28,6 +28,7 @@ from twisted.internet import tksupport, reactor, app
 from twisted.scripts import mktap
 from twisted.python import failure, usage, reflect
 
+
 class TkMkAppFrame(Tkinter.Frame):
     """
     A frame with all the necessary widgets to configure a Twisted Application.
@@ -226,32 +227,139 @@ class TkMkAppFrame(Tkinter.Frame):
         Tkinter.Frame.destroy(self)
 
 
+#
+# This class was written based on code from Drew "drewp" Pertulla
+# (<drewp (at) bigasterisk (dot) com>) - without his help, tkmktap
+# would be an ugly POS.
+#
+class ParameterLine(Tkinter.Frame):
+    def __init__(self, master, lines, label, desc, default, cmd, **kw):
+        Tkinter.Frame.__init__(self, master, relief='raised', bd=1, **kw)
+        
+        self.lines = lines
+
+        l = Tkinter.Label(
+            self, text=label, wraplen=200,
+            width=30, anchor='w', justify='left'
+        )
+
+        s = Tkinter.StringVar()
+        if default:
+            s.set(default)
+        self.entry = Tkinter.Entry(self, text=s, background='white')
+        self.flag = label
+
+        more = Tkinter.Button(
+            self, text='+',
+            command=lambda f = cmd, a = label, b = default, c = desc: f(a, b, c)
+        )
+
+        l.pack(side=Tkinter.LEFT, fill='y')
+        self.entry.pack(side=Tkinter.LEFT)
+        more.pack(side=Tkinter.LEFT)
+
+        l.bind("<Enter>", self.highlight)
+        l.bind("<Leave>", self.unhighlight)
+
+        l.bind("<ButtonPress-1>", self.press)
+        l.bind("<B1-ButtonRelease>", self.release)
+        l.bind("<B1-Motion>", self.motion)
+
+
+    def highlight(self, ev, hicolor = 'gray90'):
+        # make the label light up when you mouseover
+        ev.widget._oldcolor = self.cget('bg')
+        ev.widget.config(bg=hicolor)
+
+
+    def unhighlight(self, ev):
+        # make the label return to its old setting
+        try:
+            ev.widget.config(bg=ev.widget._oldcolor)
+            del ev.widget._oldcolor
+        except:
+            pass
+
+
+    # make the frame change order when you drag it (by its label)
+    def press(self, ev):
+        # save old attrs
+        self._oldrelief = self.cget('relief'), self.cget('bd')
+        # thicken the border
+        self.config(relief='raised', bd=3)
+    
+    
+    def motion(self, ev):
+        this = self.lines.index(self)
+        framey = ev.y + self.winfo_y()   # get mouse y coord in parent frame
+        replace = this   # replace will be the index of the row to swap with
+        for i, l in zip(range(len(self.lines)), self.lines):
+            y1 = l.winfo_y()
+            y2 = y1 + l.winfo_height()
+            if y1 < framey < y2:
+                replace = i
+        if replace != this:
+            # we moved over another row-- swap them
+            self.lines[replace], self.lines[this] = self.lines[this], self.lines[replace]
+
+            # and re-assign all rows in the new order
+            for i, l in zip(range(len(self.lines)), self.lines):
+                l.grid(row=i, column=0)
+
+
+    def release(self, ev):
+        # restore the old border width
+        try:
+            rel, bd = self._oldrelief
+            self.config(relief=rel, bd=bd)
+            del self._oldrelief
+        except:
+            pass
+
+
 class TkConfigFrame(Tkinter.Frame):
     optFrame = None
     paramFrame = None
     commandFrame = None
-    extraFrame = None
 
     subCmdFrame = None
     previousCommand = None
 
     optFlags = None
-    optParameters = None
-
-
+    paramLines = None
+    
     def __init__(self, master, options):
         Tkinter.Frame.__init__(self, master)
         self.options = options
-
+        
         self.setupOptFlags()
         self.setupOptParameters()
         self.setupSubCommands()
         self.setupExtra()
 
 
+    def getOptFlags(self):
+        return self.optFlags
+    
+    
+    def getOptParameters(self):
+        r = []
+        for p in self.paramLines:
+            r.append((p.flag, p.entry.get()))
+        return r
+
+
     def updateConfig(self, options):
-        for (opt, var) in self.optFlags + self.optParameters:
-            options[opt] = var.get()
+        for (opt, var) in self.getOptFlags() + self.getOptParameters():
+
+            if not var:
+                continue # XXX - this is poor - add a '-' button to remove options 
+
+            f = getattr(options, 'opt_' + opt, None)
+            if f:
+                f(var)
+            else:
+                options[opt] = var
         return self.extra.get()
 
 
@@ -260,7 +368,7 @@ class TkConfigFrame(Tkinter.Frame):
         flags = []
         if hasattr(self.options, 'optFlags'):
             flags.extend(self.options.optFlags)
-        
+
         d = {}
         helpFunc = getattr(self.options, 'opt_help', None)
         for meth in reflect.prefixedMethodNames(self.options.__class__, 'opt_'):
@@ -289,12 +397,10 @@ class TkConfigFrame(Tkinter.Frame):
 
 
     def setupOptParameters(self):
-        self.optParameters = []
         params = []
-        i = 0
         if hasattr(self.options, 'optParameters'):
             params.extend(self.options.optParameters)
-        
+
         d = {}
         for meth in reflect.prefixedMethodNames(self.options.__class__, 'opt_'):
             full = 'opt_' + meth
@@ -311,18 +417,21 @@ class TkConfigFrame(Tkinter.Frame):
             params.append((name, None, None, func.__doc__))
 
         if len(params):
-            self.paramFrame = f = Tkinter.Frame(self)
+            self.paramFrame = Tkinter.Frame(self)
+            self.paramLines = []
             for (flag, _, default, desc) in params:
-                s = Tkinter.StringVar()
-                if default:
-                    s.set(default)
-                l = Tkinter.Label(f, text=desc, wraplen=200)
-                t = Tkinter.Entry(f, text=s, background='white')
-                l.grid(row=i, column=0)
-                t.grid(row=i, column=1)
-                self.optParameters.append((flag, t))
-                i += 1
-            f.grid(row=1, column=2)
+                self.makeField(flag, default, desc)
+            self.paramFrame.grid(row=1, column=2)
+
+
+
+    def makeField(self, flag, default, desc):
+        line = ParameterLine(
+            self.paramFrame, self.paramLines, flag, desc, default,
+            cmd=self.makeField
+        )
+        self.paramLines.append(line)
+        line.grid(row=len(self.paramLines), column=0)
 
 
     def setupSubCommands(self):
@@ -343,8 +452,8 @@ class TkConfigFrame(Tkinter.Frame):
         l = Tkinter.Label(f, text='Extra Options')
         self.extra = Tkinter.Entry(f, background='white')
         l.pack()
-        self.extra.pack()
-        f.grid(row=2)
+        self.extra.pack(fill='y')
+        f.grid(row=2, column=1, columnspan=2)
 
 
     def pollSubCommands(self):
@@ -375,7 +484,9 @@ class TkAppMenu(Tkinter.Menu):
         self.add_cascade(label="Applications", menu=tapMenu)
 
         for item in items:
-            tapMenu.add_command(label=item, command=lambda i=item: callback(i))
+            tapMenu.add_command(
+                label=item, command=lambda i=item, c = callback: c(i)
+            )
 
 
 def run():
@@ -393,7 +504,6 @@ def run():
         lambda i, d = taps, c = config: c.reset(d[i]),
         keyList
     )
-
 
     config.pack()
     r['menu'] = menu
