@@ -23,24 +23,24 @@ class Transaction:
 class ConnectionPool(pb.Referenceable):
     """I represent a pool of connections to a DB-API 2.0 compliant database.
     """
-    def __init__(self, dbapi, *connargs, **connkw):
+    def __init__(self, dbapi, connargs):#, **connkw):
         """See ConnectionPool.__doc__
         """
         self.dbapi = dbapi
         assert dbapi.apilevel == '2.0', 'DB API module not DB API 2.0 compliant.'
         assert dbapi.threadsafety > 0, 'DB API module not sufficiently thread-safe.'
         self.connargs = connargs
-        self.connkw = connkw
+        #self.connkw = connkw
         import thread
         self.threadID = thread.get_ident
         self.connections = {}
 
     def connect(self):
-        print 'connecting'
+        print 'connecting using', self.connargs
         tid = self.threadID()
         conn = self.connections.get(tid)
         if not conn:
-            conn = apply(self.dbapi.connect, self.connargs, self.connkw)
+            conn = self.dbapi.connect(self.connargs)#, self.connkw)
             self.connections[tid] = conn
             print 'connected'
         else:
@@ -59,6 +59,27 @@ class ConnectionPool(pb.Referenceable):
                 result = None
             else:
                 result = curs.fetchall()
+                curs.close()
+        except:
+            print 'oops!'
+            conn.rollback()
+            traceback.print_exc()
+            raise
+        return result
+
+
+    def _runOperation(self, qstr):
+        """This is used for non-query operations that don't want "fetch*" to be called
+        """
+        print 'running operation'
+        conn = self.connect()
+        curs = conn.cursor()
+        try:
+            curs.execute(qstr)
+            print 'ran it!'
+            curs.execute("commit")
+            result = None
+            curs.close()
         except:
             print 'oops!'
             conn.rollback()
@@ -68,6 +89,9 @@ class ConnectionPool(pb.Referenceable):
 
     def query(self, qstr, callback, errback, eater=None, chunkSize=1):
         threadtask.dispatch(callback, errback, self._runQuery, qstr, eater, chunkSize)
+
+    def operation(self, qstr, callback, errback, eater=None, chunkSize=1):
+        threadtask.dispatch(callback, errback, self._runOperation, qstr)
 
     def interact(self, interaction, callback, errback):
         """Interact with the database.
