@@ -34,7 +34,7 @@ class Options(usage.Options):
         ["port",      "p", "53", "The port on which to listen"],
         ["resolv-conf", None, None,
             "Override location of resolv.conf (implies --recursive)"],
-        ["hosts-file", None, "/etc/hosts", "Override location of hosts file (implies --hosts)"],
+        ["hosts-file", None, "/etc/hosts", "Perform lookups with a hosts file"],
     ]
 
     optFlags = [
@@ -42,7 +42,6 @@ class Options(usage.Options):
         ["recursive",   "r", "Perform recursive lookups"],
         ["iterative",   "I", "Perform lookups using the root servers"],
         ["verbose",     "v", "Log verbosely"],
-        ["hosts",       "H", "Perform lookups via a hosts file"]
     ]
 
     zones = None
@@ -86,8 +85,6 @@ class Options(usage.Options):
     def postOptions(self):
         if self['resolv-conf']:
             self['recursive'] = True
-        if self['hosts-file']:
-            self['hosts'] = True
         if self['iterative'] and self['recursive']:
             raise usage.UsageError("--iterative and --recursive are mutually exclusive.")
         
@@ -122,7 +119,7 @@ def makeService(config):
         ca.append(cache.CacheResolver(verbose=config['verbose']))
     if config['recursive']:
         cl.append(client.createResolver(resolvconf=config['resolv-conf']))
-    if config['hosts']:
+    if config['hosts-file']:
         cl.append(hosts.Resolver(file=config['hosts-file']))
 
     f = server.DNSServerFactory(config.zones, ca, cl, config['verbose'])
