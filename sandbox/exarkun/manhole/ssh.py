@@ -82,5 +82,5 @@ EhQ0wahUTCk1gKA4uPD6TMTChavbh4K63OvbKg==
     }
     del privateKey
 
-    def __init__(self):
-        self.portal = portal.Portal(TerminalRealm(), [checkers.InMemoryUsernamePasswordDatabaseDontUse(username='password')])
+    def __init__(self, checkers):
+        self.portal = portal.Portal(TerminalRealm(), checkers)

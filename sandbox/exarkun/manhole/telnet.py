@@ -727,6 +727,57 @@ class TelnetBootstrapProtocol(TelnetProtocol, ProtocolTransportMixin):
     def dataReceived(self, data):
         self.protocol.dataReceived(data)
 
+class StatefulTelnetProtocol(basic.LineReceiver):
+    state = 'Discard'
+
+    def lineReceived(self, line):
+        state = getattr(self, "telnet_" + self.state)(line)
+        if state is not None:
+            self.state = state
+
+    def telnet_Discard(self, line):
+        pass
+
+class AuthenticatingTelnetProtocol(StatefulTelnetProtocol, ProtocolTransportMixin):
+    state = "User"
+
+    def __init__(self, portal, protocolFactory, *args, **kw):
+        self.portal = portal
+        self.protocolFactory = protocolFactory
+        self.protocolArgs = args
+        self.protocolKwArgs = kw
+
+    def connectionMade(self):
+        self.transport.write("Username: ")
+
+    def telnet_User(self, line):
+        self.username = line
+        self.transport.will(ECHO)
+        self.transport.write("Password: ")
+        return 'Password'
+
+    def telnet_Password(self, line):
+        username, password = self.username, line
+        del self.username
+        self.transport.wont(ECHO)
+        d = self.portal.login(credentials.UsernamePassword(username, password),
+                              None,
+                              IManhole)
+        d.addCallback(self._cbLogin)
+        d.addErrback(self._ebLogin)
+        return 'Discard'
+
+    def _cbLogin(self, ial):
+        interface, avatar, logout = ial
+        assert interface is IManhole
+        self.avatar = avatar
+        self.logout = logout
+        self.state = 'Command'
+
+        self.protocol = self.protocolFactory(**self.protocolArgs, *self.protocolKwArgs)
+        self.protocol.makeConnection(self)
+        self.dataReceived = self.protocol.dataReceived
+
 __all__ = [
     # Exceptions
     'TelnetError', 'NegotiationError', 'OptionRefused',

@@ -69,13 +69,13 @@ class RecvLine(insults.TerminalProtocol):
         self.transport.write(self.ps[self.pn] + ''.join(self.lineBuffer))
 
     def unhandledControlSequence(self, seq):
-        print "Don't know about", repr(seq)
+        pass
 
     def setMode(self, modes):
-        print 'Setting', modes
+        pass
 
     def resetMode(self, modes):
-        print 'Resetting', modes
+        pass
 
     def keystrokeReceived(self, keyID):
         m = self.keyHandlers.get(keyID)

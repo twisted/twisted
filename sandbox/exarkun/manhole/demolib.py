@@ -6,6 +6,7 @@ from ssh import session, TerminalUser, TerminalSession, TerminalSessionTransport
 from twisted.python import components
 from twisted.internet import protocol
 from twisted.application import internet, service
+from twisted.cred import checkers
 
 class TerminalForwardingProtocol(insults.ServerProtocol):
     def terminalSize(self, width, height):
@@ -19,6 +20,8 @@ def makeService(args):
     class ConstructedSession(TerminalSession):
         transportFactory = ConstructedSessionTransport
 
+    checker = checkers.InMemoryUsernamePasswordDatabaseDontUse(username="password")
+
     # XXX Can only support one handler via ssh per process!  Muy suck.
     components.registerAdapter(ConstructedSession, TerminalUser, session.ISession)
 
@@ -26,7 +29,7 @@ def makeService(args):
     f.protocol = lambda: TelnetTransport(TelnetBootstrapProtocol, TerminalForwardingProtocol, args['protocolFactory'])
     tsvc = internet.TCPServer(args['telnet'], f)
 
-    f = ConchFactory()
+    f = ConchFactory([checker])
     csvc = internet.TCPServer(args['ssh'], f)
 
     m = service.MultiService()
