@@ -34,8 +34,14 @@ except:
     from org.python.core import PyMethod
     instancemethod = PyMethod
 
-
+# when do these go away? I suggest at 1.0 we reset to empty
 oldModules = {"twisted.python.explorer": "twisted.manhole.explorer"}
+
+# deal with classes that were moved, so old TAPs will work
+# this is REALLY ICKY, but can't be helped because of circular imports
+from twisted.manhole.telnet import ShellFactory
+from twisted.protocols import telnet
+telnet.ShellFactory = ShellFactory
 
 ## First, let's register support for some stuff that really ought to
 ## be registerable...

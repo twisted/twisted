@@ -18,7 +18,7 @@
 
 # Twisted Imports
 from twisted.coil import app, coil
-from twisted.protocols import telnet
+from twisted.manhole import telnet
 
 # System Imports
 import types

@@ -19,7 +19,7 @@
 I am the support module for making a telnet server with mktap.
 """
 
-from twisted.protocols import telnet
+from twisted.manhole import telnet
 from twisted.internet import tcp
 from twisted.python import usage
 import sys
