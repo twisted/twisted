@@ -18,6 +18,9 @@
 
 """This module is DEPRECATED."""
 
+import warnings
+warnings.warn("This module is deprecated, please use Woven instead.", DeprecationWarning, 2)
+
 # System Imports
 import string, time, types, traceback, pprint, sys, os
 import linecache
