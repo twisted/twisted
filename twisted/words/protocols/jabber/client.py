@@ -111,20 +111,20 @@ class BasicAuthenticator(xmlstream.ConnectAuthenticator):
     def _authQueryResultEvent(self, iq):
         if iq["type"] == "result":
             # Construct auth request
-            iq = IQ(self.xmlstream, "set")
-            iq.addElement(("jabber:iq:auth", "query"))
-            iq.query.addElement("username", content = self.jid.user)
-            iq.query.addElement("resource", content = self.jid.resource)
+            reply = IQ(self.xmlstream, "set")
+            reply.addElement(("jabber:iq:auth", "query"))
+            reply.query.addElement("username", content = self.jid.user)
+            reply.query.addElement("resource", content = self.jid.resource)
         
             # Prefer digest over plaintext
             if DigestAuthQry.matches(iq):
                 digest = xmlstream.hashPassword(self.xmlstream.sid, self.password)
-                iq.query.addElement("digest", content = digest)
+                reply.query.addElement("digest", content = digest)
             else:
-                iq.query.addElement("password", content = self.password)
+                reply.query.addElement("password", content = self.password)
 
-            iq.addCallback(self._authResultEvent)
-            iq.send()
+            reply.addCallback(self._authResultEvent)
+            reply.send()
         else:
             # Check for 401 -- Invalid user
             if iq.error["code"] == "401":
