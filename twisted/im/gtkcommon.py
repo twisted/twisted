@@ -126,8 +126,8 @@ class InputOutputWindow:
                 entry.freeze()
                 apply(entry.delete_text, pos)
                 entry.set_position(pos[0])
-                entry.insert_text(result[0])
-                entry.set_position(oldpos+len(result[0])-len(word))
+                entry.insert_defaults(result[0])
+                entry.set_position(oldpos+len(result[0])-len(word)-1)
                 entry.thaw()
                 stopSignal = True
 
