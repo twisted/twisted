@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.78 $"[11:-2]
+__version__ = "$Revision: 1.79 $"[11:-2]
 
 # Sibling imports
 import interfaces
@@ -75,6 +75,9 @@ def viewFactory(viewClass):
 
 def viewMethod(viewClass):
     return lambda self, request, node, model: viewClass(model)
+
+
+templateCache = {}
 
 
 class View:
@@ -209,19 +212,18 @@ class View:
             # Build a reference to the template on disk
             self.templateDirectory = templateRef.parentRef().getObject().path
             templatePath = os.path.join(self.templateDirectory, self.templateFile)
-        # Check to see if there is an already compiled copy of it
-        templateName = os.path.splitext(self.templateFile)[0]
-        compiledTemplateName = '.' + templateName + '.pxp'
-        compiledTemplatePath = os.path.join(self.templateDirectory, compiledTemplateName)
-        # No? Compile and save it
-        if (not os.path.exists(compiledTemplatePath) or
-        os.stat(compiledTemplatePath)[stat.ST_MTIME] < os.stat(templatePath)[stat.ST_MTIME]):
+        # Check to see if there is an already parsed copy of it
+        mtime = os.path.getmtime(templatePath)
+        cachedTemplate = templateCache.get(templatePath, None)
+        compiledTemplate = None
+
+        if cachedTemplate is not None:
+            if cachedTemplate[0] == mtime:
+                compiledTemplate = templateCache[templatePath][1].cloneNode(deep=1)
+                
+        if compiledTemplate is None:
             compiledTemplate = microdom.parse(templatePath)
-            pickle.dump(compiledTemplate, open(compiledTemplatePath, 'wb'), 1)
-#            parent = templateRef.parentRef().getObject()
-#            parent.savePickleChild(compiledTemplatePath, compiledTemplate)
-        else:
-            compiledTemplate = pickle.load(open(compiledTemplatePath, "rb"))
+            templateCache[templatePath] = (mtime, compiledTemplate.cloneNode(deep=1))
         return compiledTemplate
 
     def handleDocument(self, request, document):
