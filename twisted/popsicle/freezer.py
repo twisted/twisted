@@ -16,7 +16,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-from twisted.internet import defer
+from twisted.internet import defer, error
 
 import os
 import weakref
@@ -101,7 +101,11 @@ class Freezer:
         """
         #log.msg("cleaning popsicle")
         if self.pendingCall:
-            self.pendingCall.cancel()
+            try:
+                self.pendingCall.cancel()
+            except error.AlreadyCancelled:
+                # If it's already cancelled, we don't have to do anything.
+                pass 
             self.pendingCall = None
         self.cleaning = True
         savers = {}
