@@ -43,6 +43,7 @@ class ContactsList:
         print 'registering account client', self, account
         self.accountMenuItems.append(account)
         self._updateAccountMenu()
+        self.chat._accountmanager.refreshAccounts()
 
     def _updateAccountMenu(self):
         # This seems to be necessary -- I don't understand gtk's handling of

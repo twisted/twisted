@@ -31,6 +31,7 @@ class AccountManager:
     def __init__(self):
         self.xml = openGlade(GLADE_FILE, root="MainIMWindow")
         self.chatui = gtkchat.GtkChatClientUI(self.xml)
+        self.chatui._accountmanager = self # TODO: clean this up... it's used in gtkchat
         print self.xml._o
         autoConnectMethods(self, self.chatui.theContactsList)
         self.widget = self.xml.get_widget("AccountManWidget")
@@ -59,7 +60,7 @@ class AccountManager:
         w = self.xml.get_widget("accountsList")
         w.clear()
         for acct in self.accounts:
-            l = [acct.accountName, acct.isOnline and 'yes' or 'no',
+            l = [acct.accountName, acct.isOnline() and 'yes' or 'no',
                  acct.autoLogin and 'yes' or 'no', acct.gatewayType]
             w.append(l)
 
