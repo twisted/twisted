@@ -9,6 +9,8 @@
   <property name="type">GTK_WINDOW_TOPLEVEL</property>
   <property name="window_position">GTK_WIN_POS_NONE</property>
   <property name="modal">False</property>
+  <property name="default_width">620</property>
+  <property name="default_height">320</property>
   <property name="resizable">True</property>
   <property name="destroy_with_parent">False</property>
   <signal name="delete_event" handler="_on_manholeWindow_delete_event" last_modification_time="Mon, 27 Jan 2003 05:14:26 GMT"/>
@@ -38,6 +40,28 @@
 		      <property name="label">gtk-open</property>
 		      <property name="use_stock">True</property>
 		      <signal name="activate" handler="_on_openMenuItem_activate" last_modification_time="Sun, 02 Feb 2003 18:44:51 GMT"/>
+		    </widget>
+		  </child>
+
+		  <child>
+		    <widget class="GtkImageMenuItem" id="reload_self">
+		      <property name="visible">True</property>
+		      <property name="tooltip" translatable="yes">Reload the manhole client code.  (Only useful for client development.)</property>
+		      <property name="label" translatable="yes">_Reload self</property>
+		      <property name="use_underline">True</property>
+		      <signal name="activate" handler="on_reload_self_activate" last_modification_time="Mon, 24 Feb 2003 00:15:10 GMT"/>
+
+		      <child internal-child="image">
+			<widget class="GtkImage" id="image1">
+			  <property name="visible">True</property>
+			  <property name="stock">gtk-revert-to-saved</property>
+			  <property name="icon_size">1</property>
+			  <property name="xalign">0.5</property>
+			  <property name="yalign">0.5</property>
+			  <property name="xpad">0</property>
+			  <property name="ypad">0</property>
+			</widget>
+		      </child>
 		    </widget>
 		  </child>
 

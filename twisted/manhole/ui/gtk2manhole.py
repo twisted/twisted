@@ -5,11 +5,11 @@
 # Note: Because GTK 2.x Python bindings are only available for Python 2.2,
 # this code may use Python 2.2-isms.
 
-__version__ = '$Revision: 1.3 $'[11:-2]
+__version__ = '$Revision: 1.4 $'[11:-2]
 
 from twisted import copyright
 from twisted.internet import reactor
-from twisted.python import components, failure, util
+from twisted.python import components, failure, log, util
 from twisted.spread import pb
 from twisted.spread.ui import gtk2util
 
@@ -18,11 +18,16 @@ from twisted.manhole.service import IManholeClient
 # The pygtk.require for version 2.0 has already been done by the reactor.
 import gtk
 
-import types
+import code, types, inspect
 
 # TODO:
 #  Make wrap-mode a run-time option.
+#  Command history.
+#  Explorer.
+#  Code doesn't cleanly handle opening a second connection.  Fix that.
 
+class OfflineError(Exception):
+    pass
 
 class ManholeWindow(components.Componentized, gtk2util.GladeKeeper):
     gladefile = util.sibpath(__file__, "gtk2manhole.glade")
@@ -34,7 +39,14 @@ class ManholeWindow(components.Componentized, gtk2util.GladeKeeper):
         gtk2util.GladeKeeper.__init__(self)
         components.Componentized.__init__(self)
 
+        self.input = ConsoleInput(self._input)
+        self.input.toplevel = self
         self.output = ConsoleOutput(self._output)
+
+        # Ugh.  GladeKeeper actually isn't so good for composite objects.
+        # I want this connected to the ConsoleInput's handler, not something
+        # on this class.
+        self._input.connect("key_press_event", self.input._on_key_press_event)
 
     def setDefaults(self, defaults):
         self.defaults = defaults
@@ -45,14 +57,15 @@ class ManholeWindow(components.Componentized, gtk2util.GladeKeeper):
         d.addCallbacks(self._cbLogin, self._ebLogin)
         d.addCallback(client._cbLogin)
 
-    def _disconnect(self, perspective):
+    def _cbDisconnected(self, perspective):
         self.output.append("%s went away. :(\n" % (perspective,), "local")
+        self._manholeWindow.set_title("Manhole")
 
     def _cbLogin(self, perspective):
-        self.output.append("Connected to %s\n" %
-                           (perspective.broker.transport.getPeer(),),
-                           "local")
-        perspective.notifyOnDisconnect(self._disconnect)
+        peer = perspective.broker.transport.getPeer()
+        self.output.append("Connected to %s\n" % (peer,), "local")
+        perspective.notifyOnDisconnect(self._cbDisconnected)
+        self._manholeWindow.set_title("Manhole - %s:%s" % (peer[1], peer[2]))
         return perspective
 
     def _ebLogin(self, reason):
@@ -60,15 +73,19 @@ class ManholeWindow(components.Componentized, gtk2util.GladeKeeper):
         return None
 
     def _on_aboutMenuItem_activate(self, widget, *unused):
+        import sys
         from os import path
         self.output.append("""\
 a Twisted Manhole client
   Versions:
     %(twistedVer)s
+    Python %(pythonVer)s on %(platform)s
     GTK %(gtkVer)s / PyGTK %(pygtkVer)s
     %(module)s %(modVer)s
 http://twistedmatrix.com/
 """ % {'twistedVer': copyright.longversion,
+       'pythonVer': sys.version.replace('\n', '\n      '),
+       'platform': sys.platform,
        'gtkVer': ".".join(map(str, gtk.gtk_version)),
        'pygtkVer': ".".join(map(str, gtk.pygtk_version)),
        'module': path.basename(__file__),
@@ -84,15 +101,25 @@ http://twistedmatrix.com/
     def _on_quitMenuItem_activate(self, widget, *unused):
         reactor.stop()
 
+    def on_reload_self_activate(self, *unused):
+        from twisted.python import rebuild
+        rebuild.rebuild(inspect.getmodule(self.__class__))
+
+
 tagdefs = {
     'default': {"family": "monospace"},
+    # These are message types we get from the server.
     'stdout': {"foreground": "black"},
     'stderr': {"foreground": "#AA8000"},
     'result': {"foreground": "blue"},
     'exception': {"foreground": "red"},
+    # Messages generate locally.
     'local': {"foreground": "#008000"},
+    'log': {"foreground": "#000080"},
+    'command': {"foreground": "#666666"},
     }
 
+# TODO: Factor Python console stuff back out to pywidgets.
 
 class ConsoleOutput:
     _willScroll = None
@@ -108,6 +135,11 @@ class ConsoleOutput:
                 tag.set_property(k, v)
 
         self.buffer.tag_table.lookup("default").set_priority(0)
+
+        self._captureLocalLog()
+
+    def _captureLocalLog(self):
+        return log.startLogging(_Notafile(self, "log"), setStdout=False)
 
     def append(self, text, kind=None):
         # XXX: It seems weird to have to do this thing with always applying
@@ -131,8 +163,57 @@ class ConsoleOutput:
 
 
 class ConsoleInput:
+    toplevel = None
     def __init__(self, textView):
-        pass
+        self.textView=textView
+
+    def _on_key_press_event(self, entry, event):
+        stopSignal = False
+        if event.keyval == gtk.keysyms.Return:
+            buffer = self.textView.get_buffer()
+            iter1, iter2 = buffer.get_bounds()
+            text = buffer.get_text(iter1, iter2, False)
+
+            # Figure out if that Return meant "next line" or "execute."
+            try:
+                c = code.compile_command(text)
+            except SyntaxError, e:
+                # This could conceivably piss you off if the client's python
+                # doesn't accept keywords that are known to the manhole's
+                # python.
+                point = buffer.get_iter_at_line_offset(e.lineno, e.offset)
+                buffer.place(point)
+                # TODO: Componentize!
+                self.toplevel.output.append(str(e), "exception")
+            except (OverflowError, ValueError), e:
+                self.toplevel.output.append(str(e), "exception")
+            else:
+                if c is not None:
+                    self.sendMessage()
+                    # Don't insert Return as a newline in the buffer.
+                    entry.emit_stop_by_name("key_press_event")
+                    self.clear()
+                else:
+                    # not a complete code block
+                    pass
+
+        return False
+
+    def clear(self):
+        buffer = self.textView.get_buffer()
+        buffer.delete(*buffer.get_bounds())
+
+    def sendMessage(self):
+        buffer = self.textView.get_buffer()
+        iter1, iter2 = buffer.get_bounds()
+        text = buffer.get_text(iter1, iter2, False)
+        # TODO: Componentize better!
+        try:
+            return self.toplevel.getComponent(IManholeClient).do(text)
+        except OfflineError:
+            self.toplevel.output.append("Not connected, command not sent.\n",
+                                        "exception")
+
 
 class _Notafile:
     """Curry to make failure.printTraceback work with the output widget."""
@@ -143,6 +224,8 @@ class _Notafile:
     def write(self, txt):
         self.output.append(txt, self.kind)
 
+    def flush(self):
+        pass
 
 class ManholeClient(components.Adapter, pb.Referenceable):
     __implements__ = (IManholeClient,)
@@ -154,6 +237,7 @@ class ManholeClient(components.Adapter, pb.Referenceable):
 
     def _cbLogin(self, perspective):
         self.perspective = perspective
+        perspective.notifyOnDisconnect(self._cbDisconnected)
 
     def remote_console(self, messages):
         for kind, content in messages:
@@ -170,5 +254,13 @@ class ManholeClient(components.Adapter, pb.Referenceable):
 
     def remote_listCapabilities(self):
         return self.capabilities
+
+    def _cbDisconnected(self, perspective):
+        self.perspective = None
+
+    def do(self, text):
+        if self.perspective is None:
+            raise OfflineError
+        return self.perspective.callRemote("do", text)
 
 components.registerAdapter(ManholeClient, ManholeWindow, IManholeClient)
