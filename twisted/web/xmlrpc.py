@@ -244,7 +244,7 @@ class Proxy:
             self.host, self.port = parts[1], None
         self.secure = parts[0] == 'https'
 
-    def callMethod(self, method, *args):
+    def callRemote(self, method, *args):
         factory = QueryFactory(self.url, self.host, method, *args)
         if self.secure:
             reactor.connectSSL(self.host, self.port or 443, factory)

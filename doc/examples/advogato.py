@@ -12,7 +12,7 @@ class AddDiary:
 
     def __call__(self, filename):
         self.data = open(filename).read()
-        d = self.proxy.callMethod('authenticate', self.name, self.password)
+        d = self.proxy.callRemote('authenticate', self.name, self.password)
         d.addCallbacks(self.login, self.noLogin)
 
     def noLogin(self, reason):
@@ -20,7 +20,7 @@ class AddDiary:
         reactor.stop()
 
     def login(self, cookie):
-        d = self.proxy.callMethod('diary.set', cookie, -1, self.data)
+        d = self.proxy.callRemote('diary.set', cookie, -1, self.data)
         d.addCallbacks(self.setDiary, self.errorSetDiary)
 
     def setDiary(self, response):

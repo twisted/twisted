@@ -135,7 +135,7 @@ def printError(error):
     reactor.stop()
 
 proxy = Proxy('http://advogato.org/XMLRPC')
-proxy.callMethod('test.sumprod', 3, 5).addCallbacks(printValue, printError)
+proxy.callRemote('test.sumprod', 3, 5).addCallbacks(printValue, printError)
 reactor.run()
 </pre>
 
