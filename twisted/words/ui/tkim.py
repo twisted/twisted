@@ -31,10 +31,10 @@ class AddContact(Toplevel):
     def addContact(self,*args):
         contact=self.contact.get()
         gatewayname=self.gates.get(ACTIVE)
-        if contact: 
+        if contact:
             self.im.addContact(self.im.gateways[gatewayname],contact)
             self.destroy()
-            
+
 class StartConversation(Toplevel):
     def __init__(self,im,*args,**kw):
         apply(Toplevel.__init__,(self,)+args,kw)
@@ -56,7 +56,7 @@ class StartConversation(Toplevel):
     def startConvo(self,*args):
         contact=self.contact.get()
         gatewayname=self.gates.get(ACTIVE)
-        if contact: 
+        if contact:
             self.im.conversationWith(self.im.gateways[gatewayname],contact)
             self.destroy()
 
@@ -81,7 +81,7 @@ class JoinGroup(Toplevel):
     def joinGroup(self,*args):
         group=self.group.get()
         gatewayname=self.gates.get(ACTIVE)
-        if group: 
+        if group:
             self.im.joinGroup(self.im.gateways[gatewayname],group)
             self.destroy()
 
@@ -195,7 +195,7 @@ class ContactList(Toplevel):
         statuschange=Menu(myim)
         myim.add_cascade(label="Change Status",menu=statuschange)
         for k in im2.STATUSES:
-            statuschange.add_command(label=k,command=lambda i=self.im,s=k:i.changeStatus(s))    
+            statuschange.add_command(label=k,command=lambda i=self.im,s=k:i.changeStatus(s))
         myim.add_command(label="Account Manager...",command=lambda i=self.im:i.am.deiconify())
         myim.add_command(label="Start Conversation...",command=lambda i=self.im:StartConversation(i))
 #        myim.add_command(label="__reload__",command=self.reload)
@@ -205,7 +205,7 @@ class ContactList(Toplevel):
         self.list.grid(column=0,row=0,sticky=N+E+S+W)
         sb.grid(column=1,row=0,sticky=N+S)
         sb.config(command=self.list.yview)
-        
+
         f=Frame(self)
         Button(f,text="Add Contact",command=self.addContact).grid(column=0,row=1)
         Button(f,text="Remove Contact",command=self.removeContact).grid(column=1,row=1)
@@ -215,14 +215,14 @@ class ContactList(Toplevel):
         b.grid(column=4,row=1,sticky=N+E+S+W)
         b.bind('<ButtonRelease-1>',self.showExtrasMenu)
         f.grid(column=0,row=1,columnspan=2,sticky=E+S+W)
-        
+
         self.title("Instance Messenger")
         self.protocol("WM_DELETE_WINDOW",self.close)
         tkutil.grid_setexpand(self)
         self.columnconfigure(0,weight=1)
         self.columnconfigure(1,weight=0)
         self.rowconfigure(1,weight=0)
-    
+
     def close(self):
         self.tk.quit()
         self.destroy()
@@ -236,7 +236,7 @@ class ContactList(Toplevel):
 
     def addContact(self):
         AddContact(self.im)
-    
+
     def removeContact(self):
         gatewayname,contact,state=self.list.get(ACTIVE)
         self.list.delete(ACTIVE)
@@ -250,7 +250,7 @@ class ContactList(Toplevel):
                 d.insert(0,u)
         for u in d:
             self.list.delete(u)
-    
+
     def changeContactStatus(self,gateway,contact,status):
         users=self.list.get(0,END)
         row=END
@@ -269,14 +269,14 @@ class ContactList(Toplevel):
                 row=u
                 self.list.delete(row)
                 self.list.insert(row,[gateway.name,newName,users[u][2]])
-    
+
     def sendMessage(self):
         gatewayname,user,state=self.list.get(ACTIVE)
         try:
             self.im.conversationWith(self.im.gateways[gatewayname],user)
         except KeyError:
             pass
-    
+
     def joinGroup(self):
         JoinGroup(self.im)
 
@@ -296,7 +296,7 @@ class ContactList(Toplevel):
             user=None
             state=None
         func(self.im,gateway,user,state)
-    
+
 class GroupSession(Toplevel):
     def __init__(self, im, name, gateway, **params):
         apply(Toplevel.__init__, (self,), params)
@@ -393,7 +393,7 @@ class GroupSession(Toplevel):
         items = map(lambda i,d=self.userlist.get: d(i), items)
         s=f(self.im,self.gateway,self.name,i,items)
         self.input.delete("1.0",END)
-        self.input.insert(END,s)        
+        self.input.insert(END,s)
 
     def receiveGroupMembers(self, members):
         for m in members:
@@ -471,7 +471,7 @@ class GroupSession(Toplevel):
         for u in matches:
             i=ll.index(u)
             self.out.insert(END,"[%s] "%l[i])
-        return "break"        
+        return "break"
 
 class ErrorWindow(Toplevel):
     def __init__(self,error,message,*args,**kw):
@@ -497,7 +497,7 @@ class ChooseGateway(Toplevel):
         Button(self,text="OK",command=self.choose).grid(column=0,row=1,sticky=E+S)
         Button(self,text="Cancel",command=self.destroy).grid(column=1,row=1,sticky=E+S)
         self.protocol('WM_DELETE_WINDOW',self.destroy)
-    
+
     def choose(self):
         index=self.list.index(ACTIVE)
         self.callback(self.gateways[index])
@@ -615,8 +615,8 @@ class AccountManager(Toplevel):
 
     def close(self):
         self.withdraw()
-        if self.im.cl==None: self.tk.quit() 
-    
+        if self.im.cl==None: self.tk.quit()
+
     def getState(self):
         return self.accounts
 
@@ -631,18 +631,18 @@ class AccountManager(Toplevel):
 
     def addAccount(self):
         ChooseGateway(callback=lambda g,s=self:AddAccount(g,s))
-        
+
     def _addaccount(self,account,online="False"):
         self.accounts.append(account)
         auto=account.autologon and "True" or "False"
         self.list.insert(END,(account.options["username"],online,auto,\
                               account.gatewayname))
-        
+
     def modifyAccount(self):
         index=self.list.index(ACTIVE)
         account=self.accounts[index]
         ModifyAccount(self,account)
-        
+
     def _modifyaccount(self,account,online=None):
         # assumes username is an option
         #self.accounts[name]=account
@@ -661,7 +661,7 @@ class AccountManager(Toplevel):
             self.logonAccount(account)
         else:
             self.logoffAccount(account)
-                
+
     def logonAccount(self,account):
         self._modifyaccount(account,"Attempting")
         missing=im2.logonAccount(self.im,account)
