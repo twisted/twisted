@@ -16,10 +16,9 @@
     with a mandatory 'class' attribute. The conventionalized classes are "python",
     "python-interpreter", and "shell". For example:</p>
 
+
+<h3>"python"</h3>
 <pre>
-
-<b>"python"</b>
-
     &lt;p&gt;
     For example, this is how one defines a Resource:
     &lt;/p&gt;
@@ -32,29 +31,66 @@ class MyResource(resource.Resource):
         return "Hello, world!"
     &lt;/pre&gt;
 </pre>
+
+<hr />
+
+    <p>
+    For example, this is how one defines a Resource:
+    </p>
+    <pre class="python">
+from twisted.web import resource
+
+class MyResource(resource.Resource):
+    def render(self, request):
+        return "Hello, world!"
+    </pre>
+
+<hr />
+
+<p>
 Note that you should never have leading indentation inside a &lt;pre&gt; block -- this makes it hard for readers to copy/paste the code.
+</p>
+
+
+<h3>"python-interpreter"</h3>
 <pre>
-
-<b>"python-interpreter"</b>
-
     &lt;pre class="python-interpreter"&gt;
-        &amp;gt;&amp;gt;&amp;gt; from twisted.web import resource
-        &amp;gt;&amp;gt;&amp;gt; class MyResource(resource.Resource):
-        ...     def render(self, request):
-        ...         return "Hello, world!"
-        ...
-        &amp;gt;&amp;gt;&amp;gt; MyResource().render(None)
-        "Hello, world!"
-     &lt;/pre&gt;
-   
-
-<b>"shell"</b>
-
-    &lt;pre class="shell"&gt;
-        $ mktap web -s /var/www
+    &amp;gt;&amp;gt;&amp;gt; from twisted.web import resource
+    &amp;gt;&amp;gt;&amp;gt; class MyResource(resource.Resource):
+    ...     def render(self, request):
+    ...         return "Hello, world!"
+    ...
+    &amp;gt;&amp;gt;&amp;gt; MyResource().render(None)
+    "Hello, world!"
     &lt;/pre&gt;
-
 </pre>
+
+<hr />
+<pre class="python-interpreter">
+&gt;&gt;&gt; from twisted.web import resource
+&gt;&gt;&gt; class MyResource(resource.Resource):
+...     def render(self, request):
+...         return "Hello, world!"
+...
+&gt;&gt;&gt; MyResource().render(None)
+"Hello, world!"
+</pre>
+<hr />
+
+
+<h3>"shell"</h3>
+<pre>
+    &lt;pre class="shell"&gt;
+    $ mktap web -s /var/www
+    &lt;/pre&gt;
+</pre>
+
+<hr />
+
+<pre class="shell">
+$ mktap web -s /var/www
+</pre>
+<hr />
 
 
 
@@ -72,13 +108,11 @@ Note that you should never have leading indentation inside a &lt;pre&gt; block -
 
 <pre>
         &lt;p&gt;
-    To add a &lt;code
-    class="API"&gt;twisted.web.widgets.Widget&lt;/code&gt;
-    instance to a &lt;code
-    class="API"&gt;twisted.web.widgets.Gadget&lt;/code&gt;
-    instance, do &lt;code
-    class="python"&gt;myGadget.putWidget("widgetPath",
-    MyWidget())&lt;/code&gt;.  &lt;/p&gt;
+    To add a &lt;code class="API"&gt;twisted.web.widgets.Widget&lt;/code&gt;
+    instance to a &lt;code class="API"&gt;twisted.web.widgets.Gadget&lt;/code&gt;
+    instance, do 
+    &lt;code class="python"&gt;myGadget.putWidget("widgetPath", MyWidget())&lt;/code&gt;.  
+        &lt;/p&gt;
     
         &lt;p&gt; 
     (implementation note: the widgets are stored in the &lt;code
