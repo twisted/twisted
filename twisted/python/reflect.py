@@ -17,10 +17,12 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 """
-Standardized versions of various cool things that you can do with
-Python's reflection capabilities.  This should probably involve
-metaclasses somehow, but I don't understand them, so nyah :-)
+Standardized versions of various cool and/or strange things that you can do
+with Python's reflection capabilities.
 """
+
+from __future__ import nested_scopes
+
 
 # System Imports
 import sys
@@ -51,8 +53,110 @@ class Settable:
             setattr(self,key,val)
         return self
 
-class Accessor:
 
+if sys.version_info[:2] >= (2, 2):
+    type22 = type
+else:
+    # just make fake classes so the module can be imported
+    class type22: pass
+    class object: pass
+
+
+class AccessorType(type22):
+    """Metaclass that generates properties automatically.
+
+    This is for Python 2.2 and up.
+    
+    Using this metaclass for your class will give you explicit accessor
+    methods; a method called set_foo, will automatically create a property
+    'foo' that uses set_foo as a setter method. Same for get_foo and del_foo.
+
+    Note that this will only work on methods that are present on class
+    creation. If you add methods after the class is defined they will not
+    automatically become properties. Likewise, class attributes will only
+    be used if they are present upon class creation, and no getter function
+    was set - if a getter is present, the class attribute will be ignored.
+    
+    This is a 2.2-only alternative to the Accessor mixin - just set in your
+    class definition::
+
+        __metaclass__ = AccessorType
+    
+    """
+    
+    def __init__(self, name, bases, dict):
+        type.__init__(self, name, bases, dict)
+        accessors = {}
+        prefixs = ["get_", "set_", "del_"]
+        for k in dict.keys():
+            v = getattr(self, k)
+            for i in range(3):
+                if k.startswith(prefixs[i]):
+                    accessors.setdefault(k[4:], [None, None, None])[i] = v
+        for name, (getter, setter, deler) in accessors.items():
+            # create default behaviours for the property - if we leave
+            # the getter as None we won't be able to getattr, etc..
+            if getter is None:
+                if hasattr(self, name):
+                    value = getattr(self, name)
+                    def getter(this, value=value, name=name):
+                        if this.__dict__.has_key(name):
+                            return this.__dict__[name]
+                        else:
+                            return value
+                else:
+                    def getter(this, name=name):
+                        if this.__dict__.has_key(name):
+                            return this.__dict__[name]
+                        else:
+                            raise AttributeError, "no such attribute %r" % name
+            if setter is None:
+                def setter(this, value, name=name):
+                    this.__dict__[name] = value
+            if deler is None:
+                def deler(this, name=name):
+                    del this.__dict__[name]
+            setattr(self, name, property(getter, setter, deler, ""))
+
+
+class PropertyAccessor(object):
+    """A mixin class for Python 2.2 that uses AccessorType.
+
+    This provides compatability with the pre-2.2 Accessor mixin, up
+    to a point.
+
+    Extending this class will give you explicit accessor methods; a
+    method called set_foo, for example, is the same as an if statement
+    in __setattr__ looking for 'foo'.  Same for get_foo and del_foo.
+    
+    There are also reallyDel and reallySet methods, so you can
+    override specifics in subclasses without clobbering __setattr__
+    and __getattr__, or using non-2.1 compatible code.
+
+    There is are incompatibilities with the 2.1 version - accessor
+    methods added after class creation will *not* be detected. OTOH,
+    this method is probably way faster.
+
+    In addition, class attributes will only be used if no getter
+    was defined, and instance attributes will not override getter methods
+    whereas in original Accessor the class attribute or instance attribute
+    would override the getter method.
+    """
+    # addendum to above:
+    # The behaviour of OriginalAccessor is wrong IMHO, and I've found bugs
+    # caused by it.
+    #  -- itamar
+    
+    __metaclass__ = AccessorType
+
+    def reallySet(self, k, v):
+        self.__dict__[k] = v
+
+    def reallyDel(self, k):
+        del self.__dict__[k]
+
+
+class OriginalAccessor:
     """
     Extending this class will give you explicit accessor methods; a
     method called set_foo, for example, is the same as an if statement
@@ -61,7 +165,7 @@ class Accessor:
     override specifics in subclasses without clobbering __setattr__
     and __getattr__.
 
-    TODO: Support for Python2.2 Properties.
+    This implementation is for Python 2.1.
     """
 
     def __setattr__(self, k,v):
@@ -101,6 +205,28 @@ class Accessor:
         hook to be overridden by subclasses.
         """
         del self.__dict__[k]
+
+
+# on 2.2, use the PropertyAccessor, on 2.1 use OriginalAccessor
+if sys.version_info[:2] >= (2, 2):
+    # for now, I'm leaving the new version disabled, as:
+    #  1. it causes marmalade to barf - apprently marmalade doesn't like new-style
+    #     classes or something
+    #  2. it causes errors in observable
+    # plus I had to fix some bugs in tendril - I think the OriginalAccessor is
+    # rather broken, and the problem is dealing with the fact that the new
+    # version's behaviour is different (albeit non-broken).
+    #
+    # To enable property-based accessor in 2.2, uncomment next 2 lines and
+    # delete the 3rd.
+    
+    #del OriginalAccessor
+    #Accessor = PropertyAccessor
+    Accessor = OriginalAccessor
+else:
+    del AccessorType
+    del PropertyAccessor
+    Accessor = OriginalAccessor
 
 
 class Summer(Accessor):
@@ -197,27 +323,6 @@ def funcinfo(function):
     return out
 
 
-# currentThread uses 'print'; that's no good.
-def currentThread():
-    from threading import _get_ident,_active,_DummyThread
-    try: return _active[_get_ident()]
-    except KeyError: return _DummyThread()
-# del _get_ident,_active,_DummyThread
-
-class ThreadAttr:
-    def __init__(self,threads=None,default=None):
-        self.__dict__['_threads']=threads or {}
-        self.__dict__['_default']=default
-    def __get(self):
-        try: return self._threads[currentThread()]
-        except KeyError: return self._default
-    def __getattr__(self,key):
-        return getattr(self.__get(),key)
-    def __setattr__(self,key,val):
-        return setattr(self.__get(),key)
-    def __delattr__(self,key):
-        return delattr(self.__get(),key)
-
 ISNT=0
 WAS=1
 IS=2
@@ -285,7 +390,15 @@ def _reclass(clazz):
     return clazz
 
 
+# Whoever named this should have check-in priviliges removed,
+# unless he or she makes sure no one uses this and then *kills it*.
+#
+# You know who you are ;)
 def refrump(obj):
+    """Fix an instance's class after a reload(module). I think.
+
+    See twisted.python.rebuild for a better way of doing this.
+    """
     x = _reclass(obj.__class__)
     if x is not obj.__class__:
         obj.__class__ = x

@@ -63,27 +63,41 @@ class SettableTest(unittest.TestCase):
         self.failUnlessEqual(self.setter.b, 2)
 
 
+class AccessorTester(reflect.Accessor):
+    def set_x(self, x):
+        self.y = x
+        self.reallySet('x',x)
+
+    def get_z(self):
+        self.q = 1
+        return 1
+
+    def del_z(self):
+        self.reallyDel("q")
+
+
 class AccessorTest(unittest.TestCase):
     def setUp(self):
-        class Tester(reflect.Accessor):
-            def set_x(self, x):
-                self.y = x
-                self.reallySet('x',x)
-
-            def get_z(self):
-                self.q = 1
-                return 1
-
-        self.tester = Tester()
+        self.tester = AccessorTester()
 
     def testSet(self):
         self.tester.x = 1
         self.failUnlessEqual(self.tester.x, 1)
         self.failUnlessEqual(self.tester.y, 1)
-
+    
     def testGet(self):
         self.failUnlessEqual(self.tester.z, 1)
         self.failUnlessEqual(self.tester.q, 1)
+
+    def testDel(self):
+        self.tester.z
+        self.failUnlessEqual(self.tester.q, 1)
+        del self.tester.z
+        self.failUnlessEqual(hasattr(self.tester, "q"), 0)
+        self.tester.x = 1
+        del self.tester.x
+        self.failUnlessEqual(hasattr(self.tester, "x"), 0)
+
 
 class PromiseTest(unittest.TestCase):
     def setUp(self):
