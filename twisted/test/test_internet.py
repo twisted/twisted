@@ -115,13 +115,13 @@ class InterfaceTestCase(unittest.TestCase):
         # chug a little before delaying
         while time.time() - start < 0.2:
             reactor.iterate(0.01)
-        ireset.reset(0.3)
-        idelay.delay(0.3)
+        ireset.reset(0.3) # move expiration from 0.5 to (now)0.2+0.3=0.5
+        idelay.delay(0.3) # move expiration from 0.5 to (orig)0.5+0.3=0.8
         # both should be called sometime during this
         while time.time() - start < 0.9:
             reactor.iterate(0.01)
-        self.assert_(0 < self._resetcallbackTime - start - 0.5 < 0.2)
-        self.assert_(0 < self._delaycallbackTime - start - 0.8 < 0.2)
+        self.assert_(-0.1 < self._resetcallbackTime - start - 0.5 < 0.1)
+        self.assert_(-0.1 < self._delaycallbackTime - start - 0.8 < 0.1)
 
         del self._resetcallbackTime
         del self._delaycallbackTime
