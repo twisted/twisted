@@ -169,6 +169,7 @@ class DTP(protocol.Protocol):
     file = None
     filesize = None
     action = ""
+    __bufferedData = ''
 
     def executeAction(self):
         """Initiates a transfer of data.
@@ -189,6 +190,9 @@ class DTP(protocol.Protocol):
         self.action = action
         if self.transport is not None:
             self.executeAction()
+        if action == 'STOR':
+            self.dataReceived(self.__bufferedData)
+            self.__bufferedData = ''
 
     def connectionLost(self, reason):
         if (self.action == 'STOR') and (self.file):
@@ -239,6 +243,8 @@ class DTP(protocol.Protocol):
             self.file.write(data)
             self.file.flush()
             self.filesize = self.filesize + len(data)
+        else:
+            self.__bufferedData += data
 
     def makeSTORTransport(self):
         transport = self.transport

@@ -284,8 +284,6 @@ class FTPClientAndServerTests(FTPServerTests):
 
         self.assertEquals(open('HelloThere').read(), expectedContent)
 
-    testStor.todo = 'The server is broken'
-
     def testBadLogin(self):
         client = ftp.FTPClient(passive=self.passive, username='badperson')
 
