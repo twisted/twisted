@@ -25,7 +25,7 @@ class UnattachablePerspective(perspective.Perspective):
     def attached(self, client, identity):
         name = "%s#%d" % (self.name, self._counter)
         self._counter = self._counter + 1
-        p = disposablePerspectiveClass(name)
+        p = self.disposablePerspectiveClass(name)
         p.setService(self.service)
         # You might add p to the Service's cache of perspectives at this point,
         # so s.getPerspectiveNamed(p.getPerspectiveName()) would work.  Just as
