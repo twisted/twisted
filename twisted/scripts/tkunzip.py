@@ -120,7 +120,7 @@ class Progressor:
         except TclError:
             self.stopping=1
 
-    def processAll(self, ignore, root):
+    def processAll(self, root):
         assert self.bar and self.iterator, "must setBar and setIterator"
         self.root=root
         root.title(self.title)
@@ -195,7 +195,7 @@ def run(argv=sys.argv):
     root.deiconify()
 
     # callback immediately
-    d=defer.succeed(None)
+    d=defer.succeed(root)
     
     if opt['zipfile']:
         uz=Progressor('Unzipping...')
@@ -203,13 +203,13 @@ def run(argv=sys.argv):
                                                      4096))
         uz.setIterator(zipstream.unzipIterChunky(opt['zipfile'],
                                                  opt['ziptargetdir']))
-        d.addCallback(uz.processAll, root)
+        d.addCallback(uz.processAll)
 
     if opt['compiledir']:
         comp=Progressor('Compiling to pyc...')
         comp.setBar(prog, countPysRecursive(opt['compiledir']))
         comp.setIterator(compiler(opt['compiledir']))
-        d.addCallback(comp.processAll, root)
+        d.addCallback(comp.processAll)
 
     d.addCallback(lambda _: reactor.stop)
 
