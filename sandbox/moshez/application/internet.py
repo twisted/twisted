@@ -77,12 +77,12 @@ class _AbstractClient(_VolatileDataService):
 
 
 import new
-for type in 'Generic TCP UNIX SSL UDP UNIXDatagram Multicast'.split():
+for tran in 'Generic TCP UNIX SSL UDP UNIXDatagram Multicast'.split():
     for side in 'Server Client'.split():
         base = globals()['_Abstract'+side]
-        method = (type=='Generic' and 'With') or type
-        klass = new.classobj(type+side, (base,), {'method': method})
-        globals()[type+side] = klass
+        method = (tran=='Generic' and 'With') or tran
+        klass = new.classobj(tran+side, (base,), {'method': method})
+        globals()[tran+side] = klass
 
 
 class TimerService(_VolatileDataService):
