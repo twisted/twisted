@@ -73,7 +73,7 @@ class LogBot(irc.IRCClient):
         self.logger.log("[connected at %s]" % time.asctime(time.localtime(time.time())))
 
     def connectionLost(self, reason):
-        irc.IRCClient.connectionLost(self)
+        irc.IRCClient.connectionLost(self, reason)
         self.logger.log("[disconnected at %s]" % time.asctime(time.localtime(time.time())))
         self.logger.close()
 
