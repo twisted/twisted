@@ -236,6 +236,7 @@ class LogTestCase(unittest.TestCase):
         d.addCallback(lambda x: 1/0)
         d.callback(1)
         del d
+        locals()
         c2 = [e for e in c if e["isError"]]
         self.assertEquals(len(c2), 1)
         c2[0]["failure"].trap(ZeroDivisionError)
