@@ -58,7 +58,7 @@ class MetaInterface(type):
         registry = getRegistry(registry)
         try:
             # should this be `implements' of some kind?
-            if (persist is None or persist) and isinstance(adaptable, Componentized):
+            if (persist is None or persist) and hasattr(adaptable, 'getComponent'):
                 adapter = adaptable.getComponent(self, registry, _Nothing)
             else:
                 adapter = registry.getAdapter(adaptable, self, _Nothing, persist=persist)

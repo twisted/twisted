@@ -169,16 +169,28 @@ class IAdept(components.Interface):
     def adaptorFunc(self):
         raise NotImplementedError()
 
-class Adept:
+class IElapsed(components.Interface):
+    def elapsedFunc(self):
+        """
+        1!
+        """
+
+class Adept(components.Adapter):
     __implements__ = IAdept,
     def __init__(self, orig):
-        self.orig = orig
+        self.original = orig
         self.num = 0
     def adaptorFunc(self):
         self.num = self.num + 1
-        return self.num, self.orig.inc()
+        return self.num, self.original.inc()
+
+class Elapsed(components.Adapter):
+    __implements__ = IElapsed
+    def elapsedFunc(self):
+        return 1
 
 components.registerAdapter(Adept, Compo, IAdept)
+components.registerAdapter(Elapsed, Compo, IElapsed)
 
 class AComp(components.Componentized):
     pass
@@ -219,6 +231,7 @@ class ComponentizedTestCase(unittest.TestCase):
         c = Compo()
         assert c.getComponent(IAdept).adaptorFunc() == (1, 1)
         assert c.getComponent(IAdept).adaptorFunc() == (2, 2)
+        assert IElapsed(IAdept(c)).elapsedFunc() == 1
 
     def testInheritanceAdaptation(self):
         c = CComp()
