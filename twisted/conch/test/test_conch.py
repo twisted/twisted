@@ -1032,7 +1032,8 @@ class SSHTransportTestCase(unittest.TestCase):
             timeout.cancel()
         except:
             pass
-
+    testOurServerCmdLineClient.skip = "The ordering dependancy in this test needs to be fixed."
+    
     def testOurServerUnixClient(self):
         """Test the Conch server against the client over a UNIX socket"""
         if runtime.platformType == 'win32':
