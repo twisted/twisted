@@ -347,7 +347,8 @@ class FileTransferServer(FileTransferBase):
         data = data[4:]
         path, data = getNS(data)
         attrs, data = self._parseAttributes(data)
-        assert data == '', 'still have data in SETSTAT: %s' % repr(data)
+        if data != '':
+            log.msg('WARN: still have data in SETSTAT: %s' % repr(data))
         d = defer.maybeDeferred(self.client.setAttrs, path, attrs)
         d.addCallback(self._cbStatus, requestId, 'setstat succeeded')
         d.addErrback(self._ebStatus, requestId, 'setstat failed')

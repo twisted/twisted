@@ -102,11 +102,13 @@ class SFTPTestBase(unittest.TestCase):
         os.chmod('sftp_test/testfile1', 0644)
         file('sftp_test/testRemoveFile', 'w').write('a')
         file('sftp_test/testRenameFile', 'w').write('a')
+        file('sftp_test/.testHiddenFile', 'w').write('a')
 
 
     def tearDown(self):
         for f in ['testfile1', 'testRemoveFile', 'testRenameFile', 
-                  'testRenamedFile', 'testLink', 'testfile2']:
+                  'testRenamedFile', 'testLink', 'testfile2', 
+                  '.testHiddenFile']:
             try:
                 os.remove('sftp_test/' + f)
             except OSError:
@@ -219,8 +221,8 @@ class TestOurServerOurClient(SFTPTestBase):
                     break
             files.append(f[0])
         files.sort()
-        self.failUnlessEqual(files, ['testDirectory', 'testRemoveFile', 
-                'testRenameFile', 'testfile1']) 
+        self.failUnlessEqual(files, ['.testHiddenFile', 'testDirectory', 
+                'testRemoveFile', 'testRenameFile', 'testfile1']) 
         d = openDir.close()
         result = self._waitWithBuffer(d)
 
@@ -336,7 +338,7 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, SFTPTestBase):
         self.failUnlessEqual(lsRes, ['testDirectory', 'testRemoveFile', \
                 'testRenameFile', 'testfile1'])
         lsRes = self._getCmdResult('ls *File').split('\n')
-        self.failUnlessEqual(lsRes, ['testRemoveFile', 'testRenameFile'])
+        self.failUnlessEqual(lsRes, ['.testHiddenFile', 'testRemoveFile', 'testRenameFile'])
         lsRes = self._getCmdResult('ls -l testDirectory')
         self.failIf(lsRes)
         # XXX test lls in a way that doesn't depend on local semantics
@@ -385,6 +387,10 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, SFTPTestBase):
         lsRes = self._getCmdResult('ls testfile?').split('\n')
         self.failUnlessEqual(lsRes, ['testfile2'])
         self.failIf(self._getCmdResult('rename testfile2 testfile1'))
+
+    def testCommand(self):
+        cmdRes = self._getCmdResult('!echo hello')
+        self.failUnlessEqual(cmdRes, 'hello')
 
 class TestOurServerBatchFile(test_process.SignalMixin, SFTPTestBase):
 

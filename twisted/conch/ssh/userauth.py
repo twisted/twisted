@@ -93,12 +93,12 @@ class SSHUserAuthServer(service.SSHService):
 
     def _cbFinishedAuth(self, (interface, avatar, logout)):
         log.msg('%s authenticated with %s' % (self.user, self.method))
-        self.transport.sendPacket(MSG_USERAUTH_SUCCESS, '')
-        self.transport.avatar = avatar
-        self.transport.logoutFunction = logout
         if self.cancelLoginTimeout:
             self.cancelLoginTimeout.cancel()
             self.cancelLoginTimeout = None
+        self.transport.sendPacket(MSG_USERAUTH_SUCCESS, '')
+        self.transport.avatar = avatar
+        self.transport.logoutFunction = logout
         self.transport.setService(self.transport.factory.services[self.nextService]())
 
     def _ebMaybeBadAuth(self, reason):

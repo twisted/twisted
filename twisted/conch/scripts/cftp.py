@@ -13,11 +13,11 @@ from twisted.conch.error import ConchError
 from twisted.conch.ssh import connection, common
 from twisted.conch.ssh import channel, filetransfer
 from twisted.protocols import basic
-from twisted.internet import reactor, stdio, defer, abstract, fdesc
+from twisted.internet import reactor, stdio, defer, utils
 from twisted.python import log, usage, failure
 
 import os, sys, getpass, struct, tty, fcntl, base64, signal, stat, errno
-import fnmatch
+import fnmatch, pwd
 
 class ClientOptions(options.ConchOptions):
     
@@ -140,9 +140,13 @@ class StdioClient(basic.LineReceiver):
             rest = rest.lstrip()
         else:
             command, rest = line, ''
-        command = command.upper()
-        log.msg('looking up cmd %s' % command)
-        f = getattr(self, 'cmd_%s' % command, None)
+        if command.startswith('!'): # command
+            f = self.cmd_EXEC
+            rest = (command[1:] + ' ' + rest).strip()
+        else:
+            command = command.upper()
+            log.msg('looking up cmd %s' % command)
+            f = getattr(self, 'cmd_%s' % command, None)
         if f is not None:
             d = defer.maybeDeferred(f, rest)
             d.addCallback(self._cbCommand)
@@ -338,8 +342,10 @@ class StdioClient(basic.LineReceiver):
 
     def _cbOpenList(self, directory, glob, verbose):
         files = []
+        if not glob:
+            glob = "[!.]*" # no hidden files
         d = directory.read()
-        d.addBoth(self._cbReadFile, files, directory, self._cbDisplayFiles, glob, verbose)
+        d.addBoth(self._cbReadFile, files, directory, glob, verbose)
         return d
 
     def _ebNotADirectory(self, reason, path, glob, verbose):
@@ -347,21 +353,19 @@ class StdioClient(basic.LineReceiver):
         d.addCallback(self._cbOpenList, glob, verbose)
         return d
 
-    def _cbReadFile(self, files, l, directory, callback, *args):
+    def _cbReadFile(self, files, l, directory, glob, verbose):
         if not isinstance(files, failure.Failure):
-            l.extend(files)
+            l.extend([f for f in files if fnmatch.fnmatch(f[0], glob)])
             d = directory.read()
-            d.addBoth(self._cbReadFile, l, directory, callback, *args)
+            d.addBoth(self._cbReadFile, l, directory, glob, verbose)
             return d
         else:
             reason = files
             reason.trap(EOFError)
             directory.close()
-            return callback(l, *args)
+            return self._cbDisplayFiles(l, glob, verbose)
 
     def _cbDisplayFiles(self, files, glob, verbose):
-        if glob:
-            files = [f for f in files if fnmatch.fnmatch(f[0], glob)]
         files.sort()
         if verbose:
             lines = [f[1] for f in files]
@@ -433,6 +437,15 @@ version                         Print the SFTP version.
 
     def cmd_LPWD(self, ignored):
         return os.getcwd()
+
+    def cmd_EXEC(self, rest):
+        shell = pwd.getpwnam(getpass.getuser())[6]
+        print repr(rest)
+        if rest:
+            cmds = ['-c', rest]
+            return utils.getProcessOutput(shell, cmds, errortoo=1)
+        else:
+            os.system(shell)
 
 StdioClient.__dict__['cmd_?'] = StdioClient.cmd_HELP
 
