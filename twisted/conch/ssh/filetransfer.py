@@ -648,7 +648,7 @@ class FileTransferServer(FileTransferBase):
         files = []
         for f in self._runAsUser(os.listdir, path):
             s = self._runAsUser(os.lstat, os.path.join(path, f))
-            longname = _lsLine(path, s)
+            longname = _lsLine(f, s)
             attrs = self._getAttrs(s)
             files.append((f, longname, attrs))
         opaqueId.append(1)
