@@ -197,7 +197,7 @@ class MakeMessageTestCase(unittest.TestCase):
         r.addHeader("foo", "bar")
         r.addHeader("Content-Length", "4")
         r.bodyDataReceived("1234")
-        self.assertEquals(r.toString(), "SIP/2.0 200 OK\r\nFoo: bar\r\nContent-length: 4\r\n\r\n1234")
+        self.assertEquals(r.toString(), "SIP/2.0 200 OK\r\nFoo: bar\r\nContent-Length: 4\r\n\r\n1234")
 
     def testStatusCode(self):
         r = sip.Response(200)
@@ -666,7 +666,7 @@ Call-ID: 94E7E5DAF39111D791C6000393764646@intarweb.us\r
 CSeq: 9899 REGISTER\r
 Contact: sip:exarkun@127.0.0.1:5632\r
 Expires: 3599\r
-Content-length: 0\r
+Content-Length: 0\r
 \r
 """
 
