@@ -15,6 +15,8 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from twisted.python import components
+
 
 def foo():
     return 2
@@ -27,3 +29,12 @@ class X:
         #print 'X',self.x,'doing!'
         pass
 
+
+class XComponent(components.Componentized):
+    pass
+
+class IX(components.Interface):
+    pass
+
+class XA(components.Adapter):
+    __implements__ = (IX,)
