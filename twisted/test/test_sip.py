@@ -73,17 +73,18 @@ Content-Length: 0
 """.replace("\n", "\r\n")
 
 
-class RequestParsingTestCase(unittest.TestCase):
+class MessageParsingTestCase(unittest.TestCase):
 
     def setUp(self):
         self.l = []
-        self.parser = sip.RequestsParser(self.l.append)
+        self.parser = sip.MessagesParser(self.l.append)
 
     def feedMessage(self, message):
         self.parser.dataReceived(message)
         self.parser.dataDone()
 
     def validateMessage(self, m, method, uri, headers, body):
+        """Validate Requests."""
         self.assertEquals(m.method, method)
         self.assertEquals(m.uri, uri)
         self.assertEquals(m.headers, headers)
@@ -131,9 +132,20 @@ class RequestParsingTestCase(unittest.TestCase):
         self.validateMessage(l[2], "INVITE", "sip:loop",
                              [("from", "foo"), ("to", "bar"), ("content-length", "4")],
                              "1234")
-        
 
-class RequestParsingTestCase2(RequestParsingTestCase):
+    def testSimpleResponse(self):
+        l = self.l
+        self.feedMessage(response1)
+        self.assertEquals(len(l), 1)
+        m = l[0]
+        self.assertEquals(m.code, 200)
+        self.assertEquals(m.phrase, "OK")
+        self.assertEquals(m.headers, [("from", "foo"), ("to", "bar"), ("content-length", "0")])
+        self.assertEquals(m.body, "")
+        self.assertEquals(m.finished, 1)
+
+
+class MessageParsingTestCase2(MessageParsingTestCase):
     """Same as base class, but feed data char by char."""
 
     def feedMessage(self, message):
@@ -142,20 +154,16 @@ class RequestParsingTestCase2(RequestParsingTestCase):
         self.parser.dataDone()
 
 
-class ResponseParsingTestCase(unittest.TestCase):
+class MakeMessageTestCase(unittest.TestCase):
 
-    def setUp(self):
-        self.l = []
-        self.parser = sip.ResponsesParser(self.l.append)
+    def testRequest(self):
+        r = sip.Request("INVITE", "sip:foo")
+        r.addHeader("foo", "bar")
+        self.assertEquals(r.toString(), "INVITE sip:foo SIP/2.0\r\nfoo: bar\r\n\r\n")
 
-    def testSimpleResponse(self):
-        l = self.l
-        self.parser.dataReceived(response1)
-        self.parser.dataDone()
-        self.assertEquals(len(l), 1)
-        m = l[0]
-        self.assertEquals(m.code, 200)
-        self.assertEquals(m.phrase, "OK")
-        self.assertEquals(m.headers, [("from", "foo"), ("to", "bar"), ("content-length", "0")])
-        self.assertEquals(m.body, "")
-        self.assertEquals(m.finished, 1)
+    def testResponse(self):
+        r = sip.Response(200, "OK")
+        r.addHeader("foo", "bar")
+        r.addHeader("Content-Length", "4")
+        r.bodyDataReceived("1234")
+        self.assertEquals(r.toString(), "SIP/2.0 200 OK\r\nfoo: bar\r\ncontent-length: 4\r\n\r\n1234")

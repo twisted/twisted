@@ -20,6 +20,7 @@
 
 # twisted imports
 from twisted.python import log
+from twisted.internet import protocol
 
 # sibling imports
 import basic
@@ -28,19 +29,34 @@ import basic
 class Message:
     """A SIP message."""
 
+    length = None
+    
     def __init__(self):
         self.headers = []
         self.body = ""
         self.finished = 0
     
     def addHeader(self, name, value):
-        self.headers.append((name.lower(), value))
+        name = name.lower()
+        if name == "content-length":
+            self.length = int(value)
+        self.headers.append((name, value))
 
     def bodyDataReceived(self, data):
         self.body += data
     
     def creationFinished(self):
+        if (self.length != None) and (self.length != len(self.body)):
+            raise ValueError, "wrong body length"
         self.finished = 1
+
+    def toString(self):
+        s = "%s\r\n" % self._getHeaderLine()
+        for n, v in self.headers:
+            s += "%s: %s\r\n" % (n, v)
+        s += "\r\n"
+        s += self.body
+        return s
 
 
 class Request(Message):
@@ -50,6 +66,12 @@ class Request(Message):
         self.method = method
         self.uri = uri
 
+    def __repr__(self):
+        return "<SIP Request %d:%s %s>" % (id(self), self.method, self.uri)
+
+    def _getHeaderLine(self):
+        return "%s %s SIP/2.0" % (self.method, self.uri)
+
 
 class Response(Message):
 
@@ -57,6 +79,12 @@ class Response(Message):
         Message.__init__(self)
         self.code = code
         self.phrase = phrase
+
+    def __repr__(self):
+        return "<SIP Response %d:%s>" % (id(self), self.code)
+
+    def _getHeaderLine(self):
+        return "SIP/2.0 %s %s" % (self.code, self.phrase)
 
 
 class MessagesParser(basic.LineReceiver):
@@ -67,7 +95,8 @@ class MessagesParser(basic.LineReceiver):
     """
 
     version = "SIP/2.0"
-    
+    acceptResponses = 1
+    acceptRequests = 1
     state = "firstline" # or "headers", "body" or "invalid"
     
     def __init__(self, messageReceivedCallback):
@@ -122,7 +151,24 @@ class MessagesParser(basic.LineReceiver):
             line = line.rstrip("\n\r")
             if not line:
                 return
-            self.handleFirstLine(line)
+            try:
+                a, b, c = line.split(" ", 2)
+            except ValueError:
+                self.invalidMessage()
+                return
+            if a == "SIP/2.0" and self.acceptResponses:
+                # response
+                try:
+                    code = int(b)
+                except ValueError:
+                    self.invalidMessage()
+                    return
+                self.message = Response(code, c)
+            elif c == "SIP/2.0" and self.acceptRequests:
+                self.message = Request(a, b)
+            else:
+                self.invalidMessage()
+                return
             self.state = "headers"
             return
         else:
@@ -177,30 +223,35 @@ class MessagesParser(basic.LineReceiver):
                     self.messageDone()
 
 
-class RequestsParser(MessagesParser):
+class BaseSIP(protocol.DatagramProtocol):
+    """Base class for SIP clients and servers."""
+    
+    def __init__(self):
+        self.messages = []
+        self.parser = MessagesParser(self.messages.append)
+    
+    def datagramReceived(self, data, addr):
+        self.parser.dataReceived(data)
+        self.parser.dataDone()
+        for m in self.messages:
+            if isinstance(m, Request):
+                f = getattr(self, "handle_%s_request" % m.method, self.handle_request_default)
+                f(m, addr)
+            else:
+                f = getattr(self, "handle_%s_response" % m.code, self.handle_response_default)
+                f(m, addr)
+        self.messages[:] = []
 
-    def handleFirstLine(self, line):
-        try:
-            method, uri, version = line.split(" ", 2)
-        except ValueError:
-            self.invalidMessage()
-            return
-        if version != self.version:
-            self.invalidMessage()
-            return
-        self.message = Request(method, uri)
+    def handle_response_default(self, message, addr):
+        print "Received response %s from %s" % (message, addr)
+
+    def handle_request_default(self, message, addr):
+        print "Received request %s from %s" % (message, addr)
 
 
-class ResponsesParser(MessagesParser):
-
-    def handleFirstLine(self, line):
-        try:
-            version, code, phrase = line.split(" ", 2)
-            code = int(code)
-        except ValueError:
-            self.invalidMessage()
-            return
-        if version != self.version:
-            self.invalidMessage()
-            return
-        self.message = Response(code, phrase)
+if __name__ == '__main__':
+    import sys
+    from twisted.internet import reactor
+    log.startLogging(sys.stdout)
+    reactor.listenUDP(5060, SIPServer())
+    reactor.run()
