@@ -22,10 +22,33 @@ IMPORTANT: In old code the meaning of 'implementing' was too vague. In this
 version we will switch to the Zope3 meaning (objects provide interfaces,
 if a class implements interfaces that means its *instances* provide them).
 However, some methods (e.g. implements()) are confusing because they actually
-check if object *provides* an interface. Using the Zope3 API directly is thus
-strongly recommended.
+check if object *provides* an interface.
 
-TODO: make zope.interface run in 2.2
+Using the Zope3 API directly is thus strongly recommended. Everything
+you need is in the top-level of the zope.interface package, e.g.:
+
+   from zope.interface import Interface
+
+The one exception is registerAdapter, which is in this module and is
+still the way to register adapters (at least, if you want Twisted's
+global adapter registry).
+
+Possible bugs in your code may happen because you rely on
+__implements__ existing and/or have only that and assumes that means
+the component system knows it implements interfaces. This compat layer
+will do its best to make sure that is the case, but sometimes it will
+fail on edge cases, and it will always fail if you use zope.interface APIs directly,
+e.g. this code will NOT WORK AS EXPECTED:
+
+    from twisted.python.components import implements
+    class Foo:
+        __implements__ = IFoo,
+    IFoo.providedBy(Foo()) # returns False, not True
+    implements(Foo(), IFoo) # True! notice meaning of 'implements' changed
+    IFoo.providedBy(Foo()) # now returns True, since implements() fixed it
+
+The lesson - just switch all your code to zope.interface, or only use
+old APIs. These are slow and will whine a lot. Use zope.interface.
 """
 
 # twisted imports
