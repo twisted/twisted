@@ -42,7 +42,7 @@ import sys, pwd
 class Options(usage.Options):
     synopsis = "Usage: mktap sshd [-i <interface>] [-p <port>] [-d <dir>] "
     optParameters = [["interface", "i", "", "local interface to which we listen"],
-                  ["port", "p", 5822],
+                  ["port", "p", 5822, "Port on which to listen"],
                   ["data", "d", "/etc", "directory to look for host keys in"]]
 
     longdesc = "Makes a SSH server.."

@@ -30,12 +30,13 @@ import sys
 class Options(usage.Options):
     synopsis = "Usage: mktap mail [options]"
 
-    optParameters = [["pop", "p", 8110, "Port to start the POP3 server on."],
-                  ["smtp", "s", 8025,
-                   "Port to start the SMTP server on."],
-                  ["relay", "r", None,
-                   "relay mail we do not know how to handle to this IP,"
-                   " using the given path as a queue directory"]]
+    optParameters = [
+        ["pop", "p", 8110, "Port to start the POP3 server on."],
+        ["smtp", "s", 8025, "Port to start the SMTP server on."],
+        ["relay", "r", None, 
+            "relay mail we do not know how to handle to this IP,"
+            " using the given path as a queue directory"]
+    ]
 
     longdesc = "This creates a mail.tap file that can be used by twistd."
 

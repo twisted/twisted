@@ -30,10 +30,11 @@ class Options(usage.Options):
     WARNING: This FTP server currently is very simple and will
     not work with a number of clients. We are working on making
     it more interoperable."""
-    optParameters = [["port", "p", "2121", "set the port number"],
-                  ["root", "r", "/usr/local/ftp",
-                   "define the root of the ftp-site."],
-                  ["useranonymous", "", "anonymous"]]
+    optParameters = [
+        ["port", "p", "2121",                 "set the port number"],
+        ["root", "r", "/usr/local/ftp",       "define the root of the ftp-site."],
+        ["useranonymous", "", "anonymous",    "Name of the anonymous user."]
+    ]
     optFlags = [["anonymous", "a","allow anonymous logins"],
                 ["thirdparty", "3", "allow third-party connections"],
                 ["otp", "","activate One-Time Passwords"]]

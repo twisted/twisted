@@ -28,7 +28,7 @@ import getpass, os, sys
 
 class Options(usage.Options):
     synopsis = "mktap manhole [options]"
-    optParameters = [["user", "u", "admin"]]
+    optParameters = [["user", "u", "admin", "Name of user to allow to log in"]]
     def opt_port(self, opt):
         try:
             self.opts['portno'] = int(opt)
