@@ -130,8 +130,8 @@ class Client(tcp.BaseClient):
     def __init__(self, filename, connector, reactor=None, checkPID = 0):
         self.connector = connector
         self.realAddress = self.addr = filename
-        if checkPID and not lockfile.checkLock(filename):
-            self._finishInit(None, None, lockfile.DidNotGetLock(), reactor)
+        if checkPID and not lockfile.checkLock(filename, True):
+            self._finishInit(None, None, lockfile.DidNotGetLock('failed check'), reactor)
         self._finishInit(self.doConnect, self.createInternetSocket(),
                          None, reactor)
 
