@@ -71,5 +71,20 @@ main.addDelayed(d)
 
 </pre>
     </p>
+    
+    <h2>Scheduling a task to be run in the future</h2>
+    
+    <p>Let's say you want to run a task X seconds in the future. The way to do that is:
+    
+    <pre>
+from twisted.internet import main
+
+def f():
+    print "this will run in 3.5 seconds"
+
+main.addTimeout(f, 3.5)
+
+</pre>
+  </p>
   </body>
 </html>
