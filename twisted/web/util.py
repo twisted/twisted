@@ -75,6 +75,20 @@ class ChildRedirector(Redirect):
         return ChildRedirector(newUrl)
 
 
+from twisted.python import urlpath
+
+class ParentRedirect(resource.Resource):
+    """
+    I redirect to URLPath.here().
+    """
+    isLeaf = 1
+    def render(self, request):
+        return redirectTo(urlpath.URLPath.fromRequest(request).here(), request)
+
+    def getChild(self, request):
+        return self
+
+
 class DeferredResource(resource.Resource):
     """
     I wrap up a Deferred that will eventually result in a Resource
