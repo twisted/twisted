@@ -17,7 +17,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.58 $"[11:-2]
+__version__ = "$Revision: 1.59 $"[11:-2]
 
 # Sibling imports
 import interfaces
@@ -131,13 +131,13 @@ class View:
         if widgets not in self.viewLibraries:
             self.viewLibraries.append(widgets)
         for library in self.viewLibraries:
-            self.importViewLibrary(library)
+            if not hasattr(library, 'getSubview'):
+                library.getSubview = utils.createGetFunction(library)
+            self.viewStack = (library, self.viewStack)
         self.viewStack = (self, self.viewStack)
 
     def importViewLibrary(self, namespace):
-        if not hasattr(namespace, 'getSubview'):
-            namespace.getSubview = utils.createGetFunction(namespace)
-        self.viewStack = (namespace, self.viewStack)
+        self.viewLibraries.append(namespace)
         return self
 
     def render(self, request, doneCallback=None):
