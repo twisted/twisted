@@ -35,7 +35,7 @@ site = server.Site(plumbing.Web(reality._default))
 app = main.Application("reality")
 app.addPort(tcp.Port(8080, site))
 app.addPort(tcp.Port(4040, spigot))
-app.save("start")
+app.save()
 print "Done."
 
 

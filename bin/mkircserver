@@ -25,4 +25,4 @@ portno = 6667
 a = main.Application("irc")
 t = irc.IRCFactory()
 a.addPort(tcp.Port(portno, t))
-a.save("start")
+a.save()

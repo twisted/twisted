@@ -33,4 +33,4 @@ t = telnet.ShellFactory()
 t.username = username
 t.password = password
 a.addPort(tcp.Port(portno, t))
-a.save("start")
+a.save()

@@ -14,12 +14,15 @@ CONNECTION_DONE = -2
 theApplication = None
 
 # Twisted Imports
-from twisted.python import threadable
+
+from twisted.python import threadable, log
 threadable.requireInit()
+
 # Sibling Imports
+
 import task, tcp
 
-class Application:
+class Application(log.Logger):
     running = 0
     def __init__(self, name, uid=None, gid=None):
         self.name = name
@@ -98,18 +101,25 @@ class Application:
         os.rename(filename, finalname)
         print "Saved."
 
+    def logPrefix(self):
+        return self.name+" application"
+
     def run(self):
         """Run this application, running the main loop if necessary.
         """
         if not self.running:
+            threadable.dispatcher.own(self)
             delayeds.extend(self.delayeds)
             shutdowns.append(self.shutDownSave)
             for port in self.ports:
                 port.startListening()
             self.running = 1
+            threadable.dispatcher.disown(self)
         if not running:
+            threadable.dispatcher.own(self)
             self.setUID()
             run()
+            threadable.dispatcher.disown(self)
 
 reads = {}
 writes = {}
