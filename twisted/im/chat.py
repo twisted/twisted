@@ -57,7 +57,7 @@ class ContactsList:
 
     def on_PlainJoinChat_clicked(self, b):
         GroupJoinWindow()
-        
+
     def refreshContactsLists(self):
         # HIDEOUSLY inefficient
         online = self.xml.get_widget("OnlineContactsList")
@@ -183,12 +183,12 @@ class GroupConversation(InputOutputWindow):
         lw = self.xml.get_widget("ParticipantList")
 
         if lw.selection:
-            self.group.account.perspective.addContact(self.members[lw.selection[0]])
+            self.group.account.perspective.callRemote('addContact', self.members[lw.selection[0]])
 
     def on_TopicEntry_activate(self, e):
         print "ACTIVATING TOPIC!!"
         self.group.setTopic(e.get_text())
-        
+
 
     def _cbTextSent(self, result, text, metadata=None):
         print text
