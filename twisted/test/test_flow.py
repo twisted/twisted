@@ -17,7 +17,7 @@
 # Author: Clark C. Evans
 #
 from twisted.flow import flow
-from twisted.flow.threads import Threaded
+from twisted.flow.threads import Threaded, QueryIterator
 from twisted.trial import unittest
 from twisted.python import failure
 from twisted.internet import defer, reactor, protocol
@@ -414,25 +414,55 @@ class FlowTest(unittest.TestCase):
         d = flow.Deferred(Threaded(CountIterator(5)))
         sleep(.5)
         self.assertEquals(expect, unittest.deferredResult(d))
+
+    def testQueryIterator(self):
+        try:
+            from pyPgSQL import PgSQL
+            dbpool = PgSQL
+            c = dbpool.connect()
+            r = c.cursor()
+            r.execute("SELECT 'x'")
+            r.fetchone()
+        except:
+            # PostgreSQL is not installed or bad permissions
+            return
+        expect = [['one'],['two'],['three']]
+        sql = """
+          (SELECT 'one')
+        UNION ALL
+          (SELECT 'two')
+        UNION ALL
+          (SELECT 'three')
+        """
+        d = flow.Deferred(Threaded(QueryIterator(dbpool, sql)))
+        self.assertEquals(expect, unittest.deferredResult(d)) 
         
-    def _testThreadedImmediate(self):
-        """ test for the case where the callback function is
-            not provided to the thread till after the thread has
-            completed; do it in such a way that 1/2 of the results
-            are done normally as well; resetting f.results
+    def testThreadedImmediate(self):
+        """ 
+            The goal of this test is to test the callback mechanism with
+            regard to threads, namely to assure that results can be 
+            accumulated before they are needed; and that left-over results
+            are immediately made available on the next round (even though
+            the producing thread has shut down).  This is a very tough thing
+            to test due to the timing issues.  So it may fail on some 
+            platforms, I'm not sure.
         """
         expect = [5,4,3,2,1]
         result = []
         f = Threaded(CountIterator(5))
-        def callback():
-            result.extend(f.results)
-            f.results = []
         d = defer.Deferred()
-        while True:
-            cl = f._yield()
-            sleep(.2)
-            if not cl:
-                reactor.callLater(0,d.callback,result)
-                break
-            cl.callLater(callback)
+        def process():
+            coop = f._yield()
+            if f.results:
+                result.extend(f.results)
+                f.results = []
+                reactor.callLater(0, process)
+                return
+            if coop:
+                sleep(.3)
+                reactor.callLater(0, coop.callLater, process)
+                return
+            if f.stop:
+                reactor.callLater(0, d.callback, result)
+        reactor.callLater(0, process)
         self.assertEquals(expect, unittest.deferredResult(d))

@@ -105,6 +105,10 @@ class Threaded(Stage):
             self.results.append(val)
         self._cooperate()
 
+    def _stopping(self):
+        self.stop = True
+        self._cooperate()
+
     def _process(self):
         try:
             self._iterable = iter(self._iterable)
@@ -116,15 +120,11 @@ class Threaded(Stage):
                     val = self._iterable.next()
                     reactor.callFromThread(self._process_result, val)
             except StopIteration:
-                pass
+                reactor.callFromThread(self._stopping)
             except: 
-                self.failure = Failure()
-        reactor.callFromThread(self._finish)
-
-    def _finish(self):
-        self.stop = True
-        self._cooperate.immediate = True
-        self._cooperate()
+                self.failure = Faliure()
+                reactor.callFromThread(self._cooperate)
+            self._cooperate.immediate = True
 
     def _yield(self):
         if self.results or self.stop or self.failure:
