@@ -1,3 +1,10 @@
+twisted (0.99.2-4) unstable; urgency=low
+
+  * UGH! Python 2.3 distutils bug is back 
+  * Working around it
+
+ -- Moshe Zadka <moshez@debian.org>  Wed,  2 Oct 2002 12:07:25 +0000
+
 twisted (0.99.2-3) unstable; urgency=low
 
   * Adding "/usr/bin/python" to build dependencies.
