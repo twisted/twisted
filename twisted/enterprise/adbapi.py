@@ -69,8 +69,9 @@ class ConnectionPool(pb.Referenceable):
                 result = curs.fetchall()
                 curs.close()
         except:
-            print 'oops!'
-            conn.rollback()
+            print 'ERROR: runQuery traceback'
+            # NOTE: dont rollback queries...
+            # conn.rollback()
             traceback.print_exc()
             raise
         return result
@@ -84,12 +85,11 @@ class ConnectionPool(pb.Referenceable):
         curs = conn.cursor()
         try:
             curs.execute(qstr)
-            print 'ran it!'
-            curs.execute("commit")
             result = None
             curs.close()
+            conn.commit()
         except:
-            print 'oops!'
+            print 'ERROR: runOperation traceback'
             conn.rollback()
             traceback.print_exc()
             raise
