@@ -188,7 +188,7 @@ class POP3(basic.LineReceiver):
             line = '\r\n.'
         else:
             line = '.'
-        self.sendLine('.')
+        self.sendLine(line)
         
     def do_RETR(self, i):
         self.highest = max(self.highest, i)
@@ -281,7 +281,7 @@ class POP3(basic.LineReceiver):
                 None,
                 IMailbox
             )
-        return defer.fail(cred.error.UnauthorizedLogin())
+        raise cred.error.UnauthorizedLogin()
 
 class IMailbox(components.Interface):
     def listMessages(self, i=None):
