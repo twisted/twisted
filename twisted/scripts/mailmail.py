@@ -27,6 +27,7 @@ import sys
 import rfc822
 import socket
 import getpass
+from ConfigParser import ConfigParser
 
 try:
     import cStringIO as StringIO
@@ -34,7 +35,12 @@ except:
     import StringIO
 
 from twisted.internet import reactor
+from twisted.protocols import smtp
 from twisted.mail import bounce
+
+GLOBAL_CFG = "/etc/mailmail"
+LOCAL_CFG = os.path.expanduser("~/.twisted/mailmail")
+SMARTHOST = '127.0.0.1'
 
 ERROR_FMT = """\
 Subject: Failed Message Delivery
@@ -45,6 +51,9 @@ Subject: Failed Message Delivery
 -- 
 The Twisted sendmail application.
 """
+
+def log(message, *args):
+    sys.stderr.write(str(message) % args + '\n')
 
 class Options:
     """
@@ -184,6 +193,7 @@ def parseOptions(argv):
         o.to = []
     else:
         o.recipientsFromHeaders = False
+        o.exludeAddresses = []
     
     headers = []
     buffer = StringIO.StringIO()
@@ -210,7 +220,7 @@ def parseOptions(argv):
     buffer.write(line)
 
     if o.recipientsFromHeaders:
-        for a in o.excludeAddress:
+        for a in o.excludeAddresses:
             try:
                 o.to.remove(a)
             except:
@@ -219,6 +229,92 @@ def parseOptions(argv):
     buffer.seek(0, 0)
     o.body = JointFile([buffer, sys.stdin], not o.ignoreDot)
     return o
+
+class Configuration:
+    """
+    @ivar allowUIDs
+    @ivar allowGIDs
+    @ivar denyUIDs
+    @ivar denyGIDs
+    @ivar useraccess
+    @ivar groupaccess
+    @ivar identities
+    @ivar smarthost
+    @ivar domain
+    @ivar defaultAccess
+    """
+    def __init__(self):
+        self.allowUIDs = []
+        self.denyUIDs = []
+        self.allowGIDs = []
+        self.denyGIDs = []
+        self.useraccess = 'deny'
+        self.groupaccess= 'deny'
+        
+        self.identities = {}
+        self.smarthost = None
+        self.domain = None
+        
+        self.defaultAccess = True
+
+def loadConfig(path):
+    # [useraccess]
+    # allow=uid1,uid2,...
+    # deny=uid1,uid2,...
+    # order=allow,deny
+    # [groupaccess]
+    # allow=gid1,gid2,...
+    # deny=gid1,gid2,...
+    # order=deny,allow
+    # [identity]
+    # host1=username:password
+    # host2=username:password
+    # [addresses]
+    # smarthost=a.b.c.d
+    # default_domain=x.y.z
+    
+    c = Configuration()
+    
+    if not os.access(path, os.R_OK):
+        return c
+
+    p = ConfigParser()
+    p.read(path)
+    
+    au = c.allowUIDs
+    du = c.denyUIDs
+    ag = c.allowGIDs
+    dg = c.denyGIDs
+    for (section, a, d) in (('useraccess', au, du), ('groupaccess', ag, dg)):
+        if p.has_section(section):
+            for (mode, L) in (('allow', a), ('deny', d)):
+                for id in p.get(section, mode).split(','):
+                    try:
+                        id = int(id)
+                    except ValueError:
+                        log("Illegal %sID in [%s] section: %s", section[0].upper(), section, id)
+                    else:
+                        L.append(id)
+            order = p.get(section, 'order')
+            order = map(str.split, map(str.lower, order.split(',')))
+            if order[0] == 'allow':
+                setattr(c, section, 'allow')
+            else:
+                setattr(c, section, 'deny')
+
+    if p.has_section('identity'):
+        for (host, up) in p.items('identity'):
+            parts = up.split(':', 1)
+            if len(parts) != 2:
+                log("Illegal entry in [identity] section: %s", up)
+                continue
+            p.identities[host] = parts
+
+    if p.has_section('addresses'):
+        c.smarthost = p.get('addresses', 'smarthost')
+        c.domain = p.get('addresses', 'default_domain')
+
+    return c
 
 def success(result):
     reactor.stop()
@@ -229,9 +325,9 @@ def failure(f):
     reactor.stop()
     failed = f
 
-def sendmail(options):
+def sendmail(host, options, ident):
     from twisted.protocols.smtp import sendmail
-    d = sendmail('localhost', options.sender, options.to, options.body)
+    d = sendmail(host, options.sender, options.to, options.body)
     d.addCallbacks(success, failure)
     reactor.run()
 
@@ -246,9 +342,55 @@ def senderror(failure, options):
     d = sendmail('localhost', sender, recipient, body)
     d.addBoth(lambda _: reactor.stop())
 
+def deny(conf):
+    uid = os.getuid()
+    gid = os.getgid()
+    
+    if conf.useraccess == 'deny':
+        if uid in conf.denyUIDs:
+            return True
+        if uid in conf.allowUIDs:
+            return False
+    else:
+        if uid in conf.allowUIDs:
+            return False
+        if uid in conf.denyUIDs:
+            return True
+
+    if conf.groupaccess == 'deny':
+        if gid in conf.denyGIDs:
+            return True
+        if gid in conf.allowGIDs:
+            return False
+    else:
+        if gid in conf.allowGIDs:
+            return False
+        if gid in conf.denyGIDs:
+            return True
+    
+    return not conf.defaultAccess
+
 def run():
     o = parseOptions(sys.argv[1:])
-    sendmail(o)
+    gConf = loadConfig(GLOBAL_CFG)
+    lConf = loadConfig(LOCAL_CFG)
+    
+    if deny(gConf) or deny(lConf):
+        log("Permission denied")
+        return
+
+    host = lConf.smarthost or gConf.smarthost or SMARTHOST
+    
+    ident = gConf.identities.copy()
+    ident.update(lConf.identities)
+    
+    if lConf.domain:
+        smtp.DNSNAME = lConf.domain
+    elif gConf.domain:
+        smtp.DNSNAME = gConf.domain
+
+    sendmail(host, o, ident)
+
     if failed:
         if o.printErrors:
             failed.printTraceback(file=sys.stderr)

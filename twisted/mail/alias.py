@@ -243,7 +243,8 @@ class ProcessAlias(AliasBase):
 
     def __init__(self, path, *args):
         AliasBase.__init__(self, *args)
-        self.path = path
+        self.path = path.split()
+        self.program = self.path[0]
     
     def __str__(self):
         return '<Process %s>' % (self.path,)
@@ -251,8 +252,8 @@ class ProcessAlias(AliasBase):
     def createMessageReceiver(self):
         from twisted.internet import reactor
         p = ProcessAliasProtocol()
-        m = MessageWrapper(p, self.path)
-        fd = reactor.spawnProcess(p, '/bin/sh', ('/bin/sh', '-c', self.path))
+        m = MessageWrapper(p, self.program)
+        fd = reactor.spawnProcess(p, self.program, self.path)
         return m
 
 class MultiWrapper:

@@ -24,6 +24,7 @@ from twisted.python import components
 from twisted.internet import defer
 from twisted.internet import app
 from twisted.python import util
+from twisted.python import log
 
 from twisted import cred
 import twisted.cred.portal
@@ -307,7 +308,7 @@ class FileMonitoringService(app.ApplicationService):
             mtime = os.path.getmtime(name)
         except:
             mtime = 0
-        self.files.append((interval, name, callback, mtime))
+        self.files.append([interval, name, callback, mtime])
         self.intervals.addInterval(interval)
 
     def unmonitorFile(self, name):
@@ -326,6 +327,8 @@ class FileMonitoringService(app.ApplicationService):
             except:
                 now = 0
             if now > mtime:
+                log.msg("%s changed, notifying listener" % (name,))
+                self.files[self.index][3] = now
                 callback(name)
         t, self.index = self.intervals.next()
         from twisted.internet import reactor
