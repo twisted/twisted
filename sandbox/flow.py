@@ -62,15 +62,26 @@ from __future__ import nested_scopes
 """
 from twisted.python.failure import Failure
 from twisted.python.compat import StopIteration, iter
+import types
 
 def wrap(obj, trap = None):
     """ Wraps various objects for use within a flow """
     if isinstance(obj, Stage):
         return obj
-    return Iterable(obj, trap)
+    if type(obj) is types.ClassType:
+        obj = obj()
+    try:
+        obj = iter(obj)
+        return Iterable(iter(obj),trap)
+    except TypeError: pass
+    assert callable(obj), "cannot find an appropriate wrapper"
+    return Callable(obj, trap)
 
 class Instruction:
     """ Has special meaning when yielded in a flow """
+    pass
+
+Continue = Instruction()
 
 class Cooperate(Instruction):
     """ Requests that processing be paused so other tasks can resume
@@ -144,45 +155,49 @@ class Stage(Instruction):
             return self.result.trap(*self._trap)
         return self.result
     def _yield(self):
-        """ executed during a yield statement by previous flow
+        """ executed during a yield statement by previous stage
 
-            This method is private within the scope of the flow
-            module, it is used by one stage in the flow to ask
-            for the next stage to produce.   If a value is 
-            returned, then it shall be passed all the way up
-            the call chain (useful for Cooperate) without 
-            changing the execution path.
+            This method is private within the scope of the flow module, 
+            it is used by one stage in the flow to ask a subsequent
+            stage to produce its value.  The result of the yield is 
+            then stored in self.result and is an instance of Failure
+            if a problem occurred.
         """
         self._ready = 1
         self.result = None
 
-class Iterable(Stage):
-    """ Wraps iterables (generator/iterator) for use in a flow """      
-    def __init__(self, iterable, trap):
+class Wrapper(Stage):
+    """ Basic wrapper for callable objects
+
+        This wraps functions (or bound methods).    Execution starts with
+        the initial function.   If the return value is a Stage, then 
+        control passes on to that stage for the next round of execution.  
+        If the return value is Cooperate, then the chain of Stages is
+        put on hold, and this return value travels all the way up the
+        call stack so that the underlying mechanism can sleep, or 
+        perform other tasks, etc.  All other non-Instruction return 
+        values, Failure objects included, are passed back to the 
+        previous stage via self.result
+
+        All exceptions signal the end of the Stage.  StopIteration 
+        means to stop without providing a result, while all other
+        exceptions provide a Failure self.result followed by stoppage.
+    """
+    def __init__(self, callable, trap):
         Stage.__init__(self, trap)
-        try:
-            self._next = iter(iterable).next
-        except TypeError:
-            iterable = iterable()
-            self._next = iter(iterable).next
-        self._next_stage  = None
-        self._stop_next = 0
+        self._callable   = callable
+        self._next_stage = None
+        self._stop_next  = 0
+    def _yield_next(self, result):
+        """ Fetch the next value from the underlying callable """
+        if isinstance(result, Instruction):
+            if isinstance(result, Stage):
+                self._next_stage = result
+                return Continue
+            return result
+        self.result = result
     def _yield(self):
-        """ executed during a yield statement
-
-            To fetch the next value, the Iterable first checks to 
-            see if there is a next stage which must be processed first.  
-            If so, it does that.   Note that the next stage does not need
-            to be remembered, as the current stage will yield the same 
-            object again if requires further processing.   Also, this
-            enables more than one next stage to be used.
-
-            After this, it calles the wrapped generator's next method,
-            and process the result.   If the result is a Stage, then
-            this is queued for execution.  Otherwise, either Cooperate
-            object is returned, or None is returned indicating that
-            a result was produced.
-        """
+        """ executed during a yield statement """
         Stage._yield(self)
         if self._stop_next or self.stop:
             self.stop = 1
@@ -194,13 +209,10 @@ class Iterable(Stage):
                 if result: return result
                 self._next_stage = None 
             try:
-                result = self._next()
-                if isinstance(result, Instruction):
-                    if isinstance(result, Stage):
-                        self._next_stage = result
-                        continue
-                    return result
-                self.result = result
+                ret = self._yield_next(self._callable())
+                if ret is Continue: 
+                    continue
+                return ret
             except StopIteration:
                 self.stop = 1
             except Failure, fail:
@@ -210,6 +222,25 @@ class Iterable(Stage):
                 self.result = Failure()
                 self._stop_next = 1
             return
+
+class Callable(Wrapper):
+    """ Implements a state machine, via callable functions or methods
+
+        This wraps functions (or bound methods).  Execution is the same
+        as in the Wrapper, only that callable return values are treated
+        differently... they signal the next function to be executed.
+    """
+    def _yield_next(self, result):
+        """ Fetch the next value from the underlying callable """
+        if callable(result):
+            self._next = result
+            return Continue
+        return Wrapper._yield_next(self, result)
+
+class Iterable(Wrapper):
+    """ Wraps iterables (generator/iterator) for use in a flow """      
+    def __init__(self, iterable, trap):
+        Wrapper.__init__(self, iterable.next, trap)
 
 class Merge(Stage):
     """ Merges two or more Stages results into a single stream
