@@ -139,6 +139,7 @@ build/scripts-$(pyversion) build/lib.win32-$(pyversion): $TwSources
 ExeDeps=py$(pyversion)-$(DoDocs).iss
         build/lib.win32-$(pyversion)
         build/scripts-$(pyversion)
+        $(TwSources)
 
 dist/Twisted-$(Version).win32-py$(pyversion).exe: doc/twisteddoc.zip $(ExeDeps)
     :sys $(iscc) py$(pyversion)-withdocs.iss
