@@ -57,10 +57,6 @@ class TestFailureFormatting(common.RegistryBaseMixin, unittest.TestCase):
     def tearDown(self):
         from twisted import trial
         trial.tbformat = self.oldtbformat
-        if sys.version_info[0:2] == (2,2):
-            self.registry._clearAdapterRegistry()
-            self._suite = None
-            return
         super(TestFailureFormatting, self).tearDown()
 
     def testNoExceptionCaughtHere(self):
