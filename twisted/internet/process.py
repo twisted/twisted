@@ -213,17 +213,15 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
             sys.settrace(None)
             # Destroy my stdin / stdout / stderr (in that order)
             try:
-                for fd in range(3):
-                    os.close(fd)
-                os.dup(stdin_read)   # should be 0
-                os.dup(stdout_write) # 1
-                os.dup(stderr_write) # 2
-                os.close(stdin_read)
-                os.close(stdout_read)
-                os.close(stdout_write)
-                os.close(stderr_read)
-                os.close(stderr_write)
-
+                os.dup2(stdin_read, 0)
+                os.dup2(stdout_write, 1)
+                os.dup2(stderr_write, 2)
+                # XXX TODO FIXME: 256 is a magic number here; really we need a
+                # way of saying "close all open FDs except 0, 1, 2".  This will
+                # fail in a surprising and subtle way if the current process
+                # has more than 256 FDs open.  On linux this would be
+                # "[os.close(int(fd)) for fd in os.listdir('/proc/self/fd')]"
+                # but I seriously doubt that's portable.
                 for fd in range(3, 256):
                     try:    os.close(fd)
                     except: pass
