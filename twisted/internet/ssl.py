@@ -158,4 +158,5 @@ class Connector(tcp.Connector):
     
     def startConnecting(self):
         proto = self.factory.buildProtocol((self.host, self.portno))
-        self.transportFactory(self.host, self.portno, proto, self.contextFactory, self.timeout, self)
+        self.transportFactory(self.host, self.portno, proto,
+                              self.contextFactory, self.timeout, self)

@@ -89,13 +89,30 @@ class Deferred:
         return self
 
     def addCallback(self, callback, *args, **kw):
+        """Convenience method for adding just a callback.
+
+        See addCallbacks.
+        """
         return self.addCallbacks(callback, callbackArgs=args,
                                  callbackKeywords=kw)
 
     def addErrback(self, errback, *args, **kw):
+        """Convenience method for adding just an errback.
+
+        See addCallbacks.
+        """
         return self.addCallbacks(lambda x: x, errback,
                                  errbackArgs=args,
                                  errbackKeywords=kw)
+
+    def addBoth(self, callback, *args, **kw):
+        """Convenience method for adding both a callback and an errback.
+
+        See addCallbacks.
+        """
+        return self.addCallbacks(callback, callback,
+                                 callbackArgs=args, errbackArgs=args,
+                                 callbackKeywords=kw, errbackKeywords=kw)
 
     def chainDeferred(self, d):
         return self.addCallbacks(d.callback, d.errback)
@@ -205,14 +222,13 @@ class DeferredList(Deferred):
 
           deferredList: a list of Deferreds
         """
-        self.resultList = []
+        self.resultList = [None] * len(deferredList)
         Deferred.__init__(self)
         index = 0
         for deferred in deferredList:
             deferred.addCallbacks(self._cbDeferred, self._cbDeferred,
                                   callbackArgs=(index,SUCCESS),
                                   errbackArgs=(index,FAILURE))
-            self.resultList.append(None)
             index = index + 1
             deferred.arm()
 

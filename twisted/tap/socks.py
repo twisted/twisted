@@ -20,7 +20,6 @@ I am a support module for making SOCKSv4 servers with mktap.
 """
 
 from twisted.protocols import socks
-from twisted.internet import tcp
 from twisted.python import usage
 import sys
 

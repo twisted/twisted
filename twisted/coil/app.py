@@ -20,7 +20,7 @@ This is used as the root of the config tree.
 """
 
 # Twisted Imports
-from twisted.internet import tcp
+from twisted.internet.interfaces import IConnector
 from twisted.protocols import protocol
 from twisted.python import log, roots, reflect, components
 from twisted.cred import service
@@ -111,7 +111,7 @@ class ServiceCollection(coil.ConfigCollection):
 
 class ConnectorCollection(coil.ConfigCollection):
 
-    entityType = tcp.IConnector
+    entityType = IConnector
 
     def __init__(self, app):
         coil.ConfigCollection.__init__(self)

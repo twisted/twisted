@@ -18,7 +18,7 @@ import random
 import time
 import time
 
-from twisted.internet import tcp, main
+from twisted.internet import main
 
 import osmetrics
 

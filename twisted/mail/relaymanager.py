@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-'''infrastructure for relaying mail through smart host
+"""infrastructure for relaying mail through smart host
 
 Today, internet e-mail has stopped being Peer-to-peer for many problems,
 spam (unsolicited bulk mail) among them. Instead, most nodes on the
@@ -29,7 +29,7 @@ accepting mail for a small set of domains.
 
 The classes here are meant to facilitate support for such a configuration
 for the twisted.mail SMTP server
-'''
+"""
 from twisted.python import delay, log
 from twisted.mail import relay
 from twisted.internet import tcp
@@ -38,29 +38,29 @@ import os, string
 
 class SMTPManagedRelayer(relay.SMTPRelayer):
 
-    '''SMTP Relayer which notifies a manager
+    """SMTP Relayer which notifies a manager
 
     Notify the manager about successful main, failed mail
     and broken connections
-    '''
+    """
 
     identity = 'foo.bar'
 
     def __init__(self, messages, manager):
-        '''initialize with list of messages and a manager
+        """initialize with list of messages and a manager
 
         messages should be file names.
         manager should support .notifySuccess, .notifyFailure
         and .notifyDone
-        '''
+        """
         relay.SMTPRelayer.__init__(self, messages)
         self.manager = manager
 
     def sentMail(self, addresses):
-        '''called when e-mail has been sent
+        """called when e-mail has been sent
 
         we will always get 0 or 1 addresses.
-        '''
+        """
         message = self.names[0]
         relay.SMTPRelayer.sentMail(self, addresses)
         if addresses: 
@@ -69,18 +69,18 @@ class SMTPManagedRelayer(relay.SMTPRelayer):
             self.manager.notifyFailure(self, message)
 
     def connectionFailed(self):
-        '''called when connection could not be made
+        """called when connection could not be made
 
         our manager should be notified that this happened,
-        it might prefer some other host in that case'''
+        it might prefer some other host in that case"""
         self.manager.notifyNoConection(self)
         self.manager.notifyDone(self)
 
     def connectionLost(self):
-        '''called when connection is broken
+        """called when connection is broken
 
         notify manager we will try to send no more e-mail
-        '''
+        """
         self.manager.notifyDone(self)
 
 
@@ -117,18 +117,18 @@ class MessageCollection:
 
 class SmartHostSMTPRelayingManager:
 
-    '''Manage SMTP Relayers
+    """Manage SMTP Relayers
 
     Manage SMTP relayers, keeping track of the existing connections,
     each connection's responsibility in term of messages. Create
     more relayers if the need arises.
 
     Someone should press .checkState periodically
-    '''
+    """
 
     def __init__(self, directory, smartHostAddr, maxConnections=1, 
                  maxMessagesPerConnection=10):
-        '''initialize
+        """initialize
 
         directory should be a directory full of pickles
         smartHostIP is the IP for the smart host
@@ -137,7 +137,7 @@ class SmartHostSMTPRelayingManager:
         a relayer will be given responsibility for.
 
         Default values are meant for a small box with 1-5 users.
-        '''
+        """
         self.directory = directory
         self.maxConnections = maxConnections
         self.maxMessagesPerConnection = maxMessagesPerConnection
@@ -153,10 +153,10 @@ class SmartHostSMTPRelayingManager:
         self.messageCollection.done(message)
 
     def notifySuccess(self, relay, message):
-        '''a relay sent a message successfully
+        """a relay sent a message successfully
 
         Mark it as sent in our lists
-        '''
+        """
         self._finish(message)
 
     def notifyFailure(self, relay, message):
@@ -167,11 +167,11 @@ class SmartHostSMTPRelayingManager:
         self._finish(message)
 
     def notifyDone(self, relay):
-        '''a relay finished
+        """a relay finished
 
         unmark all pending messages under this relay's resposibility
         as being relayed, and remove the relay.
-        '''
+        """
         for message in self.managed[relay]:
             self.messageCollection.waiting(message) 
         del self.managed[relay]
@@ -180,23 +180,23 @@ class SmartHostSMTPRelayingManager:
         pass
 
     def __getstate__(self):
-        '''(internal) delete volatile state'''
+        """(internal) delete volatile state"""
         dct = self.__dict__.copy()
         del dct['managed'], dct['messageCollection']
         return dct
 
     def __setstate__(self, state):
-        '''(internal) restore volatile state'''
+        """(internal) restore volatile state"""
         self.__dict__.update(state)
         self.messageCollection = MessageCollection()
         self.managed = {}
         self.readDirectory()
 
     def readDirectory(self):
-        '''read the messages directory
+        """read the messages directory
 
         look for new messages
-        ''' 
+        """ 
         for message in os.listdir(self.directory):
             # Skip non data files
             if message[-2:]!='-D':
@@ -204,11 +204,11 @@ class SmartHostSMTPRelayingManager:
             self.messageCollection.addMessage(message[:-2])
 
     def checkState(self):
-        '''call me periodically to check I am still up to date
+        """call me periodically to check I am still up to date
 
         synchronize with the state of the world, and maybe launch
         a new relay
-        '''
+        """
         self.readDirectory() 
         if (len(self.managed) >= self.maxConnections or 
             not self.messageCollection.hasWaiting()):
@@ -259,16 +259,16 @@ class MXCalculator:
 # It's difficult to pickle methods
 # So just have a function call the method
 def checkState(manager):
-    '''cause a manager to check the state'''
+    """cause a manager to check the state"""
     manager.checkState()
 
 
 def attachManagerToDelayed(manager, delayed, time=1):
-    '''attach a a manager to a Delayed
+    """attach a a manager to a Delayed
 
     manager should be an SMTPRelayManager, delayed should be a 
     twisted.python.Delayed and time should be an integer in second,
     specifying time between checking the state
-    '''
+    """
     loop = delay.Looping(time, checkState, delayed)
     loop.delayed._later(loop.loop,loop.ticks,(manager,))

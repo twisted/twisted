@@ -42,7 +42,7 @@ class IReactorTCP(Interface):
         """
 
 class IReactorSSL(Interface):
-    def clientSSL(host, port, protocol, timeout=30, contextFactory=None):
+    def clientSSL(self, host, port, protocol, contextFactory, timeout=30,):
         """Connect a client Protocol to a remote SSL socket.
         """
 
@@ -70,14 +70,21 @@ class IReactorUDP(Interface):
     """UDP socket methods.
     """
     def listenUDP(self, port, factory, interface='', maxPacketSize=8192):
-        """
-        Connects a given protocol Factory to the given numeric UDP port.
+        """Connects a given protocol Factory to the given numeric UDP port.
+
+        Returns: something conforming to IListeningPort.
         """
 
-    def clientUDP(self, remotehost, remoteport, localport, protocol,
-                  interface='', maxPacketSize=8192):
-        """Connects a Protocol instance to a UDP client port.
-        """
+##     I can't remember what I was thinking when I did this.  On the off chance
+##     that someone else remembers, I'll leave it here, but I think it's going
+##     away.
+##     
+##     def clientUDP(self, remotehost, remoteport, localport, protocol,
+##                   interface='', maxPacketSize=8192):
+##         """Connects a Protocol instance to a UDP client port.
+##         """
+
+## XXX TODO: expose udp.Port.createConnection more formally
 
 class IReactorProcess(Interface):
     def spawnProcess(self, processProtocol, executable, args=(), env={}):
@@ -309,6 +316,31 @@ class IProducer(Interface):
         producing data for good.
         """
         raise NotImplementedError
+
+
+class IConnector:
+    """Connect this to that and make it stick."""
+
+    transportFactory = None
+    protocol = None
+    factory = None
+
+    def __init__(self, host, portno, protocolFactory, timeout=30):
+        raise NotImplementedError
+
+    def connectionFailed(self):
+        raise NotImplementedError
+
+    def connectionLost(self):
+        raise NotImplementedError
+
+    def startConnecting(self):
+        raise NotImplementedError
+
+    def getProtocol(self):
+        """Get the current protocol instance."""
+        raise NotImplementedError
+
 
 
 class ISelectable(Interface):

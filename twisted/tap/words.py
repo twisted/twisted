@@ -19,7 +19,6 @@
 I am a support module for creating chat servers with mktap.
 """
 
-from twisted.internet import tcp
 from twisted.python import usage
 from twisted.spread import pb
 from twisted.words import service, ircservice, webwords

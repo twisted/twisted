@@ -19,7 +19,6 @@ import gtk
 import string
 
 from twisted.spread import pb
-from twisted.internet import tcp
 from twisted import copyright
 from twisted.python import reflect
 

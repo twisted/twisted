@@ -17,7 +17,6 @@
 
 # library includes
 from twisted.spread import pb
-from twisted.internet import tcp
 
 import time
 

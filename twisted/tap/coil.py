@@ -23,7 +23,6 @@ import string, os
 # Twisted Imports
 from twisted.web import server
 from twisted.coil import web
-from twisted.internet import tcp
 from twisted.python import usage
 
 

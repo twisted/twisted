@@ -20,7 +20,6 @@ I am a support module for making TOC servers with mktap.
 """
 
 from twisted.protocols import toc
-from twisted.internet import tcp
 from twisted.python import usage
 import sys
 

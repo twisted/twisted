@@ -20,7 +20,6 @@ I am the support module for making a ftp server with mktap.
 """
 
 from twisted.protocols import ftp
-from twisted.internet import tcp
 from twisted.python import usage
 import sys
 import os.path

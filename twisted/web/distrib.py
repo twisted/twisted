@@ -24,7 +24,6 @@ if os.sys.platform != 'win32':
 # Twisted Imports
 from twisted.spread import pb
 from twisted.protocols import http
-from twisted.internet import tcp
 from twisted.python import log
 from twisted.persisted import styles
 

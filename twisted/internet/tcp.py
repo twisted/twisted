@@ -51,6 +51,7 @@ from twisted.protocols import protocol
 from twisted.persisted import styles
 from twisted.python import log, defer
 
+from twisted.internet.interfaces import IConnector
 # Sibling Imports
 import abstract
 import main
@@ -257,29 +258,6 @@ class Client(Connection):
         s = '<%s to %s at %x>' % (self.__class__, self.addr, id(self))
         return s
 
-
-class IConnector:
-    """Connect this to that and make it stick."""
-
-    transportFactory = None
-    protocol = None
-    factory = None
-
-    def __init__(self, host, portno, protocolFactory, timeout=30):
-        raise NotImplementedError
-
-    def connectionFailed(self):
-        raise NotImplementedError
-
-    def connectionLost(self):
-        raise NotImplementedError
-
-    def startConnecting(self):
-        raise NotImplementedError
-
-    def getProtocol(self):
-        """Get the current protocol instance."""
-        raise NotImplementedError
 
 
 class Connector:

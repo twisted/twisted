@@ -19,7 +19,7 @@
 I am the support module for making a stupid proxy with mktap.
 """
 
-from twisted.internet import tcp, stupidproxy
+from twisted.internet import stupidproxy
 from twisted.python import usage
 import sys
 

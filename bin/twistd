@@ -98,6 +98,9 @@ if platformType != 'posix' or config.opts['debug']:
 
 # Twisted Imports
 from twisted.python import usage, log, runtime
+# TODO: make which reactor to use an option
+from twisted.internet.default import DefaultSelectReactor
+DefaultSelectReactor().install()
 from twisted.internet import main
 from twisted.persisted import styles
 class EverythingEphemeral(styles.Ephemeral):

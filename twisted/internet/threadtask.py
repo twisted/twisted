@@ -32,12 +32,12 @@ class ThreadDispatcher(threadpool.ThreadPool):
     The difference from ThreadPool is that callbacks are run in the main IO
     event loop thread, and are thus inherently thread-safe.
 
-    You probably want your instance to be shutdown when Twisted is shut down:
+    You probably want your instance to be shutdown when Twisted is shut down::
 
-        from twisted.internet import main
+        from twisted.internet import reactor
         from twisted.internet import threadtask
         tpool = ThreadDispatcher()
-        main.callDuringShutdown(tpool.stop)
+        reactor.addSystemEventTrigger('during', 'shutdown', tpool.stop)
 
     """
 
