@@ -23,31 +23,16 @@ class IOldApplication(components.Interface):
     def listenWith(self, portType, *args, **kw):
         pass
 
-    def unlistenWith(self, portType, *args, **kw):
-        pass
-
     def listenTCP(self, port, factory, backlog=5, interface=''):
-        pass
-
-    def unlistenTCP(self, port, interface=''):
         pass
 
     def listenUNIX(self, filename, factory, backlog=5, mode=0666):
         pass
 
-    def unlistenUNIX(self, filename):
-        pass
-
     def listenUDP(self, port, proto, interface='', maxPacketSize=8192):
         pass
 
-    def unlistenUDP(self, port, interface=''):
-        pass
-
     def listenSSL(self, port, factory, ctxFactory, backlog=5, interface=''):
-        pass
-
-    def unlistenSSL(self, port, interface=''):
         pass
 
     def connectWith(self, connectorType, *args, **kw):
@@ -75,43 +60,25 @@ class ServiceNetwork:
     def listenWith(self, portType, *args, **kw):
         internet.GenericServer(portType, *args, **kw).setServiceParent(self.app)
 
-    def unlistenWith(self, portType, *args, **kw):
-        raise NotImplementedError()
-
     def listenTCP(self, port, factory, backlog=5, interface=''):
         s = internet.TCPServer(port, factory, backlog, interface)
         s.setServiceParent(self.app)
-
-    def unlistenTCP(self, port, interface=''):
-        raise NotImplementedError()
 
     def listenUNIX(self, filename, factory, backlog=5, mode=0666):
         s = internet.UNIXServer(filename, factory, backlog, mode)
         s.setServiceParent(self.app)
 
-    def unlistenUNIX(self, filename):
-        raise NotImplementedError()
-
     def listenUDP(self, port, proto, interface='', maxPacketSize=8192):
         s = internet.UDPServer(port, proto, interface, maxPacketSize)
         s.setServiceParent(self.app)
-
-    def unlistenUDP(self, port, interface=''):
-        raise NotImplementedError()
 
     def listenSSL(self, port, factory, ctxFactory, backlog=5, interface=''):
         s = internet.SSLServer(port, factory, ctxFactory, backlog, interface)
         s.setServiceParent(self.app)
 
-    def unlistenSSL(self, port, interface=''):
-        raise NotImplementedError()
-
     def connectWith(self, connectorType, *args, **kw):
         s = internet.GenericClient(connectorType,  *args, **kw)
         s.setServiceParent(self.app)
-
-    def unlistenSSL(self, port, interface=''):
-        raise NotImplementedError()
 
     def connectUDP(self, remotehost, remoteport, protocol, localport=0,
                   interface='', maxPacketSize=8192):
