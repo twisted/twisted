@@ -19,11 +19,11 @@
 """Session Initialization Protocol."""
 
 # system imports
-import rfc822
+import socket, time
 
 # twisted imports
 from twisted.python import log, util
-from twisted.internet import protocol
+from twisted.internet import protocol, defer, reactor
 
 # sibling imports
 import basic
@@ -285,6 +285,9 @@ class Message:
         s += self.body
         return s
 
+    def _getHeaderLine(self):
+        raise NotImplementedError
+
 
 class Request(Message):
 
@@ -362,7 +365,7 @@ class MessagesParser(basic.LineReceiver):
             self.reset()
         else:
             # we have enough data and message wasn't finished? something is wrong
-            assert 0, "this should never happen"
+            raise RuntimeError, "this should never happen"
     
     def dataReceived(self, data):
         try:
@@ -375,7 +378,7 @@ class MessagesParser(basic.LineReceiver):
         """Expected to create self.message."""
         raise NotImplementedError
 
-    def lineLengthExceeded(self):
+    def lineLengthExceeded(self, line):
         self.invalidMessage()
     
     def lineReceived(self, line):
@@ -482,3 +485,176 @@ class BaseSIP(protocol.DatagramProtocol):
     def handle_request_default(self, message, addr):
         pass
 
+
+class LookupError(Exception):
+    """Error doing lookup."""
+
+
+class Proxy(BaseSIP):
+    """SIP proxy."""
+
+    def __init__(self, host=None, port=5060):
+        self.host = host or socket.getfqdn()
+        self.port = port
+        BaseSIP.__init__(self)
+        
+    def getVia(self):
+        """Return value of Via header for this proxy."""
+        return Via(host=self.host, port=self.port)
+
+    def getServerAddress(self, userURL):
+        """Return address of server which can handle this address.
+
+        We assume UDP transport at the moment.
+
+        Override in subclasses - this is the registry hook.
+
+        @return: Deferred which becomes (hostname, port) tuple, or
+                 fails with LookupError.
+        """
+        raise NotImplementedError
+        
+    def handle_request_default(self, message, (srcHost, srcPort)):
+        """Default request handler.
+        
+        Default behaviour for OPTIONS and unknown methods for proxies
+        is to forward message on to the client.
+
+        Since at the moment we are stateless proxy, thats basically
+        everything.
+        """
+        viaHeader = self.getVia()
+        if viaHeader.toString() in message.headers["via"]:
+            # must be a loop, so drop message
+            log.msg("Dropping looped message.")
+            return
+
+        # RFC 2543 6.40.2
+        senderVia = parseViaHeader(message.headers["via"][0])
+        if senderVia.host != srcHost:
+            senderVia.received = srcHost
+            message.headers["via"][0] = senderVia.toString()
+        message.headers["via"].insert(0, viaHeader.toString())
+        name, uri, tags = parseAddress(message.headers["to"][0], clean=1)
+        d = self.getServerAddress(uri)
+        d.addCallback(self._deliverMessage, message)
+        d.addErrback(self._cantForwardRequest, message)
+        
+    def _deliverMessage(self, dest, message):
+        log.msg("Sending %s to %s" % (message, dest))
+        self.transport.write(message.toString(), dest)
+
+    def _cantForwardRequest(self, error, message):
+        error.trap(LookupError)
+        del message.headers["via"][0] # this'll be us
+        self.deliverResponse(self.responseFromRequest(404, message))
+    
+    def deliverResponse(self, responseMessage):
+        """Deliver response.
+
+        Destination is based on topmost Via header."""
+        destVia = parseViaHeader(responseMessage.headers["via"][0])
+        # XXX we don't do multicast yet
+        port = destVia.port or 5060
+        if destVia.received:
+            destAddr = (destVia.received, port)
+        else:
+            destAddr = (destVia.host, port)
+        self._deliverMessage(destAddr, responseMessage)
+
+    def responseFromRequest(self, code, request):
+        """Create a response to a request message."""
+        response = Response(code)
+        for name in ("via", "to", "from", "call-id", "cseq"):
+            response.headers[name] = request.headers.get(name, [])[:]
+        return response
+    
+    def handle_response_default(self, message, addr):
+        """Default response handler."""
+        v = parseViaHeader(message.headers["via"][0])
+        if (v.host, v.port) != (self.host, self.port):
+            # we got a message not intended for us?
+            # XXX note this check breaks if we have multiple external IPs
+            # yay for suck protocols
+            log.msg("Dropping incorrectly addressed message")
+            return
+        del message.headers["via"][0]
+        if not message.headers["via"]:
+            # this message is addressed to us
+            self.gotResponse(message, addr)
+            return
+        self.deliverResponse(message)
+    
+    def gotResponse(self, message, addr):
+        """Called with responses that are addressed at this server."""
+        pass
+
+
+class RegisterProxy(Proxy):
+    """A proxy that allows registration for a specific domain.
+
+    Unregistered users won't be handled.
+    """
+
+    def __init__(self, domain, host=None, port=5060):
+        Proxy.__init__(self, host=host, port=port)
+        self.domain = domain # the domain we handle registration for
+        self.users = {} # map username to (IDelayedCall for expiry, address URI)
+
+    def getServerAddress(self, userURI):
+        if userURI.host != self.domain:
+            return defer.fail(LookupError("unknown domain"))
+        if self.users.has_key(userURI.username):
+            dc, url = self.users[userURI.username]
+            return defer.succeed((url.host, url.port or 5060))
+        else:
+            return defer.fail(LookupError("no such user"))
+
+    def _expireRegistration(self, username):
+        try:
+            del self.users[username]
+        except KeyError:
+            pass
+    
+    def handle_REGISTER_request(self, message, (host, port)):
+        """Handle a registration request."""
+        if message.uri.host != self.domain:
+            # xxx return response
+            log.msg("Registration for domain we don't handle.")
+            return
+        name, toURL, params = parseAddress(message.headers["to"][0], clean=1)
+        if toURL.host != self.domain:
+            # xxx return response
+            log.msg("Registration for domain we don't handle.")
+            return
+        if message.headers.has_key("contact"):
+            contact = message.headers["contact"][0]
+            name, contactURL, params = parseAddress(contact)
+            # XXX we should check for expires header and in URI, and allow
+            # unregistration
+            if self.users.has_key(toURL.username):
+                dc, old = self.users[toURL.username]
+                dc.reset(3600)
+            else:
+                dc = reactor.callLater(3600, self._expireRegistration, toURL.username)
+            log.msg("Registered %s at %s" % (toURL.toString(), contactURL.toString()))
+            self.users[toURL.username] = (dc, contactURL)
+        else:
+            if self.users.has_key(toURL.username):
+                dc, contactURL = self.users[toURL.username]
+            else:
+                contactURL = None
+        response = self.responseFromRequest(200, message)
+        if contactURL != None:
+            response.addHeader("contact", contactURL.toString())
+            response.addHeader("expires", "%d" % int(dc.getTime() - time.time()))
+        response.addHeader("content-length", "0")
+        self.deliverResponse(response)
+
+
+if __name__ == '__main__':
+    import sys
+    from twisted.internet import reactor
+    log.startLogging(sys.stdout)
+    reactor.listenUDP(5060, RegisterProxy("192.168.123.128", host="192.168.123.128"))
+    reactor.run()

@@ -18,6 +18,7 @@
 
 from twisted.trial import unittest
 from twisted.protocols import sip
+from twisted.internet import defer, reactor
 
 
 # request, prefixed by random CRLFs
@@ -267,3 +268,167 @@ class ParseTestCase(unittest.TestCase):
             self.assertEquals(name, gname)
             self.assertEquals(gurl.toString(), urls)
             self.assertEquals(gparams, params)
+
+
+class ProxyTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.proxy = sip.Proxy("127.0.0.1")
+        self.sent = []
+        self.proxy._deliverMessage = lambda dest, msg: self.sent.append((dest, msg))
+    
+    def testRequestForward(self):
+        r = sip.Request("INVITE", "sip:foo")
+        r.addHeader("via", sip.Via("1.2.3.4").toString())
+        r.addHeader("via", sip.Via("1.2.3.5").toString())
+        r.addHeader("foo", "bar")
+        r.addHeader("to", "<sip:joe@server.com>")
+        self.proxy.getServerAddress = lambda username: defer.succeed(("server.com", 2345))
+        self.proxy.datagramReceived(r.toString(), ("1.2.3.4", 5060))
+        self.assertEquals(len(self.sent), 1)
+        dest, m = self.sent[0]
+        self.assertEquals(dest, ("server.com", 2345))
+        self.assertEquals(m.uri.toString(), "sip:foo")
+        self.assertEquals(m.method, "INVITE")
+        self.assertEquals(m.headers["via"],
+                          ["SIP/2.0/UDP 127.0.0.1:5060",
+                           "SIP/2.0/UDP 1.2.3.4:5060",
+                           "SIP/2.0/UDP 1.2.3.5:5060"])
+
+    def testReceivedRequestForward(self):
+        r = sip.Request("INVITE", "sip:foo")
+        r.addHeader("via", sip.Via("1.2.3.4").toString())
+        r.addHeader("foo", "bar")
+        r.addHeader("to", "<sip:joe@server.com>")
+        self.proxy.getServerAddress = lambda username: defer.succeed(("server.com", 2345))
+        self.proxy.datagramReceived(r.toString(), ("1.1.1.1", 5060))
+        dest, m = self.sent[0]
+        self.assertEquals(m.headers["via"],
+                          ["SIP/2.0/UDP 127.0.0.1:5060",
+                           "SIP/2.0/UDP 1.2.3.4:5060;received=1.1.1.1"])
+
+    def testResponseWrongVia(self):
+        # first via must match proxy's address
+        r = sip.Response(200)
+        r.addHeader("via", sip.Via("foo.com").toString())
+        self.proxy.datagramReceived(r.toString(), ("1.1.1.1", 5060))
+        self.assertEquals(len(self.sent), 0)
+    
+    def testResponseForward(self):
+        r = sip.Response(200)
+        r.addHeader("via", sip.Via("127.0.0.1").toString())
+        r.addHeader("via", sip.Via("client.com", port=1234).toString())
+        self.proxy.datagramReceived(r.toString(), ("1.1.1.1", 5060))
+        self.assertEquals(len(self.sent), 1)
+        dest, m = self.sent[0]
+        self.assertEquals(dest, ("client.com", 1234))
+        self.assertEquals(m.code, 200)
+        self.assertEquals(m.headers["via"], ["SIP/2.0/UDP client.com:1234"])
+        
+    def testReceivedResponseForward(self):
+        r = sip.Response(200)
+        r.addHeader("via", sip.Via("127.0.0.1").toString())
+        r.addHeader("via", sip.Via("10.0.0.1", received="client.com").toString())
+        self.proxy.datagramReceived(r.toString(), ("1.1.1.1", 5060))
+        self.assertEquals(len(self.sent), 1)
+        dest, m = self.sent[0]
+        self.assertEquals(dest, ("client.com", 5060))
+        
+    def testResponseToUs(self):
+        r = sip.Response(200)
+        r.addHeader("via", sip.Via("127.0.0.1").toString())
+        l = []
+        self.proxy.gotResponse = lambda *a: l.append(a)
+        self.proxy.datagramReceived(r.toString(), ("1.1.1.1", 5060))
+        self.assertEquals(len(l), 1)
+        m, addr = l[0]
+        self.assertEquals(len(m.headers.get("via", [])), 0)
+        self.assertEquals(m.code, 200)
+    
+    def testLoop(self):
+        r = sip.Request("INVITE", "sip:foo")
+        r.addHeader("via", sip.Via("1.2.3.4").toString()) 
+        r.addHeader("via", sip.Via("127.0.0.1").toString())
+        self.proxy.datagramReceived(r.toString(), ("client.com", 5060))
+        self.assertEquals(self.sent, [])
+
+    def testCantForwardRequest(self):
+        r = sip.Request("INVITE", "sip:foo")
+        r.addHeader("via", sip.Via("1.2.3.4").toString())
+        r.addHeader("to", "<sip:joe@server.com>")
+        self.proxy.getServerAddress = lambda username: defer.fail(sip.LookupError())
+        self.proxy.datagramReceived(r.toString(), ("1.2.3.4", 5060))
+        self.assertEquals(len(self.sent), 1)
+        dest, m = self.sent[0]
+        self.assertEquals(dest, ("1.2.3.4", 5060))
+        self.assertEquals(m.code, 404)
+        self.assertEquals(m.headers["via"], ["SIP/2.0/UDP 1.2.3.4:5060"])
+
+    def testCantForwardResponse(self):
+        pass
+
+    testCantForwardResponse.skip = "not implemented yet"
+
+
+class RegistrationTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.proxy = sip.RegisterProxy("bell.example.com", host="127.0.0.1")
+        self.sent = []
+        self.proxy._deliverMessage = lambda dest, msg: self.sent.append((dest, msg))
+
+    def tearDown(self):
+        for d, uri in self.proxy.users.values():
+            d.cancel()
+        del self.proxy
+
+    def register(self):
+        r = sip.Request("REGISTER", "sip:bell.example.com")
+        r.addHeader("to", "sip:joe@bell.example.com")
+        r.addHeader("contact", "sip:joe@client.com:1234")
+        r.addHeader("via", sip.Via("client.com").toString())
+        self.proxy.datagramReceived(r.toString(), ("client.com", 5060))
+    
+    def testRegister(self):
+        self.register()
+        dest, m = self.sent[0]
+        self.assertEquals(dest, ("client.com", 5060))
+        self.assertEquals(m.code, 200)
+        self.assertEquals(m.headers["via"], ["SIP/2.0/UDP client.com:5060"])
+        self.assertEquals(m.headers["to"], ["sip:joe@bell.example.com"])
+        self.assertEquals(m.headers["contact"], ["sip:joe@client.com:1234"])
+        self.failUnless(int(m.headers["expires"][0]) in (3600, 3601, 3599, 3598))
+        self.assertEquals(len(self.proxy.users), 1)
+        dc, uri = self.proxy.users["joe"]
+        self.assertEquals(uri.toString(), "sip:joe@client.com:1234")
+        host, port = unittest.deferredResult(
+            self.proxy.getServerAddress(sip.URL(username="joe", host="bell.example.com")))
+        self.assertEquals((host, port), ("client.com", 1234))
+    
+    def testWrongDomainRegister(self):
+        r = sip.Request("REGISTER", "sip:wrong.com")
+        r.addHeader("to", "sip:joe@bell.example.com")
+        r.addHeader("contact", "sip:joe@client.com:1234")
+        r.addHeader("via", sip.Via("client.com").toString())
+        self.proxy.datagramReceived(r.toString(), ("client.com", 5060))
+        self.assertEquals(len(self.sent), 0)
+
+    def testWrongToDomainRegister(self):
+        r = sip.Request("REGISTER", "sip:bell.example.com")
+        r.addHeader("to", "sip:joe@foo.com")
+        r.addHeader("contact", "sip:joe@client.com:1234")
+        r.addHeader("via", sip.Via("client.com").toString())
+        self.proxy.datagramReceived(r.toString(), ("client.com", 5060))
+        self.assertEquals(len(self.sent), 0)
+
+    def testWrongDomainLookup(self):
+        self.register()
+        url = sip.URL(username="joe", host="foo.com")
+        f = unittest.deferredError(self.proxy.getServerAddress(url))
+        f.trap(sip.LookupError)
+    
+    def testNoContactLookup(self):
+        self.register()
+        url = sip.URL(username="jane", host="bell.example.com")
+        f = unittest.deferredError(self.proxy.getServerAddress(url))
+        f.trap(sip.LookupError)
