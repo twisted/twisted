@@ -150,7 +150,11 @@ class DNSServerFactory(protocol.ServerFactory):
                                     dns.Query(str(r.name), dns.A, dns.IN),
                                     dns.Query(str(r.name), dns.CNAME, dns.IN)
                                 ])
+                    if self.verbose:
+                        log.msg("Responding authoritatively with %d records" % len(answers))
                     return answers, extra
+        if self.verbose:
+            log.msg("No records found locally")
         return None
 
 
