@@ -93,7 +93,7 @@ class TestStatsBase(object):
         raise NotImplementedError, "should be overridden in subclasses"
 
     def get_skips(self):
-        return self._collect(SKIP) 
+        return self._collect(SKIP)
 
     def get_errors(self):
         return self._collect(ERROR)
@@ -102,7 +102,7 @@ class TestStatsBase(object):
         return self._collect(FAILURE)
 
     def get_expectedFailures(self):
-        return self._collect(EXPECTED_FAILURE) 
+        return self._collect(EXPECTED_FAILURE)
 
     def get_unexpectedSuccesses(self):
         return self._collect(UNEXPECTED_SUCCESS)
@@ -147,7 +147,7 @@ class TestCaseStats(TestStatsBase):
         return self.original.methodsWithStatus.get(status, [])
 
     def numTests(self):
-        return len(self.original.methodNames)
+        return len(self.original.children)
     numTests = property(numTests)
 
     def allPassed(self):

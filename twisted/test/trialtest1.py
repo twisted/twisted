@@ -121,3 +121,4 @@ class ReactorCleanupTests(unittest.TestCase):
         f = protocol.Factory()
         f.protocol = protocol.Protocol
         reactor.listenTCP(0, f)
+

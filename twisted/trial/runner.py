@@ -458,7 +458,6 @@ class TestClassAndMethodBase(TestRunnerBase):
                 self.children.append(tm)
                 f(tm)
         
-
         tci = self.testCaseInstance
         self.startTime = time.time()
 

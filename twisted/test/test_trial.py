@@ -149,7 +149,7 @@ class SpawningMixin:
         return done
 
 
-class FunctionallyTestTrial(unittest.TestCase, SpawningMixin):
+class FunctionalTest(unittest.TestCase, SpawningMixin):
     """functionally test trial in cases where it would be too difficult to test in the
        same process
     """
@@ -274,4 +274,11 @@ class FunctionallyTestTrial(unittest.TestCase, SpawningMixin):
             self._failUnlessIn("PASSED")
         return self.spawnChild(args).addCallback(_cb)
 
-FunctionallyTestTrial.timeout = 30.0
+    def testCorrectNumberTestReporting(self):
+        """make sure trial reports the correct number of tests run (issue 770)"""
+        args = self.args + ['twisted.test.trialtest4']
+        def _cb(cpp):
+            self._failUnlessIn("Ran 1 tests in")
+        return self.spawnChild(args).addCallback(_cb)
+        
+FunctionalTest.timeout = 30.0
