@@ -24,7 +24,10 @@ Where to look for \fB.html\fR files if no files are given.
 \fI-i\fR, \fI--input\fR
 Input format. New input formats can be dynamically registered. Lore itself
 comes with "lore" (the standard format), "mlore" (allows LaTeX equations)
-and "man" (man page format).
+and "man" (man page format). If the input format is not registered as a plugin,
+a module of the named input will be searched. For example, 
+.B --i twisted.lore.default
+is equivalent to using the default Lore input.
 .TP
 \fI-o\fR, \fI--output\fR
 Output format. Available output formats depend on the input. For the core

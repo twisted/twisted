@@ -15,7 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 import sys
 from twisted.lore import process, default
-from twisted.python import usage, plugin
+from twisted.python import usage, plugin, reflect
 
 class Options(usage.Options):
 
@@ -48,12 +48,15 @@ def getProcessor(input, output, config):
     plugins = plugin.getPlugIns("lore", 0, 0)
     for plug in plugins:
         if plug.tapname == input:
-            module = plug
+            module = plug.load()
             break
     else:
-        print '%s: no such input: %s' % (sys.argv[0], input)
-        return
-    module = module.load()
+        # try treating it as a module name
+        try:
+            module = reflect.namedModule(input)
+        except ImportError:
+            print '%s: no such input: %s' % (sys.argv[0], input)
+            return
     try:
         return process.getProcessor(module, output, config)
     except process.NoProcessorError, e:
