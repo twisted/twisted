@@ -56,6 +56,11 @@
     <p>In all cases, the event loop is started by calling
     <code class="python">reactor.run()</code>.</p>
 
+    <p><strong>IMPORTANT:</strong> installing a reactor should be the first thing
+    done in the app, since any code that does
+    <code class="python">from twisted.internet import reactor</code> will automatically
+    install the default reactor if the code hasen't already installed one.</p>
+
     <h2>Reactor Functionality</h2>
 
     <table cellpadding="7" cellspacing="0" border="1" title="Summary of reactor features">
