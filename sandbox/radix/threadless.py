@@ -39,7 +39,26 @@ This module requires Stackless Python 3.0. See http://stackless.com/
 
 import new, types
 import stackless
+
 from twisted.internet import reactor
+from twisted.python import failure, log
+
+def makeContinuation(channel):
+    def continuation(result):
+        reactor.callLater(0, channel.send, result)
+    return continuation
+
+def handleResult(result):
+    if isinstance(result, Exception):
+        raise result
+    elif isinstance(result, failure.Failure):
+        if result.tb:
+            raise result.value.__class__, \
+                  result.value, result.tb
+        raise result.value
+    else:
+        return result
+
 
 def takesContinuation(func):
     """
@@ -60,27 +79,26 @@ def takesContinuation(func):
     is passed to it is called. Also, its `real' return value is
     ignored, and the one given to the continuation will be returned.
     """
-
     # If it's an _unbound_ method, we need to handle `self' specially,
     # because I want `self' to always be the first argument.
 
     # Stupid Python doesn't have distinct "Bound" and "Unbound" types,
     # so we check if im_self is None.
+
     if isinstance(func, types.MethodType) and func.im_self is None:
         def doIt(self, *args, **kwargs):
             channel = theScheduler.getChannel()
-            cont = lambda result: channel.send(result)
-            func(self, cont, *args, **kwargs)
-            # let's block!
-            return channel.receive()
+            continuation = makeContinuation(channel)
+            func(self, continuation, *args, **kwargs)
+            r = channel.receive()
+            return handleResult(r)
     else:
         def doIt(*args, **kwargs):
             channel = theScheduler.getChannel()
-            def continuation(result):
-                reactor.callLater(0, channel.send, result)
+            continuation = makeContinuation(channel)
             func(continuation, *args, **kwargs)
-            # let's block!
-            return channel.receive()
+            r = channel.receive()
+            return handleResult(r)
 
     return doIt
 
@@ -109,6 +127,7 @@ def blockOn(cont, deferred):
     """
     deferred.addBoth(cont)
 
+
 blockOn = takesContinuation(blockOn)
 
 class Scheduler:
@@ -125,7 +144,10 @@ class Scheduler:
         
         self.taskletChannels[id(t)] = stackless.channel()
         try:
-            f(*args, **kwargs)
+            try:
+                f(*args, **kwargs)
+            except:
+                log.err()
         finally:
             del self.taskletChannels[id(t)]
 
