@@ -70,7 +70,6 @@ def makeWord(s):
             result.append("\\")
         result.append(c)
     s = "".join(result)
-    print "word", repr(s)
     return s
 
 def parseText(line):
@@ -109,13 +108,11 @@ class DictClient(basic.LineReceiver):
 
     def sendLine(self, line):
         """Throw up if the line is longer than 1022 characters"""
-        print "line:", line
         if len(line) > self.MAX_LENGTH - 2:
             raise ValueError("DictClient tried to send a too long line")
         basic.LineReceiver.sendLine(self, line)
 
     def lineReceived(self, line):
-        print line
         try:
             line = line.decode("UTF-8")
         except UnicodeError: # garbage received, skip
