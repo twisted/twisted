@@ -3,6 +3,8 @@
 #include<sys/socket.h>
 #include<signal.h>
 
+PyObject *g_socketerror; // socket.error
+
 static PyObject *sendmsg_sendmsg(PyObject *self, PyObject *args, PyObject *keywds);
 static PyObject *sendmsg_recvmsg(PyObject *self, PyObject *args, PyObject *keywds);
 
@@ -34,10 +36,24 @@ void initsendmsg(void) {
     PyObject *module, *dict;
     module = Py_InitModule("sendmsg", sendmsgMethods);
     dict = PyModule_GetDict(module);
-    if (!dict) {
+    if(!dict) {
         return;
     }
     insertConstant(dict, "SCM_RIGHTS", SCM_RIGHTS);
+
+    module = PyImport_ImportModule("socket");
+    if(!module) {
+        return;
+    }
+    dict = PyModule_GetDict(module);
+    if(!dict) {
+        return;
+    }
+    g_socketerror = PyDict_GetItemString(dict, "error");
+    if(!g_socketerror) {
+        return;
+    }
+    Py_INCREF(g_socketerror); // we hold a permanent reference to it! don't want it to die or something
 }
 
 static PyObject *sendmsg_sendmsg(PyObject *self, PyObject *args, PyObject *keywds) {
@@ -93,7 +109,7 @@ static PyObject *sendmsg_sendmsg(PyObject *self, PyObject *args, PyObject *keywd
         }
         cmsg_buf = malloc(CMSG_SPACE(data_len));
         if (!cmsg_buf) {
-            PyErr_SetFromErrno(PyExc_OSError);
+            PyErr_NoMemory();
             return NULL;
         }
         msg.msg_control = cmsg_buf;
@@ -109,9 +125,9 @@ static PyObject *sendmsg_sendmsg(PyObject *self, PyObject *args, PyObject *keywd
     }
 
     ret = sendmsg(fd, &msg, flags);
-    free(cmsg_buf); // this is initialized to NULL and then, optionally, to return of malloc
+    free(cmsg_buf); // this is initialized to NULL and then, optionally, to return value of malloc
     if(ret < 0) {
-        PyErr_SetFromErrno(PyExc_OSError);
+        PyErr_SetFromErrno(g_socketerror);
         return NULL;
     }
 
@@ -145,7 +161,7 @@ static PyObject *sendmsg_recvmsg(PyObject *self, PyObject *args, PyObject *keywd
     iov[0].iov_len = maxsize;
     iov[0].iov_base = malloc(maxsize);
     if (!iov[0].iov_base) {
-        PyErr_SetFromErrno(PyExc_OSError);
+        PyErr_NoMemory();
         return NULL;
     }
     msg.msg_iov = iov;
@@ -153,7 +169,7 @@ static PyObject *sendmsg_recvmsg(PyObject *self, PyObject *args, PyObject *keywd
 
     cmsgbuf = malloc(cmsg_size);
     if (!cmsgbuf) {
-        PyErr_SetFromErrno(PyExc_OSError);
+        PyErr_NoMemory();
         return NULL;
     }
     memset(cmsgbuf, 0, cmsg_size);
@@ -162,7 +178,7 @@ static PyObject *sendmsg_recvmsg(PyObject *self, PyObject *args, PyObject *keywd
 
     ret = recvmsg(fd, &msg, flags);
     if (ret < 0) {
-        PyErr_SetFromErrno(PyExc_OSError);
+        PyErr_SetFromErrno(g_socketerror);
         free(iov[0].iov_base);
         free(cmsgbuf);
         return NULL;
