@@ -110,17 +110,18 @@ class StdioClient(basic.LineReceiver):
     ps = 'cftp> '
     delimiter = '\n'
 
-    def __init__(self, client):
+    def __init__(self, client, f = None):
         self.client = client
         self.currentDirectory = ''
+        self.file = f
 
     def connectionMade(self):
         self.client.realPath('').addCallback(self._cbSetCurDir)
-        self.transport.stopReading()
+        if self.file:
+            self.transport.stopReading()
 
     def _cbSetCurDir(self, path):
         self.currentDirectory = path
-        self.transport.startReading()
         self._newLine()
 
     def lineReceived(self, line):
@@ -129,6 +130,10 @@ class StdioClient(basic.LineReceiver):
         if not line:
             self._newLine()
             return
+        if self.file and line.startswith('-'):
+            self.ignoreErrors = 1
+        else:
+            self.ignoreErrors = 0
         if ' ' in line:
             command, rest = line.split(' ', 1)
             rest = rest.lstrip()
@@ -147,6 +152,13 @@ class StdioClient(basic.LineReceiver):
 
     def _newLine(self):
         self.transport.write(self.ps)
+        self.ignoreErrors = 0
+        if self.file:
+            l = self.file.readline()
+            if not l:
+                self.client.transport.loseConnection()
+            else:
+                self.lineReceived(l)
 
     def _cbCommand(self, result):
         if result is not None:
@@ -166,20 +178,21 @@ class StdioClient(basic.LineReceiver):
         elif e in (OSError, IOError):
             self.transport.write("local error %i: %s\n" %
                     (f.value.errno, f.value.strerror))
-            self._newLine()
+        if self.file and not self.ignoreErrors:
+            self.client.transport.loseConnection()
 
     def cmd_CD(self, path):
         if not path.endswith('/'):
             path += '/'
         newPath = path and os.path.join(self.currentDirectory, path) or ''
         d = self.client.openDirectory(newPath)
-        d.addCallback(self._cbCd, newPath)
+        d.addCallback(self._cbCd)
         d.addErrback(self._ebCommand)
         return d
 
-    def _cbCd(self, directory, newPath):
+    def _cbCd(self, directory):
         directory.close()
-        d = self.client.realPath(newPath)
+        d = self.client.realPath(directory.name)
         d.addCallback(self._cbCurDir)
         return d
 
@@ -249,7 +262,7 @@ class StdioClient(basic.LineReceiver):
         f.trap(EOFError)
         rf.close()
         lf.close()
-        return "transferred %s to %s" % ('remote', 'local')
+        return "transferred %s to %s" % (rf.name, lf.name)
 
     def cmd_PUT(self, rest):
         numRequests = self.client.transport.conn.options['requests']
@@ -278,7 +291,7 @@ class StdioClient(basic.LineReceiver):
         else:
             lf.close()
             rf.close()
-            return 'transferred %s to %s' % ('local', 'remote')
+            return 'transferred %s to %s' % (lf.name, rf.name)
 
     def cmd_LCD(self, path):
         os.chdir(path)

@@ -350,7 +350,7 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, SFTPTestBase):
         f2 = file('sftp_test/testfile2').read()
         self.failUnlessEqual(f1, f2, "get failed")
         log.msg(repr(getRes))
-        # XXX assert something about getRes
+        self.failUnlessEqual(getRes, "transferred %s/sftp_test/testfile1 to sftp_test/testfile2" % os.getcwd())
         self.failIf(self._getCmdResult('rm testfile2'))
         self.failIf(os.path.exists('sftp_test/testfile2'))
 
@@ -359,7 +359,7 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, SFTPTestBase):
         f1 = file('sftp_test/testfile1').read()
         f2 = file('sftp_test/testfile2').read()
         self.failUnlessEqual(f1, f2, "get failed")
-        # XXX assert something about putRes
+        self.failUnlessEqual(putRes, "transferred sftp_test/testfile1 to %s/sftp_test/testfile2" % os.getcwd())
         self.failIf(self._getCmdResult('rm testfile2'))
         self.failIf(os.path.exists('sftp_test/testfile2'))
         
@@ -378,14 +378,15 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, SFTPTestBase):
         self.failIf(self._getCmdResult('rmdir testMakeDirectory'))
         self.failIf(self._getCmdResult('lmkdir sftp_test/testLocalDirectory'))
         self.failIf(self._getCmdResult('rmdir testLocalDirectory'))
-
+    
     def testRename(self):
         self.failIf(self._getCmdResult('rename testfile1 testfile2'))
         lsRes = self._getCmdResult('ls testfile?').split('\n')
         self.failUnlessEqual(lsRes, ['testfile2'])
         self.failIf(self._getCmdResult('rename testfile2 testfile1'))
 
-       
+#class TestOurServerBatchFile(test_process.SignalMixin, SFTPTestBase):
+
 if not unix:
     TestOurServerOurClient.skip = "don't run on non-posix"
     TestOurServerCmdLineClient.skip = "don't run on non-posix"

@@ -508,7 +508,7 @@ class FileTransferClient(FileTransferBase):
         """
         data = NS(filename) + struct.pack('!L', flags) + self._packAttributes(attrs)
         d = self._sendRequest(FXP_OPEN, data)
-        self.wasAFile[d] = 1 # HACK
+        self.wasAFile[d] = (1, filename) # HACK
         return d
 
     def removeFile(self, filename):
@@ -587,7 +587,9 @@ class FileTransferClient(FileTransferBase):
 
         attrs is a dictionary in the format of the attrs argument to openFile.
         """
-        return self._sendRequest(FXP_OPENDIR, NS(path))
+        d = self._sendRequest(FXP_OPENDIR, NS(path))
+        self.wasAFile[d] = (0, path)
+        return d
 
     def getAttrs(self, path, followLinks=0):
         """
@@ -698,11 +700,13 @@ class FileTransferClient(FileTransferBase):
 
     def packet_HANDLE(self, data):
         d, data = self._parseRequest(data)
-        if self.wasAFile.has_key(d):
-            d.callback(ClientFile(self, getNS(data)[0]))
-            del self.wasAFile[d]
+        isFile, name = self.wasAFile.pop(d)
+        if isFile:
+            cb = ClientFile(self, getNS(data)[0])
         else:
-            d.callback(ClientDirectory(self, getNS(data)[0]))
+            cb = ClientDirectory(self, getNS(data)[0])
+        cb.name = name
+        d.callback(cb)
 
     def packet_DATA(self, data):
         d, data = self._parseRequest(data)
