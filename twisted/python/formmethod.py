@@ -25,7 +25,7 @@ to format methods.  Currently this is only used by woven.
 import calendar
 
 class FormException(Exception):
-    """An error occured calling the form method.
+    """An error occurred calling the form method.
     """
     def __init__(self, *args, **kwargs):
         Exception.__init__(self, *args)

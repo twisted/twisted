@@ -441,7 +441,7 @@ class Widget(view.View):
         """
         eventHandler = getattr(self, 'wevent_' + eventName, None)
         if eventHandler is None:
-            raise NotImplementedError("A client side '%s' event occured,"
+            raise NotImplementedError("A client side '%s' event occurred,"
                     " but there was no event handler registered on %s." % 
                     (eventName, self))
                 

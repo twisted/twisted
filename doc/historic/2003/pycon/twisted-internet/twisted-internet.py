@@ -177,7 +177,7 @@ from twisted.python import log
 logFile = open('log.txt', 'a')
 log.startLogging(logFile)
 
-log.msg('Something has occured')
+log.msg('Something has occurred')
 """
 
 LOGGING_ERRORS_CODE = """
