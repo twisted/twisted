@@ -432,9 +432,9 @@ class FileSender:
         self.consumer = consumer
         self.transform = transform
         
+        self.deferred = deferred = defer.Deferred()
         self.consumer.registerProducer(self, False)
-        self.deferred = defer.Deferred()
-        return self.deferred
+        return deferred
     
     def resumeProducing(self):
         chunk = ''

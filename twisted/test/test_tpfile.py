@@ -6,7 +6,7 @@
 from twisted.trial import unittest
 from twisted.protocols import loopback
 from twisted.protocols import basic
-from twisted.internet import protocol
+from twisted.internet import protocol, abstract
 
 import StringIO
 
@@ -32,3 +32,20 @@ class FileSenderTestCase(unittest.TestCase):
         
         loopback.loopbackTCP(s, c)
         self.assertEquals(s.buffer, testStr)
+
+    def testSendingEmptyFile(self):
+        fileSender = basic.FileSender()
+        consumer = abstract.FileDescriptor()
+        consumer.connected = 1
+        emptyFile = StringIO.StringIO('')
+
+        d = fileSender.beginFileTransfer(emptyFile, consumer, lambda x: x)
+
+        # The producer will be immediately exhausted, and so immediately
+        # unregistered
+        self.assertEqual(consumer.producer, None)
+
+        # Which means the Deferred from FileSender should have been called
+        self.failUnless(d.called, 
+                        'producer unregistered with deferred being called')
+
