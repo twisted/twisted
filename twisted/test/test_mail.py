@@ -32,7 +32,7 @@ from twisted.internet import protocol
 from twisted.internet import defer
 from twisted.internet import reactor
 from twisted.internet import interfaces
-from twisted.internet.error import DNSLookupError
+from twisted.internet.error import DNSLookupError, CannotListenError
 from twisted.python import components
 from twisted.python import failure
 from twisted.python import util
@@ -687,7 +687,7 @@ def setUpDNS(self):
         
         try:
             self.udpPort = reactor.listenUDP(portNumber, protocol, interface='127.0.0.1')
-        except:
+        except CannotListenError:
             self.port.stopListening()
         else:
             break
