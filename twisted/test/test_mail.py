@@ -55,6 +55,8 @@ import test_names
 # Since we run a couple processes, we need SignalMixin from test_process
 import test_process
 
+from proto_helpers import LineSendingProtocol
+
 class DomainWithDefaultsTestCase(unittest.TestCase):
     def testMethods(self):
         d = dict([(x, x + 10) for x in range(10)])
@@ -478,7 +480,7 @@ class RelayTestCase(unittest.TestCase):
         ]
         
         dontRelay = [
-            ('TCP', '192.168.1.1', 62),
+            ('TCP', '192.168.2.1', 62),
             ('TCP', '1.2.3.4', 1943),
         ]
         
@@ -494,11 +496,13 @@ class RelayTestCase(unittest.TestCase):
         
         for peer in dontRelay:
             user = empty()
+            user.orig = 'some@place'
             user.protocol = empty()
             user.protocol.transport = empty()
             user.protocol.transport.getPeer = lambda: peer
             user.dest = 'who@cares'
             
+            import pdb; pdb.Pdb().set_trace()
             self.assertRaises(smtp.SMTPBadRcpt, domain.exists, user)
 
 class RelayerTestCase(unittest.TestCase):
@@ -748,21 +752,6 @@ class MXTestCase(unittest.TestCase):
         
         againMX = unittest.deferredResult(self.mx.getMX('test.domain'))
         self.assertEqual(str(againMX.exchange), str(nextMX.exchange))
-
-class LineSendingProtocol(basic.LineReceiver):
-    lostConn = True
-
-    def __init__(self, lines):
-        self.lines = lines[:]
-    
-    def connectionMade(self):
-        map(self.sendLine, self.lines)
-    
-    def lineReceived(self, line):
-        pass
-    
-    def connectionLost(self, reason):
-        self.lostConn = True
 
 class LiveFireExercise(unittest.TestCase):
     def setUp(self):
