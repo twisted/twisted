@@ -16,7 +16,7 @@
 
 from __future__ import nested_scopes
 import os, struct, sys
-from twisted.conch import error, checkers, realm
+from twisted.conch import error, checkers, avatar 
 from twisted.conch.ssh import keys, transport, factory, userauth, connection, common, session,channel
 from twisted.cred import portal
 from twisted.cred.credentials import IUsernamePassword
@@ -136,11 +136,11 @@ class ConchTestRealm:
         a = ConchTestAvatar()
         return interfaces[0], a, a.logout
 
-class ConchTestAvatar(realm.ConchUser):
+class ConchTestAvatar(avatar.ConchUser):
     loggedOut = False
     
     def __init__(self):
-        realm.ConchUser.__init__(self)
+        avatar.ConchUser.__init__(self)
         self.channelLookup.update({'session': session.SSHSession})
 
     def logout(self):

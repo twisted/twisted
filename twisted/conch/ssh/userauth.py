@@ -24,7 +24,7 @@ Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 """
 
 import struct
-from twisted.conch import error, credentials, realm
+from twisted.conch import error, credentials, interfaces 
 from twisted.internet import defer, reactor
 from twisted.python import failure, log
 from common import NS, getNS, MP
@@ -143,9 +143,9 @@ class SSHUserAuthServer(service.SSHService):
         signature = hasSig and getNS(rest)[0] or None
         c = credentials.SSHPrivateKey(self.user, blob, b, signature)
         if hasSig:
-            return self.portal.login(c, None, realm.IConchUser)
+            return self.portal.login(c, None, interfaces.IConchUser)
         else:
-            return self.portal.login(c, None, realm.IConchUser).addErrback(
+            return self.portal.login(c, None, interfaces.IConchUser).addErrback(
                                                         self._ebCheckKey,
                                                         packet[1:])
 
@@ -158,7 +158,7 @@ class SSHUserAuthServer(service.SSHService):
     def auth_password(self, packet):
         password = getNS(packet[1:])[0]
         c = credentials.UsernamePassword(self.user, password)
-        return self.portal.login(c, None, realm.IConchUser).addErrback(
+        return self.portal.login(c, None, interfaces.IConchUser).addErrback(
                                                         self._ebPassword)
 
     def _ebPassword(self, f):
@@ -171,7 +171,7 @@ class SSHUserAuthServer(service.SSHService):
             self.transport.sendDisconnect(transport.DISCONNECT_PROTOCOL_ERROR, "only one keyboard interactive attempt at a time")
             return failure.Failure(error.IgnoreAuthentication())
         c = credentials.PluggableAuthenticationModules(self.user, self._pamConv)
-        return self.portal.login(c, None, realm.IConchUser)
+        return self.portal.login(c, None, interfaces.IConchUser)
 
     def _pamConv(self, items):
         resp = []

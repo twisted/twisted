@@ -22,7 +22,7 @@ This module is unstable.
 Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 """
 
-import md5, os
+import md5
 
 try:
     import resource
@@ -40,8 +40,11 @@ else: # PAM requires threading
 from twisted.internet import protocol
 from twisted.python import log
 
-import common, keys, transport, primes, connection, userauth
 from twisted.conch import error
+
+import transport, userauth, connection
+
+import random
 
 class SSHFactory(protocol.Factory):
     services = {
@@ -65,6 +68,8 @@ class SSHFactory(protocol.Factory):
             if not self.primes:
                 log.msg('disabling diffie-hellman-group-exchange because we cannot find moduli file')
                 transport.SSHServerTransport.supportedKeyExchanges.remove('diffie-hellman-group-exchange-sha1')
+            else:
+                self.primesKeys = self.primes.keys()
 
     def buildProtocol(self, addr):
         t = transport.SSHServerTransport()
@@ -111,7 +116,9 @@ class SSHFactory(protocol.Factory):
         @type bits: C{int}
         @rtype:     C{tuple}
         """
-        return primes.getDHPrimeOfBits(self.primes, bits)
+        self.primesKeys.sort(lambda x,y,b=bits:cmp(abs(x-b), abs(x-b)))
+        realBits = self.primesKeys[0]
+        return random.choice(self.primes[realBits])
 
     def getService(self, transport, service):
         """
@@ -124,40 +131,4 @@ class SSHFactory(protocol.Factory):
         if transport.isAuthorized or service == 'ssh-userauth':
             return self.services[service]
 
-class OpenSSHFactory(SSHFactory):
-    dataRoot = '/usr/local/etc'
-    moduliRoot = '/usr/local/etc' # for openbsd which puts moduli in a different
-                                  # directory from keys
-    def getPublicKeys(self):
-        ks = {}
-        for file in os.listdir(self.dataRoot):
-            if file[:9] == 'ssh_host_' and file[-8:]=='_key.pub':
-                try:
-                    k = keys.getPublicKeyString(self.dataRoot+'/'+file)
-                    t = common.getNS(k)[0]
-                    ks[t] = k
-                except Exception, e:
-                    log.msg('bad public key file %s: %s' % (file,e))
-        return ks
-    def getPrivateKeys(self):
-        ks = {}
-        euid,egid = os.geteuid(), os.getegid()
-        os.setegid(0) # gain priviledges
-        os.seteuid(0)
-        for file in os.listdir(self.dataRoot):
-            if file[:9] == 'ssh_host_' and file[-4:]=='_key':
-                try:
-                    k = keys.getPrivateKeyObject(self.dataRoot+'/'+file)
-                    t = keys.objectType(k)
-                    ks[t] = k
-                except Exception, e:
-                    log.msg('bad private key file %s: %s' % (file, e))
-        os.setegid(egid) # drop them just as quickily
-        os.seteuid(euid)
-        return ks
-    def getPrimes(self):
-        try:
-            return primes.parseModuliFile(self.moduliRoot+'/moduli')
-        except IOError:
-            return None
 

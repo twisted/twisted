@@ -22,8 +22,6 @@ This module is unstable.
 Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 """
 
-import random
-
 def parseModuliFile(filename):
     lines = open(filename).readlines()
     primes = {}
@@ -39,10 +37,3 @@ def parseModuliFile(filename):
             primes[size] = []
         primes[size].append((gen, mod))
     return primes
-
-def getDHPrimeOfBits(primes, bits):
-    keys = primes.keys()
-    keys.sort(lambda x,y,b=bits:cmp(abs(x-b),abs(y-b)))
-    realBits = keys[0]
-    return random.choice(primes[realBits])
-

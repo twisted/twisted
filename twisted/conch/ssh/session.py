@@ -23,46 +23,12 @@ This module is unstable.
 Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 """
 
-import struct, os
+import struct
 
 from twisted.internet import protocol, reactor
-from twisted.python import log, components
-
-import common, channel, filetransfer
-
-class ISession(components.Interface):
-
-    def getPty(self, term, windowSize, modes):
-        """
-        Get a psuedo-terminal for use by a shell or command.
-
-        If a psuedo-terminal is not available, or the request otherwise
-        fails, raise an exception.
-        """
-
-    def openShell(self, proto):
-        """
-        Open a shell and connect it to proto.
-
-        proto should be a ProcessProtocol instance.
-        """
-
-    def execCommand(self, proto, command):
-        """
-        Execute a command.
-
-        proto should be a ProcessProtocol instance.
-        """
-
-    def windowChanged(self, newWindowSize):
-        """
-        Called when the size of the remote screen has changed.
-        """
-
-    def closed(self):
-        """
-        Called when the session is closed.
-        """
+from twisted.python import log
+from twisted.conch.interfaces import ISession
+import common, channel
 
 class SSHSession(channel.SSHChannel):
 
@@ -153,130 +119,6 @@ class SSHSession(channel.SSHChannel):
     def loseConnection(self):
         self.client.transport.loseConnection()
         channel.SSHChannel.loseConnection(self)
-
-class SSHSessionForUnixConchUser:
-
-    __implements__ = ISession
-
-    def __init__(self, avatar):
-        self.avatar = avatar
-        self. environ = {'PATH':'/bin:/usr/bin:/usr/local/bin'}
-        self.pty = None
-        self.ptyTuple = 0
-
-    def getPty(self, term, windowSize, modes):
-        import pty
-        self.environ['TERM'] = term
-        self.winSize = windowSize
-        self.modes = modes
-        master, slave = pty.openpty()
-        ttyname = os.ttyname(slave)
-        self.environ['SSH_TTY'] = ttyname 
-        self.ptyTuple = (master, slave, ttyname)
-
-    def openShell(self, proto):
-        import fcntl, tty
-        if not self.ptyTuple: # we didn't get a pty-req
-            log.msg('tried to get shell without pty, failing')
-            raise error.ConchError("no pty")
-        uid, gid = self.avatar.getUserGroupId()
-        homeDir = self.avatar.getHomeDir()
-        shell = self.avatar.getShell()
-        self.environ['USER'] = self.avatar.username
-        self.environ['HOME'] = homeDir
-        self.environ['SHELL'] = shell
-        peer = self.avatar.conn.transport.transport.getPeer()
-        host = self.avatar.conn.transport.transport.getHost()
-        self.environ['SSH_CLIENT'] = '%s %s %s' % (peer.host, peer.port, host.port)
-        self.getPtyOwnership()
-        self.pty = reactor.spawnProcess(proto, \
-                  shell, ['-', '-i'], self.environ, homeDir, uid, gid,
-                   usePTY = self.ptyTuple)
-        fcntl.ioctl(self.pty.fileno(), tty.TIOCSWINSZ, 
-                        struct.pack('4H', *self.winSize))
-        if self.modes:
-            self.setModes()
-        self.oldWrite = proto.transport.write
-        proto.transport.write = self._writeHack
-        self.avatar.conn.transport.transport.setTcpNoDelay(1)
-
-    def execCommand(self, proto, cmd):
-        uid, gid = self.avatar.getUserGroupId()
-        homeDir = self.avatar.getHomeDir()
-        shell = self.avatar.getShell() or '/bin/sh'
-        command = (shell, '-c', cmd)
-        peer = self.avatar.conn.transport.transport.getPeer()
-        host = self.avatar.conn.transport.transport.getHost()
-        self.environ['SSH_CLIENT'] = '%s %s %s' % (peer.host, peer.port, host.port)
-        if self.ptyTuple:
-            self.getPtyOwnership()
-        self.pty = reactor.spawnProcess(proto, \
-                shell, command, self.environ, homeDir,
-                uid, gid, usePTY = self.ptyTuple or 1)
-        if self.ptyTuple:
-            if self.modes:
-                self.setModes()
-        else:
-            import tty
-            tty.setraw(self.pty.fileno(), tty.TCSANOW)
-        self.avatar.conn.transport.transport.setTcpNoDelay(1)
-
-    def getPtyOwnership(self):
-        ttyGid = os.stat(self.ptyTuple[2])[5]
-        uid = self.avatar.getUserGroupId()[0]
-        euid, egid = os.geteuid(), os.getegid()
-        os.setegid(0)
-        os.seteuid(0)
-        try:
-            os.chown(self.ptyTuple[2], uid, ttyGid)
-        finally:
-            os.setegid(egid)
-            os.seteuid(euid)
-        
-    def setModes(self):
-        import tty, ttymodes
-        pty = self.pty
-        attr = tty.tcgetattr(pty.fileno())
-        for mode, modeValue in self.modes:
-            if not ttymodes.TTYMODES.has_key(mode): continue
-            ttyMode = ttymodes.TTYMODES[mode]
-            if len(ttyMode) == 2: # flag
-                flag, ttyAttr = ttyMode
-                if not hasattr(tty, ttyAttr): continue
-                ttyval = getattr(tty, ttyAttr)
-                if modeValue:
-                    attr[flag] = attr[flag]|ttyval
-                else:
-                    attr[flag] = attr[flag]&~ttyval
-            elif ttyMode == 'OSPEED':
-                attr[tty.OSPEED] = getattr(tty, 'B%s'%modeValue)
-            elif ttyMode == 'ISPEED':
-                attr[tty.ISPEED] = getattr(tty, 'B%s'%modeValue)
-            else:
-                if not hasattr(tty, ttyMode): continue
-                ttyval = getattr(tty, ttyMode)
-                attr[tty.CC][ttyval] = chr(modeValue)
-        tty.tcsetattr(pty.fileno(), tty.TCSANOW, attr)
-
-    def closed(self):
-        if self.pty:
-            import os
-            self.pty.loseConnection()
-            self.pty.signalProcess('HUP')
-            if self.ptyTuple:
-                ttyGID = os.stat(self.ptyTuple[2])[5]
-                os.chown(self.ptyTuple[2], 0, ttyGID)
-
-    def _writeHack(self, data):
-        """
-        Hack to send ignore messages when we aren't echoing.
-        """
-        if self.pty is not None:
-            import tty
-            attr = tty.tcgetattr(self.pty.fileno())[3]
-            if not attr & tty.ECHO and attr & tty.ICANON: # no echo
-                self.avatar.conn.transport.sendIgnore('\x00'*(8+len(data)))
-        self.oldWrite(data)
 
 class _ProtocolWrapper(protocol.ProcessProtocol):
     """

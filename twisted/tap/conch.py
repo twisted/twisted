@@ -34,8 +34,8 @@
 I am a support module for making SSH servers with mktap.
 """
 
-from twisted.conch import checkers, realm
-from twisted.conch.ssh import factory
+from twisted.conch import checkers, unix
+from twisted.conch.openssh_compat import factory
 from twisted.cred import portal
 from twisted.python import usage
 from twisted.application import strports
@@ -55,7 +55,7 @@ class Options(usage.Options):
 
 def makeService(config):
     t = factory.OpenSSHFactory()
-    t.portal = portal.Portal(realm.UnixSSHRealm())
+    t.portal = portal.Portal(unix.UnixSSHRealm())
     t.portal.registerChecker(checkers.UNIXPasswordDatabase())
     t.portal.registerChecker(checkers.SSHPublicKeyDatabase())
     #if checkers.pamauth:
