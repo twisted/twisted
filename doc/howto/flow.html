@@ -14,7 +14,7 @@
 
 <h3>Handling more than one Request</h3>
 
-<p>When creating services to handle simoutaneous requests, processing state
+<p>When creating services to handle simultaneous requests, processing state
 must be managed.  A common approach, threading, applies the method used 
 for single user operations:  keeping processing state within local variables 
 and function arguments.  In this case, the operating environment handles 
@@ -62,7 +62,7 @@ between steps for James and Wendy's request.  In effect, the requests
 are done in a parallel, cooperative manner.   While this is a good start,
 it isn't perfect as the event loop is stopped with a hard-coded timeout.
 It would be better for each Request object to signal when it is completed 
-so that the event loop can be shuot down sooner.</p>
+so that the event loop can be shut down sooner.</p>
 
 <h3>Deferred Callbacks</h3>
 
