@@ -1,3 +1,11 @@
+2002-12-5  Moshe Zadka <moshez@twistedmatrix.com>
+
+	* twisted/python/plugin.py: fixed a bug that got the wrong plugins.tml
+	if the package was installed in two different places
+ 
+	* twisted/inetd/*, twisted/runner/*: moved inetd to runner, to live in
+	harmony with procmon
+
 2002-12-04  Dave Peticolas  <dave@krondo.com>
 
 	* twisted/test/test_policies.py: Take the start time timestamp
