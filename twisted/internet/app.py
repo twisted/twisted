@@ -198,12 +198,12 @@ class Application(log.Logger, styles.Versioned, roots.Locked):
             del dict['running']
         return dict
 
-    def listenTCP(self, port, factory, backlog=5):
+    def listenTCP(self, port, factory, backlog=5, interface=''):
         """
         Connects a given protocol factory to the given numeric TCP/IP port.
         """
         from twisted.internet import tcp
-        self.addPort(tcp.Port(port, factory, backlog))
+        self.addPort(tcp.Port(port, factory, backlog, interface))
 
     def dontListenTCP(self, portno):
         for p in self.ports[:]:
@@ -221,14 +221,14 @@ class Application(log.Logger, styles.Versioned, roots.Locked):
         from twisted.internet import udp
         self.addPort(udp.Port(port, factory, interface, maxPacketSize))
 
-    def listenSSL(self, port, factory, ctxFactory, backlog=5):
+    def listenSSL(self, port, factory, ctxFactory, backlog=5, interface=''):
         """
         Connects a given protocol factory to the given numeric TCP/IP port.
         The connection is a SSL one, using contexts created by the context
         factory.
         """
         from twisted.internet import ssl
-        self.addPort(ssl.Port(port, factory, ctxFactory, backlog))
+        self.addPort(ssl.Port(port, factory, ctxFactory, backlog, interface))
 
     def addPort(self, port):
         """
