@@ -96,9 +96,7 @@ class MyOptions(usage.Options):
     def opt_telnet(self, port):
         from twisted.protocols import telnet
         factory = telnet.ShellFactory()
-        port = tcp.Port(int(port))
-        port.protocol = factory.protocol
-        app.addPort(port)
+        app.addPort(port, port = tcp.Port(int(port), factory))
 
     opt_t = opt_telnet
 
