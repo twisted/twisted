@@ -52,7 +52,7 @@ class ZopeHTTPRequest(log.Logger, http.Request):
         self.content.seek(0, 0)
         req = BrowserRequest(self.content, self, env)
         req.setPublication(self.channel.publication)
-        response = req.getResponse()
+        response = req._createResponse(self)
         response.setHeaderOutput(self)
         publish(req)
         self.finish()
@@ -112,9 +112,9 @@ if __name__ == '__main__':
     from Zope.App.ZopePublication.Browser.Publication import BrowserPublication
     from ZODB.FileStorage import FileStorage
     from ZODB.DB import DB
-    from Zope.Configuration.xmlconfig import XMLConfig
+    from Zope.App import config
 
-    XMLConfig("site.zcml")()
+    config("site.zcml")
     db = DB(FileStorage("Data.fs"))
     pub = BrowserPublication(db)
     
