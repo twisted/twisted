@@ -169,29 +169,18 @@ def getClassFromFQString(obj):
 
 # -- traceback formatting ---------------------
 
+# many apologies for this, but getting around the component architecture to
+# restore this functionality in a sane way was impossible.  -glyph
+_tbformathack = {
+    'plain': 'default',
+    'emacs': 'brief',
+    }
+
 def formatFailureTraceback(fail):
-    if not HIDE_TRIAL_INTERNALS:
-        return fail.getTraceback()
-    else:
-        sio = StringIO()
-        fail.printTraceback(sio)
-
-        if sio.getvalue().find(failure.EXCEPTION_CAUGHT_HERE) == -1:
-            return sio.getvalue()
-        else:
-            foundit = False
-            L = []
-            for line in sio.getvalue().split('\n'):
-                if not foundit and line.find(failure.EXCEPTION_CAUGHT_HERE) != -1:
-                    foundit = True
-                    continue
-
-                if not foundit:
-                    continue
-                else:
-                    L.append(line)
-
-            return "\n".join(L)
+    from twisted import trial as hack
+    detailLevel = _tbformathack.get(hack.tbformat, 'default')
+    elideFrameworkCode = HIDE_TRIAL_INTERNALS
+    return fail.getTraceback(detail=detailLevel, elideFrameworkCode=elideFrameworkCode)
 
 def formatMultipleFailureTracebacks(failList):
     if failList:

@@ -485,10 +485,18 @@ def _setUpLogging(config):
        if not config['suppresswarnings']:
            log.addObserver(seeWarnings)
        log.startLogging(open(config['logfile'], 'a'), 0)
-    
+
+
 def _getReporter(config):
-    
     tbformat = config['tbformat']
+    from twisted import trial
+    trial.tbformat = tbformat
+    # ^ I could honestly not figure out how else to do this without spending a
+    # week.  I strongly suggest that future trial maintainers remove
+    # trial.adapters entirely: the use of components provides no utility that I
+    # can observe, ESPECIALLY the use of components to adapt Failures, where
+    # only one type is allowed, so the adapter registry serves only to remove
+    # the possibility of passing arguments.
 
     log.msg(iface=ITrialDebug, reporter="config['reporter']: %s" % (config['reporter'],))
     if config['reporter'] is not None:

@@ -7,6 +7,8 @@
 
 """Unit testing framework."""
 
+tbformat = 'plain'
+
 from twisted.python import components
 try:
     from zope.interface import interface, declarations
