@@ -110,3 +110,29 @@ class NameVirtualHost(resource.Resource):
         """
         resrc = self._getResourceForRequest(request)
         return resrc.getChildWithDefault(path, request)
+
+class _HostResource(resource.Resource):
+
+    def getChild(self, path, request):
+        request.received_headers['host'] = path
+        return request.site.getResourceFor(request)
+
+
+class VHostMonsterResource(resource.Resource):
+
+    """\
+    Use this to be able to record the hostname and method (http vs. https)
+    in the URL without disturbing your web site. If you put this resource
+    in a URL http://foo.com/bar then requests to
+    http://foo.com/bar/http/baz.com/something will be equivalent to
+    http://foo.com/something, except that the hostname the request will
+    appear to be accessing will be "baz.com". So if "baz.com" is redirecting
+    all requests for to foo.com, while foo.com is inaccessible from the outside,
+    then redirect and url generation will work correctly
+    """
+    def getChild(self, path, request):
+        if path == 'http':
+            request.isSequre = lambda: 0
+        elif path == 'https':
+            request.isSequre = lambda: 1
+        return _HostResource()
