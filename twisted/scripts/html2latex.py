@@ -16,13 +16,14 @@
 # 
 
 import os
-from twisted.lore import latex, texi
+from twisted.lore import latex, texi, docbook
 from twisted.python import usage
 
 class Options(usage.Options):
 
     optFlags = [['section', 's', 'Generate a section, not an article'],
-                ['texi', 'i', 'Generate a Texinfo section']]
+                ['texi', 'i', 'Generate a Texinfo section'],
+                ['docbook', 'c', 'Generate a Docbook section']]
 
     optParameters = [['dir', 'd', None, 'Directory relative to which references'
                                         ' will be taken']]
@@ -39,6 +40,9 @@ def run():
     elif opt['texi']:
         klass = texi.TexiSpitter
         ext = '.texinfo'
+    elif opt['docbook']:
+        klass = docbook.DocbookSpitter
+        ext = '.xml'
     else:
         klass = latex.LatexSpitter
     for file in opt['files']:
