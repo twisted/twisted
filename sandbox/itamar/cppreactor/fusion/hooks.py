@@ -1,7 +1,6 @@
 """C++ hooks from inside reactor."""
 
 from twisted.internet import tcp
-
 from fusion import tcp as ctcp
 
 

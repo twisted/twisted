@@ -1,3 +1,5 @@
+import fusion
+
 import sys, os
 from os.path import join
 from distutils.core import setup
@@ -14,6 +16,7 @@ setup(
   ext_modules=[ 
     Extension("echo", ["echo.cpp"],
               libraries=["boost_python"],
-              include_dirs=["../include"]),
+              include_dirs=["../include"],
+              extra_link_args=["%s" % join(os.path.dirname(fusion.__file__), "tcp.so")]),
     ],
 )

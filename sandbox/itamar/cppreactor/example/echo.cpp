@@ -3,9 +3,18 @@ using namespace std;
 #include "twisted/tcp.h"
 using namespace Twisted;
 
+static char greeting[] = "hello there\n";
+
+class TestDeallocator: public Deallocator
+{
+public:
+    void dealloc(void* buf) { cout << "dealloc"; }
+};
+
 class Echo : public Protocol
 {
 private:
+    TestDeallocator dealloc;
     char buf[16384];
 public:
     virtual void connectionMade()
@@ -14,10 +23,11 @@ public:
 	cout << "connectionMade" << endl;
     }
 
-    virtual void dataReceived(char* buf, int buflen)
+    virtual void dataReceived(char* b, int buflen)
     {
-	transport->setReadBuffer(buf, 16384);
-	cout << buf;
+	transport->write(&dealloc, greeting, 12);
+	transport->setReadBuffer(this->buf, 16384);
+	cout << b;
     }
 
     virtual void connectionLost(object reason)

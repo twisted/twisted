@@ -8,8 +8,15 @@ using namespace boost::python;
 #ifndef TWISTED_TCP_H
 #define TWISTED_TCP_H
 
-
-object BufferClass; // the Python class wrapping Twisted::Buffer
+// not in Python.h, alas
+typedef struct {
+        PyObject_HEAD
+        PyObject *b_base;
+        void *b_ptr;
+        int b_size;
+        int b_readonly;
+        long b_hash;
+} PyBufferObject;
 
 
 namespace Twisted
@@ -19,24 +26,14 @@ namespace Twisted
     {
     public:
 	virtual ~Deallocator() {}
-	virtual void operator() (char* buf) = 0;
+	virtual void dealloc(void* buf) = 0;
     };
 
-    class Buffer
-    {
-    private:
+    typedef struct {
+	PyBufferObject buffer;
 	Deallocator* dealloc;
-	char* buf;
-	size_t buflen;
-    public:
-	Buffer() {}
-	void initialize(Deallocator *d, char* b, size_t l) {
-	    dealloc = d; buf = b; buflen = l;
-	}
-	~Buffer() { (*dealloc)(buf); }
-	// XXXX
-    };
-
+    } DeallocBuffer;
+    
     class Protocol;     // forward definition
 
     // The resulting Python class should be wrapped in to the transports
@@ -57,11 +54,7 @@ namespace Twisted
 	    this->buflen = buflen;
 	}
 	object doRead();
-	void write(Deallocator* d, char* buf, size_t buflen) {
-	    object b = BufferClass();
-	    ((Buffer)(extract<Buffer>(b))).initialize(d, buf, buflen);
-	    call_method<void, object>(self, "write", b);
-	}
+	void write(Deallocator* d, char* buf, int buflen);
 	void loseConnection() { call_method<void>(self, "loseConnection"); }
     };
 
