@@ -750,6 +750,8 @@ class MXTestCase(unittest.TestCase):
         self.assertEqual(str(againMX.exchange), str(nextMX.exchange))
 
 class LineSendingProtocol(basic.LineReceiver):
+    listConn = True
+
     def __init__(self, lines):
         self.lines = lines[:]
     
@@ -758,6 +760,9 @@ class LineSendingProtocol(basic.LineReceiver):
     
     def lineReceived(self, line):
         pass
+    
+    def connectionLost(self, reason):
+        self.lostConn = True
 
 class LiveFireExercise(unittest.TestCase):
     def setUp(self):
@@ -877,7 +882,10 @@ class LiveFireExercise(unittest.TestCase):
         while len(done) == 0 and i < 1000:
             reactor.iterate(0.01)
             i += 1
-        
+
+        # The server should kick us off when we send QUIT        
+        self.failUnless(client.lostConn)
+
         # First part of the delivery is done.  Poke the queue manually now
         # so we don't have to wait for the queue to be flushed.
         manager.checkState()
