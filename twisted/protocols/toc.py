@@ -1209,7 +1209,7 @@ class TOCClient(protocol.Protocol):
     def away(self,message=''):
         """
         change away state
-    message := the message, or '' to come back from awayness
+        message := the message, or '' to come back from awayness
         """
         self._awaymessage=message
         if message: 
