@@ -37,7 +37,7 @@ class Options(usage.Options):
                 ["bwverbose", "o", "Colorless verbose output"],
                 ["jelly", "j", "Jelly (machine-readable) output"],
                 ["summary", "s", "summary output"],
-                ["debug", "b", "Run tests in the Python debugger"],
+                ["debug", "b", "Run tests in the Python debugger. Will load '.pdbrc' from current directory if it exists."],
                 ["profile", None, "Run tests under the Python profiler"],
                 ["benchmark", None, "Run performance tests instead of unit tests."],
                 ["until-failure", "u", "Repeat test until it fails"],
@@ -347,7 +347,9 @@ def reallyRun(config):
     if config['debug']:
         reporter.debugger = 1
         import pdb
+        from twisted.internet import defer
         from twisted.python import failure
+        defer.Deferred.debug = True
         failure.startDebugMode()
         dbg = pdb.Pdb()
         try:

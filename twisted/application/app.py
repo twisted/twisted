@@ -70,7 +70,7 @@ def runWithHotshot(reactor, config):
         tmp.close()
 
 def runReactorWithLogging(config, oldstdout, oldstderr):
-    from twisted.internet import reactor
+    from twisted.internet import reactor, defer
     try:
         if config['profile']:
             if sys.version_info[:2] > (2, 2) and not config['nothotshot']:
@@ -78,6 +78,7 @@ def runReactorWithLogging(config, oldstdout, oldstderr):
             else:
                 runWithProfiler(reactor, config)
         elif config['debug']:
+            defer.Deferred.debug = True
             failure.startDebugMode()
             sys.stdout = oldstdout
             sys.stderr = oldstderr
