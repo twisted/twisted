@@ -225,6 +225,8 @@ desktop environments, and your toaster.
         "twisted.conch.ssh",
         "twisted.conch.ui",
         "twisted.conch.insults",
+        "twisted.conch.test",
+        "twisted.conch.scripts",
         "twisted.cred",
         "twisted.enterprise",
         "twisted.flow",
@@ -272,8 +274,8 @@ desktop environments, and your toaster.
         'bin/im', 'bin/t-im', 'bin/tap2deb', 'bin/tap2rpm',
         'bin/tapconvert', 'bin/websetroot',
         'bin/lore/lore',
-        'bin/tkmktap', 'bin/conch', 'bin/ckeygen',
-        'bin/tkconch', 'bin/trial', 'bin/mail/mailmail'
+        'bin/tkmktap', 'bin/conch/conch', 'bin/conch/ckeygen',
+        'bin/conch/tkconch', 'bin/trial', 'bin/mail/mailmail'
     ],
     'cmdclass': {
         'build_scripts': build_scripts_twisted,
