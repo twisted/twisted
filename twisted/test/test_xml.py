@@ -100,7 +100,7 @@ function give_answers() {
 if (score < 70) {
 alert("I hate you");
 }}
-        </script>
+        </script><a href=/foo.com/lalal name=foo>lalal</a>
         </body>
         </HTML>
         """
