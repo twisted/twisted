@@ -112,10 +112,10 @@ class IMAP4HelperTestCase(unittest.TestCase):
         ]
 
         for (case, expected) in zip(cases, answers):
-            self.assertEquals(imap4.parseNestedParens(case), expected)
+            self.assertEquals(imap4.parseNestedParens(case), [expected])
 
 class SimpleMailbox:
-    flags = ('\\Flag1', 'Flag2', 'LastFlag')
+    flags = ('\\Flag1', 'Flag2', '\\AnotherSysFlag', 'LastFlag')
 
     def getFlags(self):
         return self.flags
@@ -134,6 +134,9 @@ class SimpleMailbox:
     
     def destroy(self):
         pass
+    
+    def getHierarchicalDelimiter(self):
+        return '/'
 
 class SimpleServer(imap4.IMAP4Server):
     def authenticateLogin(self, username, password):
@@ -271,7 +274,7 @@ class IMAP4ServerTestCase(unittest.TestCase):
         self.assertEquals(self.server.mbox, mbox)
         self.assertEquals(self.selectedArgs, {
             'EXISTS': 9, 'RECENT': 3, 'UID': 42,
-            'FLAGS': ('\\Flag1', 'Flag2', 'LastFlag'),
+            'FLAGS': ('\\Flag1', 'Flag2', '\\AnotherSysFlag', 'LastFlag'),
             'READ-WRITE': 1
         })
 
@@ -297,7 +300,7 @@ class IMAP4ServerTestCase(unittest.TestCase):
         self.assertEquals(self.server.mbox, mbox)
         self.assertEquals(self.examinedArgs, {
             'EXISTS': 9, 'RECENT': 3, 'UID': 42,
-            'FLAGS': ('\\Flag1', 'Flag2', 'LastFlag'),
+            'FLAGS': ('\\Flag1', 'Flag2', '\\AnotherSysFlag', 'LastFlag'),
             'READ-WRITE': 0
         })
 
@@ -436,3 +439,28 @@ class IMAP4ServerTestCase(unittest.TestCase):
         loopback.loopback(self.server, self.client)
         
         self.assertEquals(SimpleServer.theAccount.subscriptions, ['THAT/MBOX'])
+
+    def testList(self):
+        SimpleServer.theAccount.addMailbox('root/subthing')
+        SimpleServer.theAccount.addMailbox('root/another-thing')
+        SimpleServer.theAccount.addMailbox('non-root/subthing')
+        
+        def login():
+            return self.client.login('testuser', 'password-test')
+        def list():
+            return self.client.list('root', '%')
+        def listed(answers):
+            self.listed = answers
+        
+        self.listed = None
+        d = self.connected.addCallback(strip(login))
+        d.addCallbacks(strip(list), self._ebGeneral)
+        d.addCallbacks(listed, self._ebGeneral)
+        d.addCallbacks(strip(self._cbStopClient), self._ebGeneral)
+        loopback.loopback(self.server, self.client)
+        
+        self.assertEquals(
+            self.listed,
+            [(SimpleMailbox.flags, "/", "ROOT/SUBTHING"),
+             (SimpleMailbox.flags, "/", "ROOT/ANOTHER-THING")]
+        )

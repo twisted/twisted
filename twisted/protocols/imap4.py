@@ -29,7 +29,6 @@ from twisted.protocols import basic
 from twisted.internet import defer
 from twisted.python import log, components
 
-
 import binascii, operator, re, string, types
 
 class IMAP4Exception(Exception):
@@ -362,7 +361,12 @@ class IMAP4Server(basic.LineReceiver):
             self.sendBadResponse(tag, 'Incorrect usage')
         else:
             ref, mbox = args
-            # ... ?
+            mailboxes = self.account.listMailboxes(ref, mbox)
+            for (name, box) in mailboxes:
+                flags = '(%s)' % ' '.join(box.getFlags())
+                delim = box.getHierarchicalDelimiter()
+                self.sendUntaggedResponse('%s "%s" %s' % (flags, delim, name))
+            self.sendPositiveResponse(tag, 'LIST completed')
 
 class UnhandledResponse(IMAP4Exception): pass
 
@@ -689,7 +693,7 @@ class IMAP4Client(basic.LineReceiver):
                     log.err('Unhandled SELECT response (1): ' + parts)
             elif split[0].upper().strip() == 'FLAGS':
                 split = parts.split(None, 1)
-                datum['FLAGS']= tuple(parseNestedParens(split[1]))
+                datum['FLAGS']= tuple(parseNestedParens(split[1])[0])
             elif split[0].upper().strip() == 'OK':
                 begin = parts.find('[')
                 end = parts.find(']')
@@ -714,7 +718,7 @@ class IMAP4Client(basic.LineReceiver):
                             except ValueError:
                                 raise IllegalServerResponse(parts)
                         elif key == 'PERMANENTFLAGS':
-                            datum['PERMANENTFLAGS'] = tuple(parseNestedParens(content[1]))
+                            datum['PERMANENTFLAGS'] = tuple(parseNestedParens(content[1])[0])
                         else:
                             log.err('Unhandled SELECT response (2): ' + parts)
                     else:
@@ -796,11 +800,53 @@ class IMAP4Client(basic.LineReceiver):
         """
         return self.sendCommand('UNSUBSCRIBE', name)
     
+    def list(self, reference, wildcard):
+        """List a subset of the available mailboxes
+        
+        This command is allowed in the Authenticated and Selected states.
+        
+        @type reference: C{str}
+        @param reference: The context in which to interpret C{wildcard}
+        
+        @type wildcard: C{str}
+        @param wildcard: The pattern of mailbox names to match, optionally
+        including either or both of the '*' and '%' wildcards.  '*' will
+        match zero or more characters and cross hierarchical boundaries.
+        '%' will also match zero or more characters, but is limited to a
+        single hierarchical level.
+        
+        @rtype: C{Deferred}
+        @return: A deferred whose callback is invoked with a list of C{tuple}s,
+        the first element of which is a C{tuple} of mailbox flags, the second
+        element of which is the hierarchy delimiter for this mailbox, and the
+        third of which is the mailbox name; if the command is unsuccessful,
+        the deferred's errback is invoked instead.
+        """
+        d = self.sendCommand('LIST', '"%s" "%s"' % (reference, wildcard))
+        d.addCallback(self._cbList)
+        return d
+    
+    def _cbList(self, (lines, last)):
+        results = []
+        for L in lines:
+            parts = parseNestedParens(L)
+            if len(parts) != 3:
+                raise IllegalServerResponse, L
+            parts[0] = tuple(parts[0])
+            results.append(tuple(parts))
+        return results
+
+
 class MismatchedNesting(Exception):
     pass
 
 class MismatchedQuoting(Exception):
     pass
+
+def wildcardToRegexp(wildcard, delim):
+    wildcard = wildcard.replace('*', '(?:.*?)')
+    wildcard = wildcard.replace('%', '(?:(?:[^%s])*?)' % re.escape(delim))
+    return re.compile(wildcard)
 
 def splitQuoted(s):
     """Split a string into whitespace delimited tokens
@@ -908,7 +954,7 @@ def parseNestedParens(s):
         raise MismatchedNesting(s)
     if len(contentStack) != 1:
         raise MismatchedNesting(s)
-    return collapseStrings(contentStack[0][0])
+    return collapseStrings(contentStack[0])
 
 
 class AuthenticationError(IMAP4Exception): pass
@@ -1045,6 +1091,12 @@ class Account:
         if name not in self.subscriptions:
             raise MailboxError, "Not currently subscribed to " + name
         self.subscriptions.remove(name)
+    
+    def listMailboxes(self, ref, wildcard):
+        ref = self._inferiorNames(ref.upper())
+        wildcard = wildcardToRegexp(wildcard, '/')
+        return [(i, self.mailboxes[i]) for i in ref if wildcard.match(i)] 
+
 
 class IMailbox(components.Interface):
     def getUIDValidity(self):
@@ -1081,4 +1133,10 @@ class IMailbox(components.Interface):
         If necessary, all resources held by this mailbox should be cleaned
         up here.  This function _must_ set the \\Noselect flag on this
         mailbox.
+        """
+
+    def getHierarchicalDelimiter(self):
+        """Get the character which delimits namespaces for in this mailbox.
+        
+        @rtype: C{str}
         """
