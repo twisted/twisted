@@ -138,7 +138,7 @@ static PyObject *iocpcore_doIteration(iocpcore* self, PyObject *args) {
     object = ov->callback;
     if(object) {
         // this is retarded. GQCS only sets error value if it wasn't succesful
-        // (what about forth case, when handle is closed?)
+        // (what about fourth case, when handle is closed?)
         if(res) {
             err = 0;
         }
@@ -201,6 +201,7 @@ static PyObject *iocpcore_WriteFile(iocpcore* self, PyObject *args) {
     printf("    wf returned %d, err %ld\n", res, err);
 #endif
     if(!res && err != ERROR_IO_PENDING) {
+        Py_DECREF(object);
         PyMem_Free(ov);
         return PyErr_SetFromWindowsErr(err);
     }
@@ -253,6 +254,7 @@ static PyObject *iocpcore_ReadFile(iocpcore* self, PyObject *args) {
     printf("    rf returned %d, err %ld\n", res, err);
 #endif
     if(!res && err != ERROR_IO_PENDING) {
+        Py_DECREF(object);
         PyMem_Free(ov);
         return PyErr_SetFromWindowsErr(err);
     }

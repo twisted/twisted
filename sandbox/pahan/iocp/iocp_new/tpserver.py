@@ -1,7 +1,7 @@
 """Throughput server."""
 
-#import proactor
-#proactor.install()
+import proactor
+proactor.install()
 import sys
 from twisted.protocols.wire import Discard
 from twisted.internet import protocol, reactor
