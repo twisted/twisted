@@ -622,13 +622,7 @@ class Broker(banana.Banana):
         """Returns an object from the remote name mapping.
 
         Note that this does not check the validity of the name, only
-        creates a translucent reference for it.  In order to check
-        the validity of an object, you can use the special message
-        '__ping__'.
-
-        object.__ping__() will always be answered with a 1 or 0 (never
-        an error) depending on whether the peer knows about the object
-        or not.
+        creates a translucent reference for it.
         """
         return RemoteReference(None, self, name, 0)
 
@@ -876,6 +870,7 @@ class Broker(banana.Banana):
             obj.__really_del__()
         obj.__del__ = reallyDel
         del self.locallyCachedObjects[objectID]
+
 
 class BrokerFactory(protocol.Factory, styles.Versioned, coil.Configurable):
     """I am a server for object brokerage.
