@@ -36,9 +36,10 @@ class ReadFileOp(OverlappedOp)
     def initiateOp(self, handle, buffer):
         self.buffer = buffer # save a reference so that things don't blow up
         self.handle = handle
-        # XXX: is this expensive to do? is this circular referring dangerous?
+        # XXX: is this expensive to do? is this circular importing dangerous?
         from twisted.internet import reactor
         reactor.registerHandler(handle, self)
         (ret, bytes) = ReadFile(handle, buffer, self.ov)
         # TODO: need try-except block to at least cleanup self.handle/self.buffer and unregisterFile
+        # also, errback if this ReadFile call throws up (perhaps call ovDone ourselves to automate cleanup?)
 
