@@ -17,7 +17,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.46 $"[11:-2]
+__version__ = "$Revision: 1.47 $"[11:-2]
 
 import os
 import cgi
@@ -183,7 +183,7 @@ class Controller(resource.Resource):
         DOM. gatheredControllers will render the page to the browser
         when it is done.
         """
-        if not request.prepath[-1] == '' and self.addSlash:
+        if self.addSlash and request.prepath[-1] != '' and request.prepath[-1] != 'index.rpy':
             return redirectTo(addSlash(request), request)
         # Handle any inputhandlers that were passed in to the controller first
         for ih in self._inputhandlers:
