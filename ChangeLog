@@ -1,3 +1,8 @@
+2003-07-15  Dave Peticolas  <dave@krondo.com>
+
+	* twisted/persisted/styles.py: better debugging output
+	for Ephemeral
+
 2003-07-14  Jp Calderone  <exarkun@twistedmatrix.com>
 
 	* twisted/cred/checkers.py, twisted/cred/credentials.py:

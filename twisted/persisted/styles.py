@@ -111,8 +111,8 @@ def unpickleStringO(val, sek):
 
 if hasattr(StringIO, 'OutputType'):
     copy_reg.pickle(StringIO.OutputType,
-                pickleStringO,
-                unpickleStringO)
+                    pickleStringO,
+                    unpickleStringO)
 
 def pickleStringI(stringi):
     return unpickleStringI, (stringi.getvalue(), stringi.tell())
@@ -135,7 +135,7 @@ class Ephemeral:
     """
 
     def __getstate__(self):
-        log.msg( "WARNING: serializing ephemeral %s" % self )
+        log.msg( "WARNING: serializing ephemeral %s" % self.__class__ )
         return None
 
     def __setstate__(self, state):
