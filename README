@@ -17,8 +17,8 @@ What is this?
   web server, a telnet server, a chat server, a news server, a generic client 
   and server for remote object access, and APIs for creating new protocols and
   services. Twisted supports integration of the Tk, GTK+, GTK+ 2, Qt, Mac OS X,
-  or wxPython event  loop with its main event loop. The Win32 event loop 
-  is also supported. Twisted works with Python 2.2 and 2.3.
+  or wxPython event loop with its main event loop. The Win32 event loop 
+  is also supported. Twisted works with all Python 2.2 and 2.3 versions.
 
   Twisted currently supports the following protocols, all implemented in pure
   Python, most of them as both servers and clients:
