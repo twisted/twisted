@@ -103,3 +103,8 @@ application = service.Application("hello")
                          os.path.abspath(os.path.join("logfiledir", "lala")))
         self.assertEqual(l.name, "lala")
         self.assertEqual(l.directory, os.path.abspath("logfiledir"))
+
+    def test_startApplication(self):
+        appl = service.Application("lala")
+        app.startApplication(appl, 0)
+        self.assert_(service.IService(appl).running)
