@@ -44,6 +44,8 @@ class TagChecker:
             return ('"' in getattr(node, 'data', '') and
                     node.parentNode.tagName not in ('code', 'pre'))
         for node in domhelpers.findNodes(dom, matcher):
+            if node.parentNode.parentNode.tagName in ('code', 'pre'):
+                continue 
             self._reportError(filename, node.parentNode, 'contains quote')
 
 def main():
