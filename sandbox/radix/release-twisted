@@ -485,12 +485,13 @@ class MakeDebs(Transaction):
         tgz = 'Twisted-%s.tar.gz' % (ver,)
         unique = '%s.%s' % (time.time(), os.getpid())
         debdir = 'debian-%s' % ver
+        lastdeb = opts['lastdeb']
 
         os.mkdir('/sid-chroot/tmp/%s' % unique)
         sh('cd /sid-chroot/tmp/%s && tar xzf %s' % (unique, tgz))
         sh("ssh -p 9022 localhost "
              "'cd /tmp/%(unique)s && "
-             "./Twisted-%(ver)s/admin/make-deb -a'"%vars())
+             "./Twisted-%(ver)s/admin/make-deb -a -o %(lastdeb)s'"%vars())
 
         if not os.path.isdir(debdir):
             os.mkdir(debdir)
