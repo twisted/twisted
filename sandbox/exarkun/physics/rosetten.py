@@ -1,11 +1,11 @@
-width = 1600
-height = 1600
+width = 600
+height = 600
 
 from math import pi, cos, sin
 
-d = 100
-n = 8
-v = 0.0777 * n
+d = 200
+n = 4
+v = 0.0777 * (n ** 0.5)
 m = 1e12 / n
 k = (2 * pi) / 1
 config = [(m,

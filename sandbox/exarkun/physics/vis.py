@@ -8,7 +8,7 @@ BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 
 # Get a configuration
-from rosetten import config, width as WIDTH, height as HEIGHT
+from rosette4 import config, width as WIDTH, height as HEIGHT
 
 # PyGame's clock sucks nuts
 class Clock:
@@ -39,7 +39,7 @@ def main():
             if evt.type == pygame.QUIT:
                 raise SystemExit("Ran %d iterations" % (count * perFrame,))
 
-        # clock.tick(60)
+        clock.tick(60)
         for x in xrange(perFrame):
             space.update()
 
