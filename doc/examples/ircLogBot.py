@@ -28,7 +28,7 @@ import string, time
 class LogBot(irc.IRCClient):
     """A logging IRC bot."""
     def __init__(self):
-        self.nickname = "twistedbotII"
+        self.nickname = "twistedbot"
 
     def connectionMade(self):
 	irc.IRCClient.connectionMade(self)
