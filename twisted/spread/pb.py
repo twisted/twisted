@@ -52,7 +52,7 @@ applied when serializing arguments.
 # Future Imports
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.123 $"[11:-2]
+__version__ = "$Revision: 1.124 $"[11:-2]
 
 
 # System Imports
@@ -529,6 +529,7 @@ class Broker(banana.Banana):
                 notifier()
             except:
                 log.deferr()
+        self.connects = None
 
     def connectionFailed(self):
         for notifier in self.failures:
@@ -536,6 +537,7 @@ class Broker(banana.Banana):
                 notifier()
             except:
                 log.deferr()
+        self.failures = None
 
     waitingForAnswers = None
 
@@ -589,7 +591,13 @@ class Broker(banana.Banana):
     def notifyOnConnect(self, notifier):
         """Call the given callback when the Broker connects."""
         assert callable(notifier)
-        self.connects.append(notifier)
+        if self.connects is None:
+            try:
+                notifier()
+            except:
+                log.err()
+        else:
+            self.connects.append(notifier)
 
     def dontNotifyOnDisconnect(self, notifier):
         """Remove a callback from list of disconnect callbacks."""
@@ -1091,6 +1099,8 @@ class _ObjectRetrieval:
             self.term = 1
             del self.broker
             self.deferred.errback(error.ConnectionLost())
+            del self.deferred
+            
 
     def connectionMade(self):
         assert not self.term, "How did this get called?"
@@ -1098,12 +1108,14 @@ class _ObjectRetrieval:
         del self.broker
         self.term = 1
         self.deferred.callback(x)
+        del self.deferred
 
     def connectionFailed(self):
         if not self.term:
             self.term = 1
             del self.broker
             self.deferred.errback(error.ConnectError(string="Connection failed"))
+            del self.deferred
 
 
 class BrokerClientFactory(protocol.ClientFactory):
