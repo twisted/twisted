@@ -35,7 +35,7 @@ class BounceDomain:
 
     This can be used to block off certain domains.
     """
-    def exists(self, name, domain):
+    def exists(self, name, domain, protocol):
         """No user exists in a BounceDomain -- always return 0
         """
         return 0

@@ -33,7 +33,7 @@ class AbstractMaildirDomain:
         """
         return None
 
-    def exists(self, name, domain):
+    def exists(self, name, domain, protocol):
         """Check for existence of user in the domain
         """
         return self.userDirectory(name) is not None

@@ -15,21 +15,21 @@ class DomainPickler:
         self.path = path
         self.n = 0
 
-    def exists(self, user, domain):
+    def exists(self, user, domain, protocol):
         """Check whether we will relay
 
         Call overridable willRelay method
         """
-        return self.willRelay()
+        return self.willRelay(protocol)
 
-    def willRelay(self):
+    def willRelay(self, protocol):
         """Check whether we agree to relay
 
         The default is to relay for non-inet connections or for
         localhost inet connections. Note that this means we are
         an open IPv6 relay
         """
-        peer = self.transport.getPeer()
+        peer = protocol.transport.getPeer()
         return peer[0] != 'INET' or peer[1] == '127.0.0.1'
 
     def saveMessage(self, origin, name, message, domain):
@@ -38,7 +38,7 @@ class DomainPickler:
         The filename is uniquely chosen.
         The pickle contains a tuple: from, to, message
         """
-        fname = "%s_%s_%s" % (os.getpid(), os.time(), self.n)
+        fname = "%s_%s_%s" % (os.getpid(), time.time(), self.n)
         self.n = self.n+1
         fp = open(os.path.join(self.path, fname), 'w')
         try:

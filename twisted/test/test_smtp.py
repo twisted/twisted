@@ -16,7 +16,7 @@ class DummyDomain:
        for name in names:
            self.messages[name] = []
 
-   def exists(self, name, domain):
+   def exists(self, name, domain, protocol):
        return self.messages.has_key(name)
 
    def saveMessage(self, origin, name, message, domain):
