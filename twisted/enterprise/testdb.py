@@ -21,7 +21,7 @@ import unittest
 import time
 
 from twisted.enterprise import manager
-from twisted.enterprise import service
+from twisted.enterprise import requests
 
 def getDebug():
     return 0
@@ -63,23 +63,27 @@ class ServiceTestCase(unittest.TestCase):
         self.data = data
         if getDebug(): print "got data:", data
 
+    def gotError(self, error):
+        print "ERROR:", error
+        assert 'errorback called'
+        
     def testGeneric(self):
         if getDebug(): print "starting Generic"
-        request = service.GenericRequest("select * from sysusers", self.gotData)
+        request = requests.GenericRequest("select * from sysusers", None, self.gotData, self.gotError)
         self.manager.addRequest(request)
         assert self.data != "DEFAULT", 'no response for generic result'
         if getDebug(): print "test Generic  successful"
         
     def testAddUser(self):
         if getDebug(): print "starting AddUser"
-        request = service.AddUserRequest('testuser','testpass', self.gotData)
+        request = requests.AddUserRequest('testuser','testpass', self.gotData, self.gotError)
         self.manager.addRequest(request)
         assert self.data != "DEFAULT", 'no response for addUser result'
         if getDebug(): print "test AddUser successful"
 
     def testPassword(self):
         if getDebug(): print "starting Password"
-        request = service.PasswordRequest('testuser', self.gotData)
+        request = requests.PasswordRequest('testuser', self.gotData, self.gotError)
         self.manager.addRequest(request)
         #print "password is <%s>" % self.data
         assert self.data != "DEFAULT", 'password retrieved is incorrect'
@@ -89,7 +93,7 @@ class ServiceTestCase(unittest.TestCase):
         if getDebug(): print "starting Bulk"
         NUMREQUESTS = 100
         for i in range(0,NUMREQUESTS):
-            request = service.PasswordRequest('testuser', self.gotData)
+            request = requests.PasswordRequest('testuser', self.gotData, self.gotError)
             self.manager.addRequest(request)
         assert self.data != "DEFULT", 'bulk failed.'
         if getDebug(): print "test Bulk successful"

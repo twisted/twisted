@@ -17,35 +17,71 @@
 from twisted.spread import pb
 from twisted.python import delay, authenticator
 import string
+import os
 from twisted.enterprise import manager
+from twisted.enterprise import requests
 
 class Service(pb.Service):
     """
-    This service manages users that request to interact with the database.
+    This service manages users that request to interact with the database. It keeps track the registered
+    database Request classes and does the loading of Requests from the directories passed in on startup.
 
-    The actual user names that users supply are not database level user names, but names that
-    exist in the "accounts" table in the database. For now, the accounts table is:
+    Request classes will be imported automatically on startup from the requestDirectories specified.
+    To be imported the file name must be of the format "dbrequest*.py" and must implement a module
+    level method called "loadRequests". This method should call registerRequestClass for each of the
+    database Request classes in the module.
 
-    create table accounts
-    (
-        name      char(24),
-        passwd    char(24),
-        accountid int
-    );
-
-    servertest.py adds two users to the accounts table for now. duplicates are ignored.
-
-    This is assumed to be single threaded for now.
-
+    The default configuration reads request classes from the directory "userRequests"
     """
-    def __init__(self, manager, app, name='twisted.enterprise.db'):
+    def __init__(self, manager, app, requestDirectories, name='twisted.enterprise.db'):
         pb.Service.__init__(self, name, app)
         self.manager = manager
+        self.requestMap = {}
+        self.requestDirectories = requestDirectories
+        self.loadDefaultRequests()
+        self.loadRequests()
 
     def startService(self):
         print "Starting db service"
         self.manager.connect()
 
+    def registerRequestClass(self, requestName, requestClass):
+        if self.requestMap.has_key(requestName):
+            print "ERROR: Request class already exists"
+            return 0
+        else:
+            self.requestMap[requestName] = requestClass
+            print "Registered Request Class '%s'" % requestName
+            return 1
+        
+    def loadDefaultRequests(self):
+        """Loads the built-in request classes from the requests.py file. These have the wrapper "__"
+        around their names as they are internal built-in classe, not user classes.
+        """
+        self.registerRequest("__generic__", requests.GenericRequest)
+        self.registerRequest("__adduser__", requests.AddUserRequest)
+        self.registerRequest("__password__", requests.PasswordRequest)
+        
+    def loadRequests(self):
+        """Loads any database Request classes from the list of directories stored in requestDirectories.
+        """
+        for dir in self.requestDirectories:
+            files = os.listdir(dir)
+            for file in files:
+                prefix = file[0:9]
+                suffix = file[-3:]
+                moduleName = file[0:-3]
+                print "Found file %s  '%s' '%s'" % ( file, prefix, suffix )
+                if prefix == "dbrequest" and suffix == ".py":
+                    mod = __import__(moduleName)
+                    mod.loadRequests(self)
+
+    def getRequestClass(self, name):
+        """Lookup a Request class by name"""
+        if self.requestMap.has_key(name):
+            return self.requestMap[name]
+        else:
+            return None
 
 class DbUser(pb.Perspective):
     """A User that wants to interact with the database.
@@ -55,61 +91,18 @@ class DbUser(pb.Perspective):
         to pass results back.
         """
         print "Got SQL request:" , sql, " args: ", args
-        newRequest = GenericRequest(sql, args, client.simpleSQLResults, client.simpleSQLError)
+        newRequest = requests.GenericRequest(sql, args, client.simpleSQLResults, client.simpleSQLError)
         self.service.manager.addRequest(newRequest)
 
-
-class GenericRequest(manager.Request):
-    """Generic sql execution request.
-    """
-    def __init__(self, sql, args, callback, errback):
-        manager.Request.__init__(self, callback, errback)
-        self.sql = sql
-        self.args = args
-
-    def execute(self, connection):
-        c = connection.cursor()
-        if self.args:
-            c.execute(self.sql, params=self.args)
-        else:
-            c.execute(self.sql)
-        self.results = c.fetchall()
-        c.close()
-        #print "Fetchall :", c.fetchall()
-        self.status = 1
-
-class AddUserRequest(manager.Request):
-    """DbRequest to add a user to the accounts table
-    """
-    def __init__(self, name, password, callback, errback):
-        manager.Request.__init__(self, callback, errback)
-        self.name = name
-        self.password = password
-
-    def execute(self, connection):
-        c = connection.cursor()
-        c.execute("insert into accounts (name, passwd, accountid) values ('%s', '%s', 0)" % (self.name, self.password) )
-        c.fetchall()
-        c.close()
-        connection.commit()
-        self.status = 1
-
-class PasswordRequest(manager.Request):
-    """DbRequest to look up the password for a user in the accounts table.
-    """
-    def __init__(self, name, callback, errback):
-        manager.Request.__init__(self, callback, errback)
-        self.name = name
-        
-    def execute(self, connection):
-        c = connection.cursor()
-        c.execute("select passwd from accounts where name = '%s'" % self.name)
-        row = c.fetchall()
-        if not row:
-            # username not found.
+    def perspective_callRequest(self, requestName, args, client):
+        """this method allows the client to call any registered Request. It will invoke either the method
+        requestResults or requestError on the client object when the request is done.
+        """
+        print "got callRequest for %s" % requestName
+        requestClass = self.service.getRequestClass(requestName)
+        if not requestClass:
             self.status = 0
-            return None
-        self.results = row[0]
-        c.close()
-        self.status = 1
-
+            return
+        fullArgs = args + (client.requestResults, client.requestError)
+        newRequest = apply(requestClass, fullArgs)
+        self.service.manager.addRequest(newRequest)

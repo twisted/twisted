@@ -47,11 +47,13 @@ class DbClient(pb.Referenced):
     def gotConnection(self, dbUser):
         print 'connected:', dbUser
         self.dbUser = dbUser
-        self.dbUser.simpleSQL("select * from accdounts where name = ?", ("testuser",), self)
+
+        args = ("select * from accounts where name = ?", ["testuser"])
+        self.dbUser.callRequest("test3", args, self)
 
     def remote_simpleSQLResults(self, *data):
         print "Got some data:" , self.count, data
-        self.dbUser.simpleSQL("select * from accdounts where name = ?", ("testuser",), self)
+        self.dbUser.simpleSQL("select * from accounts where name = ?", ("testuser",), self)
         self.count = self.count + 1
         if self.count == 400:
             now = time.time()
@@ -60,6 +62,14 @@ class DbClient(pb.Referenced):
 
     def remote_simpleSQLError(self, *error):
         print "Error!", error
+
+    def remote_requestResults(self, *data):
+        print "Got request data:", data
+        self.dbUser.simpleSQL("select * from accounts where name = ?", ("testuser",), self)        
+
+    def remote_requestError(self, *error):
+        print "Got request error:", error
+      
 
 
 def run():

@@ -69,9 +69,9 @@ class Scheduler:
 
     synchronized = ["addTask", "runUntilCurrent"]
 
-
 threadable.synchronize(Scheduler)
 theScheduler = Scheduler()
 
 def schedule(function, args=[], kwargs={}):
+    global theScheduler
     theScheduler.addTask(function, args, kwargs)

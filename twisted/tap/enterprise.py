@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from twisted.enterprise import dbserver, dbservice
+from twisted.enterprise import manager, service
 from twisted.spread import pb
 from twisted.internet import passport
 from twisted.python import usage
@@ -68,20 +68,19 @@ class Options(usage.Options):
 
 def getPorts(app, config):
     bf = pb.BrokerFactory(app)
-    mgr = dbserver.DbManager(
+    mgr = manager.ManagerSingle(
         service  = config.service,
         server   = config.server,
         database = config.database,
         username = config.username,
-        password = config.password,
-        numConnections = int(config.connections)
+        password = config.password
         )
-    svc = dbservice.DbService(mgr, app)
+    svc = service.Service(mgr, app, ["userRequests"])
     
     i = passport.Identity(config.pbusername, app)
     i.setPassword(config.pbpassword)
     app.authorizer.addIdentity(i)
-    p = dbservice.DbUser(config.pbusername, svc, i.name)
+    p = service.DbUser(config.pbusername, svc, i.name)
     svc.addPerspective(p)
     i.addKeyForPerspective(p)
 
