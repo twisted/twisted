@@ -67,6 +67,7 @@ typedef enum _cReactorTransportState
 } cReactorTransportState;
 
 /* Forward delcare types. */
+typedef struct _cDelayedCall cDelayedCall;
 typedef struct _cReactorMethod cReactorMethod;
 typedef struct _cReactorBuffer cReactorBuffer;
 typedef struct _cReactorTransport cReactorTransport;
@@ -181,6 +182,27 @@ struct _cReactorTransport
     int                 producer_streaming;
 };
 
+/* a delayed call */
+struct _cDelayedCall
+{
+    PyObject_HEAD
+
+    /* A reference to the reactor this is a part of. NULL if unscheduled */
+    cReactor *          reactor;
+
+    /* Absolute time when the call should be fired. */
+    struct timeval      call_time;
+
+    /* The function and args to call when we are fired. */
+    PyObject *          callable;
+    PyObject *          args;
+    PyObject *          kw;
+
+    /* Set to 1 once the call is fired and de-scheduled */
+    int                 called;
+
+    struct _cDelayedCall *      next;
+};
 
 /* The cReactor object. */
 struct _cReactor
@@ -197,7 +219,7 @@ struct _cReactor
     PyObject *          attr_dict;
 
     /* The main list of timed methods. */
-    cReactorMethod *    timed_methods;
+    cDelayedCall *      timed_methods;
 
     /* A list of method for each event for each phase. */
     cReactorMethod *    event_triggers[CREACTOR_NUM_EVENT_TYPES][CREACTOR_NUM_EVENT_PHASES];
@@ -285,19 +307,27 @@ PyObject * cReactorUtil_CreateDeferred(void);
 /* Convert a python number object into a millisecond delay. */
 int cReactorUtil_ConvertDelay(PyObject *delay_obj);
 
+/* Add a method to the given DelayedCall list using the given delay (in
+   milliseconds). */
+cDelayedCall *cReactorUtil_AddDelayedCall(cReactor *reactor,
+                                          int delay_ms,
+                                          PyObject *callable,
+                                          PyObject *args,
+                                          PyObject *kw);
+
+void cReactorUtil_InsertDelayedCall(cReactor *reactor, cDelayedCall *call);
+int cReactorUtil_RemoveDelayedCall(cReactor *reactor, cDelayedCall *call);
+int cReactorUtil_ReInsertDelayedCall(cReactor *reactor, cDelayedCall *call);
+
+/* Return the number of milliseconds until the next method need to be run. */
+int cReactorUtil_NextMethodDelay(cReactor *reactor);
+
 /* Add a method to the given method list.  Return the call ID of the method.
  */
 int cReactorUtil_AddMethod(cReactorMethod **list,
                            PyObject *callable,
                            PyObject *args,
                            PyObject *kw);
-
-/* Add a method to the given list using the given delay (in milliseconds). */
-int cReactorUtil_AddDelayedMethod(cReactorMethod **list,
-                                  int delay_ms,
-                                  PyObject *callable,
-                                  PyObject *args,
-                                  PyObject *kw);
 
 /* Remove a method from the given method list.  Returns -1 on error and raises
  * ValueError.
@@ -308,7 +338,7 @@ int cReactorUtil_RemoveMethod(cReactorMethod **list, int call_id);
  * now and the next method (in milliseconds).  A negative value means
  * there are no more methods.
  */
-int cReactorUtil_RunMethods(cReactorMethod **list);
+int cReactorUtil_RunDelayedCalls(cReactor *reactor);
 
 /* Iterate over the methods in the given method list. */
 typedef void (*cReactorMethodListIterator)(PyObject *callable,
@@ -320,11 +350,9 @@ void cReactorUtil_ForEachMethod(cReactorMethod *list,
                                 cReactorMethodListIterator func,
                                 void *user_data);
 
-/* Return the number of seconds until the next method need to be run. */
-int cReactorUtil_NextMethodDelay(cReactorMethod *list);
-
 /* Destroy the given method list. */
 void cReactorUtil_DestroyMethods(cReactorMethod *list);
+void cReactorUtil_DestroyDelayedCalls(cReactor *reactor);
 
 /* Convert event type from string to enum. */
 int cReactorUtil_GetEventType(const char *str, cReactorEventType *out_type);
@@ -343,8 +371,11 @@ void cReactor_AddTransport(cReactor *reactor, cReactorTransport *transport);
 /* Schedule a method to be called at a later time. */
 PyObject * cReactorTime_callLater(PyObject *self, PyObject *args, PyObject *kw);
 
-/* Cancel a previously scheduled method. */
+/* Cancel a previously scheduled method. Deprecated. */
 PyObject * cReactorTime_cancelCallLater(PyObject *self, PyObject *args);
+
+/* Retrieve a list of pending DelayedCall objects. */
+PyObject * cReactorTime_getDelayedCalls(PyObject *self, PyObject *args);
 
 /* Create a TCP IListeningPort. */
 PyObject * cReactorTCP_listenTCP(PyObject *self, PyObject *args, PyObject *kw);
@@ -395,5 +426,14 @@ cReactorJob * cReactorJobQueue_Pop(cReactorJobQueue *queue);
  * queue.
  */
 cReactorJob * cReactorJobQueue_PopWait(cReactorJobQueue *queue);
+
+/* Set up the cDelayedCall module */
+void cDelayedCall_init(void);
+
+/* Create a cDelayedCall object. */
+cDelayedCall * cDelayedCall_new(int delay_ms,
+                                PyObject *callable,
+                                PyObject *args,
+                                PyObject *kw);
 
 /* vim: set sts=4 sw=4: */

@@ -69,6 +69,8 @@ static PyMethodDef cReactor_methods[] =
     /* IReactorTime */
     { "callLater",          (PyCFunction)cReactorTime_callLater,
       (METH_VARARGS | METH_KEYWORDS), "callLater" },
+    { "getDelayedCalls",    cReactorTime_getDelayedCalls,
+      METH_VARARGS,  "getDelayedCalls" },
     { "cancelCallLater",    cReactorTime_cancelCallLater,
       METH_KEYWORDS,  "cancelCallLater" },
 
@@ -174,19 +176,19 @@ cReactor_resolve(PyObject *self, PyObject *args, PyObject *kw)
             {
                 memcpy(&addr, host->h_addr_list[0], host->h_length);
                 defer_args = Py_BuildValue("(s)", inet_ntoa(addr));
-                cReactorUtil_AddMethod(&reactor->timed_methods, callback, defer_args, NULL);
+                cReactorUtil_AddDelayedCall(reactor, 0, callback, defer_args, NULL);
             }
             else
             {
                 defer_args = Py_BuildValue("(s)", "h_length != sizeof(addr)");
-                cReactorUtil_AddMethod(&reactor->timed_methods, errback, defer_args, NULL);
+                cReactorUtil_AddDelayedCall(reactor, 0, errback, defer_args, NULL);
             }
             Py_DECREF(defer_args);
         }
         else
         {
             defer_args = Py_BuildValue("(s)", hstrerror(h_errno));
-            cReactorUtil_AddMethod(&reactor->timed_methods, errback, defer_args, NULL);
+            cReactorUtil_AddDelayedCall(reactor, 0, errback, defer_args, NULL);
             Py_DECREF(defer_args);
         }
     }
@@ -194,7 +196,7 @@ cReactor_resolve(PyObject *self, PyObject *args, PyObject *kw)
     {
         /* Type was not 1, schedule an errback call. */
         defer_args = Py_BuildValue("(s)", "only type 1 is supported");
-        cReactorUtil_AddMethod(&reactor->timed_methods, errback, defer_args, NULL);
+        cReactorUtil_AddDelayedCall(reactor, 0, errback, defer_args, NULL);
         Py_DECREF(defer_args);
     }
 
@@ -743,7 +745,7 @@ iterate_internal(cReactor *reactor, int delay)
     }
 
     /* Figure out the method delay. */
-    method_delay = cReactorUtil_NextMethodDelay(reactor->timed_methods);
+    method_delay = cReactorUtil_NextMethodDelay(reactor);
     if (method_delay < 0)
     {
         /* No methods to run.  Sleep for the specified delay time. */
@@ -801,7 +803,7 @@ iterate_internal(cReactor *reactor, int delay)
     }
 
     /* Run all the methods that need to run. */ 
-    cReactorUtil_RunMethods(&reactor->timed_methods);
+    cReactorUtil_RunDelayedCalls(reactor);
 
     /* Check our job queue -- if there is one. */
     if (reactor->main_queue)
@@ -1159,7 +1161,7 @@ cReactor_dealloc(PyObject *self)
     Py_DECREF(reactor->attr_dict);
     reactor->attr_dict = NULL;
     
-    cReactorUtil_DestroyMethods(reactor->timed_methods);
+    cReactorUtil_DestroyDelayedCalls(reactor);
     reactor->timed_methods = NULL;
 
     for (t = 0; t < CREACTOR_NUM_EVENT_TYPES; ++t)

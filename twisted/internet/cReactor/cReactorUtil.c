@@ -30,7 +30,6 @@ static int next_call_id = 1;
 struct _cReactorMethod
 {
     int                 call_id;
-    struct timeval      call_time;
     PyObject *          callable;
     PyObject *          args;
     PyObject *          kw;
@@ -73,33 +72,12 @@ cReactorUtil_AddMethod(cReactorMethod **list,
                        PyObject *args,
                        PyObject *kw)
 {
-    return cReactorUtil_AddDelayedMethod(list, 0, callable, args, kw);
-}
-
-
-int 
-cReactorUtil_AddDelayedMethod(cReactorMethod **list,
-                              int delay_ms,
-                              PyObject *callable,
-                              PyObject *args,
-                              PyObject *kw)
-{
     cReactorMethod *method;
-    cReactorMethod *node, *shadow;
-    struct timeval call_time;
-
-    /* Calc the call time. */
-    gettimeofday(&call_time, NULL);
-
-    call_time.tv_usec   += (delay_ms * 1000);
-    call_time.tv_sec    += call_time.tv_usec / 1000000;
-    call_time.tv_usec   = call_time.tv_usec % 1000000;
 
     /* Make the new method node. */
     method = (cReactorMethod *)malloc(sizeof(cReactorMethod));
     memset(method, 0x00, sizeof(cReactorMethod));
     method->call_id = next_call_id++;
-    memcpy(&method->call_time, &call_time, sizeof(call_time));
 
     Py_INCREF(callable);
     method->callable = callable;
@@ -126,38 +104,29 @@ cReactorUtil_AddDelayedMethod(cReactorMethod **list,
         method->kw = kw;
     }
 
-    /* Find the insert point. */
-    node    = *list;
-    shadow  = NULL;
-    while (node)
-    {
-        /* Check if we come before this node, if we have equal call times we
-         * will work like a FIFO and put this new method after any methods
-         * with the same call time.
-         */
-        if (   (method->call_time.tv_sec < node->call_time.tv_sec)
-            && (method->call_time.tv_usec < node->call_time.tv_usec))
-        {
-            break;
-        }
-        shadow  = node;
-        node    = node->next;
-    }
-
-    /* We should insert ourselves before node. */
-    method->next = node;
-    if (shadow)
-    {
-        shadow->next = method;
-    }
-    else
-    {
-        *list = method;
-    }
+    /* Append to the list. */
+    method->next = *list;
+    *list = method;
 
     return method->call_id;
 }
 
+cDelayedCall *
+cReactorUtil_AddDelayedCall(cReactor *reactor,
+                            int delay_ms,
+                            PyObject *callable,
+                            PyObject *args,
+                            PyObject *kw)
+{
+    cDelayedCall *call;
+
+    call = cDelayedCall_new(delay_ms, callable, args, kw);
+    if (!call)
+        return NULL;
+
+    cReactorUtil_InsertDelayedCall(reactor, call);
+    return call;
+}
 
 int
 cReactorUtil_RemoveMethod(cReactorMethod **list, int call_id)
@@ -199,13 +168,14 @@ cReactorUtil_RemoveMethod(cReactorMethod **list, int call_id)
     PyErr_Format(PyExc_ValueError, "invalid callID %d", call_id);
     return -1;
 }
-    
+
 
 int
-cReactorUtil_RunMethods(cReactorMethod **list)
+cReactorUtil_RunDelayedCalls(cReactor *reactor)
 {
-    cReactorMethod *node;
-    cReactorMethod *method;
+    cDelayedCall *node;
+    cDelayedCall *method;
+    cDelayedCall **list = &reactor->timed_methods;
     PyObject *result;
     struct timeval now;
     int delay;
@@ -226,6 +196,8 @@ cReactorUtil_RunMethods(cReactorMethod **list)
         method  = node;
         node    = node->next;
         *list   = node;
+        method->reactor = NULL;
+        method->called = 1;
 
         /* Run it. -- This can add or remove methods in 'list'. */
         result = PyEval_CallObjectWithKeywords(method->callable, method->args, method->kw);
@@ -238,11 +210,7 @@ cReactorUtil_RunMethods(cReactorMethod **list)
             Py_DECREF(result);
         }
 
-        /* Free resources. */
-        Py_DECREF(method->callable);
-        Py_XDECREF(method->args);
-        Py_XDECREF(method->kw);
-        free(method);
+        Py_DECREF(method);
     }
 
     /* If there is a node left, return the number of milliseconds until it
@@ -352,10 +320,11 @@ cReactorUtil_ForEachMethod(cReactorMethod *list,
 
 
 int
-cReactorUtil_NextMethodDelay(cReactorMethod *list)
+cReactorUtil_NextMethodDelay(cReactor *reactor)
 {
     int delay;
     struct timeval now;
+    cDelayedCall *list = reactor->timed_methods;
 
     /* No methods on this list. */
     if (!list)
@@ -456,6 +425,116 @@ cReactorUtil_ConvertDelay(PyObject *delay_obj)
     }
 
     return delay;
+}
+
+void
+cReactorUtil_InsertDelayedCall(cReactor *reactor, cDelayedCall *call)
+{
+    cDelayedCall *node, *shadow;
+    cDelayedCall **list = &reactor->timed_methods;
+
+    /* Find the insert point. */
+    node    = *list;
+    shadow  = NULL;
+    while (node)
+    {
+        /* Check if we come before this node, if we have equal call times we
+         * will work like a FIFO and put this new call after any calls
+         * with the same call time.
+         */
+        if (   (call->call_time.tv_sec < node->call_time.tv_sec)
+            && (call->call_time.tv_usec < node->call_time.tv_usec))
+        {
+            break;
+        }
+        shadow  = node;
+        node    = node->next;
+    }
+
+    /* We should insert ourselves before node. */
+    call->reactor = reactor;
+    call->next = node;
+    if (shadow)
+    {
+        shadow->next = call;
+    }
+    else
+    {
+        *list = call;
+    }
+    /* there will be two references to the new node: the one in the list,
+       and the one returned to the caller. */
+    Py_INCREF((PyObject *)call);
+}
+
+int
+cReactorUtil_RemoveDelayedCall(cReactor *reactor, cDelayedCall *call)
+{
+    cDelayedCall *node;
+    cDelayedCall *shadow;
+    cDelayedCall **list = &reactor->timed_methods;
+
+    /* Try to find the given call */
+    shadow  = NULL;
+    node    = *list;
+    while (node)
+    {
+        if (node == call)
+        {
+            /* Patch up the list to remove node. */
+            if (shadow)
+            {
+                shadow->next = node->next;
+            }
+            else
+            {
+                *list = node->next;
+            }
+            node->reactor = NULL;
+
+            Py_DECREF(node);
+
+            return 0;
+        }
+
+        shadow  = node;
+        node    = node->next;
+    }
+
+    /* Did not find it.  ValueError. */
+    PyErr_Format(PyExc_ValueError, "no such cDelayedCall");
+    /* TODO: tell them which delayed call */
+    return -1;
+}
+
+int
+cReactorUtil_ReInsertDelayedCall(cReactor *reactor, cDelayedCall *call)
+{
+    int rc;
+
+    Py_INCREF(call);
+    rc = cReactorUtil_RemoveDelayedCall(reactor, call);
+    if (rc == 0)
+        cReactorUtil_InsertDelayedCall(reactor, call);
+    Py_DECREF(call);
+
+    return rc;
+}
+
+void
+cReactorUtil_DestroyDelayedCalls(cReactor *reactor)
+{
+    cDelayedCall *list = reactor->timed_methods;
+    cDelayedCall *node;
+
+    while (list)
+    {
+        node = list;
+        list = list->next;
+        node->reactor = NULL;
+
+        Py_DECREF(node);
+    }
 }
 
 /* vim: set sts=4 sw=4: */

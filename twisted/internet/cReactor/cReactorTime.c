@@ -25,7 +25,7 @@ PyObject *
 cReactorTime_callLater(PyObject *self, PyObject *args, PyObject *kw)
 {
     cReactor *reactor;
-    int method_id;
+    cDelayedCall *call;
     int delay                   = 0;
     PyObject *delay_obj         = NULL;
     PyObject *req_args          = NULL;
@@ -73,28 +73,58 @@ cReactorTime_callLater(PyObject *self, PyObject *args, PyObject *kw)
     callable_args = PyTuple_GetSlice(args, 2, PyTuple_Size(args));
 
     /* Add this method to the list. */
-    method_id = cReactorUtil_AddDelayedMethod(&reactor->timed_methods,
-                                              delay, callable, callable_args, 
-                                              kw);
+    call = cReactorUtil_AddDelayedCall(reactor,
+                                       delay, callable, callable_args, 
+                                       kw);
     Py_DECREF(callable_args);
     
-    return PyInt_FromLong(method_id);
+    return (PyObject *)call;
+}
+
+PyObject *
+cReactorTime_getDelayedCalls(PyObject *self, PyObject *args)
+{
+    cReactor *reactor;
+    cDelayedCall *node;
+    PyObject *calls;
+
+    calls = PyList_New(0);
+    if (!calls) {
+        return NULL; // TODO: set exception?
+    }
+
+    reactor = (cReactor *)self;
+    node = reactor->timed_methods;
+    while(node) {
+        if (PyList_Append(calls, (PyObject *)node)) {
+            Py_DECREF(calls);
+            return NULL;
+        }
+        node = node->next;
+    }
+
+    return calls;
 }
 
 PyObject *
 cReactorTime_cancelCallLater(PyObject *self, PyObject *args)
 {
     cReactor *reactor;
-    int call_id = 0;
+    cDelayedCall *call;
 
     reactor = (cReactor *)self;
+    /* deprecated */
 
-    if (!PyArg_ParseTuple(args, "i:cancelCallLater", &call_id))
+    if (!PyArg_ParseTuple(args, "O:cancelCallLater", &call))
     {
         return NULL;
     }
 
-    if (cReactorUtil_RemoveMethod(&reactor->timed_methods, call_id) < 0)
+    /* todo: verify that 'self' is really a cReactor object */
+    /* todo: verify that 'call' is really a cDelayedCall object */
+    //return cDelayedCall_cancel(call, NULL);
+
+    if (cReactorUtil_RemoveDelayedCall(reactor, call) < 0)
     {
         return NULL;
     }
