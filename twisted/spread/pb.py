@@ -228,8 +228,8 @@ class Perspective(passport.Perspective):
 class Service(passport.Service):
     """A service for Perspective Broker.
 
-    On this Service, getPerspectiveNamed must return a pb.Perspective
-    rather than a passport.Perspective.
+    On this Service, the result of a perspective request must be a
+    pb.Perspective rather than a passport.Perspective.
     """
 
 class Referenceable(Serializable):
