@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.128 2003/07/31 19:09:02 moonfallen Exp $
+$Id: setup.py,v 1.129 2003/07/31 19:13:01 moonfallen Exp $
 """
 
 import distutils, os, sys, string
@@ -82,8 +82,8 @@ class build_ext_twisted(build_ext):
 
     def build_extensions(self):
         """
-        Override the build_ext build_extensions method to call our module detection
-        function before it trys to build the extensions.
+        Override the build_ext build_extensions method to call our
+        module detection function before it trys to build the extensions.
         """
         self._detect_modules()
         build_ext.build_extensions(self)
@@ -177,7 +177,10 @@ class build_ext_twisted(build_ext):
                                 define_macros=define_macros) )
 
         # opendir/readdir/scandir wrapper
-        if self._check_header("dirent.h"):
+        # dirent.h exists on windows, but is totally different.
+        # _check_header doesn't catch this, so disable building
+        # _c_dir on windows
+        if os.name!="nt" and self._check_header("dirent.h"):
             exts.append( Extension("twisted.python._c_dir",
                                     ["twisted/python/_c_dir.c"],
                                     define_macros=define_macros) )
