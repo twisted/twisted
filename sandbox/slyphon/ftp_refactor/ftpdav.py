@@ -334,14 +334,9 @@ class Realm:
         self.logout = logout
 
     def requestAvatar(self, avatarId, mind, *interfaces):
-        print "avatarId: %s, mind: %s, interfaces %s" % (avatarId, mind, interfaces)
-        import pdb;pdb.set_trace() 
-        print ftp.__file__ 
-        print interfaces[0].__module__.__file__
         if ftp.IShell in interfaces:
             if self.tld is None:
                 raise ftp.TLDNotSetInRealmError("you must set FTPRealm's tld to a non-None value before creating avatars!!!")
-            print 'avatarID %s' % avatarID
             avatar = AnonymousShell(user=self.user, tld=self.tld)
             avatar.clientwd = self.clientwd
             avatar.logout = self.logout

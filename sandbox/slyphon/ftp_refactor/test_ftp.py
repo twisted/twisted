@@ -284,10 +284,10 @@ class SimpleTests(SimpleTestBase):
         self.c.maxNumLines = numLines
         self.loopbackFunc.im_func(self.s, self.c)
 
-    print "\n\nWARNING: psyco optimizations running\n\n"
-    import psyco
-    psyco.bind(runRespTest)
-    psyco.bind(run_reply_test)
+#    print "\n\nWARNING: psyco optimizations running\n\n"
+#    import psyco
+#    psyco.bind(runRespTest)
+#    psyco.bind(run_reply_test)
         
     def test_Greeting(self):
         self.s, self.c = self.createServerAndClient()

@@ -421,7 +421,7 @@ def cleanPath(path):
     log.debug('cleaned path: %s' % path)
     return path
 
-class FTP(basic.LineReceiver, policies.TimeoutMixin):      
+class FTP(object, basic.LineReceiver, policies.TimeoutMixin):      
     """the File Transfer Protocol"""
     # FTP is a bit of a misonmer, as this is the PI - Protocol Interpreter
     blockingCommands = ['RETR', 'STOR', 'LIST'] #, 'PORT'] <- #TODO add this when implemented properly
@@ -445,6 +445,7 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
     dtpPort     = None     # object returned from listenTCP
     dtpInetPort = None     # result of dtpPort.getHost() used for saving inet port number
     dtpHostPort = None     # client address/port to connect to on PORT command
+    dtpInterface = ''      # interface for dtp to listen/connect on/to
 
     binary      = True     # binary transfers? False implies ASCII. defaults to True
 
@@ -601,7 +602,7 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
             self.dtpFactory.setTimeout(self.dtpTimeout)
         if not hasattr(self, '_FTP__TestingSoJustSkipTheReactorStep'):    # to allow for testing
             if self.dtpTxfrMode == PASV:    
-                self.dtpPort = reactor.listenTCP(0, self.dtpFactory)
+                self.dtpPort = reactor.listenTCP(0, self.dtpFactory, interface=self.dtpInterface)
             elif self.dtpTxfrMode == PORT: 
                 self.dtpPort = reactor.connectTCP(self.dtpHostPort[1], self.dtpHostPort[2])
             else:
@@ -892,7 +893,7 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
         self.reply(ENTERING_PASV_MODE, "%s,%s,%s" % (localip, lp1, lp2))
         log.debug("passive port open on: %s:%s" % (localip, lport), level="debug")
 
-    def decodeHostPort(self, line):
+    def decodeHostPort(line):
         # Decode an FTP response specifying a host and port.
         # 
         # see RFC sec. 4.1.2 "PASV"
@@ -905,6 +906,8 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
         host = "%s.%s.%s.%s" % (a, b, c, d)
         port = (int(e)<<8) + int(f)
         return (host, port)
+
+    decodeHostPort = staticmethod(decodeHostPort)
 
     def ftp_PORT(self, params=None):
         self.reply(CMD_NOT_IMPLMNTD, 'PORT')
