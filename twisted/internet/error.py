@@ -155,16 +155,18 @@ class AlreadyCancelled(ValueError):
 class ProcessDone(ConnectionDone):
     """A process has ended without apparent errors."""
 
-    def __init__(self):
+    def __init__(self, status):
         Exception.__init__(self, "process finished with exit code 0")
         self.exitCode = 0
+        self.status = status
 
 
 class ProcessTerminated(ConnectionLost):
     """A process has ended with a probable error condition."""
 
-    def __init__(self, exitCode=None):
+    def __init__(self, exitCode=None, status=None):
         self.exitCode = exitCode
+        self.status = status
         s = "process ended"
         if exitCode is not None: s = s + " with exit code %s" % exitCode
         Exception.__init__(self, s)

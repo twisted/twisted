@@ -784,6 +784,18 @@ class IProcessTransport(ITransport):
     def loseConnection(self):
         """Close stdin, stderr and stdout."""
 
+    def signalProcess(self, signalID):
+        """
+        Send a signal to the process.  signalID can 
+        be:
+
+        * one of "HUP", "KILL", "STOP", or "INT".  
+            These will be implemented in a
+            cross-platform manner, and so should be used 
+            if possible.
+        * an integer, where it represents a POSIX 
+            signal ID."""
+
 
 class IServiceCollection(Interface):
     """An object which provides access to a collection of services."""

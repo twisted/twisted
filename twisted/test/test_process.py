@@ -89,6 +89,17 @@ class EchoProtocol(protocol.ProcessProtocol):
     def processEnded(self, reason):
         self.finished = 1
 
+class SignalProtocol(protocol.ProcessProtocol):
+    def __init__(self, sig):
+        self.signal = sig
+        self.going = 1
+
+    def outReceived(self, data):
+        self.transport.signalProcess(self.signal)
+    
+    def processEnded(self, reason):
+        self.going = 0
+        assert os.WTERMSIG(reason.value.status) == getattr(signal,'SIG'+self.signal), '%s %s' % (self.signal, os.WTERMSIG(reason.value.status))
         
 class ProcessTestCase(unittest.TestCase):
     """Test running a process."""
@@ -226,6 +237,18 @@ class PosixProcessTestCase(unittest.TestCase):
         p.reason.trap(error.ProcessTerminated)
         self.assertEquals(p.reason.value.exitCode, 1)
 
+    def testSignal(self):
+        exe = sys.executable
+        scriptPath = util.sibpath(__file__, "process_signal.py")
+        signals = ('HUP', 'INT', 'KILL')
+        protocols = []
+        for sig in signals:
+            p = SignalProtocol(sig)
+            reactor.spawnProcess(p, exe, [exe, "-u", scriptPath, sig])
+            protocols.append(p)
+
+        while reduce(lambda a,b:a+b,[p.going for p in protocols]):
+            reactor.iterate()
 
 class Win32ProcessTestCase(unittest.TestCase):
     """Test process programs that are packaged with twisted."""

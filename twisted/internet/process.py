@@ -24,7 +24,7 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
 # System Imports
-import os, sys, traceback, select, errno, struct, cStringIO, types
+import os, sys, traceback, select, errno, struct, cStringIO, types, signal
 
 try:
     import pty
@@ -213,17 +213,21 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
             sys.settrace(None)
             # Destroy my stdin / stdout / stderr (in that order)
             try:
+                os.setsid()
                 for fd in range(3):
                     os.close(fd)
-                os.dup(stdin_read)   # should be 0
-                os.dup(stdout_write) # 1
-                os.dup(stderr_write) # 2
-                os.close(stdin_read)
                 os.close(stdin_write)
-                os.close(stderr_read)
-                os.close(stderr_write)
+                os.dup(stdin_read)   # should be 0
+                os.close(stdin_read)
+
                 os.close(stdout_read)
+                os.dup(stdout_write) # 1
                 os.close(stdout_write)
+
+                os.close(stderr_read)
+                os.dup(stderr_write) # 2
+                os.close(stderr_write)
+
                 for fd in range(3, 256):
                     try:    os.close(fd)
                     except: pass
@@ -315,6 +319,11 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
         self.closeStderr()
         self.closeStdout()
 
+    def signalProcess(self, signalID):
+        if signalID in ('HUP', 'STOP', 'INT', 'KILL'):
+            signalID = getattr(signal, 'SIG'+signalID)
+        os.kill(self.pid, signalID)
+
     def doError(self):
         """Called when my standard error stream is ready for reading.
         """
@@ -359,9 +368,9 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
                     else:
                         exitCode = None # wonder when this happens
                     if exitCode:
-                        self.proto.processEnded(failure.Failure(error.ProcessTerminated(exitCode)))
+                        self.proto.processEnded(failure.Failure(error.ProcessTerminated(exitCode, self.status)))
                     else:
-                        self.proto.processEnded(failure.Failure(error.ProcessDone()))
+                        self.proto.processEnded(failure.Failure(error.ProcessDone(self.status)))
                 except:
                     log.deferr()
             else:
@@ -370,6 +379,7 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
     def processEnded(self, status):
         self.status = status
         self.lostProcess = 1
+        self.closeStdin()
         self.maybeCallProcessEnded()
     
     def inConnectionLost(self):
@@ -522,6 +532,23 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
             self.processEnded(status)
             del reapProcessHandlers[pid]
 
+    def closeStdin(self):
+        pass
+
+    def closeStdout(self):
+        pass
+
+    def closeStderr(self):
+        pass
+
+    def loseConnection(self):
+        os.close(self.fd)
+
+    def signalProcess(self, signalID):
+        if signalID in ('HUP', 'STOP', 'INT', 'KILL'):
+            signalID = getattr(signal, 'SIG'+signalID)
+        os.kill(self.pid, signalID)
+
     def processEnded(self, status):
         self.status = status
         self.lostProcess += 1
@@ -548,9 +575,9 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
                 else:
                     exitCode = None # wonder when this happens
                 if exitCode:
-                    self.proto.processEnded(failure.Failure(error.ProcessTerminated(exitCode)))
+                    self.proto.processEnded(failure.Failure(error.ProcessTerminated(exitCode, self.status)))
                 else:
-                    self.proto.processEnded(failure.Failure(error.ProcessDone()))
+                    self.proto.processEnded(failure.Failure(error.ProcessDone(self.status)))
             except:
                 log.deferr()
 

@@ -225,7 +225,7 @@ class SSHSession(connection.SSHChannel):
         if self.pty:
             import signal, os
             self.pty.loseConnection()
-            os.kill(self.pty.pid, signal.SIGHUP)
+            self.pty.signalProcess('HUP') 
         ttyGID = os.stat(self.ptyTuple[2])[5]
         os.chown(self.ptyTuple[2], 0, ttyGID)
         try:
