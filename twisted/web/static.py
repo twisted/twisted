@@ -181,7 +181,7 @@ class File(resource.Resource, styles.Versioned):
         # 'foo.bar'.
         ##
         if not os.path.exists(childPath):
-            if self.allowExt and path:
+            if self.allowExt and path and os.path.isdir(self.path):
                 for fn in os.listdir(self.path):
                     if os.path.splitext(fn)[0]==path:
                         log.msg('    Returning %s' % fn)

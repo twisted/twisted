@@ -298,7 +298,7 @@ class DOMTemplate(Resource):
             html = string.join(displayed)
         return self.processString(request, html, node)
 
-    def processString(self, request, string, node):
+    def processString(self, request, html, node):
         try:
             child = parseString(html)
         except Exception, e:
@@ -308,7 +308,7 @@ class DOMTemplate(Resource):
 
     def processNode(self, request, newnode, oldnode):
         if newnode is not oldnode:
-            f.parentNode.replaceChild(newnode, oldnode)
+            oldnode.parentNode.replaceChild(newnode, oldnode)
         return newnode
 
     def substitute(self, request, node, subs):
