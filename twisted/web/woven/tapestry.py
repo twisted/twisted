@@ -7,10 +7,11 @@ THIS MODULE IS HIGHLY EXPERIMENTAL AND MAY BE DEPRECATED SOON.
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.10 $"[11:-2]
+__version__ = "$Revision: 1.11 $"[11:-2]
 
 # System Imports
 import sys
+import os
 
 # Twisted Imports
 
@@ -65,7 +66,7 @@ class ModelLoader(Resource):
         templateFile = (self.templateFile or self.__class__.__name__+'.html')
         d.addCallback(
             lambda result: self.parent.makeView(self.modelClass(result),
-                                                templateFile))
+                                                templateFile, 1))
         return _ChildJuggler(d)
 
     def loadModelNow(self, path, request):
@@ -82,13 +83,27 @@ class ModelLoader(Resource):
         from twisted.internet.defer import execute
         return execute(self.loadModelNow, path, request)
 
+
+from twisted.web import microdom
+from twisted.web import domhelpers
+
+class TapestryView(View):
+    tapestry = None
+    parentCount = 0
+    def lookupTemplate(self, request):
+        fullFile = os.path.join(self.templateDirectory, self.templateFile)
+        document = microdom.parse(open(fullFile))
+        if self.tapestry:
+            return self.tapestry.templateMutate(document, self.parentCount)
+        return document
+
 class Tapestry(Resource):
     """
     I am a top-level aggregation of Woven objects: a full `site' or
     `application'.
     """
-    viewFactory = View
-    def __init__(self, templateDirectory, viewFactory=None):
+    viewFactory = TapestryView
+    def __init__(self, templateDirectory, viewFactory=None, metaTemplate=None):
         """
         Create a tapestry with a specified template directory.
         """
@@ -96,10 +111,41 @@ class Tapestry(Resource):
         self.templateDirectory = templateDirectory
         if viewFactory is not None:
             self.viewFactory = viewFactory
+        if metaTemplate:
+            self.metaTemplate = microdom.parse(open(
+                os.path.join(templateDirectory, metaTemplate)))
+        else:
+            self.metaTemplate = None
 
-    def makeView(self, model, name):
+    def templateMutate(self, document, parentCount=0):
+        if self.metaTemplate:
+            newDoc = self.metaTemplate.cloneNode(1)
+            if parentCount:
+                dotdot = parentCount * '../'
+                for ddname in 'href', 'src', 'action':
+                    for node in domhelpers.findElementsWithAttribute(newDoc, ddname):
+                        node.setAttribute(ddname, dotdot + node.getAttribute(ddname))
+            ttl = domhelpers.findNodesNamed(newDoc, "title")[0]
+            ttl2 = domhelpers.findNodesNamed(document, "title")[0]
+            ttl.childNodes[:] = []
+            for n in ttl2.childNodes:
+                ttl.appendChild(n)
+            body = domhelpers.findElementsWithAttribute(newDoc, "class", "__BODY__")[0]
+            body2 = domhelpers.findNodesNamed(document, "body")[0]
+            ndx = body.parentNode.childNodes.index(body)
+            body.parentNode.childNodes[ndx:ndx+1] = body2.childNodes
+            for n in body2.childNodes:
+                n.parentNode = body.parentNode
+            f = open("garbage.html", "wb")
+            f.write(newDoc.toprettyxml())
+            return newDoc
+        return document
+
+    def makeView(self, model, name, parentCount=0):
         v = self.viewFactory(model, name)
+        v.parentCount = parentCount
         v.templateDirectory = self.templateDirectory
+        v.tapestry = self
         v.importViewLibrary(self)
         return v
 
@@ -131,6 +177,7 @@ class Tapestry(Resource):
             # explicitly don't want it here.
             return None
         if path == '': path = 'index'
+        path = path.replace(".","_")
         cm = getattr(self, "wchild_"+path, None)
         if cm:
             p = cm(request)
