@@ -1,79 +1,26 @@
 # wovenquotes
 
-from twisted.web.woven import model, view, controller
-from twisted.web.woven import widgets, input
-from twisted.web import domhelpers
-
+from twisted.web.woven import model, input
 from TwistedQuotes import quoters
 
 
-import cgi
-
 class MQuote(model.Model):
+    """A class which implements IModel for a FortuneQuoter instance for a given
+    filename.
+    """
     def __init__(self, filename):
         model.Model.__init__(self)
         self._filename = filename
         self._quoter = quoters.FortuneQuoter([filename])
-        self.quote = ""
-        self.title = "Quotes Galore!"
-        self.newQuote = ""
     
-    def updateQuote(self):
-        self.quote = self._quoter.getQuote()
-
-    def getQuoteFilename(self):
-        return self._filename
-
-
-class QuoteWidget(widgets.Widget):
-    def setUp(self, request, node, data):
+    def getData(self):
+        """Get a random quote from the quotefile.
         """
-        Set up this Widget object before it gets rendered into HTML.
-        
-        Since self is a Widget, I can use the higher level widget API to add a 
-        Text widget to self. I then rely on Widget.generateDOM to convert
-        from Widgets into the Document Object Model.
+        return self._quoter.getQuote()
+
+    def setData(self, data):
+        """Add a new quote to the quotefile.
         """
-        self.add(widgets.Text(cgi.escape(data)))
+        file = open(self._filename, 'a')
+        file.write('\n%\n'  + data)
 
-
-class VQuote(view.View):
-    templateFile = "WovenQuotes.xhtml"
-
-    def setUp(self, request, document):
-        """
-        Set things up for this request.
-        """
-        self.model.updateQuote()
-
-    def factory_quote(self, request, node):
-        """Create a widget which knows how to render my model's quote."""
-        domhelpers.clearNode(node)
-        return QuoteWidget(self.model)
-
-    def factory_title(self, request, node):
-        """Create a widget which knows how to render my model's title."""
-        domhelpers.clearNode(node)
-        return widgets.Text(self.model)
-
-
-class NewQuoteHandler(input.SingleValue):
-    def check(self, request, data):
-        if data:
-            return 1
-
-    def commit(self, request, node, newQuote):
-        print "committing new quote", `newQuote`
-        file = open(self.model.getQuoteFilename(), 'a')
-        file.write('\n%\n'  + newQuote)
-
-
-class CQuote(controller.Controller):
-    def factory_newQuote(self, model):
-        """Create a handler which knows how to verify input in a form with the
-        name "newQuote"."""
-        return NewQuoteHandler(model)
-
-
-view.registerViewForModel(VQuote, MQuote)
-controller.registerControllerForModel(CQuote, MQuote)

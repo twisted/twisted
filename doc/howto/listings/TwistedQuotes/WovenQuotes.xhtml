@@ -1,7 +1,7 @@
 <html>
     <head>
-        <title view="title" model="title">
-            Title will go here
+        <title model="title">
+            Quotes Galore!
         </title>
         <style>
             .quote {color: green;}
@@ -10,18 +10,19 @@
     
     <body>
         
-        <h1 view="title" model="title">
-            Title will go here
+        <h1 model="title">
+            Quotes Galore!
         </h1>
         
-        <pre view="quote" model="quote">
+        <pre view="Text" model="quote">
             Quote will go here.
         </pre>
         
         <form action="">
-            <input type="text" model="newQuote" controller="newQuote" name="newQuote" />
+            <input type="text" name="quote" model="quote" controller="Anything" />
             <input type="submit" />
         </form>
         <a href="wovenquotes.rpy">Refresh</a>
+        
     </body>
 </html>
