@@ -18,16 +18,16 @@
 from wxPython.wx import *
 
 from twisted.internet import main, wxinternet
+from twisted.python.delay import Delayed
 
-class HelloWorld:
+# set up so that "hello, world" is printed once a second
+def helloWorld():
+    print "hello, world"
 
-    def timeout(self):
-        return 1.0
-    
-    def runUntilCurrent(self):
-        print "hello, world"
-
-main.addDelayed(HelloWorld())
+d = Delayed()
+d.ticktime = 1
+d.loop(helloWorld, 1)
+main.addDelayed(d)
 
 
 ID_EXIT  = 101
