@@ -548,7 +548,10 @@ class VerboseTextReporter(TextReporter):
         self.write('%s (%s) ... ', method.__name__, reflect.qual(testClass))
 
     def reportResults(self, testClass, method, resultType, results=None):
-        words = {FAILURE: '[FAIL]', ERROR: '[ERROR]', SKIP: '[SKIPPED]',
+        words = {SKIP: '[SKIPPED]',
+                 EXPECTED_FAILURE: '[TODO]',
+                 FAILURE: '[FAIL]', ERROR: '[ERROR]',
+                 UNEXPECTED_SUCCESS: '[SUCCESS!?!]',
                  SUCCESS: '[OK]'}
         self.writeln(words.get(resultType, "[??]"))
         Reporter.reportResults(self, testClass, method, resultType, results)
