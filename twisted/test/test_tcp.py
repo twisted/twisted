@@ -60,6 +60,7 @@ class MyServerFactory(protocol.ServerFactory):
 class MyClientFactory(protocol.ClientFactory):
 
     failed = 0
+    stopped = 0
     
     def buildProtocol(self, addr):
         p = MyProtocol()
@@ -72,6 +73,9 @@ class MyClientFactory(protocol.ClientFactory):
 
     def clientConnectionLost(self, connector, reason):
         self.lostReason = reason
+
+    def stopFactory(self):
+        self.stopped = 1
 
 
 class LoopbackTestCase(unittest.TestCase):
@@ -299,8 +303,9 @@ class ConnectorTestCase(unittest.TestCase):
         p = factory.protocol
         self.assertEquals((p.made, p.closed), (1, 1))
         factory.reason.trap(error.ConnectionRefusedError)
+        self.assertEquals(factory.stopped, 1)
 
-        
+
 class CannotBindTestCase (unittest.TestCase):
     """Tests for correct behavior when a reactor cannot bind to the required TCP port."""
 
@@ -335,12 +340,14 @@ class CannotBindTestCase (unittest.TestCase):
         
         self.assertEquals(f2.failed, 1)
         f2.reason.trap(error.ConnectBindError)
-
+        self.assertEquals(f2.stopped, 1)
+        
         p.stopListening()
         factory.protocol.transport.loseConnection()
         reactor.iterate()
         reactor.iterate()
         reactor.iterate()
+        self.assertEquals(factory.stopped, 1)
 
 
 class MyOtherClientFactory(protocol.ClientFactory):

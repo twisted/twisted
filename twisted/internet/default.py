@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.54 2003/01/01 13:18:38 tv Exp $
+# $Id: default.py,v 1.55 2003/01/01 18:38:13 itamarst Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -75,7 +75,8 @@ class BaseConnector:
     __implements__ = interfaces.IConnector
 
     timeoutID = None
-
+    factoryStarted = 0
+    
     def __init__(self, reactor, factory, timeout):
         self.state = "disconnected"
         self.reactor = reactor
@@ -95,7 +96,9 @@ class BaseConnector:
             raise RuntimeError, "can't connect in this state"
 
         self.state = "connecting"
-        self.factory.doStart()
+        if not self.factoryStarted:
+            self.factory.doStart()
+            self.factoryStarted = 1
         self.transport = transport = self._makeTransport()
         if self.timeout is not None:
             self.timeoutID = self.reactor.callLater(self.timeout, transport.failIfNotConnected, error.TimeoutError())
@@ -130,13 +133,15 @@ class BaseConnector:
         if self.state == "disconnected":
             # factory hasn't called our connect() method
             self.factory.doStop()
-
+            self.factoryStarted = 0
+    
     def connectionLost(self, reason):
         self.state = "disconnected"
         self.factory.clientConnectionLost(self, reason)
         if self.state == "disconnected":
             # factory hasn't called our connect() method
             self.factory.doStop()
+            self.factoryStarted = 0
 
 
 class TCPConnector(BaseConnector):
