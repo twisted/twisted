@@ -133,10 +133,8 @@ if options.manholePass:
         bkr = pb.BrokerFactory(pb.AuthRoot(a))
         a.listenOn(options.manholePort, bkr)
 
-    i = passport.Identity(options.manholeUser, a)
-    i.setPassword(options.manholePass)
-    a.authorizer.addIdentity(i)
     svc = manholeService.Service(application=a)
-    i.addKeyForPerspective(svc.getPerspectiveNamed(options.manholeUser))
+    p = svc.createPerspective(options.manholeUser)
+    p.makeIdentity(options.manholePass)
 
 a.save()
