@@ -155,26 +155,17 @@ class Win32ProcessTestCase(unittest.TestCase):
     """Test process programs that are packaged with twisted."""
     
     def testStdinReader(self):
-        import win32api
-        pyExe = win32api.GetModuleFileName(0)
-        errF = cStringIO.StringIO()
-        outF = cStringIO.StringIO()
+        pyExe = sys.executable
         scriptPath = util.sibpath(__file__, "process_stdinreader.py")
-        p = protocol.ProcessProtocol()
-        p.closed = 0
-        p.dataReceived = outF.write
-        p.errReceived = errF.write
-        def ended(p=p): p.closed = 1
-        p.processEnded = ended
+        p = Accumulator()
         reactor.spawnProcess(p, pyExe, [pyExe, "-u", scriptPath], None, None)
-        reactor.iterate()
-        
         p.transport.write("hello, world")
-        p.transport.loseConnection()
+        p.transport.closeStdin()
+
         while not p.closed:
             reactor.iterate()
-        self.assertEquals(errF.getvalue(), "err\nerr\n")
-        self.assertEquals(outF.getvalue(), "out\nhello, world\nout\n")
+        self.assertEquals(p.errF.getvalue(), "err\nerr\n")
+        self.assertEquals(p.outF.getvalue(), "out\nhello, world\nout\n")
 
 
 if runtime.platform.getType() != 'posix':

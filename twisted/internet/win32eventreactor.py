@@ -289,7 +289,9 @@ class Process(abstract.FileDescriptor):
         """Close the process' stdin."""
         self.outQueue.put(None)
 
-    loseConnection = closeStdin
+    def loseConnection(self):
+        """Close the process' stdout."""
+        raise NotImplementedError, "not implemented yet - fix me."
     
     def outConnectionLost(self):
         self.protocol.connectionLost()
@@ -334,16 +336,18 @@ class Process(abstract.FileDescriptor):
         """Runs in thread."""
         while 1:
             try:
+                finished = 0
                 buffer, bytesToRead, result = win32pipe.PeekNamedPipe(self.hStdoutR, 1)
+                finished = (result == -1) and not bytesToRead
                 if bytesToRead == 0 and result != -1:
                     bytesToRead = 1
                 hr, data = win32file.ReadFile(self.hStdoutR, bytesToRead, None)
             except win32api.error:
-                result = -1
+                finished = 1
             else:
                 self.reactor.callFromThread(self.protocol.dataReceived, data)
             
-            if result == -1:
+            if finished:
                 self.reactor.callFromThread(self.outConnectionLost)
                 return
     
@@ -351,16 +355,18 @@ class Process(abstract.FileDescriptor):
         """Runs in thread."""
         while 1:
             try:
+                finished = 0
                 buffer, bytesToRead, result = win32pipe.PeekNamedPipe(self.hStderrR, 1)
+                finished = (result == -1) and not bytesToRead
                 if bytesToRead == 0 and result != -1:
                     bytesToRead = 1
                 hr, data = win32file.ReadFile(self.hStderrR, bytesToRead, None)
             except win32api.error:
-                result = -1
+                finished = 1
             else:
                 self.reactor.callFromThread(self.protocol.errReceived, data)
             
-            if result == -1:
+            if finished:
                 self.reactor.callFromThread(self.errConnectionLost)
                 return
             
