@@ -173,15 +173,17 @@ class ThreadedResolver:
         return failure.Failure(err)
 
     def _cleanup(self, name, lookupDeferred):
-        userDeferred, cancelCall = self._runningQueries.pop(lookupDeferred)
+        userDeferred, cancelCall = self._runningQueries[lookupDeferred]
+        del self._runningQueries[lookupDeferred]
         userDeferred.errback(self._fail(name, "timeout error"))
 
     def _checkTimeout(self, result, name, lookupDeferred):
         try:
-            userDeferred, cancelCall = self._runningQueries.pop(lookupDeferred)
+            userDeferred, cancelCall = self._runningQueries[lookupDeferred]
         except KeyError:
             pass
         else:
+            del self._runningQueries[lookupDeferred]
             cancelCall.cancel()
 
             if isinstance(result, failure.Failure):
