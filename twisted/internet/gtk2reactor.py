@@ -58,6 +58,9 @@ POLL_DISCONNECTED = gobject.IO_HUP | gobject.IO_ERR | gobject.IO_NVAL
 INFLAGS = gobject.IO_IN | POLL_DISCONNECTED
 OUTFLAGS = gobject.IO_OUT | POLL_DISCONNECTED
 
+def _our_mainquit():
+    if gtk.main_level():
+        gtk.main_quit()
 
 class Gtk2Reactor(default.PosixReactorBase):
     """GTK+-2 event loop reactor.
@@ -81,7 +84,7 @@ class Gtk2Reactor(default.PosixReactorBase):
             import gtk
             self.__pending = gtk.events_pending
             self.__iteration = gtk.main_iteration
-            self.__crash = gtk.main_quit
+            self.__crash = _our_mainquit # gtk.main_quit # <- makes crash() raise exceptions
             self.__run = gtk.main
 
     def initThreads(self):
