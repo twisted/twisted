@@ -17,8 +17,8 @@
 # USA
 #
 
+from UserDict import UserDict
 from twisted.python import components
-
 from twisted.web import server
 from twisted.web.resource import Resource
 
@@ -26,20 +26,32 @@ from twisted.web.resource import Resource
 class IPathArgs(components.Interface):
     """Provide a dictionary object which contains arguments
     which were specified in pathargs format; pathargs format
-    is /foo:bar/ where foo is the key and bar is the value.
+    is /foo=bar/ where foo is the key and bar is the value.
     """
+
+class odict(UserDict):
+    def __init__(self):
+        UserDict.__init__(self)
+        self._keys = []
+    def __setitem__(self, key, item):
+        UserDict.__setitem__(self, key, item)
+        if not key in self._keys:
+            self._keys.append(key)
+    def keys(self): 
+        return self._keys
+
 # Use a dict as the IPathArgs implementor for any given request
-components.registerAdapter(lambda request: {}, server.Request, IPathArgs)
+components.registerAdapter(lambda request: odict(), server.Request, IPathArgs)
 
 class PathArgs(Resource):
     """ Provides a mechanism to add 'pathargs' attribute to
         each request, and to populate it with instances of
-        key:value pairs found in child paths.  The value for
+        key=value pairs found in child paths.  The value for
         each key will be an array, optionally split further
         with a comma.
     """
     def getChildPathArgs(self,path,request):
-        pair = path.split(':')
+        pair = path.split('=')
         if 2 == len(pair):
             (key,val) = pair
             pathargs = IPathArgs(request)
