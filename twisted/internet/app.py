@@ -242,6 +242,18 @@ class Application(log.Logger, styles.Versioned,
 
     running = 0
     processName = None
+    
+    #
+    # XXX
+    # 
+    # The profusion of xyzPorts, xyzListeners, _listenerDict, and
+    # _extraListeners has long since passed the point of excess.
+    # Someone who feels like taking the time should merge all of these
+    # into a set of "universal" trackers.  One for ports, one for listeners,
+    # one for things that are -actually- listening and connecting.
+    # This requires another version bump and an upgrade function, of course.
+    #
+    
 
     def __init__(self, name, uid=None, gid=None, authorizer=None, authorizer_=None):
         """Initialize me.
