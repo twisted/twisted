@@ -45,8 +45,6 @@ class HTTPPageGetter(http.HTTPClient):
     def handleStatus_200(self):
         self.factory.gotHeaders(self.headers)
 
-    handleStatus_200 = lambda *args: None
-
     def handleStatusDefault(self):
         self.factory.noPage(failure.Failure(ValueError(self.status,
                                                        self.message)))
@@ -79,6 +77,7 @@ class HTTPPageDownloader(HTTPPageGetter):
     transmittingPage = 0
 
     def handleStatus_200(self):
+        HTTPPageGetter.handleStatus_200(self)
         self.transmittingPage = 1
         self.factory.pageStart()
 
