@@ -18,6 +18,12 @@ class AbstractPerson:
         self.status = OFFLINE
         self.chat = chatui
 
+    def getIdleTime(self):
+        """
+        Returns a string.
+        """
+        return '--'
+
 class AbstractClientMixin:
     """Designed to be mixed in to a Protocol implementing class.
 

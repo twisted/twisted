@@ -156,593 +156,440 @@
   <auto_shrink>False</auto_shrink>
 
   <widget>
-    <class>GtkNotebook</class>
+    <class>GtkVBox</class>
     <name>ContactsWidget</name>
-    <can_focus>True</can_focus>
-    <show_tabs>True</show_tabs>
-    <show_border>True</show_border>
-    <tab_pos>GTK_POS_TOP</tab_pos>
-    <scrollable>False</scrollable>
-    <tab_hborder>2</tab_hborder>
-    <tab_vborder>2</tab_vborder>
-    <popup_enable>False</popup_enable>
+    <homogeneous>False</homogeneous>
+    <spacing>0</spacing>
 
     <widget>
-      <class>GtkVBox</class>
-      <name>vbox11</name>
-      <homogeneous>False</homogeneous>
-      <spacing>0</spacing>
+      <class>GtkNotebook</class>
+      <name>ContactsNotebook</name>
+      <can_focus>True</can_focus>
+      <signal>
+	<name>key_press_event</name>
+	<handler>on_ContactsWidget_key_press_event</handler>
+	<last_modification_time>Tue, 07 May 2002 03:02:33 GMT</last_modification_time>
+      </signal>
+      <show_tabs>True</show_tabs>
+      <show_border>True</show_border>
+      <tab_pos>GTK_POS_TOP</tab_pos>
+      <scrollable>False</scrollable>
+      <tab_hborder>2</tab_hborder>
+      <tab_vborder>2</tab_vborder>
+      <popup_enable>False</popup_enable>
+      <child>
+	<padding>0</padding>
+	<expand>True</expand>
+	<fill>True</fill>
+      </child>
+
+      <widget>
+	<class>GtkVBox</class>
+	<name>vbox11</name>
+	<homogeneous>False</homogeneous>
+	<spacing>0</spacing>
+
+	<widget>
+	  <class>GtkLabel</class>
+	  <name>OnlineCount</name>
+	  <label>Online: %d</label>
+	  <justify>GTK_JUSTIFY_CENTER</justify>
+	  <wrap>False</wrap>
+	  <xalign>0.5</xalign>
+	  <yalign>0.5</yalign>
+	  <xpad>0</xpad>
+	  <ypad>0</ypad>
+	  <child>
+	    <padding>0</padding>
+	    <expand>False</expand>
+	    <fill>False</fill>
+	  </child>
+	</widget>
+
+	<widget>
+	  <class>GtkScrolledWindow</class>
+	  <name>scrolledwindow14</name>
+	  <hscrollbar_policy>GTK_POLICY_AUTOMATIC</hscrollbar_policy>
+	  <vscrollbar_policy>GTK_POLICY_AUTOMATIC</vscrollbar_policy>
+	  <hupdate_policy>GTK_UPDATE_CONTINUOUS</hupdate_policy>
+	  <vupdate_policy>GTK_UPDATE_CONTINUOUS</vupdate_policy>
+	  <child>
+	    <padding>0</padding>
+	    <expand>True</expand>
+	    <fill>True</fill>
+	  </child>
+
+	  <widget>
+	    <class>GtkCTree</class>
+	    <name>OnlineContactsTree</name>
+	    <can_focus>True</can_focus>
+	    <signal>
+	      <name>tree_select_row</name>
+	      <handler>on_OnlineContactsTree_tree_select_row</handler>
+	      <last_modification_time>Tue, 07 May 2002 03:06:32 GMT</last_modification_time>
+	    </signal>
+	    <signal>
+	      <name>select_row</name>
+	      <handler>on_OnlineContactsTree_select_row</handler>
+	      <last_modification_time>Tue, 07 May 2002 04:36:10 GMT</last_modification_time>
+	    </signal>
+	    <columns>4</columns>
+	    <column_widths>80,80,80,80</column_widths>
+	    <selection_mode>GTK_SELECTION_SINGLE</selection_mode>
+	    <show_titles>True</show_titles>
+	    <shadow_type>GTK_SHADOW_IN</shadow_type>
+
+	    <widget>
+	      <class>GtkLabel</class>
+	      <child_name>CTree:title</child_name>
+	      <name>label77</name>
+	      <label>Alias</label>
+	      <justify>GTK_JUSTIFY_CENTER</justify>
+	      <wrap>False</wrap>
+	      <xalign>0.5</xalign>
+	      <yalign>0.5</yalign>
+	      <xpad>0</xpad>
+	      <ypad>0</ypad>
+	    </widget>
+
+	    <widget>
+	      <class>GtkLabel</class>
+	      <child_name>CTree:title</child_name>
+	      <name>label78</name>
+	      <label>Status</label>
+	      <justify>GTK_JUSTIFY_CENTER</justify>
+	      <wrap>False</wrap>
+	      <xalign>0.5</xalign>
+	      <yalign>0.5</yalign>
+	      <xpad>0</xpad>
+	      <ypad>0</ypad>
+	    </widget>
+
+	    <widget>
+	      <class>GtkLabel</class>
+	      <child_name>CTree:title</child_name>
+	      <name>label79</name>
+	      <label>Idle Time</label>
+	      <justify>GTK_JUSTIFY_CENTER</justify>
+	      <wrap>False</wrap>
+	      <xalign>0.5</xalign>
+	      <yalign>0.5</yalign>
+	      <xpad>0</xpad>
+	      <ypad>0</ypad>
+	    </widget>
+
+	    <widget>
+	      <class>GtkLabel</class>
+	      <child_name>CTree:title</child_name>
+	      <name>label80</name>
+	      <label>Account</label>
+	      <justify>GTK_JUSTIFY_CENTER</justify>
+	      <wrap>False</wrap>
+	      <xalign>0.5</xalign>
+	      <yalign>0.5</yalign>
+	      <xpad>0</xpad>
+	      <ypad>0</ypad>
+	    </widget>
+	  </widget>
+	</widget>
+      </widget>
 
       <widget>
 	<class>GtkLabel</class>
-	<name>OnlineCount</name>
-	<label>Online: %d</label>
+	<child_name>Notebook:tab</child_name>
+	<name>label35</name>
+	<label> Online Contacts </label>
 	<justify>GTK_JUSTIFY_CENTER</justify>
 	<wrap>False</wrap>
 	<xalign>0.5</xalign>
 	<yalign>0.5</yalign>
 	<xpad>0</xpad>
 	<ypad>0</ypad>
-	<child>
-	  <padding>0</padding>
-	  <expand>False</expand>
-	  <fill>False</fill>
-	</child>
       </widget>
 
       <widget>
-	<class>GtkScrolledWindow</class>
-	<name>scrolledwindow14</name>
-	<hscrollbar_policy>GTK_POLICY_AUTOMATIC</hscrollbar_policy>
-	<vscrollbar_policy>GTK_POLICY_ALWAYS</vscrollbar_policy>
-	<hupdate_policy>GTK_UPDATE_CONTINUOUS</hupdate_policy>
-	<vupdate_policy>GTK_UPDATE_CONTINUOUS</vupdate_policy>
-	<child>
-	  <padding>0</padding>
-	  <expand>True</expand>
-	  <fill>True</fill>
-	</child>
-
-	<widget>
-	  <class>GtkCList</class>
-	  <name>OnlineContactsList</name>
-	  <can_focus>True</can_focus>
-	  <signal>
-	    <name>select_row</name>
-	    <handler>on_OnlineContactsList_select_row</handler>
-	    <last_modification_time>Tue, 29 Jan 2002 03:17:06 GMT</last_modification_time>
-	  </signal>
-	  <columns>2</columns>
-	  <column_widths>219,5</column_widths>
-	  <selection_mode>GTK_SELECTION_SINGLE</selection_mode>
-	  <show_titles>False</show_titles>
-	  <shadow_type>GTK_SHADOW_IN</shadow_type>
-
-	  <widget>
-	    <class>GtkLabel</class>
-	    <child_name>CList:title</child_name>
-	    <name>label76</name>
-	    <label>Alias</label>
-	    <justify>GTK_JUSTIFY_CENTER</justify>
-	    <wrap>False</wrap>
-	    <xalign>0.5</xalign>
-	    <yalign>0.5</yalign>
-	    <xpad>0</xpad>
-	    <ypad>0</ypad>
-	  </widget>
-
-	  <widget>
-	    <class>GtkLabel</class>
-	    <child_name>CList:title</child_name>
-	    <name>label77</name>
-	    <label>Idle</label>
-	    <justify>GTK_JUSTIFY_CENTER</justify>
-	    <wrap>False</wrap>
-	    <xalign>0.5</xalign>
-	    <yalign>0.5</yalign>
-	    <xpad>0</xpad>
-	    <ypad>0</ypad>
-	  </widget>
-	</widget>
-      </widget>
-
-      <widget>
-	<class>GtkHBox</class>
-	<name>hbox7</name>
-	<homogeneous>False</homogeneous>
-	<spacing>3</spacing>
-	<child>
-	  <padding>2</padding>
-	  <expand>False</expand>
-	  <fill>True</fill>
-	</child>
-
-	<widget>
-	  <class>GtkButton</class>
-	  <name>PlainSendIM</name>
-	  <can_focus>True</can_focus>
-	  <signal>
-	    <name>clicked</name>
-	    <handler>on_PlainSendIM_clicked</handler>
-	    <last_modification_time>Tue, 29 Jan 2002 03:17:35 GMT</last_modification_time>
-	  </signal>
-	  <label> Send IM </label>
-	  <relief>GTK_RELIEF_NORMAL</relief>
-	  <child>
-	    <padding>0</padding>
-	    <expand>False</expand>
-	    <fill>False</fill>
-	  </child>
-	</widget>
-
-	<widget>
-	  <class>GtkButton</class>
-	  <name>PlainGetInfo</name>
-	  <can_focus>True</can_focus>
-	  <label> Get Info </label>
-	  <relief>GTK_RELIEF_NORMAL</relief>
-	  <child>
-	    <padding>0</padding>
-	    <expand>False</expand>
-	    <fill>False</fill>
-	  </child>
-	</widget>
-
-	<widget>
-	  <class>GtkButton</class>
-	  <name>PlainJoinChat</name>
-	  <can_focus>True</can_focus>
-	  <signal>
-	    <name>clicked</name>
-	    <handler>on_PlainJoinChat_clicked</handler>
-	    <last_modification_time>Tue, 29 Jan 2002 13:04:49 GMT</last_modification_time>
-	  </signal>
-	  <label> Join Group </label>
-	  <relief>GTK_RELIEF_NORMAL</relief>
-	  <child>
-	    <padding>0</padding>
-	    <expand>False</expand>
-	    <fill>False</fill>
-	  </child>
-	</widget>
-
-	<widget>
-	  <class>GtkButton</class>
-	  <name>PlainGoAway</name>
-	  <can_focus>True</can_focus>
-	  <label> Go Away </label>
-	  <relief>GTK_RELIEF_NORMAL</relief>
-	  <child>
-	    <padding>0</padding>
-	    <expand>False</expand>
-	    <fill>False</fill>
-	  </child>
-	</widget>
-      </widget>
-    </widget>
-
-    <widget>
-      <class>GtkLabel</class>
-      <child_name>Notebook:tab</child_name>
-      <name>label35</name>
-      <label> Online </label>
-      <justify>GTK_JUSTIFY_CENTER</justify>
-      <wrap>False</wrap>
-      <xalign>0.5</xalign>
-      <yalign>0.5</yalign>
-      <xpad>0</xpad>
-      <ypad>0</ypad>
-    </widget>
-
-    <widget>
-      <class>GtkVBox</class>
-      <name>vbox14</name>
-      <homogeneous>False</homogeneous>
-      <spacing>0</spacing>
-
-      <widget>
-	<class>GtkScrolledWindow</class>
-	<name>OfflineContactsScroll</name>
-	<hscrollbar_policy>GTK_POLICY_AUTOMATIC</hscrollbar_policy>
-	<vscrollbar_policy>GTK_POLICY_ALWAYS</vscrollbar_policy>
-	<hupdate_policy>GTK_UPDATE_CONTINUOUS</hupdate_policy>
-	<vupdate_policy>GTK_UPDATE_CONTINUOUS</vupdate_policy>
-	<child>
-	  <padding>0</padding>
-	  <expand>True</expand>
-	  <fill>True</fill>
-	</child>
-
-	<widget>
-	  <class>GtkCList</class>
-	  <name>OfflineContactsList</name>
-	  <can_focus>True</can_focus>
-	  <columns>4</columns>
-	  <column_widths>80,80,80,80</column_widths>
-	  <selection_mode>GTK_SELECTION_SINGLE</selection_mode>
-	  <show_titles>True</show_titles>
-	  <shadow_type>GTK_SHADOW_IN</shadow_type>
-
-	  <widget>
-	    <class>GtkLabel</class>
-	    <child_name>CList:title</child_name>
-	    <name>label41</name>
-	    <label>Contact</label>
-	    <justify>GTK_JUSTIFY_CENTER</justify>
-	    <wrap>False</wrap>
-	    <xalign>0.5</xalign>
-	    <yalign>0.5</yalign>
-	    <xpad>0</xpad>
-	    <ypad>0</ypad>
-	  </widget>
-
-	  <widget>
-	    <class>GtkLabel</class>
-	    <child_name>CList:title</child_name>
-	    <name>label42</name>
-	    <label>Account</label>
-	    <justify>GTK_JUSTIFY_CENTER</justify>
-	    <wrap>False</wrap>
-	    <xalign>0.5</xalign>
-	    <yalign>0.5</yalign>
-	    <xpad>0</xpad>
-	    <ypad>0</ypad>
-	  </widget>
-
-	  <widget>
-	    <class>GtkLabel</class>
-	    <child_name>CList:title</child_name>
-	    <name>label43</name>
-	    <label>Alias</label>
-	    <justify>GTK_JUSTIFY_CENTER</justify>
-	    <wrap>False</wrap>
-	    <xalign>0.5</xalign>
-	    <yalign>0.5</yalign>
-	    <xpad>0</xpad>
-	    <ypad>0</ypad>
-	  </widget>
-
-	  <widget>
-	    <class>GtkLabel</class>
-	    <child_name>CList:title</child_name>
-	    <name>label44</name>
-	    <label>Group</label>
-	    <justify>GTK_JUSTIFY_CENTER</justify>
-	    <wrap>False</wrap>
-	    <xalign>0.5</xalign>
-	    <yalign>0.5</yalign>
-	    <xpad>0</xpad>
-	    <ypad>0</ypad>
-	  </widget>
-	</widget>
-      </widget>
-
-      <widget>
-	<class>GtkHBox</class>
-	<name>hbox8</name>
-	<homogeneous>True</homogeneous>
-	<spacing>0</spacing>
-	<child>
-	  <padding>2</padding>
-	  <expand>False</expand>
-	  <fill>True</fill>
-	</child>
-
-	<widget>
-	  <class>GtkButton</class>
-	  <name>button40</name>
-	  <can_focus>True</can_focus>
-	  <label> Add Contact </label>
-	  <relief>GTK_RELIEF_NORMAL</relief>
-	  <child>
-	    <padding>0</padding>
-	    <expand>False</expand>
-	    <fill>False</fill>
-	  </child>
-	</widget>
-
-	<widget>
-	  <class>GtkButton</class>
-	  <name>button41</name>
-	  <can_focus>True</can_focus>
-	  <label> Remove Contact </label>
-	  <relief>GTK_RELIEF_NORMAL</relief>
-	  <child>
-	    <padding>0</padding>
-	    <expand>False</expand>
-	    <fill>False</fill>
-	  </child>
-	</widget>
-      </widget>
-    </widget>
-
-    <widget>
-      <class>GtkLabel</class>
-      <child_name>Notebook:tab</child_name>
-      <name>label36</name>
-      <label> Edit Contacts </label>
-      <justify>GTK_JUSTIFY_CENTER</justify>
-      <wrap>False</wrap>
-      <xalign>0.5</xalign>
-      <yalign>0.5</yalign>
-      <xpad>0</xpad>
-      <ypad>0</ypad>
-    </widget>
-  </widget>
-</widget>
-
-<widget>
-  <class>GnomeApp</class>
-  <name>app1</name>
-  <visible>False</visible>
-  <title>Instance Messengnome</title>
-  <type>GTK_WINDOW_TOPLEVEL</type>
-  <position>GTK_WIN_POS_NONE</position>
-  <modal>False</modal>
-  <allow_shrink>False</allow_shrink>
-  <allow_grow>True</allow_grow>
-  <auto_shrink>False</auto_shrink>
-  <enable_layout_config>True</enable_layout_config>
-
-  <widget>
-    <class>GnomeDock</class>
-    <child_name>GnomeApp:dock</child_name>
-    <name>dock1</name>
-    <allow_floating>True</allow_floating>
-    <child>
-      <padding>0</padding>
-      <expand>True</expand>
-      <fill>True</fill>
-    </child>
-
-    <widget>
-      <class>GnomeDockItem</class>
-      <name>dockitem4</name>
-      <border_width>2</border_width>
-      <placement>GNOME_DOCK_TOP</placement>
-      <band>0</band>
-      <position>0</position>
-      <offset>0</offset>
-      <locked>True</locked>
-      <exclusive>True</exclusive>
-      <never_floating>False</never_floating>
-      <never_vertical>True</never_vertical>
-      <never_horizontal>False</never_horizontal>
-      <shadow_type>GTK_SHADOW_OUT</shadow_type>
-
-      <widget>
-	<class>GtkAlignment</class>
-	<name>alignment1</name>
-	<xalign>0.5</xalign>
-	<yalign>0.5</yalign>
-	<xscale>1</xscale>
-	<yscale>1</yscale>
-
-	<widget>
-	  <class>GtkMenuBar</class>
-	  <name>menubar1</name>
-	  <shadow_type>GTK_SHADOW_NONE</shadow_type>
-
-	  <widget>
-	    <class>GtkMenuItem</class>
-	    <name>settings1</name>
-	    <stock_item>GNOMEUIINFO_MENU_SETTINGS_TREE</stock_item>
-
-	    <widget>
-	      <class>GtkMenu</class>
-	      <name>settings1_menu</name>
-
-	      <widget>
-		<class>GtkMenuItem</class>
-		<name>preferences_ni1</name>
-		<signal>
-		  <name>activate</name>
-		  <handler>on_preferences_ni1_activate</handler>
-		  <last_modification_time>Sun, 27 Jan 2002 08:56:47 GMT</last_modification_time>
-		</signal>
-		<label>Preferences... NI</label>
-		<right_justify>False</right_justify>
-	      </widget>
-
-	      <widget>
-		<class>GtkPixmapMenuItem</class>
-		<name>accounts1</name>
-		<signal>
-		  <name>activate</name>
-		  <handler>on_accounts1_activate</handler>
-		  <last_modification_time>Sun, 27 Jan 2002 08:55:51 GMT</last_modification_time>
-		</signal>
-		<label>Accounts...</label>
-		<right_justify>False</right_justify>
-		<stock_icon>GNOME_STOCK_MENU_BOOK_RED</stock_icon>
-	      </widget>
-	    </widget>
-	  </widget>
-
-	  <widget>
-	    <class>GtkMenuItem</class>
-	    <name>help1</name>
-	    <stock_item>GNOMEUIINFO_MENU_HELP_TREE</stock_item>
-
-	    <widget>
-	      <class>GtkMenu</class>
-	      <name>help1_menu</name>
-
-	      <widget>
-		<class>GtkPixmapMenuItem</class>
-		<name>about1</name>
-		<signal>
-		  <name>activate</name>
-		  <handler>on_about1_activate</handler>
-		  <last_modification_time>Sun, 27 Jan 2002 08:51:29 GMT</last_modification_time>
-		</signal>
-		<stock_item>GNOMEUIINFO_MENU_ABOUT_ITEM</stock_item>
-	      </widget>
-	    </widget>
-	  </widget>
-	</widget>
-      </widget>
-    </widget>
-
-    <widget>
-      <class>GnomeDockItem</class>
-      <name>dockitem5</name>
-      <border_width>1</border_width>
-      <placement>GNOME_DOCK_TOP</placement>
-      <band>1</band>
-      <position>0</position>
-      <offset>0</offset>
-      <locked>True</locked>
-      <exclusive>True</exclusive>
-      <never_floating>False</never_floating>
-      <never_vertical>False</never_vertical>
-      <never_horizontal>False</never_horizontal>
-      <shadow_type>GTK_SHADOW_OUT</shadow_type>
-
-      <widget>
-	<class>GtkToolbar</class>
-	<name>toolbar1</name>
-	<border_width>1</border_width>
-	<orientation>GTK_ORIENTATION_HORIZONTAL</orientation>
-	<type>GTK_TOOLBAR_BOTH</type>
-	<space_size>16</space_size>
-	<space_style>GTK_TOOLBAR_SPACE_LINE</space_style>
-	<relief>GTK_RELIEF_NORMAL</relief>
-	<tooltips>True</tooltips>
-
-	<widget>
-	  <class>GtkButton</class>
-	  <child_name>Toolbar:button</child_name>
-	  <name>AddContact</name>
-	  <label>Add Contact</label>
-	  <stock_pixmap>GNOME_STOCK_PIXMAP_ADD</stock_pixmap>
-	</widget>
-
-	<widget>
-	  <class>GtkButton</class>
-	  <child_name>Toolbar:button</child_name>
-	  <name>RemoveContact</name>
-	  <label>Remove Contact</label>
-	  <stock_pixmap>GNOME_STOCK_PIXMAP_REMOVE</stock_pixmap>
-	</widget>
-
-	<widget>
-	  <class>GtkVSeparator</class>
-	  <name>vseparator1</name>
-	</widget>
-
-	<widget>
-	  <class>GtkButton</class>
-	  <child_name>Toolbar:button</child_name>
-	  <name>button33</name>
-	  <label>Get Info</label>
-	  <stock_pixmap>GNOME_STOCK_PIXMAP_SEARCH</stock_pixmap>
-	</widget>
-
-	<widget>
-	  <class>GtkButton</class>
-	  <child_name>Toolbar:button</child_name>
-	  <name>button34</name>
-	  <label>Idle</label>
-	  <stock_pixmap>GNOME_STOCK_PIXMAP_TIMER</stock_pixmap>
-	</widget>
-
-	<widget>
-	  <class>GtkVSeparator</class>
-	  <name>vseparator2</name>
-	</widget>
-
-	<widget>
-	  <class>GtkButton</class>
-	  <child_name>Toolbar:button</child_name>
-	  <name>button35</name>
-	  <label>Join Chat</label>
-	  <stock_pixmap>GNOME_STOCK_PIXMAP_BOOK_OPEN</stock_pixmap>
-	</widget>
-      </widget>
-    </widget>
-
-    <widget>
-      <class>GtkVBox</class>
-      <child_name>GnomeDock:contents</child_name>
-      <name>GnomeIMSlot</name>
-      <homogeneous>False</homogeneous>
-      <spacing>0</spacing>
-
-      <widget>
-	<class>GtkHBox</class>
-	<name>hbox14</name>
+	<class>GtkVBox</class>
+	<name>vbox14</name>
 	<homogeneous>False</homogeneous>
 	<spacing>0</spacing>
-	<child>
-	  <padding>0</padding>
-	  <expand>True</expand>
-	  <fill>True</fill>
-	</child>
 
 	<widget>
-	  <class>GtkLabel</class>
-	  <name>label74</name>
-	  <label>label74</label>
-	  <justify>GTK_JUSTIFY_CENTER</justify>
-	  <wrap>False</wrap>
-	  <xalign>0.5</xalign>
-	  <yalign>0.5</yalign>
-	  <xpad>0</xpad>
-	  <ypad>0</ypad>
-	  <child>
-	    <padding>0</padding>
-	    <expand>False</expand>
-	    <fill>False</fill>
-	  </child>
-	</widget>
-
-	<widget>
-	  <class>GtkEntry</class>
-	  <name>entry22</name>
-	  <can_focus>True</can_focus>
-	  <editable>True</editable>
-	  <text_visible>True</text_visible>
-	  <text_max_length>0</text_max_length>
-	  <text></text>
+	  <class>GtkScrolledWindow</class>
+	  <name>OfflineContactsScroll</name>
+	  <hscrollbar_policy>GTK_POLICY_AUTOMATIC</hscrollbar_policy>
+	  <vscrollbar_policy>GTK_POLICY_ALWAYS</vscrollbar_policy>
+	  <hupdate_policy>GTK_UPDATE_CONTINUOUS</hupdate_policy>
+	  <vupdate_policy>GTK_UPDATE_CONTINUOUS</vupdate_policy>
 	  <child>
 	    <padding>0</padding>
 	    <expand>True</expand>
 	    <fill>True</fill>
 	  </child>
-	</widget>
 
-	<widget>
-	  <class>GtkLabel</class>
-	  <name>label75</name>
-	  <label>label75</label>
-	  <justify>GTK_JUSTIFY_CENTER</justify>
-	  <wrap>False</wrap>
-	  <xalign>0.5</xalign>
-	  <yalign>0.5</yalign>
-	  <xpad>0</xpad>
-	  <ypad>0</ypad>
-	  <child>
-	    <padding>0</padding>
-	    <expand>False</expand>
-	    <fill>False</fill>
-	  </child>
+	  <widget>
+	    <class>GtkCList</class>
+	    <name>OfflineContactsList</name>
+	    <can_focus>True</can_focus>
+	    <signal>
+	      <name>select_row</name>
+	      <handler>on_OfflineContactsList_select_row</handler>
+	      <last_modification_time>Tue, 07 May 2002 03:00:07 GMT</last_modification_time>
+	    </signal>
+	    <columns>4</columns>
+	    <column_widths>66,80,80,80</column_widths>
+	    <selection_mode>GTK_SELECTION_SINGLE</selection_mode>
+	    <show_titles>True</show_titles>
+	    <shadow_type>GTK_SHADOW_IN</shadow_type>
+
+	    <widget>
+	      <class>GtkLabel</class>
+	      <child_name>CList:title</child_name>
+	      <name>label41</name>
+	      <label>Contact</label>
+	      <justify>GTK_JUSTIFY_CENTER</justify>
+	      <wrap>False</wrap>
+	      <xalign>0.5</xalign>
+	      <yalign>0.5</yalign>
+	      <xpad>0</xpad>
+	      <ypad>0</ypad>
+	    </widget>
+
+	    <widget>
+	      <class>GtkLabel</class>
+	      <child_name>CList:title</child_name>
+	      <name>label42</name>
+	      <label>Account</label>
+	      <justify>GTK_JUSTIFY_CENTER</justify>
+	      <wrap>False</wrap>
+	      <xalign>0.5</xalign>
+	      <yalign>0.5</yalign>
+	      <xpad>0</xpad>
+	      <ypad>0</ypad>
+	    </widget>
+
+	    <widget>
+	      <class>GtkLabel</class>
+	      <child_name>CList:title</child_name>
+	      <name>label43</name>
+	      <label>Alias</label>
+	      <justify>GTK_JUSTIFY_CENTER</justify>
+	      <wrap>False</wrap>
+	      <xalign>0.5</xalign>
+	      <yalign>0.5</yalign>
+	      <xpad>0</xpad>
+	      <ypad>0</ypad>
+	    </widget>
+
+	    <widget>
+	      <class>GtkLabel</class>
+	      <child_name>CList:title</child_name>
+	      <name>label44</name>
+	      <label>Group</label>
+	      <justify>GTK_JUSTIFY_CENTER</justify>
+	      <wrap>False</wrap>
+	      <xalign>0.5</xalign>
+	      <yalign>0.5</yalign>
+	      <xpad>0</xpad>
+	      <ypad>0</ypad>
+	    </widget>
+	  </widget>
 	</widget>
       </widget>
-    </widget>
-  </widget>
 
-  <widget>
-    <class>GnomeAppBar</class>
-    <child_name>GnomeApp:appbar</child_name>
-    <name>appbar1</name>
-    <has_progress>True</has_progress>
-    <has_status>True</has_status>
-    <child>
-      <padding>0</padding>
-      <expand>True</expand>
-      <fill>True</fill>
-    </child>
+      <widget>
+	<class>GtkLabel</class>
+	<child_name>Notebook:tab</child_name>
+	<name>label36</name>
+	<label> All Contacts </label>
+	<justify>GTK_JUSTIFY_CENTER</justify>
+	<wrap>False</wrap>
+	<xalign>0.5</xalign>
+	<yalign>0.5</yalign>
+	<xpad>0</xpad>
+	<ypad>0</ypad>
+      </widget>
+    </widget>
+
+    <widget>
+      <class>GtkHBox</class>
+      <name>hbox16</name>
+      <homogeneous>False</homogeneous>
+      <spacing>0</spacing>
+      <child>
+	<padding>0</padding>
+	<expand>False</expand>
+	<fill>True</fill>
+      </child>
+
+      <widget>
+	<class>GtkEntry</class>
+	<name>ContactNameEntry</name>
+	<can_focus>True</can_focus>
+	<signal>
+	  <name>activate</name>
+	  <handler>on_ContactNameEntry_activate</handler>
+	  <last_modification_time>Tue, 07 May 2002 04:07:25 GMT</last_modification_time>
+	</signal>
+	<editable>True</editable>
+	<text_visible>True</text_visible>
+	<text_max_length>0</text_max_length>
+	<text></text>
+	<child>
+	  <padding>0</padding>
+	  <expand>True</expand>
+	  <fill>True</fill>
+	</child>
+      </widget>
+
+      <widget>
+	<class>GtkOptionMenu</class>
+	<name>AccountsListPopup</name>
+	<can_focus>True</can_focus>
+	<items>Nothing
+To
+Speak
+Of
+</items>
+	<initial_choice>1</initial_choice>
+	<child>
+	  <padding>0</padding>
+	  <expand>False</expand>
+	  <fill>True</fill>
+	</child>
+      </widget>
+    </widget>
+
+    <widget>
+      <class>GtkHBox</class>
+      <name>hbox7</name>
+      <homogeneous>False</homogeneous>
+      <spacing>0</spacing>
+      <child>
+	<padding>2</padding>
+	<expand>False</expand>
+	<fill>True</fill>
+      </child>
+
+      <widget>
+	<class>GtkButton</class>
+	<name>PlainSendIM</name>
+	<can_focus>True</can_focus>
+	<signal>
+	  <name>clicked</name>
+	  <handler>on_PlainSendIM_clicked</handler>
+	  <last_modification_time>Tue, 29 Jan 2002 03:17:35 GMT</last_modification_time>
+	</signal>
+	<label> Send IM </label>
+	<relief>GTK_RELIEF_NORMAL</relief>
+	<child>
+	  <padding>0</padding>
+	  <expand>True</expand>
+	  <fill>False</fill>
+	</child>
+      </widget>
+
+      <widget>
+	<class>GtkButton</class>
+	<name>PlainGetInfo</name>
+	<can_focus>True</can_focus>
+	<signal>
+	  <name>clicked</name>
+	  <handler>on_PlainGetInfo_clicked</handler>
+	  <last_modification_time>Tue, 07 May 2002 04:06:59 GMT</last_modification_time>
+	</signal>
+	<label> Get Info </label>
+	<relief>GTK_RELIEF_NORMAL</relief>
+	<child>
+	  <padding>0</padding>
+	  <expand>True</expand>
+	  <fill>False</fill>
+	</child>
+      </widget>
+
+      <widget>
+	<class>GtkButton</class>
+	<name>PlainJoinChat</name>
+	<can_focus>True</can_focus>
+	<signal>
+	  <name>clicked</name>
+	  <handler>on_PlainJoinChat_clicked</handler>
+	  <last_modification_time>Tue, 29 Jan 2002 13:04:49 GMT</last_modification_time>
+	</signal>
+	<label> Join Group </label>
+	<relief>GTK_RELIEF_NORMAL</relief>
+	<child>
+	  <padding>0</padding>
+	  <expand>True</expand>
+	  <fill>False</fill>
+	</child>
+      </widget>
+
+      <widget>
+	<class>GtkButton</class>
+	<name>PlainGoAway</name>
+	<can_focus>True</can_focus>
+	<signal>
+	  <name>clicked</name>
+	  <handler>on_PlainGoAway_clicked</handler>
+	  <last_modification_time>Tue, 07 May 2002 04:06:53 GMT</last_modification_time>
+	</signal>
+	<label> Go Away </label>
+	<relief>GTK_RELIEF_NORMAL</relief>
+	<child>
+	  <padding>0</padding>
+	  <expand>True</expand>
+	  <fill>False</fill>
+	</child>
+      </widget>
+    </widget>
+
+    <widget>
+      <class>GtkHBox</class>
+      <name>hbox8</name>
+      <homogeneous>False</homogeneous>
+      <spacing>0</spacing>
+      <child>
+	<padding>2</padding>
+	<expand>False</expand>
+	<fill>True</fill>
+      </child>
+
+      <widget>
+	<class>GtkButton</class>
+	<name>AddContactButton</name>
+	<can_focus>True</can_focus>
+	<signal>
+	  <name>clicked</name>
+	  <handler>on_AddContactButton_clicked</handler>
+	  <last_modification_time>Tue, 07 May 2002 04:06:33 GMT</last_modification_time>
+	</signal>
+	<label> Add Contact </label>
+	<relief>GTK_RELIEF_NORMAL</relief>
+	<child>
+	  <padding>0</padding>
+	  <expand>True</expand>
+	  <fill>False</fill>
+	</child>
+      </widget>
+
+      <widget>
+	<class>GtkButton</class>
+	<name>RemoveContactButton</name>
+	<can_focus>True</can_focus>
+	<signal>
+	  <name>clicked</name>
+	  <handler>on_RemoveContactButton_clicked</handler>
+	  <last_modification_time>Tue, 07 May 2002 04:06:28 GMT</last_modification_time>
+	</signal>
+	<label> Remove Contact </label>
+	<relief>GTK_RELIEF_NORMAL</relief>
+	<child>
+	  <padding>0</padding>
+	  <expand>True</expand>
+	  <fill>False</fill>
+	</child>
+      </widget>
+    </widget>
   </widget>
 </widget>
 
@@ -1175,7 +1022,7 @@
 	<relief>GTK_RELIEF_NORMAL</relief>
 	<child>
 	  <padding>3</padding>
-	  <expand>False</expand>
+	  <expand>True</expand>
 	  <fill>False</fill>
 	</child>
       </widget>
@@ -1194,7 +1041,7 @@
 	<relief>GTK_RELIEF_NORMAL</relief>
 	<child>
 	  <padding>3</padding>
-	  <expand>False</expand>
+	  <expand>True</expand>
 	  <fill>False</fill>
 	</child>
       </widget>
@@ -1213,7 +1060,7 @@
 	<relief>GTK_RELIEF_NORMAL</relief>
 	<child>
 	  <padding>3</padding>
-	  <expand>False</expand>
+	  <expand>True</expand>
 	  <fill>False</fill>
 	</child>
       </widget>
@@ -1227,7 +1074,7 @@
 	<relief>GTK_RELIEF_NORMAL</relief>
 	<child>
 	  <padding>10</padding>
-	  <expand>False</expand>
+	  <expand>True</expand>
 	  <fill>False</fill>
 	</child>
       </widget>
@@ -1246,7 +1093,7 @@
 	<relief>GTK_RELIEF_NORMAL</relief>
 	<child>
 	  <padding>0</padding>
-	  <expand>False</expand>
+	  <expand>True</expand>
 	  <fill>False</fill>
 	</child>
       </widget>
@@ -1267,7 +1114,7 @@
 	<relief>GTK_RELIEF_NORMAL</relief>
 	<child>
 	  <padding>0</padding>
-	  <expand>False</expand>
+	  <expand>True</expand>
 	  <fill>False</fill>
 	</child>
       </widget>

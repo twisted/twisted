@@ -60,24 +60,72 @@ class ContactsList:
         self.xml.get_widget("OnlineCount").set_text("Online: 0")
         self.chat = chatui
 
+        # Construct Menu for Account Selection
+        self.optionMenu = self.xml.get_widget("AccountsListPopup")
+        self.accountMenuItems = []
+        self.currentAccount = None
+
+
+    def registerAccountClient(self, account):
+        print 'registering account client', self, account
+        self.accountMenuItems.append(account)
+        self._updateAccountMenu()
+
+    def _updateAccountMenu(self):
+        # This seems to be necessary -- I don't understand gtk's handling of
+        # GtkOptionMenus
+        print 'updating account menu', self.accountMenuItems
+        self.accountMenu = gtk.GtkMenu()
+        for account in self.accountMenuItems:
+            i = gtk.GtkMenuItem(account.accountName)
+            i.connect('activate', self.on_AccountsListPopup_activate, account)
+            self.accountMenu.append(i)
+        self.accountMenu.show_all()
+        self.optionMenu.set_menu(self.accountMenu)
+
+    def on_AccountsListPopup_activate(self, w, account):
+        print 'setting current account', account
+        self.currentAccount = account
+
+    def on_AddContactButton_clicked(self, b):
+        self.currentAccount.addContact(
+            self.xml.get_widget("ContactNameEntry").get_text())
+        
+    def unregisterAccountClient(self,account):
+        print 'unregistering account client', self, account
+        self.accountMenuItems.remove(account)
+        self._updateAccountMenu()
+
     def setContactStatus(self, person):
         if person not in self.people:
             self.people.append(person)
         self.refreshContactsLists()
 
-    def on_OnlineContactsList_select_row(self, w, row, column, event):
+    def on_OnlineContactsTree_select_row(self, w, row, column, event):
         self.selectedPerson = self.onlinePeople[row]
+        entry = self.xml.get_widget("ContactNameEntry")
+        entry.set_text(self.selectedPerson.name)
+        self.currentAccount = self.selectedPerson.client
+        idx = self.accountMenuItems.index(self.currentAccount)
+        self.accountMenu.set_active(idx)
+        self.optionMenu.remove_menu()
+        self.optionMenu.set_menu(self.accountMenu)
 
     def on_PlainSendIM_clicked(self, b):
-        if self.selectedPerson:
-            c = self.chat.getConversation(self.selectedPerson)
+        self.chat.getConversation(
+            self.currentAccount.getPerson(
+            self.xml.get_widget("ContactNameEntry").get_text()))
+##         if self.selectedPerson:
+##             c = self.chat.getConversation(self.selectedPerson)
 
     def on_PlainJoinChat_clicked(self, b):
-        GroupJoinWindow(self.chat)
+        ## GroupJoinWindow(self.chat)
+        name = self.xml.get_widget("ContactNameEntry").get_text()
+        self.currentAccount.joinGroup(name)
 
     def refreshContactsLists(self):
         # HIDEOUSLY inefficient
-        online = self.xml.get_widget("OnlineContactsList")
+        online = self.xml.get_widget("OnlineContactsTree")
         offline = self.xml.get_widget("OfflineContactsList")
         online.clear()
         offline.clear()
@@ -87,7 +135,8 @@ class ContactsList:
         for person in self.people:
             if person.isOnline():
                 self.onlinePeople.append(person)
-                online.append([person.name, person.getStatus()])
+                online.append([person.name, person.getStatus(),
+                               person.getIdleTime(), person.client.accountName])
                 self.countOnline = self.countOnline + 1
             offline.append([person.name, person.client.accountName,
                             'Aliasing Not Implemented', 'Groups Not Implemented'])
@@ -135,7 +184,7 @@ class Conversation(InputOutputWindow):
             self.myColor, self.personColor)
 
     def getTitle(self):
-        return "Conversation - " + self.person.name
+        return "Conversation - %s (%s)" % (self.person.name, self.person.client.accountName)
 
     def sendText(self, text):
         metadata = None
@@ -253,10 +302,12 @@ class GtkChatClientUI:
     def registerAccountClient(self,account):
         print 'registering account client'
         self.onlineAccounts.append(account)
+        self.getContactsList().registerAccountClient(account)
 
     def unregisterAccountClient(self,account):
         print 'unregistering account client'
         self.onlineAccounts.remove(account)
+        self.getContactsList().unregisterAccountClient(account)
 
     def getContactsList(self):
         if not self.theContactsList:
@@ -276,8 +327,6 @@ class GtkChatClientUI:
         return conv
 
     def getGroupConversation(self, group, stayHidden=0):
-##         if group.name[0] == '#':
-##             raise 'oops'
         conv = self.groupConversations.get(group)
         if not conv:
             conv = GroupConversation(group)

@@ -54,8 +54,12 @@ class TOCPerson(basesupport.AbstractPerson):
     def getStatus(self):
         return {OFFLINE:'Offline',ONLINE:'Online',AWAY:'Away'}[self.status]
 
-    def setStatus(self,status):
+    def getIdleTime(self):
+        return str(self.idletime)
+
+    def setStatusAndIdle(self, status, idletime):
         self.status = status
+        self.idletime = idletime
         self.chat.getContactsList().setContactStatus(self)
 
     def sendMessage(self, text, meta=None):
@@ -84,6 +88,7 @@ class TOCProto(basesupport.AbstractClientMixin, toc.TOCClient):
     def __init__(self, account, chatui):
         toc.TOCClient.__init__(self, account.username, account.password)
         basesupport.AbstractClientMixin.__init__(self, account, chatui)
+        self.accountName = self.account.username
         self.roomID = {}
         self.roomIDreverse = {}
 
@@ -94,6 +99,9 @@ class TOCProto(basesupport.AbstractClientMixin, toc.TOCClient):
         return self.chat.getGroupConversation(
             self.chat.getGroup(name,self,TOCGroup),
             hide)
+
+    def addContact(self, name):
+        self.add_buddy([name])
 
     def getPerson(self,name):
         return self.chat.getPerson(name,self,TOCPerson)
@@ -114,14 +122,19 @@ class TOCProto(basesupport.AbstractClientMixin, toc.TOCClient):
         for k in buddylist.keys():
             self.add_buddy(buddylist[k])
             for name in buddylist[k]:
-                self.getPerson(name).setStatus(OFFLINE)
+                self.getPerson(name).setStatusAndIdle(OFFLINE, '--')
         self.signon()
-        
+    name = None
     def tocNICK(self,data):
-        self.name=data[0]
-        self.accountName = "%s (TOC)"%data[0]
-        self.chat.registerAccountClient(self)
-        self.chat.getContactsList()
+        if not self.name:
+            print 'Waiting for second NICK', data
+            self.name=data[0]
+            self.chat.getContactsList()
+        else:
+            print 'reregistering...?', data
+            self.name=data[0]
+            # self.accountName = "%s (TOC)"%data[0]
+            self.chat.registerAccountClient(self)
 
     ### Error Messages
     def hearError(self, code, args):
@@ -135,10 +148,13 @@ class TOCProto(basesupport.AbstractClientMixin, toc.TOCClient):
         self.chat.getConversation(self.getPerson(username)
                              ).showMessage(dehtml(message))
     def updateBuddy(self,username,online,evilness,signontime,idletime,userclass,away):
-        if online: status=ONLINE
-        elif away: status=AWAY
-        else: status=OFFLINE
-        self.getPerson(username).setStatus(status)
+        if online:
+            status=ONLINE
+        elif away:
+            status=AWAY
+        else:
+            status=OFFLINE
+        self.getPerson(username).setStatusAndIdle(status, idletime)
 
     ### Group Chat
     def chatJoined(self, roomid, roomname, users):
