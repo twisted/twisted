@@ -88,7 +88,7 @@ def debug(*stuff):
         msg('debug:', indent(x))
 
 def showwarning(message, category, filename, lineno, file=None):
-    msg('''\
+    err('''\
 WARNING: %s::
 %s
 file: %s; line: %s
