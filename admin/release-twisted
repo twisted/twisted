@@ -58,6 +58,8 @@ class Options(usage.Options):
                      ['release', 'r', os.path.expanduser('~/Releases'),
                       "The directory where your Twisted release archive is (only relevant for --rel)."],
 
+                     ['sfname', 'n', os.environ['USER'], "The Sourceforge.net user name"],
+
                      ['cvsroot', 'c', defaultRoot, "The CVSROOT to export and/or checkout from. (only revelant for --exp and --checkout)."],
 
                      ['root', 't', os.path.abspath('Twisted.CVS'), "The directory containing your CVS checkout (unneccessary if using --checkout)."]]
@@ -116,6 +118,11 @@ class Options(usage.Options):
         """Copies a debian mini-repository in ~/Releases/debian-ver/ to /twisted/Debian/.
         Reqs: debs and existence of skeleton in /twisted/Debian"""
         self['commands'].append(InstallDebs)
+
+    def opt_sourceforge(self):
+        """Copies a debian mini-repository in ~/Releases/debian-ver/ to /twisted/Debian/.
+        Reqs: debs and existence of skeleton in /twisted/Debian"""
+        self['commands'].append(Sourceforge)
 
     def opt_debug(self):
         """Enable debug-mode: ask before running *every* shell command."""        
@@ -572,6 +579,36 @@ class InstallDebs(Transaction):
                 sh('mv %(target)s/%(file)s %(target)s/%(new)s' % vars())
                 sh('mv %(target)s/%(file)s %(target)s/%(new)s' % vars())
             sh('rm -f %(dir)s/*%(ver)s*' % vars())
+
+
+class Sourceforge(Transaction):
+
+    def doIt(self, opts):
+        name = opts['sfname']
+        rel = opts['release']
+        ver = opts['version']
+        path = '/home/users/'+name[0]+'/'+name[:2]+'/'+name 
+        sh("ssh %(name)s@shell.sf.net mkdir Twisted-%(ver)s || true" % vars())
+        sh("scp -r %(rel)s/Twisted*%(ver)s* %(rel)s/debian-%(ver)s "
+           "%(name)s@shell.sf.net:%(path)s/Twisted-%(ver)s/" % vars())
+        sh("echo "
+           "'"
+           "rm -f /home/groups/t/tw/twisted/htdocs/debian/woody/Packages.gz&&"
+           "rm -f /home/groups/t/tw/twisted/htdocs/debian/woody/Sources.gz&&"
+           "rm -f /home/groups/t/tw/twisted/htdocs/debian/woody/override&&"
+           "rm -f /home/groups/t/tw/twisted/htdocs/debian/Packages.gz&&"
+           "rm -f /home/groups/t/tw/twisted/htdocs/debian/Sources.gz&&"
+           "rm -f /home/groups/t/tw/twisted/htdocs/debian/override&&"
+           "mv Twisted-%(ver)s/debian-%(ver)s/woody/* "
+              "/home/groups/t/tw/twisted/htdocs/debian/woody/&&"
+           "rmdir Twisted-%(ver)s/debian-%(ver)s/woody&&"
+           "mv Twisted-%(ver)s/debian-%(ver)s/* "
+              "/home/groups/t/tw/twisted/htdocs/debian/&&"
+           "rmdir Twisted-%(ver)s/debian-%(ver)s&&"
+           "mv Twisted-%(ver)s/* /home/groups/t/tw/twisted/htdocs&&"
+           "cd /home/groups/t/tw/twisted/htdocs&&"
+           "tar xzf TwistedDocs-%(ver)s.tar.gz'"
+           "|ssh %(name)s@shell.sf.net newgrp twisted" % vars())
 
 if __name__=='__main__':
     main()
