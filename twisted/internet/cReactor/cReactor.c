@@ -51,7 +51,7 @@ cReactor_resolve(PyObject *self, PyObject *args, PyObject *kw)
     const char *name;
     int type        = 1;
     int timeout     = 10;
-    static char *kwlist[] = { "type", "timeout", NULL };
+    static char *kwlist[] = { "name", "type", "timeout", NULL };
 
     if (!PyArg_ParseTupleAndKeywords(args, kw, "s|ii:resolve", kwlist,
                                      &name, &type, &timeout))

@@ -264,7 +264,7 @@ cReactorTCP_listenTCP(PyObject *self, PyObject *args, PyObject *kw)
     PyObject *result;
     cReactorTransport *transport;
     cReactor *reactor;
-    static char *kwlist[] = { "backlog", "interface", NULL };
+    static char *kwlist[] = { "port", "factory", "backlog", "interface", NULL };
 
     reactor = (cReactor *)self;
 
