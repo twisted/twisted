@@ -39,7 +39,7 @@ try:
 except ImportError, AttributeError:
     pass # maybe we're using pygtk before this hack existed.
 import gtk
-import sys
+import sys, time
 
 # Twisted Imports
 from twisted.python import log, threadable, runtime, failure
@@ -55,6 +55,14 @@ hasWriter = writes.has_key
 
 # the next callback
 _simtag = None
+POLL_DISCONNECTED = gtk._gobject.IO_HUP | gtk._gobject.IO_ERR | \
+                    gtk._gobject.IO_NVAL
+
+# gtk's iochannel sources won't tell us about any events that we haven't
+# asked for, even if those events aren't sensible inputs to the poll()
+# call.
+INFLAGS = gtk._gobject.IO_IN | POLL_DISCONNECTED
+OUTFLAGS = gtk._gobject.IO_OUT | POLL_DISCONNECTED
 
 
 class Gtk2Reactor(default.PosixReactorBase):
@@ -67,25 +75,29 @@ class Gtk2Reactor(default.PosixReactorBase):
     # 'fileno' method and, if present, uses the result of that method
     # as the input source. The pygtk2 input_add does not do this. The
     # function below replicates the pygtk1 functionality.
+
+    # In addition, pygtk maps gtk.input_add to _gobject.io_add_watch, and
+    # g_io_add_watch() takes different condition bitfields than
+    # gtk_input_add(). We use g_io_add_watch() here in case pygtk fixes this
+    # bug.
     def input_add(self, source, condition, callback):
 	if hasattr(source, 'fileno'):
             # handle python objects
             def wrapper(source, condition, real_s=source, real_cb=callback):
                 return real_cb(real_s, condition)
-            return gtk.input_add(source.fileno(), condition, wrapper)
+            return gtk._gobject.io_add_watch(source.fileno(), condition,
+                                             wrapper)
         else:
-            return gtk.input_add(source, condition, callback)
+            return gtk._gobject.io_add_watch(source, condition, callback)
 
     def addReader(self, reader):
         if not hasReader(reader):
-            reads[reader] = self.input_add(reader,
-                                           gtk.gdk.INPUT_READ, self.callback)
+            reads[reader] = self.input_add(reader, INFLAGS, self.callback)
         self.simulate()
 
     def addWriter(self, writer):
         if not hasWriter(writer):
-            writes[writer] = self.input_add(writer,
-                                            gtk.gdk.INPUT_WRITE, self.callback)
+            writes[writer] = self.input_add(writer, OUTFLAGS, self.callback)
 
     def removeAll(self):
         v = reads.keys()
@@ -105,8 +117,14 @@ class Gtk2Reactor(default.PosixReactorBase):
 
     def doIteration(self, delay=0.0):
         if delay != 0:
-            log.msg("Error, gtk doIteration() only supports delay of 0")
-        gtk.main_iteration()
+            # attempt to emulate the "don't chew 100% cpu" behavior implied
+            # by delay != 0
+            time.sleep(delay)
+        gtk.main_iteration(0) # 0=don't block
+        # could also try this, might be more appropriate to handle *all*
+        # events, particularly if we have gtk handle our timers too
+        #while gtk.events_pending():
+        #    gtk.main_iteration(0)
 
     def crash(self):
         gtk.main_quit()
@@ -117,41 +135,42 @@ class Gtk2Reactor(default.PosixReactorBase):
         gtk.main()
 
     def callback(self, source, condition):
-        methods = []
-        cbNames = []
+        log.logOwner.own(source)
 
-        if condition & gtk.gdk.INPUT_READ:
-            methods.append(getattr(source, 'doRead'))
-            cbNames.append('doRead')
-
-        if (condition & gtk.gdk.INPUT_WRITE):
-            method = getattr(source, 'doWrite')
-            # if doRead is doWrite, don't add it again.
-            if not (method in methods):
-                methods.append(method)
-                cbNames.append('doWrite')
-
-        for method, cbName in zip(methods, cbNames):
-            why = None
+        why = None
+        if condition & POLL_DISCONNECTED and \
+               not (condition & gtk._gobject.IO_IN):
+            why = main.CONNECTION_LOST
+        else:
             try:
-                why = method()
+                didRead = None
+                if condition & gtk._gobject.IO_IN:
+                    why = source.doRead()
+                    didRead = source.doRead
+                if not why and condition & gtk._gobject.IO_OUT:
+                    # if doRead caused connectionLost, don't call doWrite
+                    # if doRead is doWrite, don't call it again.
+                    if not source.disconnected and source.doWrite != didRead:
+                        why = source.doWrite()
+#                if not source.fileno() == fd:
+#                    why = main.ConnectionFdescWentAway('Filedescriptor went away')
             except:
                 why = sys.exc_value
-                log.msg('Error In %s.%s' %(source,cbName))
+                log.msg('Error In %s' % source)
                 log.deferr()
-            if why:
-                try:
-                    source.connectionLost(failure.Failure(why))
-                except:
-                    log.deferr()
-                self.removeReader(source)
-                self.removeWriter(source)
-                break
-            elif source.disconnected:
-                # If source disconnected, don't call the rest of the methods.
-                break
-        self.simulate()
-        return 1
+
+        if why:
+            self.removeReader(source)
+            self.removeWriter(source)
+            try:
+                source.connectionLost(failure.Failure(why))
+            except:
+                log.deferr()
+
+        log.logOwner.disown(source)
+        
+        self.simulate() # fire Twisted timers
+        return 1 # 1=don't auto-remove the source
 
     def simulate(self):
         """Run simulation loops and reschedule callbacks.
