@@ -81,7 +81,7 @@ def wrap(obj, *trap):
 
     try:
         # this is going to pass for 'foo', is that good?
-        return Iterable(iter(obj).next, *trap)
+        return Iterable(obj, *trap)
     except TypeError: 
         # iteration over non-sequence 
         pass
@@ -194,9 +194,9 @@ class Iterable(Stage):
         means to stop without providing a result, while all other
         exceptions provide a Failure self.result followed by stoppage.
     """
-    def __init__(self, callable, *trap):
+    def __init__(self, iterable, *trap):
         Stage.__init__(self, *trap)
-        self._callable   = callable
+        self._iterable   = iter(iterable)
         self._next_stage = None
         self._stop_next  = 0
 
@@ -226,7 +226,7 @@ class Iterable(Stage):
                     return result
                 self._next_stage = None 
             try:
-                ret = self._yield_next(self._callable())
+                ret = self._yield_next(self._iterable.next())
                 if ret is Continue: 
                     continue
                 return ret
