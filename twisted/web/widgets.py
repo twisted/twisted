@@ -780,16 +780,16 @@ class WidgetPage(Page):
     '''
 
     template = '''
-    <HTML>
-    <STYLE>
+    <html>
+    <style>
     %%%%self.stylesheet%%%%
-    </STYLE>
-    <HEAD>
-    <TITLE>%%%%self.title%%%%</title>
-    <BASE href="%%%%request.prePathURL()%%%%">
+    </style>
+    <head>
+    <title>%%%%self.title%%%%</title>
+    <base href="%%%%request.prePathURL()%%%%">
     </head>
-    <BODY>
-    <H1>%%%%self.title%%%%</h1>
+    <body>
+    <h1>%%%%self.title%%%%</h1>
     %%%%self.widget%%%%
     </body>
     </html>
