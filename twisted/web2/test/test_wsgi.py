@@ -84,16 +84,16 @@ class TestWSGIEnvironment(BaseCase):
         self.assertEnv('https://host/', {'wsgi.url_scheme': 'https'})
         self.assertEnv('http://host/', {'wsgi.url_scheme': 'http'})
 
-    def test_server_protocol(self):
+    def test_SERVER_PROTOCOL(self):
         """SERVER_PROTOCOL"""
         self.assertEnv('http://host/', {'SERVER_PROTOCOL': 'HTTP/1.1'})
 
-    def test_server_port(self):
+    def test_SERVER_PORT(self):
         """SERVER_PORT"""
         self.assertEnv('http://host/', {'SERVER_PORT': ''})
         self.assertEnv('http://host:523/', {'SERVER_PORT': '523'})
         self.assertEnv('https://host/', {'SERVER_PORT': ''})
         self.assertEnv('https://host:523/', {'SERVER_PORT': '523'})
 
-        
+
     

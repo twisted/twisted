@@ -170,7 +170,8 @@ class WSGIHandler(object):
             self.response.stream=stream.ProducerStream()
             self.headersSent = True
             
-            # After this, we cannot touch self.response from this thread any more
+            # After this, we cannot touch self.response from this
+            # thread any more
             def _start():
                 # Called in IO thread
                 self.response.stream.registerProducer(self, True)
@@ -191,8 +192,9 @@ class WSGIHandler(object):
                    hasattr(result.filelike, 'fileno') and
                    not self.headersSent):
                 self.headersSent = True
-                # Make FileStream and output it. We make a new file object from the
-                # fd, just in case the original one isn't an actual file object.
+                # Make FileStream and output it. We make a new file
+                # object from the fd, just in case the original one
+                # isn't an actual file object.
                 self.response.stream = stream.FileStream(
                     os.fdopen(os.dup(result.filelike.fileno())))
                 reactor.callFromThread(self.__callback)

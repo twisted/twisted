@@ -54,7 +54,7 @@ def createCGIEnvironment(ctx, request=None):
         "SERVER_PROTOCOL":   "HTTP/%i.%i" % request.clientproto,
         "REQUEST_METHOD":    request.method,
         "PATH_INFO":         '', # Will get filled in later
-        "PATH_TRANSLATED":   '', # For our purposes, equiv. to PATH_INFO
+        "PATH_TRANSLATED":   '', # For our purposes, equal to PATH_INFO
         "SCRIPT_NAME":       script_name,
         "QUERY_STRING":      '', # Will get filled in later
         "REMOTE_HOST":       '', # TODO
