@@ -1,3 +1,8 @@
+2002-03-04  Moshe Zadka  <moshez@twistedmatrix.com>
+
+	* twisted/web/server.py: authorizer.Unauthorized->util.Unauthorized
+	(leftovers from removing .passport references.)
+
 2002-03-02  Paul Shwartz  <z3p@twistedmatrix.com>
 
 	* twisted/words/ircservice.py: Send End-Of-MOTD message --
