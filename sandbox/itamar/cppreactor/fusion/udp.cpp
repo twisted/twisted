@@ -105,5 +105,6 @@ BOOST_PYTHON_MODULE(udp)
 	.def("startProtocol", &DatagramProtocol::startProtocol)
 	.def("doStop", &DatagramProtocol::doStop)
 	.def("connectionRefused", &DatagramProtocol::connectionRefused)
+	.def_readonly("transport", &DatagramProtocol::transport)
 	;
 }
