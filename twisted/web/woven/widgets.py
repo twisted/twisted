@@ -174,10 +174,8 @@ class Widget(view.View):
     def generate(self, request, node):
         data = self.getData()
         if isinstance(data, defer.Deferred):
-            data.addCallbacks(callback=self.setDataCallback,
-                              callbackArgs=(request, node),
-                              errback=utils.renderFailure,
-                              errbackArgs=(request,))
+            data.addCallback(self.setDataCallback, request, node)
+            data.addErrback(utils.renderFailure, request)
             return data
         self.setUp(request, node, data)
         # generateDOM should always get a reference to the
@@ -193,10 +191,8 @@ class Widget(view.View):
             warnings.warn("%r has returned a Deferred multiple times for the "
                           "same request; this is a potential infinite loop."
                           % self.getData)
-            data.addCallbacks(callback=self.setDataCallback,
-                              callbackArgs=(request, node),
-                              errback=utils.renderFailure,
-                              errbackArgs=(request,))
+            data.addCallback(self.setDataCallback, request, node)
+            data.addErrback(utils.renderFailure, request)
             return data
         self.setUp(request, node, data)
         # generateDOM should always get a reference to the
