@@ -617,7 +617,7 @@ extern EXTERN_API PyObject *cBanana_dataReceived( PyObject *self, PyObject *args
   }
 
   if (!PyString_Check(newChunk)) {
-    printf("First arg was not a string\n");
+    printf("Second arg was not a string\n");
     Py_INCREF(Py_None);
     return Py_None;
   }
