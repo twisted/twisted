@@ -70,7 +70,7 @@ import string, os, sys, stat, types
 from twisted.web import microdom
 
 from twisted.python import components
-from twisted.web import resource
+from twisted.web import resource, html
 from twisted.web.resource import Resource
 from twisted.web import widgets # import Widget, Presentation
 from twisted.web.woven import controller, utils, interfaces
@@ -183,6 +183,7 @@ class DOMTemplate(Resource):
             self.templateFile = templateFile
         
         self.outstandingCallbacks = 0
+        self.failed = 0
         
     def render(self, request, block=0):
         self.handlerResults = {1: [], 0: []}
@@ -352,10 +353,22 @@ class DOMTemplate(Resource):
 
     def renderFailure(self, failure, request):
         try:
-            print request.d.toxml()
+            xml = request.d.toxml()
         except:
-            pass
-        utils.renderFailure(failure, request)
+            xml = ""
+        if not self.failed:
+            self.failed = 1
+            if failure:
+                request.write("<html><head><title>%s: %s</title></head><body>\n" % (html.escape(str(failure.type)), html.escape(str(failure.value))))
+            else:
+                request.write("<html><head><title>Failure!</title></head><body>\n")
+            utils.renderFailure(failure, request)
+            request.write("<h3>Here is the partially processed DOM:</h3>")
+            request.write("\n<pre>\n")
+            request.write(html.escape(xml))
+            request.write("\n</pre>\n")
+            request.write("</body></html>")
+            request.finish()
         return failure
 
 

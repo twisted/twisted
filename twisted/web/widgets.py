@@ -106,7 +106,7 @@ def formatFailure(myFailure):
         if filename == '<string>':
             continue
         # file, line number
-        w('<tr bgcolor="#%s"><td colspan="2" valign="top">%s, line %s in <b>%s</b><br><table width="100%%">' % (["bbbbbb", "cccccc"][line % 2], filename, lineno, method))
+        w('<tr bgcolor="#%s"><td colspan="2" valign="top">%s, line %s in <b>%s</b><br /><table width="100%%">' % (["bbbbbb", "cccccc"][line % 2], filename, lineno, method))
         snippet = ''
         for snipLineNo in range(lineno-2, lineno+2):
             snipLine = linecache.getline(filename, snipLineNo)
@@ -123,8 +123,8 @@ def formatFailure(myFailure):
                 color = ''
             w('<tr %s><td>%s</td><td><code>%s</code></td></tr>' % (color, snipLineNo,snipLine))
         w('</table></td></tr>')
-        w('<tr bgcolor="#%s">' % (["bbbbbb", "cccccc"][line % 2]))
         # local vars
+        w('<tr bgcolor="#%s">' % (["bbbbbb", "cccccc"][line % 2]))
         for nm, varList in ('Locals', localVars), ('Globals', globalVars):
             w('<td valign="top"><table><tr><th align="left" colspan="2">'
               '%s'
@@ -134,9 +134,9 @@ def formatFailure(myFailure):
                     w('<tr><td valign="top"><b>%s</b></td>'
                       '<td>%s</td></tr>' % (name, htmlrepr(var)))
             w('</table></td>')
-        w('</td>')
         w('</tr>')
         line = line + 1
+    w('</table>')
     return io.getvalue()
 
 class Widget:
@@ -1048,7 +1048,7 @@ class Reloader(Presentation):
         write = x.append
         for module in self.modules:
             rebuild.rebuild(module)
-            write('<li>reloaded %s<br>' % module.__name__)
+            write('<li>reloaded %s<br />' % module.__name__)
         return x
 
 class Sidebar(StreamWidget):
