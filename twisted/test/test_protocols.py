@@ -153,10 +153,10 @@ Content-Length: 10
             print repr(self.expected_response)
             raise AssertionError
 
-class DummySMTPHandler(smtp.SMTPHandler):
+class DummySMTP(smtp.SMTP):
 
     def connectionMade(self):
-        smtp.SMTPHandler.connectionMade(self)
+        smtp.SMTP.connectionMade(self)
         self.messages = []
 
     def handleMessage(self, helo, origin, recipients, message):
@@ -195,7 +195,7 @@ Subject: pass
 
     def testBuffer(self):
         output = StringIOWithoutClosing()
-        a = DummySMTPHandler()
+        a = DummySMTP()
         a.makeConnection(protocol.FileWrapper(output))
         a.dataReceived(self.input)
         if a.messages != self.messages:

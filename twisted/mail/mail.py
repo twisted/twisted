@@ -1,32 +1,13 @@
 """Mail support for twisted python.
 """
 
-from twisted.protocols import smtp, pop3, protocol
+from twisted.protocols import protocol
 
-class DomainBasedFactory(protocol.Factory):
-    """A server for multiple mail domains.
-    """
-    def __init__(self, domains):
-        self.domains = domains
-
-
-class VirtualSMTPFactory(DomainBasedFactory):
-    """A virtual SMTP server.
-    """
-    def buildProtocol(self, addr):
-        p = smtp.DomainSMTPHandler()
-        p.factory = self
-        return p
-
-
-class VirtualPOP3Factory(DomainBasedFactory):
-    """A virtual POP3 server.
-    """
-    def buildProtocol(self, addr):
-        p = pop3.VirtualPOP3()
-        p.factory = self
-        return p
-
+def createDomainsFactory(protocol_handler, domains):
+    ret = protocol.Factory()
+    ret.protocol = protocol_handler
+    ret.domains = domains
+    return ret
 
 class DomainWithDefaultDict:
 

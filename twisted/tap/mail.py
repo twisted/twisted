@@ -35,8 +35,8 @@ This creates a mail.tap file that can be used by twistd.
 """
 
 # Twisted Imports
-from twisted.mail import mail
-from twisted.mail import maildir
+from twisted.mail import mail, maildir
+from twisted.protocols import pop3, smtp
 from twisted.internet import tcp
 from twisted.python import usage
 
@@ -78,7 +78,8 @@ def getPorts(app, config):
         from twisted.protocols import telnet
 	factory = telnet.ShellFactory()
 	ports.append((int(config.telnet), factory))
-    ports.append((int(config.pop), mail.VirtualPOP3Factory(config.domains)))
-    ports.append((int(config.smtp), mail.VirtualSMTPFactory(config.domains)))
-    
+    ports.append((int(config.pop), 
+                 mail.createDomainsFactory(pop3.VirtualPOP3, config.domains)))
+    ports.append((int(config.smtp), 
+                 mail.createDomainsFactory(smtp.DomainSMTP, config.domains)))
     return ports

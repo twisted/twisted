@@ -10,7 +10,7 @@ class SMTPError(Exception):
 
 COMMAND, DATA = range(2)
 
-class SMTPHandler(basic.LineReceiver):
+class SMTP(basic.LineReceiver):
 
     mode = COMMAND
     __from_ = None
@@ -96,7 +96,7 @@ class SMTPHandler(basic.LineReceiver):
         pass
 
 
-class DomainSMTPHandler(SMTPHandler):
+class DomainSMTP(SMTP):
 
     def validateTo(self, helo, destination):
         try:
