@@ -36,18 +36,16 @@ reactorTypes = {
 def loadApplication(config, passphrase):
     filename = os.path.abspath(config['python'] or config['xml'] or
                                config['source'] or config['file'])
-    log.msg("Loading %s..." % (filename,))
     if config['python']:
-        application = sob.loadValueFromFile(filename, 'application',
-                                            passphrase)
-    else:
-        if config['xml']:
-            style = 'xml'
-        elif config['source']:
-            style = 'source'
-        elif config['file']:
-            style = 'pickle'
-        application = sob.load(filename, style, passphrase)
+        style = 'python'
+    if config['xml']:
+        style = 'xml'
+    elif config['source']:
+        style = 'source'
+    elif config['file']:
+        style = 'pickle'
+    log.msg("Loading %s..." % (filename,))
+    application = loadPersisted(filename, style, passphrase)
     log.msg("Loaded.")
     return application
 
@@ -192,3 +190,33 @@ def scheduleSave(app):
     from twisted.internet import reactor
     p = sob.IPersistable(app)
     reactor.addSystemEventTrigger('after', 'shutdown', p.save, 'shutdown')
+
+def saveApplication(p, type, enc, filename):
+    p = sob.IPersistable(p)
+    p.setStyle(type)
+    if enc:
+        passphrase = util.getPassword("Encryption passphrase: ")
+        filename = None
+    else:
+        passphrase = None
+    p.save(filename=filename, passphrase=passphrase)
+
+def loadPersisted(filename, kind, passphrase):
+    if kind == 'python':
+        return sob.loadValueFromFile(filename, 'application', passphrase)
+    else:
+        return sob.load(fiename, kind, passphrase)
+
+def guessType(filename):
+    ext = os.path.splitext(filename)[1]
+    return {
+        '.tac':  'python',
+        '.etac':  'python',
+        '.py':  'python',
+        '.tap': 'pickle',
+        '.etap': 'pickle',
+        '.tas': 'source',
+        '.etas': 'source',
+        '.tax': 'xml'
+        '.etax': 'xml'
+    }[ext]
