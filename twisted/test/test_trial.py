@@ -10,6 +10,7 @@ __version__ = "$Revision: 1.17 $"[11:-2]
 
 from twisted.trial.reporter import SKIP, EXPECTED_FAILURE, FAILURE, ERROR, UNEXPECTED_SUCCESS, SUCCESS
 from twisted.python import reflect, failure, log, procutils, util as pyutil, compat
+from twisted.python.runtime import platformType
 from twisted.internet import defer, reactor, protocol, error
 from twisted.protocols import loopback
 from twisted.spread import banana, jelly
@@ -137,9 +138,7 @@ class ChProcessProtoocol(protocol.ProcessProtocol):
         self.done.errback(status)
 
 class SpawningMixin:
-    def spawnChild(self, args):
-        TRIAL = procutils.which('trial')[0]
-
+    def spawnChild(self, args):        
         env = {}
         env['PATH'] = os.environ.get('PATH', '')
         env["PYTHONPATH"] = os.environ.get("PYTHONPATH", "")
@@ -157,7 +156,23 @@ class FunctionallyTestTrial(unittest.TestCase, SpawningMixin):
     cpp = None
 
     def setUpClass(self):
-        self.trial = procutils.which('trial')[0]
+        locs = procutils.which('trial')
+        if locs:
+            self.trial = locs[0]
+        elif platformType == "win32":
+            installedPath = os.path.join(os.path.dirname(sys.executable), "scripts", "trial.py")
+            if os.path.exists(installedPath):
+                self.trial = installedPath
+            else:
+                import twisted
+                sibPath = pyutil.sibpath(twisted.__file__, "bin")
+                sibPath = os.path.join(sibPath, "trial")
+                if os.path.exists(sibPath):
+                    self.trial = sibPath
+                else:
+                    raise RuntimeError, "can't find 'trial' in PATH"
+        else:
+            raise RuntimeError, "can't find 'trial' in PATH"
         self.args = ['python', self.trial, "-o"]
 
     def tearDown(self):
