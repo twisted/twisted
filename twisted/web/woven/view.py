@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.86 $"[11:-2]
+__version__ = "$Revision: 1.87 $"[11:-2]
 
 # Sibling imports
 import interfaces
@@ -661,9 +661,9 @@ class LiveView(View):
         uid = request.getSession().uid
         n = wid.templateNode
         if n.attributes.has_key('src'):
-            n['src'] = n.attributes.get('src') + '?twisted_session=' + str(uid)
+            n.attributes['src'] = n.attributes.get('src') + '?twisted_session=' + str(uid)
         else:
-            n['value'] = n.attributes.get('value') + '?twisted_session=' + str(uid)
+            n.attributes['value'] = n.attributes.get('value') + '?twisted_session=' + str(uid)
         #print wid.templateNode.toxml()
 
 
