@@ -364,13 +364,13 @@ class DOMTemplate(Resource):
             if viewMethod is None:
                 viewMethod = view.generateDOM
             self.mutateDOM(request, node, viewMethod)
-            self.recurseChildren(request, node)
 
     def mutateDOM(self, request, node, viewMethod):
         result = viewMethod(request, node)
         returnNode = self.dispatchResult(request, node, result)
-        if returnNode:
+        if returnNode is not None:
             node = returnNode
+            self.recurseChildren(request, node)
 
     def sendPage(self, request):
         """
