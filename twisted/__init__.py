@@ -13,6 +13,13 @@ if not hasattr(sys, "version_info") or sys.version_info < (2,2):
     raise RuntimeError("Twisted requires Python 2.2 or later.")
 del sys
 
+# Ensure zope.interface is installed
+try:
+    from zope.interface import Interface
+    del Interface
+except ImportError:
+    raise ImportError, "you need zope.interface installed (http://zope.org/Products/ZopeInterface/)"
+
 # Ensure compat gets imported
 from twisted.python import compat
 del compat
