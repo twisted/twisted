@@ -166,12 +166,6 @@ class Request(pb.Copyable, http.HTTP):
                 return name
 
     def requestReceived(self, command, path, version, content):
-        print """
-        command: %r
-        path: %r
-        version: %r
-        content: %r
-        """ % (command, path, version, content)
         from string import split
         self.args = {}
         self.stack = []
@@ -207,7 +201,6 @@ class Request(pb.Copyable, http.HTTP):
     
     def process(self):
         "Process a request."
-        print "RESULT: Processing!?#!"
         # Log the request to a file.
         log.msg( self )
 
@@ -231,9 +224,7 @@ class Request(pb.Copyable, http.HTTP):
 
             if hasattr(resrc, "processArgs"):
                 self.args = resrc.processArgs(self)
-                print "RESULT: Using resource's processArgs. We got %s back." % self.args
             else:
-                print "RESULT: didn't have processArgs :-("
                 # Argument processing
                 args = self.args
                 if self.method == "POST":

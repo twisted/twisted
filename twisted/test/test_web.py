@@ -57,11 +57,8 @@ class SiteTest(unittest.TestCase):
 
 class ArgProcessingResource(resource.Resource):
     def processArgs(self, request):
-        print "I am processing the arguments."
         args = copy.copy(request.args)
-        print "They used to be %r..." % args
         args.update({"bleh": "foo"})
-        print "But now they shall be %r!" % args
         return args
 
     def render(self, request):
@@ -69,7 +66,9 @@ class ArgProcessingResource(resource.Resource):
 
 
 class TestHTTPClient(http.HTTPClient):
+    
     expected_result = "args: {'bleh': 'foo'}"
+    
     def connectionMade(self):
         self.sendCommand("GET", "/")
         self.endHeaders()
@@ -91,13 +90,15 @@ class TestHTTPClient(http.HTTPClient):
     def handleEndHeaders(self):
         pass
 
+
 class LoopbackSite(loopback.LoopbackRelay, server.Site):
     def __init__(self, resource, client):
         loopback.LoopbackRelay.__init__(self, client)
         server.Site.__init__(self, resource)
 
     def stopConsuming(self):
-        print "stopped consuming??"
+        self.loseConnection()
+
 
 class LoopbackSiteTestCase(unittest.TestCase):
 
@@ -116,9 +117,8 @@ class LoopbackSiteTestCase(unittest.TestCase):
             clientToServer.clearBuffer()
             if serverToClient.shouldLose or clientToServer.shouldLose:
                 break
-        
-        
-        
+
+
 class SimpleWidget(widgets.Widget):
     def display(self, request):
         return ['correct']
