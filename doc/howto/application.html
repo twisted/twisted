@@ -102,7 +102,7 @@ app.save("start")
 <p>When you run this program, it will create a file called
 <code>daytime-start.tap</code>, and then exit. (The name is obtained by
 combining the application name with the argument to <code>.save()</code>). To
-start the server from the "freeze-dried" <code>.tap</code> file, use
+start the server from the <q>freeze-dried</q> <code>.tap</code> file, use
 <code>twistd</code> (text wrapped to be more readable):</p>
 
 <pre class="shell">
@@ -124,12 +124,14 @@ Saved.
 % 
 </pre>
 
-<p>That will "thaw out" the <code>.tap</code> file, create the Application, and
+<p>That will <q>thaw out</q> the <code>.tap</code> file, create the
+Application, and
 then run it just as if you'd invoked app.run() yourself. It forks the new
 server off into the background (so twistd itself completes instead of
 waiting for the server to die), writes the server's process ID to a file
-called "twistd.pid", and directs all the server's stdout messages to a file
-called "twistd.log" (these file names can be changed by appropriate
+called <code>twistd.pid</code>, and directs all the server's stdout messages
+to a file
+called <code>twistd.log</code> (these file names can be changed by appropriate
 arguments to <code>twistd</code>: see <code>twistd -h</code> for a list).</p>
 
 <p>When you try this example, be aware that <code>twistd</code> returns right
@@ -148,9 +150,11 @@ end of the log file.</p>
 </pre>
 
 <p>When the server is shut down, you'll notice that it creates a file called
-"daytimer-shutdown.tap" in the directory it was run from (again, the name is
-derived from the application name and the word "shutdown"). This
-<code>.tap</code> file is just like the "daytimer-start.tap" created by your
+<code>daytimer-shutdown.tap</code> in the directory it was run from
+(again, the name is
+derived from the application name and the word <q>shutdown</q>). This
+<code>.tap</code> file is just like the <code>daytimer-start.tap</code>
+created by your
 original setup program, except that it represents the state of the
 Application object as it existed just before shutdown, rather than when it
 was freshly created by your code.</p>
@@ -218,7 +222,8 @@ application picks up where it left off.</p>
 <h2>Configuration arguments</h2>
 
 <p>To do this right, you'll want to follow the sequence described by the
-"writing plugins" document. Instead of writing a short program that creates
+<a href="plugin.html">writing plugins</a> document. Instead of writing a short
+program that creates
 a <code>.tap</code> file (by creating an Application, doing various .listenTCPs
 on it, then calling .save), you will write a subroutine called
 updateApplication(). This subroutine should take a bunch of config arguments
