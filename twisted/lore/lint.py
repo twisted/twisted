@@ -42,10 +42,10 @@ class TagChecker:
 
     def check_disallowedClasses(self, dom, filename):
         def matcher(element, self=self):
-            if not self.allowedClasses.has_key(element.tagName):
-                return 0
             if not element.hasAttribute('class'):
                 return 0
+            if not self.allowedClasses.has_key(element.tagName):
+                return 1
             checker = self.allowedClasses[element.tagName]
             return not checker(element.getAttribute('class'))
         for element in domhelpers.findElements(dom, matcher):
@@ -97,8 +97,10 @@ p = {}
 
 a = list2dict(['py-listing', 'html-listing'])
 
+pre = list2dict(['python', 'shell', 'python-interpreter', 'elisp'])
+
 allowed = {'code': classes.has_key, 'span': span.has_key, 'div': div.has_key,
-           'p': p.has_key, 'a': a.has_key}
+           'p': p.has_key, 'a': a.has_key, 'pre': pre.has_key}
 
 def getDefaultChecker():
     return TagChecker(tags.has_key, allowed)
