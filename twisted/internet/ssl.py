@@ -25,9 +25,11 @@ from OpenSSL import SSL
 import socket
 import traceback
 
-
 # sibling imports
 import tcp, main
+
+# Twisted imports
+from twisted.python import log
 
 
 class ContextFactory:
@@ -132,7 +134,7 @@ class Port(tcp.Port):
             try:
                 skt,addr = self.socket.accept()
             except socket.error, e:
-                if e.args[0] == EWOULDBLOCK:
+                if e.args[0] == tcp.EWOULDBLOCK:
                     return
                 raise
             except SSL.Error:
