@@ -41,13 +41,15 @@ Usage:
                      ["port", "p", 9080]]
     
     def parseArgs(self, tapFile):
-        self.tapFile = tapFile
+        self.opts['tapFile'] = tapFile
 
     def postOptions(self):
-        if not os.path.exists(self.tapFile) and not self.new:
-            raise usage.UsageError, "No such file: %s" % repr(self.tapFile)
-        if os.path.exists(self.tapFile) and self.new:
-            raise usage.UsageError, "File %s already exists." % repr(self.tapFile)
+        tapFile = self.opts['tapFile']
+        new = self.opts['new']
+        if not os.path.exists(tapFile) and not new:
+            raise usage.UsageError, "No such file: %s" % repr(tapFile)
+        if os.path.exists(tapFile) and new:
+            raise usage.UsageError, "File %s already exists." % repr(tapFile)
 
 
 def run():
@@ -62,23 +64,26 @@ def run():
         print str(config)
         sys.exit(2)
 
+    new = config.opts['new']
+    tapFile = config.opts['tapFile']
+    
     # load or create the Application instance to be configured
-    if config.new:
-        application = app.Application(config.new)
+    if new:
+        application = app.Application(new)
     else:
-        f = open(config.tapFile, "rb")
+        f = open(tapFile, "rb")
         application = pickle.loads(f.read())
         f.close()
         if not isinstance(application, app.Application):
             raise TypeError, "The loaded object %s is not a twisted.internet.app.Application instance." % application
     
     # setup shutdown hook that saves the created tap
-    f = lambda a=application, filename=config.tapFile: a.save(filename=filename)
+    f = lambda a=application, filename=tapFile: a.save(filename=filename)
     main.callBeforeShutdown(f)
     
     # create the coil webserver
     coilApp = app.Application("coil")
     root = web.ConfigRoot(application)
     site = server.Site(root)
-    coilApp.listenTCP(int(config.port), site)
+    coilApp.listenTCP(int(config.opts['port']), site)
     coilApp.run(save=0)
