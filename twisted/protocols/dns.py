@@ -277,15 +277,31 @@ class DNS(protocol.Protocol):
         return id
 
 
+class DNSonTCPFactory(protocol.ClientFactory):
+
+    def __init__(self, boss, *args):
+        self.boss = boss
+        self.queryArgs = args
+
+    def buildProtocol(self, connector):
+        protocol = DNSonTCP()
+        protocol.factory = self
+        protocol.setQuery(self.queryArgs)
+        return protocol
+
+
 class DNSOnTCP(DNS):
     underlying = "tcp"
     _query = None
 
     def connectionMade(self):
         if self._query:
-            apply(self.query, self._query)
+            self.query(*self._query)
             self._query = None
         self.buffer = ''
+
+    def setQuery(self, query):
+        self._query = query
 
     def connectionLost(self):
         del self.buffer

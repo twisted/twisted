@@ -79,10 +79,9 @@ class DNSBoss:
         return transport.protocol.query(name, callback, type, cls, recursive)
 
     def queryTCP(self, addr, name, callback, type=1, cls=1, recursive=1):
-        self.createTCPFactory()
-        protocol = self.factories[1].buildProtocol(addr)
-        protocol.setQuery(name, callback, type, cls)
-        transport = reactor.clientTCP(addr[0], addr[1], protocol, recursive)
+        factory = dns.DNSonTCPFactory(self, addr, name, callback, 
+                                      type, cls, recursive)
+        reactor.connectTCP(addr[0], addr[1], factory)
 
     def stopReading(self, i):
         if self.ports[i] is not None:
