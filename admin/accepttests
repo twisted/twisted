@@ -162,10 +162,14 @@ def runExampleTest():
 
 def runMailTest():
     message("Starting mail test")
+    if os.path.exists('dump'):
+        scmd('rm -rf dump')
     os.mkdir("dump")
+    if os.path.exists('dump2'):
+        scmd('rm -rf dump2')
     os.mkdir("dump2")
-    scmd("mktap mail --domain foo.bar=dump --user postmaster=postmaster")
-    scmd("mktap --append mail.tap mail --relay 127.0.0.1,8025=dump2"
+    cmd("mktap mail --domain foo.bar=dump --user postmaster=postmaster")
+    cmd("mktap --append mail.tap mail --relay 127.0.0.1,8025=dump2"
          "      --smtp 8026 --pop 8111")
     twistdf("mail")
     import smtplib, poplib
