@@ -288,6 +288,7 @@ class UserDirectory(page.Page):
         if sub:
             twistdsock = os.path.join(pw_dir, self.userSocketName)
             rs = ResourceSubscription('unix',twistdsock)
+            self.putChild(name, rs)
             return rs
         else:
             return static.File(os.path.join(pw_dir, self.userDirName))
