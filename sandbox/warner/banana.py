@@ -21,6 +21,15 @@ class IJellying:
         jellier is sitting. A list of these strings will be used to describe
         where any problems occurred."""
 
+def getInstanceState(inst):
+    """Utility function to default to 'normal' state rules in serialization.
+    """
+    if hasattr(inst, "__getstate__"):
+        state = inst.__getstate__()
+    else:
+        state = inst.__dict__
+    return state
+
 SimpleTokens = (types.IntType, types.LongType, types.FloatType,
                 types.StringType, types.UnicodeType)
 
@@ -99,7 +108,7 @@ class BaseSlicer:
         object described by the very first OPEN sent over the wire,
         incrementing for each subsequent one. The objects themselves are
         stored in any/all Slicers who cares to. Generally this is the
-        SlicerParent, but child slices could do it too if they wished.
+        RootSlicer, but child slices could do it too if they wished.
         """
         pass
 
@@ -150,7 +159,7 @@ class InstanceSlicer(OrderedDictSlicer):
 
     def slice(self, obj):
         self.banana.sendToken(reflect.qual(obj.__class__))
-        OrderedDictSlicer.slice(self, obj.__dict__) #DictSlicer
+        OrderedDictSlicer.slice(self, getInstanceState(obj)) #DictSlicer
 
 class ReferenceSlicer(BaseSlicer):
     opentype = 'reference'
@@ -163,7 +172,7 @@ class ReferenceSlicer(BaseSlicer):
     def slice(self, obj):
         self.banana.sendToken(self.refid)
 
-class SlicerParent(BaseSlicer):
+class RootSlicer(BaseSlicer):
     # this lives at the bottom of the Slicer stack, at least for our testing
     # purposes
 
@@ -178,7 +187,6 @@ class SlicerParent(BaseSlicer):
 
     def finish(self, obj):
         self.references = {}
-
 
     def newSlicer(self, obj):
         refid = self.banana.getRefID(obj)
@@ -210,7 +218,7 @@ SlicerRegistry = {
 
 class Banana:
     def __init__(self):
-        parent = SlicerParent()
+        parent = RootSlicer()
         parent.banana = self
         self.stack = [parent]
         self.tokens = []
@@ -259,7 +267,6 @@ class Banana:
         slicer.slice(obj)
         slicer.finish(obj)
 
-
     # setRefID/getRefID are used to walk the stack and handle references
 
     def setRefID(self, obj, refid):
@@ -276,7 +283,7 @@ class Banana:
 
     def testSlice(self, obj):
         assert(len(self.stack) == 1)
-        assert(isinstance(self.stack[0],SlicerParent))
+        assert(isinstance(self.stack[0],RootSlicer))
         self.tokens = []
         self.doSlice(obj)
         return self.tokens

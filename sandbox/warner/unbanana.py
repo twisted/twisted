@@ -8,15 +8,15 @@ import types
 class IBananaUnslicer:
     # .parent
 
-    # start/receiveToken/receiveChild/receiveAbort/finish are the main "here
-    # are some tokens, make an object out of them" entry points used by
-    # Unbanana
+    # start/receiveToken/receiveChild/receiveAbort/receiveClose are the main
+    # "here are some tokens, make an object out of them" entry points used
+    # by Unbanana
 
     def start(self, count):
         """Called to initialize the new slice. The 'count' argument is the
         reference id: if this object might be shared (and therefore the
         target of a 'reference' token), it should call
-        self.unbanana.setObject(count, obj) with the object being created.
+        self.protocol.setObject(count, obj) with the object being created.
         If this object is not available yet (tuples), it should save a
         Deferred there instead.
         """
@@ -28,22 +28,27 @@ class IBananaUnslicer:
         """The unslicer returned in receiveOpen has finished. 'childobject'
         is the object created by that unslicer. It might be an
         UnjellyingFailure if something went wrong, in which card it may be
-        appropriate to do self.unbanana.startDiscarding(childobject, self).
+        appropriate to do self.protocol.startDiscarding(childobject, self).
         It might also be a Deferred, in which case you should add a callback
         that will fill in the appropriate object later."""
 
     def receiveAbort(self):
         """An 'abort' token was received (indicating something went wrong in
         the sender). The new object being created should be abandoned. The
-        unslicer can do self.unbanana.startDiscarding(failure, self) to
+        unslicer can do self.protocol.startDiscarding(failure, self) to
         have itself replaced with a DiscardUnslicer object."""
 
-    def finish(self):
+    def receiveClose(self):
         """Called when the Close token is received. Should return the object
         just created, or an UnjellyingFailure if something went wrong. If
         necessary, unbanana.setObject should be called, then the Deferred
         created in start() should be fired with the new object."""
 
+    def finish(self):
+        """Called when the unslicer is popped off the stack. This is called
+        even if the pop is because of an exception. The unslicer should
+        perform cleanup and remove itself from any other stacks it may have
+        added itself to."""
 
     def description(self):
         """Return a short string describing where in the object tree this
@@ -64,6 +69,15 @@ class UnbananaFailure:
     def __repr__(self):
         return "<%s at: %s>" % (self.__class__, self.where)
 
+def setInstanceState(inst, state):
+    """Utility function to default to 'normal' state rules in unserialization.
+    """
+    if hasattr(inst, "__setstate__"):
+        inst.__setstate__(state)
+    else:
+        inst.__dict__ = state
+    return inst
+
 class BaseUnslicer:
     def __init__(self):
         pass
@@ -76,32 +90,34 @@ class BaseUnslicer:
         pass
 
     def receiveAbort(self):
-        here = self.unbanana.describe()
+        here = self.protocol.describe()
         failure = UnbananaFailure(here)
-        self.unbanana.startDiscarding(failure, self)
+        self.protocol.startDiscarding(failure, self)
 
     def receiveToken(self, token):
         raise NotImplementedError
 
-    def finish(self):
+    def receiveClose(self):
         raise NotImplementedError
 
     def childFinished(self, obj):
         if isinstance(obj, UnbananaFailure):
-            if self.unbanana.debug: print "%s .childFinished for UF" % self
-            self.unbanana.startDiscarding(obj, self)
+            if self.protocol.debug: print "%s .childFinished for UF" % self
+            self.protocol.startDiscarding(obj, self)
         self.receiveChild(obj)
 
     def receiveChild(self, obj):
         pass
 
+    def finish(self):
+        pass
 
     def doOpen(self, opentype):
         """Return an IBananaUnslicer object based upon the 'opentype'
         string. This object will receive all tokens destined for the
         subnode. The first node to return something other than None will
         stop the search. To get the default behavior (bypassing deeper
-        nodes), return UnslicerParent.doOpen() directly.
+        nodes), return RootUnslicer.doOpen() directly.
         """
         return None # means "defer to the node above me"
 
@@ -122,7 +138,7 @@ class BaseUnslicer:
         object described by the very first OPEN sent over the wire,
         incrementing for each subsequent one. The objects themselves are
         stored in any/all Unslicers who cares to. Generally this is the
-        UnslicerParent, but child slices could do it too if they wished.
+        RootUnslicer, but child slices could do it too if they wished.
         """
         pass
 
@@ -148,8 +164,8 @@ class DiscardUnslicer(BaseUnslicer):
         pass
     def receiveAbort(self):
         pass # we're already discarding
-    def finish(self):
-        if self.unbanana.debug: print "DiscardUnslicer.finish"
+    def receiveClose(self):
+        if self.protocol.debug: print "DiscardUnslicer.receiveClose"
         return self.failure
 
     def describe(self):
@@ -165,7 +181,7 @@ class ListUnslicer(BaseUnslicer):
         self.count = count
         if self.debug:
             print "%s[%d].start with %s" % (self, self.count, self.list)
-        self.unbanana.setObject(count, self.list)
+        self.protocol.setObject(count, self.list)
 
     def update(self, obj, index):
         if self.debug:
@@ -174,7 +190,7 @@ class ListUnslicer(BaseUnslicer):
         self.list[index] = obj
 
     def receiveToken(self, token):
-        if self.unbanana.debug or self.debug:
+        if self.protocol.debug or self.debug:
             print "%s[%d].receiveToken(%s{%s})" % (self, self.count,
                                                    token, id(token))
         self.list.append(token)
@@ -194,7 +210,7 @@ class ListUnslicer(BaseUnslicer):
         print why.getBriefTraceback()
         log.err(why)
 
-    def finish(self):
+    def receiveClose(self):
         return self.list
 
     def describe(self):
@@ -210,7 +226,7 @@ class TupleUnslicer(ListUnslicer):
         self.count = count
         if self.debug:
             print "%s[%d].start with %s" % (self, self.count, self.deferred)
-        self.unbanana.setObject(count, self.deferred)
+        self.protocol.setObject(count, self.deferred)
 
     def update(self, obj, index):
         if self.debug:
@@ -233,13 +249,13 @@ class TupleUnslicer(ListUnslicer):
         t = tuple(self.list)
         if self.debug:
             print " finished! tuple:%s{%s}" % (t, id(t))
-        self.unbanana.setObject(self.count, t)
+        self.protocol.setObject(self.count, t)
         self.deferred.callback(t)
         return t
 
-    def finish(self):
+    def receiveClose(self):
         if self.debug:
-            print "%s[%d].finish" % (self, self.count)
+            print "%s[%d].receiveClose" % (self, self.count)
         self.stoppedAdding = 1
         return self.checkComplete()
 
@@ -249,7 +265,7 @@ class DictUnslicer(BaseUnslicer):
 
     def start(self, count):
         self.d = {}
-        self.unbanana.setObject(count, self.d)
+        self.protocol.setObject(count, self.d)
         self.key = None
 
     def receiveToken(self, token):
@@ -273,7 +289,7 @@ class DictUnslicer(BaseUnslicer):
         self.d[key] = obj
 
 
-    def finish(self):
+    def receiveClose(self):
         return self.d
 
     def describe(self):
@@ -301,10 +317,10 @@ class BrokenDictUnslicer(DictUnslicer):
             raise "dead in receiveChild"
         DictUnslicer.receiveChild(self, obj)
 
-    def finish(self):
+    def receiveClose(self):
         if self.dieInFinish:
-            raise "dead in finish()"
-        DictUnslicer.finish(self)
+            raise "dead in receiveClose()"
+        DictUnslicer.receiveClose(self)
 
 class ReallyBrokenDictUnslicer(DictUnslicer):
     def start(self, count):
@@ -326,7 +342,7 @@ class InstanceUnslicer(DictUnslicer):
         self.d = {}
         self.deferred = Deferred()
         self.count = count
-        self.unbanana.setObject(count, self.deferred)
+        self.protocol.setObject(count, self.deferred)
         self.classname = None
         # push something to indicate that we only accept strings as
         # classname or keys
@@ -343,11 +359,11 @@ class InstanceUnslicer(DictUnslicer):
         # TODO: handle isinstance(obj, Deferred)
         self.receiveToken(obj)
 
-    def finish(self):
+    def receiveClose(self):
         o = Dummy()
         #o.__classname__ = self.classname
-        o.__dict__ = self.d
-        self.unbanana.setObject(self.count, o)
+        setInstanceState(o, self.d)
+        self.protocol.setObject(self.count, o)
         self.deferred.callback(o)
         return o
 
@@ -367,7 +383,7 @@ class ReferenceUnslicer(BaseUnslicer):
             raise ValueError, "'reference' token already got number"
         if type(token) != types.IntType:
             raise ValueError, "'reference' token requires integer"
-        self.obj = self.unbanana.getObject(token)
+        self.obj = self.protocol.getObject(token)
 
     def receiveChild(self, obj):
         raise ValueError, "'reference' token requires integer"
@@ -375,7 +391,7 @@ class ReferenceUnslicer(BaseUnslicer):
     def doOpen(self, opentype):
         raise ValueError, "'reference' token requires integer"
 
-    def finish(self):
+    def receiveClose(self):
         return self.obj
         
 
@@ -391,8 +407,8 @@ UnslicerRegistry = {
     'dict2': ReallyBrokenDictUnslicer,
     }
 
-    
-class UnslicerParent(BaseUnslicer):
+
+class RootUnslicer(BaseUnslicer):
     def __init__(self):
         self.objects = {}
 
@@ -410,9 +426,9 @@ class UnslicerParent(BaseUnslicer):
 
     def childFinished(self, o):
         self.objects = {}
-        self.unbanana.childFinished(o) # send it somewhere
+        self.protocol.childFinished(o) # send it somewhere
 
-    def finish(self):
+    def receiveClose(self):
         raise ValueError, "top-level should never receive CLOSE tokens"
 
     def describe(self):
@@ -420,13 +436,13 @@ class UnslicerParent(BaseUnslicer):
 
 
     def setObject(self, counter, obj):
-        if self.unbanana.debug:
+        if self.protocol.debug:
             print "setObject(%s): %s{%s}" % (counter, obj, id(obj))
         self.objects[counter] = obj
 
     def getObject(self, counter):
         obj = self.objects.get(counter)
-        if self.unbanana.debug:
+        if self.protocol.debug:
             print "getObject(%s) -> %s{%s}" % (counter, obj, id(obj))
         return obj
 
@@ -435,8 +451,8 @@ class Unbanana:
     debug = 0
 
     def __init__(self):
-        parent = UnslicerParent()
-        parent.unbanana = self
+        parent = RootUnslicer()
+        parent.protocol = self
         self.stack = [parent]
         self.objectCounter = 0
         self.objects = {}
@@ -461,9 +477,11 @@ class Unbanana:
                 print failure.failure.getBriefTraceback()
         assert(self.stack[-1] == leaf)
         d = DiscardUnslicer(failure)
-        d.unbanana = self
-        d.openCount = self.stack[-1].openCount
-        self.stack[-1] = d
+        d.protocol = self
+        old = self.stack.pop()
+        d.openCount = old.openCount
+        old.finish()
+        self.stack.append(d)
         if self.debug:
             self.printStack()
 
@@ -513,7 +531,7 @@ class Unbanana:
             where = self.describe() + ".<OPEN%s>" % opentype
             uf = UnbananaFailure(where, Failure())
             child = DiscardUnslicer(uf)
-        child.unbanana = self
+        child.protocol = self
         child.openCount = openCount
         self.stack.append(child)
         try:
@@ -531,13 +549,14 @@ class Unbanana:
             assert(0)
         try:
             if self.debug:
-                print "finish()"
-            o = self.stack[-1].finish()
+                print "receiveClose()"
+            o = self.stack[-1].receiveClose()
         except:
             where = self.describe() + ".<CLOSE>"
             o = UnbananaFailure(where, Failure())
-        if self.debug: print "finish returned", o
-        self.stack.pop()
+        if self.debug: print "receiveClose returned", o
+        old = self.stack.pop()
+        old.finish()
         try:
             if self.debug: print "receiveChild()"
             self.stack[-1].childFinished(o)

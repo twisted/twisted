@@ -2,8 +2,8 @@
 
 from twisted.trial import unittest
 from twisted.python import reflect
-from unbanana import Unbanana, Dummy, UnbananaFailure, UnslicerParent
-from banana import Banana, SlicerParent
+from unbanana import Unbanana, Dummy, UnbananaFailure, RootUnslicer
+from banana import Banana, RootSlicer
 
 def OPENlist(count):
     return ("OPEN", "list", count)
@@ -29,7 +29,7 @@ class UnbananaTestMixin:
         self.unbanana = Unbanana()
     def tearDown(self):
         self.failUnless(len(self.unbanana.stack) == 1)
-        self.failUnless(isinstance(self.unbanana.stack[0], UnslicerParent))
+        self.failUnless(isinstance(self.unbanana.stack[0], RootUnslicer))
             
     def do(self, tokens):
         return self.unbanana.processTokens(tokens)
@@ -271,7 +271,7 @@ class FailureTests(UnbananaTestMixin, unittest.TestCase):
                         CLOSE(1),
                        CLOSE(0)])
         self.assertUnbananaFailure(res, "root.[1].{}.<CLOSE>",
-                                   "dead in finish()")
+                                   "dead in receiveClose()")
         
 class BananaTests(unittest.TestCase):
     def setUp(self):
@@ -280,7 +280,7 @@ class BananaTests(unittest.TestCase):
         return self.banana.testSlice(obj)
     def tearDown(self):
         self.failUnless(len(self.banana.stack) == 1)
-        self.failUnless(isinstance(self.banana.stack[0], SlicerParent))
+        self.failUnless(isinstance(self.banana.stack[0], RootSlicer))
 
     def testList(self):
         res = self.do([1,2])
@@ -371,7 +371,7 @@ class BananaInstanceTests(unittest.TestCase):
         return self.banana.testSlice(obj)
     def tearDown(self):
         self.failUnless(len(self.banana.stack) == 1)
-        self.failUnless(isinstance(self.banana.stack[0], SlicerParent))
+        self.failUnless(isinstance(self.banana.stack[0], RootSlicer))
     
     def test_one(self):
         obj = Bar()

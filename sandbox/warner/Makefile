@@ -4,3 +4,6 @@ lint: banana.html
 	-lore -n --output lint $<
 banana.xhtml: banana.html
 	lore -p --config template=../../doc/howto/template.tpl $<
+
+test:
+	../../bin/trial -v test_banana
