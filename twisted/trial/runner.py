@@ -36,6 +36,7 @@ class ITestRunner(components.Interface):
     def runTests(self, output):
         pass
 
+
 class SingletonRunner:
     __implements__ = (ITestRunner,)
     def __init__(self, methodName):
@@ -100,6 +101,7 @@ class TestClassRunner:
 
     def runTests(self, output):
         self.testCase = self.testClass()
+        self.testCase.output = output
         self.testCase.setUpClass()
         for methodName in self.methodNames:
             method = getattr(self.testCase, methodName)
