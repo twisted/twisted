@@ -154,7 +154,7 @@ class IReactorArbitrary(Interface):
     def listenWith(self, portType, *args, **kw):
         """Start an instance of the given C{portType} listening.
 
-        @type portType: type which implements C{IListeningPort}
+        @type portType: type which implements L{IListeningPort}
         @param portType: The object given by C{portType(*args, **kw)}
         will be started listening.
         """
@@ -163,7 +163,7 @@ class IReactorArbitrary(Interface):
         """
         Start an instance of the given C{connectorType} connecting.
 
-        @type connectorType: type which implements C{IConnector}
+        @type connectorType: type which implements L{IConnector}
         @param connectorType: The object given by C{connectorType(*args, **kw)}
         will be started connecting.
         """
@@ -176,7 +176,7 @@ class IReactorTCP(Interface):
 
         @param port: a port number on which to listen
 
-        @param factory: a twisted.internet.protocol.ServerFactory instance
+        @param factory: a L{twisted.internet.protocol.ServerFactory} instance
 
         @param backlog: size of the listen queue
 
@@ -184,7 +184,7 @@ class IReactorTCP(Interface):
 
         @returns: an object that satisfies the IListeningPort interface
 
-        @raise CannotListenError: as defined in twisted.internet.error, if it
+        @raise CannotListenError: as defined here L{twisted.internet.error.CannotListenError}, if it
            cannot listen on this port (e.g., it cannot bind to the required port
            number)
         """
@@ -196,7 +196,7 @@ class IReactorTCP(Interface):
 
         @param port: a port number
 
-        @param factory: a twisted.internet.protocol.ClientFactory instance
+        @param factory: a L{twisted.internet.protocol.ClientFactory} instance
 
         @param timeout: number of seconds to wait before assuming the
                         connection has failed.
@@ -204,9 +204,9 @@ class IReactorTCP(Interface):
         @param bindAddress: a (host, port) tuple of local address to bind
                             to, or None.
 
-        @returns:  An object implementing IConnector. This connector will call
+        @returns:  An object implementing L{IConnector}. This connector will call
            various callbacks on the factory when a connection is made,
-           failed, or lost - see ClientFactory docs for details.
+           failed, or lost - see L{ClientFactory<twisted.internet.protocol.ServerFactory>} docs for details.
         """
 
 
@@ -339,14 +339,14 @@ class IReactorMulticast(Interface):
     """
 
     def listenMulticast(self, port, protocol, interface='', maxPacketSize=8192):
-        """Connects a given DatagramProtocol to the given numeric UDP port.
+        """Connects a given L{DatagramProtocol<twisted.internet.protocol.DatagramProtocol>} to the given numeric UDP port.
 
-        @returns: object conforming to IListeningPort.
+        @returns: object conforming to L{IListeningPort}.
         """
 
     def connectMulticast(self, remotehost, remoteport, protocol, localport=0,
                          interface='', maxPacketSize=8192):
-        """Connects a ConnectedDatagramProtocol instance to a UDP port.
+        """Connects a L{ConnectedDatagramProtocol<twisted.internet.protocol.ConnectedDatagramProtocol>} instance to a UDP port.
         """
 
 
@@ -381,7 +381,7 @@ class IReactorProcess(Interface):
                        in which case use those file descriptors.
                        (Not available on all systems.)
 
-        @see: C{twisted.internet.protocol.ProcessProtocol}
+        @see: L{twisted.internet.protocol.ProcessProtocol}
         """
 
 class IReactorTime(Interface):
@@ -611,13 +611,13 @@ class IReactorPluggableResolver(Interface):
     def installResolver(self, resolver):
         """Set the internal resolver to use to for name lookups.
 
-        @type resolver: An object implementing the C{IResolverSimple} interface
+        @type resolver: An object implementing the L{IResolverSimple} interface
         @param resolver: The new resolver to use.
         """
 
 
 class IReactorFDSet(Interface):
-    """Implement me to be able to use FileDescriptor type resources.
+    """Implement me to be able to use L{FileDescriptor<twisted.internet.abstract.FileDescriptor>} type resources.
 
     This assumes that your main-loop uses UNIX-style numeric file descriptors
     (or at least similarly opaque IDs returned from a .fileno() method)
@@ -659,7 +659,7 @@ class IListeningPort(Interface):
     def startListening(self):
         """Start listening on this port.
 
-        @raise CannotListenError: as defined in C{twisted.internet.error},
+        @raise CannotListenError: as defined here L{twisted.internet.error.CannotListenError},
                                   if it cannot listen on this port (e.g.,
                                   it is a TCP port and it cannot bind to
                                   the required port number)
@@ -707,7 +707,7 @@ class IWriteDescriptor(IFileDescriptor):
 
 
 class IReadWriteDescriptor(IReadDescriptor, IWriteDescriptor):
-    """I am a FileDescriptor that can both read and write.
+    """I am a L{FileDescriptor<twisted.internet.abstract.FileDescriptor>} that can both read and write.
     """
 
 
@@ -719,7 +719,7 @@ class IConsumer(Interface):
 
         This sets self to be a consumer for a producer.  When this object
         runs out of data on a write() call, it will ask the producer
-        to resumeProducing(). A producer should implement the IProducer
+        to resumeProducing(). A producer should implement the L{IProducer}
         interface.   A push producer which is unable to pause or stop
         need not register or unregister.
         """
@@ -844,7 +844,7 @@ class IProtocolFactory(Interface):
     """
 
     def buildProtocol(self, addr):
-        """Return an object implementing IProtocol, or None.
+        """Return an object implementing L{IProtocol}, or None.
 
         This method will be called when a connection has been established
         to addr.
@@ -949,13 +949,13 @@ class ITCPTransport(ITransport):
 class ITLSTransport(ITCPTransport):
     """A TCP transport that supports switching to TLS midstream.
 
-    Once TLS mode is started the transport will implement ISSLTransport.
+    Once TLS mode is started the transport will implement L{ISSLTransport}.
     """
     
     def startTLS(self, contextFactory):
         """Initiate TLS negotiation.
         
-        @param contextFactory: A context factory (see ssl.py)
+        @param contextFactory: A context factory (see L{ssl.py<twisted.internet.ssl>})
         """
 
 class ISSLTransport(ITCPTransport):
@@ -1016,7 +1016,7 @@ class IUDPTransport(Interface):
     def write(self, packet, (host, port)):
         """Write packet to given address.
 
-        Might raise error.ConnectionRefusedError.
+        Might raise L{ConnectionRefusedError<twisted.internet.error.ConnectionRefusedError>}.
         """
 
     def getHost(self):
@@ -1029,7 +1029,7 @@ class IUDPConnectedTransport(Interface):
     def write(self, packet):
         """Write packet to address we are connected to.
 
-        Might raise error.ConnectionRefusedError.
+        Might raise L{ConnectionRefusedError<twisted.internet.error.ConnectionRefusedError>}.
         """
 
     def getHost(self):
@@ -1042,7 +1042,7 @@ class IUNIXDatagramTransport(Interface):
     def write(self, packet, address):
         """Write packet to given address.
 
-        Might raise error.ConnectionRefusedError.
+        Might raise L{ConnectionRefusedError<twisted.internet.error.ConnectionRefusedError>}.
         """
 
     def getHost(self):
@@ -1055,7 +1055,7 @@ class IUNIXDatagramConnectedTransport(Interface):
     def write(self, packet):
         """Write packet to address we are connected to.
 
-        Might raise error.ConnectionRefusedError.
+        Might raise L{ConnectionRefusedError<twisted.internet.error.ConnectionRefusedError>}.
         """
 
     def getHost(self):
