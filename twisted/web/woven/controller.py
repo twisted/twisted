@@ -17,7 +17,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.35 $"[11:-2]
+__version__ = "$Revision: 1.36 $"[11:-2]
 
 import os
 import cgi
@@ -254,16 +254,7 @@ class LiveController(Controller):
             eventTarget = request.args['woven_clientSideEventTarget'][0]
             eventArgs = request.args.get('woven_clientSideEventArguments', [])
             #print "EVENT", eventName, eventTarget, eventArgs
-            self.view = sess.getCurrentPage().view
-            #request.d = self.view.d
-            target = self.view.subviews[eventTarget]
-            target.onEvent(request, eventName, *eventArgs)
-            sess.sendScript('woven_clientToServerEventComplete()')
-            return '''<html>
-    <body>
-        %s event sent to %s with arguments %s.
-    </body>
-</html>''' % (eventName, cgi.escape(str(target)), eventArgs)
+            return self.clientToServerEvent(request, eventName, eventTarget, eventArgs)
 
         # Unlink the current page in this user's session from MVC notifications
         page = sess.getCurrentPage()
@@ -275,6 +266,23 @@ class LiveController(Controller):
         self.pageSession = None
         return Controller.render(self, request)
 
+    def clientToServerEvent(self, request, eventName, eventTarget, eventArgs):
+        """The client sent an asynchronous event to the server.
+        Locate the View object targeted by this event and attempt
+        to call onEvent on it.
+        """
+        sess = request.getSession(interfaces.IWovenLivePage)
+        self.view = sess.getCurrentPage().view
+        #request.d = self.view.d
+        target = self.view.subviews[eventTarget]
+        target.onEvent(request, eventName, *eventArgs)
+        sess.sendScript('woven_clientToServerEventComplete()')
+        return '''<html>
+<body>
+    %s event sent to %s with arguments %s.
+</body>
+</html>''' % (eventName, cgi.escape(str(target)), eventArgs)
+
     def gatheredControllers(self, v, d, request):
         Controller.gatheredControllers(self, v, d, request)
         sess = request.getSession(interfaces.IWovenLivePage)
@@ -284,12 +292,12 @@ class LiveController(Controller):
         sess.currentId = request.currentId
 
     def domChanged(self, request, widget, node):
-        print "DOM CHANGED"
         sess = request.getSession(interfaces.IWovenLivePage)
         if sess is not None:
             if not hasattr(node, 'getAttribute'):
                 return
             nodeId = node.getAttribute('id')
+            print "DOM for %r is changing to %s" % (nodeId, node.toprettyxml())
             nodeXML = node.toxml()
             nodeXML = nodeXML.replace('\n', '')
             nodeXML = nodeXML.replace('\r', '')
@@ -298,7 +306,8 @@ class LiveController(Controller):
             view = sess.getCurrentPage().view
             #for key in widget.subviews.keys():
             #    view.subviews[key].unlinkViews()
-            view.subviews.update(widget.subviews)
+            if widget.subviews:
+                view.subviews.update(widget.subviews)
             sess.sendScript(js)
 
     def wchild_WebConduit2_js(self, request):
