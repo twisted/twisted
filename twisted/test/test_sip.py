@@ -432,7 +432,7 @@ class RegistrationTestCase(unittest.TestCase):
         r.addHeader("contact", "*")
         r.addHeader("via", sip.Via("client.com").toString())
         r.addHeader("expires", "0")
-        self.proxy.datagramReceived(r.toString()m ("client.com", 5060))
+        self.proxy.datagramReceived(r.toString(), ("client.com", 5060))
     
     def testRegister(self):
         self.register()
