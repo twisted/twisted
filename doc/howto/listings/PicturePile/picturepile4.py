@@ -17,7 +17,8 @@ components.registerAdapter(Preferences, server.Session, IPreferences)
 
 class DirectoryListing(page.Page):
 
-    templateFile = "directory-listing4.xhtml"
+    templateFile = "directory-listing4.html"
+    templateDirectory = os.path.split(os.path.abspath(__file__))[0]
 
     def initialize(self, *args, **kwargs):
         self.directory = kwargs['directory']
@@ -48,7 +49,7 @@ class DirectoryListing(page.Page):
         if os.path.isdir(os.path.join(self.directory,data)):
             a.text(data)
         else:
-            a.add('img', src=(data+'/preview'),width=size,height=size)
+            a.img(src=(data+'/preview'),width=size,height=size).text(data)
 
     def wvupdate_adjuster(self, request, widget, data):
         prefs = request.getSession(IPreferences)
@@ -67,7 +68,7 @@ class ImageSizer(input.Anything):
         
 class ImageDisplay(page.Page):
 
-    templateFile="image-display.xhtml"
+    templateFile="image-display.html"
 
     def initialize(self, *args, **kwargs):
         self.image = kwargs['image']

@@ -8,7 +8,8 @@ rootDirectory = os.path.expanduser("~/Pictures")
 
 class DirectoryListing(page.Page):
 
-    templateFile = "directory-thumbnails.xhtml"
+    templateFile = "directory-listing2.html"
+    templateDirectory = os.path.split(os.path.abspath(__file__))[0]
 
     def initialize(self, *args, **kwargs):
         self.directory = kwargs['directory']
@@ -37,14 +38,14 @@ class DirectoryListing(page.Page):
         if os.path.isdir(os.path.join(self.directory,data)):
             a.text(data)
         else:
-            a.add('img', src=(data+'/preview'),width='200',height='200')
+            a.img(src=(data+'/preview'),width='200',height='200').text(data)
 
        
         
         
 class ImageDisplay(page.Page):
 
-    templateFile="image-display.xhtml"
+    templateFile="image-display.html"
 
     def initialize(self, *args, **kwargs):
         self.image = kwargs['image']

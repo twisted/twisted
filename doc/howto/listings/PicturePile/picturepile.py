@@ -6,9 +6,11 @@ from twisted.web import server, static
 
 rootDirectory = os.path.expanduser("~/Pictures")
 
+
 class DirectoryListing(page.Page):
 
-    templateFile = "directory-listing.xhtml"
+    templateFile = "directory-listing.html"
+    templateDirectory = os.path.split(os.path.abspath(__file__))[0]
 
     def initialize(self, *args, **kwargs):
         self.directory = kwargs['directory']
@@ -33,7 +35,7 @@ class DirectoryListing(page.Page):
         
 class ImageDisplay(page.Page):
 
-    templateFile="image-display.xhtml"
+    templateFile="image-display.html"
 
     def initialize(self, *args, **kwargs):
         self.image = kwargs['image']

@@ -14,7 +14,7 @@ building a simple image gallery. Given a directory of images, it will display a
 listing of that directory; when a subdirectory or image is clicked on, it will
 be displayed.</p>
 
-<p>To begin, we write an HTML template for the directory index:</p>
+<p>To begin, we write an HTML template for the directory index, and save it as directory-listing.html:</p>
 
 <pre>
 &lt;html&gt;
@@ -50,10 +50,12 @@ import os
 from twisted.internet import app 
 from twisted.web.woven import page
 from twisted.web import server
+from twisted.web import microdom
 
 class DirectoryListing(page.Page):
 
-    templateFile = "directory-listing.xhtml"
+    templateFile = "directory-listing.html"
+    templateDirectory = os.path.split(os.path.abspath(__file__))[0]
 
     def initialize(self, *args, **kwargs):
         self.directory = kwargs['directory']
@@ -137,7 +139,7 @@ like this:</p>
 their views. In particular, the List view repeated the node marked with the
 <code>listItem</code> pattern for each item in the list.</p>
 
-<p>For displaying the actual images, we use this template:</p>
+<p>For displaying the actual images, we use this template, which we save as image-display.html:</p>
 
 <pre>
 &lt;html&gt;
@@ -153,9 +155,11 @@ their views. In particular, the List view repeated the node marked with the
 And here is the definition of <code>ImageDisplay</code>:
 
 <pre class="python">
+from twisted.web import static
+
 class ImageDisplay(page.Page):
 
-    templateFile="image-display.xhtml"
+    templateFile="image-display.html"
 
     def initialize(self, *args, **kwargs):
         self.image = kwargs['image']
@@ -174,7 +178,8 @@ called if there are no <code>wchild_</code> methods available to handle the
 requested URL.</p>
 
 <p>Finally, we create a webserver set to start with a directory listing, and
-connect it to a port:</p>
+connect it to a port. We will tell this Site to serve a DirectoryListing of a
+directory named "Pictures" in our home directory:</p>
 
 <pre class="python"
 >rootDirectory = os.path.expanduser("~/Pictures")
@@ -228,7 +233,7 @@ View Update) method on our DirectoryListing class:</p>
         if os.path.isdir(os.path.join(self.directory,data)):
             a.text(data)
         else:
-            a.add('img', src=(data+'/preview'),width='200',height='200')
+            a.img(src=(data+'/preview'),width='200',height='200').text(data)
 </pre>
 
 <p>When the <code>thumbnail</code> view is requested, this method is called with
@@ -283,7 +288,7 @@ title="DirectoryListing.wvupdate_thumbnail, in picturepile3.py"
         if os.path.isdir(os.path.join(self.directory,data)):
             a.text(data)
         else:
-            a.add('img', src=(data+'/preview'),width=size,height=size)
+            a.img(src=(data+'/preview'),width=size,height=size).text(data)
 </pre>
 
 <h2>Sessions</h2>
@@ -327,7 +332,7 @@ title="DirectoryListing.wvupdate_thumbnail and DirectoryListing.wvupdate_adjuste
         if os.path.isdir(os.path.join(self.directory,data)):
             a.text(data)
         else:
-            a.add('img', src=(data+'/preview'),width=size,height=size)
+            a.img(src=(data+'/preview'),width=size,height=size).text(data)
 
     def wvupdate_adjuster(self, request, widget, data):
         prefs = request.getSession(IPreferences)
