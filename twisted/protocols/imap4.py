@@ -29,7 +29,7 @@ from twisted.protocols import basic
 from twisted.internet import defer
 from twisted.python import log, components
 
-import binascii, operator, re, string, types
+import binascii, operator, re, string, types, rfc822
 
 class IMAP4Exception(Exception):
     def __init__(self, *args):
@@ -404,7 +404,7 @@ class IMAP4Server(basic.LineReceiver):
         parts = parseNestedParens(args)
         if len(parts) == 2:
             flags = ()
-            date = currentTime()
+            date = rfc822.formatdate()
             size = parts[1]
         elif len(parts) == 3:
             if isinstance(parts[1], types.StringType):
@@ -412,7 +412,7 @@ class IMAP4Server(basic.LineReceiver):
                 date = parts[1]
             else:
                 flags = parts[1]
-                date = currentTime()
+                date = rfc822.formatdate()
             size = parts[2]
         elif len(parts) ==  4:
             flags = tuple(parts[1])
