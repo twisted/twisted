@@ -3,14 +3,6 @@
 # See LICENSE for details.
 
 
-#Don't use twistd on windows
-from twisted.python import runtime
-import sys
-if runtime.platformType != 'posix':
-    sys.exit("Don't use twisted.scripts.twistd on windows; "
-             "use twisted.scripts._twistw.")
-# End hack
-
 from twisted.python import log, syslog
 from twisted.python.util import switchUID
 from twisted.application import app, service
