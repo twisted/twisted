@@ -109,8 +109,6 @@ class IOPump:
     def getTuple(self):
         return (self.client, self.server, self.pump, self.flush)
 
-
-
 def getPortal():
     port = portal.Portal(ftp.FTPRealm())
     port.registerChecker(checkers.AllowAnonymousAccess(), credentials.IAnonymous)
@@ -554,93 +552,6 @@ class TestDTPTesting(FTPTestCase):
         self.assertEquals(lenRxLines, avatar.finalFileSize)
 
 
-# --- Client Tests -------------------------------------------
-
-
-
-
-class ConnectedFTPClient(object):
-    c    = None
-    s    = None
-    iop  = None
-    dc   = None
-    ds   = None
-    diop = None
-
-    def __init__(self):
-        self.deferred = defer.Deferred()
-        s = Dummy()
-        c = ftp.FTPClient()
-
-        self.cio, self.sio = NonClosingStringIO(), NonClosingStringIO()
-        s.factory = protocol.ServerFactory()
-
-        c.factory = protocol.ClientFactory()
-        c.factory.maxProtocolInstances = 100000
-        c.factory.protocol = ftp.FTPClient
-
-        c.makeConnection(CustomFileWrapper(self.cio))
-        s.makeConnection(CustomFileWrapper(self.sio))
-
-        iop = IOPump(c, s, self.cio, self.sio)
-        self.c, self.s, self.iop = c, s, iop
-
-    def hookUpDTP(self):
-        raise NotImplementedException("don't do that, we're not ready")
-        log.debug('hooking up dtp')
-        self.dcio, self.dsio = NonClosingStringIO(), NonClosingStringIO()
-
-        ds = Dummy()
-        ds.pi = self.s
-
-        ds.factory = protocol.ServerFactory()
-        self.s.dtpFactory = ds.factory
-
-        ds.makeConnection(CustomFileWrapper(self.dsio))
-        
-        dc = DTP()
-        dc.logname = 'ftp-dtp'
-        dc.factory = protocol.ClientFactory()
-        dc.factory.protocol = Dummy
-        dc.setRawMode()
-        del dc.lines
-        dc.makeConnection(CustomFileWrapper(self.dcio))
-
-        iop = IOPump(dc, ds, self.dcio, self.dsio)
-        self.dc, self.ds, self.diop = dc, ds, iop
-        log.debug('flushing pi buffer')
-        self.iop.flush()
-        log.debug('hooked up dtp')
-        return
-
-    def getCSTuple(self):
-        return (self.c, self.s, self.iop)
-
-
-class FTPClientTestCase(unittest.TestCase):
-    def setUp(self):
-        self.cnx = ConnectedFTPClient()
-
-    def tearDown(self):
-        delayeds = reactor.getDelayedCalls()
-        for d in delayeds:
-            d.cancel()
-        self.cnx = None
- 
-
-class TestFTPClient:#(FTPClientTestCase):
-    def testSanity(self):
-        pass
-
-    def testSendLine(self):
-        # more of a sanity check
-        c, s, iop = self.cnx.getCSTuple()
-        c.sendLine('test')
-        iop.flush()
-        self.assertEquals(s.lines[-1], 'test')
-    
-    
-
 
 class TestAnonymousAvatar(FTPTestCase):
     def testAnonymousLogin(self):
@@ -654,7 +565,8 @@ class TestAnonymousAvatar(FTPTestCase):
         pump.flush()
         self.assertEquals(c.f.lines[-1], ftp.RESPONSE[ftp.GUEST_LOGGED_IN_PROCEED], c.f.lines)
 
-
+    testAnonymousLogin.todo = 'this test needs to be refactored' 
+    
     def doAnonymousLogin(self,c,s,pump):
         c, s, pump = self.cnx.getCSPumpTuple()
         pump.flush()
@@ -671,6 +583,7 @@ class TestAnonymousAvatar(FTPTestCase):
         pump.flush()
         self.assertEquals(c.f.lines[-1], '257 "/" is current directory.')
 
+    testPWDOnLogin.todo = 'need to implement fake filesystem for testing' 
 
     def testCWD(self):
         import warnings
@@ -699,6 +612,8 @@ class TestAnonymousAvatar(FTPTestCase):
         send('PWD'); flush()
         send('CWD ../../../'); flush()
 
+    testCWD.todo = 'need to implement fake filesystem for testing' 
+
 
     def testCDUP(self):
         c, s, pump = self.cnx.getCSPumpTuple()
@@ -723,13 +638,19 @@ class TestAnonymousAvatar(FTPTestCase):
         send('PWD'); flush()
         self.assertEquals(c.f.lines[-1], '257 "/" is current directory.')
 
+    testCDUP.todo = 'need to implement fake filesystem for testing' 
 
     def testWelcomeMessage(self):
         c, s, pump = self.cnx.getCSPumpTuple()
         pump.flush()
         self.assertEquals(c.f.lines[-1], ftp.RESPONSE[ftp.WELCOME_MSG])
 
-TestAnonymousAvatar.skip = 'skip until we can support it'
+    testWelcomeMessage.todo = 'not ready yet'
+
+    def testGetUserUIDAndGID(self):
+        pass
+
+#TestAnonymousAvatar.skip = 'skip until we can support it'
 
 # -- Client Tests -----------------------------------------------------------
 
