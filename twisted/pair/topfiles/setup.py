@@ -7,7 +7,7 @@ if __name__ == '__main__':
         twisted_subproject="pair",
         # metadata
         name="Twisted Pair",
-        version="0.1.0",
+        version="SVN-Trunk",
         description="Twisted Pair is low-level netorking stuff.",
         author="Twisted Matrix Laboratories",
         author_email="twisted-python@twistedmatrix.com",

@@ -7,7 +7,7 @@ if __name__ == '__main__':
         twisted_subproject="news",
         # metadata
         name="Twisted News",
-        version="0.1.0",
+        version="SVN-Trunk",
         description="Twisted News is a news server.",
         author="Twisted Matrix Laboratories",
         author_email="twisted-python@twistedmatrix.com",

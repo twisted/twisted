@@ -7,7 +7,7 @@ if __name__ == '__main__':
         twisted_subproject="flow",
         # metadata
         name="Twisted Flow",
-        version="0.1.0",
+        version="SVN-Trunk",
         description="Twisted Flow is a concurrency thing.",
         author="Twisted Matrix Laboratories",
         author_email="twisted-python@twistedmatrix.com",

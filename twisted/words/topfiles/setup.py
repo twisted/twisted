@@ -7,7 +7,7 @@ if __name__ == '__main__':
         twisted_subproject="words",
         # metadata
         name="Twisted Words",
-        version="0.1.0",
+        version="SVN-Trunk",
         description="Twisted Words is chat.",
         author="Twisted Matrix Laboratories",
         author_email="twisted-python@twistedmatrix.com",

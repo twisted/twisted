@@ -7,7 +7,7 @@ if __name__ == '__main__':
         twisted_subproject="names",
         # metadata
         name="Twisted Names",
-        version="0.1.0",
+        version="SVN-Trunk",
         description="Twisted Names is a DNS implementation.",
         author="Twisted Matrix Laboratories",
         author_email="twisted-python@twistedmatrix.com",

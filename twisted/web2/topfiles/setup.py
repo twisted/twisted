@@ -7,7 +7,7 @@ if __name__ == '__main__':
         twisted_subproject="web2",
         # metadata
         name="Twisted Web2",
-        version="0.1.0",
+        version="SVN-Trunk",
         description="Twisted Web2 is a web server.",
         author="Twisted Matrix Laboratories",
         author_email="twisted-python@twistedmatrix.com",

@@ -7,7 +7,7 @@ if __name__ == '__main__':
         twisted_subproject="xish",
         # metadata
         name="Twisted Xish",
-        version="0.1.0",
+        version="SVN-Trunk",
         description="Twisted Xish is some XML stuff.",
         author="Twisted Matrix Laboratories",
         author_email="twisted-python@twistedmatrix.com",

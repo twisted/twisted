@@ -7,7 +7,7 @@ if __name__ == '__main__':
         twisted_subproject="conch",
         # metadata
         name="Conch",
-        version="0.9",
+        version="SVN-Trunk",
         description="Conch is a SSHv2 implementation.",
         author="Twisted Matrix Laboratories",
         author_email="twisted-python@twistedmatrix.com",
