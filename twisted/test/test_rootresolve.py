@@ -19,6 +19,7 @@
 Test cases for Twisted.names' root resolver.
 """
 
+from twisted.flow import flow
 from twisted.internet import defer
 from twisted.protocols import dns
 from twisted.names import root
@@ -56,7 +57,7 @@ class RootResolverTestCase(unittest.TestCase):
         self.msgs.append(m)
         
         d = root.discoverAuthority(host, ['root.server'], p=self.p)
-        r = unittest.deferredResult(d)
+        r = unittest.deferredResult(flow.Deferred(d))
 
         self.assertEquals(len(r), 2)
         self.assertEquals(r[1], 'root.server')
@@ -92,7 +93,7 @@ class RootResolverTestCase(unittest.TestCase):
             self.msgs.append(m)
         
         d = root.discoverAuthority(host, ['root.server'], p=self.p)
-        r = unittest.deferredResult(d)
+        r = unittest.deferredResult(flow.Deferred(d))
         
         self.assertEquals(len(r), 2)
         self.assertEquals(r[1], 'root.server')
