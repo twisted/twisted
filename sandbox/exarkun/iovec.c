@@ -63,7 +63,7 @@ static PyObject* iovec_writev(PyObject* self, PyObject* args) {
   if (error)
     return NULL;
 
-  return PyInt_FromLong(retval);
+  return Py_BuildValue("(ii)", retval, errno);
 }
 
 static PyMethodDef iovec_methods[] = {

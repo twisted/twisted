@@ -31,7 +31,7 @@ class IOVec(unittest.TestCase):
     def testWriteToFileDescriptor(self):
         s = [chr(i + ord('a')) * i for i in range(1, HARD_CHUNK_SIZE+1)]
         f = tempfile.TemporaryFile('w+')
-        self.assertEquals(arith(HARD_CHUNK_SIZE), iovec.writev(f.fileno(), s))
+        self.assertEquals(arith(HARD_CHUNK_SIZE), iovec.writev(f.fileno(), s)[0])
         
         f.seek(0, 0)
         self.assertEquals(f.read(), ''.join(s))
@@ -59,9 +59,12 @@ class IOVec(unittest.TestCase):
         shouldGet = ''.join(v)
 
         while v:
-            written = iovec.writev(client.fileno(), v)
+            written, errno = iovec.writev(client.fileno(), v)
             if written == -1:
-                continue
+                if errno == errno.EINTR:
+                    continue
+                else:
+                    print 'Breaking', errno
             while True:
                 try:
                     bytes += s.recv(written * 10)
