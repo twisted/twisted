@@ -9,6 +9,7 @@
 
 # HOWTO Generate me:
 # 1.) Grab a copy of yapps2: http://theory.stanford.edu/~amitp/Yapps/
+#     (available on debian by "apt-get install -t unstable yapps2")
 # 2.) Hack it to not add a "import yappsrt" in the output file
 # 3.) Generate the grammar as usual
 
