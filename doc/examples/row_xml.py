@@ -4,12 +4,13 @@ from twisted.internet import reactor
 from twisted.internet import main
 from twisted.internet.app import Application
 
-from twisted.enterprise import adbapi, row, sqlreflector
+from twisted.enterprise import adbapi, row, sqlreflector, xmlreflector
 
 # TODO: turn this into real unit test!!!!
 
-""" This example show using twisted.enterpise.row to load objects from
-a database and manipulate them.
+""" Load objects from postgres DB
+    Writes the objects out to XML DB
+    Loads the objects from the XML DB
 """
 
 testSchema = """
@@ -81,28 +82,17 @@ INSERT INTO lamps VALUES (25, 53, 'chair4', 'a big lamp5');
 INSERT INTO lamps VALUES (26, 54, 'couch',  'a big lamp6');
 """
 
-manager = None
+xmanager = None
 manager = None
 
 ##################################################
 ########## Definitions of Row Classes ############
 ##################################################
 
-def myRowFactory(rowClass, data, kw):
-    newRow = rowClass()
-    newRow.__dict__.update(kw)
-    return newRow
-
 class RoomRow(row.RowObject):
     rowColumns       = ["roomId", "town_id", "name", "owner", "posx", "posy", "width", "height" ]
     rowKeyColumns    = [("roomId","int4")]
     rowTableName     = "testrooms"
-    rowFactoryMethod = [myRowFactory]
-    
-    def moveTo(self, x, y):
-        self.posx = x
-        self.posy = y
-        
     def __repr__(self):
         return "<Room #%d: %s (%s) (%d,%d)>" % (self.roomId, self.name, self.owner, self.posx, self.posy)
 
@@ -111,7 +101,6 @@ class FurnitureRow(row.RowObject):
     rowKeyColumns   = [("furnId","int4")]
     rowTableName    = "furniture"
     rowForeignKeys  = [("testrooms", [("roomId","int4")], [("roomId","int4")]) ]
-
     def __repr__(self):
         return "Furniture #%d: room #%d (%s) (%d,%d)" % (self.furnId, self.roomId, self.name, self.posx, self.posy)
 
@@ -119,9 +108,7 @@ class RugRow(row.RowObject):
     rowColumns       = ["rugId", "roomId", "name"]
     rowKeyColumns    = [("rugId","int4")]
     rowTableName     = "rugs"
-    rowFactoryMethod = [myRowFactory]
     rowForeignKeys   = [( "testrooms", [("roomId","int4")],[("roomId","int4")]) ]
-    
     def __repr__(self):
         return "Rug %#d: room #%d, (%s)" % (self.rugId, self.roomId, self.name)
 
@@ -131,7 +118,6 @@ class LampRow(row.RowObject):
     rowTableName    = "lamps"
     rowForeignKeys  = [("furniture", [("furnId","int4"),("furnName", "varchar")],
                       [("furnId","int4"),("name", "varchar")]) ]
-    
     def __repr__(self):
         return "Lamp #%d" % self.lampId
 
@@ -140,15 +126,11 @@ class LampRow(row.RowObject):
 ##################################################
 
 def runTests(ignore=0):
-    global manager, manager
+    global manager
     print "running tests."
-    manager.loadObjectsFrom("testrooms").addCallback(gotRooms)
+    manager.loadObjectsFrom("testrooms").addCallback(gotDBRooms)
 
-def createSchema():
-    return dbpool.runOperation(testSchema).addCallbacks(kickOffTests)
-
-def gotRooms(rooms):
-    print "got Rooms.", rooms
+def dumpRooms(rooms):
     if not rooms:
         print "no rooms found!"
         main.shutDown()
@@ -162,61 +144,22 @@ def gotRooms(rooms):
                     for inner in child.container:
                         print "        ", inner
 
-    room.moveTo( int(random.random() * 100) , int(random.random() * 100) )
-    manager.updateRow(room).addCallback(onUpdate)
-
-
-
-def gotFurniture(furniture):
-    for f in furniture:
-        print f
-        
-    main.shutDown()
-        
-def onUpdate(data):
-    print "updated row."
-    # create a new room
-    global newRoom
-    newRoom = RoomRow()
-    newRoom.assignKeyAttr("roomId", kf.getNextKey())
-    newRoom.town_id = 20
-    newRoom.name = 'newRoom1'
-    newRoom.owner = 'fred'
-    newRoom.posx = 100
-    newRoom.posy = 100
-    newRoom.width = 15
-    newRoom.height = 20
     
-    #insert row into database
-    manager.insertRow(newRoom).addCallback(onInsert)
+def gotDBRooms(rooms):
+    print "------------ got rooms from database ------------"
+    dumpRooms(rooms)
+    for obj in manager.rowCache.values():
+        xmanager.insertRow(obj)
 
-def onInsert(data):
-    global newRoom
-    print "row inserted"
-    print newRoom.roomId
-    manager.deleteRow(newRoom).addCallback(onDelete)
+    xmanager.loadObjectsFrom("testrooms", data=None, whereClause=("roomId", 12) ).addCallback(gotXMLRooms)
 
-def onDelete(data):
-    print "row deleted."
-    newRoom2 = RoomRow()
-    newRoom2.assignKeyAttr("roomId", 10)
-    manager.selectRow(newRoom2).addCallback(onSelected)
-
-
-def onSelected(room):
-    print "\ngot Room:", room
-    main.shutDown()    
-    #global manager
-    #manager.loadObjectsFrom("testrooms").addCallback(gotRooms2)
-
-def gotRooms2(rooms):
-    print "got more rooms", rooms
+def gotXMLRooms(rooms):
+    print "------------ got rooms from XML ------------"    
+    dumpRooms(rooms)
     main.shutDown()
-
+    
 def tick():
     main.addTimeout(tick, 0.5)
-
-newRoom = None
 
 dbpool = adbapi.ConnectionPool("pyPgSQL.PgSQL", database="sean", host="localhost", port=5432)
 
@@ -224,13 +167,9 @@ dbpool = adbapi.ConnectionPool("pyPgSQL.PgSQL", database="sean", host="localhost
 application = Application("testApp")
 
 def kickOffTests(ignoredResult=0):
-    global manager, manager
+    global manager, xmanager
+    xmanager = xmlreflector.XMLReflector("myXMLdb", [RoomRow, FurnitureRow, RugRow, LampRow] )    
     manager = sqlreflector.SQLReflector(dbpool, [RoomRow, FurnitureRow, RugRow, LampRow], runTests)
-
-
-#createSchema()
-
-kf = row.KeyFactory(100000,50000)
 
 # make sure we can be shut down on windows.
 main.addTimeout(tick, 0.5)
