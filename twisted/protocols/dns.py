@@ -41,10 +41,9 @@ AF_INET6 = getattr(socket, 'AF_INET6', 'AF_INET6')
 try:
     from Crypto.Util import randpool
 except ImportError:
-    import os
     for randSource in ('random', 'srandom', 'urandom'):
         try:
-            f = file('/dev/random')
+            f = file('/dev/' + randSource)
             f.read(2)
             f.close()
         except:
