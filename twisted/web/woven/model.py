@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-__version__ = "$Revision: 1.32 $"[11:-2]
+__version__ = "$Revision: 1.33 $"[11:-2]
 
 import types
 import weakref
@@ -421,6 +421,7 @@ try:
     components.registerAdapter(ListModel, types.TupleType, interfaces.IModel)
     components.registerAdapter(DictionaryModel, types.DictionaryType, interfaces.IModel)
     components.registerAdapter(DeferredWrapper, defer.Deferred, interfaces.IModel)
+    components.registerAdapter(DeferredWrapper, defer.DeferredList, interfaces.IModel)
 except ValueError:
     # The adapters were already registered
     pass
