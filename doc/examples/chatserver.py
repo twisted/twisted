@@ -10,7 +10,12 @@ from twisted.protocols import basic
 
 class MyChat(basic.LineReceiver):
     def connectionMade(self):
+        print "Got new client!"
         self.factory.clients.append(self)
+
+    def connectionLost(self):
+        print "Lost a client!"
+        self.factory.clients.remove(self)
 
     def lineReceived(self, line):
         print "received", repr(line)
