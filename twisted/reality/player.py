@@ -58,7 +58,7 @@ class Player(styles.Versioned, thing.Thing, pb.Perspective):
         st2 = styles.Versioned.__getstate__(self, st1)
         return st2
 
-    persistentVersion = 1
+    persistenceVersion = 1
 
     def upgradeToVersion1(self):
         print 'upgrading player',self.name

@@ -70,7 +70,7 @@ class Reality(delay.Delayed,
         styles.Versioned.__setstate__(self, state)
         delay.Delayed.__setstate__(self, self.__dict__)
 
-    persistentVersion = 1
+    persistenceVersion = 1
 
     def upgradeToVersion1(self):
         print 'Upgrading Twisted Reality instance.'

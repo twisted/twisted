@@ -196,6 +196,11 @@ class Versioned:
         persistVers = (self.__dict__.get('persistenceVersion') or 0)
         if persistVers:
             del self.__dict__['persistenceVersion']
+        # Some previous versions of twisted had this weird spelling error...
+        else:
+            persistVers = (self.__dict__.get('persistentVersion') or 0)
+            if persistVers:
+                del self.__dict__['persistentVersion']
         while persistVers < currentVers:
             persistVers = persistVers + 1
             method = getattr(self, 'upgradeToVersion%s' % persistVers, None)

@@ -159,7 +159,7 @@ class ResourcePublisher(pb.Service, pb.Perspective, styles.Versioned):
         pb.Perspective.__init__(self, "any", self, "any")
         self.site = site
 
-    persistentVersion = 1
+    persistenceVersion = 1
 
     def upgradeToVersion1(self):
         """Version 1 Persistence Upgrade

@@ -49,7 +49,7 @@ class Participant(pb.Perspective, styles.Versioned):
         self.client = None
         self.info = ""
 
-    persistentVersion = 1
+    persistenceVersion = 1
 
     def upgradeToVersion1(self):
         self.status = OFFLINE
