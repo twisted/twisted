@@ -375,3 +375,74 @@ class LocalRemoteAddressTestCase(unittest.TestCase):
         self.assertEquals(p1.getHost(), p2.transport.getPeer())
 
         p1.stopListening()
+    
+
+class WriterProtocol(protocol.Protocol):
+    def connectionMade(self):
+        # use everything ITransport claims to provide. If something here
+        # fails, the exception will be written to the log, but it will not
+        # directly flunk the test. The test will fail when maximum number of
+        # iterations have passed and the writer's factory.done has not yet
+        # been set.
+        self.transport.write("Hello Cleveland!\n")
+        seq = ["Goodbye", " cruel", " world", "\n"]
+        self.transport.writeSequence(seq)
+        peer = self.transport.getPeer()
+        if peer[0] != "INET":
+            print "getPeer returned non-INET socket:", peer
+            self.factory.problem = 1
+        us = self.transport.getHost()
+        if us[0] != "INET":
+            print "getHost returned non-INET socket:", us
+            self.factory.problem = 1
+        self.factory.done = 1
+        self.transport.loseConnection()
+
+class ReaderProtocol(protocol.Protocol):
+    def dataReceived(self, data):
+        self.factory.data += data
+    def connectionLost(self):
+        self.factory.done = 1
+
+class WriterClientFactory(protocol.ClientFactory):
+    def __init__(self):
+        self.done = 0
+        self.data = ""
+    def buildProtocol(self, addr):
+        p = ReaderProtocol()
+        p.factory = self
+        self.protocol = p
+        return p
+
+class WriteDataTestCase(unittest.TestCase):
+    """Test that connected TCP sockets can actually write data. Try to
+    exercise the entire ITransport interface.
+    """
+
+    def __init__(self):
+        self.port = None
+    def tearDown(self):
+        if self.port:
+            # if something goes wrong, release the port
+            self.port.stopListening()
+            
+    def testWriter(self):
+        f = protocol.Factory()
+        f.protocol = WriterProtocol
+        f.done = 0
+        f.problem = 0
+        self.port = reactor.listenTCP(10080, f)
+        clientF = WriterClientFactory()
+        reactor.connectTCP("localhost", 10080, clientF)
+        count = 0
+        while not ((count > 10) or (f.done and clientF.done)):
+            reactor.iterate()
+            count += 1
+        self.failUnless(f.done, "writer didn't finish, it probably died")
+        self.failUnless(f.problem == 0, "writer indicated an error")
+        self.failUnless(clientF.done, "client didn't see connection dropped")
+        expected = "".join(["Hello Cleveland!\n",
+                            "Goodbye", " cruel", " world", "\n"])
+        self.failUnless(clientF.data == expected,
+                        "client didn't receive all the data it expected")
+        
