@@ -94,13 +94,12 @@ class DeferredResource(resource.Resource):
     I wrap up a Deferred that will eventually result in a Resource
     object.
     """
-    isLeaf = 1
+
     def __init__(self, d):
         resource.Resource.__init__(self)
         self.d = d
 
     def render(self, request):
-        # TODO: getChild stuffs
         self.d.addCallback(self._cbChild, request).addErrback(
             self._ebChild,request)
         from twisted.web.server import NOT_DONE_YET
@@ -113,6 +112,15 @@ class DeferredResource(resource.Resource):
     def _ebChild(self, reason, request):
         request.processingFailed(reason)
         return reason
+
+    def getChildWithDefault(self, path, request):
+        self.d.addCallback(self._cbGetChild, path, request)
+        return DeferredResource(self.d)
+
+    def _cbGetChild(self, child, path, request):
+        print "HEY HEY it is MY COOL CB", child, repr(path), request
+        return child.getChildWithDefault(path, request)
+
 
 
 stylesheet = """

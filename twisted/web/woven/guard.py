@@ -3,7 +3,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.22 $"[11:-2]
+__version__ = "$Revision: 1.23 $"[11:-2]
 
 import random
 import time
@@ -374,7 +374,7 @@ class UsernamePasswordWrapper(Resource):
                                       ).addCallback(
                     lambda (interface, avatarAspect, logout):
                     s.setResourceForPortal(avatarAspect,
-                                           self.portal, logout)))
+                                           self.portal, logout))).getChildWithDefault(path, request)
 
 
 from twisted.web.woven import interfaces, utils
