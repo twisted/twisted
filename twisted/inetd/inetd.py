@@ -111,7 +111,7 @@ class PortmapSetProtocol(Protocol):
         self.args = args
 
     def connectionMade(self):
-        self.transport.write(' '.join(self.args))
+        self.transport.write(' '.join(map(str, self.args)))
         self.transport.loseConnection()
 
 
@@ -155,11 +155,29 @@ def main(options=None):
             continue
 
         if rpc:
-            if not rpcConf.services.has_key(service.name):
-                log.msg('Unknown RPC service: ' + repr(service.name))
-                continue
             protocol = protocol[4:]     # trim 'rpc/'
 
+            # RPC has extra options, so extract that
+            try:
+                name, rpcVersions = service.name.split('rpc')
+            except ValueError:
+                log.msg('Bad RPC service/version: ' + service.name)
+                continue
+
+            if not rpcConf.services.has_key(name):
+                log.msg('Unknown RPC service: ' + repr(service.name))
+                continue
+
+            try:
+                if '-' in rpcVersions:
+                    start, end = map(int, rpcVersions.split('-'))
+                    rpcVersions = range(start, end+1)
+                else:
+                    rpcVersions = [int(rpcVersions)]
+            except ValueError:
+                log.msg('Bad RPC versions: ' + str(rpcVersions))
+                continue
+            
         if (protocol, service.socketType) not in [('tcp', 'stream'),
                                                   ('udp', 'dgram')]:
             log.msg('Skipping unsupported type/protocol: %s/%s'
@@ -191,23 +209,6 @@ def main(options=None):
                     continue
 
         log.msg('Adding service:', service.name, service.port, protocol)
-        if rpc:
-            # RPC has extra options, so extract that
-            try:
-                name, rpcVersions = service.name.split('rpc')
-            except ValueError:
-                log.msg('Bad RPC service/version: ' + service.name)
-                continue
-            try:
-                if '-' in rpcVersions:
-                    start, end = map(int, rpcVersions.split('-'))
-                    rpcVersions = range(start, end+1)
-                else:
-                    rpcVersions = [int(rpcVersions)]
-            except ValueError:
-                log.msg('Bad RPC versions: ' + str(rpcVersions))
-                continue
-            
         if service.program == 'internal':
             # Internal services can use a standard ServerFactory
             if not internalProtocols.has_key(service.name):
