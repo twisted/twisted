@@ -21,6 +21,8 @@ API Stability: stable
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
+from twisted.python.compat import *
+
 # System Imports
 import os
 import string
