@@ -108,7 +108,7 @@ class ClientContextFactory:
 class Client(tcp.Client):
     """I am an SSL client."""
 
-    __implements__ = tcp.Client.__implements__, interfaces.ISSLTransport
+    __implements__ = tuple([i for i in tcp.Client.__implements__ if i is not interfaces.ITLSTransport]), interfaces.ISSLTransport
     
     def __init__(self, host, port, bindAddress, ctxFactory, connector, reactor=None):
         # tcp.Client.__init__ depends on self.ctxFactory being set
