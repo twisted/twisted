@@ -30,7 +30,6 @@ import zlib
 
 # external library imports
 from Crypto import Util
-from Crypto.Hash import HMAC
 from Crypto.PublicKey import RSA
 from Crypto.Util import randpool
 
@@ -582,7 +581,7 @@ class SSHCiphers:
         self.dec_block_size = self.inCip.block_size
         self.outMAC = self._getMAC(self.outMacType, outInteg)
         self.inMAC = self._getMAC(self.inMacType, inInteg)
-        self.verify_digest_size = self.inMAC.digest_size
+        self.verify_digest_size = self.inMAC[2]
 
     def _getCipher(self, cip, iv, key):
         modName, keySize = self.cipherMap[cip]
@@ -598,7 +597,8 @@ class SSHCiphers:
             ds=len(mod.new().digest())
         else:
             ds=mod.digest_size
-        return HMAC.new(key[:ds], digestmod=mod)
+        key = key[:ds] + '\x00' * (64 - ds)
+        return mod, key, ds
 
     def encrypt(self, blocks):
         return self.outCip and self.outCip.encrypt(blocks) or blocks
@@ -607,16 +607,27 @@ class SSHCiphers:
         return self.inCip and self.inCip.decrypt(blocks) or blocks
 
     def makeMAC(self, seqid, data):
-        c = self.outMAC.copy()
-        c.update(struct.pack('>L', seqid))
-        c.update(data)
-        return c.digest()
+        data = struct.pack('>L', seqid) + data
+        mod, key, ds = self.outMAC
+        ipad = '\x36' * 64
+        opad = '\x5c' * 64 
+        inner = mod.new(strxor(key,ipad)+data)
+        outer = mod.new(strxor(key,opad)+inner.digest())
+        return outer.digest()
 
     def verify(self, seqid, data, mac):
-        c = self.inMAC.copy()
-        c.update(struct.pack('>L', seqid))
-        c.update(data)
+        data = struct.pack('>L', seqid) + data
+        mod, key, ds = self.inMAC
+        ipad = '\x36' * 64
+        opad = '\x5c' * 64
+        inner = mod.new(strxor(key,ipad)+data)
+        outer = mod.new(strxor(key,opad)+inner.digest())
+        return mac == outer.digest()
         return mac == c.digest()
+
+def strxor(x, y):
+    return "".join(map(lambda a,b:chr(a^b), map(ord,x), map(ord,y)))
+# for hmac
 
 def buffer_dump(b, title = None):
     r=title or ''
