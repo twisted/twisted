@@ -65,6 +65,8 @@ class Deferred:
     writing an asynchronous protocol for twisted.internet. For methods
     that come from outside packages that are not under our control, we use
     threads (see for example twisted.enterprise.adbapi).
+
+    For more information about Deferreds, see doc/howto/defer.html
     """
 
     called = 0
@@ -120,6 +122,10 @@ class Deferred:
                                  callbackKeywords=kw, errbackKeywords=kw)
 
     def chainDeferred(self, d):
+        """Chain another Deferred to this Deferred.
+        
+        This method adds callbacks to this Deferred to call d's callback or
+        errback, as appropriate."""
         return self.addCallbacks(d.callback, d.errback)
 
     def callback(self, result):
