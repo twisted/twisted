@@ -133,6 +133,13 @@ class JellyTestCase(unittest.TestCase):
         assert z[0]['list'] is z[1]
         assert z[0]['list'][0] is z
 
+    def testMoreReferences(self):
+        a = []
+        t = (a,)
+        a.append((t,))
+        s = jelly.jelly(t)
+        z = jelly.unjelly(s)
+        assert z[0][0][0] == z
 
     def testPersistentStorage(self):
         perst = [{}, 1]
