@@ -81,7 +81,7 @@ class SecondaryAuthority(common.ResolverBase):
         ans, _, _ = zone
         self.records = r = {}
         for rec in ans:
-            if rec.type == dns.SOA:
+            if not self.soa and rec.type == dns.SOA:
                 self.soa = (str(rec.name).lower(), rec.payload)
             else:
                 r.setdefault(str(rec.name).lower(), []).append(rec.payload)
