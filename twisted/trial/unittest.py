@@ -2,8 +2,10 @@
 Twisted Test Framework
 """
 
-from twisted.python import reflect
+from twisted.python import reflect, log
 import sys, time, string, traceback, types, os, glob
+
+log.startKeepingErrors()
 
 class SkipTest(Exception):
     pass
@@ -152,7 +154,7 @@ class TestSuite:
                         reactor.iterate() # flush them
                         # this will go live someday: tests should not leave
                         # lingering surprises
-                        #self.fail(msg)
+                        #testCase.fail(msg)
                 except AssertionError, e:
                     if ok:
                         output.reportFailure(testClass, method, sys.exc_info())
@@ -163,7 +165,11 @@ class TestSuite:
                     if ok:
                         output.reportError(testClass, method, sys.exc_info())
                     ok = 0
-                    
+
+                for e in log.flushErrors():
+                    ok = 0
+                    output.reportError(testClass, method, e)
+
                 if ok:
                     output.reportSuccess(testClass, method)
 
