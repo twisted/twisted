@@ -21,7 +21,6 @@ Currently in a state of flux, API is unstable.
 """
 
 from twisted.internet import defer
-import log
 import os, errno, time
 
 def createLock(lockedFile, schedule, retryCount = 10, retryTime = 5, usePID = 0):
@@ -71,7 +70,6 @@ class LockFile:
         self.touchLoop.start(60)
 
     def touch(self):
-        log.msg('touching %s' % self)
         f = open(self.filename, 'w')
         f.seek(0)
         if self.writePID:
@@ -81,7 +79,6 @@ class LockFile:
         f.close() # keep the lock fresh
 
     def remove(self):
-        log.msg('removing %s' % self)
         self.touchLoop.stop()
         os.remove(self.filename)
         
@@ -118,23 +115,19 @@ def _tryCreateLock(d, filename, retryCount, retryCurrent, retryTime, usePID, sch
 def checkLock(lockedFile, usePID=0):
     filename = lockedFile + ".lock"
     if not os.path.exists(filename):
-        log.msg('lock does not exist')
         return 0
     s = os.stat(filename)
     if (time.time() - s.st_mtime) > 300: # older than 5 minutes
-        log.msg('too old')
         return 0
     if usePID:
         try:
             pid = int(open(filename).read())
         except ValueError:
-            log.msg('bad pid file')
             return 0
         try:
             os.kill(pid, 0)
         except OSError, why:
             if why[0] == errno.ESRCH: # dead pid
-                log.msg('dead pid')
                 return 0
     return 1
 
