@@ -39,7 +39,7 @@ class HTTPPageGetter(http.HTTPClient):
         self.version, self.status, self.message = version, status, message
 
     def handleEndHeaders(self):
-        m = getattr(self, 'handleStatus_'+self.status, 'handleStatusDefault')
+        m = getattr(self, 'handleStatus_'+self.status, self.handleStatusDefault)
         m()
 
     handleStatus_200 = lambda *args: None
