@@ -224,6 +224,8 @@ class DOMTemplate(Resource):
         as the template. The first time the template is used it is cached
         for speed.
         """
+        if self.template:
+            return microdom.parseString(self.template)
         if not self.templateDirectory:
             mod = sys.modules[self.__module__]
             if hasattr(mod, '__file__'):
