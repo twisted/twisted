@@ -520,10 +520,13 @@ class Request:
                 return
 
         self.sentLength = self.sentLength + len(data)
-        if self.chunked:
-            self.transport.write(toChunk(data))
+        if data:
+            if self.chunked:
+                self.transport.write(toChunk(data))
+            else:
+                self.transport.write(data)
         else:
-            self.transport.write(data)
+            log.msg("(harmless warning): discarding zero-length data for request %s" % self) 
 
     def addCookie(self, k, v, expires=None, domain=None, path=None, max_age=None, comment=None, secure=None):
         """Set an outgoing HTTP cookie.
