@@ -41,7 +41,7 @@ def reactorCleanUp():
         for p in pending: p.cancel() # delete the rest
         reactor.iterate() # flush them
         raise unittest.FailTest, msg
-    if components.implements(reactor, interfaces.IReactorThreads):
+    if interfaces.IReactorThreads.providedBy(reactor):
         reactor.suggestThreadPoolSize(0)
         if hasattr(reactor, 'threadpool') and reactor.threadpool:
             reactor.threadpool.stop()
