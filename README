@@ -1,34 +1,16 @@
-Twisted 0.9.4
+Twisted 0.9.5
 
-Quote of the Release:
+Quote of the Release::
 
-  <Afterglow> glyth: what's odd is i keep getting a segfault and i don't know why
-  <glyph> Afterglow: are you using C?
-  <Afterglow> yes
-  <glyph> Afterglow: ah.  There's your problem.
+  * glyph returns
+  * rik wonders what glyph returns
+  <radix> rik: NOT_DONE_YET
 
-What's new in 0.9.4?
+What's new in 0.9.5?
 
-  C implementation of computationally intensive code in Banana.dataReceived,
-  giving roughly a 50x speedup to packet decoding.  This is the first release
-  of Twisted with any C code -- but don't worry!  It will still fall back to
-  Python transparently if you don't have the requisite C module.
+  Lots of bugfixes for PB, Web, and Internet.
 
-  Minor enhancements, bugfixes, and cleanups in PB; requestPerspective can now
-  optionally pass a client-side reference to act as the client's counterpart on
-  the server (this is a protocol-verion-increment change; the protocol is no
-  longer compatible)
-
-  The IRC service expanded into Twisted.Words, a chat service for PB.
-
-  Moshe Zadka's Twisted.Mail was re-integrated.
-
-  Minor bugfixes for twisted.python.rebuild and twisted.web.error.
-
-  Some naming changes.  SPL (Server PickLe) is now TAP (Twisted Application
-  Persistence), since it almost always indicates more than one server.
-
-  Removed 'contrib' directory.
+  Much better docstrings for PB.
 
 What is this?
 
