@@ -1,4 +1,4 @@
-# -*- test-case-name: divmod.test.test_filepile -*-
+# -*- test-case-name: twisted.test.test_filepile -*-
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001-2002 Matthew W. Lefkowitz
@@ -47,6 +47,8 @@ except:
 
     def readlink(filename):
         return open(os.path.join(filename,'symlink'),'rb').read()
+
+from os import makedirs
 
 prochost = socket.gethostname()
 procpid = os.getpid()
@@ -98,7 +100,7 @@ def nextFileName(dirname, ext, directory=False):
     version 2.4.  10+.  Maybe.
     """
     if not os.path.isdir(dirname):
-        os.makedirs(dirname)
+        makedirs(dirname)
     fn = os.path.join(dirname, ext+".sequence")
     try:
         num = int(readlink(fn))
@@ -327,7 +329,7 @@ class FilePile:
         """
         pp = self.pilePath(*path[:-1])
         if not os.path.isdir(pp):
-            os.makedirs(pp)
+            makedirs(pp)
         symlink(name, self.itemPath(*path))
 
     def numberedLink(self, *path):
