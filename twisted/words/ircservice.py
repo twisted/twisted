@@ -153,7 +153,7 @@ class IRCChatter(irc.IRC):
                     self.receiveDirectMessage("*login*", "Password?")
                     self.pendingLogin = participant
                 else:
-                    self.logInAs(participant, self.paswd)
+                    self.logInAs(participant, self.passwd)
         else:
             # XXX: Is this error string appropriate?
             self.sendLine(irc.ERR_NICKNAMEINUSE,
