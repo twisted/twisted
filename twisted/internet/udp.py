@@ -143,11 +143,16 @@ class Port(base.BasePort):
         self.stopReading()
         if self.connected:
             from twisted.internet import reactor
-            self.d = defer.Deferred()
             reactor.callLater(0, self.connectionLost)
-            return self.d
 
-    stopListening = loseConnection
+    def stopListening(self):
+        if self.connected:
+            self.d = defer.Deferred()
+            result = d
+        else:
+            result = None
+        self.loseConnection()
+        return result
     
     def connectionLost(self, reason=None):
         """Cleans up my socket.
@@ -162,8 +167,9 @@ class Port(base.BasePort):
         self.socket.close()
         del self.socket
         del self.fileno
-        self.d.callback(None)
-        del self.d
+        if hasattr(self, "d"):
+            self.d.callback(None)
+            del self.d
 
     def setLogStr(self):
         self.logstr = reflect.qual(self.protocol.__class__) + " (UDP)"
