@@ -14,7 +14,7 @@ import os, sys
 tmp_dir = '_epyrun_tmp' #only used for partial builds
 
 # HACK: Don't import stuff that we don't like
-
+# this is why we have to convert 
 def myimport(*args):
     try: 
         return im(*args)
@@ -198,53 +198,42 @@ def addMod(arg, path, files):
             else:
                 modnames.append(modName)
 
-# these are the flags that don't take parameters. It's used to unambiguously
-# determine what modules were passed in on the command-line
-epydoc_flags = ["--html", "--latex", "--dvi", "--ps", "--pdf", "--private", "--no-private", "--show-imports", "--builtins", "--ignore-param-mismatch", "--separate-classes", "-q", "-v", "--check", "-h", "-V"]
-
 document_all = True # are we doing a full build?
-names = ['twisted'] #default, may be overriden below
+names = ['twisted/'] #default, may be overriden below
 
 #get list of modules/pkgs on cmd-line
-for i in range(1, len(sys.argv)):
-    value = sys.argv[i]
-    if not value.startswith("-"):
-        # OK, it's not an epydoc switch
-        # but maybey it's a parameter to a switch
-        if not sys.argv[i-1].startswith("-") or sys.argv[i-1] in epydoc_flags:
-            # OK, the previous arg is not a switch,
-            # or it is a switch the doesn't take parameters.
-            # We can assume that this and following args
-            # are modules/pkgs for us to process
-            names = sys.argv[i:]
-            document_all = False
-            sys.argv[i:] = []
-            #sanity check on names
-            for i in range(len(names)):
-                if not names[i].startswith('twisted'):
-                    j = names[i].find('twisted') 
-                    if j != -1:
-                        #strip off any leading directories before the 'twisted'
-                        #dir. this makes it easy to specify full paths, such as
-                        #from TwistedEmacs
-                        names[i] = names[i][j:]
-                    else:
-                        raise SystemExit, 'You can only specify twisted modules or packages'
-            #if -o was specified, we need to change it to point to a tmp dir
-            #otherwise add our own -o option
-            try:
-                i = sys.argv.index('-o')
-                old_out_dir = sys.argv[i+1]
-                try:
-                    os.mkdir(tmp_dir)
-                except OSError:
-                    pass
-                sys.argv[i+1] = tmp_dir
-            except ValueError:
-                sys.argv[1:1] = ['-o', tmp_dir]
+try:
+    i = sys.argv.index("--modules")
+except:
+    pass
+else:
+    names = sys.argv[i+1:]
+    document_all = False
+    sys.argv[i:] = []
+    #sanity check on names
+    for i in range(len(names)):
+        try:
+            j = names[i].rindex('twisted/') 
+        except:
+            raise SystemExit, 'You can only specify twisted modules or packages'
+        else:
+            #strip off any leading directories before the 'twisted/'
+            #dir. this makes it easy to specify full paths, such as
+            #from TwistedEmacs
+            names[i] = names[i][j:]
 
-            break
-
+    #if -o was specified, we need to change it to point to a tmp dir
+    #otherwise add our own -o option
+    try:
+        i = sys.argv.index('-o')
+        old_out_dir = sys.argv[i+1]
+        try:
+            os.mkdir(tmp_dir)
+        except OSError:
+            pass
+        sys.argv[i+1] = tmp_dir
+    except ValueError:
+        sys.argv[1:1] = ['-o', tmp_dir]
 
 osrv = sys.argv
 sys.argv=["IGNORE"]
