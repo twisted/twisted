@@ -16,6 +16,7 @@ import popen2
 import time
 import sys
 import signal
+import shutil
 
 try:
     import cStringIO as StringIO
@@ -590,6 +591,8 @@ class UtilTestCase(unittest.TestCase):
         barfoo = j("baz", "bar")
         
         for d in "foo", foobar, foobaz, "baz", bazfoo, barfoo:
+            if os.path.exists(d):
+                shutil.rmtree(d, True)
             os.mkdir(d)
         
         f = file(j(foobaz, "executable"), "w")
