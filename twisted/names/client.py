@@ -1,16 +1,15 @@
-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -64,15 +63,15 @@ class Resolver(common.ResolverBase):
         @param servers: If not None, interpreted as a list of addresses of
         domain name servers to attempt to use for this lookup.  Addresses
         should be in dotted-quad form.  If specified, overrides C{resolv}.
-        
+
         @type resolv: C{str}
         @param resolv: Filename to read and parse as a resolver(5)
         configuration file.
-        
+
         @type timeout: Sequence of C{int}
         @param timeout: Default number of seconds after which to reissue the query.
         When the last timeout expires, the query is considered failed.
-       
+
         @raise ValueError: Raised if no nameserver addresses can be found.
         """
         common.ResolverBase.__init__(self)
@@ -83,21 +82,21 @@ class Resolver(common.ResolverBase):
             self.servers = []
         else:
             self.servers = servers
-        
+
         self.resolv = resolv
-        
+
         if not len(self.servers) and not resolv:
             raise ValueError, "No nameservers specified"
-        
+
         self.factory = DNSClientFactory(self, timeout)
         self.factory.noisy = 0   # Be quiet by default
-        
+
         self.protocol = dns.DNSDatagramProtocol(self)
         self.protocol.noisy = 0  # You too
-        
+
         self.connections = []
         self.pending = []
-        
+
         self.maybeParseConfig()
 
 
@@ -107,7 +106,7 @@ class Resolver(common.ResolverBase):
         d['_parseCall'] = None
         return d
 
-    
+
     def __setstate__(self, state):
         self.__dict__.update(state)
         self.maybeParseConfig()
@@ -163,7 +162,7 @@ class Resolver(common.ResolverBase):
     def pickServer(self):
         """
         Return the address of a nameserver.
-        
+
         TODO: Weight servers for response time so faster ones can be
         preferred.
         """
@@ -184,8 +183,8 @@ class Resolver(common.ResolverBase):
         for (d, q, t) in self.pending:
             self.queryTCP(q, t).chainDeferred(d)
         del self.pending[:]
-    
-    
+
+
     def messageReceived(self, message, protocol, address = None):
         log.msg("Unexpected message (%d) received from %r" % (message.id, address))
 
@@ -196,7 +195,7 @@ class Resolver(common.ResolverBase):
 
         @type queries: A C{list} of C{dns.Query} instances
         @param queries: The queries to make.
-        
+
         @type timeout: Sequence of C{int}
         @param timeout: Number of seconds after which to reissue the query.
         When the last timeout expires, the query is considered failed.
@@ -237,10 +236,10 @@ class Resolver(common.ResolverBase):
 
         @type queries: Any non-zero number of C{dns.Query} instances
         @param queries: The queries to make.
-        
+
         @type timeout: C{int}
         @param timeout: The number of seconds after which to fail.
-        
+
         @rtype: C{Deferred}
         """
         if not len(self.connections):
@@ -267,7 +266,7 @@ class Resolver(common.ResolverBase):
         return self.queryUDP(
             [dns.Query(name, type, cls)], timeout
         ).addCallback(self.filterAnswers)
-    
+
 
     # This one doesn't ever belong on UDP
     def lookupZone(self, name, timeout = 10):
@@ -292,7 +291,7 @@ class DNSClientFactory(protocol.ClientFactory):
     def __init__(self, controller, timeout = 10):
         self.controller = controller
         self.timeout = timeout
-    
+
 
     def clientConnectionLost(self, connector, reason):
         pass
@@ -332,7 +331,7 @@ def _makeLookup(method):
                 theResolver = createResolver()
             except ValueError:
                 theResolver = createResolver(servers=[('127.0.0.1', 53)])
-        
+
         return getattr(theResolver, method)(*a, **kw)
     return lookup
 
