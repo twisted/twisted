@@ -523,7 +523,7 @@ class MakeDebs(Transaction):
         replaceInFile('debian/changelog', ver+'-1', ver+'-1woody')
         replaceInFile('debian/control', ', python2.3-dev', '')
         sh('rm -f debian/*.bak')
-        sh('debuild -us -uc')
+        sh('dpkg-buildpackage -rfakeroot -us -uc')
         os.chdir('..')
         sh('rm -rf %(twisted_dir)s' % vars())
         sh('../Twisted-%(ver)s/admin/createpackages ../override'% vars())

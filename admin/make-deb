@@ -61,7 +61,7 @@ if auto_version:
 	open('debian/changelog', 'w').writelines(lines)
 if run_dch:
 	os.system("dch")
-os.system("debuild -us -uc")
+os.system("dpkg-buildpackage -rfakeroot -us -uc")
 
 if install:
 	current = os.getcwd()
