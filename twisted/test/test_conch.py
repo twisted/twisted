@@ -168,6 +168,25 @@ class EchoTransport:
         self.proto.errConnectionLost()
         self.proto.processEnded(failure.Failure(error.ProcessTerminated(0, None, None)))
 
+class ErrEchoTransport:
+
+    def __init__(self, p):
+        self.proto = p
+        p.makeConnection(self)
+        self.closed = 0
+
+    def write(self, data):
+        self.proto.errReceived(data)
+        self.proto.errReceived('\r\n')
+
+    def loseConnection(self):
+        if self.closed: return
+        self.closed = 1
+        self.proto.inConnectionLost()
+        self.proto.outConnectionLost()
+        self.proto.errConnectionLost()
+        self.proto.processEnded(failure.Failure(error.ProcessTerminated(0, None, None)))
+
 class SuperEchoTransport:
 
     def __init__(self, p):
@@ -238,7 +257,7 @@ class ConchSessionForTestAvatar:
         self.cmd = 'shell'
 
     def execCommand(self, proto, cmd):
-        theTest.assert_(cmd.split()[0] in ['false', 'echo', 'secho','jumboliah'])
+        theTest.assert_(cmd.split()[0] in ['false', 'echo', 'secho', 'eecho','jumboliah'])
         if cmd == 'jumboliah':
             raise ConchError('bad exec')
         self.cmd = cmd
@@ -254,14 +273,21 @@ class ConchSessionForTestAvatar:
             t = SuperEchoTransport(proto)
             t.write(cmd[6:])
             t.loseConnection()
+        elif f == 'eecho':
+            t = ErrEchoTransport(proto)
+            t.write(cmd[6:])
+            t.loseConnection()
         
 
     def closed(self):
         global theTest
         log.msg('closing cmd %s' % self.cmd)
         if self.cmd == 'echo hello':
-            lwl = self.proto.session.localWindowLeft
-            theTest.assertEquals(lwl, 6)
+            rwl = self.proto.session.remoteWindowLeft
+            theTest.assertEquals(rwl, 4)
+        elif self.cmd == 'eecho hello':
+            rwl = self.proto.session.remoteWindowLeft
+            theTest.assertEquals(rwl, 4)
         self.proto.transport.loseConnection()
 
 from twisted.python import components
@@ -372,13 +398,15 @@ class SSHTestClientConnection(connection.SSHConnection):
 
     name = 'ssh-connection'
     results = 0
-    totalResults = 6 
+    totalResults = 8 
 
     def serviceStarted(self):
         self.openChannel(SSHUnknownChannel(conn = self))
         self.openChannel(SSHTestFailExecChannel(conn = self))
         self.openChannel(SSHTestFalseChannel(conn = self))
-        self.openChannel(SSHTestEchoChannel(localWindow=4, localMaxPacket=1, conn = self))
+        self.openChannel(SSHTestEchoChannel(localWindow=4, localMaxPacket=5, conn = self))
+        self.openChannel(SSHTestErrChannel(localWindow=4, localMaxPacket=5, conn = self))
+        self.openChannel(SSHTestMaxPacketChannel(localWindow=12, localMaxPacket=1, conn = self))
         self.openChannel(SSHTestShellChannel(conn = self))
         self.openChannel(SSHTestSubsystemChannel(conn = self))
 
@@ -472,7 +500,6 @@ class SSHTestEchoChannel(channel.SSHChannel):
 
     name = 'session'
     testBuf = ''
-    testExtBuf = ''
     eofCalled = 0
 
     def openFailed(self, reason):
@@ -481,7 +508,7 @@ class SSHTestEchoChannel(channel.SSHChannel):
         reactor.crash()
 
     def channelOpen(self, ignore):
-        d = self.conn.sendRequest(self, 'exec', common.NS('secho hello'), 1)
+        d = self.conn.sendRequest(self, 'exec', common.NS('echo hello'), 1)
         d.addErrback(self._ebRequestFailed)
         log.msg('opened echo')
 
@@ -493,9 +520,110 @@ class SSHTestEchoChannel(channel.SSHChannel):
     def dataReceived(self, data):
         self.testBuf += data
 
-    def extReceived(self, extType, data):
+    def errReceived(self, dataType, data):
+        theTest.fail('echo channel got extended data')
+        reactor.crash()
+
+    def request_exit_status(self, status):
+        self.status = struct.unpack('>L', status)[0]
+        
+    def eofReceived(self):
+        log.msg('eof received')
+        self.eofCalled = 1
+
+    def closed(self):
         global theTest
-        theTest.assertEquals(extType, connection.EXTENDED_DATA_STDERR)
+        if self.status != 0:
+            theTest.fail('echo exit status was not 0: %i' % self.status)
+            reactor.crash()
+        if self.testBuf != "hello\r\n":
+            theTest.fail('echo did not return hello: %s' % repr(self.testBuf))
+            reactor.crash()
+        theTest.assertEquals(self.localWindowLeft, 4)
+        theTest.assert_(self.eofCalled)
+        log.msg('finished echo')
+        self.conn.addResult()
+        self.loseConnection()
+        return 1
+
+class SSHTestErrChannel(channel.SSHChannel):
+
+    name = 'session'
+    testBuf = ''
+    eofCalled = 0
+
+    def openFailed(self, reason):
+        global theTest
+        theTest.fail('err open failed: %s' % reason)
+        reactor.crash()
+
+    def channelOpen(self, ignore):
+        d = self.conn.sendRequest(self, 'exec', common.NS('eecho hello'), 1)
+        d.addErrback(self._ebRequestFailed)
+        log.msg('opened err')
+
+    def _ebRequestFailed(self, reason):
+        global theTest
+        theTest.fail('err exec failed: %s' % reason)
+        reactor.crash()
+
+    def dataReceived(self, data):
+        theTest.fail('err channel got regular data: %s' % repr(data))
+        reactor.crash()
+
+    def extReceived(self, dataType, data):
+        theTest.assertEquals(dataType, connection.EXTENDED_DATA_STDERR)
+        self.testBuf += data
+
+    def request_exit_status(self, status):
+        self.status = struct.unpack('>L', status)[0]
+        
+    def eofReceived(self):
+        log.msg('eof received')
+        self.eofCalled = 1
+
+    def closed(self):
+        global theTest
+        if self.status != 0:
+            theTest.fail('echo exit status was not 0: %i' % self.status)
+            reactor.crash()
+        if self.testBuf != "hello\r\n":
+            theTest.fail('err did not return hello: %s' % repr(self.testBuf))
+            reactor.crash()
+        theTest.assertEquals(self.localWindowLeft, 4)
+        theTest.assert_(self.eofCalled)
+        log.msg('finished err')
+        self.conn.addResult()
+        self.loseConnection()
+        return 1
+
+class SSHTestMaxPacketChannel(channel.SSHChannel):
+
+    name = 'session'
+    testBuf = ''
+    testExtBuf = ''
+    eofCalled = 0
+
+    def openFailed(self, reason):
+        global theTest
+        theTest.fail('max packet open failed: %s' % reason)
+        reactor.crash()
+
+    def channelOpen(self, ignore):
+        d = self.conn.sendRequest(self, 'exec', common.NS('secho hello'), 1)
+        d.addErrback(self._ebRequestFailed)
+        log.msg('opened max packet')
+
+    def _ebRequestFailed(self, reason):
+        global theTest
+        theTest.fail('max packet exec failed: %s' % reason)
+        reactor.crash()
+
+    def dataReceived(self, data):
+        self.testBuf += data
+
+    def extReceived(self, dataType, data):
+        theTest.assertEquals(dataType, connection.EXTENDED_DATA_STDERR)
         self.testExtBuf += data
 
     def request_exit_status(self, status):
@@ -510,16 +638,11 @@ class SSHTestEchoChannel(channel.SSHChannel):
         if self.status != 0:
             theTest.fail('echo exit status was not 0: %i' % self.status)
             reactor.crash()
-        self.testBuf = self.testBuf.replace('\r\n', '\n')
-        self.testExtBuf = self.testExtBuf.replace('\r\n', '\n')
-        if self.testBuf != 'hello\n':
-            theTest.fail('echo did not return hello: %s' % repr(self.testBuf))
-            reactor.crash()
-        if self.testExtBuf != 'hello\n':
-            theTest.fail('stderr did not return hello: %s' % repr(self.testExtBuf))
-            reactor.crash()
+        theTest.assertEquals(self.testBuf, 'hello\r\n')
+        theTest.assertEquals(self.testExtBuf, 'hello\r\n')
+        theTest.assertEquals(self.localWindowLeft, 12)
         theTest.assert_(self.eofCalled)
-        log.msg('finished echo')
+        log.msg('finished max packet')
         self.conn.addResult()
         self.loseConnection()
         return 1
@@ -572,8 +695,7 @@ class SSHTestShellChannel(channel.SSHChannel):
         if self.status != 0:
             log.msg('shell exit status was not 0: %i' % self.status)
             reactor.crash()
-        self.testBuf = self.testBuf.replace('\r\n', '\n')
-        theTest.assertEquals(self.testBuf, 'testing the shell!\n')
+        theTest.assertEquals(self.testBuf, 'testing the shell!\r\n')
         theTest.assert_(self.eofCalled)
         self.conn.addResult()
         self.loseConnection()
@@ -811,3 +933,4 @@ class SSHTransportTestCase(unittest.TestCase):
             timeout.cancel()
         except:
             pass
+

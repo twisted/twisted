@@ -143,8 +143,8 @@ class SSHConnection(service.SSHService):
         data = common.getNS(packet[4:])[0]
         channel.localWindowLeft-=dataLength
         if channel.localWindowLeft < channel.localWindowSize/2:
-            self.adjustWindow(channel, channel.localWindowSize- \
-                               channel.localWindowLeft)
+            self.adjustWindow(channel, channel.localWindowSize - \
+                                       channel.localWindowLeft)
             #log.msg('local window left: %s/%s' % (channel.localWindowLeft,
             #                                    channel.localWindowSize))
         channel.dataReceived(data)
@@ -152,10 +152,16 @@ class SSHConnection(service.SSHService):
     def ssh_CHANNEL_EXTENDED_DATA(self, packet):
         localChannel, typeCode, dataLength = struct.unpack('>3L', packet[: 12])
         channel = self.channels[localChannel]
-        if dataLength > channel.localMaxPacket:
+        if dataLength > channel.localWindowLeft or \
+           dataLength > channel.localMaxPacket:
+            log.msg('closing channel %s for too much extended data' % channel.id)
             self.sendClose(channel)
             return
         data = common.getNS(packet[8:])[0]
+        channel.localWindowLeft -= dataLength
+        if channel.localWindowLeft < channel.localWindowSize/2:
+            self.adjustWindow(channel, channel.localWindowSize - \
+                                       channel.localWindowLeft)
         self.channels[localChannel].extReceived(typeCode, data)
 
     def ssh_CHANNEL_EOF(self, packet):
@@ -165,10 +171,12 @@ class SSHConnection(service.SSHService):
     def ssh_CHANNEL_CLOSE(self, packet):
         localChannel = struct.unpack('>L', packet[: 4])[0]
         channel = self.channels[localChannel]
+        channel.remoteClosed = 1
+        if channel.localClosed and channel.remoteClosed:
+            del self.localToRemoteChannel[localChannel]
+            del self.channels[localChannel]
+            del self.channelsToRemoteChannel[channel]
         channel.closed()
-        del self.localToRemoteChannel[localChannel]
-        del self.channels[localChannel]
-        del self.channelsToRemoteChannel[channel]
 
     def ssh_CHANNEL_REQUEST(self, packet):
         localChannel = struct.unpack('>L', packet[: 4])[0]
@@ -278,6 +286,7 @@ class SSHConnection(service.SSHService):
         self.transport.sendPacket(MSG_CHANNEL_WINDOW_ADJUST, struct.pack('>2L', 
                                     self.channelsToRemoteChannel[channel], 
                                     bytesToAdd))
+        log.msg('adding %i to %i in channel %i' % (bytesToAdd, channel.localWindowLeft, channel.id))
         channel.localWindowLeft+=bytesToAdd
 
     def sendData(self, channel, data):
@@ -331,6 +340,10 @@ class SSHConnection(service.SSHService):
             return # we're already closed
         self.transport.sendPacket(MSG_CHANNEL_CLOSE, struct.pack('>L', 
                                     self.channelsToRemoteChannel[channel]))
+        if channel.localClosed and channel.remoteClosed:
+            del self.localToRemoteChannel[channel.id]
+            del self.channels[channel.id]
+            del self.channelsToRemoteChannel[channel]
 
     # methods to override
     def getChannel(self, channelType, windowSize, maxPacket, data):

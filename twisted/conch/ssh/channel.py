@@ -40,8 +40,10 @@ class SSHChannel:
         self.avatar = avatar
         self.specificData = ''
         self.buf = ''
-        #self.extBuf = []
+        self.extBuf = []
         self.closing = 0
+        self.localClosed = 0
+        self.remoteClosed = 0
         self.id = None # gets set later by SSHConnection
 
     def __str__(self):
@@ -80,11 +82,11 @@ class SSHChannel:
             b = self.buf
             self.buf = ''
             self.write(b)
-        #if self.extBuf:
-        #    b = self.extBuf
-        #    self.extBuf = []
-        #    for i in b:
-        #        self.writeExtended(*i)
+        if self.extBuf:
+            b = self.extBuf
+            self.extBuf = []
+            for i in b:
+                self.writeExtended(*i)
 
     def requestReceived(self, requestType, data):
         """
@@ -168,26 +170,26 @@ class SSHChannel:
         @type dataType: C{int}
         @type data:     C{str}
         """
-        #if self.extBuf:
-        #    if self.extBuf[-1][0] == dataType:
-        #        self.extBuf[-1][1]+=data
-        #    else:
-        #        self.extBuf.append((dataType, data))
-        #    return
-        #if len(data) > self.remoteWindowLeft:
-        #    data, self.extBuf = data[:self.remoteWindowLeft], \
-        #                        [(dataType, data[self.remoteWindowLeft:])]
-        #    self.areWriting = 0
-        #    self.stopWriting()
+        if self.extBuf:
+            if self.extBuf[-1][0] == dataType:
+                self.extBuf[-1][1]+=data
+            else:
+                self.extBuf.append([dataType, data])
+            return
+        if len(data) > self.remoteWindowLeft:
+            data, self.extBuf = data[:self.remoteWindowLeft], \
+                                [[dataType, data[self.remoteWindowLeft:]]]
+            self.areWriting = 0
+            self.stopWriting()
         if not data: return
         while len(data) > self.remoteMaxPacket:
             self.conn.sendExtendedData(self, dataType, 
                                              data[:self.remoteMaxPacket])
             data = data[self.remoteMaxPacket:]
-            #self.remoteWindowLeft-=self.remoteMaxPacket
+            self.remoteWindowLeft-=self.remoteMaxPacket
         if data:
             self.conn.sendExtendedData(self, dataType, data)
-            #self.remoteWindowLeft-=len(data)
+            self.remoteWindowLeft-=len(data)
         if self.closing:
             self.loseConnection() # try again
 
@@ -205,7 +207,8 @@ class SSHChannel:
         Close the channel.
         """
         self.closing = 1
-        if not self.buf:# and not self.extBuf:
+        if not self.buf and not self.extBuf:
+            self.localClosed = 1
             self.conn.sendClose(self)
 
     def getPeer(self):
