@@ -267,10 +267,11 @@ class File(resource.Resource, styles.Versioned):
             # If someone is looking for children with a PathReferenceContext,
             # the request won't have a prepath, and we shouldn't do this kind
             # of mangling anyway because it has already been done.
-            if hasattr(request, 'postpath') and not request.postpath and request.uri[-1] != '/':
+            if hasattr(request, 'postpath') and not request.postpath and string.split(request.uri,'?')[0][-1] != '/':
                 return Redirect(request)
             if os.path.exists(childPath):
-                if hasattr(request, 'postpath') and not request.postpath and not self.getIndex(request):
+                if hasattr(request, 'postpath') and not request.postpath and \
+                                                not self.getIndex(request):
                     return widgets.WidgetPage(DirectoryListing(self.path))
 
         ##
