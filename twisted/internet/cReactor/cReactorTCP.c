@@ -150,6 +150,25 @@ tcp_do_close(cReactorTransport *transport)
 }
 
 static PyObject *
+make_addr(struct sockaddr_in *addr)
+{
+    uint32_t ipaddr;
+    PyObject *addrobj, *ret;
+
+    ipaddr = ntohl(addr->sin_addr.s_addr);
+    addrobj = PyString_FromFormat("%d.%d.%d.%d",
+                                  (ipaddr >> 24) & 0xff,
+                                  (ipaddr >> 16) & 0xff,
+                                  (ipaddr >>  8) & 0xff,
+                                  (ipaddr >>  0) & 0xff);
+    if (!addrobj)
+        return NULL;
+    ret = Py_BuildValue("sOi", "INET", addrobj, ntohs(addr->sin_port));
+    Py_DECREF(addrobj);
+    return ret;
+}
+
+static PyObject *
 tcp_get_host(cReactorTransport *transport)
 {
     struct sockaddr_in addr;
@@ -162,6 +181,7 @@ tcp_get_host(cReactorTransport *transport)
         return NULL;
     }
 
+    //return make_addr(&addr);
     return Py_BuildValue("(ssi)", "INET", inet_ntoa(addr.sin_addr),
                          ntohs(addr.sin_port));
 }
@@ -180,6 +200,7 @@ tcp_get_peer(cReactorTransport *transport)
         return NULL;
     }
 
+    //return make_addr(&addr);
     return Py_BuildValue("(ssi)", "INET", inet_ntoa(addr.sin_addr),
                          ntohs(addr.sin_port));
 }
@@ -297,6 +318,10 @@ cReactorTCP_listenTCP(PyObject *self, PyObject *args, PyObject *kw)
         return NULL;
     }
 
+    if (strlen(interface) > 0) {
+        printf("Warning: cReactor.listenTCP does not yet honor the 'interface' parameter\n");
+    }
+
     /*
     printf("listenTCP: %d ", port);
     PyObject_Print(factory, stdout, 1);
@@ -407,6 +432,14 @@ cReactorListeningPort_stopListening(PyObject *self, PyObject *args)
     return Py_None;
 }
 
+static PyObject *
+cReactorListeningPort_getHost(PyObject *self)
+{
+    cReactorListeningPort *port = (cReactorListeningPort *)self;
+
+    return tcp_get_host(port->transport);
+}
+
 
 static void
 cReactorListeningPort_dealloc(PyObject *self)
@@ -422,6 +455,8 @@ static PyMethodDef cReactorListeningPort_methods[] =
 {
     { "stopListening", cReactorListeningPort_stopListening,
       METH_VARARGS, "stopListening" },
+    { "getHost", (PyCFunction)cReactorListeningPort_getHost,
+      METH_NOARGS, "getHost" },
     { NULL, NULL, METH_VARARGS, NULL },
 };
 
