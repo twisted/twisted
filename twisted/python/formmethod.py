@@ -166,6 +166,21 @@ class Boolean(Argument):
         return 1
 
 
+class Submit(Argument):
+    """Submit button or a reasonable facsimile thereof."""
+
+    def __init__(self, name, buttons=["Submit"], reset=0, shortDesc=None, longDesc=None):
+        Argument.__init__(self, name, shortDesc=shortDesc, longDesc=longDesc)
+        self.buttons = buttons
+        self.reset = reset
+
+    def coerce(self, val):
+        if val in self.buttons:
+            return val
+        else:
+            raise InputError, "no such action"
+
+
 class PresentationHint:
     """
     A hint to a particular system.

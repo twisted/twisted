@@ -132,12 +132,24 @@ class FormFillerWidget(widgets.Widget):
         return content.input(type="hidden",
                              name=arg.name,
                              value=getValue(request, arg))
+
+    def input_submit(self, request, content, arg):
+        div = content.div()
+        for value in arg.buttons:
+            div.input(type="submit", name=arg.name, value=value)
+            div.text(" ")
+        if arg.reset:
+            div.input(type="reset")
+        return div
     
     def createInput(self, request, shell, arg):
         name = arg.__class__.__name__.lower()
         imeth = getattr(self,"input_"+name)
         if name == "hidden":
             return (imeth(request, shell, arg).node, lmx())
+        elif name == "submit":
+            td = shell.tr().td(valign="top", colspan="2")
+            return (imeth(request, td, arg).node, lmx())
         else:
             tr = shell.tr()
             tr.td(align="right", valign="top").text(arg.getShortDescription()+":")
@@ -160,10 +172,15 @@ class FormFillerWidget(widgets.Widget):
             errorNodes[errorNode.getAttribute('errorFor')] = errorNode
         argz={}
         # list to figure out which nodes are in the template already and which aren't
+        hasSubmit = 0
         argList = self.model.fmethod.getArgs()
         for arg in argList:
+            if isinstance(arg, formmethod.Submit):
+                hasSubmit = 1
             argz[arg.name] = arg
         for inNode in domhelpers.getElementsByTagName(node, 'input'):
+            if inNode.getAttribute("type").lower() == "submit":
+                hasSubmit = 1
             nName = inNode.getAttribute("name")
             assert argz.has_key(nName), "method signature %s does not define argument %s" % (self.model.original, nName)
             inputNodes[nName] = inNode
@@ -176,9 +193,8 @@ class FormFillerWidget(widgets.Widget):
                 errorNodes[remArg.name] = errorNode
                 inputNodes[remArg.name] = inputNode
 
-        # TODO: 'submit' hint to make a list of multiple buttons
-        # clear button
-        lmn.input(type="submit")
+        if not hasSubmit:
+            lmn.input(type="submit")
 
 
 class FormErrorWidget(FormFillerWidget):
@@ -321,6 +337,7 @@ class FormProcessor(resource.Resource):
     mangle_choice = mangle_single
     mangle_boolean = mangle_single
     mangle_hidden = mangle_single
+    mangle_submit = mangle_single
     
     def mangle_flags(self, args):
         if args is None:
