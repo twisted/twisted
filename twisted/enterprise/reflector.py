@@ -96,7 +96,7 @@ class Reflector:
 
     def addToParent(self, parentRow, rows, tableName):
         """util method used by reflectors. adds these rows to the parent row object.
-        If a rowClass doesnt have a containerMethod, then a list attribute "childRows"
+        If a rowClass does not have a containerMethod, then a list attribute "childRows"
         will be used.
         """
         parentInfo = self.getTableInfo(parentRow)
