@@ -96,6 +96,15 @@ def runTelnetTest():
     scmd("telnet localhost 8023")
     killit()
 
+def runManholeTest():
+    message("Running Manhole Test")
+    cmd("mktap manhole -u username -w password")
+    twistd("manhole")
+    message("Log in with the username 'username', password 'password'.",
+            "and bask in the l33tness of direct manipulation.")
+    cmd("manhole")
+    killit()
+
 def runWordsTest():
     message("Running Words Test")
     cmd("mktap words")
@@ -148,6 +157,7 @@ def runAllTests():
     basicWebTest()
     staticWebTest()
     distWebTest()
+    runManholeTest()
     runTelnetTest()
     runWordsTest()
     runRealityTest()

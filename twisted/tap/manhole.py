@@ -21,7 +21,7 @@ I am the support module for making a telnet server with mktap.
 
 from twisted.manhole import service
 from twisted.spread import pb
-from twisted.internet import tcp
+from twisted.internet import tcp, passport
 from twisted.python import usage
 import sys
 
@@ -46,11 +46,13 @@ class Options(usage.Options):
 
 
 def getPorts(app, config):
-    
-    bf = pb.BrokerFactory()
-    bf.addService("twisted.manhole", service.Service({config.user: config.password}))
+    i = passport.Identity(config.user, app)
+    i.setPassword(config.password)
+    app.authorizer.addIdentity(i)
+    svc = service.Service(application=app)
+    i.addKeyForPerspective(svc.getPerspectiveNamed(config.user))
     try:
         portno = config.portno
     except AttributeError:
         portno = pb.portno
-    return [(portno, bf)]
+    return [(portno, pb.BrokerFactory(app))]

@@ -17,7 +17,6 @@
 
 from twisted.spread import pb
 from twisted.python import log
-from twisted.python import authenticator
 
 import string
 from cStringIO import StringIO
@@ -38,9 +37,6 @@ class FakeStdIO:
         pass
 
 class Perspective(pb.Perspective):
-    def __init__(self, factory):
-        self.factory = factory
-
     def perspective_do(self, mesg):
         """returns a list of ["type", "message"] pairs to the client for
         display"""
@@ -66,7 +62,7 @@ class Perspective(pb.Perspective):
             sys.stdout = fakeout
             sys.stderr = fakeerr
             try:
-                val = eval(code, self.factory.namespace)
+                val = eval(code, self.service.namespace)
                 if val is not None:
                     resfile.write(str(val)+'\n')
             finally:
@@ -82,10 +78,8 @@ class Perspective(pb.Perspective):
 class Service(pb.Service):
     # By default, "guest"/"guest" will work as login and password, though you
     # must implement something to retrieve a perspective.
-    def __init__(self, userdict={"admin":"admin"}):
-        pb.Service.__init__(self)
-        authenticator.Authenticator.__init__(self, userdict, 0)
-        
+    def __init__(self, serviceName='twisted.manhole', application=None):
+        pb.Service.__init__(self, serviceName, application)
         self.namespace = {}
 
     def __getstate__(self):
@@ -101,5 +95,5 @@ class Service(pb.Service):
         return dict
 
     def getPerspectiveNamed(self, name):
-        return Perspective(self)
+        return Perspective(name, self)
 
