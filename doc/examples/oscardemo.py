@@ -56,7 +56,7 @@ if any of those features don't work, tell paul (Z3Penguin).  thanks."""%SN)
             self.lastUser = user.name
             self.sendMessage(user.name, multiparts, wantAck = 1, autoResponse = (self.awayMessage!=None)).addCallback( \
                 self.messageAck)
-    def messageAck(self, username):
+    def messageAck(self, (username, message)):
         print 'message sent to %s acked' % username
     def gotAway(self, away, user):
         if away != None:

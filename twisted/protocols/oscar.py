@@ -1178,8 +1178,7 @@ class OscarAuthenticator(OscarConnection):
         if tlvs.has_key(6):
             self.cookie=tlvs[6]
             server,port=string.split(tlvs[5],":")
-            c = protocol.ClientCreator(reactor, self.BOSClass, self.username, self.cookie)
-            d = c.connectTCP(server, int(port))
+            d = self.connectToBOS(server, int(port))
             d.addErrback(lambda x: log.msg("Connection Failed! Reason: %s" % x))
             if self.deferred:
                 d.chainDeferred(self.deferred)
@@ -1201,6 +1200,10 @@ class OscarAuthenticator(OscarConnection):
         return "None"
 
     def oscar_None(self,data): pass
+
+    def connectToBOS(self, server, port):
+        c = protocol.ClientCreator(reactor, self.BOSClass, self.username, self.cookie)
+        return c.connectTCP(server, int(port))
 
     def error(self,error,url):
         log.msg("ERROR! %s %s" % (error,url))
