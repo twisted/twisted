@@ -95,6 +95,79 @@ Transports have the following methods:
     old TCP sockets.</DD>
 </DL>
 
+<H2>Writing New Transport Types</H2>
+
+<P>
+I will concentrate here on server transports.
+<P>
+
+<P>
+Writing a transport type is usually a two-step procedure. First, you
+will need to write the port-like class. The class's constructor should
+take, among other transport-specific administrative data (for example,
+for TCP ports this could be the numeric port and the addresses to listen
+on), a factory. The only thing that should be assumed by the class
+is that the given factory has a .buildProtocol method which creates
+protocol-interface class.
+</P>
+
+<P>
+This class should be pickle-safe, which means any process specific
+information (such as open files) should be thrown out by the __getstate__
+method.
+</P>
+
+<P>
+The class should have a .startListening() method, which should take whatever
+action it needs to open a port for listening. It should also have a 
+.fileno method, which will return a valid file descriptor. When this
+file descriptor is valid for reading, the .doRead method will be called.
+Usually, this method will create a transport, call the factory's
+.buildProtocol and call .makeConnection on the protocol with the transport
+as an argument.
+</P>
+
+<P>
+The transports written for every connection and passed to protocols' 
+.makeConnection must follow the transport interface:
+</P>
+
+<DL>
+<DT>.write(data)</DT>
+<DD>Queue some data to write. Do not block.</DD>
+
+<DT>.loseConnection()</DT>
+<DD>When there will be no more data to write, close down
+the connection.</DD>
+
+<DT>.getPeer()</DT>
+<DD>Return a tuple describing your peer. This should be a tuple -
+(TYPE, ...), where the ... depend on your connection's semantics.
+Use common sense. So far, for files, it is ('file', filename), for
+TCP sockets it is ('INET', address, port) and for UNIX-domain
+sockets it is ('UNIX', path). You can probably count on 'INET6'
+being IPv6 TCP sockets.</DD>
+</DL>
+
+<P>In addition, the select loop will call the following methods:</P>
+
+<DL>
+<DT>.doWrite()</DT>
+<DD>Flush the data you have, in a non-blocking manner.</DD>
+
+<DT>.doRead()</DT>
+<DD>Read data, and call the protocol's .dataReceived method with
+this chunk.</DD>
+
+<DT>.connectionLost()</DT>
+<DD>If either .doRead() or .doWrite() return CONNECTION_LOST,
+this method will be called by the select loop. It should clean
+up any OS-level resources, and call the protocol's .connectionLost()</DD>
+
+</DL>
+
+<P>
+
 
 <H2>Deployment</H2>
 
