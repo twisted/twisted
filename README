@@ -68,11 +68,10 @@ What can I do with it?
   Python, it's quite easy to script the webserver to do whatever you like!
 
   Instance Messenger is a multi-protocol chat client; it's easy to use: just
-  run 't-im' for the GTK+ version, or 'im' for the Tkinter version, and an 
-  "account manager" window will pop up. You can create and modify accounts
-  with it, and connect to/disconnect from them. Currently it can support
-  Twisted's own chat service, Twisted Words, Internet Relay Chat (IRC), and
-  AOL Instant Messenger (with the TOC protocol).
+  run 'im', and an "account manager" window will pop up. You can create and
+  modify accounts with it, and connect to/disconnect from them. Currently it
+  can support Twisted's own chat service, Twisted Words, Internet Relay Chat
+  (IRC), and AOL Instant Messenger (with the TOC protocol).
 
 Unit Tests
 
@@ -139,15 +138,11 @@ Basic Servers
   So far the IRC gateway has only been tested with mIRC, XChat, and ircII; I
   believe that these are relatively diverse clients, but YMMV.
 
-  The "Instance Messenger" client is a TKinter front-end to the various chat
+  The "Instance Messenger" is an instant messaging client to the various chat
   services that Twisted can interface with, which are IRC, AIM, and,
   twisted.words.  You can invoke it like this::
 
     % im
-
-  There is also a GTK+ based client::
-  
-    % t-im
 
   A AOL Instant Messenger TOC Server is also available::
 
