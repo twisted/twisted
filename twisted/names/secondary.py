@@ -41,6 +41,9 @@ class SecondaryAuthorityService(service.Service):
         for c in self.calls:
             c.stop()
 
+
+from twisted.names.authority import FileAuthority
+
 class SecondaryAuthority(common.ResolverBase):
     """An Authority that keeps itself updated by performing zone transfers"""
 
@@ -67,7 +70,7 @@ class SecondaryAuthority(common.ResolverBase):
         if not self.soa or not self.records:
             return defer.fail(failure.Failure(dns.DomainError(name)))
         
-        from twisted.names.authority import FileAuthority
+
         return FileAuthority.__dict__['_lookup'](self, name, cls, type, timeout)
 
     #shouldn't we just subclass? :P
