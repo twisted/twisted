@@ -1,5 +1,5 @@
 # Twisted, the Framework of Your Internet
-# Copyright (C) 2003  Matthew W. Lefkowitz, Clark C. Evans
+# Copyright (C) 2003 Matthew W. Lefkowitz
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General
@@ -14,6 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307
 # USA
+#
 
 """ A resumable execution flow mechanism.
 
@@ -49,7 +50,7 @@ class Flow:
             This appends an additional stage to the singly-linked
             list, starting with stageHead.
         '''
-        link = FlowItem(stage)
+        link = FlowLinkItem(stage)
         if not self.stageHead:
             self.stageHead = link
             self.stageTail = link
@@ -59,20 +60,24 @@ class Flow:
         return self
 
     def addFunction(self, callable, stop=None):
-        self.append(FlowFunction(callable, stop))
+        return self.append(FlowFunction(callable, stop))
 
-    def addSequence(self, callable, onFinish = None):
-        self.append(FlowSequence(callable, onFinish))
+    def addBranch(self, callable, onFinish = None):
+        return self.append(FlowBranch(callable, onFinish))
 
     def addContext(self, onFlush = None):
-        self.append(FlowContext(onFlush))
+        return self.append(FlowContext(onFlush))
 
     def addAccumulator(self, accum, start = None, 
                        finish = None, bucket = None):
-        self.append(FlowAccumulator(accum, start, finish, bucket))
+        stage = FlowAccumulator(accum, start, finish, bucket)
+        return self.append(stage)
 
+    def addChain(self, *args):
+        return self.append(FlowChain(args))
+    
     def addDiscard(self):
-        self.append(FlowStage())
+        return self.append(FlowStage())
     
     def execute(self, data = None):
         '''
@@ -97,21 +102,17 @@ class FlowStack:
         '''
         self._waitInterval = waitInterval
         self._stack   = []
-        self._context = []  # see FlowContext
+        self.context = _FlowContext()
+        self._stack.append((self.context, self.context.onFlush, None))
         self._stack.append((data, flowitem.stage, flowitem.next))
-    #
-    def context(self):
-        cntx = self._context
-        if cntx: 
-            return cntx[-1]
     # 
-    def push(self, data, stage=None, next=None):
+    def push(self, data, stage=None, next=None, mayskip = 0):
         '''
            pushes a function to be executed onto the stack:
            
              data    argument to be passed
              stage   callable to be executed
-             next    a FlowItem for subsequent stages
+             next    a FlowLinkItem for subsequent stages
         '''
         if not stage:
             # assume the next stage in the process
@@ -122,6 +123,7 @@ class FlowStack:
         elif not next:
             # assume same stage, different function
             next = self._current[2]
+        if mayskip and not next: return
         self._stack.append((data, stage, next))
     #
     def execute(self):
@@ -134,12 +136,13 @@ class FlowStack:
             (data, stage, next) = self._current
             if not(stage): raise "unconsumed data"
             try:
-                stage(self, data)
-            except PauseFlow:
+                pause = stage(self, data)
+            except PauseFlow: 
                 self.push(data, stage, next)
+                pause = 1
+            if pause:
                 reactor.callLater(self._waitInterval,self.execute)
-                return
-
+                return 1
 
 class PauseFlow(Exception):
    '''
@@ -181,28 +184,27 @@ class FlowFunction(FlowStage):
         if ret is not self.stop:
             flow.push(ret)
 
-class _FlowContext:
+class FlowChain(FlowStage):
+    ''' 
+        enables one or more sub-flows to be added to the flow
     '''
-        innerds of the flow context, this object is created
-        for each descend of a FlowContext stage, and has 
-        attached callbacks.
-
-        addOnFlush   adds a function to be called, optionally
-                     with the 'context' attribute
-    '''
-    def __init__(self):
-        self._flush = []
-    #
-    def addFlush(self, onFlush, bucket = None):
-        args = onFlush.func_code.co_argcount
-        if 0 == args: 
-           fnc = lambda flow, cntx: onFlush()
-        elif 1 == args:
-           fnc = lambda flow, cntx: onFlush(getattr(cntx,bucket,None))
-        else:
-           fnc = onFlush
-        self._flush.append(fnc)
-   
+    def __init__(self, flows):
+        flows = list(flows)
+        flows.reverse()
+        self.flows = flows
+    # 
+    def __call__(self, flow, data):
+        '''
+            adds each of the flows to the current stack, in the
+            order provided by the sequence
+        '''
+        def start(flow, subflow):
+            curr = subflow.stageHead
+            flow.push(data, curr.stage, curr.next)
+        for item in self.flows:
+            flow.push(item, start)
+        flow.push(data, mayskip = 1)
+ 
 class FlowContext(FlowStage):
     ''' 
         represents a branch of execution which may hold accumulated
@@ -216,24 +218,79 @@ class FlowContext(FlowStage):
         ''' 
             adds the _FlowContext to the FlowStack's _context stack
         '''
-        cntx = _FlowContext()
+        cntx = _FlowContext(flow.context)
         if self.onFlush: 
             cntx.addFlush(self.onFlush)
-        flow._context.append(cntx)
-        flow.push(cntx, self.flush)
+        flow.context = cntx
+        flow.push(cntx, cntx.onFlush)
         flow.push(data)
 
-    def flush(self, flow, cntx):
+class _FlowContext:
+    '''
+        flow context provides two services:
+
+          (a) it provides a location for 'flush' callbacks
+              which are applied when the context is over; and
+          (b) providing a place for semi-global variables 
+              which one or more flows below the context
+              can use without restriction
+
+    '''
+    def __init__(self, parent = None):
+        self._parent = parent
+        self._flush  = []
+        self._dict   = {}
+    #
+    def addFlush(self, onFlush, bucket = None):
+        ''' 
+           adds a function to be called, optionally with
+           a 'context' attribute, or a key in the given
+           mapping
+        '''
+        args = onFlush.func_code.co_argcount
+        if 0 == args: 
+           fnc = lambda flow, cntx: onFlush()
+        elif 1 == args:
+           fnc = lambda flow, cntx: onFlush(cntx.get(bucket,None))
+        else:
+           fnc = onFlush
+        self._flush.append(fnc)
+    #
+    def onFlush(self, flow, cntx):
         '''
            cleans up the context and fires onFlush events
         '''
-        top = flow._context.pop()
-        assert top is cntx
-        fncs = cntx._flush
-        while fncs: flow.push(cntx, fncs.pop())
+        assert flow.context is self
+        assert flow.context is cntx
+        fncs = self._flush
+        while fncs: 
+             flow.push(self, fncs.pop())
+        flow.context = self._parent
+    #
+    #  Making the flow context emulate a mapping,
+    #  by recursively handling particular operations
+    # 
+    def _search(self, key):
+        curr = self
+        while curr:
+            if key in curr._dict:
+                return curr._dict
+            curr = self._parent
+    def __contains__(self, key):
+        if self._search(key):
+            return 1
+    def __getitem__(self, key):
+        dict = self._search(key)
+        if dict: return dict[key]
+        raise KeyError(key)
+    def __setitem__(self, key, val):
+        self._dict[key] = val
+    def get(self, key, default):
+        dict = self._search(key)
+        if dict: return dict[key]
+        return default
 
-
-class FlowSequence(FlowStage):
+class FlowBranch(FlowStage):
     '''
         allows callable objects returning an iterator to be used
         within the system; this implements one-to-many behavior
@@ -267,40 +324,41 @@ class FlowSequence(FlowStage):
 
 class FlowAccumulator(FlowStage):
     '''
-        the opposite of a FlowSequence, this takes multiple calls
+        the opposite of a FlowBranch, this takes multiple calls
         and converges them into a single call; this implements
         many-to-one behavior;  for the accumulator to work, it
         requires a FlowContext be higher up the call stack
     '''
     def __init__(self, accum, start = None, finish = None, bucket = None):
         if not bucket: bucket = id(self)
-        self.bucket = str(bucket)
-        self.start  = start
-        self.accum  = accum
-        self.finish = finish
+        self.bucket  = str(bucket)
+        self.start   = start
+        self.accum   = accum
+        self.finish  = finish
     #
     def __call__(self, flow, data):
         '''
             executes the accum function
         '''
-        cntx = flow.context()
-        assert cntx, "FlowAccumulator needs a prior FlowContext"
-        if not hasattr(cntx, self.bucket):
-             if self.finish: cntx.addFlush(self.finish, self.bucket)
+        cntx = flow.context
+        if self.bucket in cntx:
+             acc = cntx[self.bucket]
+        else: 
+             if self.finish: 
+                 cntx.addFlush(self.finish, self.bucket)
              acc = self.start
              if callable(acc): acc = acc()
-        else:
-             acc = getattr(cntx, self.bucket)
         acc = self.accum(acc, data)
-        setattr(cntx, self.bucket, acc)
+        cntx[self.bucket] = acc
+        flow.push(data, mayskip = 1)
 
-class FlowItem:
+class FlowLinkItem:
     '''
        a Flow is implemented as a series of FlowStage objects
        in a linked-list; this is the link node
         
          stage   a FlowStage in the linked list
-         next    next FlowStageLink in this list
+         next    next FlowLinkItem in the list
  
     '''
     def __init__(self,stage):
@@ -362,11 +420,6 @@ class _TunnelIterator:
                 callFromThread(self.append,val)
         except StopIteration:
             callFromThread(self.stop)
-        except Exception, e:
-            print str(e)
-            #failure = failure.Failure()
-            #print "failing", failure
-            #callFromThread(self.setFailure,failure)
     #
     def setFailure(self, failure):
         self.failure = failure
@@ -383,7 +436,6 @@ class _TunnelIterator:
             raise self.failure
         raise PauseFlow
 
-
 class FlowQueryIterator(FlowIterator):
     def __init__(self, pool, sql):
         FlowIterator.__init__(self)
@@ -391,10 +443,12 @@ class FlowQueryIterator(FlowIterator):
         self.sql  = sql
         self.pool = pool
         self.data = None
+        self._tunnel.append = self._tunnel.buff.extend
+    #
     def __call__(self,data):
-        ret = FlowIterator.__call__(self,data)
-        ret.append = ret.buff.extend
-        return ret
+        self.data = data
+        return self
+    #
     def next(self):
         if not self.curs:
             conn = self.pool.connect()
@@ -406,6 +460,41 @@ class FlowQueryIterator(FlowIterator):
             self.curs.close()
             raise StopIteration
         return res
+
+def testFlow():
+    '''
+       primary tests of the Flow construct
+    '''
+    def printResult(data): print data
+    def addOne(data): return  data+1
+    def finished(): print "finished"
+    def dataSource(data):  return [1, 1+data, 1+data*2]
+    a = Flow()
+    a.execute()
+    a.addBranch(dataSource, finished)
+    a.addFunction(addOne)
+    a.addFunction(printResult)
+    a.execute(2)
+    
+    class simpleIterator:
+        def __init__(self, data): 
+            self.data = data
+        def __iter__(self): 
+            return self
+        def next(self): 
+            if self.data < 0: raise StopIteration
+            ret = self.data
+            self.data -= 1
+            return ret
+    import operator
+    b = Flow()
+    b.addBranch(simpleIterator)
+    b.addAccumulator(operator.add, 0, printResult)
+    b.addFunction(printResult)
+  
+    c = Flow()
+    c.addChain(a,b)
+    c.execute(3)
 
 def testFlowIterator():
     class CountIterator(FlowIterator):
@@ -422,55 +511,21 @@ def testFlowIterator():
     def printResult(data): print data
     def finished(): print "finished"
     f = Flow()
-    f.addSequence(CountIterator, onFinish=finished)
+    f.addBranch(CountIterator, onFinish=finished)
     f.addFunction(printResult)
     f.waitInterval = 1
     f.execute(5)
 
-def testFlow():
-    '''
-       primary tests of the Flow construct
-    '''
-    def addOne(data): return  data+1
-    def printResult(data): print data
-    def finished(): print "finished"
-    def dataSource(data):  return [1, 1+data, 1+data*2]
-    f = Flow()
-    f.execute()
-    f.addSequence(dataSource, finished)
-    f.addFunction(addOne)
-    f.addFunction(printResult)
-    f.execute(2)
-    f.execute(11)
-    
-    class simpleIterator:
-        def __init__(self, data): 
-            self.data = data
-        def __iter__(self): 
-            return self
-        def next(self): 
-            if self.data < 0: raise StopIteration
-            ret = self.data
-            self.data -= 1
-            return ret
-    
-    import operator
-    f = Flow()
-    f.addContext(finished)
-    f.addSequence(simpleIterator)
-    f.addAccumulator(operator.add, 0, printResult)
-
-
 def testFlowConnect():
     from twisted.enterprise.adbapi import ConnectionPool
-    pool = ConnectionPool("mx.ODBC.EasySoft","PSICustomerProto")
+    pool = ConnectionPool("mx.ODBC.EasySoft","<some dsn>")
     def printResult(x): print x
     def printDone(): print "done"
-    sql = "SELECT caption from vw_date"
+    sql = "<some query>"
     f = Flow()
     f.waitInterval = 1
-    f.addStage(FlowQueryIterator(pool,sql),onFinish=printDone)
-    f.addStage(printResult)
+    f.addBranch(FlowQueryIterator(pool,sql),onFinish=printDone)
+    f.addFunction(printResult)
     f.execute()
 
 # support iterators for 2.1
