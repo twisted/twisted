@@ -15,7 +15,8 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-"""
+"""DEPRECATED.
+
 Twisted Cred Service
 
 Maintainer: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
@@ -66,6 +67,8 @@ class Service(app.ApplicationService):
 
         Arguments: application, a twisted.internet.app.Application instance.
         """
+        warnings.warn("Cred services are deprecated, use realms instead.",
+                      category=DeprecationWarning, stacklevel=2)
         self.perspectives = {}
         if application:
             if serviceParent:

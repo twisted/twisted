@@ -15,7 +15,8 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-"""
+"""DEPRECATED.
+
 Container for authorization objects.
 
 Maintainer: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
@@ -46,6 +47,8 @@ class Authorizer(Accessor):
     """
 
     def __init__(self, serviceCollection=None):
+        warnings.warn("Authorizers are deprecated, switch to portals/realms/etc.",
+                      category=DeprecationWarning, stacklevel=2)
         self.serviceCollection = serviceCollection
 
     def get_application(self):

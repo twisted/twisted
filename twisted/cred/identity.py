@@ -15,7 +15,8 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-"""
+"""DEPRECATED.
+
 Base authentication mechanisms for Twisted.
 
 Maintainer: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
@@ -31,7 +32,7 @@ the addition of more methods in the base Identity.
 """
 
 # System Imports
-import md5, types, sys
+import md5, types, sys, warnings
 
 # Twisted Imports
 from twisted.python import failure
@@ -59,6 +60,8 @@ class Identity:
         I must have a name, and a backreference to the Application that the
         Keys on my keyring make reference to.
         """
+        warnings.warn("Identities are deprecated, switch to credentialcheckers etc.",
+                      category=DeprecationWarning, stacklevel=2)
         if not isinstance(name, types.StringType):
             raise TypeError
         from twisted.internet import app
