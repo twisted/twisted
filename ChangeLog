@@ -1,3 +1,7 @@
+2002-12-25  Christmas Armstrong  <radix@twistedmatrix.com>
+
+	* .: Releasing 1.0.2alpha1 - Merry Christmas!
+
 2002-12-25  Jp Calderone  <exarkun@twistedmatrix.com>
 
 	* twisted/protocols/dict.py: dict client protocol implementation
