@@ -553,6 +553,7 @@ class Base(protocol.DatagramProtocol):
     """Base class for SIP clients and servers."""
     
     PORT = PORT
+    debug = False
     
     def __init__(self):
         self.messages = []
