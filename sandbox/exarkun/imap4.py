@@ -3684,18 +3684,18 @@ def produceNestedLists(items):
                 pieces.extend([' ', _quote(i)])
         elif hasattr(i, 'read'):
             b = i.tell()
-            i.seek(2, 0)
+            i.seek(0, 2)
             e = i.tell()
-            i.seek(0, b)
+            i.seek(b, 0)
             pieces.extend([' ', '{', str(e - b), '}', IMAP4Server.delimiter])
             if top:
                 top = False
                 pieces.pop(0)
             yield StringProducer(''.join(pieces))
             pieces = []
-            yield FileProducer(d)
+            yield FileProducer(i)
         else:
-            if top:
+            if pieces and top:
                 top = False
                 pieces.pop(0)
             yield StringProducer(''.join(pieces) + ' (')
@@ -3703,7 +3703,7 @@ def produceNestedLists(items):
             for p in produceNestedLists(i):
                 yield p
             yield StringProducer(')')
-    if top:
+    if pieces and top:
         top = False
         pieces.pop(0)
     yield StringProducer(''.join(pieces))
