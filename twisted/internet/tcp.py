@@ -392,15 +392,15 @@ class Port(abstract.FileDescriptor):
         self.fileno = self.socket.fileno
         self.numberAccepts = 100
         self.startReading()
-    
+
     def approveConnection(self, sock, addr):
         """Check that this is a connection we are willing to accept.
-        
+
         By default all connections are approved - override in subclasses or in order
         to provide custom behavior, e.g. only accepting connections from 127.0.0.1.
         """
         return 1
-    
+
     def doRead(self):
         """Called when my socket is ready for reading.
 
