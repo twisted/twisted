@@ -79,6 +79,7 @@ def _scroungeRecords((answers, authority, additional), reqkey, dnstype,
         d.addCallback(_scroungeRecords, reqkey, dnstype,
                       cnameLevel, nsLevel-1, resolver)
         return d
+    return []
 
 
 def lookupText(domain, cnameLevel=D_CNAME, nsLevel=D_NS,
