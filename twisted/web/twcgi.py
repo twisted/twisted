@@ -137,9 +137,9 @@ class FilteredScript(CGIScript):
 
     filter = '/usr/bin/cat'
 
-    def runProcess(self, env, request):
+    def runProcess(self, env, request, qargs=[]):
         p = CGIProcessProtocol(request)
-        reactor.spawnProcess(p, self.filter, [self.filter, self.filename], env, os.path.dirname(self.filename))
+        reactor.spawnProcess(p, self.filter, [self.filter, self.filename]+qargs, env, os.path.dirname(self.filename))
 
 
 class PHP3Script(FilteredScript):
