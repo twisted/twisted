@@ -105,4 +105,10 @@ class TestClassRunner:
                                       method, self.runTest).run()
             output.reportResults(self.testClass, method, *results)
 
+def runTest(method):
+    # utility function, used by test_trial to more closely emulate the usual
+    # testing process. This matches the same check in util.extract_tb that
+    # matches SingletonRunner.runTest and TestClassRunner.runTest .
+    method()
+
 import unittest

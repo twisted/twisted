@@ -20,6 +20,7 @@
 import traceback
 from twisted.python import components, failure
 from twisted.internet import interfaces
+from twisted.trial import runner
 
 # Methods in this list will be omitted from a failed test's traceback if
 # they are the final frame.
@@ -93,12 +94,18 @@ def extract_tb(tb, limit=None):
     testing framework.
     """
     l = traceback.extract_tb(tb, limit)
-    myfile = __file__.replace('.pyc','.py')
+    util_file = __file__.replace('.pyc','.py')
+    unittest_file = unittest.__file__.replace('.pyc','.py')
+    runner_file = runner.__file__.replace('.pyc','.py')
+    framework = [(unittest_file, '_runPhase'), # Tester._runPhase
+                 (unittest_file, '_main'),     # Tester._main
+                 (runner_file, 'runTest'),     # [ITestRunner].runTest
+                 ]
     # filename, line, funcname, sourcetext
-    while (l[0][0] == myfile) and (l[0][2] in ('_runPhase', '_main', 'runTest')):
+    while (l[0][0], l[0][2]) in framework:
         del l[0]
-        
-    if (l[-1][0] == myfile) and (l[-1][2] in _failureConditionals):
+
+    if (l[-1][0] == unittest_file) and (l[-1][2] in _failureConditionals):
         del l[-1]
     return l
 

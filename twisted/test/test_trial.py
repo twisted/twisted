@@ -2,11 +2,11 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.12 $"[11:-2]
+__version__ = "$Revision: 1.13 $"[11:-2]
 
 from twisted.python.compat import *
 from twisted.python import reflect
-from twisted.trial import unittest, reporter
+from twisted.trial import unittest, reporter, util, runner
 from StringIO import StringIO
 import sys
 
@@ -15,12 +15,11 @@ class TestTraceback(unittest.TestCase):
         """Making sure unittest doesn't show up in traceback."""
         suite = unittest.TestSuite()
         testCase = self.FailingTest()
-        reporter = unittest.Reporter()
         result = unittest.Tester(testCase.__class__, testCase,
-                                 testCase.__class__.testThatWillFail,
-                                 lambda x: x()).run()
+                                 testCase.testThatWillFail,
+                                 runner.runTest).run()
         failType, (eType, eVal, tb) = result
-        stackList = unittest.extract_tb(tb)
+        stackList = util.extract_tb(tb)
         self.failUnlessEqual(len(stackList), 1)
         self.failUnlessEqual(stackList[0][2], 'testThatWillFail')
 
@@ -28,8 +27,6 @@ class TestTraceback(unittest.TestCase):
     class FailingTest(unittest.TestCase):
         def testThatWillFail(self):
             self.fail("Broken by design.")
-
-    testExtractTB.todo = "This test broken by recent refactorings. May be invalid"
 
 ###################
 # trial.remote

@@ -1,3 +1,11 @@
+2003-05-01  Brian Warner  <warner@lothar.com>
+
+	* twisted/test/test_trial.py: handle new trial layout
+	* twisted/trial/runner.py (runTest): utility function to help
+	test_trial
+	* twisted/trial/util.py (extract_tb): handle new trial layout,
+	ignore the right framework functions.
+
 2003-05-01  Glyph Lefkowitz  <glyph@twistedmatrix.com>
 
 	* twisted/python/context.py: call-stack context tree.
