@@ -2,12 +2,9 @@ Twisted SVN-trunk
 
 Quote of the Release:
 
-<hypatia> Why does dirdbm exist, exactly?
-<spiv> hypatia: Because glyph is trigger-happy when it comes to
-       writing persistence systems.
-<spiv> "Hey Rocky, watch me pull a persistence system out of my hat!"
-<spiv> "But that trick never works!"
-<spiv> "This time for *sure*!"
+<PenguinOfDoom> Being enlightened gentlemen, we split all programming
+    languages into two groups, sucks and doesn't-suck and put all of
+    them into the first group.
 
 For information on what's new in Twisted 1.2.1alpha2, see the ChangeLog file
 that comes with the distribution, or http://twistedmatrix.com/ChangeLog.txt.
