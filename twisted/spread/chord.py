@@ -48,8 +48,10 @@ def betweenR(n, a, b):
     elif a < b: return n > a and n <= b
     else: return n > a or n <= b
 
+
 class Node(pb.Copyable, pb.Perspective):
     """A node in a Chord network."""
+    
     def __init__(self, address, perspectiveName, identityName, port=pb.portno):
         global vNodes
         pb.Perspective.__init__(self, perspectiveName, identityName) 
@@ -70,37 +72,39 @@ class Node(pb.Copyable, pb.Perspective):
         """Intialize finger tables of local node.
         n2 is a node already on the network or None if we're the first."""
         if n2:
-            n2.findSuccessor(self.id).addCallback(lambda x, self=self: self.getNodeAt(x).addCallback(iHatePython, callbackArgs=(1,)))
+            n2.findSuccessor(self.id).addCallback(lambda x, self=self: self.getNodeAt(x).addCallback(self._setFingerCallback, callbackArgs=(1,)))
             self.finger[1].notify(self.address, pbanswer=0)
-            self.findPredecessor(self.id).addCallback(iHatePython2)
+            self.findPredecessor(self.id).addCallback(self._setPredCallback)
             for i in range(1, NBIT):
                 if betweenL(self.id, self.start(i+1), 
                   self.finger[i].id):
                     self.finger[i+1] = self.finger[i]
                 else:
-                    n2.findSuccessor(self.start(i+1)).addCallback(lambda x, self=self, i=i: self.getNodeAt(x).addCallback(iHatePython, callbackArgs=(i+1,)))
+                    n2.findSuccessor(self.start(i+1)).addCallback(lambda x, self=self, i=i: self.getNodeAt(x).addCallback(self._setFingerCallback, callbackArgs=(i+1,)))
             n2.notify(self.address, pbanswer=0)
         else:
             self.finger[1] = None
             self.pred = None
 
-    def iHatePython(self, x, i):
+    def _setFingerCallback(self, x, i):
         #CRUM! DEFEATED BY DISTANCE
         self.finger[i] = x
-    def iHatePython2(self, n):
+
+    def _setPredCallback(self, n):
         #ALSO TOO FAR!
         self.pred = n
 
     def perspective_getSuccessor(self):
         return self.finger[1]
+    
     def perspective_getPredecessor(self):
         return self.pred
     
     def perspective_findSuccessor(self, id):
-        self.findPredecessor(id).addCallback(findSuccessor_1)
+        self.findPredecessor(id).addCallback(self.findSuccessor_1)
 
     def findSuccessor_1(self, n2):
-        n2.getSuccessor().addCallbacks(findSuccessor_2, callbackArgs=n2)
+        n2.getSuccessor().addCallbacks(self.findSuccessor_2, callbackArgs=n2)
         
     def findSuccessor_2(self, address, n2):
         if address: 
@@ -113,11 +117,13 @@ class Node(pb.Copyable, pb.Perspective):
             return self
         n2 = self
         return self.findPredecessor_1(n2, id)        
+    
     def findPredecessor_1(self, n2, id):
-        n2.getSuccessor().addCallback(findPredecessor_2, n2, id)
+        n2.getSuccessor().addCallback(self.findPredecessor_2, n2, id)
+    
     def findPredecessor_2(self, n3, n2, id):
         if not betweenR(id, n2.id, n3.id):
-            n2.closestPrecedingFinger(id).addCallback(lambda a,  id=id, self=self: self.getNodeAt(a).addCallback(lambda n, id=id, self=self: findPredecessor_1(n, id)))
+            n2.closestPrecedingFinger(id).addCallback(lambda a,  id=id, self=self: self.getNodeAt(a).addCallback(lambda n, id=id, self=self: self.findPredecessor_1(n, id)))
         else:
             return n2
 
@@ -138,7 +144,7 @@ class Node(pb.Copyable, pb.Perspective):
     def stabilise(self):
         """Verify our immediate successor and tell them about us.
         Called periodically."""
-        self.finger[1].getPredecessor().addCallback(stabilise_1)
+        self.finger[1].getPredecessor().addCallback(self.stabilise_1)
 
     def stabilise_1(self, p):
         if p != self.address:
@@ -152,7 +158,7 @@ class Node(pb.Copyable, pb.Perspective):
     
     def perspective_notify(self, addr):        
         """n thinks it might be our predecessor."""
-        self.getNodeAt(addr).addCallback(notify)
+        self.getNodeAt(addr).addCallback(self.notify)
 
     def notify(self, n):   
         if (self.pred is self or self.pred is None or 
