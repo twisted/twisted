@@ -53,8 +53,7 @@ class TerminalProcessProtocol(protocol.ProcessProtocol):
 
 class ConsoleManhole(ColoredManhole):
     def handle_QUIT(self):
-        self.transport.loseConnection()
-        from twisted.internet import reactor
+        self.terminal.loseConnection()
         reactor.stop()
 
 def runWithProtocol(klass):
