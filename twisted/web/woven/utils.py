@@ -1,3 +1,5 @@
+from __future__ import nested_scopes
+
 from twisted.web import widgets as oldwidgets
 from twisted.web.woven import model, interfaces
 
