@@ -4710,8 +4710,6 @@ person.
 %
 <dreid> jml: i thought warner wanted to be a Problem object that can be passed via jelly
 %
-<glyph> "we put the 's' in 'drwxrwsr-x'
-%
 <chrchr> PenguinOfDoom: Also, what non-sucky HTTP server? What would you use, besides twisted.web?
 <glyphG4> chrchr: roxen!
 <chrchr> glyphG4: Roxen? Really??
