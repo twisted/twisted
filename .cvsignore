@@ -1,9 +1,0 @@
-_trial_temp
-*.pyc
-build
-dist
-MANIFEST
-test.log
-py*.iss
-aapdir
-main.aap
