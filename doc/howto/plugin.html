@@ -192,15 +192,19 @@ more.</p>
 
 <h3>Before you Begin</h3>
 
-<p>First, make a directory, TwistedQuotes, where you're going to keep your
-code.  The path of least resistance is probably just to make a directory inside
-your <code class="shell">Twisted-X.X.X</code> directory, which will already be
-in your <code class="python">sys.path</code>.  If you want to put it elsewhere,
-make sure that your TwistedQuotes directory is a package on your python path.
-For example, if your TwistedQuotes directory is /my/stuff/TwistedQuotes, you
-can <code class="shell">export PYTHONPATH=/my/stuff:$PYTHONPATH</code> in UNIX,
-or edit the <code class="shell">PYTHONPATH</code> environment variable to add
-<code class="shell">/my/stuff;</code> at the beginning through the System
+<p>First, make a directory, TwistedQuotes, where you're going to keep
+your code.  The path of least resistance is probably just to make a
+directory inside your <code class="shell">Twisted-X.X.X</code>
+directory, which will already be in your <code
+class="python">sys.path</code>.  If you want to put it elsewhere, make
+sure that your TwistedQuotes directory is a package on your python
+path.  <em>Note</em> that the directory you add to your PYTHONPATH
+needs to be the directory <em>containing</em> your package's
+directory! For example, if your TwistedQuotes directory is
+/my/stuff/TwistedQuotes, you can <code class="shell">export
+PYTHONPATH=/my/stuff:$PYTHONPATH</code> in UNIX, or edit the <code
+class="shell">PYTHONPATH</code> environment variable to add <code
+class="shell">/my/stuff;</code> at the beginning through the System
 Properties dialog on Windows.</p>
 
 <div style="float: right"><pre class="python-interpreter">
