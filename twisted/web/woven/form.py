@@ -225,9 +225,14 @@ class FormFillerWidget(widgets.Widget):
             if t and t.lower() == "submit":
                 hasSubmit = 1
             nName = inNode.getAttribute("name")
-            assert argz.has_key(nName), "signature does not define %r, but template has node %s" % (nName,inNode.toxml())
-            inputNodes[nName] = inNode
-            del argz[nName]
+            if argz.has_key(nName):
+                inputNodes[nName] = inNode
+                del argz[nName]
+            # TODO:
+            # * some arg types should only have a single node (text, string, etc)
+            # * some should have multiple nodes (choice, checkgroup)
+            # * some have a bunch of ancillary nodes that are possible values (menu, radiogroup)
+            # these should all be taken into account when walking through the template
         if argz:
             shell = self.createShell(request, node, data)
             # create inputs, in the same order they were passed to us:
