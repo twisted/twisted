@@ -39,6 +39,7 @@ class Options(usage.Options):
                 ["summary", "s", "summary output"],
                 ["debug", "b", "Run tests in the Python debugger"],
                 ["profile", None, "Run tests under the Python profiler"],
+                ["until-failure", "u", "Repeat test until it fails"],
                 ["recurse", "R", "Search packages recursively"]]
 
     optParameters = [["reactor", "r", None,
@@ -207,6 +208,15 @@ class Options(usage.Options):
         if not self.has_key('tbformat'):
             self['tbformat'] = 'plain'
 
+def call_until_failure(reporter, callable, *args, **kwargs):
+    count = 1
+    print "Test Pass %d" % count
+    callable(*args, **kwargs)
+    while reporter.allPassed():
+        count += 1
+        print "Test Pass %d" % count
+        callable(*args, **kwargs)
+
 def run():
     if len(sys.argv) == 1:
         sys.argv.append("--help")
@@ -292,8 +302,18 @@ def run():
             hasattr(sys, 'exc_clear') and sys.exc_clear()
         else:
             dbg.rcLines.extend(rcFile.readlines())
-        dbg.run("suite.run(reporter, config['random'])", globals(), locals())
+        if config['until-failure']:
+            call_until_failure(reporter,
+                               dbg.run,
+                               "suite.run(reporter, config['random'])",
+                               globals(), locals())
+        else:
+            dbg.run("suite.run(reporter, config['random'])",
+                    globals(), locals())
     elif config['profile']:
+        if config['until-failure']:
+            raise RuntimeError, \
+                  "you cannot use both --until-failure and --profile"
         import profile
         prof = profile.Profile()
         try:
@@ -302,7 +322,11 @@ def run():
             pass
         prof.print_stats()
     else:
-        suite.run(reporter, config['random'])
+        if config['until-failure']:
+            call_until_failure(reporter,
+                               suite.run, reporter, config['random'])
+        else:
+            suite.run(reporter, config['random'])
     sys.exit(not reporter.allPassed())
 
 if __name__ == '__main__':

@@ -1,3 +1,8 @@
+2003-10-01  Brian Warner  <warner@lothar.com>
+
+	* twisted/scripts/trial.py (run): add --until-failure option to
+	re-run the test until something fails. Closes issue87.
+
 2003-09-30  Brian Warner  <warner@lothar.com>
 
 	* twisted/test/test_conch.py (testOurServerOpenSSHClient): replace
