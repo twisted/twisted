@@ -693,7 +693,7 @@ class _TextTestResult(TestResult):
             self.stream.writeln("%s: %s" % (flavour,self.getDescription(test)))
             self.stream.writeln(self.separator2)
             if isinstance(err, twisted.python.failure.Failure):
-                err.printTraceback()
+                err.printTraceback(file=self.stream)
             else:
                 for line in apply(traceback.format_exception, err):
                     for l in string.split(line,"\n")[:-1]:
