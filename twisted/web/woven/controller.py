@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.57 $"[11:-2]
+__version__ = "$Revision: 1.58 $"[11:-2]
 
 import os
 import cgi
@@ -26,6 +26,7 @@ import types
 
 from twisted.python import log
 from twisted.python import components
+from twisted.python import failure
 from twisted.web import resource, server, static
 from twisted.web.woven import interfaces, utils
 from twisted.web import woven
@@ -286,12 +287,17 @@ class LiveController(Controller):
             sess.hookupOutputConduit(request)
             return server.NOT_DONE_YET
         if request.args.has_key('woven_clientSideEventName'):
-            request.d = microdom.parseString('<xml/>')
-            eventName = request.args['woven_clientSideEventName'][0]
-            eventTarget = request.args['woven_clientSideEventTarget'][0]
-            eventArgs = request.args.get('woven_clientSideEventArguments', [])
-            #print "EVENT", eventName, eventTarget, eventArgs
-            return self.clientToServerEvent(request, eventName, eventTarget, eventArgs)
+            try:
+                request.d = microdom.parseString('<xml/>')
+                eventName = request.args['woven_clientSideEventName'][0]
+                eventTarget = request.args['woven_clientSideEventTarget'][0]
+                eventArgs = request.args.get('woven_clientSideEventArguments', [])
+                #print "EVENT", eventName, eventTarget, eventArgs
+                return self.clientToServerEvent(request, eventName, eventTarget, eventArgs)
+            except:
+                fail = failure.Failure()
+                self.view.renderFailure(fail, request)
+                return server.NOT_DONE_YET
 
         # Unlink the current page in this user's session from MVC notifications
         page = sess.getCurrentPage()
