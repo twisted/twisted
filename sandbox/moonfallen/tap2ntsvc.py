@@ -385,3 +385,26 @@ the inno/program directory of the Innoconda distribution.  After editing the
 file, do:
    python do_inno.py
 '''
+
+makefile_template = '''\
+# assumes Cygwin make and environment
+
+name=%(name)s
+version=%(package_version)s
+
+all: $(name)-$(package_version)-setup.exe
+        @echo "Done"
+        
+$(name)-$(package_version)-setup.exe: $(name).iss do_inno.py
+        python do_inno.py
+
+$(name).iss: $(name).fms do_inno_script.py setup.py setup.cfg $(name).tap
+        python setup.py py2exe
+        python do_inno_script.py
+
+clean:
+        rm -rf dist build
+        rm -f $(name).iss
+        rm -f *.pyc
+        rm -f $(name)-$(package_version)-setup.exe
+'''
