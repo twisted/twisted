@@ -149,5 +149,6 @@ def formatFailure(myFailure):
             w('</table></td>')
         w('</tr>')
         line = line + 1
+    w('<th align="left" colspan="3"><font color="red">%s: %s</font></th>' % (html.escape(str(myFailure.type)), html.escape(str(myFailure.value))))
     w('</table>')
     return io.getvalue()
