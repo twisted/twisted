@@ -40,18 +40,18 @@ class _AbstractServer(_VolatileDataService):
     def privilegedStartService(self):
         service.Service.privilegedStartService(self)
         if self.privileged:
-            self._port = self.getPort()
+            self._port = self._getPort()
 
     def startService(self):
         service.Service.startService(self)
         if not self.privileged:
-            self._port = self.getPort()
+            self._port = self._getPort()
 
     def stopService(self):
         service.Service.stopService(self)
         self._port.stopListening()
 
-    def getPort(self):
+    def _getPort(self):
         from twisted.internet import reactor
         return getattr(reactor, 'listen'+self.method)(*self.args, **self.kwargs)
 
@@ -66,13 +66,13 @@ class _AbstractClient(_VolatileDataService):
 
     def startService(self):
         service.Service.startService(self)
-        self._connection = self.getConnection()
+        self._connection = self._getConnection()
 
     def stopService(self):
         service.Service.stopService(self)
         #self._connection.stopConnecting()
 
-    def getConnection(self):
+    def _getConnection(self):
         from twisted.internet import reactor
         return getattr(reactor, 'connect'+self.method)(*self.args,
                                                        **self.kwargs)
