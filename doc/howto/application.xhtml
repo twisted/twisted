@@ -163,17 +163,19 @@ from twisted.internet import protocol
 application = service.Application("echo")
 
 # Get the IServiceCollection interface
-s = service.IServiceCollection(application)
+myService = service.IServiceCollection(application)
 
 # Create the protocol factory
-f = protocol.ServerFactory()
-f.protocol = wire.Echo
+myFactory = protocol.ServerFactory()
+myFactory.protocol = wire.Echo
 
-# Create the (sole) service
-i = internet.TCPServer(7, f)
+# Create the (sole) server
+# Normally, the echo protocol lives on port 7, but since that
+# is a privileged port, for this example we'll use port 7001
+myServer = internet.TCPServer(7001, f)
 
 # Tie the service to the application
-i.setServiceParent(s)
+myServer.setServiceParent(s)
 </pre>
  
 <p>TAC files are run with <code>twistd -y</code> or
