@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.50 2002/11/17 04:31:24 spiv Exp $
+# $Id: default.py,v 1.51 2002/11/25 02:06:32 spiv Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -380,13 +380,12 @@ class _Win32Waker(log.Logger, styles.Ephemeral):
         """
         log.msg("starting waker")
         # Following select_trigger (from asyncore)'s example;
-        address = ("127.0.0.1", 19939)
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client.setsockopt(socket.IPPROTO_TCP, 1, 1)
-        server.bind(address)
+        server.bind(('127.0.0.1', 0))
         server.listen(1)
-        client.connect(address)
+        client.connect(server.getsockname())
         reader, clientaddr = server.accept()
         client.setblocking(1)
         reader.setblocking(0)
