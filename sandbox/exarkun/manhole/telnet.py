@@ -661,6 +661,7 @@ class TelnetTransport(Telnet, ProtocolTransportMixin):
     def connectionMade(self):
         if self.protocolFactory is not None:
             self.protocol = self.protocolFactory(*self.protocolArgs, **self.protocolKwArgs)
+            self.protocol.factory = self.factory
             self.protocol.makeConnection(self)
 
     def enableLocal(self, option):
@@ -743,9 +744,13 @@ class StatefulTelnetProtocol(basic.LineReceiver, TelnetProtocol):
     state = 'Discard'
 
     def lineReceived(self, line):
-        state = getattr(self, "telnet_" + self.state)(line)
-        if state is not None:
-            self.state = state
+        oldState = self.state
+        newState = getattr(self, "telnet_" + oldState)(line)
+        if newState is not None:
+            if self.state == oldState:
+                self.state = newState
+            else:
+                log.msg("Warning: state changed and new state returned")
 
     def telnet_Discard(self, line):
         pass
