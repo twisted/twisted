@@ -70,10 +70,30 @@ def aSillyBlockingMethod(x):
 reactor.callInThread(aSillyBlockingMethod, "2 seconds have passed")
 </pre>
 
+    <p>If you have multiple methods that you'd like to run sequentially
+    within a thread, we can do:</p>
+
+<pre class="python">
+from twisted.internet import reactor
+
+def aSillyBlockingMethodOne(x):
+    import time
+    time.sleep(2)
+    print x
+
+def aSillyBlockingMethodTwo(x):
+    print x
+
+# run both methods sequentially in a thread
+commands = [(aSillyBlockingMethodOne, ["Calling First"], {})]
+commands = commands.append((aSillyBlockingMethodTwo, ["And the second"], {}))
+reactor.callMultipleInThread(commands)
+</pre>
+
     <p>For functions whose results we wish to get, we can have the
     result returned as a Deferred:</p>
 <pre class="python">
-from twisted.internet import threads
+from twisted.internet import reactor
 
 def doLongCalculation():
     # .... do long calculation here ...
@@ -83,10 +103,28 @@ def printResult(x):
     print x
 
 # run method in thread and get result as defer.Deferred
-d = threads.deferToThread(doLongCalculation)
+d = reactor.deferToThread(doLongCalculation)
 d.addCallback(printResult)
-d.arm()
 </pre>
+
+    <h2>Managing the Thread Pool</h2>
+
+    <p>The thread pool is implemented by <code
+    class="API">twisted.python.threadpool.ThreadPool</code>.</p>
+
+    <p>We may want to modify the size of the threadpool, increasing
+    or decreasing the number of threads in use.  We can do this
+    do this quite easily:</p>
+
+<pre class="python">
+from twisted.internet import reactor
+
+reactor.suggestThreadPoolSize(20)
+</pre>
+
+  <p>The size of the thread pool defaults to a maximum of 10 threads.  Be
+  careful that you understand threads and their resource usage before
+  drastically altering the thread pool sizes.</p>
   </body>
 </html>
 
