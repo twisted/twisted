@@ -1,0 +1,39 @@
+"""I am an uber-bot that can do anything and everything."""
+
+class SaltGrain:
+    """I am a very simple SaltGrain implementation that just prints messages
+    out."""
+    def __init__(self):
+        self.network = "print"
+
+    def sendMessage(self, sender, network, message):
+        print "<%s@%s> %s" % (sender, network, message)
+
+
+class WordsGrain:
+    def __init__(self, user, password, host, groups):
+        self.network = "words"
+
+    def sendMessage(self, sender, network, message):
+        
+
+class BreadStick:
+    """I am a pretzel with no salt: I have twisty networks of communication
+    channels.
+    
+    Add Grains of salt (objects with a sendMessage method) to me (with
+    addGrainOfSalt) and I will distribute messages to them.
+    
+    sendMessages to me and I will distribute them.
+    """
+
+    def __init__(self, protocols=[]):
+        self.grains = grains 
+
+    def addGrainOfSalt(self, saltGrain):
+        self.grains.append(saltGrain)
+
+    def sendMessage(self, sender, message):
+        for p in self.grains:
+            p.sendMessage(sender, p.network, message)
+
