@@ -30,7 +30,7 @@ def fixLinks(document, ext):
             continue
         if node.getAttribute("class", "") == "absolute":
             continue
-        if node.getAttribute("class", "").find('listing') == -1:
+        if node.getAttribute("class", "").find('listing') != -1:
             continue
 
         # This is a relative link, so it should be munged.
