@@ -52,7 +52,7 @@ register("Twisted Mail",
 
 # TAP Builder modules
 
-register("Twisted Web TAP builder",
+register("Twisted Web",
          "twisted.tap.web",
          description="""
          A general-purpose web server which can serve from a 
@@ -61,75 +61,75 @@ register("Twisted Web TAP builder",
          type="tap",
          tapname="web")
 
-register("Twisted FTP TAP builder",
+register("Twisted FTP",
          "twisted.tap.ftp",
          description="An FTP server.",
          type="tap")
 
-register("Twisted Mail TAP builder",
+register("Twisted Mail",
          "twisted.tap.mail",
          description="An email service.",
          type="tap")
 
-register("Twisted Manhole TAP builder",
+register("Twisted Manhole",
          "twisted.tap.manhole",
          description="An interactive remote debugger service.",
          type="tap")
 
-register("Twisted Port-Forwarding TAP builder",
+register("Twisted Port-Forwarding",
          "twisted.tap.portforward",
          description="A simple port-forwarder.",
          type="tap")
 
-register("Twisted SOCKS TAP builder",
+register("Twisted SOCKS",
          "twisted.tap.socks",
          description="A SOCKSv4 proxy service.",
          type="tap")
 
-register("Twisted SSH TAP builder",
+register("Twisted SSH Server",
          "twisted.tap.ssh",
          description="An SSHv2 service.",
          type="tap")
 
-register("Twisted Telnet Shell TAP builder",
+register("Twisted Telnet Shell Server",
          "twisted.tap.telnet",
          description="A simple, telnet-based remote debugging service.",
          type="tap")
 
-register("Twisted TOC Server TAP builder",
+register("Twisted TOC Server",
          "twisted.tap.toc",
          description="An AIM TOC service.",
          type="tap")
 
-register("Twisted Words TAP builder",
+register("Twisted Words",
          "twisted.tap.words",
          description="A chat service.",
          type="tap")
 
-register("Twisted Coil TAP builder",
+register("Twisted Coil",
          "twisted.tap.coil",
          description="A web-based configuration manager.",
          type="tap")
 
-register("Twisted Instance Messenger TAP builder",
+register("Twisted Instance Messenger",
          "twisted.im.tap",
          description="A multi-protocol chat client.",
          type="tap",
          tapname="im")
 
-register("Twisted Sister 'Parent' TAP builder",
+register("Twisted Sister 'Parent'",
          "twisted.sister.parentap",
          description="Parent service.",
          type="tap",
          tapname="parent")
 
-register("Twisted Sister 'Sister' TAP builder",
+register("Twisted Sister 'Sister'",
          "twisted.sister.sistap",
          description="Sister service.",
          type="tap",
          tapname="sister")
 
-register("Twisted News Automated TAP Builder",
+register("Twisted News",
          "twisted.tap.news",
          description="News Server",
          type='tap',
@@ -148,19 +148,19 @@ register("Twisted Inetd Server",
          type='tap',
          tapname='inetd')
 
-register("Zoot TAP Builder",
+register("Zoot",
          "twisted.zoot.zoottap",
          description="Zoot TAP builder module",
          type='tap',
          tapname="zoot")
 
-register("Zoot Pinger TAP Builder",
+register("Zoot Pinger",
          "twisted.zoot.pingertap",
          description="Zoot Pinger TAP builder module",
          type='tap',
          tapname="pinger")
 
-register("Zoot Ponger TAP Builder",
+register("Zoot Ponger",
          "twisted.zoot.pongertap",
          description="Zoot Ponger TAP builder module",
          type='tap',
