@@ -164,6 +164,27 @@ class LatexSpitter:
         node.tagName += '_'+node.getAttribute('class')
         self.visitNode(node)
 
+    def visitNode_table(self, node):
+        # All of my children should be <tr> elements
+        numCols = 0
+        for child in node.childNodes:
+            numCols = max(numCols, len(child.childNodes))
+        numCols += 1
+        self.writer('\\begin{tabular}{@{}'+'l'*numCols+'@{}}')
+        for child in node.childNodes:
+            th = 0
+            for col in child.childNodes:
+                if getattr(col, 'tagName', None) not in ('th', 'td'):
+                    continue 
+                self.visitNode(col)
+                self.writer('&')
+                if col.tagName == 'th':
+                    th = 1
+            self.writer('\\\\\n')
+            if th:
+                self.writer('\\hline\n')
+        self.writer('\\end{tabular}\n')
+         
     visitNode_div = visitNode_span
 
     visitNode_h2 = visitNode_h3 = visitNode_h4 = visitNodeHeader
