@@ -32,7 +32,12 @@ atom = sexpy.Atom
 def consify(sexp):
     if sexp and isinstance(sexp, types.ListType):
         qar = sexp[0]
-        qdr = sexp[1:]
+        try: maybe_dot = sexp[1]
+        except IndexError: maybe_dot = None
+        if maybe_dot == atom('.'):
+            qdr = sexp[2]
+        else:
+            qdr = sexp[1:]
         return [consify(qar),consify(qdr)]
     else:
         return sexp
@@ -107,36 +112,33 @@ class Function:
         self.llist = car(forms)
         self.body = cadr(forms)
 
-
-    def __call__(self, *args):
-        bindings = []
+    def parseLambdaList(self, args):
         i = 0
+        bindings = []
         crap = self.llist
         while crap:
-            var = car(crap)
-            bindings = cons(cons(var, args[i]), bindings)
+            if func_consp(crap):
+                b =  cons(car(crap), args[i])
+            else:
+                rgs = apply(func_list, args[i:])
+                b = cons(crap, rgs)
+            bindings = cons(b, bindings)
             i = i + 1
-            crap = cdr(crap)
-
-        if i != len(args):
-            raise TypeError("Wrong number of arguments!")
+            if func_consp(crap):
+                crap = cdr(crap)
+            else:
+                break
+        return bindings
         
-        newEnv = extendEnv(VAR, self.env, func_map(lambda x, env=self.env: cons(car(x), evalExp(cdr(x), env)),  bindings))
+
+    def __call__(self, *args):
+        bindings = self.parseLambdaList(args)        
+        newEnv = extendEnv(VAR, self.env, bindings)
         return evalExp(self.body, newEnv)
 
 class Macro(Function):
     def expand(self, args):
-        bindings = []
-        i = 0
-        crap = self.llist
-        while crap:
-            var = car(crap)
-            bindings = cons(cons(var, args[i]), bindings)
-            i = i + 1
-            crap = cdr(crap)
-
-        if i != len(args):
-            raise TypeError("Wrong number of arguments!")
+        bindings = self.parseLambdaList(args)    
         newEnv = extendEnv(VAR, self.env, bindings)
         return evalExp(self.body, newEnv)
         
@@ -171,10 +173,17 @@ def eco_apply(exp, env):
         if isinstance(f, Macro):
             return apply(f, (env,) + tuple(argVec))
         else:
-            return apply(f, map(lambda x, env=env: evalExp(x, env), argVec))
+             return apply(f, map(lambda x, env=env: evalExp(x, env), argVec))
     else:
         raise NameError("No callable named %s" % name)
 
+def eval_apply(exp, env):
+    eco_apply( func_map(lambda x, env=env: evalExp(x, env), exp), env)
+    
+    
+
+def eval_function(exp, env):
+    return  globals().get('func_' + car(exp).string) or lookup(car(exp).string, env, FUN)
 
 def eval_if(exp, env):
     test = car(exp)
@@ -260,6 +269,13 @@ def reduce_1(fun, list, prevResult):
 
 def func_format(str, *args):
     return str % tuple(args)
+
+def func_concat(strs, delim=''):
+    s = []
+    while strs:
+        s.append(car(strs))
+        strs = cdr(strs)
+    return delim.join(s)
 
 def func_macroexpand(sexp):
     if func_consp(sexp):
@@ -484,12 +500,15 @@ def mixCommas(args):
 
 def func_comment(text):
     return "/* %s */" % text
+def func_str(obj):
+    return str(obj)
 
 def cgen_cstring(text):
     return '"%s"' % text 
 
 def cgen_cblock(*statements):
     return "{%s}" % string.join(statements, ";\n")
+globalFunctions['cblock'] = cgen_cblock
 def cgen_call(funcname, *args):
     return "%s(%s)" % (funcname, mixCommas(args))
 def cgen_cdeclare(type, variables):
@@ -505,7 +524,13 @@ def cgen_cdeclare(type, variables):
         a.append(variables+";")
     return string.join(a,' ')
 
-# XXX insert struct/typedef stuff here.
+def cgen_typedef(type, name):
+    return "typedef %s %s;" % (type, name)
+
+def cgen_cstruct(body):
+    return "struct %s" % body
+
+globalFunctions['cstruct'] = cgen_cstruct
 
 def cgen_enum(name,lst=None):
     if func_consp(name):
@@ -625,25 +650,22 @@ globals()['cgen_>='] = lambda x,y: "%s >= %s" % (x,y)
 globals()['cgen_&&'] = lambda x,y: "%s && %s" % (x,y)
 globals()['cgen_||'] = lambda x,y: "%s || %s" % (x,y)
 
-class PyMacro(Macro):
-    def __init__(self, func):
-        self.func = func
-        self.env = (globalValues, globalFunctions)
+eval("""
 
-    def expand(self, args):
-        return apply(self.func, args)
-    #def __call__(self, env, *args):
-    #    return cMacroExpand(self.expand(args))
+[def macro struct [name defs . instance]
+     (cstruct [format "%s %s %s" ',name
+       [cblock ,@[map [fn [x] [concat [map [function str] x] " "]] defs]]
+       ',[str [car [or instance [cons "" nil]]]]])]
+  
+[def macro cdefun [type name args . forms]
+  (c-function ',type ',name ',[map [fn [a] [nconc [car a] [cdr a]]] args]
+    ,@[map [function cmacroexpand] forms])]
 
-def cdefun(type, name, args, forms):
-    return  func_nconc(func_list(atom('c-function'), func_list(atom('quote'),type), func_list(atom('quote'),name), func_list(atom('backquote'), func_map(lambda a: func_nconc(car(a),cdr(a)), args))), func_map(cMacroExpand, forms))
-globalFunctions['cdefun'] = PyMacro(cdefun)
+[def macro cdeclare [type vars]
+  (format "%s;" [cdeclare ,type ,[map [function cmacroexpand] vars]])]
 
-def cdeclare(type, vars):
-    return func_list(atom('print'), func_list(atom('format'), "%s;", func_list(atom('cdeclare'), type, func_map(cMacroExpand, vars))))
-globalFunctions['cdeclare'] = PyMacro(cdeclare)
-def defmain(*forms):
-    return func_list(atom('cdefun'), func_list(atom('int')), atom('main'), func_list(func_list(func_list(atom('int')), atom('argc')), func_list(func_list(atom('char'), atom('*'), atom('*')), atom('argv'))), apply(func_list, forms))
-globalFunctions['defmain'] = PyMacro(defmain)
+[def macro defmain forms
+  (cdefun [int] main  [[[int] argc] [[char * *] argv]]
+    ,@forms)]
 
-
+""")
