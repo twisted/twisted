@@ -415,7 +415,6 @@ class CopiedFailure(RemoteCopy, failure.Failure):
 setUnjellyableForClass(str(CopyableFailure), CopiedFailure)
 
 def failure2Copyable(fail):
-    log.msg("Converting a Failure to a CopyableFailure")
     f = CopyableFailure()
     f.__dict__ = fail.__dict__
     return f
