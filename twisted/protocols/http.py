@@ -677,7 +677,8 @@ class Request:
         """
         self.setResponseCode(FOUND)
         self.setHeader("location", url)
-
+        self.setHeader("content-length", "0")
+    
     def setLastModified(self, when):
         """Set the X{Last-Modified} time for the response to this request.
 
