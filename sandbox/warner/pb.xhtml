@@ -146,7 +146,7 @@ class Responder(pb.Referenceable):
         return a+b
 
 # and on the remote side:
-d = rr.callRemote(RIAdding.add, a=1, b=2)
+d = rr.callRemote(RIAdding['add'], a=1, b=2)
 d.addCallback(gotAnswer)
 </pre>
 

@@ -4,6 +4,26 @@ non-independent things left to do on newpb. These require deeper magic or
 can not otherwise be done casually. Many of these involve fundamental
 protocol issues, and therefore need to be decided sooner rather than later.
 
+* decide whether to accept positional args in non-constrained methods
+
+This is really a backwards-source-compatibility issue. In newpb, the
+preferred way of invoking callRemote() is with kwargs exclusively: glyph's
+felt positional arguments are more fragile. If the client has a
+RemoteInterface, then they can convert any positional arguments into keyword
+arguments before sending the request.
+
+The question is what to do when the client is not using a RemoteInterface.
+Until recently, callRemote("bar") would try to find a matching RI. I changed
+that to have callRemote("bar") never use an RI, and instead you would use
+callRemote(RIFoo['bar']) to indicate that you want argument-checking.
+
+That makes positional arguments problematic in more situations than they were
+before. The decision to be made is if the OPEN(call) sequence should provide
+a way to convey positional args to the server (probably with numeric "names"
+in the (argname, argvalue) tuples). If we do this, the server (which always
+has the RemoteInterface) can do the positional-to-keyword mapping. But
+putting this in the protocol will oblige other implementations to handle them
+too.
 
 * change the method-call syntax to include an interfacename
 
@@ -53,8 +73,292 @@ http://svn.twistedmatrix.com/cvs/trunk/pynfo/admin.py?view=markup&rev=44&root=py
 
  rr.callRemote(RIFoo.add, **args)
 
-Nice and concise.
+Nice and concise. However, #twisted doesn't like it, adding/using arbitrary
+attributes of Interfaces is not clean (think about IFoo.implements colliding
+with RIFoo.something).
 
+ rr.callRemote(RIFoo['add'], **args)
+ RIFoo(rr).callRemote('add', **args)
+  adaptation, or narrowing?
+
+<warner> glyph: I'm adding callRemote(RIFoo.bar, **args) to newpb right now
+<radix> wow.
+<warner> seemed like a simpler interface than callRemoteInterface("RIFoo",
+"bar", **args)
+<radix> warner: Does this mean that IPerspective can be parameterized now?
+<glyph> warner: bad idea
+<exarkun> warner: Zope hates you!
+<glyph> warner: zope interfaces don't support that syntax
+<slyphon> zi does support multi-adapter syntax
+<slyphon> but i don't really know what that is
+<exarkun> warner: callRemote(RIFoo.getDescriptionFor("bar"), *a, **k)
+<warner> glyph: yeah, I fake it. In RemoteInterfaceClass, I remove those
+attributes, call InterfaceClass, and then put them all back in
+<glyph> warner: don't add 'em as attributes
+<glyph> warner: just fix the result of __getitem__ to add a slot actually
+refer back to the interface
+<glyph> radix: the problem is that IFoo['bar'] doesn't point back to IFoo
+<glyph> warner: even better, make them callable :-)
+<exarkun> glyph: IFoo['bar'].interface == 'IFoo'
+<glyph> RIFoo['bar']('hello')
+<warner> glyph: I was thinking of doing that in a later version of
+RemoteInterface
+<glyph> exarkun: >>> type(IFoo['bar'].interface)
+<glyph> <type 'str'>
+<exarkun> right
+<exarkun> 'IFoo'
+<exarkun> Just look through all the defined interfaces for ones with matching
+names
+<glyph> exarkun: ... e.g. *NOT* __main__.IFoo
+<glyph> exarkun: AAAA you die
+<radix> hee hee
+* warner struggles to keep up with his thoughts and those of people around him
+* glyph realizes he has been given the power to whine
+<warner> glyph: ok, so with RemoteInterface.__getitem__, you could still do
+rr.callRemote(RIFoo.bar, **kw), right?
+<warner> was your objection to the interface or to the implementation?
+<itamar> I really don't think you should add attributes to the interface
+<warner> ok
+<warner> I need to stash a table of method schemas somewhere
+<itamar> just make __getitem__ return better type of object
+<itamar> and ideally if this is generic we can get it into upstream
+<exarkun> Is there a reason Method.interface isn't a fully qualified name?
+<itamar> not necessarily
+<itamar> I have commit access to zope.interface
+<itamar> if you have any features you want added, post to
+interface-dev@zope.org mailing list
+<itamar> and if Jim Fulton is ok with them I can add them for you
+<warner> hmm
+<warner> does using RIFoo.bar to designate a remote method seem reasonable?
+<warner> I could always adapt it to something inside callRemote
+<warner> something PB-specific, that is
+<warner> but that adapter would have to be able to pull a few attributes off
+the method (name, schema, reference to the enclosing RemoteInterface)
+<warner> and we're really talking about __getattr__ here, not __getitem__,
+right?
+<exarkun> for x.y yes
+<itamar> no, I don't think that's a good idea
+<itamar> interfaces have all kinds od methods on them already, for
+introspection purposes
+<itamar> namespace clashes are the suck
+<itamar> unless RIFoo isn't really an Interface
+<itamar> hm
+<itamar> how about if it were a wrapper around a regular Interface?
+<warner> yeah, RemoteInterfaces are kind of a special case
+<itamar> RIFoo(IFoo, publishedMethods=['doThis', 'doThat'])
+<itamar> s/RIFoo/RIFoo = RemoteInterface(/
+<exarkun> I'm confused. Why should you have to specify which methods are
+published?
+<itamar> SECURITY!
+<itamar> not actually necessary though, no
+<itamar> and may be overkill
+<warner> the only reason I have it derive from Interface is so that we can do
+neat adapter tricks in the future
+<itamar> that's not contradictory
+<itamar> RIFoo(x) would still be able to do magic
+<itamar> you wouldn't be able to check if an object provides RIFoo, though
+<itamar> which kinda sucks
+<itamar> but in any case I am against RIFoo.bar
+<warner> pity, it makes the callRemote syntax very clean
+<radix> hm
+<radix> So how come it's a RemoteInterface and not an Interface, anyway?
+<radix> I mean, how come that needs to be done explicitly. Can't you just
+write a serializer for Interface itself?
+
+* warner goes to figure out where the RemoteInterface discussion went after he
+  got distracted
+<warner> maybe I should make RemoteInterface a totally separate class and just
+implement a couple of Interface-like methods
+<warner> cause rr.callRemote(IFoo.bar, a=1) just feels so clean
+<Jerub> warner: why not IFoo(rr).bar(a=1) ?
+<warner> hmm, also a possibility
+<radix> well
+<radix> IFoo(rr).callRemote('bar')
+<radix> or RIFoo, or whatever
+<Jerub> hold on, what does rr inherit from?
+<warner> RemoteReference
+<radix> it's a RemoteReference
+<Jerub> then why not IFoo(rr) /
+<warner> I'm keeping a strong distinction between local interfaces and remote
+ones
+<Jerub> ah, oka.y
+<radix> warner: right, you can still do RIFoo
+<warner> ILocal(a).meth(args) is an immediate function call
+<Jerub> in that case, I prefer rr.callRemote(IFoo.bar, a=1)
+<radix> .meth( is definitely bad, we need callRemote
+<warner> rr.callRemote("meth", args) returns a deferred
+<Jerub> radix: I don't like from foo import IFoo, RIFoo
+<warner> you probably wouldn't have both an IFoo and an RIFoo
+<radix> warner: well, look at it this way: IFoo(rr).callRemote('foo') still
+makes it obvious that IFoo isn't local
+<radix> warner: you could implement RemoteReferen.__conform__ to implement it
+<warner> radix: I'm thinking of providing some kind of other class that would
+allow .meth() to work (without the callRemote), but it wouldn't be the default
+<radix> plus, IFoo(rr) is how you use interfaces normally, and callRemote is
+how you make remote calls normally, so it seems that's the best way to do
+interfaces + PB
+<warner> hmm
+<warner> in that case the object returned by IFoo(rr) is just rr with a tag
+that sets the "default interface name"
+<radix> right
+<warner> and callRemote(methname) looks in that default interface before
+looking anywhere else
+<warner> for some reason I want to get rid of the stringyness of the method
+name
+<warner> and the original syntax (callRemoteInterface('RIFoo', 'methname',
+args)) felt too verbose
+<radix> warner: well, isn't that what your optional .meth thing is for?
+<radix> yes, I don't like that either
+<warner> using callRemote(RIFoo.bar, args) means I can just switch on the
+_name= argument being either a string or a (whatever) that's contained in a
+RemoteInterface
+<warner> a lot of it comes down to how adapters would be most useful when
+dealing with remote objects
+<warner> and to what extent remote interfaces should be interchangeable with
+local ones
+<radix> good point. I have never had a use case where I wanted to adapt a
+remote object, I don't think
+<radix> however, I have had use cases to send interfaces across the wire
+<radix> e.g. having a parameterized portal.login() interface
+<warner> that'll be different, just callRemote('foo', RIFoo)
+<radix> yeah.
+<warner> the current issue is whether to pass them by reference or by value
+<radix> eugh
+<radix> Can you explain it without using those words? :)
+<warner> hmm
+<radix> Do you mean, Referenceable style vs Copyable style?
+<warner> at the moment, when you send a Referenceable across the wire, the
+id-number is accompanied with a list of strings that designate which
+RemoteInterfaces the original claims to provide
+<warner> the receiving end looks up each string in a local table, and
+populates the RemoteReference with a list of RemoteInterface classes
+<warner> the table is populated by metaclass magic that runs when a 'class
+RIFoo(RemoteInterface)' definition is complete
+<radix> ok
+<radix> so a RemoteInterface is simply serialized as its qual(), right?
+<warner> so as long as both sides include the same RIFoo definition, they'll
+wind up with compatible remote interfaces, defining the same method names,
+same method schemas, etc
+<warner> effectively
+<warner> you can't just send a RemoteInterface across the wire right now, but
+it would be easy to add
+<warner> the places where they are used (sending a Referenceable across the
+wire) all special case them
+<radix> ok, and you're considering actually writing a serializer for them that
+sends all the information to totally reconstruct it on the other side without
+having the definiton
+<warner> yes
+<warner> or having some kind of debug method which give you that
+<radix> I'd say, do it the way you're doing it now until someone comes up with
+a use case for actually sending it...
+<warner> right
+<warner> the only case I can come up with is some sort of generic object
+browser debug tool
+<warner> everything else turns into a form of version negotiation which is
+better handled elsewhere
+<warner> hmm
+<warner> so RIFoo(rr).callRemote('bar', **kw)
+<warner> I guess that's not too ugly
+<radix> That's my vote. :)
+<warner> one thing it lacks is the ability to cleanly state that if 'bar'
+doesn't exist in RIFoo then it should signal an error
+<warner> whereas callRemote(RIFoo.bar, **kw) would give you an AttributeError
+before callRemote ever got called
+<warner> i.e. "make it impossible to express the incorrect usage"
+<radix> mmmh
+<radix> warner: but you _can_ check it immediately when it's called
+<warner> in the direction I was heading, callRemote(str) would just send the
+method request and let the far end deal with it, no schema-checking involved
+<radix> warner: which, 99% of the time, is effectively the same time as
+IFoo.bar would happen
+<warner> whereas callRemote(RIFoo.bar) would indicate that you want schema
+checking
+<warner> yeah, true
+<radix> hm.
+<warner> (that last feature is what allowed callRemote and callRemoteInterface
+to be merged)
+<warner> or, I could say that the normal RemoteReference is "untyped" and does
+not do schema checking
+<warner> but adapting one to a RemoteInterface results in a
+TypedRemoteReference which does do schema checking
+<warner> and which refuses to be invoked with method names that are not in the
+schema
+<radix> warner: we-ell
+<radix> warner: doing method existence checking is cool
+<radix> warner: but I think tying any further "schema checking" to adaptation
+is a bad idea
+<warner> yeah, that's my hunch too
+<warner> which is why I'd rather not use adapters to express the scope of the
+method name (which RemoteInterface it is supposed to be a part of)
+<radix> warner: well, I don't think tying it to callRemote(RIFoo.methName)
+would be a good idea just the same
+<warner> hm
+<warner> so that leaves rr.callRemote(RIFoo['add']) and
+rr.callRemoteInterface(RIFoo, 'add')
+<radix> OTOH, I'm inclined to think schema checking should happen by default
+<radix> It's just a the matter of where it's parameterized
+<warner> yeah, it's just that the "default" case (rr.callRemote('name')) needs
+to work when there aren't any RemoteInterfaces declared
+<radix> warner: oh
+<warner> but if we want to encourage people to use the schemas, then we need
+to make that case simple and concise
+* radix goes over the issue in his head again
+<radix> Yes, I think I still have the same position.
+<warner> which one? :)
+<radix> IFoo(rr).callRemote("foo"); which would do schema checking because
+schema checking is on by default when it's possible
+<warner> using an adaptation-like construct to declare a scope of the method
+name that comes later
+<radix> well, it _is_ adaptation, I think.
+<radix> Adaptation always has plugged in behavior, we're just adding a bit
+more :)
+<warner> heh
+<warner> it is a narrowing of capability
+<radix> hmm, how do you mean?
+<warner> rr.callRemote("foo") will do the same thing
+<warner> but rr.callRemote("foo") can be used without the remote interfaces
+<radix> I think I lost you.
+<warner> if rr has any RIs defined, it will try to use them (and therefore
+complain if "foo" does not exist in any of them, or if the schema is violated)
+<radix> Oh. That's strange.
+<radix> So it's really quite different from how interfaces regularly work...
+<warner> yeah
+<warner> except that if you were feeling clever you could use them the normal
+way
+<radix> Well, my inclination is to make them work as similarly as possible.
+<warner> "I have a remote reference to something that implements RIFoo, but I
+want to use it in some other way"
+<radix> s/possible/practical/
+<warner> then IBar(rr) or RIBar(rr) would wrap rr in something that knows how
+to translate Bar methods into RIFoo remote methods
+<radix> Maybe it's not practical to make them very similar.
+<radix> I see.
+
+rr.callRemote(RIFoo.add, **kw)
+rr.callRemote(RIFoo['add'], **kw)
+RIFoo(rr).callRemote('add', **kw)
+
+I like the second one. Normal Interfaces behave like a dict, so IFoo['add']
+gets you the method-describing object (z.i.i.Method). My RemoteInterfaces
+don't do that right now (because I remove the attributes before handing the
+RI to z.i), but I could probably fix that. I could either add attributes to
+the Method or hook __getitem__ to return something other than a Method
+(maybe a RemoteMethodSchema).
+
+Those Method objects have a .getSignatureInfo() which provides almost
+everything I need to construct the RemoteMethodSchema. Perhaps I should
+post-process Methods rather than pre-process the RemoteInterface. I can't
+tell how to use the return value trick, and it looks like the function may
+be discarded entirely once the Method is created, so this approach may not
+work.
+
+On the server side (Referenceable), subclassing Interface is nice because it
+provides adapters and implements() queries.
+
+On the client side (RemoteReference), subclassing Interface is a hassle: I
+don't think adapters are as useful, but getting at a method (as an attribute
+of the RI) is important. We have to bypass most of Interface to parse the
+method definitions differently.
 
 * create UnslicerRegistry, registerUnslicer
 

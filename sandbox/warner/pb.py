@@ -14,7 +14,7 @@ import slicer, schema, tokens, banana, flavors
 from tokens import BananaError, Violation, ISlicer
 from slicer import BaseUnslicer, ReferenceSlicer
 ScopedSlicer = slicer.ScopedSlicer
-from flavors import getRemoteInterfaces, getRemoteInterfaceNames
+from flavors import getRemoteInterfaces
 from flavors import Copyable, RemoteCopy, registerRemoteCopy
 from flavors import RemoteInterfaceRegistry
 
@@ -47,43 +47,31 @@ class PendingRequest(object):
             log.err("multiple failures indicate a problem")
 
 class RemoteReference(object):
-    def __init__(self, broker, refID, interfaces):
-        # accepts either interface names or actual interfaces
+    def __init__(self, broker, refID, interfaceNames):
         self.broker = broker
         self.refID = refID
-
-        ifaces = {}
-        for i in interfaces:
-            if isinstance(i, flavors.RemoteInterfaceClass):
-                ifaces[i.remoteGetRemoteName()] = i
-            else:
-                # TODO: emit warning, should prefer actual interfaces
-                ifaces[i] = RemoteInterfaceRegistry.get(i)
-        self.interfaceNames = ifaces.keys()
-        self.interfaceNames.sort()
-        self.schema = schema.RemoteReferenceSchema(ifaces)
+        self.interfaceNames = interfaceNames
 
     def __del__(self):
         self.broker.freeRemoteReference(self.refID)
 
-    def getRemoteInterfaceNames(self):
-        if not self.schema:
-            return []
-        return self.schema.interfaceNames
-
-    def getRemoteMethodNames(self):
-        if not self.schema:
-            return []
-        return self.schema.getMethods()
-
     def callRemote(self, _name, *args, **kwargs):
-        # for consistency, *all* failures are reported asynchronously.
+        # there are two forms:
+        #  rr.callRemote(RIFoo['bar'], **kwargs): uses a RemoteInterface to
+        #    describe the method being called. This will enforce argument
+        #    constraints and let you to tricky clever things in the future.
+        #  rr.callRemote('bar', **kwargs): does not use a RemoteInterface,
+        #    even if the other end is using them.
+
+        # Note: for consistency, *all* failures are reported asynchronously.
+
         req = None
 
         _resultConstraint = kwargs.get("_resultConstraint", "none")
         # remember that "none" is not a valid constraint, so we use it to
         # mean "not set by the caller", which means we fall back to whatever
-        # the RemoteInterface says
+        # the RemoteInterface says. Using None would mean an AnyConstraint,
+        # which is not the same thing.
 
         if _resultConstraint != "none":
             del kwargs["_resultConstraint"]
@@ -101,19 +89,35 @@ class RemoteReference(object):
             # notion of what the other end will accept (the RemoteInterface)
             req = PendingRequest(reqID)
 
+            # first, figure out which method they want to invoke
+            interfaceName = ""
+            methodName = None
             methodSchema = None
-            if self.schema:
-                # getMethodSchema() could raise KeyError for bad methodnames
-                methodSchema = self.schema.getMethodSchema(_name)
+
+            if type(_name) == str:
+                methodName = _name
+            elif schema.IRemoteMethodConstraint.providedBy(_name):
+                # they're using the rr.callRemote(RIFoo['bar'], **kw) form
+                methodSchema = _name
+                interfaceName = methodSchema.interface.__remote_name__
+                if self.interfaceNames:
+                    # if they call with an interface, and it looks like the
+                    # target is using interfaces, they must claim to support
+                    # it
+                    if interfaceName not in self.interfaceNames:
+                        raise Violation("%s does not offer %s" % \
+                                        (self, interfaceName))
+                methodName = methodSchema.name
+            else:
+                raise NameError("could not get remote method name from %s" \
+                                % _name)
 
             if methodSchema:
-                # turn positional arguments into kwargs
-
-                # mapArguments() could fail for bad argument names or
-                # missing required parameters
+                # turn positional arguments into kwargs. mapArguments() could
+                # fail for bad argument names or missing required parameters
                 argsdict = methodSchema.mapArguments(args, kwargs)
 
-                # check args against arg constraint. This could fail if
+                # check args against the arg constraint. This could fail if
                 # any arguments are of the wrong type
                 methodSchema.checkAllArgs(kwargs)
 
@@ -121,13 +125,17 @@ class RemoteReference(object):
                 # make a note of it to use later
                 req.setConstraint(methodSchema.getResponseConstraint())
             else:
-                assert not args
+                if args:
+                    why = "positional arguments require a RemoteInterface"
+                    why += " for %s.%s()" % (self, methodName)
+                    raise tokens.BananaError(why)
                 argsdict = kwargs
 
             # if the caller specified a _resultConstraint, that overrides
             # the schema's one
             if _resultConstraint != "none":
-                req.setConstraint(_resultConstraint) # overrides schema
+                # overrides schema
+                req.setConstraint(schema.makeConstraint(_resultConstraint))
 
         except: # TODO: merge this with the next try/except clause
             # we have not yet sent anything to the far end. A failure here
@@ -151,8 +159,9 @@ class RemoteReference(object):
             # broker.waitingForAnswers[] entry, we need to know how far the
             # slicing process made it.
 
-            slicer = CallSlicer(reqID, self.refID, _name, argsdict)
-            
+            slicer = CallSlicer(reqID, self.refID, interfaceName, methodName,
+                                argsdict)
+
             # this could fail if any of the arguments (or their children)
             # are unsliceable
             d = self.broker.send(slicer)
@@ -226,9 +235,11 @@ class DecRefUnslicer(BaseUnslicer):
         return "<decref-%s>" % self.refID
 
 class CallUnslicer(BaseUnslicer):
-    stage = 0 # 0:reqID, 1:objID, 2:methodname, 3: [(argname/value)]..
+    # 0:reqID, 1:objID, 2:interfacename, 3:methodname, 4: [(argname/value)]..
+    stage = 0
     reqID = None
     obj = None
+    interface = None
     methodname = None
     methodSchema = None # will be a MethodArgumentsConstraint
     argname = None
@@ -247,18 +258,25 @@ class CallUnslicer(BaseUnslicer):
                 raise BananaError("object ID must be an INT or STRING")
         elif self.stage == 2:
             if typebyte not in (tokens.STRING, tokens.VOCAB):
-                raise BananaError("method name must be a STRING")
+                raise BananaError("interface name must be a STRING")
+            # TODO: limit to longest interface name of self.obj?
         elif self.stage == 3:
+            if typebyte not in (tokens.STRING, tokens.VOCAB):
+                raise BananaError("method name must be a STRING")
+            # TODO: limit to longest method name of self.obj in the interface
+        elif self.stage == 4:
             if self.argname == None:
                 if typebyte not in (tokens.STRING, tokens.VOCAB):
                     raise BananaError("argument name must be a STRING")
+                # TODO: limit to the longest argname in the method
             else:
                 if self.argConstraint:
                     self.argConstraint.checkToken(typebyte, size)
 
     def doOpen(self, opentype):
-        # this can only happen when we're receiving an argument value, so
-        # we don't have to bother checking self.stage or self.argname
+        # checkToken insures that this can only happen when we're receiving
+        # an argument value, so we don't have to bother checking self.stage
+        # or self.argname
         if self.argConstraint:
             self.argConstraint.checkOpentype(opentype)
         unslicer = self.open(opentype)
@@ -282,7 +300,7 @@ class CallUnslicer(BaseUnslicer):
     def receiveChild(self, token):
         #print "CallUnslicer.receiveChild [s%d]" % self.stage, repr(token)
         # TODO: if possible, return an error to the other side
-        if self.stage == 0:
+        if self.stage == 0: # reqID
             # we don't yet know which reqID to send any failure to
             self.reqID = token
             self.stage += 1
@@ -290,11 +308,26 @@ class CallUnslicer(BaseUnslicer):
             self.broker.activeLocalCalls[self.reqID] = self
             return
 
-        if self.stage == 1:
+        if self.stage == 1: # objID
             # this might raise an exception if objID is invalid
             self.obj = self.broker.getReferenceable(token)
             self.stage += 1
-        elif self.stage == 2:
+
+        elif self.stage == 2: # interfacename (or "")
+            # validate the interfacename. This may raise an exception for
+            # unknown interfaces.
+            if token != "":
+                try:
+                    iface = self.broker.getRemoteInterfaceByName(token)
+                    self.interface = iface
+                except KeyError:
+                    raise Violation("unknown interface %s" % token)
+            if self.interface and not self.interface.providedBy(self.obj):
+                raise Violation("object %s does not implement %s" % \
+                                (self.obj, token))
+            self.stage += 1
+
+        elif self.stage == 3: # methodname
             # validate the methodname, get the schema. This may raise an
             # exception for unknown methods
             methodname = token
@@ -313,12 +346,41 @@ class CallUnslicer(BaseUnslicer):
             # class). If this expectation were to go away, a quick
             # obj.__class__ -> RemoteReferenceSchema cache could be built.
 
-            refschema = self.obj.getSchema()
-            self.methodSchema = refschema.getMethodSchema(methodname)
+            ms = None
 
+            if self.interface:
+                # they are calling an interface+method pair
+                ms = self.interface.get(methodname)
+                if not ms:
+                    why = "method '%s' not defined in %s" % \
+                          (methodname, self.interface.__remote_name__)
+                    raise Violation(why)
+            else:
+                # they are calling a method without specifying an interface.
+                # If the target uses RemoteInterfaces at all, then the method
+                # must be defined by one of them. If the target does not use
+                # RemoteInterfaces, then it must be some sort of legacy
+                # thingy and we just accept the method anyway (unless the
+                # Broker refuses to accept non-constrained methods).
+                ifaces = flavors.getRemoteInterfaces(self.obj)
+                if ifaces:
+                    ms = self.broker.getSchemaForMethod(ifaces, methodname)
+                    if not ms:
+                        why = "method '%s' not defined in any of %s" \
+                              % (methodname, [i.__remote_name__
+                                              for i in ifaces])
+                        raise Violation(why)
+
+            self.methodSchema = ms
             self.methodname = methodname
+
+            if self.broker.requireSchema and not self.methodSchema:
+                why = "This broker does not accept unconstrained method calls"
+                raise Violation(why)
+
             self.stage += 1
-        elif self.stage == 3:
+
+        elif self.stage == 4: # argname/value pairs
             if self.argname == None:
                 argname = token
                 if self.args.has_key(argname):
@@ -335,9 +397,9 @@ class CallUnslicer(BaseUnslicer):
                 self.argname = None
 
     def receiveClose(self):
-        if self.stage != 3 or self.argname != None:
+        if self.stage != 4 or self.argname != None:
             raise BananaError("'call' sequence ended too early")
-        self.stage = 4
+        self.stage = 5
         if self.methodSchema:
             # ask them again so they can look for missing arguments
             self.methodSchema.checkArgs(self.args)
@@ -348,22 +410,26 @@ class CallUnslicer(BaseUnslicer):
                            self.args, self.methodSchema)
 
     def describe(self):
+        s = "<methodcall"
         if self.stage == 0:
-            return "<methodcall>"
-        elif self.stage == 1:
-            return "<methodcall reqID=%d>" % self.reqID
-        elif self.stage == 2:
-            return "<methodcall reqID=%d obj=%s>" % (self.reqID, self.obj)
-        elif self.stage == 3:
-            base = "<methodcall reqID=%d obj=%s .%s>" % \
-                   (self.reqID, self.obj, self.methodname)
+            pass
+        if self.stage == 1:
+            s += " reqID=%d" % self.reqID
+        if self.stage == 2:
+            s += " obj=%s" % (self.obj,)
+        if self.stage == 3:
+            ifacename = "[none]"
+            if self.interface:
+                ifacename = self.interface.__remote_name__
+            s += " iface=%s" % ifacename
+        if self.stage == 4:
+            s += " .%s" % self.methodname
             if self.argname != None:
-                return base + "arg[%s]" % self.argname
-            return base
-        elif self.stage == 4:
-            base = "<methodcall reqID=%d obj=%s .%s .close>" % \
-                   (self.reqID, self.obj, self.methodname)
-            return base
+                s += " arg[%s]" % self.argname
+        if self.stage == 5:
+            s += " .close"
+        s += ">"
+        return s
 
 class AnswerUnslicer(BaseUnslicer):
     request = None
@@ -593,6 +659,7 @@ class ErrorSlicer(ScopedSlicer):
 
     def __init__(self, reqID, f):
         ScopedSlicer.__init__(self, None)
+        assert isinstance(f, failure.Failure)
         self.reqID = reqID
         self.f = f
 
@@ -699,16 +766,21 @@ class DecRefSlicer(slicer.BaseSlicer):
 class CallSlicer(ScopedSlicer):
     opentype = ('call',)
 
-    def __init__(self, reqID, refID, methodname, args):
+    def __init__(self, reqID, refID, interfacename, methodname, args):
         ScopedSlicer.__init__(self, None)
         self.reqID = reqID
         self.refID = refID
+        self.interfacename = interfacename # could be None, represented by ""
         self.methodname = methodname
         self.args = args
 
     def sliceBody(self, streamable, banana):
         yield self.reqID
         yield self.refID
+        if self.interfacename:
+            yield self.interfacename
+        else:
+            yield ""
         yield self.methodname
         keys = self.args.keys()
         keys.sort()
@@ -717,7 +789,8 @@ class CallSlicer(ScopedSlicer):
             yield self.args[argname]
 
     def describe(self):
-        return "<call-%s-%s-%s>" % (self.reqID, self.refID, self.methodname)
+        return "<call-%s-%s-%s-%s>" % (self.reqID, self.refID,
+                                       self.interfacename, self.methodname)
 
 class PBRootSlicer(slicer.RootSlicer):
     def registerReference(self, refid, obj):
@@ -728,6 +801,7 @@ class Broker(banana.Banana):
     slicerClass = PBRootSlicer
     unslicerClass = PBRootUnslicer
     unsafeTracebacks = True
+    requireSchema = False
     disconnected = False
     factory = None
 
@@ -889,12 +963,27 @@ class Broker(banana.Banana):
     # remote-method-invocation methods, target-side (Referenceable):
     # doCall, callFinished, callFailed
 
+    def getRemoteInterfaceByName(self, riname):
+        # this lives in the broker because it ought to be per-connection
+        return flavors.RemoteInterfaceRegistry[riname]
+
+    def getSchemaForMethod(self, rifaces, methodname):
+        # this lives in the Broker so it can override the resolution order,
+        # not that overlapping RemoteInterfaces should be allowed to happen
+        # all that often
+        for ri in rifaces:
+            m = ri.get(methodname)
+            if m:
+                return m
+        return None
+
     def doCall(self, reqID, obj, methodname, args, methodSchema):
         try:
             meth = getattr(obj, "remote_%s" % methodname)
+            #if meth is None:
+            #    raise Violation("method '%s' not defined" % methodname)
             res = meth(**args)
         except:
-            # TODO: implement FailureConstraint
             f = failure.Failure()
             self.callFailed(f, reqID)
         else:

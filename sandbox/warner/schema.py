@@ -68,6 +68,8 @@ class UnboundedSchema(Exception):
 
 class IConstraint(Interface):
     pass
+class IRemoteMethodConstraint(IConstraint):
+    pass
 
 class Constraint:
     """
@@ -597,12 +599,15 @@ class RemoteMethodSchema:
     of these objects.
     """
 
-    implements(IConstraint)
+    implements(IRemoteMethodConstraint)
 
     taster = {} # this should not be used as a top-level constraint
     opentypes = [] # overkill
     ignoreUnknown = False
     acceptUnknown = False
+
+    name = None # method name, set when the RemoteInterface is parsed
+    interface = None # points to the RemoteInterface which defines the method
 
     # under development
     def __init__(self, method=None, _response=None, __options=[], **kwargs):
@@ -745,55 +750,6 @@ class RemoteMethodSchema:
         # TODO: implement the rest of maxSize, just like a dictionary
         raise NotImplementedError
 
-
-class RemoteReferenceSchema:
-    implements(IConstraint)
-
-    missingMethods = False
-    # under development
-
-    def __init__(self, interfaces):
-        # 'interfaces' is a dict which maps interface name to Interfaces. On
-        # the remote side, we might be missing Interfaces, in which case
-        # those values will be None
-        self.methods = {} # maps method name to RemoteMethodSchema instance
-        self.interfaces = interfaces
-        self.interfaceNames = interfaces.keys()
-
-        if not interfaces:
-            # the remote object didn't tell us what interfaces it supports
-            self.missingMethods = True
-        if not interfaces or None in interfaces.values():
-            # the remote object supports Interfaces that we don't know
-            # about, which means that there are probably some methods we
-            # don't know about, which means that we can't be confident that
-            # any particular method name is invalid
-            self.missingMethods = True
-
-        # now figure out the legal methods
-        for iface in interfaces.values():
-            if not iface:
-                continue
-            for name in iface.remoteGetMethodNames():
-                assert(name not in self.methods,
-                       "overlapping method '%s'" % name)
-                m = iface.remoteGetMethodConstraint(name)
-                assert(isinstance(m, RemoteMethodSchema),
-                       "method %s is %s" % (name, m))
-                self.methods[name] = m
-
-    def getMethods(self):
-        return self.methods.keys()
-
-    def getMethodSchema(self, methodname):
-        s = self.methods.get(methodname)
-        if s:
-            return s
-        if not self.missingMethods:
-            why = "method '%s' not defined in any RemoteInterface %s" \
-                  % (methodname, self.interfaceNames)
-            raise Violation(why)
-        return None
 
 
 #TODO

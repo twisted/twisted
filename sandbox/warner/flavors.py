@@ -14,58 +14,89 @@ from tokens import ISlicer, BananaError, Violation
 
 
 class RemoteInterfaceClass(interface.InterfaceClass):
-    def __init__(self, iname, bases=(), attrs=None, __module__=None):
-        if attrs is not None:
-            try:
-                remote_name = self._parseRemoteInterface(iname, attrs)
-            except:
-                print "error parsing remote-interface attributes"
-                raise
+    """This metaclass lets RemoteInterfaces be a lot like Interfaces. The
+    methods are parsed differently (PB needs more information from them than
+    z.i extracts, and the methods can be specified with a RemoteMethodSchema
+    directly).
 
-        # now let the normal InterfaceClass take over
+    RemoteInterfaces can accept the following additional attribute:
+
+     __remote_name__: can be set to a string to specify the globally-unique
+                      name for this interface. If not set, defaults to the
+                      fully qualified classname.
+
+    RIFoo.names() returns the list of remote method names.
+
+    RIFoo['bar'] is still used to get information about method 'bar', however
+    it returns a RemoteMethodSchema instead of a z.i Method instance.
+    
+    """
+
+    def __init__(self, iname, bases=(), attrs=None, __module__=None):
+        if attrs is None:
+            interface.InterfaceClass.__init__(self, iname, bases, attrs,
+                                              __module__)
+            return
+
+        # parse (and remove) the attributes that make this a RemoteInterface
+        try:
+            rname, remote_attrs = self._parseRemoteInterface(iname, attrs)
+        except:
+            print "error parsing remote-interface attributes"
+            raise
+
+        # now let the normal InterfaceClass do its thing
         interface.InterfaceClass.__init__(self, iname, bases, attrs,
                                           __module__)
 
-        # auto-register the interface
-        if attrs is not None:
-            try:
-                registerRemoteInterface(self, remote_name)
-            except:
-                print "error registering RemoteInterface '%s'" % remote_name
-                raise
+        # now add all the remote methods that InterfaceClass would have
+        # complained about. This is really gross, and it really makes me
+        # question why we're bothing to inherit from z.i.Interface at all. I
+        # will probably stop doing that soon, and just have our own
+        # meta-class, but I want to make sure you can still do
+        # 'implements(RIFoo)' from within a class definition.
+
+        a = getattr(self, "_InterfaceClass__attrs") # the ickiest part
+        a.update(remote_attrs)
+        self.__remote_name__ = rname
+
+        # finally, auto-register the interface
+        try:
+            registerRemoteInterface(self, rname)
+        except:
+            print "error registering RemoteInterface '%s'" % rname
+            raise
 
     def _parseRemoteInterface(self, iname, attrs):
-        # determine all remotely-callable methods
-        methods = [name for name in attrs.keys()
-                   if ((type(attrs[name]) == types.FunctionType and
-                        not name.startswith("_")) or
-                       schema.IConstraint.providedBy(attrs[name]))]
+        remote_attrs = {}
 
-        # turn them into constraints
-        constraints = {}
-        for name in methods:
-            m = attrs[name]
-            if not schema.IConstraint.providedBy(m):
-                m = schema.RemoteMethodSchema(method=m)
-            constraints[name] = m
-            # delete the methods, so zope's InterfaceClass doesn't see them
-            del attrs[name]
+        remote_name = attrs.get("__remote_name__", iname)
 
         # and see if there is a __remote_name__ . We delete it because
         # InterfaceClass doesn't like arbitrary attributes
-        remote_name = attrs.get("__remote_name__", iname)
         if attrs.has_key("__remote_name__"):
             del attrs["__remote_name__"]
 
-        self.__remote_stuff__ = (methods, constraints, remote_name)
-        return remote_name
+        # determine all remotely-callable methods
+        names = [name for name in attrs.keys()
+                 if ((type(attrs[name]) == types.FunctionType and
+                      not name.startswith("_")) or
+                     schema.IConstraint.providedBy(attrs[name]))]
 
-    def remoteGetMethodNames(self):
-        return self.__remote_stuff__[0]
-    def remoteGetMethodConstraint(self, name):
-        return self.__remote_stuff__[1][name]
-    def remoteGetRemoteName(self):
-        return self.__remote_stuff__[2]
+        # turn them into constraints. Tag each of them with their name and
+        # the RemoteInterface they came from.
+        for name in names:
+            m = attrs[name]
+            if not schema.IConstraint.providedBy(m):
+                m = schema.RemoteMethodSchema(method=m)
+            m.name = name
+            m.interface = self
+            remote_attrs[name] = m
+            # delete the methods, so zope's InterfaceClass doesn't see them.
+            # Particularly necessary for things defined with IConstraints.
+            del attrs[name]
+
+        return remote_name, remote_attrs
 
 RemoteInterface = RemoteInterfaceClass("RemoteInterface",
                                        __module__="pb.flavors")
@@ -81,16 +112,9 @@ def getRemoteInterfaces(obj):
         if isinstance(i, RemoteInterfaceClass):
             if i not in ilist:
                 ilist.append(i)
-    def getname(i):
-        return i.remoteGetRemoteName()
-    ilist.sort(lambda x,y: cmp(x.remoteGetRemoteName(),
-                               y.remoteGetRemoteName()))
+    ilist.sort(lambda x,y: cmp(x.__remote_name__, y.__remote_name__))
     # TODO: really? both sides must match
     return ilist
-
-def getRemoteInterfaceNames(obj):
-    """Get the names of all RemoteInterfaces supported by the object."""
-    return [i.remoteGetRemoteName() for i in getRemoteInterfaces(obj)]
 
 class DuplicateRemoteInterfaceError(Exception):
     pass
@@ -98,7 +122,7 @@ class DuplicateRemoteInterfaceError(Exception):
 RemoteInterfaceRegistry = {}
 def registerRemoteInterface(iface, name=None):
     if not name:
-        name = iface.remoteGetRemoteName()
+        name = iface.__remote_name__
     assert isinstance(iface, RemoteInterfaceClass)
     if RemoteInterfaceRegistry.has_key(name):
         old = RemoteInterfaceRegistry[name]
@@ -312,17 +336,37 @@ def registerRemoteCopy(typename, factory):
 
 
 class Referenceable(object):
-    refschema = None
-    # TODO: this wants to be in an adapter, not a base class
+    _interfaceNames = None
+    # TODO: this code wants to be in an adapter, not a base class. Also, it
+    # would be nice to cache this across the class: if every instance has the
+    # same interface list, they will have the same set of _interfaceNames,
+    # and it feels silly to store that list separately for each instance.
+    # Perhaps we could compare the instance's interface list with that of the
+    # class and only recompute the names if they differ.
 
-    def getSchema(self):
-        # create and return a RemoteReferenceSchema for us
-        if not self.refschema:
-            interfaces = dict([
-                (iface.remoteGetRemoteName(), iface)
-                for iface in getRemoteInterfaces(self)])
-            self.refschema = schema.RemoteReferenceSchema(interfaces)
-        return self.refschema
+    def getInterfaceNames(self):
+        if not self._interfaceNames:
+            self._interfaceNames = [iface.__remote_name__
+                                    for iface in getRemoteInterfaces(self)]
+
+            # detect and warn about method name collisions. We do this here
+            # because it's pretty much the only place that a set of
+            # RemoteInterfaces are brought together into a single place.
+            # Really, we only want to do this once per Referenceable
+            # subclass, not per-instance. TODO: consider using a
+            # Referenceable metaclass to implement such an optimization.
+            methods = {}
+            for iface in getRemoteInterfaces(self):
+                for name in list(iface):
+                    if methods.has_key(name):
+                        log.msg("WARNING: method '%s' occurs in both %s and %s"
+                                % (name, methods[name].__remote_name__,
+                                   iface.__remote_name__))
+                    else:
+                        methods[name] = iface
+
+        return self._interfaceNames
+
     def processUniqueID(self):
         return id(self)
 
@@ -343,15 +387,15 @@ class ReferenceableSlicer(slicer.BaseSlicer):
             # this is the first time the Referenceable has crossed this
             # wire. In addition to the luid, send the interface list to the
             # far end.
-            yield getRemoteInterfaceNames(self.obj)
-            # TODO: maybe create the RemoteReferenceSchema now
-            # obj.getSchema()
+            yield self.obj.getInterfaceNames()
+
 registerAdapter(ReferenceableSlicer, Referenceable, ISlicer)
 
 class ReferenceUnslicer(slicer.BaseUnslicer):
+    """I turn an incoming 'my-reference' sequence into a RemoteReference."""
     clid = None
     interfaces = []
-    ilistConstraint = schema.ListOf(str)
+    ilistConstraint = schema.ListOf(str) # TODO: only known RI names?
 
     def checkToken(self, typebyte, size):
         if self.clid is None:
@@ -405,6 +449,10 @@ class YourReferenceSlicer(slicer.BaseSlicer):
 # there
 
 class YourReferenceUnslicer(slicer.LeafUnslicer):
+    """I accept incoming (integer) your-reference sequences and try to turn
+    them back into the original Referenceable. I also accept (string)
+    your-reference sequences and try to turn them into a published
+    Referenceable that they did not have access to before."""
     clid = None
 
     def checkToken(self, typebyte, size):

@@ -18,6 +18,9 @@ import schema, pb, flavors, tokens
 from tokens import BananaError, Violation, INT, STRING, OPEN
 from slicer import BananaFailure
 
+def getRemoteInterfaceNames(obj):
+    return [i.__remote_name__ for i in flavors.getRemoteInterfaces(obj)]
+
 class TestBroker(pb.Broker):
     def gotAnswer(self, results, req):
         self.answers.append((True, req, results))
@@ -177,9 +180,26 @@ class RIMyTarget2(pb.RemoteInterface):
     __remote_name__ = "RIMyTargetInterface2"
     sub = schema.RemoteMethodSchema(_response=int, a=int, b=int)
 
-# just like RIMyTarget except for the return value of the disputed method
-class RIMyTarget3(RIMyTarget):
-    disputed = schema.RemoteMethodSchema(_response=str, a=int)
+# For some tests, we want the two sides of the connection to disagree about
+# the contents of the RemoteInterface they are using. This is remarkably
+# difficult to accomplish within a single process. We do it by creating
+# something that behaves just barely enough like a RemoteInterface to work.
+class FakeTarget(dict):
+    pass
+RIMyTarget3 = FakeTarget()
+RIMyTarget3.__remote_name__ = RIMyTarget.__remote_name__
+
+RIMyTarget3['disputed'] = schema.RemoteMethodSchema(_response=int, a=str)
+RIMyTarget3['disputed'].name = "disputed"
+RIMyTarget3['disputed'].interface = RIMyTarget3
+
+RIMyTarget3['disputed2'] = schema.RemoteMethodSchema(_response=str, a=int)
+RIMyTarget3['disputed2'].name = "disputed"
+RIMyTarget3['disputed2'].interface = RIMyTarget3
+
+RIMyTarget3['sub'] = schema.RemoteMethodSchema(_response=int, a=int, b=int)
+RIMyTarget3['sub'].name = "sub"
+RIMyTarget3['sub'].interface = RIMyTarget3
 
 class Target(pb.Referenceable):
     implements(RIMyTarget)
@@ -192,6 +212,7 @@ class Target(pb.Referenceable):
     def remote_add(self, a, b):
         self.calls.append((a,b))
         return a+b
+    remote_add1 = remote_add
     def remote_getName(self):
         return self.name
     def remote_disputed(self, a):
@@ -232,26 +253,20 @@ class TargetMixin:
         self.targetBroker.connectionMade()
         self.callingBroker.connectionMade()
 
-    def setupTarget(self, target):
+    def setupTarget(self, target, txInterfaces=False):
+        # txInterfaces controls what interfaces the sender uses
+        #  False: sender doesn't know about any interfaces
+        #  True: sender gets the actual interface list from the target
+        #  (list): sender uses an artificial interface list
         puid = target.processUniqueID()
         clid, firstTime = self.targetBroker.getCLID(puid, target)
-        rr = self.callingBroker.registerRemoteReference(clid)
-        return rr, target
-
-    def setupTarget2(self, target):
-        # with interfaces
-        puid = target.processUniqueID()
-        clid, firstTime = self.targetBroker.getCLID(puid, target)
-        ilist = pb.getRemoteInterfaceNames(target)
+        if txInterfaces is False:
+            ilist = []
+        elif txInterfaces is True:
+            ilist = getRemoteInterfaceNames(target)
+        else:
+            ilist = txInterfaces
         rr = self.callingBroker.registerRemoteReference(clid, ilist)
-        return rr, target
-
-    def setupTarget3(self, target, senderInterfaceNames):
-        # with mismatched interfaces
-        puid = target.processUniqueID()
-        clid, firstTime = self.targetBroker.getCLID(puid, target)
-        rRR = self.callingBroker.registerRemoteReference
-        rr = rRR(clid, senderInterfaceNames)
         return rr, target
 
 
@@ -260,7 +275,6 @@ class TestInterface(unittest.TestCase, TargetMixin):
     def testTypes(self):
         self.failUnless(isinstance(RIMyTarget, flavors.RemoteInterfaceClass))
         self.failUnless(isinstance(RIMyTarget2, flavors.RemoteInterfaceClass))
-        self.failUnless(isinstance(RIMyTarget3, flavors.RemoteInterfaceClass))
 
     def testRegister(self):
         reg = pb.RemoteInterfaceRegistry
@@ -283,13 +297,13 @@ class TestInterface(unittest.TestCase, TargetMixin):
         rr, target = self.setupTarget(Target())
         ilist = pb.getRemoteInterfaces(target)
         self.failUnlessEqual(ilist, [RIMyTarget])
-        inames = pb.getRemoteInterfaceNames(target)
+        inames = getRemoteInterfaceNames(target)
         self.failUnlessEqual(inames, ["RIMyTarget"])
         self.failUnlessIdentical(pb.RemoteInterfaceRegistry["RIMyTarget"],
                                  RIMyTarget)
         
         rr, target = self.setupTarget(Target2())
-        ilist = pb.getRemoteInterfaceNames(target)
+        ilist = getRemoteInterfaceNames(target)
         self.failUnlessEqual(ilist, ["RIMyTarget",
                                      "RIMyTargetInterface2"])
         self.failUnlessIdentical(\
@@ -297,19 +311,13 @@ class TestInterface(unittest.TestCase, TargetMixin):
 
 
     def testInterface2(self):
-        # verify that a RemoteReferenceSchema created with a given set of
-        # Interfaces behaves correctly
+        # verify that RemoteInterfaces have the right attributes
         t = Target()
         ilist = pb.getRemoteInterfaces(t)
-        inames = pb.getRemoteInterfaceNames(t)
-        s = t.getSchema()
-        methods = s.getMethods()
-        methods.sort()
-        self.failUnlessEqual(methods,
-                             ["add", "add1", "disputed", "getName", "join"])
+        self.failUnlessEqual(ilist, [RIMyTarget])
 
         # 'add' is defined with 'def'
-        s1 = s.getMethodSchema("add")
+        s1 = RIMyTarget['add']
         self.failUnless(isinstance(s1, schema.RemoteMethodSchema))
         ok, s2 = s1.getArgConstraint("a")
         self.failUnless(ok)
@@ -320,7 +328,7 @@ class TestInterface(unittest.TestCase, TargetMixin):
         self.failUnless(isinstance(s3, schema.IntegerConstraint))
 
         # 'add1' is defined as a class attribute
-        s1 = s.getMethodSchema("add1")
+        s1 = RIMyTarget['add1']
         self.failUnless(isinstance(s1, schema.RemoteMethodSchema))
         ok, s2 = s1.getArgConstraint("a")
         self.failUnless(ok)
@@ -330,15 +338,15 @@ class TestInterface(unittest.TestCase, TargetMixin):
         s3 = s1.getResponseConstraint()
         self.failUnless(isinstance(s3, schema.IntegerConstraint))
 
-        s1 = s.getMethodSchema("join")
+        s1 = RIMyTarget['join']
         self.failUnless(isinstance(s1.getArgConstraint("a")[1],
                                    schema.StringConstraint))
         self.failUnless(isinstance(s1.getArgConstraint("c")[1],
                                    schema.IntegerConstraint))
-        s3 = s.getMethodSchema("join").getResponseConstraint()
+        s3 = RIMyTarget['join'].getResponseConstraint()
         self.failUnless(isinstance(s3, schema.StringConstraint))
 
-        s1 = s.getMethodSchema("disputed")
+        s1 = RIMyTarget['disputed']
         self.failUnless(isinstance(s1.getArgConstraint("a")[1],
                                    schema.IntegerConstraint))
         s3 = s1.getResponseConstraint()
@@ -362,7 +370,7 @@ class TestCall(unittest.TestCase, TargetMixin):
         rr, target = self.setupTarget(TargetWithoutInterfaces())
         d = rr.callRemote("add", a=1, b=2)
         self.failUnlessEqual(target.calls, [(1,2)])
-        r = unittest.deferredResult(d)
+        r = dr(d)
         self.failUnlessEqual(r, 3)
 
         # the caller still holds the RemoteReference
@@ -382,7 +390,7 @@ class TestCall(unittest.TestCase, TargetMixin):
         rr, target = self.setupTarget(TargetWithoutInterfaces())
         d = rr.callRemote("fail")
         self.failIf(target.calls)
-        f = unittest.deferredError(d, 2)
+        f = de(d, 2)
         self.failUnless(isinstance(f, pb.CopiedFailure))
         self.failUnless(f.check(ValueError),
                         "wrong exception type: %s" % f)
@@ -394,67 +402,156 @@ class TestCall(unittest.TestCase, TargetMixin):
         d = rr.callRemote("add", a=1, b=2, c=3)
         # add() does not take a 'c' argument, so we get a TypeError here
         self.failIf(target.calls)
-        f = unittest.deferredError(d, 2)
+        f = de(d, 2)
         self.failUnless(f.check(TypeError),
                         "wrong exception type: %s" % f.type)
         self.failUnless("remote_add() got an unexpected keyword argument 'c'"
                         in f.value)
 
+    def testFail3(self):
+        # this is done without interfaces
+        rr, target = self.setupTarget(TargetWithoutInterfaces())
+        d = rr.callRemote("bogus", a=1, b=2)
+        # the target does not have .bogus method, so we get an AttributeError
+        self.failIf(target.calls)
+        f = de(d, 2)
+        self.failUnless(f.check(AttributeError),
+                        "wrong exception type: %s" % f.type)
+        self.failUnless("'TargetWithoutInterfaces' object has no " \
+                        + "attribute 'remote_bogus'" in str(f))
+
     def testCall2(self):
-        # use interfaces this time
-        rr, target = self.setupTarget2(Target())
-        d = rr.callRemote("add", 3, 4) # enforces schemas on both ends
-        r = unittest.deferredResult(d, 2)
+        # server end uses an interface this time
+        rr, target = self.setupTarget(Target(), True)
+        d = rr.callRemote("add", a=3, b=4) # enforces schemas on receipt
+        r = dr(d, 2)
         self.failUnlessEqual(r, 7)
 
-    def testFailLocalArgConstraint(self):
-        # we violate the interface, and the sender should catch it
-        rr, target = self.setupTarget2(Target())
-        d = rr.callRemote("add", a=1, b=2, c=3)
+    def testCall3(self):
+        # use interface on both sides
+        rr, target = self.setupTarget(Target(), True)
+        d = rr.callRemote(RIMyTarget['add'], 3, 4) # enforces schemas
+        r = dr(d, 2)
+        self.failUnlessEqual(r, 7)
+
+    def testCall4(self):
+        # call through a manually-defined RemoteMethodSchema
+        rr, target = self.setupTarget(Target(), True)
+        d = rr.callRemote(RIMyTarget['add1'], 3, 4)
+        r = dr(d, 2)
+        self.failUnlessEqual(r, 7)
+
+    def testFailWrongInterfaceRemote(self):
+        # we send a method in an interface that they don't support. This is
+        # caught at the far end, because we don't have an interface list from
+        # them.
+        rr, target = self.setupTarget(Target())
+        d = rr.callRemote(RIMyTarget2['sub'], 3, 4) # doesn't offer RIMyTarget2
+        f = de(d)
+        self.failUnless(f.check(Violation))
+        self.failUnless("does not implement RIMyTargetInterface2" in str(f))
+
+    def testFailWrongInterfaceLocal(self):
+        # we send a method in an interface that we know they don't support
+        rr, target = self.setupTarget(Target(), True)
+        d = rr.callRemote(RIMyTarget2['sub'], 3, 4) # doesn't offer RIMyTarget2
+        f = de(d)
+        self.failUnless(f.check(Violation))
+        self.failUnless("does not offer RIMyTargetInterface2" in str(f))
+
+    def testFailWrongMethodRemote(self):
+        # if the target doesn't specify any remote interfaces, then the
+        # calling side shouldn't try to do any checking. The problem is
+        # caught on the target side.
+        rr, target = self.setupTarget(Target(), True)
+        d = rr.callRemote("bogus") # RIMyTarget2 doesn't .bogus()
+        f = de(d)
+        self.failUnless(f.check(Violation))
+        self.failUnless("method 'bogus' not defined in any of ['RIMyTarget']"
+                        in str(f))
+
+    def testFailWrongMethodRemote2(self):
+        # call a method which doesn't actually exist. The sender thinks
+        # they're ok but the recipient catches the violation
+        rr, target = self.setupTarget(Target(), True)
+        d = rr.callRemote(RIMyTarget3['sub'], a=1, b=1)
+        # RIMyTarget2 has a 'sub' method, but RIMyTarget (the real interface)
+        # does not
         self.failIf(target.calls)
-        f = unittest.deferredError(d, 2)
+        f = de(d, 2)
+        self.failUnless(f.check(Violation))
+        self.failUnless("method 'sub' not defined in RIMyTarget" in f.value)
+
+    def testFailWrongArgsLocal1(self):
+        # we violate the interface (extra arg), and the sender should catch it
+        rr, target = self.setupTarget(Target(), True)
+        d = rr.callRemote(RIMyTarget["add"], a=1, b=2, c=3)
+        self.failIf(target.calls)
+        f = de(d, 2)
         self.failUnless(f.check(Violation))
         self.failUnless("unknown argument 'c'" in f.value)
 
-    def testFailLocalArgConstraint2(self):
-        # we violate the interface, and the sender should catch it
-        rr, target = self.setupTarget2(Target())
-        d = rr.callRemote("add", a=1, b="two")
+    def testFailWrongArgsLocal2(self):
+        # we violate the interface (bad arg), and the sender should catch it
+        rr, target = self.setupTarget(Target(), True)
+        d = rr.callRemote(RIMyTarget["add"], a=1, b="two")
         self.failIf(target.calls)
-        f = unittest.deferredError(d, 2)
+        f = de(d, 2)
         self.failUnless(f.check(Violation))
         self.failUnless("not a number" in f.value)
 
-    def testFailRemoteArgConstraint(self):
+    def testFailWrongArgsRemote1(self):
         # the brokers disagree about the Interfaces, so the sender thinks
         # they're ok but the recipient catches the violation
-        rr, target = self.setupTarget3(Target(), ["RIMyTarget2"])
-        d = rr.callRemote("sub", a=1, b=2)
-        # RIMyTarget2 has a 'sub' method. But RIMyTarget (the real
-        # interface) does not.
+        rr, target = self.setupTarget(Target(), True)
+        d = rr.callRemote(RIMyTarget3['disputed'], a="foo")
+        # RIMyTarget3['disputed'] takes a string. But RIMyTarget (the real
+        # interface) takes an int.
         self.failIf(target.calls)
-        f = unittest.deferredError(d, 2)
+        f = de(d, 2)
         self.failUnless(f.check(Violation))
-        self.failUnless("method 'sub' not defined in any RemoteInterface"
+        self.failUnless("STRING token rejected by IntegerConstraint"
+                        in f.value)
+        self.failUnless("at <RootUnslicer>.<methodcall .disputed arg[a]>"
                         in f.value)
 
-    def testFailRemoteReturnConstraint(self):
-        rr, target = self.setupTarget2(BrokenTarget())
-        d = rr.callRemote("add", 3, 4) # violates return constraint
-        f = unittest.deferredError(d, 2)
+    def testFailWrongReturnRemote(self):
+        rr, target = self.setupTarget(BrokenTarget())
+        d = rr.callRemote(RIMyTarget["add"], 3, 4) # violates return constraint
+        f = de(d, 2)
         self.failUnless(f.check(Violation))
         self.failUnless("in outbound method results" in f.value)
 
-    def testFailLocalReturnConstraint(self):
-        rr, target = self.setupTarget3(Target(), ["RIMyTarget3"])
-        d = rr.callRemote("disputed", a=1)
-        # RIMyTarget.disputed returns an int, but the local side believes it
-        # uses RIMyTarget3 which returns a string. This should be rejected
-        # by the local side when the response comes back
+    def testFailWrongReturnLocal1(self):
+        # the target method returns a value which violates our schema
+        rr, target = self.setupTarget(Target(), True)
+        d = rr.callRemote(RIMyTarget3['disputed2'], a=1)
+        # RIMyTarget3['disputed2'] expects a string. The target returns an
+        # int. RIMyTarget (the real interface) returns an int, so they think
+        # they're ok.
         self.failIf(target.calls)
-        f = unittest.deferredError(d, 2)
+        f = de(d, 2)
         self.failUnless(f.check(Violation))
-        self.failUnless("INT token rejected by StringConstraint in inbound method results" in f.value)
+        self.failUnless("INT token rejected by StringConstraint" in str(f))
+        self.failUnless("in inbound method results" in str(f))
+        self.failUnless("at <RootUnslicer>.Answer(req=1)" in str(f))
+
+    def testFailWrongReturnLocal2(self):
+        # the target returns a value which violates our _resultConstraint
+        rr, target = self.setupTarget(Target(), True)
+        d = rr.callRemote(RIMyTarget['disputed'], a=1,
+                          _resultConstraint=str)
+        # The target returns an int, which matches the schema they're using,
+        # so they think they're ok. We've overridden our expectations to
+        # require a string.
+        self.failIf(target.calls)
+        f = de(d, 2)
+        self.failUnless(f.check(Violation))
+        self.failUnless("INT token rejected by StringConstraint" in str(f))
+        self.failUnless("in inbound method results" in str(f))
+        self.failUnless("at <RootUnslicer>.Answer(req=1)" in str(f))
+
+
 
     def defer(self, arg):
         rr, target = self.setupTarget(HelperTarget())
@@ -880,14 +977,8 @@ class TestFactory(unittest.TestCase):
         d = pb.callRemoteURL_TCP("localhost", portnum, "",
                                  RIMyTarget, "missing", a=1, b=2)
         f = de(d)
-        # interesting. the Violation is local, so f.type is the actual
-        # tokens.Violation class (rather than just a string). If the failure
-        # is caught by the far side, I think we get a string. TODO: not sure
-        # how I feel about that being different.
-        self.failUnlessEqual(f.type, tokens.Violation)
-        # likewise, f.value is a Violation instance, not a string 
-        #self.failUnless(f.value.find("method 'missing' not defined") != -1)
-        self.failUnless(f.value.args[0].find("method 'missing' not defined") != -1)
+        self.failUnlessEqual(f.type, 'tokens.Violation')
+        self.failUnless("method 'missing' not defined" in f.value)
 
     def testCall2(self):
         t = Target("fred")
@@ -921,14 +1012,14 @@ class ThreeWayHelper:
         # and .remote2 is our RRef to server2's "t2" helper target
         self.remote2 = remote2
         # sending a RemoteReference back to its source should be ok
-        d = self.remote1.callRemote("set", self.remote1)
+        d = self.remote1.callRemote("set", obj=self.remote1)
         d.addCallback(self.step4)
         return d
 
     def step4(self, res):
         assert self.target1.obj is self.target1
         # but sending one to someone else is not
-        d = self.remote2.callRemote("set", self.remote1)
+        d = self.remote2.callRemote("set", obj=self.remote1)
         d.addCallback(self.step5_callback)
         d.addErrback(self.step5_errback)
         return d
@@ -984,6 +1075,15 @@ class Test3Way(unittest.TestCase):
         if helper.passed != True:
             # should be a Failure instance
             helper.passed.raiseException()
+
+# TODO:
+#  when the Violation is remote, it is reported in a CopiedFailure, which
+#  means f.type is a string. When it is local, it is reported in a Failure,
+#  and f.type is the tokens.Violation class. I'm not sure how I feel about
+#  these being different.
+#
+#  make sure an actual exception in the remote method call is handled
+#  properly (not just a Violation)
 
 # TODO: tests to port from oldpb suite
 # testTooManyRefs: sending pb.MAX_BROKER_REFS across the wire should die
