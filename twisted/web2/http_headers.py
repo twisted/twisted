@@ -6,23 +6,35 @@ from time import gmtime, time
 import base64
 import re
 
+# Counterpart to evilness in test_http_headers
+try:
+    _http_headers_isBeingTested
+    print "isbeingtested"
+    from twisted.python.util import OrderedDict
+    ODict = OrderedDict
+    time = lambda : 999999990 # Sun, 09 Sep 2001 01:46:30 GMT
+except:
+    ODict = dict
+
+
 def dashCapitalize(s):
     ''' Capitalize a string, making sure to treat - as a word seperator '''
     return '-'.join([ x.capitalize() for x in s.split('-')])
 
 # datetime parsing and formatting
 weekdayname = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-weekday_re = re.compile("^("+("|".join(weekdayname))+")")
+weekdayname_lower = [name.lower() for name in weekdayname]
 monthname = [None,
              'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
              'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+monthname_lower = [name and name.lower() for name in monthname]
 
 ## HTTP DateTime parser
 def parseDateTime(dateString):
     """Convert an HTTP date string (one of three formats) to seconds since epoch."""
     parts = dateString.split()
 
-    if not weekday_re.match(parts[0]):
+    if not parts[0][0:3].lower() in weekdayname_lower:
         # Weekday is stupid. Might have been omitted.
         try:
             return parseDateTime("Sun, "+dateString)
@@ -63,7 +75,7 @@ def parseDateTime(dateString):
         raise ValueError("Unknown datetime format %r" % dateString)
     
     day = int(day)
-    month = int(monthname.index(month))
+    month = int(monthname_lower.index(month.lower()))
     year = int(year)
     hour, min, sec = map(int, time.split(':'))
     return int(timegm((year, month, day, hour, min, sec)))
@@ -948,16 +960,16 @@ class __RecalcNeeded(object):
 
 _RecalcNeeded = __RecalcNeeded()
 
-DefaultHTTPParsers = dict()
-DefaultHTTPGenerators = dict()
+DefaultHTTPParsers = {}
+DefaultHTTPGenerators = {}
 
 class Headers:
     """This class stores the HTTP headers as both a parsed representation and
     the raw string representation. It converts between the two on demand."""
     
     def __init__(self, parsers=DefaultHTTPParsers, generators=DefaultHTTPGenerators):
-        self._raw_headers = {}
-        self._headers = {}
+        self._raw_headers = ODict()
+        self._headers = ODict()
         self.parsers=parsers
         self.generators=generators
 
@@ -1098,16 +1110,6 @@ class Headers:
    is strictly an error, but we're nice.).
    """
 
-# Counterpart to evilness in test_http_headers
-try:
-    _http_headers_isBeingTested
-    print "isbeingtested"
-    from twisted.python.util import OrderedDict
-    toDict = OrderedDict
-    time = lambda : 999999990 # Sun, 09 Sep 2001 01:46:30 GMT
-except:
-    toDict = dict
-
 iteritems = lambda x: x.iteritems()
 
 
@@ -1136,13 +1138,13 @@ generator_general_headers = {
 }
 
 parser_request_headers = {
-    'Accept': (tokenize, listParser(parseAccept), toDict),
-    'Accept-Charset': (tokenize, listParser(parseAcceptQvalue), toDict, addDefaultCharset),
-    'Accept-Encoding':(tokenize, listParser(parseAcceptQvalue), toDict, addDefaultEncoding),
-    'Accept-Language':(tokenize, listParser(parseAcceptQvalue), toDict),
+    'Accept': (tokenize, listParser(parseAccept), ODict),
+    'Accept-Charset': (tokenize, listParser(parseAcceptQvalue), ODict, addDefaultCharset),
+    'Accept-Encoding':(tokenize, listParser(parseAcceptQvalue), ODict, addDefaultEncoding),
+    'Accept-Language':(tokenize, listParser(parseAcceptQvalue), ODict),
 #    'Authorization':str # what is "credentials"
     'Cookie':(parseCookie,),
-    'Expect':(tokenize, listParser(parseExpect), toDict),
+    'Expect':(tokenize, listParser(parseExpect), ODict),
     'From':(last,),
     'Host':(last,),
     'If-Match':(tokenize, listParser(parseStarOrETag), list),
@@ -1154,7 +1156,7 @@ parser_request_headers = {
 #    'Proxy-Authorization':str, # what is "credentials"
     'Range':(tokenize, parseRange),
     'Referer':(last,str), # TODO: URI object?
-    'TE':(tokenize, listParser(parseAcceptQvalue), toDict),
+    'TE':(tokenize, listParser(parseAcceptQvalue), ODict),
     'User-Agent':(last,str),
 }
 

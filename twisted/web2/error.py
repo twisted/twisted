@@ -69,7 +69,6 @@ class PageRedirect(Error):
 # 413 - May  include Retry-After
 # 416 - Should include Content-Range
 # 503 - Should include Retry-After
-# 504 - 
 
 class MethodNotAllowed(Error):
     """Raised by a resource when faced with an unsupported request method.

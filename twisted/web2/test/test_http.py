@@ -4,6 +4,12 @@ import time
 from twisted.trial import unittest
 from twisted.web2 import http, http_headers, responsecode, error
 
+from twisted.internet import reactor, protocol, address, interfaces
+from twisted.protocols import loopback
+
+from zope.interface import implements
+
+
 class PreconditionTestCase(unittest.TestCase):
     def checkPreconditions(self, request, expectedResult, expectedCode,
                            initCode=responsecode.OK, entityExists=True):
@@ -170,3 +176,237 @@ class PreconditionTestCase(unittest.TestCase):
         self.checkPreconditions(request, True, responsecode.OK)
 
 
+class IfRangeTestCase(unittest.TestCase):
+    def testIfRange(self):
+        request = http.Request(None, "GET", "/", "HTTP/1.1", http_headers.Headers())
+
+        request.in_headers.setRawHeaders("If-Range", ('"foo"',))
+        request.out_headers.setHeader("ETag", http_headers.ETag('foo'))
+        self.assertEquals(request.checkIfRange(), True)
+
+        request.in_headers.setRawHeaders("If-Range", ('"bar"',))
+        request.out_headers.setHeader("ETag", http_headers.ETag('foo'))
+        self.assertEquals(request.checkIfRange(), False)
+
+        request.in_headers.setRawHeaders("If-Range", ('W/"foo"',))
+        request.out_headers.setHeader("ETag", http_headers.ETag('foo', weak=True))
+        self.assertEquals(request.checkIfRange(), False)
+
+        request.in_headers.setRawHeaders("If-Range", ('"foo"',))
+        request.out_headers.removeHeader("ETag")
+        self.assertEquals(request.checkIfRange(), False)
+
+        request.in_headers.setRawHeaders("If-Range", ('Sun, 02 Jan 2000 00:00:00 GMT',))
+        request.out_headers.setHeader("Last-Modified", 946771200) # Sun, 02 Jan 2000 00:00:00 GMT
+        self.assertEquals(request.checkIfRange(), True)
+
+        request.in_headers.setRawHeaders("If-Range", ('Sun, 02 Jan 2000 00:00:01 GMT',))
+        request.out_headers.setHeader("Last-Modified", 946771200) # Sun, 02 Jan 2000 00:00:00 GMT
+        self.assertEquals(request.checkIfRange(), False)
+
+        request.in_headers.setRawHeaders("If-Range", ('Sun, 01 Jan 2000 23:59:59 GMT',))
+        request.out_headers.setHeader("Last-Modified", 946771200) # Sun, 02 Jan 2000 00:00:00 GMT
+        self.assertEquals(request.checkIfRange(), False)
+
+        request.in_headers.setRawHeaders("If-Range", ('Sun, 01 Jan 2000 23:59:59 GMT',))
+        request.out_headers.removeHeader("Last-Modified")
+        self.assertEquals(request.checkIfRange(), False)
+        
+        request.in_headers.setRawHeaders("If-Range", ('jwerlqjL#$Y*KJAN',))
+        self.assertEquals(request.checkIfRange(), False)
+    
+
+
+class LoopbackRelay(loopback.LoopbackRelay):
+    implements(interfaces.IProducer)
+    
+    def pauseProducing(self):
+        self.paused = True
+        
+    def resumeProducing(self):
+        self.paused = False
+
+    def stopProducing(self):
+        self.loseConnection()
+
+
+class TestRequest(http.Request):
+    def process(self):
+        self.cmds = []
+        self.cmds.append(('init', self.method, self.uri, self.clientproto, tuple(self.in_headers.getAllRawHeaders())))
+        
+    def handleContentChunk(self, data):
+        self.cmds.append(('contentChunk', data))
+        
+    def handleContentComplete(self):
+        self.cmds.append(('contentComplete',))
+        
+    def connectionLost(self, reason):
+        print "server connection lost"
+        self.cmds.append(('connectionLost', reason))
+        
+class TestClient(protocol.Protocol):
+    data = ""
+    done = False
+    
+    def dataReceived(self, data):
+        self.data+=data
+        
+    def write(self, data):
+        self.transport.write(data)
+
+    def connectionLost(self, reason):
+        self.done = True
+        self.transport.loseConnection()
+        
+
+class TestConnection:
+    def __init__(self):
+        self.requests = []
+        self.client = None
+
+class CoreHTTPTestCase(unittest.TestCase):
+    def connect(self, logFile=None):
+        cxn = TestConnection()
+
+        def makeTestRequest(*args):
+            cxn.requests.append(TestRequest(*args))
+            return cxn.requests[-1]
+        
+        factory = http.HTTPFactory()
+        factory.requestFactory = makeTestRequest
+        
+        cxn.client = TestClient()
+        cxn.server = factory.buildProtocol(address.IPv4Address('TCP', '127.0.0.1', 2345))
+        
+        cxn.serverToClient = LoopbackRelay(cxn.client, logFile)
+        cxn.clientToServer = LoopbackRelay(cxn.server, logFile)
+        cxn.server.makeConnection(cxn.serverToClient)
+        cxn.client.makeConnection(cxn.clientToServer)
+
+        return cxn
+
+    def iterate(self, cxn):
+        reactor.iterate(0)
+        cxn.serverToClient.clearBuffer()
+        cxn.clientToServer.clearBuffer()
+        if cxn.serverToClient.shouldLose:
+            cxn.serverToClient.clearBuffer()
+        if cxn.clientToServer.shouldLose:
+            cxn.clientToServer.clearBuffer()
+
+    def compareResult(self, cxn, cmds, data):
+        self.iterate(cxn)
+        self.assertEquals([req.cmds for req in cxn.requests], cmds)
+        self.assertEquals(cxn.client.data, data)
+
+    def assertDone(self, cxn):
+        self.iterate(cxn)
+        self.assert_(cxn.client.done)
+        
+    # Note: these tests compare the client output using string
+    #       matching. It is acceptable for this to change and break
+    #       the test if you know what you are doing.
+    
+    def testHTTP0_9(self):
+        cxn = self.connect()
+        cmds = [[]]
+        data = ""
+        
+        cxn.client.write("GET /\r\n")
+        # Second request which should not be handled
+        cxn.client.write("GET /two\r\n")
+        
+        cmds[0] += [('init', 'GET', '/', (0,9), ()), ('contentComplete',)]
+        self.compareResult(cxn, cmds, data)
+        
+        cxn.requests[0].out_headers.setRawHeaders("Yo", ("One", "Two"))
+        cxn.requests[0].acceptData()
+        cxn.requests[0].write("")
+        
+        self.compareResult(cxn, cmds, data)
+        
+        cxn.requests[0].write("Output")
+        data += "Output"
+        self.compareResult(cxn, cmds, data)
+        
+        cxn.requests[0].finish()
+        self.compareResult(cxn, cmds, data)
+        
+        self.assertDone(cxn)
+        
+    def testHTTP1_0(self):
+        cxn = self.connect()
+        cmds = [[]]
+        data = ""
+
+        cxn.client.write("GET / HTTP/1.0\r\nContent-Length: 5\r\nHost: localhost\r\n\r\nInput")
+        # Second request which should not be handled
+        cxn.client.write("GET /two HTTP/1.0\r\n\r\n")
+        
+        cmds[0] += [('init', 'GET', '/', (1,0),
+                     (('Content-Length', ['5']), ('Host', ['localhost']),)),
+                    ('contentChunk', 'Input'),
+                    ('contentComplete',)]
+        self.compareResult(cxn, cmds, data)
+        
+        cxn.requests[0].out_headers.setRawHeaders("Yo", ("One", "Two"))
+        cxn.requests[0].acceptData()
+        cxn.requests[0].write("")
+        
+        data +="HTTP/1.1 200 OK\r\nYo: One\r\nYo: Two\r\nConnection: close\r\n\r\n"
+        self.compareResult(cxn, cmds, data)
+        
+        cxn.requests[0].write("Output")
+        data += "Output"
+        self.compareResult(cxn, cmds, data)
+        
+        cxn.requests[0].finish()
+        self.compareResult(cxn, cmds, data)
+        
+        self.assertDone(cxn)
+
+    def testHTTP1_0_keepalive(self):
+        cxn = self.connect()
+        cmds = [[]]
+        data = ""
+
+        cxn.client.write("GET / HTTP/1.0\r\nConnection: keep-alive\r\nContent-Length: 5\r\nHost: localhost\r\n\r\nInput")
+        cxn.client.write("GET /two HTTP/1.0\r\n\r\n")
+        
+        cmds[0] += [('init', 'GET', '/', (1,0),
+                     (('Content-Length', ['5']), ('Host', ['localhost']),)),
+                    ('contentChunk', 'Input'),
+                    ('contentComplete',)]
+        self.compareResult(cxn, cmds, data)
+        
+        cxn.requests[0].out_headers.setRawHeaders("Content-Length", ("6", ))
+        cxn.requests[0].out_headers.setRawHeaders("Yo", ("One", "Two"))
+        cxn.requests[0].acceptData()
+        cxn.requests[0].write("")
+        
+        data +="HTTP/1.1 200 OK\r\nContent-Length: 6\r\nYo: One\r\nYo: Two\r\nConnection: Keep-Alive\r\n\r\n"
+        self.compareResult(cxn, cmds, data)
+        
+        cxn.requests[0].write("Output")
+        data += "Output"
+        self.compareResult(cxn, cmds, data)
+        
+        cxn.requests[0].finish()
+
+        # Now for second request:
+        cmds.append([])
+        cmds[1] += [('init', 'GET', '/two', (1,0), ()),
+                    ('contentComplete',)]
+        self.compareResult(cxn, cmds, data)
+
+        cxn.requests[1].out_headers.setRawHeaders("Content-Length", ("0", ))
+        cxn.requests[1].acceptData()
+        cxn.requests[1].write("")
+        
+        data += "HTTP/1.1 200 OK\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+        self.compareResult(cxn, cmds, data)
+        cxn.requests[1].finish()
+        
+        self.assertDone(cxn)
+        

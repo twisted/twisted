@@ -6,3 +6,14 @@
 twisted.web.test: unittests for the Twisted Web, Web Server Framework
 
 """
+
+# Heh heh. Too Evil to pass up. ;)
+import __builtin__
+__builtin__._http_headers_isBeingTested=True
+import sys
+if sys.modules.has_key('twisted.web2.http_headers'):
+    del sys.modules['twisted.web2.http_headers']
+    import twisted.web2
+    del twisted.web2.http_headers
+from twisted.web2 import http_headers
+del __builtin__._http_headers_isBeingTested

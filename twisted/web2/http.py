@@ -296,8 +296,8 @@ class Request:
         
         if ifrange is None:
             return False
-        if isinstance(ifrange, ETag):
-            return ifrange == self.out_headers.getHeader("etag")
+        if isinstance(ifrange, http_headers.ETag):
+            return ifrange.match(self.out_headers.getHeader("etag"), strongCompare=True)
         else:
             return ifrange == self.out_headers.getHeader("last-modified")
 
@@ -339,6 +339,11 @@ class AbortedException(Exception):
     pass
 
 class HTTPChannelRequest:
+    """This class handles the state and parsing for one HTTP request.
+    It is responsible for all the low-level connection oriented behavior.
+    Thus, it takes care of keep-alive, de-chunking, etc., and passes
+    the non-connection headers on to the user-level Request object."""
+    
     headerlen = 0
     length = None
     chunkedIn = False
@@ -358,6 +363,8 @@ class HTTPChannelRequest:
         self.channel = channel
         self.queued=queued
 
+        # Buffer writes to a string until we're first in line
+        # to write a response
         if queued:
             self.transport = StringTransport()
         else:
@@ -367,7 +374,8 @@ class HTTPChannelRequest:
         parts = initialLine.split()
         # set the version to a fallback for error generation
         self.version = (1,0)
-            
+
+        # Parse the initial request line
         if len(parts) != 3:
             if len(parts) in (1,2):
                 if len(parts) < 2:
@@ -387,7 +395,7 @@ class HTTPChannelRequest:
         
         self.version = protovers[1:3]
         
-        # Check for HTTP 0 or HTTP 1.
+        # Ensure HTTP 0 or HTTP 1.
         if self.version[0] > 1:
             self._abortWithError(responsecode.HTTP_VERSION_NOT_SUPPORTED)
 
@@ -409,8 +417,10 @@ class HTTPChannelRequest:
                     self._abortWithError(responsecode.BAD_REQUEST, "Invalid chunk size, not a hex number: %s!" % chunksize)
 
                 if self.length == 0:
+                    # We're done, parse the trailers line
                     self.chunkedIn = 3
                 else:
+                    # Read self.length bytes of raw data
                     self.channel.setRawMode()
             elif self.chunkedIn == 2:
                 # After we got data bytes of the appropriate length, we end up here,
@@ -426,7 +436,9 @@ class HTTPChannelRequest:
                 # request.
                 if line == '':
                     self.allContentReceived()
+        # END of chunk handling
         elif line == '':
+            # Empty line => End of headers
             if self.partialHeader:
                 self.headerReceived(self.partialHeader)
             self.partialHeader = ''
@@ -441,6 +453,7 @@ class HTTPChannelRequest:
                 # await raw data as content
                 self.channel.setRawMode()
         elif line[0] in ' \t':
+            # Append a header continuation
             self.partialHeader = self.partialHeader+line
         else:
             if self.partialHeader:
@@ -448,6 +461,7 @@ class HTTPChannelRequest:
             self.partialHeader = line
 
     def rawDataReceived(self, data):
+        """Handle incoming content."""
         datalen = len(data)
         if datalen < self.length:
             if not self.finished:
@@ -476,7 +490,7 @@ class HTTPChannelRequest:
             self._abortWithError(responsecode.BAD_REQUEST, "No ':' in header.")
         
         name, val = nameval
-        val.lstrip(' \t')
+        val = val.lstrip(' \t')
         self.reqHeaders._addHeader(name, val)
         
         self.headerlen = self.headerlen+ len(line)
@@ -771,7 +785,21 @@ class HTTPChannelRequest:
         
     
 class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
-    """A receiver for HTTP requests. Handles the hop-by-hop behavior."""
+    """A receiver for HTTP requests. Handles splitting up the connection
+    for the multiple HTTPChannelRequests that may be in progress on this
+    channel.
+
+    @ivar timeOut: number of seconds to wait before terminating an
+    idle connection.
+
+    @ivar maxPipeline: number of outstanding in-progress requests
+    to allow before pausing the input.
+
+    @ivar maxHeaderLength: number of bytes of header to accept from
+    the client.
+
+    """
+    
 
     # these two are generally overridden by the defaults set in HTTPFactory
     timeOut = 60 * 4
@@ -791,7 +819,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         
     def connectionMade(self):
         self.setTimeout(self.timeOut)
-    
+
     def lineReceived(self, line):
         self.resetTimeout()
         if self._first_line:
@@ -847,16 +875,19 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             self._savedTimeOut = self.setTimeout(None)
         
     def _startNextRequest(self):
-        if len(self.requests) < self.maxPipeline:
-            # resume reading after pipeline emptied
-            self.resumeProducing()
-            
-        # notify next request it can start writing
+        # notify next request, if present, it can start writing
         if self.requests:
             self.requests[0].noLongerQueued()
+            
+            # resume reading if allowed to
+            if(self.persistent != PERSIST_NO_PIPELINE and
+               len(self.requests < self.maxPipeline)):
+                self.resumeProducing
         else:
             if self._savedTimeOut:
                 self.setTimeout(self._savedTimeOut)
+            # no requests in queue, resume reading
+            self.resumeProducing()
 
     def requestWriteFinished(self, request, persistent):
         """Called by first request in queue when it is done."""
@@ -868,7 +899,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             # Do this in the next reactor loop so as to
             # not cause huge call stacks with fast
             # incoming requests.
-            reactor.callLater(self._startNextRequest)
+            reactor.callLater(0, self._startNextRequest)
         else:
             self.transport.loseConnection()
 

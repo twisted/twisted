@@ -38,6 +38,9 @@ class LoopbackRelay:
         self.write("".join(iovec))
 
     def clearBuffer(self):
+        if self.shouldLose == -1:
+            return
+        
         if self.producer:
             self.producer.resumeProducing()
         if self.buffer:
@@ -46,11 +49,13 @@ class LoopbackRelay:
             buffer = self.buffer
             self.buffer = ''
             self.target.dataReceived(buffer)
-        if self.shouldLose:
+        if self.shouldLose == 1:
+            self.shouldLose = -1
             self.target.connectionLost(failure.Failure(main.CONNECTION_DONE))
 
     def loseConnection(self):
-        self.shouldLose = 1
+        if self.shouldLose != -1:
+            self.shouldLose = 1
 
     def getHost(self):
         return 'loopback'

@@ -104,13 +104,14 @@ class Request(http.Request):
             self.postpath = map(unquote, self.path[1:].split('/'))
         self.sitepath = self.prepath[:]
         
-        requestContext = context.RequestContext(tag=self)
-        
         # make content string.
         # FIXME: make resource interface for choosing how to
         # handle content.
         self.content = StringIO.StringIO()
-        self.deferredContext = self.site.getPageContextForRequestContext(requestContext)
+
+        requestContext = context.RequestContext(tag=self)
+        
+        self.deferredContext = self._getChild(requestContext, site.getRootResource(), self.postpath)
         self.deferredContext.addErrback(self._processingFailed, requestContext)
         
     def handleContentChunk(self, data):
@@ -122,6 +123,57 @@ class Request(http.Request):
         # errbacks for rendering to be called for errors from before.
         self.deferredContext.addCallback(self._renderAndFinish)
         
+    def _getChild(self, ctx, res, path):
+        """Create a PageContext for res, call res.locateChild, and pass the
+        result on to _handleSegment."""
+        
+        # Create a context object to represent this new resource
+        newctx = context.PageContext(tag=res, parent=ctx)
+        newctx.remember(tuple(self.prepath), iweb.ICurrentSegments)
+        newctx.remember(tuple(self.postpath), iweb.IRemainingSegments)
+
+        if not path:
+            return newctx
+
+        return defer.maybeDeferred(
+            res.locateChild, newctx, path
+        ).addErrback(
+            self._processingFailed, newctx
+        ).addCallback(
+            self.handleSegment, path, newctx
+        )
+        
+    def _handleSegment(self, result, path, pageContext):
+        """Handle the result of a locateChild call done in _getChild."""
+        
+        if result is _errorMarker:
+            # The error page handler has already handled this, abort.
+            return result
+        
+        newres, newpath = result
+        # If the child resource is None then display a error page
+        if newres is None:
+            return self._processingFailed(error.Error(code=responsecode.NOT_FOUND), pageContext)
+
+        # If we got a deferred then we need to call back later, once the
+        # child is actually available.
+        if isinstance(newres, defer.Deferred):
+            return newres.addCallback(
+                lambda actualRes: self._handleSegment(
+                    (actualRes, newpath), path, pageContext))
+
+        newres = iweb.IResource(newres, persist=True)
+        if newres is pageContext.tag:
+            assert not newpath is path, "URL traversal cycle detected when attempting to locateChild %r from resource %r." % (path, res)
+            assert  len(newpath) < len(path), "Infinite loop impending..."
+
+        ## We found a Resource... update the request.prepath and postpath
+        for x in xrange(len(path) - len(newpath)):
+            self.prepath.append(self.postpath.pop(0))
+
+        return self._getChild(pageContext, newres, newpath)
+
+
     def _renderAndFinish(self, pageContext):
         if pageContext is _errorMarker:
             # If the location step raised an exception, the error
@@ -187,7 +239,7 @@ class Request(http.Request):
             raise TypeError("html is not a string")
         return
     
-    def notifyFinish(self):
+        def notifyFinish(self):
         """Notify when finishing the request
 
         @return: A deferred. The deferred will be triggered when the
@@ -253,58 +305,6 @@ class Site(http.HTTPFactory):
         channel.site = self
         return channel
 
-    def getChild(self, request, ctx, res, path):
-        ## Create a context object to represent this new resource
-        newctx = context.PageContext(tag=res, parent=ctx)
-        newctx.remember(tuple(request.prepath), iweb.ICurrentSegments)
-        newctx.remember(tuple(request.postpath), iweb.IRemainingSegments)
-
-        if not path:
-            return newctx
-
-        return defer.maybeDeferred(
-            res.locateChild, newctx, path
-        ).addErrback(
-            request._processingFailed, newctx
-        ).addCallback(
-            self.handleSegment, request, path, newctx
-        )
-        
-    def getPageContextForRequestContext(self, ctx):
-        """Retrieve a resource from this site for a particular request. The
-        resource will be wrapped in a PageContext which keeps track
-        of how the resource was located.
-        """
-        request = ctx.tag
-        path = request.postpath
-        
-        res = iweb.IResource(self.resource)
-        return self.getChild(request, ctx, res, path)
+    def getRootResource(self):
+        return self.resource
     
-    def handleSegment(self, result, request, path, pageContext):
-        if result is _errorMarker:
-            # The error page handler has already handled this, abort.
-            return result
-        
-        newres, newpath = result
-        # If the child resource is None then display a error page
-        if newres is None:
-            return request._processingFailed(error.Error(code=responsecode.NOT_FOUND), pageContext)
-
-        # If we got a deferred then we need to call back later, once the
-        # child is actually available.
-        if isinstance(newres, defer.Deferred):
-            return newres.addCallback(
-                lambda actualRes: self.handleSegment(
-                    (actualRes, newpath), request, path, pageContext))
-
-        newres = iweb.IResource(newres, persist=True)
-        if newres is pageContext.tag:
-            assert not newpath is path, "URL traversal cycle detected when attempting to locateChild %r from resource %r." % (path, res)
-            assert  len(newpath) < len(path), "Infinite loop impending..."
-
-        ## We found a Resource... update the request.prepath and postpath
-        for x in xrange(len(path) - len(newpath)):
-            request.prepath.append(request.postpath.pop(0))
-
-        return self.getChild(request, pageContext, newres, newpath)
