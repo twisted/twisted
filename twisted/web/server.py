@@ -312,7 +312,7 @@ class Request(pb.Copyable, http.HTTP):
                 # This is a Bad Thing (RFC 2616, 9.4)
                 log.msg("Warning: HEAD request %s for resource %s is"
                         " returning a message body.  I think I'll eat it."
-                        % (self, resc))
+                        % (self, resrc))
                 self.setHeader('content-length',str(len(body)-1))
             self.write('')
         else:
