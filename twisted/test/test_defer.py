@@ -65,7 +65,7 @@ class DeferredTestCase(unittest.TestCase):
         deferred.arm()
         deferred.callback("hello")
         self.failUnlessEqual(self.errback_results, None)
-        self.failUnlessEqual(self.callback_results, 
+        self.failUnlessEqual(self.callback_results,
                              (('hello',), {'world': 'world'}))
 
     def testTwoCallbacks(self):
@@ -78,10 +78,27 @@ class DeferredTestCase(unittest.TestCase):
         deferred.arm()
         deferred.callback("hello")
         self.failUnlessEqual(self.errback_results, None)
-        self.failUnlessEqual(self.callback_results, 
+        self.failUnlessEqual(self.callback_results,
                              (('hello',), {}))
-        self.failUnlessEqual(self.callback2_results, 
+        self.failUnlessEqual(self.callback2_results,
                              (('hello',), {}))
+
+    def testDeferredList(self):
+        defr1 = defer.Deferred()
+        defr2 = defer.Deferred()
+        defr3 = defer.Deferred()
+        dl = defer.DeferredList([defr1, defr2, defr3])
+        result = []
+        def cb(resultList, result=result):
+            result.extend(resultList)
+        dl.addCallbacks(cb, cb)
+        dl.arm()
+        defr1.armAndCallback(1)
+        defr2.armAndErrback(2)
+        defr3.armAndCallback(3)
+        self.failUnlessEqual(result, [(defer.SUCCESS, 1),
+                                      (defer.FAILURE, 2),
+                                      (defer.SUCCESS, 3)])
 
     def testImmediateSuccess(self):
         l = []
@@ -90,7 +107,7 @@ class DeferredTestCase(unittest.TestCase):
         self.assertEquals(l, [])
         main.iterate()
         self.assertEquals(l, ["success"])
-    
+
     def testImmediateFailure(self):
         l = []
         d = defer.fail("fail")

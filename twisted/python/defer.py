@@ -47,6 +47,7 @@ def fail(result):
     _sched(d.arm)
     return d
 
+
 class Deferred:
     """This is a callback which will be put off until later.
     
@@ -191,7 +192,43 @@ class Deferred:
 ##            log.msg("WARNING: double-arming deferred.")
 
 
-__all__ = ["Deferred", "succeed", "fail"]
+class DeferredList(Deferred):
+    """I combine a group of deferreds into one callback.
+    
+    I track a list of Deferreds for their callbacks, and make a single
+    callback when they have all completed.
+    """
+    def __init__(self, deferredList):
+        """Initialize a DeferredList.
+
+        Arguments::
+
+          deferredList: a list of Deferreds
+        """
+        self.resultList = []
+        Deferred.__init__(self)
+        index = 0
+        for deferred in deferredList:
+            deferred.addCallbacks(self._cbDeferred, self._cbDeferred,
+                                  callbackArgs=(index,SUCCESS),
+                                  errbackArgs=(index,FAILURE))
+            self.resultList.append(None)
+            index = index + 1
+
+    def _cbDeferred(self, result, index, succeeded):
+        """(internal) Callback for when one of my deferreds fires.
+        """
+        self.resultList[index] = (succeeded, result)
+        if not (None in self.resultList):
+            self.callback(self.resultList)
+
+
+# Constants for use with DeferredList
+
+SUCCESS = 1
+FAILURE = 0
+
+__all__ = ["Deferred", "DeferredList", "succeed", "fail"]
 
 # Sibling Imports
 import log
