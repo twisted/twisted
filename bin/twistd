@@ -188,11 +188,20 @@ if not config.nodaemon:
     oldstdin.close()
     oldstdout.close()
     oldstderr.close()
-
-if os.name != 'java':
-    # java doesn't have getpid
+# java doesn't have getpid, and Windows' getpid is near-useless
+usepid = ((os.name != 'java') and (os.name != 'nt'))
+if usepid:
     open(config.pidfile,'wb').write(str(os.getpid()))
 
+if os.name == 'nt':
+    # C-c can't interrupt select.select in win32.
+    from twisted.python.delay import IDelayed
+    class Win32KillTimeout(IDelayed):
+        """I time out every 1/10 second in order to allow C-c to kill the server.
+        """
+        def timeout(self):
+            return 0.1
+    main.addDelayed(Win32KillTimeout())
 
 try:
     if config.profile:
@@ -210,7 +219,6 @@ except:
         file = open("TWISTD-CRASH.log",'a')
     traceback.print_exc(file=file)
     file.flush()
-if os.name != 'java':
-    # again, java with the not having getpid
+if usepid:
     os.unlink(config.pidfile)
 print "Server Shut Down."
