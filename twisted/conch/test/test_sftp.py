@@ -282,6 +282,7 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, SFTPTestBase):
         twisted_path = os.path.dirname(twisted.__file__)
         cftp_path = os.path.abspath("%s/../bin/conch/cftp" % twisted_path)
         cmds = (cmd % (exe, cftp_path, port))
+        log.msg('running %s %s' % (exe, cmds))
         self.processProtocol = SFTPTestProcess()
         reactor.spawnProcess(self.processProtocol, exe, cmds.split(),
                              env={'PYTHONPATH': twisted_path + '/..'})
@@ -431,6 +432,7 @@ class TestOurServerBatchFile(test_process.SignalMixin, SFTPTestBase):
                     '-i dsa_test '
                     '-a --nocache '
                     '-v -b %%s localhost') % (cftp_path, port)
+        log.msg('running %s %s' % (sys.executable, self.cmd))
 
     def tearDown(self):
         self.server.stopListening()
@@ -441,7 +443,7 @@ class TestOurServerBatchFile(test_process.SignalMixin, SFTPTestBase):
         open(fn, 'w').write(f)
         l = []
         cmds = (self.cmd % fn).split()
-        d = getProcessOutputAndValue(sys.executable, cmds,)
+        d = getProcessOutputAndValue(sys.executable, cmds)
         d.setTimeout(10)
         d.addBoth(l.append)
         while not l:
