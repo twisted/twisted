@@ -587,7 +587,7 @@ class ExpatElementStream:
         self.parser.StartNamespaceDeclHandler = self._onStartNamespace
         self.parser.EndNamespaceDeclHandler = self._onEndNamespace
         self.currElem = None
-        self.defaultNsStack = []
+        self.defaultNsStack = [None]
         self.documentStarted = 0        
 
     def parse(self, buffer):
@@ -596,6 +596,8 @@ class ExpatElementStream:
     def _onStartElement(self, name, attrs):
         # Generate a qname tuple from the provided name
         qname = name.split(" ")
+        if len(qname) == 1:
+            qname = (None, name)
 
         # Process attributes
         for k, v in attrs.items():

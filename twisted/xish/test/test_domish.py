@@ -93,6 +93,18 @@ xml1 = """<stream:stream xmlns:stream='etherx' xmlns='jabber'>
 query1_root = xpath.internQuery("/stream[@xmlns='etherx']")    
 query1_elem1 = xpath.internQuery("/message[@to='bar']/x[@xmlns='xdelay'][text()='some&data>']")
 
+xml2 = """<stream>
+             <error xmlns='etherx'/>
+          </stream>"""
+query2_root = xpath.internQuery("/stream[not(@xmlns)]")    
+query2_elem1 = xpath.internQuery("/error[@xmlns='etherx']")
+
+xml3 = """<stream:stream xmlns:stream='etherx'>
+             <error/>
+	  </stream:stream>"""
+query3_root = xpath.internQuery("/stream[@xmlns='etherx']")    
+query3_elem1 = xpath.internQuery("/error[not(@xmlns)]")
+
 class DomishStreamTestCase(unittest.TestCase):    
     def __init__(self):
         self.doc_started = False
@@ -136,6 +148,20 @@ class DomishStreamTestCase(unittest.TestCase):
         self.assertEquals(self.packet_count, 1)
         self.assertEquals(self.doc_ended, True)
         
+	# Setup the 2nd stream
+	self.setupStream(domish.ExpatElementStream(),
+			 [query2_root, query2_elem1])
+
+	# Run the test
+	self.stream.parse(xml2)
+
+	# Setup the 3nd stream
+	self.setupStream(domish.ExpatElementStream(),
+			 [query3_root, query3_elem1])
+
+	# Run the test
+	self.stream.parse(xml3)
+
     def testExpatStream(self):
         try: 
             # Setup the stream
@@ -149,6 +175,21 @@ class DomishStreamTestCase(unittest.TestCase):
             self.assertEquals(self.doc_started, True)
             self.assertEquals(self.packet_count, 1)
             self.assertEquals(self.doc_ended, True)
+
+            # Setup the 2nd stream
+            self.setupStream(domish.ExpatElementStream(),
+                             [query2_root, query2_elem1])
+
+            # Run the test
+            self.stream.parse(xml2)
+
+	    # Setup the 3nd stream
+	    self.setupStream(domish.ExpatElementStream(),
+			     [query3_root, query3_elem1])
+
+	    # Run the test
+	    self.stream.parse(xml3)
+
         except ImportError:
             raise unittest.SkipTest, "Skipping ExpatElementStream test, since no expat wrapper is available."
 
