@@ -77,6 +77,12 @@ class ExampleSession:
         ep.makeConnection(trans)
         trans.makeConnection(session.wrapProtocol(ep))
 
+    def eofReceived(self):
+        pass
+
+    def closed(self):
+        pass
+
 from twisted.python import components
 components.registerAdapter(ExampleSession, ExampleAvatar, session.ISession)
 
