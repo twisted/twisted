@@ -132,35 +132,39 @@ class Client(Connection):
             try:
                 mode = os.stat(port)[0]
             except OSError, ose:
-                protocol.connectionFailed()  # no such file or directory
-                return
-            if not (mode & (stat.S_IFSOCK |  # that's not a socket
-                            stat.S_IROTH  |  # that's not readable
-                            stat.S_IWOTH )):# that's not writable
-                protocol.connectionFailed()
-                return
-            # success.
-            self.realAddress = self.addr = port
-            # we are using unix sockets
-            skt = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            whenDone = self.doConnect
+                # no such file or directory
+                whenDone = None
+            else:
+                if not (mode & (stat.S_IFSOCK |  # that's not a socket
+                                stat.S_IROTH  |  # that's not readable
+                                stat.S_IWOTH )):# that's not writable
+                    whenDone = None
+                else:
+                    # success.
+                    self.realAddress = self.addr = port
+                    # we are using unix sockets
+                    skt = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                    whenDone = self.doConnect
         else:
             skt = self.createInternetSocket()
             self.addr = (host, port)
             whenDone = self.resolveAddress
-        self.host = host
-        self.port = port
-        self.connector = connector
-        Connection.__init__(self, skt, protocol)
-        self.doWrite = self.doConnect
-        self.doRead = self.doConnect
-        self.logstr = self.protocol.__class__.__name__+",client"
-        # slightly cheezy -- deferreds in pb expect you to go through a
-        # mainloop before you actually connect them.  connecting immediately
-        # screws up that logic.
-        task.schedule(whenDone)
-        if timeout is not None:
-            main.addTimeout(self.failIfNotConnected, timeout)
+        if whenDone:
+            self.host = host
+            self.port = port
+            self.connector = connector
+            Connection.__init__(self, skt, protocol)
+            self.doWrite = self.doConnect
+            self.doRead = self.doConnect
+            self.logstr = self.protocol.__class__.__name__+",client"
+            # slightly cheezy -- deferreds in pb expect you to go through a
+            # mainloop before you actually connect them.  connecting immediately
+            # screws up that logic.
+            task.schedule(whenDone)
+            if timeout is not None:
+                main.addTimeout(self.failIfNotConnected, timeout)
+        else:
+            task.schedule(protocol.connectionFailed)
 
     def failIfNotConnected(self):
         if (not self.connected) and (not self.disconnected):
