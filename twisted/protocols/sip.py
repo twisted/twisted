@@ -140,7 +140,7 @@ class Via:
         s = "SIP/2.0/%s %s:%s" % (self.transport, self.host, self.port)
         if self.hidden:
             s += ";hidden"
-        for n in "ttl", "received", "branch", "maddr":
+        for n in "ttl", "received", "branch", "maddr", "rport":
             value = getattr(self, n)
             if value != None:
                 s += ";%s=%s" % (n, value)
@@ -174,7 +174,7 @@ def parseViaHeader(value):
             result["hidden"] = True
             continue
         name, value = p.split("=")
-        if name == "ttl":
+        if name in ("rport", "ttl"):
             value = int(value)
         result[name] = value
     return Via(**result)
@@ -722,7 +722,7 @@ class Proxy(Base):
         if senderVia.host != srcHost:
             senderVia.received = srcHost
             message.headers["via"][0] = senderVia.toString()
-        if senderVia.rport != srcPort:
+        if senderVia.port != srcPort:
             senderVia.rport = srcPort
             message.headers["via"][0] = senderVia.toString()
         message.headers["via"].insert(0, viaHeader.toString())

@@ -85,6 +85,12 @@ l: 4
 
 abcd""".replace("\n", "\r\n")
 
+request_natted = """\
+INVITE sip:foo SIP/2.0
+Via: SIP/2.0/UDP 10.0.0.1:5060;received=5.7.1.4;rport=12345
+
+""".replace("\n", "\r\n")
+
 class TestRealm:
     def requestAvatar(self, avatarId, mind, *interfaces):
         return sip.IContact, None, lambda: None
@@ -234,6 +240,17 @@ class ViaTestCase(unittest.TestCase):
     def testSimpler(self):
         v = sip.Via("example.com")
         self.checkRoundtrip(v)
+
+    def testNAT(self):
+        s = "SIP/2.0/UDP 10.0.0.1:5060;received=22.13.1.5;rport=12345"
+        v = sip.parseViaHeader(s)
+        self.assertEquals(v.transport, "UDP")
+        self.assertEquals(v.host, "10.0.0.1")
+        self.assertEquals(v.port, 5060)
+        self.assertEquals(v.received, "22.13.1.5")
+        self.assertEquals(v.rport, 12345)
+        
+        self.assertNotEquals(v.toString().find("rport=12345"), -1)
 
 
 class URLTestCase(unittest.TestCase):
