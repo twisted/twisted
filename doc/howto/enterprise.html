@@ -16,7 +16,7 @@
     database API implementations unfortunately have blocking
     interfaces -- for this reason, <code
     class="API">twisted.enterprise.adbapi</code> was created. It is
-    a non-blocking interface to the standardized 'dbapi' module,
+    a non-blocking interface to the standardized DB-API 2.0 API,
     which allows you to access a number of different RDBMSes.</p>
 
     <h2>What you should already know</h2>
@@ -29,7 +29,9 @@
 
       <li>Familiarity with using database interfaces (see <a
       href="http://www.python.org/topics/database/DatabaseAPI-2.0.html">
-      the documentation for DBAPI 2.0</a>)</li>
+      the documentation for DBAPI 2.0</a> or this <a
+      href="http://www.amk.ca/python/writing/DB-API.html">article</a>
+      by Andrew Kuchling)</li>
     </ul>
 
     <h2>Quick Overview</h2>
@@ -55,7 +57,9 @@ resultset = cursor.query('SELECT * FROM table WHERE ...')
     <code class="API">twisted.enterprise.adbapi</code>, an
     asynchronous wrapper for any <a
     href="http://www.python.org/topics/database/DatabaseAPI-2.0.html">
-    DB-API 2.0</a>-compliant module.</p>
+    DB-API 2.0</a>-compliant module.  It is currently best tested
+    with the <a href="http://pypgsql.sourceforge.net/">pyPgSQL</a>
+    module for <a href="http://www.postgresql.org/">PostgreSQL</a>.</p>
 
     <p><code class="API">enterprise.adbapi</code> will do blocking
     database operations in seperate threads, which trigger
