@@ -147,7 +147,7 @@
         <td>1.4</td>
       </tr>
 
-      <tr class="done">
+      <tr class="notdone">
         <td>twisted.enterprise</td>
 
         <td>Sean Riley</td>
@@ -156,11 +156,12 @@
 
         <td>A simple asynchronous object-relational mapper.</td>
 
-        <td>None that I can think of.</td>
+        <td>Everything should be returning Deferreds, not accepting
+          callbacks.</td>
 
-        <td>None that I can think of.</td>
+        <td>The change mentioned above will break compatibility.</td>
 
-        <td>1.0</td>
+        <td>1.2</td>
       </tr>
 
       <tr class="notdone">
@@ -282,6 +283,28 @@
         use. It may be best to destroy this package and move tap
         modules into their appropriate packages rather than
         aggregating them here.</td>
+
+        <td>n/a</td>
+      </tr>
+
+      <tr class="notdone">
+        <td>twisted.sister</td>
+
+        <td>Glyph Lefkowitz</td>
+
+        <td>Clustering Support</td>
+
+        <td>
+          Better tests.  Failover.  Integration with Enterprise to allow
+          cancelling transactions when a resource "dies".  Some mechanism for
+          loading plug-ins, so you can run a 'vanilla' sister &amp; parent
+          server w/ your particular application.  Details of a Twisted
+        </td>
+
+        <td>Blue sky...</td>
+
+        <td>Not used by external developers yet, so the API will totally break
+          several times, I'm sure.</td>
 
         <td>n/a</td>
       </tr>

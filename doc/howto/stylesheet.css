@@ -8,6 +8,8 @@ BODY
   font-family: sans-serif;
   }
 
+.done { color: #005500; background-color: #99ff99 }
+.notdone { color: #550000; background-color: #ff9999;}
 
 PRE
 {
