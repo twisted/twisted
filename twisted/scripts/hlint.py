@@ -19,6 +19,6 @@ from twisted.lore import lint
 import sys
 
 def run():
-    checker = lint.TagChecker(lint.tags.has_key, lint.classes.has_key)
+    checker = lint.getDefaultChecker()
     for file in sys.argv[1:]:
         lint.doFile(file, checker)

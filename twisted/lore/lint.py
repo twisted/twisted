@@ -76,6 +76,9 @@ tags = list2dict(["html", "title", "head", "body", "h1", "h2", "h3", "ol", "ul",
                   "cite", "div", "span", "strong", "em", "pre", "q", "table",
                   "tr", "td", "th", "style"])
 
+def getDefaultChecker():
+    return TagChecker(tags.has_key, classes.has_key)
+
 def doFile(file, checker):
     dom = tree.parseFileAndReport(file)
     if not dom:
