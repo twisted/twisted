@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: usage.py,v 1.34 2002/11/05 23:04:48 exarkun Exp $
+# $Id: usage.py,v 1.35 2002/11/07 09:09:02 exarkun Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -317,14 +317,8 @@ class Options(UserDict.UserDict):
 
         for name in dct.keys():
             method = getattr(self, 'opt_'+name)
-            reqArgs = method.im_func.func_code.co_argcount
-            if reqArgs > 2:
-                raise UsageError('Invalid Option function for %s' % name)
-            if reqArgs == 2:
-                # argName = method.im_func.func_code.co_varnames[1]
-                takesArg = 1
-            else:
-                takesArg = 0
+
+            takesArg = not flagFunction(method, name)
 
             prettyName = string.replace(name, '_', '-')
             doc = getattr(method, '__doc__', None)
@@ -551,3 +545,12 @@ def docMakeChunks(optList, width=80):
         optChunks.append(string.join(optLines, ''))
 
     return optChunks
+
+def flagFunction(method, name = None):
+    reqArgs = method.im_func.func_code.co_argcount
+    if reqArgs > 2:
+        raise UsageError('Invalid Option function for %s' % (name or method.func_name))
+    if reqArgs == 2:
+        # argName = method.im_func.func_code.co_varnames[1]
+        return 0
+    return 1
