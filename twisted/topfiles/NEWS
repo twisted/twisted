@@ -18,13 +18,14 @@ Miscellaneous features/fixes
  - *Incompatibility: mktap defaults to not change UID/GID, instead of saving
    the invoking user's UID/GID.
  - Removed some functions that were deprecated since Twisted 1.0.
+ - ZSH tab-completion for twisted commands.
 
  - More correct daemonization in twistd.
  - twisted.python.log: do not close the log because of invalid format string.
  - Disabled automatic import of cBanana. 
  - Boolean support for twisted.persisted.marmalade.
  - Refactor of plugin and application HOWTO documentation
- - Async HOWTO expanded muchly.
+ - Async HOWTO expanded greatly.
  - twisted.python.usage outputs the actual defaults, not passed in values.
 
 twisted.trial
