@@ -28,7 +28,7 @@ class LocalMethod:
         self.name = name
 
     def __call__(self, *args, **kw):
-        return apply(self.local.callRemote, (self.name,)+args, kw)
+        return self.local.callRemote(self.name, *args, **kw)
 
 
 class LocalAsRemote:
@@ -46,10 +46,10 @@ class LocalAsRemote:
         automatically wrapped in a Deferred.
         """
         if hasattr(self, 'sync_'+name):
-            return apply(getattr(self, 'sync_'+name), args, kw)
+            return getattr(self, 'sync_'+name)(*args, **kw)
         try:
             method = getattr(self, "async_" + name)
-            return defer.succeed(apply(method, args, kw))
+            return defer.succeed(method(*args, **kw))
         except:
             f = Failure()
             if self.reportAllTracebacks:
@@ -111,7 +111,7 @@ class Pager:
         if not self._stillPaging:
             self.collector.callRemote("endedPaging")
             if self.callback is not None:
-                apply(self.callback, self.callbackArgs, self.callbackKeyword)
+                self.callback(*self.callbackArgs, **self.callbackKeyword)
         return self._stillPaging
 
     def sendNextPage(self):
