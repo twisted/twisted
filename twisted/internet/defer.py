@@ -270,6 +270,15 @@ class Deferred:
     armAndCallback = callback
     armAndChain = chainDeferred
 
+
+    def __str__(self):
+        if hasattr(self, 'result'):
+            return "<Deferred at %s  current result: %r>" % (hex(id(self)),
+                                                            self.result)
+        return "<Deferred at %s>" % hex(id(self))
+    __repr__ = __str__
+        
+
     def __del__(self):
         """Print tracebacks and die.
 

@@ -15,8 +15,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from pyunit import unittest
-from twisted.internet import reactor, protocol, error
-from twisted.internet.defer import Deferred
+from twisted.internet import reactor, protocol, error, app
+from twisted.internet.defer import Deferred, succeed, fail
 from twisted.python import threadable
 threadable.init(1)
 
@@ -192,3 +192,33 @@ class ProtocolTestCase(unittest.TestCase):
         protocol = factory.buildProtocol(None)
         self.assertEquals(protocol.factory, factory)
         self.assert_( isinstance(protocol, factory.protocol) )
+
+
+class StoppingService(app.ApplicationService):
+
+    def __init__(self, name, succeed):
+        app.ApplicationService.__init__(self, name)
+        self.succeed = succeed
+
+    def stopService(self):
+        if self.succeed:
+            return succeed("yay!")
+        else:
+            return fail(Exception('boo'))
+
+
+class MultiServiceTestCase(unittest.TestCase):
+    def testDeferredStopService(self):
+        ms = app.MultiService("MultiService")
+        s1 = StoppingService("testService", 0)
+        s2 = StoppingService("testService2", 1)
+        ms.addService(s1)
+        ms.addService(s2)
+        ms.stopService().addCallback(self.woohoo)
+
+    def woohoo(self, res):
+        self.assertEqual(res[1][0], 0)
+        self.assertEqual(res[0][0], 1)
+
+        
+
