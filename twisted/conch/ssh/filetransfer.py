@@ -17,6 +17,7 @@
 import struct, array, pwd, os, stat, time, errno
 
 from twisted.internet import defer, protocol
+from twisted.python import log
 
 from common import NS, getNS
 
@@ -41,16 +42,21 @@ class FileTransferBase(protocol.Protocol):
             data, self.buf = self.buf[5:4+length], self.buf[4+length:]
             packetType = self.packetTypes.get(kind, None)
             if not packetType:
-                print 'no packet type for', kind
+                log.msg('no packet type for', kind)
                 continue
             f = getattr(self, 'packet_%s' % packetType, None)
             if not f:
-                print 'not implemented', packetType
+                log.msg('not implemented: %s' % packetType)
+                log.msg(repr(data[4:]))
                 reqId = struct.unpack('!L', data[:4])[0]
                 self._sendStatus(reqId, FX_OP_UNSUPPORTED, "don't understand %s" % packetType)
                 #XXX not implemented
                 continue
-            f(data)
+            try:
+                f(data)
+            except Exception, e:
+                reqId = struct.unpack('!L', data[:4])[0]
+                self._ebStatus(failure.Failure(e), reqId)
 
     def _parseAttributes(self, data):
         flags = struct.unpack('!L', data[:4])[0]
@@ -372,6 +378,8 @@ class FileTransferServer(FileTransferBase):
         elif reason.type == SFTPError:
             code = reason.value.code
             message = reason.value.message
+        else:
+            log.err(reason)
         self._sendStatus(requestId, code, message)
 
     def _sendStatus(self, requestId, code, message, lang = ''):
@@ -389,6 +397,9 @@ class FileTransferServer(FileTransferBase):
         uid, gid = self.avatar.getUserGroupId()
         os.setegid(gid)
         os.seteuid(uid)
+        # the next two lines fix some kind of timing error with WinSCP
+        if os.geteuid() != uid: raise IOError(errno.EACCES)
+        if os.getegid() != gid: raise IOError(errno.EACCES)
         try:
             if not hasattr(f,'__iter__'):
                 f = [(f, ) + args]
