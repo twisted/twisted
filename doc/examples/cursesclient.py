@@ -175,13 +175,7 @@ if __name__ == '__main__':
     screen = Screen(stdscr)   # create Screen object
     stdscr.refresh()
     ircFactory = IRCFactory(screen)
-    try:
-        reactor.addReader(screen) # add sceen object as a reader with twisted reactor
-        reactor.connectTCP("irc.openprojects.net",6667,ircFactory) # connect to IRC
-        reactor.run() # have fun!
-    except KeyboardInterrupt:
-        screen.close()
-        sys.exit()
-    except:
-        screen.close()
-        raise
+    reactor.addReader(screen) # add sceen object as a reader with twisted reactor
+    reactor.connectTCP("irc.openprojects.net",6667,ircFactory) # connect to IRC
+    reactor.run() # have fun!
+    screen.close()
