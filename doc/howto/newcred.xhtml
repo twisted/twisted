@@ -186,19 +186,121 @@ is disconnected, the avatar should be logged out.</p>
 <p>The protocol designer should not hardcode how users are authenticated or the
 realm implemented. For example, a POP3 protocol implementation would require a portal whose
 realm returns avatars implementing IMailbox and whose credential checker accepts
-username/password credentials, but that is all.</p>
+username/password credentials, but that is all. Here's a sketch of how the code
+might look - note that USER and PASS are the protocol commands used to login, and
+the DELE command can only be used after you are logged in:</p>
+
+<pre class="python">
+from twisted.protocols import basic
+from twisted.python import log, components
+from twisted.cred import credentials, error
+from twisted.internet import defer
+
+class IMailbox(components.Interface):
+    """Interface specification for mailbox."""
+    def deleteMessage(self, index): pass
+
+
+class POP3(basic.LineReceiver):
+    # ...
+    def __init__(self, portal):
+        self.portal = portal
+
+    def do_DELE(self, i):
+        # uses self.mbox, which is set after login
+        i = int(i)-1
+        self.mbox.deleteMessage(i)
+        self.successResponse()
+
+    def do_USER(self, user):
+        self._userIs = user
+        self.successResponse('USER accepted, send PASS')
+
+    def do_PASS(self, password):
+        if self._userIs is None:
+            self.failResponse("USER required before PASS")
+            return
+        user = self._userIs
+        self._userIs = None
+        d = defer.maybeDeferred(self.authenticateUserPASS, user, password)
+        d.addCallback(self._cbMailbox, user)
+
+    def authenticateUserPASS(self, user, password):
+        if self.portal is not None:
+            return self.portal.login(
+                cred.credentials.UsernamePassword(user, password),
+                None,
+                IMailbox
+            )
+        raise error.UnauthorizedLogin()
+
+    def _cbMailbox(self, ial, user):
+        interface, avatar, logout = ial
+
+        if interface is not IMailbox:
+            self.failResponse('Authentication failed')
+            log.err("_cbMailbox() called with an interface other than IMailbox")
+            return
+
+        self.mbox = avatar
+        self._onLogout = logout
+        self.successResponse('Authentication succeeded')
+        log.msg("Authenticated login for " + user)
+</pre>
 
    <h3>Application implementation</h3>
 
 <p>The application developer can implement realms and credential checkers. For example,
 she might implement a realm that returns IMailbox implementing avatars, using MySQL
-for storage, or perhaps a credential checker that uses LDAP for authentication.</p>
+for storage, or perhaps a credential checker that uses LDAP for authentication.
+In the following example, the Realm for a simple remote object service (using
+Twisted's Perspective Broker protocol) is implemented:</p>
+
+<pre class="python">
+from twisted.spread import pb
+from twisted.cred.portal import IRealm
+
+class SimplePerspective(pb.Avatar):
+
+    def perspective_echo(self, text):
+        print 'echoing',text
+        return text
+
+    def logout(self):
+        print self, "logged out"
+
+
+class SimpleRealm:
+    __implements__ = IRealm
+
+    def requestAvatar(self, avatarId, mind, *interfaces):
+        if pb.IPerspective in interfaces:
+            avatar = SimplePerspective()
+            return pb.IPerspective, avatar, avatar.logout 
+        else:
+            raise NotImplementedError("no interface")
+</pre>
 
    <h3>Deployment</h3>
 
 <p>Deployment involves tying together a protocol, an appropriate realm and a credential
 checker. For example, a POP3 server can be constructed by attaching to it a portal
 that wraps the MySQL-based realm and an /etc/passwd credential checker, or perhaps
-the LDAP credential checker if that is more useful.</p>
+the LDAP credential checker if that is more useful. The following example shows
+how the SimpleRealm in the previous example is deployed using an in-memory credential checker:</p>
+
+<pre class="python">
+from twisted.spread import pb
+from twisted.internet import reactor
+from twisted.cred.portal import Portal
+from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
+
+portal = Portal(SimpleRealm())
+checker = InMemoryUsernamePasswordDatabaseDontUse()
+checker.addUser("guest", "password")
+portal.registerChecker(checker)
+reactor.listenTCP(9986, pb.PBServerFactory(portal))
+reactor.run()
+</pre>
 
 </body></html>
