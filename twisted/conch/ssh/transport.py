@@ -46,8 +46,13 @@ class SSHTransportBase(protocol.Protocol):
     supportedCiphers = ['aes256-ctr', 'aes256-cbc', 'aes192-ctr', 'aes192-cbc', 
                         'aes128-ctr', 'aes128-cbc', 'cast128-ctr', 
                         'cast128-cbc', 'blowfish-ctr', 'blowfish', 'idea-ctr'
-                        'idea-cbc', '3des-ctr', '3des-cbc']
-    supportedMACs = ['hmac-sha1', 'hmac-md5']
+                        'idea-cbc', '3des-ctr', '3des-cbc'] # ,'none']
+    supportedMACs = ['hmac-sha1', 'hmac-md5'] # , 'none']
+    
+    # both of the above support 'none', but for security are disabled by
+    # default.  to enable them, subclass this class and add it, or do:
+    #   SSHTransportBase.supportedCiphers.append('none')
+
     supportedKeyExchanges = ['diffie-hellman-group-exchange-sha1', 
                              'diffie-hellman-group1-sha1']
     supportedPublicKeys = ['ssh-rsa', 'ssh-dss']
@@ -254,7 +259,7 @@ class SSHTransportBase(protocol.Protocol):
         elif direction == "in":
             return bool(self.currentEncryptions.dec_block_size)
         elif direction == "both":
-            return self.isEncrypted("in")and self.isEncrypted("out")
+            return self.isEncrypted("in") and self.isEncrypted("out")
         else:
             raise TypeError, 'direction must be "out", "in", or "both"'
 
@@ -618,6 +623,14 @@ class SSHClientTransport(SSHTransportBase):
         """
         raise NotImplementedError
 
+class _DummyCipher:
+    block_size = 1
+    
+    def encrypt(self, x):
+        return x
+    
+    decrypt = encrypt
+
 class SSHCiphers:
     cipherMap = {
         '3des-cbc':('DES3', 24, 0), 
@@ -635,10 +648,12 @@ class SSHCiphers:
         'blowfish-ctr':('Blowfish', 16, 1),
         'idea-ctr':('IDEA', 16, 1),
         'cast128-ctr':('CAST', 16, 1),
-     }
+        'none':(None, 0, 0),
+    }
     macMap = {
         'hmac-sha1': 'sha', 
-        'hmac-md5': 'md5', 
+        'hmac-md5': 'md5',
+        'none':None
      }
 
     def __init__(self, outCip, inCip, outMac, inMac):
@@ -662,7 +677,8 @@ class SSHCiphers:
 
     def _getCipher(self, cip, iv, key):
         modName, keySize, counterMode = self.cipherMap[cip]
-        if not modName: return # no cipher
+        if not modName: # no cipher
+            return _DummyCipher()
         mod = __import__('Crypto.Cipher.%s'%modName, {}, {}, 'x')
         if counterMode:
             return mod.new(key[:keySize], mod.MODE_CTR, iv[:mod.block_size], counter=_Counter(iv, mod))
@@ -671,7 +687,8 @@ class SSHCiphers:
 
     def _getMAC(self, mac, key):
         modName = self.macMap[mac]
-        if not modName: return
+        if not modName:
+            return None
         mod = __import__(modName, {}, {}, '')
         if not hasattr(mod, 'digest_size'):
             ds = len(mod.new().digest())
@@ -689,6 +706,7 @@ class SSHCiphers:
         return blocks
 
     def makeMAC(self, seqid, data):
+        if not self.outMAC: return ''
         data = struct.pack('>L', seqid)+data
         mod, i, o, ds = self.outMAC
         inner = mod.new(i+data)
@@ -696,6 +714,8 @@ class SSHCiphers:
         return outer.digest()
 
     def verify(self, seqid, data, mac):
+        if not self.inMAC:
+            return mac == ''
         data = struct.pack('>L', seqid)+data
         mod, i,o, ds = self.inMAC
         inner = mod.new(i+data)
