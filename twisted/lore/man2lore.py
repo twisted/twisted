@@ -161,14 +161,31 @@ class ManConverter:
             self.write('</dd>\n\n')
         self.tp = 1
 
+    def macro_BL(self, line):
+        #assert self.tp == 0, self.tp
+        self.write('<dl>')
+        self.tp = 1
+
+    def macro_EL(self, line):
+        if self.tp == 3:
+            self.write('</dd>')
+            self.tp = 1
+        #assert self.tp == 1, self.tp
+        self.write('</dl>\n\n')
+        self.tp = 0
+
+    def macro_IT(self, line):
+        if self.tp == 3:
+            self.write('</dd>')
+            self.tp = 1
+        #assert self.tp == 1, (self.tp, line)
+        self.write('\n<dt>')
+        self.continueReceived(line)
+        self.write('</dt>')
+        self.tp = 2
+
     def text(self, line):
-        if self.tp == 1:
-            if not self.dl:
-                self.closeTags()
-                self.write('<dl>\n\n')
-                self.dl = 1
-            self.write('<dt>')
-        elif self.tp == 2:
+        if self.tp == 2:
             self.write('<dd>')
         self.paraCheck()
 
@@ -190,10 +207,7 @@ class ManConverter:
             else:
                 self.write(escape(bit))
 
-        if self.tp == 1:
-            self.write('</dt>\n')
-            self.tp = 2
-        elif self.tp == 2:
+        if self.tp == 2:
             self.tp = 3
 
 class ProcessingFunctionFactory:

@@ -34,7 +34,7 @@ def _escapeMatch(match):
     elif c == '~':
         return '\\~{}'
     elif c == '^':
-        return '\\verb#^#'
+        return '\\^{}'
     elif c in '[]':
         return '{'+c+'}'
     else:
