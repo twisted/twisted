@@ -16,11 +16,12 @@ sys.path.insert(0, os.curdir)
 ### end of preamble
 
 from twisted.python import usage, util, failure
-from twisted.python.release import runChdirSafe, sh, CommandFailed, DirectoryExists, DirectoryDoesntExist
+from twisted.python.release import replaceInFile, runChdirSafe, sh, CommandFailed, DirectoryExists, DirectoryDoesntExist
 
 import shutil, re
 
 repourl = 'svn+ssh://svn.twistedmatrix.com/svn/Twisted'
+#repourl = 'file:///home/radix/Twisted.repo'
 trunkurl = repourl + '/trunk'
 
 debug = False
@@ -60,6 +61,7 @@ class Options(usage.Options):
                                                  self['base-version'])
         self['tagurl'] = '%s/tags/release-%s' % (repourl,
                                                  self['base-version'])
+        self['temptagurl'] = '%s/tags/temp-%s' % (repourl, self['base-version'])
 
         for x in ['wipurl', 'tagurl']:
             print "%s: %s" % (x, self[x])
@@ -145,16 +147,19 @@ def updateVersion(opts):
     newver = opts['base-version']
 
     r = checkoutdir
-    self.files = ('README', 'twisted/copyright.py', 'admin/twisted.spec')
-    for file in self.files:
+    files = ('twisted/topfiles/README', 
+             'twisted/copyright.py', 'admin/twisted.spec')
+    for file in files:
         replaceInFile(os.path.join(r, file), oldver, newver)
-        crapout = os.popen('cd %s && svn diff %s' % (r, file)).read()
+        cmd = 'cd %s && svn diff %s' % (r, file)
+        print '--$', cmd
+        crapout = os.popen(cmd).read()
         print "diff output:"
         print crapout
         if not crapout:
             raise Exception("No diff output!")
     sh('cd %s &&  svn commit -m "Setting version for %s" %s'
-       % (r, newver, ' '.join(self.files)))#, sensitive=1)
+       % (r, newver, ' '.join(files)))#, sensitive=1)
 
 
 def tagTemp(opts):
@@ -177,7 +182,7 @@ def makeDocs(opts):
     if not os.path.exists(tdir):
         raise DirectoryDoesntExist("GenerateDocs: %s doesn't exist!" % tdir)
 
-    sh('cd %s &&  ./admin/epyrun -o doc/api' % (tdir))
+    #sh('cd %s &&  ./admin/epyrun -o doc/api' % (tdir))
 
     sh('cd %s && ./admin/process-docs %s' % (tdir, ver))
 
