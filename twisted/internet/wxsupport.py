@@ -50,13 +50,13 @@ class wxRunner:
         
         # run wx idle events
         self.app.ProcessIdle()
-        reactor.callLater(0.1, self.run)
+        reactor.callLater(0.02, self.run)
 
 
 def install(app):
-    """Install the wxPython event loop, given a wxApp instance"""
+    """Install the wxPython support, given a wxApp instance"""
     runner = wxRunner(app)
-    reactor.callLater(0.1, runner.run)
+    reactor.callLater(0.02, runner.run)
 
 
 __all__ = ["install"]
