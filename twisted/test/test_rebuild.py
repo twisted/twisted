@@ -56,7 +56,7 @@ class RebuildTestCase(unittest.TestCase):
         # necessary because the file has not "changed" if a second has not gone
         # by in unix.  This sucks, but it's not often that you'll be doing more
         # than one reload per second.
-        time.sleep(1)
+        time.sleep(1.1)
         shutil.copyfile(sibpath(__file__, "myrebuilder2.py"),
                         sibpath(__file__, "myrebuilder.py"))
         rebuild(myrebuilder)
