@@ -31,9 +31,11 @@ class LogBot(irc.IRCClient):
         self.nickname = "twistedbot"
 
     def connectionMade(self):
-	irc.IRCClient.connectionMade(self)
+        irc.IRCClient.connectionMade(self)
         self.file = open(self.factory.filename, "a")
         self.log("[connected at %s]" % time.asctime(time.localtime(time.time())))
+
+    def signedOn(self):
         self.join(self.factory.channel)
 
     def connectionLost(self):
@@ -41,10 +43,17 @@ class LogBot(irc.IRCClient):
         self.log("[disconnected at %s]" % time.asctime(time.localtime(time.time())))
         self.file.close()
 
+    def connectionFailed(self):
+        irc.IRCClient.connectionFailed(self)
+        self.file = open(self.factory.filename, "a")
+        self.log("[connection failed at %s]" % time.asctime(time.localtime(time.time())))
+
     def log(self, s):
-        self.file.write(s + "\n")
+        timestamp = time.strftime("[%H:%M:%S]", time.localtime(time.time()))
+        self.file.write("%s %s\n" % (timestamp, s))
         self.file.flush()
 
+    
 
     # callbacks for events
     
