@@ -16,7 +16,7 @@
 
 """Coil plugin for web support."""
 
-from twisted.web import static, server, resource, vhost, test, proxy, cal
+from twisted.web import static, server, resource, vhost, test, proxy
 from twisted.coil import app, coil
 
 import types
@@ -121,7 +121,7 @@ coil.registerConfigurator(VirtualHostConfigurator, vhostFactory)
 class ReverseProxyConfigurator(ResourceConfigurator):
 
     configurableClass = proxy.ReverseProxyResource
-    cofigName = "Reverse Proxy"
+    configName = "HTTP Reverse Proxy"
     
     configTypes = {'path': types.StringType,
                    'host': types.StringType,
@@ -131,17 +131,3 @@ def proxyFactory(container, name):
     return proxy.ReverseProxyResource("www.yahoo.com", 80, "/")
 
 coil.registerConfigurator(ReverseProxyConfigurator, proxyFactory)
-
-
-class CalendarConfigurator(ResourceConfigurator):
-
-    configurableClass = cal.CalendarPage
-    configName = "Calendar"
-    
-    configTypes = {'password': types.StringType,
-                   'filename': types.StringType}
-
-def calendarFactory(container, name):
-    return cal.CalendarPage()
-
-coil.registerConfigurator(CalendarConfigurator, calendarFactory)
