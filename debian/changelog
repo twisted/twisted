@@ -1,3 +1,15 @@
+twisted (0.9.6-1) unstable; urgency=low
+
+  * New upstream release
+  * Added twisted.tap and twisted.mail to distribution
+  * Added docs about writing new twisted servers
+  * Changed mail API: now, saveMessage gets the SMTP from too
+  * Removed spurious prints from twisted.mail.mail
+  * New file: twisted.mail.relay, relaying infrastructure
+  * tap2deb can create policy compliant Debian packages around .tap's
+
+ -- Moshe Zadka <moshez@debian.org>  Thu,  9 Aug 2001 09:37:03 +0300
+
 twisted (0.9.4-1) unstable; urgency=low
 
   * Initial Release. (closes: #105843)
