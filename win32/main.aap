@@ -1,6 +1,6 @@
 
 SCP=bash admin/aapscp
-
+HERE=`os.getcwd()`
 :python
     from __future__ import generators
     import sys
@@ -19,7 +19,7 @@ SCP=bash admin/aapscp
         itemtmpl=r'Source: "%(twhome)s\%(what)s"; DestDir: "{app}\%(where)s"; Flags: ignoreversion'
         for dirset in data_files:
             dirname=dirset[0]
-            idct=quickdict(where=dirname, twhome=_top.TOPDIR)
+            idct=quickdict(where=dirname, twhome=_recipe.HERE)
             filenames=dirset[1]
             for f in filenames:
                 normf=os.path.normpath(f)
@@ -38,9 +38,9 @@ SCP=bash admin/aapscp
         data_files='\n'.join(df)
 
         docdct=quickdict(pyversion=_top.pyversion, twversion=_top.Version, 
-                         twhome=_top.TOPDIR, 
+                         twhome=_recipe.HERE, 
                          pykey=r"{reg:HKLM\Software\Python\PythonCore\%s\InstallPath,|ACK}" % _top.pyversion,
-                         docfile=r'Source: "%s\doc\twisteddoc.zip"; DestDir: "{app}"' % _top.TOPDIR,
+                         docfile=r'Source: "%s\doc\twisteddoc.zip"; DestDir: "{app}"' % _recipe.HERE,
                          outputbasefilename=template,
                          datafiles=data_files,
                          )
@@ -67,10 +67,10 @@ SCP=bash admin/aapscp
             return default
 
     def getBuildingTwistedVersion(dir):
-        """Return the version of Twisted in $TOPDIR, which may be
+        """Return the version of Twisted in $HERE, which may be
         different from the version of Twisted in sys.path.
         """
-        sys.path.insert(0, _top.TOPDIR)
+        sys.path.insert(0, _recipe.HERE)
         # get rid of twisted from sys.path
         if sys.modules.has_key('twisted'):
             del sys.modules['twisted']
@@ -83,7 +83,7 @@ SCP=bash admin/aapscp
                                ver, None, r'C:\pythonxx')
 
 # get the version of twisted from the tree being built, not sys.path
-Version=`getBuildingTwistedVersion(_top.TOPDIR)`
+Version=`getBuildingTwistedVersion(_recipe.HERE)`
 
 # PyVersion is variant rather than a regular string variable so the script
 # will accept only one of these two values
