@@ -955,7 +955,7 @@ class SSHTransportTestCase(unittest.TestCase):
         """
         if runtime.platformType == 'win32':
             raise unittest.SkipTest, "can't run cmdline client on win32"
-        cmd = ('conch -p %i -l testuser '
+        cmd = ('%s %s -p %i -l testuser '
                '--known-hosts ./kh_test '
                '--user-authentications publickey '
                '--host-key-algorithms ssh-rsa '
@@ -974,9 +974,10 @@ class SSHTransportTestCase(unittest.TestCase):
         self.server = reactor.listenTCP(0, fac, interface="127.0.0.1")
         port = self.server.getHost().port
         import twisted
+        exe = sys.executable
         twisted_path = os.path.dirname(twisted.__file__)
         conch_path = os.path.abspath('%s/../bin/conch' % twisted_path)
-        cmds = (cmd % port).split()
+        cmds = (cmd % (exe, conch_path, port)).split()
         p = SSHTestOpenSSHProcess()
         def _failTest():
             try:
@@ -992,8 +993,9 @@ class SSHTransportTestCase(unittest.TestCase):
             reactor.iterate(0.1)
             p.done = 1
             self.fail('test took too long')
+        #env = {'PYTHONPATH':':'.join(sys.path)}
         timeout = reactor.callLater(10, _failTest)
-        reactor.spawnProcess(p, conch_path, cmds)
+        reactor.spawnProcess(p, exe, cmds)
         # wait for process to finish
         while not p.done:
             reactor.iterate(0.1)
