@@ -440,7 +440,7 @@ class BrokerTestCase(unittest.TestCase):
         del coll
         del cp
         # nudge the gc
-        if sys.hexversion >= 0x2000000:
+        if sys.hexversion >= 0x2000000 and os.name != "java":
             import gc
             gc.collect()
         # try to nudge the GC even if we can't really
