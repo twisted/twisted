@@ -304,8 +304,8 @@ def Consumer():
             yield result
             continue
         if producer.failure:
-            producer.failure.trap()
             producer.stop = 1
+            producer.failure.trap()
         if producer.stop:
             break
 </pre>
@@ -449,60 +449,137 @@ at a later time, allowing other asyncronous operations to proceed. Once
 again, <code>defer.DeferredList</code> is only used here to stop the
 reactor after all operations are completed.</p>
 
-<h3>Flow resources</h3>
+<h3>Flow Resources</h3>
 
+<p>By using <code>flow.Deferred</code> it is easy to make up a web
+resource which is both long running, but also can serve more than
+one customer at a time.   Run the example below, and with two
+browsers, view the webpage.  Notice that both web pages are 
+being created at the same time.</p>
 
+<pre class="python">
+from __future__ import generators
+from twisted.internet import reactor
+from twisted.web import server, resource
+import flow
 
+def cooperative(count):
+    """ simulate a cooperative resource, that not block """
+    from random import random
+    idx = 0
+    while idx &lt; count:
+        val = random()
+        yield flow.Cooperate(val)
+        yield str(val)[-5:]
+        idx += 1
 
+def flowRender(req):
+    count = int(req.args.get("count",["30"])[0])
+    req.write("&lt;html&gt;&lt;body&gt;")
+    req.write(" %s Random numbers: &lt;ol&gt;\n" % count)
+    source = flow.wrap(cooperative(count))
+    yield source
+    for itm in source:
+        req.write("&lt;li&gt;%s&lt;/li&gt;\n" % itm)
+        yield source
+    req.write("&lt;/ol&gt;&lt;/body&gt;&lt;/html&gt;\n")
 
+class FlowResource(resource.Resource):
+    def __init__(self, gen):
+        resource.Resource.__init__(self)
+        self.gen = gen
+    def isLeaf(self): return true
+    def render(self, req):
+        self.d = flow.Deferred(self.gen(req))
+        self.d.addCallback(lambda _: req.finish())
+        return server.NOT_DONE_YET
 
-<h2>Dealing /w Threads</h2>
+print "visit http://localhost:8081/ to view the example"
+root = FlowResource(flowRender)
+site = server.Site(root)
+reactor.listenTCP(8081,site)
+reactor.run()
+</pre>
+
+<h3>Flow Protocols</h3>
+
+<p>The flow module can also be used to construct protocols easily, 
+following is an echo client and server.   For each protocol, one
+must yield the connection before reading from it.  When the generator 
+finishes, the connection is automatically closed.</p>
+
+<pre class="python">
+from __future__ import generators
+import flow
+from twisted.internet import protocol, reactor
+PORT = 8392
+
+def echoServer(conn):
+    yield conn
+    for data in conn:
+        conn.write(data)
+        yield conn                                   
+    reactor.callLater(0,reactor.stop)
+
+server = protocol.ServerFactory()
+server.protocol = flow.makeProtocol(echoServer)
+reactor.listenTCP(PORT,server)
+
+def echoClient(conn):
+    conn.write("Hello World")
+    yield conn
+    print conn.next()
+    conn.write("Another Line")
+    yield conn
+    print conn.next()
+
+client = protocol.ClientFactory()
+client.protocol = flow.makeProtocol(echoClient)
+reactor.connectTCP("localhost", PORT, client)
+reactor.run()
+</pre>
+
+<h2>Threading</h2>
 
 <p>While the Flow module allows for multiple cooperative tasks
 to work in a single thread, sometimes it is necessary to have
 the output of another thread be consumed within a flow.  This
-can be done with the <code>ThreadedIterator</code>.  In the
-example, the following Count implementation blocks within
-a thread by using sleep.</p>
+can be done with <code>flow.Threaded</code>, which takes an
+iterable object and executes it in another thread.   Following
+is a sample iterable, countSleep which simulates a blocking
+producer which must be put into a thread.  To show that
+<code>flow.Threaded</code> does not block other operations,
+a similar, cooperative count is included.
+</p>
 
 <pre class="python">
 from __future__ import generators
 from twisted.internet import reactor
 import flow
 
-class Count:
-    def __init__(self, count):
-        self.count = count
-    def __iter__(self):
-        return self
-    def next(self): # this is run in a separate thread
-        from time import sleep
-        sleep(.2)
-        val = self.count
-        if not(val): raise flow.StopIteration
-        self.count -= 1
-        print "producing", val
-        return val
+def countSleep(index):
+    from time import sleep
+    for index in range(index):
+        sleep(.3)
+        print "sleep", index
+        yield index
 
-d = flow.Deferred(flow.Threaded(Count(5)))
+def countCooperate(index):
+    for index in range(index):
+        yield flow.Cooperate(.1)
+        print "cooperate", index
+        yield "coop %s" % index
+
+d = flow.Deferred( flow.Merge(
+      flow.Threaded(countSleep(5)),
+      countCooperate(5)))
+
 def prn(x):
-    print "results", x
+    print x
+    reactor.stop()
 d.addCallback(prn)
-reactor.callLater(4, reactor.stop)
 reactor.run()
-
-# results:
-#   producing 5
-#   producing 4
-#   producing 3
-#   producing 2
-#   producing 1
-#   results [5, 4, 3, 2, 1]
-
-# list(flow.Block(flow.Threaded(Count(5))))
-
 </pre>
-
 
 <h3>Using database connections</h3>
 
@@ -530,10 +607,9 @@ UNION ALL
 
 def consumer():
     query = flow.Threaded(flow.QueryIterator(dbpool, sql))
-    while 1:
-        yield query
-        if query.stop: break
-        print "Processed result : ", query.result
+    yield query
+    for row in query:
+        print "Processed result : ", row
 
 from twisted.internet import reactor
 def finish(result): 

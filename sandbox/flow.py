@@ -748,6 +748,7 @@ def makeProtocol(controller, baseClass = protocol.Protocol,
             setattr(self, callbacks[0], self)  # only one callback support
         def _execute(self, dummy = None):
             cmd = self._controller
+            self.write = self.transport.write
             while True:
                 instruction = cmd._yield()
                 if instruction:

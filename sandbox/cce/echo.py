@@ -11,7 +11,7 @@ def echoServer(conn):
     print "                         client responded"
     for data in conn:
         print "                         received '%s', sending back" % data 
-        yield data                               
+        conn.write(data)
         print "                         waiting for client again"
         yield conn                                   
     print "                         disconnected"
@@ -22,12 +22,12 @@ reactor.listenTCP(PORT,server)
 
 def echoClient(conn):
     print "connect and send"
-    yield "Hello World"    # sending data
+    conn.write("Hello World")
     print "waiting for server"
     yield conn
     print "received '%s'" % conn.next()
     print "sending more"
-    yield "Another Line"
+    conn.write("Another Line")
     print "waiting for server"
     yield conn
     print "received '%s'" % conn.next()
@@ -37,6 +37,4 @@ def echoClient(conn):
 client = protocol.ClientFactory()
 client.protocol = flow.makeProtocol(echoClient)
 reactor.connectTCP("localhost", PORT, client)
-
 reactor.run()
-

@@ -25,6 +25,18 @@ from twisted.python import failure
 from twisted.internet import defer, reactor, protocol
 
 class slowlist:
+    """ this is a generator based list
+
+        def slowlist(list):
+            list = list[:]
+            while list:
+               yield list.pop(0)
+
+        It is primarly used to simulate generators by using
+        a list (for testing purposes) without being wrapped
+        as a flow.List, which has all kinds of shortcuts we
+        don't want for testing.
+    """
     def __init__(self, list):
         self.list = list[:]
     def __iter__(self):
@@ -34,25 +46,14 @@ class slowlist:
             return self.list.pop(0)
         raise flow.StopIteration
 
-class onetwothree(slowlist):
-    """ iterator version of the following generator... 
-
-        def onetwothree():
-            yield 'one'
-            yield 'two'
-            yield flow.Cooperate()
-            yield 'three'
-
-    """
-    def __init__(self):
-        slowlist.__init__(self,['one','two',flow.Cooperate(),'three'])
+_onetwothree = ['one','two',flow.Cooperate(),'three']
 
 class producer:
     """ iterator version of the following generator... 
 
         def producer():
-            lst = flow.wrap([1,2,3])
-            nam = flow.wrap(onetwothree())
+            lst = flow.wrap(slowlist([1,2,3]))
+            nam = flow.wrap(slowlist(_onetwothree))
             while True: 
                 yield lst
                 yield nam
@@ -60,8 +61,8 @@ class producer:
 
     """
     def __iter__(self):
-        self.lst   = flow.wrap([1,2,3])
-        self.nam   = flow.wrap(onetwothree())
+        self.lst   = flow.wrap(slowlist([1,2,3]))
+        self.nam   = flow.wrap(slowlist(_onetwothree))
         self.next = self.yield_lst
         return self
     def yield_lst(self):
@@ -232,19 +233,19 @@ class FlowTest(unittest.TestCase):
         rhs = list(flow.Block('string'))
         self.assertEqual(lhs,rhs)
 
+    def testBasicList(self):
+        lhs = [1,2,3]
+        rhs = list(flow.Block([1,2,flow.Cooperate(),3]))
+        self.assertEqual(lhs,rhs)
+
     def testBasicIterator(self):
         lhs = ['one','two','three']
-        rhs = list(flow.Block(onetwothree()))
+        rhs = list(flow.Block(slowlist(_onetwothree)))
         self.assertEqual(lhs,rhs)
 
     def testCallable(self):
         lhs = ['one','two','three']
-        rhs = list(flow.Block(onetwothree))
-        self.assertEqual(lhs,rhs)
-
-    def testBasicList(self):
-        lhs = [1,2,3]
-        rhs = list(flow.Block([1,2,flow.Cooperate(),3]))
+        rhs = list(flow.Block(slowlist(_onetwothree)))
         self.assertEqual(lhs,rhs)
 
     def testProducer(self):
@@ -254,7 +255,7 @@ class FlowTest(unittest.TestCase):
 
     def testConsumer(self):
         lhs = ['Title',(1,'one'),(2,'two'),(3,'three')]
-        rhs = list(flow.Block(consumer()))
+        rhs = list(flow.Block(consumer))
         self.assertEqual(lhs,rhs)
 
     def testFailure(self):
@@ -273,7 +274,7 @@ class FlowTest(unittest.TestCase):
 
     def testMerge(self):
         lhs = ['one', 1, 'two', 2, 3, 'three']
-        mrg = flow.Merge(onetwothree(),slowlist([1,2,3]))
+        mrg = flow.Merge(slowlist(_onetwothree),slowlist([1,2,3]))
         rhs = list(flow.Block(mrg))
         self.assertEqual(lhs,rhs)
 
