@@ -1299,7 +1299,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         response = []
         for part in query:
             if part.type == 'envelope':
-                response.extend(('ENVELOPE', '(%s)' % collapseNestedLists(getEnvelope(msg))))
+                response.extend(('ENVELOPE', getEnvelope(msg)))
             elif part.type == 'flags':
                 response.extend(('FLAGS', msg.getFlags()))
             elif part.type == 'internaldate':
@@ -2651,7 +2651,7 @@ class IMAP4Client(basic.LineReceiver):
                             data = data[0]
                         while data:
                             if len(data) < 2:
-                                raise IllegalServerResponse, "Not enough arguments", data
+                                raise IllegalServerResponse("Not enough arguments", data)
                             flags.setdefault(id, {})[data[0]] = data[1]
                             del data[:2]
                 else:

@@ -1363,7 +1363,22 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
     def testFetchInternalDateUID(self):
         self.testFetchInternalDate(1)
 
-
+    def testFetchEnvelope(self, uid=0):
+        def fetch():
+            return self.client.fetchEnvelope(self.messages, uid=uid)
+        
+        self.messages = '15'
+        self.msgObj = FakeyMessage({'from': 'user@domain', 
+            'to': 'resu@domain', 'date': 'thursday',
+            'subject': 'it is a message'},
+            (), '', '', 65656, None)
+        self.expected = {65656: {'ENVELOPE': [
+            'thursday', 'it is a message', 'user@domain', 'user@domain',
+            'user@domain', 'resu@domain', None, None, None]}}
+        self._fetchWork(fetch, uid)
+    
+    def testFetchEnvelopeUID(self):
+        self.testFetchEnvelope(1)
 
 class FetchSearchStoreCopyTestCase(unittest.TestCase, IMAP4HelperMixin):
     def setUp(self):
