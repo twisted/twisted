@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.72 2002/10/28 04:43:41 moshez Exp $
+$Id: setup.py,v 1.73 2002/11/08 17:19:50 moshez Exp $
 """
 
 import distutils, os, sys, string
@@ -224,6 +224,7 @@ your toaster.
         'bin/im', 'bin/t-im', 'bin/tap2deb',
         'bin/coil', 'bin/tapconvert', 'bin/websetroot',
         'bin/generatelore', 'bin/html2latex', 'bin/hlint',
+        'bin/tkmktap', 'bin/conch',
     ],
     'cmdclass': {
         'install_scripts': install_scripts_twisted,
