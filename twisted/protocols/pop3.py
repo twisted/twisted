@@ -184,7 +184,7 @@ class POP3(basic.LineReceiver):
         return chunk.replace('\n', '\r\n').replace('\r\n.', '\r\n..')
 
     def finishedFileTransfer(self, lastsent):
-        if self.lastsent != '\n':
+        if lastsent != '\n':
             line = '\r\n.'
         else:
             line = '.'
