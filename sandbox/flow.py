@@ -1,5 +1,5 @@
 # Twisted, the Framework of Your Internet
-# Copyright (C) 2003 Axista, Inc.
+# Copyright (C) 2003  Matthew W. Lefkowitz, Clark C. Evans
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General
