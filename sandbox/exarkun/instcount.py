@@ -19,7 +19,7 @@ def topClasses(N=25):
     d = {}
     for o in gc.get_objects():
         try:
-            isTypeOrClass = issubclass(o, type) or isinstance(o, ClassType)
+            isTypeOrClass = isinstance(o, (ClassType, type))
         except TypeError:
             pass
         else:
