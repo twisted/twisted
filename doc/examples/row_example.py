@@ -1,7 +1,6 @@
 import random
 
 from twisted.internet import reactor
-from twisted.internet import main
 from twisted.internet.app import Application
 
 from twisted.enterprise import adbapi, row, reflector, sqlreflector
@@ -23,7 +22,7 @@ def gotRooms(rooms):
     print "got Rooms.", rooms
     if not rooms:
         print "no rooms found!"
-        main.shutDown()
+        reactor.stop()
 
     for room in rooms:
         print "room  ", room
@@ -39,8 +38,7 @@ def gotRooms(rooms):
 def gotFurniture(furniture):
     for f in furniture:
         print f
-        
-    main.shutDown()
+    reactor.stop()
         
 def onUpdate(data):
     print "updated row."
@@ -75,11 +73,11 @@ def onSelected(furn):
         if hasattr(f, "childRows"):
             for l in f.childRows:
                 print "   ", l
-    main.shutDown()    
+    reactor.stop()
 
 def gotRooms2(rooms):
     print "got more rooms", rooms
-    main.shutDown()
+    reactor.stop()
 
 def tick():
     reactor.callLater(0.5, tick)
@@ -88,7 +86,7 @@ newRoom = None
 
 
 # use this line for postgresql test
-dbpool = adbapi.ConnectionPool("pyPgSQL.PgSQL", database="sean", host="localhost", port=5432)
+dbpool = adbapi.ConnectionPool("pyPgSQL.PgSQL", database="test")
 
 # use this line for SQLite test
 #dbpool = adbapi.ConnectionPool("sqlite", db="test")
