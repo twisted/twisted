@@ -22,6 +22,7 @@ import string, os
 
 # Twisted Imports
 from twisted.web import server, static, twcgi, script, test, distrib, trp
+from twisted.internet import interfaces
 from twisted.python import usage, reflect
 from twisted.spread import pb
 
@@ -131,6 +132,9 @@ def updateApplication(app, config):
         # This really ought to be web.Admin or something
         root = test.Test()
 
+    if isinstance(root, static.File):
+        root.registry.setComponent(interfaces.IServiceCollection, app)
+    
     if config.opts['logfile']:
         site = server.Site(root, logPath=config.opts['logfile'])
     else:

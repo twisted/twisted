@@ -37,7 +37,7 @@ import widgets
 # Twisted Imports
 from twisted.protocols import http
 from twisted.python import threadable, log, components
-from twisted.internet import abstract
+from twisted.internet import abstract, interfaces
 from twisted.spread import pb
 from twisted.persisted import styles
 
@@ -86,7 +86,18 @@ class Redirect(resource.Resource):
         
     def render(self, request):
         return redirectTo(self.url, request)
-    
+
+
+class Registry(components.Componentized):
+    pass
+
+
+def _upgradeRegistry(registry):
+    from twisted.internet import app
+    registry.setComponent(interfaces.IServiceCollection, 
+                          app.theApplication)
+
+
 class File(resource.Resource, styles.Versioned):
     """
     File is a resource that represents a plain non-interpreted file.
@@ -135,8 +146,14 @@ class File(resource.Resource, styles.Versioned):
 
     ### Versioning
 
-    persistenceVersion = 4
+    persistenceVersion = 5
 
+    def upgradeToVersion5(self):
+        if not isinstance(self.registry, Registry):
+            self.registry = Registry()
+            from twisted.internet import reactor
+            reactor.callLater(0, _upgradeRegistry, self.registry)
+    
     def upgradeToVersion4(self):
         if not hasattr(self, 'registry'):
             self.registry = {}
@@ -168,7 +185,7 @@ class File(resource.Resource, styles.Versioned):
         self.defaultType = defaultType
         self.allowExt = allowExt
         if not registry:
-            self.registry = {}
+            self.registry = Registry()
         else:
             self.registry = registry
         
