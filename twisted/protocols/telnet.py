@@ -175,6 +175,7 @@ class Telnet(protocol.Protocol):
     lastLine = None
     buffer = ''
     echo = 0
+    delimiters = ['\r\n', '\r\000']
     mode = "User"
 
     def connectionMade(self):
@@ -246,9 +247,13 @@ class Telnet(protocol.Protocol):
         by way of processLine. If the current mode is 'Done', I'll close
         the connection. """
         self.buffer = self.buffer + chunk
-        idx = string.find(self.buffer,'\r\n')
-        if idx == -1:
-            idx = string.find(self.buffer, '\r\000')
+
+        #yech.
+        for delim in self.delimiters:
+            idx = string.find(self.buffer, delim)
+            if idx != -1:
+                break
+            
         if idx != -1:
             buf, self.buffer = self.buffer[:idx], self.buffer[idx+2:]
             self.processLine(buf)
