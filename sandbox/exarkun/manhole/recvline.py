@@ -123,8 +123,8 @@ class HistoricRecvLineHandler(RecvLineHandler):
         self.historyLines = []
         self.historyPosition = 0
 
-        self.keyHandlers.update({self.proto.UP_ARROW: self.handle_UP})
-#                                 self.proto.DOWN_ARROW: self.handle_DOWN})
+        self.keyHandlers.update({self.proto.UP_ARROW: self.handle_UP,
+                                 self.proto.DOWN_ARROW: self.handle_DOWN})
 
     def handle_UP(self):
         if self.lineBuffer and self.historyPosition == len(self.historyLines):
@@ -137,7 +137,10 @@ class HistoricRecvLineHandler(RecvLineHandler):
             self.proto.write(''.join(self.lineBuffer))
             self.lineBufferIndex = len(self.lineBuffer)
 
-    def handle_ENTER(self):
+    def handle_DOWN(self):
+        pass
+
+    def handle_RETURN(self):
         self.historyLines.append(''.join(self.lineBuffer))
         self.historyPosition = len(self.historyLines)
-        return RecvLineHandler.handle_ENTER(self)
+        return RecvLineHandler.handle_RETURN(self)
