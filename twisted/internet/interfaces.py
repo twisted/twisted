@@ -44,7 +44,6 @@ class IConnector(Interface):
         """Return destination this will try to connect to.
 
         This can be one of:
-
           TCP -- ('INET', host, port)
           UNIX -- ('UNIX', address)
           SSL -- ('SSL', host, port)
@@ -56,9 +55,7 @@ class IReactorTCP(Interface):
     def listenTCP(self, port, factory, backlog=5, interface=''):
         """Connects a given protocol factory to the given numeric TCP/IP port.
 
-        Return:
-
-          an object that satisfies the IListeningPort interface
+       @returns: an object that satisfies the IListeningPort interface
 
         Throws:
 
@@ -70,19 +67,17 @@ class IReactorTCP(Interface):
     def connectTCP(self, host, port, factory, timeout=30, bindAddress=None):
         """Connect a TCP client.
 
-        Arguments:
+        @param host: a host name
 
-          * host: a host name
+        @param port: a port number
 
-          * port: a port number
+        @param factory: a twisted.internet.protocol.ClientFactory instance
 
-          * factory: a twisted.internet.protocol.ClientFactory instance
+        @param timeout: number of seconds to wait before assuming the
+                        connection has failed.
 
-          * timeout: number of seconds to wait before assuming the connection
-            has failed.
-
-          * bindAddress: a (host, port) tuple of local address to bind to, or
-            None.
+        @param bindAddress: a (host, port) tuple of local address to bind
+                            to, or None.
 
         Returns an object implementing IConnector. This connector will call
         various callbacks on the factory when a connection is made, failed, or
@@ -111,7 +106,7 @@ class IReactorSSL(Interface):
           * bindAddress: a (host, port) tuple of local address to bind to, or
             None.
 
-        Returns a IConnector.
+        @returns: an L{IConnector}.
         """
 
     def listenSSL(self, port, factory, ctxFactory, backlog=5, interface=''):
@@ -128,8 +123,6 @@ class IReactorUNIX(Interface):
     def connectUNIX(self, address, factory, timeout=30):
         """Connect a client protocol to a UNIX socket.
 
-        Returns a IConnector.
-
         Arguments:
 
           * address: a path to a unix socket on the filesystem.
@@ -139,6 +132,7 @@ class IReactorUNIX(Interface):
           * timeout: number of seconds to wait before assuming the connection
             has failed.
 
+        @returns: an L{IConnector}.
         """
 
     def listenUNIX(address, factory, backlog=5):
@@ -165,7 +159,7 @@ class IReactorUDP(Interface):
     def listenUDP(self, port, factory, interface='', maxPacketSize=8192):
         """Connects a given protocol Factory to the given numeric UDP port.
 
-        Returns: something conforming to IListeningPort.
+        @returns: something conforming to IListeningPort.
         """
 
 ##     I can't remember what I was thinking when I did this.  On the off chance
@@ -185,29 +179,28 @@ class IReactorProcess(Interface):
     def spawnProcess(self, processProtocol, executable, args=(), env={}, path=None, uid=None, gid=None):
         """Spawn a process, with a process protcol.
 
-        Arguments:
+        @param processProtocol: a ProcessProtocol instance
 
-          * processProtocol: a ProcessProtocol instance
+        @param executable: the file name to spawn - the full path should be
+                           used.
 
-          * executable: the file name to spawn - the full path should be used.
+        @param args: the command line arguments to pass to the process; a
+                     sequence of strings. The first string should be the
+                     executable's name.
 
-          * args: the command line arguments to pass to the process; a sequence
-            of strings. The first string should be the executable's name.
+        @param env: the environment variables to pass to the processs; a
+                    dictionary of strings.
 
-          * env: the environment variables to pass to the processs; a
-            dictionary of strings.
-
-          * path: the path to run the subprocess in - defaults to the current directory.
-
-        The following arguments will only be available on POSIX systems:
+        @param path: the path to run the subprocess in - defaults to the
+                     current directory.
         
-          * uid: user ID to run the subprocess as.
+        @param uid: user ID to run the subprocess as. (Only available on
+                    POSIX systems.)
 
-          * gid: group ID to run the subprocess as.
+        @param gid: group ID to run the subprocess as. (Only available on
+                    POSIX systems.)
 
-        See also:
-
-          twisted.protocols.protocol.ProcessProtocol
+        @see: C{twisted.protocols.protocol.ProcessProtocol}
         """
 
 
@@ -217,20 +210,17 @@ class IReactorTime(Interface):
     def callLater(self, delay, callable, *args, **kw):
         """Call a function later.
 
-        Arguments:
+        @type delay:  C{float}
+        @param delay: the number of seconds to wait.
 
-          * delay: the number of seconds to wait (a float).
+        @param callable: the callable object to call later.
 
-          * callable: the callable object to call later.
+        @param args: the arguments to call it with.
 
-          * *args: the arguments to call it with.
+        @param kw: they keyword arguments to call it with.
 
-          * **kw: they keyword arguments to call it with.
-
-        Returns:
-
-          An IDelayedCall object - you can call this object's cancel()
-          method to cancel the scheduled call.
+        @returns: An L{IDelayedCall} object that can be used to cancel
+                  the scheduled call, by calling its C{cancel()} method.
         """
 
     def cancelCallLater(self, callID):
@@ -240,10 +230,10 @@ class IReactorTime(Interface):
 
         Arguments:
 
-          * callID: this is an opaque identifier returned from callLater that
-            wil be used to cancel a specific call.
-
-        Will raise ValueError if the callID is not recognized.
+        @param callID: this is an opaque identifier returned from C{callLater}
+                       that will be used to cancel a specific call.
+	
+	@raise ValueError: if the callID is not recognized.
         """
 
 
@@ -352,32 +342,26 @@ class IReactorCore(Interface):
         Once the "during" phase is running, all of the remaining triggers must
         execute; their return values must be ignored.
 
-        Arguments:
+        @param phase: a time to call the event -- either the string 'before',
+                      'after', or 'during', describing when to call it
+                      relative to the event's execution.
 
-          * phase: a time to call the event -- either the string 'before',
-            'after', or 'during', describing when to call it relative to the
-            event's execution.
+        @param eventType: this is a string describing the type of event.
 
-          * eventType: this is a string describing the type of event.
+        @param callable: the object to call before shutdown.
 
-          * callable: the object to call before shutdown.
+        @param args: the arguments to call it with.
 
-          * *args: the arguments to call it with.
+        @param kw: the keyword arguments to call it with.
 
-          * **kw: the keyword arguments to call it with.
-
-        Returns:
-
-          an ID that can be used to remove this call with
-          removeSystemEventTrigger.
+        @returns: an ID that can be used to remove this call with
+                  removeSystemEventTrigger.
         """
 
     def removeSystemEventTrigger(self, triggerID):
         """Removes a trigger added with addSystemEventTrigger.
 
-        Arguments:
-
-          * triggerID: a value returned from addSystemEventTrigger.
+        @param triggerID: a value returned from addSystemEventTrigger.
         """
 
 
@@ -412,9 +396,10 @@ class IListeningPort(Interface):
     def startListening(self):
         """Start listening on this port.
 
-        Throws:
-
-          a CannotListenError, as defined in twisted.internet.error, if it cannot listen on this port (e.g., it is a TCP port and it cannot bind to the required port number)
+        @raise CannotListenError: as defined in C{twisted.internet.error},
+                                  if it cannot listen on this port (e.g.,
+                                  it is a TCP port and it cannot bind to
+                                  the required port number)
         """
 
     def stopListening(self):
@@ -424,11 +409,9 @@ class IListeningPort(Interface):
     def getHost(self):
         """Get the host that this port is listening for.
 
-        Returns:
-
-          a tuple of (proto_type, ...), where proto_type will be a string such
-          as 'INET', 'SSL', 'UNIX'.  The rest of the tuple will be identifying
-          information about the port.
+        @returns: a tuple of C{(proto_type, ...)}, where proto_type will be
+                  a string such as 'INET', 'SSL', 'UNIX'.  The rest of the
+                  tuple will be identifying information about the port.
         """
 
 
@@ -536,9 +519,9 @@ class IProtocolFactory(Interface):
         and the Port will close the connection.
 
         TODO:
-         * Document 'addr' argument -- what format is it in?
-         * Is the phrase \"incoming server connection\" correct when Factory
-           is a ClientFactory?
+          - Document 'addr' argument -- what format is it in?
+          - Is the phrase \"incoming server connection\" correct when Factory
+            is a ClientFactory?
         """
 
     def doStart(self):
