@@ -1422,12 +1422,11 @@ We will continue using the user %s.
         return (sio, len(sio.getvalue()))
 
     def mdtm(self, path):
-        from stat import ST_MTIME
         cpath, spath = self.mapCPathToSPath(path)
         if not os.path.isfile(spath):
             raise FileNotFoundError(spath)
         try:
-            dtm = time.strftime("%Y%m%d%H%M%S", time.gmtime(os.stat(spath)[ST_MTIME]))
+            dtm = time.strftime("%Y%m%d%H%M%S", time.gmtime(os.path.getmtime(spath)))
         except OSError, (e,):
             log.err(e)
             raise OperationFailedError(e)
