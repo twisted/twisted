@@ -3054,7 +3054,8 @@ class IMAP4Client(basic.LineReceiver):
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
         message objects (as returned by self.messageFile(), file objects by
-        default), or whose errback is invoked if there is an error.
+        default), to additional information, or whose errback is invoked if
+        there is an error.
         """
         d = self._fetch(messages, useUID=uid, rfc822=1)
         d.addCallback(self.__cbFetch)
