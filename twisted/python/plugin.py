@@ -228,6 +228,9 @@ def loadPlugins(plugInType, fileList, debugInspection=None, showProgress=None):
     result = []
     debugInspection, showProgress = _prepCallbacks(debugInspection, showProgress)
     
+    if not fileList:
+        raise ValueError("No plugins passed to loadPlugins")
+
     increments = 1.0 / len(fileList)
     progress = 0.0
 
