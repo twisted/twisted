@@ -52,14 +52,14 @@ class WView(template.DOMTemplate):
         if controllerName:
             namespaces = [self.controller]
             for namespace in namespaces:
-                controllerFactory = getattr(self.controller, 'factory_' + controllerName, None)
+                controllerFactory = getattr(namespace, 'factory_' + controllerName, None)
                 if controllerFactory is not None:
                     break
             if controllerFactory is None:
-                controllerFactory = getattr(dominput, controllerName, None)
+                controllerFactory = getattr(input, controllerName, None)
             if controllerFactory is None:
                 nodeText = node.toxml()
-                raise NotImplementedError, "You specified controller name %s on a node, but no factory_%s method was found." % (controllerName, controllerName)
+                raise NotImplementedError, "You specified controller name %s on a node, but no factory_%s method was found in %s." % (controllerName, controllerName, namespaces + [input])
         return controllerFactory(self.model)
     
     def getNodeView(self, request, node):     
@@ -77,7 +77,7 @@ class WView(template.DOMTemplate):
                 view = viewMethod(request, node)
             if view is None:
                 nodeText = node.toxml()
-                raise NotImplementedError, "You specified view name %s on a node, but no factory_%s method was found." % (viewName, viewName)
+                raise NotImplementedError, "You specified view name %s on a node, but no factory_%s method was found in %s or %s." % (viewName, viewName, self, widgets)
         else:
             view = node
         return view
