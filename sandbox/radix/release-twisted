@@ -27,10 +27,6 @@ if string.find(os.path.abspath(sys.argv[0]), os.sep+'Twisted') != -1:
 sys.path.insert(0, os.curdir)
 ### end of preamble
 
-#
-# The Twisted release script. This is terribly unix-centric.
-#
-
 from twisted.python import usage, util, failure
 from twisted import copyright
 
@@ -223,7 +219,7 @@ def main():
     except usage.UsageError, ue:
         print "%s: %s (see --help)" % (sys.argv[0], ue)
         sys.exit(2)
-    sys.exit("BYE")
+    #sys.exit("BYE")
 
 ##    sys.path.insert(0, os.path.abspath('Twisted'))
 
@@ -324,7 +320,11 @@ class UpdateVersion(Transaction):
         self.files = ('README', 'twisted/copyright.py', 'admin/twisted.spec')
         for file in self.files:
             replaceInFile(os.path.join(r, file), oldver, newver)
-        sh('cd %s &&  svn diff || true' % (r))
+            crapout = os.popen('cd %s && svn diff %s' % (r, file)).read()
+            print "diff output:"
+            print crapout
+            if not crapout:
+                raise Exception("No diff output!")
         sh('cd %s &&  svn commit -m "Setting version for %s" %s'
            % (r, newver, ' '.join(self.files)))#, sensitive=1)
 
