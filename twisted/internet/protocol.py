@@ -25,6 +25,8 @@ This module is stable.
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
+import random
+
 # Twisted Imports
 from twisted.python import log, failure
 from twisted.internet import interfaces, error
@@ -135,11 +137,18 @@ class ReconnectingClientFactory(ClientFactory):
 
     Note that clients should call my resetDelay method after they have
     connected successfully.
+
+    @ivar maxDelay: Maximum number of seconds between connection attempts.
+    @ivar initialDelay: Delay for the first reconnection attempt.
+    @ivar factor: a multiplicitive factor by which the delay grows
+    @ivar jitter: percentage of randomness to introduce into the delay lengh
+        to prevent stampeding.
     """
     maxDelay = 3600
     initalDelay = 1.0
     factor = 2.7182818284590451 # (math.e)
     # Phi = 1.6180339887498948
+    jitter = 0.11962656492 # molar Planck constant times c
 
     delay = initalDelay
     retries = 0
@@ -172,6 +181,10 @@ class ReconnectingClientFactory(ClientFactory):
             return
 
         self.delay = min(self.delay * self.factor, self.maxDelay)
+        if self.jitter:
+            self.delay = random.normalvariate(self.delay,
+                                              self.delay * self.jitter)
+            
         log.msg("%s will retry in %d seconds" % (connector, self.delay,))
         from twisted.internet import reactor
         self._callID = reactor.callLater(self.delay, connector.connect)
