@@ -10,7 +10,7 @@ for doc in doc/man doc/howto doc/specifications doc/vision/; do
 done
 cp admin/book.tex doc/howto
 cd doc/howto
-for i in 1 2 3;do latex book.tex;done
+for i in 1 2 3;do latex book.tex < /dev/null;done
 dvips -o book.ps book.dvi
 ps2pdf13 book.ps book.pdf
 rm *.eps *.tex *.aux *.log book.dvi book.toc ../man/*.tex \
