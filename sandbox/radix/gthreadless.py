@@ -68,8 +68,7 @@ def blockOn(d, desc=None):
     else:
         mainOrNot = ""
 
-    #print hex(id(g.parent)), mainOrNot, "<-", hex(id(g)), "(%s)" % (desc,)
-
+    #print _desc(g.parent), mainOrNot, "<-", hex(id(g)), "(%s)" % (desc,)
 
     ## Note ##
     # Notice that this code catches and ignores SystemExit. The
@@ -86,7 +85,7 @@ def blockOn(d, desc=None):
     # Deferred, then, will likely be garbage collected and thus all
     # references to our greenlet will be lost -- and thus it will have
     # SystemExit fired.
-    
+
     def cb(r):
         #print _desc(greenlet.getcurrent()), "~~>", _desc(g), "(%s)" % (desc,), r
         try:
