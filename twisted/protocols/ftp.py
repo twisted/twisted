@@ -779,9 +779,9 @@ class FTPClient(basic.LineReceiver):
         if self.passive:
             # Hack: use a mutable object to sneak a variable out of the 
             # scope of doPassive
-            mutable = [None]
+            _mutable = [None]
             def doPassive(response, 
-                          self=self, mutable=mutable, protocol=protocol):
+                          self=self, mutable=_mutable, protocol=protocol):
                 """Connect to the port specified in the response to PASV"""
                 line = response[-1]
 
@@ -799,9 +799,9 @@ class FTPClient(basic.LineReceiver):
             cmd = FTPCommand(command)
             self.queueCommand(cmd)
             # Ensure the connection is always closed
-            cmd.deferred.addCallbacks(lambda result, mutable=mutable: 
-                                          mutable[0].loseConnection() or result,
-                                      lambda result: mutable[0].loseConnection())
+            cmd.deferred.addCallbacks(
+                lambda result, mutable=_mutable: mutable[0].loseConnection() or result,
+                lambda result, mutable=_mutable: mutable[0].loseConnection())
 
             return cmd.deferred
         else:
