@@ -87,6 +87,7 @@ class IReactorUDP(Interface):
 ## XXX TODO: expose udp.Port.createConnection more formally
 
 class IReactorProcess(Interface):
+    
     def spawnProcess(self, processProtocol, executable, args=(), env={}):
         """Spawn a process, with a process protcol.
 
@@ -94,10 +95,10 @@ class IReactorProcess(Interface):
 
           * processProtocol: a ProcessProtocol instance
 
-          * executable: the file name to spawn
+          * executable: the file name to spawn - the full path should be used.
 
           * args: the command line arguments to pass to the process; a sequence
-            of strings.
+            of strings. The first string should be the executable's name.
 
           * env: the environment variables to pass to the processs; a
             dictionary of strings.
