@@ -29,6 +29,9 @@ class DirDbmTestCase(unittest.TestCase):
         self.path = tempfile.mktemp()
         self.dbm = dirdbm.open(self.path)
         self.items = (('abc', 'foo'), ('/lalal', '\000\001'), ('\000\012', 'baz'))
+
+    def tearDown(self):
+        shutil.rmtree(self.path)
     
     def testRebuildInteraction(self):
         from twisted.persisted import dirdbm
