@@ -1,3 +1,7 @@
+2002-06-01  Christopher Armstrong  <radix@twistedmatrix.com>
+
+	* .: Releasing Twisted 0.18.0
+
 2002-05-31  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* twisted/coil/plugins/portforward.py, twisted/tap/portforward.py:
