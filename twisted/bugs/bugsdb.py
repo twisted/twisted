@@ -84,18 +84,18 @@ class BugsDatabase(adbapi.Augmentation):
     
     """
     
-    def createBug(self, name, email, version, os, security, bug_type, status, summary, description):
+    def createBug(self, name, email, version, os, security, bug_type, summary, description):
         """Add a new bug to the database."""
         sql = """INSERT INTO bugs_items
                 (submittor_name, submittor_email, assigned, date_submitted, date_modified,
                  version, os, security, type, status, summary, description) VALUES
-                (%s, %s, NULL, now(), now(), %s, %s, %s, %s, %s, %s, %s)
+                (%s, %s, NULL, now(), now(), %s, %s, %s, %s, 'open', %s, %s)
               """
         if security:
             security = 't'
         else:
             security = 'f'
-        return self.runOperation(sql, name, email, version, os, security, bug_type, status, summary, description)
+        return self.runOperation(sql, name, email, version, os, security, bug_type, summary, description)
     
     def createComment(self, bug_id, name, email, comment):
         sql = """INSERT into bugs_comments (bug_id, submittor_name, submittor_email, comment)
