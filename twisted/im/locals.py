@@ -21,7 +21,7 @@ False = gtk.FALSE
 class InputOutputWindow:
     
     def __init__(self, rootName, inputName, outputName):
-        self.xml = GladeXML(GLADE_FILE, root=rootName)
+        self.xml = openGlade(GLADE_FILE, root=rootName)
         wid = self.xml.get_widget
         self.entry = wid(inputName)
         self.entry.set_word_wrap(gtk.TRUE)
@@ -122,3 +122,10 @@ def isCursorOnLastLine(entry):
     if entry.get_point() >= string.rfind(string.rstrip(entry.get_chars(0,-1)), '\n'):
         return 1
 
+def openGlade(*args, **kwargs):
+    print "opening glade file"
+    r = apply(GladeXML, args, kwargs)
+    if r:
+        return r
+    else:
+        raise IOError("Couldn't open Glade XML: %s; %s" % (args, kwargs))

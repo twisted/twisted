@@ -1,14 +1,13 @@
 import string
 
 import gtk
-from libglade import GladeXML
 
-from twisted.im.locals import GLADE_FILE, autoConnectMethods, InputOutputWindow
+from twisted.im.locals import GLADE_FILE, autoConnectMethods, InputOutputWindow, openGlade
 from twisted.im.account import onlineAccounts
 
 class GroupJoinWindow:
     def __init__(self):
-        self.xml = GladeXML(GLADE_FILE, root="JoinGroupWindow")
+        self.xml = openGlade(GLADE_FILE, root="JoinGroupWindow")
         self.widget = self.xml.get_widget("JoinGroupWindow")
         autoConnectMethods(self)
         om = self.xml.get_widget("AccountSelector")
@@ -35,7 +34,7 @@ class GroupJoinWindow:
 
 class ContactsList:
     def __init__(self):
-        self.xml = GladeXML(GLADE_FILE, root="ContactsWidget")
+        self.xml = openGlade(GLADE_FILE, root="ContactsWidget")
         self.widget = self.xml.get_widget("ContactsWidget")
         self.people = []
         self.onlinePeople = []

@@ -1,8 +1,7 @@
-from libglade import GladeXML
 import string, re
 
 from twisted.protocols import toc
-from twisted.im.locals import GLADE_FILE, autoConnectMethods, ONLINE, OFFLINE, AWAY
+from twisted.im.locals import GLADE_FILE, autoConnectMethods, ONLINE, OFFLINE, AWAY, openGlade
 from twisted.im.chat import getContactsList, getGroup, getGroupConversation, getPerson, getConversation
 from twisted.internet import tcp
 from twisted.python.defer import succeed
@@ -183,7 +182,7 @@ class TOCAccount:
 
 class TOCAccountForm:
     def __init__(self, maanger):
-        self.xml = GladeXML(GLADE_FILE, root="TOCAccountWidget")
+        self.xml = openGlade(GLADE_FILE, root="TOCAccountWidget")
         self.widget = self.xml.get_widget("TOCAccountWidget")
 
     def create(self, accountName, autoLogin):

@@ -1,10 +1,9 @@
 
-from libglade import GladeXML
 
 from twisted.python.failure import Failure
 from twisted.spread import pb
 
-from twisted.im.locals import GLADE_FILE, autoConnectMethods, ONLINE, OFFLINE, AWAY
+from twisted.im.locals import GLADE_FILE, autoConnectMethods, ONLINE, OFFLINE, AWAY, openGlade
 from twisted.im.chat import getContactsList, getGroup, getGroupConversation, getPerson, getConversation
 
 
@@ -204,7 +203,7 @@ class PBAccount:
 class PBAccountForm:
     def __init__(self, manager):
         self.manager = manager
-        self.xml = GladeXML(GLADE_FILE, root="PBAccountWidget")
+        self.xml = openGlade(GLADE_FILE, root="PBAccountWidget")
         autoConnectMethods(self)
         self.widget = self.xml.get_widget("PBAccountWidget")
         self.on_serviceType_changed()

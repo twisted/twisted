@@ -1,8 +1,7 @@
-from libglade import GladeXML
 import string
 
 from twisted.protocols import irc
-from twisted.im.locals import GLADE_FILE, autoConnectMethods, ONLINE
+from twisted.im.locals import GLADE_FILE, autoConnectMethods, ONLINE, openGlade
 from twisted.im.chat import getContactsList, getGroup, getGroupConversation, getPerson, getConversation
 from twisted.internet import tcp
 from twisted.python.defer import succeed
@@ -193,7 +192,7 @@ class IRCAccount:
 
 class IRCAccountForm:
     def __init__(self, maanger):
-        self.xml = GladeXML(GLADE_FILE, root="IRCAccountWidget")
+        self.xml = openGlade(GLADE_FILE, root="IRCAccountWidget")
         self.widget = self.xml.get_widget("IRCAccountWidget")
 
     def create(self, accountName, autoLogin):

@@ -2,9 +2,9 @@
 import cPickle
 
 import gtk
-from libglade import GladeXML
 
-from twisted.im.locals import GLADE_FILE, SETTINGS_FILE, autoConnectMethods
+from twisted.im.locals import GLADE_FILE, SETTINGS_FILE, autoConnectMethods,\
+     openGlade
 
 
 ### This generic
@@ -14,7 +14,7 @@ from twisted.im.locals import GLADE_FILE, SETTINGS_FILE, autoConnectMethods
 
 class AccountManager:
     def __init__(self):
-        self.xml = GladeXML(GLADE_FILE, root="AccountManager")
+        self.xml = openGlade(GLADE_FILE, root="AccountManager")
         print self.xml._o
         autoConnectMethods(self)
         self.widget = self.xml.get_widget("AccountManager")
@@ -79,7 +79,7 @@ class NewAccount:
     def __init__(self, manager):
         self.manager = manager
         self.manager.lockNewAccount(1)
-        self.xml = GladeXML(GLADE_FILE, root="NewAccountWindow")
+        self.xml = openGlade(GLADE_FILE, root="NewAccountWindow")
         autoConnectMethods(self)
         self.widget = self.xml.get_widget("NewAccountWindow")
         self.frame = self.xml.get_widget("GatewayFrame")
