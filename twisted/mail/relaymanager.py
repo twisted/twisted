@@ -30,7 +30,7 @@ The classes here are meant to facilitate support for such a configuration
 for the twisted.mail SMTP server
 """
 from twisted.python import delay, log
-from twisted.mail import relay, mail
+from twisted.mail import relay, mail, bounce
 from twisted.internet import reactor
 import os, string, time
 
@@ -60,11 +60,12 @@ class SMTPManagedRelayer(relay.SMTPRelayer):
         we will always get 0 or 1 addresses.
         """
         message = self.names[0]
-        relay.SMTPRelayer.sentMail(self, addresses)
         if addresses: 
             self.manager.notifySuccess(self, message)
         else: 
             self.manager.notifyFailure(self, message)
+        del self.messages[0]
+        del self.names[0]
 
     def connectionFailed(self):
         """called when connection could not be made
@@ -147,6 +148,9 @@ class Queue:
         """Get the path in the filesystem of a message."""
         return os.path.join(self.directory, message)
 
+    def getEnvelopeFile(self, message):
+        return open(os.path.join(self.directory, message+'-H'), 'rb')
+
     def createNewMessage(self):
         """Create a new message in the queue.
 
@@ -189,7 +193,8 @@ class SmartHostSMTPRelayingManager:
         self.managed = {} # SMTP clients we're managing
         self.queue = queue
 
-    def _finish(self, message):
+    def _finish(self, relay, message):
+	self.managed[relay].remove(os.path.basename(message))
         self.queue.done(message)
 
     def notifySuccess(self, relay, message):
@@ -197,7 +202,7 @@ class SmartHostSMTPRelayingManager:
 
         Mark it as sent in our lists
         """
-        self._finish(message)
+        self._finish(relay, message)
 
     def notifyFailure(self, relay, message):
         """Relaying the message has failed."""
@@ -205,7 +210,17 @@ class SmartHostSMTPRelayingManager:
         # Moshe - Bounce E-mail here
         # Be careful: if it's a bounced bounce, silently
         # discard it
-        self._finish(message)
+        fp = self.queue.getEnvelopeFile(message)
+        from_, to = cPickle.load(fp)
+        fp.close()
+	from_, to, bounce = bounce.generateBounceMessage(from_, to, open(self.queue.getPathFor(message)+'-D'))
+        fp, message = self.queue.createNewMessage()
+        cPickle.dump(fp, (from_, to))
+        fp.close()
+        for line in string.split(bounce, '\n')[:-1]:
+             message.lineReceived(line)
+        message.eomReceived()
+        self._finish(relay, message)
 
     def notifyDone(self, relay):
         """A relaying SMTP client is disconnected.
@@ -214,7 +229,7 @@ class SmartHostSMTPRelayingManager:
         as being relayed, and remove the relay.
         """
         for message in self.managed[relay]:
-            self.queue.waiting(message)
+            self.queue.waiting[message] = 1
         del self.managed[relay]
 
     def notifyNoConnection(self, relay):
@@ -302,5 +317,6 @@ def attachManagerToDelayed(manager, delayed, time=1):
     twisted.python.Delayed and time should be an integer in second,
     specifying time between checking the state
     """
+    delayed.ticktime = 1
     loop = delay.Looping(time, checkState, delayed)
     loop.delayed._later(loop.loop,loop.ticks,(manager,))
