@@ -596,3 +596,15 @@ class TestInternet(unittest.TestCase):
                 self.assert_(hasattr(reactor, prefix+method))
                 o = getattr(internet, tran+side)
                 self.assertEqual(service.IService(o), o)
+
+
+class TestCompat(unittest.TestCase):
+
+    def testService(self):
+        # test old services with new application
+        s = service.MultiService()
+        c = compat.IOldApplication(s)
+        from twisted.internet.app import ApplicationService
+        svc = ApplicationService("foo", serviceParent=c)
+        self.assertEquals(c.getServiceNamed("foo"), svc)
+        c.removeService(svc)

@@ -23,10 +23,13 @@ API Stability: unstable
 
 Maintainer: U{Moshe Zadka<mailto:moshez@twistedmatrix.com>}
 """
+
 from twisted.python import components
 from twisted.application import internet, service
 from twisted.persisted import sob
+from twisted.internet import app as oldapp
 import warnings
+
 
 class IOldApplication(components.Interface):
 
@@ -197,6 +200,38 @@ class IOldApplication(components.Interface):
         """
 
 
+class _NewService:
+    """Wrap a twisted.internet.app.ApplicationService in new service API."""
+
+    __implements__ = service.IService,
+    
+    def __init__(self, service):
+        self.service = service
+        self.name = service.serviceName
+
+    def setName(self, name):
+        raise RuntimeError
+
+    def setServiceParent(self, parent):
+        self.service.serviceParent = parent
+
+    def disownServiceParent(self):
+        self.service.serviceParent = None
+
+    def startService(self):
+        self.service.startService()
+
+    def stopService(self):
+        return self.service.stopService()
+
+    def privilegedStartService(self):
+        pass
+
+    def __cmp__(self, other):
+        return cmp(self.service, other)
+
+    def __hash__(self):
+        return hash(self.service)
 
 
 class _ServiceNetwork:
@@ -256,13 +291,20 @@ class _ServiceNetwork:
         s.setServiceParent(self.app)
 
     def addService(self, service):
+        if isinstance(service, oldapp.ApplicationService):
+            service = _NewService(service)
         self.app.addService(service)
 
     def removeService(self, service):
+        if isinstance(service, oldapp.ApplicationService):
+            service = _NewService(service)
         self.app.removeService(service)
 
     def getServiceNamed(self, name):
-        return self.app.getServiceNamed(name)
+        result = self.app.getServiceNamed(name)
+        if isinstance(result, _NewService):
+            result = result.service
+        return result
 
     def unlistenWith(self, portType, *args, **kw):
         warnings.warn("unlisten* does not work anymore. Name services "
