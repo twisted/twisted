@@ -203,7 +203,11 @@ class SSHTransportBase(protocol.Protocol):
                     log.msg(repr(packet[1:]))
                     self.sendUnimplemented()
             elif self.service:
-                self.service.packetReceived(ord(packet[0]), packet[1:])
+                log.callWithLogger(self.service, self.service.packetReceived,
+                                                 ord(packet[0]), packet[1:])
+                log.msg(repr(ord(packet[0])))
+                log.msg(repr(hasattr(self, 'first')))
+                log.msg(repr(len(self.buf)))
             else:
                 log.msg("couldn't handle %s"%messageNum)
                 log.msg(repr(packet[1:]))

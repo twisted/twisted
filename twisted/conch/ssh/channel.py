@@ -22,9 +22,9 @@ This module is unstable.
 Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 """
 
-from twisted.python import log
+from twisted.python import log, context
 
-class SSHChannel:
+class SSHChannel(log.Logger):
     name = None # only needed for client channels
     def __init__(self, localWindow = 0, localMaxPacket = 0, 
                        remoteWindow = 0, remoteMaxPacket = 0, 
@@ -49,6 +49,10 @@ class SSHChannel:
     def __str__(self):
         return '%s (lw %i rw %i)' % (self.name, self.localWindowLeft, self.remoteWindowLeft)
 
+    def logPrefix(self):
+        id = (self.id is not None and str(self.id)) or "unknown"
+        return "SSHChannel %s (%s) on %s" % (self.name, id, self.conn.logPrefix())
+
     def channelOpen(self, specificData):
         """
         Called when the channel is opened.  specificData is any data that the
@@ -56,7 +60,7 @@ class SSHChannel:
 
         @type specificData: C{str}
         """
-        log.msg('channel %s open'%self.id)
+        log.msg('channel open')
 
     def openFailed(self, reason):
         """
@@ -65,14 +69,14 @@ class SSHChannel:
 
         @type reason: C{error.ConchError}
         """
-        log.msg('other side refused channel %s\nreason: %s'%(self.id, reason))
+        log.msg('other side refused open\nreason: %s'%(self.id, reason))
 
     def addWindowBytes(self, bytes):
         """
         Called when bytes are added to the remote window.  By default it clears
         the data buffers.
 
-        @type bytes:    C{int}
+        @type bytes:    C{in:t}
         """
         self.remoteWindowLeft = self.remoteWindowLeft+bytes
         if not self.areWriting and not self.closing:
@@ -127,20 +131,21 @@ class SSHChannel:
         """
         Called when the other side will send no more data.
         """
-        log.msg('channel %s remote eof'%self.id)
+        log.msg('remote eof')
 
     def closeReceived(self):
         """
         Called when the other side has closed the channel.
         """
-        log.msg('channel %s remote close'%self.id)
+        log.msg('remote close')
+        self.loseConnection()
 
     def closed(self):
         """
         Called when the channel is closed.  This means that both our side and
         the remote side have closed the channel.
         """
-        log.msg('channel %s closed'%self.id)
+        log.msg('closed')
 
     # transport stuff
     def write(self, data):
@@ -214,8 +219,8 @@ class SSHChannel:
         Close the channel.
         """
         self.closing = 1
+        log.msg(repr((self.buf, self.extBuf)))
         if not self.buf and not self.extBuf:
-            self.localClosed = 1
             self.conn.sendClose(self)
 
     def getPeer(self):

@@ -25,7 +25,7 @@ Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 
 from twisted.python import log
 
-class SSHService:
+class SSHService(log.Logger):
     name = None # this is the ssh name for the service
     protocolMessages = {} # these map #'s -> protocol names
     transport = None # gets set later
@@ -40,6 +40,9 @@ class SSHService:
         called when the service is stopped, either by the connection ending
         or by another service being started
         """
+
+    def logPrefix(self):
+        return "SSHService %s on %s" % (self.name, self.transport.transport.logPrefix())
 
     def packetReceived(self, messageType, packet):
         """

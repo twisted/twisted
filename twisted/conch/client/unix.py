@@ -35,7 +35,7 @@ class SSHUnixClientFactory(protocol.ClientFactory):
     def clientConnectionLost(self, connector, reason):
         if self.options['reconnect']:
             connector.connect()
-        log.err(reason)
+        #log.err(reason)
         if not self.d: return
         d = self.d
         self.d = None
@@ -47,7 +47,7 @@ class SSHUnixClientFactory(protocol.ClientFactory):
         #    os.unlink(connector.transport.addr)
         #except:
         #    pass
-        log.err(reason)
+        #log.err(reason)
         if not self.d: return
         d = self.d
         self.d = None

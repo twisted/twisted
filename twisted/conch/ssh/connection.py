@@ -92,7 +92,7 @@ class SSHConnection(service.SSHService):
                 struct.pack('>4L', senderChannel, localChannel, 
                     channel.localWindowSize, 
                     channel.localMaxPacket)+channel.specificData)
-            channel.channelOpen('')
+            log.callWithLogger(channel, channel.channelOpen, '')
         except Exception, e:
             log.msg('channel open failed')
             log.err(e)
@@ -114,7 +114,7 @@ class SSHConnection(service.SSHService):
         self.channelsToRemoteChannel[channel] = remoteChannel
         channel.remoteWindowLeft = windowSize
         channel.remoteMaxPacket = maxPacket
-        channel.channelOpen(specificData)
+        log.callWithLogger(channel, channel.channelOpen, specificData)
 
     def ssh_CHANNEL_OPEN_FAILURE(self, packet):
         localChannel, reasonCode = struct.unpack('>2L', packet[: 8])
@@ -125,11 +125,12 @@ class SSHConnection(service.SSHService):
         reason = error.ConchError(reasonDesc)
         reason.desc = reasonDesc
         reason.code = reasonCode
-        channel.openFailed(reason)
+        log.callWithLogger(channel, channel.openFailed, reason)
 
     def ssh_CHANNEL_WINDOW_ADJUST(self, packet):
         localChannel, bytesToAdd = struct.unpack('>2L', packet[: 8])
-        self.channels[localChannel].addWindowBytes(bytesToAdd)
+        channel = self.channels[localChannel]
+        log.callWithLogger(channel, channel.addWindowBytes, bytesToAdd)
 
     def ssh_CHANNEL_DATA(self, packet):
         localChannel, dataLength = struct.unpack('>2L', packet[: 8])
@@ -137,7 +138,8 @@ class SSHConnection(service.SSHService):
         # XXX should this move to dataReceived to put client in charge?
         if dataLength > channel.localWindowLeft or \
            dataLength > channel.localMaxPacket: # more data than we want
-            self.sendClose(channel)
+            log.callWithLogger(channel, lambda s=self,c=channel: 
+                                log.msg('too much data') and s.sendClose(c))
             return
             #packet = packet[:channel.localWindowLeft+4]
         data = common.getNS(packet[4:])[0]
@@ -147,43 +149,48 @@ class SSHConnection(service.SSHService):
                                        channel.localWindowLeft)
             #log.msg('local window left: %s/%s' % (channel.localWindowLeft,
             #                                    channel.localWindowSize))
-        channel.dataReceived(data)
+        log.callWithLogger(channel, channel.dataReceived, data)
 
     def ssh_CHANNEL_EXTENDED_DATA(self, packet):
         localChannel, typeCode, dataLength = struct.unpack('>3L', packet[: 12])
         channel = self.channels[localChannel]
         if dataLength > channel.localWindowLeft or \
            dataLength > channel.localMaxPacket:
-            log.msg('closing channel %s for too much extended data' % channel.id)
-            self.sendClose(channel)
+            log.callWithLogger(channel, lambda s=self,c=channel: 
+                                log.msg('too much extdata') and s.sendClose(c))
             return
         data = common.getNS(packet[8:])[0]
         channel.localWindowLeft -= dataLength
         if channel.localWindowLeft < channel.localWindowSize/2:
             self.adjustWindow(channel, channel.localWindowSize - \
                                        channel.localWindowLeft)
-        self.channels[localChannel].extReceived(typeCode, data)
+        log.callWithLogger(channel, channel.extReceived, typeCode, data)
 
     def ssh_CHANNEL_EOF(self, packet):
         localChannel = struct.unpack('>L', packet[: 4])[0]
-        self.channels[localChannel].eofReceived()
+        channel = self.channels[localChannel]
+        log.callWithLogger(channel, channel.eofReceived)
 
     def ssh_CHANNEL_CLOSE(self, packet):
         localChannel = struct.unpack('>L', packet[: 4])[0]
         channel = self.channels[localChannel]
-        channel.closeReceived()
+        if channel.remoteClosed:
+            return
+        log.callWithLogger(channel, channel.closeReceived)
         channel.remoteClosed = 1
         if channel.localClosed and channel.remoteClosed:
             del self.localToRemoteChannel[localChannel]
             del self.channels[localChannel]
             del self.channelsToRemoteChannel[channel]
-            channel.closed()
+            self.deferreds[localChannel] = []
+            log.callWithLogger(channel, channel.closed)
 
     def ssh_CHANNEL_REQUEST(self, packet):
         localChannel = struct.unpack('>L', packet[: 4])[0]
         requestType, rest = common.getNS(packet[4:])
         wantReply = ord(rest[0])
-        d = self.channels[localChannel].requestReceived(requestType, rest[1:])
+        channel = self.channels[localChannel]
+        d = log.callWithLogger(channel, channel.requestReceived, requestType, rest[1:])
         if wantReply:
             if isinstance(d, defer.Deferred):
                 d.addCallback(self._cbChannelRequest, localChannel)
@@ -203,15 +210,18 @@ class SSHConnection(service.SSHService):
 
     def ssh_CHANNEL_SUCCESS(self, packet):
         localChannel = struct.unpack('>L', packet[: 4])[0]
-        if self.deferreds.has_key(localChannel):
+        if self.deferreds.get(localChannel):
             d = self.deferreds[localChannel].pop(0)
-            d.callback(packet[4:])
+            log.callWithLogger(self.channels[localChannel], 
+                               d.callback, packet[4:])
 
     def ssh_CHANNEL_FAILURE(self, packet):
         localChannel = struct.unpack('>L', packet[: 4])[0]
-        if self.deferreds.has_key(localChannel):
+        if self.deferreds.get(localChannel):
             d = self.deferreds[localChannel].pop(0)
-            d.errback(error.ConchError('channel request failed'))
+            log.callWithLogger(self.channels[localChannel],
+                               d.errback, 
+                               error.ConchError('channel request failed'))
 
     # methods for users of the connection to call
 
@@ -261,10 +271,9 @@ class SSHConnection(service.SSHService):
         @type wantReply:    C{bool}
         @rtype              C{Deferred}/C{None}
         """
-        if not self.channelsToRemoteChannel.has_key(channel):
+        if channel.localClosed:
             return
-        log.msg('sending request for channel %s, request %s' % (channel.id, requestType),
-                system=self.transport.transport.logPrefix())
+        log.msg('sending request %s' % requestType)
         self.transport.sendPacket(MSG_CHANNEL_REQUEST, struct.pack('>L', 
                                     self.channelsToRemoteChannel[channel])
                                   + common.NS(requestType)+chr(wantReply)
@@ -282,7 +291,7 @@ class SSHConnection(service.SSHService):
         @type channel:      subclass of C{SSHChannel}
         @type bytesToAdd:   C{int}
         """
-        if not self.channelsToRemoteChannel.has_key(channel):
+        if channel.localClosed:
             return # we're already closed
         self.transport.sendPacket(MSG_CHANNEL_WINDOW_ADJUST, struct.pack('>2L', 
                                     self.channelsToRemoteChannel[channel], 
@@ -298,7 +307,7 @@ class SSHConnection(service.SSHService):
         @type channel:  subclass of C{SSHChannel}
         @type data:     C{str}
         """
-        if not self.channelsToRemoteChannel.has_key(channel):
+        if channel.localClosed:
             return # we're already closed
         self.transport.sendPacket(MSG_CHANNEL_DATA, struct.pack('>L', 
                                     self.channelsToRemoteChannel[channel])+ \
@@ -314,7 +323,7 @@ class SSHConnection(service.SSHService):
         @type dataType: C{int}
         @type data:     C{str}
         """
-        if not self.channelsToRemoteChannel.has_key(channel):
+        if channel.localClosed:
             return # we're already closed
         self.transport.sendPacket(MSG_CHANNEL_EXTENDED_DATA, struct.pack('>2L', 
                             self.channelsToRemoteChannel[channel],dataType) \
@@ -326,8 +335,9 @@ class SSHConnection(service.SSHService):
 
         @type channel:  subclass of C{SSHChannel}
         """
-        if not self.channelsToRemoteChannel.has_key(channel):
+        if channel.localClosed:
             return # we're already closed
+        log.msg('sending eof')
         self.transport.sendPacket(MSG_CHANNEL_EOF, struct.pack('>L', 
                                     self.channelsToRemoteChannel[channel]))
 
@@ -337,8 +347,9 @@ class SSHConnection(service.SSHService):
 
         @type channel:  subclass of C{SSHChannel}
         """
-        if not self.channelsToRemoteChannel.has_key(channel):
+        if channel.localClosed:
             return # we're already closed
+        log.msg('sending close %i' % channel.id)
         self.transport.sendPacket(MSG_CHANNEL_CLOSE, struct.pack('>L', 
                                     self.channelsToRemoteChannel[channel]))
         channel.localClosed = 1
@@ -346,7 +357,8 @@ class SSHConnection(service.SSHService):
             del self.localToRemoteChannel[channel.id]
             del self.channels[channel.id]
             del self.channelsToRemoteChannel[channel]
-            channel.closed()
+            self.deferreds[localChannel] = []
+            log.callWithLogger(channel, channel.closed)
 
     # methods to override
     def getChannel(self, channelType, windowSize, maxPacket, data):

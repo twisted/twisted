@@ -75,6 +75,11 @@ class ISession(Interface):
         Called when the size of the remote screen has changed.
         """
 
+    def eofReceived(self):
+        """
+        Called when the other side has indicated no more data will be sent.
+        """
+        
     def closed(self):
         """
         Called when the session is closed.

@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.test.test_conch -*-
 from interfaces import IConchUser
 from error import ConchError
 from ssh.connection import OPEN_UNKNOWN_CHANNEL_TYPE
@@ -12,7 +13,7 @@ class ConchUser:
     def lookupChannel(self, channelType, windowSize, maxPacket, data):
         klass = self.channelLookup.get(channelType, None)
         if not klass:
-            raise ConchError("unknown channel type", OPEN_UNKNOWN_CHANNEL_TYPE)
+            raise ConchError(OPEN_UNKNOWN_CHANNEL_TYPE, "unknown channel")
         else:
             return klass(remoteWindow = windowSize, 
                          remoteMaxPacket = maxPacket, 

@@ -36,52 +36,55 @@ class SSHSession(channel.SSHChannel):
     def __init__(self, *args, **kw):
         channel.SSHChannel.__init__(self, *args, **kw)
         self.buf = ''
+        self.client = None
         self.session = ISession(self.avatar)
 
     def request_subsystem(self, data):
         subsystem = common.getNS(data)[0]
+        log.msg('asking for subsystem "%s"' % subsystem)
         client = self.avatar.lookupSubsystem(subsystem, data)
         if client:
             pp = SSHSessionProcessProtocol(self)
             proto = wrapProcessProtocol(pp)
             client.makeConnection(proto)
             pp.makeConnection(wrapProtocol(client))
-            log.msg('starting subsystem %s'%subsystem)
             self.client = pp
             return 1
         else:
-            log.msg('failed to get subsystem %s'%subsystem)
+            log.msg('failed to get subsystem')
             return 0
 
     def request_shell(self, data):
+        log.msg('getting shell')
         try:
-            self.client = SSHSessionProcessProtocol(self)
-            self.session.openShell(self.client)
+            pp = SSHSessionProcessProtocol(self)
+            self.session.openShell(pp)
         except:
-            log.msg('error getting shell:')
             log.deferr()
             return 0
         else:
+            self.client = pp
             return 1
 
     def request_exec(self, data):
         f,data = common.getNS(data)
+        log.msg('executing command "%s"' % f)
         try:
-            self.client = SSHSessionProcessProtocol(self)
-            self.session.execCommand(self.client, f)
+            pp = SSHSessionProcessProtocol(self)
+            self.session.execCommand(pp, f)
         except:
-            log.msg('error executing command: %s' % f)
             log.deferr()
             return 0
         else:
+            self.client = pp
             return 1
 
     def request_pty_req(self, data):
         term, windowSize, modes = parseRequest_pty_req(data)
+        log.msg('pty request: %s %s' % (term, windowSize))
         try:
             self.session.getPty(term, windowSize, modes) 
         except:
-            log.msg('error getting pty')
             log.err()
             return 0
         else:
@@ -100,7 +103,7 @@ class SSHSession(channel.SSHChannel):
             return 1
 
     def dataReceived(self, data):
-        if not hasattr(self, 'client'):
+        if not self.client:
             #self.conn.sendClose(self)
             self.buf += data
             return
@@ -108,19 +111,23 @@ class SSHSession(channel.SSHChannel):
 
     def extReceived(self, dataType, data):
         if dataType == connection.EXTENDED_DATA_STDERR:
-            if hasattr(self, 'client') and hasattr(self.client.transport, 'writeErr'):
+            if self.client and hasattr(self.client.transport, 'writeErr'):
                 self.client.transport.writeErr(data)
         else:
             log.msg('weird extended data: %s'%dataType)
 
+    def eofReceived(self):
+        self.session.eofReceived()
+
     def closed(self):
         self.session.closed()
 
-    def eofReceived(self):
-        self.loseConnection() # don't know what to do with this
+    #def closeReceived(self):
+    #    self.loseConnection() # don't know what to do with this
 
     def loseConnection(self):
-        self.client.transport.loseConnection()
+        if self.client:
+            self.client.transport.loseConnection()
         channel.SSHChannel.loseConnection(self)
 
 class _ProtocolWrapper(protocol.ProcessProtocol):

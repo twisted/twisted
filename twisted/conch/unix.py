@@ -223,6 +223,10 @@ class SSHSessionForUnixConchUser:
                 attr[tty.CC][ttyval] = chr(modeValue)
         tty.tcsetattr(pty.fileno(), tty.TCSANOW, attr)
 
+    def eofReceived(self):
+        if self.pty:
+            self.pty.closeStdin()
+
     def closed(self):
         if self.pty:
             self.pty.loseConnection()
