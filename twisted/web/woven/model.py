@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-__version__ = "$Revision: 1.49 $"[11:-2]
+__version__ = "$Revision: 1.50 $"[11:-2]
 
 import types
 import weakref
@@ -222,12 +222,6 @@ class Model:
         lookupSubmodel/getSubmodel know about, so they can use it as a
         cache.
         """
-        if value is None:
-            warnings.warn("Warning! setSubmodel should now take the request as the first argument")
-            value = name
-            name = request
-            request = None
-
         if self.submodelCheck(request, name):
             if self.submodels.has_key(name):
                 del self.submodels[name]
