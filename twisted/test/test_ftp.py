@@ -169,8 +169,6 @@ class ConnectedFTPServer(object):
         ds.factory = ftp.DTPFactory(self.s)
         self.s.dtpFactory = ds.factory
 
-        self.s.TestingSoJustSkipTheReactorStep = True
-
         ds.makeConnection(CustomFileWrapper(self.dsio))
         
         dc = Dummy()

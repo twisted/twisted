@@ -625,13 +625,12 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             phost = self.transport.getPeer()[1]
             self.dtpFactory = DTPFactory(pi=self, peerHost=phost)
             self.dtpFactory.setTimeout(self.dtpTimeout)
-        if not hasattr(self, 'TestingSoJustSkipTheReactorStep'):    # to allow for testing
-            if self.dtpTxfrMode == PASV:    
-                self.dtpPort = reactor.listenTCP(0, self.dtpFactory)
-            elif self.dtpTxfrMode == PORT: 
-                self.dtpPort = reactor.connectTCP(self.dtpHostPort[1], self.dtpHostPort[2])
-            else:
-                log.err('SOMETHING IS SCREWY: _createDTP')
+        if self.dtpTxfrMode == PASV:    
+            self.dtpPort = reactor.listenTCP(0, self.dtpFactory)
+        elif self.dtpTxfrMode == PORT: 
+            self.dtpPort = reactor.connectTCP(self.dtpHostPort[1], self.dtpHostPort[2])
+        else:
+            log.err('SOMETHING IS SCREWY: _createDTP')
 
         d = self.dtpFactory.deferred        
         d.addCallback(debugDeferred, 'dtpFactory deferred')
