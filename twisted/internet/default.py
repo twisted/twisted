@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.37 2002/09/02 08:07:13 glyph Exp $
+# $Id: default.py,v 1.38 2002/09/06 09:13:22 itamarst Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -200,7 +200,7 @@ class PosixReactorBase(ReactorBase):
         signal.signal(signal.SIGINT, self.sigInt)
         signal.signal(signal.SIGTERM, self.sigTerm)
 
-        # Catch Ctrl-Break in windows (only available in 2.2b1 onwards)
+        # Catch Ctrl-Break in windows (only available in Python 2.2 and up)
         if hasattr(signal, "SIGBREAK"):
             signal.signal(signal.SIGBREAK, self.sigBreak)
 
@@ -429,7 +429,7 @@ class SelectReactor(PosixReactorBase):
     """A select() based reactor - runs on all POSIX platforms and on Win32.
     """
 
-    __implements__ = (ReactorBase.__implements__, IReactorFDSet)
+    __implements__ = (PosixReactorBase.__implements__, IReactorFDSet)
 
     def _preenDescriptors(self):
         log.msg("Malformed file descriptor found.  Preening lists.")

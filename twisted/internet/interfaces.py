@@ -95,6 +95,22 @@ class IReactorSSL(Interface):
     def connectSSL(self, host, port, factory, contextFactory, timeout=30, bindAddress=None):
         """Connect a client Protocol to a remote SSL socket.
 
+        Arguments:
+
+          * host: a host name
+
+          * port: a port number
+
+          * factory: a twisted.internet.protocol.ClientFactory instance
+
+          * contextFactory: a twisted.internet.ssl.ContextFactory object.
+
+          * timeout: number of seconds to wait before assuming the connection
+            has failed.
+
+          * bindAddress: a (host, port) tuple of local address to bind to, or
+            None.
+
         Returns a IConnector.
         """
 
@@ -113,16 +129,39 @@ class IReactorUNIX(Interface):
         """Connect a client protocol to a UNIX socket.
 
         Returns a IConnector.
+
+        Arguments:
+
+          * address: a path to a unix socket on the filesystem.
+
+          * factory: a twisted.internet.protocol.ClientFactory instance
+
+          * timeout: number of seconds to wait before assuming the connection
+            has failed.
+
         """
 
     def listenUNIX(address, factory, backlog=5):
         """Listen on a UNIX socket.
+
+        Arguments:
+
+          * address: a path to a unix socket on the filesystem.
+
+          * factory: a twisted.internet.protocol.Factory instance.
+
+          * backlog: number of connections to allow in backlog.
         """
 
 
 class IReactorUDP(Interface):
     """UDP socket methods.
+
+    IMPORTANT: This interface is not stable! It will very likely change
+    in the future. Suggestions on how to support UDP in a nice way
+    will be much appreciated.
     """
+    
     def listenUDP(self, port, factory, interface='', maxPacketSize=8192):
         """Connects a given protocol Factory to the given numeric UDP port.
 
@@ -160,6 +199,8 @@ class IReactorProcess(Interface):
 
           * path: the path to run the subprocess in - defaults to the current directory.
 
+        The following arguments will only be available on POSIX systems:
+        
           * uid: user ID to run the subprocess as.
 
           * gid: group ID to run the subprocess as.
@@ -178,7 +219,7 @@ class IReactorTime(Interface):
 
         Arguments:
 
-          * delay: the number of seconds to wait.
+          * delay: the number of seconds to wait (a float).
 
           * callable: the callable object to call later.
 
@@ -188,11 +229,14 @@ class IReactorTime(Interface):
 
         Returns:
 
-          An ID that can be used to cancel the call, using cancelCallLater.
+          An IDelayedCall object - you can call this object's cancel()
+          method to cancel the scheduled call.
         """
 
     def cancelCallLater(self, callID):
-        """Cancel a call that would happen later.
+        """This method is deprecated.
+        
+        Cancel a call that would happen later.
 
         Arguments:
 
@@ -200,8 +244,22 @@ class IReactorTime(Interface):
             wil be used to cancel a specific call.
 
         Will raise ValueError if the callID is not recognized.
+        """
 
-        This method is deprecated.
+
+class IDelayedCall(Interface):
+    """A scheduled call.
+
+    There are probably other useful methods we can add to this interface,
+    suggestions are welcome.
+    """
+
+    def cancel(self):
+        """Cancel the scheduled call.
+
+        Will raise twisted.internet.error.AlreadyCalled if the call has already
+        happened.  Will raise twisted.internet.error.AlreadyCanceled if the
+        call has already been cancelled.
         """
 
 
