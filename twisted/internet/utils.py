@@ -26,6 +26,7 @@ try:
 except ImportError:
     import StringIO
 
+from zope.interface import implements
 
 def _callProtocolWithDeferred(protocol, executable, args, env, path, reactor):
     d = defer.Deferred() 
@@ -124,7 +125,7 @@ class _SRVConnector_ClientFactoryWrapper:
 class SRVConnector:
     """A connector that looks up DNS SRV records. See RFC2782."""
 
-    __implements__ = interfaces.IConnector
+    implements(interfaces.IConnector)
 
     stopAfterDNS=0
 
