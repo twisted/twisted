@@ -1,5 +1,9 @@
 2003-04-23  Brian Warner  <warner@lothar.com>
 
+	* twisted/internet/base.py (ReactorBase.suggestThreadPoolSize):
+	don't let suggestThreadPoolSize(0) be the only reason threads are
+	initialized.
+
 	* twisted/python/log.py (err): always log Failures to the logfile. If
 	we're doing _keepErrors, then also add them to _keptErrors.
 

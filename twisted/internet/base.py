@@ -381,6 +381,8 @@ class ReactorBase:
         self.threadpool.dispatch(log.logOwner.owner(), callable, *args, **kwargs)
 
     def suggestThreadPoolSize(self, size):
+        if size == 0 and not self.threadpool:
+            return
         if not self.threadpool:
             self._initThreadPool()
         theThreadPool = self.threadpool
