@@ -311,7 +311,8 @@ def objectType(obj):
     @rtype:     C{str}
     """
     keyDataMapping = {
-        ('n', 'e', 'd', 'p', 'q'): 'ssh-rsa', 
+        ('n', 'e', 'd', 'p', 'q'): 'ssh-rsa',
+        ('n', 'e', 'd', 'p', 'q', 'u'): 'ssh-rsa',
         ('y', 'g', 'p', 'q', 'x'): 'ssh-dss'
     }
     return keyDataMapping[tuple(obj.keydata)]
