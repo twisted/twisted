@@ -23,7 +23,7 @@ class SocketPort(styles.Ephemeral):
     type = None
     proto = None
     accepting = 0
-    dead = 0
+    disconnected = 0
     sessionno = 0
     addr = None
     factory = None
@@ -76,11 +76,11 @@ class SocketPort(styles.Ephemeral):
         if isinstance(err, error.NonFatalException):
             self.startAccepting() # delay or just fail?
         else:
-            if not self.dead:
+            if not self.disconnected:
                 self.stopListening()
 
     def stopListening(self):
-        self.dead = 1
+        self.disconnected = 1
         self.stopAccepting()
         self.socket.close()
         log.msg('(Port %r Closed)' % address.getPort(self.addr, self.af, self.type, self.proto))

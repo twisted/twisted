@@ -98,3 +98,6 @@ class SocketConnector(BaseConnector):
     def getDestination(self):
         address.getFull(self.addr, self.af, self.type, self.proto)
 
+    def loseConnection(self):
+        self.sock_transport.loseConnection()
+

@@ -1,7 +1,7 @@
 from sets import Set
 import warnings, socket
 
-from twisted.python import log
+from twisted.python import log, failure
 from twisted.persisted import styles
 from twisted.internet import main, defer
 
@@ -237,14 +237,14 @@ class ConnectedSocket(RWHandle):
                 raise
 
     def loseConnection(self):
-        print "XXXConnectedSocket.loseConnection(%s)" % (self,)
+        print "ConnectedSocket.loseConnection(%s)" % (self,)
         def callback():
             self.removeBufferCallback(callback, "buffer empty")
             try:
                 self.socket.shutdown(2)
             except socket.error:
                 pass
-            self.stopWorking(main.CONNECTION_DONE)
+            self.stopWorking(failure.Failure(main.CONNECTION_DONE))
             self.disconnecting = 0
             self.lconn_deferred.callback(None)
             del self.lconn_deferred
@@ -255,5 +255,6 @@ class ConnectedSocket(RWHandle):
             self.disconnecting = 1
             return self.lconn_deferred
         else:
+            self.stopWorking(failure.Failure(main.CONNECTION_DONE))
             return None
 

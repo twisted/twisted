@@ -5,6 +5,9 @@ import struct
 from twisted.internet import defer
 from twisted.python import log
 
+from twisted import internet
+import twisted.internet.error # this enables access to name "internet.error"
+
 from getsockinfo import getsockinfo
 import error
 
@@ -43,9 +46,11 @@ class OverlappedOp(defer.Deferred):
             if ret in (error.ERROR_INVALID_USER_BUFFER, error.ERROR_NOT_ENOUGH_MEMORY):
 #                print "%s errbacks NonFatalException" % (self,)
                 self.errback(error.NonFatalException())
-            elif ret == error.ERROR_OPERATION_ABORTED:
+            elif ret in (error.ERROR_OPERATION_ABORTED, error.ERROR_CONNECTION_ABORTED):
 #                print "%s errbacks OperationCancelledException" % (self,)
                 self.errback(error.OperationCancelledException())
+            elif ret == error.ERROR_CONNECTION_REFUSED:
+                self.errback(internet.error.ConnectionRefusedError())
             elif ret == error.ERROR_NETNAME_DELETED:
 #                print "%s errbacks HandleClosedException" % (self,)
                 self.errback(error.HandleClosedException())
@@ -55,7 +60,7 @@ class OverlappedOp(defer.Deferred):
             return True
         elif fIo and bytes == 0:
 #                print "%s errbacks HandleClosedException" % (self,)
-                self.errback(error.HandleClosedException())
+                self.errback(internet.error.ConnectionDone())
                 return True
         else:
             return False

@@ -353,7 +353,7 @@ static int makesockaddr(int sock_family, PyObject *args, struct sockaddr **addr_
             PyErr_SetString(PyExc_ValueError, "Can't parse ip address string");
             return 0;
         }
-//        printf("makesockaddr setting addr, %lu, %d, %hu\n", result, AF_INET, htons((short)port));
+        printf("makesockaddr setting addr, %lu, %d, %hu\n", result, AF_INET, htons((short)port));
         addr->sin_addr.s_addr = result;
         addr->sin_family = AF_INET;
         addr->sin_port = htons((short)port);
