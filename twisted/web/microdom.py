@@ -479,7 +479,7 @@ class MicroDOMParser(XMLParser):
         if self.caseInsensitive:
             name = name.lower()
         if (self.beExtremelyLenient and isinstance(parent, Element) and
-            parent.tagName in self.laterClosers and
+            parent.tagName.has_key(self.laterClosers) and
             name in self.laterClosers[parent.tagName]):
             self.gotTagEnd(parent.tagName)
             parent = self._getparent()
