@@ -48,6 +48,7 @@ class Range(unittest.TestCase):
         self.request = FakeRequest()
 
     def testBodyLength(self):
+        self.request._headers['range'] = 'bytes=0-1999'
         self.file.render(self.request)
         assertEquals(len(self.request._written), 2000)
 
