@@ -286,6 +286,7 @@ def getOutputFileName(originalFileName, outputExtension):
     return os.path.splitext(originalFileName)[0]+outputExtension
 
 def makeSureDirectoryExists(filename):
+    filename = os.path.abspath(filename)
     dirname = os.path.dirname(filename)
     if (not os.path.exists(dirname)):
         os.mkdir(dirname)
