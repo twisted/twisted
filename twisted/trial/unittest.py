@@ -145,9 +145,9 @@ class TestSuite:
     def addPackage(self, package):
         if type(package) is types.StringType:
             try:
-                package = reflect.namedModule(packageName)
+                package = reflect.namedModule(package)
             except ImportError, e:
-                self.couldNotImport[packageName] = e
+                self.couldNotImport[package] = e
                 return
         modGlob = os.path.join(os.path.dirname(package.__file__),
                                self.moduleGlob)
@@ -544,7 +544,6 @@ class TreeReporter(TextReporter):
         return '%s%s;1m%s%s0m' % ('\x1b[', color, text, '\x1b[')
 
     def endLine(self, message, color):
-        import string
         spaces = ' ' * (self.columns - len(self.currentLine) - len(message))
         self.write(spaces)
         self.writeln(self.color(message, color))
