@@ -12,16 +12,18 @@ class Interaction(gtk.GtkWindow):
         self.set_title("Manhole Interaction")
 
         vb = gtk.GtkVBox()
+        vp = gtk.GtkVPaned()
 
         self.output = gtk.GtkText()
         gtkim.defocusify(self.output)
-        vb.pack_start(gtkim.scrolltxt(self.output), 1,1,0)
+        vp.add1(gtkim.scrolltxt(self.output))
 
         self.input = gtk.GtkText()
         self.input.set_editable(gtk.TRUE)
-        vb.pack_start(gtkim.scrolltxt(self.input), 1,1,0)
+        vp.add2(gtkim.scrolltxt(self.input))
 
         self.send = gtkim.cbutton("Send", self.sendMessage)
+        vb.pack_start(vp, 1,1,0)
         vb.pack_start(self.send, 0,0,0)
 
         self.add(vb)
