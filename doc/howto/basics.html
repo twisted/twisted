@@ -105,7 +105,7 @@ option.</p>
 <p>When <code>twistd</code> runs, it records its process id in a
 <code>twistd.pid</code> file (this can be configured via a command line
 switch). In order to shutdown the <code>twistd</code> process, kill that
-pid (usually you would do <code>kill `twisted.pid`</code>). When the
+pid (usually you would do <code>kill `cat twisted.pid`</code>). When the
 process is killed in an orderly fashion it will leave behind the <q>shutdown
 Application</q> which is named the same as the original file with a
 <code>-shutdown</code> added to its base name. This contains the new
