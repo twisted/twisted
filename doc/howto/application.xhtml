@@ -177,7 +177,21 @@ myServer = internet.TCPServer(7001, myFactory)
 # Tie the service to the application
 myServer.setServiceParent(myService)
 </pre>
+
+<p>Note that <code>setServiceParent</code> will, in fact, automatically
+cast its argument to <code>IServiceCollection</code>. So, more succintly,
+the above code can be written:</p>
  
+<pre class="python">
+from twisted.application import service, internet
+from twisted.protocols import wire
+from twisted.internet import protocol
+application = service.Application("echo")
+myFactory = protocol.ServerFactory()
+myFactory.protocol = wire.Echo
+internet.TCPServer(7001, myFactory).setServiceParent(application)
+</pre>
+
 <p>TAC files are run with <code>twistd -y</code> or
 <code>twistd --python</code>. The <code>twistd</code> manpage
 has more information, but a common way to run is
