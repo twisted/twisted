@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.49 2002/11/17 04:15:20 itamarst Exp $
+# $Id: default.py,v 1.50 2002/11/17 04:31:24 spiv Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -275,9 +275,9 @@ class PosixReactorBase(ReactorBase):
     def listenUDP(self, port, protocol, interface='', maxPacketSize=8192):
         """Connects a given L{DatagramProtocol} to the given numeric UDP port.
 
-        @returns: object conforming to L{IListeningPort}.
-
         EXPERIMENTAL.
+
+        @returns: object conforming to L{IListeningPort}.
         """
         p = udp.Port(self, port, protocol, interface, maxPacketSize)
         p.startListening()
@@ -299,9 +299,9 @@ class PosixReactorBase(ReactorBase):
     def listenMulticast(self, port, protocol, interface='', maxPacketSize=8192):
         """Connects a given DatagramProtocol to the given numeric UDP port.
 
-        @return object conforming to IListeningPort.
-
         EXPERIMENTAL.
+
+        @returns: object conforming to IListeningPort.
         """
         p = udp.MulticastPort(self, port, protocol, interface, maxPacketSize)
         p.startListening()

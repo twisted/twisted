@@ -174,7 +174,7 @@ class IReactorMulticast(Interface):
     def listenMulticast(self, port, protocol, interface='', maxPacketSize=8192):
         """Connects a given DatagramProtocol to the given numeric UDP port.
 
-        @return object conforming to IListeningPort.
+        @returns: object conforming to IListeningPort.
         """
 
     def connectMulticast(self, remotehost, remoteport, protocol, localport=0,
