@@ -18,7 +18,7 @@ An asynchronous mapping to U{DB-API 2.0<http://www.python.org/topics/database/Da
 """
 
 from twisted.spread import pb
-from twisted.internet import task, main, defer
+from twisted.internet import task, defer
 from twisted.internet import threads
 from twisted.python import reflect, log, failure
 
@@ -66,7 +66,8 @@ class ConnectionPool(pb.Referenceable):
             del connkw['cp_max']
         else:
             max = 5
-        main.callDuringShutdown(self.close)
+        from twisted.internet import reactor
+        self.shutdownID = reactor.addSystemEventTrigger('during', 'shutdown', self.finalClose)
 
     def __getstate__(self):
         return {'dbapiName': self.dbapiName,
@@ -166,7 +167,13 @@ class ConnectionPool(pb.Referenceable):
             return result
 
     def close(self):
+        from twisted.internet import reactor
+        reactor.removeSystemEventTrigger(self.shutdownID)
+        self.finalClose()
+    def finalClose(self):
         for connection in self.connections.values():
+            log.msg('adbapi closing: %s %s%s' %
+                    ( self.dbapiName, self.connargs or '', self.connkw or ''))
             connection.close()
 
 class Augmentation:

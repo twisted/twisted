@@ -25,9 +25,6 @@ functionality so that I don't have to special-case it in all programs.
 import traceback
 import sys
 
-# sibling imports
-import hook
-
 class ThreadableError(Exception): pass
 
 class _Waiter:
@@ -211,6 +208,7 @@ def synchronize(*klasses):
         return
 
     if threaded:
+        import hook
         for klass in klasses:
 ##            hook.addPre(klass, '__init__', _synch_init)
             for methodName in klass.synchronized:
@@ -282,4 +280,5 @@ def registerAsIOThread():
 synchronize(_ThreadedWaiter)
 init(0)
 
+# sibling imports
 import log

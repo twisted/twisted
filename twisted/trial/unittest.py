@@ -152,6 +152,10 @@ class TestSuite:
                 # this will go live someday: tests should not leave
                 # lingering surprises
                 testCase.fail(msg)
+            if reactor.threadpool:
+                # should we warn here?
+                reactor.threadpool.stop()
+                reactor.threadpool = None
         except AssertionError, e:
             if ok:
                 output.reportFailure(testClass, method, sys.exc_info())
