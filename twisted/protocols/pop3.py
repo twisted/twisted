@@ -45,7 +45,7 @@ class POP3(basic.LineReceiver):
     def lineReceived(self, line):
         try:
             return apply(self.processCommand, tuple(string.split(line)))
-        except (ValueError, AttributeError, POP3Error), e:
+        except (ValueError, AttributeError, POP3Error, TypeError), e:
             self.failResponse('bad protocol or server: %s: %s' % (e.__class__.__name__, e))
 
     def processCommand(self, command, *args):
