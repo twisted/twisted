@@ -113,7 +113,7 @@ lecture = Lecture(
           Bullet("Old process exits"),
           Bullet("Client connection and namespace in-tact")),
     Slide("Migration - a demonstration - part 1",
-          Bullet(PythonSource("""\
+          Bullet(PythonInterpreter("""\
 >>> import sys, os
 >>> sys.version
 '2.2.3+ (#1, Feb 25 2004, 23:29:31) \n[GCC 3.3.3 (Debian)]'
@@ -121,13 +121,13 @@ lecture = Lecture(
 29713
 """))),
     Slide("Migration - a demonstration - part 2",
-          Bullet(PythonSource("""\
+          Bullet(PythonInterpreter("""\
 >>> import sys, os
 >>> sys.version
 '2.2.3+ (#1, Feb 25 2004, 23:29:31) \n[GCC 3.3.3 (Debian)]'
 >>> os.getpid()
 29713""")),
-          Bullet(PythonSource("""\
+          Bullet(PythonInterpreter("""\
 >>> sys.version
 '2.3.3 (#2, Jan 13 2004, 00:47:05) \n[GCC 3.3.3 20040110 (prerelease)
 (Debian)]'
@@ -137,12 +137,44 @@ lecture = Lecture(
     Slide("Migration walk-through - part 1",
           Bullet("Start a Twisted server running a telnet factory",
               SubBullet(Bullet(Shell("""\
-""")))),
-          Bullet("Connect with one or more telnet clients"),
-          Bullet("Start migration client",
-                 SubBullet(Bullet(""))),
-
-          Bullet("Migration complete")),
+Log opened.
+twistd 1.2.1alpha1 (/usr/bin/python2.3 2.3.3) starting up
+reactor class: twisted.internet.default.SelectReactor
+Loading test_conn.py...
+telnet.ShellFactory starting on 8000
+Starting factory &lt;telnet.ShellFactory instance at 0x405acf2c>
+Loaded.
+twisted.spread.pb.PBServerFactory starting on "'migrate'"
+Starting factory &lt;twisted.spread.pb.PBServerFactory instance at 0x405ccb4c>
+set uid/gid 1000/1000
+"""))))),
+    Slide("Migration walk-through - part 2",
+          Bullet("Connect to the server with a telnet client",
+                 SubBullet(Bullet(Shell("""\
+server.ServerFactory starting on "'/tmp/tmp4mUJ49'"
+Starting factory &lt;server.ServerFactory instance at 0x405a4d8c>
+Jellying &lt;Shell #0 on 8000>
+Jellying &lt;telnet.ShellFactory on 8000>
+"""))))),
+    Slide("Migration walk-through - part 3",
+          Bullet("Start a migration client",
+                 SubBullet(Bullet(Shell("""\
+Starting factory &lt;twisted.spread.pb.PBClientFactory instance at 0x4054090c>
+Starting factory &lt;client.ClientFactory instance at 0x4059ce4c>
+Owned server &lt;twisted.manhole.telnet.Shell instance at 0x405a0e4c>
+Stopping factory &lt;twisted.spread.pb.PBClientFactory instance at 0x4054090c>
+Stopping factory &lt;client.ClientFactory instance at 0x4059ce4c>
+"""))))),
+    Slide("Migration walk-through - part 4",
+          Bullet("Server shuts down",
+                 SubBullet(Bullet(Shell("""\
+(Port 'migrate' Closed)
+Stopping factory &lt;twisted.spread.pb.PBServerFactory instance at 0x405ccb4c>
+(Port '/tmp/tmp4mUJ49' Closed)
+Stopping factory &lt;server.ServerFactory instance at 0x405a4d8c>
+Main loop terminated.
+Server Shut Down.
+"""))))),
     Slide("Integration with existing software",
           Bullet("Serialization code should be kept separate from application code"),
           Bullet("Few changes to application code are required",

@@ -16,7 +16,6 @@ def handleFailedOwn(failure, avatar, name):
 
 def cbOwnedServer(result, port):
     print 'Owned server', port
-    print vars(port)
 
 def cbGetServer(port, avatar, sname):
     return avatar.callRemote('gotServer', sname

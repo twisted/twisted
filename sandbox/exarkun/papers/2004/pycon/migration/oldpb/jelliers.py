@@ -86,11 +86,10 @@ class _NewStyleDummy(object):
 def AddressUnjellier(unjellier, jellyList):
     klass = reflect.namedAny(jellyList[0])
     inst = _NewStyleDummy()
-    print klass
     inst.__class__ = klass
     state = unjellier.unjelly(jellyList[1])
     inst.__dict__ = state
-    
+
     return inst
 
 jelly.setUnjellyableForClass('twisted.internet.address.IPv4Address', AddressUnjellier)
@@ -175,15 +174,12 @@ def handleToSocket(handle, addressFamily, socketType):
 READ = 1
 WRITE = 2
 def socketInMyPocket(skt, instance, attribute, mode):
-    print 'Socketing', instance
     setattr(instance, attribute, skt)
     instance.fileno = skt.fileno
     if mode & READ:
-        print 'Reading', instance
         instance.startReading()
     if mode & WRITE:
         instance.startWriting()
-        print 'Writing', instance
 
 class _DummyClass:
     pass

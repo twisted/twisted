@@ -18,7 +18,6 @@ class Server(unix.Server):
         @param fileno: An iterable of the file descriptors to pass.
         """
         fileno = list(fileno)
-        print 'Sending', fileno
         payload = struct.pack("%di" % len(fileno), *fileno)
         r = sendmsg(self.fileno(), data, 0, (socket.SOL_SOCKET, SCM_RIGHTS, payload))
         return r
