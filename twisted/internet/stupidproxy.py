@@ -34,9 +34,11 @@ class StupidProtocol(protocol.Protocol):
         self.peer = peer
 
     def connectionLost(self):
+        self.peer.loseConnection()
         del self.peer
 
     def dataReceived(self, data):
+        print `data`
         self.peer.write(data)
 
 
