@@ -756,13 +756,10 @@ class FTPClient(basic.LineReceiver):
             ftpCommand.deferred.addErrback(self.fail).arm()
         
     def queueCommand(self, ftpCommand):
-        if self.actionQueue != [] or self.transport is None:
-            self.actionQueue.append(ftpCommand)
-        else:
-            self.actionQueue.append(ftpCommand)
+        self.actionQueue.append(ftpCommand)
+        if (len(self.actionQueue) == 1 and self.transport is not None and
+            self.nextDeferred is None):
             self.sendNextCommand()
-            #self.nextDeferred = ftpCommand.deferred
-            #self.sendLine(ftpCommand.command)
 
     def popCommandQueue(self):
         if self.actionQueue:
@@ -809,6 +806,8 @@ class FTPClient(basic.LineReceiver):
             # the host and port numbers later (see generatePortCommand)
             portCmd = FTPCommand('PORT')
             portCmd.protocol = protocol
+            portCmd.realDeferred = Deferred()
+            portCmd.deferred.addErrback(portCmd.realDeferred.errback)
             self.queueCommand(portCmd)
 
             # Create dummy functions for the next callback to call.  
@@ -819,12 +818,10 @@ class FTPClient(basic.LineReceiver):
             
             cmd = FTPCommand(command)
             # Ensure that the connection always gets closed
-            cmd.deferred.addCallbacks(lambda result, portCmd=portCmd: 
-                                          portCmd.loseConnection() or result,
-                                      portCmd.fail)
-            self.queueCommand(cmd)
+            cmd.deferred.addErrback(portCmd.fail)
 
-            return cmd.deferred
+            self.queueCommand(cmd)
+            return portCmd.realDeferred
 
     def generatePortCommand(self, portCmd):
         # Start listening on a port
@@ -835,9 +832,14 @@ class FTPClient(basic.LineReceiver):
                 self.protocol.factory = self
                 return self.protocol
         FTPDataPortFactory.protocol = portCmd.protocol
+        oldCL = portCmd.protocol.connectionLost
+        def newCL(oldCL=oldCL, portCmd=portCmd):
+            oldCL()
+            portCmd.realDeferred.callback(portCmd.protocol)
+        portCmd.protocol.connectionLost = newCL
         listener = FTPDataPort(0, FTPDataPortFactory())
+        listener.deferred = portCmd.realDeferred
         listener.startListening()
-        portCmd.loseConnection = listener.loseConnection
         portCmd.fail = listener.fail
 
         # Construct crufty FTP magic numbers that represent host & port
@@ -932,5 +934,26 @@ class FTPClient(basic.LineReceiver):
             
         # Run the next command
         self.sendNextCommand()
-            
+        
+
+class FTPFileListProtocol(basic.LineReceiver):
+    # This is the evil required to match
+    # "-rw-r--r--   1 root     other        531 Jan 29 03:26 README"
+    # If you need different evil for a wacky FTP server, you can override this.
+    fileLinePattern = re.compile(
+        r'^(?P<filetype>.)(?P<perms>.{9})\s+\d*\s*'
+        r'(?P<owner>\S+)\s+(?P<group>\S+)\s+(?P<size>\d+)\s+'
+        r'(?P<date>.*)\s+(?P<filename>.*)\r?$'
+    )
+    delimiter = '\n'
+
+    def __init__(self):
+        self.files = []
+
+    def lineReceived(self, line):
+        match = re.match(self.fileLinePattern, line)
+        if match:
+            dict = match.groupdict()
+            dict['size'] = int(dict['size'])
+            self.files.append(dict)
 

@@ -20,9 +20,10 @@ An example of using the FTP client
 """
 
 # Twisted imports
-from twisted.protocols.ftp import FTPClient
+from twisted.protocols.ftp import FTPClient, FTPFileListProtocol
 from twisted.protocols.protocol import Protocol
 from twisted.internet import main, tcp
+from twisted.python import usage
 
 # Standard library imports
 import string
@@ -39,7 +40,7 @@ class BufferingProtocol(Protocol):
     def dataReceived(self, data):
         self.buffer.write(data)
 
-def success(response, buffer=None):
+def success(response):
     print 'Success!  Got response:'
     print '---'
     if response is None:
@@ -47,44 +48,68 @@ def success(response, buffer=None):
     else:
         print string.join(response, '\n')
     print '---'
-    if buffer:
-        print 'Buffer is:'
-        print buffer.getvalue()
-    print '---'
+
 
 def fail(error):
     print 'Failed.  Error was:'
     print error
     main.shutDown()
 
+
+def showFiles(fileListProtocol):
+    print 'Processed file listing:'
+    for file in fileListProtocol.files:
+        print '    %s: %d bytes, %s' \
+              % (file['filename'], file['size'], file['date'])
+    print 'Total: %d files' % (len(fileListProtocol.files))
+
+def showBuffer(bufferProtocol):
+    print 'Got data:'
+    print bufferProtocol.buffer.getvalue()
+
+
+class Options(usage.Options):
+    optParameters = [['host', 'h', 'localhost'],
+                     ['port', 'p', 21],
+                     ['username', 'u', 'anonymous'],
+                     ['password', None, 'twisted@'],
+                     ['passive', None, 0],
+                     ['debug', 'd', 1],
+                    ]
+
+    
 # this connects the protocol to an FTP server running locally
 def run():
-    ftpClient = FTPClient('andrew', 'XXXX', passive=0)
-    ftpClient.debug = 1
-    tcp.Client("localhost", 21, ftpClient)
-
-    # Create a buffer
-    proto = BufferingProtocol()
+    # Get config
+    config = Options()
+    config.parseOptions()
+    config.port = int(config.port)
+    config.passive = int(config.passive)
+    config.debug = int(config.debug)
     
+    # Create the client
+    ftpClient = FTPClient(config.username, config.password, 
+                          passive=config.passive)
+    ftpClient.debug = config.debug
+    tcp.Client(config.host, config.port, ftpClient, 10.0)
+
     # Get the current working directory
-    ftpClient.pwd().addCallbacks(success, fail)
+    ftpClient.pwd().addCallbacks(success, fail).arm()
 
     # Get a detailed listing of the current directory
-    ftpClient.list('.', proto).addCallbacks(success, 
-                                            fail, 
-                                            callbackArgs=(proto.buffer,)).arm()
+    d = ftpClient.list('.', FTPFileListProtocol())
+    d.addCallbacks(showFiles, fail).arm()
 
     # Change to the parent directory
     ftpClient.cdup().addCallbacks(success, fail).arm()
     
-    # Create a fresh buffer
+    # Create a buffer
     proto = BufferingProtocol()
 
     # Get short listing of current directory, and quit when done
     d = ftpClient.nlst('.', proto)
-    #d.addCallbacks(fail, fail)
-    d.addCallbacks(success, fail, callbackArgs=(proto.buffer,))
-    d.addCallbacks(lambda result: main.shutDown())
+    d.addCallbacks(showBuffer, fail)
+    d.addCallback(lambda result: main.shutDown())
     d.arm()
     
     main.run()
