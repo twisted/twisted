@@ -45,11 +45,35 @@ class FailTest(AssertionError):
 # other assertions.  If you are in the habit of using the "assert" statement
 # in your tests, you probably want to leave this false.
 ASSERTION_IS_ERROR = 0
+if not ASSERTION_IS_ERROR:
+    FAILING_EXCEPTION = AssertionError
+else:
+    FAILING_EXCEPTION = FailTest
+
 
 # test results, passed as resultType to Reporter.reportResults()
 SKIP, EXPECTED_FAILURE, FAILURE, ERROR, UNEXPECTED_SUCCESS, SUCCESS = \
       "skip", "expected failure", "failure", "error", "unexpected success", \
       "success"
+
+def reactorCleanUp():
+    from twisted.internet import reactor
+    reactor.iterate() # flush short-range timers
+    pending = reactor.getDelayedCalls()
+    if pending:
+        msg = "\npendingTimedCalls still pending:\n"
+        for p in pending:
+            msg += " %s\n" % p
+        from warnings import warn
+        warn(msg)
+        for p in pending: p.cancel() # delete the rest
+        reactor.iterate() # flush them
+        testCase.fail(msg)
+    if components.implements(reactor, interfaces.IReactorThreads):
+        reactor.suggestThreadPoolSize(0)
+        if hasattr(reactor, 'threadpool') and reactor.threadpool:
+            reactor.threadpool.stop()
+            reactor.threadpool = None
 
 class TestCase:
     def setUp(self):
@@ -115,38 +139,189 @@ def isTestClass(testClass):
 def isTestCase(testCase):
     return isinstance(testCase, TestCase)
 
+def _runOneTest(testClass, testCase, method, runner):
+    """Run a single test"""
+        
+    # If the test has the todo flag set, then our failures and errors are
+    # expected.
+    todo = getattr(method, "todo", getattr(testCase, "todo", None))
+    if todo:
+        failure = EXPECTED_FAILURE
+        error = EXPECTED_FAILURE
+    else:
+        failure = FAILURE
+        error = ERROR
+
+    def runStage(stage, *args, **kwargs):
+        try:
+            stage(*args, **kwargs)
+        except FAILING_EXCEPTION, e:
+            return (failure, sys.exc_info())
+        except KeyboardInterrupt:
+            raise
+        except SkipTest, r:
+            reason = None
+            if len(r.args) > 0:
+                reason = r.args[0]
+            else:
+                reason = sys.exc_info()
+            return (SKIP, reason)
+        except:
+            return (error, sys.exc_info())
+        return None
+
+    def do(results, stage, *args, **kwargs):
+        result = runStage(stage, *args, **kwargs)
+        if result:
+            results.append(result)
+
+    def main(testCase, method):
+        if getattr(method, "skip", None):
+            raise SkipTest, method.skip
+        if getattr(testCase, "skip", None):
+            raise SkipTest, testCase.skip
+        testCase.setUp()
+        runner(method)
+
+    testCase.caseMethodName = method.__name__
+
+    failures = []
+    do(failures, main, testCase, method)
+    do(failures, testCase.tearDown)
+    do(failures, reactorCleanUp)
+        
+    # garbage collect now, to make sure any Deferreds with pending
+    # errbacks are caught and counted against this test, not some later
+    # one.
+    if gc: gc.collect()
+
+    for e in log.flushErrors():
+        failures.append((error, e))
+        
+    if not failures:
+        if todo: failures.append((UNEXPECTED_SUCCESS, todo))
+        else: failures.append((SUCCESS,))
+
+    return failures[0]
+
+
+def getClassAdapter(klass, interfaceClass, default=None):
+    adapterClass = components.getAdapterClassWithInheritance(klass, interfaceClass, default)
+    if adapterClass == None:
+        if default is None:
+            raise NotImplementedError('%s has no registered adapter for %s' %
+                                      (klass, interfaceClass))
+    return adapterClass(klass)
+    
+
+class ITestRunner(components.Interface):
+    def getTestClass(self):
+        pass
+    
+    def getMethods(self):
+        pass
+
+    def numTests(self):
+        pass
+
+    def runTest(self, method):
+        pass
+
+    def runTests(self, output):
+        pass
+
+
+class SingletonRunner:
+    __implements__ = (ITestRunner,)
+    def __init__(self, methodName):
+        if type(methodName) is types.StringType:
+            self.testClass = reflect.namedObject('.'.join(methodName.split('.')[:-1]))
+            methodName = methodName.split('.')[-1]
+            self.methodName
+        else:
+            self.testClass = method.im_class
+            self.methodName = method.__name__
+
+    def __str__(self):
+        return "%s.%s.%s" % (self.testClass.__module__, self.testClass.__name__,
+                             self.methodName)
+
+    def getMethods(self):
+        return [ self.methodName ]
+
+    def numTests(self):
+        return 1
+
+    def runTest(self, method):
+        assert method.__name__ == self.methodName
+        method()
+
+    def runTests(self, output):
+        testCase = self.testClass()
+        method = getattr(testCase, self.methodName)
+        output.reportStart(self.testClass, method)
+        results = _runOneTest(self.testClass, testCase, method, self.runTest)
+        output.reportResults(self.testClass, method, *results)
+
+
+class TestClassRunner:
+    __implements__ = (ITestRunner,)
+    methodPrefixes = ('test',)
+    
+    def __init__(self, testClass):
+        self.testClass = testClass
+        self.methodNames = []
+        for prefix in self.methodPrefixes:
+            self.methodNames.extend([ "%s%s" % (prefix, name) for name in
+                                      reflect.prefixedMethodNames(testClass, prefix)])
+
+    def __str__(self):
+        return "%s.%s" % (self.testClass.__module__, self.testClass.__name__)
+
+    def getTestClass(self):
+        return self.testClass
+
+    def getMethods(self):
+        return self.methodNames
+
+    def numTests(self):
+        return len(self.methodNames)
+
+    def runTest(self, method):
+        assert method.__name__ in self.methodNames
+        method()
+
+    def runTests(self, output):
+        self.testCase = self.testClass()
+        for methodName in self.methodNames:
+            method = getattr(self.testCase, methodName)
+            output.reportStart(self.testClass, method)
+            results = _runOneTest(self.testClass, self.testCase, method, self.runTest)
+            output.reportResults(self.testClass, method, *results)
+    
+components.registerAdapter(TestClassRunner, TestCase, ITestRunner)
+
 
 class TestSuite:
     methodPrefix = 'test'
     moduleGlob = 'test_*.py'
 
     def __init__(self):
-        self.testClasses = {}
         self.numTests = 0
         self.couldNotImport = {}
-        self.testMethods = []
-        if not ASSERTION_IS_ERROR:
-            self.failingExceptionType = AssertionError
-        else:
-            self.failingExceptionType = FailTest
+        self.tests = []
 
     def addMethod(self, method):
         """Add a single method of a test case class to this test suite.
         """
-        if type(method) is types.StringType:
-            klass = reflect.namedObject('.'.join(method.split('.')[:-1]))
-            methodName = method.split('.')[-1]
-        else:
-            klass = method.im_class
-            methodName = method.__name__
-        self.testMethods.append((klass, methodName))
-        self.numTests += 1
+        testAdapter = SingletonAdapter(method)
+        self.tests.append(testAdapter)
+        self.numTests += testAdapter.numTests()
 
     def addTestClass(self, testClass):
-        methods = [getattr(testClass, "%s%s" % (self.methodPrefix, name)) for name in
-                   reflect.prefixedMethodNames(testClass, self.methodPrefix)]
-        self.testClasses[testClass] = methods
-        self.numTests += len(methods)
+        testAdapter = getClassAdapter(testClass, ITestRunner)
+        self.tests.append(testAdapter)
+        self.numTests += testAdapter.numTests()
 
     def addModule(self, module):
         if type(module) is types.StringType:
@@ -175,116 +350,21 @@ class TestSuite:
             self.addModule(module)
 
 
-    def reactorCleanUp(self):
-        from twisted.internet import reactor
-        reactor.iterate() # flush short-range timers
-        pending = reactor.getDelayedCalls()
-        if pending:
-            msg = "\npendingTimedCalls still pending:\n"
-            for p in pending:
-                msg += " %s\n" % p
-            from warnings import warn
-            warn(msg)
-            for p in pending: p.cancel() # delete the rest
-            reactor.iterate() # flush them
-            testCase.fail(msg)
-        if components.implements(reactor, interfaces.IReactorThreads):
-            reactor.suggestThreadPoolSize(0)
-            if hasattr(reactor, 'threadpool') and reactor.threadpool:
-                reactor.threadpool.stop()
-                reactor.threadpool = None
-        
-
-    def runOneTest(self, testClass, testCase, method, output):
-        """Run a single test"""
-        
-        # If the test has the todo flag set, then our failures and errors are
-        # expected.
-        todo = getattr(method, "todo", getattr(testCase, "todo", None))
-        if todo:
-            failure = EXPECTED_FAILURE
-            error = EXPECTED_FAILURE
-        else:
-            failure = FAILURE
-            error = ERROR
-
-        def runStage(stage, *args, **kwargs):
-            try:
-                stage(*args, **kwargs)
-            except self.failingExceptionType, e:
-                return (failure, sys.exc_info())
-            except KeyboardInterrupt:
-                raise
-            except SkipTest, r:
-                reason = None
-                if len(r.args) > 0:
-                    reason = r.args[0]
-                else:
-                    reason = sys.exc_info()
-                return (SKIP, reason)
-            except:
-                return (error, sys.exc_info())
-            return None
-
-        def do(results, stage, *args, **kwargs):
-            result = runStage(stage, *args, **kwargs)
-            if result:
-                results.append(result)
-
-        def main(testCase, method):
-            if getattr(method, "skip", None):
-                raise SkipTest, method.skip
-            if getattr(testCase, "skip", None):
-                raise SkipTest, testCase.skip
-            testCase.setUp()
-            method(testCase)
-
-        testCase.caseMethodName = method.__name__
-
-        failures = []
-        do(failures, main, testCase, method)
-        do(failures, testCase.tearDown)
-        do(failures, self.reactorCleanUp)
-        
-        # garbage collect now, to make sure any Deferreds with pending
-        # errbacks are caught and counted against this test, not some later
-        # one.
-        if gc: gc.collect()
-
-        for e in log.flushErrors():
-            failures.append((error, e))
-
-        if not failures:
-            if todo: failures.append((UNEXPECTED_SUCCESS, todo))
-            else: failures.append((SUCCESS,))
-
-        output.reportResults(testClass, method, *failures[0])
-
     def run(self, output, seed = None):
         output.start(self.numTests)
-        testClasses = self.testClasses.keys()
-        testClasses.sort(lambda x,y: cmp((x.__module__, x.__name__),
-                                         (y.__module__, y.__name__)))
+        tests = self.tests
+        tests.sort(lambda x,y: cmp(str(x), str(y)))
 
         r = None
         if seed is not None:
             import random
             r = random.Random(seed)
-            r.shuffle(testClasses)
+            r.shuffle(tests)
             output.writeln('Running tests shuffled with seed %d' % seed)
 
-        ## Run all the single-method tests we want to run.
-        for testClass, methodName in self.testMethods:
-            testCase  = testClass()
-            method = getattr(testClass, methodName)
-            output.reportStart(testClass, method)
-            self.runOneTest(testClass, testCase, method, output)
-
-        for testClass in testClasses:
-            testCase = testClass()
-            for method in self.testClasses[testClass]:
-                output.reportStart(testClass, method)
-                self.runOneTest(testClass, testCase, method, output)
+        for test in tests:
+            test.runTests(output)
+        
         for name, exc in self.couldNotImport.items():
             output.reportImportError(name, exc)
 
@@ -300,8 +380,9 @@ def extract_tb(tb, limit=None):
     l = traceback.extract_tb(tb, limit)
     myfile = __file__.replace('.pyc','.py')
     # filename, line, funcname, sourcetext
-    while (l[0][0] == myfile) and (l[0][2] in ('runOneTest', 'runStage', 'main')):
+    while (l[0][0] == myfile) and (l[0][2] in ('_runOneTest', 'runStage', 'main', 'runTest')):
         del l[0]
+        
     if (l[-1][0] == myfile) and (l[-1][2] in _failureConditionals):
         del l[-1]
     return l
