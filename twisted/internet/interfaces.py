@@ -525,8 +525,7 @@ class ITransport(Interface):
 
         This indicates the other end of the connection.  TYPE indicates
         what sort of connection this is: "INET", "UNIX", or something
-        else.  "INET" tuples have 2 additional elements; hostname and
-        port.
+        else.
 
         Treat this method with caution.  It is the unfortunate
         result of the CGI and Jabber standards, but should not
@@ -546,10 +545,18 @@ class ITCPTransport(ITransport):
     """A TCP based transport."""
 
     def getTcpNoDelay(self):
-        """Return if TCP_NODELAY (Nagle's algorithm) is enabled."""
+        """Return if TCP_NODELAY is enabled."""
 
     def setTcpNoDelay(self, enabled):
-        """Enable/disable TCP_NODELAY (Nagle's algorithm)."""
+        """Enable/disable TCP_NODELAY.
+
+        Enabling TCP_NODELAY turns off Nagle's algorithm."""
+
+    def getHost(self):
+        """Returns tuple ('INET', host, port)."""
+
+    def getPeer(self):
+        """Returns tuple ('INET', host, port)."""
 
 
 class ISSLTransport(ITCPTransport):
