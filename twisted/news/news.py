@@ -21,7 +21,7 @@ Stability: semi-stable
 """
 
 from twisted.protocols import nntp
-from twisted.internet import protocol, reactor
+from twisted.internet import protocol, reactor, utils
 
 import time
 
@@ -79,7 +79,7 @@ class UsenetServerFactory(NNTPFactory):
 
 
     def startFactory(self):
-        self._updateCall = reactor.callLater(0, self.syncWithRemotes)
+        self._updateCall = utils.schedule(self.syncWithRemotes)
 
 
     def stopFactory(self):

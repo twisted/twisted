@@ -77,7 +77,7 @@ from twisted.web.woven import controller, utils, interfaces
 
 from twisted.internet import defer
 from twisted.python import failure
-from twisted.internet import reactor, defer
+from twisted.internet import reactor, defer, utils
 from twisted.python import log
 
 from twisted.web.server import NOT_DONE_YET
@@ -195,7 +195,7 @@ class DOMTemplate(Resource):
                 raise AttributeError, "%s does not define self.templateFile to operate on" % self.__class__
             self.d = self.lookupTemplate(request)
         # Schedule processing of the document for later...
-        reactor.callLater(0, self.handleDocument, request, self.d)
+        utils.schedule(self.handleDocument, request, self.d)
         #self.handleNode(request, self.d)
         #return str(self.d.toxml())
         

@@ -220,8 +220,8 @@ class Port(abstract.FileDescriptor):
         """
         self.stopReading()
         if self.connected:
-            from twisted.internet import reactor
-            reactor.callLater(0, self.connectionLost)
+            from twisted.internet import utils
+            utils.schedule(self.connectionLost)
 
     def connectionLost(self, reason=None):
         """Cleans up my socket.

@@ -40,10 +40,6 @@ def logError(err):
     log.err(err)
     return err
 
-def _sched(m, r):
-    from twisted.internet import reactor
-    reactor.callLater(0, m, r)
-
 def succeed(result):
     d = Deferred()
     d.callback(result)

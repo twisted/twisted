@@ -70,6 +70,7 @@ class RebuildTestCase(unittest.TestCase):
         else:
             b2 = myrebuilder.B()
             assert b2.b() == 'c'
+            print "MOSHE!!!!", b.b()
             assert b.b() == 'c'
         assert i.a() == 'd'
         assert a.a() == 'b'

@@ -59,8 +59,8 @@ class Reflector:
         # mainloop is not running.  I'm not sure what the correct behavior here
         # should be. --glyph
         
-        from twisted.internet import reactor
-        reactor.callLater(0, self._really_populate)
+        from twisted.internet import utils
+        utils.schedule(self._really_populate)
 
     def _really_populate(self):
         """Implement me to populate schema information for the reflector.
