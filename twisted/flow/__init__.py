@@ -10,3 +10,4 @@
 Twisted Flow: Generator support for data flows
 
 """
+__version__ = 'SVN-Trunk'

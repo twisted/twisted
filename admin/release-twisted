@@ -222,11 +222,15 @@ def createSubprojectDirectory(proj, version):
     sh('''
     ln -s `pwd`/Twisted.exp/twisted/%(proj)s/* %(sdir)s/twisted/%(proj)s
     rm %(sdir)s/twisted/%(proj)s/topfiles
+    rm %(sdir)s/twisted/%(proj)s/__init__.py
+    cp `pwd`/Twisted.exp/twisted/%(proj)s/__init__.py %(sdir)s/twisted/%(proj)s/
     ln -s `pwd`/Twisted.exp/twisted/%(proj)s/topfiles/* %(sdir)s
     rm %(sdir)s/setup.py
     cp `pwd`/Twisted.exp/twisted/%(proj)s/topfiles/setup.py %(sdir)s/
     ''' % locals())
     replaceInFile(os.path.join(sdir, 'setup.py'),
+                  'SVN-Trunk', version)
+    replaceInFile(os.path.join(sdir, 'twisted', proj, '__init__.py'),
                   'SVN-Trunk', version)
     if os.path.exists('Twisted.exp/doc/'+proj):
         sh('ln -s `pwd`/Twisted.exp/doc/%(proj)s %(sdir)s/doc' % locals())

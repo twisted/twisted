@@ -5,3 +5,4 @@
 
 """Twisted Words: a Twisted Chat service."""
 
+__version__ = 'SVN-Trunk'

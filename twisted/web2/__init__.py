@@ -8,7 +8,8 @@
 Twisted Web: a Twisted Web Server.
 
 """
-version = "2.0a3"
+__version__ = 'SVN-Trunk'
+version = __version__
 
 import compat, http, iweb, stream
 from twisted.python import components

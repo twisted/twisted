@@ -8,3 +8,5 @@
 Twisted X-ish: XML-ish DOM and XPath-ish engine
 
 """
+
+__version__ = 'SVN-Trunk'

@@ -11,3 +11,5 @@ compatibility will be added.
 
 procmon:monitor and restart processes
 """
+
+__version__ = 'SVN-Trunk'

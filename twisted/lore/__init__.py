@@ -16,3 +16,5 @@ Maintainer: U{Andrew Bennetts<spiv@twistedmatrix.com>}
 # Allow pickle output and input to minimize parses
 # Numbered headers
 # Navigational aides
+
+__version__ = 'SVN-Trunk'

@@ -15,3 +15,5 @@ twisted.protocols.raw and twisted.protocols.rawudp.
 Maintainer: U{Tommi Virtanen <mailto:tv@twistedmatrix.com>}
 
 """
+
+__version__ = 'SVN-Trunk'
