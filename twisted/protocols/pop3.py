@@ -49,18 +49,18 @@ import twisted.cred.credentials
 ##
 class APOPCredentials:
     __implements__ = (cred.credentials.IUsernamePassword,)
-    
+
     def __init__(self, magic, username, digest):
         self.magic = magic
         self.username = username
         self.digest = digest
-    
+
     def checkPassword(self, password):
         seed = self.magic + password
         my_digest = md5.new(seed).hexdigest()
         if my_digest == self.digest:
             return True
-        return False   
+        return False
 ##
 
 class _HeadersPlusNLines:
@@ -121,23 +121,23 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
     # A reference to the newcred Portal instance we will authenticate
     # through.
     portal = None
-    
+
     # Who created us
     factory = None
-    
+
     # The mailbox we're serving
     mbox = None
-    
+
     # Set this pretty low -- POP3 clients are expected to log in, download
     # everything, and log out.
     timeOut = 300
-    
+
     # Current protocol state
     state = "COMMAND"
-    
+
     # PIPELINE
     blocked = None
-    
+
     def connectionMade(self):
         if self.magic is None:
             self.magic = self.generateMagic()
@@ -184,12 +184,12 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         except (ValueError, AttributeError, POP3Error, TypeError), e:
             log.err()
             self.failResponse('bad protocol or server: %s: %s' % (e.__class__.__name__, e))
-    
+
     def processCommand(self, command, *args):
         if self.blocked is not None:
             self.blocked.append((command, args))
             return
-    
+
         command = string.upper(command)
         authCmd = command in self.AUTH_CMDS
         if not self.mbox and not authCmd:
@@ -210,7 +210,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
             "AUSPEX",
             "POTENCE",
         ]
-        
+
         if components.implements(self.factory, IServerFactory):
             # Oh my god.  We can't just loop over a list of these because
             # each has spectacularly different return value semantics!
@@ -222,7 +222,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
                 log.err()
             else:
                 baseCaps.append("IMPLEMENTATION " + str(v))
-            
+
             try:
                 v = self.factory.cap_EXPIRE()
             except NotImplementedError:
@@ -239,7 +239,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
                         v = str(v) + " USER"
                 v = str(v)
                 baseCaps.append("EXPIRE " + v)
-            
+
             try:
                 v = self.factory.cap_LOGIN_DELAY()
             except NotImplementedError:
@@ -254,7 +254,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
                         v = str(v) + " USER"
                 v = str(v)
                 baseCaps.append("LOGIN-DELAY " + v)
-            
+
             try:
                 v = self.factory.challengers
             except AttributeError:
@@ -287,10 +287,10 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         if not self.portal or not auth:
             self.failResponse("Unsupported SASL selected")
             return
-        
+
         self._auth = auth()
         chal = self._auth.getChallenge()
-        
+
         self.sendLine('+ ' + base64.encodestring(chal).rstrip('\n'))
         self.state = 'AUTH'
 
@@ -315,7 +315,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         d = defer.maybeDeferred(self.authenticateUserAPOP, user, digest)
         d.addCallbacks(self._cbMailbox, self._ebMailbox, callbackArgs=(user,)
         ).addErrback(self._ebUnexpected)
-    
+
     def _cbMailbox(self, (interface, avatar, logout), user):
         if interface is not IMailbox:
             self.failResponse('Authentication failed')
@@ -326,7 +326,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         self._onLogout = logout
         self.successResponse('Authentication succeeded')
         log.msg("Authenticated login for " + user)
-    
+
     def _ebMailbox(self, failure):
         failure = failure.trap(cred.error.LoginDenied, cred.error.LoginFailed)
         if failure is cred.error.LoginDenied:
@@ -334,7 +334,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         elif failure is cred.error.LoginFailed:
             self.failResponse('Authentication failed')
         log.msg("Denied login attempt from " + str(self.transport.getPeer()))
-    
+
     def _ebUnexpected(self, failure):
         self.failResponse('Server error: ' + failure.getErrorMessage())
         log.err(failure)
@@ -413,7 +413,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         self.blocked = []
         s.beginFileTransfer(fp, self.transport, self.transformChunk
         ).addCallback(self.finishedFileTransfer).addCallback(self._unblock).addErrback(log.err)
-    
+
     def do_RETR(self, i):
         self.highest = max(self.highest, i)
         resp, fp = self.getMessageFile(i)
@@ -434,7 +434,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         else:
             line = '.'
         self.sendLine(line)
-        
+
     def do_DELE(self, i):
         i = int(i)-1
         self.mbox.deleteMessage(i)
@@ -443,7 +443,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
     def do_NOOP(self):
         """Perform no operation.  Return a success code"""
         self.successResponse()
-    
+
     def do_RSET(self):
         """Unset all deleted message flags"""
         try:
@@ -454,7 +454,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         else:
             self.highest = 1
             self.successResponse()
-    
+
     def do_LAST(self):
         """Respond with the highest message access thus far"""
         # omg this is such a retarded protocol
@@ -471,17 +471,17 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
     def authenticateUserAPOP(self, user, digest):
         """Perform authentication of an APOP login.
-        
+
         @type user: C{str}
         @param user: The name of the user attempting to log in.
-        
+
         @type digest: C{str}
         @param digest: The response string with which the user replied.
-        
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked if the login is
         successful, and whose errback will be invoked otherwise.  The
-        callback will be passed a 3-tuple consisting of IMailbox, 
+        callback will be passed a 3-tuple consisting of IMailbox,
         an object implementing IMailbox, and a zero-argument callable
         to be invoked when this session is terminated.
         """
@@ -495,17 +495,17 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
     def authenticateUserPASS(self, user, password):
         """Perform authentication of a username/password login.
-        
+
         @type user: C{str}
         @param user: The name of the user attempting to log in.
-        
+
         @type password: C{str}
         @param password: The password to attempt to authenticate with.
-        
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked if the login is
         successful, and whose errback will be invoked otherwise.  The
-        callback will be passed a 3-tuple consisting of IMailbox, 
+        callback will be passed a 3-tuple consisting of IMailbox,
         an object implementing IMailbox, and a zero-argument callable
         to be invoked when this session is terminated.
         """
@@ -519,44 +519,44 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
 class IServerFactory(components.Interface):
     """Interface for querying additional parameters of this POP3 server.
-    
+
     Any cap_* method may raise NotImplementedError if the particular
     capability is not supported.  If cap_EXPIRE() does not raise
     NotImplementedError, perUserExpiration() must be implemented, otherwise
     they are optional.  If cap_LOGIN_DELAY() is implemented,
     perUserLoginDelay() must be implemented, otherwise they are optional.
-    
+
     @ivar challengers: A dictionary mapping challenger names to classes
     implementing C{IUsernameHashedPassword}.
     """
-    
+
     def cap_IMPLEMENTATION(self):
         """Return a string describing this POP3 server implementation."""
-    
+
     def cap_EXPIRE(self):
         """Return the minimum number of days messages are retained."""
-    
+
     def perUserExpiration(self):
         """Indicate whether message expiration is per-user.
-        
+
         @return: True if it is, false otherwise.
         """
-    
+
     def cap_LOGIN_DELAY(self):
         """Return the minimum number of seconds between client logins."""
-    
+
     def perUserLoginDelay(self):
         """Indicate whether the login delay period is per-user.
-        
+
         @return: True if it is, false otherwise.
-        """ 
+        """
 
 class IMailbox(components.Interface):
     """
     @type loginDelay: C{int}
     @ivar loginDelay: The number of seconds between allowed logins for the
-    user associated with this mailbox.  None 
-    
+    user associated with this mailbox.  None
+
     @type messageExpiration: C{int}
     @ivar messageExpiration: The number of days messages in this mailbox will
     remain on the server before being deleted.
@@ -564,11 +564,11 @@ class IMailbox(components.Interface):
 
     def listMessages(self, index=None):
         """Retrieve the size of one or more messages.
-        
+
         @type index: C{int} or C{None}
         @param index: The number of the message for which to retrieve the
         size (starting at 0), or None to retrieve the size of all messages.
-        
+
         @rtype: C{int} or any iterable of C{int}
         @return: The number of octets in the specified message, or an
         iterable of integers representing the number of octets in all the
@@ -577,45 +577,45 @@ class IMailbox(components.Interface):
 
     def getMessage(self, index):
         """Retrieve a file-like object for a particular message.
-        
+
         @type index: C{int}
         @param index: The number of the message to retrieve
-        
+
         @rtype: A file-like object
         """
-    
+
     def getUidl(self, index):
         """Get a unique identifier for a particular message.
-        
+
         @type index: C{int}
         @param index: The number of the message for which to retrieve a UIDL
-        
+
         @rtype: C{str}
         @return: A string of printable characters uniquely identifying for all
         time the specified message.
         """
-    
+
     def deleteMessage(self, index):
         """Delete a particular message.
-        
+
         This must not change the number of messages in this mailbox.  Further
         requests for the size of deleted messages should return 0.  Further
         requests for the message itself may raise an exception.
-        
+
         @type index: C{int}
         @param index: The number of the message to delete.
         """
-    
+
     def undeleteMessages(self):
         """Undelete any messages possible.
-        
+
         If a message can be deleted it, it should return it its original
         position in the message sequence and retain the same UIDL.
         """
 
     def sync(self):
         """Perform checkpointing.
-        
+
         This method will be called to indicate the mailbox should attempt to
         clean up any remaining deleted messages.
         """
