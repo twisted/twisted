@@ -7,10 +7,6 @@ import traceback
 
 from twisted.python import threadable, log
 
-# Sibling Imports
-
-import main
-
 class Task:
     """I am a set of steps that get executed.
 
@@ -90,3 +86,7 @@ if threadable.threaded:
 def doAllTasks():
     while theScheduler.tasks:
         theScheduler.runUntilCurrent()
+
+# Sibling Imports
+
+import main
