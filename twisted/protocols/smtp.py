@@ -444,9 +444,9 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
         lines = message.splitlines()
         lastline = lines[-1:]
         for line in lines[:-1]:
-            self.transport.write('%3.3d-%s\r\n' % (code, line))
-        self.transport.write('%3.3d %s\r\n' % (code,
-                                               lastline and lastline[0] or ''))
+            self.sendLine('%3.3d-%s' % (code, line))
+        self.sendLine('%3.3d %s' % (code,
+                                    lastline and lastline[0] or ''))
 
     def lineReceived(self, line):
         self.resetTimeout()
@@ -558,7 +558,9 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
 
     def _ebFromValidate(self, failure):
         if failure.check(SMTPBadSender):
-            self.sendCode(550, 'Cannot receive for specified address')
+            self.sendCode(failure.value.code,
+                          'Cannot receive for specified address %s: %s'
+                          % (repr(str(failure.value.addr)), failure.value.resp))
         elif failure.check(SMTPServerError):
             self.sendCode(failure.value.code, failure.value.resp)
         else:
@@ -632,7 +634,7 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
 
     def _ebToValidate(self, failure):
         if failure.check(SMTPBadRcpt):
-            self.sendCode(550, 'Cannot receive for specified address')
+            self.sendCode(failure.value.code, failure.value.resp)
         elif failure.check(SMTPServerError):
             self.sendCode(failure.value.code, failure.value.resp)
         else:
