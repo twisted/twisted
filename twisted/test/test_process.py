@@ -30,8 +30,8 @@ except ImportError:
     import StringIO
 
 # Twisted Imports
-from twisted.internet import reactor, protocol, error
-from twisted.python import util, runtime
+from twisted.internet import reactor, protocol, error, interfaces
+from twisted.python import util, runtime, components
 
 class TrivialProcessProtocol(protocol.ProcessProtocol):
     finished = 0
@@ -158,6 +158,7 @@ class ProcessTestCase(unittest.TestCase):
             reactor.iterate(0.01)
         self.assert_(hasattr(p, 'buffer'))
         self.assertEquals(len(p.buffer), len(p.s * 10))
+
 
 class TwoProcessProtocol(protocol.ProcessProtocol):
     finished = 0
@@ -444,10 +445,11 @@ class Win32ProcessTestCase(unittest.TestCase):
         self.assertEquals(p.outF.getvalue(), "out\nhello, world\nout\n")
 
 
-if runtime.platform.getType() != 'posix':
-    del PosixProcessTestCase
-    del PosixProcessTestCasePTY
-    del TestTwoProcessesPosix
+skipMessage = "wrong platform or reactor doesn't support IReactorProcess"
+if (runtime.platform.getType() != 'posix') or (not components.implements(reactor, interfaces.IReactorProcess)):
+    PosixProcessTestCase.skip = skipMessage
+    PosixProcessTestCasePTY.skip = skipMessage
+    TestTwoProcessesPosix.skip = skipMessage
 else:
     # do this before running the tests: it uses SIGCHLD and stuff internally
     lsOut = popen2.popen3("/bin/ls ZZXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")[2].read()
@@ -458,9 +460,12 @@ else:
         from twisted.internet import process
         signal.signal(signal.SIGCHLD, reactor._handleSigchld)
 
-if runtime.platform.getType() != 'win32':
-    del Win32ProcessTestCase
-    del TestTwoProcessesNonPosix
-else:
-    def testEcho(self): raise RuntimeError, "this test is disabled since it goes into infinite loop on windows :("
-    ProcessTestCase.testEcho = testEcho
+if (runtime.platform.getType() != 'win32') or (not components.implements(reactor, interfaces.IReactorProcess)):
+    Win32ProcessTestCase.skip = skipMessage
+    TestTwoProcessesNonPosix.skip = skipMessage
+
+if runtime.platform.getType() == 'win32':
+    ProcessTestCase.testEcho.im_func.todo = "goes into infinite loop in win32eventreactor :("
+
+if (not components.implements(reactor, interfaces.IReactorProcess)):
+    ProcessTestCase.skip = skipMessage
