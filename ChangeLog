@@ -3,6 +3,8 @@
 	* twisted/scripts/trial.py (Options.opt_reactor): make trial
 	accept the same reactor-name abbreviations as twistd does. Closes
 	issue69.
+	(top): add test-case-name tag
+
 	* doc/man/trial.1: document the change
 
 2003-09-28  Christopher Armstrong  <radix@twistedmatrix.com>
