@@ -23,7 +23,6 @@ def getIndexFilename():
     return indexFilename
 
 def addEntry(filename, anchor, text, reference):
-    ##d print ">addEntry(%s, %s, %s, %s)" % (filename, anchor, text, reference)
     global entries
     if not entries.has_key(text):
         entries[text] = []
@@ -32,6 +31,13 @@ def addEntry(filename, anchor, text, reference):
 def clearEntries():
     global entries
     entries = {}
+
+def compareIgnoringCase(x, y):
+    a = x.lower();
+    b = y.lower();
+    if a < b: return -1
+    if a > b: return 1
+    return 0
 
 def generateIndex():
     global entries
@@ -42,7 +48,7 @@ def generateIndex():
 
     f = open(indexFilename, 'w')
     sortedEntries = entries.keys()
-    sortedEntries.sort(lambda x, y: cmp(x.lower(), y.lower()))
+    sortedEntries.sort(compareIgnoringCase)
     for text in sortedEntries:
         refs = []
         f.write(text.replace('!', ', ') + ': ')

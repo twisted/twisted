@@ -203,7 +203,6 @@ class TestFactory(unittest.TestCase):
         bf.write('Chapter("%s", None)\n' % inputFilename)
         bf.close()
 
-        # you cannot number without a book!
         options.parseOptions(['--null', '--book=%s' % bookFilename,
                               '--config', 'template=%s' % templateFilename,
                               '--index=%s' % indexFilename
