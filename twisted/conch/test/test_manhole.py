@@ -125,7 +125,7 @@ class ManholeLoopbackTelnet(_TelnetMixin, unittest.TestCase, ManholeLoopbackMixi
 
 class ManholeLoopbackSSH(_SSHMixin, unittest.TestCase, ManholeLoopbackMixin):
     if transport is None:
-        skip = "Crypto requirements missing, can't run historic recvline tests over ssh"
+        skip = "Crypto requirements missing, can't run manhole tests over ssh"
 
 class ManholeLoopbackStdio(_StdioMixin, unittest.TestCase, ManholeLoopbackMixin):
     if stdio is None:
