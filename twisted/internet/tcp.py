@@ -70,7 +70,7 @@ elif os.name != 'java':
 from twisted.internet import protocol, defer, base
 from twisted.persisted import styles
 from twisted.python import log, failure, reflect
-from twisted.python.runtime import platform
+from twisted.python.runtime import platform, platformType
 from twisted.internet.error import CannotListenError
 
 # Sibling Imports
@@ -360,7 +360,7 @@ class BaseClient(Connection):
 
         # on windows failed connects are reported on exception
         # list, not write or read list.
-        if platform.getType() == "win32":
+        if platformType == "win32":
             r, w, e = select.select([], [], [self.fileno()], 0.0)
             if e:
                 err = self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
@@ -377,7 +377,7 @@ class BaseClient(Connection):
             # on Windows EINVAL means sometimes that we should keep trying:
             # http://msdn.microsoft.com/library/default.asp?url=/library/en-us/winsock/winsock/connect_2.asp
             elif ((connectResult in (EWOULDBLOCK, EINPROGRESS, EALREADY)) or
-                  (connectResult == EINVAL and platform.getType() == "win32")):
+                  (connectResult == EINVAL and platformType == "win32")):
                 self.startReading()
                 self.startWriting()
                 return
@@ -535,7 +535,8 @@ class Port(base.BasePort):
 
     def createInternetSocket(self):
         s = base.BasePort.createInternetSocket(self)
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        if platformType == "posix":
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         return s
 
     def startListening(self):
@@ -545,12 +546,12 @@ class Port(base.BasePort):
         server to begin listening on the specified port.
         """
         log.msg("%s starting on %s"%(self.factory.__class__, self.port))
-        self.factory.doStart()
         try:
             skt = self.createInternetSocket()
             skt.bind((self.interface, self.port))
         except socket.error, le:
             raise CannotListenError, (self.interface, self.port, le)
+        self.factory.doStart()
         skt.listen(self.backlog)
         self.connected = 1
         self.socket = skt
@@ -565,7 +566,7 @@ class Port(base.BasePort):
         wire-level protocol.
         """
         try:
-            if os.name == "posix":
+            if platformType == "posix":
                 numAccepts = self.numberAccepts
             else:
                 # win32 event loop breaks if we do more than one accept()
