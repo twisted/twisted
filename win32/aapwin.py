@@ -1,7 +1,9 @@
 import os.path, winreg
 
 def quickdict(initial={}, **kwargs):
-    """Return a dict with the given keys/values, initalized from initial"""
+    """Return a dict with the given keys/values, initalized from initial
+    (Like python2.3's somedict.update(dict(a=..., b=...))
+    """
     new=dict(initial)
     new.update(kwargs)
     return new
