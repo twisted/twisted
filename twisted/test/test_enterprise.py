@@ -18,62 +18,100 @@ from twisted.trial import unittest
 
 import os
 
+from twisted.trial.util import deferredResult
 from twisted.enterprise.row import RowObject
 from twisted.enterprise.xmlreflector import XMLReflector
+from twisted.enterprise.sqlreflector import SQLReflector
+from twisted.enterprise.adbapi import ConnectionPool
 from twisted.enterprise import util
 
+try: import gadfly
+except: pass
 
 tableName = "testTable"
 childTableName = "childTable"
 
 class TestRow(RowObject):
-    rowColumns    = [ 
-        ("key_string",      "varchar"),
-        ("col2",            "int"),
-        ("another_column",  "varchar"),
-        ("Column4",         "varchar"),
-        ("column_5_",       "int")
-        ]
+    rowColumns = [("key_string",      "varchar"),
+                  ("col2",            "int"),
+                  ("another_column",  "varchar"),
+                  ("Column4",         "varchar"),
+                  ("column_5_",       "int")]
     rowKeyColumns = [("key_string", "varchar")]
     rowTableName  = tableName
 
 class ChildRow(RowObject):
-    rowColumns    = [
-        ("childId",  "int"),
-        ("foo",      "varchar"),
-        ("test_key", "varchar"),
-        ("stuff",    "varchar"),
-        ("gogogo",   "int"),
-        ("data",     "varchar")
-        ]
+    rowColumns    = [("childId",  "int"),
+                     ("foo",      "varchar"),
+                     ("test_key", "varchar"),
+                     ("stuff",    "varchar"),
+                     ("gogogo",   "int"),
+                     ("data",     "varchar")]
     rowKeyColumns = [("childId", "int")]
     rowTableName  = childTableName
-    rowForeignKeys = [(tableName, [("test_key","varchar")], [("key_string","varchar")], None, 1)]
-    
-class EnterpriseTestCase(unittest.TestCase):
-    """Enterprise test cases. These will only work with the XML reflector for now. real database
-    access requires there to be a database  :) and asynchronous tests (which these are not).
+    rowForeignKeys = [(tableName,
+                       [("test_key","varchar")],
+                       [("key_string","varchar")],
+                       None, 1)]
+
+main_table_schema = """
+CREATE TABLE testTable (
+  key_string     varchar(64),
+  col2           integer,
+  another_column varchar(64),
+  Column4        varchar(64),
+  column_5_      integer
+)
+"""
+
+child_table_schema = """
+CREATE TABLE childTable (
+  childId        integer,
+  foo            varchar(64),
+  test_key       varchar(64),
+  stuff          varchar(64),
+  gogogo         integer,
+  data           varchar(64)
+)
+"""
+
+class ReflectorTestCase:
+    """Base class for testing reflectors.
+
+    Subclass and implement createReflector for the style and db you
+    want to test. This may involve creating a new database, starting a
+    server, etc. If createReflector returns None, the test is skipped.
+    This allows subclasses to test for the presence of the database
+    libraries and silently skip the test if they are not present.
+    Implement destroyReflector if your database needs to be shutdown
+    afterwards.
     """
 
-    DB = "./xmlDB"
-    
     def setUp(self):
-        # creates XML db in file system
-        self.reflector = XMLReflector(EnterpriseTestCase.DB, [TestRow, ChildRow])
+        self.reflector = self.createReflector()
+
+    def tearDown(self):
+        if self.reflector: self.destroyReflector()
+
+    def destroyReflector(self):
+        pass
+
+    def testReflector(self):
+        if not self.reflector: return
 
         # create one row to work with
-        self.newRow = TestRow()
-        self.newRow.assignKeyAttr("key_string", "first")
-        self.newRow.col2 = 1
-        self.newRow.another_column = "another"
-        self.newRow.Column4 = "foo"
-        self.newRow.column_5_ = 444
+        newRow = TestRow()
+        newRow.assignKeyAttr("key_string", "first")
+        newRow.col2 = 1
+        newRow.another_column = "another"
+        newRow.Column4 = "foo"
+        newRow.column_5_ = 444
         self.data = None
-        self.reflector.insertRow(self.newRow)        
+
+        deferredResult(self.reflector.insertRow(newRow))
 
         # create some child rows
-        self.childRows = []
-        for i in range(0,10):
+        for i in range(0, 10):
             row = ChildRow()
             row.assignKeyAttr("childId", i)
             row.foo = "foo foo "
@@ -81,49 +119,131 @@ class EnterpriseTestCase(unittest.TestCase):
             row.stuff = "d"
             row.gogogo = 101
             row.data = "some data"
-            self.reflector.insertRow(row)
-            self.childRows.append(row)
-            
-    def testQuery(self):
-        self.reflector.insertRow(self.newRow)
-        self.reflector.loadObjectsFrom(childTableName, parentRow=self.newRow).addCallback(self.gotData)
-        assert len(self.data) > 0, "no rows on query"
-        assert len(self.newRow.childRows) == 10, "didnt load child rows: %d" % len(self.newRow.childRows)
+            deferredResult(self.reflector.insertRow(row))
+            row = None
 
-        # loading these objects a second time shouldnt re-add them to the parentRow.
-        self.reflector.loadObjectsFrom(childTableName, parentRow=self.newRow).addCallback(self.gotData)
-        assert len(self.data) > 0, "no rows on query"
-        assert len(self.newRow.childRows) == 10, "child rows added more than once!: %d" % len(self.newRow.childRows)        
-        
-    def testUpdate(self):
-        self.reflector.insertRow(self.newRow)
-        self.reflector.updateRow(self.newRow)
+        d = self.reflector.loadObjectsFrom(childTableName,
+                                           parentRow=newRow)
+        d.addCallback(self.gotData)
+        deferredResult(d)
 
-    def testBulk(self):
-        rows = []
+        self.failUnless(len(self.data) > 0, "no rows on query")
+        self.failUnless(len(newRow.childRows) == 10,
+                        "did not load child rows: %d" % len(newRow.childRows))
+
+        # loading these objects a second time should not re-add them
+        # to the parentRow.
+        d = self.reflector.loadObjectsFrom(childTableName,
+                                           parentRow=newRow)
+        d.addCallback(self.gotData)
+        deferredResult(d)
+
+        self.failUnless(len(self.data) > 0, "no rows on query")
+        self.failUnless(len(newRow.childRows) == 10,
+                        "child rows added twice!: %d" % len(newRow.childRows))
+
+        # test update FIXME: make some changes to row
+        deferredResult(self.reflector.updateRow(newRow))
+
+        # test bulk
         num = 10
-        for i in range(0,num):
+        for i in range(0, num):
             newRow = TestRow()
             newRow.assignKeyAttr("key_string", "bulk%d"%i)
             newRow.col2 = 4
             newRow.another_column = "another"
             newRow.Column4 = "444"
             newRow.column_5_ = 1
-            rows.append(newRow)
-            self.reflector.insertRow(newRow)
+            deferredResult(self.reflector.insertRow(newRow))
+            newRow = None
 
-        self.reflector.loadObjectsFrom("testTable").addCallback(self.gotData)
+        d = self.reflector.loadObjectsFrom("testTable")
+        d.addCallback(self.gotData)
+        deferredResult(d)
 
-        assert len(self.data) == num+1, "query didnt get rows"
-        
-        for row in rows:
-            self.reflector.updateRow(row)
+        assert len(self.data) == num + 1, "query did not get rows"
 
-        for row in rows:
-            self.reflector.deleteRow(row)
+        for row in self.data:
+            deferredResult(self.reflector.updateRow(row))
+
+        for row in self.data:
+            deferredResult(self.reflector.deleteRow(row))
 
     def gotData(self, data):
         self.data = data
+
+
+class XMLReflectorTestCase(ReflectorTestCase, unittest.TestCase):
+    """Test cases for the XML reflector.
+    """
+
+    DB = "./xmlDB"
+
+    def createReflector(self):
+        return XMLReflector(self.DB, [TestRow, ChildRow])
+
+
+class SQLReflectorTestCase(ReflectorTestCase):
+    """Test cases for the SQL reflector.
+    """
+
+    def createReflector(self):
+        if not self.installed(): return None
+        self.startDB()
+        self.dbpool = self.makePool()
+        deferredResult(self.dbpool.runOperation(main_table_schema))
+        deferredResult(self.dbpool.runOperation(child_table_schema))
+        return SQLReflector(self.dbpool, [TestRow, ChildRow])
+
+    def destroyReflector(self):
+        self.dbpool.close()
+        self.stopDB()
+
+    def stopDB(self):
+        pass
+
+
+class GadflyPool(ConnectionPool):
+    """A pool for gadfly -- just one connection at a time, please!
+    Remove this when ConnectionPool is fixed.
+    """
+
+    def __init__(self, dbname, dbdir):
+        self.connection = gadfly.gadfly(dbname, dbdir)
+
+    def connect(self):
+        return self.connection
+
+    def close(self):
+        self.connection.close()
+        del self.connection
+
+
+class GadflyReflectorTestCase(SQLReflectorTestCase, unittest.TestCase):
+    """Test cases for the SQL reflector using Gadfly.
+    """
+
+    DB_NAME = "gadfly"
+    DB_DIR = "./gadflyDB"
+
+    def installed(self):
+        try: gadfly
+        except: return 0
+        return 1
+
+    def startDB(self):
+        if not os.path.exists(self.DB_DIR): os.mkdir(self.DB_DIR)
+        conn = gadfly.gadfly()
+        conn.startup(self.DB_NAME, self.DB_DIR)
+
+        # gadfly seems to want us to create something to get the db going
+        cursor = conn.cursor()
+        cursor.execute("create table x (x integer)")
+        conn.commit()
+        conn.close()
+
+    def makePool(self):
+        return GadflyPool(self.DB_NAME, self.DB_DIR)
 
 
 class QuotingTestCase(unittest.TestCase):
@@ -135,4 +255,3 @@ class QuotingTestCase(unittest.TestCase):
             ("\x00abc\\s\xFF", "bytea", "'\\\\000abc\\\\\\\\s\\377'"),
             ]:
             self.assertEquals(util.quote(value, typ), expected)
-
