@@ -392,16 +392,7 @@ directory, or use my --pidfile and --logfile parameters to avoid clashes.
         elif config['debug']:
             import pdb
             from twisted.python import failure
-            def newinit(self, exc_value=None, exc_type=None, exc_tb=None,
-                        init=failure.Failure.__init__.im_func):
-                r = init(self, exc_value, exc_type, exc_tb)
-                if (exc_value, exc_type, exc_tb) == (None, None, None):
-                    exc = sys.exc_info()
-                    if not exc[0] == failure.Failure:
-                        print "Jumping into debugger - %s" % exc[1]
-                        pdb.post_mortem(exc[2])
-                return r
-            failure.Failure.__init__ = newinit
+            failure.startDebugMode()
             sys.stdout = oldstdout
             sys.stderr = oldstderr
             if os.name == "posix":

@@ -357,5 +357,21 @@ class Failure:
             self.value.printDetailedTraceback(file)
         w('*--- End of Failure #%d ---\n' % self.count)
 
+
+def _debuginit(self, exc_value=None, exc_type=None, exc_tb=None,
+             Failure__init__=Failure.__init__.im_func):
+    if (exc_value, exc_type, exc_tb) == (None, None, None):
+        exc = sys.exc_info()
+        if not exc[0] == self.__class__:
+            print "Jumping into debugger - %s" % exc[1]
+            import pdb
+            pdb.post_mortem(exc[2])
+    Failure__init__(self, exc_value, exc_type, exc_tb)
+
+def startDebugMode():
+    """Enable debug hooks for Failures."""
+    Failure.__init__ = _debuginit
+
+
 #rawr stupid non-lazy import python #!*($@*(
 import log
