@@ -42,21 +42,7 @@ class Options(usage.Options):
         # confirm it.  Otherwise, I use the first line from standard
         # input, stripping off a trailing newline if there is one.
         if password in ('', '-'):
-            if os.isatty(sys.stdin.fileno()):
-                gotit = 0
-                while not gotit:
-                    try1 = getpass.getpass()
-                    try2 = getpass.getpass("Confirm: ")
-                    if try1 == try2:
-                        gotit = 1
-                    else:
-                        sys.stderr.write("Passwords don't match.\n")
-                else:
-                    self.opts['password'] = try1
-            else:
-                self.opts['password'] = sys.stdin.readline()
-                if self.opts['password'][-1] == '\n':
-                    self.opts['password'] = self.opts['password'][:-1]
+            self.opts['password'] = usage.newPasswordPrompt()
         else:
             self.opts['password'] = password
 

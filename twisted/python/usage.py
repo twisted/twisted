@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: usage.py,v 1.37 2003/01/01 13:12:47 tv Exp $
+# $Id: usage.py,v 1.38 2003/01/08 09:51:56 acapnotic Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -30,6 +30,7 @@ import string
 import os
 import sys
 import new
+import getpass
 import getopt
 from os import path
 import UserDict
@@ -463,6 +464,39 @@ class Options(UserDict.UserDict):
     #def __repr__(self):
     #    XXX: It'd be cool if we could return a succinct representation
     #        of which flags and options are set here.
+
+
+def newPasswordPrompt():
+    """Obtain a password by prompting or from stdin.
+
+    If stdin is a terminal, prompt for a new password, and confirm by
+    asking again to make sure the user typed the same thing, as
+    keystrokes will not be echoed.
+
+    If stdin is not a terminal, read in a line and use it as the
+    password, less the trailing newline, if any.
+
+    @returns: String
+    """
+    # If standard input is a terminal, I prompt for a password and
+    # confirm it.  Otherwise, I use the first line from standard
+    # input, stripping off a trailing newline if there is one.
+    if os.isatty(sys.stdin.fileno()):
+        gotit = 0
+        while not gotit:
+            try1 = getpass.getpass()
+            try2 = getpass.getpass("Confirm: ")
+            if try1 == try2:
+                gotit = 1
+            else:
+                sys.stderr.write("Passwords don't match.\n")
+        else:
+            password = try1
+    else:
+        password = sys.stdin.readline()
+        if password[-1] == '\n':
+            password = password[:-1]
+    return password
 
 
 def docMakeChunks(optList, width=80):
