@@ -54,16 +54,10 @@ def evalExp(exp, env):
             # macro = globals().get("macro_" + n)
             # if macro:
             #   return evalExp(macroexpand(macro), env)
-            return eval_apply(exp, env)
+            return eco_apply(exp, env)
     else:
         return exp
 
-
-globalValues = {"nil" : []}
-nil = []
-
-VAR = 0
-FUN = 1
 
 def ValueEnvironment():
     return (None, globalValues)
@@ -122,7 +116,7 @@ class Function:
         return evalExp(self.body, newEnv)
 
 class Macro(Function):
-    def __call__(self, env, *args):
+    def expand(self, args):
         bindings = []
         i = 0
         crap = self.llist
@@ -135,8 +129,10 @@ class Macro(Function):
         if i != len(args):
             raise TypeError("Wrong number of arguments!")
         newEnv = extendEnv(VAR, self.env, bindings)
-        boz = evalExp(self.body, newEnv)
-        return evalExp(boz, env)
+        return evalExp(self.body, newEnv)
+        
+    def __call__(self, env, *args):
+        return evalExp(self.expand(args), env)
 
 ### Dispatched stuff.
 
@@ -146,7 +142,7 @@ class Macro(Function):
 ## "muhahahahaha" -- Moshe
 eval_fn = Function
 
-def eval_apply(exp, env):
+def eco_apply(exp, env):
     #lookup order: python-defined functions, eco-defined functions/macros.
     argVec = []
     args = cdr(exp)
@@ -213,7 +209,7 @@ def eval_let(exp, env):
 def eval_def(exp, env):
     f = globals().get("def_" + car(exp).string)
     if f:
-        f(cadr(exp), cddr(exp), env)
+        f(cadr(exp).string, cddr(exp), env)
         
 def def_fn(name, forms, env):
     globalFunctions[name] = Function(forms, env)
@@ -254,6 +250,35 @@ def reduce_1(fun, list, prevResult):
 def func_format(str, *args):
     return str % tuple(args)
 
+def func_macroexpand(sexp):
+    if func_consp(sexp):
+        a = car(sexp)
+        d = cdr(sexp)
+        if isinstance(a, sexpy.Atom):
+            m = globalFunctions.get(a.string)
+            if isinstance(m, Macro):
+                args = func_map(func_macroexpand, d)
+                argVec = []
+                while args:
+                    argVec.append(car(args))
+                    args = cdr(args)
+                return m.expand(argVec)
+            elif a.string == 'let':
+                bindings = func_map(lambda x: func_list(car(x),func_macroexpand(cadr(x))), car(d))
+                body= func_map(func_macroexpand, cdr(d))
+                return func_list(a, bindings, body)
+            elif a.string == 'quote' or a.string == 'backquote':
+                return sexp
+            elif a.string == 'def':
+                return func_list(a, car(d), cadr(d), func_map(func_macroexpand, cddr(d)))
+            else:
+                return cons(a, func_map(func_macroexpand, d))
+
+    else:
+        return sexp
+                    
+        
+
 # car/cdr and compositions
 
 def car(x):
@@ -287,20 +312,25 @@ def func_add(*exp):
     return reduce(operator.add, exp)
 
 def func_and(*exp):
-    return reduce(operator.__and__, exp)
+    for e in exp:
+        if e:
+            v = e
+    return e or 0
 
 def func_consp(exp):
     return isinstance(exp, types.ListType) and len(exp) == 2 
 
 def func_or(*exp):
-    return reduce(operator.__or__, exp)
+    for e in exp:
+        if e:
+            return e
+    return 0
 
 def func_not(a):
     return not a
 
 def func_cons(car, cdr):
     return [car, cdr]
-
 cons = func_cons
 
 def func_setcar(lst, newcar):
@@ -364,5 +394,9 @@ def func_last(lst):
     
 def func_subtract(*exp):
     return reduce(operator.sub, exp)
-
+ 
 globalFunctions =  {"+": func_add, "-": func_subtract}
+globalValues = {"nil" : []}
+nil = []
+VAR = 0
+FUN = 1

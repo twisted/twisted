@@ -26,4 +26,5 @@ class EcoTestCase(unittest.TestCase):
     def testMacros(self):        
         eco.eval('[def macro mung [x] (+ ,[cadr x] ,[caddr x])]')
         assert eco.eval('[mung [* 10 5]] ') == 15
+        assert eco.eval("[let [[x [macroexpand (mung [* 10 5])]]] [and [eq [car x] '+] [eq [cadr x] 10] [eq [caddr x] 5]]]")
 testCases = [EcoTestCase]
