@@ -18,6 +18,7 @@ from __future__ import nested_scopes
 from twisted.trial import unittest
 from twisted.internet import protocol, reactor
 from twisted.protocols import basic
+from twisted.python import util
 
 from OpenSSL import SSL
 from twisted.internet import ssl
@@ -26,7 +27,7 @@ import os
 import test_tcp
 
 
-certPath = os.path.join(os.path.split(test_tcp.__file__)[0], "server.pem")
+certPath = util.sibpath(__file__, "server.pem")
 
 class StolenTCPTestCase(test_tcp.ProperlyCloseFilesTestCase, test_tcp.WriteDataTestCase):
     
@@ -192,3 +193,38 @@ class TLSTestCase(unittest.TestCase):
             cf.lines,
             UnintelligentProtocol.pretext + UnintelligentProtocol.posttext
         )
+
+class SingleLineServerProtocol(protocol.Protocol):
+    def connectionMade(self):
+        self.transport.write("+OK <some crap>\r\n")
+
+class RecordingClientProtocol(protocol.Protocol):
+    def connectionMade(self):
+        self.buffer = []
+    
+    def dataReceived(self, data):
+        self.factory.buffer.append(data)
+        
+
+class BufferingTestCase(unittest.TestCase):
+    def testOpenSSLBuffering(self):
+        server = protocol.ServerFactory()
+        client = protocol.ClientFactory()
+        
+        server.protocol = SingleLineServerProtocol
+        client.protocol = RecordingClientProtocol
+        client.buffer = []
+
+        from twisted.internet.ssl import DefaultOpenSSLContextFactory
+        from twisted.internet.ssl import ClientContextFactory
+
+        sCTX = DefaultOpenSSLContextFactory(certPath, certPath)
+        cCTX = ClientContextFactory()
+        
+        port = reactor.listenSSL(0, server, sCTX, interface='127.0.0.1')
+        reactor.connectSSL('127.0.0.1', port.getHost()[2], client, cCTX)
+        
+        for i in range(100):
+            reactor.iterate()
+        
+        self.assertEquals(client.buffer, ["+OK <some crap>\r\n"])
