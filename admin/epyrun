@@ -245,6 +245,17 @@ def getargspec(func):
         return getargspec_orig(func)
 inspect.getargspec = getargspec
 
+# HACK: Make FuncDoc DTRT with Methods
+_init_signature_orig = objdoc.FuncDoc._init_signature
+def _init_signature(self, func):
+    if isinstance(func, Method):
+	docstring = objdoc._getdoc(func)
+	self._init_signature_from_argspec(*inspect.getargspec(func))
+	return docstring
+    else:
+	return _init_signature_orig(self, func)
+objdoc.FuncDoc._init_signature = _init_signature
+
 # HACK: Another "only doc what we tell you". We don't want epydoc to
 # automatically recurse into subdirectories: "twisted"'s presence was
 # causing "twisted/test" to be docced, even thought we explicitly
