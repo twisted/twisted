@@ -134,7 +134,7 @@ class SMTP(basic.LineReceiver):
         success(origin)
 
     def validateTo(self, user, success, failure):
-        failure(user)
+        success(user)
 
     def handleMessage(self, helo, origin, recipients, message, 
                       success, failure):

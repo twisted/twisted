@@ -176,20 +176,25 @@ class DummySMTP(smtp.SMTP):
         smtp.SMTP.connectionMade(self)
         self.messages = []
 
-    def handleMessage(self, helo, origin, recipients, message):
+    def handleMessage(self, users, message, success, failure):
+        helo, origin = users[0].helo, users[0].orig
+        recipients = []
+        for user in users:
+            recipients.append(user.name+'@'+user.domain)
         self.messages.append((helo, origin, recipients, message))
+        success()
 
 
 class SMTPTestCase(unittest.TestCase):
 
-    messages = [ ('foo.com', 'moshez@foo.com', ('moshez@bar.com',), '''\
+    messages = [ ('foo.com', 'moshez@foo.com', ['moshez@bar.com'], '''\
 From: Moshe
 To: Moshe
 
 Hi, 
 how are you?
 '''),            
-                 ('foo.com', 'tttt@rrr.com', ('uuu@ooo', 'yyy@eee'), '''\
+                 ('foo.com', 'tttt@rrr.com', ['uuu@ooo', 'yyy@eee'], '''\
 Subject: pass
 
 ..rrrr..

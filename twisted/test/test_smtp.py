@@ -33,11 +33,15 @@ class DummyDomain:
        for name in names:
            self.messages[name] = []
 
-   def exists(self, name, domain, protocol):
-       return self.messages.has_key(name)
+   def exists(self, user, success, failure):
+       if self.messages.has_key(user.name):
+           success(user)
+       else:
+           failure(user)
 
-   def saveMessage(self, origin, name, message, domain):
-       self.messages[name].append(message)
+
+   def saveMessage(self, user, message):
+       self.messages[user.name].append(message)
 
 class SMTPTestCase(unittest.TestCase):
 
@@ -64,7 +68,9 @@ Someone set up us the bomb!\015
         for message in self.messages:
             protocol.lineReceived('MAIL FROM:<%s>' % message[0])
             for target in message[1]:
+                print "rcpt to"
                 protocol.lineReceived('RCPT TO:<%s>' % target)
+            print self.output.getvalue()
             protocol.lineReceived('DATA')
             protocol.dataReceived(message[2])
             protocol.lineReceived('.')
