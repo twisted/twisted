@@ -53,6 +53,9 @@ class Sub:
     def add(self, a, b):
         return 3
 
+class UltraSub(Sub):
+    pass
+
 
 class IntMultiplyWithAdder:
     """Multiply, using Adder object."""
@@ -96,6 +99,13 @@ class FooAdapterForMAA:
 
 components.registerAdapter(FooAdapterForMAA, MultiplyAndAdd, IFoo)
 
+class MakeMultiplierFromUltraSubber(components.Adapter):
+
+    adaptsTypes = UltraSub,
+    __implements__ = IMultiply
+
+    def multiply(self, a, b):
+        return 10
 
 
 class InterfacesTestCase(unittest.TestCase):
@@ -128,6 +138,11 @@ class InterfacesTestCase(unittest.TestCase):
         r.registerImplements(IAdder, IMultiply)
         o = IntAdder()
         self.assert_(r.implements(o, IMultiply))
+
+    def testImplicitAdapters(self):
+        o = UltraSub()
+        p = IMultiply(o)
+        self.assertEqual(p.multiply(9,9), 10)
         
     def testOther(self):
         self.assert_( not components.implements(3, ISub) )

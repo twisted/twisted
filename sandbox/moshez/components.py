@@ -326,6 +326,20 @@ class IComponentized(IPreComponentized):
         pass
 
 
+class MetaAdapter(type):
+
+    adaptsTypes = ()
+
+    def __init__(self, *args, **kwargs):
+        super(MetaAdapter, self).__init__(self, *args, **kwargs)
+        imp = tupleTreeToList(getattr(self, '__implements__', ()))
+        if IComponentized in imp:
+            imp.remove(IComponentized)
+        if not imp:
+            return
+        for typ in self.adaptsTypes:
+            getRegistry(None).registerAdapter(self, typ, *imp)
+
 class Adapter:
     """I am the default implementation of an Adapter for some interface.
 
@@ -342,6 +356,7 @@ class Adapter:
     @cvar multiComponent: If this adapter is persistent, should it be
           automatically registered for all appropriate interfaces.
     """
+    __metaclass__ = MetaAdapter
 
     # These attributes are used with Componentized.
 
