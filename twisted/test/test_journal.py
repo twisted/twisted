@@ -75,7 +75,7 @@ class Service:
         """Return value of an entry."""
         return self.values[key]
 
-    def addtime(self):
+    def addtime(self, journal):
         """Set a key 'time' with the current time."""
         journal.executeCommand(AddTime())
 
@@ -84,10 +84,6 @@ class Service:
     add = serviceCommand("_add")
 
     delete = serviceCommand("_delete")
-
-    def addtime(self, journal):
-        """Set a key 'time' with the current time."""
-        journal.executeCommand(AddTime())
 
 
 class JournalTestCase(unittest.TestCase):
