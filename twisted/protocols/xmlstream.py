@@ -199,6 +199,9 @@ class XmlStreamFactory(protocol.ReconnectingClientFactory):
     def addBootstrap(self, event, fn):
         self.bootstraps.append((event, fn))
 
+    def removeBootstrap(self, event, fn):
+        self.bootstraps.remove((event, fn))
+
 
 
 

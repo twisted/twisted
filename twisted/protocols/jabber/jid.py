@@ -71,3 +71,68 @@ def parse(jidstring):
 
     # Return the tuple
     return (user, server, resource)
+
+__internJIDs = {}
+
+def intern(str):
+    # XXX: Ensure that stringprep'd jids map to same JID
+    if str in __internJIDs:
+        return __internJIDs[str]
+    else:
+        j = JID(str)
+        __internJIDs[str] = j
+        return j
+
+class JID:
+    def __init__(self, str = None, tuple = None):
+        assert (str or tuple)
+        
+        if str:
+            user, host, res = parse(str)
+        else:
+            user, host, res = tuple
+
+        self.host = intern(host)
+
+        if user:
+            self.user = sys.intern(user)
+        else:
+            self.user = None
+            
+        if res:
+            self.resource = sys.intern(resource)
+        else:
+            self.resource = None
+
+    def userhost(self):
+        if self.user:
+            return "%s@%s" % (self.user, self.host)
+        else:
+            return self.host
+
+    def userhostJID(self):
+        if "_uhjid" not in self.__dict__:
+            self._uhjid = jid.intern(self.userhost())
+        return self._uhjid
+
+    def full(self):
+        if self.user:
+            if self.resource:
+                return "%s@%s/%s" % (self.user, self.host, self.resource)
+            else:
+                return "%s@%s" % (self.user, self.host)
+        else:
+            if self.resource:
+                return "%s/%s" % (self.host, self.resource)
+            else:
+                return self.host
+
+    def __eq__(self, other):
+        return (self.user == other.user and
+                self.host == other.host and
+                self.resource == other.resource)
+
+    def __ne__(self, other):
+        return not (self.user == other.user and
+                    self.host == other.host and
+                    self.resource == other.resource)
