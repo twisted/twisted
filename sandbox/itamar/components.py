@@ -164,7 +164,7 @@ def tupleTreeToList(t, l=None):
 
 
 def implements(obj, interfaceClass):
-    """Return boolean indicating if obj *provides* the given interface.
+    """DEPRECATED. Return boolean indicating if obj *provides* the given interface.
 
     This method checks if object provides, not if it implements. The confusion
     is due to the change in terminology.
@@ -299,25 +299,11 @@ def getAdapter(obj, interfaceClass, default=_Nothing,
         return default
 
 
-# create adapter registry, first attempting to get zope3's
-try:
-    if sys.version_info[:2] < (2, 3):
-        # don't even bother trying, zope.component doesn't run on 2.2
-        raise ImportError, "zope.component won't work on 2.2"
-    from zope import component
-    try:
-        _theAdapterRegistry = component.getService(None, component.Adapters)
-    except component.ComponentLookupError:
-        _theAdapterRegistry = None
-except ImportError:
-    _theAdapterRegistry = None
-
-if _theAdapterRegistry == None:
-    _theAdapterRegistry = ZopeAdapterRegistry()
-    # add global adapter lookup hook for our newly created registry
-    def _hook(iface, ob):
-        return getAdapter(ob, iface, default=None, persist=False)
-    interface.adapter_hooks.append(_hook)
+_theAdapterRegistry = ZopeAdapterRegistry()
+# add global adapter lookup hook for our newly created registry
+def _hook(iface, ob):
+    return getAdapter(ob, iface, default=None, persist=False)
+interface.adapter_hooks.append(_hook)
 
 # public zopey registration hook
 register = _theAdapterRegistry.register
