@@ -1,5 +1,5 @@
 %define name     Twisted
-%define version  1.2.1alpha2
+%define version  SVN-trunk
 %define release  1tummy
 %define prefix   %{_prefix}
 
