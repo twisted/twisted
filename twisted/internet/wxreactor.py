@@ -108,7 +108,7 @@ class WxReactor(default.SelectReactor):
 
 
 def install():
-    """Configure the twisted mainloop to be run inside the gtk mainloop.
+    """Configure the twisted mainloop to be run inside the wxPython mainloop.
     """
     reactor = WxReactor()
     from twisted.internet.main import installReactor
