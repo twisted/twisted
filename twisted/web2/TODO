@@ -1,0 +1,14 @@
+- Tests!!
+
+- Figure out what HTTP requires w.r.t. TCP half closing.
+   - Done: it requires closing write side before read side.
+	- must add half-closing support to Twisted.
+- Create default log observers for the log.msg's that we send.
+- sendfile support
+- Resource API for streaming data.
+  - Also re-add form POST processing, and make it not suck.
+- Resource API for prerender checking
+- Add support for gzip Transfer-Encoding.
+- Add parsers/generators for the rest of the headers.
+  - Also think about whether the data format of the headers
+	 is really what we want there.
