@@ -14,6 +14,19 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
+
+"""
+A simple guard framework for implementing web sites that only need
+'Anonymous' vs 'Logged on' distinction, but nothing more.
+
+If you need
+ * multiple levels of access, or
+ * multiple-interface applications, or
+ * anything else more complex than 'Logged on' and 'Not logged on'
+
+you need to use twisted.web.woven.guard directly.
+"""
+
 from twisted.cred import portal
 from twisted.web import resource, util
 from twisted.web.woven import guard
