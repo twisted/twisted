@@ -246,6 +246,8 @@ class Deferred:
                 self.timeoutCall.cancel()
             except:
                 pass
+            # Avoid reference cycles, because this object defines __del__
+            del self.timeoutCall
         self._runCallbacks()
 
 
