@@ -84,7 +84,6 @@ class AtLeastImportTestCase(unittest.TestCase):
         from twisted.protocols import protocol
         from twisted.protocols import smtp
         from twisted.protocols import telnet
-        from twisted.protocols.ldap import ldapclient
         from twisted.protocols import oscar
         from twisted.protocols import toc
     
