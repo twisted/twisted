@@ -41,7 +41,7 @@ class Options(usage.Options):
     optFlags = [["personal", "",
                  "Instead of generating a webserver, generate a "
                  "ResourcePublisher which listens on "
-                 "~/.twistd-web-service"]]
+                 "~/%s" % distrib.UserDirectory.userSocketName]]
 
     longdesc = """\
 This creates a web.tap file that can be used by twistd.  If you specify
