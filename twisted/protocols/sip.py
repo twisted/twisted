@@ -1030,7 +1030,6 @@ class RegisterProxy(Proxy):
             self.deliverResponse(self.responseFromRequest(501, message))
 
     def _cbLogin(self, (i, a, l), message, host, port):
-        print 'YAY'
         # It's stateless, matey.  What a joke.
         self.register(message, host, port)
     
