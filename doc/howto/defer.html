@@ -67,7 +67,7 @@ reactor.run()
 </pre>
 
     <h2>High Level Overview</h2>
-    <img src="../img/deferred.png" />
+    <img src="../img/deferred.png" /> 
 
     <h2>Deferreds</h2>
 
@@ -145,48 +145,55 @@ d.addCallback(printResult)
 d.arm()
 </pre>
 
-    <p>Each callback feeds its return value into the next callback (callbacks
-    will be called in the order you add them).  Thus in the previous example,
-    <code class="python">processResult</code>'s return value will be passed to
-    <code class="python">printResult</code>, instead of the value initially
-    passed into the callback.  This gives you a flexible way to chain results
-    together, possibly modifying values along the way, (for example, you may 
-    wish to pre-processe database query results).</p>
+    <p>Each callback feeds its return value into the next callback
+    (callbacks will be called in the order you add them). Thus in
+    the previous example, <code
+    class="python">processResult</code>'s return value will be
+    passed to <code class="python">printResult</code>, instead of
+    the value initially passed into the callback. This gives you a
+    flexible way to chain results together, possibly modifying
+    values along the way, (for example, you may wish to
+    pre-processe database query results).</p>
 
     <h3>More about errbacks</h3>
 
-    <p>Deferred's error handling is modelled after Python's exception handling.
-    In the case that no errors occur, all the callbacks run, one after the 
-    other, as described above.</p>
+    <p>Deferred's error handling is modelled after Python's
+    exception handling. In the case that no errors occur, all the
+    callbacks run, one after the other, as described above.</p>
 
-    <p>If the errback is called instead of the callback (e.g. because a DB
-    query raised an error), then a 
-    <code class="API">twisted.python.failure.Failure</code> is passed into the
-    first errback (you can add multiple errbacks, just like with callbacks).
-    You can think of your errbacks as being like 
-    <code class="python">except</code> blocks of ordinary Python code.</p>
-    
-    <p>Unless you explicitly <code class="python">raise</code> an error in
-    except block, the <code class="python">Exception</code> is caught and stops
-    propagating, and normal execution continues.  The same thing happens with
-    errbacks: unless you explicitly <code class="python">return</code> a 
-    <code class="python">Failure</code> or (re-)raise an exception, the error 
-    stops propagating, and
-    normal callbacks continue executing from that point (using the value
-    returned from the errback).  If the errback does returns a 
-    <code class="python">Failure</code> or raise an exception, then that is passed to the next
-    errback, and so on.</p>
+    <p>If the errback is called instead of the callback (e.g.
+    because a DB query raised an error), then a <code
+    class="API">twisted.python.failure.Failure</code> is passed
+    into the first errback (you can add multiple errbacks, just
+    like with callbacks). You can think of your errbacks as being
+    like <code class="python">except</code> blocks of ordinary
+    Python code.</p>
 
-    <p><b>Note:</b> If an errback doesn't return anything, then it effectively 
-    returns <code class="python">None</code>, meaning that callbacks will 
-    continue to be executed after this errback.  This may not be what you
-    expect to happen, so be careful.  Make sure your errbacks return a 
-    <code class="python">Failure</code> (probably the one that was passed to
-    it), or a meaningful return value for the next callback.</p>
-    
-    <p>Also, <code class="API">twisted.python.failure.Failure</code> instances
-    have a useful method called trap, allowing you to effectively do the 
-    equivalent of:</p>
+    <p>Unless you explicitly <code class="python">raise</code> an
+    error in except block, the <code
+    class="python">Exception</code> is caught and stops
+    propagating, and normal execution continues. The same thing
+    happens with errbacks: unless you explicitly <code
+    class="python">return</code> a <code
+    class="python">Failure</code> or (re-)raise an exception, the
+    error stops propagating, and normal callbacks continue
+    executing from that point (using the value returned from the
+    errback). If the errback does returns a <code
+    class="python">Failure</code> or raise an exception, then that
+    is passed to the next errback, and so on.</p>
+
+    <p><b>Note:</b> If an errback doesn't return anything, then it
+    effectively returns <code class="python">None</code>, meaning
+    that callbacks will continue to be executed after this errback.
+    This may not be what you expect to happen, so be careful. Make
+    sure your errbacks return a <code class="python">Failure</code>
+    (probably the one that was passed to it), or a meaningful
+    return value for the next callback.</p>
+
+    <p>Also, <code
+    class="API">twisted.python.failure.Failure</code> instances
+    have a useful method called trap, allowing you to effectively
+    do the equivalent of:</p>
 <pre class="python">
 try:
     # code that may throw an exception
@@ -205,18 +212,18 @@ d.addCallback(cookSpamAndEggs)
 d.addErrback(errorHandler)
 </pre>
 
-    <p>If none of arguments passed to <code class="python">failure.trap</code> 
-    match the error encapsulated in that <code class="python">Failure</code>, 
-    then it reraises the error.</p>  
-   
-    <p><b>Note:</b> There's another potential &quot;gotcha&quot; here.  There's
-    a convenience method 
-    <code class="API">twisted.python.defer.Deferred.addCallbacks</code> which
-    is similar to, but not exactly the same as, 
-    <code class="python">addCallback</code> followed by 
-    <code class="python">addErrback</code>.  In particular, consider these two
-    cases:</p>
+    <p>If none of arguments passed to <code
+    class="python">failure.trap</code> match the error encapsulated
+    in that <code class="python">Failure</code>, then it reraises
+    the error.</p>
 
+    <p><b>Note:</b> There's another potential "gotcha" here.
+    There's a convenience method <code
+    class="API">twisted.python.defer.Deferred.addCallbacks</code>
+    which is similar to, but not exactly the same as, <code
+    class="python">addCallback</code> followed by <code
+    class="python">addErrback</code>. In particular, consider these
+    two cases:</p>
 <pre class="python">
 # Case 1
 d = getDeferredFromSomewhere()
@@ -231,11 +238,11 @@ d.addCallbacks(callback1, errback1)
 d.addCallbacks(callback2, errback2)
 </pre>
 
-    <p>If an error occurs in <code class="python">callback1</code>, then for
-    Case 1 <code class="python">errback1</code> will be called with the 
-    failure.  For Case 2, <code class="python">errback2</code> will be called.
-    Be careful with your callbacks and errbacks.</p>
-    
+    <p>If an error occurs in <code class="python">callback1</code>,
+    then for Case 1 <code class="python">errback1</code> will be
+    called with the failure. For Case 2, <code
+    class="python">errback2</code> will be called. Be careful with
+    your callbacks and errbacks.</p>
   </body>
 </html>
 
