@@ -542,12 +542,12 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if self.blocked is not None:
             self.blocked.extend(commands)
 
-#    def sendLine(self, line):
-#        print 'C:', repr(line)
-#        return basic.LineReceiver.sendLine(self, line)
+    def sendLine(self, line):
+        print 'C:', repr(line)
+        return basic.LineReceiver.sendLine(self, line)
 
     def lineReceived(self, line):
-#        print 'S:', repr(line)
+        print 'S:', repr(line)
         self.resetTimeout()
 
         if self.blocked is not None:
@@ -1344,6 +1344,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def __cbManualSearch(self, result, tag, mbox, query, uid, searchResults = None):
         if searchResults is None:
             searchResults = []
+        i = 0
         for (i, (id, msg)) in zip(range(5), result):
             if self.searchFilter(query, id, msg):
                 if uid:
@@ -1925,6 +1926,8 @@ class IMAP4Client(basic.LineReceiver):
             b, e = rest.find('['), rest.find(']')
             if b != -1 and e != -1:
                 self.serverGreeting(self.__cbCapabilities(([rest[b:e]], None)))
+            else:
+                self.serverGreeting(None)
         else:
             self._defaultHandler(tag, rest)
 
