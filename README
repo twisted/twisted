@@ -71,8 +71,10 @@ Unit Tests
 
    % admin/runtests
 
-  Some of these tests may fail if you don't have the Python XML packages
-  installed on your system.
+  Some of these tests may fail if a) you don't have the dependancies
+  required for a particular subsystem installed, or b) you have a
+  firewall blocking some ports (or things like Multicast, which Linux
+  NAT has shown itself to do).
 
 
   If you're feeling more brave, you can try the new "acceptance tests".  These
