@@ -1,4 +1,2 @@
 1. "run as" parameter
-
-4. Inno iss gneration
-5. Execute inno compiler to produce package
+2. Startup type parameter
