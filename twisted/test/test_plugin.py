@@ -87,9 +87,7 @@ class PluginTestCase(unittest.TestCase):
 
         dropin = cache['testplugin']
         self.assertEquals(dropin.moduleName, 'twisted.plugins.testplugin')
-        self.assertIn(
-            "I'm a test drop-in.",
-            dropin.description.strip())
+        self.assertNotEquals(dropin.description.find("I'm a test drop-in."), -1)
 
         # Note, not the preferred way to get a plugin by its interface.
         p1 = [p for p in dropin.plugins if plugin.ITestPlugin in p.provided][0]
