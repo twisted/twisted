@@ -44,8 +44,6 @@ from twisted.python import failure, log, components
 from twisted.cred import error as cred_error, portal, checkers, credentials
 
 
-# transfer modes
-PASV, PORT = 1, 2
 
 ENDLN = str('\015\012')
 
@@ -249,7 +247,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
     @ivar shell: The connected avatar
     @ivar user: The username of the connected client
     @ivar peerHost: The (type, ip, port) of the client
-    @ivar dtpTxfrMode: The current mode -- PASV or PORT
+    @ivar dtpPortMode: The current mode -- PASV or PORT
     @ivar blocked: Command queue for command pipelining
     @ivar binary: The transfer mode.  If false, ASCII.
     @ivar dtpFactory: Generates a single DTP for this session
@@ -273,7 +271,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
     shell       = None     # the avatar
     user        = None     # the username of the client connected
     peerHost    = None     # the (type,ip,port) of the client
-    dtpTxfrMode = None     # PASV or PORT, no default
+    dtpPortMode = None     # defaults to PORT
     blocked     = None     # a command queue for pipelining
     dtpFactory  = None     # generates a single DTP for this session
     dtpInstance = None     # a DTP protocol instance
@@ -318,28 +316,23 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         self.transport.loseConnection()
 
     def setTimeout(self, seconds):
-#        log.msg('ftp.setTimeout to %s seconds' % str(seconds))
         policies.TimeoutMixin.setTimeout(self, seconds)
 
     def reply(self, key, s=''):                                               
         """format a RESPONSE and send it out over the wire"""
         if string.find(RESPONSE[key], '%s') > -1:
-#            log.debug(RESPONSE[key] % s + ENDLN)
             self.transport.write(RESPONSE[key] % s + ENDLN)
         else:
-#            log.debug(RESPONSE[key] + ENDLN)
             self.transport.write(RESPONSE[key] + ENDLN)
 
     def lineReceived(self, line):
         "Process the input from the client"
         self.resetTimeout()
         line = string.strip(line)
-#        log.debug(repr(line))
         line = self.reTelnetChars.sub('', line)  # clean up '\xff\xf4\xff' nonsense
         line = line.encode() 
         try:
             cmdAndArgs = line.split(' ',1)
-#            log.debug('processing command %s' % cmdAndArgs)
             self.processCommand(*cmdAndArgs)
         except CmdSyntaxError, (e,):
             self.reply(SYNTAX_ERR, string.upper(command))
@@ -373,34 +366,28 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             raise
 
     def processCommand(self, cmd, *args):
-#        log.debug('FTP.processCommand: cmd = %s, args = %s' % (cmd,args))
-        if self.blocked != None:                                                # all DTP commands block, 
-#            log.debug('FTP is queueing command: %s' % cmd)
-            self.blocked.append((cmd,args))                                     # so queue new requests
+        # all DTP commands block, so queue new requests
+        if self.blocked != None:
+            self.blocked.append((cmd,args))
             return
 
         cmd = cmd.upper()
-        if cmd not in ['USER','PASS'] and not self.shell:                       # these are the only two commands that don't require
-            log.debug('ftp_%s returning, user not logged in' % cmd)             # an authenticated user
+        # these are the only two commands that don't require
+        # an authenticated user
+        if cmd not in ['USER','PASS'] and not self.shell:                       
+            log.debug('ftp_%s returning, user not logged in' % cmd)             
             self.reply(NOT_LOGGED_IN)
             return
 
         if cmd in self.blockingCommands:                                        # if this is a DTP related command
-            log.debug('FTP.processCommand: cmd %s in blockingCommands' % cmd)
             if not self.dtpInstance:                                            # if no one has connected yet
-#                log.debug('FTP.processCommand: self.dtpInstance = %s' % self.dtpInstance)
                 # a bit hackish, but manually blocks this command 
                 # until we've set up the DTP protocol instance
                 # _unblock will run this first command and subsequent
                 self.blocked = [(cmd,args)]                                     # add item to queue and start blocking
-#                log.debug('during dtp setup, blocked = %s' % self.blocked)
+                #log.debug('during dtp setup, blocked = %s' % self.blocked)
                 return
-
-#       TODO: vvvvv clean up crufty comment vvvvvv
-#        method = getattr(self, "ftp_%s" % cmd, None)                            # try to find the method in this class
-#        log.debug('FTP.processCommand: method = %s' % method)
-#        if method:
-#            return method(*args)                                                
+                                              
         return getattr(self, "ftp_%s" % cmd, lambda *args: None)(*args)
         raise CmdNotImplementedError(cmd)                 # if we didn't find cmd, raise an error and alert client
 
@@ -413,7 +400,6 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             else:                                            # if someone has blocked during the time we were processing
                 self.blocked.extend(commands)                # add our commands that we dequeued back into the queue
 
-# TODO: Re-implement DTP as an adapter to FTP-PI
 
 #    def _createDTP(self):
 #        self.setTimeout(None)     # don't timeOut when setting up DTP
@@ -434,6 +420,20 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
 #        d.addCallback(debugDeferred, 'dtpFactory deferred')
 #        d.addCallback(self._unblock)                            # VERY IMPORTANT: call _unblock when client connects
 #        d.addErrback(self._ebDTP)
+
+    def _createDTP(self):
+        self.setTimeout(None)
+        if self.dtpInstance is None:
+            if self.dtpPortMode:
+                self.dtpPort = reactor.connectTCP(self.dtpHostPort[1], self.dtpHostPort[2]) 
+            else:
+                # XXX: This won't work, change to use itamar's new code
+                #      should store the instance returned by the factory as self.dtpInstance
+                #      perhaps have a dtp factory with pre-built instance that is returned by buildProtocol ?
+                self.dtpPort = reactor.listenTCP(0, self.dtpFactory)    
+        
+        # XXX: do something here so we unblock when client connects
+
 
 #    def _ebDTP(self, error):
 #        log.msg(error)
@@ -702,8 +702,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         #
         # summary: this method is a special case, so keep that in mind
         #
-        log.debug('ftp_PASV') 
-        self.dtpTxfrMode = PASV
+        self.dtpPortMode = False
 
         # XXX: change as appropriate to refactoring
 
@@ -740,8 +739,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
 
         # XXX: change as appropriate to refactoring
 
-        log.debug('ftp_PORT')
-        self.dtpTxfrMode = PORT
+        self.dtpPortMode = True 
         self.dtpHostPort = self.decodeHostPort(params)
         if self.dtpFactory:                 # if we have a DTP port set up
             self.cleanupDTP()               # lose it 
@@ -765,12 +763,10 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
 
     def ftp_RETR(self, params):
 
-        # XXX: change as appropriate to refactoring
-
-        if self.dtpTxfrMode is None:
+        if self.dtpPortMode is None:
             raise BadCmdSequenceError('must send PORT or PASV before RETR')
         self.fp, self.fpsize = self.shell.retr(cleanPath(params))
-        log.debug('self.fp = %s, self.fpsize = %s' % (self.fp, self.fpsize))
+        #log.debug('self.fp = %s, self.fpsize = %s' % (self.fp, self.fpsize))
         if self.dtpInstance and self.dtpInstance.isConnected:
             self.reply(DATA_CNX_ALREADY_OPEN_START_XFR)
         else:
