@@ -12,3 +12,5 @@
 - Add parsers/generators for the rest of the headers.
   - Also think about whether the data format of the headers
 	 is really what we want there.
+- Handle HTTP methods properly on all standard resources, and make it easy 
+	to do right on user resources

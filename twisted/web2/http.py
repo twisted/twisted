@@ -10,6 +10,7 @@ The second coming.
 Maintainer: U{James Y Knight <mailto:foom@fuhm.net>}
 
 """
+#        import traceback; log.msg(''.join(traceback.format_stack()))
 
 # system imports
 from cStringIO import StringIO
@@ -22,7 +23,7 @@ import warnings
 import os
 
 # twisted imports
-from twisted.internet import interfaces, protocol, address
+from twisted.internet import interfaces, protocol, address, reactor
 from twisted.protocols import policies, basic
 from twisted.python import log, components
 from zope.interface import implements
@@ -845,25 +846,29 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         if self.timeOut:
             self._savedTimeOut = self.setTimeout(None)
         
-        
+    def _startNextRequest(self):
+        if len(self.requests) < self.maxPipeline:
+            # resume reading after pipeline emptied
+            self.resumeProducing()
+            
+        # notify next request it can start writing
+        if self.requests:
+            self.requests[0].noLongerQueued()
+        else:
+            if self._savedTimeOut:
+                self.setTimeout(self._savedTimeOut)
+
     def requestWriteFinished(self, request, persistent):
         """Called by first request in queue when it is done."""
         if request != self.requests[0]: raise TypeError
         
-        if (self.persistent == PERSIST_NO_PIPELINE or
-            len(self.requests) <= self.maxPipeline):
-            # resume reading after pipeline emptied
-            self.resumeProducing()
-            
         del self.requests[0]
         
         if persistent:
-            # notify next request it can start writing
-            if self.requests:
-                self.requests[0].noLongerQueued()
-            else:
-                if self._savedTimeOut:
-                    self.setTimeout(self._savedTimeOut)
+            # Do this in the next reactor loop so as to
+            # not cause huge call stacks with fast
+            # incoming requests.
+            reactor.callLater(self._startNextRequest)
         else:
             self.transport.loseConnection()
 

@@ -30,12 +30,14 @@ except ImportError:
 from zope.interface import implements
 # Twisted Imports
 from twisted.internet import reactor, defer
-from twisted.python import log, components
+from twisted.python import log, components, failure
 from twisted import copyright
 
 # Sibling Imports
 from twisted.web2 import resource, http, iweb, responsecode
 from twisted.web2 import http_headers, context, error
+
+_errorMarker = object()
 
 server_version = "TwistedWeb/2.0a2"
 class Request(http.Request):
@@ -74,9 +76,7 @@ class Request(http.Request):
         host = self.in_headers.getHeader('host')
         if not host:
             if self.clientproto >= (1,1):
-                self.setResponseCode(responsecode.BAD_REQUEST)
-                self.write('')
-                return
+                raise error.Error(responsecode.BAD_REQUEST)
             host = self.chanRequest.channel.transport.getHost().host
         return host
 
@@ -105,8 +105,6 @@ class Request(http.Request):
         self.sitepath = self.prepath[:]
         
         requestContext = context.RequestContext(tag=self)
-        requestContext.remember(tuple(self.prepath), iweb.ICurrentSegments)
-        requestContext.remember(tuple(self.postpath), iweb.IRemainingSegments)
         
         # make content string.
         # FIXME: make resource interface for choosing how to
@@ -125,6 +123,11 @@ class Request(http.Request):
         self.deferredContext.addCallback(self._renderAndFinish)
         
     def _renderAndFinish(self, pageContext):
+        if pageContext is _errorMarker:
+            # If the location step raised an exception, the error
+            # handler has already rendered the error page.
+            return pageContext
+        
         d = defer.maybeDeferred(pageContext.tag.renderHTTP, pageContext)
         d.addCallback(self._cbFinishRender, pageContext)
         d.addErrback(self._processingFailed, pageContext)
@@ -141,6 +144,7 @@ class Request(http.Request):
         d = defer.maybeDeferred(_processingFailed_inner, ctx, reason)
         d.addCallback(self._cbFinishRender, ctx)
         d.addErrback(self._processingReallyFailed, ctx, reason)
+        d.addBoth(lambda result: _errorMarker)
         return d
     
     def _processingReallyFailed(self, reason, ctx, origReason):
@@ -157,7 +161,7 @@ class Request(http.Request):
             return
         
         self.setResponseCode(responsecode.INTERNAL_SERVER_ERROR)
-        body = ("<html><head><title>Internal Server Error</title</head>"
+        body = ("<html><head><title>Internal Server Error</title></head>"
                 "<body><h1>Internal Server Error</h1>An error occurred rendering the requested page. Additionally, an error occured rendering the error page.</body></html>")
         
         # reset headers
@@ -173,7 +177,9 @@ class Request(http.Request):
         resource = iweb.IResource(html, None)
         if resource:
             pageContext = context.PageContext(tag=resource, parent=ctx)
-            return _renderAndFinish(pageContext)
+            d = defer.maybeDeferred(resource.renderHTTP, pageContext)
+            d.addCallback(self._cbFinishRender, pageContext)
+            return d
         elif isinstance(html, str):
             self.write(html)
             self.finish()
@@ -247,23 +253,43 @@ class Site(http.HTTPFactory):
         channel.site = self
         return channel
 
+    def getChild(self, request, ctx, res, path):
+        ## Create a context object to represent this new resource
+        newctx = context.PageContext(tag=res, parent=ctx)
+        newctx.remember(tuple(request.prepath), iweb.ICurrentSegments)
+        newctx.remember(tuple(request.postpath), iweb.IRemainingSegments)
+
+        if not path:
+            return newctx
+
+        return defer.maybeDeferred(
+            res.locateChild, newctx, path
+        ).addErrback(
+            request._processingFailed, newctx
+        ).addCallback(
+            self.handleSegment, request, path, newctx
+        )
+        
     def getPageContextForRequestContext(self, ctx):
         """Retrieve a resource from this site for a particular request. The
         resource will be wrapped in a PageContext which keeps track
         of how the resource was located.
         """
-        path = iweb.IRemainingSegments(ctx)
+        request = ctx.tag
+        path = request.postpath
+        
         res = iweb.IResource(self.resource)
-        pageContext = context.PageContext(tag=res, parent=ctx)
-        return defer.maybeDeferred(res.locateChild, pageContext, path).addCallback(
-            self.handleSegment, ctx.tag, path, pageContext
-        )
-
+        return self.getChild(request, ctx, res, path)
+    
     def handleSegment(self, result, request, path, pageContext):
+        if result is _errorMarker:
+            # The error page handler has already handled this, abort.
+            return result
+        
         newres, newpath = result
         # If the child resource is None then display a error page
         if newres is None:
-            raise error.Error(code=responsecode.NOT_FOUND)
+            return request._processingFailed(error.Error(code=responsecode.NOT_FOUND), pageContext)
 
         # If we got a deferred then we need to call back later, once the
         # child is actually available.
@@ -281,18 +307,4 @@ class Site(http.HTTPFactory):
         for x in xrange(len(path) - len(newpath)):
             request.prepath.append(request.postpath.pop(0))
 
-        ## Create a context object to represent this new resource
-        ctx = context.PageContext(tag=newres, parent=pageContext)
-        ctx.remember(tuple(request.prepath), iweb.ICurrentSegments)
-        ctx.remember(tuple(request.postpath), iweb.IRemainingSegments)
-
-        if not newpath:
-            return ctx
-
-        return defer.maybeDeferred(
-            newres.locateChild, ctx, newpath
-        ).addErrback(
-            request._processingFailed, ctx
-        ).addCallback(
-            self.handleSegment, request, newpath, ctx
-        )
+        return self.getChild(request, pageContext, newres, newpath)
