@@ -1,3 +1,10 @@
+twisted (1.0.6-1) unstable; urgency=low
+
+  * New upstream version.
+  * NMU (encouraged by maintainer)
+
+ -- Martin Sjogren <sjogren@debian.org>  Thu,  3 Jul 2003 07:45:27 +0200
+ 
 twisted (1.0.5-1) unstable; urgency=low
 
   * New upstream version
