@@ -606,4 +606,3 @@ class NNTPServer(NNTPClient):
     def sendLine(self, line):
 #        print 'sending: ', line
         basic.LineReceiver.sendLine(self, line)
-                    func = getattr(self, 'do_%s' % cmd)
