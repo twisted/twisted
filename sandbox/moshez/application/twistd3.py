@@ -19,7 +19,7 @@ from twisted.python import failure
 from twisted.persisted import styles
 import cPickle as pickle
 import cStringIO as StringIO
-import traceback, imp, sys, os, errno, signal, pdb, profile
+import traceback, imp, sys, os, errno, signal, pdb, profile, getpass
 
 util.addPluginDir()
 
@@ -314,26 +314,17 @@ def daemonize():
                 raise
 
 def shedPrivileges(euid, uid, gid):
-    if euid:
-        try:
-            os.setegid(gid)
-            os.seteuid(uid)
-        except (AttributeError, OSError):
-            pass
-        else:
-            log.msg('set euid/egid %s/%s' % (uid, gid))
+    extra = (euid and 'e') or ''
+    try:
+        for (method, value) in zip(['uid', 'gid'], [uid, gid]):
+            getattr(os, 'set'+extra+method)(value)
+    except OSError:
+        pass
     else:
-        try:
-            os.setgid(gid)
-            os.setuid(uid)
-        except (AttributeError, OSError):
-            pass
-        else:
-            log.msg('set uid/gid %s/%s' % (uid, gid))
+        log.msg('set %suid/%sgid %s/%s' % (extra, extra, uid, gid))
 
 def getPassphrase(needed):
     if needed:
-        import getpass
         return getpass.getpass('Passphrase: ')
     else:
         return None
