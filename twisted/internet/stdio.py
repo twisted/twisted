@@ -19,7 +19,7 @@
 import sys
 
 # Twisted Imports
-from twisted.protocols import protocol
+from twisted.internet import protocol
 
 # Sibling Imports
 import abstract
@@ -39,7 +39,8 @@ class StandardIO(abstract.FileDescriptor, protocol.Transport):
         This will fail if a StandardIO has already been instantiated.
         """
         global _stdio_in_use
-        assert not _stdio_in_use, "Standard IO already in use."
+        if not _stdio_in_use:
+            raise RuntimeError, "Standard IO already in use."
         _stdio_in_use = 1
         self.fileno = sys.stdin.fileno
         self.protocol = protocol
