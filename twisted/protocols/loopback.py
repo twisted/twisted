@@ -18,7 +18,9 @@
 # These class's names should have been based on Onanism, but were
 # censored by the PSU
 
-import protocol # See?  Their security protocol at work!!
+from twisted.internet import protocol
+from twisted.python import hook
+
 
 class LoopbackRelay(protocol.Transport):
 
@@ -51,7 +53,9 @@ class LoopbackRelay(protocol.Transport):
     def getHost(self):
         return 'loopback'
 
+
 def loopback(server, client, logFile=None):
+    """Run session between server and client."""
     serverToClient = LoopbackRelay(client, logFile)
     clientToServer = LoopbackRelay(server, logFile)
     server.makeConnection(serverToClient)
@@ -66,3 +70,28 @@ def loopback(server, client, logFile=None):
             break
     client.connectionLost()
     server.connectionLost()
+
+
+def loopbackTCP(server, client, port=64124):
+    """Run session between server and client over TCP."""
+    from twisted.internet import reactor
+    f = protocol.Factory()
+    f.buildProtocol = lambda addr, p=server: p
+    serverPort = reactor.listenTCP(port, f, interface='127.0.0.1')
+    reactor.clientTCP('127.0.0.1', port, client)
+    class MyServer(server.__class__):
+
+        _loopbackTCP_notRunningAnymore = 0
+        def connectionLost(self):
+            self._loopbackTCP_notRunningAnymore = 1
+            self.__class__.__bases__[0].connectionLost(self)
+
+    server.__class__ = MyServer
+    while not server._loopbackTCP_notRunningAnymore:
+        reactor.iterate()
+
+    serverPort.stopListening()
+    reactor.iterate()
+    reactor.iterate()
+
+        
