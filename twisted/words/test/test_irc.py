@@ -1,4 +1,4 @@
-
+# test-case-name: twisted.words.test.test_irc
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -262,6 +262,39 @@ class ModeTestCase(unittest.TestCase):
         self.assertEquals(
             self.client.calls,
             [("receivedMOTD", {"motd": ["host.name Message of the Day -", "Welcome to host.name"]})])
+
+
+    def _clientTestImpl(self, sender, group, type, msg, func, **kw):
+        ident = pop(kw, 'ident', 'ident')
+        host = pop(kw, 'host', 'host')
+
+        wholeUser = sender + '!' + ident + '@' + host
+        message = (":" +
+                   wholeUser + " " +
+                   type + " " +
+                   group + " :" +
+                   msg + "\r\n")
+        self.client.dataReceived(message)
+        self.assertEquals(
+            self.client.calls,
+            [(func, kw)])
+        self.client.calls = []
+
+    def testPrivmsg(self):
+        msg = "Tooty toot toot."
+        self._clientTestImpl("sender", "#group", "PRIVMSG", msg, "privmsg",
+                             ident="ident", host="host",
+                             # Expected results below
+                             user="sender!ident@host",
+                             channel="#group",
+                             message=msg)
+
+        self._clientTestImpl("sender", "recipient", "PRIVMSG", msg, "privmsg",
+                             ident="ident", host="host",
+                             # Expected results below
+                             user="sender!ident@host",
+                             channel="recipient",
+                             message=msg)
 
 class BasicServerFunctionalityTestCase(unittest.TestCase):
     def setUp(self):
