@@ -53,10 +53,10 @@ class BaseLogFile:
         """Open the log file."""
         self.closed = 0
         if os.path.exists(self.path):
-            self._file = open(self.path, "r+")
+            self._file = open(self.path, "r+", 1)
             self._file.seek(0, 2)
         else:
-            self._file = open(self.path, "w+")
+            self._file = open(self.path, "w+", 1)
         # set umask to be same as original log file
         if self.defaultMode is not None:
             try:
