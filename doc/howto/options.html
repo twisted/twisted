@@ -29,7 +29,7 @@
     loops, or have arbitrary limitations on the command line (the
     most common one being not being able to have more then one
     instance of a specific option, thus rendering the idiom
-    "<code>program -v -v -v</code>" impossible), Twisted allows the
+    <code class="shell">program -v -v -v</code> impossible), Twisted allows the
     programmer to decide how much control she wants.</p>
 
     <p>The <code>Options</code> class is used by subclassing. Since
@@ -160,7 +160,7 @@ print
     <p>It is useful, on occassion, to group a set of options together based
     on the logical "action" to which they belong.  For this, the
     <code>usage.Options</code> class allows you to define a set of
-    "subcommands", each of which can provide its own
+    <q>subcommands</q>, each of which can provide its own
     <code>usage.Options</code> instance to handle its particular
     options.</p>
     
@@ -185,7 +185,8 @@ class Options(usage.Options):
     
     <p>The <code>subCommands</code> attribute of <code>Options</code>
     directs the parser to the two other <code>Options</code> subclasses
-    when the strings "import" or "checkout" are present on the command
+    when the strings <code>"import"</code> or <code>"checkout"</code> are
+    present on the command
     line.  All options after the given command string are passed to the
     specified Options subclass for further parsing.  Only one subcommand
     may be specified at a time.  After parsing has completed, the Options
@@ -197,8 +198,8 @@ class Options(usage.Options):
 
     <p>Sometimes, just setting an attribute on the basis of the
     options is not flexible enough. In those cases, Twisted does
-    not even attempt to provide abstractions such as "counts" or
-    "lists", but rathers lets you call your own method, which will
+    not even attempt to provide abstractions such as <q>counts</q> or
+    <q>lists</q>, but rathers lets you call your own method, which will
     be called whenever the option is encountered.</p>
 
     <p>Here is an example of counting verbosity</p>
@@ -221,12 +222,15 @@ class Options(usage.Options):
     opt_q = opt_quiet
 </pre>
 
-    <p>Command lines that look like "command -v -v -v -v" will
-    increase verbosity to 4, while "command -q -q -q" will decrease
+    <p>Command lines that look like
+    <code class="shell">command -v -v -v -v</code> will
+    increase verbosity to 4, while
+    <code class="shell">command -q -q -q</code> will decrease
     verbosity to -3. 
     </p>
 
-    <p>The <code>usage.Options</code> class knows that these are
+    <p>The <code class="API" base="twisted.python">usage.Options</code>
+    class knows that these are
     parameter-less options, since the methods do not receive an
     argument. Here is an example for a method with a parameter:</p>
 
