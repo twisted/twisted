@@ -1,3 +1,10 @@
+2003-08-18  Jp Calderone <exarkun@twistedmatrix.com>
+
+	* twisted/protocols/imap4.py: Remove support code for old versions
+	of IMailbox.fetch(); also change the interface once again (no
+	backwards compat this time) to require sequence numbers to be
+	returned, not just whatever the MessageSet spit out.
+
 2003-08-16  Dave Peticolas  <dave@krondo.com>
 
 	* twisted/test/test_import.py: update for enterprise
