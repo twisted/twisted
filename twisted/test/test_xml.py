@@ -190,3 +190,34 @@ class MicroDOMTest(TestCase):
         t = microdom.Text("foo")
         d.replaceChild(t, d.firstChild())
         self.assertEquals(d.firstChild(), t)
+
+    def testSearch(self):
+        s = "<foo><bar id='me' /><baz><foo /></baz></foo>"
+        d = microdom.parseString(s)
+        root = d.documentElement
+        self.assertEquals(root.firstChild(), d.getElementById('me'))
+        self.assertEquals(d.getElementsByTagName("foo"),
+                          [root, root.lastChild().firstChild()])
+
+    def testDoctype(self):
+        s = '''<?xml version="1.0"?>
+        <!DOCTYPE foo PUBLIC "baz" "http://www.example.com/example.dtd">
+        <foo />'''
+        d = microdom.parseString(s)
+        self.assertEquals(d.doctype, 'foo PUBLIC "baz" "http://www.example.com/example.dtd"')
+
+    samples = [("<foo/>", "<foo />"),
+               ("<foo A='b'>x</foo>", '<foo A="b">x</foo>'),
+               ("<foo><BAR /></foo>", "<foo><BAR /></foo>"),
+               ("<foo>hello there &amp; yoyoy</foo>", "<foo>hello there &amp; yoyoy</foo>"),
+               ]
+    
+    def testOutput(self):
+        for s, out in self.samples:
+            d = microdom.parseString(s, caseInsensitive=0)
+            testOut = d.documentElement.toxml()
+            self.assertEquals(out, testOut)
+
+    def testErrors(self):
+        for s in ["<foo>&am</foo>", "<foo", "<f>&</f>", "<() />"]:
+            self.assertRaises(Exception, microdom.parseString, s)
