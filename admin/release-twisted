@@ -60,6 +60,13 @@ def main():
         print "Please specify a version."
         sys.exit(2)
 
+    from twisted import copyright
+    if opts.opts['version'] != copyright.version:
+        print '''Error: the version you passed in is not the same as copyright.version:
+        -v %s, copyright.version %s''' % (opts.opts['version'], copyright.version)
+        print "Please make sure you've updated the README, the ChangeLog, and copyright.py!"
+        sys.exit(2)
+
     if opts.opts['onlydocs']:
         makeDocs(opts)
         return
