@@ -129,7 +129,9 @@ class Options(usage.Options):
             # This code expresses the high-level workflow of the
             # release procedure.
 
-            if self['type'] == 'alpha':
+            if (self['type'] == 'alpha'
+                or (self['type'] == 'rc'
+                    and self['tinyver'] == '1')):
                 commands += [CopyTrunkToWIP]
 
             commands += [CheckoutWIP,
@@ -341,6 +343,10 @@ class UpdateVersion(Transaction):
         oldver = 'SVN-trunk'
         newver = opts['full-version']
 
+
+        # XXX rar rar - It will not always be SVN-trunk! RCN>1 and
+        # finals use the same branch, and we've committed the version
+        # number!
         r = checkoutdir
         self.files = ('README', 'twisted/copyright.py', 'admin/twisted.spec')
         for file in self.files:
@@ -708,7 +714,7 @@ class UpdateWebDocs(Transaction):
         for dir in ['examples', 'fun', 'historic', 'legal',
                     'specifications', 'vision', 'man']:
             os.chdir(dir)
-            sh('%s  --config ext= -l../howto/ *.xhtml')
+            sh('%s  --config ext= -l../howto/ *.xhtml' % lorecmd)
             os.chdir('..')
 
         os.chdir('man')
