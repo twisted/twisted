@@ -189,23 +189,28 @@ class POP3Client(basic.LineReceiver):
             if m:
                 self.welcomeCode = m.group(1)
 
+    def _dispatch(self, command, default, *args):
+        # print 'pop3client dispatching:', command, default, args
+        try:
+            method = getattr(self, 'handle_'+command, default)
+            if method is not None:
+                method(*args)
+        except:
+            from twisted.python import log
+            log.deferr()
+
     def lineReceived(self, line):
         if self.mode == SHORT or self.mode == FIRST_LONG:
             self.mode = NEXT[self.mode]
-            method = getattr(self, 'handle_'+self.command, self.handle_default)
-            method(line)
+            self._dispatch(self.command, self.handle_default, line)
         elif self.mode == LONG:
             if line == '.':
                 self.mode = NEXT[self.mode]
-                method = getattr(self, 'handle_'+self.command+'_end', None)
-                if method is not None:
-                    method()
+                self._dispatch(self.command+'_end', None)
                 return
             if line[:1] == '.':
                 line = line[1:]
-            method = getattr(self, 'handle_'+self.command+'_continue', None)
-            if method is not None:
-                method(line)
+            self._dispatch(self.command+"_continue", None, line)
 
     def apopAuthenticate(self, user, password):
         digest = md5.new(magic+password).digest()
