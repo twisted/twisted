@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.test.test_woven -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001-2002 Matthew W. Lefkowitz
 # 
@@ -81,9 +82,7 @@ def clearNode(node):
     """
     Remove all children from the given node.
     """
-    if node.hasChildNodes():
-        while len(node.childNodes):
-            node.removeChild(node.lastChild())
+    node.childNodes[:] = []
 
 def locateNodes(nodeList, key, value, noNesting=1):
     """
@@ -157,22 +156,23 @@ def gatherTextNodes(iNode):
 
 class RawText(microdom.Text):
     """This is an evil and horrible speed hack. Basically, if you have a big
-    chunk of XML that you want to insert into the DOM, but you don't want
-    to incur the cost of parsing it, you can construct one of these and insert 
-    it into the DOM. This will most certainly only work with minidom as the 
-    API for converting nodes to xml is different in every DOM implementation.
-    
+    chunk of XML that you want to insert into the DOM, but you don't want to
+    incur the cost of parsing it, you can construct one of these and insert it
+    into the DOM. This will most certainly only work with microdom as the API
+    for converting nodes to xml is different in every DOM implementation.
+
     This could be improved by making this class a Lazy parser, so if you
-    inserted this into the DOM and then later actually tried to mutate
-    this node, it would be parsed then.
+    inserted this into the DOM and then later actually tried to mutate this
+    node, it would be parsed then.
     """
+
     def writexml(self, writer, indent="", addindent="", newl=""):
         writer.write("%s%s%s" % (indent, self.data, newl))
 
 def findNodes(parent, matcher, accum=None):
     if accum is None:
         accum = []
-    if not hasattr(parent, 'childNodes'):
+    if not parent.hasChildNodes():
         return accum
     for child in parent.childNodes:
         # print child, child.nodeType, child.nodeName
