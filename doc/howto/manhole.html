@@ -10,149 +10,13 @@
   <body>
     <h1>Debugging with Manhole</h1>
 
-<p><code class="API">twisted.manhole</code> is a service that lets you
-execute arbitrary code inside your running application. It makes a great
-administration and debugging tool. </p>
+<h2>Creating the Manhole Service</h2>
 
-<p>There are two ways to add a manhole port to your application. One is a
-simple telnet-like shell, and the other is a Perspective Broker -based
-service that uses a special Gtk+-based graphical client program named
-'<code>manhole</code>'.</p>
-
-
-<h2>Using the Manhole Telnet Server</h2>
-
-<p>You can take manhole for a test drive by creating an application that
-does nothing else. To do this, execute the command <code class="shell">mktap
-manhole -u [username] -w [password]</code>. This will create a twisted
-application (.tap) file that has a <code class="API">twisted.manhole</code>
-service which will listen on port 8787. Execute the command 'twistd -f
-manhole.tap' to actually start the server.</p>
-
-<p>However, where manhole really becomes useful is when you want to look
-inside an application that you're developing. Let's suppose that we have the
-following application:</p>
-
-<a href="listings/manhole/manhole1.py" class="py-listing">manhole1.py</a>
-
-<p>Once this is running, it would be nice to poke around inside it. We can
-add the manhole-shell by adding a few lines to create a new server (a
-Factory) listening on a different point:</p>
-
-<a href="listings/manhole/manhole2.py" class="py-listing">manhole2.py</a>
-
-<p>With this in place, you can telnet to port 8007, give the username
-<q>boss</q>
-and password <q>sekrit</q>, and you'll end up with a shell that behaves very
-much
-like the Python interpreter that you get by running <code>python</code> all by
-itself, with lines you type prefixed with <code>&gt;&gt;&gt;</code>.</p>
-
-
-<pre class="shell">
-% telnet localhost 8007
-Trying 127.0.0.1...
-Connected to localhost.
-Escape character is '^]'.
-
-twisted.manhole.telnet.ShellFactory
-Twisted 0.99.2
-username: boss
-password: *****
-&gt;&gt;&gt;
-</pre>
-
-<p>Note that the original Quote-Of-The-Day server is still running on port
-8123 by using <code class="shell">nc localhost 8123</code> (or <code
-class="shell">telnet localhost 8123</code> if you don't have netcat
-installed).</p>
-
-<pre class="shell">
-% nc localhost 8123
-An apple a day keeps the doctor away.
-</pre>
-
-<p>The initial namespace of the manhole interpreter is defined by a
-dictionary stored in the '<code>namespace</code>' attribute of the ShellFactory.
-For convenience, you can put references to any objects you like in that dict
-(<code class="python">f.namespace['foo'] = 12</code>), and then retrieve
-them by name from the telnet session.</p>
-
-<pre class="python-interpreter">
-&gt;&gt;&gt; foo
-12
-</pre>
-
-<p>Of course we can change that namespace by evaluating expressions in the
-interpreter. To be a useful debugging tool, however, we want to get access
-to our servers (the protocol <code class="API"
-base="twisted.internet.protocol">Factory</code> instances and everything
-hanging off of them). We start by gaining access to the main <code
-class="API" base="twisted.internet.app">Application</code> instance through
-a global variable stored in the <code>app</code> module:</p>
-
-<pre class="python-interpreter">
-&gt;&gt;&gt; import twisted.internet.app         
-&gt;&gt;&gt; a = twisted.internet.app.theApplication
-&gt;&gt;&gt; a
-&lt;'demo' app&gt;
-</pre>
-
-<p>This object holds three things of interest: the list of Delayeds
-(functions scheduled to run some number of seconds in the future), the list
-of Services (subclasses of ApplicationService that have been added to the
-application, most notably Perspective Broker services), and the list of
-ports on which protocol Factories are listening. The ports are kept in a
-list, and the Factory object itself is available inside that list (word
-wrapped for clarity):</p>
-
-<pre class="python-interpreter">
-&gt;&gt;&gt; a.tcpPorts
-[(8123, &lt;twisted.internet.protocol.Factory instance at 0x8249b8c&gt;, 5, ''),
-(8007, &lt;twisted.manhole.telnet.ShellFactory instance at 0x824aefc&gt;, 5, '')
-]
-&gt;&gt;&gt; f = a.tcpPorts[0][1]
-&gt;&gt;&gt; f
-&lt;twisted.internet.protocol.Factory instance at 0x8249b8c&gt;
-</pre>
-
-<p>Now that we have access to that Factory, what can we do? We can modify
-any attribute of the object, or call functions on it. Remember that the
-Factory stores a reference to a subclass of Protocol, and it uses that
-reference to create new Protocol instances for each new connection. We can
-change that reference to make the Factory create something else:</p>
-
-<pre class="python-interpreter">
-&gt;&gt;&gt; f.protocol
-&lt;class twisted.protocols.wire.QOTD at 0x824a66c&gt;
-&gt;&gt;&gt; from twisted.protocols.wire import Daytime
-&gt;&gt;&gt; f.protocol = Daytime
-</pre>
-
-
-<p>Congratulations, you've just changed the Factory to use the <code
-class="API" base="twisted.protocols.wire">Daytime</code> protocol instead of
-the <code class="API" base="twisted.protocols.wire">QOTD</code> protocol.
-You have just transformed the QOTD server into a Daytime server. Connect to
-port 8123 now and see the difference: you get a timestamp instead of a
-quote:</p>
-
-<pre class="shell">
-% nc localhost 8123
-Sat Sep 28 09:11:37 2002
-</pre>
-
-<p>From here, you can do anything you want to your application. It is a good
-idea to check the source for the <code class="API"
-base="twisted.internet.app">Application</code> and <code class="API"
-base="twisted.cred.service">Service</code> classes to see what else you can
-extract from them.</p>
-
-<p>Note: to terminate your session, you'll need to exit the telnet or netcat
-program (the usual control-D that works in the Python interpreter won't work
-here). Try control-] for telnet. Also note that any exceptions caused by
-your manhole session will be displayed both in the telnet session <em>and</em>
-in the stderr on the application side.</p>
+<p>In order to create a manhole server, use a command like
+<code class="shell">mktap manhole -u [username] -w [password]</code>.
+If you've already got a <q>TAP</q> for a server, you can use the argument
+<code class="shell">--append [tapname]</code> to
+<code class="shell">mktap</code> to add a manhole service to that <q>TAP</q>.
 
 <h2>Using the Manhole PB Client</h2>
 
@@ -165,23 +29,6 @@ ask to <q>watch</q> certain objects, and then will receive messages every time
 that python object is changed. (this takes advantage of some twisted.python
 code that <q>hooks</q> some functions, like .setattr). These features are
 described in detail below.</p>
-
-<p>To add a manhole PB Service to your application, you need to do some PB
-setup first. This involves creating an Authorizer, creating a Perspective
-and Identity, assigning a username and password to the Identity, then
-finally creating the Service. These steps are part of the normal
-initialization of any PB application, but when you're just starting with
-Twisted, you're probably writing simple servers using <code>listenTCP</code>,
-and haven't dealt with all those new classes yet. There is a shortcut that
-takes advantage of some of the <q>.tap</q> configuration code. It isn't pretty or
-clear, but adding the marked four lines will result in a password-protected
-Manhole Perspective being added to your application:</p>
-
-
-<a href="listings/manhole/manhole3.py" class="py-listing">manhole2.py</a>
-
-<p>TODO: this hack needs to be replaced with a cleaner way to add an
-arbitrary Service to an Application.</p>
 
 <p>With this in place and running, you're ready to connect with the manhole
 client. This is a Gtk+-based GUI application named <code>manhole</code> that
@@ -331,4 +178,3 @@ running server without missing a beat.</p>
 
 </body>
 </html>
-

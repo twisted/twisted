@@ -131,4 +131,129 @@ Saved.
 telnet-shutdown.tap file, just like when you did <code
 class="shell">kill `cat twistd.pid`</code>.</p>
 
+<h2>More Complicated Configuration</h2>
+
+<p>Let's suppose that we have the following application:</p>
+
+<a href="listings/manhole/manhole1.py" class="py-listing">manhole1.py</a>
+
+<p>Once this is running, it would be nice to poke around inside it. We can
+add the manhole-shell by adding a few lines to create a new server (a
+Factory) listening on a different point:</p>
+
+<a href="listings/manhole/manhole2.py" class="py-listing">manhole2.py</a>
+
+<p>With this in place, you can telnet to port 8007, give the username
+<q>boss</q>
+and password <q>sekrit</q>, and you'll end up with a shell that behaves very
+much
+like the Python interpreter that you get by running <code>python</code> all by
+itself, with lines you type prefixed with <code>&gt;&gt;&gt;</code>.</p>
+
+
+<pre class="shell">
+% telnet localhost 8007
+Trying 127.0.0.1...
+Connected to localhost.
+Escape character is '^]'.
+
+twisted.manhole.telnet.ShellFactory
+Twisted 0.99.2
+username: boss
+password: *****
+&gt;&gt;&gt;
+</pre>
+
+<p>Note that the original Quote-Of-The-Day server is still running on port
+8123 by using <code class="shell">nc localhost 8123</code> (or <code
+class="shell">telnet localhost 8123</code> if you don't have netcat
+installed).</p>
+
+<pre class="shell">
+% nc localhost 8123
+An apple a day keeps the doctor away.
+</pre>
+
+<p>The initial namespace of the manhole interpreter is defined by a
+dictionary stored in the '<code>namespace</code>' attribute of the ShellFactory.
+For convenience, you can put references to any objects you like in that dict
+(<code class="python">f.namespace['foo'] = 12</code>), and then retrieve
+them by name from the telnet session.</p>
+
+<pre class="python-interpreter">
+&gt;&gt;&gt; foo
+12
+</pre>
+
+<p>Of course we can change that namespace by evaluating expressions in the
+interpreter. To be a useful debugging tool, however, we want to get access
+to our servers (the protocol <code class="API"
+base="twisted.internet.protocol">Factory</code> instances and everything
+hanging off of them). We start by gaining access to the main <code
+class="API" base="twisted.internet.app">Application</code> instance through
+a global variable stored in the <code>app</code> module:</p>
+
+<pre class="python-interpreter">
+&gt;&gt;&gt; import twisted.internet.app         
+&gt;&gt;&gt; a = twisted.internet.app.theApplication
+&gt;&gt;&gt; a
+&lt;'demo' app&gt;
+</pre>
+
+<p>This object holds three things of interest: the list of Delayeds
+(functions scheduled to run some number of seconds in the future), the list
+of Services (subclasses of ApplicationService that have been added to the
+application, most notably Perspective Broker services), and the list of
+ports on which protocol Factories are listening. The ports are kept in a
+list, and the Factory object itself is available inside that list (word
+wrapped for clarity):</p>
+
+<pre class="python-interpreter">
+&gt;&gt;&gt; a.tcpPorts
+[(8123, &lt;twisted.internet.protocol.Factory instance at 0x8249b8c&gt;, 5, ''),
+(8007, &lt;twisted.manhole.telnet.ShellFactory instance at 0x824aefc&gt;, 5, '')
+]
+&gt;&gt;&gt; f = a.tcpPorts[0][1]
+&gt;&gt;&gt; f
+&lt;twisted.internet.protocol.Factory instance at 0x8249b8c&gt;
+</pre>
+
+<p>Now that we have access to that Factory, what can we do? We can modify
+any attribute of the object, or call functions on it. Remember that the
+Factory stores a reference to a subclass of Protocol, and it uses that
+reference to create new Protocol instances for each new connection. We can
+change that reference to make the Factory create something else:</p>
+
+<pre class="python-interpreter">
+&gt;&gt;&gt; f.protocol
+&lt;class twisted.protocols.wire.QOTD at 0x824a66c&gt;
+&gt;&gt;&gt; from twisted.protocols.wire import Daytime
+&gt;&gt;&gt; f.protocol = Daytime
+</pre>
+
+
+<p>Congratulations, you've just changed the Factory to use the <code
+class="API" base="twisted.protocols.wire">Daytime</code> protocol instead of
+the <code class="API" base="twisted.protocols.wire">QOTD</code> protocol.
+You have just transformed the QOTD server into a Daytime server. Connect to
+port 8123 now and see the difference: you get a timestamp instead of a
+quote:</p>
+
+<pre class="shell">
+% nc localhost 8123
+Sat Sep 28 09:11:37 2002
+</pre>
+
+<p>From here, you can do anything you want to your application. It is a good
+idea to check the source for the <code class="API"
+base="twisted.internet.app">Application</code> and <code class="API"
+base="twisted.cred.service">Service</code> classes to see what else you can
+extract from them.</p>
+
+<p>Note: to terminate your session, you'll need to exit the telnet or netcat
+program (the usual control-D that works in the Python interpreter won't work
+here). Try control-] for telnet. Also note that any exceptions caused by
+your manhole session will be displayed both in the telnet session <em>and</em>
+in the stderr on the application side.</p>
+
 </body></html>
