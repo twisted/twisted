@@ -75,10 +75,10 @@ class GoogleCheckerFactory(protocol.ClientFactory):
 
 
 def checkGoogle(words):
-    """check google for a match
+    """Check google for a match.
 
-    @returns a deferred which will callback with a URL or errback with a
-    failure
+    @returns: a Deferred which will callback with a URL or errback with a
+        Failure.
     """
     factory = GoogleCheckerFactory(words)
     reactor.connectTCP('www.google.com', 80, factory)

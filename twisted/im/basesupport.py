@@ -18,6 +18,7 @@
 # Abstract representation of chat "model" classes
 
 from locals import ONLINE, OFFLINE
+import interfaces
 
 from twisted.internet.protocol import Protocol
 
@@ -115,7 +116,7 @@ class AbstractClientMixin:
 class AbstractAccount(styles.Versioned):
     """Base class for Accounts.
 
-    I am the start of an implementation of L{<interfaces.IAccount>IAccount}, I
+    I am the start of an implementation of L{IAccount<interfaces.IAccount>}, I
     implement L{isOnline} and most of L{logOn}, though you'll need to implement
     L{_startLogOn} in a subclass.
 

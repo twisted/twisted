@@ -152,7 +152,7 @@ class Gtk2Reactor(default.PosixReactorBase):
                 break
         self.simulate()
         return 1
-    
+
     def simulate(self):
         """Run simulation loops and reschedule callbacks.
         """

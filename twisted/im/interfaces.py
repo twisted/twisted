@@ -56,12 +56,12 @@ class IAccount(Interface):
 
     def getGroup(self, groupName):
         """
-        @returntype: L{<IGroup>Group}
+        @returntype: L{Group<IGroup>}
         """
 
     def getPerson(self, personName):
         """
-        @returntype: L{<IPerson>Person}
+        @returntype: L{Person<IPerson>}
         """
 
 class IClient(Interface):
@@ -79,12 +79,14 @@ class IClient(Interface):
 
     def joinGroup(self, groupName):
         """
-        @type groupname: string
+        @param groupName: The name of the group to join.
+        @type groupName: string
         """
 
     def leaveGroup(self, groupName):
         """
-        @type groupname: string
+        @param groupName: The name of the group to leave.
+        @type groupName: string
         """
 
     def getGroupConversation(self, name,hide=0):
@@ -137,8 +139,8 @@ class IGroup(Interface):
 
     @ivar name: My name, as the server knows me.
     @type name: string
-    @param account: The account I am accessed through.
-    @type account: I{Account}
+    @ivar account: The account I am accessed through.
+    @type account: I{Account<IAccount>}
     """
 
     def __init__(self, name, account):
@@ -147,7 +149,7 @@ class IGroup(Interface):
         @param name: My name, as the server knows me.
         @type name: string
         @param account: The account I am accessed through.
-        @type account: I{Account}
+        @type account: I{Account<IAccount>}
         """
 
     def setTopic(self, text):
@@ -283,23 +285,23 @@ class IChatUI(Interface):
     def getPerson(self, name, client):
         """Get a Person for a client.
 
-        Duplicates IAccount.getPerson.
+        Duplicates L{IAccount.getPerson}.
 
         @type name: string
-        @type client: L{Client<interfaces.IClient>}
+        @type client: L{Client<IClient>}
 
-        @returntype: L{Person<interfaces.IPerson>}
+        @returntype: L{Person<IPerson>}
         """
 
     def getGroup(self, name, client):
         """Get a Group for a client.
 
-        Duplicates IAccount.getGroup.
+        Duplicates L{IAccount.getGroup}.
 
         @type name: string
-        @type client: L{Client<interfaces.IClient>}
+        @type client: L{Client<IClient>}
 
-        @returntype: L{Group<interfaces.IGroup>}
+        @returntype: L{Group<IGroup>}
         """
 
     def contactChangedNick(self, oldnick, newnick):

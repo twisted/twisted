@@ -33,9 +33,6 @@ class Reflector:
 
         @param rowClasses: a list of row class objects that describe the
             database schema.
-
-        @param populatedCallback: method to be called when all database
-            initialization is done.
         """
 
         self.rowCache = weakref.WeakValueDictionary() # doesnt hold references to cached rows.
@@ -62,9 +59,9 @@ class Reflector:
         """This is called once for each registered rowClass to add it
         and its foreign key relationships for that rowClass to the
         schema."""
-        
+
         self.schema[ tableInfo.rowTableName ] = tableInfo
-        
+
         # add the foreign key to the foreign table.
         for foreignTableName, childColumns, parentColumns, containerMethod, autoLoad in tableInfo.rowForeignKeys:
             self.schema[foreignTableName].addForeignKey(childColumns,
@@ -92,7 +89,7 @@ class Reflector:
         """util method used by reflectors. builds a where clause to link a row to another table.
         """
         whereClause = []
-        for i in range(0,len(relationship.childColumns)):                
+        for i in range(0,len(relationship.childColumns)):
             value = getattr(row, relationship.parentColumns[i][0])
             whereClause.append( [relationship.childColumns[i][0], EQUAL, value] )
         return whereClause
@@ -106,7 +103,7 @@ class Reflector:
         relationship = parentInfo.getRelationshipFor(tableName)
         if not relationship:
             raise DBError("no relationship from %s to %s" % ( parentRow.rowTableName, tableName) )
-        
+
         if not relationship.containerMethod:
             if hasattr(parentRow, "childRows"):
                 for row in rows:
@@ -115,16 +112,16 @@ class Reflector:
             else:
                 parentRow.childRows = rows
             return
-        
+
         if not hasattr(parentRow, relationship.containerMethod):
             raise DBError("parent row (%s) doesnt have container method <%s>!" % (parentRow, relationship.containerMethod))
-        
+
         meth = getattr(parentRow, relationship.containerMethod)
         for row in rows:
             meth(row)
-        
+
     ####### Row Cache ########
-    
+
     def addToCache(self, rowObject):
         """NOTE: Should this be recursive?! requires better container knowledge..."""
         self.rowCache[ rowObject.getKeyTuple() ] = rowObject
@@ -152,19 +149,19 @@ class Reflector:
 
     def loadObjectsFrom(self, tableName, parent=None, data=None,
                         whereClause=[], loadChildren=1):
-        """Implement me to load objects from the database. 
-        
+        """Implement me to load objects from the database.
+
         @param whereClause: a list of tuples of (columnName, conditional, value)
             so it can be parsed by all types of reflectors. eg.::
               whereClause = [("name", EQUALS, "fred"), ("age", GREATERTHAN, 18)]
         """
         raise DBError("not implemented")
-        
+
     def updateRow(self, rowObject):
         """update this rowObject to the database.
         """
         raise DBError("not implemented")
-    
+
     def insertRow(self, rowObject):
         """insert a new row for this object instance.
         """
@@ -173,11 +170,10 @@ class Reflector:
     def deleteRow(self, rowObject):
         """delete the row for this object from the database.
         """
-        raise DBError("not implemented")        
-    
+        raise DBError("not implemented")
+
 # conditionals
 EQUAL       = 0
 LESSTHAN    = 1
 GREATERTHAN = 2
 LIKE        = 3
-

@@ -35,7 +35,7 @@ class AccountManager:
 
         @returns: A list of tuples, each of the form
             (string:accountName, boolean:isOnline,
-             boolean:autoLogin, string:gatewayType)
+            boolean:autoLogin, string:gatewayType)
         """
         data = []
         for account in self.accounts.values():

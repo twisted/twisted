@@ -64,16 +64,16 @@ class IResolverSimple(Interface):
         @type timeout: C{int}
         @rtype: C{Deferred}
         @return: The callback of the C{Deferred} that is returned will be
-        passed a string that represents the IP address of the specified
-        name, or the errback will be called if the lookup times out.  If
-        multiple types of address records are associated with the name,
-        A6 records will be returned in preference to AAAA records, which
-        will be returned in preference to A records.  If there are multiple
-        records of the type to be returned, one will be selected at random.
+            passed a string that represents the IP address of the specified
+            name, or the errback will be called if the lookup times out.  If
+            multiple types of address records are associated with the name,
+            A6 records will be returned in preference to AAAA records, which
+            will be returned in preference to A records.  If there are multiple
+            records of the type to be returned, one will be selected at random.
 
-        @raise C{twisted.internet.defer.TimeoutError}: Raised
-        (asynchronously) if the name cannot be resolved within the specified
-        timeout period.
+        @raise L{TimeoutError<twisted.internet.defer.TimeoutError>}: Raised
+            (asynchronously) if the name cannot be resolved within the
+            specified timeout period.
         """
 
 class IResolver(IResolverSimple):
@@ -162,11 +162,11 @@ class IReactorArbitrary(Interface):
         @param portType: The object given by C{portType(*args, **kw)}
         will be started listening.
         """
-    
+
     def connectWith(self, connectorType, *args, **kw):
         """
         Start an instance of the given C{connectorType} connecting.
-        
+
         @type connectorType: type which implements C{IConnector}
         @param connectorType: The object given by C{connectorType(*args, **kw)}
         will be started connecting.
@@ -423,9 +423,9 @@ class IDelayedCall(Interface):
 
     def reset(self, secondsFromNow):
         """Reset the scheduled call's timer.
-        @param secondsLater: how many seconds from now it should fire, equivalent
-                             to C{self.cancel()} and then doing another
-                             C{reactor.callLater(secondsLater, ...)}
+        @param secondsFromNow: how many seconds from now it should fire,
+            equivalent to C{self.cancel()} and then doing another
+            C{reactor.callLater(secondsLater, ...)}
 
         @raises twisted.internet.error.AlreadyCalled: if the call has already
             happened.
@@ -815,16 +815,16 @@ class IProcessTransport(ITransport):
         """Close stdin, stderr and stdout."""
 
     def signalProcess(self, signalID):
-        """
-        Send a signal to the process.  signalID can
-        be:
+        """Send a signal to the process.
 
-        * one of "HUP", "KILL", "STOP", or "INT".
-            These will be implemented in a
-            cross-platform manner, and so should be used
-            if possible.
-        * an integer, where it represents a POSIX
-            signal ID."""
+        @param signalID: can be
+          - one of C{\"HUP\"}, C{\"KILL\"}, C{\"STOP\"}, or C{\"INT\"}.
+              These will be implemented in a
+              cross-platform manner, and so should be used
+              if possible.
+          - an integer, where it represents a POSIX
+              signal ID.
+        """
 
 
 class IServiceCollection(Interface):
