@@ -78,6 +78,26 @@ class DirDBM:
         """
         return base64.decodestring(string.replace(k, '_', '\n'))
     
+    def _readFile(self, path):
+        """Read in the contents of a file.
+        
+        Override in subclasses to e.g. provide transparently encrypted dirdbm.
+        """
+        f = _open(path, "rb")
+        s = f.read()
+        f.close()
+        return s
+    
+    def _writeFile(self, path, data):
+        """Write data to a file.
+        
+        Override in subclasses to e.g. provide transparently encrypted dirdbm.
+        """
+        f = _open(path, "wb")
+        f.write(data)
+        f.flush()
+        f.close()
+    
     def __setitem__(self, k, v):
         """dirdbm[foo] = bar; create or modify a textfile in this directory
         """
@@ -93,10 +113,7 @@ class DirDBM:
         else:
             new = old + ".new" # new entry
         try:
-            f = _open(new,'wb')
-            f.write(v)
-            f.flush()
-            f.close()
+            self._writeFile(new, v)
         except:
             os.remove(new)
             raise
@@ -108,9 +125,11 @@ class DirDBM:
         """dirdbm[foo]; get the contents of a file in this directory as a string
         """
         assert type(k) == types.StringType
-        k = self._encode(k)
-        try:    return _open(os.path.join(self.dname, k), "rb").read()
-        except: raise KeyError(self._decode(k))
+        path = os.path.join(self.dname, self._encode(k))
+        try:
+            return self._readFile(path)
+        except:
+            raise KeyError, k
 
     def __delitem__(self, k):
         """del dirdbm[foo]; delete a file in this directory
@@ -177,13 +196,7 @@ class Shelf(DirDBM):
     def __getitem__(self, k):
         """dirdbm[foo]; get the contents of a file in this directory as a pickle
         """
-        assert type(k) == types.StringType
-        k = self._encode(k)
-        try:
-            f = _open(os.path.join(self.dname, k), "rb")
-            return cPickle.Unpickler(f).load()
-        except (OSError, IOError, cPickle.UnpicklingError):
-            raise KeyError(self._decode(k))
+        return cPickle.loads(DirDBM.__getitem__(self, k))
 
 
 def open(file, flag = None, mode = None):
