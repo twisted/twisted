@@ -256,7 +256,7 @@ class GroupConversation(InputOutputWindow):
     def tabComplete(self, word):
         """InputOutputWindow calls me when tab is pressed."""
         if not word:
-            return
+            return []
         potentialMatches = []
         for nick in self.members:
             if string.lower(nick[:len(word)]) == string.lower(word):

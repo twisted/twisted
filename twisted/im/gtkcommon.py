@@ -138,7 +138,7 @@ class InputOutputWindow:
     def tabComplete(self, word):
         """Override me to implement tab completion for your window,
         I should return a list of potential matches."""
-        pass
+        return []
 
     def getCurrentWord(self, entry):
         i = entry.get_point()
