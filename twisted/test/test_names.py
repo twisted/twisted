@@ -29,6 +29,9 @@ from twisted.names import client, server, common, authority
 from twisted.protocols import dns
 from twisted.python import log, failure
 
+# A horrible hack
+client.theResolver.resolvers[2]._parseCall.cancel()
+
 # Contort ourselves horribly until inet_pton is standard
 IPV6 = hasattr(socket, 'AF_INET6')
 
