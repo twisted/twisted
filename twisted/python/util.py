@@ -82,6 +82,7 @@ def getPassword(prompt = 'Password: ', confirm = 0):
 
     @returns: C{str}
     """
+    import getpass
     # If standard input is a terminal, I prompt for a password and
     # confirm it.  Otherwise, I use the first line from standard
     # input, stripping off a trailing newline if there is one.
