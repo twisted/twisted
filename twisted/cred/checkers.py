@@ -68,7 +68,7 @@ class InMemoryUsernamePasswordDatabaseDontUse:
 
 
 class FilePasswordDB:
-    """An file-based, text-based username/password database.
+    """A file-based, text-based username/password database.
     
     Records in the datafile for this class are delimited by a particular
     string.  The username appears in a fixed field of the columns delimited
