@@ -45,57 +45,42 @@ class DefaultWidget(widgets.Widget):
 
 class WView(template.DOMTemplate):
     def getNodeController(self, request, node):
-        # Most specific
         controllerName = node.getAttribute('controller')
         
-        # Look up a handler
+        # Look up an InputHandler
         controllerFactory = DefaultHandler
         if controllerName:
-            controllerFactory = getattr(self.controller, 'factory_' + controllerName, DefaultHandler)
-            if controllerFactory is DefaultHandler:
-                controllerFactory = getattr(dominput, controllerName, DefaultHandler)
-        if controllerName and controllerFactory is DefaultHandler:
-            nodeText = node.toxml()
-            raise NotImplementedError, "You specified controller name %s on a node, but no factory_%s method was found." % (controllerName, controllerName)
-
+            namespaces = [self.controller]
+            for namespace in namespaces:
+                controllerFactory = getattr(self.controller, 'factory_' + controllerName, None)
+                if controllerFactory is not None:
+                    break
+            if controllerFactory is None:
+                controllerFactory = getattr(dominput, controllerName, None)
+            if controllerFactory is None:
+                nodeText = node.toxml()
+                raise NotImplementedError, "You specified controller name %s on a node, but no factory_%s method was found." % (controllerName, controllerName)
         return controllerFactory(self.model)
     
-    def getNodeView(self, request, node):
-        result = None
-        
-        # Most specific
+    def getNodeView(self, request, node):     
+        view = None   
         viewName = node.getAttribute('view')
 
         # Look up either a widget factory, or a dom-mutating method
-        defaultViewMethod = None
-        view = DefaultWidget(self.model)
-        viewMethod = view.generate
-        defaultViewMethod = viewMethod
         if viewName:
-            viewMethod = getattr(self, 'factory_' + viewName, defaultViewMethod)
-            if viewMethod is defaultViewMethod:
-                widget = getattr(widgets, viewName, None)
-                if widget is not None:
-                    view = widget(self.model)
-                    viewMethod = view.generate
+            viewMethod = getattr(self, 'factory_' + viewName, None)
+            if viewMethod is None:
+                view = getattr(widgets, viewName, None)
+                if view is not None:
+                    view = view(self.model)
             else:
-                # Check to see if the viewMethod returns a widget. (Use IWidget instead?)
-                maybeWidget = viewMethod(request, node)
-                if isinstance(maybeWidget, widgets.Widget):
-                    view = maybeWidget
-                    viewMethod = view.generate
-                else:
-                    result = maybeWidget
-                    viewMethod = None
-        
-        if viewName and viewMethod is defaultViewMethod:
-            del defaultViewMethod
-            del viewMethod
-            del view
-            del result
-            nodeText = node.toxml()
-            raise NotImplementedError, "You specified view name %s on a node, but no factory_%s method was found." % (viewName, viewName)
-        return view, viewMethod, result
+                view = viewMethod(request, node)
+            if view is None:
+                nodeText = node.toxml()
+                raise NotImplementedError, "You specified view name %s on a node, but no factory_%s method was found." % (viewName, viewName)
+        else:
+            view = node
+        return view
 
     def handleNode(self, request, node):
         if not hasattr(node, 'getAttribute'): # text node?
@@ -104,7 +89,7 @@ class WView(template.DOMTemplate):
         id = node.getAttribute('model')
         
         controller = self.getNodeController(request, node)
-        view, viewMethod, result = self.getNodeView(request, node)
+        result = self.getNodeView(request, node)
 
         submodel_prefix = node.getAttribute("_submodel_prefix")
         if submodel_prefix and id:
@@ -116,23 +101,21 @@ class WView(template.DOMTemplate):
         else:
             submodel = ""
 
-        controller.setView(view)
+        controller.setView(result)
         if not getattr(controller, 'submodel', None):
             controller.setSubmodel(submodel)
         # xxx refactor this into a widget interface and check to see if the object implements IWidget
         # the view may be a deferred; this is why this check is required
-        if hasattr(view, 'setController'):
-            view.setController(controller)
-            view.setNode(node)
-            if not getattr(view, 'submodel', None):
-                view.setSubmodel(submodel)
+        if hasattr(result, 'setController'):
+            result.setController(controller)
+            result.setNode(node)
+            if not getattr(result, 'submodel', None):
+                result.setSubmodel(submodel)
         
         success, data = controller.handle(request)
         if success is not None:
             self.handlerResults[success].append((controller, data, node))
 
-        if viewMethod is not None:
-            result = viewMethod(request, node)
         returnNode = self.dispatchResult(request, node, result)
         if not isinstance(returnNode, defer.Deferred):
             self.recurseChildren(request, returnNode)

@@ -21,7 +21,7 @@ import traceback
 import urllib
 from twisted.web.microdom import parseString
 from twisted.web import widgets
-from twisted.web.woven import model
+from twisted.web.woven import model, template
 
 from twisted.python import components, mvc, failure
 from twisted.python import domhelpers, log
@@ -166,7 +166,8 @@ class Widget(mvc.View):
             data.addCallback(self.setDataCallback, request, node)
             return data
         self.setUp(request, node, data)
-        return self.generateDOM(request, node)
+        result = self.generateDOM(request, node)
+        return result
     
     def setDataCallback(self, result, request, node):
         self.setData(result)
@@ -193,9 +194,15 @@ class Widget(mvc.View):
             template = node.toxml()
             log.msg(template)
         if self.tagName and str(node.tagName) != self.tagName:
+            parent = node.parentNode
             node = document.createElement(self.tagName)
+            node.parentNode = parent
         else:
-            node = self.cleanNode(node).cloneNode()
+            parentNode = node.parentNode
+            node.parentNode = None
+            new = node.cloneNode(1)
+            node.parentNode = parentNode
+            node = self.cleanNode(new)
         for key, value in self.attributes.items():
             node.setAttribute(key, value)
         for item in self.children:
@@ -253,6 +260,19 @@ class Text(Widget):
                 return domhelpers.RawText(self.text)
             else:
                 return document.createTextNode(self.text)
+
+
+class WidgetNodeMutator(template.NodeMutator):
+    def generate(self, request, node):
+        newNode = self.data.generate(request, node)
+        if isinstance(newNode, defer.Deferred):
+            return newNode
+        nodeMutator = template.NodeNodeMutator(newNode)
+        nodeMutator.d = self.d
+        return nodeMutator.generate(request, node)
+
+
+components.registerAdapter(WidgetNodeMutator, Widget, template.INodeMutator)
 
 
 class Image(Text):
@@ -422,6 +442,7 @@ class List(Widget):
             domhelpers.superAppendAttribute(newNode, '_submodel_prefix', self.submodel)
             domhelpers.superAppendAttribute(newNode, '_submodel_prefix', str(itemNum))
             node.appendChild(newNode)
+            newNode.parentNode = node
         return node
 
 class ColumnList(List):

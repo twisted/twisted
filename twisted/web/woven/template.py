@@ -73,7 +73,7 @@ from twisted.python import components
 from twisted.web import resource
 from twisted.web.resource import Resource
 from twisted.web import widgets # import Widget, Presentation
-from twisted.internet.defer import Deferred
+from twisted.internet import defer
 from twisted.python import failure
 from twisted.internet import reactor, defer
 from twisted.python.mvc import View, IView, Controller
@@ -90,6 +90,77 @@ def renderFailure(ignored, request):
     log.err(f)
     request.write(widgets.formatFailure(f))
     request.finish()
+
+
+class INodeMutator(components.Interface):
+    """A component that implements NodeMutator knows how to mutate
+    DOM based on the instructions in the object it wraps.
+    """
+    def generate(self, request, node):
+        """The generate method should do the work of mutating the DOM
+        based on the object this adapter wraps.
+        """
+        pass
+
+
+class NodeMutator:
+    __implements__ = (INodeMutator, )
+    def __init__(self, data):
+        self.data = data
+
+
+class NodeNodeMutator(NodeMutator):
+    """A NodeNodeMutator replaces the node that is passed in to generate
+    with the node it adapts.
+    """ 
+    def generate(self, request, node):
+        if self.data is not node:
+            if hasattr(self.d, 'importNode'):
+                self.data = self.d.importNode(self.data, 1)
+            parent = node.parentNode
+            parent.replaceChild(self.data, node)
+        return self.data
+
+
+class StringNodeMutator(NodeMutator):
+    """A StringNodeMutator replaces the node that is passed in to generate
+    with the string it adapts.
+    """ 
+    def generate(self, request, node):
+        if self.data:
+            try:
+                child = minidom.parseString(html)
+            except Exception, e:
+                log.msg("Error parsing return value, probably invalid xml:", e)
+                child = self.d.createTextNode(self.data)
+        else:
+            child = self.d.createTextNode(self.data)
+        nodeMutator = NodeNodeMutator(child)
+        nodeMutator.d = self.d
+        return nodeMutator.generate(request, node)
+
+
+class WebWidgetNodeMutator(NodeMutator):
+    """A WebWidgetNodeMutator replaces the node that is passed in to generate
+    with the result of generating the twisted.web.widget instance it adapts.
+    """ 
+    def generate(self, request, node):
+        widget = self.data
+        displayed = widget.display(request)
+        try:
+            html = string.join(displayed)
+        except:
+            pr = widgets.Presentation()
+            pr.tmpl = displayed
+            strList = pr.display(request)
+            html = string.join(displayed)
+        stringMutator = StringNodeMutator(html)
+        return stringMutator.generate(request, node)
+
+
+components.registerAdapter(NodeNodeMutator, minidom.Node, INodeMutator)        
+components.registerAdapter(StringNodeMutator, type(""), INodeMutator)        
+components.registerAdapter(WebWidgetNodeMutator, widgets.Widget, INodeMutator)        
 
 
 class DOMTemplate(Resource, View):
@@ -191,6 +262,7 @@ class DOMTemplate(Resource, View):
             # resulting in much gnashing of teeth.
             self.outstandingCallbacks += 1
             for node in document.childNodes:
+                request.currentParent = node
                 self.handleNode(request, node)
             self.outstandingCallbacks -= 1
             if not self.outstandingCallbacks:
@@ -204,23 +276,24 @@ class DOMTemplate(Resource, View):
         method which will convert the result into a node and insert it 
         into the DOM tree. Return the new node.
         """
-        if isinstance(result, widgets.Widget):
-            return self.processWidget(request, result, node)
-        elif isinstance(result, minidom.Node):
-            return self.processNode(request, result, node)
-        elif isinstance(result, Deferred):
+        if not isinstance(result, defer.Deferred):
+            adapter = components.getAdapter(result, INodeMutator, None, components.getAdapterClassWithInheritance)
+            if adapter is None:
+                raise NotImplementedError("Your factory method returned a %s instance, but there is no INodeMutator adapter registerred for that type." % type(result))
+            adapter.d = self.d
+            result = adapter.generate(request, node)
+        if isinstance(result, defer.Deferred):
             self.outstandingCallbacks += 1
             result.addCallback(self.dispatchResultCallback, request, node)
             result.addErrback(renderFailure, request)
             # Got to wait until the callback comes in
-            return result
-        elif isinstance(result, types.StringType):
-            return self.processString(request, result, node)
+        return result
 
     def recurseChildren(self, request, node):
         """
         If this node has children, handle them.
         """
+        request.currentParent = node
         if not node: return
         if type(node.childNodes) == type(""): return
         if node.hasChildNodes():
@@ -237,39 +310,6 @@ class DOMTemplate(Resource, View):
         self.recurseChildren(request, node)
         if not self.outstandingCallbacks:
             return self.sendPage(request)
-
-    def processWidget(self, request, widget, node):
-        """
-        Render a widget, and insert it in the current node.
-        """
-        displayed = widget.display(request)
-        try:
-            html = string.join(displayed)
-        except:
-            pr = widgets.Presentation()
-            pr.tmpl = displayed
-            strList = pr.display(request)
-            html = string.join(displayed)
-        return self.processString(request, html, node)
-
-    def processString(self, request, html, node):
-        if html:
-            try:
-                child = minidom.parseString(html)
-            except Exception, e:
-                log.msg("damn, error parsing, probably invalid xml:", e)
-                child = self.d.createTextNode(html)
-        else:
-            child = self.d.createTextNode(html)
-        return self.processNode(request, child, node)
-
-    def processNode(self, request, newnode, oldnode):
-        if newnode is not oldnode:
-            if hasattr(self.d, 'importNode'):
-                newnode = self.d.importNode(newnode, 1)
-            if oldnode.parentNode:
-                oldnode.parentNode.replaceChild(newnode, oldnode)
-        return newnode
     
     def handleNode(self, request, node):
         """
@@ -278,14 +318,12 @@ class DOMTemplate(Resource, View):
         
         Also, handle all childNodes of this node using recursion.
         """
-        print "handling"
         if not hasattr(node, 'getAttribute'): # text node?
             return node
         
         viewName = node.getAttribute('view')
         if viewName:        
             method = getattr(self, "factory_" + viewName, None)
-            print "method", method
             if not method:
                 nodeText = node.toxml()
                 raise NotImplementedError, "You specified view name %s on a node, but no factory_%s method was found." % (viewName, viewName)
@@ -304,6 +342,12 @@ class DOMTemplate(Resource, View):
         request.write(page)
         request.finish()
         return page
+
+
+##########################################
+# Deprecation zone
+# Wear a hard hat
+##########################################
 
 
 # DOMView is now deprecated since the functionality was merged into domtemplate
