@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.151 2004/01/04 23:09:45 itamarst Exp $
+$Id: setup.py,v 1.152 2004/02/10 17:34:17 exarkun Exp $
 """
 
 import distutils, os, sys, string
@@ -295,7 +295,8 @@ if hasattr(distutils.dist.DistributionMetadata, 'get_platforms'):
 
 imPath = os.path.join('twisted', 'im')
 pbuiPath = os.path.join('twisted','spread','ui')
-manuiPath = os.path.join('twisted','manhole','ui')
+baremanPath = os.path.join('twisted','manhole')
+manuiPath = os.path.join(baremanPath, 'ui')
 lorePath = os.path.join("twisted", 'lore')
 
 testPath = os.path.join("twisted", 'test')
@@ -313,9 +314,9 @@ setup_args['data_files']=[
     (manuiPath, [os.path.join(manuiPath, 'gtk2manhole.glade')]),
     (lorePath, [os.path.join(lorePath, "template.mgp")]),
     ('twisted', [os.path.join('twisted', 'plugins.tml')]),
-    (internetPath, [os.path.join(internetPath, 'gladereactor.glade')]),
-    (internetPath, [os.path.join(internetPath, 'inspectro.glade')]),
-    (internetPath, [os.path.join(internetPath, 'logview.glade')]),
+    (baremanPath, [os.path.join(baremanPath, 'gladereactor.glade')]),
+    (baremanPath, [os.path.join(baremanPath, 'inspectro.glade')]),
+    (baremanPath, [os.path.join(baremanPath, 'logview.glade')]),
     ]
 
 for pathname, filenames in [(wovenPath, wovenFiles),
