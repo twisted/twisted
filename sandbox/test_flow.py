@@ -98,8 +98,20 @@ class FlowTest(unittest.TestCase):
         f.execute(3);
         f.execute(4);
         self.assertEqual(result,['32','10','43','21','0'])
-     
-    def testContext(self):
+    
+    def testNestedContext(self):
+        import operator
+        result = []
+        f = Flow()
+        f.addSequence(CountIterator)
+        f.addContext()
+        f.addSequence(CountIterator)
+        f.addReduce(operator.add, 0)
+        f.addCallable(lambda data: result.append(data))
+        f.execute(2);
+        self.assertEqual(result,[3,1,0])
+         
+    def testAccessContext(self):
         class dummy: pass
         dummy = dummy()
         dummy.increment = 3

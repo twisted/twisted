@@ -188,7 +188,7 @@ class Flow:
           
     def _append(self, stage):
         """ adds an additional stage to the singly-lined list """
-        link = LinkItem(stage)
+        link = _LinkItem(stage)
         if not self.stageHead:
             self.stageHead = link
             self.stageTail = link
@@ -200,14 +200,14 @@ class Flow:
     def build(self, data = None, context = None):
         """ builds a flow stack for execution
 
-            This method creates a new flow Stack, binds it to the
+            This method creates a new flow stack and binds it to the
             first stage of the flow and the seed data / context.
             The stack object returned should be either "run()"
             if not in the context of Twisted, or should have iterate()
             called on it subsequent times.
         """
         assert self.stageHead, "What? A flow without stages?"
-        return Stack(self.stageHead, data, context)
+        return _Stack(self.stageHead, data, context)
 
     def execute(self, data = None, context = None):
         """ builds and runs a flow stack w/o pause function
@@ -329,7 +329,7 @@ class Context(Stage):
     def __call__(self, flow, data):
         cntx = _Context(flow.context)
         if self.onFlush: 
-            cntx.addFlush(LinkItem(self.onFlush))
+            cntx.addFlush(_LinkItem(self.onFlush))
         flow.context = cntx
         flow.push(cntx, cntx.onFlush)
         flow.push(data)
@@ -348,7 +348,7 @@ class Chain(Stage):
             flow.push(item, start)
         flow.push(data, mayskip = 1)
 
-class Stack:
+class _Stack:
     """ a stack of stages and a means for their application
 
         The general process here is to pop the current stage,
@@ -371,7 +371,7 @@ class Stack:
  
     def currLinkItem(self): 
         """ returns the current stage in the process """
-        return LinkItem(self._current[1], self._current[2]) 
+        return _LinkItem(self._current[1], self._current[2]) 
  
     def nextLinkItem(self):
         """ returns the next stage in the process """
@@ -382,7 +382,7 @@ class Stack:
            
              data    argument to be passed
              stage   callable to be executed
-             next    a LinkItem for subsequent stages
+             next    a _LinkItem for subsequent stages
         """
         if not stage:
             curr = self.nextLinkItem()
@@ -438,13 +438,13 @@ class _Context:
     def __getattr__(self, attr):
         return getattr(self._parent, attr)
 
-class LinkItem:
+class _LinkItem:
     """
        a Flow is implemented as a series of Stage objects
        in a linked-list; this is the link node
         
          stage   a Stage in the linked list
-         next    next LinkItem in the list
+         next    next _LinkItem in the list
  
     """
     def __init__(self, stage, next = None ):
