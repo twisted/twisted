@@ -20,9 +20,10 @@
 
 
 # System Imports
-import string
-from cStringIO import StringIO
-
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
 
 # Twisted Imports
 from twisted import copyright
@@ -145,7 +146,7 @@ iacBytes = {
 
 def multireplace(st, dct):
     for k, v in dct.items():
-        st = string.replace(st, k, v)
+        st = st.replace(k, v)
     return st
 
 class Telnet(protocol.Protocol):
@@ -256,7 +257,7 @@ class Telnet(protocol.Protocol):
 
         #yech.
         for delim in self.delimiters:
-            idx = string.find(self.buffer, delim)
+            idx = self.buffer.find(delim)
             if idx != -1:
                 break
             
@@ -267,7 +268,7 @@ class Telnet(protocol.Protocol):
                 self.transport.loseConnection()
 
             for delim in self.delimiters:
-                idx = string.find(self.buffer, delim)
+                idx = self.buffer.find(delim)
                 if idx != -1:
                     break
 
