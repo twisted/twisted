@@ -93,7 +93,7 @@ def startLogging(logfilename, sysLog, prefix, nodaemon):
         logFile = app.getLogFile(logfilename or 'twistd.log')
         def rotateLog(signal, frame):
             from twisted.internet import reactor
-            reactor.callLater(0, logFile.rotate)
+            reactor.callFromThread(logFile.rotate)
         signal.signal(signal.SIGUSR1, rotateLog)
     if not sysLog:
         log.startLogging(logFile)
