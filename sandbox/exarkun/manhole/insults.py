@@ -888,3 +888,24 @@ class ClientProtocol(protocol.Protocol):
             self.protocol.doubleWidthLine()
         else:
             self.protocol.unhandledControlSequence('\x1b#' + b)
+
+
+__all__ = [
+    # Interfaces
+    'ITerminalProtocol', 'ITerminalTransport',
+
+    # Symbolic constants
+    'KEYBOARD_ACTION', 'KAM', 'INSERTION_REPLACEMENT', 'IRM',
+    'LINEFEED_NEWLINE', 'LNM',
+
+    'ERROR', 'CURSOR_KEY', 'ANSI_VT52', 'COLUMN', 'SCROLL', 'SCREEN',
+    'ORIGIN', 'AUTO_WRAP', 'AUTO_REPEAT', 'PRINTER_FORM_FEED',
+    'PRINTER_EXTENT',
+
+    'CS_US', 'CS_UK', 'CS_DRAWING', 'CS_ALTERNATE', 'CS_ALTERNATE_SPECIAL',
+    'G0', 'G1', 'G2', 'G3',
+
+    'UNDERLINE', 'REVERSE_VIDEO', 'BLINK', 'BOLD', 'NORMAL',
+
+    # Protocol classes
+    'ServerProtocol', 'ClientProtocol']
