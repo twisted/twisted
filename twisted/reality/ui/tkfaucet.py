@@ -72,6 +72,7 @@ class MainWindow(Toplevel, pb.Referenceable):
         
     def tryAgain(self, er):
         print 'oops',er
+        showerror('Oops', er)
         
     def disco(self):
         print 'disconnected'
@@ -128,6 +129,9 @@ class MainWindow(Toplevel, pb.Referenceable):
     
     def doSend(self, *evstuf):
         sentence = self.entry.get()
+        possible_shortcut = self.shortcuts.get(sentence)
+        if possible_shortcut:
+            sentence = possible_shortcut
         self.doNow(sentence)
         self.entry.delete('0','end')
 
