@@ -276,9 +276,9 @@ class JabberIQLoggingInMixin(JabberIQMixin):
         digest.appendChild(microdom.Text(cgi.escape(self.getDigest())))
         resource = microdom.Element('resource')
         digest.appendChild(microdom.Text(cgi.escape(self.getResource())))
-        self.sendIQ(type='set', query=query).addCallbacks(
+        self.sendIQ(type='set', query=query).addCallbackAndError(
             self.loginSuccess,
-            self.loginFailure,
+            self.loginFailure
         )
 
     def getDigest(self):
