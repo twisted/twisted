@@ -77,6 +77,10 @@ from twisted.cred.credentials import IAnonymous, IUsernamePassword
 from twisted.cred.checkers import AllowAnonymousAccess, FilePasswordDB
 from twisted.python.util import sibpath
 from twisted.web.server import Site
+from twisted.web.util import Redirect
+
+def dumbRedirect(ignored):
+    return Redirect(".")
 
 def createResource():
     """Tying it all together.
@@ -88,5 +92,5 @@ def createResource():
     # Allow users registered in the password file.
     p.registerChecker(FilePasswordDB(sibpath(__file__, "passwords.txt")))
     # Create the resource.
-    r = guard.SessionWrapper(guard.UsernamePasswordWrapper(p))
+    r = guard.SessionWrapper(guard.UsernamePasswordWrapper(p, callback=dumbRedirect))
     return r
