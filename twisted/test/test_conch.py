@@ -487,7 +487,10 @@ class SSHTransportTestCase(unittest.TestCase):
         cmds = (cmdline % port).split()
         p = SSHTestOpenSSHProcess()
         def _failTest():
-            os.kill(p.transport.pid, 9)
+            try:
+                os.kill(p.transport.pid, 9)
+            except OSError:
+                pass
             fac.proto.transport.loseConnection()
             reactor.iterate(0.1)
             reactor.iterate(0.1)
