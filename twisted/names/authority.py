@@ -66,11 +66,11 @@ class FileAuthority(common.ResolverBase):
             for record in self.records[name.lower()]:
                 if record.TYPE == type or type == dns.ALL_RECORDS:
                     results.append(
-                        dns.RRHeader(name, record.TYPE, dns.IN, ttl, record)
+                        dns.RRHeader(name, record.TYPE, dns.IN, ttl, record, auth=True)
                     )
                 elif record.TYPE == dns.NS and type != dns.ALL_RECORDS:
                     authority.append(
-                        dns.RRHeader(name, record.TYPE, dns.IN, ttl, record)
+                        dns.RRHeader(name, record.TYPE, dns.IN, ttl, record, auth=True)
                     )
             
             for record in results + authority:
@@ -79,7 +79,7 @@ class FileAuthority(common.ResolverBase):
                     for rec in self.records.get(n.lower(), ()):
                         if rec.TYPE == dns.A:
                             additional.append(
-                                dns.RRHeader(n, dns.A, dns.IN, ttl, rec)
+                                dns.RRHeader(n, dns.A, dns.IN, ttl, rec, auth=True)
                             )
             return defer.succeed((results, authority, additional))
         except KeyError:
@@ -93,11 +93,11 @@ class FileAuthority(common.ResolverBase):
         if self.soa[0].lower() == name.lower():
             # Wee hee hee hooo yea
             ttl = max(self.soa[1].minimum, self.soa[1].expire)
-            results = [dns.RRHeader(self.soa[0], dns.SOA, dns.IN, ttl, self.soa[1])]
+            results = [dns.RRHeader(self.soa[0], dns.SOA, dns.IN, ttl, self.soa[1], auth=True)]
             for (k, r) in self.records.items():
                 for rec in r:
                     if rec.TYPE != dns.SOA:
-                        results.append(dns.RRHeader(k, rec.TYPE, dns.IN, ttl, rec))
+                        results.append(dns.RRHeader(k, rec.TYPE, dns.IN, ttl, rec, auth=True))
             results.append(results[0])
             return defer.succeed((results, (), ()))
         return defer.fail(failure.Failure(dns.DomainError(name)))

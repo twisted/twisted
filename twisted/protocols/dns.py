@@ -358,7 +358,7 @@ class RRHeader:
     
     cachedResponse = None
 
-    def __init__(self, name='', type=A, cls=IN, ttl=0, payload=None):
+    def __init__(self, name='', type=A, cls=IN, ttl=0, payload=None, auth=False):
         """
         @type name: C{str}
         @param name: The name about which this reply contains information.
@@ -382,6 +382,7 @@ class RRHeader:
         self.cls = cls
         self.ttl = ttl
         self.payload = payload
+        self.auth = auth
 
 
     def encode(self, strio, compDict=None):
@@ -404,17 +405,17 @@ class RRHeader:
         self.type, self.cls, self.ttl, self.rdlength = r
 
 
+    def isAuthoritative(self):
+        return self.auth
+
+
     def __str__(self):
         t = QUERY_TYPES.get(self.type, EXT_QUERIES.get(self.type, 'UNKNOWN (%d)' % self.type))
         c = QUERY_CLASSES.get(self.cls, 'UNKNOWN (%d)' % self.cls)
-        return '<RR %s %s %s %ds>' % (self.name, t, c, self.ttl)
+        return '<RR name=%r type=%s class=%s ttl=%ds auth=%s>' % (self.name, t, c, self.ttl, self.auth and 'True' or 'False')
 
 
-    def __repr__(self):
-        return 'RR(%r, %d, %d, %d)' % (
-            str(self.name), self.type, self.cls, self.ttl
-        )
-
+    __repr__ = __str__
 
 class SimpleRecord:
     """

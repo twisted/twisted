@@ -102,6 +102,10 @@ class DNSServerFactory(protocol.ServerFactory):
     def gotResolverResponse(self, (ans, auth, add), protocol, message, address):
         message.rCode = dns.OK
         message.answers = ans
+        for x in ans:
+            if x.isAuthoritative():
+                message.auth = 1
+                break
         message.authority = auth
         message.additional = add
         self.sendReply(protocol, message, address)
