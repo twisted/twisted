@@ -12,7 +12,7 @@ from slicer import UnbananaFailure, BaseUnslicer, ReferenceSlicer
 ScopedSlicer = slicer.ScopedSlicer
 from flavors import getRemoteInterfaces, getRemoteInterfaceNames, \
      RemoteCopy, registerRemoteCopy
-from flavors import Referenceable, IRemoteInterface
+from flavors import Referenceable, IRemoteInterface, RemoteInterfaceRegistry
 
 class PendingRequest(object):
     active = True
@@ -41,7 +41,7 @@ class RemoteReference(object):
         # attempt to find interfaces which match
         interfaces = {}
         for name in interfaceNames:
-            interfaces[name] = remoteInterfaceRegistry.get(name)
+            interfaces[name] = RemoteInterfaceRegistry.get(name)
 
         self.schema = schema.RemoteReferenceSchema(interfaces)
 
@@ -590,12 +590,6 @@ class CopiedFailure(RemoteCopy, failure.Failure):
     printBriefTraceback = printTraceback
     printDetailedTraceback = printTraceback
 registerRemoteCopy(FailureSlicer.classname, CopiedFailure)
-
-remoteInterfaceRegistry = {}
-def registerRemoteInterface(iface):
-    """Call this to register each subclass of IRemoteInterface."""
-    name = iface.remoteGetRemoteName()
-    remoteInterfaceRegistry[name] = iface
 
 class DecRefSlicer(slicer.BaseSlicer):
     opentype = ('decref',)

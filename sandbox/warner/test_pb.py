@@ -6,7 +6,7 @@ from zope.interface import implements, implementsOnly
 from twisted.python import components
 from twisted.trial import unittest
 
-import schema, pb
+import schema, pb, flavors
 from tokens import BananaError, Violation, INT, STRING, OPEN
 from slicer import UnbananaFailure
 
@@ -159,18 +159,13 @@ class IMyTarget(pb.IRemoteInterface):
     def join(self, a=str, b=str, c=int): return str
     disputed = schema.RemoteMethodSchema(_response=int, a=int)
 
-pb.registerRemoteInterface(IMyTarget)
-
 class IMyTarget2(pb.IRemoteInterface):
     __remote_name__ = "IMyTargetInterface2"
     sub = schema.RemoteMethodSchema(_response=int, a=int, b=int)
 
-pb.registerRemoteInterface(IMyTarget2)
-
 # just like IMyTarget except for the return value of the disputed method
 class IMyTarget3(IMyTarget):
     disputed = schema.RemoteMethodSchema(_response=str, a=int)
-pb.registerRemoteInterface(IMyTarget3)
 
 class Target(pb.Referenceable):
     implements(IMyTarget)
@@ -235,6 +230,20 @@ class TargetMixin:
 
 class TestInterface(unittest.TestCase, TargetMixin):
 
+    def testRegister(self):
+        reg = pb.RemoteInterfaceRegistry
+        self.failUnlessEqual(reg["IMyTarget"], IMyTarget)
+        self.failUnlessEqual(reg["IMyTargetInterface2"], IMyTarget2)
+
+    def testDuplicateRegistry(self):
+        try:
+            class IMyTarget(pb.IRemoteInterface):
+                def foo(self, bar=int): return int
+        except flavors.DuplicateRemoteInterfaceError:
+            pass
+        else:
+            self.fail("duplicate registration not caught")
+
     def testInterface1(self):
         # verify that we extract the right interfaces from a local object.
         # also check that the registry stuff works.
@@ -244,7 +253,7 @@ class TestInterface(unittest.TestCase, TargetMixin):
         self.failUnlessEqual(ilist, [IMyTarget])
         inames = pb.getRemoteInterfaceNames(target)
         self.failUnlessEqual(inames, ["IMyTarget"])
-        self.failUnlessIdentical(pb.remoteInterfaceRegistry["IMyTarget"],
+        self.failUnlessIdentical(pb.RemoteInterfaceRegistry["IMyTarget"],
                                  IMyTarget)
         
         rr, target = self.setupTarget(Target2())
@@ -252,7 +261,7 @@ class TestInterface(unittest.TestCase, TargetMixin):
         self.failUnlessEqual(ilist, ["IMyTarget",
                                      "IMyTargetInterface2"])
         self.failUnlessIdentical(\
-            pb.remoteInterfaceRegistry["IMyTargetInterface2"], IMyTarget2)
+            pb.RemoteInterfaceRegistry["IMyTargetInterface2"], IMyTarget2)
 
 
     def testInterface2(self):

@@ -35,9 +35,13 @@ class RemoteInterfaceClass(InterfaceClass):
                 del attrs["__remote_name__"]
                 
             self.__remote_stuff__ = (methods, constraints, remote_name)
-        
+
         # now let InterfaceClass at it
         InterfaceClass.__init__(self, iname, bases, attrs, __module__)
+
+        # auto-register the interface
+        if attrs is not None:
+            registerRemoteInterface(self, remote_name)
 
     def remoteGetMethodNames(self):
         return self.__remote_stuff__[0]
@@ -68,6 +72,22 @@ def getRemoteInterfaces(obj):
 def getRemoteInterfaceNames(obj):
     """Get the names of all RemoteInterfaces supported by the object."""
     return [i.remoteGetRemoteName() for i in getRemoteInterfaces(obj)]
+
+class DuplicateRemoteInterfaceError(Exception):
+    pass
+
+RemoteInterfaceRegistry = {}
+def registerRemoteInterface(iface, name=None):
+    if not name:
+        name = iface.remoteGetRemoteName()
+    assert isinstance(iface, RemoteInterfaceClass)
+    if RemoteInterfaceRegistry.has_key(name):
+        old = RemoteInterfaceRegistry[name]
+        msg = "remote interface %s was registered with the same name (%s) as %s, please use __remote_name__ to provide a unique name" % (old, name, iface)
+        raise DuplicateRemoteInterfaceError(msg)
+    RemoteInterfaceRegistry[name] = iface
+
+
 
 class ICopyable(Interface):
     """I represent an object which is passed-by-value across PB connections.
