@@ -477,8 +477,11 @@ class Base(protocol.DatagramProtocol):
     
     def __init__(self):
         self.messages = []
-        self.parser = MessagesParser(self.messages.append)
-    
+        self.parser = MessagesParser(self.addMessage)
+
+    def addMessage(self, msg):
+        self.messages.append(msg)
+
     def datagramReceived(self, data, addr):
         self.parser.dataReceived(data)
         self.parser.dataDone()
