@@ -32,6 +32,13 @@ class build_ext_twisted(build_ext):
     want to build.
     """
 
+    # lame hack! there's an "if not self.extensions" check in
+    # build_ext.run. We set it later on to a real list, before
+    # actually passing on to build_extensions...
+    def run(self):
+        self.extensions = True
+        build_ext.run(self)
+
     def build_extensions(self):
         """
         Override the build_ext build_extensions method to call our
@@ -101,7 +108,7 @@ int main(int argc, char **argv)
         """
         Determine which extension modules we should build on this system.
         """
-
+        self.extensions = []
         # always define WIN32 under Windows
         if os.name == 'nt':
             define_macros = [("WIN32", 1)]
@@ -112,23 +119,24 @@ int main(int argc, char **argv)
         
         if not self._compile_helper("#define X 1\n"):
             print "Compiler not found, skipping C extensions."
-            self.extensions = []
             return
         
         # Extension modules to build.
-        exts = [
+        exts = self.extensions
+        exts.append(
             Extension("twisted.spread.cBanana",
                       ["twisted/spread/cBanana.c"],
-                      define_macros=define_macros),
-            ]
+                      define_macros=define_macros)
+            )
+
 
         # The portmap module (for inetd)
-        if self._check_header("rpc/rpc.h"):
-            exts.append( Extension("twisted.runner.portmap",
-                                    ["twisted/runner/portmap.c"],
-                                    define_macros=define_macros) )
-        else:
-            self.announce("Sun-RPC portmap support is unavailable on this system (but that's OK, you probably don't need it anyway).")
+##        if self._check_header("rpc/rpc.h"):
+##            exts.append( Extension("twisted.runner.portmap",
+##                                    ["twisted/runner/portmap.c"],
+##                                    define_macros=define_macros) )
+##        else:
+##            self.announce("Sun-RPC portmap support is unavailable on this system (but that's OK, you probably don't need it anyway).")
 
         # urllib.unquote accelerator
         exts.append( Extension("twisted.protocols._c_urlarg",
@@ -154,10 +162,13 @@ int main(int argc, char **argv)
 class Distribution(dist.ZPkgDistribution):
     def __init__(self, attrs=None):
         dist.ZPkgDistribution.__init__(self, attrs)
-        #self.cmdclass.setdefault('build_py', build_py)
         self.cmdclass.setdefault('build_scripts', build_scripts_twisted)
         self.cmdclass.setdefault('build_ext', build_ext_twisted)
         self._mac_osx_hack()
+
+    def has_ext_modules(self):
+        # lame hack. see "lame hack" above in build_ext_twisted.
+        return True 
 
     def _mac_osx_hack(self):
         """
