@@ -296,6 +296,7 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, SFTPTestBase):
 
     def tearDownClass(self):
         test_process.SignalMixin.tearDownClass(self)
+        self.server.stopListening()
         for f in ['dsa_test.pub', 'dsa_test', 'kh_test']:
             try:
                 os.remove(f)
@@ -305,6 +306,9 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, SFTPTestBase):
             os.kill(self.processProtocol.transport.pid, 9)
         except:
             pass
+        reactor.iterate(0.1)
+        reactor.iterate(0.1)
+        reactor.iterate(0.1)
 
     def _getCmdResult(self, cmd):
         self.processProtocol.clearBuffer()
@@ -428,6 +432,10 @@ class TestOurServerBatchFile(test_process.SignalMixin, SFTPTestBase):
                     '-a --nocache '
                     '-v -b %%s localhost') % (cftp_path, port)
 
+    def tearDown(self):
+        self.server.stopListening()
+        SFTPTestBase.tearDown(self)
+
     def _getBatchOutput(self, f):
         fn = tempfile.mktemp()
         open(fn, 'w').write(f)
@@ -475,11 +483,11 @@ exit
 
     testIgnoredError.todo = "This test is broken on freebsd and osx - slyphon"
 
-if not unix:
+if not unix or not Crypto:
     TestOurServerOurClient.skip = "don't run on non-posix"
     TestOurServerCmdLineClient.skip = "don't run on non-posix"
     TestOurServerBatchFile.skip = "don't run on non-posix"
 
-if not interfaces.IReactorProcess(reactor, None) or Crypto is None:
+if not interfaces.IReactorProcess(reactor, None):
     TestOurServerCmdLineClient.skip = "don't run w/o spawnprocess or PyCrypto"
     TestOurServerBatchFile.skip = "don't run w/o/ spawnProcess or PyCrypto"
