@@ -858,6 +858,9 @@ class IMAP4Client(basic.LineReceiver):
         self.tags = {}
         self.queued = []
         self.authenticators = {}
+        
+        self._tag = None
+        self._parts = []
 
     def registerAuthenticator(self, auth):
         """Register a new form of authentication
@@ -875,18 +878,70 @@ class IMAP4Client(basic.LineReceiver):
         """
         self.authenticators[auth.getName()] = auth
 
-    def lineReceived(self, line):
-        print 'C: ' + line
-        rest = None
-        parts = line.split(None, 1)
-        if len(parts) == 2:
-            tag, rest = parts
+    def rawDataReceived(self, data):
+        self._pendingSize -= len(data)
+        if self._pendingSize > 0:
+            self._pendingBuffer.write(data)
         else:
-            # XXX - This is rude.
-            self.transport.loseConnection()
-            raise IllegalServerResponse(line)
+            passon = ''
+            if self._pendingSize < 0:
+                data, passon = data[:self._pendingSize], data[self._pendingSize:]
+            self._pendingBuffer.write(data)
+            rest = self._pendingBuffer
+            self._pendingBuffer = None
+            self._pendingSize = None
+            self._parts.append(rest)
 
-        self.dispatchCommand(tag, rest)
+    def lineReceived(self, line):
+        # print 'C: ' + line
+        lastPart = line.rfind(' ')
+        if lastPart != -1:
+            # print '1'
+            lastPart = line[lastPart:]
+            if lastPart.startswith('{') and lastPart.endswith('}'):
+                # print '2'
+                # It's a literal a-comin' in
+                try:
+                    octets = int(lastPart[1:-1])
+                except ValueError:
+                    raise IllegalServerResponse(line)
+                self._setupForLiteral(line, octets)
+                self._tag = line.split(None, 1)[0]
+                return
+            else:
+                # It isn't a literal at all
+                # print '6'
+                parts = line.split(None, 1)
+                if len(parts) != 2:
+                    raise IllegalServerResponse, line
+                tag, rest = parts
+                self.dispatchCommand(tag, rest)
+        else:
+            # print '3'
+            if self._parts:
+                # print '4'
+                # If an expression is in progress, no tag is required here
+                # Since we didn't find a literal indicator, this expression
+                # is done.
+                self._parts.append(line)
+                # print ' '.join(self._parts)
+                tag, rest = self._tag, ' '.join(self._parts)
+                self._tag, self._parts = None, []
+                self.dispatchCommand(tag, rest)
+            else:
+                # print '5'
+                # Otherwise, this line stands alone!
+                parts = line.split(None, 1)
+                if len(parts) != 2:
+                    raise IllegalServerResponse, line
+                tag, rest = parts
+                self.dispatchCommand(tag, rest)
+
+    def _setupForLiteral(self, rest, octets):
+        self._pendingBuffer = self.messageFile(octets)
+        self._pendingSize = octets
+        self._parts = [rest]
+        self.setRawMode()
 
     def makeTag(self):
         tag = '%0.4X' % self.tagID
