@@ -1,30 +1,38 @@
+2003-01-30  Kevin Turner  <acapnotic@twistedmatrix.com>
+
+	* twisted/manhole/service.py (IManholeClient.console): 1.35
+	exception messages now use a Failure.
+	(IManholeClient.listCapabilities): 1.35 Method to describe what
+	capabilities a client has, i.e. "I can receive Failures for
+	exceptions."
+
 2003-01-29  Donovan Preston  <dp@twistedmatrix.com>
 
-	* twisted/web/woven/controller.py 
-	  twisted/web/woven/template.py 
-	  twisted/web/woven/view.py 
+	* twisted/web/woven/controller.py
+	  twisted/web/woven/template.py
+	  twisted/web/woven/view.py
 	  twisted/web/woven/widgets.py Major woven codepath cleanup
 
-	* Uses a flat list of outstanding DOM nodes instead of 
+	* Uses a flat list of outstanding DOM nodes instead of
 	recursion to keep track of where Woven is in the page
 	rendering process
-	
-	* Removes View's dependency on DOMTemplate as a base 
-	class, in preparation for deprecation of DOMTemplate 
-	(all of the same semantics are now directly implemented 
-	in View). As a result, View has no base classes, making 
+
+	* Removes View's dependency on DOMTemplate as a base
+	class, in preparation for deprecation of DOMTemplate
+	(all of the same semantics are now directly implemented
+	in View). As a result, View has no base classes, making
 	the inheritance chain cleaner.
-	
-	* Stores the namespace stacks (model, view, and controller 
-	name lookup chain) in the View directly, and each widget 
-	gets an immutable reference to it's position in the lookup 
-	chain when it is created, making re-rendering Widgets more 
+
+	* Stores the namespace stacks (model, view, and controller
+	name lookup chain) in the View directly, and each widget
+	gets an immutable reference to it's position in the lookup
+	chain when it is created, making re-rendering Widgets more
 	reliable
-	
-	* Represents the namespace stacks as a cons-like tuple 
-	structure instead of mutable python lists, reducing 
-	confusion and list-copying; instead of copying the current 
-	stack lists each time a Widget is created, it just gets a 
+
+	* Represents the namespace stacks as a cons-like tuple
+	structure instead of mutable python lists, reducing
+	confusion and list-copying; instead of copying the current
+	stack lists each time a Widget is created, it just gets a
 	reference to the current tuples for each of the stacks
 
 2003-01-29  Christopher Armstrong  <radix@twistedmatrix.com>

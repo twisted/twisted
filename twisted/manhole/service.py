@@ -18,7 +18,7 @@
 # twisted imports
 from twisted import copyright
 from twisted.spread import pb
-from twisted.python import log, components
+from twisted.python import log, components, failure
 
 # sibling imports
 import explorer
@@ -26,7 +26,6 @@ import explorer
 # system imports
 from cStringIO import StringIO
 
-import operator
 import string
 import sys
 import traceback
@@ -86,18 +85,17 @@ class IManholeClient(components.Interface):
             - \"result\" -- string repr of the resulting value
                  of the expression
 
-            - \"exception\" -- a dictionary with two members:
-                - \'traceback\' -- traceback.extract_tb output; a list of
-                     tuples (filename, line number, function name, text)
-                     suitable for feeding to traceback.format_list.
-
-                - \'exception\' -- a list of one or more strings, each
-                     ending in a newline.
-                     (traceback.format_exception_only output)
+            - \"exception\" -- a L{failure.Failure}
         """
 
     def receiveExplorer(self, xplorer):
         """Receives an explorer.Explorer
+        """
+
+    def listCapabilities(self):
+        """List what manholey things I am capable of doing.
+
+        i.e. C{\"Explorer\"}, C{\"Failure\"}
         """
 
 def runInConsole(command, console, globalNS=None, localNS=None,
@@ -127,7 +125,7 @@ def runInConsole(command, console, globalNS=None, localNS=None,
         kw = {}
     if localNS is None:
         localNS = globalNS
-    if (globalNS is None) and (not operator.isCallable(command)):
+    if (globalNS is None) and (not callable(command)):
         raise ValueError("Need a namespace to evaluate the command in.")
 
     try:
@@ -136,7 +134,7 @@ def runInConsole(command, console, globalNS=None, localNS=None,
         sys.stdout = fakeout
         sys.stderr = fakeerr
         try:
-            if operator.isCallable(command):
+            if callable(command):
                 val = apply(command, args, kw)
             else:
                 try:
@@ -151,25 +149,13 @@ def runInConsole(command, console, globalNS=None, localNS=None,
             sys.stderr = err
     except:
         (eType, eVal, tb) = sys.exc_info()
-        tb_list = traceback.extract_tb(tb)[1:]
+        fail = failure.Failure(eVal, eType, tb)
         del tb
-        if not operator.isCallable(command):
-            # Fill in source lines from 'command' when we can.
-            for i in xrange(len(tb_list)):
-                tb_line = tb_list[i]
-                (filename_, lineNum, func, src) = tb_line
-                if ((src == None)
-                    and (filename_ == filename)
-                    and (func == '?')):
-
-                    src_lines = string.split(str(command), '\n')
-                    if len(src_lines) > lineNum:
-                        src = src_lines[lineNum]
-                        tb_list[i] = (filename_, lineNum, func, src)
-
-        ex_list = traceback.format_exception_only(eType, eVal)
-        errfile.write({'traceback': tb_list,
-                       'exception': ex_list})
+        # In CVS reversion 1.35, there was some code here to fill in the
+        # source lines in the traceback for frames in the local command
+        # buffer.  But I can't figure out when that's triggered, so it's
+        # going away in the conversion to Failure, until you bring it back.
+        errfile.write(pb.failure2Copyable(fail))
 
     if console:
         fakeout.consolidate()
@@ -177,6 +163,36 @@ def runInConsole(command, console, globalNS=None, localNS=None,
 
     return val
 
+def _failureOldStyle(fail):
+    """Pre-Failure manhole representation of exceptions.
+
+    For compatibility with manhole clients without the \"Failure\"
+    capability.
+
+    A dictionary with two members:
+        - \'traceback\' -- traceback.extract_tb output; a list of tuples
+             (filename, line number, function name, text) suitable for
+             feeding to traceback.format_list.
+
+        - \'exception\' -- a list of one or more strings, each
+             ending in a newline. (traceback.format_exception_only output)
+    """
+    import linecache
+    tb = []
+    for f in fail.frames:
+        # (filename, line number, function name, text)
+        tb.append((f[1], f[2], f[0], linecache.getline(f[1], f[2])))
+
+    return {
+        'traceback': tb,
+        'exception': traceback.format_exception_only(fail.type, fail.value)
+        }
+
+# Capabilities clients are likely to have before they knew how to answer a
+# "listCapabilities" query.
+_defaultCapabilities = {
+    "Explorer": 'Set'
+    }
 
 class Perspective(pb.Perspective):
     lastDeferred = 0
@@ -203,16 +219,23 @@ class Perspective(pb.Perspective):
         """
         self.clients[client] = identity
 
+        host = ':'.join(map(str, client.broker.transport.getHost()[1:]))
+
         msg = self.service.welcomeMessage % {
             'you': getattr(identity, 'name', str(identity)),
             'serviceName': self.service.getServiceName(),
             'app': getattr(self.service.application, 'name',
                            "some application"),
-            'host': 'some computer somewhere',
+            'host': host,
             'longversion': copyright.longversion,
             }
 
         client.callRemote('console', [("stdout", msg)])
+
+        client.capabilities = _defaultCapabilities
+        client.callRemote('listCapabilities').addCallbacks(
+            self._cbClientCapable, self._ebClientCapable,
+            callbackArgs=(client,),errbackArgs=(client,))
 
         return pb.Perspective.attached(self, client, identity)
 
@@ -242,9 +265,22 @@ class Perspective(pb.Perspective):
         """Pass a message to my clients' console.
         """
         clients = self.clients.keys()
+        origMessage = message
+        compatMessage = None
         for client in clients:
             try:
-                client.callRemote('console', message)
+                if not client.capabilities.has_key("Failure"):
+                    if compatMessage is None:
+                        compatMessage = origMessage[:]
+                        for i in xrange(len(message)):
+                            if ((message[i][0] == "exception") and
+                                isinstance(message[i][1], failure.Failure)):
+                                compatMessage[i] = (
+                                    message[i][0],
+                                    _failureOldStyle(message[i][1]))
+                    client.callRemote('console', compatMessage)
+                else:
+                    client.callRemote('console', message)
             except pb.ProtocolError:
                 # Stale broker.
                 self.detached(client, None)
@@ -265,6 +301,15 @@ class Perspective(pb.Perspective):
         self.console([('result', "Deferred #%s Result: %r\n" %(dnum, val))])
         return val
 
+    def _cbClientCapable(self, capabilities, client):
+        log.msg("client %x has %s" % (id(client), capabilities))
+        client.capabilities = capabilities
+
+    def _ebClientCapable(self, reason, client):
+        reason.trap(AttributeError)
+        log.msg("Couldn't get capabilities from %s, assuming defaults." %
+                (client,))
+
     ### perspective_ methods, commands used by the client.
 
     def perspective_do(self, expr):
@@ -278,6 +323,7 @@ class Perspective(pb.Perspective):
         if val is not None:
             self.localNamespace["_"] = val
             from twisted.internet.defer import Deferred
+            # TODO: client support for Deferred.
             if isinstance(val, Deferred):
                 self.lastDeferred += 1
                 self.console([('result', "Waiting for Deferred #%s...\n" % self.lastDeferred)])

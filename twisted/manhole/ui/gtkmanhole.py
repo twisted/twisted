@@ -1,6 +1,6 @@
 # -*- Python -*-
 # Twisted, the Framework of Your Internet
-# $Id: gtkmanhole.py,v 1.38 2002/09/21 08:16:49 acapnotic Exp $
+# $Id: gtkmanhole.py,v 1.39 2003/01/31 02:39:31 acapnotic Exp $
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
 # This library is free software; you can redistribute it and/or
@@ -57,6 +57,10 @@ import pywidgets
 class Interaction(pywidgets.Interaction, pb.Referenceable):
     loginWindow = None
 
+    capabilities = {
+        "Explorer": 'Set',
+        }
+
     def __init__(self):
         pywidgets.Interaction.__init__(self)
         self.signal_connect('destroy', gtk.mainquit, None)
@@ -81,6 +85,9 @@ class Interaction(pywidgets.Interaction, pb.Referenceable):
             self.display.receiveExplorer(xplorer)
         else:
             XXX # text display?
+
+    def remote_listCapabilities(self):
+        return self.capabilities
 
     def connected(self, perspective):
         self.loginWindow.hide()

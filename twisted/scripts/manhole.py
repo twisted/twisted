@@ -45,6 +45,7 @@ def run():
         sys.exit(1)
 
     # Put this off until after we parse options, or else gnome eats them.
+    # (http://www.daa.com.au/pipermail/pygtk/2002-December/004051.html)
     sys.argv[:] = ['manhole']
     from twisted.manhole.ui import gtkmanhole
 
