@@ -96,6 +96,12 @@ register("Lore Slides",
          type="lore",
          tapname="lore-slides")
 
+register("Nevow Lore",
+         "twisted.lore.nevowlore",
+         description="Nevow for Lore",
+         type="lore",
+         tapname="nevow")
+
 register("Man",
          "twisted.lore.man2lore",
          description="UNIX Man pages",
