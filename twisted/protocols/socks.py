@@ -80,7 +80,7 @@ class SOCKSv4(protocol.Protocol):
 
     def authorize(self,code,server,port,user):
         print "code %s connection to %s:%s (user %s)"%(code,server,port,user)
-        return port!=80
+        return 1
 
     def makeReply(self,reply,version=4,port=0,ip="0.0.0.0"):
         self.transport.write(struct.pack("!BBH",version,reply,port)+socket.inet_aton(ip))
