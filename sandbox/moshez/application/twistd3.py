@@ -153,13 +153,17 @@ def setupEnvironment(config):
     open(config['pidfile'],'wb').write(str(os.getpid()))
 
 def startApplication(config, application):
-    process = service.IProcess(application)
     service_ = service.IService(application)
-    if not config['originalname']:
+    process = service.IProcess(application, None)
+    if process is not None and not config['originalname']:
         launchWithName(process.processName)
     setupEnvironment(config)
     service_.privilegedStartService()
-    shedPrivileges(config['euid'], process.uid, process.gid)
+    process = service.IProcess(application, None)
+    if process is not None:
+        shedPrivileges(config['euid'], process.uid, process.gid)
+    else:
+        log.err("No process information! Not shedding privileges...")
     service_.startService()
     if not config['no_save']:
         apprun.scheduleSave(application)
