@@ -479,13 +479,18 @@ class TimerTarget:
     def append(self, what):
         self.l.append(what)
 
+class TestEcho(wire.Echo):
+    def connectionLost(self, reason):
+        self.d.callback(True)
+
 class TestInternet2(unittest.TestCase):
 
     def testTCP(self):
         s = service.MultiService()
         s.startService()
         factory = protocol.ServerFactory()
-        factory.protocol = wire.Echo
+        factory.protocol = TestEcho
+        TestEcho.d = defer.Deferred()
         t = internet.TCPServer(0, factory)
         t.setServiceParent(s)
         num = t._port.getHost().port
@@ -494,12 +499,17 @@ class TestInternet2(unittest.TestCase):
                 self.transport.write('lalala\r\n')
             def lineReceived(self, line):
                 self.factory.line = line
+                self.transport.loseConnection()
         factory = protocol.ClientFactory()
         factory.protocol = Foo
         factory.line = None
         internet.TCPClient('localhost', num, factory).setServiceParent(s)
         util.spinWhile(lambda :factory.line is None)
         self.assertEqual(factory.line, 'lalala')
+
+        # Cleanup the reactor
+        util.wait(defer.maybeDeferred(s.stopService))
+        util.wait(TestEcho.d)
 
     def testUDP(self):
         if not interfaces.IReactorUDP(reactor, None):
@@ -519,7 +529,8 @@ class TestInternet2(unittest.TestCase):
 
     def testPrivileged(self):
         factory = protocol.ServerFactory()
-        factory.protocol = wire.Echo
+        factory.protocol = TestEcho
+        TestEcho.d = defer.Deferred()
         t = internet.TCPServer(0, factory)
         t.privileged = 1
         t.privilegedStartService()
@@ -529,12 +540,19 @@ class TestInternet2(unittest.TestCase):
                 self.transport.write('lalala\r\n')
             def lineReceived(self, line):
                 self.factory.line = line
+                self.transport.loseConnection()
         factory = protocol.ClientFactory()
         factory.protocol = Foo
         factory.line = None
-        internet.TCPClient('localhost', num, factory).startService()
+        c = internet.TCPClient('localhost', num, factory)
+        c.startService()
         util.spinWhile(lambda :factory.line is None)
         self.assertEqual(factory.line, 'lalala')
+
+        # Cleanup the reactor
+        util.wait(defer.maybeDeferred(c.stopService))
+        util.wait(defer.maybeDeferred(t.stopService))
+        util.wait(TestEcho.d)
 
     def testConnectionGettingRefused(self):
         factory = protocol.ServerFactory()
@@ -552,12 +570,15 @@ class TestInternet2(unittest.TestCase):
         self.assertEqual(l, [None])
 
     def testUNIX(self):
+        # FIXME: This test is far too dense.  It needs comments.
+        #  -- spiv, 2004-11-07
         if not interfaces.IReactorUNIX(reactor, None):
             raise unittest.SkipTest, "This reactor does not support UNIX domain sockets"
         s = service.MultiService()
         s.startService()
         factory = protocol.ServerFactory()
-        factory.protocol = wire.Echo
+        factory.protocol = TestEcho
+        TestEcho.d = defer.Deferred()
         t = internet.UNIXServer('echo.skt', factory)
         t.setServiceParent(s)
         class Foo(basic.LineReceiver):
@@ -565,24 +586,25 @@ class TestInternet2(unittest.TestCase):
                 self.transport.write('lalala\r\n')
             def lineReceived(self, line):
                 self.factory.line = line
+                self.transport.loseConnection()
         factory = protocol.ClientFactory()
         factory.protocol = Foo
         factory.line = None
         internet.UNIXClient('echo.skt', factory).setServiceParent(s)
         util.spinWhile(lambda :factory.line is None)
         self.assertEqual(factory.line, 'lalala')
-        d = s.stopService()
-        l = []
-        d.addCallback(l.append)
-        util.spinWhile(lambda :not l)
+        util.wait(defer.maybeDeferred(s.stopService))
+        util.wait(TestEcho.d)
+
+        TestEcho.d = defer.Deferred()
         factory.line = None
         s.startService()
         util.spinWhile(lambda :factory.line is None)
         self.assertEqual(factory.line, 'lalala')
-        d = s.stopService()
-        l = []
-        d.addCallback(l.append)
-        util.spinWhile(lambda :not l)
+
+        # Cleanup the reactor
+        util.wait(defer.maybeDeferred(s.stopService))
+        util.wait(TestEcho.d)
 
     def testVolatile(self):
         if not interfaces.IReactorUNIX(reactor, None):
