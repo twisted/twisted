@@ -1068,12 +1068,28 @@ def _connGotRoot(root, d, client, serviceName,
                  username, password, perspectiveName):
     logIn(root, client, serviceName, username, password, perspectiveName).armAndChain(d)
 
+def authIdentity(authServRef, username, password):
+    """Return a Deferred which will do the challenge-response dance and
+    return a remote Identity reference.
+    """
+    d = defer.Deferred()
+    authServRef.username(username).addCallbacks(
+        _cbRespondToChallenge, d.armAndErrback,
+        callbackArgs=(password,d))
+    return d
+
+def _cbRespondToChallenge((challenge, challenger), password, d):
+    challenger.respond(passport.respond(challenge, password)).addCallbacks(
+        d.armAndCallback, d.armAndErrback)
+
 def logIn(authServRef, client, service, username, password, perspectiveName=None):
     """I return a Deferred which will be called back with a Perspective.
     """
     d = defer.Deferred()
-    authServRef.username(username).addCallbacks(_cbLogInRespond, d.armAndErrback,
-                                                callbackArgs=(d, client, service, password, perspectiveName or username))
+    authServRef.username(username).addCallbacks(
+        _cbLogInRespond, d.armAndErrback,
+        callbackArgs=(d, client, service, password,
+                      perspectiveName or username))
     return d
 
 def _cbLogInRespond((challenge, challenger), d, client, service, password, perspectiveName):
