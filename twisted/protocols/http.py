@@ -19,6 +19,11 @@
 """HyperText Transfer Protocol implementation.
 
 This is used by twisted.web.
+
+Server HTTP support is pretty stable, unless methods say otherwise.
+HTTP client support will at some point be refactored to support HTTP/1.1.
+
+Maintainer: Itamar Shtull-Trauring <twisted@itamarst.org>
 """
 
 # system imports
