@@ -1,3 +1,7 @@
+import sys, os, string, re, urllib2
+if string.find(os.path.abspath(sys.argv[0]), os.sep+'Twisted') != -1:
+    sys.path.insert(0, os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]
+), os.pardir, os.pardir, os.pardir)))
 from twisted.python import usage
 
 class Options(usage.Options):
@@ -19,7 +23,7 @@ def getrevision():
         line = text.readline()
         if not line:
             break
-        if line=="<br>CVS Tags:\n":
+        if line.startswith("<br>CVS Tags:"):
             text.readline()
             tag = parsetag(text.readline())
             if tag:
@@ -28,6 +32,7 @@ def getrevision():
     return tag
 
 def parsetag(tag):
+    tag = tag[tag.index('=')+1:]
     tag = tag[tag.index('=')+1:tag.rindex('"')]
     if not tag.startswith('release-'):
         return
@@ -45,11 +50,11 @@ def parsetag(tag):
 def strtag(major, minor, patch):
     spatch = ''.join(patch)
     if patch[1]=='final':
-        if patch[2]==1:
+        if patch[2]=='1':
             spatch = patch[0]
         else:
             spatch = str(int(patch[0])+1)
-    return '.'.join([major, minor, patch])
+    return '.'.join([major, minor, spatch])
 
 def calcnext(version, type):
     major, minor, patch = version
@@ -63,21 +68,23 @@ def calcnext(version, type):
         patch = patch[0], type, str(int(patch[2])+1)
     return strtag(major, minor, patch)
 
-def system(command):
+def system(command, do):
+    if not do:
+        return
     n = os.system(command)
     if n:
         sys.exit(n)
 
-def setquotr(quotr)
-    if quotr is None:
+def setqotr(qotr, do):
+    if qotr is None or not do:
         return
     res = []
     fp = file("README")
     for line in fp:
         res.append(line)
-        if line=="Quote of the Release:\n"
+        if line=="Quote of the Release:\n":
             res.append(fp.next()) # blank line
-            res.append(quotr)
+            res.append(qotr)
             for line in fp:
                 if line=='\n':
                     break
@@ -90,10 +97,21 @@ def run(config):
     command = 'cvs -d :ext:cvs.twistedmatrix.com:/cvs co -d Twisted.CVS'
     if not config['head']:
         command += "-r %s" % tag
-    system(command)
-    tag = calcnext(tag, config['type'])
+    do = not config['dry-run']
+    system(command, do)
+    old = strtag(*version)
+    tag = calcnext(version, config['type'])
     print "next version is", tag
-    os.chdir("Twisted.CVS")
-    system("cvs up -A %s" % ' '.join(config['updates']))
-    os.system("./admin/release-twisted --upver %s" % tag)
-    setquotr(config['quotr'])
+    if do:
+        os.chdir("Twisted.CVS")
+    system("cvs up -A %s" % ' '.join(config.updates), do)
+    system("./admin/release-twisted -V %s -o %s --upver" % (old, tag), do)
+    setqotr(config['qotr'], do)
+
+def main():
+    c = Options()
+    c.parseOptions()
+    run(c)
+
+if __name__=='__main__':
+    main()
