@@ -65,18 +65,33 @@ class FailureTestCase(unittest.TestCase):
         f.trap(RuntimeError)
         self.assertEquals(f.value, e)
 
-    def testRaiseExceptionWithTB(self):
+
+    def _getDivisionFailure(self):
         try:
             1/0
         except:
             f = failure.Failure()
+        return f
 
+    def _getInnermostFrameLine(self, f):
         try:
             f.raiseException()
         except ZeroDivisionError:
             tb = util.extract_tb(sys.exc_info()[2])
-            self.assertEquals(tb[-1][-1], '1/0')
+            return tb[-1][-1]
         else:
             raise Exception(
                 "f.raiseException() didn't raise ZeroDivisionError!?")
 
+    def testRaiseExceptionWithTB(self):
+        f = self._getDivisionFailure()
+        innerline = self._getInnermostFrameLine(f)
+        self.assertEquals(innerline, '1/0')
+
+    def testLackOfTB(self):
+        f = self._getDivisionFailure()
+        f.cleanFailure()
+        innerline = self._getInnermostFrameLine(f)
+        self.assertEquals(innerline, '1/0')
+
+    testLackOfTB.todo = "the traceback is not preserved, exarkun said he'll try to fix this! god knows how"
