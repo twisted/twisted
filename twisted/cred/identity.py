@@ -190,7 +190,8 @@ class Identity:
             req.errback(Unauthorized("incorrect password"))
         return req
 
-
+    def __repr__(self):
+        return "<%s %r at 0x%x>" % (self.__class__, self.name, id(self))
 
 
     # TODO: service discovery through listing of self.keyring.
