@@ -70,6 +70,7 @@ else:
 # Twisted imports
 from twisted.internet import protocol, defer, error
 from twisted.python import log, failure
+from twisted.python import util as tputil
 
 
 PORT = 53
@@ -426,7 +427,7 @@ class RRHeader:
 
     __repr__ = __str__
 
-class SimpleRecord:
+class SimpleRecord(tputil.FancyStrMixin, tputil.FancyEqMixin):
     """
     A Resource Record which consists of a single RFC 1035 domain-name.
     """
@@ -434,6 +435,9 @@ class SimpleRecord:
     
     __implements__ = (IEncodable,)
     name = None
+
+    showAttributes = (('name', 'name', '%s'), 'ttl')
+    compareAttributes = ('name', 'ttl')
 
     def __init__(self, name='', ttl=None):
         self.name = Name(name)
@@ -449,19 +453,8 @@ class SimpleRecord:
         self.name.decode(strio)
     
 
-    def __eq__(self, other):
-        if isinstance(other, SimpleRecord):
-            return (self.name == other.name and
-                    self.ttl == other.ttl)
-        return 0
-    
-    
     def __hash__(self):
         return hash(self.name)
-
-
-    def __str__(self):
-        return '<%s %s ttl=%s>' % (QUERY_TYPES[self.TYPE], self.name, self.ttl)
 
 
 # Kinds of RRs - oh my!
@@ -492,12 +485,14 @@ class Record_PTR(SimpleRecord):
 class Record_DNAME(SimpleRecord):
     TYPE = DNAME
 
-class Record_A:
+class Record_A(tputil.FancyEqMixin):
     __implements__ = (IEncodable,)
 
     TYPE = A
     address = None
 
+    compareAttributes = ('address', 'ttl')
+    
     def __init__(self, address='0.0.0.0', ttl=None):
         address = socket.inet_aton(address)
         self.address = address
@@ -512,13 +507,6 @@ class Record_A:
         self.address = readPrecisely(strio, 4)
 
 
-    def __eq__(self, other):
-        if isinstance(other, Record_A):
-            return (other.address == self.address and
-                    self.ttl == other.ttl)
-        return 0
-
-
     def __hash__(self):
         return hash(self.address)
 
@@ -531,8 +519,11 @@ class Record_A:
         return socket.inet_ntoa(self.address)
 
 
-class Record_SOA:
+class Record_SOA(tputil.FancyEqMixin, tputil.FancyStrMixin):
     __implements__ = (IEncodable,)
+
+    compareAttributes = ('serial', 'mname', 'rname', 'refresh', 'expire', 'retry', 'ttl')
+    showAttributes = ('mname', 'rname', 'serial', 'refresh', 'retry', 'expire', 'minimum', 'ttl')
 
     TYPE = SOA
     
@@ -564,18 +555,6 @@ class Record_SOA:
         self.serial, self.refresh, self.retry, self.expire, self.minimum = r
     
     
-    def __eq__(self, other):
-        if isinstance(other, Record_SOA):
-            return (self.serial == other.serial and 
-                    self.mname == other.mname and
-                    self.rname == other.rname and
-                    self.refresh == other.refresh and
-                    self.expire == other.expire and
-                    self.retry == other.retry and
-                    self.ttl == other.ttl)
-        return 0
-
-    
     def __hash__(self):
         return hash((
             self.serial, self.mname, self.rname,
@@ -583,13 +562,6 @@ class Record_SOA:
         ))
 
 
-    def __str__(self):
-        return '<SOA %s %s serial=%d refresh=%d retry=%d expire=%d min=%d ttl=%s>' % (
-            self.mname, self.rname, self.serial, self.refresh,
-            self.retry, self.expire, self.minimum, self.ttl
-        )
-    
-    
 class Record_NULL:                   # EXPERIMENTAL
     __implements__ = (IEncodable,)
     TYPE = NULL
@@ -611,9 +583,12 @@ class Record_NULL:                   # EXPERIMENTAL
         return hash(self.payload)
     
     
-class Record_WKS:                    # OBSOLETE
+class Record_WKS(tputil.FancyEqMixin, tputil.FancyStrMixin):                    # OBSOLETE
     __implements__ = (IEncodable,)
     TYPE = WKS
+
+    compareAttributes = ('address', 'protocol', 'map', 'ttl')
+    showAttributes = ('address', 'protocol', 'ttl')
 
     def __init__(self, address='0.0.0.0', protocol=0, map='', ttl=None):
         self.address = socket.inet_aton(address)
@@ -633,29 +608,16 @@ class Record_WKS:                    # OBSOLETE
         self.map = readPrecisely(strio, length - 5)
 
 
-    def __eq__(self, other):
-        if isinstance(other, Record_WKS):
-            return (self.address == other.address and
-                    self.protocol == other.protocol and
-                    self.map == other.map and
-                    self.ttl == other.ttl)
-        return 0
-
-
     def __hash__(self):
         return hash((self.address, self.protocol, self.map))
 
-
-    def __str__(self):
-        return '<WKS addr=%s proto=%d ttl=%s>' % (
-            socket.inet_ntoa(self.address), self.protocol, self.ttl
-        )
     
-    
-class Record_AAAA:               # OBSOLETE (or headed there)
+class Record_AAAA(tputil.FancyEqMixin):               # OBSOLETE (or headed there)
     __implements__ = (IEncodable,)
     TYPE = AAAA
-    
+
+    compareAttributes = ('address', 'ttl')
+
     def __init__(self, address = '::', ttl=None):
         self.address = socket.inet_pton(AF_INET6, address)
         self.ttl = str2time(ttl)
@@ -667,13 +629,6 @@ class Record_AAAA:               # OBSOLETE (or headed there)
 
     def decode(self, strio, length = None):
         self.address = readPrecisely(strio, 16)
-
-
-    def __eq__(self, other):
-        if isinstance(other, Record_AAAA):
-            return (other.address == self.address and
-                    self.ttl == other.ttl)
-        return 0
 
 
     def __hash__(self):
@@ -735,10 +690,12 @@ class Record_A6:
         )
 
 
-class Record_SRV:                # EXPERIMENTAL
+class Record_SRV(tputil.FancyEqMixin, tputil.FancyStrMixin):                # EXPERIMENTAL
     __implements__ = (IEncodable,)
     TYPE = SRV
-    
+
+    showAttributes = compareAttributes = ('priority', 'weight', 'target', 'port', 'ttl')
+
     def __init__(self, priority=0, weight=0, port=0, target='', ttl=None):
         self.priority = int(priority)
         self.weight = int(weight)
@@ -760,29 +717,16 @@ class Record_SRV:                # EXPERIMENTAL
         self.target.decode(strio)
     
     
-    def __eq__(self, other):
-        if isinstance(other, Record_SRV):
-            return (self.priority == other.priority and
-                    self.weight == other.weight and
-                    self.port == other.port and
-                    self.target == other.target and
-                    self.ttl == other.ttl)
-        return 0
-
-
     def __hash__(self):
         return hash((self.priority, self.weight, self.port, self.target))
 
 
-    def __str__(self):
-        return '<SRV prio=%d weight=%d %s:%d ttl=%s>' % (
-            self.priority, self.weight, str(self.target), self.port, self.ttl
-        )
-    
-    
-class Record_AFSDB:
+
+class Record_AFSDB(tputil.FancyStrMixin, tputil.FancyEqMixin):
     __implements__ = (IEncodable,)
     TYPE = AFSDB
+
+    showAttributes = compareAttributes = ('subtype', 'hostname', 'ttl')
     
     def __init__(self, subtype=0, hostname='', ttl=None):
         self.subtype = int(subtype)
@@ -800,27 +744,18 @@ class Record_AFSDB:
         self.subtype, = r
         self.hostname.decode(strio)
     
-    
-    def __eq__(self, other):
-        if isinstance(other, Record_AFSDB):
-            return (self.subtype == other.subtype and
-                    self.hostname == other.hostname and
-                    self.ttl == other.ttl)
-        return 0
-
 
     def __hash__(self):
         return hash((self.subtype, self.hostname))
     
     
-    def __str__(self):
-        return '<AFSB subtype=%d %s ttl=%s>' % (self.subtype, self.hostname, self.ttl)
-    
-    
-class Record_RP:
+
+class Record_RP(tputil.FancyEqMixin, tputil.FancyStrMixin):
     __implements__ = (IEncodable,)
     TYPE = RP
-    
+
+    showAttributes = compareAttributes = ('mbox', 'txt', 'ttl')
+
     def __init__(self, mbox='', txt='', ttl=None):
         self.mbox = Name(mbox)
         self.txt = Name(txt)
@@ -839,25 +774,16 @@ class Record_RP:
         self.txt.decode(strio)
 
 
-    def __eq__(self, other):
-        if isinstance(other, Record_RP):
-            return (self.mbox == other.mbox and 
-                    self.txt == other.txt and
-                    self.ttl == other.ttl)
-        return 0
-    
-    
     def __hash__(self):
         return hash((self.mbox, self.txt))
     
     
-    def __str__(self):
-        return '<RP mbox=%s txt=%s ttl=%s>' % (self.mbox, self.txt, self.ttl)
-    
-    
-class Record_HINFO:
+
+class Record_HINFO(tputil.FancyStrMixin):
     __implements__ = (IEncodable,)
     TYPE = HINFO
+
+    showAttributes = ('cpu', 'os', 'ttl')
 
     def __init__(self, cpu='', os='', ttl=None):
         self.cpu, self.os = cpu, os
@@ -888,16 +814,18 @@ class Record_HINFO:
         return hash((self.os.lower(), self.cpu.lower()))
 
 
-    def __str__(self):
-        return '<HINFO cpu=%s os=%s ttl=%s>' % (self.cpu, self.os, self.ttl)
-    
-    
-class Record_MINFO:                 # EXPERIMENTAL
+
+class Record_MINFO(tputil.FancyEqMixin, tputil.FancyStrMixin):                 # EXPERIMENTAL
     __implements__ = (IEncodable,)
     TYPE = MINFO
     
     rmailbx = None
     emailbx = None
+
+    compareAttributes = ('rmailbx', 'emailbx', 'ttl')
+    showAttributes = (('rmailbx', 'responsibility', '%s'),
+                      ('emailbx', 'errors', '%s'),
+                      'ttl')
 
     def __init__(self, rmailbx='', emailbx='', ttl=None):
         self.rmailbx, self.emailbx = Name(rmailbx), Name(emailbx)
@@ -915,25 +843,15 @@ class Record_MINFO:                 # EXPERIMENTAL
         self.emailbx.decode(strio)
 
 
-    def __eq__(self, other):
-        if isinstance(other, Record_MINFO):
-            return (self.rmailbx == other.rmailbx and
-                    self.emailbx == other.emailbx and
-                    self.ttl == other.ttl)
-        return 0
-    
-    
     def __hash__(self):
         return hash((self.rmailbx, self.emailbx))
 
 
-    def __str__(self):
-        return '<MINFO responsibility=%s errors=%s ttl=%s>' % (self.rmailbx, self.emailbx, self.ttl)
-
-
-class Record_MX:
+class Record_MX(tputil.FancyStrMixin, tputil.FancyEqMixin):
     __implements__ = (IEncodable,)
     TYPE = MX
+
+    showAttributes = compareAttributes = ('preference', 'exchange', 'ttl')
 
     def __init__(self, preference=0, exchange='', ttl=None):
         self.preference, self.exchange = int(preference), Name(exchange)
@@ -951,27 +869,19 @@ class Record_MX:
         self.exchange.decode(strio)
 
 
-    def __eq__(self, other):
-        if isinstance(other, Record_MX):
-            return (self.preference == other.preference and
-                    self.exchange == other.exchange and
-                    self.ttl == other.ttl)
-        return 0
-
-
     def __hash__(self):
         return hash((self.preference, self.exchange))
 
 
-    def __str__(self):
-        return '<MX %d %s ttl=%s>' % (self.preference, self.exchange, self.ttl)
-    
     
 # Oh god, Record_TXT how I hate thee.
-class Record_TXT:
+class Record_TXT(tputil.FancyEqMixin, tputil.FancyStrMixin):
     __implements__ = (IEncodable,)
 
     TYPE = TXT
+
+    showAttributes = compareAttributes = ('data', 'ttl')
+    
     def __init__(self, *data, **kw):
         self.data = list(data)
         # arg man python sucks so bad
@@ -998,19 +908,9 @@ class Record_TXT:
             )
 
 
-    def __eq__(self, other):
-        if isinstance(other, Record_TXT):
-            return (self.data == other.data and
-                    self.ttl == other.ttl)
-        return 0
-    
-    
     def __hash__(self):
         return hash(tuple(self.data))
     
-    
-    def __str__(self):
-        return '<TXT %r ttl=%s>' % (self.data, self.ttl)
     
     
 class Message:

@@ -285,7 +285,7 @@ class ServerDNSTestCase(unittest.TestCase):
         """Test DNS 'MR' record queries"""
         self.namesTest(
             self.resolver.lookupMailRename('test-domain.com'),
-            [dns.Record_MG('mail.redirect.or.whatever', ttl=19283784)]
+            [dns.Record_MR('mail.redirect.or.whatever', ttl=19283784)]
         )
 
 

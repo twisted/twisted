@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes, generators
 
-__version__ = '$Revision: 1.42 $'[11:-2]
+__version__ = '$Revision: 1.43 $'[11:-2]
 
 import os
 import sys
@@ -516,9 +516,40 @@ class _IntervalDifferentialIterator:
                 return
         raise ValueError, "Specified interval not in IntervalDifferential"
 
+
+class FancyStrMixin:
+    """
+    Set showAttributes to a sequence of strings naming attributes, OR
+    sequences of (attributeName, displayName, formatCharacter)
+    """
+    showAttributes = ()
+    def __str__(self):
+        r = ['<', hasattr(self, 'fancybasename') and self.fancybasename or self.__class__.__name__]
+        for attr in self.showAttributes:
+            if isinstance(attr, str):
+                r.append(' %s=%r' % (attr, getattr(self, attr)))
+            else:
+                r.append((' %s=' + attr[2]) % (attr[1], getattr(self, attr[0])))
+        r.append('>')
+        return ''.join(r)
+    __repr__ = __str__
+
+class FancyEqMixin:
+    compareAttributes = ()
+    def __eq__(self, other):
+        if not self.compareAttributes:
+            return self is other
+        #XXX Maybe get rid of this, and rather use hasattr()s
+        if not isinstance(other, self.__class__):
+            return False
+        for attr in self.compareAttributes:
+            if not getattr(self, attr) == getattr(other, attr):
+                return False
+        return True
+
 __all__ = [
     "uniquify", "padTo", "getPluginDirs", "addPluginDir", "sibpath",
     "getPassword", "dict", "println", "keyed_md5", "makeStatBar",
     "OrderedDict", "spewer", "searchupwards", "LineLog", "raises",
-    "IntervalDifferential",
+    "IntervalDifferential", "FancyStrMixin", "FancyEqMixin"
 ]
