@@ -16,20 +16,7 @@
 
 """Zooko's implementation of Gnutella."""
 
-from twisted.internet.app import Application
-from twisted.protocols import gnutella
-
-from twisted.zoot.AFactory import AFactory
-
 class Zoot:
-    def __init__(self):
-        pass
-
-class ZootFactory(AFactory):
-
-    protocol = gnutella.GnutellaTalker
-
-    def __init__(self, zoot):
-        AFactory.__init__(self)
-        self.application = zoot
+    def __init__(self, app):
+        self.twistedapp = app
 

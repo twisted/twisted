@@ -27,5 +27,6 @@ class Options(usage.Options):
     optParameters = [["port", "p", 3653, "Port number to listen on for Gnutella protocol."],]
 
 def updateApplication(app, config):
-    f = AFactory(GnutellaTalker, Zoot())
+    theBigZoot = Zoot(app)
+    f = AFactory(GnutellaTalker, theBigZoot)
     app.listenTCP(int(config["port"]), f)

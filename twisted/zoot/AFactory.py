@@ -16,16 +16,15 @@
 
 """slightly extended variation on basic Factory"""
 
-from twisted.internet.protocol import Factory, Protocol
-from twisted.internet.app import Application
+from twisted.internet.protocol import Factory
 
 class AFactory(Factory):
-    def __init__(self, protocol, application=None):
+    def __init__(self, protocol, userapp=None):
         self.protocol = protocol
-        self.application = application
+        self.userapp = userapp
 
     def buildProtocol(self, addr):
         p = Factory.buildProtocol(self, addr)
-        p.application = self.application
+        p.userapp = self.userapp
         return p
 
