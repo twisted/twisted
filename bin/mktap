@@ -35,8 +35,16 @@ from twisted.manhole import service
 manholeService = service
 del service
 
-import sys, traceback, os, cPickle
+import sys, traceback, os, cPickle, glob
 
+
+import twisted.tap
+
+tapMods = []
+for file in glob.glob(os.path.split(twisted.tap.__file__)[0] + "/*.py"):
+    fn = os.path.splitext(os.path.split(file)[1])[0]
+    if fn == '__init__': continue
+    tapMods.append(fn)
 
 class GeneralOptions(usage.Options):
     synopsis="""\
@@ -45,11 +53,8 @@ Usage::
   mktap *apptype* *application_options*
   mktap --help *apptype*
 
-So far *apptype* can be one of:
-'enterprise', 'ftp', 'mail', 'manhole', 'reality', 
-'stupid', 'telnet', 'toc', 'web', and 'words'
-""" # XXX: This list is never kept up to date --
-    #     we should auto-generate it.
+So far *apptype* can be one of: %s
+""" % tapMods
 
     optFlags = [['help', 'h']]
     optStrings = [['uid', 'u', '0'],
@@ -77,9 +82,8 @@ def getModule(type):
         mod = __import__("twisted.tap.%s" % type, globals(), locals(), type)
         return mod
     except ImportError:
-        traceback.print_exc()
-        print """Please select one of:
-        enterprise ftp mail manhole reality stupid telnet toc web words"""
+        #traceback.print_exc()
+        print """Please select one of: %s""" % tapMods
         sys.exit()
 
 options = GeneralOptions()
