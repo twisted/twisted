@@ -173,9 +173,7 @@ class Request(pb.Copyable, http.HTTP):
 
     def __repr__(self):
         return '<%s %s %s>'% (self.method, self.uri, self.clientproto)
-
-    _host = socket.gethostbyaddr(socket.gethostname())[0]
-
+    
     def process(self):
         "Process a request."
         # Log the request to a file.
@@ -395,7 +393,7 @@ class Request(pb.Copyable, http.HTTP):
         return self.session
 
     def getHost(self):
-        return self._host
+        return socket.gethostbyaddr(self.transport.getHost()[1])
 
     def getClientIP(self):
         if self.client[0] == 'INET':
