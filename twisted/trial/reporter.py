@@ -143,7 +143,6 @@ class TextReporter(Reporter):
         if isinstance(error, failure.Failure):
             tb = error.getBriefTraceback()
         elif isinstance(error, types.TupleType):
-            print "woohoo am here"
             tb = ''.join(util.format_exception(*error))
         else:
             tb = "%s\n" % error
