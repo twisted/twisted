@@ -258,8 +258,8 @@ class SSHUserAuthClient(service.SSHService):
         elif self.lastAuth == 'password':
             prompt, language, rest = getNS(packet, 2)
             self._oldPass = self._newPass = None
-            self.getPassword('Old Password: ').addCallback(self._setOldPass)
-            self.getPassword(prompt).addCallback(self._setNewPass)
+            self.getPassword('Old Password: ').addCallbacks(self._setOldPass, self._errPass)
+            self.getPassword(prompt).addCallbacks(self._setNewPass, self._errPass)
         elif self.lastAuth == 'keyboard-interactive':
             # can't handle this in the client, so just try something else
             self.askForAuth('none', '')
@@ -293,6 +293,10 @@ class SSHUserAuthClient(service.SSHService):
         else:
             self._newPass = np
 
+    def _errPass(self, failure):
+        failure.trap(KeyboardInterrupt)
+        raise SystemExit
+
     def auth_publickey(self):
         publicKey = self.getPublicKey()
         if publicKey:
@@ -309,7 +313,7 @@ class SSHUserAuthClient(service.SSHService):
     def auth_password(self):
         d = self.getPassword()
         if d:
-            d.addCallback(self._cbPassword)
+            d.addCallbacks(self._cbPassword, self._errPass)
             return 1
         else: # returned None, don't do password auth
             return 0

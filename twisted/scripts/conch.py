@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.50 2003/04/12 21:14:52 z3p Exp $
+# $Id: conch.py,v 1.51 2003/04/17 15:57:36 z3p Exp $
 
 #""" Implementation module for the `conch` command.
 #"""
@@ -24,7 +24,7 @@ from twisted.conch.ssh import transport, userauth, connection, common, keys
 from twisted.conch.ssh import session, forwarding, channel
 from twisted.internet import reactor, stdio, defer, protocol
 from twisted.internet.error import CannotListenError
-from twisted.python import usage, log
+from twisted.python import usage, log, util
 from twisted.spread import banana
 
 import os, sys, getpass, struct, tty, fcntl, base64, signal, stat, cPickle
@@ -180,9 +180,10 @@ def handleError():
     from twisted.python import failure
     global exitStatus
     exitStatus = 2
-    log.err(failure.Failure())
     reactor.stop()
-    raise
+    if sys.exc_info()[0] != SystemExit:
+        log.err(failure.Failure())
+        raise
 
 def onConnect():
     if not options['noshell']:
@@ -593,15 +594,12 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
     usedFiles = []
 
     def getPassword(self, prompt = None):
-#        self.passDeferred = defer.Deferred()
         if not prompt:
             prompt = "%s@%s's password: " % (self.user, options['host'])
-        #return self.passDeferred
-        oldout, oldin = sys.stdout, sys.stdin
-        sys.stdin = sys.stdout = open('/dev/tty','r+')
-        p=getpass.getpass(prompt)
-        sys.stdout,sys.stdin=oldout,oldin
-        return defer.succeed(p)
+        try:
+            return defer.succeed(util.getPassword(prompt))
+        except KeyboardInterrupt, e:
+            return defer.fail(e)
        
     def gotPassword(self, q, password):
         d = self.passDeferred
@@ -637,10 +635,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
                 for i in range(3):
                     prompt = "Enter passphrase for key '%s': " % \
                            self.usedFiles[-1]
-                    oldout, oldin = sys.stdout, sys.stdin
-                    sys.stdin = sys.stdout = open('/dev/tty','r+')
-                    p=getpass.getpass(prompt)
-                    sys.stdout,sys.stdin=oldout,oldin
+                    p = util.getPassword(prompt)
                     try:
                         return defer.succeed(keys.getPrivateKeyObject(file, password = p))
                     except keys.BadKeyError:

@@ -120,40 +120,53 @@ def sibpath(path, sibling):
     return os.path.join(os.path.dirname(os.path.abspath(path)), sibling)
 
 
+def _getpass(prompt):
+    """Helper to turn IOErrors into KeyboardInterrupts"""
+    import getpass
+    try:
+        return getpass.getpass(prompt)
+    except IOError, e:
+        import errno
+        if e.errno == errno.EINTR:
+            raise KeyboardInterrupt
+        raise
+    except EOFError:
+        raise KeyboardInterrupt
+
 def getPassword(prompt = 'Password: ', confirm = 0):
-    """Obtain a password by prompting or from stdin.
+    """Prompt for a password.
 
-    If stdin is a terminal, prompt for a new password, and confirm (if
-    C{confirm} is true) by asking again to make sure the user typed the same
-    thing, as keystrokes will not be echoed.
-
-    If stdin is not a terminal, read in a line and use it as the password,
-    less the trailing newline, if any.
+    Prompt for a new password, and confirm (if C{confirm} is true) by asking
+    again to make sure the user typed the same thing, as keystrokes will not
+    be echoed.
 
     @returns: C{str}
     """
-    import getpass
-    # If standard input is a terminal, I prompt for a password and
-    # confirm it.  Otherwise, I use the first line from standard
-    # input, stripping off a trailing newline if there is one.
-    if os.isatty(sys.stdin.fileno()):
+    old = sys.stdin, sys.stdout
+    
+    # If it is even possible to get the terminal
+    if os.path.exists('/dev/tty'):
+        # If it is necessary to get the terminal
+        tty = hasattr(sys.stdin, 'isatty') and sys.stdin.isatty()
+        if not tty:
+            # Replace stdin/stdout with the terminal
+            sys.stdin = sys.stdout = open('/dev/tty','r+')
+    try:
         gotit = 0
         while not gotit:
-            try1 = getpass.getpass(prompt)
+            try1 = _getpass(prompt)
             if not confirm:
                 return try1
-            try2 = getpass.getpass("Confirm: ")
+            try2 = _getpass("Confirm: ")
             if try1 == try2:
                 gotit = 1
             else:
                 sys.stderr.write("Passwords don't match.\n")
         else:
             password = try1
-    else:
-        password = sys.stdin.readline()
-        if password[-1] == '\n':
-            password = password[:-1]
-    return password
+        return password
+    finally:
+        sys.stdin, sys.stdout = old
 
 
 def dict(*a, **k):
