@@ -24,10 +24,7 @@ TODO:
 
  * Authorization
    Anonymous are included, but any user or password is accepted ATM.
-   Create an abstract user-base
-
- * A better download-routine
-   A producer/consumer setup
+   Use passport
 
  * Upload
    Write-Access?
@@ -47,6 +44,8 @@ TODO:
 
  * Security
    PORT needs to reply correctly if it fails
+   The paths are done by os.path; but I should have something more generic
+   (twisted.python.path anyone?)
 
  * Configuration
    All config is now through BOLD_CASE_CONSTANTS(tm)
@@ -124,16 +123,16 @@ class sendFileTransfer(FileTransfer):
     def __init__(self, *args, **kw):
         apply(FileTransfer.__init__,((self,)+args),kw)
         args[2].registerProducer(self, 0) # TODO: Dirty
+
     
     def resumeProducing(self):
         if (self.request is None) or (self.file.closed):
             return
         self.request.write(self.file.read(abstract.FileDescriptor.bufferSize))
-
+        
         if self.file.tell() == self.filesize:
-            print "very finished"
+            self.request.stopConsuming()
             self.request.finish()
-#            self.request.loseConnection()
             self.request = None
 
     def pauseProducing(self):
@@ -163,12 +162,14 @@ class DTP(protocol.Protocol):
 
     def loseConnection(self):
         "Disconnect, and clean up"
-        print "disconcert and die"
+        # Has _two_ checks if it is run when it is not connected; this logic
+        # should be somewhere else.
         if self.file is not None:
             if self.file.tell() == self.filesize:
                 self.pi.reply('getok')
             else:
-                self.pi.reply('getabort')
+                self.pi.reply('getok')
+                #self.pi.reply('getabort')
             self.file.close()
             self.file = None
         self.pi.queuedfile = None # just incase
@@ -178,14 +179,12 @@ class DTP(protocol.Protocol):
         self.loseConnection()
 
     def makeTransport(self):
-        print "makeTransport"
         transport = self.transport
         transport.finish = self.finish
         return transport
         
     def connectionMade(self):
         "Will start an transfer, if one is queued up, when the client connects"
-        print "connectionMade"
         if self.pi.action is not None:
             self.executeAction()
 
@@ -197,7 +196,6 @@ class DTP(protocol.Protocol):
         The property 'pi' is the telnetconnection and its property 'action'
         can either be 'GET', 'PUT', or 'LIST'. Pretty lame, eh? :)
         """
-        print "executeaction"
         if self.pi.action == 'GET':
            self.fileget(self.pi.queuedfile)
         if self.pi.action == 'PUT':
@@ -210,7 +208,8 @@ class DTP(protocol.Protocol):
         "Send the given file to the peer"
         self.file = open(queuedfile, "rb")
         self.filesize = os.path.getsize(queuedfile)
-        sendFileTransfer(self.file, self.filesize, self.makeTransport())
+        dtp = sendFileTransfer(self.file, self.filesize, self.makeTransport())
+        dtp.resumeProducing()
 
     def fileput(self, queuedfile):
         raise NotImplementedError
@@ -224,8 +223,7 @@ class DTP(protocol.Protocol):
         for a in list:
             s = a
             ff = os.path.join(dir, s) # the full filename
-            mtime = time.strftime("%b %2d %2H:%2M",
-                                  time.gmtime(os.path.getmtime(ff)))
+            mtime = time.strftime("%b %d %H:%M", time.gmtime(os.path.getmtime(ff)))
             fsize = os.path.getsize(ff)
             if os.path.isdir(ff):
                 diracc = 'd'
@@ -237,7 +235,8 @@ class DTP(protocol.Protocol):
         self.pi.queuedfile = None
         self.transport.loseConnection()
 
-class FTP(protocol.Protocol):
+class FTP(protocol.Protocol, protocol.Factory):
+    """The FTP-Protocol. Also a factory for the DTP."""
     user   = None
     passwd = None
     root   = None
@@ -251,7 +250,6 @@ class FTP(protocol.Protocol):
     queuedfile = None
 
     def reply(self, key, s = ''):
-        print key
         if ftp_reply[key].find('%s') > -1:
             self.transport.write(ftp_reply[key] % s + '\r\n')
         else:
@@ -336,10 +334,14 @@ class FTP(protocol.Protocol):
         wd = os.path.normpath(params)
         if not os.path.isabs(wd):
             wd = os.path.normpath(self.wd + '/' + wd)
-        if not os.path.isdir(self.root + wd):
+
+        # '..', '\\', and '//' is there just to prevent stop hacking :P
+        if (not os.path.isdir(self.root + wd)) or (wd.find('..') > 0)
+            or (wd.find('\\') > 0) or (wd.find('//') > 0): 
             self.reply('nodir', params)
             return
         else:
+            wd.replace('\\','/')
             self.wd = wd
             self.reply('cwdok')
 
@@ -359,7 +361,7 @@ class FTP(protocol.Protocol):
         # a bit silly code
         if self.dtp is not None:
             if self.dtp.transport is not None:
-                self.dtp.transport.loseConnection()
+                self.dtp.loseConnection()
             self.dtp = None
         # giving 0 will generate a free port
         self.dtpPort = tcp.Port(0, self)
@@ -369,17 +371,22 @@ class FTP(protocol.Protocol):
         # silly code repeating
         if self.dtp is not None:
             if self.dtp.transport is not None:
-                self.dtp.transport.loseConnection()
+                self.dtp.loseConnection()
             self.dtp = None
-        self.dtpPort = tcp.Client(self.peerhost, self.peerport,
-                                  self.buildProtocol(self.peerport))
+        self.dtp = self.buildProtocol(self.peerport)
+        self.dtpPort = tcp.Client(self.peerhost, self.peerport, self.dtp)
         self.dtp.transport = self.dtpPort
-
-    def buildProtocol(self, addr):
-        self.dtp = DTP()
         self.dtp.pi = self
-        self.dtp.factory = self
-        return self.dtp
+
+    def buildProtocol(self,addr):
+        p = DTP()
+        p.factory = self
+        p.pi = self
+        p.transport = self.dtpPort
+        if self.dtpPort:
+            p.DTPLoseConnection = self.dtpPort.loseConnection
+        self.dtp = p
+        return p
 
     def ftp_Port(self, params):
         """Request for an active connection
@@ -394,13 +401,15 @@ class FTP(protocol.Protocol):
         if not (len(params) in [6]): return 1
         peerhost = '.'.join(params[:4]) # extract ip
         peerport = int(params[4])*256+int(params[5])
-        # Simple countermeasurements against bouncing 
-        if self.peerport < 1024:
+        # Simple countermeasurements against bouncing
+        if peerport < 1024:
             self.reply('notimpl')
+            return
         if not ALLOW_THIRDPARTY:
             sockname = self.transport.getPeer()
             if not (peerhost == sockname[1]):
                 self.reply('notimpl')
+                return
         self.peerhost = peerhost
         self.peerport = peerport
         self.createActiveServer()
@@ -437,6 +446,7 @@ class FTP(protocol.Protocol):
             npath = '/'
         if not os.path.isabs(npath):
             npath = os.path.normpath(self.wd + '/' + npath)
+        print self.root + ' ' + npath
         npath = self.root + npath
         return os.path.normpath(npath) # finalize path appending 
 
@@ -452,6 +462,9 @@ class FTP(protocol.Protocol):
     def ftp_List(self, params):
         if self.checkauth():
             return
+        if self.dtpPort is None:
+            self.reply('notimpl')   # and will not be; standard noauth-reply
+            return
         # The reason for this long join, is to exclude access below the root
         npath = self.buildFullpath(params)
         if not os.path.isdir(npath):
@@ -460,8 +473,6 @@ class FTP(protocol.Protocol):
         self.reply('get')
         self.queuedfile = npath 
         self.action = 'LIST'
-        print self.dtp, "is the DTP"
-        print self.dtp.transport, "is the Transport"
         if self.dtp is not None:
             if self.dtp.transport is not None:
                 self.dtp.executeAction()
@@ -491,7 +502,6 @@ class FTP(protocol.Protocol):
     def processLine(self, line):
         "Process the input from the client"
         line = line.strip()
-        print line
         command = line.split()
         if command == []:
             self.reply('unknown')
