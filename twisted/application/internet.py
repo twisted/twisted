@@ -1,3 +1,5 @@
+# -*- test-case-name: twisted.test.test_application -*-
+
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001-2003 Matthew W. Lefkowitz
 #
@@ -38,7 +40,7 @@ class _VolatileDataService(service.Service):
 
 class _AbstractServer(_VolatileDataService):
 
-    privileged = 1
+    privileged = True
     volatile = ['_port']
     method = None
 
@@ -48,12 +50,11 @@ class _AbstractServer(_VolatileDataService):
 
     def privilegedStartService(self):
         service.Service.privilegedStartService(self)
-        if self.privileged:
-            self._port = self._getPort()
+        self._port = self._getPort()
 
     def startService(self):
         service.Service.startService(self)
-        if not self.privileged:
+        if not hasattr(self,'_port'):
             self._port = self._getPort()
 
     def stopService(self):
