@@ -167,7 +167,7 @@ class ITelnetTransport(iinternet.ITransport):
 
         Note: It is currently possible that this Deferred will never fire,
         if the peer never responds, or if the peer believes the option to
-        already be disabled.
+        already be enabled.
         """
 
     def wont(self, option):
