@@ -14,10 +14,6 @@ ingtkernet.install()
 from twisted.spread import pb
 from twisted.spread.ui import gtkutil
 
-def defocusify(widget):
-    widget.unset_flags(gtk.CAN_FOCUS)
-
-
 def gtktextget(text):
     return text.get_chars(0,text.get_length())
 def dontgo(*ev):
@@ -101,17 +97,17 @@ class GameWindow(gtk.GtkWindow, pb.Referenced):
         self.descbox.set_usize(370,255)
         self.descbox.set_word_wrap(gtk.TRUE)
         self.descscrl=gtkutil.scrollify(self.descbox)
-        defocusify(self.descbox)
+        gtkutil.defocusify(self.descbox)
         
         self.itembox=gtk.GtkText()
         self.itembox.set_word_wrap(gtk.TRUE)
         self.itemscrl=gtkutil.scrollify(self.itembox)
-        defocusify(self.itembox)
+        gtkutil.defocusify(self.itembox)
         
         self.happenings=gtk.GtkText()
         self.happenings.set_word_wrap(gtk.TRUE)
         self.happscrl=gtkutil.scrollify(self.happenings)
-        defocusify(self.happenings)
+        gtkutil.defocusify(self.happenings)
         self.cmdarea=gtk.GtkEntry()
 
         self.hpaned=gtk.GtkHPaned()
