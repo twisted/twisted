@@ -94,6 +94,7 @@ class Shell(telnet.Telnet):
         finally:
             sys.stdout = out
         
+        self.factory.namespace['_'] = result
         if result is not None:
             self.transport.write(repr(result))
             self.transport.write('\r\n')
