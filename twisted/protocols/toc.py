@@ -100,6 +100,7 @@ class TOC(protocol.Protocol):
         self.buddylist=[]
         self.signontime=0
         self.idletime=0
+        self.userinfo="<br>"
         self.userclass=" O" 
         self.away=""
         self.saved=None
@@ -170,7 +171,24 @@ class TOC(protocol.Protocol):
             data=data[:-1]
         self._debug([type,data])
         return [type,data]
+    #def modeWeb(self):
+    #    try:
+    #        line,rest=string.split(self._buf,"\n",1)
+    #        get,username,http=string.split(line," ",2)
+    #    except:
+    #        return "Web" # not enough data
+    #    print get,username,http
+    #    foo,type,username=string.split(username,"/")
+    #    if type=="info":
+    #        user=self.factory.users[username]
+    #        text="<HTML><HEAD><TITLE>User Information for %s</TITLE></HEAD><BODY>Username: <B>%s</B><br>\nWarning Level: <B>%s%</B><br>\n Online Since: <B>%s</B><br>\nIdle Minutes: <B>%s</B><br>\n<hr><br>\n%s\n<hr><br>\n"%(user.saved.nick, user.saved.nick, user.saved.evilness, time.asctime(user.signontime), int((time.time()-user.idletime)/60), user.userinfo)
+    #        self.transport.write("HTTP/1.1 200 OK\n")
+    #        self.transport.write("Content-Type: text/html\n")
+    #        self.transport.write("Content-Length: %s\n\n"%len(text))
+    #        self.transport.write(text)
+    #        self.loseConnection()
     def modeFlapon(self):
+        #if self._buf[:3]=="GET": self.modeWeb() # TODO: get this working
         if len(self._buf)<10: return "Flapon" # not enough bytes
         flapon,self._buf=self._buf[:10],self._buf[10:]
         if flapon!="FLAPON\r\n\r\n":
@@ -345,6 +363,14 @@ class TOC(protocol.Protocol):
             self.sendError(NOT_AVAILABLE,username)
             return
         user.hearWhisper(self,data,auto)
+    def toc_set_info(self,data):
+        """
+        set the users information, retrivable with toc_get_info
+
+        toc_set_info <user info (quoted)>
+        """
+        info=unquote(data)
+        self._userinfo=info
     def toc_set_idle(self,data):
         """
         set/unset idle
@@ -432,6 +458,16 @@ class TOC(protocol.Protocol):
         toc_set_config <config>
         """
         self.saved.config=unquote(data)
+    def toc_get_info(self,data):
+        """
+        get the user info for a user
+
+        toc_get_info <username>
+        """
+        if not self.factory.users.has_key(data):
+            self.sendError(901,data)
+            return
+        self.sendFlap(2,"GOTO_URL:TIC:info/%s"%data)
     def toc_format_nickname(self,data):
         """
         change the format of your nickname.
@@ -695,7 +731,7 @@ class TOCClient(protocol.Protocol):
             l=(rest,)
         else:
             l=tuple(string.split(rest,":",maxsplit))
-        print command,l
+        self._debug("%s %s"%(command,l))
         try:
             func=getattr(self,"toc%s"%command)
             self._debug("calling %s"%func)

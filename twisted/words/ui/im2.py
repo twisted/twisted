@@ -48,7 +48,6 @@ class InstanceMessenger:
         gatewayname=string.replace(gatewayname," ","")
         user=string.replace(user," ","")
         filename=path+os.sep+"im"+os.sep+gatewayname+"-"+user+".log"
-        print filename
         f=open(filename,"a")
         f.write("(%s) %s\n"%(time.asctime(time.localtime(time.time())),text))
         f.close()

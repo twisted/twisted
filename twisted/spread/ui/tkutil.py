@@ -38,7 +38,7 @@ class GenericLogin(Toplevel):
     def __init__(self,callback,buttons):
         Toplevel.__init__(self)
         self.callback=callback
-        Label(self,text="Twisted v%s"%copyright.version).grid(column=0,row=0)
+        Label(self,text="Twisted v%s"%copyright.version).grid(column=0,row=0,columnspan=2)
         self.entries={}
         row=1
         for stuff in buttons:

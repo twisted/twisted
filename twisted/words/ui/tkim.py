@@ -237,23 +237,31 @@ class ContactList(Toplevel):
         self.im.conversationWith(gatewayname,user)
     def joinGroup(self):
         JoinGroup(self.im)
+
 im2.Conversation=Conversation
 im2.ContactList=ContactList
 im2.GroupSession=GroupSession
 
-def our_connected(perspective):
-    b.username=lw.username.get()
-    b.connected(perspective)
-    im.attachGateway(b)
-    lw.destroy()
+def fix_apply_values(func,loginoptions,args,kw):
+    k={}
+    for key,real,foo in loginoptions:
+        if kw.has_key(string.lower(key)):
+            k[real]=kw[string.lower(key)]
+    apply(func,args,k)
+
 def main():
-    global lw,im,b
     root=Tk()
     root.withdraw()
     tkinternet.install(root)
     im=im2.InstanceMessenger()
-    b=words.WordsGateway(im)
-    lw=tkutil.Login(our_connected,b,initialPassword="guest",initialService="twisted.words")
+    im.logging=1
+    o=[]
+    for label,key,default in words.loginOptions:
+        if key[:4]=="pass": # probably a password
+            o.append([label,default,{"show":"*"}])
+        else:
+            o.append([label,default])
+    lw=tkutil.GenericLogin(lambda kw,f=words.makeConnection,o=words.loginOptions,a=(im,):fix_apply_values(f,o,a,kw),o)
     mainloop()
     tkinternet.stop()
 

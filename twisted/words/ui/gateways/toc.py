@@ -16,8 +16,17 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from twisted.protocols import toc
+from twisted.internet import tcp
 from twisted.words.ui import gateway
 import string,re
+
+loginOptions=[["Nickname","username","my_screen_name"],["Password","password","my_password"],["Hostname","server","toc.oscar.aol.com"],["Port #","port","9898"]]
+
+def makeConnection(im,server=None,port=None,**kwargs):
+    c=apply(TOCGateway,(im,),kwargs)
+    tcp.Client(server,port,c)
+    im.attachGateway(c)
+    
 def dehtml(text):
     text=re.sub('<.*?>','',text)
     text=string.replace(text,'&gt;','>')
@@ -26,6 +35,7 @@ def dehtml(text):
     text=string.replace(text,'&nbsp;',' ')
     text=string.replace(text,'&#34;','"')
     return text
+
 class TOCGateway(gateway.Gateway,toc.TOCClient):
     """This is the interface between IM and a TOC server
     """

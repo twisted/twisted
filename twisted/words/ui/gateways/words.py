@@ -15,9 +15,36 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from twisted.internet import tcp
 from twisted.spread import pb
 from twisted.words.service import statuses
 from twisted.words.ui import gateway
+
+loginOptions=[["Username","username","guest"],["Password","password","guest"],["Service","service","twisted.words"],["Hostname","server","localhost"],["Port #","port",str(pb.portno)]]
+
+
+class makeConnection:
+    def __init__(self,im,server=None,port=None,username=None,password=None,service=None):
+        self.im=im
+        b=pb.Broker()
+        b.requestIdentity(username,password,callback=self.gotIdentity,errback=self.notConnected)
+        self.username=username
+        self.service=service
+        tcp.Client(server,int(port),b)
+
+    def notConnected(self,tb):
+        print "NOT CONNECTED!"
+        print tb
+    
+    def gotIdentity(self,identity):
+        self.ref=WordsGateway(self.im)
+        self.ref.username=self.username
+        identity.attach(self.service,self.username,self.ref,pbcallback=self.pbCallback)
+
+    def pbCallback(self,perspective):
+        self.ref.connected(perspective)
+        self.im.attachGateway(self.ref)
+        
 class WordsGateway(gateway.Gateway,pb.Referenced):
     """This is the interface between IM and a twisted.words service
     """
