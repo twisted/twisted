@@ -284,6 +284,7 @@ class Resolver(common.ResolverBase):
         d.setTimeout(timeout or 10)
         controller = AXFRController(name, d)
         factory = DNSClientFactory(controller, timeout)
+        factory.noisy = False #stfu
         reactor.connectTCP(host, port, factory)
         return d.addCallback(lambda x: (x, [], []))
 

@@ -119,7 +119,7 @@ class DNSServerFactory(protocol.ServerFactory):
             message.rCode = dns.ENAME
         else:
             message.rCode = dns.ESERVER
-            log.err()
+            log.err(failure)
         
         self.sendReply(protocol, message, address)
         if self.verbose:
