@@ -201,11 +201,13 @@ class LineReceiver(protocol.Protocol):
 class Int32StringReceiver(protocol.Protocol):
     """A receiver for int32-prefixed strings.
 
-    This class is somewhat deprecated, but necessary for
-    backwards compatibility for previous Gloop versions.
-    It publishes the same interface as NetstringReceiver.
+    An int32 string is a string prefixed by 4 bytes, the length of
+    the string encoded in network byte order.
+    
+    This class publishes the same interface as NetstringReceiver.
     """
-
+    
+    MAX_LENGTH = 99999
     recvd = ""
 
     def stringReceived(self, msg):
@@ -219,6 +221,9 @@ class Int32StringReceiver(protocol.Protocol):
         self.recvd = self.recvd + recd
         while len(self.recvd) > 3:
             length ,= struct.unpack("!i",self.recvd[:4])
+            if length > self.MAX_LENGTH:
+                self.transport.loseConnection()
+                return
             if len(self.recvd) < length+4:
                 break
             packet = self.recvd[4:length+4]
