@@ -2,7 +2,7 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import sys, os, tty
+import sys, os
 from pprint import pformat
 
 from zope.interface import implements
