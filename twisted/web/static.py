@@ -33,6 +33,7 @@ import server
 import error
 import resource
 import widgets
+from twisted.web.util import redirectTo
 
 # Twisted Imports
 from twisted.protocols import http
@@ -63,20 +64,6 @@ def addSlash(request):
         request.isSecure() and 's' or '',
         request.getHeader("host"),
         (string.split(request.uri,'?')[0]))
-
-def redirectTo(URL, request):
-    request.redirect(URL)
-    return """
-<html>
-    <head>
-        <meta http-equiv=\"refresh\" content=\"0;URL=%(url)s\">
-    </head>
-    <body bgcolor=\"#FFFFFF\" text=\"#000000\">
-    <!- The user\'s browser must be incredibly feeble if they have to click...-->
-        Click <a href=\"%(url)s\">here</a>.
-    </body>
-</html>
-""" % {'url': URL}
 
 class Redirect(resource.Resource):
     def __init__(self, request):

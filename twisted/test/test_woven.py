@@ -20,7 +20,7 @@ from twisted.protocols import http
 from twisted.test import test_web
 from twisted.internet import reactor, defer
 
-from twisted.web.woven import template, model, view, controller, widgets, input, page
+from twisted.web.woven import template, model, view, controller, widgets, input, page, guard
 
 outputNum = 0
 
@@ -375,7 +375,99 @@ class ModelPathTest(WovenTC):
 
 </html>"""
 
+class FakeHTTPChannel:
+    # TODO: this should be an interface in twisted.protocols.http... lots of
+    # things want to fake out HTTP
+    def __init__(self):
+        self.transport = self
+        self.factory = self
 
-testCases = [DOMTemplateTest, TWWTest, ControllerTest, ListDeferredTest, 
-            NestedListTest, NotifyTest, ModelPathTest]
-  
+    # 'factory' attribute needs this
+    def log(self, req):
+        pass
+
+    # 'channel' of request needs this
+    def requestDone(self, req):
+        self.req = req
+
+    # 'transport' attribute needs this
+    def getPeer(self):
+        return "fake", "fake", "fake"
+    def getHost(self):
+        return "fake", "fake", 80
+
+    def write(self, data):
+        # print data
+        pass
+    def writeSequence(self, datas):
+        for data in datas:
+            self.write(data)
+
+class FakeHTTPRequest(server.Request):
+    def __init__(self, *args, **kw):
+        server.Request.__init__(self, *args, **kw)
+        self._cookieCache = {}
+        from cStringIO import StringIO
+        self.content = StringIO()
+        self.received_headers['host'] = 'fake.com'
+        
+    def addCookie(self, k, v, *args,**kw):
+        server.Request.addCookie(self,k,v,*args,**kw)
+        assert not self._cookieCache.has_key(k), "Should not be setting duplicate cookies!"
+        self._cookieCache[k] = v
+        self.received_cookies[k] = v
+
+    def processingFailed(self, fail):
+        raise fail
+
+class FakeSite(server.Site):
+    def getResourceFor(self, req):
+        res = server.Site.getResourceFor(self,req)
+        self.caughtRes = res
+        return res
+
+from twisted.web import static
+
+class GuardTest(unittest.TestCase):
+    def testSessionInit(self):
+        sessWrapped = static.Data("you should never see this", "text/plain")
+        swChild = static.Data("YES", "text/plain")
+        sessWrapped.putChild("yyy",swChild)
+        sess = guard.SessionWrapper(sessWrapped)
+        da = static.Data("b","text/plain")
+        da.putChild("xxx", sess)
+        st = FakeSite(da)
+        chan = FakeHTTPChannel()
+        chan.site = st
+
+        # first we're going to make sure that the session doesn't get set by
+        # accident when browsing without first explicitly initializing the
+        # session
+        req = FakeHTTPRequest(chan, queued=0)
+        req.requestReceived("GET", "/xxx/yyy", "1.0")
+        assert len(req._cookieCache.values()) == 0, req._cookieCache.values()
+        self.assertEquals(req.getSession(),None)
+
+        # now we're going to make sure that the redirect and cookie are properly set
+        req = FakeHTTPRequest(chan, queued=0)
+        req.requestReceived("GET", "/xxx/__init__", "1.0")
+        ccv = req._cookieCache.values()
+        self.assertEquals(len(ccv),1)
+        cookie = ccv[0]
+        # redirect set?
+        self.failUnless(req.headers.has_key('location'))
+        # redirect matches cookie?
+        self.assertEquals(req.headers['location'].split('/')[-1], cookie)
+        # URL is correct?
+        self.assertEquals(req.headers['location'],
+                          'http://fake.com/xxx/'+cookie)
+        oldreq = req
+        
+        # now let's try with a request for the session-cookie URL that has a cookie set
+        req = FakeHTTPRequest(chan, queued=0)
+        req.received_cookies[sess.cookieKey] = cookie
+        url = "/"+(oldreq.headers['location'].split('http://fake.com/',1))[1]
+        req.requestReceived("GET",url, "1.0")
+        self.assertEquals(req.headers['location'],
+                          'http://fake.com/xxx/')
+        
