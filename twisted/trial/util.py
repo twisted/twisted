@@ -205,8 +205,7 @@ class _Janitor(object):
                 s = DIRTY_REACTOR_MSG + repr([repr(obj) for obj in junk])
         if s is not None:
             # raise DirtyReactorError, s
-            warnings.warn(s, DirtyReactorWarning)
-
+            raise JanitorError(failure.Failure(DirtyReactorWarning(s)))
     do_cleanReactor = classmethod(do_cleanReactor)
 
     def doGcCollect(cls):
@@ -281,7 +280,8 @@ class _Wait(object):
                 end += float(itimeout.duration)
                 while not resultSet:
                     if itimeout.duration >= 0.0 and time.time() > end:
-                        raise itimeout.excClass, itimeout.excArg
+                        e = itimeout.excClass(itimeout.excArg)
+                        raise e
                     reactor.iterate(0.01)
             return resultSet[0]
         finally:

@@ -250,6 +250,7 @@ desktop environments, and your toaster.
         "twisted.tap",
         "twisted.test",
         "twisted.trial",
+        "twisted.trial.test",
         "twisted.web",
         "twisted.web.test",
         "twisted.web.scripts",

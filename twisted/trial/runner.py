@@ -64,8 +64,8 @@ from os.path import join as opj
 
 from twisted.internet import defer
 from twisted.python import components, reflect, log, failure
-from twisted.trial import itrial, util, unittest, registerAdapter, \
-     adaptWithDefault
+from twisted import trial
+from twisted.trial import itrial, util, unittest, adaptWithDefault
 from twisted.trial.itrial import ITestCaseFactory, IReporter, ITrialDebug
 from twisted.trial.reporter import SKIP, EXPECTED_FAILURE, FAILURE, \
      ERROR, UNEXPECTED_SUCCESS, SUCCESS
@@ -111,9 +111,12 @@ class TestSuite(Timed):
         self.tests = []
         self.children = []
         if benchmark:
-            registerAdapter(None, itrial.ITestCaseFactory,
+            self._registerBenchmarkAdapters()
+
+    def _registerBenchmarkAdapters(self):
+            trial.registerAdapter(None, itrial.ITestCaseFactory,
                             itrial.ITestRunner)
-            registerAdapter(BenchmarkCaseRunner, itrial.ITestCaseFactory,
+            trial.registerAdapter(BenchmarkCaseRunner, itrial.ITestCaseFactory,
                             itrial.ITestRunner)
 
     def addMethod(self, method):
@@ -182,36 +185,38 @@ class TestSuite(Timed):
     def isDebuggingRun(self):
         return self.debugger
 
-    def run(self, seed=None):
-        self.startTime = time.time()
-        tests = self.tests
-        if self.sortTests:
-            # XXX twisted.python.util.dsu(tests, str)
-            tests.sort(lambda x, y: cmp(str(x), str(y)))
+    def _bail(self):
+        from twisted.internet import reactor
+        reactor.fireSystemEvent('shutdown') # radix's suggestion
+        reactor.suggestThreadPoolSize(0)
 
-        log.startKeepingErrors()
-
-        # randomize tests if requested
-        # this should probably also call some kind of random method on the
-        # test runners, to get *them* to run tests in a random order
-        r = None
-        if seed is not None:
-            r = random.Random(seed)
-            r.shuffle(tests)
-            self.reporter.write('Running tests shuffled with seed %d' % seed)
-
-
+    def _setUpSigchldHandler(self):
         # set up SIGCHLD signal handler so that parents of spawned processes
         # will be notified when their child processes end
         from twisted.internet import reactor
         if hasattr(reactor, "_handleSigchld") and hasattr(signal, "SIGCHLD"):
             self.sigchldHandler = signal.signal(signal.SIGCHLD,
                                                 reactor._handleSigchld)
+    def _initLogging(self):
+        log.startKeepingErrors()
 
-        def _bail():
-            from twisted.internet import reactor
-            reactor.fireSystemEvent('shutdown') # radix's suggestion
-            reactor.suggestThreadPoolSize(0)
+    def run(self, seed=None):
+        self.startTime = time.time()
+        tests = self.tests
+        if self.sortTests:
+            # XXX twisted.python.util.dsu(tests, str)
+            tests.sort(lambda x, y: cmp(str(x), str(y)))
+        
+        self._initLogging()
+
+        # randomize tests if requested
+        r = None
+        if seed is not None:
+            r = random.Random(seed)
+            r.shuffle(tests)
+            self.reporter.write('Running tests shuffled with seed %d' % seed)
+
+        self._setUpSigchldHandler()
 
         try:
             # this is where the test run starts
@@ -226,7 +231,7 @@ class TestSuite(Timed):
                     tr.runTests(randomize=(seed is not None))
                 except KeyboardInterrupt:
                     log.msg(iface=ITrialDebug, kbd="KEYBOARD INTERRUPT")
-                    _bail()
+                    self._bail()
                     raise
                 except:
                     f = failure.Failure()
@@ -256,7 +261,7 @@ class TestSuite(Timed):
             t, v, tb = sys.exc_info()
             raise RuntimeError, "your reporter is broken %r" % \
                   (''.join(v),), tb
-        _bail()
+        self._bail()
 
 
 class MethodInfoBase(Timed):
@@ -307,8 +312,8 @@ class UserMethodWrapper(MethodInfoBase):
         except util.MultiError, e:
             for f in e.failures:
                 self.errors.append(f)
-        except:
-            self.errors.append(failure.Failure())
+#:        except:
+#:            self.errors.append(failure.Failure())
 
         self.endTime = time.time()
         
@@ -634,13 +639,13 @@ class BenchmarkCaseRunner(TestCaseRunner):
     methodPrefix = 'benchmark'
     def runTests(self, randomize=False):
         # need to hook up randomize for Benchmark test cases
-        registerAdapter(None, types.MethodType, itrial.ITestMethod)
-        registerAdapter(BenchmarkMethod, types.MethodType, itrial.ITestMethod)
+        trial.registerAdapter(None, types.MethodType, itrial.ITestMethod)
+        trial.registerAdapter(BenchmarkMethod, types.MethodType, itrial.ITestMethod)
         try:
             super(BenchmarkCaseRunner, self).runTests()
         finally:
-            registerAdapter(None, types.MethodType, itrial.ITestMethod)
-            registerAdapter(TestMethod, types.MethodType, itrial.ITestMethod)
+            trial.registerAdapter(None, types.MethodType, itrial.ITestMethod)
+            trial.registerAdapter(TestMethod, types.MethodType, itrial.ITestMethod)
         
 
 class TestMethod(MethodInfoBase, ParentAttributeMixin):
@@ -725,7 +730,12 @@ class TestMethod(MethodInfoBase, ParentAttributeMixin):
 
     def _eb(self, f):
         log.msg(f.printTraceback())
-        if f.check(unittest.FAILING_EXCEPTION,
+        if isinstance(f.value, util.DirtyReactorWarning):
+            # This will eventually become an error, but for now
+            # we delegate the responsibility of warning the user
+            # to the reporter so that we can test for this
+            self.getReporter().cleanupErrors(f)
+        elif f.check(unittest.FAILING_EXCEPTION,
                    unittest.FailTest):
             self.failures.append(f)
         elif f.check(KeyboardInterrupt):
@@ -738,7 +748,7 @@ class TestMethod(MethodInfoBase, ParentAttributeMixin):
                                "arguments! "
                                "Give a reason for skipping tests!"),
                               stacklevel=2)
-                reason = str(f)
+                reason = itrial.IFormattedFailure(f)
             self._skipReason = reason
         else:
             self.errors.append(f)
@@ -835,6 +845,7 @@ class TestMethod(MethodInfoBase, ParentAttributeMixin):
             for f in e.failures:
                 self._eb(f)
             return e.failures
+            
 
 
 class BenchmarkMethod(TestMethod):

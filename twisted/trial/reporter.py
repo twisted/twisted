@@ -237,6 +237,9 @@ class Reporter(object):
 
     def endClass(self, klass):
         pass
+
+    def emitWarning(self, message, category=UserWarning, stacklevel=0):
+        warnings.warn(message, category, stacklevel - 1)
         
     def upDownError(self, userMeth, warn=True, printStatus=True):
         if warn:

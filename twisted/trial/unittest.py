@@ -220,6 +220,10 @@ Trial's 'special' attributes:
      seconds by adding a method attribute C{.timeout} which is the number of
      seconds as a float that trial should wait for a result. To turn off the
      timeout for a given test (which is not recommended), set timeout = None.
+    
+     The timeout attribute also gives you the option of setting it to a tuple,
+     (timeoutvalue, TimeoutExceptionClass, exception_arg) for more control over
+     the type of exception and message delivered when the method times out.
 
 
 Non-obvious rules
