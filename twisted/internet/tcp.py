@@ -67,6 +67,7 @@ elif os.name != 'java':
     from errno import EISCONN
     from errno import ENOTCONN
     from errno import EINTR
+from errno import EAGAIN
 
 # Twisted Imports
 from twisted.internet import protocol, defer, base
@@ -602,7 +603,7 @@ class Port(base.BasePort):
                 try:
                     skt, addr = self.socket.accept()
                 except socket.error, e:
-                    if e.args[0] == EWOULDBLOCK:
+                    if e.args[0] in (EWOULDBLOCK, EAGAIN):
                         self.numberAccepts = i
                         break
                     elif e.args[0] == EPERM:
