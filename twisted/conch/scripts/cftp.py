@@ -239,7 +239,6 @@ class StdioClient(basic.LineReceiver):
         return d
 
     def cmd_GET(self, rest):
-        numRequests = self.client.transport.conn.options['requests']
         if ' ' in rest:
             remote, local = rest.split()
         else:
@@ -257,25 +256,65 @@ class StdioClient(basic.LineReceiver):
 
     def _cbGetOpenFile(self, rf, lf):
         bufferSize = self.client.transport.conn.options['buffersize']
-        d = self._cbGetRead('', rf, lf, 0, bufferSize)
-        d.addErrback(self._ebGetEOF, rf, lf)
+        numRequests = self.client.transport.conn.options['requests']
+        dList = []
+        chunks = []
+        for i in range(numRequests):            
+            d = self._cbGetRead('', rf, lf, chunks, 0, bufferSize)
+            dList.append(d)
+        dl = defer.DeferredList(dList, fireOnOneErrback=1)
+        dl.addCallback(self._cbGetDone, rf, lf)
+        return dl
+
+    def _getNextChunk(self, chunks):
+        end = 0
+        for chunk in chunks:
+            if end == 'eof':
+                return # nothing more to get
+            if end != chunk[0]:
+                i = chunks.index(chunk)
+                chunks.insert(i, (end, chunk[0]))
+                return (end, chunk[0] - end)
+            end = chunk[1]
+        bufSize = self.client.transport.conn.options['buffersize']
+        chunks.append((end, end + bufSize))
+        return (end, bufSize)
+
+    def _cbGetRead(self, data, rf, lf, chunks, start, size):
+        if data and isinstance(data, failure.Failure):
+            log.msg('get read err: %s' % data)
+            reason = data
+            reason.trap(EOFError)
+            i = chunks.index((start, start + size))
+            del chunks[i]
+            chunks.insert(i, (start, 'eof'))
+        elif data:
+            log.msg('get read data: %i' % len(data))
+            lf.seek(start)
+            lf.write(data)
+            if len(data) != size:
+                log.msg('got less than we asked for: %i < %i' % 
+                        (len(data), size))
+                i = chunks.index((start, start + size))
+                del chunks[i]
+                chunks.insert(i, (start, start + len(data)))
+        chunk = self._getNextChunk(chunks)
+        if not chunk:
+            return
+        else:
+            start, length = chunk
+        log.msg('asking for %i -> %i' % (start, start+length))
+        d = rf.readChunk(start, length)
+        d.addBoth(self._cbGetRead, rf, lf, chunks, start, length)
         return d
 
-    def _cbGetRead(self, data, rf, lf, start, bufSize):
-        lf.seek(start)
-        lf.write(data)
-        d = rf.readChunk(start+len(data), bufSize)
-        d.addCallback(self._cbGetRead, rf, lf, start+len(data), bufSize)
-        return d
-
-    def _ebGetEOF(self, f, rf, lf):
-        f.trap(EOFError)
+    def _cbGetDone(self, ignored, rf, lf):
+        log.msg('get done')
         rf.close()
         lf.close()
         return "transferred %s to %s" % (rf.name, lf.name)
-
+   
     def cmd_PUT(self, rest):
-        numRequests = self.client.transport.conn.options['requests']
         if ' ' in rest:
             local, remote= rest.split()
         else:
@@ -288,21 +327,35 @@ class StdioClient(basic.LineReceiver):
         return d
 
     def _cbPutOpenFile(self, rf, lf):
-        bufferSize = self.client.transport.conn.options['buffersize']
-        return self._cbPutWrite(None, rf, lf, 0, bufferSize)
+        numRequests = self.client.transport.conn.options['requests']
+        dList = []
+        chunks = []
+        for i in range(numRequests):
+            d = self._cbPutWrite(None, rf, lf, chunks)
+            if d:
+                dList.append(d)
+        dl = defer.DeferredList(dList, fireOnOneErrback=1)
+        dl.addCallback(self._cbPutDone, rf, lf)
+        return dl
 
-    def _cbPutWrite(self, ignored, rf, lf, start, bufferSize):
-        data = lf.read(bufferSize)
+    def _cbPutWrite(self, ignored, rf, lf, chunks):
+        chunk = self._getNextChunk(chunks)
+        start, size = chunk
+        lf.seek(start)
+        data = lf.read(size)
         if data:
             d = rf.writeChunk(start, data)
-            d.addCallback(self._cbPutWrite, rf, lf, start+len(data), 
-                            bufferSize)
+            d.addCallback(self._cbPutWrite, rf, lf, chunks)
             return d
         else:
-            lf.close()
-            rf.close()
-            return 'transferred %s to %s' % (lf.name, rf.name)
+            return
 
+    def _cbPutDone(self, ignored, rf, lf):
+        lf.close()
+        rf.close()
+        return 'transferred %s to %s' % (lf.name, rf.name)
+
+        
     def cmd_LCD(self, path):
         os.chdir(path)
 
@@ -343,7 +396,7 @@ class StdioClient(basic.LineReceiver):
     def _cbOpenList(self, directory, glob, verbose):
         files = []
         if not glob:
-            glob = "[!.]*" # no hidden files
+            glob = "[!.]*"
         d = directory.read()
         d.addBoth(self._cbReadFile, files, directory, glob, verbose)
         return d
