@@ -138,7 +138,8 @@ class NetstringReceiverTestCase(unittest.TestCase):
         for s in self.illegal_strings:            
             r = self.getSafeNS()
             r.dataReceived(s)
-            assert r.brokenPeer, "connection wasn't closed on illegal netstring %s" % repr(s)
+            if not r.brokenPeer:
+                raise AssertionError("connection wasn't closed on illegal netstring %s" % repr(s))
 
 
 class DummyHTTPHandler(http.HTTP):

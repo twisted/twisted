@@ -92,7 +92,7 @@ class NetstringReceiver(protocol.Protocol):
             elif self.mode == LENGTH:
                 self.doLength()
             else:
-                assert 0, "mode is not DATA, COMMA or LENGTH"
+                raise RuntimeError, "mode is not DATA, COMMA or LENGTH"
 
     def sendString(self, data):
         self.transport.write('%d:%s,' % (len(data), data))
