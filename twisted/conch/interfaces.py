@@ -1,4 +1,5 @@
-from twisted.python.components import Interface
+#from twisted.python.components import Interface
+from zope.interface import Interface
 
 class IConchUser(Interface):
     """A user who has been authenticated to Cred through Conch.  This is 
@@ -269,6 +270,22 @@ class ISFTPServer(Interface):
 
         This method returns the absolute path as a string, or a Deferred
         that returns the same.
+        """
+
+    def extendedRequest(self, extendedName, extendedData):
+        """
+        This is the extension mechanism for SFTP.  The other side can send us
+        arbitrary requests.
+
+        extendedName is the name of the request as a string.
+        extendedData is the data the other side sent with the request,
+        as a string.
+
+        If we don't implement the request given by extendedName, raise
+        NotImplementedError.
+
+        The return value is a string, or a Deferred that will be called
+        back with a string.
         """
 
 class ISFTPFile(Interface):

@@ -35,6 +35,11 @@ class FileTransferForTestAvatar(unix.SFTPServerForUnixConchUser):
     def _absPath(self, path):
         return os.path.realpath(os.path.abspath(os.path.join(os.getcwd(), path)))
 
+    def extendedRequest(self, extName, extData):
+        if extName == 'testExtendedRequest':
+            return 'bar'
+        raise NotImplementedError
+
 components.registerAdapter(FileTransferForTestAvatar, FileTransferTestAvatar, filetransfer.ISFTPServer)
 
 class TestOurServerOurClient(unittest.TestCase):
@@ -164,5 +169,13 @@ class TestOurServerOurClient(unittest.TestCase):
         self.failUnlessEqual(realPath, os.path.join(os.getcwd(), 'testfile1'))
 
     def testExtendedRequest(self):
-        raise unittest.SkipTest, "haven't done this yet"
+        log.msg('1')
+        d = self.client.extendedRequest('testExtendedRequest', 'foo')
+        log.msg('1')
+        self.failUnlessEqual(self._waitWithBuffer(d), 'bar')
+        log.msg('1')
+        d = self.client.extendedRequest('testBadRequest', '')
+        log.msg('1')
+        self.failUnlessRaises(NotImplementedError, self._waitWithBuffer, d)
+        log.msg('1')
 
