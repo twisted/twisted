@@ -1,8 +1,3 @@
-Backwards Compatability Issues:
-
-  PyOpenSSL does not work with Python 1.5.2, therefore there is no SSL support
-  for this version of Python.
-
 Troubleshooting:
 
   If you are going to use Python 2.0 or greater, you cannot regress an
