@@ -4813,7 +4813,23 @@ person.
 <exarkun> I hit <enter> and the tests proceeded
 <exarkun> Do we call passwd in our tests or something? :)
 %
+<itamar> 22 bugs and I'm a free man
+<PenguinOfDoom> A slave contract under an entymologist?
+%
+<slyphon> slyphon: mock mock mock
+<PenguinOfDoom> slyphon: Did you grab the wrong end of a mockery gun?
+%
 <PenguinOfDoom> Being enlightened gentlemen, we split all programming languages into two groups, sucks and doesn't-suck and put all of them into the first group.
+%
+<itamar> what are you going to do at cisco?
+<exarkun> rot and die, I bet
+<PenguinOfDoom> itamar: IOS debuggery.
+<exarkun> woo I win
+%
+<SamB> what do interfaces do when you call them? is that even allowed?
+<exarkun> welcome to the year 1973.
+<exarkun> callable interfaces roam the surface of the earth
+<exarkun> humanity has fled underground
 %
 <dash> consumption does not create wealth, production does
 <dash> people in China have noticed this, people in America have not
@@ -4826,6 +4842,31 @@ person.
 * moshez hides
 <dash> i am not h3x
 <moshez> anyone adds this to quotes, I hunt you down and kill you
+%
+* kev wonders if having people checking output by eye counts as a valid unit test
+<MFen> if you can attach electrodes to them and force them to do it every time
+<exarkun> and they have to turn red when it fails
+%
+<RemyWork> http://web.archive.org/web/20030608082636/http://www.movabletype.org/commercial_license.shtml
+<RemyWork> I love having to use the wayback machine to see what my rights are
+%
+<exarkun> I suspect the performance of this irrelevant task is highly sensitive to implementation decisions
+%
+<radix> I just downloaded the fruitiest anime ever
+<radix> it's .. girly
+<radix> it's about a girl's school, and about a "sister" system between upperclassmen and lowerclassmen, and .. and... *twitch*
+<radix> there isn't any hitting!
+%
+<mwh> i wonder if i should post an "are you serious" comment
+<radix> mwh: that's a lot nicer than the comment I was thinking up
+<radix> which was something along the lines of "Holy shit, I'm sick of the horrible crap that's showing up in this God-forsaken cookbook."
+%
+<mamamusings> grades are due by saturday
+<mamamusings> that means i have to at least pretend to evaluate them
+<crw> i KNEW teachers talked like this when students weren't around :P
+<mamamusings> hell, i talk like this when they *are* around
+<mamamusings> it's good to be tenured
+%
 %
 <moshez>    On January 8th, 1977, Amber Nicole Benson came into this world -- more
 <moshez>    specifically, she was born in Birmingham, Alabama.
@@ -4848,4 +4889,6 @@ person.
 <Tv> exarkun: Yeah, except it would a poor weapon, because it COULD NOT BLOCK!
 %
 <SamB> few people know the secret of growing donuts
+%
+<hypatia> I distrust projects that require you to socialise with the developers in order to learn how to use them.
 %
