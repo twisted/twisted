@@ -318,11 +318,12 @@ class ReactorCoreTestCase(unittest.TestCase):
         self.problem = 0
         self.addTrigger("before", "shutdown", self.count)
         self.addTimer(0.1, self.stop)
-        self.addTimer(5, self.timeout)
+        t = self.addTimer(5, self.timeout)
         reactor.run()
         self.failUnless(self.counter == 1,
                         "reactor.stop didn't invoke shutdown triggers")
         self.failIf(self.problem, "the test timed out")
+        self.removeTimer(t)
 
     def testCrash(self):
         self.counter = 0
@@ -333,7 +334,7 @@ class ReactorCoreTestCase(unittest.TestCase):
         # when called with reactor.callLater(0). Must be >0 seconds in the
         # future to let gtk_mainloop start first.
         self.addTimer(0.1, self.crash)
-        self.addTimer(5, self.timeout)
+        t = self.addTimer(5, self.timeout)
         reactor.run()
         # this will fire reactor.crash, which ought to exit .run without
         # running the event triggers
@@ -341,9 +342,9 @@ class ReactorCoreTestCase(unittest.TestCase):
                         "reactor.crash invoked shutdown triggers, "
                         "but it isn't supposed to")
         self.failIf(self.problem, "the test timed out")
-        
-        
-        
+        self.removeTimer(t)
+
+
 class DelayedTestCase(unittest.TestCase):
     def setUp(self):
         self.finished = 0

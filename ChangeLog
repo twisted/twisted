@@ -1,5 +1,7 @@
 2003-01-10  Dave Peticolas  <dave@krondo.com>
 
+	* twisted/test/test_internet.py: cleanup timers
+
 	* twisted/test/test_woven.py: expire sessions to clean up timers
 
 	* twisted/web/woven/guard.py: stop timer when session expires
