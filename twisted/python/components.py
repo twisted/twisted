@@ -244,7 +244,6 @@ class MetaInterface(interface.InterfaceClass):
     def __init__(self, name, bases=(), attrs=None, __doc__=None,
                  __module__=None):
         self.__attrs = {}
-        self.name = name
         if attrs is not None:
             if __module__ == None and attrs.has_key('__module__'):
                 __module__ = attrs['__module__']
@@ -265,9 +264,6 @@ class MetaInterface(interface.InterfaceClass):
         if __module__ == None:
             __module__ = sys._getframe(1).f_globals['__name__']
         return interface.InterfaceClass.__init__(self, name, bases, attrs, __doc__, __module__)
-
-    def __repr__(self):
-        return '<MetaInterface %s>' % self.name
 
     def __call__():
         # Copying evil trick I dinna understand
@@ -335,9 +331,8 @@ class MetaInterface(interface.InterfaceClass):
         registry.register([self], to, '', using)
 
     def __getattr__(self, attr):
-        if attr != '__instadapt__':
-            warnings.warn("Don't get attributes off Interface, use .queryDescriptionFor() etc. instead",
-                          DeprecationWarning, stacklevel=3)
+        warnings.warn("Don't get attributes off Interface, use .queryDescriptionFor() etc. instead",
+                      DeprecationWarning, stacklevel=3)
         if self.__attrs.has_key(attr):
             return self.__attrs[attr]
         result = self.queryDescriptionFor(attr)
