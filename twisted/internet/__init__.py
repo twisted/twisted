@@ -20,6 +20,3 @@
 Twisted Internet: Asynchronous I/O and Events.
 
 """
-
-# the reactor that is currently installed
-reactor = None

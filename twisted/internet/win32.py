@@ -73,7 +73,7 @@ writes = {}
 events = {}
 
 
-class Win32Reactor(default.ReactorBase):
+class Win32Reactor(default.PosixReactorBase):
     """Reactor that uses Win32 event APIs."""
     
     def _makeSocketEvent(self, fd, action, why, events=events):
@@ -193,12 +193,14 @@ class Win32Reactor(default.ReactorBase):
     doIteration = doWaitForMultipleEvents
 
     
-    def install(self):
-        default.ReactorBase.install(self)
-        threadable.init(1)
-        # change when we redo process stuff - process is probably
-        # borked anyway.
-        process.Process = Process
+def install(self):
+    threadable.init(1)
+    # change when we redo process stuff - process is probably
+    # borked anyway.
+    process.Process = Process
+    r = Win32Reactor()
+    import main
+    main.installReactor(r)
 
 
 class Process(abstract.FileDescriptor):
@@ -334,6 +336,10 @@ class Process(abstract.FileDescriptor):
                 return
             task.schedule(self.handleError, data)
 
+
+def install():
+    reactor = Win32Reactor()
+    reactor.install()
 
 __all__ = ["Win32Reactor"]
 

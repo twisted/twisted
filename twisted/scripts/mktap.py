@@ -15,12 +15,14 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: mktap.py,v 1.8 2002/04/21 19:32:30 carmstro Exp $
+# $Id: mktap.py,v 1.9 2002/05/04 23:47:45 glyph Exp $
 
 """ Implementation module for the `mktap` command.
 """
 ## Copied from bin/mktap 1.26!
 
+from twisted.internet import default
+default.install()
 from twisted.protocols import telnet
 from twisted.internet import app, tcp
 from twisted.python import usage
@@ -122,7 +124,6 @@ def run():
     else:
         a = cPickle.load(open(options.opts['append']))
 
-    haveBroker = 0
     try:
         mod.updateApplication(a, config)
     except usage.error, ue:
@@ -135,12 +136,6 @@ def run():
         print "The use of getPorts() is deprecated."
         for portno, factory in mod.getPorts():
             a.listenTCP(portno, factory)
-
-    # this seems a rather broken mechanism
-    for proto in a.ports:
-        if isinstance(proto, pb.BrokerFactory):
-            haveBroker = 1
-            break
 
     a.save()
 

@@ -1,6 +1,6 @@
 # -*- Python -*-
 # Twisted, the Framework of Your Internet
-# $Id: gtkmanhole.py,v 1.34 2002/04/29 09:45:35 glyph Exp $
+# $Id: gtkmanhole.py,v 1.35 2002/05/04 23:47:47 glyph Exp $
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
 # This library is free software; you can redistribute it and/or
@@ -29,7 +29,6 @@ import gtk
 
 from twisted.python import rebuild, util
 from twisted.spread.ui import gtkutil
-from twisted.internet import ingtkernet
 from twisted.spread import pb
 from twisted.manhole import explorer
 
@@ -43,7 +42,6 @@ except ImportError:
 else:
     _GNOME_POWER = True
 
-ingtkernet.install()
 
 ## def findBeginningOfLineWithPoint(entry):
 ##     pos = entry.get_point()

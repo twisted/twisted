@@ -21,13 +21,6 @@ import types
 import os
 import time
 
-# Twisted Import
-from twisted.python.runtime import platform
-
-if platform.getType() != 'java':
-    import signal
-
-
 import sys
 import socket
 CONNECTION_LOST = -1
@@ -38,6 +31,7 @@ theApplication = None
 # Twisted Imports
 
 from twisted.python import threadable, log
+from twisted.python.runtime import platform
 from twisted.persisted import styles
 from twisted.python.defer import Deferred, DeferredList
 
@@ -74,49 +68,24 @@ def shutDown(*ignored):
     the process to exit.  It can also be called directly in order
     to trigger a clean shutdown.
     """
-    global running, interruptCountdown, shuttingDown
-    if not shuttingDown:
-        if threadable.threaded:
-            removeReader(waker)
-        shuttingDown = 1
-        log.msg('Starting shutdown sequence.')
-        defrList = []
-        for callback in beforeShutdown:
-            try:
-                d = callback()
-            except:
-                log.deferr()
-            else:
-                if isinstance(d, Deferred):
-                    defrList.append(d)
-        if defrList:
-            DeferredList(defrList).addCallbacks(stopMainLoop, stopMainLoop).arm()
-        else:
-            stopMainLoop()
-    elif interruptCountdown > 0:
-        log.msg('Raising exception in %s more interrupts!' % interruptCountdown)
-        interruptCountdown = interruptCountdown - 1
-    else:
-        stopMainLoop()
-        raise RuntimeError("Shut down exception!")
+    _getReactor().stop()
 
 def stopMainLoop(*ignored):
     global running
     running = 0
     log.msg("Stopping main loop.")
 
-
-def handleSignals():
-    """Install the signal handlers for the Twisted event loop."""
-    signal.signal(signal.SIGINT, shutDown)
-    signal.signal(signal.SIGTERM, shutDown)
-
-    # Catch Ctrl-Break in windows (only available in 2.2b1 onwards)
-    if hasattr(signal, "SIGBREAK"):
-        signal.signal(signal.SIGBREAK, shutDown)
-
-    if platform.getType() == 'posix':
-        signal.signal(signal.SIGCHLD, process.reapProcess)
+def _getReactor():
+    import twisted.internet
+    if not hasattr(twisted.internet, 'reactor'):
+        # Work on Jython
+        if platform.getType() == 'java':
+            import jnternet
+            # XXX make jnternet a Reactor
+        else:
+            import default
+            default.install()
+    return twisted.internet.reactor
 
 
 def run(installSignalHandlers=1):
@@ -124,65 +93,33 @@ def run(installSignalHandlers=1):
 
     This call \"never\" returns.  It is the main loop which runs delayed timers
     (see twisted.python.delay and addDelayed), and the I/O monitor (doSelect).
-
     """
-    # now this is an ugly hack - make sure that we have a reactor installed
-    import twisted.internet
-    if not twisted.internet.reactor:
-        import default
-        reactor = default.SelectReactor()
-        reactor.install()
-    self = twisted.internet.reactor
-    
     global running
     running = 1
-    threadable.registerAsIOThread()
-
-    callDuringShutdown(disconnectAll)
-
-    if installSignalHandlers:
-        handleSignals()
-
-    for function in _whenRunning:
-        function()
-    _whenRunning[:] = []
-    try:
-        try:
-            while running:
-                # Advance simulation time in delayed event
-                # processors.
-                self.runUntilCurrent()
-                timeout = self.timeout()                
-                self.doIteration(running and timeout)
-        except:
-            log.msg("Unexpected error in main loop.")
-            log.deferr()
-            shutDown()
-            raise
-        else:
-            log.msg('Main loop terminated.')
-
-    finally:
-        for callback in duringShutdown + afterShutdown:
-            try:
-                callback()
-            except:
-                log.deferr()
+    _getReactor().run()
 
 
-def disconnectAll():
-    """Disconnect every reader, and writer in the system.
-    """
-    selectables = removeAll()
-    for reader in selectables:
-        log.logOwner.own(reader)
-        try:
-            reader.connectionLost()
-        except:
-            log.deferr()
-        log.logOwner.disown(reader)
+def installReactor(reactor):
+    global addReader, addWriter, removeReader, removeWriter
+    global iterate, addTimeout, wakeUp
+    # this stuff should be common to all reactors.
+    import twisted.internet
+    import sys
+    assert not sys.modules.has_key('twisted.internet.reactor'), \
+           "reactor already installed"
+    twisted.internet.reactor = reactor
+    sys.modules['twisted.internet.reactor'] = reactor
+    
+    # install stuff for backwards compatability
+    addReader = reactor.addReader
+    addWriter = reactor.addWriter
+    removeWriter = reactor.removeWriter
+    removeReader = reactor.removeReader
+    iterate = reactor.iterate
+    addTimeout = lambda m, t, f=reactor.callLater: f(t, m)
+    wakeUp = reactor.wakeUp
 
-_whenRunning = []
+
 
 def callWhenRunning(function):
     """Add a function to be called when the system starts running.
@@ -194,7 +131,7 @@ def callWhenRunning(function):
     if running:
         function()
     else:
-        _whenRunning.append(function)
+        _getReactor().addSystemEventTrigger('after', 'startup', function)
 
 def callBeforeShutdown(function):
     """Add a function to be called before shutdown begins.
@@ -204,12 +141,13 @@ def callBeforeShutdown(function):
     running, so any function registered in this list may return a
     Deferred, which will delay the actual shutdown until later.
     """
-    beforeShutdown.append(function)
+    _getReactor().addSystemEventTrigger('before', 'shutdown', function)
 
 def removeCallBeforeShutdown(function):
     """Remove a function registered with callBeforeShutdown.
     """
-    beforeShutdown.remove(function)
+    _getReactor().removeSystemEventTrigger(('before', 'shutdown',
+                                            (function, (), {})))
 
 def callDuringShutdown(function):
     """Add a function to be called during shutdown.
@@ -217,29 +155,25 @@ def callDuringShutdown(function):
     These functions ought to shut down the event loop -- stopping
     thread pools, closing down all connections, etc.
     """
-    duringShutdown.append(function)
+    _getReactor().addSystemEventTrigger('during', 'shutdown', function)
+
 
 def removeCallDuringShutdown(function):
-    duringShutdown.remove(function)
+    _getReactor().removeSystemEventTrigger(('during', 'shutdown',
+                                            (function, (), {})))
 
 def callAfterShutdown(function):
-    afterShutdown.append(function)
+    _getReactor().addSystemEventTrigger('after', 'shutdown', function)
+
 
 def removeCallAfterShutdown(function):
-    duringShutdown.remove(function)
+    _getReactor().removeSystemEventTrigger(('after', 'shutdown',
+                                            (function, (), {})))
+
 
 
 # Sibling Import
 import process
-
-# Work on Jython
-if platform.getType() == 'java':
-    import jnternet
-
-# backward compatibility stuff
-import app
-Application = app.Application
-
 
 class Delayeds:
     """Wrapper for twisted.python.delay.IDelayed objects, so they use IReactorTime."""
@@ -255,7 +189,7 @@ class Delayeds:
 
     def timeout(self):
         """Return timeout until next run."""
-        timeout = 1.0
+        timeout = None
         for delay in self.delayeds:
             newTimeout = delay.timeout()
             if ((newTimeout is not None) and
@@ -270,7 +204,7 @@ class Delayeds:
             d.runUntilCurrent()
 
 
-# delayeds backwards compatability - this will be done in default.ReactorBase
+# delayeds backwards compatability - this will be done in base.ReactorBase
 # once we get e.g. the task module to not call main.addDelayed on import
 _delayeds = Delayeds()
 addDelayed = _delayeds.addDelayed

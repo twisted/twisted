@@ -93,7 +93,7 @@ def unpickleModule(name):
         print "Module has moved:",name,
         name = oldModules[name]
         print name
-    return __import__(name,None,None,'x')
+    return __import__(name,{},{},'x')
 
 
 copy_reg.pickle(types.ModuleType,

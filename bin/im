@@ -33,22 +33,11 @@ if string.find(os.path.abspath(sys.argv[0]),'Twisted') != -1:
 from twisted.python import usage
 
 class Options(usage.Options):
-    synopsis = "Usage: im [--toolkit gtk]"
-    optStrings = [["toolkit", "t", "tk", "One of: tk, gtk"]]
-
+    synopsis = "Usage: im"
+    
 config = Options()
 config.parseOptions()
-
-try:
-    if config.toolkit != 'tk':
-        raise ImportError()
-    from twisted.words.ui import tkim
-except ImportError:
-    try:
-        from twisted.words.ui import gtkim
-    except ImportError:
-        print "Neither GTK nor TK found."
-    else:
-        gtkim.main()
-else:
-    tkim.main()
+from twisted.internet import default
+default.install()
+from twisted.words.ui import tkim
+tkim.main()

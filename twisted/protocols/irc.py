@@ -27,6 +27,7 @@ References:
 """
 
 from twisted.internet import tcp
+from twisted.internet import reactor
 from twisted.persisted import styles
 from twisted.protocols import basic, protocol
 from twisted.python import log, reflect
@@ -322,7 +323,7 @@ class IRCClient(basic.LineReceiver):
         name = getattr(file, "name", "file@%s" % (id(file),))
 
         factory = DccSendFactory(file)
-        port = tcp.Port(0, factory, 1)
+        port = reactor.listenTCP(0, factory, 1)
 
         raise NotImplementedError,(
             "XXX!!! Help!  I need to bind a socket, have it listen, and tell me its address.  "

@@ -15,7 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from pyunit import unittest
-from twisted.internet import default
+from twisted.internet import reactor
 from twisted.python.defer import Deferred
 import sys
 
@@ -36,12 +36,13 @@ class InterfaceTestCase(unittest.TestCase):
             l2.append(1)
         ##         d.addCallback(lambda x: sys.stdout.write("firing d\n"))
         ##         d2.addCallback(lambda x: sys.stdout.write("firing d2\n"))
-        r = default.SelectReactor()
+        r = reactor
         r.addSystemEventTrigger("before", "test", _appendToList)
         r.addSystemEventTrigger("during", "test", _appendToList)
         r.addSystemEventTrigger("after", "test", _appendToList)
         self.assertEquals(len(l), 0, "Nothing happened yet.")
         r.fireSystemEvent("test")
+        r.iterate()
         self.assertEquals(len(l), 3, "Should have filled the list.")
         l[:]=[]
         r.addSystemEventTrigger("before", "defer", _returnDeferred)

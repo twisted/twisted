@@ -26,10 +26,10 @@ from pyunit import unittest
 
 from twisted.spread import pb, util
 from twisted.protocols import protocol
-from twisted.internet import main
+from twisted.internet.app import Application
 from twisted.python import defer, failure, log
 from twisted.cred import identity
-
+from twisted.internet import main
 
 class Dummy(pb.Viewable):
     def view_doNothing(self, user):
@@ -97,7 +97,7 @@ def connectedServerAndClient():
     """Returns a 3-tuple: (client, server, pump)
     """
     c = pb.Broker()
-    app = main.Application("pb-test")
+    app = Application("pb-test")
     ident = identity.Identity("guest", app)
     ident.setPassword("guest")
     svc = DummyService("test", app)

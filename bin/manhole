@@ -29,9 +29,11 @@ if string.find(os.path.abspath(sys.argv[0]),'Twisted') != -1:
         os.path.dirname(os.path.abspath(sys.argv[0]))))
 ### end of preamble
 
+from twisted.internet import ingtkernet
+ingtkernet.install()
+from twisted.internet import reactor
 from twisted.python import usage
 from twisted.spread.ui import gtkutil
-
 from twisted.spread import pb
 
 class MyOptions(usage.Options):
@@ -69,4 +71,4 @@ lw = gtkutil.Login(i.connected,
 i.loginWindow = lw
 
 lw.show_all()
-gtkmanhole.gtk.mainloop()
+reactor.run()

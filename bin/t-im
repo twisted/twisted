@@ -27,18 +27,11 @@ if string.find(os.path.abspath(sys.argv[0]),'Twisted') != -1:
 sys.path.append('.')
 ### end of preamble
 
-import gtk                              # 3 .. 2 .. 1 ..
-try:
-    import gnome.ui                         # get ready!
-except ImportError:
-    print "Gnome support disabled"
-
-
-from twisted.internet import ingtkernet, tcp
-#from twisted.python import reflect
+from twisted.internet import ingtkernet
 ingtkernet.install()
 
 from twisted.im.gtkaccount import AccountManager
-
 AccountManager()
-gtk.mainloop()
+
+from twisted.internet import reactor
+reactor.run()

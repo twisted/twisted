@@ -20,7 +20,8 @@ Amalgamate all Twisted testcases
 """
 
 from pyunit import unittest
-from twisted.internet import main
+from twisted.internet import default
+default.install()
 
 import string
 import traceback
@@ -98,16 +99,9 @@ class TestLoader(unittest.TestLoader):
         return string.join(lines, '')
 
 from twisted.python import log, runtime
-from twisted.internet import default
 log.msg("opening test.log")
 log.logfile = open("test.log", 'a')
 
-# install event loop
-reactor = default.SelectReactor()
-reactor.install()
-
-
-        
 def testSuite():
     """unittestgui wants a callable to return a suite."""
 

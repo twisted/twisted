@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.5 2002/05/02 12:36:18 itamarst Exp $
+# $Id: default.py,v 1.6 2002/05/04 23:47:48 glyph Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -24,15 +24,20 @@ from bisect import insort
 from time import time
 import os
 import socket
+import signal
 
 from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorUNIX
 from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorSSL
 from twisted.internet.interfaces import IReactorProcess
-from twisted.internet import main, tcp, udp, task
+from twisted.internet import main
+
+from twisted.internet import main, tcp, udp, task, process
 from twisted.python import log, threadable
 from twisted.persisted import styles
 from twisted.python.defer import DeferredList, Deferred
 from twisted.python.runtime import platform
+
+from twisted.internet.base import ReactorBase
 
 try:
     from twisted.internet import ssl
@@ -46,13 +51,125 @@ if platform.getType() != 'java':
     import select
     from errno import EINTR, EBADF
 
+class PosixReactorBase(ReactorBase):
+    """A basis for reactors that use file descriptors.
+    """
+    __implements__ = (ReactorBase.__implements__, IReactorUNIX,
+                      IReactorTCP, IReactorUDP) # IReactorProcess
 
-class _Win32Waker(styles.Ephemeral):
+    if sslEnabled:
+        __implements__ = __implements__ + (IReactorSSL,)
+
+    def __init__(self, installSignalHandlers=1):
+        ReactorBase.__init__(self)
+        self._installSignalHandlers = installSignalHandlers
+
+    def _handleSignals(self):
+        """Install the signal handlers for the Twisted event loop."""
+        signal.signal(signal.SIGINT, self.sigInt)
+        signal.signal(signal.SIGTERM, self.sigTerm)
+
+        # Catch Ctrl-Break in windows (only available in 2.2b1 onwards)
+        if hasattr(signal, "SIGBREAK"):
+            signal.signal(signal.SIGBREAK, self.sigBreak)
+
+        if platform.getType() == 'posix':
+            signal.signal(signal.SIGCHLD, process.reapProcess)
+
+    def startRunning(self):
+        threadable.registerAsIOThread()
+        self.fireSystemEvent('startup')
+        if self._installSignalHandlers:
+            self._handleSignals()
+        self.running = 1
+
+    def run(self):
+        self.startRunning()
+        self.mainLoop()
+
+    def mainLoop(self):
+        while self.running:
+            try:
+                while self.running:
+                    # Advance simulation time in delayed event
+                    # processors.
+                    self.runUntilCurrent()
+                    t2 = self.timeout()
+                    t = self.running and t2
+                    # print self, 'running ', t, ' ', t2, ' ',self._pendingTimedCalls
+                    self.doIteration(t)
+            except:
+                log.msg("Unexpected error in main loop.")
+                log.deferr()
+            else:
+                log.msg('Main loop terminated.')
+
+
+    def installWaker(self):
+        """Install a `waker' to allow other threads to wake up the IO thread.
+        """
+        if not self.wakerInstalled:
+            self.wakerInstalled = 1
+            self.waker = _Waker()
+            self.addReader(self.waker)
+
+    # IReactorProcess ## XXX TODO!
+
+    # IReactorUDP
+
+    def listenUDP(self, port, factory, interface='', maxPacketSize=8192):
+        """See twisted.internet.interfaces.IReactorUDP.listenUDP
+        """
+        return udp.Port(self, port, factory, interface, maxPacketSize)
+
+    # IReactorUNIX
+
+    def clientUNIX(self, address, protocol, timeout=30):
+        """See twisted.internet.interfaces.IReactorUNIX.clientUNIX
+        """
+        return tcp.Client("unix", address, protocol, timeout=timeout)
+
+    def listenUNIX(self, address, factory, backlog=5):
+        """Listen on a UNIX socket.
+        """
+        
+        return tcp.Port(address, factory, backlog=backlog)
+
+
+    # IReactorTCP
+
+    def listenTCP(self, port, factory, backlog=5, interface=''):
+        """See twisted.internet.interfaces.IReactorTCP.listenTCP
+        """
+        p = tcp.Port(port, factory, backlog, interface)
+        p.startListening()
+        return p
+
+    def clientTCP(self, host, port, protocol, timeout=30):
+        """See twisted.internet.interfaces.IReactorTCP.clientTCP
+        """
+        return tcp.Client(host, port, protocol, timeout)
+
+
+    # IReactorSSL (sometimes, not implemented)
+
+    def clientSSL(self, host, port, protocol, contextFactory, timeout=30,):
+        return ssl.Client(host, port, protocol, contextFactory, timeout)
+
+    def listenSSL(self, port, factory, contextFactory, backlog=5, interface=''):
+        return ssl.Port(port, factory, contextFactory, backlog, interface)
+
+
+
+class _Win32Waker(log.Logger, styles.Ephemeral):
     """I am a workaround for the lack of pipes on win32.
 
     I am a pair of connected sockets which can wake up the main loop
     from another thread.
     """
+
+    disconnected = 0
+    
     def __init__(self):
         """Initialize.
         """
@@ -82,11 +199,14 @@ class _Win32Waker(styles.Ephemeral):
         self.r.recv(8192)
 
 
-class _UnixWaker(styles.Ephemeral):
+class _UnixWaker(log.Logger, styles.Ephemeral):
     """This class provides a simple interface to wake up the select() loop.
 
     This is necessary only in multi-threaded programs.
     """
+
+    disconnected = 0
+    
     def __init__(self):
         """Initialize.
         """
@@ -127,265 +247,17 @@ reads = {}
 writes = {}
 
 
-class ReactorBase:
-    """Default base class for Reactors."""
-    
-    __implements__ = IReactorCore, IReactorTime, IReactorUNIX, \
-                     IReactorTCP, IReactorUDP, #\
-                     # IReactorProcess
-    if sslEnabled:
-        __implements__ = __implements__ + (IReactorSSL,)
 
-    installed = 0
+
+
+class SelectReactor(PosixReactorBase):
+    """A select() based reactor - runs on all POSIX platforms and on Win32.
+    """
 
     def __init__(self, installSignalHandlers=1):
-        self._installSignalHandlers = installSignalHandlers
-        self._eventTriggers = {}
-        self._pendingTimedCalls = []
-        self._delayeds = main._delayeds
+        PosixReactorBase.__init__(self, installSignalHandlers)
         threadable.whenThreaded(self.initThreads)
-
-    # override in subclasses
-
-    wakerInstalled = 0
-
-    def initThreads(self):
-        """Perform initialization required for threading.
-        """
-        if platform.getType() != 'java':
-            self.installWaker()
-
-    def installWaker(self):
-        """Install a `waker' to allow other threads to wake up the IO thread.
-        """
-        if not self.wakerInstalled:
-            self.wakerInstalled = 1
-            self.waker = _Waker()
-            self.addReader(self.waker)
-            if self.installed:
-                import main
-                main.waker = self.waker
-
-    def wakeUp(self):
-        """Wake up the event loop."""
-        if not threadable.isInIOThread():
-            self.waker.wakeUp()
-
-    def doIteration(self):
-        """Do one iteration over the readers and writers we know about."""
-        raise NotImplementedError
-
-    def addReader(self, reader):
-        raise NotImplementedError
-
-    def addWriter(self, writer):
-        raise NotImplementedError
-
-    def removeReader(self, reader):
-        raise NotImplementedError
-
-    def removeWriter(self, writer):
-        raise NotImplementedError
-
-    def removeAll(self):
-        raise NotImplementedError
-    
-    
-    # Installation.
-
-    def install(self):
-        self.installed = 1
-
-        # this stuff should be common to all reactors.
-        import twisted.internet
-        import sys
-        twisted.internet.reactor = self
-        sys.modules['twisted.internet.reactor'] = self
-
-        # install stuff for backwards compatability
-        import main
-        main.addReader = self.addReader
-        main.addWriter = self.addWriter
-        main.removeWriter = self.removeWriter
-        main.removeReader = self.removeReader
-        main.removeAll = self.removeAll
-        main.iterate = self.iterate
-        main.addTimeout = lambda m, t, f=self.callLater: f(t, m)
-        
-        if hasattr(self, "waker"):
-            main.waker = self.waker
-        main.wakeUp = self.wakeUp
-
-    # IReactorCore
-
-    def run(self):
-        """See twisted.internet.interfaces.IReactorCore.run.
-        """
-        main.run(self._installSignalHandlers)
-
-
-    def stop(self):
-        """See twisted.internet.interfaces.IReactorCore.stop.
-        """
-        # TODO: fire 'shutdown' event.
-        main.shutDown()
-
-
-    def crash(self):
-        """See twisted.internet.interfaces.IReactorCore.crash.
-        """
-        main.stopMainLoop()
-
-
-    def iterate(self, delay=0):
-        """See twisted.internet.interfaces.IReactorCore.iterate.
-        """
-        self.runUntilCurrent()
-        self.doIteration(delay)
-
-    def callFromThread(self, callable, *args, **kw):
-        """See twisted.internet.interfaces.IReactorCore.callFromThread.
-        """
-        apply(task.schedule, (callable,)+ args, kw)
-
-    def fireSystemEvent(self, eventType):
-        """See twisted.internet.interfaces.IReactorCore.fireSystemEvent.
-        """
-        sysEvtTriggers = self._eventTriggers.get(eventType)
-        if not sysEvtTriggers:
-            return
-        defrList = []
-        for callable, args, kw in sysEvtTriggers[0]:
-            try:
-                d = apply(callable, args, kw)
-            except:
-                log.deferr()
-            else:
-                if isinstance(d, Deferred):
-                    defrList.append(d)
-        if defrList:
-            DeferredList(defrList).addBoth(self._cbContinueSystemEvent, eventType).arm()
-        else:
-            self._continueSystemEvent(eventType)
-
-
-    def _cbContinueSystemEvent(self, result, eventType):
-        self._continueSystemEvent(eventType)
-
-
-    def _continueSystemEvent(self, eventType):
-        sysEvtTriggers = self._eventTriggers.get(eventType)
-        for callList in sysEvtTriggers[1], sysEvtTriggers[2]:
-            for callable, args, kw in callList:
-                try:
-                    apply(callable, args, kw)
-                except:
-                    log.deferr()
-
-    def addSystemEventTrigger(self, phase, eventType, callable, *args, **kw):
-        """See twisted.internet.interfaces.IReactorCore.addSystemEventTrigger.
-        """
-        if self._eventTriggers.has_key(eventType):
-            triglist = self._eventTriggers[eventType]
-        else:
-            triglist = [[], [], []]
-            self._eventTriggers[eventType] = triglist
-        evtList = triglist[{"before": 0, "during": 1, "after": 2}[phase]]
-        evtList.append((callable, args, kw))
-        return (phase, eventType, (callable, args, kw))
-
-    def removeSystemEventTrigger(self, triggerID):
-        """See twisted.internet.interfaces.IReactorCore.removeSystemEventTrigger.
-        """
-        phase, eventType, item = triggerID
-        self._eventTriggers[eventType][{"before": 0,
-                                        "during": 1,
-                                        "after":  2}[phase]
-                                       ].remove(item)
-
-
-    # IReactorTime
-
-    def callLater(self, seconds, callable, *args, **kw):
-        """See twisted.internet.interfaces.IReactorTime.callLater.
-        """
-        tple = (time() + seconds, callable, args, kw)
-        insort(self._pendingTimedCalls, tple)
-        return tple
-
-    def cancelCallLater(self, callID):
-        """See twisted.internet.interfaces.IReactorTime.cancelCallLater.
-        """
-        self._pendingTimedCalls.remove(callID)
-
-    def timeout(self):
-        if self._pendingTimedCalls:
-            t = self._pendingTimedCalls[0][0] - time()
-            if t < 0:
-                return 0
-            else:
-                return min(t, self._delayeds.timeout())
-        else:
-            return self._delayeds.timeout()
-
-    def runUntilCurrent(self):
-        """Run all pending timed calls."""
-        now = time()
-        while self._pendingTimedCalls and (self._pendingTimedCalls[0][0] < now):
-            seconds, func, args, kw = self._pendingTimedCalls.pop()
-            try:
-                apply(func, args, kw)
-            except:
-                log.deferr()
-        self._delayeds.runUntilCurrent()
-
-
-    # IReactorProcess ## XXX TODO!
-
-    # IReactorUDP
-
-    def listenUDP(self, port, factory, interface='', maxPacketSize=8192):
-        """See twisted.internet.interfaces.IReactorUDP.listenUDP
-        """
-        return udp.Port(self, port, factory, interface, maxPacketSize)
-
-    # IReactorUNIX
-
-    def clientUNIX(self, address, protocol, timeout=30):
-        """See twisted.internet.interfaces.IReactorUNIX.clientUNIX
-        """
-        return tcp.Client("unix", address, protocol, timeout=timeout)
-
-    def listenUNIX(self, address, factory, backlog=5):
-        """Listen on a UNIX socket.
-        """
-        return tcp.Port(address, factory, backlog=backlog)
-
-
-    # IReactorTCP
-
-    def listenTCP(self, port, factory, backlog=5, interface=''):
-        """See twisted.internet.interfaces.IReactorTCP.listenTCP
-        """
-        return tcp.Port(port, factory, backlog, interface)
-
-    def clientTCP(self, host, port, protocol, timeout=30):
-        """See twisted.internet.interfaces.IReactorTCP.clientTCP
-        """
-        return tcp.Client(host, port, protocol, timeout)
-
-
-    # IReactorSSL (sometimes, not implemented)
-
-    def clientSSL(self, host, port, protocol, contextFactory, timeout=30,):
-        return ssl.Client(host, port, protocol, contextFactory, timeout)
-
-    def listenSSL(self, port, factory, contextFactory, backlog=5, interface=''):
-        return ssl.Port(port, factory, contextFactory, backlog, interface)
-
-
-class SelectReactor(ReactorBase):
-    """A select() based reactor - should run on all POSIX platforms and on Win32."""
+        self._installSignalHandlers = installSignalHandlers
 
     def _preenDescriptors(self):
         log.msg("Malformed file descriptor found.  Preening lists.")
@@ -401,6 +273,7 @@ class SelectReactor(ReactorBase):
                     log.msg("bad descriptor %s" % selectable)
                 else:
                     selDict[selectable] = 1
+
 
     def doSelect(self, timeout,
                  # Since this loop should really be as fast as possible,
@@ -503,4 +376,14 @@ class SelectReactor(ReactorBase):
                 del writes[reader]
         return readers
 
+
+
+
+
+def install():
+    # Replace 'main' methods with my own
+    """Configure the twisted mainloop to be run inside the gtk mainloop.
+    """
+    reactor = SelectReactor(1)
+    main.installReactor(reactor)
 

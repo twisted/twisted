@@ -105,7 +105,7 @@ class TwistedSocketNotifier(QSocketNotifier):
 _timer = None
 
 
-class QTReactor(default.ReactorBase):
+class QTReactor(default.PosixReactorBase):
     """Qt based reactor."""
 
     def addReader(self, reader):
@@ -148,9 +148,8 @@ def install():
     """Configure the twisted mainloop to be run inside the qt mainloop.
     """
     reactor = QTReactor()
-    reactor.install()
-    main.callBeforeShutdown( reactor.cleanup )
-
-    main.running = 2
-    main.ALLOW_TWISTED_REBUILD = 0
+    reactor.addSystemEventTrigger('after', 'shutdown', reactor.cleanup )
     reactor.simulate()
+    from twisted.internet.main import installReactor
+    installReactor(reactor)
+    return reactor

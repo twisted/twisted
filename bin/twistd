@@ -55,7 +55,9 @@ class ServerOptions(usage.Options):
                   ['pidfile','','twistd.pid',
                    "use a pidfile"],
                   ['rundir','d','.',
-                   'change to a supplied directory before running']]
+                   'change to a supplied directory before running'],
+                  ['reactor', 'r', 'default',
+                   'What ReactorCore module to use.']]
 
     def opt_plugin(self, pkgname):
         """read config.tac from a plugin package, as with -y
@@ -97,11 +99,8 @@ if platformType != 'posix' or config.opts['debug']:
     config.opts['nodaemon'] = 1
 
 # Twisted Imports
-from twisted.python import usage, log, runtime
+from twisted.python import log
 # TODO: make which reactor to use an option
-from twisted.internet.default import SelectReactor
-SelectReactor().install()
-from twisted.internet import main
 from twisted.persisted import styles
 class EverythingEphemeral(styles.Ephemeral):
     def __getattr__(self, key):
@@ -177,12 +176,28 @@ if register.LICENSE_KEY:
 if register.LICENSE_ORG:
     log.msg("organization: %s" % register.LICENSE_ORG)
 
+if platformType == 'java':
+    from twisted.internet import jnternet
+    jnternet.install()
+else:
+    reactorTypes = {
+        'gtk': 'twisted.internet.ingtkernet',
+        'default': 'twisted.internet.default',
+        'win32': 'twisted.internet.win32',
+        'win': 'twisted.internet.win32',
+        'poll': 'twisted.internet.poll'
+        }
+    from twisted.python.reflect import namedModule
+    namedModule(reactorTypes[config['reactor']]).install()
+
+from twisted.internet import reactor
+log.msg('reactor class: %s' % reactor.__class__)
+
 if not config.opts['python']:
     print "Loading %s..." % config.opts['file']
     sys.modules['__main__'] = EverythingEphemeral()
     application = load(open(config.opts['file'],'rb'))
     sys.modules['__main__'] = mainMod
-    main.theApplication = application
     styles.doUpgrade()
 else:
     pyfile = os.path.abspath(config.opts['python'])
@@ -224,22 +239,12 @@ if usepid:
 
 if os.name == 'nt':
     # C-c can't interrupt select.select in win32.
-    from twisted.python.delay import IDelayed
-    
     class Win32KillTimeout:
         """I time out every 1/10 second in order to allow C-c to kill the server.
         """
-        
-        __implements__ = IDelayed
-        
-        def runUntilCurrent(self):
-            pass
-        
-        def timeout(self):
-            return 0.1
-    
-    main.addDelayed(Win32KillTimeout())
-
+        def callMeAgain(self):
+            reactor.callLater(0.1, self.callMeAgain)
+    reactor.callLater(0.1, Win32KillTimeout().callMeAgain)
 try:
     if config.opts['profile']:
         import profile

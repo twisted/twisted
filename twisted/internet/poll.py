@@ -40,7 +40,7 @@ poller = select.poll()
 POLL_DISCONNECTED = (select.POLLHUP | select.POLLERR | select.POLLNVAL)
 
 
-class PollReactor(default.ReactorBase):
+class PollReactor(default.PosixReactorBase):
     """A reactor that uses poll(2)."""
 
     def _updateRegisteration(self, fd):
@@ -159,3 +159,8 @@ class PollReactor(default.ReactorBase):
 
 
 __all__ = ["PollReactor"]
+
+def install():
+    p = PollReactor()
+    import main
+    main.installReactor(p)

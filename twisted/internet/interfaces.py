@@ -141,6 +141,11 @@ class IReactorCore(Interface):
     """Core methods that a Reactor must implement.
     """
 
+    def resolve(self, name, type=1, timeout=10):
+        """Return a Deferred that will resolve a hostname.
+        """
+
+
     def run(self):
         """Run the main loop until stop() is called.
         """
@@ -230,6 +235,30 @@ class IReactorCore(Interface):
           * triggerID: a value returned from addSystemEventTrigger.
         """
 
+class IReactorFDSet(Interface):
+    """Implement me to be able to use FileDescriptor type resources.
+
+    This assumes that your main-loop uses UNIX-style numeric file descriptors
+    (or at least similarly opaque IDs returned from a .fileno() method)
+    """
+
+    def addReader(self, reader):
+        """addReader(IReadDescriptor) -> None
+        """
+
+    def addWriter(self, writer):
+        """addWriter(IWriteDescriptor) -> None
+        """
+
+    def removeReader(self, reader):
+        """removeReader(IReadDescriptor) -> None
+        """
+
+    def removeWriter(self, writer):
+        """removeWriter(IWriteDescriptor) -> None
+        """
+
+
 class IListeningPort(Interface):
     """A listening port.
     """
@@ -251,6 +280,31 @@ class IListeningPort(Interface):
           as 'INET', 'SSL', 'UNIX'.  The rest of the tuple will be identifying
           information about the port.
         """
+
+class IFileDescriptor(Interface):
+    """A file descriptor.
+    """
+
+    def fileno(self):
+        """fileno() -> int 
+
+        Returns: the platform-specified representation of a file-descriptor
+        number.
+        """
+
+class IReadDescriptor(IFileDescriptor):
+    def doRead(self):
+        """Some data is available for reading on your descriptor.
+        """
+
+class IWriteDescriptor(IFileDescriptor):
+    def doWrite(self):
+        """Some data is available for reading on your descriptor.
+        """
+
+class IReadWriteDescriptor(IReadDescriptor, IWriteDescriptor):
+    """I am a FileDescriptor that can both read and write.
+    """
 
 class IConsumer(Interface):
     """A consumer consumes data from a producer."""

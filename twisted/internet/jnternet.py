@@ -24,7 +24,7 @@ from twisted.persisted import styles
 from twisted.python import timeoutqueue, log
 
 # Java Imports
-from java.net import Socket, ServerSocket, SocketException
+from java.net import Socket, ServerSocket, SocketException, InetAddress
 from java.lang import System
 import jarray
 
@@ -33,6 +33,8 @@ import threading, Queue, time
 
 # Sibling Imports
 import abstract
+import interfaces
+from twisted.internet.base import ReactorBase
 
 
 class JConnection(abstract.FileDescriptor,
@@ -42,13 +44,14 @@ class JConnection(abstract.FileDescriptor,
 
     writeBlocker = None
 
-    def __init__(self, skt, protocol):
+    def __init__(self, skt, protocol, jport):
         # print 'made a connection'
         self.skt = skt
         self.protocol = protocol
         self.istream = skt.getInputStream()
         self.ostream = skt.getOutputStream()
         self.writeQ = Queue.Queue()
+        self.jport = jport
 
     def write(self, data):
         # print 'waiting to put some data into the writeQ'
@@ -78,6 +81,13 @@ class JConnection(abstract.FileDescriptor,
     def loseConnection(self):
         self.writeQ.put(None)
 
+    def getHost(self):
+        # addr = self.skt.getInetAddress()
+        return ('INET', InetAddress.getLocalHost().getHostAddress(), self.jport.port)
+
+    def getPeer(self):
+        addr = self.skt.getInetAddress()
+        return ('INET', addr.getHostAddress(), self.skt.getPort())
 
 class Blocker(threading.Thread):
 
@@ -169,27 +179,25 @@ class AcceptBlocker(Blocker):
         return (self.svr.gotSocket, skt)
 
 
-class JMultiplexor:
+class JReactor(ReactorBase):
     """Fakes multiplexing using multiple threads and an action queue."""
 
     def __init__(self):
+        ReactorBase.__init__(self)
         self.readers = []
         self.writers = []
         self.q = timeoutqueue.TimeoutQueue()
 
     def run(self, **kwargs):
+        import main
         main.running = 1
 
         while 1:
             # run the delayeds
-            timeout = None
-            for delayed in main.delayeds:
-                delayed.runUntilCurrent()
-                newTimeout = delayed.timeout()
-                if ((newTimeout is not None) and
-                    ((timeout is None) or
-                     (newTimeout < timeout))):
-                    timeout = newTimeout
+            self.runUntilCurrent()
+            timeout = self.timeout()
+            if timeout is None:
+                timeout = 1000
 
             # wait at most `timeout` seconds for action to be added to queue
             try:
@@ -202,60 +210,53 @@ class JMultiplexor:
                 meth, arg = self.q.get()
                 meth(arg)
 
-            # check if we should shutdown
-            if not main.running:
-                print "Shutting down jython event loop..."
-                for callback in main.shutdowns:
-                    try:
-                        callback()
-                    except:
-                        log.deferr()
 
-                System.exit(0)
+    def listenTCP(self, port, factory, backlog=5, interface=''):
+        jp = JavaPort(self, port, factory, backlog)
+        jp.startListening()
+        return jp
 
+    def wakeUp(self):
+        self.q.put((doNothing, None))
 
-theMultiplexor = JMultiplexor()
 
 def doNothing(arg):
     pass
 
-def wakeUp():
-    theMultiplexor.q.put((doNothing, None))
 
-def shutDown():
-    if main.running:
-        main.running = 0
-        wakeUp()
+class JavaPort:
+    __implements__ = interfaces.IListeningPort
 
-def portStartListening(tcpPort):
-    sskt = ServerSocket(tcpPort.port, tcpPort.backlog)
-    tcpPort.sskt = sskt
-    AcceptBlocker(tcpPort, theMultiplexor.q).start()
+    def __init__(self, reactor, port, factory, backlog):
+        self.reactor = reactor
+        self.factory = factory
+        self.port = port
+        self.backlog = backlog
+        self.isListening = 1
 
-def portGotSocket(tcpPort, skt):
-    # make this into an address...
-    protocol = tcpPort.factory.buildProtocol(None)
-    transport = JConnection(skt, protocol)
+    def startListening(self):
+        sskt = ServerSocket(self.port, self.backlog)
+        self.sskt = sskt
+        AcceptBlocker(self, self.reactor.q).start()
+        log.msg("%s starting on %s"%(self.factory.__class__, self.port))
 
-    # make read and write blockers
-    protocol.makeConnection(transport, tcpPort)
-    wb = WriteBlocker(transport, theMultiplexor.q)
-    wb.start()
-    transport.writeBlocker = wb
-    ReadBlocker(transport, theMultiplexor.q).start()
+    def stopListening(self):
+        self.isListening = 0
 
-def doSelect(*args):
-    """Do nothing."""
-    pass
+    def gotSocket(self, skt):
+        # make this into an address...
+        protocol = self.factory.buildProtocol(None)
+        transport = JConnection(skt, protocol, self)
 
-# change port around
-import tcp
-tcp.Port.startListening = portStartListening
-tcp.Port.gotSocket = portGotSocket
+        # make read and write blockers
+        protocol.makeConnection(transport, self)
+        wb = WriteBlocker(transport, self.reactor.q)
+        wb.start()
+        transport.writeBlocker = wb
+        ReadBlocker(transport, self.reactor.q).start()
 
-import main
-main.run = theMultiplexor.run
-main.wakeUp = wakeUp
-main.shutDown = shutDown
-main.doSelect = doSelect
-
+def install():
+    reactor = JReactor()
+    import main
+    main.installReactor(reactor)
+    return reactor

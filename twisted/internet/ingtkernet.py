@@ -34,7 +34,7 @@ import gtk
 import sys
 
 # Twisted Imports
-from twisted.python import log
+from twisted.python import log, threadable
 
 # Sibling Imports
 import main, default
@@ -48,17 +48,24 @@ hasWriter = writes.has_key
 _simtag = None
 
 
-class GtkReactor(default.ReactorBase):
-    """GTK+ event loop reactor."""
+class GtkReactor(default.PosixReactorBase):
+    """GTK+ event loop reactor.
+    """
 
     def addReader(self, reader):
         if not hasReader(reader):
             reads[reader] = gtk.input_add(reader, gtk.GDK.INPUT_READ, self.callback)
-        simulate()
+        self.simulate()
 
     def addWriter(self, writer):
         if not hasWriter(writer):
             writes[writer] = gtk.input_add(writer, gtk.GDK.INPUT_WRITE, self.callback)
+
+    def removeAll(self):
+        v = reads.keys()
+        for reader in v:
+            self.removeReader(reader)
+        return v
 
     def removeReader(self, reader):
         if hasReader(reader):
@@ -69,6 +76,20 @@ class GtkReactor(default.ReactorBase):
         if hasWriter(writer):
             gtk.input_remove(writes[writer])
             del writes[writer]
+
+    def crash(self):
+        gtk.mainquit()
+
+    def run(self):
+        threadable.registerAsIOThread()
+        self.fireSystemEvent('startup')
+        if self._installSignalHandlers:
+            self._handleSignals()
+        self.running = 1
+        self.simulate()
+        if self._installSignalHandlers:
+            self._handleSignals()
+        gtk.mainloop()
 
     def callback(self, source, condition):
         methods = []
@@ -115,6 +136,8 @@ class GtkReactor(default.ReactorBase):
             gtk.timeout_remove(_simtag)
         self.runUntilCurrent()
         timeout = min(self.timeout(), 0.1)
+        if timeout is None:
+            timeout = 0.1
         _simtag = gtk.timeout_add(timeout * 1010, self.simulate) # grumble
 
 
@@ -123,13 +146,6 @@ def install():
     """Configure the twisted mainloop to be run inside the gtk mainloop.
     """
     reactor = GtkReactor()
-    reactor.install()
-    
-    # Indicate that the main loop is running, so application.run() won't try to
-    # run it...
-    main.running = 2
-    # Indicate that rebuild should NOT touch this module now, since it's been
-    # mucked with.
-    main.ALLOW_TWISTED_REBUILD = 0
-    # Begin simulation gtk tick
-    reactor.simulate()
+    from twisted.internet.main import installReactor
+    installReactor(reactor)
+    return reactor

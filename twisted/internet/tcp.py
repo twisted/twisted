@@ -101,7 +101,8 @@ class Connection(abstract.FileDescriptor,
         except socket.error, se:
             if se.args[0] == EWOULDBLOCK:
                 return 0
-            return main.CONNECTION_LOST
+            else:
+                return main.CONNECTION_LOST
 
     def connectionLost(self):
         """See abstract.FileDescriptor.connectionLost().
@@ -132,9 +133,12 @@ class Connection(abstract.FileDescriptor,
 class Client(Connection):
     """A client for TCP (and similiar) sockets.
     """
-    def __init__(self, host, port, protocol, timeout=None, connector=None):
+    def __init__(self, host, port, protocol, timeout=None, connector=None, reactor=None):
         """Initialize the client, setting up its socket, and request to connect.
         """
+        if reactor is None:
+            from twisted.internet import reactor
+        self.reactor = reactor
         if host == 'unix':
             # "port" in this case is really a filename
             try:
@@ -168,13 +172,14 @@ class Client(Connection):
             # slightly cheezy -- deferreds in pb expect you to go through a
             # mainloop before you actually connect them.  connecting immediately
             # screws up that logic.
-            task.schedule(whenDone)
+            self.reactor.callLater(0, whenDone)
             if timeout is not None:
                 main.addTimeout(self.failIfNotConnected, timeout)
         else:
-            task.schedule(protocol.connectionFailed)
+            self.reactor.callLater(0, protocol.connectionFailed)
 
     def failIfNotConnected(self, *ignored):
+        print 'failing if not connected'
         if (not self.connected) and (not self.disconnected):
             if self.connector:
                 self.connector.connectionFailed()
@@ -192,11 +197,10 @@ class Client(Connection):
         if abstract.isIPAddress(self.addr[0]):
             self._setRealAddress(self.addr[0])
         else:
-            deferred = defer.Deferred()
-            main.resolver.resolve(deferred, self.addr[0])
-            deferred.addCallback(self._setRealAddress)
-            deferred.addErrback(self.failIfNotConnected)
-            deferred.arm()
+            self.reactor.resolve(self.addr[0]
+                            ).addCallbacks(
+                self._setRealAddress, self.failIfNotConnected
+                ).arm()
 
     def _setRealAddress(self, address):
         # print 'real address:',repr(address),repr(self.addr)
@@ -357,13 +361,16 @@ class Port(abstract.FileDescriptor):
     interface = ''
     backlog = 5
 
-    def __init__(self, port, factory, backlog=5, interface=''):
+    def __init__(self, port, factory, backlog=5, interface='', reactor=None):
         """Initialize with a numeric port to listen on.
         """
         self.port = port
         self.factory = factory
         self.backlog = backlog
         self.interface = interface
+        if reactor is None:
+            from twisted.internet import reactor
+        self.reactor = reactor
 
     def __repr__(self):
         return "<%s on %s>" % (self.factory.__class__, self.port)
@@ -462,7 +469,7 @@ class Port(abstract.FileDescriptor):
         self.disconnecting = 1
         self.stopReading()
         if self.connected:
-            task.schedule(self.connectionLost)
+            self.reactor.callLater(0, self.connectionLost)
 
     def connectionLost(self):
         """Cleans up my socket.

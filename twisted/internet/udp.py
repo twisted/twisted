@@ -25,7 +25,7 @@ import socket
 
 if os.name == 'nt':
     EWOULDBLOCK = 10035
-else:
+elif os.name != 'java':
     from errno import EWOULDBLOCK
 
 # Twisted Imports
@@ -51,7 +51,7 @@ class Connection(abstract.FileDescriptor,
 
     keepConnection = 0
 
-    def __init__(self, skt, protocol, remote, local, sessionno):
+    def __init__(self, skt, protocol, remote, local, sessionno, reactor=None):
         self.socket = skt
         self.fileno = skt.fileno
         self.remote = remote
@@ -61,17 +61,18 @@ class Connection(abstract.FileDescriptor,
         self.connected = 1
         self.logstr = "%s,%s,%s (UDP)" % (self.protocol.__class__.__name__, 
                                           sessionno, self.remote[0])
+        if reactor is None:
+            from twisted.internet import reactor
+        self.reactor = reactor
         if abstract.isIPAddress(self.remote[0]):
             self.realAddress = self.remote[0]
         else:
             self.realAddress = None
-            deferred = defer.Deferred()
-            main.resolver.resolve(deferred, self.remote[0])
-            deferred.addCallback(self.setRealAddress)
-            deferred.addErrback(self.connectionLost)
-            deferred.arm()
+            deferred = self.reactor.resolve(self.remote[0]
+                                       ).addCallbacks(
+                self.setRealAddress, self.connectionLost
+                ).arm()
 
-            
     def setRealAddress(self, address):
         self.realAddress = address
         self.startWriting()

@@ -69,11 +69,11 @@ class Redirect(resource.Resource):
         return """
 <html>
     <head>
-        <meta http-equiv="refresh" content="0;URL=%(url)s">
+        <meta http-equiv=\"refresh\" content=\"0;URL=%(url)s\">
     </head>
-    <body bgcolor="#FFFFFF" text="#000000">
-    <!- The user's browser must be incredibly feeble if they have to click...-->
-        Click <a href="%(url)s">here</a>.
+    <body bgcolor=\"#FFFFFF\" text=\"#000000\">
+    <!- The user\'s browser must be incredibly feeble if they have to click...-->
+        Click <a href=\"%(url)s\">here</a>.
     </body>
 </html>
 """ % {'url': self.url}
@@ -166,7 +166,7 @@ class File(resource.Resource, styles.Versioned):
         except OSError:
             mode=0
 
-        if stat.S_ISDIR(mode):
+        if os.path.isdir(childPath): # 'stat.S_ISDIR(mode)' is faster but doesn't work on jython
             # If someone is looking for children with a PathReferenceContext,
             # the request won't have a prepath, and we shouldn't do this kind
             # of mangling anyway because it has already been done.
@@ -221,10 +221,10 @@ class File(resource.Resource, styles.Versioned):
         mode, ino, dev, nlink, uid, gid, size, atime, mtime, ctime =\
               os.stat(self.path)
 
-        if stat.S_ISDIR(mode):
+        if os.path.isdir(self.path): # stat.S_ISDIR(mode) (see above)
             index = self.getIndex(request)
             if index:
-                    return index.render(request)
+                return index.render(request)
     
             dirwidget = DirectoryListing(self.path)
             return widgets.RenderSession(dirwidget.display(request), request)

@@ -23,11 +23,13 @@ import socket
 
 # Twisted Imports
 from twisted.protocols import protocol
-from twisted.python import log
+from twisted.python import log, defer
 from twisted.persisted import styles
 from twisted.python.runtime import platform
 from twisted.cred.authorizer import DefaultAuthorizer
 
+# Sibling Imports
+import main
 
 class Application(log.Logger, styles.Versioned):
     """I am the `root object' in a Twisted process.
@@ -55,7 +57,9 @@ class Application(log.Logger, styles.Versioned):
         """
         self.name = name
         # a list of (tcp, ssl, udp) Ports
-        self.ports = []
+        self.tcpPorts = []
+        self.udpPorts = []
+        self.sslPorts = []
         # a list of (tcp, ssl, udp) Connectors
         self.connectors = []
         # a list of twisted.python.delay.Delayeds
@@ -68,10 +72,30 @@ class Application(log.Logger, styles.Versioned):
         if platform.getType() == "posix":
             self.uid = uid or os.getuid()
             self.gid = gid or os.getgid()
-        self.resolver = main.resolver
 
+    persistenceVersion = 7
 
-    persistenceVersion = 5
+    def upgradeToVersion7(self):
+        print 'upgrading 7'
+        self.tcpPorts = []
+        self.udpPorts = []
+        self.sslPorts = []
+        from twisted.internet import tcp, udp
+        for port in self.ports:
+            if isinstance(port, tcp.Port):
+                self.tcpPorts.append(
+                    (port.port, port.factory,
+                     port.backlog, port.interface))
+            elif isinstance(port, udp.Port):
+                self.udpPorts.append(
+                    port.port, port.factory,
+                    port.interface, port.maxPacketSize)
+            else:
+                print 'upgrade of %s not implemented, sorry' % port.__class__
+        del self.ports
+
+    def upgradeToVersion6(self):
+        del self.resolver
 
     def upgradeToVersion5(self):
         if hasattr(self, "entities"):
@@ -111,12 +135,8 @@ class Application(log.Logger, styles.Versioned):
     def addService(self, service):
         """Add a service to this application.
         """
-        if self.services.has_key(service.serviceName):
-            if main.running:
-                main.removeCallBeforeShutdown(self.services[service.serviceName].stopService)
+        # XXX TODO remove existing service first
         self.services[service.serviceName] = service
-        if main.running:
-            main.callBeforeShutdown(service.stopService)
 
     def __repr__(self):
         return "<%s app>" % repr(self.name)
@@ -131,47 +151,35 @@ class Application(log.Logger, styles.Versioned):
         """
         Connects a given protocol factory to the given numeric TCP/IP port.
         """
-        from twisted.internet import tcp
-        self.addPort(tcp.Port(port, factory, backlog, interface))
+        self.tcpPorts.append((port, factory, backlog, interface))
+        if self.running:
+            from twisted.internet import reactor
+            factory.startFactory()
+            reactor.listenTCP(port, factory, backlog, interface)
 
     def dontListenTCP(self, portno):
-        from twisted.internet import tcp
-        for p in self.ports[:]:
-            if p.port == portno and isinstance(p, tcp.Port):
-                p.loseConnection()
-                self.ports.remove(p)
+        raise 'temporarily not implemented'
 
-    def dontListenUDP(self, portno):
-        from twisted.internet import udp
-        for p in self.ports[:]:
-            if p.port == portno and isinstance(p, udp.Port):
-                p.loseConnection()
-                self.ports.remove(p)
-    
     def listenUDP(self, port, factory, interface='', maxPacketSize=8192):
         """
         Connects a given protocol factory to the given numeric UDP port.
         """
-        from twisted.internet import udp
-        self.addPort(udp.Port(port, factory, interface, maxPacketSize))
+        from twisted.internet import reactor
+        self.udpPorts.append((port, factory, backlog, interface))
+        if self.running:
+            factory.startFactory()
+            reactor.listenUDP(port, factory, interface, maxPacketSize)
 
+    def dontListenUDP(self, portno):
+        raise 'temporarily not implemented'
+    
     def listenSSL(self, port, factory, ctxFactory, backlog=5, interface=''):
         """
         Connects a given protocol factory to the given numeric TCP/IP port.
         The connection is a SSL one, using contexts created by the context
         factory.
         """
-        from twisted.internet import ssl
-        self.addPort(ssl.Port(port, factory, ctxFactory, backlog, interface))
-
-    def addPort(self, port):
-        """
-        Adds a listening port (an instance of a twisted.internet.tcp.Port) to
-        this Application, to be bound when it's running.
-        """
-        self.ports.append(port)
-        if self.running:
-            port.startListening()
+        raise 'temporarily unimplemented'
 
     def connectTCP(self, host, port, factory):
         """Connect a given client protocol factory to a specific TCP server."""
@@ -238,8 +246,8 @@ class Application(log.Logger, styles.Versioned):
         currently active factories will have thier stopFactory method called.
         """
         self.save("shutdown")
-        for port in self.ports:
-            port.factory.stopFactory()
+        for port, factory, i, b in self.tcpPorts:
+            factory.stopFactory()
 
     def save(self, tag=None, filename=None):
         """Save a pickle of this application to a file in the current directory.
@@ -271,6 +279,24 @@ class Application(log.Logger, styles.Versioned):
         """
         return "*%s*" % self.name
 
+    def _beforeShutDown(self):
+        l = []
+        for service in self.services.values():
+            try:
+                d = service.stopService()
+                if isinstance(d, defer.Deferred):
+                    l.append(d)
+            except:
+                log.deferr()
+        if l:
+            return defer.DeferredList(l)
+
+
+    def _afterShutDown(self):
+        if self._save:
+            self.shutDownSave()
+        
+
     def run(self, save=1, installSignalHandlers=1):
         """run(save=1, installSignalHandlers=1)
         Run this application, running the main loop if necessary.
@@ -285,29 +311,34 @@ class Application(log.Logger, styles.Versioned):
             import default
             reactor = default.SelectReactor()
             reactor.install()
+            
+        from twisted.internet import reactor
     
-        global resolver
         if not self.running:
             log.logOwner.own(self)
             for delayed in self.delayeds:
                 main.addDelayed(delayed)
-            for service in self.services.values():
-                main.callBeforeShutdown(service.stopService)
-            if save:
-                main.callAfterShutdown(self.shutDownSave)
-            for port in self.ports:
+            self._save = save
+            main.callBeforeShutdown(self._beforeShutDown)
+            main.callAfterShutdown(self._afterShutDown)
+            for port, factory, backlog, interface in self.tcpPorts:
                 try:
-                    port.startListening()
+                    factory.startFactory()
+                    reactor.listenTCP(port, factory, backlog, interface)
                 except socket.error, msg:
-                    log.msg('error on port %s: %s' % (port.port, msg))
+                    log.msg('error on TCP port %s: %s' % (port, msg))
+                    return
+            for port, factory, interface, maxPacketSize in self.udpPorts:
+                try:
+                    factory.startFactory()
+                    reactor.listenUDP(port, factory, interface, maxPacketSize)
+                except socket.error, msg:
+                    log.msg('error on UDP port %s: %s' % (port, msg))
                     return
             for connector in self.connectors:
                 connector.startConnecting()
-            for port in self.ports:
-                port.factory.startFactory()
             for service in self.services.values():
                 service.startService()
-            resolver = self.resolver
             self.running = 1
             log.logOwner.disown(self)
         if not main.running:
@@ -317,9 +348,6 @@ class Application(log.Logger, styles.Versioned):
             theApplication = self
             main.run(installSignalHandlers=installSignalHandlers)
             log.logOwner.disown(self)
-
-# sibling import
-import main
 
 #
 # These are dummy classes for backwards-compatibility!

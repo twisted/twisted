@@ -16,7 +16,7 @@
 from Tkinter import *
 import tkFileDialog
 import SimpleDialog
-from twisted.internet import tkinternet #, tcp
+from twisted.internet import tkinternet
 from twisted.spread.ui import tkutil, tktree
 from twisted.words.ui import im, gateways
 #from twisted.protocols import telnet
@@ -935,6 +935,5 @@ def main():
     im.disconnectGateways(imclient)
     f=open(path,"w")
     im.saveState(f,imclient.am.getState())
-    tkinternet.stop()
 
 if __name__=="__main__": main()
