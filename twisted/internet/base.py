@@ -84,7 +84,7 @@ class DelayedCall:
         raise TypeError
 
     def __str__(self):
-       return "<DelayedCall [%ds] %s%s>" % (self.time - time(), reflect.safe_repr(func), reflect.safe_repr(self.args))
+       return "<DelayedCall [%ds] %s%s>" % (self.time - time(), reflect.safe_repr(self.func), reflect.safe_repr(self.args))
 
 class ReactorBase:
     """Default base class for Reactors.
