@@ -2,7 +2,7 @@
 # See LICENSE for details.
 
 
-import sys
+import sys, os
 import new
 
 from twisted.trial import unittest
@@ -20,13 +20,24 @@ if sys.version_info >= (2, 2, 0):
 class RebuildTestCase(unittest.TestCase):
     """Simple testcase for rebuilding, to at least exercise the code.
     """
+    def setUp(self):
+        self.libPath = self.mktemp()
+        os.mkdir(self.libPath)
+        self.fakelibPath = os.path.join(self.libPath, 'twisted_rebuild_fakelib')
+        os.mkdir(self.fakelibPath)
+        file(os.path.join(self.fakelibPath, '__init__.py'), 'w').close()
+        sys.path.insert(0, self.libPath)
+
+    def tearDown(self):
+        sys.path.remove(self.libPath)
+
     def testFileRebuild(self):
         from twisted.python.rebuild import rebuild
         from twisted.python.util import sibpath
         import shutil, time
         shutil.copyfile(sibpath(__file__, "myrebuilder1.py"),
-                        sibpath(__file__, "myrebuilder.py"))
-        from twisted.test import myrebuilder
+                        os.path.join(self.fakelibPath, "myrebuilder.py"))
+        from twisted_rebuild_fakelib import myrebuilder
         a = myrebuilder.A()
         try:
             object
@@ -46,7 +57,7 @@ class RebuildTestCase(unittest.TestCase):
         # than one reload per second.
         time.sleep(1.1)
         shutil.copyfile(sibpath(__file__, "myrebuilder2.py"),
-                        sibpath(__file__, "myrebuilder.py"))
+                        os.path.join(self.fakelibPath, "myrebuilder.py"))
         rebuild(myrebuilder)
         try:
             object
