@@ -11,7 +11,7 @@ def interpret():
     parser.connectionMade()
     l = []
     parser.symbolicExpressionReceived = l.append
-    evaluator = eco.Evaluator()
+    env = (eco.ValueEnvironment(), eco.FunctionEnvironment())
     
     while 1:
         if continuation:
@@ -25,7 +25,7 @@ def interpret():
         parser.dataReceived(line)
         if l:
             value = l.pop()
-            sys.stdout.write("%s\n" % evaluator.evalExp(eco.consify(value)))
+            sys.stdout.write("%s\n" % eco.evalExp(eco.consify(value), env))
             continuation = 0
         else:
             continuation = 1
