@@ -18,11 +18,11 @@ import os
 import socket
 import sys
 import warnings
-from zope.interface import implements, classImplements
+from zope.interface import implements, classImplements, Interface
 
 from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorUNIX, IReactorUNIXDatagram
 from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorSSL, IReactorArbitrary
-from twisted.internet.interfaces import IReactorProcess, IReactorFDSet, IReactorMulticast
+from twisted.internet.interfaces import IReactorProcess, IReactorFDSet, IReactorMulticast, IReactorCleanup
 from twisted.internet import main, error, protocol, interfaces
 from twisted.internet import tcp, udp, defer
 
@@ -294,13 +294,17 @@ if unixEnabled:
 components.backwardsCompatImplements(PosixReactorBase)
 
 
+class _IReactorWaker(Interface):
+    """I am a waker for the select reactor"""
+
+
 class _Win32Waker(log.Logger, styles.Ephemeral):
     """I am a workaround for the lack of pipes on win32.
 
     I am a pair of connected sockets which can wake up the main loop
     from another thread.
     """
-
+    implements(_IReactorWaker)
     disconnected = 0
 
     def __init__(self, reactor):
@@ -346,7 +350,7 @@ class _UnixWaker(log.Logger, styles.Ephemeral):
 
     This is used by threads or signals to wake up the event loop.
     """
-
+    implements(_IReactorWaker)
     disconnected = 0
 
     def __init__(self, reactor):
@@ -422,11 +426,11 @@ else:
 _NO_FILENO = error.ConnectionFdescWentAway('Handler has no fileno method')
 _NO_FILEDESC = error.ConnectionFdescWentAway('Filedescriptor went away')
 
+
 class SelectReactor(PosixReactorBase):
     """A select() based reactor - runs on all POSIX platforms and on Win32.
     """
-
-    implements(IReactorFDSet)
+    implements(IReactorFDSet, IReactorCleanup)
 
     def _preenDescriptors(self):
         log.msg("Malformed file descriptor found.  Preening lists.")
@@ -554,6 +558,14 @@ class SelectReactor(PosixReactorBase):
                 del writes[reader]
         self.waker = None
         return readers
+
+    def cleanup(self):
+        """Remove all readers and writers, and return a list of Selectables that
+        represent dirty reactor state
+        """
+        return [reader for reader in self.removeAll() if not
+                _IReactorWaker.providedBy(reader)]
+
 
 components.backwardsCompatImplements(SelectReactor)
 
