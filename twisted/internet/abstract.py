@@ -42,10 +42,11 @@ class FileDescriptor(log.Logger, styles.Ephemeral):
     connected = 0
     producerPaused = 0
     streamingProducer = 0
-    unsent = ""
     producer = None
     disconnected = 0
     disconnecting = 0
+    dataBuffer = ""
+    offset = 0
 
     __implements__ = (interfaces.IProducer, interfaces.IReadWriteDescriptor,
                       interfaces.IConsumer, interfaces.ITransport)
@@ -93,16 +94,21 @@ class FileDescriptor(log.Logger, styles.Ephemeral):
         indicates that a write was done.
         """
         # Send as much data as you can.
-        l = self.writeSomeData(self.unsent)
+        if self.offset:
+            l = self.writeSomeData(buffer(self.dataBuffer, self.offset))
+        else:
+            l = self.writeSomeData(self.dataBuffer)
         if l < 0 or isinstance(l, Exception):
             return l
-        if l == 0 and self.unsent:
+        if l == 0 and self.dataBuffer:
             result = 0
         else:
             result = None
-        self.unsent = self.unsent[l:]
+        self.offset += l
         # If there is nothing left to send,
-        if not self.unsent:
+        if self.offset == len(self.dataBuffer):
+            self.dataBuffer = ""
+            self.offset = 0
             # stop writing.
             self.stopWriting()
             # If I've got a producer who is supposed to supply me with data,
@@ -136,23 +142,24 @@ class FileDescriptor(log.Logger, styles.Ephemeral):
         if not self.connected:
             return
         if data:
-            if (not self.unsent) and (self.producer is None):
+            if (not self.dataBuffer) and (self.producer is None):
                 l = self.writeSomeData(data)
                 if l == len(data):
                     # all data was sent, our work here is done
                     return
                 elif not isinstance(l, Exception) and l > 0:
                     # some data was sent
-                    self.unsent = data[l:]
+                    self.dataBuffer = data
+                    self.offset = l
                 else:
                     # either no data was sent, or we were disconnected.
                     # if we were disconnected we still continue, so that
                     # the event loop can figure it out later on.
-                    self.unsent = data
+                    self.dataBuffer = data
             else:
-                self.unsent = self.unsent + data
+                self.dataBuffer = self.dataBuffer + data
             if self.producer is not None:
-                if len(self.unsent) > self.bufferSize:
+                if len(self.dataBuffer) > self.bufferSize:
                     self.producerPaused = 1
                     self.producer.pauseProducing()
             self.startWriting()

@@ -160,7 +160,7 @@ class Connection(tcp.Connection):
     def doWrite(self):
         if self.readBlockedOnWrite:
             self.readBlockedOnWrite = 0
-            if not self.unsent: self.stopWriting()
+            if not self.dataBuffer: self.stopWriting()
             return self.doRead()
         return tcp.Connection.doWrite(self)
     
