@@ -14,6 +14,20 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+"""
+
+Path-based references for PB, and other reference-based protocols.
+
+Maintainer: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
+
+Stability: semi-stable
+
+Future Plans: None at this point besides a final overview and finalization
+pass.
+
+"""
+
+
 from twisted.python import log
 
 from flavors import Referenceable, Viewable

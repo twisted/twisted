@@ -14,6 +14,19 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+"""
+Persistent references for PB.
+
+Maintainer: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
+
+Stability: in flux
+
+Future Plans: PerspectiveConnector should be made obsolete by PB URLs.  It
+should be very easy to replace when that new functionality is available.
+
+"""
+
+
 from twisted.spread import pb
 from twisted.internet import defer
 from twisted.python import log

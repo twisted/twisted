@@ -17,6 +17,15 @@
 
 """
 Twisted Cred Service
+
+Maintainer: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
+
+Stability: semi-stable
+
+Future Plans: This module needs a little bit of finalization and cleanup, and
+will probably have the errors for missing or non-cached perspectives be more
+clearly defined.
+
 """
 
 # Twisted Imports

@@ -22,6 +22,14 @@ Currently this is only objects accessible through Perspective Broker, but will
 hopefully encompass all forms of remote access which can emulate subsets of PB
 (such as XMLRPC or SOAP).
 
+Maintainer: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
+
+Stability: semi-stable
+
+Future Plans: Optimization.  Exploitation of new-style object model.
+Optimizations to this module should not affect external-use semantics at all,
+but may have a small impact on users who subclass and override methods.
+
 """
 
 # NOTE: this module should NOT import pb; it is supposed to be a module which

@@ -14,7 +14,17 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-"""Banana - s-exp based protocol."""
+"""Banana - s-exp based protocol.
+
+Maintainer: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
+
+Stability: semi-stable
+
+Future Plans: This module is almost entirely stable.  The same caveat applies
+to it as applies to twisted.spread.jelly, however.  Read its future plans for
+more details.
+
+"""
 
 from twisted.internet import protocol
 from twisted.persisted import styles

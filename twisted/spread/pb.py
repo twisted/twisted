@@ -22,6 +22,17 @@ Perspective Broker
 \"This isn\'t a professional opinion, but it's probably got enough
 internet to kill you.\" --glyph
 
+Maintainer: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
+
+Stability: semi-stable
+
+Future Plans: 'connect' and 'IdentityConnector' will be gradually replaced with
+URLs, that will be able to extend resource location and discovery conversations
+and specify different authentication mechanisms besides username/password.
+This should only add to, and not change, the existing protocol.  There are no
+anticipated protocol-breaking changes before a complete finalization but we
+need more users before we can be totally sure of that.
+
 Introduction
 
 This is a broker for proxies for and copies of objects.  It provides a

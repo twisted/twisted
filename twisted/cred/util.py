@@ -15,15 +15,23 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+"""
+
+Utility functions for authorization.
+
+These are currently for challenge-response shared secret authentication.
+
+Maintainer: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
+
+Stability: semi-stable
+
+"""
+
 # System Imports
 import md5
 import random
 
-
-class Unauthorized(Exception):
-    """An exception that is raised when unauthorized actions are attempted.
-    """
-
+from twisted.cred.error import Unauthorized
 
 def respond(challenge, password):
     """Respond to a challenge.

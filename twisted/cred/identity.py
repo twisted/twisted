@@ -15,6 +15,21 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+"""
+Base authentication mechanisms for Twisted.
+
+Maintainer: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
+
+Stability: semi-stable
+
+Future Plans: There needs to be more pluggable support for different, disparate
+authentication mechanisms being supported by the same Identity as long as it
+supports the appropriate persistent data-storage fields.  This will likely be
+accomplished with Adapters and possibly Componentized, although it may just be
+the addition of more methods in the base Identity.
+
+"""
+
 # System Imports
 import md5, types
 

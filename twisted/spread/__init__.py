@@ -19,4 +19,10 @@
 
 Twisted Spread: Spreadable (Distributed) Computing.
 
+Maintainer: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
+
+Stability: semi-stable
+
+Future Plans: PB, Jelly and Banana need to be optimized.
+
 """

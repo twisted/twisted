@@ -18,6 +18,16 @@
 
 """S-expression-based persistence of python objects.
 
+Maintainer: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
+
+Stability: semi-stable
+
+Future Plans: Optimization.  Lots of optimization.  No semantic breakages
+should be necessary, but if small tweaks are required to gain acceptable
+large-scale performance then they will be made.  Although Glyph is the
+maintainer, Bruce Mitchener will be supervising most of the optimization work
+here.
+
 I do something very much like Pickle; however, pickle's main goal seems to be
 efficiency (both in space and time); jelly's main goals are security, human
 readability, and portability to other environments.
