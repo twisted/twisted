@@ -31,9 +31,8 @@ class TwistedWordsPerson:
         if metadata:
             d=self.account.perspective.directMessage(self.name,
                                                     text, metadata)
-            d.addCallbacks(lambda x: None, #OK, this is really freaking lame.
-                           self.metadataFailed,
-                           errbackArgs=("* "+text,))
+            d.addErrback(self.metadataFailed,
+                         "* "+text)
             return d
         else:
             return self.account.perspective.directMessage(self.name, text)
@@ -60,9 +59,8 @@ class TwistedWordsGroup:
         if metadata:
             d=self.account.perspective.groupMessage(self.name,
                                                     text, metadata)
-            d.addCallbacks(lambda x: None, #OK, this is really freaking lame.
-                           self.metadataFailed,
-                           errbackArgs=("* "+text,))
+            d.addErrback(self.metadataFailed,
+                         "* "+text)
             return d
         else:
             return self.account.perspective.groupMessage(self.name, text)
@@ -122,6 +120,10 @@ class TwistedWordsClient(pb.Referenceable):
     def remote_receiveContactList(self, clist):
         for name, status in clist:
             getPerson(name, self, TwistedWordsPerson).setStatus(status)
+
+    def remote_setGroupMetadata(self, dict_, groupName):
+        if dict_.has_key("topic"):
+            self.getGroupConversation(groupName).setTopic(dict_["topic"], dict_.get("topic_author", None))            
 
     def joinGroup(self, name):
         self.getGroup(name).joining()

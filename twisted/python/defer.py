@@ -80,8 +80,14 @@ class Deferred:
         return self
 
     def addCallback(self, callback, *args, **kw):
-        return self.addCallbacks(callback, callbackArgs=args, callbackKeywords = kw)
+        return self.addCallbacks(callback, callbackArgs=args,
+                                 callbackKeywords=kw)
 
+    def addErrback(self, errback, *args, **kw):
+        return self.addCallbacks(lambda x: x, errback,
+                                 errbackArgs=args,
+                                 errbackKeywords=kw)
+        
     def chainDeferred(self, d):
         return self.addCallbacks(d.callback, d.errback)
 

@@ -152,6 +152,9 @@ class GroupConversation(InputOutputWindow):
         self.members = members
         self.refreshMemberList()
 
+    def setTopic(self, topic, author):
+        self.xml.get_widget("TopicLabel").set_text("%s -- %s" % (topic, author))
+
     def memberJoined(self, member):
         self.members.append(member)
         self.output.insert_defaults("> %s joined <\n" % member)
