@@ -34,6 +34,7 @@ install-stamp: build-stamp
 
 	# Add here commands to install the package into debian/tmp.
 	cp -rf build/lib*/twisted debian/tmp/usr/lib/python2.1/site-packages/
+	cp twisted/im/instancemessenger.glade debian/tmp/usr/lib/python2.1/site-packages/twisted/im
 	cp TODO README CREDITS doc/*.html debian/tmp/usr/share/doc/twisted
 	cp doc/examples/*.py debian/tmp/usr/share/doc/twisted/examples
 	gzip -9 debian/tmp/usr/share/doc/twisted/examples/*.py
