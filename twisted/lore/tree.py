@@ -51,9 +51,10 @@ def fontifyFiles(infile, outfile):
 def fixLinks(document, ext):
     for node in domhelpers.findElementsWithAttribute(document, 'href'):
         href = node.getAttribute("href")
-        if '/' not in href and href.endswith('.html'):
-            fname = os.path.splitext(href)
-            node.setAttribute("href", fname[0] + ext)
+        if '/' not in href:
+            if href.endswith('.html') or href[:href.rfind('#')].endswith('.html'):
+                fname = os.path.splitext(href)
+                node.setAttribute("href", fname[0] + ext)
 
 
 def addMtime(document, fullpath):
