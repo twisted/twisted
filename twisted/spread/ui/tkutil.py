@@ -9,8 +9,12 @@ from twisted import copyright
 #boldFont = Font("-adobe-courier-bold-r-normal-*-*-120-*-*-m-*-iso8859-1")
 #errorFont = Font("-adobe-courier-medium-o-normal-*-*-120-*-*-m-*-iso8859-1")
 
-
-
+def grid_setexpand(widget):
+    cols,rows=widget.grid_size()
+    for i in range(cols):
+        widget.columnconfigure(i,weight=1)
+    for i in range(rows):
+        widget.rowconfigure(i,weight=1)
 class Login(Toplevel):
     def __init__(self, callback,
              referenced = None,
@@ -26,8 +30,8 @@ class Login(Toplevel):
         # version_label.show()
         self.username = Entry(self)
         self.password = Entry(self,show='*')
-        self.service  = Entry(self)
         self.hostname = Entry(self)
+        self.service  = Entry(self)
         self.port     = Entry(self)
 
         self.username.insert(0,initialUser)
