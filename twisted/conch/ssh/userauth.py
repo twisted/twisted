@@ -201,6 +201,9 @@ class SSHUserAuthServer(service.SSHService):
 class SSHUserAuthClient(service.SSHService):
     name = 'ssh-userauth'
     protocolMessages = None # set later
+
+    preferredOrder = ['publickey', 'password', 'keyboard-interactive']
+
     def __init__(self, user, instance):
         self.user = user
         self.instance = instance
@@ -229,6 +232,14 @@ class SSHUserAuthClient(service.SSHService):
         partial = ord(partial)
         if partial:
             self.authenticatedWith.append(self.lastAuth)
+        def _(x, y):
+            i1 = self.preferredOrder.index(x)
+            i2 = self.preferredOrder.index(y)
+            if i1 < 0: return 1
+            if i2 < 0: return -1
+            return cmp(i1, i2)
+        canContinue.sort(_)
+        log.msg('can continue with: %s' % canContinue)
         for method in canContinue:
             if method not in self.authenticatedWith and self.tryAuth(method):
                 return 
