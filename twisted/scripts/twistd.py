@@ -273,7 +273,8 @@ def runApp(config):
         if os.name == "posix":
             import signal
             def rotateLog(signal, frame, logFile=logFile):
-                logFile.rotate()
+                from twisted.internet import reactor
+                reactor.callLater(0, logFile.rotate)
             signal.signal(signal.SIGUSR1, rotateLog)
 
 
