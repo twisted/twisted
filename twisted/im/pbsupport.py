@@ -95,7 +95,7 @@ class TwistedWordsGroup(basesupport.AbstractGroup):
 
 
 
-class TwistedWordsClient(pb.Referenceable):
+class TwistedWordsClient(pb.Referenceable, basesupport.AbstractClientMixin):
     """In some cases, this acts as an Account, since it a source of text
     messages (multiple Words instances may be on a single PB connection)
     """
@@ -105,6 +105,9 @@ class TwistedWordsClient(pb.Referenceable):
         print "HELLO I AM A PB SERVICE", serviceName, perspectiveName
         self.chat = chatui
 
+    def getPerson(self, name):
+        return self.chat.getPerson(name, self, TwistedWordsPerson)
+                  
     def getGroup(self, name):
         return self.chat.getGroup(name, self, TwistedWordsGroup)
 
