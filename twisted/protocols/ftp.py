@@ -278,11 +278,12 @@ def debugDeferred(self, *_):
  
 def _getFPName(fp):
     """returns a file object's name attr if it has one,
-    otherwise it returns "name"
+    otherwise it returns "<string>"
     """
     if hasattr(fp, 'name'):
         return fp.name
-    return 'file'   # stringIO objects have no .name attr
+    # stringIO objects have no .name attr
+    return getattr(fp, 'name', '<string>')
 
 class IDTPParent(object):
     """An interface for protocols that wish to use a DTP sub-protocol and
@@ -439,6 +440,19 @@ def cleanPath(path):
     return path
 
 class FTP(object, basic.LineReceiver, policies.TimeoutMixin):      
+    """Protocol Interpreter for the File Transfer Protocol
+    
+    @ivar shell: The connected avatar
+    @ivar user: The username of the connected client
+    @ivar peerHost: The (type, ip, port) of the client
+    @ivar dtpTxfrMode: The current mode -- PASV or PORT
+    @ivar blocked: Command queue for command pipelining
+    @ivar binary: The transfer mode.  If false, ASCII.
+    @ivar dtpFactory: Generates a single DTP for this session
+    @ivar dtpPort: Port returned from listenTCP
+    @ivar dtpInetPort: dtpPort.getHost()
+    @ivar dtpHostPort: cluient (address, port) to connect to on a PORT command
+    """
     __implements__ = (IDTPParent,IProtocol,)
     # FTP is a bit of a misonmer, as this is the PI - Protocol Interpreter
     blockingCommands = ['RETR', 'STOR', 'LIST', 'PORT']
@@ -451,21 +465,19 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
     # reply with appropriate error message and drop the connection
     instanceNum = 0
 
-    
-    def __init__(self):
-        self.portal      = None
-        self.shell       = None     # the avatar
-        self.user        = None     # the username of the client connected
-        self.peerHost    = None     # the (type,ip,port) of the client
-        self.dtpTxfrMode = None     # PASV or PORT, no default
-        self.blocked     = None     # a command queue for pipelining
-        self.dtpFactory  = None     # generates a single DTP for this session
-        self.dtpInstance = None     # a DTP protocol instance
-        self.dtpPort     = None     # object returned from listenTCP
-        self.dtpInetPort = None     # result of dtpPort.getHost() used for saving inet port number
-        self.dtpHostPort = None     # client address/port to connect to on PORT command
+    portal      = None
+    shell       = None     # the avatar
+    user        = None     # the username of the client connected
+    peerHost    = None     # the (type,ip,port) of the client
+    dtpTxfrMode = None     # PASV or PORT, no default
+    blocked     = None     # a command queue for pipelining
+    dtpFactory  = None     # generates a single DTP for this session
+    dtpInstance = None     # a DTP protocol instance
+    dtpPort     = None     # object returned from listenTCP
+    dtpInetPort = None     # result of dtpPort.getHost() used for saving inet port number
+    dtpHostPort = None     # client address/port to connect to on PORT command
 
-        self.binary      = True     # binary transfers? False implies ASCII. defaults to True
+    binary      = True     # binary transfers? False implies ASCII. defaults to True
 
     def connectionMade(self):
         log.debug('ftp-pi connectionMade: instance %s' % self.instanceNum)
