@@ -30,7 +30,7 @@ StringIO = cStringIO
 del cStringIO
 import traceback
 
-def PyCompiler(path):
+def ResourceScript(path):
     """
     I am a normal py file which will define a "resource" global upon completion
     The resource global should be an instance of Resource, and will be returned
