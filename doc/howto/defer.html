@@ -19,22 +19,14 @@ file access - there are many APIs that are blocking, and many
 methods where the common idiom is to block until a result is
 gotten.</p>
 
-<pre class="python"> 
-def someBlockingCall(x):
-    # imagine I/O blocking code here
-    print "blocking"
-    import time
-    time.sleep(4)
-    return x * 3
-
-def someNonBlockingCall():
-    # imagine some non-blocking code here
-    print "non-blocking"
-
+<pre class="python">
 class Getter:
     def getData(self, x):
-        someNonBlockingCall()
-        return someBlockingCall(x)
+        # imagine I/O blocking code here
+        print "blocking"
+        import time
+        time.sleep(4)
+        return x * 3
 
 g = Getter()
 print g.getData(3)
@@ -46,28 +38,21 @@ print g.getData(3)
 single threaded, and event based.  The solution for this issue is to refactor
 the code, so that instead of blocking until data is available, we return
 immediately, and use a callback to notify the requester once the data
-eventually arrives.  Looking at how this is usually implemented using Python's thread object will help us understand the necessity for Deferreds.</p>
+eventually arrives.</p>
 
 <pre class="python">
-def someAsyncCall(callback,x):
-    # Using threads, a blocking call can be changed into
-    # a non-blocking call, using a callback.  Rather than
-    # dupliate this code, use twisted.threads.deferToThread
-    from threading import Thread
-    class BlockingThread(Thread):
-        def run(self,callback,x):
-            callback(someBlockingCall(x))
-    BlockingThread().run(callback,x)
+from twisted.internet import reactor
 
 class Getter:
     def getData(self, x, callback):
-        someNonBlockingCall()
-        someAsyncCall(callback,x)
+        # this won't block
+        reactor.callLater(4, callback, x * 3)
 
 def printData(d):
     print d
 
 g = Getter()
+g.getData(3, printData)
 </pre>
 
 <p>There are several things missing in this simple example.  There is no way
@@ -90,12 +75,13 @@ standardizes the application programmer's interface with all sorts of
 blocking or delayed operations.</p>
 
 <pre class="python">
+from twisted.internet import reactor, defer
+
 class Getter:
     def getData(self, x):
-        from twisted.internet.defer import Deferred
-        d = Deferred()
-        someNonBlockingCall()
-        someAsyncCall(d.callback,x)
+        # this won't block
+        d = defer.Deferred()
+        reactor.callLater(4, d.callback, x * 3)
         return d
 
 def printData(d):
@@ -112,25 +98,30 @@ second with the result of the first callback, and so on. Why do we need this?
 Well, consider a Deferred returned by twisted.enterprise.adbapi - the result of
 a SQL query. A web widget might add a callback that converts this result into
 HTML, and pass the Deferred onwards, where the callback will be used by twisted
-to return the result to the HTTP client.</p>
+to return the result to the HTTP client. The callback chain will be bypassed
+in case of errors or exceptions.</p>
 
 <pre class="python">
+from twisted.internet import reactor, defer
+
 class Getter:
     def gotResults(self, x):
+        if x % 2:
+            self.d.callback(x*3)
+        else:
+            self.d.errback(ValueError("You used an even number!"))
+
+    def _toHTML(self, r):
+        return "<p>Result: %s</p>" % r
+
+    def getData(self, x):
         """The Deferred mechanism provides an errback method
            to handle error conditions.  In this 'example',
            even numbers are bad.
         """
-        if x % 2:
-            self.d.callback(x*3)
-        else:
-            self.d.errback("You used an even number!")
-    def getData(self, x):
-        from twisted.internet.defer import Deferred
-        self.d = Deferred()
-        someNonBlockingCall()
-        someAsyncCall(self.gotResults,x)
-        return self.d
+        self.d = defer.Deferred()
+        reactor.callLater(4, self.gotResults, x)
+        return self.d.addCallback(self._toHTML)
 
 def printData(d):
     print d
@@ -139,11 +130,13 @@ def printError(failure):
     import sys
     sys.stderr.write(str(failure))
 
+# this will print an error message
 g = Getter()
 d = g.getData(3)
 d.addCallback(printData)
 d.addErrback(printError)
 
+# this will print "<p>Result: 12</p>"
 g = Getter()
 d = g.getData(4)
 d.addCallback(printData)
