@@ -59,10 +59,13 @@ class ADBAPITestBase:
 
         self.checkOpenfunCalled()
 
+        inserts = []
         # add some rows to simple table (runOperation)
         for i in range(self.num_iterations):
             sql = "insert into simple(x) values(%d)" % i
-            deferredResult(self.dbpool.runOperation(sql))
+            inserts.append(self.dbpool.runOperation(sql))
+        unittest.wait(defer.gatherResults(inserts))
+        del inserts
 
         # make sure they were added (runQuery)
         sql = "select x from simple order by x";

@@ -8,6 +8,7 @@ from twisted.trial import unittest
 
 import os, random
 
+from twisted.internet import defer
 from twisted.enterprise.row import RowObject
 from twisted.enterprise.reflector import *
 from twisted.enterprise.xmlreflector import XMLReflector
@@ -131,6 +132,7 @@ class ReflectorTestBase:
         self.failUnless(rowMatches(parent, values), "no match")
 
         # create some child rows
+        inserts = []
         child_values = {}
         for i in range(0, self.num_iterations):
             row = ChildRow()
@@ -138,8 +140,10 @@ class ReflectorTestBase:
             values = self.randomizeRow(row)
             values['test_key'] = row.test_key = "first"
             child_values[i] = values
-            deferredResult(self.reflector.insertRow(row))
+            inserts.append(self.reflector.insertRow(row))
             row = None
+        unittest.wait(defer.gatherResults(inserts))
+        del inserts
 
         d = self.reflector.loadObjectsFrom(childTableName, parentRow=parent)
         d.addCallback(self.gotData)
