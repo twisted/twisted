@@ -19,6 +19,7 @@
 # System Imports
 import types
 import os
+import time
 
 # Twisted Import
 from twisted.python.runtime import platform
@@ -188,8 +189,8 @@ def doSelect(timeout,
             elif se.args[0] == EBADF:
                 _preenDescriptors()
             else:
+                # OK, I really don't know what's going on.  Blow up.
                 raise
-
     for selectables, method, dict in ((r, "doRead", reads),
                                       (w,"doWrite", writes)):
         hkm = dict.has_key
@@ -306,6 +307,8 @@ def callBeforeShutdown(function):
     beforeShutdown.append(function)
 
 def removeCallBeforeShutdown(function):
+    """Remove a function registered with callBeforeShutdown.
+    """
     beforeShutdown.remove(function)
 
 def callDuringShutdown(function):

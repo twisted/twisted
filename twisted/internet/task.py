@@ -98,7 +98,7 @@ class ThreadedScheduler:
                     del threadTasks[thread]
         finally:
             self._lock.release()
-        
+
         for func, args, kwargs in tasksTodo:
             apply(func, args, kwargs)
 

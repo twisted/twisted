@@ -20,7 +20,7 @@ Twisted Cred Service
 """
 
 # Twisted Imports
-from twisted.python import defer
+from twisted.python import defer, log
 
 # Sibling Imports
 from perspective import Perspective
@@ -138,3 +138,14 @@ class Service:
         """
         return self.serviceType or str(self.__class__)
 
+    def startService(self):
+        """This call is made as a service starts up.
+        """
+        log.msg("%s (%s) starting" % (self.__class__, self.serviceName))
+        return None
+
+    def stopService(self):
+        """This call is made before shutdown.
+        """
+        log.msg("%s (%s) stopping" % (self.__class__, self.serviceName))
+        return None

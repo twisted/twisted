@@ -63,8 +63,11 @@ class ThreadDispatcher(threadpool.ThreadPool):
     def dispatchApply(self, owner, callback, errback, func, args, kw):
         self.dispatch(owner, self._runWithCallback, callback, errback, func, args, kw)
 
+    def runInThread(self, callback, errback, func, *args, **kw):
+        self.dispatchApply(log.logOwner.owner(), callback, errback, func, args, kw)
+
     def stop(self):
-        log.msg("stopping thread pool " +str(self))
+        log.msg("stopping thread dispatcher " +str(self))
         threadpool.ThreadPool.stop(self)
 
 

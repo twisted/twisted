@@ -107,10 +107,15 @@ class Application(log.Logger, styles.Versioned):
     def addService(self, service):
         """Add a service to this application.
         """
+        if self.services.has_key(service.serviceName):
+            if main.running:
+                main.removeCallBeforeShutdown(self.services[service.serviceName].stopService)
         self.services[service.serviceName] = service
+        if main.running:
+            main.callBeforeShutdown(service.stopService)
 
     def __repr__(self):
-        return "<%s app>" % self.name
+        return "<%s app>" % repr(self.name)
 
     def __getstate__(self):
         dict = styles.Versioned.__getstate__(self)
@@ -261,6 +266,8 @@ class Application(log.Logger, styles.Versioned):
             log.logOwner.own(self)
             for delayed in self.delayeds:
                 main.addDelayed(delayed)
+            for service in self.services.values():
+                main.callBeforeShutdown(service.stopService)
             if save:
                 main.callAfterShutdown(self.shutDownSave)
             for port in self.ports:
@@ -273,6 +280,8 @@ class Application(log.Logger, styles.Versioned):
                 connector.startConnecting()
             for port in self.ports:
                 port.factory.startFactory()
+            for service in self.services.values():
+                service.startService()
             resolver = self.resolver
             self.running = 1
             log.logOwner.disown(self)

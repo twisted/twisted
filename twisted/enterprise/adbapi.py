@@ -5,7 +5,8 @@ This is designed to integrate with twisted.internet.threadtask.
 import traceback
 
 from twisted.spread import pb
-from twisted.internet import task, threadtask
+from twisted.internet import task, main
+from twisted.internet.threadtask import ThreadDispatcher
 from twisted.python import reflect, log, defer, failure
 
 # sibling imports
@@ -45,6 +46,8 @@ class ConnectionPool(pb.Referenceable):
         import thread
         self.threadID = thread.get_ident
         self.connections = {}
+        self.dispatcher = ThreadDispatcher(3, 5)
+        main.callDuringShutdown(self.dispatcher.stop)
 
     def __getstate__(self):
         return {'dbapiName': self.dbapiName,
@@ -54,15 +57,15 @@ class ConnectionPool(pb.Referenceable):
     def __setstate__(self, state):
         self.__dict__ = state
         apply(self.__init__, (self.dbapiName, )+self.connargs, self.connkw)
+        main.callDuringShutdown(self.dispatcher.stop)
 
     def connect(self):
         tid = self.threadID()
         conn = self.connections.get(tid)
         if not conn:
-            print 'connecting using', self.dbapiName, self.connargs, self.connkw
             conn = apply(self.dbapi.connect, self.connargs, self.connkw)
             self.connections[tid] = conn
-            print 'connected'
+            log.msg('Database Connected %s %s %s' %( self.dbapiName, self.connargs, self.connkw ))
         return conn
 
     def _runQuery(self, args, kw):
@@ -89,10 +92,10 @@ class ConnectionPool(pb.Referenceable):
         return result
 
     def query(self, callback, errback, *args, **kw):
-        threadtask.dispatch(callback, errback, self._runQuery, args, kw)
+        self.dispatcher.runInThread(callback, errback, self._runQuery, args, kw)
 
     def operation(self, callback, errback, *args, **kw):
-        threadtask.dispatch(callback, errback, self._runOperation, args, kw)
+        self.dispatcher.runInThread(callback, errback, self._runOperation, args, kw)
 
     def interaction(self, interaction, callback, errback, *args, **kw):
         """Interact with the database.
@@ -109,7 +112,7 @@ class ConnectionPool(pb.Referenceable):
         the transaction was committed; if 'errback', it was rolled back.  This
         does not apply in databases which do not support transactions.
         """
-        apply(threadtask.dispatch, (callback, errback, self._runInteraction, interaction) + args, kw)
+        apply(self.dispatcher.runInThread, (callback, errback, self._runInteraction, interaction) + args, kw)
 
     def _runInteraction(self, interaction, *args, **kw):
         trans = Transaction(self, self.connect())
@@ -193,7 +196,7 @@ class Augmentation:
 
         class EmployeeRow(row.rowClass):
             pass
-            
+
         def gotEmployees(employees):
             for emp in employees:
                 emp.manager = "fred smith"
@@ -221,13 +224,13 @@ class Augmentation:
             if first:
                 first = 0
             else:
-                sql = sql + ","                
+                sql = sql + ","
             sql = sql + " %s" % column
         sql = sql + " FROM %s WHERE %s""" % (tableName, whereClause)
         transaction.execute(sql)
         rows = transaction.fetchall()
         # construct the objects
-        results = []        
+        results = []
         for r in rows:
             kw = row.makeKW(rowClass, r)
             resultObject = apply(factoryMethod, (rowClass, data, kw) )

@@ -174,6 +174,9 @@ class Time:
     def __init__(self):
         self.queue = []
 
+    def __repr__(self):
+        return '<twisted Time %s>' % (self.queue,)
+
     def runLater(self, seconds, func, *args, **kw):
         """Run an event a specified number of seconds later.
         """
