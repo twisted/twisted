@@ -272,8 +272,12 @@ class Process:
 
         By default, uid or gid will be 0 (superuser)
         """
-        self.uid = uid or 0
-        self.gid = gid or 0
+        if uid is None:
+            uid = os.getuid()
+        if gid is None:
+            gid = os.getgid()
+        self.uid = uid
+        self.gid = gid
 
 
 def Application(name, uid=None, gid=None):
