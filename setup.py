@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.149 2003/10/17 21:08:01 etrepum Exp $
+$Id: setup.py,v 1.150 2003/11/20 23:08:03 pahan Exp $
 """
 
 import distutils, os, sys, string
@@ -85,6 +85,12 @@ class build_ext_twisted(build_ext):
         self._detect_modules()
         build_ext.build_extensions(self)
 
+    def _remove_conftest(self):
+        for filename in ("conftest.c", "conftest.o", "conftest.obj"):
+            try:
+                os.unlink(filename)
+            except EnvironmentError:
+                pass
 
     def _compile_helper(self, content):
         conftest = open("conftest.c", "w")
@@ -98,11 +104,7 @@ class build_ext_twisted(build_ext):
                 return False
             return True
         finally:
-            try:
-                os.unlink("conftest.c")
-                os.unlink("conftest.o")
-            except:
-                pass
+            self._remove_conftest()
 
     def _check_define(self, include_files, define_name):
         """
