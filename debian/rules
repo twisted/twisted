@@ -135,6 +135,10 @@ install-indep-stamp: install-base-stamp
 			debian/$$package/DEBIAN/$$maint;\
 			chmod 755 debian/$$package/DEBIAN/$$maint;\
 		done;\
+		install -d debian/$$package/usr/lib/menu/$$package;\
+		sed "s/@VERSION@/$$version/g" \
+		debian/python-twisted-conch.menu.in > \
+		debian/$$package/usr/lib/menu/$$package;\
 	done
 		
 	set -e;for subdir in examples howto specifications img;\
