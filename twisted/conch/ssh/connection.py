@@ -16,8 +16,13 @@
 # 
 
 import struct
-from twisted.internet import protocol, ptypro
+from twisted.internet import protocol
+try:
+    from twisted.internet import ptypro
+except ImportError:
+    ptypro = None
 from twisted.python import log
+from twisted.conch import error
 import service, common
 
 class SSHConnection(service.SSHService):
@@ -26,6 +31,26 @@ class SSHConnection(service.SSHService):
     localToRemoteChannel = {}
     channels = {}
     channelsToRemoteChannel = {}
+    deferreds = {}
+
+    def ssh_GLOBAL_REQUEST(self, packet):
+        requestType, rest = common.getNS(packet)
+        wantReply, rest = ord(rest[0]), rest[1:]
+        f = getattr(self, 'global_%s' % requestType.replace('-','_'))
+        reply = MSG_REQUEST_FAILURE
+        data = ''
+        if f:
+            ret = f(rest)
+
+            if ret:
+                reply = MSG_REQUEST_SUCCESS
+                if type(ret) in (types.TupleType, types.ListType):
+                    data = ret[1]
+            else:
+                reply = MSG_REQUEST_FAILURE
+        if wantReply:
+            self.transport.sendPacket(reply, data)
+                
     
     def ssh_CHANNEL_OPEN(self, packet):
         channelType, rest = common.getNS(packet)
@@ -66,20 +91,20 @@ class SSHConnection(service.SSHService):
     def ssh_CHANNEL_DATA(self, packet):
         localChannel = struct.unpack('>L', packet[:4])[0]
         data = common.getNS(packet[4:])[0]
-        self.channels[localChannel].receiveData(data)
+        self.channels[localChannel].dataReceived(data)
 
     def ssh_CHANNEL_EXTENDED_DATA(self, packet):
         localChannel, typeCode = struct.unpack('>2L', packet[:8])
         data = common.getNS(packet[8:])[0]
-        self.channels[localChannel].receiveExtendedData(typeCode, data)
+        self.channels[localChannel].extReceived(typeCode, data)
 
     def ssh_CHANNEL_EOF(self, packet):
         localChannel = struct.unpack('>L', packet[:4])[0]
-        self.channels[localChannel].receiveEOF()
+        self.channels[localChannel].eofReceived()
 
     def ssh_CHANNEL_CLOSE(self, packet):
         localChannel = struct.unpack('>L', packet[:4])[0]
-        self.channels[localChannel].receiveClose()
+        self.channels[localChannel].closed()
         del self.localToRemoteChannel[localChannel]
         del self.channels[localChannel]
 
@@ -87,12 +112,24 @@ class SSHConnection(service.SSHService):
         localChannel = struct.unpack('>L', packet[:4])[0]
         requestType, rest = common.getNS(packet[4:])
         wantReply = ord(rest[0])
-        if self.channels[localChannel].receiveRequest(requestType, rest[1:]):
+        if self.channels[localChannel].requestReceived(requestType, rest[1:]):
             reply = MSG_CHANNEL_SUCCESS
         else:
             reply = MSG_CHANNEL_FAILURE
         if wantReply:
             self.transport.sendPacket(reply, struct.pack('>L', self.localToRemoteChannel[localChannel]))
+
+    def ssh_CHANNEL_SUCCESS(self, packet):
+        localChannel = struct.unpack('>L', packet[:4])[0]
+        if self.deferreds.has_key(localChannel):
+            self.deferreds[localChannel].callback(packet[4:])
+            del self.deferreds[localChannel]
+
+    def ssh_CHANNEL_FAILURE(self, packet):
+        localChannel = struct.unpack('>L', packet[:4])[0]
+        if self.deferreds.has_key(localChannel):
+            self.deferreds[localChannel].errback(ConchError('channel request failed'))
+            del self.deferreds[localChannel]
 
     def openChannel(self, channel, extra = ''):
         self.transport.sendPacket(MSG_CHANNEL_OPEN, common.NS(channel.name) 
@@ -105,11 +142,13 @@ class SSHConnection(service.SSHService):
 
     def sendRequest(self, channel, requestType, data, wantReply = 0):
         log.msg('sending request for channel %s, request %s' % (channel.id, requestType))
-        # XXX handle wantReply
+        d = defer.Deferred()
         self.transport.sendPacket(MSG_CHANNEL_REQUEST, struct.pack('>L',
                                             self.channelsToRemoteChannel[channel]) + \
                                             common.NS(requestType)+chr(wantReply) + \
                                             data)
+        self.deferreds[channel.id] = d
+        return d
         
     def sendData(self, channel, data):
         self.transport.sendPacket(MSG_CHANNEL_DATA, struct.pack('>L',
@@ -151,7 +190,7 @@ class SSHChannel:
         self.windowSize = self.windowSize + bytes
         self.windowLeft = self.windowLeft + bytes
 
-    def receiveRequest(self, requestType, data):
+    def requestReceived(self, requestType, data):
         foo = requestType.replace('-','_')
         f = getattr(self,'request_%s' % foo)
         if f:
@@ -159,19 +198,37 @@ class SSHChannel:
         log.msg('unhandled request for %s' % requestType)
         return 0
 
-    def receiveData(self, data):
+    def dataReceived(self, data):
         log.msg('got data %s' % repr(data))
 
-    def receiveExtendedData(self, dataType, data):
+    def extReceived(self, dataType, data):
         log.msg('got extended data %s %s' % (dataType, repr(data)))
 
-    def receiveEOF(self):
+    def eofReceived(self):
         log.msg('channel %s remote eof' % self.id)
 
-    def receiveClose(self):
+    def closed(self):
         log.msg('channel %s closed' % self.id)
 
-class SSHSession(SSHChannel, protocol.Protocol): # treat us as a protocol for the sake of Process
+    # transport stuff
+    def write(self, data):
+        if len(data) > self.windowLeft:
+            self.conn.adjustWindow(self, len(data))
+        self.conn.sendData(self, data)
+
+    def writeSequence(self, data):
+        self.write(''.join(data))
+
+    def loseConnection(self):
+        self.conn.sendClose(self)
+
+    def getPeer(self):
+        return ('SSH',) + self.conn.transport.getPeer()
+
+    def getHost(self):
+        return ('SSH',) + self.conn.transport.getHost()
+
+class SSHSession(SSHChannel):
 
     environ = {}
 
@@ -192,10 +249,13 @@ class SSHSession(SSHChannel, protocol.Protocol): # treat us as a protocol for th
         if not self.environ.has_key('TERM'): # we didn't get a pty-req
             log.msg('tried to get shell without pty, failing')
             return 0
+        if not ptypro:
+            log.msg("we don't support psuedo-terminals on this system")
+            return 0
         shell = '/bin/sh' # fix this
         try:
-            ptypro.Process(shell, [shell], self.environ, '/tmp', self) # fix this too
-        except OSError:
+            ptypro.Process(shell, [shell], self.environ, '/tmp', SSHSessionProtocol(self)) # fix this too
+        except OSError, ImportError:
             log.msg('failed to get pty')
             return 0
         else:
@@ -205,6 +265,9 @@ class SSHSession(SSHChannel, protocol.Protocol): # treat us as a protocol for th
     def request_exec(self, data):
         log.msg('disabled exec')
         return 0
+        if not ptypro:
+            log.msg("we don't support psuedo-terminals on this system")
+            return 0
         log.msg('accepted exec (horribly insecure) %s' % data[4:])
         args = data[4:].split()
         ptypro.Process(args[0], args, self.environ, '/tmp', self)
@@ -222,6 +285,7 @@ class SSHSession(SSHChannel, protocol.Protocol): # treat us as a protocol for th
 
     def subsystem_python(self):
         # XXX hack hack hack
+        # this should be refacted into the 'interface to pb service' part
         from twisted.manhole import telnet
         pyshell = telnet.Shell()
         pyshell.connectionMade = lambda *args: None
@@ -231,53 +295,55 @@ class SSHSession(SSHChannel, protocol.Protocol): # treat us as a protocol for th
             'connection':self.conn,
             'transport':self.conn.transport,
         }
-        pyshell.factory = self
+        pyshell.factory = self # we need pyshell.factory.namespace
         pyshell.delimiters.append('\n')
         pyshell.mode = 'Command'
-        pyshell.makeConnection(self)
-        pyshell.loggedIn()
+        pyshell.makeConnection(self) # because we're the transport
+        pyshell.loggedIn() # since we've logged in by the time we make it here
         self.receiveEOF = self.loseConnection
         return pyshell
 
-    def receiveData(self, data):
+    def dataReceived(self, data):
         if not hasattr(self, 'client'):
             log.msg("hmm, got data, but we don't have a client: %s" % repr(data))
             self.conn.sendClose(self)
             return
         self.client.dataReceived(data)
 
-    def receiveExtendedData(self, dataType, data):
+    def extReceived(self, dataType, data):
         if dataType == EXTENDED_DATA_STDERR:
-            if hasattr(self.client, 'errorReceieved'):
-                self.client.errorReceived(data)
+            if hasattr(self.client, 'errReceieved'):
+                self.client.errReceived(data)
         else:
             log.msg('weird extended data: %s' % dataType)
 
 #    def receiveEOF(self):
 #        pass # don't know what to do with this
 
-    def receiveClose(self):
+    def closed(self):
         try:
             del self.client
         except AttributeError:
             pass # we didn't have a client
-        SSHChannel.receiveClose(self)
-    # protocol/process stuff
+        SSHChannel.closed(self)
+
+class SSHSessionProtocol(protocol.Protocol, protocol.ProcessProtocol):
+    def __init__(self, session):
+        self.session = session
+
     def dataReceived(self, data):
-        self.conn.sendData(self, data)
+        self.session.write(data)
+
+    outReceived = dataReceived
 
     def errReceived(self, err):
-        self.conn.sendExtendedData(self, EXTENDED_DATA_STDERR, err)
+        self.session.conn.sendExtendedData(self.session, EXTENDED_DATA_STDERR, err)
 
-    def processEnded(self):
-        self.conn.sendClose(self)
+    def connectionLost(self, reason):
+        self.session.loseConnection()
 
-    # transport stuff
-    def write(self, data):
-        self.conn.sendData(self, data)
+    processEnded = connectionLost
 
-    def loseConnection(self):
-        self.conn.sendClose(self)
 
 MSG_GLOBAL_REQUEST                = 80
 MSG_REQUEST_SUCCESS               = 81

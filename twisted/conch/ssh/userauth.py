@@ -16,19 +16,37 @@
 # 
 import os.path, base64
 from twisted.conch import error
-from twisted.internet import app, defer
+from twisted.internet import app, defer, reactor
 from twisted.python import failure, log
 from common import NS, getNS, MP
 import keys, transport, service
 
 class SSHUserAuthServer(service.SSHService):
     name = 'ssh-userauth'
+    loginTimeout = 10 * 60 * 60 # 10 minutes before we disconnect them
+    attemptsBeforeDisconnect = 20 # number of attempts to allow before a disconnect
+    supportedAuthentications = ['publickey','password']
+
     protocolMessages = None # set later
-    supportedAuthentications = ('publickey','password')
+
     authenticatedWith = []
+    loginAttempts = 0
+    user = None
+    nextService = None
+    
+    def serviceStarted(self):
+        if not self.transport.isEncrypted('out'):
+            self.supportedAuthentications.remove('password')
+            # don't let us transport password in plaintext
+        self.cancelLoginTimeout = reactor.callLater(self.loginTimeout,
+                                                    self.transport.sendDisconnect,
+                                                    transport.DISCONNECT_NO_MORE_AUTH_METHODS_AVAILABLE,
+                                                    'you took too long')
 
     def tryAuth(self, kind, user, data):
         log.msg('%s trying auth %s' % (user, kind))
+        if kind not in self.supportedAuthentications:
+            return defer.fail(error.ConchError('unsupported authentication, failing'))
         d = self.transport.factory.authorizer.getIdentityRequest(user)
         d.pause()
         d.addCallback(self._cbTryAuth, kind, data)
@@ -43,6 +61,8 @@ class SSHUserAuthServer(service.SSHService):
 
     def ssh_USERAUTH_REQUEST(self, packet):
         user, nextService, method, rest = getNS(packet, 3)
+        if user != self.user or nextService != self.nextService:
+            self.authenticatedWith = [] # clear auth state
         self.user = user
         self.nextService = nextService
         self.method = method
@@ -55,7 +75,9 @@ class SSHUserAuthServer(service.SSHService):
             return
         log.msg('%s authenticated with %s' % (self.user, self.method))
         self.authenticatedWith.append(self.method)
+        self.supportedAuthentications.remove(self.method)
         if self.areDone():
+            reactor.cancelCallLater(self.cancelLoginTimeout)
             self.transport.sendPacket(MSG_USERAUTH_SUCCESS, '')
             self.transport.setService(self.transport.factory.services[self.nextService]())
         else:
@@ -71,6 +93,11 @@ class SSHUserAuthServer(service.SSHService):
         if self.method != 'none': # ignore 'none' as a method
             log.msg('%s failed auth %s' % (self.user, self.method))
             log.msg('potential reason: %s' % foo)
+            self.loginAttempts += 1
+            if self.loginAttempts > self.attemptsBeforeDisconnect:
+                self.transport.sendDisconnect(transport.DISCONNECT_NO_MORE_AUTH_METHODS_AVAILABLE,
+                                              'too many bad auths')
+                return
         self.transport.sendPacket(MSG_USERAUTH_FAILURE, NS(','.join(self.supportedAuthentications))+'\x00')
 
     def auth_publickey(self, ident, packet):
@@ -133,6 +160,7 @@ class SSHUserAuthClient(service.SSHService):
         
     def ssh_USERAUTH_SUCCESS(self, packet):
         self.transport.setService(self.instance)
+        self.ssh_USERAUTH_SUCCESS = lambda *a: None # ignore these
 
     def ssh_USERAUTH_FAILURE(self, packet):
         canContinue, partial = getNS(packet)

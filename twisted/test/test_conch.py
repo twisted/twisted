@@ -18,7 +18,7 @@ import os
 from twisted.conch import identity, error
 from twisted.conch.ssh import keys, transport, factory, userauth
 from twisted.cred import authorizer
-from twisted.internet import reactor, defer, app
+from twisted.internet import reactor, defer, app, protocol
 from twisted.python import log
 from pyunit import unittest
 
@@ -62,12 +62,16 @@ class SSHKeysHandlingTestCase(unittest.TestCase):
             os.remove(f)
 
     def testDSA(self):
+        """test DSA keys
+        """
         privKey = keys.getPrivateKeyObject('dsa_test')
         pubKey = keys.getPublicKeyObject('dsa_test.pub')
         self._testKey(privKey, pubKey)
         self._testKeyFromString(privKey, pubKey, privateDSA, publicDSA)
 
     def testRSA(self):
+        """test RSA keys
+        """
         privKey = keys.getPrivateKeyObject('rsa_test')
         pubKey = keys.getPublicKeyObject('rsa_test.pub')
         self._testKey(privKey, pubKey)
@@ -126,11 +130,11 @@ class SSHTestBase:
 
     allowedToError = 0
 
-    def connectionLost(self):
+    def connectionLost(self, reason):
         global theTest
         if not hasattr(self,'expectedLoseConnection'):
             reactor.crash()
-            theTest.fail('unexpectedly lost connection %s' % self)
+            theTest.fail('unexpectedly lost connection %s\n%s' % (self, reason))
         reactor.crash()
 
     def receiveError(self, reasonCode, desc):
@@ -186,6 +190,17 @@ class SSHTestClient(SSHTestBase, transport.SSHClientTransport):
 
     def connectionSecure(self):
         self.requestService(SSHTestClientAuth('testuser',SSHTestConnection()))
+
+class SSHTestClientFactory(protocol.ClientFactory):
+
+    def buildProtocol(self, addr):
+        self.client = SSHTestClient()
+        return self.client
+
+    def clientConnectionFailed(self, reason):
+        global theTest
+        theTest.fail('connection between client and server failed!')
+        reactor.crash()
 
 class SSHTestConnection:
 
@@ -248,6 +263,8 @@ class SSHTransportTestCase(unittest.TestCase):
             os.remove(f)
 
     def testOurServerOurClient(self):
+        """test the SSH server against the SSH client
+        """
         global theTest
         theTest = self
         auth = ConchTestAuthorizer()
@@ -255,9 +272,8 @@ class SSHTransportTestCase(unittest.TestCase):
         auth.addIdentity(ident)
         fac = SSHTestFactory()
         fac.authorizer = auth
-        client = SSHTestClient()
         host = reactor.listenTCP(0, fac).getHost()
         port = host[2]
-        reactor.clientTCP('localhost', port, client)
+        reactor.connectTCP('localhost', port, SSHTestClientFactory())
         reactor.run()
 

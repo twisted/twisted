@@ -52,6 +52,7 @@ class SSHTransportBase(protocol.Protocol):
     supportedLanguages = ()
 
     gotVersion = 0
+    ignoreNextPacket = 0
     buf = ''
     outgoingPacketSequence = 0 
     incomingPacketSequence = 0
@@ -62,7 +63,7 @@ class SSHTransportBase(protocol.Protocol):
     isAuthorized = 0
     service = None
 
-    def connectionLost(self):
+    def connectionLost(self, reason):
         #from twisted.internet import reactor
         #reactor.stop()
         log.msg('connection lost')
@@ -166,7 +167,7 @@ class SSHTransportBase(protocol.Protocol):
                     i = parts.index(p)
                     self.buf = '\n'.join(parts[i+1:])
         packet = self.getPacket()
-        while packet:  
+        while packet:
             messageNum = ord(packet[0])
             if messageNum < 50:
                 messageType = messages[messageNum][4:]
@@ -233,17 +234,49 @@ class SSHTransportBase(protocol.Protocol):
         if alwaysDisplay:
             log.msg('Remote Debug Message:', message)
 
+    def isEncrypted(self, direction = "out"):
+        """direction must be in ["out", "in", "both"]
+        """
+        if self.currentEncryptions == None:
+            return 0
+        elif direction == "out":
+            return self.currentEncryptions.outCip != None
+        elif direction  == "in":
+            return self.currentEncryptions.outCip != None
+        elif direction == "both":
+            return self.isEncrypted("in") and self.isEncrypted("out")
+
+    def isVerified(self, direction = "out"):
+        """direction must be in ["out", "in", "both"]
+        """
+        if self.currentEncryptions == None:
+            return 0
+        elif direction == "out":
+            return self.currentEncryptions.outMAC != None
+        elif direction  == "in":
+            return self.currentEncryptions.outCMAC != None
+        elif direction == "both":
+            return self.isVerified("in") and self.isVerified("out")
+
 class SSHServerTransport(SSHTransportBase):
     def ssh_KEXINIT(self, packet):
         self.clientKexInitPayload = chr(MSG_KEXINIT) + packet
         cookie = packet[:16]
         k = getNS(packet[16:], 10)
         strings, rest = k[:-1], k[-1]
-        assert rest[-1]=='\x00', 'first kex packet sent'
         kexAlgs, keyAlgs, encCS, encSC, macCS, macSC, compCS, compSC, langCS, langSC = \
             [s.split(',') for s in strings]
-        kexAlg = ffs(kexAlgs, self.supportedKeyExchanges)
-        self.kexAlg = kexAlg
+        if ord(rest[0]): # first_kex_packet_follows
+            if kexAlgs[0] != self.supportedKeyExchanges[0] or \
+               keyAlgs[0] != self.supportedPublicKeys[0] or \
+               not ffs(encSC, self.supportedCiphers) or \
+               not ffs(encCS, self.supportedCiphers) or \
+               not ffs(macSC, self.supportedMACs) or \
+               not ffs(macCS, self.supportedMACs) or \
+               not ffs(compCS, self.supportedCompressions) or \
+               not ffs(compSC, self.supportedCompressions):
+                   self.ignoreNextPacket = 1 # guess was wrong
+        self.kexAlg = ffs(kexAlgs, self.supportedKeyExchanges)
         self.keyAlg = ffs(keyAlgs, self.supportedPublicKeys)
         self.nextEncryptions = SSHCiphers(
             ffs(encSC, self.supportedCiphers),
@@ -269,6 +302,9 @@ class SSHServerTransport(SSHTransportBase):
 
 
     def ssh_KEX_DH_GEX_REQUEST_OLD(self, packet):
+        if self.ignoreNextPacket:
+            self.ignoreNextPacket = 0
+            return
         if self.kexAlg == 'diffie-hellman-group1-sha1': # this is really KEXDH_INIT
             clientDHPubKey, foo = getMP(packet)
             y = Util.number.getRandomNumber(16, entropy.get_bytes)
@@ -296,6 +332,9 @@ class SSHServerTransport(SSHTransportBase):
             raise ConchError('bad kexalg: %s' % self.kexAlg)
 
     def ssh_KEX_DH_GEX_REQUEST(self, packet):
+        if self.ignoreNextPacket:
+            self.ignoreNextPacket = 0
+            return
         self.min, self.ideal, self.max = struct.unpack('>3L', packet)
         self.g, self.p = self.factory.getDHPrime(self.ideal)
         self.sendPacket(MSG_KEX_DH_GEX_GROUP, MP(self.p)+MP(self.g))
@@ -368,8 +407,7 @@ class SSHClientTransport(SSHTransportBase):
         strings, rest = k[:-1], k[-1]
         kexAlgs, keyAlgs, encCS, encSC, macCS, macSC, compCS, compSC, langCS, langSC = \
             [s.split(',') for s in strings]
-        kexAlg = ffs(self.supportedKeyExchanges, kexAlgs)
-        self.kexAlg = kexAlg
+        self.kexAlg = ffs(self.supportedKeyExchanges, kexAlgs)
         self.keyAlg = ffs(self.supportedPublicKeys, keyAlgs)
         self.nextEncryptions = SSHCiphers(
             ffs(self.supportedCiphers, encCS),
@@ -385,7 +423,7 @@ class SSHClientTransport(SSHTransportBase):
         if None in self.nextEncryptions.__dict__.values():
             self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED, "couldn't match all kex parts")
             return            
-        if kexAlg == 'diffie-hellman-group1-sha1':
+        if self.kexAlg == 'diffie-hellman-group1-sha1':
             self.x = Util.number.getRandomNumber(512, entropy.get_bytes)
             self.DHpubKey = pow(DH_GENERATOR, self.x, DH_PRIME)
             self.sendPacket(MSG_KEXDH_INIT, MP(self.DHpubKey))
@@ -504,12 +542,12 @@ class SSHCiphers:
         'arcfour':('ARC4', 16),
         'idea-cbc':('IDEA', 16),
         'cast128-cbc':('CAST', 16),
-#        'none':None,
+        'none':None,
     }
     macMap = {
         'hmac-sha1':'sha',
         'hmac-md5':'md5',
-#        'none':None,
+        'none':None,
     }
 
     def __init__(self, outCip, inCip, outMac, inMac):
