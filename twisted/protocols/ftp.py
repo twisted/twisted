@@ -1092,7 +1092,7 @@ class FTPFileListProtocol(basic.LineReceiver):
         self.files = []
 
     def lineReceived(self, line):
-        match = re.match(self.fileLinePattern, line)
+        match = self.fileLinePattern.match(line)
         if match:
             dict = match.groupdict()
             dict['size'] = int(dict['size'])
