@@ -146,7 +146,7 @@ names which then uses reverse proxy (in Apache, via mod_proxy) to different
 internal web servers, possibly on different machines. However, naive 
 configuration causes miscommunication: the internal server firmly believes it
 is running on "internal-name:port", and will generate URLs to that effect,
-which will be completely wrong when gotten to the client.</p>
+which will be completely wrong when received by the client.</p>
 
 <p>While Apache has the ProxyPassReverse directive, it is really a hack
 and is nowhere near comprehensive enough. Instead, the recommended practice
