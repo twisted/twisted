@@ -1,8 +1,7 @@
 """
-Usage: webmon.py <url>
-Write to stdout when URL becomes available/unavailable, or when the content
-changes. Write a "." every five seconds, when the status of the URL stays the
-same.
+Usage: webmon.py <url> [...]
+Write to stdout when a URL becomes available/unavailable, or when the content
+changes.
 """
 from twisted.web import monitor
 from twisted.internet import reactor
@@ -18,9 +17,6 @@ class ChangeChecker(monitor.ChangeChecker):
         else:
             print self.url, "changed"
 
-    def reportNoChange(self):
-        sys.stdout.write(".")
-        sys.stdout.flush()
-
-checker = ChangeChecker(sys.argv[1], 5)
+for url in sys.argv[1:]:
+    ChangeChecker(url, 5)
 reactor.run()
