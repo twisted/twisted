@@ -258,8 +258,7 @@ class Process(abstract.FileDescriptor):
 
         self.outQueue = Queue.Queue()
         self.closed = 0
-        self.stdoutClosed = 0
-        self.stderrClosed = 0
+        self.closedNotifies = 0
         
         addEvent(self.hProcess, self, self.connectionLostNotify)
         threading.Thread(target=self.doWrite).start()
@@ -275,8 +274,9 @@ class Process(abstract.FileDescriptor):
         self.outQueue.put(None)
     
     def connectionLostNotify(self):
-        """Will be called twice, by the stdout and stderr threads."""
-        if not self.closed:
+        """Will be called 3 times, by stdout/err threads and process handle."""
+        self.closedNotifies = self.closedNotifies + 1
+        if self.closedNotifies == 3:
             self.closed = 1
             self.connectionLost()
     
@@ -310,6 +310,7 @@ class Process(abstract.FileDescriptor):
                     bytesToRead = 1
                 hr, data = win32file.ReadFile(self.hStdoutR, bytesToRead, None)
             except win32api.error:
+                task.schedule(self.connectionLostNotify)
                 return
             task.schedule(self.handleChunk, data)
     
@@ -322,6 +323,7 @@ class Process(abstract.FileDescriptor):
                     bytesToRead = 1
                 hr, data = win32file.ReadFile(self.hStderrR, bytesToRead, None)
             except win32api.error:
+                task.schedule(self.connectionLostNotify)
                 return
             task.schedule(self.handleError, data)
 
