@@ -110,6 +110,8 @@ class AppConfiguratorPage(widgets.Presentation):
     def displayTreeElement(self, write, inName, inPath, collection, indentLevel=0):
         subIndent = indentLevel + 1
         for name, entity in collection.listStaticEntities():
+            cfg = coil.getConfigurator(entity)
+            if isinstance(cfg, roots.Collection): entity = cfg
             if isinstance(entity, roots.Collection):
                 write('%s + <a href="%s/%s">%s</a> <br>' %
                       (indentLevel * '&nbsp;', inPath, name, name))
@@ -127,20 +129,44 @@ class AppConfiguratorPage(widgets.Presentation):
             obj = self.app
             for elem in path:
                 if elem:                # '' doesn't count
-                    obj = obj.getStaticEntity(elem)
-                    if obj is None:
+                    try:
+                        newobj = obj.getStaticEntity(elem)
+                    except AttributeError:
+                        newobj = None
+                    if newobj is None:
+                        # see if we can get subobject from configurator
+                        cfg = coil.getConfigurator(obj)
+                        if isinstance(cfg, roots.Collection):
+                            newobj = cfg.getStaticEntity(elem)
+                            if newobj is not None:
+                                obj = newobj
+                                continue
+                        
+                        # no such subobject
                         request.setResponseCode(http.TEMPORARY_REDIRECT)
                         request.setHeader('location', request.prePathURL())
                         return ['Redirecting...']
+                    else:
+                        obj = newobj
         else:
             obj = self.app
         ret = []
         linkfrom = string.join(['config']+request.postpath, '/') + '/'
         cfg = coil.getConfigurator(obj)
+        
+        # add a form for configuration if available
         if cfg and cfg.configTypes:
             ret.extend(widgets.TitleBox("Configuration", ConfigForm(self, cfg, linkfrom)).display(request))
-        if isinstance(obj, roots.Homogenous): # and isinstance(obj.entityType, coil.Configurator):
-            ret.extend(widgets.TitleBox("Listing", CollectionForm(self, obj, linkfrom)).display(request))
+        
+        # add a form for a collection of objects
+        if isinstance(obj, roots.Homogenous):
+            if obj.entityType in (types.StringType, types.IntType, types.FloatType, types.LongType):
+                ret.extend(widgets.TitleBox("Delete Items", ImmutableCollectionDeleteForm(self, obj, linkfrom)).display(request))
+                colClass = ImmutableCollectionForm
+            else:
+                colClass = CollectionForm
+            ret.extend(widgets.TitleBox("Listing", colClass(self, obj, linkfrom)).display(request))
+        
         ret.append(html.PRE(str(obj)))
         return ret
 
@@ -286,3 +312,75 @@ class CollectionForm(widgets.Form):
             raise widgets.FormInputError("Don't know how to %s" % repr(submit))
         self.format(self.getFormFields(request), write, request)
 
+
+class ImmutableCollectionForm(widgets.Form):
+    """A collection of immutable objects such as strings or integers."""
+    
+    typeMap = {types.StringType : 'string',
+               types.IntType : 'integer',
+               types.FloatType : 'float'
+              }
+    
+    def __init__(self, appcpage, coll, linkfrom):
+        self.appcpage = appcpage
+        self.collection = coll
+        self.linkfrom = linkfrom
+    
+    def getFormFields(self, request):
+        result = []
+        for name, val in self.collection.listStaticEntities():
+            result.append(['string', name, 'val_%s' % name, val])
+        result.append(['string', "New %s to Insert" % self.collection.getNameType(), "name", ""])
+        kind = self.typeMap[self.collection.entityType]
+        result.append([kind, "%s to Insert" % self.collection.getEntityType(), "value", ""])
+        return widgets.Form.getFormFields(self, request, result)
+
+    def process(self, write, request, submit, name, value, **newitems):
+        if name:
+            try:
+                self.collection.putEntity(name, value)
+            except:
+                raise widgets.FormInputError(str(sys.exc_info()[1]))
+            write("<b>%s created!</b>" % name)
+        for key, value in newitems.items():
+            if len(key) <= 4 or key[:4] != "val_": continue
+            key = key[4:]
+            try:
+                self.collection.putEntity(key, value)
+            except:
+                raise widgets.FormInputError(str(sys.exc_info()[1]))
+            write("<b>%s changed!</b>" % key)
+        self.format(self.getFormFields(request), write, request)
+
+
+class ImmutableCollectionDeleteForm(widgets.Form):
+    """A collection of immutable objects such as strings or integers.
+    
+    This form allows you to delete entries.
+    """
+    
+    submitNames = ["Delete"]
+    
+    def __init__(self, appcpage, coll, linkfrom):
+        self.appcpage = appcpage
+        self.collection = coll
+        self.linkfrom = linkfrom
+    
+    def getFormFields(self, request):
+        itemlst = []
+        for name, val in self.collection.listStaticEntities():
+            itemlst.append([name, '%s: %s' % (name, html.escape(repr(val))), 0])
+        result = []
+        if itemlst:
+            result.append(['checkgroup', 'Items in Set<br>(Select to Delete)',
+                           'items', itemlst])
+        return widgets.Form.getFormFields(self, request, result)
+
+    def process(self, write, request, submit, items=()):
+        try:
+            for item in items:
+                self.collection.delEntity(item)
+        except:
+            raise widgets.FormInputError(str(sys.exc_info()[1]))
+        write("<b>Items Deleted.</b><br>(%s)<br>" % html.escape(repr(items)))
+        self.format(self.getFormFields(request), write, request)

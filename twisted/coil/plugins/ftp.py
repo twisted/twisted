@@ -19,12 +19,28 @@
 # Twisted Imports
 from twisted.coil import app, coil
 from twisted.protocols import ftp
+from twisted.python import roots
 
 # System Imports
 import types, os
 
 
-class FTPConfigurator(app.ProtocolFactoryConfigurator):
+class UserCollection(roots.Homogenous):
+    """A username/password collection."""
+    
+    entityType = types.StringType
+    
+    def __init__(self, factory):
+        roots.Homogenous.__init__(self, factory.userdict)
+
+    def getEntityType(self):
+        return "Password"
+    
+    def getNameType(self):
+        return "Username"
+
+
+class FTPConfigurator(app.ProtocolFactoryConfigurator, roots.Locked):
 
     configurableClass = ftp.FTPFactory
     
@@ -37,6 +53,12 @@ class FTPConfigurator(app.ProtocolFactoryConfigurator):
 
     configName = 'FTP Server'
 
+    def __init__(self, instance):
+        roots.Locked.__init__(self)
+        app.ProtocolFactoryConfigurator.__init__(self, instance)
+        self.putEntity("users", UserCollection(self.instance))
+        self.lock()
+    
     def config_root(self, root):
         if not os.path.exists(root):
             raise coil.InvalidConfiguration("No such path: %s" % root)

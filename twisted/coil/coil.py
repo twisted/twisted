@@ -156,7 +156,10 @@ def getConfigurableClass(configuratorClass):
 
 def getConfigurator(instance):
     """Return a configurator for a configurable instance, or None."""
-    klass = instance.__class__
+    try:
+        klass = instance.__class__
+    except AttributeError:
+        return None
     try:
         configuratorClass = configurators[klass]
     except KeyError:
