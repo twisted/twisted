@@ -18,8 +18,7 @@
 from twisted.protocols.sux import XMLParser
 import os, re
 
-normalizeRE = re.compile(r'\s{2,}')
-escapingRE = re.compile(r'([#$%&_\{}])')
+escapingRE = re.compile(r'([#$%&_{}^~])')
 
 class LatexSpitter(XMLParser):
 
@@ -49,15 +48,9 @@ class LatexSpitter(XMLParser):
         if self.ignoring:
             return
         if self.normalizing:
-            # Convert CR and LF to ordinary spaces...
-            data = data.replace('\r', ' ')
             data = data.replace('\n', ' ')
-            # ...and collapse consecutive spaces to a single space.
-            data = normalizeRE.sub(' ', data)
         if self.escaping:
-            data = escapingRE.sub(r'\\\1', data)
-            # ^ and ~ need special escapes.
-            data = data.replace('~', '\\verb@~@').replace('^', '\\^{}')
+            data = escapingRE.sub(r'\\\1{}', data).replace('\\', '$\backslash$')
         self.writer(data)
 
     def gotEntityReference(self, entityRef):
