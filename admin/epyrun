@@ -12,7 +12,6 @@ sys.path.insert(0, os.curdir)
 
 import os, sys
 
-#it'd be nice to get this working
 def myimport(*args):
     try: 
         return im(*args)
@@ -83,6 +82,8 @@ components.Interface = Interface
 from twisted.python import reflect
 from twisted.internet import reactor
 # epydoc
+import epydoc
+assert epydoc.__version__[0] == '2', "You need epydoc 2.x!"
 from epydoc.cli import cli
 from epydoc.html import HTMLFormatter
 import epydoc.html
