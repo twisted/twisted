@@ -86,8 +86,8 @@ class ServiceSubscription(Ephemeral):
         """Send out the DNS query for this service."""
         # XXX add Known Answers, first should be set to ask for unicast
         self.resolver.protocol.write(queries=[dns.Query(self.service, dns.PTR, dns.IN)])
-        self._scheduledQuery = reactor.callLater(self.intervals.next(),
-                                                 self._sendQuery)
+        self._scheduledQuery = self.resolver.callLater(self.intervals.next(),
+                                                       self._sendQuery)
     
     def _generateIntervals(self):
         """Intervals of querying for the records."""
@@ -118,7 +118,7 @@ class ServiceSubscription(Ephemeral):
         assert isinstance(name, unicode)
         timeouts = self.timeouts[name]
         if timeouts:
-            self.expires[name] = reactor.callLater(timeouts[0], self._expire, name)
+            self.expires[name] = self.resolver.callLater(timeouts[0], self._expire, name)
             self.timeouts[name] = timeouts[1:]
             if write:
                 self.resolver.protocol.write(queries=[
@@ -200,7 +200,7 @@ class mDNSResolver(Ephemeral):
             self.queries[(query.type, name)][0].append(d)
         else:
             self.queries[(query.type, name)] = [[d], timeouts[1:]]
-            reactor.callLater(timeouts[0], self._queryTimeout, query)
+            self.callLater(timeouts[0], self._queryTimeout, query)
             self.protocol.write(queries=[query])
         return d
     
@@ -215,7 +215,7 @@ class mDNSResolver(Ephemeral):
                 d.errback(failure.Failure(dns.DNSQueryTimeoutError(query)))
         elif self.protocol.transport:
             l[1] = timeouts[1:]
-            reactor.callLater(timeouts[0], self._queryTimeout, query)
+            self.callLater(timeouts[0], self._queryTimeout, query)
             self.protocol.write(queries=[query])
 
     def _cbResolved(self, message, domain):
@@ -236,6 +236,10 @@ class mDNSResolver(Ephemeral):
                 self._cbResolved, domain)
     
     # internal methods
+
+    def callLater(self, *args, **kwargs):
+        """Pluggable hook for testing."""
+        return reactor.callLater(*args, **kwargs)
     
     def messageReceived(self, message, address):
         #print message.queries, message.answers, message.answer
@@ -264,7 +268,7 @@ class mDNSResolver(Ephemeral):
                     if instanceName.endswith(service):
                         # we might have gotten A record with this SRV, so to make sure we have its
                         # IP cached we put off the notification slightly
-                        reactor.callLater(0, subscription.gotSRV, instanceName, r.payload)
+                        self.callLater(0, subscription.gotSRV, instanceName, r.payload)
                         break
             elif r.type == dns.A:
                 name = str(r.name)
@@ -272,7 +276,7 @@ class mDNSResolver(Ephemeral):
                     self.domainExpires[name].delay(r.payload.ttl)
                 else:
                     self.cachedDomains[name] = r.payload.dottedQuad()
-                    self.domainExpires[name] = reactor.callLater(r.payload.ttl, self._expireDomain, name)
+                    self.domainExpires[name] = self.callLater(r.payload.ttl, self._expireDomain, name)
     
     def _removeSubscription(self, service):
         """Called by ServiceSubscription to remove itself."""
