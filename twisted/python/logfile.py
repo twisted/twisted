@@ -34,7 +34,7 @@ class BaseLogFile:
     synchronized = ["write", "rotate"]
     
     def __init__(self, name, directory, defaultMode=None):
-        self.directory = os.path.realpath(directory)
+        self.directory = directory
         assert os.path.isdir(self.directory)
         self.name = name
         self.path = os.path.join(directory, name)
