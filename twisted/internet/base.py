@@ -356,7 +356,7 @@ class ReactorBase:
         """See twisted.internet.interfaces.IReactorTime.callLater.
         """
         assert callable(f), "%s is not callable" % f
-        assert seconds >= 0
+        assert seconds >= 0, "%s is not greater than or equal to 0 seconds" % (seconds,)
         tple = DelayedCall(time() + seconds, f, args, kw, self._pendingTimedCalls.remove, self._resetCallLater)
         insort(self._pendingTimedCalls, tple)
         return tple
