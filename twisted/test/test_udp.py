@@ -272,10 +272,16 @@ class MulticastTestCase(unittest.TestCase):
             self.assertEquals(o.transport.getTTL(), 2)
 
     def testLoopback(self):
-        for o in self.client, self.server:
-            self.assertEquals(o.transport.getLoopbackMode(), 1)
-            o.transport.setLoopbackMode(0)
-            self.assertEquals(o.transport.getLoopbackMode(), 0)
+        self.assertEquals(self.server.transport.getLoopbackMode(), 1)
+        self.runUntilSuccess(self.server.transport.joinGroup, "225.0.0.250")
+        self.server.transport.write("hello", ("225.0.0.250", self.server.transport.getHost().port))
+        reactor.iterate()
+        self.assertEquals(len(self.server.packets), 1)
+        self.server.transport.setLoopbackMode(0)
+        self.assertEquals(self.server.transport.getLoopbackMode(), 0)
+        self.server.transport.write("hello", ("225.0.0.250", self.server.transport.getHost().port))
+        reactor.iterate()
+        self.assertEquals(len(self.server.packets), 1)
     
     def testInterface(self):
         for o in self.client, self.server:
