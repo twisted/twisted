@@ -285,7 +285,7 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, SFTPTestBase):
         log.msg('running %s %s' % (exe, cmds))
         self.processProtocol = SFTPTestProcess()
         reactor.spawnProcess(self.processProtocol, exe, cmds.split(),
-                             env={'PYTHONPATH': twisted_path + '/..'})
+                             env=None)
         timeout = time.time() + 10
         while (not self.processProtocol.buffer) and (time.time() < timeout):
             reactor.iterate(0.1)
@@ -443,7 +443,7 @@ class TestOurServerBatchFile(test_process.SignalMixin, SFTPTestBase):
         open(fn, 'w').write(f)
         l = []
         cmds = (self.cmd % fn).split()
-        d = getProcessOutputAndValue(sys.executable, cmds)
+        d = getProcessOutputAndValue(sys.executable, cmds, env=None)
         d.setTimeout(10)
         d.addBoth(l.append)
         while not l:
