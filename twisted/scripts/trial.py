@@ -372,6 +372,7 @@ def reallyRun(config):
         prof = profile.Profile()
         try:
             prof.runcall(suite.run, reporter, config['random'])
+            prof.dump_stats('profile.data')
         except SystemExit:
             pass
         prof.print_stats()
