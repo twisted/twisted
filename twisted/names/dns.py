@@ -22,6 +22,9 @@ import random, string, struct
 
 DNS, TCP = range(2)
 
+DNS_PORT = 53
+
+
 class DNSBoss:
     protocols = (dns.DNS, dns.DNSOnTCP)
     portPackages = (udp, tcp)
@@ -125,7 +128,7 @@ class SentQuery:
         self.name = name
         self.type = type
         for nameserver in nameservers:
-            self.ids.append(boss.queryUDP((nameserver, 53), name, 
+            self.ids.append(boss.queryUDP((nameserver, DNS_PORT), name, 
                                           self.getAnswer, type=type))
 
     def getAnswer(self, message):
