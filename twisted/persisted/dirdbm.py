@@ -73,7 +73,7 @@ class DirDBM:
         assert type(k) == types.StringType
         k = self._encode(k)
         try:    return _open(os.path.join(self.dname, k), "rb").read()
-        except: raise KeyError(k)
+        except: raise KeyError(self._decode(k))
 
     def __delitem__(self, k):
         """del dirdbm[foo]; delete a file in this directory
@@ -81,7 +81,7 @@ class DirDBM:
         assert type(k) == types.StringType
         k = self._encode(k)
         try:    os.remove(os.path.join(self.dname, k))
-        except (OSError, IOError): raise KeyError(k)
+        except (OSError, IOError): raise KeyError(self._decode(k))
 
     def keys(self):
         """dirdbm.keys(); return a list of filenames
@@ -150,7 +150,7 @@ class Shelf(DirDBM):
             f = _open(os.path.join(self.dname, k), "rb")
             return cPickle.Unpickler(f).load()
         except (OSError, IOError, cPickle.UnpicklingError):
-            raise KeyError(k)
+            raise KeyError(self._decode(k))
 
 
 def open(file, flag = None, mode = None):
