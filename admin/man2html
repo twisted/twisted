@@ -1,0 +1,3 @@
+#!/bin/sh
+filename=`echo $1 | sed 's/\.1$//'`
+groff -Thtml -man $filename.1 | egrep -v '(^<a href.*<br>$)|(<hr>)|(^<tr )|(^<td )|(^ *cols=)|(^<meta )' | sed -e 's#^<table.*#<p>#' -e 's#</td>.*#</p>#' -e 's/<b>/<strong>/g' -e 's#</b>#</strong>#g' -e 's/<i>/<em>/g' -e 's#</i>#</em>#g' -e 's/align=center//' -e 's#<br>#</p><p>#' > $filename.html
