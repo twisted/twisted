@@ -100,7 +100,6 @@ class AuthServer(StupidRPC):
 
 
     def remote_auth(self, name, password):
-        print "trying to login with ", repr(name), repr(password)
         d = self.factory.portal.login(
             credentials.UsernamePassword(name, password),
             None,
@@ -110,13 +109,11 @@ class AuthServer(StupidRPC):
     remote_auth.sig = (str, str)
 
     def _cbGotRoot(self, root):
-        print "HELLO CBGOTROOT"
         self.root = root
         root.proto = self
         self.sendSuccess(AUTH_SUCCESS)
 
     def _ebNoRoot(self, f):
-        print "HELLOEBNOROOT"
         log.err(f)
         self.sendFailure(AUTH_FAILURE)
 
@@ -132,7 +129,6 @@ def ipify(ipstr):
 class CapServer:
 
     def remote_bindPort(self, interface, portno):
-        print "HEY!", interface
         self.proto.sendSuccess("<3")
     remote_bindPort.sig = (ipify, int)
 
