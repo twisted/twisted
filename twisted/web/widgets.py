@@ -451,12 +451,13 @@ class Form(StreamWidget):
         return fields
 
     submitNames = ['Submit']
+    actionURI = ''
 
     def format(self, form, write, request):
         """I display an HTML FORM according to the result of self.getFormFields.
         """
         write('<FORM ENCTYPE="multipart/form-data" METHOD="post" ACTION="%s">\n'
-              '<TABLE BORDER="0">\n' % request.uri)
+              '<TABLE BORDER="0">\n' % (self.actionURI or request.uri))
   
         for field in form:
             if len(field) == 5:
@@ -655,13 +656,13 @@ class RenderSession:
 
     class Sentinel:
         pass
-
+    
     def __init__(self, lst, request):
         self.lst = lst
         self.request = request
         self.needsHeaders = 0
         self.beforeBody = 1
-
+        self.forgotten = 0
         toArm = []
         for i in range(len(self.lst)):
             item = self.lst[i]
@@ -687,6 +688,8 @@ class RenderSession:
         return sentinel
 
     def callback(self, result, sentinel, decNeedsHeaders):
+        if self.forgotten:
+            return
         if result != FORGET_IT:
             self.needsHeaders = self.needsHeaders - decNeedsHeaders
         else:
@@ -699,6 +702,8 @@ class RenderSession:
         # If the deferred does not wish to produce it's result all at
         # once, it can give us a partial result as
         #  (NOT_DONE_YET, partial_result)
+        ## XXX: How would a deferred go about producing the result in multiple
+        ## stages?? --glyph
         if result[0] is NOT_DONE_YET:
             done = 0
             result = result[1]
@@ -749,9 +754,10 @@ class RenderSession:
         assert self.lst is not None, "This shouldn't happen."
         while 1:
             item = self.lst[0]
-            if self.beforeBody and item == FORGET_IT:
+            if self.beforeBody and FORGET_IT in self.lst:
                 # If I haven't moved yet, and the widget wants to take
                 # over the page, let it do so!
+                self.forgotten = 1
                 return
 
             if isinstance(item, types.StringType):
