@@ -1,3 +1,9 @@
+2002-09-25  Kevin Turner  <acapnotic@twistedmatrix.com>
+
+	* twisted/tap/manhole.py: mktap manhole will now prompt for a
+	password or accept one from stdin if one is not provided on the
+	command line.
+
 2002-09-25  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
 
 	* bin/tapconvert: made sure tapconvert program gets installed.

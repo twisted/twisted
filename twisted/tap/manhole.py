@@ -23,18 +23,50 @@ from twisted.manhole import service
 from twisted.cred import authorizer
 from twisted.spread import pb
 from twisted.python import usage
-import sys
+import getpass, os, sys
 
 
 class Options(usage.Options):
-    optParameters = [["password", "w", "admin"],
-                  ["user", "u", "admin"]]
+    synopsis = "mktap manhole [options]"
+    optParameters = [["user", "u", "admin"]]
     def opt_port(self, opt):
         try:
             self.opts['portno'] = int(opt)
         except ValueError:
             raise usage.error("Invalid argument to 'port'!")
+
+    def opt_password(self, password):
+        """Required.  '-' will prompt or read a password from stdin.
+        """
+        # If standard input is a terminal, I prompt for a password and
+        # confirm it.  Otherwise, I use the first line from standard
+        # input, stripping off a trailing newline if there is one.
+        if password in ('', '-'):
+            if os.isatty(sys.stdin.fileno()):
+                gotit = 0
+                while not gotit:
+                    try1 = getpass.getpass()
+                    try2 = getpass.getpass("Confirm: ")
+                    if try1 == try2:
+                        gotit = 1
+                    else:
+                        sys.stderr.write("Passwords don't match.\n")
+                else:
+                    self.opts['password'] = try1
+            else:
+                self.opts['password'] = sys.stdin.readline()
+                if self.opts['password'][-1] == '\n':
+                    self.opts['password'] = self.opts['password'][:-1]
+        else:
+            self.opts['password'] = password
+
+    def postOptions(self):
+        if not self.opts.has_key('password'):
+            self.opt_password('-')
+        print "password is", repr(self.opts['password'])
+            
     opt_p = opt_port
+    opt_w = opt_password
 
 
 def updateApplication(app, config):
