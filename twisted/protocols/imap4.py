@@ -938,6 +938,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             self.transport.startTLS(self.ctx)
             self.startedTLS = True
             if 'LOGIN' not in self.challengers:
+                self.challengers = self.challengers.copy()
                 self.challengers['LOGIN'] = LOGINCredentials
         else:
             self.sendNegativeResponse(tag, 'TLS not available')
