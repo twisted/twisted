@@ -189,6 +189,7 @@ class Options(usage.Options):
             #assert filename.endswith('.py') # YOU BASTARDS
             try:
                 prog = open(filename).read()
+                prog = '\n'.join(prog.splitlines()) + '\n'
             except IOError, err:
                 sys.stderr.write("Not printing coverage data for %r: %s\n" % (filename, err))
                 sys.stderr.flush()
