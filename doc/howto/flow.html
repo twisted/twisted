@@ -276,6 +276,7 @@ print list(flow.Block(Consumer))
 implicitly, and thus the generator above is equivalent to...</p>
 
 <pre class="python">
+from __future__ import generators
 def Consumer():
     producer = flow.wrap(Counter(3))
     while True:
@@ -293,6 +294,7 @@ More concretely...
 </p>
 
 <pre class="python">
+from __future__ import generators
 def Consumer():
     producer = flow.wrap(Counter(3))
     while True:
