@@ -86,8 +86,12 @@ class MultiService(Service):
         if service.name is not None:
             self.namedServices[service.name] = service
         self.services.append(service)
+        if self.running:
+            service.startService()
 
     def removeService(self, service):
         if service.name:
             del self.namedServices[service.name]
         self.services.remove(service)
+        if self.running:
+            service.stopService()
