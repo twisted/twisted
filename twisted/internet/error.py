@@ -39,6 +39,10 @@ class ConnectError(Exception):
         Exception.__init__(self, string)
 
 
+class ConnectBindError(ConnectError):
+    """Couldn't bind."""
+
+
 class UnknownHostError(ConnectError):
     """Hostname couldn't be looked up."""
 

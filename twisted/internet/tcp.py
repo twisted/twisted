@@ -178,9 +178,11 @@ class BaseClient(Connection):
         if err == "address not found":
             err = error.UnknownHostError()
         self.connector.connectionFailed(failure.Failure(err))
-        self.stopReading()
-        self.stopWriting()
-        del self.connector
+        if hasattr(self, "reactor"):
+            # this doesn't happens if we failed in __init__
+            self.stopReading()
+            self.stopWriting()
+            del self.connector
 
     def createInternetSocket(self):
         """(internal) Create an AF_INET socket.
@@ -299,11 +301,20 @@ class UNIXClient(BaseClient):
 class TCPClient(BaseClient):
     """A TCP client."""
 
-    def __init__(self, host, port, connector, reactor=None):
+    def __init__(self, host, port, bindAddress, connector, reactor=None):
         self.connector = connector
         skt = self.createInternetSocket()
         self.addr = (host, port)
-        self._finishInit(self.resolveAddress, skt, None, reactor)
+        whenDone = self.resolveAddress
+        err = None
+        # try to bind to given address
+        if bindAddress is not None:
+            try:
+                skt.bind(bindAddress)
+            except socket.error, se:
+                err = error.ConnectBindError(se[0], se[1])
+                whenDone = None
+        self._finishInit(whenDone, skt, err, reactor)
 
 
 class Server(Connection):

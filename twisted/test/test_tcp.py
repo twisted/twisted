@@ -284,5 +284,32 @@ class CannotBindTestCase (unittest.TestCase):
 
         p1.stopListening()
 
+    def testClientBind(self):
+        f = MyServerFactory()
+        p = reactor.listenTCP(0, f, interface="127.0.0.1")
+        
+        factory = MyClientFactory()
+        reactor.connectTCP("127.0.0.1", p.getHost()[2], factory, bindAddress=("127.0.0.1", 0))
+        while not factory.protocol:
+            reactor.iterate()
+        
+        self.assertEquals(factory.protocol.made, 1)
+
+        port = factory.protocol.transport.getHost()[2]
+        f2 = MyClientFactory()
+        reactor.connectTCP("127.0.0.1", p.getHost()[2], f2, bindAddress=("127.0.0.1", port))
+        reactor.iterate()
+        reactor.iterate()
+        
+        self.assertEquals(f2.failed, 1)
+        f2.reason.trap(error.ConnectBindError)
+
+        p.stopListening()
+        factory.protocol.transport.loseConnection()
+        reactor.iterate()
+        reactor.iterate()
+        reactor.iterate()
+
+
 
 

@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.24 2002/07/28 18:43:54 glyph Exp $
+# $Id: default.py,v 1.25 2002/07/29 23:33:55 itamarst Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -129,7 +129,7 @@ class TCPConnector(BaseConnector):
         BaseConnector.__init__(self, reactor, factory, timeout)
 
     def _makeTransport(self):
-        return tcp.TCPClient(self.host, self.port, self, self.reactor)
+        return tcp.TCPClient(self.host, self.port, self.bindAddress, self, self.reactor)
 
     def getDestination(self):
         return ('INET', self.host, self.port)
@@ -158,7 +158,7 @@ class SSLConnector(BaseConnector):
         BaseConnector.__init__(self, reactor, factory, timeout)
 
     def _makeTransport(self):
-        return ssl.Client(self.host, self.port, self.contextFactory, self, self.reactor)
+        return ssl.Client(self.host, self.port, self.bindAddress, self.contextFactory, self, self.reactor)
 
     def getDestination(self):
         return ('SSL', self.host, self.port)
