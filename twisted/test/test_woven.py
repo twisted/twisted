@@ -553,3 +553,38 @@ class GuardTest(unittest.TestCase):
         # print req.session.services
         for sz in swrap.sessions.values():
             sz.expire()
+
+
+class _TestPage(page.Page):
+    template = """
+        <html><body>
+
+        <div>First: <span model="title" view="Text"/></div>
+        <div>Second: <span model="title" view="Text"/></div>
+        <div>Third: <span model="title" view="Text"/></div>
+
+        </body></html>
+    """
+
+    def wmfactory_title(self, request):
+        d = defer.Deferred()
+        reactor.callLater(0, d.callback, 'The Result')
+        return d
+
+class DeferredModelTestCase(unittest.TestCase):
+    def testDeferredModel(self):
+        # Test that multiple uses of a deferred model work correctly.
+        channel = FakeHTTPChannel()
+        channel.site = FakeSite(_TestPage())
+        request = channel.makeFakeRequest('/')
+
+        while not request.finished:
+            reactor.iterate()
+        
+        dom = microdom.parseXMLString(request.written.getvalue())
+        spanElems = domhelpers.findNodesNamed(dom, 'span')
+        for spanElem in spanElems:
+            self.failUnlessEqual('The Result', spanElem.childNodes[0].data)
+        
+        
+
