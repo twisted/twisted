@@ -8,7 +8,7 @@
 
       <h3>Gadget</h3>
 	<p>A collection of widgets. like a "directory" of HTML files. you add
-	  widgets to it with self.addWidget("name", WidgetInstance()). This 
+	  widgets to it with self.putWidget("name", WidgetInstance()). This 
 	  widget will be rendered inside the Gadget-local page. Also, if you
 	  make a Gadget that is also a subclass of "Widget", then whenever the
 	  "index"  (http://foo.com/foo/, "foo" being the Gadget/Widget 
@@ -84,7 +84,7 @@ template = '''&lt;html&gt;&lt;head&gt;&lt;title&gt;%%%%title%%%%&lt;/title&gt;&l
 <h3>Adding Widgets to a Gadget</h3>
 <p>
 I had some code like this in one of my Gadgets:<br>
-<code>self.addWidget("Foo", widgets.TitleBox(MyWidget())).</code><br>
+<code>self.putWidget("Foo", widgets.TitleBox(MyWidget())).</code><br>
 Later whenever trying to access this widget I got this traceback:
 
 <pre>
@@ -95,7 +95,7 @@ Traceback evaluating code in twisted.words.webwords.Page:Traceback (most recent 
 AttributeError: TitleBox instance has no attribute 'getHeader'
 </pre>
 <p>
-Now remember, widgets that you add to a gadget with addWidget are rendered with self.page
+Now remember, widgets that you add to a gadget with putWidget are rendered with self.page
 like so: self.page(theChildWidget). The problem is, theChildWidget in this case was actually
 TitleBox! and of course, TitleBox doesn't follow our template's protocol of having a 'getHeader'
 method. So, the lesson is: do not wrap your real widgets with other widgets when adding to
