@@ -24,10 +24,10 @@ sys.path.append('.')
 from twisted.protocols import telnet
 from twisted.internet import main,tcp
 from twisted.python import usage
-import sys, traceback, os
+import sys, traceback, os, cPickle
 
 class GeneralOptions(usage.Options):
-    optFlags = [['help', 'h']]
+    optFlags = [['help', 'h'], ['append', 'a']]
     optStrings = [['uid', 'u', os.getuid()], ['gid', 'g', os.getgid()]]
 
     def parseArgs(self, *args):
@@ -67,7 +67,10 @@ except usage.error, ue:
     print "Usage Error: %s" % ue
     sys.exit()
 
-a = main.Application(options.args[0], int(options.uid), int(options.gid))
+if not options.append:
+    a = main.Application(options.args[0], int(options.uid), int(options.gid))
+else:
+    a = cPickle.load(open(options.args[0]+'.tap'))
 for num, proto in mod.getPorts(a, config):
     a.listenOn(num, proto)
 a.save()
