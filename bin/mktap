@@ -6,7 +6,7 @@ Usage::
   mktap *apptype* *application_options*
   mktap --help *apptype*
 
-So far *apptype* can be 'web', 'irc', 'reality', 'toc', 'mail' and 'telnet'
+So far *apptype* can be 'web', 'words', 'reality', 'toc', 'mail' and 'telnet'
 
 """
 
@@ -49,15 +49,15 @@ except:
     print __doc__
     sys.exit()
 
-if options.help:
+if options.help or not options.args:
     if options.args:
         mod = getModule(options.args[0])
         print mod.usage_message
         sys.exit()
-    else: 
+    else:
         print __doc__
 	sys.exit()
-else: 
+else:
     mod = getModule(options.args[0])
 try:
     config = mod.Options()
@@ -71,4 +71,3 @@ a = main.Application(options.args[0], int(options.uid), int(options.gid))
 for num, proto in mod.getPorts(a, config):
     a.listenOn(num, proto)
 a.save()
-
