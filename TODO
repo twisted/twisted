@@ -21,11 +21,12 @@ this file directly.
 001 [[Glyph]] Asynchronous Authentication Service.  PB (and similiar) servers
     ought to be able to defer their authentication at least to another PB
     service.  This means that the Authenticator interface has to be revamped to
-    use callbacks instead of return values. (this is twisted.manhole.webcoil)
+    use callbacks instead of return values.
 
 002 *{Glyph Lefkowitz}* Configuration Application.  Twisted needs an
     interactive application for exploring and composing the various types of
-    services that are available; mktap is not adequate.
+    services that are available; mktap is not adequate. (this is 
+    twisted.manhole.webcoil)
 
 003 [[Paul Swartz]] Integration of TOC and Words.  twisted.protocols.toc ought
     to integrate with twisted.words, so that AIM, IRC, and PB clients can all
