@@ -15,4 +15,5 @@ application.listenTCP(19988, site)
 
 # The "slaver" server
 fact = pb.BrokerFactory(distrib.ResourcePublisher(server.Site(static.File('static'))))
-application.listenTCP('./.rp', fact)
+
+application.listenUNIX('./.rp', fact)

@@ -178,7 +178,7 @@ def updateApplication(app, config):
 
         pw_name, pw_passwd, pw_uid, pw_gid, pw_gecos, pw_dir, pw_shell \
                  = pwd.getpwuid(os.getuid())
-        app.listenTCP(os.path.join(pw_dir,
+        app.listenUNIX(os.path.join(pw_dir,
                                    distrib.UserDirectory.userSocketName),
                       pb.BrokerFactory(distrib.ResourcePublisher(site)))
     else:
