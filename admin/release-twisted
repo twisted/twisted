@@ -277,7 +277,7 @@ def createSubprojectDirectory(proj, version):
     os.makedirs(sdir+'/twisted/%s' % (proj,))
     os.makedirs(sdir+'/twisted/plugins')
 
-    sh('''
+    sh("""
     ln -s `pwd`/Twisted.exp/twisted/%(proj)s/* %(sdir)s/twisted/%(proj)s
     rm %(sdir)s/twisted/%(proj)s/topfiles
     rm %(sdir)s/twisted/%(proj)s/__init__.py
@@ -285,14 +285,15 @@ def createSubprojectDirectory(proj, version):
     ln -s `pwd`/Twisted.exp/LICENSE %(sdir)s
     ln -s `pwd`/Twisted.exp/twisted/%(proj)s/topfiles/* %(sdir)s
 
-    # We want this project's plugin module
-    ln -s `pwd`/Twisted.exp/twisted/plugins/twisted_%(proj)s.py %(sdir)s/twisted/plugins
-
     # we want copies so we can replace versions
     rm %(sdir)s/setup.py %(sdir)s/README
     cp `pwd`/Twisted.exp/twisted/%(proj)s/topfiles/setup.py %(sdir)s/
     cp `pwd`/Twisted.exp/twisted/%(proj)s/topfiles/README %(sdir)s/
-    ''' % locals())
+    """ % locals())
+    if os.path.exists('Twisted.exp/twisted/plugins/twisted_%s.py'):
+        sh("ln -s `pwd`/Twisted.exp/twisted/plugins/twisted_%(proj)s.py "
+           "%(sdir)s/twisted/plugins" % locals())
+    
     replaceMe = {'SVN-Trunk': version}
     replaceInFile(os.path.join(sdir, 'setup.py'), replaceMe)
     replaceInFile(os.path.join(sdir, 'README'), replaceMe)
