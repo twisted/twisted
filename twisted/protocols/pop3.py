@@ -56,7 +56,7 @@ class POP3(basic.LineReceiver):
     
     def processCommand(self, command, *args):
         command = string.upper(command)
-        if self.mbox is None and command not in ('APOP', 'USER', 'PASS'):
+        if self.mbox is None and command not in ('APOP', 'USER', 'PASS', 'RPOP'):
             raise POP3Error("not authenticated yet: cannot do %s" % command)
         f = getattr(self, 'do_' + command, None)
         if f:
@@ -173,6 +173,9 @@ class POP3(basic.LineReceiver):
         """Respond with the highest message access thus far"""
         # omg this is such a retarded protocol
         self.successResponse(self.highest)
+
+    def do_RPOP(self, user):
+        self.failResponse('permission denied, sucker')
 
     def do_QUIT(self):
         self.mbox.sync()
