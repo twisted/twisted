@@ -468,7 +468,10 @@ class Form(StreamWidget):
                   '<TD VALIGN="%s">\n' %
                   (displayName, ((inputType == 'text') and 'top') or 'middle'))
             self.formGen[inputType](write, inputName, inputValue)
-            write('\n%s\n</td>\n</tr>\n' % description)
+            write('\n<br>\n<font size="-1">%s</font></td>\n</tr>\n' % description)
+
+                 
+
         write('<TR><TD></TD><TD ALIGN="left"><hr>\n')
         for submitName in self.submitNames:
             write('<INPUT TYPE="submit" NAME="submit" VALUE="%s">\n' % submitName)
