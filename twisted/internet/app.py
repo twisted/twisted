@@ -305,13 +305,6 @@ class Application(log.Logger, styles.Versioned):
         'installSignalHandlers' is passed through to main.run(), the
         function that starts the mainloop.
         """
-        # now this is an ugly hack - make sure that we have a reactor installed
-        import twisted.internet
-        if not twisted.internet.reactor:
-            import default
-            reactor = default.SelectReactor()
-            reactor.install()
-            
         from twisted.internet import reactor
     
         if not self.running:
