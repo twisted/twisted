@@ -5,19 +5,48 @@ This is a compatibility hack to turn twisted.python.log functions into calls
 to the new logging module in 2.3.
 """
 
+import sys
 import logging
-
+import logging.handlers
 
 from twisted.python import log
 
 class LogOwner:
+    fmt = "%(asctime)s %(levelname)-5s %(name)s: %(filename)s:%(lineno)d: %(message)s"
+
+    preBufferSize = 1024 * 1024 # 1 meg in memory, then bye-bye!  Better
+                                # logging before then.
+
     def __init__(self):
+        self.formatter = logging.Formatter(self.fmt)
+        self.filer = logging.handlers.MemoryHandler(self.preBufferSize)
+        self.filer.setFormatter(self.formatter)
+        self.filer.setLevel(logging.DEBUG)
         self.logs = []
         self._log = logging.getLogger("Uninitialized")
+        self._log.addHandler(self.filer)
+    
+    def replaceFiler(self, filer):
+        self._log.removeHandler(self.filer)
+        for l in self.logs:
+            l.removeHandler(self.filer)
+
+        try:
+            self.filer.setTarget(filer)
+        except:
+            pass
+        else:
+            self.filer.flush()
+
+        self.filer = filer
+        self._log.addHandler(self.filer)
+        for l in self.logs:
+            l.addHandler(self.filer)
 
     def own(self, owner):
         if owner is not None:
             log = logging.getLogger(owner.logPrefix())
+            log.addHandler(self.filer)
             self.logs.append(log)
     
     def disown(self, owner):
@@ -38,9 +67,18 @@ def msg(*args):
 def err(*args):
     logOwner.owner().error(' '.join(map(str, args)))
 
+def startLogging(logFile, setStdout=1):
+    """Initialize logging to a specified file."""
+    print 'hi'
+    logOwner.replaceFiler(logging.StreamHandler(logFile))
+    msg("Log opened.")
+    if setStdout:
+        sys.stdout = sys.stderr = logFile
+    print 'zong'
 
 from twisted.python import log
 
 log.msg = msg
 log.err = err
+log.startLogging = startLogging
 logOwner = log.logOwner = LogOwner()
