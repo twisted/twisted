@@ -144,16 +144,19 @@ class MultiService(Service):
             service.stopService()
 
 
-class Application(MultiService, components.Componentized):
+class IProcess:
+
+    def getID(self):
+        pass
+
+
+class Process:
+
+    __implements__ = IProcess,
 
     processName = None
 
-    def __init__(self, name, uid=None, gid=None):
-        MultiService.__init__(self)
-        components.Componentized.__init__(self)
-        self.setName(name)
-        self.setComponent(sob.IPersistable, sob.Persistant(self, self.name))
-        if runtime.platformType == "posix":
+    def __init__(self, uid=None, gid=None):
             if uid is None:
                 uid = os.getuid()
             self.uid = uid
@@ -161,5 +164,18 @@ class Application(MultiService, components.Componentized):
                 gid = os.getgid()
             self.gid = gid
 
-    def __repr__(self):
-        return "<%s app>" % repr(self.name)
+    def getID(self):
+        return self.uid, self.gid
+    
+
+class Application(components.Componentized):
+
+    def __init__(self, name, uid=None, gid=None):
+        components.Componentized.__init__(self)
+        service = MultiService()
+        service.setName(name)
+        self.setComponent(IServiceCollection, service)
+        self.setComponent(IService, service)
+        self.setComponent(sob.IPersistable, sob.Persistant(self, name))
+        if runtime.platformType == "posix":
+            self.setComponent(IProcess, Process(uid, gid))

@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 from twisted.python import util, log, logfile, syslog
-from twisted.application import apprun
+from twisted.application import apprun, service
 import sys, os, errno, signal
 
 util.addPluginDir()
@@ -153,12 +153,14 @@ def setupEnvironment(config):
     open(config['pidfile'],'wb').write(str(os.getpid()))
 
 def startApplication(config, application):
+    process = service.IProcess(application)
+    service_ = service.IService(application)
     if not config['originalname']:
-        launchWithName(application.processName)
+        launchWithName(process.processName)
     setupEnvironment(config)
-    application.privilegedStartService()
-    shedPrivileges(config['euid'], application.uid, application.gid)
-    application.startService()
+    service_.privilegedStartService()
+    shedPrivileges(config['euid'], process.uid, process.gid)
+    service_.startService()
     if not config['no_save']:
         apprun.scheduleSave(application)
 

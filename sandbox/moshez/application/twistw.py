@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 from twisted.python import util, log, logfile
-from twisted.application import apprun
+from twisted.application import apprun, service
 import sys, os
 
 util.addPluginDir()
@@ -49,8 +49,8 @@ def runApp(config):
     apprun.initialLog()
     os.chdir(config['rundir'])
     application = apprun.getApplication(config, passphrase)
-    application.privilegedStartService()
-    application.startService()
+    service.IService(application).privilegedStartService()
+    service.IService(application).startService()
     if not config['no_save']:
         apprun.scheduleSave(application)
     apprun.runReactorWithLogging(config, oldstdout, oldstderr)

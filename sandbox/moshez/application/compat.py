@@ -63,24 +63,14 @@ class IOldApplication(components.Interface):
     def connectUNIX(self, address, factory, timeout=30):
         pass
 
-    def bindPorts(self):
-        pass
 
-    def save(self, tag=None, filename=None, passphrase=None):
-        pass
-
-    def logPrefix(self):
-        pass
-
-    def run(self, save=1, installSignalHandlers=1):
-        pass
 
 class ServiceNetwork:
 
     __implements__ = IOldApplication,
 
     def __init__(self, app):
-        self.app = app
+        self.app = IServiceCollection(app)
 
     def listenWith(self, portType, *args, **kw):
         internet.GenericServer(portType, *args, **kw).setServiceParent(self.app)
@@ -136,48 +126,6 @@ class ServiceNetwork:
         s = internet.UNIXClient(address, factory, timeout)
         s.setServiceParent(self.app)
 
-    def bindPorts(self):
-        self.app.privilegedStartService()
-
-    def save(self, tag=None, filename=None, passphrase=None):
-        sob.IPersistable(self.app).save(tag, filename, passphrase)
-
-    def logPrefix(self):
-        return '*%s*' % self.app.name
-
-    def run(self, save=1, installSignalHandlers=1):
-        self.app.startService()
-        from twisted.internet import reactor
-        reactor.addSystemEventTrigger('before', 'shutdown',
-                                      self.app.stopService)
-        if save:
-            reactor.addSystemEventTrigger('after', 'shutdown',
-                                           self.save, 'shutdown')
-        log.callWithLogger(self, reactor.run,
-                           installSignalHandlers=installSignalHandlers)
-
-    def setEUID(self):
-        try:
-            os.setegid(self.app.gid)
-            os.seteuid(self.app.uid)
-        except (AttributeError, OSError):
-            pass
-        else:
-            log.msg('set euid/egid %s/%s' % (self.app.uid, self.app.gid))
-
-    def setUID(self):
-        try:
-            os.setgid(self.app.gid)
-            os.setuid(self.app.uid)
-        except (AttributeError, OSError):
-            pass
-        else:
-            log.msg('set uid/gid %s/%s' % (self.app.uid, self.app.gid))
-
-    def __getattr__(self, name):
-        return getattr(self.app, name)
-
-
 components.registerAdapter(ServiceNetwork,
                            service.IServiceCollection, IOldApplication)
 
@@ -196,18 +144,19 @@ def convert(oldApp):
     of the old application
     '''
     ret = service.Application(oldApp.name, oldApp.uid, oldApp.gid)
-    ret.processName = oldApp.processName
+    service.IProcess(ret).processName = oldApp.processName
     for (pList, klass) in [(oldApp.extraPorts, internet.GenericServer),
                            (oldApp.extraConnectors, internet.GenericClient),]:
         for (portType, args, kw) in pList:
-            klass(portType, *args, **kw).setServiceParent(ret)
+            s = klass(portType, *args, **kw)
+            s.setServiceParent(service.IServiceCollection(ret))
     for (name, klass) in mapping:
         for args in getattr(oldApp, name):
-            klass(*args).setServiceParent(ret)
-    for service in ret:
+            klass(*args).setServiceParent(service.IServiceCollection(ret))
+    for service in IServiceCollection(ret):
         if isinstance(service, internet._AbstractServer):
             service.privileged = 1
     for service in oldApp.services.values():
         service.disownServiceParent()
-        service.setServiceParent(ret)
+        service.setServiceParent(service.IServiceCollection(ret))
     return ret
