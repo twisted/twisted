@@ -233,7 +233,7 @@ class LoopbackTestCase(PortCleanerUpper):
                 socket.getservbyname = serv
                 raise
 
-            spinUntil(lambda :getattr(cf, 'protocol', None) is not None)
+            spinUntil(lambda :getattr(s, 'protocol', None) is not None)
             self.cleanPorts(port, c.transport, cf.protocol.transport)
 
         finally:
