@@ -23,6 +23,7 @@ import reflect, util
 
 # system imports
 import types
+import warnings
 
 
 class Interface:
@@ -205,6 +206,13 @@ class Adapter:
         """
         self.original = original
 
+    def getComponent(self, interface):
+        """
+        I forward getComponent to self.original on the assumption that it is an
+        instance of Componentized.
+        """
+        return self.original.getComponent(interface)
+
 class Componentized:
     """I am a mixin to allow you to be adapted in various ways persistently.
 
@@ -227,26 +235,60 @@ class Componentized:
     def setAdapter(self, interfaceClass, adapterClass):
         self.setComponent(interfaceClass, adapterClass(self))
 
+    def addAdapter(self, adapterClass, ignoreClass=0):
+        """Utility method that calls addComponent.  I take an adapter class and
+        instantiate it with myself as the first argument.
+        """
+        self.addComponent(adapterClass(self), ignoreClass)
+
     def setComponent(self, interfaceClass, component):
         self._adapterCache[interfaceClass] = component
 
-    def addComponent(self, component):
+    def addComponent(self, component, ignoreClass=0):
         """
         Add a component to me, for all appropriate interfaces.
 
         In order to determine which interfaces are appropriate, the component's
-        __implements__ attribute will be scanned.  An 'appropriate' interface
-        is one which it implments, and for which its class has been registered
-        as an adapter for my class according to the rules of getComponent.
+        __implements__ attribute will be scanned.
+
+        If the argument 'ignoreClass' is True, then all interfaces are
+        considered appropriate.
+
+        Otherwise, an 'appropriate' interface is one for which its class has
+        been registered as an adapter for my class according to the rules of
+        getComponent.
+
+        @return: the list of appropriate interfaces
         """
-        for iface in component.__implements__:
-            ac = self.locateAdapterClass(self.__class__, iface, None)
-            if ac == component.__class__:
+        for iface in tupleTreeToList(component.__implements__):
+            if (ignoreClass or
+                (self.locateAdapterClass(self.__class__, iface, None)
+                 == component.__class__)):
                 self._adapterCache[iface] = component
 
 
-    def removeComponent(self, interfaceClass):
+    def unsetComponent(self, interfaceClass):
+        """Remove my component specified by the given interface class."""
         del self._adapterCache[interfaceClass]
+
+    def removeComponent(self, component):
+        """
+        Remove the given component from me entirely, for all interfaces which
+        it has been registered.
+
+        @return: a list of the interfaces that were removed.
+        """
+        if (isinstance(component, types.ClassType) or
+            isinstance(component, types.TypeType)):
+            warnings.warn("passing interface to removeComponent, you probably want unsetComponent", DeprecationWarning, 1)
+            self.unsetComponent(component)
+            return [component]
+        l = []
+        for k, v in self._adapterCache.items():
+            if v is component:
+                del self._adapterCache[k]
+                l.append(k)
+        return l
 
     def getComponent(self, interface):
         """Create or retrieve an adapter for the given interface.
@@ -279,7 +321,6 @@ class Componentized:
                     adapter.multiComponent and
                     hasattr(adapter, '__implements__')):
                     self.addComponent(adapter)
-                    
             return adapter
 
 
