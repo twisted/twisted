@@ -18,5 +18,5 @@
 # DOMWidgets
 
 from twisted.python import log
-log.write("DeprecationWarning: twisted.web.domwidgets has been renamed twisted.web.woven.widgets.")
+log.write("DeprecationWarning: twisted.web.domwidgets has been renamed twisted.web.woven.widgets.\n")
 from twisted.web.woven.widgets import *

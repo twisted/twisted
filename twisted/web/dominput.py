@@ -18,5 +18,5 @@
 # dominput
 
 from twisted.python import log
-log.write("DeprecationWarning: twisted.web.dominput has been renamed twisted.web.woven.input.")
+log.write("DeprecationWarning: twisted.web.dominput has been renamed twisted.web.woven.input.\n")
 from twisted.web.woven.input import *

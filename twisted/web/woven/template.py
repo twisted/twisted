@@ -468,7 +468,7 @@ class DOMController(mvc.Controller, Resource):
     __implements__ = (mvc.Controller.__implements__, resource.IResource)
     
     def __init__(self, *args, **kwargs):
-        log.msg("DOMController is deprecated; it has been renamed twisted.web.woven.controller.WController")
+        log.msg("DeprecationWarning: DOMController is deprecated; it has been renamed twisted.web.woven.controller.WController.\n")
         mvc.Controller.__init__(self, *args, **kwargs)
         Resource.__init__(self)
     
