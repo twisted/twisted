@@ -26,7 +26,7 @@ def eval(string):
 
 def evalExp(exp, env):
     if isinstance(exp, sexpy.Atom):
-        return lookup(exp, env[0])
+        return lookup(exp, env, VAR)
     elif isinstance(exp, types.ListType):
         if exp == []:
             return exp
@@ -58,14 +58,15 @@ def ValueEnvironment():
 def FunctionEnvironment():
     return (None, globalFunctions)
 
-def lookup(exp, env):
+def lookup(exp, env, varOrFun):
+    vars = env[varOrFun]
     val = None
     while 1:
-        val = env[1].get(exp)
+        val = vars[1].get(exp)
         if val:
             return val
-        env = env[0]
-        if not env:
+        vars = vars[0]
+        if not vars:
             raise NameError("variable '%s' not found" % exp)
 
 def extendEnv(varOrFun, oldEnv, bindings):
@@ -142,7 +143,7 @@ def eval_apply(exp, env):
     global_fun = globals().get('func_' + name)
     funky_fun = funkyDict.get(name)
     try:
-        local_fun = lookup(name, env[1])
+        local_fun = lookup(name, env, FUN)
     except NameError:
         local_fun = None
 
