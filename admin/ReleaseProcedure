@@ -21,6 +21,7 @@ TEST, TEST.
    significant but weren't mentioned in ChangeLog, retroactively add them
  * ChangeLog: Add an entry: * .: Releasing Twisted <version>
  * twisted/copyright.py: Update the version number.
+ * cvs commit README doc/howto/installing-twisted ChangeLog twisted/copyright.py
 
 
  * After ensuring we're really ready to dist:
