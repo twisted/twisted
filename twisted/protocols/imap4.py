@@ -40,8 +40,8 @@ def maybeDeferred(obj, cb, eb, cbArgs, ebArgs):
         cb(obj, *cbArgs)
 
 class Command:
-    _1_RESPONSES = ('CAPABILITY', 'LIST', 'LSUB', 'STATUS', 'SEARCH')
-    _2_RESPONSES = ('EXISTS', 'EXPUNGE', 'FETCH')
+    _1_RESPONSES = ('CAPABILITY', 'FLAGS', 'LIST', 'LSUB', 'STATUS', 'SEARCH')
+    _2_RESPONSES = ('EXISTS', 'EXPUNGE', 'FETCH', 'RECENT')
     defer = None
     
     def __init__(self, command, args='', continuation=None, wantResponse=()):
@@ -61,6 +61,7 @@ class Command:
                 N >= 2 and names[1] in self._2_RESPONSES):
                 send.append(L)
             else:
+                print 'Appending unused', L
                 unuse.append(L)
         self.defer.callback((send, lastLine))
         if unuse:
