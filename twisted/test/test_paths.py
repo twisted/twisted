@@ -1,0 +1,98 @@
+
+import os, time
+
+from twisted.python import filepath
+from twisted.python.runtime import platform
+from twisted.trial import unittest
+
+class FilePathTestCase(unittest.TestCase):
+
+    f1content = "file 1"
+    f2content = "file 2"
+
+    def setUp(self):
+        self.now = time.time()
+        cmn = self.caseMethodName
+        os.mkdir(cmn)
+        os.mkdir(os.path.join(cmn,"sub1"))
+        f = open(os.path.join(cmn, "file1"),"wb")
+        f.write(self.f1content)
+        f = open(os.path.join(cmn, "sub1", "file2"),"wb")
+        f.write(self.f2content)
+        os.mkdir(os.path.join(cmn, 'sub3'))
+        f = open(os.path.join(cmn, "sub3", "file3.ext1"),"wb")
+        f = open(os.path.join(cmn, "sub3", "file3.ext2"),"wb")
+        f = open(os.path.join(cmn, "sub3", "file3.ext3"),"wb")
+        self.path = filepath.FilePath(cmn)
+
+    def testValidSubdir(self):
+        sub1 = self.path.child('sub1')
+        self.failUnless(sub1.exists(),
+                        "This directory does exist.")
+        self.failUnless(sub1.isdir(),
+                        "It's a directory.")
+        self.failUnless(not sub1.isfile(),
+                        "It's a directory.")
+        self.failUnless(not sub1.islink(),
+                        "It's a directory.")
+        self.failUnlessEqual(sub1.listdir(),
+                             ['file2'])
+
+    def testMultiExt(self):
+        f3 = self.path.child('sub3').child('file3')
+        exts = '.foo','.bar', 'ext1','ext2','ext3'
+        self.failIf(f3.siblingExtensionSearch(*exts))
+        f3e = f3.siblingExtension(".foo")
+        f3e.touch()
+        self.failIf(not f3.siblingExtensionSearch(*exts).exists())
+        f3e.remove()
+        self.failIf(f3.siblingExtensionSearch(*exts))
+
+    def testInvalidSubdir(self):
+        sub2 = self.path.child('sub2')
+        self.failIf(sub2.exists(),
+                    "This directory does not exist.")
+
+    def testValidFiles(self):
+        f1 = self.path.child('file1')
+        self.failUnlessEqual(f1.open().read(), self.f1content)
+        f2 = self.path.child('sub1').child('file2')
+        self.failUnlessEqual(f2.open().read(), self.f2content)
+
+    def testStatCache(self):
+        p = self.path.child('stattest')
+        p.touch()
+        self.failUnlessEqual(p.getsize(), 0)
+        self.failUnlessEqual(abs(p.getmtime() - time.time()) // 20, 0)
+        self.failUnlessEqual(abs(p.getctime() - time.time()) // 20, 0)
+        self.failUnlessEqual(abs(p.getatime() - time.time()) // 20, 0)
+        self.failUnlessEqual(p.exists(), True)
+        self.failUnlessEqual(p.exists(), True)
+        p.remove()
+        # test caching
+        self.failUnlessEqual(p.exists(), True)
+        p.restat(reraise=False)
+        self.failUnlessEqual(p.exists(), False)
+        self.failUnlessEqual(p.islink(), False)
+        self.failUnlessEqual(p.isdir(), False)
+        self.failUnlessEqual(p.isfile(), False)
+
+    def testInsecureUNIX(self):
+        self.assertRaises(filepath.InsecurePath, self.path.child, "..")
+        self.assertRaises(filepath.InsecurePath, self.path.child, "/etc")
+        self.assertRaises(filepath.InsecurePath, self.path.child, "../..")
+
+    def testInsecureWin32(self):
+        """Windows has 'special' filenames like NUL and CON and COM1 and LPR
+        and PRN and ... god knows what else.  They can be located anywhere in
+        the filesystem.  For obvious reasons, we do not wish to normally permit
+        access to these.
+        """
+        self.assertRaises(filepath.InsecurePath, self.path.child, "CON")
+        self.assertRaises(filepath.InsecurePath, self.path.child, r"..\..")
+        self.assertRaises(filepath.InsecurePath, self.path.child, "C:CON")
+        self.assertRaises(filepath.InsecurePath, self.path.child, r"C:\CON")
+        self.assertRaises(filepath.InsecurePath, self.path.child, r"C:randomfile")
+
+    if platform.getType() != 'win32':
+        testInsecureWin32.skip = "Consider yourself lucky."
