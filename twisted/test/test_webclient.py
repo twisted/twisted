@@ -38,6 +38,18 @@ class LongTimeTakingResource(resource.Resource):
         request.write("hello!!!")
         request.finish()
 
+class CookieMirrorResource(resource.Resource):
+    def render(self, request):
+        l = []
+        for k,v in request.received_cookies.items():
+            l.append((k, v))
+        l.sort()
+        return repr(l)
+
+class RawCookieMirrorResource(resource.Resource):
+    def render(self, request):
+        return repr(request.getHeader('cookie'))
+
 class WebClientTestCase(unittest.TestCase):
     def _listen(self, site):
         return reactor.listenTCP(0, site, interface="127.0.0.1")
@@ -181,6 +193,85 @@ class WebClientRedirectBetweenSSLandPlainText(unittest.TestCase):
     def testHoppingAround(self):
         self.assertEquals(unittest.deferredResult(client.getPage(self.getHTTP("one"))),
                           "FOUND IT!")
+
+
+class FakeTransport:
+    disconnecting = False
+    def __init__(self):
+        self.data = []
+    def write(self, stuff):
+        self.data.append(stuff)
+
+class CookieTestCase(unittest.TestCase):
+    def _listen(self, site):
+        return reactor.listenTCP(0, site, interface="127.0.0.1")
+
+    def setUp(self):
+        root = static.Data('El toro!', 'text/plain')
+        root.putChild("cookiemirror", CookieMirrorResource())
+        root.putChild("rawcookiemirror", RawCookieMirrorResource())
+        site = server.Site(root, timeout=None)
+        self.port = self._listen(site)
+        reactor.iterate(); reactor.iterate()
+        self.portno = self.port.getHost()[2]
+
+    def tearDown(self):
+        self.port.stopListening()
+        reactor.iterate(); reactor.iterate();
+        del self.port
+
+    def getHTTP(self, path):
+        return "http://127.0.0.1:%d/%s" % (self.portno, path)
+
+    def testNoCookies(self):
+        self.assertEquals(unittest.deferredResult(client.getPage(self.getHTTP("cookiemirror"))),
+                          "[]")
+
+    def testSomeCookies(self):
+        self.assertEquals(unittest.deferredResult(client.getPage(self.getHTTP("cookiemirror"),
+                                                                 cookies={'foo': 'bar',
+                                                                          'baz': 'quux'})),
+                          "[('baz', 'quux'), ('foo', 'bar')]")
+
+    def testRawNoCookies(self):
+        self.assertEquals(unittest.deferredResult(client.getPage(self.getHTTP("rawcookiemirror"))),
+                          "None")
+
+    def testRawSomeCookies(self):
+        self.assertEquals(unittest.deferredResult(client.getPage(self.getHTTP("rawcookiemirror"),
+                                                                 cookies={'foo': 'bar',
+                                                                          'baz': 'quux'})),
+                          "'foo=bar; baz=quux'")
+
+    def testCookieHeaderParsing(self):
+        d = defer.Deferred()
+        factory = client.HTTPClientFactory('http://foo.example.com/')
+        proto = factory.buildProtocol('127.42.42.42')
+        proto.transport = FakeTransport()
+        proto.connectionMade()
+        for line in [
+            '200 Ok',
+            'Squash: yes',
+            'Hands: stolen',
+            'Set-Cookie: CUSTOMER=WILE_E_COYOTE; path=/; expires=Wednesday, 09-Nov-99 23:12:40 GMT',
+            'Set-Cookie: PART_NUMBER=ROCKET_LAUNCHER_0001; path=/',
+            'Set-Cookie: SHIPPING=FEDEX; path=/foo',
+            '',
+            'body',
+            'more body',
+            ]:
+            proto.dataReceived(line + '\r\n')
+        self.assertEquals(proto.transport.data,
+                          ['GET / HTTP/1.0\r\n',
+                           'Host: foo.example.com\r\n',
+                           'User-Agent: Twisted PageGetter\r\n',
+                           '\r\n'])
+        self.assertEquals(factory.cookies,
+                          {
+            'CUSTOMER': 'WILE_E_COYOTE',
+            'PART_NUMBER': 'ROCKET_LAUNCHER_0001',
+            'SHIPPING': 'FEDEX',
+            })
 
 if ssl is None or not hasattr(ssl, 'DefaultOpenSSLContextFactory'):
     for case in [WebClientSSLTestCase, WebClientRedirectBetweenSSLandPlainText]:

@@ -39,8 +39,11 @@ class HTTPPageGetter(http.HTTPClient):
         self.sendCommand(method, self.factory.path)
         self.sendHeader('Host', self.factory.host)
         self.sendHeader('User-Agent', self.factory.agent)
-        for cookie, cookval in self.factory.cookies.items():
-            self.sendHeader('Cookie', '%s=%s' % (cookie, cookval))
+        if self.factory.cookies:
+            l=[]
+            for cookie, cookval in self.factory.cookies.items():  
+                l.append('%s=%s' % (cookie, cookval))
+            self.sendHeader('Cookie', '; '.join(l))
         for (key, value) in self.factory.headers.items():
             self.sendHeader(key, value)
         self.endHeaders()
@@ -170,11 +173,13 @@ class HTTPClientFactory(protocol.ClientFactory):
     path = None
 
     def __init__(self, url, method='GET', postdata=None, headers=None,
-                 agent="Twisted PageGetter", timeout=0):
+                 agent="Twisted PageGetter", timeout=0, cookies=None):
         self.timeout = timeout
         self.agent = agent
 
-        self.cookies = {}
+        if cookies is None:
+            cookies = {}
+        self.cookies = cookies
         if headers is not None:
             self.headers = headers
         else:
@@ -209,12 +214,11 @@ class HTTPClientFactory(protocol.ClientFactory):
         self.response_headers = headers
         if headers.has_key('set-cookie'):
             for cookie in headers['set-cookie']:
-                for cookie in cookie.split(','):
-                    cookparts = cookie.split(';')
-                    cook = cookparts[0]
-                    cook.lstrip()
-                    k, v = cook.split('=', 1)
-                    self.cookies[k.lstrip()] = v.lstrip()
+                cookparts = cookie.split(';')
+                cook = cookparts[0]
+                cook.lstrip()
+                k, v = cook.split('=', 1)
+                self.cookies[k.lstrip()] = v.lstrip()
 
     def gotStatus(self, version, status, message):
         self.version, self.status, self.message = version, status, message
