@@ -30,13 +30,13 @@ import sys
 import traceback
 
 if os.name == 'nt':
-	EWOULDBLOCK	= 10035
-	EINPROGRESS	= 10036
-	EALREADY	= 10037
-	ECONNRESET      = 10054
-	ENOTCONN	= 10057
+        EWOULDBLOCK        = 10035
+        EINPROGRESS        = 10036
+        EALREADY        = 10037
+        ECONNRESET      = 10054
+        ENOTCONN        = 10057
 else:
-	from errno import EALREADY, EINPROGRESS, EWOULDBLOCK, ECONNRESET, ENOTCONN
+        from errno import EALREADY, EINPROGRESS, EWOULDBLOCK, ECONNRESET, ENOTCONN
 
 # Twisted Imports
 from twisted.protocols import protocol
@@ -239,22 +239,24 @@ class Port(abstract.FileDescriptor):
     `transport' attribute will be called with the signature expected for
     Server.__init__, so it can be replaced.
     """
-    
+
     transport = Server
     sessionno = 0
     unixsocket = None
-    
+    interface = ''
+    backlog = 5
+
     def __init__(self, port, factory, backlog=5, interface=''):
         """Initialize with a numeric port to listen on.
         """
         self.port = port
-	self.factory = factory
-	self.backlog = backlog
-	self.interface = interface
+        self.factory = factory
+        self.backlog = backlog
+        self.interface = interface
 
     def __repr__(self):
         return "<%s on %s>" % (self.factory.__class__, self.port)
-        
+
     def createInternetSocket(self):
         """(internal) create an AF_INET socket.
         """
@@ -273,14 +275,9 @@ class Port(abstract.FileDescriptor):
 
         return dct
 
-    def __setstate__(self, dct):
-        if not dct.has_key('backlog'):
-            dct['backlog'] = 5
-        self.__dict__.update(dct)
-
     def startListening(self):
         """Create and bind my socket, and begin listening on it.
-        
+
         This is called on unserialization, and must be called after creating a
         server to begin listening on the specified port.
         """
@@ -304,7 +301,7 @@ class Port(abstract.FileDescriptor):
 
     def doRead(self):
         """Called when my socket is ready for reading.
-        
+
         This accepts a connection and callse self.protocol() to handle the
         wire-level protocol.
         """
@@ -325,7 +322,7 @@ class Port(abstract.FileDescriptor):
 
     def loseConnection(self):
         """ Stop accepting connections on this port.
-        
+
         This will shut down my socket and call self.connectionLost().
         """
         # Since ports can't, by definition, write any data, we can just close
