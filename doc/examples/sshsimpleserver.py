@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from twisted.cred import authorizer
 from twisted.conch import identity, error
 from twisted.conch.ssh import factory, userauth, connection, channel, keys
@@ -8,17 +9,22 @@ log.startLogging(sys.stderr)
 
 """Example of running another protocol over an SSH channel.
 log in with username "user" and password "password".
+Alternatively, put a public key in ./id_dsa.pub and the user may be
+authenticated with that.
 """
 
 class EchoProtocol(protocol.Protocol):
     """this is our example protocol that we will run over SSH
     """
     def dataReceived(self, data):
-        if data == '\n':
+        if data == '\r':
             data = '\r\n'
+        elif data == '\x03': #^C
+            self.transport.loseConnection()
         self.transport.write(data)
 
 publicKey = 'ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAGEArzJx8OYOnJmzf4tfBEvLi8DVPrJ3/c9k2I/Az64fxjHf9imyRJbixtQhlH9lfNjUIx+4LmrJH5QNRsFporcHDKOTwTTYLh5KmRpslkYHRivcJSkbh/C+BR3utDS555mV'
+
 privateKey = """-----BEGIN RSA PRIVATE KEY-----
 MIIByAIBAAJhAK8ycfDmDpyZs3+LXwRLy4vA1T6yd/3PZNiPwM+uH8Yx3/YpskSW
 4sbUIZR/ZXzY1CMfuC5qyR+UDUbBaaK3Bwyjk8E02C4eSpkabJZGB0Yr3CUpG4fw
@@ -34,7 +40,13 @@ EhQ0wahUTCk1gKA4uPD6TMTChavbh4K63OvbKg==
 
 class Identity(identity.ConchIdentity):
     def validatePublicKey(self, data):
-        return defer.fail(error.ConchError('no private keys'))
+        try:
+            if data == keys.getPublicKeyString('id_dsa.pub') and self.name == 'user':
+                return defer.succeed('')
+        except IOError:
+            pass
+        return defer.fail(error.ConchError('no or bad public key'))
+
     def verifyPlainPassword(self, password):
         if password=='password' and self.name == 'user':
             return defer.succeed('')
@@ -66,7 +78,8 @@ class SSHSession(channel.SSHChannel):
         self.dataReceived = self.client.dataReceived
         return 1
     def loseConnection(self):
-        self.protocol.connectionLost()
+        self.client.connectionLost()
+        channel.SSHChannel.loseConnection(self)
 
 class SSHFactory(factory.SSHFactory):
     publicKeys = {
