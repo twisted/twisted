@@ -156,9 +156,13 @@ class AbstractAccount:
         self.port = int(self.port)
 
     def __getstate__(self):
-        self._isOnline = 0
-        self._isConnecting = 0
-        return self.__dict__
+        state = self.__dict__.copy()
+        for k in ('_isOnline', '_isConnecting'):
+            try:
+                del state[k]
+            except KeyError:
+                pass
+        return state
 
     def isOnline(self):
         return self._isOnline
