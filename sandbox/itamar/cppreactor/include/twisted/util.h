@@ -27,7 +27,7 @@ namespace Twisted {
 	virtual void dealloc(char* buf) {}
     };
 
-    Inline object import(char* module)
+    inline object import(char* module)
     {
 	PyObject* m = PyImport_ImportModule(module);
 	return extract<object>(m);
