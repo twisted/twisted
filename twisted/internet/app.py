@@ -284,6 +284,10 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
             if self.asXML:
                 self.persistStyle = "xml"
             del self.asXML
+        self.tcpConnectors = self.connectors
+        del self.connectors
+        self.sslConnectors = []
+        self.unixConnectors = []
 
     def upgradeToVersion7(self):
         print 'upgrading 7'
