@@ -14,7 +14,7 @@ from twisted.python.runtime import platformType
 from twisted.internet import defer, reactor, protocol, error, threads
 from twisted.protocols import loopback
 from twisted.trial import unittest, reporter, util, runner, itrial
-from twisted.trial.test import trialtest1, trialtest2, trialtest3, trialtest4, common
+from twisted.trial.test import trialtest1, pyunit, trialtest3, trialtest4, common
 
 # this is ok, the module has been designed for this usage
 from twisted.trial.assertions import *
@@ -173,7 +173,7 @@ class FunctionalTest(common.RegistryBaseMixin, unittest.TestCase):
         self.assertMethodsCalled(*allMethods)
 
     def testPyUnitSupport(self):
-        self.suite.addTestClass(trialtest2.PyUnitTest)
+        self.suite.addTestClass(pyunit.PyUnitTest)
         self.suite.run()
         self.assertMethodsCalled(*allMethods)
 
