@@ -153,6 +153,13 @@ class LineOnlyReceiverTestCase(unittest.TestCase):
         for c in self.buffer:
             a.dataReceived(c)
         self.failUnlessEqual(a.received, self.buffer.split('\n')[:-1])
+
+    def testLineTooLong(self):
+        t = StringIOWithoutClosing()
+        a = LineOnlyTester()
+        a.makeConnection(protocol.FileWrapper(t))
+        res = a.dataReceived('x'*200)
+        self.failIfEqual(res, None)
             
                 
 class TestMixin:

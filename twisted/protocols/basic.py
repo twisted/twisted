@@ -155,6 +155,8 @@ class LineOnlyReceiver(protocol.Protocol):
                 return self.lineLengthExceeded(line)                
             else:
                 self.lineReceived(line)
+        if len(self._buffer) > self.MAX_LENGTH:
+            return self.lineLengthExceeded(self._buffer)                
 
     def lineReceived(self, line):
         """Override this for when each line is received.
