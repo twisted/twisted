@@ -18,7 +18,7 @@
 from twisted.python import runtime
 import sys
 if runtime.platformType != 'posix':
-     sys.exit("Please use twistw on windows, not twistd")
+    sys.exit("Please use twistw on windows, not twistd")
 # End hack
 
 from twisted.python import log, syslog
