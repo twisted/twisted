@@ -106,7 +106,6 @@ class Banana(protocol.Protocol, styles.Ephemeral):
 
 
     def connectionMade(self):
-        self.listStack = []
         self.currentDialect = None
         if not self.isClient:
             self.sendEncoded(self.knownDialects)
@@ -238,6 +237,7 @@ class Banana(protocol.Protocol, styles.Ephemeral):
         incomingVocabulary[v] = k
 
     def __init__(self, isClient=1):
+        self.listStack = []
         self.outgoingSymbols = copy.copy(self.outgoingVocabulary)
         self.outgoingSymbolCount = 0
         self.isClient = isClient
