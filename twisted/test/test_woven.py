@@ -285,7 +285,7 @@ class VNotifyTest(view.View):
     template = """<html>
     <body>
         <ol id="theList" model="root/inventory" view="List">
-            <li view="Text" pattern="listItem" />
+            <li view="someText" pattern="listItem" />
         </ol>
         
         <form action="">
@@ -295,6 +295,8 @@ class VNotifyTest(view.View):
     </body>
 </html>"""
 
+    def wvfactory_someText(self, request, node, m):
+        return widgets.Text(m)
 
 class InventoryUpdater(input.Anything):    
     def commit(self, request, node, data):

@@ -292,8 +292,6 @@ class Widget(view.View):
         mutator.d = request.d
         mutator.generate(request, oldNode)
         self.node = newNode
-        # This works for simple cases, unfortunately this widget doesn't have
-        # appropriate mvc stack -- it only has itself
         self.recurseChildren(request, newNode)
         return newNode
 

@@ -296,6 +296,9 @@ class View(template.DOMTemplate):
                 model = self.getTopOfModelStack()
             if not view or not isinstance(view, widgets.Widget):
                 view = widgets.DefaultWidget(model)
+            view.modelStack = self.modelStack[:]
+            view.viewStack = self.viewStack[:]
+            view.controllerStack = self.controllerStack[:]
             if not controller:
                 controller = input.DefaultHandler(model)
             controller.parent = self.controllerStack[0]
