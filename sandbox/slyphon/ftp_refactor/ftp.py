@@ -272,6 +272,10 @@ class DTPFileSender(basic.FileSender):
             self.deferred.errback(ClientDisconnectError())
             self.deferred = None
 
+class DTPFileReceiver(protocol.ProcessProtocol):
+    def __init__(self):
+        pass
+
 # -- Utility Functions --
 
 def debugDeferred(self, *_):
@@ -341,15 +345,21 @@ class DTP(object, protocol.Protocol):
         d, self.factory.deferred = self.factory.deferred, defer.Deferred()
         d.callback(None)
 
+    def dataReceived(self, data):
+        if self.pi.fp is not None:
+            self.pi.fp.write(data)
+            self.pi.fp.flush()
+
     def transformChunk(self, chunk):
-        log.msg('transformChunk: before = %s' % chunk)
-        newChunk = self.reTransform.sub('\r\n', chunk)
-        log.msg('transformChunk: after = %s' % newChunk)
-        return newChunk
+        # this is b0rK3n! send everything as BINARY!
+        return chunk
+        #log.msg('transformChunk: before = %s' % chunk)
+        #newChunk = self.reTransform.sub('\r\n', chunk)
+        #log.msg('transformChunk: after = %s' % newChunk)
+        #return newChunk
 
     def dtp_RETR(self): # RETR = sendFile
-        """ssnds a file object out the wire
-        @param fpSizeTuple a tuple of a file object and that file's size
+        """sends a file object out the wire
         """
         filename = _getFPName(self.pi.fp)
 
@@ -369,6 +379,9 @@ class DTP(object, protocol.Protocol):
                 ).addCallback(debugDeferred,'firing at end of file transfer'
                 ).addCallback(self._dtpPostTransferCleanup
                 )
+
+    def dtp_STOR(self):
+        pass
 
     def _dtpPostTransferCleanup(self, *arg):
         log.debug("dtp._dtpPostTransferCleanup")
@@ -534,7 +547,6 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         log.msg('ftp.setTimeout to %s seconds' % str(seconds))
         policies.TimeoutMixin.setTimeout(self, seconds)
 
-
     def reply(self, key, s=''):                                               
         """format a RESPONSE and send it out over the wire"""
         if string.find(RESPONSE[key], '%s') > -1:
@@ -687,6 +699,9 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         else:
             self.dtpInstance = None
 
+        # TODO: Is this the right place for clearing dtpCommand?
+        self.dtpCommand = None
+
     def _doDTPCommand(self, cmd, *arg): 
         self.setTimeout(None)               # don't Time out when waiting for DTP Connection
         log.debug('FTP._doDTPCommand: self.blocked: %s' % self.blocked)
@@ -700,6 +715,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             raise e
         else:
             self.dtpFactory.setTimeout(self.dtpTimeout)
+            self.dtpCommand = cmd
             if arg:
                 d = f(arg)
             else:
@@ -718,13 +734,16 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         """called back when a file transfer has been completed by the dtp"""
         log.debug('finishedFileTransfer! cleaning up DTP')
         if self.fp is not None and not self.fp.closed:
-            if self.fp.tell() == self.fpsize:
+            if ((self.dtpCommand == 'RETR' and self.fp.tell() == self.fpsize)
+               or self.dtpCommand == 'STOR'):
                 log.debug('transfer completed okay :-)')
                 self.reply(TXFR_COMPLETE_OK)
             else:
                 log.debug("uh-oh there was an error...must have been the client's fault")
                 self.reply(CNX_CLOSED_TXFR_ABORTED)
+            self.fp.flush()
             self.fp.close()
+            self.fp = None
 
     def _cbDTPCommand(self):
         """called back when any DTP command has completed successfully"""
@@ -810,7 +829,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         """sets up anonymous login avatar"""
         assert interface is IFTPShell
         peer = self.transport.getPeer()
-#       log.debug("Anonymous login from %s:%s" % (peer[1], peer[2]))
+        #log.debug("Anonymous login from %s:%s" % (peer[1], peer[2]))
         self.shell = avatar
         self.logout = logout
         self.reply(GUEST_LOGGED_IN_PROCEED)
@@ -984,6 +1003,27 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         self.transport.loseConnection()
         log.debug("Client Quit")
 
+    def ftp_DELE(self, path=''):
+        self.reply(CMD_NOT_IMPLMNTD, 'DELE')
+
+    def ftp_MKD(self, path=''):
+        self.reply(CMD_NOT_IMPLMNTD, 'MKD')
+
+    def ftp_RMD(self, path=''):
+        self.reply(CMD_NOT_IMPLMNTD, 'RMD')
+
+    def ftp_STOR(self, path=''):
+        if self.dtpTxfrMode is None:
+            raise BadCmdSequenceError('must send PORT or PASV before RETR')
+        self.fp = self.shell.stor(cleanPath(path))       
+        if self.dtpInstance and self.dtpInstance.isConnected:
+            self.reply(DATA_CNX_ALREADY_OPEN_START_XFR)
+        else:
+            self.reply(FILE_STATUS_OK_OPEN_DATA_CNX)
+        self._doDTPCommand('STOR')
+
+    def ftp_STOU(self, path=''):
+        self.reply(CMD_NOT_IMPLMNTD, 'STOU')
 
 class FTPFactory(protocol.Factory):
     """A factory for producing ftp protocol instances
@@ -1336,7 +1376,7 @@ We will continue using the user %s.
             return (file(spath, 'rb'), os.path.getsize(spath))
         except (IOError, OSError), (e,):
             log.debug(e)
-            raise OperationFailedError('An OSError occurred %s' % e)
+            raise OperationFailedError('An error occurred %s' % e)
 
     def stor(self, params):
         raise AnonUserDeniedError()
@@ -1444,6 +1484,27 @@ We will continue using the user %s.
     def nlist(self, path):
         raise CmdNotImplementedError()
 
+class FTPShell(FTPAnonymousShell):
+    def dele(self, path):
+        pass
+
+    def mkd(self, path):
+        pass
+
+    def rmd(self, path):
+        pass
+
+    def stor(self, path):
+        cpath, spath = self.mapCPathToSPath(path)
+        if os.access(spath, os.W_OK):
+            try:
+                return file(spath, 'wb')
+            except (IOError, OSError), (e,):
+                log.debug(e)
+                raise OperationFailedError('An error occurred %s' % e)
+        raise PermissionDeniedError('Could not write file %s' % cpath)
+
+
 class FTPRealm:
     __implements__ = (portal.IRealm,)
     clientwd = '/'
@@ -1472,8 +1533,6 @@ class FTPRealm:
             avatar.logout = self.logout
             return IFTPShell, avatar, avatar.logout
         raise NotImplementedError("Only IFTPShell interface is supported by this realm")
-
-
 
 
 # --- FTP CLIENT  -------------------------------------------------------------
