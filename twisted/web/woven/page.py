@@ -22,8 +22,8 @@ class Page(model.Model, view.View, controller.Controller):
         the model. You can override me to perform more advanced
         template lookup logic.
         """
-        print "RENDER"
-        if self.gatherControllersFromView:
-            return view.View.render(self, request, doneCallback=self.gatheredControllers, block=block)
-        else:
-            return self.gatheredControllers(self.view, self.view.d, request)
+        # Handle any inputhandlers that were passed in to the controller first
+        for ih in self._inputhandlers:
+            ih._parent = self
+            ih.handle(request)
+        return view.View.render(self, request, doneCallback=self.gatheredControllers, block=block)
