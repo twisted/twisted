@@ -96,14 +96,17 @@ class ConnectionPool(pb.Referenceable):
     def _runOperation(self, args, kw):
         """This is used for non-query operations that don't want "fetch*" to be called
         """
+        
         conn = self.connect()
         curs = conn.cursor()
+
         try:
             apply(curs.execute, args, kw)
             result = None
             curs.close()
             conn.commit()
         except:
+            # XXX - failures aren't working here
             conn.rollback()
             raise
         return result
@@ -198,7 +201,7 @@ class Augmentation:
     schema = ''' Insert your SQL database schema here. '''
 
     def createSchema(self):
-        return self.runOperation(self.schema, self.schemaCreated, self.schemaNotCreated)
+        return self.runOperation(self.schema).addCallbacks(self.schemaCreated, self.schemaNotCreated)
 
     def schemaCreated(self, result):
         log.msg("Successfully created schema for %s." % str(self.__class__))
