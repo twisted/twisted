@@ -52,9 +52,8 @@ class MessageLogger:
 class LogBot(irc.IRCClient):
     """A logging IRC bot."""
     
-    def __init__(self):
-        self.nickname = "twistedbot"
-
+    nickname = "twistedbot"
+    
     def connectionMade(self):
         irc.IRCClient.connectionMade(self)
         self.logger = MessageLogger(open(self.factory.filename, "a"))

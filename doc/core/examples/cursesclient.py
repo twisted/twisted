@@ -44,9 +44,9 @@ class IRC(IRCClient):
 
     """ A protocol object for IRC """
 
-    def __init__(self, screenObj):
-        self.nick = 'testcurses'
+    nickname = "testcurses"
 
+    def __init__(self, screenObj):
         # screenObj should be 'stdscr' or a curses window/pad object
         self.screenObj = screenObj
         # for testing (hacky way around initial bad design for this example) :)
@@ -57,6 +57,7 @@ class IRC(IRCClient):
         self.screenObj.addLine(line)
 
     def connectionMade(self):
+        IRCClient.connectionMade(self)
         self.screenObj.addLine("* CONNECTED")
 
     def clientConnectionLost(self, connection, reason):
