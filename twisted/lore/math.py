@@ -46,7 +46,6 @@ def formulaeToImages(document, dir):
         file = tempfile.mktemp()
         open(file+'.tex', 'w').write(latexText)
         os.system('latex %s.tex' % file)
-        print "looking for dvi in ", os.path.basename(file)+'.dvi'
         os.system('dvips %s.dvi -o %s.ps' % (os.path.basename(file), file))
         baseimgname = 'latexformula%d.png' % i
         imgname = os.path.join(dir, baseimgname)
