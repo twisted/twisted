@@ -44,7 +44,7 @@ class ClassicClassAdapter(_Cache):
         f.__dict__ = d
         return self.cret(memo, original, f)
 
-class BoundMethodAdapter(components.Adapter):
+class BoundMethodAdapter(_Cache):
     def rebuild(self, memo):
         if id(original) in memo:
             return memo[id(original)]
@@ -53,7 +53,7 @@ class BoundMethodAdapter(components.Adapter):
         name = original.im_func.func_name
         return self.cret(memo, original, getattr(IRebuildable(self).rebuild(memo), name))
 
-class UnboundMethodAdapter(components.Adapter):
+class UnboundMethodAdapter(_Cache):
     def rebuild(self, memo):
         if id(original) in memo:
             return memo[id(original)]
