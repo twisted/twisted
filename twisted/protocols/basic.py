@@ -138,9 +138,9 @@ class LineReceiver(protocol.Protocol):
     
     This is useful for line-oriented protocols such as IRC, HTTP, POP, etc.
     
-    @ivar delimiter: The line-ending delimiter to use. By default this is
+    @cvar delimiter: The line-ending delimiter to use. By default this is
                      '\\r\\n'.
-    @ivar MAX_LENGTH: The maximum length of a line to allow (If a
+    @cvar MAX_LENGTH: The maximum length of a line to allow (If a
                       sent line is longer than this, the connection is dropped).
                       Default is 16834.
     """
