@@ -322,18 +322,7 @@ class Connection(abstract.FileDescriptor):
         del self.protocol
         del self.socket
         del self.fileno
-        try:
-            protocol.connectionLost(reason)
-        except TypeError, e:
-            # while this may break, it will only break on deprecated code
-            # as opposed to other approaches that might've broken on
-            # code that uses the new API (e.g. inspect).
-            if e.args and e.args[0] == "connectionLost() takes exactly 1 argument (2 given)":
-                warnings.warn("Protocol %s's connectionLost should accept a reason argument" % protocol,
-                              category=DeprecationWarning, stacklevel=2)
-                protocol.connectionLost()
-            else:
-                raise
+        protocol.connectionLost(reason)
 
     logstr = "Uninitialized"
 
