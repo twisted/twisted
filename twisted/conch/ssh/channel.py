@@ -39,7 +39,6 @@ class SSHChannel:
         self.specificData = ''
         self.buf = ''
         self.extBuf = ''
-        self.client = None
         self.id = None # gets set later by SSHConnection
 
     def channelOpen(self, specificData):
