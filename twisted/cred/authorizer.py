@@ -122,8 +122,7 @@ class DefaultAuthorizer(Authorizer):
 
         I return a L{deferred<twisted.internet.defer.Deferred>} which will
         be called back to when an identity is discovered to be available
-        (or errback for unavailable).  It will be returned unarmed, so
-        you must arm it yourself.
+        (or errback for unavailable).
         """
 
         req = defer.Deferred()
