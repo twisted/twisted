@@ -1,10 +1,10 @@
-<html><head><title>Woven</title></head>
+<html><head><title>Woven Widget Reference</title></head>
 <body>
-<h1>Woven</h1>
+<h1>Woven Widget Reference</h1>
 
 <div class="doit">This document is intended as a reference guide for all the
 woven builtins and signatures you need in order to write a woven application.
-<a href="mailto:stephen@thorne.id.au">Please Give Me Feedback!"</a></div>
+<a href="mailto:stephen@thorne.id.au">Please Give Me Feedback!</a></div>
 
 <h2>Common Factory Signatures</h2>
 <pre class="python">
@@ -32,29 +32,32 @@ class MyPage(page.Page):
 <pre class="python">
 class MyPage(page.Page):
     template = """
-    &lt;a view="Attributes" model="/mylink"> My Link! &lt;/a>
+    &lt;a view="Attributes" model="/mylink"&gt; My Link! &lt;/a&gt;
     """
 
-MyPage({'mylink' : {'href':'/path/to'} })
+MyPage({'mylink': {'href': '/path/to'}})
 </pre>
 
 <h3>Text, RawText</h3>
-<p> For putting text into a node. This will escape any HTML/XML special characters turning them into HTML entities, i.e. &amp;lt;foo&amp;gt;.</p>
+<p>For putting text into a node. This will escape any HTML/XML special
+characters turning them into HTML entities, i.e.
+<code>&amp;lt;foo&amp;gt;</code>.</p>
 <pre class="python">
 class MyPage(page.Page):
     template = """
-    &lt;span view="Text" model="/mytext" />
+    &lt;span view="Text" model="/mytext" /&gt;
     """
 
-MyPage({'mytext' : 'abc'})
+MyPage({'mytext': 'abc'})
 </pre>
 
 <h3>ParagraphText</h3>
-<p> For taking text, one paragraph per line, and dressing it with &lt;p&gt; tags.</p>
+<p>For taking text, one paragraph per line, and dressing it with
+<code>&lt;p&gt;</code> tags.</p>
 <pre class="python">
 class MyPage(page.Page):
     template = """
-    &lt;span view="ParagraphText" model="/mytext" />
+    &lt;span view="ParagraphText" model="/mytext" /&gt;
     """
 
 MyPage({'mytext' : """
@@ -69,10 +72,10 @@ This is a second one. It has two sentences.
 <pre class="python">
 class MyPage(page.Page):
     template = """
-    &lt;img view="Image" alt="MyImage" model="/myimg" />
+    &lt;img view="Image" alt="MyImage" model="/myimg" /&gt;
     """
 
-MyPage({'myimg' : '/images/myimage.png'})
+MyPage({'myimg': '/images/myimage.png'})
 </pre>
 
 <h3>Error</h3>
@@ -85,19 +88,19 @@ MyPage({'myimg' : '/images/myimage.png'})
 <p>A Br.</p>
 
 <h3>Input</h3>
-<p>An Input, it takes 'value', 'name' and 'id'. If 'name' isn't supplied, it
-reverts to the value of 'id', if 'id' isn't supplied either, it takes the name
-of the submodel. The other input classes extend this one, and give it a proper
-'type'.</p>
+<p>An Input, it takes <code>value</code>, <code>name</code> and <code>id</code>.
+If <code>name</code> isn't supplied, it reverts to the value of <code>id</code>,
+if <code>id</code> isn't supplied either, it takes the name of the submodel. The
+other input classes extend this one, and give it a proper <code>type</code>.</p>
 
 <h3>CheckBox</h3>
-<p>As Input, but.. boxy.</p>
+<p>As Input, but... boxy.</p>
 
 <h3>RadioButton</h3>
-<p>As Input, but.. kinda button like.</p>
+<p>As Input, but... kinda button like.</p>
 
 <h3>File</h3>
-<p>As Input, but.. more chance of 1's and 0's. And a dialog on some user-agents.</p>
+<p>As Input, but... more chance of 1's and 0's. And a dialog on some user-agents.</p>
 
 <h3>Password</h3>
 <p>Renders a password text field. no option for maxlength, quite strange.</p>
@@ -107,11 +110,13 @@ of the submodel. The other input classes extend this one, and give it a proper
 
 <h3>Select</h3>
 <p>This falls under input, but instead of taking a value, you have to fiddle
-with options for that. There's no way to specify type="multiple" either it
-seems.</p>
+with options for that. There's no way to specify <code>type="multiple"</code>
+either it seems.</p>
 
 <h3>Option</h3>
-<p>Option widgets have the methods .setText() and .setValue(), but if your text
+<p>Option widgets have the methods <code class="API"
+base="twisted.web.woven.widgets.Option">setText</code> and <code class="API"
+base="twisted.web.woven.widgets.Option">setValue</code>, but if your text
 and your value co-incide, they can just be put in the model and it will all be
 hunky and/or dory.</p>
 
@@ -120,8 +125,8 @@ hunky and/or dory.</p>
 <pre class="python">
 class MyPage(page.Page):
     template = """
-    &lt;a view="Anchor" model="/anchorone" />
-    &lt;a view="myanchor" model="/anchortwo" />
+    &lt;a view="Anchor" model="/anchorone" /&gt;
+    &lt;a view="myanchor" model="/anchortwo" /&gt;
     """
 
     def wvfactory_myanchor(self, request, node, model):
@@ -131,16 +136,19 @@ class MyPage(page.Page):
         a.setLink(model['href'])
 
 MyPage({
-    'anchorone' : '/pages/otherpage'
-    'anchortwo' : {
-        'href':'/pages/thisotherpage/',
-        'thingy':'foobar',
-        'text':'The Text Of The Link'
-    })
+    'anchorone': '/pages/otherpage',
+    'anchortwo': {
+        'href': '/pages/thisotherpage/',
+        'thingy': 'foobar',
+        'text': 'The Text Of The Link'
+    }
+})
 </pre>
 
 <h3>DirectoryAnchor</h3>
-<p>Exactly like Anchor, but given a model which contains '/pages/otherpage' it will provide a link to '/pages/otherpage/' with a trailing slash.</p>
+<p>Exactly like Anchor, but given a model which contains
+<code>/pages/otherpage</code> it will provide a link to
+<code>/pages/otherpage/</code> with a trailing slash.</p>
 
 <h3>List</h3>
 <p>List is a nice view for displaying the contents of a list. You can choose
@@ -149,41 +157,41 @@ or more will cause alternation.</p>
 <pre class="python">
 class MyPage(page.Page):
     template = """
-         &lt;table model="blah" view="List">
-             &lt;tr pattern="listHeader">&lt;th>A&lt;/th>&lt;th>B&lt;/th>&lt;/tr>
-             &lt;tr pattern="emptyList">&lt;td colspan='2'>***None***&lt;/td>&lt;/tr>
-             &lt;tr pattern="listItem">
-                 &lt;td>&lt;span view="Text" model="0" />&lt;/td>
-                 &lt;td>&lt;span view="Text" model="1" />&lt;/td>
-             &lt;/tr>
-             &lt;tr pattern="listFooter">&lt;td colspan="2">All done!&lt;/td>&lt;/tr>
-         &lt;/table>
+         &lt;table model="blah" view="List"&gt;
+             &lt;tr pattern="listHeader"&gt;&lt;th&gt;A&lt;/th&gt;&lt;th&gt;B&lt;/th&gt;&lt;/tr&gt;
+             &lt;tr pattern="emptyList"&gt;&lt;td colspan='2'&gt;***None***&lt;/td&gt;&lt;/tr&gt;
+             &lt;tr pattern="listItem"&gt;
+                 &lt;td&gt;&lt;span view="Text" model="0" /&gt;&lt;/td&gt;
+                 &lt;td&gt;&lt;span view="Text" model="1" /&gt;&lt;/td&gt;
+             &lt;/tr&gt;
+             &lt;tr pattern="listFooter"&gt;&lt;td colspan="2"&gt;All done!&lt;/td&gt;&lt;/tr&gt;
+         &lt;/table&gt;
     """
 
-MyPage({ 'blah' : [('abc', 'fza'), ('def', 'fdsa'), ('ghi', 'fdas')] })
+MyPage({'blah': [('abc', 'fza'), ('def', 'fdsa'), ('ghi', 'fdas')]})
 </pre>
 
 <h3>KeyedList</h3>
 <p>KeyedList is similar to List above, works nearly the same way, except the
 model is a dictionary, not a list. If you need access to the key in your
-listItems, make your listItem use a view that will inspect the model=''
-attribute, as the KeyedList widget will create subwidgets, respecting view=''
-but overriding model=''.</p>
+listItems, make your listItem use a view that will inspect the
+<code>model</code> attribute, as the KeyedList widget will create subwidgets,
+respecting <code>view</code> attribute but overriding <code>model</code>.</p>
 <pre class="python">
 class MyPage(page.Page):
     template = """
-         &lt;table model="blah" view="List">
-             &lt;tr pattern="listHeader">&lt;th>A&lt;/th>&lt;th>B&lt;/th>&lt;/tr>
-             &lt;tr pattern="emptyList">&lt;td colspan='2'>***None***&lt;/td>&lt;/tr>
-             &lt;tr pattern="listItem">
-                 &lt;td>&lt;span view="Text" model="0" />&lt;/td>
-                 &lt;td>&lt;span view="Text" model="1" />&lt;/td>
-             &lt;/tr>
-             &lt;tr pattern="listFooter">&lt;td colspan="2">All done!&lt;/td>&lt;/tr>
-         &lt;/table>
+         &lt;table model="blah" view="List"&gt;
+             &lt;tr pattern="listHeader"&gt;&lt;th&gt;A&lt;/th&gt;&lt;th&gt;B&lt;/th&gt;&lt;/tr&gt;
+             &lt;tr pattern="emptyList"&gt;&lt;td colspan='2'&gt;***None***&lt;/td&gt;&lt;/tr&gt;
+             &lt;tr pattern="listItem"&gt;
+                 &lt;td&gt;&lt;span view="Text" model="0" /&gt;&lt;/td&gt;
+                 &lt;td&gt;&lt;span view="Text" model="1" /&gt;&lt;/td&gt;
+             &lt;/tr&gt;
+             &lt;tr pattern="listFooter"&gt;&lt;td colspan="2"&gt;All done!&lt;/td&gt;&lt;/tr&gt;
+         &lt;/table&gt;
     """
 
-MyPage({ 'blah' : [('abc', 'fza'), ('def', 'fdsa'), ('ghi', 'fdas')] })
+MyPage({'blah' : [('abc', 'fza'), ('def', 'fdsa'), ('ghi', 'fdas')]})
 </pre>
 
 <h3>Bold</h3>
@@ -199,23 +207,25 @@ MyPage({ 'blah' : [('abc', 'fza'), ('def', 'fdsa'), ('ghi', 'fdas')] })
 <pre class="python">
 class MyPage(page.Page):
     template = """
-    &lt;a view="Link" model="/anchorone"> My Text &lt;/a>
-    &lt;a view="Link" model="/anchortwo" />
+    &lt;a view="Link" model="/anchorone"&gt; My Text &lt;/a&gt;
+    &lt;a view="Link" model="/anchortwo" /&gt;
     """
 
 MyPage({
-    'anchorone' : '/pages/otherpage'
-    'anchortwo' : {
-        'href':'/pages/thisotherpage/',
-        'text':'The Text Of The Link'
-    })
+    'anchorone': '/pages/otherpage',
+    'anchortwo': {
+        'href': '/pages/thisotherpage/',
+        'text': 'The Text Of The Link'
+    }
+})
 </pre>
 
 <h3>RootRelativeLink</h3>
 <p>Extends Link, and adds the functionality that it will respect this
-request.getRootURL, so that we can be deployed in different roots easily.
-<span class="python">self['href'] = request.getRootURL() + '/' +
-self['href']</span>.  </p>
+request.getRootURL, so that we can be deployed in different roots easily.</p>
+<pre class="python">
+self['href'] = request.getRootURL() + '/' + self['href']
+</pre>
 
 <h3>ExpandMacro</h3>
     <p>A Macro expansion widget modeled after the METAL expander
@@ -223,7 +233,8 @@ self['href']</span>.  </p>
     
     <p>In the Page that is being rendered, place the ExpandMacro widget
     on the node you want replaced with the Macro, and provide nodes
-    tagged with fill-slot= attributes which will fill slots in the Macro:</p>
+    tagged with <code>fill-slot=</code> attributes which will fill slots in the
+    Macro:</p>
     
 <pre class="python">
 class MyPage(page.Page):
@@ -234,23 +245,23 @@ class MyPage(page.Page):
             macroName="main")
 </pre>
         
-<pre class="html">
-&lt;div view="myMacro">
-    &lt;span fill-slot="greeting">Hello&lt;/span>
-    &lt;span fill-slot="greetee">World&lt;/span>
-&lt;/div>
+<pre>
+&lt;div view="myMacro"&gt;
+    &lt;span fill-slot="greeting"&gt;Hello&lt;/span&gt;
+    &lt;span fill-slot="greetee"&gt;World&lt;/span&gt;
+&lt;/div&gt;
 </pre>
     
 <p>
-    Then, in your Macro template file ("MyMacro.html" in the above
+    Then, in your Macro template file (<q>MyMacro.html</q> in the above
     example) designate a node as the macro node, and nodes
-    inside that as the slot nodes::
+    inside that as the slot nodes:
 </p>
     
-<pre class="html">
-&lt;div macro="main">
-    &lt;h3>&lt;span slot="greeting" />, &lt;span slot="greetee" />!&lt;/h3>
-&lt;/div>
+<pre>
+&lt;div macro="main"&gt;
+    &lt;h3&gt;&lt;span slot="greeting" /&gt;, &lt;span slot="greetee" /&gt;!&lt;/h3&gt;
+&lt;/div&gt;
 </pre>
 
 <h3>DeferredWidget</h3>
