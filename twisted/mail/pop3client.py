@@ -84,8 +84,8 @@ class POP3Client(basic.LineOnlyReceiver):
     # does not offer any protection via encryption.
     allowInsecureLogin = False
 
-    # Regular expression to match the challenge string in the
-    # server greeting line.
+    # Regular expression to search for in the challenge string in the server
+    # greeting line.
     challengeMagicRe = re.compile('(<[^>]+>)')
 
     # Challenge received from the server; set by the default
@@ -199,7 +199,7 @@ class POP3Client(basic.LineOnlyReceiver):
         if code != OK:
             self.transport.loseConnection()
         else:
-            m = self.challengeMagicRe.match(status)
+            m = self.challengeMagicRe.search(status)
             if m is not None:
                 self.serverGreeting(m.group(1))
             else:
