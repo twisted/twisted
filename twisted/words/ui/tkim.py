@@ -312,9 +312,12 @@ class ContactList(Toplevel):
         AddContact(self.im)
 
     def removeContact(self):
-        gatewayname,contact,state=self.list.get(ACTIVE)
-        self.list.delete(ACTIVE)
-        self.im.removeContact(self.im.gateways[gatewayname],contact)
+        user=self.box.curselection()
+        if not user: return
+        username=user.node.user
+        gateway=user.parent.parent.node.gateway
+        self.box.remove(user)
+        self.im.removeContact(gateway,username)
 
     def getGateway(self,gateway):
         g=self.gateways.get(gateway)
@@ -343,6 +346,7 @@ class ContactList(Toplevel):
     def changeContactName(self,gateway,contact,newName):
         g=self.getGateway(gateway)
         g.online.updateName(contact,newName)
+        g.offline.updateName(contact,newName)
 
     def sendMessage(self):
         user=self.box.curselection()
@@ -368,8 +372,11 @@ class ContactList(Toplevel):
         m.post(e.x_root,e.y_root)
 
     def runExtra(self,gateway,func):
-        gatewayname,user,state=self.list.get(ACTIVE)
-        if gatewayname!=gateway.name:
+        user=self.box.curselection()
+        if not user: return
+        username=user.node.user
+        gateway2=user.parent.parent.node.gateway
+        if gateway2!=gateway:
             user=None
             state=None
         func(self.im,gateway,user,state)
@@ -444,7 +451,11 @@ class StatusNode(tktree.Node):
         return u
     def hasUser(self,user):
         for u,s in self.users:
-            if u==user: return 1
+            if type(s)==type(""): # single user
+                if u==user: return 1
+            else:
+                if u.hasUser(user): return 1
+
         return 0
     def addUser(self,user,status):
         self.users.append([user,status])
@@ -872,7 +883,7 @@ def handleError(gateway,event_name,message):
     for key,value in imclient.groups.items():
         if key[:len(strgate)]==strgate:
             value.destroy()
-            del imclientt.groups[strgate+value.name]
+            del imclient.groups[strgate+value.name]
 
 def main():
     global imclient
