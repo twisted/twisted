@@ -37,7 +37,7 @@ namespace csharpReactor {
       get { return this._running; }
     }
 
-		public IPort listenTCP(IPEndPoint endPoint, IFactory factory, int backlog) {
+		public IListeningPort listenTCP(IPEndPoint endPoint, IFactory factory, int backlog) {
 			tcp.Port p = new tcp.Port(endPoint, factory, backlog, this);
 			p.startListening();
 			return p;
@@ -61,6 +61,22 @@ namespace csharpReactor {
 			this._reads.Add(fd.socket, fd);
 		}
 		
+		public void removeReader(ISocket isock) {
+			if (this._reads.ContainsKey(isock)) {
+				this._reads.Remove(isock);
+			}
+		}
+
+		public void addWriter(ISocket isock) {
+			this._writes.Add(isock.socket, isock);
+		}
+
+		public void removeWriter(ISocket isock) {
+			if (this._writes.ContainsKey(isock)) {
+				this._writes.Remove(isock);
+			}
+		}
+
 		public ICollection removeAll() {
 			ArrayList values = new ArrayList(this._reads.Values);
 			ArrayList keys = new ArrayList(this._reads.Keys);

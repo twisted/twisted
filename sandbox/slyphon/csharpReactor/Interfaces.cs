@@ -3,12 +3,21 @@ using System.Net;
 using System.Net.Sockets;
 
 namespace csharpReactor.interfaces {
+
+	/// <summary>
+	/// this is roughly equivalent to t.i.interfaces.ISystemHandle, but
+	/// as Select() only works on WinSock sockets (grumble, grumble), 
+	/// we can drop the charade and admit that we're only gonna be dealing
+	/// with sockets.
+	/// </summary>
 	public interface ISocket {
 		Socket socket { get; }
 	}
 
 	public interface IProducer {
 		void stopProducing();
+		void pauseProducing();
+		void resumeProducing();
 	}
 	
 	public interface IConsumer {
@@ -18,30 +27,52 @@ namespace csharpReactor.interfaces {
 	}
 
 	// -- To be fleshed out later -----------------
-	public interface IReadDescriptor : ISocket {}
-	public interface IWriteDescriptor : ISocket {}
-	public interface IReadWriteDescriptor : ISocket {}
+	public interface IReadDescriptor : ISocket {
+		void doRead();
+	}
+
+	public interface IWriteDescriptor : ISocket {
+		Nullable<int> doWrite();
+	}
+
+	public interface IReadWriteDescriptor : IReadDescriptor, IWriteDescriptor {}
 	// ----------------------------------------
 
 	
 	/// <summary>
   /// A transport for bytes
+  /// 
+	/// I represent (and wrap) the physical connection and synchronicity
+	/// of the framework which is talking to the network.  I make no
+	///	representations about whether calls to me will happen immediately
+	///	or require returning to a control loop, or whether they will happen
+	///	in the same or another thread.  Consider methods of this class
+	///	(aside from getPeer) to be 'thrown over the wall', to happen at some
+	///	indeterminate time
   /// </summary>
   public interface ITransport : ISocket {
-    IProtocol protocol { get; }
-    IAddress client { get; }
-    IPort server { get; }
     double sessionNum { get; }
     bool connected { get; }
-    void startReading();
+		void write(String data);
+		void writeSequence(String[] data);
+		void loseConnection();
+		/// <summary>
+		/// returns an IAddress representing the other side of the connection
+		/// it is not reliable (port forwarding, proxying, etc.)
+		/// </summary>
+		IAddress getPeer();
+		/// <summary>
+		/// returns an IAddress representing this side of the connection
+		/// </summary>
+		IAddress getHost();
   }
 
-  public interface IPort : ISocket {
+  public interface IListeningPort : ISocket {
     IPEndPoint localEndPoint { get; }
-    int backlog { get; set; }
+//    int backlog { get; set; }
     IAddress address { get; }
-    IFactory factory { get; set; }
-    void doRead();
+//    IFactory factory { get; set; }
+//    void doRead();
     void startListening();
   }
 
@@ -57,7 +88,7 @@ namespace csharpReactor.interfaces {
   }
 
   public interface IReactor {
-    IPort listenTCP(IPEndPoint ep, IFactory f, int backlog);
+    IListeningPort listenTCP(IPEndPoint ep, IFactory f, int backlog);
     void doIteration(int timeout);
     void addReader(ISocket fd);
     void run();
@@ -90,4 +121,5 @@ namespace csharpReactor.interfaces {
     void doStop();
   }
   
+
 }

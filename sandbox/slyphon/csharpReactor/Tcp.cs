@@ -4,17 +4,8 @@ using System.Net.Sockets;
 using csharpReactor.interfaces;
 
 namespace csharpReactor.tcp {
-  public class Server : ITransport, ISocket {
-    protected Socket _sock;
+  public class Server : existential.FileDescriptor {
     protected IProtocol _protocol;
-    protected IAddress _client;
-    protected IPort _server;
-    protected double _sessionNum;
-    protected bool _connected = false;
-    
-		public Socket socket {
-			get { return this._sock; }
-		}
 
     public IProtocol protocol {
       get { return this._protocol; }
@@ -24,20 +15,12 @@ namespace csharpReactor.tcp {
       get { return this._client; }
     }
 
-    public IPort server { 
+    public IListeningPort server { 
       get { return this._server; }
     }
 
-    public double sessionNum {
-      get { return this._sessionNum; }
-    }
-
-    public bool connected {
-      get { return this._connected; }
-    }
-
-    public Server(Socket sock, IProtocol p, IAddress client, IPort server, double sessionNum) {
-      this._sock = sock;
+    public Server(Socket sock, IProtocol p, IAddress client, IListeningPort server, double sessionNum) {
+      this._socket = sock;
       this._protocol = p;
       this._client = client;
       this._server = server;
@@ -47,13 +30,10 @@ namespace csharpReactor.tcp {
       this._connected = true;
     }
 
-    public void startReading() {
-			Reactor.instance.addReader((ISocket)this);
-    }
   }
 
 
-  public class Port : existential.FileDescriptor, IPort {
+  public class Port : existential.FileDescriptor, IListeningPort {
     public static AddressFamily addressFamily = AddressFamily.InterNetwork;
     public static SocketType socketType = SocketType.Stream;
     public static ProtocolType protocolType = ProtocolType.Tcp;
@@ -109,14 +89,14 @@ namespace csharpReactor.tcp {
     /// called when my socket is ready for reading!
     /// accept a connection and sets up the protocol
     /// </summary>
-    public virtual void doRead() {
+    public override void doRead() {
       Socket s = this._socket.Accept();
       IProtocol p = this._factory.buildProtocol(new Address(s));
       if (p == null) {
         s.Close(); // reject the connection attempt
       } else {
         this._sessionNum++; // XXX: Should probably be concerned about rollover
-        ITransport transport = new Server(s, p, new Address(s), (IPort)this, this._sessionNum);
+        ITransport transport = new Server(s, p, new Address(s), (IListeningPort)this, this._sessionNum);
         p.makeConnection(transport);
       }
     }

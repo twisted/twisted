@@ -48,7 +48,7 @@ namespace csharpReactor.tests {
 			Socket sock = gimmeASocket();
 			tcp.Server s = new tcp.Server(sock, (IProtocol)proto.MockInstance, 
 														(IAddress)(new DynamicMock(typeof(IAddress))).MockInstance,
-														(IPort)(new DynamicMock(typeof(IPort))).MockInstance,
+														(IListeningPort)(new DynamicMock(typeof(IListeningPort))).MockInstance,
 														100);
 			ArrayList reads = new ArrayList(r.removeAll());			
 			Assert.IsTrue(reads.Count == 1);
