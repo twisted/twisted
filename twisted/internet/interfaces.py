@@ -353,7 +353,7 @@ class IReactorProcess(Interface):
                        in which case use those file descriptors.
                        (Not available on all systems.)
 
-        @see: C{twisted.protocols.protocol.ProcessProtocol}
+        @see: C{twisted.internet.protocol.ProcessProtocol}
         """
 
 class IReactorTime(Interface):
