@@ -56,6 +56,11 @@ class DummyRequest:
     def setETag(self, tag):
         assert not self.written, "ETag cannot be set after data has been written: %s." % string.join(self.written, "@@@@")
 
+class ResourceTestCase(unittest.TestCase):
+    def testListEntities(self):
+        r = resource.Resource()
+        self.failUnlessEqual([], r.listEntities())
+        
 class SimpleResource(resource.Resource):
     def render(self, request):
         if http.CACHED in (request.setLastModified(10),
