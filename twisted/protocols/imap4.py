@@ -1238,9 +1238,6 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 (tag, query, uid), None, (tag,), None
             )
         else:
-            if 'bodystructure' in [p.type for p in query]:
-                self.sendNegativeResponse(tag, "BODYSTRUCTURE is totally unsupported, dude.")
-                return
             maybeDeferred(self.mbox.fetch, messages, uid=uid).addCallbacks(
                 self.__cbFetch, self.__ebFetch,
                 (tag, query, uid), None, (tag,), None
@@ -3643,12 +3640,21 @@ def getEnvelope(msg):
         reply_to and parseAddr(reply_to), to and parseAddr(to),
         cc and parseAddr(cc), bcc and parseAddr(bcc), in_reply_to, mid)
 
+def getLineCount(msg):
+    lines = 0
+    # XXX - This must be the number of lines in the ENCODED version
+    for _ in msg.getBodyFile():
+        lines += 1
+    return lines
+
 def getBodyStructure(msg, extended=False):
     # XXX - This does not properly handle multipart messages
     # BODYSTRUCTURE is obscenely complex and criminally under-documented.
     
-    charset = 'US-ASCII'
-    mm = msg.getHeaders(False, 'content-type').get('content-type')
+    attrs = {}
+    headers = 'content-type', 'content-id', 'content-description', 'content-transfer-encoding'
+    headers = msg.getHeaders(False, *headers)
+    mm = headers.get('content-type')
     if mm:
         mm = ''.join(mm.splitlines())
         mimetype = mm.split(';')
@@ -3660,27 +3666,76 @@ def getBodyStructure(msg, extended=False):
             else:
                 major, minor = mimtype
             attrs = dict([x.lower().split('=', 1) for x in mimetype[1:]])
-            try:
-                charset = attrs['charset'].upper()
-            except KeyError:
-                pass
         else:
             major = minor = None
     else:
         major = minor = None
     
+    
     size = str(msg.getSize())
-    lines = 0
-    for _ in msg.getBodyFile():
-        lines += 1
-    return (
-        major, minor,               # Main and Sub MIME types
-        ("CHARSET", charset),       # Character encoding
-        None, None,                 # Hell if I know
-        "7BIT",                     # Content-Transfer-Encoding??  Beats me
-        size,                       # Number of octets total
-        str(lines)                  # number of lines in body
-    )
+    result = [
+        major, minor,                       # Main and Sub MIME types
+        attrs.items(),                      # content-type parameter list
+        headers.get('content-id'),          # Duh
+        headers.get('content-description'), # Duh
+        headers.get('content-transfer-encoding'), # Duh
+        size,                               # Number of octets total
+    ]
+    
+    # XXX - Super expensive, CACHE THIS VALUE FOR LATER RE-USE
+    if major.lower() == 'text':
+        result.append(str(getLineCount(msg)))
+    elif (major.lower(), minor.lower()) == ('message', 'rfc822'):
+        contained = msg.getSubPart(0)
+        result.append(getEnvelope(contained))
+        result.append(getBodyStructure(contained, False))
+        result.append(getLineCount(contained))
+
+    if not extended:
+        return result
+
+    if major.lower() != 'multipart':
+        headers = 'content-md5', 'content-disposition', 'content-language'
+        headers = msg.getHeaders(False, *headers)
+        disp = headers.get('content-disposition')
+
+        # XXX - I dunno if this is really right
+        if disp:
+            disp = disp.split('; ')
+            if len(disp) == 1:
+                disp = (disp[0].lower(), None)
+            elif len(disp) > 1:
+                disp = (disp[0].lower(), [x.split('=') for x in disp[1:]])
+
+        result.append(headers.get('content-md5'))
+        result.append(disp)
+        result.append(headers.get('content-language'))
+    else:
+        result = [result]
+        try:
+            i = 0
+            while True:
+                submsg = msg.getSubPart(i)
+                L.append(getBodyStructure(submsg))
+                i += 1
+        except IndexError:
+            result.append(minor)
+            result.append(attrs.items())
+
+            # XXX - I dunno if this is really right
+            headers = msg.getHeaders(False, 'content-disposition', 'content-language')
+            disp = headers.get('content-disposition')
+            if disp:
+                disp = disp.split('; ')
+                if len(disp) == 1:
+                    disp = (disp[0].lower(), None)
+                elif len(disp) > 1:
+                    disp = (disp[0].lower(), [x.split('=') for x in disp[1:]])
+            
+            result.append(disp)
+            result.append(headers.get('content-language'))
+
+    return result
 
 class IMessage(components.Interface):
     def getHeaders(self, negate, *names):
@@ -3730,6 +3785,9 @@ class IMessage(components.Interface):
         
         @type part: C{int}
         @param part: The number of the part to retrieve, indexed from 0.
+
+        @raise C{IndexError}: Raised if the specified part does not exist.
+        @raise C{TypeError}: Raised if this message is not multipart.
         
         @rtype: Any object implementing C{IMessage}.
         @return: The specified sub-part.
