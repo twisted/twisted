@@ -52,10 +52,6 @@ def _functionWrapper(original, name, signatureInfo):
     def _callthrough(*pos, **kw):
         argcount = len(pos)
         kwcount = len(kw)
-        if len(positional) > 0 and positional[0] == 'self':
-            # FIXME, hack.
-            # 'self' shouldn't be in the interface declarations, but is.
-            argcount=argcount+1
         
         if len(positional) > 0 or kwargs is not None or varargs is not None:
             if varargs is None and argcount > len(positional):

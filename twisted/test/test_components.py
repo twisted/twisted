@@ -451,7 +451,8 @@ class TestZIBC(unittest.TestCase):
 from zope import interface as zinterface
 
 class IZope(zinterface.Interface):
-    pass
+    def amethod(a, b):
+        pass
 
 class Zopeable:
     pass
@@ -490,4 +491,9 @@ class TestZope(unittest.TestCase):
         self.assert_(components.implements(o, IZope))
         self.assert_(components.implements(o, ISub))
 
+    def testSignatureString(self):
+        # Make sure it cuts off the self from old t.p.c signatures.
+        self.assertEquals(IAdder['add'].getSignatureString(), "(a, b)")
+        self.assertEquals(IZope['amethod'].getSignatureString(), "(a, b)")
+        
 warnings.filterwarnings('default', **compWarn)
