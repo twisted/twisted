@@ -2,12 +2,12 @@ Source: twisted
 Section: net
 Priority: extra
 Maintainer: Moshe Zadka <moshez@debian.org>
-Build-Depends: debhelper, python-distutils, python-dev
+Build-Depends: debhelper, python-dev
 Standards-Version: 3.0.1
 
 Package: twisted
 Architecture: any
-Depends: python
+Depends: python2.1
 Recommends: python-tk
 Description: Event-based framework for internet applications.
  It includes a web server, a telnet server, a multiplayer RPG engine, a 

@@ -13,7 +13,7 @@ export DH_COMPAT=1
 build: build-stamp
 build-stamp:
 	dh_testdir
-	/usr/bin/python setup.py build
+	/usr/bin/python2.1 setup.py build
 	touch build-stamp
 
 clean:
@@ -33,13 +33,13 @@ install-stamp: build-stamp
 	dh_installdirs
 
 	# Add here commands to install the package into debian/tmp.
-	cp -rf build/lib*/twisted debian/tmp/usr/lib/python1.5/site-packages/
+	cp -rf build/lib*/twisted debian/tmp/usr/lib/python2.1/site-packages/
 	cp TODO README CREDITS doc/*.html debian/tmp/usr/share/doc/twisted
 	cp doc/examples/*.py debian/tmp/usr/share/doc/twisted/examples
 	gzip -9 debian/tmp/usr/share/doc/twisted/examples/*.py
 	cp debian/copyright debian/tmp/usr/share/doc/twisted/
 	cp bin/manhole bin/tap2deb bin/mktap bin/gnusto bin/twistd bin/im bin/faucet debian/tmp/usr/bin
-	for file in debian/tmp/usr/bin/*;do sed '1s|.*|#!/usr/bin/python|' $$file > $$file.$$$$;cat $$file.$$$$ > $$file;rm $$file.$$$$;done
+	for file in debian/tmp/usr/bin/*;do sed '1s|.*|#!/usr/bin/python2.1|' $$file > $$file.$$$$;cat $$file.$$$$ > $$file;rm $$file.$$$$;done
 	cp doc/man/*.1 debian/tmp/usr/share/man/man1/
 	gzip -9 debian/tmp/usr/share/man/man1/*
 	touch install-stamp

@@ -1,3 +1,10 @@
+twisted (0.12.0-1) unstable; urgency=low
+
+  * New upstream version
+  * Using Python 2.1 
+
+ -- Moshe Zadka <moshez@debian.org>  Wed, 21 Nov 2001 15:17:25 +0200
+
 twisted (0.10.3-1) unstable; urgency=low
 
   * New upstream release
