@@ -19,8 +19,6 @@
 An asynchronous mapping to U{DB-API 2.0<http://www.python.org/topics/database/DatabaseAPI-2.0.html>}.
 """
 
-import warnings
-
 from twisted.internet import defer
 from twisted.internet import threads
 from twisted.python import reflect, log, failure
@@ -290,97 +288,6 @@ class ConnectionPool:
         self.threadpool.callInThread(threads._putResultInDeferred,
                                      d, f, args, kwargs)
         return d
-
-    def query(self, callback, errback, *args, **kw):
-        warnings.warn("This is deprecated. Use runQuery.", DeprecationWarning)
-        self._deferToThread(self._runQuery, *args, **kw).addCallbacks(
-            callback, errback)
-
-    def operation(self, callback, errback, *args, **kw):
-        warnings.warn("This is deprecated. Use runOperation", DeprecationWarning)
-        self._deferToThread(self._runOperation, *args, **kw).addCallbacks(
-            callback, errback)
-
-    def synchronousOperation(self, *args, **kw):
-        warnings.warn("This is deprecated. Use DB-API directly.", DeprecationWarning)
-        self._runOperation(*args, **kw)
-
-    def interaction(self, interaction, callback, errback, *args, **kw):
-        warnings.warn("This is deprecated. Use runInteraction", DeprecationWarning)
-        self._deferToThread(self._runInteraction, interaction,
-                            *args, **kw).addCallbacks(callback, errback)
-
-
-class Augmentation:
-    '''This class is now deprecated. Just use the ConnectionPool directly.
-
-    Conventional usage of me is to write methods that look like
-
-      >>>  def getSomeData(self, critereon):
-      >>>      return self.runQuery("SELECT * FROM FOO WHERE BAR LIKE '%%%s%%'" % critereon).addCallback(self.processResult)
-
-    '''
-
-    def __init__(self, dbpool):
-        warnings.warn("This is deprecated. Use ConnectionPool.", DeprecationWarning)
-        self.dbpool = dbpool
-
-    def __setstate__(self, state):
-        self.__dict__ = state
-
-    def operationDone(self, done):
-        """Example callback for database operation success.
-
-        Override this, and/or define your own callbacks.
-        """
-        warnings.warn("This is deprecated. Roll your own.", DeprecationWarning)
-        log.msg("%s Operation Done: %s" % (reflect.qual(self.__class__), done))
-
-    def operationError(self, error):
-        """Example callback for database operation failure.
-
-        Override this, and/or define your own callbacks.
-        """
-        warnings.warn("This is deprecated. Roll your own.", DeprecationWarning)
-        log.msg("%s Operation Failed: %s" % (reflect.qual(self.__class__), error))
-        log.err(error)
-
-    schema = ''' Insert your SQL database schema here. '''
-
-    def createSchema(self):
-        warnings.warn("This is deprecated. Roll your own.", DeprecationWarning)
-        return self.runOperation(self.schema).addCallbacks(self.schemaCreated, self.schemaNotCreated)
-
-    def schemaCreated(self, result):
-        warnings.warn("This is deprecated. Roll your own.", DeprecationWarning)
-        log.msg("Successfully created schema for %s." % reflect.qual(self.__class__))
-
-    def schemaNotCreated(self, error):
-        warnings.warn("This is deprecated. Roll your own.", DeprecationWarning)
-        log.msg("Schema already exists for %s." % reflect.qual(self.__class__))
-
-    def runQuery(self, *args, **kw):
-        warnings.warn("This is deprecated. Use the ConnectionPool.",
-                      DeprecationWarning)
-        d = defer.Deferred()
-        self.dbpool.query(d.callback, d.errback, *args, **kw)
-        return d
-
-    def runOperation(self, *args, **kw):
-        warnings.warn("This is deprecated. Use the ConnectionPool.",
-                      DeprecationWarning)
-        d = defer.Deferred()
-        self.dbpool.operation(d.callback, d.errback, *args, **kw)
-        return d
-
-    def runInteraction(self, interaction, *args, **kw):
-        warnings.warn("This is deprecated. Use the ConnectionPool.",
-                      DeprecationWarning)
-        d = defer.Deferred()
-        self.dbpool.interaction(interaction, d.callback, d.errback,
-                                *args, **kw)
-        return d
-
 
 def safe(text):
     """Make a string safe to include in an SQL statement

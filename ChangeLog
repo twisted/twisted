@@ -2,6 +2,7 @@
 
 	* twisted/enterprise/adbapi.py: only log sql exceptions if noisy.
 	Closes issue 631.
+	Remove deprecated api.
 
 	* twisted/news/database.py: do not use adbapi.Augmentation
 
