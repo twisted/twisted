@@ -274,7 +274,7 @@ class ColoredManhole(Manhole):
 
         if moreCharactersComing:
             # Skip it all, we'll get called with another character in
-            # like 2 femptoseconds.
+            # like 2 femtoseconds.
             return
 
         if ch == ' ':
