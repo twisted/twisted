@@ -85,11 +85,11 @@ from sys import stdout
 class Echo(Protocol):
 
     def dataReceived(self, data):
-            stdout.write(data)
+        stdout.write(data)
 
 class EchoClientFactory(ClientFactory):
     
-    def startedConnection(self, connector):
+    def startedConnecting(self, connector):
         print 'Started to connect.'
     
     def buildProtocol(self, addr):
