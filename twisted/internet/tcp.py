@@ -230,9 +230,9 @@ class BaseClient(Connection):
         try:
             self.socket.connect(self.realAddress)
         except socket.error, se:
-            if se.args[0] in (EISCONN, EALREADY):
+            if se.args[0] == EISCONN:
                 pass
-            elif se.args[0] in (EWOULDBLOCK, EINVAL, EINPROGRESS):
+            elif se.args[0] in (EWOULDBLOCK, EINVAL, EINPROGRESS, EALREADY):
                 self.startReading()
                 self.startWriting()
                 return
