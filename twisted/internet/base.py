@@ -322,7 +322,7 @@ class ReactorBase:
     def addSystemEventTrigger(self, phase, eventType, f, *args, **kw):
         """See twisted.internet.interfaces.IReactorCore.addSystemEventTrigger.
         """
-        assert callable(f)
+        assert callable(f), "%s is not callable" % f
         if self._eventTriggers.has_key(eventType):
             triglist = self._eventTriggers[eventType]
         else:
@@ -355,7 +355,7 @@ class ReactorBase:
     def callLater(self, seconds, f, *args, **kw):
         """See twisted.internet.interfaces.IReactorTime.callLater.
         """
-        assert callable(f)
+        assert callable(f), "%s is not callable" % f
         assert seconds >= 0
         tple = DelayedCall(time() + seconds, f, args, kw, self._pendingTimedCalls.remove, self._resetCallLater)
         insort(self._pendingTimedCalls, tple)
@@ -405,6 +405,7 @@ class ReactorBase:
                 call.func(*call.args, **call.kw)
             except:
                 log.deferr()
+
 
 
     # IReactorThreads
