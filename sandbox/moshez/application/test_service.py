@@ -32,7 +32,6 @@ class TestService(unittest.TestCase):
         p = service.MultiService()
         s.setServiceParent(p)
         self.failUnlessEqual(list(p), [s])
-        self.failUnlessEqual(p.getService(0), s)
         self.failUnlessEqual(s.parent, p)
 
     def testNamedChild(self):
@@ -43,7 +42,6 @@ class TestService(unittest.TestCase):
         self.failUnlessEqual(list(p), [s])
         self.failUnlessEqual(s.parent, p)
         self.failUnlessEqual(p.getServiceNamed("hello"), s)
-        self.failUnlessEqual(p.getService(0), s)
 
     def testDoublyNamedChild(self):
         s = service.Service()

@@ -32,24 +32,11 @@ reactorTypes = {
     'kqueue': 'twisted.internet.kqreactor'
     }
 
-
-def loadApplication(config, passphrase):
-    filename = os.path.abspath(config['python'] or config['xml'] or
-                               config['source'] or config['file'])
-    if config['python']:
-        style = 'python'
-    elif config['xml']:
-        style = 'xml'
-    elif config['source']:
-        style = 'source'
-    elif config['file']:
-        style = 'pickle'
-    log.msg("Loading %s..." % (filename,))
+def loadApplication(d, passphrase):
+    s = [(d[t], t) for t in ['python', 'xml', 'source', 'file'] if d[t]][0]
+    filename, style = s[0], {'file':'pickle'}.get(s[1],s[1])
+    log.msg("Loading %s..." % filename)
     application = loadPersisted(filename, style, passphrase)
-    if service.IService(application, None) is None:
-        # oh my god! it is an old style application
-        # convert convert before anyone sees us with it
-        application = compat.convert(application)
     log.msg("Loaded.")
     return application
 
@@ -57,32 +44,29 @@ def installReactor(reactor):
     if reactor:
         reflect.namedModule(reactorTypes[reactor]).install()
 
-def runReactor(config, oldstdout, oldstderr):
-    from twisted.internet import reactor
-    if config['profile']:
-        p = profile.Profile()
-        p.runctx("reactor.run()", globals(), locals())
-        if config['savestats']:
-            p.dump_stats(config['profile'])
-        else:
-            # XXX - omfg python sucks
-            tmp, sys.stdout = sys.stdout, open(config['profile'], 'a')
-            p.print_stats()
-            sys.stdout, tmp = tmp, sys.stdout
-            tmp.close()
-    elif config['debug']:
-        failure.startDebugMode()
-        sys.stdout = oldstdout
-        sys.stderr = oldstderr
-        if runtime.platformType == 'posix':
-            signal.signal(signal.SIGINT, lambda *args: pdb.set_trace())
-        pdb.run("reactor.run()", globals(), locals())
-    else:
-        reactor.run()
-
 def runReactorWithLogging(config, oldstdout, oldstderr):
+    from twisted.internet import reactor
     try:
-        runReactor(config, oldstdout, oldstderr)
+        if config['profile']:
+            p = profile.Profile()
+            p.runcall(reactor.run)
+            if config['savestats']:
+                p.dump_stats(config['profile'])
+            else:
+                # XXX - omfg python sucks
+                tmp, sys.stdout = sys.stdout, open(config['profile'], 'a')
+                p.print_stats()
+                sys.stdout, tmp = tmp, sys.stdout
+                tmp.close()
+        elif config['debug']:
+            failure.startDebugMode()
+            sys.stdout = oldstdout
+            sys.stderr = oldstderr
+            if runtime.platformType == 'posix':
+                signal.signal(signal.SIGINT, lambda *args: pdb.set_trace())
+            pdb.runcall(reactor.run)
+        else:
+            reactor.run()
     except:
         if config['nodaemon']:
             file = oldstdout
@@ -102,7 +86,7 @@ def getApplication(config, passphrase):
     try:
         application = loadApplication(config, passphrase)
     except Exception, e:
-        s = "Failed to load application: %s" % (e,)
+        s = "Failed to load application: %s" % e
         traceback.print_exc(file=log.logfile)
         log.msg(s)
         log.deferr()
@@ -168,7 +152,6 @@ def run(runApp, ServerOptions):
     # make default be "--help"
     if len(sys.argv) == 1:
         sys.argv.append("--help")
-
     config = ServerOptions()
     try:
         config.parseOptions()
@@ -185,26 +168,16 @@ def initialLog():
                                                runtime.shortPythonVersion()))
     log.msg('reactor class: %s' % reactor.__class__)
 
-def scheduleSave(app):
-    from twisted.internet import reactor
-    p = sob.IPersistable(app)
-    reactor.addSystemEventTrigger('after', 'shutdown', p.save, 'shutdown')
 
-def saveApplication(p, type, enc, filename):
-    p = sob.IPersistable(p)
-    p.setStyle(type)
-    if enc:
-        passphrase = util.getPassword("Encryption passphrase: ")
-        filename = None
-    else:
-        passphrase = None
-    p.save(filename=filename, passphrase=passphrase)
 
 def loadPersisted(filename, kind, passphrase):
     if kind == 'python':
-        return sob.loadValueFromFile(filename, 'application', passphrase)
+        application = sob.loadValueFromFile(filename, 'application', passphrase)
     else:
-        return sob.load(filename, kind, passphrase)
+        application = sob.load(filename, kind, passphrase)
+    if service.IService(application, None) is None:
+        application = compat.convert(application)
+    return application
 
 def guessType(filename):
     ext = os.path.splitext(filename)[1]
@@ -222,9 +195,7 @@ def guessType(filename):
 
 def loadOrCreate(name, filename, procname, uid, gid):
     if filename and os.path.exists(filename):
-        a = sob.load(filename, 'pickle')
-        if service.IServiceCollection(a, None) is None: # old application
-            a = compat.convert(a)
+        a = loadPersisted(filename, 'pickle', None)
     else:
         a = service.Application(name, uid, gid)
     if procname:
@@ -232,16 +203,21 @@ def loadOrCreate(name, filename, procname, uid, gid):
     return a
 
 def convertStyle(filein, typein, passphrase, fileout, typeout, encrypt):
-    a = loadPersisted(filein, typein, passphrase)
-    if sob.IPersistable(a, None) is None: # we have an old-style application
-        a = compat.convert(a)
-    saveApplication(a, typeout, encrypt, fileout)
+    application = loadPersisted(filein, typein, passphrase)
+    sob.IPersistable(application).setStyle(typeout)
+    if encrypt:
+        passphrase = util.getPassword("Encryption passphrase: ")
+        fileout = None
+    else:
+        passphrase = None
+    sob.IPersistable(application).save(filename=fileout, passphrase=passphrase)
 
 def startApplication(application, save):
     from twisted.internet import reactor
     service.IService(application).startService()
     if save:
-        scheduleSave(application)
+         p = sob.IPersistable(app)
+         reactor.addSystemEventTrigger('after', 'shutdown', p.save, 'shutdown')
     reactor.addSystemEventTrigger('before', 'shutdown',
                                   service.IService(application).stopService)
 

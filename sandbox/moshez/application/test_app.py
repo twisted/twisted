@@ -21,22 +21,6 @@ import os
 
 class TestAppSupport(unittest.TestCase):
 
-    def testSaveApplication(self):
-        a = service.Application("hello")
-        for style in 'pickle xml source'.split():
-            app.saveApplication(a, style, 0, 'helloapplication')
-            a1 = app.loadPersisted('helloapplication', style, None)
-            self.assertEqual(service.IService(a1).name, "hello")
-            app.saveApplication(a, style, 0, None)
-            a1 = app.loadPersisted('hello.ta'+style[0], style, None)
-            self.assertEqual(service.IService(a1).name, "hello")
-        open("hello.tac", 'w').write("""
-from twisted.application import service
-application = service.Application("hello")
-""")
-        a1 = app.loadPersisted('hello.tac', 'python', None)
-        self.assertEqual(service.IService(a1).name, "hello")
-        
     def testTypeGuesser(self):
         self.assertRaises(KeyError, app.guessType, "file.blah")
         self.assertEqual('python', app.guessType("file.py"))
@@ -58,7 +42,8 @@ application = service.Application("hello")
         for style in 'source xml pickle'.split():
             config = baseconfig.copy()
             config[{'pickle': 'file'}.get(style, style)] = 'helloapplication'
-            app.saveApplication(a, style, 0, 'helloapplication')
+            sob.IPersistable(a).setStyle(style)
+            sob.IPersistable(a).save(filename='helloapplication')
             a1 = app.loadApplication(config, None)
             self.assertEqual(service.IService(a1).name, "hello")
         config = baseconfig.copy()
