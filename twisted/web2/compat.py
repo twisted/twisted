@@ -73,7 +73,9 @@ class OldRequestAdapter(object):
             headers = getattr(self.original, name)
             return HeaderAdapter(headers)
         return property(_get)
-    
+
+    code = _getsetFromOriginal('code')
+    code_message = ""
     method = _getsetFromOriginal('method')
     clientproto = _getsetFromOriginal('clientproto')
     uri = _getsetFromOriginal('uri')
@@ -112,7 +114,7 @@ class OldRequestAdapter(object):
         
     def setResponseCode(self, code, message=None):
         # message ignored
-        self.original.setResponseCode(code)
+        self.original.code = code
 
     def setLastModified(self, when):
         when = long(math.ceil(when))
@@ -120,16 +122,16 @@ class OldRequestAdapter(object):
         try:
             self.original.checkPreconditions()
         except error.Error, err:
-            self.original.setResponseCode(err.code)
+            self.original.code = err.code
             return old_http.CACHED
         return None
 
     def setETag(self, etag):
-        self.original.out_headers.setRawHeaders('ETag', long(math.ceil(when)))
+        self.original.out_headers.setRawHeaders('ETag', etag)
         try:
             self.original.checkPreconditions()
         except error.Error, err:
-            self.original.setResponseCode(err.code)
+            self.original.code = err.code
             return old_http.CACHED
 
     def getAllHeaders(self):

@@ -216,7 +216,7 @@ class Request(http.Request):
             self.chanRequest.abortConnection()
             return
         
-        self.setResponseCode(responsecode.INTERNAL_SERVER_ERROR)
+        self.code = responsecode.INTERNAL_SERVER_ERROR
         body = ("<html><head><title>Internal Server Error</title></head>"
                 "<body><h1>Internal Server Error</h1>An error occurred rendering the requested page. Additionally, an error occured rendering the error page.</body></html>")
         

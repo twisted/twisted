@@ -65,8 +65,7 @@ class IRequest(components.Interface):
         pass
     def write(self, data):
         pass
-    def setResponseCode(self, code, message=None):
-        pass
+    
     def checkPreconditions(self, entityExists=True):
         pass
     def checkIfRange(self):
@@ -76,18 +75,17 @@ class IRequest(components.Interface):
         pass
     def unregisterProducer(self):
         pass
-    def connectionLost(self, reason):
-        pass
     
     chanRequest = Attribute("")
     method = Attribute("")
     uri = Attribute("")
     clientproto = Attribute("")
     in_headers = Attribute("")
-
+    
     startedWriting = Attribute("")
     out_headers = Attribute("")
     sentLength = Attribute("")
+    code = Attribute("")
 
 class IOldRequest(components.Interface):
     """I'm an old request, completely unspecified. :("""

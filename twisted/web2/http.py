@@ -25,7 +25,7 @@ import os
 # twisted imports
 from twisted.internet import interfaces, protocol, address, reactor
 from twisted.protocols import policies, basic
-from twisted.python import log, components
+from twisted.python import log, components, util
 from zope.interface import implements
 
 # sibling imports
@@ -72,7 +72,7 @@ class StringTransport:
 # response codes that must have empty bodies
 NO_BODY_CODES = (204, 304)
 
-class Request:
+class Request(object):
     """A HTTP request.
 
     Subclasses should override the process() method to determine how
@@ -98,6 +98,15 @@ class Request:
     _acceptedData = False
     
     _forceSSL = False
+    
+    def _setCode(self, code):
+        if self.startedWriting:
+            raise AttributeError("The response code is immutable as it has already been sent.")
+        self._code = code
+    def _getCode(self):
+        return self._code
+
+    code = property(_getCode, _setCode)
     
     def createFromRequest(cls, other):
         result = cls(other.chanRequest, other.command, other.path, other.clientproto, other.in_headers)
@@ -213,11 +222,6 @@ class Request:
     def unregisterProducer(self):
         self.chanRequest.unregisterProducer()
     
-    def setResponseCode(self, code):
-        """Set the HTTP response code.
-        """
-        self._code = code
-
     def checkPreconditions(self, entityExists=True):
         """Check to see if this request passes the conditional checks specified
         by the client. As a side-effect, may modify my response code to
@@ -311,7 +315,6 @@ class Request:
             return ifrange.match(self.out_headers.getHeader("etag"), strongCompare=True)
         else:
             return ifrange == self.out_headers.getHeader("last-modified")
-
 
 # FIXME: these last 3 methods don't belong here.
 
@@ -465,6 +468,7 @@ class HTTPChannelRequest:
             else:
                 # await raw data as content
                 self.channel.setRawMode()
+                # Should I do self.pauseProducing() here?
         elif line[0] in ' \t':
             # Append a header continuation
             self.partialHeader = self.partialHeader+line
@@ -794,14 +798,19 @@ class HTTPChannelRequest:
             self.request.connectionLost(reason)
 
     # producer interface
-#    def pauseProducing(self):
-#        self.channel.
-#    def stopProducing(self):
-#
-#    def resumeProducing(self):
+    def pauseProducing(self):
+        if not self.finishedReading:
+            self.channel.pauseProducing()
         
+    def resumeProducing(self):
+        if not self.finishedReading:
+            self.channel.resumeProducing()
+       
+    def stopProducing(self):
+        if not self.finishedReading:
+            self.channel.stopProducing()
     
-class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
+class HTTPChannel(object, basic.LineReceiver, policies.TimeoutMixin):
     """A receiver for HTTP requests. Handles splitting up the connection
     for the multiple HTTPChannelRequests that may be in progress on this
     channel.
@@ -817,7 +826,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
     """
     
-    # implement(interfaces.IHalfCloseableProtocol)
+    implements(interfaces.IHalfCloseableProtocol)
     
     # these two are generally overridden by the defaults set in HTTPFactory
     timeOut = 60 * 4
@@ -832,9 +841,9 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     persistent = True
     
     _readLost = False
-    _losingWrite = False
     
     _lingerTimer = None
+    chanRequest = None
     
     def __init__(self):
         # the request queue
@@ -961,30 +970,22 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         3b) If that doesn't happen, the timer fires, and makes the socket
             close anyways.
         """
-        # XXX: Until itamar finishes the half-closing support, cannot use
-        # the real code.
-        self.transport.loseConnection()
-        return
-        # XXX
         
         # Close write half
-        self._losingWrite = True
         self.transport.halfCloseConnection(write=True)
         
         # Throw out any incoming data
-        self.transport.startReading()
         self.dataReceived = self.lineReceived = lambda *args: None
-        
-    def writeConnectionLost(self, reason):
-        if self._losingWrite:
-            # Okay, all data has been written
-            # In 20 seconds, actually close the socket
-            self._lingerTimer = reactor.callLater(20, self.transport.loseConnection)
-        else:
-            # Write error, lose as normal.
-            self.transport.loseConnection()
-        
-    def readConnectionLost(self, reason):
+        # (this has to be a callLater because current processing might
+        #  cause input to be paused after this returns)
+        reactor.callLater(0, self.transport.resumeProducing)
+
+    def writeConnectionLost(self):
+        # Okay, all data has been written
+        # In 20 seconds, actually close the socket
+        self._lingerTimer = reactor.callLater(20, self.transport.loseConnection)
+
+    def readConnectionLost(self):
         """Read connection lost"""
         # If in the lingering-close state, lose the socket.
         if self._lingerTimer:
@@ -1000,9 +1001,10 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         # If currently in the process of reading a request, this is
         # probably a client abort, so lose the connection.
         if self.chanRequest:
-            self.loseConnection()
+            self.transport.loseConnection()
         
     def connectionLost(self, reason):
+        self.readConnectionLost()
         self.setTimeout(None)
         # Tell all requests to abort.
         for request in self.requests:

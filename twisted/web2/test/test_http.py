@@ -15,7 +15,7 @@ class PreconditionTestCase(unittest.TestCase):
     def checkPreconditions(self, request, expectedResult, expectedCode,
                            initCode=responsecode.OK, entityExists=True):
         code=initCode
-        request.setResponseCode(code)
+        request.code = code
         preconditionsPass = True
         
         try:
@@ -259,6 +259,10 @@ class LoopbackRelay(loopback.LoopbackRelay):
     def stopProducing(self):
         self.loseConnection()
 
+    def halfCloseConnection(self, read=False, write=False):
+        # HACK.
+        if write:
+            self.loseConnection()
 
 class TestRequest(http.Request):
     def process(self):
@@ -805,7 +809,7 @@ class PipelinedErrorTestCase(ErrorTestCase):
 
 class SimpleRequest(http.Request):
     def process(self):
-        self.setResponseCode(404)
+        self.code = 404
         self.finish()
         
     def handleContentChunk(self, data):
@@ -836,8 +840,6 @@ class RealServerTest(unittest.TestCase):
         self.assertEquals(code, 0)
         self.assertEquals(out, "HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n")
 
-    testBasicWorkingness.todo = "this test fails using retrial and i don't know why, will try to fix -slyphon"
-    
     def testLingeringClose(self):
         out,err,code = deferredResult(
             utils.getProcessOutputAndValue(sys.executable, args=(util.sibpath(__file__, "simple_client.py"), "lingeringClose", str(self.port))))
@@ -846,4 +848,3 @@ class RealServerTest(unittest.TestCase):
         self.assertEquals(code, 0)
         self.assertEquals(out, "HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n")
 
-    testLingeringClose.todo = "half-close support not implemented yet"

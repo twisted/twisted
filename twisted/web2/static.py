@@ -29,7 +29,7 @@ dangerousPathError = error.Error(responsecode.NOT_FOUND, "Invalid request URL.")
 
 def redirectTo(URL, request):
     # FIXME:
-    request.setResponseCode(FOUND)
+    request.code = FOUND
     request.setHeader("location", url)
     return """
 <html>
@@ -335,7 +335,7 @@ class File:
                 except UnsatisfiableRangeRequest:
                     pass
                 else:
-                    request.setResponseCode(http.PARTIAL_CONTENT)
+                    request.code = http.PARTIAL_CONTENT
                     request.out_headers.setHeader('content-range',('bytes',start, end, size))
                     #content-length should be the actual size of the stuff we're
                     #sending, not the full size of the on-server entity.
