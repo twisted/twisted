@@ -24,18 +24,16 @@ build-stamp:
 	touch build-stamp
 
 clean:
-	rm -f build-stamp install-stamp
+	rm -f *-stamp
 	rm -rf build
 	find . -name "*.pyc" |xargs -r rm
-	# Add here commands to clean up after the build process.
 	for package in $(packages);\
 		do rm -rf debian/$$package;\
 	done
 	rm -rf debian/files debian/substvars
 
-
-install: install-stamp
-install-stamp: build-stamp 
+install-base: install-base-stamp
+install-base-stamp: build-stamp
 
 	set -e;for package in $(packages);\
 		do rm -rf debian/$$package;\
@@ -52,6 +50,27 @@ install-stamp: build-stamp
 		do package=python$$version-twisted;\
 		/usr/bin/python$$version setup.py install \
                    --no-compile --root debian/$$package; \
+	done
+
+	set -e; for version in $(versions);\
+		do package=python$$version-twisted;\
+		binpackage=python$$version-twisted-bin;\
+		for file in `find debian/python$$version-twisted -name "*.so"`;\
+			do target=`echo $$file | sed 's/twisted/twisted-bin/'`;\
+			if [ ! -d `dirname $$target` ]; then\
+				install -d `dirname $$target`; \
+			fi; \
+			mv $$file $$target; \
+		done; \
+	done
+	touch install-base-stamp
+
+install-indep: install-indep-stamp
+
+install-indep-stamp: install-base-stamp
+
+	set -e; for version in $(versions); \
+		do package=python$$version-twisted;\
 		install -d debian/$$package/usr/share/man/man1;\
 		install -d debian/$$package/usr/lib/menu/;\
 		install -d debian/$$package/usr/bin/;\
@@ -85,18 +104,6 @@ install-stamp: build-stamp
 		ln -s `basename $$file` $$target;\
 		ln -s `basename $$file`.1.gz \
 		      debian/$(DEFAULTPACKAGE)/usr/share/man/man1/`basename $$target`.1.gz;\
-	done
-
-	set -e; for version in $(versions);\
-		do package=python$$version-twisted;\
-		binpackage=python$$version-twisted-bin;\
-		for file in `find debian/python$$version-twisted -name "*.so"`;\
-			do target=`echo $$file | sed 's/twisted/twisted-bin/'`;\
-			if [ ! -d `dirname $$target` ]; then\
-				install -d `dirname $$target`; \
-			fi; \
-			mv $$file $$target; \
-		done; \
 	done
 
 	set -e; for version in $(versions); \
@@ -149,10 +156,10 @@ install-stamp: build-stamp
 	install -m 644 doc/fun/Twisted.Quotes \
 	          debian/twisted-quotes/usr/share/games/fortunes/twisted-quotes
 	strfile debian/twisted-quotes/usr/share/games/fortunes/twisted-quotes
-	touch install-stamp
+	touch install-indep-stamp
 
 
-binary-indep: build install
+binary-indep: build install-indep
 	set -e;for package in $(indeppackages);\
 		do dpkg-gencontrol -isp -p$$package -Pdebian/$$package;\
 		chown -R root.root debian/$$package;\
@@ -160,7 +167,7 @@ binary-indep: build install
 		dpkg --build debian/$$package ..;\
 	done
 
-binary-arch: build install
+binary-arch: build install-base
 	find debian -name "*.so" | xargs -n 1 strip --remove-section=.comment \
                                                     --remove-section=.note \
 	                                            --strip-unneeded
