@@ -340,14 +340,12 @@ class File(resource.Resource, styles.Versioned):
         fsize = size = self.getFileSize()
 
         if os.path.isdir(self.path): # stat.S_ISDIR(mode) (see above)
-            if self.path[-1] == '/':
+            if self.path[-1] == os.sep:
                 index = self.getIndex(request)
                 if index:
                     return index.render(request)
             else:
                 return self.redirect(request)
-            #dirListingPage = widgets.WidgetPage(DirectoryListing(self.path))
-            #return dirListingPage.render(request)
 
         request.setHeader('accept-ranges','bytes')
 
