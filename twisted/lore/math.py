@@ -90,8 +90,8 @@ class ProcessingFunctionFactory:
     def generate_lint(self, d):
         checker = lint.getDefaultChecker()
         checker.allowedClasses = checker.allowedClasses.copy()
-        checker.allowedClasses['div']['latexmacros'] = 1
-        checker.allowedClasses['span']['latexformula'] = 1
+        checker.allowedClasses['div'].__self__['latexmacros'] = 1
+        checker.allowedClasses['span'].__self__['latexformula'] = 1
         return lambda file, linkrel: lint.doFile(file, checker)
 
 factory = ProcessingFunctionFactory()
