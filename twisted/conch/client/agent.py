@@ -24,6 +24,7 @@ Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 
 from twisted.conch.ssh import agent, channel
 from twisted.internet import protocol
+from twisted.python import log
 
 class SSHAgentClient(agent.SSHAgentClient):
     
