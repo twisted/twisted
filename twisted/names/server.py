@@ -62,12 +62,6 @@ class DNSServerFactory(protocol.ServerFactory):
             self.cache = caches[-1]
 
 
-    def buildProtocol(self, addr):
-        p = dns.DNSProtocol(self)
-        p.factory = self
-        return p
-
-
     def connectionMade(self, protocol):
         pass
 
