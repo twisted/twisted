@@ -169,6 +169,7 @@ class ControllerTest(WovenTC):
     
     def testControllerOutput(self):
         boxNode = self.d.getElementById("box")
+        assert boxNode, "Test %s failed" % outputNum
         style = boxNode.getAttribute("style")
         styles = style.split(";")
         sDict = {}
@@ -227,6 +228,7 @@ class ListDeferredTest(WovenTC):
 
     def testOutput(self):
         listNode = self.d.getElementById("list")
+        assert listNode, "Test %s failed" % outputNum
         liNodes = domhelpers.getElementsByTagName(listNode, 'li')
         assert len(liNodes) == len(identityList)
 
@@ -262,6 +264,7 @@ class NestedListTest(WovenTC):
     
     def testOutput(self):
         listNode = self.d.getElementById("first")
+        assert listNode, "Test %s failed" % outputNum
         liNodes = filter(lambda x: hasattr(x, 'tagName') and x.tagName == 'li', listNode.childNodes)
 #        print len(liNodes), len(self.m.data), liNodes, self.m.data
         assert len(liNodes) == len(self.m.data)

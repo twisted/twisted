@@ -42,6 +42,7 @@ class Controller(resource.Resource):
     def __init__(self, *args):
         resource.Resource.__init__(self)
         self.model = args[-1]
+        self.subcontrollers = []
 
     def setView(self, view):
         self.view = view
@@ -80,6 +81,8 @@ class Controller(resource.Resource):
         self.setUp(request)
         self.view = components.getAdapter(self.model, interfaces.IView, None)
         self.view.setController(self)
+        for subcontroller in self.subcontrollers:
+            subcontroller.handle(request)
         return self.view.render(request, block=block)
 
     def process(self, request, **kwargs):

@@ -88,6 +88,7 @@ class Node:
             return 0
     
     def appendChild(self, child):
+        assert isinstance(child, Node)
         self.childNodes.append(child)
         child.parentNode = self
 

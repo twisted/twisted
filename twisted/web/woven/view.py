@@ -69,7 +69,7 @@ class View(template.DOMTemplate):
 
     __implements__ = (template.DOMTemplate.__implements__, interfaces.IView)
 
-    wantsAllNotifications = 1
+    wantsAllNotifications = 0
 
     def __init__(self, m, templateFile=None):
         """
@@ -129,21 +129,17 @@ class View(template.DOMTemplate):
         model= attribute, call getSubmodel on the current model object.
         If not, return the top of the model stack.
         """
+        parent = None
         if submodel:
-            for parent in self.modelStack:
-                if parent is None: continue
-                f = getattr(parent, "wmfactory_%s" % submodel, None)
-                if f is not None: break
-            if f:
-                m = f(request, node)
-            elif submodel == '.':
+            if submodel == '.':
                 m = self.getTopOfModelStack()
             else:
-                for x in self.modelStack:
-                    if x is None:
+                for parent in self.modelStack:
+                    if parent is None:
                         continue
-                    m = x.lookupSubmodel(submodel)
+                    m = parent.lookupSubmodel(submodel)
                     if m is not None:
+                        #print "model", m
                         break
                 else:
                     warnings.warn("POTENTIAL ERROR: Node had a model=%s "
@@ -158,6 +154,8 @@ class View(template.DOMTemplate):
                 m.parent = parent
             if not getattr(m, 'name', None):
                 m.name = submodel
+            return m
+        #print `submodel`, self.getTopOfModelStack()
         if submodel:
             return self.getTopOfModelStack()
         return None
@@ -215,7 +213,39 @@ class View(template.DOMTemplate):
             controller = input.DefaultHandler(model)
 
         return controller
-    
+
+
+    def getSubview(self, request, node, model, viewName):
+        """Get a sub-view from me.
+        """
+        view = None
+        vm = getattr(self, 'wvfactory_' + viewName, None)
+        if not vm:
+            vm = getattr(self, 'factory_' + viewName, None)
+            if vm is not None:
+                warnings.warn("factory_ methods are deprecated; please use "
+                              "wvfactory_ instead", DeprecationWarning)
+        if vm:
+            try:
+                view = vm(request, node, model)
+            except TypeError:
+                warnings.warn("wvfactory_ methods take (request, node, "
+                              "model) instead of (request, node) now. \n"
+                              "Please instanciate your widgets with a "
+                              "reference to model instead of self.model",
+                              DeprecationWarning)
+                self.model = model
+                view = vm(request, node)
+                self.model = self.mainModel
+
+        setupMethod = getattr(self, 'wvupdate_' + viewName, None)
+        if setupMethod:
+            if view is None:
+                view = widgets.Widget(self.model)
+            view.setupMethods.append(setupMethod)
+        return view
+  
+
     def getNodeView(self, request, node, submodel, model):
         view = None   
         viewName = node.getAttribute('view')
@@ -226,43 +256,20 @@ class View(template.DOMTemplate):
         # Look up a view factory.
         if viewName:
             for namespace in self.viewStack:
-                viewMethod = getattr(namespace, 'wvfactory_' + viewName, None)
-                if viewMethod is not None:
+                if namespace is None:
+                    continue
+                view = namespace.getSubview(request, node, model, viewName)
+                if view:
                     break
-                viewMethod = getattr(namespace, 'factory_' + viewName, None)
-                if viewMethod is not None:
-                    warnings.warn("factory_ methods are deprecated; please use "
-                                  "wvfactory_ instead", DeprecationWarning)
-                    break
+            if view is None:
 
-            try:
-                view = viewMethod(request, node, model)
-            except TypeError:
-                warnings.warn("wvfactory_ methods take (request, node, "
-                              "model) instead of (request, node) now. \n"
-                              "Please instanciate your widgets with a "
-                              "reference to model instead of self.model",
-                              DeprecationWarning)
-                self.model = model
-                view = viewMethod(request, node)
-                self.model = self.mainModel
-
-            if view is None and not hasattr(self, 'wvupdate_' + viewName):
                 raise NotImplementedError("You specified view name %s on a "
                                           "node, but no factory_%s method was "
                                           "found in %s or %s." % (viewName,
                                                                   viewName,
                                                                   self,
                                                                   widgets))
-            # Look for wvupdate_ methods.
-            for namespace in self.viewStack:
-                if namespace is None: continue
-                setupMethod = getattr(namespace, 'wvupdate_' + viewName, None)
-                if setupMethod:
-                    if view is None:
-                        view = widgets.Widget(self.model)
-                    view.setupMethods.append(setupMethod)
-        elif node.getAttribute("model") and model is not self.model:
+        elif node.getAttribute("model"):
             # If no "view" attribute was specified on the node, see if there
             # is a IView adapter registerred for the model.
             # First, see if the model is Componentized.
@@ -274,8 +281,6 @@ class View(template.DOMTemplate):
                                 None,
                                 components.getAdapterClassWithInheritance)
 
-        if view is None:
-            view = node
         return view
 
     def handleNode(self, request, node):
@@ -290,35 +295,34 @@ class View(template.DOMTemplate):
         controller.parent = self.controllerStack[0]
         self.controllerStack.insert(0, controller)
         view = self.getNodeView(request, node, submodelName, model)
-        if not isinstance(view, type("")):
-            view.parent = self.viewStack[0]
-            if hasattr(view, 'model') and view.model != self.modelStack[0]:
-                self.modelStack[0] = view.model
-        self.viewStack.insert(0, view)
-        if isinstance(view, widgets.Widget):
+        if hasattr(view, 'setController'):
+            if model is None:
+                model = self.getTopOfModelStack()
+            model.addView(view)
+            if not getattr(view, 'submodel', None):
+                view.setSubmodel(submodelName)
+
+        if view is None:
+            view = widgets.DefaultWidget(model)
+        else:
             id = node.getAttribute("id")
             if not id:
                 id = "woven_id_" + str(self.currentId)
                 self.currentId += 1
                 view['id'] = id
             self.subviews[id] = view
-        
-        if isinstance(view, View):
-            controller.setView(view)
-        else:
-            controller.setView(widgets.DefaultWidget(model))
+            view.parent = self.viewStack[0]
+            if hasattr(view, 'model') and view.model != self.modelStack[0]:
+                self.modelStack[0] = view.model
+        view.setController(controller)
+        view.setNode(node)
+        self.viewStack.insert(0, view)
+
         if not getattr(controller, 'submodel', None):
             controller.setSubmodel(submodelName)
         # xxx refactor this into a widget interface and check to see if the object implements IWidget
         # the view may be a deferred; this is why this check is required
-        if hasattr(view, 'setController'):
-            if model is None:
-                model = self.getTopOfModelStack()
-            model.addView(view)
-            view.setController(controller)
-            view.setNode(node)
-            if not getattr(view, 'submodel', None):
-                view.setSubmodel(submodelName)
+        controller.setView(view)
         
         controllerResult = controller.handle(request)
         self.outstandingCallbacks += 1
@@ -400,11 +404,18 @@ class View(template.DOMTemplate):
             if request.args.has_key(node.getAttribute('name')):
                 del request.args[node.getAttribute('name')]
             result = controller.commit(request, node, data)
+            print 'controller.model', controller.model, controller.model.views
             returnNodes = controller.model.notify({'request': request, 
                                         controller.submodel: data})
-            for newNode in returnNodes:
+            self.controllerStack.insert(0, controller)
+            for wid, newNode in returnNodes:
                 if newNode is not None:
+                    self.viewStack.insert(0, wid)
+                    self.modelStack.insert(0, controller.model)
                     self.recurseChildren(request, newNode)
+                    self.modelStack.pop(0)
+                    self.viewStack.pop(0)
+            self.controllerStack.pop(0)
             if isinstance(result, defer.Deferred):
                 self.outstandingCallbacks += 1
                 result.addCallback(self.handleCommitCallback, request)

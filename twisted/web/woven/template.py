@@ -121,6 +121,7 @@ class NodeNodeMutator(NodeMutator):
 
 class NoneNodeMutator(NodeMutator):
     def generate(self, request, node):
+        return node # do nothing
         child = self.d.createTextNode("None")
         node.parentNode.replaceChild(child, node)
 

@@ -71,6 +71,7 @@ class Widget(view.View):
     tagName = None
     def __init__(self, model = None, submodel = None, setup = None):
         self.errorFactory = Error
+        self.become = None
         self._reset()
         view.View.__init__(self, model)
         self.node = None
@@ -88,7 +89,6 @@ class Widget(view.View):
     def _reset(self):
         self.attributes = {}
         self.slots = {}
-        self.become = None
         self._children = []
     
     def initialize(self):
@@ -199,7 +199,7 @@ class Widget(view.View):
             setupMethod(request, self, data)
         # generateDOM should always get a reference to the
         # templateNode from the original HTML
-        result = self.generateDOM(request, self.templateNode)
+        result = self.generateDOM(request, self.templateNode or node)
         return result
     
     def setDataCallback(self, result, request, node):
@@ -241,9 +241,24 @@ class Widget(view.View):
                   L{children}, and L{attributes} (You should populate these
                   in L{setUp}, probably).
         """
+        if self.become:
+            print "becoming"
+            become = self.become
+            self.become = None
+            parent = node.parentNode
+            node.parentNode = None
+            old = node.cloneNode(1)
+            node.parentNode = parent
+            gen = become.generateDOM(request, node)
+            del old.attributes['model']
+            gen.appendChild(self.cleanNode(old))
+            self.node = gen
+            return gen
         if DEBUG:
             template = node.toxml()
             log.msg(template)
+        if not self.tagName:
+            self.tagName = self.templateNode.tagName
         if node is not self.templateNode:
             parent = node.parentNode
             node = document.createElement(self.tagName)
@@ -262,13 +277,7 @@ class Widget(view.View):
                 item = item.generateDOM(request, node)
             node.appendChild(item)
         #print "WE GOT A NODE", node.toxml()
-        if self.become is None:
-            self.node = node
-        else:
-            become = self.become
-            self.become = None
-            become.add(self)
-            self.node = become.generateDOM(request, node)
+        self.node = node
         return self.node
 
     def modelChanged(self, payload):
@@ -306,7 +315,9 @@ class Widget(view.View):
         and set to self.become. When generate is subsequently called, self.become
         will be responsible for mutating the DOM instead of this widget.
         """
+        print "setError called", self
         self.become = self.errorFactory(self.model, message)
+#        self.modelChanged({'request': request})
 
     def getPattern(self, name, default = None):
         """Get a named slot from the incoming template node. Returns a copy
@@ -364,6 +375,17 @@ class DefaultWidget(Widget):
         """
         By default, we just return the node unchanged
         """
+        if self.become:
+            become = self.become
+            self.become = None
+            parent = node.parentNode
+            node.parentNode = None
+            old = node.cloneNode(1)
+            node.parentNode = parent
+            gen = become.generateDOM(request, node)
+            del old.attributes['model']
+            gen.appendChild(self.cleanNode(old))
+            return gen
         return node
 
 wvfactory_DefaultWidget = viewFactory(DefaultWidget)
@@ -639,9 +661,9 @@ class List(Widget):
     tagName = None
     def generateDOM(self, request, node):
         node = Widget.generateDOM(self, request, node)
-        listHeader = domhelpers.getIfExists(node, 'listHeader')
-        listFooter = domhelpers.getIfExists(node, 'listFooter')
-        emptyList = domhelpers.getIfExists(node, 'emptyList')
+        listHeader = self.getPattern('listHeader', None)
+        listFooter = self.getPattern('listFooter', None)
+        emptyList = self.getPattern('emptyList', None)
         domhelpers.clearNode(node)
         if not listHeader is None:
             node.appendChild(listHeader)
@@ -799,6 +821,20 @@ class RawText(Widget):
         return self.node
 
 wvfactory_RawText = viewFactory(RawText)
+
+def getSubview(request, node, model, viewName):
+    """Get a sub-view from me.
+    """
+    if viewName == "None":
+        return DefaultWidget(model)
+    view = None
+    self = globals()
+
+    vm = self.get(viewName, None)
+    if vm:
+        view = vm(model)
+
+    return view
 
 
 view.registerViewForModel(Text, model.StringModel)
