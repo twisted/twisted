@@ -57,7 +57,7 @@ class BugsDatabase(adbapi.Augmentation):
         return self.runQuery(sql)
     
     def getBugComments(self, bug_id):
-        sql = """SELECT post_id, submittor_name, submittor_email, comment FROM bugs_comments
+        sql = """SELECT post_id, submittor_name, submittor_email, date, comment FROM bugs_comments
                  WHERE bug_id = %d ORDER BY post_id""" % bug_id
         return self.runQuery(sql)
     

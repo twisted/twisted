@@ -17,7 +17,7 @@
 """Web interface to the bugs database."""
 
 # system imports
-import string
+import string, cgi
 
 # twisted imports
 from twisted.web import widgets
@@ -123,13 +123,23 @@ class ViewBug(widgets.Widget):
     
     def _cbBug(self, result):
         l = []
-        for v in result[0]:
-            l.append("%s<br>\n" % v)
+        desc = result[0][13]
+        email = cgi.escape(result[0][2], 1)
+        result = map(cgi.escape, result[0])
+        l.append('<h3>%s</h3>\n' % result[11])
+        l.append('<p>\n<b>Submitted by <a href="mailto:%s">%s</a> on %s</b><br>\n' % (email, result[1], result[4]))
+        l.append('<b>Last modified:</b> %s<br>\n' % result[5])
+        l.append('<b>Version:<b> %s<br>\n'% result[6])
+        l.append('<b>OS:</b> %s<br>\n' % result[7])
+        l.append('<b>Type:<b> %s<br>\n' % result[8])
+        l.append('<b>Status:</b> %s<br>\n</p>\n' % result[9])
+        l.append('<b>Assigned to:</b> %s<br>\n</p>\n' % result[3])
+        l.append('<pre>\n%s\n</pre>' % desc)
         return l
     
     def _cbComments(self, result):
         l  = ["<h3>Comments</h3>\n"]
-        for id, name, email, comment in result:
-            l.append('<p><a href="mailto:%s">%s</a>:<br>\n'
-                     '%s</p>\n' % (name, email, comment))
+        for id, name, email, date, comment in result:
+            l.append('<p><b><a href="mailto:%s">%s</a> on %s:</b><br>\n'
+                     '<pre>%s</pre></p>\n' % (cgi.escape(email, 1), cgi.escape(name), date, comment))
         return l
