@@ -28,11 +28,9 @@ class Transaction:
     def __init__(self, pool, connection):
         self._connection = connection
         cursor = self._cursor = connection.cursor()
-        self.execute = cursor.execute
-        self.fetchone = cursor.fetchone
-        self.executemany = cursor.executemany
-        self.fetchmany = cursor.fetchmany
-        self.fetchall = cursor.fetchall
+        
+    def __getattr__(self, name):
+        return getattr(self._cursor, name)
 
 
 class ConnectionPool(pb.Referenceable):
