@@ -1,3 +1,7 @@
+2003-10-15  Christopher Armstrong  <radix@twistedmatrix.com>
+
+	* .: Releasing Twisted 1.1.0alpha2 (alpha1 was dead in the water).
+
 2003-10-15  Brian Warner  <warner@lothar.com>
 
 	* setup.py: remove cReactor/ to the sandbox. Closes issue318.
