@@ -294,7 +294,10 @@ class File(resource.Resource, styles.Versioned):
             else:
                 adapter = components.getAdapter(p, resource.IResource, None)
                 if not adapter:
-                    raise "%s instance does not implement IResource, and there is no registered adapter." % p.__class__
+                    raise NotImplementedError("%s instance does not implement "
+                                              "IResource, and there is no "
+                                              "registered adapter." %
+                                              p.__class__)
                 return adapter
 
         f = self.createSimilarFile(childPath)

@@ -147,7 +147,7 @@ class Request(pb.Copyable, http.Request):
         try:
             resrc = self.site.getResourceFor(self)
             self.render(resrc)
-        except Exception, e:
+        except:
             self.processingFailed(failure.Failure())
 
     def render(self, resrc):
