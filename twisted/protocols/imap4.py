@@ -266,10 +266,8 @@ class MessageSet(object):
             return self.ranges == other.ranges
         return False
 
+
 class LiteralString:
-
-
-
     def __init__(self, size, defered):
         self.size = size
         self.data = []
@@ -496,7 +494,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 #        return basic.LineReceiver.sendLine(self, line)
 
     def lineReceived(self, line):
-        # print 'S:', repr(line)
+#        print 'S:', repr(line)
         self.resetTimeout()
         if self._pendingLiteral:
             self._pendingLiteral.callback(line)
@@ -3641,8 +3639,9 @@ def getEnvelope(msg):
         cc and parseAddr(cc), bcc and parseAddr(bcc), in_reply_to, mid)
 
 def getLineCount(msg):
-    lines = 0
+    # XXX - Super expensive, CACHE THIS VALUE FOR LATER RE-USE
     # XXX - This must be the number of lines in the ENCODED version
+    lines = 0
     for _ in msg.getBodyFile():
         lines += 1
     return lines
@@ -3660,12 +3659,14 @@ def getBodyStructure(msg, extended=False):
         mimetype = mm.split(';')
         if mimetype:
             type = mimetype[0].split('/', 1)
-            if len(mimetype) == 1:
-                major = mimetype[0]
+            if len(type) == 1:
+                major = type[0]
                 minor = None
+            elif len(type) == 2:
+                major, minor = type
             else:
-                major, minor = mimtype
-            attrs = dict([x.lower().split('=', 1) for x in mimetype[1:]])
+                major = minor = None
+            attrs = dict([x.strip().lower().split('=', 1) for x in mimetype[1:]])
         else:
             major = minor = None
     else:
@@ -3682,8 +3683,9 @@ def getBodyStructure(msg, extended=False):
         size,                               # Number of octets total
     ]
     
-    # XXX - Super expensive, CACHE THIS VALUE FOR LATER RE-USE
-    if major.lower() == 'text':
+    if not major:
+        pass
+    elif major.lower() == 'text':
         result.append(str(getLineCount(msg)))
     elif (major.lower(), minor.lower()) == ('message', 'rfc822'):
         contained = msg.getSubPart(0)

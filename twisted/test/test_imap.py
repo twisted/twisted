@@ -1410,8 +1410,22 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
         self.testFetchEnvelope(1)
 
     def testFetchBodyStructure(self, uid=0):
-        raise unittest.SkipTest("I don't understand BodyStructure")
-    
+        def fetch():
+            return self.client.fetchBodyStructure(self.messages, uid=uid)
+        
+        self.messages = '3:9,10:*'
+        self.msgObj = FakeyMessage({
+                'content-type': 'text/plain; name=thing; key=value',
+                'content-id': 'this-is-the-content-id',
+                'content-description': 'describing-the-content-goes-here!',
+                'content-transfer-encoding': '8BIT',
+            }, (), '', 'Body\nText\nGoes\nHere\n', 919293, None)
+        self.expected = {919293: {'BODYSTRUCTURE': [
+            'text', 'plain', [['name', 'thing'], ['key', 'value']],
+            'this-is-the-content-id', 'describing-the-content-goes-here!',
+            '8BIT', '20', '4', None, None, None]}}
+        self._fetchWork(fetch, uid)
+        
     def testFetchBodyStructureUID(self):
         self.testFetchBodyStructure(1)
     
@@ -1423,7 +1437,7 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
         self.msgObj = FakeyMessage({}, (), '', 'Yea whatever', 91825, None)
         self.expected = {91825: 
             {'BODY': 
-                [None, None, ['CHARSET', 'US-ASCII'], None, None, '7BIT',
+                [None, None, [], None, None, '7BIT',
                     '12', '1'
                 ]
             }
