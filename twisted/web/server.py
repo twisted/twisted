@@ -130,13 +130,13 @@ class Request(pb.Copyable, http.Request):
                 return self.prepath[-1] + '/' + name
             else:
                 return name
-    
+
     def process(self):
         "Process a request."
 
         # get site from channel
         self.site = self.channel.site
-        
+
         # set various default headers
         self.setHeader('server', version)
         self.setHeader('date', http.datetimeToString())
@@ -243,7 +243,7 @@ class Request(pb.Copyable, http.Request):
         """Remote version of addCookie; same interface.
         """
         apply(self.addCookie, (k, v), kwargs)
-    
+
     def view_setHeader(self, issuer, k, v):
         """Remote version of setHeader; same interface.
         """
@@ -322,7 +322,7 @@ class Session:
     def notifyOnExpire(self, callback):
         """Call this callback when the session expires or logs out."""
         self.expireCallbacks.append(callback)
-    
+
     def expire(self):
         """Expire/logout of the session."""
         log.msg("expired session %s" % self.uid)
@@ -349,7 +349,7 @@ version = "TwistedWeb/%s" % copyright.version
 
 
 class Site(http.HTTPFactory):
-    
+
     counter = 0
 
     def __init__(self, resource, logPath=None):
@@ -362,7 +362,7 @@ class Site(http.HTTPFactory):
     def _openLogFile(self, path):
         from twisted.lumberjack import logfile
         return logfile.LogFile(os.path.basename(path), os.path.dirname(path))
-    
+
     def __getstate__(self):
         d = copy.copy(self.__dict__)
         d['sessions'] = {}

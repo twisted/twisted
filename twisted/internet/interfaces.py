@@ -1,15 +1,15 @@
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -22,8 +22,7 @@ from twisted.python.components import Interface
 
 class IReactorTCP(Interface):
     def listenTCP(self, port, factory, backlog=5, interface=''):
-        """
-        Connects a given protocol factory to the given numeric TCP/IP port.
+        """Connects a given protocol factory to the given numeric TCP/IP port.
         """
 
     def clientTCP(self, host, port, protocol, timeout=30):
@@ -37,7 +36,7 @@ class IReactorTCP(Interface):
 
           * protocol: a twisted.internet.protocol.Protocol instance
 
-          * timeout: number of seconds to wait before assuming the connection 
+          * timeout: number of seconds to wait before assuming the connection
             has failed.
         """
 
@@ -79,7 +78,7 @@ class IReactorUDP(Interface):
 ##     I can't remember what I was thinking when I did this.  On the off chance
 ##     that someone else remembers, I'll leave it here, but I think it's going
 ##     away.
-##     
+##
 ##     def clientUDP(self, remotehost, remoteport, localport, protocol,
 ##                   interface='', maxPacketSize=8192):
 ##         """Connects a Protocol instance to a UDP client port.
@@ -89,7 +88,7 @@ class IReactorUDP(Interface):
 
 
 class IReactorProcess(Interface):
-    
+
     def spawnProcess(self, processProtocol, executable, args=(), env={}, path=None):
         """Spawn a process, with a process protcol.
 
@@ -240,7 +239,7 @@ class IReactorCore(Interface):
             'after', or 'during', describing when to call it relative to the
             event's execution.
 
-          * eventType: this is a string describing the type of event.  It 
+          * eventType: this is a string describing the type of event.  It
 
           * callable: the object to call before shutdown.
 
@@ -315,7 +314,7 @@ class IFileDescriptor(Interface):
     """
 
     def fileno(self):
-        """fileno() -> int 
+        """fileno() -> int
 
         Returns: the platform-specified representation of a file-descriptor
         number.
@@ -342,7 +341,7 @@ class IReadWriteDescriptor(IReadDescriptor, IWriteDescriptor):
 
 class IConsumer(Interface):
     """A consumer consumes data from a producer."""
-    
+
     def registerProducer(self, producer, streaming):
         """Register to receive data from a producer.
 
@@ -362,7 +361,7 @@ class IConsumer(Interface):
 
 class IProducer(Interface):
     """A producer produces data for a consumer.
-    
+
     If this is a streaming producer, it will only be
     asked to resume producing if it has been previously asked to pause.
     Also, if this is a streaming producer, it will ask the producer to
@@ -372,29 +371,29 @@ class IProducer(Interface):
     this consumer) data in the main IO thread of some process as the result
     of a read operation, whereas a non-streaming producer is expected to
     produce data each time resumeProducing() is called.
-    
+
     If this is a non-streaming producer, resumeProducing will be called
     immediately, to start the flow of data.  Otherwise it is assumed that
     the producer starts out life unpaused.
     """
-    
+
     def resumeProducing(self):
         """Resume producing data.
-        
+
         This tells a producer to re-add itself to the main loop and produce
         more data for its consumer.
         """
 
     def pauseProducing(self):
         """Pause producing data.
-        
+
         Tells a producer that it has produced too much data to process for
         the time being, and to stop until resumeProducing() is called.
         """
 
     def stopProducing(self):
         """Stop producing data.
-        
+
         This tells a producer that its consumer has died, so it must stop
         producing data for good.
         """
@@ -405,4 +404,3 @@ class IConnector:
 
     def getProtocol(self):
         """Get the current protocol instance."""
-

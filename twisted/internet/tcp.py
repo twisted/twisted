@@ -480,7 +480,7 @@ class Port(abstract.FileDescriptor):
             self.reactor.callLater(0, self.connectionLost)
 
     stopListening = loseConnection
-    
+
     def connectionLost(self):
         """Cleans up my socket.
         """

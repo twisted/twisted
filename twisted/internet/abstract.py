@@ -144,7 +144,7 @@ class FileDescriptor(log.Logger):
         the main loop, it will lose its connection as soon as it's done
         flushing its write buffer; otherwise, it will wake up the main thread
         and lose the connection immediately.
-        
+
         If you have a producer registered, the connection won't be closed until the
         producer is finished. Therefore, make sure you unregister your producer
         when it's finished, or the connection will never close.

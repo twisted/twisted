@@ -41,9 +41,9 @@ class Service:
 
     (See Also: twisted.spread.pb.Service)
     """
-    
+
     __implements__ = IService
-    
+
     # ugh, load order
     perspectiveClass = Perspective
 

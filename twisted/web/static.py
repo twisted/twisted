@@ -62,7 +62,7 @@ class Data(resource.Resource):
 class Redirect(resource.Resource):
     def __init__(self, url):
         self.url = url
-    
+
     def render(self, request):
         request.setHeader("location", self.url)
         request.setResponseCode(http.TEMPORARY_REDIRECT)
@@ -83,10 +83,10 @@ class File(resource.Resource, styles.Versioned):
     File is a resource that represents a plain non-interpreted file.
     It's constructor takes a file path.
     """
-    
+
     # we don't implement IConfigCollection
     __implements__ = resource.IResource
-    
+
     contentTypes = {
         ".css": "text/css",
         ".exe": "application/x-executable",
@@ -213,7 +213,7 @@ class File(resource.Resource, styles.Versioned):
         f = File(childPath, self.defaultType, self.allowExt)
         f.processors = self.processors
         f.indexNames = self.indexNames[:]
-        
+
         return f
 
     def render(self, request):
@@ -225,7 +225,7 @@ class File(resource.Resource, styles.Versioned):
             index = self.getIndex(request)
             if index:
                 return index.render(request)
-    
+
             return self.redirect(request).render(request)
             #dirListingPage = widgets.WidgetPage(DirectoryListing(self.path))
             #return dirListingPage.render(request)
@@ -304,7 +304,7 @@ class File(resource.Resource, styles.Versioned):
         directory = os.listdir(self.path)
         directory.sort()
         return directory
-    
+
     def listEntities(self):
         return map(lambda fileName, self=self: File(os.path.join(self.path, fileName)), self.listNames())
 

@@ -6,7 +6,7 @@
 
 		* mail domains now receive service in __init__
 
-		* split file system stuff into Queue (renamed from MessageCollection) 
+		* split file system stuff into Queue (renamed from MessageCollection)
 
 		* Put a Queue in service
 	* twisted/protocol/smtp.py: changed SMTPClient API so that it returns
@@ -16,7 +16,7 @@
 
 	* twisted/protocols/ftp.py: Small fixes to FTPClient that have
         changed the interface slightly -- return values from callbacks
-	are now consistent for active and passive FTP.  Have a look at 
+	are now consistent for active and passive FTP.  Have a look at
 	doc/examples/ftpclient.py for details.
 
 2002-04-28  Itamar Shtull-Trauring  <twisted@itamarst.org>
@@ -48,7 +48,7 @@
 
 	* twisted/web/{server,twcgi}.py: Fixed POST bug in distributed
 	web servers.
-	
+
 2002-04-19  Chris Armstrong  <carmstro@twistedmatrix.com>
 
 	* .: Releasing Twisted 0.17.3.
@@ -76,24 +76,24 @@
 
 2002-04-17  Donovan Preston <dp@twistedmatrix.com>
 
-	* Major changes to the capabilities of the static web server, in an 
-	attempt to be able to use Twisted instead of Zope at work; my plan is to 
-	capture many of the conveniences of Zope without the implicitness and 
+	* Major changes to the capabilities of the static web server, in an
+	attempt to be able to use Twisted instead of Zope at work; my plan is to
+	capture many of the conveniences of Zope without the implicitness and
 	complexity that comes with working around implicit behavior when it fails.
 
 	1) .trp and .rpy support in the static web server:
-	Very simple handlers to allow you to easily add Resource objects 
-		dynamically to a running server, by merely changing files on the 
+	Very simple handlers to allow you to easily add Resource objects
+		dynamically to a running server, by merely changing files on the
 		filesystem.
 	An .rpy file will be executed, and if a "resource" variable exists upon the
-		execution's completion, it will be returned. 
+		execution's completion, it will be returned.
 	A .trp file (twisted resource pickle) will be unpickled and returned. An
-		object unpickled from a .trp should either implement IResource itself, 
+		object unpickled from a .trp should either implement IResource itself,
 		or have a registered adapter in twisted.python.components.
 
 	2) Acquisition:
-	As resources are being looked up by repeated calls to getChild, this 
-		change creates instances of 
+	As resources are being looked up by repeated calls to getChild, this
+		change creates instances of
 		twisted.spread.refpath.PathReferenceAcquisitionContext and puts
 		them in the request as "request.pathRef"
 	Any method that has an instance of the request can then climb up
@@ -113,7 +113,7 @@
 		ultimately, while templateFile is being parsed, the methods
 		specified will be called with instances of xml.dom.mindom.Node
 		as the first parameter, allowing the python code to manipulate
-		(see twisted.web.blog for an example) 
+		(see twisted.web.blog for an example)
 
 2002-04-17  Chris Armstrong  <carmstro@twistedmatrix.com>
 
@@ -132,7 +132,7 @@
 
 	User-visible API changes:
 	- Request.content is now a file-like object, instead of a string.
-	- Functions that incorrectly used Request.received instead of 
+	- Functions that incorrectly used Request.received instead of
 	  Request.getAllHeaders() will break.
 	- sendHeader, finishHeaders, sendStatus are all hidden now.
 

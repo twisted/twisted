@@ -374,7 +374,7 @@ class RemoteCopy(Unjellyable):
             return setInstanceState(self, unjellier, jellyList)
         self.setCopyableState(unjellier.unjelly(jellyList[1]))
         return self
-           
+
 
 
 class RemoteCache(RemoteCopy, Serializable):
@@ -438,7 +438,7 @@ class RemoteCache(RemoteCopy, Serializable):
         self.broker = unjellier.invoker
         self.luid = jellyList[1]
         return cProxy
-    
+
     def __really_del__(self):
         """Final finalization call, made after all remote references have been lost.
         """
@@ -490,7 +490,7 @@ setUnjellyableForClass("lcache", unjellyLCache)
 def unjellyLocal(unjellier, unjellyList):
     obj = unjellier.invoker.localObjectForID(unjellyList[1])
     return obj
-    
+
 setUnjellyableForClass("local", unjellyLocal)
 
 class RemoteCacheMethod:
@@ -580,4 +580,3 @@ class RemoteCacheObserver:
         """Get a RemoteMethod for this key.
         """
         return RemoteCacheMethod(key, self.broker, self.cached, self.perspective)
-

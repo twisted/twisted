@@ -91,25 +91,25 @@ def getImplementors(interface):
 
 def getConfiguratorsForTree(root):
     """Return iterator of Configurators for a config tree.
-    
+
     This really ought to be implemented as a generator.
     """
     stack = [root]
     result = []
-    
+
     while stack:
         obj = stack.pop()
-        
+
         # add the configurator's dispensers to result
         cfg = getConfigurator(obj)
         if cfg is not None: result.append(cfg)
-        
+
         # see if obj has children and if so add them to stack
         collection = getCollection(obj)
         if collection is not None:
             for name, entity in collection.listStaticEntities():
                 stack.append(entity)
-    
+
     return result
 
 
@@ -311,11 +311,11 @@ class CollectionWrapper:
 
 class DispenserStorage:
     """A mini-database of dispensers.
-    
+
     When first created, traverses the tree of configcollections and
     configurators and loads all dispensers.
     """
-    
+
     def __init__(self, root):
         # self.dispensers is a mapping:
         # <interface> --> <list of (instance, functionName, description) tuples>
@@ -324,11 +324,11 @@ class DispenserStorage:
         # for the given instance.
         self.dispensers = {}
         self.addObject(root)
-    
+
     def addObject(self, object):
         """Add the dispensers for an object and it's config children."""
         dispensers = self.dispensers
-        
+
         for cfg in getConfiguratorsForTree(object):
             obj = cfg.getInstance()
             for funcName, interface, desc in cfg.configDispensers():
@@ -338,7 +338,7 @@ class DispenserStorage:
     def removeObject(self, object):
         """Remove an object and its config children."""
         dispensers = self.dispensers
-        
+
         for cfg in getConfiguratorsForTree(object):
             obj = cfg.getInstance()
             for funcName, interface, desc in cfg.configDispensers():
@@ -346,10 +346,10 @@ class DispenserStorage:
                     dispensers[interface].remove((obj, funcName, desc))
                 if not dispensers[interface]:
                     del dispensers[interface]
-    
+
     def getDispensers(self, interface):
         """Return a list of dispensers for a given interface.
-        
+
         List items are in the form (instance, functionName, description).
         """
         return self.dispensers.get(interface, [])

@@ -38,7 +38,7 @@ def ResourceScript(path):
     globals = {}
 
     execfile(path, globals, globals)
-    
+
     return globals['resource']
 
 class PythonScript(resource.Resource):

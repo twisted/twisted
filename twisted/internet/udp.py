@@ -1,16 +1,16 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -59,7 +59,7 @@ class Connection(abstract.FileDescriptor,
         self.local = local
         self.sessionno = sessionno
         self.connected = 1
-        self.logstr = "%s,%s,%s (UDP)" % (self.protocol.__class__.__name__, 
+        self.logstr = "%s,%s,%s (UDP)" % (self.protocol.__class__.__name__,
                                           sessionno, self.remote[0])
         if reactor is None:
             from twisted.internet import reactor
@@ -148,7 +148,7 @@ class Port(abstract.FileDescriptor):
 
     def __repr__(self):
         return "<%s on %s>" % (self.factory.__class__, self.port)
-        
+
     def createInternetSocket(self):
         """(internal) create an AF_INET/SOCK_DGRAM socket.
         """
@@ -169,7 +169,7 @@ class Port(abstract.FileDescriptor):
 
     def startListening(self):
         """Create and bind my socket, and begin listening on it.
-        
+
         This is called on unserialization, and must be called after creating a
         server to begin listening on the specified port.
         """
@@ -210,7 +210,7 @@ class Port(abstract.FileDescriptor):
 
     def loseConnection(self):
         """ Stop accepting connections on this port.
-        
+
         This will shut down my socket and call self.connectionLost().
         """
         self.stopReading()
@@ -235,7 +235,7 @@ class Port(abstract.FileDescriptor):
         """Returns the name of my class, to prefix log entries with.
         """
         return self.logstr
-    
+
     def getHost(self):
         """
         Returns a tuple of ('INET_UDP', hostname, port), indicating

@@ -365,7 +365,7 @@ class Form(Widget):
 
     # do we raise an error when we get extra args or not?
     formAcceptExtraArgs = 0
-    
+
     def getFormFields(self, request, fieldSet = None):
         """I return a list of lists describing this form, or a Deferred.
 
@@ -642,7 +642,7 @@ class Form(Widget):
         l = []
         self.format(form, l.append, request)
         return l
-    
+
 
 
 class DataWidget(Widget):

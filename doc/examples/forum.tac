@@ -6,7 +6,7 @@ from twisted.enterprise import adbapi, dbpassport
 from twisted.web import widgets, server
 
 from twisted.forum import gadgets, service
-    
+
 # Connect to a database.
 dbpool = adbapi.ConnectionPool("pyPgSQL.PgSQL", "localhost:5432", database="sean")
 auth = dbpassport.DatabaseAuthorizer(dbpool)
@@ -32,7 +32,7 @@ application.listenOn(8485, s)
 
 def done(data):
     print "Done update!", data
-    
+
 def got(data):
     for d in data:
         print d
@@ -49,4 +49,3 @@ forumService.manager.loadObjectsFrom("twisted_perspectives",
 #forumService.manager.loadObjectsFrom("metrics_sources",
 #                                     [("source_id","int4")
 #                                      ]).addCallback(got).arm()
-

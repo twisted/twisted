@@ -920,10 +920,10 @@ class IRCChatter(irc.IRC, service.WordsClientInterface):
             pass
 
 class IRCGateway(protocol.Factory):
-    
+
     def __init__(self, service):
         self.service = service
-    
+
     def buildProtocol(self, connection):
         """Build an IRC protocol to talk to my chat service.
         """
@@ -944,4 +944,3 @@ def ctcpToWords(query_tag):
 
 def wordsToCtcp(style):
     return mapWordsToCtcp.get(style, style)
-

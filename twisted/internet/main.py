@@ -109,7 +109,7 @@ def installReactor(reactor):
            "reactor already installed"
     twisted.internet.reactor = reactor
     sys.modules['twisted.internet.reactor'] = reactor
-    
+
     # install stuff for backwards compatability
     addReader = reactor.addReader
     addWriter = reactor.addWriter
@@ -206,4 +206,3 @@ class Delayeds:
 _delayeds = Delayeds()
 addDelayed = _delayeds.addDelayed
 removeDelayed = _delayeds.removeDelayed
-

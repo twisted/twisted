@@ -1,6 +1,6 @@
 # -*- Python -*-
 # Twisted, the Framework of Your Internet
-# $Id: gtkmanhole.py,v 1.35 2002/05/04 23:47:47 glyph Exp $
+# $Id: gtkmanhole.py,v 1.36 2002/05/26 06:42:40 acapnotic Exp $
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
 # This library is free software; you can redistribute it and/or
@@ -73,7 +73,7 @@ class Interaction(pywidgets.Interaction, pb.Referenceable):
             self.display.makeDefaultCanvas()
         else:
             self.display = BrowserDisplay(self)
-            
+
         # The referencable attached to the Perspective
         self.client = self
 
