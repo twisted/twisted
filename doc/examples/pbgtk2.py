@@ -37,11 +37,7 @@ class LoginDialog:
         gladefile = util.sibpath(__file__, "pbgtk2login.glade")
         self.glade = glade.XML(gladefile)
 
-        # mold can go away when we get a newer pygtk (post 1.99.14)
-        mold = {}
-        for k in dir(self):
-            mold[k] = getattr(self, k)
-        self.glade.signal_autoconnect(mold)
+        self.glade.signal_autoconnect(self)
 
         self.setWidgetsFromGladefile()
         self._loginDialog.show()
