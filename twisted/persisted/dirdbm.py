@@ -128,7 +128,7 @@ class DirDBM:
         old = os.path.join(self.dname, k)
         if os.path.exists(old):
             new = old + ".rpl" # replacement entry
-        ~else:
+        else:
             new = old + ".new" # new entry
         try:
             self._writeFile(new, v)
