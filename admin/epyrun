@@ -141,7 +141,7 @@ class TwistedHTMLFormatter(HTMLFormatter):
         import os.path
         seen = {}
         for uid, doc in self._docmap.data.iteritems():
-            if uid.is_method():
+            if uid.is_method() or uid.is_function():
                 if uid.name() in seen: continue
                 seen[uid.name()] = 1
                 filename = os.path.join(directory, uid.name() + '.html')
