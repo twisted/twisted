@@ -169,6 +169,7 @@ class Resource:
     def putChild(self, path, child):
         """Register a static child.
         """
+        assert "/" not in path, "path must not contain '/'. For root resource pass ''."
         self.children[path] = child
         child.server = self.server
 
