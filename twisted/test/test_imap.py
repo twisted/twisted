@@ -333,7 +333,8 @@ class Account(imap4.MemoryAccount):
     
     def select(self, name, rw=1):
         mbox = imap4.MemoryAccount.select(self, name)
-        mbox.rw = rw
+        if mbox is not None:
+            mbox.rw = rw
         return mbox
 
 class SimpleServer(imap4.IMAP4Server):
@@ -695,6 +696,31 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
         self.assertEquals(
             self.statused,
             {'MESSAGES': 9, 'UIDNEXT': '10', 'UNSEEN': 4}
+        )
+    
+    def testFailedStatus(self):
+        def login():
+            return self.client.login('testuser', 'password-test')
+        def status():
+            return self.client.status('root/nonexistent', 'MESSAGES', 'UIDNEXT', 'UNSEEN')
+        def statused(result):
+            self.statused = result
+        def failed(failure):
+            self.failure = failure
+
+        self.statused = self.failure = None
+        d = self.connected.addCallback(strip(login))
+        d.addCallbacks(strip(status), self._ebGeneral)
+        d.addCallbacks(statused, failed)
+        d.addCallbacks(self._cbStopClient, self._ebGeneral)
+        self.loopback()
+        
+        self.assertEquals(
+            self.statused, None
+        )
+        self.assertEquals(
+            self.failure.value.args,
+            ('Could not open mailbox',)
         )
 
     def testAppend(self):

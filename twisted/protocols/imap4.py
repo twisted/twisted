@@ -568,7 +568,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 (tag, mailbox), None, (tag, mailbox), None
             )
         else:
-            self.sendNegativeResponse(tag, str(e))
+            self.sendNegativeResponse(tag, "Could not open mailbox")
     select_STATUS = auth_STATUS
 
     def __cbStatus(self, status, tag, box):
