@@ -42,7 +42,7 @@ object Twisted::TCPTransport::doRead()
 	    return import("twisted.internet.main").attr("CONNECTION_DONE");
 	} else if (result > 0) {
 	    buffer += result;
-	    buflen += result;
+	    buflen -= result;
 	    protocol->dataReceived(buffer - result, result);
 	} else if (result == EWOULDBLOCK) {
 	    return None;
