@@ -30,7 +30,8 @@ def maskOldAppWarnings():
                             DeprecationWarning)
 
 def unmaskOldAppWarnings():
-    warnings.filters = warnings.filters[1:]
+    warnings.filterwarnings('default', 'twisted.internet.app is deprecated',
+                            DeprecationWarning)
     
 class Dummy:
     processName=None

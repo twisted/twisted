@@ -20,9 +20,16 @@ Test cases for twisted.internet.app.
 
 from twisted.trial import unittest
 from twisted.internet import app, protocol, error
-
+import warnings
 
 class AppTestCase(unittest.TestCase):
+    def setUpClass(self):
+        warnings.filterwarnings('ignore', 'twisted.internet.app is deprecated',
+                                DeprecationWarning)
+
+    def tearDownClass(self):
+        warnings.filterwarnings('default', 'twisted.internet.app is deprecated',
+                                DeprecationWarning)
 
     def testListenUnlistenTCP(self):
         a = app.Application("foo")
@@ -73,7 +80,11 @@ class AppTestCase(unittest.TestCase):
 class ServiceTestCase(unittest.TestCase):
 
     def testRegisterService(self):
+        warnings.filterwarnings('ignore', 'twisted.internet.app is deprecated',
+                                DeprecationWarning)
         a = app.Application("foo")
         svc = app.ApplicationService("service", a)
         self.assertEquals(a.getServiceNamed("service"), svc)
         self.assertEquals(a, svc.serviceParent)
+        warnings.filterwarnings('default', 'twisted.internet.app is deprecated',
+                                DeprecationWarning)
