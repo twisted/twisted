@@ -49,17 +49,19 @@ class VersionTestCase(unittest.TestCase):
         global MyVersioned
         class MyVersioned(styles.Versioned):
             persistenceVersion = 2
+            persistenceForgets = ['garbagedata']
             v3 = 0
             v4 = 0
 
             def __init__(self):
                 self.somedata = 'xxx'
+                self.garbagedata = lambda q: 'cant persist'
 
             def upgradeToVersion3(self):
-                self.v3 = self.v3 + 1
+                self.v3 += 1
 
             def upgradeToVersion4(self):
-                self.v4 = self.v4 + 1
+                self.v4 += 1
         mv = MyVersioned()
         assert not (mv.v3 or mv.v4), "hasn't been upgraded yet"
         pickl = pickle.dumps(mv)

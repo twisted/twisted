@@ -191,6 +191,7 @@ class Versioned:
     will be printed.
     """
     persistenceVersion = 1
+    persistenceForgets = ()
 
     def __setstate__(self, state):
         versionedsToUpgrade[self] = 1
@@ -204,6 +205,10 @@ class Versioned:
         bases.reverse()
         bases.append(self.__class__) # don't forget me!!
         for base in bases:
+            if base.__dict__.has_key('persistenceForgets'):
+                for slot in base.persistenceForgets:
+                    if dct.has_key(slot):
+                        del dct[slot]
             if base.__dict__.has_key('persistenceVersion'):
                 dct['%s.persistenceVersion' % reflect.qual(base)] = base.persistenceVersion
         return dct
