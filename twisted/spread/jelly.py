@@ -59,7 +59,10 @@ import pickle
 import sys
 import types
 from types import StringType
-from types import UnicodeType
+try:
+    from types import UnicodeType
+except ImportError:
+    UnicodeType = None
 from types import IntType
 from types import TupleType
 from types import ListType
@@ -307,7 +310,7 @@ class _Jellier:
                         self.jelly(obj.im_self),
                         self.jelly(obj.im_class)]
 
-            elif objType is UnicodeType:
+            elif UnicodeType and objType is UnicodeType:
                 return ['unicode', obj.encode('UTF-8')]
             elif objType is NoneType:
                 return ['None']
@@ -488,7 +491,10 @@ class _Unjellier:
         return None
 
     def _unjelly_unicode(self, exp):
-        return unicode(exp[0], "UTF-8")
+        if UnicodeType:
+            return unicode(exp[0], "UTF-8")
+        else:
+            return Unpersistable(exp[0])
 
     def unjellyInto(self, obj, loc, jel):
         o = self.unjelly(jel)
