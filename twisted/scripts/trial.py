@@ -83,9 +83,13 @@ def run():
        log.startLogging(open(config['logfile'], 'a'), 0)
 
     if config['verbose']:
-        suite.run(unittest.VerboseTextReporter(sys.stdout))
+        reporter = unittest.VerboseTextReporter(sys.stdout)
     else:
-        suite.run(unittest.TextReporter(sys.stdout))
+        reporter = unittest.TextReporter(sys.stdout)
+
+    suite.run(reporter)
+
+    sys.exit(not reporter.allPassed())
 
 if __name__ == '__main__':
     run()
