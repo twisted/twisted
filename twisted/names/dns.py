@@ -17,6 +17,8 @@ Future Plans:
 """
 
 # System imports
+import warnings
+
 import struct, random, types, socket
 from math import ceil, floor
 try:
@@ -848,27 +850,31 @@ class Record_MX(tputil.FancyStrMixin, tputil.FancyEqMixin):
     implements(IEncodable, IRecord)
     TYPE = MX
 
-    compareAttributes = ('preference', 'exchange', 'ttl')
-    showAttributes = ('preference', ('exchange', 'exchange', '%s'), 'ttl')
+    compareAttributes = ('preference', 'name', 'ttl')
+    showAttributes = ('preference', ('name', 'name', '%s'), 'ttl')
 
-    def __init__(self, preference=0, exchange='', ttl=None):
-        self.preference, self.exchange = int(preference), Name(exchange)
+    def __init__(self, preference=0, name='', ttl=None, **kwargs):
+        self.preference, self.name = int(preference), Name(kwargs.get('exchange', name))
         self.ttl = str2time(ttl)
-
 
     def encode(self, strio, compDict = None):
         strio.write(struct.pack('!H', self.preference))
-        self.exchange.encode(strio, compDict)
+        self.name.encode(strio, compDict)
 
 
     def decode(self, strio, length = None):
         self.preference = struct.unpack('!H', readPrecisely(strio, 2))[0]
-        self.exchange = Name()
-        self.exchange.decode(strio)
+        self.name = Name()
+        self.name.decode(strio)
 
+    def exchange(self):
+        warnings.warn("use Record_MX.name instead", DeprecationWarning, stacklevel=2)
+        return self.name
 
+    exchange = property(exchange)
+    
     def __hash__(self):
-        return hash((self.preference, self.exchange))
+        return hash((self.preference, self.name))
 
 
 

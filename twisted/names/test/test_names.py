@@ -96,6 +96,9 @@ test_domain_com = NoFileAuthority(
             dns.Record_A('255.255.255.254'),
             dns.Record_A('0.0.0.0')
         ],
+       'cname.test-domain.com': [
+	    dns.Record_CNAME('test-domain.com')
+        ],
     }
 )
 
@@ -241,6 +244,12 @@ class ServerDNSTestCase(unittest.TestCase):
             [dns.Record_CNAME('canonical.name.com', ttl=19283784)]
         )
 
+    def testCNAMEAdditional(self):
+	"""Test additional processing for CNAME records"""
+	self.namesTest(
+	    self.resolver.lookupAddress('cname.test-domain.com'),
+	    [dns.Record_CNAME('test-domain.com', ttl=19283784), dns.Record_A('127.0.0.1', ttl=19283784)]
+	)
 
     def testMB(self):
         """Test DNS 'MB' record queries"""

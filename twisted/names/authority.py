@@ -82,12 +82,16 @@ class FileAuthority(common.ResolverBase):
         authority = []
         additional = []
         default_ttl = max(self.soa[1].minimum, self.soa[1].expire)
-        try:
-            for record in self.records[name.lower()]:
+        
+        domain_records = self.records.get(name.lower())
+       
+        if domain_records:
+            for record in domain_records:
                 if record.ttl is not None:
                     ttl = record.ttl
                 else:
                     ttl = default_ttl
+                    
                 if record.TYPE == type or type == dns.ALL_RECORDS:
                     results.append(
                         dns.RRHeader(name, record.TYPE, dns.IN, ttl, record, auth=True)
@@ -104,16 +108,17 @@ class FileAuthority(common.ResolverBase):
                 results = cnames
 
             for record in results + authority:
-                if record.type == dns.NS or record.type == dns.CNAME:
+                section = {dns.NS: additional, dns.CNAME: results, dns.MX: additional}.get(record.type)
+                if section is not None:
                     n = str(record.payload.name)
                     for rec in self.records.get(n.lower(), ()):
                         if rec.TYPE == dns.A:
-                            additional.append(
+                            section.append(
                                 dns.RRHeader(n, dns.A, dns.IN, rec.ttl or default_ttl, rec, auth=True)
                             )
-            
+          
             return defer.succeed((results, authority, additional))
-        except KeyError:
+        else:
             if name.lower().endswith(self.soa[0].lower()):
                 # We are the authority and we didn't find it.  Goodbye.
                 return defer.fail(failure.Failure(dns.AuthoritativeDomainError(name)))
