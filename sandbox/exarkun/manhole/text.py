@@ -4,8 +4,12 @@ import insults
 
 class _Attribute(object):
     def __getitem__(self, item):
-        assert isinstance(item, (_Attribute, str))
-        self.children.append(item)
+        assert isinstance(item, (tuple, _Attribute, str))
+        if isinstance(item, tuple):
+            self.children.extend(item)
+        else:
+            self.children.append(item)
+        return self
 
     def serialize(self, write, attrs):
         for ch in self.children:
@@ -30,10 +34,27 @@ class _ColorAttr(_Attribute):
 
         super(_ColorAttr, self).serialize(write, attrs)
 
+class _NormalAttr(_Attribute):
+    def __init__(self):
+        self.children = []
+
+    def serialize(self, write, attrs):
+        if not self.children:
+            return
+
+        if helper.CharacterAttribute() != attrs:
+            write('\x1b[m')
+            attrs.__init__()
+        super(_NormalAttr, self).serialize(write, attrs)
+
 class _OtherAttr(_Attribute):
     def __init__(self, attrname, attrvalue):
-        self.attrname = attrname
+        self.attrname = attrname.lower()
         self.attrvalue = attrvalue
+        self.children = []
+
+    def __neg__(self):
+        return _OtherAttr(self.attrname, not self.attrvalue)
 
     def serialize(self, write, attrs):
         if not self.children:
@@ -82,18 +103,26 @@ class CharacterAttributes(object):
             except KeyError:
                 raise AttributeError(name)
 
-    fg = _ColorAttributes(_ForegroundColorAttr)
-    bg = _ColorAttributes(_BackgroundColorAttr)
+    fg = _ColorAttribute(_ForegroundColorAttr)
+    bg = _ColorAttribute(_BackgroundColorAttr)
 
     attrs = {
         'bold': insults.BOLD,
         'blink': insults.BLINK,
         'underline': insults.UNDERLINE,
-        'reverseVideo': insults.REVERSE_VIDEO,
-        'normal': insults.NORMAL}
+        'reverseVideo': insults.REVERSE_VIDEO}
 
     def __getattr__(self, name):
+        if name == 'normal':
+            return _NormalAttr()
         try:
-            return _Attribute(self.attrs[name])
+            return _OtherAttr(self.attrs[name], True)
         except KeyError:
             raise AttributeError(name)
+
+def flatten(output, attrs):
+    L = []
+    output.serialize(L.append, attrs)
+    return ''.join(L)
+
+attributes = CharacterAttributes()

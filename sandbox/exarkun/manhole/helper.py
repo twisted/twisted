@@ -21,6 +21,12 @@ class CharacterAttribute:
         self.foreground = foreground
         self.background = background
 
+    def __eq__(self, other):
+        return vars(self) == vars(other)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
     def toVT102(self, only=False):
         # Spit out a vt102 control sequence that will set up
         # all the attributes set here.  Except charset.
