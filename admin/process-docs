@@ -4,12 +4,11 @@ url=http://twistedmatrix.com/documents/TwistedDocs/TwistedDocs-$1/api/%s.html
 templ=doc/howto/template.tpl
 echo "Man-->Lore"
 ./bin/lore -p --input man --output lore --config ext=-man.html doc/man/*.1
-for doc in doc/man doc/howto doc/specifications doc/vision; do
+for doc in doc doc/man doc/howto doc/specifications doc/vision; do
 	echo "Lore-->Lint"
 	./bin/lore -p --output lint $doc/*.html
 	echo "Lore-->HTML"
-	./bin/lore -p --config template=$templ --config baseurl=$url \
-	           -l ../howto/ $doc/*.html
+	./bin/lore -p --config template=$templ --config baseurl=$url $doc/*.html
 	echo "Lore-->LaTeX"
 	./bin/lore -p --output latex --config section $doc/*.html
 done
@@ -19,4 +18,4 @@ for i in 1 2 3;do latex book.tex < /dev/null;done
 dvips -o book.ps book.dvi
 ps2pdf13 book.ps book.pdf
 rm *.eps *.tex *.aux *.log book.dvi book.toc ../man/*.tex \
-   ../specifications/*.tex ../man/*-man.html ../vision/*.tex
+   ../specifications/*.tex ../man/*-man.html ../vision/*.tex ../*.tex
