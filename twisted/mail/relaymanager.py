@@ -291,8 +291,7 @@ class MXCalculator:
         del self.badMXs[mx]
 
     def getMX(self, deferred, domain):
-        ""
-        # TBD
+        "TBD"
 
     def getMXAnswer(self, deferred, answers):
         if not answers:
