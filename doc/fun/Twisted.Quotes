@@ -2735,3 +2735,8 @@ wrapper refuses to acknowledge setuid bits
 <datazone> play that funky music dash boy
 * dash is playing that funky music right.
 %
+<ameoba> radix: I think "+q? :)" is an ETC macro...
+<ameoba> radix: it's used alot in quantum computing.
+<ameoba> "try all values, destroy universe if false"
+<ameoba> useful for that O(1) execution speed, unfortunately, it could be REALLY BAD if your evaluation function's buggy
+%
