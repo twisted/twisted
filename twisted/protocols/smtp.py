@@ -98,7 +98,7 @@ class SMTP(basic.LineReceiver):
 
     def lineReceived(self, line):
         if self.mode is DATA:
-            return self.handleDataLine(line)
+            return self.dataLineReceived(line)
         command = string.split(line, None, 1)[0]
         method = getattr(self, 'do_'+string.upper(command), None)
         if method is None:
@@ -150,19 +150,19 @@ class SMTP(basic.LineReceiver):
         helo, origin, recipients = self.__helo, self.__from, self.__to
         self.__from = None
         self.__to = ()
-        self.__messages = self.handleMessageStart(recipients)
+        self.__messages = self.startMessage(recipients)
         self.sendCode(354, 'Continue')
 
     def connectionLost(self):
         if self.mode is DATA:
             for message in self.__messages:
-                message.handleTrunc()
+                message.connectionLost()
 
     def do_RSET(self, rest):
         self.__init__()
         self.sendCode(250, 'I remember nothing.')
 
-    def handleDataLine(self, line):
+    def dataLineReceived(self, line):
         if line[:1] == '.':
             if line == '.':
                 self.mode = COMMAND
@@ -197,7 +197,7 @@ class SMTP(basic.LineReceiver):
     def validateTo(self, user, success, failure):
         success(user)
 
-    def handleMessageStart(self, recipients):
+    def startMessage(self, recipients):
         return []
 
 
@@ -210,7 +210,7 @@ class DomainSMTP(SMTP):
             return
         self.factory.domains[user.domain].exists(user, success, failure)
 
-    def handleMessageStart(self, users):
+    def startMessage(self, users):
         ret = []
         for user in users:
             ret.append(self.factory.domains[user.domain].startMessage(user))

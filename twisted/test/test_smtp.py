@@ -191,7 +191,7 @@ class DummySMTP(smtp.SMTP):
         smtp.SMTP.connectionMade(self)
         self.messages = []
 
-    def handleMessageStart(self, users):
+    def startMessage(self, users):
         return [DummySMTPMessage(self, users)]
 
 
