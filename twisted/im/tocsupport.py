@@ -13,13 +13,19 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+# System Imports
 import string, re
 
+# Twisted Imports
 from twisted.protocols import toc
-from twisted.im.locals import GLADE_FILE, ONLINE, OFFLINE, AWAY, openGlade
+from twisted.im.locals import ONLINE, OFFLINE, AWAY
 from twisted.internet import tcp
 from twisted.python.defer import succeed
-      
+
+# Sibling Imports
+import basesupport
+
 def dehtml(text):
     text=string.replace(text,"<br>","\n")
     text=string.replace(text,"<BR>","\n")
@@ -41,67 +47,59 @@ def html(text):
     text=string.replace(text,"\n","<br>")
     return '<html><body bgcolor="white"><font color="black">%s</font></body></html>'%text
 
-class TOCPerson:
-    def __init__(self,name,tocClient,chatui):
-        self.name = name
-        self.account = tocClient
-        self.status = OFFLINE
-        self.chat = chatui
-
+class TOCPerson(basesupport.AbstractPerson):
     def isOnline(self):
-        return self.status!=OFFLINE
+        return self.status != OFFLINE
 
     def getStatus(self):
         return {OFFLINE:'Offline',ONLINE:'Online',AWAY:'Away'}[self.status]
 
     def setStatus(self,status):
-        self.status=status
+        self.status = status
         self.chat.getContactsList().setContactStatus(self)
 
     def sendMessage(self, text, meta=None):
         if meta:
             if meta.get("style", None) == "emote":
                 text="* "+text+"* "
-        self.account.say(self.name,html(text))
+        self.client.say(self.name,html(text))
         return succeed(text)
 
-class TOCGroup:
+class TOCGroup(basesupport.AbstractGroup):
     def __init__(self,name,tocClient,chatui):
-        self.name=name
-        self.account=tocClient
-        self.roomID=self.account.roomID[name]
-        self.chat = chatui
+        basesupport.AbstractGroup.__init__(self, name, tocClient, chatui)
+        self.roomID = self.client.roomID[self.name]
 
     def sendGroupMessage(self, text, meta=None):
         if meta:
             if meta.get("style", None) == "emote":
                 text="* "+text+"* "
-        self.account.chat_say(self.roomID,html(text))
+        self.client.chat_say(self.roomID,html(text))
         return succeed(text)
 
     def leave(self):
-        self.account.chat_leave(self.roomID)
-        
-class TOCProto(toc.TOCClient):
+        self.client.chat_leave(self.roomID)
+
+class TOCProto(basesupport.AbstractClientMixin, toc.TOCClient):
     def __init__(self, account, chatui):
-        self.account = account
         toc.TOCClient.__init__(self, account.username, account.password)
-        self.roomID={}
-        self.roomIDreverse={}
-        self.chat = chatui
+        basesupport.AbstractClientMixin.__init__(self, account, chatui)
+        self.roomID = {}
+        self.roomIDreverse = {}
 
     def _debug(self, m):
         pass #print '<toc debug>', repr(m)
 
     def getGroupConversation(self, name,hide=0):
-        return self.chat.getGroupConversation(self.chat.getGroup(name,self,TOCGroup),
-                                         hide)
+        return self.chat.getGroupConversation(
+            self.chat.getGroup(name,self,TOCGroup),
+            hide)
 
     def getPerson(self,name):
         return self.chat.getPerson(name,self,TOCPerson)
 
     def onLine(self):
-        self.account.isOnline = 1
+        self.account._isOnline = 1
         #print '$$!&*$&!(@$*& TOC ONLINE *!#@&$(!*%&'
 
     def gotConfig(self, mode, buddylist, permit, deny):
@@ -122,7 +120,7 @@ class TOCProto(toc.TOCClient):
     def tocNICK(self,data):
         self.name=data[0]
         self.accountName = "%s (TOC)"%data[0]
-        self.chat.registerAccount(self)
+        self.chat.registerAccountClient(self)
         self.chat.getContactsList()
 
     ### Error Messages
@@ -170,12 +168,12 @@ class TOCProto(toc.TOCClient):
     def receiveBytes(self, user, file, chunk, sofar, total):
         print '*** File transfer! ***', user, file, chunk, sofar, total
 
-    # GTKIM calls
     def joinGroup(self,name):
         self.chat_join(4,toc.normalize(name))
 
-class TOCAccount:
+class TOCAccount(basesupport.AbstractAccount):
     gatewayType = "AIM (TOC)"
+    
     def __init__(self, accountName, autoLogin, username, password, host, port):
         self.accountName = accountName
         self.autoLogin = autoLogin
@@ -183,33 +181,7 @@ class TOCAccount:
         self.password = password
         self.host = host
         self.port = port
-        self.isOnline = 0
 
-    def __setstate__(self, d):
-        self.__dict__ = d
-        self.port = int(self.port)
-
-    def __getstate__(self):
-        self.isOnline = 0
-        return self.__dict__
-
-    def isOnline(self):
-        return self.isOnline
-
-    def logOn(self, chatui):
+    def startLogOn(self, chatui):
         tcp.Client(self.host, self.port, TOCProto(self, chatui))
-
-class TOCAccountForm:
-    def __init__(self, maanger):
-        self.xml = openGlade(GLADE_FILE, root="TOCAccountWidget")
-        self.widget = self.xml.get_widget("TOCAccountWidget")
-
-    def create(self, accountName, autoLogin):
-        return TOCAccount(
-            accountName, autoLogin,
-            self.xml.get_widget("TOCName").get_text(),
-            self.xml.get_widget("TOCPass").get_text(),
-            self.xml.get_widget("TOCHost").get_text(),
-            int(self.xml.get_widget("TOCPort").get_text()) )
-
 

@@ -18,19 +18,16 @@
 from twisted.python.failure import Failure
 from twisted.spread import pb
 
-from twisted.im.locals import GLADE_FILE, autoConnectMethods, ONLINE, OFFLINE, AWAY, openGlade
+from twisted.im.locals import ONLINE, OFFLINE, AWAY
 
+import basesupport
 
-### --- Twisted.Words Account stuff.
-
-class TwistedWordsPerson:
-    """Abstract represntation of a person I can talk to on t.w
+class TwistedWordsPerson(basesupport.AbstractPerson):
+    """I a facade for a person you can talk to through a twisted.words service.
     """
     def __init__(self, name, wordsClient, chatui):
-        self.name = name                # what's my name
-        self.status = OFFLINE           # am I online
-        self.account = wordsClient      # object through which I communicate
-        self.chat = chatui              # chat UI
+        basesupport.AbstractPerson.__init__(self, name, wordsClient, chatui)
+        self.status = OFFLINE
 
     def isOnline(self):
         return ((self.status == ONLINE) or
@@ -43,48 +40,49 @@ class TwistedWordsPerson:
         """Return a deferred...
         """
         if metadata:
-            d=self.account.perspective.directMessage(self.name,
+            d=self.client.perspective.directMessage(self.name,
                                                      text, metadata)
             d.addErrback(self.metadataFailed, "* "+text)
             return d
         else:
-            return self.account.perspective.callRemote('directMessage',self.name, text)
+            return self.client.perspective.callRemote('directMessage',self.name, text)
 
     def metadataFailed(self, result, text):
         print "result:",result,"text:",text
-        return self.account.perspective.directMessage(self.name, text)
+        return self.client.perspective.directMessage(self.name, text)
 
 
     def setStatus(self, status):
         self.status = status
         self.chat.getContactsList().setContactStatus(self)
 
-class TwistedWordsGroup:
+class TwistedWordsGroup(basesupport.AbstractGroup):
     def __init__(self, name, wordsClient, chatui):
-        self.name = name
-        self.account = wordsClient
+        basesupport.AbstractGroup.__init__(name, wordsClient, chatui)
         self.joined = 0
-        self.chat = chatui
 
     def sendGroupMessage(self, text, metadata=None):
         """Return a deferred.
         """
         #for backwards compatibility with older twisted.words servers.
         if metadata:
-            d=self.account.perspective.callRemote('groupMessage', self.name,
+            d=self.client.perspective.callRemote('groupMessage', self.name,
                                                   text, metadata)
-            d.addErrback(self.metadataFailed,
-                         "* "+text)
+            d.addErrback(self.metadataFailed, "* "+text)
             return d
         else:
-            return self.account.perspective.callRemote('groupMessage', self.name, text)
+            return self.client.perspective.callRemote('groupMessage',
+                                                      self.name, text)
 
     def setTopic(self, text):
-        self.account.perspective.callRemote('setGroupMetadata', {'topic': text, 'topic_author': self.account.name}, self.name)
+        self.client.perspective.callRemote(
+            'setGroupMetadata',
+            {'topic': text, 'topic_author': self.client.name},
+            self.name)
 
     def metadataFailed(self, result, text):
         print "result:",result,"text:",text
-        return self.account.perspective.callRemote('groupMessage', self.name, text)
+        return self.client.perspective.callRemote('groupMessage', self.name, text)
 
     def joining(self):
         self.joined = 1
@@ -93,7 +91,7 @@ class TwistedWordsGroup:
         self.joined = 0
 
     def leave(self):
-        return self.account.perspective.callRemote('leaveGroup', self.name)
+        return self.client.perspective.callRemote('leaveGroup', self.name)
 
 
 
@@ -166,20 +164,20 @@ class TwistedWordsClient(pb.Referenceable):
 
     def connected(self, perspective):
         print 'Connected Words Client!', perspective
-        self.chat.registerAccount(self)
+        self.chat.registerAccountClient(self)
         self.perspective = perspective
         self.chat.getContactsList()
 
 
 
-pbGtkFrontEnds = {
+pbFrontEnds = {
     "twisted.words": TwistedWordsClient,
     "twisted.reality": None
     }
 
 
-class PBAccount:
-    isOnline = 0
+class PBAccount(basesupport.AbstractAccount):
+    _isOnline = 0
     gatewayType = "PB"
     def __init__(self, accountName, autoLogin,
                  host, port, identity, password, services):
@@ -191,14 +189,15 @@ class PBAccount:
         self.identity = identity
         self.services = []
         for serviceType, serviceName, perspectiveName in services:
-            self.services.append([pbGtkFrontEnds[serviceType], serviceName,
+            self.services.append([pbFrontEnds[serviceType], serviceName,
                                   perspectiveName])
 
-    def logOn(self, chatui):
+    def startLogOn(self, chatui):
         print 'Connecting...',
         pb.getObjectAt(self.host, self.port).addCallbacks(self._cbConnected,
                                                           self._ebConnected,
-                                                          callbackArgs=(chatui,))
+              
+                                            callbackArgs=(chatui,))
 
     def _cbConnected(self, root, chatui):
         print 'Connected!'
@@ -218,56 +217,4 @@ class PBAccount:
     def _ebConnected(self, error):
         print 'Not connected.'
         return error
-
-class PBAccountForm:
-    def __init__(self, manager):
-        self.manager = manager
-        self.xml = openGlade(GLADE_FILE, root="PBAccountWidget")
-        autoConnectMethods(self)
-        self.widget = self.xml.get_widget("PBAccountWidget")
-        self.on_serviceType_changed()
-        self.selectedRow = None
-
-    def addPerspective(self, b):
-        stype = self.xml.get_widget("serviceType").get_text()
-        sname = self.xml.get_widget("serviceName").get_text()
-        pname = self.xml.get_widget("perspectiveName").get_text()
-        self.xml.get_widget("serviceList").append([stype, sname, pname])
-
-    def removePerspective(self, b):
-        if self.selectedRow is not None:
-            self.xml.get_widget("serviceList").remove(self.selectedRow)
-
-    def on_serviceType_changed(self, w=None):
-        self.xml.get_widget("serviceName").set_text(self.xml.get_widget("serviceType").get_text())
-        self.xml.get_widget("perspectiveName").set_text(self.xml.get_widget("identity").get_text())
-
-    on_identity_changed = on_serviceType_changed
-
-    def on_serviceList_select_row(self, slist, row, column, event):
-        self.selectedRow = row
-
-    def create(self, accName, autoLogin):
-        host = self.xml.get_widget("hostname").get_text()
-        port = self.xml.get_widget("portno").get_text()
-        user = self.xml.get_widget("identity").get_text()
-        pasw = self.xml.get_widget("password").get_text()
-        serviceList = self.xml.get_widget("serviceList")
-        services = []
-        for r in xrange(0, serviceList.rows):
-            row = []
-            for c in xrange(0, serviceList.columns):
-                row.append(serviceList.get_text(r, c))
-            services.append(row)
-        if not services:
-            services.append([
-                self.xml.get_widget("serviceType").get_text(),
-                self.xml.get_widget("serviceName").get_text(),
-                self.xml.get_widget("perspectiveName").get_text()])
-        return PBAccount(accName, autoLogin, host, int(port), user, pasw, services)
-
-
-
-
-
 

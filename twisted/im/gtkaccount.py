@@ -18,7 +18,7 @@ import cPickle
 
 import gtk
 
-from twisted.im.locals import GLADE_FILE, SETTINGS_FILE, autoConnectMethods,\
+from twisted.im.gtkcommon import GLADE_FILE, SETTINGS_FILE, autoConnectMethods,\
      openGlade
 
 import gtkchat
@@ -43,6 +43,20 @@ class AccountManager:
         except IOError:
             self.accounts = []
             print 'initialized!'
+
+    def on_ConsoleButton_clicked(self, b):
+        #### For debugging purposes...
+        from twisted.manhole.ui.pywidgets import LocalInteraction
+        l = LocalInteraction()
+        l.localNS['chat'] = self.chatui
+        l.signal_connect('delete_event', self.closeConsole)
+        l.show_all()
+
+    def on_ContactsButton_clicked(self, b):
+        self.chatui.getContactsList()
+
+    def closeConsole(self, w, evt):
+        return 1
 
     def created(self, acct):
         self.accounts.append(acct)
@@ -137,9 +151,88 @@ class NewAccount:
     def on_NewAccountWindow_destroy(self, w):
         self.manager.lockNewAccount(0)
 
-from twisted.im.pbsupport import PBAccountForm
-from twisted.im.tocsupport import TOCAccountForm
-from twisted.im.ircsupport import IRCAccountForm
+from twisted.im.pbsupport import PBAccount
+from twisted.im.tocsupport import TOCAccount
+from twisted.im.ircsupport import IRCAccount
+
+
+class PBAccountForm:
+    def __init__(self, manager):
+        self.manager = manager
+        self.xml = openGlade(GLADE_FILE, root="PBAccountWidget")
+        autoConnectMethods(self)
+        self.widget = self.xml.get_widget("PBAccountWidget")
+        self.on_serviceType_changed()
+        self.selectedRow = None
+
+    def addPerspective(self, b):
+        stype = self.xml.get_widget("serviceType").get_text()
+        sname = self.xml.get_widget("serviceName").get_text()
+        pname = self.xml.get_widget("perspectiveName").get_text()
+        self.xml.get_widget("serviceList").append([stype, sname, pname])
+
+    def removePerspective(self, b):
+        if self.selectedRow is not None:
+            self.xml.get_widget("serviceList").remove(self.selectedRow)
+
+    def on_serviceType_changed(self, w=None):
+        self.xml.get_widget("serviceName").set_text(self.xml.get_widget("serviceType").get_text())
+        self.xml.get_widget("perspectiveName").set_text(self.xml.get_widget("identity").get_text())
+
+    on_identity_changed = on_serviceType_changed
+
+    def on_serviceList_select_row(self, slist, row, column, event):
+        self.selectedRow = row
+
+    def create(self, accName, autoLogin):
+        host = self.xml.get_widget("hostname").get_text()
+        port = self.xml.get_widget("portno").get_text()
+        user = self.xml.get_widget("identity").get_text()
+        pasw = self.xml.get_widget("password").get_text()
+        serviceList = self.xml.get_widget("serviceList")
+        services = []
+        for r in xrange(0, serviceList.rows):
+            row = []
+            for c in xrange(0, serviceList.columns):
+                row.append(serviceList.get_text(r, c))
+            services.append(row)
+        if not services:
+            services.append([
+                self.xml.get_widget("serviceType").get_text(),
+                self.xml.get_widget("serviceName").get_text(),
+                self.xml.get_widget("perspectiveName").get_text()])
+        return PBAccount(accName, autoLogin, host, int(port), user, pasw, services)
+
+
+class TOCAccountForm:
+    def __init__(self, maanger):
+        self.xml = openGlade(GLADE_FILE, root="TOCAccountWidget")
+        self.widget = self.xml.get_widget("TOCAccountWidget")
+
+    def create(self, accountName, autoLogin):
+        return TOCAccount(
+            accountName, autoLogin,
+            self.xml.get_widget("TOCName").get_text(),
+            self.xml.get_widget("TOCPass").get_text(),
+            self.xml.get_widget("TOCHost").get_text(),
+            int(self.xml.get_widget("TOCPort").get_text()) )
+
+
+class IRCAccountForm:
+    def __init__(self, maanger):
+        self.xml = openGlade(GLADE_FILE, root="IRCAccountWidget")
+        self.widget = self.xml.get_widget("IRCAccountWidget")
+
+    def create(self, accountName, autoLogin):
+        return IRCAccount(
+            accountName, autoLogin,
+            self.xml.get_widget("ircNick").get_text(),
+            self.xml.get_widget("ircPassword").get_text(),
+            self.xml.get_widget("ircChannels").get_text(),
+            self.xml.get_widget("ircServer").get_text(),
+            int(self.xml.get_widget("ircPort").get_text()) )
+
+
 
 registeredTypes = [ ("Twisted", PBAccountForm),
                     ("AOL Instant Messenger", TOCAccountForm),

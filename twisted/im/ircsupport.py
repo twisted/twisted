@@ -16,16 +16,13 @@
 import string
 
 from twisted.protocols import irc
-from twisted.im.locals import GLADE_FILE, autoConnectMethods, ONLINE, openGlade
+from twisted.im.locals import ONLINE
 from twisted.internet import tcp
 from twisted.python.defer import succeed
-      
-class IRCPerson:
-    def __init__(self,name,tocClient,chatui):
-        self.name=name
-        self.account=tocClient
-        self.chat = chatui
 
+import basesupport
+
+class IRCPerson(basesupport.AbstractPerson):
     def isOnline(self):
         return ONLINE
 
@@ -38,38 +35,33 @@ class IRCPerson:
 
     def sendMessage(self, text, meta={}):
         if meta and meta.get("style", None) == "emote":
-            self.account.ctcpMakeQuery(self.name,[('ACTION', text)])
+            self.client.ctcpMakeQuery(self.name,[('ACTION', text)])
             return succeed(text)
-        self.account.msg(self.name,text)
+        self.client.msg(self.name,text)
         return succeed(text)
 
-class IRCGroup:
-    def __init__(self,name,tocClient):
-        self.name=name
-        self.account=tocClient
-
+class IRCGroup(basesupport.AbstractGroup):
     def setTopic(self, topic):
-        self.account.topic(self.name, topic)
+        self.client.topic(self.name, topic)
 
     def sendGroupMessage(self, text, meta={}):
         if meta and meta.get("style", None) == "emote":
-            self.account.me(self.name,text)
+            self.client.me(self.name,text)
             return succeed(text)
-        self.account.say(self.name,text)
+        self.client.say(self.name,text)
         return succeed(text)
 
     def leave(self):
-        self.account.leave(self.name)
-        self.account.getGroupConversation(self.name,1)
-        
-class IRCProto(irc.IRCClient):
+        self.client.leave(self.name)
+        self.client.getGroupConversation(self.name,1)
+
+class IRCProto(basesupport.AbstractClientMixin, irc.IRCClient):
     def __init__(self, account, chatui):
-        self.account = account
+        basesupport.AbstractClientMixin.__init__(self, account, chatui)
         self._namreplies={}
         self._ingroups={}
         self._groups={}
         self._topics={}
-        self.chat = chatui
 
     def getGroupConversation(self, name,hide=0):
         name=string.lower(name)
@@ -79,15 +71,21 @@ class IRCProto(irc.IRCClient):
         return self.chat.getPerson(name,self,IRCPerson)
 
     def connectionMade(self):
-        if self.account.password:
-            self.sendLine("PASS :%s" % account.password)
-        self.setNick(self.account.nickname)
-        self.sendLine("USER %s foo bar :GTK-IM user"%self.nickname)
-        for channel in self.account.channels:
-            self.joinGroup(channel)
-        self.account.isOnline=1
-        self.chat.registerAccount(self)
-        self.chat.getContactsList()
+        try:
+            print 'connection made on irc service!?', self
+            if self.account.password:
+                self.sendLine("PASS :%s" % account.password)
+            self.setNick(self.account.nickname)
+            self.sendLine("USER %s foo bar :GTK-IM user"%self.nickname)
+            for channel in self.account.channels:
+                self.joinGroup(channel)
+            self.account._isOnline=1
+            print 'uh, registering irc acct'
+            self.chat.registerAccountClient(self)
+            self.chat.getContactsList()
+        except:
+            import traceback
+            traceback.print_exc()
 
     def setNick(self,nick):
         self.name=nick
@@ -185,6 +183,7 @@ class IRCProto(irc.IRCClient):
 
 class IRCAccount:
     gatewayType = "IRC"
+    _isOnline = 0
     def __init__(self, accountName, autoLogin, nickname, password, channels, host, port):
         self.accountName = accountName
         self.autoLogin = autoLogin
@@ -195,14 +194,14 @@ class IRCAccount:
             self.channels=[]
         self.host = host
         self.port = port
-        self.isOnline = 0
+        self._isOnline = 0
 
     def __setstate__(self, d):
         self.__dict__ = d
         self.port = int(self.port)
 
     def __getstate__(self):
-        self.isOnline = 0
+        self._isOnline = 0
         return self.__dict__
 
     def isOnline(self):
@@ -210,18 +209,4 @@ class IRCAccount:
 
     def logOn(self, chatui):
         tcp.Client(self.host, self.port, IRCProto(self, chatui))
-
-class IRCAccountForm:
-    def __init__(self, maanger):
-        self.xml = openGlade(GLADE_FILE, root="IRCAccountWidget")
-        self.widget = self.xml.get_widget("IRCAccountWidget")
-
-    def create(self, accountName, autoLogin):
-        return IRCAccount(
-            accountName, autoLogin,
-            self.xml.get_widget("ircNick").get_text(),
-            self.xml.get_widget("ircPassword").get_text(),
-            self.xml.get_widget("ircChannels").get_text(),
-            self.xml.get_widget("ircServer").get_text(),
-            int(self.xml.get_widget("ircPort").get_text()) )
 

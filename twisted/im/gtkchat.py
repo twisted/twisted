@@ -17,7 +17,7 @@ import string
 
 import gtk
 
-from twisted.im.locals import GLADE_FILE, autoConnectMethods, InputOutputWindow, openGlade
+from twisted.im.gtkcommon import GLADE_FILE, autoConnectMethods, InputOutputWindow, openGlade
 
 class GroupJoinWindow:
     def __init__(self, chatui):
@@ -28,7 +28,7 @@ class GroupJoinWindow:
         m = gtk.GtkMenu()
         om.set_menu(m)
         activ = 0
-        for acct in onlineAccounts:
+        for acct in chatui.onlineAccounts:
             print 'adding account to menu:',acct.accountName
             i = gtk.GtkMenuItem(acct.accountName)
             m.append(i)
@@ -87,7 +87,8 @@ class ContactsList:
                 self.onlinePeople.append(person)
                 online.append([person.name, person.getStatus()])
                 self.countOnline = self.countOnline + 1
-            offline.append([person.name, person.account.accountName, 'Aliasing Not Implemented', 'Groups Not Implemented'])
+            offline.append([person.name, person.client.accountName,
+                            'Aliasing Not Implemented', 'Groups Not Implemented'])
         self.xml.get_widget("OnlineCount").set_text("Online: %d" % self.countOnline)
 
 
@@ -123,10 +124,10 @@ class Conversation(InputOutputWindow):
     def _cbTextSent(self, result, text, metadata=None):
         print 'result:',result
         text = string.replace(text, '\n', '\n\t')
-        msg = "<%s> %s\n" % (self.person.account.name, text)
+        msg = "<%s> %s\n" % (self.person.client.name, text)
         if metadata:
             if metadata.get("style", None) == "emote":
-                msg = "* %s %s\n" % (self.person.account.name, text)
+                msg = "* %s %s\n" % (self.person.client.name, text)
         self.output.insert_defaults(msg)
 
 class GroupConversation(InputOutputWindow):
@@ -138,7 +139,7 @@ class GroupConversation(InputOutputWindow):
         self.group = group
         self.members = []
         self.membersHidden = 0
-        self.xml.get_widget("NickLabel").set_text(self.group.account.name)
+        self.xml.get_widget("NickLabel").set_text(self.group.client.name)
 
     def hidden(self, w):
         InputOutputWindow.hidden(self, w)
@@ -198,7 +199,7 @@ class GroupConversation(InputOutputWindow):
         lw = self.xml.get_widget("ParticipantList")
 
         if lw.selection:
-            self.group.account.addContact(self.members[lw.selection[0]])
+            self.group.client.addContact(self.members[lw.selection[0]])
 
     def on_TopicEntry_activate(self, e):
         print "ACTIVATING TOPIC!!"
@@ -208,10 +209,10 @@ class GroupConversation(InputOutputWindow):
     def _cbTextSent(self, result, text, metadata=None):
         print text
         text = string.replace(text, '\n', '\n\t')
-        msg = "<%s> %s\n" % (self.group.account.name, text)
+        msg = "<%s> %s\n" % (self.group.client.name, text)
         if metadata:
             if metadata.get("style", None) == "emote":
-                msg = "* %s %s\n" % (self.group.account.name, text)
+                msg = "* %s %s\n" % (self.group.client.name, text)
         self.output.insert_defaults(msg)
 
 class GtkChatClientUI:
@@ -224,10 +225,12 @@ class GtkChatClientUI:
         self.theContactsList = None
         self.onlineAccounts = []     # list of message sources currently online
         
-    def registerAccount(self,account):
+    def registerAccountClient(self,account):
+        print 'registering account client'
         self.onlineAccounts.append(account)
 
-    def unregisterAccount(self,account):
+    def unregisterAccountClient(self,account):
+        print 'unregistering account client'
         self.onlineAccounts.remove(account)
 
     def getContactsList(self):
@@ -248,8 +251,8 @@ class GtkChatClientUI:
         return conv
 
     def getGroupConversation(self, group, stayHidden=0):
-        if group.name[0] == '#':
-            raise 'oops'
+##         if group.name[0] == '#':
+##             raise 'oops'
         conv = self.groupConversations.get(group)
         if not conv:
             conv = GroupConversation(group)
@@ -268,7 +271,7 @@ class GtkChatClientUI:
     def getGroup(self, name, account, Class):
         g = self.groupCache.get((name, account))
         if not g:
-            g = Class(name, account)
+            g = Class(name, account, self)
             self.groupCache[name, account] = g
         return g
 

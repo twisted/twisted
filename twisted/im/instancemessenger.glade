@@ -1163,6 +1163,44 @@
 
       <widget>
 	<class>GtkButton</class>
+	<name>ConsoleButton</name>
+	<can_default>True</can_default>
+	<can_focus>True</can_focus>
+	<signal>
+	  <name>clicked</name>
+	  <handler>on_ConsoleButton_clicked</handler>
+	  <last_modification_time>Mon, 29 Apr 2002 09:13:32 GMT</last_modification_time>
+	</signal>
+	<label>Console</label>
+	<relief>GTK_RELIEF_NORMAL</relief>
+	<child>
+	  <padding>3</padding>
+	  <expand>False</expand>
+	  <fill>False</fill>
+	</child>
+      </widget>
+
+      <widget>
+	<class>GtkButton</class>
+	<name>ContactsButton</name>
+	<can_default>True</can_default>
+	<can_focus>True</can_focus>
+	<signal>
+	  <name>clicked</name>
+	  <handler>on_ContactsButton_clicked</handler>
+	  <last_modification_time>Mon, 29 Apr 2002 09:13:14 GMT</last_modification_time>
+	</signal>
+	<label>Contacts</label>
+	<relief>GTK_RELIEF_NORMAL</relief>
+	<child>
+	  <padding>3</padding>
+	  <expand>False</expand>
+	  <fill>False</fill>
+	</child>
+      </widget>
+
+      <widget>
+	<class>GtkButton</class>
 	<name>NewAccountButton</name>
 	<can_default>True</can_default>
 	<can_focus>True</can_focus>
@@ -1175,8 +1213,8 @@
 	<relief>GTK_RELIEF_NORMAL</relief>
 	<child>
 	  <padding>3</padding>
-	  <expand>True</expand>
-	  <fill>True</fill>
+	  <expand>False</expand>
+	  <fill>False</fill>
 	</child>
       </widget>
 
@@ -1188,9 +1226,9 @@
 	<label>Modify Account</label>
 	<relief>GTK_RELIEF_NORMAL</relief>
 	<child>
-	  <padding>3</padding>
-	  <expand>True</expand>
-	  <fill>True</fill>
+	  <padding>10</padding>
+	  <expand>False</expand>
+	  <fill>False</fill>
 	</child>
       </widget>
 
@@ -1207,9 +1245,9 @@
 	<label>Delete Account</label>
 	<relief>GTK_RELIEF_NORMAL</relief>
 	<child>
-	  <padding>3</padding>
-	  <expand>True</expand>
-	  <fill>True</fill>
+	  <padding>0</padding>
+	  <expand>False</expand>
+	  <fill>False</fill>
 	</child>
       </widget>
 
@@ -1228,9 +1266,9 @@
 	<label>Logon</label>
 	<relief>GTK_RELIEF_NORMAL</relief>
 	<child>
-	  <padding>10</padding>
-	  <expand>True</expand>
-	  <fill>True</fill>
+	  <padding>0</padding>
+	  <expand>False</expand>
+	  <fill>False</fill>
 	</child>
       </widget>
     </widget>
