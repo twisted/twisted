@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: tkconch.py,v 1.4 2002/12/28 17:58:33 z3p Exp $
+# $Id: tkconch.py,v 1.5 2002/12/28 18:19:14 z3p Exp $
 
 """ Implementation module for the `tkconch` command.
 """
@@ -35,7 +35,9 @@ class TkConchMenu(Tkinter.Frame):
         ## Standard heading: initialization
         apply(Tkinter.Frame.__init__, (self,) + args, params)
 
-        self.master.title('TkConch')        
+        self.master.title('TkConch')
+        self.localRemoteVar = Tkinter.StringVar()
+        self.localRemoteVar.set('local')
 
         Tkinter.Label(self, anchor='w', justify='left', text='Hostname').grid(column=1, row=1, sticky='w')
         self.host = Tkinter.Entry(self)
@@ -69,9 +71,9 @@ class TkConchMenu(Tkinter.Frame):
         self.forwardHost = Tkinter.Entry(self)
         self.forwardHost.grid(column=2, row=8, sticky='nesw')
         Tkinter.Label(self, text='Host').grid(column=3, row=8, sticky='nesw')
-        self.localForward = Tkinter.Radiobutton(self, text='Local')
+        self.localForward = Tkinter.Radiobutton(self, text='Local', variable=self.localRemoteVar, value='local')
         self.localForward.grid(column=2, row=9)
-        self.remoteForward = Tkinter.Radiobutton(self, text='Remote')
+        self.remoteForward = Tkinter.Radiobutton(self, text='Remote', variable=self.localRemoteVar, value='remote')
         self.remoteForward.grid(column=3, row=9)
 
         Tkinter.Label(self, text='Advanced Options').grid(column=1, columnspan=3, row=10, sticky='nesw')
@@ -103,10 +105,19 @@ class TkConchMenu(Tkinter.Frame):
             self.identity.insert(Tkinter.END, r)
 
     def addForward(self):
-        pass
+        port = self.forwardPort.get()
+        self.forwardPort.delete(0, Tkinter.END)
+        host = self.forwardHost.get()
+        self.forwardHost.delete(0, Tkinter.END)
+        if self.localRemoteVar.get() == 'local':
+            self.forwards.insert(Tkinter.END, 'L:%s:%s' % (port, host))
+        else:
+            self.forwards.insert(Tkinter.END, 'R:%s:%s' % (port, host))
 
     def removeForward(self):
-        pass
+        cur = self.forwards.curselection()
+        if cur:
+            self.forwards.remove(cur[0])
 
     def doConnect(self):
         finished = 1
@@ -144,6 +155,12 @@ class TkConchMenu(Tkinter.Frame):
 
         if self.identity.get():
             options.identitys.append(self.identity.get())
+
+        for line in self.forwards.get(0,Tkinter.END):
+            if line[0]=='L':
+                options.opt_localforward(line[2:])
+            else:
+                options.opt_remoteforward(line[2:])
 
         if '@' in options['host']:
             options['user'], options['host'] = options['host'].split('@',1)
@@ -286,7 +303,13 @@ def run():
         sys.exit(1)
     for k,v in options.items():
         if v and hasattr(menu, k):
-            getattr(menu,k).insert(Tkinter.END, v)       
+            getattr(menu,k).insert(Tkinter.END, v)
+    for (p, (rh, rp)) in options.localForwards:
+        menu.forwards.insert(Tkinter.END, 'L:%s:%s:%s' % (p, rh, rp))
+    options.localForwards = []
+    for (p, (rh, rp)) in options.remoteForwards:
+        menu.forwards.insert(Tkinter.END, 'R:%s:%s:%s' % (p, rh, rp))
+    options.remoteForwards = []
     frame = tkvt100.VT100Frame(root, callback=None)
     root.geometry('%dx%d'%(tkvt100.fontWidth*frame.width+3, tkvt100.fontHeight*frame.height+3))
     frame.pack(side = Tkinter.TOP)
