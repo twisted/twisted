@@ -821,13 +821,16 @@ class MethodUnslicer(BaseUnslicer):
 
     def receiveClose(self):
         assert self.state == 3
-        meth = getattr(self.im_class, self.im_func)
         if self.im_self is None:
+            meth = getattr(self.im_class, self.im_func)
+            # getattr gives us an unbound method
             return meth
         # TODO: late-available instances
         #if isinstance(self.im_self, NotKnown):
         #    im = _InstanceMethod(self.im_name, self.im_self, self.im_class)
         #    return im
+        meth = self.im_class.__dict__[self.im_func]
+        # whereas __dict__ gives us a function
         im = instancemethod(meth, self.im_self, self.im_class)
         return im
         
@@ -849,6 +852,15 @@ class NoneUnslicer(LeafUnslicer):
     def receiveClose(self):
         return None
 
+class BooleanUnslicer(LeafUnslicer):
+    value = None
+    def receiveToken(self, token):
+        assert self.value == None
+        assert type(token) == types.IntType
+        self.value = token
+    def receiveClose(self):
+        return bool(self.value)
+
         
 UnslicerRegistry = {
     'unicode': UnicodeUnslicer,
@@ -858,6 +870,7 @@ UnslicerRegistry = {
     'instance': InstanceUnslicer,
     'reference': ReferenceUnslicer,
     'none': NoneUnslicer,
+    'boolean': BooleanUnslicer,
     # for testing
     'dict1': BrokenDictUnslicer,
     'dict2': ReallyBrokenDictUnslicer,
