@@ -32,7 +32,7 @@ import sys
 class Options(usage.Options):
     synopsis = "Usage: mktap web [options]"
     optParameters = [["port", "p", "8080","Port to start the server on."],
-                     ["logfile", "l", None, "Path to web log file."],
+                     ["logfile", "l", None, "Path to web CLF (Combined Log Format) log file."],
                      ["https", None, None, "Port to listen on for Secure HTTP."],
                      ["certificate", "c", "server.pem", "SSL certificate to use for HTTPS."],
                      ["privkey", "k", "server.pem", "SSL certificate to use for HTTPS."],
