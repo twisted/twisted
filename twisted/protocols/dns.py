@@ -120,12 +120,29 @@ class IEncodable:
         """
         Write a representation of this object to the given
         file object.
+        
+        @type strio: File-like object
+        @param strio: The stream to which to write bytes
+        
+        @type compDict: C{dict} or C{None}
+        @param compDict: A dictionary of backreference addresses that have
+        have already been written to this stream and that may be used for
+        compression.
         """
     
-    def decode(self, strio):
+    def decode(self, strio, length = None):
         """
         Reconstruct an object from data read from the given
         file object.
+        
+        @type strio: File-like object
+        @param strio: The stream from which bytes may be read
+
+        @type length: C{int} or C{None}
+        @param length: The number of bytes in this RDATA field.  Most
+        implementations can ignore this value.  Only in the case of
+        records similar to TXT where the total length is in no way
+        encoded in the data is it necessary.
         """
 
 
@@ -169,7 +186,7 @@ class Name:
         strio.write(chr(0))
 
 
-    def decode(self, strio):
+    def decode(self, strio, length = None):
         """
         Decode a byte string into this Name.
         
@@ -247,18 +264,16 @@ class Query:
         strio.write(struct.pack("!HH", self.type, self.cls))
 
 
-    def decode(self, strio):
+    def decode(self, strio, length = None):
         self.name.decode(strio)
         buff = readPrecisely(strio, 4)
         self.type, self.cls = struct.unpack("!HH", buff)
     
     
     def __str__(self):
-        return '<Query %s %s %d>' % (
-            self.name,
-            QUERY_TYPES.get(self.type, 'UNKNOWN (%d)' % self.type),
-            self.cls
-        )
+        t = QUERY_TYPES.get(self.type, EXT_QUERIES.get(self.type, 'UNKNOWN (%d)' % self.type))
+        c = QUERY_CLASSES.get(self.cls, 'UNKNOWN (%d)' % self.cls)
+        return '<Query %s %s %s>' % (self.name, t, c)
 
 
     def __repr__(self):
@@ -287,6 +302,7 @@ class RRHeader:
     cls = None
     ttl = None
     payload = None
+    rdlength = None
     
     cachedResponse = None
 
@@ -326,22 +342,19 @@ class RRHeader:
             strio.seek(aft, 0)
 
 
-    def decode(self, strio):
+    def decode(self, strio, length = None):
         self.name.decode(strio)
         l = struct.calcsize(self.fmt)
         buff = readPrecisely(strio, l)
-        self.type, self.cls, self.ttl, L = struct.unpack(self.fmt, buff)
+        r = struct.unpack(self.fmt, buff)
+        self.type, self.cls, self.ttl, self.rdlength = r
 
-        # Moshe - temp
-        self.strio = strio
-        self.strioOff = strio.tell()-l
-    
-    
+
     def __str__(self):
-        return '<RR %s %s %s %ds>' % (
-            self.name, QUERY_TYPES[self.type],
-            QUERY_CLASSES[self.cls], self.ttl
-        )
+        t = QUERY_TYPES.get(self.type, EXT_QUERIES.get(self.type, 'UNKNOWN (%d)' % self.type))
+        c = QUERY_CLASSES.get(self.cls, 'UNKNOWN (%d)' % self.cls)
+        return '<RR %s %s %s %ds>' % (self.name, t, c, self.ttl)
+
 
     def __repr__(self):
         return 'RR(%r, %d, %d, %d)' % (
@@ -353,6 +366,7 @@ class SimpleRecord:
     """
     A Resource Record which consists of a single RFC 1035 domain-name.
     """
+    TYPE = None
     
     __implements__ = (IEncodable,)
     name = None
@@ -365,7 +379,7 @@ class SimpleRecord:
         self.name.encode(strio, compDict)
 
 
-    def decode(self, strio):
+    def decode(self, strio, length = None):
         self.name = Name()
         self.name.decode(strio)
     
@@ -422,7 +436,7 @@ class Record_A:
         strio.write(self.address)
 
 
-    def decode(self, strio):
+    def decode(self, strio, length = None):
         self.address = readPrecisely(strio, 4)
 
 
@@ -460,7 +474,7 @@ class Record_SOA:
         )
     
     
-    def decode(self, strio):
+    def decode(self, strio, length = None):
         self.mname, self.rname = Name(), Name()
         self.mname.decode(strio)
         self.rname.decode(strio)
@@ -498,12 +512,10 @@ class Record_NULL:                   # EXPERIMENTAL
         raise NotImplementedError, "Cannot encode or decode NULL records"
     
     
-    def decode(self, strio):
+    def decode(self, strio, length = None):
         raise NotImplementedError, "Cannot encode or decode NULL records"
 
 
-# XXX - This *can't* be right, can it?
-# XXX - Nope, it's not.  See below.
 class Record_WKS:                    # OBSOLETE
     __implements__ = (IEncodable,)
     TYPE = WKS
@@ -521,11 +533,11 @@ class Record_WKS:                    # OBSOLETE
         )
     
     
-    def decode(self, strio, compDict = None):
-        r = struct.unpack('!LB', readPrecisely(strio, 5))
+    def decode(self, strio, length = None):
+        L = struct.calcsize('!LB')
+        r = struct.unpack('!LB', readPrecisely(strio, L))
         self.address, self.protocol = r
-        # Burp!
-        self.map = strio.read()
+        self.map = readPrecisely(strio, length - L)
 
 
     def __eq__(self, other):
@@ -556,7 +568,7 @@ class Record_SRV:                # EXPERIMENTAL
         self.target.encode(strio, compDict)
     
     
-    def decode(self, strio):
+    def decode(self, strio, length = None):
         r = struct.unpack('!HHH', readPrecisely(strio, struct.calcsize('!HHH')))
         self.priority, self.weight, self.port = r
         self.target = Name()
@@ -592,7 +604,7 @@ class Record_AFSDB:
         self.hostname.encode(strio, compDict)
     
     
-    def decode(self, strio):
+    def decode(self, strio, length = None):
         r = struct.unpack('!H', readPrecisely(strio, struct.calcsize('!H')))
         self.subtype, = r
         self.hostname.decode(strio)
@@ -623,7 +635,7 @@ class Record_RP:
         self.txt.encode(strio, compDict)
     
     
-    def decode(self, strio):
+    def decode(self, strio, length = None):
         self.mbox = Name()
         self.txt = Name()
         self.mbox.decode(strio)
@@ -655,7 +667,7 @@ class Record_HINFO:
         strio.write(struct.pack('!B', len(self.os)) + self.os)
 
 
-    def decode(self, strio):
+    def decode(self, strio, length = None):
         cpu = struct.unpack('!B', readPrecisely(strio, 1))[0]
         self.cpu = readPrecisely(strio, cpu)
         os = struct.unpack('!B', readPrecisely(strio, 1))[0]
@@ -689,7 +701,7 @@ class Record_MINFO:                 # EXPERIMENTAL
         self.emailbx.encode(strio, compDict)
     
     
-    def decode(self, strio):
+    def decode(self, strio, length = None):
         self.rmailbx, self.emailbx = Name(), Name()
         self.rmailbx.decode(strio)
         self.emailbx.decode(strio)
@@ -719,7 +731,7 @@ class Record_MX:
         self.exchange.encode(strio, compDict)
 
 
-    def decode(self, strio):
+    def decode(self, strio, length = None):
         self.preference = struct.unpack('!H', readPrecisely(strio, 2))[0]
         self.exchange = Name()
         self.exchange.decode(strio)
@@ -736,16 +748,13 @@ class Record_MX:
         return '<MX %d %s>' % (self.preference, self.exchange)
 
 
-# XXX - This *can't* be right, can it?
-# XXX - No, it's not.  We need to pass the RDLENGTH field down from the header.
-# XXX - Ideas: Add is as a parameter to the decode() method of IEncodable and
-# XXX - pass it all the way down.  It'd be a pain though.
+# Oh god, Record_TXT how I hate thee.
 class Record_TXT:
     __implements__ = (IEncodable,)
 
     TYPE = TXT
     def __init__(self, *data):
-        self.data = data
+        self.data = list(data)
     
     
     def encode(self, strio, compDict = None):
@@ -753,16 +762,21 @@ class Record_TXT:
             strio.write(struct.pack('!B', len(d)) + d)
 
 
-    def decode(self, strio):
+    def decode(self, strio, length = None):
+        soFar = 0
         self.data = []
-        while 1:
-            try:
-                l = struct.unpack('!B', readPrecisely(strio, 1))[0]
-            except EOFError:
-                break
-            self.data.append(readPrecisely(strio, l))
-    
-    
+        while soFar < length:
+            L = struct.unpack('!B', readPrecisely(strio, 1))[0]
+            self.data.append(readPrecisely(strio, L))
+            soFar += L + 1
+        if soFar != length:
+            log.msg(
+                "Decoded %d bytes in TXT record, but rdlength is %d" % (
+                    soFar, length
+                )
+            )
+
+
     def __eq__(self, other):
         if isinstance(other, Record_TXT):
             return self.data == other.data
@@ -842,7 +856,7 @@ class Message:
         strio.write(body)
 
 
-    def decode(self, strio):
+    def decode(self, strio, length = None):
         self.maxSize = 0
         header = readPrecisely(strio, self.headerSize)
         r = struct.unpack(self.headerFmt, header)
@@ -881,7 +895,7 @@ class Message:
                 continue
             header.payload = t()
             try:
-                header.payload.decode(strio)
+                header.payload.decode(strio, header.rdlength)
             except EOFError:
                 return
             list.append(header)

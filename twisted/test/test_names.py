@@ -19,7 +19,7 @@
 """
 Test cases for twisted.names.
 """
-import sys
+import sys, socket
 from pyunit import unittest
 
 from twisted.internet import reactor, protocol, defer
@@ -86,10 +86,13 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
                         dns.Record_CNAME('canonical.name.com'),
                         dns.Record_MB('mailbox.test-domain.com'),
                         dns.Record_MG('mail.group.someplace'),
+                        dns.Record_TXT('A First piece of Text', 'a SecoNd piece'),
+                        dns.Record_TXT('Some more text, haha!  Yes.  \0  Still here?'),
                         dns.Record_MR('mail.redirect.or.whatever'),
                         dns.Record_MINFO(rmailbx='r mail box', emailbx='e mail box'),
                         dns.Record_AFSDB(subtype=1, hostname='afsdb.test-domain.com'),
                         dns.Record_RP(mbox='whatever.i.dunno', txt='some.more.text'),
+                        dns.Record_WKS(0x12EF4303, socket.IPPROTO_TCP, '\x12\x01\x16\xfe\xc1\x00\x01'),
                         soa_record
                     ],
                     'http.tcp.test-domain.com': [
@@ -263,4 +266,21 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
         self.namesTest(
             self.resolver.lookupResponsibility('test-domain.com'),
             [dns.Record_RP(mbox='whatever.i.dunno', txt='some.more.text')]
+        )
+
+
+    def testTXT(self):
+        """Test DNS 'TXT' record queries"""
+        self.namesTest(
+            self.resolver.lookupText('test-domain.com'),
+            [dns.Record_TXT('A First piece of Text', 'a SecoNd piece'),
+             dns.Record_TXT('Some more text, haha!  Yes.  \0  Still here?')]
+        )
+
+
+    def testWKS(self):
+        """Test DNS 'WKS' record queries"""
+        self.namesTest(
+            self.resolver.lookupWellKnownServices('test-domain.com'),
+            [dns.Record_WKS(0x12EF4303, socket.IPPROTO_TCP, '\x12\x01\x16\xfe\xc1\x00\x01')]
         )
