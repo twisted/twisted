@@ -22,11 +22,12 @@ from cStringIO import StringIO
 
 import tree
 
-escapingRE = re.compile(r'([#$%&_{}^~])')
+escapingRE = re.compile(r'([#$%&_{}^~\\])')
 lowerUpperRE = re.compile(r'([a-z])([A-Z])')
 
 def latexEscape(text):
-    text = escapingRE.sub(r'\\\1{}', text.replace('\\', '$\\backslash$'))
+    text = escapingRE.sub(lambda x: (x.group()=='\\' and '$\\backslash$') or
+                                    '\\'+x.group(), text)
     return text.replace('\n', ' ')
 
 entities = { 'amp': '&', 'gt': '>', 'lt': '<', 'quot': '"',
@@ -144,6 +145,8 @@ class LatexSpitter(BaseLatexSpitter):
         if href.startswith('http://') or href.startswith('https://'):
             if node.childNodes[0].data != href:
                 self.writer('\\footnote{%s}' % latexEscape(href))
+        elif href.startswith('mailto:'):
+            pass
         else:
             if href.startswith('#'):
                 href = self.filename + href
