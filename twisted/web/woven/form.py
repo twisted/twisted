@@ -74,6 +74,14 @@ class FormFillerWidget(widgets.Widget):
                              size="60",
                              name=arg.name)
 
+    def input_flags(self, request, content, arg):
+        for key, val, label in arg.flags:
+            nn = content.input(type="checkbox",
+                               name=arg.name,
+                               value=str(key))
+            nn.text(label)
+        return content
+
     def createInput(self, request, shell, arg):
         tr = shell.tr()
         tr.td(align="right", valign="top").text(arg.getShortDescription()+":")
