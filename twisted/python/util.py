@@ -15,6 +15,8 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from __future__ import nested_scopes
+
 import os, sys
 
 def uniquify(lst):
@@ -115,7 +117,6 @@ def dict(*a, **k):
 def println(*a):
     sys.stdout.write(' '.join(map(str, a))+'\n')
 
-
 # XXX
 # This does not belong here
 # But where does it belong?
@@ -143,7 +144,34 @@ def keyed_md5(secret, challenge):
         ).digest()
     ).hexdigest()
 
+
+def makeStatBar(width, maxPosition, doneChar = '=', undoneChar = '-', currentChar = '>'):
+    """Creates a function that will return a string representing a progress bar.
+    """
+    aValue = width / float(maxPosition)
+    def statBar(position, force = 0, last = ['']):
+        assert len(last) == 1, "Don't mess with the last parameter."
+        done = int(aValue * position)
+        toDo = width - done - 2
+        result = "[%s%s%s]" % (doneChar * done, currentChar, undoneChar * toDo)
+        if force:
+            last[0] = result
+            return result
+        if result == last[0]:
+            return ''
+        last[0] = result
+        return result
+
+    statBar.__doc__ = """statBar(position, force = 0) -> '[%s%s%s]'-style progress bar
+
+    returned string is %d characters long, and the range goes from 0..%d.
+    The 'position' argument is where the '%s' will be drawn.  If force is false,
+    '' will be returned instead if the resulting progress bar is identical to the
+    previously returned progress bar.
+""" % (doneChar * 3, currentChar, undoneChar * 3, width, maxPosition, currentChar)
+    return statBar
+
 __all__ = [
     "uniquify", "padTo", "getPluginDirs", "addPluginDir", "sibpath",
-    "getPassword", "dict", "println", "keyed_md5"
+    "getPassword", "dict", "println", "keyed_md5", "makeStatBar"
 ]

@@ -20,9 +20,11 @@ from __future__ import nested_scopes
 import sys
 import os
 import errno
+import types
+import warnings
 
 # Twisted imports
-from twisted.python import log
+from twisted.python import log, util
 
 # Sibling Imports
 from reflect import namedModule
@@ -77,76 +79,96 @@ class DropIn:
         return "<Package %s %s>" % (self.name, self.plugins)
 
 
-def getPluginFileList(debugInspection=0, showProgress=0):
-    """Find plugin.tml files in C{sys.path}
+def _prepCallbacks(debug, progress):
+    if debug:
+        try:
+            debug('Looking for plugin.tml files')
+        except:
+            debug = lambda x: sys.stdout.write(x + '\n')
+            debug('Looking for plugin.tml files')
+    else:
+        debug = lambda x: None
+    if progress:
+        try:
+            progress(0.0)
+        except:
+            pb = util.makeStatusBar(76)
+            progress = lambda x, pb=pb: sys.stdout.write(pb(x) + '\r')
+            progress(0.0)
+    else:
+        progress = lambda x: None
+    return debug, progress
 
-    @type debugInspection: C{int}
-    @param debugInspection: If true, debug information about the loading
-    process is printed.
+def getPluginFileList(debugInspection=None, showProgress=None):
+    """Find plugin.tml files in subdirectories of paths in C{sys.path}
+
+    @type debugInspection: C{None} or a callable taking one argument
+    @param debugInspection: If not None, this is invoked with strings containing
+    debug information about the loading process.  If it is any other true value,
+    this debug information is written to stdout (This behavior is deprecated).
     
-    @type showProgress: C{int}
-    @param showProgress: If true, an indication of the loading progress is
-    printed.
-    
+    @type showProgress: C{None} or a callable taking one argument.
+    @param showProgress: If not None, this is invoked with floating point
+    values between 0 and 1 describing the progress of the loading process. 
+    If it is any other true value, this progress information is written to
+    stdout.  (This behavior is deprecated).
+
     @rtype: C{list} of C{str}
     @return: A list of the plugin.tml files found.
     """
+    if isinstance(debugInspection, types.IntType):
+        warnings.warn(
+            "int parameter for debugInspection is deprecated, pass None or "
+            "a function that takes a single argument instead.",
+            DeprecationWarning, 2
+        )
+    if isinstance(showProgress, types.IntType):
+        warnings.warn(
+            "int parameter for showProgress is deprecated, pass None or "
+            "a function that takes a single argument instead.",
+            DeprecationWarning, 2
+        )
+    debugInspection, showProgress = _prepCallbacks(debugInspection, showProgress)
+    exists = os.path.exists
+    join = os.sep.join
     result = []
     loaded = {}
-    if showProgress:
-        log.logfile.write(' Looking for plugins.tml files: [')
-        log.logfile.flush()
-    found = 0
-
     seenNames = {}
-    for d in filter(os.path.isdir, map(os.path.abspath, sys.path)):
+    paths = filter(os.path.isdir, map(os.path.abspath, sys.path))
+    for (index, d) in zip(range(len(paths)), paths):
         if loaded.has_key(d):
-            if debugInspection:
-                log.msg('already saw %s' % d)
+            debugInspection('Already saw ' + d)
             continue
         else:
-            if debugInspection:
-                log.msg('Recursing through %s' % d)
-            loaded[d] = 1
-
+            debugInspection('Recursing through ' + d)
         try:
-            paths = os.listdir(d)
+            subDirs = os.listdir(d)
         except OSError, (err, s):
             # Permission denied, carry on
             if err == errno.EACCES:
-                if showProgress:
-                    log.logfile.write('x')
-                    log.logfile.flush()
-                if debugInspection:
-                    log.msg('Permission denied on ' + d)
+                showProgress((index + 1) / len(paths))
+                debugInspection('Permission denied on ' + d)
             else:
                 raise
         else:
-            for plugindir in paths:
+            for plugindir in subDirs:
                 if seenNames.has_key(plugindir):
+                    debugInspection('Seen %s already' % plugindir)
                     continue
                 seenNames[plugindir] = 1
-                plugindir = os.sep.join((d, plugindir))
-                if showProgress:
-                    log.logfile.write('+')
-                    log.logfile.flush()
-                tmlname = os.sep.join((plugindir, "plugins.tml"))
-                if debugInspection:
-                    log.msg(tmlname)
-                if os.path.exists(tmlname):
-                    found = 1
+                tmlname = join((d, plugindir, "plugins.tml"))
+                if exists(tmlname):
                     result.append(tmlname)
+                    debugInspection('Found ' + tmlname)
+                else:
+                    debugInspection('Failed ' + tmlname)
 
-    if not found:
+    if not result:
         raise IOError("Couldn't find a plugins file!")
-
-    if showProgress:
-        log.logfile.write(']\n')
-        log.logfile.flush()
-
+    showProgress(1.0)
     return result
 
-def loadPlugins(plugInType, fileList, debugInspection=0, showProgress=0):
+def loadPlugins(plugInType, fileList, debugInspection=None, showProgress=None):
     """Traverse the given list of files and attempt to load plugins from them.
 
     @type plugInType: C{str}
@@ -159,58 +181,59 @@ def loadPlugins(plugInType, fileList, debugInspection=0, showProgress=0):
     information from.  One name is put in their scope, the C{register}
     function.
     
-    @type debugInspection: C{int}
-    @param debugInspection: If true, debug information about the loading
-    process is printed.
+    @type debugInspection: C{None} or a callable taking one argument
+    @param debugInspection: If not None, this is invoked with strings containing
+    debug information about the loading process.  If it is any other true value,
+    this debug information is written to stdout (This behavior is deprecated).
     
-    @type showProgress: C{int}
-    @param showProgress: If true, an indication of the loading progress is
-    printed.
+    @type showProgress: C{None} or a callable taking one argument.
+    @param showProgress: If not None, this is invoked with floating point
+    values between 0 and 1 describing the progress of the loading process. 
+    If it is any other true value, this progress information is written to
+    stdout.  (This behavior is deprecated).
 
     @rtype C{list}
     @return: A list of the C{PlugIn} objects found.
     """
+    if isinstance(debugInspection, types.IntType):
+        warnings.warn(
+            "int parameter for debugInspection is deprecated, pass None or "
+            "a function that takes a single argument instead.",
+            DeprecationWarning, 2
+        )
+    if isinstance(showProgress, types.IntType):
+        warnings.warn(
+            "int parameter for showProgress is deprecated, pass None or "
+            "a function that takes a single argument instead.",
+            DeprecationWarning, 2
+        )
     result = []
-    if showProgress:
-        log.logfile.write('Loading plugins.tml files: [')
-        log.logfile.flush()
-
-    for tmlFile in fileList:
+    debugInspection, showProgress = _prepCallbacks(debugInspection, showProgress)
+    for (index, tmlFile) in zip(range(len(fileList)), fileList):
+        debugInspection("Loading from " + tmlFile)
         try:
             pname = os.path.split(os.path.abspath(tmlFile))[-2]
             dropin = DropIn(pname)
             ns = {'register': dropin.register}
             execfile(tmlFile, ns)
         except:
-            if debugInspection:
-                import traceback
-                print "Exception in %s:" % (tmlFile,)
-                traceback.print_exc()
-            else:
-                print "Exception in %s (use --debug for more info)" % tmlFile
+            debugInspection(sys.exc_info())
             continue
 
-        if showProgress:
-            log.logfile.write('+')
-            log.logfile.flush()
+        showProgress((index + 1) / len(fileList))
         for plugin in dropin.plugins:
             if plugInType == plugin.type:
                 result.append(plugin)
+                debugInspection("Found %r" % (plugin,))
+            else:
+                debugInspection("Disqualified %r" % (plugin,))
+        debugInspection("Finished loading from %s!" % tmlFile)
 
-        if debugInspection:
-            log.msg("Successfully loaded %s!" % tmlFile)
-
-        if showProgress:
-            log.logfile.write('.')
-            log.logfile.flush()
-
-    if showProgress:
-        log.logfile.write(']\n')
-        log.logfile.flush()
-
+    showProgress(1.0)
+    debugInspection("Returning %r" % (result,))
     return result
 
-def getPlugIns(plugInType, debugInspection=0, showProgress=0):
+def getPlugIns(plugInType, debugInspection=None, showProgress=None):
     """Helper function to get all the plugins of a particular type.
     
     @type plugInType: C{str}
@@ -218,18 +241,40 @@ def getPlugIns(plugInType, debugInspection=0, showProgress=0):
     against the C{type} argument to the C{register} function in the
     plugin.tml files.
     
-    @type debugInspection: C{int}
-    @param debugInspection: If true, debug information about the loading
-    process is printed.
+    @type debugInspection: C{None} or a callable taking one argument
+    @param debugInspection: If not None, this is invoked with strings containing
+    debug information about the loading process.  If it is any other true value,
+    this debug information is written to stdout (This behavior is deprecated).
     
-    @type showProgress: C{int}
-    @param showProgress: If true, an indication of the loading progress is
-    printed.
-    
+    @type showProgress: C{None} or a callable taking one argument.
+    @param showProgress: If not None, this is invoked with floating point
+    values between 0 and 1 describing the progress of the loading process. 
+    If it is any other true value, this progress information is written to
+    stdout.  (This behavior is deprecated).
+
     @rtype: C{list}
     @return: A list of C{PlugIn} objects that were found.
     """
-    tmlFiles = getPluginFileList(debugInspection, showProgress)
-    return loadPlugins(plugInType, tmlFiles, debugInspection, showProgress)
+    if isinstance(debugInspection, types.IntType):
+        warnings.warn(
+            "int parameter for debugInspection is deprecated, pass None or "
+            "a function that takes a single argument instead.",
+            DeprecationWarning, 2
+        )
+    if isinstance(showProgress, types.IntType):
+        warnings.warn(
+            "int parameter for showProgress is deprecated, pass None or "
+            "a function that takes a single argument instead.",
+            DeprecationWarning, 2
+        )
+    debugInspection, showProgress = _prepCallbacks(debugInspection, showProgress)
+
+    firstHalf = secondHalf = lambda x: None
+    if showProgress:
+        firstHalf = lambda x: showProgress(x / 2)
+        secondHalf = lambda x: showProgress(x / 2 + 0.5)
+
+    tmlFiles = getPluginFileList(debugInspection, firstHalf)
+    return loadPlugins(plugInType, tmlFiles, debugInspection, secondHalf)
 
 __all__ = ['PlugIn', 'DropIn', 'getPluginFileList', 'loadPlugins', 'getPlugIns']

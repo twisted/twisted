@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: mktap.py,v 1.31 2003/03/18 00:04:28 radix Exp $
+# $Id: mktap.py,v 1.32 2003/04/09 06:46:25 exarkun Exp $
 
 """ Implementation module for the `mktap` command.
 """
@@ -37,7 +37,7 @@ except ImportError:
 
 
 from twisted.python.plugin import getPlugIns
-
+from twisted.python import log
 
 # !!! This code should be refactored; also,
 # I bet that it shares a lot with other scripts
@@ -46,7 +46,7 @@ from twisted.python.plugin import getPlugIns
 def findAGoodName(x):
     return getattr(x, 'tapname', getattr(x, 'name', getattr(x, 'module')))
 
-def loadPlugins(debug = 0, progress = 0):
+def loadPlugins(debug = None, progress = None):
     try:
         plugins = getPlugIns("tap", debug, progress)
     except IOError:
@@ -76,16 +76,21 @@ class GeneralOptions(usage.Options):
     synopsis = """Usage:    mktap [options] <command> [command options]
  """
 
-    optParameters = [['uid', 'u', None, "The uid to run as."],
-                  ['gid', 'g', None, "The gid to run as."],
-                  ['append', 'a', None,   "An existing .tap file to append the plugin to, rather than creating a new one."],
-                  ['type', 't', 'pickle', "The output format to use; this can be 'pickle', 'xml', or 'source'."],
-                  ['appname', 'n', None, "The process name to use for this application."]]
+    uid = gid = None
+    if hasattr(os, 'getgid'):
+        uid, gid = os.getuid(), os.getgid()
+    optParameters = [
+        ['uid', 'u', uid, "The uid to run as."],
+        ['gid', 'g', gid, "The gid to run as."],
+        ['append', 'a', None,   "An existing .tap file to append the plugin to, rather than creating a new one."],
+        ['type', 't', 'pickle', "The output format to use; this can be 'pickle', 'xml', or 'source'."],
+        ['appname', 'n', None, "The process name to use for this application."]
+    ]
+    del uid, gid
 
     optFlags = [['xml', 'x',       "DEPRECATED: same as --type=xml"],
                 ['source', 's',    "DEPRECATED: same as --type=source"],
                 ['encrypted', 'e', "Encrypt file before writing (will make the extension of the resultant file begin with 'e')"],
-                ['progress', 'p',  "Show progress of plugin loading"],
                 ['debug', 'd',     "Show debug information for plugin loading"]]
 
 
@@ -105,8 +110,13 @@ class GeneralOptions(usage.Options):
         # finish parsinsg and parseArgs to run.
         self['help'] = 1
 
+    def opt_progress(self):
+        """Display the progress of plugin-loading"""
+        import warnings
+        warnings.warn('The --progress flag is deprecated')
+    opt_p = opt_progress
+
     def postOptions(self):
-        self['progress'] = int(self['progress'])
         self['debug'] = int(self['debug'])
 
         # backwards compatibility for old --xml and --source options
@@ -122,20 +132,18 @@ class GeneralOptions(usage.Options):
 # Rest of code in "run"
 
 def run():
-    tapLookup = loadPlugins()
+    debugInfo = []
+    tapLookup = loadPlugins(debugInfo.append, None)
     options = GeneralOptions(tapLookup)
-    if hasattr(os, 'getgid'):
-        options['uid'] = os.getuid()
-        options['gid'] = os.getgid()
     try:
-        options.parseOptions(sys.argv[1:])
-        # XXX - Yea, this is FILTH FILTH FILTH
-        if options['debug'] or options['progress']:
-            from twisted.python import log
-            log.startLogging(sys.stdout)
-            tapLookup = loadPlugins(options['debug'], options['progress'])
-    except SystemExit:
-        # We don't really want to catch this at all...
+        try:
+            options.parseOptions(sys.argv[1:])
+        finally:
+            if options['debug']:
+                for debug in debugInfo:
+                    log.err(debug)
+    except (SystemExit, KeyboardInterrupt):
+        # We don't really want to catch these at all...
         raise
     except Exception, e:
         # XXX: While developing, I find myself frequently disabling
@@ -145,6 +153,7 @@ def run():
         print str(sys.exc_value)
         print str(options)
         sys.exit(2)
+    
 
     if options['help'] or not hasattr(options, 'subOptions'):
         if hasattr(options, 'subOptions'):
