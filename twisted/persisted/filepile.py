@@ -290,6 +290,11 @@ class FilePileIterator:
         return self
 
 class FilePile:
+    """
+    I manage trees of filenames and symlinks to help you write storage
+    systems.
+    """
+
     def __init__(self, dirname, loader=str, pilext='pile', itemext='item', cmpfunc=cmp):
         """Create a FilePile.
 
