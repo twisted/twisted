@@ -13,9 +13,9 @@ if os.name == 'nt':
 
     class ShortcutTest(unittest.TestCase):
         def testCreate(self):
-            if sys.platform == "win32":
-                s1=shortcut.Shortcut("test_shortcut.py")
-                tempname=tempfile.mktemp('.lnk')
-                s1.save(tempname)
-                assert os.path.exists(tempname)
-                os.unlink(tempname)
+            s1=shortcut.Shortcut("test_shortcut.py")
+            tempname=tempfile.mktemp('.lnk')
+            s1.save(tempname)
+            assert os.path.exists(tempname)
+            sc=shortcut.open(tempname)
+            assert sc.GetPath(0)[0].endswith('test_shortcut.py')

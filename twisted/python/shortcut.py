@@ -7,6 +7,15 @@ win32 only.
 from win32com.shell import shell
 import pythoncom
 
+def open(filename):
+    """Open an existing shortcut for reading.
+@return: The shortcut object
+@rtype: Shortcut
+"""
+    sc=Shortcut()
+    sc.load(filename)
+    return sc
+
 class Shortcut:
     """A shortcut on Win32.
     >>> sc=Shortcut(path, arguments, description, workingdir, iconpath, iconidx)
