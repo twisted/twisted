@@ -447,6 +447,8 @@ class ColumnList(List):
         
         if self.end:
             listSize = self.end - self.start
+            if listSize > len(self.getData()):
+                listSize = len(self.getData())
         else:
             listSize = len(self.getData())
         for itemNum in range(listSize):
