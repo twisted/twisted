@@ -30,6 +30,7 @@ import model
 import template
 import view
 import utils
+import interfaces
 
 from twisted.python import components, failure
 from twisted.python import log
@@ -236,7 +237,11 @@ class Widget(view.View):
         if self.subviews:
             self.getTopModel().subviews.update(self.subviews)
         self.controller.domChanged(request, self, returnNode)
-        return returnNode
+
+        ## We need to return the result along the callback chain
+        ## so that any other views which added a setDataCallback
+        ## to the same deferred will get the correct data.
+        return result
 
     def setUp(self, request, node, data):
         """
@@ -981,8 +986,28 @@ class ExpandMacro(Widget):
 
         return macro
 
+class DeferredWidget(Widget):
+    def setDataCallback(self, result, request, node):
+        model = result
+        view = None
+        if isinstance(model, components.Componentized):
+            view = model.getAdapter(interfaces.IView)
+        if not view and hasattr(model, '__class__'):
+            view = components.getAdapter(model,
+                    interfaces.IView,
+                    None,
+                    components.getAdapterClassWithInheritance)
+        
+        if view:
+            view["id"] = self.attributes.get('id', '')
+            view.templateNode = node
+            view.controller = self.controller
+            return view.setDataCallback(result, request, node)
+        else:
+            return Widget.setDataCallback(self, result, request, node)
 
 view.registerViewForModel(Text, model.StringModel)
 view.registerViewForModel(List, model.ListModel)
 view.registerViewForModel(KeyedList, model.DictionaryModel)
 view.registerViewForModel(Link, model.Link)
+view.registerViewForModel(DeferredWidget, model.DeferredWrapper)

@@ -18,11 +18,10 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.83 $"[11:-2]
+__version__ = "$Revision: 1.84 $"[11:-2]
 
 # Sibling imports
 import interfaces
-import template
 import utils
 import controller
 from utils import doSendPage
@@ -252,10 +251,9 @@ class View:
                 self.modelStack = self.modelStack[1]
                 self.viewStack = self.viewStack[1]
                 if self.controllerStack is not None:
-                    controller = self.controllerStack[0]
+                    controller, self.controllerStack = self.controllerStack
                     if controller is not None:
                         controller.exit(request)
-                    self.controllerStack = self.controllerStack[1]
             if (hasattr(node, 'getAttribute') and 
             (node.getAttribute('model') or node.getAttribute('view') or node.getAttribute('controller'))):
                 self.outstandingNodes.append(1)
@@ -279,15 +277,11 @@ class View:
         into the DOM tree. Return the new node.
         """
         if not isinstance(result, defer.Deferred):
-            adapter = components.getAdapter(result, template.INodeMutator, None, components.getAdapterClassWithInheritance)
-            if adapter is None:
-                raise NotImplementedError(
-                    "Your factory method returned %s, but there is no "
-                    "INodeMutator adapter registerred for %s." %
-                    (result, getattr(result, "__class__",
-                                     None) or type(result)))
-            result = adapter.generate(request, node)
-        if isinstance(result, defer.Deferred):
+            if node.parentNode is not None:
+                node.parentNode.replaceChild(result, node)
+            else:
+                raise RuntimeError, "We're dying here, please report this immediately"
+        else:
             self.outstandingCallbacks += 1
             result.addCallback(self.dispatchResultCallback, request, node)
             result.addErrback(self.renderFailure, request)
@@ -561,7 +555,8 @@ class View:
                     view)
                 controllerResult.addErrback(self.renderFailure, request)
             else:
-                returnNode = self.dispatchResult(request, node, view)
+                viewResult = view.generate(request, node)
+                returnNode = self.dispatchResult(request, node, viewResult)
                 self.handleNewNode(request, returnNode)
         else:
             self.controllerStack = (controller, self.controllerStack)
@@ -615,14 +610,15 @@ class View:
 #            value.model.removeView(value)
 
     def dispatchResultCallback(self, result, request, node):
-        """Deal with a callback from a deferred, dispatching the result
-        and recursing children.
+        """Deal with a callback from a deferred, checking to see if it is
+        ok to send the page yet or not.
         """
         self.outstandingCallbacks -= 1
-        node = self.dispatchResult(request, node, result)
-        self.recurseChildren(request, node)
+        #node = self.dispatchResult(request, node, result)
+        #self.recurseChildren(request, node)
         if not self.outstandingCallbacks:
-            return self.sendPage(request)
+            self.sendPage(request)
+        return result
 
     def renderFailure(self, failure, request):
         try:
@@ -691,22 +687,3 @@ def registerViewForModel(view, model):
 import input
 import widgets
 
-
-class ViewNodeMutator(template.NodeMutator):
-    """A ViewNodeMutator replaces the node that is passed into generate
-    with the result of generating the View it adapts.
-    """
-    def generate(self, request, node):
-        newNode = self.data.generate(request, node)
-        assert newNode is not None
-        if isinstance(newNode, defer.Deferred):
-            if hasattr(self.data, 'outgoingId'):
-                # Let dispatchResult know what ID we want to insert into 
-                # the outgoing document, so we can replace it later
-                newNode.outgoingId = self.data.outgoingId
-            return newNode
-        nodeMutator = template.NodeNodeMutator(newNode)
-        return nodeMutator.generate(request, node)
-
-
-components.registerAdapter(ViewNodeMutator, View, template.INodeMutator)
