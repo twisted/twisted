@@ -190,11 +190,11 @@ class Model:
     protected_names = []
     
     def getSubmodel(self, name):
-        if name not in self.protected_names:
+        if name[0] != '_' and name not in self.protected_names:
             return getattr(self, name, None)
 
     def setSubmodel(self, name, value):
-        if name not in self.protected_names:
+        if name[0] != '_' and name not in self.protected_names:
             setattr(self, name, value)
 
     def getData(self):
