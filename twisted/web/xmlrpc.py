@@ -24,9 +24,11 @@ API Stability: semi-stable
 
 Maintainer: L{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
+from __future__ import nested_scopes
 
 # System Imports
 import xmlrpclib
+import urlparse
 
 # Sibling Imports
 from twisted.web import resource, server
@@ -230,9 +232,28 @@ class QueryFactory(protocol.ClientFactory):
         self.deferred.errback(IOError(status, message))
         self.deferred = None
 
-def query(server, port, url, method, *args):
-    factory = QueryFactory(url, server, method, *args)
-    reactor.connectTCP(server, port, factory)
-    return factory.deferred
+class Proxy:
 
-__all__ = ["XMLRPC", "Handler", "NoSuchFunction", "Fault", "query"]
+    def __init__(self, url):
+        parts = urlparse.urlparse(url)
+        self.url = urlparse.urlunparse(('', '')+parts[2:])
+        if ':' in parts[1]:
+            self.host, self.port = parts[1].split(':')
+            self.port = int(self.port)
+        else:
+            self.host, self.port = parts[1], None
+        self.secure = parts[0] == 'https'
+
+    def callMethod(self, method, *args):
+        factory = QueryFactory(self.url, self.host, method, *args)
+        if self.secure:
+            reactor.connectSSL(self.host, self.port or 443, factory)
+        else:
+            reactor.connectTCP(self.host, self.port or 80, factory)
+        return factory.deferred
+
+    def __getattr__(self, name):
+        return lambda *args: self.callMethod(name, *args)
+
+
+__all__ = ["XMLRPC", "Handler", "NoSuchFunction", "Fault", "Proxy"]

@@ -1,4 +1,4 @@
-from twisted.web.xmlrpc import query
+from twisted.web.xmlrpc import Proxy
 from twisted.internet import reactor
 
 def printValue(value):
@@ -9,9 +9,10 @@ def printError(error):
     print 'error', error
     reactor.stop()
 
-query('localhost', 10999, '/', 'echo', 41).addCallbacks(printValue, printError)
+proxy = Proxy('http://localhost:10999/')
+proxy.callMethod('echo', 41).addCallbacks(printValue, printError)
 reactor.run()
-query('localhost', 10999, '/', 'defer').addCallbacks(printValue, printError)
+proxy.defer().addCallbacks(printValue, printError)
 reactor.run()
-query('localhost', 10999, '/', 'fail').addCallbacks(printValue, printError)
+proxy.fail().addCallbacks(printValue, printError)
 reactor.run()
