@@ -39,10 +39,9 @@ namespace Twisted
 
     class Protocol
     {
-    private:
-	object transportobj; // so that we have INCREF the transport
     public:
 	PyObject* self;
+	object transportobj; // so that we have INCREF the transport
 	TCPTransport* transport;
 
 	Protocol() {};

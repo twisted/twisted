@@ -174,6 +174,7 @@ BOOST_PYTHON_MODULE(tcp)
 	.def("connectionMade", &Protocol::connectionMade)
 	.def("connectionLost", &Protocol::connectionLost)
 	.def("makeConnection", &Protocol::makeConnection)
+	.def_readonly("transport", &Protocol::transportobj)
 	;
     if (PyType_Ready(&BufferType) < 0) {
 	return;
