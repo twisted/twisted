@@ -31,6 +31,27 @@ class Factory:
     self.protocol.
     """
     protocol = None
+
+    def startFactory(self):
+        """This will be called before I begin listening on a Port.
+
+        This can be used to perform 'unserialization' tasks that
+        are best put off until things are actually running, such
+        as connecting to a database, opening files, etcetera.
+
+        It will be called both after an application has been unserialized and
+        before all the ports begin accepting connections.
+        """
+
+    def stopFactory(self):
+        """This will be called before I stop listening on a Port.
+
+        This can be used to perform 'shutdown' tasks such as disconnecting
+        database connections, closing files, etc.
+
+        It will be called before an application shuts down.
+        """
+
     def buildProtocol(self, connection):
         """Create an instance of a subclass of Protocol.
 
@@ -44,22 +65,28 @@ class Factory:
         return p
 
 
+class ClientFactory(Factory):
+    """Subclass this to indicate that your protocol.Factory is only usable for clients.
+    """
+
+class ServerFactory(Factory):
+    """Subclass this to indicate that your protocol.Factory is only usable for servers.
+    """
+
 class Protocol:
     """This is the abstract superclass of all protocols.
 
-    If you are going to write a new protocol for Twisted,
-    start here.  The docstrings of this class explain how
-    you can get started.  Any protocol implementation,
-    either client or server, should be a subclass of me.
+    If you are going to write a new protocol for Twisted, start here.  The
+    docstrings of this class explain how you can get started.  Any protocol
+    implementation, either client or server, should be a subclass of me.
 
-    My API is quite simple.  Implement dataReceived(data) to
-    handle both event-based and synchronous input; output can
-    be sent through the 'transport' attribute, which is to be
-    an instance of a twisted.protocols.protocol.Transport.
+    My API is quite simple.  Implement dataReceived(data) to handle both
+    event-based and synchronous input; output can be sent through the
+    'transport' attribute, which is to be an instance of a
+    twisted.protocols.protocol.Transport.
 
-    Some subclasses exist already to help you write common types of
-    protocols: see the twisted.protocols.basic module for a few of
-    them.
+    Some subclasses exist already to help you write common types of protocols:
+    see the twisted.protocols.basic module for a few of them.
     """
 
     connected = 0
@@ -69,9 +96,9 @@ class Protocol:
     def makeConnection(self, transport, server = None):
         """Make a connection to a transport and a server.
 
-        This sets the 'transport' (and 'server'; the jury is still out
-        as to whether this will remain) attributes of this Protocol, and
-        calls the connectionMade() callback.
+        This sets the 'transport' (and 'server'; the jury is still out as to
+        whether this will remain) attributes of this Protocol, and calls the
+        connectionMade() callback.
         """
         self.connected = 1
         self.transport = transport

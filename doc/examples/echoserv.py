@@ -40,7 +40,6 @@ if __name__ == '__main__':
     factory = Factory()
     factory.protocol = echoserv.Echo
     app = Application("echo")
-    app.listenOn(8000,factory)
-    p = udp.Port(8000,factory)
-    app.addPort(p)
+    app.listenTCP(8000,factory)
+    app.listenUDP(8000, factory)
     app.save("start")

@@ -891,11 +891,6 @@ def main():
     except IOError:
         pass
     imclient.im.connect(handleError,"error")
-#    t=telnet.ShellFactory()
-#    import __main__
-#    t.namespace=__main__.__dict__
-#    t.namespace['im']=im
-#    tcp.Port(10023,t).startListening()
     mainloop()
     im.disconnectGateways(imclient)
     f=open(path,"w")

@@ -73,14 +73,6 @@ twisted.web.test in it."""
 
     opt_s = opt_static
 
-#    def opt_telnet(self, port):
-#        from twisted.protocols import telnet
-#        factory = telnet.ShellFactory()
-#        app.addPort(tcp.Port(int(port), factory))
-
-#    opt_t = opt_telnet
-
-
 
 def getPorts(app, config):
     ports = []

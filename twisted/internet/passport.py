@@ -51,15 +51,6 @@ class Service:
         self.perspectives = {}
         self.setApplication(application)
 
-    def startService(self):
-        """A hook called when the application that this service is a part of has fully loaded.
-
-        This can be used to perform 'unserialization' tasks that
-        are best put off until things are actually running, such
-        as connecting to a database, opening files, etcetera.
-        """
-        log.msg("(%s %s started up!)" % (str(self.__class__), repr(self.getServiceName())))
-
     def setApplication(self, application):
         assert not self.application, "Application already set!"
         if application:

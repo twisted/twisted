@@ -124,7 +124,7 @@ class Connection(abstract.FileDescriptor,
 class Client(Connection):
     """A client for TCP (and similiar) sockets.
     """
-    def __init__(self, host, port, protocol, timeout=None):
+    def __init__(self, host, port, protocol, timeout=None, connector=None):
         """Initialize the client, setting up its socket, and request to connect.
         """
         if host == 'unix':
@@ -150,6 +150,7 @@ class Client(Connection):
             whenDone = self.resolveAddress
         self.host = host
         self.port = port
+        self.connector = connector
         Connection.__init__(self, skt, protocol)
         self.doWrite = self.doConnect
         self.doRead = self.doConnect
@@ -160,6 +161,8 @@ class Client(Connection):
 
     def failIfNotConnected(self):
         if (not self.connected) and (not self.disconnected):
+            if self.connector:
+                self.connector.connectionFailed()
 	    self.protocol.connectionFailed()
             self.stopReading()
             self.stopWriting()
@@ -209,6 +212,13 @@ class Client(Connection):
         self.connected = 1
         self.startReading()
         self.protocol.makeConnection(self)
+        if self.connector:
+            self.connector.makeConnection(self)
+
+    def connectionLost(self):
+        Connection.connectionLost(self)
+        if self.connector:
+            self.connector.connectionLost()
 
     def getHost(self):
         """Returns a tuple of ('INET', hostname, port).
@@ -228,6 +238,25 @@ class Client(Connection):
     def __repr__(self):
         s = '<%s to %s at %x>' % (self.__class__, self.addr, id(self))
         return s
+
+class Connector:
+    def __init__(self, host, factory, portno, timeout=30):
+        self.host = host
+        self.portno = portno
+        self.factory = factory
+        self.portno = portno
+
+    def connectionFailed(self):
+        self.startConnecting()
+
+    def connectionLost(self):
+        self.connectionFailed()
+
+    def startConnecting(self):
+        proto = self.factory.buildProtocol((self.host, self.portno))
+        Client(self.host, self.portno, proto, 30, self)
+        
+
 
 class Server(Connection):
     """Serverside socket-stream connection class.
@@ -350,6 +379,7 @@ class Port(abstract.FileDescriptor):
         self.fileno = self.socket.fileno
         self.numberAccepts = 100
         self.startReading()
+        self.factory.startFactory()
 
     def doRead(self):
         """Called when my socket is ready for reading.
@@ -403,6 +433,7 @@ class Port(abstract.FileDescriptor):
             os.unlink(self.port)
         del self.socket
         del self.fileno
+        self.factory.stopFactory()
 
     def logPrefix(self):
         """Returns the name of my class, to prefix log entries with.

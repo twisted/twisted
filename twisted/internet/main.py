@@ -41,13 +41,13 @@ from twisted.persisted import styles
 
 # Sibling Imports
 
-import tcp, passport
+import passport
 
 class Application(log.Logger, styles.Versioned):
     running = 0
     def __init__(self, name, uid=None, gid=None, authorizer=None):
         self.name = name
-        # a list of twisted.internet.tcp.Ports
+        # a list of (tcp, ssl, udp) Ports
         self.ports = []
         # a list of twisted.python.delay.Delayeds
         self.delayeds = []
@@ -93,11 +93,22 @@ class Application(log.Logger, styles.Versioned):
             del dict['running']
         return dict
 
-    def listenOn(self, port, factory, backlog=5):
+    def listenTCP(self, port, factory, backlog=5):
         """
         Connects a given protocol factory to the given numeric TCP/IP port.
         """
+        from twisted.internet import tcp
         self.addPort(tcp.Port(port, factory, backlog))
+
+    # deprecated name for backward compat.
+    listenOn = listenTCP
+
+    def listenUDP(self, port, factory, interface='', maxPacketSize=8192):
+        """
+        Connects a given protocol factory to the given numeric TCP/IP port.
+        """
+        from twisted.internet import udp
+        self.addPort(udp.Port(port, factory, interface, maxPacketSize))
 
     def listenSSL(self, port, factory, ctxFactory, backlog=5):
         """
@@ -107,7 +118,7 @@ class Application(log.Logger, styles.Versioned):
         """
         from twisted.internet import ssl
         self.addPort(ssl.Port(port, factory, ctxFactory, backlog))
-    
+
     def addPort(self, port):
         """
         Adds a listening port (an instance of a twisted.internet.tcp.Port) to
@@ -157,9 +168,14 @@ class Application(log.Logger, styles.Versioned):
                 log.msg('set uid/gid %s/%s' % (self.uid, self.gid))
 
     def shutDownSave(self):
-        """Persist a pickle named "%(self.name)s-shutdown.tap"
+        """Persist a pickle, then stop all protocol factories.
+
+        The pickle will be named \"%(self.name)s-shutdown.tap\".  First, all
+        currently active factories will have thier stopFactory method called.
         """
         self.save("shutdown")
+        for port in self.ports:
+            port.factory.stopFactory()
 
     def save(self, tag=None):
         """Save a pickle of this application to a file in the current directory.
@@ -202,8 +218,8 @@ class Application(log.Logger, styles.Versioned):
                 except socket.error:
                     print 'port %s already bound' % port.port
                     return
-            for service in self.services.values():
-                service.startService()
+            for port in self.ports:
+                port.factory.startFactory()
             resolver = self.resolver
             self.running = 1
             log.logOwner.disown(self)
@@ -266,7 +282,7 @@ def shutDown(a=None, b=None):
         log.msg('Raising exception in %s more interrupts!' % interruptCountdown)
         interruptCountdown = interruptCountdown - 1
     else:
-        raise RuntimeError("Shut Down!")
+        raise RuntimeError("Shut Down Exception!")
 
 
 def runUntilCurrent():

@@ -20,6 +20,7 @@ from twisted.persisted import styles
 from twisted.protocols import irc
 from twisted.python import log
 from twisted.words import service
+from twisted import copyright
 
 wordsService = service
 del service
@@ -67,7 +68,7 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
 
     realname = 'Tendril'
     versionName = 'Tendril'
-    versionNum = '$Revision: 1.7 $'[11:-2]
+    versionNum = '$Revision: 1.8 $'[11:-2]
     versionEnv = copyright.longversion
 
     helptext = (
@@ -172,7 +173,6 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
         self.log("%s: Connection lost." % (self.transport,), 'info')
         for nick in self.participants.keys()[:]:
             self.logoutParticipant(nick)
-
 
     ### Protocol LineReceiver-level methods
 
