@@ -43,10 +43,9 @@ install-stamp: build-stamp
 	gzip -9 debian/tmp/usr/share/man/man1/*
 	touch install-stamp
 
-binary-arch: build install
-
 binary-indep: build install
-#	dh_testversion
+
+binary-arch: build install
 	dh_testdir
 	dh_testroot
 	dh_strip
