@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.67 2003/03/05 17:16:21 itamarst Exp $
+# $Id: default.py,v 1.68 2003/03/15 12:28:30 tv Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -93,7 +93,9 @@ class PosixReactorBase(ReactorBase):
             signal.signal(signal.SIGBREAK, self.sigBreak)
 
         if platform.getType() == 'posix':
-            signal.signal(signal.SIGCHLD, process.reapAllProcesses)
+            signal.signal(signal.SIGCHLD,
+                          lambda signum,frame,reactor=self:
+                          process.reapAllProcesses(signum, frame, reactor))
 
     def startRunning(self, installSignalHandlers=1):
         threadable.registerAsIOThread()

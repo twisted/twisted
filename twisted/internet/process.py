@@ -61,14 +61,27 @@ from main import CONNECTION_LOST, CONNECTION_DONE
 
 reapProcessHandlers = {}
 
-def reapAllProcesses(signum, frame):
+def _reapAllProcesses():
     """Reap all registered processes.
 
-    This gets called on SIGCHILD.
+    This gets after a SIGCHLD, on the next event loop iteration.
     """
     for process in reapProcessHandlers.values():
         process.reapProcess()
 
+def reapAllProcesses(signum, frame, reactor):
+    """Reap all registered processes.
+
+    This gets called on SIGCHLD. We do no processing inside a signal
+    handler, as the calls we make here could occur between any two
+    python bytecode instructions. Deferring processing to the next
+    eventloop round prevents us from violating the state constraints
+    of arbitrary classes. Note that a Reactor must be able to accept
+    callLater calls at any time, even interleaved inside it's own
+    methods; it must block SIGCHLD if it is unable to guarantee this.
+
+    """
+    reactor.callLater(0, _reapAllProcesses)
 
 def registerReapProccessHandler(pid, process):
     if reapProcessHandlers.has_key(pid):
