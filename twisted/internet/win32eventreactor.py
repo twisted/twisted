@@ -105,7 +105,7 @@ class Win32Reactor(posixbase.PosixReactorBase):
         """Add a socket FileDescriptor for notification of data available to read.
         """
         if not reads.has_key(reader):
-            reads[reader] = self._makeSocketEvent(reader, reader.doRead, FD_READ|FD_ACCEPT|FD_CONNECT|FD_CLOSE)
+            reads[reader] = self._makeSocketEvent(reader, 'doRead', FD_READ|FD_ACCEPT|FD_CONNECT|FD_CLOSE)
 
     def addWriter(self, writer, writes=writes):
         """Add a socket FileDescriptor for notification of data available to write.
@@ -187,13 +187,13 @@ class Win32Reactor(posixbase.PosixReactorBase):
 
     def _runAction(self, action, fd):
         try:
-            closed = action()
+            closed = getattr(fd, action)()
         except:
             closed = sys.exc_info()[1]
             log.deferr()
 
         if closed:
-            self._disconnectSelectable(fd, closed, action == fd.doRead)
+            self._disconnectSelectable(fd, closed, action == 'doRead')
 
     doIteration = doWaitForMultipleEvents
 
