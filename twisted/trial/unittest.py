@@ -227,6 +227,7 @@ class Tester:
 class TestSuite:
     methodPrefix = 'test'
     moduleGlob = 'test_*.py'
+    sortTests = 1
 
     def __init__(self):
         self.numTests = 0
@@ -252,9 +253,13 @@ class TestSuite:
             except:
                 self.couldNotImport[module] = failure.Failure()
                 return
-        names = dir(module)
-        for name in names:
-            obj = getattr(module, name)
+        if hasattr(module, '__tests__'):
+            objects = module.__tests__
+        else:
+            names = dir(module)
+            objects = [getattr(module, name) for name in names]
+
+        for obj in objects:
             if type(obj) is types.ClassType and util.isTestClass(obj):
                 self.addTestClass(obj)
 
@@ -293,7 +298,8 @@ class TestSuite:
     def run(self, output, seed = None):
         output.start(self.numTests)
         tests = self.tests
-        tests.sort(lambda x,y: cmp(str(x), str(y)))
+        if self.sortTests:
+            tests.sort(lambda x,y: cmp(str(x), str(y)))
 
         log.startKeepingErrors()
         r = None
