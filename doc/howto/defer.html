@@ -170,10 +170,11 @@ d.arm()
     except block, the <code class="python">Exception</code> is caught and stops
     propagating, and normal execution continues.  The same thing happens with
     errbacks: unless you explicitly <code class="python">return</code> a 
-    <code class="python">Failure</code>, the error stops propagating, and
+    <code class="python">Failure</code> or (re-)raise an exception, the error 
+    stops propagating, and
     normal callbacks continue executing from that point (using the value
-    returned from the errback).  If the errback returns a 
-    <code class="python">Failure</code>, then that is passed to the next
+    returned from the errback).  If the errback does returns a 
+    <code class="python">Failure</code> or raise an exception, then that is passed to the next
     errback, and so on.</p>
 
     <p><b>Note:</b> If an errback doesn't return anything, then it effectively 
