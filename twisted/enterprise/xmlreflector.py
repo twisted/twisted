@@ -64,22 +64,24 @@ class XMLReflector(reflector.Reflector):
 
             tableInfo = _TableInfo(rc)
             self.populateSchemaFor(tableInfo)
-        
-    def _rowLoader(self, tableName, parentRow, data, whereClause, forceChildren):
+
+    def _rowLoader(self, tableName, parentRow, data,
+                   whereClause, forceChildren):
         d = self.tableDirs[ tableName]
         tableInfo = self.schema[tableName]
         filenames = os.listdir(d)
         results = []
         newRows = []
         for filename in filenames:
-            if filename.find(self.extension) != len(filename) - len(self.extension):
+            if (filename.find(self.extension) !=
+                len(filename) - len(self.extension)):
                 continue
             f = open(d + "/" + filename, "r")
             proxy = marmalade.unjellyFromXML(f)
             f.close()
             # match object with whereClause... NOTE: this is insanely slow..
             # every object in the directory is loaded and checked!
-            stop = 0            
+            stop = 0
             if whereClause:
                 for item in whereClause:
                     (columnName, cond, value) = item
@@ -135,17 +137,18 @@ class XMLReflector(reflector.Reflector):
             pass
         else:
             whereClause = []
-        results = self._rowLoader(tableName, parentRow, data, whereClause, forceChildren)
+        results = self._rowLoader(tableName, parentRow, data,
+                                  whereClause, forceChildren)
         return defer.succeed(results)
-    
+
     def updateRow(self, rowObject):
         """update this rowObject to the database.
         """
         # just replace the whole file for now
         return self.insertRow(rowObject)
-        
+
     def insertRow(self, rowObject):
-        """insert a new row for this object instance. dont include the "container" attribute.
+        """insert a new row for this object instance. do not include the "container" attribute.
         """
         proxy = XMLRowProxy(rowObject)
         filename = self.makeFilenameFor(rowObject)
@@ -153,12 +156,10 @@ class XMLReflector(reflector.Reflector):
         marmalade.jellyToXML(proxy, f)
         f.close()
         return defer.succeed(1)
-        
+
     def deleteRow(self, rowObject):
         """delete the row for this object from the database.
         """
         filename = self.makeFilenameFor(rowObject)        
         os.remove(filename)
         return defer.succeed(1)
-
-
