@@ -16,9 +16,11 @@
 
 """This module integrates PyUI with twisted.internet's mainloop.
 
-API Stability: semi-stable
+API Stability: unstable
 
 Maintainer: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
+
+See doc/examples/pyuidemo.py for example usage.
 """
 
 # System imports
@@ -43,3 +45,5 @@ def install(ms=10, reactor=None, args=(), kw={}):
     if reactor is None:
         from twisted.internet import reactor
     _guiUpdate(reactor, ms / 1000.0)
+
+__all__ = ["install"]
