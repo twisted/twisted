@@ -72,7 +72,7 @@ cReactorUtil_AddMethod(cReactorMethod **list,
                        PyObject *args,
                        PyObject *kw)
 {
-    cReactorMethod *method;
+    cReactorMethod *method, **node;
 
     /* Make the new method node. */
     method = (cReactorMethod *)malloc(sizeof(cReactorMethod));
@@ -104,9 +104,14 @@ cReactorUtil_AddMethod(cReactorMethod **list,
         method->kw = kw;
     }
 
-    /* Append to the list. */
-    method->next = *list;
-    *list = method;
+    /* Append to the list: find the end */
+    node = list;
+    while(*node) {
+        node = &((*node)->next);
+    }
+
+    method->next = *node;
+    *node = method;
 
     return method->call_id;
 }
@@ -164,8 +169,9 @@ cReactorUtil_RemoveMethod(cReactorMethod **list, int call_id)
         node    = node->next;
     }
 
-    /* Did not find it.  ValueError. */
-    PyErr_Format(PyExc_ValueError, "invalid callID %d", call_id);
+    /* Did not find it. Caller may want to return a ValueError with
+       something like: PyErr_Format(PyExc_ValueError, "invalid callID %d",
+       call_id);, but we'll leave that up to them. */
     return -1;
 }
 
@@ -244,65 +250,6 @@ cReactorUtil_DestroyMethods(cReactorMethod *list)
         Py_XDECREF(node->kw);
         free(node);
     }
-}
-
-int
-cReactorUtil_GetEventType(const char *str, cReactorEventType *out_type)
-{
-    static struct {
-        const char *        str;
-        cReactorEventType   type;
-    } type_map[] = 
-    {
-        { "startup",    CREACTOR_EVENT_TYPE_STARTUP },
-        { "shutdown",   CREACTOR_EVENT_TYPE_SHUTDOWN },
-        { "persist",    CREACTOR_EVENT_TYPE_PERSIST },
-    };
-    static int type_map_len = sizeof(type_map) / sizeof(type_map[0]);
-
-    int i;
-
-    for (i = 0; i < type_map_len; ++i)
-    {
-        if (strcmp(str, type_map[i].str) == 0)
-        {
-            *out_type = type_map[i].type;
-            return 0;
-        }
-    }
-
-    PyErr_Format(PyExc_ValueError, "unknown event type: %s", str);
-    return -1;
-}
-
-
-int
-cReactorUtil_GetEventPhase(const char *str, cReactorEventPhase *out_phase)
-{
-    static struct {
-        const char *        str;
-        cReactorEventPhase  phase;
-    } phase_map[] = 
-    {
-        { "before",     CREACTOR_EVENT_PHASE_BEFORE },
-        { "during",     CREACTOR_EVENT_PHASE_DURING },
-        { "after",      CREACTOR_EVENT_PHASE_AFTER },
-    };
-    static int phase_map_len = sizeof(phase_map) / sizeof(phase_map[0]);
-
-    int i;
-
-    for (i = 0; i < phase_map_len; ++i)
-    {
-        if (strcmp(str, phase_map[i].str) == 0)
-        {
-            *out_phase = phase_map[i].phase;
-            return 0;
-        }
-    }
-
-    PyErr_Format(PyExc_ValueError, "unknown event phase: %s", str);
-    return -1;
 }
 
 
