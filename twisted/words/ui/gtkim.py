@@ -18,10 +18,6 @@ pb.setCopierForClass("twisted.words.service.Group", Group)
 def defocusify(widget):
     widget.unset_flags(gtk.CAN_FOCUS)
 
-def cbutton(name, cb):
-    b = gtk.GtkButton(name)
-    b.signal_connect ("clicked", cb)
-    return b
 
 
 class AddContact(gtk.GtkWindow):
@@ -29,7 +25,7 @@ class AddContact(gtk.GtkWindow):
         gtk.GtkWindow.__init__(self, gtk.WINDOW_TOPLEVEL)
         self.set_title("Add Contact")
         self.contactList = contactList
-        button = cbutton("Add Contact", self.clicked)
+        button = gtkutil.cbutton("Add Contact", self.clicked)
         self.entry = gtk.GtkEntry()
         hb = gtk.GtkHBox()
         hb.add(self.entry)
@@ -123,8 +119,8 @@ class ContactList(gtk.GtkWindow, pb.Referenced):
         
         vb.pack_start(gtkutil.scrollify(self.list), gtk.TRUE, gtk.TRUE, 0)
         
-        addContactButton = cbutton("Add Contact", self.addContact)
-        sendMessageButton = cbutton("Send Message", self.sendMessage)
+        addContactButton = gtkutil.cbutton("Add Contact", self.addContact)
+        sendMessageButton = gtkutil.cbutton("Send Message", self.sendMessage)
         hb = gtk.GtkHBox()
         hb.pack_start(addContactButton)
         hb.pack_start(sendMessageButton)
