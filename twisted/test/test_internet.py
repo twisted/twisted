@@ -23,6 +23,7 @@ threadable.init(1)
 import sys
 import time
 import threading
+import types
 
 
 class InterfaceTestCase(unittest.TestCase):
@@ -68,6 +69,114 @@ class InterfaceTestCase(unittest.TestCase):
         r.fireSystemEvent("remove")
         self.assertEquals(len(l), 1)
         self.assertEquals(len(l2), 0)
+
+    def testTriggerSystemEvent2(self):
+        # one of the "before" trigger functions returns a deferred. A later
+        # "before" trigger fires the deferred. A third before runs. Then a
+        # "during" should be run. One of the failure modes for the old
+        # cReactor code is to start the "during" as soon as the deferred
+        # fires, rather than waiting for the "before" phase to be finished
+        l = []
+        d = Deferred()
+        d2 = Deferred()
+        def _returnDeferred(d=d):
+            return d
+        def _fireDeferred(d=d):
+            d.callback(None)
+        def _returnDeferred2(d2=d2):
+            return d2
+        def _appendToList(l=l):
+            l.append(1)
+        r = reactor
+        # to test this properly, the triggers must fire in this sequence:
+        # _returnDeferred, _fireDeferred, _returnDeferred2 . cReactor happens
+        # to run triggers in the order in which they were added.
+        r.addSystemEventTrigger("before", "defer2", _returnDeferred)
+        r.addSystemEventTrigger("before", "defer2", _fireDeferred)
+        r.addSystemEventTrigger("before", "defer2", _returnDeferred2)
+        r.addSystemEventTrigger("during", "defer2", _appendToList)
+        r.addSystemEventTrigger("after", "defer2", _appendToList)
+        r.fireSystemEvent("defer2")
+        self.assertEquals(len(l), 0, "Event should not have fired yet.")
+        d2.callback(None)
+        self.assertEquals(len(l), 2)
+
+    def testTriggerSystemEvent3(self):
+        # make sure reactor can survive the loss of an event type while
+        # waiting for a before-trigger's Deferred to fire
+        l = []
+        d = Deferred()
+        d2 = Deferred()
+        def _returnDeferred(d=d):
+            return d
+        def _appendToList(l=l):
+            l.append(1)
+        def _ignore(failure):
+            return None
+        r = reactor
+        b1 = r.addSystemEventTrigger("before", "defer3", _returnDeferred)
+        b2 = r.addSystemEventTrigger("after", "defer3", _appendToList)
+        r.fireSystemEvent("defer3")
+        self.assertEquals(len(l), 0, "Event should not have fired yet.")
+        r.removeSystemEventTrigger(b1)
+        r.removeSystemEventTrigger(b2)
+        try:
+            d.callback(None) # cReactor gives errback to deferred
+        except ValueError:
+            pass
+        self.assertEquals(len(l), 0)
+        d.addErrback(_ignore)
+
+    def testTriggerSystemEvent4(self):
+        # make sure interleaved event types do not interfere with each other.
+        # Old cReactor code had a single defer_list for all event types.
+        l = []
+        l2 = []
+        d = Deferred()
+        d2 = Deferred()
+        def _returnDeferred(d=d):
+            return d
+        def _returnDeferred2(d2=d2):
+            return d2
+        def _appendToList(l=l):
+            l.append(1)
+        def _appendToList2(l2=l2):
+            l2.append(1)
+        r = reactor
+        r.addSystemEventTrigger("before", "event1", _returnDeferred)
+        r.addSystemEventTrigger("after", "event1", _appendToList)
+        r.addSystemEventTrigger("before", "event2", _returnDeferred2)
+        r.addSystemEventTrigger("after", "event2", _appendToList2)
+        r.fireSystemEvent("event1")
+        # event1 should be waiting on deferred 'd'
+        r.fireSystemEvent("event2")
+        # event2 should be waiting on deferred 'd2'
+        self.assertEquals(len(l), 0, "Event should not have fired yet.")
+        self.assertEquals(len(l2), 0, "Event should not have fired yet.")
+        d.callback(None)
+        # event1 should run "during" and "after" stages
+        # event2 should still be waiting on d2
+        self.assertEquals(len(l), 1)
+        self.assertEquals(len(l2), 0)
+        d2.callback(None)
+        # event2 should run "during" and "after" stages
+        self.assertEquals(len(l), 1)
+        self.assertEquals(len(l2), 1)
+
+    def testTriggerSystemEvent5(self):
+        # make sure the reactor can handle attempts to remove bogus triggers
+        l = []
+        def _appendToList(l=l):
+            l.append(1)
+        r = reactor
+        b = r.addSystemEventTrigger("after", "event1", _appendToList)
+        r.removeSystemEventTrigger(b)
+        if type(b) == types.IntType:
+            bogus = b + 40
+            self.failUnlessRaises(ValueError,
+                                  r.removeSystemEventTrigger, bogus)
+            self.failUnlessRaises(TypeError,
+                                  r.removeSystemEventTrigger, None)
 
     _called = 0
 
