@@ -17,7 +17,7 @@ class SingleSignedShort(Record):
 
 class SingleUnsignedShort(Record):
     __format__ = [('a', Integer(16, False))]
-    EXPECTED_ENCODED_SIZE = 1
+    EXPECTED_ENCODED_SIZE = 2
 
 class SingleSignedLong(Record):
     __format__ = [('a', Integer(32, True))]
@@ -73,5 +73,6 @@ class RecordPacking(unittest.TestCase):
                 # Pick a random value that the attribute can take on
                 setattr(inst, k, randomValue(t))
             s = inst.encode()
-            self.assertEquals(len(s), rt.EXPECTED_ENCODED_SIZE)
+            msg = "%s encoded to %d bytes, not %d bytes" % (rt.__name__, len(s), rt.EXPECTED_ENCODED_SIZE)
+            self.assertEquals(len(s), rt.EXPECTED_ENCODED_SIZE, msg)
             self.assertEquals(vars(rt.decode(s)), vars(inst))

@@ -1,5 +1,6 @@
 # -*- test-case-name: twisted.test.test_record -*-
 
+import types
 import struct
 
 class Integer:
@@ -8,6 +9,17 @@ class Integer:
             bits -= 1
         self.bits = bits
         self.signed = signed
+
+    def __hash__(self):
+        return hash((self.bits, self.signed))
+
+    def __eq__(self, other):
+        if isinstance(other, Integer):
+            return self.bits == other.bits and self.signed == other.signed
+        return False
+
+    def __repr__(self):
+        return '<%ssigned %d bit integer>' % (self.signed and 'un' or '', self.signed + self.bits)
 
     def verify(self, value):
         if not self.signed and value < 0:
@@ -45,7 +57,9 @@ class RecordType(type):
             result = []
             subbytes = []
             for (attr, type) in format:
+                print attr, type
                 if type in klass.FORMAT_SPECIFIERS:
+                    print 'yonk'
                     offset = 0
                     accum = 0
                     subbytes.reverse()
@@ -68,6 +82,7 @@ class RecordType(type):
                     subbytes.append((getattr(self, attr), type))
                 else:
                     raise NotImplementedError((type, attr))
+            print format, result
             return ''.join(result)
         return encode
     makeEncoder = classmethod(makeEncoder)
@@ -92,7 +107,9 @@ class RecordType(type):
                         bytes = bytes[type.bits % 8:]
                     else:
                         raise NotImplementedError("Decoding sub-byte fields is hard")
-            return types.InstanceType(cls, d)
+            i = cls()
+            i.__dict__.update(d)
+            return i
         return classmethod(decode)
     makeDecoder = classmethod(makeDecoder)
 
