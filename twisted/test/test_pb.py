@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-"""Tests for ProtoBroker module.
+"""Tests for Pespective Broker module.
 """
 
 import sys
@@ -476,4 +476,55 @@ class BrokerTestCase(unittest.TestCase):
         pump.pump()
         assert accum.pop() == 'hello world!', 'oops...'
 
-testCases = [BrokerTestCase]
+
+class DisconnectionTestCase(unittest.TestCase):
+    """Test disconnection callbacks."""
+    
+    def error(self, *args):
+        raise RuntimeError, "I shouldn't have been called: %s" % args
+    
+    def gotDisconnected(self):
+        """Called on broker disconnect."""
+        self.gotCallback = 1
+    
+    def objectDisconnected(self, o):
+        """Called on RemoteReference disconnect."""
+        self.assertEquals(o, self.remoteObject)
+        self.objectCallback = 1
+    
+    def testDisconnection(self):
+        c, s, pump = connectedServerAndClient()
+        pump.pump()
+        s.setNameForLocal("o", SimpleRemote())
+        
+        # get a client reference to server object
+        r = c.remoteForName("o")
+        pump.pump()
+        pump.pump()
+        pump.pump()
+        
+        # register and then unregister disconnect callbacks
+        # making sure they get unregistered
+        c.notifyOnDisconnect(self.error)
+        self.assert_(self.error in c.disconnects)
+        c.dontNotifyOnDisconnect(self.error)
+        self.assert_(not (self.error in c.disconnects))
+        
+        r.local_notifyOnDisconnect(self.error)
+        self.assert_(r._disconnected in c.disconnects)
+        self.assert_(self.error in r.disconnectCallbacks)
+        r.local_dontNotifyOnDisconnect(self.error)
+        self.assert_(not (r._disconnected in c.disconnects))
+        self.assert_(not (self.error in r.disconnectCallbacks))
+        
+        # register disconnect callbacks
+        c.notifyOnDisconnect(self.gotDisconnected)
+        r.local_notifyOnDisconnect(self.objectDisconnected)
+        self.remoteObject = r
+        
+        # disconnect
+        c.connectionLost()
+        self.assert_(self.gotCallback)
+        self.assert_(self.objectCallback)
+
+testCases = [BrokerTestCase, DisconnectionTestCase]
