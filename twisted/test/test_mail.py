@@ -30,7 +30,6 @@ from twisted.protocols import dns
 from twisted.protocols import basic
 from twisted.internet import protocol
 from twisted.internet import defer
-from twisted.internet import process
 from twisted.python import components
 from twisted.python import failure
 from twisted.python import util
@@ -1015,6 +1014,8 @@ class AliasTestCase(unittest.TestCase):
         self.assertEquals([L[:-1] for L in lines], self.lines)
 
     def testAliasResolution(self):
+        from twisted.internet import reactor
+
         aliases = {}
         domain = {'': TestDomain(aliases, ['user1', 'user2', 'user3'])}
         A1 = mail.alias.AliasGroup(['user1', '|process', '/file'], domain, 'alias1')
@@ -1028,7 +1029,7 @@ class AliasTestCase(unittest.TestCase):
 
         r1 = map(str, A1.resolve(aliases).objs)
         r1.sort()
-        p = process.Process(*([None] * 7))
+        p = reactor.spawnProcess(protocol.ProcessProtocol(), "/bin/ls")
         expected = map(str, [
             mail.alias.AddressAlias('user1', None, None),
             mail.alias.MessageWrapper(p, 'process'),
@@ -1057,6 +1058,8 @@ class AliasTestCase(unittest.TestCase):
         self.assertEquals(r3, expected)
 
     def testCyclicAlias(self):
+        from twisted.internet import reactor
+
         aliases = {}
         domain = {'': TestDomain(aliases, [])}
         A1 = mail.alias.AddressAlias('alias2', domain, 'alias1')
@@ -1075,7 +1078,7 @@ class AliasTestCase(unittest.TestCase):
         A4 = mail.alias.AliasGroup(['|process', 'alias1'], domain, 'alias4')
         aliases['alias4'] = A4
         
-        p = process.Process(*([None] * 7))
+        p = reactor.spawnProcess(protocol.ProcessProtocol(), "/bin/ls")
         r = map(str, A4.resolve(aliases).objs)
         r.sort()
         expected = map(str, [
