@@ -3274,7 +3274,7 @@ class IMAP4Client(basic.LineReceiver):
 
         This command is allowed in the Selected state.
 
-        @type messages: C{str}
+        @type messages: C{MessageSet} or C{str}
         @param messages: A message sequence set
 
         @type flags: Any iterable of C{str}
@@ -3293,14 +3293,14 @@ class IMAP4Client(basic.LineReceiver):
         the server's responses (C{[]} if C{silent} is true) or whose
         errback is invoked if there is an error.
         """
-        return self._store(messages, silent and 'FLAGS.SILENT' or 'FLAGS', flags, uid)
+        return self._store(str(messages), silent and 'FLAGS.SILENT' or 'FLAGS', flags, uid)
 
     def addFlags(self, messages, flags, silent=1, uid=0):
         """Add to the set flags for one or more messages.
 
         This command is allowed in the Selected state.
 
-        @type messages: C{str}
+        @type messages: C{MessageSet} or C{str}
         @param messages: A message sequence set
 
         @type flags: Any iterable of C{str}
@@ -3319,14 +3319,14 @@ class IMAP4Client(basic.LineReceiver):
         the server's responses (C{[]} if C{silent} is true) or whose
         errback is invoked if there is an error.
         """
-        return self._store(messages, silent and '+FLAGS.SILENT' or '+FLAGS', flags, uid)
+        return self._store(str(messages), silent and '+FLAGS.SILENT' or '+FLAGS', flags, uid)
 
     def removeFlags(self, messages, flags, silent=1, uid=0):
         """Remove from the set flags for one or more messages.
 
         This command is allowed in the Selected state.
 
-        @type messages: C{str}
+        @type messages: C{MessageSet} or C{str}
         @param messages: A message sequence set
 
         @type flags: Any iterable of C{str}
@@ -3345,7 +3345,7 @@ class IMAP4Client(basic.LineReceiver):
         the server's responses (C{[]} if C{silent} is true) or whose
         errback is invoked if there is an error.
         """
-        return self._store(messages, silent and '-FLAGS.SILENT' or '-FLAGS', flags, uid)
+        return self._store(str(messages), silent and '-FLAGS.SILENT' or '-FLAGS', flags, uid)
 
     def _store(self, messages, cmd, flags, uid):
         store = uid and 'UID STORE' or 'STORE'
