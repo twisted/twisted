@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.test.test_popsicle -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001-2002 Matthew W. Lefkowitz
 #
@@ -59,6 +60,13 @@ from twisted.internet import defer
 import os
 import weakref
 
+try:
+    from new import instance
+    from new import instancemethod
+except:
+    from org.python.core import PyMethod
+    instancemethod = PyMethod
+
 class Freezer:
     DELETE = 0
     SAVE = 1
@@ -108,6 +116,10 @@ class Freezer:
     def _dirty(self, obj, dirt=SAVE):
         self.dirtySet[obj] = dirt
 
+    def register(self, obj, repo):
+        self.getPersistentReference(obj, repo)
+        self.dirty(obj)
+
     def delete(self, obj):
         return self.dirty(obj, Freezer.DELETE)
 
@@ -126,8 +138,10 @@ class Freezer:
                         continue
                     for saver in ent[1]:
                         if doSave:
+                            print 'saving',obj
                             saver.save(obj)
                         else:
+                            print 'deleting',obj
                             saver.delete(obj)
         finally:
             self.cleaning = False
@@ -137,6 +151,7 @@ theFreezer = Freezer()
 ref = theFreezer.getPersistentReference
 clean = theFreezer.clean
 dirty = theFreezer.dirty
+register = theFreezer.register
 
 class ISaver:
     def save(self, object):
@@ -167,13 +182,6 @@ class Repository:
     _lastOID = 0
 
 
-    def loadOID(self, oid):
-        """
-        Return a Deferred which will fire the object represented by the given
-        OID...
-        """
-        raise NotImplementedError()
-
 
     def saveOID(self, oid, obj):
         """
@@ -187,34 +195,96 @@ class Repository:
         """
         self._cache = weakref.WeakValueDictionary()
         self._revCache = weakref.WeakKeyDictionary()
-
-
-    def cache(self, oid, obj):
-        """Weakly cache an object for the given OID.
-
-        This means I own it, so also register it with the Freezer as such.
-        """
-        
-        self._cache[oid] = obj
-        self._revCache[obj] = oid
-
+        self._pRefs = weakref.WeakValueDictionary()
 
     def load(self, oid):
+        """Load an object from cache or by OID. Return a Deferred.
+
+        This method should be called by external objects looking for a
+        'starting point' into the repository.
         """
-        Load an object from cache or by OID.
-        Return a Deferred 
-        """
-        obj = self._cache.get(oid)
-        if obj:
-            return defer.succeed(obj)
+        oid = str(oid)
+        if self._pRefs.has_key(oid):
+            pRef = self._pRefs[oid]
         else:
-            d = self.loadOID(oid)
-            d.addCallback(self._cbLoadedOID, oid)
+            pRef = PersistentReference(str(oid), self, None)
+        return pRef()
+
+    def loadNow(self, oid):
+        """External API for synchronously loading stuff.
+
+        This should ONLY BE USED by code that is doing the actual
+        loading/saving of structured objects.  Application code should always
+        make calls through PersistentReference.__call__, otherwise it will not
+        work on some back-ends.
+        """
+        oid = str(oid)
+        if self._cache.get(oid):
+            return self._cache[oid]
+        # this code is copied and subtly changed from _cbLoadedOID.  I wish I
+        # could have found a better way to do it, but -- expect bugs here!
+        pRef = PersistentReference(oid, self, None)
+        pRef.deferred = defer.Deferred()
+        try:
+            try:
+                obj = self.loadOIDNow(oid)
+            except:
+                pRef.deferred.errback()
+                raise
+            else:
+                theFreezer.setPersistentReference(obj, pRef)
+                theFreezer.addSaver(obj, self)
+                pRef.deferred.callback(obj)
+                self.cache(oid, obj)
+                return obj
+        finally:
+            del pRef.deferred
+
+    def loadOIDNow(self, oid):
+        """
+        Implement me if you want to implement synchronous loading.
+        """
+        raise NotImplementedError()
+
+    def loadOID(self, oid):
+        """Implement me to return a Deferred if you want to implement asynchronous loading.
+        """
+        return defer.execute(self.loadOIDNow, oid)
+
+    def createOID(self, oid, klass):
+        """Create an instance with an oid and cache it.  This is useful during loading.
+        """
+        i = instance(klass)
+        self.cache(oid, i, 0)
+        return i
+
+    def loadRef(self, pRef):
+        """
+        Synonymous with ref.__call__().
+        """
+        oid = pRef.oid
+        obj = self._cache.get(oid)
+        if obj is not None:
+            return defer.succeed(obj)
+        elif self._pRefs.has_key(oid):
+            # have a persistent ref, but no object
+            return pRef.deferred
+        else:
+            # have no persistent ref
+            d = defer.Deferred()
+            self._pRefs[oid] = pRef
+            pRef.deferred = d
+            d2 = self.loadOID(oid)
+            d2.addCallback(self._cbLoadedOID, oid, pRef)
             return d
 
 
-    def _cbLoadedOID(self, result, oid):
+    def _cbLoadedOID(self, result, oid, pref):
+        theFreezer.setPersistentReference(result, pref)
+        theFreezer.addSaver(result, self)
         self.cache(oid, result)
+        pref.deferred.callback(result)
+        del pref.deferred
         return result
 
 
@@ -226,6 +296,21 @@ class Repository:
         self._lastOID += 1
         return self._lastOID
 
+    def cache(self, oid, obj, finished=1):
+        """Weakly cache an object for the given OID.
+
+        This means I own it, so also register it with the Freezer as such.
+        """
+        self._cache[oid] = obj
+        self._revCache[obj] = oid
+
+    def getOID(self, obj):
+        if self._revCache.has_key(obj):
+            return self._revCache[obj]
+        else:
+            # TODO: if OID generation really needs to be async...
+            return ref(obj).acquireOID(self)
+
     def save(self, obj):
         """
         Save an object...
@@ -235,13 +320,10 @@ class Repository:
         """
         theFreezer._savingRepo = self
         try:
-            if self._revCache.has_key(obj):
-                oid = self._revCache[obj]
-                return self.saveOID(oid, obj)
-            else:
-                # TODO: if OID generation really needs to be async...
-                oid = ref(obj).acquireOID(self)
-                return self.saveOID(oid, obj)
+            oid = self.getOID(obj)
+            val = self.saveOID(oid, obj)
+            self.cache(oid, obj)
+            return val
         finally:
             theFreezer._savingRepo = None
 
@@ -268,8 +350,7 @@ class PersistentReference:
     def __call__(self):
         if self.obj is not None:
             return defer.succeed(self.obj)
-        else:
-            return self.repo.load(self.oid)
+        return self.repo.loadRef(self)
 
     def acquireOID(self, repo=None):
         """Take a PersistentReference that isn't really persistent yet, and
@@ -299,16 +380,32 @@ class PersistentReference:
             return None
         ### assert False, "wrong repository!"
 
-class Picklesicle(Repository):
+class DirectoryRepository(Repository):
+    def __init__(self, dirname):
+        if not os.path.isdir(dirname):
+            os.mkdir(dirname)
+            fn = os.path.join(dirname,".popsiqnum")
+        Repository.__init__(self)
+        self.dirname = dirname
+
+    def generateOID(self, obj):
+        fn = os.path.join(self.dirname,".popsiqnum")
+        try:
+            seq = str(int(open(fn).read()) + 1)
+        except IOError:
+            seq = '0'
+        open(fn,'w').write(seq)
+        return seq
+
+class Picklesicle(DirectoryRepository):
+
     """I am a Repository that uses a directory full of Pickles to save
-    everything.
+    everything.  This is the most naive implementation possible of a popsicle
+    backend, and useful for reference implementors.
     """
 
     def __init__(self, dirname, persistentClasses):
-        if not os.path.isdir(dirname):
-            os.mkdir(dirname)
-        Repository.__init__(self)
-        self.dirname = dirname
+        DirectoryRepository.__init__(self, dirname)
         self.persistentClasses = persistentClasses
 
     def persistentLoad(self, pid):
@@ -366,5 +463,4 @@ class Picklesicle(Repository):
         self._savingOID = oid
         pl.persistent_id = self.persistentID
         pl.dump(obj)
-        return defer.succeed(1)
 
