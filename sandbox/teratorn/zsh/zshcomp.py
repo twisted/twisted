@@ -10,69 +10,140 @@ generateFor = [('twistd', 'ServerOptions')]
 
 import sys, commands
 from twisted import scripts
+from twisted.python import reflect
 
 def escape(str):
     return commands.mkarg(str)[1:]
 
-def makeZshCode(cmd_name, optionsClass, out_file):
-    """write the zsh completion code to the given file"""
-    o = optionsClass()
-    optParameters = getattr(o, 'optParameters', [])
-    optFlags = getattr(o, 'optFlags', [])
-    multiUse = getattr(o, 'zsh_multiUse', [])
-    actions = getattr(o, 'zsh_actions', {})
+class writeZshCode:
+    def __init__(self, cmd_name, optionsClass, file):
+        """write the zsh completion code to the given file"""
+        self.cmd_name = cmd_name
+        self.optionsClass = optionsClass
+        self.file = file
 
-    out_file.write('#compdef %s\n' % cmd_name)
-    out_file.write('_arguments \\\n')
+        self.optParams = getattr(optionsClass, 'optParameters', [])
+        self.optFlags = getattr(optionsClass, 'optFlags', [])
+        self.altArgDescr = getattr(optionsClass, 'zsh_altArgDescr', {})
+        self.multiUse = getattr(optionsClass, 'zsh_multiUse', [])
+        self.actions = getattr(optionsClass, 'zsh_actions', {})
 
-    for optList in optParameters:
-        long, short, default = optList[:3]
+        self.writeHeader()
 
-        length = len(optList)
-        if length == 3:
-            descr = getattr(o, 'opt_%s' % optList[0]).__doc__
-        elif length == 4:
-            descr = optList[3]
-        else:
-            raise SystemExit, 'len(optList) == %s' % len(optList)
+        self.addAdditionalOptions()
+        self.writeOptParamLines()
+        self.writeOptFlagLines()
 
-        longExclude = ''
-        shortExclude = ''
-        multi = ''
-        #shortExclude = '(-%s)' % short
-        action = actions.get(long, ' ')
-        if short:
-            if long in multiUse:
-                multi = '*'
+        self.writeFooter()
+
+    def writeHeader(self):
+        self.file.write('#compdef %s\n' % self.cmd_name)
+        self.file.write('_arguments \\\n')
+
+    def writeFooter(self):
+        self.file.write('&& return 0\n')
+
+    def writeOptParamLines(self):
+        for optList in self.optParams:
+            length = len(optList)
+            if length == 1:
+                long = optList[0]
+                short, descr = None, None
+            elif length == 2 or length == 3:
+                long, short = optList
+                descr = None
+            elif length == 4:
+                long, short = optList[:2]
+                descr = '[%s]' % optList[3]
             else:
-                longExclude = '(--%s)' % long
-                shortExclude = '(-%s)' % short
+                raise SystemExit, 'optList has invalid length'
 
-            out_file.write(escape('%s%s-%s[%s]:%s:%s' % (longExclude, multi, short, descr, long, action)))
-            out_file.write(' \\\n')
-
-        out_file.write(escape('%s%s--%s=[%s]:%s:%s' % (shortExclude, multi, long, descr, long, action)))
-        out_file.write(' \\\n')
-
-    for optList in optFlags:
-        long, short, descr = optList
-        longExclude = ''
-        shortExclude = ''
-        multi = ''
-        if short:
-            if long in multiUse:
-                multi = '*'
+            if long in self.altArgDescr:
+                descr = '[%s]' % self.altArgDescr[long]
             else:
-                longExclude = '(--%s)' % long
-                shortExclude = '(-%s)' % short
+                if descr == None:
+                    descr = ''
 
-            out_file.write(escape('%s%s-%s[%s]' % (longExclude, multi, short, descr)))
-            out_file.write(' \\\n')
+            longExclude = ''
+            shortExclude = ''
+            multi = ''
+            #shortExclude = '(-%s)' % short
+            action = self.actions.get(long, ' ')
+            if short:
+                if long in self.multiUse:
+                    multi = '*'
+                else:
+                    longExclude = '(--%s)' % long
+                    shortExclude = '(-%s)' % short
 
-        out_file.write(escape('%s%s--%s[%s]' % (shortExclude, multi, long, descr)))
-        out_file.write(' \\\n')
+                self.file.write(escape('%s%s-%s%s:%s:%s' % (longExclude, multi, short, descr, long, action)))
+                self.file.write(' \\\n')
 
-    out_file.write('&& return 0\n')
+            self.file.write(escape('%s%s--%s=%s:%s:%s' % (shortExclude, multi, long, descr, long, action)))
+            self.file.write(' \\\n')
+
+    def writeOptFlagLines(self):
+        for optList in self.optFlags:
+            length = len(optList)
+            if length == 1:
+                long = optList[0]
+                short, descr = None, None
+            elif length == 2:
+                long, short = optList
+                descr = None
+            elif length == 3:
+                long, short = optList[:2]
+                descr = '[%s]' % firstLine(optList[2])
+            else:
+                raise SystemExit, 'optList has invalid length'
+
+            if long in self.altArgDescr:
+                descr = '[%s]' % altArgDescr[long]
+            else:
+                if descr == None:
+                    descr = ''
+
+            longExclude = ''
+            shortExclude = ''
+            multi = ''
+            if short:
+                if long in self.multiUse:
+                    multi = '*'
+                else:
+                    longExclude = '(--%s)' % long
+                    shortExclude = '(-%s)' % short
+
+                self.file.write(escape('%s%s-%s%s' % (longExclude, multi, short, descr)))
+                self.file.write(' \\\n')
+
+            self.file.write(escape('%s%s--%s%s' % (shortExclude, multi, long, descr)))
+            self.file.write(' \\\n')
+
+    def addAdditionalOptions(self):
+        """Add additional options to the optFlags and optParams lists.
+        These will be defined by 'opt_foo' methods of the Options subclass"""
+        methodsDict = {}
+        reflect.accumulateMethods(self.optionsClass, methodsDict, 'opt_')
+        for methodName, methodObj in methodsDict.items():
+            if methodName in self.altArgDescr:
+                descr = self.altArgDescr[methodName]
+            else:
+                descr = methodObj.__doc__
+
+            reqArgs = methodObj.im_func.func_code.co_argcount
+            if reqArgs == 2:
+                self.optParams.append([methodName, None, None, descr])
+            elif reqArgs == 1:
+                self.optFlags.append([methodName, None, descr])
+            else:
+                raise SystemExit, 'opt_ method has wrong number of arguments'
+
+def firstLine(s):
+    try:
+        i = s.find('\n')
+        return s[:i]
+    except ValueError:
+        return s
 
 def makeCompFunctionFiles(out_path):
     for cmd_name, class_name in generateFor:
@@ -82,7 +153,7 @@ def makeCompFunctionFiles(out_path):
         m = __import__('%s' % cmd_name, None, None, (class_name))
         o = getattr(m, class_name)
         f = file('%s/_%s' % (out_path, cmd_name), 'w')
-        makeZshCode(cmd_name, o, f)
+        writeZshCode(cmd_name, o, f)
 
 def run():
     if len(sys.argv) != 2:

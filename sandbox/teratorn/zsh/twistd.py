@@ -30,7 +30,7 @@ import os, errno, signal
 class ServerOptions(app.ServerOptions):
     synopsis = "Usage: twistd [options]"
 
-    optFlags = [['nodaemon','n',  "don't daemonize"],
+    optFlags = [['nodaemon', 'n', "don't daemonize"],
                 ['quiet', 'q', "No-op for backwards compatability."],
                 ['originalname', None, "Don't try to change the process name"],
                 ['syslog', None,   "Log to syslog, not to file"],
@@ -59,8 +59,8 @@ class ServerOptions(app.ServerOptions):
     zsh_multiUse = ['quiet']
     
     #each tuple lists options that cannot appear together
-    zsh_mutuallyExclusive = [('q', 'n'),
-                         ('n', 'euid')]
+    zsh_mutuallyExclusive = [('quiet', 'nodaemon'),
+                         ('nodaemon', 'euid')]
 
     #alternate argument descriptions
     zsh_altArgDescr = {'pidfile':'This is different than \'Name of the pidfile\''}
