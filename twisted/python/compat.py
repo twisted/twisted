@@ -23,7 +23,6 @@ import sys, types, socket, struct, __builtin__, exceptions, UserDict
 #    __builtin__.dict = dict
 
 
-del UserDict.DictMixin
 if not hasattr(UserDict, 'DictMixin'):
     from twisted.python.pymodules import UserDictExtras
     UserDict.DictMixin = UserDictExtras.DictMixin
