@@ -34,7 +34,7 @@ from twisted.persisted import styles
 from twisted.python import log, defer
 
 # Sibling Imports
-import abstract, main
+import abstract, main, task
 
 
 class Connection(abstract.FileDescriptor,
