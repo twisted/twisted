@@ -19,7 +19,7 @@ class waitForDeferred:
             yield thing
             thing = thing.getResult()
             print thing #the result! hoorj!
-        thingummy = deferGenerator(thingummy)
+        thingummy = deferredGenerator(thingummy)
 
     waitForDeferred returns something that you should immediately yield;
     when your generator is resumed, calling thing.getResult() will either
@@ -62,7 +62,7 @@ class waitForDeferred:
             raise self.failure
         return self.result
 
-def deferGenerator(g, deferred=None, result=None):
+def _deferGenerator(g, deferred=None, result=None):
     """
     See L{waitForDeferred}.
     """
@@ -79,19 +79,19 @@ def deferGenerator(g, deferred=None, result=None):
     if isinstance(result, waitForDeferred):
         def gotResult(r):
             result.result = r
-            deferGenerator(g, deferred, r)
+            _deferGenerator(g, deferred, r)
         def gotError(f):
             result.failure = f
-            deferGenerator(g, deferred, f)
+            _deferGenerator(g, deferred, f)
         result.d.addCallbacks(gotResult, gotError)
         # XXX log.err???? bad
         result.d.addErrback(log.err)
     else:
-        deferGenerator(g, deferred, result)
+        _deferGenerator(g, deferred, result)
     return deferred
 
 def deferredGenerator(f):
-    return lambda *args, **kwargs: deferGenerator(f(*args, **kwargs))
+    return lambda *args, **kwargs: _deferGenerator(f(*args, **kwargs))
 
 if __name__ == '__main__':
     from twisted.internet import reactor
@@ -125,7 +125,7 @@ if __name__ == '__main__':
         return
 
 
-    d = deferGenerator(testIt())
+    d = _deferGenerator(testIt())
     def _(r):
         assert r == "there"
         print "wee"
