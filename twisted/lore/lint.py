@@ -50,7 +50,7 @@ class TagChecker:
             return not checker(element.getAttribute('class'))
         for element in domhelpers.findElements(dom, matcher):
             self._reportError(filename, element,
-                              'unkown class %s' %element.getAttribute('class'))
+                              'unknown class %s' %element.getAttribute('class'))
 
     def check_quote(self, dom, filename):
         def matcher(node):
