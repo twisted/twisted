@@ -1,6 +1,27 @@
-2003-01-31  Cory Dodt <corydodt@yahoo.com>
-    * twisted/lore/latex.py:  Don't treat comments like text nodes, just
-      drop them.
+2003-01-31  Cory Dodt  <corydodt@yahoo.com>
+
+	* twisted/lore/latex.py:  Don't treat comments like text nodes, just
+	  drop them.
+
+2003-01-30  Jp Calderone  <exarkun@twistedmatrix.com>
+
+	* twisted/internet/default.py
+	  twisted/internet/base.py
+	  twisted/internet/tcp.py
+	  twisted/internet/ssl.py
+	  twisted/internet/udp.py
+	  twisted/internet/unix.py
+
+	  Refactor of many internal classes, including Clients and
+	Connectors.  UNIX socket functionality moved out of the TCP classes
+	and into a new module, unix.py, and implementation of IReactorUNIX
+	by PosixReactorBase made conditional on platform UNIX socket
+	support.  Redundant inheritance cruft removed from various classes.
+
+	* twisted/internet/app.py: listenWith, unlistenWith, and connectWith
+	methods added to Application.
+
+	* twisted/internet/interfaces.py: IReactorArbitrary added.
 
 2003-01-30  Kevin Turner  <acapnotic@twistedmatrix.com>
 
