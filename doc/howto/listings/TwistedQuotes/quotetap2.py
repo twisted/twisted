@@ -2,6 +2,7 @@ from TwistedQuotes import quoteproto    # Protocol and Factory
 from TwistedQuotes import quoters       # "give me a quote" code
 from TwistedQuotes import pbquote       # perspective broker binding
 
+from twisted.application import service, internet
 from twisted.python import usage        # twisted command-line processing
 from twisted.spread import pb           # Perspective Broker
 from twisted.cred import authorizer     # cred authorizer, to allow logins
@@ -16,7 +17,8 @@ class Options(usage.Options):
                      ["pb", "b", None,
                       "Port to listen with PB server"]]
 
-def updateApplication(app, config):
+def makeService(config):
+    svc = service.MultiService()
     if config["file"]:                  # If I was given a "file" option...
         # Read quotes from a file, selecting a random one each time,
         quoter = quoters.FortuneQuoter([config['file']])
@@ -30,10 +32,12 @@ def updateApplication(app, config):
     pbport = config['pb']               # TCP PB port to listen on
     if pbport:
         auth = authorizer.DefaultAuthorizer(app)
-        pbserv = pbquote.QuoteService(quoter, "twisted.quotes", app, auth)
+        pbserv = pbquote.QuoteService(quoter, "twisted.quotes", None, auth)
+        svc.addService(pbserv)
         # create a quotereader "guest" give that perspective a password and
         # create an account based on it, with the password "guest".
         pbserv.createPerspective("guest").makeIdentity("guest")
         pbfact = pb.BrokerFactory(pb.AuthRoot(auth))
-        app.listenTCP(int(pbport), pbfact)
-    app.listenTCP(port, factory)
+        svc.addService(internet.TCPServer(int(pbport), pbfact))
+    svc.addService(internet.TCPServer(port, factory))
+    return svc

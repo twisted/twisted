@@ -40,16 +40,18 @@ don't have to use Twisted this way.  It is quite possible to write applications
 that use Twisted almost exclusively as a library. If you use it as a framework,
 though, Twisted will help you by managing these resources itself.</p>
 
-<p>The central framework class that you will deal with, both as a Twisted
-developer and administrator, is <code
-class="API">twisted.internet.app.Application</code>.  There is one <code
+<p>The central framework classes that you will deal with, both as a Twisted
+developer and administrator, are services, which implement <code
+class="API">twisted.application.service.IService</code>. <code
+class="API">twisted.application.service.Application</code> creates the root
+of a tree of services that form a twisted application.  There is one <code
 class="python">Application</code> instance per Twisted process, and it is the
 top-level manager of resources and handler of events in the Twisted framework.
 (Unlike some other frameworks, developers do not subclass <code
-class="python">Application</code>; rather than defining methods on it, you
+class="python">Application</code>; rather by adding services it, you
 register event handlers to be called by it.)  To store configuration data, as
 well as other information, Twisted serializes <code
-class="python">Application</code> instances, storing all event handlers that
+class="python">Application</code> instances, storing all services that
 have been registered with them.  Since the whole <code
 class="python">Application</code> instance is serialized, Twisted
 <q>configuration</q> files are significantly more comprehensive than
@@ -60,7 +62,7 @@ running process.</p>
 
 <p>The central concept that a Twisted system administrator will work with are
 files that contain
-<code base="twisted.internet.app" class="API">Application</code>
+<code base="twisted.application.service" class="API">Application</code>
 instances serialized
 in various formats optimized for different uses. <code>.TAP</code> files are
 optimized for speed of loading and saving, <code>.TAX</code> files are
@@ -72,13 +74,18 @@ for developers.  The two command-line programs which work with these files are
 <code class="shell">mktap</code> utility create <code>.TA*</code> files from
 simple
 command-line arguments, and the <code class="shell">twistd</code> daemon will
-load and run those files.</p>
+load and run those files. Alternatively, a Python script can be used to
+create the <code base="twisted.application.service" class="API">Application</code>
+instance and this script can be run directly using 
+<code class="shell">twistd -y script.py</code>, as long as the file <code>script.py</code>
+has a <code base="twisted.application.service" class="API">Application</code>
+object called <code>application</code> on the module level.</p>
 
 <p>There are many ways in which your code will be called by various parts of
 the Twisted framework by the time you're done.  The initial one we're going to
 focus on here is a plug-in for the <code class="shell">mktap</code> utility.
 <code class="shell">mktap</code> produces complete, runnable
-<code class="API" base="twisted.internet.app">Application</code>
+<code base="twisted.application.service" class="API">Application</code>
 instances, so no additional work is necessary to make your code work with
 <code class="shell">twistd</code>.  First we will go through the process of
 creating a
@@ -101,10 +108,10 @@ href="http://twistedmatrix.com/products/dot-products" ><q>dot-products</q></a>
 can
 define mechanisms for extensibility using plug-ins.  Two Twisted dot-products
 already load such plug-ins.  The 
-<code class="API">twisted.tap</code>package loads Twisted Application
+<code class="API">twisted.application</code>package loads Twisted Application
 builder modules (TAP plug-ins) and the
-<code class="API">twisted.coil</code> package loads configuration
-modules (COIL plug-ins).  </p>
+<code class="API">twisted.lore</code> package loads document formatting
+modules.</p>
 
 <p>Twisted finds its plug-ins by using pre-existing Python concepts; the load
 path, and packages.  Every top-level <a
@@ -343,15 +350,20 @@ TAP construction module</a>
 <p>This module has to conform to a fairly simple interface.  It must have a
 class called <code class="python">Options</code> which is a subclass of <code
 class="API">twisted.python.usage.Options</code>.  It must also have a function
- <code class="python">updateApplication(app, config)</code>, which will be
-passed an instance of a <code
-class="API">twisted.internet.app.Application</code> and an instance of the
+ <code class="python">makeService(config)</code>, which will be
+passed an instance of the
 <code class="python">Options</code> class defined in the module itself, <code
 class="python">TwistedQuotes.quotetap.Options</code>.  Command-line options
 given on the <code class="shell">mktap</code> command line fill in the values
 in <code class="python">Options</code> and are used in <code
-class="python">updateApplication</code> to make the actual connections between
-objects.</p>
+class="python">makeService</code> to make the actual connections between
+objects. <code
+class="python">makeService</code> is expected to return an object implementing
+<code class="API" base="twisted.application.service">IService</code>. This can
+be a <code class="API" base="twisted.application.service">Service</code> subclass,
+a <code class="API" base="twisted.application.service">MultiService</code> collection
+of sub-services, a <code class="API" base="twisted.application.internet">TCPServer</code>
+serving a protocol factory, and so on.</p>
 
 <p>A more detailed discussion of <code
 class="API">twisted.python.usage.Options</code> can be found in the document <a
@@ -430,20 +442,14 @@ Options:
                  'source'. [default: pickle]
       --help     display this message
 Commands:
-    coil             A web-based configuration manager.
     ftp              An FTP server.
     im               A multi-protocol chat client.
     inetd
-    issues           Bug reporting/tracking service.
     mail             An email service.
     manhole          An interactive remote debugger service.
     news             News Server
-    parent           Parent service.
-    pinger           Zoot Pinger TAP builder module
-    ponger           Zoot Ponger TAP builder module
     portforward      A simple port-forwarder.
     <em>qotd             Example of a TAP builder module.</em>
-    sibling          Sibling service.
     socks            A SOCKSv4 proxy service.
     ssh
     telnet           A simple, telnet-based remote debugging service.
@@ -451,7 +457,6 @@ Commands:
     web              A general-purpose web server which can serve from a
                      filesystem or application resource.
     words            A chat service.
-    zoot             Zoot TAP builder module
 </pre>
 
 <p>Not only does our <code class="python">Options</code> class get

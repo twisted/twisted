@@ -14,16 +14,13 @@ class SOAPQuoter(soap.SOAPPublisher):
         return quoter.getQuote()
 
 def main():
-    from twisted.internet.app import Application
-    app = Application("xmlrpc")
+    from twisted.internet import reactor
     root = resource.Resource()
     root.putChild('RPC2', XMLRPCQuoter())
     root.putChild('SOAP', SOAPQuoter())
-    app.listenTCP(7080, server.Site(root))
-    return app
-
-application = main()
+    reactor.listenTCP(7080, server.Site(root))
+    reactor.run()
 
 if __name__ == '__main__':
-    application.run(save=0)
+    main()
 

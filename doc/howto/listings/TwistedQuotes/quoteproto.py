@@ -1,5 +1,4 @@
 from twisted.internet.protocol import Factory, Protocol
-from twisted.internet.app import Application
 
 class QOTD(Protocol):
 
