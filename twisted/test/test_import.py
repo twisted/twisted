@@ -18,7 +18,6 @@
 from twisted.trial import unittest
 from twisted.python.runtime import platformType
 
-
 class AtLeastImportTestCase(unittest.TestCase):
 
     """I test that there are no syntax errors which will not allow importing.
@@ -146,5 +145,17 @@ class AtLeastImportTestCase(unittest.TestCase):
         from twisted.lore import latex
         from twisted.lore import slides
         from twisted.lore import lmath
+
+    def test_test(self):
+        import os, sys
+        oldargv = sys.argv
+        sys.argv = sys.argv[:1]
+        try:
+            tests = os.listdir(os.path.dirname(__file__))
+            for f in tests:
+                if f.startswith('test_') and f.endswith('.py'):
+                    __import__('twisted.test.%s' % f[:-3])
+        finally:
+            sys.argv = oldargv
 
 testCases = [AtLeastImportTestCase]
