@@ -101,6 +101,7 @@ class TestClassRunner:
 
     def runTests(self, output):
         self.testCase = self.testClass()
+        self.testCase._resultReporter_ = output
         self.testCase.setUpClass()
         for methodName in self.methodNames:
             method = getattr(self.testCase, methodName)
