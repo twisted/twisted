@@ -17,7 +17,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.61 $"[11:-2]
+__version__ = "$Revision: 1.62 $"[11:-2]
 
 # Sibling imports
 import interfaces
@@ -87,6 +87,14 @@ class View:
     templateFile = ''
     templateDirectory = ''
     template = ''
+
+    isLeaf = 1
+
+    def getChild(self, path, request):
+        raise NotImplementedError()
+
+    def getChildWithDefault(self, path, request):
+        return self.getChild(path, request)
 
     viewLibraries = []
     setupStacks = 1

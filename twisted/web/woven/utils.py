@@ -29,7 +29,7 @@ def _getModel(self):
 
 
 def doSendPage(self, d, request):
-    page = str(d.toprettyxml())
+    page = str(d.toxml())
     request.write(page)
     request.finish()
     return page
