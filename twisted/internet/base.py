@@ -100,17 +100,19 @@ class ReactorBase:
         self._eventTriggers = {}
         self._pendingTimedCalls = []
         self._delayeds = main._delayeds
+        self.waker = None
+        self.usingThreads = 0
         self.addSystemEventTrigger('during', 'shutdown', self.crash)
         self.addSystemEventTrigger('during', 'shutdown', self.disconnectAll)
         threadable.whenThreaded(self.initThreads)
 
     # override in subclasses
 
-    wakerInstalled = 0
     _lock = None
 
     def initThreads(self):
         import thread
+        self.usingThreads = 1
         self.installWaker()
         self.threadCallQueue = []
 
@@ -135,7 +137,10 @@ class ReactorBase:
     def wakeUp(self):
         """Wake up the event loop."""
         if not threadable.isInIOThread():
-            self.waker.wakeUp()
+            if self.waker:
+                self.waker.wakeUp()
+            # if the waker isn't installed, the reactor isn't running, and
+            # therefore doesn't need to be woken up
 
     def doIteration(self):
         """Do one iteration over the readers and writers we know about."""

@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.58 2003/01/08 14:18:53 spiv Exp $
+# $Id: default.py,v 1.59 2003/01/09 08:03:11 warner Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -229,6 +229,8 @@ class PosixReactorBase(ReactorBase):
         self.fireSystemEvent('startup')
         if self._installSignalHandlers:
             self._handleSignals()
+        if self.usingThreads:
+            self.installWaker()
         self.running = 1
 
     def run(self):
@@ -255,9 +257,8 @@ class PosixReactorBase(ReactorBase):
     def installWaker(self):
         """Install a `waker' to allow other threads to wake up the IO thread.
         """
-        if not self.wakerInstalled:
-            self.wakerInstalled = 1
-            self.waker = _Waker()
+        if not self.waker:
+            self.waker = _Waker(self)
             self.addReader(self.waker)
 
 
@@ -390,10 +391,11 @@ class _Win32Waker(log.Logger, styles.Ephemeral):
 
     disconnected = 0
 
-    def __init__(self):
+    def __init__(self, reactor):
         """Initialize.
         """
         log.msg("starting waker")
+        self.reactor = reactor
         # Following select_trigger (from asyncore)'s example;
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -421,7 +423,7 @@ class _Win32Waker(log.Logger, styles.Ephemeral):
     def connectionLost(self, reason):
         self.r.close()
         self.w.close()
-
+        self.reactor.waker = None
 
 class _UnixWaker(log.Logger, styles.Ephemeral):
     """This class provides a simple interface to wake up the select() loop.
@@ -431,9 +433,10 @@ class _UnixWaker(log.Logger, styles.Ephemeral):
 
     disconnected = 0
 
-    def __init__(self):
+    def __init__(self, reactor):
         """Initialize.
         """
+        self.reactor = reactor
         i, o = os.pipe()
         self.i = os.fdopen(i,'r')
         self.o = os.fdopen(o,'w')
@@ -455,6 +458,7 @@ class _UnixWaker(log.Logger, styles.Ephemeral):
         """
         self.i.close()
         self.o.close()
+        self.reactor.waker = None
 
 if platform.getType() == 'posix':
     _Waker = _UnixWaker
