@@ -90,6 +90,11 @@ statusCodes = {100: "Trying",
                503: "Service Unavailable",
                504: "Gateway Time-out",
                505: "SIP Version not supported",
+               
+               600: "Busy Everywhere",
+               603: "Decline",
+               604: "Does not exist anywhere",
+               606: "Not Acceptable",
                }
 
 
