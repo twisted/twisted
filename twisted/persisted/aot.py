@@ -327,7 +327,7 @@ class AOTUnjellier:
             if c is Module:
                 return reflect.namedModule(ao.name)
 
-            elif c in [Class, Function]:
+            elif c in [Class, Function] or issubclass(c, type):
                 return reflect.namedObject(ao.name)
 
             elif c is InstanceMethod:
@@ -490,6 +490,9 @@ class AOTJellier:
             retval = Module(obj.__name__)
             
         elif objType is types.ClassType:
+            retval = Class(reflect.qual(obj))
+
+        elif issubclass(objType, type):
             retval = Class(reflect.qual(obj))
             
         elif objType is types.FunctionType:

@@ -297,7 +297,7 @@ class DOMJellier:
         elif objType is types.ModuleType:
             node = self.document.createElement("module")
             node.setAttribute("name", obj.__name__)
-        elif objType in (types.ClassType, type):
+        elif objType==types.ClassType or issubclass(objType, type):
             node = self.document.createElement("class")
             node.setAttribute("name", qual(obj))
         elif objType is types.UnicodeType:
