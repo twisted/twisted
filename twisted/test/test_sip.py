@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.test.test_sip -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -676,12 +677,29 @@ class FakeDigestAuthorizer(sip.DigestAuthorizer):
     def generateOpaque(self):
         return '1674186428'
 
+
+class FakeRegistry(sip.InMemoryRegistry):
+    """Make sure expiration is always seen to be 3600.
+
+    Otherwise slow reactors fail tests incorrectly.
+    """
+
+    def _cbReg(self, reg):
+        if 3600 < reg.secondsToExpiry or reg.secondsToExpiry < 3598:
+            raise RuntimeError, "bad seconds to expire: %s" % reg.secondsToExpiry
+        reg.secondsToExpiry = 3600
+        return reg
+
+    def getRegistrationInfo(self, uri):
+        return sip.InMemoryRegistry.getRegistrationInfo(self, uri).addCallback(self._cbReg)
+
+
 class AuthorizationTestCase(unittest.TestCase):
     def setUp(self):
         self.proxy = sip.RegisterProxy(host="intarweb.us")
         self.proxy.authorizers = self.proxy.authorizers.copy()
         self.proxy.authorizers['digest'] = FakeDigestAuthorizer()
-        self.registry = sip.InMemoryRegistry("intarweb.us")
+        self.registry = FakeRegistry("intarweb.us")
         self.proxy.registry = self.proxy.locator = self.registry
         self.transport = proto_helpers.FakeDatagramTransport()
         self.proxy.transport = self.transport
