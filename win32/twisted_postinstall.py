@@ -37,7 +37,7 @@ def install(sitepackages, prefix):
                manhole.bat tapconvert.bat trial.bat coil.bat""".split():
         f=join(scripts, bat)
         scriptpy=f.replace('.bat', '.py')
-        file(f, 'w').write("@%s %s" % (pyexe, scriptpy))
+        file(f, 'w').write("@%s %s %%1 %%2 %%3 %%4 %%5 %%6 %%7 %%8 %%9" % (pyexe, scriptpy))
 
     args=['tkunzip']
     doczip=join(sitepackages, 'twisteddoc.zip')
