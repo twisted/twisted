@@ -58,6 +58,7 @@ class FilePathTestCase(unittest.TestCase):
         f3e = f3.siblingExtension(".foo")
         f3e.touch()
         self.failIf(not f3.siblingExtensionSearch(*exts).exists())
+        self.failIf(not f3.siblingExtensionSearch('*').exists())
         f3e.remove()
         self.failIf(f3.siblingExtensionSearch(*exts))
 

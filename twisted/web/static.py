@@ -276,8 +276,7 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
                 return self.directoryListing()
 
         if not fpath.exists():
-            searchNames = [(path + ext) for ext in self.ignoredExts]
-            fpath = self.childSearchPreauth(*searchNames)
+            fpath = fpath.siblingExtensionSearch(*self.ignoredExts)
             if fpath is None:
                 return self.childNotFound
 

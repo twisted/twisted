@@ -126,7 +126,7 @@ class FilePath:
                 basedot = basename(p)+'.'
                 for fn in listdir(dirname(p)):
                     if fn.startswith(basedot):
-                        return self.clonePath(joinpath(p, fn))
+                        return self.clonePath(joinpath(dirname(p), fn))
             p2 = p + ext
             if exists(p2):
                 return self.clonePath(p2)
