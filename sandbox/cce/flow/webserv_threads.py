@@ -1,7 +1,6 @@
 from __future__ import generators
 from twisted.flow import flow
 from twisted.flow.threads import Threaded
-from webserv import run
 
 def cooperative():
     """ simulate a cooperative resource, that doesn't block """
@@ -104,4 +103,9 @@ def render(req):
         yield states
 
 if __name__=='__main__':
-    run(render)
+    from twisted.internet import reactor
+    from twisted.web.server import Site
+    from twisted.flow.web import Resource
+    print "visit http://localhost:8081/ to view"
+    reactor.listenTCP(8081,Site(Resource(render)))
+    reactor.run()
