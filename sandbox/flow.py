@@ -106,6 +106,12 @@ class Generator(FlowCommand):
         except StopIteration:
             self.stop = 1
             self.result = None
+        except Cooperate, coop:
+            self.stop = 0
+            self.result = coop
+        except failure.Failure, fail:
+            self.stop = 1
+            self.result = failure
         except:
             self.stop = 1
             self.result = failure.Failure()
@@ -204,3 +210,108 @@ class DeferredFlow(Flow, defer.Deferred):
             from twisted.internet import reactor
             reactor.callLater(timeout, self._execute)
  
+#
+# The following is a thread package which really is othogonal to
+# Flow.  Flow does not depend on it, and it does not depend on Flow.
+# Although, if you are trying to bring the output of a thread into
+# a Flow, it is exactly what you want.   The QueryIterator is 
+# just an obvious application of the ThreadedIterator.
+#
+
+class ThreadedIterator:
+    """
+       This is an iterator base class which can be used to build
+       iterators which are constructed and run within a Flow
+    """
+     
+    def __init__(self):
+        tunnel = _TunnelIterator(self)
+        self._tunnel = tunnel
+     
+    def __iter__(self): 
+        from twisted.internet.reactor import callInThread
+        callInThread(self._tunnel.process)
+        return self._tunnel
+     
+    def next(self):
+        """ 
+            The method used to fetch the next value, make sure
+            to return a list of rows, not just a row
+        """
+        raise StopIteration
+
+class _TunnelIterator:
+    """
+       This is an iterator which tunnels output from an iterator
+       executed in a thread to the main thread.   Note, unlike
+       regular iterators, this one throws a PauseFlow exception
+       which must be handled by calling reactor.callLater so that
+       the producer threads can have a chance to send events to 
+       the main thread.
+    """
+    def __init__(self, source):
+        """
+            This is the setup, the source argument is the iterator
+            being wrapped, which exists in another thread.
+        """
+        self.source     = source
+        self.isFinished = 0
+        self.failure    = None
+        self.buff       = []
+     
+    def process(self):
+        """
+            This is called in the 'source' thread, and 
+            just basically sucks the iterator, appending
+            items back to the main thread.
+        """
+        from twisted.internet.reactor import callFromThread
+        try:
+            while 1:
+                val = self.source.next()
+                self.buff.extend(val)    # lists are thread safe
+        except StopIteration:
+            callFromThread(self.stop)
+        self.source = None
+     
+    def setFailure(self, failure):
+        self.failure = failure
+     
+    def stop(self):
+        self.isFinished = 1
+     
+    def next(self):
+        if self.buff:
+           return self.buff.pop(0)
+        if self.isFinished:  
+            raise StopIteration
+        if self.failure:
+            raise self.failure
+        raise Cooperate()
+
+class QueryIterator(ThreadedIterator):
+    def __init__(self, pool, sql, fetchall=0):
+        ThreadedIterator.__init__(self)
+        self.curs = None
+        self.sql  = sql
+        self.pool = pool
+        self.data = None
+        self.fetchall = fetchall
+     
+    def __call__(self,data):
+        self.data = data
+        return self
+     
+    def next(self):
+        if not self.curs:
+            conn = self.pool.connect()
+            self.curs = conn.cursor()
+            if self.data: self.curs.execute(self.sql % self.data) 
+            else: self.curs.execute(self.sql)
+        if self.fetchall:
+            res = self.curs.fetchall()
+        else:
+            res = self.curs.fetchmany()
+        if not(res): 
+            raise StopIteration
+        return res

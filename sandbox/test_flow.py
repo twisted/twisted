@@ -107,5 +107,26 @@ class FlowTest(unittest.TestCase):
         f.addCallback(res)
         reactor.iterate()
 
+    def testThreaded(self):
+        class CountIterator(flow.ThreadedIterator):
+            def __init__(self, count):
+                flow.ThreadedIterator.__init__(self)
+                self.count = count
+            def next(self): # this is run in a separate thread
+                from time import sleep
+                sleep(.1)
+                val = self.count
+                if not(val):
+                    raise StopIteration
+                self.count -= 1
+                return [val]
+        def res(x): self.assertEqual([5,4,3,2,1], x)
+        from twisted.internet import reactor
+        f = flow.DeferredFlow(CountIterator(5))
+        f.addCallback(res)
+        reactor.callLater(2,reactor.stop)
+        reactor.run()
+
 if '__main__' == __name__:
     unittest.main()
+
