@@ -21,7 +21,6 @@ This is used by twisted.web.
 """
 
 # system imports
-import string
 from cStringIO import StringIO
 import tempfile
 import base64
@@ -204,11 +203,11 @@ def timegm(year, month, day, hour, minute, second):
 
 def stringToDatetime(dateString):
     """Convert an HTTP date string to seconds since epoch."""
-    parts = string.split(dateString, ' ')
+    parts = dateString.split(' ')
     day = int(parts[1])
     month = int(monthname.index(parts[2]))
     year = int(parts[3])
-    hour, min, sec = map(int, string.split(parts[4], ':'))
+    hour, min, sec = map(int, parts[4].split(':'))
     return int(timegm(year, month, day, hour, min, sec))
 
 def toChunk(data):
@@ -220,7 +219,7 @@ def fromChunk(data):
 
     Returns tuple (result, remaining), may raise ValueError.
     """
-    prefix, rest = string.split(data, '\r\n', 1)
+    prefix, rest = data.split('\r\n', 1)
     length = int(prefix, 16)
     if not rest[length:length+2] == '\r\n':
         raise ValueError, "chunk must end with CRLF"
@@ -251,13 +250,13 @@ class HTTPClient(basic.LineReceiver):
     def lineReceived(self, line):
         if self.firstLine:
             self.firstLine = 0
-            version, status, message = string.split(line, None, 2)
+            version, status, message = line.split(None, 2)
             self.handleStatus(version, status, message)
             return
         if line:
-            key, val = string.split(line, ': ', 1)
+            key, val = line.split(': ', 1)
             self.handleHeader(key, val)
-            if string.lower(key) == 'content-length':
+            if key.lower() == 'content-length':
                 self.length = int(val)
         else:
             self.handleEndHeaders()
@@ -364,9 +363,9 @@ class Request:
     def parseCookies(self):
         cookietxt = self.getHeader("cookie")
         if cookietxt:
-            for cook in string.split(cookietxt,'; '):
+            for cook in cookietxt.split(': '):
                 try:
-                    k, v = string.split(cook, '=')
+                    k, v = cook.split('=')
                     self.received_cookies[k] = v
                 except ValueError:
                     pass
@@ -394,8 +393,8 @@ class Request:
                         repr(self.uri))
             self.path, argstring = urllib.unquote(x[0]), x[1]
             # parse the argument string
-            for kvp in string.split(argstring, '&'):
-                keyval = map(urllib.unquote, string.split(kvp, '='))
+            for kvp in argstring.split('&'):
+                keyval = map(urllib.unquote, kvp.split('='))
                 if len(keyval) != 2:
                     continue
                 key, value = keyval
@@ -464,7 +463,7 @@ class Request:
     def getHeader(self, key):
         """Get a header that was sent from the network.
         """
-        return self.received_headers.get(string.lower(key))
+        return self.received_headers.get(key.lower())
 
     def getCookie(self, key):
         """Get a cookie that was sent from the network.
@@ -506,12 +505,12 @@ class Request:
                     l.append("%s: %s\r\n" % ('Transfer-encoding', 'chunked'))
                     self.chunked = 1
                 for name, value in self.headers.items():
-                    l.append("%s: %s\r\n" % (string.capitalize(name), value))
+                    l.append("%s: %s\r\n" % (name.capitalize(), value))
                 for cookie in self.cookies:
                     l.append('%s: %s\r\n' % ("Set-Cookie", cookie))
                 l.append("\r\n")
                                 
-                self.transport.write(string.join(l, ""))
+                self.transport.write("".join(l))
             
             # if this is a "HEAD" request, we shouldn't return any data
             if self.method == "HEAD":
@@ -561,7 +560,7 @@ class Request:
     def setHeader(self, k, v):
         """Set an outgoing HTTP header.
         """
-        self.headers[string.lower(k)] = v
+        self.headers[k.lower()] = v
 
     def getAllHeaders(self):
         return self.received_headers
@@ -571,9 +570,7 @@ class Request:
 
         This will either use the Host: header (if it is available) or the 
         """
-        return string.split(self.getHeader('host') or
-                            socket.gethostbyaddr(self.getHost()[1]),
-                            ':')[0]
+        return (self.getHeader('host') or socket.gethostbyaddr(self.getHost()[1])).split(':')[0]
 
     def getHost(self):
         """Get my originally requesting transport's host.
@@ -597,9 +594,9 @@ class Request:
         # Authorization, (mostly) per the RFC
         try:
             authh = self.getHeader("Authorization")
-            bas, upw = string.split(authh)
+            bas, upw = authh.split()
             upw = base64.decodestring(upw)
-            self.user, self.password = string.split(upw,':')
+            self.user, self.password = upw.split(':')
         except:
             self.user = self.password = ""
 
@@ -669,7 +666,7 @@ class HTTPChannel(basic.LineReceiver):
                 self.__first_line = 2
                 return
             self.__first_line = 0
-            parts = string.split(line)
+            parts = line.split()
             if len(parts)<3:
                 parts.append('HTTP/0.9') # isn't backwards compat great!
             if len(parts) != 3:
@@ -702,9 +699,9 @@ class HTTPChannel(basic.LineReceiver):
     def headerReceived(self, line):
         """Do pre-processing (for content-length) and store this header away.
         """
-        header, data = string.split(line, ':', 1)
-        header = string.lower(header)
-        data = string.strip(data)
+        header, data = line.split(':', 1)
+        header = header.lower()
+        data = data.strip()
         if header == 'content-length':
             self.length = int(data)
         self.requests[-1].received_headers[header] = data
@@ -743,7 +740,7 @@ class HTTPChannel(basic.LineReceiver):
         """Check if the channel should close or not."""
         connection = request.getHeader('connection')
         if connection:
-            tokens = map(string.lower, string.split(connection, ' '))
+            tokens = map(str.lower, connection.split(' '))
         else:
             tokens = []
 
