@@ -48,3 +48,12 @@ class ManholeLoopback(_x, unittest.TestCase):
              ">>> Foo().bar()",
              "Hello, world!",
              ">>>"])
+
+    def testException(self):
+        self._test(
+            "1 / 0\n",
+            [">>> 1 / 0",
+             "Traceback (most recent call last):",
+             '  File "<console>", line 1, in ?',
+             "ZeroDivisionError: integer division or modulo by zero",
+             ">>>"])
