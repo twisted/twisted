@@ -190,6 +190,25 @@ class TestCase:
                 break
         return name
 
+    def runReactor(self, times, seconds=0):
+        """
+        I iterate the reactor for you. `times' can be either an
+        explicit number of iterations, or, if `seconds' is True, the
+        number of seconds to run the reactor.
+
+        You probably want to use expectedAssertions with this.
+        """
+        from twisted.internet import reactor
+
+        if seconds:
+            reactor.callLater(times, reactor.crash)
+            reactor.run()
+            return
+
+        for i in xrange(times):
+            reactor.iterate()
+            
+
 # components.registerAdapter(runner.TestClassRunner, TestCase, runner.ITestRunner)
 
 class Tester:
