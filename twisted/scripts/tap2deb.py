@@ -27,7 +27,7 @@ class MyOptions(usage.Options):
                   ["description", "e", ""],
                   ["long_description", "l", ""],
                   ["version", "v", "1.0"],
-                  ["debfile", "d", None]]
+                  ["debfile", "d", None]],
                   ["type", "y", "tap", "type of configuration: 'tap', 'xml, 'source' or 'python'"]]
 
 
