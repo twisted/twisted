@@ -1,3 +1,15 @@
+2003-07-14  Jp Calderone  <exarkun@twistedmatrix.com>
+
+	* twisted/cred/checkers.py, twisted/cred/credentials.py:
+	CramMD5Credentials and OnDiskUsernamePasswordDatabase added;
+	IUsernameHashedPassword also created for use by protocols that
+	do not receive plaintext passwords over the network.
+
+	* twisted/mail/, twisted/protocols/smtp.py: Addition of alias
+	support and authenticated ESMTP connections.  Several interfaces
+	changed, but deprecation warnings and backwards compatibility code
+	has been put in place to ease the change.
+
 2003-07-12  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* twisted/web/util.py: Add a new ChildRedirector that, when placed
