@@ -167,8 +167,9 @@ class Failure:
                 globalz = {}
             else:
                 globalz = f.f_globals.copy()
-                if globalz.has_key("__builtins__"):
-                    del globalz["__builtins__"]
+            for d in globalz, localz:
+                if d.has_key("__builtins__"):
+                    del d["__builtins__"]
             stack.insert(0, [
                 f.f_code.co_name,
                 f.f_code.co_filename,
@@ -185,8 +186,10 @@ class Failure:
                 globalz = {}
             else:
                 globalz = f.f_globals.copy()
-                if globalz.has_key("__builtins__"):
-                    del globalz["__builtins__"]
+            for d in globalz, localz:
+                if d.has_key("__builtins__"):
+                    del d["__builtins__"]
+            
             frames.append([
                 f.f_code.co_name,
                 f.f_code.co_filename,
