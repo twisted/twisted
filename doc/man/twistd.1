@@ -69,6 +69,9 @@ Log to syslog, not to file.
 .TP
 \fB\--prefix\fR \fI<prefix>\fR
 Use the specified prefix when logging to logfile. Default is "twisted".
+.PP
+Note that if \fBtwistd\fR is run as root, the working directory is \fInot\fR
+searched for Python modules.
 .SH AUTHOR
 Written by Moshe Zadka, based on twistd's help messages
 .SH "REPORTING BUGS"
