@@ -27,3 +27,5 @@ Maintainer: U{Andrew Bennetts<spiv@twistedmatrix.com>}
 # Allow non-web image formats (EPS, specifically)
 # Allow pickle output and input to minimize parses
 # If the input name is not a valid tap, try treating it as a module name
+# Numbered headers
+# Navigational aides
