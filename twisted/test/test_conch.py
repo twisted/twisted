@@ -292,6 +292,8 @@ class SSHTestTrueChannel(connection.SSHChannel):
         log.msg('finished true')
         if self.conn.results == 3: # all tests run
             self.conn.transport.expectedLoseConnection = 1
+            theTest.fac.proto.expectedLoseConnection = 1
+            self.loseConnection()
             reactor.crash()
         return 1
 
@@ -329,6 +331,8 @@ class SSHTestFalseChannel(connection.SSHChannel):
         log.msg('finished false')
         if self.conn.results == 3: # all tests run
             self.conn.transport.expectedLoseConnection = 1
+            theTest.fac.proto.expectedLoseConnection = 1
+            self.loseConnection()
             reactor.crash()
         return 1 
 
@@ -370,6 +374,8 @@ class SSHTestEchoChannel(connection.SSHChannel):
         log.msg('finished echo')
         if self.conn.results == 3: # all tests run
             self.conn.transport.expectedLoseConnection = 1
+            theTest.fac.proto.expectedLoseConnection = 1
+            self.loseConnection()
             reactor.crash()
         return 1
 
