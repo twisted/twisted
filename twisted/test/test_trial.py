@@ -142,7 +142,8 @@ class SpawningMixin:
 
         env = {}
         env['PATH'] = os.environ.get('PATH', '')
-
+        env["PYTHONPATH"] = os.environ.get("PYTHONPATH", "")
+        
         done = defer.Deferred()
         self.cpp = ChProcessProtoocol(done)
         self.process = procutils.spawnPythonProcess(self.cpp, args, env, packages=('twisted',))
