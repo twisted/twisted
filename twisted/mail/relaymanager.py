@@ -32,6 +32,7 @@ for the twisted.mail SMTP server
 """
 
 from twisted.python import log
+from twisted.python import util
 from twisted.mail import relay
 from twisted.mail import bounce
 from twisted.internet import protocol
@@ -451,6 +452,7 @@ class MXCalculator:
     def _cbMX(self, answers, domain):
         if not answers:
             raise IOError("No MX found for %r" % (domain,))
+        answers = util.dsu(answers, lambda e: e.preference)
         for answer in answers:
             if answer not in self.badMXs:
                 return answer
