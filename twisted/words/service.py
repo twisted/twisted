@@ -83,10 +83,6 @@ Then there's a whole bunch of things that would be nice to have.
 
 """
 
-import warnings
-warnings.warn("twisted.words will be undergoing a rewrite at some point in the future.")
-
-
 # System Imports
 import types, time
 from zope.interface import implements

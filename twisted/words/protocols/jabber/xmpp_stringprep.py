@@ -3,7 +3,7 @@
 # Copyright (c) 2001-2005 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import sys
+import sys, warnings
 
 if sys.version_info < (2,3,2):
     import re
@@ -16,6 +16,13 @@ if sys.version_info < (2,3,2):
     idna = IDNA()
 
     crippled = True
+
+    warnings.warn("Accented and non-Western Jabber IDs will not be properly "
+                  "case-folded with this version of Python, resulting in "
+                  "incorrect protocol-level behavior.  It is strongly "
+                  "recommended you upgrade to Python 2.3.2 or newer if you "
+                  "intend to use Twisted's Jabber support.")
+
 else:
     import stringprep
     import unicodedata
@@ -23,7 +30,7 @@ else:
 
     crippled = False
 
-del sys
+del sys, warnings
 
 class ILookupTable:
     """ Interface for character lookup classes. """
