@@ -110,9 +110,8 @@ def simulate():
     global _simtag
     if _simtag is not None:
         gtk.timeout_remove(_simtag)
-    timeout = main.runUntilCurrent()
-    if timeout is not None:
-        _simtag = gtk.timeout_add(timeout * 1010, simulate) # grumble
+    timeout = main.runUntilCurrent() or 0.1
+    _simtag = gtk.timeout_add(timeout * 1010, simulate) # grumble
 
 def install():
     # Replace 'main' methods with my own
