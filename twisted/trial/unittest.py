@@ -60,7 +60,8 @@ class TestCase:
     assertNotEqual = assertNotEquals = failIfEqual
     assertRaises = failUnlessRaises
     assert_ = failUnless
-
+    failIfEquals = failIfEqual
+    
     def assertApproximates(self, first, second, tolerance, msg=None):
         if abs(first - second) > tolerance:
             raise AssertionError, (msg or "%s ~== %s" % (first, second))
