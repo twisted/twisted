@@ -4,7 +4,7 @@
 # See LICENSE for details.
 
 
-"""This is a web-sever which integrates with the twisted.internet
+"""This is a web-server which integrates with the twisted.internet
 infrastructure.
 """
 
