@@ -179,3 +179,6 @@ class ProcessTerminated(ConnectionLost):
 
 class NotConnectingError(RuntimeError):
     """The Connector was not connecting when it was asked to stop connecting."""
+
+class NotListeningError(RuntimeError):
+    """The Port was not listening when it was asked to stop listening."""

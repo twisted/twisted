@@ -430,11 +430,14 @@ class Application(log.Logger, styles.Versioned,
                             break
                     else:
                         toRemove.append(t)
-        for t in toRemove:
-            self.extraPorts.remove(t)
-            if self._extraListeners.has_key(t):
-                self._extraListeners[t].stopListening()
-                del self._extraListeners[t]
+        if toRemove:
+            for t in toRemove:
+                self.extraPorts.remove(t)
+                if self._extraListeners.has_key(t):
+                    self._extraListeners[t].stopListening()
+                    del self._extraListeners[t]
+        else:
+            raise error.NotListeningError, (portType, args, kw)
 
     def listenTCP(self, port, factory, backlog=5, interface=''):
         """
@@ -451,10 +454,13 @@ class Application(log.Logger, styles.Versioned,
             port_, factory_, backlog_, interface_ = t
             if port == port_ and interface == interface_:
                 toRemove.append(t)
-        for t in toRemove:
-            self.tcpPorts.remove(t)
-        if self._listenerDict.has_key((port_, interface_)):
-            self._listenerDict[port_,interface_].stopListening()
+        if toRemove:
+            for t in toRemove:
+                self.tcpPorts.remove(t)
+            if self._listenerDict.has_key((port_, interface_)):
+                self._listenerDict[port_,interface_].stopListening()
+        else:
+            raise error.NotListeningError, (interface, port)
 
     def listenUNIX(self, filename, factory, backlog=5, mode=0666):
         """
@@ -471,10 +477,13 @@ class Application(log.Logger, styles.Versioned,
             filename_, factory_, backlog_, mode_ = t
             if filename == filename_:
                 toRemove.append(t)
-        for t in toRemove:
-            self.unixPorts.remove(t)
-        if self._listenerDict.has_key((filename_)):
-            self._listenerDict[filename_].stopListening()
+        if toRemove:
+            for t in toRemove:
+                self.unixPorts.remove(t)
+            if self._listenerDict.has_key((filename_)):
+                self._listenerDict[filename_].stopListening()
+        else:
+            raise error.NotListeningError, filename
 
     def listenUDP(self, port, proto, interface='', maxPacketSize=8192):
         """
@@ -495,8 +504,11 @@ class Application(log.Logger, styles.Versioned,
             port_, factory_, interface_, size_ = t
             if port_ == port and interface_ == interface:
                 toRemove.append(t)
-        for t in toRemove:
-            self.udpPorts.remove(t)
+        if toRemove:
+            for t in toRemove:
+                self.udpPorts.remove(t)
+        else:
+            raise error.NotListeningError, (interface, port)
 
     def listenSSL(self, port, factory, ctxFactory, backlog=5, interface=''):
         """
