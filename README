@@ -2,9 +2,9 @@ Twisted 1.0.8alpha3
 
 Quote of the Release:
 
-Haha foolish humans
-I am your ruler.
-ROOR
+"from experience and months of lurking, I would say the Twisted newbie
+experience is characterised by waves of confusion and euphoria."
+  -- Douglas Bagnall
 
 
 For information on what's new in Twisted 1.0.8alpha3, see the ChangeLog file
@@ -47,7 +47,9 @@ What is this?
 
 What can I do with it?
 
-  Instructions for installing this software are in the INSTALL file.
+  Instructions for installing this software are at
+  http://twistedmatrix.com/documents/howto/installing-twisted, or in
+  your archive in doc/howto/installing-twisted.xhtml.
 
   Although there is a lot of infrastructure support in Twisted, the immediately
   useful applications for the end-user are Twisted Web and Instance Messenger.
