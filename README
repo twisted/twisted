@@ -47,9 +47,7 @@ What is this?
 
 What can I do with it?
 
-  Instructions for installing this software are at
-  http://twistedmatrix.com/documents/howto/installing-twisted, or in
-  your archive in doc/howto/installing-twisted.xhtml.
+  Instructions for installing this software are in INSTALL.
 
   Although there is a lot of infrastructure support in Twisted, the immediately
   useful applications for the end-user are Twisted Web and Instance Messenger.
