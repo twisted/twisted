@@ -18,7 +18,7 @@ from twisted.trial import unittest
 
 import sys, os
 
-from twisted.xish import domish
+from twisted.xish import domish, xpath
 
 class DomishTestCase(unittest.TestCase):
     def testEscaping(self):
@@ -82,4 +82,67 @@ class DomishTestCase(unittest.TestCase):
         assert e.hasAttribute("attrib2") == 0
         assert e[("testns2", "attrib2")] == "value2"
 
-testCases = [DomishTestCase]
+xml1 = """<stream:stream xmlns:stream='etherx' xmlns='jabber'>
+             <message to='bar'><x xmlns='xdelay'>some&amp;data&gt;</x></message>
+          </stream:stream>"""
+query1_root = xpath.internQuery("/stream[@xmlns='etherx']")    
+query1_elem1 = xpath.internQuery("/message[@to='bar']/x[@xmlns='xdelay'][text()='some&data>']")
+
+class DomishStreamTestCase(unittest.TestCase):    
+    def __init__(self):
+        self.doc_started = False
+        self.packet_count = 0
+        self.doc_ended = False
+        self.match_list = []
+
+    def _docStarted(self, root):
+        self.doc_started = True
+        assert self.match_list.pop(0).matches(root)
+
+    def _elementMatched(self, elem):
+        self.packet_count = self.packet_count + 1
+        assert self.match_list.pop(0).matches(elem)
+
+    def _docEnded(self):
+        self.doc_ended = True
+
+    def setupStream(self, stream, matches):
+        self.stream = stream
+        self.stream.DocumentStartEvent = self._docStarted
+        self.stream.ElementEvent = self._elementMatched
+        self.stream.DocumentEndEvent = self._docEnded
+        self.doc_started = False
+        self.packet_count = 0
+        self.doc_ended = False
+        self.match_list = matches
+    
+    def testSuxStream(self):
+        # Setup the stream
+        self.setupStream(domish.SuxElementStream(),
+                         [query1_root, query1_elem1])
+
+        # Run the test
+        self.stream.parse(xml1)
+
+        # Check result vars
+        self.assertEquals(self.doc_started, True)
+        self.assertEquals(self.packet_count, 1)
+        self.assertEquals(self.doc_ended, True)
+        
+    def testExpatStream(self):
+        try: 
+            # Setup the stream
+            self.setupStream(domish.ExpatElementStream(),
+                             [query1_root, query1_elem1])
+
+            # Run the test
+            self.stream.parse(xml1)
+
+            # Check result vars
+            self.assertEquals(self.doc_started, True)
+            self.assertEquals(self.packet_count, 1)
+            self.assertEquals(self.doc_ended, True)
+        except ImportError:
+            raise unittest.SkipTest, "Skipping ExpatElementStream test, since no expat wrapper is available."
+
+

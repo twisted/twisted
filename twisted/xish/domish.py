@@ -23,7 +23,7 @@ try:
 except ImportError:
     import StringIO
 
-def isStr(s):
+def _isStr(s):
     """ Internal method to determine if an object is a string """
     return isinstance(s, type('')) or isinstance(s, type(u''))
 
@@ -53,7 +53,7 @@ class _Serializer:
 
     def serialize(self, elem, closeElement = 1):
         # Shortcut, check to see if elem is actually a string (aka Cdata)
-        if isStr(elem):
+        if _isStr(elem):
             self.cio.write(escapeToXml(elem))
             return
 
@@ -78,7 +78,7 @@ class _Serializer:
         # Serialize attributes
         for k,v in elem.attributes.items():
             # If the attribute name is a list, it's a qualified attribute
-            if isLst(k):
+            if k.__class__ == type(()):
                 self.cio.write(" %s:%s='%s'" % (self.getPrefix[k[0]], k[1], escapeToXml(v, 1)))
             else:
                 self.cio.write(" %s='%s'" % ( k, escapeToXml(v, 1)))
@@ -117,6 +117,14 @@ def escapeToXml(text, isattrib = 0):
     if isattrib == 1:
         text = text.replace("'", "&apos;")
         text = text.replace("\"", "&quot;")
+    return text
+
+def unescapeFromXml(text):
+    text = text.replace("&lt;", "<")
+    text = text.replace("&gt;", ">")
+    text = text.replace("&apos;", "'")
+    text = text.replace("&quot;", "\"")
+    text = text.replace("&amp;", "&")
     return text
 
 def generateOnlyKlass(list, klass):
@@ -220,7 +228,7 @@ class Element:
         """ Retrieve the first CData (content) node 
         """
         for n in self.children:
-            if isStr(n): return n
+            if _isStr(n): return n
         return ""
 
     def _dqa(self, attr):
@@ -262,7 +270,7 @@ class Element:
     def addContent(self, text):
         """Add some text data to this element"""
         c = self.children
-        if len(c) > 0 and isStr(c[-1]):
+        if len(c) > 0 and _isStr(c[-1]):
             c[-1] = c[-1] + text
         else:
             c.append(text)
@@ -385,7 +393,7 @@ class SuxElementStream(sux.XMLParser):
             if p == None:
                 attribs[n] = v
             else:
-                attribs[(self.findUri(p)), n] = unescape(v)
+                attribs[(self.findUri(p)), n] = unescapeFromXml(v)
 
         # Construct the actual Element object
         e = Element((uri, name), defaultUri, attribs)
@@ -419,8 +427,17 @@ class SuxElementStream(sux.XMLParser):
         # Ignore comments for the moment
         pass
 
-#    def gotEntityReference(self, entityRef):
-#        pass    
+    entities = { "amp" : "&",
+                 "lt"  : "<",
+                 "gt"  : ">",
+                 "apos": "'",
+                 "quot": "\"" }
+
+    def gotEntityReference(self, entityRef):
+        # If this is an entity we know about, add it as content
+        # to the current element
+        if entityRef in SuxElementStream.entities:
+            self.currElem.addContent(SuxElementStream.entities[entityRef])
 
     def gotTagEnd(self, name):
         # Ensure the document hasn't already ended
@@ -469,7 +486,6 @@ class SuxElementStream(sux.XMLParser):
 class ExpatElementStream:
     def __init__(self):
         import pyexpat
-        self.resetParser()
         self.DocumentStartEvent = None
         self.ElementEvent = None
         self.DocumentEndEvent = None
@@ -512,7 +528,7 @@ class ExpatElementStream:
             self.documentStarted = 1
             self.DocumentStartEvent(e)
 
-    def _onEndElement(self, name):
+    def _onEndElement(self, _):
         # Check for null current elem; end of doc
         if self.currElem == None:
             self.DocumentEndEvent()
