@@ -17,10 +17,9 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 
-"""Deprecated, use twisted.internet.defer instead."""
+"""Deprecated, use L{twisted.internet.defer} instead."""
 
 from twisted.internet.defer import *
 
 import warnings
 warnings.warn("Use twisted.internet.defer - twisted.python.defer is deprecated.", stacklevel=2)
-
