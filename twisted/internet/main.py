@@ -137,17 +137,20 @@ delayeds = [task.theScheduler]
 shutdowns = []
 
 def shutDown(a=None, b=None):
-    """Save a copy of this Selector to disk in *appname*.tap and exit.
+    """Run all shutdown callbacks (save all running Applications) and exit.
 
-    This is called by various signal handlers which should cause the
-    process to exit.
+    This is called by various signal handlers which should cause the process to
+    exit.  It can also be called directly in order to trigger a clean shutdown.
     """
     global running
-    running = 0
-    log.msg('Starting Shutdown Sequence.')
-    threadable.dispatcher.stop()
-    for callback in shutdowns:
-        callback()
+    if running:
+        running = 0
+        log.msg('Starting Shutdown Sequence.')
+        threadable.dispatcher.stop()
+        for callback in shutdowns:
+            callback()
+    else:
+        log.msg('Duplicate Shutdown Ignored.')
 
 
 def runUntilCurrent():

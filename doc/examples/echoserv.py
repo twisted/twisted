@@ -11,14 +11,13 @@ class Echo(Protocol):
 
 ### Persistent Application Builder
 
-# This builds a .spl file
+# This builds a .tap file
 
 if __name__ == '__main__':
     # Since this is persistent, it's important to get the module naming right
     # (If we just used Echo, then it would be __main__.Echo when it attempted
     # to unpickle)
     import echoserv
-    import cPickle, string
     from twisted.internet.main import Application
     factory = Factory()
     factory.protocol = echoserv.Echo
