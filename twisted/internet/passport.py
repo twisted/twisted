@@ -257,7 +257,7 @@ class Identity:
         self.keyring[(serviceName, perspectiveName)] = 1
 
     def requestPerspectiveForKey(self, serviceName, perspectiveName):
-        """Get a perspective for the given key.
+        """Get a perspective request (a Deferred) for the given key.
 
         If this identity does not have access to the given (serviceName,
         perspectiveName) pair, I will raise KeyError.
@@ -348,10 +348,10 @@ class Authorizer:
         raise NotImplementedError()
 
     def getIdentityRequest(self, name):
-        """Request an identity, and make the given callback when it's received.
+        """Get an identity request, make the given callback when it's received.
 
         Override this to provide a method for retrieving identities than
-        the hash provided by default.
+        the hash provided by default. The method should return a Deferred.
 
         Note that this is asynchronous specifically to provide support
         for authenticating users from a database.
