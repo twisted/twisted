@@ -344,7 +344,11 @@ class IMAP4Server(basic.LineReceiver):
                 self._pendingLiteral.addErrback(self.__ebAuthChunk, tag)
 
     def __cbAuthChunk(self, result, auth, savedState, tag):
-        d = maybeDeferred(None, auth.authenticateResponse, savedState, result)
+        try:
+            uncoded = base64.decodestring(result)
+        except TypeError:
+            raise error.Unauthorized, "Malformed Response - not base64"
+        d = maybeDeferred(None, auth.authenticateResponse, savedState, uncoded)
         d.addCallbacks(
             self.__cbAuthResp,
             self.__ebAuthResp,
@@ -2678,11 +2682,7 @@ class CramMD5ServerAuthenticator:
         return chal
 
     def authenticateResponse(self, state, response):
-        try:
-            uncoded = base64.decodestring(response)
-        except TypeError:
-            raise error.Unauthorized, "Malformed Response - not base64"
-        parts = uncoded.split(None, 1)
+        parts = response.split(None, 1)
         if len(parts) != 2:
             raise error.Unauthorized, "Malformed Response - wrong number of parts"
         name, digest = parts
