@@ -72,6 +72,7 @@ class XMLParser(Protocol):
 
     def saveMark(self):
         '''Get the line number and column of the last character parsed'''
+        # This gets replaced during dataReceived, restored afterwards
         return (self.lineno, self.colno)
 
     def _parseError(self, message):
@@ -83,23 +84,27 @@ class XMLParser(Protocol):
         curState = self.state
         stateFn = getattr(self, 'do_' + curState)
         lineno, colno = self.lineno, self.colno
+        _saveMark = self.saveMark
         def saveMark():
             return (lineno, colno)
         self.saveMark = saveMark
-        for byte in data:
-            # do newline stuff
-            if byte == '\n':
-                lineno += 1
-                colno = 0
-            else:
-                colno += 1
-            newState = stateFn(byte)
-            if newState is not None and newState != curState:
-                getattr(self, "end_" + curState, nop)()
-                getattr(self, "begin_" + newState, nop)(byte)
-                curState = newState
-                stateFn = getattr(self, "do_" + curState)
-        self.lineno, self.colno = lineno, colno
+        try:
+            for byte in data:
+                # do newline stuff
+                if byte == '\n':
+                    lineno += 1
+                    colno = 0
+                else:
+                    colno += 1
+                newState = stateFn(byte)
+                if newState is not None and newState != curState:
+                    getattr(self, "end_" + curState, nop)()
+                    getattr(self, "begin_" + newState, nop)(byte)
+                    curState = newState
+                    stateFn = getattr(self, "do_" + curState)
+        finally:
+            self.saveMark = _saveMark
+            self.lineno, self.colno = lineno, colno
         self.state = curState
 
     # state methods
