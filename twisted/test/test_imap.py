@@ -407,3 +407,30 @@ class IMAP4ServerTestCase(unittest.TestCase):
         expected = ['newname', 'newname/m1', 'newname/m2']
         mboxes.sort()
         self.assertEquals(mboxes, [s.upper() for s in expected])
+
+    def testSubscribe(self):
+        def login():
+            return self.client.login('testuser', 'password-test')
+        def subscribe():
+            return self.client.subscribe('this/mbox')
+        
+        d = self.connected.addCallback(strip(login))
+        d.addCallbacks(strip(subscribe), self._ebGeneral)
+        d.addCallbacks(strip(self._cbStopClient), self._ebGeneral)
+        loopback.loopback(self.server, self.client)
+        
+        self.assertEquals(SimpleServer.theAccount.subscriptions, ['THIS/MBOX'])
+    
+    def testUnsubscribe(self):
+        SimpleServer.theAccount.subscriptions = ['THIS/MBOX', 'THAT/MBOX']
+        def login():
+            return self.client.login('testuser', 'password-test')
+        def unsubscribe():
+            return self.client.unsubscribe('this/mbox')
+        
+        d = self.connected.addCallback(strip(login))
+        d.addCallbacks(strip(unsubscribe), self._ebGeneral)
+        d.addCallbacks(strip(self._cbStopClient), self._ebGeneral)
+        loopback.loopback(self.server, self.client)
+        
+        self.assertEquals(SimpleServer.theAccount.subscriptions, ['THAT/MBOX'])

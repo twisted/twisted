@@ -337,6 +337,32 @@ class IMAP4Server(basic.LineReceiver):
         else:
             self.sendPositiveResponse(tag, 'Mailbox renamed')
     select_RENAME = auth_RENAME
+    
+    def auth_SUBSCRIBE(self, tag, args):
+        try:
+            self.account.subscribe(args.strip())
+        except MailboxError, m:
+            self.sendNegativeResponse(tag, str(m))
+        else:
+            self.sendPositiveResponse(tag, 'Subscribed')
+    select_SUBSCRIBE= auth_SUBSCRIBE
+    
+    def auth_UNSUBSCRIBE(self, tag, args):
+        try:
+            self.account.unsubscribe(args.strip())
+        except MailboxError, m:
+            self.sendNegativeResponse(tag, str(m))
+        else:
+            self.sendPositiveResponse(tag, 'Unsubscribed')
+    select_UNSUBSCRIBE = auth_UNSUBSCRIBE
+
+    def auth_LIST(self, tag, args):
+        args = splitQuoted(args)
+        if len(args) != 2:
+            self.sendBadResponse(tag, 'Incorrect usage')
+        else:
+            ref, mbox = args
+            # ... ?
 
 class UnhandledResponse(IMAP4Exception): pass
 
@@ -741,7 +767,35 @@ class IMAP4Client(basic.LineReceiver):
         successful and whose errback is invoked otherwise.
         """
         return self.sendCommand('RENAME', ' '.join((oldname, newname)))
+    
+    def subscribe(self, name):
+        """Add a mailbox to the subscription list
+        
+        This command is allowed in the Authenticated and Selected states.
+        
+        @type name: C{str}
+        @param name: The mailbox to mark as 'active' or 'subscribed'
+        
+        @rtype: C{Deferred}
+        @return: A deferred whose callback is invoked if the subscription
+        is successful and whose errback is invoked otherwise.
+        """
+        return self.sendCommand('SUBSCRIBE', name)
 
+    def unsubscribe(self, name):
+        """Remove a mailbox from the subscription list
+        
+        This command is allowed in the Authenticated and Selected states.
+        
+        @type name: C{str}
+        @param name: The mailbox to unsubscribe
+        
+        @rtype: C{Deferred}
+        @return: A deferred whose callback is invoked if the unsubscription
+        is successful and whose errback is invoked otherwise.
+        """
+        return self.sendCommand('UNSUBSCRIBE', name)
+    
 class MismatchedNesting(Exception):
     pass
 
@@ -901,9 +955,11 @@ class Account:
     mboxType = None
 
     mailboxes = None
+    subscriptions = None
 
     def __init__(self):
         self.mailboxes = {}
+        self.subscriptions = []
     
     def addMailbox(self, name, mbox = None):
         name = name.upper()
@@ -978,7 +1034,18 @@ class Account:
             if infname.startswith(name):
                 inferiors.append(infname)
         return inferiors
-        
+    
+    def subscribe(self, name):
+        name = name.upper()
+        if name not in self.subscriptions:
+            self.subscriptions.append(name)
+    
+    def unsubscribe(self, name):
+        name = name.upper()
+        if name not in self.subscriptions:
+            raise MailboxError, "Not currently subscribed to " + name
+        self.subscriptions.remove(name)
+
 class IMailbox(components.Interface):
     def getUIDValidity(self):
         """Return the unique validity identifier for this mailbox.
