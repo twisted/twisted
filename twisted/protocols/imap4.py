@@ -1167,9 +1167,9 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         mailboxes = self.account.listMailboxes(ref, mbox)
         for (name, box) in mailboxes:
             if not sub or self.account.isSubscribed(name):
-                flags = '(%s)' % ' '.join(box.getFlags())
+                flags = box.getFlags()
                 delim = box.getHierarchicalDelimiter()
-                self.sendUntaggedResponse('%s %s "%s" %s' % (cmdName, flags, delim, name))
+                self.sendUntaggedResponse(collapseNestedLists((cmdName, flags, delim, name)))
         self.sendPositiveResponse(tag, '%s completed' % (cmdName,))
 
     auth_LIST = (_listWork, arg_astring, arg_astring, 0, 'LIST')
