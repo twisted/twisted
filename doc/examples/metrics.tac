@@ -26,7 +26,7 @@ from twisted.metrics import gadgets
 
 
 # Connect to a database.
-dbpool = adbapi.ConnectionPool("pyPgSQL.PgSQL", "localhost:5432", database="sean")
+dbpool = adbapi.ConnectionPool("pyPgSQL.PgSQL", database="twisted")
 auth = dbpassport.DatabaseAuthorizer(dbpool)
 
 # Create Twisted application object
