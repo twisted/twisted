@@ -440,11 +440,8 @@ class TreeReporter(TextReporter):
         self.endLine('[SKIPPED]', self.BLUE)
         Reporter.reportSkip(self, testCase, method, exc_info)
 
-def deferredResult(d, timeout=None):
-    """Waits for a Deferred to arrive, then returns or throws an exception,
-    based on the result.
-    """
-    
+
+def _getDeferredResult(d, timeout=None):
     from twisted.internet import reactor
     if timeout is not None:
         d.setTimeout(timeout)
@@ -452,8 +449,27 @@ def deferredResult(d, timeout=None):
     d.addCallbacks(resultSet.append, resultSet.append)
     while not resultSet:
         reactor.iterate()
-    if isinstance(resultSet[0], failure.Failure):
-        raise resultSet[0].value
+    return resultSet[0]
+
+def deferredResult(d, timeout=None):
+    """Waits for a Deferred to arrive, then returns or throws an exception,
+    based on the result.
+    """    
+    result = _getDeferredResult(d, timeout)
+    if isinstance(result, failure.Failure):
+        raise result.value
     else:
-        return resultSet[0]
-    
+        return result
+
+def deferredError(d, timeout=None):
+    """Waits for deferred to fail, and it returns the Failure.
+
+    If the deferred succeeds, raises an acception.
+    """
+    result = _getDeferredResult(d, timeout)
+    if isinstance(result, failure.Failure):
+        return result
+    else:
+        raise AssertionError, "Deferred did not fail: %r" % result
+
+
