@@ -184,3 +184,32 @@ class MakeMessageTestCase(unittest.TestCase):
         r.addHeader("Content-Length", "4")
         r.bodyDataReceived("1234")
         self.assertEquals(r.toString(), "SIP/2.0 200 OK\r\nfoo: bar\r\ncontent-length: 4\r\n\r\n1234")
+
+
+class ViaTestCase(unittest.TestCase):
+
+    def testComplex(self):
+        s = "SIP/2.0/UDP first.example.com:4000;ttl=16;maddr=224.2.0.1 ;branch=a7c6a8dlze (Example)"
+        v = sip.parseViaHeader(s)
+        self.assertEquals(v.transport, "UDP")
+        self.assertEquals(v.host, "first.example.com")
+        self.assertEquals(v.port, 4000)
+        self.assertEquals(v.ttl, 16)
+        self.assertEquals(v.maddr, "224.2.0.1")
+        self.assertEquals(v.branch, "a7c6a8dlze")
+        self.assertEquals(v.hidden, 0)
+        self.assertEquals(v.toString(),
+                          "SIP/2.0/UDP first.example.com:4000;ttl=16;branch=a7c6a8dlze;maddr=224.2.0.1")
+
+    def testSimple(self):
+        s = "SIP/2.0/UDP example.com;hidden"
+        v = sip.parseViaHeader(s)
+        self.assertEquals(v.transport, "UDP")
+        self.assertEquals(v.host, "example.com")
+        self.assertEquals(v.port, 5060)
+        self.assertEquals(v.ttl, None)
+        self.assertEquals(v.maddr, None)
+        self.assertEquals(v.branch, None)
+        self.assertEquals(v.hidden, 1)
+        self.assertEquals(v.toString(),
+                          "SIP/2.0/UDP example.com:5060;hidden")

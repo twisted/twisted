@@ -64,7 +64,7 @@ class Via:
         if self.hidden:
             s += ";hidden"
         for n in "ttl", "received", "branch", "maddr":
-            value = gettattr(self, n)
+            value = getattr(self, n)
             if value != None:
                 s += ";%s=%s" % (n, value)
         return s
@@ -72,7 +72,7 @@ class Via:
 
 def parseViaHeader(value):
     """Parse a Via header, returning Via class instance."""
-    parts = via.split(";")
+    parts = value.split(";")
     sent, params = parts[0], parts[1:]
     protocolinfo, by = sent.split(" ", 1)
     result = {}
@@ -90,7 +90,7 @@ def parseViaHeader(value):
         # it's the comment-striping dance!
         p = p.strip().split(" ", 1)
         if len(p) == 1:
-            p, comment = p, ""
+            p, comment = p[0], ""
         else:
             p, comment = p
         if p == "hidden":
@@ -333,5 +333,5 @@ if __name__ == '__main__':
     import sys
     from twisted.internet import reactor
     log.startLogging(sys.stdout)
-    reactor.listenUDP(5060, SIPServer())
+    reactor.listenUDP(5060, BaseSIP())
     reactor.run()
