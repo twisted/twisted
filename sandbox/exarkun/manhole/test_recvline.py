@@ -233,6 +233,8 @@ class Loopback(unittest.TestCase):
         # An insults API for this would be nice.
         left = "\x1b[D"
         insert = "\x1b[2~"
+        home = "\x1b[1~"
+        end = "\x1b[4~"
         backspace = "\x7f"
 
         # Hack cough grunk stfu
@@ -313,5 +315,37 @@ class Loopback(unittest.TestCase):
             str(recvlineClient),
             ">>> fourth line\n" +
             "fourth line\n" +
+            ">>>\n" +
+            "\n" * (HEIGHT - 4))
+
+    def testHome(self):
+        exec ''
+        locals().update(self.objs)
+
+        telnetClient.write("blah line" + home + "home\n")
+
+        clientTransport.clearBuffer()
+        serverTransport.clearBuffer()
+
+        self.assertEquals(
+            str(recvlineClient),
+            ">>> home line\n" +
+            "home line\n" +
+            ">>>\n" +
+            "\n" * (HEIGHT - 4))
+
+    def testEnd(self):
+        exec ''
+        locals().update(self.objs)
+
+        telnetClient.write("end " + left * 4 + end + "line\n")
+
+        clientTransport.clearBuffer()
+        serverTransport.clearBuffer()
+
+        self.assertEquals(
+            str(recvlineClient),
+            ">>> end line\n" +
+            "end line\n" +
             ">>>\n" +
             "\n" * (HEIGHT - 4))
