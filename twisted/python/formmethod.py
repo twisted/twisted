@@ -180,19 +180,13 @@ class Boolean(Argument):
         return 1
 
 
-class Submit(Argument):
+class Submit(Choice):
     """Submit button or a reasonable facsimile thereof."""
 
-    def __init__(self, name, buttons=["Submit"], reset=0, shortDesc=None, longDesc=None):
-        Argument.__init__(self, name, shortDesc=shortDesc, longDesc=longDesc)
-        self.buttons = buttons
+    def __init__(self, name, choices=[("Submit", "submit", "Submit form")],
+                 reset=0, shortDesc=None, longDesc=None):
+        Choice.__init__(self, name, choices=choices, shortDesc=shortDesc, longDesc=longDesc)
         self.reset = reset
-
-    def coerce(self, val):
-        if val in self.buttons:
-            return val
-        else:
-            raise InputError, "no such action"
 
 
 class PresentationHint:

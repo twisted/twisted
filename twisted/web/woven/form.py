@@ -140,8 +140,8 @@ class FormFillerWidget(widgets.Widget):
 
     def input_submit(self, request, content, arg):
         div = content.div()
-        for value in arg.buttons:
-            div.input(type="submit", name=arg.name, value=value)
+        for tag, value, desc in arg.choices:
+            div.input(type="submit", name=arg.name, value=tag)
             div.text(" ")
         if arg.reset:
             div.input(type="reset")
