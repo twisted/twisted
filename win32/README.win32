@@ -1,7 +1,7 @@
 OVERVIEW
 --------
 
-The following requirements must be met to build the "Official" win32
+Some requirements must be met to build the "Official" win32
 Twisted.  The Official build produces two files with the following
 features:
 
@@ -27,16 +27,23 @@ This method is only necessary if you are trying to install Twisted
 from e.g. the CVS repository, and you don't want to acquire all the
 tools necessary to do the Official build.
 
-* With MSVC
+* With MSVC ***
 Without Cygwin installed, you need MSVC installed for the cl.exe
 compiler, which is the default on windows.  Just issue the command:
 $ python setup.py install
 
-* With Cygwin
+* With Cygwin ***
 With Cygwin installed, you need to make sure the gcc-mingw package is
-installed.  Just issue the commands:
-$ python setup.py build --compiler=mingw32
-$ python setup.py install
+installed. You also need libpython22.a (or libpython23.a as appropriate).  
+Instructions can be found at http://sebsauvage.net/python/mingw.html .
+
+Once that's done, just issue the command:
+
+$ python setup.py build --compiler=mingw32 install
+
+If for some reason extensions won't build, try this instead:
+
+$ python setup.py install --skip-build
 
 
 OFFICIAL
@@ -45,7 +52,11 @@ The Official Twisted is built with native Python 2.2 (latest), not the
 Cygwin version of Python, however it is built with the help of Cygwin
 packages.
 
-* Distutils
+* winreg ***
+You need this little module:
+http://www.rutherfurd.net/python/winreg/
+
+* Distutils ***
 To build Twisted with documentation, shortcuts, etc., you will need
 the CVS version of distutils (as of this writing, 2003.07.06).  The
 information for downloading distutils is at:
@@ -55,23 +66,23 @@ http://www.python.org/sigs/distutils-sig/cvs.html
 Alternately, you can get Python 2.3, but the official win32 build is
 done with Python 2.2 and CVS distutils.
 
-* Cygwin
+* Cygwin ***
 You will need Cygwin, with the gcc-mingw package installed.  Get
 Cygwin at:
 
 http://cygwin.com
 
-* Bootstrap Twisted
+* Bootstrap Twisted ***
 You will need an existing installation of Twisted, as the build script
 uses some utilities within Twisted.  The "bare minimum" install
 described above will suffice.
 
 
-* Epydoc
-Epydoc is used to build the API documentation.  Find this tool at: 
+* Epydoc ***
+Epydoc 2.0 is used to build the API documentation.  Find this tool at: 
 http://sourceforge.net/project/showfiles.php?group_id=32455
 
-* Netpbm
+* Netpbm ***
 Finally, you will need to install the netpbm package to build the
 documentation.  The URL for this Cygwin package, which is *not* in the
 official Cygwin, is:
@@ -85,7 +96,7 @@ $ tar xvfj /path/to/netpbm-*.tar.bz2
 
 This will drop the binaries in usr/bin/.
 
-* Issue the build command
+* Issue the build command ***
 
 $ python win32/build.py
 
