@@ -61,8 +61,36 @@ statusCodes = {100: "Trying",
                301: "Moved Permanently",
                404: "Not Found",
                406: "Not Acceptable",
+               407: "Proxy Authentication Required",
+               408: "Request Timeout",
+               409: "Conflict",
+               410: "Gone",
+               411: "Length Required",
+               413: "Request Entity Too Large",
+               414: "Request-URI Too Large",
+               415: "Unsupported Media Type",
+               420: "Bad Extension",
+               480: "Temporarily not available",
+               481: "Call Leg/Transaction Does Not Exist",
+               482: "Loop Detected",
+               483: "Too Many Hops",
+               484: "Address Incomplete",
+               485: "Ambiguous",
+               486: "Busy Here",
+               
+               500: "Internal Server Error",
+               501: "Not Implemented",
+               502: "Bad Gateway",
+               503: "Service Unavailable",
+               504: "Gateway Time-out",
+               505: "SIP Version not supported",
                }
 
+
+specialCases = {
+    'cseq': 'CSeq',
+    'call-id': 'Call-ID',
+}
 
 class Via:
     """A SIP Via header."""
@@ -168,7 +196,7 @@ class URL:
             w(";%s" % v)
         if self.headers:
             w("?")
-            w("&".join([("%s=%s" % p) for p in self.headers.items()]))
+            w("&".join([("%s=%s" % (specialCases.get(h) or h.capitalize(), v)) for (h, v) in self.headers.items()]))
         return "".join(l)
 
     def __str__(self):
@@ -185,7 +213,7 @@ def parseURL(url):
     """
     d = {}
     if not url.startswith("sip:"):
-        raise ValueError("unsupported scheme")
+        raise ValueError("unsupported scheme: " + url[:4])
     parts = url[4:].split(";")
     userdomain, params = parts[0], parts[1:]
     udparts = userdomain.split("@", 1)
@@ -299,7 +327,7 @@ class Message:
         s = "%s\r\n" % self._getHeaderLine()
         for n, vs in self.headers.items():
             for v in vs:
-                s += "%s: %s\r\n" % (n, v)
+                s += "%s: %s\r\n" % (specialCases.get(n) or n.capitalize(), v)
         s += "\r\n"
         s += self.body
         return s
