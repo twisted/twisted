@@ -1,16 +1,16 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -20,23 +20,11 @@
 import gtk
 import sys
 import traceback
-import time
 
 # Twisted Imports
 
 # Sibling Imports
 import main
-
-_conditions = {
-    gtk.GDK.INPUT_READ: 'Read',
-    gtk.GDK.INPUT_WRITE: 'Write',
-    
-    # This is here because SOMETIMES, GTK tells us about this
-    # condition (wtf is 3!?! GDK.INPUT_EXCEPTION is 4!) even though we
-    # don't ask.  I believe this is almost always indicative of a
-    # closed connection.
-    3: 'Read'
-    }
 
 reads = main.reads
 writes = main.writes
@@ -64,21 +52,40 @@ def removeWriter(writer):
         del writes[writer]
 
 def callback(source, condition):
-    cbName = 'do'+_conditions[condition]
-    try:
-        method = getattr(source, cbName)
-        why = method()
-    except:
-        why = main.CONNECTION_LOST
-        print 'Error In',source,'.',cbName
-        traceback.print_exc(file=sys.stdout)
-    if why:
+    methods = []
+    cbNames = []
+
+    if condition & gtk.GDK.INPUT_READ:
+        methods.append(getattr(source, 'doRead'))
+        cbNames.append('doRead')
+
+    if (condition & gtk.GDK.INPUT_WRITE):
+        method = getattr(source, 'doWrite')
+        # if doRead is doWrite, don't add it again.
+        if not (method in methods):
+            methods.append(method)
+            cbNames.append('doWrite')
+
+    for method, cbName in map(None, methods, cbNames):
+        why = None
         try:
-            source.connectionLost()
+            method = getattr(source, cbName)
+            why = method()
         except:
+            why = main.CONNECTION_LOST
+            print 'Error In',source,'.',cbName
             traceback.print_exc(file=sys.stdout)
-        removeReader(source)
-        removeWriter(source)
+        if why:
+            try:
+                source.connectionLost()
+            except:
+                traceback.print_exc(file=sys.stdout)
+            removeReader(source)
+            removeWriter(source)
+            break
+        elif source.disconnected:
+            # If source disconnected, don't call the rest of the methods.
+            break
     simulate()
 
 # the next callback
@@ -108,4 +115,3 @@ def install():
     main.ALLOW_TWISTED_REBUILD = 0
     # Begin simulation gtk tick
     simulate()
-
