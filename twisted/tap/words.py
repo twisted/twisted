@@ -24,6 +24,7 @@ from twisted.spread import pb
 from twisted.spread.util import LocalAsyncForwarder
 from twisted.words import service, ircservice, webwords
 from twisted.web import server
+from twisted.cred.authorizer import DefaultAuthorizer
 
 import sys, string
 
@@ -64,8 +65,9 @@ class Options(usage.Options):
     longdesc = "Makes a twisted.words service and support servers."
 
 def updateApplication(app, config):
-    svc = service.Service("twisted.words", app)
-    bkr = pb.BrokerFactory(pb.AuthRoot(app))
+    auth = DefaultAuthorizer(app)
+    svc = service.Service("twisted.words", app, auth)
+    bkr = pb.BrokerFactory(pb.AuthRoot(auth))
     irc = ircservice.IRCGateway(svc)
     adm = server.Site(webwords.WordsGadget(svc))
 
