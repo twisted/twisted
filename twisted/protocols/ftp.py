@@ -61,6 +61,7 @@ import copy
 import traceback
 import os
 import time
+import string
 
 # Twisted Imports
 from twisted.internet import abstract, tcp
@@ -135,9 +136,9 @@ threadable.synchronize(sendFileTransfer)
 
 class DTP(protocol.Protocol):
     """A Client/Server-independent implementation of the DTP-protocol.
-    Is able to GET and LIST in an ftp-environment
-
-    imminent total rewrite
+    Performs the actions RETR, STOR and LIST. The data transfer will
+    start as soon as:
+    1) The user has connected 2) the property 'action' has been set. 
     """
     # PI is the telnet-like interface to FTP
     # Will be set to the instance which initiates DTP
@@ -146,11 +147,44 @@ class DTP(protocol.Protocol):
     filesize = None
     action = ""
 
+    def executeAction(self):
+        """Initiates a transfer of data.
+        Its action is based on self.action, and self.pi.queuedfile
+        """
+        if self.action == 'RETR':
+           self.actionRETR(self.pi.queuedfile)
+        if self.action == 'STOR':
+           self.actionSTOR(self.pi.queuedfile) 
+        if self.action == 'LIST':
+           self.actionLIST(self.pi.queuedfile) # queuedfile now acts as a path
+
+    def connectionMade(self):
+        "Will start an transfer, if one is queued up, when the client connects"
+        if self.action is not None:
+            self.executeAction()
+
+    def setAction(self, action):
+        "Set the action, and if the connected, start the transfer"
+        self.action = action
+        if self.transport is not None:
+            self.executeAction()
+
+    def connectionLost(self):
+        if (self.action == 'STOR') and (self.file):
+            self.file.close()
+            self.file = None
+            self.pi.reply('fileok')
+            self.pi.queuedfile = None
+        self.action = None
+        self.pi.dtpPort.loseConnection()
+
     #
-    #   "GET"
+    #   "RETR"
     #
-    def finishGet(self):
-        "Disconnect, and clean up"
+    def finishRETR(self):
+        """Disconnect, and clean up a RETR
+        Called by producer when the transfer is done
+        """
         # Has _two_ checks if it is run when it is not connected; this logic
         # should be somewhere else.
         if self.file is not None:
@@ -163,67 +197,40 @@ class DTP(protocol.Protocol):
         self.pi.queuedfile = None # just incase
         self.transport.loseConnection()
 
-    def makeTransport(self):
+    def makeRETRTransport(self):
         transport = self.transport
-        transport.finish = self.finishGet
+        transport.finish = self.finishRETR
         return transport
         
-    def connectionMade(self):
-        "Will start an transfer, if one is queued up, when the client connects"
-        if self.pi.action is not None:
-            self.executeAction()
-
-    def fileget(self, queuedfile):
+    def actionRETR(self, queuedfile):
         "Send the given file to the peer"
         self.file = open(queuedfile, "rb")
         self.filesize = os.path.getsize(queuedfile)
-        dtp = sendFileTransfer(self.file, self.filesize, self.makeTransport())
-        dtp.resumeProducing()
+        producer = sendFileTransfer(self.file, self.filesize, self.makeRETRTransport())
+        producer.resumeProducing()
 
     #
-    #   "PUT"
+    #   "STOR"
     #
-    def connectionLost(self):
-        if (self.action == 'STOR') and (self.file):
-            self.file.close()
-            self.file = None
-            self.pi.reply('fileok')
-            self.pi.queuedfile = None
-        self.action = None
-        self.pi.dtpPort.loseConnection()
-
     def dataReceived(self, data):
         if (self.action == 'STOR') and (self.file):
             self.file.write(data)
             self.filesize = self.filesize + len(data)
 
-    def makePutTransport(self):
+    def makeSTORTransport(self):
         transport = self.transport
         return transport
         
-    def fileput(self, queuedfile):
+    def actionSTOR(self, queuedfile):
+        "Retrieve a file from peer"
         self.file = open(queuedfile, "wb")
         self.filesize = 0
-        transport = self.makePutTransport()
+        transport = self.makeSTORTransport()
 
-    def executeAction(self):
-        """Initiates the transfer.
-        This is a two-case implementation for starting the transfer.
-        It is either started by the telnet-interface when the connection
-        is already open, or it is called by connectionMade.
-        The property 'pi' is the telnetconnection and its property 'action'
-        can either be 'GET', 'RETR', or 'LIST'. Pretty lame, eh? :)
-        """
-        if self.pi.action == 'RETR':
-           self.fileget(self.pi.queuedfile)
-        if self.pi.action == 'STOR':
-           self.fileput(self.pi.queuedfile) 
-        if self.pi.action == 'LIST':
-           self.listdir(self.pi.queuedfile) # queuedfile now acts as a path :)
-        self.action = self.pi.action
-        self.pi.action = None
-
-    def listdir(self, dir):
+    #
+    #   'LIST'
+    #
+    def actionLIST(self, dir):
         """Prints outs the files in the given directory
         Note that the printout is very fake, and only gives the filesize,
         date, time and filename.
@@ -244,8 +251,39 @@ class DTP(protocol.Protocol):
         self.pi.queuedfile = None
         self.transport.loseConnection()
 
-class FTP(protocol.Protocol, protocol.Factory):
-    """The FTP-Protocol. Also a factory for the DTP."""
+class DTPFactory(protocol.Factory):
+    """The DTP-Factory.
+    This class is not completely self-contained.
+    """
+    dtp = None      # The DTP-protocol
+    dtpPort = None  # The TCPClient / TCPServer
+
+    def createPassiveServer(self):
+        if self.dtp is not None:
+            if self.dtp.transport is not None:
+                self.dtp.transport.loseConnection()
+            self.dtp = None
+        # giving 0 will generate a free port
+        self.dtpPort = tcp.Port(0, self)
+        self.dtpPort.startListening()
+ 
+    def createActiveServer(self):
+        if self.dtp is not None:
+            if self.dtp.transport is not None:
+                self.dtp.transport.loseConnection()
+            self.dtp = None
+        self.dtp = self.buildProtocol(self.peerport)
+        self.dtpPort = tcp.Client(self.peerhost, self.peerport, self.dtp)
+
+    def buildProtocol(self,addr):
+        p = DTP()
+        p.factory = self
+        p.pi = self
+        self.dtp = p
+        return p
+
+class FTP(protocol.Protocol, DTPFactory):
+    """The FTP-Protocol."""
     user   = None
     passwd = None
     root   = None
@@ -253,9 +291,6 @@ class FTP(protocol.Protocol, protocol.Factory):
     type   = None
     peerhost = None
     peerport = None
-    dtp = None      # The DTP-protocol
-    dtpPort = None  # The TCPClient / TCPServer
-    action = None
     queuedfile = None
 
     def reply(self, key, s = ''):
@@ -288,7 +323,7 @@ class FTP(protocol.Protocol, protocol.Factory):
         """
         if params=='':
             return 1
-        self.user = params.split()[0]
+        self.user = string.split(params)[0]
         if self.factory.anonymous and self.user == self.factory.useranonymous:
             self.reply('guest')
             self.root = self.factory.root
@@ -363,38 +398,12 @@ class FTP(protocol.Protocol, protocol.Factory):
 
     def ftp_Type(self, params):
         if self.checkauth(): return
-        params = params.upper()
+        params = string.upper(params)
         if params in ['A', 'I']:
             self.type = params
             self.reply('type', self.type)
         else:
             return 1
-
-    def createPassiveServer(self):
-        # a bit silly code
-        if self.dtp is not None:
-            if self.dtp.transport is not None:
-                self.dtp.transport.loseConnection()
-            self.dtp = None
-        # giving 0 will generate a free port
-        self.dtpPort = tcp.Port(0, self)
-        self.dtpPort.startListening()
- 
-    def createActiveServer(self):
-        # silly code repeating
-        if self.dtp is not None:
-            if self.dtp.transport is not None:
-                self.dtp.transport.loseConnection()
-            self.dtp = None
-        self.dtp = self.buildProtocol(self.peerport)
-        self.dtpPort = tcp.Client(self.peerhost, self.peerport, self.dtp)
-
-    def buildProtocol(self,addr):
-        p = DTP()
-        p.factory = self
-        p.pi = self
-        self.dtp = p
-        return p
 
     def ftp_Port(self, params):
         """Request for an active connection
@@ -405,9 +414,9 @@ class FTP(protocol.Protocol, protocol.Factory):
         Note that this disables 'Cross-ftp' 
         """
         if self.checkauth(): return
-        params = params.split(',')
+        params = string.split(params, ',')
         if not (len(params) in [6]): return 1
-        peerhost = '.'.join(params[:4]) # extract ip
+        peerhost = string.join(params[:4], '.') # extract ip
         peerport = int(params[4])*256+int(params[5])
         # Simple countermeasurements against bouncing
         if peerport < 1024:
@@ -430,7 +439,7 @@ class FTP(protocol.Protocol, protocol.Factory):
         self.createPassiveServer()
         # Use the ip from the pi-connection
         sockname = self.transport.getHost()
-        localip = sockname[1].replace('.', ',')
+        localip = string.replace(sockname[1], '.', ',')
         lport = self.dtpPort.socket.getsockname()[1]
         lp1 = lport / 256
         lp2, lp1 = str(lport - lp1*256), str(lp1)
@@ -512,11 +521,9 @@ class FTP(protocol.Protocol, protocol.Factory):
             return
         self.reply('file')
         self.queuedfile = npath 
-        self.action = 'LIST'
         if self.dtp is not None:
-            if self.dtp.transport is not None:
-                self.dtp.executeAction()
-
+            self.dtp.setAction('LIST')
+ 
     def ftp_Retr(self, params):
         if self.checkauth():
             return
@@ -526,10 +533,8 @@ class FTP(protocol.Protocol, protocol.Factory):
             return
         self.reply('file')
         self.queuedfile = npath 
-        self.action = 'RETR'
         if self.dtp is not None:
-            if self.dtp.transport is not None:
-                self.dtp.executeAction()
+            self.dtp.setAction('RETR')
 
     def ftp_Stor(self, params):
         if self.checkauth():
@@ -542,10 +547,8 @@ class FTP(protocol.Protocol, protocol.Factory):
             pass
         self.reply('file')
         self.queuedfile = npath 
-        self.action = 'STOR'
         if self.dtp is not None:
-            if self.dtp.transport is not None:
-                self.dtp.executeAction()
+            self.dtp.setAction('STOR')
 
     def ftp_Abor(self, params):
         if self.checkauth():
@@ -556,8 +559,8 @@ class FTP(protocol.Protocol, protocol.Factory):
 
     def processLine(self, line):
         "Process the input from the client"
-        line = line.strip()
-        command = line.split()
+        line = string.strip(line)
+        command = string.split(line)
         if command == []:
             self.reply('unknown')
             return 0
@@ -565,30 +568,31 @@ class FTP(protocol.Protocol, protocol.Factory):
         for c in commandTmp:
             if ord(c) < 128:
                 command = command + c
-        command = command.capitalize()
+        command = string.capitalize(command)
         print "-"+command+"-"
         if command == '':
             return 0
         if line.count(' ') > 0:
-            params = line[line.find(' ')+1:]
+            params = line[string.find(line, ' ')+1:]
         else:
             params = ''
-        if ( line.find("\x1A") > -1):
+        # Does this work at all? Quit at ctrl-D
+        if ( string.find(line, "\x1A") > -1):
             command = 'Quit'
         method = getattr(self, "ftp_%s" % command, None)
         if method is not None:
             n = method(params)
             if n == 1:
-                self.reply('unknown', command.upper())
+                self.reply('unknown', string.upper(command))
         else:
-            self.reply('unknown', command.upper())
+            self.reply('unknown', string.upper(command))
 
     def dataReceived(self, line):
         self.processLine(line)
         return 0
         
                   
-class ShellFactory(protocol.Factory):
+class FTPFactory(protocol.Factory):
     command = ''
     userdict = {}
     anonymous = 0
