@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_microdom -*-
+# -*- test-case-name: twisted.test.test_persisted -*-
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001-2002 Matthew W. Lefkowitz
@@ -200,8 +200,8 @@ class Element(Node):
     def hasAttributes(self):
         return 1
     
-    def getAttribute(self, name):
-        return self.attributes.get(name, None)
+    def getAttribute(self, name, default=None):
+        return self.attributes.get(name, default)
 
     def getAttributeNode(self, name):
         return _Attr(self.getAttribute(name), self)
