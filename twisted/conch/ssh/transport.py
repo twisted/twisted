@@ -555,8 +555,7 @@ class SSHClientTransport(SSHTransportBase):
     # client methods
     def verifyHostKey(self, hostKey, fingerprint):
         # return 1 if it's good
-        log.msg('got server fingerprint %s' % fingerprint)
-        return 1
+        raise NotImplementedError
 
     def connectionSecure(self):
         raise NotImplementedError
