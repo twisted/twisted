@@ -41,7 +41,7 @@ car at all times, you must be *this* tall to get on board, and we cannot be
 responsible for any lost or stolen articles. Permanecen sentados, por
 favor.</p>
 
-<a name="motivation"><h3>Motivation</h3></a>
+<a name="motivation"><h2>Motivation</h2></a>
 
 <p>So now that you've gotten through the <a href="pb-tour.html">PB Walking
 Tour</a>, you've become a master at distributed objects and remote method
@@ -133,7 +133,7 @@ again the basement denizens at Twisted Matrix Laboratories have beaten you
 to it.</p>
 
 
-<a name="sample"><h3>A sample application</h3></a>
+<a name="sample"><h2>A sample application</h2></a>
 
 <p>As a framework for this chapter, we'll be referring to a hypothetical
 game implemented by several programs using the Twisted framework. This game
@@ -174,7 +174,7 @@ class Game(pb.Referenceable):
 <p>and move the responsibility (and capability) for calling Game.move() out
 to a different class. That class is a pb.Perspective.</p>
 
-<a name="perspectives"><h3>Perspectives</h3></a>
+<a name="perspectives"><h2>Perspectives</h2></a>
 
 <p>pb.Perspective (and some related classes: Identity, Authorizer, and
 Service) is a layer on top of the basic PB system that handles
@@ -241,7 +241,7 @@ Compare the argument passed by the <code>.callRemote()</code> in each client.
 You can see how each client logs into a different Perspective.</p>
 
 
-<a name="overview"><h3>Class Overview</h3></a>
+<a name="overview"><h2>Class Overview</h2></a>
 
 <p>Now that we've seen some of the motivation behind the Perspective class,
 let's start to de-mystify some of the parts labeled "magic" in pb6server.py.
@@ -323,7 +323,7 @@ they finish the authentication sequence) or disconnects. Each
 </p>
 
 
-<a name="responsibilities"><h3>Class Responsibilities</h3></a>
+<a name="responsibilities"><h2>Class Responsibilities</h2></a>
 
 <p>Now that we've gone over the classes and objects involved, let's look at
 the specific responsibilities of each. Most of these classes are on the hook
@@ -333,7 +333,7 @@ subclassing). This section indicates what those main methods are and when
 they get called.</p>
 
 
-<a name="responsibilities/authorizer"><h4>Authorizer</h4></a>
+<a name="responsibilities/authorizer"><h3>Authorizer</h3></a>
 
 <p>The <code>Authorizer</code> has to provide <code>Identity</code> objects
 (requested by name) by implementing <code>.getIdentityRequest()</code>. The
@@ -360,7 +360,7 @@ the <code>Identity</code> object) can be used here.<a
 name="F8"><a href="#f8">[8]</a></a></p>
 
 
-<a name="responsibilities/identity"><h4>Identity</h4></a>
+<a name="responsibilities/identity"><h3>Identity</h3></a>
 
 <p>The <code>Identity</code> object thus returned has two responsibilities.
 The first is to authenticate the user, because so far they are unverified:
@@ -416,7 +416,7 @@ auth.addIdentity(i)
 </pre>
 
 
-<a name="responsibilities/service"><h4>Service</h4></a>
+<a name="responsibilities/service"><h3>Service</h3></a>
 
 <p>The <code class="API" base="twisted.cred.service">Service</code> object's
 job is to provide <code>Perspective</code> instances, by implementing
@@ -447,7 +447,7 @@ object needs a pointer to its parent <code>Service</code> object, and the
 it contains.</p>
 
 
-<a name="smallexample"><h3>How that example worked</h3></a>
+<a name="smallexample"><h2>How that example worked</h2></a>
 
 <p>Ok, so that's what everything is supposed to do. Now you can walk through
 the previous example and see what was going on: we created a subclass called
@@ -476,7 +476,7 @@ eventually get back a remote reference to a <code>Perspective</code>
 provided by the <code>Service</code> that you named.</p>
 
 
-<a name="walkthrough"><h3>Code Walkthrough: pb.connect()</h3></a>
+<a name="walkthrough"><h2>Code Walkthrough: pb.connect()</h2></a>
 
 <p>So, now that you've seen the complete sequence, it's time for a code
 walkthrough. This will give you a chance to see the places where you might
@@ -555,7 +555,7 @@ visible in <code>pb6client1.py</code>.</p>
 
 
 
-<a name="bigexample"><h3>A Larger Example</h3></a>
+<a name="bigexample"><h2>A Larger Example</h2></a>
 
 <p>Now it's time to look more closely at the Go server described before.</p>
 
