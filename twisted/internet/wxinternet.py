@@ -35,7 +35,7 @@ class GuiDelayed:
         self.app = app
     
     def timeout(self):
-        return 0.001
+        return 0.006 # will this use up too much CPU on slow machines?
     
     def runUntilCurrent(self):
         # run wx events
@@ -65,3 +65,6 @@ def install(app):
     """Install the wxPython event loop, given a twixApp instance."""
     assert isinstance(app, twixApp)
     main.run = app.MainLoop
+
+
+__all__ = ["install", "twixApp"]
