@@ -69,9 +69,10 @@ the original Referenceable.</p>
 <p>The remote side invokes a remote method by calling
 <code>ref.callRemote()</code> on its RemoteReference. This starts by
 validating the method name and arguments against a <q>Schema</q> (described
-below). It then creates a new Request object which will live until the
-method call has either completed successfully or failed due to an exception
-(including the connection being lost).</p>
+below). It then creates a new Request object which will live until the method
+call has either completed successfully or failed due to an exception
+(including the connection being lost). <code>callRemote</code> returns a
+Deferred, which does not fire until the request is finished.</p>
 
 <p>It then sends a <code>call</code> banana sequence over the wire. This
 sequence indicates the request ID (used to match the request with the
@@ -83,17 +84,21 @@ method being invoked, and the arguments to be passed into the method.</p>
 positional parameters). Each argument is subject to the <q>argument
 transformation</q> described below.</p>
 
-<p>The local side receives the <code>call</code> sequence, uses the
-object-ID to look up the Referenceable, finds the desired method, then
-applies the method's schema to the incoming arguments. If they are
-acceptable, it invokes the method. A normal return value it sent back
-immediately in an <code>answer</code> sequence. If the method returns a
-Deferred, the answer will be sent back when the Deferred fires. If the
-method raises an exception (or the Deferred does an errback), the resulting
-Failure is sent back in a <code>error</code> sequence. Both the
-<code>answer</code> and the <code>error</code> start with the request-ID so
-they can be used to complete the Request object waiting on the remote
-side.</p>
+<p>The local side receives the <code>call</code> sequence, uses the object-ID
+to look up the Referenceable, finds the desired method, then applies the
+method's schema to the incoming arguments. If they are acceptable, it invokes
+the method. A normal return value it sent back immediately in an
+<code>answer</code> sequence (subject to the same transformation as the
+inbound arguments). If the method returns a Deferred, the answer will be sent
+back when the Deferred fires. If the method raises an exception (or the
+Deferred does an errback), the resulting Failure is sent back in a
+<code>error</code> sequence. Both the <code>answer</code> and the
+<code>error</code> start with the request-ID so they can be used to complete
+the Request object waiting on the remote side.</p>
+
+<p>The original Deferred (the one produced by <code>callRemote</code>) is
+finally callbacked with the results of the method (or errbacked with a
+Failure or RemoteFailure object).</p>
 
 <h2>Argument Transformation</h2>
 
@@ -179,12 +184,12 @@ caller will get back a deep copy of the list it passed in.</p>
 <h3>Referenceables, RemoteReferences</h3>
 
 <p>Referenceables are transformed into RemoteReferences when they are sent
-over the wire. As one side traverses the object graph of the method
-arguments (or the return value), each <code>Referenceable</code> object it
-encounters it serialized with a <code>remote</code> sequence, that includes
-the object-ID number. When the other side is unserializing the token stream,
-it creates a <code>RemoteReference</code> object (TODO: or uses one that
-already exists).</p>
+over the wire. As one side traverses the object graph of the method arguments
+(or the return value), each <code>Referenceable</code> object it encounters
+it serialized with a <code>my-reference</code> sequence, that includes the
+object-ID number. When the other side is unserializing the token stream, it
+creates a <code>RemoteReference</code> object, or uses one that already
+exists.</p>
 
 <p>Likewise, if an argument (or return value) contains a
 <code>RemoteReference</code>, and it is being sent back to the Broker that
@@ -211,6 +216,15 @@ class Called(pb.Referenceable):
         return arg
 </pre>
 
+<p>These references have a serialization scope which extends across the
+entire connection. As long as two method calls share the same
+<code>Broker</code> instance (which generally means they share the same TCP
+socket), they will both serialize <code>Referenceable</code>s into identical
+<code>RemoteReference</code>s. This also means that both sides do
+reference-counting to insure that the Referenceable doesn't get
+garbage-collected while a remote system holds a RemoteReference that points
+to it.</p>
+
 <p>In the future, there may be other classes which behave this way. In
 particular, <q>Referenceable</q> and <q>Callable</q> may be distinct
 qualities.</p>
@@ -219,18 +233,118 @@ qualities.</p>
 <h3>Copyable, RemoteCopy</h3>
 
 <p>Some objects can be marked to indicate that they should be copied bodily
-each time they traverse the wire. Classes which inherit from
-<code>pb.Copyable</code> are passed-by-value. Their
-<code>getTypeToCopy</code> and <code>getStateToCopy</code> methods are used
-to assemble the data that will be serialized. Rather than subclass
-<code>pb.Copyable</code>, you can also implement the
-<code>flavors.ICopyable</code> interface, or register an ICopyable
-adapter.</p>
+each time they traverse the wire (pass-by-value instead of
+pass-by-reference). Classes which inherit from <code>pb.Copyable</code> are
+passed-by-value. Their <code>getTypeToCopy</code> and
+<code>getStateToCopy</code> methods are used to assemble the data that will
+be serialized. These methods default to plain old <code>reflect.qual</code>
+and <code>__dict__</code>, which just uses the fully-qualified name of the
+class and its regular <code>__dict__</code>. You can override these to
+provide a different (or smaller) set of state attributes to the remote
+end.</p>
 
-<p>The receiving side must register a <code>RemoteCopy</code> subclass under
-the same name as returned by the sender's <code>getTypeToCopy</code> value.
 
-</p>
+<pre class="python">
+class Source(pb.Copyable):
+    def getStateToCopy(self):
+        state = self.__dict__.copy()
+        del state['private']
+        state['children'] = []
+        return state
+</pre>
+
+<p>Rather than subclass <code>pb.Copyable</code>, you can also implement the
+<code>flavors.ICopyable</code> interface:</p>
+
+<pre class="python">
+from twisted.python import reflect
+
+class Source2:
+    implements(flavors.ICopyable)
+    def getTypeToCopy(self):
+        return reflect.qual(self.__class__)
+    def getStateToCopy(self):
+        return self.__dict__
+</pre>
+
+<p>.. or register an ICopyable adapter. Using the adapter allows you to
+define serialization behavior for third-party classes that are out of your
+control (ones which you cannot rewrite to inherit from
+<code>pb.Copyable</code>).</p>
+
+<pre class="python">
+class Source3:
+    pass
+
+class Source3Copier:
+    implements(flavors.ICopyable)
+
+    def getTypeToCopy(self):
+        return 'foo.Source3'
+    def getStateToCopy(self):
+        orig = self.original
+        d = { 'foo': orig.foo, 'bar': orig.bar }
+        return d
+
+registerAdapter(Source3Copier, Source3, flavors.ICopyable)
+</pre>
+
+
+<p>On the other end of the wire, the receiving side must register a
+<code>RemoteCopy</code> subclass under the same name as returned by the
+sender's <code>getTypeToCopy</code> value. This subclass is used as a factory
+to create instances that correspond to the original <code>Copyable</code>.</p>
+
+<p>The default <code>RemoteCopy</code> behavior simply sets the instance's
+<code>__dict__</code> to the incoming state, which may be plenty if you trust
+your sender enough to let them arbitrarily manipulate your object state. If
+so, and you believe both peers are importing the same source file, it is
+enough to register the <code>RemoteCopy</code> at the same time you create
+the <code>Copyable</code>:</p>
+
+<pre class="python">
+class Source(pb.Copyable):
+    def getStateToCopy(self):
+        state = self.__dict__.copy()
+        del state['private']
+        state['children'] = []
+        return state
+class Remote(pb.RemoteCopy):
+    pass
+# TODO: it ought to be possible to do pb.registerRemoteCopy(Source, Remote)
+pb.registerRemoteCopy(reflect.qual(Source), Remote)
+</pre>
+
+<p>You can do something special with the incoming object state by overriding
+the <code>setCopyableState</code> method. This may allow you to do some
+sanity-checking on the state before trusting it.</p>
+
+<pre class="python">
+class Remote(pb.RemoteCopy):
+    def setCopyableState(self, state):
+        state['count'] = 0
+        self.__dict__ = state
+        self.total = self.one + self.two
+</pre>
+
+<p>You can also set a <q>constraint</q> on the inbound object state, which
+provides a way to enforce some type checking on the state components as they
+arrive. This protects against resource-consumption attacks where someone
+sends you a zillion-byte string as part of the object's state.</p>
+
+<pre class="python">
+class Remote(pb.RemoteCopy):
+    stateSchema = schema.AttributeDictConstraint(('foo', int),
+                                                 ('bar', str))
+</pre>
+
+<p>In this example, the object will only accept two attributes: <q>foo</q>
+(which must be a number), and <q>bar</q> (which must be a string shorter than
+the default limit of 1000 characters). Various classes from the
+<code>schema</code> module can be used to construct more complicated
+constraints.</p>
+
+
 
 <h3>Slicers, ISlicer</h3>
 
