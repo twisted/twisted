@@ -52,14 +52,14 @@ static PyObject *unquote(PyObject *self, PyObject *args, PyObject *kwargs)
 {
     unsigned char *s, *r, *end;
     unsigned char quotedchar, quotedchartmp = 0, tmp;
-    unsigned char escchar = '%'; // the character we use to begin %AB sequences
+    unsigned char escchar = '%'; /* the character we use to begin %AB sequences */
     static char *kwlist[] = {"s", "escchar", NULL};
     int state = STATE_INITIAL, length;
     PyObject *output, *str;
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s#|c:unquote", kwlist, &s, &length, &escchar)) {
         return NULL;
     }
-    // output = cStringIO()
+    /* output = cStringIO() */
     output = PycStringIO->NewOutput(length);
     if (output == NULL) {
         return NULL;
@@ -110,7 +110,7 @@ static PyObject *unquote(PyObject *self, PyObject *args, PyObject *kwargs)
         break;
     }
 
-    // return output.getvalue()
+    /* return output.getvalue() */
     str = PycStringIO->cgetvalue(output);
     return str;
 }
