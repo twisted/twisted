@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-__version__ = "$Revision: 1.25 $"[11:-2]
+__version__ = "$Revision: 1.26 $"[11:-2]
 """
 This module represents flavors of remotely acessible objects.
 
@@ -455,9 +455,9 @@ class RemoteCache(RemoteCopy, Serializable):
         self.luid = jellyList[1]
         return cProxy
 
-    def __really_del__(self):
-        """Final finalization call, made after all remote references have been lost.
-        """
+##     def __really_del__(self):
+##         """Final finalization call, made after all remote references have been lost.
+##         """
 
     def __cmp__(self, other):
         """Compare me [to another RemoteCache.
