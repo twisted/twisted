@@ -609,6 +609,7 @@ class FTP(basic.LineReceiver, DTPFactory):
             self.reply('notimpl')   # and will not be; standard noauth-reply
             return
         if params == "-a": params = '' # bug in konqueror
+        if params == "-aL": params = '' # bug in gFTP 2.0.15
         # The reason for this long join, is to exclude access below the root
         npath = self.buildFullpath(params)
         if not os.path.isdir(npath):
