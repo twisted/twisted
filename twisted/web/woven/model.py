@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-__version__ = "$Revision: 1.52 $"[11:-2]
+__version__ = "$Revision: 1.53 $"[11:-2]
 
 import types
 import weakref
@@ -94,7 +94,8 @@ class Model:
         """
         Remove a view that the model no longer should keep track of.
         """
-        for weakref in self.views:
+        # AM: loop on a _copy_ of the list, since we're changing it!!!
+        for weakref in list(self.views):
             ref = weakref()
             if ref is view or ref is None:
                 self.views.remove(weakref)
@@ -117,7 +118,8 @@ class Model:
         self.cachedFor = None
         if changed is None: changed = {}
         retVal = []
-        for view in self.views:
+        # AM: loop on a _copy_ of the list, since we're changing it!!!
+        for view in list(self.views):
             ref = view()
             if ref is not None:
                 retVal.append((ref, ref.modelChanged(changed)))
@@ -125,12 +127,12 @@ class Model:
                 self.views.remove(view)
         for key, value in self.subviews.items():
             if value.wantsAllNotifications or changed.has_key(key):
-                for item in value:
+                for item in list(value):
                     ref = item()
                     if ref is not None:
                         retVal.append((ref, ref.modelChanged(changed)))
                     else:
-                        self.views.remove(view)
+                        value.remove(item)
         return retVal
 
     protected_names = ['initialize', 'addView', 'addSubview', 'removeView', 'notify', 'getSubmodel', 'setSubmodel', 'getData', 'setData']
