@@ -4,8 +4,12 @@ from twisted.spread import pb
 from twisted.internet import tcp
 from twisted import copyright
 
-def scrolltxt(widget):
-    widget.set_word_wrap(gtk.TRUE)
+
+
+
+
+def scrollify(widget):
+    #widget.set_word_wrap(gtk.TRUE)
     scrl=gtk.GtkScrolledWindow()
     scrl.add(widget)
     scrl.set_policy(gtk.POLICY_NEVER, gtk.POLICY_ALWAYS)

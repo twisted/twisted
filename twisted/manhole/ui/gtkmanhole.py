@@ -46,12 +46,14 @@ class Interaction(gtk.GtkWindow):
 
         self.output = gtk.GtkText()
         gtkim.defocusify(self.output)
-        vp.pack1(gtkim.scrolltxt(self.output), gtk.TRUE, gtk.FALSE)
+        self.output.set_word_wrap(gtk.TRUE)
+        vp.pack1(gtkutil.scrollify(self.output), gtk.TRUE, gtk.FALSE)
 
         self.input = gtk.GtkText()
         self.input.set_editable(gtk.TRUE)
         self.input.connect("key_press_event", self.processKey)
-        vp.pack2(gtkim.scrolltxt(self.input), gtk.FALSE, gtk.TRUE)
+        self.input.set_word_wrap(gtk.TRUE)
+        vp.pack2(gtkim.scrollify(self.input), gtk.FALSE, gtk.TRUE)
         vb.pack_start(vp, 1,1,0)
 
         self.add(vb)

@@ -15,21 +15,6 @@ class Group(pb.Cache):
 
 pb.setCopierForClass("twisted.words.service.Group", Group)
 
-def scrollify(widget):
-    scrl=gtk.GtkScrolledWindow(None, None)
-    scrl.add(widget)
-    scrl.set_policy(gtk.POLICY_NEVER, gtk.POLICY_ALWAYS)
-    # scrl.set_update_policy(gtk.POLICY_AUTOMATIC)
-    return scrl
-
-def scrolltxt(widget):
-    widget.set_word_wrap(gtk.TRUE)
-    scrl=gtk.GtkScrolledWindow()
-    scrl.add(widget)
-    scrl.set_policy(gtk.POLICY_NEVER, gtk.POLICY_ALWAYS)
-    # scrl.set_update_policy(gtk.POLICY_AUTOMATIC)
-    return scrl
-
 def defocusify(widget):
     widget.unset_flags(gtk.CAN_FOCUS)
 
@@ -70,7 +55,8 @@ class Conversation(gtk.GtkWindow):
         self.text = gtk.GtkText()
         vb = gtk.GtkVBox()
         defocusify(self.text)
-        vb.pack_start(scrolltxt(self.text), 1, 1, 0)
+        self.text.set_word_wrap(gtk.TRUE)
+        vb.pack_start(gtkutil.scrollify(self.text), 1, 1, 0)
         self.entry = gtk.GtkEntry()
         self.entry.signal_connect('activate', self.sendMessage)
         vb.pack_start(self.entry, 0, 0, 0)
@@ -135,7 +121,7 @@ class ContactList(gtk.GtkWindow, pb.Referenced):
         self.list.set_column_width(0, 50)
         self.list.signal_connect("select_row", self.contactSelected)
         
-        vb.pack_start(scrollify(self.list), gtk.TRUE, gtk.TRUE, 0)
+        vb.pack_start(gtkutil.scrollify(self.list), gtk.TRUE, gtk.TRUE, 0)
         
         addContactButton = cbutton("Add Contact", self.addContact)
         sendMessageButton = cbutton("Send Message", self.sendMessage)

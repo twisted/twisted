@@ -31,7 +31,8 @@ class ResponseWindow(gtk.GtkWindow):
         self.set_title(question)
         self.text.set_editable(gtk.TRUE)
         self.text.insert_defaults(default)
-        scrl=gtkutil.scrolltxt(self.text)
+        self.text.set_word_wrap(gtk.TRUE)
+        scrl=gtkutil.scrollify(self.text)
         vb=gtk.GtkVBox()
         bb=gtk.GtkHButtonBox()
         vb.pack_start(scrl)
@@ -100,15 +101,18 @@ class GameWindow(gtk.GtkWindow, pb.Referenced):
 
         self.descbox=gtk.GtkText()
         self.descbox.set_usize(370,255)
-        self.descscrl=gtkutil.scrolltxt(self.descbox)
+        self.descbox.set_word_wrap(gtk.TRUE)
+        self.descscrl=gtkutil.scrollify(self.descbox)
         defocusify(self.descbox)
         
         self.itembox=gtk.GtkText()
-        self.itemscrl=gtkutil.scrolltxt(self.itembox)
+        self.itembox.set_word_wrap(gtk.TRUE)
+        self.itemscrl=gtkutil.scrollify(self.itembox)
         defocusify(self.itembox)
         
         self.happenings=gtk.GtkText()
-        self.happscrl=gtkutil.scrolltxt(self.happenings)
+        self.happenings.set_word_wrap(gtk.TRUE)
+        self.happscrl=gtkutil.scrollify(self.happenings)
         defocusify(self.happenings)
         self.cmdarea=gtk.GtkEntry()
 
