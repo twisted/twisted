@@ -61,24 +61,143 @@ import types
 import warnings
 import weakref
 
-# zope3
+# zope3 imports
 try:
     from zope.interface import interface, declarations
-    from zope.interface.adapter import AdapterRegistry as ZopeAdapterRegistry
+    from zope.interface.adapter import AdapterRegistry
 except ImportError:
     raise ImportError, "you need zope.interface installed (http://zope.org/Products/ZopeInterface/)"
 
 
-ALLOW_DUPLICATES = 0
+# Twisted's global adapter registry
+globalRegistry = AdapterRegistry()
+
+
+def registerAdapter(adapterFactory, origInterface, *interfaceClasses):
+    """Register an adapter class.
+
+    An adapter class is expected to implement the given interface, by
+    adapting instances implementing 'origInterface'. An adapter class's
+    __init__ method should accept one parameter, an instance implementing
+    'origInterface'.
+    """
+    self = globalRegistry
+    assert interfaceClasses, "You need to pass an Interface"
+    global ALLOW_DUPLICATES
+
+    # deal with class->interface adapters:
+    if not isinstance(origInterface, interface.InterfaceClass):
+        # fix up __implements__ if it's old style
+        fixClassImplements(origInterface)
+        origInterface = declarations.implementedBy(origInterface)
+
+    for interfaceClass in interfaceClasses:
+        factory = self.get(origInterface).selfImplied.get(interfaceClass, {}).get('')
+        if (factory and not ALLOW_DUPLICATES):
+            raise ValueError("an adapter (%s) was already registered." % (factory, ))
+    for interfaceClass in interfaceClasses:
+        self.register([origInterface], interfaceClass, '', adapterFactory)
+
+
+def getAdapterFactory(fromInterface, toInterface, default):
+    """Return registered adapter for a given class and interface.
+
+    Note that is tied to the *Twisted* global registry, and will
+    thus not find adapters registered elsewhere.
+    """
+    fixClassImplements(fromInterface)
+    self = globalRegistry
+    if not isinstance(fromInterface, interface.InterfaceClass):
+        fromInterface = declarations.implementedBy(fromInterface)
+    factory = self.lookup1(fromInterface, toInterface)
+    if factory == None:
+        factory = default
+    return factory
+
+
+# add global adapter lookup hook for our newly created registry
+def _hook(iface, ob, lookup=globalRegistry.lookup1):
+    factory = lookup(declarations.providedBy(ob), iface)
+    if factory is None:
+        return None
+    else:
+        return factory(ob)
+interface.adapter_hooks.append(_hook)
+
+
+# WARNING: EXTREME ICKYNESS FOLLOWS
+#
+# The code beneath this comment is the backwards compatability layer.
+# You do not want to read it. You certainly do not want to use it.
 
 class _Nothing:
-    """
-    An alternative to None - default value for functions which raise if default not passed.
+    """Default value for functions which raise if default not passed.
     """
 
+_fixedClasses = {}
+def fixClassImplements(klass):
+    """Switch class from __implements__ to zope implementation."""
+    if _fixedClasses.has_key(klass):
+        return
+    if hasattr(klass, "__implements__") and isinstance(klass.__implements__, (tuple, MetaInterface)):
+        warnings.warn("Please use implements(), not __implements__ for class %s" % klass, DeprecationWarning, stacklevel=3)
+        declarations.classImplementsOnly(klass, *tupleTreeToList(klass.__implements__))
+        _fixedClasses[klass] = 1
 
-def getRegistry(r):
-    return _theAdapterRegistry
+ALLOW_DUPLICATES = 0
+
+
+def getAdapter(obj, interfaceClass, default=_Nothing,
+               adapterClassLocator=None, persist=None):
+    """DEPRECATED. Return an object that implements the given interface.
+
+    The result will be a wrapper around the object passed as a parameter, or
+    the parameter itself if it already implements the interface. If no
+    adapter can be found, the 'default' parameter will be returned.
+
+    The recommended way of replacing uses of this function is to use
+    IFoo(o), since getAdapter is tied to a specific Twisted registry
+    and thus won't interoperate well.
+    """
+    if hasattr(obj, '__class__'):
+        fixClassImplements(obj.__class__)
+    self = globalRegistry
+    if interfaceClass.providedBy(obj):
+        return obj
+
+    if persist != False:
+        pkey = (id(obj), interfaceClass)
+        if _adapterPersistence.has_key(pkey):
+            return _adapterPersistence[pkey]
+
+    factory = self.lookup1(declarations.providedBy(obj), interfaceClass)
+    if factory != None:
+        return factory(obj)
+
+    if default == _Nothing:
+        raise NotImplementedError
+    else:
+        return default
+
+getAdapterClass = getAdapterFactory
+
+def getAdapterClassWithInheritance(klass, interfaceClass, default):
+    """Return registered adapter for a given class and interface.
+    """
+    fixClassImplements(klass)
+    adapterClass = getAdapterFactory(klass, interfaceClass, _Nothing)
+    if adapterClass is _Nothing:
+        for baseClass in reflect.allYourBase(klass):
+            adapterClass = getAdapterFactory(klass, interfaceClass, _Nothing)
+            if adapterClass is not _Nothing:
+                return adapterClass
+    else:
+        return adapterClass
+    return default
+
+
+def getRegistry(r=None):
+    return globalRegistry
 
 class CannotAdapt(NotImplementedError, TypeError):
     """
@@ -171,7 +290,7 @@ class MetaInterface(interface.InterfaceClass):
         if registry != None:
             raise RuntimeError, "registry argument will be ignored"
         warnings.warn("adaptWith is only supported for backwards compatability", DeprecationWarning)
-        registry = _theAdapterRegistry
+        registry = globalRegistry
         registry.register([self], to, '', using)
 
     def __getattr__(self, attr):
@@ -251,113 +370,6 @@ class _Wrapper(object):
 
     def __init__(self, a):
         self.a = a
-
-
-_fixedClasses = {}
-def fixClassImplements(klass):
-    """Switch class from __implements__ to zope implementation."""
-    if _fixedClasses.has_key(klass):
-        return
-    if hasattr(klass, "__implements__") and isinstance(klass.__implements__, (tuple, MetaInterface)):
-        warnings.warn("Please use implements(), not __implements__ for class %s" % klass, DeprecationWarning, stacklevel=3)
-        declarations.classImplementsOnly(klass, *tupleTreeToList(klass.__implements__))
-        _fixedClasses[klass] = 1
-
-def registerAdapter(adapterFactory, origInterface, *interfaceClasses):
-    """Register an adapter class.
-
-    An adapter class is expected to implement the given interface, by
-    adapting instances implementing 'origInterface'. An adapter class's
-    __init__ method should accept one parameter, an instance implementing
-    'origInterface'.
-    """
-    self = _theAdapterRegistry
-    assert interfaceClasses, "You need to pass an Interface"
-    global ALLOW_DUPLICATES
-
-    # deal with class->interface adapters:
-    if not isinstance(origInterface, interface.InterfaceClass):
-        # fix up __implements__ if it's old style
-        fixClassImplements(origInterface)
-        origInterface = declarations.implementedBy(origInterface)
-
-    for interfaceClass in interfaceClasses:
-        factory = self.get(origInterface).selfImplied.get(interfaceClass, {}).get('')
-        if (factory and not ALLOW_DUPLICATES):
-            raise ValueError("an adapter (%s) was already registered." % (factory, ))
-    for interfaceClass in interfaceClasses:
-        self.register([origInterface], interfaceClass, '', adapterFactory)
-
-
-def getAdapterFactory(fromInterface, toInterface, default):
-    """Return registered adapter for a given class and interface.
-    """
-    fixClassImplements(fromInterface)
-    self = _theAdapterRegistry
-    if not isinstance(fromInterface, interface.InterfaceClass):
-        fromInterface = declarations.implementedBy(fromInterface)
-    factory = self.lookup1(fromInterface, toInterface)
-    if factory == None:
-        factory = default
-    return factory
-
-getAdapterClass = getAdapterFactory
-
-def getAdapterClassWithInheritance(klass, interfaceClass, default):
-    """Return registered adapter for a given class and interface.
-    """
-    fixClassImplements(klass)
-    adapterClass = getAdapterFactory(klass, interfaceClass, _Nothing)
-    if adapterClass is _Nothing:
-        for baseClass in reflect.allYourBase(klass):
-            adapterClass = getAdapterFactory(klass, interfaceClass, _Nothing)
-            if adapterClass is not _Nothing:
-                return adapterClass
-    else:
-        return adapterClass
-    return default
-
-def getAdapter(obj, interfaceClass, default=_Nothing,
-               adapterClassLocator=None, persist=None):
-    """Return an object that implements the given interface.
-
-    The result will be a wrapper around the object passed as a parameter, or
-    the parameter itself if it already implements the interface. If no
-    adapter can be found, the 'default' parameter will be returned.
-    """
-    if hasattr(obj, '__class__'):
-        fixClassImplements(obj.__class__)
-    self = _theAdapterRegistry
-    if interfaceClass.providedBy(obj):
-        return obj
-
-    if persist != False:
-        pkey = (id(obj), interfaceClass)
-        if _adapterPersistence.has_key(pkey):
-            return _adapterPersistence[pkey]
-
-    factory = self.lookup1(declarations.providedBy(obj), interfaceClass)
-    if factory != None:
-        return factory(obj)
-
-    if default == _Nothing:
-        raise NotImplementedError
-    else:
-        return default
-
-
-_theAdapterRegistry = ZopeAdapterRegistry()
-# add global adapter lookup hook for our newly created registry
-def _hook(iface, ob, lookup=_theAdapterRegistry.lookup1):
-    factory = lookup(declarations.providedBy(ob), iface)
-    if factory is None:
-        return None
-    else:
-        return factory(ob)
-interface.adapter_hooks.append(_hook)
-
-# public zopey registration hook
-register = _theAdapterRegistry.register
 
 
 class Adapter:
