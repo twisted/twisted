@@ -14,9 +14,15 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
+"""Save and load small objects to and from files, using various formats.
+
+API Stability: unstable
+
+Maintainer: U{Moshe Zadka<mailto:moshez@twistedmatrix.com>}
+"""
+
 
 # TODO
-# * Add docstrings
 # * Write tests
 # * Move to twisted.persisted
 import os, md5
@@ -43,11 +49,21 @@ def _decrypt(passphrase, data):
 
 class IPersistable(components.Interface):
 
+    """An object which can be saved in several formats to a file"""
+
     def setStyle(self, style):
-        pass
+        """Set desired format.
+
+        @type style: string (one of 'pickle', 'source' or 'xml')
+        """
 
     def save(self, tag=None, filename=None, passphrase=None):
-        pass
+        """Save object to file.
+
+        @type tag: string
+        @type filename: string
+        @type passphrase: string
+        """
 
 
 class Persistant:
@@ -61,6 +77,10 @@ class Persistant:
         self.name = name
 
     def setStyle(self, style):
+        """Set desired format.
+
+        @type style: string (one of 'pickle', 'source' or 'xml')
+        """
         self.style = style
 
     def _getFilename(self, filename, ext, tag):
@@ -99,6 +119,12 @@ class Persistant:
         return ext, dumpFunc
 
     def save(self, tag=None, filename=None, passphrase=None):
+        """Save object to file.
+
+        @type tag: string
+        @type filename: string
+        @type passphrase: string
+        """
         ext, dumpFunc = self._getStyle()
         if passphrase:
             ext = 'e' + ext
@@ -127,6 +153,14 @@ class _EverythingEphemeral(styles.Ephemeral):
 
 
 def load(filename, style, passphrase=None):
+    """Load an object from a file.
+
+    Deserialize an object from a file. The file can be encrypted.
+
+    @param filename: string
+    @param style: string (one of 'source', 'xml' or 'pickle')
+    @param passphrase: string
+    """
     mode = 'r'
     if style=='source'
         from twisted.persisted.marmalade import unjellyFromXML as load
@@ -154,6 +188,16 @@ def load(filename, style, passphrase=None):
 
 
 def loadValueFromFile(filename, variable, passphrase=None):
+    """Load the value of a variable in a Python file.
+
+    Run the contents of the file, after decrypting if C{passphrase} is
+    given, in a namespace and return the result of the variable
+    named C{variable}.
+
+    @param filename: string
+    @param variable: string
+    @param passphrase: string
+    """
     if passphrase:
         mode = 'rb'
     else:
