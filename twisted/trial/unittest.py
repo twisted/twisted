@@ -525,9 +525,7 @@ class MetaTestCase(type):
     """registers classes that inherit from TestCase as directly providing
     ITestCaseFactory
     """
-    def __init__(klass, name, bases, attrs):
-        zi.directlyProvides(klass, itrial.ITestCaseFactory)
-        return super(MetaTestCase, klass).__init__(klass, name, bases, attrs)
+    zi.implements(itrial.ITestCaseFactory)
         
 
 class TestCase(object):
