@@ -21,8 +21,6 @@ import socket
 CONNECTION_LOST = -1
 CONNECTION_DONE = -2
 
-theApplication = None
-
 # Twisted Imports
 
 from twisted.python import threadable, log
