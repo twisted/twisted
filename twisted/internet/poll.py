@@ -131,7 +131,7 @@ class PollReactor(default.PosixReactorBase):
             selectable = selectables[fd]
             log.logOwner.own(selectable)
 
-            if event & POLL_DISCONNECTED:
+            if event & POLL_DISCONNECTED and not (event & POLLIN):
                 why = main.CONNECTION_LOST
             else:
                 try:
