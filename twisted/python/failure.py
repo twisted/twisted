@@ -283,8 +283,8 @@ class Failure:
             c['stack'] = [
                 [
                     v[0], v[1], v[2],
-                    [(j[0], repr(j[1])) for j in v[3]],
-                    [(j[0], repr(j[1])) for j in v[4]]
+                    [(j[0], reflect.safe_repr(j[1])) for j in v[3]],
+                    [(j[0], reflect.safe_repr(j[1])) for j in v[4]]
                 ] for v in self.stack
             ]
 
