@@ -51,7 +51,7 @@ QUERY_TYPES = {
 
 # "Extended" queries (Hey, half of these are deprecated, good job)
 EXT_QUERIES = {
-    252: 'AFRX',  253: 'MAILB',
+    251: 'IXFR',  252: 'AXFR',       253: 'MAILB',
     254: 'MAILA', 255: 'ALL_RECORDS'
 }
 REV_TYPES = util.dict([
@@ -392,6 +392,10 @@ class SimpleRecord:
 
     def __str__(self):
         return '<%s %s>' % (QUERY_TYPES[self.TYPE], self.name)
+    
+    
+    def xfrString(self):
+        return '%s %s' % (QUERY_TYPES[self.TYPE], self.name)
 
 
 # Kinds of RRs - oh my!
@@ -450,6 +454,10 @@ class Record_A:
         return '<A %s>' % (inet_ntoa(self.address),)
 
 
+    def xfrString(self):
+        return 'A %s' % (inet_ntoa(self.address),)
+
+
 class Record_SOA:
     __implements__ = (IEncodable,)
 
@@ -498,6 +506,13 @@ class Record_SOA:
             self.mname, self.rname, self.serial, self.refresh,
             self.retry, self.expire, self.minimum
         )
+    
+    
+    def xfrString(self):
+        return 'SOA %s %s %d %d %d %d %d' % (
+            self.mname, self.rname, self.serial, self.refresh,
+            self.retry, self.expire, self.minimum
+        )
 
 
 class Record_NULL:                   # EXPERIMENTAL
@@ -514,6 +529,10 @@ class Record_NULL:                   # EXPERIMENTAL
     
     def decode(self, strio, length = None):
         raise NotImplementedError, "Cannot encode or decode NULL records"
+    
+    
+    def xfrString(self):
+        raise NotImplementederror, "Cannot XFR NULL records"
 
 
 class Record_WKS:                    # OBSOLETE
@@ -550,6 +569,18 @@ class Record_WKS:                    # OBSOLETE
 
     def __str__(self):
         return '<WKS addr=%s proto=%d>' % (self.address, self.protocol)
+    
+    
+    def xfrString(self):
+        r = []
+        for i in range(len(self.map)):
+            for j in range(8):
+                if self.map[i] & (1 << j):
+                    r.append(i * 8 + j)
+        return 'WKS %s %d %s' % (
+            socket.inet_ntoa(self.address), self.protocol,
+            ' '.join(map(str, r))
+        )
 
 
 class Record_SRV:                # EXPERIMENTAL
@@ -588,6 +619,13 @@ class Record_SRV:                # EXPERIMENTAL
         return '<SRV prio=%d weight=%d %s:%d>' % (
             self.priority, self.weight, str(self.target), self.port
         )
+    
+    
+    def xfrString(self):
+        return 'SRV %d %d %d %s' % (
+            self.priority, self.weight,
+            self.port, self.target
+        )
 
 
 class Record_AFSDB:
@@ -618,7 +656,11 @@ class Record_AFSDB:
     
     
     def __str__(self):
-        return '<AFSB subtype=%d %s>' % (self.subtype, self(self.hostname))
+        return '<AFSB subtype=%d %s>' % (self.subtype, self.hostname)
+    
+    
+    def xfrString(self):
+        return 'AFSB %d %s' % (self.subtype, self.hostname)
 
 
 class Record_RP:
@@ -650,8 +692,11 @@ class Record_RP:
     
     
     def __str__(self):
-        return '<RP mbox=%s txt=%s>' % (str(self.mbox), str(self.txt))
-    __repr__ = __str__
+        return '<RP mbox=%s txt=%s>' % (self.mbox, self.txt)
+    
+    
+    def xfrString(self):
+        return 'RP %s %s' % (self.mbox, self.txt)
 
 
 class Record_HINFO:
@@ -683,6 +728,10 @@ class Record_HINFO:
 
     def __str__(self):
         return '<HINFO cpu=%s os=%s>' % (self.cpu, self.os)
+    
+    
+    def xfrString(self):
+        return 'HINFO %s %s' % (self.cpu, self.os)
 
 
 class Record_MINFO:                 # EXPERIMENTAL
@@ -718,6 +767,10 @@ class Record_MINFO:                 # EXPERIMENTAL
         return '<MINFO responsibility=%s errors=%s>' % (self.rmailbx, self.emailbx)
 
 
+    def xfrString(self):
+        return 'MINFO %s %s' % (self.rmailbx, self.emailbx)
+
+
 class Record_MX:
     __implements__ = (IEncodable,)
     TYPE = MX
@@ -746,6 +799,10 @@ class Record_MX:
 
     def __str__(self):
         return '<MX %d %s>' % (self.preference, self.exchange)
+    
+    
+    def xfrString(self):
+        return 'MX %d %s' % (self.preference, self.exchange)
 
 
 # Oh god, Record_TXT how I hate thee.
@@ -785,6 +842,10 @@ class Record_TXT:
     
     def __str__(self):
         return '<TXT %r>' % self.data
+    
+    
+    def xfrString(self):
+        return 'TXT ' + ' '.join(map(repr, self.data))
 
 
 class Message:
