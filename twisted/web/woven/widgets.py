@@ -396,12 +396,6 @@ class Widget(view.View):
                         newNode.appendChild(document.createTextNode(msg))
                         return newNode
                     return default
-                else:
-                    for node in slots:
-                        node.removeAttribute('pattern')
-            else:
-                for node in slots:
-                    node.removeAttribute(name + 'Of')
             self.slots[name] = slots
         slot = slots.pop(0)
         slots.append(slot)
@@ -409,6 +403,10 @@ class Widget(view.View):
             parentNode = slot.parentNode
             slot.parentNode = None
             clone = slot.cloneNode(deep)
+            if clone.hasAttribute('pattern'):
+                clone.removeAttribute('pattern')
+            elif clone.hasAttribute(name + 'Of'):
+                clone.removeAttribute(name + 'Of')
             slot.parentNode = parentNode
             return clone
         return slot
