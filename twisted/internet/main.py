@@ -283,9 +283,7 @@ def doSelect(timeout,
              reads=reads,
              writes=writes,
              rhk=reads.has_key,
-             whk=writes.has_key,
-             own=log.logOwner.own,
-             disown=log.logOwner.disown):
+             whk=writes.has_key):
     """Run one iteration of the I/O monitor loop.
 
     This will run all selectables who had input or output readiness
@@ -324,7 +322,7 @@ def doSelect(timeout,
             if not hkm(selectable):
                 continue
             # This for pausing input when we're not ready for more.
-            own(selectable)
+            log.logOwner.own(selectable)
             try:
                 why = getattr(selectable, method)()
                 handfn = getattr(selectable, 'fileno', None)
@@ -340,7 +338,7 @@ def doSelect(timeout,
                     selectable.connectionLost()
                 except:
                     traceback.print_exc(file=log.logfile)
-            disown(selectable)
+            log.logOwner.disown(selectable)
 
 
 def iterate(timeout=0.):
