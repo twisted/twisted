@@ -1,4 +1,5 @@
 from twisted.conch.ssh import keys, factory, common
+from twisted.python import log
 import primes
 import os
 
