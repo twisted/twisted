@@ -275,7 +275,7 @@ class StaticFileTest(unittest.TestCase):
 
     def testStaticPaths(self):
         import os
-        dp = os.path.join(self.caseMethodName,"hello")
+        dp = os.path.join(self.mktemp(),"hello")
         ddp = os.path.join(dp, "goodbye")
         tp = os.path.abspath(os.path.join(dp,"world.txt"))
         tpy = os.path.join(dp,"wyrld.rpy")
@@ -319,7 +319,7 @@ resource = Data('dynamic world','text/plain')
 
     def testIgnoredExts(self):
         import os
-        dp = os.path.join(self.caseMethodName, 'allYourBase')
+        dp = os.path.join(self.mktemp(), 'allYourBase')
         fp = os.path.join(dp, 'AreBelong.ToUs')
         os.makedirs(dp)
         open(fp, 'wb').write("Take off every 'Zig'!!")
