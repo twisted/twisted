@@ -1,3 +1,11 @@
+2002-12-10  Paul Swartz  <z3p@twistedmatrix.com>
+
+    * twisted/conch/*: many fixes to conch server, now works and can run
+    as root.
+
+    * twisted/conh/ssh/session.py: fix root exploit where a python shell was
+    left acessable to anyone.
+
 2002-12-10  Cory Dodt  <corydodt@yahoo.com>
 
     * t/scripts/postinstall.py: new.  Create shortcut icons on win32.
