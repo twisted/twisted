@@ -32,6 +32,9 @@ class TimedOut(Exception):
 class TimeoutQueue(Queue.Queue):
     """A thread-safe queue that supports timeouts"""
     
+    def __init__(self, max=0):
+        Queue.Queue.__init__(self, max)
+    
     def wait(self, timeout):
         """Wait until the queue isn't empty. Raises TimedOut if still empty."""
         endtime = _time() + timeout
@@ -49,26 +52,3 @@ class TimeoutQueue(Queue.Queue):
 
 __all__ = ["TimeoutQueue", "TimedOut"]
 
-
-if __name__ == '__main__':
-    import threading
-    
-    q = TimeoutQueue()
-    
-    try:
-        q.wait(5)
-    except TimedOut:
-        print "OK, timed out correctly."
-    
-    def put():
-        time.sleep(3)
-        q.put(1)
-    
-    start = time.time()
-    threading.Thread(target=put).start()
-    q.wait(3.5)
-    assert time.time() - start < 4
-    
-    result = q.get()
-    if result == 1:
-        print "OK, got data correctly."
