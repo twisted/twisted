@@ -76,7 +76,7 @@ import time, types
 from twisted.python.failure import Failure
 from twisted.python.compat import StopIteration, iter, isinstance, True, False
 from twisted.internet import defer, reactor, protocol
-from twisted.internet.error import ConnectionLost
+from twisted.internet.error import ConnectionLost, ConnectionDone
 
 #
 # Exceptions used within flow
@@ -804,9 +804,9 @@ def makeProtocol(controller, baseClass = protocol.Protocol,
                 self._controller = wrap(self.controller())
             self._execute()
         def connectionLost(self, reason=protocol.connectionDone):
-            if protocol.connectionDone is reason or \
-               ( self.finishOnConnectionLost and \
-                 isinstance(reason.value, ConnectionLost)):
+            if isinstance(reason.value, ConnectionDone) or \
+               (isinstance(reason.value, ConnectionLost) and \
+                self.finishOnConnectionLost):
                 self.finish()
             else:
                 self.errback(reason)

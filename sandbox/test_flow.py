@@ -205,7 +205,7 @@ class echoClient:
             yield "testing"
             yield conn
             # signal that we are done
-            conn.factory.d.callback(conn.next())
+            conn.d.callback(conn.next())
     """
     def __init__(self, conn):
         self.conn = conn
@@ -353,7 +353,7 @@ class FlowTest(unittest.TestCase):
         rhs = unittest.deferredResult(d)
         self.assertEquals([('a',1),('b',2),('a',3),('a',4),('b',5)],rhs)
 
-    def _testProtocol(self):
+    def _testProtocolLocalhost(self):
         PORT = 8392
         server = protocol.ServerFactory()
         server.protocol = flow.Protocol
@@ -369,8 +369,11 @@ class FlowTest(unittest.TestCase):
         from twisted.protocols import loopback
         server = flow.Protocol()
         server.controller = echoServer
-        client = flow.makeProtocol(echoClient)
+        client = flow.makeProtocol(echoClient)()
+        client.factory = protocol.ClientFactory()
+        client.factory.d = defer.Deferred()
         loopback.loopback(server, client)
+        self.assertEquals('testing', unittest.deferredResult(client.factory.d))
 
     def testThreaded(self):
         class CountIterator:
