@@ -6,7 +6,7 @@
 <h3>What Is Migration?</h3>
 
 <p><i>Service migration</i> is the term coined for the process involving the
-hand-off of application-level duties from one process to another. 
+hand-off of application-level duties from one process to another.
 Historically this has typically been achieved by stopping one process and
 then starting another.  In the case of certain platforms, wider reaching
 <i>restart</i> procedures have been required, but ultimate the effect on the
@@ -71,7 +71,7 @@ typically they will all be transferred in rapid succession.</p>
 must be serializable <a name="1_backref"><a href="#1">[1]</a></a>.  This is
 necessary so that they can be conveyed over a socket as a stream of bytes to
 the service recipient.  Serializers for instances of most built-in types,
-including ints, strings, lists, and dicts, are provided by framework code. 
+including ints, strings, lists, and dicts, are provided by framework code.
 Additionally, instances of most user-defined classes can also be serialized
 by using the fully qualified name of their class and the contents of their
 instance <code>__dict__</code>.  Since the focus of this migration technique
@@ -99,7 +99,7 @@ restricted by filesystem permissions, or a process for which filesystem
 permissions alone are too coarsely grained to prevent access.</p>
 
 <p>Second, secondary transports are established, providing a path for objects
-which cannot be serialized solely as a bytestream to be transported over. 
+which cannot be serialized solely as a bytestream to be transported over.
 There is one example of this in the current implementation: a second UNIX
 socket is opened and used to pass file descriptors (via sendmsg(2) and
 recvmsg(2)) to the process assuming responsibility.  Passing such things as
@@ -141,7 +141,9 @@ will discussed further below.</p>
 
 <h2>Serializers</h2>
 
-<p>As previously mentioned, twisted.spread.jelly is used to communicate
+<h3>Abstract File Descriptors</h3>
+
+<p>As previously mentioned, <code>twisted.spread.jelly</code> is used to communicate
 objects between processes.  This implementation uses interfaces, adapters,
 and components to maintain a separation of concerns between application
 logic and serialization logic.  Annotated versions of the serializer and
@@ -188,7 +190,7 @@ class FileDescriptorJellier(components.Adapter):
         sxp.extend([
             reflect.qual(self.original.__class__),
             jellier.jelly(self.getStateFor(jellier))])
-        return jellier.preserve(self.original, sxp)   
+        return jellier.preserve(self.original, sxp)
 
     # This function computes the actual instance state of the
     # FileDescriptor.
@@ -217,7 +219,7 @@ READ = 1
 WRITE = 2
 
 class FileDescriptorUnjellier:
-    def __init__(self, mode): 
+    def __init__(self, mode):
         self.mode = mode
 
     def __call__(self, unjellier, jellyList):
@@ -234,7 +236,7 @@ class FileDescriptorUnjellier:
 
         # Here we determine what kind of socket has been transferred.
         addressFamily = getattr(klass, 'addressFamily', socket.AF_INET)
-        socketType = getattr(klass, 'socketType', socket.SOCK_STREAM)  
+        socketType = getattr(klass, 'socketType', socket.SOCK_STREAM)
 
         # Finally, we create a socket from the file descriptor and associate
         # it with the FileDescriptor that has been instantiated.
@@ -258,6 +260,129 @@ def socketInMyPocket(skt, instance, attribute, mode):
 </code>
 </pre>
 
+<h3>Real File Descriptors</h3>
+
+<p>Migrating abstract file descriptors is only of use if the real file
+descriptors they represent can be migrated as well.  A reactor-based API
+based on <code>sendmsg(2)</code> and <code>recvmsg(2)</code> is used by
+this migration implementation, and part of its implementation is presented
+below:
+
+<pre>
+<code>
+
+from twisted.internet import unix
+
+from sendmsg import sendmsg, recvmsg
+from sendmsg import SCM_RIGHTS
+
+class Server(unix.Server):
+    def sendFileDescriptors(self, fileno, data="Filler"):
+        """
+        @param fileno: An iterable of the file descriptors to pass.
+        """
+        payload = struct.pack("%di" % len(fileno), *fileno)
+        return sendmsg(self.fileno(), data, 0, (socket.SOL_SOCKET, SCM_RIGHTS, payload))
+
+class Client(unix.Client):
+    def doRead(self):
+        while self.connected:
+            try:
+                msg, flags, ancillary = recvmsg(self.fileno())
+            except socket.error, e:
+                if e[0] == errno.EAGAIN:
+                    break
+                else:
+                    log.err()
+            except:
+                log.err()
+            else:
+                if ancillary:
+                    buf = ancillary[0][2]
+                    fds = struct.unpack('%di' % (len(buf) / 4), buf)
+                    try:
+                        self.protocol.fileDescriptorsReceived(fds)
+                    except:
+                        log.err()
+                else:
+                    break
+        return unix.Client.doRead(self)
+
+</code>
+</pre>
+
+<p><code>FileDescriptorJellier</code> and <code>FileDescriptorUnjellier
+</code> rely on these classes to ensure the correct real file descriptor
+is associated with each abstract file descriptor which is migrated to
+a new process.</p>
+
+<h2>Results</h2>
+
+<h3>Web Server Migration</h3>
+
+<h3>Interactive Python Shell / Telnet Server</h3>
+
+<p>To demonstrate this technique in a more complex and stateful
+environment, a migration server was added to a telnet server
+connected to an interactive Python shell.  The telnet portion of
+the server uses classes which have been part of Twisted for nearly
+two years as of the writing of this paper, and only makes a few
+lines of modifications to allow migration to be possible.</p>
+
+<p>The first portion of a transcript of a brief telnet session
+with this server is as follows:</p>
+
+<pre>
+exarkun@boson:~$ telnet localhost 8000
+Trying ::1...
+Trying 127.0.0.1...
+Connected to localhost.
+Escape character is '^]'.
+
+telnet.ShellFactory
+Twisted 1.2.1alpha1
+username: admin
+password: *****
+>>> import sys, os
+>>> sys.version
+'2.2.3+ (#1, Feb 25 2004, 23:29:31) \n[GCC 3.3.3 (Debian)]'
+>>> os.getpid()
+880
+</pre>
+
+<p>At this point, a migration client is started and instructed to
+retrieve both the telnet server and all connected clients from
+the service originator.  The remainder of the transcript results
+from the migration client running the telnet server:</p>
+
+<pre>
+>>> os.getpid()
+884
+>>> try:
+...     os.kill(880, 0)
+... except OSError, e:
+...     print e
+... else:
+...     print 'No exception occurred'
+...
+[Errno 3] No such process
+>>> sys.version
+'2.3.3 (#2, Jan 13 2004, 00:47:05) \n[GCC 3.3.3 20040110 (prerelease) (Debian)]'
+>>> ^]
+telnet> c
+Connection closed.
+</pre>
+
+<p>The PID change indicates that a new process is handling the session
+and the <quote>No such process</quote> error from <code>os.kill</code>
+indicates that the originating process no longer exists.  Additionally,
+the presence of the <code>os</code> and <code>sys</code> modules in the
+interpreter namespace indicate that application state as well as socket
+state has successfully migrated to the service recipient.  Finally,
+the new value of <code>sys.version</code> indicates that an entirely
+different version of the Python interpreter is now handling this telnet
+session.</p>
+
 <ol>
 <li><a name="1">The initial implementation of this migration technique uses
 <code>twisted.spread.jelly</code> as the serialization library, however it
@@ -268,4 +393,3 @@ href="#1_backref">&lt;-</a></a></li>
 
 </body>
 </html>
-

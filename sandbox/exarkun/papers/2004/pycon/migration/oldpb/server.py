@@ -67,11 +67,15 @@ class MigrationServer(pb.Avatar):
         self.tracking.setdefault(id, []).append((cleanup, revert))
 
     def cleanup(self, id):
-        functions = [c for (c, r) in self.tracking.pop(id)]
+        bin = self.tracking[id]
+        del self.tracking[id]
+        functions = [c for (c, r) in bin]
         map(apply, functions)
 
     def revert(self, id):
-        functions = [r for (c, r) in self.tracking.pop(id)]
+        bin = self.tracking[id]
+        del self.tracking[id]
+        functions = [r for (c, r) in bin]
         map(apply, functions)
 
     # Other stuff
@@ -96,19 +100,22 @@ class MigrationServer(pb.Avatar):
     def perspective_getServer(self, name):
         if not self.descriptorChannelAllocated:
             raise DescriptorChannelNotAllocated()
-        self.transition[name] = self.servers.pop(name)
+        self.transition[name] = self.servers[name]
+        del self.servers[name]
         self.sendingServerID = name
         return self.transition[name]
 
     def perspective_gotServer(self, name):
-        server = self.transition.pop(name)
+        server = self.transition[name]
+        del self.transition[name]
         self.cleanup(name)
         if not self.servers and not self.transition:
             self.outOfServers()
 
     def perspective_nevermind(self, name):
         self.revert(name)
-        self.servers[name] = self.transition.pop(name)
+        self.servers[name] = self.transition[name]
+        del self.transition[name]
 
     def outOfServers(self):
         pass

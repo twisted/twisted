@@ -92,7 +92,9 @@ class SocketStorage(components.Adapter):
         return socket.fileno()
 
     def get(self, uid):
-        return self.skts.pop(uid)
+        skt = self.skts[uid]
+        del self.skts[uid]
+        return skt
 
 components.registerAdapter(SocketStorage, jelly._Jellier, ISocketStorage)
 
@@ -101,7 +103,8 @@ class FileDescriptorJellier(components.Adapter):
 
     def getStateFor(self, jellier):
         state = self.original.__dict__.copy()
-        ISocketStorage(jellier).put(state.pop('socket'))
+        ISocketStorage(jellier).put(state['socket'])
+        del state['socket']
         jellier.invoker.serializingPerspective.dChannel.transport.sendFileDescriptors([state['fileno']()])
         del state['fileno']
         return state

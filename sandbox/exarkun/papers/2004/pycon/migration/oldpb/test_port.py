@@ -19,7 +19,7 @@ def makeAFactory():
 
 def makeService():
     from twisted.internet import reactor
-    port = reactor.listenTCP(0, makeAFactory())
+    port = reactor.listenTCP(8000, makeAFactory())
 
     r = MigrationRealm({'blah': port})
     p = portal.Portal(r)
