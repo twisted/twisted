@@ -16,7 +16,11 @@
 
 from twisted.internet import protocol
 
-from cStringIO import StringIO
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
+
 from struct import pack, unpack
 
 def _blowUp(data):
