@@ -170,7 +170,8 @@ class LatexSpitter:
         for child in node.childNodes:
             numCols = max(numCols, len(child.childNodes))
         numCols += 1
-        self.writer('\\begin{table}[ht]\\begin{center}\\begin{tabular}{@{}'+'l'*numCols+'@{}}')
+        self.writer('\\begin{table}[ht]\\begin{center}')
+        self.writer('\\begin{tabular}{@{}'+'l'*numCols+'@{}}')
         for child in node.childNodes:
             th = 0
             for col in child.childNodes:
