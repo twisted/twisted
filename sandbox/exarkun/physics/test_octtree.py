@@ -1,7 +1,6 @@
 from twisted.trial import unittest
 from zope import interface
 
-
 import octtree
 
 class Thingy:
@@ -35,7 +34,11 @@ class OctTreeTest(unittest.TestCase):
         ot = octtree.OctTree([0,0,0],
                              20, 20, 20)
 
-        ot.iterInFrustum(point=(4,4,4), fov=100,
-                         distance=100,
-                         angle=angleBetween((4,4,4), o1.position))
+        ot.iterInPrism(
+            # Points defining the quadrilateral closest to the viewer,
+            # starting at the top left and proceeding clockwise
+            ((-2, 0, 2), (2, 0, 2), (2, 0, -2), (-2, 0, -2)),
 
+            # Points defining the quadrilateral further from the viewer,
+            # as above.
+            ((-8, 0, 8), (8, 0, 8), (8, 0, -8), (-8, 0, -8)))
