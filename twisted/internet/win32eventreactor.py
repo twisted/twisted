@@ -166,7 +166,7 @@ class Win32Reactor(default.PosixReactorBase):
             try:
                 closed = fd.doWrite()
             except:
-                closed = sys.exc_value
+                closed = sys.exc_info()[1]
                 log.deferr()
 
             if closed:
@@ -199,7 +199,7 @@ class Win32Reactor(default.PosixReactorBase):
             try:
                 closed = action()
             except:
-                closed = sys.exc_value
+                closed = sys.exc_info()[1]
                 log.deferr()
 
             if closed:

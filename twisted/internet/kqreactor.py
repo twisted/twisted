@@ -186,7 +186,7 @@ class KQueueReactor(default.PosixReactorBase):
             if not selectable.fileno() == fd:
                 why = main.CONNECTION_LOST
         except:
-            why = sys.exc_value
+            why = sys.exc_info()[1]
             log.deferr()
 
         if why:

@@ -146,7 +146,7 @@ class GtkReactor(default.PosixReactorBase):
                 if not source.disconnected and source.doWrite != didRead:
                     why = source.doWrite()
         except:
-            why = sys.exc_value
+            why = sys.exc_info()[1]
             log.msg('Error In %s' % source)
             log.deferr()
 

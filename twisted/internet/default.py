@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_internet -*-
-# $Id: default.py,v 1.74 2003/05/01 16:40:47 itamarst Exp $
+# $Id: default.py,v 1.75 2003/05/02 03:47:27 anthony Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -482,7 +482,7 @@ class SelectReactor(PosixReactorBase):
             elif handfn() == -1:
                 why = _NO_FILEDESC
         except:
-            why = sys.exc_value
+            why = sys.exc_info()[1]
             log.err()
         if why:
             self.removeReader(selectable)

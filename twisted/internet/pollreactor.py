@@ -160,7 +160,7 @@ class PollReactor(default.PosixReactorBase):
                     why = main.ConnectionFdescWentAway('Filedescriptor went away')
             except:
                 log.deferr()
-                why = sys.exc_value
+                why = sys.exc_info()[1]
         if why:
             self.removeReader(selectable)
             self.removeWriter(selectable)
