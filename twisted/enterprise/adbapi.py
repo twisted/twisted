@@ -38,7 +38,7 @@ class Transaction:
         if self._cursor is not None:
             self._cursor.close()
         self._cursor = self._connection.cursor()
-        
+
     def __getattr__(self, name):
         return getattr(self._cursor, name)
 
@@ -48,36 +48,51 @@ class ConnectionPool(pb.Referenceable):
 
     You can pass keywords args cp_min and cp_max that will specify the size
     of the thread pool used to serve database requests (possibly this is
-    deprecated - it does not work at the moment in any case).
+    deprecated - it does not work at the moment in any case). You can also
+    pass the noisy arg which determines whether informational log messages
+    are generated during the pool's operation.
     """
     noisy = 1
-    
+    min = 3
+    max = 5
+
     def __init__(self, dbapiName, *connargs, **connkw):
         """See ConnectionPool.__doc__
         """
         self.dbapiName = dbapiName
         if self.noisy:
-            log.msg("Connecting to database: %s %s %s" % (dbapiName, connargs, connkw))
+            log.msg("Connecting to database: %s %s %s" %
+                    (dbapiName, connargs, connkw))
         self.dbapi = reflect.namedModule(dbapiName)
-        assert self.dbapi.apilevel == '2.0', 'DB API module not DB API 2.0 compliant.'
-        assert self.dbapi.threadsafety > 0, 'DB API module not sufficiently thread-safe.'
+
+        if getattr(self.dbapi, 'apilevel', None) != '2.0':
+            log.msg('DB API module not DB API 2.0 compliant.')
+
+        if getattr(self.dbapi, 'threadsafety', 0) < 1:
+            log.msg('DB API module not sufficiently thread-safe.')
+
         self.connargs = connargs
         self.connkw = connkw
+
         import thread
         self.threadID = thread.get_ident
         self.connections = {}
+
         if connkw.has_key('cp_min'):
-            min = connkw['cp_min']
+            self.min = connkw['cp_min']
             del connkw['cp_min']
-        else:
-            min = 3
+
         if connkw.has_key('cp_max'):
-            max = connkw['cp_max']
+            self.max = connkw['cp_max']
             del connkw['cp_max']
-        else:
-            max = 5
+
+        if connkw.has_key('cp_noisy'):
+            self.noisy = connkw['cp_noisy']
+            del connkw['cp_noisy']
+
         from twisted.internet import reactor
-        self.shutdownID = reactor.addSystemEventTrigger('during', 'shutdown', self.finalClose)
+        self.shutdownID = reactor.addSystemEventTrigger('during', 'shutdown',
+                                                        self.finalClose)
 
     def runInteraction(self, interaction, *args, **kw):
         """Interact with the database and return the result.
@@ -102,10 +117,11 @@ class ConnectionPool(pb.Referenceable):
         apply(self.interaction, (interaction,d.callback,d.errback,)+args, kw)
         return d
 
-
-
     def __getstate__(self):
         return {'dbapiName': self.dbapiName,
+                'noisy': self.noisy,
+                'min': self.min,
+                'max': self.max,
                 'connargs': self.connargs,
                 'connkw': self.connkw}
 
@@ -135,6 +151,7 @@ class ConnectionPool(pb.Referenceable):
             return result
         except:
             conn.rollback()
+            raise
 
     def _runOperation(self, args, kw):
         conn = self.connect()
@@ -190,11 +207,13 @@ class ConnectionPool(pb.Referenceable):
         from twisted.internet import reactor
         reactor.removeSystemEventTrigger(self.shutdownID)
         self.finalClose()
+
     def finalClose(self):
         for connection in self.connections.values():
             if self.noisy:
-                log.msg('adbapi closing: %s %s%s' %
-                        ( self.dbapiName, self.connargs or '', self.connkw or ''))
+                log.msg('adbapi closing: %s %s%s' % (self.dbapiName,
+                                                     self.connargs or '',
+                                                     self.connkw or ''))
             connection.close()
 
 class Augmentation:
