@@ -17,11 +17,14 @@
 """Simple Mail Transfer Protocol implementation.
 """
 
+# Twisted imports
 from twisted.protocols import basic
 from twisted.internet import protocol, defer
 from twisted.python import log
 
+# System imports
 import os, time, string, operator
+import MimeWriter, tempfile
 
 class SMTPError(Exception):
     pass
@@ -311,6 +314,7 @@ class SMTPClient(basic.LineReceiver):
         """Called with list of emails to which we sent the message."""
         pass
 
+
 class SMTPSender(SMTPClient):
 
     done = 0
@@ -336,3 +340,94 @@ class SMTPSender(SMTPClient):
     def sentMail(self, addresses):
         self.factory.sendFinished = 1
         self.factory.result.callback(addresses == [self.factory.toEmail])
+
+
+class SMTPClientFactory(protocol.ClientFactory):
+    """
+    Factory to manage the connections required to send an email.
+    """
+
+    protocol = SMTPSender
+    
+    def __init__(self, fromEmail, toEmail, file, deferred):
+        self.fromEmail = fromEmail
+        self.toEmail = toEmail
+        self.file = file
+        self.result = deferred
+        self.sendFinished = 0
+    
+    def clientConnectionFailed(self, connector, error):
+        self.result.errback(error)
+
+    def clientConnectionLost(self, connector, error):
+        # if email wasn't sent, try again
+        if not self.sendFinished:
+            connector.connect() # reconnect to SMTP server
+
+    def buildProtocol(self, addr):
+        p = self.protocol(self.fromEmail)
+        p.factory = self
+        return p
+
+
+def sendEmail(smtphost, fromEmail, toEmail, content, headers = None, attachments = None):
+    """Send an email, optionally with attachments.
+
+    @type smtphost: str
+    @param smtphost: hostname of SMTP server to which to connect
+    
+    @type fromEmail: str
+    @param fromEmail: email address to indicate this email is from
+    
+    @type toEmail: str
+    @param toEmail: email address to which to send this email
+    
+    @type content: str
+    @param content: The body if this email.
+    
+    @type headers: dict
+    @param headers: Dictionary of headers to include in the email
+
+    @type attachments: list of 3-tuples
+    @param attachments: Each 3-tuple should consist of the name of the
+      attachment, the mime-type of the attachment, and a string that is
+      the attachment itself.
+
+    @rtype: Deferred
+    @return: The returned Deferred has its callback or errback invoked when
+      the mail is successfully sent or when an error occurs, respectively.
+    """
+    f = tempfile.TemporaryFile()
+    writer = MimeWriter.MimeWriter(f)
+
+    if headers:
+        # Setup the mail headers
+        for (header, value) in headers.items():
+            writer.addheader(header, value)
+
+    writer.startmultipartbody("mixed")
+
+    # message body
+    part = writer.nextpart()
+    body = part.startbody("text/plain")
+    body.write(content)
+
+    if attachments is not None:
+        # add attachments
+        for (file, mime, attachment) in attachments:
+            part = writer.nextpart()
+            part.addheader("Content-Transfer-Encoding", "base64")
+            body = part.startbody("%s; name=%s" % (mime, file))
+            body.write(base64.encodestring(attachment))
+
+    # finish
+    writer.lastpart()
+
+    # send message
+    f.seek(0, 0)
+    d = defer.Deferred()
+    factory = SMTPClientFactory(fromEmail, toEmail, f, d)
+    from twisted.internet import reactor
+    reactor.connectTCP(smtphost, 25, factory)
+
+    return d
