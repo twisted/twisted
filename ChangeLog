@@ -1,5 +1,7 @@
 2004-02-28  Dave Peticolas <dave@krondo.com>
 
+	* setup.py: install tap2rpm as a bin script
+
 	* twisted/test/test_enterprise.py: Test Firebird db. Fix typos.
 
 2004-02-27  Andrew Bennetts  <spiv@twistedmatrix.com>
