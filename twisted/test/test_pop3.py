@@ -42,6 +42,8 @@ import twisted.cred.portal
 import twisted.cred.checkers
 import twisted.cred.credentials
 
+from proto_helpers import LineSendingProtocol
+
 class MyVirtualPOP3(mail.protocols.VirtualPOP3):
 
     magic = '<moshez>'
@@ -49,7 +51,7 @@ class MyVirtualPOP3(mail.protocols.VirtualPOP3):
     def authenticateUserAPOP(self, user, digest):
         user, domain = self.lookupDomain(user)
         return self.service.domains['baz.com'].authenticateUserAPOP(user, digest, self.magic, domain)
-
+    
 class DummyDomain:
 
    def __init__(self):
@@ -145,20 +147,18 @@ Someone set up us the bomb!\015
         self.factory.domains['baz.com'].addMessage('hello', self.message)
 
     def testMessages(self):
-        self.output = StringIOWithoutClosing()
-        self.transport = internet.protocol.FileWrapper(self.output)
-        protocol =  MyVirtualPOP3()
-        protocol.makeConnection(self.transport)
-        protocol.service = self.factory
-        protocol.lineReceived('APOP hello@baz.com world')
-        protocol.lineReceived('UIDL')
-        protocol.lineReceived('RETR 1')
-        protocol.lineReceived('QUIT')
-        if self.output.getvalue() != self.expectedOutput:
-            #print `self.output.getvalue()`
-            #print `self.expectedOutput`
-            raise AssertionError(self.output.getvalue(), self.expectedOutput)
-        protocol.connectionLost(failure.Failure(Exception()))
+        client = LineSendingProtocol([
+            'APOP hello@baz.com world',
+            'UIDL',
+            'RETR 1',
+            'QUIT',
+        ])
+        server =  MyVirtualPOP3()
+        server.service = self.factory
+        loopback.loopbackTCP(server, client)
+        
+        output = '\r\n'.join(client.response) + '\r\n'
+        self.assertEquals(output, self.expectedOutput)
 
     def testLoopback(self):
         protocol =  MyVirtualPOP3()
@@ -207,24 +207,20 @@ How are you, friend?
 class AnotherPOP3TestCase(unittest.TestCase):
 
     def runTest(self, lines, expected):
-        a = StringIOWithoutClosing()
         dummy = DummyPOP3()
-        dummy.makeConnection(protocol.FileWrapper(a))
-        lines = string.split('''\
-APOP moshez dummy
-LIST
-UIDL
-RETR 1
-RETR 2
-DELE 1
-RETR 1
-QUIT''', '\n')
+        client = LineSendingProtocol([
+            "APOP moshez dummy",
+            "LIST",
+            "UIDL",
+            "RETR 1",
+            "RETR 2",
+            "DELE 1",
+            "RETR 1",
+            "QUIT",
+        ])
         expected_output = '+OK <moshez>\r\n+OK Authentication succeeded\r\n+OK 1\r\n1 44\r\n.\r\n+OK \r\n1 0\r\n.\r\n+OK 44\r\nFrom: moshe\r\nTo: moshe\r\n\r\nHow are you, friend?\r\n.\r\n-ERR index out of range\r\n+OK \r\n-ERR message deleted\r\n+OK \r\n'
-        for line in lines:
-            dummy.lineReceived(line)
-        self.failUnlessEqual(expected_output, a.getvalue(),
-                             "\nExpected:\n%s\nResults:\n%s\n"
-                             % (expected_output, a.getvalue()))
+        loopback.loopback(dummy, client)
+        self.failUnlessEqual(expected_output, '\r\n'.join(client.response) + '\r\n')
         dummy.connectionLost(failure.Failure(Exception()))
                              
 
