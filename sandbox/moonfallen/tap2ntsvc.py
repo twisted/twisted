@@ -16,8 +16,6 @@ cftypes=('python', 'xml', 'source', 'pickle')
 class Tap2NtsvcOptions(usage.Options):
     optParameters = [['type', 'y', None,
                       'Config file type out of: %s' % ', '.join(cftypes)],
-                     ['output-file', 'o', None,
-                      'Name of the setup executable produced'],
                      ['name', 'n', None,
                       'Short name of the service (used with "net start")'],
                      ['package_version', 'v', "1.0",
@@ -149,6 +147,7 @@ Could not create directory %s because: %s" % (o['dirname'], e.strerr))
 Could not copy file %s because: %s" % (o['conffile'], e.strerr))
 
     # invoke the packaging tools
+    sys.path.insert(0, util.sibpath(o['conffile'], ''))
     sys.path.insert(0, os.getcwd())
     import setup
     setup.run('setup.py py2exe'.split())
@@ -185,12 +184,10 @@ import py2exe
 
 scriptfile = "%(script)s"
 configfile = "%(confbase)s"
-iconfile = "%(icon)s"
 
 def run(argv = sys.argv):
     setup_args = {"scripts": [scriptfile],
                   "data_files": [("", [configfile]),
-                                 ("", [iconfile]),
                                  ],
                   }
     orig_argv = sys.argv
