@@ -123,6 +123,12 @@ def greedyWrap(inString, width=80):
 
     outLines = []
 
+    #eww, evil hacks to allow paragraphs delimited by two \ns :(
+    if inString.find('\n\n') >= 0:
+        paragraphs = string.split(inString, '\n\n')
+        for para in paragraphs:
+            outLines.extend(greedyWrap(para) + ['\n\n'])
+        return outLines
     inWords = string.split(inString)
 
     column = 0
