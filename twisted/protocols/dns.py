@@ -1095,7 +1095,7 @@ class DNSDatagramProtocol(protocol.DatagramProtocol):
     def datagramReceived(self, data, addr):
         m = Message()
         m.fromStr(data)
-        if self.liveMessages.has_key(m.id):
+        if self.liveMessages.has_key(m.id) and m.answer:
             d = self.liveMessages[m.id]
             del self.liveMessages[m.id]
             # XXX we shouldn't need this hack
