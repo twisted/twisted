@@ -40,7 +40,7 @@ Content-Type: multipart/report; report-type=delivery-status;
 --%(boundary)s
 Content-Type: message/delivery-status
 Arrival-Date: %(ctime)s
-Final-Recipient: RFC822; %(failedTo)
+Final-Recipient: RFC822; %(failedTo)s
 """
 
 def generateBounce(message, failedFrom, failedTo, transcript=''):
