@@ -15,6 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 import sys
+import new
 
 from twisted.trial import unittest
 from twisted.python import rebuild
@@ -128,5 +129,21 @@ class RebuildTestCase(unittest.TestCase):
         from twisted.spread import banana
         rebuild.latestClass(banana.Banana)
 
+class NewStyleTestCase(unittest.TestCase):
+    todo = """New Style classes are poorly supported"""
 
-testCases = [RebuildTestCase]
+    def setUp(self):
+        self.m = new.module('whipping')
+        sys.modules['whipping'] = self.m
+    
+    def tearDown(self):
+        del sys.modules['whipping']
+        del self.m
+    
+    def testSlots(self):
+        exec "class SlottedClass(object): __slots__ = 'a'," in self.m.__dict__
+        rebuild.updateInstance(self.m.SlottedClass())
+
+    def testTypeSubclass(self):
+        exec "class ListSubclass(list): pass" in self.m.__dict__
+        rebuild.updateInstance(self.m.ListSubclass())
