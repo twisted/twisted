@@ -29,18 +29,17 @@ class ServerContextFactory:
         ctx.use_privatekey_file('server.pem')
         return ctx
 
-### Persistent Application Builder
-
-# This builds a .tap file
 
 if __name__ == '__main__':
-    import echoserv
+    import echoserv, sys
     from twisted.internet.protocol import Factory
     from twisted.internet.app import Application
     from twisted.internet import ssl
+    from twisted.python import log
+    log.startLogging(sys.stdout)
     from echoserv_ssl import ServerContextFactory
     factory = Factory()
     factory.protocol = echoserv.Echo
     app = Application("echo-ssl")
     app.listenSSL(8000, factory, ServerContextFactory())
-    app.save("start")
+    app.run(save=0)
