@@ -227,7 +227,9 @@ class Widget(view.View):
 
         newNode = self._regenerate(request, node, result)
         returnNode = self.dispatchResult(request, node, newNode)
-        if hasattr(self, 'outgoingId'):
+        # isinstance(Element) added because I was having problems with
+        # this code trying to call setAttribute on my RawTexts -radix 2003-5-28
+        if hasattr(self, 'outgoingId') and isinstance(returnNode, Element):
             returnNode.setAttribute('id', self.outgoingId)
         self.handleNewNode(request, returnNode)
         self.handleOutstanding(request)
