@@ -43,7 +43,7 @@ namespace TwistedImpl
 	size_t m_bytessent; // number bytes already sent from m_vecs[m_offset];
 	
 	// Make sure we can add another item to m_vecs:
-	void ensureEnoughSpace();
+	void ensureEnoughSpace(size_t amount);
 	
 	// fix first item to take into account m_bytessent:
 	inline void twiddleFirst() {
@@ -63,7 +63,7 @@ namespace TwistedImpl
 	}
 	
 	inline void reallyAdd(const char* buf, size_t len, const OwnerPtr p, bool isExternal) {
-	    ensureEnoughSpace();
+	    ensureEnoughSpace(1);
 	    m_vecs[m_offset + m_used].iov_base = (void*) buf;
 	    m_vecs[m_offset + m_used].iov_len = len;
 	    m_used++;
@@ -217,7 +217,7 @@ namespace Twisted
 
 	// Public API for transports:
 
-	template <typename W>
+	template <class W>
 	void write(size_t reserve, W writer) {
 	    if (!connected || reserve == 0)
 		return;
@@ -242,6 +242,28 @@ namespace Twisted
 		return;
 	    m_iovec.add(buf, len, owner);
 	    m_bufferedbytes += len;
+	    if (m_hasproducer && m_bufferedbytes > 131072) {
+		this->producerPaused = true;
+		m_producer.attr("pauseProducing")();
+	    }
+	    startWriting();
+	}
+
+	template <class InputIterator>
+	void write(size_t numvecs, iovec* vecs, InputIterator begin, InputIterator end)
+	{
+	    if (!connected || numvecs == 0)
+		return;
+	    m_iovec.ensureEnoughSpace(numvecs);
+	    memcpy(m_iovec.m_vecs + m_iovec.m_offset + m_iovec.m_used,
+		   vecs, numvecs * sizeof(iovec));
+	    m_iovec.m_used += numvecs;
+	    for (int i = 0; i < numvecs; i++) {
+		m_bufferedbytes += vecs[i].iov_len;
+	    }
+	    for (InputIterator it = begin; it != end; ++it) {
+		m_iovec.m_ownerqueue.push(std::pair<bool,const OwnerPtr>(true, *it));
+	    }
 	    if (m_hasproducer && m_bufferedbytes > 131072) {
 		this->producerPaused = true;
 		m_producer.attr("pauseProducing")();
