@@ -91,18 +91,18 @@ class JellyTestCase(unittest.TestCase):
             n.n3 = n2
             c = jelly.jelly(n)
             m = jelly.unjelly(c)
-            assert isinstance(m, NewStyle)
-            assert m.n2 is m.n3
+            self.failUnless(isinstance(m, NewStyle))
+            self.assertIdentical(m.n2, m.n3)
 
     def testSimple(self):
         """
         simplest test case
         """
-        assert SimpleJellyTest('a', 'b').isTheSameAs(SimpleJellyTest('a', 'b'))
+        self.failUnless(SimpleJellyTest('a', 'b').isTheSameAs(SimpleJellyTest('a', 'b')))
         a = SimpleJellyTest(1, 2)
         cereal = jelly.jelly(a)
         b = jelly.unjelly(cereal)
-        assert a.isTheSameAs(b)
+        self.failUnless(a.isTheSameAs(b))
 
     def testIdentity(self):
         """
@@ -112,17 +112,17 @@ class JellyTestCase(unittest.TestCase):
         y = (x)
         x.append(y)
         x.append(y)
-        assert x[0] is x[1]
-        assert x[0][0] is x
+        self.assertIdentical(x[0], x[1])
+        self.assertIdentical(x[0][0], x)
         s = jelly.jelly(x)
         z = jelly.unjelly(s)
-        assert z[0] is z[1]
-        assert z[0][0] is z
+        self.assertIdentical(z[0], z[1])
+        self.assertIdentical(z[0][0], z)
 
     def testUnicode(self):
         if hasattr(types, 'UnicodeType'):
             x = 'blah'
-            assert jelly.unjelly(jelly.jelly(unicode(x))) == x
+            self.assertEquals(jelly.unjelly(jelly.jelly(unicode(x))), x)
 
     def testStressReferences(self):
         reref = []
@@ -130,8 +130,8 @@ class JellyTestCase(unittest.TestCase):
         reref.append(toplevelTuple)
         s = jelly.jelly(toplevelTuple)
         z = jelly.unjelly(s)
-        assert z[0]['list'] is z[1]
-        assert z[0]['list'][0] is z
+        self.assertIdentical(z[0]['list'], z[1])
+        self.assertIdentical(z[0]['list'][0], z)
 
 
     def testPersistentStorage(self):
@@ -156,10 +156,10 @@ class JellyTestCase(unittest.TestCase):
         jel = jelly.jelly(a, persistentStore = persistentStore)
         x = jelly.unjelly(jel, persistentLoad = persistentLoad)
 
-        assert x.b is x.c.b, "Identity failure."
+        self.assertIdentical(x.b, x.c.b)
         # assert len(perst) == 3, "persistentStore should only be called 3 times."
-        assert perst[0], "persistentStore was not called."
-        assert x.b is a.b, "Persistent storage identity failure."
+        self.failUnless(perst[0], "persistentStore was not called.")
+        self.assertIdentical(x.b, a.b, "Persistent storage identity failure.")
 
     def testMoreReferences(self):
         a = []
@@ -177,7 +177,7 @@ class JellyTestCase(unittest.TestCase):
         dct = jelly.jelly({})
         try:
             jelly.unjelly(dct, taster)
-            assert 0, "Insecure Jelly unjellied successfully."
+            self.fail("Insecure Jelly unjellied successfully.")
         except jelly.InsecureJelly:
             # OK, works
             pass
@@ -210,7 +210,7 @@ class JellyTestCase(unittest.TestCase):
         t3 = TupleState((t1, t2))
         d = {t1: t1, t2: t2, t3: t3, "t3": t3}
         t3prime = jelly.unjelly(jelly.jelly(d))["t3"]
-        assert t3prime.other[0].other is t3prime.other[1].other
+        self.assertIdentical(t3prime.other[0].other, t3prime.other[1].other)
 
     def testClassSecurity(self):
         """
@@ -230,20 +230,21 @@ class JellyTestCase(unittest.TestCase):
         # first, a friendly insecure serialization
         friendly = jelly.jelly(a, taster)
         x = jelly.unjelly(friendly, taster)
-        assert isinstance(x.c, jelly.Unpersistable), "C came back: %s" % x.c.__class__
+        self.failUnless(isinstance(x.c, jelly.Unpersistable),
+                        "C came back: %s" % x.c.__class__)
         # now, a malicious one
         mean = jelly.jelly(a)
         try:
             x = jelly.unjelly(mean, taster)
-            assert 0, "x came back: %s" % x
+            self.fail("x came back: %s" % x)
         except jelly.InsecureJelly:
             # OK
             pass
-        assert x.x is x.b, "Identity mismatch"
+        self.assertIdentical(x.x, x.b, "Identity mismatch")
         #test class serialization
         friendly = jelly.jelly(A, taster)
         x = jelly.unjelly(friendly, taster)
-        assert x is A, "A came back: %s" % x
+        self.assertIdentical(x, A, "A came back: %s" % x)
 
 class ClassA(pb.Copyable, pb.RemoteCopy):
     def __init__(self):
