@@ -658,3 +658,17 @@ class TelnetBootstrapProtocol(TelnetProtocol, ProtocolTransportMixin):
 
     def dataReceived(self, data):
         self.protocol.dataReceived(data)
+
+__all__ = [
+    # Exceptions
+    'TelnetError', 'NegotiationError', 'AlreadyNegotiating',
+    'AlreadyEnabled', 'AlreadyDisabled',
+
+    # Interfaces
+    'ITelnetProtocol', 'ITelnetTransport',
+
+    # Other stuff, protocols, etc.
+    'Telnet', 'TelnetProtocol', 'TelnetTransport',
+    'TelnetBootstrapProtocol',
+
+    ]
