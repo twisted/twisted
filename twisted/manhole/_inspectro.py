@@ -1,5 +1,3 @@
-#!/usr/bin/python2.3
-
 """An input/output window for the glade reactor inspector.
 """
 
