@@ -40,10 +40,11 @@ def install(ms=10, reactor=None, args=(), kw={}):
     Schedule PyUI's display to be updated approximately every C{ms}
     milliseconds, and initialize PyUI with the specified arguments.
     """
-    pyui.init(*args, **kw)
+    d = pyui.init(*args, **kw)
 
     if reactor is None:
         from twisted.internet import reactor
     _guiUpdate(reactor, ms / 1000.0)
+    return d
 
 __all__ = ["install"]
