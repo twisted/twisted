@@ -14,7 +14,24 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-"""NNTP protocol support."""
+"""NNTP protocol support.
+
+  The following protocol commands are currently understood:
+    LIST        LISTGROUP    NEWSGROUPS    XOVER    XHDR
+    POST        GROUP        ARTICLE       STAT     HEAD
+    BODY        NEXT         LAST          MODE     QUIT
+    
+  The following protocol commands require implementation:
+    HELP        IHAVE        NEWNEWS       SLAVE    CHECK
+    MODE STREAM TAKETHIS     XGTITLE       XINDEX   XPAT
+    XPATH       XROVER       XTHREAD       AUTHINFO NEWGROUPS
+
+
+  Other desired features:
+    A real backend
+    More robust client input handling
+    A control protocol
+"""
 
 from twisted.protocols import basic
 from twisted.python import log
@@ -589,3 +606,4 @@ class NNTPServer(NNTPClient):
     def sendLine(self, line):
 #        print 'sending: ', line
         basic.LineReceiver.sendLine(self, line)
+                    func = getattr(self, 'do_%s' % cmd)
