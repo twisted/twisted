@@ -678,7 +678,57 @@ class IRCChatter(irc.IRC, service.WordsClientInterface):
 
         [REQUIRED]
         """
-        pass # XXX - NotImplementedError
+        if params:
+            target = params[0]
+        else:
+            target = self.nickname
+
+##         try:
+##             participant = getParticipantNamed(target)
+##         except service.UserNonexistantError:
+##             self.sendMessage(irc.ERR_NOSUCHNICK,
+##                              target, ":No such nickname.")
+##             return
+
+##         nick = participant.name
+##         user = participant.identityName
+
+##         # 'host' being the origin of this participant's connection,
+##         # the place sie calls home.  Typically the FQDN of the machine
+##         # the user is running their client off of, but other
+##         # interpretations are imaginable, as some might say there are
+##         # privacy/security issues in making such information public.
+##         host = participant.XXX
+
+##         # The participant's "real" name.  Usually contains nothing of
+##         # the sort, but rather any short bit of identifying
+##         # information which the nick doesn't convay on its own.  Such
+##         # as "King of Spain" or "http://twistedmatrix.com/users/elrey/"
+##         real_name = getIdentityNamed(participant.identityName).realName
+
+##         # The server this participant is connecting through.  For
+##         # answering questions such as "How can I use the server sie's
+##         # using?" and "That host is really poorly administered.  What
+##         # should I put in my blacklist file?"
+##         server = XXX
+##         server_info = XXX.desc
+
+##         self.sendMessage(irc.RPL_WHOISUSER,
+##                          nick, user, host, '*', ':' + real_name)
+##         self.sendMessage(irc.RPL_WHOISSERVER,
+##                          nick, server, ':' + server_info)
+
+##         if participant.status is not service.ONLINE:
+##             away_message = XXX or service.statuses[participant.status]
+##             self.sendMessage(irc.RPL_AWAY,
+##                              nick, ':' + away_message)
+
+##         if participant.idle_time:
+##             seconds_idle = time.time() - participant.idle_time:
+##                 self.sendMessage(irc.RPL_WHOISIDLE, nick, seconds_idle,
+##                                  ':seconds idle')
+
+##         self.sendMessage(irc.RPL_ENDOFWHOIS, nick, ':end of WHOIS')
 
 
     def irc_WHOWAS(self, prefix, params):
@@ -738,12 +788,12 @@ class IRCChatter(irc.IRC, service.WordsClientInterface):
 
         [Optional]
         """
-        if params: # message
+        if params and params[0]: # there is an away message
             self.participant.changeStatus(service.AWAY)
-            self.sendMessage("306", "You are now away.")
+            self.sendMessage(irc.RPL_NOWAWAY, "You are now away.")
         else:
             self.participant.changeStatus(service.ONLINE)
-            self.sendMessage("305", "You are no longer away.")
+            self.sendMessage(irc.RPL_UNAWAY, "You are no longer away.")
 
 
     def irc_REHASH(self, prefix, params):

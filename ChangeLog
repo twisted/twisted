@@ -1,3 +1,9 @@
+2002-02-12  Kevin Turner  <acapnotic@twistedmatrix.com>
+
+	* twisted/words/ircservice.py (IRCChatter.irc_AWAY): Fix bug
+	where you can never come back from being away (at least using
+	epic4).  Closes: #%d
+
 2002-02-11  Chris Armstrong  <carmstro@twistedmatrix.com>
 
 	* twisted/web/widgets.py: Changed Gadget.page to Gadget.pageFactory
@@ -16,7 +22,7 @@
 2002-02-09  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
 
 	* bin/eco: Created a command-line interpreter for ECO.
-	
+
 	* doc/man/eco.1: man page for bin/eco
 
 2002-02-09  Chris Armstrong  <carmstro@twistedmatrix.com>
@@ -38,14 +44,14 @@
 2002-02-08  Glyph Lefkowitz  <glyph@twistedmatrix.com>
 
 	* twisted/eco: Initial prototype of ECO, the Elegant C Overlay
-	macro engine. 
+	macro engine.
 
 2002-02-02  Paul Swartz <z3p@twistedmatrix.com>
 
-	* twisted/im/ircsupport.py:  Added support for the IRC protocol
-	to IM.
+        * twisted/im/ircsupport.py:  Added support for the IRC protocol
+        to IM.
 
-2002-02-02  Chris Armstrong  <carmstro@twistedmatrix.com>
+2002-02-02  Chris Armstrong <carmstro@twistedmatrix.com>
 
 	* twisted/python/deferred.py: added Deferred.addErrback, so now
 	it's easy to attach errbacks to deferreds when you don't care
@@ -55,7 +61,7 @@
 	displaying topics.
 
 2002-02-02  Paul Swartz <z3p@twistedmatrix.com>
-	
+
 	* SOCKSv4 support: there is now a protocols.socks, which contains
 	support for SOCKSv4, a TCP proxying protocol.  mktap also has
 	support for the new protocol.
@@ -63,13 +69,13 @@
 2002-02-02  Kevin Turner  <acapnotic@twistedmatrix.com>
 
 	* twisted/words/ircservice.py (IRCChatter.receiveDirectMessage),
-	(IRCChatter.receiveGroupMessage), 
+	(IRCChatter.receiveGroupMessage),
 	(IRCChatter.irc_PRIVMSG): Added CTCP ACTION <-> emote translation
 
 2002-02-01  Paul Swartz <z3p@twistedmatrix.com>
 
-	* twisted/im/tocsupport.py: Added support for most of the TOC
-	protocol to IM.
+        * twisted/im/tocsupport.py: Added support for most of the TOC
+        protocol to IM.
 
 
 2002-02-01  Chris Armstrong  <carmstro@twistedmatrix.com>
