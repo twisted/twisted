@@ -48,7 +48,7 @@ class Test(XMLRPC):
         raise RuntimeError
 
     def xmlrpc_fault(self):
-        return xmlrpc.Fault(12)
+        return xmlrpc.Fault(12, "hello")
 
 
 class XMLRPCTestCase(unittest.TestCase):
@@ -74,7 +74,7 @@ class XMLRPCTestCase(unittest.TestCase):
     def testErrors(self):
         for methodName in "fail", "deferFail", "fault", "noSuchMethod":
             l = []
-            d = self.proxy().callRemote("fail").addErrback(l.append)
+            d = self.proxy().callRemote(methodName).addErrback(l.append)
             while not l:
                 reactor.iterate()
             l[0].trap(xmlrpc.Fault)
