@@ -20,6 +20,9 @@ A group of classes which implement the observer/observable and
 publisher/subscriber pattern.
 """
 
+import warnings
+warnings.warn("twisted.python.observable is deprecated and will be removed", DeprecationWarning, 2)
+
 # System Imports
 import types
 import sys
