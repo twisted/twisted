@@ -728,6 +728,7 @@ class Request:
             method = 'SSL'
         else:
             method = 'INET'
+        self.received_headers["host"] = host
         self.host = (method, host, port)
 
     def getClientIP(self):
