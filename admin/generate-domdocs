@@ -1,4 +1,32 @@
-#!/usr/bin/python
+#!/usr/bin/env python
+
+# Twisted, the Framework of Your Internet
+# Copyright (C) 2001 Matthew W. Lefkowitz
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+### Twisted Preamble
+# This makes sure that users don't have to set up their environment
+# specially in order to run these programs from bin/.
+import sys,os,string
+
+if string.find(os.path.abspath(sys.argv[0]),'Twisted') != -1:
+    sys.path.append(os.path.dirname(
+        os.path.dirname(os.path.abspath(sys.argv[0]))))
+sys.path.append('.')
+### end of preamble
+
 
 import sys, os, re
 from pprint import pprint
@@ -74,38 +102,12 @@ class Cache:
                 print "%s matches %s! URL: %s" % (name, k, v)
 
 
-def munge(document, template, linkrel, cache):
-    # relative links
-    for node in findElementsWithAttribute(template,"href"):
-        node.setAttribute("href", node.getAttribute("href") + linkrel)
-    for node in findElementsWithAttribute(document, "href"):
-        href = node.getAttribute("href")
-        if not (href.startswith("http://") or href.startswith("mailto:")):
-            fname = href.split('/')[-1].split('.')
-            if len(fname) == 2 and fname[1] == 'html':
-                # print 'rel link', href
-                node.setAttribute("href", fname[0] + '.xhtml')
-    for node in findElementsWithAttribute(document, "class", "API"):
-        if len(node.childNodes) > 1:
-            print 'There are too many child nodes of this API link.'
-        newref = cache.match(node.childNodes[0].nodeValue)
-        if newref:
-            node2 = document.createElement("a")
-            node2.setAttribute("href", newref)
-            node2.childNodes = node.childNodes
-            node.childNodes = [node2]
-            print 'api:', newref
-    findNodesNamed(template, "title")[0].childNodes.extend(
-        findNodesNamed(document, 'title')[0].childNodes)
-    body = findNodesNamed(document, "body")[0]
-    tmplbody = findElementsWithAttribute(template, "class", "body")[0]
-    tmplbody.childNodes = body.childNodes
-    tmplbody.setAttribute("class", "content")
 
 class Walker:
-    def __init__(self, templ, cache):
+    def __init__(self, templ, cache, ext):
         self.templ = templ
         self.cache = cache
+        self.ext = ext
 
     def walk(self, ig, d, names):
         linkrel = '../' * (d.count('/')-1)
@@ -117,22 +119,58 @@ class Walker:
             if fext == '.html':
                 document = dom.parse(open(fullpath))
                 template = self.templ.cloneNode(1)
-                munge(document, template, linkrel, self.cache)
-                template.writexml(open(fname+".xhtml", 'wb'))
+                self.munge(document, template, linkrel)
+                template.writexml(open(fname+self.ext, 'wb'))
+
+
+    def munge(self, document, template, linkrel):
+        # relative links
+        for node in findElementsWithAttribute(template,"href"):
+            node.setAttribute("href", node.getAttribute("href") + linkrel)
+        for node in findElementsWithAttribute(document, "href"):
+            href = node.getAttribute("href")
+            if not (href.startswith("http://") or href.startswith("mailto:")):
+                fname = href.split('/')[-1].split('.')
+                if len(fname) == 2 and fname[1] == 'html':
+                    # print 'rel link', href
+                    node.setAttribute("href", fname[0] + self.ext)
+        for node in findElementsWithAttribute(document, "class", "API"):
+            if len(node.childNodes) > 1:
+                print 'There are too many child nodes of this API link.'
+            newref = self.cache.match(node.childNodes[0].nodeValue)
+            if newref:
+                node2 = document.createElement("a")
+                node2.setAttribute("href", newref)
+                node2.childNodes = node.childNodes
+                node.childNodes = [node2]
+                print 'api:', newref
+        findNodesNamed(template, "title")[0].childNodes.extend(
+            findNodesNamed(document, 'title')[0].childNodes)
+        body = findNodesNamed(document, "body")[0]
+        tmplbody = findElementsWithAttribute(template, "class", "body")[0]
+        tmplbody.childNodes = body.childNodes
+        tmplbody.setAttribute("class", "content")
+
 
 class Options(usage.Options):
     synopsis = "Usage: ./generate.py [options]"
     optParameters = [["template", "t", "doc/howto/template.tpl", "The template to follow for generating content."],
                      ["version", "v", str(copyright.version), "The version of API docs to link to"],
                      ["apidir", "a", "../doc/Twisted", "The location of the API documentation generated by HappyDoc."],
-                     ["docsdir", "d", "doc/howto"]]
+                     ["docsdir", "d", "doc/howto"],
+                     ["ext", "e", ".xhtml", "The extension of output files (and thus what links are munged to)"]]
+
 
 def main():
     opt = Options()
     opt.parseOptions(sys.argv[1:])
-    templ = dom.parse(open(opt.template))
-    c = Cache(opt.apidir, 'http://api-central')
-    os.path.walk(opt.docsdir, Walker(templ, c).walk, None)
+    if opt['ext'] == "None":
+        ext = ""
+    else:
+        ext = opt['ext']
+    templ = dom.parse(open(opt['template']))
+    c = Cache(opt['apidir'], 'http://twistedmatrix.com/documents/TwistedDocs/Twisted-%s/' % opt['version'])
+    os.path.walk(opt['docsdir'], Walker(templ, c, ext).walk, None)
 
 if __name__=='__main__':
     main()
