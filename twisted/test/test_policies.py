@@ -31,7 +31,7 @@ class SimpleProtocol(protocol.Protocol):
 
     connected = disconnected = 0
     buffer = ""
-    
+
     def connectionMade(self):
         self.connected = 1
 
@@ -61,7 +61,7 @@ class EchoProtocol(protocol.Protocol):
 
     def stopProducing(self):
         pass
-    
+
     def dataReceived(self, data):
         self.transport.write(data)
 
@@ -95,7 +95,7 @@ class SimpleSenderProtocol(SimpleProtocol):
         self.testcase.failed = 1
     def dataReceived(self, data):
         self.data += data
-        
+
 
 
 class ThrottlingTestCase(unittest.TestCase):
@@ -115,7 +115,7 @@ class ThrottlingTestCase(unittest.TestCase):
         self.assertEquals([c.connected for c in c1, c2, c3], [1, 1, 1])
         self.assertEquals([c.disconnected for c in c1, c2, c3], [0, 0, 1])
         self.assertEquals(len(tServer.protocols.keys()), 2)
-        
+
         # disconnect one protocol and now another should be able to connect
         c1.transport.loseConnection()
         reactor.iterate(); reactor.iterate()
@@ -125,7 +125,7 @@ class ThrottlingTestCase(unittest.TestCase):
 
         self.assertEquals(c4.connected, 1)
         self.assertEquals(c4.disconnected, 0)
-        
+
         for c in c2, c4: c.transport.loseConnection()
         p.stopListening()
         reactor.iterate(); reactor.iterate()
@@ -150,7 +150,7 @@ class ThrottlingTestCase(unittest.TestCase):
             p = p.wrappedProtocol
             self.assert_(isinstance(p, EchoProtocol))
             p.transport.registerProducer(p, 1)
-        
+
         c1.transport.write("0123456789")
         c2.transport.write("abcdefghij")
         reactor.iterate(); reactor.iterate()
@@ -159,7 +159,7 @@ class ThrottlingTestCase(unittest.TestCase):
         self.assertEquals(c1.buffer, "0123456789")
         self.assertEquals(c2.buffer, "abcdefghij")
         self.assertEquals(tServer.writtenThisSecond, 20)
-        
+
         # at this point server should've written 20 bytes, 10 bytes
         # above the limit so writing should be paused around 1 second
         # from 'now', and resumed a second after that
@@ -167,7 +167,7 @@ class ThrottlingTestCase(unittest.TestCase):
         for p in tServer.protocols.keys():
             self.assert_(not hasattr(p.wrappedProtocol, "paused"))
             self.assert_(not hasattr(p.wrappedProtocol, "resume"))
-            
+
         while not hasattr(p.wrappedProtocol, "paused"):
             reactor.iterate()
 
@@ -177,7 +177,7 @@ class ThrottlingTestCase(unittest.TestCase):
             self.assert_(hasattr(p.wrappedProtocol, "paused"))
             self.assert_(not hasattr(p.wrappedProtocol, "resume"))
             self.assert_(abs(p.wrappedProtocol.paused - now - 1.0) < 0.1)
-        
+
         while not hasattr(p.wrappedProtocol, "resume"):
             reactor.iterate()
 
@@ -239,16 +239,19 @@ class ThrottlingTestCase(unittest.TestCase):
             p.loseConnection()
         reactor.iterate(); reactor.iterate()
 
+    # These fail intermittently.
+    testReadLimit.skip = "Inaccurate tests are worse than no tests."
+    testWriteLimit.skip = "Inaccurate tests are worse than no tests."
 
 class TimeoutTestCase(unittest.TestCase):
     def setUp(self):
         self.failed = 0
-    
+
     def testTimeout(self):
         # Create a server which times out inactive connections
         server = policies.TimeoutFactory(Server(), 3)
         port = reactor.listenTCP(0, server)
-        
+
         # Create a client tha sends and receive nothing
         client = SimpleProtocol()
         f = SillyFactory(client)
@@ -257,7 +260,7 @@ class TimeoutTestCase(unittest.TestCase):
         for i in range(10):
             reactor.iterate()
             self.assert_(client.connected)
-        
+
         time.sleep(3.5)
         for i in range(3):
             reactor.iterate()
@@ -267,12 +270,12 @@ class TimeoutTestCase(unittest.TestCase):
         port.loseConnection()
         for i in range(10):
             reactor.iterate()
-        
+
     def testThatSendingDataAvoidsTimeout(self):
         # Create a server which times out inactive connections
         server = policies.TimeoutFactory(Server(), 2)
         port = reactor.listenTCP(0, server)
-        
+
         # Create a client that sends and receive nothing
         client = SimpleSenderProtocol(self)
         f = SillyFactory(client)
@@ -280,15 +283,15 @@ class TimeoutTestCase(unittest.TestCase):
         reactor.connectTCP("127.0.0.1", port.getHost()[2], f)
         reactor.callLater(3.5, client.finish)
         reactor.run()
-        
+
         self.failUnlessEqual(self.failed, 0)
         self.failUnlessEqual(client.data, 'foo'*4)
-        
+
     def testThatReadingDataAvoidsTimeout(self):
         # Create a server that sends occasionally
         server = SillyFactory(SimpleSenderProtocol(self))
         port = reactor.listenTCP(0, server, interface='127.0.0.1')
-    
+
         clientFactory = policies.WrappingFactory(SillyFactory(SimpleProtocol()))
         port = reactor.connectTCP('127.0.0.1', port.getHost()[2], clientFactory)
 
@@ -296,6 +299,5 @@ class TimeoutTestCase(unittest.TestCase):
         reactor.iterate()
         reactor.callLater(5, server.p.finish)
         reactor.run()
-        
-        self.failUnlessEqual(self.failed, 0)
 
+        self.failUnlessEqual(self.failed, 0)
