@@ -85,6 +85,7 @@ class SymbolicExpressionReceiver(protocol.Protocol):
         self.expq = []
         self.quoteLevel = 0
         self.quotes = []
+        self.devourComment = 0
     # I don't ever want to buffer more than 64k of data before bailing.
     maxUnparsedBufferSize = 32 * 1024 
     
@@ -125,6 +126,9 @@ class SymbolicExpressionReceiver(protocol.Protocol):
         self.quotes.append(newCurrentSexp)
         if self.listStack:
             self.listStack[-1].append(newCurrentSexp)
+        if self.listStack[-1][0] in (Atom('quote'), Atom('unquote')):
+            del self.listStack[-1]
+            del self.quotes[-2]
         self.listStack.append(newCurrentSexp)
 
 
@@ -141,17 +145,16 @@ class SymbolicExpressionReceiver(protocol.Protocol):
         if not self.listStack:                
             self._sexpRecv(aList)
 
-    def _tokenReceived(self, tok):
-                
+    def _tokenReceived(self, tok):        
         if self.listStack:
             self.listStack[-1].append(tok)
             if self.quotes and self.listStack[-1] is self.quotes[-1]:
                 del self.quotes[-1]
                 i = self.listStack.pop()
-                if not self.listStack:
-                    self._sexpRecv(i)
+            if not self.listStack:
+                self._sexpRecv(i)
         else:
-                self._sexpRecv(tok)
+            self._sexpRecv(tok)
 
 
     def _sexpRecv(self, xp):
@@ -159,7 +162,14 @@ class SymbolicExpressionReceiver(protocol.Protocol):
 
     def dataReceived(self, data):
         buffer = self.buffer + data
-        while buffer:
+        if self.devourComment:
+            i = string.find(buffer,"\n")
+            if i != -1:
+                buffer = buffer[i:]
+                self.devourComment = 0
+            else:
+                self.devourComment = 1
+        while buffer:            
             # eat any whitespace at the beginning of the string.
             m = WHITESPACE.match(buffer)
             if m:
@@ -201,6 +211,13 @@ class SymbolicExpressionReceiver(protocol.Protocol):
                 self.openQuote("quote")
                 buffer = buffer[1:]
                 continue
+            if buffer[0] == ";":
+                i = string.find(buffer,"\n")
+                if i != -1:
+                    buffer = buffer[i:]
+                    devourComment = 0
+                else:
+                    self.devourComment = 1
             m = STRING.match(buffer)
             if m:
                 end = m.end()
