@@ -1,12 +1,13 @@
-"""mDNS.
+"""mDNS with service discovery support.
 
 Usage:
 
-1. Call the module-level function startListening() when your app wishes
-   to use mDNS. Call the module-level function sttopListening() when your app finishes
-   using mDNS.
+1. Call the module-level function startListening() when your app
+   wishes to use mDNS, before doing any other operation. Call the
+   module-level function stopListening() when your app finishes using
+   mDNS.
 
-2. Use top level functions getIP() and subscribeService().
+2. Use top level functions resolve() and subscribeService().
 
 This makes sure you only run one resolver per process.
 """
@@ -14,11 +15,12 @@ This makes sure you only run one resolver per process.
 # TODO
 #
 # Check TTL of responses is 255
-#
-# Service discovery APIs
 
-from twisted.internet import reactor, defer
+import random, struct
+
+from twisted.internet import reactor, defer, protocol
 from twisted.protocols import dns
+from twisted.python import failure
 from twisted.python.components import Interface
 
 
@@ -62,7 +64,7 @@ class ServiceSubscription:
         self.resolver = resolver
         self.subscribers = []
         self.addresses = {} # map name to (domainname, port)
-        self.resolver._sendQuery([dns.Query(service, dns.PTR, dns.IN)])
+        self.resolver.protocol.write([dns.Query(service, dns.PTR, dns.IN)])
         # XXX schedule stage new lookups at intervals
     
     def unsubscribe(self, subscriber):
@@ -91,12 +93,14 @@ class mDNSResolver:
     """
 
     _users = 0
-
+    timeouts = (1, 3, 7)
+    
     def __init__(self):
         self.protocol = mDNSDatagramProtocol(self)
         self.subscriptions = {} # map service name to ServiceSubscription
         self.cachedDomains = {} # map .local domain name to IP
-
+        self.queries = {} # map tuple (dns type, name) to [list of Deferreds, list timeouts]
+    
     # external API
     
     def startListening(self):
@@ -119,77 +123,130 @@ class mDNSResolver:
             self.subscriptions[service] = ServiceSubscription(service, self)
         self.subscriptions[service].subscribe(subscriber)
 
-    def getIP(self, domain):
-        """Do A lookup."""
+    def query(self, query, timeouts=None):
+        """Return Deferred of dns.Message.
+
+        @param query: a dns.Query.
+        """
+        if timeouts is None:
+            timeouts = self.timeouts
+        d = defer.Deferred()
+        if self.queries.has_key((query.type, str(query.name))):
+            self.queries[(query.type, str(query.name))][0].append(d)
+        else:
+            self.queries[(query.type, str(query.name))] = [[d], timeouts[1:]]
+            reactor.callLater(timeouts[0], self._queryTimeout, query)
+            self.protocol.write([query])
+        return d
+    
+    def _queryTimeout(self, query):
+        l = self.queries.get((query.type, str(query.name)))
+        if not l:
+            return
+        timeouts = l[1]
+        if not timeouts:
+            del self.queries[(query.type, str(query.name))]
+            for d in l[0]:
+                d.errback(failure.Failure(defer.TimeoutError(query)))
+        elif self.protocol.transport:
+            l[1] = timeouts[1:]
+            reactor.callLater(timeouts[0], self._queryTimeout, query)
+            self.protocol.write([query])
+
+    def _cbResolved(self, message, domain):
+        for r in message.answers:
+            if r.type == dns.A and str(r.name) == domain:
+                return r.payload.dottedQuad()
+        return failure.Failure(defer.TimeoutError(domain))
+    
+    def resolve(self, domain):
+        """Do a A record lookup for domain.
+
+        @return: Deferred of the IP address.
+        """
         if self.cachedDomains.has_key(domain):
             return defer.succeed(self.cachedDomains[domain])
         else:
-            # XXX do lookup
-            pass
+            return self.query(dns.Query(domain, dns.ALL_RECORDS, dns.IN)).addCallback(
+                self._cbResolved, domain)
     
     # internal methods
     
-    def messageReceived(self, message, protocol, address = None):
+    def messageReceived(self, message, address):
         #print message.queries, message.answers
         for r in message.answers:
+            pattern = (r.type, str(r.name))
+            if self.queries.has_key(pattern):
+                for d in self.queries[pattern][0]:
+                    d.callback(message)
+                del self.queries[pattern]
             if r.type == dns.PTR:
                 service = r.name.name
                 if self.subscriptions.has_key(service):
-                    self._sendQuery([dns.Query(r.payload.name.name, dns.SRV, dns.IN)])
+                    self.query(dns.Query(r.payload.name.name, dns.SRV, dns.IN))
             elif r.type == dns.SRV:
                 name = r.name.name
                 for service, subscription in self.subscriptions.items():
+                    # for service '_ichat._tcp.local', the name for
+                    # iChat user might be 'Mr Smith._ichat._tcp.local'
                     if name.endswith(service):
                         # we might have gotten A record with this SRV, so to make sure we have its
                         # IP cached we put off the notification slightly
                         reactor.callLater(0, subscription.gotSRV, name[:-len(service) - 1], r.payload)
-                    break
+                        break
             elif r.type == dns.A:
                 # XXX need to deal with TTL
                 self.cachedDomains[str(r.name)] = r.payload.dottedQuad()
-    
-    def _cbGotQueryResult(self, result):
-        self.messageReceived(result, self.protocol)
-    
-    def _sendQuery(self, queries):
-        """Send a query."""
-        self.protocol.query((MDNS_ADDRESS, 5353), queries).addCallback(
-            self._cbGotQueryResult)
 
     def _removeSubscription(self, service):
         """Called by ServiceSubscription to remove itself."""
-        del self.subscription[service]
+        del self.subscriptions[service]
 
 
-class mDNSDatagramProtocol(dns.DNSDatagramProtocol):
+class mDNSDatagramProtocol(protocol.DatagramProtocol):
     """Multicast DNS support."""
+    
+    def __init__(self, mResolver):
+        self.mResolver = mResolver
 
     def startListening(self):
         reactor.listenMulticast(5353, self, listenMultiple=True)
         self.transport.joinGroup(MDNS_ADDRESS)
         self.transport.setTTL(255)
 
+    def datagramReceived(self, data, addr):
+        m = dns.Message()
+        m.fromStr(data)
+        self.mResolver.messageReceived(m, addr)
+
+    def write(self, queries, id=None):
+        if id is None:
+            id = random.randrange(2 ** 10, 2 ** 15)
+        m = dns.Message(id, recDes=1)
+        m.queries = queries
+        self.transport.write(m.toStr(), (MDNS_ADDRESS, 5353))
+
 
 theResolver = mDNSResolver()
 startListening = theResolver.startListening
 stopListening = theResolver.stopListening
-getIP = theResolver.getIP
+resolve = theResolver.resolve
 subscribeService = theResolver.subscribeService
 
 
 __all__ = ["IServiceSubscription", "ISubscriber", "stopListening", "startListening",
-           "getIP", "subscribeService"]
+           "resolve", "subscribeService"]
 
 
 if __name__ == '__main__':
     class Sub:
         def _resolved(self, ip, host):
             print host, "is actually", ip
-        
+
         def serviceAdded(self, name, host, port):
             print "%s is ('%s', %s)" % (name, host, port)
-            getIP(host).addCallback(self._resolved, host)
-    
+            resolve(host).addCallback(self._resolved, host)
+            resolve("nosuchhost.local").addCallback(self._resolved, "nosuchhost.local")
     startListening()
     print "Subscribing to _workstation._tcp.local, which should show all Macs on network"
     subscribeService("_workstation._tcp.local", Sub())
