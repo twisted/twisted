@@ -87,7 +87,7 @@ class FileDescriptorJellier(components.Adapter):
 components.registerAdapter(FileDescriptorJellier, iinternet.IFileDescriptor, ispread.IJellyable)
 
 def handleToFileDescriptor(handle):
-    return defer.succeed(7) # handle)
+    return defer.succeed(handle)
 
 def handleToSocket(handle, addressFamily, socketType):
     return handleToFileDescriptor(handle
@@ -104,13 +104,15 @@ class _DummyClass:
     pass
 
 def FileDescriptorUnjellier(unjellier, jellyList):
+    # Second half of the icky hack!
+    fdproto = unjellier.invoker.fdproto
     klass = reflect.namedAny(jellyList[0])
     inst = _DummyClass()
     inst.__class__ = klass
     state = unjellier.unjelly(jellyList[1])
     socketHandle = state.pop('socketHandle')
     inst.__dict__ = state
-    handleToSocket(socketHandle, klass.addressFamily, klass.socketType
+    handleToSocket(fdproto.fds.pop(0), klass.addressFamily, klass.socketType
         ).addCallback(socketInMyPocket, inst, 'socket'
         ).addErrback(log.err
         )

@@ -36,16 +36,16 @@ class ClientFactory(protocol.ClientFactory):
 def cbOwnedServer(result):
     print 'Owned server'
 
-def cbGetServer(port, avatar, proto, sname):
+def cbGetServer(port, avatar, sname):
     return avatar.callRemote('gotServer', sname
         ).addCallback(cbOwnedServer
         ).addErrback(log.err
         )
 
-def cbServerList(lst, avatar, proto):
+def cbServerList(lst, avatar):
     sname = lst.pop()
     return avatar.callRemote('getServer', sname,
-        ).addCallback(cbGetServer, avatar, proto, sname
+        ).addCallback(cbGetServer, avatar, sname
         ).addErrback(log.err
         )
 
@@ -68,8 +68,10 @@ def cbDescriptorChannel(channel, avatar):
     return d
 
 def cbChannelConnected(proto, avatar):
+    # Hack!  But a much smaller one than what it replaced.
+    avatar.broker.fdproto = proto
     return avatar.callRemote('getServerList'
-        ).addCallback(cbServerList, avatar, proto
+        ).addCallback(cbServerList, avatar
         ).addErrback(ebServerList
         )
 
