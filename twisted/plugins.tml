@@ -146,11 +146,6 @@ register("Bot-Creating Bot",
          type="twisted.words.bot",
          botType="botbot")
 
-register("Twisted Issues Interface Bot",
-         "twisted.issues.robot",
-         type="twisted.words.bot",
-         botType="issues")
-
 register("Twisted Inetd Server",
          "twisted.inetd.tap",
 	 description="An inetd(8) replacement.",
