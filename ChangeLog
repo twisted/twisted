@@ -1,6 +1,7 @@
 2003-07-04  Dave Peticolas  <dave@krondo.com>
 
 	* twisted/test/test_enterprise.py: add sqlite. more tests.
+	Add Postgres test.
 
 	* twisted/enterprise/util.py: fix bug in getKeyColumn
 

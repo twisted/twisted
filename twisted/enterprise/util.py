@@ -49,9 +49,9 @@ class DBError(Exception):
 ### Utility functions
 
 def getKeyColumn(rowClass, name):
-    name = name.lower()
+    lcname = name.lower()
     for keyColumn, type in rowClass.rowKeyColumns:
-        if name == keyColumn.lower():
+        if lcname == keyColumn.lower():
             return name
     return None
 

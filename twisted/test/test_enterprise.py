@@ -33,6 +33,9 @@ except: gadfly = None
 try: import sqlite
 except: sqlite = None
 
+try: from pyPgSQL import PgSQL
+except: PgSQL = None
+
 tableName = "testTable"
 childTableName = "childTable"
 
@@ -95,7 +98,7 @@ def randomizeRow(row, nullsOK=1):
                 value = ''
             else:
                 value = ''.join(map(lambda i:chr(random.randrange(32,127)),
-                                    xrange(random.randint(1, 500))))
+                                    xrange(random.randint(1, 64))))
         setattr(row, name, value)
         values[name] = value
     return values
@@ -228,7 +231,10 @@ class SQLReflectorTestCase(ReflectorTestCase):
     """Test cases for the SQL reflector.
     """
 
-    DB_NAME = "test"
+    DB_NAME = "twisted_test"
+    DB_USER = 'twisted_test'
+    DB_PASS = 'twisted_test'
+
     reflectorClass = SQLReflector
 
     def createReflector(self):
@@ -239,20 +245,22 @@ class SQLReflectorTestCase(ReflectorTestCase):
         return self.reflectorClass(self.dbpool, [TestRow, ChildRow])
 
     def destroyReflector(self):
+        deferredResult(self.dbpool.runOperation('DROP TABLE testTable'))
+        deferredResult(self.dbpool.runOperation('DROP TABLE childTable'))
         self.dbpool.close()
         self.stopDB()
 
-    def stopDB(self):
-        pass
+    def startDB(self): pass
+    def stopDB(self): pass
 
 
-class GadflyPool(ConnectionPool):
-    """A pool for gadfly -- just one connection at a time, please!
+class SinglePool(ConnectionPool):
+    """A pool for just one connection at a time.
     Remove this when ConnectionPool is fixed.
     """
 
-    def __init__(self, dbname, dbdir):
-        self.connection = gadfly.gadfly(dbname, dbdir)
+    def __init__(self, connection):
+        self.connection = connection
 
     def connect(self):
         return self.connection
@@ -288,7 +296,7 @@ class GadflyTestCase(SQLReflectorTestCase, unittest.TestCase):
         conn.close()
 
     def makePool(self):
-        return GadflyPool(self.DB_NAME, self.DB_DIR)
+        return SinglePool(gadfly.gadfly(self.DB_NAME, self.DB_DIR))
 
 
 class SQLiteTestCase(SQLReflectorTestCase, unittest.TestCase):
@@ -304,7 +312,16 @@ class SQLiteTestCase(SQLReflectorTestCase, unittest.TestCase):
         if os.path.exists(self.database): os.unlink(self.database)
 
     def makePool(self):
-        return ConnectionPool('sqlite', database=self.database)
+        return SinglePool(sqlite.connect(database=self.database))
+
+
+class PostgresTestCase(SQLReflectorTestCase, unittest.TestCase):
+    """Test cases for the SQL reflector using Postgres.
+    """
+
+    def makePool(self):
+        return ConnectionPool('pyPgSQL.PgSQL', database=self.DB_NAME,
+                              user=self.DB_USER, password=self.DB_PASS)
 
 
 class QuotingTestCase(unittest.TestCase):
@@ -320,3 +337,13 @@ class QuotingTestCase(unittest.TestCase):
 
 if gadfly is None: GadflyTestCase.skip = 1
 if sqlite is None: SQLiteTestCase.skip = 1
+
+if PgSQL is None: PostgresTestCase.skip = 1
+else:
+    try:
+        conn = PgSQL.connect(database=SQLReflectorTestCase.DB_NAME,
+                             user=PostgresTestCase.DB_USER,
+                             password=PostgresTestCase.DB_PASS)
+        conn.close()
+    except:
+        PostgresTestCase.skip = 1
