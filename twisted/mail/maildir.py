@@ -62,7 +62,7 @@ class AbstractMaildirDomain:
         """Save a message for a given user
         """
         name, domain = user.name, user.domain
-        dir = os.path.join(self.userDirectory(name), 'inbox')
+        dir = self.userDirectory(name)
         fname = _generateMaildirName() 
         filename = os.path.join(dir, 'tmp', fname)
         fp = open(filename, 'w')
