@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-__version__ = "$Revision: 1.48 $"[11:-2]
+__version__ = "$Revision: 1.49 $"[11:-2]
 
 import types
 import weakref
@@ -399,7 +399,7 @@ class DictionaryModel(Wrapper):
         if self.submodels.has_key(name):
             return self.submodels[name]
         orig = self.original
-        if not orig.has_key(name):
+        if name not in orig:
             return None
         sm = adaptToIModel(orig[name], self, name)
         self.submodels[name] = sm
