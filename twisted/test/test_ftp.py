@@ -345,13 +345,16 @@ class FTPTestCase(unittest.TestCase):
 
 class TestUtilityFunctions(unittest.TestCase):
     def testCleanPath(self):
-        evil_paths = [r"..\/*/foobar/ding//dong/\\**"]
-        for ep in evil_paths:
-            log.msg(ftp.cleanPath(ep))
-        self.fail('this test needs more work')
+        import os.path as osp
+        evilPaths = [r"..\/*/foobar/ding//dong/\\**", 
+        r"../../\\**/*/fhet/*/..///\\//..///#$#221./*"]
+        exorcisedPaths = ["..\/foobar/ding/dong","../../../#$#221."]
+        for x, ep in enumerate(evilPaths):
+            cp = ftp.cleanPath(ep)
+            self.failUnlessEqual(cp, exorcisedPaths[x])
+            log.msg(cp)
 
-TestUtilityFunctions.todo = 'workin on it'
-    
+    testCleanPath.todo = 'this test needs more work'
 
 class TestFTPFactory(FTPTestCase):
     def testBuildProtocol(self):
@@ -554,23 +557,29 @@ class TestDTPTesting(FTPTestCase):
         self.assertEquals(lenRxLines, avatar.finalFileSize)
 
 
-
 class TestAnonymousAvatar(FTPTestCase):
     def testAnonymousLogin(self):
-        c, s, pump = self.cnx.getCSPumpTuple()
+        c, s, pump, send = self.cnx.getCSTuple()
+
         pump.flush()
-        self.assertEquals(c.f.lines[-1], ftp.RESPONSE[ftp.WELCOME_MSG])
+        got = c.lines[-2:]
+        wanted = ftp.RESPONSE[ftp.WELCOME_MSG].split('\r\n')
+        self.assertEquals(wanted, got, "wanted: %s\n\ngot: %s" % (wanted,got))
+
         c.sendLine('USER anonymous')
         pump.flush()
-        self.assertEquals(c.f.lines[-1], ftp.RESPONSE[ftp.GUEST_NAME_OK_NEED_EMAIL])
+        self.assertEquals(c.lines[-1], ftp.RESPONSE[ftp.GUEST_NAME_OK_NEED_EMAIL])
+
         c.sendLine('PASS w00t@twistedmatrix.com')
         pump.flush()
-        self.assertEquals(c.f.lines[-1], ftp.RESPONSE[ftp.GUEST_LOGGED_IN_PROCEED], c.f.lines)
+        wanted = ftp.RESPONSE[ftp.GUEST_LOGGED_IN_PROCEED]
+        got = c.lines[-1]
+        self.assertEquals(wanted, got, "wanted: %s\n\ngot: %s" % (wanted,got))
 
     testAnonymousLogin.todo = 'this test needs to be refactored' 
     
     def doAnonymousLogin(self,c,s,pump):
-        c, s, pump = self.cnx.getCSPumpTuple()
+        c, s, pump, send = self.cnx.getCSTuple()
         pump.flush()
         c.sendLine('USER anonymous')
         pump.flush()
@@ -579,37 +588,37 @@ class TestAnonymousAvatar(FTPTestCase):
 
 
     def testPWDOnLogin(self):
-        c, s, pump = self.cnx.getCSPumpTuple()
+        c, s, pump, send = self.cnx.getCSTuple()
         self.doAnonymousLogin(c,s,pump)
         c.sendLine('PWD')
         pump.flush()
-        self.assertEquals(c.f.lines[-1], '257 "/" is current directory.')
+        self.assertEquals(c.lines[-1], '257 "/" is current directory.')
 
     testPWDOnLogin.todo = 'need to implement fake filesystem for testing' 
 
     def testCWD(self):
         import warnings
         warnings.warn("""This test is VERY FRAGILE! in fact, its so fragile it won't run on any other computer but mine""")
-        c, s, pump = self.cnx.getCSPumpTuple()
+        c, s, pump, send = self.cnx.getCSTuple()
         send = c.sendLine
         flush = pump.flush
 
         self.doAnonymousLogin(c,s,pump)
 
         send('CWD src'); flush()
-        self.assertEquals(c.f.lines[-1], ftp.RESPONSE[ftp.REQ_FILE_ACTN_COMPLETED_OK])
+        self.assertEquals(c.lines[-1], ftp.RESPONSE[ftp.REQ_FILE_ACTN_COMPLETED_OK])
 
         send('PWD'); flush()
-        self.assertEquals(c.f.lines[-1], '257 "/src" is current directory.')
+        self.assertEquals(c.lines[-1], '257 "/src" is current directory.')
 
         send('CWD freemind'); flush()
-        self.assertEquals(c.f.lines[-1], ftp.RESPONSE[ftp.REQ_FILE_ACTN_COMPLETED_OK])
+        self.assertEquals(c.lines[-1], ftp.RESPONSE[ftp.REQ_FILE_ACTN_COMPLETED_OK])
 
         send('PWD'); flush()
-        self.assertEquals(c.f.lines[-1], '257 "/src/freemind" is current directory.')
+        self.assertEquals(c.lines[-1], '257 "/src/freemind" is current directory.')
 
         send('CWD ../radix'); flush()
-        self.assertEquals(c.f.lines[-1], ftp.RESPONSE[ftp.REQ_FILE_ACTN_COMPLETED_OK])
+        self.assertEquals(c.lines[-1], ftp.RESPONSE[ftp.REQ_FILE_ACTN_COMPLETED_OK])
 
         send('PWD'); flush()
         send('CWD ../../../'); flush()
@@ -618,7 +627,7 @@ class TestAnonymousAvatar(FTPTestCase):
 
 
     def testCDUP(self):
-        c, s, pump = self.cnx.getCSPumpTuple()
+        c, s, pump, send = self.cnx.getCSTuple()
         send = c.sendLine
         flush = pump.flush
 
@@ -626,33 +635,51 @@ class TestAnonymousAvatar(FTPTestCase):
         send('CWD src/freemind/doc'); flush()
 
         send('PWD'); flush()
-        self.assertEquals(c.f.lines[-1], '257 "/src/freemind/doc" is current directory.')
+        self.assertEquals(c.lines[-1], '257 "/src/freemind/doc" is current directory.')
     
         send('CDUP'); flush()
         send('PWD'); flush()
-        self.assertEquals(c.f.lines[-1], '257 "/src/freemind" is current directory.')
+        self.assertEquals(c.lines[-1], '257 "/src/freemind" is current directory.')
 
         send('CDUP'); flush()
         send('PWD'); flush()
-        self.assertEquals(c.f.lines[-1], '257 "/src" is current directory.')
+        self.assertEquals(c.lines[-1], '257 "/src" is current directory.')
 
         send('CDUP'); flush()
         send('PWD'); flush()
-        self.assertEquals(c.f.lines[-1], '257 "/" is current directory.')
+        self.assertEquals(c.lines[-1], '257 "/" is current directory.')
 
     testCDUP.todo = 'need to implement fake filesystem for testing' 
 
-    def testWelcomeMessage(self):
-        c, s, pump = self.cnx.getCSPumpTuple()
-        pump.flush()
-        self.assertEquals(c.f.lines[-1], ftp.RESPONSE[ftp.WELCOME_MSG])
-
-    testWelcomeMessage.todo = 'not ready yet'
+#    def testWelcomeMessage(self):
+#        c, s, pump, send = self.cnx.getCSTuple()
+#        pump.flush()
+#        self.assertEquals(c.lines[-1], ftp.RESPONSE[ftp.WELCOME_MSG])
+#
+#    testWelcomeMessage.todo = 'not ready yet'
 
     def testGetUserUIDAndGID(self):
         pass
 
 #TestAnonymousAvatar.skip = 'skip until we can support it'
+
+
+# -- Experimenting with process protocol
+
+class ChildProcessProtocol(protocol.ProcessProtocol):
+    def __init__(self, doneLoading):
+        self.doneLoading = doneLoading
+
+    def outReceived(self, data):
+        if 'set uid/gid' in data:
+            self.doneLoading.callback("twistd ready")
+
+    def errReceived(self, data):
+        self.doneLoading.errback(data)
+
+    def processEnded(self, status):
+        self.doneLoading.callback("It's done")
+
 
 # -- Client Tests -----------------------------------------------------------
 
