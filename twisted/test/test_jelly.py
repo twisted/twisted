@@ -12,6 +12,9 @@ from twisted.test import test_newjelly
 
 class JellyTestCase(test_newjelly.JellyTestCase):
     jc = jelly
+    if test_newjelly.haveDatetime:
+        def testDateTime(self):
+            test_newjelly.JellyTestCase.testDateTime(self)
 
     def testPersistentStorage(self):
         perst = [{}, 1]

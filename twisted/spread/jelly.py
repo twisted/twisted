@@ -81,6 +81,16 @@ from types import ClassType
 import copy
 
 try:
+    import datetime
+except ImportError:
+    class datetime:
+        def sorry(self, *args, **kw):
+            raise NotImplementedError("Datetime unserializing not supported in Python < 2.3")
+        datetime = sorry
+        timedelta = sorry
+        date = sorry
+        time = sorry
+try:
     from types import BooleanType
 except ImportError:
     BooleanType = None
@@ -426,6 +436,18 @@ class _Jellier:
                 return ['module', obj.__name__]
             elif objType is BooleanType:
                 return ['boolean', obj and 'true' or 'false']
+            elif objType is datetime.datetime:
+                if obj.tzinfo:
+                    raise NotImplementedError, "Currently can't jelly datetime objects with tzinfo"
+                return ['datetime', '%s %s %s %s %s %s %s' % (obj.year, obj.month, obj.day, obj.hour, obj.minute, obj.second, obj.microsecond)]
+            elif objType is datetime.time:
+                if obj.tzinfo:
+                    raise NotImplementedError, "Currently can't jelly datetime objects with tzinfo"
+                return ['time', '%s %s %s %s' % (obj.hour, obj.minute, obj.second, obj.microsecond)]
+            elif objType is datetime.date:
+                return ['date', '%s %s %s' % (obj.year, obj.month, obj.day)]
+            elif objType is datetime.timedelta:
+                return ['timedelta', '%s %s %s' % (obj.days, obj.seconds, obj.microseconds)]
             elif objType is ClassType or issubclass(type, objType):
                 return ['class', qual(obj)]
             else:
@@ -563,6 +585,19 @@ class _Unjellier:
             return exp[0] == 'true'
         else:
             return Unpersistable(exp[0])
+
+    def _unjelly_datetime(self, exp):
+        return datetime.datetime(*map(int, exp[0].split()))
+
+    def _unjelly_date(self, exp):
+        return datetime.date(*map(int, exp[0].split()))
+
+    def _unjelly_time(self, exp):
+        return datetime.time(*map(int, exp[0].split()))
+
+    def _unjelly_timedelta(self, exp):
+        days, seconds, microseconds = map(int, exp[0].split())
+        return datetime.timedelta(days=days, seconds=seconds, microseconds=microseconds)
 
     def unjellyInto(self, obj, loc, jel):
         o = self.unjelly(jel)
@@ -763,6 +798,10 @@ class SecurityOptions:
                              "str": 1,
                              "int": 1,
                              "float": 1,
+                             "datetime": 1,
+                             "time": 1,
+                             "date": 1,
+                             "timedelta": 1,
                              "NoneType": 1}
         if hasattr(types, 'UnicodeType'):
             self.allowedTypes['unicode'] = 1

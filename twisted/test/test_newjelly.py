@@ -58,6 +58,11 @@ else:
     class NewStyle(object):
         pass
 
+try:
+    import datetime
+    haveDatetime = 1
+except ImportError:
+    haveDatetime = 0
 
 class JellyTestCase(unittest.TestCase):
     """
@@ -84,6 +89,17 @@ class JellyTestCase(unittest.TestCase):
             m = self.jc.unjelly(c)
             self.failUnless(isinstance(m, NewStyle))
             self.assertIdentical(m.n2, m.n3)
+
+    if haveDatetime:
+        def testDateTime(self):
+            dtn = datetime.datetime.now()
+            dtd = datetime.datetime.now() - dtn
+            input = [dtn, dtd]
+            c = self.jc.jelly(input)
+            output = self.jc.unjelly(c)
+            self.assertEquals(input, output)
+            self.assertNotIdentical(input, output)
+        testDateTime.todo = 'Newjelly does not support datetime yet.'
 
     def testSimple(self):
         """
