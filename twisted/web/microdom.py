@@ -150,7 +150,7 @@ class CDATASection(CharacterData):
         stream.write("]]>")
 
 class Element(Node):
-    def __init__(self, tagName, attributes=None, parentNode=None):
+    def __init__(self, tagName, attributes=None, parentNode=None, filename=None, markpos=None):
         Node.__init__(self, parentNode)
         if attributes is None:
             self.attributes = {}
@@ -159,6 +159,8 @@ class Element(Node):
             for k, v in self.attributes.items():
                 self.attributes[k] = v.replace('&quot;', '"')
         self.nodeName = self.tagName = tagName
+        self._filename = filename
+        self._markpos = markpos
 
     def hasAttributes(self):
         return 1
@@ -200,6 +202,34 @@ class Element(Node):
             stream.write(">")
         else:
             stream.write("/>")
+
+    def __repr__(self):
+        rep = "Element(%s" % repr(self.nodeName)
+        if self.attributes:
+            rep += ", attributes=%r" % (self.attributes,)
+        if self._filename:
+            rep += ", filename=%r" % (self._filename,)
+        if self._markpos:
+            rep += ", markpos=%r" % (self._markpos,)
+        return rep + ')'
+
+    def __str__(self):
+        rep = "<" + self.nodeName
+        if self._filename or self._markpos:
+            rep += " ("
+        if self._filename:
+            rep += repr(self._filename)
+        if self._markpos:
+            rep += " line %s column %s" % self._markpos
+        if self._filename or self._markpos:
+            rep += ")"
+        for item in self.attributes.items():
+            rep += " %s=%r" % item
+        if self.hasChildNodes():
+            rep += " >...</%s>" % self.nodeName
+        else:
+            rep += " />"
+        return rep
         
 
 class MicroDOMParser(XMLParser):
@@ -232,9 +262,7 @@ class MicroDOMParser(XMLParser):
             name = name.lower()
         if name in self.autoClosedTags:
             self._shouldAutoClose = name
-        el = Element(name, attributes, parent)
-        el._filename = self.filename
-        el._markpos = self.saveMark()
+        el = Element(name, attributes, parent, self.filename, self.saveMark())
         self.elementstack.append(el)
         if parent:
             parent.appendChild(el)
