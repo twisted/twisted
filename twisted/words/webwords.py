@@ -20,11 +20,13 @@ import time
 #Twisted imports
 from twisted.web import html, server, error, widgets
 from twisted.internet import passport
+from twisted.persisted import styles
 
 #Sibling imports
 import service
 
-class AccountCreationWidget(widgets.Form):
+class AccountCreationWidget(widgets.Form, styles.Versioned):
+    persistenceVersion = 1
     title = "Account Creation"
     formFields = [
         ['string','Username','username',''],
@@ -33,6 +35,10 @@ class AccountCreationWidget(widgets.Form):
 
     def __init__(self, service):
         self.service = service
+
+    def upgradeToVersion1(self):
+        #this object should get garbage collected..
+        pass
 
     def process(self, write, request, **args):
         if args.has_key("username"):
@@ -67,12 +73,17 @@ class ParticipantInfoWidget(widgets.Widget):
                service.statuses[self.part.status])]
 
 
-class ParticipantListWidget(widgets.Gadget, widgets.Widget):
+class ParticipantListWidget(widgets.Gadget, widgets.Widget, styles.Versioned):
+    persistedVersion = 1
     def __init__(self, service):
         widgets.Gadget.__init__(self)
         self.service = service
         self.page = Page
         self.title = "Participant List"
+
+    def upgradeToVersion1(self):
+        #This object should get garbage collected..
+        pass
         
     def display(self, request):
         """Get HTML for a directory of participants.
@@ -85,13 +96,13 @@ class ParticipantListWidget(widgets.Gadget, widgets.Widget):
     def getWidget(self, name, request):
         """Get info for a particular participant.
         """
-        print 'GETTING A PARTICIPANT'
         if name in self.service.participants.keys():
             return ParticipantInfoWidget(name, self.service)
         else:
             return error.NoResource("That participant does not exist.")
 
-class WordsGadget(widgets.Gadget, widgets.Widget):
+class WordsGadget(widgets.Gadget, widgets.Widget, styles.Versioned):
+    persistenceVersion = 1
     title = "WebWords Administration Interface"
     def __init__(self, svc):
         widgets.Gadget.__init__(self)
@@ -99,6 +110,11 @@ class WordsGadget(widgets.Gadget, widgets.Widget):
         self.putWidget("create", AccountCreationWidget(svc))
         self.putWidget("users", ParticipantListWidget(svc))
         self.page = Page
+
+    def upgradeToVersion1(self):
+        #This object should get garbage collected...
+        pass
+
 
     def display(self, request):
         return [html.linkList([[request.childLink("create"),
@@ -123,7 +139,16 @@ class Page(widgets.WidgetPage):
     ''')
 
 
-class WebWordsAdminSite(server.Site):
+class WebWordsAdminSite(server.Site, styles.Versioned):
+    persistenceVersion = 1
     def __init__(self, svc):
         res = WordsGadget(svc)
         server.Site.__init__(self, res)
+
+    def upgradeToVersion1(self):
+        self.__init__(self.service)
+        del self.service
+
+AccountCreation = AccountCreationWidget
+ParticipantsDirectory = ParticipantListWidget
+AdminDir = WordsGadget
