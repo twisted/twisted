@@ -75,7 +75,7 @@ class Application(log.Logger):
         See the documentation for twisted.python.delay.Delayed for details.
         """
         self.delayeds.append(delayed)
-        if running:
+        if running and self.running:
             delayeds.append(delayed)
 
     def setUID(self):

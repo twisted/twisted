@@ -174,11 +174,12 @@ class Server(Connection):
         self.startReading()
         self.connected = 1
 	self.logstr = "%s,%s,%s" % (self.protocol.__class__.__name__, sessionno, self.hostname)
+        self.repstr = "<%s #%s on %s>" % (self.protocol.__class__.__name__, self.sessionno, self.server.port)
 
     def __repr__(self):
         """A string representation of this connection.
 	"""
-	return "<%s #%s on %s>" % (self.protocol.__class__.__name__, self.sessionno, self.server.port)
+	return self.repstr
 
     def logPrefix(self):
         """Return the prefix to log with when I own the logging thread.
