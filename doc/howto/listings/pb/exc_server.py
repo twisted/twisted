@@ -1,7 +1,7 @@
 #! /usr/bin/python
 
 from twisted.spread import pb
-import twisted.internet.app
+from twisted.internet import reactor
 
 class MyError(pb.Error):
     """This is an Expected Exception. Something bad happened."""
@@ -22,9 +22,8 @@ class One(pb.Root):
         raise MyError2(msg)
 
 def main():
-    app = twisted.internet.app.Application("exc_server")
-    app.listenTCP(8800, pb.BrokerFactory(One()))
-    app.run(save=0)
+    reactor.listenTCP(8800, pb.BrokerFactory(One()))
+    reactor.run()
 
 if __name__ == '__main__':
     main()
