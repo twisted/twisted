@@ -25,6 +25,12 @@ class DirectoryListing(page.Page):
       return files
 
     def getDynamicChild(self, name, request):
+      # Protect against malicious URLs like '..'
+      if static.isDangerous(name):
+          return static.dangerousPathError
+
+      # Return a DirectoryListing or an ImageDisplay resource, depending on
+      # whether the path corresponds to a directory or to a file
       path = os.path.join(self.directory,name)
       if os.path.exists(path):
           if os.path.isdir(path):
