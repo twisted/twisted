@@ -1,47 +1,15 @@
-
 """An asynchronous mapping to DB-API.
 
 This is designed to integrate with twisted.internet.threadtask.
 """
 import traceback
-    
+
 from twisted.spread import pb
 from twisted.internet import task, threadtask
 from twisted.python import reflect, log, defer, failure
 
-class EntityObject:
-    """Default class for database objects. Knows how to save itself back to the db.
-    Should use a class derived from this class for each database table. Objects of these
-    classes are constructed by the object loader.
-    """
-    columns = []     # list of column names and types for the table I came from
-    keyColumns = []  # list of key columns to identify instances in the db
-    tableName = ""
-    updateSQL = ""
-    
-    def updateMe(self):
-        """update my contents to the database.
-        """
-        args = []
-        
-        # build update attributes
-        for column, type, typeid in self.columns:
-            found = 0
-            # be sure not to update key columns            
-            for keyColumn, type in self.keyColumns:
-                if column == keyColumn:
-                    found = 1
-            if found:
-                continue
-            args.append(self.__dict__[column])
-            
-        # build where clause
-        for keyColumn, type in self.keyColumns:
-            args.append( self.__dict__[keyColumn])
-
-        sql = self.updateSQL % tuple(args)
-        return self.augmentation.runOperation(sql)
-
+# sibling imports
+import entity
 
 class Transaction:
     def __init__(self, pool, connection):
@@ -210,22 +178,23 @@ class Augmentation:
         apply(self.dbpool.interaction, (interaction,d.callback,d.errback,)+args, kw)
         return d
         
-    def loadObjectsFrom(self, tableName, keyColumns, entityClass = EntityObject, whereClause = "1 = 1"):
+    def loadObjectsFrom(self, tableName, keyColumns, entityClass = entity.Entity, whereClause = "1 = 1"):
         """Create a set of python objects of <entityClass> from the contents of a table
         populated with appropriate data members. The constructor for <entityClass> must take
         no args. Example to use this:
 
-        class EmployeeEntity:
+        class EmployeeEntity(entity.EntityObject):
             pass
             
         def gotEmployees(employees):
             for emp in employees:
                 emp.manager = "fred smith"
-                emp.updateMe()
+                emp.updateEntity()
 
         manager.loadObjectsFrom("employee",
                                 ["employee_name", "varchar"],
-                                EmployeeEntity).addCallback(getEmployees)
+                                "employee_name like 'm%%'",
+                                EmployeeEntity).addCallback(gotEmployees)
 
         NOTE: this functionality is experimental. be careful.
         """
@@ -254,7 +223,7 @@ class Augmentation:
         rows = transaction.fetchall()
 
         # populate entityClass data
-        self.buildSQL(entityClass, tableName, columns, keyColumns)
+        entity.buildEntityClass(self, entityClass, tableName, columns, keyColumns)
 
         # construct the objects
         results = []        
@@ -268,84 +237,5 @@ class Augmentation:
         #print "RESULTS", results
         return results
 
-    def buildSQL(self, entityClass, tableName, columns, keyColumns):
-        """build the SQL to update objects of <entityClass> to the database. This 
-        populates the class attributes used when doing updates.
-        """
 
-        if entityClass.tableName and entityClass.tableName != tableName:
-            raise ("ERROR: class %s has already had SQL generated for table %s." % (repr(entityClass), tableName) )
-
-        entityClass.tableName = tableName
-        entityClass.columns = columns
-        entityClass.keyColumns = keyColumns
-        entityClass.augmentation = self
-
-        sql = "UPDATE %s SET" % tableName
-
-        # build update attributes
-        first = 1        
-        for column, type, typeid in columns:
-            found = 0
-            # be sure not to update key columns
-            for keyColumn, ktype in keyColumns:
-                print "column", column, keyColumn
-                if column == keyColumn:
-                    found = 1
-            if found:
-                continue
-            if not first:
-                sql = sql + ", "
-            sql = sql + "  %s = %s" % (column, quote("%s", type))
-            first = 0
-
-        # build where clause
-        first = 1
-        sql = sql + "  WHERE "
-        for keyColumn, type in keyColumns:
-            if not first:
-                sql = sql + " AND "
-            sql = sql + "   %s = %s " % (keyColumn, quote("%s", type) )
-            first = 0
-
-        print "Generated SQL:", sql
-        entityClass.updateSQL = sql
-        return 1
-
-
-
-### Utility functions
-
-
-NOQUOTE = 1
-USEQUOTE = 2
-
-dbTypeMap = {
-    "bool": NOQUOTE,    
-    "int2": NOQUOTE,
-    "int4": NOQUOTE,
-    "float8": NOQUOTE,
-    "char": USEQUOTE,
-    "varchar": USEQUOTE,
-    "text": USEQUOTE,
-    "timestamp": USEQUOTE
-    }
-
-
-def safe(text):
-    """Make a string safe to include in an SQL statement
-    """
-    return text.replace("'", "''")
-
-def quote(value, typeCode):
-    """Add quotes for text types and no quotes for integer types.
-    NOTE: uses Postgresql type codes..
-    """
-    q = dbTypeMap.get(typeCode, None)
-    if not q:
-        raise ("Type %s not known" % typeCode)
-    if q == NOQUOTE:
-        return value
-    elif q == USEQUOTE:
-        return "'%s'" % safe(value)
-
+safe = entity.safe
