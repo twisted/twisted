@@ -15,7 +15,7 @@ class IRCChatter(irc.IRC):
     participant = None
     pendingLogin = None
     hostname = "nowhere"
-    servicename = "twisted"
+    servicename = "twisted.words"
 
     def receiveContactList(self, contactList):
         for name, status in contactList:
@@ -179,6 +179,8 @@ class IRCChatter(irc.IRC):
         #<< who glyph
         #>> :benford.openprojects.net 352 glyph #python glyph adsl-64-123-27-108.dsl.austtx.swbell.net benford.openprojects.net glyph H :0 glyph
         #>> :benford.openprojects.net 315 glyph glyph :End of /WHO list.
+        if not params:
+            self.sendLine(":%s 315 :/WHO not supported.")
         name = params[0]
         if name[0] == '#':
             channame = name[1:]
@@ -192,7 +194,7 @@ class IRCChatter(irc.IRC):
             self.sendLine(":%s 315 %s #%s :End of /WHO list." %
                           (self.servicename, self.nickname, group.name))
         else:
-            raise NotImplementedError("user 'who' not implemented")
+            self.sendLine(":%s 315 :User /WHO not implemented")
 
     def irc_NAMES(self, prefix, params):
         #<< NAMES #python
