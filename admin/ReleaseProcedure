@@ -10,6 +10,7 @@ TEST, TEST.
        we've actually had a release once where a newer --user worked with older --personals but *not*
        new --personals, and I never tested new --personals!)
      * Run the test.tas from Twisted/admin/ with the latest `twistd'; this tests upgrading code.
+     * Run "./bin/twistd -y admin/echo.py": this tests -y
  * Also make sure that the words .tap remained compatible; start the words server's .tap on some out-of-the-way port
        (same as above, I've gotta automate this)
 
