@@ -47,6 +47,7 @@ import basic
 
 # twisted imports
 from twisted.internet import interfaces, reactor, protocol
+from twisted.protocols import policies
 from twisted.python import log
 
 
@@ -856,7 +857,7 @@ class Request:
         pass
 
 
-class HTTPChannel(basic.LineReceiver):
+class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     """A receiver for HTTP requests."""
 
     length = 0
@@ -868,12 +869,20 @@ class HTTPChannel(basic.LineReceiver):
     # set in instances or subclasses
     requestFactory = Request
 
+    # Timeout connections after 12 hours of inactivity
+    timeOut = 60 * 60 * 12
+    _savedTimeOut = None
 
     def __init__(self):
         # the request queue
         self.requests = []
 
+    def connectionMade(self):
+        self.setTimeout(self.timeOut)
+    
     def lineReceived(self, line):
+        self.resetTimeout()
+
         if self.__first_line:
             # if this connection is not persistent, drop any data which
             # the client (illegally) sent after the last request.
@@ -942,6 +951,11 @@ class HTTPChannel(basic.LineReceiver):
         self.__first_line = 1
         del self._command, self._path, self._version
 
+        # Disable the idle timeout, in case this request takes a long
+        # time to finish generating output.
+        if self.timeOut:
+            self._savedTimeOut = self.setTimeout(None)
+
         req = self.requests[-1]
         req.requestReceived(command, path, version)
 
@@ -1000,10 +1014,18 @@ class HTTPChannel(basic.LineReceiver):
             # notify next request it can start writing
             if self.requests:
                 self.requests[0].noLongerQueued()
+            else:
+                if self._savedTimeOut:
+                    self.setTimeout(self._savedTimeOut)
         else:
             self.transport.loseConnection()
+    
+    def timeoutConnection(self):
+        log.msg("Timing out client: %s" % str(self.transport.getPeer()))
+        policies.TimeoutMixin.timeoutConnection(self)
 
     def connectionLost(self, reason):
+        self.setTimeout(None)
         for request in self.requests:
             request.connectionLost(reason)
 
