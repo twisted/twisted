@@ -1,5 +1,5 @@
 #!/bin/sh
-set -e
+set -e -x
 for file in doc/man/*.1;
 do filename=`echo $file | sed 's/\.1$//'`
    python twisted/lore/man2lore.py $filename.1 > $filename-man.html
@@ -7,11 +7,15 @@ done
 baseurl=http://twistedmatrix.com/documents/TwistedDocs/TwistedDocs-$1/api/%s.html
 templ=doc/howto/template.tpl
 for doc in doc/man doc/howto doc/specifications; do
-  ./bin/hlint $doc/*.html
+  for file in $doc/*.html; do
+    ./bin/hlint $file
+  done
   ./bin/generatelore --docsdir $doc -t $templ --baseurl $baseurl -l ../howto/
 done
 cp admin/book.tex doc/howto
-./bin/html2latex -s doc/howto/*.html doc/man/*.html doc/specifications/*.html
+for file in doc/howto/*.html doc/man/*.html doc/specifications/*.html; do
+  ./bin/html2latex -s $file
+done
 cd doc/howto
 for i in 1 2 3;do latex book.tex;done
 dvips -o book.ps book.dvi
