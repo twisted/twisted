@@ -91,10 +91,7 @@ class PortCleanerUpper(unittest.TestCase):
         for p in ports:
             if p.connected:
                 p.loseConnection()
-                try:
-                    util.spinWhile(lambda :p.connected)
-                except:
-                    pass
+                util.spinWhile(lambda :p.connected)
 
 
 
