@@ -111,8 +111,10 @@ class LatexSpitter(XMLParser):
     mapStart_pre = '\\begin{verbatim}'
     mapEnd_pre = '\\end{verbatim}'
 
-    mapStart_em = '\\begin{em}'
-    mapEnd_em = '\\end{em}'
+    mapStart_strong = mapStart_em = '\\begin{em}'
+    mapEnd_strong = mapEnd_em = '\\end{em}'
+
+    mapStart_q = mapEnd_q = '"'
 
 
 class SectionLatexSpitter(LatexSpitter):
