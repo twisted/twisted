@@ -3,7 +3,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.13 $"[11:-2]
+__version__ = "$Revision: 1.14 $"[11:-2]
 
 import random
 import time
@@ -279,4 +279,9 @@ class PerspectiveWrapper(Resource):
             if sc:
                 return sc.getChildWithDefault(path, request)
             return self.noAuthResource.getChildWithDefault(path, request)
+
+
+from twisted.web.woven import interfaces, utils
+## Dumb hack until we have an ISession and use interface-to-interface adaption
+components.registerAdapter(utils.WovenLivePage, GuardSession, interfaces.IWovenLivePage)
 

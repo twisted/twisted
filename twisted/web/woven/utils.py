@@ -2,7 +2,7 @@ from __future__ import nested_scopes
 
 from twisted.web import server
 from twisted.web import util as webutil
-from twisted.web.woven import model, interfaces
+from twisted.web.woven import interfaces
 from twisted.python import failure, log, components
 
 
@@ -12,20 +12,6 @@ def renderFailure(fail, request):
     log.err(fail)
     request.write(webutil.formatFailure(fail))
     #request.finish()
-
-def _getModel(self):
-    if not isinstance(self.model, model.Model): # see __class__.doc
-         return self.model
-
-    if self.submodel is None:
-##         if hasattr(self.node, 'toxml'):
-##             nodeText = self.node.toxml()
-##         else:
-##             widgetDict = self.__dict__
-        return ""
-##        raise NotImplementedError, "No model attribute was specified on the node."
-
-    return self.model.lookupSubmodel(self.submodel)
 
 
 def doSendPage(self, d, request):
@@ -126,8 +112,6 @@ class WovenLivePage:
         else:
             self.input(inp)
 
-components.registerAdapter(WovenLivePage, server.Session, interfaces.IWovenLivePage)
-
 
 class Stack:
     def __init__(self, stack=None):
@@ -191,4 +175,8 @@ class SetId:
 
 def createSetIdFunction(theId):
     return SetId(theId)
+
+
+
+components.registerAdapter(WovenLivePage, server.Session, interfaces.IWovenLivePage)
 

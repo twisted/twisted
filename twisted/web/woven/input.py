@@ -28,7 +28,7 @@ from twisted.python.reflect import qual
 from twisted.web import domhelpers
 from twisted.web.woven import template, controller, utils
 
-__version__ = "$Revision: 1.29 $"[11:-2]
+__version__ = "$Revision: 1.30 $"[11:-2]
 
 controllerFactory = controller.controllerFactory
 
@@ -146,8 +146,6 @@ class InputHandler(controller.Controller):
         Controller.
         """
         self._parent.aggregateInvalid(request, inputhandler, data)
-
-    _getMyModel = utils._getModel
 
     def commit(self, request, node, data):
         """

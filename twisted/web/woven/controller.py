@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.53 $"[11:-2]
+__version__ = "$Revision: 1.54 $"[11:-2]
 
 import os
 import cgi
@@ -339,7 +339,6 @@ class LiveController(Controller):
     def gatheredControllers(self, v, d, request):
         Controller.gatheredControllers(self, v, d, request)
         sess = request.getSession(interfaces.IWovenLivePage)
-        print "THIS PAGE IS GOING LIVE:", self
         self.pageSession = sess
         sess.setCurrentPage(self)
         sess.currentId = request.currentId
