@@ -24,7 +24,7 @@ import agent
 import os, sys, base64, getpass
 
 def verifyHostKey(transport, host, pubKey, fingerprint):
-    goodKey = isInKnownHosts(host, pubKey)
+    goodKey = isInKnownHosts(host, pubKey, transport.factory.options)
     if goodKey == 1: # good key
         return defer.succeed(1)
     elif goodKey == 2: # AAHHHHH changed
@@ -61,24 +61,26 @@ def verifyHostKey(transport, host, pubKey, fingerprint):
         known_hosts.close()
         return defer.succeed(1)
 
-def isInKnownHosts(host, pubKey):
+def isInKnownHosts(host, pubKey, options):
     """checks to see if host is in the known_hosts file for the user.
     returns 0 if it isn't, 1 if it is and is the same, 2 if it's changed.
     """
     keyType = common.getNS(pubKey)[0]
     retVal = 0
-    if not os.path.exists(os.path.expanduser('~/.ssh/')):
+    
+    if not options['known-hosts'] and not os.path.exists(os.path.expanduser('~/.ssh/')):
         print 'Creating ~/.ssh directory...'
         os.mkdir(os.path.expanduser('~/.ssh'))
+    kh_file = options['known-hosts'] or '~/.ssh/known_hosts'
     try:
-        known_hosts = open(os.path.expanduser('~/.ssh/known_hosts'))
+        known_hosts = open(os.path.expanduser(kh_file))
     except IOError:
         return 0
     for line in known_hosts.xreadlines():
         split = line.split()
-        if len(split) != 3: # old 4-field known_hosts entry (ssh1?)
-            continue
-        hosts, hostKeyType, encodedKey = split
+#        if len(split) != 3: # old 4-field known_hosts entry (ssh1?)
+#            continue
+        hosts, hostKeyType, encodedKey = split[:3]
         if host not in hosts.split(','): # incorrect host
             continue
         if hostKeyType != keyType: # incorrect type of key

@@ -89,6 +89,9 @@ class SSHUnixClientFactory(protocol.ClientFactory):
         obj.__class__ = newClass
         SSHUnixClientProtocol.__init__(obj)
         log.msg('returning %s' % obj)
+        d = self.d
+        self.d = None
+        d.callback(None)
         return obj
 
 class SSHUnixServerFactory(protocol.Factory):

@@ -157,8 +157,11 @@ class EchoTransport:
         self.closed = 0
 
     def write(self, data):
+        log.msg(repr(data))
         self.proto.outReceived(data)
         self.proto.outReceived('\r\n')
+        if '\x00' in data: # mimic 'exit' for the shell test
+            self.loseConnection()
 
     def loseConnection(self):
         if self.closed: return
@@ -241,7 +244,9 @@ class ConchSessionForTestAvatar:
     def __init__(self, avatar):
         theTest.assert_(isinstance(avatar, ConchTestAvatar))
         self.cmd = None
+        self.proto = None
         self.ptyReq = False
+        self.eof = 0
 
     def getPty(self, term, windowSize, attrs):
         log.msg('pty req')
@@ -257,10 +262,10 @@ class ConchSessionForTestAvatar:
         self.cmd = 'shell'
 
     def execCommand(self, proto, cmd):
+        self.cmd = cmd
         theTest.assert_(cmd.split()[0] in ['false', 'echo', 'secho', 'eecho','jumboliah'])
         if cmd == 'jumboliah':
             raise ConchError('bad exec')
-        self.cmd = cmd
         self.proto = proto
         f = cmd.split()[0]
         if f == 'false':
@@ -278,17 +283,25 @@ class ConchSessionForTestAvatar:
             t.write(cmd[6:])
             t.loseConnection()
         
+#    def closeReceived(self):
+#        #if self.proto:
+#        #   self.proto.transport.loseConnection()
+#        self.loseConnection()
+
+    def eofReceived(self):
+        self.eof = 1
 
     def closed(self):
         global theTest
-        log.msg('closing cmd %s' % self.cmd)
+        log.msg('closed cmd "%s"' % self.cmd)
         if self.cmd == 'echo hello':
             rwl = self.proto.session.remoteWindowLeft
             theTest.assertEquals(rwl, 4)
         elif self.cmd == 'eecho hello':
             rwl = self.proto.session.remoteWindowLeft
             theTest.assertEquals(rwl, 4)
-        self.proto.transport.loseConnection()
+        elif self.cmd == 'shell':
+            theTest.assert_(self.eof)
 
 from twisted.python import components
 components.registerAdapter(ConchSessionForTestAvatar, ConchTestAvatar, session.ISession)
@@ -398,10 +411,9 @@ class SSHTestClientConnection(connection.SSHConnection):
 
     name = 'ssh-connection'
     results = 0
-    totalResults = 8 
+    totalResults = 8
 
     def serviceStarted(self):
-        self.openChannel(SSHUnknownChannel(conn = self))
         self.openChannel(SSHTestFailExecChannel(conn = self))
         self.openChannel(SSHTestFalseChannel(conn = self))
         self.openChannel(SSHTestEchoChannel(localWindow=4, localMaxPacket=5, conn = self))
@@ -409,10 +421,14 @@ class SSHTestClientConnection(connection.SSHConnection):
         self.openChannel(SSHTestMaxPacketChannel(localWindow=12, localMaxPacket=1, conn = self))
         self.openChannel(SSHTestShellChannel(conn = self))
         self.openChannel(SSHTestSubsystemChannel(conn = self))
+        self.openChannel(SSHUnknownChannel(conn = self))
 
     def addResult(self):
         self.results += 1
         log.msg('got %s of %s results' % (self.results, self.totalResults))
+        if self.results == self.totalResults:
+            self.transport.expectedLoseConnection = 1
+            theTest.fac.proto.expectedLoseConnection = 1
         if self.results == self.totalResults:
             self.transport.expectedLoseConnection = 1
             theTest.fac.proto.expectedLoseConnection = 1
@@ -449,13 +465,19 @@ class SSHTestFailExecChannel(channel.SSHChannel):
     def channelOpen(self, ignore):
         d = self.conn.sendRequest(self, 'exec', common.NS('jumboliah'), 1)
         d.addCallback(self._cbRequestWorked)
-        d.addErrback(lambda x,s=self:log.flushErrors() and s.conn.addResult())
+        d.addErrback(self._ebRequestWorked)
         log.msg('opened fail exec')
 
     def _cbRequestWorked(self, ignored):
         global theTest
         theTest.fail('fail exec succeeded')
         reactor.crash()
+
+    def _ebRequestWorked(self, ignored):
+        log.msg('fail exec finished')
+        log.flushErrors()
+        self.conn.addResult()
+        self.loseConnection()
 
 class SSHTestFalseChannel(channel.SSHChannel):
 
@@ -493,7 +515,6 @@ class SSHTestFalseChannel(channel.SSHChannel):
             reactor.crash()
         log.msg('finished false')
         self.conn.addResult()
-        self.loseConnection()
         return 1
 
 class SSHTestEchoChannel(channel.SSHChannel):
@@ -543,7 +564,6 @@ class SSHTestEchoChannel(channel.SSHChannel):
         theTest.assert_(self.eofCalled)
         log.msg('finished echo')
         self.conn.addResult()
-        self.loseConnection()
         return 1
 
 class SSHTestErrChannel(channel.SSHChannel):
@@ -585,7 +605,7 @@ class SSHTestErrChannel(channel.SSHChannel):
     def closed(self):
         global theTest
         if self.status != 0:
-            theTest.fail('echo exit status was not 0: %i' % self.status)
+            theTest.fail('err exit status was not 0: %i' % self.status)
             reactor.crash()
         if self.testBuf != "hello\r\n":
             theTest.fail('err did not return hello: %s' % repr(self.testBuf))
@@ -594,7 +614,6 @@ class SSHTestErrChannel(channel.SSHChannel):
         theTest.assert_(self.eofCalled)
         log.msg('finished err')
         self.conn.addResult()
-        self.loseConnection()
         return 1
 
 class SSHTestMaxPacketChannel(channel.SSHChannel):
@@ -644,7 +663,6 @@ class SSHTestMaxPacketChannel(channel.SSHChannel):
         theTest.assert_(self.eofCalled)
         log.msg('finished max packet')
         self.conn.addResult()
-        self.loseConnection()
         return 1
 
 class SSHTestShellChannel(channel.SSHChannel):
@@ -652,6 +670,7 @@ class SSHTestShellChannel(channel.SSHChannel):
     name = 'session'
     testBuf = ''
     eofCalled = 0
+    closeCalled = 0
 
     def openFailed(self, reason):
         theTest.fail('shell open failed: %s' % reason)
@@ -674,8 +693,8 @@ class SSHTestShellChannel(channel.SSHChannel):
         reactor.crash()
 
     def _cbShellOpen(self, ignored):
-        self.write('testing the shell!')
-        self.loseConnection()
+        self.write('testing the shell!\x00')
+        self.conn.sendEOF(self)
 
     def _ebShellOpen(self, reason):
         theTest.fail('shell request failed: %s' % reason)
@@ -695,10 +714,10 @@ class SSHTestShellChannel(channel.SSHChannel):
         if self.status != 0:
             log.msg('shell exit status was not 0: %i' % self.status)
             reactor.crash()
-        theTest.assertEquals(self.testBuf, 'testing the shell!\r\n')
+        theTest.assertEquals(self.testBuf, 'testing the shell!\x00\r\n')
         theTest.assert_(self.eofCalled)
+        log.msg('finished shell')
         self.conn.addResult()
-        self.loseConnection()
 
 class SSHTestSubsystemChannel(channel.SSHChannel):
 
@@ -735,7 +754,7 @@ class SSHTestSubsystemChannel(channel.SSHChannel):
         
         d3 = self.conn.sendGlobalRequest('bar', 'foo', 1)
         d3.addCallback(self._cbThirdGlobal)
-        d3.addErrback(lambda x,s=self: s.conn.addResult() and s.loseConnection())
+        d3.addErrback(lambda x,s=self: log.msg('subsystem finished') or s.conn.addResult() or s.loseConnection())
 
     def _ebRealRequestFailed(self, reason):
         global theTest
@@ -916,6 +935,63 @@ class SSHTransportTestCase(unittest.TestCase):
             self.fail('test took too long')
         timeout = reactor.callLater(10, _failTest)
         reactor.spawnProcess(p, ssh_path, cmds)
+        # wait for process to finish
+        while not p.done:
+            reactor.iterate(0.1)
+
+        # cleanup
+        fac.proto.done = 1
+        fac.proto.transport.loseConnection()
+        reactor.iterate()
+
+        try:
+            timeout.cancel()
+        except:
+            pass
+
+    def testOurServerCmdLineClient(self):
+        """test the Conch server against the cmdline
+        client
+        """
+        cmd = ('conch -p %i -l testuser '
+               '--known-hosts ./kh_test '
+               '--user-authentications publickey '
+               '--host-key-algorithms ssh-rsa '
+               '-K direct '
+               '-i dsa_test '
+               'localhost '
+               'echo goodbye')
+        global theTest
+        theTest = self
+        realm = ConchTestRealm()
+        p = portal.Portal(realm)
+        p.registerChecker(ConchTestPublicKeyChecker())
+        fac = SSHTestFactory()
+        fac.portal = p
+        theTest.fac = fac
+        self.server = reactor.listenTCP(0, fac, interface="127.0.0.1")
+        port = self.server.getHost().port
+        import twisted
+        twisted_path = os.path.dirname(twisted.__file__)
+        conch_path = os.path.abspath('%s/../bin/conch' % twisted_path)
+        cmds = (cmd % port).split()
+        p = SSHTestOpenSSHProcess()
+        def _failTest():
+            try:
+                os.kill(p.transport.pid, 9)
+            except OSError:
+                pass
+            try:
+                fac.proto.transport.loseConnection()
+            except AttributeError:
+                pass
+            reactor.iterate(0.1)
+            reactor.iterate(0.1)
+            reactor.iterate(0.1)
+            p.done = 1
+            self.fail('test took too long')
+        timeout = reactor.callLater(10, _failTest)
+        reactor.spawnProcess(p, conch_path, cmds)
         # wait for process to finish
         while not p.done:
             reactor.iterate(0.1)

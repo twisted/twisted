@@ -357,7 +357,7 @@ class SSHConnection(service.SSHService):
             del self.localToRemoteChannel[channel.id]
             del self.channels[channel.id]
             del self.channelsToRemoteChannel[channel]
-            self.deferreds[localChannel] = []
+            self.deferreds[channel.id] = []
             log.callWithLogger(channel, channel.closed)
 
     # methods to override

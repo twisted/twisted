@@ -30,16 +30,19 @@ class ConchOptions(usage.Options):
                      ['connection-usage', 'K', None],
                      ['port', 'p', None, 'Connect to this port.  Server must be on the same port.'],
                      ['option', 'o', None, 'Ignored OpenSSH options'],
-                    ]
+                     ['host-key-algorithms', '', ''],
+                     ['known-hosts', '', 'File to check for host keys'],
+                     ['user-authentications', '', 'Types of user authentications to use.'],
+                   ]
 
     optFlags = [['version', 'V', 'Display version number only.'],
                 ['compress', 'C', 'Enable compression.'],
                 ['log', 'v', 'Log to stderr'],
                 ['nocache', 'I', 'Do not allow connection sharing over this connection.'],
                 ['nox11', 'x', 'Disable X11 connection forwarding (default)'],
-                ['agent', 'A', 'Enable authentication agent forwarding.'],
-                ['noagent', 'a', 'Disable authentication agent forwarding (default.'],
-                 ['reconnect', 'r', 'Reconnect to the server if the connection is lost.'],
+                ['agent', 'A', 'Enable authentication agent forwarding'],
+                ['noagent', 'a', 'Disable authentication agent forwarding (default)'],
+                ['reconnect', 'r', 'Reconnect to the server if the connection is lost.'],
                ]
 
     identitys = []
@@ -57,6 +60,7 @@ class ConchOptions(usage.Options):
                 sys.exit("Unknown cipher type '%s'" % cipher)
         self['ciphers'] = ciphers
 
+
     def opt_macs(self, macs):
         "Specify MAC algorithms"
         macs = macs.split(',')
@@ -65,7 +69,18 @@ class ConchOptions(usage.Options):
                 sys.exit("Unknown mac type '%s'" % mac)
         self['macs'] = macs
 
-#    def opt_user_authentications(self, uas):
+    def opt_host_key_algorithms(self, hkas):
+        "Select host key algorithms"
+        hkas = hkas.split(',')
+        for hka in hkas:
+            if hka not in SSHClientTransport.supportedPublicKeys:
+                sys.exit("Unknown host key type '%s'" % hka)
+        self['host-key-algorithms'] = hkas
+
+    def opt_user_authentications(self, uas):
+        "Choose how to authenticate to the remote server"
+        self['user-authentications'] = uas.split(',')
+
     def opt_connection_usage(self, conns):
         conns = conns.split(',')
         connTypes = connect.connectTypes.keys()

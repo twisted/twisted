@@ -107,8 +107,7 @@ class SSHTransportBase(protocol.Protocol):
     def sendPacket(self, messageType, payload):
         payload = chr(messageType)+payload
         if self.outgoingCompression:
-            payload = self.outgoingCompression.compress(payload)
-            payload = payload+self.outgoingCompression.flush(2)
+            payload = self.outgoingCompression.compress(payload) + self.outgoingCompression.flush(2)
         if self.currentEncryptions:
             bs = self.currentEncryptions.enc_block_size
         else:
@@ -117,18 +116,13 @@ class SSHTransportBase(protocol.Protocol):
         lenPad = bs-(totalSize%bs)
         if lenPad < 4:
             lenPad = lenPad+bs
-        randomPad = entropy.get_bytes(lenPad)
-        packet = struct.pack('!LB', 1+len(payload)+lenPad, lenPad)+ \
-                payload+randomPad
+        packet = struct.pack('!LB', totalSize+lenPad-4, lenPad)+ \
+                payload+entropy.get_bytes(lenPad)
         assert len(packet)%bs == 0, '%s extra bytes in packet'%(len(packet)%bs)
         if self.currentEncryptions:
-            encPacket = self.currentEncryptions.encrypt(packet)
-            assert len(encPacket) == len(packet), '%s %s'%(len(encPacket), len(packet))
+            encPacket = self.currentEncryptions.encrypt(packet) + self.currentEncryptions.makeMAC(self.outgoingPacketSequence, packet)
         else:
             encPacket = packet
-        if self.currentEncryptions:
-            d = self.currentEncryptions.makeMAC(self.outgoingPacketSequence, packet)
-            encPacket = encPacket+d
         self.transport.write(encPacket)
         self.outgoingPacketSequence+=1
 
@@ -268,9 +262,9 @@ class SSHTransportBase(protocol.Protocol):
         if self.currentEncryptions == None:
             return 0
         elif direction == "out":
-            return self.currentEncryptions.outCip != None
+            return bool(self.currentEncryptions.enc_block_size)
         elif direction == "in":
-            return self.currentEncryptions.outCip != None
+            return bool(self.currentEncryptions.dec_block_size)
         elif direction == "both":
             return self.isEncrypted("in")and self.isEncrypted("out")
         else:
@@ -588,7 +582,7 @@ class SSHClientTransport(SSHTransportBase):
     def ssh_NEWKEYS(self, packet):
         if packet != '':
             self.sendDisconnect(DISCONNECT_PROTOCOL_ERROR, "NEWKEYS takes no data")
-        if not hasattr(self.nextEncryptions, 'outCip'):
+        if not self.nextEncryptions.enc_block_size:
             self._gotNewKeys = 1
             return
         self.currentEncryptions = self.nextEncryptions
@@ -650,12 +644,10 @@ class SSHCiphers:
         'blowfish-ctr':('Blowfish', 16, 1),
         'idea-ctr':('IDEA', 16, 1),
         'cast128-ctr':('CAST', 16, 1),
-        'none':(None, None), 
      }
     macMap = {
         'hmac-sha1': 'sha', 
         'hmac-md5': 'md5', 
-        'none': None, 
      }
 
     def __init__(self, outCip, inCip, outMac, inMac):
@@ -663,15 +655,19 @@ class SSHCiphers:
         self.inCipType = inCip
         self.outMacType = outMac
         self.inMacType = inMac
+        self.enc_block_size = 0
+        self.dec_block_size = 0
 
     def setKeys(self, outIV, outKey, inIV, inKey, outInteg, inInteg):
-        self.outCip = self._getCipher(self.outCipType, outIV, outKey)
-        self.enc_block_size = self.outCip.block_size
-        self.inCip = self._getCipher(self.inCipType, inIV, inKey)
-        self.dec_block_size = self.inCip.block_size
+        o = self._getCipher(self.outCipType, outIV, outKey)
+        self.encrypt = o.encrypt
+        self.enc_block_size = o.block_size
+        o = self._getCipher(self.inCipType, inIV, inKey)
+        self.decrypt = o.decrypt
+        self.dec_block_size = o.block_size
         self.outMAC = self._getMAC(self.outMacType, outInteg)
         self.inMAC = self._getMAC(self.inMacType, inInteg)
-        self.verify_digest_size = self.inMAC[2]
+        self.verify_digest_size = self.inMAC[3]
 
     def _getCipher(self, cip, iv, key):
         modName, keySize, counterMode = self.cipherMap[cip]
@@ -691,26 +687,28 @@ class SSHCiphers:
         else:
             ds = mod.digest_size
         key = key[: ds]+'\x00'*(64-ds)
-        return mod, key, ds
+        i = XOR.new('\x36').encrypt(key)
+        o = XOR.new('\x5c').encrypt(key)
+        return mod, i,o, ds
 
     def encrypt(self, blocks):
-        return self.outCip and self.outCip.encrypt(blocks) or blocks
+        return blocks
 
     def decrypt(self, blocks):
-        return self.inCip and self.inCip.decrypt(blocks) or blocks
+        return blocks
 
     def makeMAC(self, seqid, data):
         data = struct.pack('>L', seqid)+data
-        mod, key, ds = self.outMAC
-        inner = mod.new(XOR.new('\x36').encrypt(key)+data)
-        outer = mod.new(XOR.new('\x5c').encrypt(key)+inner.digest())
+        mod, i, o, ds = self.outMAC
+        inner = mod.new(i+data)
+        outer = mod.new(o+inner.digest())
         return outer.digest()
 
     def verify(self, seqid, data, mac):
         data = struct.pack('>L', seqid)+data
-        mod, key, ds = self.inMAC
-        inner = mod.new(XOR.new('\x36').encrypt(key)+data)
-        outer = mod.new(XOR.new('\x5c').encrypt(key)+inner.digest())
+        mod, i,o, ds = self.inMAC
+        inner = mod.new(i+data)
+        outer = mod.new(o+inner.digest())
         return mac == outer.digest()
 
 class _Counter:

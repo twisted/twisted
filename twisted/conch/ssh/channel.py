@@ -155,22 +155,22 @@ class SSHChannel(log.Logger):
 
         @type data: C{str}
         """
+        #if not data: return
         if self.buf:
             self.buf += data
             return
-        if len(data) > self.remoteWindowLeft:
-            data, self.buf = data[: self.remoteWindowLeft],  \
-                            data[self.remoteWindowLeft:]
-            self.areWriting = 0  
+        top = len(data)
+        if top > self.remoteWindowLeft:
+            data, self.buf = data[:self.remoteWindowLeft], data[self.remoteWindowLeft:]
+            self.areWriting = 0
             self.stopWriting()
-        if not data: return
-        while len(data) > self.remoteMaxPacket:
-            self.conn.sendData(self, data[: self.remoteMaxPacket])
-            data = data[self.remoteMaxPacket:]
-            self.remoteWindowLeft-=self.remoteMaxPacket
-        if data:
-            self.conn.sendData(self, data)
-            self.remoteWindowLeft-=len(data)
+            top = self.remoteWindowLeft
+        rmp = self.remoteMaxPacket
+        write = self.conn.sendData
+        r = range(0, top, rmp)
+        for offset in r:
+            write(self, data[offset: offset+rmp])
+        self.remoteWindowLeft-=top
         if self.closing and not self.buf:
             self.loseConnection() # try again
 

@@ -50,6 +50,8 @@ class SSHClientFactory(protocol.ClientFactory):
             trans.supportedMACs = self.options['macs']
         if self.options['compress']:
             trans.supportedCompressions[0:1] = ['zlib']
+        if self.options['host-key-algorithms']:
+            trans.supportedPublicKeys = self.options['host-key-algorithms']
         return trans
 
 class SSHClientTransport(transport.SSHClientTransport):
