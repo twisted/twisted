@@ -16,9 +16,8 @@
 from twisted.trial import unittest
 import string, random, copy
 
-from twisted.web import server, resource, widgets, guard, util
+from twisted.web import server, resource, util
 from twisted.internet import app, defer
-from twisted.cred import service, identity, perspective, authorizer
 from twisted.protocols import http, loopback
 from twisted.python import log, reflect
 
@@ -92,87 +91,6 @@ class SiteTest(unittest.TestCase):
         sres1.putChild("",sres2)
         site = server.Site(sres1)
         assert site.getResourceFor(DummyRequest([''])) is sres2, "Got the wrong resource."
-
-class SimpleWidget(widgets.Widget):
-    def display(self, request):
-        return ['correct']
-
-class TextDeferred(widgets.Widget):
-    def __init__(self, text):
-        self.text = text
-
-    def display(self, request):
-        d = defer.Deferred()
-        d.callback([self.text])
-        return [d]
-
-
-class DeferredWidget(widgets.Widget):
-    def display(self, request):
-        d = defer.Deferred()
-        d.callback(["correct"])
-        return [d]
-
-class MultiDeferredWidget(widgets.Widget):
-    def display(self, request):
-        d = defer.Deferred()
-        d2 = defer.Deferred()
-        d3 = defer.Deferred()
-        d.callback([d2])
-        d2.callback([d3])
-        d3.callback(["correct"])
-        return [d]
-
-class WidgetTest(unittest.TestCase):
-    def testSimpleRenderSession(self):
-        w1 = SimpleWidget()
-        d = DummyRequest([''])
-        widgets.WidgetResource(w1).render(d)
-        assert d.finished
-        assert d.written == ['correct']
-
-    def testDeferredRenderSession(self):
-        w1 = DeferredWidget()
-        d = DummyRequest([''])
-        widgets.WidgetResource(w1).render(d)
-        assert d.finished
-        assert d.written == ['correct']
-
-    def testMultiDeferredRenderSession(self):
-        w1 = MultiDeferredWidget()
-        d = DummyRequest([''])
-        widgets.WidgetResource(w1).render(d)
-        assert d.finished
-        assert d.written == ['correct']
-
-class GuardTest(unittest.TestCase):
-    def setUp(self):
-        self.auth = authorizer.DefaultAuthorizer()
-        self.app = app.Application("guard", authorizer=self.auth)
-        ident = identity.Identity("bob", authorizer=self.auth)
-        ident.setPassword("joe")
-        self.auth.addIdentity(ident)
-        self.svc = service.Service("simple", authorizer=self.auth, serviceParent=self.app)
-        self.psp = perspective.Perspective('jethro',ident.name)
-        self.svc.addPerspective(self.psp)
-        ident.addKeyForPerspective(self.psp)
-
-    def testSuccess(self):
-        g = guard.ResourceGuard(SimpleResource(), self.svc)
-        d = DummyRequest([])
-        g.render(d)
-        assert d.written != ['correct']
-        assert d.finished
-        d = DummyRequest([])
-        d.site = self
-        d.addArg('username', 'bob')
-        d.addArg('password', 'joe')
-        d.addArg('perspective', 'jethro')
-        d.addArg('__formtype__', reflect.qual(guard.AuthForm))
-        g.render(d)
-        assert d.finished, "didn't finish"
-        assert d.written == ['correct'], "incorrect result: %s" % d.written
-
 
 # Conditional requests:
 # If-None-Match, If-Modified-Since
