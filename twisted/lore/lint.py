@@ -146,7 +146,7 @@ class DefaultTagChecker(TagChecker):
         for node in domhelpers.findNodesNamed(dom, 'a'):
             if not node.hasAttribute('href'):
                 continue
-            text = node.childNodes[0].data
+            text = domhelpers.getNodeText(node)
             proto = urlparse.urlparse(text)[0]
             if proto:
                 if text != node.getAttribute('href',''):
