@@ -178,7 +178,7 @@ def htmlUnknown(x):
 def htmlDict(d):
     io = StringIO()
     w = io.write
-    w('<div class="dict"><span class="heading">Dictionary %d</span>' % id(d))
+    w('<div class="dict"><span class="heading">Dictionary instance @ %s</span>' % hex(id(d)))
     w('<table class="dict">')
     for k, v in d.items():
 
@@ -191,7 +191,7 @@ def htmlDict(d):
 def htmlList(l):
     io = StringIO()
     w = io.write
-    w('<div class="list"><span class="heading">List %d</span>' % id(l))
+    w('<div class="list"><span class="heading">List instance @ %s</span>' % hex(id(l)))
     for i in l:
         w('<div class="listItem">%s</div>' % htmlrepr(i))
     w('</div>')
@@ -202,9 +202,9 @@ def htmlInst(i):
         s = i.__html__()
     else:
         s = html.escape(saferepr(i))
-    return '''<div class="instance"><span class="instanceName">%s instance @ 0x%x</span>
+    return '''<div class="instance"><span class="instanceName">%s instance @ %s</span>
               <span class="instanceRepr">%s</span></div>
-              ''' % (i.__class__, id(i), s)
+              ''' % (i.__class__, hex(id(i)), s)
 
 def htmlString(s):
     return html.escape(saferepr(s))
