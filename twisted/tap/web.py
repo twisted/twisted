@@ -31,8 +31,9 @@ import sys
 class Options(usage.Options):
     synopsis = "Usage: mktap web [options]"
     optParameters = [["port", "p", "8080","Port to start the server on."],
-                  ["telnet", "t", None,
-                   "Run a telnet server on this port."]]
+                     ["telnet", "t", None, "Run a telnet server on this port."],
+                     ["logfile", "l", None, "Path to web log file."],
+                     ]
     optFlags = [["personal", "",
                  "Instead of generating a webserver, generate a "
                  "ResourcePublisher which listens on "
@@ -127,7 +128,10 @@ def updateApplication(app, config):
         # This really ought to be web.Admin or something
         root = test.Test()
 
-    site = server.Site(root)
+    if config.opts['logfile']:
+        site = server.Site(root, logPath=config.opts['logfile'])
+    else:
+        site = server.Site(root)
 
     if config.opts['personal']:
         import pwd,os
