@@ -1,10 +1,34 @@
+# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
 """
 This module implements a zsh code generator which generates completion code
 for commands that use twisted.python.usage. This is the stuff that makes
 pressing Tab at the command line work.
+
+API Stability: API? what API?
+
+Maintainer: U{Eric Mangold<mailto:teratorn@twistedmatrix.com>}
 """
-import sys, commands, itertools
+
+import sys, commands #, itertools
 from twisted.python import reflect, util
+
+try:
+    enumerate
+except:
+    def enumerate(seq):
+        return zip(range(len(seq)), seq)
+
+try:
+    from itertools import chain
+except:
+    def chain(*args):
+        lst = []
+        for seq in args:
+            for item in seq:
+                lst.append(item)
+        return lst
 
 # commands to generate completion function files for
 generateFor = [
@@ -113,7 +137,9 @@ class zshCodeGenerator:
                 "examining zsh_ attributes for the %s command" % (
                     name, self.cmd_name)
 
-        for name in itertools.chain(self.altArgDescr, self.actionDescr,
+#        for name in itertools.chain(self.altArgDescr, self.actionDescr,
+#                                    self.actions, self.multiUse):
+        for name in chain(self.altArgDescr, self.actionDescr,
                                     self.actions, self.multiUse):
             if name not in self.optAll_d:
                 err(name)
@@ -157,7 +183,7 @@ class zshCodeGenerator:
     def writeStandardFunction(self):
         self.writeHeader()
 
-        for optList in itertools.chain(self.optFlags, self.optParams):
+        for optList in chain(self.optFlags, self.optParams):
             self.writeOption(optList[0])
 
         self.writeFooter()
@@ -169,7 +195,7 @@ class zshCodeGenerator:
 
         #create a mapping of long option name -> single character name
         longToShort = {}
-        for optList in itertools.chain(self.optParams, self.optFlags):
+        for optList in chain(self.optParams, self.optFlags):
             try:
                 if optList[1] != None:
                     longToShort[optList[0]] = optList[1]
