@@ -16,24 +16,33 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 """Internet Relay Chat Protocol implementation
+
+References:
+ * RFC 1459: Internet Relay Chat Protocol
+
+ * RFC 2812: Internet Relay Chat: Client Protocol
+
+ * The Client-To-Client-Protocol
+   http://www.irchelp.org/irchelp/rfc/ctcpspec.html
 """
 
 from twisted.internet import tcp
 from twisted.protocols import basic, protocol
 from twisted.python import log, reflect
-from twisted.spread import pb
 import errno
 import operator
 import os
 import random
 import re
 import shutil
+import stat
 import string
 import struct
 import sys
 import time
 import tempfile
 import traceback
+import types
 
 from os import path
 
@@ -47,6 +56,8 @@ class IRCBadMessage(Exception):
     pass
 
 def parsemsg(s):
+    """Breaks a message from an IRC server into its prefix, command, and arguments.
+    """
     prefix = ''
     trailing = []
     if s[0] == ':':
@@ -62,6 +73,9 @@ def parsemsg(s):
 
 
 class IRC(protocol.Protocol):
+    """Internet Relay Chat server protocol.
+    """
+
     buffer = ""
 
     def connectionMade(self):
@@ -127,7 +141,11 @@ class IRC(protocol.Protocol):
 
 
 class IRCClient(basic.LineReceiver, log.Logger):
-    """I am a faceless IRC client.
+    """Internet Relay Chat client protocol, with sprinkles.
+
+    In addition to providing an interface for an IRC client protocol,
+    this class also contains reasonable implementations of many common
+    CTCP methods.
 
     TODO: Add flood protection/rate limiting for my CTCP replies.
     """
@@ -194,10 +212,17 @@ class IRCClient(basic.LineReceiver, log.Logger):
 
     ### user input commands, client->client
 
+    def me(self, channel, action):
+        """Strike a pose.
+        """
+        self.ctcpMakeQuery(channel, [('ACTION', action)])
+
     _pings = None
     _MAX_PINGRING = 12
 
     def ping(self, user):
+        """Measure round-trip delay to another IRC client.
+        """
         if self._pings is None:
             self._pings = {}
 
@@ -206,7 +231,7 @@ class IRCClient(basic.LineReceiver, log.Logger):
             key.append(random.choice(xrange(33,91)))
         key = string.join(map(chr, key),'')
         self._pings[key] = time.time()
-        self.ctcpMakeQuery(user, (['PING', key]))
+        self.ctcpMakeQuery(user, [('PING', key)])
 
         if len(self._pings) > self._MAX_PINGRING:
             # Remove some of the oldest entries.
@@ -216,6 +241,33 @@ class IRCClient(basic.LineReceiver, log.Logger):
             excess = self._MAX_PINGRING - len(self._pings)
             for i in xrange(excess):
                 del self._pings[byValue[i][1]]
+
+    def dccSend(self, user, file):
+        if type(file) == types.StringType:
+            file = open(file, 'r')
+
+        size = fileSize(file)
+
+        name = getattr(file, "name", "file@%s" % (id(file),))
+
+        factory = DccSendFactory(file)
+        port = tcp.Port(0, factory, 1)
+
+        raise NotImplementedError,(
+            "XXX!!! Help!  I need to bind a socket, have it listen, and tell me its address.  "
+            "(and stop accepting once we've made a single connection.)")
+
+        my_address = struct.pack("!I", my_address)
+
+        args = ['SEND', name, my_address, str(portNum)]
+
+        if not (size is None):
+            args.append(size)
+
+        args = string.join(args, ' ')
+
+        self.ctcpMakeQuery(user, [('DCC', args)])
+
 
     ### server->client messages
     ### You might want to fiddle with these,
@@ -272,6 +324,8 @@ class IRCClient(basic.LineReceiver, log.Logger):
     ### It is safe to leave these alone.
 
     def ctcpQuery(self, user, channel, messages):
+        """Dispatch method for any CTCP queries received.
+        """
         for m in messages:
             method = getattr(self, "ctcpQuery_%s" % m[0], None)
             if method:
@@ -355,6 +409,8 @@ class IRCClient(basic.LineReceiver, log.Logger):
             names = reflect.prefixedMethodNames(self.__class__,
                                                 'ctcpQuery_')
 
+            names = map(lambda s: s[10:], names)
+
             self.ctcpMakeReply(nick, [('CLIENTINFO',
                                        string.join(names, ' '))])
         else:
@@ -387,6 +443,11 @@ class IRCClient(basic.LineReceiver, log.Logger):
                              time.asctime(time.localtime(time.time())))])
 
     def ctcpQuery_DCC(self, user, channel, data):
+        """Initiate a Direct Client Connection
+
+        Supported connection types: SEND, CHAT
+        """
+
         data = string.split(data)
         if len(data) < 4:
             raise IRCBadMessage, "malformed DCC request: %s" % (data,)
@@ -467,17 +528,31 @@ class IRCClient(basic.LineReceiver, log.Logger):
                  % (user, tag, data))
 
     def ctcpMakeReply(self, user, messages):
+        """Send one or more extended messages as a CTCP reply.
+
+        'messages' takes a list of extended messages.
+        An extended message is a (tag, data) tuple, where 'data' may be
+        None.
+        """
         self.notice(user, ctcpStringify(messages))
 
     ### client CTCP query commands
 
     def ctcpMakeQuery(self, user, messages):
+        """Send one or more extended messages as a CTCP query.
+
+        'messages' takes a list of extended messages.
+        An extended message is a (tag, data) tuple, where 'data' may be
+        None.
+        """
         self.msg(user, ctcpStringify(messages))
 
     ### Receiving a response to a CTCP query (presumably to one we made)
     ### You may want to add methods here, or override UnknownReply.
 
     def ctcpReply(self, user, channel, messages):
+        """Dispatch method for any CTCP replies received.
+        """
         for m in messages:
             method = getattr(self, "ctcpReply_%s" % m[0], None)
             if method:
@@ -515,6 +590,9 @@ class IRCClient(basic.LineReceiver, log.Logger):
                                                         tb),''))
 
     def quirkyMessage(self, s):
+        """This is called when I receive a message which is peculiar,
+        but not wholly indecipherable.
+        """
         self.log(s + '\n')
 
     ### Protocool methods
@@ -536,7 +614,7 @@ class IRCClient(basic.LineReceiver, log.Logger):
 
 
 class DccFileReceiveBasic(protocol.Protocol):
-    """Bare protocol to receive a DCC SEND stream.
+    """Bare protocol to receive a Direct Client Connection SEND stream.
 
     This does enough to keep the other guy talking, but you'll want to
     extend my dataReceived method to *do* something with the data I get.
@@ -548,10 +626,126 @@ class DccFileReceiveBasic(protocol.Protocol):
         self.bytesReceived = 0
 
     def dataReceived(self, data):
-        self.bytesReceived = self.bytesReceived + len(data)
+        """Called when data is received.
+
+        Warning: This just acknowledges to the remote host that the
+        data has been received; it doesn't *do* anything with the
+        data, so you'll want to override this.
+        """
         self.transport.write(struct.pack('!i', self.bytesReceived))
+        self.bytesReceived = self.bytesReceived + len(data)
+
+
+class DccSendProtocol(protocol.Protocol):
+    """Protocol for an outgoing Direct Client Connection SEND.
+    """
+
+    blocksize = 1024
+    file = None
+    bytesSent = 0
+
+    def __init__(self, file):
+        if type(file) is types.StringType:
+            self.file = open(file, 'r')
+
+    def connectionMade(self):
+        self.sendBlock()
+
+    def dataReceived(self, data):
+        # XXX: Do we need to check to see if len(data) != fmtsize?
+
+        bytesShesGot = struct.unpack("!I", data)
+        if bytesShesGot < self.bytesSent:
+            # Wait for her.
+            # XXX? Add some checks to see if we've stalled out?
+            return
+        elif bytesShesGot > self.bytesSent:
+            self.transport.log("DCC SEND %s: She says she has %d bytes "
+                               "but I've only sent %d.  I'm stopping "
+                               "this screwy transfer."
+                               % (self.file,
+                                  bytesShesGot, self.bytesSent))
+            self.transport.loseConnection()
+            return
+
+        self.sendBlock()
+
+    def sendBlock(self):
+        block = self.file.read(self.blocksize)
+        if block:
+            self.transport.write(block)
+            self.bytesSent = self.bytesSent + len(block)
+        else:
+            # Nothing more to send, transfer complete.
+            self.transport.loseConnection()
+
+    def connectionLost(self):
+        if hasattr(self.file, "close"):
+            self.file.close()
+
+
+class DccSendFactory(protocol.Factory):
+    protocol = DccSendProtocol
+    def __init__(self, file):
+        self.file = file
+
+    def buildProtocol(self, connection):
+        p = self.protocol(self.file)
+        p.factory = self
+        return p
+
+
+def fileSize(file):
+    """I'll try my damndest to determine the size of this file object.
+    """
+    size = None
+    if hasattr(file, "fileno"):
+        fileno = file.fileno()
+        try:
+            stat_ = os.fstat(fileno)
+            size = stat_[stat.ST_SIZE]
+        except:
+            pass
+        else:
+            return size
+
+    if hasattr(file, "name") and path.exists(file.name):
+        try:
+            size = path.getsize(file.name)
+        except:
+            pass
+        else:
+            return size
+
+    if hasattr(file, "seek") and hasattr(file, "tell"):
+        try:
+            try:
+                file.seek(0, 2)
+                size = file.tell()
+            finally:
+                file.seek(0, 0)
+        except:
+            pass
+        else:
+            return size
+
+    return size
+
 
 class DccChat(basic.LineReceiver):
+    """Direct Client Connection protocol type CHAT.
+
+    DCC CHAT is really just your run o' the mill basic.LineReceiver
+    protocol.  This class only varies from that slightly, accepting
+    either LF or CR LF for a line delimeter for incoming messages
+    while always using CR LF for outgoing.
+
+    The lineReceived method implemented here uses the DCC connection's
+    'client' attribute (provided upon construction) to deliver incoming
+    lines from the DCC chat via IRCClient's normal privmsg interface.
+    That's something of a spoof, which you may well want to override.
+    """
+
     queryData = None
     delimiter = CR + NL
     client = None
@@ -559,6 +753,16 @@ class DccChat(basic.LineReceiver):
     buffer = ""
 
     def __init__(self, client, queryData=None):
+        """Initialize a new DCC CHAT session.
+
+        queryData is a 3-tuple of
+        (fromUser, targetUserOrChannel, data)
+        as received by the CTCP query.
+
+        (To be honest, fromUser is the only thing that's currently
+        used here. targetUserOrChannel is potentially useful, while
+        the 'data' argument is soley for informational purposes.)
+        """
         self.client = client
         if queryData:
             self.queryData = queryData
@@ -613,11 +817,16 @@ class DccFileReceive(DccFileReceiveBasic):
             self.fromUser = self.queryData[0]
 
     def set_directory(self, directory):
+        """Set the directory where the downloaded file will be placed.
+
+        May raise OSError if the supplied directory path is not suitable.
+        """
         if not path.exists(directory):
             raise OSError(errno.ENOENT, "You see no directory there.",
                           directory)
         if not path.isdir(directory):
-            raise OSError(errno.ENOTDIR, "That's not a directory.",
+            raise OSError(errno.ENOTDIR, "You cannot put a file into "
+                          "something which is not a directory.",
                           directory)
         if not os.access(directory, os.X_OK | os.W_OK):
             raise OSError(errno.EACCES,
@@ -626,12 +835,32 @@ class DccFileReceive(DccFileReceiveBasic):
         self.destDir = directory
 
     def set_filename(self, filename):
+        """Change the name of the file being transferred.
+
+        This replaces the file name provided by the sender.
+        """
         self.filename = filename
 
     def set_overwrite(self, boolean):
+        """May I overwrite existing files?
+        """
         self.overwrite = boolean
 
     def moveFileIn(self):
+        """Move the file from its temporary location to its proper name and path.
+
+        Called once the connetion is closed, but you may want to call
+        it again in case it does not succeed the first time.
+
+        Will raise OSError with ETXTBSY if called before the file is
+        closed.
+        """
+
+        if not self.file.closed:
+            raise OSError(errno.ETXTBSY,
+                          "The receiving socket is still eating.",
+                          self.file.name)
+
         dst = path.abspath(path.join(self.destDir, self.filename))
 
         if self.overwrite or not path.exists(dst):
@@ -654,6 +883,10 @@ class DccFileReceive(DccFileReceiveBasic):
         # XXX: update a progress indicator here?
 
     def connectionLost(self):
+        """When the connection is lost, I close the file.
+
+        and then I moveFileIn().
+        """
         logmsg = ("%s closed." % (self,))
         if self.fileSize > 0:
             logmsg = ("%s  %d/%d bytes received"
@@ -692,6 +925,12 @@ class DccFileReceive(DccFileReceiveBasic):
 
 
 def fileMove(src, dst):
+    """Move a file.
+
+    Unlike os.rename, this works even if the source and destination
+    paths are on different filesystems.  It does so by falling back to
+    copy & remove if a rename fails.
+    """
     try:
         os.rename(src, dst)
     except OSError, e:
