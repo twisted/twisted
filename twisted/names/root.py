@@ -35,7 +35,7 @@ import random
 from twisted.flow import flow
 from twisted.python import log
 from twisted.internet import defer
-from twisted.protocols import dns
+from twisted.names import dns
 from twisted.names import common
 
 def retry(t, p, *args):

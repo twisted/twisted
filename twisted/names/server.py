@@ -38,7 +38,7 @@ import time
 
 # Twisted imports
 from twisted.internet import protocol, defer
-from twisted.protocols import dns
+from twisted.names import dns
 from twisted.python import failure, log
 
 import resolve, common

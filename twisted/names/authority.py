@@ -22,7 +22,7 @@ import copy
 import operator
 import time
 
-from twisted.protocols import dns
+from twisted.names import dns
 from twisted.internet import defer
 from twisted.python import failure
 

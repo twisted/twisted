@@ -27,8 +27,7 @@ from twisted.trial.util import deferredResult as dR
 from twisted.trial.util import wait
 
 from twisted.internet import reactor, protocol, defer, error
-from twisted.names import client, server, common, authority, hosts
-from twisted.protocols import dns
+from twisted.names import client, server, common, authority, hosts, dns
 from twisted.python import log, failure
 
 # IPv6 support is spotty at best!

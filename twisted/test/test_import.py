@@ -111,17 +111,6 @@ class AtLeastImportTestCase(unittest.TestCase):
         from twisted.words import service
         from twisted.words import ircservice
 
-    def test_names(self):
-        """Test importing names
-        """
-        from twisted.names import authority
-        from twisted.names import cache
-        from twisted.names import common
-        from twisted.names import hosts
-        from twisted.names import resolve
-        from twisted.names import server
-        from twisted.names import tap
-
     def test_mail(self):
         """Test importing mail
         """

@@ -17,7 +17,7 @@
 
 import operator, time, copy
 
-from twisted.protocols import dns
+from twisted.names import dns
 from twisted.python import failure, log
 from twisted.internet import interfaces, defer
 

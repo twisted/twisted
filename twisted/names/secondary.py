@@ -1,7 +1,7 @@
 # -*- coding: Latin-1 -*-
 
 from twisted.internet import task, defer
-from twisted.protocols import dns
+from twisted.names import dns
 from twisted.names import common
 from twisted.names import client
 from twisted.names import server

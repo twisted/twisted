@@ -17,7 +17,7 @@
 
 import operator, sys, socket, random
 
-from twisted.protocols import dns
+from twisted.names import dns
 from twisted.internet import defer, error
 from twisted.python import failure, log
 

@@ -27,7 +27,7 @@ the query, or someway to specify (authority|ttl|cache behavior|more?)
 """
 
 from twisted.internet import defer, interfaces
-from twisted.protocols import dns
+from twisted.names import dns
 
 import common
 

@@ -16,7 +16,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 """
-Tests for twisted.protocols.dns.
+Tests for twisted.names.dns.
 """
 
 import socket
@@ -27,8 +27,8 @@ except ImportError:
     from StringIO import StringIO
 
 from twisted.trial import unittest
-from twisted.protocols import dns
-from twisted.test.test_names import IPv6
+from twisted.names import dns
+from twisted.names.test.test_names import IPv6
 
 
 class RoundtripDNSTestCase(unittest.TestCase):

@@ -21,7 +21,7 @@ Domain Name Server
 import os, traceback
 
 from twisted.python import usage
-from twisted.protocols import dns
+from twisted.names import dns
 from twisted.application import internet, service
 
 from twisted.names import server

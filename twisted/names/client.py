@@ -36,7 +36,7 @@ import time
 from twisted.python.runtime import platform
 from twisted.internet import defer, protocol, interfaces, threads
 from twisted.python import log, failure
-from twisted.protocols import dns
+from twisted.names import dns
 
 import common
 
