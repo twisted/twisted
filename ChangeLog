@@ -1,3 +1,14 @@
+2003-12-14  Dave Peticolas  <dave@krondo.com>
+
+	* twisted/test/test_enterprise.py: test deleting rows not in cache
+
+	* twisted/enterprise/reflector.py: deleted rows don't have to be
+	in cache
+
+	* doc/examples/row_example.py: use KeyFactory from row_util
+
+	* doc/examples/row_util.py: add KeyFactory
+
 2003-12-31  Brian Warner  <warner@lothar.com>
 
 	* twisted/internet/defer.py (Deferred.setTimeout): if the Deferred

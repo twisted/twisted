@@ -97,7 +97,7 @@ def kickOffTests(ignoredResult=0):
     manager = sqlreflector.SQLReflector(dbpool, [RoomRow, FurnitureRow, RugRow, LampRow])
     manager.loadObjectsFrom("testrooms", forceChildren=1).addCallback(gotRooms)
 
-kf = row.KeyFactory(100000,50000)
+kf = KeyFactory(100000, 50000)
 
 # make sure we can be shut down on windows.
 reactor.callLater(0.5, tick)

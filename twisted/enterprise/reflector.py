@@ -121,7 +121,6 @@ class Reflector:
     def addToCache(self, rowObject):
         """NOTE: Should this be recursive?! requires better container knowledge..."""
         self.rowCache[ rowObject.getKeyTuple() ] = rowObject
-        #print "Adding to Cache <%s> %s" % (keys, rowObject)
 
     def findInCache(self, rowClass, kw):
         keys = []
@@ -130,16 +129,14 @@ class Reflector:
             keys.append( kw[keyName] )
         keyTuple = tuple(keys)
         if self.rowCache.has_key(keyTuple):
-            #print "found object in cache:", keyTuple
             return self.rowCache[keyTuple]
         return None
 
     def removeFromCache(self, rowObject):
         """NOTE: should this be recursive!??"""
         key = rowObject.getKeyTuple()
-        if not self.rowCache.has_key(key):
-            raise DBError("Row object not in cache: %s", rowObject)
-        del self.rowCache[key]
+        if self.rowCache.has_key(key):
+            del self.rowCache[key]
 
     ####### Row Operations ########
 

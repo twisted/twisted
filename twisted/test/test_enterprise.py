@@ -166,7 +166,6 @@ class ReflectorTestCase:
 
         # save it
         deferredResult(self.reflector.insertRow(row))
-        row = None # drop the reference so it is no longer cached
 
         # now load it back in
         whereClause = [("key_string", EQUAL, "first")]
@@ -281,6 +280,17 @@ class ReflectorTestCase:
         deferredResult(d)
 
         self.failUnless(len(self.data) == 0, "rows were not deleted")
+
+        # create one row to work with
+        row = TestRow()
+        row.assignKeyAttr("key_string", "first")
+        values = self.randomizeRow(row)
+
+        # save it
+        deferredResult(self.reflector.insertRow(row))
+
+        # delete it
+        deferredResult(self.reflector.deleteRow(row))
 
     def gotData(self, data):
         self.data = data

@@ -5,11 +5,25 @@ from twisted.enterprise import row
 ########## Definitions of Row Classes ############
 ##################################################
 
+class KeyFactory:
+    """This is a lame, but simple way to generate keys.
+       For real code, use the database instead."""
+    def __init__(self, minimum, pool):
+        self.min = minimum
+        self.pool = minimum + pool
+        self.current = self.min
+
+    def getNextKey(self):
+        next = self.current + 1
+        self.current = next
+        if self.current >= self.pool:
+            raise "Key factory key pool exceeded."
+        return next
+
 def myRowFactory(rowClass, data, kw):
     newRow = rowClass()
     newRow.__dict__.update(kw)
     return newRow
-
 
 class RoomRow(row.RowObject):
     rowColumns = [
