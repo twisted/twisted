@@ -1,4 +1,11 @@
+2004-06-25  Jp Calderone  <exarkun@twistedmatrix.com>
+
+	* twisted/spread/banana.py: Disabled automatic import and use of
+	cBanana.  PB will now use the pure-Python version of banana unless
+	cBanana is manually installed by the application.
+
 2004-06-12  Paul Swartz  <z3p@twistedmatrix.com>
+
 	* twisted/conch/client: added -r flag to reconnect to the server if
 	the connection is lost (closes 623).
 
