@@ -18,7 +18,7 @@ import re, os, cStringIO, time, cgi, string, urlparse
 from twisted import copyright
 from twisted.python import htmlizer, text
 from twisted.web import microdom, domhelpers
-import process, latex, indexer
+import process, latex, indexer, numberer, htmlbook
 from twisted.python.util import InsensitiveDict
 
 # relative links to html files
@@ -190,25 +190,71 @@ def notes(document):
     for note in notes:
         note.childNodes.insert(0, notePrefix)
 
-def index(document, filename):
+def compareMarkPos(a, b):
+    linecmp = cmp(a[0], b[0])
+    if linecmp:
+        return linecmp
+    return cmp(a[1], b[1])
+
+def comparePosition(a, b):
+    return compareMarkPos(a._markpos, b._markpos)
+
+def findNodeJustBefore(target, nodes):
+    result = None
+    for node in nodes:
+        if comparePosition(target, node) < 0:
+            return result
+        result = node
+    return result
+
+def getFirstAncestorWithSectionHeader(entry):
+    """Go up ancestors until one with at least one <h2> is found, then return the <h2> nodes"""
+    for a in domhelpers.getParents(entry)[1:]:
+        headers = domhelpers.findNodesNamed(a, "h2")
+        if len(headers) > 0:
+            return headers
+    return []
+
+def getSectionNumber(header):
+    if not header:
+        return None
+    return header.childNodes[0].value.strip()
+
+def getSectionReference(entry):
+    headers = getFirstAncestorWithSectionHeader(entry)
+    myHeader = findNodeJustBefore(entry, headers)
+    return getSectionNumber(myHeader)
+
+def index(document, filename, chapterReference):
     entries = domhelpers.findElementsWithAttribute(document, "class", "index")
-    if not footnotes:
+    if not entries:
         return
     i = 0;
     for entry in entries:
         i += 1
         anchor = 'index%02d' % i
-        indexer.addEntry(filename, anchor, entry.attributes['value'])
-        entry.nodeName = 'a' # does this even affect anything?
-        entry.tagName = 'a'
-        entry.endTagName = 'a'
+        if chapterReference:
+            ref = getSectionReference(entry) or chapterReference
+        else:
+            ref = 'link'
+        indexer.addEntry(filename, anchor, entry.attributes['value'], ref)
+        # does nodeName even affect anything?
+        entry.nodeName = entry.tagName = entry.endTagName = 'a'
         entry.attributes = InsensitiveDict({'name': anchor})
 
 def setIndexLink(template, indexFilename):
+    if not indexFilename:
+        return
     indexLinks = domhelpers.findElementsWithAttribute(template, "class", "index-link")
     for link in indexLinks:
         link.nodeName = link.tagName = link.endTagName = 'a'
         link.attributes = InsensitiveDict({'href': indexFilename})
+
+def numberDocument(document, chapterNumber):
+    i = 1
+    for node in domhelpers.findNodesNamed(document, "h2"):
+        node.childNodes = [microdom.Text("%s.%d " % (chapterNumber, i))] + node.childNodes
+        i += 1
 
 def fixRelativeLinks(document, linkrel):
     for attr in 'src', 'href':
@@ -217,11 +263,13 @@ def fixRelativeLinks(document, linkrel):
             if not href.startswith('http') and not href.startswith('/'):
                 node.setAttribute(attr, linkrel+node.getAttribute(attr))
 
-def setTitle(template, title):
+def setTitle(template, title, chapterNumber):
     for nodeList in (domhelpers.findNodesNamed(template, "title"),
                      domhelpers.findElementsWithAttribute(template, "class",
                                                           'title')):
         if nodeList:
+            if numberer.getNumberSections() and chapterNumber:
+                nodeList[0].childNodes.append(microdom.Text('%s. ' % chapterNumber))
             nodeList[0].childNodes.extend(title)
 
 def setAuthors(template, authors):
@@ -274,13 +322,18 @@ def munge(document, template, linkrel, dir, fullpath, ext, url, config, outfileG
     putInToC(template, generateToC(document))
     footnotes(document)
     notes(document)
-    index(document, outfileGenerator(os.path.split(fullpath)[1], ext))
+
     setIndexLink(template, indexer.getIndexFilename())
     setVersion(template, config.get('version', ''))
 
     # Insert the document into the template
+    chapterNumber = htmlbook.getNumber(fullpath)
     title = domhelpers.findNodesNamed(document, 'title')[0].childNodes
-    setTitle(template, title)
+    setTitle(template, title, chapterNumber)
+    if numberer.getNumberSections() and chapterNumber:
+        numberDocument(document, chapterNumber)
+    index(document, outfileGenerator(os.path.split(fullpath)[1], ext),
+          htmlbook.getReference(fullpath))
 
     authors = domhelpers.findNodesNamed(document, 'link')
     authors = [(node.getAttribute('title',''), node.getAttribute('href', ''))
@@ -317,7 +370,8 @@ def makeSureDirectoryExists(filename):
 def doFile(filename, linkrel, ext, url, templ, options={}, outfileGenerator=getOutputFileName):
     doc = parseFileAndReport(filename)
     clonedNode = templ.cloneNode(1)
-    munge(doc, clonedNode, linkrel, os.path.dirname(filename), filename, ext, url, options, outfileGenerator)
+    munge(doc, clonedNode, linkrel, os.path.dirname(filename), filename, ext,
+          url, options, outfileGenerator)
     newFilename = outfileGenerator(filename, ext)
     makeSureDirectoryExists(newFilename)
     clonedNode.writexml(open(newFilename, 'wb'))

@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 import sys
-from twisted.lore import process, default, indexer
+from twisted.lore import process, default, indexer, numberer, htmlbook
 from twisted.python import usage, plugin, reflect
 
 class Options(usage.Options):
@@ -30,7 +30,8 @@ class Options(usage.Options):
                      ["docsdir", "d", None],
                      ["linkrel", "l", ''],
                      ["output", "o", 'html'],
-                     ["index", "x", "index", "The base filename you want to give your index file"],
+                     ["index", "x", None, "The base filename you want to give your index file"],
+                     ["book", "b", None, "The book file to generate a book from"],
                     ]
 
     def __init__(self, *args, **kw):
@@ -77,6 +78,13 @@ def getWalker(df, opt):
 
 
 def runGivenOptions(opt):
+    """Do everything but parse the options; useful for testing.
+    Returns a descriptive string if there's an error."""
+
+    book = None
+    if opt['book']:
+        book = htmlbook.Book(opt['book'])
+
     df = getProcessor(opt['input'], opt['output'], opt.config)
     if not df:
         return 'getProcessor() failed'
@@ -86,10 +94,26 @@ def runGivenOptions(opt):
     if opt['files']:
         for filename in opt['files']:
             walker.walked.append(('', filename))
+    elif book:
+        for filename in book.getFiles():
+            walker.walked.append(('', filename))
     else:
         walker.walkdir(opt['docsdir'] or '.')
 
-    indexer.setIndexFilename("%s.%s" % (opt['index'], opt['output']))
+    if opt['index']:
+        indexFilename = opt['index']
+    elif book:
+        indexFilename = book.getIndexFilename()
+    else:
+        indexFilename = None
+
+    if indexFilename:
+        indexer.setIndexFilename("%s.%s" % (indexFilename, opt['output']))
+    else:
+        indexer.setIndexFilename(None)
+
+    ## TODO: get numberSections from book, if any
+    numberer.setNumberSections(opt['number'])
 
     walker.generate()
 
@@ -109,24 +133,9 @@ def run():
         print '%s: Try --help for usage details.' % sys.argv[0]
         sys.exit(1)
 
-    df = getProcessor(opt['input'], opt['output'], opt.config)
-    if not df:
-        sys.exit(1)
-
-    walker = getWalker(df, opt)
-
-    if opt['files']:
-        for filename in opt['files']:
-            walker.walked.append(('', filename))
-    else:
-        walker.walkdir(opt['docsdir'] or '.')
-
-    walker.generate()
-
-    if walker.failures:
-        for (file, errors) in walker.failures:
-            for error in errors:
-                print "%s:%s" % (file, error)
+    result = runGivenOptions(opt)
+    if result:
+        print result
         sys.exit(1)
 
 

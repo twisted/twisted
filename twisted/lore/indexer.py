@@ -14,10 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-entries = {}
-indexFilename = "index.xhtml"
-
-def setIndexFilename(filename="index.xhtml"):
+def setIndexFilename(filename='index.xhtml'):
     global indexFilename
     indexFilename = filename
 
@@ -25,11 +22,12 @@ def getIndexFilename():
     global indexFilename
     return indexFilename
 
-def addEntry(filename, anchor, text):
+def addEntry(filename, anchor, text, reference):
+    ##d print ">addEntry(%s, %s, %s, %s)" % (filename, anchor, text, reference)
     global entries
     if not entries.has_key(text):
         entries[text] = []
-    entries[text].append((filename, anchor))
+    entries[text].append((filename, anchor, reference))
 
 def clearEntries():
     global entries
@@ -37,13 +35,28 @@ def clearEntries():
 
 def generateIndex():
     global entries
-    f = open(indexFilename, "w")
+    global indexFilename
+
+    if not indexFilename:
+        return
+
+    f = open(indexFilename, 'w')
     sortedEntries = entries.keys()
-    sortedEntries.sort()
+    sortedEntries.sort(lambda x, y: cmp(x.lower(), y.lower()))
     for text in sortedEntries:
-        f.write(text + ': ')
-        for (file, anchor) in entries[text]:
-            f.write('<a href="%s#%s">link</a>\n' % (file, anchor))
+        refs = []
+        f.write(text.replace('!', ', ') + ': ')
+        for (file, anchor, reference) in entries[text]:
+            refs.append('<a href="%s#%s">%s</a>' % (file, anchor, reference))
+        if text == 'infinite recursion':
+            refs.append('<em>See Also:</em> recursion, infinite\n')
+        if text == 'recursion!infinite':
+            refs.append('<em>See Also:</em> infinite recursion\n')
+        f.write('%s<br />\n' % ", ".join(refs))
     f.close()
 
+def reset():
+    clearEntries()
+    setIndexFilename()
 
+reset()

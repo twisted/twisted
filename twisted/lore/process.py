@@ -55,6 +55,7 @@ class Walker:
     def generate(self):
         i = 0
         indexer.clearEntries()
+        tree.filenum = 0
         for linkrel, fullpath in self.walked:
             linkrel = self.linkrel + linkrel
             i += 1

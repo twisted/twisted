@@ -499,8 +499,10 @@ class Element(Node):
                 else:
                     prefix = genprefix()
                     newprefixes[ns] = prefix
+                if not val: print "val is null; key is '%s'" % key ##d
                 writeattr(prefix+':'+key,val)
             else:
+                if not val: print "val is null; attr is '%s'" % attr ##d
                 writeattr(attr, val)
         if newprefixes:
             for ns, prefix in newprefixes.iteritems():
