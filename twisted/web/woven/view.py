@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.76 $"[11:-2]
+__version__ = "$Revision: 1.77 $"[11:-2]
 
 # Sibling imports
 import interfaces
@@ -513,9 +513,10 @@ class View:
 
             theId = node.getAttribute("id")
             if not theId:
-                curId = getattr(request, 'currentId', 0)
+                #curId = getattr(request, 'currentId', 0)
+                curId = id(view)
                 theId = "woven_id_" + str(curId)
-                request.currentId = curId + 1
+                #request.currentId = curId + 1
                 view.setupMethods.append(utils.createSetIdFunction(theId))
                 view.outgoingId = theId
                 #print "SET AN ID", theId
