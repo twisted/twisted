@@ -142,6 +142,7 @@ def run(argv=sys.argv):
     sh('admin/process-docs')
     python('admin/epyrun -o doc/api')
     os.chdir('doc')
+    print "Zipping..."
     infozip('-rq win32doc.zip examples/ -x "*CVS*" "*.cvsignore*"')
     infozip('-q win32doc.zip howto/*.xhtml howto/stylesheet.css howto/*.pdf')
     infozip('-q win32doc.zip specifications/*.xhtml')
