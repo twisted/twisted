@@ -62,8 +62,8 @@ class LoaderCommon:
 
     def decrypt(self):
         try:
-            from Crypto.Cipher import RC5
-            self.data = RC5.new(self.passphrase).decrypt(self.data)
+            from Crypto.Cipher import AES
+            self.data = AES.new(self.passphrase).decrypt(self.data)
         except ImportError:
             print "The --decrypt flag requires the PyCrypto module, no file written."
             

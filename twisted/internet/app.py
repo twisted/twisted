@@ -35,10 +35,10 @@ from twisted.cred.authorizer import DefaultAuthorizer
 import main, defer, error
 
 def encrypt(passphrase, data):
-    from Crypto.Cipher import RC5
+    from Crypto.Cipher import AES
     if len(data) % 8:
         data = data + (' ' * (8 - len(data) % 8))
-    return RC5.new(passphrase).encrypt(data)
+    return AES.new(passphrase).encrypt(data)
 
 
 class _SSLlistener:

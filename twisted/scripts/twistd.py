@@ -93,8 +93,8 @@ class ServerOptions(usage.Options):
 
 
 def decrypt(passphrase, data):
-    from Crypto.Cipher import RC5
-    return RC5.new(passphrase).decrypt(data)
+    from Crypto.Cipher import AES
+    return AES.new(passphrase).decrypt(data)
 
 
 def run():
