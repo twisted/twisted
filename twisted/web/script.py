@@ -54,6 +54,16 @@ def ResourceScript(path, registry):
 
     return glob['resource']
 
+def ResourceTemplate(path, registry):
+    from quixote import ptl_compile
+
+    glob = {'__file__': path, 'resource': error.ErrorPage(500, "Whoops! Internal Error", rpyNoResource), 'registry': registry}
+
+    e = ptl_compile.compile_template(open(path), path)
+    exec e in glob
+    return glob['resource']
+
+
 class PythonScript(resource.Resource):
     """I am an extremely simple dynamic resource; an embedded python script.
 
