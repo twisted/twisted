@@ -316,6 +316,15 @@ class IMAP4Server(basic.LineReceiver):
         else:
             self.sendPositiveResponse(tag, 'Mailbox created')
     select_CREATE = auth_CREATE
+    
+    def auth_DELETE(self, tag, args):
+        try:
+            self.account.delete(args.strip())
+        except MailboxException, m:
+            self.sendNegativeResponse(tag, str(m))
+        else:
+            self.sendPositiveResponse(tag, 'Mailbox deleted')
+    select_DELETE = auth_DELETE
 
 class UnhandledResponse(IMAP4Exception): pass
 
@@ -447,7 +456,7 @@ class IMAP4Client(basic.LineReceiver):
                     # Give them this last line, too
                     d.callback((lines, rest))
                 else:
-                    d.errback(IMAP4Exception(rest))
+                    d.errback(IMAP4Exception(line))
                 del self.tags[tag]
                 self.waiting = None
                 self._flushQueue()
@@ -689,6 +698,20 @@ class IMAP4Client(basic.LineReceiver):
         is successful and whose errback is invoked otherwise.
         """
         return self.sendCommand('CREATE', name)
+    
+    def delete(self, name):
+        """Delete a mailbox
+        
+        This command is allowed in the Authenticated and Selected states.
+        
+        @type name: C{str}
+        @param name: The name of the mailbox to delete.
+        
+        @rtype: C{Deferred}
+        @return: A deferred whose calblack is invoked if the mailbox is
+        deleted successfully and whose errback is invoked otherwise.
+        """
+        return self.sendCommand('DELETE', name)
 
 class MismatchedNesting(Exception):
     pass
@@ -835,7 +858,6 @@ class IClientAuthentication(components.Interface):
     def challengeResponse(self, secret, challenge):
         """Generate a challenge response string"""
 
-
 class MailboxException(IMAP4Exception): pass
 
 class MailboxCollision(MailboxException):
@@ -883,6 +905,23 @@ class Account:
 
     def release(self, mbox):
         pass
+    
+    def delete(self, name):
+        name = name.upper()
+        # See if this mailbox exists at all
+        mbox = self.select(name)
+        if not mbox:
+            raise MailboxException, "No such mailbox"
+        # See if this box is flagged \Noselect
+        if r'\Noselect' in mbox.getFlags():
+            # Check for hierarchically inferior mailboxes with this one
+            # as part of their root.
+            for others in self.mailboxes.keys():
+                if others != name and others.startswith(name):
+                    raise MailboxException, "Hierarchically inferior mailboxes exist and \\Noselect is set"
+        del self.mailboxes[name]
+        mbox.destroy()
+
 
 class IMailbox(components.Interface):
     def getUIDValidity(self):
@@ -911,4 +950,11 @@ class IMailbox(components.Interface):
         
         @rtype: C{int}
         @return: A true value if write permission is allowed, a false value otherwise.
+        """
+
+    def destroy(self):
+        """Called before this mailbox is deleted, permanently.
+        
+        If necessary, all resources held by this mailbox should be cleaned
+        up here.
         """

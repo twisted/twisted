@@ -113,8 +113,10 @@ class IMAP4HelperTestCase(unittest.TestCase):
             self.assertEquals(imap4.parseNestedParens(case), expected)
 
 class SimpleMailbox:
+    flags = ('\\Flag1', 'Flag2', 'LastFlag')
+
     def getFlags(self):
-        return ('\\Flag1', 'Flag2', 'LastFlag')
+        return self.flags
     
     def getUID(self):
         return 42
@@ -127,12 +129,11 @@ class SimpleMailbox:
     
     def isWriteable(self):
         return 1
+    
+    def destroy(self):
+        pass
 
 class SimpleServer(imap4.IMAP4Server):
-    theAccount = imap4.Account()
-    theAccount.mboxType = SimpleMailbox
-    theAccount.addMailbox('test-mailbox', SimpleMailbox())
-
     def authenticateLogin(self, username, password):
         if username == 'testuser' and password == 'password-test':
             return self.theAccount
@@ -152,6 +153,11 @@ class IMAP4ServerTestCase(unittest.TestCase):
         self.server = SimpleServer()
         self.client = SimpleClient(d)
         self.connected = d
+
+        theAccount = imap4.Account()
+        theAccount.mboxType = SimpleMailbox
+        SimpleServer.theAccount = theAccount
+
     
     def tearDown(self):
         del self.server
@@ -242,6 +248,7 @@ class IMAP4ServerTestCase(unittest.TestCase):
         self.assertEquals(self.server.state, 'unauth')
 
     def testSelect(self):
+        SimpleServer.theAccount.addMailbox('test-mailbox')
         self.selectedArgs = None
         def login():
             return self.client.login('testuser', 'password-test')
@@ -267,6 +274,7 @@ class IMAP4ServerTestCase(unittest.TestCase):
         })
 
     def testExamine(self):
+        SimpleServer.theAccount.addMailbox('test-mailbox')
         self.examinedArgs = None
         def login():
             return self.client.login('testuser', 'password-test')
@@ -312,8 +320,59 @@ class IMAP4ServerTestCase(unittest.TestCase):
         
         self.assertEquals(self.result, [1] * len(succeed) + [0] * len(fail))
         mbox = SimpleServer.theAccount.mailboxes.keys()
-        answers = ['testbox', 'test/box', 'test', 'test/box/box', 'test-mailbox']
+        answers = ['testbox', 'test/box', 'test', 'test/box/box']
         mbox.sort()
         answers.sort()
         self.assertEquals(mbox, [a.upper() for a in answers])
+
+    def testDelete(self):
+        SimpleServer.theAccount.addMailbox('delete/me')
         
+        def login():
+            return self.client.login('testuser', 'password-test')
+        def delete():
+            return self.client.delete('delete/me')
+        d = self.connected.addCallbacks(strip(login))
+        d.addCallback(strip(delete))
+        d.addCallbacks(strip(self._cbStopClient), self._ebGeneral)
+        loopback.loopback(self.server, self.client)
+        
+        self.assertEquals(SimpleServer.theAccount.mailboxes.keys(), [])
+
+    def testNonExistentDelete(self):
+        def login():
+            return self.client.login('testuser', 'password-test')
+        def delete():
+            return self.client.delete('delete/me')
+        def deleteFailed(failure):
+            self.failure = failure
+
+        self.failure = None
+        d = self.connected.addCallback(strip(login))
+        d.addCallback(strip(delete)).addErrback(deleteFailed)
+        d.addCallbacks(strip(self._cbStopClient), self._ebGeneral)
+        loopback.loopback(self.server, self.client)
+        
+        self.assertEquals(str(self.failure.value), 'No such mailbox')
+
+
+    def testIllegalDelete(self):
+        m = SimpleMailbox()
+        m.flags = (r'\Noselect',)
+        SimpleServer.theAccount.addMailbox('delete', m)
+        SimpleServer.theAccount.addMailbox('delete/me')
+
+        def login():
+            return self.client.login('testuser', 'password-test')
+        def delete():
+            return self.client.delete('delete')
+        def deleteFailed(failure):
+            self.failure = failure
+
+        self.failure = None
+        d = self.connected.addCallback(strip(login))
+        d.addCallback(strip(delete)).addErrback(deleteFailed)
+        d.addCallbacks(strip(self._cbStopClient), self._ebGeneral)
+        loopback.loopback(self.server, self.client)
+        
+        self.assertEquals(str(self.failure.value), "Hierarchically inferior mailboxes exist and \\Noselect is set")
