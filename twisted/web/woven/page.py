@@ -1,6 +1,6 @@
 # page.py
 
-__version__ = "$Revision: 1.13 $"[11:-2]
+__version__ = "$Revision: 1.14 $"[11:-2]
 
 from twisted.python import reflect
 from twisted.web import resource
@@ -10,7 +10,7 @@ class Page(model.MethodModel, controller.Controller, view.View):
     __implements__ = (model.Model.__implements__, view.View.__implements__,
                       controller.Controller.__implements__)
     def __init__(self, m=None, templateFile=None, inputhandlers=None,
-                controllers=None, templateDirectory=None,
+                controllers=None, templateDirectory=None, template=None,
                  *args, **kwargs):
         model.Model.__init__(self, *args, **kwargs)
         if m is None:
@@ -23,7 +23,8 @@ class Page(model.MethodModel, controller.Controller, view.View):
         self.view = self
         view.View.__init__(self, self.model, controller=self,
                            templateFile=templateFile,
-                           templateDirectory = templateDirectory)
+                           templateDirectory = templateDirectory,
+                           template = template)
         self.controller = self
         self.controllerRendered = 0
     
