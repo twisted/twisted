@@ -41,10 +41,8 @@ def initializeMaildir(dir):
     if not os.path.isdir(dir):
         os.mkdir(dir)
         for subdir in ['new', 'cur', 'tmp', '.Trash']:
-            print 'Making ', os.path.join(dir, subdir)
             os.mkdir(os.path.join(dir, subdir))
         for subdir in ['new', 'cur', 'tmp']:
-            print 'Making ', os.path.join(dir, '.Trash', subdir)
             os.mkdir(os.path.join(dir, '.Trash', subdir))
         # touch
         open(os.path.join(dir, '.Trash', 'maildirfolder'), 'w').close()
