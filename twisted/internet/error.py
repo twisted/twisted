@@ -158,17 +158,20 @@ class ProcessDone(ConnectionDone):
     def __init__(self, status):
         Exception.__init__(self, "process finished with exit code 0")
         self.exitCode = 0
+        self.signal = None
         self.status = status
 
 
 class ProcessTerminated(ConnectionLost):
     """A process has ended with a probable error condition."""
 
-    def __init__(self, exitCode=None, status=None):
+    def __init__(self, exitCode=None, signal=None, status=None):
         self.exitCode = exitCode
+        self.signal = signal
         self.status = status
         s = "process ended"
         if exitCode is not None: s = s + " with exit code %s" % exitCode
+        if signal is not None: s = s + " by signal %s" % signal
         Exception.__init__(self, s)
 
 class NotConnectingError(RuntimeError):

@@ -1,13 +1,27 @@
-2003-2-9  Christopher Armstrong  <radix@twistedmatrix.com>
+2003-02-09  Brian Warner  <warner@lothar.com>
+
+	* twisted/internet/error.py (ProcessDone,ProcessTerminated):
+	* twisted/internet/process.py (Process.maybeCallProcessEnded,
+	* twisted/internet/process.py (PTYProcess.maybeCallProcessEnded,
+	record the signal that killed the process in .signal, set .signal
+	to None if the process died of natural causes, set .exitCode to None
+	if the process died of a signal.
+	* twisted/test/test_process.py: verify .signal, .exitCode are set
+	to None when they ought to be, verify signal-death is reported with
+	ProcessTerminated and not ProcessDone
+
+	* ChangeLog: Set add-log-time-format to iso8601.
+
+2003-02-09  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* .: Releasing 1.0.3rc1.
 
-2003-2-8  Moshe Zadka <moshez@twistedmatrix.com>
+2003-02-08  Moshe Zadka <moshez@twistedmatrix.com>
 
 	* twisted/tap/mail.py twisted/mail/tap.py twisted/plugins.tml: 
 	Moved from tap to mail, trying to thin down twisted.tap a little.
 
-2003-2-7  Moshe Zadka <moshez@twistedmatrix.com>
+2003-02-07  Moshe Zadka <moshez@twistedmatrix.com>
 
 	* twisted/lore/default.py twisted/lore/tree.py twisted/lore/latex.py
         twisted/lore/man2lore.py twisted/lore/math.py
@@ -1896,3 +1910,7 @@
 	* First go at database for twisted.bugs. I hate RDBMS. I hate web.
 
 --- 0.13.0 Release ---
+
+# Local Variables:
+# add-log-time-format: add-log-iso8601-time-string
+# End:

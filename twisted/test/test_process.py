@@ -99,6 +99,9 @@ class SignalProtocol(protocol.ProcessProtocol):
     
     def processEnded(self, reason):
         self.going = 0
+        reason.trap(error.ProcessTerminated)
+        assert reason.value.exitCode == None
+        assert reason.value.signal == getattr(signal,'SIG'+self.signal)
         assert os.WTERMSIG(reason.value.status) == getattr(signal,'SIG'+self.signal), '%s %s' % (self.signal, os.WTERMSIG(reason.value.status))
         
 class ProcessTestCase(unittest.TestCase):
@@ -117,6 +120,8 @@ class ProcessTestCase(unittest.TestCase):
         f = p.reason
         f.trap(error.ProcessTerminated)
         self.assertEquals(f.value.exitCode, 23)
+        # would .signal be available on non-posix?
+        #self.assertEquals(f.value.signal, None)
         
         try:
             import process_tester
@@ -222,6 +227,7 @@ class PosixProcessTestCase(unittest.TestCase):
             reactor.iterate(0.01)
         p.reason.trap(error.ProcessDone)
         self.assertEquals(p.reason.value.exitCode, 0)
+        self.assertEquals(p.reason.value.signal, None)
 
 
     def testAbnormalTermination(self):
@@ -236,6 +242,7 @@ class PosixProcessTestCase(unittest.TestCase):
             reactor.iterate(0.01)
         p.reason.trap(error.ProcessTerminated)
         self.assertEquals(p.reason.value.exitCode, 1)
+        self.assertEquals(p.reason.value.signal, None)
 
     def testSignal(self):
         exe = sys.executable

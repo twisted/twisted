@@ -359,14 +359,19 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
             self.lostInConnection):
             if self.lostProcess:
                 try:
+                    exitCode = sig = None
                     if self.status != -1:
-                        exitCode = os.WEXITSTATUS(self.status)
+                        if os.WIFEXITED(self.status):
+                            exitCode = os.WEXITSTATUS(self.status)
+                        else:
+                            sig = os.WTERMSIG(self.status)
                     else:
-                        exitCode = None # wonder when this happens
-                    if exitCode:
-                        self.proto.processEnded(failure.Failure(error.ProcessTerminated(exitCode, self.status)))
+                        pass # wonder when this happens
+                    if exitCode or sig:
+                        e = error.ProcessTerminated(exitCode, sig, self.status)
                     else:
-                        self.proto.processEnded(failure.Failure(error.ProcessDone(self.status)))
+                        e = error.ProcessDone(self.status)
+                    self.proto.processEnded(failure.Failure(e))
                 except:
                     log.deferr()
             else:
@@ -566,14 +571,19 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
     def maybeCallProcessEnded(self):
         if self.lostProcess == 2:
             try:
+                exitCode = sig = None
                 if self.status != -1:
-                    exitCode = os.WEXITSTATUS(self.status) 
+                    if os.WIFEXITED(self.status):
+                        exitCode = os.WEXITSTATUS(self.status)
+                    else:
+                        sig = os.WTERMSIG(self.status)
                 else:
-                    exitCode = None # wonder when this happens
-                if exitCode:
-                    self.proto.processEnded(failure.Failure(error.ProcessTerminated(exitCode, self.status)))
+                    pass # wonder when this happens
+                if exitCode or sig:
+                    e = error.ProcessTerminated(exitCode, sig, self.status)
                 else:
-                    self.proto.processEnded(failure.Failure(error.ProcessDone(self.status)))
+                    e = error.ProcessDone(self.status)
+                self.proto.processEnded(failure.Failure(e))
             except:
                 log.deferr()
 
