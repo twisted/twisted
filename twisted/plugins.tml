@@ -55,7 +55,7 @@ register("Twisted Mail",
 register("Twisted Web",
          "twisted.tap.web",
          description="""
-         A general-purpose web server which can serve from a 
+         A general-purpose web server which can serve from a
 	 filesystem or application resource.
          """,
          type="tap",
@@ -118,17 +118,17 @@ register("Twisted Instance Messenger",
          type="tap",
          tapname="im")
 
-register("Twisted Sister 'Parent'",
-         "twisted.sister.parentap",
+register("Twisted Sibling 'Parent'",
+         "twisted.sibling.parentap",
          description="Parent service.",
          type="tap",
          tapname="parent")
 
-register("Twisted Sister 'Sister'",
-         "twisted.sister.sistap",
-         description="Sister service.",
+register("Twisted Sibling 'Sibling'",
+         "twisted.sibling.sibtap",
+         description="Sibling service.",
          type="tap",
-         tapname="sister")
+         tapname="sibling")
 
 register("Twisted News",
          "twisted.tap.news",
