@@ -151,6 +151,7 @@ components.registerAdapter(ChatConduitSession, server.Session, IConduitSession)
 
 class MWebConduit(wmvc.WModel):
     def __init__(self, wordsService, issueRepo):
+        wmvc.WModel.__init__(self)
         self.wordsService = wordsService
         self.issueRepo = issueRepo
 
