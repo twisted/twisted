@@ -712,7 +712,7 @@ class UpdateWebDocs(Transaction):
         sh("%s --config ext= *.xhtml" % lorecmd)
         os.chdir('..')
         for dir in ['examples', 'historic',
-                    'specifications', 'vision', 'man']:
+                    'specifications', 'vision']:
             os.chdir(dir)
             sh('%s  --config ext= -l../howto/ *.xhtml' % lorecmd)
             os.chdir('..')
