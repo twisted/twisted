@@ -257,6 +257,11 @@ class IRCClient(basic.LineReceiver):
 
     part = leave
 
+    def topic(self, channel, topic):
+        # << TOPIC #xtestx :fff
+        if channel[0] not in '&#': channel = '#' + channel
+        self.sendLine("TOPIC %s :%s" % (channel, topic))
+
     def say(self, channel, message):
         if channel[0] not in '&#': channel = '#' + channel
         self.sendLine("PRIVMSG %s :%s" % (channel, message))
