@@ -1,0 +1,127 @@
+  <html>
+    <head>
+      <title>WebWidgets Documentation</title>
+    </head>
+    <body>
+
+      <h2>Classes</h2>
+
+      <h3>Gadget</h3>
+	<p>A collection of widgets. like a "directory" of HTML files. you add
+	  widgets to it with self.addWidget("name", WidgetInstance()). This 
+	  widget will be rendered inside the Gadget-local Page. Also, if you
+	  make a Gadget that is also a subclass of "Widget", then whenever the
+	  "index"  (http://foo.com/foo/, "foo" being the Gadget/Widget 
+	  resource) is requested, the object will be rendered as a Widget 
+	  inside of the Gadget-local Page. The Gadget-local Page is the 'page'
+	  attribute of the gadget. So in your __init__ method for your Gadget
+	  subclass, do <code>self.page = SomeWidgetPageSubclass</code> (note that it is 
+	  _not_ an instance, but the actual class object).
+	</p>
+
+	<h3>Widget</h3>
+	  <p>
+	    A Widget is simply something that is renderable, using the 
+	    display() method. This method is expected to return a list of 
+	    HTML strings. (it can also contain instances of defer.Deferred
+	    -- but this is another story).
+	  </p>
+	  
+	<h3>Presentation</h3>
+	  <p>
+	    This is a special Widget that you don't create a display()
+	    method for. You override the special 'template' variable, which
+	    is a string with interpolated python expressions. It should look
+	    something like:
+	    <code>
+	    template = '''
+	    &lt;html&gt;&lt;head&gt;&lt;title&gt;%%%%title%%%%&lt;/title&gt;&lt;/head&gt;
+	    &lt;body&gt;%%%%getContent(request)%%%%&lt;/body&gt;&lt;/html&gt;
+	    '''
+	    </code>
+	      
+	    As you can see, Python expressions are denoted with surrounding
+	    sets of 4 %'s. Note also that expressions are evaluated in the
+	    namespace of the instance object itself -- this means that you
+	    do not have to prefix method calls and attribute names with 
+	    'self.'
+	  </p>
+
+	<h3>WidgetPage</h3>
+	  <p>
+	    A WidgetPage is a special Presentation that allows you to pass a Widget
+            object to it's constructor. The most common use of this class is for subclassing;
+            you should have a subclass that defines a 'template' class-variable, and probably
+            nothing else. WidgetPage stores the widget you pass to it in it's 'widget'
+            attribute, so remember that whenever you're making a customized template 
+            (see "Common Pitfalls: WidgetPage" below).
+	  </p>
+
+<h2>Common Pitfalls</h2>
+
+<h3>WidgetPage</h3>
+<p>
+If you have a subclass of widgets.WidgetPage, make sure your template accesses the
+widget it's displaying with the 'widget' object. For example, if you want to
+get the title from the current widget you're displaying:
+</p>
+
+<p>
+<code>
+template = '''&lt;html&gt;&lt;head&gt;&lt;title&gt;%%%%widget.title&lt;/title&gt;&lt;/head&gt;&lt;/html&gt;''' 
+</code>
+</p>
+<p>
+instead of:
+</p>
+<p>
+<code>
+template = '''&lt;html&gt;&lt;head&gt;&lt;title&gt;%%%%title&lt;/title&gt;&lt;/head&gt;&lt;/html&gt;''' 
+</code>
+</p>
+
+<h3>Adding Widgets to a Gadget</h3>
+<p>
+I had some code like this in one of my Gadgets:<br>
+<code>self.addWidget("Foo", widgets.TitleBox(MyWidget())).</code><br>
+Later whenever trying to access this widget I got this traceback:
+
+<pre>
+Traceback evaluating code in twisted.words.webwords.Page:Traceback (most recent call last):
+  File "/usr/lib/python2.1/site-packages/twisted/web/widgets.py", line 86, in display
+    x = eval(elem, namespace, namespace)
+  File "&lt;string&gt;", line 0, in ?
+AttributeError: TitleBox instance has no attribute 'getContent'
+</pre>
+<p>
+Now remember, widgets that you add to a gadget with addWidget are rendered with self.page
+like so: self.page(theChildWidget). The problem is, theChildWidget in this case was actually
+TitleBox! and of course, TitleBox doesn't follow our template's protocol of having a 'getContent'
+method. So, the lesson is: do not wrap your real widgets with other widgets when adding to
+a Gadget: do formatting either in a) the template or b) the widget's display() method.
+</p>
+
+<h3>Return values of display</h3>
+<p>
+If you ever get a traceback like this:
+</p>
+<pre>
+web.Server Traceback
+
+Traceback (most recent call last):
+  File "/home/punck/cvs/Twisted/twisted/web/server.py", line 215, in process
+    body = resrc.render(self)
+  File "/usr/lib/python2.1/site-packages/twisted/web/widgets.py", line 408, in render
+    displayed = self.display(request)
+  File "/usr/lib/python2.1/site-packages/twisted/web/widgets.py", line 97, in display
+    tm.extend(val)
+AttributeError: TitleBox instance has no attribute '__len__'
+</pre>
+<p>
+It's because you tried to put a widget in the list that display() returns! for now, just tack
+on '.display(request)' to all the widgets you want to return. This will be fixed later on, that
+is, you will be able to include Widget objects in the list that display() returns.
+</p>
+</body>
+</html>
+
