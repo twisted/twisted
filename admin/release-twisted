@@ -368,7 +368,7 @@ class GenerateDocs(Transaction):
         for x in ['*.pyc', '.cvsignore']:
             sh('find %s -name "%s" | xargs rm -f' % (tdir, x))
 
-        sh('rm -f %s/doc/api/index.html.bak')
+        sh('rm -f %s/doc/api/index.html.bak' % tdir)
 
 
     def undoIt(self, opts, fail):
@@ -422,17 +422,17 @@ class CreateTarballs(Transaction):
         print "makeBalls: TwistedDocs"
         docdir = "TwistedDocs-%s" % ver
         sh(  '''
-             cd %(tdir)s/doc && 
-             mv api %(docdir)s
+             cd %(tdir)s && 
+             mv doc %(docdir)s
 
              tar czf   %(docdir)s.tar.gz  %(docdir)s && 
-             mv %(docdir)s.tar.gz ../../ && 
+             mv %(docdir)s.tar.gz ../ && 
 
              tar cjf   %(docdir)s.tar.bz2 %(docdir)s && 
-             mv %(docdir)s.tar.bz2 ../../ && 
+             mv %(docdir)s.tar.bz2 ../ && 
 
              zip -9 -r %(docdir)s.zip %(docdir)s > /dev/null && 
-             mv %(docdir)s.zip ../../
+             mv %(docdir)s.zip ../
              ''' % locals())
 
     def undoIt(self, opts, fail):
