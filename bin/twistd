@@ -104,6 +104,8 @@ try:
         profile.run("selector.run()")
     else:
         application.run()
-finally:
-    os.unlink(config.pidfile)
-    print "Server Shut Down."
+except:
+    traceback.print_exc(file=oldstdout)
+    oldstdout.flush()
+os.unlink(config.pidfile)
+print "Server Shut Down."

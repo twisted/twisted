@@ -399,7 +399,7 @@ class Site(protocol.Factory):
         return res
 
 
-class HTTPClient(tcp.Client, log.Logger):
+class HTTPClient(tcp.Client):
     """A client for HTTP connections.
 
     My implementation is deprecated, since it doesn't use Protocols, but my

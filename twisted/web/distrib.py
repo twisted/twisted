@@ -12,6 +12,7 @@ import resource
 import server
 import error
 import html
+import static
 from server import NOT_DONE_YET
 
 class Request(pb.Copy, server.Request):

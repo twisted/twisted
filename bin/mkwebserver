@@ -74,6 +74,10 @@ class MyOptions(usage.Options):
 
     opt_m = opt_module
 
+    def opt_help(self):
+        print __doc__
+        sys.exit(0)
+
     def opt_user(self):
         self.root = distrib.UserDirectory()
 

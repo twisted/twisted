@@ -10,8 +10,6 @@ if string.find(os.path.abspath(sys.argv[0]),'Twisted') != -1:
         os.path.dirname(os.path.abspath(sys.argv[0])))) 
 ### end of preamble
 
-from twisted import threadable
-threadable.init(0)
 import cPickle
 import pdb
 import profile
@@ -20,7 +18,6 @@ import sys
 
 sys.path.append(os.path.dirname(sys.argv[1]))
 
-sel = cPickle.load(open(sys.argv[1]))
-sel.handleSignals()
-#profile.run('sel.run()')
-pdb.run('sel.run()')
+app = cPickle.load(open(sys.argv[1]))
+#profile.run('app.run()')
+pdb.run('app.run()')

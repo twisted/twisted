@@ -3,9 +3,9 @@
 import types
 
 # Twisted Imports
-from twisted.python import threadable
+from twisted.python import threadable, log
 
-class FileDescriptor:
+class FileDescriptor(log.Logger):
     """An object which can be operated on by select().
     
     This is an abstract superclass of all objects which may be notified when

@@ -32,7 +32,7 @@ def reapProcess(*args):
     except:
         pass
 
-class ProcessWriter(abstract.FileDescriptor, styles.Ephemeral, log.Logger):
+class ProcessWriter(abstract.FileDescriptor, styles.Ephemeral):
     """(Internal) Helper class to write to Process's stdin.
 
     I am a helper which describes a selectable asynchronous writer to a
@@ -105,7 +105,7 @@ class ProcessError(abstract.FileDescriptor):
         del self.proc
 
 
-class Process(abstract.FileDescriptor, styles.Ephemeral, log.Logger):
+class Process(abstract.FileDescriptor, styles.Ephemeral):
     """An operating-system Process.
     
     This represents an operating-system process with standard input,

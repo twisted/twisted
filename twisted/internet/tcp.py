@@ -87,7 +87,7 @@ class Connection(abstract.FileDescriptor,
         protocol.connectionLost()
 
 
-class Client(Connection):#, log.Logger):
+class Client(Connection):
     """A client for TCP (and similiar) sockets.
     """
     def __init__(self, host, port, protocol):
@@ -106,6 +106,7 @@ class Client(Connection):#, log.Logger):
         Connection.__init__(self, skt, protocol)
 	self.doWrite = self.doConnect
         self.doConnect()
+        self.logstr = self.protocol.__class__.__name__+",client"
 
     def createInternetSocket(self):
         """(internal) Create an AF_INET socket.
@@ -134,7 +135,7 @@ class Client(Connection):#, log.Logger):
         self.protocol.makeConnection(self)
 
     def logPrefix(self):
-        return self.protocol.__class__.__name__+",client"
+        return self.logstr
 
     def getPeer(self):
         """Returns a tuple of ('INET', hostname, port).
@@ -145,7 +146,7 @@ class Client(Connection):#, log.Logger):
         return ('INET',)+self.addr
 
 
-class Server(Connection, log.Logger):
+class Server(Connection):
     """Serverside socket-stream connection class.
     
     I am a serverside network connection transport; a socket which came from an
@@ -193,7 +194,7 @@ class Server(Connection, log.Logger):
         """
         return ('INET',)+self.socket.getsockname()
 
-class Port(abstract.FileDescriptor, log.Logger):
+class Port(abstract.FileDescriptor):
     """I am a TCP server port, listening for connections.
 
     When a connection is accepted, I will call my factory's buildProtocol with
