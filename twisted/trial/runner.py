@@ -2,7 +2,6 @@
 
 # -#*- test-case-name: twisted.test.trialtest3.TestTests -*-
 # -@*- test-case-name: twisted.test.trialtest3 -*-
-# -$*- test-case-name: buildbot.test.test_trial.TestRemoteReporter.testConnectToSlave -*-
 #
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
@@ -81,20 +80,13 @@ class BrokenTestCaseWarning(Warning):
     """emitted as a warning when an exception occurs in one of
     setUp, tearDown, setUpClass, or tearDownClass"""
 
-class CouldNotImportWarning(Warning):
-    pass
-
-class TwistedPythonComponentsBugWarning(Warning):
-    pass
-
-
 class Timed(object):
     zi.implements(itrial.ITimed)
     startTime = None
     endTime = None
 
 def _dbgPA(msg):
-   log.msg(iface=itrial.ITrialDebug, parseargs=msg)
+    log.msg(iface=itrial.ITrialDebug, parseargs=msg)
 
 class TestSuite(Timed):
     """This is the main organizing object. The front-end script creates a
@@ -137,7 +129,8 @@ class TestSuite(Timed):
         if ITestCaseFactory.providedBy(testClass):
             self.tests.append(testClass)
         else:
-            warnings.warn("didn't add %s because it does not implement ITestCaseFactory" % testClass)
+            warnings.warn(("didn't add %s because it does not implement "
+                           "ITestCaseFactory" % testClass))
 
     def addModule(self, module):
         if isinstance(module, types.StringType):
@@ -194,7 +187,7 @@ class TestSuite(Timed):
         tests = self.tests
         if self.sortTests:
             # XXX twisted.python.util.dsu(tests, str)
-            tests.sort(lambda x,y: cmp(str(x), str(y)))
+            tests.sort(lambda x, y: cmp(str(x), str(y)))
 
         log.startKeepingErrors()
 
@@ -290,7 +283,8 @@ class UserMethodError(Exception):
 
 class UserMethodWrapper(MethodInfoBase):
     zi.implements(itrial.IUserMethod, itrial.IMethodInfo)
-    def __init__(self, original, janitor, raiseOnErr=True, timeout=None, suppress=None):
+    def __init__(self, original, janitor, raiseOnErr=True, timeout=None,
+                 suppress=None):
         super(UserMethodWrapper, self).__init__(original)
         self.janitor = janitor
         self.original = original
@@ -308,8 +302,8 @@ class UserMethodWrapper(MethodInfoBase):
             
         try:
             _runWithWarningFilters(self.suppress,
-                    lambda :util.wait(defer.maybeDeferred(self.original, *a, **kw),
-                           timeout, useWaitError=True))
+                lambda :util.wait(defer.maybeDeferred(self.original, *a, **kw),
+                       timeout, useWaitError=True))
         except util.MultiError, e:
             for f in e.failures:
                 self.errors.append(f)
@@ -329,6 +323,11 @@ class UserMethodWrapper(MethodInfoBase):
 
 
 class ParentAttributeMixin:
+    """a mixin to allow decendents of this class to call up 
+    their parents to get a value. the default usage stops at the
+    TestSuite (as it is the trunk of all of this), but any class along the
+    way may return a different value.
+    """
     def getJanitor(self):
         return self.parent.getJanitor()
 
@@ -370,9 +369,12 @@ def _runWithWarningFilters(filterlist, f, *a, **kw):
     try:
         if filterlist is not None:
             for args, kwargs in filterlist:
+                # these two idiot variables are here to make the line < 80wide
+                err1 = "first element must be a sequence"
+                err2 = "second element must be a dict"
                 assert (isinstance(args, types.TupleType) or 
-                        isinstance(args, types.ListType)), "first element must be a sequence"
-                assert isinstance(kwargs, types.DictType), "second element must be a dict"
+                        isinstance(args, types.ListType)), err1
+                assert isinstance(kwargs, types.DictType), err2
                 warnings.filterwarnings(*args, **kwargs)
         return f(*a, **kw)
     finally:
@@ -609,7 +611,8 @@ class TestCaseMethodRunner(TestClassAndMethodBase):
         self.tearDownClass = self.testCaseInstance.tearDownClass
 
         for attr in MAGIC_ATTRS:
-            objs = [self.original, self._testCase, inspect.getmodule(self._testCase)]
+            objs = [self.original, self._testCase,
+                        inspect.getmodule(self._testCase)]
             setattr(self, attr, util._selectAttr(attr, *objs))
         
 
@@ -773,8 +776,9 @@ class TestMethod(MethodInfoBase, ParentAttributeMixin):
                             error.raiseException()
                         self._eb(error)
                     else:
-                        # give the reporter the illusion that the test has run normally
-                        # but don't actually run the test if setUp is broken
+                        # give the reporter the illusion that the test has 
+                        # run normally but don't actually run the test if 
+                        # setUp is broken
                         reporter.startTest(self)
                         reporter.upDownError(setUp, warn=False,
                                              printStatus=False)
@@ -840,38 +844,12 @@ class BenchmarkMethod(TestMethod):
 
     def run(self, testCaseInstance):
         # WHY IS THIS MONKEY PATCH HERE?
-        testCaseInstance.recordStat = lambda datum: self.benchmarkStats.__setitem__(itrial.IFQMethodName(self.original), datum)
+        def _recordStat(datum):
+            # again, idiot variable here to make line < 80 wide
+            name = itrial.IFQMethodName(self.original)
+            self.benchmarkStats.__setitem__(name, datum)
+        testCaseInstance.recordStat = _recordStat
         self.original(testCaseInstance)
         
-
-def runTest(method):
-    # utility function, used by test_trial to more closely emulate the usual
-    # testing process. This matches the same check in util.extract_tb that
-    # matches SingletonRunner.runTest and TestClassRunner.runTest .
-    method()
-
-
-
-
-## class PerformanceTestClassRunner(TestClassRunner):
-##     methodPrefixes = ('benchmark',)
-##     def runTest(self, method):
-##         assert method.__name__ in self.methodNames
-##         fullName = "%s.%s" % (method.im_class, method.im_func.__name__)
-##         method.im_self.recordStat = lambda datum: self.stats.__setitem__(fullName,datum)
-##         method()
-
-
-
-## class PerformanceSingletonRunner(SingletonRunner):
-##     def __init__(self, methodName, stats):
-##         SingletonRunner.__init__(self, methodName)
-##         self.stats = stats
-
-##     def runTest(self, method):
-##         assert method.__name__ == self.methodName
-##         fullName = "%s.%s" % (method.im_class, method.im_func.__name__)
-##         method.im_self.recordStat = lambda datum: self.stats.__setitem__(fullName, datum)
-##         method()
 
 
