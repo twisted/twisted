@@ -108,18 +108,6 @@ class IMessageDelivery(components.Interface):
         @raise SMTPBadSender: Raised of messages from this address are
         not to be accepted.
         """
-    
-    def startMessage(self, recipients):
-        """Create and return IMessages for delivery to each given recipient
-        
-        DEPRECATED.  Implement validateTo() correctly.
-        
-        @type recipients: C{list} of C{Address}
-        @param recipients: The addresses for which to create IMessages.
-        
-        @rtype: C{list}
-        @return: The IMessage objects.
-        """
 
 class SMTPError(Exception):
     pass
@@ -380,17 +368,6 @@ class User:
     def __str__(self):
         return str(self.dest)
 
-    def __getattr__(self,attr):
-        attrmap = { 'name' : 'local', 'domain' : 'domain' }
-        if attr in attrmap:
-            warnings.warn("User.%s is deprecated, use User.dest.%s instead" %
-                (attr, attrmap[attr]), category=DeprecationWarning,
-                stacklevel=2)
-            return getattr(self.dest, attrmap[attr])
-        else:
-            raise AttributeError, ("'%s' object has no attribute '%s'" %
-                (type(self).__name__, attr))
-
 class IMessage(components.Interface):
     """Interface definition for messages that can be sent via SMTP."""
     
@@ -424,7 +401,6 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
         self._from = None
         self._helo = None
         self._to = []
-        self._user_to = []
         self.delivery = delivery
 
     def timeoutConnection(self):
@@ -484,7 +460,6 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
         self._helo = (rest, peer)
         self._from = None
         self._to = []
-        self._user_to = []
         self.sendCode(250, '%s Hello %s, nice to meet you' % (self.host, peer))
 
     def do_QUIT(self, rest):
@@ -511,7 +486,6 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
             return
         # Clear old recipient list
         self._to = []
-        self._user_to = []
         m = self.mail_re.match(rest)
         if not m:
             self.sendCode(501, "Syntax error")
@@ -522,37 +496,12 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
         except AddressError, e:
             self.sendCode(553, str(e))
             return
-            
-        try:
-            defer.maybeDeferred(self.validateFrom, self._helo, addr
-            ).addCallbacks(self._cbFromValidate, self._ebFromValidate)
-        except TypeError:
-            if self.validateFrom.func_code.co_argcount == 5:
-                warnings.warn(
-                    'File "%s", line %d, in %s\n'
-                    '  %s.validateFrom call syntax has changed!\n'
-                    '  Please update your code!' %
-                    (self.validateFrom.func_code.co_filename,
-                     self.validateFrom.func_code.co_firstlineno,
-                     self.validateFrom.func_code.co_name,
-                     self.__class__.__name__),
-                    category=DeprecationWarning,stacklevel=2)
-                self.validateFrom(self._helo, addr, self._cbFromValidate,
-                                  self._fromInvalid)
-            else:
-                raise
 
-    def _fromInvalid(self, from_, code=550, msg='No mail for you!'):
-        "For compatibility"
-        self.sendCode(code,msg)
+        defer.maybeDeferred(self.validateFrom, self._helo, addr
+            ).addCallbacks(self._cbFromValidate, self._ebFromValidate
+            )
 
     def _cbFromValidate(self, from_, code=250, msg='Sender address accepted'):
-        if from_ is None:
-            warnings.warn(
-                "Returning None from validateFrom is deprecated.  "
-                "Raise smtp.SMTPBadSender instead", DeprecationWarning
-            )
-            self.sendCode(550, 'Cannot receive for specified address')
         self._from = from_
         self.sendCode(code, msg)
 
@@ -586,56 +535,21 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
             self.sendCode(553, str(e))
             return
 
-        try:
-            d = defer.maybeDeferred(self.validateTo, user)
-            d.addCallbacks(
-                self._cbToValidate,
-                self._ebToValidate,
-                callbackArgs=(user,)
-            )
-        except TypeError:
-            if self.validateTo.func_code.co_argcount == 4:
-                warnings.warn(
-                    'File "%s", line %d, in %s\n'
-                    '  %s.validateTo call syntax has changed!\n'
-                    '  Please update your code!' %
-                    (self.validateTo.func_code.co_filename,
-                     self.validateTo.func_code.co_firstlineno,
-                     self.validateTo.func_code.co_name,
-                     self.__class__.__name__),
-                    category=DeprecationWarning,stacklevel=2)
-                self.validateTo(user, self._cbToValidate, self._toInvalid)
-            else:
-                raise
-
-    def _toInvalid(self, to, code=550,
-                   msg='Cannot receive for specified address'):
-        "For compatibility"
-        self.sendCode(code, msg)
+        d = defer.maybeDeferred(self.validateTo, user)
+        d.addCallbacks(
+            self._cbToValidate,
+            self._ebToValidate,
+            callbackArgs=(user,)
+        )
 
     def _cbToValidate(self, to, user=None, code=250, msg='Recipient address accepted'):
         if user is None:
             user = to
-        if to is None:
-            warnings.warn(
-                "Returning None from validateTo is deprecated.  "
-                "Raise smtp.SMTPBadRcpt instead.", DeprecationWarning
-            )
-            self.sendCode(550, 'Cannot receive for specified address')
-        elif isinstance(to, User):
-            warnings.warn(
-                "Returning a User from validateTo is deprecated.  "
-                "Return an IMessage factory instead.", DeprecationWarning
-            )
-            self._user_to.append(to)
-        else:
-            self._to.append((user, to))
+        self._to.append((user, to))
         self.sendCode(code, msg)
 
     def _ebToValidate(self, failure):
-        if failure.check(SMTPBadRcpt):
-            self.sendCode(failure.value.code, failure.value.resp)
-        elif failure.check(SMTPServerError):
+        if failure.check(SMTPBadRcpt, SMTPServerError):
             self.sendCode(failure.value.code, failure.value.resp)
         else:
             log.err(failure)
@@ -645,43 +559,32 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
             )
 
     def do_DATA(self, rest):
-        if self._from is None or (not self._to and not self._user_to):  
+        if self._from is None or (not self._to):
             self.sendCode(503, 'Must have valid receiver and originator')
             return
         assert self.delivery
         self.mode = DATA
-        helo, origin, user_recipients = self._helo, self._from, self._user_to
+        helo, origin = self._helo, self._from
         recipients = self._to
         
         self._from = None
         self._to = []
-        self._user_to = []
         self.datafailed = None
         
-        if user_recipients:
-            try:
-                self.__messages = self.startMessage(user_recipients)
-            except SMTPServerError, e:
-                self.sendCode(e.code, e.resp)
-                self.mode = COMMAND
-                return
-            rcvdhdr = self.delivery.receivedHeader(
-                helo, origin, map(str, user_recipients))
-        else:
-            try:
-                self.__messages = [f() for (u, f) in recipients]
-            except SMTPServerError, e:
-                self.sendCode(e.code, e.resp)
-                self.mode = COMMAND
-                return
-            except:
-                log.err()
-                self.sendCode(550, "Internal server error")
-                self.mode = COMMAND
-                return
+        try:
+            self.__messages = [f() for (u, f) in recipients]
+        except SMTPServerError, e:
+            self.sendCode(e.code, e.resp)
+            self.mode = COMMAND
+            return
+        except:
+            log.err()
+            self.sendCode(550, "Internal server error")
+            self.mode = COMMAND
+            return
 
-            rcvdhdr = self.delivery.receivedHeader(
-                helo, origin, [u for (u, f) in recipients])
+        rcvdhdr = self.delivery.receivedHeader(
+            helo, origin, [u for (u, f) in recipients])
 
         self.__inheader = self.__inbody = 0
         if rcvdhdr:
@@ -694,7 +597,7 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
                 return
         self.sendCode(354, 'Continue')
         fmt = 'Receiving message for delivery: from=%s to=%s'
-        log.msg(fmt % (origin, map(str, [u for (u, f) in recipients] or user_recipients)))
+        log.msg(fmt % (origin, [str(u) for (u, f) in recipients]))
 
     def connectionLost(self, reason):
         # self.sendCode(421, 'Dropping connection.') # This does nothing...
@@ -716,7 +619,6 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
     def do_RSET(self, rest):
         self._from = None
         self._to = []
-        self._user_to = []
         self.sendCode(250, 'I remember nothing.')
 
     def dataLineReceived(self, line):
@@ -789,8 +691,10 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
         self.challenge = None
         if reason.check(cred.error.UnauthorizedLogin):
             self.sendCode(535, 'Authentication failed')
+        elif reason.check(SMTPAddressError):
+            self.sendCode(reason.value.code, reason.value.resp)
         else:
-            self.sendCode(451, 'Requested action aborted: error in processing')
+            self.sendCode(451, 'Requested action aborted: local error in processing')
             log.err(reason)
 
     # overridable methods:
@@ -999,23 +903,8 @@ class SMTPClient(basic.LineReceiver):
     def smtpState_msgSent(self, code, resp):
         if self._from is not None:
             # If there was a pending message
-            try:
-                self.sentMail(code, resp, len(self.successAddresses),
-                              self.toAddressesResult, self.log)
-            except TypeError:
-                if self.sentMail.func_code.co_argcount == 2:
-                    warnings.warn(
-                        'File "%s", line %d, in %s\n'
-                        '  %s.sentMail call syntax has changed!\n'
-                        '  Please update your code!' %
-                        (self.sentMail.func_code.co_filename,
-                         self.sentMail.func_code.co_firstlineno,
-                         self.sentMail.func_code.co_name,
-                         self.__class__.__name__),
-                        category=DeprecationWarning,stacklevel=2)
-                    self.sentMail(self.successAddresses)
-                else:
-                    raise
+            self.sentMail(code, resp, len(self.successAddresses),
+                          self.toAddressesResult, self.log)
 
         self.toAddressesResult = []
         self._from = None
@@ -1223,7 +1112,6 @@ class ESMTP(SMTP):
         self._helo = (rest, peer)
         self._from = None
         self._to = []
-        self._user_to = []
         ext = self.extensions()
         self.sendCode(
             250,
