@@ -53,6 +53,8 @@ class AuthForm(widgets.Form):
         ['string','Perspective','perspective','']
         ]
 
+    formAcceptExtraArgs = 1
+    
     def __init__(self, reqauth, sessionIdentity=None, sessionPerspective=None):
         """Initialize, specifying various options.
         

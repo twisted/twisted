@@ -363,6 +363,9 @@ class Form(Widget):
     formFields = [
     ]
 
+    # do we raise an error when we get extra args or not?
+    formAcceptExtraArgs = 0
+    
     def getFormFields(self, request, fieldSet = None):
         """I return a list of lists describing this form, or a Deferred.
 
@@ -571,7 +574,7 @@ class Form(Widget):
         for field in ['submit', '__formtype__', '__checkboxes__']:
             if args.has_key(field):
                 del args[field]
-        if args:
+        if args and not self.formAcceptExtraArgs:
             raise FormInputError("unknown fields: %s" % repr(args))
         return apply(self.process, (write, request, submitAction), kw)
 
