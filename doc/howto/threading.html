@@ -31,7 +31,7 @@ threadable.init()
     writing data to a transport from a protocol is not thread-safe.
     Therefore, we want a way to schedule methods to be run in the
     main event loop. This can be done using the function <code
-    class="API">twisted.internet.interfaces.IReactorCore.callFromThread</code>:</p>
+    class="API">twisted.internet.interfaces.IReactorThreads.callFromThread</code>:</p>
 <pre class="python">
 from twisted.internet import reactor
 from twisted.python import threadable
