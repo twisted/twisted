@@ -38,11 +38,14 @@ def run(argv=sys.argv):
     # string matches the directory being built, not the directory
     # already installed
     sys.path.insert(0, home)
+    # delete our reference to twisted so the new import gets the version
+    # of twisted found under home
+    del sys.modules['twisted']
     from twisted.copyright import version
 
     twisteddist='Twisted-%s.win32-py2.2.exe' % version
     python='c:\\python22\\python.exe'
-    scp='c:\\cygwin\\bin\\echo'
+    scp='c:\\cygwin\\bin\\scp'
     ssh='c:\\cygwin\\bin\\ssh'
     commands=[(python, 'setup.py', 'clean', '--all'),
               (python, 'setup.py', 'build', '--compiler=mingw32'),
