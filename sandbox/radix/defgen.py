@@ -19,7 +19,7 @@ class waitForDeferred:
             yield thing
             thing = thing.getResult()
             print thing #the result! hoorj!
-        thingummy = deferGenerator(thingummy)
+        thingummy = deferredGenerator(thingummy)
 
     waitForDeferred returns something that you should immediately yield;
     when your generator is resumed, calling thing.getResult() will either
