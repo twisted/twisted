@@ -60,7 +60,7 @@ class MessageSet:
     
     def __contains__(self, value):
         for (low, high) in self._rangePairs():
-            if (low is None or value >= low) and (high is None or value < high):
+            if (low is None or value >= low) and (high is None or value <= high):
                 return True
         return False
     
@@ -84,28 +84,31 @@ class MessageSet:
                 return sys.maxint
             L = 0
             for (low, high) in self._rangePairs():
-                L = L + high - low
+                L = L + high - low + 1
             return L
         return 0
     
     def __iter__(self):
         def i():
             for (low, high) in self._rangePairs():
-                while high is None or low < high:
+                while high is None or low <= high:
                     yield low
                     low += 1
         return i()
     
-    def __repr__(self):
+    def __str__(self):
         p = []
         for (low, high) in self._rangePairs():
-            if low + 1 == high:
+            if low == high:
                 p.append(str(low))
             elif high is None:
                 p.append('%d:*' % (low,))
             else:
                 p.append('%d:%d' % (low, high))
-        return '<%s>' % (','.join(p),)
+        return ','.join(p)
+    
+    def __repr__(self):
+        return '<MessageSet %s>' % (str(self),)
 
 class Command:
     _1_RESPONSES = ('CAPABILITY', 'FLAGS', 'LIST', 'LSUB', 'STATUS', 'SEARCH')
@@ -1737,19 +1740,27 @@ class IMAP4Client(basic.LineReceiver):
                         raise IllegalServerResponse, line
         return ids
 
-    def search(self, *queries):
+    def search(self, *queries, **kwarg):
         """Search messages in the currently selected mailbox
 
         This command is allowed in the Selected state.
 
         Any non-zero number of queries are accepted by this method, as
         returned by the C{Query}, C{Or}, and C{Not} functions.
+        
+        One keyword argument is accepted: if uid is passed in with a non-zero
+        value, the server is asked to return message UIDs instead of message
+        sequence numbers.
+
         @rtype: C{Deferred}
         @return: A deferred whose callback will be invoked with a list of all
         the message sequence numbers return by the search, or whose errback
         will be invoked if there is an error.
         """
-        cmd = 'SEARCH'
+        if kwarg.get('uid'):
+            cmd = 'UID SEARCH'
+        else:
+            cmd = 'SEARCH'
         args = ' '.join(queries)
         d = self.sendCommand(Command(cmd, args, wantResponse=(cmd,)))
         d.addCallback(self.__cbSearch)
@@ -2261,7 +2272,7 @@ class IMAP4Client(basic.LineReceiver):
         d.addCallback(self.__cbFetch, lookFor='FLAGS')
         return d
     
-    def copy(self, messages, mailbox):
+    def copy(self, messages, mailbox, uid):
         """Copy the specified messages to the specified mailbox.
         
         This command is allowed in the Selected state.
@@ -2272,13 +2283,21 @@ class IMAP4Client(basic.LineReceiver):
         @type mailbox: C{str}
         @param mailbox: The mailbox to which to copy the messages
         
+        @type uid: C{bool}
+        @param uid: If true, the C{messages} refers to message UIDs, rather
+        than message sequence numbers.
+        
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a true value
         when the copy is successful, or whose errback is invoked if there
         is an error.
         """
+        if uid:
+            cmd = 'UID COPY'
+        else:
+            cmd = 'COPY'
         args = '%s %s' % (messages, mailbox.encode('imap4-utf-7'))
-        return self.sendCommand(Command('COPY', args))
+        return self.sendCommand(Command(cmd, args))
 
     #
     # IMailboxListener methods
@@ -2306,7 +2325,7 @@ def parseIdList(s):
                 if high == '*':
                     res = res + (low, None)
                 else:
-                    res = res + (low, int(high) + 1)
+                    res = res + (low, int(high))
             except ValueError:
                 raise IllegalIdentifierError, p
         else:
@@ -2315,7 +2334,7 @@ def parseIdList(s):
             except ValueError:
                 raise IllegalIdentifierError, p
             else:
-                res = res + (p, p + 1)
+                res = res + (p, p)
     return res
 
 class IllegalQueryError(IMAP4Exception): pass
@@ -2367,6 +2386,8 @@ def Query(sorted=0, **kwarg):
         keyword     : Search for messages with the given keyword set
 
         larger      : Search for messages larger than this number of octets
+
+        messages    : Search only the given message sequence set.
 
         new         : If set to a true value, search messages flagged with
                       \\Recent but not \\Seen

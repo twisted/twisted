@@ -74,12 +74,12 @@ class IMAP4HelperTestCase(unittest.TestCase):
         self.assertEquals(m1, m2)
         
         m1 = m1 + (1, 3)
-        self.assertEquals(len(m1), 2)
-        self.assertEquals(list(m1), [1, 2])
+        self.assertEquals(len(m1), 3)
+        self.assertEquals(list(m1), [1, 2, 3])
         
         m2 = m2 + (1, 3)
         self.assertEquals(m1, m2)
-        self.assertEquals(list(m1 + m2), [1, 2, 1, 2])
+        self.assertEquals(list(m1 + m2), [1, 2, 3, 1, 2, 3])
 
     def testQuotedSplitter(self):
         cases = [
@@ -267,16 +267,16 @@ class IMAP4HelperTestCase(unittest.TestCase):
         outputs = [
             MessageSet(1, None),
             MessageSet(5, None),
-            MessageSet(1, 3, 5, None),
-            MessageSet(1, 2),
-            MessageSet(1, 2, 2, 3),
-            MessageSet(1, 2, 3, 4, 5, 6),
-            MessageSet(1, 11),
-            MessageSet(1, 11, 11, 12),
-            MessageSet(1, 6, 10, 21),
-            MessageSet(1, 2, 5, 11),
-            MessageSet(1, 2, 5, 11, 15, 21),
-            MessageSet(1, 11, 15, 16, 20, 26),
+            MessageSet(1, 2, 5, None),
+            MessageSet(1, 1),
+            MessageSet(1, 1, 2, 2),
+            MessageSet(1, 1, 3, 3, 5, 5),
+            MessageSet(1, 10),
+            MessageSet(1, 10, 11, 11),
+            MessageSet(1, 5, 10, 20),
+            MessageSet(1, 1, 5, 10),
+            MessageSet(1, 1, 5, 10, 15, 20),
+            MessageSet(1, 10, 15, 15, 20, 25),
         ]
         
         lengths = [
@@ -1079,11 +1079,18 @@ class FakeyServer(imap4.IMAP4Server):
 class FetchSearchStoreCopyTestCase(unittest.TestCase, IMAP4HelperMixin):
     result = None
     search_result = [1, 4, 5, 7]
+    fetchall_result = {}
 
     def search(self, query, uid):
         self.assertEquals(imap4.parseNestedParens(self.query), query)
         self.assertEquals(self.uid, uid)
         return self.search_result
+    
+    def fetch(self, messages, parts, uid):
+        self.assertEquals(str(messages), self.messages)
+        self.assertEquals(parts, self.parts)
+        self.assertEquals(uid, self.uid)
+        return self.fetchall_result
     
     def setUp(self):
         self.server = imap4.IMAP4Server()
@@ -1092,15 +1099,9 @@ class FetchSearchStoreCopyTestCase(unittest.TestCase, IMAP4HelperMixin):
         self.connected = defer.Deferred()
         self.client = SimpleClient(self.connected)
     
-    def testFetch(self):
-        self.query = imap4.Or(
-            imap4.Query(header=('subject', 'substring')),
-            imap4.Query(larger=1024, smaller=4096),
-        )
-        self.uid = 0
-        
+    def _searchWork(self, uid):
         def search():
-            return self.client.search(self.query)
+            return self.client.search(self.query, uid=uid)
         def result(R):
             self.result = R
 
@@ -1115,3 +1116,46 @@ class FetchSearchStoreCopyTestCase(unittest.TestCase, IMAP4HelperMixin):
         self.failIf(self.result is self.search_result)
         
         self.assertEquals(self.result, self.search_result)
+    
+    def testSearch(self):
+        self.query = imap4.Or(
+            imap4.Query(header=('subject', 'substring')),
+            imap4.Query(larger=1024, smaller=4096),
+        )
+        self.uid = 0
+        self._searchWork(0)
+
+    def testUIDSearch(self):
+        self.query = imap4.Or(
+            imap4.Query(header=('subject', 'substring')),
+            imap4.Query(larger=1024, smaller=4096),
+        )
+        self.uid = 1
+        self._searchWork(1)
+
+    def testFetchAll(self):
+        def fetch():
+            return self.client.fetchAll(self.messages, 0)
+        def result(R):
+            self.result = R
+        
+        self.messages = '1:10,20'
+        self.parts = ['ENVELOPE', 'RFC822SIZE', 'INTERNALDATE', 'FLAGS']
+        self.uid = 0
+
+        self.connected.addCallback(strip(fetch)
+        ).addCallback(result
+        ).addCallback(self._cbStopClient
+        ).addErrback(self._ebGeneral)
+
+        loopback.loopback(self.server, self.client)
+        
+        # Ensure no short-circuiting wierdness is going on
+        self.failIf(self.result is self.fetchall_result)
+        
+        self.assertEquals(self.result, self.fetchall_result)
+
+    def testFetch(self):
+        pass
+        
+        
