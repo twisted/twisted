@@ -33,7 +33,7 @@ import Tkinter
 import tkMessageBox
 import traceback
 
-import string
+import string, StringIO
 tk = Tkinter # Alternative to the messy 'from Tkinter import *' often seen
 
 
@@ -340,11 +340,14 @@ class TkTestRunner(BaseGUITestRunner):
         window = tk.Toplevel(self.root)
         window.title(txt)
         window.protocol('WM_DELETE_WINDOW', window.quit)
-        test, error = self.errorInfo[selected]
+        test, failure = self.errorInfo[selected]
+        s = StringIO.StringIO()
+        failure.printTraceback(s)
+        # original code limited this to 10 frames, but Failure doesn't offer
+        # control over that
+        tracebackText = s.getvalue()
         tk.Label(window, text=str(test),
                  foreground="red", justify=tk.LEFT).pack(anchor=tk.W)
-        tracebackLines = apply(traceback.format_exception, error + (10,))
-        tracebackText = string.join(tracebackLines,'')
         tk.Label(window, text=tracebackText, justify=tk.LEFT).pack()
         tk.Button(window, text="Close",
                   command=window.quit).pack(side=tk.BOTTOM)
