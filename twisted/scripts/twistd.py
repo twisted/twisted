@@ -31,7 +31,6 @@ import sys, os
 
 reactorTypes = {
     'gtk': 'twisted.internet.gtkreactor',
-    'tk': 'twisted.internet.tkreactor',
     'default': 'twisted.internet.default',
     'win32': 'twisted.internet.win32eventreactor',
     'win': 'twisted.internet.win32eventreactor',
