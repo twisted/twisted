@@ -4,7 +4,6 @@
   * twistd/twistw would be nice to test, maybe by explicitly
     running a new process
 * Doc-strings
-  * __init__.py
   * app.py
   * mktap.py
   * tapconvert.py
