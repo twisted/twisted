@@ -137,7 +137,8 @@ class FileDescriptor(log.Logger, styles.Ephemeral):
         otherwise this adds data to be written the next time this file descriptor is
         ready for writing.
         """
-        assert not isinstance(data, unicode) # no, really, I mean it
+        if isinstance(data, unicode): # no, really, I mean it
+            raise TypeError("Data must be not be unicode")
         if not self.connected:
             return
         if data:
