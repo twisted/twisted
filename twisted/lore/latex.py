@@ -24,7 +24,7 @@ import urlparse
 
 import tree
 
-escapingRE = re.compile(r'([#$%&_{}^~\\])')
+escapingRE = re.compile(r'([\[\]#$%&_{}^~\\])')
 lowerUpperRE = re.compile(r'([a-z])([A-Z])')
 
 def _escapeMatch(match):
@@ -35,6 +35,8 @@ def _escapeMatch(match):
         return '\\~{}'
     elif c == '^':
         return '\\verb#^#'
+    elif c in '[]':
+        return '{'+c+'}'
     else:
         return '\\' + c
 
