@@ -46,21 +46,21 @@ twisted.web.test in it."""
 
     def __init__(self):
         usage.Options.__init__(self)
-        self.indexes = []
-        self.root = None
+        self.opts['indexes'] = []
+        self.opts['root'] = None
 
     def opt_index(self, indexName):
         """Add the name of a file used to check for directory indexes.
         [default: index, index.html]
         """
-        self.indexes.append(indexName)
+        self.opts['indexes'].append(indexName)
 
     opt_i = opt_index
         
     def opt_user(self):
         """Makes a server with ~/public_html and ~/.twistd-web-service support for users.
         """
-        self.root = distrib.UserDirectory()
+        self.opts['root'] = distrib.UserDirectory()
 
     opt_u = opt_user
 
@@ -71,8 +71,8 @@ twisted.web.test in it."""
         any other files that you want to be served up raw.
         """
 
-        self.root = static.File(path)
-        self.root.processors = {
+        self.opts['root'] = static.File(path)
+        self.opts['root'].processors = {
             '.cgi': twcgi.CGIScript,
             '.php3': twcgi.PHPScript,
             '.epy': script.PythonScript
@@ -82,36 +82,36 @@ twisted.web.test in it."""
         """Create a Resource subclass with a zero-argument constructor.
         """
         classObj = reflect.namedClass(className)
-        self.root = classObj()
+        self.opts['root'] = classObj()
 
     opt_s = opt_static
 
     def opt_mime_type(self, defaultType):
-        if not isinstance(self.root, static.File):
+        if not isinstance(self.opts['root'], static.File):
             print "You can only use --static_mime after --static."
             sys.exit(2)
-        self.root.defaultType = defaultType
+        self.opts['root'].defaultType = defaultType
 
     opt_m = opt_mime_type
 
 
 
 def updateApplication(app, config):
-    if config.telnet:
+    if config.opts['telnet']:
         from twisted.protocols import telnet
         factory = telnet.ShellFactory()
-        app.listenTCP(int(config.telnet), factory)
-    if config.root:
-        root = config.root
-        if config.indexes:
-            config.root.indexNames = config.indexes
+        app.listenTCP(int(config.opts['telnet']), factory)
+    if config.opts['root']:
+        root = config.opts['root']
+        if config.opts['indexes']:
+            config.opts['root'].indexNames = config.opts['indexes']
     else:
         # This really ought to be web.Admin or something
         root = test.Test()
 
     site = server.Site(root)
 
-    if config.personal:
+    if config.opts['personal']:
         import pwd,os
 
         pw_name, pw_passwd, pw_uid, pw_gid, pw_gecos, pw_dir, pw_shell \
@@ -120,5 +120,5 @@ def updateApplication(app, config):
                                    distrib.UserDirectory.userSocketName),
                       pb.BrokerFactory(distrib.ResourcePublisher(site)))
     else:
-        app.listenTCP(int(config.port), site)
+        app.listenTCP(int(config.opts['port']), site)
 

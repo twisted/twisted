@@ -53,18 +53,18 @@ def addUser(factory, username, password):
 def updateApplication(app, config):
     t = ftp.FTPFactory()
     # setting the config
-    t.anonymous = config.anonymous
-    t.thirdparty = config.thirdparty
-    t.root = config.root
-    t.useranonymous = config.useranonymous
-    t.otp = config.otp
+    t.anonymous = config.opts['anonymous']
+    t.thirdparty = config.opts['thirdparty']
+    t.root = config.opts['root']
+    t.useranonymous = config.opts['useranonymous']
+    t.otp = config.opts['otp']
     t.userdict = {}
 
     # adding a default user
     addUser(t, "twisted", "twisted")
 
     try:
-        portno = int(config.port)
-    except AttributeError:
+        portno = int(config.opts['port'])
+    except KeyError:
         portno = 2121
     app.listenTCP(portno, t)

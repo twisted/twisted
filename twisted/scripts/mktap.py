@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: mktap.py,v 1.4 2002/03/21 16:10:33 itamarst Exp $
+# $Id: mktap.py,v 1.5 2002/04/03 19:00:57 carmstro Exp $
 
 """ Implementation module for the `mktap` command.
 """
@@ -100,8 +100,8 @@ def getModule(type):
 def run():
     options = GeneralOptions()
     if hasattr(os, 'getgid'):
-        options.uid = os.getuid()
-        options.gid = os.getgid()
+        options.opts['uid'] = os.getuid()
+        options.opts['gid'] = os.getgid()
     try:
         options.parseOptions(sys.argv[1:])
     except:
@@ -128,10 +128,10 @@ def run():
         config.opt_help()
         sys.exit(1)
 
-    if not options.append:
-        a = app.Application(options.args[0], int(options.uid), int(options.gid))
+    if not options.opts['append']:
+        a = app.Application(options.args[0], int(options.opts['uid']), int(options.opts['gid']))
     else:
-        a = cPickle.load(open(options.append))
+        a = cPickle.load(open(options.opts['append']))
 
     haveBroker = 0
     mod.updateApplication(a, config)
@@ -149,14 +149,14 @@ def run():
             break
 
     # Would you like a manhole with that?
-    if options.manholePass:
+    if options.opts['manholePass']:
         if not haveBroker:
             bkr = pb.BrokerFactory(pb.AuthRoot(a))
-            a.listenTCP(options.manholePort, bkr)
+            a.listenTCP(options.opts['manholePort'], bkr)
 
         svc = manholeService.Service(application=a)
-        p = svc.createPerspective(options.manholeUser)
-        p.makeIdentity(options.manholePass)
+        p = svc.createPerspective(options.opts['manholeUser'])
+        p.makeIdentity(options.opts['manholePass'])
 
     a.save()
 

@@ -71,12 +71,12 @@ class Options(usage.Options):
 
 
 def updateApplication(app, config):
-    if config.telnet:
+    if config.opts['telnet']:
         from twisted.protocols import telnet
         factory = telnet.ShellFactory()
-        app.listenTCP(int(config.telnet), factory)
-    if config.relay:
-        addr, dir = string.split(config.relay, '=', 1)
+        app.listenTCP(int(config.opts['telnet']), factory)
+    if config.opts['relay']:
+        addr, dir = string.split(config.opts['relay'], '=', 1)
         ip, port = string.split(addr, ',', 1)
         port = int(port)
         default = relay.DomainPickler(dir)
@@ -85,7 +85,7 @@ def updateApplication(app, config):
         relaymanager.attachManagerToDelayed(manager, delayed)
         config.domains = mail.DomainWithDefaultDict(config.domains, default)
         app.addDelayed(delayed)
-    app.listenTCP(int(config.pop),
+    app.listenTCP(int(config.opts['pop']),
                  mail.createDomainsFactory(pop3.VirtualPOP3, config.domains))
-    app.listenTCP(int(config.smtp),
+    app.listenTCP(int(config.opts['smtp']),
                  mail.createDomainsFactory(smtp.DomainSMTP, config.domains))

@@ -34,5 +34,5 @@ class Options(usage.Options):
     longdesc = 'Stupid proxy.'
 
 def updateApplication(app, config):
-    s = stupidproxy.makeStupidFactory(config.host, int(config.dest_port))
-    app.listenTCP(int(config.port), s)
+    s = stupidproxy.makeStupidFactory(config.opts['host'], int(config.opts['dest_port']))
+    app.listenTCP(int(config.opts['port']), s)

@@ -40,11 +40,11 @@ realities can be found at http://twistedmatrix.com/reality.epy.
 """
 
 def updateApplication(app, config):
-    if not config.map:
+    if not config.opts['map']:
         raise Exception("Please give a map name")
-    print 'Loading %s...' % config.map
+    print 'Loading %s...' % config.opts['map']
     sys.stdout.flush()
-    rdf = reality._default = load(open(config.map,'rb'))
+    rdf = reality._default = load(open(config.opts['map'],'rb'))
     rdf.setApplication(app)
     # Should this be considered 'Legacy'?
     rdf.addPlayersAsIdentities()

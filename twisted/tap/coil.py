@@ -38,5 +38,5 @@ This creates a coil.tap file that can be used by twistd."""
 def updateApplication(app, config):
     root = web.ConfigRoot(app)
     site = server.Site(root)
-    app.listenTCP(int(config.port), site)
+    app.listenTCP(int(config.opts['port']), site)
 

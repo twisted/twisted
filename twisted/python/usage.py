@@ -24,44 +24,49 @@ an example::
     from twisted.python import usage
     import sys
     class MyOptions(usage.Options):
-        optFlags = [["hello", "h"], ["goodbye", "g"]]
-        optParameters = [["message", "m", "friend!"]]
+        optFlags = [['hello', 'h'], ['goodbye', 'g']]
+        optParameters = [['message', 'm', 'friend!']]
+
         def __init__(self):
-            self.debug = 0
+            usage.Options.__init__(self)
+            self.opts['debug'] = 0
+
         def opt_debug(self, opt):
-            if opt == "yes" or opt == "y" or opt == "1":
-                self.debug = 1
-            elif opt == "no" or opt == "n" or opt == "0":
-                self.debug = 0
+            if opt == 'yes' or opt == 'y' or opt == '1':
+                self.opts['debug'] = 1
+            elif opt == 'no' or opt == 'n' or opt == '0':
+                self.opts['debug'] = 0
             else:
-                print "Unknown value for debug, setting to 0"
-                self.debug = 0
+                print 'Unknown value for debug, setting to 0'
+                self.opts['debug'] = 0
         opt_d = opt_debug # a single-char alias for --debug
     try:
         config = MyOptions()
         config.parseOptions()
     except usage.UsageError, ue:
-        print "%s: %s" % (sys.argv[0], ue)
-    if config.hello:
-        if config.debug: print "printing hello"
-        print "hello", config.message #defaults to "friend!"
-    if config.goodbye:
-        if config.debug: print "printing goodbye"
-        print "goodbye", config.message
+        print '%s: %s' % (sys.argv[0], ue)
+    if config.opts['hello']:
+        if config.opts['debug']: print 'printing hello'
+        print 'hello', config.opts['message'] #defaults to 'friend!'
+    if config.opts['goodbye']:
+        if config.opts['debug']: print 'printing goodbye'
+        print 'goodbye', config.opts['message']
 
 #EOF
 
 As you can see, you define optFlags as a list of parameters (with
 both long and short names) that are either on or off.  optParameters
 are parameters with string values, with their default value as
-the third parameter in the list.  If you want to handle your own
-options, define a method named opt_paramname that takes (self,
-option) as arguments. option will be whatever immediately follows
-the parameter on the command line. A few example command lines
-that will work:
+the third parameter in the list.
+
+If you want to handle your own options, define a method named opt_paramname
+that takes (self, option) as arguments. option will be whatever immediately
+follows the parameter on the command line. You should place any option-related
+state in the 'self.opts' dict, but this isn't required; it's only for
+consistency. A few example command lines that will work:
 
 # XXX - Where'd the examples go?
-""" # "
+"""
 
 # System Imports
 import string
@@ -94,6 +99,8 @@ class Options:
         self.docs = {}
         self.synonyms = {}
         self.__dispatch = {}
+        self.opts = {}
+
 
         collectors = [
             self._gather_flags,
@@ -107,9 +114,23 @@ class Options:
             self.longOpt.extend(longOpt)
             self.shortOpt = self.shortOpt + shortOpt
             self.docs.update(docs)
-            self.__dict__.update(settings)
+            
+            self.opts.update(settings)
+            
             self.synonyms.update(synonyms)
             self.__dispatch.update(dispatch)
+
+    def __getattr__(self, attr):
+        """
+        I make sure that old style 'optObj.option' access still works.
+        """
+        #XXX GET RID OF ME!
+
+        if self.opts.has_key(attr):
+            print "optionObject.option is deprecated! Use new-style optionObject.opts['option'] instead! (This is only a warning) (%s, %s)" % (attr, self.opts[attr])
+            return self.opts[attr]
+        else:
+            raise AttributeError("%s instance has no attribute '%s'" % (self.__class__, attr))
 
     def opt_help(self):
         print self.__str__()
@@ -180,13 +201,21 @@ class Options:
         if value not in ('', None):
             raise UsageError, ("Flag '%s' takes no argument."
                                " Not even \"%s\"." % (flagName, value))
-        setattr(self, flagName, 1)
+
+        self.opts[flagName] = 1
+
+        #XXX: Delete me a few releases after 0.16.1
+        #setattr(self, flagName, 1)
 
     def _generic_parameter(self, parameterName, value):
         if value in ('', None):
             raise UsageError, ("Parameter '%s' requires an argument."
                                % (parameterName,))
-        setattr(self, parameterName, value)
+
+        self.opts[parameterName] = value
+
+        #XXX: Delete me a few releases after 0.16.1
+        #setattr(self, parameterName, value)
 
     def _gather_flags(self):
         """Gather up boolean (flag) options.
@@ -222,6 +251,9 @@ class Options:
         docs, settings, synonyms, dispatch = {}, {}, {}, {}
 
         parameters = []
+
+        # XXX: Please, let's delete these after a few releases.
+
         # We have to keep calling these "optStrings" because this code is
         # used in the IPC10 paper, which makes it written in stone...
         reflect.accumulateClassList(self.__class__, 'optStrings',
@@ -395,7 +427,7 @@ def docMakeChunks(optList, width=80):
     """Makes doc chunks for option declarations.
 
     Takes a list of dictionaries, each of which may have one or more
-    of the keys "long", "short", "doc", "default", "optType".
+    of the keys 'long', 'short', 'doc', 'default', 'optType'.
 
     Returns a list of strings.
     The strings may be multiple lines,

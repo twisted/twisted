@@ -31,7 +31,7 @@ class Options(usage.Options):
                   ["user", "u", "admin"]]
     def opt_port(self, opt):
         try:
-            self.portno = int(opt)
+            self.opts['portno'] = int(opt)
         except ValueError:
             raise usage.error("Invalid argument to 'port'!")
     opt_p = opt_port
@@ -39,10 +39,10 @@ class Options(usage.Options):
 
 def updateApplication(app, config):
     svc = service.Service(application=app)
-    p = svc.createPerspective(config.user)
-    p.makeIdentity(config.password)
+    p = svc.createPerspective(config.opts['user'])
+    p.makeIdentity(config.opts['password'])
     try:
-        portno = config.portno
-    except AttributeError:
+        portno = config.opts['portno']
+    except KeyError:
         portno = pb.portno
     app.listenTCP(portno, pb.BrokerFactory(pb.AuthRoot(app)))

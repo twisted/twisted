@@ -32,5 +32,5 @@ class Options(usage.Options):
 
 def updateApplication(app, config):
     t = toc.TOCFactory()
-    portno = int(config.port)
+    portno = int(config.opts['port'])
     app.listenTCP(portno, t)

@@ -32,10 +32,10 @@ class WellBehaved(usage.Options):
                 ]
 
     def opt_myflag(self):
-        self.myflag = "PONY!"
+        self.opts['myflag'] = "PONY!"
 
     def opt_myparam(self, value):
-        self.myparam = "%s WITH A PONY!" % (value,)
+        self.opts['myparam'] = "%s WITH A PONY!" % (value,)
 
 
 class ParseCorrectnessTest(unittest.TestCase):
@@ -56,22 +56,22 @@ class ParseCorrectnessTest(unittest.TestCase):
     def test_checkParameters(self):
         """Checking that parameters have correct values.
         """
-        self.failUnlessEqual(self.nice.long, "Alpha")
-        self.failUnlessEqual(self.nice.another, "Beta")
-        self.failUnlessEqual(self.nice.longonly, "noshort")
-        self.failUnlessEqual(self.nice.shortless, "Gamma")
+        self.failUnlessEqual(self.nice.opts['long'], "Alpha")
+        self.failUnlessEqual(self.nice.opts['another'], "Beta")
+        self.failUnlessEqual(self.nice.opts['longonly'], "noshort")
+        self.failUnlessEqual(self.nice.opts['shortless'], "Gamma")
 
     def test_checkFlags(self):
         """Checking that flags have correct values.
         """
-        self.failUnlessEqual(self.nice.aflag, 1)
-        self.failUnlessEqual(self.nice.flout, 0)
+        self.failUnlessEqual(self.nice.opts['aflag'], 1)
+        self.failUnlessEqual(self.nice.opts['flout'], 0)
 
     def test_checkCustoms(self):
         """Checking that custom flags and parameters have correct values.
         """
-        self.failUnlessEqual(self.nice.myflag, "PONY!")
-        self.failUnlessEqual(self.nice.myparam, "Tofu WITH A PONY!")
+        self.failUnlessEqual(self.nice.opts['myflag'], "PONY!")
+        self.failUnlessEqual(self.nice.opts['myparam'], "Tofu WITH A PONY!")
 
 class HelpStringTest(unittest.TestCase):
     def setUp(self):

@@ -43,6 +43,6 @@ def updateApplication(app, config):
     irc = ircservice.IRCGateway(svc)
     adm = server.Site(webwords.WordsGadget(svc))
 
-    app.listenTCP(int(config.port), bkr)
-    app.listenTCP(int(config.irc), irc)
-    app.listenTCP(int(config.web), adm)
+    app.listenTCP(int(config.opts['port']), bkr)
+    app.listenTCP(int(config.opts['irc']), irc)
+    app.listenTCP(int(config.opts['web']), adm)
