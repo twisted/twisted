@@ -68,6 +68,17 @@ def reapAllProcesses():
     for process in reapProcessHandlers.values():
         process.reapProcess()
 
+
+    # Try to reap unregistered processes, too
+    while 1:
+        try:
+            pid, status = os.waitpid(-1, os.WNOHANG)
+            if pid == 0:
+                break
+            log.msg("Reaping unregistered pid %d! Status: %d" % (pid, status))
+        except OSError:
+            break
+
 def registerReapProcessHandler(pid, process):
     if reapProcessHandlers.has_key(pid):
         raise RuntimeError
