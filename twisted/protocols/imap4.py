@@ -4004,7 +4004,7 @@ _statusRequestDict = {
 def statusRequestHelper(mbox, names):
     r = {}
     for n in names:
-        r[n] = getattr(mbox, _statusRequestDict[n])()
+        r[n] = getattr(mbox, _statusRequestDict[n.upper()])()
     return r
 
 def parseAddr(addr):
