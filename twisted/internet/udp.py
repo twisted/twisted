@@ -38,7 +38,7 @@ from twisted.persisted import styles
 from twisted.python import log, reflect, components
 
 # Sibling Imports
-import abstract, main, error, interfaces
+import abstract, error, interfaces
 
 
 class Port(base.BasePort):

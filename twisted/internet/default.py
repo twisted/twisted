@@ -24,7 +24,7 @@ from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorUNIX
 from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorSSL, IReactorArbitrary
 from twisted.internet.interfaces import IReactorProcess, IReactorFDSet, IReactorMulticast
 from twisted.internet.interfaces import IHalfCloseableDescriptor
-from twisted.internet import main, error, protocol, interfaces
+from twisted.internet import error, protocol, interfaces
 from twisted.internet import tcp, udp, defer
 
 from twisted.python import log, threadable, failure, components
@@ -44,8 +44,6 @@ try:
     unixEnabled = True
 except ImportError:
     unixEnabled = False
-
-from main import CONNECTION_LOST
 
 if platformType != 'java':
     import select
@@ -591,7 +589,8 @@ def install():
     """Configure the twisted mainloop to be run using the select() reactor.
     """
     reactor = SelectReactor()
-    main.installReactor(reactor)
+    from twisted.internet.main import installReactor
+    installReactor(reactor)
 
 
 __all__ = ["install", "PosixReactorBase", "SelectReactor"]

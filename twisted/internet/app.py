@@ -40,7 +40,7 @@ from twisted.python.util import OrderedDict
 from twisted.python import context
 
 # Sibling Imports
-import main, defer, error
+import defer, error
 
 def encrypt(passphrase, data):
     import md5
@@ -482,7 +482,6 @@ class Application(log.Logger, styles.Versioned,
     def upgradeToVersion2(self):
         """Version 2 Persistence Upgrade
         """
-        #self.resolver = main.DummyResolver()
         self.resolver = None # will be deleted in upgrade to v6
     
     def upgradeToVersion1(self):
@@ -862,7 +861,6 @@ class Application(log.Logger, styles.Versioned,
         reactor.addSystemEventTrigger('after', 'shutdown', self._afterShutDown)
         global theApplication
         theApplication = self
-        main.running = 1 # just in case
         log.callWithLogger(self, reactor.run, installSignalHandlers=installSignalHandlers)
 
 

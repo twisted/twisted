@@ -28,7 +28,7 @@ import sys
 from twisted.python import log, threadable, failure
 
 # Sibling Imports
-import main, default
+import default
 
 reads = {}
 writes = {}

@@ -30,7 +30,7 @@ from twisted.python.util import switchUID
 from twisted.internet import protocol
 
 # Sibling Imports
-import abstract, main, fdesc, error
+import abstract, fdesc, error
 from main import CONNECTION_LOST, CONNECTION_DONE
 
 reapProcessHandlers = {}

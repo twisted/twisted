@@ -49,7 +49,7 @@ import socket
 from zope.interface import implements, implementsOnly, implementedBy
 
 # sibling imports
-import tcp, main, interfaces
+import tcp, interfaces
 
 # Twisted imports
 from twisted.python import log, components

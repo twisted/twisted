@@ -11,7 +11,7 @@ Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 
 from __future__ import nested_scopes
 
-from twisted.internet import reactor, main, defer, protocol
+from twisted.internet import reactor, defer, protocol
 from twisted.python import log
 
 import struct

@@ -4,7 +4,7 @@
 
 import socket
 
-from twisted.internet import interfaces, defer, main, error, protocol, address
+from twisted.internet import interfaces, defer, error, protocol, address
 from twisted.internet.abstract import isIPAddress
 from twisted.persisted import styles
 from twisted.python import log, failure, reflect

@@ -157,7 +157,7 @@ class PollReactor(default.PosixReactorBase):
                     why = selectable.doWrite()
                     inRead = False
                 if not selectable.fileno() == fd:
-                    why = main.ConnectionFdescWentAway('Filedescriptor went away')
+                    why = error.ConnectionFdescWentAway('Filedescriptor went away')
                     inRead = False
             except:
                 log.deferr()

@@ -30,7 +30,7 @@ import sys
 import cfsupport as cf
 
 from twisted.python import log, threadable, failure
-from twisted.internet import main, default, error
+from twisted.internet import default, error
 from weakref import WeakKeyDictionary
 
 # cache two extremely common "failures" without traceback info
