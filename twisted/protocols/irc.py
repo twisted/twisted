@@ -255,6 +255,14 @@ class IRCClient(basic.LineReceiver):
         """
         pass
 
+    def kickedFrom(self, channel, kicker, message):
+        """Called when I am kicked from a channel.
+        """
+        pass
+
+    def userKicked(self, kickee, channel, kicker, message):
+        pass
+
     ### user input commands, client->server
     ### Your client will want to invoke these.
 
@@ -433,6 +441,20 @@ class IRCClient(basic.LineReceiver):
     def irc_NICK(self, prefix, params):
         nick = string.split(prefix,'!',0)[0]
         if nick == self.nickname: self.nickname = params[0]
+
+
+    def irc_KICK(self, prefix, params):
+        """Kicked?  Who?  Not me, I hope.
+        """
+        kicker = string.split(prefix,'!')[0]
+        channel = params[0]
+        kicked = params[1]
+        message = params[-1]
+        if string.lower(kicked) == string.lower(self.nickname):
+            # Yikes!
+            self.kickedFrom(channel, kicker, message)
+        else:
+            self.userKicked(kicked, channel, kicker, message)
 
     def irc_unknown(self, prefix, command, params):
         pass

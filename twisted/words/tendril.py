@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: tendril.py,v 1.17 2002/05/30 10:47:57 itamarst Exp $
+# $Id: tendril.py,v 1.18 2002/07/13 23:46:54 glyph Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -78,7 +78,7 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
 
     realname = 'Tendril'
     versionName = 'Tendril'
-    versionNum = '$Revision: 1.17 $'[11:-2]
+    versionNum = '$Revision: 1.18 $'[11:-2]
     versionEnv = copyright.longversion
 
     helptext = (
@@ -108,8 +108,6 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
         perspectiveName -- the name of my perspective with this
         service.  Defaults to nickname + networkSuffix.
 
-        To connect me to an IRC server, pass me as the 'protocol' when
-        constructing a tcp.Client.
         """
         self.participants = {}
         self.dcc_sessions = {}

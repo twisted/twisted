@@ -194,6 +194,48 @@ class GroupConversation(InputOutputWindow):
         alloc_color = self.output.get_colormap().alloc
         self.myColor = alloc_color("#0000ff")
         self.xml.get_widget("NickLabel").set_text(self.group.client.name)
+        participantList = self.xml.get_widget("ParticipantList")
+        groupBox = self.xml.get_widget("GroupActionsBox")
+        for method in group.getGroupCommands():
+            b = gtk.GtkButton(method.__name__)
+            b.connect("clicked", self._doGroupAction, method)
+            groupBox.add(b)
+
+    def on_ParticipantList_unselect_row(self, w, row, column, event):
+        print 'row unselected'
+        personBox = self.xml.get_widget("PersonActionsBox")
+        for child in personBox.children():
+            personBox.remove(child)
+
+    def on_ParticipantList_select_row(self, w, row, column, event):
+        self.selectedPerson = self.group.client.getPerson(self.members[row])
+        print 'selected', self.selectedPerson
+        personBox = self.xml.get_widget("PersonActionsBox")
+        personFrame = self.xml.get_widget("PersonFrame")
+        # clear out old buttons
+        for child in personBox.children():
+            personBox.remove(child)
+        personFrame.set_label("Person: %s" % self.selectedPerson.name)
+        for method in self.selectedPerson.getPersonCommands():
+            b = gtk.GtkButton(method.__name__)
+            b.connect("clicked", self._doPersonAction, method)
+            personBox.add(b)
+            b.show()
+        for method in self.group.getTargetCommands(self.selectedPerson):
+            b = gtk.GtkButton(method.__name__)
+            b.connect("clicked", self._doTargetAction, method,
+                      self.selectedPerson)
+            personBox.add(b)
+            b.show()
+
+    def _doGroupAction(self, evt, method):
+        method()
+
+    def _doPersonAction(self, evt, method):
+        method()
+
+    def _doTargetAction(self, evt, method, person):
+        method(person)
 
     def hidden(self, w):
         InputOutputWindow.hidden(self, w)
@@ -334,6 +376,8 @@ class GtkChatClientUI:
             self.groupConversations[group] = conv
         if not stayHidden:
             conv.show()
+        else:
+            conv.hide()
         return conv
 
     def getPerson(self, name, account, Class):

@@ -623,24 +623,6 @@ Of
       </child>
 
       <widget>
-	<class>GtkButton</class>
-	<name>LeaveButton</name>
-	<can_focus>True</can_focus>
-	<signal>
-	  <name>clicked</name>
-	  <handler>on_LeaveButton_clicked</handler>
-	  <last_modification_time>Tue, 29 Jan 2002 14:21:13 GMT</last_modification_time>
-	</signal>
-	<label> Leave </label>
-	<relief>GTK_RELIEF_NORMAL</relief>
-	<child>
-	  <padding>0</padding>
-	  <expand>False</expand>
-	  <fill>False</fill>
-	</child>
-      </widget>
-
-      <widget>
 	<class>GtkEntry</class>
 	<name>TopicEntry</name>
 	<can_focus>True</can_focus>
@@ -663,7 +645,7 @@ Of
       <widget>
 	<class>GtkLabel</class>
 	<name>AuthorLabel</name>
-	<label>author</label>
+	<label>&lt;nobody&gt;</label>
 	<justify>GTK_JUSTIFY_CENTER</justify>
 	<wrap>False</wrap>
 	<xalign>0.5</xalign>
@@ -730,10 +712,10 @@ Of
 
       <widget>
 	<class>GtkVBox</class>
-	<name>vbox8</name>
+	<name>actionvbox</name>
 	<width>110</width>
 	<homogeneous>False</homogeneous>
-	<spacing>0</spacing>
+	<spacing>1</spacing>
 	<child>
 	  <shrink>True</shrink>
 	  <resize>False</resize>
@@ -756,6 +738,16 @@ Of
 	    <class>GtkCList</class>
 	    <name>ParticipantList</name>
 	    <can_focus>True</can_focus>
+	    <signal>
+	      <name>select_row</name>
+	      <handler>on_ParticipantList_select_row</handler>
+	      <last_modification_time>Sat, 13 Jul 2002 08:11:12 GMT</last_modification_time>
+	    </signal>
+	    <signal>
+	      <name>unselect_row</name>
+	      <handler>on_ParticipantList_unselect_row</handler>
+	      <last_modification_time>Sat, 13 Jul 2002 08:23:25 GMT</last_modification_time>
+	    </signal>
 	    <columns>1</columns>
 	    <column_widths>80</column_widths>
 	    <selection_mode>GTK_SELECTION_SINGLE</selection_mode>
@@ -778,60 +770,67 @@ Of
 	</widget>
 
 	<widget>
-	  <class>GtkButton</class>
-	  <name>AddContactButton</name>
-	  <can_focus>True</can_focus>
-	  <signal>
-	    <name>clicked</name>
-	    <handler>on_AddContactButton_clicked</handler>
-	    <last_modification_time>Wed, 13 Feb 2002 07:52:38 GMT</last_modification_time>
-	  </signal>
-	  <label>Add Contact</label>
-	  <relief>GTK_RELIEF_NORMAL</relief>
+	  <class>GtkFrame</class>
+	  <name>frame10</name>
+	  <label>Group</label>
+	  <label_xalign>0</label_xalign>
+	  <shadow_type>GTK_SHADOW_ETCHED_IN</shadow_type>
 	  <child>
 	    <padding>0</padding>
 	    <expand>False</expand>
 	    <fill>False</fill>
 	  </child>
+
+	  <widget>
+	    <class>GtkVBox</class>
+	    <name>GroupActionsBox</name>
+	    <homogeneous>False</homogeneous>
+	    <spacing>0</spacing>
+
+	    <widget>
+	      <class>Placeholder</class>
+	    </widget>
+
+	    <widget>
+	      <class>Placeholder</class>
+	    </widget>
+
+	    <widget>
+	      <class>Placeholder</class>
+	    </widget>
+	  </widget>
 	</widget>
 
 	<widget>
-	  <class>GtkButton</class>
-	  <name>button15</name>
-	  <can_focus>True</can_focus>
-	  <label>Kick</label>
-	  <relief>GTK_RELIEF_NORMAL</relief>
+	  <class>GtkFrame</class>
+	  <name>PersonFrame</name>
+	  <label>Person</label>
+	  <label_xalign>0</label_xalign>
+	  <shadow_type>GTK_SHADOW_ETCHED_IN</shadow_type>
 	  <child>
 	    <padding>0</padding>
 	    <expand>False</expand>
 	    <fill>False</fill>
 	  </child>
-	</widget>
 
-	<widget>
-	  <class>GtkButton</class>
-	  <name>button16</name>
-	  <can_focus>True</can_focus>
-	  <label>Ban</label>
-	  <relief>GTK_RELIEF_NORMAL</relief>
-	  <child>
-	    <padding>0</padding>
-	    <expand>False</expand>
-	    <fill>False</fill>
-	  </child>
-	</widget>
+	  <widget>
+	    <class>GtkVBox</class>
+	    <name>PersonActionsBox</name>
+	    <homogeneous>False</homogeneous>
+	    <spacing>0</spacing>
 
-	<widget>
-	  <class>GtkButton</class>
-	  <name>button17</name>
-	  <can_focus>True</can_focus>
-	  <label>Reward</label>
-	  <relief>GTK_RELIEF_NORMAL</relief>
-	  <child>
-	    <padding>0</padding>
-	    <expand>False</expand>
-	    <fill>False</fill>
-	  </child>
+	    <widget>
+	      <class>Placeholder</class>
+	    </widget>
+
+	    <widget>
+	      <class>Placeholder</class>
+	    </widget>
+
+	    <widget>
+	      <class>Placeholder</class>
+	    </widget>
+	  </widget>
 	</widget>
       </widget>
     </widget>

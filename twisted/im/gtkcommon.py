@@ -55,7 +55,7 @@ class InputOutputWindow:
     def show(self):
         if not self.currentlyVisible:
             self.win = w = gtk.GtkWindow(gtk.WINDOW_TOPLEVEL)
-            w.connect("destroy", self.hidden)
+            self.connectid = w.connect("destroy", self.hidden)
             w.add(self.widget)
             w.set_title(self.getTitle())
             w.show_all()
@@ -66,6 +66,13 @@ class InputOutputWindow:
         self.win = None
         w.remove(self.widget)
         self.currentlyVisible = 0
+
+    def hide(self):
+        self.win.remove(self.widget)
+        self.currentlyVisible = 0
+        self.win.disconnect(self.connectid)
+        self.win.destroy()
+
 
     def handle_key_press_event(self, entry, event):
         stopSignal = False

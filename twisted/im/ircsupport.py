@@ -23,6 +23,12 @@ from twisted.python.defer import succeed
 import basesupport
 
 class IRCPerson(basesupport.AbstractPerson):
+
+    def imperson_whois(self):
+        self.client.sendLine("WHOIS %s" % self.name)
+
+    ### interface impl
+
     def isOnline(self):
         return ONLINE
 
@@ -41,6 +47,17 @@ class IRCPerson(basesupport.AbstractPerson):
         return succeed(text)
 
 class IRCGroup(basesupport.AbstractGroup):
+
+    def imgroup_testAction(self):
+        print 'action test!'
+
+    def imtarget_kick(self, target):
+        reason = "for great justice!"
+        self.client.sendLine("KICK #%s %s :%s" % (
+            self.name, target.name, reason))
+
+    ### Interface Implementation
+    
     def setTopic(self, topic):
         self.client.topic(self.name, topic)
 
@@ -93,6 +110,17 @@ class IRCProto(basesupport.AbstractClientMixin, irc.IRCClient):
         self.name=nick
         self.accountName="%s (IRC)"%nick
         irc.IRCClient.setNick(self,nick)
+
+    def kickedFrom(self, channel, kicker, message):
+        """Called when I am kicked from a channel.
+        """
+        print 'ono i was kicked', channel, kicker, message
+        return self.chat.getGroupConversation(
+            self.chat.getGroup(channel[1:],self,IRCGroup),1)
+
+    def userKicked(self, kickee, channel, kicker, message):
+        print 'whew somebody else', kickee, channel, kicker, message
+
 
     def privmsg(self,username,channel,message):
         username=string.split(username,'!',1)[0]
@@ -191,8 +219,6 @@ class IRCProto(basesupport.AbstractClientMixin, irc.IRCClient):
             self.getGroupConversation(group).memberChangedNick(fromNick, toNick)
         self._ingroups[toNick] = self._ingroups[fromNick]
         del self._ingroups[fromNick]
-        
-        
 
     def irc_unknown(self, prefix, command, params):
         print "unknown message from IRCserver. prefix: %s, command: %s, params: %s" % (prefix, command, params)

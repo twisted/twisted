@@ -309,14 +309,6 @@ def safe_repr(obj):
 
 ##the following were factored out of usage
 
-def prefixedMethodNames(classObj, prefix):
-    """A list of method names with a given prefix in a given class.
-    """
-    dct = {}
-    addMethodNamesToDict(classObj, dct, prefix)
-    return dct.keys()
-
-
 def allYourBase(classObj, baseClass=None):
     """allYourBase(classObj, baseClass=None) -> list of all base
     classes that are subclasses of baseClass, unless it is None, 
@@ -332,6 +324,14 @@ def accumulateBases(classObj, l, baseClass=None):
         if baseClass is None or issubclass(base, baseClass):
             l.append(base)
         accumulateBases(base, l, baseClass)
+
+
+def prefixedMethodNames(classObj, prefix):
+    """A list of method names with a given prefix in a given class.
+    """
+    dct = {}
+    addMethodNamesToDict(classObj, dct, prefix)
+    return dct.keys()
 
 
 def addMethodNamesToDict(classObj, dict, prefix, baseClass=None):
@@ -355,6 +355,13 @@ def addMethodNamesToDict(classObj, dict, prefix, baseClass=None):
                 and (name[:len(prefix)] == prefix)
                 and (len(optName))):
                 dict[optName] = 1
+
+def prefixedMethods(obj, prefix):
+    """A list of methods with a given prefix on a given instance.
+    """
+    dct = {}
+    accumulateMethods(obj, dct, prefix)
+    return dct.values()
 
 def accumulateMethods(obj, dict, prefix='', curClass=None):
     """accumulateMethods(instance, dict, prefix)

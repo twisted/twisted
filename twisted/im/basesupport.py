@@ -5,11 +5,32 @@ from locals import ONLINE, OFFLINE
 
 from twisted.protocols.protocol import Protocol
 
+from twisted.python.reflect import prefixedMethods
+
 class AbstractGroup:
     def __init__(self,name,baseClient,chatui):
         self.name = name
         self.client = baseClient
         self.chat = chatui
+
+    def getGroupCommands(self):
+        """finds group commands
+
+        these commands are methods on me that start with imgroup_; they are
+        called with no arguments
+        """
+        return prefixedMethods(self, "imgroup_")
+
+    def getTargetCommands(self, target):
+        """finds group commands
+
+        these commands are methods on me that start with imgroup_; they are
+        called with a user present within this room as an argument
+
+        you may want to override this in your group in order to filter for
+        appropriate commands on the given user
+        """
+        return prefixedMethods(self, "imtarget_")
 
 class AbstractPerson:
     def __init__(self,name,baseClient,chatui):
@@ -18,11 +39,23 @@ class AbstractPerson:
         self.status = OFFLINE
         self.chat = chatui
 
+    def getPersonCommands(self):
+        """finds person commands
+
+        these commands are methods on me that start with imperson_; they are
+        called with no arguments
+        """
+        return prefixedMethods(self, "imperson_")
+
     def getIdleTime(self):
         """
         Returns a string.
         """
         return '--'
+
+    def imperson_converse(self):
+        self.chat.getConversation(self)
+
 
 class AbstractClientMixin:
     """Designed to be mixed in to a Protocol implementing class.
