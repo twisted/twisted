@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.50 $"[11:-2]
+__version__ = "$Revision: 1.51 $"[11:-2]
 
 import os
 import cgi
@@ -311,17 +311,18 @@ class LiveController(Controller):
         self.view = sess.getCurrentPage().view
         #request.d = self.view.d
         target = self.view.subviews[eventTarget]
-        
+
+        ## From the time we call onEvent until it returns, we want all
+        ## calls to IWovenLivePage.sendScript to be appended to this
+        ## list so we can spit them out in the response, immediately
+        ## below.
         scriptOutput = []
-        def sendScript(js):
-            scriptOutput.append(js)
         orig = sess.sendScript
-        sess.sendScript = sendScript
-            
+        sess.sendScript = scriptOutput.append
         target.onEvent(request, eventName, *eventArgs)
-        scriptOutput.append('top.woven_clientToServerEventComplete()')
-        
         sess.sendScript = orig
+
+        scriptOutput.append('top.woven_clientToServerEventComplete()')        
         
         #print "GATHERED JS", scriptOutput
         
