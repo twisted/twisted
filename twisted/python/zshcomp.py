@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2005 Eric Mangold
 # See LICENSE for details.
 
 """

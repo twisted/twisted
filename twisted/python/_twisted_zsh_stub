@@ -1,5 +1,10 @@
 #compdef trial conch mktap cftp tapconvert twistd ckeygen lore pyhtmlizer websetroot tap2deb tkmktap tkconch manhole tap2rpm
 
+# Copyright (c) 2005 Eric Mangold
+# See LICENSE for details.
+#
+# Maintainer: Eric Mangold <teratorn@twistedmatrix.com>
+
 # This file is meant to be in your zsh function path. i.e. in one of those
 # directories listed in your $fpath variable.
 #
