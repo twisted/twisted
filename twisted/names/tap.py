@@ -40,6 +40,7 @@ class Options(usage.Options):
     
     def __init__(self):
         usage.Options.__init__(self)
+        self['verbose'] = 0
         self.zonefiles = []
     
     
@@ -47,8 +48,13 @@ class Options(usage.Options):
         if not os.path.exists(filename):
             raise usage.UsageError(filename + ": No such file")
         self.zonefiles.append(filename)
-    
-    
+
+
+    def opt_verbose(self):
+        """Increment verbosity level"""
+        self['verbose'] += 1
+
+
     def postOptions(self):
         zones = []
         if not len(self.zonefiles):

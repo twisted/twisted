@@ -85,6 +85,20 @@ class DNSServerFactory(protocol.ServerFactory):
         pass
 
 
+    def sendReply(self, protocol, message, address):
+        if self.verbose > 1:
+            s = ' '.join([str(a) for a in message.answers])
+            if not s:
+                log.msg("Replying with no answers")
+            else:
+                log.msg("Answers are " + s)
+
+        if address is None:
+            protocol.writeMessage(message)
+        else:
+            protocol.writeMessage(message, address)
+
+
     def handleQuery(self, message, protocol, address):
         answers = []
         for q in message.queries:
@@ -100,38 +114,26 @@ class DNSServerFactory(protocol.ServerFactory):
             message.answers = []
             message.rCode = dns.ENAME
 
-        try:
-            protocol.writeMessage(message)
-        except TypeError:
-            protocol.writeMessage(message, address)
+        self.sendReply(protocol, message, address)
 
 
     def handleInverseQuery(self, message, protocol, address):
         message.rCode = dns.ENOTIMP
-        try:
-            protocol.writeMessage(message)
-        except TypeError:
-            protocol.writeMessage(message, address)
+        self.sendReply(protocol, message, address)
 
 
     def handleStatus(self, message, protocol, address):
         message.rCode = dns.ENOTIMP
-        try:
-            protocol.writeMessage(message)
-        except TypeError:
-            protocol.writeMessage(message, address)
-        
+        self.sendReply(protocol, message, address)
+
 
     def handleOther(self, message, protocol, address):
         message.rCode = dns.ENOTIMP
-        try:
-            protocol.writeMessage(message)
-        except TypeError:
-            protocol.writeMessage(message, address)
+        self.sendReply(protocol, message, address)
 
 
     def messageReceived(self, message, protocol, address = None):
-        if self.verbose:
+        if self.verbose > 0:
             s = ' '.join([dns.QUERY_TYPES.get(q.type, 'UNKNOWN') for q in message.queries])
             if not len(s):
                 log.msg("Empty query from %r" % (address or protocol.transport.getPeer()))
