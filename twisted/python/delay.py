@@ -150,6 +150,24 @@ class Later:
     def rebuildUpdate(self, updater):
         self.func = updater(self.func)
 
+
+class IDelayed:
+    """Interface implemented by Delayed objects - delayed event queues."""
+    
+    def timeout(self):
+        """Return maximum number of seconds between calls of runUntilCurrent.
+        
+        The returned value should either be a float, or None if we don't want
+        to affect the event loop.
+        """
+    
+    def runUntilCurrent(self):
+        """This will be called on every iteration of the event loop.
+        
+        This is where the delayed work should be done.
+        """
+
+
 class Delayed(rebuild.Sensitive):
     """I am a delayed event queue.
 
@@ -163,7 +181,11 @@ class Delayed(rebuild.Sensitive):
     steps will be stopped in the middle, and a single method call will not be
     made.
     """
+    
+    __implements__ = IDelayed,
+    
     fudgefactor = 0.01
+
     def __init__(self):
         """ Initialize the delayed event queue. """
         self.queue = []

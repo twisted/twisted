@@ -27,9 +27,14 @@ from wxPython.wx import wxApp
 # sibling imports
 import main
 
+# twisted import
+from twisted.python import delay
+
 
 class GuiDelayed:
     """Delayed that assures GUI events are handled."""
+
+    __implements__ = delay.IDelayed,
     
     def __init__(self, app):
         self.app = app
