@@ -107,7 +107,6 @@ class Participant(pb.Perspective):
         recipient.receiveDirectMessage(self, message)
 
     def groupMessage(self, groupName, message):
-        log.msg("got %s from %s to %s" % (message,self.name,groupName))
         for group in self.groups:
             if group.name == groupName:
                 group.sendMessage(self, message)
