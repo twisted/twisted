@@ -1329,7 +1329,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 else:
                     response.extend(('UID', str(msg.getUID())))
             elif part.type == 'bodystructure':
-                response.extend(('BODYSTRUCTURE', getBodyStructure(msg)))
+                response.extend(('BODYSTRUCTURE', getBodyStructure(msg, True)))
             elif part.type == 'body':
                 subMsg = msg
                 for p in part.part or ():
@@ -1353,13 +1353,17 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                     hdrs = [': '.join((k, v)) for (k, v) in hdrs.iteritems()]
                     hdrs = '\r\n'.join(hdrs)
                     response.extend((str(part), hdrs + '\r\n\r\n'))
-                else:
-                    # Simplified body request
+                elif part.empty:
+                    # BODY[] request
                     hdrs = msg.getHeaders((), True)
                     hdrs = [': '.join((k, v)) for (k, v) in hdrs.iteritems()]
                     hdrs.append('')
                     hdrs = '\r\n'.join(hdrs)
                     response.extend((str(part), hdrs + '\r\n' + subMsg.getBodyFile().read()))
+                else:
+                    # Simplified bodystructure request
+                    response.extend(('BODY', getBodyStructure(msg, False)))
+
         if uid and not seenUID:
             response[:0] = ['UID', str(msgId)]
         self.sendUntaggedResponse("%d FETCH %s" % (msgId, collapseNestedLists([response])))
@@ -3625,7 +3629,7 @@ def getEnvelope(msg):
     in_reply_to = msg.getHeaders(False, 'in-reply-to').get('in-reply-to')
     return date, subject, from_, sender, reply_to, to, cc, bcc, in_reply_to
 
-def bodyStructure(msg):
+def getBodyStructure(msg, extended=False):
     # XXX - This does not properly handle multipart messages
     # BODYSTRUCTURE is obscenely complex and criminally under-documented.
     
@@ -3971,18 +3975,24 @@ class _FetchParser:
         mime = None
         text = None
         part = None
+        empty = False
         partialBegin = None
         partialLength = None
         def __str__(self):
             base = 'BODY'
+            part = ''
+            if self.part:
+                part = '.'.join([str(x + 1) for x in self.part]) + '.'
             if self.peek:
                 base += '.PEEK'
             if self.header:
-                base += '[%s]' % (self.header,)
+                base += '[%s%s]' % (part, self.header,)
             elif self.text:
-                base += '[TEXT]'
+                base += '[%sTEXT]' % (part,)
             elif self.mime:
-                base += '[MIME]'
+                base += '[%sMIME]' % (part,)
+            elif self.empty:
+                base += '[]'
             if self.partialBegin is not None:
                 base += '<%d.%d>' % (self.partialBegin, self.partialLength)
             return base
@@ -3995,13 +4005,14 @@ class _FetchParser:
     class Header:
         negate = False
         fields = None
+        part = None
         def __str__(self):
             base = 'HEADER'
             if self.fields:
                 base += '.FIELDS'
                 if self.negate:
                     base += '.NOT'
-                base += ' (%s)' % (' '.join(self.fields),)
+                base += ' (%s)' % (' '.join(map(str.title, self.fields)),)
             if self.part:
                 base = '.'.join(map(str, self.part)) + '.'
             return base
@@ -4149,19 +4160,24 @@ class _FetchParser:
     def state_section(self, s):
         # Grab [HEADER] or [HEADER.FIELDS (Header list)] or 
         # [HEADER.FIELDS.NOT (Header list)], [TEXT], or [MIME]
+        # or simply []
+        
         l = s.lower()
         used = 0
-        if l.startswith('header]'):
-            o = self.pending_body.header = self.Header()
+        if l.startswith(']'):
+            self.pending_body.empty = True
+            used += 1
+        elif l.startswith('header]'):
+            self.pending_body.header = self.Header()
             used += 7
         elif l.startswith('text]'):
-            o = self.pending_body.text = self.Text()
+            self.pending_body.text = self.Text()
             used += 5
         elif l.startswith('mime]'):
-            o = self.pending_body.mime = self.MIME()
+            self.pending_body.mime = self.MIME()
             used += 5
         else:
-            o = h = self.Header()
+            h = self.Header()
             if l.startswith('header.fields.not'):
                 h.negate = True
                 used += 17
