@@ -1,0 +1,240 @@
+
+import hmac
+
+def P_hash(hash, secret, seed, bytes):
+    """Data expansion function.
+    
+    @type secret: C{str}
+    @type seed: C{str}
+    @type bytes: C{int}
+    @rtype: C{str}
+    """
+    def A(i):
+        if i == 0:
+            return seed
+        return hmac.hmac(secret, A(i - 1), hash).digest()
+    n = 0
+    r = ''
+    while len(r) < bytes:
+        n += 1
+        r += hmac.hmac(secret, A(n) + seed, hash).digest()
+    return r[:bytes]
+
+def P_MD5(secret, seed, bytes):
+    return P_hash(md5, secret, seed, bytes)
+
+def P_SHA1(secret, seed, bytes):
+    return P_hash(sha, secret, seed, bytes)
+
+def dividedSecret(secret):
+    """Divide a secret into two equal-length portions.
+    
+    @type secret: C{str}
+    @rtype: 2 C{tuple} of C{str}
+    """
+    half = math.ceil(len(secret) / 2.0)
+    if half % 2 == 0:
+        return secret[:half], secret[half:]
+    return secret[:half], secret[half-1:]
+
+def XOR(A, B):
+    return ''.join([chr(ord(a) ^ ord(b)) for (a, b) in zip(A, B)])
+
+def PRF(secret, label, seed):
+    S1, S2 = dividedSecret(secret)
+    return XOR(P_MD5(S1, label + seed), P_SHA1(S2, label + seed))
+
+class ConnectionState:
+    """Describes the security parameters for a TLS Connection read or write state
+
+    @ivar connectionEnd: Either SERVER_END or CLIENT_END - indicates which end of the
+    TLS connection this side is considered.
+    """
+    
+    SERVER_END = "server"
+    CLIENT_END = "client
+    connectionEnd = None
+
+    NULL = "null"
+    RC4 = "rc4"
+    RC2 = "rc2"
+    DES = "des"
+    DES3 = "3des"
+    DES40 = "des40"
+    bulkEncryptionAlgorithm = None
+
+    MD5 = "md5"
+    SHA = "sha"
+    macAlgorithm = None
+
+    compressionAlgorithm = None
+    
+    # 48 bytes of cryptographically secure goodness
+    masterSecret = None
+    
+    # 32 byte value provided by the client
+    clientRandom = None
+    
+    # 32 byte value provided by the server
+    serverRandom = None
+    
+    # Groan
+    exportable = None
+
+    compressionState = None
+    cipherState = None
+    
+    macSecret = None
+    sequenceNumber = None    
+
+class TLSRecordLayer:
+    CHANGE_CIPHER_SPEC = 20
+    ALERT = 21
+    HANDSHAKE = 22
+    APPLICATION_DATA = 23
+    contentType = None
+
+    # Two 8 bit unsigned integers indicating the protocol version
+    version = (3, 1)
+
+    # 16 bit unsigned integer indicating the length of this record
+    length = None
+    
+    # The data associated with this record
+    fragment = None
+
+
+class TLSPlaintext(TLSRecordLayer):
+    """A packet of information on the TLS Record Layer
+    """
+
+class TLSCompressed(TLSRecordLayer):
+    """A packet of compressed information on the TLS Record Layer
+    """
+
+class TLSCiphertext(TLSRecordLayer):
+    """
+    """
+
+    # Determines how fragment should be handled
+    cipherType = None
+
+
+def HMAC_hash(hash, writeSecret, seqNum, type, version, fragment):
+    # seqNum is 64 bits
+    assert seqNum < (2 ** 64)
+    seqNum = struct.pack('>II', seqNum >> 32, seqNum & 0xffffffff)
+    version = struct.pack('>BB', *version)
+    length = struct.pack('>H', len(fragment))
+    return hmac.hmac(writeSecret, seqNum + chr(contentType) + version + length + fragment, hash).digest()
+
+class GenericCipher:
+    def __init__(self, secParams, writeSecret, seqNum, contentType, version, fragment):
+        self.mac = HMAC_hash(secParams.macAlgorithm, writeSecret, seqNum, contentType, version, fragment)
+
+class StandardStreamCipher(GenericCipher):
+    def __init__(self, secParams, writeSecret, seqNum, contentType, version, fragment):
+        GenericCipher.__init__(self, secParams, writeSecret, seqNum, contentType, version, fragment)
+        self.content = fragment
+
+class GenericBlockCipher:
+    blockSize = None
+
+    def __init__(self, secParams, writeSecret, seqNum, contentType, version, fragment, padding=None):
+        GenericCipher.__init__(self, secParams, writeSecret, seqNum, contentType, version, fragment)
+        toEncode = self.mac + fragment
+        if padding is None:
+            padding = self.blockSize - (len(toEncode) % self.blockSize)
+            if padding == self.blockSize:
+                padding = 0
+        self.content = cipher(toEncode + (chr(padding) * (padding + 1)))
+
+class TLSHandshake(TLSRecordLayer):
+    sessionIdentifier = None
+    peerCertificate = None
+    compressionMethod = None
+    cipherSpec = None
+    masterSecret = None
+    isResumable = None
+
+class CipherChange(TLSRecordLayer):
+    CHANGE_CIPHER_SPEC = 1
+
+class Alert(TLSRecordLayer):
+    WARNING = 1
+    FATAL = 2
+    
+    alertLevel = None
+    
+    CLOSE_NOTIFY = 0
+    UNEXPECTED_MESSAGE = 10
+    BAD_RECORD_MAC = 20
+    DECRYPTION_FAILED = 21
+    RECORD_OVERFLOW = 22
+    DECOMPRESSION_FAILURE = 30
+    HANDSHAKE_FAILURE = 40
+    BAD_CERTIFICATE = 42
+    UNSUPPORTED_CERTIFICATE = 32
+    CERTIFICATE_REVOKED = 44
+    CERTIFICATE_EXPIRED = 45
+    CERTIFICATE_UNKNOWN = 46
+    ILLEGAL_PARAMETER = 47
+    UNKNOWN_CA = 48
+    ACCESS_DENIED = 49
+    DECODE_ERROR = 50
+    DECRYPT_ERROR = 51
+    EXPORT_RESTRICTION = 60
+    PROTOCOL_VERSION = 70
+    INSUFFICIENT_SECURITY = 71
+    INTERNAL_ERROR = 80
+    USER_CANCELED = 90 # SIC
+    NO_RENEGOTIATION = 100
+    
+    alertDescription = None
+
+class Handshake:
+    HELLO_REQUEST = 0
+    CLIENT_HELLO = 1
+    SERVER_HELLO = 2
+    CERTIFICATE = 11
+    SERVER_KEY_EXCHANGE = 12
+    CERTIFICATE_REQUEST = 13
+    SERVER_HELLO_DONE = 14
+    CERTIFICATE_VERIFY = 165
+    CLIENT_KEY_EXCHANGE = 16
+    FINISHED = 20
+    
+    def __init__(self, type):
+        self.handshakeType = type
+    
+class ClientHello(Handshake):
+    def __init__(self, bytes):
+        Handshake.__init__(self, Handshake.CLIENT_HELLO)
+        self.gmt_unix_time = int(time.time())
+        self.bytes = bytes
+    
+    def encode(self):
+        return struct.pack('>BI', self.handshakeType, self.gmt_unix_time) + self.bytes
+
+
+from implicitstate import ImplicitStateProtocol
+class TLSClient(ImplicitStateProtocol):
+    currentReadState = None
+    currentWriteState = None
+    
+    pendingReadState = None
+    pendingWriteState = None
+
+    protocolState = None
+
+    buffer = ''
+
+    def send(self, record):
+        self.transport.write(record.encode())
+
+    def connectionMade(self):
+        self.send(Handshake(Handshake.CLIENT_HELLO))
+        self.implicit_state = (self.state_waitingHello, 1)
+    
+    def state_waitingHello(self, data):
+        return self.state_waitingChangeCipherSpec, 
