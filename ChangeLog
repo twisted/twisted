@@ -1,6 +1,9 @@
 2002-08-14  Christopher Armstrong  <radix@twistedmatrix.com>
 
-	* Releasing Twisted 0.99.0rc1! ON THE WAY TO 1.0, BABY!
+	* Releasing Twisted 0.99.0rc1! ON THE WAY TO 1.0, BABY!  
+	* Releasing Twisted 0.99.0rc2! Sorry, typoed the version number in
+	copyright.py
+	* Releasing Twisted 0.99.0rc3! I HATE TAGGING!
 
 2002-08-14  Glyph Lefkowitz  <glyph@twistedmatrix.com>
 
