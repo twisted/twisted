@@ -35,6 +35,14 @@ listeners or connectors are added):
     from twisted.internet import win32
     win32.install()
 
+This requires win32all to be installed.
+
+TODO:
+1. Pass tests.
+2. WaitForMultipleObjects can only handle 64 objects, so we need threads.
+3. Event loop handling of writes is *very* problematic.
+4. Support GUI events.
+5. Switch everyone to a decent OS so we don't have to deal with insane APIs.
 """
 
 # Win32 imports
@@ -190,7 +198,9 @@ class Process(abstract.FileDescriptor):
     
     If your subprocess is a python program, you need to:
     
-     - Run python.exe with the '-u' command line option.
+     - Run python.exe with the '-u' command line option - this turns on
+       unbuffered I/O. Buffering stdout/err/in can cause problems, see e.g.
+       http://support.microsoft.com/default.aspx?scid=kb;EN-US;q1903
     
      - If you don't want Windows messing with data passed over
        stdin/out/err, set the pipes to be in binary mode::
