@@ -299,7 +299,13 @@ class VerboseTextReporter(TextReporter):
     # This is actually the bwverbose option
     def startTest(self, method):
         tm = itrial.ITestMethod(method)
-        self.write('%s (%s) ... ', tm.name, reflect.qual(tm.klass))
+        # XXX this is a crap workaround for doctests,
+        # there should be a better solution.
+        try:
+            klass = reflect.qual(tm.klass)
+        except AttributeError: # not a real class
+            klass = str(tm.klass)
+        self.write('%s (%s) ... ', tm.name, klass)
         super(VerboseTextReporter, self).startTest(method)
         
     def endTest(self, method):
