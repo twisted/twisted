@@ -1,0 +1,22 @@
+#compdef mktap
+_arguments -s \
+"(--encrypted)-e[Encrypt file before writing (will make the extension of the resultant file begin with 'e')]" \
+"(-e)--encrypted[Encrypt file before writing (will make the extension of the resultant file begin with 'e')]" \
+'(--debug)-d[Show debug information for plugin loading]' \
+'(-d)--debug[Show debug information for plugin loading]' \
+'(--progress)-p[Show progress information for plugin loading]' \
+'(-p)--progress[Show progress information for plugin loading]' \
+'(--help)-h[Display this message]' \
+'(-h)--help[Display this message]' \
+'--version[version]' \
+'(--uid)-u[The uid to run as.]:uid to run as:_files' \
+'(-u)--uid=[The uid to run as.]:uid to run as:_files' \
+'(--gid)-g[The gid to run as.]:gid to run as:_files' \
+'(-g)--gid=[The gid to run as.]:gid to run as:_files' \
+'(--append)-a[An existing .tap file to append the plugin to, rather than creating a new one.]:tap file to append to:_files -g "*.tap"' \
+'(-a)--append=[An existing .tap file to append the plugin to, rather than creating a new one.]:tap file to append to:_files -g "*.tap"' \
+"(--type)-t[The output format to use; this can be 'pickle', 'xml', or 'source'.]:output format:(pickle xml source)" \
+"(-t)--type=[The output format to use; this can be 'pickle', 'xml', or 'source'.]:output format:(pickle xml source)" \
+'(--appname)-n[The process name to use for this application.]:appname:_files' \
+'(-n)--appname=[The process name to use for this application.]:appname:_files' \
+&& return 0

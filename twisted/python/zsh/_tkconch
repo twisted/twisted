@@ -1,0 +1,36 @@
+#compdef tkconch
+_arguments -s \
+'(--notty -T --tty)-t[Tty; allocate a tty even if command is given.]' \
+'(--notty -T -t)--tty[Tty; allocate a tty even if command is given.]' \
+'(--tty -t --notty)-T[Do not allocate a tty.]' \
+'(--tty -t -T)--notty[Do not allocate a tty.]' \
+'(--version)-V[Display version number only.]' \
+'(-V)--version[Display version number only.]' \
+'(--compress)-C[Enable compression.]' \
+'(-C)--compress[Enable compression.]' \
+'(--noshell)-N[Do not execute a shell or command.]' \
+'(-N)--noshell[Do not execute a shell or command.]' \
+'(--subsystem)-s[Invoke command (mandatory) as SSH2 subsystem.]' \
+'(-s)--subsystem[Invoke command (mandatory) as SSH2 subsystem.]' \
+'(--log)-v[Log to stderr]' \
+'(-v)--log[Log to stderr]' \
+'(--ansilog)-a[Print the receieved data to stdout]' \
+'(-a)--ansilog[Print the receieved data to stdout]' \
+'--help[Display this help and exit.]' \
+'(--user)-l[Log in using this user name.]:user:_files' \
+'(-l)--user=[Log in using this user name.]:user:_files' \
+'(--identity)-i[Identity for public key authentication]:identity:_files' \
+'(-i)--identity=[Identity for public key authentication]:identity:_files' \
+"(--escape)-e[Set escape character; \`\`none'' = disable]:escape:_files" \
+"(-e)--escape=[Set escape character; \`\`none'' = disable]:escape:_files" \
+'(--cipher)-c[Select encryption algorithm.]:cipher:_files' \
+'(-c)--cipher=[Select encryption algorithm.]:cipher:_files' \
+'(--macs)-m[Specify MAC algorithms for protocol version 2.]:macs:_files' \
+'(-m)--macs=[Specify MAC algorithms for protocol version 2.]:macs:_files' \
+'(--port)-p[Connect to this port.  Server must be on the same port.]:port:_files' \
+'(-p)--port=[Connect to this port.  Server must be on the same port.]:port:_files' \
+'(--localforward)-L[listen-port:host:port   Forward local port to remote address]:listen-port:host:port:_files' \
+'(-L)--localforward=[listen-port:host:port   Forward local port to remote address]:listen-port:host:port:_files' \
+'(--remoteforward)-R[listen-port:host:port   Forward remote port to local address]:listen-port:host:port:_files' \
+'(-R)--remoteforward=[listen-port:host:port   Forward remote port to local address]:listen-port:host:port:_files' \
+&& return 0

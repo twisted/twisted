@@ -1,0 +1,7 @@
+#compdef pyhtmlizer
+_arguments -s \
+'--version[version]' \
+'--help[Display this help and exit.]' \
+'(--stylesheet)-s[URL of stylesheet to link to.]:stylesheet:_files' \
+'(-s)--stylesheet=[URL of stylesheet to link to.]:stylesheet:_files' \
+&& return 0

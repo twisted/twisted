@@ -1,0 +1,62 @@
+#compdef cftp
+_arguments -s \
+'(--version)-V[Display version number only.]' \
+'(-V)--version[Display version number only.]' \
+'(--compress)-C[Enable compression.]' \
+'(-C)--compress[Enable compression.]' \
+'(--log)-v[Log to stderr]' \
+'(-v)--log[Log to stderr]' \
+'(--nocache)-I[Do not allow connection sharing over this connection.]' \
+'(-I)--nocache[Do not allow connection sharing over this connection.]' \
+'(--nox11)-x[Disable X11 connection forwarding (default)]' \
+'(-x)--nox11[Disable X11 connection forwarding (default)]' \
+'(--noagent -a --agent)-A[Enable authentication agent forwarding]' \
+'(--noagent -a -A)--agent[Enable authentication agent forwarding]' \
+'(--agent -A --noagent)-a[Disable authentication agent forwarding (default)]' \
+'(--agent -A -a)--noagent[Disable authentication agent forwarding (default)]' \
+'(--reconnect)-r[Reconnect to the server if the connection is lost.]' \
+'(-r)--reconnect[Reconnect to the server if the connection is lost.]' \
+'--help[Display this help and exit.]' \
+'(--user)-l[Log in using this user name.]:user:_users' \
+'(-l)--user=[Log in using this user name.]:user:_users' \
+'(--identity)-i[Identity for public-key authentication]:identity:_files' \
+'(-i)--identity=[Identity for public-key authentication]:identity:_files' \
+"(--ciphers)-c[Select encryption algorithms]:ciphers:_values -s , 'ciphers to choose from' aes256-ctr aes256-cbc aes192-ctr aes192-cbc aes128-ctr aes128-cbc cast128-ctr cast128-cbc blowfish-ctr blowfish idea-ctridea-cbc 3des-ctr 3des-cbc" \
+"(-c)--ciphers=[Select encryption algorithms]:ciphers:_values -s , 'ciphers to choose from' aes256-ctr aes256-cbc aes192-ctr aes192-cbc aes128-ctr aes128-cbc cast128-ctr cast128-cbc blowfish-ctr blowfish idea-ctridea-cbc 3des-ctr 3des-cbc" \
+"(--macs)-m[Specify MAC algorithms]:macs:_values -s , 'macs to choose from' hmac-sha1 hmac-md5" \
+"(-m)--macs=[Specify MAC algorithms]:macs:_values -s , 'macs to choose from' hmac-sha1 hmac-md5" \
+"(--connection-usage)-K[Connection types to use]:connection-usage:_values -s , 'connection types to choose from' unix direct" \
+"(-K)--connection-usage=[Connection types to use]:connection-usage:_values -s , 'connection types to choose from' unix direct" \
+'(--port)-p[Connect to this port.  Server must be on the same port.]:port:_files' \
+'(-p)--port=[Connect to this port.  Server must be on the same port.]:port:_files' \
+'(--option)-o[Ignored OpenSSH options]:option:_files' \
+'(-o)--option=[Ignored OpenSSH options]:option:_files' \
+"(--)--host-key-algorithms=[Select host key algorithms]:host-key-algorithms:_values -s , 'host key algorithms to choose from' ssh-rsa ssh-dss" \
+'(--)--known-hosts=[File to check for host keys]:known-hosts:_files' \
+'(--)--user-authentications=[Types of user authentications to use.]:user-authentications:_files' \
+'(--user)-l[Log in using this user name.]:user:_users' \
+'(-l)--user=[Log in using this user name.]:user:_users' \
+'(--identity)-i[Identity for public-key authentication]:identity:_files' \
+'(-i)--identity=[Identity for public-key authentication]:identity:_files' \
+"(--ciphers)-c[Select encryption algorithms]:ciphers:_values -s , 'ciphers to choose from' aes256-ctr aes256-cbc aes192-ctr aes192-cbc aes128-ctr aes128-cbc cast128-ctr cast128-cbc blowfish-ctr blowfish idea-ctridea-cbc 3des-ctr 3des-cbc" \
+"(-c)--ciphers=[Select encryption algorithms]:ciphers:_values -s , 'ciphers to choose from' aes256-ctr aes256-cbc aes192-ctr aes192-cbc aes128-ctr aes128-cbc cast128-ctr cast128-cbc blowfish-ctr blowfish idea-ctridea-cbc 3des-ctr 3des-cbc" \
+"(--macs)-m[Specify MAC algorithms]:macs:_values -s , 'macs to choose from' hmac-sha1 hmac-md5" \
+"(-m)--macs=[Specify MAC algorithms]:macs:_values -s , 'macs to choose from' hmac-sha1 hmac-md5" \
+"(--connection-usage)-K[Connection types to use]:connection-usage:_values -s , 'connection types to choose from' unix direct" \
+"(-K)--connection-usage=[Connection types to use]:connection-usage:_values -s , 'connection types to choose from' unix direct" \
+'(--port)-p[Connect to this port.  Server must be on the same port.]:port:_files' \
+'(-p)--port=[Connect to this port.  Server must be on the same port.]:port:_files' \
+'(--option)-o[Ignored OpenSSH options]:option:_files' \
+'(-o)--option=[Ignored OpenSSH options]:option:_files' \
+"(--)--host-key-algorithms=[Select host key algorithms]:host-key-algorithms:_values -s , 'host key algorithms to choose from' ssh-rsa ssh-dss" \
+'(--)--known-hosts=[File to check for host keys]:known-hosts:_files' \
+'(--)--user-authentications=[Types of user authentications to use.]:user-authentications:_files' \
+'(--buffersize)-B[Size of send/receive buffer (default: 32768)]:buffersize:_files' \
+'(-B)--buffersize=[Size of send/receive buffer (default: 32768)]:buffersize:_files' \
+"(--batchfile)-b[File to read commands from, or '-' for stdin.]:batchfile:_files" \
+"(-b)--batchfile=[File to read commands from, or '-' for stdin.]:batchfile:_files" \
+'(--requests)-R[Number of requests to make before waiting for a reply.]:requests:_files' \
+'(-R)--requests=[Number of requests to make before waiting for a reply.]:requests:_files' \
+'(--subsystem)-s[Subsystem/server program to connect to.]:subsystem:_files' \
+'(-s)--subsystem=[Subsystem/server program to connect to.]:subsystem:_files' \
+&& return 0

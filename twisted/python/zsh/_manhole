@@ -1,0 +1,19 @@
+#compdef manhole
+_arguments -s \
+'--version[version]' \
+'--help[Display this help and exit.]' \
+'(--user)-u[username]:user:_files' \
+'(-u)--user=[username]:user:_files' \
+'(--password)-w[password]:password:_files' \
+'(-w)--password=[password]:password:_files' \
+'(--service)-s[PB Service]:service:_files' \
+'(-s)--service=[PB Service]:service:_files' \
+'(--host)-h[host]:host:_files' \
+'(-h)--host=[host]:host:_files' \
+'(--port)-p[port]:port:_files' \
+'(-p)--port=[port]:port:_files' \
+'(--perspective)-P[PB Perspective to ask for (if different than username)]:perspective:_files' \
+'(-P)--perspective=[PB Perspective to ask for (if different than username)]:perspective:_files' \
+'(--toolkit)-t[Front-end to use; one of gtk2]:toolkit:_files' \
+'(-t)--toolkit=[Front-end to use; one of gtk2]:toolkit:_files' \
+&& return 0
