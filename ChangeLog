@@ -1,5 +1,16 @@
 2004-02-25  Christopher Armstrong  <radix@twistedmatrix.com>
 
+	* twisted/protocols/dns.py: Fixed a bug in TCP support: It
+	wouldn't process any messages after the first, causing AXFR
+	queries to be totally broken (in addition to other problems in the
+	implementation of AXFR).
+
+	* twisted/names/client.py: Fixed the AXFR client (lookupZone),
+	thanks to DJB's wonderful documentation of the horribleness of
+	DNS.
+
+2004-02-25  Christopher Armstrong  <radix@twistedmatrix.com>
+
 	* .: Releasing Twisted 1.2.0 final! Same as rc3.
 
 2004-02-24  Christopher Armstrong  <radix@twistedmatrix.com>

@@ -1,12 +1,12 @@
 # -*- coding: Latin-1 -*-
 
-from twisted.internet import task
+from twisted.internet import task, defer
 from twisted.protocols import dns
 from twisted.names import common
 from twisted.names import client
 from twisted.names import server
 from twisted.names import resolve
-from twisted.python import log
+from twisted.python import log, failure
 from twisted.application import service
 
 class SecondaryAuthorityService(service.Service):
@@ -46,6 +46,7 @@ class SecondaryAuthority(common.ResolverBase):
 
     transferring = False
 
+    soa = records = None
     def __init__(self, primaryIP, domain):
         common.ResolverBase.__init__(self)
         self.primary = primaryIP
@@ -61,8 +62,13 @@ class SecondaryAuthority(common.ResolverBase):
             ).addErrback(self._ebZone
             )
 
-    from twisted.names.authority import FileAuthority
-    _lookup = FileAuthority.__dict__['_lookup']
+
+    def _lookup(self, name, cls, type, timeout=None):
+        if not self.soa or not self.records:
+            return defer.fail(failure.Failure(dns.DomainError(name)))
+        
+        from twisted.names.authority import FileAuthority
+        return FileAuthority.__dict__['_lookup'](self, name, cls, type, timeout)
 
     def _cbZone(self, zone):
         ans, _, _ = zone

@@ -1172,26 +1172,33 @@ class DNSProtocol(protocol.Protocol):
 
     def dataReceived(self, data):
         self.buffer = self.buffer + data
-        if self.length is None and len(self.buffer) >= 2:
-            self.length = struct.unpack('!H', self.buffer[:2])[0]
-            self.buffer = self.buffer[2:]
 
-        if len(self.buffer) == self.length:
-            m = Message()
-            m.fromStr(self.buffer)
-            
-            try:
-                d = self.liveMessages[m.id]
-            except KeyError:
-                self.controller.messageReceived(m, self)
-            else:
-                del self.liveMessages[m.id]
+        while self.buffer:
+            if self.length is None and len(self.buffer) >= 2:
+                self.length = struct.unpack('!H', self.buffer[:2])[0]
+                self.buffer = self.buffer[2:]
+
+            if len(self.buffer) >= self.length:
+                myChunk = self.buffer[:self.length]
+                m = Message()
+                m.fromStr(myChunk)
+
                 try:
-                    d.callback(m)
-                except:
-                    log.err()
-            self.length = None
-            self.buffer = ''
+                    d = self.liveMessages[m.id]
+                except KeyError:
+                    self.controller.messageReceived(m, self)
+                else:
+                    del self.liveMessages[m.id]
+                    try:
+                        d.callback(m)
+                    except:
+                        log.err()
+
+                self.buffer = self.buffer[self.length:]
+                self.length = None
+            else:
+                break
+
 
 
     def query(self, queries, timeout = None):

@@ -390,3 +390,59 @@ class HelperTestCase(unittest.TestCase):
             b = authority.getSerial(f)
             self.failUnless(a < b)
             a = b
+
+
+class AXFRTest(unittest.TestCase):
+    def setUp(self):
+        self.results = None
+        self.d = defer.Deferred()
+        self.d.addCallback(self._gotResults)
+        self.controller = client.AXFRController('fooby.com', self.d)
+
+        self.soa = dns.RRHeader(name='fooby.com', type=dns.SOA, cls=dns.IN, ttl=86400, auth=False,
+                                payload=dns.Record_SOA(mname='fooby.com',
+                                                       rname='hooj.fooby.com',
+                                                       serial=100,
+                                                       refresh=200,
+                                                       retry=300,
+                                                       expire=400,
+                                                       minimum=500,
+                                                       ttl=600))
+
+        self.records = [
+            self.soa,
+            dns.RRHeader(name='fooby.com', type=dns.NS, cls=dns.IN, ttl=700, auth=False,
+                         payload=dns.Record_NS(name='ns.twistedmatrix.com', ttl=700)),
+
+            dns.RRHeader(name='fooby.com', type=dns.MX, cls=dns.IN, ttl=700, auth=False,
+                         payload=dns.Record_MX(preference=10, exchange='mail.mv3d.com', ttl=700)),
+
+            dns.RRHeader(name='fooby.com', type=dns.A, cls=dns.IN, ttl=700, auth=False,
+                         payload=dns.Record_A(address='64.123.27.105', ttl=700)),
+            self.soa
+            ]
+
+    def _makeMessage(self):
+        # hooray they all have the same message format
+        return dns.Message(id=999, answer=1, opCode=0, recDes=0, recAv=1, auth=1, rCode=0, trunc=0, maxSize=0)
+
+    def testBindAndTNamesStyle(self):
+        # Bind style = One big single message
+        m = self._makeMessage()
+        m.queries = [dns.Query('fooby.com', dns.AXFR, dns.IN)]
+        m.answers = self.records
+        self.controller.messageReceived(m, None)
+        self.assertEquals(self.results, self.records)
+
+    def _gotResults(self, result):
+        self.results = result
+
+    def testDJBStyle(self):
+        # DJB style = message per record
+        records = self.records[:]
+        while records:
+            m = self._makeMessage()
+            m.queries = [] # DJB *doesn't* specify any queries.. hmm..
+            m.answers = [records.pop(0)]
+            self.controller.messageReceived(m, None)
+        self.assertEquals(self.results, self.records)

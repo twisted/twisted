@@ -270,9 +270,57 @@ class Resolver(common.ResolverBase):
 
     # This one doesn't ever belong on UDP
     def lookupZone(self, name, timeout = 10):
-        return self.queryTCP(
-            [dns.Query(name, dns.AXFR, dns.IN)], timeout
-        ).addCallback(self.filterAnswers)
+        """
+        Perform an AXFR request. This is quite different from usual
+        DNS requests. See http://cr.yp.to/djbdns/axfr-notes.html for
+        more information.
+        """
+        address = self.pickServer()
+        if address is None:
+            return defer.fail(IOError('No domain name servers available'))
+        host,port = address
+        from twisted.internet import reactor
+        d = defer.Deferred()
+        d.setTimeout(timeout or 10)
+        controller = AXFRController(name, d)
+        factory = DNSClientFactory(controller, timeout)
+        reactor.connectTCP(host, port, factory)
+        return d.addCallback(lambda x: (x, [], []))
+
+
+class AXFRController:
+    def __init__(self, name, deferred):
+        self.name = name
+        self.deferred = deferred
+        self.soa = None
+        self.records = []
+
+    def connectionMade(self, protocol):
+        # dig saids recursion-desired to 0, so I will too
+        message = dns.Message(protocol.pickID(), recDes=0)
+        message.queries = [dns.Query(self.name, dns.AXFR, dns.IN)]
+        protocol.writeMessage(message)
+
+    def messageReceived(self, message, protocol):
+        # Caveat: We have to handle two cases: All records are in 1
+        # message, or all records are in N messages.
+
+        # According to http://cr.yp.to/djbdns/axfr-notes.html,
+        # 'authority' and 'additional' are always empty, and only
+        # 'answers' is present.
+        self.records.extend(message.answers)
+        if not self.records:
+            return
+        if not self.soa:
+            if self.records[0].type == dns.SOA:
+                #print "first SOA!"
+                self.soa = self.records[0]
+        if len(self.records) > 1 and self.records[-1].type == dns.SOA:
+            #print "It's the second SOA! We're done."
+
+            # I'm pretty sure this key has to exist if we're at
+            # this point
+            self.deferred.callback(self.records)
 
 
 class ThreadedResolver:
@@ -286,6 +334,7 @@ class ThreadedResolver:
         d = threads.deferToThread(socket.gethostbyname, name)
         d.setTimeout(timeout)
         return d
+
 
 class DNSClientFactory(protocol.ClientFactory):
     def __init__(self, controller, timeout = 10):
@@ -301,6 +350,7 @@ class DNSClientFactory(protocol.ClientFactory):
         p = dns.DNSProtocol(self.controller)
         p.factory = self
         return p
+
 
 
 def createResolver(servers = None, resolvconf = None, hosts = None):
