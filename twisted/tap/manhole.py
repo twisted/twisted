@@ -16,7 +16,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 """
-I am the support module for making a telnet server with mktap.
+I am the support module for making a manhole server with mktap.
 """
 
 from twisted.manhole import service
