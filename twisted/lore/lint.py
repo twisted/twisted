@@ -59,10 +59,9 @@ class TagChecker:
     def check_quote(self, dom, filename):
         def matcher(node):
             return ('"' in getattr(node, 'data', '') and
-                    node.parentNode.tagName not in ('code', 'pre'))
+                    [1 for n in domhelpers.getParents(node)[1:-1]
+                           if n.tagName in ('pre', 'code')] == [])
         for node in domhelpers.findNodes(dom, matcher):
-            if node.parentNode.parentNode.tagName in ('code', 'pre'):
-                continue 
             self._reportError(filename, node.parentNode, 'contains quote')
 
     def check_align(self, dom, filename):

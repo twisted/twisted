@@ -207,3 +207,10 @@ def getNodeText(node):
     oldio = cStringIO.StringIO()
     writeNodeData(node, oldio)
     return oldio.getvalue()
+
+def getParents(node):
+    l = []
+    while node:
+        l.append(node)
+        node = node.parentNode
+    return l

@@ -39,14 +39,6 @@ def getLatexText(node, writer, filter=lambda x:x):
     for child in node.childNodes :
         getLatexText(child, writer, filter)
 
-def getParents(node):
-    l = []
-    while node:
-        l.append(node)
-        node = node.parentNode
-    return l
-
-
 class LatexSpitter:
 
     baseLevel = 0
@@ -59,7 +51,7 @@ class LatexSpitter:
     def writeNodeData(self, node):
         buf = StringIO()
         getLatexText(node, buf.write, latexEscape)
-        parents = getParents(node.parentNode)[:-1]
+        parents = domhelpers.getParents(node.parentNode)[:-1]
         text = buf.getvalue()
         if not [n.tagName in ('pre', 'code') for n in parents]:
             text = text.replace('<', '$<$').replace('>', '$>$')
