@@ -1,0 +1,369 @@
+<html>
+<head>
+<title>
+Twisted Mail Tutorial: Building an SMTP Client from Scratch
+</title>
+</head>
+
+<body>
+
+<p>This tutorial will walk you through the creation of an extremely
+simple SMTP client application.  By the time the tutorial is complete,
+you will understand how to create and start a TCP client speaking the
+SMTP protocol, have it connect to an appropriate mail exchange server,
+and transmit a message for delivery.</p>
+
+<p>For the majority of this tutorial, <code>twistd</code> will be used
+to launch the application.  Near the end we will explore other
+possibilities for starting a Twisted application.  Until then, make
+sure that you have <code>twistd</code> installed and conveniently
+accessible for use in running each of the example <code>.tac</code>
+files.</p>
+
+<h3>SMTP Client 1</h3>
+
+<p>The first step is to create <a href="smtpclient-1.tac">the most
+minimal <code>.tac</code> file</a> possible for use by
+<code>twistd</code>.</p>
+
+<blockquote><code>
+from twisted.application import service
+</code></blockquote>
+
+<p>The first line of the <code>.tac</code> file imports
+<code>twisted.application.service</code>, a module which contains many
+of the basic <em>service</em> classes and helper functions available
+in Twisted.  In particular, we will be using the
+<code>Application</code> function to create a new <em>application
+service</em>.  An <em>application service</em> simply acts as a
+central object on which to store certain kinds of deployment
+configuration.</p>
+
+<blockquote><code>
+application = service.Application("SMTP Client Tutorial")
+</code></blockquote>
+
+<p>The second line of the <code>.tac</code> file creates a new
+<em>application service</em> and binds it to the local name
+<code>application</code>.  <code>twistd</code> requires this local
+name in each <code>.tac</code> file it runs.  It uses various pieces
+of configuration on the object to determine its behavior.  For
+example, <code>"SMTP Client Tutorial"</code> will be used as the name
+of the <code>.tap</code> file into which to serialize application
+state, should it be necessary to do so.</p>
+
+<p>That does it for the first example.  We now have enough of a
+<code>.tac</code> file to pass to <code>twistd</code>.  If we run <a
+href="smtpclient-1.tac">smtpclient-1.tac</a> using the
+<code>twistd</code> command line:</p>
+
+<blockquote><code>
+twistd -noy smtpclient-1.tac
+</code></blockquote>
+
+<p>we are rewarded with the following output:</p>
+
+<blockquote><pre>
+exarkun@boson:~/mail/tutorial/smtpclient$ twistd -noy smtpclient-1.tac
+2005/03/27 18:31 EST [-] Log opened.
+2005/03/27 18:31 EST [-] twistd 2.0.0 (/usr/bin/python2.4 2.4.1) starting up
+2005/03/27 18:31 EST [-] reactor class: twisted.internet.selectreactor.SelectReactor
+2005/03/27 18:31 EST [-] Loading smtpclient-1.tac...
+2005/03/27 18:31 EST [-] Loaded.
+</pre></blockquote>
+
+<p>As we expected, not much is going on.  We can shutdown this server
+by issueing <code>^C</code>:</p>
+
+<blockquote><pre>
+2005/03/27 18:34 EST [-] Received SIGINT, shutting down.
+2005/03/27 18:34 EST [-] Main loop terminated.
+2005/03/27 18:34 EST [-] Server Shut Down.
+exarkun@boson:~/mail/tutorial/smtpclient$
+</pre></blockquote>
+
+<h3>SMTP Client 2</h3>
+
+<p>The first version of our SMTP client wasn't very interesting.  It
+didn't even establish any TCP connections!  The <a
+href="smtpclient-2.tac">second version</a> will come a little bit
+closer to that level of complexity.  First, we need to import a few
+more things:</p>
+
+<blockquote><code><pre>
+from twisted.application import internet
+from twisted.internet import protocol
+</pre></code></blockquote>
+
+<p><code>twisted.application.internet</code> is another
+<em>application service</em> module.  It provides services for
+establishing outgoing connections (as well as creating network
+servers, though we are not interested in those parts for the moment).
+<code>twisted.internet.protocol</code> provides base implementations
+of many of the core Twisted concepts, such as <em>factories</em> and
+<em>protocols</em>.</p>
+
+<p>The next line of <a href="smtpclient-2.tac">smtpclient-2.tac</a>
+instantiates a new <em>client factory</em>.</p>
+
+<blockquote><code>
+smtpClientFactory = protocol.ClientFactory()
+</code></blockquote>
+
+<p><em>Client factories</em> are responsible for constructing
+<em>protocol instances</em> whenever connections are established.
+They may be required to create just one instance, or many instances if
+many different connections are established, or they may never be
+required to create one at all, if no connection ever manages to be
+established.</p>
+
+<p>Now that we have a client factory, we'll need to hook it up to the
+network somehow.  The next line of <code>smtpclient-2.tac</code> does
+just that:</p>
+
+<blockquote><code>
+smtpClientService = internet.TCPClient(None, None, smtpClientFactory)
+</code></blockquote>
+
+<p>We'll ignore the first two arguments to
+<code>internet.TCPClient</code> for the moment and instead focus on
+the third.  <code>TCPClient</code> is one of those <em>application
+service</em> classes.  It creates TCP connections to a specified
+address and then uses its third argument, a <em>client factory</em>,
+to get a <em>protocol instance</em>.  It then associates the TCP
+connection with the protocol instance and gets out of the way.</p>
+
+<p>We can try to run <code>smtpclient-2.tac</code> the same way we ran
+<code>smtpclient-1.tac</code>, but the results might be a little
+disappointing:</p>
+
+<blockquote><code><pre>
+exarkun@boson:~/mail/tutorial/smtpclient$ twistd -noy smtpclient-2.tac
+2005/03/27 18:55 EST [-] Log opened.
+2005/03/27 18:55 EST [-] twistd SVN-Trunk (/usr/bin/python2.4 2.4.1) starting up
+2005/03/27 18:55 EST [-] reactor class: twisted.internet.selectreactor.SelectReactor
+2005/03/27 18:55 EST [-] Loading smtpclient-2.tac...
+2005/03/27 18:55 EST [-] Loaded.
+2005/03/27 18:55 EST [-] Starting factory &lt;twisted.internet.protocol.ClientFactory instance at 0xb791e46c&gt;
+2005/03/27 18:55 EST [-] Traceback (most recent call last):
+          File "/home/exarkun/pythonpath/twisted/scripts/twistd.py", line 187, in runApp
+            app.runReactorWithLogging(config, oldstdout, oldstderr)
+          File "/home/exarkun/pythonpath/twisted/application/app.py", line 128, in runReactorWithLogging
+            reactor.run()
+          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/internet/posixbase.py", line 200, in run
+            self.mainLoop()
+          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/internet/posixbase.py", line 208, in mainLoop
+            self.runUntilCurrent()
+        --- &lt;exception caught here&gt; ---
+          File "/home/exarkun/pythonpath/twisted/internet/base.py", line 533, in runUntilCurrent
+            call.func(*call.args, **call.kw)
+          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/internet/tcp.py", line 489, in resolveAddress
+            if abstract.isIPAddress(self.addr[0]):
+          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/internet/abstract.py", line 315, in isIPAddress
+            parts = string.split(addr, '.')
+          File "/usr/lib/python2.4/string.py", line 292, in split
+            return s.split(sep, maxsplit)
+        exceptions.AttributeError: 'NoneType' object has no attribute 'split'
+
+2005/03/27 18:55 EST [-] Received SIGINT, shutting down.
+2005/03/27 18:55 EST [-] Main loop terminated.
+2005/03/27 18:55 EST [-] Server Shut Down.
+exarkun@boson:~/mail/tutorial/smtpclient$
+</pre><code></blockquote>
+
+<p>What happened?  Those first two arguments to <code>TCPClient</code>
+turned out to be important after all.  We'll get to them in the next
+example.</p>
+
+<h3>SMTP Client 3</h3>
+
+<p>Version three of our SMTP client only changes one thing.  The line
+from version two:</p>
+
+<blockquote><code>
+smtpClientService = internet.TCPClient(None, None, smtpClientFactory)
+</code></blockquote>
+
+<p>has its first two arguments changed from <code>None</code> to
+something with a bit more meaning:</p>
+
+<blockquote><code>
+smtpClientService = internet.TCPClient('localhost', 25, smtpClientFactory)
+</code></blockquote>
+
+<p>This directs the client to connect to <em>localhost</em> on port
+<em>25</em>.  This isn't the address we want ultimately, but it's a
+good place-holder for the time being.  We can run <a
+href="smtpclient-3.tac">smtpclient-3.tac</a> and see what this change
+gets us:</p>
+
+<blockquote><code><pre>
+exarkun@boson:~/mail/tutorial/smtpclient$ twistd -noy smtpclient-3.tac
+2005/03/27 19:10 EST [-] Log opened.
+2005/03/27 19:10 EST [-] twistd SVN-Trunk (/usr/bin/python2.4 2.4.1) starting up
+2005/03/27 19:10 EST [-] reactor class: twisted.internet.selectreactor.SelectReactor
+2005/03/27 19:10 EST [-] Loading smtpclient-3.tac...
+2005/03/27 19:10 EST [-] Loaded.
+2005/03/27 19:10 EST [-] Starting factory &lt;twisted.internet.protocol.ClientFactory instance at 0xb791e48c&gt;
+2005/03/27 19:10 EST [-] Enabling Multithreading.
+2005/03/27 19:10 EST [Uninitialized] Traceback (most recent call last):
+          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/python/log.py", line 56, in callWithLogger
+            return callWithContext({"system": lp}, func, *args, **kw)
+          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/python/log.py", line 41, in callWithContext
+            return context.call({ILogContext: newCtx}, func, *args, **kw)
+          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/python/context.py", line 52, in callWithContext
+            return self.currentContext().callWithContext(ctx, func, *args, **kw)
+          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/python/context.py", line 31, in callWithContext
+            return func(*args,**kw)
+        --- &lt;exception caught here&gt; ---
+          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/internet/selectreactor.py", line 139, in _doReadOrWrite
+            why = getattr(selectable, method)()
+          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/internet/tcp.py", line 543, in doConnect
+            self._connectDone()
+          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/internet/tcp.py", line 546, in _connectDone
+            self.protocol = self.connector.buildProtocol(self.getPeer())
+          File "/home/exarkun/pythonpath/twisted/internet/base.py", line 641, in buildProtocol
+            return self.factory.buildProtocol(addr)
+          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/internet/protocol.py", line 99, in buildProtocol
+            p = self.protocol()
+        exceptions.TypeError: 'NoneType' object is not callable
+
+2005/03/27 19:10 EST [Uninitialized] Stopping factory &lt;twisted.internet.protocol.ClientFactory instance at 0xb791e48c&gt;
+2005/03/27 19:10 EST [-] Received SIGINT, shutting down.
+2005/03/27 19:10 EST [-] Main loop terminated.
+2005/03/27 19:10 EST [-] Server Shut Down.
+exarkun@boson:~/mail/tutorial/smtpclient$
+</pre></code></blockquote>
+
+<p>A meagre amount of progress, but the service still raises an exception.  This time, it's because we haven't specified a <em>protocol class</em> for the factory to use.  We'll do that in the next example.
+
+<h3>SMTP Client 4</h3>
+
+<p>In the previous example, we ran into a problem because we hadn't
+set up our <em>client factory's</em> <em>protocol</em> attribute
+correctly (or at all).  <code>ClientFactory.buildProtocol</code> is
+the method responsible for creating a <em>protocol instance</em>.  The
+default implementation calls the factory's <code>protocol</code> attribute,
+adds itself as an attribute named <code>factory</code> to the
+resulting instance, and returns it.  In <a
+href="smtpclient-4.tac">smtpclient-4.tac</a>, we'll correct the
+oversight that caused the traceback in smtpclient-3.tac:</p>
+
+<blockquote><code>
+smtpClientFactory.protocol = protocol.Protocol
+</code></blockquote>
+
+<p>Running this version of the client, we can see the output is once
+again traceback free:</p>
+
+<blockquote><code><pre>
+exarkun@boson:~/Projects/svn/Twisted/trunk/doc/mail/tutorial/smtpclient$ twistd -noy smtpclient-4.tac
+2005/03/27 19:29 EST [-] Log opened.
+2005/03/27 19:29 EST [-] twistd SVN-Trunk (/usr/bin/python2.4 2.4.1) starting up
+2005/03/27 19:29 EST [-] reactor class: twisted.internet.selectreactor.SelectReactor
+2005/03/27 19:29 EST [-] Loading smtpclient-4.tac...
+2005/03/27 19:29 EST [-] Loaded.
+2005/03/27 19:29 EST [-] Starting factory &lt;twisted.internet.protocol.ClientFactory instance at 0xb791e4ac&gt;
+2005/03/27 19:29 EST [-] Enabling Multithreading.
+2005/03/27 19:29 EST [-] Received SIGINT, shutting down.
+2005/03/27 19:29 EST [Protocol,client] Stopping factory &lt;twisted.internet.protocol.ClientFactory instance at 0xb791e4ac&gt;
+2005/03/27 19:29 EST [-] Main loop terminated.
+2005/03/27 19:29 EST [-] Server Shut Down.
+</pre></code></blockquote>
+
+<p>But what does this mean?
+<code>twisted.internet.protocol.Protocol</code> is the base
+<em>protocol</em> implementation.  For those familiar with the classic
+UNIX network services, it is equivalent to the <em>discard</em>
+service.  It never produces any output and it discards all its input.
+Not terribly useful, and certainly nothing like an SMTP client.  Let's
+see how we can improve this in the next example.</p>
+
+<h3>SMTP Client 5</h3>
+
+<p>In <a href="smtpclient-5.tac">smtpclient-5.tac</a>, we will begin
+to use Twisted's SMTP protocol implementation for the first time.
+We'll make the obvious change, simply swapping out
+<code>twisted.internet.protocol.Protocol</code> in favor of
+<code>twisted.mail.smtp.ESMTPClient</code>.  Don't worry about the
+<em>E</em> in <em>ESMTP</em>.  It indicates we're actually using a
+newer version of the SMTP protocol.  There is an
+<code>SMTPClient</code> in Twisted, but there's essentially no reason
+to ever use it.</p>
+
+<p>smtpclient-5.tac adds a new import:</p>
+
+<blockquote><code>
+from twisted.mail import smtp
+</blockquote></code>
+
+<p>All of the mail related code in Twisted exists beneath the
+<code>twisted.mail</code> package.  More specifically, everything
+having to do with the SMTP protocol implementation is defined in the
+<code>twisted.mail.smtp</code> module.</p>
+
+<p>Next we remove a line we added in smtpclient-4.tac:</p>
+
+<blockquote><code>
+smtpClientFactory.protocol = protocol.Protocol
+</code></blockquote>
+
+<p>And add a similar one in its place:</p>
+
+<blockquote><code>
+smtpClientFactory.protocol = smtp.ESMTPClient
+</code></blockquote>
+
+<p>Our client factory is now using a protocol implementation which
+behaves as an SMTP client.  What happens when we try to run this
+version?</p>
+
+<blockquote><code><pre>
+exarkun@boson:~/Projects/svn/Twisted/trunk/doc/mail/tutorial/smtpclient$ twistd -noy smtpclient-5.tac
+2005/03/27 19:42 EST [-] Log opened.
+2005/03/27 19:42 EST [-] twistd SVN-Trunk (/usr/bin/python2.4 2.4.1) starting up
+2005/03/27 19:42 EST [-] reactor class: twisted.internet.selectreactor.SelectReactor
+2005/03/27 19:42 EST [-] Loading smtpclient-5.tac...
+2005/03/27 19:42 EST [-] Loaded.
+2005/03/27 19:42 EST [-] Starting factory &lt;twisted.internet.protocol.ClientFactory instance at 0xb791e54c&gt;
+2005/03/27 19:42 EST [-] Enabling Multithreading.
+2005/03/27 19:42 EST [Uninitialized] Traceback (most recent call last):
+          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/python/log.py", line 56, in callWithLogger
+            return callWithContext({"system": lp}, func, *args, **kw)
+          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/python/log.py", line 41, in callWithContext
+            return context.call({ILogContext: newCtx}, func, *args, **kw)
+          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/python/context.py", line 52, in callWithContext
+            return self.currentContext().callWithContext(ctx, func, *args, **kw)
+          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/python/context.py", line 31, in callWithContext
+            return func(*args,**kw)
+        --- &lt;exception caught here&gt; ---
+          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/internet/selectreactor.py", line 139, in _doReadOrWrite
+            why = getattr(selectable, method)()
+          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/internet/tcp.py", line 543, in doConnect
+            self._connectDone()
+          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/internet/tcp.py", line 546, in _connectDone
+            self.protocol = self.connector.buildProtocol(self.getPeer())
+          File "/home/exarkun/pythonpath/twisted/internet/base.py", line 641, in buildProtocol
+            return self.factory.buildProtocol(addr)
+          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/internet/protocol.py", line 99, in buildProtocol
+            p = self.protocol()
+        exceptions.TypeError: __init__() takes at least 2 arguments (1 given)
+
+2005/03/27 19:42 EST [Uninitialized] Stopping factory &lt;twisted.internet.protocol.ClientFactory instance at 0xb791e54c&gt;
+2005/03/27 19:43 EST [-] Received SIGINT, shutting down.
+2005/03/27 19:43 EST [-] Main loop terminated.
+2005/03/27 19:43 EST [-] Server Shut Down.
+exarkun@boson:~/Projects/svn/Twisted/trunk/doc/mail/tutorial/smtpclient$ 
+</pre></code></blockquote>
+
+
+<p>Oops, back to getting a traceback.  This time, the default
+implementation of <code>buildProtocl</code> seems no longer to be
+sufficient.  It instantiates the protocol with no arguments, but
+<code>ESMTPClient</code> wants at least one argument.  In the next
+version of the client, we'll override <code>buildProtocol</code> to
+fix this problem.</p>
+
+
+</body>
+</html>
