@@ -36,7 +36,7 @@ if os.name == 'nt':
     from errno import WSAEINTR as EINTR
     from errno import WSAEMSGSIZE as EMSGSIZE
     from errno import WSAECONNREFUSED as ECONNREFUSED
-    from errno import WSAEAGAIN as EAGAIN
+    from errno import EAGAIN
 elif os.name != 'java':
     from errno import EWOULDBLOCK, EINTR, EMSGSIZE, ECONNREFUSED, EAGAIN
 
