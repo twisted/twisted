@@ -128,6 +128,8 @@ def updateInstance(self):
 def __getattr__(self, name):
     """A getattr method to cause a class to be refreshed.
     """
+    if name == '__del__':
+        raise AttributeError("Without this, Python segfaults.")
     updateInstance(self)
     log.msg("(rebuilding stale %s instance (%s))" % (reflect.qual(self.__class__), name))
     result = getattr(self, name)
