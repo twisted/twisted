@@ -301,7 +301,7 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, SFTPTestBase):
         self.processProtocol.clearBuffer()
         self.processProtocol.transport.write(cmd+'\n')
         timeout = time.time() + 5
-        while (not 'cftp> ' in self.processProtocol.buffer) and (time.time() < timeout):
+        while (self.processProtocol.buffer.find('cftp> ') == -1) and (time.time() < timeout):
             reactor.iterate(0.1)
         self.failIf(time.time() > timeout, "timeout")
         if self.processProtocol.buffer.startswith('cftp> '):
