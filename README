@@ -1,14 +1,12 @@
-Twisted 0.14.0
+Twisted 0.15.0
 
 Quote of the Release:
 
-<glyph> funny.  I'm looking at twistedmatrix.com right now and the most recent
-version is still 0.13.0
-<radix> :P
-<radix> glyph: find a QOTR
+<itamar> two more webmonkey days, and then I'm off to the USA
+* shapr hands a web-banana to itamar 
+<desaster@ircnet> my god, the banana is full of ads
 
-
-For information on what's new in Twisted 0.14.0, see the ChangeLog file
+For information on what's new in Twisted 0.15.0, see the ChangeLog file
 that comes with the distribution, or http://twistedmatrix.com/ChangeLog.txt.
 
 
@@ -26,16 +24,18 @@ What is this?
   
     - FTP
     - HTTP
+    - SOCKS
     - SMTP
-    - irc
+    - IRC
     - telnet
     - POP3
     - AOL's instant messaging TOC
+    - OSCAR, used by AOL-IM as well as ICQ (client only)
     - DNS (client only)
     - LDAP (client only)
     - finger
     - Echo, discard, chargen and friends
-    - Perspective Broker
+    - Twisted Perspective Broker
   
   For more information, visit http://www.twistedmatrix.com.
 
@@ -43,15 +43,15 @@ What is this?
 What can I do with it?
 
   To install Twisted, just make sure the Twisted-$VERSION/twisted directory
-  is in your $PYTHONPATH. For example, if you extracted Twisted-0.13.0.tar.gz
+  is in your $PYTHONPATH. For example, if you extracted Twisted-0.15.0.tar.gz
   to /home/bob/, then you would have something like: 
 
-    export PYTHONPATH=$PYTHONPATH:/home/bob/Twisted-0.13.0/twisted
+    export PYTHONPATH=$PYTHONPATH:/home/bob/Twisted-0.15.0/twisted
   
   in your ~/.bash_profile.
 
 
-  Although there is lots of infrastructure support in Twisted, the immediately
+  Although there is a lot of infrastructure support in Twisted, the immediately
   useful applications for the end-user are Twisted Web and Instance Messenger.
   Twisted Web is a webserver, written entirely in python, which is designed to
   be "zero maintenance".  We run the twistedmatrix.com website from it, and I 
@@ -61,10 +61,11 @@ What can I do with it?
   Python, it's quite easy to script the webserver to do whatever you like!
 
   Instance Messenger is a multi-protocol chat client; it's easy to use: just
-  run 'im' and an "account manager" window will pop up. You can create and
-  modify accounts with it, and connect to/disconnect from them. Currently it
-  can support Twisted's own chat service, Twisted Words, Internet Relay Chat
-  (IRC), and AOL Instant Messenger (with the TOC protocol).
+  run 't-im' for the GTK+ version, or 'im' for the Tkinter version, and an 
+  "account manager" window will pop up. You can create and modify accounts
+  with it, and connect to/disconnect from them. Currently it can support
+  Twisted's own chat service, Twisted Words, Internet Relay Chat (IRC), and
+  AOL Instant Messenger (with the TOC protocol).
 
 Unit Tests
 

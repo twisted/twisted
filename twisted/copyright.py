@@ -21,7 +21,8 @@ Copyright information for Twisted.
 """
 
 
-version="0.14.0"
+version="0.15.0"
+longversion="Twisted %s" % version
 
 disclaimer="""
 Twisted, the Framework of Your Internet
@@ -43,4 +44,4 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 copyright="(c) 2000 Matthew William Lefkowitz, all rights reserved."
 
-longversion="Twisted %s"% version
+
