@@ -35,7 +35,7 @@ from Crypto.Util import randpool
 
 # twisted imports
 from twisted.conch import error
-from twisted.internet import protocol
+from twisted.internet import protocol, defer
 from twisted.python import log
 
 # sibling importsa
@@ -460,27 +460,10 @@ class SSHClientTransport(SSHTransportBase):
             pubKey, packet = getNS(packet)
             f, packet = getMP(packet)
             signature, packet = getNS(packet)
-            serverKey = keys.getPublicKeyObject(data = pubKey)
             fingerprint = ':'.join(map(lambda c: '%02x'%ord(c), md5.new(pubKey).digest()))
-            sharedSecret = _MPpow(f, self.x, DH_PRIME)
-            if not self.verifyHostKey(pubKey, fingerprint):
-                self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED, 'bad fingerprint')
-                return
-            h = sha.new()
-            h.update(NS(self.ourVersionString))
-            h.update(NS(self.otherVersionString))
-            h.update(NS(self.ourKexInitPayload))
-            h.update(NS(self.serverKexInitPayload))
-            h.update(NS(pubKey))
-            h.update(MP(self.DHpubKey))
-            h.update(MP(f))
-            h.update(sharedSecret)
-            exchangeHash = h.digest()
-            if not keys.verifySignature(serverKey, signature, exchangeHash):
-                self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED, 'bad signature')
-                return
-            self._keySetup(sharedSecret, exchangeHash)
-            return
+            d = self.verifyHostKey(pubKey, fingerprint)
+            d.addCallback(self._continueGEX_GROUP, pubKey, f, signature)
+            d.addErrback(lambda x,self=self:self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED, 'bad host key'))
         else:
             self.p, rest = getMP(packet)
             self.g, rest = getMP(rest)
@@ -488,16 +471,36 @@ class SSHClientTransport(SSHTransportBase):
             self.DHpubKey = pow(self.g, self.x, self.p)
             self.sendPacket(MSG_KEX_DH_GEX_INIT, MP(self.DHpubKey))
 
+    def _continueGEX_GROUP(self, ignored, pubKey, f, signature):
+        serverKey = keys.getPublicKeyObject(data = pubKey)
+        sharedSecret = _MPpow(f, self.x, DH_PRIME)
+        h = sha.new()
+        h.update(NS(self.ourVersionString))
+        h.update(NS(self.otherVersionString))
+        h.update(NS(self.ourKexInitPayload))
+        h.update(NS(self.serverKexInitPayload))
+        h.update(NS(pubKey))
+        h.update(MP(self.DHpubKey))
+        h.update(MP(f))
+        h.update(sharedSecret)
+        exchangeHash = h.digest()
+        if not keys.verifySignature(serverKey, signature, exchangeHash):
+            self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED, 'bad signature')
+            return
+        self._keySetup(sharedSecret, exchangeHash)
+
     def ssh_KEX_DH_GEX_REPLY(self, packet):
         pubKey, packet = getNS(packet)
         f, packet = getMP(packet)
         signature, packet = getNS(packet)
+        fingerprint = ':'.join(map(lambda c: '%02x'%ord(c), md5.new(pubKey).digest()))
+        d = self.verifyHostKey(pubKey, fingerprint)
+        d.addCallback(self._continueGEX_REPLY, pubKey, f, signature)
+        d.addErrback(lambda x, self=self: self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED, 'bad host key'))
+
+    def _continueGEX_REPLY(self, ignored, pubKey, f, signature):
         serverKey = keys.getPublicKeyObject(data = pubKey)
         sharedSecret = _MPpow(f, self.x, self.p)
-        fingerprint = ':'.join(map(lambda c: '%02x'%ord(c), md5.new(pubKey).digest()))
-        if not self.verifyHostKey(pubKey, fingerprint):
-            self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED, 'bad host key')
-            return
         h = sha.new()
         h.update(NS(self.ourVersionString))
         h.update(NS(self.otherVersionString))
@@ -553,8 +556,11 @@ class SSHClientTransport(SSHTransportBase):
 
     # client methods
     def verifyHostKey(self, hostKey, fingerprint):
-        # return 1 if it's good
-        raise NotImplementedError
+        """Returns a Deferred that gets a callback if it is a valid key, or
+        an errback if not.
+        """
+        # return  if it's good
+        return defer.fail(NotImplementedError)
 
     def connectionSecure(self):
         raise NotImplementedError

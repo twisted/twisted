@@ -209,7 +209,7 @@ class SSHTestClient(SSHTestBase, transport.SSHClientTransport):
         global theTest
         theTest.assertEquals(key, keys.getPublicKeyString(data = publicRSA))
         theTest.assertEquals(fp,'3d:13:5f:cb:c9:79:8a:93:06:27:65:bc:3d:0b:8f:af')
-        return 1
+        return defer.succeed(1) 
 
     def connectionSecure(self):
         self.requestService(SSHTestClientAuth('testuser',SSHTestClientConnection()))
