@@ -139,7 +139,8 @@ def noOperation(*args, **kw):
     consectetur, adipisci velit...
     """
 
-PB_CONNECTION_LOST = 'Connection Lost'
+class PBConnectionLost(Exception):
+    pass
 
 def printTraceback(tb):
     """Print a traceback (string) to the standard log.
@@ -539,7 +540,7 @@ class Broker(banana.Banana):
         if self.waitingForAnswers:
             for d in self.waitingForAnswers.values():
                 try:
-                    d.errback(PB_CONNECTION_LOST)
+                    d.errback(failure.Failure(PBConnectionLost()))
                 except:
                     log.deferr()
         for notifier in self.disconnects:
