@@ -34,10 +34,19 @@ Comma-separated list of modules to bundle into the application
                       util.sibpath(__file__, 'pysvc.ico'),
                       "Windows icon file to use"],
                      ]
+    optFlags = [['skip-py2exe', None,
+                 "Don't do py2exe build step (implies --skip-inno)"],
+                ['skip-inno', None,
+                 "Don't do Inno Setup build step"],
+                ]
 
     def __init__(self):
         usage.Options.__init__(self)
         self.warnings = []
+
+    def opt_skip_py2exe(self):
+        self['skip-py2exe']=1
+        self['skip-inno']=1
     
     def opt_type(self, cftype):
         if cftype not in cftypes:
@@ -45,6 +54,8 @@ Comma-separated list of modules to bundle into the application
 Type must be one of [%s], not \"%s\"""" % (', '.join(cftypes),
                                            cftype))
         self['type'] = cftype
+
+    opt_y = opt_type
 
     def parseArgs(self, conffile):
         self['conffile'] = os.path.abspath(conffile)
@@ -147,31 +158,34 @@ Could not create directory %s because: %s" % (o['dirname'], e.strerr))
 Could not copy file %s because: %s" % (o['conffile'], e.strerr))
 
     # invoke the packaging tools
-    sys.path.insert(0, util.sibpath(o['conffile'], ''))
-    sys.path.insert(0, os.getcwd())
-    import setup
-    setup.run('setup.py py2exe'.split())
+    if not o['skip-py2exe']:
+        sys.path.insert(0, util.sibpath(o['conffile'], ''))
+        sys.path.insert(0, os.getcwd())
+        import setup
+        setup.run('setup.py -q py2exe'.split())
 
-
-    import inno
-    script = inno.Script(destination="{pf}\%s" % o['name'], **o)
-    script.collect(os.path.join("dist", svc_appended))
-    outname = '%s.iss' % o['name']
-    out = file(outname, 'w+')
-    script.writeScript(out)
-    out.write(r'''[Run]
+    
+        if not o['skip-inno']:
+            import inno
+            script = inno.Script(destination="{pf}\%s" % o['name'], **o)
+            script.collect(os.path.join("dist", svc_appended))
+            outname = '%s.iss' % o['name']
+            out = file(outname, 'w+')
+            script.writeScript(out)
+            out.write(r'''[Run]
+Filename: "{app}\%(svc)s.exe"; Parameters: "-remove"
 Filename: "{app}\%(svc)s.exe"; Parameters: "-install"
 [UninstallRun]
 Filename: "{sys}\net.exe"; Parameters: "%(name)s stop"
 Filename: "{app}\%(svc)s.exe"; Parameters: "-remove"
 ''' % {'svc':svc_appended, 'name':o['name']})
-    out.close()
-    inno.build(outname)
+            out.close()
+            inno.build(outname)
     
 
 
-    sys.stderr.write("%s: %d warnings.\n" % (os.path.basename(argv[0]),
-                                             len(o.warnings)) )
+    sys.stderr.write("%s: %d warnings.\n" %
+                     (os.path.basename(argv[0]), len(o.warnings)))
 
 
 setup_template = '''\
