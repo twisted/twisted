@@ -33,7 +33,7 @@ import base64
 import string
 import glob
 import cPickle
-_open = __builtins__['open']
+_open = open
 
 class DirDBM:
     """A directory with a DBM interface.
