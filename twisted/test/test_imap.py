@@ -26,7 +26,8 @@ from twisted.protocols import imap4, loopback
 from twisted.internet import defer
 from twisted.trial import unittest
 from twisted.python import util
-from twisted.cred import authorizer
+from twisted.cred import authorizer, service
+from twisted.internet.app import _AbstractServiceCollection # I don't feel like reimplementing this.
 
 def strip(f):
     return lambda result, f=f: f()
@@ -345,7 +346,7 @@ class IMAP4HelperMixin:
         self.client = SimpleClient(d)
         self.connected = d
 
-        theAccount = Account()
+        theAccount = Account('testuser')
         theAccount.mboxType = SimpleMailbox
         SimpleServer.theAccount = theAccount
 
@@ -767,20 +768,33 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
         
         self.assertEquals(self.results, [0, 2])
 
+class DummyService(service.Service):
+    def __init__(self, authorizer):
+        service.Service.__init__(self, 'MessageStorage', authorizer=authorizer)
+
 class AuthenticatorTestCase(IMAP4HelperMixin, unittest.TestCase):
-    def testCramMD5(self):
-        a = Account()
-        auth = authorizer.DefaultAuthorizer()
+    def setUp(self):
+        IMAP4HelperMixin.setUp(self)
+        services = _AbstractServiceCollection()
+        auth = authorizer.DefaultAuthorizer(services)
+        service = DummyService(auth)
+        services.addService(service)
         ident = imap4.CramMD5Identity('testuser', auth)
-        ident.setPassword('secret', a)
+        ident.setPassword('secret')
+        a = Account('testuser')
+        service.addPerspective(a)
+        ident.addKeyForPerspective(a)
         auth.addIdentity(ident) 
+
         sAuth = imap4.CramMD5ServerAuthenticator('test-domain.com', auth)
         cAuth = imap4.CramMD5ClientAuthenticator('testuser')
 
         self.client.registerAuthenticator(cAuth)
         self.server.registerChallenger(sAuth)
         self.authenticated = 0
+        self.account = a
 
+    def testCramMD5(self):
         def auth():
             return self.client.authenticate('secret')
         def authed():
@@ -792,7 +806,24 @@ class AuthenticatorTestCase(IMAP4HelperMixin, unittest.TestCase):
         self.loopback()
         
         self.assertEquals(self.authenticated, 1)
-        self.assertEquals(self.server.account, a)
+        self.assertEquals(self.server.account, self.account)
+    
+    def testFailedCramMD5(self):
+        def misauth():
+            return self.client.authenticate('not the secret')
+        def authed():
+            self.authenticated = 1
+        def misauthed():
+            self.authenticated = -1
+        
+        d = self.connected.addCallback(strip(misauth))
+        d.addCallbacks(strip(authed), strip(misauthed))
+        d.addCallbacks(self._cbStopClient, self._ebGeneral)
+        self.loopback()
+
+        self.assertEquals(self.authenticated, -1)
+        self.assertEquals(self.server.account, None)
+
 
 class UnsolicitedResponseTestCase(IMAP4HelperMixin, unittest.TestCase):
     def testReadWrite(self):

@@ -30,7 +30,7 @@ from twisted.internet import defer
 from twisted.internet.defer import maybeDeferred
 from twisted.python import log, components, util, failure
 from twisted.python.compat import *
-from twisted.cred import identity, error
+from twisted.cred import identity, error, perspective
 
 import base64, binascii, operator, re, string, time, types, rfc822, random
 
@@ -301,26 +301,26 @@ class IMAP4Server(basic.LineReceiver):
                 coded = base64.encodestring(challenge)[:-1]
                 self._pendingLiteral = defer.Deferred()
                 self.sendContinuationRequest(coded)
-                self._pendingLiteral.addCallback(self._cbAuthChunk, auth, challenge, tag)
-                self._pendingLiteral.addErrback(self._ebAuthChunk, tag)
+                self._pendingLiteral.addCallback(self.__cbAuthChunk, auth, challenge, tag)
+                self._pendingLiteral.addErrback(self.__ebAuthChunk, tag)
 
-    def _cbAuthChunk(self, result, auth, savedState, tag):
+    def __cbAuthChunk(self, result, auth, savedState, tag):
         d = maybeDeferred(None, auth.authenticateResponse, savedState, result)
         d.addCallbacks(
-            self._cbAuthResp,
-            self._ebAuthResp,
+            self.__cbAuthResp,
+            self.__ebAuthResp,
             (tag,), None, (tag,), None
         )
 
-    def _cbAuthResp(self, result, tag):
+    def __cbAuthResp(self, result, tag):
         self.sendPositiveResponse(tag, 'Authentication successful')
         self.state = 'auth'
         self.account = result
     
-    def _ebAuthResp(self, failure, tag):
+    def __ebAuthResp(self, failure, tag):
         self.sendNegativeResponse(tag, 'Authentication failed: ' + str(failure.value))
     
-    def _ebAuthChunk(self, failure, tag):
+    def __ebAuthChunk(self, failure, tag):
         self.sendNegativeResponse(tag, 'Authentication failed: ' + str(falure.value))
 
     def unauth_LOGIN(self, tag, args):
@@ -329,7 +329,7 @@ class IMAP4Server(basic.LineReceiver):
             self.sendBadResponse(tag, 'Wrong number of arguments')
         else:
             maybeDeferred(None, self.authenticateLogin, *args).addCallbacks(
-                self._cbLogin, self._ebLogin, (tag,), None, (tag,), None
+                self.__cbLogin, self.__ebLogin, (tag,), None, (tag,), None
             )
 
     def authenticateLogin(self, user, passwd):
@@ -348,7 +348,7 @@ class IMAP4Server(basic.LineReceiver):
         """
         return None
 
-    def _cbLogin(self, account, tag):
+    def __cbLogin(self, account, tag):
         if account is None:
             self.sendNegativeResponse(tag, 'LOGIN failed')
         else:
@@ -356,7 +356,7 @@ class IMAP4Server(basic.LineReceiver):
             self.sendPositiveResponse(tag, 'LOGIN succeeded')
             self.state = 'auth'
 
-    def _ebLogin(self, failure, tag):
+    def __ebLogin(self, failure, tag):
         self.sendBadResponse(tag, 'Server error: ' + str(failure.value))
 
     def _parseMbox(self, name):
@@ -484,19 +484,19 @@ class IMAP4Server(basic.LineReceiver):
         mbox = self.account.select(mailbox, 0)
         if mbox:
             maybeDeferred(None, mbox.requestStatus, names).addCallbacks(
-                self._cbStatus, self._ebStatus,
+                self.__cbStatus, self.__ebStatus,
                 (tag, mailbox), None, (tag, mailbox), None
             )
         else:
             self.sendNegativeResponse(tag, str(e))
     select_STATUS = auth_STATUS
 
-    def _cbStatus(self, status, tag, box):
+    def __cbStatus(self, status, tag, box):
         line = ' '.join(['%s %s' % x for x in status.items()])
         self.sendUntaggedResponse('STATUS %s (%s)' % (box, line))
         self.sendPositiveResponse(tag, 'STATUS complete')
 
-    def _ebStatus(self, failure, tag, box):
+    def __ebStatus(self, failure, tag, box):
         self.sendBadResponse(tag, 'STATUS %s failed: %s' % (box, failure))
 
     def auth_APPEND(self, tag, args):
@@ -530,38 +530,38 @@ class IMAP4Server(basic.LineReceiver):
         if not mbox:
             self.sendNegativeResponse(tag, '[TRYCREATE] No such mailbox')
         d = self._setupForLiteral(size)
-        d.addCallback(self._cbContinueAppend, tag, mbox, flags, date)
-        d.addErrback(self._ebAppend, tag)
+        d.addCallback(self.__cbContinueAppend, tag, mbox, flags, date)
+        d.addErrback(self.__ebAppend, tag)
     select_APPEND = auth_APPEND
 
-    def _cbContinueAppend(self, rest, tag, mbox, flags, date):
+    def __cbContinueAppend(self, rest, tag, mbox, flags, date):
         d = mbox.addMessage(rest, flags, date)
-        d.addCallback(self._cbAppend, tag, mbox)
-        d.addErrback(self._ebAppend, tag)
+        d.addCallback(self.__cbAppend, tag, mbox)
+        d.addErrback(self.__ebAppend, tag)
 
-    def _cbAppend(self, result, tag, mbox):
+    def __cbAppend(self, result, tag, mbox):
         self.sendUntaggedResponse('%d EXISTS' % mbox.getMessageCount())
         self.sendPositiveResponse(tag, 'APPEND complete')
 
-    def _ebAppend(self, failure, tag):
+    def __ebAppend(self, failure, tag):
         self.sendBadResponse(tag, 'APPEND failed: ' + str(failure.value))
 
     def select_CHECK(self, tag, args):
         d = self.checkpoint()
         if d is None:
-            self._cbCheck(None, tag)
+            self.__cbCheck(None, tag)
         else:
             d.addCallbacks(
-                self._cbCheck,
-                self._ebCheck,
+                self.__cbCheck,
+                self.__ebCheck,
                 callbackArgs=(tag,),
                 errbackArgs=(tag,)
             )
 
-    def _cbCheck(self, result, tag):
+    def __cbCheck(self, result, tag):
         self.sendPositiveResponse(tag, 'CHECK completed')
 
-    def _ebCheck(self, failure, tag):
+    def __ebCheck(self, failure, tag):
         self.sendBadResponse(tag, 'CHECK failed: ' + str(failure.value))
 
     def checkpoint(self):
@@ -577,7 +577,7 @@ class IMAP4Server(basic.LineReceiver):
     def select_CLOSE(self, tag, args):
         if self.mbox.isWriteable():
             maybeDeferred(None, self.mbox.expunge).addCallbacks(
-                self._cbClose, self._ebClose, (tag,), None, (tag,), None
+                self.__cbClose, self.__ebClose, (tag,), None, (tag,), None
             )
         else:
             self.sendPositiveResponse(tag, 'CLOSE completed')
@@ -585,19 +585,19 @@ class IMAP4Server(basic.LineReceiver):
             self.mbox = None
             self.state = 'auth'
 
-    def _cbClose(self, result, tag):
+    def __cbClose(self, result, tag):
         self.sendPositiveResponse(tag, 'CLOSE completed')
         self.mbox.removeListener(self)
         self.mbox = None
         self.state = 'auth'
 
-    def _ebClose(self, failure, tag):
+    def __ebClose(self, failure, tag):
         self.sendBadResponse(tag, 'CLOSE failed: ' + str(failure.value))
 
     def select_EXPUNGE(self, tag, args):
         if self.mbox.isWriteable():
             maybeDeferred(None, self.mbox.expunge).addCallbacks(
-                self._cbExpunge, self._ebExpunge, (tag,), None, (tag,), None
+                self.__cbExpunge, self.__ebExpunge, (tag,), None, (tag,), None
             )
         else:
             self.sendPositiveResponse(tag, 'CLOSE completed')
@@ -605,7 +605,7 @@ class IMAP4Server(basic.LineReceiver):
             self.mbox = None
             self.state = 'auth'
 
-    def _cbExpunge(self, result, tag):
+    def __cbExpunge(self, result, tag):
         for e in result:
             self.sendUntaggedResponse('%d EXPUNGE' % e)
         self.sendPositiveResponse(tag, 'EXPUNGE completed')
@@ -613,17 +613,17 @@ class IMAP4Server(basic.LineReceiver):
         self.mbox = None
         self.state = 'auth'
 
-    def _ebExpunge(self, failure, tag):
+    def __ebExpunge(self, failure, tag):
         self.sendBadResponse(tag, 'EXPUNGE failed: ' + str(failure.value))
 
     def select_SEARCH(self, tag, args, uid=0):
         query = parseNestedParens(args)
         maybeDeferred(None, self.mbox.search, query).addCallbacks(
-            self._cbSearch, self._ebSearch,
+            self.__cbSearch, self.__ebSearch,
             (tag, uid), None, (tag,), None
         )
 
-    def _cbSearch(self, result, tag, uid):
+    def __cbSearch(self, result, tag, uid):
         if uid:
             topPart = self.mbox.getUIDValidity() << 16
             result = map(topPart.__or__, result)
@@ -631,7 +631,7 @@ class IMAP4Server(basic.LineReceiver):
         self.sendUntaggedResponse('SEARCH ' + ids)
         self.sendPositiveResponse(tag, 'SEARCH completed')
 
-    def _ebSearch(self, failure, tag):
+    def __ebSearch(self, failure, tag):
         self.sendBadResponse(tag, 'SEARCH failed: ' + str(failure.value))
 
     def select_FETCH(self, tag, args, uid=0):
@@ -647,11 +647,11 @@ class IMAP4Server(basic.LineReceiver):
             topPart = ~(self.mbox.getUIDValidity() << 16)
             messages = map(topPart.__and__, messages)
         maybeDeferred(None, self.mbox.fetch, messages, query).addCallbacks(
-            self._cbFetch, self._ebFetch,
+            self.__cbFetch, self.__ebFetch,
             (tag, uid), None, (tag,), None
         )
 
-    def _cbFetch(self, results, tag, uid):
+    def __cbFetch(self, results, tag, uid):
         for (mId, parts) in results.items():
             if uid:
                 topPart = self.mbox.getUIDValidity() << 16
@@ -666,7 +666,7 @@ class IMAP4Server(basic.LineReceiver):
             )
         self.sendPositiveResponse(tag, 'FETCH completed')
 
-    def _ebFetch(self, failure, tag):
+    def __ebFetch(self, failure, tag):
         self.sendBadResponse(tag, 'FETCH failed: ' + str(failure.value))
 
     def select_STORE(self, tag, args, uid=0):
@@ -694,16 +694,16 @@ class IMAP4Server(basic.LineReceiver):
             mode = 0
 
         maybeDeferred(None, self.mbox.store, messages, flags, mode).addCallbacks(
-            self._cbStore, self._ebStore, (tag, silent), None, (tag,), None
+            self.__cbStore, self.__ebStore, (tag, silent), None, (tag,), None
         )
 
-    def _cbStore(self, result, tag, silent):
+    def __cbStore(self, result, tag, silent):
         if result and not silent:
               for (k, v) in result.items():
                 self.sendUntaggedResponse('%d FETCH FLAGS (%s)' % (k, ' '.join(v)))
         self.sendPositiveResponse(tag, 'STORE completed')
 
-    def _ebStore(self, failure, tag):
+    def __ebStore(self, failure, tag):
         self.sendBadResponse(tag, 'Server error: ' + str(failure.value))
 
     def select_COPY(self, tag, args, uid=0):
@@ -725,10 +725,10 @@ class IMAP4Server(basic.LineReceiver):
                 self.mbox.fetch, messages,
                 ['BODY', [], 'INTERNALDATE', 'FLAGS']
             ).addCallbacks(
-                self._cbCopy, self._ebCopy, (tag, mbox), None, (tag, mbox), None
+                self.__cbCopy, self.__ebCopy, (tag, mbox), None, (tag, mbox), None
             )
 
-    def _cbCopy(self, messages, tag, mbox):
+    def __cbCopy(self, messages, tag, mbox):
         # XXX - This should handle failures with a rollback or something
         addedDeferreds = []
         addedIDs = []
@@ -747,9 +747,9 @@ class IMAP4Server(basic.LineReceiver):
                 else:
                     addedIDs.append(d)
         d = defer.DeferredList(addedDeferreds)
-        d.addCallback(self._cbCopied, addedIDs, failures, tag, mbox)
+        d.addCallback(self.__cbCopied, addedIDs, failures, tag, mbox)
 
-    def _cbCopied(self, deferredIds, ids, failures, tag, mbox):
+    def __cbCopied(self, deferredIds, ids, failures, tag, mbox):
         for (result, status) in deferredIds:
             if status:
                 ids.append(result)
@@ -952,7 +952,7 @@ class IMAP4Client(basic.LineReceiver):
             elif L.find('READ-WRITE') != -1:
                 self.modeChanged(1)
             elif L.find('FETCH') != -1:
-                flags.update(self._cbFetch(([L], None), ('FLAGS',)))
+                flags.update(self.__cbFetch(([L], None), ('FLAGS',)))
             else:
                 log.msg('Unhandled unsolicited response: ' + repr(L))
         if flags:
@@ -985,10 +985,10 @@ class IMAP4Client(basic.LineReceiver):
         args = ''
         resp = ('CAPABILITY',)
         d = self.sendCommand(Command(cmd, args, wantResponse=resp))
-        d.addCallback(self._cbCapabilities)
+        d.addCallback(self.__cbCapabilities)
         return d
 
-    def _cbCapabilities(self, (lines, tagline)):
+    def __cbCapabilities(self, (lines, tagline)):
         caps = {}
         for rest in lines:
             rest = rest.split()[1:]
@@ -1011,10 +1011,11 @@ class IMAP4Client(basic.LineReceiver):
         when the proper server acknowledgement has been received.
         """
         d = self.sendCommand(Command('LOGOUT', wantResponse=('BYE',)))
-        d.addCallback(self._cbLogout)
+        d.addCallback(self.__cbLogout)
         return d
 
-    def _cbLogout(self, (lines, tagline)):
+    def __cbLogout(self, (lines, tagline)):
+        self.transport.loseConnection()
         # We don't particularly care what the server said
         return None
 
@@ -1029,10 +1030,10 @@ class IMAP4Client(basic.LineReceiver):
         of untagged status updates the server responds with.
         """
         d = self.sendCommand(Command('NOOP'))
-        d.addCallback(self._cbNoop)
+        d.addCallback(self.__cbNoop)
         return d
 
-    def _cbNoop(self, (lines, tagline)):
+    def __cbNoop(self, (lines, tagline)):
         # Conceivable, this is elidable.
         # It is, afterall, a no-op.
         return lines
@@ -1053,10 +1054,10 @@ class IMAP4Client(basic.LineReceiver):
             d = self.getCapabilities()
         else:
             d = defer.succeed(self._capCache)
-        d.addCallback(getAuthMethods).addCallback(self._cbAuthenticate, secret)
+        d.addCallback(getAuthMethods).addCallback(self.__cbAuthenticate, secret)
         return d
 
-    def _cbAuthenticate(self, auths, secret):
+    def __cbAuthenticate(self, auths, secret):
         for scheme in auths:
             if self.authenticators.has_key(scheme):
                 break
@@ -1064,16 +1065,16 @@ class IMAP4Client(basic.LineReceiver):
             raise NoSupportedAuthentication(auths, self.authenticators.keys())
 
         continuation = defer.Deferred()
-        continuation.addCallback(self._cbContinueAuth, scheme, secret)
+        continuation.addCallback(self.__cbContinueAuth, scheme, secret)
         d = self.sendCommand(Command('AUTHENTICATE', scheme, continuation))
-        d.addCallback(self._cbAuth)
+        d.addCallback(self.__cbAuth)
         return d
 
-    def _cbContinueAuth(self, rest, scheme, secret):
+    def __cbContinueAuth(self, rest, scheme, secret):
         auth = self.authenticators[scheme]
         self.sendLine(auth.challengeResponse(secret, rest + '\n'))
 
-    def _cbAuth(self, *args, **kw):
+    def __cbAuth(self, *args, **kw):
         return None
 
     def login(self, username, password):
@@ -1112,7 +1113,7 @@ class IMAP4Client(basic.LineReceiver):
         args = mailbox.encode('imap4-utf-7')
         resp = ('FLAGS', 'EXISTS', 'RECENT', 'UNSEEN', 'PERMANENTFLAGS', 'UIDVALIDITY')
         d = self.sendCommand(Command(cmd, args, wantResponse=resp))
-        d.addCallback(self._cbSelect, 1)
+        d.addCallback(self.__cbSelect, 1)
         return d
 
     def examine(self, mailbox):
@@ -1132,10 +1133,10 @@ class IMAP4Client(basic.LineReceiver):
         args = mailbox.encode('imap4-utf-7')
         resp = ('FLAGS', 'EXISTS', 'RECENT', 'UNSEEN', 'PERMANENTFLAGS', 'UIDVALIDITY')
         d = self.sendCommand(Command(cmd, args, wantResponse=resp))
-        d.addCallback(self._cbSelect, 0)
+        d.addCallback(self.__cbSelect, 0)
         return d
 
-    def _cbSelect(self, (lines, tagline), rw):
+    def __cbSelect(self, (lines, tagline), rw):
         # In the absense of specification, we are free to assume:
         #   READ-WRITE access
         datum = {'READ-WRITE': rw}
@@ -1292,7 +1293,7 @@ class IMAP4Client(basic.LineReceiver):
         args = '"%s" "%s"' % (reference, wildcard.encode('imap4-utf-7'))
         resp = ('LIST',)
         d = self.sendCommand(Command(cmd, args, wantResponse=resp))
-        d.addCallback(self._cbList, 'LIST')
+        d.addCallback(self.__cbList, 'LIST')
         return d
 
     def lsub(self, reference, wildcard):
@@ -1308,10 +1309,10 @@ class IMAP4Client(basic.LineReceiver):
         args = '"%s" "%s"' % (reference, wildcard.encode('imap4-utf-7'))
         resp = ('LSUB',)
         d = self.sendCommand(Command(cmd, args, wantResponse=resp))
-        d.addCallback(self._cbList, 'LSUB')
+        d.addCallback(self.__cbList, 'LSUB')
         return d
 
-    def _cbList(self, (lines, last), command):
+    def __cbList(self, (lines, last), command):
         results = []
         for L in lines:
             parts = parseNestedParens(L)
@@ -1342,10 +1343,10 @@ class IMAP4Client(basic.LineReceiver):
         args = "%s (%s)" % (mailbox.encode('imap4-utf-7'), ' '.join(names))
         resp = ('STATUS',)
         d = self.sendCommand(Command(cmd, args, resp))
-        d.addCallback(self._cbStatus)
+        d.addCallback(self.__cbStatus)
         return d
 
-    def _cbStatus(self, (lines, last)):
+    def __cbStatus(self, (lines, last)):
         status = {}
         for line in lines:
             parts = parseNestedParens(line)
@@ -1392,15 +1393,15 @@ class IMAP4Client(basic.LineReceiver):
             date and ' ' or '', date, L
         )
         continuation = defer.Deferred()
-        continuation.addCallback(self._cbContinueAppend, message)
+        continuation.addCallback(self.__cbContinueAppend, message)
         d = self.sendCommand(Command('APPEND', cmd, continuation))
-        d.addCallback(self._cbAppend)
+        d.addCallback(self.__cbAppend)
         return d
 
-    def _cbContinueAppend(self, lines, message):
+    def __cbContinueAppend(self, lines, message):
         self.transport.write(message)
 
-    def _cbAppend(self, result):
+    def __cbAppend(self, result):
         return None
 
     def check(self):
@@ -1446,10 +1447,10 @@ class IMAP4Client(basic.LineReceiver):
         cmd = 'EXPUNGE'
         resp = ('EXPUNGE',)
         d = self.sendCommand(Command(cmd, wantResponse=resp))
-        d.addCallback(self._cbExpunge)
+        d.addCallback(self.__cbExpunge)
         return d
 
-    def _cbExpunge(self, (lines, last)):
+    def __cbExpunge(self, (lines, last)):
         ids = []
         for line in lines:
             parts = line.split(None, 1)
@@ -1477,10 +1478,10 @@ class IMAP4Client(basic.LineReceiver):
         cmd = 'SEARCH'
         args = ' '.join(queries)
         d = self.sendCommand(Command(cmd, args, wantResponse=(cmd,)))
-        d.addCallback(self._cbSearch)
+        d.addCallback(self.__cbSearch)
         return d
 
-    def _cbSearch(self, (lines, end)):
+    def __cbSearch(self, (lines, end)):
         ids = []
         for line in lines:
             parts = line.split(None, 1)
@@ -1506,7 +1507,7 @@ class IMAP4Client(basic.LineReceiver):
         if there is an error.
         """
         d = self._fetch(messages, uid=1)
-        d.addCallback(self._cbFetch, lookFor=('UID',))
+        d.addCallback(self.__cbFetch, lookFor=('UID',))
         return d
 
     def fetchFlags(self, messages):
@@ -1523,7 +1524,7 @@ class IMAP4Client(basic.LineReceiver):
         there is an error.
         """
         d = self._fetch(messages, flags=1)
-        d.addCallback(self._cbFetch, lookFor=('FLAGS',))
+        d.addCallback(self.__cbFetch, lookFor=('FLAGS',))
         return d
 
     def fetchInternalDate(self, messages):
@@ -1540,7 +1541,7 @@ class IMAP4Client(basic.LineReceiver):
         if there is an error.
         """
         d = self._fetch(messages, internaldate=1)
-        d.addCallback(self._cbFetch, lookFor=('INTERNALDATE',))
+        d.addCallback(self.__cbFetch, lookFor=('INTERNALDATE',))
         return d
 
     def fetchEnvelope(self, messages):
@@ -1557,7 +1558,7 @@ class IMAP4Client(basic.LineReceiver):
         if there is an error.
         """
         d = self._fetch(messages, envelope=1)
-        d.addCallback(self._cbFetch, lookFor=('ENVELOPE',))
+        d.addCallback(self.__cbFetch, lookFor=('ENVELOPE',))
         return d
 
     def fetchBodyStructure(self, messages):
@@ -1574,7 +1575,7 @@ class IMAP4Client(basic.LineReceiver):
         if there is an error.
         """
         d = self._fetch(messages, bodystructure=1)
-        d.addCallback(self._cbFetch, lookFor=('BODYSTRUCTURE',))
+        d.addCallback(self.__cbFetch, lookFor=('BODYSTRUCTURE',))
         return d
 
     def fetchSimplifiedBody(self, messages):
@@ -1591,7 +1592,7 @@ class IMAP4Client(basic.LineReceiver):
         if there is an error.
         """
         d = self._fetch(messages, body=1)
-        d.addCallback(self._cbFetch, lookFor=('BODY',))
+        d.addCallback(self.__cbFetch, lookFor=('BODY',))
         return d
 
     def fetchMessage(self, messages):
@@ -1608,7 +1609,7 @@ class IMAP4Client(basic.LineReceiver):
         if there is an error.
         """
         d = self._fetch(messages, rfc822=1)
-        d.addCallback(self._cbFetch, lookFor=('RFC822',))
+        d.addCallback(self.__cbFetch, lookFor=('RFC822',))
         return d
 
     def fetchHeaders(self, messages):
@@ -1625,7 +1626,7 @@ class IMAP4Client(basic.LineReceiver):
         invoked if there is an error.
         """
         d = self._fetch(messages, rfc822header=1)
-        d.addCallback(self._cbFetch, lookFor=('RFC822.HEADER',))
+        d.addCallback(self.__cbFetch, lookFor=('RFC822.HEADER',))
         return d
 
     def fetchBody(self, messages):
@@ -1642,7 +1643,7 @@ class IMAP4Client(basic.LineReceiver):
         is an error.
         """
         d = self._fetch(messages, rfc822text=1)
-        d.addCallback(self._cbFetch, lookFor=('RFC822.TEXT',))
+        d.addCallback(self.__cbFetch, lookFor=('RFC822.TEXT',))
         return d
 
     def fetchSize(self, messages):
@@ -1659,7 +1660,7 @@ class IMAP4Client(basic.LineReceiver):
         an error.
         """
         d = self._fetch(message, rfc822size=1)
-        d.addCallback(self._cbFetch, lookFor=('RFC822.SIZE',))
+        d.addCallback(self.__cbFetch, lookFor=('RFC822.SIZE',))
         return d
 
     def fetchFull(self, messages):
@@ -1684,7 +1685,7 @@ class IMAP4Client(basic.LineReceiver):
             rfc822size=1, envelope=1, body=1
         )
         d.addCallback(
-            self._cbFetch,
+            self.__cbFetch,
             lookFor=(
                 'FLAGS', 'INTERNALDATE', 'RFC822.SIZE',
                 'ENVELOPE', 'BODY'
@@ -1713,7 +1714,7 @@ class IMAP4Client(basic.LineReceiver):
             rfc822size=1, envelope=1
         )
         d.addCallback(
-            self._cbFetch,
+            self.__cbFetch,
             lookFor=(
                 'FLAGS', 'INTERNALDATE', 'RFC822.SIZE', 'ENVELOPE'
             )
@@ -1740,14 +1741,14 @@ class IMAP4Client(basic.LineReceiver):
             messages, flags=1, internaldate=1, rfc822size=1
         )
         d.addCallback(
-            self._cbFetch,
+            self.__cbFetch,
             lookFor=(
                 'FLAGS', 'INTERNALDATE', 'RFC822.SIZE'
             )
         )
         return d
 
-    def _cbFetch(self, (lines, last), lookFor):
+    def __cbFetch(self, (lines, last), lookFor):
         flags = {}
         for line in lines:
             parts = line.split(None, 2)
@@ -1839,10 +1840,10 @@ class IMAP4Client(basic.LineReceiver):
             extra = '<%d.%d>' % (offset, length)
         cmd = fmt % (peek and '.PEEK' or '', number, header, payload, extra)
         d = self.sendCommand(Command('FETCH', cmd, wantResponse=('FETCH',)))
-        d.addCallback(self._cbFetchSpecific)
+        d.addCallback(self.__cbFetchSpecific)
         return d
 
-    def _cbFetchSpecific(self, (lines, last)):
+    def __cbFetchSpecific(self, (lines, last)):
         info = {}
         for line in lines:
             parts = line.split(None, 2)
@@ -1930,7 +1931,7 @@ class IMAP4Client(basic.LineReceiver):
     def _store(self, messages, cmd, flags):
         args = ' '.join((messages, cmd, '(%s)' % ' '.join(flags)))
         d = self.sendCommand(Command('STORE', args, wantResponse=('FETCH',)))
-        d.addCallback(self._cbFetch, lookFor='FLAGS')
+        d.addCallback(self.__cbFetch, lookFor='FLAGS')
         return d
     
     def copy(self, messages, mailbox):
@@ -2330,9 +2331,8 @@ class IClientAuthentication(components.Interface):
         """Generate a challenge response string"""
 
 class CramMD5Identity(identity.Identity):
-    def setPassword(self, plaintext, account):
+    def setPassword(self, plaintext):
         self.plaintext = plaintext
-        self.account = account
 
     def challenge(self):
         # The data encoded in the first ready response contains an
@@ -2348,8 +2348,8 @@ class CramMD5Identity(identity.Identity):
     def verifyResponse(self, digest, response):
         verify = util.keyed_md5(self.plaintext, response)
         if verify == digest:
-            return defer.succeed(self.account)
-        return defer.fail(error.Unauthorized("Incorrect password"))
+            return self
+        raise error.Unauthorized, "Incorrect response"
 
 # Do these belong here?
 class CramMD5ServerAuthenticator:
@@ -2385,8 +2385,23 @@ class CramMD5ServerAuthenticator:
         name, digest = parts
         
         identity = self.authorizer.getIdentityRequest(name)
-        identity.addCallback(CramMD5Identity.verifyResponse, digest, state)
+        identity.addCallback(self.__cbIdentity, state, digest)
+        identity.addCallback(self.__cbVerified, name)
+        identity.addCallback(self.__cbPerspective)
         return identity
+
+    def __cbIdentity(self, identity, state, digest):
+        d = identity.verifyResponse(digest, state)
+        return identity
+
+    def __cbVerified(self, identity, name):
+        d = identity.requestPerspectiveForKey('MessageStorage', name)
+        d.addCallback(lambda perspective: (identity, perspective))
+        return d
+    
+    def __cbPerspective(self, (identity, perspective)):
+        perspective.attached(self, identity)
+        return perspective
 
 class CramMD5ClientAuthenticator:
     __implements__ = (IClientAuthentication,)
@@ -2418,6 +2433,12 @@ class ReadOnlyMailbox(MailboxException):
         return 'Mailbox open in read-only state'
 
 class IAccount(components.Interface):
+    """Interface for Account classes
+    
+    Implementors of this interface must also subclass
+    C{twisted.cred.perspective.Perspective}
+    """
+
     def addMailbox(self, name, mbox = None):
         """Add a new mailbox to this account
         
@@ -2563,14 +2584,15 @@ class IAccount(components.Interface):
         given criteria.
         """
     
-class MemoryAccount:
+class MemoryAccount(perspective.Perspective):
     __implements__ = (IAccount,)
 
     mailboxes = None
     subscriptions = None
     top_id = 0
 
-    def __init__(self):
+    def __init__(self, name):
+        perspective.Perspective.__init__(self, name, name)
         self.mailboxes = {}
         self.subscriptions = []
 
