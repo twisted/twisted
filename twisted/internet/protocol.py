@@ -109,9 +109,9 @@ class ClientFactory(Factory):
     def startedConnecting(self, connector):
         """Called when a connection has been started.
 
-        @param connector: a Connector object.
-
         You can call connector.stopConnecting() to stop the connection attempt.
+
+        @param connector: a Connector object.
         """
 
     def clientConnectionFailed(self, connector, reason):
