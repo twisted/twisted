@@ -4,19 +4,30 @@ Sat, 21 Jul 2001 09:35:33 +0300
 It was downloaded from http://www.twistedmatrix.com
 
 Upstream Author(s): 
-Glyph "Glyph" Lefkowitz <glyph@twistedmatrix.com>
-Sean "Riley" Riley <sean@twistedmatrix.com>
-Allen "Dash" Short <washort@twistedmatrix.com>
-Chris "Radix" Armstrong <carmstro@twistedmatrix.com>
-Jürgen "snibril" Hermann <jh@twistedmatrix.com>
-Moshe "vertical" Zadka <moshez@twistedmatrix.com>
-Benjamin Bruheim <grolgh@online.no>
-Travis B. "Nafai" Hartwell <slt5v@cc.usu.edu>
+- Glyph "Glyph" Lefkowitz <glyph@twistedmatrix.com>
+- Sean "Riley" Riley <sean@twistedmatrix.com>
+- Allen "Dash" Short <washort@twistedmatrix.com>
+- Chris "Radix" Armstrong <radix@twistedmatrix.com>
+- Paul "z3p" Swartz <z3p@twistedmatrix.com>
+- Jürgen "snibril" Hermann <jh@twistedmatrix.com>
+- Moshe "vertical" Zadka <moshez@twistedmatrix.com>
+- Benjamin Bruheim <grolgh@online.no>
+- Travis B. "Nafai" Hartwell <nafai@twistedmatrix.com>
+- Itamar "itamar" Shtull-Trauring <twisted@itamarst.org>
+- Andrew "spiv" Bennetts <andrew@puzzling.org>
+- Kevin "Acapnotic" Turner <acapnotic@twistedmatrix.com>
+- Donovan "fzZzy" Preston <dp@twistedmatrix.com>
+- Jp "exarkun" Calderone <exarkun@twistedmatrix.com>
+- Gavin "skreech" Cooper <coop@coopweb.org> 
+- Jonathan "jml" Lange <jml@twistedmatrix.com>
 
 Copyright:
 
+  The README contains the following:
   All of the code in this distribution is (C) Matthew William Lefkowitz, AKA
   "Glyph".
 
-  Twisted is made available under the GNU Lesser General Public License.  The
-  included LICENSE file describes this in detail.
+  Twisted is made available under the GNU Lesser General Public License.
+
+  On Debian systems, the GNU LGPL is available in
+  /usr/share/common-licenses/LGPL-2.1
