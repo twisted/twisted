@@ -163,6 +163,7 @@ class Client(Connection):
             else:
                 self.protocol.connectionFailed()
                 self.stopWriting()
+            return
         # If I have reached this point without raising or returning, that means
         # that the socket is connected.
         del self.doWrite
