@@ -1,16 +1,16 @@
-from twisted.internet import reactor, defer
+from twisted.internet import reactor
 
 from twisted.trial import unittest, util
 
-from defgen import waitForDeferred, deferredGenerator
+from twisted.internet.defer import waitForDeferred, deferredGenerator, Deferred
 
 def getThing():
-    d = defer.Deferred()
+    d = Deferred()
     reactor.callLater(0, d.callback, "hi")
     return d
 
 def getOwie():
-    d = defer.Deferred()
+    d = Deferred()
     def CRAP():
         d.errback(ZeroDivisionError('OMG'))
     reactor.callLater(0, CRAP)
