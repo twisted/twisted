@@ -893,7 +893,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         command = parts[0].upper()
         args = parts[1]
 
-        if command not in ('COPY', 'FETCH', 'STORE', SEARCH):
+        if command not in ('COPY', 'FETCH', 'STORE', 'SEARCH'):
             raise IllegalClientResponse, args
 
         f = getattr(self, 'select_' + command)
