@@ -94,11 +94,25 @@ class TestNetstring(basic.NetstringReceiver):
     def stringReceived(self, s):
         self.received.append(s)
 
+class TestSafeNetstring(basic.SafeNetstringReceiver):
+    
+    MAX_LENGTH = 50
+    closed = 0
+    
+    def stringReceived(self, s):
+        pass
+    
+    def connectionLost(self):
+        self.closed = 1
+
 
 class NetstringReceiverTestCase(unittest.TestCase):
 
     strings = ['hello', 'world', 'how', 'are', 'you123', ':today', "a"*515]
 
+    illegal_strings = ['9999999999999999999999', 'abc', '4:abcde',
+                       '51:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab,',]
+    
     def testBuffer(self):
         for packet_size in range(1, 10):
             t = StringIOWithoutClosing()
@@ -113,6 +127,18 @@ class NetstringReceiverTestCase(unittest.TestCase):
                     a.dataReceived(s)
             if a.received != self.strings:
                 raise AssertionError(a.received)
+    
+    def getSafeNS(self):
+        t = StringIOWithoutClosing()
+        a = TestSafeNetstring()
+        a.makeConnection(protocol.FileWrapper(t))
+        return a
+    
+    def testSafe(self):
+        for s in self.illegal_strings:            
+            r = self.getSafeNS()
+            r.dataReceived(s)
+            assert r.brokenPeer, "connection wasn't closed on illegal netstring %s" % repr(s)
 
 
 class DummyHTTPHandler(http.HTTP):

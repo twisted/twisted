@@ -97,6 +97,34 @@ class NetstringReceiver(protocol.Protocol):
     def sendString(self, data):
         self.transport.write('%d:%s,' % (len(data), data))
 
+
+class SafeNetstringReceiver(NetstringReceiver):
+    """A NetstringReceiver that behaves in a safe manner:
+    
+    1) Messages are limited in size, useful if you don't want someone sending
+       you a 500MB netstring.
+    2) The connection is lost if an illegal message is received.
+    """
+    
+    MAX_LENGTH = 99999
+    brokenPeer = 0
+        
+    def doLength(self):
+        try:
+            NetstringReceiver.doLength(self)
+        except OverflowError:
+            raise NetstringParseError("netstring was too long")
+        if self.length > self.MAX_LENGTH:
+            raise NetstringParseError("netstring was too long")
+    
+    def dataReceived(self, data):
+        try:
+            NetstringReceiver.dataReceived(self, data)
+        except NetstringParseError:
+            self.transport.loseConnection()
+            self.brokenPeer = 1
+
+
 class LineReceiver(protocol.Protocol):
     """A protocol which has a mode where it receives lines, and a mode where it receives raw data.
     
