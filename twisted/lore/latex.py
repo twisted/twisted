@@ -89,8 +89,7 @@ class LatexSpitter:
     def visitNode_img(self, node):
         fileName = os.path.join(self.currDir, node.getAttribute('src'))
         target, ext = os.path.splitext(fileName)
-        ext = ext[1:]
-        m = getattr(self, 'convert_'+ext, None)
+        m = getattr(self, 'convert_'+ext[1:], None)
         if not m:
             return
         target = os.path.join(self.currDir, os.path.basename(target)+'.eps')
