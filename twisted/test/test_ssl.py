@@ -69,11 +69,12 @@ class UnintelligentProtocol(basic.LineReceiver):
                 self.sendLine(l)
             self.transport.loseConnection()
         
-class ServerTLSContext(ssl.DefaultOpenSSLContextFactory):
-    isClient = 0
-    def __init__(self, *args, **kw):
-        kw['sslmethod'] = SSL.TLSv1_METHOD
-        ssl.DefaultOpenSSLContextFactory.__init__(self, *args, **kw)
+if ssl is not None:
+    class ServerTLSContext(ssl.DefaultOpenSSLContextFactory):
+        isClient = 0
+        def __init__(self, *args, **kw):
+            kw['sslmethod'] = SSL.TLSv1_METHOD
+            ssl.DefaultOpenSSLContextFactory.__init__(self, *args, **kw)
 
 class LineCollector(basic.LineReceiver):
     def __init__(self, doTLS, fillBuffer=0):
