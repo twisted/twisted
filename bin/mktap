@@ -77,7 +77,7 @@ if options.help or not options.args:
         sys.exit()
     else:
         print __doc__
-	sys.exit()
+        sys.exit()
 else:
     mod = getModule(options.args[0])
 try:
