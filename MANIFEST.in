@@ -15,11 +15,13 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 # Twisted - Distutils distribution files
 #
-# $Id: MANIFEST.in,v 1.8 2002/08/15 07:15:53 radix Exp $
+# $Id: MANIFEST.in,v 1.9 2003/01/27 16:30:44 acapnotic Exp $
 
 include CREDITS LICENSE README
 include MANIFEST.in
 include twisted/im/instancemessenger.glade
+include twisted/spread/ui/login2.glade
+include twisted/manhole/ui/gtk2manhole.glade
 include twisted/plugins.tml
 
 recursive-include bin *
