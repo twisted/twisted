@@ -62,4 +62,4 @@ class Range(unittest.TestCase):
         """Content-Range of a request is correct."""
         self.request._headers['range'] = 'bytes=0-1999'
         self.file.render(self.request)
-        assertEquals(self.request._setHeaders.get('content-range'), ['0-1999/8000'])
+        assertEquals(self.request._setHeaders.get('content-range'), ['bytes 0-1999/8000'])
