@@ -1,3 +1,5 @@
+import string
+
 import gtk
 from libglade import GladeXML
 
@@ -28,6 +30,7 @@ class GroupJoinWindow:
     def on_GroupJoinButton_clicked(self, b):
         name = self.xml.get_widget("GroupNameEntry").get_text()
         self.currentAccount.joinGroup(name)
+        self.widget.destroy()
 
 
 class ContactsList:
@@ -120,7 +123,8 @@ class GroupConversation(InputOutputWindow):
         self.group.sendGroupMessage(text).addCallback(self._cbTextSent, text)
 
     def showGroupMessage(self, sender, text):
-        self.output.insert_defaults("<%s> %s\n" % (sender, text))
+        msg = "<%s> %s\n" % (sender, text)
+        self.output.insert_defaults(msg)
 
     def setGroupMembers(self, members):
         self.members = members
@@ -128,10 +132,12 @@ class GroupConversation(InputOutputWindow):
 
     def memberJoined(self, member):
         self.members.append(member)
+        self.output.insert_defaults("> %s joined <\n" % member)
         self.refreshMemberList()
 
     def memberLeft(self, member):
         self.members.remove(member)
+        self.output.insert_defaults("> %s left <\n" % member)
         self.refreshMemberList()
 
     def refreshMemberList(self):
