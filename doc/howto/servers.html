@@ -174,7 +174,7 @@ from twisted.protocols.basic import LineReceiver
 
 class Answer(LineReceiver):
 
-    answers = {'How are you?': 'Fine', None : 'I don't know what you mean'}
+    answers = {'How are you?': 'Fine', None : "I don't know what you mean"}
 
     def lineReceived(self, line):
         if self.answers.has_key(line):
