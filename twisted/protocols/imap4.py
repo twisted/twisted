@@ -1667,8 +1667,6 @@ class IMAP4Client(basic.LineReceiver):
         self._defaultHandler(tag, rest)
 
     def _defaultHandler(self, tag, rest):
-        if rest.find('EXISTS') != -1:
-            import pdb; pdb.Pdb().set_trace()
         if tag == '*' or tag == '+':
             if not self.waiting:
                 self._extraInfo([rest])
