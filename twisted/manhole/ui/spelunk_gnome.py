@@ -1,6 +1,6 @@
 # -*- Python -*-
 # Twisted, the Framework of Your Internet
-# $Id: spelunk_gnome.py,v 1.9 2002/08/19 03:21:56 radix Exp $
+# $Id: spelunk_gnome.py,v 1.10 2002/09/21 08:16:49 acapnotic Exp $
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
 # This library is free software; you can redistribute it and/or
@@ -117,7 +117,6 @@ class SpelunkDisplay(gnome.Canvas):
             log.msg("Making new visage for %d" % (xplorer.id, ))
             self.visages[xplorer.id] = xplorer.newVisage(self.root(),
                                                          self)
-        xplorer.requestState()
 
 #### Base classes
 
@@ -185,9 +184,6 @@ class Explorer(pb.RemoteCache):
         for a in spelunker.groupLabels.keys():
             things = getattr(self, a)
             spelunker.fill_attributeGroup(a, things)
-
-    def requestState(self):
-        self.view.callRemote("updateState")
 
 class _LooseBoxBorder:
     box = None
@@ -679,4 +675,4 @@ GenericVisage = Visage
 GenericAttributeWidget = AttributeWidget
 
 pb.setCopierForClassTree(sys.modules[__name__],
-                         Explorer, 'twisted.python.explorer')
+                         Explorer, 'twisted.manhole.explorer')

@@ -1,6 +1,6 @@
 # -*- Python -*-
 # Twisted, the Framework of Your Internet
-# $Id: gtkmanhole.py,v 1.37 2002/08/19 03:21:56 radix Exp $
+# $Id: gtkmanhole.py,v 1.38 2002/09/21 08:16:49 acapnotic Exp $
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
 # This library is free software; you can redistribute it and/or
@@ -131,7 +131,6 @@ class Interaction(pywidgets.Interaction, pb.Referenceable):
             gtk.mainquit()
 
 
-
 class LineOrientedBrowserDisplay:
     def __init__(self, toplevel=None):
         if toplevel:
@@ -188,4 +187,4 @@ class Signature(pb.RemoteCopy, explorer.Signature):
 
     __str__ = explorer.Signature.__str__
 
-pb.setCopierForClass('twisted.python.explorer.Signature', Signature)
+pb.setCopierForClass('twisted.manhole.explorer.Signature', Signature)

@@ -1,3 +1,5 @@
+# -*- test-case-name: twisted.test.test_explorer -*-
+# $Id: explorer.py,v 1.2 2002/09/21 08:16:51 acapnotic Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
