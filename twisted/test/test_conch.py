@@ -20,7 +20,7 @@ from twisted.conch import identity, error, checkers
 from twisted.conch.ssh import keys, transport, factory, userauth, connection, common, session,channel
 from twisted.cred import portal
 from twisted.cred.credentials import IUsernamePassword
-from twisted.internet import reactor, defer, app, protocol
+from twisted.internet import reactor, defer, protocol
 from twisted.python import log
 from twisted.trial import unittest
 from Crypto.PublicKey import RSA, DSA
