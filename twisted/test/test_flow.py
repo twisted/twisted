@@ -474,7 +474,7 @@ class FlowTest(unittest.TestCase):
             coop = f._yield()
             if f.results:
                 result.extend(f.results)
-                f.results = []
+                del f.results[:len(result)]
                 reactor.callLater(0, process)
                 return
             if coop:
