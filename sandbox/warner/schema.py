@@ -124,12 +124,20 @@ class Constraint:
         """Check the OPEN type (the tuple of Index Tokens). Raise an
         exception if it is not accepted.
         """
+
         if self.opentypes == None:
             return
-        if opentype not in self.opentypes:
-            print "opentype %s, self.opentypes %s" % (opentype,
-                                                      self.opentypes)
-            raise Violation, "unacceptable OPEN type '%s'" % (opentype,)
+
+        for o in self.opentypes:
+            if len(o) == len(opentype):
+                if o == opentype:
+                    return
+            if len(o) > len(opentype):
+                # we might have a partial match: they haven't flunked yet
+                if opentype == o[:len(opentype)]:
+                    return # still in the running
+        print "opentype %s, self.opentypes %s" % (opentype, self.opentypes)
+        raise Violation, "unacceptable OPEN type '%s'" % (opentype,)
 
     def checkObject(self, obj):
         """Validate an existing object. Usually objects are validated as
@@ -357,7 +365,8 @@ class PolyConstraint(Constraint):
             except Violation:
                 pass
         if not ok:
-            raise Violation("does not satisfy any of %s" % self.alternatives)
+            raise Violation("does not satisfy any of %s" \
+                            % (self.alternatives,))
 
     def maxSize(self, seen=None):
         if not seen: seen = []
@@ -529,9 +538,9 @@ class AttributeDictConstraint(Constraint):
                                 for c in self.itervalues()], 1)
 
     def getAttrConstraint(self, attrname):
-        c = self.attrConstraints.get(attrname)
+        c = self.keys.get(attrname)
         if c:
-            if isinstance(c, schema.Optional):
+            if isinstance(c, Optional):
                 c = c.constraint
             return (True, c)
         # unknown attribute
@@ -713,7 +722,9 @@ class RemoteMethodSchema:
                 self.responseConstraint.checkObject(results)
             except Violation, v:
                 if v.args:
-                    v.args[0] += " in outbound method results"
+                    args = list(v.args)
+                    args[0] += " in outbound method results"
+                    v.args = tuple(args)
                 else:
                     v.args = ("in outbound method results",)
                 raise v
@@ -823,10 +834,24 @@ class Optional(Constraint):
         seen.append(self)
         return self.constraint.maxDepth(seen)
 
-#class FailureConstraint(ClassConstraint):
-#    def __init__(self):
-#        ClassConstraint.__init__(self, failure.Failure)
-FailureConstraint = StringConstraint
+class FailureConstraint(AttributeDictConstraint):
+    taster = openTaster
+    opentypes = [("copyable", "twisted.python.failure.Failure")]
+    name = "FailureConstraint"
+    klass = failure.Failure
+
+    def __init__(self):
+        attrs = [('type', StringConstraint(200)),
+                 ('value', StringConstraint(1000)),
+                 ('traceback', StringConstraint(2000)),
+                 ('parents', ListOf(StringConstraint(200))),
+                 ]
+        AttributeDictConstraint.__init__(self, *attrs)
+
+    def checkObject(self, obj):
+        if not isinstance(obj, self.klass):
+            raise Violation("is not an instance of %s" % self.klass)
+
 
 def makeConstraint(t):
     #if isinstance(t, Constraint):

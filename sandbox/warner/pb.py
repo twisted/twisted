@@ -460,9 +460,7 @@ class ErrorUnslicer(BaseUnslicer):
             # may raise BananaError for bad reqIDs
             self.request = self.broker.getRequest(reqID)
         else:
-            # TODO: need real failures
-            #self.failure = token
-            self.failure = failure.Failure(RuntimeError(token))
+            self.failure = token
             self.gotFailure = True
 
     def receiveClose(self):
@@ -600,8 +598,7 @@ class ErrorSlicer(ScopedSlicer):
 
     def sliceBody(self, streamable, banana):
         yield self.reqID
-        # TODO: need CopyableFailures
-        yield self.f.getBriefTraceback()
+        yield self.f
 
     def describe(self):
         return "<error-%s>" % self.reqID
@@ -622,10 +619,12 @@ class FailureSlicer(slicer.BaseSlicer):
         return "<%s>" % self.classname
         
     def getStateToCopy(self, obj, broker):
-        state = obj.__dict__.copy()
-        state['tb'] = None
-        state['frames'] = []
-        state['stack'] = []
+        #state = obj.__dict__.copy()
+        #state['tb'] = None
+        #state['frames'] = []
+        #state['stack'] = []
+
+        state = {}
         if isinstance(obj.value, failure.Failure):
             # TODO: how can this happen? I got rid of failure2Copyable, so
             # if this case is possible, something needs to replace it
@@ -638,14 +637,46 @@ class FailureSlicer(slicer.BaseSlicer):
             io = StringIO.StringIO()
             obj.printTraceback(io)
             state['traceback'] = io.getvalue()
+            # TODO: provide something with globals and locals and HTML and
+            # all that cool stuff
         else:
             state['traceback'] = 'Traceback unavailable\n'
+        if len(state['traceback']) > 1900:
+            state['traceback'] = (state['traceback'][:1900] +
+                                  "\n\n-- TRACEBACK TRUNCATED --\n")
+        state['parents'] = obj.parents
         return state
 registerAdapter(FailureSlicer, failure.Failure, ISlicer)
 
-class CopiedFailure(RemoteCopy, failure.Failure):
+class CopiedFailure(failure.Failure, RemoteCopy):
+    """I am a shadow of some remote Failure instance. I contain less
+    information than the original did.
+
+    You can still extract a (brief) printable traceback from me. My .parents
+    attribute is a list of strings describing the class of the exception
+    that I contain, just like the real Failure had, so my trap() and check()
+    methods work fine. My .type and .value attributes are string
+    representations of the original exception class and exception instance,
+    respectively. The most significant effect is that you cannot access
+    f.value.args, and should instead just use f.value .
+
+    My .frames and .stack attributes are empty, although this may change in
+    the future (and with the cooperation of the sender).
+    """
+
     nonCyclic = True
-    
+    stateSchema = schema.FailureConstraint()
+
+    def __init__(self):
+        RemoteCopy.__init__(self)
+
+    def setCopyableState(self, state):
+        self.__dict__ = state
+        # state includes: type, value, traceback, parents
+        self.tb = None
+        self.frames = []
+        self.stack = []
+
     pickled = 1
     def printTraceback(self, file=None):
         if not file: file = log.logfile

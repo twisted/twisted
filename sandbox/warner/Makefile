@@ -2,7 +2,7 @@ all: banana.html pb.html
 
 %.html: %.xhtml
 	-lore -n --output lint $<
-	lore -p --config template=../../doc/howto/template.tpl \
+	lore -p --config template=../../doc/core/howto/template.tpl \
 		--config ext=.html $<
 
 TEST=test_banana test_schema test_pb

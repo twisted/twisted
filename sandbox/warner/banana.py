@@ -379,9 +379,6 @@ class Banana(protocol.Protocol):
                 int2b128(symbolID, write)
                 write(VOCAB)
             else:
-                if len(obj) > SIZE_LIMIT:
-                    raise BananaError, \
-                          "string is too long to send (%d)" % len(obj)
                 int2b128(len(obj), write)
                 write(STRING)
                 write(obj)

@@ -67,8 +67,6 @@ URL = doFullLogin(URL, "warner", "x8yzzy")
 URL.callRemote(methodname, args)
 
 
-* implement/test CopiedFailureConstraint
-
 * constrain ReferenceUnslicer properly
 
 The schema can use a ReferenceConstraint to indicate that the object must be
