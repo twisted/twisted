@@ -21,7 +21,7 @@ Twisted: The Framework Of Your Internet.
 
 # Ensure the user is running the version of python we require.
 import sys
-if sys.version_info < (2,2):
+if not hasattr(sys, "version_info") or sys.version_info < (2,2):
 	raise RuntimeError("Twisted requires Python 2.2 or later.")
 del sys
 
