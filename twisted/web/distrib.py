@@ -83,14 +83,16 @@ class Issue:
             self.request.finish()
 
     def failed(self, failure):
+        #XXX: Argh. FIXME.
+        failure = str(failure)
         self.request.write(
             error.ErrorPage(http.INTERNAL_SERVER_ERROR,
                             "Server Connection Lost",
                             "Connection to distributed server lost:" +
-                            html.PRE(failure.getBriefTraceback())).
+                            html.PRE(failure)).
             render(self.request))
         self.request.finish()
-        log.msg(failure.getBriefTraceback())
+        log.msg(failure)
 
 
 class ResourceSubscription(resource.Resource):
