@@ -27,7 +27,7 @@ function load_twisted_completions() {
     python_code='
 import twisted, os.path
 dir = os.path.dirname(twisted.__file__)
-print dir + os.sep + os.path.join("python", "zsh", "fpath")
+print dir + os.sep + os.path.join("python", "zsh")
 '
     dir=$(python -c "$python_code")
     #debug "Trying to load twisted functions from $dir"
