@@ -96,17 +96,17 @@ def _cbGotMX(result, name):
         return []
     mxes = [(r.payload.preference, r.payload.exchange) for r in result]
     mxes.sort()
-    return [x[1].name for x in mxes]
+    return [(x[0], x[1].name) for x in mxes]
 
 def _cbResolveResults(result, resolver):
     if not result:
         return []
     dl = []
-    for val in result:
+    for pri, val in result:
         if not isIPAddress(val):
-            dl.append(resolver.getHostByName(val))
+            dl.append(resolver.getHostByName(val).addCallback(lambda x, pri=pri: (pri, x)))
         else:
-            dl.append(defer.succeed(val))
+            dl.append(defer.succeed((pri, val)))
     return defer.gatherResults(dl)
 
 def ptrize(ip):
