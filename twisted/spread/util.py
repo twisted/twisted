@@ -67,7 +67,7 @@ class LocalAsyncForwarder:
     """
 
     def __init__(self, forwarded, interfaceClass, failWhenNotImplemented=0):
-        assert implements(forwarded, interfaceClass)
+        assert interfaceClass.providedBy(forwarded)
         self.forwarded = forwarded
         self.interfaceClass = interfaceClass
         self.failWhenNotImplemented = failWhenNotImplemented
@@ -76,7 +76,7 @@ class LocalAsyncForwarder:
         return getattr(self.forwarded, method)(*args, **kw)
 
     def callRemote(self, method, *args, **kw):
-        if hasattr(self.interfaceClass, method):
+        if self.interfaceClass.queryDescriptionFor(method):
             result = defer.maybeDeferred(self._callMethod, method, *args, **kw)
             return result
         elif self.failWhenNotImplemented:

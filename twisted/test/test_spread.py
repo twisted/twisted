@@ -19,6 +19,7 @@
 Test cases for twisted.spread package
 """
 
+from zope.interface import implements
 from twisted.trial import unittest
 
 from twisted.spread.util import LocalAsyncForwarder
@@ -33,7 +34,7 @@ class IForwarded(Interface):
 
 class Forwarded:
 
-    __implements__ = IForwarded
+    implements(IForwarded)
     forwarded = 0
     unforwarded = 0
 
