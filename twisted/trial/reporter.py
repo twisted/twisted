@@ -17,7 +17,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-import sys, time, pdb, string, types, inspect
+import sys, time, pdb, string, types, inspect, traceback
 
 from twisted.python import reflect, failure
 from twisted.python.compat import True, False
@@ -128,8 +128,9 @@ class TextReporter(Reporter):
     SEPARATOR = '-' * 79
     DOUBLE_SEPARATOR = '=' * 79
 
-    def __init__(self, stream=sys.stdout):
+    def __init__(self, stream=sys.stdout, tbformat='plain'):
         self.stream = stream
+        self.tbformat = tbformat
         Reporter.__init__(self)
 
     def reportResults(self, testClass, method, resultType, results=None):
@@ -143,7 +144,9 @@ class TextReporter(Reporter):
         if isinstance(error, failure.Failure):
             tb = error.getBriefTraceback()
         elif isinstance(error, types.TupleType):
-            tb = ''.join(util.format_exception(*error))
+            d = {'plain': traceback,
+                 'emacs': util}
+            tb = ''.join(d[self.tbformat].format_exception(*error))
         else:
             tb = "%s\n" % error
 
@@ -224,9 +227,6 @@ class TextReporter(Reporter):
 
 class TimingTextReporter(TextReporter):
 
-    def __init__(self, stream=sys.stdout):
-        TextReporter.__init__(self, stream)
-
     def reportStart(self, testClass, method):
         self.testStartedAt = time.time()
         self.write('%s (%s) ... ', method.__name__, reflect.qual(testClass))
@@ -243,8 +243,6 @@ class TimingTextReporter(TextReporter):
         Reporter.reportResults(self, testClass, method, resultType, results)
 
 class VerboseTextReporter(TextReporter):
-    def __init__(self, stream=sys.stdout):
-        TextReporter.__init__(self, stream)
 
     def reportStart(self, testClass, method):
         self.write('%s (%s) ... ', method.__name__, reflect.qual(testClass))
@@ -270,8 +268,8 @@ class TreeReporter(TextReporter):
     CYAN = 36
     WHITE = 37
 
-    def __init__(self, stream=sys.stdout):
-        TextReporter.__init__(self, stream)
+    def __init__(self, stream=sys.stdout, tbformat='plain'):
+        TextReporter.__init__(self, stream, tbformat)
         self.lastModule = None
         self.lastClass = None
 

@@ -25,8 +25,8 @@ import re
 
 class Options(usage.Options):
     synopsis = """%s [options] [[file|package|module|TestCase|testmethod]...]
-    """ % (
-        os.path.basename(sys.argv[0]),)
+    """ % (os.path.basename(sys.argv[0]),)
+
     optFlags = [["help", "h"],
                 ["text", "t", "Text mode (ignored)"],
                 ["verbose", "v", "Verbose output"],
@@ -37,6 +37,7 @@ class Options(usage.Options):
                 ["debug", "b", "Run tests in the Python debugger"],
                 ["profile", None, "Run tests under the Python profiler"],
                 ["recurse", "R", "Search packages recursively"]]
+
     optParameters = [["reactor", "r", None,
                       "The Twisted reactor to install before running the tests (looked up as a module contained in twisted.internet)"],
                      ["logfile", "l", "test.log", "log file name"],
@@ -123,6 +124,12 @@ class Options(usage.Options):
         import gc
         gc.disable()
 
+    def opt_tbformat(self, opt):
+        """Specify the format to display tracebacks with. Valid formats are 'plain' and 'emacs'."""
+        if opt not in ('plain', 'emacs'):
+            raise usage.UsageError("tbformat must be 'plain' or 'emacs'.")
+        self['tbformat'] = opt
+
     opt_m = opt_module
     opt_p = opt_package
     opt_c = opt_testcase
@@ -194,6 +201,9 @@ class Options(usage.Options):
                     import time
                     self['random'] = long(time.time() * 100)
 
+        if not self.has_key('tbformat'):
+            self['tbformat'] = 'plain'
+
 def run():
     if len(sys.argv) == 1:
         sys.argv.append("--help")
@@ -246,19 +256,26 @@ def run():
        log.addObserver(seeWarnings)
        log.startLogging(open(config['logfile'], 'a'), 0)
 
+    tbformat = config['tbformat']
+
+    # XXX Yuck. We should just have a --reporter option. Then we could
+    # have a dict of {reportername: reporterclass}, look up
+    # config['reporter'] in it, and instantiate the result with the
+    # args.
+
     if config['verbose']:
-        reporter = reps.TreeReporter(sys.stdout)
+        reporter = reps.TreeReporter(sys.stdout, tbformat)
     elif config['bwverbose']:
-        reporter = reps.VerboseTextReporter(sys.stdout)
+        reporter = reps.VerboseTextReporter(sys.stdout, tbformat)
     elif config['summary']:
         reporter = reps.MinimalReporter(sys.stdout)
     elif config['jelly']:
         import twisted.trial.remote
         reporter = twisted.trial.remote.JellyReporter(sys.stdout)
     elif config['timing']:
-        reporter = reps.TimingTextReporter(sys.stdout)
+        reporter = reps.TimingTextReporter(sys.stdout, tbformat)
     else:
-        reporter = reps.TextReporter(sys.stdout)
+        reporter = reps.TextReporter(sys.stdout, tbformat)
 
     if config['debug']:
         reporter.debugger = 1

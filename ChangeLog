@@ -1,14 +1,26 @@
+2003-06-23  Christopher Armstrong  <radix@twistedmatrix.com>
+
+	* twisted/scripts/trial.py twisted/trial/reporter.py
+	doc/man/trial.1: 
+
+	Added a --tbformat={plain,emacs} option to trial. Now the default
+	is to show the regular python traceback; if you want tracebacks
+	that look like compiler output for emacs, use --tbformat=emacs.
+
 2003-06-23  Cory Dodt <corydodt@yahoo.com>
+
 	* twisted/python/util.py twisted/web/microdom.py 
 	twisted/test/test_{util,xml}.py: preserveCase and caseInsensitive
 	work on attribute names as well as element names.
 
 2003-06-22  Jp Calderone  <exarkun@twistedmatrix.com>
+
 	* twisted/internet/defer.py: Changed maybeDeferred API from
 	maybeDeferred(deferred, f, *args, **kw) to maybeDeferred(f, *args,
 	**kw).
 
 2003-06-19  Paul Swartz  <z3p@twistedmatrix.com>
+
 	* twisted/conch/{checkers,credentials,realm}.py, 
 	twisted/conch/ssh/userauth.py: Moved the Conch user authentication
 	code to use the new version of Cred.
