@@ -23,7 +23,8 @@ from twisted.python import util, components
 try:
     from OpenSSL import SSL
     from twisted.internet import ssl
-except:
+    from ssl_helpers import ClientTLSContext
+except ImportError:
     SSL = ssl = None
 
 import os
@@ -55,7 +56,6 @@ class StolenTCPTestCase(test_tcp.ProperlyCloseFilesTestCase, test_tcp.WriteDataT
 
         self.totalConnections = 0
 
-from ssl_helpers import ClientTLSContext
 
 class UnintelligentProtocol(basic.LineReceiver):
     pretext = [
