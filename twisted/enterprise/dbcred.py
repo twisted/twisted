@@ -38,10 +38,15 @@ class PerspectiveRow(row.RowObject):
         ("service_name",     "varchar"),
         ("perspective_type", "varchar")
         ]
-    rowKeyColumns  = [("identity_name", "varchar"),("perspective_name","varchar")]
+    rowKeyColumns  = [("identity_name", "varchar"),
+                      ("perspective_name","varchar"),
+                      ("service_name", "varchar")]
     rowTableName   = "twisted_perspectives"
     rowForeignKeys = [("twisted_identities", [("identity_name","varchar")],[("identity_name","varchar")], None, 1)]
 
+    def __repr__(self):
+        return "identity: %s perspective: %s service: %s" % ( self.identity_name, self.perspective_name, self.service_name)
+    
 class ReflectorAuthorizer(authorizer.Authorizer):
     """An authorizer that uses a given row reflector.
     """
