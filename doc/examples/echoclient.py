@@ -17,7 +17,6 @@
 
 from twisted.internet.protocol import ClientFactory
 from twisted.protocols.basic import LineReceiver
-from twisted.internet.app import Application
 from twisted.internet import reactor
 import sys
 
