@@ -110,6 +110,7 @@ class View:
         A view must be told what its model is, and may be told what its
         controller is, but can also look up its controller if none specified.
         """
+        components.fixClassImplements(m.__class__)
         if not interfaces.IModel.providedBy(m):
             m = model.adaptToIModel(m, None, None)
         self.model = self.mainModel = m
@@ -690,6 +691,7 @@ def registerViewForModel(view, model):
     """
     components.registerAdapter(view, model, interfaces.IView)
 #     adapter = components.getAdapter(model, resource.IResource, None)
+#     components.fixClassImplements(view.__class__)
 #     if adapter is None and resource.IResource.providedBy(view):
 #         components.registerAdapter(view, model, resource.IResource)
 
