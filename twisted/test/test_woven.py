@@ -62,6 +62,12 @@ class SimpleTemplate(template.DOMTemplate):
     def factory_getHello(self, request, node):
         return "Hello"
 
+class DOMHelpersTest(unittest.TestCase):
+    def testMicrodom(self):
+        d = microdom.parseString("<x id='hello' />")
+        helloNode = d.getElementById("hello")
+        self.failUnlessEqual(helloNode, d.documentElement)
+
 
 class DOMTemplateTest(WovenTC):
     resourceFactory = SimpleTemplate

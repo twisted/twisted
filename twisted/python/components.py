@@ -163,15 +163,17 @@ def getAdapter(obj, interfaceClass, default,
     the parameter itself if it already implements the interface. If no
     adapter can be found, the 'default' parameter will be returned.
     """
-    if not hasattr(obj, '__class__'):
-        return default
+    if hasattr(obj, '__class__'):
+        klas = obj.__class__
+    else:
+        klas = type(obj)
 
     if implements(obj, interfaceClass):
         return obj
     adapterClass =  (
         adapterClassLocator or getAdapterClass
                     )(
-        obj.__class__, interfaceClass, None
+        klas, interfaceClass, None
                      )
     if adapterClass is None:
         return default
