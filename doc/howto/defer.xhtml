@@ -370,12 +370,13 @@ d.addCallbacks(callback2, errback2)
 2, <code class="python">errback2</code> will be called. Be careful with your
 callbacks and errbacks.</p>
 
-<p>What this means in a practical sense is in Case 1, "A" will handle a success
-condition from <code>getDeferredFromSomewhere</code>, and "B" will handle any
-errors that occur <em>from either the upstream source, or that occur in 'A'</em>.
-In Case 2, "C"'s errback1 <em>will only handle an error condition raised by
-<code>getDeferredFromSomewhere</code></em>, it will not do any handling of errors raised in
-callback1.</p>
+<p>What this means in a practical sense is in Case 1, &quot;A&quot; will
+handle a success condition from <code>getDeferredFromSomewhere</code>, and
+&quot;B&quot; will handle any errors that occur <em>from either the upstream
+source, or that occur in 'A'</em>.  In Case 2, &quot;C&quot;'s errback1
+<em>will only handle an error condition raised by
+<code>getDeferredFromSomewhere</code></em>, it will not do any handling of
+errors raised in callback1.</p>
 
 
 <h3>Unhandled Errors</h3>
