@@ -28,7 +28,7 @@ Future Plans:
  - Accept chunked data from clients in server.
  - Other missing HTTP features from the RFC.
 
-Maintainer: Itamar Shtull-Trauring <twisted@itamarst.org>
+Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
 # system imports
