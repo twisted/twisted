@@ -609,7 +609,8 @@ executed as a callback when the previous step completes.</p>
 <pre>
  getRootObject()
  _cbAuthIdentity(): authServRef.callRemote('username', username)
- _cbRespondToChallenge(): challenger.callRemote('respond', f[challenge,password])
+ _cbRespondToChallenge():
+    challenger.callRemote('respond', f[challenge,password])
  _cbGetPerspective(): identity.callRemote('attach', servicename,
                                           perspectivename, client)
  usercallback(perspective)
