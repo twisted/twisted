@@ -109,31 +109,33 @@ def superInterfaces(interface):
 adapterRegistry = {}
 
 
-def registerAdapter(adapterClass, origClass, interfaceClass):
+def registerAdapter(adapterClass, origClass, *interfaceClasses):
     """Register an adapter class.
 
     An adapter class is expected to implement the given interface, by
     adapting instances of paramter 'origClass'. An adapter class's
     __init__ method should accept one parameter, an instance of 'origClass'.
     """
-    if adapterRegistry.has_key((origClass, interfaceClass)):
-        raise ValueError(
-            "an adapter (%s) was already registered." % (
-                adapterRegistry[(origClass, interfaceClass)]
+    assert interfaceClasses, "You need to pass an Interface"
+    for interfaceClass in interfaceClasses:
+        if adapterRegistry.has_key((origClass, interfaceClass)):
+            raise ValueError(
+                "an adapter (%s) was already registered." % (
+                    adapterRegistry[(origClass, interfaceClass)]
+                )
             )
-        )
 
-    # this may need to be removed
-    if not implements(adapterClass, interfaceClass):
-        raise ValueError, "%s instances don't implement interface %s" % (adapterClass, interfaceClass)
+        # this may need to be removed
+        if not implements(adapterClass, interfaceClass):
+            raise ValueError, "%s instances don't implement interface %s" % (adapterClass, interfaceClass)
 
-    if not issubclass(interfaceClass, Interface):
-        raise ValueError, "interface %s doesn't inherit from %s" % (interfaceClass, Interface)
+        if not issubclass(interfaceClass, Interface):
+            raise ValueError, "interface %s doesn't inherit from %s" % (interfaceClass, Interface)
 
-    for i in superInterfaces(interfaceClass):
-        # don't override already registered adapters for super-interfaces
-        if not adapterRegistry.has_key((origClass, i)):
-            adapterRegistry[(origClass, i)] = adapterClass
+        for i in superInterfaces(interfaceClass):
+            # don't override already registered adapters for super-interfaces
+            if not adapterRegistry.has_key((origClass, i)):
+                adapterRegistry[(origClass, i)] = adapterClass
 
 
 def getAdapterClass(klass, interfaceClass, default):
@@ -160,9 +162,11 @@ def getAdapterClassWithInheritance(klass, interfaceClass, default):
         return adapterClass
     return default
 
-class _default: pass
 
-def getAdapter(obj, interfaceClass, default=_default,
+class _Nothing: #An alternative to None
+    pass
+
+def getAdapter(obj, interfaceClass, default=_Nothing,
                adapterClassLocator=None):
     """Return an object that implements the given interface.
 
@@ -183,16 +187,13 @@ def getAdapter(obj, interfaceClass, default=_default,
         klas, interfaceClass, None
                      )
     if adapterClass is None:
-        if default is _default:
+        if default is _Nothing:
             raise NotImplementedError('%s instance does not implement %s, and '
                                       'there is no registered adapter.' %
                                       (obj, interfaceClass))
         return default
     else:
         return adapterClass(obj)
-
-class _Nothing:
-    pass
 
 class Adapter:
     """I am the default implementation of an Adapter for some interface.
