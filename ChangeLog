@@ -1,3 +1,8 @@
+2002-02-02  Paul Swartz <z3p@twistedmatrix.com>
+
+    * twisted/im/ircsupport.py:  Added support for the IRC protocol
+    to IM.
+
 2002-02-02  Chris Armstrong <carmstro@twistedmatrix.com>
 
 	* twisted/python/deferred.py: added Deferred.addErrback, so now
@@ -18,6 +23,11 @@
 	* twisted/words/ircservice.py (IRCChatter.receiveDirectMessage),
 	(IRCChatter.receiveGroupMessage), 
 	(IRCChatter.irc_PRIVMSG): Added CTCP ACTION <-> emote translation
+
+2002-02-01  Paul Swartz <z3p@twistedmatrix.com>
+
+    * twisted/im/tocsupport.py: Added support for most of the TOC
+    protocol to IM.
 
 2002-01-30  Chris Armstrong  <carmstro@twistedmatrix.com>
 
