@@ -14,15 +14,34 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-"""An example IRC log bot - logs a channel's events to a file."""
+"""An example IRC log bot - logs a channel's events to a file.
+
+If someone says the bot's name in the channel followed by a ':',
+e.g.
+
+  <foo> logbot: hello!
+
+the bot will reply:
+
+  <logbot> foo: I am a log bot
+
+Run this script with two arguments, the channel name the bot should
+connect to, and file to log to, e.g.:
+
+  $ python ircLogBot.py test test.log
+
+will log channel #test to the file 'test.log'.
+"""
 
 
 # twisted imports
 from twisted.protocols import irc
 from twisted.internet import reactor, protocol
+from twisted.python import log
 
 # system imports
-import string, time
+import time, sys
+
 
 class MessageLogger:
     """
@@ -45,6 +64,7 @@ class MessageLogger:
 
 class LogBot(irc.IRCClient):
     """A logging IRC bot."""
+    
     def __init__(self):
         self.nickname = "twistedbot"
 
@@ -54,9 +74,6 @@ class LogBot(irc.IRCClient):
         self.log = self.logger.log
         self.log("[connected at %s]" % time.asctime(time.localtime(time.time())))
 
-    def signedOn(self):
-        self.join(self.factory.channel)
-
     def connectionLost(self, reason):
         irc.IRCClient.connectionLost(self)
         self.log("[disconnected at %s]" % time.asctime(time.localtime(time.time())))
@@ -65,23 +82,34 @@ class LogBot(irc.IRCClient):
 
     # callbacks for events
 
+    def signedOn(self):
+        """Called when bot has succesfully signed on to server."""
+        self.join(self.factory.channel)
+
     def joined(self, channel):
+        """This will get called when the bot joins the channel."""
         self.log("[I have joined %s]" % channel)
 
     def privmsg(self, user, channel, msg):
-        user = string.split(user, '!', 1)[0]
+        """This will get called when the bot receives a message."""
+        user = user.split('!', 1)[0]
         self.log("<%s> %s" % (user, msg))
+        if msg.startswith("%s:" % self.nickname):
+            # someone is talking to me, lets respond:
+            msg = "%s: I am a log bot" % user
+            self.say(channel, msg)
+            self.log("<%s> %s" % (self.nickname, msg))
 
     def action(self, user, channel, msg):
-        user = string.split(user, '!', 1)[0]
+        """This will get called when the bot sees someone do an action."""
+        user = user.split('!', 1)[0]
         self.log("* %s %s" % (user, msg))
 
     # irc callbacks
 
     def irc_NICK(self, prefix, params):
-        """When an IRC user changes their nickname
-        """
-        old_nick = string.split(prefix,'!')[0]
+        """Called when an IRC user changes their nickname."""
+        old_nick = prefix.split('!')[0]
         new_nick = params[0]
         self.log("%s is now known as %s" % (old_nick, new_nick))
 
@@ -92,7 +120,7 @@ class LogBotFactory(protocol.ClientFactory):
     A new protocol instance will be created each time we connect to the server.
     """
 
-    # the class of the protocol to build
+    # the class of the protocol to build when new connection is made
     protocol = LogBot
 
     def __init__(self, channel, filename):
@@ -109,8 +137,10 @@ class LogBotFactory(protocol.ClientFactory):
 
 
 if __name__ == '__main__':
+    # initialize logging
+    log.startLogging(sys.stdout)
+    
     # create factory protocol and application
-    import sys
     f = LogBotFactory(sys.argv[1], sys.argv[2])
 
     # connect factory to this host and port
