@@ -1,3 +1,19 @@
+# Twisted, the Framework of Your Internet
+# Copyright (C) 2001 Matthew W. Lefkowitz
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
 import string
 import weakref
 
@@ -5,9 +21,9 @@ from twisted.enterprise import adbapi
 from twisted.enterprise.util import DBError, getKeyColumn, quote, _TableInfo, _TableRelationship
 from twisted.enterprise.row import RowObject
 
-from twisted.enterprise.reflector import Reflector
+from twisted.enterprise import reflector
 
-class SQLReflector(Reflector, adbapi.Augmentation):
+class SQLReflector(reflector.Reflector, adbapi.Augmentation):
     """I reflect on a database and load RowObjects from it.
 
     In order to do this, I interrogate a relational database to
@@ -17,21 +33,19 @@ class SQLReflector(Reflector, adbapi.Augmentation):
     hopefully be extended
     """
     populated = 0
-
+    conditionalLabels = {
+        reflector.EQUAL       : "=",
+        reflector.LESSTHAN    : "<",
+        reflector.GREATERTHAN : ">",
+        reflector.LIKE        : "like"
+        }
+    
     def __init__(self, dbpool, rowClasses, populatedCallback):
         """
         Initialize me against a database.
-
-        Arguments:
-
-          * dbpool: a database pool.
-
-          * rowClasses: a list of row class objects that describe the database schema.
-
-          * populatedCallback: method to be called when all database initialization is done
         """
         adbapi.Augmentation.__init__(self, dbpool)
-        Reflector.__init__(self, rowClasses, populatedCallback)        
+        reflector.Reflector.__init__(self, rowClasses, populatedCallback)        
 
     def _really_populate(self):
         self.runInteraction(self._transPopulateSchema).addCallbacks(
@@ -82,14 +96,13 @@ class SQLReflector(Reflector, adbapi.Augmentation):
         columns = transaction.fetchall()
 
         tableInfo.dbColumns = columns
-        tableInfo.selectSQL = self.buildSelectSQL(tableInfo.rowClass, tableInfo.rowTableName, columns, tableInfo.rowKeyColumns)
         tableInfo.updateSQL = self.buildUpdateSQL(tableInfo.rowClass, tableInfo.rowTableName, columns, tableInfo.rowKeyColumns)
         tableInfo.insertSQL = self.buildInsertSQL(tableInfo.rowTableName, columns)
         tableInfo.deleteSQL = self.buildDeleteSQL(tableInfo.rowTableName, tableInfo.rowKeyColumns)
 
         self.populateSchemaFor(tableInfo)
         
-    def loadObjectsFrom(self, tableName, data = None, whereClause = "1 = 1", parent = None):
+    def loadObjectsFrom(self, tableName, data = None, whereClause = [], parent = None):
 
         """Load a set of RowObjects from a database.
 
@@ -115,19 +128,32 @@ class SQLReflector(Reflector, adbapi.Augmentation):
         return self.runInteraction(self._objectLoader, tableName, data, whereClause, parent)
 
     def _objectLoader(self, transaction, tableName, data, whereClause, parent):
-        """worker method to load objects from a table.
+        """worker method to load objects from a table. NOTE: works, but needs to be make more readable!
         """
         tableInfo = self.schema[tableName]
         # get the data from the table
-        sql = 'SELECT '
+        sql = "SELECT "
         first = 1
-        for column, typeid, type in tableInfo.dbColumns:
+        for column, type, typeid in tableInfo.dbColumns:
             if first:
                 first = 0
             else:
                 sql = sql + ","
             sql = sql + " %s" % column
-        sql = sql + " FROM %s WHERE %s""" % (tableName, whereClause)
+        sql = sql + " FROM %s """ % (tableName)
+        if whereClause:
+            sql += " WHERE "
+            first = 1
+            for wItem in whereClause:
+                if first:
+                    first = 0
+                else:
+                    sql += " AND "
+                (columnName, cond, value) = wItem
+                t = self.findTypeFor(tableName, columnName)
+                quotedValue = quote(value, t)
+                sql += "%s %s %s" % (columnName, self.conditionalLabels[cond], quotedValue)
+
         transaction.execute(sql)
         rows = transaction.fetchall()
         # construct the objects
@@ -147,11 +173,10 @@ class SQLReflector(Reflector, adbapi.Augmentation):
                 self.addToCache(resultObject)                
             results.append(resultObject)
 
-
         if self.schema[ tableName ]:
             self.loadChildRows(tableInfo.rowClass, results, transaction, data)
 
-        # NOTE: using the tableName as the container is a temporary measure until containment is figured out.
+        # NOTE: using the "container" variable as the container is a temporary measure until containment is figured out.
         if parent:
             if hasattr(parent, "container"):
                 parent.container.extend(results)
@@ -164,73 +189,26 @@ class SQLReflector(Reflector, adbapi.Augmentation):
         """
         for newRow in rows:
             for relationship in self.schema[ rowClass.rowTableName ].childTables:
-                whereClause = ""
+                whereClause = []
                 first = 1
                 for i in range(0,len(relationship.childColumns)):
-                    if first:
-                        first = 0
-                    else:
-                        whereClause += " AND "
-                    value = quote(getattr(newRow, relationship.parentColumns[i][0]), relationship.parentColumns[i][1])
-                    whereClause += " %s.%s = %s" % (relationship.childTableName,
-                                                        relationship.childColumns[i][0],
-                                                        value)
+                    value = getattr(newRow, relationship.parentColumns[i][0])
+                    #value = quote(getattr(newRow, relationship.parentColumns[i][0]), relationship.parentColumns[i][1])                    
+
+                    whereClause.append( [relationship.childColumns[i][0], reflector.EQUAL, value] )
+                    
                 self._objectLoader(transaction,
                                    relationship.childTableName,
                                    data,
                                    whereClause,
                                    newRow)
 
-    def getTableInfo(self, rowObject):
-        """Get a TableInfo record about a particular instance.
-
-        Arguments:
-
-          * rowObject: a RowObject instance of a class previously
-            registered with me.
-
-        This record contains various information about the instance's
-        class as registered with this reflector.
-
-        Raises:
-
-          * twisted.enterprise.row.DBError: raised if this class was
-            not previously registered.
-        """
-        try:
-            return self.schema[rowObject.rowTableName]
-        except KeyError:
-            raise DBError("class %s was not registered with %s" % (
-                rowObject.__class__, self))
-
-    def buildSelectSQL(self, rowClass, tableName, columns, keyColumns):
-        """(Internal) Build SQL to select a row for an existing rowObject.
-        """
-        sql = "SELECT "
-        # build select columns
-        first = 1
-        for column, type, typeid in columns:
-            if getKeyColumn(rowClass, column):
-                continue
-            if not first:
-                sql = sql + ", "
-            sql = sql + "  %s" % (column)
-            first = 0
-
-        sql = sql + " FROM %s WHERE " % tableName
-
-        # build where clause
-        first = 1
-        try:
-            for keyColumn, type in keyColumns:
-                if not first:
-                    sql = sql + " AND "
-                sql = sql + "   %s = %s " % (keyColumn, quote("%s", type) )
-                first = 0
-        except DBError, dbe:
-            raise DBError("Error: %r while formatting %s"% (dbe.args[0],
-                                                            rowClass))
-        return sql
+    def findTypeFor(self, tableName, columnName):
+        tableInfo = self.schema[tableName]
+        for column, type, typeid in tableInfo.dbColumns:
+            if column.upper() == columnName.upper():
+                return type
+            
 
     def buildUpdateSQL(self, rowClass, tableName, columns, keyColumns):
         """(Internal) Build SQL to update a RowObject.
@@ -359,34 +337,4 @@ class SQLReflector(Reflector, adbapi.Augmentation):
         sql = self.deleteRowSQL(rowObject)
         self.removeFromCache(rowObject)
         return self.runOperation(sql)
-
-    def selectRowSQL(self, rowObject):
-        args = []
-        tableInfo = self.schema[rowObject.rowTableName]        
-        # build where clause
-        for keyColumn, type in tableInfo.rowKeyColumns:
-            args.append(rowObject.findAttribute(keyColumn))
-        return self.getTableInfo(rowObject).selectSQL % tuple(args)
-
-    def selectRow(self, rowObject):
-        """load this rows current values from the database.
-        """
-        sql = self.selectRowSQL(rowObject)
-        return self.runQuery(sql).addCallback(self._cbSelectData, rowObject)
-
-    def _cbSelectData(self, data, rowObject):
-        if len(data) > 1:
-            raise DBError("select data included more than one row")
-        if len(data) == 0:
-            raise DBError("select data was empty")
-        actualPos = 0
-        tableInfo = self.schema[rowObject.rowTableName]        
-        for i in range(0, len(tableInfo.dbColumns)):
-            if not getKeyColumn(rowObject.__class__, tableInfo.dbColumns[i][0] ):
-                for col in rowObject.rowColumns:
-                    if string.lower(col) == string.lower(tableInfo.dbColumns[i][0]):
-                        setattr(rowObject, col, data[0][actualPos] )
-                actualPos = actualPos + 1
-        rowObject.setDirty(0)
-        return rowObject
 

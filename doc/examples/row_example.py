@@ -4,7 +4,7 @@ from twisted.internet import reactor
 from twisted.internet import main
 from twisted.internet.app import Application
 
-from twisted.enterprise import adbapi, row, sqlreflector
+from twisted.enterprise import adbapi, row, reflector, sqlreflector
 
 # TODO: turn this into real unit test!!!!
 
@@ -198,16 +198,11 @@ def onInsert(data):
 
 def onDelete(data):
     print "row deleted."
-    newRoom2 = RoomRow()
-    newRoom2.assignKeyAttr("roomId", 10)
-    manager.selectRow(newRoom2).addCallback(onSelected)
+    return manager.loadObjectsFrom("testrooms", whereClause=[("roomId",reflector.EQUAL,10)] ).addCallback(onSelected)
 
-
-def onSelected(room):
-    print "\ngot Room:", room
+def onSelected(rooms):
+    print "\ngot Room:", rooms
     main.shutDown()    
-    #global manager
-    #manager.loadObjectsFrom("testrooms").addCallback(gotRooms2)
 
 def gotRooms2(rooms):
     print "got more rooms", rooms

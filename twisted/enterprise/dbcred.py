@@ -14,10 +14,62 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from twisted.enterprise import adbapi
+from twisted.enterprise import adbapi, row, reflector
 from twisted.cred import authorizer, identity
 import base64
 import string
+
+
+class IdentityRow(row.RowObject):
+    rowColumns     = ["identity_name", "password"]
+    rowKeyColumns  = [("identity_name", "varchar")]
+    rowTableName   = "twisted_identities"
+
+class PerspectiveRow(row.RowObject):
+    rowColumns     = ["identity_name", "perspective_name", "service_name", "perspective_type"]
+    rowKeyColumns  = [("identity_name", "varchar"),("perspective_name","varchar")]
+    rowTableName   = "twisted_perspectives"
+    rowForeignKeys = [("twisted_identities", [("identity_name","varchar")],[("identity_name","varchar")])]
+
+class ReflectorAuthorizer(authorizer.Authorizer):
+    """An authorizer that uses a given row reflector.
+    """
+    def __init__(self, refl, serviceCollection=None):
+        authorizer.Authorizer.__init__(self, serviceCollection)
+        self.perspectiveCreators = {}
+        self.reflector = refl
+
+    def getIdentityRequest(self, name):
+        """get the identity from the database with the specified name.
+        """
+        w=[("identity_name", reflector.EQUAL, name)]
+        return self.reflector.loadObjectsFrom(
+            "twisted_identities",
+            whereClause=w,
+            ).addCallbacks(self._cbIdentity, self._ebIdentity)
+
+    def _ebIdentity(self, data):
+        print "ERROR:", data
+        raise KeyError("Failed to load identity")
+        
+    def _cbIdentity(self, newIdentityRows):
+        if len(newIdentityRows) == 0:
+            # no rows! User doesnt exist
+            raise KeyError("Identity not found")
+
+        irow = newIdentityRows[0]
+        hashedPass = base64.decodestring(irow.password)
+
+        i = identity.Identity(irow.identity_name, self)
+        i.setAlreadyHashedPassword(hashedPass)
+        i.rows = [] #keep the rows around for now...
+        i.rows.append(irow)
+        
+        for prow in irow.container:
+            i.addKeyByString(prow.service_name, prow.perspective_name)
+            i.rows.append(prow) #keep the rows around for now...
+            
+        return i
 
 class DatabaseAuthorizer(authorizer.Authorizer, adbapi.Augmentation):
     """A PyPgSQL authorizer for Twisted Internet Passport
@@ -48,6 +100,7 @@ class DatabaseAuthorizer(authorizer.Authorizer, adbapi.Augmentation):
     def __init__(self, dbpool, serviceCollection=None):
         authorizer.Authorizer.__init__(self, serviceCollection)
         self.perspectiveCreators = {}
+        
         adbapi.Augmentation.__init__(self, dbpool)
 
     def addIdentity(self, identity):
@@ -66,8 +119,7 @@ class DatabaseAuthorizer(authorizer.Authorizer, adbapi.Augmentation):
 
 
     def getIdentityRequest(self, name):
-        """This name corresponds to the 'source_name' column of the metrics_sources table.
-        Check in that table for a corresponding entry.
+        """get the identity from the database with the specified name.
         """
         sql = """
         SELECT   twisted_identities.identity_name,

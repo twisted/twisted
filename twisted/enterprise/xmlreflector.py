@@ -1,8 +1,24 @@
+# Twisted, the Framework of Your Internet
+# Copyright (C) 2001 Matthew W. Lefkowitz
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
 import os
 import copy
 
 from twisted.internet import defer
-from twisted.enterprise.reflector import Reflector
+from twisted.enterprise import reflector
 from twisted.enterprise.util import _TableInfo
 
 from twisted.persisted import marmalade
@@ -16,7 +32,7 @@ class XMLRowProxy:
         for columnName in rowObject.rowColumns:
             self.kw[columnName] = getattr(rowObject, columnName)
 
-class XMLReflector(Reflector):
+class XMLReflector(reflector.Reflector):
     """Reflector for twisted.enterprise that uses XML files.
 
     WARNING: this is an experimental piece of code. this reflector
@@ -32,7 +48,7 @@ class XMLReflector(Reflector):
         except OSError, e:
             print "Base Directory %s already exists" % baseDir
         self.tableDirs = {}
-        Reflector.__init__(self, rowClasses, populatedCallback)        
+        reflector.Reflector.__init__(self, rowClasses, populatedCallback)        
 
     def _really_populate(self):
         """load schema data
@@ -64,9 +80,16 @@ class XMLReflector(Reflector):
             f.close()
             # match object with whereClause... NOTE: this is insanely slow..
             # every object in the directory is loaded and checked!
+            stop = 0            
             if whereClause:
-                if proxy.kw[whereClause[0]] != whereClause[1]:
-                    continue
+
+                for item in whereClause:
+                    (columnName, cond, value) = item
+                    #TODO: just do EQUAL for now
+                    if proxy.kw[columnName] != value:
+                        stop = 1
+            if stop:
+                continue
             # find the row in the cache or add it
             resultObject = self.findInCache(tableInfo.rowClass, proxy.kw)
             if not resultObject:
@@ -84,7 +107,7 @@ class XMLReflector(Reflector):
         for newRow in results:
             for relationship in self.schema[ newRow.rowTableName ].childTables:
                 # build whereClause
-                w = (relationship.childColumns[0][0], getattr(newRow, relationship.parentColumns[0][0]) )
+                w = [ (relationship.childColumns[0][0], reflector.EQUAL, getattr(newRow, relationship.parentColumns[0][0]) )]
                 self._loader(relationship.childTableName, data, w, newRow)
 
         return results
@@ -101,7 +124,7 @@ class XMLReflector(Reflector):
     def loadObjectsFrom(self, tableName, data = None, whereClause = None, parent = None):
         """The whereClause for XML loading is (columnName, value) tuple
         """
-        results = self._loader(tableName, data, whereClause, None)
+        results = self._loader(tableName, data, whereClause, parent)
         return defer.succeed(results)
     
     def updateRow(self, rowObject):
@@ -126,14 +149,5 @@ class XMLReflector(Reflector):
         filename = self.makeFilenameFor(rowObject)        
         os.remove(filename)
         return defer.succeed(1)
-
-    def selectRow(self, rowObject):
-        """load this rows current values from the database.
-        """
-        filename = self.makeFilenameFor(rowObject)
-        f = open(filename, "r")
-        obj = marmalade.unjellyFromXML(f)
-        f.close()
-        return defer.succeed(obj)
 
 

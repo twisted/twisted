@@ -4,7 +4,7 @@ from twisted.internet import reactor
 from twisted.internet import main
 from twisted.internet.app import Application
 
-from twisted.enterprise import adbapi, row, sqlreflector, xmlreflector
+from twisted.enterprise import adbapi, row, sqlreflector, xmlreflector, reflector
 
 # TODO: turn this into real unit test!!!!
 
@@ -151,12 +151,12 @@ def gotDBRooms(rooms):
     for obj in manager.rowCache.values():
         xmanager.insertRow(obj)
 
-    xmanager.loadObjectsFrom("testrooms", data=None, whereClause=("roomId", 12) ).addCallback(gotXMLRooms)
+    xmanager.loadObjectsFrom("testrooms", data=None, whereClause=[("roomId",reflector.EQUAL, 12)]).addCallback(gotXMLRooms)
 
 def gotXMLRooms(rooms):
     print "------------ got rooms from XML ------------"    
     dumpRooms(rooms)
-    xmanager.loadObjectsFrom("testrooms", data=None, whereClause=("roomId", 12) ).addCallback(gotXMLRooms2)
+    xmanager.loadObjectsFrom("testrooms", data=None, whereClause=[("roomId",reflector.EQUAL, 12)]).addCallback(gotXMLRooms2)
 
 def gotXMLRooms2(rooms):
     print "------------ got rooms from XML again! ------------"        
