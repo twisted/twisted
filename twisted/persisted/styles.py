@@ -123,11 +123,11 @@ class Ephemeral:
     """
 
     def __getstate__(self):
-        print "WARNING: serializing ephemeral", self
+        log.msg( "WARNING: serializing ephemeral %s" % self )
         return None
 
     def __setstate__(self, state):
-        print "WARNING: unserializing ephemeral", self.__class__
+        log.msg( "WARNING: unserializing ephemeral %s" % self.__class__ )
         self.__class__ = Ephemeral
 
 
@@ -202,7 +202,7 @@ class Versioned:
             persistVers = persistVers + 1
             method = getattr(self, 'upgradeToVersion%s' % persistVers, None)
             if method:
-                print "Upgrading %s to version %s" % (self.__class__, persistVers)
+                log.msg( "Upgrading %s to version %s" % (self.__class__, persistVers) )
                 method()
             else:
-                print 'Warning: cannot upgrade %s to version %s' % (self.__class__, persistVers)
+                log.msg( 'Warning: cannot upgrade %s to version %s' % (self.__class__, persistVers) )
