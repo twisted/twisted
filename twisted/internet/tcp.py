@@ -210,9 +210,9 @@ class Client(Connection):
         try:
             self.socket.connect(self.realAddress)
         except socket.error, se:
-            if se.args[0] == EISCONN:
+            if se.args[0] in (EISCONN, EINPROGRESS, EALREADY):
                 pass
-            elif se.args[0] in (EINPROGRESS, EWOULDBLOCK, EALREADY, EINVAL):
+            elif se.args[0] in (EWOULDBLOCK, EINVAL):
                 self.startReading()
                 return
             else:
