@@ -27,6 +27,7 @@ import traceback
 from twisted.internet import tksupport, reactor, app
 from twisted.scripts import mktap
 from twisted.python import failure, usage, reflect
+from twisted.copyright import version
 
 
 class TkMkAppFrame(Tkinter.Frame):
@@ -518,6 +519,7 @@ def run():
     config.pack()
     r['menu'] = menu
 
+    r.title('Twisted Application Maker ' + version)
     r.deiconify()
     tksupport.install(r)
     reactor.run()
