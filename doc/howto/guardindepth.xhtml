@@ -1,14 +1,11 @@
 <html xmlns="http://www.w3.org/1999/xhtml"><head><title>Guard In Depth</title></head><body>
 <h1>Guard In Depth</h1>
 
-<div class="note">Woven Guard is in a state of flux at the moment.  We
-apologize for the absence of a stable, supported API for web-based
-authentication, which we recognize is a very broadly needed feature, but it is
-surprisingly difficult to get it correct in a multi-protocol context.
-(Remember, Twisted is a lot more than just a web server!)  Please help the
-woven development team correct this situation by keeping up with the latest
-improvements to the API and giving requirements and use-cases for the
-deployment of guard-based sites.  Stay tuned!</div>
+<div class="note">
+<p>
+This HOWTO documents Woven Guard, part of the Woven framework. The Woven framework should not be used for new projects. The newer <a href="http://stewstuff.com/doc/nevow.xhtml">Nevow</a> framework, available as part of the <a href="http://www.divmod.org/Quotient/">Quotient</a> project, is a simpler framework with consistent semantics and better testing and is strongly recommended over Woven.
+</p>
+</div>
 
 <p>Woven guard is founded on the <a href="cred.xhtml">twisted.cred</a>
 framework, and it is important to be somewhat familiar with cred to work with
