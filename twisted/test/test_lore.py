@@ -5,11 +5,11 @@ from twisted.lore import tree
 from twisted.lore import process
 from twisted.lore import default
 
+from twisted.python.util import sibpath
+
 import os
 
-mydir = os.getcwd() + os.sep
-
-options = {"template" : mydir + "template.tpl", 'baseurl': '%s', 'ext': '.xhtml' }
+options = {"template" : sibpath(__file__, "template.tpl"), 'baseurl': '%s', 'ext': '.xhtml' }
 d = options
 
 def filenameGenerator(originalFileName, outputExtension):
@@ -21,16 +21,16 @@ def filenameGenerator2(originalFileName, outputExtension):
 
 class TestFactory(unittest.TestCase):
 
-    file = mydir + 'simple.html'
+    file = sibpath(__file__, 'simple.html')
     linkrel = ""
 
     def assertEqualFiles(self, exp, act):
         if (exp == act): return True
-        fact = open(mydir + act)
+        fact = open(sibpath(__file__, act))
         self.assertEqualsFile(exp, fact.read())
 
     def assertEqualsFile(self, exp, act):
-        expected = open(mydir + exp).read()
+        expected = open(sibpath(__file__, exp)).read()
         self.assertEqualsString(expected, act)
 
     def assertEqualsString(self, expected, act):
@@ -74,19 +74,19 @@ class TestFactory(unittest.TestCase):
         self.assertEqualsFile('good_internal.xhtml', node.toprettyxml())
 
     def test_getProcessor(self):
-        options = { 'template': mydir + 'template.tpl', 'ext': '.xhtml', 'baseurl': 'burl',
+        options = { 'template': sibpath(__file__, 'template.tpl'), 'ext': '.xhtml', 'baseurl': 'burl',
                     'filenameMapping': None }
         p = process.getProcessor(default, "html", options)
-        p(mydir + 'simple3.html', self.linkrel)
+        p(sibpath(__file__, 'simple3.html'), self.linkrel)
         self.assertEqualFiles('good_simple.xhtml', 'simple3.xhtml')
 
     def test_getProcessorWithFilenameGenerator(self):
-        options = { 'template': mydir + 'template.tpl',
+        options = { 'template': sibpath(__file__, 'template.tpl'),
                     'ext': '.xhtml',
                     'baseurl': 'burl',
                     'filenameMapping': 'addFoo' }
         p = process.getProcessor(default, "html", options)
-        p(mydir + 'simple4.html', self.linkrel)
+        p(sibpath(__file__, 'simple4.html'), self.linkrel)
         self.assertEqualFiles('good_simple.xhtml', 'simple4foo.xhtml')
 
     def test_outputdirGenerator(self):
