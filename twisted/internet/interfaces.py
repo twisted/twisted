@@ -645,6 +645,13 @@ class IReactorFDSet(Interface):
         @returns: C{None}.
         """
 
+    def removeAll(self):
+        """Remove all readers and writers, and return the list of
+        L{IReadDescriptor}s and L{IWriteDescriptor}s removed.
+        
+        Should not remove reactor internal reactor connections (like a waker).
+        """
+
 
 class IListeningPort(Interface):
     """A listening port.
@@ -1167,12 +1174,3 @@ class IMulticastTransport(Interface):
 
     def leaveGroup(self, addr, interface=""):
         """Leave multicast group, return Deferred of success."""
-
-
-class IReactorCleanup(Interface):
-    """Provide methods for cleaning reactor state. Used primarily by test frameworks"""
-
-    def cleanup(self):
-        """Resets the reactor state to as pristine a condition as is possible,
-        @return: a sequence of objects that represent dirty reactor state.
-        """
