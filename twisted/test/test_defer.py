@@ -1,0 +1,84 @@
+
+# Twisted, the Framework of Your Internet
+# Copyright (C) 2001 Matthew W. Lefkowitz
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+
+"""
+Test cases for defer module.
+"""
+
+from pyunit import unittest
+from twisted.python import defer
+
+class DeferredTestCase(unittest.TestCase):
+
+    def _callback(self, *args, **kw):
+        self.callback_results = args, kw
+        return args[0]
+
+    def _callback2(self, *args, **kw):
+        self.callback2_results = args, kw
+
+    def _errback(self, *args, **kw):
+        self.errback_results = args, kw
+
+    def testCallbackWithoutArgs(self):
+        self.callback_results = None
+        self.errback_results = None
+        deferred = defer.Deferred()
+        deferred.addCallback(self._callback)
+        deferred.arm()
+        deferred.callback("hello")
+        self.failUnlessEqual(self.errback_results, None)
+        self.failUnlessEqual(self.callback_results, (('hello',), {}))
+
+    def testCallbackWithArgs(self):
+        self.callback_results = None
+        self.errback_results = None
+        deferred = defer.Deferred()
+        deferred.addCallback(self._callback, "world")
+        deferred.arm()
+        deferred.callback("hello")
+        self.failUnlessEqual(self.errback_results, None)
+        self.failUnlessEqual(self.callback_results, (('hello', 'world'), {}))
+
+    def testCallbackWithKwArgs(self):
+        self.callback_results = None
+        self.errback_results = None
+        deferred = defer.Deferred()
+        deferred.addCallback(self._callback, world="world")
+        deferred.arm()
+        deferred.callback("hello")
+        self.failUnlessEqual(self.errback_results, None)
+        self.failUnlessEqual(self.callback_results, 
+                             (('hello',), {'world': 'world'}))
+
+    def testTwoCallbacks(self):
+        self.callback_results = None
+        self.callback2_results = None
+        self.errback_results = None
+        deferred = defer.Deferred()
+        deferred.addCallback(self._callback)
+        deferred.addCallback(self._callback2)
+        deferred.arm()
+        deferred.callback("hello")
+        self.failUnlessEqual(self.errback_results, None)
+        self.failUnlessEqual(self.callback_results, 
+                             (('hello',), {}))
+        self.failUnlessEqual(self.callback2_results, 
+                             (('hello',), {}))
+
+testCases = [DeferredTestCase]
