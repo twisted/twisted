@@ -2,6 +2,7 @@
 
 	* twisted/bugs: Gone. Separate plugin package.
 	* twisted/eco: Gone. The king is dead. Long live the king!
+	(eco is no longer going to be developed, Pyrex has obviated it.)
 
 2002-04-10  Chris Armstrong  <carmstro@twistedmatrix.com>
 

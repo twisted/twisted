@@ -130,7 +130,7 @@ this file directly.
 
 025 *{Glyph Lefkowitz}* Fix C encoder for banana.
 
-026 *{Someone}* More ircd-style names for virtual nicks in words; LoginServ (or maybe
+026 *{Chris Armstrong}* More ircd-style names for virtual nicks in words; LoginServ (or maybe
     NickServ) instead of *login*.  The asterisks break some clients.
 
 027 Unit testing of I/O code.  There are two possible approaches, both of which
