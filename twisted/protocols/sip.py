@@ -18,6 +18,9 @@
 
 """Session Initialization Protocol."""
 
+# system imports
+import rfc822
+
 # twisted imports
 from twisted.python import log, util
 from twisted.internet import protocol
@@ -42,6 +45,17 @@ longHeaders = {}
 for k, v in shortHeaders.items():
     longHeaders[v] = k
 del k, v
+
+# XXX I got bored, type them all in
+statusCodes = {100: "Trying",
+               180: "Ringing",
+               181: "Call Is Being Forwarded",
+               182: "Queued",
+               200: "OK",
+               300: "Multiple Choices",
+               301: "Moved Permanently",
+               406: "Not Acceptable",
+               }
 
 
 class Via:
@@ -202,6 +216,40 @@ def parseURL(url):
     return URL(**d)
 
 
+def parseAddress(address, clean=0):
+    """Return (name, uri, params) for From/To/Contact header.
+
+    @param clean: remove unnecessary info, usually for From and To headers.
+    """
+    address = address.strip()
+    # simple 'sip:foo' case
+    if address.startswith("sip:"):
+        return "", parseURL(address), {}
+    params = {}
+    name, url = address.split("<", 1)
+    name = name.strip()
+    if name.startswith('"'):
+        name = name[1:]
+    if name.endswith('"'):
+        name = name[:-1]
+    url, paramstring = url.split(">", 1)
+    url = parseURL(url)
+    paramstring = paramstring.strip()
+    if paramstring:
+        for l in paramstring.split(";"):
+            if not l:
+                continue
+            k, v = l.split("=")
+            params[k] = v
+    if clean:
+        # rfc 2543 6.21
+        url.ttl = None
+        url.headers = {}
+        url.transport = None
+        url.maddr = None
+    return name, url, params
+
+
 class Message:
     """A SIP message."""
 
@@ -242,7 +290,10 @@ class Request(Message):
     def __init__(self, method, uri, version="SIP/2.0"):
         Message.__init__(self)
         self.method = method
-        self.uri = parseURL(uri)
+        if isinstance(uri, URL):
+            self.uri = uri
+        else:
+            self.uri = parseURL(uri)
 
     def __repr__(self):
         return "<SIP Request %d:%s %s>" % (id(self), self.method, self.uri)
@@ -253,9 +304,11 @@ class Request(Message):
 
 class Response(Message):
 
-    def __init__(self, code, phrase, version="SIP/2.0"):
+    def __init__(self, code, phrase=None, version="SIP/2.0"):
         Message.__init__(self)
         self.code = code
+        if phrase == None:
+            phrase = statusCodes[code]
         self.phrase = phrase
 
     def __repr__(self):

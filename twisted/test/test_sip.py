@@ -185,9 +185,17 @@ class MakeMessageTestCase(unittest.TestCase):
         r.bodyDataReceived("1234")
         self.assertEquals(r.toString(), "SIP/2.0 200 OK\r\nfoo: bar\r\ncontent-length: 4\r\n\r\n1234")
 
+    def testStatusCode(self):
+        r = sip.Response(200)
+        self.assertEquals(r.toString(), "SIP/2.0 200 OK\r\n\r\n")
+
 
 class ViaTestCase(unittest.TestCase):
 
+    def checkRoundtrip(self, v):
+        s = v.toString()
+        self.assertEquals(s, sip.parseViaHeader(s).toString())
+    
     def testComplex(self):
         s = "SIP/2.0/UDP first.example.com:4000;ttl=16;maddr=224.2.0.1 ;branch=a7c6a8dlze (Example)"
         v = sip.parseViaHeader(s)
@@ -200,7 +208,8 @@ class ViaTestCase(unittest.TestCase):
         self.assertEquals(v.hidden, 0)
         self.assertEquals(v.toString(),
                           "SIP/2.0/UDP first.example.com:4000;ttl=16;branch=a7c6a8dlze;maddr=224.2.0.1")
-
+        self.checkRoundtrip(v)
+    
     def testSimple(self):
         s = "SIP/2.0/UDP example.com;hidden"
         v = sip.parseViaHeader(s)
@@ -213,6 +222,11 @@ class ViaTestCase(unittest.TestCase):
         self.assertEquals(v.hidden, 1)
         self.assertEquals(v.toString(),
                           "SIP/2.0/UDP example.com:5060;hidden")
+        self.checkRoundtrip(v)
+    
+    def testSimpler(self):
+        v = sip.Via("example.com")
+        self.checkRoundtrip(v)
 
 
 class URLTestCase(unittest.TestCase):
@@ -237,3 +251,19 @@ class URLTestCase(unittest.TestCase):
                      ("maddr", "1.2.3.4"), ("other", ["blah", "goo=bar"]),
                      ("headers", {"a": "b", "c": "d"})]:
             self.assertEquals(getattr(url, k), v)
+
+
+class ParseTestCase(unittest.TestCase):
+
+    def testParseAddress(self):
+        for address, name, urls, params in [
+            ('"A. G. Bell" <sip:foo@example.com>', "A. G. Bell", "sip:foo@example.com", {}),
+            ("Anon <sip:foo@example.com>", "Anon", "sip:foo@example.com", {}),
+            ("sip:foo@example.com", "", "sip:foo@example.com", {}),
+            ("<sip:foo@example.com>", "", "sip:foo@example.com", {}),
+            ("foo <sip:foo@example.com>;tag=bar;foo=baz", "foo", "sip:foo@example.com", {"tag": "bar", "foo": "baz"}),
+            ]:
+            gname, gurl, gparams = sip.parseAddress(address)
+            self.assertEquals(name, gname)
+            self.assertEquals(gurl.toString(), urls)
+            self.assertEquals(gparams, params)
