@@ -32,13 +32,13 @@ class TestUserMethod(unittest.TestCase):
         umw = runner.UserMethodWrapper(self.errorfulMethod, self.janitor)
         failUnlessRaises(runner.UserMethodError, umw)
         failUnless(umw.errors[0].check(UserError))
-        failUnless(umw.endTime > umw.startTime)
+        failUnless(umw.endTime >= umw.startTime)
 
     def testDeferredError(self):
         umw = runner.UserMethodWrapper(self.errorfulDeferred, self.janitor)
         failUnlessRaises(runner.UserMethodError, umw)
         failUnless(umw.errors[0].check(UserError))
-        failUnless(umw.endTime > umw.startTime)
+        failUnless(umw.endTime >= umw.startTime)
 
 
 class WaitReentrancyTest(unittest.TestCase):
