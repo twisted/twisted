@@ -231,7 +231,7 @@ class DOMTemplate(Resource):
             templatePath = os.path.join(self.templateDirectory, self.templateFile)
         # Check to see if there is an already compiled copy of it
         templateName = os.path.splitext(self.templateFile)[0]
-        compiledTemplateName = templateName + '.pxp'
+        compiledTemplateName = '.' + templateName + '.pxp'
         compiledTemplatePath = os.path.join(self.templateDirectory, compiledTemplateName)
         # No? Compile and save it
         if (not os.path.exists(compiledTemplatePath) or 
