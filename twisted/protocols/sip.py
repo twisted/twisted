@@ -889,7 +889,6 @@ class DigestedCredentials(cred.credentials.UsernameHashedPassword):
         self.challenges = challenges
     
     def checkPassword(self, password):
-
         method = 'REGISTER'
         response = self.fields.get('response')
         uri = self.fields.get('uri')
@@ -973,6 +972,14 @@ class RegisterProxy(Proxy):
         Proxy.__init__(self, *args, **kw)
         self.liveChallenges = {}
         
+    def handle_ACK_request(self, message, (host, port)):
+        # XXX
+        # ACKs are a client's way of indicating they got the last message
+        # Responding to them is not a good idea.
+        # However, we should keep track of terminal messages and re-transmit
+        # if no ACK is received.
+        pass
+
     def handle_REGISTER_request(self, message, (host, port)):
         """Handle a registration request.
 
