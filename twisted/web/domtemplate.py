@@ -96,12 +96,13 @@ class MethodLookup:
             self._bytag[kwargs['tag']]=method
 
     def getMethodForNode(self, node):
-        if u'id' in node.attributes.keys():
-            id = str(node.attributes[u'id'].nodeValue)
+        if not node.hasAttributes(): return
+        id = node.getAttribute("id")
+        if id:
             if self._byid.has_key(id):
                 return self._byid[id]
-        if u'class' in node.attributes.keys():
-            klass = str(node.attributes[u'class'].nodeValue)
+        klass = node.getAttribute("class")
+        if klass:
             if self._byclass.has_key(klass):
                 return self._byclass[klass]
         if self._bytag.has_key(str(node.nodeName)):
@@ -215,15 +216,15 @@ class DOMTemplate(Resource):
         Handle the root node, and send the page if there are no
         outstanding callbacks when it returns.
         """
-        self.handleNode(request, document)
+        for node in document.childNodes:
+            self.handleNode(request, node)
         if not self.outstandingCallbacks:
-            self.sendPage(request)
+            return self.sendPage(request)
 
     def sendPage(self, request):
         """
         Convert the DOM tree to XML and send it to the browser.
         """
-        print "sending page"
         page = str(self.d.toxml())
         request.write(page)
         request.finish()
@@ -269,8 +270,9 @@ class DOMTemplate(Resource):
         """
         if not node: return
         if type(node.childNodes) == type(""): return
+        if node.hasChildNodes():
         for child in node.childNodes:
-            self.handleNode(request, child)
+                self.handleNode(request, child)
 
     def callback(self, result, request, node):
         """
@@ -278,14 +280,11 @@ class DOMTemplate(Resource):
         and recursing children.
         """
         self.outstandingCallbacks -= 1
-        print "callback called", self.outstandingCallbacks
         node = self.dispatchResult(request, node, result)
         print node
         self.recurseChildren(request, node)
-        print "yo"
         if not self.outstandingCallbacks:
-            self.sendPage(request)
-        print "done"
+            return self.sendPage(request)
 
     def processWidget(self, request, widget, node):
         """
@@ -311,6 +310,7 @@ class DOMTemplate(Resource):
 
     def processNode(self, request, newnode, oldnode):
         if newnode is not oldnode:
+            newnode = self.d.importNode(newnode, 1)
             oldnode.parentNode.replaceChild(newnode, oldnode)
         return newnode
 
@@ -323,20 +323,4 @@ class DOMTemplate(Resource):
             if child.nodeValue:
                 child.replaceData(0, len(child.nodeValue), child.nodeValue % subs)
             self.substitute(request, child, subs)
-            
-    def locateNodes(self, nodeList, key, value):
-        """
-        Find subnodes in the given node where the given attribute
-        has the given value.
-        """
-        returnList = []
-        if not type(nodeList) is type([]) and not isinstance(nodeList, minidom.NodeList):
-            return self.locateNodes(nodeList.childNodes, key, value)
-        
-        for childNode in nodeList:
-            if not hasattr(childNode, 'getAttribute'):
-                continue
-            if str(childNode.getAttribute(key)) == value:
-                returnList.append(childNode)
-            returnList.extend(self.locateNodes(childNode, key, value))
-        return returnList
+    
