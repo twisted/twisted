@@ -43,7 +43,7 @@ class Request:
     def finish(self):
         """The response to this request is finished; flush all data to the network stream.
         """
-        raise NotImplementedError("%s.finish" % str(self.__class))
+        raise NotImplementedError("%s.finish" % str(self.__class__))
 
 class Entity:
     """I am a terminal object in a hierarchy, with no children.

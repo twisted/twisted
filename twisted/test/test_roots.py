@@ -3,6 +3,22 @@ from twisted.python import roots
 import types
 
 class RootsTest(unittest.TestCase):
+
+    def testExceptions(self):
+        request = roots.Request()
+        try:
+            request.write("blah")
+        except NotImplementedError:
+            pass
+        else:
+            self.fail()
+        try:
+            request.finish()
+        except NotImplementedError:
+            pass
+        else:
+            self.fail()
+
     def testCollection(self):
         collection = roots.Collection()
         collection.putEntity("x", 'test')
