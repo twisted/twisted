@@ -86,8 +86,8 @@ def pickOptions(master, filename):
 
 # Define function so it works, if somewhat uncleanly for
 # Python2.1 users too
-def askdirectory():
-    d = tkCommonDialog.Dialog()
+def askdirectory(*args, **kw):
+    d = tkCommonDialog.Dialog(*args, **kw)
     d.command = 'tk_chooseDirectory'
     return d.show()
 
