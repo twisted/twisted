@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.43 2002/07/17 08:52:44 jh Exp $
+$Id: setup.py,v 1.44 2002/07/18 16:27:25 carmstro Exp $
 """
 
 import distutils, os, sys, string
@@ -47,9 +47,8 @@ script_preamble = """
 # This makes sure that users don't have to set up their environment
 # specially in order to run these programs from bin/.
 import sys, os, string
-pos = string.find(os.path.abspath(sys.argv[0]), os.sep+'Twisted')
-if pos != -1:
-    sys.path.insert(0, os.path.abspath(sys.argv[0])[:pos+8])
+if string.find(os.path.abspath(sys.argv[0]), os.sep+'Twisted') != -1:
+    sys.path.insert(0, os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]), os.pardir, os.pardir)))
 sys.path.insert(0, os.curdir)
 ### end of preamble
 """
