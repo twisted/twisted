@@ -135,7 +135,7 @@ class ApplicationService(Accessor, styles.Versioned):
         if serviceParent is None:
             return
         if self.serviceParent and self.serviceParent is not serviceParent:
-            raise RuntimeError("Service Parent already set!")
+            raise RuntimeError("Service Parent already set to %s, can't set to %s" % (self.serviceParent, serviceParent))
         self.serviceParent = serviceParent
         serviceParent.addService(self)
 
