@@ -29,6 +29,7 @@ class POP3(basic.LineReceiver):
 
     magic = None
     _userIs = None
+    highest = 0
 
     def connectionMade(self):
         if self.magic is None:
@@ -114,6 +115,7 @@ class POP3(basic.LineReceiver):
         return resp, self.mbox.getMessage(i)
 
     def do_TOP(self, i, size):
+        self.highest = max(self.highest, i)
         resp, fp = self.getMessageFile(i)
         if not fp:
             return
@@ -132,6 +134,7 @@ class POP3(basic.LineReceiver):
         self.sendLine('.')
 
     def do_RETR(self, i):
+        self.highest = max(self.highest, i)
         resp, fp = self.getMessageFile(i)
         if not fp:
             return
@@ -163,7 +166,13 @@ class POP3(basic.LineReceiver):
         except:
             self.failResponse()
         else:
+            self.highest = 1
             self.successResponse()
+    
+    def do_LAST(self):
+        """Respond with the highest message access thus far"""
+        # omg this is such a retarded protocol
+        self.successResponse(self.highest)
 
     def do_QUIT(self):
         self.mbox.sync()
