@@ -54,8 +54,8 @@ class Realm:
         if resource.IResource not in interfaces:
             raise NotImplementedError
         if avatarId is checkers.ANONYMOUS:
-            return static.Data("Who are you?<br>"+login, 'text/html')
-        return static.Data("The answer is 42, %s<br>%s" % (avatarId, logout),
+            return static.Data("Who are you?&lt;br>"+login, 'text/html')
+        return static.Data("The answer is 42, %s&lt;br>%s" % (avatarId, logout),
                            'text/html')
 </pre>
 
