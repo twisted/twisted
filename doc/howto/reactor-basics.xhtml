@@ -4,14 +4,38 @@
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
-    <title>Reactor Basics</title>
+    <title>Reactor Overview</title>
   </head>
   <body>
-    <h1>Reactor Basics</h1>
 
-    <p> The reactor is the core of the event loop within Twisted and
-    provides a basic interface to a number of services, including
-    network communications, threading, and event dispatching. </p>
+    <h1>Reactor Overview</h1>
+
+    <p>
+    This HOWTO introduces the Twisted reactor, describes the basics of the
+    reactor and links to 
+    </p>
+  
+    <h2>Reactor Basics</h2>
+
+    <p> The reactor is the core of the event loop within Twisted -- the loop
+    which drives applications using Twisted. The reactor
+    provides basic interfaces to a number of services, including
+    network communications, threading, and event dispatching.
+    </p>
+
+    <p>
+    For information about using the reactor and the Twisted event loop, see:
+    </p>
+
+    <ul>
+    <li>the event dispatching howtos: <a href="time.xhtml">Scheduling</a> and <a
+    href="defer.xhtml">Using Deferreds</a>;</li>
+    <li>the communication howtos: <a href="servers.xhtml">TCP
+    servers</a>, <a href="clients.xhtml">TCP clients</a>, <a
+    href="udp.xhtml">UDP networking</a> and <a href="process.xhtml">Using
+    processes</a>; and</li>
+    <li><a href="threads.xhtml">Using threads</a>.</li>
+    </ul>
 
     <p> There are multiple implementations of the reactor, each
     modified to provide better support for specialized features
@@ -19,7 +43,20 @@
     and how to use a particular implementation is available via
     <a href="choosing-reactor.xhtml">Choosing a Reactor</a>. </p>
 
-    <p> You can get to the reactor object using the following code:</p>
+    
+    <p>
+    Twisted applications can use the interfaces in <code
+    class="API">twisted.application.service</code> to configure and run the
+    application instead of using
+    boilerplate reactor code. See <a
+    href="application.xhtml">Using Application</a> for an introduction to
+    Application.
+    </p>
+
+    <h2>Using the reactor object</h2>
+
+    <p> You can get to the <code class="API"
+    base="twisted.internet">reactor</code> object using the following code:</p>
 
 <pre class="python">
 from twisted.internet import reactor
