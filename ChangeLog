@@ -1,5 +1,11 @@
 2003-04-19  Brian Warner  <warner@lothar.com>
 
+	* twisted/test/test_trial.py (LoopbackTests.testImportError): fix
+	tests to reflect new string-based remote test results
+
+	* twisted/trial/remote.py (JellyReporter.cleanResults): handle
+	strings as testClass/method to unbreak tests
+
 	* twisted/python/failure.py (Failure.__getstate__): stringify
 	.type and .value too
 

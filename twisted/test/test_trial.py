@@ -2,7 +2,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.6 $"[11:-2]
+__version__ = "$Revision: 1.7 $"[11:-2]
 
 from twisted.python.compat import *
 from twisted.python import reflect
@@ -124,7 +124,7 @@ class LoopbackTests(unittest.TestCase):
         self.failUnlessEqual(self.reporter.errors[0][:2], ("aTestClass",
                                                            "aMethod"))
         f = self.reporter.errors[0][-1]
-        self.failUnlessEqual(f.type, NameError)
+        self.failUnlessEqual(f.type, str(NameError))
 
     def testImportError(self):
         try:
@@ -137,7 +137,7 @@ class LoopbackTests(unittest.TestCase):
         f = self.reporter.importErrors[0][-1]
         self.failUnlessEqual(self.reporter.importErrors[0][0],
                              "nosuchmoduleasthis")
-        self.failUnlessEqual(f.type, ImportError)
+        self.failUnlessEqual(f.type, str(ImportError))
 
 class TestTests(unittest.TestCase):
     # first, the things we're going to test

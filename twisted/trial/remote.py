@@ -109,9 +109,16 @@ class JellyReporter(unittest.Reporter):
         self.jellyMethodCall("stop", *args)
         unittest.Reporter.stop(self, *args)
         
+    def cleanResults(self, testClass, method):
+        if type(testClass) == types.ClassType:
+            testClass = reflect.qual(testClass)
+        if type(method) == types.MethodType:
+            method = method.__name__
+        return (testClass, method)
+    
     def reportStart(self, testClass, method):
-        self.jellyMethodCall("reportStart",
-                             reflect.qual(testClass), method.__name__)
+        testClassName, methodName = self.cleanResults(testClass, method)
+        self.jellyMethodCall("reportStart", testClassName, methodName)
         unittest.Reporter.reportStart(self, testClass, method)
         
     def reportResults(self, testClass, method, resultType, results=None):
@@ -119,8 +126,9 @@ class JellyReporter(unittest.Reporter):
         if type(jresults) == types.TupleType:
             typ, val, tb = jresults
             jresults = failure.Failure(val, typ, tb)
+        testClassName, methodName = self.cleanResults(testClass, method)
         self.jellyMethodCall("reportResults",
-                             reflect.qual(testClass), method.__name__,
+                             testClassName, methodName,
                              resultType,
                              jresults)
         unittest.Reporter.reportResults(self, testClass, method, resultType,
