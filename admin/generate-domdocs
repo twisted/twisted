@@ -182,8 +182,7 @@ class Walker:
 
 # relative links to html files
 def fixLinks(document, ext):
-    attributes = (('href', None), ('class', 'html-listing'))
-    for node in findElementsWithNameAndAttributes(document, None, attributes):
+    for node in findElementsWithAttribute(document, 'href'):
         href = node.getAttribute("href")
         if not (href.startswith("http://") or href.startswith("mailto:")):
             fname = os.path.splitext(href)
@@ -322,8 +321,6 @@ def footnotes(document):
     body.childNodes.append(footnoteElement)
 
 def munge(document, template, linkrel, d, fullpath, ext, cache):
-    for doc in (template, document):
-        fixLinks(doc, ext)
     addMtime(template, fullpath)
     # things linked from the top
     for list in (findElementsWithAttribute(template,"src"),
@@ -334,6 +331,8 @@ def munge(document, template, linkrel, d, fullpath, ext, cache):
     fontifyPython(document)
     addPyListings(document, d)
     addHTMLListings(document, d)
+    for doc in (template, document):
+        fixLinks(doc, ext)
     putInToC(document, generateToC(document))
     footnotes(document)
 
