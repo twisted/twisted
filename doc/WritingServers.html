@@ -371,9 +371,9 @@ class Options(usage.Options):
     longdesc = "Quote server"
 
 
-def getPorts(app, config):
+def updateApplication(app, config):
     factory = makeQOTDFactory(config.quote)
-    return [(int(config.port), factory)]
+    app.listenTCP(int(config.port), factory)
 </PRE>
 
 <H2>Putting it All Together</H2>

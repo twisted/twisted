@@ -80,12 +80,11 @@ twisted.web.test in it."""
     opt_s = opt_static
 
 
-def getPorts(app, config):
-    ports = []
+def updateApplication(app, config):
     if config.telnet:
         from twisted.protocols import telnet
         factory = telnet.ShellFactory()
-        ports.append((int(config.telnet), factory))
+        app.listenTCP(int(config.telnet), factory)
     try:
         root = config.root
         if config.indexes:
@@ -101,9 +100,9 @@ def getPorts(app, config):
 
         pw_name, pw_passwd, pw_uid, pw_gid, pw_gecos, pw_dir, pw_shell \
                  = pwd.getpwuid(os.getuid())
-        ports.append((os.path.join(pw_dir,
+        app.listenTCP(os.path.join(pw_dir,
                                    distrib.UserDirectory.userSocketName),
-                      pb.BrokerFactory(distrib.ResourcePublisher(site))))
+                      pb.BrokerFactory(distrib.ResourcePublisher(site)))
     else:
-        ports.append((int(config.port), site))
-    return ports
+        app.listenTCP(int(config.port), site)
+

@@ -37,12 +37,12 @@ class Options(usage.Options):
 
     longdesc = "Makes a twisted.words service and support servers."
 
-def getPorts(app, config):
+def updateApplication(app, config):
     svc = service.Service("twisted.words", app)
     bkr = pb.BrokerFactory(pb.AuthRoot(app))
     irc = ircservice.IRCGateway(svc)
     adm = server.Site(webwords.WordsGadget(svc))
 
-    return [(int(config.port), bkr),
-            (int(config.irc), irc),
-            (int(config.web), adm)]
+    app.listenTCP(int(config.port), bkr)
+    app.listenTCP(int(config.irc), irc)
+    app.listenTCP(int(config.web), adm)

@@ -35,9 +35,8 @@ class Options(usage.Options):
 This creates a coil.tap file that can be used by twistd."""
 
 
-def getPorts(app, config):
-    ports = []
+def updateApplication(app, config):
     root = webcoil.ConfigRoot(app)
     site = server.Site(root)
-    ports.append((int(config.port), site))
-    return ports
+    app.listenTCP(int(config.port), site)
+

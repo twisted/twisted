@@ -34,7 +34,7 @@ class Options(usage.Options):
     optStrings = [["pop", "p", 8110, "Port to start the POP3 server on."],
                   ["smtp", "s", 8025,
                    "Port to start the SMTP server on."],
-		  ["telnet", "t", None,
+                  ["telnet", "t", None,
                    "Run a telnet server on this port."],
                   ["relay", "r", None,
                    "relay mail we do not know how to handle to this IP,"
@@ -70,12 +70,11 @@ class Options(usage.Options):
     opt_b = opt_bounce_to_postmaster
 
 
-def getPorts(app, config):
-    ports = []
+def updateApplication(app, config):
     if config.telnet:
         from twisted.protocols import telnet
-	factory = telnet.ShellFactory()
-	ports.append((int(config.telnet), factory))
+        factory = telnet.ShellFactory()
+        app.listenTCP(int(config.telnet), factory)
     if config.relay:
         addr, dir = string.split(config.relay, '=', 1)
         ip, port = string.split(addr, ',', 1)
@@ -86,8 +85,7 @@ def getPorts(app, config):
         relaymanager.attachManagerToDelayed(manager, delayed)
         config.domains = mail.DomainWithDefaultDict(config.domains, default)
         app.addDelayed(delayed)
-    ports.append((int(config.pop),
-                 mail.createDomainsFactory(pop3.VirtualPOP3, config.domains)))
-    ports.append((int(config.smtp),
-                 mail.createDomainsFactory(smtp.DomainSMTP, config.domains)))
-    return ports
+    app.listenTCP(int(config.pop),
+                 mail.createDomainsFactory(pop3.VirtualPOP3, config.domains))
+    app.listenTCP(int(config.smtp),
+                 mail.createDomainsFactory(smtp.DomainSMTP, config.domains))

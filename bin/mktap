@@ -132,10 +132,19 @@ else:
     a = cPickle.load(open(options.append))
 
 haveBroker = 0
-for num, proto in mod.getPorts(a, config):
+mod.updateApplication(a, config)
+
+# backwards compatible interface
+if hasattr(mod, "getPorts"):
+    print "The use of getPorts() is deprecated."
+    for portno, factory in mod.getPorts():
+        a.listenTCP(portno, factory)
+
+# this seems a rather broken mechanism
+for proto in a.ports:
     if isinstance(proto, pb.BrokerFactory):
         haveBroker = 1
-    a.listenTCP(num, proto)
+        break
 
 # Would you like a manhole with that?
 if options.manholePass:

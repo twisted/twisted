@@ -41,7 +41,7 @@ class Options(usage.Options):
 	    raise usage.error("Invalid argument to 'port'!")
     opt_p = opt_port
 
-def getPorts(app, config):
+def updateApplication(app, config):
     t = telnet.ShellFactory()
     t.username = config.username
     t.password = config.password
@@ -49,4 +49,4 @@ def getPorts(app, config):
         portno = config.portno
     except AttributeError:
         portno = 4040
-    return [(portno, t)]
+    app.listenTCP(portno, t)

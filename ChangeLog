@@ -1,6 +1,11 @@
+
 2002-03-05  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
 
         * New win32 event loop, written by Andrew Bennetts.
+
+        * Changed the interface for creating tap modules - use
+        a method called updateApplication instead of getPorts. this
+        is a much more generic and useful mechanism.
 
 2002-03-04  Moshe Zadka  <moshez@twistedmatrix.com>
 

@@ -50,7 +50,7 @@ def addUser(factory, username, password):
     else:
         factory.userdict[username]["passwd"] = password
 
-def getPorts(app, config):
+def updateApplication(app, config):
     t = ftp.FTPFactory()
     # setting the config
     t.anonymous = config.anonymous
@@ -67,4 +67,4 @@ def getPorts(app, config):
         portno = int(config.port)
     except AttributeError:
         portno = 2121
-    return [(portno, t)]
+    app.listenTCP(portno, t)

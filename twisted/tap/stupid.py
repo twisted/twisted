@@ -33,6 +33,6 @@ class Options(usage.Options):
 
     longdesc = 'Stupid proxy.'
 
-def getPorts(app, config):
+def updateApplication(app, config):
     s = stupidproxy.makeStupidFactory(config.host, int(config.dest_port))
-    return [(int(config.port), s)]
+    app.listenTCP(int(config.port), s)

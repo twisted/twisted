@@ -39,7 +39,7 @@ utility on a build_map file from a Twisted Reality distribution.  Some
 realities can be found at http://twistedmatrix.com/reality.epy.
 """
 
-def getPorts(app, config):
+def updateApplication(app, config):
     if not config.map:
         raise Exception("Please give a map name")
     print 'Loading %s...' % config.map
@@ -55,6 +55,6 @@ def getPorts(app, config):
     site = server.Site(plumbing.Web(rdf))
     bf = pb.BrokerFactory(pb.AuthRoot(app))
 
-    return [(8080, site),
-            (4040, spigot),
-            (8787, bf)]
+    app.listenTCP(8080, site)
+    app.listenTCP(4040, spigot)
+    app.listenTCP(8787, bf)

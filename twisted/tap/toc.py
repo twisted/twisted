@@ -30,7 +30,7 @@ class Options(usage.Options):
 
     longdesc = "Makes a TOC server."
 
-def getPorts(app, config):
+def updateApplication(app, config):
     t = toc.TOCFactory()
     portno = int(config.port)
-    return [(portno, t)]
+    app.listenTCP(portno, t)

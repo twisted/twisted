@@ -31,9 +31,9 @@ class Options(usage.Options):
 
     longdesc = "Makes a SOCKSv4 server."
 
-def getPorts(app, config):
+def updateApplication(app, config):
     print "\n\nWARNING: This SOCKSv4 proxy is configured insecurely.\nDO NOT RUN IT ON YOUR FIREWALL.\n\n"
     if config.log=="None": config.log=None
     t = socks.SOCKSv4Factory(config.log)
     portno = int(config.port)
-    return [(portno, t)]
+    app.listenTCP(portno, t)

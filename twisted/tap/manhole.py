@@ -37,7 +37,7 @@ class Options(usage.Options):
     opt_p = opt_port
 
 
-def getPorts(app, config):
+def updateApplication(app, config):
     svc = service.Service(application=app)
     p = svc.createPerspective(config.user)
     p.makeIdentity(config.password)
@@ -45,4 +45,4 @@ def getPorts(app, config):
         portno = config.portno
     except AttributeError:
         portno = pb.portno
-    return [(portno, pb.BrokerFactory(pb.AuthRoot(app)))]
+    app.listenTCP(portno, pb.BrokerFactory(pb.AuthRoot(app)))
