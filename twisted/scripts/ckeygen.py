@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: ckeygen.py,v 1.6 2003/01/08 03:05:26 z3p Exp $
+# $Id: ckeygen.py,v 1.7 2003/02/10 18:31:54 exarkun Exp $
 
 #""" Implementation module for the `ckeygen` command.
 #"""
@@ -63,7 +63,7 @@ def run():
         elif options['type'] == 'dsa':
             generateDSAkey(options)
         else:
-            sys.exit('unknown key type %s' % options['type'])
+            sys.exit('Key type was %s, must be one of: rsa, dsa' % options['type'])
     elif options['fingerprint']:
         printFingerprint(options)
     elif options['changepass']:
