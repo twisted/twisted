@@ -1,15 +1,15 @@
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -100,7 +100,7 @@ class InstanceMessengerGUI:
     def _log(self,gateway,user,text):
         """
         used to log conversations/chats to a file
-        gateway := the gateway the message is from (class Gateway 
+        gateway := the gateway the message is from (class Gateway
         user := the user who sent the message, ends in .chat for groups (string)
         text := the message they sent (string)
         """
@@ -115,7 +115,7 @@ class InstanceMessengerGUI:
             f=open(filename,"w")
         f.write("(%s) %s\n"%(time.asctime(time.localtime(time.time())),text))
         f.close()
-        
+
     def event_attach(self, gateway):
         """
         called when a gateway is connected to attach it to the GUI.
@@ -124,18 +124,18 @@ class InstanceMessengerGUI:
         if not self.cl:self.cl=self.ContactList(self)
         self.gateways[gateway.name]=gateway
         #gateway.attachIM(self.im)
-    
+
     def event_detach(self, gateway):
         """
         called when a gateway wants to detach from the GUI.
-        gateway := the gateway to detach (class Gateway) 
+        gateway := the gateway to detach (class Gateway)
         """
         del self.gateways[gateway.name]
-   
+
     def event_receiveContactList(self,gateway,contacts):
         """
         called when we receive the contact list from a gateway
-        gateway := the gateway the list is from (class Gateway) 
+        gateway := the gateway the list is from (class Gateway)
         contacts := a list of the contacts (list)
         """
         if not self.cl: self.cl = self.ContactList(self)
@@ -150,7 +150,7 @@ class InstanceMessengerGUI:
         message := the message (string)
         """
         # make sure we've started the conversation
-        w = self.conversationWith(gateway,user) 
+        w = self.conversationWith(gateway,user)
         w.messageReceived(message)
 
     def event_statusChanged(self,gateway,contact,status):
@@ -197,7 +197,7 @@ class InstanceMessengerGUI:
             del self.groups[str(gateway)+group]
         except KeyError:
             pass
-      
+
     def event_receiveGroupMembers(self,gateway,members,group):
         """
         called when we receive the list of group members.
@@ -259,14 +259,14 @@ class InstanceMessengerGUI:
         gateway := the gateway that failed to connect (class Gateway)
         message := the reason the connection failed (string)
         """
-        
+
         self.ErrorWindow(message,message)
 
     # methods that call events
     def addContact(self, gateway, user):
         """
         add a contact to the gateways contact list.
-        gateway := the gateway to add the contact to (class Gateway) 
+        gateway := the gateway to add the contact to (class Gateway)
         user := the contact to add to the list (string)
         """
         self.im.send(gateway,"addContact",contact=user)
@@ -314,7 +314,7 @@ class InstanceMessengerGUI:
         message := the message to send (string)
         """
         self.im.send(gateway,"directMessage",user=user,message=message)
-    
+
     def groupMessage(self,gateway,group,message):
         """
         send a message to a group.
@@ -414,14 +414,14 @@ class GroupSession:
         gateway := the gateway that's being used (class Gateway)
         """
         raise NotImplementedError
-    
+
     def receiveGroupMembers(self,members):
         """
         called when we receive the list of members already in the group
         members := the names of the current members (list of strings)
         """
         raise NotImplementedError
-    
+
     def receiveGroupMessage(self,member,message):
         """
         called when a member of the group sends a message. note: we /don't/ get
@@ -430,7 +430,7 @@ class GroupSession:
         message := the message (string)
         """
         raise NotImplementedError
-    
+
     def receiveGroupEmote(self,member,emote):
         """
         called when a member of the group sends a emote. note: we /don't/ get
@@ -446,7 +446,7 @@ class GroupSession:
         member := the member who just joined the group
         """
         raise NotImplementedError
-    
+
     def memberLeft(self,member):
         """
         called when a member leaves the group.
@@ -462,7 +462,7 @@ class GroupSession:
         newName := the new name of the member (string)
         """
         raise NotImplementedError
-        
+
 def ErrorWindow(error,message):
     """
     displayed when an error occurs.

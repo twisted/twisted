@@ -776,4 +776,3 @@ class Sidebar(StreamWidget):
                       '</font></a></td></tr>'
                        % (sectionColor, sectionColor, request.sibLink(link), sectionTextColor, name))
         write("</table>")
-
