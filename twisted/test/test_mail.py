@@ -755,9 +755,9 @@ class LiveFireExercise(unittest.TestCase):
 
     def tearDown(self):
         tearDownDNS(self)
-#        for d in self.tmpdirs:
-#            if os.path.exists(d):
-#                shutil.rmtree(d)
+        for d in self.tmpdirs:
+            if os.path.exists(d):
+                shutil.rmtree(d)
 
     def testLocalDelivery(self):
         service = mail.mail.MailService('test.mail')
