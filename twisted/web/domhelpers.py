@@ -265,3 +265,8 @@ def getParents(node):
         node = node.parentNode
     return l
 
+def namedChildren(parent, nodeName):
+    """namedChildren(parent, nodeName) -> children (not descendants) of parent
+    that have tagName == nodeName
+    """
+    return [n for n in parent.childNodes if getattr(n, 'tagName', '')==nodeName]

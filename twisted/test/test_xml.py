@@ -406,6 +406,20 @@ alert("I hate you");
         self.assertEquals(j3.toxml(), hdr+
                           u'<foo><div>\u221a</div><!--\u221a--></foo>'.encode('utf8'))
 
+    def testNamedChildren(self):
+        tests = {"<foo><bar /><bar unf='1' /><bar>asdfadsf</bar>"
+                         "<bam/></foo>" : 3,
+                 '<foo>asdf</foo>' : 0,
+                 '<foo><bar><bar></bar></bar></foo>' : 1,
+                 }
+        for t in tests.keys():
+            node = microdom.parseString(t).documentElement
+            result = domhelpers.namedChildren(node, 'bar')
+            self.assertEquals(len(result), tests[t])
+            if result:
+                self.assert_(hasattr(result[0], 'tagName'))
+
+        
         
 
     def testCloneNode(self):
