@@ -1534,28 +1534,32 @@ class IMAP4Client(basic.LineReceiver):
         message numbers to message identifiers, or whose errback is invoked
         if there is an error.
         """
-        d = self._fetch(messages, uid=1)
+        d = self._fetch(messages, useUID=0, uid=1)
         d.addCallback(self.__cbFetch, lookFor=('UID',))
         return d
 
-    def fetchFlags(self, messages):
+    def fetchFlags(self, messages, uid=0):
         """Retrieve the flags for one or more messages
 
         This command is allowed in the Selected state.
 
         @type messages: C{str}
         @param messages: A message sequence set (e.g., '1,3,4' or '2:5,11')
+        
+        @type uid: C{bool}
+        @param uid: Indicates whether the message sequence set is of message
+        numbers or of unique message IDs.
 
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
         message numbers to lists of flags, or whose errback is invoked if
         there is an error.
         """
-        d = self._fetch(messages, flags=1)
+        d = self._fetch(messages, useUID=uid, flags=1)
         d.addCallback(self.__cbFetch, lookFor=('FLAGS',))
         return d
 
-    def fetchInternalDate(self, messages):
+    def fetchInternalDate(self, messages, uid=0):
         """Retrieve the internal date associated with one or more messages
 
         This command is allowed in the Selected state.
@@ -1563,16 +1567,20 @@ class IMAP4Client(basic.LineReceiver):
         @type messages: C{str}
         @param messages: A message sequence set
 
+        @type uid: C{bool}
+        @param uid: Indicates whether the message sequence set is of message
+        numbers or of unique message IDs.
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
         message numbers to date strings, or whose errback is invoked
         if there is an error.
         """
-        d = self._fetch(messages, internaldate=1)
+        d = self._fetch(messages, useUID=uid, internaldate=1)
         d.addCallback(self.__cbFetch, lookFor=('INTERNALDATE',))
         return d
 
-    def fetchEnvelope(self, messages):
+    def fetchEnvelope(self, messages, uid=0):
         """Retrieve the envelope data for one or more messages
 
         This command is allowed in the Selected state.
@@ -1580,16 +1588,20 @@ class IMAP4Client(basic.LineReceiver):
         @type messages: C{str}
         @param messages: A message sequence set
 
+        @type uid: C{bool}
+        @param uid: Indicates whether the message sequence set is of message
+        numbers or of unique message IDs.
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
         message numbers to envelope data, or whose errback is invoked
         if there is an error.
         """
-        d = self._fetch(messages, envelope=1)
+        d = self._fetch(messages, useUID=uid, envelope=1)
         d.addCallback(self.__cbFetch, lookFor=('ENVELOPE',))
         return d
 
-    def fetchBodyStructure(self, messages):
+    def fetchBodyStructure(self, messages, uid=0):
         """Retrieve the structure of the body of one or more messages
 
         This command is allowed in the Selected state.
@@ -1597,16 +1609,20 @@ class IMAP4Client(basic.LineReceiver):
         @type messages: C{str}
         @param messages: A message sequence set
 
+        @type uid: C{bool}
+        @param uid: Indicates whether the message sequence set is of message
+        numbers or of unique message IDs.
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
         message numbers to structure data, or whose errback is invoked
         if there is an error.
         """
-        d = self._fetch(messages, bodystructure=1)
+        d = self._fetch(messages, useUID=uid, bodystructure=1)
         d.addCallback(self.__cbFetch, lookFor=('BODYSTRUCTURE',))
         return d
 
-    def fetchSimplifiedBody(self, messages):
+    def fetchSimplifiedBody(self, messages, uid=0):
         """Retrieve the simplified body structure of one or more messages
 
         This command is allowed in the Selected state.
@@ -1614,16 +1630,20 @@ class IMAP4Client(basic.LineReceiver):
         @type messages: C{str}
         @param messages: A message sequence set
 
+        @type uid: C{bool}
+        @param uid: Indicates whether the message sequence set is of message
+        numbers or of unique message IDs.
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
         message numbers to body data, or whose errback is invoked
         if there is an error.
         """
-        d = self._fetch(messages, body=1)
+        d = self._fetch(messages, useUID=uid, body=1)
         d.addCallback(self.__cbFetch, lookFor=('BODY',))
         return d
 
-    def fetchMessage(self, messages):
+    def fetchMessage(self, messages, uid=0):
         """Retrieve one or more entire messages
 
         This command is allowed in the Selected state.
@@ -1631,16 +1651,20 @@ class IMAP4Client(basic.LineReceiver):
         @type messages: C{str}
         @param messages: A message sequence set
 
+        @type uid: C{bool}
+        @param uid: Indicates whether the message sequence set is of message
+        numbers or of unique message IDs.
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
         message numbers to messages objects, or whose errback is invoked
         if there is an error.
         """
-        d = self._fetch(messages, rfc822=1)
+        d = self._fetch(messages, useUID=uid, rfc822=1)
         d.addCallback(self.__cbFetch, lookFor=('RFC822',))
         return d
 
-    def fetchHeaders(self, messages):
+    def fetchHeaders(self, messages, uid=0):
         """Retrieve headers of one or more messages
 
         This command is allowed in the Selected state.
@@ -1648,16 +1672,20 @@ class IMAP4Client(basic.LineReceiver):
         @type messages: C{str}
         @param messages: A message sequence set
 
+        @type uid: C{bool}
+        @param uid: Indicates whether the message sequence set is of message
+        numbers or of unique message IDs.
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
         message numbers to dicts of message headers, or whose errback is
         invoked if there is an error.
         """
-        d = self._fetch(messages, rfc822header=1)
+        d = self._fetch(messages, useUID=uid, rfc822header=1)
         d.addCallback(self.__cbFetch, lookFor=('RFC822.HEADER',))
         return d
 
-    def fetchBody(self, messages):
+    def fetchBody(self, messages, uid=0):
         """Retrieve body text of one or more messages
 
         This command is allowed in the Selected state.
@@ -1665,16 +1693,20 @@ class IMAP4Client(basic.LineReceiver):
         @type messages: C{str}
         @param messages: A message sequence set
 
+        @type uid: C{bool}
+        @param uid: Indicates whether the message sequence set is of message
+        numbers or of unique message IDs.
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
         message numbers to body text, or whose errback is invoked if there
         is an error.
         """
-        d = self._fetch(messages, rfc822text=1)
+        d = self._fetch(messages, useUID=uid, rfc822text=1)
         d.addCallback(self.__cbFetch, lookFor=('RFC822.TEXT',))
         return d
 
-    def fetchSize(self, messages):
+    def fetchSize(self, messages, uid=0):
         """Retrieve the size, in octets, of one or more messages
 
         This command is allowed in the Selected state.
@@ -1682,16 +1714,20 @@ class IMAP4Client(basic.LineReceiver):
         @type messages: C{str}
         @param messages: A message sequence set
 
+        @type uid: C{bool}
+        @param uid: Indicates whether the message sequence set is of message
+        numbers or of unique message IDs.
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
         message numbers to sizes, or whose errback is invoked if there is
         an error.
         """
-        d = self._fetch(message, rfc822size=1)
+        d = self._fetch(message, useUID=uid, rfc822size=1)
         d.addCallback(self.__cbFetch, lookFor=('RFC822.SIZE',))
         return d
 
-    def fetchFull(self, messages):
+    def fetchFull(self, messages, uid=0):
         """Retrieve several different fields of one or more messages
 
         This command is allowed in the Selected state.  This is equivalent
@@ -1702,6 +1738,10 @@ class IMAP4Client(basic.LineReceiver):
         @type messages: C{str}
         @param messages: A message sequence set
 
+        @type uid: C{bool}
+        @param uid: Indicates whether the message sequence set is of message
+        numbers or of unique message IDs.
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
         message numbers to dict of the retrieved data values, or whose
@@ -1709,7 +1749,7 @@ class IMAP4Client(basic.LineReceiver):
         are "flags", "date", "size", "envelope", and "body".
         """
         d = self._fetch(
-            messages, flags=1, internaldate=1,
+            messages, useUID=uid, flags=1, internaldate=1,
             rfc822size=1, envelope=1, body=1
         )
         d.addCallback(
@@ -1721,7 +1761,7 @@ class IMAP4Client(basic.LineReceiver):
         )
         return d
 
-    def fetchAll(self, messages):
+    def fetchAll(self, messages, uid=0):
         """Retrieve several different fields of one or more messages
 
         This command is allowed in the Selected state.  This is equivalent
@@ -1731,6 +1771,10 @@ class IMAP4Client(basic.LineReceiver):
         @type messages: C{str}
         @param messages: A message sequence set
 
+        @type uid: C{bool}
+        @param uid: Indicates whether the message sequence set is of message
+        numbers or of unique message IDs.
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
         message numbers to dict of the retrieved data values, or whose
@@ -1738,7 +1782,7 @@ class IMAP4Client(basic.LineReceiver):
         are "flags", "date", "size", and "envelope".
         """
         d = self._fetch(
-            messages, flags=1, internaldate=1,
+            messages, useUID=uid, flags=1, internaldate=1,
             rfc822size=1, envelope=1
         )
         d.addCallback(
@@ -1749,7 +1793,7 @@ class IMAP4Client(basic.LineReceiver):
         )
         return d
 
-    def fetchFast(self, messages):
+    def fetchFast(self, messages, uid=0):
         """Retrieve several different fields of one or more messages
 
         This command is allowed in the Selected state.  This is equivalent
@@ -1759,6 +1803,10 @@ class IMAP4Client(basic.LineReceiver):
         @type messages: C{str}
         @param messages: A message sequence set
 
+        @type uid: C{bool}
+        @param uid: Indicates whether the message sequence set is of message
+        numbers or of unique message IDs.
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
         message numbers to dict of the retrieved data values, or whose
@@ -1766,7 +1814,7 @@ class IMAP4Client(basic.LineReceiver):
         "flags", "date", and "size".
         """
         d = self._fetch(
-            messages, flags=1, internaldate=1, rfc822size=1
+            messages, useUID=uid, flags=1, internaldate=1, rfc822size=1
         )
         d.addCallback(
             self.__cbFetch,
@@ -1800,12 +1848,17 @@ class IMAP4Client(basic.LineReceiver):
                 print '(3)Ignoring ', parts
         return flags
 
-    def fetchSpecific(self, messages, headerType=None, headerNumber=None,
-                      headerArgs=None, peek=None, offset=None, length=None):
+    def fetchSpecific(self, messages, uid=0, headerType=None,
+                      headerNumber=None, headerArgs=None, peek=None,
+                      offset=None, length=None):
         """Retrieve a specific section of one or more messages
 
         @type messages: C{str}
         @param messages: A message sequence set
+
+        @type uid: C{bool}
+        @param uid: Indicates whether the message sequence set is of message
+        numbers or of unique message IDs.
 
         @param headerType: C{str}
         @param headerType: If specified, must be one of HEADER,
@@ -1866,8 +1919,9 @@ class IMAP4Client(basic.LineReceiver):
             extra = ''
         else:
             extra = '<%d.%d>' % (offset, length)
+        fetch = uid and 'UID FETCH' or 'FETCH'
         cmd = fmt % (messages, peek and '.PEEK' or '', number, header, payload, extra)
-        d = self.sendCommand(Command('FETCH', cmd, wantResponse=('FETCH',)))
+        d = self.sendCommand(Command(fetch, cmd, wantResponse=('FETCH',)))
         d.addCallback(self.__cbFetchSpecific)
         return d
 
@@ -1885,12 +1939,13 @@ class IMAP4Client(basic.LineReceiver):
                         info[id] = parseNestedParens(parts[2])
         return info
 
-    def _fetch(self, messages, **terms):
+    def _fetch(self, messages, useUID=0, **terms):
+        fetch = useUID and 'UID FETCH' or 'FETCH'
         cmd = '%s %s' % (message, ' '.join([s.upper() for s in terms.keys()]))
-        d = self.sendCommand(Command('FETCH', cmd, wantResponse=('FETCH',)))
+        d = self.sendCommand(Command(fetch, cmd, wantResponse=('FETCH',)))
         return d
 
-    def setFlags(self, messages, flags, silent=1):
+    def setFlags(self, messages, flags, silent=1, uid=0):
         """Set the flags for one or more messages.
 
         This command is allowed in the Selected state.
@@ -1905,14 +1960,18 @@ class IMAP4Client(basic.LineReceiver):
         @param silent: If true, cause the server to supress its verbose
         response.
 
+        @type uid: C{bool}
+        @param uid: Indicates whether the message sequence set is of message
+        numbers or of unique message IDs.
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a list of the
         the server's responses (C{[]} if C{silent} is true) or whose
         errback is invoked if there is an error.
         """
-        return self._store(messages, silent and 'FLAGS.SILENT' or 'FLAGS', flags)
+        return self._store(messages, silent and 'FLAGS.SILENT' or 'FLAGS', flags, uid)
 
-    def addFlags(self, messages, flags, silent=1):
+    def addFlags(self, messages, flags, silent=1, uid=0):
         """Add to the set flags for one or more messages.
 
         This command is allowed in the Selected state.
@@ -1927,14 +1986,18 @@ class IMAP4Client(basic.LineReceiver):
         @param silent: If true, cause the server to supress its verbose
         response.
 
+        @type uid: C{bool}
+        @param uid: Indicates whether the message sequence set is of message
+        numbers or of unique message IDs.
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a list of the
         the server's responses (C{[]} if C{silent} is true) or whose
         errback is invoked if there is an error.
         """
-        return self._store(messages, silent and '+FLAGS.SILENT' or '+FLAGS', flags)
+        return self._store(messages, silent and '+FLAGS.SILENT' or '+FLAGS', flags, uid)
 
-    def removeFlags(self, messages, flags, silent=1):
+    def removeFlags(self, messages, flags, silent=1, uid=0):
         """Remove from the set flags for one or more messages.
 
         This command is allowed in the Selected state.
@@ -1949,16 +2012,21 @@ class IMAP4Client(basic.LineReceiver):
         @param silent: If true, cause the server to supress its verbose
         response.
 
+        @type uid: C{bool}
+        @param uid: Indicates whether the message sequence set is of message
+        numbers or of unique message IDs.
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a list of the
         the server's responses (C{[]} if C{silent} is true) or whose
         errback is invoked if there is an error.
         """
-        return self._store(messages, silent and '-FLAGS.SILENT' or '-FLAGS', flags)
+        return self._store(messages, silent and '-FLAGS.SILENT' or '-FLAGS', flags, uid)
 
-    def _store(self, messages, cmd, flags):
+    def _store(self, messages, cmd, flags, uid):
+        store = uid and 'UID STORE' or 'STORE'
         args = ' '.join((messages, cmd, '(%s)' % ' '.join(flags)))
-        d = self.sendCommand(Command('STORE', args, wantResponse=('FETCH',)))
+        d = self.sendCommand(Command(store, args, wantResponse=('FETCH',)))
         d.addCallback(self.__cbFetch, lookFor='FLAGS')
         return d
     
