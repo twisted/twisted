@@ -21,6 +21,7 @@ twisted.log: Logfile and multi-threaded file support.
 
 
 import sys
+import os
 import string
 import cStringIO
 import time
@@ -66,15 +67,18 @@ except NameError:
     logfile = sys.stdout
 
 def write(stuff):
+    """Write some data to the log."""
     logfile.write(str(stuff))
     logfile.flush()
 
 def msg(stuff):
-    logfile.write(str(stuff)+"\n")
+    """Write some data to the log (a linebreak will be appended)."""
+    logfile.write(str(stuff) + os.linesep)
     logfile.flush()
 
 
 def startLogging(file):
+    """Initialize logging to a specified file."""
     global logfile, logOwner
     import threadable
     threadable.requireInit()
@@ -92,7 +96,7 @@ def startLogging(file):
 
 class Logger:
     """
-    This represents a class which may 'own' a log.
+    This represents a class which may 'own' a log. Used by subclassing.
     """
     written = 1
     def log(self,bytes):
@@ -203,21 +207,17 @@ class ThreadedLogOwner:
 
 
 class Log:
-
+    """
+    This will create a Log file (intended to be written to with
+    'print', but usable from anywhere that a file is) from a file
+    and an 'ownable' object.  The ownable object must have a
+    method called 'owner', which takes no arguments and returns a
+    Logger.
+    """
+    
     synchronized = ['write', 'writelines']
 
     def __init__(self, file, ownable):
-
-        """
-        Log(file, ownable)
-
-        This will create a Log file (intended to be written to with
-        'print', but usable from anywhere that a file is) from a file
-        and an 'ownable' object.  The ownable object must have a
-        method called 'owner', which takes no arguments and returns a
-        Logger.
-        """
-
         self.file = file
         for attr in file_protocol:
             if not hasattr(self,attr):
@@ -245,3 +245,7 @@ try:
     logOwner
 except NameError:
     logOwner = LogOwner(None)
+
+
+__all__ = ["logOwner", "Log", "Logger", "startLogging", "msg", "write"]
+
