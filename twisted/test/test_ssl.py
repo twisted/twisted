@@ -22,7 +22,7 @@ import test_tcp
 certPath = util.sibpath(__file__, "server.pem")
 
 class StolenTCPTestCase(test_tcp.ProperlyCloseFilesTestCase, test_tcp.WriteDataTestCase):
-    
+
     def setUp(self):
         self._setUp()
         f = protocol.ServerFactory()
@@ -35,7 +35,7 @@ class StolenTCPTestCase(test_tcp.ProperlyCloseFilesTestCase, test_tcp.WriteDataT
         f.protocol = test_tcp.ConnectionLosingProtocol
 
         f.protocol.master = self
-        
+
         L = []
         def connector():
             p = self.listener.getHost().port
@@ -52,13 +52,13 @@ class UnintelligentProtocol(basic.LineReceiver):
         "last thing before tls starts",
         "STARTTLS",
     ]
-    
+
     posttext = [
         "first thing after tls started",
         "last thing ever",
     ]
-    
-    
+
+
     def connectionMade(self):
         for l in self.pretext:
             self.sendLine(l)
@@ -69,7 +69,7 @@ class UnintelligentProtocol(basic.LineReceiver):
             for l in self.posttext:
                 self.sendLine(l)
             self.transport.loseConnection()
-        
+
 if ssl is not None:
     class ServerTLSContext(ssl.DefaultOpenSSLContextFactory):
         isClient = 0
@@ -81,7 +81,7 @@ class LineCollector(basic.LineReceiver):
     def __init__(self, doTLS, fillBuffer=0):
         self.doTLS = doTLS
         self.fillBuffer = fillBuffer
-        
+
     def connectionMade(self):
         self.factory.rawdata = ''
         self.factory.lines = []
@@ -101,17 +101,17 @@ class LineCollector(basic.LineReceiver):
                 self.transport.startTLS(ctx, self.factory.server)
             else:
                 self.setRawMode()
-    
+
     def rawDataReceived(self, data):
         self.factory.rawdata += data
         self.factory.done = 1
-    
+
     def connectionLost(self, reason):
         self.factory.done = 1
 
 class TLSTestCase(unittest.TestCase):
     fillBuffer = 0
-    
+
     def testTLS(self):
         cf = protocol.ClientFactory()
         cf.protocol = UnintelligentProtocol
@@ -124,20 +124,20 @@ class TLSTestCase(unittest.TestCase):
 
         port = reactor.listenTCP(0, sf, interface="127.0.0.1")
         portNo = port.getHost().port
-        
+
         reactor.connectTCP('127.0.0.1', portNo, cf)
-        
+
         i = 0
         while i < 1000 and not sf.done:
             reactor.iterate(0.01)
             i += 1
-        
+
         self.failUnless(sf.done, "Never finished reading all lines: %s" % sf.lines)
         self.assertEquals(
             sf.lines,
             UnintelligentProtocol.pretext + UnintelligentProtocol.posttext
         )
-    
+
     def testUnTLS(self):
         cf = protocol.ClientFactory()
         cf.protocol = UnintelligentProtocol
@@ -150,14 +150,14 @@ class TLSTestCase(unittest.TestCase):
 
         port = reactor.listenTCP(0, sf, interface="127.0.0.1")
         portNo = port.getHost().port
-        
+
         reactor.connectTCP('127.0.0.1', portNo, cf)
-        
+
         i = 0
         while i < 1000 and not sf.done:
             reactor.iterate(0.01)
             i += 1
-        
+
         self.failUnless(sf.done, "Never finished reading all lines")
         self.assertEquals(
             sf.lines,
@@ -177,21 +177,21 @@ class TLSTestCase(unittest.TestCase):
 
         port = reactor.listenTCP(0, sf, interface="127.0.0.1")
         portNo = port.getHost().port
-        
+
         reactor.connectTCP('127.0.0.1', portNo, cf)
-        
+
         i = 0
         while i < 1000 and not cf.done:
             reactor.iterate(0.01)
             i += 1
-        
+
         self.failUnless(cf.done, "Never finished reading all lines")
         self.assertEquals(
             cf.lines,
             UnintelligentProtocol.pretext + UnintelligentProtocol.posttext
         )
 
-    
+
 class SpammyTLSTestCase(TLSTestCase):
     fillBuffer = 1
     def testTLS(self):
@@ -207,21 +207,21 @@ class SingleLineServerProtocol(protocol.Protocol):
         self.transport.identifier = 'SERVER'
         self.transport.write("+OK <some crap>\r\n")
         self.transport.getPeerCertificate()
-        
+
 class RecordingClientProtocol(protocol.Protocol):
     def connectionMade(self):
         self.transport.identifier = 'CLIENT'
         self.buffer = []
         self.transport.getPeerCertificate()
-    
+
     def dataReceived(self, data):
         self.factory.buffer.append(data)
-        
+
 class BufferingTestCase(unittest.TestCase):
     def testOpenSSLBuffering(self):
         server = protocol.ServerFactory()
         client = protocol.ClientFactory()
-        
+
         server.protocol = SingleLineServerProtocol
         client.protocol = RecordingClientProtocol
         client.buffer = []
@@ -231,7 +231,7 @@ class BufferingTestCase(unittest.TestCase):
 
         sCTX = DefaultOpenSSLContextFactory(certPath, certPath)
         cCTX = ClientContextFactory()
-        
+
         port = reactor.listenSSL(0, server, sCTX, interface='127.0.0.1')
         reactor.connectSSL('127.0.0.1', port.getHost().port, client, cCTX)
 
@@ -239,7 +239,7 @@ class BufferingTestCase(unittest.TestCase):
         while i < 5000 and not client.buffer:
             i += 1
             reactor.iterate()
-        
+
         self.assertEquals(client.buffer, ["+OK <some crap>\r\n"])
 
 def generateCertificateObjects(organization, organizationalUnit):
