@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.146 2003/10/12 05:07:54 exarkun Exp $
+$Id: setup.py,v 1.147 2003/10/13 18:43:40 etrepum Exp $
 """
 
 import distutils, os, sys, string
@@ -175,7 +175,7 @@ int main(int argc, char **argv)
             import thread
         except:
             thread = None
-        if hasattr(select, "poll") and thread:
+        if hasattr(select, "poll") and thread and not sys.platform=='darwin':
             exts.append( Extension("twisted.internet.cReactor",
                                     [
                                         "twisted/internet/cReactor/cReactorModule.c",
@@ -206,6 +206,12 @@ int main(int argc, char **argv)
                                 ["twisted/protocols/_c_urlarg.c"],
                                 define_macros=define_macros) )
 
+        if sys.platform == 'darwin':
+            exts.append( Extension("twisted.internet.cfsupport",
+                                    ["twisted/internet/cfsupport/cfsupport.c"],
+                                    extra_link_args=['-framework','CoreFoundation','-framework','CoreServices','-framework','Carbon'],
+                                    define_macros=define_macros))
+        
         self.extensions.extend(exts)
 
 #############################################################################

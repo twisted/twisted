@@ -31,7 +31,7 @@ Installation
 
   Mac OS X packages and dependences can be obtained from:
 
-    http://undefined.org/python/pimp/darwin-6.6-Power_Macintosh.html
+    http://undefined.org/python/pimp/
   
   Win32 EXEs are available from http://twisted.sf.net, as well as tarballs
   for other platforms. As with other Python packages, the standard way of

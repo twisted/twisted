@@ -182,7 +182,6 @@ cdef extern from "pymactoolbox.h":
     cdef int CFURLRefObj_Convert(object, CFURLRef *)
     cdef int OptionalCFURLRefObj_Convert(object, CFURLRef *)
     
-cdef extern from "<CoreServices/CoreServices.h>":
     # CFNetwork
     ctypedef struct CFNetServiceClientContext:
         CFIndex version

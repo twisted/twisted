@@ -54,7 +54,8 @@ cdef class PyCFRunLoop:
             _runLoop = GetCFRunLoopFromEventLoop(_evtLoop)
         else:
             if CFObj_Convert(runLoop, &_runLoop) == 0:
-                return -1
+                raise
+                #return -1
         self.cf = CFObj_New(CFRetain(_runLoop))
 
     def run(self):

@@ -29,6 +29,7 @@ reactorTypes = {
     'poll': 'twisted.internet.pollreactor',
     'qt': 'twisted.internet.qtreactor',
     'c' : 'twisted.internet.cReactor',
+    'cf' : 'twisted.internet.cfreactor',
     'kqueue': 'twisted.internet.kqreactor'
     }
 

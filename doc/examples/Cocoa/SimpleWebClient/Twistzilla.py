@@ -1,17 +1,22 @@
+# Twisted, the Framework of Your Internet
+# Copyright (C) 2003 Matthew W. Lefkowitz
 #
-#  MyAppDelegate.py
-#  cocoaDemo
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
 #
-#  Created by Bob Ippolito on Fri Jan 17 2003.
-#  Copyright (c) 2003 __MyCompanyName__. All rights reserved.
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 # import needed classes/functions from Foundation
-from Foundation import NSObject, NSLog, NSTimer, NSMutableString, NSRunLoop
-
 # import Nib loading functionality from AppKit
 from PyObjCTools import NibClassBuilder, AppHelper
-from PyObjCTools.NibClassBuilder import AutoBaseClass
 
 import twisted.internet.cfreactor
 reactor = twisted.internet.cfreactor.install()
@@ -36,7 +41,7 @@ class TwistzillaClient(http.HTTPClient):
     def handleResponse(self, data):
         self.delegate.gotResponse_(data)
 
-class MyAppDelegate(AutoBaseClass):
+class MyAppDelegate(NibClassBuilder.AutoBaseClass):
     def gotResponse_(self, html):
         s = self.resultTextField.textStorage()
         s.replaceCharactersInRange_withString_((0, s.length()), html)
@@ -53,12 +58,12 @@ class MyAppDelegate(AutoBaseClass):
         else:
             host, port = u[1][:pos], int(u[1][pos+1:])
         if u[2] == '':
-            file = '/'
+            fname = '/'
         else:
-            file = u[2]
+            fname = u[2]
         host = host.encode('utf8')
-        file = file.encode('utf8')
-        protocol.ClientCreator(reactor, TwistzillaClient, self, (host, port, file)).connectTCP(host, port).addErrback(lambda f:self.gotResponse_(f.getBriefTraceback()))
+        fname = fname.encode('utf8')
+        protocol.ClientCreator(reactor, TwistzillaClient, self, (host, port, fname)).connectTCP(host, port).addErrback(lambda f:self.gotResponse_(f.getBriefTraceback()))
 
     def applicationDidFinishLaunching_(self, aNotification):
         """
@@ -67,12 +72,9 @@ class MyAppDelegate(AutoBaseClass):
         loop.
         """
         self.messageTextField.setStringValue_("http://www.twistedmatrix.com/")
-        # get current CFRunLoop
-        cfr = NSRunLoop.currentRunLoop().getCFRunLoop()
-        reactor.run(installSignalHandlers=False, withRunLoop=cfr)
+        reactor.run(installSignalHandlers=False)
 
 if __name__ == '__main__':
     from twisted.python import log
     log.startLogging(sys.stdout)
-    NibClassBuilder.extractClasses('MainMenu.nib')
     AppHelper.runEventLoop()

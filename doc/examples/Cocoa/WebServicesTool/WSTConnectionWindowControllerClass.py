@@ -17,6 +17,7 @@ Implements a standard toolbar.
 
 from AppKit import *
 from Foundation import *
+from PyObjCTools import NibClassBuilder
 
 from objc import IBOutlet
 from objc import selector
@@ -26,7 +27,6 @@ import twisted.internet.cfreactor
 reactor = twisted.internet.cfreactor.install()
 from twisted.internet import defer
 from twisted.web.xmlrpc import Proxy
-#import xmlrpclib
 
 import sys
 import types
@@ -80,7 +80,6 @@ def addToolbarItem(aController, anIdentifier, aLabel, aPaletteLabel,
     
     aController._toolbarItems[anIdentifier] = toolbarItem
 
-from PyObjCTools import NibClassBuilder
 NibClassBuilder.extractClasses( "WSTConnection" )
 
 class WSTConnectionWindowController(NibClassBuilder.AutoBaseClass):
@@ -137,7 +136,7 @@ class WSTConnectionWindowController(NibClassBuilder.AutoBaseClass):
         self.createToolbar()
         # Start the CFReactor if it's not already going
         if not reactor.running:
-            reactor.run(withRunLoop=NSRunLoop.currentRunLoop().getCFRunLoop())
+            reactor.run()
     
     def windowWillClose_(self, aNotification):
         """
@@ -239,7 +238,7 @@ class WSTConnectionWindowController(NibClassBuilder.AutoBaseClass):
             newItem.setMinSize_( item.minSize() )
             newItem.setMaxSize_( item.maxSize() )
         
-        return newItem  
+        return newItem
     
     def setStatusTextFieldMessage_(self, aMessage):
         """
@@ -353,7 +352,7 @@ class WSTConnectionWindowController(NibClassBuilder.AutoBaseClass):
             % (aMethod , index, len(self._methods))
         )
         return self._server.callRemote(
-            self._methodPrefix + 'methodSignature', 
+            self._methodPrefix + 'methodSignature',
             aMethod
         )
             

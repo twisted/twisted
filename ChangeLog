@@ -1,3 +1,23 @@
+2003-10-13  Bob Ippolito <bob@redivi.com>
+
+	* doc/examples/cocoaDemo:
+	Removed, replaced by doc/examples/Cocoa cfreactor demos.
+
+	* doc/examples/Cocoa:
+	Moved from sandbox/etrepum/examples/PyObjC, cleaned up.
+
+	* twisted/internet/cfsupport, twisted/internet/cfreactor.py:
+	Moved from sandbox/etrepum, cleaned up.
+
+	* twisted/application/app.py:
+	Added 'cf' -> twisted.internet.cfreactor to reactorTypes
+
+	* setup.py:
+	sys.platform=='darwin' - build cfsupport, do not build cReactor.
+
+	* INSTALL:
+    Changed URL of pimp repository to shorter version.
+
 2003-10-12  Jp Calderone  <exarkun@twistedmatrix.com>
 
 	* bin/tktwistd, twisted/scripts/tktwistd.py, doc/man/tktwistd.1:
