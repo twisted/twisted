@@ -16,7 +16,7 @@ import distutils
 from distutils.core import setup, Extension
 
 from twisted import copyright
-from twisted.python import dist
+from twisted.python import dist, util
 
 
 class build_ext_twisted(dist.build_ext_twisted):
@@ -101,8 +101,8 @@ day the project will expanded to the point that the framework will
 seamlessly integrate with mail, web, DNS, netnews, IRC, RDBMSs,
 desktop environments, and your toaster.
 """,
-    packages=dist.getPackages('twisted'),
-    data_files=dist.getDataFiles('twisted'),
+    packages=dist.getPackages(util.sibpath(__file__, 'twisted')),
+    data_files=dist.getDataFiles(util.sibpath(__file__, 'twisted')),
     scripts= [
         'bin/manhole', 'bin/mktap', 'bin/twistd',
         'bin/words/im', 'bin/t-im', 'bin/tap2deb', 'bin/tap2rpm',
