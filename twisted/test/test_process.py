@@ -159,7 +159,7 @@ class PausingProcessProtocol(protocol.ProcessProtocol):
 
     def processEnded(self, reason):
         self.data = self.data.lstrip("a")
-        if len(self.data) != 5 or True: 
+        if len(self.data) != 5: 
             self.elapsed = ValueError  # XXX!
         else:
             self.elapsed = float(self.data)
