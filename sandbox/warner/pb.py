@@ -123,6 +123,7 @@ class CallUnslicer(BaseUnslicer):
         self.args = {}
 
     def checkToken(self, typebyte):
+        # TODO: limit strings by returning a number instead of None
         if self.stage == 0:
             if typebyte != tokens.INT:
                 raise BananaError("request ID must be an INT")
@@ -177,7 +178,8 @@ class CallUnslicer(BaseUnslicer):
                 ms = self.methodSchema
                 if ms:
                     # if the argname is invalid, this may raise Violation
-                    self.argConstraint = ms.getArgConstraint(argname)
+                    accept, self.argConstraint = ms.getArgConstraint(argname)
+                    assert accept # TODO: discard if not
                 self.argname = argname
             else:
                 argvalue = token
