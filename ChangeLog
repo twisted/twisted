@@ -1,5 +1,19 @@
 2003-04-07  Brian Warner  <warner@lothar.com>
 
+	* twisted/test/test_banana.py (BananaTestCase): add Acapnotic's
+	crash-cBanana test case, and some others.
+
+	* twisted/spread/banana.py (Pynana.dataReceived): add 640k limit on
+	lists/tuples, parameterize the limit into banana.SIZE_LIMIT, define
+	and use BananaError on all problems. Impose 640k limit on outbound
+	lists/tuples/strings to catch problems on transmit side too.
+
+	* twisted/spread/cBanana.c (cBanana_dataReceived): check malloc()
+	return values to avoid segfault from oversized lists. Impose 640k
+	limit on length of incoming lists. Raise BananaError on these
+	checks instead of the previously-unreachable
+	cBanana.'cBanana.error' exception.
+
 	* twisted/test/test_process.py (TwoProcessProtocol): add test to make
 	sure killing one process doesn't take out a second one
 	(PosixProcessTestCasePTY): add variant that sets usePTY=1

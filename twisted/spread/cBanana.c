@@ -497,6 +497,8 @@ PyObject* cBanana_encode(PyObject* self, PyObject *args) {
 }
 
 
+/* TODO: change the API to return a failure if the encoded value won't fit.
+   Current implementation just folds oversized values. */
 static long b1282int(unsigned char *str, int begin, int end) {
   long result = 0;
   long place = 0;
@@ -657,16 +659,35 @@ extern EXTERN_API PyObject *cBanana_dataReceived( PyObject *self, PyObject *args
     switch (typeByte) {
     case LIST: {
       int num = b1282int(buffer, nBeginPos, nEndPos);
+
+      if (num > 640*1024) {
+        PyErr_SetString(BananaError,
+                        "Security precaution: List too long.\n");
+        return NULL;
+      }
       if (!state->currentList)  {
         state->currentList = (struct listItem *)malloc(sizeof(struct listItem));
+        if (!state->currentList)
+          return PyErr_NoMemory();
         state->currentList->lastList = NULL;
         state->currentList->currentIndex = 0;
         state->currentList->size = num;
         state->currentList->thisList = PyList_New(num);
+        if (!state->currentList->thisList) {
+          /* PyList_New sets PyErr_NoMemory for us */
+          free(state->currentList); state->currentList = NULL;
+          return NULL;
+        }
       } else {
         struct listItem *newList = (struct listItem *) malloc(sizeof(struct listItem));
+        if (!newList)
+          return PyErr_NoMemory();
         newList->size = num;
         newList->thisList = PyList_New(num);
+        if (!newList->thisList) {
+          free(newList);
+          return NULL;
+        }
         newList->currentIndex = 0;
         newList->lastList = state->currentList;
         state->currentList = newList;
@@ -740,7 +761,8 @@ extern EXTERN_API PyObject *cBanana_dataReceived( PyObject *self, PyObject *args
     case STRING: {
       int len = b1282int(buffer, nBeginPos, nEndPos);
       if (len > 640 * 1024) {
-        PyErr_SetString(BananaError, "Security precaution: Length identifier  > 640K.\n");
+        PyErr_SetString(BananaError,
+                        "Security precaution: String too long.\n");
         return NULL;
       }
       if (len > (bufferSize - pos) ) {
@@ -858,13 +880,49 @@ extern EXTERN_API PyObject *cBanana_dataReceived( PyObject *self, PyObject *args
 
 }
 
+/* Do the equivalent of:
+ * from foo.bar import baz
+ * where "foo.bar" is 'name' and "baz" is 'from_item'
+ * Stolen from cReactorUtil.c
+ */
+static PyObject *util_FromImport(const char *name, const char *from_item)
+{
+  PyObject *from_list;
+  PyObject *module;
+  PyObject *item;
+
+  /* Make the from list. */
+  from_list = PyList_New(1);
+  PyList_SetItem(from_list, 0, PyString_FromString(from_item));
+
+  /* Attempt the import, with const correctness removed. */
+  module = PyImport_ImportModuleEx((char *)name, NULL, NULL, from_list);
+  Py_DECREF(from_list);
+  if (!module)
+  {
+    return NULL;
+  }
+
+  /* Get the from_item from the module. */
+  item = PyObject_GetAttrString(module, (char *)from_item);
+  Py_DECREF(module);
+
+  return item;
+}
+
 /* module's initialization function for Python */
 extern EXTERN_API void initcBanana(void)
 {
   cBananaStateType.ob_type = &PyType_Type;
   cBanana_module = Py_InitModule("cBanana", cBanana__methods__);
   cBanana_dict = PyModule_GetDict(cBanana_module);
-  BananaError = PyErr_NewException("cBanana.error", NULL, NULL);
-  PyDict_SetItemString(cBanana_dict, "cBanana.error", BananaError);
+  BananaError = util_FromImport("twisted.spread.banana", "BananaError");
+  if (!BananaError) {
+    PyErr_Print();
+    /* this means we'll have our own exception type, not shared with
+       banana.py */
+    BananaError = PyErr_NewException("BananaError", NULL, NULL);
+  }
+  PyDict_SetItemString(cBanana_dict, "BananaError", BananaError);
 }
 

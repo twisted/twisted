@@ -27,13 +27,16 @@ for more details.
 @author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
 
-__version__ = "$Revision: 1.36 $"[11:-2]
+__version__ = "$Revision: 1.37 $"[11:-2]
 
 from twisted.internet import protocol
 from twisted.persisted import styles
 from twisted.python import log
 
 import types, copy, cStringIO, struct
+
+class BananaError(Exception):
+    pass
 
 def int2b128(integer, stream):
     if integer == 0:
@@ -70,6 +73,8 @@ LONGNEG  = chr(0x86)
 VOCAB    = chr(0x87)
 
 HIGH_BIT_SET = chr(0x80)
+
+SIZE_LIMIT = 640 * 1024   # 640k is all you'll ever need :-)
 
 class Pynana(protocol.Protocol, styles.Ephemeral):
     knownDialects = ["pb", "none"]
@@ -136,21 +141,23 @@ class Pynana(protocol.Protocol, styles.Ephemeral):
                 pos = pos + 1
             else:
                 if pos > 64:
-                    raise Exception("Security precaution: more than 64 bytes of prefix")
+                    raise BananaError("Security precaution: more than 64 bytes of prefix")
                 return
             num = buffer[:pos]
             typebyte = buffer[pos]
             rest = buffer[pos+1:]
             if len(num) > 64:
-                raise Exception("Security precaution: longer than 64 bytes worth of prefix")
+                raise BananaError("Security precaution: longer than 64 bytes worth of prefix")
             if typebyte == LIST:
                 num = b1282int(num)
+                if num > SIZE_LIMIT:
+                    raise BananaError("Security precaution: List too long.")
                 listStack.append((num, []))
                 buffer = rest
             elif typebyte == STRING:
                 num = b1282int(num)
-                if num > 640 * 1024: # 640k is all you'll ever need :-)
-                    raise Exception("Security precaution: Length identifier too long.")
+                if num > SIZE_LIMIT:
+                    raise BananaError("Security precaution: String too long.")
                 if len(rest) >= num:
                     buffer = rest[num:]
                     gotItem(rest[:num])
@@ -253,6 +260,9 @@ class Pynana(protocol.Protocol, styles.Ephemeral):
 
     def _encode(self, obj, write):
         if isinstance(obj, types.ListType) or isinstance(obj, types.TupleType):
+            if len(obj) > SIZE_LIMIT:
+                raise BananaError, \
+                      "list/tuple is too long to send (%d)" % len(obj)
             int2b128(len(obj), write)
             write(LIST)
             for elem in obj:
@@ -281,11 +291,14 @@ class Pynana(protocol.Protocol, styles.Ephemeral):
                 int2b128(symbolID, write)
                 write(VOCAB)
             else:
+                if len(obj) > SIZE_LIMIT:
+                    raise BananaError, \
+                          "string is too long to send (%d)" % len(obj)
                 int2b128(len(obj), write)
                 write(STRING)
                 write(obj)
         else:
-            raise RuntimeError, "could not send object: %s" % repr(obj)
+            raise BananaError, "could not send object: %s" % repr(obj)
 Banana = Pynana
 
 

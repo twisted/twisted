@@ -99,12 +99,43 @@ class BananaTestCase(unittest.TestCase):
             self.enc.dataReceived(byte)
         assert self.result == foo, "%s!=%s" % (repr(self.result), repr(foo))
 
+    def feed(self, data):
+        for byte in data:
+            self.enc.dataReceived(byte)
+    def testOversizedList(self):
+        data = '\x02\x01\x01\x01\x01\x80'
+        # list(size=0x0101010102, about 4.3e9)
+        self.failUnlessRaises(banana.BananaError, self.feed, data)
+    def testOversizedString(self):
+        data = '\x02\x01\x01\x01\x01\x82'
+        # string(size=0x0101010102, about 4.3e9)
+        self.failUnlessRaises(banana.BananaError, self.feed, data)
+
+    def testCrashString(self):
+        crashString = '\x00\x00\x00\x00\x04\x80'
+        # string(size=0x0400000000, about 17.2e9)
+
+        #  cBanana would fold that into a 32-bit 'int', then try to allocate
+        #  a list with PyList_New(). cBanana ignored the NULL return value,
+        #  so it would segfault when trying to free the imaginary list.
+
+        # This variant doesn't segfault straight out in my environment.
+        # Instead, it takes up large amounts of CPU and memory...
+        #crashString = '\x00\x00\x00\x00\x01\x80'
+        # print repr(crashString)
+        #self.failUnlessRaises(Exception, self.enc.dataReceived, crashString)
+        try:
+            # should now raise MemoryError
+            self.enc.dataReceived(crashString)
+        except banana.BananaError:
+            pass
+            
 testCases = [MathTestCase, BananaTestCase]
 
 if hasattr(banana, 'cBanana'):
     class CananaTestCase(BananaTestCase):
-    
         encClass = banana.Canana
+
     testCases.append(CananaTestCase)
 
 
