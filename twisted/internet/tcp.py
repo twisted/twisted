@@ -62,6 +62,7 @@ from errno import EAGAIN
 from twisted.internet import protocol, defer, base, address
 from twisted.persisted import styles
 from twisted.python import log, failure, reflect, components
+from twisted.python.util import unsignedID
 from twisted.python.runtime import platform, platformType
 from twisted.internet.error import CannotListenError
 
@@ -610,7 +611,7 @@ class Client(BaseClient):
         return address.IPv4Address('TCP', *(self.addr + ('INET',)))
 
     def __repr__(self):
-        s = '<%s to %s at %x>' % (self.__class__, self.addr, id(self))
+        s = '<%s to %s at %x>' % (self.__class__, self.addr, unsignedID(self))
         return s
 
 

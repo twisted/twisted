@@ -16,7 +16,7 @@ import traceback
 
 # Twisted imports
 from twisted.python import log, failure
-
+from twisted.python.util import unsignedID
 
 class AlreadyCalledError(Exception):
     pass
@@ -380,9 +380,9 @@ class Deferred:
     def __str__(self):
         cname = self.__class__.__name__
         if hasattr(self, 'result'):
-            return "<%s at %s  current result: %r>" % (cname, hex(id(self)),
+            return "<%s at %s  current result: %r>" % (cname, hex(unsignedID(self)),
                                                        self.result)
-        return "<%s at %s>" % (cname, hex(id(self)))
+        return "<%s at %s>" % (cname, hex(unsignedID(self)))
     __repr__ = __str__
 
 

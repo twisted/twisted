@@ -44,6 +44,17 @@ class UtilTestCase(unittest.TestCase):
         self.calls = 0
         self.assertEquals(util.untilConcludes(f, 2, 3), 5)
         self.assertEquals(self.calls, 3)
+    
+    def testUnsignedID(self):
+        util.id = lambda x: x
+        try:
+            for i in range(1, 100):
+                self.assertEquals(util.unsignedID(i), i)
+            top = (sys.maxint + 1L) * 2L
+            for i in range(-100, -1):
+                self.assertEquals(util.unsignedID(i), top + i)
+        finally:
+            del util.id
 
 class OrderedDictTest(unittest.TestCase):
     def testOrderedDict(self):

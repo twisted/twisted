@@ -692,10 +692,25 @@ def untilConcludes(f, *a, **kw):
                 continue
             raise
 
+# A value about twice as large as any Python int, to which negative values
+# from id() will be added, moving them into a range which should begin just
+# above where positive values from id() leave off.
+_HUGEINT = (sys.maxint + 1L) * 2L
+def unsignedID(obj):
+     """
+     Return the id of an object as an unsigned number so that its hex
+     representation makes sense
+     """
+     rval = id(obj)
+     if rval < 0:
+         rval += _HUGEINT
+     return rval
+
 __all__ = [
     "uniquify", "padTo", "getPluginDirs", "addPluginDir", "sibpath",
     "getPassword", "dict", "println", "keyed_md5", "makeStatBar",
     "OrderedDict", "InsensitiveDict", "spewer", "searchupwards", "LineLog",
-    "raises", "IntervalDifferential", "FancyStrMixin", "FancyEqMixin", "dsu",
-    "switchUID", "SubclassableCStringIO", "moduleMovedForSplit"
+    "raises", "IntervalDifferential", "FancyStrMixin", "FancyEqMixin",
+    "dsu", "switchUID", "SubclassableCStringIO", "moduleMovedForSplit",
+    "unsignedID"
 ]
