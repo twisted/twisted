@@ -22,7 +22,7 @@ class TokenPrinter:
             type = "identifier"
             self.parameters = 1
         elif type == tokenize.NAME:
-             if keyword.kwdict.has_key(token):
+             if keyword.iskeyword(token):
                  type = 'keyword'
              else:
                  if self.parameters:
