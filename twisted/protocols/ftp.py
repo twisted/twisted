@@ -309,7 +309,7 @@ class FTP(protocol.Protocol, DTPFactory):
             self.action = action
 
     def reply(self, key, s = ''):
-        if ftp_reply[key].find('%s') > -1:
+        if string.find(ftp_reply[key], '%s') > -1:
             self.transport.write(ftp_reply[key] % s + '\r\n')
         else:
             self.transport.write(ftp_reply[key] + '\r\n')
@@ -599,7 +599,7 @@ class FTP(protocol.Protocol, DTPFactory):
         print "-"+command+"-"
         if command == '':
             return 0
-        if line.count(' ') > 0:
+        if string.count(line, ' ') > 0:
             params = line[string.find(line, ' ')+1:]
         else:
             params = ''
