@@ -1,4 +1,6 @@
 
+import time
+
 from twisted.trial import unittest
 
 from test_recvline import _x
@@ -78,3 +80,39 @@ class ManholeLoopback(_x, unittest.TestCase):
         self._test(
             "cancelled line" + ctrld,
             [""])
+
+    def testDeferred(self):
+        self._test(
+            "from twisted.internet import defer, reactor\n"
+            "def deferLater(n):\n"
+            "\td = defer.Deferred()\n"
+            "\treactor.callLater(n, d.callback, 'Hi!')\n"
+            "\treturn d\n"
+            "\n"
+            "deferLater(0.1)\n",
+            [">>> from twisted.internet import defer, reactor",
+             ">>> def deferLater(n):",
+             "...     d = defer.Deferred()",
+             "...     reactor.callLater(n, d.callback, 'Hi!')",
+             "...     return d",
+             "...",
+             ">>> deferLater(0.1)",
+             "<Deferred #0>",
+             ">>>"])
+
+        time.sleep(0.2)
+        from twisted.internet import reactor
+        reactor.iterate()
+
+        self._test(
+            "",
+            [">>> from twisted.internet import defer, reactor",
+             ">>> def deferLater(n):",
+             "...     d = defer.Deferred()",
+             "...     reactor.callLater(n, d.callback, 'Hi!')",
+             "...     return d",
+             "...",
+             ">>> deferLater(0.1)",
+             "<Deferred #0>",
+             "Deferred #0 called back: 'Hi!'",
+             ">>>"])
