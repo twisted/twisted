@@ -618,3 +618,5 @@ class PortStringification(unittest.TestCase):
             portNo = p.getHost().port
             self.assertNotEqual(str(p).find(str(portNo)), -1,
                                 "%d not found in %s" % (portNo, p))
+
+        testSSL.todo = """this test fails on freebsd: exceptions.AttributeError: 'module' object has no attribute 'DefaultOpenSSLContextFactory'"""

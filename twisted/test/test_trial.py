@@ -1,346 +1,262 @@
-# -*- Python -*-
+# -*- test-case-name: twisted.test.test_trial.FunctionallyTestTrial -*-
+
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.16 $"[11:-2]
+__version__ = "$Revision: 1.17 $"[11:-2]
 
-from twisted.python import reflect
-from twisted.trial import unittest, reporter, util, runner
-from StringIO import StringIO
-import sys
-import os
-
-class TestTraceback(unittest.TestCase):
-    def testExtractTB(self):
-        """Making sure unittest doesn't show up in traceback."""
-        suite = unittest.TestSuite()
-        testCase = self.FailingTest()
-        result = unittest.Tester(testCase.__class__, testCase,
-                                 testCase.testThatWillFail,
-                                 runner.runTest).run()
-        failType, (eType, eVal, tb) = result
-        stackList = util.extract_tb(tb)
-        self.failUnlessEqual(len(stackList), 1)
-        self.failUnlessEqual(stackList[0][2], 'testThatWillFail')
-
-    # Hidden in here so the failing test doesn't get sucked into the bigsuite.
-    class FailingTest(unittest.TestCase):
-        def testThatWillFail(self):
-            self.fail("Broken by design.")
-
-###################
-# trial.remote
-
+from twisted.trial.reporter import SKIP, EXPECTED_FAILURE, FAILURE, ERROR, UNEXPECTED_SUCCESS, SUCCESS
+from twisted.python import reflect, failure, log, procutils, util as pyutil, compat
+from twisted.internet import defer, reactor, protocol, error
 from twisted.protocols import loopback
-from twisted.trial import remote
 from twisted.spread import banana, jelly
+from twisted.trial import unittest, reporter, util, runner, itrial, remote
+from twisted.trial.unittest import failUnless, failUnlessIn, failIfIn, failUnlessRaises
+from twisted.trial.unittest import failUnlessEqual, failIf, failIfIdentical, failUnlessSubstring
+from twisted.trial.unittest import failUnlessSubstring, failIfSubstring
+from twisted.test import trialtest1, trialtest2
+from StringIO import StringIO
 
-_negotiate = '\x01\x80\x04\x82none'
-_encStart = '\x03\x80\x05\x82tuple\x05\x82start\x02\x80\x05\x82tuple\x01\x81'
+import zope.interface as zi
 
+from pprint import pprint
+import sys, os, os.path as osp
+from os.path import join as opj
 
-class RemoteReporter:
-    expectedTests = None
-    def __init__(self):
-        self.errors = []
-        self.importErrors = []
-        
-    def remote_start(self, expectedTests, times=None):
-        self.expectedTests = expectedTests
+import cPickle as pickle
 
-    def remote_reportResults(self, testClass, methodName, resultType,
-                             results, times=None):
-        assert resultType == reporter.ERROR
-        if resultType == reporter.ERROR:
-            self.errors.append((testClass, methodName, results))
+__doctest__ = True
 
-    def remote_reportImportError(self, name, failure, times=None):
-        self.importErrors.append((name, failure))
+def foobar(arg):
+    """excercise doctest capabilities
+    >>> foobar('happy days')
+    happy days
+    >>> 
+    """
+    print arg
 
-class OneShotDecoder(remote.DecodeReport):
-    def expressionReceived(self, lst):
-        remote.DecodeReport.expressionReceived(self, lst)
-        self.transport.loseConnection()
-
-class JellyReporterWithHook(remote.JellyReporter):
     
-    def makeConnection(self, transport):
-        remote.JellyReporter.makeConnection(self, transport)
-        self._runHook()
+class LogObserver:
+    channels = compat.adict(
+        foobar = True
+    )
+    def __init__(self, outputter=None):
+        self.outputter = outputter
+        if outputter is None:
+            self.outputter = lambda events, k: pyutil.println(''.join(events[k]))
 
-class TestJellyReporter(unittest.TestCase):
+    def setOutputter(self, f):
+        if not callable(f):
+            raise TypeError, "argument to setOutputter must be a callable object"
+        self.outputter = f
+
+    def install(self):
+        log.addObserver(self)
+        return self
+
+    def remove(self):
+        # hack to get around trial's brokeness
+        if self in log.theLogPublisher.observers:
+            log.removeObserver(self)
+
+    def __call__(self, events):
+        for k in events:
+            if self.channels.get(k, None):
+                #self.outputter(events, k)
+                print repr(events)
+
+class UserError(Exception):
+    pass
+
+class TestUserMethod(unittest.TestCase):
     def setUp(self):
-        self.stream = StringIO()
-        self.reporter = remote.JellyReporter(self.stream)
-        self.reporter.doSendTimes = False
-        
-    def testStart(self):
-        self.reporter.start(1)
-        self.failUnlessEqual(_negotiate + _encStart, self.stream.getvalue())
+        self.janitor = util.Janitor()
 
-    def testError(self):
+    def errorfulMethod(self):
+        raise UserError, 'i am a user error'
+
+    def errorfulDeferred(self):
+        f = None
         try:
-            monkey / 0
-        except Exception:
-            self.reporter.reportResults("aTestClass", "aMethod",
-                                        reporter.ERROR,
-                                        sys.exc_info())
+            self.errorfulMethod()
+        except:
+            f = failure.Failure()
+        return defer.fail(f)
+    
+    def testErrorHandling(self):
+        """wrapper around user code"""
+        umw = runner.UserMethodWrapper(self.errorfulMethod, self.janitor)
+        failUnlessRaises(runner.UserMethodError, umw)
+        failUnless(umw.errors[0].check(UserError))
+        failUnless(umw.endTime > umw.startTime)
 
-
-class TestRemoteReporter(unittest.TestCase):
-    def setUp(self):
-        self.reporter = RemoteReporter()
-        self.decoder = remote.DecodeReport(self.reporter)
-        self.decoder.dataReceived(_negotiate)
-
-    def testStart(self):
-        self.decoder.dataReceived(_encStart)
-        self.failUnlessEqual(self.reporter.expectedTests, 1)
-
-
-class LoopbackTests(unittest.TestCase):
-    def setUp(self):
-        self.sendReporter = JellyReporterWithHook()
-
-        self.reporter = RemoteReporter()
-        self.decoder = OneShotDecoder(self.reporter)
-
-    def testStart(self):
-        self.sendReporter._runHook = lambda : self.sendReporter.start(1)
-        loopback.loopback(self.sendReporter, self.decoder)
-        self.failUnlessEqual(self.reporter.expectedTests, 1)
-
-    def testError(self):
-        try:
-            monkey / 0
-        except Exception:
-            self.sendReporter._runHook = lambda : (
-                self.sendReporter.reportResults("aTestClass", "aMethod",
-                                                reporter.ERROR,
-                                                sys.exc_info()))            
-        loopback.loopback(self.sendReporter, self.decoder)
-        self.failUnlessEqual(len(self.reporter.errors), 1)
-        self.failUnlessEqual(self.reporter.errors[0][:2], ("aTestClass",
-                                                           "aMethod"))
-        f = self.reporter.errors[0][-1]
-        self.failUnlessEqual(f.type, reflect.qual(NameError))
-
-    def testImportError(self):
-        try:
-            import nosuchmoduleasthis
-        except ImportError, exc:
-            self.sendReporter._runHook = lambda : (
-                self.sendReporter.reportImportError("nosuchmoduleasthis", exc))
-        loopback.loopback(self.sendReporter, self.decoder)
-        self.failUnlessEqual(len(self.reporter.importErrors), 1)
-        f = self.reporter.importErrors[0][-1]
-        self.failUnlessEqual(self.reporter.importErrors[0][0],
-                             "nosuchmoduleasthis")
-        self.failUnlessEqual(f.type, ImportError)
-
-class TestTests(unittest.TestCase):
-    # first, the things we're going to test
-    class Tests(unittest.TestCase):
-        def __init__(self):
-            self.setupRun = 0
-            self.teardownRun = 0
-        def setUp(self):
-            self.setupRun += 1
-        def tearDown(self):
-            self.teardownRun += 1
-        def testSuccess_pass(self):
-            pass
-        def testFail_fail(self):
-            self.fail("failed")
-        def testFailIf_pass(self):
-            self.failIf(0, "failed")
-        def testFailIf_fail(self):
-            self.failIf(1, "failed")
-        def testFailUnless_pass(self):
-            self.failUnless(1, "failed")
-        def testFailUnless_fail(self):
-            self.failUnless(0, "failed")
-        def testFailUnlessRaises_pass(self):
-            def boom():
-                raise ValueError
-            self.failUnlessRaises(ValueError, boom)
-        def testFailUnlessRaises1_fail(self):
-            def boom():
-                raise IndexError
-            self.failUnlessRaises(ValueError, boom)
-        def testFailUnlessRaises2_fail(self):
-            def boom():
-                pass
-            self.failUnlessRaises(ValueError, boom)
-        def testFailUnlessEqual_pass(self):
-            self.failUnlessEqual(1, 1, "failed")
-        def testFailUnlessEqual_fail(self):
-            self.failUnlessEqual(1, 2, "failed")
-        def testFailIfEqual_fail(self):
-            self.failIfEqual(1, 1, "failed")
-        def testFailIfEqual_pass(self):
-            self.failIfEqual(1, 2, "failed")
-        def testFailUnlessIdentical_pass(self):
-            a = [1,2]
-            b = a
-            self.failUnlessIdentical(a, b, "failed")
-        def testFailUnlessIdentical1_fail(self):
-            a = [1,2]
-            b = [1,2]
-            self.failUnlessIdentical(a, b, "failed")
-        def testFailUnlessIdentical2_fail(self):
-            a = [1,2]
-            b = [3,4]
-            self.failUnlessIdentical(a, b, "failed")
-        def testApproximates1_pass(self):
-            a = 1.0
-            b = 1.2
-            self.assertApproximates(a, b, .3, "failed")
-        def testApproximates2_pass(self):
-            a = 1.0
-            b = 1.2
-            self.assertApproximates(b, a, .3, "failed")
-        def testApproximates3_fail(self):
-            a = 1.0
-            b = 1.2
-            self.assertApproximates(a, b, .1, "failed")
-        def testApproximates4_fail(self):
-            a = 1.0
-            b = 1.2
-            self.assertApproximates(b, a, .1, "failed")
-        def testSkip1_skip(self):
-            raise unittest.SkipTest("skip me")
-        def testSkip2_skip(self):
-            pass
-        testSkip2_skip.skip = "skip me"
-        def testTodo1_exfail(self):
-            self.fail("deliberate failure")
-        testTodo1_exfail.todo = "expected to fail"
-        def testTodo2_exfail(self):
-            raise ValueError
-        testTodo2_exfail.todo = "expected to fail"
-        def testTodo3_unexpass(self):
-            pass # unexpected success
-        testTodo3_unexpass.todo = "expected to fail"
+    def testDeferredError(self):
+        umw = runner.UserMethodWrapper(self.errorfulDeferred, self.janitor)
+        failUnlessRaises(runner.UserMethodError, umw)
+        failUnless(umw.errors[0].check(UserError))
+        failUnless(umw.endTime > umw.startTime)
         
-            
-            
-    def checkResults(self, rep, method):
-        self.failIf(rep.imports, "%s caused import error" % method)
-        self.failUnless(rep.numTests == 1,
-                        "%s had multiple tests" % method)
-        if method[-5:] == "_pass":
-            self.failIf(rep.errors)
-            self.failIf(rep.failures)
-            self.failIf(rep.skips)
-            self.failIf(rep.expectedFailures)
-            self.failIf(rep.unexpectedSuccesses)
-        if method[-5:] == "_fail":
-            self.failIf(rep.errors)
-            self.failUnless(len(rep.failures) == 1,
-                            "%s had %d failures" % (method,
-                                                    len(rep.failures)))
-            self.failIf(rep.skips)
-            self.failIf(rep.expectedFailures)
-            self.failIf(rep.unexpectedSuccesses)
-        if method[-6:] == "_error":
-            self.failUnless(len(rep.errors) == 1,
-                            "%s had %d errors" % (method,
-                                                  len(rep.errors)))
-            self.failIf(rep.failures)
-            self.failIf(rep.skips)
-            self.failIf(rep.expectedFailures)
-            self.failIf(rep.unexpectedSuccesses)
-        if method[-5:] == "_skip":
-            self.failIf(rep.errors)
-            self.failIf(rep.failures)
-            self.failUnless(len(rep.skips) == 1,
-                            "%s had %d skips" % (method,
-                                                 len(rep.skips)))
-            self.failIf(rep.expectedFailures)
-            self.failIf(rep.unexpectedSuccesses)
-        if method[-7:] == "_exfail":
-            self.failIf(rep.errors)
-            self.failIf(rep.failures)
-            self.failIf(rep.skips)
-            self.failUnless(len(rep.expectedFailures) == 1,
-                            "%s had %d expectedFailures" % \
-                            (method, len(rep.expectedFailures)))
-            self.failIf(rep.unexpectedSuccesses)
-        if method[-9:] == "_unexpass":
-            self.failIf(rep.errors)
-            self.failIf(rep.failures)
-            self.failIf(rep.skips)
-            self.failIf(rep.expectedFailures)
-            self.failUnless(len(rep.unexpectedSuccesses) == 1,
-                            "%s had %d unexpectedSuccesses" % \
-                            (method, len(rep.unexpectedSuccesses)))
-        
-    def testTests(self):
-        suite = unittest.TestSuite()
-        suffixes = reflect.prefixedMethodNames(TestTests.Tests, "test")
-        for suffix in suffixes:
-            method = "test" + suffix
-            testCase = self.Tests()
 
-            # if one of these test cases fails, switch to TextReporter to
-            # see what happened
+class BogusReporter(reporter.Reporter):
+    def __init__(self):
+        pass
+    stream = log.NullFile()
+    tbformat = 'plain'
+    bogus = lambda *a, **kw: None
+    upDownError = startModule = endModule = bogus
+    startClass = endClass = startTest = endTest = cleanupErrors = bogus
 
-            rep = reporter.Reporter()
-            #reporter = reporter.TextReporter()
-            #print "running '%s'" % method
 
-            rep.start(1)
-
-            result = unittest.Tester(testCase.__class__, testCase,
-                                     getattr(testCase, method),
-                                     lambda x: x()).run()
-            rep.reportResults(testCase.__class__, getattr(self.Tests, method),
-                              *result)
-            # TODO: verify that case.setUp == 1 and case.tearDown == 1
-            try:
-                self.checkResults(rep, method)
-            except unittest.FailTest:
-                # with TextReporter, this will show the traceback
-                print
-                print "problem in method '%s'" % method
-                reporter.stop()
-                raise
-            
-class UtilityTestCase(unittest.TestCase):
+class TestMktemp(unittest.TestCase):
     def testMktmp(self):
         tmp = self.mktemp()
         tmp1 = self.mktemp()
         exp = os.path.join('twisted.test.test_trial', 'UtilityTestCase', 'testMktmp')
         self.failIfEqual(tmp, tmp1)
-        self.failUnless(os.path.exists(exp))
-        self.failUnless(os.path.isdir(exp))
+        self.failIf(os.path.exists(exp))
 
 
-# this class is here to demonstrate a use case in trial. It will always
-# fail, therefore it is turned off. The way it fails is enlightening,
-# however.
+class ChProcessProtoocol(protocol.ProcessProtocol):
+    sawTheEnd = None
+    def __init__(self, done):
+        self.done = done
+        self.ended = defer.Deferred()
+        self.out, self.err = [], []
+        
+    def outReceived(self, data):
+        self.out.append(data)
+##         for line in data.split('\n'):
+##             print "LINE: %s" % (line,)
 
-if False:
-    class DemoTest(unittest.TestCase):
-        def setUp(self):
-            self.finished = False
+    def errReceived(self, data):
+        self.err.append(data)
+##         for line in data.split('\n'):
+##             sys.stderr.write("\n\tchild stderr: %s" % (line,))
+##             sys.stderr.flush()
 
-        def go(self):
-            if True:
-                raise RuntimeError("something blew up")
-            self.finished = True
+    def processEnded(self, status):
+        lines = ''.join(self.out).split('\n') 
+        lines.reverse()
+        for line in lines:
+            if (line.find("Ran") != -1) and (line.find("tests") != -1):
+                self.done.callback(self)
+                return
+        self.done.errback(status)
 
-        def testHiddenException(self):
-            import time
-            from twisted.internet import reactor
-            reactor.callLater(0.5, self.go)
-            timeout = time.time() + 2
-            while not (self.finished or time.time() > timeout):
-                reactor.iterate(0.1)
-            # note that this assertion fails, but the RuntimeError which is
-            # the root cause is not displayed
-            self.failUnless(self.finished)
+class SpawningMixin:
+    def spawnChild(self, args):
+        TRIAL = procutils.which('trial')[0]
+
+        env = {}
+        env['PATH'] = os.environ.get('PATH', '')
+
+        done = defer.Deferred()
+        self.cpp = ChProcessProtoocol(done)
+        self.process = procutils.spawnPythonProcess(self.cpp, args, env, packages=('twisted',))
+        return done
+
+
+class FunctionallyTestTrial(unittest.TestCase, SpawningMixin):
+    """functionally test trial in cases where it would be too difficult to test in the
+       same process
+    """
+    cpp = None
+
+    def setUpClass(self):
+        self.trial = procutils.which('trial')[0]
+        self.args = ['python', self.trial, "-o"]
+
+    def tearDown(self):
+        pass
+
+    def _failIfIn(self, astring):
+        out = ''.join(self.cpp.out)
+        failIfSubstring(astring, out,
+                     "%r not found in child process output:\n\n%s" % (astring,
+                        '\n'.join(['\tOUT: %s' % line for line in out.split('\n')])))
+
+    def _failUnlessIn(self, astring):
+        out = ''.join(self.cpp.out)
+        failUnlessSubstring(astring, out,
+                     "%r not found in child process output:\n\n%s" % (astring,
+                        '\n'.join(['\tOUT: %s' % line for line in out.split('\n')])))
+
+    def testBrokenSetUp(self):
+        args = self.args + ['twisted.test.trialtest1.TestFailureInSetUp']
+
+        def _cb(cpp):
+            self._failUnlessIn(reporter.SET_UP_WARN)
+            self._failIfIn(trialtest1.TEAR_DOWN_MSG) # if setUp is broken, tearDown should not run
+        return self.spawnChild(args).addCallback(_cb)
+    
+    def testBrokenTearDown(self):
+        args = self.args + ['twisted.test.trialtest1.TestFailureInTearDown']
+
+        def _cb(cpp):
+            self._failUnlessIn(reporter.TEAR_DOWN_WARN)
+        return self.spawnChild(args).addCallback(_cb)
+        
+    def testBrokenSetUpClass(self):
+        args = self.args + ['twisted.test.trialtest1.TestFailureInSetUpClass']
+        
+        def _cb(cpp):
+            # if setUp is broken, tearDownClass should not run
+            #
+            self._failUnlessIn(reporter.SET_UP_CLASS_WARN)
+            self._failIfIn(trialtest1.TEAR_DOWN_CLASS_MSG)
+        return self.spawnChild(args).addCallback(_cb)
+
+    def testBrokenTearDownClass(self):
+        args = self.args + ['twisted.test.trialtest1.TestFailureInTearDownClass']
+
+        def _cb(cpp):
+            self._failUnlessIn(reporter.TEAR_DOWN_CLASS_WARN)
+        return self.spawnChild(args).addCallback(_cb)
+
+    def testHiddenException(self):
+        args = self.args + ['twisted.test.trialtest1.DemoTest.testHiddenException']
+        def _cb(cpp):
+            self._failUnlessIn(trialtest1.HIDDEN_EXCEPTION_MSG)
+        return self.spawnChild(args).addCallback(_cb)
+
+    def testLeftoverSockets(self):
+        args = self.args + ['twisted.test.trialtest1.ReactorCleanupTests.test_socketsLeftOpen']
+        def _cb(cpp):
+            self._failUnlessIn(util.DIRTY_REACTOR_MSG)
+            # when it becomes an error to leave selectables in the reactor
+            # uncomment the following line: 
+            #self._failUnlessIn(reporter.UNCLEAN_REACTOR_WARN)
+            self._failUnlessIn(util.DIRTY_REACTOR_MSG)
+        return self.spawnChild(args).addCallback(_cb)
+
+    def testLeftoverPendingCalls(self):
+        args = self.args + ['twisted.test.trialtest1.ReactorCleanupTests.test_leftoverPendingCalls']
+
+        def _cb(cpp):
+            self._failUnlessIn(reporter.UNCLEAN_REACTOR_WARN)
+            self._failUnlessIn(util.PENDING_TIMED_CALLS_MSG)
+        return self.spawnChild(args).addCallback(_cb)
+    
+    def testPyUnitSupport(self):
+        args = self.args + ['twisted.test.trialtest2.TestPyUnitSupport']
+        def _cb(cpp):
+            for msg in trialtest2.MESSAGES:
+                self._failUnlessIn(msg)
+        return self.spawnChild(args).addCallback(_cb)
+
+    def testTests(self):
+        args = self.args + ['twisted.test.trialtest3.TestTests']
+        def _cb(cpp):
+            self._failUnlessIn("[OK]")
+            self._failUnlessIn("PASSED")
+        return self.spawnChild(args).addCallback(_cb)
+
+    def testBenchmark(self):
+        args = self.args + ['twisted.test.trialtest3.TestBenchmark']
+        def _cb(cpp):
+            self._failUnlessIn("[OK]")
+            self._failUnlessIn("PASSED")
+        return self.spawnChild(args).addCallback(_cb)

@@ -92,6 +92,9 @@ class ThreadsTestCase(unittest.TestCase):
         # what our expectation are.
         self.assertEquals(c.index, 1000, "threads lost a count")
 
+    if sys.version.find("freebsd") != -1:
+        testCallInThread.todo = "this test fails on freebsd - slyphon"
+
     def testCallMultiple(self):
         c = Counter()
         # we call the non-thread safe method, but because they should

@@ -200,7 +200,7 @@ class DBTestConnector:
 
     def setUpClass(self):
         if not self.can_connect():
-            self.skip = '%s: Cannot access db' % self.TEST_PREFIX
+            raise unittest.SkipTest, '%s: Cannot access db' % self.TEST_PREFIX
 
     def can_connect(self):
         """Return true if this database is present on the system
