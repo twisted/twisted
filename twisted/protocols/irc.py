@@ -43,7 +43,7 @@ Test coverage needs to be better.
 <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-__version__ = '$Revision: 1.87 $'[11:-2]
+__version__ = '$Revision: 1.88 $'[11:-2]
 
 from twisted.internet import reactor, protocol
 from twisted.persisted import styles
@@ -202,7 +202,84 @@ class IRC(protocol.Protocol):
     def irc_unknown(self, prefix, command, params):
         """Implement me!"""
         raise NotImplementedError
+    
+    # Helper methods
+    def privmsg(self, sender, recip, message):
+        """Send a message to a channel or user
+        
+        @type sender: C{str}
+        @param sender: Who is sending this message.  Should be of the form
+        username!ident@hostmask (unless you know better!).
+        
+        @type recip: C{str}
+        @param recip: The recipient of this message.  If a channel, it
+        must start with a channel prefix.
+        
+        @type message: C{str}
+        @param message: The message being sent.
+        """
+        self.sendLine(":%s PRIVMSG %s :%s" % (sender, recip, message))
+    
+    def notice(self, sender, recip, message):
+        """Send a \"notice\" to a channel or user.
+        
+        Notices differ from privmsgs in that the RFC claims they are different.
+        Robots are supposed to send notices and not respond to them.  Clients
+        typically display notices differently from privmsgs.
+        
+        @type sender: C{str}
+        @param sender: Who is sending this message.  Should be of the form
+        username!ident@hostmask (unless you know better!).
+        
+        @type recip: C{str}
+        @param recip: The recipient of this message.  If a channel, it
+        must start with a channel prefix.
+        
+        @type message: C{str}
+        @param message: The message being sent.
+        """
+        self.sendLine(":%s NOTICE %s :%s" % (sender, recip, message))
 
+    def action(self, sender, recip, message):
+        """Send an action to a channel or user.
+        
+        @type sender: C{str}
+        @param sender: Who is sending this message.  Should be of the form
+        username!ident@hostmask (unless you know better!).
+        
+        @type recip: C{str}
+        @param recip: The recipient of this message.  If a channel, it
+        must start with a channel prefix.
+        
+        @type message: C{str}
+        @param message: The action being sent.
+        """
+        self.sendLine(":%s ACTION %s :%s" % (sender, recip, message))
+
+    def join(self, who, where):
+        """Send a join message.
+        
+        @type who: C{str}
+        @param who: The name of the user joining.  Should be of the form
+        username!ident@hostmask (unless you know better!).
+        
+        @type where: C{str}
+        @param where: The channel the user is joining.
+        """
+        self.sendLine(":%s JOIN %s" % (who, where))
+    
+    def part(self, who, where):
+        """Send a part message.
+
+        @type who: C{str}
+        @param who: The name of the user joining.  Should be of the form
+        username!ident@hostmask (unless you know better!).
+        
+        @type where: C{str}
+        @param where: The channel the user is joining.
+        """
+        self.sendLine(":%s PART %s" % (who, where))
+        
 
 class IRCClient(basic.LineReceiver):
     """Internet Relay Chat client protocol, with sprinkles.
