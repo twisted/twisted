@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.22 2002/12/04 22:02:07 z3p Exp $
+# $Id: conch.py,v 1.23 2002/12/07 15:14:05 z3p Exp $
 
 #""" Implementation module for the `ssh` command.
 #"""
@@ -51,7 +51,7 @@ class GeneralOptions(usage.Options):
                 ['log', 'v', 'Log to stderr'],
                 ['nox11', 'x']]
 
-    identitys = ['~/.ssh/id_rsa', '~/.ssh/id_dsa']
+    identitys = []
     localForwards = []
     remoteForwards = []
 
@@ -133,6 +133,8 @@ def run():
     log.deferr = handleError # HACK
     if '@' in options['host']:
         options['user'], options['host'] = options['host'].split('@',1)
+    if not options.identitys:
+        options.identitys = ['~/.ssh/id_rsa', '~/.ssh/id_dsa']
     host = options['host']
     port = int(options['port'] or 22)
     log.msg((host,port))
@@ -287,11 +289,25 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         return keys.getPublicKeyString(file) 
     
     def getPrivateKey(self):
-        # doesn't handle encryption
         file = os.path.expanduser(self.usedFiles[-1])
         if not os.path.exists(file):
             return None
-        return keys.getPrivateKeyObject(file)
+        try:
+            return keys.getPrivateKeyObject(file)
+        except keys.BadKeyError, e:
+            if e.args[0] == 'encrypted key with no password':
+                for i in range(3):
+                    prompt = "Enter passphrase for key '%s': " % \
+                           self.usedFiles[-1]
+                    oldout, oldin = sys.stdout, sys.stdin
+                    sys.stdin = sys.stdout = open('/dev/tty','r+')
+                    p=getpass.getpass(prompt)
+                    sys.stdout,sys.stdin=oldout,oldin
+                    try:
+                        return keys.getPrivateKeyObject(file, password = p)
+                    except keys.BadKeyError:
+                        pass
+            raise
 
 class SSHConnection(connection.SSHConnection):
     def serviceStarted(self):

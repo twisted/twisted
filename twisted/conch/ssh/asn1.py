@@ -46,7 +46,7 @@ def parse(data):
         if t == SEQUENCE:
             things.append(parse(body))
         elif t == INTEGER:
-            assert (ord(body[0])&0x80) == 0, "shouldn't have negative number"
+            #assert (ord(body[0])&0x80) == 0, "shouldn't have negative number"
             things.append(number.bytes_to_long(body))
     if len(things) == 1:
         return things[0]

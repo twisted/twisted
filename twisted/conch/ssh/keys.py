@@ -26,9 +26,10 @@ Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 import base64
 import os.path
 import string
-import sha
+import sha, md5
 
 # external library imports
+from Crypto.Cipher import DES
 from Crypto.PublicKey import RSA, DSA
 from Crypto import Util
 
@@ -75,14 +76,27 @@ def getPublicKeyObject(filename = None, line = 0, data = '', b64data = ''):
         y, rest = common.getMP(rest)
         return DSA.construct((y, g, p, q))
 
-def getPrivateKeyObject(filename = None, data = ''):
+def getPrivateKeyObject(filename = None, data = '', password = ''):
     if filename:
         data = open(filename).readlines()
     else:
         data = [x+'\n' for x in data.split('\n')]
     kind = data[0][11: 14]
-    keyData = base64.decodestring(''.join(data[1:-1]))
+    if data[1].startswith('Proc-Type: 4,ENCRYPTED'): # encrypted key
+        ivdata = data[2].split(',')[1][:-1]
+        iv = ''.join([chr(int(ivdata[i:i+2],16)) for i in range(0, len(ivdata), 2)])
+        if not password:
+            raise BadKeyError, 'encrypted key with no password'
+        ba = md5.new(password + iv).digest()
+        bb = md5.new(ba + password + iv).digest()
+        decKey = (ba + bb)[:24]
+        b64Data = base64.decodestring(''.join(data[4:-1]))
+        keyData = des_cbc3_decrypt(b64Data, decKey, iv)
+    else:
+        keyData = base64.decodestring(''.join(data[1:-1]))
     decodedKey = asn1.parse(keyData)
+    if type(decodedKey[0]) == type([]):
+        decodedKey = decodedKey[0] # this happens with encrypted keys
     if kind == 'RSA':
         return RSA.construct(decodedKey[1: 6])
     elif kind == 'DSA':
@@ -167,3 +181,20 @@ def printKey(obj):
 
 ID_SHA1 = '\x30\x21\x30\x09\x06\x05\x2b\x0e\x03\x02\x1a\x05\x00\x04\x14'
 
+def des_cbc3_decrypt(src, key, iv):
+    scheds = [key[i:i+8] for i in range(0,24,8)]
+    e1,e2,e3 = map(lambda x:DES.new(x,DES.MODE_ECB), scheds)
+    i = 0
+    out = ''
+    prev = iv
+    while src:
+        enc, src = src[:8], src[8:]
+        t1 = e3.decrypt(enc)
+        t2 = e2.encrypt(t1)
+        t3 = e1.decrypt(t2)
+        out += _strxor(t3, prev)
+        prev = enc
+    return out
+
+def _strxor(s1,s2):
+    return "".join(map(lambda x, y: chr(ord(x) ^ ord(y)), s1, s2))
