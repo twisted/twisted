@@ -147,7 +147,8 @@ if '__main__' == __name__:
 # broken up till urllib2.py revision 1.53.6.2 or Python 2.3.4; so, if
 # you have Python 2.3.2 or 2.3.3 you can fetch this file from CVS.
 #
-# curl --user bing:gnib --digest "http://127.0.0.1:8080/data"
+# curl -b cookies -c cookies --user bing:gnib --digest \
+#     "http://127.0.0.1:8080/data"
 #
 def fetch():
     import urllib2
