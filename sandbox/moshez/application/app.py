@@ -1,7 +1,7 @@
 from twisted.python import components
 from twisted.application import service, persist
 
-class Application(MultiService, component.Componentized):
+class Application(service.MultiService, components.Componentized):
 
     processName = None
 

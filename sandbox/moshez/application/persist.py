@@ -7,12 +7,12 @@ def encrypt(passphrase, data):
     import md5
     from Crypto.Cipher import AES as cipher
     leftover = len(data) % cipher.block_size
-    if leftover
+    if leftover:
         data = data + ' '*(cipher.block_size - leftover)
     return cipher.new(md5.new(passphrase).digest()[:16]).encrypt(data)
 
 
-class IPersistable(Interface):
+class IPersistable(components.Interface):
 
     def setPassword(self, password):
         pass
