@@ -13,9 +13,9 @@ from twisted.cred.util import challenge
 from twisted.cred.authorizer import DefaultAuthorizer
 from twisted.cred.identity import Identity
 
-    
+
 class TicketAuthorizer(DefaultAuthorizer):
-    
+
     def loadIdentity(self, identityName, keys):
         log.msg( "loading identity: %s:%s " %(identityName, keys))
         ticket = challenge()
@@ -46,7 +46,7 @@ class SisterMotherClient(Referenceable):
         method = getattr(resource, "sister_%s" % methodName)
         fullArgs = (srcResourceType, srcResourceName) + args
         return apply(method, fullArgs, kw)
-        
+
 class SisterService(Service, Perspective):
     """A 'sister' object, managed by a mother server
 
@@ -80,15 +80,15 @@ class SisterService(Service, Perspective):
         self.application.authorizer.sisterService = self
         ## identities are a special kind of resource
         self.registerResourceLoader("identity", self.application.authorizer.loadIdentity)
-        
+
         # this will be the first method called on the mother connection once it is setup
         self.motherRef.callRemote('publishIP', publishHost, self.localPort, self.sisterMother)
-        
+
     def startService(self):
         log.msg( 'starting sister, woo')
 
     def __getstate__(self):
-        d = self.__dict__.copy()
+        d = Service.__getstate__(self)
         d['ownedResources'] = {}
         d['remoteResources'] = {}
         return d
@@ -135,7 +135,7 @@ class SisterService(Service, Perspective):
         """
         log.msg( 'sister: registering resource loader %s:%s' % (resourceType, repr(resourceLoader)))
         self.resourceLoaders[resourceType] = resourceLoader
-        
+
     def unloadResource(self, resourceType, resourceName):
         print "sister: unloading (%s:%s)" %(resourceType, resourceName)
         del self.ownedResources[ (resourceType, resourceName) ]
