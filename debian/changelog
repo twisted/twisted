@@ -1,4 +1,4 @@
-twisted (1.0.1alpha1-1) unstable; urgency=low
+twisted (1.0.1-1) unstable; urgency=low
 
   * Semi dummy entry, to remind me stuff I need to write:
   * Split out conch
@@ -10,6 +10,7 @@ twisted (1.0.1alpha1-1) unstable; urgency=low
   * Split out doc-api
     * It's HUGE and many people don't need it (since it is available on the
       web) 
+  * FilteredScript buggy, not uploading.
 
  -- Moshe Zadka <moshez@debian.org>  Tue, 12 Nov 2002 02:59:56 -0600
 
