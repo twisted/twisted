@@ -34,7 +34,7 @@
 I am a support module for making SSH servers with mktap.
 """
 
-from twisted.conch import identity
+from twisted.conch import identity, authorizer
 from twisted.conch.ssh import factory
 from twisted.python import usage
 import sys, pwd
@@ -49,12 +49,8 @@ class Options(usage.Options):
 
 def updateApplication(app, config):
     t = factory.OpenSSHFactory()
-    t.authorizer = app.authorizer
+    t.authorizer = authorizer.OpenSSHConchAuthorizer()
+    t.authorizer.setApplication(app)
     t.dataRoot = config.opts['data']
     portno = int(config.opts['port'])
-    for pwdinfo in pwd.getpwall():
-        username = pwdinfo[0]
-        print 'adding identity for', username
-        ident = identity.OpenSSHConchIdentity(username, app)
-        app.authorizer.addIdentity(ident)
     app.listenTCP(portno, t, interface=config.opts['interface'])
