@@ -167,6 +167,7 @@ class FormFillerWidget(widgets.Widget):
         return div
 
     def input_date(self, request, content, arg):
+        breakLines = arg.getHint('breaklines', 1)
         date = getValues(request, arg)
         if date == None:
             year, month, day = "", "", ""
@@ -175,10 +176,12 @@ class FormFillerWidget(widgets.Widget):
         div = content.div()
         div.text("Year: ")
         div.input(type="text", size="4", maxlength="4", name=arg.name, value=str(year))
-        div.br()
+        if breakLines:
+            div.br()
         div.text("Month: ")
         div.input(type="text", size="2", maxlength="2", name=arg.name, value=str(month))
-        div.br()
+        if breakLines:
+            div.br()
         div.text("Day: ")
         div.input(type="text", size="2", maxlength="2", name=arg.name, value=str(day))
         return div
