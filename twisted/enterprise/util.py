@@ -14,7 +14,6 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import string
 import types
 import adbapi
 
@@ -50,8 +49,9 @@ class DBError(Exception):
 ### Utility functions
 
 def getKeyColumn(rowClass, name):
+    name = name.lower()
     for keyColumn, type in rowClass.rowKeyColumns:
-        if string.lower(name) == keyColumn:
+        if name == keyColumn.lower():
             return name
     return None
 
@@ -61,7 +61,6 @@ def quote(value, typeCode, string_escaper=adbapi.safe):
     """
     q = dbTypeMap.get(typeCode, None)
     if q is None:
-
         raise DBError("Type %s not known" % typeCode)
     if value is None:
         return 'null'
@@ -97,9 +96,9 @@ def makeKW(rowClass, args):
     """
     kw = {}
     for i in range(0,len(args)):
-        columnName = rowClass.dbColumns[i][0]
+        columnName = rowClass.dbColumns[i][0].lower()
         for attr in rowClass.rowColumns:
-            if string.lower(attr) == string.lower(columnName):
+            if attr.lower() == columnName:
                 kw[attr] = args[i]
                 break
     return kw
