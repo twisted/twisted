@@ -1,3 +1,12 @@
+2003-01-03  Jp Calderone  <exarkun@twistedmatrix.com>
+
+	* twisted/python/components.py: Fix bug due to interaction between
+	Componentized subclasses and twisted.python.rebuild.rebuild()
+
+	* twisted/python/reflect.py: Removed backwards compatability hack
+	for deprecated name twisted.protocols.telnet.ShellFactory and empty
+	oldModules dictionary.
+
 2003-01-02  Brian Warner  <warner@lothar.com>
 
 	* twisted/test/test_internet.py (DelayedTestCase): add test
