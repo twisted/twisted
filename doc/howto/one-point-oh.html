@@ -25,9 +25,9 @@
 
     <h2>Process</h2>
 
-    <p>We will, as soon as the <code
-    class="API">twisted.internet</code> APIs are stable, switch
-    to version 0.99.0. At this point, our goal will be to document,
+    <p>As soon as the <code
+    class="API">twisted.internet</code> APIs became stable, we switched
+    to version 0.99.0. Now, our goal is to document,
     write tests and fix bugs in <code
     class="API">twisted.internet</code> - all changes must be API
     compatible from this point onwards.</p>
@@ -42,27 +42,21 @@
     <h2>Requirements for 0.99</h2>
 
     <ul>
-      <li>Clean up connectors. [Done]</li>
+      <li>Clean up connectors. <strong>[Done]</strong></li>
 
       <li>Make necessary changes to Application - whatever changes
-      glyph wanted to make with authorizers and services. [Done]</li>
+      glyph wanted to make with authorizers and services. <strong>[Done]</strong></li>
 
-      <li>Finalize Deferred APIs. [Done]</li>
+      <li>Finalize Deferred APIs. <strong>[Done]</strong></li>
 
       <li>Low-level socket APIs - people want to turn off Nagle's
       algorithm and set other settings on sockets that are
       currently not supported. we need to formalize a method for
-      this. [Done]</li>
+      this. <strong>[Done]</strong></li>
 
       <li>Support binding client sockets to specific
-      interfaces. [done]</li>
+      interfaces. <strong>[Done]</strong></li>
     </ul>
-
-    <p>I don't think we need to mark all modules for API stability
-    level. I think we only need to mark modules that *are* stable,
-    if they're not stable, "semi-stable" isn't useful, since we may
-    yet think of some major changes that will make it less
-    stable.</p>
 
     <p>So, another requirement is marking all modules whose API is
     stable as such, the rest of the modules can be left
@@ -80,7 +74,7 @@
     before 1.0 is released.</p>
 
     <ul>
-      <li>Move all bin/ scripts to twisted/scripts.</li>
+      <li>Move all bin/ scripts to twisted/scripts. <strong>[Done]</strong></li>
     </ul>
 
     <h2>Post 1.0 Features</h2>
