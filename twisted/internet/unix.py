@@ -40,10 +40,10 @@ class Server(tcp.Server):
         tcp.Server.__init__(self, sock, protocol, (client, None), server, sessionno)
 
     def getHost(self):
-        return ('UNIX', self.socket.getsockname())
+        return ('UNIX', repr(self.socket.getsockname()))
 
     def getPeer(self):
-        return ('UNIX', self.hostname)
+        return ('UNIX', repr(self.hostname))
 
 class Port(tcp.Port):
     addressFamily = socket.AF_UNIX
@@ -64,7 +64,7 @@ class Port(tcp.Port):
         This is called on unserialization, and must be called after creating a
         server to begin listening on the specified port.
         """
-        log.msg("%s starting on %r" % (self.factory.__class__, self.port))
+        log.msg("%s starting on %r" % (self.factory.__class__, repr(self.port)))
         self.factory.doStart()
         try:
             skt = self.createInternetSocket()
@@ -73,7 +73,10 @@ class Port(tcp.Port):
             raise CannotListenError, (None, self.port, le)
         else:
             # Make the socket readable and writable to the world.
-            os.chmod(self.port, self.mode)
+            try:
+                os.chmod(self.port, self.mode)
+            except: # probably not a visible filesystem name
+                pass
             skt.listen(self.backlog)
             self.connected = True
             self.socket = skt
@@ -90,7 +93,7 @@ class Port(tcp.Port):
 
         This indicates the server's address.
         """
-        return ('UNIX', self.socket.getsockname())
+        return ('UNIX', repr(self.socket.getsockname()))
 
 
 class Client(tcp.BaseClient):
@@ -123,7 +126,7 @@ class Client(tcp.BaseClient):
         self._finishInit(whenDone, skt, err, reactor)
 
     def getPeer(self):
-        return ('UNIX', self.addr)
+        return ('UNIX', repr(self.addr))
 
     def getHost(self):
         return ('UNIX', )
@@ -154,7 +157,7 @@ class DatagramPort(udp.Port):
         self.mode = mode
 
     def _bindSocket(self):
-        log.msg("%s starting on %s"%(self.protocol.__class__, self.port))
+        log.msg("%s starting on %s"%(self.protocol.__class__, repr(self.port)))
         try:
             skt = self.createInternetSocket() # XXX: haha misnamed method
             if self.port:
@@ -162,7 +165,10 @@ class DatagramPort(udp.Port):
         except socket.error, le:
             raise error.CannotListenError, (None, self.port, le)
         if self.port:
-            os.chmod(self.port, self.mode)
+            try:
+                os.chmod(self.port, self.mode)
+            except: # probably not a visible filesystem name
+                pass
         self.connected = 1
         self.socket = skt
         self.fileno = self.socket.fileno
@@ -180,6 +186,20 @@ class DatagramPort(udp.Port):
             else:
                 raise
 
+    def connectionLost(self, reason=None):
+        """Cleans up my socket.
+        """
+        log.msg('(Port %s Closed)' % repr(self.port))
+        base.BasePort.connectionLost(self, reason)
+        if hasattr(self, "protocol"):
+            # we won't have attribute in ConnectedPort, in cases
+            # where there was an error in connection process
+            self.protocol.doStop()
+        self.connected = 0
+        self.socket.close()
+        del self.socket
+        del self.fileno
+
     def setLogStr(self):
         self.logstr = reflect.qual(self.protocol.__class__) + " (UDP)"
 
@@ -188,7 +208,7 @@ class DatagramPort(udp.Port):
         Returns a tuple of ('UNIX_DGRAM', address), indicating
         the servers address
         """
-        return ('UNIX_DGRAM',)+self.socket.getsockname()
+        return ('UNIX_DGRAM',repr(self.socket.getsockname()))
 
 class ConnectedDatagramPort(DatagramPort):
     """A connected datagram UNIX socket."""
@@ -225,7 +245,7 @@ class ConnectedDatagramPort(DatagramPort):
                 no = se.args[0]
                 if no in (EAGAIN, EINTR, EWOULDBLOCK):
                     return
-                if (no == ECONNREFUSED) or (platformType == "win32" and no == WSAECONNRESET):
+                if no == ECONNREFUSED:
                     self.protocol.connectionRefused()
                 else:
                     raise
@@ -252,5 +272,5 @@ class ConnectedDatagramPort(DatagramPort):
         Returns a tuple of ('UNIX_DGRAM', address), indicating
         the remote address.
         """
-        return ('UNIX_DGRAM', self.remoteaddr)
+        return ('UNIX_DGRAM', repr(self.remoteaddr))
 
