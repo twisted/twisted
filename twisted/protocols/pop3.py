@@ -141,7 +141,6 @@ class POP3(basic.LineReceiver):
 
     def do_LIST(self, i=None):
         messages = self.mbox.listMessages()
-        total = reduce(operator.add, messages, 0)
         self.successResponse(len(messages))
         i = 1
         for message in messages:
@@ -215,7 +214,7 @@ class POP3(basic.LineReceiver):
 
     def do_NOOP(self):
         """Perform no operation.  Return a success code"""
-        self.successReponse()
+        self.successResponse()
     
     def do_RSET(self):
         """Unset all deleted message flags"""
