@@ -93,7 +93,7 @@ class View(template.DOMTemplate):
                 for x in self.modelStack:
                     if x is None:
                         continue
-                    m = x.lookupSubmodel(submodel + '/')
+                    m = x.lookupSubmodel(submodel)
                     if m is not None:
                         break
                 else:

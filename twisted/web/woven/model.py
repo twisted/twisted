@@ -134,7 +134,7 @@ class Model:
         if not submodelName:
             return self.getData()
 
-        submodelList = submodelName.split('/')[:-1]
+        submodelList = submodelName.split('/')  #[:-1]
 #         print "submodelList", submodelList
         currentModel = adapted = self
         for element in submodelList:

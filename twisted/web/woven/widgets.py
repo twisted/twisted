@@ -130,10 +130,10 @@ class Widget(view.View):
         If the return value of L{getData} is a Deferred, I am called
         when the result of the Deferred is available.
         """
-        currentModel = self._getMyModel()
-        if currentModel is None:
-            raise NotImplementedError, "Can't set the data when there's no model to set it on."
-        currentModel.setData(data)
+#         currentModel = self._getMyModel()
+#         if currentModel is None:
+#             raise NotImplementedError, "Can't set the data when there's no model to set it on."
+        self.model.setData(data)
 
     def add(self, item):
         """
