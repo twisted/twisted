@@ -466,7 +466,7 @@ class Request:
             self.transport.write(data)
 
         # if we have producer, register it with transport
-        if self.producer is not None:
+        if (self.producer is not None) and not self.finished:
             self.transport.registerProducer(self.producer, self.streamingProducer)
 
         # if we're finished, clean up
@@ -574,7 +574,7 @@ class Request:
 
     def unregisterProducer(self):
         """Unregister the producer."""
-        if not self.queued and self.producer:        
+        if not self.queued:        
             self.transport.unregisterProducer()
         self.producer = None
 
