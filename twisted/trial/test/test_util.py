@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.trial.test.test_util -*-
-from twisted.python import failure
+from twisted.python import failure, log
 from twisted.python.runtime import platformType
 from twisted.internet import defer, reactor, threads
 from twisted.trial import unittest, util, runner
@@ -134,4 +134,26 @@ class TestMktemp(unittest.TestCase):
         failIfEqual(tmp, tmp1)
         failIf(os.path.exists(exp))
 
+
+# glyph's contributed test
+# http://twistedmatrix.com/bugs/file317/failing.py
+
+class FakeException(Exception):
+    pass
+
+def die():
+    try:
+        raise FakeException()
+    except:
+        log.err()
+
+class MyTest(unittest.TestCase):
+    def testFlushAfterWait(self):
+        die()
+        util.wait(defer.succeed(''))
+        log.flushErrors(FakeException)
+
+    def testFlushByItself(self):
+        die()
+        log.flushErrors(FakeException)
 

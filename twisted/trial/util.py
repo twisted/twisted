@@ -338,17 +338,11 @@ def wait(d, timeout=DEFAULT_TIMEOUT, useWaitError=False):
     if not useWaitError:
         if isinstance(r, failure.Failure):
             r.raiseException()
-        _Janitor.do_logErrCheck()
     else:
         flist = []
         if isinstance(r, failure.Failure):
             flist.append(r)
         
-        try:
-            _Janitor.do_logErrCheck()
-        except MultiError, e:
-            flist.extend(e.failures)
-
         if flist:
             raise WaitError(flist)
 
