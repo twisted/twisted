@@ -1,5 +1,5 @@
 
-import os, time, pickle
+import sys, os, time, pickle
 
 from twisted.python import filepath
 from twisted.python.runtime import platform
@@ -154,5 +154,5 @@ class URLPathTestCase(unittest.TestCase):
         self.assertEquals(str(self.path.here()), 'http://example.com/foo/')
         self.assertEquals(str(self.path.child('').here()), 'http://example.com/foo/bar/')
 
-
-
+if sys.platform == "win32":
+    FilePathTestCase.testGetAndSet.im_func.todo = "os.rename in FilePath.setContent doesn't work too well on Windows"
