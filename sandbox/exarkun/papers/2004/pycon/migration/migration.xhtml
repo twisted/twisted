@@ -5,7 +5,7 @@
 <html>
 
 <head>
-<title>Transluscent Inter-Process Service Migration</title>
+<title>Translucent Inter-Process Service Migration</title>
 </head>
 
 <body>
@@ -119,7 +119,7 @@ permissions alone are too coarsely grained to prevent access.</p>
 <h4>Secondary Transports</h4>
 
 <p>Second, secondary transports are established, providing a path for objects
-which cannot be serialized solely as a bytestream to be transported over.
+which cannot be serialized solely as a byte stream to be transported over.
 There is one example of this in the current implementation: a second UNIX
 socket is opened and used to pass file descriptors (via sendmsg(2) and
 recvmsg(2)) to the process assuming responsibility.  Passing such things as
@@ -410,7 +410,7 @@ control over the client.</p>
 
 <h2>Conclusions</h2>
 
-<p>Upgrading software in a production environment can be a dauting prospect;
+<p>Upgrading software in a production environment can be a daunting prospect;
 even in the best case, when software can be upgraded and restarted without
 incident, customers are always unhappy with service outages.  Translucent
 service migration can provide a way to test software updates on a live

@@ -129,7 +129,7 @@ class ShellFactory(telnet.ShellFactory):
 """))))),
     Slide("Design for migratability",
           Bullet("Maintain clear separate between code and data"),
-          Bullet("")),
+          Bullet("Maintain clear separation between different services")),
     Slide("Conclusions",
           Bullet("Multitude of migration options available for Python software"),
           Bullet("Migration without service interruption provides great flexibility for implementors")),
@@ -143,4 +143,4 @@ class ShellFactory(telnet.ShellFactory):
                            Bullet("Allow user to select references to break")))),
     Slide("Questions?"))
 
-lecture.renderHTML(".", "migration-%02d.html")
+lecture.renderHTML(".", "migration-%02d.xhtml", css="stylesheet.css")
