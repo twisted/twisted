@@ -416,24 +416,6 @@ For example, a graphical tool could provide not just help messages at the
 command line, but a listing of all available TAP types and forms for each, for
 the user to enter information.</p>
 
-<p>The last thing we're going to do is make our server configurable using
-Twisted's configuration system, coil. This will allow us to change the
-settings on an existing TAP file, or make a new one, using a web based user
-interface. To do this, we write a coil plugin, and then register it with
-<code>plugins.tml</code>.</p>
-
-<a href="listings/TwistedQuotes/coil.py" class="py-listing">Twisted Quotes
-Coil Plug-in</a>
-
-<p>Once having done this, we can edit the TAP file we created previously,
-by using <code class="shell">coil</code>, which runs a web interface we can
-access with our browser on port 9080:</p>
-
-<pre class="shell">
-% coil qotd.tap &
-% mozilla http://localhost:9080/
-</pre>
-
 <p>It is this kind of power that results from using a dynamic, powerful
 framework like Twisted.  I hope that you take your newfound knowledge and
 discover all kinds of cool things like this that you get for free just by using
