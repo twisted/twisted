@@ -32,13 +32,8 @@ class Options(usage.Options):
 
 
 def makeProcessingFunction(d):
-    from twisted.lore import latex
-    if d['section']:
-        return lambda file, linkrel: latex.convertFile(file,
-                             latex.SectionLatexSpitter)
-    else:
-        return lambda file, linkrel: latex.convertFile(file,
-                             latex.LatexSpitter)
+    from twisted.lore import default
+    return process.getProcessor(default, 'latex', d)
 
 def run():
     opt = Options()

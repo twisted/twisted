@@ -30,9 +30,8 @@ class Options(usage.Options):
         self['files'] = files
 
 def makeProcessingFunction(d):
-    from twisted.lore import lint
-    checker = lint.getDefaultChecker()
-    return lambda file, linkrel: lint.doFile(file, checker)
+    from twisted.lore import default
+    return process.getProcessor(default, 'lint', d)
 
 def run():
     opt = Options()

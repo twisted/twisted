@@ -40,16 +40,8 @@ class Options(usage.Options):
 
 
 def makeProcessingFunction(d):
-    from twisted.lore import tree
-    from twisted.web import microdom
-    if d['ext'] == "None":
-        ext = ""
-    else:
-        ext = d['ext']
-    templ = microdom.parse(open(d['template']))
-    df = lambda file, linkrel: tree.doFile(file, linkrel, d['ext'],
-                                           d['baseurl'], templ)
-    return df
+    from twisted.lore import default
+    return process.getProcessor(default, 'html', d)
 
 
 def run():
