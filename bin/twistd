@@ -17,27 +17,6 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 
-usage_message = """
-Usage: twistd [options]
-Options:
-     -q --quiet       be a little more quiet
-     -n --nodaemon    don't daemonize
-     -p --profile     run profiler
-     -o --no_save     do not save state on shutdown
-     -l --logfile     log to a specified file, - for stdout
-                        (default twistd.log)
-        --pidfile     use a pidfile
-                        (default twistd.pid)
-     -r --rundir      change to a supplied directory before running
-                        (default .)
-     -f --file        read the given .tap file
-                        (default twistd.tap)
-     -y --python      read an application from within a Python file
-     -g --plugin      read config.tac from a plugin package, as with -y
-
-This reads an twisted.internet.app.Application out of a file and runs it.
-"""
-
 ### Twisted Preamble
 # This makes sure that users don't have to set up their environment
 # specially in order to run these programs from bin/.
@@ -59,20 +38,22 @@ import imp
 
 class ServerOptions(usage.Options):
     synopsis = "Usage: twistd [options]"
-    longdesc = "This reads an twisted.internet.app.Application out of a file and runs it."
 
-    optFlags = [['nodaemon','n',"don't daemonize"],
-                ['profile','p',"run profiler"],
-                ['quiet','q',"be a little more quiet"],
-                ['no_save','o',"do not save state on shutdown"]]
+    optFlags = [['nodaemon','n',  "don't daemonize"],
+                ['profile','p',   "run profiler"],
+                ['quiet','q',     "be a little more quiet"],
+                ['no_save','o',   "do not save state on shutdown"]]
 
     optStrings = [['logfile','l', None,
                    "log to a specified file, - for stdout"],
-                  ['file','f','twistd.tap',"read the given .tap file"],
+                  ['file','f','twistd.tap',
+                   "read the given .tap file"],
                   ['python','y', None,
                    "read an application from within a Python file"],
-                  ['pidfile','','twistd.pid',"use a pidfile"],
-                  ['rundir','d','.']]
+                  ['pidfile','','twistd.pid',
+                   "use a pidfile"],
+                  ['rundir','d','.',
+                   'change to a supplied directory before running']]
 
     def opt_plugin(self, pkgname):
         """read config.tac from a plugin package, as with -y
@@ -86,11 +67,11 @@ class ServerOptions(usage.Options):
 
     opt_g = opt_plugin
 
+config = ServerOptions()
 try:
-    config = ServerOptions()
     config.parseOptions()
 except usage.error, ue:
-    print usage_message
+    print config.longdesc
     print "%s: %s" % (sys.argv[0], ue)
     os._exit(1)
 
