@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_internet -*-
-# $Id: default.py,v 1.75 2003/05/02 03:47:27 anthony Exp $
+# $Id: default.py,v 1.76 2003/05/02 06:43:38 anthony Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -456,7 +456,7 @@ class SelectReactor(PosixReactorBase):
                 else:
                     # OK, I really don't know what's going on.  Blow up.
                     raise
-        _drdw = self._doWriteOrRead
+        _drdw = self._doReadOrWrite
         _logrun = log.callWithLogger
         for selectables, method, dict in ((r, "doRead", reads),
                                           (w,"doWrite", writes)):
@@ -470,17 +470,17 @@ class SelectReactor(PosixReactorBase):
 
     doIteration = doSelect
 
-    def _doWriteOrRead(self, selectable, method, dict, faildict={
+    def _doReadOrWrite(self, selectable, method, dict, faildict={
         error.ConnectionDone: failure.Failure(error.ConnectionDone()),
         error.ConnectionLost: failure.Failure(error.ConnectionLost())
         }):
         try:
             why = getattr(selectable, method)()
-            handfn = getattr(selectable, 'fileno', None)
-            if not handfn:
-                why = _NO_FILENO
-            elif handfn() == -1:
-                why = _NO_FILEDESC
+            #handfn = getattr(selectable, 'fileno', None)
+            #if not handfn:
+            #    why = _NO_FILENO
+            #elif handfn() == -1:
+            #    why = _NO_FILEDESC
         except:
             why = sys.exc_info()[1]
             log.err()
