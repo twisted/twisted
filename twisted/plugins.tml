@@ -54,8 +54,12 @@ register("Twisted Names",
 
 register("Twisted Web Automated TAP builder",
          "twisted.tap.web",
-         description="automated TAP building",
-         type="tap")
+         description="""
+         Builds a Twisted Application instance that contains a general-purpose
+         web server, which can serve from a filesystem or application resource.
+         """,
+         type="tap",
+         tapname="web")
 
 register("Twisted FTP Automated TAP builder",
          "twisted.tap.ftp",

@@ -46,21 +46,6 @@
     and the other <code>IReactor*.listen*</code> APIs for more
     information.</p>
 
-    <p>Because of this multi-faceted aspect to writing servers, it
-    is useful to have some place where all this things are bound
-    together - using a specific Protocol class, with a specially
-    initialized factory and a specific network interface on a
-    specific port. For that, the twisted.tap package exists, which
-    records "common server deployments". It creates a TAP (Twisted
-    Application Pickle) which keeps the configuration information
-    for a specific server.</p>
-
-    <p>So, in conclusion - most often, you will just have to write
-    your Protocol class (which might get complicated, and you may
-    want to write auxiliary classes for it) and then write a
-    twisted.tap submodule which programmatically explains how to
-    use this class.</p>
-
     <p>This document will explain each step of the way.</p>
 
     <h2>Protocols</h2>
@@ -127,11 +112,12 @@ class Echo(Protocol):
     immediately closes the connection if there are too many active
     protocols.</p>
 
-    <h3>Using the Protocol -- An Interlude</h3>
+    <h3>Using the Protocol</h3>
 
     <p>In this section, I will explain how to test your protocol
-    easily. You'll still need to read the rest of the document to
-    run a production-grade Twisted server, though.</p>
+    easily. (In order to see how you should write a production-grade Twisted
+    server, though, you should read the <a href="plugin.html" >Writing Plug-Ins
+    for Twisted</a> HOWTO as well).</p>
 
     <p>Here is code that will run the QOTD server discussed
     earlier</p>
@@ -289,7 +275,7 @@ class LogfileFactory(Factory):
         self.fp.close()
 </pre>
 
-    <h3>Putting it All Together -- Another Interlude</h3>
+    <h3>Putting it All Together</h3>
 
     <p>So, you know what factories are, and want to run the QOTD
     with configurable quote server, do you? No problems, here is an
@@ -318,90 +304,6 @@ app.run()
 
     <p>And that's it!</p>
 
-    <h2><code class="API">twisted.tap</code></h2>
-
-    <p>As seen, many times the interplays between a specific
-    Protocol class and a specific Factory class depend on quite a
-    few attributes which all need to be set correctly. The <code
-    class="API">twisted.tap</code> package allows a programmer to
-    document it programmatically, while giving a naive user an easy
-    way to generate configurations.</p>
-
-    <p>Let us assume that a module, <code>twisted.quote</code>,
-    included the following code, which has already been given as
-    example:</p>
-<pre class="python">
-from twisted.internet.protocol import Factory, Protocol
-
-class QOTD(Protocol):
-
-    def connectionMade(self):
-        self.transport.write(self.factory.quote+'\r\n')
-        self.transport.loseConnection()
-
-
-def makeQOTDFactory(quote=None):
-    factory = Factory()
-    factory.protocol = QOTD
-    factory.quote = quote or 'An apple a day keeps the doctor away'
-    return factory
-</pre>
-
-    <p>We want a user to be able to generate a quote server easily.
-    He should be able to give a quote, and optionally a port
-    number. If no port number is given, the server should listen on
-    port 17, the one mandated by the RFC.</p>
-
-    <p>We will have the configuration-creator accept the options
-    <code>-q</code> or <code>--quote</code> to set the quote, and
-    <code>-p</code> or <code>--port</code> to set the ports.</p>
-
-    <p>Here is an example (put this code in
-    twisted/tap/quote.py):</p>
-<pre class="python">
-from twisted.python import usage
-from twisted.quote import makeQOTDFactory
-
-
-class Options(usage.Options):
-
-    synopsis = "Usage: mktap quote [options]"
-
-    optStrings = [["port", "p", 17], ["quote", "q", None]]
-
-    longdesc = "Quote server"
-
-
-def updateApplication(app, config):
-    factory = makeQOTDFactory(config.opts['quote'])
-    app.listenTCP(int(config.opts['port']), factory)
-</pre>
-
-    <h2>Putting it All Together</h2>
-    Well, now that you have all that, you're probably wondering,
-    what do we do now to actually run the server? Well, nothing
-    could be simpler. 
-<pre class="shell">
-% mktap quote --quote "Twisted is coolness personified"
-% su
-# twistd -f quote.tap
-# exit
-%
-</pre>
-    You need to run <code>twistd</code> as root, because it needs
-    to bind to a privileged port. Don't worry -- it'll shed
-    privileges and suid to the user you ran <code>mktap</code> as
-    soon as possible. It is not very hard to configure it to run as
-    any other user: 
-<pre class="shell">
-% mktap --uid 33 --gid 33 quote --quote "Twisted is coolness personified"
-% su
-# twistd -f quote.tap
-# exit
-%
-</pre>
-    Will run it as <code>www-data</code> on Debian systems, for
-    example.
   </body>
 </html>
 

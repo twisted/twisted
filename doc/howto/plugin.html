@@ -1,0 +1,312 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html> <head>
+<title>Writing Plug-Ins for Twisted</title>
+<link rel="stylesheet" href="stylesheet.css"/>
+</head>
+
+<body>
+<h1>Writing a New Plug-In for Twisted</h1>
+<h2>So You Want to be a Twisted Hacker</h2>
+
+<p>Twisted is a very general and powerful tool.  It can power anything
+connected to a network, from your corporate message-broadcasting network to
+your desktop IRC client.  This is great for integrating lots of different
+tools, but can make it very difficult to document and understand how the whole
+platform is supposed to work.  A side effect of this is that it's hard to get
+started with a project using Twisted, because it's hard to find out where to
+start.</p>
+
+<p>This guide is to help you understand the <q>right way</q> to get started
+working on a Twisted application.  It probably won't answer your specific
+questions about how to do things like <a href="time.html" >schedule functions
+to call in the future</a> or <a href="servers.html" >listen on a socket</a>;
+there are other documents that address these concerns and you can read them
+later.</p>
+
+<h2>Twisted and You: Where Does Your Code Fit In?</h2>
+
+<p>If you're like most people that have asked me questions about this, you've
+probably come to Twisted thinking of it as a library of code to help you write
+an application.  It can be, but it is much more useful to think of <em>your
+code as the library</em>.  Twisted is a framework.</p>
+
+<p>The difference between a framework and a library is that a developer's code
+will run a library's functions; a framework runs the developer's functions,
+instead.  The difference is subtle, but significant; there are a range of
+resources which have to be allocated and managed regarding start-up and
+shut-down of an process; regarding spawning of threads and handling events.  If
+you use it as a framework, Twisted will help you by doing those things
+itself.</p>
+
+<p>You don't have to use Twisted this way.  It is quite possible to write
+applications that use Twisted almost exclusively as a library.</p>
+
+<p>There are many ways in which your code will be called by various parts of
+the Twisted framework by the time you're done.  The initial one we're going to
+focus on here is a plug-in for the <code class="shell">mktap</code> utility.
+First we will go through the process of creating a plug-in that Twisted can
+find, then we make it adhere to the <code class="shell">mktap</code> interface.
+Finally we will load that plug-in with a server.</p>
+
+<h2>What is a Plug-In?</h2>
+
+<p>Python makes it very easy to dynamically load and evaluate programs.  The
+plug-in system for Twisted, <code class="API">twisted.python.plugin</code>, is
+a way to find (without loading) and then load plug-ins for particular
+systems.</p>
+
+<p>Unlike other "plug-in" systems, like the well known ones associated with The
+Gimp, Photoshop, and Apache <code class="API">twisted.python.plugin</code> is
+generic.  There are multiple kinds of plug-in which Twisted can load using this
+system and they are used in very different contexts.  You can even use it to
+load third-party plug-ins for your own applications. </p>
+
+<p>Twisted finds its plug-ins by using pre-existing Python concepts; the load
+path, and packages.  Every top-level Python package (= directory whose parent
+is on sys.path which contains an <code class="shell">__init__.py</code>) can
+potentially contain some number of plug-ins.  Packages which contain plug-ins
+are called "drop-ins", because you "drop" them into your sys.path. The only
+difference between a package and a drop-in is the existence of a file named
+<code class="shell">plugins.tml</code> (TML for Twisted Module List) that
+contains some special Python expressions to identify the location of
+sub-packages or modules which can be loaded.</p>
+
+<p>
+<code class="shell">plugins.tml</code> will be a list of calls to one function:
+<ul><li> <code class="py-prototype">register(name, module, type=plugin_type,
+  description=user_description [, **plugin_specific_data])</code>.
+  <ul>
+    
+    <li><code class="py-src-parameter">name</code> is a free-form string, to be
+    displayed to the user in presentation contexts (like a web page, or a
+    list-box in a GUI).</li>
+    
+    <li><code class="py-src-parameter">module</code> is a string which must
+    be the fully-qualified name of a Python module.</li>
+    
+    <li><code
+    class="py-src-parameter">type</code> is the name of the system you are
+    plugging in to.  Be sure to spell this right, or Twisted won't find your
+    plug-in at all!</li>
+    
+    <li><code
+    class="py-src-parameter">**plugin_specific_data</code> is a dictionary of
+    information associated with the plug-in, specific to the <code
+    class="py-src-parameter">type</code> of plug-in it is. Note that some plug-in
+    types may require a specific bit of data in order to work.</li>
+    
+  </ul></li>
+</ul>
+  </p>
+
+<p>If you look at <code class="shell">twisted/plugins.tml</code>, you will
+notice that Twisted is a drop-in for itself!  You can browse through it for
+lots of examples of plug-ins being registered.</p>
+
+<p>The most prevalent kind of plug-in is the <code>TAP</code> (Twisted
+Application builder) type.  These are relatively simple to get started with.
+Let's look at Twisted's own plugins.tml for an example of registering one:</p>
+
+<pre class="python">
+register("Twisted Web Automated TAP builder",
+         "twisted.tap.web",
+         description="""
+         Builds a Twisted Application instance that contains a general-purpose
+         web server, which can serve from a filesystem or application resource.
+         """,
+         type="tap",
+         tapname="web")
+</pre>
+
+<p>Note the <code class="py-src-parameter">tapname</code> parameter.  This is a
+parameter only used by <code class="py-src-string">"tap"</code>-type modules,
+which indicates what name to use on the <code class="shell">mktap</code>
+command line.  In English, this particular call to <code
+class="python">register</code> means <q>When the user types <code
+class="shell">mktap web</code>, it selects the module <code
+class="python">twisted.tap.web</code> to handle the rest of the arguments</q>.
+</p>
+
+<p>Now that you understand how to register a plug-in, let's move along to
+writing your first one.</p>
+
+<h2>Twisted Quotes: A Case Study</h2>
+
+<p>As an example, we are going to work on the Quote of the Day application
+discussed elsewhere in the Twisted documentation, TwistedQuotes.</p>
+
+<h3>Before you Begin</h3>
+
+<p>First, make a directory, TwistedQuotes, where you're going to keep your
+code.  Make sure that your TwistedQuotes directory is a package on your python
+path.  I have some brief directions for how to do this, but if you don't
+already understand the way Python's <code class="python">sys.path</code>
+variable works, or at least environment variables on your platform, the path of
+least resistance is probably just to make a directory inside your <code
+class="shell">Twisted-X.X.X</code> directory, which will already be in your
+sys.path.  Otherwise, If your TwistedQuotes directory is
+/my/stuff/TwistedQuotes, you can <code class="shell">export
+PYTHONPATH=/my/stuff:$PYTHONPATH</code> in UNIX, or edit the <code
+class="shell">PYTHONPATH</code> environment variable to add <code
+class="shell">/my/stuff;</code> at the beginning using the appropriate GUI on
+Windows.</p>
+
+<div style="float: right"><pre class="python-interpreter">
+Python 2.1.3 (#1, Apr 20 2002, 22:45:31) 
+[GCC 2.95.4 20011002 (Debian prerelease)] on linux2
+Type "copyright", "credits" or "license" for more information.
+&gt;&gt;&gt; import TwistedQuotes
+&gt;&gt;&gt; # No traceback means you're fine.
+</pre></div>
+
+<p>You will then need to add an <code class="shell">__init__.py</code> to this
+directory, to mark it as a package.  In order to test that everything is
+working, start up the Python interactive interpreter, or your favorite IDE, and
+verify that the package imports properly.</p>
+
+<h3>A Look at the Heart of the Application</h3>
+
+<a href="listings/TwistedQuotes/quoters.py" class="py-listing">Twisted Quotes
+Central Abstraction</a>
+
+<p>This code listing shows us what the Twisted Quotes system is all about.  It
+doesn't have any way of talking to the outside world, but it provides a library
+which is a clear and uncluttered abstraction: <q>give me the quote of the
+day</q>. </p>
+
+<p>Your Twisted applications should follow this style as much as possible. Note
+that this module does not import any Twisted functionality at all!  The reason
+for doing things this way is integration.  If your <q>business objects</q> are
+unrelated to any protocol, you can make a module that binds the same key
+abstraction to different protocols, GUIs, and file formats.  Having such
+classes provides a point to decouple your components from each other, allowing
+each to be used independently.</p>
+
+<p>This is the way that Twisted itself remains minimal impact.  Although the
+systems are tightly integrated, you can use them independently because they are
+tightly integrated around very specific points.</p>
+
+<a href="listings/TwistedQuotes/quoteproto.py" class="py-listing">Twisted
+Quotes Protocol Implementation</a>
+
+<p>This is a very straightforward <code>Protocol</code> implementation.  You can
+get more information on the specifics of this from the <a
+href="servers.html">Writing Servers</a> HOWTO.
+</p>
+
+<p>The pattern described above is repeated here.  The Protocol contains
+essentially no logic of its own, just enough to tie together an object which
+can generate quotes (a <code class="python">Quoter</code>) and an object which
+can relay bytes to a TCP connection (a <code
+class="python">Transport</code>).</p>
+
+<p>Once we have an abstraction, and we have connected it to the network, the
+next thing to do is to provide an interface for the user.  For the purposes of
+this example we will first implement a <code class="shell">mktap</code>
+interface.</p>
+
+<a href="listings/TwistedQuotes/quotetap.py" class="py-listing">Twisted Quotes
+TAP construction module</a>
+
+<p>This module has to conform to a fairly simple interface.  It must have a
+class called <code class="python">Options</code> which is a subclass of <code
+class="API">twisted.python.usage.Options</code>.  It must also have a function
+ <code class="python">updateApplication(app, config)</code>, which will be
+passed an instance of a <code
+class="API">twisted.internet.app.Application</code> and an instance of the
+Options class defined in the module itself, <code
+class="python">TwistedQuotes.quotetap.Options</code>.</p>
+
+<p>A more detailed discussion of <code
+class="API">twisted.python.usage.Options</code> can be found in the document <a
+href="options.html" >Using <code>usage.Options</code></a>.</p>
+
+<p>Now that we've implemented all the necessary pieces, we can finish putting
+them together by writing a TML file which allows the <code
+class="shell">mktap</code> utility to find our protocol module.</p>
+
+<a href="listings/TwistedQuotes/plugins.tml" class="py-listing">Twisted Quotes
+Plug-in registration</a>
+
+<p>Now the QOTD server is ready to be instantiated!  Let's start up a server
+and get a quote from it.</p>
+
+<pre class="shell">
+% mktap qotd       
+Saving qotd application to qotd.tap...
+Saved.
+% twistd -f qotd.tap 
+% nc localhost 8007
+An apple a day keeps the doctor away.
+% kill `cat twistd.pid`
+</pre>
+
+<p>(<code class="shell">nc</code> is the <a
+href="http://www.atstake.com/research/tools/index.html#network_utilities">netcat</a>
+utility, which no UNIX system should be without.)
+</p>
+
+<p>So we just saw Twisted in action as a framework.  With relatively little
+code, we've got a server that can respond to a request over a network, with two
+potential alternative back-ends (fortune files and static text).  </p>
+
+<p>After reading this (and following along with your own example, of course),
+you should be familiar with the process of getting your own Twisted code with
+unique functionality in it running inside of a server.  You should be familiar
+with the concept of a drop-in and a plug-in, and understand both how to create
+them and how to install them from other people on your system.</p>
+
+<p>I think that this indicates that Twisted is a very powerful, flexible
+framework.  But wait, there's more!  By following the rules I set out at the
+beginning of this HOWTO, we have accidentally implemented another piece of
+useful functionality. </p>
+
+<pre class="shell">
+% mktap
+Usage::
+
+  mktap 'apptype' [application_options]
+  mktap --help 'apptype'
+
+'apptype' can be one of: web portforward toc coil words manhole im news socks <b>qotd</b> telnet parent sister ftp mail
+Options:
+  -x, --xml      Output as XML, rather than pickle.
+  -s, --source   Output as Python source-code (AOT format), rather than pickle.
+  -u, --uid=     [default: 1000]
+  -g, --gid=     [default: 1000]
+  -a, --append=  
+      --help     display this message
+% mktap --help qotd
+Usage: mktap [options]
+Options:
+  -p, --port=    Port number to listen on for QOTD protocol. [default: 8007]
+  -s, --static=  A static quote to display. [default: An apple a day keeps the
+                 doctor away.]
+  -f, --file=    A fortune-format text file to read quotes from.
+      --help     
+</pre>
+
+<p>Not only does our Options class get instantiated by <code
+class="shell">mktap</code> directly, the user can query mktap for interactive
+help!  This is just one small benefit to using Twisted as it was designed.  As
+more tools that use the <code class="py-src-string">"tap"</code> style of
+plug-in, more useful functionality will become available from Twisted Quotes.
+For example, a graphical tool could provide not just help messages at the
+command line, but a listing of all available TAP types and forms for each, for
+the user to enter information.</p>
+
+<p>It is this kind of power that results from using a dynamic, powerful
+framework like Twisted.  I hope that you take your newfound knowledge and
+discover all kinds of cool things like this that you get for free just by using
+it!</p>
+
+<p class="doit">The plug-in system is a relatively new part of Twisted, and not
+as many things use it as they should yet.  Watch this space for new
+developments regarding plugins, other systems that you can plug your code into,
+and more documentation for people wanting to write systems that can be plugged
+in to!</p>
+
+<hr />
+<address><a href="mailto:glyph@twistedmatrix.com">Glyph Lefkowitz</a></address>
+<!-- hhmts start --> Last modified: Thu Jun 20 11:06:30 CDT 2002 <!-- hhmts end -->
+</body> </html>

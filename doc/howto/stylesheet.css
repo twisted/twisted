@@ -39,6 +39,12 @@ PRE
   background-color: #ddddff;
 }
 
+.doit 
+{
+  border: thin blue dashed ;
+  background-color: #0ef
+}
+
 .py-src-comment
 {
   color: #1111CC
@@ -63,9 +69,30 @@ PRE
 
 .py-src-string
 {
+  
   color: #115511
 }
+.py-listing 
+{
+  border: thin solid black;
+  background-color: #eee;
+}
+.py-listing .python 
+{
+  margin-top: 0;
+  margin-bottom: 0;
+  border: none;
+  border-bottom: thin solid black;
+  }
 
+.py-caption
+{
+  text-align: center;
+ }
+.py-filename
+{
+  font-style: italic;
+  }
 HR
 {
   display: inline;

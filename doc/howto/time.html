@@ -34,47 +34,6 @@ def runEverySecond():
 reactor.callLater(1, runEverySecond)
 </pre>
      
-
-    <h2>Spreading tasks over time</h2>
-
-    <p><em>Note:</em> Delayeds may be deprecated in the future.</p>
-
-    <p>Sometimes we want to schedule tasks to be run at intervals,
-    e.g. a long calculation that might block twisted if the whole
-    thing were to be run at once. We do this using objects that
-    conform to the Delayed interface (see <code
-    class="API">twisted.python.delay</code>).</p>
-
-    <p>A delayed must define two functions:</p>
-
-    <ul>
-      <li><code class="python">timeout(self)</code> -- return
-      maximum number of seconds until we should next run, or None
-      if we have nothing to run.</li>
-
-      <li><code class="python">runUntilCurrent(self)</code> -- this
-      command will be run at the very latest, but possibly before,
-      the number of seconds returned by <code>timeout</code> has
-      passed.</li>
-    </ul>
-    For example: 
-<pre class="python">
-class LongCalculation:
-    """Runs at least 100 multipications a minute."""
-    
-    value = 1L
-    
-    def timeout(self):
-        return 0.01
-    
-    def runUntilCurrent(self):
-       self.value = self.value * 2L
-
-# register the Delayed object with the Twisted event loop:
-o = LongCalculation()
-from twisted.internet import main
-main.addDelayed(o)
-</pre>
   </body>
 </html>
 

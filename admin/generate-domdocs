@@ -101,12 +101,21 @@ class Cache:
             if pat.match(k):
                 return v
 
+def fontifyFiles(infile, outfile):
+    py2html.PrettyPrint(PyFontify.fontify,
+                        "rawhtml", "color").file_filter(infile, outfile)
+    
+
 def writeNodeData(node, oldio):
     for subnode in node.childNodes:
         if hasattr(subnode, 'data'):
             oldio.write(str(subnode.data))
         else:
             writeNodeData(subnode, oldio)
+def getNodeText(node):
+    oldio = cStringIO.StringIO()
+    writeNodeData(node, oldio)
+    return oldio.getvalue()
 cols = 79
 class Walker:
     def __init__(self, templ, cache, ext):
@@ -126,16 +135,16 @@ class Walker:
             fullpath = os.path.join(d, name)
             fname, fext = os.path.splitext(fullpath)
             if fext == '.html':
-                self.walked.append((linkrel, fname, fullpath))
+                self.walked.append((linkrel, fname, fullpath, d))
                 
     def walkAround(self):
         i = 0
-        for linkrel, fname, fullpath in self.walked:
+        for linkrel, fname, fullpath, d in self.walked:
             i += 1
             self.percentdone((float(i) / len(self.walked)), fname)
             document = dom.parse(open(fullpath))
             template = self.templ.cloneNode(1)
-            self.munge(document, template, linkrel)
+            self.munge(document, template, linkrel, d)
             template.writexml(open(fname+self.ext, 'wb'))
         self.percentdone(1., "*Done*")
     def percentdone(self, percent, fname):
@@ -151,7 +160,7 @@ class Walker:
 
 
 
-    def munge(self, document, template, linkrel):
+    def munge(self, document, template, linkrel, d):
         # relative links
         for node in findElementsWithAttribute(template,"href"):
             node.setAttribute("href", node.getAttribute("href") + linkrel)
@@ -172,11 +181,22 @@ class Walker:
                 node2.setAttribute("href", newref)
                 node2.childNodes = node.childNodes
                 node.childNodes = [node2]
+        for node in findElementsWithAttribute(document, "class", "py-listing"):
+            fn = node.getAttribute("href")
+            outfile = cStringIO.StringIO()
+            fontifyFiles(open(d+'/'+fn), outfile)
+            val = outfile.getvalue()
+            
+            text = str('<div class="py-listing">'
+                       '<pre class="python">%s</pre>'
+                       '<div class="py-caption">%s - '
+                       '<span class="py-filename">%s</span></div></div>' % (
+                val, getNodeText(node), node.getAttribute("href")))
+            newnode = dom.parseString(text).documentElement
+            node.parentNode.replaceChild(newnode, node)
+            
         for node in findElementsWithAttribute(document, "class", "python"):
             if node.tagName == 'pre':
-                ppr = py2html.PrettyPrint(PyFontify.fontify,
-                                          "rawhtml", "color")
-
                 newio = cStringIO.StringIO()
                 # write the python code to a buffer
                 oldio = cStringIO.StringIO()
@@ -186,9 +206,8 @@ class Walker:
                 oldio = cStringIO.StringIO()
                 oldio.write(oivs)
                 oldio.seek(0)
-                ppr.file_filter(oldio, newio)
+                fontifyFiles(oldio, newio)
                 newio.seek(0)
-                open('INVESTIGATE.txt', 'wb').write(newio.getvalue())
                 newdom = dom.parse(newio)
                 newel = newdom.documentElement
                 newel.setAttribute("class", "python")
