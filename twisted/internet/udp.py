@@ -156,6 +156,11 @@ class Port(base.BasePort):
                     return self.write(datagram, addr)
                 elif no == EMSGSIZE:
                     raise error.MessageLengthError, "message too long"
+                elif no == ECONNREFUSED:
+                    # in non-connected UDP ECONNREFUSED is platform dependent, I think
+                    # and the info is not necessarily useful. Nevertheless maybe we
+                    # should call connectionRefused? XXX
+                    return
                 else:
                     raise
 
