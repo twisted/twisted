@@ -90,11 +90,10 @@ finish_system_event(cReactor *reactor, cEventTriggers *triggers)
     cReactorUtil_ForEachMethod(triggers->triggers[CREACTOR_EVENT_PHASE_AFTER],
                                run_system_event_triggers, NULL);
 
-    /* If we are in the STOPPING state, move to DONE. */
-    if (reactor->state == CREACTOR_STATE_STOPPING)
-    {
-        reactor->state = CREACTOR_STATE_DONE;
-    }
+    /* If we're finishing off the "shutdown" event, we may now move the reactor
+       to the STOPPED state */
+    if (strcmp(triggers->event_type, "shutdown") == 0)
+        cReactor_stop_finish(reactor);
 }
 
 
@@ -281,8 +280,13 @@ fireSystemEvent_internal(cReactor *reactor, const char *event_type)
     cEventTriggers *triggers;
 
     triggers = get_event_triggers(reactor, event_type, 0);
-    if (!triggers)
-        return; /* nothing to do */
+    if (!triggers) {
+        /* nothing to do */
+        /* except finish off the "shutdown" job */
+        if (strcmp(event_type, "shutdown") == 0)
+            cReactor_stop_finish(reactor);
+        return;
+    }
         
     triggers->before_finished = 0;
     /* Iterate over the "before" methods. */

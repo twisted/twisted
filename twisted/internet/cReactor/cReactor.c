@@ -195,6 +195,12 @@ cReactor_resolve(PyObject *self, PyObject *args, PyObject *kw)
     return defer;
 }
 
+void
+cReactor_stop_finish(cReactor *reactor)
+{
+    /* called when shutdown triggers have completed */
+    reactor->state = CREACTOR_STATE_STOPPED;
+}
 
 static void
 stop_internal(cReactor *reactor)
@@ -202,6 +208,7 @@ stop_internal(cReactor *reactor)
     /* Change state and fire system event. */
     reactor->state = CREACTOR_STATE_STOPPING;
     fireSystemEvent_internal(reactor, "shutdown");
+    /* state will move to STOPPED after all shutdown triggers have run. */
 }
 
 
@@ -408,52 +415,7 @@ iterate_internal_init(cReactor *reactor)
                                       NULL);
     cReactor_AddTransport(reactor, transport);
 
-    /* Change our state to running. */
-    reactor->state = CREACTOR_STATE_RUNNING;
-
-    /* Fire the the startup system event. */
-    fireSystemEvent_internal(reactor, "startup");
-
     return 0;
-}
-
-static void
-iterate_internal_finalize(cReactor *reactor)
-{
-    cReactorThread *thread;
-    PyThreadState *thread_state;
-
-    /* No cleanup needed if we aren't using threads. */
-    if (! reactor->multithreaded)
-    {
-        return;
-    }
-
-    /* Release the Python interpreter lock in case there are APPLY jobs still
-     * in the worker queue.
-     */
-    thread_state = PyThreadState_Swap(NULL);
-    PyEval_ReleaseLock();
-
-    /* Issue EXIT jobs, one for each thread. */
-    thread = reactor->thread_pool;
-    while (thread)
-    {
-        cReactorJobQueue_AddJob(reactor->worker_queue, cReactorJob_NewExit());
-        thread = thread->next;
-    }
-
-    /* Wait for them to finish. */
-    thread = reactor->thread_pool;
-    while (thread)
-    {
-        pthread_join(thread->thread_id, NULL);
-        thread = thread->next;
-    }
-
-    /* Reacquire the lock. */
-    PyEval_AcquireLock();
-    PyThreadState_Swap(thread_state);
 }
 
 
@@ -466,21 +428,6 @@ iterate_internal(cReactor *reactor, int delay)
     cReactorJob *job;
     int poll_res;
     PyThreadState *thread_state = NULL;
-
-    /* Special one-time init handling. */
-    if (reactor->state == CREACTOR_STATE_INIT)
-    {
-        if (iterate_internal_init(reactor) < 0)
-        {
-            return -1;
-        }
-    }
-    else if (reactor->state == CREACTOR_STATE_DONE)
-    {
-        /* Exception. */
-        PyErr_SetString(PyExc_RuntimeError, "the reactor is shut down!");
-        return -1;
-    }
 
     /* Figure out the method delay. */
     method_delay = cReactorUtil_NextMethodDelay(reactor);
@@ -570,7 +517,7 @@ iterate_internal(cReactor *reactor, int delay)
                     break;
 
                 case CREACTOR_JOB_EXIT:
-                    /* No one can tell the reactor to quit! */
+                    /* No one can tell the reactor's main thread to quit! */
                     break;
             }
             cReactorJob_Destroy(job);
@@ -585,12 +532,6 @@ iterate_internal(cReactor *reactor, int delay)
             /* Stop. */
             stop_internal(reactor);
         }
-    }
-
-    /* Check for the DONE state and do any cleanup. */
-    if (reactor->state == CREACTOR_STATE_DONE)
-    {
-        iterate_internal_finalize(reactor); 
     }
 
     return 0;
@@ -646,14 +587,39 @@ cReactor_run(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    /* Keep running until we hit the DONE state. */
-    do
+    if (reactor->state != CREACTOR_STATE_STOPPED)
+    {
+        /* _RUNNING means they tried to nest reactor.run() calls, and we
+         don't allow that. _STOPPING means reactor.run() hasn't finished yet
+         (XXX:??) */
+        if (reactor->state == CREACTOR_STATE_RUNNING)
+            PyErr_SetString(PyExc_RuntimeError,
+                            "the reactor was already running!");
+        else
+            PyErr_SetString(PyExc_RuntimeError,
+                            "the reactor was trying to stop!");
+        return NULL;
+    }
+        
+
+    /* Change our state to running. */
+    reactor->state = CREACTOR_STATE_RUNNING;
+
+    /* Fire the the startup system event. */
+    fireSystemEvent_internal(reactor, "startup");
+
+    /* "Begin at the beginning", the King said, very gravely, "and go on
+       till you come to the end: then stop." */
+    while (reactor->state != CREACTOR_STATE_STOPPED)
     {
         if (iterate_internal(reactor, -1) < 0)
         {
             return NULL;
         }
-    } while (reactor->state < CREACTOR_STATE_DONE);
+    }
+
+    /* do cleanup when we stop running */
+    cReactorThread_freeThreadpool(reactor); 
 
     Py_INCREF(Py_None);
     return Py_None;
@@ -674,7 +640,7 @@ cReactor_crash(PyObject *self, PyObject *args)
     }
 
     /* Move the state to done. */
-    reactor->state = CREACTOR_STATE_DONE;
+    reactor->state = CREACTOR_STATE_STOPPED;
 
     Py_INCREF(Py_None);
     return Py_None;
@@ -730,7 +696,7 @@ cReactor_init(cReactor *reactor)
     }
 
     /* Set our state. */
-    reactor->state = CREACTOR_STATE_INIT;
+    reactor->state = CREACTOR_STATE_STOPPED;
 
     /* We need to know when threading has begun. */
     when_threaded = cReactorUtil_FromImport("twisted.python.threadable",
@@ -759,6 +725,10 @@ cReactor_init(cReactor *reactor)
     {
         return -1;
     }
+
+    /* initialize signal handlers, signal-delivering pipes, */
+    if (iterate_internal_init(reactor))
+        return -1;
 
     return 0;
 }

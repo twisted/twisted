@@ -43,10 +43,9 @@ typedef enum _cReactorEventPhase
 /* Reactor states. */
 typedef enum _cReactorState
 {
-    CREACTOR_STATE_INIT     = 0,
+    CREACTOR_STATE_STOPPED  = 0,
     CREACTOR_STATE_RUNNING  = 1,
     CREACTOR_STATE_STOPPING = 2,
-    CREACTOR_STATE_DONE     = 3,
 } cReactorState;
 
 /* Transport states. */
@@ -249,6 +248,7 @@ PyObject * cReactor_New(void);
 PyObject * cReactor_resolve(PyObject *self, PyObject *args, PyObject *kw);
 PyObject * cReactor_run(PyObject *self, PyObject *args);
 PyObject * cReactor_stop(PyObject *self, PyObject *args);
+void       cReactor_stop_finish(cReactor *reactor);
 PyObject * cReactor_crash(PyObject *self, PyObject *args);
 PyObject * cReactor_iterate(PyObject *self, PyObject *args, PyObject *kw);
 PyObject * cReactor_fireSystemEvent(PyObject *self, PyObject *args);
@@ -385,6 +385,7 @@ PyObject * cReactorThread_suggestThreadPoolSize(PyObject *self, PyObject *args);
 PyObject * cReactorThread_wakeUp(PyObject *self, PyObject *args);
 
 PyObject * cReactorThread_initThreading(PyObject *self, PyObject *args);
+void cReactorThread_freeThreadpool(cReactor *reactor);
 
 /* Create a new APPLY job. */
 cReactorJob * cReactorJob_NewApply(PyObject *callable, PyObject *args, PyObject *kw);

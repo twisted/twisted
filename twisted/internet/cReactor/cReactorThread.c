@@ -22,6 +22,8 @@
 #include <signal.h>
 #include <unistd.h>
 
+static int cReactorThread_initThreadpool(cReactor *reactor);
+
 /* The worker thread's main loop. */
 static void *
 worker_thread_main(void *arg)
@@ -139,12 +141,10 @@ cReactorThread_callInThread(PyObject *self, PyObject *args, PyObject *kw)
         return NULL;
     }
 
-    /* Threads must be initialized first. */
-    if (! reactor->multithreaded)
-    {
-        PyErr_SetString(PyExc_RuntimeError,
-                        "callInThread called before initThreading!");
-        return NULL;
+    /* The threadpool must be initialized first. */
+    if (!reactor->thread_pool) {
+        if (cReactorThread_initThreadpool(reactor) != 0)
+            return NULL;
     }
 
     /* Slice off the callable args. */
@@ -262,10 +262,13 @@ cReactorThread_suggestThreadPoolSize(PyObject *self, PyObject *args)
 PyObject *
 cReactorThread_initThreading(PyObject *self, PyObject *args)
 {
+    /* This sets up main_queue, which is used to feed jobs to the main
+       thread where they can be executed safely. runFromThread adds to this
+       queue, and the main loop (iterate_internal) removes jobs from it.
+
+       The queue set up by this function is never removed. */
+
     cReactor *reactor;
-    PyThreadState *thread_state;
-    int i;
-    cReactorThread *thread;
 
     reactor = (cReactor *)self;
 
@@ -286,45 +289,139 @@ cReactorThread_initThreading(PyObject *self, PyObject *args)
 
         /* Make a thread safe job queue for the reactor. */
         reactor->main_queue = cReactorJobQueue_New();
-
-        /* Make a worker queue. */
-        reactor->worker_queue = cReactorJobQueue_New();
-
-        /* Clamp the minimum thread pool size to 1. */
-        if (reactor->req_thread_pool_size < 1)
-        {
-            reactor->req_thread_pool_size = 1;
-        }
-
-        /* Get the main thread's thread state. */
-        thread_state = PyThreadState_Get();
-
-        /* Create the threads. */
-        for (i = 0; i < reactor->req_thread_pool_size; ++i)
-        {
-            thread = (cReactorThread *)malloc(sizeof(cReactorThread));
-            memset(thread, 0x00, sizeof(cReactorThread));
-
-            /* Reactor link. */
-            thread->reactor = reactor;
-
-            /* The Interpreter state from the main thread. */
-            thread->interp = thread_state->interp;
-
-            /* Add it to the list. */
-            thread->next            = reactor->thread_pool;
-            reactor->thread_pool    = thread;
-
-            /* Fire it up! */
-            pthread_create(&thread->thread_id,
-                           NULL,
-                           worker_thread_main,
-                           thread);
-        }
     }
 
     Py_INCREF(Py_None);
     return Py_None;
+}
+
+/* 
+   cReactorThread_initThreadpool:
+
+   Set up the thread pool, used to process jobs dispatched by runInThread.
+   This is run whenever runInThread notices that the pool is missing.
+
+   The threads set up by this function are removed when the "shutdown" event
+   trigger completes. This will occur when reactor.run() completes, either
+   because .stop() was called, .crash() was called, or a signal was
+   received.
+*/
+
+static int
+cReactorThread_initThreadpool(cReactor *reactor)
+{
+
+    PyThreadState *thread_state;
+    int i;
+    cReactorThread *thread;
+
+    if (reactor->thread_pool)
+        return 0;
+
+    /* Initialize the reactor's threadness. */
+    if (!reactor->multithreaded)
+    {
+        PyObject *threadable_init, *obj;
+
+        /* call threadable.init(1) */
+        threadable_init = cReactorUtil_FromImport("twisted.python.threadable",
+                                                  "init");
+        if (!threadable_init)
+            return -1;
+        obj = PyObject_CallFunction(threadable_init, "(i)", 1);
+        Py_DECREF(threadable_init);
+        Py_XDECREF(obj);
+        if (!obj)
+            return -1;
+        
+        /* that will call cReactorThread_initThreading, which will set
+           reactor->multithreaded */
+        if (!reactor->multithreaded) {
+            PyErr_SetString(PyExc_RuntimeError,
+                            "initThreading failed to init threading");
+        }
+    }
+
+    /* Make a worker queue. */
+    reactor->worker_queue = cReactorJobQueue_New();
+
+    /* Clamp the minimum thread pool size to 1. */
+    if (reactor->req_thread_pool_size < 1)
+    {
+        reactor->req_thread_pool_size = 1;
+    }
+
+    /* Get the main thread's thread state. */
+    thread_state = PyThreadState_Get();
+
+    /* Create the threads. */
+    for (i = 0; i < reactor->req_thread_pool_size; ++i)
+    {
+        thread = (cReactorThread *)malloc(sizeof(cReactorThread));
+        if (!thread) {
+            PyErr_SetString(PyExc_MemoryError,
+                            "could not allocate a worker thread");
+            return -1;
+        }
+        memset(thread, 0x00, sizeof(cReactorThread));
+
+        /* Reactor link. */
+        thread->reactor = reactor;
+
+        /* The Interpreter state from the main thread. */
+        thread->interp = thread_state->interp;
+
+        /* Add it to the list. */
+        thread->next            = reactor->thread_pool;
+        reactor->thread_pool    = thread;
+
+        /* Fire it up! */
+        pthread_create(&thread->thread_id,
+                       NULL,
+                       worker_thread_main,
+                       thread);
+    }
+
+    return 0;
+}
+
+void
+cReactorThread_freeThreadpool(cReactor *reactor)
+{
+    cReactorThread *thread;
+    PyThreadState *thread_state;
+
+    /* No cleanup needed if we aren't using threads. */
+    if (! reactor->multithreaded)
+    {
+        return;
+    }
+
+    /* Release the Python interpreter lock in case there are APPLY jobs still
+     * in the worker queue.
+     */
+    thread_state = PyThreadState_Swap(NULL);
+    PyEval_ReleaseLock();
+
+    /* Issue EXIT jobs, one for each thread. */
+    thread = reactor->thread_pool;
+    while (thread)
+    {
+        cReactorJobQueue_AddJob(reactor->worker_queue, cReactorJob_NewExit());
+        thread = thread->next;
+    }
+
+    /* Wait for them to finish. */
+    thread = reactor->thread_pool;
+    while (thread)
+    {
+        pthread_join(thread->thread_id, NULL);
+        thread = thread->next;
+    }
+
+    /* Reacquire the lock. */
+    PyEval_AcquireLock();
+    PyThreadState_Swap(thread_state);
 }
 
 
