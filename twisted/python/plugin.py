@@ -127,9 +127,14 @@ def getPluginFileList(debugInspection=None, showProgress=None):
     loaded = {}
     seenNames = {}
     
-    paths = filter(os.path.isdir,
-                map(cacheTransform,
-                    filter(lambda x:isinstance(x, type('')), sys.path)))
+    # XXX Some people claim to have found non-strings in sys.path (an empty
+    # list, in particular).  Instead of tracking down the cause for their
+    # presence, they decided it was better to discard them unconditionally
+    # without further investigation.  At some point, someone should track
+    # down where non-strings are coming from and do something about them.
+    paths = [cacheTransform(p) for p in sys.path 
+             if isinstance(p, str) and os.path.isdir(p)]
+
     # special case for commonly used directories we *know* shouldn't be checked
     # and really slow down mktap and such-like in real installations
     for p in ("/usr/bin", "/usr/local/bin"):
