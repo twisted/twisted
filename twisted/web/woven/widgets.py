@@ -718,7 +718,7 @@ def appendModel(newNode, modelName):
     if curModel is None:
         newModel = str(modelName)
     else:
-        newModel = str(modelName) + '/' + curModel
+        newModel = '/'.join((curModel, str(modelName)))
     newNode.attributes['model'] = newModel
 
 
