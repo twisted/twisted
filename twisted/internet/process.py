@@ -111,8 +111,8 @@ class ProcessWriter(abstract.FileDescriptor, styles.Ephemeral):
         """Write some data to the open process.
         """
         try:
-            rv = os.write(self.proc.stdin, self.unsent)
-            if rv == len(self.unsent):
+            rv = os.write(self.proc.stdin, data)
+            if rv == len(data):
                 self.startReading()
             return rv
         except IOError, io:

@@ -48,8 +48,8 @@ class StandardIOWriter(abstract.FileDescriptor):
     
     def writeSomeData(self, data):
         try:
-            rv = os.write(self.fileno(), self.unsent)
-            if rv == len(self.unsent):
+            rv = os.write(self.fileno(), data)
+            if rv == len(data):
                 self.startReading()
             return rv
         except IOError, io:
