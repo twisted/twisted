@@ -108,14 +108,6 @@ def getAdapterFactory(fromInterface, toInterface, default):
 
 # add global adapter lookup hook for our newly created registry
 def _hook(iface, ob, lookup=globalRegistry.lookup1):
-    # FIXME: Workaround zope.interface bug:
-    # Once you look up something in AdapterRegistry,
-    # any further 'classProvides(Only)' statements will not work.
-    # Until this is fixed, make *sure* fixClassImplements was
-    # called before looking anything up in AdapterRegistry.
-    # http://collector.zope.org/Zope3-dev/349
-    if hasattr(ob, '__class__'):
-        fixClassImplements(ob.__class__)
     factory = lookup(declarations.providedBy(ob), iface)
     if factory is None:
         return None
