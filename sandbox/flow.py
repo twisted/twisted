@@ -31,33 +31,44 @@ from __future__ import nested_scopes
 
     Most classes in the flow module an Instruction, either a CallLater
     or a Stage.   A Stage instruction is used to wrap various sorts of
-    producers, anything from a simple String, to Callback functions.  
-    Stages can yield other stages to build a processing chain, results
-    which are returned to the previous stage, or a CallLater instruction
-    which causes the whole operation to be suspended.   
+    producers, anything from a simple string to Callback functions.  
+    Some stages can be constructed directly, such as Zip, Concurrent,
+    Merge, Callback, or Threaded.  But in most cases, in particular
+    _String, _List, _Iterable, and _Deferred, state construction is
+    handled through the wrap function.  Stages can yield other stages 
+    to build a processing chain, results which are returned to the 
+    previous stage, or a CallLater instruction which causes the whole 
+    operation to be suspended.   
 
-    There is a special CallLater, Cooperate, which simply resumes the 
-    chain of stages at a later time.   However, each one of the 
-    Callback, DeferredWrapper, and Threaded wrappers have their
-    own special CallLater which handles their specific cases.
+    Typically, the CallLater instructions as passed up the call stack
+    till the top level, or Controller.  The controller then typically
+    returns control, but registers itself to be called later.  Once
+    called again, the controller sets up the call stack and resumes
+    the top level generator.  There is a special CallLater, Cooperate,
+    which simply resumes the chain of stages at a later time.   Some 
+    stages, Callback, _Deferred, and Threaded have their own special 
+    CallLater which handles the process of resuming flow for their 
+    specific case.
 
     Instruction
        CallLater
           Cooperate
        Stage
-          String
-          List
-          Iterable
+          _String
+          _List
+          _Iterable
           Zip
           Concurrent
              Merge
           Block
           Callback*
-             Protocol
-          DeferredWrapper*
+             _Protocol
+          _Deferred*
           Threaded*
-    Deferred
-
+    Controller
+        Deferred 
+        Block
+        _Protocol
 """
 
 import time, types
@@ -83,15 +94,15 @@ def wrap(obj, *trap):
 
     typ = type(obj)
     if typ is type([]) or typ is type(tuple()):
-        return List(obj)
+        return _List(obj)
     if typ is type(''):
-        return String(obj)
+        return _String(obj)
      
     if isinstance(obj, defer.Deferred):
-        return DeferredWrapper(obj, *trap)
+        return _Deferred(obj, *trap)
 
     try:
-        return Iterable(obj, *trap)
+        return _Iterable(obj, *trap)
     except TypeError: 
         pass
 
@@ -109,6 +120,18 @@ class Unsupported(TypeError):
         msg = "Unsupported flow instruction: %s " % repr(inst)
         TypeError.__init__(self,msg)
 
+class Controller:
+    """ Flow controller
+
+        At the base of every flow, is a controller class which 
+        interprets the instructions, especially the CallLater 
+        instructions.  This is primarly just a marker class to
+        denote which classes consume Instruction events.  If a
+        controller cannot handle a particular instruction, it
+        raises the Unsupported exception.
+    """
+    pass
+
 class NotReadyError(RuntimeError):
     """ Used for the default stage value indicating that 'yield' was
         not used on the stage prior to calling it's next() method
@@ -120,7 +143,7 @@ class CallLater(Instruction):
     """ Instruction to support callbacks
 
         This is the instruction which is returned during the yield
-        of the DeferredWrapper and Callback stage.   The underlying 
+        of the _Deferred and Callback stage.   The underlying 
         flow driver should call the 'callLater' function with the 
         callable to be executed after each callback.
     """
@@ -266,8 +289,8 @@ class Stage(Instruction):
         """
         raise NotImplementedError
 
-class String(Stage):
-    """ Wrapper for a string object
+class _String(Stage):
+    """ Wrapper for a string object; don't create directly use flow.wrap
 
         This is probably the simplest stage of all.  It is a 
         constant list of one item.   While it may not have much
@@ -280,8 +303,8 @@ class String(Stage):
     def _yield(self):
         pass
 
-class List(Stage):
-    """ Wrapper for lists and tuple objects
+class _List(Stage):
+    """ Wrapper for lists and tuple objects; don't create directly
 
         A simple stage, which admits the usage of instructions,
         such as Cooperate() within the list.   This would be
@@ -299,7 +322,7 @@ class List(Stage):
             self.results.append(result)
         self.stop = True
 
-class Iterable(Stage):
+class _Iterable(Stage):
     """ Wrapper for iterable objects, pass in a next() function
 
         This wraps functions (or bound methods).    Execution starts with
@@ -479,7 +502,7 @@ class Merge(Stage):
             self.stop = True
         self.failure =  self.concurrent.failure
 
-class Block(Stage):
+class Block(Controller,Stage):
     """ A stage which Blocks on Cooperate events
 
         This converts a Stage into an iterable which can be used 
@@ -550,8 +573,8 @@ class Callback(Stage):
             return self._cooperate
     __call__ = result
 
-class DeferredWrapper(Stage):
-    """ Wraps a Deferred object into a stage
+class _Deferred(Stage):
+    """ Wraps a Deferred object into a stage; create with flow.wrap
 
         This stage provides a callback 'catch' for errback and
         callbacks.  If not called, then this returns an Instruction
@@ -566,7 +589,7 @@ class DeferredWrapper(Stage):
     def __init__(self, deferred, *trap):
         Stage.__init__(self, *trap)
         deferred.addCallbacks(self._callback)
-        self._cooperate  = DeferredWrapper.Instruction(deferred)
+        self._cooperate  = _Deferred.Instruction(deferred)
         self._called     = False
         self._fetched    = False
 
@@ -652,7 +675,7 @@ class Threaded(Stage):
             return
         return self._cooperate
 
-class Deferred(defer.Deferred):
+class Deferred(Controller, defer.Deferred):
     """ wraps up a Stage with a Deferred interface
  
         In this version, the results of the Stage are used to 
