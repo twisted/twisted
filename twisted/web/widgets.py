@@ -1,6 +1,6 @@
 
 # System Imports
-import string, time, types, traceback, copy, pprint, sys, os
+import string, time, types, traceback, copy, pprint, sys, os, string
 from cStringIO import StringIO
 
 # Twisted Imports
@@ -14,6 +14,10 @@ from server import NOT_DONE_YET
 """A twisted web component framework.
 """
 
+# magic value that sez a widget needs to take over the whole page.
+
+FORGET_IT = 99 
+
 class Widget:
     def display(self, request):
         raise NotImplementedError("twisted.web.widgets.Widget.display")
@@ -26,7 +30,9 @@ class StreamWidget(Widget):
     def display(self, request):
         io = StringIO()
         try:
-            self.stream(io.write, request)
+            result = self.stream(io.write, request)
+            if result is not None:
+                return result
             return [io.getvalue()]
         except:
             io = StringIO()
@@ -68,7 +74,8 @@ class Presentation(Widget):
         for elem in self.tmpl:
             flip = not flip
             if flip:
-                tm.append(elem)
+                if elem:
+                    tm.append(elem)
             else:
                 try:
                     x = eval(elem, namespace, namespace)
@@ -81,7 +88,8 @@ class Presentation(Widget):
                     if isinstance(x, types.ListType):
                         tm.extend(x)
                     elif isinstance(x, Widget):
-                        tm.extend(x.display(request))
+                        val = x.display(request)
+                        tm.extend(val)
                     else:
                         # Only two allowed types here should be deferred and
                         # string.
@@ -154,7 +162,7 @@ class Form(StreamWidget):
         write(pprint.PrettyPrinter().pformat(kw))
 
     def doProcess(self, form, write, request):
-        args = request.args
+        args = copy.copy(request.args)
         kw = {}
         for inputType, displayName, inputName, inputValue in form:
             if not args.has_key(inputName):
@@ -173,7 +181,7 @@ class Form(StreamWidget):
                 del args[field]
         if args:
             raise FormInputError("unknown fields" % repr(args))
-        apply(self.process, (write, request), kw)
+        return apply(self.process, (write, request), kw)
 
     def stream(self, write, request):
         args = request.args
@@ -217,18 +225,45 @@ class Container(Widget):
             value.extend(d)
         return value
 
+class _RequestDeferral:
+    def __init__(self):
+        self.deferred = defer.Deferred()
+        self.io = StringIO()
+        self.write = self.io.write
+
+    def finish(self):
+        self.deferred.callback(self.io.getvalue())
+
+def possiblyDeferWidget(widget, request):
+    # web in my head get it out get it out
+    try:
+        disp = widget.display(request)
+        # if this widget wants to defer anything -- well, I guess we've got to
+        # defer it.
+        for elem in disp:
+            if isinstance(elem, defer.Deferred):
+                req = _RequestDeferral()
+                RenderSession(disp, req)
+                return req.deferred
+        return string.join(disp, '')
+    except:
+        io = StringIO()
+        traceback.print_exc(file=io)
+        return html.PRE(io.getvalue())
+
 class RenderSession:
     def __init__(self, lst, request):
         self.lst = lst
         self.request = request
         self.position = 0
+        self.needsHeaders = 0
         pos = 0
         toArm = []
+        # You might want to set a header from a deferred, in which case you
+        # have to set an attribute -- needsHeader.
         for item in lst:
             if isinstance(item, defer.Deferred):
-                args = (pos,)
-                item.addCallbacks(self.callback, self.errback,
-                                  callbackArgs=args, errbackArgs=args)
+                self._addDeferred(item, pos)
                 toArm.append(item)
             pos = pos + 1
         self.keepRendering()
@@ -236,18 +271,37 @@ class RenderSession:
         for item in toArm:
             item.arm()
 
-    def callback(self, result, position):
+    def _addDeferred(self, deferred, position):
+        if hasattr(deferred, 'needsHeader'):
+            self.needsHeaders = self.needsHeaders + 1
+            args = (position, 1)
+        else:
+            args = (position, 0)
+        deferred.addCallbacks(self.callback, self.callback,
+                              callbackArgs=args, errbackArgs=args)
+
+    def callback(self, result, position, decNeedsHeaders):
+        if result != FORGET_IT:
+            self.needsHeaders = self.needsHeaders - decNeedsHeaders
+        if isinstance(result, defer.Deferred):
+            self._addDeferred(result, position)
         self.lst[position] = result
         self.keepRendering()
+        if isinstance(result, defer.Deferred):
+            result.arm()
 
-    def errback(self, error, position):
-        self.lst[position] = error
-        self.keepRendering()
 
     def keepRendering(self):
+        if self.needsHeaders:
+            # short circuit actual rendering process until we're sure no more
+            # deferreds need to set headers...
+            return
         assert self.lst is not None, "This shouldn't happen."
         while 1:
             item = self.lst[self.position]
+            if self.position == 0 and item == FORGET_IT:
+                # If I haven't moved yet, and the widget wants to take over the page, let it do so!
+                return
             if isinstance(item, types.StringType):
                 self.request.write(item)
             elif isinstance(item, defer.Deferred):
@@ -260,6 +314,15 @@ class RenderSession:
                 self.request.finish()
                 return
 
+
+class WidgetResource(resource.Resource):
+    def __init__(self, widget):
+        self.widget = widget
+
+    def render(self, request):
+        RenderSession(self.widget.display(request), request)
+        return NOT_DONE_YET
+    
 
 class Page(resource.Resource, Presentation):
 
@@ -375,6 +438,7 @@ class TitleBox(Presentation):
         """
         self.widget = widget
         self.title = title
+        Presentation.__init__(self)
 
 
 class Reloader(Presentation):
