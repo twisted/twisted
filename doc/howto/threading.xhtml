@@ -124,10 +124,11 @@ d.addCallback(printResult)
 <pre class="python">
 from twisted.internet import reactor
 
-reactor.suggestThreadPoolSize(20)
+reactor.suggestThreadPoolSize(30)
 </pre>
 
-  <p>The size of the thread pool defaults to a maximum of 10 threads.  Be
+  <p>The default size of the thread pool depends on the reactor being used;
+  the default reactor uses a minimum size of 5 and a maximum size of 20.  Be
   careful that you understand threads and their resource usage before
   drastically altering the thread pool sizes.</p>
   </body>
