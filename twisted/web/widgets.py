@@ -358,6 +358,7 @@ class Form(Widget):
         'file': htmlFor_file,
         'string': htmlFor_string,
         'int': htmlFor_string,
+        'float': htmlFor_string,
         'text': htmlFor_text,
         'menu': htmlFor_menu,
         'multimenu': htmlFor_multimenu,
@@ -367,7 +368,8 @@ class Form(Widget):
     }
 
     formParse = {
-        'int': int
+        'int': int,
+        'float': float,
     }
 
     formFields = [
@@ -392,7 +394,9 @@ class Form(Widget):
 
           * 'string': a short string
 
-          * 'int': an integer
+          * 'int': an integer, e.g. 1, 0, 25 or -23
+
+          * 'float': a float, e.g. 1.0, 2, -3.45, or 28.4324231
 
           * 'text': a longer text field, suitable for entering paragraphs
 
