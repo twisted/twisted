@@ -43,6 +43,7 @@ def createCGIEnvironment(ctx, request=None):
     python_path = string.join(sys.path, os.pathsep)
     server_name = request.host.split(':')[0]
 
+    # See http://hoohoo.ncsa.uiuc.edu/cgi/env.html for CGI interface spec
     env = os.environ.copy()
     env.update({
         "SERVER_SOFTWARE":   server.VERSION,
@@ -51,15 +52,23 @@ def createCGIEnvironment(ctx, request=None):
         "SERVER_PROTOCOL":   "HTTP/%i.%i" % request.clientproto,
         "SERVER_PORT":       str(request.getHost()[2]),
         "REQUEST_METHOD":    request.method,
-        "SCRIPT_NAME":       script_name, # XXX
+        "PATH_INFO":         '', # Will get filled in later
+        "PATH_TRANSLATED":   '', # For our purposes, equiv. to PATH_INFO
+        "SCRIPT_NAME":       script_name,
+        "QUERY_STRING":      '', # Will get filled in later
+        "REMOTE_HOST":       '', # TODO
+        "REMOTE_ADDR":       '', # TODO
         "REQUEST_URI":       request.uri,
+        "CONTENT_TYPE":      '', # TODO
         "CONTENT_LENGTH":    str(request.stream.length),
+        # Anything below here is not part of the CGI specification.
+        "REQUEST_SCHEME":    request.scheme,
         })
     
     # Add PATH_INFO from the remaining segments in the context
     postpath = iweb.IRemainingSegments(ctx)
     if postpath:
-        env["PATH_INFO"] = "/" + '/'.join(postpath)
+        env["PATH_TRANSLATED"] = env["PATH_INFO"] = "/" + '/'.join(postpath)
 
     ## This doesn't work in compat.py right now, either.
     #client = request.getClient()

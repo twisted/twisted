@@ -106,6 +106,7 @@ class ErrorStream(object):
 
 class WSGIHandler(object):
     headersSent = False
+    
     def __init__(self, application, ctx):
         # Called in IO thread
         request = iweb.IRequest(ctx)
@@ -120,19 +121,14 @@ class WSGIHandler(object):
     def setupEnvironment(self):
         # Called in application thread
         env = self.environment
-        if env.get('HTTPS'):
-            url_scheme = 'https'
-        else:
-            url_scheme = 'http'
         env['wsgi.version']      = (1, 0)
-        env['wsgi.url_scheme']   = url_scheme
+        env['wsgi.url_scheme']   = env['REQUEST_SCHEME']
         env['wsgi.input']        = InputStream(self.request.stream)
         env['wsgi.errors']       = ErrorStream()
         env['wsgi.multithread']  = True
         env['wsgi.multiprocess'] = True
         env['wsgi.run_once']     = False
         env['wsgi.file_wrapper'] = FileWrapper
-        
 
     def startWSGIResponse(self, status, response_headers, exc_info=None):
         # Called in application thread
