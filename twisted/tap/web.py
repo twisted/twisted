@@ -86,6 +86,9 @@ twisted.web.test in it."""
             }
 
     def opt_processor(self, proc):
+        if not isinstance(self.opts['root'], static.File):
+            print "You can only use --processor after --path."
+            sys.exit(2)
         ext, klass = proc.split('=', 1)
         self.opts['root'].processors[ext] = reflect.namedClass(klass)
 
