@@ -163,7 +163,7 @@ Could not create directory %s because: %s" % (o['dirname'], e.strerr))
 
     try:
         shutil.copy2(o['conffile'], '.')
-    except EnvironmentError:
+    except EnvironmentError, e:
         if e.strerror == 'File exists':
             pass
         else:
