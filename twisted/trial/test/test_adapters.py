@@ -156,6 +156,7 @@ class TestFailureFormatting(common.RegistryBaseMixin, unittest.TestCase):
 
     def testImportError(self):
         self.failIfImportErrors = False
+        # Add a module that fails to import
         self.suite.addModule('twisted.trial.test.importErrors')
         self.suite.run()
 
@@ -166,7 +167,11 @@ class TestFailureFormatting(common.RegistryBaseMixin, unittest.TestCase):
         
         common.stringComparison(expect, output)
 
-        # Clean up garbage left in sys.modules.  Without this, this test fails
-        # when run a second time.
-        del sys.modules['twisted.trial.test.importErrors']
+        try:
+            # Clean up garbage left in sys.modules.  Without this, this test fails
+            # when run a second time.
+            del sys.modules['twisted.trial.test.importErrors']
+        except KeyError:
+            # Python 2.4 has fixed this.  Yay!
+            pass
 
