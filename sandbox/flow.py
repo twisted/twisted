@@ -74,8 +74,12 @@ def wrap(obj, trap = None):
         obj = iter(obj)
         return Iterable(iter(obj),trap)
     except TypeError: pass
-    assert callable(obj), "cannot find an appropriate wrapper"
-    return Callable(obj, trap)
+    if callable(obj):
+        return Callable(obj, trap)
+    from twisted.internet.defer import Deferred
+    if isinstance(obj, Deferred):
+        return WrapDeferred(obj)
+    assert 0, "cannot find an appropriate wrapper"
 
 class Instruction:
     """ Has special meaning when yielded in a flow """
@@ -308,6 +312,30 @@ class Block(Stage):
                 raise TypeError("Invalid stage result")
             return stage.next()
 
+class DeferredWrapper(Stage):
+    """ Wraps a Deferred object into a stage
+
+        Ideally, this could be done better with more indepth
+        knowledge of the reactor, i.e. instead of returning
+        Cooperate, it could return a WaitFor object, which
+        would then cause the stream to only be resumed once
+        the deferred has finished
+    """
+    def __init__(self, deferred, trap = None, delay = 0):
+        Stage.__init__(self, trap)
+        deferred.addBoth(self_callback)
+        self._cooperate = Cooperate(delay)
+        self._finished = 0
+    def _callback(res):
+        self.result = res
+        self._finished = 1
+    def _yield(self):
+        Stage._yield(self)
+        if not self._finished:
+            return self._cooperate
+        if self._stop_next or self.stop:
+            self.stop = 1
+            return
 #
 # Items following this comment depend upon twisted.internet
 #
