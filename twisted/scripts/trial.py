@@ -24,7 +24,11 @@ from twisted.trial import unittest
 import sys, os
 
 class Options(usage.Options):
-    optFlags = [["help", "h"], ["text", "t", "Text mode (ignored)"], ["verbose", "v", "Verbose output"]]
+    optFlags = [["help", "h"],
+                ["text", "t", "Text mode (ignored)"],
+                ["verbose", "v", "Verbose output"]]
+    optParameters = [["reactor", "r", None,
+                      "The Twisted reactor to install before running the tests (looked up as a module contained in twisted.internet)"]]
 
     def __init__(self):
         usage.Options.__init__(self)
@@ -53,6 +57,12 @@ def run():
     except usage.error, ue:
         print "%s: %s" % (sys.argv[0], ue)
         os._exit(1)
+
+    if config['reactor']:
+        from twisted.python import reflect
+        mod = 'twisted.internet.' + config['reactor']
+        print "Using %s reactor" % mod
+        reflect.namedModule(mod).install()
 
     suite = unittest.TestSuite()
     for package in config['packages']:

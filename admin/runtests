@@ -27,8 +27,8 @@ sys.path.insert(0, os.curdir)
 
 from twisted.scripts import trial
 
-if len(sys.argv) == 1:
-    sys.argv.extend(['-p', 'twisted.test'])
+# People shouldn't really be passing -p to runtests; it's explicitly for twisted.test
+sys.argv.extend(['-p', 'twisted.test'])
 
 trial.run()
 
