@@ -83,15 +83,15 @@ def run():
     # Get config
     config = Options()
     config.parseOptions()
-    config.port = int(config.port)
-    config.passive = int(config.passive)
-    config.debug = int(config.debug)
+    config.opts['port'] = int(config.opts['port'])
+    config.opts['passive'] = int(config.opts['passive'])
+    config.opts['debug'] = int(config.opts['debug'])
     
     # Create the client
-    ftpClient = FTPClient(config.username, config.password, 
-                          passive=config.passive)
-    ftpClient.debug = config.debug
-    tcp.Client(config.host, config.port, ftpClient, 10.0)
+    ftpClient = FTPClient(config.opts['username'], config.opts['password'], 
+                          passive=config.opts['passive'])
+    ftpClient.debug = config.opts['debug']
+    tcp.Client(config.opts['host'], config.opts['port'], ftpClient, 10.0)
 
     # Get the current working directory
     ftpClient.pwd().addCallbacks(success, fail).arm()

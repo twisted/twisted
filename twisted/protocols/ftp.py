@@ -699,10 +699,25 @@ class FTPCommand:
         self.ready = 1
         
 class FTPClient(basic.LineReceiver):
+    """A Twisted FTP Client
+
+    Supports active and passive transfers.
+    """
     debug = 0
     def __init__(self, username='anonymous', 
                  password='twisted@twistedmatrix.com',
                  passive=1):
+        """Constructor.
+
+        Optional arguments:
+          * username
+          * password
+          * passive -- flag that control if the client is to use active or 
+            passive data connections.  You can also change this after 
+            construction by assigning to self.passive.
+            
+        I will login as soon as I receive the weclome message from the server.
+        """
         self.username = username
         self.password = password
 
@@ -714,18 +729,20 @@ class FTPClient(basic.LineReceiver):
         self.passive = passive
 
     def fail(self, error):
-        """Disconnect, and also give an error to any queued deferreds"""
+        """Disconnect, and also give an error to any queued deferreds."""
         self.transport.loseConnection()
         while self.actionQueue:
             ftpCommand = self.popCommandQueue()
             ftpCommand.deferred.errback(Failure(ConnectionLost('FTP connection lost', error)))
 
     def sendLine(self, line):
+        """(Private) Sends a line, unless line is None."""
         if line is None:
             return
         basic.LineReceiver.sendLine(self, line)
 
     def sendNextCommand(self):
+        """(Private) Processes the next command in the queue."""
         ftpCommand = self.popCommandQueue()
         if ftpCommand is None:
             self.nextDeferred = None
@@ -743,7 +760,7 @@ class FTPClient(basic.LineReceiver):
         self.sendLine(ftpCommand.text)
 
     def queueLogin(self):
-        """Initialise the connection
+        """Initialise the connection.
 
         Login, send the password, set retrieval mode to binary"""
         self.nextDeferred = Deferred().addErrback(self.fail)
@@ -751,17 +768,22 @@ class FTPClient(basic.LineReceiver):
         for command in ('USER ' + self.username, 
                         'PASS ' + self.password,
                         'TYPE I',):
-            ftpCommand = FTPCommand(command)
-            self.queueCommand(ftpCommand)
-            ftpCommand.deferred.addErrback(self.fail).arm()
+            self.queueStringCommand(command).addErrback(self.fail).arm()
         
     def queueCommand(self, ftpCommand):
+        """Add an FTPCommand object to the queue.
+
+        If it's the only thing in the queue, and we are connected and we aren't
+        waiting for a response of an earlier command, the command will be sent
+        immediately.
+        """
         self.actionQueue.append(ftpCommand)
         if (len(self.actionQueue) == 1 and self.transport is not None and
             self.nextDeferred is None):
             self.sendNextCommand()
 
     def popCommandQueue(self):
+        """Return the front element of the command queue, or None if empty."""
         if self.actionQueue:
             return self.actionQueue.pop(0)
         else:
@@ -824,6 +846,15 @@ class FTPClient(basic.LineReceiver):
             return portCmd.realDeferred
 
     def generatePortCommand(self, portCmd):
+        """(Private) Generates the text of a given PORT command"""
+
+        # The problem is that we don't create the listening port until we need
+        # it for various reasons, and so we have to muck about to figure out
+        # what interface and port it's listening on, and then finally we can
+        # create the text of the PORT command to send to the FTP server.
+
+        # FIXME: This method is far too ugly.
+        
         # Start listening on a port
         class FTPDataPortFactory(ServerFactory):
             def buildProtocol(self, connection):
@@ -857,42 +888,81 @@ class FTPClient(basic.LineReceiver):
         portCmd.deferred.addErrback(listener.fail).arm()
 
     def escapePath(self, path):
+        """Returns a FTP escaped path (replace newlines with nulls)"""
         # Escape newline characters
         return string.replace(path, '\n', '\0')
 
     def retrieveFile(self, path, protocol):
+        """Retrieve a file from the given path
+
+        This method issues the 'RETR' FTP command.
+        
+        The file is fed into the given Protocol instance.  The data connection
+        will be passive if self.passive is set.
+        """
         return self.retrieve('RETR ' + self.escapePath(path), protocol)
 
     retr = retrieveFile
 
     def list(self, path, protocol):
+        """Retrieve a file listing into the given protocol instance.
+
+        This method issues the 'LIST' FTP command.
+
+        You probably want to use an instance of FTPFileListingProtocol for the
+        protocol argument, because it should be able to cope with most common
+        file listing formats.
+        """
         if path is None:
             path = ''
         return self.retrieve('LIST ' + self.escapePath(path), protocol)
         
     def nlst(self, path, protocol):
+        """Retrieve a short file listing into the given protocol instance.
+
+        This method issues the 'NLST' FTP command.
+        
+        NLST (should) return a list of filenames, one per line.
+        """
         if path is None:
             path = ''
         return self.retrieve('NLST ' + self.escapePath(path), protocol)
 
     def queueStringCommand(self, command):
+        """Queues a string to be issued as an FTP command
+        
+        Returns a Deferred that will be called when the response to the command
+        has been received."""
         ftpCommand = FTPCommand(command)
         self.queueCommand(ftpCommand)
         return ftpCommand.deferred
 
     def cwd(self, path):
+        """Issues the CWD (Change Working Directory) command.
+
+        Returns a Deferred that will be called when done."""
         return self.queueStringCommand('CWD ' + self.escapePath(path))
 
     def cdup(self):
+        """Issues the CDUP (Change Directory UP) command.
+
+        Returns a Deferred that will be called when done."""
         return self.queueStringCommand('CDUP')
 
     def pwd(self):
+        """Issues the PWD (Print Working Directory) command.
+
+        Returns a Deferred that will be called when done.  It is up to the 
+        caller to interpret the response, but the parsePWDResponse method in
+        this module should work."""
         return self.queueStringCommand('PWD')
 
     def quit(self):
+        """Issues the QUIT command."""
         return self.queueStringCommand('QUIT')
     
     def lineReceived(self, line):
+        """(Private) Parses the response messages from the FTP server."""
         # Add this line to the current response
         if self.debug:
             print '-->', line
@@ -957,3 +1027,17 @@ class FTPFileListProtocol(basic.LineReceiver):
             dict['size'] = int(dict['size'])
             self.files.append(dict)
 
+def parsePWDResponse(response):
+    """Returns the path from a response to a PWD command.
+
+    Response typically look like:
+        257 "/home/andrew" is current directory.
+    For this example, I will return '/home/andrew'.
+
+    If I can't find the path, I return None.
+    """
+    match = re.search('".*"', response)
+    if match:
+        return match.groups()[0]
+    else:
+        return None
