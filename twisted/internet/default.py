@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_internet -*-
-# $Id: default.py,v 1.78 2003/05/02 21:02:22 itamarst Exp $
+# $Id: default.py,v 1.79 2003/05/10 12:52:37 glyph Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -440,10 +440,12 @@ class SelectReactor(PosixReactorBase):
                 break
             except ValueError, ve:
                 # Possibly a file descriptor has gone negative?
+                log.err()
                 self._preenDescriptors()
             except TypeError, te:
-                # Something *totally* invalid (object w/o fileno, non-integral result)
-                # was passed
+                # Something *totally* invalid (object w/o fileno, non-integral
+                # result) was passed
+                log.err()
                 self._preenDescriptors()
             except select.error,se:
                 # select(2) encountered an error
