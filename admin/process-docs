@@ -13,8 +13,8 @@ for doc in doc/man doc/howto doc/specifications; do
   ./bin/generatelore -p --docsdir $doc -t $templ --baseurl $baseurl -l ../howto/
 done
 cp admin/book.tex doc/howto
-for file in doc/howto/*.html doc/man/*.html doc/specifications/*.html; do
-  ./bin/html2latex -s $file
+for dir in doc/howto/ doc/man/ doc/specifications/; do
+  ./bin/html2latex -p -s --docsdir $dir
 done
 cd doc/howto
 for i in 1 2 3;do latex book.tex;done
