@@ -1,15 +1,25 @@
 
 from zope import interface
 
-from numarray import array, dot
+from numarray import array, dot, alltrue, outerproduct
 from numarray.linear_algebra import determinant
 
 class ILocated(interface.Interface):
     position = interface.Attribute(
-        "position", __doc__="Three tuple of coordinates of a thing")
+        "position", __doc__="shape (3,) numarray of coordinates")
 
 def distance(x, y):
-    return ((x[0] - y[0]) ** 2 + (x[1] - y[1]) ** 2 + (x[2] - y[2]) ** 2) ** 0.5
+    return _distance(array(x, typecode='d'),
+                     array(y, typecode='d'))
+
+def _distance(x, y):
+    return sum((x - y) ** 2) ** 0.5
+
+def magnitude(a):
+    return sum(a * a) ** 0.5
+
+def normalize(a):
+    return a / magnitude(a)
 
 class _TerminalNode(object):
     def __init__(self):
@@ -25,30 +35,37 @@ class _TerminalNode(object):
         return iter(self.objects)
 
     def iternear(self, center, radius):
+        return self._iternear(array(center, typecode='d'),
+                              radius)
+
+    def _iternear(self, center, radius):
         for o in self.objects:
-            if distance(o.position, center) < radius:
+            if _distance(o.position, center) < radius:
                 yield o
 
     def itervisible(self, viewpoint, direction, cosAngle=0.866):
+        return self._itervisible(array(viewpoint, typecode='d'),
+                                 array(direction, typecode='d'),
+                                 cosAngle)
+
+    def _itervisible(self, viewpoint, direction, cosAngle):
         for o in self.objects:
-            if visible(viewpoint, direction, cosAngle, o.position):
+            if _visible(viewpoint, direction, cosAngle, o.position):
                 yield o
 
 
-def magnitude(a):
-    return (sum(a * a) ** 0.5)
-
-def normalize(a):
-    return a / magnitude(a)
-
 def visible(viewpoint, direction, cosAngle, target):
-    if target == viewpoint:
+    return _visible(array(viewpoint, typecode='d'),
+                    array(direction, typecode='d'),
+                    cosAngle,
+                    array(target, typecode='d'))
+
+def _visible(viewpoint, direction, cosAngle, target):
+    if alltrue(target == viewpoint):
         return False
-    viewpoint = array(viewpoint)
-    target = normalize(array(target) - viewpoint)
-    direction = normalize(array(direction))
+    target = normalize(target - viewpoint)
+    direction = normalize(direction)
     prod = dot(target, direction - viewpoint)
-    # print prod, cosAngle, prod > cosAngle, target
     return prod > cosAngle
 
 def permute(s, n):
@@ -61,10 +78,10 @@ def permute(s, n):
 
 class OctTree(object):
     def __init__(self, center, width, depth, height, n=0):
-        self.center = center
-        self.width = width
-        self.depth = depth
-        self.height = height
+        self.center = array(center, typecode='d')
+        self.width = float(width)
+        self.depth = float(depth)
+        self.height = float(height)
         self._children = {}
         self.n = n
 
@@ -128,6 +145,10 @@ class OctTree(object):
                     yield obj
 
     def iternear(self, center, radius):
+        return self._iternear(array(center, typecode='d'),
+                              radius)
+
+    def _iternear(self, center, radius):
         # Required condition for left octants
         left = ((self.center[0] - (self.width / 2) < center[0] + radius) and
                 (self.center[0] > center[0] - radius))
@@ -188,46 +209,64 @@ class OctTree(object):
 
         for child in children:
             if child is not None:
-                for obj in child.iternear(center, radius):
+                for obj in child._iternear(center, radius):
                     yield obj
 
     def itervisible(self, viewpoint, direction, cosAngle=0.866):
-        # There are 27 interesting boundary points.  First compute the
-        # visibility of each of them.
+        return self._itervisible(array(viewpoint, typecode='d'),
+                                 array(direction, typecode='d'),
+                                 cosAngle)
+
+    def _itervisible(self, viewpoint, direction, cosAngle):
         c = self.center
-        w = self.width / 2.
-        d = self.depth / 2.
-        h = self.height / 2.
-        v = []
-        for (x, y, z) in permute((-1, 0, 1), 3):
-            v.append(visible(viewpoint, direction, cosAngle,
-                             (c[0] + w * x, c[1] + d * y, c[2] + h * y)))
+        w = self.width
+        d = self.depth
+        h = self.height
 
-        octantMap = {
-            # Left/Right Front/Back Bottom/Top
-            (True, True, True): [0, 1, 3, 4, 9, 10, 12, 13],
-            (False, True, True): [1, 2, 4, 5, 10, 11, 13, 14],
-            (True, False, True): [3, 4, 6, 7, 12, 13, 15, 16],
-            (False, False, True): [4, 5, 7, 8, 13, 14, 16, 17],
-
-            (True, True, False): [9, 10, 12, 13, 18, 19, 21, 22],
-            (False, True, False): [10, 11, 13, 14, 19, 20, 22, 23],
-            (True, False, False): [12, 13, 15, 16, 21, 22, 24, 25],
-            (False, False, False): [13, 14, 16, 17, 22, 23, 25, 26]}
-
-        for (chKey, vIdx) in octantMap.iteritems():
-            x = 0
-            for i in vIdx:
-                x += v[i]
-            if x == 0:
-                continue
-            elif x == 8:
-                child = self._children.get(chKey)
-                if child is not None:
-                    for obj in child:
+        corners = [c + (x * w, y * d, z * h)
+                   for (x, y, z) in permute((-1, 1), 3)]
+        vis = [cr
+               for cr in corners
+               if _visible(viewpoint, direction, cosAngle, cr)]
+        if len(vis) == 9:
+            # All corners visible, therefore all children visible.
+            for ch in self._children.itervalues():
+                if ch is not None:
+                    for obj in ch:
                         yield obj
-            else:
-                child = self._children.get(chKey)
-                if child is not None:
-                    for obj in child.itervisible(viewpoint, direction, cosAngle):
+        elif len(vis) > 0:
+            # Some corners visible, therefore some children visible.
+            for ch in self._children.itervalues():
+                if ch is not None:
+                    for obj in ch._itervisible(viewpoint, direction, cosAngle):
                         yield obj
+        else:
+            # No corners visible.  The view frustum may pass through this
+            # octant without intersecting a corner.  If the center of the
+            # frustum lies within a particular distance of the center of
+            # this octant, we know some children may be visible.
+            critDist = magnitude(array((w / 2, d / 2, h / 2)))
+            dist = _linePointDistance(c, array((0.0, 0, 0)), direction)
+            if dist < critDist:
+                for ch in self._children.itervalues():
+                    if ch is not None:
+                        for obj in ch._itervisible(viewpoint, direction, cosAngle):
+                            yield obj
+
+def linePointDistance(x0, x1, x2):
+    return _linePointDistance(array(x0, typecode='d'),
+                              array(x1, typecode='d'),
+                              array(x2, typecode='d'))
+
+def cross(a, b):
+    x = a[1] * b[2] - a[2] * b[1]
+    y = a[2] * b[0] - a[0] * b[2]
+    z = a[0] * b[1] - a[1] * b[0]
+    return array([x, y, z], typecode='d')
+
+def _linePointDistance(x0, x1, x2):
+    x = cross(x2 - x1, x1 - x0)
+    num = magnitude(x)
+    den = magnitude(x2 - x1)
+    r = num / den
+    return r

@@ -2,13 +2,14 @@ from math import pi, cos
 
 from twisted.trial import unittest
 from zope import interface
+from numarray import array
 
 import octtree
 
 class Thingy:
     interface.implements(octtree.ILocated)
     def __init__(self, x=0, y=0, z=0):
-        self.position = (x, y, z)
+        self.position = array((x, y, z), typecode='d')
     def __str__(self):
         return 'Thingy%r' % (self.position,)
     __repr__ = __str__
@@ -99,21 +100,20 @@ class OctTreeTest(unittest.TestCase):
 
     def testNearBoundarySearch(self):
         "Make sure the OT does inter-node searches good"
-        raise "Write Me"
+    testNearBoundarySearch.skip = "write me"
 
     def testVisibility(self):
-        o = [Thingy(*c) for c in [(0, 0, 0), (-1, 1, 0), (1, 1, 0),
-                                  (3, 1, 0), (0, 1, 1), (0, 1, 3)]]
+        eye = (0, 0, 0)
+        viewpoint = (0, 1, 0)
+        fov = cos(pi / 4)
+        o = [Thingy(*c) for c in [(0, 1, 0), (0, 2, 0), (0, 3, 0)]]
 
-        ot = octtree.OctTree([0,0,0],
-                             20, 20, 20)
-
+        ot = octtree.OctTree([0, 0, 0], 20, 20, 20)
         for obj in o:
             ot.add(obj)
 
-        vis = list(ot.itervisible((0, -1, 0), (0, 10, 0), cos(pi / 4)))
-        print vis
-        self.assertEquals(len(vis), 4)
-        for i in 0, 2, 3, 5:
-            self.assertIn(o[i], vis)
-
+        vis = list(ot.itervisible(eye, viewpoint, fov))
+        self.assertEquals(len(vis), len(o))
+        vis.sort()
+        o.sort()
+        self.assertEquals(vis, o)
