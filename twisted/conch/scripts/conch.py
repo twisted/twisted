@@ -105,8 +105,15 @@ def run():
         options.opt_help()
         sys.exit(1)
     if options['log']:
+        if options['logfile']:
+            if options['logfile'] == '-':
+                f = sys.stdout
+            else:
+                f = file(options['logfile'], 'a+')
+        else:
+            f = sys.stderr
         realout = sys.stdout
-        log.startLogging(sys.stderr)
+        log.startLogging(f)
         sys.stdout = realout
     else:
         log.discardLogs()
@@ -117,10 +124,16 @@ def run():
     except:
         old = None
     try:
+        oldUSR1 = signal.signal(signal.SIGUSR1, lambda *a: reactor.callLater(0, reConnect))
+    except:
+        oldUSR1 = None
+    try:
         reactor.run()
     finally:
         if old:
             tty.tcsetattr(fd, tty.TCSANOW, old)
+        if oldUSR1:
+            signal.signal(signal.SIGUSR1, oldUSR1)
         if (options['command'] and options['tty']) or not options['notty']:
             signal.signal(signal.SIGWINCH, signal.SIG_DFL)
     if sys.stdout.isatty() and not options['command']:
@@ -176,10 +189,11 @@ def onConnect():
         _KeepAlive(conn)
     if options.localForwards:
         for localPort, hostport in options.localForwards:
-            reactor.listenTCP(localPort,
+            s = reactor.listenTCP(localPort,
                         forwarding.SSHListenForwardingFactory(conn,
                             hostport,
                             SSHListenClientForwardingChannel))
+            conn.localForwards.append(s)
     if options.remoteForwards:
         for remotePort, hostport in options.remoteForwards:
             log.msg('asking for remote forwarding for %s:%s' %
@@ -199,6 +213,10 @@ def onConnect():
                 import errno
                 if e.errno != errno.EBADF:
                     raise
+
+def reConnect():
+    beforeShutdown()
+    conn.transport.transport.loseConnection()
 
 def beforeShutdown():
     remoteForwards = options.remoteForwards
@@ -238,6 +256,7 @@ class SSHConnection(connection.SSHConnection):
     def serviceStarted(self):
         global conn
         conn = self
+        self.localForwards = []
         self.remoteForwards = {}
         if not isinstance(self, connection.SSHConnection):
             # make these fall through
@@ -246,6 +265,10 @@ class SSHConnection(connection.SSHConnection):
         onConnect()
 
     def serviceStopped(self):
+        lf = self.localForwards
+        self.localForwards = []
+        for s in lf:
+            s.loseConnection()
         stopConnection()
 
     def requestRemoteForwarding(self, remotePort, hostport):

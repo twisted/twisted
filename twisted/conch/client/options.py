@@ -2,7 +2,7 @@
 # See LICENSE for details.
 
 #
-from twisted.conch.ssh.transport import SSHClientTransport
+from twisted.conch.ssh.transport import SSHClientTransport, SSHCiphers
 from twisted.python import usage
 
 import connect
@@ -21,11 +21,12 @@ class ConchOptions(usage.Options):
                      ['host-key-algorithms', '', None],
                      ['known-hosts', '', None, 'File to check for host keys'],
                      ['user-authentications', '', None, 'Types of user authentications to use.'],
+                     ['logfile', '', None, 'File to log to, or - for stdout'],
                    ]
 
     optFlags = [['version', 'V', 'Display version number only.'],
                 ['compress', 'C', 'Enable compression.'],
-                ['log', 'v', 'Log to stderr'],
+                ['log', 'v', 'Enable logging (defaults to stderr)'],
                 ['nocache', 'I', 'Do not allow connection sharing over this connection.'],
                 ['nox11', 'x', 'Disable X11 connection forwarding (default)'],
                 ['agent', 'A', 'Enable authentication agent forwarding'],
@@ -37,9 +38,9 @@ class ConchOptions(usage.Options):
     zsh_mutuallyExclusive = [("agent", "noagent")]
     zsh_actions = {"user":"_users",
                    "ciphers":"_values -s , 'ciphers to choose from' %s" %
-                       " ".join(SSHClientTransport.supportedCiphers),
+                       " ".join(SSHCiphers.cipherMap.keys()),
                    "macs":"_values -s , 'macs to choose from' %s" %
-                       " ".join(SSHClientTransport.supportedMACs),
+                       " ".join(SSHCiphers.macMap.keys()),
                    "host-key-algorithms":"_values -s , 'host key algorithms to choose from' %s" %
                        " ".join(SSHClientTransport.supportedPublicKeys),
                    "connection-usage":"_values -s , 'connection types to choose from' %s" %
@@ -64,7 +65,7 @@ class ConchOptions(usage.Options):
         "Select encryption algorithms"
         ciphers = ciphers.split(',')
         for cipher in ciphers:
-            if cipher not in SSHClientTransport.supportedCiphers:
+            if not SSHCiphers.cipherMap.has_key(cipher):
                 sys.exit("Unknown cipher type '%s'" % cipher)
         self['ciphers'] = ciphers
 
@@ -73,7 +74,7 @@ class ConchOptions(usage.Options):
         "Specify MAC algorithms"
         macs = macs.split(',')
         for mac in macs:
-            if mac not in SSHClientTransport.supportedMACs:
+            if not SSHCiphers.macMap.has_key(mac):
                 sys.exit("Unknown mac type '%s'" % mac)
         self['macs'] = macs
 
