@@ -100,13 +100,11 @@ call, and won't return from that call until the server is terminated
 <p>To use the second option, the same source file can be used, but
 using the <code>twistd -y</code> command to start the application
 as a daemon.  If persistence is not required, then use the
-<code>--no_save</code> option.   Furthermore, to stop the daemon,
-use <code>stop</code> sub-command.<p>
+<code>--no_save</code> option.</p>
 
 <pre class="shell">
 $ twistd --no_save --python=app1.py
-$ twistd stop
-$ cat twistd.log
+$ tail -f twistd.log
 04/04/2003 23:45 [-] Log opened.
 04/04/2003 23:45 [-] twistd 1.0.4alpha1 (/usr/local/bin/python 2.2.2)
 starting up
@@ -120,12 +118,6 @@ starting up
 8813
 04/04/2003 23:45 [*daytimer*] Starting factory
 <twisted.internet.protocol.Factory instance at 0x835dcac>
-04/04/2003 23:45 [-] set uid/gid 1000/0
-04/04/2003 23:45 [twisted.internet.protocol.Factory] (Port 8813 Closed)
-04/04/2003 23:45 [twisted.internet.protocol.Factory] Stopping factory
-<twisted.internet.protocol.Factory instance at 0x835dcac>
-04/04/2003 23:45 [*daytimer*] Main loop terminated.
-04/04/2003 23:45 [-] Server Shut Down.
 </pre>
 
 <p>To use the third option and launch the server later, just use
@@ -183,7 +175,7 @@ server failed to start. If it persists in failing, look in
 port will fail unless you're root, and the exception will be listed at the
 end of the log file.</p>
 
-<p>To kill the server, use <code>twistd stop</code> or just do:</p>
+<p>To kill the server, just do:</p>
 
 <pre class="shell">
 % kill `cat twistd.pid`
