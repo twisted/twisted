@@ -1,3 +1,8 @@
+2004-01-09  Jp Calderone  <exarkun@twistedmatrix.com>
+
+	* twisted/protocols/imap4.py: Add IMessageCopier interface to allow
+	for optimized implementations of message copying.
+
 2004-01-06  Brian Warner  <warner@lothar.com>
 
 	* twisted/internet/default.py (PosixReactorBase.spawnProcess): add

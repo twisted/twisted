@@ -1760,7 +1760,17 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         addedDeferreds = []
         addedIDs = []
         failures = []
+        
+        fastCopyMbox = IMessageCopier(mbox, default=None)
         for (id, msg) in messages:
+            if fastCopyMbox is not None:
+                d = defer.maybeDeferred(fastCopyMbox.copy, msg)
+                addedDeferreds.append(d)
+                continue
+
+            # XXX - The following should be an implementation of IMessageCopier.copy
+            # on an IMailbox->IMessageCopier adapter.
+
             flags = msg.getFlags()
             date = msg.getInternalDate()
 
@@ -4369,6 +4379,12 @@ class IMessageFile(components.Interface):
 class ISearchableMailbox(components.Interface):
     def search(self, query, uid):
         """Search for messages that meet the given query criteria.
+        
+        If this interface is not implemented by the mailbox, L{IMailbox.fetch}
+        and various methods of L{IMessage} will be used instead.
+
+        Implementations which wish to offer better performance than the
+        default implementation should implement this interface.
 
         @type query: C{list}
         @param query: The search criteria
@@ -4381,6 +4397,24 @@ class ISearchableMailbox(components.Interface):
         @return: A list of message sequence numbers or message UIDs which
         match the search criteria or a C{Deferred} whose callback will be
         invoked with such a list.
+        """
+
+class IMessageCopier(components.Interface):
+    def copy(self, messageObject):
+        """Copy the given message object into this mailbox.
+        
+        The message object will be one which was previously returned by
+        L{IMailbox.fetch}.
+        
+        Implementations which wish to offer better performance than the
+        default implementation should implement this interface.
+        
+        If this interface is not implemented by the mailbox, IMailbox.addMessage
+        will be used instead.
+        
+        @rtype: C{Deferred} or C{int}
+        @return: Either the UID of the message or a Deferred which fires
+        with the UID when the copy finishes.
         """
 
 class IMailbox(components.Interface):

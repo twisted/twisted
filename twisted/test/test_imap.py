@@ -2171,6 +2171,16 @@ class FeaturefulMessage:
     def open(self):
         return StringIO("open")
 
+class MessageCopierMailbox:
+    __implements__ = imap4.IMessageCopier,
+
+    def __init__(self):
+        self.msgs = []
+
+    def copy(self, msg):
+        self.msgs.append(msg)
+        return len(self.msgs)
+
 class CopyWorkerTestCase(unittest.TestCase):
     def testFeaturefulMessage(self):
         s = imap4.IMAP4Server()
@@ -2179,6 +2189,10 @@ class CopyWorkerTestCase(unittest.TestCase):
         # It is complex.  It needs to be tested directly!
         # Perhaps it should be refactored, simplified, or split up into
         # not-so-private components, but that is a task for another day.
+        
+        # Ha ha! Addendum!  Soon it will be split up, and this test will
+        # be re-written to just use the default adapter for IMailbox to
+        # IMessageCopier and call .copy on that adapter.
         f = s._IMAP4Server__cbCopy
 
         m = FakeMailbox()
@@ -2220,6 +2234,20 @@ class CopyWorkerTestCase(unittest.TestCase):
             self.failUnless(status)
             self.assertEquals(result, None)
 
+    def testMessageCopier(self):
+        s = imap4.IMAP4Server()
+        
+        # See above comment
+        f = s._IMAP4Server__cbCopy
+        
+        m = MessageCopierMailbox()
+        msgs = [object() for i in range(1, 11)]
+        d = f([im for im in zip(range(1, 11), msgs)], 'tag', m)
+        r = unittest.deferredResult(d)
+        
+        self.assertEquals(r, zip([1] * 10, range(1, 11)))
+        for (orig, new) in zip(msgs, m.msgs):
+            self.assertIdentical(orig, new)
 
 class TLSTestCase(IMAP4HelperMixin, unittest.TestCase):
     serverCTX = ServerTLSContext and ServerTLSContext()
