@@ -6,7 +6,7 @@
 Plugin system for Twisted.
 
 @author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>
-@author: U{Glyph Lefkowitz<mailto:exarkun@twistedmatrix.com>
+@author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>
 """
 
 from __future__ import generators
