@@ -1,5 +1,8 @@
 2003-04-29  Brian Warner  <warner@lothar.com>
 
+	* twisted/web/resource.py, twisted/python/roots.py: add
+	test-case-name tag
+
 	* twisted/web/resource.py (IResource)
 	  twisted/spread/refpath.py (PathReferenceAcquisitionContext.getIndex)
 	  twisted/python/roots.py (Collection.getEntity): appease pychecker
