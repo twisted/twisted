@@ -23,17 +23,15 @@ class MQuote(wmvc.WModel):
 
 
 class QuoteWidget(domwidgets.Widget):
-    def generateDOM(self, request, node):
+    def setUp(self, request, node, data):
         """
-        Generate DOM to represent a quote.
+        Set up this Widget object before it gets rendered into HTML.
         
         Since self is a Widget, I can use the higher level widget API to add a 
         Text widget to self. I then rely on Widget.generateDOM to convert
         from Widgets into the Document Object Model.
         """
-        quote = self.getData()
-        self.add(domwidgets.Text(quote))
-        return domwidgets.Widget.generateDOM(self, request, node)
+        self.add(domwidgets.Text(data))
 
 
 class VQuote(wmvc.WView):
