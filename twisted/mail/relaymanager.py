@@ -483,5 +483,10 @@ class MXCalculator:
         if self.fallbackToDomain:
             failure.trap(IOError)
             log.msg("MX lookup failed; attempting to use hostname (%s) directly" % (domain,))
-            return self.resolver.getHostByName(domain)
+
+            # Alright, I admit, this is a bit icky.
+            from twisted.protocols import dns
+            return self.resolver.getHostByName(domain
+                ).addCallback(lambda h: dns.Record_MX(exchange=h)
+                )
         return failure
