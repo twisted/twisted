@@ -26,7 +26,7 @@ except ImportError:
     import StringIO
 
 # Twisted Imports
-from twisted.internet import reactor, protocol, error, interfaces
+from twisted.internet import reactor, protocol, error, interfaces, defer
 from twisted.python import util, runtime, components
 from twisted.python import procutils
 
@@ -631,6 +631,75 @@ class UtilTestCase(unittest.TestCase):
             j("baz", "foo", "executable.bin")
         ])
 
+class ClosingPipesProcessProtocol(protocol.ProcessProtocol):
+    output = ''
+    errput = ''
+
+    def __init__(self, outOrErr):
+        self.deferred = defer.Deferred()
+        self.deferred.addCallbacks(
+            callback=lambda _: unittest.fail("I wanted an errback."),
+            errback=self._end)
+        self.outOrErr = outOrErr
+
+    def _end(self, reason):
+        unittest.failIf(reason.check(error.ProcessDone),
+                        'Child should fail due to EPIPE.')
+        reason.trap(error.ProcessTerminated)
+        # child must not get past that write without raising
+        unittest.failIfEqual(reason.value.exitCode, 42)
+        unittest.failUnlessEqual(self.output, '')
+        return self.errput
+
+    def processEnded(self, reason):
+        self.deferred.callback(reason)
+
+    def outReceived(self, data):
+        self.output += data
+
+    def errReceived(self, data):
+        self.errput += data
+
+class ClosingPipes(unittest.TestCase):
+
+    def doit(self, fd):
+        p = ClosingPipesProcessProtocol(True)
+        reactor.spawnProcess(p, sys.executable,
+                             [sys.executable, '-c', r'raw_input(); import sys, os; os.write(%d, "foo\n"); sys.exit(42)' % fd],
+                             env=None)
+        p.transport.write('go\n')
+
+        if fd == 1:
+            p.transport.closeStdout()
+        elif fd == 2:
+            p.transport.closeStderr()
+        else:
+            raise RuntimeError
+
+        # make the buggy case not hang
+        p.transport.closeStdin()
+        return p.deferred
+
+    def test_stdout(self):
+        """ProcessProtocol.transport.closeStdout actually closes the pipe."""
+        d = self.doit(1)
+        def _check(errput):
+            unittest.failIfEqual(errput.index('OSError'), -1)
+            unittest.failIfEqual(errput.index('Broken pipe'), -1)
+        d.addCallback(_check)
+        return d
+
+    def test_stderr(self):
+        """ProcessProtocol.transport.closeStderr actually closes the pipe."""
+        d = self.doit(2)
+        def _check(errput):
+            # there should be no stderr open, so nothing for it to
+            # write the error to.
+            unittest.failUnlessEqual(errput, '')
+        d.addCallback(_check)
+        return d
+
+
 skipMessage = "wrong platform or reactor doesn't support IReactorProcess"
 if (runtime.platform.getType() != 'posix') or (not interfaces.IReactorProcess(reactor, None)):
     PosixProcessTestCase.skip = skipMessage
@@ -651,3 +720,4 @@ if runtime.platform.getType() == 'win32':
 
 if not interfaces.IReactorProcess(reactor, None):
     ProcessTestCase.skip = skipMessage
+    ClosingPipes.skip = skipMessage

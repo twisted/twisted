@@ -133,6 +133,8 @@ class ProcessReader(abstract.FileDescriptor):
     I am a selectable representation of a process's output pipe, such as
     stdout and stderr.
     """
+    connected = 1
+
     def __init__(self, reactor, proc, name, fileno):
         """Initialize, specifying a process to connect to.
         """
