@@ -1,3 +1,63 @@
+2002-08-28  Christopher Armstrong  <radix@twistedmatrix.com>
+
+	* Releasing Twisted 0.99.1rc1.
+	
+2002-08-27  Donovan Preston  <dp@twistedmatrix.com>
+
+	* twisted.web.domtemplate: Look up templates in the directory of
+	the module containing the DOMTemplate doing the lookup before
+	going along with regular acquisition.
+
+2002-08-27  Glyph Lefkowitz  <glyph@twistedmatrix.com>
+
+	* twisted.*: Lots of minor fixes to make JavaReactor work again.
+
+2002-08-26  Andrew Bennetts  <andrew-twisted@puzzling.org>
+
+	* twisted.python.logfile: Added the ability to disable log
+	rotation if logRotation is None.
+
+2002-08-22  Jp Calderone  <exarkun@twistedmatrix.com>
+
+	* twisted.news: Added a decent RDBM storage backend.
+
+2002-08-21  Paul Swartz  <z3p@twistedmatrix.com>
+
+	* doc/howto/process.html: Process documentation, too!
+
+2002-08-20  Paul Swartz  <z3p@twistedmatrix.com>
+
+	* doc/howto/clients.html: Client-writing documentation.
+
+2002-08-20  Jp Calderone  <exarkun@twistedmatrix.com>
+
+	* twisted.protocols.nntp: More protocol implemented: SLAVE, XPATH,
+	XINDEX, XROVER, TAKETHIS, and CHECK.
+
+2002-08-19  Christopher Armstrong  <radix@twistedmatrix.com>
+
+	* bin, twisted.scripts.*: Migrated all bin/* scripts'
+	implementations to twisted/scripts. This means win32 users will
+	finally have access to all of the twisted scripts through .bat
+	files!
+
+2002-08-19  Jp Calderone  <exarkun@twistedmatrix.com>
+
+	* twisted.news, twisted.protocols.nntp: Additional RFC977 support:
+	HELP and IHAVE implemented.
+
+2002-08-19  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
+
+	* twisted.internet.{process,win32eventreactor,etc}: New and
+	hopefully final Process API, and improved Win32 GUI support.
+
+2002-08-18  Christopher Armstrong  <radix@twistedmatrix.com>
+
+	* Everything: Got rid of almost all usage of the `print' statement
+	as well as any usage of stdout. This will make it easier to
+	redirect boring log output and still write to stdout in your
+	scripts.
+
 2002-08-18  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* Releasing Twisted 0.99.0 final. No changes since rc9.
