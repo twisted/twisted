@@ -65,7 +65,7 @@ Instance Method: s.center, where s is an instance of UserString.UserString:
 @author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
 
-__version__ = "$Revision: 1.2 $"[11:-2]
+__version__ = "$Revision: 1.3 $"[11:-2]
 
 # System Imports
 import string
@@ -317,6 +317,7 @@ class _Jellier:
                 (objType is FloatType)):
                 return obj
 
+            refId = self._ref_id
             self._ref_id += 1
             
             if objType is MethodType:
@@ -346,7 +347,7 @@ class _Jellier:
                 if self.seen.has_key(objId):
                     objCheck, derefKey = self.seen[objId]
                     return [dereference_atom, derefKey]
-                self.seen[objId] = obj, self._ref_id
+                self.seen[objId] = obj, refId
                 sxp = []
                 if objType is ListType:
                     sxp.append(list_atom)
@@ -359,6 +360,7 @@ class _Jellier:
                 elif objType in DictTypes:
                     sxp.append(dictionary_atom)
                     for key, val in obj.items():
+                        self._ref_id += 1
                         sxp.append([self.jelly(key), self.jelly(val)])
                 elif objType is InstanceType:
                     className = qual(obj.__class__)
@@ -582,23 +584,25 @@ class _Unjellier:
     def _unjelly_method(self, rest):
         ''' (internal) unjelly a method
         '''
+        nk = NotKnown()
+        rid = self.getRefId()
+        self.resolveReference(nk)
         im_name = rest[0]
         im_self = self.unjelly(rest[1])
         im_class = self.unjelly(rest[2])
+        assert not isinstance(im_self, NotKnown)
         if type(im_class) is not types.ClassType:
             raise InsecureJelly("Method found with non-class class.")
         if im_class.__dict__.has_key(im_name):
             if im_self is None:
                 im = getattr(im_class, im_name)
-            elif isinstance(im_self, NotKnown):
-                im = _InstanceMethod(im_name, im_self, im_class)
             else:
                 im = instancemethod(im_class.__dict__[im_name],
                                     im_self,
                                     im_class)
         else:
             raise 'instance method changed'
-        return self.resolveReference(im)
+        return self.resolveReference(im, rid)
 
 
 class _Dummy:
@@ -732,6 +736,8 @@ class SecurityOptions:
 globalSecurity = SecurityOptions()
 globalSecurity.allowBasicTypes()
 
+debugCrap = []
+
 def jelly(object, taster = DummySecurityOptions(), persistentStore=None, invoker=None):
     """Serialize to s-expression.
 
@@ -739,7 +745,9 @@ def jelly(object, taster = DummySecurityOptions(), persistentStore=None, invoker
     optional 'taster' argument takes a SecurityOptions and will mark any
     insecure objects as unpersistable rather than serializing them.
     """
-    return _Jellier(taster, persistentStore, invoker).jelly(object)
+    jr = _Jellier(taster, persistentStore, invoker)
+    jel = jr.jelly(object)
+    return jel
 
 
 def unjelly(sexp, taster = DummySecurityOptions(), persistentLoad=None, invoker=None):
@@ -750,5 +758,8 @@ def unjelly(sexp, taster = DummySecurityOptions(), persistentLoad=None, invoker=
     of SecurityOptions, will cause an InsecureJelly exception to be raised if a
     disallowed type, module, or class attempted to unserialize.
     """
-    return _Unjellier(taster, persistentLoad, invoker).unjellyFull(sexp)
+    ujr = _Unjellier(taster, persistentLoad, invoker)
+    result = ujr.unjellyFull(sexp)
+    debugCrap.append(ujr.references)
+    return result
 
