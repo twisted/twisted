@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes, generators
 
-__version__ = '$Revision: 1.49 $'[11:-2]
+__version__ = '$Revision: 1.50 $'[11:-2]
 
 import os
 import sys
@@ -581,7 +581,7 @@ except:
 
 def switchUID(uid, gid, euid=False):
     if euid:
-        setuid = os.geteuid
+        setuid = os.seteuid
         setgid = os.setegid
     else:
         setuid = os.setuid
