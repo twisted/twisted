@@ -1,4 +1,4 @@
-# -*- test-case-name: persisted -*-
+# -*- test-case-name: twisted.test.test_persisted -*-
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001-2002 Matthew W. Lefkowitz
@@ -17,11 +17,11 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 
-#
-# AOT: Abstract Object Trees
-# The source-code-marshallin'est abstract-object-serializin'est persister
-# this side of Marmalade!
-# 
+"""
+AOT: Abstract Object Trees
+The source-code-marshallin'est abstract-object-serializin'est persister
+this side of Marmalade!
+"""
 
 import types, new, string, copy_reg
 

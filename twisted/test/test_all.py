@@ -27,6 +27,9 @@ import glob
 import sys
 from os import path
 
+from twisted.python import log, runtime, reflect
+
+
 # List which tests we *aren't* running, rather than the ones we are.
 # Less likely to forget about them this way.
 exclude_tests = [
@@ -44,7 +47,7 @@ class TestLoader(unittest.TestLoader):
         self.load_errors = []
         self.excluded_tests = []
 
-    def loadTestsFromMyPackage(self, file=None):
+    def loadTestsFromMyPackage(self, file=None, modules=[]):
         """Loads everything named test_*.py in this directory.
 
         A test module may exclude itself from the suite by assigning
@@ -52,13 +55,14 @@ class TestLoader(unittest.TestLoader):
         """
 
         testpath = path.dirname(path.abspath(__file__))
-        if file is None:
-            test_files = glob.glob(testpath + '/test_*.py')
-        else:
+        if file is not None:
             test_files = [path.abspath(file)]
-        
-        test_mNames = map(lambda fp: path.splitext(path.basename(fp))[0],
-                         test_files)
+        elif modules:
+            test_files = []
+        else:
+            test_files = glob.glob(testpath + '/test_*.py')
+
+        test_mNames = map(reflect.filenameToModuleName, test_files) + modules
 
         if last_test in test_mNames:
             test_mNames.remove(last_test)
@@ -72,7 +76,7 @@ class TestLoader(unittest.TestLoader):
                 continue
 
             try:
-                module = __import__('twisted.test.%s' % (name,),
+                module = __import__(name,
                                     locals(), globals(), [name])
                 excluded = getattr(module, 'EXCLUDE_FROM_BIGSUITE', None)
                 if excluded:
@@ -99,7 +103,6 @@ class TestLoader(unittest.TestLoader):
 
         return string.join(lines, '')
 
-from twisted.python import log, runtime
 log.msg("opening test.log")
 log.logfile = open("test.log", 'a')
 

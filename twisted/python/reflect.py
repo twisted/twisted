@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.test.test_reflect -*-
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -23,6 +24,7 @@ metaclasses somehow, but I don't understand them, so nyah :-)
 
 # System Imports
 import sys
+import os
 import types
 import cStringIO
 import string
@@ -31,6 +33,7 @@ import pickle
 # Sibling Imports
 import reference
 import failure
+
 
 class Settable:
     """
@@ -463,3 +466,27 @@ def objgrep(start, goal, eq=isLike, path='', paths=None, seen=None):
         if isinstance(start, types.InstanceType):
             objgrep(start.__class__, goal, eq, path+'.__class__', paths, seen)
     return paths
+
+def _startswith(s, sub):
+    # aug python2.1
+    return s[:len(sub)] == sub
+
+def filenameToModuleName(fn):
+    """Convert a name in the filesystem to the name of the Python module it is.
+
+    This is agressive about getting a module name back from a file; it will
+    always return a string.  Agressive means 'sometimes wrong'; it won't look
+    at the Python path or try to do any error checking: don't use this method
+    unless you already know that the filename you're talking about is a Python
+    module.
+    """
+    fullName = os.path.abspath(fn)
+    modName = os.path.splitext(os.path.basename(fn))[0]
+    while 1:
+        fullName = os.path.dirname(fullName)
+        if os.path.exists(os.path.join(fullName, "__init__.py")):
+            modName = "%s.%s" % (os.path.basename(fullName), modName)
+        else:
+            break
+    return modName
+

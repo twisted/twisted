@@ -1,3 +1,5 @@
+# -*- test-case-name: twisted.test.test_components -*-
+
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -127,7 +129,32 @@ def registerAdapter(adapterClass, origClass, interfaceClass):
             adapterRegistry[(origClass, i)] = adapterClass
 
 
-def getAdapter(obj, interfaceClass, default):
+def getAdapterClass(klass, interfaceClass, default):
+    """Return registered adapter for a given class and interface.
+    """
+    adapterClass = adapterRegistry.get((klass, interfaceClass), _Nothing)
+    if adapterClass is _Nothing:
+        return default
+    else:
+        return adapterClass
+
+
+def getAdapterClassWithInheritance(klass, interfaceClass, default):
+    """Return registered adapter for a given class and interface.
+    """
+    adapterClass = adapterRegistry.get((klass, interfaceClass), _Nothing)
+    if adapterClass is _Nothing:
+        for baseClass in reflect.allYourBase(klass):
+            adapterClass = adapterRegistry.get((baseClass, interfaceClass),
+                                               _Nothing)
+            if adapterClass is not _Nothing:
+                return adapterClass
+    else:
+        return adapterClass
+
+
+def getAdapter(obj, interfaceClass, default,
+               adapterClassLocator=None):
     """Return an object that implements the given interface.
 
     The result will be a wrapper around the object passed as a paramter, or
@@ -139,18 +166,64 @@ def getAdapter(obj, interfaceClass, default):
 
     if implements(obj, interfaceClass):
         return obj
-
-    adapterClass = getAdapterClass(obj.__class__, interfaceClass, None)
+    adapterClass =  (
+        adapterClassLocator or getAdapterClass
+                    )(
+        obj.__class__, interfaceClass, None
+                     )
     if adapterClass is None:
         return default
     else:
         return adapterClass(obj)
 
+class _Nothing:
+    pass
 
-def getAdapterClass(klass, interfaceClass, default):
-    """Return registered adapter for a given class and interface."""
-    return adapterRegistry.get((klass, interfaceClass), default)
 
+
+class Componentized:
+    """I am a mixin to allow you to be adapted in various ways persistently.
+
+    I define a list of persistent adapters.  This is to allow adapter classes
+    to store system-specific state, and initialized on demand.  The
+    getComponent method implements this.  You must also register adapters for
+    this class for the interfaces that you wish to pass to getComponent.
+
+    Many other classes and utilities listed here are present in Zope3; this one
+    is specific to Twisted.
+    """
+
+
+    def __init__(self):
+        self._adapterCache = {}
+
+    def locateAdapterClass(self, klass, interfaceClass, default):
+        return getAdapterClassWithInheritance(klass, interfaceClass, default)
+
+    def getComponent(self, interface):
+        """Create or retrieve an adapter for the given interface.
+
+        If such an adapter has already been created, retrieve it from the cache
+        that this instance keeps of all its adapters.  Adapters created through
+        this mechanism may safely store system-specific state.
+
+        If you want to register an adapter that will be created through
+        getComponent, but you don't require (or don't want) your adapter to be
+        cached and kept alive for the lifetime of this Componentized object,
+        set the attribute 'temporaryAdapter' to True on your adapter class.
+        """
+        if implements(self, interface):
+            return self
+        if self._adapterCache.has_key(interface):
+            return self._adapterCache[interface]
+        else:
+            adapter = getAdapter(self, interface, None,
+                                 self.locateAdapterClass)
+            if adapter is not None and not (
+                hasattr(adapter, "temporaryAdapter") and
+                adapter.temporaryAdapter):
+                self._adapterCache[interface] = adapter
+            return adapter
 
 __all__ = ["Interface", "implements", "getInterfaces", "superInterfaces",
            "registerAdapter", "getAdapterClass", "getAdapter"]

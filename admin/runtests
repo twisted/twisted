@@ -47,10 +47,11 @@ class TestProgram:
     file = None
 
     def __init__(self, argv=None):
+        self.modules = []
         if argv is None:
             argv = ["runtests"]
 
-        opts, args = getopt.getopt(argv[1:], "tvq", ["file="])
+        opts, args = getopt.getopt(argv[1:], "tvq", ["file=","module="])
         if ('-t', '') in opts:
             text_mode = 'always'
         else:
@@ -66,9 +67,9 @@ class TestProgram:
         for k, v in opts:
             if k == '--file':
                 self.file = v
-            else:
-                self.file = None
-        
+            elif k == '--module':
+                self.modules.append(v)
+
         if args:
             reactor = args[-1]
         else:
@@ -121,7 +122,7 @@ class TestProgram:
         from twisted.test import test_all
 
         loader = test_all.TestLoader()
-        test = loader.loadTestsFromMyPackage(self.file)
+        test = loader.loadTestsFromMyPackage(self.file, self.modules)
 
         runner = unittest.TextTestRunner(verbosity = self.verbosity)
         result = runner.run(test)

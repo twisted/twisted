@@ -159,6 +159,73 @@ class InterfacesTestCase(unittest.TestCase):
         self.assertEquals(l, l2)
 
 
+class Compo(components.Componentized):
+    num = 0
+    def inc(self):
+        self.num = self.num + 1
+        return self.num
+
+class IAdept(components.Interface):
+    def adaptorFunc(self):
+        raise NotImplementedError()
+
+class Adept:
+    __implements__ = IAdept,
+    def __init__(self, orig):
+        self.orig = orig
+        self.num = 0
+    def adaptorFunc(self):
+        self.num = self.num + 1
+        return self.num, self.orig.inc()
+
+components.registerAdapter(Adept, Compo, IAdept)
+
+class AComp(components.Componentized):
+    pass
+class BComp(AComp):
+    pass
+class CComp(BComp):
+    pass
+
+class ITest(components.Interface):
+    pass
+class ITest2(components.Interface):
+    pass
+class Test:
+    __implements__ = ITest,
+    def __init__(self, orig):
+        pass
+class Test2:
+    __implements__ = ITest2,
+    temporaryAdapter = 1
+    def __init__(self, orig):
+        pass
+
+components.registerAdapter(Test, AComp, ITest)
+components.registerAdapter(Test2, AComp, ITest2)
+
+
+
+
+class ComponentizedTestCase(unittest.TestCase):
+    """Simple test case for caching in Componentized.
+    """
+    def testComponentized(self):
+        c = Compo()
+        assert c.getComponent(IAdept).adaptorFunc() == (1, 1)
+        assert c.getComponent(IAdept).adaptorFunc() == (2, 2)
+
+    def testInheritanceAdaptation(self):
+        c = CComp()
+        co1 = c.getComponent(ITest)
+        co2 = c.getComponent(ITest)
+        co3 = c.getComponent(ITest2)
+        co4 = c.getComponent(ITest2)
+        assert co1 is co2
+        assert co3 is not co4
+
+
+
 class AdapterTestCase(unittest.TestCase):
     """Test adapters."""
 
