@@ -55,6 +55,10 @@ cdef extern from "Python.h":
 	cdef extern void PyEval_RestoreThread(PyThreadState*)
 
 cdef class epoll:
+	"""
+	Represent a set of file descriptors being monitored for events
+	"""
+
 	cdef int fd
 	cdef int initialized
 
@@ -78,7 +82,20 @@ cdef class epoll:
 	def fileno(self):
 		return self.fd
 
-	def control(self, int op, int fd, int events):
+	def _control(self, int op, int fd, int events):
+		"""Modify the monitored state of a particular file descriptor.
+
+		@type op: C{int}
+		@param op: One of CTL_ADD, CTL_DEL, or CTL_MOD
+
+		@type fd: C{int}
+		@param fd: File descriptor to modify
+
+		@type events: C{int}
+		@param events: A bit set of IN, OUT, PRI, ERR, HUP, and ET.
+
+		@raise IOError: Raised if the underlying epoll_ctl() call fails.
+		"""
 		cdef int result
 		cdef epoll_event evt
 		evt.events = events
@@ -86,6 +103,43 @@ cdef class epoll:
 		result = epoll_ctl(self.fd, op, fd, &evt)
 		if result == -1:
 			raise IOError(errno, strerror(errno))
+
+	def add(self, int fd, int events):
+		"""Begin monitoring the given file descriptor for events.
+
+		@type fd: C{int}
+		@param fd: File descriptor to monitor
+
+		@type events: C{int}
+		@param events: A bit set of IN, OUT, PRI, ERR, HUP, and ET.
+
+		@raise IOError: Raised if the underlying epoll_ctl() call fails.
+		"""
+		self._control(CTL_ADD, fd, events)
+
+	def remove(self, int fd):
+		"""Stop monitoring the given file descriptor for events.
+
+		@type fd: C{int}
+		@param fd: File descriptor not to monitor any more
+
+		@raise IOError: Raised if the underlying epoll_ctl() call fails.
+		"""
+		self._control(CTL_DEL, fd, 0, None)
+
+	def modify(self, int fd, int events):
+		"""Change the monitored state of the given file descriptor.
+
+		@type fd: C{int}
+		@param fd: File descriptor to monitor
+
+		@type events: C{int}
+		@param events: A bit set of IN, OUT, PRI, ERR, HUP, and ET.
+
+		@raise IOError: Raised if the underlying epoll_ctl()
+		call fails.
+		"""
+		self._control(CTL_MOD, fd, events, None)
 
 	def wait(self, unsigned int maxevents, int timeout):
 		cdef epoll_event *events
@@ -118,13 +172,14 @@ CTL_DEL = EPOLL_CTL_DEL
 CTL_MOD = EPOLL_CTL_MOD
 
 IN = EPOLLIN
-PRI = EPOLLPRI
 OUT = EPOLLOUT
+PRI = EPOLLPRI
+ERR = EPOLLERR
+HUP = EPOLLHUP
+ET = EPOLLET
+
 RDNORM = EPOLLRDNORM
 RDBAND = EPOLLRDBAND
 WRNORM = EPOLLWRNORM
 WRBAND = EPOLLWRBAND
 MSG = EPOLLMSG
-ERR = EPOLLERR
-HUP = EPOLLHUP
-ET = EPOLLET
