@@ -1,4 +1,4 @@
-2003-12-14  Dave Peticolas  <dave@krondo.com>
+2004-01-04  Dave Peticolas  <dave@krondo.com>
 
 	* twisted/test/test_enterprise.py: test deleting rows not in cache
 
