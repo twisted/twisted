@@ -1,25 +1,23 @@
 #include <iostream>
-using namespace std;
 #include <boost/bind.hpp>
 #include "twisted/tcp.h"
 using namespace Twisted;
 
 static char greeting[] = "hello there\n";
 
-class TestDeallocator: public Deallocator
-{
-public:
-    virtual void dealloc(char* buf) { cout << "dealloc\n"; }
-};
+// sample custom deallocator
+static void dealloc(const char* buf, size_t buflen, void* extra) {
+    std::cout << "dealloc" << std::endl; 
+}
+
 
 void printNum(int i) {
-    cout << i << " seconds passed." << std::endl;
+    std::cout << i << " seconds passed." << std::endl;
 }
 
 class Echo : public Protocol
 {
 private:
-    TestDeallocator dealloc;
     char buf[16384];
 public:
     virtual void connectionMade()
@@ -27,19 +25,19 @@ public:
 	transport->setReadBuffer(buf, 16384);
 	callLater(1, boost::bind(printNum, 1));
 	callLater(2, boost::bind(printNum, 2));
-	cout << "connectionMade" << endl;
+	std::cout << "connectionMade" << std::endl;
     }
 
     virtual void dataReceived(char* b, int buflen)
     {
-	transport->write(&dealloc, greeting, 12);
+	transport->write(greeting, 12, dealloc);
 	transport->setReadBuffer(this->buf, 16384);
-	cout << b;
+	std::cout << "RECEIVED: " << b;
     }
 
     virtual void connectionLost(object reason)
     {
-	cout << "connection lost" << endl;
+	std::cout << "connection lost" << std::endl;
     }
 
     virtual void bufferFull() {;}

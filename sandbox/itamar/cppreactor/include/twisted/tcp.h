@@ -12,6 +12,13 @@ namespace Twisted
 {
     using namespace boost::python;
 
+    // Signature for deallocation strategy function.
+    typedef void (*deallocateFunc)(const char*, size_t, void*);
+
+    void deleteDeallocate(const char* buf, size_t buflen, void* extra) {
+	delete[] buf;
+    }
+
     class Protocol;     // forward definition
 
     // The resulting Python class should be wrapped in to the transports
@@ -33,7 +40,15 @@ namespace Twisted
 	    this->buflen = buflen;
 	}
 	object doRead();
-	void write(Deallocator* d, char* buf, int buflen);
+
+
+	// Public API for transports:
+
+	// dealloc() will be called with buf, buflen and extra when
+	// buf can be deallocated. NULL indicates doing nothing.
+	void write(const char* buf, size_t buflen,
+		   deallocateFunc dealloc=NULL, void* extra=NULL);
+
 	void loseConnection() { self.attr("loseConnection")(); }
     };
 

@@ -8,38 +8,6 @@
 namespace Twisted {
     using namespace boost::python;
 
-    // Deallocation strategy for buffers.
-    class Deallocator
-    {
-    public:
-	virtual ~Deallocator() {}
-	virtual void dealloc(char* buf) = 0;
-    };
-    
-    // delete[] the buffer.
-    class DeleteDeallocator : public Deallocator
-    {
-	virtual void dealloc(char* buf) { delete[] buf; }
-    };
-
-    // Do nothing.
-    class NullDeallocator : public Deallocator
-    {
-	virtual void dealloc(char* buf) {}
-    };
-
-    // Hold on to object for lifetime of dealloactor.
-    // Mostly useful for smart pointers.
-    template <class T>
-    class LifetimeDeallocator : public Deallocator
-    {
-    private:
-	T m_object;
-    public:
-	LifetimeDeallocator(T o) : m_object(o) {}
-	virtual void dealloc(char* buf) {}
-    };
-
     inline object import(char* module)
     {
 	PyObject* m = PyImport_ImportModule(module);
