@@ -275,7 +275,7 @@ class ProxyTestCase(unittest.TestCase):
     def setUp(self):
         self.proxy = sip.Proxy("127.0.0.1")
         self.sent = []
-        self.proxy._deliverMessage = lambda dest, msg: self.sent.append((dest, msg))
+        self.proxy.sendMessage = lambda dest, msg: self.sent.append((dest, msg))
     
     def testRequestForward(self):
         r = sip.Request("INVITE", "sip:foo")
@@ -321,7 +321,7 @@ class ProxyTestCase(unittest.TestCase):
         self.proxy.datagramReceived(r.toString(), ("1.1.1.1", 5060))
         self.assertEquals(len(self.sent), 1)
         dest, m = self.sent[0]
-        self.assertEquals(dest, ("client.com", 1234))
+        self.assertEquals((dest.host, dest.port), ("client.com", 1234))
         self.assertEquals(m.code, 200)
         self.assertEquals(m.headers["via"], ["SIP/2.0/UDP client.com:1234"])
         
@@ -332,7 +332,7 @@ class ProxyTestCase(unittest.TestCase):
         self.proxy.datagramReceived(r.toString(), ("1.1.1.1", 5060))
         self.assertEquals(len(self.sent), 1)
         dest, m = self.sent[0]
-        self.assertEquals(dest, ("client.com", 5060))
+        self.assertEquals((dest.host, dest.port), ("client.com", 5060))
         
     def testResponseToUs(self):
         r = sip.Response(200)
@@ -360,7 +360,7 @@ class ProxyTestCase(unittest.TestCase):
         self.proxy.datagramReceived(r.toString(), ("1.2.3.4", 5060))
         self.assertEquals(len(self.sent), 1)
         dest, m = self.sent[0]
-        self.assertEquals(dest, ("1.2.3.4", 5060))
+        self.assertEquals((dest.host, dest.port), ("1.2.3.4", 5060))
         self.assertEquals(m.code, 404)
         self.assertEquals(m.headers["via"], ["SIP/2.0/UDP 1.2.3.4:5060"])
 
@@ -375,7 +375,7 @@ class RegistrationTestCase(unittest.TestCase):
     def setUp(self):
         self.proxy = sip.RegisterProxy("bell.example.com", host="127.0.0.1")
         self.sent = []
-        self.proxy._deliverMessage = lambda dest, msg: self.sent.append((dest, msg))
+        self.proxy.sendMessage = lambda dest, msg: self.sent.append((dest, msg))
 
     def tearDown(self):
         for d, uri in self.proxy.users.values():
@@ -392,7 +392,7 @@ class RegistrationTestCase(unittest.TestCase):
     def testRegister(self):
         self.register()
         dest, m = self.sent[0]
-        self.assertEquals(dest, ("client.com", 5060))
+        self.assertEquals((dest.host, dest.port), ("client.com", 5060))
         self.assertEquals(m.code, 200)
         self.assertEquals(m.headers["via"], ["SIP/2.0/UDP client.com:5060"])
         self.assertEquals(m.headers["to"], ["sip:joe@bell.example.com"])
@@ -401,9 +401,9 @@ class RegistrationTestCase(unittest.TestCase):
         self.assertEquals(len(self.proxy.users), 1)
         dc, uri = self.proxy.users["joe"]
         self.assertEquals(uri.toString(), "sip:joe@client.com:1234")
-        host, port = unittest.deferredResult(
+        desturl = unittest.deferredResult(
             self.proxy.getServerAddress(sip.URL(username="joe", host="bell.example.com")))
-        self.assertEquals((host, port), ("client.com", 1234))
+        self.assertEquals((desturl.host, desturl.port), ("client.com", 1234))
     
     def testWrongDomainRegister(self):
         r = sip.Request("REGISTER", "sip:wrong.com")
@@ -432,3 +432,45 @@ class RegistrationTestCase(unittest.TestCase):
         url = sip.URL(username="jane", host="bell.example.com")
         f = unittest.deferredError(self.proxy.getServerAddress(url))
         f.trap(sip.LookupError)
+
+
+class Client(sip.BaseSIP):
+
+    def __init__(self):
+        sip.BaseSIP.__init__(self)
+        self.received = []
+
+    def handle_response_default(self, response, addr):
+        self.received.append(response)
+
+
+class LiveTest(unittest.TestCase):
+
+    def setUp(self):
+        self.proxy = sip.RegisterProxy("bell.example.com", host="127.0.0.1")
+        self.serverPort = reactor.listenUDP(0, self.proxy, interface="127.0.0.1")
+        self.client = Client()
+        self.clientPort = reactor.listenUDP(0, self.client, interface="127.0.0.1")
+        self.serverAddress = self.serverPort.getHost()[1:]
+
+    def tearDown(self):
+        self.clientPort.stopListening()
+        self.serverPort.stopListening()
+        for d, uri in self.proxy.users.values():
+            d.cancel()
+        reactor.iterate()
+        reactor.iterate()
+
+    def testRegister(self):
+        p = self.clientPort.getHost()[-1]
+        r = sip.Request("REGISTER", "sip:bell.example.com")
+        r.addHeader("to", "sip:joe@bell.example.com")
+        r.addHeader("contact", "sip:joe@127.0.0.1:%d" % p)
+        r.addHeader("via", sip.Via("127.0.0.1", port=p).toString())
+        self.client.sendMessage(sip.URL(host="127.0.0.1", port=self.serverAddress[1]),
+                                r)
+        while not len(self.client.received):
+            reactor.iterate()
+        self.assertEquals(len(self.client.received), 1)
+        r = self.client.received[0]
+        self.assertEquals(r.code, 200)

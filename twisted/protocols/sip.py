@@ -217,6 +217,14 @@ def parseURL(url):
     return URL(**d)
 
 
+def cleanRequestURL(url):
+    """Clean a URL from a Request line."""
+    url.transport = None
+    url.maddr = None
+    url.ttl = None
+    url.headers = {}
+
+
 def parseAddress(address, clean=0):
     """Return (name, uri, params) for From/To/Contact header.
 
@@ -298,7 +306,8 @@ class Request(Message):
             self.uri = uri
         else:
             self.uri = parseURL(uri)
-
+            cleanRequestURL(self.uri)
+    
     def __repr__(self):
         return "<SIP Request %d:%s %s>" % (id(self), self.method, self.uri.toString())
 
@@ -479,6 +488,17 @@ class BaseSIP(protocol.DatagramProtocol):
                 f(m, addr)
         self.messages[:] = []
 
+    def sendMessage(self, destURL, message):
+        """Send a message.
+
+        @param dest: C{URL}. This should be a *physical* URL, not a logical one.
+        @param message: The message to send.
+        """
+        log.msg("Sending %s to %s" % (message, destURL))
+        if destURL.transport not in ("udp", None):
+            raise RuntimeError, "only UDP currently supported"
+        self.transport.write(message.toString(), (destURL.host, destURL.port))
+
     def handle_response_default(self, message, addr):
         pass
 
@@ -503,14 +523,12 @@ class Proxy(BaseSIP):
         return Via(host=self.host, port=self.port)
 
     def getServerAddress(self, userURL):
-        """Return address of server which can handle this address.
-
-        We assume UDP transport at the moment.
+        """Return physical URL of server for logical URL of user.
 
         Override in subclasses - this is the registry hook.
 
-        @return: Deferred which becomes (hostname, port) tuple, or
-                 fails with LookupError.
+        @param userURL: a logical C{URL}.
+        @return: Deferred which becomes URL or fails with LookupError.
         """
         raise NotImplementedError
         
@@ -537,13 +555,9 @@ class Proxy(BaseSIP):
         message.headers["via"].insert(0, viaHeader.toString())
         name, uri, tags = parseAddress(message.headers["to"][0], clean=1)
         d = self.getServerAddress(uri)
-        d.addCallback(self._deliverMessage, message)
+        d.addCallback(self.sendMessage, message)
         d.addErrback(self._cantForwardRequest, message)
-        
-    def _deliverMessage(self, dest, message):
-        log.msg("Sending %s to %s" % (message, dest))
-        self.transport.write(message.toString(), dest)
-
+    
     def _cantForwardRequest(self, error, message):
         error.trap(LookupError)
         del message.headers["via"][0] # this'll be us
@@ -557,10 +571,10 @@ class Proxy(BaseSIP):
         # XXX we don't do multicast yet
         port = destVia.port or 5060
         if destVia.received:
-            destAddr = (destVia.received, port)
+            destAddr = URL(host=destVia.received, port=port)
         else:
-            destAddr = (destVia.host, port)
-        self._deliverMessage(destAddr, responseMessage)
+            destAddr = URL(host=destVia.host, port=port)
+        self.sendMessage(destAddr, responseMessage)
 
     def responseFromRequest(self, code, request):
         """Create a response to a request message."""
@@ -606,7 +620,7 @@ class RegisterProxy(Proxy):
             return defer.fail(LookupError("unknown domain"))
         if self.users.has_key(userURI.username):
             dc, url = self.users[userURI.username]
-            return defer.succeed((url.host, url.port or 5060))
+            return defer.succeed(url)
         else:
             return defer.fail(LookupError("no such user"))
 
