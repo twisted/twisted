@@ -485,6 +485,10 @@ class UtilTestCase(unittest.TestCase):
         f.close()
         os.chmod(j(bazfoo, "executable"), 0700)
         
+        f = file(j(bazfoo, "executable.bin"), "w")
+        f.close()
+        os.chmod(j(bazfoo, "executable.bin"), 0700)
+        
         f = file(j(barfoo, "executable"), "w")
         f.close()
         
@@ -500,7 +504,22 @@ class UtilTestCase(unittest.TestCase):
         self.assertEquals(paths, [
             j("foo", "baz", "executable"), j("baz", "foo", "executable")
         ])
-
+    
+    def testWhichPathExt(self):
+        j = os.path.join
+        old = os.environ.get('PATHEXT', None)
+        os.environ['PATHEXT'] = os.pathsep.join(('bin', 'exe', 'sh'))
+        try:
+            paths = procutils.which("executable")
+        finally:
+            if old is None:
+                del os.environ['PATHEXT']
+            else:
+                os.environ['PATHEXT'] = old
+        self.assertEquals(paths, [
+            j("foo", "baz", "executable"), j("baz", "foo", "executable"),
+            j("baz", "foo", "executable.bin")
+        ])
 
 skipMessage = "wrong platform or reactor doesn't support IReactorProcess"
 if (runtime.platform.getType() != 'posix') or (not components.implements(reactor, interfaces.IReactorProcess)):
