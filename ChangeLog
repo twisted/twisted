@@ -1,3 +1,8 @@
+2003-05-04  Brian Warner  <warner@lothar.com>
+
+	* twisted/trial/reporter.py (ResultTypes): export legal values for
+	Reporter.reportResults() so remote reporters know what to expect
+
 2003-05-03  Jp Calderone  <exarkun@twistedmatrix.com>
 
 	* twisted/internet/tcp.py, twisted/internet/ssl.py: TLS support
