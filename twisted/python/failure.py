@@ -142,10 +142,11 @@ class Failure:
         if tb:
             f = tb.tb_frame
         elif not isinstance(self.value, Failure):
-            # Get the stack, unless this is a "chained Failure".
-            f = inspect.currentframe()
-            stackOffset = 1
-
+            # we don't do frame introspection since it's expensive,
+            # and if we were passed a plain exception with no
+            # traceback, it's not useful anyway
+            f = stackOffset = None
+        
         while stackOffset and f:
             # This excludes this Failure.__init__ frame from the
             # stack, leaving it to start with our caller instead.
@@ -297,12 +298,13 @@ class Failure:
         """
         if file is None: file = log.logfile
         w = file.write
-        w( 'Traceback (most recent call last):\n')
-        if not self.frames:
-            w("Eek!  %s has no frames in traceback!\n" % (repr(self),))
-        format_frames(self.stack[-traceupLength:], w)
-        w("--- <exception caught here> ---\n")
-        format_frames(self.frames, w)
+        if self.frames:
+            w( 'Traceback (most recent call last):\n')
+            format_frames(self.stack[-traceupLength:], w)
+            w("--- <exception caught here> ---\n")
+            format_frames(self.frames, w)
+        else:
+            w("Failure: ")
         w("%s: %s\n" % (str(self.type), str(self.value)))
         if isinstance(self.value, Failure):
             file.write(" (chained Failure)\n")
@@ -313,7 +315,7 @@ class Failure:
         """
         if file is None: file = log.logfile
         w = file.write
-        w("Traceback! %s, %s\n" % (self.type, self.value))
+        w("Traceback: %s, %s\n" % (self.type, self.value))
         format_frames(self.frames, w, "brief")
         if isinstance(self.value, Failure):
             file.write(" (chained Failure)\n")
