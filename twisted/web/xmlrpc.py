@@ -86,10 +86,15 @@ class XMLRPC(resource.Resource):
         This returned function will be called, and should return the result
         of the call, a Deferred, or a xmlrpclib.Fault instance.
         
-        Override in subclasses - see doc/examples/xmlrpc.py for a nice
-        default policy.
+        Override in subclasses if you want your own policy. The default
+        policy is that given functionPath 'foo', return the method at
+        self.xmlrpc_foo, i.e. getattr(self, "xmlrpc_" + functionPath).
         """
-        raise NotImplementedError, "implement in subclass"
+        f = getattr(self, "xmlrpc_%s" % functionPath, None)
+        if f and callable(f):
+            return f
+        else:
+            raise xmlrpc.NoSuchFunction
 
 
 class Result:

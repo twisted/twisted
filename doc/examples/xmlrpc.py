@@ -25,17 +25,6 @@ class Echoer(xmlrpc.XMLRPC):
     'defer_fail' and 'fail.
     """
     
-    def _getFunction(self, functionPath):
-        """Convert the functionPath to a method beginning with 'xmlrpc_'.
-        
-        For example, 'echo' returns the method 'xmlrpc_echo'.
-        """
-        f = getattr(self, "xmlrpc_%s" % functionPath, None)
-        if f:
-            return f
-        else:
-            raise xmlrpc.NoSuchFunction
-    
     def xmlrpc_echo(self, *args):
         """Return all passed args."""
         return args
