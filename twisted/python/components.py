@@ -277,63 +277,58 @@ class MetaInterface(interface.InterfaceClass):
             __module__ = sys._getframe(1).f_globals['__name__']
         return interface.InterfaceClass.__init__(self, name, bases, attrs, __doc__, __module__)
 
-    def __call__():
-        # Copying evil trick I dinna understand
-        def __call__(self, adaptable, default=_Nothing, persist=None, registry=None):
-            if hasattr(adaptable, "__class__"):
-                fixClassImplements(adaptable.__class__)
-            if registry != None:
-                raise RuntimeError, "registry argument will be ignored"
-            # getComponents backwards compat
-            if hasattr(adaptable, "getComponent") and not hasattr(adaptable, "__conform__") and persist != False:
-                warnings.warn("please use __conform__ instead of getComponent: %s" % type(adaptable), DeprecationWarning)
-                result = adaptable.getComponent(self)
-                if result != None:
-                    return result
-            # check for weakref persisted adapters
-            if persist != False:
-                pkey = (id(adaptable), self)
-                if _adapterPersistence.has_key(pkey):
-                    return _adapterPersistence[pkey]
+    def __call__(self, adaptable, default=_Nothing, persist=None, registry=None):
+        if hasattr(adaptable, "__class__"):
+            fixClassImplements(adaptable.__class__)
+        if registry != None:
+            raise RuntimeError, "registry argument will be ignored"
+        # getComponents backwards compat
+        if hasattr(adaptable, "getComponent") and not hasattr(adaptable, "__conform__") and persist != False:
+            warnings.warn("please use __conform__ instead of getComponent: %s" % type(adaptable), DeprecationWarning)
+            result = adaptable.getComponent(self)
+            if result != None:
+                return result
+        # check for weakref persisted adapters
+        if persist != False:
+            pkey = (id(adaptable), self)
+            if _adapterPersistence.has_key(pkey):
+                return _adapterPersistence[pkey]
 
-            if persist:
-                # we need to recreate the whole z.i.i.Interface.__call__
-                # code path here, cause we should only persist stuff
-                # that isn't coming from __conform__. Sigh.
-                conform = getattr(adaptable, '__conform__', None)
-                if conform is not None:
-                    try:
-                        adapter = conform(self)
-                    except TypeError:
-                        if sys.exc_info()[2].tb_next is not None:
-                            raise CannotAdapt
-                    else:
-                        if adapter is not None:
-                            return adapter
-                adapter = self.__adapt__(adaptable)
-                if adapter == None:
-                    if default == _Nothing:
+        if persist:
+            # we need to recreate the whole z.i.i.Interface.__call__
+            # code path here, cause we should only persist stuff
+            # that isn't coming from __conform__. Sigh.
+            conform = getattr(adaptable, '__conform__', None)
+            if conform is not None:
+                try:
+                    adapter = conform(self)
+                except TypeError:
+                    if sys.exc_info()[2].tb_next is not None:
                         raise CannotAdapt
-                    else:
-                        return default
-                _adapterPersistence[(id(adaptable), self)] = adapter
-                # make sure as long as adapter is alive the original object is alive
-                _adapterOrigPersistence[_Wrapper(adaptable)] = adapter
-                return adapter
-            
-            marker = object()
-            adapter = interface.InterfaceClass.__call__(self, adaptable, alternate=marker)
-            if adapter == marker:
-                if hasattr(self, '__instadapt__'):
-                    adapter = self.__instadapt__(adaptable, default)
                 else:
-                    adapter = default
-            if adapter == default and default == _Nothing:
-                raise CannotAdapt
+                    if adapter is not None:
+                        return adapter
+            adapter = self.__adapt__(adaptable)
+            if adapter == None:
+                if default == _Nothing:
+                    raise CannotAdapt
+                else:
+                    return default
+            _adapterPersistence[(id(adaptable), self)] = adapter
+            # make sure as long as adapter is alive the original object is alive
+            _adapterOrigPersistence[_Wrapper(adaptable)] = adapter
             return adapter
-        
-        return __call__
-    __call__ = __call__()
+
+        marker = object()
+        adapter = interface.InterfaceClass.__call__(self, adaptable, alternate=marker)
+        if adapter == marker:
+            if hasattr(self, '__instadapt__'):
+                adapter = self.__instadapt__(adaptable, default)
+            else:
+                adapter = default
+        if adapter == default and default == _Nothing:
+            raise CannotAdapt
+        return adapter
     
     def adaptWith(self, using, to, registry=None):
         if registry != None:
