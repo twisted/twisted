@@ -367,7 +367,7 @@ class DatagramProtocol:
     noisy = "sure, why not"
 
     def doStart(self):
-        """Make sure startFactory is called."""
+        """Make sure startProtocol is called."""
         if not self.numPorts:
             if self.noisy:
                 log.msg("Starting protocol %s" % self)
@@ -375,7 +375,7 @@ class DatagramProtocol:
         self.numPorts = self.numPorts + 1
 
     def doStop(self):
-        """Make sure stopFactory is called."""
+        """Make sure stopProtocol is called."""
         assert self.numPorts > 0
         self.numPorts = self.numPorts - 1
         if not self.numPorts:
