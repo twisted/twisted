@@ -102,7 +102,6 @@ if platformType != 'posix' or config.opts['debug']:
 
 # Twisted Imports
 from twisted.python import log
-# TODO: make which reactor to use an option
 from twisted.persisted import styles
 class EverythingEphemeral(styles.Ephemeral):
     def __getattr__(self, key):

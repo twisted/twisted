@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.10 2002/05/22 09:26:09 itamarst Exp $
+# $Id: default.py,v 1.11 2002/05/25 11:47:58 glyph Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -112,8 +112,6 @@ class PosixReactorBase(ReactorBase):
             self.wakerInstalled = 1
             self.waker = _Waker()
             self.addReader(self.waker)
-
-    # IReactorProcess ## XXX TODO!
 
     # IReactorUDP
 

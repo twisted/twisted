@@ -128,7 +128,6 @@ class ReactorBase:
     def stop(self):
         """See twisted.internet.interfaces.IReactorCore.stop.
         """
-        # TODO: fire 'shutdown' event.
         self.fireSystemEvent("shutdown")
 
     def crash(self):
