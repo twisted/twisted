@@ -472,3 +472,17 @@ class TLSTestCase(unittest.TestCase, LoopbackMixin):
 if ClientTLSContext is None:
     for case in (TLSTestCase,):
         case.skip = "OpenSSL not present"
+
+class EmptyLineTestCase(unittest.TestCase):
+    def testEmptyLineSyntaxError(self):
+        proto = smtp.SMTP()
+        output = StringIOWithoutClosing()
+        transport = internet.protocol.FileWrapper(output)
+        proto.makeConnection(transport)
+        proto.lineReceived('')
+        proto.setTimeout(None)
+
+        out = output.getvalue().splitlines()
+        self.assertEquals(len(out), 2)
+        self.failUnless(out[0].startswith('220'))
+        self.assertEquals(out[1], "500 Error: bad syntax")

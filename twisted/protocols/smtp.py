@@ -437,11 +437,19 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
         return getattr(self, 'state_' + self.mode)(line)
     
     def state_COMMAND(self, line):
-        command = line.split(None, 1)[0]
-        method = self.lookupMethod(command)
-        if method is None:
-            method = self.do_UNKNOWN
-        method(line[len(command):].strip())
+        words = line.split(None, 1)
+        try:
+            command = words[0]
+        except IndexError:
+            self.sendSyntaxError()
+        else:
+            method = self.lookupMethod(command)
+            if method is None:
+                method = self.do_UNKNOWN
+            method(line[len(command):].strip())
+
+    def sendSyntaxError(self):
+        self.sendCode(500, 'Error: bad syntax')
 
     def lookupMethod(self, command):
         return getattr(self, 'do_' + command.upper(), None)
