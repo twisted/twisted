@@ -21,7 +21,7 @@ This module provides support for Twisted to interact with the PyGTK mainloop.
 In order to use this support, simply do the following::
 
     |  from twisted.internet import gtkreactor
-    |  gtkreactor.install()
+    |  gtkreactor.install() 
 
 Then use twisted.internet APIs as usual.  The other methods here are not
 intended to be called directly.
@@ -34,7 +34,7 @@ import gtk
 import sys
 
 # Twisted Imports
-from twisted.python import log, threadable
+from twisted.python import log, threadable, runtime
 
 # Sibling Imports
 import main, default
@@ -140,11 +140,53 @@ class GtkReactor(default.PosixReactorBase):
         _simtag = gtk.timeout_add(timeout * 1010, self.simulate) # grumble
 
 
+class PortableGtkReactor(default.SelectReactor):
+    """Reactor that works on Windows.
+
+    input_add is not supported on GTK+ for Win32, apparently.
+    """
+    
+    def doIteration(self, delay=0.0):
+        if delay != 0:
+            log.msg("Error, gtk doIteration() only supports delay of 0")
+        default.SelectReactor.doIteration(self,delay)
+    
+    def crash(self):
+        gtk.mainquit()
+
+    def run(self):
+        self.startRunning()
+        self.simulate()
+        gtk.mainloop()
+
+    def simulate(self):
+        """Run simulation loops and reschedule callbacks.
+        """
+        global _simtag
+        if _simtag is not None:
+            gtk.timeout_remove(_simtag)
+        self.iterate()
+        timeout = min(self.timeout(), 0.1)
+        if timeout is None:
+            timeout = 0.1
+        _simtag = gtk.timeout_add(timeout * 1010, self.simulate) # grumble
+
+
 def install():
-    # Replace 'main' methods with my own
     """Configure the twisted mainloop to be run inside the gtk mainloop.
     """
     reactor = GtkReactor()
     from twisted.internet.main import installReactor
     installReactor(reactor)
     return reactor
+
+def portableInstall():
+    """Configure the twisted mainloop to be run inside the gtk mainloop.
+    """
+    reactor = PortableGtkReactor()
+    from twisted.internet.main import installReactor
+    installReactor(reactor)
+    return reactor
+
+if runtime.platform.getType() != 'posix':
+    install = portableInstall
