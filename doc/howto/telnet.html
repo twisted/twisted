@@ -2,14 +2,13 @@
 <body>
 <h1>Creating and working with a telnet server</h1>
 
-<p>Run <code class="shell">mktap telnet -p 4040 -u admin -w
-woohoo</code> at your shell prompt. If you list the contents of
-your current directory, you'll notice a new file --
-<code>telnet.tap</code>.  After you do this, run 'twistd -f telnet.tap'.
-Since the Application has a telnet server that you
-specified to be on port 4040, it will start listening for
-connections on this port. Try connecting with your favorite
-telnet utility to 127.0.0.1 port 4040.</p>
+<p>Run <code class="shell">mktap telnet -p 4040 -u admin -w woohoo</code> at
+your shell prompt. If you list the contents of your current directory,
+you'll notice a new file -- <code>telnet.tap</code>.  After you do this, run
+<code class="shell">twistd -f telnet.tap</code>. Since the Application has a
+telnet server that you specified to be on port 4040, it will start listening
+for connections on this port. Try connecting with your favorite telnet
+utility to 127.0.0.1 port 4040.</p>
 
 <pre class="shell">
 $ <em>telnet localhost 4040</em>
