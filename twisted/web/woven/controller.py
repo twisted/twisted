@@ -17,7 +17,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.42 $"[11:-2]
+__version__ = "$Revision: 1.43 $"[11:-2]
 
 import os
 import cgi
@@ -302,6 +302,9 @@ class LiveController(Controller):
         if sess is not None:
             if not hasattr(node, 'getAttribute'):
                 return
+            page = sess.getCurrentPage()
+            if page is None:
+                return
             nodeId = node.getAttribute('id')
             print "DOM for %r is changing to %s" % (nodeId, node.toprettyxml())
             nodeXML = node.toxml()
@@ -310,11 +313,10 @@ class LiveController(Controller):
             nodeXML = nodeXML.replace("\\", "\\\\")
             nodeXML = nodeXML.replace("'", "\\'")
             js = "top.woven_replaceElement('%s', '%s')" % (nodeId, nodeXML)
-            view = sess.getCurrentPage().view
             #for key in widget.subviews.keys():
             #    view.subviews[key].unlinkViews()
             if widget.subviews:
-                view.subviews.update(widget.subviews)
+                page.view.subviews.update(widget.subviews)
             sess.sendScript(js)
 
     def wchild_WebConduit2_js(self, request):
