@@ -12,7 +12,7 @@ class FilePathTestCase(unittest.TestCase):
 
     def setUp(self):
         self.now = time.time()
-        cmn = self.caseMethodName
+        cmn = self.mktemp()
         os.mkdir(cmn)
         os.mkdir(os.path.join(cmn,"sub1"))
         f = open(os.path.join(cmn, "file1"),"wb")
