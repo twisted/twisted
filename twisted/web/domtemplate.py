@@ -73,7 +73,7 @@ import string, os, stat, types
 from xml.dom import minidom
 
 from twisted.web.resource import Resource
-from twisted.web.widgets import Widget, Presentation
+from twisted.web import widgets # import Widget, Presentation
 from twisted.web import domwidgets
 from twisted.python.defer import Deferred
 from twisted.internet import reactor
@@ -252,7 +252,7 @@ class DOMTemplate(Resource):
         method which will convert the result into a node and insert it 
         into the DOM tree. Return the new node.
         """
-        if isinstance(result, Widget):
+        if isinstance(result, widgets.Widget):
             return self.processWidget(request, result, node)
         elif isinstance(result, minidom.Node):
             return self.processNode(request, result, node)
@@ -295,7 +295,7 @@ class DOMTemplate(Resource):
         try:
             html = string.join(displayed)
         except:
-            pr = Presentation()
+            pr = widgets.Presentation()
             pr.tmpl = displayed
             strList = pr.display(request)
             html = string.join(displayed)
@@ -329,7 +329,6 @@ class DOMTemplate(Resource):
 # DOMView: The DOMTemplate for MVC
 
 from twisted.python.mvc import View, IView, Controller
-from twisted.web.domwidgets import Widget
 
 # If no widget/handler was found in the container controller or view, these modules will be searched.
 import domhandlers, domwidgets
@@ -349,7 +348,7 @@ class DefaultHandler(Controller):
         self.id = id
 
 
-class DefaultWidget(Widget):
+class DefaultWidget(domwidgets.Widget):
     def render(self, request):
         return None
 
