@@ -40,7 +40,7 @@ def sh(command, null=True):#, sensitive=0):
         raise CommandFailed(command)
 
 
-def replaceInFile(filename, oldstr, newstr):
+def replaceInFile(filename, oldToNew):
     """
     I replace the text `oldstr' with `newstr' in `filename' using sed
     and mv.
@@ -49,11 +49,13 @@ def replaceInFile(filename, oldstr, newstr):
     f = open(filename+'.bak')
     d = f.read()
     f.close()
-    d = d.replace(oldstr, newstr)
+    for k,v in oldToNew.items():
+        d = d.replace(k, v)
     f = open(filename + '.new', 'w')
     f.write(d)
     f.close()
     os.rename(filename+'.new', filename)
+    os.unlink(filename+'.bak')
 
 def runChdirSafe(f, *args, **kw):
     origdir = os.path.abspath('.')

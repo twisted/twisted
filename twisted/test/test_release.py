@@ -23,12 +23,11 @@ class UtilityTest(unittest.TestCase):
         outf.close()
 
         expected = in_.replace('$VER', '2.0.0')
-        release.replaceInFile('release.replace', '$VER', '2.0.0')
+        release.replaceInFile('release.replace', {'$VER': '2.0.0'})
         A.assertEquals(open('release.replace').read(), expected)
 
-        A.assertEquals(open('release.replace.bak').read(), in_)
 
         expected = expected.replace('2.0.0', '3.0.0')
-        release.replaceInFile('release.replace', '2.0.0', '3.0.0')
+        release.replaceInFile('release.replace', {'2.0.0': '3.0.0'})
         A.assertEquals(open('release.replace').read(), expected)
 

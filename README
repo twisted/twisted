@@ -12,18 +12,18 @@ http://twistedmatrix.com/products/splitfaq
 This release of Twisted Sumo, constructed on SUMO-Date, 
 contains the following:
 
-Twisted Core SVN-Core
-Twisted Conch SVN-Conch
-Twisted Flow SVN-Flow
-Twisted Lore SVN-Lore
-Twisted Mail SVN-Mail
-Twisted Names SVN-Names
-Twisted News SVN-News
-Twisted Pair SVN-Pair
-Twisted Runner SVN-Runner
-Twisted Web SVN-Web
-Twisted Words SVN-Words
-Twisted Xish SVN-Xish
+Twisted Core-SVN-Trunk
+Twisted Conch Conch-SVN-Trunk
+Twisted Flow Flow-SVN-Trunk
+Twisted Lore Lore-SVN-Trunk
+Twisted Mail Mail-SVN-Trunk
+Twisted Names Names-SVN-Trunk
+Twisted News News-SVN-Trunk
+Twisted Pair Pair-SVN-Trunk
+Twisted Runner Runner-SVN-Trunk
+Twisted Web Web-SVN-Trunk
+Twisted Words Words-SVN-Trunk
+Twisted Xish Xish-SVN-Trunk
 
 Below is an explanation of the layout of this tarball (as well as the
 SVN repository).
