@@ -2,9 +2,6 @@ Twisted SVN-trunk
 
 Quote of the Release:
 
-<PenguinOfDoom> Being enlightened gentlemen, we split all programming
-    languages into two groups, sucks and doesn't-suck and put all of
-    them into the first group.
 
 For information on what's new in Twisted SVN-trunk, see the ChangeLog
 file that comes with the distribution.
@@ -12,7 +9,9 @@ file that comes with the distribution.
 What is this?
 =============
 
-  Twisted is an event-based framework for internet applications.
+  Twisted is an event-based framework for internet applications which
+  works on Python 2.2.X and 2.3.X.  The following are the (important)
+  modules included with Twisted::
 
   - twisted.application
     A "Service" system that allows you to organize your application in
@@ -42,11 +41,14 @@ What is this?
 
   Twisted supports integration of the Tk, GTK+, GTK+ 2, Qt, Mac OS X,
   or wxPython event loop with its main event loop. The Win32 event
-  loop is also supported. Twisted works with all Python
-  2.2 and 2.3 versions.
+  loop is also supported.
 
   For more information, visit http://www.twistedmatrix.com, or join the list 
   at http://twistedmatrix.com/cgi-bin/mailman/listinfo/twisted-python
+
+  There are many official Twisted subprojects, including clients and
+  servers for web, mail, DNS, and more. You can find out more about
+  these projects at http://twistedmatrix.com/projects/
 
 
 Installing

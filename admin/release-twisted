@@ -175,20 +175,23 @@ def exportTemp(opts):
     sh('svn export %s Twisted.exp' % (opts['temptagurl'],))
 
 
-def makeDocs(opts):
-    # XXX - this needs to do API docs per-subproject, not all at once.
+def makeDocsCore(opts):
     ver = opts['base-version']
     tdir = 'Twisted.exp'
 
     if not os.path.exists(tdir):
         raise DirectoryDoesntExist("GenerateDocs: %s doesn't exist!" % tdir)
 
-    sh('cd %s &&  happydoc -o doc/api twisted' % (tdir))
+    os.chdir(tdir)
 
-    sh('cd %s && ./admin/process-docs %s' % (tdir, ver))
+    for docdir in ['howto', 'howto/tutorial', 'howto/policy',
+                   'specifications', 'vision']:
+        sh("./bin/lore/lore -p --config template=doc/core/howto/template.tpl "
+           "--config ext=.html --config version=%(ver)s -l ../howto/ "
+           "doc/core/%(docdir)s/*.xhtml" % locals())
 
     #shwack the crap
-    sh('find %s -name "*.pyc" | xargs rm -f' % (tdir,))
+    sh('find . -name "*.pyc" | xargs rm -f')
 
 
 
