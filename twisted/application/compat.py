@@ -204,6 +204,8 @@ class _NewService:
     """Wrap a twisted.internet.app.ApplicationService in new service API."""
 
     __implements__ = service.IService,
+
+    running = 0
     
     def __init__(self, service):
         self.service = service
@@ -219,9 +221,11 @@ class _NewService:
         self.service.serviceParent = None
 
     def startService(self):
+        self.running = 1
         self.service.startService()
 
     def stopService(self):
+        self.running = 0
         return self.service.stopService()
 
     def privilegedStartService(self):
