@@ -34,7 +34,7 @@ This requires win32all to be installed.
 TODO:
 1. Pass tests.
 2. WaitForMultipleObjects can only handle 64 objects, so we need threads.
-3. Event loop handling of writes is *very* problematic.
+3. Event loop handling of writes is *very* problematic (use a delayed?)
 4. Support GUI events.
 5. Replace icky socket loopback waker with event based waker.
 6. Switch everyone to a decent OS so we don't have to deal with insane APIs.
@@ -56,7 +56,7 @@ import pywintypes
 import msvcrt
 
 # Twisted imports
-from twisted.internet import abstract, main, task, default, process
+from twisted.internet import abstract, default
 from twisted.python import log, threadable
 
 # System imports
@@ -199,9 +199,6 @@ class Win32Reactor(default.PosixReactorBase):
 
 def install():
     threadable.init(1)
-    # change when we redo process stuff - process is probably
-    # borked anyway.
-    process.Process = Process
     r = Win32Reactor()
     import main
     main.installReactor(r)
@@ -344,10 +341,10 @@ class Process(abstract.FileDescriptor):
             except win32api.error:
                 result = -1
             else:
-                task.schedule(self.protocol.dataReceived, data)
+                self.reactor.callFromThread(self.protocol.dataReceived, data)
             
             if result == -1:
-                task.schedule(self.outConnectionLost)
+                self.reactor.callFromThread(self.outConnectionLost)
                 return
     
     def doReadErr(self):
@@ -361,10 +358,10 @@ class Process(abstract.FileDescriptor):
             except win32api.error:
                 result = -1
             else:
-                task.schedule(self.protocol.errReceived, data)
+                self.reactor.callFromThread(self.protocol.errReceived, data)
             
             if result == -1:
-                task.schedule(self.errConnectionLost)
+                self.reactor.callFromThread(self.errConnectionLost)
                 return
             
 
