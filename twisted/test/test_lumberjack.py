@@ -70,3 +70,19 @@ class LogFileTestCase(unittest.TestCase):
         self.assert_(os.path.exists("%s.3" % self.path))
         self.assert_(not os.path.exists("%s.4" % self.path))
         log.close()
+
+    def testAppend(self):
+        log = logfile.LogFile(self.name, self.dir)
+        log.write("0123456789")
+        log.close()
+        
+        log = logfile.LogFile(self.name, self.dir)
+        self.assertEquals(log.size, 10)
+        self.assertEquals(log._file.tell(), log.size)
+        log.write("abc")
+        self.assertEquals(log.size, 13)
+        self.assertEquals(log._file.tell(), log.size)
+        f = log._file
+        f.seek(0, 0)
+        self.assertEquals(f.read(), "0123456789abc")
+        log.close()

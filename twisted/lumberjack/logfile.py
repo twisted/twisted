@@ -38,9 +38,11 @@ class LogFile:
         self.closed = 0
         if os.path.exists(self.path):
             self.size = os.stat(self.path)[stat.ST_SIZE]
+            self._file = open(self.path, "r+")
+            self._file.seek(0, 2)
         else:
             self.size = 0
-        self._file = open(self.path, "w")
+            self._file = open(self.path, "w")
     
     def __getstate__(self):
         state = self.__dict__.copy()
