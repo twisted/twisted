@@ -96,7 +96,8 @@ class SSHUserAuthServer(service.SSHService):
         service = self.transport.factory.getService(self.transport, 
                 self.nextService)
         if not service:
-            raise ConchError('could not get next service: %s'%self.nextService)
+            raise error.ConchError('could not get next service: %s' 
+                                  % self.nextService)
         log.msg('%s authenticated with %s' % (self.user, self.method))
         if self.cancelLoginTimeout:
             self.cancelLoginTimeout.cancel()
