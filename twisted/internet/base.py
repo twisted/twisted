@@ -237,7 +237,7 @@ class ReactorBase:
         self.running = 0
         self.waker = None
         self.usingThreads = 0
-        self.resolver = ThreadedResolver()
+        self.resolver = ThreadedResolver(self)
         self.addSystemEventTrigger('during', 'shutdown', self.crash)
         self.addSystemEventTrigger('during', 'shutdown', self.disconnectAll)
         threadable.whenThreaded(self.initThreads)
