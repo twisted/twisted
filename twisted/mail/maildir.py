@@ -50,12 +50,15 @@ class _MaildirNameGenerator:
     """
     n = 0
     p = os.getpid()
-    s = socket.gethostname()
+    s = socket.gethostname().replace('/', r'\057').replace(':', r'\072')
 
     def generate(self):
         self.n = self.n + 1
-        t = str(int(time.time()))
-        return '%s.%s_%s.%s' % (t, self.p, self.n, self.s)
+        t = time.time()
+        seconds = str(int(t))
+        microseconds = str(int((t-int(t))*10e6))
+        return '%s.M%sP%sQ%s.%s' % (seconds, microseconds,
+                                    self.p, self.n, self.s)
 
 _generateMaildirName = _MaildirNameGenerator().generate
 
@@ -69,6 +72,23 @@ def initializeMaildir(dir):
         # touch
         open(os.path.join(dir, '.Trash', 'maildirfolder'), 'w').close()
 
+
+class MaildirMessage(mail.FileMessage):
+    size = None
+
+    def __init__(self, address, fp, *a, **kw):
+        header = "Delivered-To: %s\n" % address
+        fp.write(header)
+        self.size = len(header)
+        mail.FileMessage.__init__(self, fp, *a, **kw)
+
+    def lineReceived(self, line):
+        mail.FileMessage.lineReceived(self, line)
+        self.size += len(line)+1
+
+    def eomReceived(self):
+        self.finalName = self.finalName+',S=%d' % self.size
+        return mail.FileMessage.eomReceived(self)
 
 class AbstractMaildirDomain:
     """Abstract maildir-backed domain.
@@ -106,8 +126,8 @@ class AbstractMaildirDomain:
         fname = _generateMaildirName()
         filename = os.path.join(dir, 'tmp', fname)
         fp = open(filename, 'w')
-        fp.write("Delivered-To: %(name)s@%(domain)s\n" % vars())
-        return mail.FileMessage(fp, filename, os.path.join(dir, 'new', fname))
+        return MaildirMessage('%s@%s' % (name, domain), fp, filename,
+                              os.path.join(dir, 'new', fname))
 
 
 class MaildirMailbox(pop3.Mailbox):
