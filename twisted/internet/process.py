@@ -24,7 +24,7 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
 # System Imports
-import os, sys, traceback, select, errno, tty, fcntl, termios, struct
+import os, sys, traceback, select, errno, tty, fcntl, termios, struct, cStringIO
 
 try:
     import pty
@@ -33,6 +33,7 @@ except:
 
 from twisted.persisted import styles
 from twisted.python import log, failure
+from twisted.internet import protocol
 
 # Sibling Imports
 import abstract, main, fdesc, error
@@ -69,6 +70,26 @@ def unregisterReapProccessHandler(pid, process):
             and reapProcessHandlers[pid] == process):
         raise RuntimeError
     del reapProcessHandlers[pid]
+
+
+class BackRelay(protocol.ProcessProtocol):
+    """
+    Used in twisted.internet.default.PosixReactorBase.getProcessOutput.
+    """
+
+    def __init__(self, deferred):
+        self.deferred = deferred
+        self.s = cStringIO.StringIO()
+
+    def errReceived(self, text):
+        self.deferred.errback(failure.Failure(IOError("got stderr")))
+        self.transport.loseConnection()
+
+    def outReceived(self, text):
+        self.s.write(text)
+
+    def processEnded(self, reason):
+        self.deferred.callback(self.s.getvalue())
 
 
 

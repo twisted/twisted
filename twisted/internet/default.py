@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.44 2002/10/09 18:15:29 z3p Exp $
+# $Id: default.py,v 1.45 2002/10/12 18:31:00 radix Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -34,7 +34,7 @@ from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorUNIX
 from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorSSL
 from twisted.internet.interfaces import IReactorProcess, IReactorFDSet
 from twisted.internet import main, error, protocol, interfaces
-from twisted.internet import tcp, udp, task
+from twisted.internet import tcp, udp, task, defer
 
 
 from twisted.python import log, threadable, failure
@@ -268,6 +268,13 @@ class PosixReactorBase(ReactorBase):
         #        raise NotImplementedError, "process not available since win32all is not installed"
         else:
             raise NotImplementedError, "process only available in this reactor on POSIX"
+
+    def getProcessOutput(self, executable, args=(), env={}, path='.'):
+        d = defer.Deferred() 
+        p = process.BackRelay(d)
+        self.spawnProcess(p, executable, (executable,)+args, env, path)
+        return d
+
 
     # IReactorUDP
 
