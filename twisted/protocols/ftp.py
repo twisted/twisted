@@ -257,6 +257,7 @@ class DTPFactory(protocol.Factory):
     """
     dtp = None      # The DTP-protocol
     dtpPort = None  # The TCPClient / TCPServer
+    action = None
 
     def createPassiveServer(self):
         if self.dtp is not None:
@@ -280,6 +281,9 @@ class DTPFactory(protocol.Factory):
         p.factory = self
         p.pi = self
         self.dtp = p
+        if self.action is not None:
+            self.dtp.setAction(self.action)
+            self.action = None
         return p
 
 class FTP(protocol.Protocol, DTPFactory):
@@ -293,8 +297,16 @@ class FTP(protocol.Protocol, DTPFactory):
     peerport = None
     queuedfile = None
 
+    def setAction(self, action):
+        """Alias for DTP.setAction
+        Since there's no guarantee an instance of dtp exists"""
+        if self.dtp is not None:
+            self.dtp.setAction(action)
+        else:
+            self.action = action
+
     def reply(self, key, s = ''):
-        if string.find(ftp_reply[key], '%s') > -1:
+        if ftp_reply[key].find('%s') > -1:
             self.transport.write(ftp_reply[key] % s + '\r\n')
         else:
             self.transport.write(ftp_reply[key] + '\r\n')
@@ -380,16 +392,16 @@ class FTP(protocol.Protocol, DTPFactory):
         wd = os.path.normpath(params)
         if not os.path.isabs(wd):
             wd = os.path.normpath(self.wd + '/' + wd)
-        wd = string.replace(wd,'\\','/')
-        while string.find(wd, '//') > -1:
-            wd = string.replace(wd, '//','/')
+        wd = wd.replace('\\','/')
+        while wd.find('//') > -1:
+            wd = wd.replace('//','/')
         # '..', '\\', and '//' is there just to prevent stop hacking :P
-        if (not os.path.isdir(self.root + wd)) or (string.find(wd,'..') > 0) or \
-            (string.find(wd,'\\') > 0) or (string.find(wd,'//') > 0): 
+        if (not os.path.isdir(self.root + wd)) or (wd.find('..') > 0) or \
+            (wd.find('\\') > 0) or (wd.find('//') > 0): 
             self.reply('nodir', params)
             return
         else:
-            wd = string.replace(wd,'\\','/')
+            wd = wd.replace('\\','/')
             self.wd = wd
             self.reply('cwdok')
 
@@ -521,8 +533,7 @@ class FTP(protocol.Protocol, DTPFactory):
             return
         self.reply('file')
         self.queuedfile = npath 
-        if self.dtp is not None:
-            self.dtp.setAction('LIST')
+        self.setAction('LIST')
  
     def ftp_Retr(self, params):
         if self.checkauth():
@@ -533,8 +544,7 @@ class FTP(protocol.Protocol, DTPFactory):
             return
         self.reply('file')
         self.queuedfile = npath 
-        if self.dtp is not None:
-            self.dtp.setAction('RETR')
+        self.setAction('RETR')
 
     def ftp_Stor(self, params):
         if self.checkauth():
@@ -547,8 +557,7 @@ class FTP(protocol.Protocol, DTPFactory):
             pass
         self.reply('file')
         self.queuedfile = npath 
-        if self.dtp is not None:
-            self.dtp.setAction('STOR')
+        self.setAction('STOR')
 
     def ftp_Abor(self, params):
         if self.checkauth():
@@ -572,7 +581,7 @@ class FTP(protocol.Protocol, DTPFactory):
         print "-"+command+"-"
         if command == '':
             return 0
-        if string.count(line,' ') > 0:
+        if line.count(' ') > 0:
             params = line[string.find(line, ' ')+1:]
         else:
             params = ''
