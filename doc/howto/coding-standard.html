@@ -38,6 +38,22 @@
     <p>Acceptance tests are all automated by the bin/accepttests
     script currently. (TODO: real acceptance tests strategy!)</p>
 
+<p>Run the unit tests tests before you check anything in.</p>
+
+<p>Let me repeat that, for emphasis: <em>run the unit tests before you check
+<strong>anything</strong> in</em>.  Code which breaks functionality is
+unfortunate and unavoidable.  The acceptance tests are highly nonportable and
+sometimes a pain to run, so this is pardonable.  Code which breaks the unit
+tests in a way that you could have prevented by running them yourself, however,
+may be grounds for anything from merciless taunting to revocation of cvs commit
+privileges.</p>
+
+<p>It is strongly suggested that developers learn to use Emacs, and use the
+<code>twisted-dev.el</code> file included in the TwistedEmacs package to bind
+the F9 key to <q>run unit tests</q> and bang on it frequently.  Support for
+other editors is unavailable at this time but we would love to provide it.</p>
+
+
     <h2>Whitespace</h2>
 
     <p>Indentation is 4 spaces per indent. Tabs are not allowed. It
@@ -187,7 +203,25 @@ def foo2bar(f):
     # Optionally, actual code can go here.
        
 </pre>
-     
+    <h2>Manpages</h2>
+
+    <p>All UNIX-style scripts (those that use usage.Options) should have an
+    associated manpage that describes their functionality and briefly outlines
+    their options.</p>
+
+    <p>On debian systems you can find a skeleton example of a manpage in
+    <code>/usr/share/doc/man-db/examples/manpage.example</code></p>
+
+    <h2>ChangeLog</h2>
+
+    <p>All changes that will affect the way end-users see Twisted should come
+    with an appropriate entry in the ChangeLog that summarizes that impact.</p>
+
+    <p>The correct format for the ChangeLog is GNU changelog format.  There is
+    an emacs mode for editing this, use <code>M-x add-change-log-entry</code>.  If you
+    are, for whatever absurd reason, using an editor other than emacs to edit
+    Twisted, you can use Moshe Zadka's helpfully provided
+    <code>admin/change</code> script to add a properly-formatted entry.</p>
 
     <h2>Classes</h2>
 
@@ -339,8 +373,7 @@ def foo2bar(f):
       Lefkowitz</a>
     </address>
     <!-- Created: Thu Apr 26 07:53:26 CDT 2001 -->
-    <!-- hhmts start -->
-    Last modified: Sun Mar 17 00:30:20 EST 2002 <!-- hhmts end -->
+    <!-- hhmts start -->Last modified: Sat Sep 21 05:00:24 CDT 2002 <!-- hhmts end -->
   </body>
 </html>
 
