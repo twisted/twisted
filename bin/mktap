@@ -24,13 +24,14 @@ sys.path.append('.')
 from twisted.protocols import telnet
 from twisted.internet import main,tcp
 from twisted.python import usage
-import sys, traceback
+import sys, traceback, os
 
-try:
-    command = sys.argv[1]
-except:
-    print __doc__
-    sys.exit()
+class GeneralOptions(usage.Options):
+    optFlags = [['help', 'h']]
+    optStrings = [['uid', 'u', os.getuid()], ['gid', 'g', os.getgid()]]
+
+    def parseArgs(self, *args):
+        self.args = args
 
 def getModule(type):
     try:
@@ -41,25 +42,32 @@ def getModule(type):
         print "Please select one of: telnet words reality web toc."
         sys.exit()
 
-if command == "--help":
-    if len(sys.argv) > 2:
-        mod = getModule(sys.argv[2])
+options = GeneralOptions()
+try:
+    options.parseOptions(sys.argv[1:])
+except:
+    print __doc__
+    sys.exit()
+
+if options.help:
+    if options.args:
+        mod = getModule(options.args[0])
         print mod.usage_message
         sys.exit()
     else: 
         print __doc__
 	sys.exit()
 else: 
-    mod = getModule(command)
+    mod = getModule(options.args[0])
 try:
     config = mod.Options()
-    config.parseOptions(sys.argv[2:])
+    config.parseOptions(options.args[1:])
 except usage.error, ue:
     print mod.usage_message
     print "Usage Error: %s" % ue
     sys.exit()
 
-a = main.Application(command)
+a = main.Application(options.args[0], int(options.uid), int(options.gid))
 for num, proto in mod.getPorts(a, config):
     a.listenOn(num, proto)
 a.save()
