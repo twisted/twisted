@@ -3766,6 +3766,10 @@ class _FetchParser:
                 base += '.PEEK'
             if self.header:
                 base += '[%s]' % (self.header,)
+            elif self.text:
+                base += '[TEXT]'
+            elif self.mime:
+                base += '[MIME]'
             if self.partialBegin is not None:
                 base += '<%d.%d>' % (self.partialBegin, self.partialLength)
             return base
