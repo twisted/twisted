@@ -117,8 +117,11 @@ cp "%(rpm_file)s.init" "$RPM_BUILD_ROOT"/etc/init.d/"%(rpm_file)s"
 
 %%post
 /sbin/chkconfig --add %(rpm_file)s
+/sbin/chkconfig --level 35 %(rpm_file)s
+/etc/init.d/%(rpm_file)s start
 
 %%preun
+/etc/init.d/%(rpm_file)s stop
 /sbin/chkconfig --del %(rpm_file)s
 
 %%files
