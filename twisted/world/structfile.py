@@ -17,6 +17,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
+from __future__ import generators
+from twisted.python.compat import *
 
 from fileutils import openPlus
 
@@ -37,9 +39,6 @@ from struct import error as StructError
 ##     assert fmt[0] == '!', fmt
 ##     return struct.calcsize(fmt)
 
-
-
-from __future__ import generators
 
 class FixedSizeString(object):
     def __init__(self, size):
