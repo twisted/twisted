@@ -1,7 +1,7 @@
 2003-09-18  Stephen Thorne  <stephen@thorne.id.au>
 
 	* twisted/web/distrib.py: Removed dependancy on twisted.web.widgets, and
-    instead using woven.
+	instead using woven.
 
 2003-09-18  Stephen Thorne  <stephen@thorne.id.au>
 
