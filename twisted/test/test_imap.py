@@ -547,3 +547,20 @@ class IMAP4ServerTestCase(unittest.TestCase):
             mb.messages
         )
 
+    def testCheck(self):
+        SimpleServer.theAccount.addMailbox('root/subthing')
+        def login():
+            return self.client.login('testuser', 'password-test')
+        def select():
+            return self.client.select('root/subthing')
+        def check():
+            return self.client.check()
+        
+        d = self.connected.addCallback(strip(login))
+        d.addCallbacks(strip(select), self._ebGeneral)
+        d.addCallbacks(strip(check), self._ebGeneral)
+        d.addCallbacks(strip(self._cbStopClient), self._ebGeneral)
+        loopback.loopback(self.server, self.client)
+        
+        # Okay, that was fun
+    

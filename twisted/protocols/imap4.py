@@ -430,17 +430,47 @@ class IMAP4Server(basic.LineReceiver):
         d = self._setupForLiteral(size)
         d.addCallback(self._cbContinueAppend, tag, mbox, flags, date)
         d.addErrback(self._ebAppend, tag)
+    select_APPEND = auth_APPEND
 
     def _cbContinueAppend(self, rest, tag, mbox, flags, date):
         d = mbox.addMessage(rest, flags, date)
-        d.addCallback(self._cbAppend, tag)
+        d.addCallback(self._cbAppend, tag, mbox)
         d.addErrback(self._ebAppend, tag)
     
-    def _cbAppend(self, result, tag):
+    def _cbAppend(self, result, tag, mbox):
+        self.sendUntaggedResponse('%d EXISTS' % mbox.getMessageCount())
         self.sendPositiveResponse(tag, 'APPEND complete')
     
     def _ebAppend(self, failure, tag):
         self.sendBadResponse(tag, 'APPEND failed: ' + str(failure))
+    
+    def select_CHECK(self, tag, args):
+        d = self.checkpoint()
+        if d is None:
+            self._cbCheck(None, tag)
+        else:
+            d.addCallbacks(
+                self._cbCheck,
+                self._ebCheck,
+                callbackArgs=(tag,),
+                errbackArgs=(tag,)
+            )
+
+    def _cbCheck(self, result, tag):
+        self.sendPositiveResponse(tag, 'CHECK completed')
+    
+    def _ebCheck(self, failure, tag):
+        self.sendBadResponse(tag, 'CHECK failed: ' + str(failure))
+    
+    def checkpoint(self):
+        """Called when the client issues a CHECK command.
+        
+        This should perform any checkpoint operations required by the server.
+        It may be a long running operation, but may not block.  If it returns
+        a deferred, the client will only be informed of success (or failure)
+        when the deferred's callback (or errback) is invoked.
+        """
+        return None
 
 
 class UnhandledResponse(IMAP4Exception): pass
@@ -930,6 +960,8 @@ class IMAP4Client(basic.LineReceiver):
     def status(self, mailbox, *names):
         """Retrieve the status of the given mailbox
         
+        This command is allowed in the Authenticated and Selected states.
+        
         @type mailbox: C{str}
         @param mailbox: The name of the mailbox to query
         
@@ -965,6 +997,8 @@ class IMAP4Client(basic.LineReceiver):
     def append(self, mailbox, message, flags = (), date = None):
         """Add the given message to the currently selected mailbox
         
+        This command is allowed in the Authenticated and Selected states.
+        
         @type mailbox: C{str}
         @param mailbox: The mailbox to which to add this message.
 
@@ -993,6 +1027,18 @@ class IMAP4Client(basic.LineReceiver):
     
     def _cbAppend(self, result):
         return None
+    
+    def check(self):
+        """Tell the server to perform a checkpoint
+        
+        This command is allowed in the Authenticated and Selected states.
+        
+        @rtype: C{Deferred}
+        @return: A deferred whose callback is invoked when this command
+        succeeds or whose errback is invoked if it fails.
+        """
+        return self.sendCommand('CHECK')
+    
 
 
 class MismatchedNesting(Exception):
