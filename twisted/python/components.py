@@ -68,6 +68,9 @@ try:
 except ImportError:
     raise ImportError, "you need zope.interface installed (http://zope.org/Products/ZopeInterface/)"
 
+class ComponentsDeprecationWarning(DeprecationWarning):
+    """So you can filter new-components related deprecations easier."""
+    pass
 
 # Twisted's global adapter registry
 globalRegistry = AdapterRegistry()
@@ -181,7 +184,7 @@ def fixClassImplements(klass):
         backwardsCompatImplements(klass)
         return
     if isinstance(klass.__implements__, (tuple, MetaInterface)):
-        warnings.warn("Please use implements(), not __implements__ for class %s" % klass, DeprecationWarning, stacklevel=3)
+        warnings.warn("Please use implements(), not __implements__ for class %s" % klass, ComponentsDeprecationWarning, stacklevel=3)
         iList = tupleTreeToList(klass.__implements__)
         if iList:
             declarations.classImplementsOnly(klass, *iList)
@@ -264,12 +267,12 @@ class MetaInterface(interface.InterfaceClass):
                 __doc__ = attrs['__doc__']
                 del attrs['__doc__']
             if attrs.has_key("__adapt__"):
-                warnings.warn("Please don't use __adapt__ on Interface subclasses", DeprecationWarning, stacklevel=2)
+                warnings.warn("Please don't use __adapt__ on Interface subclasses", ComponentsDeprecationWarning, stacklevel=2)
                 self.__instadapt__ = attrs["__adapt__"]
                 del attrs["__adapt__"]
             for k, v in attrs.items():
                 if not isinstance(v, types.FunctionType) and not isinstance(v, interface.Attribute):
-                    warnings.warn("Please only use functions and zope.interface.Attributes as Interface class attributes", DeprecationWarning, stacklevel=2)
+                    warnings.warn("Please only use functions and zope.interface.Attributes as Interface class attributes", ComponentsDeprecationWarning, stacklevel=2)
                     self.__attrs[k] = v
                     attrs[k] = interface.Attribute(repr(v))
         # BEHOLD A GREAT EVIL SHALL COME UPON THEE
@@ -284,7 +287,7 @@ class MetaInterface(interface.InterfaceClass):
             raise RuntimeError, "registry argument will be ignored"
         # getComponents backwards compat
         if hasattr(adaptable, "getComponent") and not hasattr(adaptable, "__conform__") and persist != False:
-            warnings.warn("please use __conform__ instead of getComponent: %s" % type(adaptable), DeprecationWarning)
+            warnings.warn("please use __conform__ instead of getComponent: %s" % type(adaptable), ComponentsDeprecationWarning)
             result = adaptable.getComponent(self)
             if result != None:
                 return result
@@ -333,7 +336,7 @@ class MetaInterface(interface.InterfaceClass):
     def adaptWith(self, using, to, registry=None):
         if registry != None:
             raise RuntimeError, "registry argument will be ignored"
-        warnings.warn("adaptWith is only supported for backwards compatability", DeprecationWarning)
+        warnings.warn("adaptWith is only supported for backwards compatability", ComponentsDeprecationWarning)
         registry = globalRegistry
         registry.register([self], to, '', using)
 
@@ -343,7 +346,7 @@ class MetaInterface(interface.InterfaceClass):
         if attr != "__instadapt__": # __instadapt__ is part of our own backwards compat layer
             warnings.warn("Don't get attributes (in this case, %r) off Interface, use "
                           ".queryDescriptionFor() etc. instead" % (attr,),
-                          DeprecationWarning, stacklevel=3)
+                          ComponentsDeprecationWarning, stacklevel=3)
         if self.__attrs.has_key(attr):
             return self.__attrs[attr]
         result = self.queryDescriptionFor(attr)
@@ -371,7 +374,7 @@ def implements(obj, interfaceClass):
     This method checks if object provides, not if it implements. The confusion
     is due to the change in terminology.
     """
-    warnings.warn("Please use providedBy() or implementedBy()", DeprecationWarning, stacklevel=2)
+    warnings.warn("Please use providedBy() or implementedBy()", ComponentsDeprecationWarning, stacklevel=2)
     # try to support both classes and instances, which is HORRIBLE
     if isinstance(obj, (type, types.ClassType)):
         fixClassImplements(obj)
@@ -386,7 +389,7 @@ def getInterfaces(klass):
 
     This is horrible and stupid. Please use zope.interface.providedBy() or implementedBy().
     """
-    warnings.warn("getInterfaces should not be used, use providedBy() or implementedBy()", DeprecationWarning, stacklevel=2)
+    warnings.warn("getInterfaces should not be used, use providedBy() or implementedBy()", ComponentsDeprecationWarning, stacklevel=2)
     # try to support both classes and instances, giving different behaviour
     # which is HORRIBLE :(
     if isinstance(klass, (type, types.ClassType)):
@@ -403,7 +406,7 @@ def getInterfaces(klass):
 
 def superInterfaces(interface):
     """DEPRECATED. Given an interface, return list of super-interfaces (including itself)."""
-    warnings.warn("Please use zope.interface APIs", DeprecationWarning, stacklevel=2)
+    warnings.warn("Please use zope.interface APIs", ComponentsDeprecationWarning, stacklevel=2)
     result = [interface]
     result.extend(reflect.allYourBase(interface, Interface))
     result = util.uniquify(result)
@@ -463,7 +466,7 @@ class Adapter:
         except AttributeError:
             return default
         else:
-            warnings.warn("please use __conform__ instead of getComponent on %r's class" % self.original, DeprecationWarning, stacklevel=2)
+            warnings.warn("please use __conform__ instead of getComponent on %r's class" % self.original, ComponentsDeprecationWarning, stacklevel=2)
             return f(interface, registry=registry, default=default)
 
     def __conform__(self, interface):
@@ -620,4 +623,4 @@ class ReprableComponentized(Componentized):
 __all__ = ["Interface", "implements", "getInterfaces", "superInterfaces",
            "registerAdapter", "getAdapterClass", "getAdapter", "Componentized",
            "Adapter", "ReprableComponentized", "backwardsCompatImplements",
-           "fixClassImplements", "MetaInterface", "getRegistry"]
+           "fixClassImplements", "MetaInterface", "getRegistry", "ComponentsDeprecationWarning"]
