@@ -272,6 +272,10 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         self.sendLine(".")
 
     def do_AUTH(self, args=None):
+        if not getattr(self.factory, 'challengers', None):
+            self.failResponse("AUTH extension unsupported")
+            return
+
         if args is None:
             self.successResponse("Supported authentication methods:")
             for a in self.factory.challengers:
