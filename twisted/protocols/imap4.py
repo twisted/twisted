@@ -555,7 +555,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
         if line:
             # Too many arguments
-            raise IllegalClientResponse("Too many arguments for command")
+            raise IllegalClientResponse("Too many arguments for command: " + repr(line))
 
         if uid is not None:
             handler(uid=uid, *args)
@@ -567,7 +567,6 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         self.__doCommand(tag, fn, args, parseargs, rest, uid)
 
     def __ebDispatch(self, failure, tag):
-
         if failure.check(IllegalClientResponse):
             self.sendBadResponse(tag, 'Illegal syntax: ' + str(failure.value))
         elif failure.check(IllegalOperation):
@@ -1309,7 +1308,6 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             from twisted.internet import reactor
             reactor.callLater(0, self._consumeMessageIterable, results, tag, query, uid)
 
-
     def _sendMessageFetchResponse(self, msgId, msg, query, uid):
         seenUID = False
         response = []
@@ -1321,20 +1319,13 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             elif part.type == 'internaldate':
                 response.extend(('INTERNALDATE', msg.getInternalDate()))
             elif part.type == 'rfc822header':
-                hdrs = msg.getHeaders(True)
-                hdrs = [': '.join((k, v)) for (k, v) in hdrs.iteritems()]
-                hdrs = '\r\n'.join(hdrs)
-                response.extend(('RFC822.HEADER', hdrs + '\r\n\r\n'))
+                response.extend(('RFC822.HEADER', _formatHeaders(msg.getHeaders(True)) + '\r\n'))
             elif part.type == 'rfc822text':
                 response.extend(('RFC822.TEXT', msg.getBodyFile()))
             elif part.type == 'rfc822size':
                 response.extend(('RFC822.SIZE', str(msg.getSize())))
             elif part.type == 'rfc822':
-                hdrs = msg.getHeaders(True)
-                hdrs = [': '.join((k, v)) for (k, v) in hdrs.iteritems()]
-                hdrs.append('')
-                hdrs = '\r\n'.join(hdrs)
-                response.extend(('RFC822', hdrs + '\r\n' + msg.getBodyFile().read()))
+                response.extend(('RFC822', _formatHeaders(msg.getHeaders(True)) + msg.getBodyFile().read()))
             elif part.type == 'uid':
                 seenUID = True
                 if uid:
@@ -1349,30 +1340,16 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                     subMsg = subMsg.getSubPart(p)
                 if part.header:
                     if not part.header.fields:
-                        hdrs = msg.getHeaders(True)
-                        hdrs = [': '.join((k, v)) for (k, v) in hdrs.iteritems()]
-                        hdrs = '\r\n'.join(hdrs)
-                        response.extend((str(part), hdrs + '\r\n\r\n'))
+                        response.extend((str(part), _formatHeaders(msg.getHeaders(True)) + '\r\n'))
                     else:
                         hdrs = subMsg.getHeaders(part.header.negate, *part.header.fields)
-                        hdrs = ['%s: %s' % x for x in hdrs.iteritems()]
-                        hdrs.append('')
-                        hdrs = '\r\n'.join(hdrs) + '\r\n'
-                        response.extend((str(part), hdrs))
+                        response.extend((str(part), _formatHeaders(hdrs) + '\r\n'))
                 elif part.text:
                     response.extend((str(part), subMsg.getBodyFile()))
                 elif part.mime:
-                    hdrs = msg.getHeaders(True)
-                    hdrs = [': '.join((k, v)) for (k, v) in hdrs.iteritems()]
-                    hdrs = '\r\n'.join(hdrs)
-                    response.extend((str(part), hdrs + '\r\n\r\n'))
+                    response.extend((str(part), _formatHeaders(msg.getHeaders(True)) + '\r\n'))
                 elif part.empty:
-                    # BODY[] request
-                    hdrs = msg.getHeaders(True)
-                    hdrs = [': '.join((k, v)) for (k, v) in hdrs.iteritems()]
-                    hdrs.append('')
-                    hdrs = '\r\n'.join(hdrs)
-                    response.extend((str(part), hdrs + '\r\n' + subMsg.getBodyFile().read()))
+                    response.extend((str(part), _formatHeaders(msg.getHeaders(True)) + subMsg.getBodyFile().read()))
                 else:
                     # Simplified bodystructure request
                     response.extend(('BODY', getBodyStructure(msg, False)))
@@ -4146,6 +4123,11 @@ class IMailbox(components.Interface):
         @raise ReadOnlyMailbox: Raised if this mailbox is not open for
         read-write.
         """
+
+def _formatHeaders(headers):
+    hdrs = [': '.join((k, '\r\n'.join(v.splitlines()))) for (k, v) in headers.iteritems()]
+    hdrs = '\r\n'.join(hdrs) + '\r\n'
+    return hdrs
 
 class _FetchParser:
     class Envelope:
