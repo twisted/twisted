@@ -58,7 +58,7 @@ def nevowify(filename, linkrel, ext, url, templ, options=None, outfileGenerator=
         options = {}
     pclass = options['pageclass']
     pclass = reflect.namedObject(pclass)
-    page = pclass(docFactory=rend.htmlstr(open(filename).read()))
+    page = pclass(docFactory=rend.htmlfile(filename))
     s = page.renderString()
     from twisted.trial.util import wait
     s = wait(s)
