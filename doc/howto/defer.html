@@ -453,6 +453,61 @@ usefulness!</p>
   work as normal.</p>
   </li>
 </ul>
+
+<h2>DeferredList</h2>
+
+<p>Sometimes you want to be notified after several different events have all
+happened, rather than individually waiting for each one.  For example, you may
+want to wait for all the connections in a list to close.  <code
+	class="API">twisted.internet.defer.DeferredList</code> is the way to do
+this.</p>
+
+<p>To create a DeferredList from multiple Deferreds, you simply pass a list of
+the Deferreds you want it to wait for:</p>
+<pre class="python">
+# Creates a DeferredList
+dl = defer.DeferredList([deferred1, deferred2, deferred3])
+</pre>
+
+<p>You can now treat the DeferredList like an ordinary Deferred; you can call
+<code>addCallbacks</code> and so on.  The DeferredList will call its callback
+when all the deferreds have completed.  The callback will be called with a list
+of the results of the Deferreds it contains, like so:</p>
+
+<pre class="python">
+def printResult(result):
+    print result
+deferred1 = defer.Deferred()
+deferred2 = defer.Deferred()
+deferred3 = defer.Deferred()
+dl = defer.DeferredList([deferred1, deferred2, deferred3])
+dl.addCallback(printResult)
+deferred1.callback('one')
+deferred2.errback('bang!')
+deferred3.callback('three')
+# At this point, dl will fire its callback, printing:
+#     [(1, 'one'), (0, 'bang!'), (1, 'three')]
+# (note that defer.SUCCESS == 1, and defer.FAILURE == 0)
+</pre>
+
+<p>A standard DeferredList will never call errback.</p>
+
+<h3>Other behaviours</h3>
+
+<p>DeferredList accepts two keywords arguments that modify its behaviour:
+<code>fireOnOneCallback</code> and <code>fireOnOneErrback</code>.  If
+<code>fireOnOneCallback</code> is set, the DeferredList will immediately call
+its callback as soon as any of its Deferreds call their callback.  Similarly,
+<code>fireOnOneErrback</code> will call errback as soon as any of the Deferreds
+call their errback.  Note that DeferredList is still one-shot, like ordinary
+Deferreds, so after a callback or errback has been called the DeferredList will
+do nothing further (it will just silently ignore any other results from its
+Deferreds).</p>
+
+<p>The <code>fireOnOneErrback</code> option is particularly useful when you
+want to wait for all the results if everything succeeds, but also want to know
+immediately if something fails.</p>
+
 </body>
 </html>
 
