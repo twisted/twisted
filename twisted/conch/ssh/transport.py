@@ -393,7 +393,7 @@ class SSHServerTransport(SSHTransportBase):
             tries += 1
             y = Util.number.getRandomNumber(pSize, entropy.get_bytes)
         assert(y >= minimum) # TODO: test_conch just hangs if this is hit
-        # the chance of it being hit are really really high
+        # the chance of it being hit are really really low
 
         f = pow(self.g, y, self.p)
         sharedSecret = _MPpow(clientDHPubKey, y, self.p)
