@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.108 2003/04/09 05:48:33 acapnotic Exp $
+$Id: setup.py,v 1.109 2003/04/28 05:16:19 exarkun Exp $
 """
 
 import distutils, os, sys, string
@@ -308,4 +308,4 @@ else:
     setup_args['ext_modules'] = []
 
 if __name__ == '__main__':
-    apply(setup, (), setup_args)
+    setup(**setup_args)
