@@ -10,65 +10,87 @@
 <body>
 <h1>Using Application</h1>
 
+
+<p>There are many ways in which your code will be called by various parts of
+the Twisted framework by the time you're done.  The initial one we're going to
+focus on here is a plug-in for the <code class="shell">mktap</code> utility.
+<code class="shell">mktap</code> produces complete, runnable
+<code base="twisted.application.service" class="API">Application</code>
+instances, so no additional work is necessary to make your code work with
+<code class="shell">twistd</code>.  First we will go through the process of
+creating a
+plug-in that Twisted can find, then we make it adhere to the <code
+class="shell">mktap</code> interface.  Finally we will load that plug-in with a
+server.</p>
 <h2>Motivation</h2>
 
-<p>What happens when you want to write a Twisted application? Well,
-if you come into Twisted thinking of it as a library, you may
-decide a useful way is to write a Python script. This Python
-script would probably take the following actions:</p>
+<p>Twisted can power anything connected to a network, from your corporate
+message-broadcasting network to your desktop IRC client.  This is great for
+integrating lots of different tools, but can make it very difficult to
+understand how to use the Twisted platform most effectively.</p>
+
+<p>You've probably come to Twisted thinking of it as a library of code to help
+you write an application. It is much more useful to think of <em>your
+code</em> as the library. Twisted is a framework.  The difference between a
+framework and a library is that a developer's code will run a library's
+functions; whereas a framework runs the developer's functions.</p>
+
+<p>The difference is subtle, but significant; there are a range of resources
+which have to be allocated and managed regarding start-up and shut-down of an
+process, such as spawning of threads and handling events. In the library
+model, you handle the management of these resources. If you use Twisted as a
+framework, though, it will manage these resources itself.</p>
+
+<p>If you were using Twisted as a library, you would probably write a Python
+script that:</p>
 
 <ul>
-<li>Install the reactor you want (or skip this step if you
-    want the default reactor).</li>
-<li>Perform initialization options -- open data files, start
+<li>installs the reactor you want (if you're not using the default);</li>
+<li>performs initialization &mdash; opens data files, starts
 <code>reactor.callLater</code> loops, etc.</li>
-<li>Call <code>reactor.run()</code></li>
-<li>Perform deinitalization options</li>
+<li>calls <code>reactor.run()</code>; and</li>
+<li>performs deinitialization.</li>
 </ul>
 
-<p>There are two problems with this methodology. It has a lot
-of boiler-plate code, and it introduces an inflexibility into
-the design. The usual way to solve this kind of problem is
-to write <em>configuration files</em>, and it is no different
-in Twisted.</p>
+<p>There are two problems with this methodology: it requires a lot of
+boiler-plate code; and it introduces inflexibility into the design. The usual
+way to solve this kind of problem is to write <em>configuration files</em>,
+and it is no different in Twisted.</p>
 
-<p>At this point, the standard thing to do would be to write
-a long, tedious and subtly wrong manual describing the configuration
-language. Rest assured, like every other project, Twisted
-has those. But the language is secondary, and will be described
-later -- more important are the configuration <em>objects</em>.</p>
+<p>At this point, the standard thing to do would be to write a long, tedious
+and subtly wrong manual describing the configuration language. Rest assured,
+like every other project, Twisted has those. But the language is secondary,
+and will be described later &mdash; more important are the configuration
+<em>objects</em>.</p>
 
 <h2>Services, Persistence and Security, Oh My!</h2>
 
-<p>It is possible to think of any configuration language as a
-specially designed language to build a configuration object,
-which is then queried and acted upon by the program runtime.
-In Twisted, this is literally true internally -- and the
+<p>It is possible to think of any configuration language as designed to build
+a configuration object, which is then queried and acted upon by the program
+runtime.</p>
+
+<p>
+In Twisted, this is literally true internally &mdash; the
 master configuration object is
 <code>twisted.application.service.Application</code>.
 However, there is virtually nothing you can do with this
-object directly. This object is <code>Componentized</code> --
-it has different, orthogonal, aspects. Access to this aspects
-is done by using <em>interfaces</em>. Interfaces, for our purposes,
+object directly. This object is <code>Componentized</code> &mdash;
+it has different, orthogonal, aspects. You access these aspects
+by using <em>interfaces</em>. Interfaces, for our purposes,
 are just callables which return different aspects of the 
-<code>Application</code>.
-Unlike other frameworks, like <code>Qt</code> or <code>wxWindows</code>,
-in Twisted you do not derive from <code>Application</code> --
-you use methods to register your objects with it.
-</p>
+<code>Application</code>.</p>
 
 <p>There are four interfaces supported, three of which are defined in
 <code>twisted.application.service</code>:</p>
 
 <ul>
-<li><code>IService</code></li>
-<li><code>IServiceCollection</code></li>
-<li><code>IProcess</code></li>
-<li><code>twisted.persisted.sob.IPersistable</code></li>
+<li><code>IService</code>;</li>
+<li><code>IServiceCollection</code>;</li>
+<li><code>IProcess</code>; and</li>
+<li><code>twisted.persisted.sob.IPersistable</code>.</li>
 </ul>
-
 <p>Constructing an application is done by calling it with a single
-argument -- its name. The name influences some things, among them
+argument &mdash; its name. The name influences some things, among them
 the default file it will persist to (which is why it is mandatory).</p>
 
 <pre class="python">
@@ -83,7 +105,27 @@ per = sob.IPersistable(application)
 
 <h2>Services</h2>
 
-<p>There are two interfaces relevant to services -- <code>IService</code>
+<p>The central framework classes that you will deal with, both as a Twisted
+developer and administrator, are services, which implement <code
+class="API">twisted.application.service.IService</code>. <code
+class="API">twisted.application.service.Application</code> creates the root of
+a tree of services that form a twisted application.  There is one <code
+class="python">Application</code> instance per Twisted process, and it is the
+top-level manager of resources and handler of events in the Twisted framework.
+(Unlike other frameworks, like <code>Qt</code> or <code>wxWindows</code>, in
+Twisted you do not derive from <code>Application</code>; rather you register
+event handlers for it to call by adding Services to it.)  To store
+configuration data, as well as other information, Twisted serializes <code
+class="python">Application</code> instances, storing all services that have
+been registered with them.  Since the whole <code
+class="python">Application</code> instance is serialized, Twisted
+<q>configuration</q> files are significantly more comprehensive than those for
+other systems. These files store everything related to a running <code
+class="python">Application</code> instance; in essence the full state of a
+running process.</p>
+
+
+<p>There are two interfaces relevant to services &mdash; <code>IService</code>
 and <code>IServiceCollection</code>. <code>IService</code> represents
 a <em>state-aware</em> container. That means the service is ready to be
 notified of application start-ups and shutdowns. Services can be named
@@ -137,7 +179,7 @@ period elapses.</p>
 <h2>String Ports</h2>
 
 <p>In Twisted, a <code>ServerFactory</code> does not care what kind
-of virtual reliable circuit it listens too -- SSL, UNIX domain
+of virtual reliable circuit it listens too &mdash; SSL, UNIX domain
 sockets, TCP sockets or something else. However, the APIs for constructing
 the various <code>*Server</code> classes are different. When it is
 necessary for a less sophisticated user to direct construction of such

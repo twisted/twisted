@@ -8,61 +8,14 @@
 
 <h2>Getting Started</h2>
 
-<p>Twisted is a very general and powerful tool.  It can power anything
-connected to a network, from your corporate message-broadcasting network to
-your desktop IRC client.  This is great for integrating lots of different
-tools, but can make it very difficult to document and understand how the whole
-platform is supposed to work.  A side effect of this is that it's hard to get
-started with a project using Twisted, because it's hard to find out where to
-start.</p>
+<p>The purpose of this guide is to describe one of the ways to configure a
+Twisted server application, which is helpful when you want to pregenerate
+simple configurations. Client applications are not likely to use the
+infrastructure described in this document, and a simpler alternative exists
+for servers, covered in the <a href="application.xhtml">Application
+howto</a>. This guide exists as a supplement to the Application howto.</p>
 
-<p>This guide is to help you understand one of the main ways to get
-started working on a Twisted server application.  It probably won't
-answer your specific questions about how to do things like <a
-href="time.xhtml" >schedule functions to call in the future</a> or <a
-href="servers.xhtml" >listen on a socket</a>; there are other
-documents that address these concerns and you can read them
-later. Client applications are not likely to use the infrastructure
-described in this document, and a simpler alternative exists for
-servers, covered in the <a href="application.xhtml">Application
-howto</a>.</p>
-
-
-<h2>Twisted and You: Where Does Your Code Fit In?</h2>
-
-<p>If you're like most people that have asked me questions about this, you've
-probably come to Twisted thinking of it as a library of code to help you write
-an application.  It can be, but it is much more useful to think of <em>your
-code as the library</em>.  Twisted is a framework.</p>
-
-<p>The difference between a framework and a library is that a developer's code
-will run a library's functions; a framework runs the developer's functions,
-instead.  The difference is subtle, but significant; there are a range of
-resources which have to be allocated and managed regarding start-up and
-shut-down of an process, such as spawning of threads and handling events.  You
-don't have to use Twisted this way.  It is quite possible to write applications
-that use Twisted almost exclusively as a library. If you use it as a framework,
-though, Twisted will help you by managing these resources itself.</p>
-
-<p>The central framework classes that you will deal with, both as a Twisted
-developer and administrator, are services, which implement <code
-class="API">twisted.application.service.IService</code>. <code
-class="API">twisted.application.service.Application</code> creates the root
-of a tree of services that form a twisted application.  There is one <code
-class="python">Application</code> instance per Twisted process, and it is the
-top-level manager of resources and handler of events in the Twisted framework.
-(Unlike some other frameworks, developers do not subclass <code
-class="python">Application</code>; rather by adding services it, you
-register event handlers to be called by it.)  To store configuration data, as
-well as other information, Twisted serializes <code
-class="python">Application</code> instances, storing all services that
-have been registered with them.  Since the whole <code
-class="python">Application</code> instance is serialized, Twisted
-<q>configuration</q> files are significantly more comprehensive than
-those for other
-systems. These files store everything related to a running <code
-class="python">Application</code> instance; in essence the full state of a
-running process.</p>
+<h2>Plugins and Application objects</h2>
 
 <p>The central concept that a Twisted system administrator will work with are
 files that contain
@@ -85,18 +38,6 @@ instance and this script can be run directly using
 has a <code base="twisted.application.service" class="API">Application</code>
 object called <code>application</code> on the module level. Applications are
 covered in more depth in the <a href="application.xhtml">Application howto</a>.</p>
-
-<p>There are many ways in which your code will be called by various parts of
-the Twisted framework by the time you're done.  The initial one we're going to
-focus on here is a plug-in for the <code class="shell">mktap</code> utility.
-<code class="shell">mktap</code> produces complete, runnable
-<code base="twisted.application.service" class="API">Application</code>
-instances, so no additional work is necessary to make your code work with
-<code class="shell">twistd</code>.  First we will go through the process of
-creating a
-plug-in that Twisted can find, then we make it adhere to the <code
-class="shell">mktap</code> interface.  Finally we will load that plug-in with a
-server.</p>
 
 <h2>What is a Plug-In?</h2>
 
