@@ -5,7 +5,8 @@
 # where "resourcename" is one of the things in the left column here,
 # and a "resourcename.tgz" file will be created.
 
-twistedsumo packages/sumo
+twistedsumo dist/sumo
+twistedzpkg dist/twistedzpkg
 twisted twisted
 twisted.conch twisted/conch
 twisted.flow twisted/flow
