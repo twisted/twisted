@@ -22,6 +22,7 @@ class ConsoleManhole(Manhole):
         self.lineBufferIndex = 0
 
     def handle_QUIT(self):
+        self.proto.reset()
         reactor.stop()
 
 def main():

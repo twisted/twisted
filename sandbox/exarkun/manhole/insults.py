@@ -577,6 +577,9 @@ class ServerProtocol(protocol.Protocol):
             last = ''
         self.write('\x1b[%s;%sr' % (first, last))
 
+    def resetScrollRegion(self):
+        self.setScrollRegion()
+
     def reportCursorPosition(self):
         d = defer.Deferred()
         self._cursorReports.append(d)
