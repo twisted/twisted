@@ -412,6 +412,12 @@ class TimeoutMixin:
         self.__lastReceived = time.time()
     
     def setTimeout(self, period):
+        """Change the timeout period
+        
+        @type period: C{int} or C{NoneType}
+        @param period: The period, in seconds, to change the timeout to, or
+        C{None} to disable the timeout.
+        """
         self.timeOut = period
         self.__lastReceived = time.time()
         if self.__timeoutCall:
