@@ -46,6 +46,8 @@ from twisted.python import failure, log
 def makeContinuation(channel):
     from twisted.internet import reactor
     def continuation(result):
+        if hasattr(continuation, 'debug'):
+            print continuation.debug
         reactor.callLater(0, channel.send, result)
     return continuation
 
@@ -131,6 +133,14 @@ def blockOn(cont, deferred):
 
 blockOn = takesContinuation(blockOn)
 
+
+def sleep(cont, seconds):
+    cont.debug = "SLEEP"
+    from twisted.internet import reactor
+    reactor.callLater(seconds, cont)
+
+sleep = takesContinuation(sleep)
+
 class Scheduler:
     def __init__(self):
         self.taskletChannels = {} # mapping of tasklets to channels
@@ -142,8 +152,8 @@ class Scheduler:
         channel.receive())
         """
         t = stackless.getcurrent()
-        
-        self.taskletChannels[id(t)] = stackless.channel()
+        channel = stackless.channel()
+        self.taskletChannels[id(t)] = channel
         try:
             try:
                 f(*args, **kwargs)
@@ -162,6 +172,7 @@ class Scheduler:
         """
         I am context-dependant.
         """
+        assert stackless.getcurrent() != stackless.getmain(), "You can't be calling me from the main tasklet, man!"
         return self.taskletChannels[id(stackless.getcurrent())]
 
 theScheduler = Scheduler()

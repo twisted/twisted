@@ -1,3 +1,5 @@
+import time
+
 from twisted.trial import unittest
 from twisted.internet import reactor, defer
 
@@ -42,6 +44,17 @@ class StacklessTester(unittest.TestCase):
 
         threadless.theScheduler.callInTasklet(waiter)
         self.runReactor(0.3, seconds=True)
+
+    def testSleep(self):
+        self.expectedAssertions = 1
+        def waiter():
+            now = time.time()
+            print "TIME TIME"
+            threadless.sleep(0.2)
+            print "HEY HEY"
+            self.assert_(time.time() - now > 0.1)
+        threadless.theScheduler.callInTasklet(waiter)
+        self.runReactor(1, seconds=True)
 
 try:
     import stackless
