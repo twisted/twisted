@@ -79,7 +79,7 @@ class PBFailureTest(unittest.TestCase):
     def runClient(self):
         pb.connect("localhost", PORTNO, "guest", "guest",
                    "pbfailure", "guest", 30).addCallbacks(self.connected, self.notConnected)
-        reactor.callLater(10, self.timeOut)
+        self.id = reactor.callLater(10, self.timeOut)
 
 
     def a(self, d):
@@ -87,6 +87,11 @@ class PBFailureTest(unittest.TestCase):
             d.addCallbacks(self.success, m)
 
 
+
+    def stopReactor(self):
+        reactor.cancelCallLater(self.id)
+        reactor.stop()
+        
     ##
     # callbacks
     ##
@@ -97,7 +102,7 @@ class PBFailureTest(unittest.TestCase):
         self.a(persp.callRemote('die'))
 
     def notConnected(self, fail):
-        reactor.stop()
+        self.stopReactor()
         raise pb.Error("There's probably something wrong with your environment"
                        "(is port 54321 free?), because I couldn't connect to myself.")
 
@@ -105,9 +110,8 @@ class PBFailureTest(unittest.TestCase):
     def success(self, result):
         if result in [42, 420, 4200]:
             self.total = self.total + 1
-#        if self.total == 3:
-#            pass
-#            #reactor.stop()
+        if self.total == 3:
+            self.stopReactor()
 
     def failurePoop(self, fail):
         fail.trap(PoopError)
@@ -123,7 +127,6 @@ class PBFailureTest(unittest.TestCase):
 
     def timeOut(self):
         reactor.stop()
-        if self.total != 3:
-            raise TimeoutError("Never got all three failures!")
+        raise TimeoutError("Never got all three failures!")
 
 testCases = [PBFailureTest]
