@@ -4026,7 +4026,7 @@ class _FetchParser:
                     base += '.NOT'
                 base += ' (%s)' % (' '.join(map(str.title, self.fields)),)
             if self.part:
-                base = '.'.join(map(str, self.part)) + '.'
+                base = '.'.join([str(x + 1) for x in self.part]) + '.' + base
             return base
 
     class Text:
