@@ -26,9 +26,6 @@ from twisted.names import dns
 from twisted.internet import main, udp
 from twisted.protocols import protocol
 
-# hack until moshez lets me set the port for queries
-dns.DNS_PORT = 2053
-
 
 class DNSFactory(protocol.ServerFactory):
 
@@ -38,25 +35,31 @@ class DNSFactory(protocol.ServerFactory):
         self.boss = dns.DNSServerBoss()
     
     
-class DNSTestCase(unittest.TestCase):
+class ServerDNSTestCase(unittest.TestCase):
     """Test cases for DNS server and client."""
+    
+    def setUp(self):
+        # hack until moshez lets me set the port for queries
+        dns.DNS_PORT = 2053
+    
+    def tearDown(self):
+        dns.DNS_PORT = 53
     
     def testServer(self):
         factory = DNSFactory()
         factory.boss.addDomain("example.foo", dns.SimpleDomain("example.foo", "1.1.1.1"))
         p = udp.Port(2053, factory)
         p.startListening()
+        main.iterate()
+        main.iterate()
         
         resolver = dns.Resolver(["localhost"])
         d = resolver.resolve("example.foo")
         d.addCallback(self.tS_result).addErrback(self.tS_error)
         d.arm()
-        main.iterate()
-        main.iterate()
-        main.iterate()
-        main.iterate()
         
-        self.assertEquals(self.gotAnswer, 1)
+        while not hasattr(self, "gotAnswer"):
+            main.iterate()
         del self.gotAnswer
         p.loseConnection()
         main.iterate()
@@ -67,4 +70,32 @@ class DNSTestCase(unittest.TestCase):
     
     def tS_error(self, error):
         raise RuntimeError, error
+
+
+class LookupDNSTestCase(unittest.TestCase):
+    
+    def setUp(self):
+        self.results = []
+        self.resolver = dns.Resolver(["192.114.42.86"])
+    
+    def _testLookup(self, domain, type, result):
+        d = self.resolver.resolve(domain, type)
+        d.addCallback(self._result).addErrback(self._error)
+        d.arm()
+        while len(self.results) == 0:
+            main.iterate()
+        self.assertEquals(self.results[0], result)
+        
+    def _result(self, result):
+        self.results.append(result)
+    
+    def _error(self, error):
+        raise RuntimeError, error
+
+    def testA(self):
+        self._testLookup("zoteca.com", 1, "209.163.251.206")
+    
+    def testMX(self):
+        self._testLookup("zoteca.com", 15, ['israel2.maxnm.com', 'www.maxnm.com'])
+
     
