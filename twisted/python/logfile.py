@@ -24,7 +24,10 @@ import os, stat, glob, string
 
 
 class LogFile:
-    """A log file that can be rotated."""
+    """A log file that can be rotated.
+    
+    A rotateLength of None disables log rotation.
+    """
     
     def __init__(self, name, directory, rotateLength=1000000):
         self.directory = directory
@@ -58,7 +61,7 @@ class LogFile:
         """Write some data to the file."""
         self.size = self.size + len(data)
         self._file.write(data)
-        if self.size >= self.rotateLength:
+        if self.rotateLength is not None and self.size >= self.rotateLength:
             self.rotate()
     
     def flush(self):
