@@ -255,14 +255,15 @@ class Canana(Banana):
 
 Pynana = Banana
 
-try:
-    import cBanana
-except ImportError:
-    #print 'using python banana'
-    pass
-else:
-    #print 'using C banana'
-    Banana = Canana
+# cBanana is currently out of sync with python Banana
+#try:
+#    import cBanana
+#except ImportError:
+#    #print 'using python banana'
+#    pass
+#else:
+#    #print 'using C banana'
+#    Banana = Canana
 
 # For use from the interactive interpreter
 _i = Banana()
