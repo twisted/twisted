@@ -418,7 +418,7 @@ class Element(Node):
 
     def writexml(self, stream, indent='', addindent='', newl='', strip=0):
         # write beginning
-        NEVERSINGLETON = ('a', 'li', 'div', 'span', 'title', 'script', 'link')
+        NEVERSINGLETON = ('a', 'li', 'div', 'span', 'title', 'script')
         # this should never be necessary unless people start 
         # changing .tagName on the fly(?)
         if not self.preserveCase:
