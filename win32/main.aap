@@ -89,8 +89,6 @@ all: dist/$(setupbase)-$(Version).win32-py$(pyversion).exe
 :syseval find twisted -name '*.py' -o -name '*.sql' -o -name '*.glade*'  | :assign TwSources
 TwSources+=twisted/plugins.tml
            twisted/lore/template.mgp
-           twisted/test/process.alias.sh
-           twisted/test/rfc822.message
            twisted/test/server.pem
            twisted/web/woven/FlashConduit*
            twisted/web/woven/WebConduit*
