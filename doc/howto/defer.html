@@ -530,7 +530,8 @@ being snarfed out of the middle of each and handed off to the DeferredList
 
 <p>Therefore, if you add a callback to the Deferred <em>after</em> adding the
 Deferred to the DeferredList, the value returned by that callback will not
-be given to the DeferredList's callback.</p>
+be given to the DeferredList's callback.  To avoid confusion, we recommend not
+adding callbacks to a Deferred once it has been used in a DeferredList.</p>
 </div>
 
 <pre class="python">
