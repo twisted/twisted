@@ -39,7 +39,7 @@ class TestAvatar:
         self.name = name
         self.loggedIn = False
         self.loggedOut = False
-        
+
     def login(self):
         assert not self.loggedIn
         self.loggedIn = True
@@ -83,7 +83,7 @@ class NewCredTest(unittest.TestCase):
         expected.sort()
         got.sort()
         self.assertEquals(got, expected)
-    
+
     def testBasicLogin(self):
         l = []; f = []
         self.portal.login(credentials.UsernamePassword("bob", "hello"),
@@ -125,7 +125,7 @@ class CramMD5CredentialsTestCase(unittest.TestCase):
         c = credentials.CramMD5Credentials()
         chal = c.getChallenge()
         self.assertEquals(chal, c.getChallenge())
-    
+
     def testCheckPassword(self):
         c = credentials.CramMD5Credentials()
         chal = c.getChallenge()
@@ -151,11 +151,11 @@ class OnDiskDatabaseTestCase(unittest.TestCase):
         for (u, p) in self.users:
             f.write('%s:%s\n' % (u, p))
         f.close()
-        
+
         for (u, p) in self.users:
             self.failUnlessRaises(KeyError, db.getUser, u.upper())
             self.assertEquals(db.getUser(u), (u, p))
-    
+
     def testCaseInSensitivity(self):
         dbfile = self.mktemp()
         db = checkers.OnDiskUsernamePasswordDatabase(dbfile, caseSensitive=0)
@@ -163,7 +163,7 @@ class OnDiskDatabaseTestCase(unittest.TestCase):
         for (u, p) in self.users:
             f.write('%s:%s\n' % (u, p))
         f.close()
-        
+
         for (u, p) in self.users:
             self.assertEquals(db.getUser(u.upper()), (u, p))
 
@@ -176,11 +176,9 @@ class OnDiskDatabaseTestCase(unittest.TestCase):
         f.close()
 
         for (u, p) in self.users:
-            self.assertEquals(
-                unittest.deferredResult(db.requestAvatarId(
-                    credentials.UsernamePassword(u, p))),
-                u
-            )
+            c = credentials.UsernamePassword(u, p)
+            d = defer.maybeDeferred(db.requestAvatarId, c)
+            self.assertEquals(unittest.deferredResult(d), u)
 
         for (u, p) in self.users:
             self.assertEquals(
@@ -197,26 +195,34 @@ class OnDiskDatabaseTestCase(unittest.TestCase):
         db = checkers.OnDiskUsernamePasswordDatabase(dbfile, hash=hash)
         f = file(dbfile, 'w')
         for (u, p) in self.users:
-            f.write('%s:%s\n' % (u, p))
+            f.write('%s:%s\n' % (u, crypt(p, u[:2])))
         f.close()
-        
-        for (u, p) in self.users:
-            self.assertEquals(
-                unittest.deferredResult(db.requestAvatarId(
-                    credentials.UsernamePassword(u, p))),
-                u
-            )
-        
+
         r = TestRealm()
         port = portal.Portal(r)
         port.registerChecker(db)
-        
+
         for (u, p) in self.users:
-            d = port.login(ITestable, None,
-                credentials.UsernameHashedPassword(u, crypt(p, u[:2])))
-            d.addErrback(lambda r: r.trap(error.UnhandledCredentials))
-            self.assertEquals(unittest.deferredResult(d),
-                error.UnhandledCredentials)
+            c = credentials.UsernamePassword(u, p)
+
+            d = defer.maybeDeferred(db.requestAvatarId, c)
+            self.assertEquals(unittest.deferredResult(d), u)
+
+            d = port.login(c, None, ITestable)
+            i, a, l = unittest.deferredResult(d)
+            self.assertEquals(a.original.name, u)
+
+            # It should fail if we pass the wrong password
+            c = credentials.UsernamePassword(u, 'wrong password')
+            d = port.login(c, None, ITestable)
+            f = unittest.deferredError(d)
+            f.trap(error.UnauthorizedLogin)
+
+            # And it should fail for UsernameHashedPassword
+            c = credentials.UsernameHashedPassword(u, crypt(p, u[:2]))
+            d = port.login(c, None, ITestable)
+            f = unittest.deferredError(d)
+            f.trap(error.UnhandledCredentials)
 
     if crypt is None:
         testHashedPasswords.skip = "crypt module not available"

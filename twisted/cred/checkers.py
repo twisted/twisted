@@ -37,7 +37,7 @@ class ICredentialsChecker(components.Interface):
         (provided as checkers.ANONYMOUS) or fire a Failure(UnauthorizedLogin).
         Alternatively, return the result itself.
         """
-        
+
 # A note on anonymity - We do not want None as the value for anonymous
 # because it is too easy to accidentally return it.  We do not want the
 # empty string, because it is too easy to mistype a password file.  For
@@ -190,15 +190,16 @@ class FilePasswordDB:
         except KeyError:
             return failure.Failure(error.UnauthorizedLogin())
         else:
-            if self.hash and components.implements(c, credentials.IUsernameHashedPassword):
-                h = self.hash(c.username, c.password, p)
-                if h == p:
-                    return u
+            up = credentials.IUsernamePassword(c, default=None)
+            if self.hash:
+                if up is not None:
+                    h = self.hash(up.username, up.password, p)
+                    if h == p:
+                        return u
                 return failure.Failure(error.UnauthorizedLogin())
             else:
                 return defer.maybeDeferred(c.checkPassword, p
                     ).addCallback(self._cbPasswordMatch, u)
-            return failure.Failure(error.UnauthorizedLogin())
 
 # For backwards compatibility
 # Allow access as the old name.
