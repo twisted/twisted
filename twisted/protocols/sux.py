@@ -46,6 +46,17 @@ identChars = string.letters+string.digits+'.-_:'
 def nop(*args, **kw):
     "Do nothing."
     
+class ParseError(Exception):
+
+    def __init__(self, filename, line, col, message):
+        self.filename = filename
+        self.line = line
+        self.col = col
+        self.message = message
+
+    def __str__(self):
+       return "%s:%s:%s: %s" % (self.filename, self.line, self.col,
+                                self.message)
 
 class XMLParser(Protocol):
     state = None
@@ -58,7 +69,7 @@ class XMLParser(Protocol):
         return (self.lineno, self.colno)
 
     def _parseError(self, message):
-        raise Exception("%s:%s:%s: %s" % ((self.filename,)+self.saveMark()+(message,)))
+        raise ParseError(*((self.filename,)+self.saveMark()+(message,)))
 
     def dataReceived(self, data):
         if not self.state:
