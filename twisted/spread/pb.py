@@ -967,7 +967,7 @@ class Broker(banana.Banana):
                 errback(PB_CONNECTION_LOST)
             except:
                 traceback.print_exc(file=log.logfile)
-        for callback, errback in self.awaitingPerspectives.items():
+        for callback, errback in self.awaitingPerspectives.values():
             try:
                 errback()
             except:
