@@ -32,7 +32,8 @@ bind them to some extension using the web tap's <code>--processor</code>
 flag. Here is an example:</p>
 
 <pre>
-% mktap web --processor=.rtl=twisted.web.script.ResourceTemplate
+% mktap web --path=/var/www \
+        --processor=.rtl=twisted.web.script.ResourceTemplate
 </pre>
 
 <p>The above command line binds the "rtl" extension to use the 
