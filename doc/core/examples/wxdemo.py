@@ -28,7 +28,7 @@ class MyFrame(wxFrame):
         menu = wxMenu()
         menu.Append(ID_EXIT, "E&xit", "Terminate the program")
         menuBar = wxMenuBar()
-        menuBar.Append(menu, "&File");
+        menuBar.Append(menu, "&File")
         self.SetMenuBar(menuBar)
         EVT_MENU(self, ID_EXIT,  self.DoExit)
 
