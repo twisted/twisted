@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.148 2003/10/15 09:41:10 warner Exp $
+$Id: setup.py,v 1.149 2003/10/17 21:08:01 etrepum Exp $
 """
 
 import distutils, os, sys, string
@@ -181,6 +181,7 @@ int main(int argc, char **argv)
         if sys.platform == 'darwin':
             exts.append( Extension("twisted.internet.cfsupport",
                                     ["twisted/internet/cfsupport/cfsupport.c"],
+                                    extra_compile_args=['-w'],
                                     extra_link_args=['-framework','CoreFoundation','-framework','CoreServices','-framework','Carbon'],
                                     define_macros=define_macros))
         
