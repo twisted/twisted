@@ -20,10 +20,12 @@ from twisted.python import components, log
 from ssh import session, forwarding, filetransfer
 from ssh.filetransfer import FXF_READ, FXF_WRITE, FXF_APPEND, FXF_CREAT, FXF_TRUNC, FXF_EXCL
 from ssh.connection import OPEN_UNKNOWN_CHANNEL_TYPE
+
 from avatar import ConchUser
+from error import ConchError
 from interfaces import ISession, ISFTPServer, ISFTPFile
 
-import struct, array, os, stat, time, errno
+import struct, array, os, stat, time
 
 class UnixSSHRealm:
     __implements__ = portal.IRealm
@@ -91,7 +93,6 @@ class UnixConchUser(ConchUser):
         log.msg('avatar %s logging out (%i)' % (self.username, len(self.listeners)))
 
     def _runAsUser(self, f, *args, **kw):
-        import os
         euid = os.geteuid()
         egid = os.getegid()
         uid, gid = self.getUserGroupId()
@@ -141,7 +142,7 @@ class SSHSessionForUnixConchUser:
         from twisted.internet import reactor
         if not self.ptyTuple: # we didn't get a pty-req
             log.msg('tried to get shell without pty, failing')
-            raise error.ConchError("no pty")
+            raise ConchError("no pty")
         uid, gid = self.avatar.getUserGroupId()
         homeDir = self.avatar.getHomeDir()
         shell = self.avatar.getShell()

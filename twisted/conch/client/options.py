@@ -14,7 +14,11 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-from twisted.python import usage 
+from twisted.conch.ssh.transport import SSHClientTransport
+from twisted.python import usage
+
+import sys
+
 class ConchOptions(usage.Options):
 
     optParameters = [['user', 'l', None, 'Log in using this user name.'],

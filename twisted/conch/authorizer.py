@@ -24,7 +24,7 @@ from twisted.cred import authorizer
 from twisted.cred.error import Unauthorized
 from twisted.internet import defer
 from twisted.python import log
-import identity, error
+import identity
 
 class OpenSSHConchAuthorizer(authorizer.DefaultAuthorizer):
     identityClass = identity.OpenSSHConchIdentity

@@ -15,8 +15,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 from twisted.conch.error import ConchError
-from twisted.conch.ssh import common, keys, userauth
-from twisted.internet import defer
+from twisted.conch.ssh import common, keys, userauth, agent
+from twisted.internet import defer, protocol, reactor
 from twisted.python import log
 
 import os, sys, base64, getpass
@@ -31,7 +31,6 @@ def verifyHostKey(transport, host, pubKey, fingerprint):
         oldout, oldin = sys.stdout, sys.stdin
         sys.stdin = sys.stdout = open('/dev/tty','r+')
         if host == transport.transport.getPeer().host:
-            host = host
             khHost = host
         else:
             host = '%s (%s)' % (host,
@@ -134,7 +133,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
 
     def getPublicKey(self):
         if self.keyAgent:
-            blob = keyAgent.getPublicKey()
+            blob = self.keyAgent.getPublicKey()
             if blob:
                 return blob
         files = [x for x in self.options.identitys if x not in self.usedFiles]
@@ -156,7 +155,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
 
     def signData(self, publicKey, signData):
         if not self.usedFiles: # agent key
-            return keyAgent.signData(publicKey, signData)
+            return self.keyAgent.signData(publicKey, signData)
         else:
             return userauth.SSHUserAuthClient.signData(self, publicKey, signData)
 
@@ -181,7 +180,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
                         pass
                 return defer.fail(ConchError('bad password'))
             raise
-        except KeyboardError:
+        except KeyboardInterrupt:
             print
             reactor.stop()
 
