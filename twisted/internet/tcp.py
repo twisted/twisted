@@ -674,8 +674,9 @@ class Port(base.BasePort):
         del self.socket
         del self.fileno
         self.factory.doStop()
-        self.deferred.callback(None)
-        del self.deferred
+        if hasattr(self, "deferred"):
+            self.deferred.callback(None)
+            del self.deferred
 
     def logPrefix(self):
         """Returns the name of my class, to prefix log entries with.
