@@ -802,7 +802,7 @@ class DeferredQueue(object):
          """
          if self.waiting:
              self.waiting.pop(0).callback(obj)
-         elif self.size is not None and len(self.pending) < self.size:
+         elif self.size is None or len(self.pending) < self.size:
              self.pending.append(obj)
          else:
              raise QueueOverflow()
@@ -817,7 +817,7 @@ class DeferredQueue(object):
          """
          if self.pending:
              return succeed(self.pending.pop(0))
-         elif self.size is not None and len(self.waiting) < self.backlog:
+         elif self.backlog is None or len(self.waiting) < self.backlog:
              d = Deferred()
              self.waiting.append(d)
              return d
