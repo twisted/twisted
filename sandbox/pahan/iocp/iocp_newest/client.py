@@ -8,7 +8,7 @@ from twisted.python import failure
 from abstract import ConnectedSocket
 from ops import ConnectExOp
 from util import StateEventMachineType
-import address, error
+import error
 
 class ClientSocket(ConnectedSocket):
     def __init__(self, sock, protocol, sf):
@@ -111,9 +111,6 @@ class SocketConnector(styles.Ephemeral, object):
     def prepareAddress(self):
         raise NotImplementedError
 
-    def getDestination(self):
-        return address.getFull(self.addr, self.sockinfo)
-
     def connectionLost(self, reason):
         self.state = "disconnected"
         self.factory.clientConnectionLost(self, reason)
@@ -149,7 +146,7 @@ class SocketConnector(styles.Ephemeral, object):
         del self.sub
         self.state = "connected"
         self.cancelTimeout()
-        p = self.factory.buildProtocol(address.getFull(socket.getpeername(), self.sockinfo))
+        p = self.factory.buildProtocol(self.getAddress(socket))
         self.transport_obj = self.transport(socket, p, self)
         p.makeConnection(self.transport_obj)
 

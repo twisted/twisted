@@ -7,7 +7,6 @@ from twisted.python import log, failure
 
 from ops import ReadFileOp, WriteFileOp
 from util import StateEventMachineType
-import address
 
 class ConnectedSocket(log.Logger, styles.Ephemeral, object):
     __metaclass__ = StateEventMachineType
@@ -235,12 +234,6 @@ class ConnectedSocket(log.Logger, styles.Ephemeral, object):
 
     def stopProducing(self):
         self.loseConnection()
-
-    def getHost(self):
-        return address.getFull(self.socket.getsockname(), self.sf.sockinfo)
-
-    def getPeer(self):
-        return address.getFull(self.socket.getpeername(), self.sf.sockinfo)
 
     def __repr__(self):
         return self.repstr

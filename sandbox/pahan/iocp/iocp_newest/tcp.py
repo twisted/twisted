@@ -1,7 +1,7 @@
 import types, socket, operator
 
 from twisted.internet.abstract import isIPAddress # would rather not import "abstract"
-from twisted.internet import defer, interfaces
+from twisted.internet import defer, interfaces, address
 from twisted.python import log
 
 import server, client, error
@@ -38,6 +38,11 @@ class Port(server.ListeningPort):
 
 class ClientSocket(client.SocketConnector.transport, TcpMixin):
     __implements__ = client.SocketConnector.transport.__implements__ + (interfaces.ITCPTransport,)
+    def getHost(self):
+        return address.IPv4Address('TCP', *(self.socket.getsockname() + ('INET',)))
+
+    def getPeer(self):
+        return address.IPv4Address('TCP', *(self.client + ('INET',)))
 
 class Connector(client.SocketConnector):
     sockinfo = (socket.AF_INET, socket.SOCK_STREAM, 0)
@@ -61,4 +66,11 @@ class Connector(client.SocketConnector):
         else:
             from twisted.internet import reactor
             return reactor.resolve(host).addCallback(self._filterRealAddress)
+
+    def getDestination(self):
+        return address.IPv4Address('TCP', self.addr[0], self.addr[1], 'INET')
+
+    def getAddress(self, socket):
+        pn = socket.getpeername()
+        return address.IPv4Address('TCP', pn[0], pn[1], 'INET')
 

@@ -8,15 +8,13 @@ from twisted.python import log, reflect
 from ops import AcceptExOp
 from abstract import ConnectedSocket
 from util import StateEventMachineType
-import address, error
+import error
 
 class ServerSocket(ConnectedSocket):
     def __init__(self, sock, protocol, sf, sessionno):
         ConnectedSocket.__init__(self, sock, protocol, sf)
-        self.logstr = "%s,%s,%s" % (self.protocol.__class__.__name__, sessionno,
-                address.getHost(self.sf.addr, self.sf.sockinfo))
-        self.repstr = "<%s #%s on %s>" % (self.protocol.__class__.__name__, sessionno, 
-                address.getPort(self.sf.addr, self.sf.sockinfo))
+        self.logstr = "%s,%s,%s" % (self.protocol.__class__.__name__, sessionno, 'address')
+        self.repstr = "<%s #%s on %s>" % (self.protocol.__class__.__name__, sessionno, 'address')
         self.startReading()
 
 class ListeningPort(log.Logger, styles.Ephemeral, object):
@@ -35,15 +33,15 @@ class ListeningPort(log.Logger, styles.Ephemeral, object):
         self.accept_op = AcceptExOp(self)
 
     def __repr__(self):
-        return "<%s on %s>" % (self.factory.__class__, address.getPort(self.addr, self.sockinfo))
+        return "<%s on %s>" % (self.factory.__class__, 'address')
 
     def handle_disconnected_startListening(self):
-        log.msg("%s starting on %s" % (self.factory.__class__, address.getPort(self.addr, self.sockinfo)))
+        log.msg("%s starting on %s" % (self.factory.__class__, 'address')
         try:
             skt = socket.socket(*self.sockinfo)
             skt.bind(self.addr)
         except socket.error, le:
-            raise error.CannotListenError, (address.getHost(self.addr, self.sockinfo), address.getPort(self.addr, self.sockinfo), le)
+            raise error.CannotListenError, (None, None, le)
         self.factory.doStart()
         skt.listen(self.backlog)
         self.socket = skt
@@ -79,7 +77,7 @@ class ListeningPort(log.Logger, styles.Ephemeral, object):
     def handle_listening_stopListening(self):
         self.state = "disconnected"
         self.socket.close()
-        log.msg('(Port %r Closed)' % address.getPort(self.addr, self.sockinfo))
+        log.msg('(Port %r Closed)' % ('address',))
         self.factory.doStop()
 
     handle_listening_loseConnection = handle_listening_stopListening
@@ -91,13 +89,7 @@ class ListeningPort(log.Logger, styles.Ephemeral, object):
         """Returns the name of my class, to prefix log entries with.
         """
         return reflect.qual(self.factory.__class__)
-
-    def getHost(self):
-        return address.getFull(self.socket.getsockname(), self.sockinfo)
-
-    def getPeer(self):
-        return address.getFull(self.socket.getpeername(), self.sockinfo)
-
+ 
     def connectionLost(self, reason):
         pass
 
