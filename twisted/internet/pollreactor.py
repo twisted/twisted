@@ -135,7 +135,12 @@ class PollReactor(posixbase.PosixReactorBase):
                 raise
         _drdw = self._doReadOrWrite
         for fd, event in l:
-            selectable = selectables[fd]
+            try:
+                selectable = selectables[fd]
+            except KeyError:
+                # Handles the infrequent case where one selectable's
+                # handler disconnects another.
+                continue
             log.callWithLogger(selectable, _drdw, selectable, fd, event, POLLIN, POLLOUT, log)
 
     doIteration = doPoll
