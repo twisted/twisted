@@ -389,7 +389,7 @@ class AuthTestCase(unittest.TestCase, LoopbackMixin):
         p = cred.portal.Portal(realm)
         p.registerChecker(DummyChecker())
 
-        server = DummyESMTP([smtp.CramMD5ChallengeResponse('testuser')])
+        server = DummyESMTP({'CRAM-MD5': smtp.CramMD5ChallengeResponse})
         server.portal = p
         client = MyESMTPClient('testpassword')
 

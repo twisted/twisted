@@ -449,7 +449,7 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
     
     def testCapabilityWithAuth(self):
         caps = {}
-        self.server.CAPABILITIES['AUTH'].append('CRAM-MD5')
+        self.server.challengers['CRAM-MD5'] = smtp.CramMD5ChallengeResponse
         def getCaps():
             def gotCaps(c):
                 caps.update(c)
@@ -945,7 +945,6 @@ class AuthenticatorTestCase(IMAP4HelperMixin, unittest.TestCase):
         self.server.portal = portal
 
         self.server.challengers['CRAM-MD5'] = smtp.CramMD5ChallengeResponse
-        self.server.CAPABILITIES['AUTH'].append('CRAM-MD5')
 
         cAuth = imap4.CramMD5ClientAuthenticator('testuser')
 

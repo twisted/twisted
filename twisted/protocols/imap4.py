@@ -408,9 +408,6 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     """
     __implements__ = (IMailboxListener,)
 
-    # Capabilities supported by this server
-    CAPABILITIES = None
-
     # Identifier for this server software
     IDENT = 'Twisted IMAP4rev1 Ready'
     
@@ -419,6 +416,12 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     timeOut = 60
 
     POSTAUTH_TIMEOUT = 60 * 30
+
+    # Whether STARTTLS has been issued successfully yet or not.
+    startedTLS = False
+    
+    # Whether our transport supports TLS
+    canStartTLS = False
 
     # Mapping of tags to commands we have received
     tags = None
@@ -438,28 +441,29 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     # Command data to be processed when literal data is received
     _pendingLiteral = None
 
-    # Challenge generators for AUTHENTICATE command
+    # IChallengeResponse factories for AUTHENTICATE command
     challengers = None
     
     state = 'unauth'
 
     def __init__(self, chal = None, contextFactory = None):
         if chal is None:
-            chal = []
-        self.challengers = dict([(c.getName().upper(), c) for c in chal])
-        self.challengers = {}
-        self.CAPABILITIES = {'AUTH': self.challengers.keys()}
+            chal = {}
+        self.challengers = chal
         self.ctx = contextFactory
 
-    def connectionMade(self):
-        self.setTimeout(self.timeOut)
+    def capabilities(self):
+        cap = {'AUTH': self.challengers.keys()}
+        if self.ctx and self.canStartTLS and not self.startedTLS:
+            cap['LOGINDISABLED'] = None
+            cap['STARTTLS'] = None
+        return cap
 
-        if self.ctx and implements(self.transport, ITLSTransport):
-            self.CAPABILITIES['LOGINDISABLED'] = None
-            self.CAPABILITIES['STARTTLS'] = None
-        
+    def connectionMade(self):
         self.tags = {}
+        self.setTimeout(self.timeOut)
         self.sendServerGreeting()
+        self.canStartTLS = implements(self.transport, ITLSTransport)
     
     def connectionLost(self, reason):
         self.setTimeout(None)
@@ -472,17 +476,16 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         self.transport.loseConnection()
         if self.mbox:
             self.mbox.removeListener(self)
+            self.mbox = None
 
     def rawDataReceived(self, data):
         self.resetTimeout()
-
         passon = self._pendingLiteral.write(data)
         if passon is not None:
             self.setLineMode(passon)
 
     def lineReceived(self, line):
         self.resetTimeout()
-
         if self._pendingLiteral:
             self._pendingLiteral.callback(line)
             self._pendingLiteral = None
@@ -792,7 +795,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def listCapabilities(self):
         caps = ['IMAP4rev1']
-        for c, v in self.CAPABILITIES.iteritems():
+        for c, v in self.capabilities().iteritems():
             if v is None:
                 caps.append(c)
             elif len(v):
@@ -886,22 +889,25 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         auth.abort()
 
     def do_STARTTLS(self, tag):
-        if self.ctx and implements(self.transport, ITLSTransport):
+        if self.startedTLS:
+            self.sendNegativeResponse(tag, 'TLS already negotiated')
+        elif self.ctx and self.canStartTLS:
             self.sendPositiveResponse(tag, 'Begin TLS negotiation now')
             self.transport.startTLS(self.ctx)
-            del self.CAPABILITIES['LOGINDISABLED']
-            del self.CAPABILITIES['STARTTLS']
+            self.startedTLS = True
+        else:
+            self.sendNegativeResponse(tag, 'TLS not available')
 
     unauth_STARTTLS = (do_STARTTLS,)
 
     def do_LOGIN(self, tag, user, passwd):
-        if 'LOGINDISABLED' in self.CAPABILITIES:
+        if 'LOGINDISABLED' in self.capabilities():
             self.sendBadResponse(tag, 'LOGIN is disabled before STARTTLS')
             return
 
         maybeDeferred(self.authenticateLogin, user, passwd).addCallbacks(
             self.__cbLogin, self.__ebLogin, (tag,), None, (tag,), None
-            )
+        )
 
     unauth_LOGIN = (do_LOGIN, arg_astring, arg_astring)
 

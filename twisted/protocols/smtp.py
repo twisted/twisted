@@ -137,9 +137,6 @@ class CramMD5ChallengeResponse(cred.credentials.UsernamePassword):
     def __init__(self, host = DNSNAME):
         self.host = host
     
-    def getName(self):
-        return 'CRAM-MD5'
-
     def abort(self):
         if self.waiting:
             self.waiting.errback(failure.Failure(cred.errors.UnauthorizedLogin()))
@@ -486,7 +483,7 @@ class SMTP(basic.LineReceiver):
     timeout = 600
     host = DNSNAME
     delivery = None
-
+    
     def __init__(self):
         self.mode = COMMAND
         self._from = None
@@ -1152,13 +1149,32 @@ class ESMTPClient(SMTPClient):
             self._failresponse = self.smtpState_disconnect
 
 class ESMTP(SMTP):
-    def __init__(self, chal = None):
+
+    ctx = None
+    canStartTLS = False
+    startedTLS = False
+    
+    portal = None
+    authenticated = False
+    delivery = None
+
+    def __init__(self, chal = None, ctx = None):
         SMTP.__init__(self)
         if chal is None:
-            chal = []
-        self.challengers = dict([(c.getName().upper(), c) for c in chal])
+            chal = {}
+        self.challengers = chal
         self.authenticated = False
-        self.extArgs = {'AUTH': self.challengers.keys()}
+        self.ctx = ctx
+
+    def connectionMade(self):
+        SMTP.connectionMade(self)
+        self.canStartTLS = implements(self.transport, ITLSTransport)
+
+    def extensions(self):
+        ext = {'AUTH': self.challengers.keys()}
+        if self.canStartTLS and not self.startedTLS:
+            ext['STARTTLS'] = None
+        return ext
 
     def lookupMethod(self, command):
         m = SMTP.lookupMethod(self, command)
@@ -1166,28 +1182,45 @@ class ESMTP(SMTP):
             m = getattr(self, 'ext_' + command.upper(), None)
         return m
 
+    def listExtensions(self):
+        r = []
+        for (c, v) in self.extensions().iteritems():
+            if v:
+                r.append('%s %s' % (c, ' '.join(v)))
+            else:
+                r.append(c)
+        return '\n'.join(r)
+
     def do_EHLO(self, rest):
-        extensions = reflect.prefixedMethodNames(self.__class__, 'ext_')
         peer = self.transport.getPeer()[1]
         self._helo = (rest, peer)
         self._from = None
         self._to = []
+        ext = self.extensions()
         self.sendCode(
             250,
             '%s\n%s Hello %s, nice to meet you' % (
-                '\n'.join([
-                    '%s %s' % (e, ' '.join(self.extArgs.get(e, []))) for e in extensions
-                ]),
+                self.listExtensions(),
                 self.host, peer
             )
         )
+
+    def ext_STARTTLS(self, rest):
+        if self.startedTLS:
+            self.sendCode(503, 'TLS already negotiated')
+        elif self.ctx and self.canStartTLS:
+            self.sendCode(220, 'Begin TLS negotiation now')
+            self.transport.startTLS(self.ctx)
+            self.startedTLS = True
+        else:
+            self.sendCode(454, 'TLS not available')
 
     def ext_AUTH(self, rest):
         if self.authenticated:
             self.sendCode(503, 'Already authenticated')
             return
         parts = rest.split(None, 1)
-        chal = self.challengers.get(parts[0].upper())
+        chal = self.challengers.get(parts[0].upper())()
         if not chal:
             self.sendCode(504, 'Unrecognized authentication type')
             return
@@ -1242,8 +1275,9 @@ class ESMTP(SMTP):
     
     def connectionLost(self, reason):
         SMTP.connectionLost(self, reason)
-        self._onLogout()
-        self._onLogout = None
+        if self._onLogout:
+            self._onLogout()
+            self._onLogout = None
 
 
 class SMTPSender(SMTPClient):
