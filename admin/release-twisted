@@ -568,7 +568,7 @@ class InstallDebs(Transaction):
             for file in glob.glob('%(dir)s/*.old' % vars()):
                 new = os.path.splitext(file)[0]
                 sh('mv %(target)s/%(file)s %(target)s/%(new)s')
-            sh('rm %(dir)s/*%(ver)s*' % vars())
+            sh('rm -f %(dir)s/*%(ver)s*' % vars())
 
 if __name__=='__main__':
     main()
