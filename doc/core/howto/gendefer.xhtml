@@ -13,8 +13,6 @@
 
 <h1>Generating Deferreds</h1>
 
-<h2>Introduction</h2>
-
 <p><code class="API" base="twisted.internet.defer">Deferred</code> objects are
 signals that a function you have called does not yet have the data you want
 available. When a function returns a Deferred object, your calling function
@@ -24,8 +22,6 @@ attaches callbacks to it to handle the data when available.</p>
 that return Deferreds, that is, constructing Deferred objects, arranging for
 them to be returned immediately without blocking until data is available, and
 firing their callbacks when the data is available.</p>
-
-<h3>Assumed knowledge</h3>
 
 <p>This document assumes that you are familiar with the <a
 href="async.xhtml">asynchronous model</a> used by Twisted, and with <a
@@ -143,38 +139,7 @@ callbacks, but using them does not guarantee that you have an asynchronous
 function.</p>
 
 
-
-<h2>Technical Details</h2>
-
-<p>Deferreds greatly simplify the process of writing asynchronous code by
-providing a standard for registering callbacks, but there are some subtle and
-sometimes confusing rules that you need to follow if you are going to use
-them. This mostly applies to people who are writing new systems that use
-Deferreds internally, and not writers of applications that just add callbacks
-to Deferreds produced and processed by other systems. Nevertheless, it is good
-to know.</p>
-
-<p>Deferreds are one-shot. A generalization of the Deferred API to generic
-event-sources is in progress -- watch this space for updates! -- but Deferred
-itself is only for events that occur once. You can only call
-<code>Deferred.callback</code> or <code>Deferred.errback</code> once. The
-processing chain continues each time you add new callbacks to an
-already-called-back-to Deferred.</p>
-
-<p>The important consequence of this is that <strong>sometimes, addCallbacks
-will call its argument synchronously, and sometimes it will not</strong>. In
-situations where callbacks modify state, it is highly desirable for the chain
-of processing to halt until all callbacks are added. For this, it is possible
-to <code>pause</code> and <code>unpause</code>
-a Deferred's processing chain while you are adding lots of callbacks.</p>
-
-<p>Be careful when you use these methods! If you <code>pause</code> a Deferred,
-it is <em>your</em> responsibility to make sure that you unpause it; code that
-calls <code>callback</code> or <code>errback</code> should
-<strong>never</strong> call <code>unpause</code>, as this would negate its
-usefulness!</p>
-
-<h3>Advanced Processing Chain Control</h3>
+<h2>Advanced Processing Chain Control</h2>
 
 <ul>
   <li>
@@ -238,6 +203,38 @@ def immediateIsValidUser(user):
 <p>There is an equivalent <code class="API"
 base="twisted.internet">defer.fail</code> method to return a Deferred with the
 errback chain already fired.</p>
+
+<h2>Possible sources of error</h2>
+
+<p>Deferreds greatly simplify the process of writing asynchronous code by
+providing a standard for registering callbacks, but there are some subtle and
+sometimes confusing rules that you need to follow if you are going to use
+them. This mostly applies to people who are writing new systems that use
+Deferreds internally, and not writers of applications that just add callbacks
+to Deferreds produced and processed by other systems. Nevertheless, it is good
+to know.</p>
+
+<h3>Firing Deferreds more than once is impossible</h3>
+
+<p>Deferreds are one-shot. You can only call <code>Deferred.callback</code> or
+<code>Deferred.errback</code> once. The processing chain continues each time
+you add new callbacks to an already-called-back-to Deferred.</p>
+
+<h3>Synchronous callback execution</h3>
+
+<p>If a Deferred already has a result available, addCallback
+<strong>may</strong> call the callback synchronously: that is, immediately
+after it's been added.  In situations where callbacks modify state, it is
+might be desirable for the chain of processing to halt until all callbacks are
+added. For this, it is possible to <code>pause</code> and <code>unpause</code>
+a Deferred's processing chain while you are adding lots of callbacks.</p>
+
+<p>Be careful when you use these methods! If you <code>pause</code> a
+Deferred, it is <em>your</em> responsibility to make sure that you unpause it.
+The function adding the callbacks must unpause a paused Deferred, it should
+<em>never</em> be the responsibility of the code that actually fires the
+callback chain by calling <code>callback</code> or <code>errback</code> as
+this would negate its usefulness!</p>
 
 <h2>See also</h2>
 <ol>
