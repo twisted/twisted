@@ -109,6 +109,9 @@ from flavors import setCopierForClass, setUnjellyableForClass
 from flavors import setFactoryForClass
 from flavors import setCopierForClassTree
 
+# zope.interface
+from zope.interface import implements
+
 MAX_BROKER_REFS = 1024
 
 portno = 8787
@@ -1722,7 +1725,7 @@ class _PortalWrapper(Referenceable):
 class _PortalAuthChallenger(Referenceable):
     """Called with response to password challenge."""
 
-    __implements__ = (Referenceable.__implements__, IUsernameHashedPassword, IUsernameMD5Password)
+    implements(IUsernameHashedPassword, IUsernameMD5Password)
 
     def __init__(self, portalWrapper, username, challenge):
         self.portalWrapper = portalWrapper
