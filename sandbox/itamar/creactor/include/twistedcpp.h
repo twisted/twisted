@@ -35,17 +35,4 @@ namespace Twisted
     };
 }
 
-// Some useful functions for connecting to Pyrex:
-extern "C" {
-    void tp_dataReceived(void* protocol, char* buf, int buflen) {
-	(reinterpret_cast<Twisted::Protocol*>(protocol))->dataReceived(buf, buflen);
-    }
-    void tp_connectionLost(void* protocol) {
-	(reinterpret_cast<Twisted::Protocol*>(protocol))->connectionLost();
-    }
-    void tp_bufferFull(void* protocol) {
-	(reinterpret_cast<Twisted::Protocol*>(protocol))->bufferFull();
-    }
-}
-
 #endif
