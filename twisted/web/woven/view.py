@@ -184,9 +184,7 @@ class View(template.DOMTemplate):
                 if model is None:
                     model = self.getTopOfModelStack()
                 try:
-                    self.model = model
                     view = viewMethod(request, node, model)
-                    self.model = self.mainModel
                 except TypeError:
                     warnings.warn("wvfactory_ methods take (request, node, "
                                   "model) instead of (request, node) now. \n"
