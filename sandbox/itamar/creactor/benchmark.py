@@ -1,7 +1,7 @@
 from twisted.protocols.basic import LineReceiver
 from twisted.internet import protocol, reactor
 
-import tcp
+import sample
 
 
 class Py(LineReceiver):
@@ -22,7 +22,7 @@ def main(py):
         factory.protocol = Py
     else:
         import creactor # monkey patch, lalala
-        factory.buildProtocol = lambda _: tcp.CProtocol()
+        factory.buildProtocol = lambda _: sample.SampleProtocol()
     reactor.listenTCP(1234, factory)
     reactor.run()
 

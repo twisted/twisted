@@ -6,6 +6,7 @@ setup(
   name = "creactor",
   ext_modules=[ 
     Extension("tcp", ["tcp.pyx"]),
+    Extension("sample", ["sample.pyx"]),
     ],
   cmdclass = {'build_ext': build_ext}
 )
