@@ -250,7 +250,7 @@ class MulticastMixin:
 
     def getOutgoingInterface(self):
         i = self.socket.getsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF)
-        return socket.inet_ntoa(struct.pack("@l", i))
+        return socket.inet_ntoa(struct.pack("@i", i))
     
     def setOutgoingInterface(self, addr):
         """Returns Deferred of success."""
