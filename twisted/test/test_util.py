@@ -61,24 +61,24 @@ class GetPasswordTest(unittest.TestCase):
         """Making sure getPassword accepts a password from standard input.
         """
         from os import path
+        import twisted
         # Fun path games because for my sub-process, 'import twisted'
         # doesn't always point to the package containing this test
         # module.
-        # (XXX: Does that mean that when sub-process imports this module
-        # and it does 'from twisted.python import util', it's going to get
-        # the wrong version of that too?)
         script = """\
 import sys
 sys.path.insert(0, \"%(dir)s\")
-import test_util
+from twisted.test import test_util
 print test_util.util.__version__
 print test_util.reversePassword()
-""" % {'dir': path.dirname(__file__)}
+""" % {'dir': path.dirname(path.dirname(twisted.__file__))}
         cmd_in, cmd_out, cmd_err = os.popen3("%(python)s -c '%(script)s'" %
                                              {'python': sys.executable,
                                               'script': script})
         cmd_in.write("secret\n")
         cmd_in.close()
+        errors = cmd_err.read()
+        self.failIf(errors, errors)
         uversion = cmd_out.readline()[:-1]
         self.failUnlessEqual(uversion, util.__version__,
                              "I want to test module version %r, "
@@ -86,8 +86,6 @@ print test_util.reversePassword()
                              (util.__version__, uversion))
         # stripping print's trailing newline.
         secret = cmd_out.read()[:-1]
-        errors = cmd_err.read()
-        self.failIf(errors, errors)
         # The reversing trick it so make sure that there's not some weird echo
         # thing just sending back what we type in.
         self.failUnlessEqual(reverseString(secret), "secret")
