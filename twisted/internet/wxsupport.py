@@ -44,6 +44,10 @@ class wxRunner:
         self.app = app
         
     def run(self):
+        """
+        Execute pending WX events followed by WX idle events and
+        reschedule.
+        """
         # run wx events
         while self.app.Pending():
             self.app.Dispatch()

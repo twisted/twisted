@@ -304,10 +304,10 @@ class Protocol(BaseProtocol):
         message.
 
         @param data: a string of indeterminate length.  Please keep in mind
-        that you will probably need to buffer some data, as partial (or
-        multiple) protocol messages may be received!  I recommend that unit
-        tests for protocols call through to this method with differing chunk
-        sizes, down to one byte at a time.
+            that you will probably need to buffer some data, as partial
+            (or multiple) protocol messages may be received!  I recommend
+            that unit tests for protocols call through to this method with
+            differing chunk sizes, down to one byte at a time.
         """
 
     def connectionLost(self, reason=failure.Failure(error.ConnectionDone())):
