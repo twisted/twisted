@@ -1,3 +1,9 @@
+2003-07-25  Jp Calderone  <exarkun@twistedmatrix.com>
+
+	* twisted/protocols/imap4.py: The fetch method of the IMailbox
+	interface has been changed to accept only a MessageSet and a uid
+	argument and to return an IMessage implementor.
+
 2003-07-24  Brian Warner  <warner@lothar.com>
 
 	* twisted/internet/cReactor/cDelayedCall.c: implement .active and
