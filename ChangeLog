@@ -1,4 +1,12 @@
-2002-12-09  Paul Swartz  <z3p@twistedmatrix.com
+2002-12-10  Cory Dodt  <corydodt@yahoo.com>
+
+    * t/scripts/postinstall.py: new.  Create shortcut icons on win32.
+
+    * twisted-post-install.py: new.  Runs t/scripts/postinstall.py
+
+    * setup.py: copy twisted-post-install.py during install_scripts
+
+2002-12-09  Paul Swartz  <z3p@twistedmatrix.com>
 
     * twisted/internet/app.py: actually set the euid/egid if users ask
 
