@@ -96,9 +96,9 @@ template = '''\
     <code>%%%%self.widget%%%%</code> to access it (see <q>Common
     Pitfalls: WidgetPage</q> below).</p>
 
-    <h1>Common Pitfalls</h1>
+    <h2>Common Pitfalls</h2>
 
-    <h2>WidgetPage</h2>
+    <h3>WidgetPage</h3>
 
     <p>If you have a subclass of <code base="twisted.web"
     class="API">widgets.WidgetPage</code> , make sure your template
@@ -125,7 +125,7 @@ template = '''\
 '''
 </pre>
 
-    <h2>Adding Widgets to a Gadget</h2>
+    <h3>Adding Widgets to a Gadget</h3>
 
     <p>I had some code like this in one of my Gadgets: <code
     class="python">self.putWidget("Foo",
@@ -153,7 +153,7 @@ AttributeError: TitleBox instance has no attribute 'getHeader'
     template or b) the widget's <code
     class="python">display()</code> method.</p>
 
-    <h2>Return values of display()</h2>
+    <h3>Return values of display()</h3>
 
     <p>If you ever get this traceback (word wrapped for readability):</p>
 <pre class="python">
