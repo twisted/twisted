@@ -201,19 +201,4 @@ def runApp(config):
 
 
 def run():
-    # make default be "--help"
-    if len(sys.argv) == 1:
-        sys.argv.append("--help")
-
-    config = ServerOptions()
-    try:
-        config.parseOptions()
-    except usage.error, ue:
-        config.opt_help()
-        print "%s: %s" % (sys.argv[0], ue)
-        os._exit(1)
-
-    runApp(config)
-
-if __name__ == '__main__':
-    run()
+    apprun.run(runApp, ServerOptions)

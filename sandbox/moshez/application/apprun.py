@@ -219,3 +219,18 @@ class ServerOptions(usage.Options):
         """Print an insanely verbose log of everything that happens.  Useful
         when debugging freezes or locks in complex code."""
         sys.settrace(util.spewer)
+
+
+def run(runApp, ServerOptions):
+    # make default be "--help"
+    if len(sys.argv) == 1:
+        sys.argv.append("--help")
+
+    config = ServerOptions()
+    try:
+        config.parseOptions()
+    except usage.error, ue:
+        config.opt_help()
+        print "%s: %s" % (sys.argv[0], ue)
+        os._exit(1)
+    runApp(config)
