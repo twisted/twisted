@@ -117,8 +117,8 @@ class InQueue(IssueState):
     def __init__(self, queue):
         """Create an InQueue state.
 
-        @param queue The queue that the issue (is/was) in (while it is / when
-        it was) in this state.
+        @param queue: The queue that the issue (is/was) in (while it is / when
+                      it was) in this state.
         """
         self.queue = queue
 
@@ -132,7 +132,7 @@ class InQueue(IssueState):
         self.queue.removeIssue(self.issue)
 
 class InTransfer(IssueState):
-    """ The state of an issue as it is waiting to be transferred between two
+    """The state of an issue as it is waiting to be transferred between two
     different IssueFixers.
     """
 

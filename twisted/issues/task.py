@@ -34,9 +34,9 @@ class Task(common.Commentable):
         Tasks have estimates, completion %'s, categories, dependent issues,
         dependent tasks, and may have a developer (or team) assigned to it.
 
-        @param submitter The IssuePerson who submitted this task.
+        @param submitter: The IssuePerson who submitted this task.
 
-        @param description A description of the work to be done.
+        @param description: A description of the work to be done.
         """
         common.Commentable.__init__(self, submitter, description)
         self.percentage = 0

@@ -1114,19 +1114,15 @@ class BrokerClientFactory(protocol.ClientFactory):
 def getObjectAt(host, port, timeout=None):
     """Establishes a PB connection and returns with a RemoteReference.
 
-    Arguments:
+    @param host: the host to connect to
 
-      host: the host to connect to
+    @param port: the port number to connect to
 
-      port: the port number to connect to
+    @param timeout: a value in milliseconds to wait before failing by
+      default. (OPTIONAL)
 
-      timeout (optional): a value in milliseconds to wait before failing by
-      default.
-
-    Returns:
-
-      A Deferred which will be passed a remote reference to the root object of
-      a PB server.x
+    @returns A Deferred which will be passed a remote reference to the
+      root object of a PB server.x
     """
     d = defer.Deferred()
     b = Broker(1)

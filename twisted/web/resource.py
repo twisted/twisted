@@ -87,13 +87,6 @@ class Resource(coil.ConfigCollection):
     def getChild(self, path, request):
         """Retrieve a 'child' resource from me.
 
-        Arguments:
-
-           path: a string, describing the child
-
-           request: a twisted.web.server.Request specifying meta-information
-           about the request that is being made for this child.
-
         Implement this to create dynamic resource generation -- resources which
         are always available may be registered with self.putChild().
 
@@ -103,10 +96,15 @@ class Resource(coil.ConfigCollection):
 
         For example, the URL /foo/bar/baz will normally be::
 
-          |  site.resource.getChild('foo').getChild('bar').getChild('baz').
+          | site.resource.getChild('foo').getChild('bar').getChild('baz').
 
         However, if the resource returned by 'bar' has isLeaf set to true, then
         the getChild call will never be made on it.
+
+        @param path: a string, describing the child
+
+        @param request: a twisted.web.server.Request specifying meta-information
+                        about the request that is being made for this child.
         """
         return error.NoResource("No such child resource.")
 

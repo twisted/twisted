@@ -60,18 +60,16 @@ class AuthForm(widgets.Form):
     def __init__(self, reqauth, sessionIdentity=None, sessionPerspective=None):
         """Initialize, specifying various options.
         
-        Arguments:
-
-            * reqauth: a web.resource.Resource instance, indicating which
+        @param reqauth: a web.resource.Resource instance, indicating which
               resource a user will be logging into with this form; this must
               specify a serviceName attribute which indicates the name of the
               service from which perspectives will be requested.
 
-            * [sessionIdentity]: if specified, the name of the attribute on
+        @param sessionIdentity: if specified, the name of the attribute on
               the user's session to set for the identity they get from logging
               in to this form.
             
-            * [sessionPerspective]: if specified, the name of the attribute on
+        @param sessionPerspective: if specified, the name of the attribute on
               the user's session to set for the perspective they get from
               logging in to this form.
         """

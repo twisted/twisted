@@ -64,12 +64,14 @@ class IIssueNotifier(Interface):
     def notifyFixerReady(self, issueFixer, issue):
         """Notify me that a fixer is ready to fix an issue that I brought up.
 
-        @param issueFixer the IssuePerson who is now ready to deal with my issue
-        @param issue the Issue that is being resolved
+        @param issueFixer: the IssuePerson who is now ready to deal with my
+                           issue
+        @param issue: the Issue that is being resolved
         """
 
     def notifyFinderReady(self, issueFinder, issue):
-        """Notify me that a finder is ready for me to start talking to them about an issue.
+        """Notify me that a finder is ready for me to start talking to them
+        about an issue.
 
         This notification is sent when the conversation begins, in order to
         give the fixer a frame of reference for the conversation. (In most chat
@@ -91,13 +93,13 @@ class IssuePerson(pb.Perspective):
 
     We refer to the two kinds of people who interact with issues as follows:
 
-      issueFinder: A person who finds issues.  This may be a customer, a
-      developer in their capacity as a bug-hunter, or a user who has found a
-      problem.
+      - B{issueFinder}: A person who finds issues.  This may be a customer, a
+        developer in their capacity as a bug-hunter, or a user who has found a
+        problem.
 
-      issueFixer: A person who can fix the problems that are found.  These
-      people may be allocated in some manner associated with tasks.  Managers
-      are special instances of issue fixers with particular permissions.
+      - B{issueFixer}: A person who can fix the problems that are found.  These
+        people may be allocated in some manner associated with tasks.  Managers
+        are special instances of issue fixers with particular permissions.
     
     """
 
