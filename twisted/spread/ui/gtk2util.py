@@ -138,6 +138,7 @@ class LoginDialog(GladeKeeper):
     def _cancelled(self):
         if not self.deferredResult.called:
             self.deferredResult.errback(netError.UserError("User hit Cancel."))
+        self._loginDialog.destroy()
 
     def _windowClosed(self, reason=None):
         if not self.deferredResult.called:
@@ -173,7 +174,7 @@ class LoginDialog(GladeKeeper):
         self.statusMsg("Connected to server.")
         self.deferredResult.callback(perspective)
         # clear waiting cursor
-        self._loginDialog.hide()
+        self._loginDialog.destroy()
 
     def _ebFailedLogin(self, reason):
         if isinstance(reason, failure.Failure):
