@@ -156,12 +156,12 @@ def _upgradeRegistry(registry):
 
 
 def loadMimeTypes(mimetype_locations=['/etc/mime.types']):
-    '''
-        Multiple file locations containing mime-types can be passed as a list.
-        The files will be sourced in that order, overriding mime-types from the
-        files sourced beforehand, but only if a new entry explicitly overrides
-        the current entry.
-    '''
+    """
+    Multiple file locations containing mime-types can be passed as a list.
+    The files will be sourced in that order, overriding mime-types from the
+    files sourced beforehand, but only if a new entry explicitly overrides
+    the current entry.
+    """
     import mimetypes
     # Grab Python's built-in mimetypes dictionary.
     contentTypes = mimetypes.types_map
@@ -190,6 +190,16 @@ def loadMimeTypes(mimetype_locations=['/etc/mime.types']):
             
     return contentTypes
 
+def getTypeAndEncoding(filename, types, encodings, defaultType):
+    p, ext = os.path.splitext(filename)
+    ext = ext.lower()
+    if encodings.has_key(ext):
+        enc = encodings[ext]
+        ext = os.path.splitext(p)[1].lower()
+    else:
+        enc = None
+    type = types.get(ext, defaultType)
+    return type, enc
 
 class File(resource.Resource, styles.Versioned, filepath.FilePath):
     """
@@ -287,7 +297,10 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
 
     def directoryListing(self):
         return widgets.WidgetPage(DirectoryListing(self.path,
-                                                   self.listNames()))
+                                                   self.listNames(),
+                                                   self.contentTypes,
+                                                   self.contentEncodings,
+                                                   self.defaultType))
 
     def getChild(self, path, request):
         """See twisted.web.Resource.getChild.
@@ -335,14 +348,10 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
         self.restat()
 
         if self.type is None:
-            p, ext = self.splitext()
-            ext = ext.lower()
-            if self.contentEncodings.has_key(ext):
-                self.encoding = enc = self.contentEncodings[ext]
-                ext = os.path.splitext(p)[1].lower()
-            else:
-                self.encoding = None
-            self.type = self.contentTypes.get(ext, self.defaultType)
+            self.type, self.encoding = getTypeAndEncoding(self.basename(),
+                                                          self.contentTypes,
+                                                          self.contentEncodings,
+                                                          self.defaultType)
 
         if not self.exists():
             return error.NoResource("File not found.").render(request)
@@ -421,7 +430,6 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
         return map(lambda fileName, self=self: self.createSimilarFile(os.path.join(self.path, fileName)), self.listNames())
 
     def createPickleChild(self, name, child):
-        # XXX WTF Is this crap!?!!?!? whoever added it, please remove it -glyph
         if not os.path.isdir(self.path):
             resource.Resource.putChild(self, name, child)
         # xxx use a file-extension-to-save-function dictionary instead
@@ -445,8 +453,21 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
         return f
 
 
-class DirectoryListing(widgets.StreamWidget):
-    def __init__(self, pathname, dirs=None):
+class DirectoryListing(widgets.StreamWidget, styles.Versioned):
+    persistenceVersion = 1
+
+    def upgradeToVersion1(self):
+        self.contentTypes = File.contentTypes
+        self.contentEncodings = File.contentEncodings
+        self.defaultType = 'text/html'
+    
+    def __init__(self, pathname, dirs=None,
+                 contentTypes=File.contentTypes,
+                 contentEncodings=File.contentEncodings,
+                 defaultType='text/html'):
+        self.contentTypes = contentTypes
+        self.contentEncodings = contentEncodings
+        self.defaultType = defaultType
         # dirs allows usage of the File to specify what gets listed
         self.dirs = dirs
         self.path = pathname
@@ -455,24 +476,31 @@ class DirectoryListing(widgets.StreamWidget):
         return "Directory Listing For %s" % request.path
 
     def stream(self, write, request):
-        write("<ul>\n")
         if self.dirs is None:
             directory = os.listdir(self.path)
             directory.sort()
         else:
             directory = self.dirs
+
+        write("<table><tr><th>Filename</th><th>Content type</th><th>Content encoding</th></tr>\n")
+
         for path in directory:
             url = urllib.quote(path, "/:")
             if os.path.isdir(os.path.join(self.path, path)):
                 url = url + '/'
-                write('<li>[D] <a href="%s">%s/</a></li>'
+                write('<tr><td><a href="%s">%s/</a></td><td>[Directory]</td><td></td></tr>'
                       % (url, path))
+
         for path in directory:
             url = urllib.quote(path, "/:")
             if not os.path.isdir(os.path.join(self.path, path)):
-                write('<li>[F] <a href="%s">%s</a></li>'
-                      % (url, path))
-        write("</ul>\n")
+                mimetype, encoding = getTypeAndEncoding(path, self.contentTypes, self.contentEncodings, self.defaultType)
+                write('<tr><td><a href="%(url)s">%(name)s</a></td><td>[%(type)s]</td><td>%(encoding)s</tr>'
+                      % {'url': url,
+                         'name': path,
+                         'type': mimetype,
+                         'encoding': (encoding and '[%s]' % encoding or '')})
+        write("</table>\n")
 
     def __repr__(self):
         return '<DirectoryListing of %r>' % self.path

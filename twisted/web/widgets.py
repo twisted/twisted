@@ -798,6 +798,7 @@ class WidgetPage(Page):
         font-family: Lucida, Verdana, Helvetica, Arial, sans-serif;
         font-weight: bold;
         text-decoration: none;
+        text-align: left;
     }
 
     pre, code
