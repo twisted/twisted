@@ -20,6 +20,12 @@
 #include "Python.h"
 #include "structmember.h"
 
+#if PY_VERSION_HEX < 0x02030000
+/* Python 2.3 changed tp_free prototype from 'destructor' to 'freefunc'.
+   This fallback is for 2.2 */
+typedef destructor freefunc;
+#endif
+
 static char dir__doc__[] =
 "Wrapper for opendir(3) and related functions.";
 
@@ -192,7 +198,7 @@ static PyTypeObject PyDirObjectIterator_Type = {
 	0,							/* tp_init */
 	0,							/* tp_alloc */
 	(newfunc)PyDirObjectIterator_new,		/* tp_new */
-	(destructor)PyDirObjectIterator_free,	/* tp_free */
+	(freefunc)PyDirObjectIterator_free,		/* tp_free */
 };
 
 /*
@@ -450,7 +456,7 @@ static PyTypeObject PyDirObject_Type = {
 	0,							/* tp_init */
 	0,							/* tp_alloc */
 	(newfunc)PyDirObject_new,		/* tp_new */
-	(destructor)PyDirObject_free,		/* tp_free */
+	(freefunc)PyDirObject_free,		/* tp_free */
 };
 
 int select_dirs(const char* path, const char* name, int type) {
