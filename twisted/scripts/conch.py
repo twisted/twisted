@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.10 2002/11/10 07:36:51 spiv Exp $
+# $Id: conch.py,v 1.11 2002/11/25 22:14:03 z3p Exp $
 
 #""" Implementation module for the `ssh` command.
 #"""
@@ -154,10 +154,10 @@ class SSHClientTransport(transport.SSHClientTransport):
         except IOError:
             return 0
         for line in known_hosts.xreadlines():
-            try:
-                hosts, hostKeyType, encodedKey = line.split()
-            except ValueError: # old 4-field known_hosts entry (ssh1?)
+            split = line.split()
+            if len(split) != 3: # old 4-field known_hosts entry (ssh1?)
                 continue
+            hosts, hostKeyType, encodedKey = split
             if not host in hosts.split(','): # incorrect host
                 continue
             if not hostKeyType == keyType: # incorrect type of key
@@ -284,7 +284,7 @@ class SSHSession(connection.SSHChannel):
 
     def request_exit_status(self, data):
         global exitStatus
-        exitStatus = struct.unpack('>L', data)[0]
+        exitStatus = int(struct.unpack('>L', data)[0])
         log.msg('exit status: %s' % exitStatus)
 
     def sendEOF(self):
