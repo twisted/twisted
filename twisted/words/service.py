@@ -262,13 +262,13 @@ class Participant(pb.Perspective, styles.Versioned):
     def receiveGroupMessage(self, sender, group, message, metadata):
         if sender is not self and self.client:
             if metadata:
-                d = self.client.receiveGroupMessage(sender.name, group.name,
+                d = self.client.callRemote('receiveGroupMessage',sender.name, group.name,
                                                     message, metadata)
                 if d:
                     d.addErrback(self.receiveGroupMessage,
                                  sender, group, message, None)
             else:
-                self.client.receiveGroupMessage(sender.name, group.name,
+                self.client.callRemote('receiveGroupMessage',sender.name, group.name,
                                                 message)
 
     def memberJoined(self, member, group):
