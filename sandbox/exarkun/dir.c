@@ -30,8 +30,7 @@ staticforward PyTypeObject PyDirentObject_Type;
 static PyObject *
 PyDirentObject_FromDirent(struct dirent* entry) {
 	PyDirentObject* o;
-	o = (PyDirentObject *)
-		PyType_GenericNew(&PyDirentObject_Type, NULL, NULL);
+	o = (PyDirentObject *)PyType_GenericNew(&PyDirentObject_Type, NULL, NULL);
 	if (o != NULL) {
 		o->dirent_type = entry->d_type;
 		o->dirent_namelen = strlen(entry->d_name);
@@ -260,8 +259,10 @@ static PyMethodDef PyDirObject_methods[] = {
 		"rewind() -> seek to the beginning of this directory"},
 	{"tell", (PyCFunction)PyDirObject_tell, METH_NOARGS,
 		"tell() -> report the current position in this directory"},
-	{"seek", (PyCFunction)PyDirObject_close, METH_VARARGS,
+	{"seek", (PyCFunction)PyDirObject_seek, METH_VARARGS,
 		"seek(pos) -> change the current position in this directory"},
+	{"close", (PyCFunction)PyDirObject_close, METH_NOARGS,
+		"close(pos) -> close this directory"},
 	{NULL,	NULL},
 };
 
@@ -333,6 +334,10 @@ initdir(void)
 
 	d = PyModule_GetDict(m);
 	if (d == NULL)
+		return;
+
+	Py_INCREF(PyDirObject_Error);
+	if (PyDict_SetItemString(d, "DirError", PyDirObject_Error) < 0)
 		return;
 
 	Py_INCREF(&PyDirentObject_Type);
