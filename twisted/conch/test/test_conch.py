@@ -23,6 +23,7 @@ class Echo(protocol.Protocol):
 
     def connectionLost(self, reason):
         log.msg('ECHO CONNECTION DONE')
+
     def dataReceived(self, data):
         self.transport.write(data)
         if '\n' in data:
@@ -92,6 +93,7 @@ class ConchTestForwardingPort(protocol.Protocol):
         self.proto = proto
 
     def connectionMade(self):
+        log.msg('FORWARDING PORT OPEN')
         self.proto.fac.proto.expectedLoseConnection = 1
         self.buf = ''
         self.transport.write(self.data)
@@ -100,11 +102,12 @@ class ConchTestForwardingPort(protocol.Protocol):
         self.buf += data
 
     def connectionLost(self, reason):
+        log.msg('FORWARDING PORT CLOSED')
         unittest.failUnlessEqual(self.buf, self.data)
 
         # forwarding-only clients don't die on their own
         self.proto.transport.write('\x03')
-        os.kill(self.proto.transport.pid, signal.SIGHUP)
+        os.kill(self.proto.transport.pid, signal.SIGKILL)
 
 if Crypto:
     from twisted.conch.client import options, default, connect
@@ -245,6 +248,7 @@ class CmdLineClientTestBase(SignalMixin, _LogTimeFormatMixin):
 
     def testLocalToRemoteForwarding(self):
         f = EchoFactory()
+        f.fac = self.fac
         serv = reactor.listenTCP(0, f)
         port = serv.getHost().port
         p = ConchTestForwardingProcess(port+10,self.fac)
@@ -253,6 +257,7 @@ class CmdLineClientTestBase(SignalMixin, _LogTimeFormatMixin):
 
     def testRemoteToLocalForwarding(self):
         f = EchoFactory()
+        f.fac = self.fac
         serv = reactor.listenTCP(0, f)
         port = serv.getHost().port
         p = ConchTestForwardingProcess(port+10, self.fac)
@@ -345,7 +350,7 @@ class UnixClientTestCase(CmdLineClientTestBase, unittest.TestCase):
         d = connect.connect(o['host'], int(o['port']), o, vhk, uao)
         d.addErrback(lambda f: unittest.fail('Failure connecting to test server: %s' % f))
         
-        util.spinWhile(lambda: not p.done, timeout=10)
+        util.spinWhile(lambda: not p.done, timeout=30)
 
         # cleanup
         if not p.done:
