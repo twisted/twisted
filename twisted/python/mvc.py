@@ -89,10 +89,16 @@ class IView(components.Interface):
         Default behavior: Look up a component that implements IController
         for the self.model instance.
         """
+        
+    def setController(self, controller):
+        """Set the controller that this view is related to."""
 
 class IController(components.Interface):
     """A MVC Controller"""
-
+    def setView(self, view):
+        """
+        Set the view that this controller is related to.
+        """
 
 # Should all these docstrings be duplicated in the implementation
 # of the interfaces?
@@ -104,8 +110,16 @@ class Model:
     """
     __implements__ = IModel
     
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         self.views = []
+        self.initialize(*args, **kwargs)
+    
+    def initialize(self, *args, **kwargs):
+        """
+        Hook for subclasses to initialize themselves without having to
+        mess with the __init__ chain.
+        """
+        pass
 
     def addView(self, view):
         """
@@ -128,16 +142,27 @@ class Model:
         MVC paradigm of querying the model for things you're interested
         in.
         """
+        if changed is None: changed = {}
         for view in self.views:
             view.modelChanged(changed)
 
-    def __cmp__(self, other):
+    def __eq__(self, other):
+        if other is None: return 0
         for elem in self.__dict__.keys():
             if elem is "views": continue
-            if getattr(self, elem) != getattr(other, elem):
-                return cmp(getattr(self, elem), getattr(other, elem))
+            if getattr(self, elem) != getattr(other, elem, None):
+                return 0
         else:
-            return 0
+            return 1
+    
+    def __ne__(self, other):
+        if other is None: return 1
+        for elem in self.__dict__.keys():
+            if elem is "views": continue
+            if getattr(self, elem) == getattr(other, elem, None):
+                return 0
+        else:
+            return 1
 
 
 class View:
@@ -146,7 +171,7 @@ class View:
     """
     __implements__ = IView
     
-    def __init__(self, model, controller=None):
+    def __init__(self, model, controller=None, *args, **kwargs):
         """
         A view must be told what it's model is, and may be told what it's
         controller is, but can also look up it's controller if none specified.
@@ -156,12 +181,12 @@ class View:
         if controller:
             self.controller = controller
         else:
-            self.controller = self.controllerFactory(model, self)
-        self.draw()
+            self.controller = self.controllerFactory(model)
+        self.initialize(*args, **kwargs)
     
-    def draw(self):
+    def initialize(self):
         """
-        Hook subclasses can override to implement drawing the initial view
+        Hook subclasses can override to set up the initial view
         after the class is done initializing, without overriding __init__
         """
         pass
@@ -177,7 +202,7 @@ class View:
             if handler:
                 apply(handler, (changed[name],))
 
-    def controllerFactory(self, model, view):
+    def controllerFactory(self, model):
         """
         Hook for subclasses to customize the controller that is associated
         with the model associated with this view.
@@ -186,8 +211,12 @@ class View:
         # if you don't need to use one...
         # Something that ignores all messages?
         controller = components.getAdapter(model, IController, None)
-        controller.setView(self)
+        if controller:
+            controller.setView(self)
         return controller
+        
+    def setController(self, controller):
+        self.controller = controller
 
 class Controller:
     """
