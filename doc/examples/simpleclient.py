@@ -19,7 +19,7 @@
 An example client. Run simpleserv.py first before running this.
 """
 
-from twisted.internet import protocol
+from twisted.internet import reactor, protocol
 
 
 # a client protocol
@@ -42,22 +42,21 @@ class EchoClient(protocol.Protocol):
 
 
 class EchoFactory(protocol.ClientFactory):
-    
-    def connectionFailed(self, connector, reason):
+    protocol = EchoClient
+
+    def clientConnectionFailed(self, connector, reason):
         print "Connection failed - goodbye!"
-        from twisted.internet import reactor
+        reactor.stop()
+    
+    def clientConnectionLost(self, connector, reason):
+        print "Connection lost - goodbye!"
         reactor.stop()
 
 
 # this connects the protocol to a server runing on port 8000
 def main():
-    # install default reactor
-    from twisted.internet import default
-    default.install()
-
-    from twisted.internet import reactor
-    p = EchoClient()
-    reactor.clientTCP("localhost", 8000, p)
+    f = EchoFactory()
+    reactor.connectTCP("localhost", 8000, f)
     reactor.run()
 
 # this only runs if the module was *not* imported
