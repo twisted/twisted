@@ -61,15 +61,6 @@ def addMtime(document, fullpath):
     for node in domhelpers.findElementsWithAttribute(document, "class","mtime"):
         node.appendChild(microdom.Text(time.asctime(time.localtime(mtime))))
 
-def fixFromTop(nodes, linkrel):
-    for node in nodes:
-        if node.hasAttribute('src'):
-            attr = 'src'
-        else:
-            attr = 'href'
-        node.setAttribute(attr, linkrel+node.getAttribute(attr))
-
-
 def fixAPI(document, cache):
     # API references
     for node in domhelpers.findElementsWithAttribute(document, "class", "API"):
@@ -195,11 +186,6 @@ def footnotes(document):
 
 def munge(document, template, linkrel, d, fullpath, ext, cache):
     addMtime(template, fullpath)
-    # things linked from the top
-    for list in (domhelpers.findElementsWithAttribute(template,"src"),
-                 domhelpers.findElementsWithAttribute(template,"href"),
-                 domhelpers.findElementsWithAttribute(document, "fromtop")):
-        fixFromTop(list, linkrel)
     fixAPI(document, cache)
     fontifyPython(document)
     addPyListings(document, d)
