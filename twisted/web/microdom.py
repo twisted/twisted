@@ -300,9 +300,8 @@ class Comment(CharacterData):
     def writexml(self, stream, indent='', addindent='', newl='', strip=0):
         val=self.data
         if isinstance(val, UnicodeType):
-            stream.write("<!--%s-->" % val.encode('utf8'))
-        else:
-            stream.write("<!--%s-->" % val
+            val=val.encode('utf8')
+        stream.write("<!--%s-->" % val
 
     def cloneNode(self, deep=0, parent=None):
         return Comment(self.nodeValue, parent)
