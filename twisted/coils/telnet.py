@@ -29,8 +29,8 @@ class ShellFactoryConfigurator(app.ProtocolFactoryConfigurator):
     configurableClass = telnet.ShellFactory
     
     configTypes = {
-        'username': types.StringType,
-        'password': types.StringType,
+        'username': [types.StringType, "Username", ""],
+        'password': [types.StringType, "Password", ""],
         }
 
     configName = 'Telnet Python Shell'

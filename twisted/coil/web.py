@@ -198,7 +198,7 @@ class ConfigForm(widgets.Form):
         existing = self.cfgr.getConfiguration()
         allowed = self.cfgr.configTypes
         myFields = []
-        for name, cfgType in allowed.items():
+        for name, (cfgType, prompt, description) in allowed.items():
             current = existing.get(name)
             if isinstance(cfgType, types.ClassType):
                 inputType = 'menu'
@@ -217,8 +217,7 @@ class ConfigForm(widgets.Form):
             else:
                 inputType = 'string'
                 inputValue = "<UNKNOWN>"
-            # TODO: real display name
-            myFields.append([inputType, name, name, inputValue])
+            myFields.append([inputType, prompt, name, inputValue])
         return myFields
 
     def process(self, write, request, submit, **values):
@@ -227,7 +226,7 @@ class ConfigForm(widgets.Form):
         created = {}
         for name, cfgInfo in values.items():
             write(str((name, cfgInfo)) + "<br>")
-            if isinstance(allowed[name], types.ClassType):
+            if isinstance(allowed[name][0], types.ClassType):
                 if cfgInfo == 'current':
                     continue
                 created[name] = self.configurator.makeConfigurable(cfgInfo, self.cfgr, name)

@@ -28,8 +28,8 @@ class ProxyConfigurator(app.ProtocolFactoryConfigurator):
 
     configurableClass = stupidproxy.StupidFactory
     
-    configTypes = {'host': types.StringType,
-                   'port': types.IntType
+    configTypes = {'host': [types.StringType, "Remote Host", "Host to forward to, e.g. 'www.yahoo.com'."],
+                   'port': [types.IntType, "Remote Port", "Port to forward to, e.g. 80."]
                   }
 
 

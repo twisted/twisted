@@ -29,7 +29,7 @@ class SOCKSConfigurator(app.ProtocolFactoryConfigurator):
     configurableClass = socks.SOCKSv4Factory
     
     configTypes = {
-        'logging': types.StringType,
+        'logging': [types.StringType, "Logfile", "Path to log file."]
         }
 
     configName = 'SOCKSv4 Proxy'

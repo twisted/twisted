@@ -187,9 +187,10 @@ class Configurator:
     
     I have a dictionary attribute, configTypes, that indicates what sort of
     objects I will allow to be configured.  It is a mapping of variable names
-    to variable types.  Variable types may be either python type objects,
-    classes, or objects describing a desired 'hint' to the interface (such as
-    'boolean' or ['choice', 'a', 'b', 'c']). (XXX Still in flux.)
+    to a list of [variable type, prompt, description].  Variable types may be
+    either python type objects, classes, or objects describing a desired 'hint'
+    to the interface (such as 'boolean' or ['choice', 'a', 'b', 'c']). 
+    (XXX Still in flux.)
 
     I have a list attribute, configDispensers, that indicates what methods on
     me may be called with no arguments to create an instance of another
@@ -215,13 +216,20 @@ class Configurator:
         """Initialize this configurator with the instance it will be configuring."""
         self.instance = instance
 
+    def getType(self, name):
+        """Get the type of a configuration variable."""
+        if self.configTypes.has_key(name):
+            return self.configTypes[name][0]
+        else:
+            return None
+    
     def configure(self, dict):
         """Set a list of configuration variables.
         """
         items = dict.items()
-        getType = self.configTypes.get
+        
         for name, value in items:
-            t = getType(name, None)
+            t = self.getType(name)
             if isinstance(t, types.TypeType) or isinstance(t, types.ClassType):
                 if not isinstance(value, t) or (value is None):
                     raise InvalidConfiguration("type mismatch")

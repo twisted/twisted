@@ -28,7 +28,7 @@ class SiteConfigurator(app.ProtocolFactoryConfigurator):
     """Configurator for web sites."""
     
     configurableClass = server.Site
-    configTypes = {'resource': resource.Resource}
+    configTypes = {'resource': [resource.Resource, "Resource", "The resource at the site's root."] }
     configName = 'HTTP Web Site'
 
 def siteFactory(container, name):
@@ -60,10 +60,11 @@ class StaticConfigurator(ResourceConfigurator):
     
     configurableClass = static.File
     
-    configTypes = {'path': types.StringType,
-                   'execCGI': 'boolean',
-                   'execEPY': 'boolean',
-                   'defaultType': types.StringType}
+    configTypes = {'path': [types.StringType, "Path", "The path in the filesystem to be served."],
+                   'execCGI': ['boolean', "Execute CGIs", "Support running CGI scripts."],
+                   'execEPY': ['boolean', "Execute EPYs", "Support running EPY scripts."],
+                   'defaultType': [types.StringType, "Default MIME Type", "MIME type for files whose type can't be guessed."]
+                  }
 
     configName = 'Web Filesystem Access'
 
@@ -125,9 +126,9 @@ class ReverseProxyConfigurator(ResourceConfigurator):
     configurableClass = proxy.ReverseProxyResource
     configName = "HTTP Reverse Proxy"
     
-    configTypes = {'path': types.StringType,
-                   'host': types.StringType,
-                   'port': types.IntType}
+    configTypes = {'path': [types.StringType, "Remote Path", "The path on the remote server, e.g. '/foo'."],
+                   'host': [types.StringType, "Remote Host", "The remote host, e.g. 'www.yahoo.com'"],
+                   'port': [types.IntType, "Remote Port", "The remote port, typically 80."]}
 
 def proxyFactory(container, name):
     return proxy.ReverseProxyResource("www.yahoo.com", 80, "/")

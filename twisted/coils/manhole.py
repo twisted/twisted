@@ -28,7 +28,7 @@ class ManholeConfigurator(app.ServiceConfigurator):
     configurableClass = service.Service
     
     configTypes = {
-        'serviceName': types.StringType
+        'serviceName': [types.StringType, "Service Name", ""]
         }
 
     configName = 'Twisted Manhole PB Service'
