@@ -167,12 +167,9 @@ class DTP(protocol.Protocol):
         """Initiates a transfer of data.
         Its action is based on self.action, and self.pi.queuedfile
         """
-        if self.action == 'RETR':
-           self.actionRETR(self.pi.queuedfile)
-        if self.action == 'STOR':
-           self.actionSTOR(self.pi.queuedfile) 
-        if self.action == 'LIST':
-           self.actionLIST(self.pi.queuedfile) # queuedfile now acts as a path
+        func = getattr(self, 'action' + self.action, None)
+        if func:
+            func(self.pi.queuedfile)
 
     def connectionMade(self):
         "Will start an transfer, if one is queued up, when the client connects"
@@ -277,6 +274,17 @@ class DTP(protocol.Protocol):
         self.file = StringIO.StringIO(s)
         self.filesize = len(s)
         reactor.callLater(0.1, self.executeAction)
+
+    #
+    #   'NLST'
+    #
+    def actionNLST(self, dir):
+        s = '\r\n'.join(os.listdir(dir))
+        self.file = StringIO.StringIO(s)
+        self.filesize = len(s)
+        self.action = 'RETR'
+        self.executeAction()
+        #reactor.callLater(0.1, self.executeAction)
         
 
 class DTPFactory(protocol.ClientFactory):
@@ -573,6 +581,12 @@ class FTP(basic.LineReceiver, DTPFactory):
             self.reply('nodir')
  
     def ftp_List(self, params):
+        self.getListing(params)
+
+    def ftp_Nlst(self, params):
+        self.getListing(params, 'NLST')
+
+    def getListing(self, params, action='LIST'):
         if self.checkauth():
             return
         if self.dtpPort is None:
@@ -589,7 +603,7 @@ class FTP(basic.LineReceiver, DTPFactory):
             return
         self.reply('file')
         self.queuedfile = npath 
-        self.setAction('LIST')
+        self.setAction(action)
  
     def ftp_Retr(self, params):
         if self.checkauth():

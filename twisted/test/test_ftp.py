@@ -30,6 +30,12 @@ from twisted.test.test_protocols import StringIOWithoutClosing
 
 FTP_PORT = 2121
 
+class BufferProtocol(Protocol):
+    def __init__(self):
+        self.buf = StringIO()
+    def dataReceived(self, data):
+        self.buf.write(data)
+
 
 class FTPClientTests(unittest.TestCase):
     def testFailedRETR(self):
@@ -118,7 +124,7 @@ class FTPClientAndServerTests(FTPServerTests):
     def callback(self, result):
         self.result = result
         
-    def testFileListings(self):
+    def testLongFileListings(self):
         if hasattr(self, 'result'):
             del self.result
 
@@ -151,6 +157,39 @@ class FTPClientAndServerTests(FTPServerTests):
         self.failUnless('test_ftp.py' in filenames, 
                         'test_ftp.py not in file listing')
 
+    def testShortFileListings(self):
+        if hasattr(self, 'result'):
+            del self.result
+
+        # Connect
+        client = ftp.FTPClient(passive=self.passive)
+        factory = ClientFactory()
+        factory.noisy = 0
+        factory.buildProtocol = lambda s, c=client: c
+        reactor.connectTCP('localhost', FTP_PORT, factory)
+
+        # Issue the command and set the callbacks
+        p = BufferProtocol()
+        d = client.nlst('.', p)
+        d.addCallbacks(self.callback, self.errback)
+
+        # Wait for the result
+        id = reactor.callLater(5, self.errback, "timed out") # timeout so we don't freeze
+        while not hasattr(self, 'result') and not hasattr(self, 'error'):
+            reactor.iterate()
+        try:
+            id.cancel()
+        except ValueError: pass
+
+        error = getattr(self, 'error', None)
+        if error:
+            raise error[0], error[1], error[2]
+
+        # Check that the listing contains this file (test_ftp.py)
+        filenames = p.buf.getvalue().split('\r\n')
+        self.failUnless('test_ftp.py' in filenames, 
+                        'test_ftp.py not in file listing')
+
     def testRetr(self):
         if hasattr(self, 'result'):
             del self.result
@@ -165,11 +204,6 @@ class FTPClientAndServerTests(FTPServerTests):
         # Download this module's file (test_ftp.py/.pyc/.pyo)
         import test_ftp
         thisFile = test_ftp.__file__
-        class BufferProtocol(Protocol):
-            def __init__(self):
-                self.buf = StringIO()
-            def dataReceived(self, data):
-                self.buf.write(data)
         
         proto = BufferProtocol()
         d = client.retr(os.path.basename(thisFile), proto)
