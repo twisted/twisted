@@ -1,0 +1,491 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+<head>
+<title>Managing the Release of a Large Python Project</title>
+</head>
+
+<body>
+<h1>Managing the Release of a Large Python Project</h1>
+
+<ul>
+<li>Christopher Armstrong <a href="mailto:radix@twistedmatrix.com">radix@twistedmatrix.com</a></li>
+<li>Moshe Zadka <a href="mailto:moshez@twistedmatrix.com">moshez@twistedmatrix.com</a></li>
+</ul>
+
+<h2>Abstract</h2>
+<p>
+
+Twisted is a Python networking framework. At last count, the project
+contains nearly 60,000 lines of effective code (not comments or blank
+lines). When preparing a release, many details must be checked, and
+many steps must be followed. We describe here the technologies and
+tools we use, and explain how we built tools on top of them which help
+us make releasing as painless as possible.
+
+</p>
+
+<h2>Introduction</h2>
+<p>
+
+One of the virtues of Python is the ease of distributing code. Its
+module system and the lack of necessity of compilation are what make
+this possible. This means that for simple Python projects, nothing
+more complicated then tar is needed to prepare a distribution of a
+library. However, Twisted has auto-generated documentation in several
+formats, including docstring generated documentation, HOWTOs written
+in HTML, and manpages written in nroff. As Twisted grew more complex
+and popular, a detailed procedure for putting out a release was made
+necessary. However, human fallibility being what it is, it was decided
+that most of these steps should be automated.
+
+</p>
+
+<h2>Overview of Steps</h2>
+<p>
+
+Despite heavy automation, there are still a number of manual steps
+involved in the release process. We've reduced the amount of manual
+steps quite a bit, and most of what's left is not fully automatable,
+although the process could be made easier (see <q>Future
+Directions</q> below).
+
+</p>
+
+<ul>
+  <li>Test
+  <ul>
+    <li>Unit tests</li>
+    <li>Acceptance tests</li>
+    <li>Pre-release tests</li>
+  </ul>
+  </li>
+  <li>Update the Changelog and README files</li>
+  <li>Run the release script
+  <ul>
+    <li>unix runs admin/release-twisted</li>
+    <li>Win32 runs win32/bdist_wininst.bat</li>
+  </ul>
+  </li>
+  <li>Deploy: update twisted deployment on twistedmatrix.com</li>
+  <li>Upload to SourceForge mirror</li>
+  <li>Update Website</li>
+</ul>
+
+
+
+<h2>Testing</h2>
+
+<p>
+
+Twisted has three categories of tests: unit, acceptance, and
+pre-release. Testing is an important part of releasing quality
+software, of course, so these will be explained.
+
+</p>
+
+
+<p>
+
+Unit tests are run as often as possible by each of the developers as
+they write code, and must pass before they commit any changes to
+CVS. While the Twisted team tries to follow the XP practice of
+ensuring all code is releasable, this isn't always true. Thus, running
+the unit tests on several platforms before releasing is necessary.
+Our BuildBot runs the unit tests constantly on several hosts and
+multiple platforms, so the <a
+href="http://twistedmatrix.com/users/warner.twistd/">status page</a>
+is simply checked for green lights before a release.
+
+</p>
+
+<p>
+
+Acceptance tests (which, unfortunately, are not quite the same as <a
+href="http://xprogramming.org/">Extreme Programming's</a> Acceptance
+Tests) are simply interactive tests of various Twisted services. There
+is a script that executes several system commands that use the Twisted
+end-user executables and start several clients (web browsers, IRC
+clients, etc) to allow the user to interactively test the different
+services that Twisted offers. These are only routinely run before a
+release, but we also encourage developers to run these before they
+make major changes.
+
+</p>
+
+<p>
+
+The pre-release tests are for ensuring the web server (One of the most
+popular parts of Twisted, and which the twistedmatrix.com web site
+uses) runs correctly in a semi-production environment. The script
+starts up a web server on twistedmatrix.com, similar to the one on
+port 80, but on an out-of-the-way port. <q>lynx</q> is then run
+several times, with URLs strategically chosen to test different
+features of the web server. Afterwards, the log of the web server is
+displayed and the user is to check for any errors.
+
+</p>
+
+
+<h2>The release-twisted Script</h2>
+
+<p>
+
+Like many other build/release systems, the automated parts of our
+release system started out as a number of small shell
+scripts. Eventually these became a single Python script which was a
+large improvement, but still had many problems, especially since our
+release process became more complex (documentation generation,
+different types of archive formats, etc). This led to problems with
+steps in the middle of the process breaking; the release manager would
+need to restart the entire thing, or enter the remaining commands
+manually.
+
+</p>
+
+<p>
+
+The solution that we came up with was a simple framework for
+pseudo-transactions; Every step of the process is implemented with a
+class that has <code class="python">doIt</code> and <code
+class="python">undoIt</code> methods. Each step also has a
+command-line argument associated with it, so a typical run of the
+script looks something like this:
+
+<pre class="shell">
+$SOMEWHERE/admin/release-twisted -V $VERSION -o $LASTVERSION --checkout \
+--release=/twisted/Releases --upver --tag --exp --dist --docs --balls \
+--rel --deb --debi
+</pre>
+
+</p>
+
+<h3>Transactions</h3>
+
+<p>
+
+As stated above, our transaction system is very simple. One of our
+rather simple transaction classes is <code
+class="python">Export</code>.
+
+</p>
+
+
+<pre class="python">
+class Export(Transaction):
+    def doIt(self, opts):
+        print "Export"
+        root = opts['cvsroot']
+        ver = opts['release-version']
+        sh('cvs -d%s export -r release-%s Twisted' % (root, ver.replace('.', '_')))
+
+    def undoIt(self, opts, fail):
+        sh('rm -rf Twisted')
+</pre>
+
+
+<p>
+
+One useful feature to note is the <code
+class="python">sensitiveUndo</code> attribute on Transaction
+classes. If a transaction has this set, the user will be prompted
+before running the <code class="python">undoIt</code> method. This is
+useful for very long-running processes, like documentation generation,
+debian package building, and uploading to sourceforge. If something
+goes wrong in the middle of one of these processes, we want to give
+the user a chance to manually fix the problem rather than redoing the
+entire transaction. They can then continue from the next command by
+omitting the commands that have already been accomplished from the
+<code class="shell">release-twisted</code> arguments.
+
+</p>
+
+<p>
+
+A list of all of the transactions defined in release-twisted follows.
+
+</p>
+
+<dl>
+<dt>CheckOut</dt>
+<dd>
+
+  checks out the latest revision of Twisted from CVS and puts it in
+  the <q>Twisted.CVS</q> directory.
+
+</dd>
+
+<dt>UpdateVersion</dt>
+<dd>
+
+  changes the version number of the current release -- updating
+  twisted/copyright.py (the canonical location for the current
+  version) and a few other text files where the current version is
+  mentioned.
+
+</dd>
+
+
+<dt>Tag</dt>
+<dd>
+
+  tags the revisions in the current source tree with the version
+  passed in on the command line.
+
+</dd>
+
+
+<dt>Export</dt>
+
+<dd>
+
+  runs the cvs <q>export</q> command, which is similar to
+  <q>checkout</q>, but leaves out CVS support directories; this is
+  what we package up in the archives.
+
+</dd>
+
+
+<dt>PrepareDist</dt>
+<dd>
+
+  simply copies the directory containing the version of Twisted to be
+  released to a new directory specifically for the release
+  process. The reason that we have this extra copy is that sometimes
+  one will want to create a release from a directory that wasn't
+  created from the <q>Export</q> command; having the release script
+  munge that directory in-place would be impolite.
+
+</dd>
+
+
+<dt>GenerateDocs</dt>
+
+<dd>
+
+  generates the various documentation: HTML API documentation (via
+  Epydoc), HTML, PostScript, and PDF howto documentation (via
+  twisted.lore), and HTML man-pages (via lore, converted from the
+  nroff source).
+
+</dd>
+
+<dt>CreateTarballs</dt>
+<dd>
+
+  creates the various archives that each Twisted release involves:
+  tarred and gzipped or bzip2ed versions of archives with code plus
+  documentation, code without documentation, and only documentation.
+
+</dd>
+
+
+<dt>Release</dt>
+
+<dd>
+
+  copies all of the archives to a directory specified by the --release
+  parameter. This is meant to be a publically accessible directory,
+  thus the name <q>Release</q>.
+
+</dd>
+
+<dt>MakeDebs</dt>
+
+<dd>
+
+  creates the .deb packages and support files for the Twisted Debian
+  packages.
+  
+</dd>
+
+<dt>InstallDebs</dt>
+
+<dd>
+
+  Creates an apt-gettable Debian package repository in the
+  (unfortunately hard-coded) <q>/twisted/Debian</q> directory.
+
+</dd>
+
+<dt>Sourceforge</dt>
+
+<dd>
+  
+  uploads the archives and debian packages to Twisted's sourceforge
+  mirror at <a
+  href="http://twisted.sourceforge.net">http://twisted.sourceforge.net/</a>.
+
+</dd>
+
+
+<dt>UpgradeDebian</dt>
+
+<dd>
+
+  Installs the recently-generated Debian packages via <q>dpkg</q> on
+  the local machine.
+  
+</dd>
+  
+</dl>
+
+
+<h2>setup.py</h2>
+
+<p>
+
+Twisted has an extensive and very customized setup.py script. We have
+a number of C extension modules and try to ensure that they all build,
+or at least fail gracefully, on win32, Mac OSX, Linux and other
+popular unix-style OSes.
+
+</p>
+
+<p>
+
+We have overridden three of the distutils <q>command classes</q>:
+<code class="python">build_ext</code>, <code
+class="python">install_scripts</code>, and <code
+class="python">install_data</code>.
+
+</p>
+
+
+<h3>Building C extensions</h3>
+
+<p>
+
+<code class="python">build_ext_twisted</code> detects, based on
+various features of the platform, which C extensions to build. It
+overrides the <code class="python">build_extensions</code> method to
+first check which C extensions are appropriate to build for the
+current platform before proceeding as normal (by calling the
+superclass's <code class="python">build_extensions</code>). The
+module-detection consists of several simple tests for platform
+features and conditional additions to the `extensions' attribute. One
+especially useful feature is the <code
+class="python">_check_header</code> method, which takes the name of an
+arbitrary head file and tries to compile (via the distutil's C
+compiler interafce) a simple C file that only #includes it.
+
+</p>
+
+
+<h3>Installing scripts</h3>
+
+
+<p>
+
+<code class="python">install_data_twisted</code> ensures that the data
+files are installed along-side the python modules in the twisted
+package. This is accomplished with the incantation:
+
+</p>
+
+<pre class="python">
+class install_data_twisted(install_data):
+    def finalize_options (self):
+        self.set_undefined_options('install',
+            ('install_lib', 'install_dir')
+        )
+        install_data.finalize_options(self)
+</pre>
+
+
+
+<h3>Windows Releases</h3>
+
+<!--
+<p>
+This section will cover the problems with packaging Python projects
+for windows, especially ones which contain scripts. The problem of
+clickability is especially acute, as windows determines types by
+extensions and not by #! lines.
+</p>
+-->
+
+<p>
+
+Packaging software for windows involves a unique set of problems. The
+problem of clickability is especially acute; Several customizations to
+the distutils setup had to be made.
+
+</p>
+
+<p>
+
+The first customization was to make the <q>scripts</q> end with a
+<q>.py</q> extension, since Windows relies on extension rather than a
+she-bang line to specify what interpreter should execute a file. This
+was accomplished by overriding the <code
+class="python">install_scripts</code> command, like so:
+
+</p>
+
+<pre class="python">
+class install_scripts_twisted(install_scripts):
+    """Renames scripts so they end with '.py' on Windows."""
+
+    def run(self):
+        install_scripts.run(self)
+        if os.name == "nt":
+            for file in self.get_outputs():
+                if not file.endswith(".py"):
+                    os.rename(file, file + ".py")
+</pre>
+
+
+<p>
+
+We also wanted to have a Start-menu group with a number of icons for
+running different Twisted programs. This was accomplished with a
+post-install script specified with the command-line parameter
+<code class="shell">--install-script=twisted_postinstall.py</code>.
+
+</p>
+
+
+
+<h2>Future Directions</h2>
+
+<p>
+
+The theme is, of course, automation, and there are still many manual
+steps involved in a Twisted release. The currently most annoying step
+is updating the documentation and downloads section of the
+twistedmatrix.com website. Automating this would be a major
+improvement to the time it takes from the running of the release
+script to a fully completed release.
+
+</p>
+
+<p>
+
+Another major improvement will involve further integration with
+BuildBot. Currently we have BuildBot running unit tests, building C
+extensions, and generating documentation on several hosts. Eventually
+we would like to have it constantly generating full release archives,
+and have an additional web form for <q>finalizing</q> any particular
+build that we deem releasable. The result would be uploading the
+release to the mirrors and updating the website.
+
+</p>
+
+<p>
+
+The tagging scheme used by the release-twisted scripts can sometimes
+be problematic. If we find serious problems in the code-base after the
+Tag command is executed (which is fairly early in the process), we are
+forced to fix the bug and increase the version number. This can be
+prevented by, instead of making the official tag, using the unofficial
+tag <q>releasing-$version</q> (as opposed to <q>release-$version</q>)
+at that early stage. Once most of the steps are complete, the official
+tag will be made. If something in between goes wrong, we can just
+re-use the unofficial <q>releasing-$version</q> tag and not worry
+about users trying to use that tag.
+
+</p>
+
+
+</body>
+</html>

@@ -1,0 +1,120 @@
+<html><head><title>Deployment of Twisted Web Servers</title></head><body>
+<h1>Deployment of Twisted Web Servers</h1>
+
+<ul>
+<li>Travis B. Hartwell
+<a
+href="mailto:nafai@twistedmatrix.com">&lt;nafai@twistedmatrix.com&gt;</a></li>
+<li>Moshe Zadka
+<a
+href="mailto:moshez@twistedmatrix.com">&lt;moshez@twistedmatrix.com&gt;</a></li>
+</ul>
+
+<h2>Overview</h2>
+
+<p>Twisted is a Python framework for writing networked applications.
+Among other things, Twisted has a web server that can be used out of
+the box.  However, because Twisted is first and foremost a framework,
+using it gives many advantages over conventional web servers, and
+deploying a server with it is possible in many different ways.  The various
+deployment options will be covered, with their pros and cons. Most attention
+will be given to deployment options relevant for UNIX-like systems,
+though much of the material covered is relevant to Win32 installations.
+We will also cover in details some current use-cases of Twisted deployment,
+as a way to illustrate the principles.</p>
+
+<h2>Configuration</h2>
+
+<p>The classical, and best supported, way to configure Twisted is via the
+so-called <code>TAP</code> (Twisted Application Pickle) mechanism. This uses
+the inherent ability of Python to serialize objects by serializing the 
+<code class="API" base="twisted.internet.app">Application</code> object.
+<code>TAP</code>s are usually created, and managed, via the
+<code class="shell">mktap</code> utility.</p>
+
+<p><code class="shell">mktap</code> can create several different servers.
+Here, we concentrate on the kinds of web servers it can generate. The simplest
+kind of web server is to serve from a given root on the filesystem. This
+is done via using a command-line such as
+<pre class="shell">
+% mktap web --path /var/www
+</pre>
+This generates a server which is fairly rich in <q>processors</q>: special
+file-types (marked by extensions) which are handled by special code in the
+server to generate content (usually HTML) on the fly. The most common,
+and flexible, of these file-types is the <em>Resource Script</em>, or 
+<code class="shell">.rpy</code> file. More will be said of Resource Scripts
+later.</p>
+
+<p>Additional processors can be defined for the web-server via the 
+<code class="shell">mktap</code> command line.</p>
+
+<p>TODO: FINISH SECTION</p>
+
+<h2>Starting and Stopping</h2>
+
+<p>A web server is a daemon -- one which is expected to be run by the system,
+not by any manual user interaction. Thus, some way of interfacing the operating
+system's ideas of when web servers should be up and down and the Twisted web
+server should be crafted. On UNIX systems, this is done via so-called init
+scripts.</p>
+
+<p>When manually running a server, one uses the
+<code class="shell">twistd</code> utility.
+of this program, particularily as regards file-placement, will be covered,
+and suggestions as to good values will be given. Special attention will
+be given to the chroot options, and their benefits security-wise.</p>
+
+<p>TODO: FINISH SECTION</p>
+
+<h2>Processors</h2>
+
+<p>The Twisted web has a feature called <q>processors</q>, which allows it to
+handle dynamic content generation in various ways. Here I will cover the various
+processors existing, and give a brief rundown on their feature-sets. Resource
+scripts and resource pickles, two easy ways to embed Python objects inside
+the resource tree via the file system will be covered.</p>
+
+<h2>User Servers</h2>
+
+<p>The Twisted web server has a unique feature: being able to handle dynamic
+content generation by arbitrary users in a safe way. Here the use and
+implementation of this feature will be covered, as will various ways to
+make sure the personal servers are up.</p>
+
+<h2>Rewrite Rules</h2>
+
+<p>A feature shamelessly stolen from Apache, rewrite rules present a powerful
+ways to solve problems, but are somewhat tricky to use in a way which doesn't
+interfere with some of the unique Twisted web features. Here, this feature
+will be covered, as will the various gotchas.</p>
+
+<h2>Virtual Host Monster and Virtual Hosts</h2>
+
+<p>Virtual hosts are a common necessary evil these days. Here, the Twisted
+web interaction with this feature will be covered, both when running directly
+on a port and multiplexing several sites, and when run behind a web server
+ppwhich proxies a subset of the request.</p>
+
+<h2>Debian</h2>
+
+<p>The Twisted team has supplied a Debian package which handles much of the
+above problems in a way which is meant to be as non-surprising as possible
+to users of other web servers in Debian. Here, this configuration will be
+covered thoroughly, as a use case of the general principles discussed earlier.
+</p>
+
+<p>This configuration has examples for using rewrite rules to implement some
+of the configuration options which are somewhat unnatural for Twisted web,
+like <q>~user</q> homepages. It also contains an example of a mix of
+<q>virtual</q> children and <q>real</q> children.</p>
+
+<h2>Current Deployments of Twisted Web</h2>
+
+<p>Chief among these is the Twisted Matrix web server
+(http://www.twistedmatrix.com) itself.  It has been running Twisted
+Web as its web server for quite some time now.  Details on how it is
+deployed and configured will be shared, as well as other examples of
+Twisted Web Usage.</p>
+
+</body></html>

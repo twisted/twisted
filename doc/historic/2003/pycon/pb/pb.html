@@ -1,0 +1,966 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>Perspective Broker: <q>Translucent</q> Remote Method calls in Twisted</title>
+ </head>
+
+<body>
+
+<h1>Perspective Broker: <q>Translucent</q> Remote Method calls in Twisted</h1>
+
+<ul>
+<li><a href="http://www.lothar.com">Brian Warner</a>:
+<code>&lt;warner@lothar.com&gt;</code>
+</li>
+</ul>
+
+<h2>Abstract</h2>
+
+<p>One of the core services provided by the Twisted networking framework is
+<q>Perspective Broker</q>, which provides a clean, secure, easy-to-use
+Remote Procedure Call (RPC) mechanism. This paper explains the novel
+features of PB, describes the security model and its implementation, and
+provides brief examples of usage.</p>
+
+<p>PB is used as a foundation for many other services in Twisted, as well as
+projects built upon the Twisted framework. twisted.web servers can delegate
+responsibility for different portions of URL-space by distributing PB
+messages to the object that owns that subspace. twisted.im is an
+instant-messaging protocol that runs over PB. Applications like CVSToys and
+the BuildBot use PB to distribute notices every time a CVS commit has
+occurred. Using Perspective Broker as the RPC layer allows these projects to
+stay focused on the interesting parts.</p>
+
+<p>The PB protocol is not limited to Python. There is a working Java
+implementation available from the Twisted web site, as is an Emacs-Lisp
+version (which can be used to control a PB-enabled application from within
+your editing session, or effectively embed a Python interpreter in Emacs).
+Python's dynamic and introspective nature makes Perspective Broker easier to
+implement (and very convenient to use), but neither are strictly necessary.
+With a set of callback tables and a good dictionary implementation, it would
+be possible to implement the same protocol in C, C++, Perl, or other
+languages.</p>
+
+<h2>Overview</h2>
+
+<h3>Features</h3>
+
+<p>Perspective Broker provides the following basic RPC features.</p>
+
+<ul>
+  <li><strong>remotely-invokable methods</strong>: certain methods (those
+  with names that start with <q>remote_</q>) of
+  <code>pb.Referenceable</code> objects can be invoked by remote clients who
+  hold matching <code>pb.RemoteReference</code> objects.</li>
+
+  <li><strong>transparent, controllable object serialization</strong>: other
+  objects sent through those remote method invocations (either as arguments
+  or in the return value) will be automatically serialized. The data that is
+  serialized, and the way they are represented on the remote side, depends
+  upon which <code>twisted.pb.flavor</code> class they inherit from, and
+  upon overridable methods to get and set state.</li>
+
+  <li><strong>per-connection object ids</strong>: certain objects that are
+  passed by reference are tracked when they are sent over a wire. If the
+  receiver sends back the reference it received, the sender will see their
+  original object come back to them.</li>
+
+  <li><strong>twisted.cred authentication layer</strong>: provides common
+  username/password verification functions. <code>pb.Viewable</code> objects
+  keep a user reference with them, so remotely-invokable methods can find
+  out who invoked them.</li>
+
+  <li><strong>remote exception reporting</strong>: exceptions that occur in
+  remote methods are wrapped in <code>Failure</code> objects and serialized
+  so they can be provided to the caller. All the usual traceback information
+  is available on the invoking side.</li>
+
+  <li><strong>runs over arbitrary byte-pipe transports</strong>: including
+  TCP, UNIX-domain sockets, and SSL connections. UDP support (in the form of
+  Airhook) is being developed.</li>
+
+  <li><strong>numerous sandwich-related puns</strong>: PB, Jelly, Banana,
+  <code>twisted.spread</code>, Marmalade, Tasters, and Flavors. By contrast,
+  CORBA and XML-RPC have few, if any, puns in their naming conventions.</li>
+  
+</ul>
+
+<h3>Example</h3>
+
+<p>Here is a simple example of PB in action. The server code creates an
+object that can respond to a few remote method calls, and makes it available
+on a TCP port. The client code connects and runs two methods.</p>
+
+<a href="pb-server1.py" class="py-listing" skipLines="2">pb-server1.py</a>
+<a href="pb-client1.py" class="py-listing" skipLines="2">pb-client1.py</a>
+
+<p>When this is run, the client emits the following progress messages:</p>
+
+<pre class="shell">
+% <em>./pb-client1.py</em>
+got object: &lt;twisted.spread.pb.RemoteReference instance at 0x817cab4&gt;
+asking it to add
+addition complete, result is 3
+now trying subtract
+subtraction result is -7
+shutting down
+</pre>
+
+<p>This example doesn't demonstrate instance serialization, exception
+reporting, authentication, or other features of PB. For more details and
+examples, look at the PB <q>howto</q> docs at <a
+href="http://twistedmatrix.com/documents/howto/">twistedmatrix.com</a>.</p>
+
+<h2>Why <q>Translucent</q> References?</h2>
+
+<p>Remote function calls are not the same as local function calls. Remote
+calls are asynchronous. Data exchanged with a remote system may be
+interpreted differently depending upon version skew between the two systems.
+Method signatures (number and types of parameters) may differ. More failure
+modes are possible with RPC calls than local ones.</p>
+
+<p><q>Transparent</q> RPC systems attempt to hide these differences, to make
+remote calls look the same as local ones (with the noble intention of making
+life easier for programmers), but the differences are real, and hiding them
+simply makes them more difficult to deal with. PB therefore provides
+<q>translucent</q> method calls: it exposes these differences, but offers
+convenient mechanisms to handle them. Python's flexible object model and
+exception handling take care of part of the problem, while Twisted's
+Deferred class provides a clean way to deal with the asynchronous nature of
+RPC.</p>
+
+<h3>Asynchronous Invocation</h3>
+
+<p>A fundamental difference between local function calls and remote ones is
+that remote ones are always performed asynchronously. Local function calls
+are generally synchronous (at least in most programming languages): the
+caller is blocked until the callee finishes running and possibly returns a
+value. Local functions which might block (loosely defined as those which
+would take non-zero or indefinite time to run on infinitely fast hardware)
+are usually marked as such, and frequently provide alternative APIs to run
+in an asynchronous manner. Examples of blocking functions are
+<code>select()</code> and its less-generalized cousins:
+<code>sleep()</code>, <code>read()</code> (when buffers are empty), and
+<code>write()</code> (when buffers are full).</p>
+
+<p>Remote function calls are generally assumed to take a long time. In
+addition to the network delays involved in sending arguments and receiving
+return values, the remote function might itself be blocking.</p>
+
+<p><q>Transparent</q> RPC systems, which pretend that the remote system is
+really local, usually offer only synchronous calls. This prevents the
+program from getting other work done while the call is running, and causes
+integration problems with GUI toolkits and other event-driven
+frameworks.</p>
+
+<h3>Failure Modes</h3>
+
+<p>In addition to the usual exceptions that might be raised in the course of
+running a function, remotely invoked code can cause other errors. The
+network might be down, the remote host might refuse the connection (due to
+authorization failures or resource-exhaustion issues), the remote end might
+have a different version of the code and thus misinterpret serialized
+arguments or return a corrupt response. Python's flexible exception
+mechanism makes these errors easy to report: they are just more exceptions
+that could be raised by the remote call. In other languages, this requires a
+special API to report failures via a different path than the normal
+response.</p>
+
+<h3>Deferreds to the rescue</h3>
+
+<p>In PB, Deferreds are used to handle both the asynchronous nature of the
+method calls and the various kinds of remote failures that might occur. When
+the method is invoked, PB returns a Deferred object that will be fired
+later, when the response (success or failure) is received from the remote
+end. The caller (the one who invoked <code>callRemote</code>) is free to
+attach callback and errback handlers to the Deferred. If an exception is
+raised (either by the remote code or a network failure during processing),
+the errback will be run with the wrapped exception. If the function
+completes normally, the callback is run.</p>
+
+<p>By using Deferreds, the invoking program can get other work done while it
+is waiting for the results. Failure is handled just as cleanly as
+success.</p>
+
+<p>In addition, the remote method can itself return a <code>Deferred</code>
+instead of an actual return value. When that <code>Deferreds</code> fires,
+the data given to the callback will be serialized and returned to the
+original caller. This allows the remote server to perform other work as
+well, putting off the answer until one is available.</p>
+
+
+<h2>Calling Remote Methods</h2>
+
+<p>Perspective Broker is first and foremost a mechanism for remote method
+calls: doing something to a local object which causes a method to get run on
+a distant one. The process making the request is usually called the
+<q>client</q>, and the process which hosts the object that actually runs the
+method is called the <q>server</q>. Note, however, that method requests can
+go in either direction: instead of distinguishing <q>client</q> and
+<q>server</q>, it makes more sense to talk about the <q>sender</q> and
+<q>receiver</q> for any individual method call. PB is symmetric, and the
+only real difference between the two ends is that one initiated the original
+TCP connection and the other accepted it.</p>
+
+<p>With PB, the local object is an instance of
+<code>twisted.spread.pb.RemoteReference</code>, and you <q>do something</q>
+to it by calling its <code>.callRemote</code> method. This call accepts a
+method name and an argument list (including keyword arguments). Both are
+serialized and sent to the receiving process, and the call returns a
+<code>Deferred</code>, to which you can add callbacks. Those callbacks will
+be fired later, when the response returns from the remote end.</p>
+
+<p>That local RemoteReference points at a
+<code>twisted.spread.pb.Referenceable</code> object living in the other
+program (or one of the related callable flavors). When the request comes
+over the wire, PB constructs a method name by prepending
+<code>remote_</code> to the name requested by the remote caller. This method
+is looked up in the <code>pb.Referenceable</code> and invoked. If an
+exception is raised (including the <code>AttributeError</code> that results
+from a bad method name), the error is wrapped in a <code>Failure</code>
+object and sent back to the caller. If it succeeds, the result is serialized
+and sent back.</p>
+
+<p>The caller's Deferred will either have the callback run (if the method
+completed normally) or the errback run (if an exception was raised). The
+Failure object given to the errback handler allows a full stack trace to be
+displayed on the calling end.</p>
+
+<p>For example, if the holder of the <code>RemoteReference</code> does <code
+class="python">rr.callRemote("foo", 1, 3)</code>, the corresponding
+<code>Referenceable</code> will be invoked with <code
+class="python">r.remote_foo(1, 3)</code>. A <code>callRemote</code> of
+<q><code>bar</code></q> would invoke <code>remote_bar</code>, etc.</p>
+
+<h3>Obtaining other references</h3>
+
+<p>Each <code>pb.RemoteReference</code> object points to a
+<code>pb.Referenceable</code> instance in some other program. The first such
+reference must be acquired with a bootstrapping function like
+<code>pb.getObjectAt</code>, but all subsequent ones are created when a
+<code>pb.Referenceable</code> is sent as an argument to (or a return value
+from) a remote method call.</p>
+
+<p>When the arguments or return values contain references to other objects,
+the object that appears on the other side of the wire depends upon the type
+of the referred object. Basic types are simply copied: a dictionary of lists
+will appear as a dictionary of lists, with internal references preserved on
+a per-method-call basis (just as Pickle will preserve internal references
+for everything pickled at the same time). Class instances are restricted,
+both to avoid confusion and for security reasons.</p>
+
+<h3>Transferring Instances</h3>
+
+<p>PB only allows certain kinds of objects to be transferred to and from
+remote processes. Most of these restrictions are implemented in the <a
+href="#jelly">Jelly</a> serialization layer, described below. In general, to
+send an object over the wire, it must either be a basic python type (list,
+dictionary, etc), or an instance of a class which is derived from one of the
+four basic <em>PB Flavors</em>: <code>Referenceable</code>,
+<code>Viewable</code>, <code>Copyable</code>, and <code>Cacheable</code>.
+Each flavor has methods which define how the object should be treated when
+it needs to be serialized to go over the wire, and all have related classes
+that are created on the remote end to represent them.</p>
+
+<p>There are a few kinds of callable classes. All are represented on the
+remote system with <code>RemoteReference</code> instances.
+<code>callRemote</code> can be used on these RemoteReferences, causing
+methods with various prefixes to be invoked.</p>
+
+<table border="1">
+  <tr>
+    <th>Local Class</th>
+    <th>Remote Representation</th>
+    <th>method prefix</th>
+  </tr>
+  <tr>
+    <td><code>Referenceable</code></td>
+    <td><code>RemoteReference</code></td>
+    <td><code>remote_</code></td>
+  </tr>
+  <tr>
+    <td><code>Viewable</code></td>
+    <td><code>RemoteReference</code></td>
+    <td><code>view_</code></td>
+  </tr>
+</table>
+
+<p><code>Viewable</code> (and the related <code>Perspective</code> class)
+are described later (in <a href="#authorization">Authorization</a>). They
+provide a secure way to let methods know <em>who</em> is calling them. Any
+time a <code>Referenceable</code> (or <code>Viewable</code>) is sent over
+the wire, it will appear on the other end as a <code>RemoteReference</code>.
+If any of these references are sent back to the system they came from, they
+emerge from the round trip in their original form.</p>
+
+<p>Note that RemoteReferences cannot be sent to anyone else (there are no
+<q>third-party references</q>): they are scoped to the connection between
+the holder of the <code>Referenceable</code> and the holder of the
+<code>RemoteReference</code>. (In fact, the <code>RemoteReference</code> is
+really just an index into a table maintained by the owner of the original
+<code>Referenceable</code>).</p>
+
+<p>There are also two data classes. To send an instance over the wire, it
+must belong to a class which inherits from one of these.</p>
+
+<table border="1">
+  <tr>
+    <th>Local Class</th>
+    <th>Remote Representation</th>
+  </tr>
+  <tr>
+    <td><code>Copyable</code></td>
+    <td><code>RemoteCopy</code></td>
+  </tr>
+  <tr>
+    <td><code>Cacheable</code></td>
+    <td><code>RemoteCache</code></td>
+  </tr>
+</table>
+
+<h3>pb.Copyable</h3>
+<a name="pb.Copyable"></a>
+
+<p><code>Copyable</code> is used to allow class instances to be sent over
+the wire. <code>Copyable</code>s are copy-by-value, unlike
+<code>Referenceable</code>s which are copy-by-reference.
+<code>Copyable</code> objects have a method called
+<code>getStateToCopy</code> which gets to decide how much of the object
+should be sent to the remote system: the default simply copies the whole
+<code>__dict__</code>. The receiver must register a <code>RemoteCopy</code>
+class for each kind of <code>Copyable</code> that will be sent to it: this
+registration (described later in <a href="#unjellyableRegistry">Representing
+Instances</a>) maps class names to actual classes. Apart from being a
+security measure (it emphasizes the fact that the process is receiving data
+from an untrusted remote entity and must decide how to interpret it safely),
+it is also frequently useful to distinguish a copy of an object from the
+original by holding them in different classes.</p>
+
+<p><code>getStateToCopy</code> is frequently used to remove attributes that
+would not be meaningful outside the process that hosts the object, like file
+descriptors. It also allows shared objects to hold state that is only
+available to the local process, including passwords or other private
+information. Because the default serialization process recursively follows
+all references to other objects, it is easy to accidentally send your entire
+program to the remote side. Explicitly creating the state object (creating
+an empty dictionary, then populating it with only the desired instance
+attributes) is a good way to avoid this.</p>
+
+<p>The fact that PB will refuse to serialize objects that are neither basic
+types nor explicitly marked as being transferable (by subclassing one of the
+pb.flavors) is another way to avoid the <q>don't tug on that, you never know
+what it might be attached to</q> problem. If the object you are sending
+includes a reference to something that isn't marked as transferable, PB will
+raise an InsecureJelly exception rather than blindly sending it anyway (and
+everything else it references).</p>
+
+<p>Finally, note that <code>getStateToCopy</code> is distinct from the
+<code>__getstate__</code> method used by Pickle, and they can return
+different values. This allows objects to be persisted (across time)
+differently than they are transmitted (across [memory]space).</p>
+
+<h3>pb.Cacheable</h3>
+<a name="pb.Cacheable"></a>
+
+<p><code>Cacheable</code> is a variant of <code>Copyable</code> which is
+used to implement remote caches. When a <code>Cacheable</code> is sent
+across a wire, a method named <code>getStateToCacheAndObserveFor</code> is
+used to simultaneously get the object's current state and to register an
+<q>Observer</q> which lives next to the <code>Cacheable</code>. The Observer
+is effectively a <code>RemoteReference</code> that points at the remote
+cache. Each time the cached object changes, it uses its Observers to tell
+all the remote caches about the change. The <q>setter</q> methods can just
+call <code class="python">observer.callRemote("setFoo", newvalue)</code> for
+all their observers.</p>
+
+<p>On the remote end, a <code>RemoteCache</code> object is created, which
+populates the original object's state just as <code>RemoteCopy</code> does.
+When changes are made, the Observers remotely invoke methods like
+<code>observe_setFoo</code> in the <code>RemoteCache</code> to perform the
+updates.</p>
+
+<p>As <code>RemoteCache</code> objects go away, their Observers go away too,
+and call <code>stoppedObserving</code> so they can be removed from the
+list.</p>
+
+<p>The PB <a href="http://twistedmatrix.com/documents/howto/"
+><q>howto</q> docs</a> have more information and complete examples of both
+<code>pb.Copyable</code> and <code>pb.Cacheable</code>.</p>
+
+
+<h2>Authorization</h2>
+<a name="authorization"></a>
+
+<p>As a framework, Perspective Broker (indeed, all of Twisted) was built
+from the ground up. As multiple use cases became apparent, common
+requirements were identified, code was refactored, and layers were developed
+to cleanly serve the needs of all <q>customers</q>. The twisted.cred layer
+was created to provide authorization services for PB as well as other
+Twisted services, like the HTTP server and the various instant messaging
+protocols. The abstract notions of identity and authority it uses are
+intended to match the common needs of these various protocols: specific
+applications can always use subclasses that are more appropriate for their
+needs.</p>
+
+<h3>Identity and Perspectives</h3>
+
+<p>In twisted.cred, <q>Identities</q> are usernames (with passwords),
+represented by <code>Identity</code> objects. Each identity has a
+<q>keyring</q> which authorizes it to access a set of objects called
+<q>Perspectives</q>. These perspectives represent accounts or other
+capabilities; each belongs to a single <q>Service</q>. There may be multiple
+Services in a single application; in fact the flexible nature of Twisted
+makes this easy. An HTTP server would be a Service, and an IRC server would
+be another one.</p>
+
+<p>As an example, a login service might have perspectives for Alice, Bob,
+and Charlie, and there might also be an Admin perspective. Alice has admin
+capabilities. In addition, let us say the same application has a chat
+service with accounts for each person (but no special administrator
+account).</p>
+
+<p>So, in this example, Alice's keyring gives her access to three
+perspectives: login/Alice, login/Admin, and chat/Alice. Bob only gets two:
+login/Bob and chat/Bob. <code>Perspective</code> objects have names and
+belong to <code>Service</code> objects, but the
+<code>Identity.keyring</code> is a dictionary indexed by (serviceName,
+perspectiveName) pairs. It uses names instead of object references because
+the <code>Perspective</code> object might be created on demand. The keys
+include the service name because Perspective names are scoped to a single
+service.</p>
+
+<h3>pb.Perspective</h3>
+
+<p>The PB-specific subclass of the generic <code>Perspective</code> class is
+also capable of remote execution. The login process results in the
+authorized client holding a special kind of <code>RemoteReference</code>
+that will allow it to invoke <code>perspective_</code> methods on the
+matching <code>pb.Perspective</code> object. In PB applications that use the
+<code>twisted.cred</code> authorization layer, clients get this reference
+first. The client is then dependent upon the Perspective to provide
+everything else, so the Perspective can enforce whatever security policy it
+likes.</p>
+
+<p>(Note that the <code>pb.Perspective</code> class is not actually one of
+the serializable PB flavors, and that instances of it cannot be sent
+directly over the wire. This is a security feature intended to prevent users
+from getting access to somebody else's <code>Perspective</code> by mistake,
+perhaps when a <q>list all users</q> command sends back an object which
+includes references to other Perspectives.)</p>
+
+<p>PB provides functions to perform a challenge-response exchange in which
+the remote client proves their identity to get that <code>Perspective</code>
+reference. The <code>Identity</code> object holds a password and uses an MD5
+hash to verify that the remote user knows the password without sending it in
+cleartext over the wire. Once the remote user has proved their identity,
+they can request a reference to any <code>Perspective</code> permitted by
+their <code>Identity</code>'s keyring.</p>
+
+<p>There are twisted.cred functions (twisted.enterprise.dbcred) which can
+pull user information out of a database, and it is easy to create modules
+that could check /etc/passwd or LDAP instead. Authorization can then be
+centralized through the Perspective object: each object that is accessible
+remotely can be created with a pointer to the local Perspective, and objects
+can ask that Perspective whether the operation is allowed before performing
+method calls.</p>
+
+<p>Most clients use a helper function called <code>pb.connect()</code> to
+get the first Perspective reference: it takes all the necessary identifying
+information (host, port, username, password, service name, and perspective
+name) and returns a <code>Deferred</code> that will be fired when the
+<code>RemoteReference</code> is available. (This may change in the future:
+there are plans afoot to use a URL-like scheme to identify the Perspective,
+which will probably mean a new helper function).</p>
+
+<h3>Viewable</h3>
+
+<p>There is a special kind of <code>Referenceable</code> called
+<code>pb.Viewable</code>. Its remote methods (all named <code>view_</code>)
+are called with an extra argument that points at the
+<code>Perspective</code> the client is using. This allows the same
+<code>Referenceable</code> to be shared among multiple clients while
+retaining the ability to treat those clients differently. The methods can
+check with the Perspective to see if the request should be allowed, and can
+use per-client information in processing the request.</p>
+
+<!-- XXX: it would be nice to provide some examples of typical Perspective
+use cases: static pre-defined Perspectives, DB lookup, anonymous access. But
+they would be pretty big, and are probably more appropriate for the
+pb-cred.html HOWTO doc -->
+
+
+<h2>PB Design: Object Serialization</h2>
+
+<p>Fundamental to any calling convention, whether ABI or RPC, is how
+arguments and return values are passed from caller to callee and back. RPC
+systems require data to be turned into a form which can be delivered through
+a network, a process usually known as serialization. Sharing complex types
+(references and class instances) with a remote system requires more care:
+references should all point to the same thing (even though the object being
+referenced might live on either end of the connection), and allowing a
+remote user to create arbitrary class instances in your memory space is a
+security risk that must be controlled.</p>
+
+<p>PB uses its own serialization scheme called <q>Jelly</q>. At the bottom
+end, it uses s-expressions (lists of numbers and strings) to represent the
+state of basic types (lists, dictionaries, etc). These s-expressions are
+turned into a bytestream by the <q>Banana</q> layer, which has an optional C
+implementation for speed. Unserialization for higher-level objects is driven
+by per-class <q>jellyier</q> objects: this flexibility allows PB to offer
+inheritable classes for common operations. <code>pb.Referenceable</code> is
+a class which is serialized by sending a reference to the remote end that
+can be used to invoke remote methods. <code>pb.Copyable</code> is a class
+which creates a new object on the remote end, with methods that the
+developer can override to control how much state is sent or accepted.
+<code>pb.Cacheable</code> sends a full copy the first time it is exchanged,
+but then sends deltas as the object is modified later.</p>
+
+<p>Objects passed over the wire get to decide for themselves how much
+information is actually passed to the remote system. Copy-by-reference
+objects are given a per-connection ID number and stashed in a local
+dictionary. Copy-by-value objects may send their entire
+<code>__dict__</code>, or some subset thereof. If the remote method returns
+a referenceable object that was given to it earlier (either in the same RPC
+call or an earlier one), PB sends the ID number over the wire, which is
+looked up and turned into a proper object reference upon receipt. This
+provides one-sided reference transparency: one end sees objects coming and
+going through remote method calls in exactly the same fashion as through
+local calls. Those references are only capable of very specific operations;
+PB does not attempt to provide full object transparency. As discussed later,
+this is instrumental to security.</p>
+
+<h3>Banana and s-expressions</h3>
+
+<p>The <q>Banana</q> low-level serialization layer converts s-expressions
+which represent basic types (numbers, strings, and lists of numbers,
+strings, or other lists) to and from a bytestream. S-expressions are easy to
+encode and decode, and are flexible enough (when used with a set of tokens)
+to represent arbitrary objects. <q>cBanana</q> is a C extension module which
+performs the encode/decode step faster than the native python
+implementation.</p>
+
+<p>Each s-expression element is converted into a message with two or three
+components: a header, a type marker, and an optional body (used only for
+strings). The header is a number expressed in base 128. The type marker is a
+single byte with the high bit set, that both terminates the header and
+indicate the type of element this message describes (number, list-start,
+string, or tokenized string).</p>
+
+<p>When a connection is first established, a list of strings is sent to
+negotiate the <q>dialect</q> of Banana being spoken. The first dialect known
+to both sides is selected. Currently, the dialect is only used to select a
+list of string tokens that should be specially encoded (for performance),
+but subclasses of Banana could use self.currentDialect to influence the
+encoding process in other ways.</p>
+
+<p>When Banana is used for PB (by negotiating the <q>pb</q> dialect), it has
+a list of 30ish strings that are encoded into two-byte sequences instead of
+being sent as generalized string messages. These string tokens are used to
+mark complex types (beyond the simple lists, strings, and numbers provided
+natively by Banana) and other objects Jelly needs to do its job.</p>
+
+<h3>Jelly</h3>
+<a name="jelly"></a>
+
+<p><code>Jelly</code> handles object serialization. It fills a similar role
+to the standard Pickle module, but has design goals of security and
+portability (especially to other languages) where Pickle favors efficiency
+of representation. In addition, Jelly serializes objects into s-expressions
+(lists of tokens, strings, numbers, and other lists), and lets Banana do the
+rest, whereas Pickle goes all the way down to a bytestream by itself.</p>
+
+<p>Basic python types (apart from strings and numbers, which Banana can
+handle directly) are generally turned into lists with a type token as the
+first element. For example, a python dictionary is turned into a list that
+starts with the string token <q>dictionary</q> and continues with elements
+that are lists of [key, value] pairs. Modules, classes, and methods are all
+transformed into s-expressions that refer to the relevant names. Instances
+are represented by combining the class name (a string) with an arbitrary
+state object (which is usually a dictionary).</p>
+
+<p>Much of the rest of Jelly has to do with safely handling class instances
+(as opposed to basic Python types) and dealing with references to shared
+objects.</p>
+
+<h4>Tracking shared references</h4>
+
+<p>Mutable types are serialized in a way that preserves the identity between
+the same object referenced multiple times. As an example, a list with four
+elements that all point to the same object must look the same on the remote
+end: if it showed up as a list pointing to four independent objects (even if
+all the objects had identical states), the resulting list would not behave
+in the same way as the original. Changing <code>newlist[0]</code> would not
+modify <code>newlist[1]</code> as it ought to.</p>
+
+<p>Consequently, when objects which reference mutable types are serialized,
+those references must be examined to see if they point to objects which have
+already been serialized in the same session. If so, an object id tag of some
+sort is put into the bytestream instead of the complete object, indicating
+that the deserializer should use a reference to a previously-created object.
+This also solves the issue of recursive or circular references: the first
+appearance of an object gets the full state, and all subsequent ones get a
+reference to it.</p>
+
+<p>Jelly manages this reference tracking through an internal
+<code>_Jellier</code> object (in particular through the <code>.cooked</code>
+dictionary). As objects are serialized, their <code>id</code> values are
+stashed. References to those objects that occur after jellying has started
+can be replaced with a <q>dereference</q> marker and the object id.</p>
+
+<p>The scope of this <code>_Jellier</code> object is limited to a single
+call of the <code>jelly</code> function, which in general corresponds to a
+single remote method call. The argument tuple is jellied as a single object
+(a tuple), so different arguments to the same method will share referenced
+objects<span class="footnote">Actually, PB currently jellies the list
+arguments in a separate tuple from the keyword arguments. This issue is
+currently being examined and may be changed in the future</span>, but
+arguments of separate methods will not share them. To do more complex
+caching and reference tracking, certain PB <q>flavors</q> (see below)
+override their <code>jellyFor</code> method to do more interesting things.
+In particular, <code>pb.Referenceable</code> objects have code to insure
+that one which makes a round trip will come back as a reference to the same
+object that was originally sent.</p>
+
+<p>An exception to this <q>one-call scope</q> is provided: if the
+<code>Jellier</code> is created with a <code>persistentStore</code> object,
+all class instances will be passed through it first, and it has the
+opportunity to return a <q>persistent id</q>. If available, this id is
+serialized instead of the object's state. This would allow object references
+to be shared between different invocations of <code>jelly</code>. However,
+PB itself does not use this technique: it uses overridden
+<code>jellyFor</code> methods to provide per-connection shared
+references.</p>
+
+<h4>Representing Instances</h4>
+<a name="unjellyableRegistry"></a>
+
+<p>Each class gets to decide how it should be represented on a remote
+system. Sending and receiving are separate actions, performed in separate
+programs on different machines. So, to be precise, each class gets to decide
+two things. First, they get to specify how they should be sent to a remote
+client: what should happen when an instance is serialized (or <q>jellied</q>
+in PB lingo), what state should be recorded, what class name should be sent,
+etc. Second, the receiving program gets to specify how an incoming object
+that claims to be an instance of some class should be treated: whether it
+should be accepted at all, if so what class should be used to create the new
+object, and how the received state should be used to populate that
+object.</p>
+
+<p>A word about notation: in Perspective Broker parlance, <q>to jelly</q> is
+used to describe the act of turning an object into an s-expression
+representation (serialization, or at least most of it). Therefore the
+reverse process, which takes an s-expression and turns it into a real python
+object, is described with the verb <q>to unjelly</q>. </p>
+
+<h4>Jellying Instances</h4>
+
+<p>Serializing instances is fairly straightforward. Classes which inherit
+from <code>Jellyable</code> provide a <code>jellyFor</code> method, which
+acts like <code>__getstate__</code> in that it should return a serializable
+representation of the object (usually a dictionary). Other classes are
+checked with a <code>SecurityOptions</code> instance, to verify that they
+are safe to be sent over the wire, then serialized by using their
+<code>__getstate__</code> method (or their <code>__dict__</code> if no such
+method exists). User-level classes always inherit from one of the PB
+<q>flavors</q> like <code>pb.Copyable</code> (all of which inherit from
+<code>Jellyable</code>) and use <code>jellyFor</code>; the
+<code>__getstate__</code> option is only for internal use.</p>
+
+<!-- should we mention persistentStore here? Nothing uses it, so no. Besides
+it was already hinted at in 'tracking shared references' above. -->
+
+<h4>Secure Unjellying</h4>
+
+<p>Unjellying (for instances) is triggered by the receipt of an s-expression
+with the <q>instance</q> tag. The s-expression has two elements: the name of
+the class, and an object (probably a dictionary) which holds the instance's
+state. At that point in time, the receiving program does not know what class
+should be used: it is certainly <em>not</em> safe to simply do an
+<code>import</code> of the classname requested by the sender. That
+effectively allows a remote entity to run arbitrary code on your system.
+</p>
+
+<p>There are two techniques used to control how instances are unjellied. The
+first is a <code>SecurityOptions</code> instance which gets to decide
+whether the incoming object should accepted or not. It is said to
+<q>taste</q> the incoming type before really trying to unserialize it. The
+default taster accepts all basic types but no classes or instances.</p>
+
+<p>If the taster decides that the type is acceptable, Jelly then turns to
+the <code>unjellyableRegistry</code> to determine exactly <em>how</em> to
+deserialize the state. This is a table that maps received class names names
+to unserialization routines or classes.</p>
+
+<p>The receiving program must register the classes it is willing to accept.
+Any attempts to send instances of unregistered classes to the program will
+be rejected, and an InsecureJelly exception will be sent back to the sender.
+If objects should be represented by the same class in both the sender and
+receiver, and if the class is defined by code which is imported into both
+programs (an assumption that results in many security problems when it is
+violated), then the shared module can simply claim responsibility as the
+classes are defined:</p>
+
+<pre class="python">
+class Foo(pb.RemoteCopy):
+  def __init__(self):
+    # note: __init__ will *not* be called when creating RemoteCopy objects
+    pass
+  def __getstate__(self):
+    return foo
+  def __setstate__(self, state):
+    self.stuff = state.stuff
+setUnjellyableForClass(Foo, Foo)
+</pre>
+
+<p>In this example, the first argument to
+<code>setUnjellyableForClass</code> is used to get the fully-qualified class
+name, while the second defines which class will be used for unjellying.
+<code>setUnjellyableForClass</code> has two functions: it informs the
+<q>taster</q> that instances of the given class are safe to receive, and it
+registers the local class that should be used for unjellying.</p>
+
+
+<h3>Broker</h3>
+
+<p>The <code>Broker</code> class manages the actual connection to a remote
+system. <code>Broker</code> is a <q>Protocol</q> (in Twisted terminology),
+and there is an instance for each socket over which PB is being spoken.
+Proxy objects like <code>pb.RemoteReference</code>, which are associated
+with another object on the other end of the wire, all know which Broker they
+must use to get to their remote counterpart. <code>pb.Broker</code> objects
+implement distributed reference counts, manage per-connection object IDs,
+and provide notification when references are lost (due to lost connections,
+either from network problems or program termination).</p>
+
+<h4>PB over Jelly</h4>
+
+<p>Perspective Broker is implemented by sending Jellied commands over the
+connection. These commands are always lists, and the first element of the
+list is always a command name. The commands are turned into
+<code>proto_</code>-prefixed method names and executed in the Broker object.
+There are currently 9 such commands. Two (<code>proto_version</code> and
+<code>proto_didNotUnderstand</code>) are used for connection negotiation.
+<code>proto_message</code> is used to implement remote method calls, and is
+answered by either <code>proto_answer</code> or
+<code>proto_error</code>.</p>
+
+<p><code>proto_cachemessage</code> is used by Observers (see <a
+href="#pb.Copyable">pb.Copyable</a>) to notify their
+<code>RemoteCache</code> about state updates, and behaves like
+<code>proto_message</code>. <a href="#pb.Cacheable">pb.Cacheable</a> also
+uses <code>proto_decache</code> and <code>proto_uncache</code> to manage
+reference counts of cached objects.</p>
+
+<p>Finally, <code>proto_decref</code> is used to manage reference counts on
+<code>RemoteReference</code> objects. It is sent when the
+<code>RemoteReference</code> goes away, so that the holder of the original
+<code>Referenceable</code> can free that object.</p>
+
+<h4>Per-Connection ID Numbers</h4>
+
+<p>Each time a <code>Referenceable</code> is sent across the wire, its
+<code>jellyFor</code> method obtains a new unique <q>local ID</q> (luid) for
+it, which is a simple integer that refers to the original object. The
+Broker's <code>.localObjects{}</code> and <code>.luids{}</code> tables
+maintain the <q>luid</q>-to-object mapping. Only this ID number is sent to
+the remote system. On the other end, the object is unjellied into a
+<code>RemoteReference</code> object which remembers its Broker and the luid
+it refers to on the other end of the wire. Whenever
+<code>callRemote()</code> is used, it tells the Broker to send a message to
+the other end, including the luid value. Back in the original process, the
+luid is looked up in the table, turned into an object, and the named method
+is invoked.</p>
+
+<p>A similar system is used with Cacheables: the first time one is sent, an
+ID number is allocated and recorded in the
+<code>.remotelyCachedObjects{}</code> table. The object's state (as returned
+by <code>getStateToCacheAndObserveFor()</code>) and this ID number are sent
+to the far end. That side uses <code>.cachedLocallyAs()</code> to find the
+local <code>CachedCopy</code> object, and tracks it in the Broker's
+<code>.locallyCachedObjects{}</code> table. (Note that to route state
+updates to the right place, the Broker on the <code>CachedCopy</code> side
+needs to know where it is. The same is not true of
+<code>RemoteReference</code>s: nothing is ever sent <em>to</em> a
+<code>RemoteReference</code>, so its Broker doesn't need to keep track of
+it).</p>
+
+<p>Each remote method call gets a new <code>requestID</code> number. This
+number is used to link the request with the response. All pending requests
+are stored in the Broker's <code>.waitingForAnswers{}</code> table until
+they are completed by the receipt of a <code>proto_answer</code> or
+<code>proto_error</code> message.</p>
+
+<p>The Broker also provides hooks to be run when the connection is lost.
+Holders of a <code>RemoteReference</code> can register a callback with
+<code>.notifyOnDisconnect()</code> to be run when the process which holds
+the original object goes away. Trying to invoke a remote method on a
+disconnected broker results in an immediate <code>DeadReferenceError</code>
+exception.</p>
+
+<h4>Reference Counting</h4>
+
+<p>The Broker on the <code>Referenceable</code> end of the connection needs
+to implement distributed reference counting. The fact that a remote end
+holds a <code>RemoteReference</code> should prevent the
+<code>Referenceable</code> from being freed. To accomplish this, The
+<code>.localObjects{}</code> table actually points at a wrapper object
+called <code>pb.Local</code>. This object holds a reference count in it that
+is incremented by one for each <code>RemoteReference</code> that points to
+the wrapped object. Each time a Broker serializes a
+<code>Referenceable</code>, that count goes up. Each time the distant
+<code>RemoteReference</code> goes away, the remote Broker sends a
+<code>proto_decref</code> message to the local Broker, and the count goes
+down. When the count hits zero, the <code>Local</code> is deleted, allowing
+the original <code>Referenceable</code> object to be released.</p>
+
+
+<h2>Security</h2>
+
+<p>Insecurity in network applications comes from many places. Most can be
+summarized as trusting the remote end to behave in a certain way.
+Applications or protocols that do not have a way to verify their assumptions
+may act unpredictably when the other end misbehaves; this may result in a
+crash or a remote compromise. One fundamental assumption that most RPC
+libraries make when unserializing data is that the same library is being
+used at the other end of the wire to generate that data. Developers put so
+much time into making their RPC libraries work <strong>at all</strong> that
+they usually assume their own code is the only thing that could possibly
+provide the input. A safer design is to assume that the input will almost
+always be corrupt, and to make sure that the program survives anyway.</p>
+
+<h3>Controlled Object serialization</h3>
+
+<p>Security is a primary design goal of PB. The receiver gets final say as
+to what they will and will not accept. The lowest-level serialization
+protocol (<q>Banana</q>) is simple enough to validate by inspection, and
+there are size limits imposed on the actual data received to prevent
+excessive memory consumption. Jelly is willing to accept basic data types
+(numbers, strings, lists and dictionaries of basic types) without question,
+as there is no dangerous code triggered by their creation, but Class
+instances are rigidly controlled. Only subclasses of the basic PB flavors
+(<code>pb.Copyable</code>, etc) can be passed over the wire, and these all
+provide the developer with ways to control what state is sent and accepted.
+Objects can keep private data on one end of the connection by simply not
+including it in the copied state.</p>
+
+<p>Jelly's refusal to serialize objects that haven't been explicitly marked
+as copyable helps stop accidental security leaks. Seeing the
+<code>pb.Copyable</code> tag in the class definition is a flag to the
+developer that they need to be aware of what parts of the class will be
+available to a remote system and which parts are private. Classes without
+those tags are not an issue: the mere act of <em>trying</em> to export them
+will cause an exception. If Jelly tried to copy arbitrary classes, the
+security audit would have to look into <em>every</em> class in the
+system.</p>
+
+<h3>Controlled Object Unserialization</h3>
+
+<p>On the receiving side, the fact that Unjellying insists upon a
+user-registered class for each potential incoming instance reduces the risk
+that arbitrary code will be executed on behalf of remote clients. Only the
+classes that are added to the <code>unjellyableRegistry</code> need to be
+examined. Half of the security issues in RPC systems will boil down to the
+fact that these potential unserializing classes will have their
+<code>setCopyableState</code> methods called with a potentially hostile
+<code>state</code> argument. (the other half are that <code>remote_</code>
+methods can be called with arbitrary arguments, including instances that
+have been sent to that client at some point since the current connection was
+established). If the system is prepared to handle that, it should be in good
+shape security-wise.</p>
+
+<p>RPC systems which allow remote clients to create arbitrary objects in the
+local namespace are liable to be abused. Code gets run when objects are
+created, and generally the more interesting and useful the object, the more
+powerful the code that gets run during its creation. Such systems also have
+more assumptions that must be validated: code that expects to be given an
+object of class <code>A</code> so it can call <code>A.foo</code> could be
+given an object of class <code>B</code> instead, for which the
+<code>foo</code> method might do something drastically different. Validating
+the object is of the required type is much easier when the number of
+potential types is smaller.</p>
+
+<h3>Controlled Method Invocation</h3>
+
+<p>Objects which allow remote method invocation do not provide remote access
+to their attributes (<code>pb.Referenceable</code> and
+<code>pb.Copyable</code> are mutually exclusive). Remote users can only
+invoke a well-defined and clearly-marked subset of their methods: those with
+names that start with <code>remote_</code> (or other specific prefixes
+depending upon the variant of <code>Referenceable</code> in use). This
+insures that they can have local methods which cannot be invoked remotely.
+Complete object transparency would make this very difficult: the
+<q>translucent</q> reference scheme allows objects some measure of privacy
+which can be used to implement a security model. The
+<q><code>remote_</code></q> prefix makes all remotely-invokable methods easy
+to locate, improving the focus of a security audit.</p>
+
+<h3>Restricted Object Access</h3>
+
+<p>Objects sent by reference are indexed by a per-connection ID number,
+which is the only way for the remote end to refer back to that same object.
+This list means that the remote end can not touch objects that were not
+explicitly given to them, nor can they send back references to objects
+outside that list. This protects the program's memory space against the
+remote end: they cannot find other local objects to play with.</p>
+
+<p>This philosophy of using simple, easy to validate identifiers (integers
+in the case of PB) that are scoped to a well-defined trust boundary (in this
+case the Broker and the one remote system it is connected to) leads to
+better security. Imagine a C system which sent pointers to the remote end
+and hoped it would receive back valid ones, and the kind of damage a
+malicious client could do. PB's <code>.localObjects{}</code> table insures
+that any given client can only refer to things that were given to them. It
+isn't even a question of validating the identifier they send: if it isn't a
+value of the <code>.localObjects{}</code> dictionary, they have no physical
+way to get at it. The worst they can do with a corrupt ObjectID is to cause
+a <code>KeyError</code> when it is not found, which will be trapped and
+reported back.</p>
+
+<h3>Size Limits</h3>
+
+<p>Banana limits string objects to 640k (because, as the source says, 640k
+is all you'll ever need). There is a helper class called
+<code>pb.util.StringPager</code> that uses a producer/consumer interface to
+break up the string into separate pages and send them one piece at a time.
+This also serves to reduce memory consumption: rather than serializing the
+entire string and holding it in RAM while waiting for the transmit buffers
+to drain, the pages are only serialized as there is space for them.</p>
+
+
+<h2>Future Directions</h2>
+
+<p>PB can currently be carried over TCP and SSL connections, and through
+UNIX-domain sockets. It is being extended to run over UDP datagrams and a
+work-in-progress reliable datagram protocol called <q>airhook</q>. (clearly
+this requires changes to the authorization sequence, as it must all be done
+in a single packet: it might require some kind of public-key signature).</p>
+
+<p>At present, two functions are used to obtain the initial reference to a
+remote object: <code>pb.getObjectAt</code> and <code>pb.connect</code>. They
+take a variety of parameters to indicate where the remote process is
+listening, what kind of username/password should be used, and which exact
+object should be retrieved. This will be simplified into a <q>PB URL</q>
+syntax, making it possible to identify a remote object with a descriptive
+URL instead of a list of parameters.</p>
+
+<p>Another research direction is to implement <q>typed arguments</q>: a way
+to annotate the method signature to indicate that certain arguments may only
+be instances of a certain class. Reminiscent of the E language, this would
+help remote methods improve their security, as the common code could take
+care of class verification.</p>
+
+<p>Twisted provides a <q>componentization</q> mechanism to allow
+functionality to be split among multiple classes. A class can declare that
+all methods in a given list (the <q>interface</q>) are actually implemented
+by a companion class. Perspective Broker will be cleaned up to use this
+mechanism, making it easier to swap out parts of the protocol with different
+implementations.</p>
+
+<p>Finally, a comprehensive security audit and some performance improvements
+to the Jelly design are also in the works.</p>
+
+<!-- $Id: pb.html,v 1.1 2003/03/31 05:21:40 glyph Exp $ -->
+
+</body> </html>
