@@ -457,6 +457,7 @@ callFour: call on stale reference
 % 
 </pre>
 
+
 <p>In this example, <code>callTwo</code> tries to send an instance of a
 locally-defined class through <code>callRemote</code>. The default security
 model implemented by <code class="API" base="twisted.spread">pb.Jelly</code>
@@ -464,8 +465,9 @@ on the remote end will not allow unknown classes to be unserialized (i.e.
 taken off the wire as a stream of bytes and turned back into an object: a
 living, breathing instance of some class): one reason is that it does not
 know which local class ought to be used to create an instance that
-corresponds to the remote object.<span class="footnote"><p>The naive approach of
-simply doing <code>import
+corresponds to the remote object<!--   eat breaking space
+
+--><span class="footnote"><p>The naive approach of simply doing <code>import
 SomeClass</code> to match a remote caller who claims to have an object of
 type <q>SomeClass</q> could have nasty consequences for some modules that do
 significant operations in their <code>__init__</code> methods (think
@@ -481,7 +483,7 @@ base="twisted.spread">jelly</code>). The easiest way to make it possible to
 copy entire class instances over the wire is to have them inherit from <code
 class="API" base="twisted.spread">pb.Copyable</code>, and then to use
 <code>setUnjellyableForClass(remoteClass, localClass)</code> on the
-receiving side. See XXX for an example.</p></span>
+receiving side. See XXX for an example.</p></span>.
 
 The receiving end of the connection gets to decide what to accept and what
 to reject. It indicates its disapproval by raising a <code class="API"
@@ -490,6 +492,7 @@ at the remote end, the exception is returned to the caller asynchronously,
 so an <code>errback</code> handler for the associated <code>Deferred</code>
 is run. That errback receives a <code>Failure</code> which wraps the
 <code>InsecureJelly</code>.</p>
+
 
 <p>Remember that <code>trap</code> re-raises exceptions that it wasn't asked
 to look for. You can only check for one set of exceptions per errback
