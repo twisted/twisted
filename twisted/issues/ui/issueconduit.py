@@ -47,6 +47,7 @@ class ConduitNotifier(robot.IssueBotNotifier):
         robot.IssueBotNotifier.notifyFixerGone(self, issueFixer, issue)
         self.fixer = None
         self.conduit.recipient = "IssueBot"
+        self.conduit.die()
     
         
 class IConduitSession(components.Interface):
@@ -86,6 +87,8 @@ class ChatConduitSession(WordsClient):
         
     def die(self):
         self.service.deleteBot(self)
+        if self.request:
+            self.request.finish()
     def setRequest(self, request):        
         self.request = request
         for item in self.cached:
