@@ -142,3 +142,12 @@ this file directly.
     other protocols. (This depends on 008)
 
 030 Acceptance tests for DNS code.
+
+031 Abstract notion of "a group of people", at a higher level than a chat
+    group.
+
+032 Mailman-like mailing list functionality for twisted.mail.
+
+033 [[Glyph Lefkowitz]] Object Migration layer for Twisted Spread.
+
+034 Voice & video streaming for Twisted Words.
