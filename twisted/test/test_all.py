@@ -18,6 +18,7 @@ import test_pb
 import test_todo
 import test_explorer
 import test_banana
+import test_rebuild
 from pyunit import unittest
 
 
@@ -37,6 +38,7 @@ def testSuite():
              test_dirdbm.testCases     + test_jelly.testCases     +
              test_pb.testCases         + test_todo.testCases      +
              test_explorer.testCases   + test_banana.testCases    +
+             test_rebuild.testCases    +
              # Leave this one at the end.
              test_import.testCases)
     return makeBigSuite(cases)

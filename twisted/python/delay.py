@@ -9,15 +9,20 @@ twisted.reality and twisted.net; see the documentation for
 twisted.reality.Reality and twisted.net.Selector for details.
 """
 
+# System Imports
 import os
 import sys
 import traceback
+import copy
 
 if os.name != 'java':
     import errno
 
 from time import sleep, time
 from bisect import insort
+
+# Sibling Imports
+import rebuild
 
 TICKS = 0
 FUNC  = 1
@@ -46,6 +51,9 @@ class Looping:
         self.ticks = ticks
         self.func = func
         self.delayed = delayed
+
+    def rebuildUpdate(self, updater):
+        self.func = updater(self.func)
 
     def stop(self):
         """Externally stop a looped event from recurring.
@@ -83,6 +91,10 @@ class Steps(Looping):
         self.list=list
         self.func2=func
 
+    def rebuildUpdate(self, updater):
+        Looping.rebuild(self)
+        self.func2 = updater(self.func2)
+
     def step(self):
         """Execute one step through.
         """
@@ -117,8 +129,10 @@ class Later:
             self.running = 0
             del self.func
 
+    def rebuildUpdate(self, updater):
+        self.func = updater(self.func)
 
-class Delayed:
+class Delayed(rebuild.Sensitive):
     """I am a delayed event queue.
 
     A delayed event scheduler which, in my humble but correct opinion, is much
@@ -226,6 +240,15 @@ class Delayed:
         (I would say "increments", but it actually decrements it for
         simplicity of implementation reasons. -glyph)
         """
+        if self.needRebuildUpdate():
+            print "Rebuilding Delayed Event Queue..."
+            for ticks, func, args in self.queue:
+                # it's going to be an instance of one of the above, so just
+                # pull on its instance.
+                func.im_self.rebuildUpdate(self.latestVersionOf)
+            self.rebuildUpToDate()
+            print "Rebuilt."
+            
         self.last_tick = time()
         sticks = self.ticks - 1
         self.ticks = sticks
