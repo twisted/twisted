@@ -19,7 +19,7 @@
 I am a support module for making SSH servers with mktap.
 """
 
-from twisted.secsh import factory
+from twisted.conch import factory
 from twisted.python import usage
 import sys
 
