@@ -1594,7 +1594,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if uid and not seenUID:
             response[:0] = [D('UID'), msg.getUID()]
         
-        L = [D('*'), D(msgId), D('FETCH'), response, D('\r\n')]
+        L = [D('* %d FETCH ' % msgId), response, D('\r\n')]
         self.blocked = []
         return ProducerChain(
             ).beginProducing(self.transport, produceNestedLists(L)
@@ -3649,6 +3649,65 @@ def collapseNestedLists(items):
             pieces.extend([' ', '(%s)' % (collapseNestedLists(i),)])
     return ''.join(pieces[1:])
 
+def produceNestedLists(items):
+    """Turn a nested list structure into a producer.
+
+    Strings in C{items} will be sent as literals if they contain CR or LF,
+    otherwise they will be quoted.  References to None in C{items} will be
+    translated to the atom NIL.  Objects with a 'read' attribute will have
+    it called on them with no arguments and the returned string will be
+    inserted into the output as a literal.  Integers will be converted to
+    strings and inserted into the output unquoted.  Instances of
+    C{DontQuoteMe} will be converted to strings and inserted into the output
+    unquoted.
+    
+    This function used to be much nicer, and only quote things that really
+    needed to be quoted (and C{DontQuoteMe} did not exist), however, many
+    broken IMAP4 clients were unable to deal with this level of sophistication,
+    forcing the current behavior to be adopted for practical reasons.
+
+    @type items: Any iterable
+
+    @rtype: C{str}
+    """
+    top = True
+    pieces = []
+    for i in items:
+        if i is None:
+            pieces.extend([' ', 'NIL'])
+        elif isinstance(i, (DontQuoteMe, int, long)):
+            pieces.extend([' ', str(i)])
+        elif isinstance(i, types.StringTypes):
+            if _needsLiteral(i):
+                pieces.extend([' ', '{', str(len(i)), '}', IMAP4Server.delimiter, i])
+            else:
+                pieces.extend([' ', _quote(i)])
+        elif hasattr(i, 'read'):
+            b = i.tell()
+            i.seek(2, 0)
+            e = i.tell()
+            i.seek(0, b)
+            pieces.extend([' ', '{', str(e - b), '}', IMAP4Server.delimiter])
+            if top:
+                top = False
+                pieces.pop(0)
+            yield StringProducer(''.join(pieces))
+            pieces = []
+            yield FileProducer(d)
+        else:
+            if top:
+                top = False
+                pieces.pop(0)
+            yield StringProducer(''.join(pieces) + ' (')
+            pieces = []
+            for p in produceNestedLists(i):
+                yield p
+            yield StringProducer(')')
+    if top:
+        top = False
+        pieces.pop(0)
+    yield StringProducer(''.join(pieces))
+
 class IClientAuthentication(components.Interface):
     def getName(self):
         """Return an identifier associated with this authentication scheme.
@@ -4775,22 +4834,24 @@ class ProducerChain:
         self.producers = iter(producers)
         
         self.prod = self.producers.next()
-        self.prod.produce = self.consumer.write
+        self.prod.produce = lambda s: self.consumer.write(s)
         d = self._onDone = defer.Deferred()
         self.consumer.registerProducer(self, False)
         return d
 
     def resumeProducing(self):
-        self.prod.resumeProducing()
-        if getattr(self.prod, 'finishedProducing', False):
-            try:
-                self.prod = self.producers.next()
-            except StopIteration:
-                self.consumer.unregisterProducer()
-                self._onDone.callback(self)
-                self._onDone = self.consumer = self.prod = None
-            else:
-                self.prod.produce = self.consumer.write
+        while True:
+            self.prod.resumeProducing()
+            if getattr(self.prod, 'finishedProducing', False):
+                try:
+                    self.prod = self.producers.next()
+                except StopIteration:
+                    self.consumer.unregisterProducer()
+                    self._onDone.callback(self)
+                    self._onDone = self.consumer = self.prod = None
+                    break
+                else:
+                    self.prod.produce = self.consumer.write
 
     def pauseProducing(self):
         pass
@@ -4825,63 +4886,6 @@ class FileProducer:
             self.f = None
         else:
             self.produce(b)
-
-def produceNestedLists(items, top=True):
-    """Turn a nested list structure into an iterable of Producers.
-
-    Strings in C{items} will be sent as literals if they contain CR or LF,
-    otherwise they will be quoted.  References to None in C{items} will be
-    translated to the atom NIL.  Objects with a 'read' attribute will have
-    it called on them with no arguments and the returned string will be
-    inserted into the output as a literal.  Integers will be converted to
-    strings and inserted into the output unquoted.  Instances of
-    C{DontQuoteMe} will be converted to strings and inserted into the output
-    unquoted.
-    
-    This function used to be much nicer, and only quote things that really
-    needed to be quoted (and C{DontQuoteMe} did not exist), however, many
-    broken IMAP4 clients were unable to deal with this level of sophistication,
-    forcing the current behavior to be adopted for practical reasons.
-
-    @type items: Any iterable
-
-    @rtype: C{str}
-    """
-    pieces = []
-    for i in items:
-        if i is None:
-            pieces.extend([' ', 'NIL'])
-        elif isinstance(i, (DontQuoteMe, int, long)):
-            pieces.extend([' ', str(i)])
-        elif isinstance(i, types.StringTypes):
-            if _needsLiteral(i):
-                pieces.extend([' ', '{', str(len(i)), '}', IMAP4Server.delimiter, i])
-            else:
-                pieces.extend([' ', _quote(i)])
-        elif hasattr(i, 'read'):
-            b = i.tell()
-            i.seek(0, 1)
-            e = i.tell()
-            i.seek(0, b)
-            pieces.extend([' ', '{', str(e - b), '}', IMAP4Server.delimiter])
-            if not top:
-                pieces.pop(0)
-            yield StringProducer(''.join(pieces))
-            yield FileProducer(i)
-            pieces = []
-        else:
-            pieces.append(' (')
-            if not top:
-                pieces.pop(0)
-            yield StringProducer(''.join(pieces))
-            for p in produceNestedLists(i, False):
-                yield p
-            pieces = [')']
-    import pdb; pdb.Pdb().set_trace()
-    if pieces:
-        if not top:
-            pieces.pop(0)
-        yield StringProducer(''.join(pieces))
 
 def parseTime(s):
     # XXX - This may require localization :(
