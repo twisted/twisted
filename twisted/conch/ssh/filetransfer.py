@@ -800,7 +800,7 @@ class SFTPFile:
 
     def writeChunk(self, offset, data):
         return self.server._runAsUser([(os.lseek, self.fd, offset, 0),
-                                       (os.write, self.fd, 0)])
+                                       (os.write, self.fd, data)])
 
     def getAttrs(self):
         s = self.server._runAsUser(os.fstat, self.fd)
