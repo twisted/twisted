@@ -251,8 +251,10 @@ root = static.File("/var/www/htdocs")
 root.indices=['index.rpy']
 root.processors = {'.rpy': script.ResourceScript}
 application = service.Application('web')
+sc = service.IServiceCollection(application)
 site = server.Site(root)
-internet.TCPServer(80, site).setServiceParent(service.IServiceCollection(application))
+i = internet.TCPServer(80, site)
+i.setServiceParent(sc)
 </pre>
 
 <p><code>File</code> objects also have a method called <code>ignoreExt</code>.
