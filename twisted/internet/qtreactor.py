@@ -28,7 +28,7 @@ import sys
 from twisted.python import log, threadable, failure
 
 # Sibling Imports
-import default
+import posixbase
 
 reads = {}
 writes = {}
@@ -94,12 +94,12 @@ class TwistedSocketNotifier(QSocketNotifier):
 _timer = None
 
 
-class QTReactor(default.PosixReactorBase):
+class QTReactor(posixbase.PosixReactorBase):
     """Qt based reactor."""
 
     def __init__(self, app=None):
         self.running = 1
-        default.PosixReactorBase.__init__(self)
+        posixbase.PosixReactorBase.__init__(self)
         if app is None:
             app = QApplication([])
         self.qApp = app

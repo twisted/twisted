@@ -73,7 +73,7 @@ from twisted.python import log, failure
 
 # Sibling imports
 import main
-import default
+import posixbase
 
 # globals
 reads = {}
@@ -82,7 +82,7 @@ selectables = {}
 kq = kqueue()
 
 
-class KQueueReactor(default.PosixReactorBase):
+class KQueueReactor(posixbase.PosixReactorBase):
     """A reactor that uses kqueue(2)/kevent(2)."""
 
     def _updateRegistration(self, *args):

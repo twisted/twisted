@@ -41,10 +41,10 @@ from twisted.python import log, threadable, runtime, failure, components
 from twisted.internet.interfaces import IReactorFDSet
 
 # Sibling Imports
-from twisted.internet import main, default, error
+from twisted.internet import main, posixbase, error, selectreactor
 
-reads = default.reads
-writes = default.writes
+reads = {}
+writes = {}
 hasReader = reads.has_key
 hasWriter = writes.has_key
 
@@ -65,7 +65,7 @@ def _our_mainquit():
     if gtk.main_level():
         gtk.main_quit()
 
-class Gtk2Reactor(default.PosixReactorBase):
+class Gtk2Reactor(posixbase.PosixReactorBase):
     """GTK+-2 event loop reactor.
     """
 
@@ -74,7 +74,7 @@ class Gtk2Reactor(default.PosixReactorBase):
     def __init__(self, useGtk=True):
         self.context = gobject.main_context_default()
         self.loop = gobject.MainLoop()
-        default.PosixReactorBase.__init__(self)
+        posixbase.PosixReactorBase.__init__(self)
         # pre 2.3.91 the glib iteration and mainloop functions didn't release
         # global interpreter lock, thus breaking thread and signal support.
         if (hasattr(gobject, "pygtk_version") and gobject.pygtk_version >= (2, 3, 91)
@@ -96,7 +96,7 @@ class Gtk2Reactor(default.PosixReactorBase):
             # (wrapping glib-2.4.7) does. python-gtk=2.0.0 (wrapping
             # glib-2.2.3) does not.
             gobject.threads_init()
-        default.PosixReactorBase.initThreads(self)
+        posixbase.PosixReactorBase.initThreads(self)
     
     # The input_add function in pygtk1 checks for objects with a
     # 'fileno' method and, if present, uses the result of that method
@@ -223,7 +223,7 @@ class Gtk2Reactor(default.PosixReactorBase):
 components.backwardsCompatImplements(Gtk2Reactor)
 
 
-class PortableGtkReactor(default.SelectReactor):
+class PortableGtkReactor(selectreactor.SelectReactor):
     """Reactor that works on Windows.
 
     input_add is not supported on GTK+ for Win32, apparently.

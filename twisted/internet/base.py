@@ -23,9 +23,8 @@ except ImportError:
     fcntl = None
 import traceback
 
-from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorUNIX, IReactorUNIXDatagram, IReactorThreads
-from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorSSL
-from twisted.internet.interfaces import IReactorProcess, IReactorPluggableResolver
+from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorThreads
+from twisted.internet.interfaces import IReactorPluggableResolver
 from twisted.internet.interfaces import IConnector, IDelayedCall
 from twisted.internet import main, error, abstract, defer
 from twisted.python import threadable, log, failure, reflect, components

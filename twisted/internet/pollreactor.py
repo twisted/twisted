@@ -20,7 +20,7 @@ import select, errno, sys
 
 # Twisted imports
 from twisted.python import log, threadable, failure
-from twisted.internet import main, default, error
+from twisted.internet import main, posixbase, error
 
 # globals
 reads = {}
@@ -31,7 +31,7 @@ poller = select.poll()
 POLL_DISCONNECTED = (select.POLLHUP | select.POLLERR | select.POLLNVAL)
 
 
-class PollReactor(default.PosixReactorBase):
+class PollReactor(posixbase.PosixReactorBase):
     """A reactor that uses poll(2)."""
 
     def _updateRegistration(self, fd):

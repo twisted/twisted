@@ -36,10 +36,10 @@ from twisted.python import log, threadable, runtime, failure, components
 from twisted.internet.interfaces import IReactorFDSet
 
 # Sibling Imports
-from twisted.internet import main, default
+from twisted.internet import main, posixbase, selectreactor
 
-reads = default.reads
-writes = default.writes
+reads = {}
+writes = {}
 hasReader = reads.has_key
 hasWriter = writes.has_key
 
@@ -47,7 +47,7 @@ hasWriter = writes.has_key
 _simtag = None
 
 
-class GtkReactor(default.PosixReactorBase):
+class GtkReactor(posixbase.PosixReactorBase):
     """GTK+ event loop reactor.
     """
 
@@ -160,7 +160,7 @@ class GtkReactor(default.PosixReactorBase):
 components.backwardsCompatImplements(GtkReactor)
 
 
-class PortableGtkReactor(default.SelectReactor):
+class PortableGtkReactor(selectreactor.SelectReactor):
     """Reactor that works on Windows.
 
     input_add is not supported on GTK+ for Win32, apparently.

@@ -8,5 +8,5 @@ import sys
 del sys.modules['twisted.internet.reactor']
 #from twisted.python import log
 #log.msg("Installing SelectReactor, since unspecified.")
-from twisted.internet import default
-default.install()
+from twisted.internet import selectreactor
+selectreactor.install()

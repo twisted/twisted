@@ -31,7 +31,7 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 
 from twisted.python.runtime import seconds
 from twisted.python import log
-from twisted.internet import default
+from twisted.internet import selectreactor
 
 from wxPython.wx import wxTimer, wxApp
 
@@ -59,7 +59,7 @@ class DummyApp(wxApp):
         return True
 
 
-class WxReactor(default.SelectReactor):
+class WxReactor(selectreactor.SelectReactor):
     """wxPython reactor.
 
     wx drives the event loop, and calls Twisted every millisecond, and
@@ -71,7 +71,7 @@ class WxReactor(default.SelectReactor):
         self.wxapp = wxapp
     
     def crash(self):
-        default.SelectReactor.crash(self)
+        selectreactor.SelectReactor.crash(self)
         self.timer.Stop()
         del self.timer
         self.wxapp.ExitMainLoop()

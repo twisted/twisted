@@ -31,7 +31,7 @@ ALTERNATIVE SOLUTIONS:
 
 Or:
 
- - Instead of doing a reactor, we make this an addon to the default reactor.
+ - Instead of doing a reactor, we make this an addon to the select reactor.
    The WFMO event loop runs in a separate thread. This means no need to maintain
    separate code for networking, 64 event limit doesn't apply to sockets,
    we can run processes and other win32 stuff in default event loop. The
@@ -59,7 +59,7 @@ import msvcrt
 import win32gui
 
 # Twisted imports
-from twisted.internet import abstract, default, main, error
+from twisted.internet import abstract, posixbase, main, error
 from twisted.python import log, threadable, failure, components
 from twisted.internet.interfaces import IReactorFDSet
 
@@ -79,7 +79,7 @@ writes = {}
 events = {}
 
 
-class Win32Reactor(default.PosixReactorBase):
+class Win32Reactor(posixbase.PosixReactorBase):
     """Reactor that uses Win32 event APIs."""
 
     implements(IReactorFDSet)

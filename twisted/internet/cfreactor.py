@@ -30,7 +30,7 @@ import sys
 import cfsupport as cf
 
 from twisted.python import log, threadable, failure
-from twisted.internet import default, error
+from twisted.internet import posixbase, error
 from weakref import WeakKeyDictionary
 
 # cache two extremely common "failures" without traceback info
@@ -159,7 +159,7 @@ class SelectableSocketWrapper(object):
     def __hash__(self):
         return hash(self.fd)
 
-class CFReactor(default.PosixReactorBase):
+class CFReactor(posixbase.PosixReactorBase):
     # how long to poll if we're don't care about signals
     longIntervalOfTime = 60.0 
 
@@ -180,7 +180,7 @@ class CFReactor(default.PosixReactorBase):
         self.inheritedRunLoop = runLoop is not None 
         if self.inheritedRunLoop:
             self.getRunLoop(runLoop)
-        default.PosixReactorBase.__init__(self)
+        posixbase.PosixReactorBase.__init__(self)
 
     def installWaker(self):
         # I don't know why, but the waker causes 100% CPU
@@ -253,7 +253,7 @@ class CFReactor(default.PosixReactorBase):
             self.crashing = False
 
     def callLater(self, howlong, *args, **kwargs):
-        rval = default.PosixReactorBase.callLater(self, howlong, *args, **kwargs)
+        rval = posixbase.PosixReactorBase.callLater(self, howlong, *args, **kwargs)
         if self.timer:
             timeout = self.timeout()
             if timeout is None:
@@ -329,7 +329,7 @@ class CFReactor(default.PosixReactorBase):
     def stop(self):
         if not self.running:
             raise ValueError, "Can't stop a stopped reactor"
-        default.PosixReactorBase.stop(self)
+        posixbase.PosixReactorBase.stop(self)
 
 def install(runLoop=None):
     """Configure the twisted mainloop to be run inside CFRunLoop.
