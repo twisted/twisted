@@ -173,16 +173,18 @@ class Model:
         in.
         """
         if changed is None: changed = {}
+        retVal = []
         for view in self.views:
             ref = view()
             if ref is not None:
-                ref.modelChanged(changed)
+                retVal.append(ref.modelChanged(changed))
         for key, value in self.subviews.items():
             if changed.has_key(key):
                 for item in value:
                     ref = item()
                     if ref is not None:
-                        ref.modelChanged(changed)
+                        retVal.append(ref.modelChanged(changed))
+        return retVal
 
     def __eq__(self, other):
         if other is None: return 0

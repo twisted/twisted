@@ -87,9 +87,11 @@ class Widget(mvc.View):
        - we are really being called to enable an operation on an attribute
          of the model, which we will call the submodel
 
-    @cvar tagName: The tag name of the element that this widget creates. If this
-          is None, then the original Node will be cloned.
-    @cvar wantsAllNotifications: [XXX document ???]
+    @cvar tagName: The tag name of the DOM element that this widget creates. 
+          If this is None, then the original Node will be cloned.
+    @cvar wantsAllNotifications: Indicate that this widget wants to recieve every
+          change notification from the main model, not just notifications that affect
+          it's model.
     """
 
     wantsAllNotifications = 0
@@ -102,6 +104,7 @@ class Widget(mvc.View):
         self.become = None
         self.children = []
         self.node = None
+        self.templateNode = None
         if submodel:
             self.submodel = submodel
         else:
@@ -173,6 +176,10 @@ class Widget(mvc.View):
         Set a node for this widget to use instead of creating one programatically.
         Useful for looking up a node in a template and using that.
         """
+        # self.templateNode should always be the original, unmutated
+        # node that was in the HTML template.
+        if self.templateNode == None:
+            self.templateNode = node
         self.node = node
 
     def cleanNode(self, node):
@@ -195,7 +202,9 @@ class Widget(mvc.View):
             data.addErrback(renderFailure, request)
             return data
         self.setUp(request, node, data)
-        result = self.generateDOM(request, node)
+        # generateDOM should always get a reference to the
+        # templateNode from the original HTML
+        result = self.generateDOM(request, self.templateNode)
         return result
     
     def setDataCallback(self, result, request, node):
@@ -206,7 +215,9 @@ class Widget(mvc.View):
             data.addErrback(renderFailure, request)
             return data
         self.setUp(request, node, data)
-        return self.generateDOM(request, node)
+        # generateDOM should always get a reference to the
+        # templateNode from the original HTML
+        return self.generateDOM(request, self.templateNode)
     
     def setUp(self, request, node, data):
         """
@@ -266,12 +277,15 @@ class Widget(mvc.View):
         else:
             data = self.getData()
         self.children = []
-        self.setUp(request, oldNode, data)
-        newNode = self.generateDOM(request, oldNode)
+        # generateDOM should always get a reference to the
+        # templateNode from the original HTML
+        self.setUp(request, self.templateNode, data)
+        newNode = self.generateDOM(request, self.templateNode)
         mutator = template.NodeNodeMutator(newNode)
         mutator.d = request.d
         mutator.generate(request, oldNode)
         self.node = newNode
+        return newNode
     
     def __setitem__(self, item, value):
         """
@@ -289,7 +303,10 @@ class Widget(mvc.View):
 
     def setError(self, request, message):
         """
-        XXX: Document
+        Convenience method for allowing a Controller to report an error to the
+        user. When this is called, a Widget of class self.errorFactory is instanciated
+        and set to self.become. When generate is subsequently called, self.become
+        will be responsible for mutating the DOM instead of this widget.
         """
         self.become = self.errorFactory(self.model, message)
 

@@ -233,8 +233,10 @@ class WView(template.DOMTemplate):
             if request.args.has_key(node.getAttribute('name')):
                 del request.args[node.getAttribute('name')]
             result = controller.commit(request, node, data)
-            self.model.notify({'request': request, controller.submodel: data})
-            self.recurseChildren(request, controller.view.node)
+            returnNodes = self.model.notify({'request': request, controller.submodel: data})
+            for newNode in returnNodes:
+                if newNode is not None:
+                    self.recurseChildren(request, newNode)
             if isinstance(result, defer.Deferred):
                 self.outstandingCallbacks += 1
                 result.addCallback(self.handleCommitCallback, request)

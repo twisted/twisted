@@ -132,7 +132,7 @@ try:
     components.registerAdapter(ListModel, types.ListType, mvc.IModel)
     components.registerAdapter(DictionaryModel, types.DictionaryType, mvc.IModel)
     components.registerAdapter(Wrapper, types.StringType, mvc.IModel)
-    components.registerAdapter(Wrapper, types.TupleType, mvc.IModel)
+    components.registerAdapter(ListModel, types.TupleType, mvc.IModel)
     components.registerAdapter(Wrapper, defer.Deferred, mvc.IModel)
 except ValueError:
     # The adapters were already registered
