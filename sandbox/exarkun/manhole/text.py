@@ -19,7 +19,7 @@ class _Attribute(object):
             attrs = helper.CharacterAttribute()
         for ch in self.children:
             if isinstance(ch, str):
-                write(attrs.toVT102(only=True))
+                write(attrs.toVT102())
                 write(ch)
             else:
                 ch.serialize(write, attrs.copy())
@@ -41,10 +41,7 @@ class _OtherAttr(_Attribute):
         return result
 
     def serialize(self, write, attrs):
-        if self.attrvalue:
-            setattr(attrs, self.attrname, True)
-        else:
-            setattr(attrs, self.attrname, False)
+        attrs = attrs.wantOne(**{self.attrname: self.attrvalue})
         super(_OtherAttr, self).serialize(write, attrs)
 
 class _ColorAttr(_Attribute):
@@ -53,8 +50,8 @@ class _ColorAttr(_Attribute):
         self.ground = ground
         self.children = []
 
-    def serialize(self, write, attrs=None):
-        setattr(attrs, self.ground, self.color)
+    def serialize(self, write, attrs):
+        attrs = attrs.wantOne(**{self.ground: self.color})
         super(_ColorAttr, self).serialize(write, attrs)
 
 class _ForegroundColorAttr(_ColorAttr):

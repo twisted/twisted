@@ -12,7 +12,9 @@ class CharacterAttribute:
     def __init__(self, charset=insults.G0,
                  bold=False, underline=False,
                  blink=False, reverseVideo=False,
-                 foreground=WHITE, background=BLACK):
+                 foreground=WHITE, background=BLACK,
+
+                 _subtracting=False):
         self.charset = charset
         self.bold = bold
         self.underline = underline
@@ -20,6 +22,8 @@ class CharacterAttribute:
         self.reverseVideo = reverseVideo
         self.foreground = foreground
         self.background = background
+
+        self._subtracting = _subtracting
 
         # print 'Made', vars(self)
 
@@ -34,11 +38,21 @@ class CharacterAttribute:
         c.__dict__.update(vars(self))
         return c
 
-    def toVT102(self, only=False):
+    def wantOne(self, **kw):
+        k, v = kw.popitem()
+        if getattr(self, k) != v:
+            attr = self.copy()
+            attr._subtracting = not v
+            setattr(attr, k, v)
+            return attr
+        else:
+            return self.copy()
+
+    def toVT102(self):
         # Spit out a vt102 control sequence that will set up
         # all the attributes set here.  Except charset.
         attrs = []
-        if only:
+        if self._subtracting:
             attrs.append(0)
         if self.bold:
             attrs.append(insults.BOLD)
@@ -52,7 +66,9 @@ class CharacterAttribute:
             attrs.append(FOREGROUND + self.foreground)
         if self.background != BLACK:
             attrs.append(BACKGROUND + self.background)
-        return '\x1b[' + ';'.join(map(str, attrs)) + 'm'
+        if attrs:
+            return '\x1b[' + ';'.join(map(str, attrs)) + 'm'
+        return ''
 
 # XXX - need to support scroll regions and scroll history
 class TerminalBuffer(protocol.Protocol):
