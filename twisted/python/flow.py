@@ -71,9 +71,8 @@ class Flow:
     def addContext(self, onFlush = None):
         return self.append(FlowContext(onFlush))
 
-    def addAccumulator(self, accum, start = None, 
-                       finish = None, bucket = None):
-        stage = FlowAccumulator(accum, start, finish, bucket)
+    def addAccumulator(self, accum, start = None, bucket = None):
+        stage = FlowAccumulator(accum, start, bucket)
         return self.append(stage)
 
     def addChain(self, *args):
@@ -108,6 +107,12 @@ class FlowStack:
         self.context = _FlowContext()
         self._stack.append((self.context, self.context.onFlush, None))
         self._stack.append((data, flowitem.stage, flowitem.next))
+    #
+    def nextLinkItem(self):
+        '''
+            returns the next stage in the process
+        '''
+        return self._current[2]
     # 
     def push(self, data, stage=None, next=None, mayskip = 0):
         '''
@@ -119,7 +124,7 @@ class FlowStack:
         '''
         if not stage:
             # assume the next stage in the process
-            curr = self._current[2]
+            curr = self.nextLinkItem()
             if curr:
                 stage = curr.stage
                 next  = curr.next
@@ -224,7 +229,7 @@ class FlowContext(FlowStage):
         '''
         cntx = _FlowContext(flow.context)
         if self.onFlush: 
-            cntx.addFlush(self.onFlush)
+            cntx.addFlush(FlowLinkItem(self.onFlush))
         flow.context = cntx
         flow.push(cntx, cntx.onFlush)
         flow.push(data)
@@ -245,20 +250,12 @@ class _FlowContext:
         self._flush  = []
         self._dict   = {}
     #
-    def addFlush(self, onFlush, bucket = None):
+    def addFlush(self, flowLink, bucket = None):
         ''' 
-           adds a function to be called, optionally with
-           a 'context' attribute, or a key in the given
-           mapping
+           registers a flowLink to be executed using data from the
+           given bucket once the context has been popped.
         '''
-        args = onFlush.func_code.co_argcount
-        if 0 == args: 
-           fnc = lambda flow, cntx: onFlush()
-        elif 1 == args:
-           fnc = lambda flow, cntx: onFlush(cntx.get(bucket,None))
-        else:
-           fnc = onFlush
-        self._flush.append(fnc)
+        self._flush.append((flowLink, bucket))
     #
     def onFlush(self, flow, cntx):
         '''
@@ -266,9 +263,9 @@ class _FlowContext:
         '''
         assert flow.context is self
         assert flow.context is cntx
-        fncs = self._flush
-        while fncs: 
-             flow.push(self, fncs.pop())
+        for link, bucket in self._flush:
+            data = self.get(bucket, None)
+            flow.push(data, link.stage, link.next)
         flow.context = self._parent
     #
     #  Making the flow context emulate a mapping,
@@ -333,12 +330,11 @@ class FlowAccumulator(FlowStage):
         many-to-one behavior;  for the accumulator to work, it
         requires a FlowContext be higher up the call stack
     '''
-    def __init__(self, accum, start = None, finish = None, bucket = None):
+    def __init__(self, accum, start = None, bucket = None):
         if not bucket: bucket = id(self)
-        self.bucket  = str(bucket)
-        self.start   = start
-        self.accum   = accum
-        self.finish  = finish
+        self.bucket   = str(bucket)
+        self.start    = start
+        self.accum    = accum
     #
     def __call__(self, flow, data):
         '''
@@ -348,13 +344,15 @@ class FlowAccumulator(FlowStage):
         if self.bucket in cntx:
              acc = cntx[self.bucket]
         else: 
-             if self.finish: 
-                 cntx.addFlush(self.finish, self.bucket)
+             cntx.addFlush(flow.nextLinkItem(), self.bucket)
              acc = self.start
              if callable(acc): acc = acc()
         acc = self.accum(acc, data)
         cntx[self.bucket] = acc
-        flow.push(data, mayskip = 1)
+
+    def onFinish(self, flow, data): 
+        pass
+
 
 class FlowLinkItem:
     '''
@@ -409,7 +407,6 @@ class _TunnelIterator:
         self.isFinished = 0
         self.failure    = None
         self.buff       = []
-        self.append     = self.buff.append
     #
     def process(self):
         '''
@@ -421,7 +418,7 @@ class _TunnelIterator:
         try:
             while 1:
                 val = self.source.next()
-                callFromThread(self.append,val)
+                callFromThread(self.buff.append,val)
         except StopIteration:
             callFromThread(self.stop)
     #
@@ -447,7 +444,6 @@ class FlowQueryIterator(FlowIterator):
         self.sql  = sql
         self.pool = pool
         self.data = None
-        self._tunnel.append = self._tunnel.buff.extend
     #
     def __call__(self,data):
         self.data = data
