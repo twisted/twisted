@@ -460,7 +460,6 @@ def wrap(obj, *trap):
                 d.addCallback(lambda _: reactor.stop())
                 reactor.run()
           
-            # constuct a flow from a string 
             source = "string"
             printFlow(source)
 
@@ -518,6 +517,20 @@ class Filter(Stage):
         returns true.   If the function is None, the identity 
         function is assumed, that is, all items yielded that are
         false (zero or empty) are discarded.
+
+            def odd(val):
+                if val % 2:
+                    return True
+            
+            def range():
+                yield 1
+                yield 2
+                yield 3
+                yield 4
+            
+            source = flow.Filter(odd,range)
+            printFlow(source)
+
     """
     def __init__(self, func, stage, *trap):
         Stage.__init__(self, *trap)
@@ -525,17 +538,21 @@ class Filter(Stage):
         self.stage = wrap(stage)
 
     def _yield(self):
-        if self.results or self.stop or self.failure:
+        if self.stop or self.failure:
             return
         stage = self.stage
-        instruction = stage._yield()
-        if instruction:
-            return instruction
-        self.results.extend(filter(self.func,stage.results))
-        if stage.stop:
-            self.stop = 1
-        if stage.failure:
-            self.failure = stage.failure
+        while not self.results:
+            instruction = stage._yield()
+            if instruction:
+                return instruction
+            self.results.extend(filter(self.func,stage.results))
+            stage.results = []
+            if stage.stop:
+                self.stop = 1
+                return
+            if stage.failure:
+                self.failure = stage.failure
+                return
 
 class Map(Stage):
     """ flow equivalent to map:  Map(function, stage, ... )
@@ -548,6 +565,13 @@ class Map(Stage):
         the identity function is assumed; if there are multiple list
         arguments, Map stage returns a sequence consisting of tuples
         containing the corresponding items from all lists.
+
+            def fn(val):
+                return val + 10
+            
+            source = flow.Map(fn,range(4))
+            printFlow(source)
+            
     """
     def __init__(self, func, stage, *stages):
         Stage.__init__(self)

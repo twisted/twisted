@@ -278,6 +278,15 @@ class FlowTest(unittest.TestCase):
         rhs = list(flow.Block(mrg))
         self.assertEqual(lhs,rhs)
 
+    def testFilter(self):
+        def odd(val):
+            if val % 2:
+                return True
+        lhs = [ 1, 3 ]
+        mrg = flow.Filter(odd,slowlist([1,2,flow.Cooperate(),3]))
+        rhs = list(flow.Block(mrg))
+        self.assertEqual(lhs,rhs)
+
     def testDeferred(self):
         lhs = ['Title', (1,'one'),(2,'two'),(3,'three')]
         d = flow.Deferred(consumer())
