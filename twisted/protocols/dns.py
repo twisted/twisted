@@ -1129,13 +1129,6 @@ class DNSDatagramProtocol(protocol.DatagramProtocol):
         self.resends = {}
         self.id = random.randrange(2 ** 10, 2 ** 15)
 
-
-    def __getstate__(self):
-        d = self.__dict__.copy()
-        d['transport'] = None
-        return d
-
-
     def pickID(self):
         while 1:
             self.id += randomSource() % (2 ** 10)
@@ -1148,6 +1141,10 @@ class DNSDatagramProtocol(protocol.DatagramProtocol):
         self.liveMessages = {}
         self.resends = {}
         self.transport = None
+
+	def startProtocol(self):
+		self.liveMessages = {}
+		self.resends = {}
 
     def writeMessage(self, message, address):
         if not self.transport:
@@ -1169,8 +1166,8 @@ class DNSDatagramProtocol(protocol.DatagramProtocol):
             del self.liveMessages[m.id]
             try:
                 d.callback(m)
-            except Exception, e:
-                print e
+            except:
+                log.err()
 
 
     def query(self, address, queries, timeout = 10, id = None):
@@ -1255,7 +1252,10 @@ class DNSProtocol(protocol.Protocol):
                 del self.liveMessages[m.id]
                 try:
                     d.callback(m)
-                except: pass
+                except:
+                    log.err()
+            self.length = None
+            self.buffer = ''
 
 
     def query(self, queries, timeout = None):

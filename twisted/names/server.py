@@ -175,7 +175,7 @@ class DNSServerFactory(protocol.ServerFactory):
             log.msg("Unknown op code (%d) from %r" % (message.opCode, address))
 
 
-    def messageReceived(self, message, protocol, address = None):
+    def messageReceived(self, message, proto, address = None):
         message.timeReceived = time.time()
     
         if self.verbose:
@@ -185,26 +185,26 @@ class DNSServerFactory(protocol.ServerFactory):
                 s = ' '.join([dns.QUERY_TYPES.get(q.type, 'UNKNOWN') for q in message.queries])
 
             if not len(s):
-                log.msg("Empty query from %r" % ((address or protocol.transport.getPeer()),))
+                log.msg("Empty query from %r" % ((address or proto.transport.getPeer()),))
             else:
-                log.msg("%s query from %r" % (s, address or protocol.transport.getPeer()))
+                log.msg("%s query from %r" % (s, address or proto.transport.getPeer()))
 
         message.recAv = self.canRecurse
         message.answer = 1
 
-        if not self.allowQuery(message, protocol, address):
+        if not self.allowQuery(message, proto, address):
             message.rCode = dns.EREFUSED
-            self.sendReply(protocol, message, address)
+            self.sendReply(proto, message, address)
         elif message.opCode == dns.OP_QUERY:
-            self.handleQuery(message, protocol, address)
+            self.handleQuery(message, proto, address)
         elif message.opCode == dns.OP_INVERSE:
-            self.handleInverseQuery(message, protocol, address)
+            self.handleInverseQuery(message, proto, address)
         elif message.opCode == dns.OP_STATUS:
-            self.handleStatus(message, protocol, address)
+            self.handleStatus(message, proto, address)
         elif message.opCode == dns.OP_NOTIFY:
-            self.handleNotify(message, protocol, address)
+            self.handleNotify(message, proto, address)
         else:
-            self.handleOther(message, protocol, address)
+            self.handleOther(message, proto, address)
 
 
     def allowQuery(self, message, protocol, address):
