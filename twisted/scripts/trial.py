@@ -71,16 +71,16 @@ def run():
     for module in config['modules']:
         suite.addModule(module)
 
+##     testdir = "_trial_temp"
+##     if os.path.exists(testdir):
+##         import shutil
+##         shutil.rmtree(testdir)
+##     os.mkdir(testdir)
+##     os.chdir(testdir)
+
     if config['logfile']:
        from twisted.python import log
        log.startLogging(open(config['logfile'], 'a'), 0)
-
-    testdir = "_trial_temp"
-    if os.path.exists(testdir):
-        import shutil
-        shutil.rmtree(testdir)
-    os.mkdir(testdir)
-    os.chdir(testdir)
 
     if config['verbose']:
         suite.run(unittest.VerboseTextReporter(sys.stdout))
