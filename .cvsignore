@@ -4,3 +4,4 @@ build
 dist
 MANIFEST
 test.log
+py*.iss

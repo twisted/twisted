@@ -1,13 +1,16 @@
+from __future__ import generators
+
 import sys
 import zipfile
+import py_compile
 # wx
 import Tkinter
 from Tkinter import *
 # twisted
-from twisted.internet import tksupport, reactor, defer, threads
-from twisted.python import failure, log
+from twisted.internet import tksupport, reactor, defer
+from twisted.python import failure, log, zipstream, util, usage
 # local
-import PASS_unzip
+import os.path
 
 
 class ProgressBar:
@@ -44,9 +47,6 @@ class ProgressBar:
                                            font=self.labelFont)
         self.update()
         self.canvas.pack(side='top', fill='x', expand='no')
-
-    def destroy(self):
-        reactor.stop()
 
     def pack(self, *args, **kwargs):
         self.frame.pack(*args, **kwargs)
@@ -94,54 +94,141 @@ class ProgressBar:
         self.canvas.update_idletasks()
 
 
-
-class Unzipness:
+class Processor:
+    """A base class to allow ...
+    Children must implement processOne
+    """
+    def __init__(self, bar, *args, **kwargs):
+        self.bar=bar
+        self.stopping=0
+        self.remaining=-1
+    
+    def updateBar(self):
+        b=self.bar
+        try:
+            b.updateProgress(b.max - self.remaining)
+        except TclError:
+            self.stopping=1
+            
+class Unzipness(Processor):
     """I am the procedure of unzipping a file.  When unzipping starts,
     I unzip the filename I am initialized with and show progress
     in the progress frame I am initialized with.
 
     """
     
-    def __init__(self, filename, bar):
-        self.unzipper=PASS_unzip.chunkyUnzipIter(filename)
-        bar.updateProgress(0, PASS_unzip.countZipFileChunks(filename, 4096))
-        self.bar=bar
-        self.stopping=0
+    def __init__(self, bar, filename, whereto):
+        Processor.__init__(self, bar)
+        self.unzipper=zipstream.unzipIterChunky(filename, whereto)
+        bar.updateProgress(0, zipstream.countZipFileChunks(filename, 4096))
 
-    def unzipAll(self):
-        for remaining in self.unzipper:
-            if self.stopping:
-                return
-            if remaining%10==0:
-                reactor.callFromThread(self.updateBar, remaining)
-        reactor.callFromThread(self.updateBar, 0)
+    def processAll(self):
+        d=defer.Deferred()
+        reactor.callLater(0.1, self.processOne, d)
+        return d
 
-    def updateBar(self, remaining):
-        b=self.bar
+    def processOne(self, deferred):
+        if self.stopping:
+            return deferred.callback(self.remaining)
+        
         try:
-            b.updateProgress(b.max - remaining)
-        except TclError:
-            self.stopping=1
+            self.remaining=self.unzipper.next()
+        except StopIteration:
+            return deferred.callback(0)
+        
+        if self.remaining%10==0:
+            reactor.callLater(0, self.updateBar)
+        reactor.callLater(0, self.processOne, deferred)
+
+
+def countPys(countl, directory, names):
+    sofar=countl[0]
+    sofar=sofar+len([f for f in names if f.endswith('.py')])
+    countl[0]=sofar
+    return sofar
+
+def countPysRecursive(path):
+    countl=[0]
+    os.path.walk(path, countPys, countl)
+    return countl[0]
+
+def compiler(path):
+    remaining=countPysRecursive(path)
+    def justlist(all, directory, names):
+        pynames=[os.path.join(directory, n) for n in names if n.endswith('.py')]
+        all.extend(pynames)
+    all=[]
+    os.path.walk(path, justlist, all)
     
+    i=zip(all, xrange(remaining-1, -1, -1))
+    for f, remaining in i:
+        py_compile.compile(f)
+        yield remaining
+
+class Compileness(Processor):
+    def __init__(self, bar, directory):
+        Processor.__init__(self, bar)
+        self.directory=directory
+        self.compiler=compiler(directory)
+        bar.updateProgress(0, countPysRecursive(directory))
+
+    def processAll(self):
+        d=defer.Deferred()
+        reactor.callLater(0.1, self.processOne, d)
+        return d
+
+    def processOne(self, deferred):
+        if self.stopping:
+            return deferred.callback(self.remaining)
+        
+        try:
+            self.remaining=self.compiler.next()
+        except StopIteration:
+            return deferred.callback(0)
+        
+        if self.remaining%10==0:
+            reactor.callLater(0, self.updateBar)
+        reactor.callLater(0, self.processOne, deferred)    
+
+def _switchToCompiling(root, bar, directory):
+    root.title('Compiling to pyc...')
+    comp=Compileness(bar, os.path.join(directory, 'twisted'))
+    d=comp.processAll()
+    d.addCallback(lambda _: reactor.stop())
+    d.addErrback(util.println)
+    return d
+
+class TksetupOptions(usage.Options):
+    optParameters=[["zipfile", "z", "", "a zipfile"],
+                   ["ziptargetdir", "t", ".", "where to extract zipfile"],
+                   ["compiledir", "c", ".", "a directory to compile"],
+                   ]
 
 def run(argv=sys.argv):
-    if len(argv)<=1:
-        log.err("Need a filename")
-        return
+    options=TksetupOptions()
+    try:
+        options.parseOptions(argv)
+    except usage.UsageError, e:
+        print str(options)
+        print str(e)
+        sys.exit(1)
+    
     root=Tkinter.Tk()
     root.title('Unzipping...')
     root.withdraw()
+    root.protocol('WM_DELETE_WINDOW', reactor.stop)
     tksupport.install(root)
     
     prog=ProgressBar(root, value=0, labelColor="black", width=200)    
     prog.pack()
 
-    uz=Unzipness(argv[1], prog)
+    uz=Unzipness(prog, argv[1], options['ziptargetdir'])
 
     reactor.callLater(0, root.deiconify)
-    d=threads.deferToThread(uz.unzipAll)
-    d.addBoth(lambda _: reactor.stop())
-    
+    d=uz.processAll()
+    d.addErrback(util.println)
+    d.addCallback(lambda _: _switchToCompiling(root, prog,
+                                               options['compiledir']))
     reactor.run()
 
 
