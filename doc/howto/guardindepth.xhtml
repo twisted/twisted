@@ -45,8 +45,8 @@ from twisted.cred import portal, checkers
 from twisted.web import resource, static
 from twisted.web.woven import guard
 
-login='<a href="%s">login</a>' % guard.PERSPECTIVE_INIT
-logout='<a href="%s">logout</a>' % guard.PERSPECTIVE_DESTROY
+login='&lt;a href="%s">login&lt;/a>' % guard.PERSPECTIVE_INIT
+logout='&lt;a href="%s">logout&lt;/a>' % guard.PERSPECTIVE_DESTROY
 
 class Realm:
     __implements__ = portal.IRealm
