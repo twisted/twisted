@@ -42,6 +42,7 @@ DOMWidgets are views which can be composed into bigger views.
 
 DEBUG = 0
 
+_RAISE = 1
 
 class Widget(view.View):
     """
@@ -321,10 +322,13 @@ class Widget(view.View):
             if not slots:
                 node = domhelpers.getIfExists(self.templateNode, name)
                 if not node:
-                    log.write('WARNING: No template nodes were found '
-                              '(tagged %s="%s"'
+                    msg = 'WARNING: No template nodes were found '\
+                              '(tagged %s="%s"'\
                               ' or slot="%s") for node %s' % (name + "Of", 
-                                            sm, name, self.templateNode))
+                                            sm, name, self.templateNode)
+                    if default is _RAISE:
+                        raise Exception(msg)
+                    log.write(msg)
                     return default
                 slots = [node]
             self.slots[name] = slots
@@ -578,7 +582,7 @@ class Anchor(Widget):
         if params:
             href = href + '?' + params
         data = self.getData()
-        self['href'] = href or data + self.trailingSlash
+        self['href'] = href or str(data) + self.trailingSlash
         if data is None:
             data = ""
         self.add(Text(self.text or data, self.raw, 0))
@@ -594,6 +598,7 @@ wvfactory_DirectoryAnchor = viewFactory(DirectoryAnchor)
 
 
 def appendModel(newNode, modelName):
+    if newNode is None: return
     curModel = newNode.getAttribute('model')
     if curModel is None:
         newModel = str(modelName)
@@ -665,14 +670,15 @@ class List(Widget):
 
             newNode = self.getPattern('listItem', default = None)
             if not newNode:
-                newNode = self.getPattern('item')
+                newNode = self.getPattern('item', default = _RAISE)
                 if newNode:
                     warnings.warn("itemOf= is deprecated, "
                                         "please use listItemOf instead",
                                         DeprecationWarning)
 
             appendModel(newNode, itemNum)
-
+            if not newNode.getAttribute("view"):
+                newNode.setAttribute("view", "DefaultWidget")
             parentNode.appendChild(newNode)
 
 wvfactory_List = viewFactory(List)
