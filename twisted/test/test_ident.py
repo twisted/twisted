@@ -7,6 +7,8 @@
 Test cases for twisted.protocols.ident module.
 """
 
+import struct
+
 from twisted.protocols import ident
 from twisted.python import failure
 from twisted.internet import error
