@@ -235,6 +235,7 @@ desktop environments, and your toaster.
         "twisted.lore",
         "twisted.mail",
         "twisted.mail.test",
+        "twisted.mail.scripts",
         "twisted.manhole",
         "twisted.manhole.ui",
         "twisted.names",
