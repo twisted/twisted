@@ -138,6 +138,10 @@ class Port(tcp.Port):
                 raise
             except SSL.Error:
                 return
+            if not self.approveConnection(skt, addr):
+                log.msg("Unapproved connection from %s." % addr)
+                skt.close()
+                return
             protocol = self.factory.buildProtocol(addr)
             s = self.sessionno
             self.sessionno = s+1

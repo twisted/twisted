@@ -1,3 +1,8 @@
+2002-01-29  Itamar Shtull-Trauring <itamarst@twistedmatrix.com>
+
+	* Added hook to tcp.Port and ssl.Port for limiting acceptable
+          connections - approveConnection(socket, addr).
+
 2002-01-23  Glyph Lefkowitz  <glyph@zelda.twistedmatrix.com>
 
 	* Incompatible change to PB: all remote methods now return

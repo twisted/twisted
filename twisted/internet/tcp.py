@@ -393,7 +393,15 @@ class Port(abstract.FileDescriptor):
         self.numberAccepts = 100
         self.startReading()
         self.factory.startFactory()
-
+    
+    def approveConnection(self, sock, addr):
+        """Check that this is a connection we are willing to accept.
+        
+        By default all connections are approved - override in subclasses or in order
+        to provide custom behavior, e.g. only accepting connections from 127.0.0.1.
+        """
+        return 1
+    
     def doRead(self):
         """Called when my socket is ready for reading.
 
@@ -409,6 +417,11 @@ class Port(abstract.FileDescriptor):
                         self.numberAccepts = i
                         break
                     raise
+                # check this connection is acceptable
+                if not self.approveConnection(skt, addr):
+                    log.msg("Unapproved connection from %s." % addr)
+                    skt.close()
+                    continue
                 protocol = self.factory.buildProtocol(addr)
                 s = self.sessionno
                 self.sessionno = s+1
@@ -422,7 +435,7 @@ class Port(abstract.FileDescriptor):
     def doWrite(self):
         """Raises an AssertionError.
         """
-        assert 0, "doWrite called on a %s" % str(self.__class__)
+        raise RuntimeError, "doWrite called on a %s" % str(self.__class__)
 
     def loseConnection(self):
         """ Stop accepting connections on this port.
