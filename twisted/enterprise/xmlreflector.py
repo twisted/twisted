@@ -7,12 +7,23 @@ from twisted.enterprise.util import _TableInfo
 
 from twisted.persisted import marmalade
 
+
+class XMLRowProxy:
+    """Used to persist Row Objects as XML.
+    """
+    def __init__(self, rowObject):
+        self.kw = {}
+        for columnName in rowObject.rowColumns:
+            self.kw[columnName] = getattr(rowObject, columnName)
+
 class XMLReflector(Reflector):
     """Reflector for twisted.enterprise that uses XML files.
 
     WARNING: this is an experimental piece of code. this reflector
     does not function completely yet! it is also very very slow.
     """
+
+    extension = ".xml"
     
     def __init__(self, baseDir, rowClasses, populatedCallback=None):
         self.baseDir = baseDir
@@ -42,18 +53,26 @@ class XMLReflector(Reflector):
         
     def _loader(self, tableName, data, whereClause, parent):
         d = self.tableDirs[ tableName]
+        tableInfo = self.schema[tableName]
         filenames = os.listdir(d)
         results = []
         for filename in filenames:
+            if filename.find(self.extension) != len(filename) - len(self.extension):
+                continue
             f = open(d + "/" + filename, "r")
-            obj = marmalade.unjellyFromXML(f)
+            proxy = marmalade.unjellyFromXML(f)
             f.close()
             # match object with whereClause... NOTE: this is insanely slow..
             # every object in the directory is loaded and checked!
             if whereClause:
-                if getattr(obj, whereClause[0]) != whereClause[1]:
+                if proxy.kw[whereClause[0]] != whereClause[1]:
                     continue
-            results.append(obj)
+            # find the row in the cache or add it
+            resultObject = self.findInCache(tableInfo.rowClass, proxy.kw)
+            if not resultObject:
+                resultObject = apply(tableInfo.rowFactoryMethod[0], (tableInfo.rowClass, data, proxy.kw) )
+                self.addToCache(resultObject)                
+            results.append(resultObject)
 
         if parent:
             if hasattr(parent, "container"):
@@ -94,13 +113,10 @@ class XMLReflector(Reflector):
     def insertRow(self, rowObject):
         """insert a new row for this object instance. dont include the "container" attribute.
         """
-        temp = copy.copy(rowObject)
-        if hasattr(temp, "container"):
-            del temp.container
-
-        filename = self.makeFilenameFor(temp)
+        proxy = XMLRowProxy(rowObject)
+        filename = self.makeFilenameFor(rowObject)
         f = open(filename,"w")
-        marmalade.jellyToXML(temp, f)
+        marmalade.jellyToXML(proxy, f)
         f.close()
         return defer.succeed(1)
         

@@ -156,6 +156,10 @@ def gotDBRooms(rooms):
 def gotXMLRooms(rooms):
     print "------------ got rooms from XML ------------"    
     dumpRooms(rooms)
+    xmanager.loadObjectsFrom("testrooms", data=None, whereClause=("roomId", 12) ).addCallback(gotXMLRooms2)
+
+def gotXMLRooms2(rooms):
+    print "------------ got rooms from XML again! ------------"        
     main.shutDown()
     
 def tick():
