@@ -125,8 +125,8 @@ class PerformanceTestClassRunner(TestClassRunner):
     methodPrefixes = ('benchmark',)
 
     def runTest(self, method):
-        fullName = "%s.%s" % (method.im_class, method.im_func.__name__)
         assert method.__name__ in self.methodNames
+        fullName = "%s.%s" % (method.im_class, method.im_func.__name__)
         method.im_self.recordStat = lambda datum: self.stats.__setitem__(fullName,datum)
         method()
 
@@ -139,7 +139,8 @@ class PerformanceSingletonRunner(SingletonRunner):
 
     def runTest(self, method):
         assert method.__name__ == self.methodName
-        method.im_self.recordStat = lambda datum: self.stats.__setitem__(fullName,datum)
+        fullName = "%s.%s" % (method.im_class, method.im_func.__name__)
+        method.im_self.recordStat = lambda datum: self.stats.__setitem__(fullName, datum)
         method()
 
 
