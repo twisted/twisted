@@ -148,7 +148,7 @@ upgraded = {}
 
 def doUpgrade():
     global versionedsToUpgrade, upgraded
-    for versioned in versionedsToUpgrade.keys():
+    for versioned in versionedsToUpgrade.itervalues():
         requireUpgrade(versioned)
     versionedsToUpgrade = {}
     upgraded = {}
@@ -156,8 +156,9 @@ def doUpgrade():
 def requireUpgrade(obj):
     """Require that a Versioned instance be upgraded completely first.
     """
-    if versionedsToUpgrade.has_key(obj) and not upgraded.has_key(obj):
-        upgraded[obj] = 1
+    objID = id(obj)
+    if objID in versionedsToUpgrade and objID not in upgraded:
+        upgraded[objID] = 1
         obj.versionUpgrade()
         return obj
 
@@ -194,7 +195,7 @@ class Versioned:
     persistenceForgets = ()
 
     def __setstate__(self, state):
-        versionedsToUpgrade[self] = 1
+        versionedsToUpgrade[id(self)] = self
         self.__dict__ = state
 
     def __getstate__(self, dict=None):

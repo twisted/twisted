@@ -76,7 +76,30 @@ class VersionTestCase(unittest.TestCase):
         styles.doUpgrade()
         assert obj.v3 == 1, "upgraded unnecessarily"
         assert obj.v4 == 1, "upgraded unnecessarily"
+    
+    def testNonIdentityHash(self):
+        global ClassWithCustomHash
+        class ClassWithCustomHash(styles.Versioned):
+            def __init__(self, unique, hash):
+                self.unique = unique
+                self.hash = hash
+            def __hash__(self):
+                return self.hash
+        
+        v1 = ClassWithCustomHash('v1', 0)
+        v2 = ClassWithCustomHash('v2', 0)
 
+        pkl = pickle.dumps((v1, v2))
+        del v1, v2
+        ClassWithCustomHash.persistenceVersion = 1
+        ClassWithCustomHash.upgradeToVersion1 = lambda self: setattr(self, 'upgraded', True)
+        v1, v2 = pickle.loads(pkl)
+        styles.doUpgrade()
+        self.assertEquals(v1.unique, 'v1')
+        self.assertEquals(v2.unique, 'v2')
+        self.failUnless(v1.upgraded)
+        self.failUnless(v2.upgraded)
+        
 
 class MyEphemeral(styles.Ephemeral):
 
