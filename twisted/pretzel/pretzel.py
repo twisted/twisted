@@ -31,8 +31,18 @@ class SaltGrain:
 
 
 class WordsGrain:
+    """I am a twisted.words salt grain."""
     def __init__(self, user, password, host, groups):
         self.network = "words"
+
+    def sendMessage(self, sender, message):
+        pass
+
+
+class IRCGrain:
+    """I am an IRC salt grain."""
+    def __init__(self, user, password, host, port):
+        self.network = "irc"
 
     def sendMessage(self, sender, message):
         pass
