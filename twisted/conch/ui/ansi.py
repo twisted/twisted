@@ -32,6 +32,7 @@ class ColorText:
 
     # The colors to use
     COLORS = ('b', 'r', 'g', 'y', 'l', 'm', 'c', 'w')
+    BOLD_COLORS = tuple([x.upper() for x in COLORS])
     BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(len(COLORS))
 
     # Color names
@@ -226,7 +227,7 @@ class AnsiParser:
         pass
 
 
-    def pickColor(self, value, mode, BOLD = map(str.upper, ColorText.COLORS)):
+    def pickColor(self, value, mode, BOLD = ColorText.BOLD_COLORS):
         if mode:
             return ColorText.COLORS[value]
         else:
