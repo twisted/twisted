@@ -112,6 +112,7 @@ static PyObject *unquote(PyObject *self, PyObject *args, PyObject *kwargs)
 
     /* return output.getvalue() */
     str = PycStringIO->cgetvalue(output);
+    Py_DECREF(output);
     return str;
 }
 
