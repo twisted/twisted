@@ -44,6 +44,9 @@ except: PgSQL = None
 try: import MySQLdb
 except: MySQLdb = None
 
+try: import psycopg
+except: psycopg = None
+
 tableName = "testTable"
 childTableName = "childTable"
 
@@ -452,6 +455,15 @@ class PostgresTestCase(SQLReflectorTestCase, unittest.TestCase):
         return ConnectionPool('pyPgSQL.PgSQL', database=self.DB_NAME,
                               user=self.DB_USER, password=self.DB_PASS,
                               cp_min=0)
+			      
+class PsycopgTestCase(SQLReflectorTestCase, unittest.TestCase):
+    """Test cases for the SQL reflector using psycopg for Postgres.
+    """
+
+    def makePool(self):
+        return ConnectionPool('psycopg', database=self.DB_NAME,
+                              user=self.DB_USER, password=self.DB_PASS,
+                              cp_min=0)
 
 
 class MySQLTestCase(SQLReflectorTestCase, unittest.TestCase):
@@ -491,6 +503,16 @@ else:
         conn.close()
     except Exception, e:
         PostgresTestCase.skip = "Connection to PgSQL server failed: " + str(e)
+	
+if psycopg is None: PsycopgTestCase.skip = "psycopg module not available"
+else:
+    try:
+        conn = psycopg.connect(database=PostgresTestCase.DB_NAME,
+                               user=PostgresTestCase.DB_USER,
+                               password=PostgresTestCase.DB_PASS)
+        conn.close()
+    except Exception, e:
+        PsycopgTestCase.skip = "Connection to PostgreSQL using psycopg failed: " + str(e)
 
 if MySQLdb is None: MySQLTestCase.skip = "MySQLdb module not available"
 else:
