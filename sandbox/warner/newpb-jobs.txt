@@ -18,12 +18,12 @@ receipt of a particular named argument to a remotely-invokable method), at
 most X bytes and Y slicer frames will be in use before either the object is
 accepted and processed or the schema notes the violation and the object is
 rejected (whereupon the temporary storage is released and all further bytes
-in the reject object are simply discarded). Strictly speaking, the number
+in the rejected object are simply discarded). Strictly speaking, the number
 returned by maxSize() is the largest string on the wire which has not yet
-been rejected as violating the constraint, but it is also a reasonable metric
-to describe how much internal storage must be used while processing it. (To
-achieve greater accuracy would involve knowing exactly how large each Python
-type is; not a sensible thing to attempt).
+been rejected as violating the constraint, but it is also a reasonable
+metric to describe how much internal storage must be used while processing
+it. (To achieve greater accuracy would involve knowing exactly how large
+each Python type is; not a sensible thing to attempt).
 
 The idea is that someone who is worried about an attacker throwing a really
 long string or an infinitely-nested list at them can ask the schema just what
@@ -175,7 +175,7 @@ test_banana.InboundByteStream.testConstrainedInt needs implementation
 
 * add constraints to Slicers (outbound constraints)
 
-This is much easier then the inbound side. Each constraint just gets a single
+This is much easier than the inbound side. Each constraint just gets a single
 checkObject() call with the candidate object before it is sent.
 
 * implement CopyableSlicer/CopyableUnslicer
@@ -214,9 +214,9 @@ Some lingering questions in this area:
  When PB determines that an object wants to be copied by value instead of by
  reference (pb.Copyable subclass, Copyable(obj), schema says so), where
  should it find a schema to define what exactly gets copied over? A class
- attribute of the object's class would make sense: most object would do this,
- some could override jellyFor to get more control, and others could override
- something else to push a new Slicer on the stack and do streaming
+ attribute of the object's class would make sense: most objects would do
+ this, some could override jellyFor to get more control, and others could
+ override something else to push a new Slicer on the stack and do streaming
  serialization. Whatever the approach, it needs to be paralleled by the
  receiving side's unjellyableRegistry.
 
