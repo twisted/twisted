@@ -31,6 +31,8 @@ sys.path.append('.')
 import re
 import os
 import cStringIO
+import time
+# syntax highlighting for Python source
 import py2html, PyFontify
 from pprint import pprint
 from twisted import copyright
@@ -154,7 +156,7 @@ class Walker:
             self.percentdone((float(i) / len(self.walked)), fname)
             document = dom.parse(open(fullpath))
             template = self.templ.cloneNode(1)
-            self.munge(document, template, linkrel, d)
+            self.munge(document, template, linkrel, d, fullpath)
             template.writexml(open(fname+self.ext, 'wb'))
         self.percentdone(1., "*Done*")
     def percentdone(self, percent, fname):
@@ -170,7 +172,7 @@ class Walker:
 
 
 
-    def munge(self, document, template, linkrel, d):
+    def munge(self, document, template, linkrel, d, fullpath):
         # relative links to html files
         for node in (findElementsWithAttribute(template, "href")+
                      findElementsWithAttribute(document, "href")):
@@ -180,6 +182,11 @@ class Walker:
                 if len(fname) == 2 and fname[1] == '.html':
                     # print 'rel link', href
                     node.setAttribute("href", fname[0] + self.ext)
+        for node in findElementsWithAttribute(template, "class", "mtime"):
+            mode, ino, dev, nlink, uid, gid, size, atime, mtime, ctime =\
+                  os.stat(fullpath)
+            # print mtime
+            node.appendChild(dom.Text(time.asctime(time.localtime(mtime))))
         # things linked from the top
         for node in (
             findElementsWithAttribute(template,"src") +
