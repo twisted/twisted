@@ -360,6 +360,6 @@ def main():
     gw = GameWindow()
     lw = gtkutil.Login(gw.connected, gw,
                        "Damien", "admin",
-                       "localhost", "reality")
+                       "localhost", "twisted.reality")
     lw.show_all()
     gtk.mainloop()

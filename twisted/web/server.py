@@ -357,7 +357,7 @@ class Site(protocol.Factory):
         """(internal) Generate an opaque, unique ID for a user's session.
         """
         self.counter = self.counter + 1
-        return str(long(time.time()*1000) + "x" + str(self.counter))
+        return "%sx%s" % (long(time.time()*1000), self.counter)
 
     def makeSession(self):
         """Generate a new Session instance, and store it for future reference.

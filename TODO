@@ -43,10 +43,10 @@ this file directly.
     have both eventually.  I would really like to have the Jython Faucet back
     up and running again.
 
-006 "Enterprise".  Similiar to WebWare's MiddleKit, it would be nice to have a
-    library for object-relational interaction.  Better yet that such
-    interaction could be event-based rather than dependant upon blocking DB
-    APIs.  This is a nastier problem than it sounds like.
+006 [[Sean Riley]] "Enterprise".  Similiar to WebWare's MiddleKit, it would be
+    nice to have a library for object-relational interaction.  Better yet that
+    such interaction could be event-based rather than dependant upon blocking
+    DB APIs.  This is a nastier problem than it sounds like.
 
 007 Web widgetry.  Twisted.Web ought to have a way of assembling pages where
     bits of the pages can be rendered asynchronously (for example, from pb
@@ -63,3 +63,7 @@ this file directly.
 009 HEAD and other HTTP subtleties for Twisted.Web.  There are many things in
     the HTTP RFC(s) that Twisted.Web does not do properly and should.  This
     could perhaps be broken out into multiple TODO items.
+
+010 Profiling, and possibly C optimization of, twisted.internet.main loop and
+    select calls.  There also needs to be some serious load-testing of Twisted
+    in this area to discover its limitations.

@@ -33,7 +33,7 @@ def getPorts(app, config):
     spigot = plumbing.Spigot(rdf)
     site = server.Site(plumbing.Web(rdf))
     bf = pb.BrokerFactory()
-    bf.addService("reality", rdf)
+    bf.addService("twisted.reality", rdf)
 
     return [(8080, site),
             (4040, spigot),
