@@ -121,7 +121,7 @@ class CatChannel(channel.SSHChannel):
 
     def _cbSendRequest(self, ignored):
         self.write('This data will be echoed back to us by "cat."\r\n')
-        self.sendEOF()
+        self.conn.sendEOF(self)
         self.loseConnection()
 
     def dataReceived(self, data):
