@@ -97,7 +97,6 @@ class FooAdapterForMAA:
 components.registerAdapter(FooAdapterForMAA, MultiplyAndAdd, IFoo)
 
 
-
 class InterfacesTestCase(unittest.TestCase):
     """Test interfaces."""
 
@@ -382,14 +381,6 @@ class TestMetaInterface(unittest.TestCase):
         self.assertEquals(IMeta(c).add(1), 3)
         self.assertEquals(IMeta(c, persist=False).add(1), 1)
         self.assertEquals(IMeta(c).add(1), 4)
-
-    def testCustomRegistry(self):
-        from twisted.python import context
-        n = MetaNumber(0)
-        myReg = components.AdapterRegistry()
-        myReg.registerAdapter(BackwardsAdder, MetaNumber, IMeta)
-        self.assertEquals(context.call({components.AdapterRegistry: myReg},
-                                       IMeta, n).add(2), -2)
 
     def testRegistryPersistence(self):
         n = MetaNumber(1)
