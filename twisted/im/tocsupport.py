@@ -88,7 +88,6 @@ class TOCProto(basesupport.AbstractClientMixin, toc.TOCClient):
     def __init__(self, account, chatui):
         toc.TOCClient.__init__(self, account.username, account.password)
         basesupport.AbstractClientMixin.__init__(self, account, chatui)
-        self.accountName = self.account.username
         self.roomID = {}
         self.roomIDreverse = {}
 
@@ -129,6 +128,7 @@ class TOCProto(basesupport.AbstractClientMixin, toc.TOCClient):
         if not self.name:
             print 'Waiting for second NICK', data
             self.name=data[0]
+            self.accountName = '%s (TOC)' % self.name
             self.chat.getContactsList()
         else:
             print 'reregistering...?', data
@@ -148,10 +148,10 @@ class TOCProto(basesupport.AbstractClientMixin, toc.TOCClient):
         self.chat.getConversation(self.getPerson(username)
                              ).showMessage(dehtml(message))
     def updateBuddy(self,username,online,evilness,signontime,idletime,userclass,away):
-        if online:
-            status=ONLINE
-        elif away:
+        if away:
             status=AWAY
+        elif online:
+            status=ONLINE
         else:
             status=OFFLINE
         self.getPerson(username).setStatusAndIdle(status, idletime)
@@ -168,6 +168,8 @@ class TOCProto(basesupport.AbstractClientMixin, toc.TOCClient):
         else:
             self.getGroupConversation(group).memberLeft(member)
     def chatHearMessage(self, roomid, username, message):
+        if toc.normalize(username) == toc.normalize(self.name):
+            return # ignore the message
         group=self.roomIDreverse[roomid]
         self.getGroupConversation(group).showGroupMessage(username, dehtml(message))
     def chatHearWhisper(self, roomid, username, message):
