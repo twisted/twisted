@@ -1099,6 +1099,10 @@ class ProcessAliasTestCase(test_process.SignalMixin, unittest.TestCase):
             mail.alias.MessageWrapper(p, 'echo')
         ])
         self.assertEquals(r, expected)
+        reactor.iterate()
+        reactor.iterate()
+        reactor.iterate()
+
 if not components.implements(reactor, interfaces.IReactorProcess):
     ProcessAliasTestCase = "IReactorProcess not supported"
 
