@@ -489,7 +489,7 @@ class Telnet(protocol.Protocol):
 
 class ProtocolTransportMixin:
     def write(self, bytes):
-        self.transport.write(bytes)
+        self.transport.write(bytes.replace('\n', '\r\n'))
 
     def writeSequence(self, seq):
         self.transport.writeSequence(seq)

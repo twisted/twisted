@@ -11,6 +11,8 @@ class RecvLine(insults.TerminalProtocol):
 
     TABSTOP = 4
 
+    lineDelimiter = '\n'
+
     ps = ('>>> ', '... ')
     pn = 0
 
@@ -27,7 +29,7 @@ class RecvLine(insults.TerminalProtocol):
         self.keyHandlers = {
             t.LEFT_ARROW: self.handle_LEFT,
             t.RIGHT_ARROW: self.handle_RIGHT,
-            '\n': self.handle_RETURN,
+            self.lineDelimiter: self.handle_RETURN,
             '\x7f': self.handle_BACKSPACE,
             '\t': self.handle_TAB,
             t.DELETE: self.handle_DELETE,
@@ -87,8 +89,9 @@ class RecvLine(insults.TerminalProtocol):
 
     def handle_TAB(self):
         n = self.TABSTOP - (len(self.lineBuffer) % self.TABSTOP)
-        for i in xrange(n):
-            self.keystrokeReceived(' ')
+        self.transport.cursorForward(n)
+        self.lineBufferIndex += n
+        self.lineBuffer.extend(' ' * n)
 
     def handle_LEFT(self):
         if self.lineBufferIndex > 0:

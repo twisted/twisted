@@ -9,6 +9,7 @@ from twisted.python import log
 
 class FileWrapper:
     softspace = 0
+    state = 'normal'
 
     def __init__(self, o):
         self.o = o
@@ -17,10 +18,10 @@ class FileWrapper:
         pass
 
     def write(self, data):
-        self.o.addOutput(data)
+        self.o.addOutput(data.replace('\r\n', '\n'))
 
     def writelines(self, lines):
-        self.o.addOutput(''.join(lines))
+        self.write(''.join(lines))
 
 class ManholeInterpreter(code.InteractiveInterpreter):
     numDeferreds = 0
@@ -29,9 +30,9 @@ class ManholeInterpreter(code.InteractiveInterpreter):
         self._pendingDeferreds = {}
         self.handler = handler
         self.filename = filename
-        self.resetbuffer()
+        self.resetBuffer()
 
-    def resetbuffer(self):
+    def resetBuffer(self):
         """Reset the input buffer."""
         self.buffer = []
 
@@ -53,7 +54,7 @@ class ManholeInterpreter(code.InteractiveInterpreter):
         source = "\n".join(self.buffer)
         more = self.runsource(source, self.filename)
         if not more:
-            self.resetbuffer()
+            self.resetBuffer()
         return more
 
     def runcode(self, *a, **kw):
@@ -96,32 +97,7 @@ class ManholeInterpreter(code.InteractiveInterpreter):
     def write(self, data, async=False):
         self.handler.addOutput(data, async)
 
-class VT102Writer:
-    typeToColor = {
-        'identifier': '\x1b[31m',
-        'keyword': '\x1b[32m',
-        'parameter': '\x1b[33m',
-        'variable': '\x1b[34m'}
-
-    normalColor = '\x1b[0m'
-
-    def __init__(self):
-        self.written = []
-
-    def color(self, type):
-        return self.typeToColor.get(type, '')
-
-    def write(self, token, type=None):
-        self.written.append(self.color(type))
-        self.written.append(token)
-        self.written.append(self.normalColor)
-
-    def __str__(self):
-        s = ''.join(self.written)
-        return s.splitlines()[-2]
-
 class Manhole(recvline.HistoricRecvLine):
-
     def connectionMade(self):
         recvline.HistoricRecvLine.connectionMade(self)
         self.interpreter = ManholeInterpreter(self)
@@ -140,24 +116,65 @@ class Manhole(recvline.HistoricRecvLine):
     def handle_QUIT(self):
         self.transport.loseConnection()
 
+    def _needsNewline(self):
+        w = self.transport.lastWrite
+        return not w.endswith('\n') and not w.endswith('\x1bE')
+
     def addOutput(self, bytes, async=False):
         if async:
             self.transport.eraseLine()
             self.transport.cursorBackward(len(self.lineBuffer) + len(self.ps[self.pn]))
 
-        self.transport.write(bytes.replace('\n', '\r\n'))
+        self.transport.write(bytes)
 
         if async:
-            if not self.transport.lastWrite.endswith('\r\n') and not self.transport.lastWrite.endswith('\x1bE'):
-                self.transport.write('\r\n')
+            if self._needsNewline():
+                self.transport.nextLine()
             self.transport.write(self.ps[self.pn] + ''.join(self.lineBuffer))
 
     def lineReceived(self, line):
         more = self.interpreter.push(line)
         self.pn = bool(more)
-        if not self.transport.lastWrite.endswith('\r\n') and not self.transport.lastWrite.endswith('\x1bE'):
-            self.transport.write('\r\n')
+        if self._needsNewline():
+            self.transport.nextLine()
         self.transport.write(self.ps[self.pn])
+
+class VT102Writer:
+    typeToColor = {
+        'identifier': '\x1b[31m',
+        'keyword': '\x1b[32m',
+        'parameter': '\x1b[33m',
+        'variable': '\x1b[34m'}
+
+    normalColor = '\x1b[0m'
+
+    def __init__(self):
+        self.written = []
+
+    def color(self, type):
+        return self.typeToColor.get(type, '')
+
+    def write(self, token, type=None):
+        if token and token != '\r':
+            c = self.color(type)
+            if c:
+                self.written.append(self.color(type))
+            self.written.append(token)
+            if c:
+                self.written.append(self.normalColor)
+
+    def __str__(self):
+        s = ''.join(self.written)
+        return s.strip('\n').splitlines()[-1]
+
+def lastColorizedLine(source):
+    w = VT102Writer()
+    p = TokenPrinter(w.write).printtoken
+    s = StringIO.StringIO(source)
+
+    tokenize.tokenize(s.readline, p)
+
+    return str(w)
 
 class ColoredManhole(Manhole):
     def characterReceived(self, ch):
@@ -167,23 +184,25 @@ class ColoredManhole(Manhole):
             self.lineBuffer[self.lineBufferIndex:self.lineBufferIndex+1] = [ch]
         self.lineBufferIndex += 1
 
-        w = VT102Writer()
-        p = TokenPrinter(w.write).printtoken
-        s = StringIO.StringIO('\n'.join(self.interpreter.buffer) +
-                              '\n' +
-                              ''.join(self.lineBuffer))
+        source = ('\n'.join(self.interpreter.buffer) +
+                  '\n' +
+                  ''.join(self.lineBuffer))
 
         # Try to write some junk
         try:
-            tokenize.tokenize(s.readline, p)
+            coloredLine = lastColorizedLine(source)
         except tokenize.TokenError:
             # We couldn't do it.  Strange.  Oh well, just add the character.
             self.transport.write(ch)
         else:
             # Success!  Clear the source on this line.
-            self.transport.cursorBackward(100) # len(self.lineBuffer))
-            self.transport.eraseToLineEnd()
+            self.transport.eraseLine()
+            self.transport.cursorBackward(len(self.lineBuffer) + len(self.ps[self.pn]) - 1)
 
             # And write a new, colorized one.
-            self.transport.write(self.ps[self.pn] + str(w))
+            self.transport.write(self.ps[self.pn] + coloredLine)
 
+            # And move the cursor to where it belongs
+            n = len(self.lineBuffer) - self.lineBufferIndex
+            if n:
+                self.transport.cursorBackward(n)
