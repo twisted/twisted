@@ -33,7 +33,7 @@ class CheckingPackagesTestCase(unittest.TestCase):
         os.path.walk('twisted', 
                      lambda l,d,n:not d.endswith('CVS') and l.append(d),
                      l)
-        l = [x.replace('/', '.') for x in l]
+        l = [x.replace(os.sep, '.') for x in l]
         p = setup.setup_args['packages']
 
         for package in p:
