@@ -39,6 +39,7 @@ import socket
 import math
 import time
 import calendar
+import warnings
 
 # sibling imports
 import basic
@@ -557,6 +558,9 @@ class Request:
 
     def finish(self):
         """We are finished writing data."""
+        if not hasattr(self, 'channel'):
+            warnings.warn("Warning! request.finish called twice.", stacklevel=2)
+            return
         if self.chunked and self.code not in NO_BODY_CODES:
             # write last chunk and closing CRLF
             self.transport.write("0\r\n\r\n")
