@@ -230,8 +230,9 @@ class JellyTestCase(unittest.TestCase):
             # OK
             pass
         assert x.x is x.b, "Identity mismatch"
-        
+        #test class serialization
+        friendly = jelly.jelly(A, taster)
+        x = jelly.unjelly(friendly, taster)
+        assert x is A, "A came back: %s" % x
 
 testCases = [JellyTestCase]
-        
-        

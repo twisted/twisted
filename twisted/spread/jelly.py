@@ -600,7 +600,7 @@ class _Unjellier:
 
     def _unjelly_class(self, rest):
         clist = string.split(rest[0], '.')
-        modName = string.join(clist[:-1])
+        modName = string.join(clist[:-1], '.')
         if not self.taster.isModuleAllowed(modName):
             raise InsecureJelly("module %s not allowed" % modName)
         klaus = namedObject(rest[0])

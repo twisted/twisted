@@ -1,3 +1,10 @@
+2002-12-12  Dave Peticolas  <dave@krondo.com>
+
+	* twisted/test/test_jelly.py: test class serialization
+
+	* twisted/spread/jelly.py: join module names with '.' in
+	_unjelly_class
+
 2002-12-12  Paul Swartz <z3p@twistedmatrix.com>
 
 	* twisted/conch/pamauth.py: added, gives support for authentication
