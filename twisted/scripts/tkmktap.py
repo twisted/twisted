@@ -96,7 +96,7 @@ class TkMkAppFrame(Tkinter.Frame):
 
         f = Tkinter.Frame(appFrame)
         s = Tkinter.StringVar()
-        s.set(str(os.getuid()))
+        s.set(not hasattr(os, 'getuid') and '0' or str(os.getuid()))
         uidLabel = Tkinter.Label(f, text='UID')
         self.uid = Tkinter.Entry(f, text=s, background='white')
 
@@ -106,7 +106,7 @@ class TkMkAppFrame(Tkinter.Frame):
 
         f = Tkinter.Frame(appFrame)
         s = Tkinter.StringVar()
-        s.set(str(os.getgid()))
+        s.set(not hasattr(os, 'getgid') and '0' or str(os.getgid()))
         gidLabel = Tkinter.Label(f, text='GID')
         self.gid = Tkinter.Entry(f, text=s, background='white')
 
