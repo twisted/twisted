@@ -18,7 +18,7 @@
 """Mail support for twisted python.
 """
 
-import stat, os, socket, time, md5, binascii
+import stat, os, socket, time, md5, string
 from twisted.protocols import pop3
 from twisted.persisted import dirdbm
 
@@ -176,6 +176,6 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
         if not self.dbm.has_key(user):
             return None
         my_digest = md5.new(magic+self.dbm[user]).digest()
-        my_digest = binascii.hexlify(my_digest)
+        my_digest = string.join(map(lambda x: "%02x"%ord(x), my_digest), '')
         if digest == my_digest:
             return MaildirMailbox(os.path.join(self.root, user, 'inbox'))
