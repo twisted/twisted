@@ -599,3 +599,18 @@ class OtherPrimitives(unittest.TestCase):
         for i in range(N):
             queue.get().addCallback(gotten.append)
             self.assertEquals(gotten, range(N, N + i + 1))
+
+        queue = defer.DeferredQueue()
+        gotten = []
+        for i in range(N):
+            queue.get().addCallback(gotten.append)
+        for i in range(N):
+            queue.put(i)
+        self.assertEquals(gotten, range(N))
+        
+        queue = defer.DeferredQueue(size=0)
+        self.assertRaises(defer.QueueOverflow, queue.put, None)
+
+        queue = defer.DeferredQueue(backlog=0)
+        self.assertRaises(defer.QueueUnderflow, queue.get)
+
