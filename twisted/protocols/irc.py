@@ -1105,10 +1105,11 @@ class DccFileReceive(DccFileReceiveBasic):
             logmsg = ("%s  %d bytes received"
                       % (logmsg, self.bytesReceived))
 
-        logmsg = "%s and written to %s.\n" % (logmsg, self.file.name)
+        if hasattr(self, 'file'):
+            logmsg = "%s and written to %s.\n" % (logmsg, self.file.name)
+            if hasattr(self.file, 'close'): self.file.close()
 
         self.transport.log(logmsg)
-        self.file.close()
 
     def __str__(self):
         from_ = self.transport.getPeer()
