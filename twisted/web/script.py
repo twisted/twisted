@@ -21,8 +21,9 @@
 import server
 import resource
 import html
+import error
 
-
+from twisted.protocols import http
 from twisted import copyright
 import cStringIO
 StringIO = cStringIO
@@ -54,6 +55,10 @@ class PythonScript(resource.Resource):
                      '__file__': self.filename}
         try:
             execfile(self.filename, namespace, namespace)
+        except IOError, e:
+            if e.errno == 2: #file not found
+                request.setResponseCode(http.NOT_FOUND)
+                request.write(error.NoResource().render(request))
         except:
             io = StringIO.StringIO()
             traceback.print_exc(file=io)
