@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.test.test_formmethod -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -134,6 +135,7 @@ class Flags(Argument):
             for flagKey, flagVal, flagDesc in self.flags:
                 if inFlagKey == flagKey:
                     outFlags.append(flagVal)
+                    break
             else:
                 raise InputError("Invalid Flag: %s" % inFlagKey)
         return outFlags
