@@ -21,6 +21,7 @@ from twisted.trial import unittest
 from twisted.internet import threads, reactor
 from twisted.python import threadable, failure
 
+import time
 # make sure thread pool is shutdown
 import atexit
 #atexit.register(reactor.suggestThreadPoolSize, 0)
@@ -28,6 +29,7 @@ import atexit
 
 class Counter:    
     index = 0
+    problem = 0
     
     def sync_add(self):
         """A thread-safe method."""
@@ -36,8 +38,14 @@ class Counter:
     def add(self):
         """A none thread-safe method."""
         next = self.index + 1
+        # another thread could jump in here and increment self.index on us
         if next != self.index + 1:
+            self.problem = 1
             raise ValueError
+        # or here, same issue but we wouldn't catch it. We'd overwrite their
+        # results, and the index will have lost a count. If several threads
+        # get in here, we will actually make the count go backwards when we
+        # overwrite it.
         self.index = next
     
     synchronized = ["sync_add"]
@@ -53,13 +61,41 @@ class ThreadsTestCase(unittest.TestCase):
         
         for i in range(1000):
             reactor.callInThread(c.sync_add)
+
+        # those thousand calls should all be running "at the same time" (at
+        # least up to the size of the thread pool, anyway). While they are
+        # fighting over the right to add, watch carefully for any sign of
+        # overlapping threads, which might be detected by the thread itself
+        # (c.problem), or might appear as an index that doesn't go all the
+        # way up to 1000 (a few missing counts and it could stop at 999). If
+        # threadpools are really broken, it might never increment at all.
+
+        # in practice, if the threads are running unsynchronized (say, using
+        # c.add instead of c.sync_add), it takes about 10 repetitions of
+        # this test case to expose a problem
         
+        when = time.time()
         oldIndex = 0
         while c.index < 1000:
+            # watch for the count to go backwards
             assert oldIndex <= c.index
+            # spend some extra time per loop making sure we eventually get
+            # out of it
+            self.failIf(c.problem, "threads reported overlap")
+            if c.index > oldIndex:
+                when = time.time() # reset each count
+            else:
+                if time.time() > when + 5:
+                    if c.index > 0:
+                        self.fail("threads lost a count")
+                    else:
+                        self.fail("threads never started")
             oldIndex = c.index
-        
-        self.assertEquals(c.index, 1000)
+
+        # This check will never fail, because a missing count wouldn't make
+        # it out of the 'while c.index < 1000' loop. But it makes it clear
+        # what our expectation are.
+        self.assertEquals(c.index, 1000, "threads lost a count")
 
     def testCallMultiple(self):
         c = Counter()
@@ -68,9 +104,19 @@ class ThreadsTestCase(unittest.TestCase):
         commands = [(c.add, (), {})] * 1000
         threads.callMultipleInThread(commands)
 
+        when = time.time()
         oldIndex = 0
         while c.index < 1000:
             assert oldIndex <= c.index
+            self.failIf(c.problem, "threads reported overlap")
+            if c.index > oldIndex:
+                when = time.time() # reset each count
+            else:
+                if time.time() > when + 5:
+                    if c.index > 0:
+                        self.fail("threads lost a count")
+                    else:
+                        self.fail("threads never started")
             oldIndex = c.index
         
         self.assertEquals(c.index, 1000)
