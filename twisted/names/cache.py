@@ -79,7 +79,7 @@ class CacheResolver(common.ResolverBase):
             ))
 
 
-    def lookupAllRecords(self, name, timeout = 10):
+    def lookupAllRecords(self, name, timeout = None):
         return defer.fail(failure.Failure(dns.DomainError(name)))
 
 

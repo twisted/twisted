@@ -34,7 +34,7 @@ import os
 # Twisted imports
 from twisted.python.runtime import platform
 from twisted.internet import defer, protocol, interfaces, threads
-from twisted.python import log
+from twisted.python import log, failure
 from twisted.protocols import dns
 
 import common
@@ -44,7 +44,7 @@ class Resolver(common.ResolverBase):
     __implements__ = (interfaces.IResolver,)
 
     index = 0
-    timeout = 10
+    timeout = None
 
     factory = None
     servers = None
@@ -52,7 +52,7 @@ class Resolver(common.ResolverBase):
     protocol = None
     connections = None
 
-    def __init__(self, resolv = None, servers = None, timeout = 10):
+    def __init__(self, resolv = None, servers = None, timeout = (1, 3, 11, 45)):
         """
         @type servers: C{list} of C{(str, int)} or C{None}
         @param servers: If not None, interpreted as a list of addresses of
@@ -63,10 +63,10 @@ class Resolver(common.ResolverBase):
         @param resolv: Filename to read and parse as a resolver(5)
         configuration file.
         
-        @type timeout: C{int}
-        @param timeout: Default number of seconds after which to fail with a
-        C{twisted.internet.defer.TimeoutError}
-        
+        @type timeout: Sequence of C{int}
+        @param timeout: Default number of seconds after which to reissue the query.
+        When the last timeout expires, the query is considered failed.
+       
         @raise ValueError: Raised if no nameserver addresses can be found.
         """
         common.ResolverBase.__init__(self)
@@ -128,14 +128,13 @@ class Resolver(common.ResolverBase):
 
     def connectionMade(self, protocol):
         self.connections.append(protocol)
-        # XXX - need to use timeout
         for (d, q, t) in self.pending:
-            protocol.query(q).chainDeferred(d)
+            self.queryTCP(q, t).chainDeferred(d)
         del self.pending[:]
     
     
-    def messageReceived(self, protocol, message, address = None):
-        log.msg("Unexpected message received from %r" % (address,))
+    def messageReceived(self, message, protocol, address = None):
+        log.msg("Unexpected message (%d) received from %r" % (message.id, address))
 
 
     def queryUDP(self, queries, timeout = None):
@@ -145,25 +144,44 @@ class Resolver(common.ResolverBase):
         @type queries: A C{list} of C{dns.Query} instances
         @param queries: The queries to make.
         
-        @type timeout: C{int}
-        @param timeout: Number of seconds after which to give up the query.
+        @type timeout: Sequence of C{int}
+        @param timeout: Number of seconds after which to reissue the query.
+        When the last timeout expires, the query is considered failed.
 
         @rtype: C{Deferred}
         @raise C{twisted.internet.defer.TimeoutError}: When the query times
         out.
         """
-        address = self.pickServer()
         if timeout is None:
             timeout = self.timeout
-        return self.protocol.query(address, queries, timeout)
+        address = self.pickServer()
+        d = self.protocol.query(address, queries, timeout[0])
+        d.addErrback(self._reissue, address, queries, timeout[1:])
+        return d
 
 
-    def queryTCP(self, queries, timeout = None):
+    def _reissue(self, reason, address, query, timeout):
+        reason.trap(defer.TimeoutError)
+        if timeout and self.protocol.transport:
+            d = self.protocol.query(address, query, timeout[0], reason.value.id)
+            d.addErrback(self._reissue, address, query, timeout[1:])
+            return d
+
+        try:
+            del self.protocol.resends[reason.value.id]
+        except:
+            pass
+        return failure.Failure(defer.TimeoutError(query))
+
+    def queryTCP(self, queries, timeout = 10):
         """
         Make a number of DNS queries via TCP.
 
         @type queries: Any non-zero number of C{dns.Query} instances
         @param queries: The queries to make.
+        
+        @type timeout: C{int}
+        @param timeout: The number of seconds after which to fail.
         
         @rtype: C{Deferred}
         """
@@ -174,7 +192,7 @@ class Resolver(common.ResolverBase):
             self.pending.append((defer.Deferred(), queries, timeout))
             return self.pending[-1][0]
         else:
-            return self.connections[0].query(queries)
+            return self.connections[0].query(queries, timeout)
 
 
     def filterAnswers(self, message):
@@ -205,8 +223,9 @@ class ThreadedResolver:
 
     def getHostByName(self, name, timeout = 10):
         # XXX - Make this respect timeout
-        return threads.deferToThread(socket.gethostbyname, name)
-
+        d = threads.deferToThread(socket.gethostbyname, name)
+        d.setTimeout(timeout)
+        return d
 
 class DNSClientFactory(protocol.ClientFactory):
     def __init__(self, controller, timeout = 10):

@@ -57,7 +57,7 @@ class FileAuthority(common.ResolverBase):
         self.__dict__ = state
 #        print 'setstate ', self.soa
 
-    def _lookup(self, name, cls, type, timeout = 10):
+    def _lookup(self, name, cls, type, timeout = None):
         results = []
         authority = []
         additional = []

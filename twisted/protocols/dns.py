@@ -28,8 +28,12 @@ Future Plans:
 """
 
 # System imports
-import StringIO, struct, random, types, socket
+import struct, random, types, socket
 from math import ceil, floor
+try:
+    import cStringIO as StringIO
+except ImportError:
+    import StringIO
 
 try:
     from Crypto.Util import randpool
@@ -42,14 +46,16 @@ except ImportError:
         1
     )
 
-    randomSource = lambda: random.randint(0, 65535)
+    def randomSource():
+        return random.randint(0, 65535)
 else:
-    randomSource = lambda r = randpool.RandomPool().get_bytes: struct.unpack('h', r(2))[0]
+    def randomSource(r = randpool.RandomPool().get_bytes):
+        return struct.unpack('h', r(2))[0]
 
 # Twisted imports
 from twisted.internet import protocol, defer, error
 from twisted.python.compat import dict, isinstance
-from twisted.python import log, compat
+from twisted.python import log, compat, failure
 
 
 PORT = 53
@@ -107,6 +113,10 @@ class DomainError(ValueError):
 class AuthoritativeDomainError(ValueError):
     pass
 
+class DNSQueryTimeoutError(defer.TimeoutError):
+    def __init__(self, id):
+        self.id = id
+        defer.TimeoutError.__init__(self)
 
 def str2time(s):
     suffixes = (
@@ -125,9 +135,9 @@ def str2time(s):
     return s
 
 
-def readPrecisely( file, l ):
-    buff = file.read( l )
-    if len( buff ) < l:
+def readPrecisely(file, l):
+    buff = file.read(l)
+    if len(buff) < l:
         raise EOFError
     return buff
 
@@ -1025,6 +1035,7 @@ class Message:
 class DNSDatagramProtocol(protocol.DatagramProtocol):
     id = None
     liveMessages = None
+    resends = None
     
     timeout = 10
     reissue = 2
@@ -1032,6 +1043,7 @@ class DNSDatagramProtocol(protocol.DatagramProtocol):
     def __init__(self, controller):
         self.controller = controller
         self.liveMessages = {}
+        self.resends = {}
         self.id = random.randrange(2 ** 10, 2 ** 15)
 
 
@@ -1048,7 +1060,11 @@ class DNSDatagramProtocol(protocol.DatagramProtocol):
             if not self.liveMessages.has_key(self.id):
                 break
         return self.id
-
+     
+    def stopProtocol(self):
+        self.liveMessages = {}
+        self.resends = {}
+        self.transport = None
 
 #    def writeMessage(self, message, address):
 #        from twisted.internet import reactor
@@ -1068,33 +1084,19 @@ class DNSDatagramProtocol(protocol.DatagramProtocol):
         m = Message()
         m.fromStr(data)
         try:
-            d, i = self.liveMessages[m.id]
-        except KeyError:
-            self.controller.messageReceived(m, self, addr)
+            d = self.liveMessages[m.id]
+        except KeyError, e:
+            if not self.resends.has_key(m.id):
+                self.controller.messageReceived(m, self, addr)
         else:
             del self.liveMessages[m.id]
-            d.callback(m)
-            i.cancel()
+            try:
+                d.callback(m)
+            except Exception, e:
+                print e
 
 
-    def _reissueQuery(self, message, address, counter, timer):
-        d, _ = self.liveMessages[message.id]
-        if counter <= 0:
-            d.errback(defer.TimeoutError(message.queries))
-            del self.liveMessages[message.id]
-        else:
-            from twisted.internet import reactor
-            self.writeMessage(message, address)
-            self.liveMessages[message.id] = (
-                d,
-                reactor.callLater(
-                    timer, self._reissueQuery, message, address,
-                    counter - 1, timer
-                )
-            )
-
-
-    def query(self, address, queries, timeout = None, reissue = None):
+    def query(self, address, queries, timeout = 10, id = None):
         """
         Send out a message with the given queries.
         
@@ -1107,29 +1109,23 @@ class DNSDatagramProtocol(protocol.DatagramProtocol):
         @rtype: C{Deferred}
         """
         from twisted.internet import reactor
-        id = self.pickID()
+        if id is None:
+            id = self.pickID()
+        else:
+            self.resends[id] = 1
         m = Message(id, recDes=1)
         m.queries = queries
-
-        if timeout is None:
-            timeout = self.timeout
-        if reissue is None:
-            if self.reissue is None:
-                counter = 0
-                reissue = timeout
-            else:
-                reissue = self.reissue
-                counter = int(timeout / float(self.reissue))
-
-        d, _ = self.liveMessages[id] = (
-            defer.Deferred(),
-            reactor.callLater(
-                reissue, self._reissueQuery, m, address,
-                counter, reissue
-            )
-        )
+        d = self.liveMessages[id] = defer.Deferred()
+        d.setTimeout(timeout, self._clearFailed, id)
         self.writeMessage(m, address)
         return d
+        
+    def _clearFailed(self, deferred, id):
+        try:
+            del self.liveMessages[id]
+        except:
+            pass
+        deferred.errback(failure.Failure(DNSQueryTimeoutError(id)))
 
 
 class DNSProtocol(protocol.Protocol):
@@ -1181,7 +1177,9 @@ class DNSProtocol(protocol.Protocol):
                 self.controller.messageReceived(m, self)
             else:
                 del self.liveMessages[m.id]
-                d.callback(m)
+                try:
+                    d.callback(m)
+                except: pass
 
 
     def query(self, queries, timeout = None):
@@ -1195,6 +1193,8 @@ class DNSProtocol(protocol.Protocol):
         """
         id = self.pickID()
         d = self.liveMessages[id] = defer.Deferred()
+        if timeout is not None:
+            d.setTimeout(timeout)
         m = Message(id, recDes=1)
         m.queries = queries
         self.writeMessage(m)

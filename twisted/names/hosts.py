@@ -48,7 +48,7 @@ class Resolver:
         self.ttl = ttl
 
 
-    def query(self, query, timeout = 10):
+    def query(self, query, timeout = None):
         return self._lookup(str(query.name), query.type, query.type, timeout)
 
 
@@ -60,7 +60,7 @@ class Resolver:
         )
 
 
-    def lookupAddress(self, name, timeout=10):
+    def lookupAddress(self, name, timeout = None):
         res = searchFileFor(self.file, name)
         if res:
             return defer.succeed([

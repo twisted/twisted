@@ -31,7 +31,7 @@ class ResolverBase:
         for (k, v) in typeToMethod.items():
             self.typeToMethod[k] = getattr(self, v)
 
-    def query(self, query, timeout = 10):
+    def query(self, query, timeout = None):
         try:
             return self.typeToMethod[query.type](str(query.name), timeout)
         except KeyError, e:
@@ -40,86 +40,70 @@ class ResolverBase:
     def _lookup(self, name, cls, type, timeout):
         raise NotImplementedError("ResolverBase._lookup")
 
-    def lookupAddress(self, name, timeout = 10):
+    def lookupAddress(self, name, timeout = None):
         return self._lookup(name, dns.IN, dns.A, timeout)
 
-    def lookupIPV6Address(self, name, timeout = 10):
+    def lookupIPV6Address(self, name, timeout = None):
         return self._lookup(name, dns.IN, dns.AAAA, timeout)
 
-    def lookupAddress6(self, name, timeout = 10):
+    def lookupAddress6(self, name, timeout = None):
         return self._lookup(name, dns.IN, dns.A6, timeout)
 
-    def lookupMailExchange(self, name, timeout = 10):
+    def lookupMailExchange(self, name, timeout = None):
         return self._lookup(name, dns.IN, dns.MX, timeout)
 
-    def lookupNameservers(self, name, timeout = 10):
+    def lookupNameservers(self, name, timeout = None):
         return self._lookup(name, dns.IN, dns.NS, timeout)
 
-    def lookupCanonicalName(self, name, timeout = 10):
+    def lookupCanonicalName(self, name, timeout = None):
         return self._lookup(name, dns.IN, dns.CNAME, timeout)
 
-    def lookupMailBox(self, name, timeout = 10):
+    def lookupMailBox(self, name, timeout = None):
         return self._lookup(name, dns.IN, dns.MB, timeout)
 
-    def lookupMailGroup(self, name, timeout = 10):
+    def lookupMailGroup(self, name, timeout = None):
         return self._lookup(name, dns.IN, dns.MG, timeout)
 
-    def lookupMailRename(self, name, timeout = 10):
+    def lookupMailRename(self, name, timeout = None):
         return self._lookup(name, dns.IN, dns.MR, timeout)
 
-    def lookupPointer(self, name, timeout = 10):
+    def lookupPointer(self, name, timeout = None):
         return self._lookup(name, dns.IN, dns.PTR, timeout)
 
-    def lookupAuthority(self, name, timeout = 10):
+    def lookupAuthority(self, name, timeout = None):
         return self._lookup(name, dns.IN, dns.SOA, timeout)
 
-    def lookupNull(self, name, timeout = 10):
+    def lookupNull(self, name, timeout = None):
         return self._lookup(name, dns.IN, dns.NULL, timeout)
 
-    def lookupWellKnownServices(self, name, timeout = 10):
+    def lookupWellKnownServices(self, name, timeout = None):
         return self._lookup(name, dns.IN, dns.WKS, timeout)
 
-    def lookupService(self, name, timeout = 10):
+    def lookupService(self, name, timeout = None):
         return self._lookup(name, dns.IN, dns.SRV, timeout)
 
-    def lookupHostInfo(self, name, timeout = 10):
+    def lookupHostInfo(self, name, timeout = None):
         return self._lookup(name, dns.IN, dns.HINFO, timeout)
 
-    def lookupMailboxInfo(self, name, timeout = 10):
+    def lookupMailboxInfo(self, name, timeout = None):
         return self._lookup(name, dns.IN, dns.MINFO, timeout)
 
-    def lookupText(self, name, timeout = 10):
+    def lookupText(self, name, timeout = None):
         return self._lookup(name, dns.IN, dns.TXT, timeout)
 
-    def lookupResponsibility(self, name, timeout = 10):
+    def lookupResponsibility(self, name, timeout = None):
         return self._lookup(name, dns.IN, dns.RP, timeout)
 
-    def lookupAFSDatabase(self, name, timeout = 10):
+    def lookupAFSDatabase(self, name, timeout = None):
         return self._lookup(name, dns.IN, dns.AFSDB, timeout)
 
-    def lookupZone(self, name, timeout = 10):
+    def lookupZone(self, name, timeout = None):
         return self._lookup(name, dns.IN, dns.AXFR, timeout)
 
-    def lookupAllRecords(self, name, timeout = 10):
+    def lookupAllRecords(self, name, timeout = None):
         return self._lookup(name, dns.IN, dns.ALL_RECORDS, timeout)
 
-#    def lookupAllRecords(self, name, timeout = 10):
-#        return defer.DeferredList([
-#            self._lookup(name, dns.IN, type, timeout).addErrback(
-#                lambda f: f.trap(NotImplementedError) and EMPTY_RESULT
-#            ) for type in dns.QUERY_TYPES.keys()
-#        ]).addCallback(self._cbAllRecords)
-
-#    def _cbAllRecords(self, results):
-#        ans, auth, add = [], [], []
-#        for res in results:
-#            if res[0]:
-#                ans.extend(res[1][0])
-#                auth.extend(res[1][1])
-#                add.extend(res[1][2])
-#        return ans, auth, add
-
-    def getHostByName(self, name, timeout = 10, effort = 10):
+    def getHostByName(self, name, timeout = None, effort = 10):
         # XXX - respect timeout
         return self._lookup(name, dns.IN, dns.ALL_RECORDS, timeout).addCallback(
             self._cbRecords, name, effort
