@@ -4,86 +4,54 @@
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
-    <title>Twisted 1.0</title>
+    <title>Twisted 1.0 FAQ</title>
   </head>
 
   <body>
-    <h1>Getting to 1.0</h1>
+    <h1>Twisted 1.0 FAQ</h1>
 
-    <h2>Introduction</h2>
+    <h3>Does the 1.0 release mean that all of Twisted's APIs are stable?</h3>
 
-    <p>Not all of the APIs in Twisted 1.0 are going to be stable. What
-    is going to be stable are specific APIs, namely twisted.internet.
-    Other parts of Twisted may still be too immature to be considered
-    stable, and will be worked on in later versions.</p>
+    <p>No, only specific parts of Twisted are stable, i.e. we only promise
+    backwards compatibility for some parts of Twisted. While these APIs may be
+    extended, they will not change in ways that break existing code that uses them. 
 
-    <p>The goal of this release, then, is to have <code
-    class="API">twisted.internet</code> in a state where it is a
-    suitable replacement for asyncore/Medusa. That means it should
-    be stable API-wise, have as many tests as we can possibly write
-    for it, and be well documented.</p>
+    <p>While other parts of Twisted are not stable, we will however do
+    our best to make sure that there is backwards compatibility for these parts
+    as well. In general, the more the module or package are used, and the closer they
+    are to being feature complete, the more we will concentrate on providing backwards
+    compatibility when API changes take place.</p>
 
-    <h2>Process</h2>
+    <h3>Which parts of Twisted 1.0 are stable?</h3>
 
-    <p>As soon as the <code
-    class="API">twisted.internet</code> APIs became stable, we switched
-    to version 0.99.0. Now, our goal is to document,
-    write tests and fix bugs in <code
-    class="API">twisted.internet</code> - all changes must be API
-    compatible from this point onwards.</p>
+    <p>In general, any module marked as such can be considered stable. In
+    Twisted 1.0, <b>only twisted.internet is stable</b>, other than:</p>
+    
+    <ol>
+    <li>UDP support</li>
+    <li>twisted.internet.ptypro - probably be merged into IReactorProcess APIs.</li>
+    <li>twisted.internet.win32eventreactor - will be replaced with win32support in future.</li>
+    </ol>
 
-    <p>Changes to other parts of Twisted will continue to be
-    acceptable, as long as they follow our usual policies.</p>
+    <p>In addition, most of the modules in twisted.spread, twisted.python, twisted.web 
+    will probably have backwards compatibility provided if their APIs change, since they
+    are widely used.</p>
 
-    <p>1.0 will be released when we feel that the level of bugs is
-    sufficiently low, and the amount of documentation and unit
-    tests is sufficiently high.</p>
+    <h3>Twisted really needs documentation for cred/PB/etc.</h3>
 
-    <h2>Requirements for 0.99</h2>
+    Yes, we know. We are doing the best we can, and there is documentation
+    in progress for many parts of Twisted. There is a limit to how much we
+    can do in our free time. See also the answer to the next question.
+    
+    <h3>My company would love to use Twisted, but it's missing feature X</h3>
 
-    <ul>
-      <li>Clean up connectors. <strong>[Done]</strong></li>
-
-      <li>Make necessary changes to Application - whatever changes
-      glyph wanted to make with authorizers and services. <strong>[Done]</strong></li>
-
-      <li>Finalize Deferred APIs. <strong>[Done]</strong></li>
-
-      <li>Low-level socket APIs - people want to turn off Nagle's
-      algorithm and set other settings on sockets that are
-      currently not supported. we need to formalize a method for
-      this. <strong>[Done]</strong></li>
-
-      <li>Support binding client sockets to specific
-      interfaces. <strong>[Done]</strong></li>
-    </ul>
-
-    <p>So, another requirement is marking all modules whose API is
-    stable as such, the rest of the modules can be left
-    unmarked.  We currently anticipate these modules to be: </p>
+    <p>You have 3 options:</p>
 
     <ul>
-      <li><code class="API">twisted.internet</code></li>
-      <li>All of <code class="API">twisted.enterprise</code>,
-        except for <code class="API">twisted.enterprise.row</code>.</li>
-    </ul>
-
-    <h2>Requirements for 1.0</h2>
-
-    <p>These are non-API-related changes that need to be made
-    before 1.0 is released.</p>
-
-    <ul>
-      <li>Move all bin/ scripts to twisted/scripts. <strong>[Done]</strong></li>
-    </ul>
-
-    <h2>Post 1.0 Features</h2>
-
-    <p>These are features that will likely be added after
-    the 1.0 release.</p>
-
-    <ul>
-      <li>New UDP API.</li>
+    <li>Pay one of the Twisted developers to implement the feature.</li>
+    <li>Implement the feature yourself.</li>
+    <li>Add a feature request to our bug tracker. We will try to implement the
+        feature, but there are no guarantees when and if this will happen.</li>
     </ul>
 
   </body>
