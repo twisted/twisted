@@ -1070,7 +1070,6 @@ class Headers:
         Value should be a list of strings, each being one header of the
         given name.
         """
-        
         name=name.lower()
         self._raw_headers[name] = value
         self._headers[name] = _RecalcNeeded
@@ -1083,6 +1082,14 @@ class Headers:
         name=name.lower()
         self._raw_headers[name] = _RecalcNeeded
         self._headers[name] = value
+
+    def addRawHeader(self, name, value):
+        """
+        Add a raw value to a header that may or may not already exist.
+        If it exists, add it as a separate header to output; do not
+        replace anything.
+        """
+        self.setRawHeaders(name, self.getRawHeaders(name, []) + [value])
 
     def removeHeader(self, name):
         """Removes the header named."""

@@ -34,27 +34,62 @@ import server
 import static
 import stream
 
-class CGIDirectory(resource.Resource, filepath.FilePath):
-    addSlash = True
+
+def createCGIEnvironment(ctx, request=None):
+    if request is None:
+        request = iweb.IRequest(ctx)
     
-    def __init__(self, pathname):
-        resource.Resource.__init__(self)
-        filepath.FilePath.__init__(self, pathname)
+    script_name = "/" + string.join(request.prepath, '/')
+    python_path = string.join(sys.path, os.pathsep)
+    server_name = request.host.split(':')[0]
 
-    def locateChild(self, ctx, segments):
-        fnp = self.child(segments[0])
-        if not fnp.exists():
-            print fnp.path, 'does not exist'
-            return static.File.childNotFound, ()
-        elif fnp.isdir():
-            return CGIDirectory(fnp.path), segments[1:]
+    env = os.environ.copy()
+    env.update({
+        "SERVER_SOFTWARE":   server.VERSION,
+        "SERVER_NAME":       server_name,
+        "GATEWAY_INTERFACE": "CGI/1.1",
+        "SERVER_PROTOCOL":   "HTTP/%i.%i" % request.clientproto,
+        "SERVER_PORT":       str(request.getHost()[2]),
+        "REQUEST_METHOD":    request.method,
+        "SCRIPT_NAME":       script_name, # XXX
+        "SCRIPT_FILENAME":   self.filename,
+        "REQUEST_URI":       request.uri,
+        "CONTENT_LENGTH":    str(request.stream.length),
+        })
+    
+    # Add PATH_INFO from the remaining segments in the context
+    postpath = iweb.IRemainingSegments(ctx)
+    if postpath:
+        env["PATH_INFO"] = "/" + '/'.join(postpath)
+
+    ## This doesn't work in compat.py right now, either.
+    #client = request.getClient()
+    #if client is not None:
+    #    env['REMOTE_HOST'] = client
+    #ip = request.getClientIP()
+    #if ip is not None:
+    #    env['REMOTE_ADDR'] = ip
+
+    qindex = request.uri.find('?')
+    if qindex != -1:
+        qs = env['QUERY_STRING'] = request.uri[qindex+1:]
+        if '=' in qs:
+            qargs = []
         else:
-            return CGIScript(fnp.path), segments[1:]
-        return None, ()
+            qargs = [urllib.unquote(x) for x in qs.split('+')]
+    else:
+        env['QUERY_STRING'] = ''
+        qargs = []
 
-    def render(self, ctx):
-        errormsg = 'CGI directories do not support directory listing'
-        return http.Response(responsecode.FORBIDDEN)
+    # Propagate HTTP headers
+    for title, header in request.headers.getAllRawHeaders():
+        envname = title.replace('-', '_').upper()
+        if title not in ('content-type', 'content-length'):
+            envname = "HTTP_" + envname
+        env[envname] = ','.join(header)
+            
+    return env
+
 
 class CGIScript(resource.LeafResource):
     """I represent a CGI script.
@@ -76,63 +111,10 @@ class CGIScript(resource.LeafResource):
         process.
         """
         request = iweb.IRequest(ctx)
-
         # Make sure that we don't have an unknown content-length
         if request.stream.length is None:
             return http.Response(responsecode.LENGTH_REQUIRED)
-
-        script_name = "/" + string.join(request.prepath, '/')
-        python_path = string.join(sys.path, os.pathsep)
-        server_name = request.host.split(':')[0]
-        env = {
-            "SERVER_SOFTWARE":   server.VERSION,
-            "SERVER_NAME":       server_name,
-            "GATEWAY_INTERFACE": "CGI/1.1",
-            "SERVER_PROTOCOL":   "HTTP/%i.%i" % request.clientproto,
-            "SERVER_PORT":       str(request.getHost()[2]),
-            "REQUEST_METHOD":    request.method,
-            "SCRIPT_NAME":       script_name, # XXX
-            "SCRIPT_FILENAME":   self.filename,
-            "REQUEST_URI":       request.uri,
-            "CONTENT_LENGTH":    str(request.stream.length),
-            }
-
-        ## This doesn't work in compat.py right now, either.
-        #client = request.getClient()
-        #if client is not None:
-        #    env['REMOTE_HOST'] = client
-        #ip = request.getClientIP()
-        #if ip is not None:
-        #    env['REMOTE_ADDR'] = ip
-
-        postpath = iweb.IRemainingSegments(ctx)
-        if postpath:
-            env["PATH_INFO"] = "/" + string.join(postpath, '/')
-
-        qindex = string.find(request.uri, '?')
-        if qindex != -1:
-            qs = env['QUERY_STRING'] = request.uri[qindex+1:]
-            if '=' in qs:
-                qargs = []
-            else:
-                qargs = [urllib.unquote(x) for x in qs.split('+')]
-        else:
-            env['QUERY_STRING'] = ''
-            qargs = []
-
-        # Propagate HTTP headers
-        for title, header in request.headers.getAllRawHeaders():
-            envname = string.upper(string.replace(title, '-', '_'))
-            if title not in ('content-type', 'content-length'):
-                envname = "HTTP_" + envname
-            env[envname] = ','.join(header)
-            
-        # Propagate our environment
-        for key, value in os.environ.items():
-            if not env.has_key(key):
-                env[key] = value
-
-        # And they're off!
+        env = createCGIEnvironment(ctx, request=request)
         return self.runProcess(env, request, qargs)
 
     def http_POST(self, ctx):
@@ -281,11 +263,7 @@ class CGIProcessProtocol(protocol.ProcessProtocol):
                 else:
                     self.response.code = statusNum
             else:
-                ##self.request.setHeader(name, text)
-                self.response.headers.setRawHeaders(
-                    name,
-                    self.response.headers.getRawHeaders(name, [])+[text]
-                    )
+                self.response.headers.addRawHeader(name, text)
 
     def processEnded(self, reason):
         if reason.value.exitCode != 0:
@@ -304,4 +282,27 @@ class CGIProcessProtocol(protocol.ProcessProtocol):
         Call our deferred (from CGIScript.render) with a response.
         """
         self.deferred.callback(self.response)
+
+
+class CGIDirectory(resource.Resource, filepath.FilePath):
+    addSlash = True
+    
+    def __init__(self, pathname):
+        resource.Resource.__init__(self)
+        filepath.FilePath.__init__(self, pathname)
+
+    def locateChild(self, ctx, segments):
+        fnp = self.child(segments[0])
+        if not fnp.exists():
+            print fnp.path, 'does not exist'
+            return static.File.childNotFound, ()
+        elif fnp.isdir():
+            return CGIDirectory(fnp.path), segments[1:]
+        else:
+            return CGIScript(fnp.path), segments[1:]
+        return None, ()
+
+    def render(self, ctx):
+        errormsg = 'CGI directories do not support directory listing'
+        return http.Response(responsecode.FORBIDDEN)
 
