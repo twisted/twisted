@@ -61,7 +61,7 @@ class CGIScript(resource.Resource):
     IPC with an external process with an unpleasant protocol.
     """
     isLeaf = 1
-    def __init__(self, filename):
+    def __init__(self, filename, registry=None):
         """Initialize, with the name of a CGI script file.
         """
         self.filename = filename
