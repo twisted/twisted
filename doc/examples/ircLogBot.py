@@ -51,12 +51,11 @@ class MessageLogger:
     def __init__(self, file):
         self.file = file
 
-
     def log(self, message):
+        """Write a message to the file."""
         timestamp = time.strftime("[%H:%M:%S]", time.localtime(time.time()))
         self.file.write('%s %s\n' % (timestamp, message))
         self.file.flush()
-
 
     def close(self):
         self.file.close()
@@ -71,12 +70,11 @@ class LogBot(irc.IRCClient):
     def connectionMade(self):
         irc.IRCClient.connectionMade(self)
         self.logger = MessageLogger(open(self.factory.filename, "a"))
-        self.log = self.logger.log
-        self.log("[connected at %s]" % time.asctime(time.localtime(time.time())))
+        self.logger.log("[connected at %s]" % time.asctime(time.localtime(time.time())))
 
     def connectionLost(self, reason):
         irc.IRCClient.connectionLost(self)
-        self.log("[disconnected at %s]" % time.asctime(time.localtime(time.time())))
+        self.logger.log("[disconnected at %s]" % time.asctime(time.localtime(time.time())))
         self.logger.close()
 
 
@@ -88,22 +86,22 @@ class LogBot(irc.IRCClient):
 
     def joined(self, channel):
         """This will get called when the bot joins the channel."""
-        self.log("[I have joined %s]" % channel)
+        self.logger.log("[I have joined %s]" % channel)
 
     def privmsg(self, user, channel, msg):
         """This will get called when the bot receives a message."""
         user = user.split('!', 1)[0]
-        self.log("<%s> %s" % (user, msg))
+        self.logger.log("<%s> %s" % (user, msg))
         if msg.startswith("%s:" % self.nickname):
             # someone is talking to me, lets respond:
             msg = "%s: I am a log bot" % user
             self.say(channel, msg)
-            self.log("<%s> %s" % (self.nickname, msg))
+            self.logger.log("<%s> %s" % (self.nickname, msg))
 
     def action(self, user, channel, msg):
         """This will get called when the bot sees someone do an action."""
         user = user.split('!', 1)[0]
-        self.log("* %s %s" % (user, msg))
+        self.logger.log("* %s %s" % (user, msg))
 
     # irc callbacks
 
@@ -111,7 +109,7 @@ class LogBot(irc.IRCClient):
         """Called when an IRC user changes their nickname."""
         old_nick = prefix.split('!')[0]
         new_nick = params[0]
-        self.log("%s is now known as %s" % (old_nick, new_nick))
+        self.logger.log("%s is now known as %s" % (old_nick, new_nick))
 
 
 class LogBotFactory(protocol.ClientFactory):
