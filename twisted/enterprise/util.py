@@ -33,6 +33,7 @@ dbTypeMap = {
     "integer": NOQUOTE,
     "float4": NOQUOTE,
     "float8": NOQUOTE,
+    "numeric": NOQUOTE,
     "real": NOQUOTE,
     "smallint": NOQUOTE,
     "char": USEQUOTE,
