@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.58 $"[11:-2]
+__version__ = "$Revision: 1.59 $"[11:-2]
 
 import os
 import cgi
@@ -342,9 +342,9 @@ class LiveController(Controller):
     <script language="javascript">
     %s
     </script>
-    %s event sent to %s with arguments %s.
+    %s event sent to %s (%s) with arguments %s.
 </body>
-</html>''' % ('\n'.join(scriptOutput), eventName, cgi.escape(str(target)), eventArgs)
+</html>''' % ('\n'.join(scriptOutput), eventName, cgi.escape(str(target)), eventTarget, eventArgs)
 
     def gatheredControllers(self, v, d, request):
         Controller.gatheredControllers(self, v, d, request)
