@@ -266,6 +266,8 @@ def runApp(config):
                     os.remove(config['pidfile'])
             else:
                 sys.exit('Can\'t check status of PID %s from pidfile %s: %s' % (pid, config['pidfile'], why[1]))
+        except AttributeError:
+            pass # welcome to windows
         else:
             sys.exit("""\
 Another twistd server is running, PID %s\n
