@@ -33,7 +33,6 @@ import cStringIO
 import time
 # syntax highlighting for Python source
 import py2html, PyFontify
-from pprint import pprint
 from twisted import copyright
 from twisted.python import usage
 
