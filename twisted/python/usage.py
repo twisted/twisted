@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: usage.py,v 1.48 2003/09/05 06:43:38 tv Exp $
+# $Id: usage.py,v 1.49 2003/09/05 06:59:48 tv Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -539,7 +539,7 @@ def docMakeChunks(optList, width=80):
             column1 = "  %2s%c --%s  " % (short, comma, long)
 
         if opt.get('doc', ''):
-            doc = opt['doc']
+            doc = opt['doc'].strip()
         else:
             doc = ''
 
