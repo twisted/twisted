@@ -103,11 +103,11 @@ class WxReactor(default.SelectReactor):
         while self.running:
             self.runUntilCurrent()
             t = self.timeout()
-            if t == None or t > 0.009:
-                t = 0.009
+            if t == None or t > 0.001:
+                t = 0.001
             #t2 = self.running and t
             self.doIteration(t)
-            if seconds() - start > 0.009:
+            if seconds() - start > 0.001:
                 break
 
 
