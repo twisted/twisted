@@ -11,19 +11,16 @@ class IRCParseError(ValueError):
 def parsemsg(s):
     prefix = ''
     trailing = []
-    try:
-        if s[0] == ':':
-            prefix, s = string.split(s[1:], maxsplit=1)
-        if s.find(':') != -1:
-            s, trailing = string.split(s, ':', 1)
-            args = string.split(s)
-            args.append(trailing)
-        else:
-            args = string.split(s)
-        command = args.pop(0)
-        return prefix, command, args
-    except:
-        raise IRCParseError
+    if s[0] == ':':
+        prefix, s = string.split(s[1:], maxsplit=1)
+    if string.find(s,':') != -1:
+        s, trailing = string.split(s, ':', 1)
+        args = string.split(s)
+        args.append(trailing)
+    else:
+        args = string.split(s)
+    command = args.pop(0)
+    return prefix, command, args
 
 
 class IRC(protocol.Protocol):

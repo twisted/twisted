@@ -16,6 +16,7 @@ theApplication = None
 # Twisted Imports
 
 from twisted.python import threadable, log
+from twisted.persisted import styles
 threadable.requireInit()
 
 # Sibling Imports
@@ -142,6 +143,21 @@ def shutDown(a=None, b=None):
     threadable.dispatcher.stop()
     for callback in shutdowns:
         callback()
+
+
+def runUntilCurrent():
+    """Run all delayed loops and return a timeout for when the next call expects to be made.
+    """
+    # This code is duplicated for efficiency later.
+    timeout = None
+    for delayed in delayeds:
+        delayed.runUntilCurrent()
+        newTimeout = delayed.timeout()
+        if ((newTimeout is not None) and
+            ((timeout is None) or
+             (newTimeout < timeout))):
+            timeout = newTimeout
+    return timeout
 
 
 def doSelect(timeout,
@@ -314,91 +330,106 @@ if os.name == 'nt':
             doSelect(0)
         threadable.dispatcher.work()
 
+class _Win32Waker(styles.Ephemeral):
+    """I am a workaround for the lack of pipes on win32.
+    
+    I am a pair of connected sockets which can wake up the main loop
+    from another thread.
+    """
+    def __init__(self):
+        """Initialize.
+        """
+        # Following select_trigger (from asyncore)'s example;
+        address = ("127.0.0.1",19939)
+        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client.setsockopt(socket.IPPROTO_TCP, 1, 1)
+        server.bind(address)
+        server.listen(1)
+        client.connect(address)
+        reader, clientaddr = server.accept()
+        client.setblocking(1)
+        reader.setblocking(0)
+        self.r = reader
+        self.w = client
+        self.fileno = self.r.fileno
+        
+    def wakeUp(self):
+        """Send a byte to my connection.
+        """
+        self.w.send('x')
+        
+    def doRead(self):
+        """Read some data from my connection.
+        """
+        self.r.recv(8192)
+
+class _UnixWaker(styles.Ephemeral):
+    """This class provides a simple interface to wake up the select() loop.
+    
+    This is necessary only in multi-threaded programs.
+    """
+    def __init__(self):
+        """Initialize.
+        """
+        i, o = os.pipe()
+        self.i = os.fdopen(i,'r')
+        self.o = os.fdopen(o,'w')
+        self.fileno = self.i.fileno
+        
+    def doRead(self):
+        """Read one byte from the pipe.
+        """
+        self.i.read(1)
+        
+    def wakeUp(self):
+        """Write one byte to the pipe, and flush it.
+        """
+        self.o.write('x')
+        self.o.flush()
+        
+    def connectionLost(self):
+        """Close both ends of my pipe.
+        """
+        self.i.close()
+        self.o.close()
+
+if os.name == 'posix':
+    _Waker = _UnixWaker
+else:
+    _Waker = _Win32Waker
+
+def wakeUp():
+    if not threadable.isInIOThread():
+        waker.wakeUp()
+
+def wakeAddReader(reader):
+    """Selector.addReader(selectable) -> None
+    Adds a Selectable to the list of objects monitored for data being
+    available to read. (waking up the main I/O thread if necessary)"""
+    reads[reader] = 1
+    wakeUp()
+
+def wakeAddWriter(writer):
+    """Selector.addWriter(selectable) -> None
+    Adds a Selectable to the list of objects monitored for data being
+    available to write. (waking up the main I/O thread if necessary)"""
+    writes[writer] = 1
+    wakeUp()
+
+wakerInstalled = 0
+
+def installWaker():
+    global addReader, addWriter, waker, wakerInstalled
+    if not wakerInstalled:
+        wakerInstalled = 1
+        waker = _Waker()
+        addReader(waker)
+        addReader = wakeAddReader
+        addWriter = wakeAddWriter
+
 if threadable.threaded:
-    if os.name == 'nt':
-        class _Waker:
-            """I am a workaround for the lack of pipes on win32.
-
-            I am a pair of connected sockets which can wake up the main loop
-            from another thread.
-            """
-            def __init__(self):
-                """Initialize.
-                """
-                # Following select_trigger (from asyncore)'s example;
-                address = ("127.0.0.1",19939)
-                server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                client.setsockopt(socket.IPPROTO_TCP, 1, 1)
-                server.bind(address)
-                server.listen(1)
-                client.connect(address)
-                reader, clientaddr = server.accept()
-                client.setblocking(1)
-                reader.setblocking(0)
-                self.r = reader
-                self.w = client
-                self.fileno = self.r.fileno
-
-            def wakeUp(self):
-                """Send a byte to my connection.
-                """
-                self.w.send('x')
-
-            def doRead(self):
-                """Read some data from my connection.
-                """
-                self.r.recv(8192)
-    else:
-        class _Waker:
-            """This class provides a simple interface to wake up the select() loop.
-
-            This is necessary only in multi-threaded programs.
-            """
-            def __init__(self):
-                """Initialize.
-                """
-                i, o = os.pipe()
-                self.i = os.fdopen(i,'r')
-                self.o = os.fdopen(o,'w')
-                self.fileno = self.i.fileno
-
-            def doRead(self):
-                """Read one byte from the pipe.
-                """
-                self.i.read(1)
-
-            def wakeUp(self):
-                """Write one byte to the pipe, and flush it.
-                """
-                self.o.write('x')
-                self.o.flush()
-
-            def connectionLost(self):
-                """Close both ends of my pipe.
-                """
-                self.i.close()
-                self.o.close()
-
-    waker = _Waker()
-    addReader(waker)
-    def wakeUp():
-        if not threadable.isInIOThread():
-            waker.wakeUp()
-            
-    def addReader(reader):
-        """Selector.addReader(selectable) -> None
-        Adds a Selectable to the list of objects monitored for data being
-        available to read. (waking up the main I/O thread if necessary)"""
-        reads[reader] = 1
-        wakeUp()
-
-    def addWriter(writer):
-        """Selector.addWriter(selectable) -> None
-        Adds a Selectable to the list of objects monitored for data being
-        available to write. (waking up the main I/O thread if necessary)"""
-        writes[writer] = 1
-        wakeUp()
+    installWaker()
 
 # Sibling Import
 import process

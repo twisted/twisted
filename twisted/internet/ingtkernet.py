@@ -73,14 +73,7 @@ def simulate():
     global _simtag
     if _simtag is not None:
         gtk.timeout_remove(_simtag)
-    timeout = None
-    for delayed in delayeds:
-        delayed.runUntilCurrent()
-        newTimeout = delayed.timeout()
-        if ((newTimeout is not None) and
-            ((timeout is None) or
-             (newTimeout < timeout))):
-            timeout = newTimeout
+    timeout = main.runUntilCurrent()
     if timeout is not None:
         _simtag = gtk.timeout_add(timeout * 1010, simulate) # grumble
 

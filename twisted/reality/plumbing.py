@@ -225,8 +225,7 @@ class WebThing(html.Interface):
             request.setHeader("Location","http://%s%s" % (
                 request.getHeader("host"), self._getpath(request)))
             request.code = http.MOVED_PERMANENTLY
-            threadable.dispatch(None, setattr, player,
-                                'location', self.thing)
+            player.location = self.thing
             return "NO CONTENT"
             
         return self.runBox(request,

@@ -1,0 +1,22 @@
+#!/usr/bin/env python
+
+"""
+Usage: gtkfaucet
+
+This script is a GTK frontend to a Twisted Reality 'Pump' server.
+"""
+
+### TwistedPython Preamble
+# This makes sure that users don't have to set up their environment
+# specially in order to run these programs from bin/.
+import sys,os,string
+
+if string.find(os.path.abspath(sys.argv[0]),'Twisted') != -1:
+    sys.path.append(os.path.dirname(
+        os.path.dirname(os.path.abspath(sys.argv[0])))) 
+### end of preamble
+
+from twisted.reality.ui import tkfaucet
+
+tkfaucet.main()
+

@@ -151,6 +151,7 @@ def rebuild(module, doLog=1):
             if doLog:
                 sys.stdout.write("x")
                 sys.stdout.flush()
+            clazz.__bases__ = ()
             clazz.__dict__.clear()
             clazz.__getattr__ = __getattr__
             clazz.__module__ = module.__name__
