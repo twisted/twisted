@@ -200,6 +200,9 @@ class LogPublisher:
         for i in xrange(len(self.observers) - 1, -1, -1):
             try:
                 self.observers[i](actualEventDict)
+            except KeyboardInterrupt:
+                # Don't swallow keyboard interrupt!
+                raise
             except:
                 o = self.observers.pop(i)
                 msg("Log observer %s failed, removing from observer list." % (o,))
