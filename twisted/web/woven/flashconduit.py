@@ -20,7 +20,7 @@ class FlashConduit(LineReceiver):
         lp.hookupOutputConduit(self)
 
     def writeScript(self, data):
-        print "writing javascript", data
+        #print "writing javascript", data
         self.transport.write(data + '\0')
 
 

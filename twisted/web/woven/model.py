@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-__version__ = "$Revision: 1.37 $"[11:-2]
+__version__ = "$Revision: 1.38 $"[11:-2]
 
 import types
 import weakref
@@ -50,6 +50,9 @@ class Model:
         self.views = []
         self.subviews = {}
         self.submodels = {}
+        self._getter = kwargs.get('getter')
+        self._setter = kwargs.get('setter')
+        self.cachedValid = 0
         self.initialize(*args, **kwargs)
 
     def __getstate__(self):
@@ -84,8 +87,13 @@ class Model:
         for weakref in self.views:
             ref = weakref()
             if ref is view or ref is None:
-                print "removed a view."
                 self.views.remove(weakref)
+
+    def setGetter(self, getter):
+        self._getter = getter
+
+    def setSetter(self, setter):
+        self._setter = setter
 
     def notify(self, changed=None):
         """
@@ -96,6 +104,8 @@ class Model:
         MVC paradigm of querying the model for things you're interested
         in.
         """
+        self.cachedValid = 0
+        self.submodels = {}
         if changed is None: changed = {}
         retVal = []
         for view in self.views:
@@ -213,7 +223,7 @@ class Model:
         cache.
         """
         if value is None:
-            warnings.warn("Warning!")
+            warnings.warn("Warning! setSubmodel should now take the request as the first argument")
             value = name
             name = request
             request = None
@@ -224,17 +234,43 @@ class Model:
             setattr(self, name, value)
 
     def getData(self, request=None):
+        if self._getter is not None:
+            func = self._getter
+            num = 1
+            if hasattr(func, 'im_func'):
+                num = 2
+                func = func.im_func
+            args, varargs, varkw, defaults = inspect.getargspec(func)
+            self.cachedValid = 1
+            self.submodels = {}
+            if len(args) == num:
+                self.orig = self._getter(request)
+            else:
+                self.orig = self._getter()
+            return self.orig
         return self
 
     def setData(self, request=None, data=None):
         if data is None:
-            warnings.warn("Warning!")
+            warnings.warn("Warning! setData should now take the request as the first argument")
             data = request
             request = None
-        if hasattr(self, 'parent') and self.parent:
-            self.parent.setSubmodel(None, self.name, data)
-        if hasattr(self, 'orig'):
-            self.orig = data
+        if self._setter is not None:
+            func = self._setter
+            num = 2
+            if hasattr(func, 'im_func'):
+                num = 3
+                func = func.im_func
+            args, varargs, varkw, defaults = inspect.getargspec(func)
+            self.cachedValid = 0
+            if len(args) == num:
+                return self._setter(request, data)
+            return self._setter(data)
+        else:
+            if hasattr(self, 'parent') and self.parent:
+                self.parent.setSubmodel(None, self.name, data)
+            if hasattr(self, 'orig'):
+                self.orig = data
 
 class MethodModel(Model):
     """Look up submodels with wmfactory_* methods.
@@ -254,6 +290,17 @@ class MethodModel(Model):
             warnings.warn("Warning, wmfactory methods now should take the request as the first argument")
             return meth()
         return meth(request)
+    
+    def getSubmodel(self, request=None, name=None):
+        if name is None:
+            warnings.warn("Warning! getSubmodel should now take the request as the first argument")
+            name = request
+            request = None
+
+        sm = Model.getSubmodel(self, request, name)
+        if sm is not None:
+            sm._getter = getattr(self, "wmfactory_"+name)
+        return sm
 
 
 class AttributeModel(Model):
@@ -282,9 +329,35 @@ class Wrapper(Model):
         self.orig = orig
 
     def getData(self, request=None):
+        if self._getter is not None:
+            func = self._getter
+            num = 1
+            if hasattr(func, 'im_func'):
+                num = 2
+                func = func.im_func
+            args, varargs, varkw, defaults = inspect.getargspec(func)
+            self.cachedValid = 1
+            self.submodels = {}
+            if len(args) == num:
+                self.orig = self._getter(request)
+            else:
+                self.orig = self._getter()
+            return self.orig
+
         return self.orig
 
     def setData(self, request=None, data=None):
+        if self._setter is not None:
+            func = self._setter
+            num = 2
+            if hasattr(func, 'im_func'):
+                num = 3
+                func = func.im_func
+            args, varargs, varkw, defaults = inspect.getargspec(func)
+            self.cachedValid = 0
+            if len(args) == num:
+                return self._setter(request, data)
+            return self._setter(data)
         if data is None:
             warnings.warn("Warning!")
             data = request
@@ -381,9 +454,6 @@ class DictionaryModel(Wrapper):
             name = request
             request = None
         self.orig[name] = value
-
-    def getData(self, request=None):
-        return self.orig
 
 
 class AttributeWrapper(Wrapper):

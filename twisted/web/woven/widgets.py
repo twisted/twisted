@@ -128,7 +128,7 @@ class Widget(view.View):
         """
         self.submodel = submodel
 
-    def getData(self):
+    def getData(self, request=None):
         """
         I have a model; however since I am a widget I am only responsible
         for a portion of that model. This method returns the portion I am
@@ -137,14 +137,14 @@ class Widget(view.View):
         The return value of this may be a Deferred; if it is, then
         L{setData} will be called once the result is available.
         """
-        return self.model.getData()
+        return self.model.getData(request)
 
-    def setData(self, data):
+    def setData(self, request=None, data=None):
         """
         If the return value of L{getData} is a Deferred, I am called
         when the result of the Deferred is available.
         """
-        self.model.setData(data)
+        self.model.setData(request, data)
 
     def add(self, item):
         """
@@ -187,7 +187,7 @@ class Widget(view.View):
         return node
 
     def generate(self, request, node):
-        data = self.getData()
+        data = self.getData(request)
         if isinstance(data, defer.Deferred):
             data.addCallback(self.setDataCallback, request, node)
             data.addErrback(utils.renderFailure, request)
@@ -205,9 +205,9 @@ class Widget(view.View):
         return result
 
     def setDataCallback(self, result, request, node):
-        if isinstance(self.getData(), defer.Deferred):
+        if isinstance(self.getData(request), defer.Deferred):
             self.setData(result)
-        data = self.getData()
+        data = self.getData(request)
         if isinstance(data, defer.Deferred):
             import warnings
             warnings.warn("%r has returned a Deferred multiple times for the "
@@ -307,7 +307,7 @@ class Widget(view.View):
         if payload.has_key(self.submodel):
             data = payload[self.submodel]
         else:
-            data = self.getData()
+            data = self.getData(request)
         newNode = self._regenerate(request, oldNode, data)
         returnNode = self.dispatchResult(request, oldNode, newNode)
         # shot in the dark: this seems to make *my* code work.  probably will
@@ -477,9 +477,9 @@ class Text(Widget):
             domhelpers.clearNode(node)
         if isinstance(self.text, model.Model):
             if self.raw:
-                textNode = domhelpers.RawText(str(self.getData()))
+                textNode = domhelpers.RawText(str(self.getData(request)))
             else:
-                textNode = document.createTextNode(str(self.getData()))
+                textNode = document.createTextNode(str(self.getData(request)))
             if node is None:
                 return textNode
             node.appendChild(textNode)
@@ -502,7 +502,7 @@ class Image(Text):
         #and Image both subclass.
         node.setAttribute('border', self.border)
         if isinstance(self.text, model.Model):
-            data = self.getData()
+            data = self.getData(request)
         else:
             data = self.text
         assert data is not None, "data is None, self.text is %r" % (self.text,)
@@ -548,7 +548,7 @@ class Input(Widget):
             else:
                 id = self.attributes.get('id', node.getAttribute('id'))
             self['name'] = id
-        mVal = self.getData()
+        mVal = self.getData(request)
         if mVal is None:
             mVal = ''
         assert mVal is not None
@@ -614,7 +614,7 @@ class Option(Input):
         self['value'] = str(value)
 
     def generateDOM(self, request, node):
-        self.add(Text(self.text or self.getData()))
+        self.add(Text(self.text or self.getData(request)))
         return Input.generateDOM(self, request, node)
 
 
@@ -644,7 +644,7 @@ class Anchor(Widget):
         params = urllib.urlencode(self.parameters)
         if params:
             href = href + '?' + params
-        data = self.getData()
+        data = self.getData(request)
         self['href'] = href or str(data) + self.trailingSlash
         #self['href'] = urllib.quote(self['href'])
         if data is None:
@@ -659,7 +659,7 @@ class SubAnchor(Anchor):
         params = urllib.urlencode(self.parameters)
         if params:
             href = href + '?' + params
-        data = self.getData()
+        data = self.getData(request)
         if not href:
             href = node.getAttribute('href')
         self['href'] = href + str(data) + self.trailingSlash
@@ -723,7 +723,7 @@ class List(Widget):
         domhelpers.clearNode(node)
         if not listHeader is None:
             node.appendChild(listHeader)
-        data = self.getData()
+        data = self.getData(request)
         if data:
             self._iterateData(node, self.submodel, data)
         elif not emptyList is None:
@@ -847,7 +847,7 @@ class Cell(Widget):
 
 class RawText(Widget):
     def generateDOM(self, request, node):
-        self.node = domhelpers.RawText(self.getData())
+        self.node = domhelpers.RawText(self.getData(request))
         return self.node
 
 from types import StringType
@@ -863,10 +863,10 @@ class Link(Widget):
             node.setAttribute("href", data)
         else:
             data = self.model
-            txt = data.getSubmodel("text").getData()
+            txt = data.getSubmodel("text").getData(request)
             if not isinstance(txt, Node):
                 txt = document.createTextNode(txt)
-            lnk = data.getSubmodel("href").getData()
+            lnk = data.getSubmodel("href").getData(request)
             self['href'] = lnk
             node.tagName = 'a'
             domhelpers.clearNode(node)
