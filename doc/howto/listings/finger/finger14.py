@@ -14,14 +14,6 @@ class FingerService(service.Service):
     def __init__(self, filename):
         self.users = {}
         self.filename = filename
-        self._read()
-    def _read(self):
-        for line in file(self.filename):
-            user, status = line.split(':', 1)
-            user=user.strip()
-            status=status.strip()
-            self.users[user] = status
-        self.call = reactor.callLater(30, self._read)
     def startService(self):
         def _read(self):
             for line in file(self.file):
