@@ -67,7 +67,6 @@ class GtkReactor(default.PosixReactorBase):
     def addReader(self, reader):
         if not hasReader(reader):
             reads[reader] = gtk.input_add(reader, gtk.GDK.INPUT_READ, self.callback)
-        self.simulate()
 
     def addWriter(self, writer):
         if not hasWriter(writer):
