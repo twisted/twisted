@@ -19,7 +19,7 @@ from twisted.python import log
 from twisted.python import components
 from twisted.python import mvc
 from twisted.web import resource
-from twisted.web.woven import view
+from twisted.web.woven import template
 
 
 class WController(mvc.Controller, resource.Resource):
@@ -45,7 +45,7 @@ class WController(mvc.Controller, resource.Resource):
 
     def process(self, request, **kwargs):
         log.msg("Processing results: ", kwargs)
-        return view.RESTART_RENDERING
+        return template.RESTART_RENDERING
 
 
 def registerControllerForModel(controller, model):
