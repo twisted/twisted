@@ -19,6 +19,10 @@
 
 Requires xmlrpclib (comes standard with Python 2.2 and later, otherwise can be
 downloaded from http://www.pythonware.com/products/xmlrpc/).
+
+API Stability: semi-stable
+
+Maintainer: L{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
 # System Imports
@@ -84,7 +88,12 @@ class XMLRPC(resource.Resource):
 
     By default methods beginning with 'xmlrpc_' are published.
     """
-    
+
+    # Error codes for Twisted, if they conflict with yours then
+    # modify them at runtime.
+    NOT_FOUND = 8001
+    FAILURE = 8002
+
     isLeaf = 1
     
     def __init__(self):
