@@ -18,24 +18,24 @@
 """
 Perspective Broker
 
-    "This isn't a professional opinion, but it's probably got enough internet
-    to kill you." --glyph
+    "This isn't a professional opinion, but it's probably got enough
+    internet to kill you." --glyph
 
  Introduction
 
   This is a broker for proxies for and copies of objects.  It provides a
   translucent interface layer to those proxies.
 
-  The protocol is not opaque, because it provides objects which represent the
-  remote proxies and require no context (server references, IDs) to operate
-  on.
+  The protocol is not opaque, because it provides objects which
+  represent the remote proxies and require no context (server
+  references, IDs) to operate on.
 
-  It is not transparent because it does *not* attempt to make remote objects
-  behave identically, or even similiarly, to local objects.  Method calls are
-  invoked asynchronously, and specific rules are applied when serializing
-  arguments.
+  It is not transparent because it does *not* attempt to make remote
+  objects behave identically, or even similiarly, to local objects.
+  Method calls are invoked asynchronously, and specific rules are
+  applied when serializing arguments.
 
-"""#'
+"""
 
 # System Imports
 import traceback
@@ -68,33 +68,36 @@ class Error(Exception):
     """
     This error can be raised to generate known error conditions.
 
-    When a PB callable method (perspective_, remote_, view_) raises this
-    error, it indicates that a traceback should not be printed, but instead,
-    the string representation of the exception should be sent.
+    When a PB callable method (perspective_, remote_, view_) raises
+    this error, it indicates that a traceback should not be printed,
+    but instead, the string representation of the exception should be
+    sent.
     """
 
 class Serializable:
     """(internal) An object that can be passed remotely.
 
-    This is a style of object which can be serialized by Perspective Broker.
-    Objects which wish to be referenceable or copied remotely have to subclass
-    Serializable.  However, clients of Perspective Broker will probably not
-    want to directly subclass Serializable; the Flavors of transferable objects
-    are listed below.
+    This is a style of object which can be serialized by Perspective
+    Broker.  Objects which wish to be referenceable or copied remotely
+    have to subclass Serializable.  However, clients of Perspective
+    Broker will probably not want to directly subclass Serializable; the
+    Flavors of transferable objects are listed below.
 
-    What it means to be "serializable" is that an object can be passed to or
-    returned from a remote method.  Certain basic types (dictionaries, lists,
-    tuples, numbers, strings) are serializable by default; however, classes
-    need to choose a specific serialization style: Referenceable, Viewable,
-    Copyable or Cacheable.
+    What it means to be "serializable" is that an object can be
+    passed to or returned from a remote method.  Certain basic types
+    (dictionaries, lists, tuples, numbers, strings) are serializable by
+    default; however, classes need to choose a specific serialization
+    style: Referenceable, Viewable, Copyable or Cacheable.
 
-    You may also pass [lists, dictionaries, tuples] of Serializable instances
-    to or return them from remote methods, as many levels deep as you like.
+    You may also pass [lists, dictionaries, tuples] of Serializable
+    instances to or return them from remote methods, as many levels deep
+    as you like.
     """
 
     def remoteSerialize(self, broker):
         """Return a list of strings & numbers which represents this object remotely.
         """
+
         raise NotImplementedError()
 
     def processUniqueID(self):
@@ -104,6 +107,7 @@ class Serializable:
         indicate that two values are identity-equivalent (such as proxies
         for the same object).
         """
+
         return id(self)
 
 class Message:
@@ -133,30 +137,32 @@ PB_CONNECTION_LOST = 'Connection Lost'
 def printTraceback(tb):
     """Print a traceback (string) to the standard log.
     """
+
     log.msg('Perspective Broker Traceback:' )
     log.msg(tb)
 
 class Perspective(passport.Perspective):
     """A perspective on a service.
 
-    per*spec*tive, n. : The relationship of aspects of a subject to each other
-    and to a whole: 'a perspective of history'; 'a need to view the problem in
-    the proper perspective'.
+    per*spec*tive, n. : The relationship of aspects of a subject to each
+    other and to a whole: 'a perspective of history'; 'a need to view
+    the problem in the proper perspective'.
 
     A service represents a collection of state, plus a collection of
-    perspectives.  Perspectives are the way that networked clients have a
-    'view' onto an object, or collection of objects on the server.
+    perspectives.  Perspectives are the way that networked clients have
+    a 'view' onto an object, or collection of objects on the server.
 
-    Although you may have a service onto which there is only one perspective,
-    the common case is that a Perspective will be analagous to (or the same as)
-    a "user"; if you are creating a PB-enabled service, your User (or
-    equivalent) class should subclass Perspective.
+    Although you may have a service onto which there is only one
+    perspective, the common case is that a Perspective will be
+    analagous to (or the same as) a "user"; if you are creating a
+    PB-enabled service, your User (or equivalent) class should subclass
+    Perspective.
 
-    Initially, a peer requesting a perspective will receive only a RemoteReference to
-    a Perspective.  When a method is called on that RemoteReference, it will
-    translate to a method on the remote perspective named
-    'perspective_methodname'.  (For more information on invoking methods on
-    other objects, see ViewPoint.)
+    Initially, a peer requesting a perspective will receive only a
+    RemoteReference to a Perspective.  When a method is called on
+    that RemoteReference, it will translate to a method on the remote
+    perspective named 'perspective_methodname'.  (For more information
+    on invoking methods on other objects, see ViewPoint.)
     """
 
     def remoteMessageReceived(self, broker, message, args, kw):
@@ -185,19 +191,21 @@ class Perspective(passport.Perspective):
 class Service(passport.Service):
     """A service for Perspective Broker.
 
-    On this Service, getPerspectiveNamed must return a pb.Perspective rather
-    than a passport.Perspective.
+    On this Service, getPerspectiveNamed must return a pb.Perspective
+    rather than a passport.Perspective.
     """
 
 class Referenceable(Serializable):
     perspective = None
     """I am an object sent remotely as a direct reference.
 
-    When one of my subclasses is sent as an argument to or returned from a
-    remote method call, I will be serialized by default as a direct reference.
+    When one of my subclasses is sent as an argument to or returned
+    from a remote method call, I will be serialized by default as a
+    direct reference.
 
-    This means that the peer will be able to call methods on me; a method call
-    xxx() from my peer will be resolved to methods of the name remote_xxx.
+    This means that the peer will be able to call methods on me;
+    a method call xxx() from my peer will be resolved to methods
+    of the name remote_xxx.
     """
 
     def remoteMessageReceived(self, broker, message, args, kw):
@@ -219,9 +227,10 @@ class Referenceable(Serializable):
     def remoteSerialize(self, broker):
         """(internal)
 
-        Return a tuple which will be used as the s-expression to serialize this
-        to a peer.
+        Return a tuple which will be used as the s-expression to
+        serialize this to a peer.
         """
+
         return remote_atom, broker.registerReference(self)
 
 
@@ -238,9 +247,9 @@ class Root(Referenceable):
     def rootObject(self, broker):
         """A BrokerFactory is requesting to publish me as a root object.
 
-        When a BrokerFactory is sending me as the root object, this method will
-        be invoked to allow per-broker versions of an object.  By default I
-        return myself.
+        When a BrokerFactory is sending me as the root object, this
+        method will be invoked to allow per-broker versions of an
+        object.  By default I return myself.
         """
         return self
 
@@ -248,6 +257,7 @@ class Root(Referenceable):
 class AsReferenceable(Referenceable):
     """AsReferenceable: a reference directed towards another object.
     """
+
     def __init__(self, object):
         """Initialize me with an object.
         """
@@ -264,33 +274,35 @@ class AsReferenceable(Referenceable):
 class ViewPoint(Referenceable):
     """I act as an indirect reference to an object accessed through a Perspective.
 
-    Simply put, I combine an object with a perspective so that when a peer
-    calls methods on the object I refer to, the method will be invoked with
-    that perspective as a first argument, so that it can know who is calling
-    it.
+    Simply put, I combine an object with a perspective so that when a
+    peer calls methods on the object I refer to, the method will be
+    invoked with that perspective as a first argument, so that it can
+    know who is calling it.
 
-    While Viewable objects will be converted to Proxies by default when they
-    are returned from or sent as arguments to a remote method, any object may
-    be manually proxied as well.
+    While Viewable objects will be converted to Proxies by default when
+    they are returned from or sent as arguments to a remote method, any
+    object may be manually proxied as well.
 
-    This can be useful when dealing with Perspectives, Copyables, and
-    Cacheables.  It is legal to implement a method as such on a perspective::
+    This can be useful when dealing with Perspectives, Copyables,
+    and Cacheables.  It is legal to implement a method as such on
+    a perspective::
 
      | def perspective_getViewPointForOther(self, name):
      |     return ViewPoint(self, self.service.getPerspectiveNamed(name))
 
     This will allow you to have references to Perspective objects in two
-    different ways.  One is through the initial 'attach' call -- each peer will
-    have a RemoteReference to their perspective directly.  The other is through
-    this method; each peer can get a RemoteReference to all other perspectives
-    in the service; but that RemoteReference will be to a ViewPoint, not
-    directly to the object.
+    different ways.  One is through the initial 'attach' call -- each
+    peer will have a RemoteReference to their perspective directly.  The
+    other is through this method; each peer can get a RemoteReference to
+    all other perspectives in the service; but that RemoteReference will
+    be to a ViewPoint, not directly to the object.
 
-    The practical offshoot of this is that you can implement 2 varieties of
-    remotely callable methods on this Perspective; view_xxx and
-    perspective_xxx.  view_xxx methods will follow the rules for ViewPoint
-    methods (see ViewPoint.remoteMessageReceived), and perspective_xxx methods
-    will follow the rules for Perspective methods.
+    The practical offshoot of this is that you can implement 2 varieties
+    of remotely callable methods on this Perspective; view_xxx and
+    perspective_xxx. view_xxx methods will follow the rules for
+    ViewPoint methods (see ViewPoint.remoteMessageReceived), and
+    perspective_xxx methods will follow the rules for Perspective
+    methods.
     """
 
     def __init__(self, perspective, object):
@@ -314,8 +326,9 @@ class ViewPoint(Referenceable):
         """A remote message has been received.  Dispatch it appropriately.
 
         The default implementation is to dispatch to a method called
-        'view_messagename' to my Object and call it on my object with the same
-        arguments, modified by inserting my Perspective as the first argument.
+        'view_messagename' to my Object and call it on my object with
+        the same arguments, modified by inserting my Perspective as
+        the first argument.
         """
         args = broker.unserialize(args, self.perspective)
         kw = broker.unserialize(kw, self.perspective)
@@ -332,9 +345,10 @@ class ViewPoint(Referenceable):
 class Viewable(Serializable):
     """I will be converted to a ViewPoint when passed to or returned from a remote method.
 
-    The beginning of a peer's interaction with a PB Service is always through a
-    perspective.  However, if a perspective_xxx method returns a Viewable, it
-    will be serialized to the peer as a response to that method.
+    The beginning of a peer's interaction with a PB Service is always
+    through a perspective.  However, if a perspective_xxx method returns
+    a Viewable, it will be serialized to the peer as a response to that
+    method.
     """
 
     def remoteSerialize(self, broker):
@@ -348,51 +362,59 @@ class Copyable(Serializable):
     """Subclass me to get copied each time you are returned from or passed to a remote method.
 
     When I am returned from or passed to a remote method call, I will be
-    converted into data via a set of callbacks (see my methods for more info).
-    That data will then be serialized using Jelly, and sent to the peer.
+    converted into data via a set of callbacks (see my methods for more
+    info).  That data will then be serialized using Jelly, and sent to
+    the peer.
 
-    The peer will then look up the type to represent this with; see RemoteCopy for
-    details.
+    The peer will then look up the type to represent this with; see
+    RemoteCopy for details.
     """
+
     def getStateToCopy(self):
         """Gather state to send when I am serialized for a peer.
 
-        I will default to returning self.__dict__.  Override this to customize
-        this behavior.
+        I will default to returning self.__dict__.  Override this to
+        customize this behavior.
         """
+
         return self.__dict__
 
     def getStateToCopyFor(self, perspective):
         """Gather state to send when I am serialized for a particular perspective.
 
-        I will default to calling getStateToCopy.  Override this to customize
-        this behavior.
+        I will default to calling getStateToCopy.  Override this to
+        customize this behavior.
         """
+
         return self.getStateToCopy()
 
     def getTypeToCopy(self):
         """Determine what type tag to send for me.
 
         By default, send the string representation of my class
-        (package.module.Class); normally this is adequate, but you may override
-        this to change it.
+        (package.module.Class); normally this is adequate, but
+        you may override this to change it.
         """
+
         return str(self.__class__)
 
     def getTypeToCopyFor(self, perspective):
         """Determine what type tag to send for me.
 
-        By default, defer to self.getTypeToCopy() normally this is adequate,
-        but you may override this to change it.
+        By default, defer to self.getTypeToCopy() normally this is
+        adequate, but you may override this to change it.
         """
+
         return self.getTypeToCopy()
 
     def remoteSerialize(self, broker):
         """Assemble type tag and state to copy for this broker.
 
-        This will call getTypeToCopyFor and getStateToCopy, and return an
-        appropriate s-expression to represent me.  Do not override this method.
+        This will call getTypeToCopyFor and getStateToCopy, and
+        return an appropriate s-expression to represent me.  Do
+        not override this method.
         """
+
         p = broker.getPerspective()
         return (copy_atom, self.getTypeToCopyFor(p),
                 broker.jelly(self.getStateToCopyFor(p)))
@@ -401,40 +423,47 @@ class Copyable(Serializable):
 class RemoteCopy:
     """I am a remote copy of a Copyable object.
 
-    When the state from a Copyable object is received, an instance will be
-    created based on the copy tags table (see setCopierForClass) and sent the
-    setCopyableState message.  I provide a reasonable default implementation of
-    that message; subclass me if you wish to serve as a copier for remote data.
+    When the state from a Copyable object is received, an instance will
+    be created based on the copy tags table (see setCopierForClass) and
+    sent the setCopyableState message.  I provide a reasonable default
+    implementation of that message; subclass me if you wish to serve as
+    a copier for remote data.
 
     NOTE: copiers are invoked with no arguments.  Do not implement a
     constructor which requires args in a subclass of RemoteCopy!
     """
+
     def setCopyableState(self, state):
         """I will be invoked with the state to copy locally.
 
         'state' is the data returned from the remote object's
-        'getStateToCopyFor' method, which will often be the remote object's
-        dictionary (or a filtered approximation of it depending on my peer's
-        perspective).
+        'getStateToCopyFor' method, which will often be the remote
+        object's dictionary (or a filtered approximation of it depending
+        on my peer's perspective).
         """
+
         self.__dict__ = state
 
 class RemoteCache(RemoteCopy):
     """A cache is a local representation of a remote Cacheable object.
 
-    This represents the last known state of this object.  It may also have
-    methods invoked on it -- in order to update caches, the cached class
-    generates a RemoteReference to this object as it is originally sent.
+    This represents the last known state of this object.  It may
+    also have methods invoked on it -- in order to update caches,
+    the cached class generates a RemoteReference to this object as
+    it is originally sent.
 
-    Much like copy, I will be invoked with no arguments.  Do not implement a
-    constructor that requires arguments in one of my subclasses.
+    Much like copy, I will be invoked with no arguments.  Do not
+    implement a constructor that requires arguments in one of my
+    subclasses.
     """
+
     def remoteMessageReceived(self, broker, message, args, kw):
         """A remote message has been received.  Dispatch it appropriately.
 
         The default implementation is to dispatch to a method called
         'observe_messagename' and call it on my  with the same arguments.
         """
+
         args = broker.unserialize(args)
         kw = broker.unserialize(kw)
         method = getattr(self, "observe_%s" % message)
@@ -455,15 +484,16 @@ def setCopierForClass(classname, copier):
 
       pb.setCopierForClass('module.package.Class', MyCopier).
 
-    Call this at the module level immediately after its class definition.
-    MyCopier should be a subclass of RemoteCopy.
+    Call this at the module level immediately after its class
+    definition. MyCopier should be a subclass of RemoteCopy.
 
-    The classname may be a special tag returned by 'Copyable.getTypeToCopyFor'
-    rather than an actual classname.
+    The classname may be a special tag returned by
+    'Copyable.getTypeToCopyFor' rather than an actual classname.
 
-    This call is also for cached classes, since there will be no overlap.  The
-    rules are the same.
+    This call is also for cached classes, since there will be no
+    overlap.  The rules are the same.
     """
+
     global copyTags
     copyTags[classname] = copier
 
@@ -471,9 +501,11 @@ def setCopierForClass(classname, copier):
 class RemoteCacheMethod:
     """A method on a reference to a RemoteCache.
     """
+
     def __init__(self, name, broker, cached, perspective):
         """(internal) initialize.
         """
+
         self.name = name
         self.broker = broker
         self.perspective = perspective
@@ -482,19 +514,23 @@ class RemoteCacheMethod:
     def do(self, *args, **kw):
         """(internal) action method.
         """
+
         self.cached.remoteCacheDo(self.broker, self.name, self.perspective, args, kw)
 
 
 class RemoteCacheObserver:
     """I am a reverse-reference to the peer's RemoteCache.
 
-    I am generated automatically when a cache is serialized.  I represent a
-    reference to the client's RemoteCache object that will represent a particular
-    Cacheable; I am the additional object passed to getStateToCacheAndObserveFor.
+    I am generated automatically when a cache is serialized.  I
+    represent a reference to the client's RemoteCache object that
+    will represent a particular Cacheable; I am the additional
+    object passed to getStateToCacheAndObserveFor.
     """
+
     def __init__(self, broker, cached, perspective):
         """Initialize me pointing at a client side cache for a particular broker/perspective.
         """
+
         self.broker = broker
         self.cached = cached
         self.perspective = perspective
@@ -506,6 +542,7 @@ class RemoteCacheObserver:
     def __hash__(self):
         """generate a hash unique to all RemoteCacheObservers for this broker/perspective/cached triplet
         """
+
         return (  (hash(self.broker) % 2**10)
                 + (hash(self.perspective) % 2**10)
                 + (hash(self.cached) % 2**10))
@@ -513,11 +550,13 @@ class RemoteCacheObserver:
     def __cmp__(self, other):
         """compare me to another RemoteCacheObserver
         """
+
         return cmp((self.broker, self.perspective, self.cached), other)
 
     def __getattr__(self, key):
         """Create a RemoteCacheMethod.
         """
+
         if key[:2]=='__' and key[-2:]=='__':
             raise AttributeError(key)
         return RemoteCacheMethod(key, self.broker, self.cached, self.perspective).do
@@ -526,32 +565,36 @@ class RemoteCacheObserver:
 class Cacheable(Copyable):
     """A cached instance.
 
-    This means that it's copied; but there is some logic to make sure that it's
-    only copied once.  Additionally, when state is retrieved, it is passed a
-    "proto-reference" to the state as it will exist on the client.
+    This means that it's copied; but there is some logic to make sure
+    that it's only copied once.  Additionally, when state is retrieved,
+    it is passed a "proto-reference" to the state as it will exist on
+    the client.
 
-    XXX: The documentation for this class needs work, but it's the most complex
-    part of PB and it is inherently difficult to explain.
+    XXX: The documentation for this class needs work, but it's the most
+    complex part of PB and it is inherently difficult to explain.
     """
 
     def getStateToCacheAndObserveFor(self, perspective, observer):
         """Get state to cache on the client and client-cache reference to observe locally.
 
-        This is similiar to getStateToCopyFor, but it additionally passes in a
-        reference to the client-side RemoteCache instance that will be created
-        when it is unserialized.  This allows Cacheable instances to keep their
-        RemoteCaches up to date when they change, such that no changes can
-        occurr between the point at which the state is initially copied and the
-        client receives it that are not propogated.
+        This is similiar to getStateToCopyFor, but it additionally
+        passes in a reference to the client-side RemoteCache instance
+        that will be created when it is unserialized.  This allows
+        Cacheable instances to keep their RemoteCaches up to date when
+        they change, such that no changes can occurr between the point
+        at which the state is initially copied and the client receives
+        it that are not propogated.
         """
+
         return self.getStateToCopyFor(perspective)
 
     def remoteSerialize(self, broker):
         """Return an appropriate tuple to serialize me.
 
-        Depending on whether this broker has cached me or not, this may return
-        either a full state or a reference to an existing cache.
+        Depending on whether this broker has cached me or not, this may
+        return either a full state or a reference to an existing cache.
         """
+
         luid = broker.cachedRemotelyAs(self)
         if luid is None:
             luid = broker.cacheRemotely(self)
@@ -567,6 +610,7 @@ class Cacheable(Copyable):
     def remoteCacheDo(self, broker, methodName, perspective, args, kw):
         """Call this method on the remotely cached version of this object. (For a given broker.)
         """
+
         cacheID = broker.cachedRemotelyAs(self)
         assert cacheID is not None, "You can't call a cached method when the object hasn't been given to the other side yet."
         callback = kw.get("pbcallback")
@@ -580,17 +624,17 @@ class Cacheable(Copyable):
 class RemoteReference(Serializable, styles.Ephemeral):
     """This is a translucent reference to a remote object.
 
-    I may be a reference to a ViewPoint, a Referenceable, or a Perspective.
-    From the client's perspective, it is not possible to tell which except by
-    convention.
+    I may be a reference to a ViewPoint, a Referenceable, or
+    a Perspective.  From the client's perspective, it is not
+    possible to tell which except by convention.
 
-    I am a "translucent" reference because although no additional bookkeeping
-    overhead is given to the application programmer for manipulating a
-    reference, return values are asynchronous.
+    I am a "translucent" reference because although no additional
+    bookkeeping overhead is given to the application programmer for
+    manipulating a reference, return values are asynchronous.
 
-    In order to get a return value from a RemoteReference method, you must pass
-    a callback in as a 'pbcallback'.  Errors can be detected with a
-    'pberrback'.  For example::
+    In order to get a return value from a RemoteReference method,
+    you must pass a callback in as a 'pbcallback'.  Errors can be
+    detected with a 'pberrback'.  For example::
 
       | def doIt(reference):
       |     reference.doIt("hello","world", frequency=2,
@@ -607,8 +651,10 @@ class RemoteReference(Serializable, styles.Ephemeral):
     def __init__(self, perspective, broker, luid, doRefCount):
         """(internal) Initialize me with a broker and a locally-unique ID.
 
-        The ID is unique only to the particular Perspective Broker instance.
+        The ID is unique only to the particular Perspective Broker
+        instance.
         """
+
         self.luid = luid
         self.broker = broker
         self.doRefCount = doRefCount
@@ -617,17 +663,20 @@ class RemoteReference(Serializable, styles.Ephemeral):
     def remoteSerialize(self, broker):
         """If I am being sent back to where I came from, serialize as a local backreference.
         """
+
         assert self.broker == broker, "Can't send references to brokers other than their own."
         return local_atom, self.luid
 
     def __getattr__(self, key):
         """Get a Message for this key.
 
-        This makes attributes translucent, so that the method call syntax
-        foo.bar(baz) will still work.  However, please note that method calls
-        are asynchronous, so return values and exceptions will not be
-        propogated.  (Message calls always return None.)
+        This makes attributes translucent, so that the method call
+        syntax foo.bar(baz) will still work.  However, please note
+        that method calls are asynchronous, so return values and
+        exceptions will not be propogated.  (Message calls always
+        return None.)
         """
+
         if key[:2]=='__' and key[-2:]=='__':
             raise AttributeError(key)
         return Message(self, key).send
@@ -636,6 +685,7 @@ class RemoteReference(Serializable, styles.Ephemeral):
     def remoteInstanceDo(self, key, args, kw):
         """Asynchronously send a named message to the object which I refer to.
         """
+
         callback = kw.get("pbcallback")
         errback = kw.get("pberrback")
         if kw.has_key('pbcallback'):
@@ -649,6 +699,7 @@ class RemoteReference(Serializable, styles.Ephemeral):
     def __cmp__(self,other):
         """Compare me [to another RemoteReference].
         """
+
         if isinstance(other, RemoteReference):
             if other.broker == self.broker:
                 return cmp(self.luid, other.luid)
@@ -657,22 +708,25 @@ class RemoteReference(Serializable, styles.Ephemeral):
     def __hash__(self):
         """Hash me.
         """
+
         return self.luid
 
     def __del__(self):
         """Do distributed reference counting on finalization.
         """
+
         if self.doRefCount:
             self.broker.sendDecRef(self.luid)
 
 class RemoteCacheProxy(Serializable):
     """I am an ugly implementation detail.
 
-    Cacheable objects have to be manually reference counted in order to
-    properly do handshaking on removing references to them.  I aid in that;
-    when you *think* you have a reference to a RemoteCache, you actually have a
-    reference to me.
+    Cacheable objects have to be manually reference counted in order
+    to properly do handshaking on removing references to them.  I aid
+    in that; when you *think* you have a reference to a RemoteCache,
+    you actually have a reference to me.
     """
+
     __inited = 0
     def __init__(self, broker, instance, luid):
         self.__broker = broker
@@ -683,12 +737,14 @@ class RemoteCacheProxy(Serializable):
     def remoteSerialize(self, broker):
         """serialize me (only for the broker I'm for) as the original cached reference
         """
+
         assert broker is self.__broker, "You cannot exchange cached proxies between brokers."
         return 'lcache', self.__luid
 
     def __getattr__(self, name):
         """Get a method or attribute from my cache.
         """
+
         assert name != '_RemoteCacheProxy__instance', "Infinite recursion."
         inst = self.__instance
         maybeMethod = getattr(inst, name)
@@ -706,6 +762,7 @@ class RemoteCacheProxy(Serializable):
         """String representation.
         """
         return "RemoteCacheProxy(%s)" % repr(self.__instance)
+
     def __str__(self):
         """Printable representation.
         """
@@ -744,6 +801,7 @@ class RemoteCacheProxy(Serializable):
 class Local:
     """(internal) A reference to a local object.
     """
+
     def __init__(self, object):
         """Initialize.
         """
@@ -773,15 +831,18 @@ local_atom = "local"
 class _NetJellier(jelly._Jellier):
     """A Jellier for pb, serializing all serializable flavors.
     """
+
     def __init__(self, broker):
         """initialize me for a single request.
         """
+
         jelly._Jellier.__init__(self, broker.localSecurity, None)
         self.broker = broker
 
     def _jelly_instance(self, instance):
         """(internal) replacement method
         """
+
         assert isinstance(instance, Serializable),\
                'non-serializable %s (%s) for: %s %s %s' % (
             str(instance.__class__),
@@ -800,6 +861,7 @@ class _NetUnjellier(jelly._Unjellier):
 
     This unserializes the various Serializable flavours in PB.
     """
+
     def __init__(self, broker):
         jelly._Unjellier.__init__(self, broker.localSecurity, None)
         self.broker = broker
@@ -871,6 +933,7 @@ class Broker(banana.Banana):
     def expressionReceived(self, sexp):
         """Evaluate an expression as it's received.
         """
+
         if isinstance(sexp, types.ListType):
             command = sexp[0]
             methodName = "proto_%s" % command
@@ -885,9 +948,11 @@ class Broker(banana.Banana):
 
     def proto_version(self, vnum):
         """Protocol message: (version version-number)
-        Check to make sure that both ends of the protocol are speaking the same
-        version dialect.
+
+        Check to make sure that both ends of the protocol are speaking
+        the same version dialect.
         """
+
         if vnum != self.version:
             raise ProtocolError("Version Incompatibility: %s %s" % (self.version, vnum))
 
@@ -900,15 +965,16 @@ class Broker(banana.Banana):
     def proto_didNotUnderstand(self, command):
         """Respond to stock 'didNotUnderstand' message.
 
-        Log the command that was not understood and continue. (Note: this will
-        probably be changed to close the connection or raise an exception in
-        the future.)
+        Log the command that was not understood and continue. (Note:
+        this will probably be changed to close the connection or raise
+        an exception in the future.)
         """
         log.msg("Didn't understand command:", repr(command))
 
     def connectionMade(self):
         """Initialize.
         """
+
         # Some terms:
         #  PUID: process unique ID; return value of id() function.  type "int".
         #  LUID: locally unique ID; an ID unique to an object mapped over this
@@ -955,6 +1021,7 @@ class Broker(banana.Banana):
     def connectionLost(self):
         """The connection was lost.
         """
+
         self.disconnected = 1
         # nuke potential circular references.
         self.luids = None
@@ -988,9 +1055,10 @@ class Broker(banana.Banana):
     def localObjectForID(self, luid):
         """Get a local object for a locally unique ID.
 
-        I will return an object previously stored with self.registerReference,
-        or None if
+        I will return an object previously stored with
+        self.registerReference, or None if XXX:Unfinished thought:XXX
         """
+
         lob = self.localObjects.get(luid)
         if lob is None:
             return
@@ -999,9 +1067,10 @@ class Broker(banana.Banana):
     def registerReference(self, object):
         """Get an ID for a local object.
 
-        Store a persistent reference to a local object and map its id() to a
-        generated, session-unique ID and return that ID.
+        Store a persistent reference to a local object and map its id()
+        to a generated, session-unique ID and return that ID.
         """
+
         assert object is not None
         puid = object.processUniqueID()
         luid = self.luids.get(puid)
@@ -1025,18 +1094,21 @@ class Broker(banana.Banana):
     def remoteForName(self, name):
         """Returns an object from the remote name mapping.
 
-        Note that this does not check the validity of the name, only creates a
-        translucent reference for it.  In order to check the validity of an
-        object, you can use the special message '__ping__'.
+        Note that this does not check the validity of the name, only
+        creates a translucent reference for it.  In order to check
+        the validity of an object, you can use the special message
+        '__ping__'.
 
-        object.__ping__() will always be answered with a 1 or 0 (never an
-        error) depending on whether the peer knows about the object or not.
+        object.__ping__() will always be answered with a 1 or 0 (never
+        an error) depending on whether the peer knows about the object
+        or not.
         """
         return RemoteReference(None, self, name, 0)
 
     def cachedRemotelyAs(self, instance):
         """Returns an ID that says what this instance is cached as remotely, or None if it's not.
         """
+
         puid = instance.processUniqueID()
         luid = self.remotelyCachedLUIDs.get(puid)
         if luid is not None:
@@ -1050,7 +1122,7 @@ class Broker(banana.Banana):
 
     def cacheRemotely(self, instance):
         """
-        """
+        XXX"""
         puid = instance.processUniqueID()
         luid = self.newLocalID()
         self.remotelyCachedLUIDs[puid] = luid
@@ -1061,6 +1133,7 @@ class Broker(banana.Banana):
 
     def cacheLocally(self, cid, instance):
         """(internal)
+
         Store a non-filled-out cached instance locally.
         """
         self.locallyCachedObjects[cid] = instance
@@ -1078,6 +1151,7 @@ class Broker(banana.Banana):
     def serialize(self, object, perspective=None, method=None, args=None, kw=None):
         """Jelly an object according to the remote security rules for this broker.
         """
+
         if isinstance(object, defer.Deferred):
             object.addCallbacks(self.serialize, lambda x: x,
                                 callbackKeywords={
@@ -1104,6 +1178,7 @@ class Broker(banana.Banana):
     def unserialize(self, sexp, perspective = None):
         """Unjelly an sexp according to the local security rules for this broker.
         """
+
         self.perspective = perspective
         self.unjellier = _NetUnjellier(self)
         try:
@@ -1125,7 +1200,6 @@ class Broker(banana.Banana):
         return self.currentRequestID
 
     def sendMessage(self, perspective, objectID, message, args, kw, callback, errback):
-
         """(internal) Send a message to a remote object.
 
         Arguments:
@@ -1140,12 +1214,13 @@ class Broker(banana.Banana):
 
           * kw: a dict of keyword arguments
 
-          * callback: a callback to be made when this request is answered with
-            a return value.
+          * callback: a callback to be made when this request is answered
+            with a return value.
 
-          * errback: a callback to be made when this request is answered with
-            an exception.
+          * errback: a callback to be made when this request is answered
+            with an exception.
         """
+
         self._sendMessage('',perspective, objectID, message, args, kw, callback, errback)
 
     def sendCacheMessage(self, cacheID, message, perspective, args, kw, callback, errback):
@@ -1180,9 +1255,10 @@ class Broker(banana.Banana):
     def _recvMessage(self, findObjMethod, requestID, objectID, message, answerRequired, netArgs, netKw):
         """Received a message-send.
 
-        Look up message based on object, unserialize the arguments, and invoke
-        it with args, and send an 'answer' or 'error' response.
+        Look up message based on object, unserialize the arguments, and
+        invoke it with args, and send an 'answer' or 'error' response.
         """
+
         try:
             object = findObjMethod(objectID)
             if object is None:
@@ -1219,26 +1295,26 @@ class Broker(banana.Banana):
     def _sendAnswer(self, netResult, requestID):
         """(internal) Send an answer to a previously sent message.
         """
-        self.sendCall("answer", requestID, netResult)
 
+        self.sendCall("answer", requestID, netResult)
 
     def proto_answer(self, requestID, netResult):
         """(internal) Got an answer to a previously sent message.
 
         Look up the appropriate callback and call it.
         """
+
         callback, errback = self.waitingForAnswers[requestID]
         del self.waitingForAnswers[requestID]
         result = self.unserialize(netResult)
         # XXX should this exception be caught?
         callback(result)
 
-
     def _sendError(self, descriptiveString, requestID):
         """(internal) Send an error for a previously sent message.
         """
-        self.sendCall("error", requestID, descriptiveString)
 
+        self.sendCall("error", requestID, descriptiveString)
 
     def proto_error(self, requestID, descriptiveString):
         """(internal) Deal with an error.
@@ -1309,7 +1385,8 @@ class BrokerFactory(protocol.Factory, styles.Versioned):
         """
         proto = Broker()
         proto.factory = self
-        proto.setNameForLocal("root", self.objectToBroker.rootObject(proto))
+        proto.setNameForLocal("root",
+                              self.objectToBroker.rootObject(proto))
         return proto
 
 ### AUTH STUFF
@@ -1317,6 +1394,7 @@ class BrokerFactory(protocol.Factory, styles.Versioned):
 class AuthRoot(Root):
     """I provide AuthServs as root objects to Brokers for a BrokerFactory.
     """
+
     def __init__(self, app):
         self.app = app
 
@@ -1335,6 +1413,7 @@ class _Detacher:
 class IdentityWrapper(Referenceable):
     """I delegate most functionality to a passport.Identity.
     """
+
     def __init__(self, broker, identity):
         """Initialize, specifying an identity to wrap.
         """
@@ -1344,10 +1423,11 @@ class IdentityWrapper(Referenceable):
     def remote_attach(self, serviceName, perspectiveName, remoteRef):
         """Attach the remote reference to a requested perspective.
         """
+
         perspective = self.identity.getPerspectiveForKey(serviceName, perspectiveName)
         perspective = perspective.attached(remoteRef, self.identity)
-        # Make sure that when connectionLost happens, this perspective will be
-        # tracked in order that 'detached' will be called.
+        # Make sure that when connectionLost happens, this perspective
+        # will be tracked in order that 'detached' will be called.
         # self.broker.perspectives.append((perspective, remoteRef, self.identity))
         self.broker.notifyOnDisconnect(
             _Detacher(perspective, remoteRef, self.identity).detach)
@@ -1398,7 +1478,8 @@ class AuthServ(Referenceable):
             return challenge, AuthChallenger(ident, self, challenge)
 
 class _ObjectRetrieval:
-    """(Internal) Does callbacks for getObjectAt."""
+    """(Internal) Does callbacks for getObjectAt.
+    """
 
     def __init__(self, broker, cb, eb):
         self.cb = cb
@@ -1502,16 +1583,17 @@ class connect:
     class.  So I will return a new "connect" instance, but you'll be
     best off ignoring that.)
     """
-        
+
     # Would it be worth hiding this behind a wrapper _function_, just so
     # the definition types would feel more natural?
-        
+
     def __init__(self, callback, errback, host, port, username, password,
                  service, perspective=None, client=None, timeout=None):
         """Connects and authenticates, then retrieves a PB service.
 
         See pb.connect.__doc__
-        and pay no attention to the man behind the curtain."""
+        and pay no attention to the man behind the curtain.
+        """
 
         self.callback = callback
         self.errback = errback
