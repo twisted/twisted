@@ -218,7 +218,8 @@ class DomainSMTP(SMTP):
 
 
 class SMTPClient(basic.LineReceiver):
-
+    """SMTP client for sending emails."""
+    
     def __init__(self, identity):
         self.identity = identity
 
@@ -287,3 +288,21 @@ class SMTPClient(basic.LineReceiver):
     def smtpCode_250_afterData(self, line):
         self.sentMail(self.successAddresses)
         self.smtpCode_250_from('')
+
+
+    # these methods should be overriden in subclasses
+    def getMailFrom(self):
+        """Return the email address the mail is from."""
+        raise NotImplementedError
+
+    def getMailTo(self):
+        """Return a list of emails to send to."""
+        raise NotImplementedError
+
+    def getMailData(self):
+        """Return the data of message to be sent."""
+        raise NotImplementedError
+
+    def sentMail(self, addresses):
+        """Called with list of emails to which we sent the message."""
+        pass
