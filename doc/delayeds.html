@@ -9,7 +9,7 @@
     <h2>Spreading tasks over time</h2>
 
     <p>
-      Sometimes we want to spread out a number of tasks over time, e.g. a long calculation that might block twisted if
+      Sometimes we want to schedule tasks to be run at intervals, e.g. a long calculation that might block twisted if
       the whole thing were to be run at once. We do this using objects that conform  to the Delayed interface 
       (see <code>twisted.python.delay</code>).
     <p>
@@ -18,7 +18,7 @@
      A delayed must define two functions:
      <ul>
       <li><code>timeout(self)</code> -- return maximum number of seconds until we should next run, or None if we have nothing to run.
-      <li><code>runUntilCurrent(self)</code> -- this command will be run at the very latest when the time returned by <code>timeout</code> has passed.
+      <li><code>runUntilCurrent(self)</code> -- this command will be run at the very latest, but possibly before, the number of seconds returned by <code>timeout</code> has passed.
     </ul>
     For example:
     <pre>
@@ -41,9 +41,12 @@ main.addDelayed(o)
 </pre>
     </p>
 
-   <h2>Running tasks at intervals</h2>
+   <h2>Running tasks at fixed intervals</h2>
    
-   <p>Using this infrastrucure, we can now schedule tasks to be run at intervals, e.g. once a minute:
+   <p>We sometimes want tasks to be run at intervals, but without them being called before that interval has passed.
+          For example, we may want to run some task once a minute, no more and no less. Specifying 60.0 as 
+          <code>timeout</code>'s result is no good, since it is very likely the task will be called long before 60 seconds have passed.
+          This how we can do so:
    
    <pre>
 from twisted.python import delay
