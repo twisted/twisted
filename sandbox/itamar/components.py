@@ -51,7 +51,7 @@ class _Nothing:
 
 
 def getRegistry(r):
-    return theAdapterRegistry
+    return _theAdapterRegistry
 
 class CannotAdapt(NotImplementedError, TypeError):
     """
@@ -68,7 +68,7 @@ class MetaInterface(interface.InterfaceClass):
                  __module__=None):
         if attrs is not None:
             if attrs.has_key("__adapt__"):
-                warnings.warn("Please don't use __adapt__ on Interface subclasses", DeprecationWarning)
+                warnings.warn("Please don't use __adapt__ on Interface subclasses", DeprecationWarning, stacklevel=2)
                 self.__instadapt__ = attrs["__adapt__"]
                 del attrs["__adapt__"]
             for k, v in attrs.items():
@@ -86,7 +86,7 @@ class MetaInterface(interface.InterfaceClass):
                 raise RuntimeError, "registry argument will be ignored"
             # getComponents backwards compat
             if hasattr(adaptable, "getComponent") and not hasattr(adaptable, "__conform__") and persist != False:
-                warnings.warn("please use __conform__ instead of getComponent", DeprecationWarning)
+                warnings.warn("please use __conform__ instead of getComponent: %s" % type(adaptable), DeprecationWarning)
                 result = adaptable.getComponent(self)
                 if result != None:
                     return result
@@ -138,8 +138,8 @@ class MetaInterface(interface.InterfaceClass):
     def adaptWith(self, using, to, registry=None):
         if registry != None:
             raise RuntimeError, "registry argument will be ignored"
-        warnings.warn("persist argument is deprecated", DeprecationWarning)
-        registry = theAdapterRegistry
+        warnings.warn("adaptWith is only supported for backwards compatability", DeprecationWarning)
+        registry = _theAdapterRegistry
         registry.register([self], to, '', using)
 
     def __getattr__(self, attr):
@@ -169,6 +169,8 @@ def implements(obj, interfaceClass):
     This method checks if object provides, not if it implements. The confusion
     is due to the change in terminology.
     """
+    warnings.warn("Please use providedBy() or implementedBy()", DeprecationWarning)
+    fixClassImplements(obj.__class__)
     return interfaceClass.providedBy(obj)
 
 
@@ -181,8 +183,10 @@ def getInterfaces(klass):
     # try to support both classes and instances, giving different behaviour
     # which is HORRIBLE :(
     if isinstance(klass, (type, types.ClassType)):
+        fixClassImplements(klass)
         l = list(declarations.implementedBy(klass))
     else:
+        fixClassImplements(klass.__class__)
         l = list(declarations.providedBy(klass))
     r = []
     for i in l:
@@ -210,98 +214,110 @@ class _Wrapper(object):
         self.a = a
 
 
-class AdapterRegistry(ZopeAdapterRegistry):
-    
-    def registerAdapter(self, adapterFactory, origInterface, *interfaceClasses):
-        """Register an adapter class.
+def fixClassImplements(klass):
+    """Switch class from __implements__."""
+    if hasattr(klass, "__implements__") and isinstance(klass.__implements__, (tuple, MetaInterface)):
+            warnings.warn("Please use implements(), not __implements__ for class %s" % klass, DeprecationWarning)
+            declarations.classImplementsOnly(klass, *tupleTreeToList(klass.__implements__))
 
-        An adapter class is expected to implement the given interface, by
-        adapting instances implementing 'origInterface'. An adapter class's
-        __init__ method should accept one parameter, an instance implementing
-        'origInterface'.
-        """
-        assert interfaceClasses, "You need to pass an Interface"
-        global ALLOW_DUPLICATES
 
-        # deal with class->interface adapters:
-        if not issubclass(origInterface, Interface):
-            # fix up __implements__ if it's old style
-            if hasattr(origInterface, "__implements__") and isinstance(origInterface.__implements__, (tuple, MetaInterface)):
-                for i in tupleTreeToList(origInterface.__implements__):
-                    declarations.classImplements(origInterface, i)
-            origInterface = declarations.implementedBy(origInterface)
+def registerAdapter(adapterFactory, origInterface, *interfaceClasses):
+    """Register an adapter class.
 
-        for interfaceClass in interfaceClasses:
-            factory = self.get(origInterface).selfImplied.get(interfaceClass, {}).get('')
-            if (factory and not ALLOW_DUPLICATES):
-                raise ValueError("an adapter (%s) was already registered." % (factory, ))
+    An adapter class is expected to implement the given interface, by
+    adapting instances implementing 'origInterface'. An adapter class's
+    __init__ method should accept one parameter, an instance implementing
+    'origInterface'.
+    """
+    self = _theAdapterRegistry
+    assert interfaceClasses, "You need to pass an Interface"
+    global ALLOW_DUPLICATES
 
-        self.register([origInterface], interfaceClasses[0], '', adapterFactory)
-    
-    def getAdapterFactory(self, fromInterface, toInterface, default):
-        """Return registered adapter for a given class and interface.
-        """
-        if not issubclass(fromInterface, Interface):
-            fromInterface = declarations.implementedBy(fromInterface)
-        factory = self.lookup1(fromInterface, toInterface)
-        if factory == None:
-            factory = default
-        return factory
+    # deal with class->interface adapters:
+    if not issubclass(origInterface, Interface):
+        # fix up __implements__ if it's old style
+        fixClassImplements(origInterface)
+        origInterface = declarations.implementedBy(origInterface)
 
-    getAdapterClass = getAdapterFactory
+    for interfaceClass in interfaceClasses:
+        factory = self.get(origInterface).selfImplied.get(interfaceClass, {}).get('')
+        if (factory and not ALLOW_DUPLICATES):
+            raise ValueError("an adapter (%s) was already registered." % (factory, ))
 
-    def getAdapterClassWithInheritance(self, klass, interfaceClass, default):
-        """Return registered adapter for a given class and interface.
-        """
-        warnings.warn("You almost certainly want to be "
-                      "using interface->interface adapters. "
-                      "If you do not, modify your desire.",
-                      DeprecationWarning, stacklevel=3)
-        adapterClass = self.getAdapterFactory(klass, interfaceClass, _Nothing)
-        if adapterClass is _Nothing:
-            for baseClass in reflect.allYourBase(klass):
-                adapterClass = self.getAdapterFactory(klass, interfaceClass, _Nothing)
-                if adapterClass is not _Nothing:
-                    return adapterClass
-        else:
-            return adapterClass
+    self.register([origInterface], interfaceClasses[0], '', adapterFactory)
+
+def getAdapterFactory(fromInterface, toInterface, default):
+    """Return registered adapter for a given class and interface.
+    """
+    self = _theAdapterRegistry
+    if not issubclass(fromInterface, Interface):
+        fromInterface = declarations.implementedBy(fromInterface)
+    factory = self.lookup1(fromInterface, toInterface)
+    if factory == None:
+        factory = default
+    return factory
+
+getAdapterClass = getAdapterFactory
+
+def getAdapterClassWithInheritance(klass, interfaceClass, default):
+    """Return registered adapter for a given class and interface.
+    """
+    adapterClass = getAdapterFactory(klass, interfaceClass, _Nothing)
+    if adapterClass is _Nothing:
+        for baseClass in reflect.allYourBase(klass):
+            adapterClass = getAdapterFactory(klass, interfaceClass, _Nothing)
+            if adapterClass is not _Nothing:
+                return adapterClass
+    else:
+        return adapterClass
+    return default
+
+def getAdapter(obj, interfaceClass, default=_Nothing,
+               adapterClassLocator=None, persist=None):
+    """Return an object that implements the given interface.
+
+    The result will be a wrapper around the object passed as a parameter, or
+    the parameter itself if it already implements the interface. If no
+    adapter can be found, the 'default' parameter will be returned.
+    """
+    self = _theAdapterRegistry
+    if interfaceClass.providedBy(obj):
+        return obj
+
+    if persist != False:
+        pkey = (id(obj), interfaceClass)
+        if _adapterPersistence.has_key(pkey):
+            return _adapterPersistence[pkey]
+
+    factory = self.lookup1(declarations.providedBy(obj), interfaceClass)
+    if factory != None:
+        return factory(obj)
+
+    if default == _Nothing:
+        raise NotImplementedError
+    else:
         return default
 
-    def getAdapter(self, obj, interfaceClass, default=_Nothing,
-                   adapterClassLocator=None, persist=None):
-        """Return an object that implements the given interface.
 
-        The result will be a wrapper around the object passed as a parameter, or
-        the parameter itself if it already implements the interface. If no
-        adapter can be found, the 'default' parameter will be returned.
-        """
-        if interfaceClass.providedBy(obj):
-            return obj
-        
-        if persist != False:
-            pkey = (id(obj), interfaceClass)
-            if _adapterPersistence.has_key(pkey):
-                return _adapterPersistence[pkey]
+# create adapter registry, first attempting to get zope3's
+try:
+    if sys.version_info[:2] < (2, 3):
+        # don't even bother trying, zope.component doesn't run on 2.2
+        raise ImportError, "zope.component won't work on 2.2"
+    from zope import component
+    try:
+        _theAdapterRegistry = component.getService(None, component.Adapters)
+    except component.ComponentLookupError:
+        _theAdapterRegistry = None
+except ImportError:
+    _theAdapterRegistry = None
 
-        factory = self.lookup1(declarations.providedBy(obj), interfaceClass)
-        if factory != None:
-            return factory(obj)
-
-        if default == _Nothing:
-            raise NotImplementedError
-        else:
-            return default
-
-
-theAdapterRegistry = AdapterRegistry()
-# XXX may need to change to raise correct exceptions
-def _hook(iface, ob):
-    return theAdapterRegistry.getAdapter(ob, iface, default=None, persist=False)
-interface.adapter_hooks.append(_hook)
-registerAdapter = theAdapterRegistry.registerAdapter
-getAdapterClass = theAdapterRegistry.getAdapterClass
-getAdapterClassWithInheritance = theAdapterRegistry.getAdapterClassWithInheritance
-getAdapter = theAdapterRegistry.getAdapter
+if _theAdapterRegistry == None:
+    _theAdapterRegistry = ZopeAdapterRegistry()
+    # add global adapter lookup hook for our newly created registry
+    def _hook(iface, ob):
+        return getAdapter(ob, iface, default=None, persist=False)
+    interface.adapter_hooks.append(_hook)
 
 
 class Adapter:
@@ -377,7 +393,7 @@ class Componentized(styles.Versioned):
         self._adapterCache = {}
 
     def locateAdapterClass(self, klass, interfaceClass, default, registry=None):
-        return getRegistry(registry).getAdapterClassWithInheritance(klass, interfaceClass, default)
+        return getAdapterClassWithInheritance(klass, interfaceClass, default)
 
     def setAdapter(self, interfaceClass, adapterClass):
         self.setComponent(interfaceClass, adapterClass(self))
@@ -474,9 +490,8 @@ class Componentized(styles.Versioned):
                     self.addComponent(adapter)
             return adapter
 
-    # XXX uncommenting this fails tests, figure out why
-    #def __conform__(self, interface):
-    #    return self.getComponent(interface)
+    def __conform__(self, interface):
+        return self.getComponent(interface)
     
     def upgradeToVersion1(self):
         # To let Componentized instances interact correctly with
@@ -498,4 +513,4 @@ class ReprableComponentized(Componentized):
 
 __all__ = ["Interface", "implements", "getInterfaces", "superInterfaces",
            "registerAdapter", "getAdapterClass", "getAdapter", "Componentized",
-           "AdapterRegistry", "Adapter", "ReprableComponentized"]
+           "Adapter", "ReprableComponentized"]

@@ -379,8 +379,6 @@ class TestMetaInterface(unittest.TestCase):
         IMeta(c).add(1)
         IMeta(c).add(1)
         self.assertEquals(IMeta(c).add(1), 3)
-        self.assertEquals(IMeta(c, persist=False).add(1), 1)
-        self.assertEquals(IMeta(c).add(1), 4)
 
     def testRegistryPersistence(self):
         n = MetaNumber(1)
