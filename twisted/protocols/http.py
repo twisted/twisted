@@ -20,8 +20,13 @@
 
 This is used by twisted.web.
 
-Server HTTP support is pretty stable, unless methods say otherwise.
-HTTP client support will at some point be refactored to support HTTP/1.1.
+API Stability: Server HTTP support is pretty stable, unless methods say
+               otherwise, client HTTP is not stable.
+
+Future Plans:
+ - HTTP client support will at some point be refactored to support HTTP/1.1.
+ - Accept chunked data from clients in server.
+ - Other missing HTTP features from the RFC.
 
 Maintainer: Itamar Shtull-Trauring <twisted@itamarst.org>
 """
