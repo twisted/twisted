@@ -5,39 +5,6 @@ from twisted.cred import credentials, checkers, portal
 
 import insults
 
-###
-### XXX Monkey patch until z3p decides how to fix this for real
-###
-def monkey():
-    from twisted.conch.ssh.factory import resource, transport
-    from twisted.python import log
-
-    def startFactory(self):
-        # disable coredumps
-        if resource:
-            resource.setrlimit(resource.RLIMIT_CORE, (0,0))
-        else:
-            log.msg('INSECURE: unable to disable core dumps.')
-        if not hasattr(self,'publicKeys'):
-            self.publicKeys = self.getPublicKeys()
-        if not hasattr(self,'privateKeys'):
-            self.privateKeys = self.getPrivateKeys()
-        if not self.publicKeys or not self.privateKeys:
-            raise error.ConchError('no host keys, failing')
-        if not hasattr(self,'primes'):
-            self.primes = self.getPrimes()
-            if not self.primes:
-                log.msg('disabling diffie-hellman-group-exchange because we cannot find moduli file')
-                try:
-                    transport.SSHServerTransport.supportedKeyExchanges.remove('diffie-hellman-group-exchange-sha1')
-                except ValueError:
-                    pass
-            else:
-                self.primesKeys = self.primes.keys()
-    factory.SSHFactory.startFactory = startFactory
-monkey()
-
-
 class TerminalUser(avatar.ConchUser):
     def __init__(self):
         avatar.ConchUser.__init__(self)
