@@ -44,7 +44,6 @@ import copy
 import string
 import sys
 import types
-import new
 
 # Twisted Imports
 from twisted.python import log, defer, failure
@@ -73,7 +72,6 @@ from flavors import setCopierForClassTree
 
 portno = 8787
 
-from twisted.protocols import protocol
 
 class ProtocolError(Exception):
     """
@@ -231,8 +229,12 @@ class RemoteReference(Serializable, styles.Ephemeral):
     bookkeeping overhead is given to the application programmer for
     manipulating a reference, return values are asynchronous.
 
-    All attributes besides '__double_underscored__' attributes are RemoteMethod
-    instances; these act like methods which return Deferreds.
+    All attributes besides '__double_underscored__' attributes and
+    attributes beginning with 'local_' are RemoteMethod instances;
+    these act like methods which return Deferreds.
+    
+    Methods beginning with 'local_' are methods that run locally on
+    the instance.
     
     See also twisted.python.defer.
     """
@@ -243,32 +245,50 @@ class RemoteReference(Serializable, styles.Ephemeral):
         The ID is unique only to the particular Perspective Broker
         instance.
         """
-
         self.luid = luid
         self.broker = broker
         self.doRefCount = doRefCount
         self.perspective = perspective
+        self.disconnectCallbacks = []
 
+    def local_notifyOnDisconnect(self, callback):
+        """Register a callback to be called if our broker gets disconnected.
+        
+        This callback will be called with one method, this instance.
+        """
+        assert callable(callback)
+        self.disconnectCallbacks.append(callback)
+        if len(self.disconnectCallbacks):
+            self.broker.notifyOnDisconnect(self._disconnected)
+    
+    def local_dontNotifyOnDisconnect(self, callback):
+        """Register a callback to be called if our broker gets disconnected."""
+        self.disconnectCallbacks.remove(callback)
+        if not self.disconnectCallbacks:
+            self.broker.dontNotifyOnDisconnect(self._disconnected)
+    
+    def _disconnected(self):
+        """Called if we are disconnected and have callbacks registered."""
+        for callback in self.disconnectCallbacks:
+            callback(self)
+        self.disconnectCallbacks = None
+    
     def remoteSerialize(self, broker):
         """If I am being sent back to where I came from, serialize as a local backreference.
         """
-
         assert self.broker == broker, "Can't send references to brokers other than their own."
         return local_atom, self.luid
 
     def __getattr__(self, key):
         """Get a RemoteMethod for this key.
         """
-
-        if key[:2]=='__' and key[-2:]=='__':
+        if (key[:2]=='__' and key[-2:]=='__') or key[:6] == 'local_':
             raise AttributeError(key)
         return RemoteMethod(self, key)
-
 
     def __cmp__(self,other):
         """Compare me [to another RemoteReference].
         """
-
         if isinstance(other, RemoteReference):
             if other.broker == self.broker:
                 return cmp(self.luid, other.luid)
@@ -277,13 +297,11 @@ class RemoteReference(Serializable, styles.Ephemeral):
     def __hash__(self):
         """Hash me.
         """
-
         return self.luid
 
     def __del__(self):
         """Do distributed reference counting on finalization.
         """
-
         if self.doRefCount:
             self.broker.sendDecRef(self.luid)
 
@@ -752,11 +770,7 @@ class Broker(banana.Banana):
             object = findObjMethod(objectID)
             if object is None:
                 raise Error("Invalid Object ID")
-            # Special message to check for validity of object-ID.
-            if message == '__ping__':
-                result = (object is not None)
-            else:
-                netResult = object.remoteMessageReceived(self, message, netArgs, netKw)
+            netResult = object.remoteMessageReceived(self, message, netArgs, netKw)
         except Error, e:
             if answerRequired:
                 self._sendError(str(e), requestID)
@@ -1002,7 +1016,7 @@ class _ObjectRetrieval:
         if not self.term:
             self.term = 1
             del self.broker
-            self.eb("connection lost")
+            self.deferred.armAndErrback("connection lost")
 
     def connectionMade(self):
         assert not self.term, "How did this get called?"
