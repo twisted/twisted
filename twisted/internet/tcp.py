@@ -109,6 +109,9 @@ class _TLSMixin:
         if self.connected:
             self.startReading()
 
+    def halfCloseConnection(self, read=False, write=False):
+        raise RuntimeError, "TLS connections currently do not support half-closing"
+    
     def doWrite(self):
         if self.writeBlockedOnRead:
             self.stopWriting()
