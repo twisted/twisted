@@ -504,7 +504,7 @@ def saveState(file,state):
     for account in state:
         if not account.savepass: # don't save password
             for k in account.options.keys():
-                lo=gateway.__gateways__[k].loginOptions
+                lo=gateways.__gateways__[k].loginOptions
                 for type,foo,name,bar in lo:
                     if name==k and type=="password":
                         del(account.options[k])

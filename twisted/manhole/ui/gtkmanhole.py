@@ -267,6 +267,7 @@ class InputText(gtk.GtkText):
             else:
                 stopSignal = True
                 text = self.get_chars(0,-1)
+                if not text: return
                 try:
                     if text[0] == '/':
                         # It's a local-command, don't evaluate it as
