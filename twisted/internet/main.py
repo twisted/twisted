@@ -21,7 +21,6 @@ from twisted.python import log
 from twisted.python import threadable, failure
 from twisted.python.runtime import platform
 from twisted.persisted import styles
-from twisted.python.components import implements
 from twisted.internet.interfaces import IReactorFDSet, IReactorCore
 from twisted.internet.interfaces import IReactorTime, IReactorUNIX
 import error
