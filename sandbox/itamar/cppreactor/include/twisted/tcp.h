@@ -44,7 +44,7 @@ namespace Twisted
 	object transportobj; // so that we have INCREF the transport
 	TCPTransport* transport;
 
-	Protocol() {};
+	Protocol() : transport(NULL) {};
 	virtual ~Protocol() {}
 	void init(PyObject* s) { 
 	    this->self = s;

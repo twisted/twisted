@@ -53,7 +53,7 @@ namespace Twisted
 	PyObject* self;
 	UDPPort* transport;
 
-	DatagramProtocol() {};
+	DatagramProtocol() : transport(NULL) {};
 	virtual ~DatagramProtocol() {}
 	void init(PyObject* s) { 
 	    this->self = s;
