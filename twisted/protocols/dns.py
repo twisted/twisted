@@ -30,100 +30,98 @@ def readPrecisely( file, l ):
 
 
 class Name:
-    def __init__( self, name = '' ):
+    def __init__( self, name=''):
         self.name = name
 
-    def Encode( self, strio, compDict = None ):
+    def encode(self, strio, compDict=None):
         name = self.name
         while name:
             if compDict is not None:
-                if compDict.has_key( name ):
+                if compDict.has_key(name):
                     strio.write(
-                        struct.pack( "!H", 0xc000 | compDict[ name ] ) )
+                        struct.pack("!H", 0xc000 | compDict[name]))
                     return
                 else:
-                    compDict[ name ] = strio.tell() + Message.headerSize
-            ind = string.find( name, '.' )
+                    compDict[name] = strio.tell() + Message.headerSize
+            ind = string.find(name, '.')
             if ind > 0:
-                label,name = name[:ind],name[ind + 1:]
+                label, name = name[:ind], name[ind + 1:]
             else:
-                label,name = name,''
+                label, name = name, ''
                 ind = len(label)
-            strio.write( chr( ind ) )
-            strio.write( label )
-        strio.write( chr( 0 ) )
+            strio.write(chr(ind))
+            strio.write(label)
+        strio.write(chr(0))
 
-    def Decode( self, strio ):
+    def decode(self, strio):
         self.name = ''
         off = 0
         while 1:
-            l = ord( readPrecisely( strio, 1 ) )
+            l = ord(readPrecisely(strio, 1))
             if l == 0:
                 if off > 0:
-                    strio.seek( off )
+                    strio.seek(off)
                 return
-            if ( l >> 6 ) == 3:
-                new_off = ( ( l & 63 ) << 8
-                            | ord( readPrecisely( strio, 1 ) ) )
-                if ( off == 0 ):
+            if (l >> 6) == 3:
+                new_off = ((l&63) << 8
+                            | ord(readPrecisely(strio, 1)))
+                if off == 0:
                     off = strio.tell()
-                strio.seek( new_off )
+                strio.seek(new_off)
                 continue
-            label = readPrecisely( strio, l )
+            label = readPrecisely(strio, l)
             if self.name == '':
                 self.name = label
             else:
                 self.name = self.name + '.' + label
 
-    def __repr__( self ):
+    def __repr__(self):
         return self.name
 
 class Query:
-    def __init__( self, name = '', type = 0, cls = 0 ):
-        self.name = Name( name )
+    def __init__(self, name='', type=0, cls=0):
+        self.name = Name(name)
         self.type = type
         self.cls = cls
 
-    def Encode( self, strio, compDict = None ):
-        self.name.Encode( strio, compDict )
-        strio.write( struct.pack( "!HH", self.type, self.cls ) )
+    def encode(self, strio, compDict=None):
+        self.name.encode(strio, compDict)
+        strio.write(struct.pack("!HH", self.type, self.cls))
 
-    def Decode( self, strio ):
-        self.name.Decode( strio )
-        buff = readPrecisely( strio, 4 )
-        ( self.type, self.cls ) = struct.unpack( "!HH", buff )
+    def decode(self, strio):
+        self.name.decode(strio)
+        buff = readPrecisely(strio, 4)
+        self.type, self.cls = struct.unpack("!HH", buff)
 
 class RR:
     fmt = "!HHIH"
 
-    def __init__( self, name = '', type = 0, cls = 0, ttl = 0,
-                  data = '' ):
-        self.name = Name( name )
+    def __init__(self, name='', type=0, cls=0, ttl=0, data = ''):
+        self.name = Name(name)
         self.type = type
         self.cls = cls
         self.ttl = ttl
         self.data = data
 
-    def Encode( self, strio, compDict = None ):
-        self.name.Encode( strio, compDict )
-        strio.write( struct.pack( self.fmt, self.type, self.cls,
-                                  self.ttl, len( self.data ) ) )
-        strio.write( data )
+    def encode(self, strio, compDict=None):
+        self.name.encode(strio, compDict)
+        strio.write(struct.pack(self.fmt, self.type, self.cls,
+                                self.ttl, len( self.data)))
+        strio.write(data)
 
-    def Decode( self, strio ):
-        self.name.Decode( strio )
-        l = struct.calcsize( self.fmt )
-        buff = readPrecisely( strio, l )
-        ( self.type, self.cls, self.ttl, l ) = struct.unpack( self.fmt,
-                                                              buff )
-        self.data = readPrecisely( strio, l )
+    def decode(self, strio):
+        self.name.decode(strio)
+        l = struct.calcsize(self.fmt)
+        buff = readPrecisely(strio, l)
+        self.type, self.cls, self.ttl, l = struct.unpack(self.fmt, buff )
+        self.data = readPrecisely(strio, l)
 
 class Message:
     headerFmt = "!H2B4H"
     headerSize = struct.calcsize( headerFmt )
 
-    def __init__(self, id = 0, answer = 0, opCode = 0, recDes = 0, recAv = 0,
-                 auth = 0, rCode = OK, trunc = 0, maxSize = 512):
+    def __init__(self, id=0, answer=0, opCode=0, recDes=0, recAv=0,
+                       auth=0, rCode=OK, trunc=0, maxSize=512):
         self.maxSize = maxSize
         self.id = id
         self.answer = answer
@@ -138,35 +136,35 @@ class Message:
         self.ns = []
         self.add = []
 
-    def addQuery( self, name, type = 1, cls = 1 ):
-        self.queries.append( Query( name, type, cls ) )
+    def addQuery(self, name, type=1, cls=1):
+        self.queries.append(Query(name, type, cls))
 
-    def Encode( self, strio ):
+    def encode(self, strio):
         compDict = {}
         body_tmp = StringIO.StringIO()
         for q in self.queries:
-            q.Encode( body_tmp, compDict )
+            q.encode(body_tmp, compDict)
         body = body_tmp.getvalue()
-        size = len( body ) + self.headerSize
+        size = len(body) + self.headerSize
         if self.maxSize and size > self.maxSize:
             self.trunc = 1
             body = body[:maxSize - self.headerSize]
-        byte3 = ( ( ( self.answer & 1 ) << 7 )
-                  | ( ( self.opCode & 0xf ) << 3 )
-                  | ( ( self.auth & 1 ) << 2 )
-                  | ( ( self.trunc & 1 ) << 1 )
-                  | ( self.recDes & 1 ) )
-        byte4 = ( ( ( self.recAv & 1 ) << 7 )
-                  | ( self.rCode & 0xf ) )
-        strio.write( struct.pack( self.headerFmt, self.id, byte3, byte4,
-                                  len( self.queries ), 0, 0, 0) )
-        strio.write( body )
+        byte3 = (( ( self.answer & 1 ) << 7 )
+                 | ((self.opCode & 0xf ) << 3 )
+                 | ((self.auth & 1 ) << 2 )
+                 | ((self.trunc & 1 ) << 1 )
+                 | ( self.recDes & 1 ) )
+        byte4 = ( ( (self.recAv & 1 ) << 7 )
+                  | (self.rCode & 0xf ) )
+        strio.write(struct.pack(self.headerFmt, self.id, byte3, byte4,
+                                len(self.queries), 0, 0, 0))
+        strio.write(body)
 
-    def Decode( self, strio ):
+    def decode(self, strio):
         self.maxSize = 0
-        header = readPrecisely( strio, self.headerSize )
-        ( self.id, byte3, byte4, nqueries, nans,
-          nns, nadd ) = struct.unpack( self.headerFmt, header )
+        header = readPrecisely(strio, self.headerSize)
+        (self.id, byte3, byte4, nqueries, nans,
+         nns, nadd) = struct.unpack(self.headerFmt, header)
         self.answer = ( byte3 >> 7 ) & 1
         self.opCode = ( byte3 >> 3 ) & 0xf
         self.auth = ( byte3 >> 2 ) & 1
@@ -177,80 +175,79 @@ class Message:
 
         eof = 0
 
-        for list, num, cls in ( ( self.queries, nqueries, Query ),
-                                ( self.answers, nans, RR ),
-                                ( self.ns, nns, RR ),
-                                ( self.add, nadd, RR ) ):
+        for list, num, cls in ( (self.queries, nqueries, Query),
+                                (self.answers, nans, RR),
+                                (self.ns, nns, RR),
+                                (self.add, nadd, RR) ):
             list[:] = []
             if not eof:
-                for i in range( num ):
+                for i in range(num):
                     element = cls()
                     try:
-                        element.Decode( strio )
+                        element.decode(strio)
                     except EOFError:
                         eof = 1
                         break
                     else:
-                        list.append( element )
+                        list.append(element)
 
-    def toStr( self ):
+    def toStr(self):
         strio = StringIO.StringIO()
-        self.Encode( strio )
+        self.encode(strio)
         return strio.getvalue()
 
-    def fromStr( self, str ):
-        strio = StringIO.StringIO( str )
-        self.Decode( strio )
+    def fromStr(self, str):
+        strio = StringIO.StringIO(str)
+        self.decode(strio)
 
 
-class DNS( protocol.Protocol ):
+class DNS(protocol.Protocol):
     underlying = "udp"
 
-    def dataReceived( self, data ):
+    def dataReceived(self, data):
         message = Message()
-        message.fromStr( data )
+        message.fromStr(data)
         if message.answer == 0:
             message.answer = 1
             message.rCode = ENOTIMP
-            self.writeMessage( message )
+            self.writeMessage(message)
             self.transport.loseConnection()
         else:
-            self.factory.boss.accomplish( message.id,
-                                          message )
+            self.factory.boss.accomplish(message.id, message)
             self.transport.loseConnection()
 
-    def writeMessage( self, message ):
+    def writeMessage(self, message):
         if not self.connected:
             raise "Not connected"
-        self.transport.write( message.toStr() )
+        self.transport.write(message.toStr())
 
-    def query( self, name, callback ):
-        id = self.factory.boss.addPending( callback )
-        message = Message( id )
-        message.addQuery( name )
-        self.writeMessage( message )
+    def query(self, name, callback):
+        id = self.factory.boss.addPending(callback)
+        message = Message(id)
+        message.addQuery(name)
+        self.writeMessage(message)
 
 
-class DNSOnTCP( DNS ):
+class DNSOnTCP(DNS):
     underlying = "tcp"
     _query = None
 
-    def connectionMade( self ):
+    def connectionMade(self):
         if self._query:
             apply(self.query, self._query)
             self._query = None
         self.buffer = ''
 
-    def connectionLost( self ):
+    def connectionLost(self):
         del self.buffer
 
-    def dataReceived( self, data ):
+    def dataReceived(self, data):
         self.buffer = self.buffer + data
-        while len( self.buffer ) >= 2:
-            size = struct.unpack( "!H", self.buffer[ : 2 ] )[ 0 ]
-            if len( self.buffer ) >= size + 2:
-                DNS.dataReceived( self, self.buffer[ 2 : size + 2 ] )
-                self.buffer = self.buffer[ size + 2 : ]
+        while len(self.buffer) >= 2:
+            size = struct.unpack("!H", self.buffer[:2])[0]
+            if len(self.buffer) >= size + 2:
+                DNS.dataReceived(self, self.buffer[2:size+2])
+                self.buffer = self.buffer[size+2:]
 
     def setQuery(self, name, callback):
         self._query = name, callback
@@ -259,5 +256,4 @@ class DNSOnTCP( DNS ):
         if not self.connected:
             raise "Not connected"
         str = message.toStr()
-        self.transport.write( struct.pack( "!H", len( str ) )
-                              + str )
+        self.transport.write(struct.pack("!H", len(str)) + str)
