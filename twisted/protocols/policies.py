@@ -398,17 +398,8 @@ class TimeoutMixin:
     __timeoutCall = None
     __lastReceived = None
 
-    def connectionMade(self):
-        if self.timeOut is not None:
-            self.__lastReceived = time.time()
-            self.__timeoutCall = reactor.callLater(self.timeOut, self.__timedOut)
-
-    def connectionLost(self, reason):
-        if self.__timeoutCall:
-            self.__timeoutCall.cancel()
-            self.__timeoutCall = None
-
-    def dataReceived(self, data):
+    def resetTimeout(self):
+        """Reset the timeout count down"""
         self.__lastReceived = time.time()
     
     def setTimeout(self, period):
