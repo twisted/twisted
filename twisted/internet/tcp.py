@@ -39,6 +39,11 @@ try:
 except ImportError:
     fcntl = None
 
+try:
+    from OpenSSL import SSL
+except ImportError:
+    SSL = None
+
 if os.name == 'nt':
     # we hardcode these since windows actually wants e.g.
     # WSAEALREADY rather than EALREADY. Possibly we should
@@ -78,6 +83,88 @@ import main
 import interfaces
 import error
 
+class _TLSMixin:
+    writeBlockedOnRead = 0
+    readBlockedOnWrite = 0
+    sslShutdown = 0
+
+    def doRead(self):
+        if self.writeBlockedOnRead:
+            self.writeBlockedOnRead = 0
+            return self.doWrite()
+        try:
+            return Connection.doRead(self)
+        except SSL.ZeroReturnError:
+            # close SSL layer, since other side has done so, if we haven't
+            if not self.sslShutdown:
+                try:
+                    self.socket.shutdown()
+                    self.sslShutdown = 1
+                except SSL.Error:
+                    pass
+            return main.CONNECTION_DONE
+        except SSL.WantReadError:
+            return
+        except SSL.WantWriteError:
+            self.readBlockedOnWrite = 1
+            self.startWriting()
+            return
+        except SSL.Error:
+            return main.CONNECTION_LOST
+
+    def doWrite(self):
+        if self.readBlockedOnWrite:
+            self.readBlockedOnWrite = 0
+            # XXX - This is touching internal guts bad bad bad
+            if not self.dataBuffer:
+                self.stopWriting()
+            return self.doRead()
+        return Connection.doWrite(self)
+
+    def writeSomeData(self, data):
+        if not data:
+            return 0
+        try:
+            return Connection.writeSomeData(self, data)
+        except SSL.WantWriteError:
+            return 0
+        except SSL.WantReadError:
+            self.writeBlockedOnRead = 1
+        except SSL.Error:
+            return main.CONNECTION_LOST
+
+    def _closeSocket(self):
+        try:
+            self.socket.sock_shutdown(2)
+        except:
+            try:
+                self.socket.close()
+            except:
+                pass
+
+    def _postLoseConnection(self):
+        """Gets called after loseConnection(), after buffered data is sent.
+
+        We close the SSL transport layer, and if the other side hasn't
+        closed it yet we start reading, waiting for a ZeroReturnError
+        which will indicate the SSL shutdown has completed.
+        """
+        try:
+            done = self.socket.shutdown()
+            self.sslShutdown = 1
+        except SSL.Error:
+            return main.CONNECTION_LOST
+        if done:
+            return main.CONNECTION_DONE
+        else:
+            # we wait for other side to close SSL connection -
+            # this will be signaled by SSL.ZeroReturnError when reading
+            # from the socket
+            self.stopWriting()
+            self.startReading()
+            
+            # don't close socket just yet
+            return None
 
 class Connection(abstract.FileDescriptor):
     """I am the superclass of all socket-based FileDescriptors.
@@ -88,12 +175,29 @@ class Connection(abstract.FileDescriptor):
 
     __implements__ = abstract.FileDescriptor.__implements__, interfaces.ITCPTransport
 
+    TLS = 0
+
     def __init__(self, skt, protocol, reactor=None):
         abstract.FileDescriptor.__init__(self, reactor=reactor)
         self.socket = skt
         self.socket.setblocking(0)
         self.fileno = skt.fileno
         self.protocol = protocol
+        
+    def startTLS(self, ctx):
+        if not SSL:
+            raise RuntimeException, "No SSL support available"
+        assert not self.TLS
+
+        self._startTLS()
+        self.socket = SSL.Connection(ctx.getContext(), self.socket)
+        self.fileno = self.socket.fileno
+
+    def _startTLS(self):
+        self.TLS = 1
+        class TLSConnection(_TLSMixin, self.__class__):
+            pass
+        self.__class__ = TLSConnection
 
     def doRead(self):
         """Calls self.protocol.dataReceived with all available data.
@@ -190,6 +294,11 @@ class BaseClient(Connection):
             reactor.callLater(0, whenDone)
         else:
             reactor.callLater(0, self.failIfNotConnected, error)
+
+    def startTLS(self, ctx):
+        holder = Connection.startTLS(self, ctx)
+        self.socket.set_connect_state()
+        return holder
 
     def stopConnecting(self):
         """Stop attempt to connect."""
@@ -360,6 +469,11 @@ class Server(Connection):
         """
         return self.repstr
 
+    def startTLS(self, ctx):
+        holder = Connection.startTLS(self, ctx)
+        self.socket.set_accept_state()
+        return holder
+
     def getHost(self):
         """Returns a tuple of ('INET', hostname, port).
 
@@ -458,6 +572,7 @@ class Port(base.BasePort):
                     elif e.args[0] == EPERM:
                         continue
                     raise
+                
                 protocol = self.factory.buildProtocol(addr)
                 if protocol is None:
                     skt.close()
@@ -465,11 +580,22 @@ class Port(base.BasePort):
                 s = self.sessionno
                 self.sessionno = s+1
                 transport = self.transport(skt, protocol, addr, self, s)
+                transport = self._preMakeConnection(transport)
                 protocol.makeConnection(transport)
             else:
                 self.numberAccepts = self.numberAccepts+20
         except:
+            # Note that in TLS mode, this will possibly catch SSL.Errors
+            # raised by self.socket.accept()
+            #
+            # There is no "except SSL.Error:" above because SSL may be
+            # None if there is no SSL support.  In any case, all the
+            # "except SSL.Error:" suite would probably do is log.deferr()
+            # and return, so handling it here works just as well.
             log.deferr()
+
+    def _preMakeConnection(self, transport):
+        return transport
 
     def loseConnection(self, connDone=failure.Failure(main.CONNECTION_DONE)):
         """Stop accepting connections on this port.

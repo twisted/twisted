@@ -17,19 +17,20 @@
 from __future__ import nested_scopes
 from twisted.trial import unittest
 from twisted.internet import protocol, reactor
-try:
-    import OpenSSL
-    from twisted.internet import ssl
-except ImportError:
-    OpenSSL = None
+from twisted.protocols import basic
+
+from OpenSSL import SSL
+from twisted.internet import ssl
+
 import os
 import test_tcp
 
 
+certPath = os.path.join(os.path.split(test_tcp.__file__)[0], "server.pem")
+
 class StolenTCPTestCase(test_tcp.ProperlyCloseFilesTestCase, test_tcp.WriteDataTestCase):
     
     def setUp(self):
-        certPath = os.path.join(os.path.split(test_tcp.__file__)[0], "server.pem")
         f = protocol.ServerFactory()
         f.protocol = protocol.Protocol
         self.listener = reactor.listenSSL(
@@ -49,5 +50,114 @@ class StolenTCPTestCase(test_tcp.ProperlyCloseFilesTestCase, test_tcp.WriteDataT
 
         self.totalConnections = 0
 
-if not OpenSSL:
-    del StolenTCPTestCase
+class ClientTLSContext(ssl.ClientContextFactory):
+    isClient = 1
+    def getContext(self):
+        return SSL.Context(ssl.SSL.TLSv1_METHOD)
+
+class UnintelligentProtocol(basic.LineReceiver):
+    pretext = [
+        "first line",
+        "last thing before tls starts",
+        "STARTTLS",
+    ]
+    
+    posttext = [
+        "first thing after tls started",
+        "last thing ever",
+    ]
+    
+    def connectionMade(self):
+        for l in self.pretext:
+            self.sendLine(l)
+
+    def lineReceived(self, line):
+        if line == "READY":
+            self.transport.startTLS(ClientTLSContext())
+            for l in self.posttext:
+                self.sendLine(l)
+            self.transport.loseConnection()
+        
+class ServerTLSContext(ssl.DefaultOpenSSLContextFactory):
+    isClient = 0
+    def __init__(self, *args, **kw):
+        kw['sslmethod'] = SSL.TLSv1_METHOD
+        ssl.DefaultOpenSSLContextFactory.__init__(self, *args, **kw)
+
+class LineCollector(basic.LineReceiver):
+    def __init__(self, doTLS):
+        self.doTLS = doTLS
+
+    def connectionMade(self):
+        self.factory.rawdata = ''
+        self.factory.lines = []
+
+    def lineReceived(self, line):
+        self.factory.lines.append(line)
+        if line == 'STARTTLS':
+            self.sendLine('READY')
+            if self.doTLS:
+                ctx = ServerTLSContext(
+                    privateKeyFileName=certPath,
+                    certificateFileName=certPath,
+                )
+                self.transport.startTLS(ctx)
+            else:
+                self.setRawMode()
+    
+    def rawDataReceived(self, data):
+        self.factory.rawdata += data
+        self.factory.done = 1
+    
+    def connectionLost(self, reason):
+        self.factory.done = 1
+
+class TLSTestCase(unittest.TestCase):
+    def testTLS(self):
+        cf = protocol.ClientFactory()
+        cf.protocol = UnintelligentProtocol
+        
+        sf = protocol.ServerFactory()
+        sf.protocol = lambda: LineCollector(1)
+        sf.done = 0
+
+        port = reactor.listenTCP(0, sf)
+        portNo = port.getHost()[2]
+        
+        reactor.connectTCP('0.0.0.0', portNo, cf)
+        
+        i = 0
+        while i < 5000 and not sf.done:
+            reactor.iterate(0.01)
+            i += 1
+        
+        self.failUnless(sf.done, "Never finished reading all lines")
+        self.assertEquals(
+            sf.lines,
+            UnintelligentProtocol.pretext + UnintelligentProtocol.posttext
+        )
+    
+    def testUnTLS(self):
+        cf = protocol.ClientFactory()
+        cf.protocol = UnintelligentProtocol
+        
+        sf = protocol.ServerFactory()
+        sf.protocol = lambda: LineCollector(0)
+        sf.done = 0
+
+        port = reactor.listenTCP(0, sf)
+        portNo = port.getHost()[2]
+        
+        reactor.connectTCP('0.0.0.0', portNo, cf)
+        
+        i = 0
+        while i < 5000 and not sf.done:
+            reactor.iterate(0.01)
+            i += 1
+        
+        self.failUnless(sf.done, "Never finished reading all lines")
+        self.assertEquals(
+            sf.lines,
+            UnintelligentProtocol.pretext
+        )
+        self.failUnless(sf.rawdata, "No encrypted bytes received")

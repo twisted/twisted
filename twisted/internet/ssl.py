@@ -95,115 +95,12 @@ class ClientContextFactory:
         return SSL.Context(SSL.SSLv3_METHOD)
 
 
-class Connection(tcp.Connection):
-    """I am an SSL connection.
-    """
-
-    __implements__ = tcp.Connection.__implements__, interfaces.ISSLTransport
-    
-    writeBlockedOnRead = 0
-    readBlockedOnWrite= 0
-    sslShutdown = 0
-    
-    def getPeerCertificate(self):
-        """Return the certificate for the peer."""
-        return self.socket.get_peer_certificate()
-
-    def _postLoseConnection(self):
-        """Gets called after loseConnection(), after buffered data is sent.
-
-        We close the SSL transport layer, and if the other side hasn't
-        closed it yet we start reading, waiting for a ZeroReturnError
-        which will indicate the SSL shutdown has completed.
-        """
-        try:
-            done = self.socket.shutdown()
-            self.sslShutdown = 1
-        except SSL.Error:
-            return main.CONNECTION_LOST
-        if done:
-            return main.CONNECTION_DONE
-        else:
-            # we wait for other side to close SSL connection -
-            # this will be signaled by SSL.ZeroReturnError when reading
-            # from the socket
-            self.stopWriting()
-            self.startReading()
-            return None # don't close socket just yet
-    
-    def doRead(self):
-        """See tcp.Connection.doRead for details.
-        """
-        if self.writeBlockedOnRead:
-            self.writeBlockedOnRead = 0
-            return self.doWrite()
-        try:
-            return tcp.Connection.doRead(self)
-        except SSL.ZeroReturnError:
-            # close SSL layer, since other side has done so, if we haven't
-            if not self.sslShutdown:
-                try:
-                    self.socket.shutdown()
-                    self.sslShutdown = 1
-                except SSL.Error:
-                    pass
-            return main.CONNECTION_DONE
-        except SSL.WantReadError:
-            return
-        except SSL.WantWriteError:
-            self.readBlockedOnWrite = 1
-            self.startWriting()
-            return
-        except SSL.Error:
-            return main.CONNECTION_LOST
-
-    def doWrite(self):
-        if self.readBlockedOnWrite:
-            self.readBlockedOnWrite = 0
-            if not self.dataBuffer: self.stopWriting()
-            return self.doRead()
-        return tcp.Connection.doWrite(self)
-    
-    def writeSomeData(self, data):
-        """See tcp.Connection.writeSomeData for details.
-        """
-        if not data:
-            return 0
-
-        try:
-            return tcp.Connection.writeSomeData(self, data)
-        except SSL.WantWriteError:
-            return 0
-        except SSL.WantReadError:
-            self.writeBlockedOnRead = 1
-            return 0
-        except SSL.Error:
-            return main.CONNECTION_LOST
-
-    def _closeSocket(self):
-        """Called to close our socket."""
-        try:
-            self.socket.sock_shutdown(2)
-        except socket.error:
-            try:
-                self.socket.close()
-            except socket.error:
-                log.deferr()
-
-
-
-class Client(Connection, tcp.Client):
+class Client(tcp.Client):
     """I am an SSL client."""
     def __init__(self, host, port, bindAddress, ctxFactory, connector, reactor=None):
         # tcp.Client.__init__ depends on self.ctxFactory being set
         self.ctxFactory = ctxFactory
         tcp.Client.__init__(self, host, port, bindAddress, connector, reactor)
-
-    def createInternetSocket(self):
-        """(internal) create an SSL socket
-        """
-        sock = tcp.Client.createInternetSocket(self)
-        return SSL.Connection(self.ctxFactory.getContext(), sock)
 
     def getHost(self):
         """Returns a tuple of ('SSL', hostname, port).
@@ -219,16 +116,14 @@ class Client(Connection, tcp.Client):
         """
         return ('SSL',)+self.addr
 
+    def _finishInit(self, whenDone, skt, error, reactor):
+        tcp.Client._finishInit(self, whenDone, skt, error, reactor)
+        self.startTLS(self.ctxFactory)
 
 
-class Server(Connection, tcp.Server):
+class Server(tcp.Server):
     """I am an SSL server.
     """
-    
-    def __init__(*args, **kw):
-        # We don't want Connection's __init__
-        tcp.Server.__init__(*args, **kw)
-    
     def getHost(self):
         """Returns a tuple of ('SSL', hostname, port).
 
@@ -257,33 +152,12 @@ class Port(tcp.Port):
         """
         sock = tcp.Port.createInternetSocket(self)
         return SSL.Connection(self.ctxFactory.getContext(), sock)
-    
-    def doRead(self):
-        """Called when my socket is ready for reading.
 
-        This accepts a connection and calls self.protocol() to handle the
-        wire-level protocol.
-        """
-        try:
-            try:
-                skt, addr = self.socket.accept()
-            except socket.error, e:
-                if e.args[0] == tcp.EWOULDBLOCK:
-                    return
-                raise
-            except SSL.Error:
-                log.deferr()
-                return
-            protocol = self.factory.buildProtocol(addr)
-            if protocol is None:
-                skt.close()
-                return
-            s = self.sessionno
-            self.sessionno = s+1
-            transport = self.transport(skt, protocol, addr, self, s)
-            protocol.makeConnection(transport)
-        except:
-            log.deferr()
+    def _preMakeConnection(self, transport):
+        # *Don't* call startTLS here
+        # The transport already has the SSL.Connection object from above
+        transport._startTLS()
+        return tcp.Port._preMakeConnection(self, transport)
 
 
 class Connector(base.BaseConnector):
