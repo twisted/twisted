@@ -1,0 +1,44 @@
+#!/usr/bin/python
+
+from twisted.protocols.sux import XMLParser
+import os
+
+class TagChecker(XMLParser):
+
+    def __init__(self, allowed):
+        self.allowed = allowed
+
+    def gotText(self, _):
+        pass
+
+    gotEntityReference = gotText
+
+    def gotTagStart(self, name, attributes):
+        if not self.allowed(name):
+            col, line = self.saveMark()
+            print '%s:%s:%s: unsupported tag <%s>' % (self.fileName, col, line, 
+                                                      name)
+
+    def gotTagEnd(self, name):
+        if not self.allowed(name):
+            col, line = self.saveMark()
+            print '%s:%s:%s: unsupported tag </%s>' % (self.fileName, col, line,
+                                                       name)
+
+def main():
+    import sys
+    allowed = {}
+    for tag in ("html", "title", "head", "body", "h1", "h2", "h3", "ol", "ul",
+                "dl", "li", "dt", "dd", "p", "code", "img", "blockquote", "a",
+                "cite", "div", "span", "strong", "em", "pre", "q", "table",
+                "tr", "td", "th"):
+        allowed[tag] = None
+    checker = TagChecker(allowed.has_key)
+    for file in sys.argv[1:]:
+        f = open(file)
+        checker.makeConnection(None)
+        checker.fileName = file
+        checker.dataReceived(f.read())
+
+if __name__ == '__main__':
+   main()
