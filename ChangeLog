@@ -1,5 +1,12 @@
 2003-11-24  Jp Calderone  <exarkun@twistedmatrix.com>
 
+	* twisted/internet/abstract.py: Changed FileDescriptor's
+	registerProducer method to immediately call the given producer's
+	stopProducing method if the FileDescriptor is in the process of
+	or has finished disconnecting.
+
+2003-11-24  Jp Calderone  <exarkun@twistedmatrix.com>
+
 	* twisted/protocols/imap4.py: Fix incorrect behavior of closing the
 	mailbox in response to an EXPUNGE command.
 

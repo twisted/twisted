@@ -232,10 +232,13 @@ class FileDescriptor(log.Logger, styles.Ephemeral):
         """
         if self.producer is not None:
             raise RuntimeError("Cannot register producer %s, because producer %s was never unregistered." % (producer, self.producer))
-        self.producer = producer
-        self.streamingProducer = streaming
-        if not streaming:
-            producer.resumeProducing()
+        if self.disconnected:
+            producer.stopProducing()
+        else:
+            self.producer = producer
+            self.streamingProducer = streaming
+            if not streaming:
+                producer.resumeProducing()
 
     def unregisterProducer(self):
         """Stop consuming data from a producer, without disconnecting.

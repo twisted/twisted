@@ -630,15 +630,30 @@ class MultiServiceTestCase(unittest.TestCase):
 
 
 class DummyProducer:
+    resumed = 0
+    stopped = 0
     def resumeProducing(self):
-         pass
+         self.resumed += 1
+    
+    def stopProducing(self):
+         self.stopped += 1
 
 class TestProducer(unittest.TestCase):
 
     def testDoubleProducer(self):
         fd = abstract.FileDescriptor()
-        fd.registerProducer(DummyProducer(), 0)
+        fd.connected = 1
+        dp = DummyProducer()
+        fd.registerProducer(dp, 0)
+        self.assertEquals(dp.resumed, 1)
         self.assertRaises(RuntimeError, fd.registerProducer, DummyProducer(), 0)
+
+    def testUnconnectedFileDescriptor(self):
+        fd = abstract.FileDescriptor()
+        fd.disconnected = 1
+        dp = DummyProducer()
+        fd.registerProducer(dp, 0)
+        self.assertEquals(dp.stopped, 1)
 
 if __name__ == '__main__':
     unittest.main()
