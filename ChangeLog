@@ -1,5 +1,8 @@
 2003-05-05  Brian Warner  <warner@lothar.com>
 
+	* twisted/trial/reporter.py: remove ResultTypes, it doesn't really
+	accomplish its goal
+
 	* twisted/trial/unittest.py: move log.startKeepingErrors() from
 	top-level to TestSuite.run(). This fixes the problem of errors
 	being eaten by code which imports unittest for other reasons (like

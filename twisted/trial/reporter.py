@@ -26,10 +26,6 @@ from twisted.python.compat import True, False
 SKIP, EXPECTED_FAILURE, FAILURE, ERROR, UNEXPECTED_SUCCESS, SUCCESS = \
       "skip", "expected failure", "failure", "error", "unexpected success", \
       "success"
-# all possible values for resultType
-ResultTypes = [SKIP,
-               EXPECTED_FAILURE, FAILURE, ERROR,
-               UNEXPECTED_SUCCESS, SUCCESS]
 
 class Reporter:
     """I report results from a run of a test suite.
