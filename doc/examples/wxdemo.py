@@ -1,4 +1,3 @@
-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 # 
@@ -17,23 +16,18 @@
 
 from wxPython.wx import *
 
-from twisted.internet import main, wxsupport, default
-from twisted.python.delay import Delayed
-default.install()
+from twisted.internet import wxsupport, reactor
 
 # set up so that "hello, world" is printed once a second
 def helloWorld():
     print "hello, world"
-
-d = Delayed()
-d.ticktime = 1
-d.loop(helloWorld, 1)
-main.addDelayed(d)
+    reactor.callLater(1, helloWorld)
+reactor.callLater(1, helloWorld)
 
 def twoSecondsPassed():
     print "two seconds passed"
 
-main.addTimeout(twoSecondsPassed, 2)
+reactor.callLater(2, twoSecondsPassed)
 
 ID_EXIT  = 101
 
@@ -49,10 +43,10 @@ class MyFrame(wxFrame):
 
     def DoExit(self, event):
         self.Close(true)
-        main.shutDown()
+        reactor.stop()
 
 
-class MyApp(wxsupport.twixApp):
+class MyApp(wxApp):
 
     def OnInit(self):
         frame = MyFrame(NULL, -1, "Hello, world")
@@ -64,7 +58,7 @@ class MyApp(wxsupport.twixApp):
 def demo():
     app = MyApp(0)
     wxsupport.install(app)
-    main.run()
+    reactor.run()
 
 
 if __name__ == '__main__':
