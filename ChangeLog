@@ -1,3 +1,8 @@
+2002-10-23  Itamar Shtull-Trauring  <twisted@itamarst.org>
+
+	* twisted/web/soap.py: experimental SOAP support, using SOAPpy.
+	See doc/examples/soap.py for sample usage.
+
 2002-10-22  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* twisted/python/log.py: Two new features.
