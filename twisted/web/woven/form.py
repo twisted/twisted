@@ -220,7 +220,8 @@ class FormFillerWidget(widgets.Widget):
         for inNode in domhelpers.findElementsWithAttribute(node, "name"):
             if inNode.tagName.lower() not in ('textarea', 'select', 'input'):
                 continue
-            if inNode.getAttribute("type").lower() == "submit":
+            t = inNode.getAttribute("type")
+            if t and t.lower() == "submit":
                 hasSubmit = 1
             nName = inNode.getAttribute("name")
             assert argz.has_key(nName), "method signature %s does not define argument %s" % (self.model.original, nName)
