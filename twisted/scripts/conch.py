@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.52 2003/04/17 17:11:54 z3p Exp $
+# $Id: conch.py,v 1.53 2003/04/19 03:22:48 acapnotic Exp $
 
 #""" Implementation module for the `conch` command.
 #"""
@@ -43,7 +43,7 @@ class GeneralOptions(usage.Options):
                     ['remoteforward', 'R', None, 'listen-port:host:port   Forward remote port to local address'],
                     ['option', 'o', None, 'Ignored OpenSSH options'],
                     ]
-    
+
     optFlags = [['null', 'n', 'Redirect input from /dev/null.'],
                 ['fork', 'f', 'Fork to background after authentication.'],
                 ['tty', 't', 'Tty; allocate a tty even if command is given.'],
@@ -150,7 +150,7 @@ def run():
         options.identitys = ['~/.ssh/id_rsa', '~/.ssh/id_dsa']
     host = options['host']
     if not options['user']:
-        options['user'] = getpass.getuser() 
+        options['user'] = getpass.getuser()
     if not options['port']:
         options['port'] = 22
     else:
@@ -190,7 +190,7 @@ def onConnect():
     if options.localForwards:
         for localPort, hostport in options.localForwards:
             reactor.listenTCP(localPort,
-                        forwarding.SSHListenForwardingFactory(conn, 
+                        forwarding.SSHListenForwardingFactory(conn,
                             hostport,
                             SSHListenClientForwardingChannel))
     if options.remoteForwards:
@@ -222,7 +222,7 @@ def onConnect():
 
 class SSHUnixClientFactory(protocol.ClientFactory):
     noisy = 1
-    
+
     def clientConnectionLost(self, connector, reason):
         reactor.stop()
 
@@ -240,7 +240,7 @@ class SSHUnixClientFactory(protocol.ClientFactory):
             log.msg("socket not owned by us: %s" % stats[4])
         elif filestats[5] != os.getgid():
             log.msg("socket not owned by our group: %s" % stats[5])
-        # XXX reenable this when i can fix it for cygwin    
+        # XXX reenable this when i can fix it for cygwin
         #elif filestats[-3:] != stats[-3:]:
         #    log.msg("socket doesn't have same create times")
         else:
@@ -256,7 +256,7 @@ class SSHUnixServerFactory(protocol.Factory):
     def buildProtocol(self, addr):
         return SSHUnixServerProtocol()
 
-class SSHUnixClientProtocol(banana.Banana): 
+class SSHUnixClientProtocol(banana.Banana):
     knownDialects = ['none']
 
     def __init__(self):
@@ -292,7 +292,7 @@ class SSHUnixClientProtocol(banana.Banana):
         self.sendMessage('sendGlobalRequest', request, data, wantReply)
         if wantReply:
             return self.returnDeferred()
-    
+
     def openChannel(self, channel, extra = ''):
         self.channelQueue.append(channel)
         channel.conn = self
@@ -497,7 +497,7 @@ class SSHUnixChannel(channel.SSHChannel):
             reactor.stop()
 
 class SSHClientFactory(protocol.ClientFactory):
-    noisy = 1 
+    noisy = 1
 
     def stopFactory(self):
         reactor.stop()
@@ -524,7 +524,7 @@ class SSHClientTransport(transport.SSHClientTransport):
     def verifyHostKey(self, pubKey, fingerprint):
         goodKey = self.isInKnownHosts(options['host'], pubKey)
         if goodKey == 1: # good key
-            return defer.succeed(1) 
+            return defer.succeed(1)
         elif goodKey == 2: # AAHHHHH changed
             return defer.fail(ConchError('changed host key'))
         else:
@@ -534,15 +534,15 @@ class SSHClientTransport(transport.SSHClientTransport):
                 host = options['host']
                 khHost = options['host']
             else:
-                host = '%s (%s)' % (options['host'], 
+                host = '%s (%s)' % (options['host'],
                                     self.transport.getPeer()[1])
-                khHost = '%s,%s' % (options['host'], 
+                khHost = '%s,%s' % (options['host'],
                                     self.transport.getPeer()[1])
             keyType = common.getNS(pubKey)[0]
             print """The authenticity of host '%s' can't be extablished.
-%s key fingerprint is %s.""" % (host, 
-                                {'ssh-dss':'DSA', 'ssh-rsa':'RSA'}[keyType], 
-                                fingerprint) 
+%s key fingerprint is %s.""" % (host,
+                                {'ssh-dss':'DSA', 'ssh-rsa':'RSA'}[keyType],
+                                fingerprint)
             ans = raw_input('Are you sure you want to continue connecting (yes/no)? ')
             while ans.lower() not in ('yes', 'no'):
                 ans = raw_input("Please type 'yes' or 'no': ")
@@ -601,7 +601,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
             print
             reactor.stop()
             return defer.fail(ConchError('PEBKAC'))
-       
+
     def getPublicKey(self):
         files = [x for x in options.identitys if x not in self.usedFiles]
         log.msg(str(options.identitys))
@@ -611,15 +611,15 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         file = files[0]
         log.msg(file)
         self.usedFiles.append(file)
-        file = os.path.expanduser(file) 
+        file = os.path.expanduser(file)
         file += '.pub'
         if not os.path.exists(file):
             return self.getPublicKey() # try again
         try:
-            return keys.getPublicKeyString(file) 
+            return keys.getPublicKeyString(file)
         except:
             return self.getPublicKey() # try again
-    
+
     def getPrivateKey(self):
         file = os.path.expanduser(self.usedFiles[-1])
         if not os.path.exists(file):
@@ -662,7 +662,7 @@ class SSHConnection(connection.SSHConnection):
 class SSHSession(channel.SSHChannel):
 
     name = 'session'
-    
+
     def channelOpen(self, foo):
         #global globalSession
         #globalSession = self
@@ -672,7 +672,7 @@ class SSHSession(channel.SSHChannel):
         try:
             new = tty.tcgetattr(fd)
         except:
-            log.msg('not a typewriter!') 
+            log.msg('not a typewriter!')
         else:
             new[3] = new[3] & ~tty.ICANON & ~tty.ECHO
             new[6][tty.VMIN] = 1
@@ -695,7 +695,7 @@ class SSHSession(channel.SSHChannel):
                 winsz = fcntl.ioctl(fd, tty.TIOCGWINSZ, '12345678')
                 winSize = struct.unpack('4H', winsz)
                 ptyReqData = session.packRequest_pty_req(term, winSize, '')
-                self.conn.sendRequest(self, 'pty-req', ptyReqData)                
+                self.conn.sendRequest(self, 'pty-req', ptyReqData)
             self.conn.sendRequest(self, 'exec', \
                 common.NS(options['command']))
         else:
@@ -787,4 +787,3 @@ class SSHConnectForwardingChannel(forwarding.SSHConnectForwardingChannel):
         forwarding.SSHConnectForwardingChannel.closed(self)
         if len(self.conn.channels) == 1 and not (options['noshell'] and not options['nocache']): # just us left
             reactor.stop()
-
