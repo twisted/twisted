@@ -263,6 +263,10 @@ class Element(Node):
         return clone
 
     def getElementsByTagName(self, name):
+        import warnings
+        warnings.warn("This method is not recursive - use "
+                      "domhelpers.getElementsByTagName instead.",
+                      DeprecationWarning, stacklevel=2)
         return [n for n in self.childNodes if n.nodeName == name]
     
     def hasAttributes(self):
