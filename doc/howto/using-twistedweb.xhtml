@@ -194,7 +194,7 @@ from twisted.web import static, server
 root = static.File("/var/www/htdocs")
 application = service.Application('web')
 site = server.Site(root)
-service.IService(application).addService(internet.TCPServer(80, site))
+service.IServiceCollection(application).addService(internet.TCPServer(80, site))
 </pre>
 
 <p>Most advanced configurations will be in the form of tweaking the
@@ -252,7 +252,7 @@ root.indices=['index.rpy']
 root.processors = {'.rpy': script.ResourceScript}
 application = service.Application('web')
 site = server.Site(root)
-service.IService(application).addService(internet.TCPServer(80, site))
+service.IServiceCollection(application).addService(internet.TCPServer(80, site))
 </pre>
 
 <p><code>File</code> objects also have a method called <code>ignoreExt</code>.
@@ -268,7 +268,7 @@ root.ignoreExt(".rpy")
 root.processors = {'.rpy': script.ResourceScript}
 application = service.Application('web')
 site = server.Site(root)
-service.IService(application).addService(internet.TCPServer(80, site))
+service.IServiceCollection(application).addService(internet.TCPServer(80, site))
 </pre>
 
 <p>Now, a URL such as <code>/foo</code> might be served from a Resource
@@ -306,7 +306,7 @@ root.addHost('baz', baz)
 
 application = service.Application('web')
 site = server.Site(root)
-service.IService(application).addService(internet.TCPServer(80, site))
+service.IServiceCollection(application).addService(internet.TCPServer(80, site))
 </pre>
 
 <h3>Advanced Techniques</h3>
@@ -327,7 +327,7 @@ for dir in os.listdir("/var/vhosts"):
 
 application = service.Application('web')
 site = server.Site(root)
-service.IService(application).addService(internet.TCPServer(80, site))
+service.IServiceCollection(application).addService(internet.TCPServer(80, site))
 </pre>
 
 <pre class="python">
@@ -339,7 +339,7 @@ root = static.File("/var/www/htdocs")
 
 site = server.Site(root)
 application = service.Application('web')
-serviceCollection = service.IService(application)
+serviceCollection = service.IServiceCollection(application)
 
 for num in map(int, open("/etc/web/ports").read().split()):
     serviceCollection.addCollection(internet.TCPServer(num, site))
@@ -562,7 +562,7 @@ root = vhost.NameVirtualHost()
 root.addHost(vhostName, reverseProxy)
 site = server.Site(root)
 application = service.Application('web-proxy')
-service.IService(application).addService(internet.TCPServer(80, site))
+service.IServiceCollection(application).addService(internet.TCPServer(80, site))
 </pre>
 
 <h2>Rewriting URLs</h2>
