@@ -81,10 +81,17 @@ class LogBot(irc.IRCClient):
         """This will get called when the bot receives a message."""
         user = user.split('!', 1)[0]
         self.logger.log("<%s> %s" % (user, msg))
-        if msg.startswith("%s:" % self.nickname):
-            # someone is talking to me, lets respond:
+        
+        # Check to see if they're sending me a private message
+        if channel == self.nickname:
+            msg = "It isn't nice to whisper!  Play nice with the group."
+            self.msg(user, msg)
+            return
+
+        # Otherwise check to see if it is a message directed at me
+        if msg.startswith(self.nickname + ":"):
             msg = "%s: I am a log bot" % user
-            self.say(channel, msg)
+            self.msg(channel, msg)
             self.logger.log("<%s> %s" % (self.nickname, msg))
 
     def action(self, user, channel, msg):
