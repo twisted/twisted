@@ -103,8 +103,3 @@ application = service.Application("hello")
                                  "converttest.out", outstyle, 0)
                 appl2 = app.loadPersisted("converttest.out", outstyle, None)
                 self.assertEqual(service.IService(appl2).name, "lala")
-    
-        
-'''
-def startApplication(application, save):
-'''
