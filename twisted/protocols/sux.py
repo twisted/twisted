@@ -58,14 +58,18 @@ class ParseError(Exception):
        return "%s:%s:%s: %s" % (self.filename, self.line, self.col,
                                 self.message)
 
+
 class XMLParser(Protocol):
+
     state = None
     filename = "<xml />"
+
     def connectionMade(self):
         self.lineno = 1
         self.colno = 0
 
     def saveMark(self):
+        '''Get the line number and column of the last character parsed'''
         return (self.lineno, self.colno)
 
     def _parseError(self, message):
@@ -275,21 +279,39 @@ class XMLParser(Protocol):
     # Sorta SAX-ish API
     
     def gotTagStart(self, name, attributes):
+        '''Encountered an opening tag.
+
+        Default behaviour is to print.'''
         print 'begin', name, attributes
 
     def gotText(self, data):
+        '''Encountered text
+
+        Default behaviour is to print.'''
         print 'text:', repr(data)
 
     def gotEntityReference(self, entityRef):
+        '''Encountered mnemonic entity reference
+
+        Default behaviour is to print.'''
         print 'entityRef: &%s;' % entityRef
 
     def gotComment(self, comment):
+        '''Encountered mnemonic entity reference
+
+        Default behaviour is to print.'''
         pass
 
     def gotCData(self, cdata):
-        print 'CDATA:', repr(cdata)
+        '''Encountered CDATA
+
+        Default behaviour is to call the gotText method'''
+        self.gotText(cdata)
 
     def gotTagEnd(self, name):
+        '''Encountered closing tag
+
+        Default behaviour is to print.'''
         print 'end', name
 
 if __name__ == '__main__':
@@ -299,6 +321,7 @@ if __name__ == '__main__':
     <!DOCTYPE ignore all this shit, hah its malformed!!!!@$>
     <?xml version="suck it"?>
     <foo>
+    &#65;
     <bar />
     <baz boz="buz">boz &zop;</baz>
     <![CDATA[ foo bar baz ]]>
