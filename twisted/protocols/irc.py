@@ -42,7 +42,7 @@ Test coverage needs to be better.
     <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-__version__ = '$Revision: 1.59 $'[11:-2]
+__version__ = '$Revision: 1.60 $'[11:-2]
 
 from twisted.internet import reactor, protocol
 from twisted.persisted import styles
@@ -280,6 +280,8 @@ class IRCClient(basic.LineReceiver):
     ###
     ### You'll want to override these.
 
+    ### Methods involving me directly
+
     def privmsg(self, user, channel, message):
         """Called when I have a message from a user to me or a channel.
         """
@@ -287,6 +289,13 @@ class IRCClient(basic.LineReceiver):
 
     def joined(self, channel):
         """Called when I finish joining a channel.
+
+        channel has the starting character (# or &) intact.
+        """
+        pass
+
+    def left(self, channel):
+        """Called when I have left a channel.
 
         channel has the starting character (# or &) intact.
         """
@@ -307,11 +316,6 @@ class IRCClient(basic.LineReceiver):
         """
         self.privmsg(user, channel, message)
 
-    def action(self, user, channel, data):
-        """Called when I see a user perform an ACTION on a channel.
-        """
-        pass
-
     def pong(self, user, secs):
         """Called with the results of a CTCP PING query.
         """
@@ -327,7 +331,52 @@ class IRCClient(basic.LineReceiver):
         """
         pass
 
+    ### Things I observe other people doing in a channel.
+
+    def userJoined(self, user, channel):
+        """Called when I see another user joining a channel.
+        """
+        pass
+
+    def userLeft(self, user, channel):
+        """Called when I see another user leaving a channel.
+        """
+        pass
+
     def userKicked(self, kickee, channel, kicker, message):
+        """Called when I observe someone else being kicked from a channel.
+        """
+        pass
+
+    def action(self, user, channel, data):
+        """Called when I see a user perform an ACTION on a channel.
+        """
+        pass
+
+    def topicUpdated(self, user, channel, newTopic):
+        """In channel, user changed the topic to newTopic.
+
+        Also called when first joining a channel.
+        """
+        pass
+
+    def userRenamed(self, oldname, newname):
+        """A user changed their name from oldname to newname.
+        """
+        pass
+
+    ### Information from the server.
+
+    def receivedMOTD(self, motd):
+        """I recieved a message-of-the-day banner from the server.
+
+        motd is a list of strings, where each string was sent as a seperate
+        message from the server. To display, you might want to use
+            
+            string.join(motd, '\n')
+
+        to get a nicely formatted string.
+        """
         pass
 
     ### user input commands, client->server
@@ -349,10 +398,19 @@ class IRCClient(basic.LineReceiver):
 
     part = leave
 
-    def topic(self, channel, topic):
+    def topic(self, channel, topic=None):
+        """Attempt to set the topic of the given channel, or ask what it is.
+        
+        If topic is None, then I sent a topic query instead of trying to set
+        the topic. The server should respond with a TOPIC message containing
+        the current topic of the given channel.
+        """
         # << TOPIC #xtestx :fff
         if channel[0] not in '&#!+': channel = '#' + channel
-        self.sendLine("TOPIC %s :%s" % (channel, topic))
+        if topic != None:
+            self.sendLine("TOPIC %s :%s" % (channel, topic))
+        else:
+            self.sendLine("TOPIC %s" % (channel,))
 
     def say(self, channel, message, length = None):
         if channel[0] not in '&#!+': channel = '#' + channel
@@ -461,8 +519,19 @@ class IRCClient(basic.LineReceiver):
 
     def irc_JOIN(self, prefix, params):
         nick = string.split(prefix,'!')[0]
+        channel = params[-1]
         if nick == self.nickname:
-            self.joined(params[-1])
+            self.joined(channel)
+        else:
+            self.userJoined(nick, channel)
+
+    def irc_PART(self, prefix, params):
+        nick = string.split(prefix,'!')[0]
+        channel = params[-1]
+        if nick == self.nickname:
+            self.left(channel)
+        else:
+            self.userLeft(nick, channel)
 
     def irc_PING(self, prefix, params):
         self.sendLine("PONG %s" % params[-1])
@@ -505,7 +574,10 @@ class IRCClient(basic.LineReceiver):
 
     def irc_NICK(self, prefix, params):
         nick = string.split(prefix,'!',0)[0]
-        if nick == self.nickname: self.nickname = params[0]
+        if nick == self.nickname: 
+            self.nickname = params[0]
+        else:
+            self.userRenamed(nick, params[0])
 
 
     def irc_KICK(self, prefix, params):
@@ -520,6 +592,37 @@ class IRCClient(basic.LineReceiver):
             self.kickedFrom(channel, kicker, message)
         else:
             self.userKicked(kicked, channel, kicker, message)
+
+    def irc_TOPIC(self, prefix, params):
+        """Someone in the channel set the topic.
+        """
+        user = string.split(prefix, '!')[0]
+        channel = params[0]
+        newtopic = params[1]
+        self.topicUpdated(user, channel, newtopic)
+
+    def irc_RPL_TOPIC(self, prefix, params):
+        """I just joined the channel, and the server is telling me the current topic.
+        """
+        user = string.split(prefix, '!')[0]
+        channel = params[1]
+        newtopic = params[2]
+        self.topicUpdated(user, channel, newtopic)
+
+    def irc_RPL_NOTOPIC(self, prefix, params):
+        user = string.split(prefix, '!')[0]
+        channel = params[1]
+        newtopic = ""
+        self.topicUpdated(user, channel, newtopic)
+
+    def irc_RPL_MOTDSTART(self, prefix, params):
+        self.motd = [params[-1]]
+
+    def irc_RPL_MOTD(self, prefix, params):
+        self.motd.append(params[-1])
+
+    def irc_RPL_ENDOFMOTD(self, prefix, params):
+        self.receivedMOTD(self.motd)
 
     def irc_unknown(self, prefix, command, params):
         pass
