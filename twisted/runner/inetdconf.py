@@ -147,8 +147,12 @@ class InetdConf(SimpleConfFile):
         if not port and not protocol.startswith('rpc/'):
             # FIXME: Should this be discarded/ignored, rather than throwing
             #        an exception?
-            raise UnknownService, "Unknown service: %s (%s)" \
-                                  % (serviceName, protocol)
+            try:
+                port = int(serviceName)
+                serviceName = 'unknown'
+            except:
+                raise UnknownService, "Unknown service: %s (%s)" \
+                      % (serviceName, protocol)
 
         self.services.append(InetdService(serviceName, port, socketType,
                                           protocol, wait, user, group, program,
@@ -158,7 +162,7 @@ class InetdConf(SimpleConfFile):
 class ServicesConf(SimpleConfFile):
     """/etc/services parser
     
-    @ivar self.services: dict mapping service names to (port, protocol) tuples.
+    @ivar services: dict mapping service names to (port, protocol) tuples.
     """
     
     defaultFilename = '/etc/services'
