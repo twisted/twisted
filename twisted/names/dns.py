@@ -29,7 +29,7 @@ AF_INET6 = getattr(socket, 'AF_INET6', 'AF_INET6')
 try:
     from Crypto.Util import randpool
 except ImportError:
-    for randSource in ('random', 'srandom', 'urandom'):
+    for randSource in ('urandom',):
         try:
             f = file('/dev/' + randSource)
             f.read(2)
@@ -72,7 +72,7 @@ QUERY_TYPES = {
     13: 'HINFO', 14: 'MINFO', 15: 'MX',   16:  'TXT',
 
     17: 'RP',    18: 'AFSDB',
-    # 19 through 32?  Eh, I'll get to 'em.
+    # 19 through 27?  Eh, I'll get to 'em.
 
     28: 'AAAA',
 
