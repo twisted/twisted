@@ -181,6 +181,7 @@ class FTPClientAndServerTests(FTPServerTests):
         filenames = map(lambda file: file['filename'], fileList.files)
         self.failUnless('ftp_crap' in filenames,
                         'ftp_crap not in file listing')
+        client.transport.loseConnection()
 
     def testShortFileListings(self):
 
@@ -212,6 +213,7 @@ class FTPClientAndServerTests(FTPServerTests):
         filenames = p.buf.getvalue().split('\r\n')
         self.failUnless('ftp_crap' in filenames,
                         'ftp_crap not in file listing')
+        client.transport.loseConnection()
 
     def testRetr(self):
         # Connect
@@ -246,6 +248,7 @@ class FTPClientAndServerTests(FTPServerTests):
         data = proto.buf.getvalue()
         self.failUnless(data == open('ftp_crap', "rb").read(),
                         'RETRieved file does not match original')
+        client.transport.loseConnection()
 
 
     def testStor(self):
@@ -283,6 +286,7 @@ class FTPClientAndServerTests(FTPServerTests):
             raise error[0], error[1], error[2]
 
         self.assertEquals(open('HelloThere').read(), expectedContent)
+        client.transport.loseConnection()
 
     def testBadLogin(self):
         client = ftp.FTPClient(passive=self.passive, username='badperson')
