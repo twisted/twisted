@@ -26,7 +26,7 @@ import types
 
 class ProxyConfigurator(coil.Configurator):
 
-    configurableClass = portforward.ProxyFactorf
+    configurableClass = portforward.ProxyFactory
     
     configTypes = {'host': [types.StringType, "Remote Host", "Host to forward to, e.g. 'www.yahoo.com'."],
                    'port': [types.IntType, "Remote Port", "Port to forward to, e.g. 80."]
