@@ -22,17 +22,39 @@ Test cases for twisted.names.
 import sys
 from pyunit import unittest
 
-from twisted.internet import reactor, protocol
+from twisted.internet import reactor, protocol, defer
 from twisted.names import client, server
 from twisted.protocols import dns
 from twisted.python import log
 
 
+gotResponse = 0
 PORT = 2053
+
+def setDone(message):
+    global gotResponse
+    gotResponse = 1
+    return message
+
+def getPayload(message):
+    global gotResponse
+    gotResponse = 1
+    return [answer.payload for answer in message.answers]
+
 
 class NoFileAuthority:
     def __init__(self, soa, records):
         self.soa, self.records = soa, records
+
+soa_record = dns.Record_SOA(
+                    mname = 'test-domain.com',
+                    rname = 'root.test-domain.com',
+                    serial = 100,
+                    refresh = 1234,
+                    minimum = 7654,
+                    expire = 19283784,
+                    retry = 15
+                )
 
 
 class ServerDNSTestCase(unittest.DeferredTestCase):
@@ -41,25 +63,18 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
     def setUp(self):
         self.factory = server.DNSServerFactory([
             NoFileAuthority(
-                soa = dns.Record_SOA(
-                    mname = 'test-domain.com',
-                    rname = 'root.test-domain.com',
-                    serial = 100,
-                    refresh = 1234,
-                    minimum = 7654,
-                    expire = 19283784,
-                    retry = 15
-                ),
+                soa = soa_record,
                 records = {
                     'test-domain.com': [
                         dns.Record_A('127.0.0.1'),
                         dns.Record_NS('39.28.189.39'),
                         dns.Record_MX(10, 'host.test-domain.com'),
-                        dns.Record_HINFO(os='Linux', cpu='A Fast One, Dontcha know')
+                        dns.Record_HINFO(os='Linux', cpu='A Fast One, Dontcha know'),
+                        soa_record
                     ],
                     'host.test-domain.com': [
                         dns.Record_A('123.242.1.5'),
-                        dns.Record_A('0.255.0.255')
+                        dns.Record_A('0.255.0.255'),
                     ],
                     'host-two.test-domain.com': [
 #
@@ -68,10 +83,13 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
 #
                         dns.Record_A('255.255.255.254'),
                         dns.Record_A('0.0.0.0')
+                    ],
+                    '123.93.84.28.in-addr.arpa': [
+                        dns.Record_PTR('test.host-reverse.lookup.com')
                     ]
                 }
             )
-        ])
+        ], verbose=2)
         
         from twisted.internet import reactor
         self.listenerTCP = reactor.listenTCP(PORT, self.factory)
@@ -108,25 +126,63 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
             reactor.iterate(0.1)
 
 
-    def testMailExchangeRecord(self):
+    def testAuthority(self):
+        global gotResponse
+        gotResponse = 0
+
         r = self.resolver
         self.deferredFailUnlessEqual(
-            r.lookupMailExchange('test-domain.com'),
+            r.queryUDP([dns.Query('test-domain.com', dns.SOA, dns.IN)]).addCallback(getPayload),
+            [soa_record]
+        )
+        
+        while not gotResponse:
+            reactor.iterate(0.05)
+
+
+    def testMailExchangeRecord(self):
+        global gotResponse
+        gotResponse = 0
+
+        r = self.resolver
+        self.deferredFailUnlessEqual(
+            r.lookupMailExchange('test-domain.com').addCallback(setDone),
             [dns.Record_MX(10, 'host.test-domain.com')]
         )
 
-        from twisted.internet import reactor
-        for i in range(10):
-            reactor.iterate(0.1)
+        while not gotResponse:
+            reactor.iterate(0.05)
 
 
     def testNameserver(self):
+        global gotResponse
+        gotResponse = 0
+
         r = self.resolver
         self.deferredFailUnlessEqual(
-            r.lookupNameservers('test-domain.com'),
+            r.lookupNameservers('test-domain.com').addCallback(setDone),
             [dns.Record_NS('39.28.189.39')]
         )
 
-        from twisted.internet import reactor
-        for i in range(10):
-            reactor.iterate(0.1)
+        while not gotResponse:
+            reactor.iterate(0.05)
+
+
+    # Yea, second class citizens all the way
+    def testOther(self):
+        global gotResponse
+        gotResponse = 0
+        
+        r = self.resolver
+        self.deferredFailUnlessEqual(
+            r.queryUDP([dns.Query('test-domain.com', dns.HINFO, dns.IN)]).addCallback(getPayload),
+            [dns.Record_HINFO(os='Linux', cpu='A Fast One, Dontcha know')]
+        )
+        
+        self.deferredFailUnlessEqual(
+            r.queryUDP([dns.Query('123.93.84.28.in-addr.arpa', dns.HINFO, dns.IN)]).addCallback(getPayload),
+            [dns.Record_PTR('test.host-reverse.lookup.com')]
+        )
+
+        while not gotResponse:
+            reactor.iterate(0.05)

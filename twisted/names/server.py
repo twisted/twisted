@@ -184,7 +184,7 @@ class DNSServerFactory(protocol.ServerFactory):
                 s = ' '.join([dns.QUERY_TYPES.get(q.type, 'UNKNOWN') for q in message.queries])
 
             if not len(s):
-                log.msg("Empty query from %r" % (address or protocol.transport.getPeer()))
+                log.msg("Empty query from %r" % ((address or protocol.transport.getPeer()),))
             else:
                 log.msg("%s query from %r" % (s, address or protocol.transport.getPeer()))
 
