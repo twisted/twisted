@@ -2,7 +2,7 @@ from twisted.web import domtemplate
 from twisted.python import domhelpers #helpers for munging the DOM
 
 
-import quoters
+from TwistedQuotes import quoters
 
 class QuoteResource(domtemplate.DOMTemplate):
     """I am a DOMTemplate that displays a fancy quote page."""

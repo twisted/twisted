@@ -5,7 +5,7 @@ from twisted.web import domwidgets
 from twisted.web import domhandlers
 from twisted.python import domhelpers
 
-import quoters
+from TwistedQuotes import quoters
 
 
 class MQuote(wmvc.WModel):

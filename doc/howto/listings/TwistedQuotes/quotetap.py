@@ -1,5 +1,6 @@
-import quoteproto                       # Protocol and Factory
-import quoters                          # "give me a quote" code
+from TwistedQuotes import quoteproto    # Protocol and Factory
+from TwistedQuotes import quoters      # "give me a quote" code
+
 from twisted.python import usage        # twisted command-line processing
 
 class Options(usage.Options):

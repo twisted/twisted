@@ -1,6 +1,6 @@
 # -*- Python -*- 
 
-import webquoteresource
+from TwistedQuotes import webquoteresource
     
 #__file__ is defined to be the name of this file; this is to
 #get the sibling file "quotes.txt" which should be in the same directory
