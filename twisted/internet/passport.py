@@ -319,6 +319,10 @@ class Identity:
 class Authorizer:
     """An interface to a set of identities.
     """
+    def setApplication(self, app):
+        """Set the application for this authorizer.
+        """
+        self.application = app
     def addIdentity(self, identity):
         """Create an identity and make a callback when it has been created.
         """

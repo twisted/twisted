@@ -131,6 +131,7 @@ class Application(log.Logger, styles.Versioned, roots.Locked):
         self.services = {}
         # a passport authorizer
         self.authorizer = authorizer or passport.DefaultAuthorizer()
+        self.authorizer.setApplication(self)
         if platform.getType() == "posix":
             self.uid = uid or os.getuid()
             self.gid = gid or os.getgid()

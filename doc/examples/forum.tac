@@ -9,10 +9,10 @@ import gadgets
 import service
 
 # Create Twisted application object
-application = main.Application("posting board")
+application = main.Application("forum")
 
 # Connect to a database.
-dbpool = adbapi.ConnectionPool("pyPgSQL.PgSQL", "localhost:5432", database="sean")
+dbpool = adbapi.ConnectionPool("pyPgSQL.PgSQL", database="twisted")
 
 # Create the service
 forumService = service.ForumService("posting", application, dbpool)

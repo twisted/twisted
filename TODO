@@ -152,3 +152,6 @@ this file directly.
 033 [[Glyph Lefkowitz]] Object Migration layer for Twisted Spread.
 
 034 Voice & video streaming for Twisted Words.
+
+035 Asynchronous equivalent to getPerspectiveNamed, so that perspectives can be
+    loaded from a database a-la getIdentityRequest.

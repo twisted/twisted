@@ -16,6 +16,8 @@
 
 """A thread pool that is integrated with the Twisted event loop."""
 
+import sys
+
 # Sibling Import
 import task, main
 
@@ -46,7 +48,9 @@ class ThreadDispatcher(threadpool.ThreadPool):
     def _runWithCallback(self, callback, errback, func, args, kwargs):
         try:
             result = apply(func, args, kwargs)
-        except Exception, e:
+        except:
+            e = sys.exc_info()[1]
+            # errback(e)
             task.schedule(errback, e)
         else:
             task.schedule(callback, result)

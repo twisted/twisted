@@ -6,7 +6,7 @@ This is designed to integrate with twisted.internet.threadtask.
 
 from twisted.spread import pb
 from twisted.internet import task, threadtask
-from twisted.python import reflect
+from twisted.python import reflect, log, defer
 
 import traceback
 
@@ -80,7 +80,7 @@ class ConnectionPool(pb.Referenceable):
     def _runOperation(self, qstr):
         """This is used for non-query operations that don't want "fetch*" to be called
         """
-        print 'running operation'
+        # print 'running operation'
         conn = self.connect()
         curs = conn.cursor()
         try:
@@ -89,9 +89,8 @@ class ConnectionPool(pb.Referenceable):
             curs.close()
             conn.commit()
         except:
-            print 'ERROR: runOperation traceback'
             conn.rollback()
-            traceback.print_exc()
+            # traceback.print_exc()
             raise
         return result
 
@@ -128,4 +127,58 @@ class ConnectionPool(pb.Referenceable):
             raise
         else:
             trans._connection.commit()
+
+            
+class Augmentation:
+    '''A class which augments a database connector with some functionality.
+
+    Conventional usage of me is to write methods that look like
+
+      |  def getSomeData(self, critereon, callbackIn, errbackIn):
+      |      return self.runQuery("SELECT * FROM FOO WHERE BAR LIKE '%%%s%%'" % critereon, callbackIn, errbackIn)
+    
+    '''
+
+    def __init__(self, dbpool):
+        self.dbpool = dbpool
+        self.createSchema().arm()
+
+    def __setstate__(self, state):
+        self.__dict__ = state
+        self.createSchema().arm()
+
+    def operationDone(self, done):
+        """Default callback for database operation success.
+        """
+        log.msg("%s Operation Done: %s" % (str(self.__class__), done))
+
+    def operationError(self, error):
+        """Default callback for database operation failure.
+        """
+        # error.print_traceback()
+        log.msg("%s Operation Failed: %s" % (str(self.__class__), error))
+
+    schema = ''' Insert your SQL database schema here. '''
+
+    def createSchema(self):
+        return self.runOperation(self.schema, self.schemaCreated, self.schemaNotCreated)
+
+    def schemaCreated(self, result):
+        log.msg("Successfully created schema for %s." % str(self.__class__))
+
+    def schemaNotCreated(self, error):
+        log.msg("Schema already exists for %s." % str(self.__class__))
+
+    def runQuery(self, querySQL, callback, errback):
+        d = defer.Deferred()
+        d.addCallbacks(callback, errback)
+        self.dbpool.query(querySQL, d.callback, d.errback)
+        return d
+
+    def runOperation(self, updateSQL, callback=None, errback=None):
+        d = defer.Deferred()
+        d.addCallbacks(callback or self.operationDone,
+                       errback or self.operationError)
+        self.dbpool.operation(updateSQL, d.callback, d.errback)
+        return d
 

@@ -31,12 +31,6 @@ class ForumManager:
     def operationError(self, error):
         print "Operation error:", error
 
-    def messagesDone(self, messages):
-        print "got list of messages"
-
-    def messagesError(self, error):
-        print "Query Error:", error
-        
     def createForum(self, name):
         """Create a new forum with this name.
         """

@@ -193,7 +193,11 @@ class _Jellier:
         work for long ints that can fit into a regular integer, currently, but
         that limitation is temporary)
         """
-        return int(ng)
+        try:
+            return int(ng)
+        except OverflowError:
+            print "Warning!  Jellying a long that Banana might not be able to handle: %s" % ng
+            return ng
 
     def _jelly_float(self, loat):
         """(internal)
