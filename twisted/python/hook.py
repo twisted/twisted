@@ -21,7 +21,7 @@ I define support for hookable instance methods.
 
 These are methods which you can register pre-call and post-call external
 functions to augment their functionality.  People familiar with more esoteric
-languages may think of these as "method combinations".
+languages may think of these as \"method combinations\".
 
 This could be used to add optional preconditions, user-extensible callbacks
 (a-la emacs) or a thread-safety mechanism.
@@ -48,7 +48,7 @@ values and exception status of the main method will be propogated (assuming
 none of the hooks raise an exception).  Hooks will be executed in the order in
 which they are added.
 
-""" #'"
+"""
 
 # System Imports
 import string
