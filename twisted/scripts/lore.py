@@ -45,7 +45,7 @@ class Options(usage.Options):
 
 
 def getProcessor(input, output, config):
-    plugins = plugin.getPlugIns("lore", 0, 0)
+    plugins = plugin.getPlugIns("lore", None, None)
     for plug in plugins:
         if plug.tapname == input:
             module = plug.load()
