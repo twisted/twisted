@@ -399,7 +399,7 @@ class BaseClient(Connection):
 
         # on windows failed connects are reported on exception
         # list, not write or read list.
-        if platformType == "win32":
+        if platformType == "win32" or sys.platform == "cygwin":
             r, w, e = select.select([], [], [self.fileno()], 0.0)
             if e:
                 err = self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
@@ -576,7 +576,7 @@ class Port(base.BasePort):
 
     def createInternetSocket(self):
         s = base.BasePort.createInternetSocket(self)
-        if platformType == "posix":
+        if platformType == "posix" and sys.platform != "cygwin":
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         return s
 
