@@ -6,9 +6,13 @@ rebuild.ImmutableObjectAdapter,types.BufferType,rebuild.IRebuildable
 rebuild.ImmutableObjectAdapter,types.UnicodeType,rebuild.IRebuildable
 rebuild.ImmutableObjectAdapter,types.BooleanType,rebuild.IRebuildable
 rebuild.ImmutableObjectAdapter,types.BuiltinFunctionType,rebuild.IRebuildable
-rebuild.ImmutableObjectAdapter,types.BuildinMethodType,rebuild.IRebuildable
+rebuild.ImmutableObjectAdapter,types.BuiltinMethodType,rebuild.IRebuildable
 rebuild.ImmutableObjectAdapter,types.CodeType,rebuild.IRebuildable
 rebuild.ImmutableObjectAdapter,types.NoneType,rebuild.IRebuildable
 rebuild.ImmutableObjectAdapter,types.SliceType,rebuild.IRebuildable
 rebuild.ImmutableObjectAdapter,types.FileType,rebuild.IRebuildable
+rebuild.ImmutableObjectAdapter,types.FunctionType,rebuild.IRebuildable
+rebuild.ListAdapter,types.ListType,rebuild.IRebuildable
 rebuild.ClassicClassAdapter,types.InstanceType,rebuild.IRebuildable
+rebuild.BoundMethodAdapter,types.MethodType,rebuild.IRebuildable
+rebuild.UnboundMethodAdapter,types.UnboundMethodType,rebuild.IRebuildable

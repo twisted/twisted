@@ -1,4 +1,23 @@
-register("Web Proxy",
-         "exarkun.proxy",
-         description="Proxy for web jazz",
-         type="tap")
+from twisted.python.util import sibpath
+
+csvpath = 'components.csv'
+
+for zow in [
+    [x.strip() for x in l.split(',')] for l in file(csvpath).read().strip().split('\n')
+    ]:
+    print zow
+    adapter, original, interface = zow
+    description = "Automated adapter registration: %s(%s) => %s" % (
+        interface, original, adapter
+        )
+    register(
+        "adapter",
+        None,
+        adapter=adapter,
+        original=original,
+        interface=interface,
+        type="adapterRegistration",
+        description=description
+        )
+
+
