@@ -1,5 +1,11 @@
+"""
+    This basically shows that base.py#next() and wrap.py#_yield()
+    consume .6 and 2.4 seconds (where the initial caller is .9)
+    so, the overhead of the flow module is 3-4x without flow.
+"""
+
 from __future__ import generators
-import flow
+from twisted.flow import flow
 import time
 
 def nonFlow():

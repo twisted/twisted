@@ -1,5 +1,5 @@
 from __future__ import generators
-import flow
+from twisted.flow import flow
 from twisted.internet import protocol, reactor
 PORT = 8392
 

@@ -105,7 +105,7 @@ def withFlow():
     """
         The same example refactored to use generators/flow
     """
-    import flow
+    from twisted.flow import flow
 
     # Return the factors of a given number as a iterable object
     def factor(n):
@@ -170,7 +170,7 @@ def withFlow():
         def connectionMade(self):
             # create a callback object, and register it to recieve lines
             cb = flow.Callback()
-            self.lineReceived = cb.callback
+            self.lineReceived = cb.result
             #
             self.findFactors(self.factory.value)
             d = flow.Deferred(printResults(cb,self.live))

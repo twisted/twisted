@@ -1,4 +1,3 @@
-
 # Why flow?
 #
 #   The flow module provides a mechanism for delivering results
@@ -16,29 +15,13 @@
 #   which weaves the data together onto a single output
 #   stream, via request.write  
 #
-#
-# Why not Deferreds?
-#
-#   One could use deferreds, however, in the first, cooperative
-#   example, one would really have to use a thread (where one
-#   really isn't necessary with the flow module).   And, in the
-#   second, either you'd need a deferred for each row (or chunk
-#   of rows), or the results could not be incrementally.  And,
-#   further, the HTML page generation would have to be broken
-#   up into several 'stages' which were executed after each
-#   other.   Furthermore, if more than one 'database' query
-#   was to be used, the deferreds from them would have to
-#   be synconized; or, you could not execute the queries
-#   in parallel (one on a different database node, for 
-#   example).  In any case, I don't think it'd be as 
-#   pretty as this...   prove me wrong!
-#
 
 from __future__ import generators
 from twisted.internet import reactor
 from twisted.web import server, resource
 from twisted.python import util
-import flow
+from twisted.flow import flow
+from twisted.flow.threads import Threaded
 
 def cooperative():
     """ simulate a cooperative resource, that doesn't block """
@@ -122,7 +105,7 @@ def render(req):
              <tr>
     """)
     zips   = flow.wrap(cooperative())
-    states = flow.wrap(flow.Threaded(blocking()))
+    states = flow.wrap(Threaded(blocking()))
     yield states
     for cnt, abbr, state in states:
         req.write("""
