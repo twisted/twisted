@@ -20,8 +20,6 @@
 #t.w imports
 import resource
 
-from twisted import reality#.error
-
 from twisted.protocols import http
 
 class error(Exception):
@@ -51,8 +49,7 @@ class ErrorPage(resource.Resource):
 
 
 class NoResource(ErrorPage):
-    #reality.error instead of reality.
-    def __init__(self, message=reality.NoVerb('web').format()):
+    def __init__(self, message="Sorry. No luck finding that resource."):
         ErrorPage.__init__(self, http.NOT_FOUND,
                            "No Such Resource",
                            message)

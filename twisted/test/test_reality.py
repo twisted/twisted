@@ -22,18 +22,21 @@ Test cases for twisted.reality module.
 from pyunit import unittest
 
 from twisted.reality import error
-from twisted import reality
+from twisted.reality import reality
+from twisted.reality import thing
+from twisted.reality import player
+from twisted.reality import room
 
 class ContainmentTestCase(unittest.TestCase):
     def setUp(self):
         r = self.reality = reality.Reality()
-        self.ball =   reality.Thing("ball", r)
-        self.box =    reality.Thing("box", r)
-        self.table =  reality.Thing("table", r)
-        self.slab =   reality.Thing("slab", r)
-        self.bob =    reality.Player("bob", r)
-        self.room =   reality.Room("room", r)
-        self.area =   reality.Room("area", r)
+        self.ball =   thing.Thing("ball", r)
+        self.box =    thing.Thing("box", r)
+        self.table =  thing.Thing("table", r)
+        self.slab =   thing.Thing("slab", r)
+        self.bob =    player.Player("bob", r)
+        self.room =   room.Room("room", r)
+        self.area =   room.Room("area", r)
 
     def tearDown(self):
         for x in 'ball', 'table', 'slab', 'bob', 'room':
@@ -150,20 +153,20 @@ class ContainmentTestCase(unittest.TestCase):
         largeNumber = 15
         things = []
         for i in range(largeNumber):
-            thing = reality.Thing("thing"+str(i))
-            thing.surface = 1
-            things.append(thing)
+            thng = thing.Thing("thing"+str(i))
+            thng.surface = 1
+            things.append(thng)
 
         things[0].location = self.box
 
         for i in range(len(things)):
-            thing = things[i]
+            thng = things[i]
             if i:
-                thing.location = things[i-1]
+                thng.location = things[i-1]
         assert things[largeNumber-1] == self.room.find('thing' + str(largeNumber-1)),\
                "thing not found"
 
-        for thing in things:
-            thing.destroy()
+        for thng in things:
+            thng.destroy()
 
 testCases = [ContainmentTestCase]

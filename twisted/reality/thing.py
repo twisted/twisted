@@ -37,7 +37,7 @@ from twisted.python import observable, reflect
 from twisted.protocols import protocol
 from twisted.persisted import styles
 # backward compatibility
-import twisted.reality
+#import twisted.reality
 
 #the default reality which things will use.
 _default = None
@@ -149,14 +149,7 @@ class Thing(observable.Publisher,
         # More state setup, these with constraints.
         self.name = str(name)
         if reality == '':
-            #this is for backwards-compatibility: check both the package
-            #_default and the local _default. Delete this check for 0.9.1
-            if _default is not None:
-                self.reality = _default
-            elif twisted.reality._default is not None:
-                self.reality = twisted.reality._default
-            else:
-                self.reality = None #this could happen before, so it still can.
+            self.reality = _default
         else:
             self.reality = reality
 
