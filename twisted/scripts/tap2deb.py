@@ -191,10 +191,7 @@ Moshe Zadka <moshez@twistedmatrix.com> -- tap2deb author
 
 Copyright:
 
-tap2deb is released under the GNU Lesser General Public License,
-and this package contains bits of code from tap2deb, and hence is
-a derived work of tap2deb, and is under the GNU Lesser General
-Public License
+Insert copyright here.
 ''' % vars())
 
     save_to_file(os.path.join('.build', directory, 'debian', 'dirs'),
