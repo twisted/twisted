@@ -299,6 +299,10 @@ class Port(abstract.FileDescriptor):
         self.fileno = self.socket.fileno
         self.startReading()
 
+    def getSocket(self):
+        skt,addr = self.socket.accept()
+        return skt, addr
+
     def doRead(self):
         """Called when my socket is ready for reading.
 
@@ -306,7 +310,7 @@ class Port(abstract.FileDescriptor):
         wire-level protocol.
         """
         try:
-            skt,addr = self.socket.accept()
+            skt, addr = self.getSocket()
             protocol = self.factory.buildProtocol(addr)
             s = self.sessionno
             self.sessionno = s+1

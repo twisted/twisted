@@ -138,7 +138,8 @@ class HTTPClient(basic.LineReceiver):
     """A client for HTTP
     """
     length = None
-    buffer = ''
+    firstLine = 1
+    __buffer = ''
 
     def sendCommand(self, command, path):
         self.transport.write('%s %s HTTP/1.0\r\n' % (command, path))
@@ -150,20 +151,30 @@ class HTTPClient(basic.LineReceiver):
         self.transport.write('\r\n')
 
     def lineReceived(self, line):
+        if self.firstLine:
+            self.firstLine = 0
+            version, status, message = string.split(line, None, 2)
+            self.handleStatus(version, status, message)
+            return
         if line:
             key, val = string.split(line, ': ', 1)
+            self.handleHeader(key, val)
             if string.lower(key) == 'content-length':
                 self.length = int(val)
         else:
+            self.handleEndHeaders()
             self.setRawMode()
 
     def connectionLost(self):
-        b = self.buffer
-        self.buffer = ''
-        self.handleResponse(b)
+        if self.__buffer:
+            b = self.__buffer
+            self.__buffer = ''
+            self.handleResponse(b)
 
     def connectionMade(self):
         pass
+
+    handleStatus = handleHeader = handleEndHeaders = lambda *args: None
     
     def rawDataReceived(self, data):
         if self.length is not None:
@@ -171,11 +182,12 @@ class HTTPClient(basic.LineReceiver):
             self.length = self.length - len(data)
         else:
             rest = ''
-        self.buffer = self.buffer + data
+        self.__buffer = self.__buffer + data
         if self.length == 0:
-            b = self.buffer
-            self.buffer = ''
+            b = self.__buffer
+            self.__buffer = ''
             self.handleResponse(b)
+            self.setLineMode(rest)
 
 
 class HTTP(basic.LineReceiver):
