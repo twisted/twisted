@@ -1,4 +1,4 @@
-twisted (0.99.0+0.99.1rc1-1) unstable; urgency=low
+twisted (0.99.0+0.99.1rc5-1) unstable; urgency=low
 
   * changelog entry to let the deb build.
 
