@@ -1238,7 +1238,25 @@ def _cbLogInResponded(identity, d, client, serviceName, perspectiveName):
         d.errback(cred.error.Unauthorized("invalid username or password"))
 
 class IdentityConnector:
+     """
+     I support connecting to multiple Perspective Broker services that are
+     in a service tree.
+     """
      def __init__(self, host, port, identityName, password):
+         """
+         @type host:               C{string}
+         @param host:              The host to connect to or the PB server.
+                                   If this is C{"unix"}, then a UNIX socket
+                                   will be used rather than a TCP socket.
+         @type port:               C{integer}
+         @param port:              The port to connect to for the PB server.
+         @type identityName:       C{string}
+         @param identityName:      The name of the identity to use to
+                                   autheticate with the PB server.
+         @type password:           C{string}
+         @param password:          The password to use to autheticate with
+                                   the PB server.
+         """
          self.host = host
          self.port = port
          self.identityName = identityName
@@ -1270,6 +1288,12 @@ class IdentityConnector:
          self._connectDeferreds[:] = []
 
      def requestLogin(self):
+         """
+         Attempt to authenticate about the PB server, but don't
+         request any services, yet.
+
+         @rtype:                    L{twisted.internet.defer.Deferred}
+         """
          if not self._identityWrapper:
              d = defer.Deferred()
              self._connectDeferreds.append(d)
@@ -1283,6 +1307,25 @@ class IdentityConnector:
 
      def requestService(self, serviceName, perspectiveName=None,
                         client=None):
+         """
+         Request a perspective on the specified service.  This will
+         authenticate against the server as well if L{requestLogin}
+         hasn't already been called.
+
+         @type serviceName:         C{string}
+         @param serviceName:        The name of the service to obtain
+                                    a perspective for.
+         @type perspectiveName:     C{string}
+         @param perspectiveName:    If specified, the name of the
+                                    perspective to obtain.  Otherwise,
+                                    default to the name of the identity.
+         @param client:             The client object to attach to
+                                    the perspective.
+
+         @rtype:                    L{twisted.internet.defer.Deferred}
+         @return:                   A deferred which will receive a callback
+                                    with the perspective.
+         """
          return self.requestLogin().addCallback(
              lambda i, self=self: i.callRemote("attach",
                                                serviceName,
