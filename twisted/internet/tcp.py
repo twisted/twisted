@@ -258,11 +258,37 @@ class Client(Connection):
         return s
 
 
+class IConnector:
+    """Connect this to that and make it stick."""
+
+    transportFactory = None
+    protocol = None
+    factory = None
+
+    def __init__(self, host, portno, protocolFactory, timeout=30):
+        raise NotImplementedError
+
+    def connectionFailed(self):
+        raise NotImplementedError
+
+    def connectionLost(self):
+        raise NotImplementedError
+
+    def startConnecting(self):
+        raise NotImplementedError
+
+    def getProtocol(self):
+        """Get the current protocol instance."""
+        raise NotImplementedError
+
+
 class Connector:
     """Connect a protocol to a server using TCP and if it fails make a new one."""
 
     transportFactory = Client
     protocol = None
+
+    __implements__ = [IConnector]
 
     def __init__(self, host, portno, protocolFactory, timeout=30):
         self.host = host

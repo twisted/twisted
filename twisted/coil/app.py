@@ -20,8 +20,9 @@ This is used as the root of the config tree.
 """
 
 # Twisted Imports
+from twisted.internet import tcp
 from twisted.protocols import protocol
-from twisted.python import roots, reflect, components
+from twisted.python import log, roots, reflect, components
 from twisted.cred import service
 
 # Sibling Imports
@@ -34,7 +35,7 @@ import string
 class PortCollection(coil.ConfigCollection):
     """A collection of Ports; names may only be strings which represent port numbers.
     """
-    
+
     entityType = protocol.IFactory
 
     def __init__(self, app, ptype):
@@ -56,6 +57,7 @@ class PortCollection(coil.ConfigCollection):
             if isinstance(port, self.mod.Port):
                 if port.port == idx:
                     return port.factory
+        raise KeyError, "No such entity %s" % (name,)
 
     def reallyPutEntity(self, portno, factory):
         getattr(self.app, 'listen'+string.upper(self.ptype))(int(portno), factory)
@@ -67,7 +69,7 @@ class PortCollection(coil.ConfigCollection):
         """Enter a port number.
         """
         try:
-            portno = int(name)
+            int(name)
         except ValueError:
             raise roots.ConstraintViolation("Not a port number: %s" % repr(name))
         else:
@@ -82,7 +84,7 @@ class PortCollection(coil.ConfigCollection):
 
 class ServiceCollection(coil.ConfigCollection):
     """A collection of Service objects."""
-    
+
     entityType = service.IService
 
     def __init__(self, app):
@@ -99,7 +101,7 @@ class ServiceCollection(coil.ConfigCollection):
         # No need to put the entity!  It will be automatically
         # registered by the Service's constructor...
         pass
-    
+
     def delEntity(self, name):
         del self.app.services[name]
 
@@ -107,9 +109,73 @@ class ServiceCollection(coil.ConfigCollection):
         return "Service"
 
 
+class ConnectorCollection(coil.ConfigCollection):
+
+    entityType = tcp.IConnector
+
+    def __init__(self, app):
+        coil.ConfigCollection.__init__(self)
+        self.app = app
+
+    def listStaticNames(self):
+        n = []
+        for i in xrange(len(self.app.connectors)):
+            c = self.app.connectors[i]
+            n.append("%s:%s,%d" % (c.host, c.portno, i))
+        return n
+
+    def listStaticEntities(self):
+        return map(None, self.listStaticNames(), self.app.connectors[:])
+
+    def getStaticEntity(self, name):
+        return self.app.connectors[self._getIndexFromName(name)]
+
+    def reallyPutEntity(self, name_is_discarded, entity):
+        """Adds a Connector to the Application.
+
+        XXX: I completely ignore whatever 'name' is passed to me.
+        """
+        self.app.addConnector(entity)
+
+    def delEntity(self, name):
+        del self.app.connectors[self._getIndexFromName(name)]
+
+    def getEntityType(self):
+        return "Connector"
+
+    def _getIndexFromName(self, name):
+        if ',' not in name:
+            try:
+                i = int(name)
+            except ValueError:
+                raise ValueError, \
+                      "\"%s\" does not have a list index" % (name,)
+        else:
+            name_hostport, i = string.split(name,',')
+            i = int(i)
+
+        # Sanity check
+        if name_hostport:
+            connector = self.app.connectors[i]
+            got_hostport = "%s:%s" % (connector.host, connector.portno)
+            if name_hostport != got_hostport:
+                log.msg("Warning: host:port for connector %d (%s) does "
+                        "not match given string %s" %
+                        (i, got_hostport, name_hostport))
+
+        return i
+
+    def __str__(self):
+        return "Collection of Connectors in %s" % (str(self.app),)
+
+    def __repr__(self):
+        return "<%s at 0x%x in app '%s'>" % (self.__class__, id(self),
+                                             self.app.name)
+
+
 class ApplicationConfig(coil.StaticCollection):
     """The root of the application configuration."""
-    
+
     def __init__(self, app):
         coil.StaticCollection.__init__(self)
         self.app = app
@@ -126,4 +192,5 @@ class ApplicationConfig(coil.StaticCollection):
         l.putEntity("udp", PortCollection(self.app, 'udp'))
         l.lock()
         self.putEntity("services", ServiceCollection(self.app))
+        self.putEntity("connectors", ConnectorCollection(self.app))
         self.lock()
