@@ -9,11 +9,11 @@ from twisted.internet import main
 
 """Schema for this test program:
 
-DROP TABLE rooms;
+DROP TABLE testrooms;
 
-CREATE TABLE rooms
+CREATE TABLE testrooms
 (
-  room_id  int,
+  roomId  int,
   town_id  int,
   name     varchar(64),
   owner    varchar(64),
@@ -24,36 +24,54 @@ CREATE TABLE rooms
 );
 
 
-INSERT INTO rooms VALUES (10, 100, 'testroom1', 'someguy', 10, 10, 20, 20);
-INSERT INTO rooms VALUES (11, 100, 'testroom2', 'someguy', 30, 10, 20, 20);
-INSERT INTO rooms VALUES (12, 100, 'testroom3', 'someguy', 50, 10, 20, 20);
-INSERT INTO rooms VALUES (13, 100, 'testroom4', 'someguy', 10, 30, 20, 20);
-INSERT INTO rooms VALUES (14, 100, 'testroom5', 'someguy', 10, 50, 20, 20);
+INSERT INTO testrooms VALUES (10, 100, 'testroom1', 'someguy', 10, 10, 20, 20);
+INSERT INTO testrooms VALUES (11, 100, 'testroom2', 'someguy', 30, 10, 20, 20);
+INSERT INTO testrooms VALUES (12, 100, 'testroom3', 'someguy', 50, 10, 20, 20);
+INSERT INTO testrooms VALUES (13, 100, 'testroom4', 'someguy', 10, 30, 20, 20);
+INSERT INTO testrooms VALUES (14, 100, 'testroom5', 'someguy', 10, 50, 20, 20);
 
 """
 
 class RoomRow(row.RowObject):
+
+    rowColumns = [
+        "roomId",
+        "town_id",
+        "name",
+        "owner",
+        "posx",
+        "posy",
+        "width",
+        "height"
+        ]
 
     def moveTo(self, x, y):
         self.posx = x
         self.posy = y
         
     def __repr__(self):
-        return "<Room #%d: %s (%s) (%d,%d)>" % (self.room_id, self.name, self.owner, self.posx, self.posy)
+        return "<Room #%d: %s (%s) (%d,%d)>" % (self.roomId, self.name, self.owner, self.posx, self.posy)
+
+
+def runTests(stuff):
+    global manager
+    manager.loadObjectsFrom("testrooms", [("roomId", "int4")], None, RoomRow).addCallback(gotRooms).arm()
 
 def gotRooms(rooms):
     print "got Rooms.", dir(rooms[0])
     
     for room in rooms:
         print "  ROOM:", room
-        if room.room_id == 10:
+        if room.roomId == 10:
             room.moveTo( int(random.random() * 100) , int(random.random() * 100) )
-            room.updateRow()
+            room.updateRow().addCallback(onUpdate).arm()
 
-    room.deleteRow()
-
+def onUpdate(data):
+    print "updated row."
     # create a new room
-    newRoom = RoomRow( room_id=int(random.random() * 1000))
+    global newRoom
+    newRoom = RoomRow()
+    newRoom.assignKeyAttr("roomId", kf.getNextKey())
     newRoom.town_id = 20
     newRoom.name = 'newRoom1'
     newRoom.owner = 'fred'
@@ -62,27 +80,37 @@ def gotRooms(rooms):
     newRoom.width = 15
     newRoom.height = 20
     
-    # insert row into database
-    newRoom.insertRow()
+    #insert row into database
+    newRoom.insertRow().addCallback(onInsert).arm()
 
-def selected(room):
+def onInsert(data):
+    print "row inserted", newRoom.roomId
+    newRoom.deleteRow().addCallback(onDelete).arm()    
+
+def onDelete(data):
+    print "row deleted."
+    newRoom2 = RoomRow()
+    newRoom2.assignKeyAttr("roomId", 10)
+    newRoom2.selectRow().addCallback(onSelected).arm()
+    
+
+def onSelected(room):
     print "\ngot Room:", room
     main.shutDown()
 
-def runTests(stuff):
-    manager.loadObjectsFrom("rooms", [("room_id", "int4")], RoomRow).addCallback(gotRooms).arm()
-    qRoom = RoomRow( room_id=11)
-    qRoom.selectRow().addCallback(selected).arm()
-    
+
+newRoom = None
+
 dbpool = adbapi.ConnectionPool("pyPgSQL.PgSQL", "localhost:5432", database="sean")
 manager = adbapi.Augmentation(dbpool)
-newRoom = None
 
 # Create Twisted application object
 application = main.Application("testApp")
 
-stubs = [ (RoomRow, "rooms", [("room_id","int4")]) ]
+stubs = [ (RoomRow, "testrooms", [("roomId","int4")]) ]
 reflector = row.DBReflector(manager, stubs)
 reflector.populate().addCallback(runTests).arm()
+
+kf = row.KeyFactory(100000,50000)
 
 application.run()

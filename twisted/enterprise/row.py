@@ -1,6 +1,9 @@
+import string
+import time
 
 class DBError(Exception):
     pass
+
 
 class RowObject:
     """I represent a row in a table in a relational database. My class is "populated"
@@ -14,34 +17,44 @@ class RowObject:
 
     Once created, the "key column" attributes cannot be changed.
     """
-    columns = []     # list of column names and types for the table I came from
-    keyColumns = []  # list of key columns to identify instances in the db
+
+    ### Class Attributes populated by the DBReflector
+    
+    dbColumns = []     # list of column names and types for the table I came from
+    dbKeyColumns = []  # list of key columns to identify instances in the db
     tableName = ""
     selectSQL = ""
     updateSQL = ""
     insertSQL = ""
     deleteSQL = ""
     populated = 0    # set on the class when the class is "populated" with SQL
-    insync = 0       # set on an instance then the instance is in-sync with the database
+    dirty = 0        # set on an instance then the instance is out-of-sync with the database
 
-    def __init__(self, *args, **kw):
-        """this should accept the key column values as names keywords. These must be key
-        arguments as the order is undefined in which the key columns are retrieved from
-        the database when keyColumns is populated.
+    ### Class Attributes that users must supply
+
+    rowColumns = []  # list of the columns in the table with the correct case.
+                     # this will be used to create member variables.
+
+    def assignKeyAttr(self, attrName, value):
+        """assign to a key attribute.. this cannot be done through normal means
+        to protect changing keys of db objects.
         """
-        if not self.populated:
-            raise DBError("class %s has not been populated" % repr(self.__class__) )            
-        if len(args) != 0:
-            raise DBError("you cannot pass non-keyword args to construct a RowObject")        
-        if len(kw) != len(self.keyColumns):
-            raise DBError(": wrong number of key arguments %s" % repr(kw) )
+        found = 0
+        for keyColumn, type in self.dbKeyColumns:
+            if keyColumn == attrName:
+                found = 1
+        if not found:
+            raise DBError("%s is not a key columns." % attrName)
+        self.__dict__[attrName] = value
 
-        for key in kw.keys():
-            if not getKeyColumn(self.__class__, key):
-                raise DBError(" wrong key argument: <%s>" % key)
-        # set the key attributes
-        self.__dict__.update(kw)             
-
+    def findAttribute(self, attrName):
+        """find an attribute by caseless name
+        """
+        for attr in self.__dict__.keys():
+            if string.lower(attr) == string.lower(attrName):
+                return self.__dict__[attr]
+        raise DBError("Unable to find attribute %s" % attrName)
+    
     def updateRow(self):
         """update my contents to the database.
         """
@@ -49,16 +62,17 @@ class RowObject:
             raise ("ERROR: class %s has not been populated" % repr(self.__class__) )
         args = []
         # build update attributes
-        for column, type, typeid in self.columns:
+        for column, type, typeid in self.dbColumns:
             if getKeyColumn(self.__class__, column):
                 continue
-            args.append(self.__dict__[column])
+            args.append(self.findAttribute(column))
         # build where clause
-        for keyColumn, type in self.keyColumns:
-            args.append( self.__dict__[keyColumn])
+        for keyColumn, type in self.dbKeyColumns:
+            args.append( self.findAttribute(keyColumn))
 
         sql = self.updateSQL % tuple(args)
-        return self.augmentation.runOperation(sql).addCallback(self.setSync)
+        self.setDirty(0)
+        return self.augmentation.runOperation(sql)
 
     def insertRow(self):
         """insert a new row for this object instance.
@@ -67,11 +81,13 @@ class RowObject:
             raise DBError("class %s has not been populated" % repr(self.__class__) )     
         args = []
         # build values
-        for column, type, typeid in self.columns:
-            args.append(self.__dict__[column])
+        for column, type, typeid in self.dbColumns:
+            args.append(self.findAttribute(column))
 
         sql = self.insertSQL % tuple(args)
-        return self.augmentation.runOperation(sql).addCallback(self.setSync)
+        self.setDirty(0)        
+
+        return self.augmentation.runOperation(sql)
 
     def deleteRow(self):
         """delete the row for this object from the database.
@@ -80,8 +96,8 @@ class RowObject:
             raise DBError("class %s has not been populated" % repr(self.__class__) )                    
         args = []
         # build where clause
-        for keyColumn, type in self.keyColumns:
-            args.append( self.__dict__[keyColumn])
+        for keyColumn, type in self.dbKeyColumns:
+            args.append(self.findAttribute(keyColumn))
 
         sql = self.deleteSQL % tuple(args)
         return self.augmentation.runOperation(sql)
@@ -93,11 +109,10 @@ class RowObject:
             raise DBError("class %s has not been populated" % repr(self.__class__) )                    
         args = []
         # build where clause
-        for keyColumn, type in self.keyColumns:
-            args.append( self.__dict__[keyColumn])
+        for keyColumn, type in self.dbKeyColumns:
+            args.append(self.findAttribute(keyColumn))
 
         sql = self.selectSQL % tuple(args)
-        print "sql=", sql
         return self.augmentation.runQuery(sql).addCallback(self.gotSelectData)
 
     def gotSelectData(self, data):
@@ -106,13 +121,17 @@ class RowObject:
         if len(data) == 0:
             raise DBError("ERROR: select data was empty")
         actualPos = 0
-        for i in range(0, len(self.columns)):
-            if not getKeyColumn(self.__class__, self.columns[i][0] ):            
-                setattr(self, self.columns[i][0], data[0][actualPos] )
+        for i in range(0, len(self.dbColumns)):
+            if not getKeyColumn(self.__class__, self.dbColumns[i][0] ):            
+                setattr(self, self.dbColumns[i][0], data[0][actualPos] )
                 actualPos = actualPos + 1
-        self.setSync()
+        self.setDirty(0)
         return self
-        
+
+    def setDirty(self, flag):
+        """must use this to set dirty... or dirty flag gets set.
+        """
+        self.__dict__["dirty"] = flag
         
     def __setattr__(self, name, value):
         """special setattr so prevent changing of key values.
@@ -120,11 +139,28 @@ class RowObject:
         # build where clause
         if getKeyColumn(self.__class__, name):
             raise DBError("cannot assign to key column attribute <%s> of RowObject class" % name)
-        self.__dict__[name] = value
-        self.__dict__["insync"] = 0  # no longer in sync with database
 
-    def setSync(self):
-        self.insync = 1
+        if name in self.rowColumns:
+            if value != self.__dict__.get(name,None):
+                self.__dict__["dirty"] = 1  # no longer in sync with database
+            
+        self.__dict__[name] = value
+
+
+    def createDefaultAttributes(self):
+        """populate instance with default attributes. Used when creating a new instance
+        NOT from the database.
+        """
+        for attr in self.rowColumns:
+            if getKeyColumn(self.__class__, attr):
+                continue
+            for column, ctype, typeid in self.dbColumns:
+                if string.lower(column) == string.lower(attr):
+                    q = dbTypeMap.get(ctype, None)
+                    if q == NOQUOTE:
+                        setattr(self, attr, 0)
+                    else:
+                        setattr(self, attr, "")
 
 
 class DBReflector:
@@ -137,7 +173,7 @@ class DBReflector:
     called.
 
     <stubs> is a set of definitions of classes to construct:
-       [ (StubClass, databaseTableName, KeyColumns) ]
+       [ (StubClass, args, databaseTableName, KeyColumns) ]
 
     StubClass is a user-defined class that the constructed class will be
     constructed from. It should be derived from RowObject
@@ -147,6 +183,7 @@ class DBReflector:
     def __init__(self, augmentation, stubs):
         self.aug = augmentation
         self.stubs = stubs
+        self.rowClasses = {}
 
     def populate(self):
         """This actually runs the population of the classes. It returns
@@ -164,6 +201,7 @@ class DBReflector:
                 raise DBError("Stub class must be derived from RowClass")
 
             self._populateRowClass(transaction, self.aug, stubClass, tableName, keyColumns)
+            self.rowClasses[tableName] = stubClass
 
     def _populateRowClass(self, transaction, aug, rowClass, tableName, keyColumns):
         """construct all the SQL for database operations on <tableName> and
@@ -172,8 +210,8 @@ class DBReflector:
         NOTE: 26 - 29 are system column types that you shouldn't use...
 
         """
-        if rowClass.tableName and rowClass.tableName != tableName:
-            raise ("ERROR: class %s has already had SQL generated for table %s." % (repr(rowClass), tableName) )
+        #if rowClass.tableName and rowClass.tableName != tableName:
+        #    raise ("ERROR: class %s has already had SQL generated for table %s." % (repr(rowClass), tableName) )
 
         sql = """SELECT pg_attribute.attname, pg_type.typname, pg_attribute.atttypid
         FROM pg_class, pg_attribute, pg_type
@@ -188,8 +226,8 @@ class DBReflector:
 
         # populate rowClass data
         rowClass.tableName = tableName
-        rowClass.columns = columns
-        rowClass.keyColumns = keyColumns
+        rowClass.dbColumns = columns
+        rowClass.dbKeyColumns = keyColumns
         rowClass.augmentation = aug
 
         rowClass.selectSQL = self.buildSelectSQL(rowClass, tableName, columns, keyColumns)
@@ -223,7 +261,6 @@ class DBReflector:
                 sql = sql + " AND "
             sql = sql + "   %s = %s " % (keyColumn, quote("%s", type) )
             first = 0
-        print "Generated SQL:", sql
         return sql
 
     def buildUpdateSQL(self, rowClass, tableName, columns, keyColumns):
@@ -292,6 +329,24 @@ class DBReflector:
         return sql
 
 
+class KeyFactory:
+    """I create unique keys to use as primary key columns in database tables.
+    I am able to use a specified range.
+    (NOTE: not thread safe....)
+    """
+    def __init__(self, minimum, pool):
+        self.min = minimum
+        self.pool = minimum + pool
+        self.current = self.min
+
+    def getNextKey(self):
+        next = self.current + 1
+        self.current = next
+        if self.current >= self.pool:
+            raise "Key factory key pool exceeded."
+        return next
+        
+    
 NOQUOTE = 1
 USEQUOTE = 2
 
@@ -310,7 +365,7 @@ dbTypeMap = {
 ### Utility functions
 
 def getKeyColumn(rowClass, name):
-    for keyColumn, type in rowClass.keyColumns:
+    for keyColumn, type in rowClass.dbKeyColumns:
         if name == keyColumn:
             return name
     return None
@@ -333,3 +388,15 @@ def quote(value, typeCode):
     elif q == USEQUOTE:
         return "'%s'" % safe(value)
 
+def makeKW(rowClass, args):
+    """Utility method to construct a dictionary for the attributes
+    of an object from set of args. This also fixes the case of column names.
+    """
+    kw = {}
+    for i in range(0,len(args)):
+        columnName = rowClass.dbColumns[i][0]
+        for attr in rowClass.rowColumns:
+            if string.lower(attr) == string.lower(columnName):
+                kw[attr] = args[i]
+                break
+    return kw

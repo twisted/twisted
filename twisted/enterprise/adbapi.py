@@ -11,6 +11,14 @@ from twisted.python import reflect, log, defer, failure
 # sibling imports
 import row
 
+
+def defaultFactoryMethod(rowClass, data, kw):
+    """Default factory method used by loadObjects to create rowObject instances.
+    """
+    newObject = rowClass()
+    newObject.__dict__.update(kw)
+    return newObject
+
 class Transaction:
     def __init__(self, pool, connection):
         self._connection = connection
@@ -178,7 +186,7 @@ class Augmentation:
         apply(self.dbpool.interaction, (interaction,d.callback,d.errback,)+args, kw)
         return d
 
-    def loadObjectsFrom(self, tableName, keyColumns, rowClass = row.RowObject, whereClause = "1 = 1"):
+    def loadObjectsFrom(self, tableName, keyColumns, data, rowClass, whereClause = "1 = 1", factoryMethod = defaultFactoryMethod):
         """Create a set of python objects of <rowClass> from the contents of a table
         populated with appropriate data members. The constructor for <rowClass> must take
         no args. Example to use this:
@@ -193,45 +201,42 @@ class Augmentation:
 
         manager.loadObjectsFrom("employee",
                                 ["employee_name", "varchar"],
-                                "employee_name like 'm%%'",
-                                EmployeeRow).addCallback(gotEmployees)
+                                userData,
+                                employeeFactory,
+                                EmployeeRow,
+                                "employee_name like 'm%%'"
+                                ).addCallback(gotEmployees)
 
         NOTE: this functionality is experimental. be careful.
         """
-        return self.runInteraction(self._objectLoader, tableName, keyColumns, rowClass, whereClause)
+        return self.runInteraction(self._objectLoader, tableName, keyColumns, data, rowClass, whereClause, factoryMethod)
 
-    def _objectLoader(self, transaction, tableName, keyColumns, rowClass, whereClause):
+    def _objectLoader(self, transaction, tableName, keyColumns, data, rowClass, whereClause, factoryMethod):
         """worker method to load objects from a table.
         """
-        if not rowClass.populated:
-            raise row.DBError("unpopulated Row Class")
-
         # get the data from the table
-        sql = """SELECT * FROM %s WHERE %s""" % (tableName, whereClause)
+        sql = """SELECT """
+        first = 1
+        for column, typeid, type in rowClass.dbColumns:
+            if first:
+                first = 0
+            else:
+                sql = sql + ","                
+            sql = sql + " %s" % column
+        sql = sql + " FROM %s WHERE %s""" % (tableName, whereClause)
         transaction.execute(sql)
         rows = transaction.fetchall()
-
         # construct the objects
         results = []        
         for r in rows:
-
-            # find the key values
-            keys = {}
-            i = 0
-            for name, type, typeid in rowClass.columns:
-                if row.getKeyColumn(rowClass, name):
-                    keys[name] = r[i]
-                i = i + 1
-            
-            resultObject = apply(rowClass, (), keys)
-            for i in range(0, len(rowClass.columns)):
-                if not row.getKeyColumn(rowClass, rowClass.columns[i][0] ):
-                    setattr(resultObject, rowClass.columns[i][0], r[i] )
-            resultObject.setSync()
+            kw = row.makeKW(rowClass, r)
+            resultObject = apply(factoryMethod, (rowClass, data, kw) )
             results.append(resultObject)
 
         #print "RESULTS", results
         return results
+
+
 
 
 safe = row.safe
