@@ -130,6 +130,10 @@ class ConnectionPool(pb.Referenceable):
         apply(self.__init__, (self.dbapiName, )+self.connargs, self.connkw)
 
     def connect(self):
+        """Should be run in thread, blocks.
+
+        Don't call this method directly from non-threaded twisted code.
+        """
         tid = self.threadID()
         conn = self.connections.get(tid)
         if not conn:
@@ -169,10 +173,12 @@ class ConnectionPool(pb.Referenceable):
         return result
 
     def query(self, callback, errback, *args, **kw):
+        # this will be deprecated ASAP
         threads.deferToThread(self._runQuery, args, kw).addCallbacks(
             callback, errback)
 
     def operation(self, callback, errback, *args, **kw):
+        # this will be deprecated ASAP
         threads.deferToThread(self._runOperation, args, kw).addCallbacks(
             callback, errback)
 
@@ -180,6 +186,7 @@ class ConnectionPool(pb.Referenceable):
         self._runOperation(args, kw)
 
     def interaction(self, interaction, callback, errback, *args, **kw):
+        # this will be deprecated ASAP
         apply(threads.deferToThread,
               (self._runInteraction, interaction) + args, kw).addCallbacks(
             callback, errback)
