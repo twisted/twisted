@@ -413,7 +413,3 @@ class AuthorizerTestCase(unittest.TestCase):
     def test_nonExistentIdent(self):
         d = self.auth.getIdentityRequest("nosuchuser")
         d.addCallback(self._error).addErrback(self._gotNoUser)
-
-
-if __name__ == "__main__":
-    unittest.main()
