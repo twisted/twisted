@@ -86,29 +86,6 @@ def FileDescriptorPickler(s, fdmap):
     p.persistent_id = ph.persistent_id
     return p
 
-class _FileDescriptorUnpickler:
-    def __init__(self, fdmap):
-        self.fdmap = fdmap
-        self.fdmemo = {}
-
-    def persistent_load(self, id):
-        r = None
-        id = int(id)
-        kname, mode, id = id.split(":")
-        if id in self.fdmemo:
-            return self.fdmemo[id]
-        if kname == "file":
-            r = self.fdmemo[id] = os.fdopen(self.fdmap[id], mode)
-        elif kname == "socket":
-            r = self.fdmemo[id] = socket.fromfd(self.fdmap[id])
-        return r
-
-def FileDescriptorUnpickler(s, fdmap):
-    ph = _FileDescriptorUnpickler(fdmap)
-    p = pickle.Unpickler(s)
-    p.persistent_load = ph.persistent_load
-    return p
-
 class FileDescriptorSendingProtocol(basic.LineReceiver):
     """
     Must be used with L{Port} as the transport.
