@@ -15,6 +15,10 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+"""A task scheduler that is integrated with the main event loop.
+
+This scheduler is not thread-safe - use the threadtask instead if you need it.
+"""
 
 # System Imports
 
@@ -90,9 +94,13 @@ class Scheduler:
 theScheduler = Scheduler()
 
 def schedule(task):
+    """Add a task to the scheduler.
+    """
     theScheduler.addTask(task)
 
 def wakeAndSchedule(task):
+    """Add a task to the scheduler.
+    """
     theScheduler.addTask(task)
     main.wakeUp()
 
@@ -101,6 +109,8 @@ if threadable.threaded:
 
 
 def doAllTasks():
+    """Run all tasks in the scheduler.
+    """
     while theScheduler.tasks:
         theScheduler.runUntilCurrent()
 
