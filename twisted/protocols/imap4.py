@@ -42,6 +42,7 @@ def maybeDeferred(obj, cb, eb, cbArgs, ebArgs):
 class Command:
     _1_RESPONSES = ('CAPABILITY', 'FLAGS', 'LIST', 'LSUB', 'STATUS', 'SEARCH')
     _2_RESPONSES = ('EXISTS', 'EXPUNGE', 'FETCH', 'RECENT')
+    _OK_RESPONSES = ('UIDVALIDITY', 'READ-WRITE', 'READ-ONLY')
     defer = None
     
     def __init__(self, command, args='', continuation=None, wantResponse=()):
@@ -55,13 +56,13 @@ class Command:
         send = []
         unuse = []
         for L in self.lines:
-            names = L.split()
+            names = parseNestedParens(L)
             N = len(names)
             if (N >= 1 and names[0] in self._1_RESPONSES or
-                N >= 2 and names[1] in self._2_RESPONSES):
+                N >= 2 and names[1] in self._2_RESPONSES or
+                N >= 2 and names[0] == 'OK' and isinstance(names[1], types.ListType) and names[1][0] in self._OK_RESPONSES):
                 send.append(L)
             else:
-                print 'Appending unused', L
                 unuse.append(L)
         self.defer.callback((send, lastLine))
         if unuse:
@@ -844,7 +845,7 @@ class IMAP4Client(basic.LineReceiver):
                 status, line = rest.split(None, 1)
                 if status == 'OK':
                     # Give them this last line, too
-                    cmd.finish(line, self._extraInfo)
+                    cmd.finish(rest, self._extraInfo)
                 else:
                     cmd.defer.errback(IMAP4Exception(line))
                 del self.tags[tag]
@@ -1016,7 +1017,7 @@ class IMAP4Client(basic.LineReceiver):
         args = mailbox
         resp = ('FLAGS', 'EXISTS', 'RECENT', 'UNSEEN', 'PERMANENTFLAGS', 'UIDVALIDITY')
         d = self.sendCommand(Command(cmd, args, wantResponse=resp))
-        d.addCallback(self._cbSelect)
+        d.addCallback(self._cbSelect, 1)
         return d
 
     def examine(self, mailbox):
@@ -1034,15 +1035,15 @@ class IMAP4Client(basic.LineReceiver):
         """
         cmd = 'EXAMINE'
         args = mailbox
-        resp = 'FLAGS', 'EXISTS', 'RECENT', 'UNSEEN', 'PERMANENTFLAGS'
+        resp = ('FLAGS', 'EXISTS', 'RECENT', 'UNSEEN', 'PERMANENTFLAGS', 'UIDVALIDITY')
         d = self.sendCommand(Command(cmd, args, wantResponse=resp))
-        d.addCallback(self._cbSelect)
+        d.addCallback(self._cbSelect, 0)
         return d
 
-    def _cbSelect(self, (lines, tagline)):
+    def _cbSelect(self, (lines, tagline), rw):
         # In the absense of specification, we are free to assume:
         #   READ-WRITE access
-        datum = {'READ-WRITE': 1}
+        datum = {'READ-WRITE': rw}
         lines.append(tagline)
         for parts in lines:
             split = parts.split()
