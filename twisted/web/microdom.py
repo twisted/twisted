@@ -42,10 +42,11 @@ from cStringIO import StringIO
 from twisted.protocols.sux import XMLParser, ParseError
 from twisted.python import reflect
 from twisted.python.reflect import Accessor
+from twisted.python.compat import isinstance
 
 # create NodeList class
 from types import ListType as NodeList
-from types import StringType
+from types import StringTypes, UnicodeType
 import sys
 dictsAreNotSequences = sys.version_info < (2, 2)
 
@@ -280,12 +281,18 @@ class Text(CharacterData):
 
     def writexml(self, stream, indent='', addindent='', newl='', strip=0):
         if self.raw:
-            val = str(self.nodeValue)
+            val = self.nodeValue
+            if not isinstance(val, StringTypes):
+                val = str(self.nodeValue)
         else:
-            v = str(self.nodeValue)
+            v = self.nodeValue
+            if not isinstance(v, StringTypes):
+                v = str(v)
             if strip:
                 v = ' '.join(v.split())
             val = escape(v)
+            if isinstance(val, UnicodeType):
+                val = val.encode('utf8')
         stream.write(val)
 
     def __repr__(self):
@@ -479,7 +486,7 @@ class MicroDOMParser(XMLParser):
         if self.caseInsensitive:
             name = name.lower()
         if (self.beExtremelyLenient and isinstance(parent, Element) and
-            parent.tagName.has_key(self.laterClosers) and
+            self.laterClosers.has_key(parent.tagName) and
             name in self.laterClosers[parent.tagName]):
             self.gotTagEnd(parent.tagName)
             parent = self._getparent()
@@ -603,7 +610,7 @@ class lmx:
     """Easy creation of XML."""
     
     def __init__(self, node='div'):
-        if isinstance(node, StringType):
+        if isinstance(node, StringTypes):
             node = Element(node)
         self.node = node
 
