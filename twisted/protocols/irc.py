@@ -39,10 +39,10 @@ Test coverage needs to be better.
 @see: RFC 1459: Internet Relay Chat Protocol
 @see: RFC 2812: Internet Relay Chat: Client Protocol
 @see: U{The Client-To-Client-Protocol
-    <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
+<http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-__version__ = '$Revision: 1.62 $'[11:-2]
+__version__ = '$Revision: 1.63 $'[11:-2]
 
 from twisted.internet import reactor, protocol
 from twisted.persisted import styles
@@ -97,10 +97,10 @@ def parsemsg(s):
 
 
 def split(str, length = 80):
-    """split(str, length = 80) -> list of strs
+    """ Breaks a message into multiple lines,
+    prefering to break at whitespace near str[length].  Also breaks at \n.
 
-    Breaks a message into multiple lines, prefering to break at
-    whitespace near str[length].  Also breaks at \n.
+    @returns: list of strings
     """
     r = []
     while len(str) > length:
@@ -372,7 +372,7 @@ class IRCClient(basic.LineReceiver):
 
         motd is a list of strings, where each string was sent as a seperate
         message from the server. To display, you might want to use::
-            
+
             string.join(motd, '\n')
 
         to get a nicely formatted string.
@@ -400,7 +400,7 @@ class IRCClient(basic.LineReceiver):
 
     def topic(self, channel, topic=None):
         """Attempt to set the topic of the given channel, or ask what it is.
-        
+
         If topic is None, then I sent a topic query instead of trying to set
         the topic. The server should respond with a TOPIC message containing
         the current topic of the given channel.
@@ -574,7 +574,7 @@ class IRCClient(basic.LineReceiver):
 
     def irc_NICK(self, prefix, params):
         nick = string.split(prefix,'!',0)[0]
-        if nick == self.nickname: 
+        if nick == self.nickname:
             self.nickname = params[0]
         else:
             self.userRenamed(nick, params[0])
