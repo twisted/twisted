@@ -37,7 +37,7 @@ I am a support module for making SSH servers with mktap.
 from twisted.conch import identity, authorizer
 from twisted.conch.ssh import factory
 from twisted.python import reflect, usage
-import sys, pwd
+import sys
 
 class Options(usage.Options):
     synopsis = "Usage: mktap sshd [-i <interface>] [-p <port>] [-d <dir>] "
