@@ -68,10 +68,21 @@ fakeOut("gtk")
 fakeOut("wxPython.wx")
 
 ## HACK: This is a nasty one! Replace TypeType with (TypeType,
-## InterfaceClass) so epydoc will try to document Interfaces.
-from zope.interface.interface import InterfaceClass
+## InterfaceClass), and dir with something that makes Interfaces look like 
+## classes so epydoc will try to document Interfaces.
+from zope.interface.interface import InterfaceClass, Method
 import types
 types.TypeType = (types.TypeType, InterfaceClass)
+_marker = object()
+def epydir(obj=_marker, dir=dir):
+    if obj is _marker:
+        return sys._getframe(1).f_locals.keys()
+    elif isinstance(obj, InterfaceClass):
+        return obj.names(all=True)
+    else:
+        return dir(obj)
+import __builtin__
+__builtin__.dir = epydir
 
 # initial twisted
 from twisted.python import reflect
@@ -93,6 +104,46 @@ def is_public(self):
 
 uid.UID.is_private = is_private
 uid.UID.is_public = is_public
+
+# HACK: More zope.interface hackery -- zope.interface.interface.Methods are
+# methods too!
+is_method_orig = uid.ObjectUID.is_method
+def is_method(self):
+    return is_method_orig(self) or isinstance(self._obj, Method)
+uid.ObjectUID.is_method = is_method
+is_routine_orig = uid.ObjectUID.is_routine
+def is_routine(self):
+    return is_routine_orig(self) or isinstance(self._obj, Method)
+uid.ObjectUID.is_routine = is_routine
+_findname_orig = uid.ObjectUID._findname
+def _findname(self):
+    if isinstance(self._obj, Method):
+        return '%s.%s' % (self.cls(), self._obj.__name__)
+    else:
+        return _findname_orig(self)
+uid.ObjectUID._findname = _findname
+cls_orig = uid.ObjectUID.cls
+def cls(self):
+    if isinstance(self._obj, Method):
+        return uid.ObjectUID(self._obj.interface)
+    else:
+        return cls_orig(self)
+uid.ObjectUID.cls = cls
+make_uid_orig = uid.make_uid
+def make_uid(obj, base_uid=None, shortname=None):
+    if isinstance(obj, Method):
+        key = (id(obj), id(obj.interface))
+        obj_uid = uid._object_uids.get(key)
+        if obj_uid is not None: return obj_uid
+        obj_uid = uid.ObjectUID(obj)
+        uid._object_uids[key] = obj_uid
+        return obj_uid
+    else:
+        return make_uid_orig(obj, base_uid, shortname)
+uid.make_uid = make_uid
+#from twisted.cred.portal import IRealm
+#print uid.ObjectUID(IRealm.requestAvatar).is_routine()
+#sys.exit()
 
 # HACK: Don't append -module and -class to the filenames, and generate
 # redirecty-files for all methods.
@@ -172,6 +223,27 @@ def _add(self, objID):
     return orig_add(self, objID)
 
 objdoc.DocMap._add = _add
+
+# HACK: objdoc directly imports make_uid, so our monkeypatch to make_uid needs
+# to happen here too:
+objdoc.make_uid = make_uid
+
+# HACK: add dummy im_func attr to Method to make epydoc happy
+Method.im_func = None
+
+# HACK: teach inspect.getargspec how to extract info from Methods
+import inspect
+getargspec_orig = inspect.getargspec
+def getargspec(func):
+    if isinstance(func, Method):
+        spec = func.getSignatureInfo()
+        defaults = [spec['optional'][arg] 
+                    for arg in spec['positional'] 
+                    if arg in spec['optional']]
+        return (spec['positional'], spec['varargs'], spec['kwargs'], defaults)
+    else:
+        return getargspec_orig(func)
+inspect.getargspec = getargspec
 
 # HACK: Another "only doc what we tell you". We don't want epydoc to
 # automatically recurse into subdirectories: "twisted"'s presence was
