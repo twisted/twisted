@@ -1,3 +1,11 @@
+2002-04-08  Glyph Lefkowitz  <glyph@zelda.twistedmatrix.com>
+
+	* twisted/spread/jelly.py: Refactored jelly to provide (a) more
+	sane, language-portable API for efficient extensibility and (b)
+	final version of "wire" protocol.  This should be very close to
+	the last wire-protocol-breaking change to PB before
+	standardization happens.
+
 2002-04-04  Glyph Lefkowitz  <glyph@twistedmatrix.com>
 
 	* Removed __getattr__ backwards compatibility in PB
