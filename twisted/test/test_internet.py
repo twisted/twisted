@@ -281,7 +281,6 @@ class InterfaceTestCase(unittest.TestCase):
             time.sleep(0.5)
             reactor.wakeUp()
         start = time.time()
-        reactor.initThreads() # so wakeUp actually works
         t = threading.Thread(target=wake).start()
         reactor.iterate(5)
         # it may wake up right away. Accept this, but it really depends upon
