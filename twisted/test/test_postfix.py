@@ -71,7 +71,10 @@ class PostfixTCPMapServerTestCase:
         for input, expected_output in self.chat:
             protocol.lineReceived(input)
             self.runReactor(1)
-            self.assertEquals(output.getvalue(), expected_output)
+            self.assertEquals(output.getvalue(), expected_output,
+                              'For %r, expected %r but got %r' % (
+                input, expected_output, output.getvalue()
+                ))
             output.truncate(0)
         protocol.setTimeout(None)
 
@@ -88,7 +91,10 @@ class PostfixTCPMapServerTestCase:
         for input, expected_output in self.chat:
             protocol.lineReceived(input)
             self.runReactor(1)
-            self.assertEquals(output.getvalue(), expected_output)
+            self.assertEquals(output.getvalue(), expected_output,
+                              'For %r, expected %r but got %r' % (
+                input, expected_output, output.getvalue()
+                ))
             output.truncate(0)
         protocol.setTimeout(None)
 
@@ -99,10 +105,10 @@ class Valid(PostfixTCPMapServerTestCase, unittest.TestCase):
         }
     chat = [
         ('get', "400 Command 'get' takes 1 parameters.\n"),
-        ('get foo bar', "400 Command 'get' takes 1 parameters.\n"),
+        ('get foo bar', "500 \n"),
         ('put', "400 Command 'put' takes 2 parameters.\n"),
         ('put foo', "400 Command 'put' takes 2 parameters.\n"),
-        ('put foo bar baz', "400 Command 'put' takes 2 parameters.\n"),
+        ('put foo bar baz', "500 put is not implemented yet.\n"),
         ('put foo bar', '500 put is not implemented yet.\n'),
         ('get foo', '200 ThisIs%20Foo\n'),
         ('get bar', '200 %20bar%20really%20is%20found%0D%0A\n'),

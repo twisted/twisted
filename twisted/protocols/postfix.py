@@ -19,6 +19,8 @@
 
 """Postfix mail transport agent related protocols."""
 
+import sys
+
 # Twisted imports
 from twisted.protocols import basic
 from twisted.protocols import policies
@@ -61,24 +63,28 @@ class PostfixTCPMapServer(basic.LineReceiver, policies.TimeoutMixin):
 
     def lineReceived(self, line):
         self.resetTimeout()
-        splitted = line.split(None)
-        request = splitted[0]
-        params = splitted[1:]
+        try:
+            request, params = line.split(None, 1)
+        except ValueError:
+            request = line
+            params = None
         try:
             f = getattr(self, 'do_' + request)
         except AttributeError:
             self.sendCode(400, 'unknown command')
         else:
-            numOfParams = f.im_func.func_code.co_argcount - 1 # don't count self
-            if len(params) != numOfParams:
-                self.sendCode(400, 'Command %r takes %d parameters.' % (request, numOfParams))
-            else:
-                f(*params)
+            try:
+                f(params)
+            except:
+                self.sendCode(400, 'Command %r failed: %s.' % (request, sys.exc_value))
 
     def do_get(self, key):
-        d = defer.maybeDeferred(self.factory.get, key)
-        d.addCallbacks(self._cbGot, self._cbNot)
-        d.addErrback(log.err)
+        if key is None:
+            self.sendCode(400, 'Command %r takes 1 parameters.' % 'get')
+        else:
+            d = defer.maybeDeferred(self.factory.get, key)
+            d.addCallbacks(self._cbGot, self._cbNot)
+            d.addErrback(log.err)
 
     def _cbNot(self, fail):
         self.sendCode(400, fail.getErrorMessage())
@@ -89,8 +95,16 @@ class PostfixTCPMapServer(basic.LineReceiver, policies.TimeoutMixin):
         else:
             self.sendCode(200, quote(value))
 
-    def do_put(self, key, value):
-        self.sendCode(500, 'put is not implemented yet.')
+    def do_put(self, keyAndValue):
+        if keyAndValue is None:
+            self.sendCode(400, 'Command %r takes 2 parameters.' % 'put')
+        else:
+            try:
+                key, value = keyAndValue.split(None, 1)
+            except ValueError:
+                self.sendCode(400, 'Command %r takes 2 parameters.' % 'put')
+            else:
+                self.sendCode(500, 'put is not implemented yet.')
 
 
 class PostfixTCPMapDictServerFactory(protocol.ServerFactory,
