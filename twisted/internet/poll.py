@@ -25,7 +25,7 @@ listeners or connectors are added):
 """
 
 # System imports
-import select, traceback
+import select, traceback, errno
 
 # Twisted imports
 from twisted.python import log, threadable
@@ -96,7 +96,15 @@ def doPoll(timeout,
     """Poll the poller for new events."""
     timeout = int(timeout * 1000) # convert seconds to milliseconds
 
-    for fd, event in poller.poll(timeout):
+    try:
+        l=poller.poll(timeout)
+    except select.error, e:
+        print repr(e)
+        if e[0] == errno.EINTR:
+            return
+        else:
+            raise
+    for fd, event in l:
         selectable = selectables[fd]
         log.logOwner.own(selectable)
         
