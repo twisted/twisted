@@ -369,7 +369,7 @@ class Threaded(Stage):
         try:
             self._iterable = iter(self._iterable)
         except: 
-            self._append(Failure())
+            self._buffer.append(Failure())
         else:
             try:
                 while 1:
