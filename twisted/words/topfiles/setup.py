@@ -18,6 +18,8 @@ if __name__ == '__main__':
         license="MIT",
         long_description="""\
 Twisted Words contains implementations of many Instant Messaging
-protocols.
+protocols, including IRC, Jabber, MSN, OSCAR (AIM & ICQ), TOC (AOL),
+and some functionality for creating bots, inter-protocol gateways, and
+a client application for many of the protocols.
 """,
         )

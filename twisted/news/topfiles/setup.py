@@ -8,7 +8,7 @@ if __name__ == '__main__':
         # metadata
         name="Twisted News",
         version="SVN-Trunk",
-        description="Twisted News is a news server.",
+        description="Twisted News is an NNTP server and programming library.",
         author="Twisted Matrix Laboratories",
         author_email="twisted-python@twistedmatrix.com",
         maintainer="Jp Calderone",
@@ -16,7 +16,9 @@ if __name__ == '__main__':
         url="http://twistedmatrix.com/projects/news/",
         license="MIT",
         long_description="""\
-Twisted News is a news server.
+Twisted News is an NNTP protocol (Usenet) programming library. The
+library library contains server and client protocol implementations. A
+simple NNTP server is also provided.
 """,
     )
 

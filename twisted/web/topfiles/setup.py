@@ -9,7 +9,7 @@ if __name__ == '__main__':
         # metadata
         name="Twisted Web",
         version="SVN-Trunk",
-        description="Twisted Web is a web server.",
+        description="Twisted web server, programmable in Python.",
         author="Twisted Matrix Laboratories",
         author_email="twisted-python@twistedmatrix.com",
         maintainer="James Knight",
@@ -17,6 +17,8 @@ if __name__ == '__main__':
         url="http://twistedmatrix.com/projects/web/",
         license="MIT",
         long_description="""\
-Twisted Web is a web server.
+Twisted Web is a complete web server, aimed at hosting web
+applications using Twisted and Python, but fully able to serve static
+pages, also.
 """,
         )
