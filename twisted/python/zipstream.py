@@ -227,14 +227,7 @@ def unzipIterChunky(filename, directory='.', overwrite=0,
                 ftell=fp.tell
                 owrite=outfile.write
                 size=info.file_size
-                \
-thisfile_hunks=0
                 while ftell() < size:
-                    thisfile_hunks=thisfile_hunks+1
-                    if filename=='bigfile.zip' and (
-                    thisfile_hunks==countFileChunks(info,
-                                                    chunksize)-1):
-                        ''#import pdb; pdb.set_trace()
                     hunk=fread(chunksize)
                     owrite(hunk)
                     remaining=remaining-1
