@@ -8,11 +8,11 @@ ingtkernet.install()
 
 class Interaction(gtk.GtkWindow):
     def __init__(self):
-        gtk.GtkWindow(self, gtk.WINDOW_TOPLEVEL)
+        gtk.GtkWindow.__init__(self, gtk.WINDOW_TOPLEVEL)
 	self.set_title("Manhole Interaction")
 
 	vb = gtk.GtkVBox()
-	
+
 	self.output = gtk.GtkText()
 	gtkim.defocusify(self.output)
 	vb.pack_start(gtkim.scrolltxt(self.output), 1,1,0)
@@ -48,7 +48,7 @@ class Interaction(gtk.GtkWindow):
 def main():
     global lw
     i = Interaction()
-    lw = gtkutil.Login(i.connected, initialUser="admin", 
+    lw = gtkutil.Login(i.connected, initialUser="admin",
                        initialPassword="admin", initialService="manhole")
     lw.show_all()
     gtk.mainloop()
