@@ -5,11 +5,12 @@ changes.
 """
 from twisted.web import monitor
 from twisted.internet import reactor
-import sys
+import sys, time
 
 class ChangeChecker(monitor.ChangeChecker):
 
     def reportChange(self, old, new):
+        print time.ctime(),
         if old is None:
             print self.url, "available"
         elif new is None:
