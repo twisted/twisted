@@ -15,6 +15,7 @@ from twisted.internet.defer import Deferred
 
 from twisted.web.resource import Resource, IResource
 from twisted.web.static import redirectTo, addSlash, File, Data
+from twisted.web.server import NOT_DONE_YET
 
 from twisted.spread.refpath import PathReferenceAcquisitionContext
 
