@@ -415,6 +415,33 @@ class MyTest(unittest.TestCase):
         # otherwise it probably passed. Cleanup will be done in tearDown()
 </pre>
 
+<h3>Using child processes</h3>
+
+<p>The standard way to handle child processes in Twisted is with
+reactor.spawnProcess(). This uses fork() or another platform-specific method
+to create a child process, then sets up a signal handler to wait for its
+termination. Several of Twisted's unit tests use child processes to provide
+the target of some network operation (like conch). This is useful when you
+cannot run both the server and the client in the same process.</p>
+
+<p>The only catch is that the handler for SIGCHLD is normally set up inside
+the reactor when you start it (i.e. with <code>reactor.start()</code>). The
+reactor is not started or stopped within trial (reactor.iterate is used
+within deferredResult), so this signal handler might not be set up when your
+test is run.</p>
+
+<p>The workaround is to include the <code>SignalMixin</code> class, as
+defined in twisted/test/test_process.py . This class uses some
+reactor-private methods to make sure the signal handler is registered at
+startup, and then torn down again at shutdown. Eventually this private
+method will probably be replaced with some better-defined public API, but
+for now copying the technique used in <code>SignalMixin</code> is the best
+solution.</p>
+
+<p>If you forget to do this, the most likely symptom will be that your child
+processes will start normally (and produce all the output they're supposed
+to), but will never appear to finish. (specifically, the child process will
+emit SIGCHLD, but the parent trial process will ignore it).</p>
 
 
 <h2 id="links">Links</h2><a name="links"></a>
