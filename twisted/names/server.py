@@ -1,4 +1,4 @@
-
+# -*- test-case-name: twisted.test.test_names -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 # 
@@ -137,7 +137,7 @@ class DNSServerFactory(protocol.ServerFactory):
         for q in queries:
             for a in self.authorities:
                 n = str(q.name).lower()
-                if n.endswith(a.soa[0].lower()):
+                if n.endswith(str(a.soa.mname).lower()):
                     for r in a.records.get(n, ()):
                         if q.type == r.TYPE or q.type == dns.ALL_RECORDS or r.TYPE == dns.CNAME:
                             res = dns.RRHeader(str(q.name), r.TYPE, q.cls, 10)
