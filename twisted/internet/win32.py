@@ -299,7 +299,10 @@ class Process(abstract.FileDescriptor):
     def doReadOut(self):
         """Runs in thread."""
         try:
-            hr, data = win32file.ReadFile(self.hStdoutR, 8192, None)
+            buffer, bytesToRead, ignore = win32pipe.PeekNamedPipe(self.hStdoutR, 0)
+            if not bytesToRead:
+                return
+            hr, data = win32file.ReadFile(self.hStdoutR, bytesToRead, None)
         except win32api.error:
             self.stdoutClosed = 1
             if self.stderrClosed:
@@ -311,7 +314,10 @@ class Process(abstract.FileDescriptor):
     def doReadErr(self):
         """Runs in thread."""
         try:
-            hr, data = win32file.ReadFile(self.hStderrR, 8192, None)
+            buffer, bytesToRead, ignore = win32pipe.PeekNamedPipe(self.hStderrR, 0)
+            if not bytesToRead:
+                return
+            hr, data = win32file.ReadFile(self.hStderrR, bytesToRead, None)
         except win32api.error:
             self.stderrClosed = 1
             if self.stdoutClosed:
