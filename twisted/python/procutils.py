@@ -8,7 +8,7 @@
 @stability: Unstable
 """
 
-import os, sys
+import os, sys, imp
 
 from twisted.internet import reactor
 from twisted.python.compat import sets
