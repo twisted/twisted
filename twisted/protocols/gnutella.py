@@ -32,12 +32,14 @@ from twisted.python import log
 true = 1
 false = 0
 
+DESCRIPTORLENGTH=16
+
 CONNSTRINGRE=re.compile("^GNUTELLA CONNECT/([^\r\n]*)")
 CONNSTRING="GNUTELLA CONNECT/0.4"
 ACKSTRING="GNUTELLA OK"
 
 HEADERLENGTH=23
-HEADERENCODING="<16sBBBI" # descriptorId, payloadDescriptor, ttl, hops, payloadLength
+HEADERENCODING="<%dsBBBI" % DESCRIPTORLENGTH # descriptorId, payloadDescriptor, ttl, hops, payloadLength
 
 OURMAXPAYLOADLENGTH=640 * 2**10
 
@@ -52,9 +54,9 @@ PARTIALQUERYHITPAYLOADENCODING="<BHBBBBI" # numberOfHits, port, -- 4 octets of I
 PARTIALQUERYHITRESULTLENGTH=8
 PARTIALQUERYHITRESULTENCODING="<II" # fileIndex, fileSize
 
-SERVENTIDENTIFIERENCODING="<16s" # serventIdentifier
+SERVENTIDENTIFIERENCODING="<%ds" % DESCRIPTORLENGTH # serventIdentifier
 
-PUSHPAYLOADENCODING="<16sIBBBBH" # serventIdentifier, fileIndex, -- 4 octets of IPv4 address --, port
+PUSHPAYLOADENCODING="<%dsIBBBBH" % DESCRIPTORLENGTH # serventIdentifier, fileIndex, -- 4 octets of IPv4 address --, port
 
 payloadDescriptor2Name = {
     0x00: "Ping",
@@ -99,6 +101,7 @@ class GnutellaTalker(LineReceiver):
         assert (ttl > 0) and (ttl <= 256), "ttl must be > 0 and <= 256." + " -- " + "ttl: %s" % str(ttl)
         self.transport.write(struct.pack(HEADERENCODING, (self._nextDescriptorId(), 0, ttl, 0, 0,)))
 
+        # xxxxk
     # METHODS OF INTEREST TO SUBCLASSES
     def pingReceived(self, descriptorId, ttl, hops):
         """
@@ -153,10 +156,10 @@ class GnutellaTalker(LineReceiver):
         """
         log.msg("%s.pushReceived(%s, %s, %s, ipAddress=%s, port=%s, serventIdentifier=%s, fileIndex=%s" % (str(self), str(descriptorId), str(ttl), str(hops), str(ipAddress), str(port), str(serventIdentifier), str(fileIndex),))
         pass
-   
+ 
     # METHODS OF INTEREST TO THIS CLASS ONLY
     def _nextDescriptorId(self):
-        return self.prng.get(16)
+        return string.join(map(chr, map(random.randrange, [0]*DESCRIPTORLENGTH, [256]*DESCRIPTORLENGTH)), '')
 
     def connectionMade(self):
         if self.initiator:

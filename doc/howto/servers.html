@@ -19,9 +19,14 @@
     you write powerful servers. The cost of this flexibility is a
     few layers in the way to writing your server.</p>
 
-    <p>At the base, the place where you actually implement the
-    protocol parsing and handling, is the protocol handler class.
-    This class will usually be decended from <code
+    <p>This document describes the "Protocol" layer, where you 
+    implement protocol parsing and handling.  If you are implementing 
+    an application then you should read this document second, after 
+    first reading the top level overview of how to begin writing your 
+    Twisted application, in <a href="plugin.html" >Writing Plug-Ins 
+    for Twisted</a>.
+
+    <p>Your protocol handling class will usually subclass <code
     class="API">twisted.internet.protocol.Protocol</code>. Most
     protocol handlers inherit either from this class or from one of
     its convenience children. An instance of the protocol class
