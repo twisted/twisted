@@ -117,7 +117,7 @@ def createApplicationDecoder(config):
                     return styles.Ephemeral()
 
     # Application creation/unserializing
-    if config.opts['python']:
+    if config['python']:
         def decode(filename, data):
             log.msg('Loading %s...' % (filename,))
             d = {'__file__': filename}
@@ -127,9 +127,9 @@ def createApplicationDecoder(config):
             except KeyError:
                 log.msg("Error - python file %s must set a variable named 'application', an instance of twisted.internet.app.Application. No such variable was found!" % (repr(filename),))
                 sys.exit()
-        filename = os.path.abspath(config.opts['python'])
+        filename = os.path.abspath(config['python'])
         mode = 'r'
-    elif config.opts['xml']:
+    elif config['xml']:
         def decode(filename, data):
             from twisted.persisted.marmalade import unjellyFromXML
             log.msg('<Loading file="%s" />' % (filename,))
@@ -139,9 +139,9 @@ def createApplicationDecoder(config):
             sys.modules['__main__'] = mainMod
             styles.doUpgrade()
             return application
-        filename = config.opts['xml']
+        filename = config['xml']
         mode = 'r'
-    elif config.opts['source']:
+    elif config['source']:
         def decode(filename, data):
             from twisted.persisted.aot import unjellyFromSource
             log.msg("Loading %s..." % (filename,))
@@ -151,7 +151,7 @@ def createApplicationDecoder(config):
             sys.modules['__main__'] = mainMod
             styles.doUpgrade()
             return application
-        filename = config.opts['source']
+        filename = config['source']
         mode = 'r'
     else:
         def decode(filename, data):
@@ -161,14 +161,14 @@ def createApplicationDecoder(config):
             sys.modules['__main__'] = mainMod
             styles.doUpgrade()
             return application
-        filename = config.opts['file']
+        filename = config['file']
         mode = 'rb'
     return filename, decode, mode
 
 
 def loadApplication(config, passphrase):
     filename, decode, mode = createApplicationDecoder(config)
-    if config.opts['encrypted']:
+    if config['encrypted']:
         data = open(filename, 'rb').read()
         data = decrypt(passphrase, data)
         try:
@@ -204,7 +204,7 @@ def run():
         os._exit(1)
 
     register.checkLicenseFile()
-    sys.path.append(config.opts['rundir'])
+    sys.path.append(config['rundir'])
 
     # Install a reactor immediately.  The application will not load properly
     # unless this is done FIRST; otherwise the first 'reactor' import would
@@ -217,11 +217,11 @@ def run():
         from twisted.python.reflect import namedModule
         namedModule(reactorTypes[config['reactor']]).install()
 
-    if platformType != 'posix' or config.opts['debug']:
+    if platformType != 'posix' or config['debug']:
         # only posix can fork, and debugging requires nodaemon
-        config.opts['nodaemon'] = 1
+        config['nodaemon'] = 1
 
-    if config.opts['encrypted']:
+    if config['encrypted']:
         import getpass
         passphrase = getpass.getpass('Passphrase: ')
     else:
@@ -231,11 +231,11 @@ def run():
     # This will fix up accidental function definitions in evaluation spaces
     # and the like.
     initRun = 0
-    if os.path.exists(config.opts['pidfile']):
+    if os.path.exists(config['pidfile']):
         try:
-            pid = int(open(config.opts['pidfile']).read())
+            pid = int(open(config['pidfile']).read())
         except ValueError:
-            sys.exit('Pidfile %s contains non numeric value' % config.opts['pidfile'])
+            sys.exit('Pidfile %s contains non numeric value' % config['pidfile'])
 
         try:
             os.kill(pid, 0)
@@ -243,23 +243,23 @@ def run():
             import errno
             if why[0] == errno.ESRCH:
                 # The pid doesnt exists.
-                if not config.opts['quiet']:
-                    print 'Removing stale pidfile %s' % config.opts['pidfile']
-                    os.remove(config.opts['pidfile'])
+                if not config['quiet']:
+                    print 'Removing stale pidfile %s' % config['pidfile']
+                    os.remove(config['pidfile'])
             else:
-                sys.exit('Can\'t check status of PID %s from pidfile %s: %s' % (pid, config.opts['pidfile'], why[1]))
+                sys.exit('Can\'t check status of PID %s from pidfile %s: %s' % (pid, config['pidfile'], why[1]))
         else:
             sys.exit('A server is already running, PID %s' %  pid)
 
-    if config.opts['logfile'] == '-':
-        if not config.opts['nodaemon']:
+    if config['logfile'] == '-':
+        if not config['nodaemon']:
             print 'daemons cannot log to stdout'
             os._exit(1)
         logFile = sys.stdout
-    elif config.opts['nodaemon'] and not config.opts['logfile']:
+    elif config['nodaemon'] and not config['logfile']:
         logFile = sys.stdout
     else:
-        logPath = os.path.abspath(config.opts['logfile'] or 'twistd.log')
+        logPath = os.path.abspath(config['logfile'] or 'twistd.log')
         logFile = logfile.LogFile(os.path.basename(logPath), os.path.dirname(logPath))
 
         # rotate logs on SIGUSR1
@@ -300,15 +300,15 @@ def run():
 
     # If we're asked to chroot and os.chroot does not exist,
     # just fail.
-    if config.opts['chroot'] is not None:
-        os.chroot(config.opts['chroot']) 
+    if config['chroot'] is not None:
+        os.chroot(config['chroot']) 
 
     if platformType != 'java':
         # java can't chdir
-        os.chdir(config.opts['rundir'])
+        os.chdir(config['rundir'])
 
 
-    if not config.opts['nodaemon']:
+    if not config['nodaemon']:
         # Turn into a daemon.
         if os.fork():   # launch child and...
             os._exit(0) # kill off parent
@@ -339,7 +339,7 @@ def run():
     # java doesn't have getpid, and Windows' getpid is near-useless
     usepid = ((os.name != 'java') and (os.name != 'nt'))
     if usepid:
-        open(config.opts['pidfile'],'wb').write(str(os.getpid()))
+        open(config['pidfile'],'wb').write(str(os.getpid()))
 
     if os.name == 'nt':
         # C-c can't interrupt select.select in win32.
@@ -352,33 +352,33 @@ def run():
 
 
     application.bindPorts()
-    if config.opts['euid']:
+    if config['euid']:
         application.setEUID()
     else:
         application.setUID()
 
     try:
-        if config.opts['profile']:
+        if config['profile']:
             import profile
-            profile.run("application.run(%d)" % (not config.opts['no_save']))
-        elif config.opts['debug']:
+            profile.run("application.run(%d)" % (not config['no_save']))
+        elif config['debug']:
             import pdb
             sys.stdout = oldstdout
             sys.stderr = oldstderr
             if os.name == "posix":
                 import signal
                 signal.signal(signal.SIGINT, debugSignalHandler)
-            pdb.run("application.run(%d)" % (not config.opts['no_save']),
+            pdb.run("application.run(%d)" % (not config['no_save']),
                     globals(), locals())
         else:
-            application.run(not config.opts['no_save'])
+            application.run(not config['no_save'])
     except:
-        if config.opts['nodaemon']:
+        if config['nodaemon']:
             file = oldstdout
         else:
             file = open("TWISTD-CRASH.log",'a')
         traceback.print_exc(file=file)
         file.flush()
     if usepid:
-        os.unlink(config.opts['pidfile'])
+        os.unlink(config['pidfile'])
     log.msg("Server Shut Down.")
