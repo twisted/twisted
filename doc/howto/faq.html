@@ -1,4 +1,8 @@
-<html>
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
 <head><title>The Twisted FAQ</title></head>
 <body>
 <h1>The Twisted FAQ</h1>
@@ -72,5 +76,25 @@ would do well to look there. Then send any pertinent information about the
 bug (hopefully as much information needed to reproduce it: OS, CVS versions
 of any important files, Python version, code you wrote or things you did
 to trigger the bug, etc.) to the <a href="http://twistedmatrix.com/cgi-bin/mailman/listinfo/twisted-python">mailing list</a></p>
+
+<h2>How do I serve PHP files with twisted.web?</h2>
+
+<p>The following code will start up a webserver that will serve PHP-pages by CGI. Look at <code>twisted.web.twcgi</code>
+for more examples regarding twisted.web and CGI.</p>
+
+<pre class="python">
+from twisted.internet import main, app
+from twisted.web import server, static, twcgi
+
+class PHPFile(static.File):
+    processors = {'.php': twcgi.PHPScript}
+    indexNames = ['index.php']+static.File.indexNames
+
+application = app.Application("phpwebserver")
+root = PHPFile("/var/www/phpsite", allowExt=1) # allowExt is not required, but allows foo.net/index to render index.php
+site = server.Site(root)
+application.listenTCP(8080, site)
+application.run()
+</pre>
 
 </body></html>
