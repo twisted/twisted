@@ -19,6 +19,7 @@
 Tests for twisted.cred.
 """
 
+import sys
 from pyunit import unittest
 from types import *
 from twisted.internet import app
@@ -243,15 +244,19 @@ class PerspectiveTestCase(unittest.TestCase):
         self.ident = ident = self.perspective.makeIdentity("password")
         # simple password verification
         pwrq = ident.verifyPlainPassword("password")
-        pwrq.addCallback(self._testmakeIdentity_1)
-        pwrq.addErrback(self._testmakeIdentity_1fail)
+        pwrq.addCallbacks(self._testmakeIdentity_1, self._testmakeIdentity_1fail)
         pwrq.arm()
 
     def _testmakeIdentity_1fail(self, msg):
-        self.fail("Identity did not verify with plain password")
+        try:
+            self.fail("Identity did not verify with plain password: %s" % msg)
+        except self.failureException, e:
+            self.error = sys.exc_info()
+            raise
         
     def _testmakeIdentity_1(self, msg):
         # complex password verification
+        ident = self.ident
         challenge = ident.challenge()
         hashedPassword = util.respond(challenge, "password")
         pwrq = ident.verifyPassword(challenge, hashedPassword)
@@ -260,7 +265,11 @@ class PerspectiveTestCase(unittest.TestCase):
         pwrq.arm()
 
     def _testmakeIdentity_2fail(self, msg):
-        self.fail("Identity did not verify with hashed password")
+        try:
+            self.fail("Identity did not verify with hashed password: %s" % msg)
+        except self.failureException, e:
+            self.error = sys.exc_info()
+            raise
         
     def _testmakeIdentity_2(self, msg):
         d = self.perspective.getIdentityRequest()
