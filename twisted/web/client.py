@@ -29,6 +29,8 @@ class HTTPPageGetter(http.HTTPClient):
         self.sendCommand('GET', self.factory.url)
         self.sendHeader('Host', self.factory.host)
         self.sendHeader('User-Agent', self.factory.agent)
+        for (key, value) in self.factory.headers.items():
+            self.sendHeader(key, value)
         self.endHeaders()
         self.headers = {}
 
@@ -94,6 +96,8 @@ class HTTPPageDownloader(HTTPPageGetter):
 
 
 class HTTPClientFactory(protocol.ClientFactory):
+
+    headers = {}
 
     protocol = HTTPPageGetter
 
