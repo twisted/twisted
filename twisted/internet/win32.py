@@ -62,7 +62,7 @@ import pywintypes
 import msvcrt
 
 # Twisted imports
-from twisted.internet import abstract, main
+from twisted.internet import abstract, main, task
 from twisted.python import log, threadable
 
 # System imports
@@ -249,7 +249,7 @@ class Process(abstract.FileDescriptor):
         
         # create the process
         cmdline = "%s %s" % (command, string.join(args[1:], ' '))
-        hProcess, hThread, dwPid, dwTid = win32process.CreateProcess(None, cmdline, None, None, 1, 0, environment, path, StartupInfo)
+        self.hProcess, hThread, dwPid, dwTid = win32process.CreateProcess(None, cmdline, None, None, 1, 0, environment, path, StartupInfo)
         
         # close handles which only the child will use
         win32file.CloseHandle(hStderrW)
@@ -261,9 +261,10 @@ class Process(abstract.FileDescriptor):
         self.stdoutClosed = 0
         self.stderrClosed = 0
         
+        addEvent(self.hProcess, self, self.connectionLostNotify)
         threading.Thread(target=self.doWrite).start()
-        addEvent(self.hStdoutR, self, self.doReadOut)
-        addEvent(self.hStderrR, self, self.doReadErr)
+        threading.Thread(target=self.doReadOut).start()
+        threading.Thread(target=self.doReadErr).start()
     
     def write(self, data):
         """Write data to the process' stdin."""
@@ -273,16 +274,19 @@ class Process(abstract.FileDescriptor):
         """Close the process' stdin."""
         self.outQueue.put(None)
     
-    def connectionLost(self):
+    def connectionLostNotify(self):
         """Will be called twice, by the stdout and stderr threads."""
         if not self.closed:
-            removeEvent(self.hStdoutR)
-            removeEvent(self.hStderrR)
-            abstract.FileDescriptor.connectionLost(self)
             self.closed = 1
-            self.closeStdin()
-            win32file.CloseHandle(self.hStdoutR)
-            win32file.CloseHandle(self.hStderrR)
+            self.connectionLost()
+    
+    def connectionLost(self):
+        """Shut down resources."""
+        removeEvent(self.hProcess)
+        abstract.FileDescriptor.connectionLost(self)
+        self.closeStdin()
+        win32file.CloseHandle(self.hStdoutR)
+        win32file.CloseHandle(self.hStderrR)
     
     def doWrite(self):
         """Runs in thread."""
@@ -299,34 +303,33 @@ class Process(abstract.FileDescriptor):
     
     def doReadOut(self):
         """Runs in thread."""
-        try:
-            buffer, bytesToRead, ignore = win32pipe.PeekNamedPipe(self.hStdoutR, 0)
-            hr, data = win32file.ReadFile(self.hStdoutR, bytesToRead, None)
-        except win32api.error:
-            self.stdoutClosed = 1
-            if self.stderrClosed:
-                return main.CONNECTION_LOST
-            else:
+        while 1:
+            try:
+                buffer, bytesToRead, ignore = win32pipe.PeekNamedPipe(self.hStdoutR, 0)
+                if bytesToRead == 0:
+                    bytesToRead = 1
+                hr, data = win32file.ReadFile(self.hStdoutR, bytesToRead, None)
+            except win32api.error:
                 return
-        self.handleChunk(data)
+            task.schedule(self.handleChunk, data)
     
     def doReadErr(self):
         """Runs in thread."""
-        try:
-            buffer, bytesToRead, ignore = win32pipe.PeekNamedPipe(self.hStderrR, 0)
-            hr, data = win32file.ReadFile(self.hStderrR, bytesToRead, None)
-        except win32api.error:
-            self.stderrClosed = 1
-            if self.stdoutClosed:
-                return main.CONNECTION_LOST
-            else:
+        while 1:
+            try:
+                buffer, bytesToRead, ignore = win32pipe.PeekNamedPipe(self.hStderrR, 0)
+                if bytesToRead == 0:
+                    bytesToRead = 1
+                hr, data = win32file.ReadFile(self.hStderrR, bytesToRead, None)
+            except win32api.error:
                 return
-        self.handleError(data)
+            task.schedule(self.handleError, data)
 
 
 def install():
     """Install the win32 event loop."""
     import main, process
+    threadable.init(1)
     main.addReader = addReader
     main.addWriter = addWriter
     main.removeReader = removeReader
