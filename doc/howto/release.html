@@ -55,10 +55,15 @@
   <li>
   <p>
   If you are working from a CVS version of Twisted which you want to release,
-  make sure it is named "Twisted.CVS", and in the directory immediately
+  make sure it is named <code class="shell">Twisted.CVS</code>, and in the
+  directory immediately
   above it there is nothing else (that can be done via symlinks), and run:
   </p>
-  <pre class="shell">./Twisted.CVS/admin/release-twisted -V $VERSION -o $LASTVERSION --release=/twisted/Releases --upver --tag --exp --dist --docs --balls --rel --deb --debi</pre>
+<pre class="shell">
+./Twisted.CVS/admin/release-twisted -V $VERSION -o $LASTVERSION \
+--release=/twisted/Releases --upver --tag --exp --dist --docs \
+--balls --rel --deb --debi
+</pre>
   </li>
   
   <li>
@@ -67,7 +72,11 @@
   reasonably recent checkout of Twisted in $SOMEWHERE, and in an empty directory
   do
   </p>
-  <pre class="shell">$SOMEWHERE/admin/release-twisted -V $VERSION -o $LASTVERSION --checkout --release=/twisted/Releases --upver --tag --exp --dist --docs --balls --rel --deb --debi</pre>
+<pre class="shell">
+$SOMEWHERE/admin/release-twisted -V $VERSION -o $LASTVERSION --checkout \
+--release=/twisted/Releases --upver --tag --exp --dist --docs --balls \
+--rel --deb --debi
+</pre>
   </li>
 </ul>
 
@@ -93,7 +102,10 @@ sudo /etc/init.d/twisted-web start
 
 <h3>Distribute</h3>
 <p>Upload to Sourceforge</p>
-<pre class="shell">$SOMEWHERE/admin/release-twisted -n $SFNAME -v $VERSION --sourceforge --release=/twisted/Releases</pre>
+<pre class="shell">
+$SOMEWHERE/admin/release-twisted -n $SFNAME -v $VERSION --sourceforge \
+                  --release=/twisted/Releases
+</pre>
 
 <h3>Update Website</h3>
 
