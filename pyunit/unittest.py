@@ -337,7 +337,9 @@ class DeferredTestCase(TestCase):
         """
         I fail unless the Deferred return value is equal to expected.
         """
-        deferred.addCallback(self._deferredFUEqualCallback, expected)
+        deferred.addCallback(
+            self._deferredFUEqualCallback, expected
+        ).addErrback(self.deferredError)
 
     def _runSetUp(self):
         from twisted.internet import defer
