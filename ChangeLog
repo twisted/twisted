@@ -1,3 +1,18 @@
+2003-05-19  Christopher Armstrong  <radix@twistedmatrix.com>
+
+	* twisted/web/server.py: Added two new methods to Request objects:
+	rememberRootURL and getRootURL. Calling rememberRootURL will store
+	the already-processed part of the URL on the request, and calling
+	getRootURL will return it. This is so you can more easily link to
+	disparate parts of your web application.
+
+	* twisted/web/woven/{page,widgets}.py: Updated Woven to take
+	advantage of previously-mentioned Request changes. You can now say
+	`appRoot = True' in the Page subclass that is instantiated by your
+	.rpy (for example), and then use a RootRelativeLink widget
+	(exactly the same way you use a Link widget) to get a link
+	relative to your root .rpy.
+ 	
 2003-05-16  Brian Warner  <warner@lothar.com>
 
 	* twisted/scripts/trial.py: catch failures during import of test
