@@ -1,16 +1,16 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -42,12 +42,13 @@ def reapProcess(*args):
     """Reap as many processes as possible (without blocking) via waitpid.
 
     This is called when sigchild is caught or a Process object loses its
-    "connection" (stdout is closed) This ought to result in reaping all zombie
-    processes, since it will be called twice as often as it needs to be.
+    "connection" (stdout is closed) This ought to result in reaping all
+    zombie processes, since it will be called twice as often as it needs
+    to be.
 
-    (Unfortunately, this is a slightly experimental approach, since UNIX
-    has no way to be really sure that your process is going to go away w/o
-    blocking.  I don't want to block.)
+    (Unfortunately, this is a slightly experimental approach, since
+    UNIX has no way to be really sure that your process is going to
+    go away w/o blocking.  I don't want to block.)
     """
     try:
         os.waitpid(0,os.WNOHANG)
@@ -101,7 +102,7 @@ class ProcessWriter(abstract.FileDescriptor, styles.Ephemeral):
 
 class ProcessError(abstract.FileDescriptor):
     """ProcessError
-    
+
     I am a selectable representation of a process's stderr.
     """
     def __init__(self, proc):
@@ -129,23 +130,24 @@ class ProcessError(abstract.FileDescriptor):
 
 class Process(abstract.FileDescriptor, styles.Ephemeral):
     """An operating-system Process.
-    
+
     This represents an operating-system process with standard input,
     standard output, and standard error streams connected to it.
 
-    On UNIX, this is implemented using fork(), exec(), pipe() and fcntl().
-    These calls may not exist elsewhere so this code is not cross-platform.
-    (also, windows can only select on sockets...)
+    On UNIX, this is implemented using fork(), exec(), pipe()
+    and fcntl(). These calls may not exist elsewhere so this
+    code is not cross-platform. (also, windows can only select
+    on sockets...)
     """
-    
+
     def __init__(self, command, args, environment, path):
         """Spawn an operating-system process.
 
-        This is where the hard work of disconnecting all currently open files /
-        forking / executing the new process happens.  (This is executed
-        automatically when a Process is instantiated.)
+        This is where the hard work of disconnecting all currently open
+        files / forking / executing the new process happens.  (This is
+        executed automatically when a Process is instantiated.)
         """
-        command = os.path.abspath(command)
+
         stdout_read, stdout_write = os.pipe()
         stderr_read, stderr_write = os.pipe()
         stdin_read,  stdin_write  = os.pipe()
@@ -170,6 +172,9 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
                 # If there are errors, bail and try to write something
                 # descriptive to stderr.
                 stderr = os.fdopen(2,'w')
+                stderr.write("Upon execvpe %s %s in environment %s\n:" %
+                             (command, str(args),
+                              "id %s" % id(environment)))
                 traceback.print_exc(file=stderr)
                 stderr.flush()
                 for fd in range(3):
@@ -225,7 +230,8 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
     def doWrite(self):
         """Called when my standard output stream is ready for writing.
 
-        This will only happen in the case where the pipe to write to is broken.
+        This will only happen in the case where the pipe to write to is
+        broken.
         """
         return CONNECTION_DONE
 
