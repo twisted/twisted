@@ -132,6 +132,7 @@ def daemonize():
 
 def shedPrivileges(euid, uid, gid):
     switchUID(uid, gid, euid)
+    extra = euid and 'e' or ''
     log.msg('set %suid/%sgid %s/%s' % (extra, extra, uid, gid))
 
 def launchWithName(name):
