@@ -53,10 +53,10 @@ class LogBot(irc.IRCClient):
         self.file.write("%s %s\n" % (timestamp, s))
         self.file.flush()
 
-    
+
 
     # callbacks for events
-    
+
     def joined(self, channel):
         self.log("[I have joined %s]" % channel)
 
@@ -69,7 +69,7 @@ class LogBot(irc.IRCClient):
         self.log("* %s %s" % (user, msg))
 
     # irc callbacks
-    
+
     def irc_NICK(self, prefix, params):
         """When an IRC user changes their nickname
         """
@@ -77,7 +77,7 @@ class LogBot(irc.IRCClient):
         new_nick = params[0]
         self.log("%s is now known as %s" % (old_nick, new_nick))
 
-    
+
 class LogBotFactory(protocol.ClientFactory):
     """A factory for LogBots.
 
@@ -86,7 +86,7 @@ class LogBotFactory(protocol.ClientFactory):
 
     # the class of the protocol to build
     protocol = LogBot
-    
+
     def __init__(self, channel, filename):
         self.channel = channel
         self.filename = filename
