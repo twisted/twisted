@@ -30,17 +30,15 @@ class MotherService(Service, Perspective):
         self.sisters = []             # [(host, port, reference)]
         self.makeIdentity(sharedSecret)
         
-    def _cbLoadedResource(self, ticket, resourceType, resourceName, host, port, sisterPerspective):
+    def _cbLoadedResource(self, result, resourceType, resourceName, host, port, sisterPerspective):
         log.msg( 'mother: loaded resource')
         self.lockedResources[(resourceType, resourceName)] = (host, port, sisterPerspective)
-        return (ticket, host, port, sisterPerspective)
+        return (result, host, port, sisterPerspective)
 
-    def loadRemoteResource(self, resourceType, resourceName, generateTicket, *args):
+    def loadRemoteResource(self, resourceType, resourceName, *args):
         """Request a sister-server to load a resource.
 
-        NOTE: caching of ticket resources could be an issue... do we cache tickets??
-        
-        Return a Deferred which will fire with (ticket, host, port), that will
+        Return a Deferred which will fire with (data, host, port, sister), that will
         describe where and how a resource can be located.
         """
 
@@ -51,17 +49,17 @@ class MotherService(Service, Perspective):
         log.msg( 'mother: loading resource (%s)'  % self.sisters)
         if not self.sisters:
             defr = defer.Deferred()
-            self.toLoadOnConnect.append((resourceType, resourceName, generateTicket, args, defr))
+            self.toLoadOnConnect.append((resourceType, resourceName, args, defr))
             return defr
 
         #TODO: better selection mechanism for sister server
         (host, port, sisterPerspective) = choice(self.sisters)
         
-        d = apply( sisterPerspective.callRemote, ("loadResource", resourceType, resourceName, generateTicket) + args )
+        d = apply( sisterPerspective.callRemote, ("loadResource", resourceType, resourceName) + args )
         d.addCallback(self._cbLoadedResource, resourceType, resourceName, host, port, sisterPerspective)
         return d
 
-    def loadRemoteResourceFor(self, sisterPerspective, resourceType, resourceName, generateTicket, *args):
+    def loadRemoteResourceFor(self, sisterPerspective, resourceType, resourceName, *args):
         """Use to load a remote resource on a specified sister
         service. Dont load it if already loaded on a sister.
         """
@@ -73,16 +71,14 @@ class MotherService(Service, Perspective):
                 break
 
         if not found:
-            raise ("Attempt to load resource for no-existent sister")
+            raise ("Attempt to load resource <%s:%s> for no-nexistent sister" % (resourceType, resourceName) )
 
         if self.lockedResources.has_key( (resourceType, resourceName) ):
             raise ("resource %s:%s already loaded on a sister" % (resourceName, resourceType) )
         
-        d = apply( sisterPerspective.callRemote, ("loadResource", resourceType, resourceName, generateTicket) + args )
+        d = apply( sisterPerspective.callRemote, ("loadResource", resourceType, resourceName) + args )
         d.addCallback(self._cbLoadedResource, resourceType, resourceName, host, port, sisterPerspective)
         return d
-
-
     
     def perspective_unloadResource(self, resourceType, resourceName):
         """This is called by sister services to unload a resource
@@ -99,8 +95,8 @@ class MotherService(Service, Perspective):
         """
         log.msg( "sister attached: %s:%s" % (host, port ) )
         self.sisters.append((host, port,clientRef) )
-        for resourceType, resourceName, generateTicket, args, deferred in self.toLoadOnConnect:
-            apply(self.loadRemoteResource, (resourceType, resourceName, generateTicket) + args).chainDeferred(deferred)
+        for resourceType, resourceName, args, deferred in self.toLoadOnConnect:
+            apply(self.loadRemoteResource, (resourceType, resourceName) + args).chainDeferred(deferred)
         self.toLoadOnConnect = []
 
     def perspective_callDistributed(self, srcResourceType, srcResourceName, destResourceType, destResourceName, methodName, *args, **kw):
@@ -110,7 +106,7 @@ class MotherService(Service, Perspective):
         if not data:
             raise "Unable to find not-loaded resource."
         (host, port, perspective) = data
-        print "Calling distributed method <%s> for %s:%s" % (methodName, destResourceType, destResourceName)
+        log.msg( "Calling distributed method <%s> for %s:%s" % (methodName, destResourceType, destResourceName))
         return perspective.callRemote('callDistributed', srcResourceType, srcResourceName, destResourceType, destResourceName, methodName, args, kw)
         
     def detached(self, client, identity):

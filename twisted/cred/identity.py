@@ -85,7 +85,7 @@ class Identity:
             check = self.keyring[(serviceName, perspectiveName)]
         except KeyError, ke:
             return defer.fail(failure.Failure())
-        return self.application.getServiceNamed(serviceName).getPerspectiveRequest(perspectiveName)
+        return self.application.getServiceNamed(serviceName).getPerspectiveForIdentity(perspectiveName, self)
 
     def getAllKeys(self):
         """Returns a list of all services and perspectives this identity can connect to.

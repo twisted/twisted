@@ -127,6 +127,11 @@ class Service:
         """
         return defer.fail("No such perspective %s" % name)
 
+    def getPerspectiveForIdentity(self, name, identity):
+        """A hook to use if the identity is required when getting the perspective.
+        """
+        return self.getPerspectiveRequest(name)
+    
     def getPerspectiveRequest(self, name):
         """Return a Deferred which is a request for a perspective on this service.
         """
