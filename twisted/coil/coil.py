@@ -138,6 +138,10 @@ def registerConfigurator(configuratorClass, factory):
     by coil.
     """
     configurableClass = configuratorClass.configurableClass
+    if configurators.has_key(configurableClass):
+        raise ValueError, "class %s already has a Configurator" % configurableClass
+    if configurables.has_key(configuratorClass):
+        raise ValueError, "configurator %s already registered" % configuratorClass
     theClassHierarchy.registerClass(configuratorClass)
     configurators[configurableClass] = configuratorClass
     configurables[configuratorClass] = configurableClass
