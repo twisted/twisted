@@ -75,6 +75,10 @@ class PluginError(Exception):
 class PluginWarning(Warning):
     pass
 
+class WhatchuTalkinBoutWillisError(Exception):
+    """raised when trial can't figure out how to convert an argument into
+    a runnable chunk of python
+    """
 
 class Options(usage.Options):
     synopsis = """%s [options] [[file|package|module|TestCase|testmethod]...]
@@ -165,7 +169,6 @@ class Options(usage.Options):
             return self.fallbackReporter
             
 
-
     def opt_reactor(self, reactorName):
         # this must happen before parseArgs does lots of imports
         app.installReactor(reactorName)
@@ -238,23 +241,38 @@ class Options(usage.Options):
 
     def opt_module(self, module):
         "Module to test"
-        self['modules'].append(module)
+        self._tryNamedAny(module)
 
     def opt_package(self, package):
         "Package to test"
-        self['packages'].append(package)
+        self._tryNamedAny(package)
 
     def opt_testcase(self, case):
         "TestCase to test"
-        self['testcases'].append(case)
+        self._tryNamedAny(case)
 
     def opt_file(self, filename):
         "Filename of module to test"
-        self['modules'].append(reflect.filenameToModuleName(filename))
+        m = None
+        if osp.isfile(filename):
+            try:
+                mname = reflect.filenameToModuleName(filename)
+                self._tryNamedAny(mname)
+            except WhatchuTalkinBoutWillisError:
+                # okay, not in PYTHONPATH...
+                path, fullname = osp.split(filename)
+                name, ext = osp.splitext(fullname)
+                m = new.module(name)
+                sourcestring = file(filename, 'rb').read()
+                exec sourcestring in m.__dict__
+                sys.modules[name] = m
+                
+        self['modules'].append(m)
+
 
     def opt_method(self, method):
         "Method to test"
-        self['methods'].append(method)
+        self._tryNamedAny(method)
 
     def opt_spew(self):
         """Print an insanely verbose log of everything that happens.  Useful
@@ -316,6 +334,34 @@ class Options(usage.Options):
 
     tracer = None
 
+    def _tryNamedAny(self, arg):
+        try:
+            n = reflect.namedAny(arg)
+        except ValueError:
+            raise WhatchuTalkinBoutWillisError
+        except:
+            f = failure.Failure()
+            f.printTraceback()
+            self['_couldNotImport'][arg] = f
+            return 
+
+        # okay, we can use named any to import it, so now wtf is it?
+        if inspect.ismodule(n):
+            filename = os.path.basename(n.__file__)
+            filename = os.path.splitext(filename)[0]
+            if filename == '__init__':
+                self['packages'].append(n)
+            else:
+                self['modules'].append(n)
+        elif inspect.isclass(n):
+            self['testcases'].append(n)
+        elif inspect.ismethod(n):
+            self['methods'].append(n)
+        else:
+            raise WhatchuTalkinBoutWillisError, "could not figure out how to use %s" % arg
+            #self['methods'].append(n)
+
+
     def parseArgs(self, *args):
         def _dbg(msg):
             if self._logObserver is not None:
@@ -327,80 +373,46 @@ class Options(usage.Options):
 
         for arg in args:
             _dbg("arg: %s" % (arg,))
-            if os.sep in arg:
-                _dbg("contains os.sep, must be a file or directory")
-                if not os.path.exists(arg):
-                    raise IOError(errno.ENOENT, os.strerror(errno.ENOENT), arg)
+            
+            if not os.sep in arg and not arg.endswith('.py'):
+                # simplest case, someone writes twisted.test.test_foo on the command line
+                # only one option, use namedAny
+                try:
+                    self._tryNamedAny(arg)
+                except WhatchuTalkinBoutWillisError:
+                    pass
+                else:
+                    continue
+            
+            # make sure the user isn't smoking crack
+            if not os.path.exists(arg):
+                raise IOError(errno.ENOENT, os.strerror(errno.ENOENT), arg)
 
-                if arg.endswith(os.sep) and arg != os.sep:
-                    _dbg("arg endswith os.sep")
-                    arg = arg[:-len(os.sep)]
-                    _dbg("arg now %s" % (arg,))
-                arg = reflect.filenameToModuleName(arg)
-
-##                 _dbg("name: %s" % (name,))
-##                 if os.path.isdir(arg):
-##                     _dbg("adding package: %s" % (name,))
-##                     self['packages'].append(name)
-##                 else:
-##                     _dbg("adding module: %s" % (name,))
-##                     self['modules'].append(name)
-##                 continue
-
-            if arg.endswith('.py'):
+            # if the argument ends in os.sep, it *must* be a directory (if it's valid)
+            # directories must be modules/packages, so use filenameToModuleName
+            if arg.endswith(os.sep) and arg != os.sep:
+                _dbg("arg endswith os.sep")
+                arg = arg[:-len(os.sep)]
+                _dbg("arg now %s" % (arg,))
+                modname = reflect.filenameToModuleName(arg)
+                self._tryNamedAny(modname)
+                continue
+                
+            elif arg.endswith('.py'):
                 _dbg("*Probably* a file.")
                 if osp.exists(arg):
-                    modstr = osp.abspath(arg)
-                    mname = reflect.filenameToModuleName(arg)
-                    _dbg("modulename: %s" % (mname,))
-                    if mname:
-                        self['modules'].append(mname)
-                        continue
+                    self.opt_file(arg)
+                    continue
 
-            if osp.isdir(arg) and osp.exists(opj(arg, '__init__.py')):
-                _dbg("it's a package")
-                self['packages'].append(osp.split(arg)[1])
-                continue
+            elif osp.isdir(arg):
+                if osp.exists(opj(arg, '__init__.py')):
+                    modname = reflect.filenameToModuleName(arg)
+                    self._tryNamedAny(modname)
+                    continue
+                
+            print "can't figure out what to do with argument %r, continuing" % (arg,)
+            continue
 
-##             _dbg("try doing an execfile")
-##             if osp.isfile(arg) and os.sep not in arg:
-##                 name, ext = osp.splitext(arg)
-##                 m = new.module(name)
-##                 sourcestring = file(arg, 'rb').read()
-##                 exec sourcestring in m.__dict__
-##                 sys.modules[name] = m
-##                 self['modules'].append(m)
-##                 continue
-
-            ###########################################################################
-            # WTF?+!
-            # a non-default reactor must have been installed by now: it
-            # imports the module, which installs a reactor
-            try:
-                _dbg("trying reflect.namedAny(%s)" % (arg,))
-                arg = reflect.namedAny(arg)
-            except ValueError:
-                raise usage.UsageError, "Can't find anything named %r to run" % arg
-            except:
-                f = failure.Failure()
-                _dbg("caught failure: %s" % (f.getTraceback(),))
-                self['_couldNotImport'][arg] = f
-                continue
-            ############################################################################
-
-            if inspect.ismodule(arg):
-                filename = os.path.basename(arg.__file__)
-                filename = os.path.splitext(filename)[0]
-                if filename == '__init__':
-                    self['packages'].append(arg)
-                else:
-                    self['modules'].append(arg)
-            elif inspect.isclass(arg):
-                self['testcases'].append(arg)
-            elif inspect.ismethod(arg):
-                self['methods'].append(arg)
-            else:
-                self['methods'].append(arg)
 
     def postOptions(self):
         def _mustBeInt():
@@ -640,6 +652,7 @@ def run():
         sys.argv.append("--help")
 
     config = Options()
+
     try:
         config.parseOptions()
     except usage.error, ue:
