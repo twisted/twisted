@@ -4227,7 +4227,13 @@ class _FetchParser:
                 base += '.FIELDS'
                 if self.negate:
                     base += '.NOT'
-                base += ' (%s)' % (' '.join(map(str.title, self.fields)),)
+                fields = []
+                for f in self.fields:
+                    f = f.title()
+                    if _needsQuote(f):
+                        f = _quote(f)
+                    fields.append(f)
+                base += ' (%s)' % ' '.join(fields)
             if self.part:
                 base = '.'.join([str(x + 1) for x in self.part]) + '.' + base
             return base
