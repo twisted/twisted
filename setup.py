@@ -186,6 +186,12 @@ int main(int argc, char **argv)
                                     extra_compile_args=['-w'],
                                     extra_link_args=['-framework','CoreFoundation','-framework','CoreServices','-framework','Carbon'],
                                     define_macros=define_macros))
+
+        if sys.platform == 'win32':
+            exts.append( Extension("twisted.internet.iocp._iocp",
+                                    ["twisted/internet/iocp/_iocp.c"],
+                                    libraries=["ws2_32", "mswsock"],
+                                    define_macros=define_macros))
         
         self.extensions.extend(exts)
 
@@ -222,6 +228,7 @@ desktop environments, and your toaster.
         "twisted.flow",
         "twisted.im",
         "twisted.internet",
+        "twisted.internet.iocp",
         "twisted.internet.serialport",
         "twisted.lore",
         "twisted.mail",
