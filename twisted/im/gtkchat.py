@@ -201,7 +201,10 @@ class GroupConversation(InputOutputWindow):
         self._colorcache = {}
         alloc_color = self.output.get_colormap().alloc
         self.myColor = alloc_color("#0000ff")
-        self.xml.get_widget("NickLabel").set_text(self.group.account.client.name)
+        # TODO: we shouldn't be getting group conversations randomly without
+        # names, but irc autojoin appears broken.
+        self.xml.get_widget("NickLabel").set_text(
+            getattr(self.group.account.client,"name","(no name)"))
         participantList = self.xml.get_widget("ParticipantList")
         groupBox = self.xml.get_widget("GroupActionsBox")
         for method in group.getGroupCommands():
