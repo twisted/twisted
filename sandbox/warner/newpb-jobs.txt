@@ -349,3 +349,12 @@ accepted.
 An oldbanana peer can be detected because the server side sends its dialect
 list from connectionMade, and oldbanana lists are sent with OLDLIST tokens
 (the explicit-length kind).
+
+* add .describe methods to all Slicers
+
+This involves setting an attribute between each yield call, to indicate what
+part is about to be serialized.
+
+* security TODOs:
+
+** size constraints on the set-vocab sequence

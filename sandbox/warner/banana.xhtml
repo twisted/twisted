@@ -156,9 +156,11 @@ being used, and the body is empty.</p>
   length-prefixed lists. Instead it relies upon the Banana layer to track
   OPEN/CLOSE tokens.</p>
 
-  <p>The token which follows an OPEN marker must be a string: either a
-  STRING token or a VOCAB token. This string indicates what kind of new
-  sub-expression is being started.</p>
+  <p>OPEN markers are followed by the <q>Open Index</q> tuple: one or more
+  tokens to indicate what kind of new sub-expression is being started. The
+  first token must be a string (either STRING or VOCAB), the rest may be
+  strings or other primitive tokens. The recipient decides when the Open
+  Index has finished and the body has begun.</p>
   </li>
 
   <li>
@@ -192,10 +194,11 @@ being used, and the body is empty.</p>
   
 </ul>
 
-<p>TODO: Add TRUE, FALSE, and NONE tokens.</p>
+<p>TODO: Add TRUE, FALSE, and NONE tokens. (maybe? These are currently
+handled as OPEN sequences)</p>
 
 
-<h2>Object graph serialization</h2>
+<h2>Serialization</h2>
 
 <p>When serializing an object, it is useful to view it as a directed graph.
 The root object is the one you start with, any objects it refers to are
@@ -209,190 +212,339 @@ replaces them with numbered <code>reference</code> tokens to break loops in
 the graph.</p>
 
 
-<h2>Banana Slices</h2>
+<h3>Banana Slicers</h3>
 
 <p>A <em>Banana Slicer</em> is responsible for serializing a single user
-object: it <q>slices</q> that object into a series of Banana tokens. On the
-receiving end, there is a corresponding <em>Banana Unslicer</em> which
-accepts the incoming tokens and re-creates the user object. There are
-different kinds of Slicers and Unslicers for lists, tuples, dictionaries,
-and instances. Classes can provide their own Slicers if they want more
-control over the serialization process.</p>
+object: it <q>slices</q> that object into a series of smaller pieces, either
+fundamental Banana tokens or other Sliceable objects. On the receiving end,
+there is a corresponding <em>Banana Unslicer</em> which accepts the incoming
+tokens and re-creates the user object. There are different kinds of Slicers
+and Unslicers for lists, tuples, dictionaries, etc. Classes can provide
+their own Slicers if they want more control over the serialization
+process.</p>
 
-<p>There is a Slicer object for each act of serialization of a given object.
-This allows the Slicer to contain state about the serialization process.
-While it is not yet implemented, this will allow things like
-producer/consumer -style serialization, and interleaved serialization of
-multiple objects (doing context switching on the wire). Classes which do not
-need this capability can have a Slicer per serialized object. It is also
-valid to have the serialized object be its own Slicer.</p>
+<p>In general, there is a Slicer object for each act of serialization of a
+given object (although this is not strictly necessary). This allows the
+Slicer to contain state about the serialization process, which enables
+producer/consumer -style pauses, and slicer-controlled streaming
+serialization. The entire context is stored in a small tuple (which includes
+the Slicer), so it can be set aside for a while. In the future, this will
+allow interleaved serialization of multiple objects (doing context switching
+on the wire), to do things like priority queues and avoid head-of-line
+blocking.</p>
 
-<p>For any given object, the Slicer is acquired by finding an
-<code>ISlicer</code> adapter for the object. The Slicer is then told to
-<code>slice</code> the object, which should return a sequence or an iterable
-which yields the Open Index Tokens, followed by the body tokens. Most
-subclasses of <code>BaseSlicer</code> implement a companion method named
-<code>sliceBody</code>, which only provides the body tokens.
-<code>sliceBody</code> is usually just a series of <code>yield</code>
+<p>The most common pattern is to have the Slicer be the <code>ISlicer</code>
+Adapter for the object, in which it gets a new Slicer case each it is
+serialized. Classes which do not need to store a lot of state can have a
+single Slicer per serialized object, presumably through some adapter tricks.
+It is also valid to have the serialized object be its own Slicer.</p>
+
+<p>The Slicer has other duties (described below), but the main one is to
+implement the <code>slice</code> method, which should return a sequence or
+an iterable which yields the Open Index Tokens, followed by the body tokens.
+(Note that the Slicer should not include the OPEN or CLOSE tokens: those are
+supplied by the SendBanana wrapping code). Any item which is a fundamental
+type (int, string, float) will be sent as a banana token, anything else will
+be handled by recursion (with a new Slicer).</p>
+
+<p>Most subclasses of <code>BaseSlicer</code> implement a companion method
+named <code>sliceBody</code>, which supplies just the body tokens. (This
+makes the code a bit easier to follow). <code>sliceBody</code> is usually
+just a <q>return [token, token]</q>, or a series of <code>yield</code>
 statements, one per token. However, classes which wish to have more control
 over the process can implement <code>sliceBody</code> or even
 <code>slice</code> differently.</p>
 
-<p>However, if the <q>streamable</q> flag is set, then the slicer is allowed
-to yield a Deferred instead of a regular token. This means that that
-serialization needs to wait for a while (perhaps we are streaming data from
-another source which has run dry, or we are trying to implement some kind of
-rate limiting). Banana will wait until the Deferred fires before attempting
-to retrieve another token. If the <q>streamable</q> flag is <em>not</em>
-set, then a parent Slicer has decided that it is unwilling to allow
-streaming (perhaps it needs to serialize a coherent state, and a pause for
-streaming would allow that state to change before it was completely
-serialized). The Slicer may not return a Deferred when streaming is
-disabled.</p>
+
+
+<pre class="python">
+class ThingySlicer(slicer.BaseSlicer):
+    openindex = ('thingy',)
+    trackReferences = True
+
+    def sliceBody(self, streamable, banana):
+        return [self.obj.attr1, self.obj.attr2]
+</pre>
+
+<p>If <q>attr1</q> and <q>attr2</q> are integers, the preceding Slicer would
+create a token sequence like: OPEN STRING(thingy) 13 16 CLOSE. If
+<q>attr2</q> were actually another Thingy instance, it might produce OPEN
+STRING(thingy) 13 OPEN STRING(thingy) 19 18 CLOSE CLOSE. </p>
+
+<p>Doing this with a generator gives the same basic results but avoids the
+temporary buffer, which can be important when sending large amounts of data.
+The following Slicer could be combined with a concatenating Unslicer to
+implement the old FilePager class without the extra round-trip
+inefficiencies.</p>
+
+<pre class="python">
+class DemandSlicer(slicer.BaseSlicer):
+    openindex = ('demandy',)
+    trackReferences = True
+
+    def sliceBody(self, streamable, banana):
+        f = open("data", "r")
+        for chunk in f.read(2048):
+            yield chunk
+</pre>
+
+<p>The SendBanana code controls the pacing: if the transport is full, it has
+the option of pausing the generator until the receiving end has caught up.
+It also has the option of pulling tokens out of the Slicer anyway, and
+buffering them in memory. This may be necessary to achieve serialization
+coherency, discussed below.</p>
+
+<p>If the <q>streamable</q> flag is set, then the <em>slicer</em> gets to
+control the pacing too: it is allowed to yield a Deferred where it would
+normally provide a regular token. This tells Banana that serialization needs
+to wait for a while (perhaps we are streaming data from another source which
+has run dry, or we are trying to implement some kind of rate limiting).
+Banana will wait until the Deferred fires before attempting to retrieve
+another token. If the <q>streamable</q> flag is <em>not</em> set, then a
+parent Slicer has decided that it is unwilling to allow streaming (perhaps
+it needs to serialize a coherent state, and a pause for streaming would
+allow that state to change before it was completely serialized). The Slicer
+is not allowed to return a Deferred when streaming is disabled.</p>
+
+<pre class="python">
+class URLGetterSlicer(slicer.BaseSlicer):
+    openindex = ('urldata',)
+    trackReferences = True
+
+    def gotPage(self, page):
+        self.page = page
+
+    def sliceBody(self, streamable, banana):
+        yield self.url
+        d = web.client.getPage(self.url)
+        d.addCallback(self.gotPage)
+        yield d
+        # here we hover in limbo until it fires
+        yield self.page
+</pre>
+
+<p>(the code is a bit kludgy because generators have no way to pass data
+back out of the <q>yield</q> statement).</p>
 
 <p>The Slicer can also raise a <q>Violation</q> exception, in which case the
 slicer will be aborted: no further tokens will be pulled from it. This
 causes an ABORT token to be sent over the wire, followed immediately by a
 CLOSE token. The dead Slicer's parent is notified with a
 <code>childAborted</code> method, then the Banana continues to extract
-tokens from the parent as if the child had finished normally.</p>
+tokens from the parent as if the child had finished normally. (TODO: we need
+a convenient way for the parent to indicate that it wishes to give up too,
+such as raising a Violation from within <code>childAborted</code>).</p>
 
 
-<h2>The Banana Stack</h2>
+<h3>Serialization Coherency</h3>
 
-<p>The serialization context is stored in a <q>Banana</q> object (names are
-still being decided), which is a subclass of Protocol. This holds a stack of
-Banana Slicers, one per object currently being serialized (i.e. one per node
-in the path from the root object to the object currently being
-serialized).</p>
+<p>Streaming serialization means the object is serialized a little bit at a
+time, never consuming too much memory at once. The tradeoff is that, by
+doing other useful work inbetween, our object may change state while it is
+being serialized. In oldbanana this process was uninterruptible, so
+coherency was not an issue. In newbanana it is optional. Some objects may
+have more trouble with this than others, so Banana provides Slicers with a
+means to influence the process.</p>
+
+<p>Banana makes certain promises about what takes place between successive
+<q>yield</q> statements, when the Slicer gives up control to Banana. The
+most conservative approach is to:</p>
+
+<ul>
+  <li>disable the RootSlicer's <q>streamable</q> flag to tell all Slicers
+  that they should not return Deferreds: this avoids loss of control due
+  to child Slicers giving it away</li>
+
+  <li>set the SendBanana policy to buffer data in memory rather than do a
+  .pauseProducing: this removes pauses due to the output channel filling
+  up</li>
+
+  <li>return a list from <code>slice</code> (or <code>sliceBody</code>)
+  instead of using a generator: this fixes the object contents at a single
+  point in time. (you can also create a list at the beginning of that
+  routine and then yield pieces of it, which has exactly the same
+  effect)</li>
+</ul>
+
+<p>Slicers aren't supposed to do anything which changes the state observed
+by other Slicers: if this is really the case than it is safe to use a
+generator. A parent Slicer which yields a non-primitive object will give up
+control to the child Slicer needed to handle that object, but that child
+should do its business and finish quickly, so there should be no way for the
+parent object's state to change in the meantime. </p>
+
+<p>If the SendBanana is allowed to give up control (.pauseProducing), then
+arbitrary code will get to run in between <q>yield</q> calls, possibly
+changing the state being accessed by those yields. Likewise child Slicers
+might give up control, threatening the coherency of one of their parents.
+Slicers can invoke <code>banana.inhibitStreaming()</code> (TODO: need a
+better name) to inhibit streaming, which will cause all child serialization
+to occur immediately, buffering as much data in memory as necessary to
+complete the operation without give up control.</p>
+
+<p>Coherency issues are a new area for Banana, so expect new tools and
+techniques to be developed which allow the programmer to make sensible
+tradeoffs.</p>
+
+
+
+<h3>The Slicer Stack</h3>
+
+<!-- directions are inconsistent: the RootSlicer is the parent, but lives at
+the bottom of the stack. I think of delegation as going "upwards" to your
+parent (like upcalls), so I describe it that way, but that "up" is at odds
+with the stack's "bottom" -->
+
+<p>The serialization context is stored in a <q>SendBanana</q> object, which
+is one of the two halves of the Banana object (a subclass of Protocol). This
+holds a stack of Banana Slicers, one per object currently being serialized
+(i.e. one per node in the path from the root object to the object currently
+being serialized).</p>
 
 <p>For example, suppose a class instance is being serialized, and this class
 chose to use a dictionary to hold its instance state. That dictionary holds
-a list of numbers in one of its values. The Banana Stack would hold the root
-slicer, an InstanceSlicer, a DictSlicer, and finally a ListSlicer.</p>
+a list of numbers in one of its values. While the list of numbers is being
+serialized, the Slicer Stack would hold: the RootSlicer, an InstanceSlicer,
+a DictSlicer, and finally a ListSlicer.</p>
 
-<p>(note: it might be possible to move the functionality of the Banana
-object entirely into the <q>root slice</q> (<q>root slicer</q>?)). </p>
-
-<p>The Banana object also holds the unserialization context. A stack of
-<q>Unslicer</q> objects handle incoming tokens. The <q>Banana</q> is
-responsible for tracking OPEN and CLOSE tokens, making sure a failure in an
-Unslicer doesn't cause a loss of synchronization. Unslicer methods may raise
-Violation exceptions: these are caught by the Unbanana and cause the object
-currently being unserialized to fail: its parent gets a UnbananaFailure
-instead of the dict or list or instance that it would normally have
-received.</p>
-
-<p>The stack is used to determine three things:</p>
+<p>The stack is used to determine two things:</p>
 
 <ul>
-  <li> Whether to allow a given child to be serialized: the Taster
-       function</li>
-  <li> How to handle a child object: which Slicer should be used</li>
+  <li> How to handle a child object: which Slicer should be used, or if a
+       Violation should be raised</li>
   <li> How to track object references, to break cycles in the object graph</li>
 </ul>
 
-<p>The default case puts a <q>Parent</q> slice at the bottom of the stack.
-This can also be interpreted as a <q>root object</q>, if you imagine that
-any given user object being serialized is somehow a child of the overall
-serialization context. In PB, for example, the root object would be related
-to the connection.</p>
+<p>When a new object needs to be sent, it is first submitted to the top-most
+Slicer (to its <code>slicerForObject</code> method), which is responsible
+for either returning a suitable Slicer or raising a Violation exception (if
+the object is rejected by a security policy). Most Slicers will just
+delegate this method up to the RootSlicer, but Slicers which wish to pass
+judgement upon enclosed objects (or modify the Slicer selected) can do
+something else. Unserializable objects will raise an exception here.</p>
 
-<p>In addition, the stack can be queried to find out what path leads from
-the root object to the one currently being serialized. If something goes
-wrong in the serialization process (an exception is thrown), this path can
-make it much easier to find out <em>when</em> the trouble happened, as
-opposed to merely where. Knowing which method of your FooObject failed
-during serialization isn't very useful when you have 500 of them inside your
-data structure and you need to know whether it was <code>bar.thisfoo</code>
-or <code>bar.thatfoo</code> which caused the problem. To this end, each
-Slicer has a <code>.describe</code> method which is supposed to return a
-short string that explains how to get to the child node currently being
-processed. When an error occurs, these strings are concatenated together and
-put into the failure object.</p>
+<p>Once the new Slicer is obtained, the OPEN token is emitted, which
+provides the <q>openID</q> number (just an implicit count of how many OPEN
+tokens have been sent over the wire). This is where we break cycles in the
+object graph: before serializing the object, we record a reference to it
+(the openID), and any time we encounter the object again, we send the
+reference number instead of a new copy. This reference number is tracked in
+the SlicerStack, by handing the number/object pair to the top-most Slicer's
+<code>registerReference</code> method. Most Slicers will delegate this up to
+the RootSlicer, but again they can perform additional registrations or
+consume the request entirely. This is used in PB to provide <q>scoped
+references</q>, where (for example) a list <em>should</em> be sent twice if
+it occurs in two separate method calls. In this case the CallSlicer (which
+sits above the PBRootSlicer) does its own registration.</p>
 
-<p>The Parent slice is meant to provide the default behavior for the stack.
-The default class currently does the following:</p>
+<p>The <code>slicerForObject</code> process is responsible for catching the
+second time the object is sent. It looks in the same mapping created by
+<code>registerReference</code> and returns a <code>ReferenceSlicer</code>
+instead of the usual one.</p>
+
+<p>The <code>RootSlicer</code>, which sits at the bottom of the stack, is a
+special case. It is never pushed or popped, and implements most of the
+policy for the whole Banana process. The RootSlicer can also be interpreted
+as a <q>root object</q>, if you imagine that any given user object being
+serialized is somehow a child of the overall serialization context. In PB,
+for example, the root object would be related to the connection and needs to
+track things like which remotely-invokable objects are available.</p>
+
+<p>The default RootSlicer implements the following behavior:</p>
 
 <ul>
-  <li> Allow all objects to be serialzed: .taster is empty.</li>
-  <li> Use the BananaRegistry mapping from object types to Slicer classes.</li>
-  <li> Record object references in a dict inside the parent slice.</li>
+  <li>Allow all objects to be serialized that can be</li>
+
+  <li>Use its <code>.slicerTable</code> to get a Slicer for an object. If
+  that fails, adapt the object to ISlicer</li>
+
+  <li>Record object references in its <code>.references</code> dict</li>
 </ul>
 
-<p>TODO: The idea is to let other serialization contexts to other things.
-The tokens should probably go to the parent slice for handling: turning into
-bytes and sending over a wire, saving to a file, etc. Having the whole stack
-participate in the Tasting process means that objects can put restrictions
-on what is sent on their behalf: objects could refuse to let certain classes
-be sent as part of their instance state.</p>
+<p>The <code>RootSlicer</code> class only does <q>safe</q> serialization:
+basic types and whatever you've registered an ISlicer adapter for. The
+<code>TrustingRootSlicer</code> uses that .slicerTable mapping to serialize
+unsafe things (arbitrary instances, classes, etc), which is suitable for
+local storage instead of network communication (i.e. when you want to use
+banana as a pickle replacement).</p>
+
+<p>TODO: The idea is to let other serialization contexts do other things.
+For example, the final tokens could go to the parent slice for handling
+instead of straight to the Protocol, which would provide more control over
+turning the tokens into bytes and sending over a wire, saving to a file,
+etc.</p>
+
+<p>Finally, the stack can be queried to find out what path leads from the
+root object to the one currently being serialized. If something goes wrong
+in the serialization process (an exception is thrown), this path can make it
+much easier to find out <em>when</em> the trouble happened, as opposed to
+merely where. Knowing that the <q>.oops</q> method of your FooObject failed
+during serialization isn't very useful when you have 500 FooObjects inside
+your data structure and you need to know whether it was
+<code>bar.thisfoo</code> or <code>bar.thatfoo</code> which caused the
+problem. To this end, each Slicer has a <code>.describe</code> method which
+is supposed to return a short string that explains how to get to the child
+node currently being processed. When an error occurs, these strings are
+concatenated together and put into the failure object.</p>
 
 
-<h2>Bananaing</h2>
 
-<p>Serialization starts with the Parent Slicer being asked to serialize the
-given object. The Parent gives the object to Banana. Banana starts by
-walking the stack (which, of course, has only the Parent on it at that
-point), calling the <code>.taste</code> method for each Slicer there. If any
-of them have a problem with the object being serialized, they express it by
-raising an exception (TODO: which one? InsecureBanana?).</p>
+<h2>Deserialization</h2>
 
-<p>If the Taster stack passes the object, Banana's next job is to find a new
-Slicer to handle the object. It does this by walking the stack, calling
-<code>.newSlicer</code> on each slice. The first one that returns an object
-ends the search. In most cases, this is the Parent slice, which just looks
-up the <code>type()</code> of the object in the <code>SlicerRegistry</code>.
-A type which does not have a Slicer registered for it will cause an
-exception to be raised here.</p>
+<p>The other half of the Banana class is the <code>ReceiveBanana</code>,
+which accepts incoming tokens and turns them into objects. It is organized
+just like the <code>SendBanana</code>, with a stack of <q>Banana
+Unslicer</q> objects, each of which assembles tokens or child objects into a
+larger one. Each Unslicer receives the tokens emitted by the matching Slicer
+on the sending side. The whole stack is used to create new Unslicers,
+enforce restrictions upon what objects will be accepted, and manage object
+references.</p>
 
-<p>The new Slicer is pushed on the the stack. It is then sent three methods
-in succession: <code>.start</code>, <code>.slice</code>, and
-<code>.finish</code>. <code>start</code> defaults to registering the object
-with <code>setRefID</code> and sending a appropriate OPEN token.
-<code>slice</code> is defined on a per-Slicer basis to send all the
-necessary tokens. <code>finish</code> sends the CLOSE token.</p>
+<p>Each Unslicer accepts tokens that turn into an object of some sort. They
+pass this object up to their parent Unslicer. Eventually a finished object
+is given to the <code>RootUnslicer</code>, which decides what to do with it.
+When the Banana is being used for data storage (like pickle), the root will
+just deliver the object to the caller. When Banana is used in PB, the actual
+work is done by some intermediate objects like the
+<code>CallUnslicer</code>, which is responsible for a single method
+invocation.</p>
 
-<p>Banana keeps strict track of the nesting level. For safety, each OPEN
-gets a sequence number so it can be matched with its CLOSE token. If a
-Slicer's .close method fails to send the close token, very bad things will
-happen (in general, all further objects will become children of the one that
-didn't CLOSE properly). The sequence numbers are an attempt to minimize the
-damage.</p>
+<p>The <code>ReceiveBanana</code> itself is responsible for pulling
+well-formed tokens off the incoming data stream, tracking OPEN and CLOSE
+tokens, maintaining synchronization with the transmitted token stream, and
+discarding tokens when the receiving Unslicers have rejected one of the
+inbound objects. Unslicer methods may raise Violation exceptions: these are
+caught by the Unbanana and cause the object currently being unserialized to
+fail: its parent gets a UnbananaFailure instead of the dict or list or
+instance that it would normally have received.</p>
 
-
-<h2>Unbananaing</h2>
-
-<p>The Unbanana object has a corresponding stack of <em>Banana Unslicer</em>
-objects. Each one receives the tokens emitted by the matching Slicer on the
-sending side. The whole stack is used to determine new Unslicer objects,
-perform Tasting of incoming tokens, and manage object references.</p>
-
-<p>OPEN tokens have a string (or short list of tokens.. see below) to
-indicate what kind of object is being started. This is looked up in the
-UnbananaRegistry just like object types are looked up in the BananaRegistry.
-The new Unslicer is pushed onto the stack.</p>
+<p>OPEN tokens are followed by short list of tokens) to indicate what kind
+of object is being started. This is looked up in the UnbananaRegistry just
+like object types are looked up in the BananaRegistry (TODO: need sensible
+adapter-based registration scheme for unslicing). The new Unslicer is pushed
+onto the stack.</p>
 
 <p><q>ABORT</q> tokens indicate that something went wrong on the sending
 side and that the current object is to be aborted. It causes the receiver to
-ignore all tokens until the CLOSE token which closes the current node. This
+discard all tokens until the CLOSE token which closes the current node. This
 is implemented with a simple counter of how many levels of discarding we
 have left to do.</p>
 
-<p><q>CLOSE</q> tokens finish the current node. The slice will pass its
-completed object up to the <q>childFinished</q> method of its parent.</p>
+<p><q>CLOSE</q> tokens finish the current node. The Unslicer will pass its
+completed object up to the <q>receiveChild</q> method of its parent.</p>
 
 <h3>Open Index tokens</h3>
 
-<p>To be precise, OPEN tokens are followed by an arbitrary list of other
-tokens which are used to determine which UnslicerFactory should be invoked
-to create the new Unslicer. Basic Python types are designated with a simple
-string, like (OPEN <q>list</q>) or (OPEN <q>dict</q>), but instances are
-serialized with two strings (OPEN <q>instance</q> <q>classname</q>), and
-various exotic PB objects like method calls may involve a list of strings
-and numbers (OPEN <q>call</q> reqID objID methodname). The unbanana code
-works with the unslicer stack's designated <q>opener</q> object to apply
-constraints to these indexing tokens and finally obtain the new Unslicer
-when enough indexing tokens have been received.</p>
+<p>OPEN tokens are followed by an arbitrary list of other tokens which are
+used to determine which UnslicerFactory should be invoked to create the new
+Unslicer. Basic Python types are designated with a simple string, like (OPEN
+<q>list</q>) or (OPEN <q>dict</q>), but instances are serialized with two
+strings (OPEN <q>instance</q> <q>classname</q>), and various exotic PB
+objects like method calls may involve a list of strings and numbers (OPEN
+<q>call</q> reqID objID methodname). The unbanana code works with the
+unslicer stack's designated <q>opener</q> object to apply constraints to
+these indexing tokens and finally obtain the new Unslicer when enough
+indexing tokens have been received.</p>
 
 <p>The reason for assembling this list before creating the Unslicer (instead
 of using a generic InstanceUnslicer which switches behavior depending upon
@@ -416,7 +568,7 @@ the content tokens).</p>
 
   <li>Each OPEN sequence is divided into an <q>Index phase</q> and a
   <q>Contents phase</q>. The first one (or two or three) tokens are the
-  Index Tokens and the rest are the Content Tokens. The sequence ends with a
+  Index Tokens and the rest are the Body Tokens. The sequence ends with a
   CLOSE token.</li>
 
   <li>Banana.inOpen is a boolean which indicates that we are in the Index
@@ -434,10 +586,10 @@ the content tokens).</p>
 <p>If .inOpen is True, each new token type will be passed (through
 Banana.getLimit and top.openerCheckToken) to the opener's .openerCheckToken
 method, along with the current opentype tuple. The opener gets to decide if
-the token is acceptable (possibly raising a BananaError exception), and may
-return a length limit (usually for strings). Note that the opener does not
-maintain state about what phase the decoding process is in, so it may want
-to condition its response upon the length of the opentype.</p>
+the token is acceptable (possibly raising a BananaError exception). Note
+that the opener does not maintain state about what phase the decoding
+process is in, so it may want to condition its response upon the length of
+the opentype.</p>
 
 <p>After each index token is complete, it is appended to .opentype, then the
 list is passed (through Banana.handleOpen, top.doOpen, and top.open) to the
@@ -450,7 +602,7 @@ another exception (which causes the connection to be abandoned).</p>
 <h3>Unslicer Lifecycle</h3>
 
 <p>Each Unslicer handles a single <q>OPEN sequence</q>, which starts with an
-OPEN token and ends with a CLOSE token (or an ABORT token).</p>
+OPEN token and ends with a CLOSE token.</p>
 
 
 <h4>Creation</h4>
@@ -479,10 +631,8 @@ This method can do one of the following things:</p>
 <p>When a new Unslicer object is pushed on the top of the stack, it has its
 <code>.start</code> method called, in which it has an opportunity to create
 whatever internal state is necessary to record the incoming content tokens.
-Each created object will have a separate Unslicer instance. (TODO: could
-optimize with singleton Unslicer objects, using start/finish methods to do
-cleanup). The start method can run normally, or raise a Violation
-exception.</p>
+Each created object will have a separate Unslicer instance. The start method
+can run normally, or raise a Violation exception.</p>
 
 <p>This Unslicer is responsible for all incoming tokens until either 1: it
 pushes a new one on the stack, or 2: it receives a CLOSE token.</p>
@@ -527,9 +677,10 @@ is built out of all the index tokens received during this index phase).</p>
 <h4>receiveChild</h4>
 
 <p>If the type byte is accepted, and the size limit is obeyed, then the rest
-of the token is read and a finished (primitive) object is created: a string,
-number, boolean, or None. This object is handed to the topmost Unslicer's
-<code>.receiveChild</code> method, where again it is has a few options:</p>
+of the token is read and a finished (primitive) object is created: a string
+or number (TODO: maybe add boolean and None). This object is handed to the
+topmost Unslicer's <code>.receiveChild</code> method, where again it is has
+a few options:</p>
 
 <ul>
   <li>Run normally: if the object is acceptable, it should append or record
@@ -661,7 +812,7 @@ VOCAB(7)  (equivalent to STRING(list))
   listun.start()
 
 STRING(foo)
-  listun.checkToken(STRING) : must return None or 3 or greater
+  listun.checkToken(STRING, 3) : must return None
   string is assembled
   listun.receiveChild("foo") : appends to list
 
@@ -753,24 +904,31 @@ been cleared, and if so, complete their own object (and fire their own
 Deferreds so any containers <em>they</em> are a child of may be updated
 and/or completed).</p>
 
+<p>TODO: it would be really handy to have the RootUnslicer do Deferred
+Accounting: each time a Deferred is installed instead of a real object, add
+its the graph-path to a list. When the Deferred fires and the object becomes
+available, remove it. If deserialization completes and there are still
+Deferreds hanging around, flag an error that points to the culprits instead
+of returning a broken object.</p>
 
 <h3>Security Model</h3>
 
-<p>Having the whole Slicer stack particpate in Tasting on the sending side
-seems to make a lot of sense. It might be better to have a way to push new
-Taster objects onto a separate stack. This would certainly help with
-performance, as the common case (where most Slicers ignore .taste) does a
-pointless method call to every Slice for every object sent. The trick is to
-make sure that exception cases don't leave a taster stranded on the stack
-when the object that put it there has gone away.</p>
+<p>Having the whole Slicer stack get a chance to pass judgement on the
+outbound object is very flexible. There are optimizations possibly because
+of the fact that most Slicers don't care, perhaps a separate stack for the
+ones that want to participate, or a chained delegation function. The
+important thing is to make sure that exception cases don't leave a
+<q>taster</q> stranded on the stack when the object that put it there has
+gone away.</p>
 
-<p>On the receiving side, each object has a corresponding .taste method,
-which receives tokens instead of complete objects. This makes sense, because
-you want to catch the dangerous data before it gets turned into an object,
-but tokens are a pretty low-level place to do security checks. It might be
-more useful to have some kind of <q>instance taster stack</q>, with tasters
-that are asked specifically about (class,state) pairs and whether they
-should be turned into objects or not.</p>
+<p>On the receiving side, the top Unslicer gets to make a decision about the
+token before its body has arrived (limiting memory exposure to no more than
+65 bytes). In addition, each Unslicer receives component tokens one at a
+time. This lets you catch the dangerous data before it gets turned into an
+object. However, tokens are a pretty low-level place to do security checks.
+It might be more useful to have some kind of <q>instance taster stack</q>,
+with tasters that are asked specifically about (class,state) pairs and
+whether they should be turned into objects or not.</p>
 
 <p>Because the Unslicers receive their data one token at a time, things like
 InstanceUnslicer can perform security checks one attribute at a time.
@@ -782,6 +940,8 @@ the constraints. The idea is to catch violations before any code is run on
 the receiving side. Typical checks would be things like <q>.foo must be a
 number</q>, <q>.bar must not be an instance</q>, <q>.baz must implement the
 IBazzer interface</q>.</p>
+
+<p>TODO: the rest of this section is somewhat out of date.</p>
 
 <p>Using the stack instead of a single Taster object means that the rules
 can be changed depending upon the context of the object being processed. A
@@ -826,25 +986,21 @@ tokens are the basic unit of information. The basic tokens are just numbers
 and strings: anything more complicated (starting at lists) involves
 composites of other tokens.</p>
 
-<p>The serialization side will be reworked to be a bit more
-producer-oriented. Objects should be able to defer their serialization
-temporarily (TODO: really??) like twisted.web resources can do NOT_DONE_YET
-right now. The big goal here is that large objects which can't fit into the
-socket buffers should not consume lots of memory, sitting around in a
-serialized state with nowhere to go. This must be balanced against the
-confusion caused by time-distributed serialization. PB method calls must
-retain their current in-order execution, and it must not be possible to
-interleave serialized state (big mess).</p>
-
-<p>To actually accomplish this, objects should be able to provide their own
-Slicers. It may be convenient to do this entirely with Adapters, so Banana
-registers ListSlicer, etc as an ISlicer adapter for the fundamental types;
-pb.Copyable implements ISlicer by having a method to return a new Slicer;
-etc.</p>
-
-<p>Likewise on the receiving end, the Unslicer is created when the OPEN
-token is received, and then receives all the tokens destined for that
-object.</p>
+<p>Producer/Consumer-oriented serialization means that large objects which
+can't fit into the socket buffers should not consume lots of memory, sitting
+around in a serialized state with nowhere to go. This must be balanced
+against the confusion caused by time-distributed serialization. PB method
+calls must retain their current in-order execution, and it must not be
+possible to interleave serialized state (big mess). One interesting
+possibility is to allow multiple parallel SlicerStacks, with a
+context-switch token to let the receiving end know when they should switch
+to a different UnslicerStack. This would allow cleanly interleaved streams
+at the token level. <q>Head-of-line blocking</q> is when a large request
+prevents a smaller (quicker) one from getting through: grocery stores
+attempt to relieve this frustration by grouping customers together by
+expected service time (the express lane). Parallel stacks would allow the
+sender to establish policies on immediacy versus minimizing context
+switches.</p>
 
 <h3>CBanana, CBananaRun, RunBananaRun</h3>
 
@@ -936,12 +1092,13 @@ object to a python function.
 
 <h3>Streaming Methods</h3>
 
-<p>It would be neat if a method could indicate that it would like to receive
-its arguments in a streaming fashion. This would involve calling the method
-early (as soon as the objectID and method name were known), then somehow
-feeding objects to it as they arrive. The object could return a handler or
-consumer sub-object which would be fed as tokens arrive over the wire. This
-consumer should have a way to enforce a constraint on its input.</p>
+<p>It would be neat if a PB method could indicate that it would like to
+receive its arguments in a streaming fashion. This would involve calling the
+method early (as soon as the objectID and method name were known), then
+somehow feeding objects to it as they arrive. The object could return a
+handler or consumer sub-object which would be fed as tokens arrive over the
+wire. This consumer should have a way to enforce a constraint on its
+input.</p>
 
 <p>This consumer object sounds a lot like an Unslicer, so maybe the method
 schema should indicate that the method will would like to be called right
@@ -952,8 +1109,8 @@ methods.</p>
 
 <p>On the sending side, it would be neat to let a callRemote() invocation
 provide a Producer or a generator that will supply data as the network
-buffer becomes available. This could involve pushing a Slicer. Maybe Slicers
-should be generators. </p>
+buffer becomes available. This could involve pushing a Slicer. Slicers are
+generators.</p>
 
 
 

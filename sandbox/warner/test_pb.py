@@ -380,3 +380,9 @@ class TestCall(unittest.TestCase, TargetMixin):
         self.failIf(target.calls)
         f = unittest.deferredError(d, 2)
         self.failUnless(str(f).find("Violation, INT token rejected by StringConstraint in inbound method results") != -1)
+
+
+# test how a Referenceable gets transformed into a RemoteReference as it
+# crosses the wire, then verify that it gets transformed back into the
+# original Referenceable when it comes back
+
