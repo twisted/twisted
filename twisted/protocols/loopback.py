@@ -43,6 +43,9 @@ class LoopbackRelay(protocol.Transport):
     def loseConnection(self):
         self.shouldLose = 1
 
+    def getHost(self):
+        return 'loopback'
+
 def loopback(server, client):
     serverToClient = LoopbackRelay(client)
     clientToServer = LoopbackRelay(server)

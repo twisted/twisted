@@ -190,7 +190,7 @@ class File(resource.Resource, styles.Versioned):
             request.setResponseCode(http.TEMPORARY_REDIRECT)
             return " "
         request.setHeader('accept-ranges','bytes')
-        request.setHeader('last-modified', server.date_time_string(mtime))
+        request.setHeader('last-modified', http.datetimeToString(mtime))
         if self.type:
             request.setHeader('content-type', self.type)
         if self.encoding:
@@ -200,7 +200,7 @@ class File(resource.Resource, styles.Versioned):
         modified_since = request.getHeader('if-modified-since')
         if modified_since is not None:
             # check if file has been modified and if not don't return the file
-            modified_since = server.string_date_time(modified_since)
+            modified_since = http.stringToDatetime(modified_since)
             if modified_since >= mtime:
                 request.setResponseCode(http.NOT_MODIFIED)
                 return ''
@@ -255,6 +255,7 @@ class FileTransfer(pb.Viewable):
             return
         self.request.write(self.file.read(abstract.FileDescriptor.bufferSize))
         if self.file.tell() == self.size:
+            self.request.unregisterProducer()
             self.request.finish()
             self.request = None
 

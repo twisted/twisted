@@ -22,15 +22,6 @@ from twisted.internet import app, main, tcp
 from twisted.cred import service, identity, perspective
 from twisted.protocols import http, loopback
 
-class DateTimeTest(unittest.TestCase):
-    """Test date parsing functions."""
-    def testRoundtrip(self):
-        for i in range(10000):
-            time = random.randint(0, 2000000000)
-            timestr = server.date_time_string(time)
-            time2 = server.string_date_time(timestr)
-            self.assertEquals(time, time2)
-
 
 class DummyRequest:
     uri='http://dummy/'
@@ -151,4 +142,4 @@ class GuardTest(unittest.TestCase):
         # print w
         assert d.written == ['correct'], "incorrect result: %s"% w
 
-testCases = [DateTimeTest, SiteTest, WidgetTest, GuardTest]
+

@@ -103,7 +103,7 @@ class CGIScript(resource.Resource):
             env['QUERY_STRING'] = ''
 
         # Propogate HTTP headers
-        for title, header in request.received.items():
+        for title, header in request.getAllHeaders().items():
             envname = string.upper(string.replace(title, '-', '_'))
             if title not in ('content-type', 'content-length'):
                 envname = "HTTP_" + envname
@@ -159,8 +159,9 @@ class CGIProcess(process.Process, pb.Viewable):
         self.request = request
         process.Process.__init__(self, script, args, env, path)
         self.request.registerProducer(self, 1)
-        if self.request.content:
-            self.write(self.request.content)
+        content = self.request.content.read()
+        if content:
+            self.write(content)
         self.closeStdin()
 
     def handleError(self, error):

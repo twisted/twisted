@@ -1,3 +1,13 @@
+2002-04-14  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
+
+	* HTTP 1.1 now supports persistent and pipelined connections.
+
+	User-visible API changes:
+	- Request.content is now a file-like object, instead of a string.
+	- Functions that incorrectly used Request.received instead of 
+	  Request.getAllHeaders() will break.
+	- sendHeader, finishHeaders, sendStatus are all hidden now.
+
 2002-04-12  Kevin Turner  <acapnotic@twistedmatrix.com>
 
 	* twisted/coil/plugins/tendril.py (TendrilConfigurator): New coil

@@ -19,6 +19,29 @@
 from twisted.python import components
 
 
+class IConsumer(components.Interface):
+    """A consumer consumes data from a producer."""
+    
+    def registerProducer(self, producer, streaming):
+        """Register to receive data from a producer.
+
+        This sets self to be a consumer for a producer.  When this object
+        runs out of data on a write() call, it will ask the producer
+        to resumeProducing(). A producer should implement the IProducer
+        interface.
+        """
+        raise NotImplementedError
+
+    def unregisterProducer(self):
+        """Stop consuming data from a producer, without disconnecting.
+        """
+        raise NotImplementedError
+
+    def write(self, data):
+        """The producer will write data by calling this method."""
+        raise NotImplementedError
+
+
 class IProducer(components.Interface):
     """A producer produces data for a consumer.
     
@@ -106,4 +129,4 @@ class ISelectable(components.Interface):
         raise NotImplementedError
 
 
-__all__ = ["IProducer", "ISelectable"]
+__all__ = ["IProducer", "ISelectable", "IConsumer"]

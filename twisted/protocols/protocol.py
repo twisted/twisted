@@ -215,7 +215,10 @@ class FileWrapper(Transport):
             self.handleException()
 
     def getPeer(self):
-        return 'file', self.file.name
+        return 'file', 'file'
 
+    def getHost(self):
+        return 'file'
+    
     def handleException(self):
         pass
