@@ -145,7 +145,7 @@ class Request(pb.Copyable, http.Request):
         try:
             # Resource Identification
             self.prepath = []
-            self.postpath = string.split(self.path[1:], '/')
+            self.postpath = map(urllib.unquote, string.split(self.path[1:], '/'))
             resrc = self.site.getResourceFor(self)
 
             # Resource renderring
@@ -307,6 +307,7 @@ class Request(pb.Copyable, http.Request):
 
     def pathRef(self):
         return refpath.PathReferenceAcquisitionContext(self, self.acqpath)
+
 
 class _RemoteProducerWrapper:
     def __init__(self, remote):

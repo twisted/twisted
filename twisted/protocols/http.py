@@ -385,12 +385,12 @@ class Request:
         x = self.uri.split('?')
 
         if len(x) == 1:
-            self.path = urllib.unquote(self.uri)
+            self.path = self.uri
         else:
             if len(x) != 2:
                 log.msg("May ignore parts of this invalid URI: %s"
                         % repr(self.uri))
-            self.path, argstring = urllib.unquote(x[0]), x[1]
+            self.path, argstring = x[0], x[1]
             # parse the argument string
             for kvp in argstring.split('&'):
                 keyval = map(urllib.unquote, kvp.split('='))
