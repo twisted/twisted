@@ -1,12 +1,17 @@
 #!/bin/sh
-set -e -x
-baseurl=http://twistedmatrix.com/documents/TwistedDocs/TwistedDocs-$1/api/%s.html
+set -e
+url=http://twistedmatrix.com/documents/TwistedDocs/TwistedDocs-$1/api/%s.html
 templ=doc/howto/template.tpl
+echo "Man-->Lore"
 ./bin/lore -p --input man --output lore --config ext=-man.html doc/man/*.1
-for doc in doc/man doc/howto doc/specifications doc/vision/; do
-  for command in "--output lint" "--config template=$templ --config baseurl=$baseurl -l ../howto" "--output latex --config section"; do
-     ./bin/lore -p $command $doc/*.html
-  done
+for doc in doc/man doc/howto doc/specifications doc/vision; do
+	echo "Lore-->Lint"
+	./bin/lore -p --output lint $doc/*.html
+	echo "Lore-->HTML"
+	./bin/lore -p --config template=$templ --config baseurl=$url \
+	           -l ../howto $doc/*.html
+	echo "Lore-->LaTeX"
+	./bin/lore -p --output latex --config section $doc/*.html
 done
 cp admin/book.tex doc/howto
 cd doc/howto
