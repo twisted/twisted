@@ -1,6 +1,6 @@
 #! /usr/bin/python
 
-from slicer import RootSlicer, RootUnslicer, DiscardUnslicer, UnbananaFailure
+from slicer import RootSlicer, RootUnslicer, DiscardUnslicer, UnbananaFailure, VocabSlicer
 from twisted.internet import protocol
 from twisted.python.failure import Failure
 
@@ -66,11 +66,26 @@ class Banana(protocol.Protocol):
         self.rootSlicer.protocol = self
         self.slicerStack = [self.rootSlicer]
         self.openCount = 0
+        self.outgoingVocabulary = {}
 
     def send(self, obj):
         assert(len(self.slicerStack) == 1)
         assert(isinstance(self.slicerStack[0], RootSlicer))
         self.doSlice(obj)
+
+    def setOutgoingVocabulary(self, vocabDict):
+        # build a VOCAB message, send it, then set our outgoingVocabulary
+        # dictionary to start using the new table
+        for key,value in vocabDict.items():
+            assert(isinstance(key, types.IntType))
+            assert(isinstance(value, types.StringType))
+        s = VocabSlicer()
+        s.protocol = self
+        self.slicerStack.append(s)
+        self.doSlice(vocabDict)
+        self.slicerStack.pop(-1)
+        self.outgoingVocabulary = dict(zip(vocabDict.values(),
+                                           vocabDict.keys()))
 
     def doSlice(self, obj):
         slicer = self.slicerStack[-1]
@@ -110,8 +125,6 @@ class Banana(protocol.Protocol):
 
     # and these methods define how they emit low-level tokens
 
-    outgoingSymbols = {}
-
     def sendOpen(self, opentype):
         openID = self.openCount
         self.openCount += 1
@@ -141,9 +154,8 @@ class Banana(protocol.Protocol):
             write(FLOAT)
             write(struct.pack("!d", obj))
         elif isinstance(obj, types.StringType):
-            # TODO: an API for extending banana...
-            if self.outgoingSymbols.has_key(obj):
-                symbolID = self.outgoingSymbols[obj]
+            if self.outgoingVocabulary.has_key(obj):
+                symbolID = self.outgoingVocabulary[obj]
                 int2b128(symbolID, write)
                 write(VOCAB)
             else:
@@ -178,7 +190,13 @@ class Banana(protocol.Protocol):
         self.objectCounter = 0
         self.objects = {}
         self.inOpen = 0
+        self.incomingVocabulary = {}
         self.buffer = ''
+
+    def setIncomingVocabulary(self, vocabDict):
+        # maps small integer to string, should be called in response to a
+        # OPEN(vocab) sequence.
+        self.incomingVocabulary = vocabDict
 
     def startDiscarding(self, failure, leaf):
         """Begin discarding everything in the current node. When the node is
@@ -276,16 +294,16 @@ class Banana(protocol.Protocol):
         try:
             if self.debug:
                 print "receiveClose()"
-            o = self.receiveStack[-1].receiveClose()
+            obj = self.receiveStack[-1].receiveClose()
         except:
             where = self.describe() + ".<CLOSE>"
-            o = UnbananaFailure(where, Failure())
-        if self.debug: print "receiveClose returned", o
+            obj = UnbananaFailure(where, Failure())
+        if self.debug: print "receiveClose returned", obj
         old = self.receiveStack.pop()
         old.finish()
         try:
             if self.debug: print "receiveChild()"
-            self.receiveStack[-1].childFinished(o)
+            self.receiveStack[-1].childFinished(old, obj)
         except:
             where = self.describe()
             # this is just like receiveToken failing

@@ -165,6 +165,10 @@ class OrderedDictSlicer(BaseSlicer):
             self.send(key)
             self.send(value)
 
+class VocabSlicer(OrderedDictSlicer):
+    opentype = 'vocab'
+    trackReferences = 0
+
 class InstanceSlicer(OrderedDictSlicer):
     opentype = 'instance'
     trackReferences = 1
@@ -326,7 +330,7 @@ class BaseUnslicer:
     def receiveClose(self):
         raise NotImplementedError
 
-    def childFinished(self, obj):
+    def childFinished(self, unslicer, obj):
         if isinstance(obj, UnbananaFailure):
             if self.protocol.debug: print "%s .childFinished for UF" % self
             self.protocol.startDiscarding(obj, self)
@@ -386,7 +390,7 @@ class DiscardUnslicer(BaseUnslicer):
         pass
     def receiveToken(self, token):
         pass
-    def childFinished(self, o):
+    def childFinished(self, unslicer, obj):
         pass
     def receiveAbort(self):
         pass # we're already discarding
@@ -534,6 +538,41 @@ class DictUnslicer(BaseUnslicer):
         else:
             return "{}"
 
+class VocabUnslicer(BaseUnslicer):
+    """Much like DictUnslicer, but keys must be numbers, and values must
+    be strings"""
+    
+    def start(self, count):
+        self.d = {}
+        self.haveKey = 0
+        self.key = None
+
+    def receiveToken(self, token):
+        if not self.haveKey:
+            if self.d.has_key(token):
+                raise ValueError, "duplicate key '%s'" % token
+            if not isinstance(token, types.IntType):
+                raise ValueError, "VOCAB key '%s' must be a number" % token
+            self.key = token
+            self.haveKey = 1
+        else:
+            if not isinstance(token, types.StringType):
+                raise ValueError, "VOCAB value '%s' must be a string" % token
+            self.d[self.key] = token
+            self.haveKey = 0
+
+    def receiveChild(self, obj):
+        raise ValueError, "VocabUnslicer does not accept sub-objects"
+
+    def receiveClose(self):
+        return self.d
+
+    def describe(self):
+        if self.haveKey:
+            return "<vocabdict>[%s]" % self.key
+        else:
+            return "<vocabdict>"
+
 
 class BrokenDictUnslicer(DictUnslicer):
     dieInFinish = 0
@@ -653,6 +692,9 @@ class RootUnslicer(BaseUnslicer):
         pass
 
     def doOpen(self, opentype):
+        if len(self.protocol.receiveStack) == 1 and opentype == "vocab":
+            # only legal at top-level
+            return VocabUnslicer()
         return UnslicerRegistry[opentype]()
 
     def receiveToken(self, token):
@@ -661,9 +703,12 @@ class RootUnslicer(BaseUnslicer):
     def receiveAbort(self, token):
         raise ValueError, "top-level should never receive ABORT tokens"
 
-    def childFinished(self, o):
+    def childFinished(self, unslicer, obj):
         self.objects = {}
-        self.protocol.receivedObject(o) # give finished object to Banana
+        if isinstance(unslicer, VocabUnslicer):
+            self.protocol.setIncomingVocabulary(obj)
+            return
+        self.protocol.receivedObject(obj) # give finished object to Banana
 
     def receiveClose(self):
         raise ValueError, "top-level should never receive CLOSE tokens"

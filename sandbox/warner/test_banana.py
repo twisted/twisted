@@ -7,6 +7,8 @@ from slicer import RootSlicer, Dummy, UnbananaFailure, RootUnslicer
 
 import cStringIO, types
 
+def OPEN(opentype, count):
+    return ("OPEN", opentype, count)
 def OPENlist(count):
     return ("OPEN", "list", count)
 def OPENtuple(count):
@@ -469,20 +471,36 @@ class BananaInstanceTests(unittest.TestCase):
                                  CLOSE(2),
                               CLOSE(0)])
 
-class ByteStream(unittest.TestCase):
-    listToken = "\x04\x82list"
+class TestBananaMixin:
     def setUp(self):
-        self.banana = Banana()
+        self.banana = TestBanana()
         self.banana.transport = cStringIO.StringIO()
+
     def encode(self, obj):
         self.banana.send(obj)
         return self.banana.transport.getvalue()
+
+    def clearOutput(self):
+        self.banana.transport = cStringIO.StringIO()
+
+    def decode(self, str):
+        self.banana.object = None
+        self.banana.dataReceived(str)
+        obj = self.banana.object
+        self.banana.object = None
+        return obj
+
     def wantEqual(self, got, wanted):
         if got != wanted:
             print
             print "wanted: '%s'" % wanted
             print "got   : '%s'" % got
             self.fail("did not get expected string")
+
+    def loop(self, obj):
+        return self.decode(self.encode(obj))
+    def looptest(self, obj):
+        self.failUnlessEqual(self.loop(obj), obj)
 
     def OPEN(self, opentype, count):
         assert count < 128
@@ -497,6 +515,8 @@ class ByteStream(unittest.TestCase):
         assert len(str) < 128
         return chr(len(str)) + "\x82" + str
 
+class ByteStream(TestBananaMixin, unittest.TestCase):
+
     def test_list(self):
         obj = [1,2]
         expected = "".join([self.OPEN("list", 0),
@@ -509,15 +529,16 @@ class ByteStream(unittest.TestCase):
         # everybody's favorite "([(ref0" test case.
         obj = ([],)
         obj[0].append((obj,))
-        expected = "".join([self.OPEN("tuple",0),
-                             self.OPEN("list",1),
-                              self.OPEN("tuple",2),
-                               self.OPEN("reference",3),
-                                self.INT(0),
-                               self.CLOSE(3),
-                              self.CLOSE(2),
-                             self.CLOSE(1),
-                            self.CLOSE(0)])
+        OPEN = self.OPEN; CLOSE = self.CLOSE; INT = self.INT; STR = self.STR
+        expected = "".join([OPEN("tuple",0),
+                             OPEN("list",1),
+                              OPEN("tuple",2),
+                               OPEN("reference",3),
+                                INT(0),
+                               CLOSE(3),
+                              CLOSE(2),
+                             CLOSE(1),
+                            CLOSE(0)])
         self.wantEqual(self.encode(obj), expected)
 
     def test_two(self):
@@ -526,18 +547,19 @@ class ByteStream(unittest.TestCase):
         fooname = reflect.qual(Foo)
         barname = reflect.qual(Bar)
         # needs OrderedDictSlicer for the test to work
+        OPEN = self.OPEN; CLOSE = self.CLOSE; INT = self.INT; STR = self.STR
 
-        expected = "".join([self.OPEN("instance",0), self.STR(fooname),
-                             self.STR("a"), self.INT(1),
-                             self.STR("b"),
-                              self.OPEN("list",1),
-                               self.INT(2), self.INT(3),
-                               self.CLOSE(1),
-                             self.STR("c"),
-                               self.OPEN("instance",2), self.STR(barname),
-                                self.STR("d"), self.INT(4),
-                               self.CLOSE(2),
-                            self.CLOSE(0)])
+        expected = "".join([OPEN("instance",0), STR(fooname),
+                             STR("a"), INT(1),
+                             STR("b"),
+                              OPEN("list",1),
+                               INT(2), INT(3),
+                               CLOSE(1),
+                             STR("c"),
+                               OPEN("instance",2), STR(barname),
+                                STR("d"), INT(4),
+                               CLOSE(2),
+                            CLOSE(0)])
         self.wantEqual(self.encode(f1), expected)
 
 
@@ -545,27 +567,7 @@ class TestBanana(Banana):
     def receivedObject(self, obj):
         self.object = obj
 
-class ThereAndBackAgain(unittest.TestCase):
-
-    def setUp(self):
-        self.banana = TestBanana()
-        self.banana.transport = cStringIO.StringIO()
-
-    def encode(self, obj):
-        self.banana.send(obj)
-        return self.banana.transport.getvalue()
-
-    def decode(self, str):
-        self.banana.object = None
-        self.banana.dataReceived(str)
-        obj = self.banana.object
-        self.banana.object = None
-        return obj
-
-    def loop(self, obj):
-        return self.decode(self.encode(obj))
-    def looptest(self, obj):
-        self.failUnlessEqual(self.loop(obj), obj)
+class ThereAndBackAgain(TestBananaMixin, unittest.TestCase):
 
     def test_int(self):
         self.looptest(42)
@@ -630,4 +632,65 @@ class ThereAndBackAgain(unittest.TestCase):
             self.looptest(i)
     testLotsaTypes.skip = "not all types are implemented yet"
 
+        
+class VocabTest1(unittest.TestCase):
+    def test_incoming1(self):
+        b = TokenBanana()
+        vdict = {1: 'list', 2: 'tuple', 3: 'dict'}
+        keys = vdict.keys()
+        keys.sort()
+        setVdict = [OPEN('vocab', 0)]
+        for k in keys:
+            setVdict.append(k)
+            setVdict.append(vdict[k])
+        setVdict.append(CLOSE(0))
+        b.processTokens(setVdict)
+        # banana should now know this vocabulary
+        self.failUnlessEqual(b.incomingVocabulary, vdict)
+
+    def test_outgoing(self):
+        b = TokenBanana()
+        vdict = {1: 'list', 2: 'tuple', 3: 'dict'}
+        keys = vdict.keys()
+        keys.sort()
+        setVdict = [OPEN('vocab', 0)]
+        for k in keys:
+            setVdict.append(k)
+            setVdict.append(vdict[k])
+        setVdict.append(CLOSE(0))
+        b.tokens = []
+        b.setOutgoingVocabulary(vdict)
+        vocabTokens = b.tokens
+        b.tokens = []
+        self.failUnlessEqual(vocabTokens, setVdict)
+        # banana should now know this vocabulary
+
+class VocabTest2(TestBananaMixin, unittest.TestCase):
+    def OPEN(self, opentype, count):
+        num = self.invdict[opentype]
+        return chr(count) + "\x88" + chr(num) + "\x87"
+    def CLOSE(self, count):
+        return chr(count) + "\x89"
+    
+    def test_loop(self):
+        vdict = {1: 'list', 2: 'tuple', 3: 'dict'}
+        self.invdict = dict(zip(vdict.values(), vdict.keys()))
+
+        self.banana.setOutgoingVocabulary(vdict)
+        self.failUnlessEqual(self.banana.outgoingVocabulary, self.invdict)
+        self.decode(self.banana.transport.getvalue())
+        self.failUnlessEqual(self.banana.incomingVocabulary, vdict)
+        self.clearOutput()
+        s = self.encode([({'a':1},)])
+
+        OPEN = self.OPEN; CLOSE = self.CLOSE; INT = self.INT; STR = self.STR
+        expected = "".join([OPEN("list", 0),
+                             OPEN("tuple", 1),
+                              OPEN("dict", 2),
+                               STR('a'), INT(1),
+                              CLOSE(2),
+                             CLOSE(1),
+                            CLOSE(0)])
+        self.wantEqual(s, expected)
+        
         
