@@ -173,21 +173,44 @@ easy to indicate a CSS stylesheet in the template.</p>
 
 <h2>Using Lore to Generate HTML</h2>
 
-TBD
+<p>After having written a template, the easiest way to build HTML from the Lore
+document is by:</p>
+
+<pre class="shell">
+% lore --config template=myteplate.tpl mydocument.html
+</pre>
+
+<p>This will create a file called <code class="shell">mydocument.xhtml</code>.
+</p>
 
 <h2>Using Lore to Generate LaTex</h2>
 
 <h3>Articles</h3>
 
-TBD
+<pre class="shell">
+% lore --output latex mydocument.html
+</pre>
 
 <h3>Books</h3>
 
-TBD
+<p>Have a Lore file for each section. Then, have a LaTeX file which inputs
+all the given LaTeX files. Generate all the LaTeX files by using</p>
 
-<h2>Using <code class="shell">hlint</code></h2>
+<pre>
+% lore --output latex --config section *.html
+</pre>
 
-TBD
+<p>in the releavant directory.</p>
+
+<h2>Linting</h2>
+
+<pre>
+% lore --output lint mydocument.html
+</pre>
+
+<p>This will generate compiler-style (file:line:column:message) warnings.
+It is possible to integrate these warnings into a smart editor such as
+EMACS, but it has not been done yet.</p>
 
 </body>
 </html>
