@@ -141,8 +141,6 @@ def runWordsTest():
         raw_input()
     message("Now let's test the 'im' interface.")
     cmd("im")
-    message("And t-im...")
-    cmd("t-im")
     killit()
 
 def runRealityTest():
