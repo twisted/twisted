@@ -34,7 +34,7 @@ class TwistedSisterTestCase(unittest.TestCase):
         self.app = Application("sistertest", authorizer=self.auth)
         self.ss = SisterService(
             "localhost", parent_port, "twisted.sister.parent",
-            sister_port, shared_secret, "twisted.sister", self.app)
+            sister_port, shared_secret, "localhost", "twisted.sister", self.app)
         self.ps = ParentService(shared_secret, "twisted.sister.parent", self.app)
         self.bf = BrokerFactory(AuthRoot(self.app))
         self.app.listenTCP(shared_port, self.bf)
