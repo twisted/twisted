@@ -79,6 +79,7 @@ class BugsDatabase(adbapi.Augmentation):
                              REFERENCES bugs_items (bug_id),
         submittor_name  varchar(64),
         submittor_email varchar(128),
+        date         timestamp,
         comment      text
     );
     
@@ -98,13 +99,18 @@ class BugsDatabase(adbapi.Augmentation):
         return self.runOperation(sql, name, email, version, os, security, bug_type, summary, description)
     
     def createComment(self, bug_id, name, email, comment):
-        sql = """INSERT into bugs_comments (bug_id, submittor_name, submittor_email, comment)
-                 VALUES (%s, %s, %s, %s)"""
+        sql = """INSERT into bugs_comments (bug_id, submittor_name, submittor_email, comment, date)
+                 VALUES (%s, %s, %s, %s, now())"""
         return self.runOperation(sql, bug_id, name, email, comment)
     
     def getAllBugs(self):
-        """Returns a set of columns for all bugs."""
-        sql = """SELECT ALL * FROM bugs_items"""
+        """Returns (bug_id, summary, type, status, assigned, date_modified) for all bugs."""
+        sql = """SELECT bug_id, summary, type, status, assigned, date_modified FROM bugs_items"""
+        return self.runQuery(sql)
+    
+    def getBug(self, bug_id):
+        """Returns all columns for a bug."""
+        sql = """SELECT ALL * FROM bugs_items WHERE bug_id = %d""" % bug_id
         return self.runQuery(sql)
     
     def getBugComments(self, bug_id):
