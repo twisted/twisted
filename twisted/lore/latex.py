@@ -124,7 +124,8 @@ class LatexSpitter(BaseLatexSpitter):
     def visitNodeHeader(self, node):
         level = (int(node.tagName[1])-2)+self.baseLevel
         self.writer('\n\n\\'+level*'sub'+'section{')
-        self.visitNodeDefault(node)
+        #self.visitNodeDefault(node)
+        getLatexText(node, self.writer, latexEscape)
         self.writer('}\n')
 
     def visitNode_a_listing(self, node):
