@@ -35,7 +35,7 @@ class OpenSSHConchAuthorizer(authorizer.DefaultAuthorizer):
         """
         Return a Deferred that will callback with an Identity for the given
         name.  For the purposes of Conch, this should B{always} callback with
-        an Indentity to prevent attackers from learning what users are valid
+        an Identity to prevent attackers from learning what users are valid
         and which aren't.
 
         @type name: C{str}
