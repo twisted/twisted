@@ -152,12 +152,15 @@ class _InstanceFactory(ClientFactory):
 
 
 class ClientCreator:
-    """Useful for cases when we don't really need a factory.
+    """Client connections that do not require a factory.
 
-    Mainly this is when there is no shared state between protocol instances
-    (e.g. protocols that work in a way similar to httplib or smtplib).
-
-    The API for this class is not stable.
+    The various connect* methods create a protocol instance using the given
+    protocol class and arguments, and connect it, returning a Deferred of the
+    resulting protocol instance.
+    
+    Useful for cases when we don't really need a factory.  Mainly this
+    is when there is no shared state between protocol instances, and no need
+    to reconnect.
     """
 
     def __init__(self, reactor, protocolClass, *args, **kwargs):
@@ -173,11 +176,20 @@ class ClientCreator:
         self.reactor.connectTCP(host, port, f, timeout=timeout, bindAddress=bindAddress)
         return d
 
-    def connectUNIX(self, address, timeout = 30):
+    def connectUNIX(self, address, timeout = 30, checkPid=0):
+        """Connect to Unix socket, return Deferred of resulting protocol instance."""
         d = defer.Deferred()
         f = _InstanceFactory(self.reactor, self.protocolClass(*self.args, **self.kwargs), d)
-        self.reactor.connectUNIX(address, f, timeout = timeout)
+        self.reactor.connectUNIX(address, f, timeout = timeout, checkPid=checkPid)
         return d
+    
+    def connectSSL(self, host, port, contextFactory, timeout=30, bindAddress=None):
+        """Connect to SSL server, return Deferred of resulting protocol instance."""
+        d = defer.Deferred()
+        f = _InstanceFactory(self.reactor, self.protocolClass(*self.args, **self.kwargs), d)
+        self.reactor.connectSSL(host, port, f, contextFactory, timeout=timeout, bindAddress=bindAddress)
+        return d
+
 
 class ReconnectingClientFactory(ClientFactory):
     """My clients auto-reconnect with an exponential back-off.
