@@ -81,18 +81,25 @@ def install():
         python_dir=sysconfig.get_config_var("prefix")
         scripts_dir=os.path.join(python_dir, "scripts")
         # FIXME - this list needs some work
-        twisted_scripts=" ".join(["twistd", "mktap", "im", "generatelore",
-                                    "hlint", "manhole", "t-im", "tapconvert",
-                                    "html2latex", "conch",
-                                    ])
+        advertised_scripts=" ".join(["twistd", "mktap", "generatelore",
+                                     "hlint", "manhole", "tapconvert",
+                                     "html2latex", "ckeygen", "trial",
+                                     "coil",
+                                     ])
+        # The following scripts are not advertised for the following reasons
+        # conch - issues an exception when run with no arguments
+        # websetroot - issues an exception when run with no args
+        # im, t-im - issue exceptions for missing gtk when run
+        # tap2deb - platform-specific
+        # tk* - the ones that work have icons in the start menu, no need
         pathdict={'scripts_dir': scripts_dir,
-                  'twisted_scripts': twisted_scripts}
+                  'advertised_scripts': advertised_scripts}
         batch_script="""@echo off
 set PATHEXT=%%PATHEXT%%;.py
 set PATH=%(scripts_dir)s;%%PATH%%
 set PATH
 echo -:- -:- -:- -:- -:--:- -:- -:- -:- -:--:- -:- -:- -:- -:-
-echo Commands available in twisted: %(twisted_scripts)s
+echo Commands available in twisted: %(advertised_scripts)s
 echo -:- -:- -:- -:- -:--:- -:- -:- -:- -:--:- -:- -:- -:- -:-
 """ % pathdict
         bat_location=getBatFilename()
