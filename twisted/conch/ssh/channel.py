@@ -41,6 +41,9 @@ class SSHChannel:
         self.extBuf = ''
         self.id = None # gets set later by SSHConnection
 
+    def __str__(self):
+        return '%s (lw %i rw %i)' % (self.name, self.localWindowLeft, self.remoteWindowLeft)
+
     def channelOpen(self, specificData):
         """
         Called when the channel is opened.  specificData is any data that the
