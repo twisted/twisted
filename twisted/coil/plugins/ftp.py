@@ -45,10 +45,10 @@ class FTPConfigurator(app.ProtocolFactoryConfigurator, roots.Locked):
     configurableClass = ftp.FTPFactory
     
     configTypes = {"anonymous": ["boolean", "Allow Anonymous Logins", ""],
-                   "useranonymous": [types.StringType, "Anonymous Username", "Username for anonymous users, typically 'username'."],
-                   "otp": ["boolean", "OTP", "Use One time passwords."],
+                   "useranonymous": [types.StringType, "Anonymous Username", "Username for anonymous users, typically 'anonymous'."],
+                   "otp": ["boolean", "OTP", "Use One Time Passwords."],
                    "root": [types.StringType, "Root", "The root folder for the FTP server."],
-                   "thirdparty": ["boolean", "Allow 3rd-party Transfers", "Allow A to forward data to B. May be a security risk"],
+                   "thirdparty": ["boolean", "Allow 3rd-party Transfers", "Allow A to forward data to B. May be a security risk."],
                    }
 
     configName = 'FTP Server'
