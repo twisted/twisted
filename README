@@ -1,4 +1,4 @@
-Twisted 1.2.0rc3
+Twisted 1.2.0
 
 Quote of the Release:
 
@@ -9,7 +9,7 @@ Quote of the Release:
 <spiv> "But that trick never works!"
 <spiv> "This time for *sure*!"
 
-For information on what's new in Twisted 1.2.0rc3, see the ChangeLog file
+For information on what's new in Twisted 1.2.0, see the ChangeLog file
 that comes with the distribution, or http://twistedmatrix.com/ChangeLog.txt.
 
 What is this?
