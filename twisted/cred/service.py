@@ -1,4 +1,4 @@
-
+# -*- test-case-name: twisted.test.test_cred -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -28,7 +28,7 @@ from perspective import Perspective
 
 # System Imports
 import types
-
+import warnings
 
 class IService(components.Interface):
     """An authorized service for internet applications.
@@ -49,17 +49,29 @@ class Service(app.ApplicationService):
     # ugh, load order
     perspectiveClass = Perspective
 
-    application = None
     serviceType = None
     serviceName = None
 
-    def __init__(self, serviceName, application=None):
+    def __init__(self, serviceName, serviceParent=None, authorizer=None, application=None):
         """Create me, attached to the given application.
 
         Arguments: application, a twisted.internet.app.Application instance.
         """
         self.perspectives = {}
-        app.ApplicationService.__init__(self, serviceName, application)
+        if application:
+            if serviceParent:
+                raise Exception("You can't do that.")
+            else:
+                sp = application
+        else:
+            sp = serviceParent
+        if not authorizer:
+            if isinstance(sp, app.Application):
+                warnings.warn("You have to pass an authorizer separately from an application now.",
+                              category=DeprecationWarning, stacklevel=2)
+                authorizer = sp.authorizer
+        self.authorizer = authorizer
+        app.ApplicationService.__init__(self, serviceName, serviceParent, application)
 
     def cachePerspective(self, perspective):
         """Cache a perspective loaded from an external data source.

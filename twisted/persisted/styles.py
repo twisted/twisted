@@ -1,4 +1,4 @@
-
+# -*- test-case-name: twisted.test.test_persisted -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -162,6 +162,15 @@ def requireUpgrade(obj):
         obj.versionUpgrade()
         return obj
 
+from twisted.python import reflect
+
+def _aybabtu(c):
+    l = []
+    for b in reflect.allYourBase(c, Versioned):
+        if b not in l and b is not Versioned:
+            l.append(b)
+    return l
+
 class Versioned:
     """
     This type of object is persisted with versioning information.
@@ -185,37 +194,64 @@ class Versioned:
     persistenceVersion = 1
 
     def __setstate__(self, state):
-        currentVers = self.__class__.persistenceVersion
-        persistVers = (state.get('persistenceVersion') or 0)
-        assert currentVers >= persistVers, "Sorry, can't go backwards in time. %s<%s" % (currentVers, persistVers)
-        if currentVers > persistVers:
-            versionedsToUpgrade[self] = 1
+        versionedsToUpgrade[self] = 1
         self.__dict__ = state
 
     def __getstate__(self, dict=None):
         """Get state, adding a version number to it on its way out.
         """
         dct = copy.copy(dict or self.__dict__)
-        dct['persistenceVersion'] = self.__class__.persistenceVersion
+        bases = _aybabtu(self.__class__)
+        bases.reverse()
+        bases.append(self.__class__) # don't forget me!!
+        for base in bases:
+            if base.__dict__.has_key('persistenceVersion'):
+                dct['%s.persistenceVersion' % str(base)] = base.persistenceVersion
         return dct
 
     def versionUpgrade(self):
         """(internal) Do a version upgrade.
         """
-        currentVers = self.__class__.persistenceVersion
-        persistVers = (self.__dict__.get('persistenceVersion') or 0)
-        if persistVers:
+        bases = _aybabtu(self.__class__)
+        # put the bases in order so superclasses' persistenceVersion methods
+        # will be called first.
+        bases.reverse()
+        bases.append(self.__class__) # don't forget me!!
+        # first let's look for old-skool versioned's
+        if self.__dict__.has_key("persistenceVersion"):
+            
+            # Hacky heuristic: if more than one class subclasses Versioned,
+            # we'll assume that the higher version number wins for the older
+            # class, so we'll consider the attribute the version of the older
+            # class.  There are obviously possibly times when this will
+            # eventually be an incorrect assumption, but hopefully old-school
+            # persistenceVersion stuff won't make it that far into multiple
+            # classes inheriting from Versioned.
+            
+            pver = self.__dict__['persistenceVersion']
             del self.__dict__['persistenceVersion']
-        # Some previous versions of twisted had this weird spelling error...
-        else:
-            persistVers = (self.__dict__.get('persistentVersion') or 0)
+            highestVersion = 0
+            highestBase = None
+            for base in bases:
+                if not base.__dict__.has_key('persistenceVersion'):
+                    continue
+                if base.persistenceVersion > highestVersion:
+                    highestBase = base
+                    highestVersion = base.persistenceVersion
+            if highestBase:
+                self.__dict__['%s.persistenceVersion' % str(highestBase)] = pver
+        for base in bases:
+            currentVers = base.persistenceVersion
+            pverName = '%s.persistenceVersion' % str(base)
+            persistVers = (self.__dict__.get(pverName) or 0)
             if persistVers:
-                del self.__dict__['persistentVersion']
-        while persistVers < currentVers:
-            persistVers = persistVers + 1
-            method = getattr(self, 'upgradeToVersion%s' % persistVers, None)
-            if method:
-                log.msg( "Upgrading %s to version %s" % (self.__class__, persistVers) )
-                method()
-            else:
-                log.msg( 'Warning: cannot upgrade %s to version %s' % (self.__class__, persistVers) )
+                del self.__dict__[pverName]
+            assert persistVers <=  currentVers, "Sorry, can't go backwards in time."
+            while persistVers < currentVers:
+                persistVers = persistVers + 1
+                method = base.__dict__.get('upgradeToVersion%s' % persistVers, None)
+                if method:
+                    log.msg( "Upgrading %s to version %s" % (base, persistVers) )
+                    method(self)
+                else:
+                    log.msg( 'Warning: cannot upgrade %s to version %s' % (base, persistVers) )

@@ -48,18 +48,9 @@ class ForeignObject:
     def __hash__(self):
         raise TypeError, "unhashable type"
 
-class Stubby:
-    def __getattr__(self, key):
-        raise KeyError, \
-              "Stub %s doesn't have key %s.\n"\
-              "An oversight of the unittester?" % (self.__class__, key)
 
 # Service
-
-class AppForServiceTest(Stubby, app.Application):
-    def __init__(self, name, *a, **kw):
-        self.name = name
-        self.services = {}
+AppForServiceTest = app.Application
 
 class ServiceTestCase(unittest.TestCase):
     App = AppForServiceTest
@@ -78,14 +69,6 @@ class ServiceTestCase(unittest.TestCase):
 
         self.assertRaises(TypeError, service.Service,
                           ForeignObject("Not a Name"))
-
-    def testConstruction_application(self):
-        """application, if provided, should look at least vaugely like
-        an application."""
-
-        self.assertRaises(TypeError, service.Service,
-                          "test service",
-                          ForeignObject("Not an Application"))
 
     def testsetApplication(self):
         appl = self.App("test app for service-test")
@@ -153,32 +136,20 @@ class ServiceTestCase(unittest.TestCase):
 
 # Perspectives
 
-class AppForPerspectiveTest(Stubby, app.Application):
-    def __init__(self, name, *a, **kw):
-        self.name = name
-        self.authorizer = "Stub depth exceeded"
-        self.authorizer = authorizer.DefaultAuthorizer()
-        self.authorizer.setApplication(self)
-
-class ServiceForPerspectiveTest(Stubby, service.Service):
-    def __init__(self, name, appl):
-        self.serviceName = name
-        self.application = appl
-        self.perspectives = {}
-
-class IdentityForPerspectiveTest(Stubby, identity.Identity):
-    def __init__(self, name, appl=None):
-        self.name = name
-        self.application = appl
-        self.keyring = {}
+AppForPerspectiveTest = app.Application
+ServiceForPerspectiveTest = service.Service
+IdentityForPerspectiveTest = identity.Identity
 
 class PerspectiveTestCase(unittest.TestCase):
     App = AppForPerspectiveTest
     Service = ServiceForPerspectiveTest
-    Identity = IdentityForPerspectiveTest
+    def Identity(self, n):
+        return self.auth.createIdentity(n)
+        
 
     def setUp(self):
         self.app = self.App("app for perspective-test")
+        self.auth = authorizer.DefaultAuthorizer()
         self.service = self.Service("service for perspective-test",
                                     self.app)
         self.perspective = perspective.Perspective("test perspective")
@@ -291,30 +262,14 @@ class FunctionsTestCase(unittest.TestCase):
     def test_challenge(self):
         self.assert_(identity.challenge())
 
-class AppForIdentityTest(Stubby, app.Application):
-    def __init__(self, name, *a, **kw):
-        self.name = name
-        self.authorizer = "Stub depth exceeded"
+AppForIdentityTest = AppForPerspectiveTest
 
-class ServiceForIdentityTest(Stubby, service.Service):
-    def __init__(self, name, appl):
-        self.serviceName = name
-        self.application = appl
-        self.perspectives = {}
+ServiceForIdentityTest = ServiceForPerspectiveTest
 
-    def getServiceName(self):
-        return self.serviceName
-
-class PerspectiveForIdentityTest(Stubby, perspective.Perspective):
-    def __init__(self, name, service, *a, **kw):
-        self.perspectiveName = name
-        self.service = service
-
-    def getService(self):
-        return self.service
-
-    def getPerspectiveName(self):
-        return self.perspectiveName
+class PerspectiveForIdentityTest(perspective.Perspective):
+    def __init__(self, n, service):
+        perspective.Perspective.__init__(self, n)
+        self.setService(service)
 
 class IdentityTestCase(unittest.TestCase):
     App = AppForIdentityTest
@@ -327,10 +282,6 @@ class IdentityTestCase(unittest.TestCase):
 
     def testConstruction(self):
         identity.Identity("test name", self.app)
-
-    def testConstruction_invalidApp(self):
-        self.assertRaises(TypeError, identity.Identity,
-                          "test name", ForeignObject("not an app"))
 
     def test_addKeyByString(self):
         self.ident.addKeyByString("one", "two")
@@ -435,8 +386,7 @@ class AuthorizerTestCase(unittest.TestCase):
         del self.ident
     
     def test_addIdent(self):
-        a = app.Application("test")
-        i = identity.Identity("user", a)
+        i = identity.Identity("user", self.auth)
 
         # add the identity
         self.auth.addIdentity(i)

@@ -36,7 +36,7 @@ class Identity:
     """
     hashedPassword = None
 
-    def __init__(self, name, application):
+    def __init__(self, name, authorizer):
         """Create an identity.
 
         I must have a name, and a backreference to the Application that the
@@ -45,11 +45,15 @@ class Identity:
         if not isinstance(name, types.StringType):
             raise TypeError
         from twisted.internet import app
-        if not isinstance(application, app.Application):
-            raise TypeError
+        if isinstance(authorizer, app.Application):
+            authorizer = authorizer.authorizer
         self.name = name
-        self.application = application
+        self.authorizer = authorizer
         self.keyring = {}
+
+    def upgradeToVersion2(self):
+        self.authorizer = self.application.authorizer
+        del self.application
 
     def addKeyForPerspective(self, perspective):
         """Add a key for the given perspective.
@@ -86,7 +90,7 @@ class Identity:
             check = self.keyring[(serviceName, perspectiveName)]
         except KeyError, ke:
             return defer.fail(failure.Failure())
-        return self.application.getServiceNamed(serviceName).getPerspectiveForIdentity(perspectiveName, self)
+        return self.authorizer.getServiceNamed(serviceName).getPerspectiveForIdentity(perspectiveName, self)
 
     def getAllKeys(self):
         """Returns a list of all services and perspectives this identity can connect to.
@@ -101,6 +105,13 @@ class Identity:
         If this key is not present, raise KeyError.
         """
         del self.keyring[(serviceName, perspectiveName)]
+
+    def save(self):
+        """Persist this Identity to the authorizer.
+        """
+        self.authorizer.addIdentity(self)
+
+    ### Authentication Mechanisms
 
     def setPassword(self, plaintext):
         if plaintext is None:

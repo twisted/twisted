@@ -966,11 +966,14 @@ class AuthRoot(Root):
     """I provide AuthServs as root objects to Brokers for a BrokerFactory.
     """
 
-    def __init__(self, app):
-        self.app = app
+    def __init__(self, auth):
+        from twisted.internet.app import Application
+        if isinstance(auth, Application):
+            auth = auth.authorizer
+        self.auth = auth
 
     def rootObject(self, broker):
-        return AuthServ(self.app, broker)
+        return AuthServ(self.auth, broker)
 
 class _Detacher:
     def __init__(self, perspective, remoteRef, identity, broker):
@@ -1048,12 +1051,12 @@ class AuthServ(Referenceable):
     See also: AuthRoot
     """
 
-    def __init__(self, app, broker):
-        self.app = app
+    def __init__(self, auth, broker):
+        self.auth = auth
         self.broker = broker
 
     def remote_username(self, username):
-        defr = self.app.authorizer.getIdentityRequest(username)
+        defr = self.auth.getIdentityRequest(username)
         defr.addCallback(self.mkchallenge)
         return defr
 

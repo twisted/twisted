@@ -24,7 +24,7 @@ class TicketAuthorizer(DefaultAuthorizer):
         ident.setPassword(ticket)
         for serviceName, perspectiveName in keys:
             ident.addKeyByString( serviceName, perspectiveName)
-        self.addIdentity(ident)
+        ident.save()
         return ticket
 
 True = 1

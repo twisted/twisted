@@ -44,13 +44,9 @@ class AccountCreationWidget(widgets.Form, styles.Versioned):
         if args.has_key("username"):
             u,p = request.args['username'][0], request.args['password'][0]
             app = self.service.application
-            ident = identity.Identity(u, app)
-            ident.setPassword(p)
-            app.authorizer.addIdentity(ident)
             part = self.service.createPerspective(u)
-            part.setIdentity(ident)
-            ident.addKeyForPerspective(part)
             if part:
+                ident = part.makeIdentity(p)
                 write("Participant Added.")
             else:
                 write("Duplicate.")

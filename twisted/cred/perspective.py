@@ -1,4 +1,4 @@
-
+# -*- test-case-name: twisted.test.test_cred -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -39,9 +39,9 @@ class Perspective:
         default, which will normally not resolve.)
         """
         if not isinstance(perspectiveName, types.StringType):
-            raise TypeError
+            raise TypeError("Expected string, got %s."% perspectiveName)
         if not isinstance(identityName, types.StringType):
-            raise TypeError
+            raise TypeError("Expected string, got %s."% identityName)
         self.perspectiveName = perspectiveName
         self.identityName = identityName
 
@@ -66,11 +66,12 @@ class Perspective:
         """
         if not isinstance(password, types.StringType):
             raise TypeError
-        ident = identity.Identity(self.perspectiveName, self.service.application)
-        self.setIdentityName(self.perspectiveName)
+        ident = self.service.authorizer.createIdentity(self.perspectiveName)
+        # ident = identity.Identity(self.perspectiveName, self.service.application)
+        self.setIdentity(ident)
         ident.setPassword(password)
         ident.addKeyForPerspective(self)
-        self.service.application.authorizer.addIdentity(ident)
+        ident.save()
         return ident
 
     def getPerspectiveName(self):

@@ -30,5 +30,5 @@ class OpenSSHConchAuthorizer(authorizer.DefaultAuthorizer):
         else:
             if not self.identities.has_key(name):
                 print 'adding %s for %s' % (self.identityClass, name)
-                self.addIdentity(self.identityClass(name, self.application))
+                self.addIdentity(self.identityClass(name, self))
             return defer.succeed(self.identities[name])

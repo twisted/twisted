@@ -60,6 +60,8 @@ class Accessor:
     There are also reallyDel and reallySet methods, so you can
     override specifics in subclasses without clobbering __setattr__
     and __getattr__.
+
+    TODO: Support for Python2.2 Properties.
     """
 
     def __setattr__(self, k,v):

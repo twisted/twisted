@@ -18,6 +18,8 @@
 # Twisted Imports
 from twisted.internet import defer
 
+# Sibling Imports
+from twisted.cred import identity
 
 class Authorizer:
     """An interface to a set of identities.
@@ -26,6 +28,17 @@ class Authorizer:
         """Set the application for this authorizer.
         """
         self.application = app
+
+    identityClass = identity.Identity
+
+    def createIdentity(self, name):
+        """Create an identity of an appropriate type for this Authorizer.
+
+        This identity will not be saved!  You must call its .save() method
+        before it will be recognized by this authorizer.
+        """
+        return self.identityClass(name, self)
+
     def addIdentity(self, identity):
         """Create an identity and make a callback when it has been created.
         """
@@ -44,6 +57,9 @@ class Authorizer:
         for authenticating users from a database.
         """
         raise NotImplementedError("%s.getIdentityRequest"%str(self.__class__))
+
+    def getServiceNamed(self, name):
+        return self.application.getServiceNamed(name)
 
 
 class DefaultAuthorizer(Authorizer):

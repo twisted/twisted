@@ -21,6 +21,7 @@ import os
 import string
 import socket
 import types
+import warnings
 
 # Twisted Imports
 from twisted.internet import interfaces
@@ -57,8 +58,30 @@ class _SSLlistener:
     def listen(self):
         self.app.listenSSL(self.port, self.fac, self.ctx, self.backlog, self.interface)
 
+class _AbstractServiceCollection:
 
-class ApplicationService:
+    def __init__(self):
+        """Create an abstract service collection.
+        """
+        self.services = {}
+
+    def getServiceNamed(self, serviceName):
+        """Retrieve the named service from this application.
+
+        Raise a KeyError if there is no such service name.
+        """
+        return self.services[serviceName]
+
+    def addService(self, service):
+        """Add a service to this application.
+        """
+        # XXX TODO remove existing service first
+        self.services[service.serviceName] = service
+
+
+
+from twisted.python.reflect import Accessor
+class ApplicationService(Accessor, styles.Versioned):
     """I am a service you can add to an application.
 
     I represent some chunk of functionality which may be bound to many or no
@@ -73,11 +96,12 @@ class ApplicationService:
     directly subclassing ApplicationService.
     """
 
-    application = None
     serviceType = None
     serviceName = None
+    serviceParent = None
+    persistenceVersion = 1
 
-    def __init__(self, serviceName, application=None):
+    def __init__(self, serviceName, serviceParent=None, application=None):
         """Create me, attached to the given application.
 
         Arguments: application, a twisted.internet.app.Application instance.
@@ -85,32 +109,87 @@ class ApplicationService:
         if not isinstance(serviceName, types.StringType):
             raise TypeError("%s is not a string." % serviceName)
         self.serviceName = serviceName
-        self.setApplication(application)
-
-    def setApplication(self, application):
-        from twisted.internet import app
-        if application and not isinstance(application, app.Application):
-            raise TypeError( "%s is not an Application" % application)
-        if self.application and self.application is not application:
-            raise RuntimeError( "Application already set!" )
         if application:
-            self.application = application
-            application.addService(self)
+            warnings.warn("Application keyword argument to Service.__init__ is deprecated; use serviceParent instead.",
+                          category=DeprecationWarning, stacklevel=2)
+            if serviceParent:
+                raise ValueError("Backwards compatible constructor failed to make sense.")
+            serviceParent = application
+        self.setServiceParent(serviceParent)
+
+
+    def upgradeToVersion1(self):
+        self.serviceParent = self.application
+        del self.application
+
+    def setServiceParent(self, serviceParent):
+        """Set my parent, which must be a service collection of some kind.
+        """
+        if serviceParent is None:
+            return
+        if self.serviceParent and self.serviceParent is not serviceParent:
+            raise RuntimeError("Service Parent already set!")
+        self.serviceParent = serviceParent
+        serviceParent.addService(self)
+
+    def set_application(self, application):
+        warnings.warn("application attribute is deprecated; use serviceParent instead.",
+                      category=DeprecationWarning, stacklevel=3)
+        if application and not isinstance(application, Application):
+            raise TypeError( "%s is not an Application" % application)
+        self.setServiceParent(application)
+
+    setApplication = set_application
+
+    def get_application(self):
+        a = self.serviceParent
+        while (not isinstance(a, Application) and a is not None):
+            a = a.serviceParent
+        return a
 
     def startService(self):
         """This call is made as a service starts up.
         """
         log.msg("%s (%s) starting" % (self.__class__, self.serviceName))
+        self.serviceRunning = 1
         return None
 
     def stopService(self):
         """This call is made before shutdown.
         """
         log.msg("%s (%s) stopping" % (self.__class__, self.serviceName))
+        self.serviceRunning = 0
         return None
 
+class MultiService(_AbstractServiceCollection, ApplicationService):
+    """I am a collection of multiple services.
 
-class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
+    I am useful if you have a large number of services and need to categorize
+    them, or you need to write a protocol that can access multiple services
+    through one factory, such as a protocol that maps services to virtual
+    hosts, like POP3.
+    """
+
+    def __init__(self, serviceName, serviceParent=None):
+        _AbstractServiceCollection.__init__(self)
+        ApplicationService.__init__(self, serviceName, serviceParent)
+
+    def startService(self):
+        ApplicationService.startService(self)
+        for svc in self.services.values():
+            svc.startService()
+
+    def stopService(self):
+        ApplicationService.stopService(self)
+        for svc in self.services.values():
+            svc.stopService()
+
+    def addService(self, service):
+        if self.serviceRunning:
+            service.startService()
+
+class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable,
+                  Accessor, _AbstractServiceCollection):
     """I am the `root object' in a Twisted process.
 
     I represent a set of persistent, potentially interconnected listening TCP
@@ -129,11 +208,10 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
 
           * gid: (optional) a POSIX group-id.  Only used on POSIX systems.
 
-          * authorizer: a twisted.cred.authorizer.Authorizer.
-
         If uid and gid arguments are not provided, this application will
         default to having the uid and gid of the user and group who created it.
         """
+        _AbstractServiceCollection.__init__(self)
         self.name = name
         # a list of (tcp, ssl, udp) Ports
         self.tcpPorts = []              # check
@@ -149,134 +227,22 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
         # a list of twisted.internet.cred.service.Services
         self.services = {}              # check
         # a cred authorizer
-        self.authorizer = authorizer or authorizer_ or DefaultAuthorizer() # check
-        self.authorizer.setApplication(self)
+        self._authorizer = authorizer or authorizer_ or DefaultAuthorizer() # check
+        self._authorizer.setApplication(self)
         if platform.getType() == "posix":
             self.uid = uid or os.getuid()
             self.gid = gid or os.getgid()
 
+    persistenceVersion = 9
 
-    jellyDOMVersion = 1
+    def get_authorizer(self):
+        warnings.warn("Application.authorizer attribute is deprecated, use Service.authorizer instead",
+                      category=DeprecationWarning, stacklevel=3)
+        return self._authorizer
 
-    def jellyToDOM_1(self, jellier, node):
-        if hasattr(self, 'uid'):
-            node.setAttribute("uid", str(self.uid))
-            node.setAttribute("gid", str(self.gid))
-        node.setAttribute("name", self.name)
-        tcpnode = jellier.document.createElement("tcp")
-        node.appendChild(tcpnode)
-        sslnode = jellier.document.createElement("ssl")
-        node.appendChild(sslnode)
-        svcnode = jellier.document.createElement("services")
-        node.appendChild(svcnode)
-        delaynode = jellier.document.createElement("delayeds")
-        node.appendChild(delaynode)
-        authnode = jellier.document.createElement("authorizer")
-        node.appendChild(authnode)
-        for svc in self.services.values():
-            svcnode.appendChild(jellier.jellyToNode(svc))
-        for port, factory, backlog, interface in self.tcpPorts:
-            n = jellier.jellyToNode(factory)
-            n.setAttribute("parent:listen", str(port))
-            if backlog != 5:
-                n.setAttribute("parent:backlog", str(backlog))
-            if interface != '':
-                n.setAttribute("parent:interface", str(interface))
-            tcpnode.appendChild(n)
-        for port, factory, ctxFactory, backlog, interface in self.sslPorts:
-            n = jellier.jellyToNode(factory)
-            n.setAttribute("parent:listen", str(port))
-            if backlog != 5:
-                n.setAttribute("parent:backlog", str(backlog))
-            if interface != '':
-                n.setAttribute("parent:interface", str(interface))
-            n2 = jellier.jellyToNode(ctxFactory)
-            n2.setAttribute("parent:ctxfactory", 1)
-            n.appendChild(n2)
-            sslnode.appendChild(n)
-        for connector in self.tcpConnectors:
-            n = jellier.jellyToNode(connector.factory)
-            n.setAttribute("parent:connect", "%s:%d" % (connector.host, connector.portno))
-            if connector.timeout != 30:
-                n.setAttribute("parent:timeout", connector.timeout)
-            tcpnode.appendChild(n)
-        for delayed in self.delayeds:
-            n = jellier.jellyToNode(delayed)
-            delaynode.appendChild(n)
-        authnode.appendChild(jellier.jellyToNode(self.authorizer))
-
-    def _cbConnectTCP(self, factory, hostname, portno, timeout):
-        self.connectTCP(hostname, portno, factory, timeout)
-
-    def _cbListenTCP(self, factory, portno, backlog, interface):
-        self.listenTCP(portno, factory, backlog, interface)
-
-
-    def _getChildElements(self, node):
-        from xml.dom.minidom import Element
-        l = []
-        for subnode in node.childNodes:
-            if isinstance(subnode, Element):
-                l.append(subnode)
-        return l
-
-        
-    def unjellyFromDOM_1(self, unjellier, node):
-        if node.hasAttribute("uid"):
-            self.uid = int(node.getAttribute("uid"))
-            self.gid = int(node.getAttribute("gid"))
-        self.name = node.getAttribute("name")
-        self.udpPorts = []
-        self.sslPorts = []
-        self.persistStyle = "xml"
-        for subnode in self._getChildElements(node):
-            if subnode.tagName == 'ssl':
-                self.sslPorts = []
-                for facnode in self._getChildElements(subnode):
-                    if facnode.hasAttribute("parent:listen"):
-                        for posCtxN in self._getChildElements(facnode):
-                            if posCtxN.hasAttribute("parent:ctxfactory"):
-                                ctxFacNode = posCtxN
-                        facnode.removeChild(ctxFacNode)
-                        portno = int(facnode.getAttribute("parent:listen"))
-                        interface = facnode.getAttribute("parent:interface") or ''
-                        backlog = int(facnode.getAttribute("parent:backlog") or 5)
-                        listener = _SSLlistener(self, portno, interface, backlog)
-                        unjellier.unjellyLater(ctxFacNode).addCallback(
-                            listener.setContext)
-                        unjellier.unjellyLater(facnode).addCallback(
-                            listener.setFactory)
-            if subnode.tagName == 'tcp':
-                self.tcpPorts = []
-                self.tcpConnectors = []
-                for facnode in self._getChildElements(subnode):
-                    if facnode.hasAttribute("parent:connect"):
-                        s = facnode.getAttribute("parent:connect")
-                        hostname, portno = string.split(s, ":")
-                        portno = int(portno)
-                        s = facnode.getAttribute("parent:timeout") or 0
-                        timeout = int(s)
-                        unjellier.unjellyLater(facnode).addCallback(self._cbConnectTCP, hostname, portno, timeout)
-                    elif facnode.hasAttribute("parent:listen"):
-                        portno = int(facnode.getAttribute("parent:listen"))
-                        interface = facnode.getAttribute("parent:interface") or ''
-                        backlog = int(facnode.getAttribute("parent:backlog") or 5)
-                        unjellier.unjellyLater(facnode).addCallback(self._cbListenTCP, portno, backlog, interface)
-                    else:
-                        raise ValueError("Couldn't determine type of TCP node.")
-            elif subnode.tagName == 'services':
-                self.services = {}
-                for svcnode in self._getChildElements(subnode):
-                    unjellier.unjellyLater(svcnode).addCallback(self.addService)
-            elif subnode.tagName == 'authorizer':
-                authnode = marmalade.getValueElement(subnode)
-                unjellier.unjellyAttribute(self, "authorizer", authnode)
-            elif subnode.tagName == 'delayeds':
-                self.delayeds = []
-                for delnode in self._getChildElements(subnode):
-                    unjellier.unjellyLater(delnode).addCallback(self.addDelayed)
-
-    persistenceVersion = 8
+    def upgradeToVersion9(self):
+        self._authorizer = self.authorizer
+        del self.authorizer
 
     def upgradeToVersion8(self):
         self.persistStyle = "pickle"
@@ -337,19 +303,6 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
         log.msg("Upgrading %s Application." % repr(self.name))
         self.authorizer = DefaultAuthorizer()
         self.services = {}
-
-    def getServiceNamed(self, serviceName):
-        """Retrieve the named service from this application.
-
-        Raise a KeyError if there is no such service name.
-        """
-        return self.services[serviceName]
-
-    def addService(self, service):
-        """Add a service to this application.
-        """
-        # XXX TODO remove existing service first
-        self.services[service.serviceName] = service
 
     def __repr__(self):
         return "<%s app>" % repr(self.name)

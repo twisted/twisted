@@ -46,12 +46,6 @@ class DummyManholeClient(LocalAsRemote):
 class DummyApp(app.Application):
     name = 'None'
 
-    def __init__(self):
-        pass
-
-    def addService(self, serv):
-        pass
-
 class ManholeTest(unittest.TestCase):
     """Various tests for the manhole service.
 
@@ -60,7 +54,7 @@ class ManholeTest(unittest.TestCase):
     values.
     """
     def setUp(self):
-        self.service = service.Service(application=DummyApp())
+        self.service = service.Service("pb", application=DummyApp("myapp"))
         self.p = service.Perspective("UnitTest")
         self.p.setService(self.service)
         self.client = DummyManholeClient()
