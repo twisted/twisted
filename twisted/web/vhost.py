@@ -33,7 +33,7 @@ class NameVirtualHost(resource.Resource):
     def _getResourceForRequest(self, request):
         """(Internal) Get the appropriate resource for the given host.
         """
-        host = string.lower(request.getHeader('host'))
+        host = string.split(string.lower(request.getHeader('host')),':')[0]
         return self.hosts.get(host, error.NoResource("host %s not in vhost map" % repr(host)))
         
     def render(self, request):
