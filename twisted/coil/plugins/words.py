@@ -17,8 +17,7 @@
 """Coil plugin for words service."""
 
 # Twisted Imports
-from twisted.protocols import protocol
-from twisted.internet.interfaces import IConnector
+from twisted.internet import protocol
 from twisted.coil import coil
 from twisted.words import service, ircservice, tendril, webwords
 from twisted.web import resource
@@ -45,7 +44,7 @@ class WordsConfigurator(coil.Configurator):
              "IRC chat gateway to %s" % self.instance.serviceName],
             ['makeWebAccounts', resource.IResource,
              "Public Words Website for %s" % self.instance.serviceName],
-            ['makeTendril', IConnector,
+            ['makeTendril', protocol.IFactory,
              "Tendril to IRC from %s" % (self.instance.serviceName,)]
             ]
 
