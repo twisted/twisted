@@ -125,13 +125,14 @@ class Via:
     """A SIP Via header."""
 
     def __init__(self, host, port=PORT, transport="UDP", ttl=None, hidden=False,
-                 received=None, branch=None, maddr=None):
+                 received=None, rport=None, branch=None, maddr=None):
         self.transport = transport
         self.host = host
         self.port = port
         self.ttl = ttl
         self.hidden = hidden
         self.received = received
+        self.rport = rport
         self.branch = branch
         self.maddr = maddr
 
@@ -721,6 +722,9 @@ class Proxy(Base):
         if senderVia.host != srcHost:
             senderVia.received = srcHost
             message.headers["via"][0] = senderVia.toString()
+        if senderVia.rport != srcPort:
+            senderVia.rport = srcPort
+            message.headers["via"][0] = senderVia.toString()
         message.headers["via"].insert(0, viaHeader.toString())
         name, uri, tags = parseAddress(message.headers["to"][0], clean=1)
         d = self.locator.getAddress(uri)
@@ -738,7 +742,7 @@ class Proxy(Base):
         Destination is based on topmost Via header."""
         destVia = parseViaHeader(responseMessage.headers["via"][0])
         # XXX we don't do multicast yet
-        port = destVia.port or self.PORT
+        port = destVia.rport or destVia.port or self.PORT
         if destVia.received:
             destAddr = URL(host=destVia.received, port=port)
         else:
@@ -820,16 +824,28 @@ class DigestedCredentials(cred.credentials.UsernameHashedPassword):
         self.fields = fields
     
     def checkPassword(self, password):
+        H = lambda x: md5.md5(x).digest()
+        KD = lambda s, d: H(s + ":" + d)
+
+        method = 'REGISTER'
         response = self.fields.get('response')
         uri = self.fields.get('uri')
         nonce = self.fields.get('nonce', '')
 
         user, domain = self.username.split('@', 1)
+        if uri is None:
+            uri = 'sip:' + domain
 
-        a1 = ':'.join((user, domain, password))
-        a2 = ':'.join(('REGISTER', uri is None and ('sip:' + domain) or uri))
-        interim = ':'.join((md5.md5(a1).hexdigest(), nonce, md5.md5(a2).hexdigest()))
-        return md5.md5(interim).hexdigest() == response
+        print 'user=%(user)s\ndomain=%(domain)s\nuri=%(uri)s' % locals()
+        print 'method=%(method)s\nresponse=%(response)s\nnonce=%(nonce)s' % locals()
+
+        A1 = H(user + ':' + domain + ':' + password).encode('hex')
+        A2 = H(method + ':' + uri).encode('hex')
+        expected = KD(A1, nonce + ":" + A2).encode('hex')
+        
+        print 'A1=%(A1)s\nA2=%(A2)s\nexpected=%(expected)s' % locals()
+
+        return expected == response
 
 class DigestAuthorizer:
     CHALLENGE_LIFETIME = 15
@@ -843,10 +859,11 @@ class DigestAuthorizer:
         c = tuple([random.randrange(sys.maxint) for _ in range(3)])
         c = '%d%d%d' % c
         self.outstanding[c] = True
-        return 'nonce="%(nonce)s",qop-options=auth,opaque="%(opaque)s"' % {
-            'nonce': c.encode('base64').strip(),
-            'opaque': str(random.randrange(sys.maxint))
-        } 
+        return ','.join((
+            'nonce="%s"' % 'abcdefg', # c.encode('base64').strip(),
+            'opaque="%s"' % str(random.randrange(sys.maxint)),
+            'qop-options="auth"',
+        ))
         
     def decode(self, response):
         response = ' '.join(response.splitlines())
