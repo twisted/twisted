@@ -94,8 +94,13 @@ def getPlugIns(plugInType, debugInspection=0, showProgress=0):
                         ns = {'register': dropin.register}
                         try:
                             execfile(tmlname, ns)
-                        except Exception, e:
-                            print "Exception in %s: %s" % (tmlname, e)
+                        except:
+                            if debugInspection:
+                                import traceback
+                                print "Exception in %s:"
+                                traceback.print_exc()
+                            else:
+                                print "Exception in %s (use --debug for more info)" % (tmlname,)
                             continue
                         found = 1
                         if showProgress:
