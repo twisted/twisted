@@ -276,14 +276,19 @@ def munge(document, template, linkrel, d, fullpath, ext, url, config):
 
     return slides
 
+from tree import makeSureDirectoryExists
 
-def doFile(fn, linkrel, ext, url, templ, d=None):
+def getOutputFileName(originalFileName, outputExtension, index):
+    return os.path.splitext(originalFileName)[0]+'-'+str(index) + outputExtension
+
+def doFile(filename, linkrel, ext, url, templ, options={}, outfileGenerator=getOutputFileName):    
     from tree import parseFileAndReport
-    d = d or {}
-    doc = parseFileAndReport(fn)
-    slides = munge(doc, templ, linkrel, os.path.dirname(fn), fn, ext, url, d)
+    doc = parseFileAndReport(filename)
+    slides = munge(doc, templ, linkrel, os.path.dirname(filename), filename, ext, url, options)
     for slide, index in zip(slides, range(len(slides))):
-        slide.dom.writexml(open(os.path.splitext(fn)[0]+'-'+str(index)+ext, 'wb'))
+        newFilename = getOutputFileName(filename, ext, index)
+        makeSureDirectoryExists(newFilename)
+        slide.dom.writexml(open(newFilename, 'wb'))
 
 # Prosper output
 
