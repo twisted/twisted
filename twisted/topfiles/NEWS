@@ -36,6 +36,7 @@ twisted.internet
  - Multi-listen UDP multicast support
  - protocol.ClientCreator has a connectSSL.
  - defer.deferredGenerator: allows you to write Deferred code w/o callbacks.
+ - Deferred.setTimeout is now deprecated.
  - New defer.DeferredLock/DeferredSemaphore/DeferredQueue.
  - Add utils.getProcessOutputAndValue to get stdout/err/value.
 

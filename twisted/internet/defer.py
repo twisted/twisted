@@ -364,12 +364,11 @@ class Deferred:
         @param timeoutFunc: will receive the Deferred and *args, **kw as its
         arguments.  The default timeoutFunc will call the errback with a
         L{TimeoutError}.
-
-        DON'T USE THIS! It's a bad idea! Use a function called by reactor.callLater instead
-        to accomplish the same thing!
-
-        YOU HAVE BEEN WARNED!
         """
+        warnings.warn(
+            "Deferred.setTimeout is deprecated.  Look for timeout "
+            "support specific to the API you are using instead.",
+            DeprecationWarning, stacklevel=2)
 
         if self.called:
             return
