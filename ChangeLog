@@ -1,3 +1,8 @@
+2002-04-28  Itamar Shtull-Trauring  <twisted@itamarst.org>
+
+	* twisted/protocols/http.py: log hits using extended log format
+        and make web taps logfile configurable.
+
 2002-04-26  Itamar Shtull-Trauring  <twisted@itamarst.org>
 
 	* twisted/lumberjack/logfile.py: reversed order of rotated
