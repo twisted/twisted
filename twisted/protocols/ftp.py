@@ -392,7 +392,7 @@ class DTPFactory(protocol.Factory):
         self.delayedCall = None
 
     def buildProtocol(self, addr):
-        log.debug('DTPFacotry.buildProtocol')
+        log.debug('DTPFactory.buildProtocol')
         self.cancelTimeout()
         if self.pi.dtpInstance:   # only create one instance
             return 
@@ -402,18 +402,20 @@ class DTPFactory(protocol.Factory):
         self.pi.dtpInstance = p
         return p
 
-    def doStop(self):
-        log.debug('dtpFactory.doStop')
-        if self.numPorts > 0:
-            protocol.Factory.doStop(self)
+    def stopFactory(self):
+        log.debug('dtpFactory.stopFactory')
         self.cancelTimeout()
 
     def timeoutFactory(self):
         log.msg('timed out waiting for DTP connection')
         if self.deferred:
             d, self.deferred = self.deferred, None 
+
+            # TODO: LEFT OFF HERE!
+
+            d.addErrback(debugDeferred, 'timeoutFactory firing errback')
             d.errback(defer.TimeoutError())
-        self.doStop()
+        self.stopFactory()
 
     def cancelTimeout(self):
         if not self.delayedCall.called and not self.delayedCall.cancelled: 
@@ -480,6 +482,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
 
     binary      = True     # binary transfers? False implies ASCII. defaults to True
 
+
     def connectionMade(self):
         log.debug('ftp-pi connectionMade: instance %s' % self.instanceNum)
 
@@ -523,13 +526,14 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
     def timeoutConnection(self):
         log.msg('FTP timed out')
         self.transport.loseConnection()
-        if self.dtpFactory.deferred:
-            d, self.dtpFactory.deferred = self.dtpFactory.deferred, None
-            d.errback(FTPTimeoutError('cleaning up dtp!'))
+        #if self.dtpFactory is not None and self.dtpFactory.deferred is not None:
+            #d, self.dtpFactory.deferred = self.dtpFactory.deferred, None
+            #d.errback(FTPTimeoutError('cleaning up dtp!'))
 
     def setTimeout(self, seconds):
         log.msg('ftp.setTimeout to %s seconds' % str(seconds))
         policies.TimeoutMixin.setTimeout(self, seconds)
+
 
     def reply(self, key, s=''):                                               
         """format a RESPONSE and send it out over the wire"""
@@ -642,8 +646,8 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         d.addErrback(self._ebDTP)
 
     def _ebDTP(self, error):
-        self.setTimeout(self.timeOut)               # restart timeOut clock after DTP returns
-        log.err(error)
+        log.msg(error)
+        self.setTimeout(self.factory.timeOut)       # restart timeOut clock after DTP returns
         r = error.trap(defer.TimeoutError,          # this is called when DTP times out
                        BogusClientError,            # called if PI & DTP clients don't match
                        FTPTimeoutError,             # called when FTP connection times out
@@ -672,7 +676,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         except AttributeError, (e,):
             log.msg('Already Called dtpPort.stopListening!!!: %s' % e)
 
-        self.dtpFactory.doStop()
+        self.dtpFactory.stopFactory()
         if self.dtpFactory is None:
             log.debug('ftp.dtpFactory already set to None')
         else:
@@ -705,7 +709,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             d.addCallback(debugDeferred, 'running cleanupDTP')
             d.addCallback(lambda _: self.cleanupDTP())
             d.addCallback(debugDeferred, 'running ftp.setTimeout()')
-            d.addCallback(lambda _: self.setTimeout(self.timeOut))
+            d.addCallback(lambda _: self.setTimeout(self.factory.timeOut))
             d.addCallback(debugDeferred, 'running ftp._unblock')
             d.addCallback(lambda _: self._unblock())
             d.addErrback(self._ebDTP)
@@ -987,7 +991,7 @@ class FTPFactory(protocol.Factory):
         this factory will create. When the maximum number is reached, a protocol
         instance will be spawned that will give the "Too many connections" message
         to the client and then close the connection.
-    @ivar timeOut: the protocol interpreter's idle timeout time in seconds
+    @ivar timeOut: the protocol interpreter's idle timeout time in seconds, default is 600 seconds
     """
     protocol = FTP
     allowAnonymous = True
@@ -1003,6 +1007,7 @@ class FTPFactory(protocol.Factory):
         self.portal = portal
         self.userAnonymous = 'anonymous'
         self.maxProtocolInstances = maxProtocolInstances
+        reactor._pi = self
 
     def buildProtocol(self, addr):
         log.debug('%s of %s max ftp instances: ' % (self.currentInstanceNum, self.maxProtocolInstances))
@@ -1204,16 +1209,21 @@ def _testPermissions(uid, gid, spath, mode='r'):
     readMasks = {'usr': stat.S_IRUSR, 'grp': stat.S_IRGRP, 'oth': stat.S_IROTH}
     writeMasks = {'usr': stat.S_IWUSR, 'grp': stat.S_IWGRP, 'oth': stat.S_IWOTH}
     modes = {'r': readMasks, 'w': writeMasks}
+    log.msg('running _testPermissions')
     if osp.exists(spath):
         s = os.lstat(spath)
         if uid == 0:    # root is superman, can access everything
+            log.msg('uid == root, can do anything!')
             return True
         elif modes[mode]['usr'] & s.st_mode > 0 and uid == s.st_uid:
+            log.msg('usr has proper permissions')
             return True
         elif ((modes[mode]['grp'] & s.st_mode > 0) and 
                 (gid == s.st_gid or gid in _memberGIDs(gid))):
+            log.msg('grp has proper permissions')
             return True
         elif modes[mode]['oth'] & s.st_mode > 0:
+            log.msg('oth has proper permissions')
             return True
     return False   
 
@@ -1247,10 +1257,12 @@ class FTPAnonymousShell(object):
         """used to set up permissions checking. finds the uid and gid of 
         the shell.user. called during __init__
         """
+        log.msg('getUserUIDAndGID')
         pw_name, pw_passwd, pw_uid, pw_gid, pw_dir = range(5)
         try:
             p = pwd.getpwnam(self.user)
             self.uid, self.gid = p[pw_uid], p[pw_gid]
+            log.debug("set (uid,gid) for file-permissions checking to (%s,%s)" % (self.uid,self.gid))
         except KeyError, (e,):
             log.msg("""
 COULD NOT SET ANONYMOUS UID! Name %s could not be found.
@@ -1318,6 +1330,8 @@ We will continue using the user %s.
         cpath, spath = self.mapCPathToSPath(path)
         if not osp.isfile(spath):
             raise FileNotFoundError(cpath)
+        #if not _testPermissions(self.uid, self.gid, spath):
+            #raise PermissionDeniedError(cpath)
         try:
             return (file(spath, 'rb'), os.path.getsize(spath))
         except (IOError, OSError), (e,):
@@ -1327,7 +1341,7 @@ We will continue using the user %s.
     def stor(self, params):
         raise AnonUserDeniedError()
 
-    def getUnixLongListString(self, path):
+    def getUnixLongListString(self, spath):
         """generates the equivalent output of a unix ls -l path, but
         using python-native code. 
 
@@ -1337,8 +1351,6 @@ We will continue using the user %s.
             know at this point whether or not it will work on win32
         """
         import pwd, grp, time
-        cpath, spath = self.mapCPathToSPath(path)
-        log.debug('cpath: %s,   spath:%s' % (cpath, spath))
 
         TYPE, PMSTR, NLINKS, OWN, GRP, SZ, MTIME, NAME = range(8)
 
@@ -1402,7 +1414,11 @@ We will continue using the user %s.
         return sio
        
     def list(self, path):
-        sio = self.getUnixLongListString(path)
+        cpath, spath = self.mapCPathToSPath(path)
+        log.debug('cpath: %s,   spath:%s' % (cpath, spath))
+        #if not _testPermissions(self.uid, self.gid, spath):
+            #raise PermissionDeniedError(cpath)
+        sio = self.getUnixLongListString(spath)
         return (sio, len(sio.getvalue()))
 
     def mdtm(self, path):
