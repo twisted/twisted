@@ -41,7 +41,7 @@ class Options(usage.Options):
                      ['cvsroot', 'c', '/cvs', 'The CVSROOT to export from. (only revelant for --exp).']]
 
 
-    longdesc = "Specify -v and all steps to execute; if no steps are given, default is '--exp --dist --docs --ball --rel'"
+    longdesc = "Specify -v and all steps to execute; if no steps are given, default is '--exp --dist --docs --balls --rel'"
     
     def __init__(self):
         usage.Options.__init__(self)
@@ -62,7 +62,7 @@ class Options(usage.Options):
         Reqs: Twisted-$ver exists."""
         self['commands'].append('docs')
 
-    def opt_ball(self):
+    def opt_balls(self):
         """Creates tarballs.
         Reqs: Twisted-$ver exists."""
         self['commands'].append('ball')
@@ -93,13 +93,13 @@ def main():
         sys.exit(2)
 
     if not opts['commands']:
-        opts['commands'] = ['exp', 'dist', 'docs', 'dist', 'balls', 'rel']
+        opts['commands'] = ['exp', 'dist', 'docs', 'balls', 'rel']
 
     d = {'exp': exportCVS,
          'docs': makeDocs,
          'dist': copyDist,
          'rel': release,
-         'ball': makeBalls}
+         'balls': makeBalls}
 
     for command in opts['commands']:
         d[command](opts)
