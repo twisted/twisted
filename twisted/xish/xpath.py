@@ -164,6 +164,92 @@ class _Location:
             for c in elem.children:
                 if _isStr(c): resultlist.append(c)
 
+class _AnyLocation:
+    def __init__(self):
+        self.predicates = []
+        self.elementName = None
+        self.childLocation = None
+
+    def matchesPredicates(self, elem):
+        for p in self.predicates:
+            if not p.value(elem):
+                return 0
+        return 1
+
+    def listParents(self, elem, parentlist):
+        if elem.parent != None:
+            self.listParents(elem.parent, parentlist)
+        parentlist.append(elem.name)
+
+    def isRootMatch(self, elem):
+        if (self.elementName == None or self.elementName == elem.name) and self.matchesPredicates(elem):
+            if self.childLocation != None:
+                for c in elem.elements():
+                    if self.childLocation.matches(c):
+                        return True
+            else:
+                return True
+        return False
+
+    def findFirstRootMatch(self, elem):
+        if (self.elementName == None or self.elementName == elem.name) and self.matchesPredicates(elem):
+            # Thus far, the name matches and the predicates match,
+            # now check into the children and find the first one
+            # that matches the rest of the structure
+            # the rest of the structure
+            if self.childLocation != None:
+                for c in elem.elements():
+                    if self.childLocation.matches(c):
+                        return c
+                return None
+            else:
+                # No children locations; this is a match!
+                return elem
+        else:
+            # Ok, predicates or name didn't match, so we need to start
+            # down each child and treat it as the root and try
+            # again
+            for c in elem.elements():
+                if self.matches(c):
+                    return c
+            # No children matched...
+            return None
+
+    def matches(self, elem):
+        if self.isRootMatch(elem):
+            return True
+        else:
+            # Ok, initial element isn't an exact match, walk
+            # down each child and treat it as the root and try
+            # again
+            for c in elem.elements():
+                if self.matches(c):
+                    return True
+            # No children matched...
+            return False
+
+    def queryForString(self, elem, resultbuf):
+        raise "UnsupportedOperation"
+
+    def queryForNodes(self, elem, resultlist):
+        # First check to see if _this_ element is a root
+        if self.isRootMatch(elem):
+            resultlist.append(elem)
+
+        # Now check each child
+        for c in elem.elements():
+            self.queryForNodes(c, resultlist)            
+        
+
+    def queryForStringList(self, elem, resultlist):
+        if self.isRootMatch(elem):
+            for c in elem.children:
+                if _isStr(c): resultlist.append(c)
+        for c in elem.elements():
+            self.queryForStringList(c, resultlist)
+        
+
+
 class XPathQuery:
     def __init__(self, queryStr):
         from twisted.xish.xpathparser import parse
