@@ -1,3 +1,9 @@
+2003-11-07  Brian Warner  <warner@lothar.com>
+
+	* twisted/application/app.py (getApplication): provide a more
+	constructive error message when a .tac file doesn't define
+	'application'. Closes issue387.
+
 2003-11-01  Paul Swartz  <z3p@twistedmatrix.com>
 
 	* twisted/conch/ssh/common.py: use GMPy for faster math if it's

@@ -1,4 +1,5 @@
-
+# -*- test-case-name: twisted.test.test_application -*-
+#
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
 # This library is free software; you can redistribute it and/or
@@ -90,6 +91,15 @@ def getApplication(config, passphrase):
         log.msg("Loaded.")
     except Exception, e:
         s = "Failed to load application: %s" % e
+        if isinstance(e, KeyError) and e.args[0] == "application":
+            s += """
+Could not find 'application' in the file. To use 'twistd -y', your .tac
+file must create a suitable object (e.g., by calling service.Application())
+and store it in a variable named 'application'. twistd loads your .tac file
+and scans the global variables for one of this name.
+
+Please read the 'Using Application' HOWTO for details.
+"""
         traceback.print_exc(file=log.logfile)
         log.msg(s)
         log.deferr()
