@@ -556,10 +556,36 @@ class MethodArgumentsConstraint(Constraint):
         raise Violation("unknown argument '%s'" % argname)
 
     def checkArgs(self, argdict):
+        # this is called on the inbound side. Each argument has already been
+        # checked individually, so all we have to do is verify global things
+        # like all required arguments have been provided.
         for argname in self.required:
             if not argdict.has_key(argname):
                 raise Violation("missing required argument '%s'" % argname)
 
+    def checkObject(self, kwargs):
+        for argname, argvalue in kwargs.items():
+            accept, constraint = self.getArgConstraint(argname)
+            if not accept:
+                # this argument will be ignored by the far end. TODO: emit a
+                # warning
+                pass
+            constraint.checkObject(argvalue)
+        self.checkArgs(kwargs)
+
+    def maxSize(self, seen=None):
+        if self.acceptUnknown:
+            raise UnboundedSchema # there is no limit on that thing
+        if self.ignoreUnknown:
+            # for now, we ignore unknown arguments by accepting the object
+            # and then throwing it away. This makes us vulnerable to the
+            # memory consumed by that object. TODO: in the CallUnslicer,
+            # arrange to discard the ignored object instead of receiving it.
+            # When this is done, ignoreUnknown will not cause the schema to
+            # be unbounded and this clause should be removed.
+            raise UnboundedSchema
+        # TODO: implement the rest of maxSize, just like a dictionary
+        raise NotImplementedError
 
 #TODO
 class Shared(Constraint):
