@@ -348,14 +348,16 @@ def addMethodNamesToDict(classObj, dict, prefix, baseClass=None):
                 and (len(optName))):
                 dict[optName] = 1
 
-def accumulateMethods(obj, dict, prefix=''):
+def accumulateMethods(obj, dict, prefix='', curClass=None):
     """Raped'n'pasted from addMethodNamesToDict. This takes an *instance*
     object, and accumulates a dict of methname: *instance*MethObj pairs.
     """
-    for base in obj.__class__.__bases__:
-        accumulateMethods(obj, dict, prefix)
+    if not curClass:
+        curClass = obj.__class__
+    for base in curClass.__bases__:
+        accumulateMethods(obj, dict, prefix, base)
 
-    for name, method in obj.__class__.__dict__.items():
+    for name, method in curClass.__dict__.items():
         optName = name[len(prefix):]
         if ((type(method) is types.FunctionType)
             and (name[:len(prefix)] == prefix)
