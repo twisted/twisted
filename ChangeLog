@@ -1,3 +1,9 @@
+2003-07-28  Brian Warner  <warner@lothar.com>
+
+	* twisted/python/_c_dir.c: hush compiler warning
+
+	* setup.py: add twisted.xish
+
 2003-07-28  Itamar Shtull-Trauring  <itamar@itamarst.org>
 
 	* twisted/spread/pb.py (PBClientFactory): a new, superior API for

@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.124 2003/07/25 02:13:29 exarkun Exp $
+$Id: setup.py,v 1.125 2003/07/29 06:03:45 warner Exp $
 """
 
 import distutils, os, sys, string
@@ -241,6 +241,7 @@ desktop environments, and your toaster.
         "twisted.web.woven",
         "twisted.words",
         "twisted.world",
+        "twisted.xish",
     ],
     'scripts' : [
         'bin/manhole', 'bin/mktap', 'bin/twistd',
