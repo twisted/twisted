@@ -97,6 +97,10 @@ _timer = None
 class QTReactor(posixbase.PosixReactorBase):
     """Qt based reactor."""
 
+    # Reference to a DelayedCall for self.crash() when the reactor is
+    # entered through .iterate()
+    _crashCall = None
+
     def __init__(self, app=None):
         self.running = 1
         posixbase.PosixReactorBase.__init__(self)
@@ -134,6 +138,9 @@ class QTReactor(posixbase.PosixReactorBase):
             return
         self.runUntilCurrent()
 
+        if self._crashCall is not None:
+            self._crashCall.reset(0)
+
         # gah
         timeout = self.timeout()
         if timeout is None: timeout = 1.0
@@ -150,9 +157,9 @@ class QTReactor(posixbase.PosixReactorBase):
             _timer.stop()
             _timer = None
 
-    def doIteration(self, delay=0.0):
+    def iterate(self, delay=0.0):
         log.msg(channel='system', event='iteration', reactor=self)
-        self.callLater(delay, self.crash)
+        self._crashCall = self.callLater(delay, self.crash)
         self.run()
 
     def run(self, installSignalHandlers=1):
@@ -162,6 +169,10 @@ class QTReactor(posixbase.PosixReactorBase):
         self.qApp.enter_loop()
 
     def crash(self):
+        if self._crashCall is not None:
+            if self._crashCall.active():
+                self._crashCall.cancel()
+            self._crashCall = None
         self.running = 0
 
 
