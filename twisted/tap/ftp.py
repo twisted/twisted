@@ -34,6 +34,7 @@ Options are as follows:
         
         -a, --anonymous:        allow anonymous logins
         -3, --thirdparty:       allow third-party connections
+            --otp               activate One-Time Passwords
         
 """
 
@@ -42,7 +43,17 @@ class Options(usage.Options):
                   ["root", "r", "/usr/local/ftp"],
                   ["useranonymous", "", "anonymous"]]
     optFlags = [["anonymous", "a"],
-                ["thirdparty", "3"]]
+                ["thirdparty", "3"],
+                ["otp", ""]]
+
+def addUser(factory, username, password):
+    factory.userdict[username] = {}
+    if factory.otp:
+        from twisted.python import otp
+        factory.userdict[username]["otp"] = otp.OTP(password, hash=otp.md5)
+    else:
+        factory.userdict[username]["passwd"] = password
+    
 
 def getPorts(app, config):
     t = ftp.FTPFactory()
@@ -51,9 +62,12 @@ def getPorts(app, config):
     t.thirdparty = config.thirdparty
     t.root = config.root
     t.useranonymous = config.useranonymous
-    # adding a default user
+    t.otp = config.otp
     t.userdict = {}
-    t.userdict["twisted"] = "twisted"
+    
+    # adding a default user
+    addUser(t, "twisted", "twisted")
+        
     try:
         portno = config.portno
     except AttributeError:

@@ -27,6 +27,7 @@ TODO:
    User / Password is stored in a dict (factory.userdict) in plaintext
    Use passport
    Filelevel access
+   Separate USER / PASS from mainloop
 
  * Ascii-download
    Currently binary only. Ignores TYPE
@@ -88,6 +89,7 @@ ftp_reply = {
     'pwd':       '257 "%s" is current directory.',
 
     'user':      '331 Password required for %s.',
+    'userotp':   '331 Response to %s.',
     'guest':     '331 Guest login ok, type your name as password.',
     'userok':    '230 User %s logged in.',
     'guestok':   '230 Guest login ok, access restrictions apply.',
@@ -343,7 +345,13 @@ class FTP(protocol.Protocol, DTPFactory):
         else:
             # TODO:
             # Add support for home-dir
-            self.reply('user', self.user)
+            if self.factory.otp:
+                otp = self.factory.userdict[self.user]["otp"]
+                prompt = otp.challenge()
+                otpquery = "Response to %s %s for skey" % (prompt, "required")
+                self.reply('userotp', otpquery)
+            else:
+                self.reply('user', self.user)
             self.root = self.factory.root
             self.wd = '/'
         # Flush settings
@@ -361,11 +369,19 @@ class FTP(protocol.Protocol, DTPFactory):
             self.reply('guestok')
         else:
             # Authing follows
-            if (self.factory.userdict.has_key(self.user)) and \
-               (self.factory.userdict[self.user] == self.passwd):
-                self.reply('userok', self.user)
+            if self.factory.otp:
+                otp = self.factory.userdict[self.user]["otp"]
+                try:
+                    otp.authenticate(self.passwd)
+                    self.reply('userok', self.user)
+                except:
+                    self.reply('noauth')
             else:
-                self.reply('noauth')
+                if (self.factory.userdict.has_key(self.user)) and \
+                   (self.factory.userdict[self.user]["passwd"] == self.passwd):
+                    self.reply('userok', self.user)
+                else:
+                    self.reply('noauth')
 
     def ftp_Noop(self, params):
         """Do nothing, and reply an OK-message
@@ -569,6 +585,7 @@ class FTP(protocol.Protocol, DTPFactory):
     def processLine(self, line):
         "Process the input from the client"
         line = string.strip(line)
+        print line
         command = string.split(line)
         if command == []:
             self.reply('unknown')
@@ -606,6 +623,7 @@ class FTPFactory(protocol.Factory):
     userdict = {}
     anonymous = 0
     thirdpart = 0
+    otp = 1
     root = '/usr/bin/local'
     useranonymous = 'anonymous'
  
