@@ -72,3 +72,8 @@ class ArgumentTestCase(unittest.TestCase):
                     ("2002", "13", "1"), ("1999", "12","32"),
                     ("2002", "1"), ("2002", "2", "3", "4")]
         self.argTest(formmethod.Date, goodTests, badTests)
+
+    def testRangedInteger(self):
+        goodTests = {"0": 0, "12": 12, "3": 3}.items()
+        badTests = ["-1", "x", "13", "-2000", "3.4"]
+        self.argTest(formmethod.IntegerRange, goodTests, badTests, 0, 12)
