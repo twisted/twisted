@@ -5,6 +5,15 @@ import re
 from xml.dom import minidom
 from xml import xpath
 
+# sibling
+import tpusage
+
+class Options(tpusage.Options):
+    synopsis = 'bypath [options] <bypfile> <xmlfile>'
+    def parseArgs(self, bypfile, xmlfile):
+        self['bypfile'] = bypfile
+        self['xmlfile'] = xmlfile
+
 class BaseEvaluator:
     namespace = {}
     def __init__(self, xml):
@@ -108,10 +117,17 @@ class Program:
 
 def run(argv=None):
     if argv is None: argv = sys.argv
-    bypfile , xmlfile = sys.argv[1:]
-    txt = file(bypfile).read() 
+    o = Options()
+    try:
+        o.parseOptions(argv[1:])
+    except usage.UsageError, e:
+        sys.stderr.write(str(o))
+        sys.stderr.write('%s\n' % (str(e),))
+        return 1
 
-    pr = Program(xmlfile)
+    txt = file(o['bypfile']).read() 
+
+    pr = Program(o['xmlfile'])
     for line in txt.splitlines():
         # workaround sre.scanner which doesn't scan empty lines
         if line == '': line = '\n'
