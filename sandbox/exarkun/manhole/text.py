@@ -3,6 +3,9 @@ import helper
 import insults
 
 class _Attribute(object):
+    def __init__(self):
+        self.children = []
+
     def __getitem__(self, item):
         assert isinstance(item, (tuple, _Attribute, str))
         if isinstance(item, tuple):
@@ -21,20 +24,7 @@ class _Attribute(object):
             else:
                 ch.serialize(write, attrs.copy())
 
-class _ColorAttr(_Attribute):
-    def __init__(self, color, ground):
-        self.color = color
-        self.ground = ground
-        self.children = []
-
-    def serialize(self, write, attrs=None):
-        setattr(attrs, self.ground, self.color)
-        super(_ColorAttr, self).serialize(write, attrs)
-
 class _NormalAttr(_Attribute):
-    def __init__(self):
-        self.children = []
-
     def serialize(self, write, attrs):
         attrs.__init__()
         super(_NormalAttr, self).serialize(write, attrs)
@@ -57,13 +47,23 @@ class _OtherAttr(_Attribute):
             setattr(attrs, self.attrname, False)
         super(_OtherAttr, self).serialize(write, attrs)
 
-class _ForegroundColorAttr(_Attribute):
-    def __init__(self, color):
-        _Attribute.__init__(self, color, helper.FOREGROUND)
+class _ColorAttr(_Attribute):
+    def __init__(self, color, ground):
+        self.color = color
+        self.ground = ground
+        self.children = []
 
-class _BackgroundColorAttr(_Attribute):
+    def serialize(self, write, attrs=None):
+        setattr(attrs, self.ground, self.color)
+        super(_ColorAttr, self).serialize(write, attrs)
+
+class _ForegroundColorAttr(_ColorAttr):
     def __init__(self, color):
-        _Attribute.__init__(self, color, helper.BACKGROUND)
+        super(_ForegroundColorAttr, self).__init__(color, 'foreground')
+
+class _BackgroundColorAttr(_ColorAttr):
+    def __init__(self, color):
+        super(_BackgroundColorAttr, self).__init__(color, 'background')
 
 class CharacterAttributes(object):
     class _ColorAttribute(object):

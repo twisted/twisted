@@ -53,3 +53,17 @@ class Serialization(unittest.TestCase):
                 A.bold[A.blink['Hello', -A.bold[' world'], '.']],
                 self.attrs),
             '\x1b[1;5mHello\x1b[0;5m world\x1b[1;5m.')
+
+    def testForeground(self):
+        self.assertEquals(
+            text.flatten(
+                A.normal[A.fg.red['Hello, '], A.fg.green['world!']],
+                self.attrs),
+            '\x1b[31mHello, \x1b[32mworld!')
+
+    def testBackground(self):
+        self.assertEquals(
+            text.flatten(
+                A.normal[A.bg.red['Hello, '], A.bg.green['world!']],
+                self.attrs),
+            '\x1b[41mHello, \x1b[42mworld!')
