@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import os, sys, shutil, time, string
 
-
 def cmd(st):
     c = os.path.join(twistedBinDir,'') + st
     print "Running Command: %s" % repr(c)
@@ -189,46 +188,49 @@ def runMailTest():
     message("Starting mail test. ",
             "Output should be one email (postmaster@foo.bar) ",
             "and one bounce (postmaster@no.such.domain).",)
-    if os.path.exists('dump'):
-        scmd('rm -rf dump')
-    os.mkdir("dump")
-    if os.path.exists('dump2'):
-        scmd('rm -rf dump2')
-    os.mkdir("dump2")
+    for p in 'dump', 'dump2':
+        os.path.exists(p) and scmd('rm -rf %s' % p)
+        os.mkdir(p)
     cmd("mktap mail --domain foo.bar=dump --user postmaster=postmaster "
         " --pop3 18110")
     cmd("mktap --append mail.tap mail --relay 127.0.0.1,8025=dump2"
          "      --smtp 18026 --pop3 18111")
     twistdf("mail")
-    import smtplib, poplib
-    s = smtplib.SMTP('127.0.0.1', 18026)
-    s.sendmail("m@moshez.org", ['postmaster@foo.bar'], '''\
+    try:
+        time.sleep(1.0)
+        import smtplib, poplib
+        s = smtplib.SMTP('127.0.0.1', 18026)
+        s.sendmail("m@moshez.org", ['postmaster@foo.bar'], '''\
 Subject: How are you gentlemen?
 
 All your base are belong to us
 ''')
-    s.quit()
-    time.sleep(5)
-    p = poplib.POP3('127.0.0.1', 18110)
-    p.apop('postmaster@foo.bar', 'postmaster')
-    print string.join(p.retr(1)[1], '\n')
-    p.dele(1)
-    p.quit()
+        s.quit()
+        time.sleep(5)
+        p = poplib.POP3('127.0.0.1', 18110)
+        p.apop('postmaster@foo.bar', 'postmaster')
+        s = p.retr(1)
+        print s
+        print string.join(s[1], '\n')
+        p.dele(1)
+        p.quit()
 
-    s = smtplib.SMTP('127.0.0.1', 18026)
-    s.sendmail("postmaster@foo.bar", ['moshez@no.such.domain'], '''\
+        s = smtplib.SMTP('127.0.0.1', 18026)
+        s.sendmail("postmaster@foo.bar", ['moshez@no.such.domain'], '''\
 Subject: How are you ladies?
 
 All your dependents are belong to us
 ''')
-    s.quit()
-    time.sleep(10)
-    p = poplib.POP3('127.0.0.1', 18110)
-    p.apop('postmaster@foo.bar', 'postmaster')
-    print string.join(p.retr(1)[1], '\n')
-    p.dele(1)
-    p.quit()
-    killit()
+        s.quit()
+        time.sleep(10)
+        p = poplib.POP3('127.0.0.1', 18110)
+        p._debugging = 2
+        p.apop('postmaster@foo.bar', 'postmaster')
+        print string.join(p.retr(1)[1], '\n')
+        p.dele(1)
+        p.quit()
+    finally:
+        killit()
 
 
 def runAllTests():
@@ -251,21 +253,25 @@ def runAllTests():
 twistedBinDir = os.path.join(os.path.dirname(sys.argv[0]), '..', 'bin')
 examplesDir = twistedBinDir+'/../doc/examples'
 
-try:
-    block = sys.argv[1] == "-b"
-except IndexError:
-    block = None
-try:
-    webbrowser = os.environ['WEBBROWSER']
-    username = os.environ['USER']
-    ircclient = os.environ['IRCCLIENT']
-except KeyError:
-    message("Required Environment Variables:",
-            "  * WEBBROWSER: a command which will run a web browser.",
-            "                (If this doesn't block until the window is closed,",
-            "                 pass '-b' as an argument to the script.)",
-            "  * IRCCLIENT: an IRC client in the style of ircii (use -b in the",
-            "               same situation as above)",
-            "  * USER: your UNIX username.")
-else:
-    runAllTests()
+def main():
+    try:
+        block = sys.argv[1] == "-b"
+    except IndexError:
+        block = None
+    try:
+        webbrowser = os.environ['WEBBROWSER']
+        username = os.environ['USER']
+        ircclient = os.environ['IRCCLIENT']
+    except KeyError:
+        message("Required Environment Variables:",
+                "  * WEBBROWSER: a command which will run a web browser.",
+                "                (If this doesn't block until the window is closed,",
+                "                 pass '-b' as an argument to the script.)",
+                "  * IRCCLIENT: an IRC client in the style of ircii (use -b in the",
+                "               same situation as above)",
+                "  * USER: your UNIX username.")
+    else:
+        runAllTests()
+
+if __name__ == '__main__':
+    main()
