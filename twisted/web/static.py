@@ -103,7 +103,7 @@ class Registry(components.Componentized):
             if isinstance(s, sclas):
                 return s
             if components.implements(s, IServiceCollection):
-                ss = self._grabService(s)
+                ss = self._grabService(s, sclas)
                 if ss:
                     return ss
 
@@ -317,6 +317,10 @@ class File(resource.Resource, styles.Versioned):
         f.indexNames = self.indexNames[:]
         return f
 
+    def openForReading(self):
+        """Open a file and return it."""
+        return open(self.path,'rb')
+    
     def render(self, request):
         """You know what you doing."""
 
@@ -347,7 +351,7 @@ class File(resource.Resource, styles.Versioned):
             request.setHeader('content-encoding', self.encoding)
 
         try:
-            f = open(self.path,'rb')
+            f = self.openForReading()
         except IOError, e:
             import errno
             if e[0] == errno.EACCES:
@@ -437,7 +441,8 @@ class File(resource.Resource, styles.Versioned):
         fl.close()
 
     def createSimilarFile(self, path):
-        return File(path, self.defaultType, self.allowExt, self.registry)
+        return self.__class__(path, self.defaultType, self.allowExt, self.registry)
+
 
 class DirectoryListing(widgets.StreamWidget):
     def __init__(self, pathname):
