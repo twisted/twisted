@@ -60,28 +60,31 @@ class DropIn:
 
 def getPlugIns(plugInType, debugInspection=0, showProgress=0):
     loaded = {}
-    dirs = sys.path
-    import twisted
     result = []
-    plugindirs = []
     if showProgress:
         sys.stdout.write(' Loading: [')
         sys.stdout.flush()
-    for d in dirs:
+    for d in sys.path:
         d = os.path.abspath(d)
         if loaded.has_key(d):
+            if debugInspection:
+                print 'already saw', d
             continue
         else:
+            if debugInspection:
+                print 'looking at', d
             loaded[d] = 1
         if os.path.isdir(d):
             for plugindir in os.listdir(d):
+                plugindir = os.path.join(d, plugindir)
                 if os.path.isdir(plugindir):
-                    plugindir = os.path.join(d, plugindir)
                     if showProgress:
                         sys.stdout.write('-')
                         sys.stdout.flush()
                     tmlname = os.path.join(plugindir, "plugins.tml")
                     pname = os.path.split(os.path.abspath(plugindir))[-1]
+                    if debugInspection:
+                        print tmlname
                     if os.path.exists(tmlname):
                         dropin = DropIn(pname)
                         ns = {'register': dropin.register}
@@ -94,6 +97,9 @@ def getPlugIns(plugInType, debugInspection=0, showProgress=0):
                                 result.append(plugin)
                         if debugInspection:
                             print "Successfully loaded %s!" % plugindir
+        else:
+            if debugInspection:
+                print 'sys.path entry not a directory', d
         if showProgress:
             sys.stdout.write('.')
             sys.stdout.flush()
@@ -101,3 +107,4 @@ def getPlugIns(plugInType, debugInspection=0, showProgress=0):
         sys.stdout.write(' ]\n')
         sys.stdout.flush()
     return result
+ 
