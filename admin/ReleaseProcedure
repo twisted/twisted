@@ -1,22 +1,42 @@
 TEST, TEST.
  
  * run the unit tests.
- * run the accepttests (I use "WEBBROWSER='galeon -n' IRCCLIENT=epic4 admin/accepttests -b")
+ * run the accepttests. I use:
+WEBBROWSER='galeon -n' IRCCLIENT=epic4 admin/accepttests -b
  * make sure distributed web servers are working; test on zaibach.
-     * run a --user server on port 3080 ('mktap web --user -p 3080; twistd -f web.tap')
-     * check http://twistedmatrix.com:3080/jh.twistd/python/moin.cgi/, carmstro.twistd, z3p.twistd; if distributed
-       web *wasn't* supposed to break this release, scream at twisted.web hackers :-)
-     * start a new --personal server from the latest codebase, make sure it's working (yes, 
-       we've actually had a release once where a newer --user worked with older --personals but *not*
-       new --personals, and I never tested new --personals!)
-     * Run the test.tas from Twisted/admin/ with the latest `twistd'; this tests upgrading code.
-     * Run "./bin/twistd -y admin/echo.py": this tests -y
+     * run a --user server on port 3080 
+./bin/mktap web --user -p 3080; ./bintwistd -f web.tap
+     * check http://twistedmatrix.com:3080/jh.twistd/python/moin.cgi/, carmstro.twistd, z3p.twistd; if distributed web *wasn't* supposed to break this 
+       release, scream at twisted.web hackers :-)
+     * kill the server:
+kill `cat twistd.pid`
+     * start a new --personal server from the latest codebase:
+       (make sure it's working -- we've actually had a release once where a 
+        newer --user worked with older --personals but *not*
+        new --personals, and I never tested new --personals!)
+       * kill your regular personal server
+       * Run:
+./bin/mktap --personal web;./bin/twistd -f web.tap
+       * check http://twistedmatrix.com/<you>.twistd/
+       * kill it:
+kill `cat twistd.pid`
+       * Restart your regular personal server
+     * Run the test.tas from Twisted/admin/ with the latest `twistd':
+./bin/twistd -s admin/test.tas
+       and check http://localhost:3080/ - this tests upgrading code.
+       * kill it:
+kill `cat twistd.pid`
+     * Test -y: 
+./bin/twistd -y admin/echo.py
+       * kill it:
+kill `cat twistd.pid`
+
  * Also make sure that the words .tap remained compatible; start the words server's .tap on some out-of-the-way port
        (same as above, I've gotta automate this)
 
  * OK, so everything's working, time to update release documents
- * README: add a new Quote of the Release, update all mentions of last version number (use your editors
-   search function, there are several of them)
+ * README: add a new Quote of the Release, update all mentions of last version 
+   number (use your editor's search function, there are several of them)
  * doc/howto/installing-twisted
  * ChangeLog: Browse through twisted-commits; if you see any updates that are
    significant but weren't mentioned in ChangeLog, retroactively add them
@@ -38,13 +58,17 @@ TEST, TEST.
 
  * Alright, we're ready to pack it up!
  * from one directory above "Twisted" CVS module, run './Twisted/admin/release-twisted -v <version>'
-   * note that <version> must match the version number in twisted/copyright.py; I made
-     the mistake of forgetting to update copyright once and this will prevent that :-)
- * There are a number of options available for 'release-twisted', use them if desired
+   * note that <version> must match the version number in 
+     twisted/copyright.py; I made the mistake of forgetting to update 
+     copyright once and this will prevent that :-)
+   * There are a number of options available for 'release-twisted', use them 
+     if desired
 
- * run 'md5sums ~/Releases/Twisted*', and 'gpg --clearsign' the output. update /products/download/md5sums.txt on the website.
+ * run 'md5sums ~/Releases/Twisted*', and 'gpg --clearsign' the output. update 
+   /products/download/md5sums.txt on the website.
 
  * Time to deploy!
+   ---- This part is sorely out of date -- document the new Debian way --
  * su root
    * cd /twised/Releases; mv *<oldversion>* old/; cp -a ~<myuser>/Releases/*<newversion>* .
    * cd /twisted/; tar xzvf Twisted-<version>.tar.gz; mv Twisted Twisted.old; mv Twisted-<version> Twisted
