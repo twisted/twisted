@@ -2,6 +2,8 @@
 
 	* .: Releasing Twisted 1.0.6rc1.
 
+	* .: Releasing Twisted 1.0.6rc2. Pop3 had failing tests.
+
 2003-06-26  Clark C. Evans  <cce@twistedmatrix.com>
 
 	* twisted/flow/*.py: Moved Flow from the sandbox to
