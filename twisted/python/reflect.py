@@ -556,7 +556,7 @@ def accumulateClassDict(classObj, attr, adict, baseClass=None):
     for base in classObj.__bases__:
         accumulateClassDict(base, attr, adict)
     if baseClass is None or baseClass in classObj.__bases__:
-        adict.update(getattr(classObj, attr, {}))
+        adict.update(classObj.__dict__.get(attr, {}))
 
 
 def accumulateClassList(classObj, attr, listObj, baseClass=None):
@@ -567,7 +567,7 @@ def accumulateClassList(classObj, attr, listObj, baseClass=None):
     for base in classObj.__bases__:
         accumulateClassList(base, attr, listObj)
     if baseClass is None or baseClass in classObj.__bases__:
-        listObj.extend(getattr(classObj, attr, []))
+        listObj.extend(classObj.__dict__.get(attr, []))
 
 
 def isSame(a, b):
