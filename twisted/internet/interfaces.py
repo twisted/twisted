@@ -26,7 +26,7 @@ class IReactorTCP(Interface):
         Connects a given protocol factory to the given numeric TCP/IP port.
         """
 
-    def clientTCP(self, host, port, factory, timeout=30):
+    def clientTCP(self, host, port, protocol, timeout=30):
         """Connect a TCP client.
 
         Arguments:
@@ -35,7 +35,7 @@ class IReactorTCP(Interface):
 
           * port: a port number
 
-          * factory: a twisted.internet.protocol.Factory
+          * protocol: a twisted.internet.protocol.Protocol instance
 
           * timeout: amount of time to wait before assuming the connection has
             failed.
@@ -57,7 +57,7 @@ class IReactorSSL(Interface):
 class IReactorUNIX(Interface):
     """UNIX socket methods.
     """
-    def clientUNIX(address, protocol):
+    def clientUNIX(address, protocol, timeout=30):
         """Connect a client Protocol to a UNIX socket.
         """
 
@@ -221,6 +221,28 @@ class IReactorCore(Interface):
         Arguments:
 
           * triggerID: a value returned from addSystemEventTrigger.
+        """
+
+class IListeningPort(Interface):
+    """A listening port.
+    """
+
+    def startListening(self):
+        """Start listening on this port.
+        """
+
+    def stopListening(self):
+        """Stop listening on this port.
+        """
+
+    def getHost(self):
+        """Get the host that this port is listening for.
+
+        Returns:
+
+          a tuple of (proto_type, ...), where proto_type will be a string such
+          as 'INET', 'SSL', 'UNIX'.  The rest of the tuple will be identifying
+          information about the port.
         """
 
 class IConsumer(Interface):
