@@ -35,7 +35,7 @@ AWAY = 2
 
 statuses = ["Offline","Online","Away"]
 
-class WordsError(pb.Error):
+class WordsError(pb.Error, KeyError):
     pass
 
 class NotInCollectionError(WordsError):
@@ -165,7 +165,7 @@ class Transcript:
 class IWordsPolicy(components.Interface):
     def getNameFor(self, participant):
         """Give a name for a participant, based on the current policy."""
-    def lookupParticipant(self, nick):
+    def lookUpParticipant(self, nick):
         """ Get a Participant, given a name."""
 
 class NormalPolicy:
@@ -470,6 +470,12 @@ class Service(pb.Service, styles.Versioned):
         log.msg("Creating New Participant: %s" % name)
         return pb.Service.createPerspective(self, name)
 
+    def getPerspectiveNamed(self, name):
+        try:
+            return pb.Service.getPerspectiveNamed(self, name)
+        except KeyError:
+            raise UserNonexistantError(name)
+
     def addBot(self, name, bot):
         p = self.createPerspective(name)
         bot.setupBot(p) # XXX this method needs a better name
@@ -480,7 +486,7 @@ class Service(pb.Service, styles.Versioned):
     def deleteBot(self, bot):
         bot.voice.detached(bot, None)
         self.bots.remove(bot)
-        del self.perspectives[bot]
+        del self.perspectives[bot.voice.perspectiveName]
 
     createParticipant = createPerspective
 
