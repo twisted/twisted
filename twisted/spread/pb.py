@@ -67,7 +67,7 @@ applied when serializing arguments.
 @author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
 
-__version__ = "$Revision: 1.148 $"[11:-2]
+__version__ = "$Revision: 1.149 $"[11:-2]
 
 
 # System Imports
@@ -450,6 +450,8 @@ class CopyableFailure(failure.Failure, Copyable):
     L{twisted.python.failure.Failure} for serialization.
     """
 
+    unsafeTracebacks = 0
+
     def getStateToCopy(self):
         #state = self.__getstate__()
         state = self.__dict__.copy()
@@ -457,13 +459,16 @@ class CopyableFailure(failure.Failure, Copyable):
         state['frames'] = []
         state['stack'] = []
         if isinstance(self.value, failure.Failure):
-            state['value'] = failure2Copyable(self.value)
+            state['value'] = failure2Copyable(self.value, self.unsafeTracebacks)
         else:
             state['value'] = str(self.value) # Exception instance
         state['type'] = str(self.type) # Exception class
-        io = StringIO.StringIO()
-        self.printTraceback(io)
-        state['traceback'] = io.getvalue()
+        if self.unsafeTracebacks:
+            io = StringIO.StringIO()
+            self.printTraceback(io)
+            state['traceback'] = io.getvalue()
+        else:
+            state['traceback'] = 'Traceback unavailable\n'
         return state
 
 class CopiedFailure(RemoteCopy, failure.Failure):
@@ -477,8 +482,9 @@ class CopiedFailure(RemoteCopy, failure.Failure):
 
 setUnjellyableForClass(CopyableFailure, CopiedFailure)
 
-def failure2Copyable(fail):
+def failure2Copyable(fail, unsafeTracebacks=0):
     f = CopyableFailure()
+    f.unsafeTracebacks = unsafeTracebacks
     f.__dict__ = fail.__dict__
     return f
 
@@ -932,7 +938,9 @@ class Broker(banana.Banana):
         """(internal) Send an error for a previously sent message.
         """
         if not isinstance(fail, CopyableFailure) and isinstance(fail, failure.Failure):
-            fail = failure2Copyable(fail)
+            fail = failure2Copyable(fail, self.factory.unsafeTracebacks)
+        if isinstance(fail, CopyableFailure):
+            fail.unsafeTracebacks = self.factory.unsafeTracebacks
         self.sendCall("error", requestID, self.serialize(fail))
 
     def proto_error(self, requestID, fail):
@@ -1013,6 +1021,7 @@ class BrokerFactory(protocol.Factory, styles.Versioned):
     I am a server for object brokerage.
     """
 
+    unsafeTracebacks = 0
     persistenceVersion = 3
 
     def __init__(self, objectToBroker):
@@ -1200,7 +1209,8 @@ class _ObjectRetrieval:
 
 class BrokerClientFactory(protocol.ClientFactory):
     noisy = 0
-
+    unsafeTracebacks = 0
+    
     def __init__(self, protocol):
         warnings.warn("This is deprecated. Use PBClientFactory.", DeprecationWarning, 2)
         if not isinstance(protocol,Broker): raise TypeError, "protocol is not an instance of Broker"
@@ -1506,6 +1516,7 @@ class PBClientFactory(protocol.ClientFactory):
     """
 
     protocol = Broker
+    unsafeTracebacks = 0
     
     def __init__(self):
         self._reset()
@@ -1623,6 +1634,8 @@ class PBServerFactory(protocol.ServerFactory):
     server.
     """
 
+    unsafeTracebacks = 0
+    
     def __init__(self, root):
         self.root = IPBRoot(root)
 

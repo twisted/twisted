@@ -17,8 +17,8 @@
 from twisted.trial import unittest
 
 from twisted.spread import pb
-from twisted.internet import reactor
-from twisted.python import log
+from twisted.internet import reactor, defer
+from twisted.python import log, failure
 
 ##
 # test exceptions
@@ -33,24 +33,30 @@ class TimeoutError(Exception): pass
 ####
 class SimpleRoot(pb.Root):
     def remote_poop(self):
-        raise PoopError("Someone threw poopie at me!")
+        return defer.fail(failure.Failure(PoopError("Someone threw poopie at me!")))
     def remote_fail(self):
         raise FailError("I'm a complete failure! :(")
     def remote_die(self):
         raise DieError("*gack*")
 
+
 class PBFailureTest(unittest.TestCase):
 
-    def __init__(self):
-        self.total = 0
-
+    compare = unittest.TestCase.assertEquals
+    unsafeTracebacks = 0
+    
+    def setUp(self):
+        self.results = [42000, 4200, 420, 42]
+        
     def testPBFailures(self):
-        p = reactor.listenTCP(0, pb.PBServerFactory(SimpleRoot()), interface="127.0.0.1")
+        factory = pb.PBServerFactory(SimpleRoot())
+        factory.unsafeTracebacks = self.unsafeTracebacks
+        p = reactor.listenTCP(0, factory, interface="127.0.0.1")
         self.port = p.getHost()[2]
         self.runClient()
         reactor.run()
         p.stopListening()
-        log.flushErrors(PoopError, FailError, DieError)
+        log.flushErrors(PoopError, FailError, DieError, AttributeError)
 
     def runClient(self):
         f = pb.PBClientFactory()
@@ -59,7 +65,7 @@ class PBFailureTest(unittest.TestCase):
         self.id = reactor.callLater(10, self.timeOut)
 
     def a(self, d):
-        for m in (self.failurePoop, self.failureFail, self.failureDie, lambda: None):
+        for m in (self.failurePoop, self.failureFail, self.failureDie, self.failureNoSuch, lambda x: x):
             d.addCallbacks(self.success, m)
 
     def stopReactor(self):
@@ -74,6 +80,7 @@ class PBFailureTest(unittest.TestCase):
         self.a(persp.callRemote('poop'))
         self.a(persp.callRemote('fail'))
         self.a(persp.callRemote('die'))
+        self.a(persp.callRemote("nosuch"))
 
     def notConnected(self, fail):
         self.stopReactor()
@@ -81,23 +88,39 @@ class PBFailureTest(unittest.TestCase):
                        ", because I couldn't connect to myself.")
 
     def success(self, result):
-        if result in [42, 420, 4200]:
-            self.total = self.total + 1
-        if self.total == 3:
+        if result == self.results[-1]:
+            self.results.pop()
+        if not self.results:
             self.stopReactor()
 
     def failurePoop(self, fail):
         fail.trap(PoopError)
+        self.compare(fail.traceback, "Traceback unavailable\n")
         return 42
 
     def failureFail(self, fail):
         fail.trap(FailError)
+        self.compare(fail.traceback, "Traceback unavailable\n")
         return 420
 
     def failureDie(self, fail):
         fail.trap(DieError)
+        self.compare(fail.traceback, "Traceback unavailable\n")
         return 4200
 
+    def failureNoSuch(self, fail):
+        # XXX maybe PB shouldn't send AttributeErrors? and make generic exception
+        # for no such method?
+        fail.trap(AttributeError)
+        self.compare(fail.traceback, "Traceback unavailable\n")
+        return 42000
+        
     def timeOut(self):
         reactor.crash()
         raise TimeoutError("Never got all three failures!")
+
+
+class PBFailureTestUnsafe(PBFailureTest):
+
+    compare = unittest.TestCase.failIfEquals
+    unsafeTracebacks = 1

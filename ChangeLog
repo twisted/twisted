@@ -1,3 +1,9 @@
+2003-10-12  Itamar Shtull-Trauring  <itamar@sheriffpony>
+
+	* twisted/spread/pb.py: Perspective Broker no longer sends
+	detailed tracebacks over the wire unless the "unsafeTracebacks"
+	attribute is set of the factory.
+
 2003-10-02  Jp Calderone  <exarkun@twistedmatrix.com>
 
 	* setup.py, twisted/test/test_dir.py, twisted/python/_c_dir.c:
