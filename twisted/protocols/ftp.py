@@ -69,7 +69,7 @@ from math import floor
 from twisted.internet import abstract, reactor, protocol
 from twisted.internet.interfaces import IProducer
 from twisted.protocols import basic
-from twisted.internet.protocol import ServerFactory, Protocol
+from twisted.internet.protocol import ClientFactory, ServerFactory, Protocol
 from twisted import internet
 from twisted.internet.defer import Deferred, DeferredList, FAILURE
 from twisted.python.failure import Failure
@@ -830,7 +830,13 @@ class FTPClient(basic.LineReceiver):
                 host = "%s.%s.%s.%s" % (a, b, c, d)
                 port = int(e)*256 + int(f)
 
-                mutable[0] = reactor.clientTCP(host, port, protocol, 30.0)
+                class _Factory(ClientFactory):
+                    def buildProtocol(self, ignored):
+                        self.protocol.factory = self
+                        return self.protocol
+                f = _Factory()
+                f.protocol = protocol
+                mutable[0] = reactor.connectTCP(host, port, f)
 
             pasvCmd = FTPCommand('PASV')
             self.queueCommand(pasvCmd)
@@ -838,8 +844,13 @@ class FTPClient(basic.LineReceiver):
 
             cmd = FTPCommand(command)
             # Ensure the connection is always closed
-            cmd.deferred.addBoth(lambda x, m=_mutable: 
-                                    m[0].loseConnection() or x)
+            def alwaysDisconnect(connector):
+                if connector.state == 'connecting':
+                    connector.stopConnecting()
+                elif connector.state == 'connected':
+                    connector.transport.loseConnection()
+            cmd.deferred.addBoth(lambda x, m=_mutable, a=alwaysDisconnect: 
+                                    a(m[0]) or x)
 
             d = DeferredList([cmd.deferred, protocol.deferred],
                              fireOnOneErrback=1)
