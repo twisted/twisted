@@ -703,9 +703,6 @@ class IContact(Interface):
     """A user of a registrar or proxy"""
 
 
-class IContact(Interface):
-    """A user of a registrar or proxy"""
-
 class IRegistry(Interface):
     """Allows registration of logical->physical URL mapping."""
 
