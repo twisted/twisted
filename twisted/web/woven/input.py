@@ -49,8 +49,9 @@ class InputHandler(controller.Controller):
     """
     invalidErrorText = "Error!"
     setupStacks = 0
-    def __init__(self, model, 
+    def __init__(self, model=None, 
                 parent=None, 
+                name=None,
                 check=None, 
                 commit = None, 
                 invalidErrorText = None, 
@@ -65,6 +66,8 @@ class InputHandler(controller.Controller):
             self.invalidErrorText = invalidErrorText
         if submodel is not None:
             self.submodel = submodel
+        if name is not None:
+            self.submodel = name
 
     def initialize(self):
         pass
