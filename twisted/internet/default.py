@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.48 2002/11/15 14:56:17 spiv Exp $
+# $Id: default.py,v 1.49 2002/11/17 04:15:20 itamarst Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -32,7 +32,7 @@ import sys
 
 from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorUNIX
 from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorSSL
-from twisted.internet.interfaces import IReactorProcess, IReactorFDSet
+from twisted.internet.interfaces import IReactorProcess, IReactorFDSet, IReactorMulticast
 from twisted.internet import main, error, protocol, interfaces
 from twisted.internet import tcp, udp, task, defer
 
@@ -189,7 +189,7 @@ class PosixReactorBase(ReactorBase):
     """A basis for reactors that use file descriptors.
     """
     __implements__ = (ReactorBase.__implements__, IReactorUNIX,
-                      IReactorTCP, IReactorUDP) # IReactorProcess
+                      IReactorTCP, IReactorUDP, IReactorMulticast) # IReactorProcess
 
     if sslEnabled:
         __implements__ = __implements__ + (IReactorSSL,)
@@ -290,6 +290,30 @@ class PosixReactorBase(ReactorBase):
         EXPERIMENTAL.
         """
         p = udp.ConnectedPort(self, (remotehost, remoteport), localport, protocol, interface, maxPacketSize)
+        p.startListening()
+        return p
+
+
+    # IReactorMulticast
+
+    def listenMulticast(self, port, protocol, interface='', maxPacketSize=8192):
+        """Connects a given DatagramProtocol to the given numeric UDP port.
+
+        @return object conforming to IListeningPort.
+
+        EXPERIMENTAL.
+        """
+        p = udp.MulticastPort(self, port, protocol, interface, maxPacketSize)
+        p.startListening()
+        return p
+
+    def connectMulticast(self, remotehost, remoteport, protocol, localport=0,
+                         interface='', maxPacketSize=8192):
+        """Connects a ConnectedDatagramProtocol instance to a UDP port.
+
+        EXPERIMENTAL.
+        """
+        p = udp.ConnectedMulticastPort(self, (remotehost, remoteport), localport, protocol, interface, maxPacketSize)
         p.startListening()
         return p
 

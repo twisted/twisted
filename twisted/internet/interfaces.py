@@ -164,6 +164,25 @@ class IReactorUDP(Interface):
         """
 
 
+class IReactorMulticast(Interface):
+    """UDP socket methods that support multicast.
+
+    IMPORTANT: This is an experimental new interface. It may change
+    without backwards compatability. Suggestions are welcome.
+    """
+    
+    def listenMulticast(self, port, protocol, interface='', maxPacketSize=8192):
+        """Connects a given DatagramProtocol to the given numeric UDP port.
+
+        @return object conforming to IListeningPort.
+        """
+
+    def connectMulticast(self, remotehost, remoteport, protocol, localport=0,
+                         interface='', maxPacketSize=8192):
+        """Connects a ConnectedDatagramProtocol instance to a UDP port.
+        """
+
+
 class IReactorProcess(Interface):
 
     def spawnProcess(self, processProtocol, executable, args=(), env={}, path=None, uid=None, gid=None, usePTY=0):
@@ -619,3 +638,61 @@ class IProcessTransport(ITransport):
 class IServiceCollection(Interface):
     """An object which provides access to a collection of services."""
     pass
+
+
+class IUDPTransport(Interface):
+    """Transport for UDP PacketProtocols."""
+
+    def write(self, packet, (host, port)):
+        """Write packet to given address.
+
+        Might raise error.ConnectionRefusedError.
+        """
+
+    def getHost(self):
+        """Return ('INET_UDP', interface, port) we are listening on."""
+
+
+class IUDPConnectedTransport(Interface):
+    """Transport for UDP ConnectedPacketProtocols."""
+
+    def write(self, packet):
+        """Write packet to address we are connected to.
+
+        Might raise error.ConnectionRefusedError.
+        """
+
+    def getHost(self):
+        """Return ('INET_UDP', interface, port) we are listening on."""
+
+
+class IMulticastTransport(Interface):
+    """Additional functionality for multicast UDP."""
+
+    def getOutgoingInterface(self):
+        """Return interface of outgoing multicast packets."""
+    
+    def setOutgoingInterface(self, addr):
+        """Set interface for outgoing multicast packets.
+
+        Returns Deferred of success.
+        """
+    
+    def getLoopbackMode(self):
+        """Return if loopback mode is enabled."""
+    
+    def setLoopbackMode(self, mode):
+        """Set if loopback mode is enabled."""
+
+    def getTTL(self):
+        """Get time to live for multicast packets."""
+    
+    def setTTL(self, ttl):
+        """Set time to live on multicast packets."""
+
+    def joinGroup(self, addr, interface=""):
+        """Join a multicast group. Returns Deferred of success."""
+    
+    def leaveGroup(self, addr, interface=""):
+        """Leave multicast group, return Deferred of success."""
+

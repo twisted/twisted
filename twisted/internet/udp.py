@@ -1,4 +1,3 @@
-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -17,6 +16,8 @@
 
 """Various asynchronous UDP classes.
 
+Please do not use this module directly.
+
 API Stability: unstable
 
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
@@ -25,6 +26,8 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 # System Imports
 import os
 import socket
+import operator
+import struct
 
 if os.name == 'nt':
     EWOULDBLOCK = 10035
@@ -37,12 +40,14 @@ from twisted.persisted import styles
 from twisted.python import log, reflect
 
 # Sibling Imports
-import abstract, main, error
+import abstract, main, error, interfaces
 
 
 class Port(abstract.FileDescriptor):
     """UDP port, listening for packets."""
 
+    __implements__ = abstract.FileDescriptor.__implements__, interfaces.IUDPTransport
+    
     def __init__(self, reactor, port, protocol, interface='', maxPacketSize=8192):
         """Initialize with a numeric port to listen on.
         """
@@ -174,6 +179,8 @@ class Port(abstract.FileDescriptor):
 class ConnectedPort(Port):
     """A connected UDP socket."""
 
+    __implements__ = abstract.FileDescriptor.__implements__, interfaces.IUDPConnectedTransport
+        
     def __init__(self, reactor, (remotehost, remoteport), port, protocol, interface='', maxPacketSize=8192):
         Port.__init__(self, reactor, port, protocol, interface, maxPacketSize)
         self.remotehost = remotehost
@@ -228,3 +235,71 @@ class ConnectedPort(Port):
         """
         return ('INET_UDP', self.remotehost, self.remoteport)
 
+
+class MulticastMixin:
+    """Implement multicast functionality.
+
+    Initial implementation, probably needs some changes for Windows support.
+    """
+
+    def getOutgoingInterface(self):
+        i = self.socket.getsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF)
+        return socket.inet_ntoa(i)
+    
+    def setOutgoingInterface(self, addr):
+        """Returns Deferred of success."""
+        return self.reactor.resolve(addr).addCallback(self._setInterface)
+
+    def _setInterface(self, addr):
+        i = socket.inet_aton(addr)
+        self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF, i)
+        return 1
+    
+    def getLoopbackMode(self):
+        mode = self.socket.getsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP)
+        return struct.unpack("b", mode)[0]
+    
+    def setLoopbackMode(self, mode):
+        mode = struct.pack("b", operator.truth(mode))
+        self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, mode)
+
+    def getTTL(self):
+        ttl = self.socket.getsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL)
+        return struct.unpack("b", ttl)[0]
+    
+    def setTTL(self, ttl):
+        ttl = struct.pack("b", ttl)
+        self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, ttl)
+
+    def joinGroup(self, addr, interface=""):
+        """Join a multicast group. Returns Deferred of success."""
+        return self.reactor.resolve(addr).addCallback(self._joinAddr1, interface, 1)
+
+    def _joinAddr1(self, addr, interface, join):
+        return self.reactor.resolve(interface).addCallback(self._joinAddr2, addr, join)
+
+    def _joinAddr2(self, interface, addr, join):
+        addr = socket.inet_aton(addr)
+        interface = socket.inet_aton(interface)
+        if join:
+            cmd = socket.IP_ADD_MEMBERSHIP
+        else:
+            cmd = socket.IP_DROP_MEMBERSHIP
+        self.socket.setsockopt(socket.IPPROTO_IP, cmd, addr + interface)
+        return 1
+    
+    def leaveGroup(self, addr, interface=""):
+        """Leave multicast group, return Deferred of success."""
+        return self.reactor.resolve(addr).addCallback(self._joinAddr1, interface, 0)
+
+
+class MulticastPort(MulticastMixin, Port):
+    """UDP Port that supports multicasting."""
+
+    __implements__ = Port.__implements__, interfaces.IMulticastTransport
+
+
+class ConnectedMulticastPort(MulticastMixin, ConnectedPort):
+    """Connected UDP Port that supports multicasting."""
+
+    __implements__ = ConnectedPort.__implements__, interfaces.IMulticastTransport
