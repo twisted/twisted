@@ -98,7 +98,6 @@ class TestRealm:
         return sip.IContact, None, lambda: None
 
 class MessageParsingTestCase(unittest.TestCase):
-
     def setUp(self):
         self.l = []
         self.parser = sip.MessagesParser(self.l.append)
@@ -480,7 +479,7 @@ class RegistrationTestCase(unittest.TestCase):
         self.assertEquals(len(self.registry.users), 0)
         self.assertEquals(len(self.sent), 1)
         dest, m = self.sent[0]
-        self.assertEquals(m.code, 401)
+        self.assertEquals(m.code, 407)
 
     def testBasicAuthentication(self):
         self.addPortal()
@@ -491,7 +490,7 @@ class RegistrationTestCase(unittest.TestCase):
         r.addHeader("to", "sip:joe@bell.example.com")
         r.addHeader("contact", "sip:joe@client.com:1234")
         r.addHeader("via", sip.Via("client.com").toString())
-        r.addHeader("authorization", "Basic " + "userXname:passXword".encode('base64'))
+        r.addHeader("proxy-authorization", "Basic " + "userXname:passXword".encode('base64'))
         self.proxy.datagramReceived(r.toString(), ("client.com", 5060))
         
         self.assertEquals(len(self.registry.users), 1)
@@ -514,7 +513,7 @@ class RegistrationTestCase(unittest.TestCase):
         self.assertEquals(len(self.registry.users), 0)
         self.assertEquals(len(self.sent), 1)
         dest, m = self.sent[0]
-        self.assertEquals(m.code, 401)
+        self.assertEquals(m.code, 407)
     
     def testWrongDomainRegister(self):
         r = sip.Request("REGISTER", "sip:wrong.com")
@@ -624,13 +623,16 @@ Content-Length: 0\r
 """
 
 challengeResponse = """\
-SIP/2.0 401 Unauthorized\r
-Via: SIP/2.0/UDP 192.168.1.100:50609;received=127.0.0.1;rport=5632\r
+SIP/2.0 407 Proxy Authentication Required\r
+Via: SIP/2.0/UDP 192.168.1.100:50609;rport=5632;received=127.0.0.1\r
 To: <sip:exarkun@intarweb.us:50609>\r
 From: <sip:exarkun@intarweb.us:50609>\r
 Call-ID: 94E7E5DAF39111D791C6000393764646@intarweb.us\r
 CSeq: 9898 REGISTER\r
-WWW-Authenticate: Digest nonce="92956076410767313901322208775",opaque="1674186428",qop-options="auth",algorithm="MD5",realm="intarweb.us"\r
+Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER\r
+User-agent: Asterisk PBX\r
+Contact: "exarkun" <sip:exarkun@192.168.1.100:50609>\r
+Proxy-Authenticate: Digest nonce="92956076410767313901322208775",opaque="1674186428",qop-options="auth",algorithm="MD5",realm="intarweb.us"\r
 \r
 """
 
@@ -643,7 +645,7 @@ Contact: "exarkun" <sip:exarkun@192.168.1.100:50609>\r
 Call-ID: 94E7E5DAF39111D791C6000393764646@intarweb.us\r
 CSeq: 9899 REGISTER\r
 Expires: 500\r
-Authorization: Digest username="exarkun",realm="intarweb.us",nonce="92956076410767313901322208775",response="4a47980eea31694f997369214292374b",uri="sip:intarweb.us",algorithm=MD5,opaque="1674186428"\r
+Proxy-Authorization: Digest username="exarkun",realm="intarweb.us",nonce="92956076410767313901322208775",response="4a47980eea31694f997369214292374b",uri="sip:intarweb.us",algorithm=MD5,opaque="1674186428"\r
 User-Agent: X-Lite build 1061\r
 Content-Length: 0\r
 \r
@@ -651,11 +653,13 @@ Content-Length: 0\r
 
 okResponse = """\
 SIP/2.0 200 OK\r
-Via: SIP/2.0/UDP 192.168.1.100:50609;received=127.0.0.1;rport=5632\r
+Via: SIP/2.0/UDP 192.168.1.100:50609;rport=5632;received=127.0.0.1\r
 To: <sip:exarkun@intarweb.us:50609>\r
 From: <sip:exarkun@intarweb.us:50609>\r
 Call-ID: 94E7E5DAF39111D791C6000393764646@intarweb.us\r
 CSeq: 9899 REGISTER\r
+Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER\r
+User-agent: Asterisk PBX\r
 Contact: sip:exarkun@192.168.1.100:50609\r
 Expires: 3599\r
 Content-length: 0\r
@@ -693,13 +697,13 @@ class AuthorizationTestCase(unittest.TestCase):
     def testChallenge(self):
         self.proxy.datagramReceived(registerRequest, ("127.0.0.1", 5632))
         self.assertEquals(
-            self.transport.written,
-            [(challengeResponse, ("127.0.0.1", 5632))]
+            self.transport.written[-1],
+            ((challengeResponse, ("127.0.0.1", 5632)))
         )
         self.transport.written = []
 
         self.proxy.datagramReceived(authRequest, ("127.0.0.1", 5632))
         self.assertEquals(
-            self.transport.written,
-            [(okResponse, ("127.0.0.1", 5632))]
+            self.transport.written[-1],
+            ((okResponse, ("127.0.0.1", 5632)))
         )

@@ -779,7 +779,7 @@ class Proxy(Base):
 
     def handle_request(self, message, addr):
         # send immediate 100/trying message before processing
-        self.deliverResponse(self.responseFromRequest(100, message))
+        #self.deliverResponse(self.responseFromRequest(100, message))
         f = getattr(self, "handle_%s_request" % message.method, None)
         if f is None:
             f = self.handle_request_default
@@ -843,7 +843,7 @@ class Proxy(Base):
         #compatibility guesses
         response.addHeader("allow","INVITE, ACK, CANCEL, OPTIONS, BYE, REFER")
         response.addHeader("User-Agent", "Asterisk PBX") # ha ha we deceive you foolish client
-        response.addHeader("date", time.asctime())
+        #response.addHeader("date", time.asctime())
         return response
     
     def handle_response(self, message, addr):
@@ -1036,7 +1036,7 @@ class RegisterProxy(Proxy):
                 value = '%s realm="%s"' % (scheme.title(), self.host)
             else:
                 value = '%s %s,realm="%s"' % (scheme.title(), chal, self.host)
-            m.headers.setdefault('Proxy-Authenticate', []).append(value)
+            m.headers.setdefault('proxy-authenticate', []).append(value)
         self.deliverResponse(m)
 
     def login(self, message, host, port):
