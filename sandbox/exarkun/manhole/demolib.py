@@ -11,12 +11,8 @@ def makeService(args):
     class ConstructedProtocol(insults.ServerProtocol):
         handlerFactory = args['handler']
 
-    # Telnet classes
-    class ConstructedBootstrap(TelnetBootstrapProtocol):
-        protocolFactory = ConstructedProtocol
-
-    class ConstructedTelnetTransport(TelnetTransport):
-        protocolFactory = ConstructedBootstrap
+        def terminalSize(self, width, height):
+            self.handler.terminalSize(width, height)
 
     # SSH classes
     class ConstructedSessionTransport(TerminalSessionTransport):
@@ -29,7 +25,7 @@ def makeService(args):
     components.registerAdapter(ConstructedSession, TerminalUser, session.ISession)
 
     f = protocol.ServerFactory()
-    f.protocol = ConstructedTelnetTransport
+    f.protocol = lambda: TelnetTransport(TelnetBootstrapProtocol, ConstructedProtocol)
     tsvc = internet.TCPServer(args['telnet'], f)
 
     f = ConchFactory()

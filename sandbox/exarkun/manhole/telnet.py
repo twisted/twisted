@@ -6,15 +6,15 @@ from twisted.internet import protocol, interfaces as iinternet, defer
 from twisted.protocols import telnet
 from twisted.python import components, log
 
-MODE = '\x01'
+MODE = chr(1)
 EDIT = 1
 TRAPSIG = 2
 MODE_ACK = 4
 SOFT_TAB = 8
 LIT_ECHO = 16
 
-NAWS = '\x1f'
-SUPPRESS_GO_AHEAD = '\x03'
+NAWS = chr(31)
+SUPPRESS_GO_AHEAD = chr(3)
 
 # Characters gleaned from the various (and conflicting) RFCs.  Not all of these are correct.
 
@@ -134,7 +134,7 @@ class TelnetProtocol(protocol.Protocol):
     def unhandledCommand(self, command, argument):
         pass
 
-    def unhandledSubnegotiation(self, bytes):
+    def unhandledSubnegotiation(self, command, bytes):
         pass
 
     def allowEnable(self, option):
@@ -217,6 +217,11 @@ class Telnet(protocol.Protocol):
             self.dont(option)
             return d
 
+        return self._disable(option, self.dont)
+
+    def offerDisable(self, option):
+        return self._disable(option, self.wont)
+
     def requestNegotiation(self, about, bytes):
         """Send a subnegotiation request.
 
@@ -231,7 +236,6 @@ class Telnet(protocol.Protocol):
         self._write(telnet.IAC + telnet.SB + bytes + telnet.SE)
 
     def dataReceived(self, data):
-        print self.__class__.__name__, '.dataReceived', repr(data)
         # Most grossly inefficient implementation ever
         for b in data:
             if self.state == 'data':
@@ -262,16 +266,17 @@ class Telnet(protocol.Protocol):
             elif self.state == 'subnegotiation':
                 if b == IAC:
                     self.state = 'subnegotiation-escaped'
-                elif b == SE:
+                else:
+                    self.commands.append(b)
+            elif self.state == 'subnegotiation-escaped':
+                if b == SE:
                     self.state = 'data'
                     commands = self.commands
                     del self.commands
                     self.negotiate(commands)
                 else:
+                    self.state = 'subnegotiation'
                     self.commands.append(b)
-            elif self.state == 'subnegotiation-escaped':
-                self.state = 'subnegotiation'
-                self.commands.append(b)
             else:
                 raise ValueError("How'd you do this?")
 
@@ -505,10 +510,10 @@ class TelnetTransport(Telnet, ProtocolTransportMixin):
     """
 
     protocol = None
-    protocolFactory = None
 
-    def __init__(self, *a, **kw):
+    def __init__(self, protocolFactory, *a, **kw):
         Telnet.__init__(self)
+        self.protocolFactory = protocolFactory
         self.protocolArgs = a
         self.protocolKwArgs = kw
 
@@ -527,14 +532,13 @@ class TelnetTransport(Telnet, ProtocolTransportMixin):
         Telnet.disable(self, option)
         self.protocol.disable(option)
 
-    def unhandledSubnegotiation(self, bytes):
-        self.protocol.unhandledSubnegotiation(bytes)
+    def unhandledSubnegotiation(self, command, bytes):
+        self.protocol.unhandledSubnegotiation(command, bytes)
 
     def unhandledCommand(self, command, argument):
         self.protocol.unhandledCommand(command, argument)
 
     def applicationByteReceived(self, bytes):
-        print 'omg!'
         self.protocol.dataReceived(bytes)
 
     def connectionLost(self, reason):
@@ -542,19 +546,21 @@ class TelnetTransport(Telnet, ProtocolTransportMixin):
         self.protocol.connectionLost(reason)
         del self.protocol
 
-class TelnetBootstrapProtocol(protocol.Protocol, ProtocolTransportMixin):
+class TelnetBootstrapProtocol(TelnetProtocol, ProtocolTransportMixin):
     protocol = None
-    protocolFactory = None
 
-    def __init__(self, *args, **kw):
+    def __init__(self, protocolFactory, *args, **kw):
+        self.protocolFactory = protocolFactory
         self.protocolArgs = args
         self.protocolKwArgs = kw
 
     def connectionMade(self):
         self.transport.negotiationMap[NAWS] = self.telnet_NAWS
 
-        for opt in (telnet.LINEMODE, NAWS, SUPPRESS_GO_AHEAD, telnet.ECHO):
+        for opt in (telnet.LINEMODE, NAWS, SUPPRESS_GO_AHEAD):
             self.transport.requestEnable(opt).addErrback(log.err)
+
+        self.transport.write(telnet.IAC + telnet.WILL + telnet.ECHO)
 
         self.protocol = self.protocolFactory(*self.protocolArgs, **self.protocolKwArgs)
         self.protocol.makeConnection(self)
@@ -565,14 +571,20 @@ class TelnetBootstrapProtocol(protocol.Protocol, ProtocolTransportMixin):
     def enable(self, opt):
         if opt == telnet.LINEMODE:
             self.transport.requestNegotiation(telnet.LINEMODE, MODE + chr(TRAPSIG))
+        elif opt == NAWS:
+            pass
+        else:
+            print 'enabling', repr(opt)
+
+    def disable(self, opt):
+        print 'disabling', repr(opt)
 
     def telnet_NAWS(self, bytes):
         if len(bytes) == 4:
-            width, height = struct.unpack('!HH', bytes)
+            width, height = struct.unpack('!HH', ''.join(bytes))
             self.protocol.terminalSize(width, height)
         else:
             log.msg("Wrong number of NAWS bytes")
 
     def dataReceived(self, data):
-        print 'TelnetBootstrapProtocol.dataReceived', repr(data)
         self.protocol.dataReceived(data)

@@ -92,11 +92,3 @@ class Manhole(recvline.HistoricRecvLineHandler):
         if not self.proto.lastWrite.endswith('\r\n') and not self.proto.lastWrite.endswith('\x1bE'):
             self.proto.write('\r\n')
         self.proto.write(self.ps[self.pn])
-
-from twisted.application import service
-application = service.Application("Interactive Python Interpreter")
-
-from demolib import makeService
-makeService({'handler': Manhole,
-             'telnet': 6023,
-             'ssh': 6022}).setServiceParent(application)
