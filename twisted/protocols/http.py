@@ -388,8 +388,8 @@ class Request:
             self.path = urllib.unquote(self.uri)
         else:
             if len(x) != 2:
-                log.msg("May ignore parts of this invalid URI:",
-                        repr(self.uri))
+                log.msg("May ignore parts of this invalid URI: %s"
+                        % repr(self.uri))
             self.path, argstring = urllib.unquote(x[0]), x[1]
             # parse the argument string
             for kvp in argstring.split('&'):
