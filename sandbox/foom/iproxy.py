@@ -5,6 +5,7 @@ class InterfaceProxy:
     """A wrapper to put around an object that only allows access to the
     specified interfaces.
     """
+    __inInit=1
     def __init__(self, original, interfaces=None):
         self.__original=original
         attrs=[]
@@ -23,17 +24,21 @@ class InterfaceProxy:
                 else:
                     raise TypeError("Unknown kind of attribute.")
         self.__attrs=attrs
-        self.__setattr__=self.__setattr
+        self.__inInit=0
         
     def __getattr__(self, name):
         if name not in self.__attrs:
-            raise AttributeError("%s object has no attribute '%s'" %(
+            raise AttributeError("'%s' object has no attribute '%s'" %(
                 getClass(self.__original).__name__, name))
         return getattr(self.__original, name)
     
-    def __setattr(self, name, val):
+    def __setattr__(self, name, val):
+        if self.__inInit:
+            self.__dict__[name]=val
+            return
+        
         if name not in self.__attrs:
-            raise AttributeError("%s object has no attribute '%s'" %(
+            raise AttributeError("'%s' object has no attribute '%s'" %(
                 getClass(self.__original).__name__, name))
         return setattr(self.__original, name, val)
         
@@ -43,7 +48,7 @@ def _functionWrapper(original, name, signatureInfo):
     required=signatureInfo['required']
     optional=signatureInfo['optional']
     varargs=signatureInfo['varargs']
-    
+
     def _callthrough(*pos, **kw):
         argcount = len(pos)
         kwcount = len(kw)
@@ -63,7 +68,7 @@ def _functionWrapper(original, name, signatureInfo):
                     argcount))
             for k in kw:
                 if kwargs is None:
-                    if k not in optional:
+                    if k not in positional:
                         raise TypeError("%.200s() got an unexpected "
                                         "keyword argument '%.400s'" %(
                             name, k))
