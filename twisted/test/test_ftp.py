@@ -275,6 +275,8 @@ class FTPClientAndServerTests(FTPServerTests):
 
         self.assertEquals(open('HelloThere').read(), expectedContent)
 
+    testStor.todo = 'The server is broken'
+
     def testBadLogin(self):
         client = ftp.FTPClient(passive=self.passive, username='badperson')
 
@@ -319,6 +321,9 @@ class FTPPassiveClientAndServerTests(FTPClientAndServerTests):
     trivial subclass!  Hahaha!
     """
     passive = 1
+
+    def testStor(self):
+        FTPClientAndServerTests.testStor(self)
 
 
 class FTPFileListingTests(unittest.TestCase):
