@@ -132,16 +132,16 @@ class SendFileTransfer:
             return
         buffer = self.file.read(abstract.FileDescriptor.bufferSize)
         self.request.write(buffer)
-        
+
         if self.file.tell() == self.filesize:
             self.stopProducing()
-            
+                    
     def pauseProducing(self):
         pass
 
     def stopProducing(self):
-        self.request.stopConsuming()
-        self.request.finish()
+        self.request.unregisterProducer()
+        reactor.callLater(0, self.request.finish)
         self.request = None
 
 
@@ -183,10 +183,15 @@ class DTP(protocol.Protocol):
 
     def connectionLost(self):
         if (self.action == 'STOR') and (self.file):
-            self.file.close()
-            self.file = None
             self.pi.reply('fileok')
-            self.pi.queuedfile = None
+        elif self.file is not None:
+            if self.file.tell() == self.filesize:
+                self.pi.reply('fileok')
+            else:
+                self.pi.reply('getabort')
+        self.file.close()
+        self.file = None
+        self.pi.queuedfile = None
         self.action = None
         self.dtpPort.loseConnection()
 
@@ -197,16 +202,6 @@ class DTP(protocol.Protocol):
         """Disconnect, and clean up a RETR
         Called by producer when the transfer is done
         """
-        # Has _two_ checks if it is run when it is not connected; this logic
-        # should be somewhere else.
-        if self.file is not None:
-            if self.file.tell() == self.filesize:
-                self.pi.reply('fileok')
-            else:
-                self.pi.reply('getabort')
-            self.file.close()
-            self.file = None
-        self.pi.queuedfile = None # just incase
         self.transport.loseConnection()
 
     def makeRETRTransport(self):
