@@ -144,15 +144,12 @@ class Controller(resource.Resource):
         when it is done.
         """
         # Handle any inputhandlers that were passed in to the controller first
-        print "INPUTHANDLERS", self._inputhandlers
         for ih in self._inputhandlers:
             ih._parent = self
             ih.handle(request)
-        print "VALID", self._valid, self._invalid
         for key, value in self._valid.items():
             key.commit(request, None, value)
         self._valid = {}
-        print "COMMIT DONE", self.model
         return self.renderView(request, block=block)
 
     def renderView(self, request, block=0):
