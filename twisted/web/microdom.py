@@ -340,7 +340,6 @@ def _unescapeDict(d):
         dd[k] = html.unescape(v)
     return dd
 
-
 class MicroDOMParser(XMLParser):
 
     # <dash> glyph: a quick scan thru the DTD says BODY, AREA, LINK, IMG, HR,
@@ -372,6 +371,13 @@ class MicroDOMParser(XMLParser):
         self.beExtremelyLenient = beExtremelyLenient
         self.caseInsensitive = caseInsensitive
         # self.indentlevel = 0
+
+    def shouldPreserveSpace(self):
+        for edx in xrange(len(self.elementstack)):
+            el = self.elementstack[-edx]
+            if el.tagName == 'pre' or el.getAttribute("xml:space", '') == 'preserve':
+                return 1
+        return 0
 
     def _getparent(self):
         if self.elementstack:
@@ -411,11 +417,12 @@ class MicroDOMParser(XMLParser):
             self.documents.append(te)
 
     def gotText(self, data):
-        self._gotStandalone(Text, data)
-    
+        if data.strip() or self.shouldPreserveSpace():
+            self._gotStandalone(Text, data)
+
     def gotComment(self, data):
         self._gotStandalone(Comment, data)
-    
+
     def gotEntityReference(self, entityRef):
         self._gotStandalone(EntityReference, entityRef)
 

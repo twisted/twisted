@@ -34,6 +34,14 @@ class SUXTest(TestCase):
 
 
 class MicroDOMTest(TestCase):
+
+    def testEatingWhitespace(self):
+        s = """<hello>   
+        </hello>"""
+        d = microdom.parseString(s)
+        self.failUnless(not d.documentElement.hasChildNodes(),
+                        d.documentElement.childNodes)
+    
     def testTameDocument(self):
         s = """
         <test>
