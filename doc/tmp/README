@@ -1,0 +1,7 @@
+Temporary directory that is used by epyrun when rebuilding
+specific modules (as opposed to all of twisted). We need
+this so we won't overwrite the existing index.html (and friends)
+because the index.html (and friends) we generate here won't be
+correct (since we are not building all the modules). Don't blame
+me. epydoc made me do it.
+
