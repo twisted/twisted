@@ -271,7 +271,7 @@ class ISFTPServer(Interface):
         that returns the same.
         """
 
-class ISFTPFile:
+class ISFTPFile(Interface):
     """
     This represents an open file on the server.  An object adhering to this
     interface should be returned from openFile().
@@ -330,62 +330,4 @@ class ISFTPFile:
         called back when they are.
         """
 
-class ISFTPFile:
-    """
-    This represents an open file on the server.  An object adhering to this
-    interface should be returned from openFile().
-    """
-
-    def close(self):
-        """
-        Close the file.
-
-        This method returns nothing if the close succeeds immediatly, or a
-        Deferred that is called back when the close succeeds.
-        """
-
-    def readChunk(self, offset, length):
-        """
-        Read from the file.
-
-        offset is an integer that is the index to start from in the file.
-        length is the maximum length of data to return.  The actual amount
-        returned may less than this.  For normal disk files, however,
-        this should read the requested number (up to the end of the file).
-
-        If EOF is reached before any data is read, raise EOFError.
-
-        This method returns the data as a string, or a Deferred that is
-        called back with same.
-        """
-
-    def writeChunk(self, offset, data):
-        """
-        Write to the file.
-
-        offset is an integer that is the index to start from in the file.
-        data is a string that is the data to write.
-
-        This method returns when the write completes, or a Deferred that is
-        called when it completes.
-        """
-
-    def getAttrs(self):
-        """
-        Return the attributes for the file.
-
-        This method returns a dictionary in the same format as the attrs
-        argument to openFile or a Deferred that is called back with same.
-        """
-
-    def setAttrs(self, attrs):
-        """
-        Set the attributes for the file.
-
-        attrs is a dictionary in the same format as the attrs argument to
-        openFile.
-
-        This method returns when the attributes are set or a Deferred that is
-        called back when they are.
-        """
 
