@@ -74,7 +74,7 @@ def unescape(text):
 def escape(text):
     "Escape a few HTML special chars with HTML entities."
     for s, h in ESCAPE_CHARS:
-        text = text.replace(s,h)
+        text = text.replace(s, h)
     return text
 
 class MismatchedTags(Exception):
@@ -363,10 +363,10 @@ class Element(Node):
         NEVERSINGLETON = ('a', 'li', 'div', 'span', 'title')
         w = stream.write
         begin = [newl, indent, '<', self.tagName]
-        be = begin.extend
+        bext = begin.extend
         j = ''.join
         for attr, val in self.attributes.items():
-            be((' ', attr, '="', escape(val), '"'))
+            bext((' ', attr, '="', escape(val), '"'))
         w(j(begin))
         if self.childNodes or self.tagName.lower() in NEVERSINGLETON:
             w(">")
