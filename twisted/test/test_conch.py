@@ -64,11 +64,13 @@ class ConchKeysHandlingTestCase(unittest.TestCase):
         privKey = keys.getPrivateKeyObject('dsa_test')
         pubKey = keys.getPublicKeyObject('dsa_test.pub')
         self._testKey(privKey, pubKey)
+        self._testKeyFromString(privKey, pubKey, privateDSA, publicDSA)
 
     def testRSA(self):
         privKey = keys.getPrivateKeyObject('rsa_test')
         pubKey = keys.getPublicKeyObject('rsa_test.pub')
         self._testKey(privKey, pubKey)
+        self._testKeyFromString(privKey, pubKey, privateRSA, publicRSA)
 
     def _testKey(self, priv, pub):
         testData = 'this is the test data'
@@ -86,22 +88,32 @@ class ConchKeysHandlingTestCase(unittest.TestCase):
                     'verified badsign with %s' % 
                         keys.objectType(priv))
 
+    def _testKeyFromString(self, privKey, pubKey, privData, pubData):
+        keyType = keys.objectType(privKey)
+        privFS = keys.getPrivateKeyObject(data = privData)
+        pubFS = keys.getPublicKeyObject(b64data = pubData)
+        self.assert_(privFS.__dict__ == privKey.__dict__,
+                     'getting %s private key from string failed' % keyType)
+        self.assert_(pubFS.__dict__ == pubKey.__dict__,
+                     'getting %s public key from string failed' % keyType)
+
+
 
 class SSHTestBase:
 
     def connectionLost(self):
         if not hasattr(self,'expectedLoseConnection'):
             self.test.fail('unexpectedly lost connection')
-        reactor.crash()
+        self.test.reactorRunning = 0
 
     def receiveError(self, reasonCode, desc):
         self.test.fail('got disconnect: reason %s, desc: %s' %
                        (reasonCode, desc))
-        reactor.crash()
+        self.test.reactorRunning = 0
 
     def receiveUnimplemented(self, seqID):
         self.test.fail('got unimplemented: seqid %s'  % seqID)
-        reactor.crash()
+        self.test.reactorRunning = 0
 
 
 class SSHTestServer(SSHTestBase, transport.SSHServerTransport): pass
@@ -148,7 +160,9 @@ class SSHTestConnection:
 
     def serviceStarted(self):
         #self.transport.expectedLostConnection = 1
-        reactor.crash()
+        if not hasattr(self.transport, 'factory'):
+            # make the client end the connection
+            self.transport.test.reactorRunning = 0
 
 class SSHTestFactory(factory.SSHFactory):
 
@@ -203,6 +217,6 @@ class ConchTransportTest(unittest.TestCase):
         client.serverfac = fac
         reactor.listenTCP(66722, fac)
         reactor.clientTCP('localhost', 66722, client)
-        reactor.run()
-
- 
+        self.reactorRunning = 1
+        while self.reactorRunning:
+            reactor.iterate(0.1)

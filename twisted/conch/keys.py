@@ -34,71 +34,78 @@ class BadKeyError(Exception):
     XXX: we really need to check for bad keys
     """
 
-def getPublicKeyString(filename, line=0):
-    lines = open(filename).readlines()
-    data = lines[line]
+def getPublicKeyString(filename = None, line = 0, data = ''):
+    if filename:
+        lines = open(filename).readlines()
+        data = lines[line]
     fileKind, fileData, desc = data.split()
-#    if fileKind != kind:
-#        raise BadKeyError, 'key should be %s but instead is %s' % (kind, fileKind)
+    #    if fileKind != kind:
+    #        raise BadKeyError, 'key should be %s but instead is %s' % (kind, fileKind)
     return base64.decodestring(fileData)
 
-def getPublicKeyObject(filename=None, line = 0, data = ''):
-    if not filename:
+def getPublicKeyObject(filename = None, line = 0, data = '', b64data = ''):
+    # b64data is the kind of data we'd get from reading a key file
+    if data:
         publicKey = data
+    elif b64data:
+        publicKey = getPublicKeyString(data = b64data)
     else:
         publicKey = getPublicKeyString(filename, line)
     keyKind, rest = common.getNS(publicKey)
     if keyKind == 'ssh-rsa':
         e, rest = common.getMP(rest)
         n, rest = common.getMP(rest)
-        return RSA.construct((n,e))
+        return RSA.construct((n, e))
     elif keyKind == 'ssh-dss':
         p, rest = common.getMP(rest)
         q, rest = common.getMP(rest)
         g, rest = common.getMP(rest)
         y, rest = common.getMP(rest)
-        return DSA.construct((y,g,p,q))
+        return DSA.construct((y, g, p, q))
 
-def getPrivateKeyObject(filename):
-    data = open(filename).readlines()
-    kind = data[0][11:14]
+def getPrivateKeyObject(filename = None, data = ''):
+    if filename:
+        data = open(filename).readlines()
+    else:
+        data = [x+'\n' for x in data.split('\n')]
+    kind = data[0][11: 14]
     keyData = base64.decodestring(''.join(data[1:-1]))
     decodedKey = asn1.parse(keyData)
     if kind == 'RSA':
-        return RSA.construct(decodedKey[1:6])
+        return RSA.construct(decodedKey[1: 6])
     elif kind == 'DSA':
-        p,q,g,y,x = decodedKey[1:6]
-        return DSA.construct((y,g,p,q,x))
-
+        p, q, g, y, x = decodedKey[1: 6]
+        return DSA.construct((y, g, p, q, x))
+    
 def objectType(obj):
     keyDataMapping = {
-        ('n', 'e', 'd', 'p','q'):'ssh-rsa',
-        ('y', 'g', 'p', 'q', 'x'):'ssh-dss'
+    ('n', 'e', 'd', 'p', 'q'): 'ssh-rsa', 
+        ('y', 'g', 'p', 'q', 'x'): 'ssh-dss'
     }
     return keyDataMapping[tuple(obj.keydata)]
 
 def pkcs1Pad(data, lMod):
-    lenPad = lMod - 2 - len(data)
-    return '\x01' + ('\xff'*lenPad) + '\x00' + data
+    lenPad = lMod-2-len(data)
+    return '\x01'+('\xff'*lenPad)+'\x00'+data
 
 def pkcs1Digest(data, lMod):
     digest = sha.new(data).digest()
-    return pkcs1Pad(ID_SHA1 + digest, lMod)
+    return pkcs1Pad(ID_SHA1+digest, lMod)
 
 def lenSig(obj):
     return obj.size()/8
 
 def signData(obj, data):
     mapping = {
-        'ssh-rsa':signData_rsa,
-        'ssh-dss':signData_dsa
+    'ssh-rsa': signData_rsa, 
+        'ssh-dss': signData_dsa
     }
     objType = objectType(obj)
-    return common.NS(objType) + mapping[objType](obj,data)
+    return common.NS(objType)+mapping[objType](obj, data)
 
 def signData_rsa(obj, data):
     sigData = pkcs1Digest(data, lenSig(obj))
-    sig = obj.sign(sigData, '')[0] 
+    sig = obj.sign(sigData, '')[0]
     return common.NS(Util.number.long_to_bytes(sig)) # get around adding the \x00 byte
 
 def signData_dsa(obj, data):
@@ -109,9 +116,9 @@ def signData_dsa(obj, data):
 
 def verifySignature(obj, sig, data):
     mapping = {
-        'ssh-rsa':verifySignature_rsa,
-        'ssh-dss':verifySignature_dsa,
-    }
+    'ssh-rsa': verifySignature_rsa, 
+        'ssh-dss': verifySignature_dsa, 
+     }
     objType = objectType(obj)
     sigType, sigData = common.getNS(sig)
     if objType != sigType: # object and signature are not of same type
@@ -125,25 +132,25 @@ def verifySignature_rsa(obj, sig, data):
 def verifySignature_dsa(obj, sig, data):
     sig = common.getNS(sig)[0]
     l = len(sig)/2
-    sigTuple = map(Util.number.bytes_to_long, [sig[:l],sig[l:]])
+    sigTuple = map(Util.number.bytes_to_long, [sig[: l], sig[l:]])
     return obj.verify(sha.new(data).digest(), sigTuple)
 
 def printKey(obj):
-    print '%s %s (%s bits)' % (objectType(obj),
-                               obj.hasprivate() and 'Private Key' or 'Public Key',
+    print '%s %s (%s bits)'%(objectType(obj), 
+                               obj.hasprivate()and 'Private Key'or 'Public Key', 
                                obj.size())
     for k in obj.keydata:
         if hasattr(obj, k):
             print 'attr', k
-            by = common.MP(getattr(obj,k))[4:]
+            by = common.MP(getattr(obj, k))[4:]
             while by:
-                m = by[:15]
+                m = by[: 15]
                 by = by[15:]
                 o = ''
                 for c in m:
-                    o=o+'%02x:'%ord(c)
-                if len(m)<15:
-                    o=o[:-1]
+                    o = o+'%02x:'%ord(c)
+                if len(m) < 15:
+                    o = o[:-1]
                 print '\t'+o
 
 ID_SHA1 = '\x30\x21\x30\x09\x06\x05\x2b\x0e\x03\x02\x1a\x05\x00\x04\x14'

@@ -146,7 +146,12 @@ class SSHChannel:
         self.windowLeft = self.windowLeft + bytes
 
     def receiveRequest(self, requestType, data):
-        print 'got request', requestType, repr(data)
+        foo = requestType.replace('-','_')
+        f = getattr(self,'request_%s' % foo)
+        if f:
+            return f(data)
+        print 'unhandled request for', requestType
+        return 0
 
     def receiveData(self, data):
         print 'got data', repr(data)
@@ -161,39 +166,64 @@ class SSHChannel:
         print 'closed'
 
 class SSHSession(SSHChannel, protocol.Protocol): # treat us as a protocol for the sake of Process
+
     environ = {}
-    def receiveRequest(self, requestType, data):
-        if requestType == 'subsystem':
-            subsystem = common.getNS(data)[0]
-            print 'accepted subsystem', subsystem
+
+    def request_subsystem(self, data):
+        subsystem = common.getNS(data)[0]
+        f = getattr(self,'subsystem_%s' % subsystem)
+        if f:
+            self.client = f()
             return 1
-        elif requestType == 'shell':
-            shell = '/bin/sh' # fix this
-            print 'accepted shell', shell
-            ptypro.Process(shell, [shell], self.environ, '/tmp', self) # fix this too
-            return 1
-        elif requestType == 'exec':
-            print 'disabled exec'
-            return 0
-            print 'accepted exec (horribly insecure)', data[4:]
-            args = data[4:].split()
-            ptypro.Process(args[0], args, self.environ, '/tmp', self)
-            return 1
-        elif requestType == 'pty-req':
-            term, rest = common.getNS(data)
-            cols, rows, foo, bar = struct.unpack('>4L', rest[:16])
-            modes = common.getNS(rest[16:])[0]
-            self.environ['TERM'] = term
-            self.environ['ROWS'] = str(rows)
-            self.environ['COLUMNS'] = str(cols)
-            # XXX handle modes
-            print repr(modes)
-            return 1
-        else:
-            print 'got request', requestType, repr(data)
+        print 'failed to get subsystem', subsystem
+        return 0
+
+    def request_shell(self, data):
+        shell = '/bin/sh' # fix this
+        print 'accepted shell', shell
+        ptypro.Process(shell, [shell], self.environ, '/tmp', self) # fix this too
+        return 1
+
+    def request_exec(self, data):
+        print 'disabled exec'
+        return 0
+        print 'accepted exec (horribly insecure)', data[4:]
+        args = data[4:].split()
+        ptypro.Process(args[0], args, self.environ, '/tmp', self)
+        return 1
+
+    def request_pty_req(self, data):
+        term, rest = common.getNS(data)
+        cols, rows, foo, bar = struct.unpack('>4L', rest[:16])
+        modes = common.getNS(rest[16:])[0]
+        self.environ['TERM'] = term
+        self.environ['ROWS'] = str(rows)
+        self.environ['COLUMNS'] = str(cols)
+        # XXX handle modes
+        print repr(modes)
+        return 1
+
+    def subsystem_python(self):
+        # XXX hack hack hack
+        from twisted.manhole import telnet
+        pyshell = telnet.Shell()
+        pyshell.connectionMade = lambda *args: None
+        pyshell.lineBuffer = []
+        self.namespace = {
+            'session':self,
+            'connection':self.conn,
+            'transport':self.conn.transport
+        }
+        pyshell.factory = self
+        pyshell.delimiters.append('\n')
+        pyshell.mode = 'Command'
+        pyshell.makeConnection(self)
+        pyshell.loggedIn()
+        self.receiveEOF = self.loseConnection
+        return pyshell
 
     def receiveData(self, data):
-        self.transport.write(data)
+        self.client.dataReceived(data)
 
     # protocol stuff
     def dataReceived(self, data):
@@ -203,6 +233,13 @@ class SSHSession(SSHChannel, protocol.Protocol): # treat us as a protocol for th
         self.conn.sendExtendedData(self, EXTENDED_DATA_STDERR, err)
 
     def processEnded(self):
+        self.conn.sendClose(self)
+
+    # transport stuff
+    def write(self, data):
+        self.conn.sendData(self, data)
+
+    def loseConnection(self):
         self.conn.sendClose(self)
 
 MSG_GLOBAL_REQUEST                = 80

@@ -29,10 +29,8 @@ from Crypto.PublicKey import RSA
 from twisted.internet import protocol
 
 # sibling importsa
-#import keys
-from common import NS, getNS, MP, getMP, ffs
+from common import NS, getNS, MP, getMP, ffs # ease of use
 import keys
-#RSAkey = cPickle.load(open('/c/rsakey'))
 
 class SSHTransportBase(protocol.Protocol):
     protocolVersion = '2.0'
