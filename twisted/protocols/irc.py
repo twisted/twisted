@@ -42,12 +42,12 @@ Test coverage needs to be better.
 <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-__version__ = '$Revision: 1.67 $'[11:-2]
+__version__ = '$Revision: 1.68 $'[11:-2]
 
 from twisted.internet import reactor, protocol
 from twisted.persisted import styles
 from twisted.protocols import basic
-from twisted.python import log, reflect
+from twisted.python import log, reflect, text
 
 # System Imports
 
@@ -255,6 +255,8 @@ class IRCClient(basic.LineReceiver):
     lineRate = None
     _queue = None
     _queueEmptying = None
+
+    delimiter = '\n' # '\r\n' will also work (see dataReceived)
 
     __pychecker__ = 'unusednames=params,prefix,channel'
 
@@ -507,13 +509,13 @@ class IRCClient(basic.LineReceiver):
     def dccResume(self, user, fileName, port, resumePos):
         """Send a DCC RESUME request to another user."""
         self.ctcpMakeQuery(user, [
-            (DCC, ['RESUME', fileName, port, resumePos])])
+            ('DCC', ['SEND', 'RESUME', fileName, port, resumePos])])
 
     def dccAcceptResume(self, user, fileName, port, resumePos):
         """Send a DCC ACCEPT response to clients who have requested a resume.
         """
         self.ctcpMakeQuery(user, [
-            (DCC, ['ACCEPT', fileName, port, resumePos])])
+            ('DCC', ['SEND', 'ACCEPT', fileName, port, resumePos])])
 
     ### server->client messages
     ### You might want to fiddle with these,
@@ -763,6 +765,7 @@ class IRCClient(basic.LineReceiver):
         if handler:
             if self.dcc_sessions is None:
                 self.dcc_sessions = []
+            data = data[len(dcctype)+1:]
             handler(user, channel, data)
         else:
             nick = string.split(user,"!")[0]
@@ -778,12 +781,19 @@ class IRCClient(basic.LineReceiver):
         if len(data) < 3:
             raise IRCBadMessage, "malformed DCC SEND request: %r" % (data,)
 
+        dcctype = data[0].upper()
+        if dcctype in ('RESUME', 'ACCEPT'):
+            handler = getattr(self, 'dcc_SEND_' + dcctype, None)
+            data.pop()
+            handler(user, channel, data)
+            return
+
         (filename, address, port) = data[:3]
 
         address = dccParseAddress(address)
         try:
             port = int(port)
-        except VauleError:
+        except ValueError:
             raise IRCBadMessage, "Indecipherable port %r" % (port,)
 
         size = -1
@@ -796,18 +806,18 @@ class IRCClient(basic.LineReceiver):
         # XXX Should we bother passing this data?
         self.dccDoSend(user, address, port, filename, size, data)
 
-    def dcc_ACCEPT(self, user, channel, data):
+    def dcc_SEND_ACCEPT(self, user, channel, data):
         data = text.splitQuoted(data)
         if len(data) < 3:
-            raise IRCBadMessage, "malformed DCC ACCEPT request: %r" % (data,)
+            raise IRCBadMessage, "malformed DCC SEND ACCEPT request: %r" % (data,)
         (filename, port, resumePos) = data[:3]
 
         self.dccDoAcceptResume(user, filename, port, resumePos)
 
-    def dcc_RESUME(self, user, channel, data):
+    def dcc_SEND_RESUME(self, user, channel, data):
         data = text.splitQuoted(data)
         if len(data) < 3:
-            raise IRCBadMessage, "malformed DCC RESUME request: %r" % (data,)
+            raise IRCBadMessage, "malformed DCC SEND RESUME request: %r" % (data,)
         (filename, port, resumePos) = data[:3]
         self.dccDoResume(user, filename, port, resumePos)
 
@@ -946,24 +956,22 @@ class IRCClient(basic.LineReceiver):
         if self.performLogin:
             self.register(self.nickname)
 
+    def dataReceived(self, data):
+        basic.LineReceiver.dataReceived(self, data.replace('\r', ''))
 
     def lineReceived(self, line):
-        # some servers (dalnet!) break RFC and send their first few
-        # lines just delimited by \n
-        lines = string.split(line,'\n')
-        for line in lines:
-          line = lowDequote(line)
-          try:
-              prefix, command, params = parsemsg(line)
-              if numeric_to_symbolic.has_key(command):
-                  command = numeric_to_symbolic[command]
-              method = getattr(self, "irc_%s" % command, None)
-              if method is not None:
-                  method(prefix, params)
-              else:
-                  self.irc_unknown(prefix, command, params)
-          except IRCBadMessage:
-              apply(self.badMessage, (line,) + sys.exc_info())
+      line = lowDequote(line)
+      try:
+          prefix, command, params = parsemsg(line)
+          if numeric_to_symbolic.has_key(command):
+              command = numeric_to_symbolic[command]
+          method = getattr(self, "irc_%s" % command, None)
+          if method is not None:
+              method(prefix, params)
+          else:
+              self.irc_unknown(prefix, command, params)
+      except IRCBadMessage:
+          apply(self.badMessage, (line,) + sys.exc_info())
 
     def __getstate__(self):
         dct = self.__dict__.copy()
