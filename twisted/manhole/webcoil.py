@@ -224,13 +224,16 @@ class CollectionForm(widgets.Form):
             itemlst.append([name, '%s: <a href="%s">%s</a>' %
                             (name, self.linkfrom+name,
                              html.escape(repr(val))), 0])
-        return widgets.Form.getFormFields(
-            self, request,
-            [['checkgroup', 'Items in Set<br>(Select to Delete)', 'items', itemlst],
-             ['string', "%s to Insert" % self.coll.getNameType(), "name", ""],
-             ['menu', "%s to Insert" % self.coll.getEntityType(), "type", self.configurator.makeConfigMenu(self.coll.entityType)]])
+        result = []
+        if itemlst:
+            result.append(['checkgroup', 'Items in Set<br>(Select to Delete)',
+                           'items', itemlst])
+        result.append(['string', "%s to Insert" %
+                       self.coll.getNameType(), "name", ""])
+        result.append(['menu', "%s to Insert" % self.coll.getEntityType(), "type", self.configurator.makeConfigMenu(self.coll.entityType)])
+        return widgets.Form.getFormFields(self, request, result)
 
-    def process(self, write, request, submit, name, type, items):
+    def process(self, write, request, submit, name, type, items=()):
         # write(str(('YAY', name, type)))
         # TODO: validation on the name?
         if submit == 'Delete':
