@@ -15,7 +15,6 @@ Description: Event-based framework for internet applications. (transitional)
  Since some packages have versioned dependency on twisted, this cannot
  be done via Provides:
 
-
 Package: python-twisted
 Architecture: all
 Depends: python2.1-twisted, python-gtk
