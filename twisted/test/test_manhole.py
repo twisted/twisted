@@ -41,6 +41,12 @@ class DummyApp:
         pass
 
 class ManholeTest(unittest.TestCase):
+    """Various tests for the manhole service.
+
+    Both the the importIdentity and importMain tests are known to fail
+    when the __name__ in the manhole namespace is set to certain
+    values.
+    """
     def setUp(self):
         self.service = service.Service(application=DummyApp())
         self.p = service.Perspective("UnitTest")
