@@ -168,7 +168,7 @@ class IMAP4Server(basic.LineReceiver):
                 self.setLineMode(passon)
 
     def lineReceived(self, line):
-        print 'S: ' + line
+        # print 'S: ' + line
         args = line.split(None, 2)
         rest = None
         if self._pendingLiteral:
@@ -788,7 +788,7 @@ class IMAP4Client(basic.LineReceiver):
         self.queued = []
         self.authenticators = {}
 
-    def registerAuthenticator(self, name, auth):
+    def registerAuthenticator(self, auth):
         """Register a new form of authentication
 
         When invoking the authenticate() method of IMAP4Client, the first
@@ -802,7 +802,7 @@ class IMAP4Client(basic.LineReceiver):
         @param auth: The object to use to perform the client
         side of this authentication scheme.
         """
-        self.authenticators[name.upper()] = auth
+        self.authenticators[auth.getName()] = auth
 
     def lineReceived(self, line):
         # print 'C: ' + line
