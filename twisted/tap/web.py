@@ -87,7 +87,8 @@ twisted.web.test in it."""
             }
 
     def opt_processor(self, proc):
-        """`ext=class' where `class' is added as a Processor for files ending with `ext'.
+        """`ext=class' where `class' is added as a Processor for files ending
+        with `ext'.
         """
         if not isinstance(self.opts['root'], static.File):
             raise usage.UsageError("You can only use --processor after --path.")
