@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: usage.py,v 1.45 2003/07/20 09:55:01 tv Exp $
+# $Id: usage.py,v 1.46 2003/08/04 08:26:15 davep Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -129,9 +129,8 @@ class Options(UserDict.UserDict):
             self._gather_handlers,
             ]
 
-        for (longOpt, shortOpt, docs, settings, synonyms, dispatch)\
-            in map( lambda c: c(), collectors):
-
+        for c in collectors:
+            (longOpt, shortOpt, docs, settings, synonyms, dispatch) = c()
             self.longOpt.extend(longOpt)
             self.shortOpt = self.shortOpt + shortOpt
             self.docs.update(docs)
@@ -345,7 +344,7 @@ class Options(UserDict.UserDict):
                 #docs[name] = string.split(doc, '\n')[0]
                 docs[prettyName] = doc
             else:
-                docs[prettyName] = None
+                docs[prettyName] = self.docs.get(prettyName)
 
             synonyms[prettyName] = prettyName
 
