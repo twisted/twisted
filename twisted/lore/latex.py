@@ -37,7 +37,6 @@ def getLatexText(node, writer, filter=lambda x:x):
     for child in node.childNodes :
         getLatexText(child, writer, filter)
 
-
 class LatexSpitter:
 
     baseLevel = 0
@@ -46,7 +45,6 @@ class LatexSpitter:
         self.writer = writer
         self.currDir = currDir
         self.filename = filename
-        self.seenAPIs = {}
 
     def visitNode(self, node):
         if not hasattr(node, 'tagName'):
@@ -67,24 +65,15 @@ class LatexSpitter:
 
     def visitNode_pre(self, node):
         self.writer('\\begin{verbatim}\n')
-        getLatexText(node, self.writer, lambda x:x)
+        buf = StringIO()
+        getLatexText(node, buf.write)
+        self.writer(LeadingTrailingBlankLineFilter()(buf.getvalue()))
         self.writer('\\end{verbatim}\n')
 
     def visitNode_code(self, node):
         fout = StringIO()
         getLatexText(node, fout.write, latexEscape)
         data = fout.getvalue()
-        
-        # Automatically fully-qualify the first (and only the first) mention of
-        # APIs, i.e turn "pb.Root" into "twisted.spread.pb.Root".
-        if node.getAttribute('class') == 'API' and not self.filename.startswith('glossary'):
-            base = node.getAttribute('base', '')
-            if base:
-                base += '.'
-            fullAPI = base + data
-            if not self.seenAPIs.has_key(fullAPI):
-                self.seenAPIs[fullAPI] = 1
-                data = fullAPI
         
         # Insert hyphenation points at what look like reasonable spots.
         olddata = data
@@ -260,6 +249,33 @@ class SectionLatexSpitter(LatexSpitter):
 
     mapStart_title = mapEnd_title = mapEnd_body = mapStart_body = None
     mapStart_html = None
+
+
+class LeadingTrailingBlankLineFilter:
+    leadingBlanks = 1
+    def __call__(self, data):
+        # Trim leading blank lines
+        lines = data.split('\n')
+        lines = map(self.lineReceived, lines)
+        lines = filter(lambda x: x is not None, lines)
+
+        # Trim trailing blank lines
+        self.leadingBlanks = 1
+        lines.reverse()
+        lines = map(self.lineReceived, lines)
+        lines = filter(lambda x: x is not None, lines)
+        
+        lines.reverse()
+        return '\n'.join(lines)
+
+    def lineReceived(self, line):
+        if self.leadingBlanks:
+            if line and line.strip():
+                self.leadingBlanks = 0
+            else:
+                return None
+        return line
+
 
 
 def processFile(spitter, fin):
