@@ -65,7 +65,7 @@ Instance Method: s.center, where s is an instance of UserString.UserString:
 @author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
 
-__version__ = "$Revision: 1.4 $"[11:-2]
+__version__ = "$Revision: 1.5 $"[11:-2]
 
 # System Imports
 import string
@@ -303,6 +303,14 @@ class _Jellier:
     constantTypes = {types.StringType : 1, types.IntType : 1,
                      types.FloatType : 1, types.LongType : 1}
 
+    # XXX ancient horrible backwards-compatibility
+    
+    def prepare(self, obj):
+        return []
+
+    def preserve(self, obj, jlist):
+        return jlist
+
 
     def jelly(self, obj):
         if isinstance(obj, Jellyable):
@@ -523,7 +531,12 @@ class _Unjellier:
         self.resolveReference(preTuple)
         for elem in xrange(len(l)):
             self.unjellyInto(preTuple, elem, lst[elem])
-        return preTuple.resolvedObject or preTuple
+        # zero-length tuples are false!!
+        # return preTuple.resolvedObject or preTuple
+        if preTuple.resolvedObject is None:
+            return preTuple
+        else:
+            return preTuple.resolvedObject
     
     def _unjelly_list(self, lst):
         l = range(len(lst))
@@ -748,6 +761,7 @@ def jelly(object, taster = DummySecurityOptions(), persistentStore=None, invoker
     """
     jr = _Jellier(taster, persistentStore, invoker)
     jel = jr.jelly(object)
+    # jr.__dict__.clear()
     return jel
 
 
@@ -761,6 +775,6 @@ def unjelly(sexp, taster = DummySecurityOptions(), persistentLoad=None, invoker=
     """
     ujr = _Unjellier(taster, persistentLoad, invoker)
     result = ujr.unjellyFull(sexp)
-    debugCrap.append(ujr.references)
+    # debugCrap.append(ujr.references)
     return result
 
