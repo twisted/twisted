@@ -5,7 +5,7 @@
 import time
 
 from twisted.trial import unittest
-from twisted.conch.test.test_recvline import _TelnetMixin, _SSHMixin, _StdioMixin, stdio
+from twisted.conch.test.test_recvline import _TelnetMixin, _SSHMixin, _StdioMixin, stdio, transport
 from twisted.conch import manhole
 
 ctrlc = '\x03'
@@ -124,7 +124,8 @@ class ManholeLoopbackTelnet(_TelnetMixin, unittest.TestCase, ManholeLoopbackMixi
     pass
 
 class ManholeLoopbackSSH(_SSHMixin, unittest.TestCase, ManholeLoopbackMixin):
-    pass
+    if transport is None:
+        skip = "Crypto requirements missing, can't run historic recvline tests over ssh"
 
 class ManholeLoopbackStdio(_StdioMixin, unittest.TestCase, ManholeLoopbackMixin):
     if stdio is None:

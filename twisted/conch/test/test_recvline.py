@@ -236,7 +236,12 @@ end = "\x1b[4~"
 backspace = "\x7f"
 
 from twisted.cred import checkers
-from twisted.conch.ssh import transport, userauth, channel, connection, session
+from twisted.conch.ssh import userauth, channel, connection, session
+
+try:
+    from twisted.conch.ssh import transport
+except ImportError:
+    transport = None
 
 class TestAuth(userauth.SSHUserAuthClient):
     def __init__(self, username, password, *a, **kw):
@@ -288,27 +293,28 @@ class TestConnection(connection.SSHConnection):
     def write(self, bytes):
         return self.__channel.write(bytes)
 
-class TestTransport(transport.SSHClientTransport):
-    def __init__(self, protocolFactory, protocolArgs, protocolKwArgs, username, password, width, height, *a, **kw):
-        # transport.SSHClientTransport.__init__(self, *a, **kw)
-        self.protocolFactory = protocolFactory
-        self.protocolArgs = protocolArgs
-        self.protocolKwArgs = protocolKwArgs
-        self.username = username
-        self.password = password
-        self.width = width
-        self.height = height
+if transport is not None:
+    class TestTransport(transport.SSHClientTransport):
+        def __init__(self, protocolFactory, protocolArgs, protocolKwArgs, username, password, width, height, *a, **kw):
+            # transport.SSHClientTransport.__init__(self, *a, **kw)
+            self.protocolFactory = protocolFactory
+            self.protocolArgs = protocolArgs
+            self.protocolKwArgs = protocolKwArgs
+            self.username = username
+            self.password = password
+            self.width = width
+            self.height = height
 
-    def verifyHostKey(self, hostKey, fingerprint):
-        return defer.succeed(True)
+        def verifyHostKey(self, hostKey, fingerprint):
+            return defer.succeed(True)
 
-    def connectionSecure(self):
-        self.__connection = TestConnection(self.protocolFactory, self.protocolArgs, self.protocolKwArgs, self.width, self.height)
-        self.requestService(
-            TestAuth(self.username, self.password, self.__connection))
+        def connectionSecure(self):
+            self.__connection = TestConnection(self.protocolFactory, self.protocolArgs, self.protocolKwArgs, self.width, self.height)
+            self.requestService(
+                TestAuth(self.username, self.password, self.__connection))
 
-    def write(self, bytes):
-        return self.__connection.write(bytes)
+        def write(self, bytes):
+            return self.__connection.write(bytes)
 
 from twisted.conch.manhole_ssh import TerminalUser, TerminalSession, TerminalRealm, TerminalSessionTransport, ConchFactory
 from twisted.python import components
@@ -608,7 +614,8 @@ class HistoricRecvlineLoopbackTelnet(_TelnetMixin, unittest.TestCase, HistoricRe
     pass
 
 class HistoricRecvlineLoopbackSSH(_SSHMixin, unittest.TestCase, HistoricRecvlineLoopbackMixin):
-    pass
+    if transport is None:
+        skip = "Crypto requirements missing, can't run historic recvline tests over ssh"
 
 class HistoricRecvlineLoopbackStdio(_StdioMixin, unittest.TestCase, HistoricRecvlineLoopbackMixin):
     if stdio is None:
