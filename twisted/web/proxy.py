@@ -67,13 +67,13 @@ class ProxyClient(http.HTTPClient):
 
     def handleEndHeaders(self):
         self.father.transport.write("\r\n")
-
-    def connectionLost(self, reason):
-        self.father.transport.loseConnection()
     
-    def handleResponse(self, buffer):
+    def handleResponsePart(self, buffer):
         self.father.transport.write(buffer)
-        self.transport.loseConnection()    
+
+    def handleResponseEnd(self):
+        self.transport.loseConnection()
+        self.father.channel.transport.loseConnection()
 
 
 class ProxyClientFactory(protocol.ClientFactory):
