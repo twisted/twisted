@@ -54,6 +54,12 @@ X = Attributes(
     ignoreUnknown=True,
     )
 
+X = Attributes(
+    attributes={ 'hello': str,     # this form doesn't allow Optional()
+                 'goodbye': int,
+               },
+    Optional("foo", str),  # but both can be used at once
+    ignoreUnknown=True)
 
 class Narf(Remoteable):
     # step 1

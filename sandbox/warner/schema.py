@@ -441,15 +441,24 @@ class DictConstraint(Constraint):
 DictOf = DictConstraint
 
 class AttributeDictConstraint(Constraint):
-    taster = openTaster
-    opentypes = ["methodcall"] # TODO: ???
+    """This is a constraint for dictionaries that are used for attributes.
+    All keys are short strings, and each value has a separate constraint.
+    It could be used to describe instance state, but could also be used
+    to constraint arbitrary dictionaries with string keys.
 
-    def __init__(self, ignoreUnknown=False, *attrTuples):
+    Some special constraints are legal here: Optional.
+    """
+    taster = openTaster
+    opentypes = ["attrdict"]
+
+    def __init__(self, *attrTuples, **kwargs):
+        self.ignoreUnknown = kwargs.get('ignoreUnknown', False)
         self.keys = {}
-        for name, constraint in attrTuples:
+        for name, constraint in (list(attrTuples) +
+                                 kwargs.get('attributes', {}).items()):
             assert name not in self.keys.keys()
             self.keys[name] = makeConstraint(constraint)
-        self.ignoreUnknown = ignoreUnknown
+
     def maxSize(self, seen=None):
         if not seen: seen = []
         if self in seen:
@@ -468,7 +477,30 @@ class AttributeDictConstraint(Constraint):
         # items is 1. The other "1" is for the AttributeDict container itself
         return 1 + reduce(max, [c.maxDepth(seen[:])
                                 for c in self.itervalues()], 1)
+    def checkObject(self, obj):
+        if type(obj) != type({}):
+            raise Violation, "'%s' (%s) is not a Dictionary" % (obj,
+                                                                type(obj))
+        allkeys = self.keys.keys()
+        for k in obj.keys():
+            try:
+                constraint = self.keys[k]
+                allkeys.remove(k)
+            except KeyError:
+                if not self.ignoreUnknown:
+                    raise Violation, "key '%s' not in schema" % k
+                else:
+                    # hmm. kind of a soft violation. allow it for now.
+                    pass
+            else:
+                constraint.checkObject(obj[k])
 
+        for k in allkeys[:]:
+            if isinstance(self.keys[k], Optional):
+                allkeys.remove(k)
+        if allkeys:
+            raise Violation("object is missing required keys: %s" % \
+                            ",".join(allkeys))
 
 #TODO
 class Shared(Constraint):

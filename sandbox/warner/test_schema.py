@@ -205,6 +205,24 @@ class ConformTest(unittest.TestCase):
         self.violates(d, {"a": "b"})
         self.violates(d, {"a": 1, "b": 2, "c": 3, "d": 4, "toomuch": 5})
 
+    def testAttrDict(self):
+        d = schema.AttributeDictConstraint(('a', int), ('b', str))
+        self.conforms(d, {"a": 1, "b": "string"})
+        self.violates(d, {"a": 1, "b": 2})
+        self.violates(d, {"a": 1, "b": "string", "c": "is a crowd"})
+
+        d = schema.AttributeDictConstraint(('a', int), ('b', str),
+                                           ignoreUnknown=True)
+        self.conforms(d, {"a": 1, "b": "string"})
+        self.violates(d, {"a": 1, "b": 2})
+        self.conforms(d, {"a": 1, "b": "string", "c": "is a crowd"})
+
+        d = schema.AttributeDictConstraint(attributes={"a": int, "b": str})
+        self.conforms(d, {"a": 1, "b": "string"})
+        self.violates(d, {"a": 1, "b": 2})
+        self.violates(d, {"a": 1, "b": "string", "c": "is a crowd"})
+
+
 class CreateTest(unittest.TestCase):
     def check(self, obj, expected):
         self.failUnless(isinstance(obj, expected))
