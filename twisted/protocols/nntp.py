@@ -429,7 +429,7 @@ class NNTPClient(basic.LineReceiver):
             self._gotXHeader(self._endState())
 
 
-class NNTPServer(NNTPClient):
+class NNTPServer(basic.LineReceiver):
     COMMANDS = [
         'LIST', 'GROUP', 'ARTICLE', 'STAT', 'MODE', 'LISTGROUP', 'XOVER',
         'XHDR', 'HEAD', 'BODY', 'NEXT', 'LAST', 'POST', 'QUIT', 'IHAVE',
@@ -437,7 +437,6 @@ class NNTPServer(NNTPClient):
     ]
 
     def __init__(self):
-        NNTPClient.__init__(self)
         self.servingSlave = 0
 
     def connectionMade(self):
