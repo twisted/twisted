@@ -74,7 +74,8 @@ class StaticConfigurator(coil.Configurator, coil.StaticCollection):
     configTypes = {'path': [types.StringType, "Path", "The path in the filesystem to be served."],
                    'execCGI': ['boolean', "Execute CGIs", "Support running CGI scripts."],
                    'execEPY': ['boolean', "Execute EPYs", "Support running EPY scripts."],
-                   'defaultType': [types.StringType, "Default MIME Type", "MIME type for files whose type can't be guessed."]
+                   'defaultType': [types.StringType, "Default MIME Type", "MIME type for files whose type can't be guessed."],
+                   'allowExt': [types.IntType, "Allow extensions to be ignored (0 or 1)", "Specify wether or not requests for /foo will return /foo.ext if it exists."]
                   }
 
     configName = 'Web Filesystem Access'
@@ -109,7 +110,8 @@ class StaticConfigurator(coil.Configurator, coil.StaticCollection):
         return {'path': instance.path,
                 'execCGI': instance.processors.has_key('.cgi'),
                 'execEPY': instance.processors.has_key('.epy'),
-                'defaultType': instance.defaultType}
+                'defaultType': instance.defaultType,
+                'allowExt': instance.allowExt}
 
 def staticFactory(container, name):
     return static.File("somewhere/outthere")
