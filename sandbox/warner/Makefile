@@ -6,8 +6,11 @@ banana.html: banana.xhtml
 	lore -p --config template=../../doc/howto/template.tpl \
 		--config ext=.html $<
 
+TEST=test_banana test_schema test_pb
 test:
-	../../bin/trial -v test_banana test_schema test_pb
+	../../bin/trial -v $(TEST)
+test2:
+	../../bin/trial -o $(TEST)
 
 clean:
 	rm -f *~ *.pyc *.xhtml
