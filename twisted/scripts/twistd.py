@@ -123,9 +123,10 @@ def daemonize():
         os._exit(0) # kill off parent
     os.setsid()
     os.umask(077)
+    null=os.open('/dev/null', os.O_RDWR)
     for i in range(3):
         try:
-            os.close(i)
+            os.dup2(null, i)
         except OSError, e:
             if e.errno != errno.EBADF:
                 raise
