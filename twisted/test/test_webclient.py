@@ -294,8 +294,8 @@ class WebClientRedirectBetweenSSLandPlainText(unittest.TestCase):
         self.plainPort = reactor.listenTCP(0, plainSite, interface="127.0.0.1")
 
         reactor.iterate(); reactor.iterate()
-        self.plainPortno = self.plainPort.getHost()[2]
-        self.tlsPortno = self.tlsPort.getHost()[2]
+        self.plainPortno = self.plainPort.getHost().port
+        self.tlsPortno = self.tlsPort.getHost().port
 
         plainRoot.putChild('one', util.Redirect(self.getHTTPS('two')))
         tlsRoot.putChild('two', util.Redirect(self.getHTTP('three')))

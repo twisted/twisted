@@ -239,6 +239,6 @@ if SSL is None:
     for case in (BufferingTestCase, TLSTestCase, StolenTCPTestCase):
         case.skip = "OpenSSL not present"
 
-if not components.implements(reactor, interfaces.IReactorSSL):
+if not interfaces.IReactorSSL(reactor, None):
     for case in (BufferingTestCase, TLSTestCase, StolenTCPTestCase):
         case.skip = "Reactor doesn't support SSL"

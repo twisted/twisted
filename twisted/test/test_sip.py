@@ -580,7 +580,8 @@ class LiveTest(unittest.TestCase):
         self.serverPort = reactor.listenUDP(0, self.proxy, interface="127.0.0.1")
         self.client = Client()
         self.clientPort = reactor.listenUDP(0, self.client, interface="127.0.0.1")
-        self.serverAddress = self.serverPort.getHost()[1:]
+        self.serverAddress = (self.serverPort.getHost().host,
+                              self.serverPort.getHost().port)
 
     def tearDown(self):
         self.clientPort.stopListening()
@@ -591,7 +592,7 @@ class LiveTest(unittest.TestCase):
         reactor.iterate()
 
     def testRegister(self):
-        p = self.clientPort.getHost()[-1]
+        p = self.clientPort.getHost().port
         r = sip.Request("REGISTER", "sip:bell.example.com")
         r.addHeader("to", "sip:joe@bell.example.com")
         r.addHeader("contact", "sip:joe@127.0.0.1:%d" % p)
@@ -611,7 +612,7 @@ class LiveTest(unittest.TestCase):
         # implementors might be too stupid to bind to port 5060, or set a
         # value on the rport parameter they send if they bind to another
         # port.
-        p = self.clientPort.getHost()[-1]
+        p = self.clientPort.getHost().port
         r = sip.Request("REGISTER", "sip:bell.example.com")
         r.addHeader("to", "sip:joe@bell.example.com")
         r.addHeader("contact", "sip:joe@127.0.0.1:%d" % p)

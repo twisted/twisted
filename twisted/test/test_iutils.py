@@ -57,5 +57,5 @@ class UtilsTestCase(unittest.TestCase):
         self.output = o
 
 
-if not components.implements(reactor, interfaces.IReactorProcess):
+if not interfaces.IReactorProcess(reactor, None):
     UtilsTestCase.skip = "reactor doesn't implement IReactorProcess"

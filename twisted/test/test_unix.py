@@ -124,8 +124,8 @@ class DatagramUnixSocketTestCase(unittest.TestCase):
         os.unlink(addr)
     # test connecting to bound and connected (somewhere else) address
 
-if not components.implements(reactor, interfaces.IReactorUNIX):
+if not interfaces.IReactorUNIX(reactor, None):
     UnixSocketTestCase.skip = "This reactor does not support UNIX domain sockets"
-if not components.implements(reactor, interfaces.IReactorUNIXDatagram):
+if not interfaces.IReactorUNIXDatagram(reactor, None):
     DatagramUnixSocketTestCase.skip = "This reactor does not support UNIX datagram sockets"
 

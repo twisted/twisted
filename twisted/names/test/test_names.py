@@ -160,7 +160,7 @@ class ServerDNSTestCase(unittest.TestCase):
         
         while 1:
             self.listenerTCP = reactor.listenTCP(0, self.factory, interface="127.0.0.1")
-            port = self.listenerTCP.getHost()[2]
+            port = self.listenerTCP.getHost().port
 
             try:
                 self.listenerUDP = reactor.listenUDP(port, p, interface="127.0.0.1")

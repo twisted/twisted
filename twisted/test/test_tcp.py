@@ -345,7 +345,10 @@ class ConnectorTestCase(PortCleanerUpper):
         factory.clientConnectionLost = lambda c, r: (l.append(c), m.append(r))
         factory.startedConnecting = lambda c: l.append(c)
         connector = reactor.connectTCP("127.0.0.1", n, factory)
-        self.assertEquals(connector.getDestination(), ('INET', "127.0.0.1", n))
+        dest = connector.getDestination()
+        self.assertEquals(dest.type, "TCP")
+        self.assertEquals(dest.host, "127.0.0.1")
+        self.assertEquals(dest.port, n)
         
         i = 0
         while i < 50 and not factory.stopped:
@@ -412,7 +415,10 @@ class CannotBindTestCase(PortCleanerUpper):
         p1 = reactor.listenTCP(0, f, interface='127.0.0.1')
         n = p1.getHost().port
         self.ports.append(p1)
-        self.assertEquals(p1.getHost(), ("INET", "127.0.0.1", n,))
+        dest = p1.getHost()
+        self.assertEquals(dest.type, "TCP")
+        self.assertEquals(dest.host, "127.0.0.1")
+        self.assertEquals(dest.port, n)
         
         # make sure new listen raises error
         self.assertRaises(error.CannotListenError, reactor.listenTCP, n, f, interface='127.0.0.1')
@@ -489,12 +495,12 @@ class WriterProtocol(protocol.Protocol):
         seq = ["Goodbye", " cruel", " world", "\n"]
         self.transport.writeSequence(seq)
         peer = self.transport.getPeer()
-        if peer[0] != "INET":
-            print "getPeer returned non-INET socket:", peer
+        if peer.type != "TCP":
+            print "getPeer returned non-TCP socket:", peer
             self.factory.problem = 1
         us = self.transport.getHost()
-        if us[0] != "INET":
-            print "getHost returned non-INET socket:", us
+        if us.type != "TCP":
+            print "getHost returned non-TCP socket:", us
             self.factory.problem = 1
         self.factory.done = 1
         
@@ -609,7 +615,9 @@ class AClientFactory(protocol.ClientFactory):
 
     def buildProtocol(self, addr):
         self.testcase.assertEquals(addr, self.ipv4addr)
-        self.testcase.assertEquals(addr, ('INET', self.ipv4addr.host, self.ipv4addr.port))
+        self.testcase.assertEquals(addr.type, "TCP")
+        self.testcase.assertEquals(addr.host, self.ipv4addr.host)
+        self.testcase.assertEquals(addr.port, self.ipv4addr.port)
         p = AProtocol()
         p.factory = self
         return p
@@ -622,7 +630,9 @@ class AServerFactory(protocol.ServerFactory):
     
     def buildProtocol(self, addr):
         self.testcase.assertEquals(addr, self.ipv4addr)
-        self.testcase.assertEquals(addr, (self.ipv4addr.host, self.ipv4addr.port))
+        self.testcase.assertEquals(addr.type, "TCP")
+        self.testcase.assertEquals(addr.host, self.ipv4addr.host)
+        self.testcase.assertEquals(addr.port, self.ipv4addr.port)
         p = AProtocol()
         p.factory = self
         return p
