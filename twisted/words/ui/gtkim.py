@@ -199,7 +199,9 @@ class ContactList(gtk.GtkWindow, pb.Referenced):
 def main():
     global lw
     b = ContactList()
-    lw = gtkutil.Login(b.connected, b, initialPassword="guest")
+    lw = gtkutil.Login(b.connected, b,
+                       initialPassword="guest",
+                       initialService="twisted.words")
     lw.show_all()
     gtk.mainloop()
 

@@ -390,6 +390,7 @@ class Site(protocol.Factory):
         getChildWithDefault on each resource it finds for a path element,
         stopping when it hits an element where isLeaf is true.
         """
+        request.site = self
         res = self.resource
         while request.postpath and not res.isLeaf:
             pathElement = request.postpath.pop(0)

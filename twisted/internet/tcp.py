@@ -292,7 +292,7 @@ class Port(abstract.FileDescriptor):
         # Since ports can't, by definition, write any data, we can just close
         # instantly (no need for the more complex stuff for selectables which
         # write)
-        main.removeReader(self)
+        removeReader(self)
         self.connectionLost()
 
     def connectionLost(self):
