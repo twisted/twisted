@@ -49,26 +49,34 @@ class IssueSite(Resource):
         v.templateDirectory = self.templateDir
         return v
 
-    def child_index(self):
+    def child_index(self, request):
         return self.makeView(MIssueRepository(self.repository),
                              "webrepo_index.html")
 
-    def child_tasks(self):
+    def child_tasks(self, request):
         return Data("Sorry check back later",
                     "text/plain")
 
-    def child_issues(self):
+    def child_issues(self, request):
         return self.makeView(MIssueRepository(self.repository),
                              "webrepo_issuelist.html")
 
-    def child_conduit(self):
+    def child_conduit(self, request):
         return issueconduit.MWebConduit(self.wordserv, self.repository)
+
+    def child_conduit_js(self, request):
+        h = request.getHeader("user-agent")
+        if h.count("MSIE"):
+            pn = "conduit_msie.js"
+        else:
+            pn = "conduit_moz.js"
+        return File(os.path.join(self.templateDir, pn))
 
     def getChild(self, path, request):
         if path == '': path = 'index'
         cm = getattr(self, "child_"+path, None)
         if cm:
-            p = cm()
+            p = cm(request)
             adapter = components.getAdapter(p, IResource, None)
             if adapter:
                 return adapter
