@@ -55,7 +55,7 @@ from twisted.web import static
 
 class DirectoryListing(page.Page):
 
-    templateFile = "directory-listing.html"
+    templateFile = "directory-listing.xhtml"
     templateDirectory = os.path.split(os.path.abspath(__file__))[0]
 
     def initialize(self, *args, **kwargs):
@@ -176,7 +176,7 @@ from twisted.web import static
 
 class ImageDisplay(page.Page):
 
-    templateFile="image-display.html"
+    templateFile="image-display.xhtml"
 
     def initialize(self, *args, **kwargs):
         self.image = kwargs['image']
@@ -312,7 +312,7 @@ render. Fortunately, twisted.web provides this in the form of a Session
 object. Since only one Session exists per user for all applications on the
 server, the Session object is Componentized, and each application adds
 adapters to contain their own state and behaviour, as explained in the <a
-href= "components.html" >Components</a> documentation. So, we start with an
+href= "components.xhtml" >Components</a> documentation. So, we start with an
 interface, and a class that implements it, and registration of our class upon
 Session:</p>
 

@@ -23,7 +23,7 @@ tail-recursively. For example, if the URL
 into the list of path segments <code class="python">['foo', 'bar',
 'baz']</code>. It then calls <code class="python">root.getChild('foo')</code>, calls <code class="python">getChild('bar')</code> on the result, calls <code class="python">getChild('baz')</code> on the second result, and finally calls <code class="python">render(request)</code> on the result of the final <code class="python">getChild</code> call.</p>
 
-<p>For more details about Twisted Web, see <a href="web-overview.html">Overview
+<p>For more details about Twisted Web, see <a href="web-overview.xhtml">Overview
 of Twisted Web</a>.</p>
 
 <h2>Smalltalk Model-View-Controller Overview</h2>
@@ -76,14 +76,14 @@ of Twisted Web</a>.</p>
 <h2>In Depth Pages about Woven components</h2>
 
 <ul>
-  <li><a href="web-overview.html">Twisted Web</a></li>
-  <li><a href="modelindepth.html">Model</a></li>
-  <li><a href="viewindepth.html">View</a></li>
-  <li><a href="controllerindepth.html">Controller</a></li>
-  <li><a href="pageindepth.html">Page</a></li>
-  <li><a href="livepage.html">LivePage</a></li>
-  <li><a href="formindepth.html">Form</a></li>
-  <li><a href="guardindepth.html">Guard</a></li>
+  <li><a href="web-overview.xhtml">Twisted Web</a></li>
+  <li><a href="modelindepth.xhtml">Model</a></li>
+  <li><a href="viewindepth.xhtml">View</a></li>
+  <li><a href="controllerindepth.xhtml">Controller</a></li>
+  <li><a href="pageindepth.xhtml">Page</a></li>
+  <li><a href="livepage.xhtml">LivePage</a></li>
+  <li><a href="formindepth.xhtml">Form</a></li>
+  <li><a href="guardindepth.xhtml">Guard</a></li>
 </ul>
 
 <img title="Overview of the Woven rendering process" src="../img/woven_overview.png" />
@@ -261,20 +261,20 @@ resource = page.Page(model, template=template)
 
 <h2>Further Reading</h2><a name="furtherconcepts" />
 
-<p><a href="web-overview.html">Twisted Web</a> is the Object-publishing web server woven uses to glue HTTP requests to Page rendering.</p>
+<p><a href="web-overview.xhtml">Twisted Web</a> is the Object-publishing web server woven uses to glue HTTP requests to Page rendering.</p>
 
-<p><a href="pageindepth.html">Page</a> objects are the IResource implementors in the Woven framework. They represent URL segments and drive the Woven template rendering process. They also contain convenient methods for specifying Page trees.</p>
+<p><a href="pageindepth.xhtml">Page</a> objects are the IResource implementors in the Woven framework. They represent URL segments and drive the Woven template rendering process. They also contain convenient methods for specifying Page trees.</p>
 
-<p><a href="modelindepth.html">Model</a> objects provide data to Woven pages. Woven includes IModel adapters for the basic Python types and makes it easy for you to write your own Model classes and IModel adapters for your already-existing classes.</p>
+<p><a href="modelindepth.xhtml">Model</a> objects provide data to Woven pages. Woven includes IModel adapters for the basic Python types and makes it easy for you to write your own Model classes and IModel adapters for your already-existing classes.</p>
 
-<p><a href="viewindepth.html">View</a> objects insert Model data into the DOM provided by the Template. They use DOM syntax for HTML generation, and have convenient syntax for locating and copying <code>pattern=</code> nodes abstractly.</p>
+<p><a href="viewindepth.xhtml">View</a> objects insert Model data into the DOM provided by the Template. They use DOM syntax for HTML generation, and have convenient syntax for locating and copying <code>pattern=</code> nodes abstractly.</p>
 
-<p><a href="controllerindepth.html">Controller</a> objects accept input from the request and update the Model data. Controller objects are optional; often your Page or View instances can contain the controller logic and still make sense. Controllers are for cases which are general enough to warrant validation and commit logic.</p>
+<p><a href="controllerindepth.xhtml">Controller</a> objects accept input from the request and update the Model data. Controller objects are optional; often your Page or View instances can contain the controller logic and still make sense. Controllers are for cases which are general enough to warrant validation and commit logic.</p>
 
-<p><a href="livepage.html">LivePage</a> objects allow you to build DHTML behaviors into your Woven pages using pure server-side Python.  It includes code for asynchronously forwarding client-side JavaScript events to the server without refreshing the page, and sending JavaScript to a page from the server after it has already been loaded.</p>
+<p><a href="livepage.xhtml">LivePage</a> objects allow you to build DHTML behaviors into your Woven pages using pure server-side Python.  It includes code for asynchronously forwarding client-side JavaScript events to the server without refreshing the page, and sending JavaScript to a page from the server after it has already been loaded.</p>
 
-<p><a href="formindepth.html">Form</a> is a woven module that makes it easy to create HTML forms from existing Python methods which take keyword arguments. It also supports basic input validation.</p>
+<p><a href="formindepth.xhtml">Form</a> is a woven module that makes it easy to create HTML forms from existing Python methods which take keyword arguments. It also supports basic input validation.</p>
 
-<p><a href="guardindepth.html">Guard</a> is a woven module that allows you to wrap your Page instances with login pages, to prevent unauthorized users from accessing them.</p>
+<p><a href="guardindepth.xhtml">Guard</a> is a woven module that allows you to wrap your Page instances with login pages, to prevent unauthorized users from accessing them.</p>
 
 </body></html>

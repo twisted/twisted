@@ -55,7 +55,7 @@ than multi-threaded programming.</p>
 
 <p>Note that Twisted still allows the use of threads if you really 
 need them, usually to interface with synchronous legacy code.  See 
-<a href="threading.html">Using Threads</a> for details.</p>
+<a href="threading.xhtml">Using Threads</a> for details.</p>
 
 <h2>Async Design Issues</h2>
 
@@ -66,7 +66,7 @@ conceivable that an implementation might perform an action which takes
 a long time (either because of network or CPU issues), then one should
 design that method to be asynchronous. In general, this means to transform
 the method to be callback based. In Twisted, it usually means returning
-a <a href="defer.html">Deferred</a>.</p>
+a <a href="defer.xhtml">Deferred</a>.</p>
 
 <p>Since non-volatile state cannot be kept in local variables, because each
 method must return quickly, it is usually kept in instance variables. In cases

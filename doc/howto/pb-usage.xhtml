@@ -54,7 +54,7 @@ using <code>.getRootObject()</code>.</p>
 <p>Because <code>.getRootObject()</code> has to wait until a network
 connection has been made and exchange some data, it may take a while,
 so it returns a Deferred, to which the gotObject() callback is
-attached. (See the documentation on <a href="defer.html">Deferring
+attached. (See the documentation on <a href="defer.xhtml">Deferring
 Execution</a> for a complete explanation of <code class="API"
 base="twisted.internet.defer">Deferred</code>s). If and when the
 connection succeeds and a reference to the remote root object is
@@ -274,7 +274,7 @@ inherit from <code class="API" base="twisted.spread.pb">Referenceable</code>
 <code class="API" base="twisted.spread.jelly">InsecureJelly</code>
 exception<span class="footnote">This can be overridden, by subclassing one of
 the Serializable flavors and defining custom serialization code for your
-class. See <a href="pb-copyable.html">pb-copyable.html</a> for
+class. See <a href="pb-copyable.xhtml">pb-copyable.html</a> for
 details.</span>.</p>
 
 
@@ -306,7 +306,7 @@ both are real objects instead of remote references.</p>
 <p>A few other techniques are demonstrated in <code>pb2client.py</code>. One
 is that the callbacks are are added with <code>.addCallback</code> instead
 of <code>.addCallbacks</code>. As you can tell from the <a
-href="defer.html">Deferred</a> documentation, <code>.addCallback</code> is a
+href="defer.xhtml">Deferred</a> documentation, <code>.addCallback</code> is a
 simplified form which only adds a success callback. The other is that to
 keep track of state from one callback to the next (the remote reference to
 the main One() object), we create a simple class, store the reference in an

@@ -18,8 +18,8 @@ start.</p>
 
 <p>This guide is to help you understand the <q>right way</q> to get started
 working on a Twisted application.  It probably won't answer your specific
-questions about how to do things like <a href="time.html" >schedule functions
-to call in the future</a> or <a href="servers.html" >listen on a socket</a>;
+questions about how to do things like <a href="time.xhtml" >schedule functions
+to call in the future</a> or <a href="servers.xhtml" >listen on a socket</a>;
 there are other documents that address these concerns and you can read them
 later.  <strong>Although there are other ways for Twisted to call your code,
 all Twisted projects should start as a plug-in of some kind.</strong></p>
@@ -275,7 +275,7 @@ stuck to each other.  They communicate in well-defined ways, and only when that
 communication provides some additional feature.  Thus, you can use <code
 class="API">twisted.web</code> with <code
 class="API">twisted.enterprise</code>, but neither requires the other, because
-they are integrated around the concept of <a href="defer.html">Deferreds</a>.
+they are integrated around the concept of <a href="defer.xhtml">Deferreds</a>.
 (Don't worry we'll get to each of those features in later documentation.)</p>
 
 <p>Your Twisted applications should follow this style as much as possible.
@@ -314,7 +314,7 @@ class="python">QOTDFactory</code>; you will do that yourself later, in the
 </p>
 
 <p>Note: you can read more specifics of <code class="python">Protocol</code> and
-<code class="python">Factory</code> in the <a href="servers.html">Writing
+<code class="python">Factory</code> in the <a href="servers.xhtml">Writing
 Servers</a> HOWTO.</p>
 
 <p>Once we have an abstraction -- a <code>Quoter</code> -- and we have a
@@ -367,7 +367,7 @@ serving a protocol factory, and so on.</p>
 
 <p>A more detailed discussion of <code
 class="API">twisted.python.usage.Options</code> can be found in the document <a
-href="options.html" >Using <code>usage.Options</code></a>.</p>
+href="options.xhtml" >Using <code>usage.Options</code></a>.</p>
 
 <p>Now that we've implemented all the necessary pieces, we can finish putting
 them together by writing a TML file which allows the <code

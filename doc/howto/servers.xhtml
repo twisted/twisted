@@ -22,9 +22,9 @@
     implement protocol parsing and handling.  If you are implementing 
     an application then you should read this document second, after 
     first reading the top level overview of how to begin writing your 
-    Twisted application, in <a href="plugin.html">Writing Plug-Ins 
+    Twisted application, in <a href="plugin.xhtml">Writing Plug-Ins 
     for Twisted</a>. This document is only relevant to TCP, SSL and
-    Unix socket servers, there is a <a href="udp.html">separate document</a>
+    Unix socket servers, there is a <a href="udp.xhtml">separate document</a>
      for UDP.</p>
 
     <p>Your protocol handling class will usually subclass <code
@@ -121,7 +121,7 @@ class Echo(Protocol):
 
     <p>In this section, I will explain how to test your protocol
     easily. (In order to see how you should write a production-grade Twisted
-    server, though, you should read the <a href="plugin.html" >Writing Plug-Ins
+    server, though, you should read the <a href="plugin.xhtml" >Writing Plug-Ins
     for Twisted</a> HOWTO as well).</p>
 
     <p>Here is code that will run the QOTD server discussed
@@ -317,7 +317,7 @@ It uses the reactor interface, which lets many different loops handle
 the networking code, without modifying end-user code, like this.
 As mentioned above, if you want to write your code to be a production-grade
 Twisted server, and not a mere 20-line hack, you will want to
-use <a href="application.html">the Application object</a>.</p>
+use <a href="application.xhtml">the Application object</a>.</p>
 
   </body>
 </html>
