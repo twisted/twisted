@@ -19,6 +19,7 @@
 from twisted.trial import unittest
 
 from twisted.python import components
+from twisted.python.compat import *
 
 
 class IAdder(components.Interface):

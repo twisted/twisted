@@ -18,6 +18,7 @@
 import os, gc, struct
 
 from twisted.trial import unittest
+from twisted.python.compat import *
 
 from twisted.world import structfile, compound, storable
 from twisted.world.storable import Storable

@@ -20,6 +20,7 @@
 
 # sibling imports
 import reflect, util, context
+from compat import *
 
 from twisted.persisted import styles
 
