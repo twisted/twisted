@@ -10,9 +10,10 @@ from distutils import core
 
 
 def setup(**kw):
-    if 'ext_modules' not in kw:
-        kw['ext_modules'] = [True] # distutils is so lame
     if 'detectExtensions' in kw:
+        if 'ext_modules' not in kw:
+            kw['ext_modules'] = [True] # distutils is so lame
+
         dE = kw.pop('detectExtensions')
         def my_build_ext(d):
             bet = build_ext_twisted(d)
