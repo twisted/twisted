@@ -110,7 +110,8 @@ class InterfacesTestCase(unittest.TestCase):
             self.assertEquals(components.tupleTreeToList(tree), result)
 
     def testClasses(self):
-        # is this a right thing to do?
+        components.fixClassImplements(Sub)
+        components.fixClassImplements(MultiplyAndAdd)
         self.assert_( IMultiply.implementedBy(MultiplyAndAdd) )
         self.assert_( IAdder.implementedBy(MultiplyAndAdd) )
         self.assert_( IAdder.implementedBy(Sub) )
