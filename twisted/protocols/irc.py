@@ -42,7 +42,7 @@ Test coverage needs to be better.
 <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-__version__ = '$Revision: 1.76 $'[11:-2]
+__version__ = '$Revision: 1.77 $'[11:-2]
 
 from twisted.internet import reactor, protocol
 from twisted.persisted import styles
@@ -70,6 +70,8 @@ CR = chr(015)
 NL = chr(012)
 LF = NL
 SPC = chr(040)
+
+CHANNEL_PREFIXES = '&#!+'
 
 class IRCBadMessage(Exception):
     pass
@@ -330,6 +332,24 @@ class IRCClient(basic.LineReceiver):
         """
         self.privmsg(user, channel, message)
 
+    def modeChanged(self, channel, set, modes, args):
+        """Called when a channel's modes are changed
+        
+        @type channel: C{str}
+        @param channel: The channel for which the modes are changing.
+        
+        @type set: C{bool} or C{int}
+        @param set: true if the mode is being added, false if it is being
+        removed.
+        
+        @type modes: C{str}
+        @param modes: The mode or modes which are being changed.
+        
+        @type args: C{tuple}
+        @param args: Any additional information required for the mode
+        change.
+        """
+
     def pong(self, user, secs):
         """Called with the results of a CTCP PING query.
         """
@@ -431,6 +451,18 @@ class IRCClient(basic.LineReceiver):
             self.sendLine("TOPIC %s :%s" % (channel, topic))
         else:
             self.sendLine("TOPIC %s" % (channel,))
+
+    def mode(self, chan, set, modes, limit = None, user = None, mask = None):
+        """Change the modes on a user or channel."""
+        line = 'MODE %s %s%s' % (chan, set and '+' or '-', modes)
+        if limit is not None:
+            line = '%s %d' % (line, limit)
+        elif user is not None:
+            line = '%s %s' % (line, user)
+        elif mask is not None:
+            line = '%s %s' % (line, mask)
+        self.sendLine(line)
+
 
     def say(self, channel, message, length = None):
         if channel[0] not in '&#!+': channel = '#' + channel
@@ -563,6 +595,13 @@ class IRCClient(basic.LineReceiver):
             self.left(channel)
         else:
             self.userLeft(nick, channel)
+
+    def irc_MODE(self, prefix, params):
+        channel, rest = params[0], params[1:]
+        set = rest[0][0] == '+'
+        modes = rest[0][1:]
+        args = rest[1:]
+        self.modeChanged(channel, set, modes, tuple(args))
 
     def irc_PING(self, prefix, params):
         self.sendLine("PONG %s" % params[-1])

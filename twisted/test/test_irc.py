@@ -46,6 +46,7 @@ class QuotingTest(unittest.TestCase):
         for s in stringSubjects:
             self.failUnlessEqual(s, irc.ctcpDequote(irc.ctcpQuote(s)))
 
+
 class IRCClientWithoutLogin(irc.IRCClient):
     performLogin = 0
 
@@ -86,6 +87,35 @@ class CTCPTest(unittest.TestCase):
         del self.client
         del self.transport
 
+class ModeNoticingClient(IRCClientWithoutLogin):
+    channel = set = mode = args = None
+
+    def modeChanged(self, *args):
+        self.channel, self.set, self.mode, self.args = args
+
+
+class ModeTestCase(unittest.TestCase):
+    def setUp(self):
+        self.file = StringIOWithoutClosing()
+        self.transport = protocol.FileWrapper(self.file)
+        self.client = ModeNoticingClient()
+        self.client.makeConnection(self.transport)
+
+    def tearDown(self):
+        self.transport.loseConnection()
+        self.client.connectionLost()
+        del self.client
+        del self.transport
+
+    def test_MODE_CHANGE(self):
+        message = ":ChanServ!ChanServ@services. MODE #tanstaafl +o exarkun\r\n"
+        self.client.dataReceived(message)
+        self.assertEquals(self.client.channel, "#tanstaafl")
+        self.assertEquals(self.client.set, 1)
+        self.assertEquals(self.client.mode, "o")
+        self.assertEquals(self.client.args, ("exarkun",))
+
+
 # class DCCtest(unittest.TestCase):
 #     def setUp(self):
 #         self.transport = StringIOWithoutClosing()
@@ -97,6 +127,3 @@ class CTCPTest(unittest.TestCase):
 
 #     def test_file(self):
 #         pass
-
-#if __name__ == '__main__':
-#    unittest.main()
