@@ -174,7 +174,6 @@ def createApplicationDecoder(config):
             log.msg('<Loading file="%s" />' % (filename,))
             sys.modules['__main__'] = EverythingEphemeral()
             application = unjellyFromXML(StringIO.StringIO(data))
-            application.persistStyle = 'xml'
             sys.modules['__main__'] = mainMod
             styles.doUpgrade()
             return application
@@ -186,7 +185,6 @@ def createApplicationDecoder(config):
             log.msg("Loading %s..." % (filename,))
             sys.modules['__main__'] = EverythingEphemeral()
             application = unjellyFromSource(StringIO.StringIO(data))
-            application.persistStyle = 'aot'
             sys.modules['__main__'] = mainMod
             styles.doUpgrade()
             return application
@@ -379,28 +377,8 @@ def getPassphrase(needed):
     else:
         return None
 
-# Install a reactor immediately.  The application will not load properly
-# unless this is done FIRST; otherwise the first 'reactor' import would
-# trigger an automatic installation of the default reactor.
-
-# To make this callable from within a running Twisted app, allow as the
-# reactor None to bypass this and use whatever reactor is currently in use.
-def runApp(config):
+def getApplication(config, passphrase)
     global initRun
-    passphrase = getPassphrase(config['encrypted'])
-    installReactor(config['reactor'])
-    if runtime.platformType != 'posix' or config['debug']:
-        # only posix can fork, and debugging requires nodaemon
-        config['nodaemon'] = 1
-    checkPID(config['pidfile'], config['quiet'])
-    startLogging(config['logfile'], config['syslog'], config['prefix'],
-                 config['nodaemon'])
-    from twisted.internet import reactor
-    log.msg('reactor class: %s' % reactor.__class__)
-
-    # Load the servers.
-    # This will fix up accidental function definitions in evaluation spaces
-    # and the like.
     initRun = 0
     try:
         application = loadApplication(config, passphrase)
@@ -410,43 +388,58 @@ def runApp(config):
         log.msg(s)
         log.deferr()
         sys.exit('\n' + s + '\n')
-    
-    if not config['originalname']:
-        if application.processName and application.processName != sys.argv[0]:
-            exe = os.path.realpath(sys.executable)
-            args = [application.processName, sys.argv[0], '--originalname']
-            args.extend(sys.argv[1:])
-            log.msg('Changing process name to ' + application.processName)
-            os.execv(exe, *args)
+    log.msg("Loaded.")
+    initRun = 1
 
+def launchWithName(name):
+    if name and name != sys.argv[0]:
+        exe = os.path.realpath(sys.executable)
+        log.msg('Changing process name to ' + name)
+        os.execv(exe, [name, sys.argv[0], '--originalname']+sys.argv[1:])
+    
+def usepid():
+    # java doesn't have getpid, and Windows' getpid is near-useless
+    return ((os.name != 'java') and (os.name != 'nt'))
+
+def setupEnvironment(config):
     if config['chroot'] is not None:
         os.chroot(config['chroot'])
         if config['rundir'] == '.':
             config['rundir'] = '/'
-
     if platformType != 'java':
         # java can't chdir
         os.chdir(config['rundir'])
-
-
     if not config['nodaemon']:
         daemonize()
-
-    log.msg("Loaded.")
-    initRun = 1
-
-    # java doesn't have getpid, and Windows' getpid is near-useless
-    usepid = ((os.name != 'java') and (os.name != 'nt'))
-    if usepid:
+    if usepid():
         open(config['pidfile'],'wb').write(str(os.getpid()))
-
     if os.name == 'nt':
         # C-c can't interrupt select.select in win32.
         def callAgain(f):
             reactor.callLater(0.1, f, f)
         reactor.callLater(0.1, callAgain, callAgain)
 
+# Install a reactor immediately.  The application will not load properly
+# unless this is done FIRST; otherwise the first 'reactor' import would
+# trigger an automatic installation of the default reactor.
 
+# To make this callable from within a running Twisted app, allow as the
+# reactor None to bypass this and use whatever reactor is currently in use.
+def runApp(config):
+    passphrase = getPassphrase(config['encrypted'])
+    installReactor(config['reactor'])
+    if runtime.platformType != 'posix' or config['debug']:
+        # only posix can fork, and debugging requires nodaemon
+        config['nodaemon'] = 1
+    startLogging(config['logfile'], config['syslog'], config['prefix'],
+                 config['nodaemon'])
+    checkPID(config['pidfile'], config['quiet'])
+    from twisted.internet import reactor
+    log.msg('reactor class: %s' % reactor.__class__)
+    application = getApplication(config, passphrase)
+    if not config['originalname']:
+        launchWithName(application.processName)
+    setupEnvironment(config)
     application.privilegedStartService()
     shedPrivileges(config['euid'], application.uid, application.gid)
     application.startService()
@@ -461,7 +454,7 @@ def runApp(config):
             file = open("TWISTD-CRASH.log",'a')
         traceback.print_exc(file=file)
         file.flush()
-    if usepid:
+    if usepid():
         removePID(config['pidfile'])
     if config['report-profile']:
         if application.processName:
