@@ -291,7 +291,7 @@ class IReactorUNIXDatagram(Interface):
         @param protocol: a L{twisted.internet.protocol.ConnectedDatagramProtocol} instance
 
         @param maxPacketSize: maximum packet size to accept
-        
+
         @param mode: mode to set on the unix socket.
 
         @param bindAddress: address to bind to
@@ -764,7 +764,7 @@ class IPushProducer(IProducer):
 
     This interface is semi-stable.
     """
-    
+
     def pauseProducing(self):
         """Pause producing data.
 
@@ -785,7 +785,7 @@ class IPullProducer(IProducer):
 
     This interface is semi-stable.
     """
-        
+
     def resumeProducing(self):
         """Produce data for the consumer a single time.
 
@@ -794,9 +794,9 @@ class IPullProducer(IProducer):
         by calling the consumer's write() method a single time with
         produced data.
         """
-    
+
 class IProtocol(Interface):
-    
+
     def dataReceived(self, data):
         """Called whenever data is received.
 
@@ -945,16 +945,16 @@ class ITCPTransport(ITransport):
 
     def getPeer(self):
         """Returns tuple ('INET', host, port)."""
-    
+
 class ITLSTransport(ITCPTransport):
     """A TCP transport that supports switching to TLS midstream.
 
     Once TLS mode is started the transport will implement L{ISSLTransport}.
     """
-    
+
     def startTLS(self, contextFactory):
         """Initiate TLS negotiation.
-        
+
         @param contextFactory: A context factory (see L{ssl.py<twisted.internet.ssl>})
         """
 

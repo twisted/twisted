@@ -1,16 +1,16 @@
 # -*- test-case-name: twisted.test.test_ssl -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -28,8 +28,8 @@ moment this is not enforced, but in the future it might be.
 
 API Stability: stable
 
-Future Plans: 
-    - split module so reactor-specific classes are in a separate module 
+Future Plans:
+    - split module so reactor-specific classes are in a separate module
     - support for switching TCP into SSL
     - more options
 
@@ -58,7 +58,7 @@ class ContextFactory:
     """A factory for SSL context objects, for server SSL connections."""
 
     isClient = 0
-    
+
     def getContext(self):
         """Return a SSL.Context object. override in subclasses."""
         raise NotImplementedError
@@ -152,11 +152,11 @@ class Server(tcp.Server):
 class Port(tcp.Port):
     """I am an SSL port."""
     transport = Server
-    
+
     def __init__(self, port, factory, ctxFactory, backlog=5, interface='', reactor=None):
         tcp.Port.__init__(self, port, factory, backlog, interface, reactor)
         self.ctxFactory = ctxFactory
-    
+
     def createInternetSocket(self):
         """(internal) create an SSL socket
         """

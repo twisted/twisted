@@ -59,7 +59,7 @@ class Port(base.BasePort):
     addressFamily = socket.AF_INET
     socketType = socket.SOCK_DGRAM
     maxThroughput = 256 * 1024 # max bytes we read in one eventloop iteration
-    
+
     def __init__(self, port, proto, interface='', maxPacketSize=8192, reactor=None):
         """Initialize with a numeric port to listen on.
         """
@@ -82,7 +82,7 @@ class Port(base.BasePort):
         """
         self._bindSocket()
         self._connectToProtocol()
-    
+
     def _bindSocket(self):
         log.msg("%s starting on %s"%(self.protocol.__class__, self.port))
         try:
@@ -93,7 +93,7 @@ class Port(base.BasePort):
         self.connected = 1
         self.socket = skt
         self.fileno = self.socket.fileno
-    
+
     def _connectToProtocol(self):
         self.protocol.makeConnection(self)
         self.startReading()
@@ -155,7 +155,7 @@ class Port(base.BasePort):
             result = None
         self.loseConnection()
         return result
-    
+
     def connectionLost(self, reason=None):
         """Cleans up my socket.
         """
@@ -193,13 +193,13 @@ class ConnectedPort(Port):
     """A connected UDP socket."""
 
     __implements__ = Port.__implements__, interfaces.IUDPConnectedTransport
-        
+
     def __init__(self, (remotehost, remoteport), port, proto, interface='', maxPacketSize=8192, reactor=None):
         assert isinstance(proto, protocol.ConnectedDatagramProtocol)
         Port.__init__(self, port, proto, interface, maxPacketSize, reactor)
         self.remotehost = remotehost
         self.remoteport = remoteport
-    
+
     def startListening(self):
         self._bindSocket()
         if abstract.isIPAddress(self.remotehost):
@@ -213,7 +213,7 @@ class ConnectedPort(Port):
         self.realAddress = addr
         self.socket.connect((addr, self.remoteport))
         self._connectToProtocol()
-    
+
     def connectionFailed(self, reason):
         self.loseConnection()
         self.protocol.connectionFailed(reason)
@@ -270,7 +270,7 @@ class MulticastMixin:
     def getOutgoingInterface(self):
         i = self.socket.getsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF)
         return socket.inet_ntoa(struct.pack("@i", i))
-    
+
     def setOutgoingInterface(self, addr):
         """Returns Deferred of success."""
         return self.reactor.resolve(addr).addCallback(self._setInterface)
@@ -279,17 +279,17 @@ class MulticastMixin:
         i = socket.inet_aton(addr)
         self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF, i)
         return 1
-    
+
     def getLoopbackMode(self):
         return self.socket.getsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP)
-    
+
     def setLoopbackMode(self, mode):
         mode = struct.pack("b", operator.truth(mode))
         self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, mode)
 
     def getTTL(self):
         return self.socket.getsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL)
-    
+
     def setTTL(self, ttl):
         ttl = struct.pack("b", ttl)
         self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
@@ -310,7 +310,7 @@ class MulticastMixin:
             cmd = socket.IP_DROP_MEMBERSHIP
         self.socket.setsockopt(socket.IPPROTO_IP, cmd, addr + interface)
         return 1
-    
+
     def leaveGroup(self, addr, interface=""):
         """Leave multicast group, return Deferred of success."""
         return self.reactor.resolve(addr).addCallback(self._joinAddr1, interface, 0)
