@@ -1,6 +1,6 @@
 
 import insults
-from telnet import TelnetBootstrapProtocol
+from telnet import TelnetTransport, TelnetBootstrapProtocol
 from ssh import session, TerminalUser, TerminalSession, TerminalSessionTransport, ConchFactory
 
 from twisted.python import components
@@ -11,9 +11,14 @@ def makeService(args):
     class ConstructedProtocol(insults.ServerProtocol):
         handlerFactory = args['handler']
 
+    # Telnet classes
     class ConstructedBootstrap(TelnetBootstrapProtocol):
-        protocol = ConstructedProtocol
+        protocolFactory = ConstructedProtocol
 
+    class ConstructedTelnetTransport(TelnetTransport):
+        protocolFactory = ConstructedBootstrap
+
+    # SSH classes
     class ConstructedSessionTransport(TerminalSessionTransport):
         protocolFactory = ConstructedProtocol
 
@@ -24,7 +29,7 @@ def makeService(args):
     components.registerAdapter(ConstructedSession, TerminalUser, session.ISession)
 
     f = protocol.ServerFactory()
-    f.protocol = ConstructedBootstrap
+    f.protocol = ConstructedTelnetTransport
     tsvc = internet.TCPServer(args['telnet'], f)
 
     f = ConchFactory()

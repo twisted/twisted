@@ -190,7 +190,7 @@ class Telnet(protocol.Protocol):
             DO: self.telnet_DO,
             DONT: self.telnet_DONT}
 
-    def write(self, bytes):
+    def _write(self, bytes):
         self.transport.write(bytes)
 
     def requestEnable(self, option):
@@ -217,7 +217,21 @@ class Telnet(protocol.Protocol):
             self.dont(option)
             return d
 
+    def requestNegotiation(self, about, bytes):
+        """Send a subnegotiation request.
+
+        @param about: A byte indicating the feature being negotiated.
+        @param bytes: Any number of bytes containing specific information
+        about the negotiation being requested.  No values in this string
+        need to be escaped, as this function will escape any value which
+        requires it.
+        """
+        bytes = bytes.replace(telnet.IAC, telnet.IAC * 2)
+        bytes = bytes.replace(telnet.SE, telnet.IAC + telnet.SE)
+        self._write(telnet.IAC + telnet.SB + bytes + telnet.SE)
+
     def dataReceived(self, data):
+        print self.__class__.__name__, '.dataReceived', repr(data)
         # Most grossly inefficient implementation ever
         for b in data:
             if self.state == 'data':
@@ -301,26 +315,27 @@ class Telnet(protocol.Protocol):
     def do(self, option):
         """Request an option be enabled.
         """
-        self.write(IAC + DO + option)
+        self._write(IAC + DO + option)
 
     def dont(self, option):
         """Request an option be disabled.
         """
-        self.write(IAC + DONT + option)
+        self._write(IAC + DONT + option)
 
     def will(self, option):
         """Indicate that we will enable an option.
         """
-        self.write(IAC + WILL + option)
+        self._write(IAC + WILL + option)
 
     def wont(self, option):
         """Indicate that we will not enable an option.
         """
-        self.write(IAC + WONT + option)
+        self._write(IAC + WONT + option)
 
     class _OptionState:
         state = 'no'
         negotiating = False
+        onResult = None
 
     def getOptionState(self, opt):
         return self.options.setdefault(opt, self._OptionState())
@@ -454,7 +469,23 @@ class Telnet(protocol.Protocol):
     def disable(self, option):
         pass
 
-class TelnetTransport(Telnet):
+class ProtocolTransportMixin:
+    def write(self, bytes):
+        self.transport.write(bytes)
+
+    def writeSequence(self, seq):
+        self.transport.writeSequence(seq)
+
+    def loseConnection(self):
+        self.transport.loseConnection()
+
+    def getHost(self):
+        return self.transport.getHost()
+
+    def getPeer(self):
+        return self.transport.getPeer()
+
+class TelnetTransport(Telnet, ProtocolTransportMixin):
     """
     @ivar protocol: An instance of the protocol to which this
     transport is connected, or None before the connection is
@@ -482,7 +513,7 @@ class TelnetTransport(Telnet):
         self.protocolKwArgs = kw
 
     def connectionMade(self):
-        p = self.protocol = self.protocolFactory(self)
+        p = self.protocol = self.protocolFactory(*self.protocolArgs, **self.protocolKwArgs)
         p.makeConnection(self)
 
     def allowEnable(self, option):
@@ -503,6 +534,7 @@ class TelnetTransport(Telnet):
         self.protocol.unhandledCommand(command, argument)
 
     def applicationByteReceived(self, bytes):
+        print 'omg!'
         self.protocol.dataReceived(bytes)
 
     def connectionLost(self, reason):
@@ -510,53 +542,37 @@ class TelnetTransport(Telnet):
         self.protocol.connectionLost(reason)
         del self.protocol
 
-class BootstrapProtocol(TelnetProtocol):
+class TelnetBootstrapProtocol(protocol.Protocol, ProtocolTransportMixin):
+    protocol = None
     protocolFactory = None
 
-    def __init__(self, proto, *a, **kw):
-        self.proto = self.protocolFactory(self, proto, *a, **kw)
+    def __init__(self, *args, **kw):
+        self.protocolArgs = args
+        self.protocolKwArgs = kw
 
-class TelnetBootstrapProtocol(TelnetTransport):
     def connectionMade(self):
-        TelnetTransport.connectionMade(self)
-        for opt in (telnet.LINEMODE, telnet.ECHO, telnet.NAWS):
-            self.requestEnable(opt)
+        self.transport.negotiationMap[NAWS] = self.telnet_NAWS
+
+        for opt in (telnet.LINEMODE, NAWS, SUPPRESS_GO_AHEAD, telnet.ECHO):
+            self.transport.requestEnable(opt).addErrback(log.err)
+
+        self.protocol = self.protocolFactory(*self.protocolArgs, **self.protocolKwArgs)
+        self.protocol.makeConnection(self)
 
     def allowEnable(self, opt):
-        return opt in (telnet.LINEMODE, telnet.ECHO, telnet.NAWS)
+        return opt in (telnet.LINEMODE, NAWS, SUPPRESS_GO_AHEAD, telnet.ECHO)
 
     def enable(self, opt):
-        pass
+        if opt == telnet.LINEMODE:
+            self.transport.requestNegotiation(telnet.LINEMODE, MODE + chr(TRAPSIG))
 
-    def iacSBchunk(self, chunk):
-        if chunk[0] == NAWS:
-            if len(chunk) == 6:
-                width, height = struct.unpack('!HH', chunk[1:-1])
-                self.chainedProtocol.handler.terminalSize(width, height)
+    def telnet_NAWS(self, bytes):
+        if len(bytes) == 4:
+            width, height = struct.unpack('!HH', bytes)
+            self.protocol.terminalSize(width, height)
+        else:
+            log.msg("Wrong number of NAWS bytes")
 
-    def iac_WILL(self, feature):
-        if feature == telnet.LINEMODE:
-            self.write(telnet.IAC + telnet.SB + telnet.LINEMODE + MODE + chr(TRAPSIG) + telnet.IAC + telnet.SE)
-        elif feature == telnet.ECHO:
-            self.write(telnet.IAC + telnet.DONT + telnet.ECHO)
-
-    def iac_WONT(self, feature):
-        pass
-
-    def iac_DO(self, feature):
-        if feature == telnet.GA:
-            self.write(telnet.IAC + telnet.WILL + SUPPRESS_GO_AHEAD)
-
-    def iac_DONT(self, feature):
-        pass
-
-    def processChunk(self, bytes):
-        self.chainedProtocol.dataReceived(bytes)
-
-    # ITransport or whatever
-    def loseConnection(self):
-        self.transport.loseConnection()
-
-    def connectionLost(self, reason):
-        self.chainedProtocol.connectionLost(reason)
-
+    def dataReceived(self, data):
+        print 'TelnetBootstrapProtocol.dataReceived', repr(data)
+        self.protocol.dataReceived(data)
