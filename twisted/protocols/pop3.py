@@ -312,21 +312,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         d.addCallbacks(self._cbMailbox, self._ebMailbox, callbackArgs=(user,)
         ).addErrback(self._ebUnexpected)
     
-#    def _cbMailbox(self, (interface, avatar, logout), user):
-    def _cbMailbox(self, ial, user):
-        if isinstance(ial, Mailbox) or components.implements(ial, IMailbox):
-            import warnings
-            warnings.warn(
-                "POP3.authenticateUser*() methods must now return a 3-tuple,"
-                "not a Mailbox.  Please update your code.",
-                DeprecationWarning, 1
-            )
-            interface = IMailbox
-            avatar = ial
-            logout = lambda: None
-        else:
-            interface, avatar, logout = ial
-
+    def _cbMailbox(self, (interface, avatar, logout), user):
         if interface is not IMailbox:
             self.failResponse('Authentication failed')
             log.err("_cbMailbox() called with an interface other than IMailbox")
