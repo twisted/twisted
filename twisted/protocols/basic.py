@@ -128,8 +128,8 @@ class LineOnlyReceiver(protocol.Protocol):
     def dataReceived(self, data):
         """Translates bytes into lines, and calls lineReceived."""
         lines  = (self._buffer+data).split(self.delimiter)
-        self._buffer = lines[-1]
-        for line in lines[:-1]:
+        self._buffer = lines.pop(-1)
+        for line in lines:
             if self.transport.disconnecting:
                 # this is necessary because the transport may be told to lose
                 # the connection by a line within a larger packet, and it is
