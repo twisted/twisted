@@ -79,10 +79,6 @@ class FileDescriptor(log.Logger):
         a result of 0 implies no write was done. A result of None
         indicates that a write was done.
         """
-        if not self.unsent:
-            self.stopWriting()
-            return
-        
         # Send as much data as you can.
         l = self.writeSomeData(self.unsent)
         if l < 0:
