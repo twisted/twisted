@@ -1396,7 +1396,7 @@ class TOCClient(protocol.Protocol):
         self.sendFlap(2,"toc_rvous_accept %s %s %s" % (normalize(user),
                                                      cookie,uuid))
         if uuid==SEND_FILE_UID:
-            reactor.clientTCP(pip,port,SendFileTransfer(self,cookie,user,d["name"]))
+            protocol.ClientConnector(reactor, SendFileTransfer,self,cookie,user,d["name"]).connectTCP(pip,port)
 
     def rvous_cancel(self,cookie):
         user,uuid,pip,port,d=self._cookies[cookie]
