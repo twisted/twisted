@@ -1,41 +1,33 @@
 """
-def flen(f):
-    f.seek(0, 2)
-    return f.tell()
+The stream module provides a simple abstraction of streaming
+data. While Twisted already has some provisions for handling this in
+its Producer/Consumer model, the rather complex interactions between
+producer and consumer makes it difficult to implement something like
+the CompoundStream object. Thus, this API.
 
-f=open('/etc/resolv.conf')
-s=stream2.FileStream(f, 0, flen(f))
-c=stream2.CompoundStream()
-c.addStream(s)
-c.addStr("***************")
-a,b=c.split(10)
+The IStream interface is very simple. It consists of two methods:
+read, and close. The read method should either return some data, None
+if there is no data left to read, or a Deferred. Close frees up any
+underlying resources and causes read to return None forevermore.
+
+IByteStream adds a bit more to the API:
+1) read is required to return objects conforming to the buffer interface.  
+2) .length, which may either an integer number of bytes remaining, or
+None if unknown
+3) .split(position). Split takes a position, and splits the
+stream in two pieces, returning the two new streams. Using the
+original stream after calling split is not allowed. 
+
+There are two builtin source stream classes: FileStream and
+MemoryStream. The first produces data from a file object, the second
+from a buffer in memory. Any number of these can be combined into one
+stream with the CompoundStream object. Then, to interface with other
+parts of Twisted, there are two transcievers: StreamProducer and
+ProducerStream. The first takes a stream and turns it into an
+IPushProducer, which will write to a consumer. The second is a
+consumer which is a stream, so that other producers can write to it.
 """
-  
-"""
-IPullProducer:
- - resumeProducing() is really read, with a consumer.write() callback.
- - consumer.registerProducer/unregisterProducer unnecessary.
 
-IPushProducer:
- - resumeProducing() says to start writing data. read()
- - pauseProducing() stop writing data
-
-PullStream:
- - passive, has read() method, which returns data, or a deferred if no data available.
-
-PushStream:
- - active, has beginProducing(consumer) method, and then write()s to consumer.
- - resumeProducing() says to start writing data.
- - pauseProducing() stop writing data
-
-StreamProducer: 
- - converts a pull stream into a producer
- - calls push.write(pull.read()) until pauseProducing is called.
-
-ProducerStream
- - converts producers into a pull stream
- - when read() is called, returns a deferred, and calls producer.resumeProducing() and waits for a write() call.
-"""
 
 import copy,os
 from zope.interface import Interface, Attribute, implements
@@ -49,11 +41,14 @@ class IStream(Interface):
     
     def read():
         """Read some data.
-        Returns some object or else a Deferred.
+        Returns some object representing the data.
+        If there is no more data available, returns None.
+        Can also return a Deferred resulting in one of the above.
         """
         
     def close():
-        """Prematurely close."""
+        """Prematurely close. Should also cause further reads to
+        return None."""
 
 class IByteStream(IStream):
     """A stream which is of bytes."""
@@ -63,19 +58,26 @@ class IByteStream(IStream):
     def read():
         """Read some data.
         Returns an object conforming to the buffer interface, or
-        else a Deferred.
+        if there is no more data available, returns None.
+        Can also return a Deferred resulting in one of the above.
+
         """
     def split(point):
         """Split this stream into two, at byte position 'point'.
 
-        Returns a tuple of (before, after). A stream should not be used
-        after calling split on it.
+        Returns a tuple of (before, after). After calling split,
+        no other methods should be called on this stream. Doing
+        so will have undefined behavior.
 
-        If you cannot be implement this trivially, try return fallbackSplit(self, point).
+        Implementation note:
+        If you cannot implement split easily, you may implement it as:
+          return fallbackSplit(self, point)
         """
 
     def close():
-        """Prematurely close."""
+        """Prematurely close this stream. Should also cause further reads to
+        return None. Additionally, .length should be set to 0.
+        """
 
 class ISendfileableStream(Interface):
     def read(sendfile=False):
@@ -88,6 +90,8 @@ class ISendfileableStream(Interface):
         """
         
 class SimpleStream:
+    """Superclass of simple streams with a single buffer and a offset and length
+    into that buffer."""
     implements(IByteStream)
     
     length = None
@@ -135,13 +139,17 @@ def mmapwrapper(*args, **kwargs):
 
 class FileStream(SimpleStream):
     implements(ISendfileableStream)
-    """A producer that produces data from a file. File must be a normal
-    file that supports seek or this won't work."""
+    """A stream that reads data from a file. File must be a normal
+    file that supports seek, (e.g. not a pipe or device or socket)."""
     # 65K, minus some slack
     CHUNK_SIZE = 2 ** 2 ** 2 ** 2 - 32
 
     f = None
     def __init__(self, f, start=0, length=None, useMMap=True):
+        """
+        Create the stream from file f. If you specify start and length,
+        use only that portion of the file.
+        """
         self.f = f
         self.start = start
         if length is None:
@@ -199,7 +207,12 @@ class FileStream(SimpleStream):
         SimpleStream.close(self)
         
 class MemoryStream(SimpleStream):
+    """A stream that reads data from a buffer object."""
     def __init__(self, mem, start=0, length=None):
+        """
+        Create the stream from buffer object mem. If you specify start and length,
+        use only that portion of the buffer.
+        """
         self.mem = mem
         self.start = start
         if length is None:
@@ -225,7 +238,9 @@ class MemoryStream(SimpleStream):
         SimpleStream.close(self)
         
 class CompoundStream:
-    """An IByteStream which is composed of a bunch of substreams."""
+    """A stream which is composed of many other streams.
+    Call addStream to add substreams.
+    """
     
     implements(IByteStream, ISendfileableStream)
     deferred = None
