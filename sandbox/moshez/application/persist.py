@@ -24,23 +24,20 @@ from twisted.persisted import styles
 # These encrypt/decrypt functions only work for data formats
 # which are immune to having spaces tucked at the end.
 # All data formats which persist saves hold that condition.
-def encrypt(passphrase, data):
+def _encrypt(passphrase, data):
     from Crypto.Cipher import AES as cipher
     leftover = len(data) % cipher.block_size
     if leftover:
         data += ' '*(cipher.block_size - leftover)
     return cipher.new(md5.new(passphrase).digest()[:16]).encrypt(data)
 
-def decrypt(passphrase, data):
+def _decrypt(passphrase, data):
     from Crypto.Cipher import AES
     return AES.new(md5.new(passphrase).digest()[:16]).decrypt(data)
 
 
 class IPersistable(components.Interface):
 
-    def setPassword(self, password):
-        pass
- 
     def setStyle(self, style):
         pass
 
@@ -80,7 +77,7 @@ class Persistant:
         else:
             s = StringIO.StringIO()
             dumpFunc(self, s)
-            f.write(encrypt(passphrase, s.getvalue()))
+            f.write(_encrypt(passphrase, s.getvalue()))
         f.close()
 
     def _getStyle(self):
@@ -133,7 +130,7 @@ def load(filename, style, passphrase=None):
         from cPickle import load
         mode = 'rb'
     if passphrase:
-        fp = StringIO.StringIO(open(filename, 'rb').read())
+        fp = StringIO.StringIO(_decrypt(open(filename, 'rb').read()))
     else:
         fp = open(filename, mode)
     mainMod = sys.modules['__main__']
@@ -154,7 +151,7 @@ def loadValueFromFile(filename, variable, passphrase=None):
         mode = 'r'
     data = open(filename, mode).read()
     if passphrase:
-        data = decrypt(passphrase, data)
+        data = _decrypt(passphrase, data)
     d = {'__file__': filename}
     exec data in d, d
     value = d['variable']
