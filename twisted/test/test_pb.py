@@ -555,7 +555,18 @@ class DisconnectionTestCase(unittest.TestCase):
         """Called on RemoteReference disconnect."""
         self.assertEquals(o, self.remoteObject)
         self.objectCallback = 1
-    
+
+    def testBadSerialization(self):
+        c, s, pump = connectedServerAndClient()
+        pump.pump()
+        s.setNameForLocal("o", BadCopySet())
+        g = c.remoteForName("o")
+        l = []
+        g.callRemote("setBadCopy", BadCopyable()).addErrback(l.append)
+        main.iterate()
+        pump.flush()
+        self.assertEquals(len(l), 1)
+
     def testDisconnection(self):
         c, s, pump = connectedServerAndClient()
         pump.pump()
@@ -591,6 +602,14 @@ class DisconnectionTestCase(unittest.TestCase):
         self.assert_(self.gotCallback)
         self.assert_(self.objectCallback)
 
+
+class BadCopyable(pb.Copyable):
+    def getStateToCopyFor(self, p):
+        raise "freak out"
+
+class BadCopySet(pb.Referenceable):
+    def remote_setBadCopy(self, bc):
+        return None
 
 class LocalRemoteTest(util.LocalAsRemote):
 
@@ -633,6 +652,5 @@ class SpreadUtilTestCase(unittest.TestCase):
         o = LocalRemoteTest()
         m = o.remoteMethod("add1")
         self.assertEquals(m(3), 4)
-
 
 testCases = [BrokerTestCase, DisconnectionTestCase, SpreadUtilTestCase]

@@ -654,8 +654,11 @@ class Broker(banana.Banana):
             del kw['pbanswer']
         if self.disconnected:
             raise ProtocolError("Calling Stale Broker")
-        netArgs = self.serialize(args, perspective=perspective, method=message)
-        netKw = self.serialize(kw, perspective=perspective, method=message)
+        try:
+            netArgs = self.serialize(args, perspective=perspective, method=message)
+            netKw = self.serialize(kw, perspective=perspective, method=message)
+        except:
+            return defer.fail(failure.Failure())
         requestID = self.newRequestID()
         if answerRequired:
             rval = defer.Deferred()
