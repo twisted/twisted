@@ -418,6 +418,7 @@ class FileSender:
         if not chunk:
             self.file = None
             self.consumer.unregisterProducer()
+            log.debug("producer has unregistered?: %s" % (self.consumer.producer is None))
             if self.deferred:
                 self.deferred.callback(self.lastSent)
                 self.deferred = None
