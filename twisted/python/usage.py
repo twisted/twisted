@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: usage.py,v 1.27 2002/08/10 20:36:57 exarkun Exp $
+# $Id: usage.py,v 1.28 2002/08/14 23:39:45 radix Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -378,9 +378,15 @@ class Options(UserDict.UserDict):
 
 
     def __str__(self, width=None):
+
+        #If subOptions exists by now, then there was probably an error while
+        #parsing its options.
+        if hasattr(self, 'subOptions'):
+            return str(self.subOptions)
+        
         if not width:
             width = int(os.environ.get('COLUMNS', '80'))
-        
+
         if hasattr(self, 'subCommands'):
             cmdDicts = []
             for (cmd, short, parser, desc) in self.subCommands:
