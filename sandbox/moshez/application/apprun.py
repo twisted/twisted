@@ -132,7 +132,6 @@ class ServerOptions(usage.Options):
                 ['debug', 'b',
                  "run the application in the Python Debugger "
                  "(implies nodaemon), sending SIGINT will drop into debugger"],
-                ['quiet','q',     "be a little more quiet"],
                 ['no_save','o',   "do not save state on shutdown"],
                 ['encrypted', 'e',
                  "The specified tap/aos/xml file is encrypted."]]

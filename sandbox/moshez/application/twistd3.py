@@ -52,21 +52,19 @@ class ServerOptions(apprun.ServerOptions):
         sys.exit()
 
 
-def checkPID(pidfile, quiet):
+def checkPID(pidfile):
     if os.path.exists(pidfile):
         try:
             pid = int(open(pidfile).read())
         except ValueError:
-            sys.exit('Pidfile %s contains non numeric value' % pidfile)
-
+            sys.exit('Pidfile %s contains non-numeric value' % pidfile)
         try:
             os.kill(pid, 0)
         except OSError, why:
             if why[0] == errno.ESRCH:
                 # The pid doesnt exists.
-                if not quiet:
-                    print 'Removing stale pidfile %s' % config['pidfile']
-                    os.remove(pidfile)
+                log.msg('Removing stale pidfile %s' % pidfile)
+                os.remove(pidfile)
             else:
                 sys.exit("Can't check status of PID %s from pidfile %s: %s" %
                          (pid, pidfile, why[1]))
@@ -75,7 +73,7 @@ def checkPID(pidfile, quiet):
 Another twistd server is running, PID %s\n
 This could either be a previously started instance of your application or a
 different application entirely. To start a new one, either run it in some other
-directory, or use my --pidfile and --logfile parameters to avoid clashes.
+directory, or use the --pidfile and --logfile parameters to avoid clashes.
 """ %  pid)
 
 def removePID(pidfile):
@@ -153,18 +151,16 @@ def setupEnvironment(config):
     open(config['pidfile'],'wb').write(str(os.getpid()))
 
 def startApplication(config, application):
-    service_ = service.IService(application)
     process = service.IProcess(application, None)
     if process is not None and not config['originalname']:
         launchWithName(process.processName)
     setupEnvironment(config)
-    service_.privilegedStartService()
-    process = service.IProcess(application, None)
+    service.IService(application).privilegedStartService()
     if process is not None:
         shedPrivileges(config['euid'], process.uid, process.gid)
     else:
         log.err("No process information! Not shedding privileges...")
-    service_.startService()
+    service.IService(application).startService()
     if not config['no_save']:
         apprun.scheduleSave(application)
 
@@ -177,7 +173,7 @@ def runApp(config):
     startLogging(config['logfile'], config['syslog'], config['prefix'],
                  config['nodaemon'])
     apprun.initialLog()
-    checkPID(config['pidfile'], config['quiet'])
+    checkPID(config['pidfile'])
     startApplication(config, apprun.getApplication(config, passphrase))
     apprun.runReactorWithLogging(config, oldstdout, oldstderr)
     removePID(config['pidfile'])

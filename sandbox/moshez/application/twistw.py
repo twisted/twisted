@@ -53,6 +53,9 @@ def runApp(config):
     service.IService(application).startService()
     if not config['no_save']:
         apprun.scheduleSave(application)
+    def callMeAgain():
+        reactor.callLater(0.1, callMeAgain)
+    reactor.callLater(0.1, callMeAgain)
     apprun.runReactorWithLogging(config, oldstdout, oldstderr)
     if config['report-profile']:
         apprun.reportProfile(config['report-profile'], application.processName)
