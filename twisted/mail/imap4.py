@@ -1098,6 +1098,8 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     select_NAMESPACE = auth_NAMESPACE
 
     def _parseMbox(self, name):
+        if isinstance(name, unicode):
+            return name
         try:
             return name.decode('imap4-utf-7')
         except:
@@ -1264,7 +1266,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             if not sub or self.account.isSubscribed(name):
                 flags = box.getFlags()
                 delim = box.getHierarchicalDelimiter()
-                resp = (DontQuoteMe(cmdName), map(DontQuoteMe, flags), delim, name)
+                resp = (DontQuoteMe(cmdName), map(DontQuoteMe, flags), delim, name.encode('imap4-utf-7'))
                 self.sendUntaggedResponse(collapseNestedLists(resp))
         self.sendPositiveResponse(tag, '%s completed' % (cmdName,))
 
@@ -5207,10 +5209,12 @@ def parseTime(s):
 
 import codecs
 def modified_base64(s):
-    return binascii.b2a_base64(s)[:-1].rstrip('=').replace('/', ',')
+    s_utf7 = s.encode('utf-7')
+    return s_utf7[1:-1].replace('/', ',')
 
 def modified_unbase64(s):
-    return binascii.a2b_base64(s.replace(',', '/') + '===')
+    s_utf7 = '+' + s.replace(',', '/') + '-'
+    return s_utf7.decode('utf-7')
 
 def encoder(s):
     r = []
@@ -5220,7 +5224,7 @@ def encoder(s):
             if _in:
                 r.extend(['&', modified_base64(''.join(_in)), '-'])
                 del _in[:]
-            r.append(c)
+            r.append(str(c))
         elif c == '&':
             if _in:
                 r.extend(['&', modified_base64(''.join(_in)), '-'])

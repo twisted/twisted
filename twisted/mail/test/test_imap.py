@@ -68,10 +68,12 @@ def sortNest(l):
 
 class IMAP4UTF7TestCase(unittest.TestCase):
     tests = [
-        ['Hello world', 'Hello world'],
-        ['Hello & world', 'Hello &- world'],
-        ['Hello\xffworld', 'Hello&,w-world'],
-        ['\xff\xfe\xfd\xfc', '&,,79,A-'],
+        [u'Hello world', 'Hello world'],
+        [u'Hello & world', 'Hello &- world'],
+        [u'Hello\xffworld', 'Hello&AP8-world'],
+        [u'\xff\xfe\xfd\xfc', '&AP8A,gD9APw-'],
+        [u'~peter/mail/\u65e5\u672c\u8a9e/\u53f0\u5317', 
+         '~peter/mail/&ZeVnLIqe-/&U,BTFw-'], # example from RFC 2060
     ]
 
     def testEncode(self):
