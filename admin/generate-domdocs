@@ -175,12 +175,13 @@ def munge(document, template, linkrel, d, fullpath, ext, cache):
     # relative links to html files
     for node in (findElementsWithAttribute(template, "href")+
                  findElementsWithAttribute(document, "href")):
-        href = node.getAttribute("href")
-        if not (href.startswith("http://") or href.startswith("mailto:")):
-            fname = os.path.splitext(href)
-            if len(fname) == 2 and fname[1] == '.html':
-                # print 'rel link', href
-                node.setAttribute("href", fname[0] + ext)
+        if not node.getAttribute("class") == "html-listing":
+            href = node.getAttribute("href")
+            if not (href.startswith("http://") or href.startswith("mailto:")):
+                fname = os.path.splitext(href)
+                if len(fname) == 2 and fname[1] == '.html':
+                    # print 'rel link', href
+                    node.setAttribute("href", fname[0] + ext)
     for node in findElementsWithAttribute(template, "class", "mtime"):
         mode, ino, dev, nlink, uid, gid, size, atime, mtime, ctime =\
               os.stat(fullpath)
