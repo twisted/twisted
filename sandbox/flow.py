@@ -26,34 +26,191 @@
     to allow the handler to return (for example, if must block), but 
     saving the handler's state so it can be resumed later. 
 """
-from compat import StopIteration, iter
+from twisted.python.compat import StopIteration, iter
 from __future__ import nested_scopes
 
+class PauseFlow(Exception):
+   """
+      This exception is used to pause a Flow, returning control
+      back to the main event loop.  The flow automatically 
+      reschedules itself to resume execution, resuming at the
+      stage where it left off.  This exception can be thrown
+      inside of any stage, and that stage will be re-scheduled
+      for another time.  This is useful when a resource needed
+      to complete a stage is busy.   The entire reason for this
+      library is to support complicated flows where this 
+      exception can be raised.
+  """
+
 class Flow:
-    '''
-       This object maintains a sequence of FlowStages which can be
+    """ a sequence of Stages which can be executed more than once
+
+       This object maintains a sequence of Stages which can be
        executed in order, where the output of one flow stage becomes
-       the input of the next.   A flow starts with a top-level FlowStage,
+       the input of the next.   A flow starts with a top-level Stage,
        usually a producer of some sort, perhaps a database query, 
        followed by other filter stages until the data passed is 
-       eventually consumed and None is returned.
-   '''
+       eventually consumed and None is returned.  The sequence is
+       stored using a linked-list.
+    """
+
+    def addDiscard(self):
+        """ the no-op stage """
+        return self._append(Stage())
+
+    def addCallable(self, callable, stop=None, withContext = 0):
+        """ wraps a function or other callable for use in a flow
+
+            This wraps a callable with a single input parameter
+            and an optional output value, one-to-one behavior.
+            If the return value is stop (None if you don't have 
+            a return statement) then the next stage is not processed.
+
+                def func(data):
+                    # do something and then process
+                    # the next stage
+                    return data
+             
+            Optionally, the callable will be passed a context object
+            as the first argument and the data value as the second
+            argument when registered with withContext true.  The 
+            context exists for the life of the flow, so it can be 
+            used to stuff away variables as needed.
+
+                def func(context, data):
+                    # context is mutable to 
+                    # store all kinds of items
+                    return data
+            
+            Note that this implementation is tail recursive, that is, 
+            in most cases each callable finishes executing before the 
+            next stage is pushed onto the stack.
+        """
+        return self._append(Callable(callable, stop, withContext))
+
+    def addBranch(self, callable, onFinish = None, withContext = 0):
+        """ wraps an iterator; in effect one-to-many behavior
+
+            This wraps an iterable object so that it can be used
+            within a data flow.  This protocol has three stages:
+
+                First, the callable is applied with a single argument,
+                the data value from the parent data flow.   This can
+                be a function returning a list, for example.  Or, it
+                could be a class implementing the iterator protocol 
+                with a __init__ taking a 'data' argument.
+ 
+                Second, the result value, if any, is passed to iter,
+                where __iter__ is called to create an iterator.  This
+                is just a step in the iterator protocol, but can be 
+                useful under some circumstances.   If the result of 
+                the first stage is a list or tuple, then this is 
+                handled automatically.
+ 
+                Third, the next() method of the returned object is
+                executed repeatedly untill StopIteration is raised.
+                For each time the next() function returns, its 
+                result is passed onto the next stage.
+            
+            Optionally, an onFinish function can be provided which 
+            is executed after the iteration finishes.  This function
+            takes no arguments.
+
+            And, just like addCallable, if withContext is true, then
+            the context is passed as the first argument to both the 
+            first stage and also to the onFinish function, if it was
+            provided.
+        """            
+        return self._append(Branch(callable, onFinish, withContext))
+    
+    def addMerge(self, callable, start = None, bucket = None, 
+                 withContext =0, passThru = 0, isGlobal = 0, reduce = 1):
+        """ condences results; in effect many-to-one behavior
+
+            This stage is the opposite of the Branch stage, it accepts
+            multiple calls and aggregates them.  The registration of
+            this stage has several parameters:
+    
+                callable   the function or operator which will merge the 
+                           output; the function has two paramaters, first
+                           is the current accumulated value, and second is
+                           the value passed via the stream; the output 
+                           depends on the following parameter
+    
+                start      the starting value; or, if it is a callable,
+                           a function taking no arguments that will be
+                           applied to create a starting value
+    
+                bucket     the attribute name for the aggregate value,
+                           if left as None, a unique bucket name will 
+                           be used
+   
+                isGlobal   if the attribute should be attached to the
+                           root context (where it will survive for the
+                           life of the flow's execution) 
+
+                passThru   If this is true, then the next stage will be
+                           passed on the data as it arrives from the
+                           previous stage; also the final 'notificaton'
+                           of the next stage will be skipped.  This is 
+                           only useful if the bucket name is provided.
+ 
+                reduce     If this boolean value is true, then the result
+                           of the function will be the new aggregate value;
+                           in this way most operators can be used.  Clearly,
+                           then, if reduce is true, the merge will pass one
+                           and only one value to the next stage
+    
+                           Otherwise, the argument is expected to be a tuple;
+                           first is the new accumulated value and the second 
+                           is a value to be passed on to the next stage.  
+                           To handle mutable reductions, if the result is None
+                           then the accumulated value won't be replaced and
+                           a result won't be passed on; this works if the 
+                           function is mutating the accumulated value
+    
+            Since reducing to a single list is often useful, the default
+            parameters of this function do exactly that.   Note that this
+            stage uses the most nested Context for holding the accumulation
+            bucket; thus placement of Context stages could be used to 
+            capture intermediate results, etc.
+        """
+        return self._append(Merge(callable, start, bucket, withContext, 
+                                 passThru, isGlobal, reduce))
+
+    def addMergeToList(self, passThru = 0, isGlobal = 0, bucket=None):
+        """ accumulates events into a list """
+        return self._append( Merge(bucket=bucket, passThru=passThru,
+                                  isGlobal=isGlobal))
+    
+    def addContext(self, onFlush = None):
+        """ adds a nested context, provides for end notification
+
+            In a flow, introducing a branch or a callable doesn't
+            necessarly create a variable context.  This is done explicitly
+            with this Stage.  This context also provides a callback
+            which can be used with the context is flushed, that is when
+            all child processes have finished.  
+        """
+        return self._append(Context(onFlush))
+
+    def addChain(self, *flows):
+        """ adds one or more flows to the current flow
+
+            In some cases it is necessary to daisy-chain flows
+            together so that the stages from the chained flows
+            are executed in the current flow context
+        """
+        return self._append(Chain(flows))
+    
     def __init__(self):
-        '''
-           Initializes a Flow object.  Processing starts at initialStage
-           and then proceeds recursively.  Note that the stages are 
-           recorded here as a StageItem singly-linked list.
-        '''
         self.stageHead    = None
         self.stageTail    = None
         self.waitInterval = 0
-    #     
-    def append(self, stage):
-        '''
-            This appends an additional stage to the singly-linked
-            list, starting with stageHead.
-        '''
-        link = FlowLinkItem(stage)
+          
+    def _append(self, stage):
+        """ adds an additional stage to the singly-lined list """
+        link = LinkItem(stage)
         if not self.stageHead:
             self.stageHead = link
             self.stageTail = link
@@ -63,85 +220,172 @@ class Flow:
         return self
 
     def execute(self, data = None):
-        '''
-           This executes the current flow, given empty
-           starting data and the default initial state.
-        '''
+        """ executes the current flow
+
+            This method creates a new Stack and then begins the execution 
+            of the flow within that stack.  Note that this means that the 
+            Flow object itself shouldn't be used for execution specific 
+            information, this is what the Stack is for.
+        """
         if self.stageHead:
-            stack = FlowStack(self.stageHead, data, self.waitInterval)
+            stack = Stack(self.stageHead, data, self.waitInterval)
             stack.execute()
 
-    def addFunction(self, callable, stop=None):
-        return self.append(FlowFunction(callable, stop))
+class Stage:
+    def __call__(self, flow, data):
+        pass
+ 
+class Callable(Stage):
+    def __init__(self, callable, stop = None, withContext = 0):
+        self.callable   = callable
+        self.stop       = stop
+        self.withContext = withContext
+     
+    def __call__(self, flow, data):
+        """
+        """
+        if self.withContext:
+            ret = self.callable(flow.context,data)
+        else:
+            ret = self.callable(data)
+        if ret is not self.stop:
+            flow.push(ret)
 
-    def addBranch(self, callable, onFinish = None):
-        return self.append(FlowBranch(callable, onFinish))
-
-    def addContext(self, onFlush = None):
-        return self.append(FlowContext(onFlush))
-
-    def addMerge(self, func, start = None, bucket = None, reduce = 1):
-        stage = FlowMerge(func, start, bucket, reduce)
-        return self.append(stage)
-
-    def addMergeToList(self, bucket=None):
-        return self.append(FlowMerge(bucket=bucket))
-
-    def addChain(self, *args):
-        return self.append(FlowChain(args))
+class Branch(Stage):
+    def __init__(self, callable, onFinish = None, withContext = 0):
+        self.callable   = callable
+        self.onFinish   = onFinish
+        self.withContext = withContext
+      
+    def __call__(self, flow, data):
+        if self.withContext:
+            ret = self.callable(flow.context,data)
+        else:
+            ret = self.callable(data)
+        if ret is not None:
+            next = iter(ret).next
+            flow.push(next, self.iterate)
     
-    def addDiscard(self):
-        return self.append(FlowStage())
-    
+    def iterate(self, flow, next):
+        try:
+            data = next()
+            flow.push(next, self.iterate)
+            flow.push(data)
+        except StopIteration:
+            if self.onFinish:
+                if self.withContext:
+                    ret = self.onFinish(flow.context)
+                else:
+                    ret = self.onFinish()
 
-class FlowStack:
-    '''
-       a stack of FlowStages and a means for their execution
-    '''
+class Merge(Stage):
+    def __init__(self, callable = lambda lst, val: lst.append(val) or lst,
+                       start = lambda: [], bucket = None, withContext = 0,
+                       passThru = 0, isGlobal = 0, reduce = 1):
+        if not bucket: bucket = "_%d" % id(self)
+        self.bucket      = bucket
+        self.start       = start
+        self.callable    = callable
+        self.reduce      = reduce
+        self.withContext = withContext
+        self.isGlobal    = isGlobal
+        self.passThru    = passThru
+        assert reduce or self.passThru
+    #
+    def __call__(self, flow, data):
+        if self.isGlobal: cntx = flow.global_context
+        else:             cntx = flow.context
+        if not hasattr(cntx, self.bucket):
+             start = self.start
+             if callable(start): start = start()
+             setattr(cntx,self.bucket,start)
+             if not self.passThru:
+                 cntx.addFlush(flow.nextLinkItem(), self.bucket)
+        if self.withContext:
+            curr = self.callable(cntx, getattr(cntx,self.bucket), data)
+        else:
+            curr = self.callable(getattr(cntx,self.bucket), data)
+        if self.reduce:
+            setattr(cntx, self.bucket, curr)
+            if self.passThru:
+                flow.push(data)
+        else:
+            if curr:
+                (save, data) = curr
+                setattr(cntx, self.bucket, save)
+                if data: flow.push(data)
+
+class Context(Stage):
+    def __init__(self, onFlush = None):
+        self.onFlush = onFlush
+
+    def __call__(self, flow, data):
+        cntx = _Context(flow.context)
+        if self.onFlush: 
+            cntx.addFlush(LinkItem(self.onFlush))
+        flow.context = cntx
+        flow.push(cntx, cntx.onFlush)
+        flow.push(data)
+
+class Chain(Stage):
+    def __init__(self, flows):
+        flows = list(flows)
+        flows.reverse()
+        self.flows = flows
+      
+    def __call__(self, flow, data):
+        def start(flow, subflow):
+            curr = subflow.stageHead
+            flow.push(data, curr.stage, curr.next)
+        for item in self.flows:
+            flow.push(item, start)
+        flow.push(data, mayskip = 1)
+
+class Stack:
+    """ a stack of stages and a means for their application
+
+        The general process here is to pop the current stage,
+        and call it; during the call, the stage can then add
+        further items back on to the call stack.  Once the stage
+        returns, the stack is checked and iteration continues.
+    """
     def __init__(self, flowitem, data = None, waitInterval = 0):
-        '''
-           bootstraps the processing of the flow:
+        """ bootstraps the processing of the flow
 
              flowitem      the very first stage in the process
              data          starting argument
              waitInterval  a useful item to slow the flow
-        '''
+        """
         self._waitInterval = waitInterval
         self._stack   = []
-        self.context = _FlowContext()
+        self.global_context = _Context()
+        self.context = self.global_context
         self._stack.append((self.context, self.context.onFlush, None))
         self._stack.append((data, flowitem.stage, flowitem.next))
-    #
+     
     def nextLinkItem(self):
-        '''
-            returns the next stage in the process
-        '''
+        """ returns the next stage in the process """
         return self._current[2]
-    # 
+      
     def push(self, data, stage=None, next=None, mayskip = 0):
-        '''
-           pushes a function to be executed onto the stack:
+        """ pushes a function to be executed onto the stack
            
              data    argument to be passed
              stage   callable to be executed
-             next    a FlowLinkItem for subsequent stages
-        '''
+             next    a LinkItem for subsequent stages
+        """
         if not stage:
-            # assume the next stage in the process
             curr = self.nextLinkItem()
             if curr:
                 stage = curr.stage
                 next  = curr.next
         elif not next:
-            # assume same stage, different function
             next = self._current[2]
         if mayskip and not next: return
         self._stack.append((data, stage, next))
-    #
+     
     def execute(self):
-        '''
-           This executes the current flow.
-        '''
+        """ executes the current flow"""
         stack = self._stack
         while stack:
             self._current = stack.pop()
@@ -157,263 +401,80 @@ class FlowStack:
                 reactor.callLater(self._waitInterval,self.execute)
                 return 1
 
-class PauseFlow(Exception):
-   '''
-      This exception is used to pause a Flow, returning control
-      back to the main event loop.  The flow automatically 
-      reschedules itself to resume execution, resuming at the
-      stage where it left off.
-  '''
-
-class FlowStage:
-    ''' 
-        operational unit in a flow, performs some sort of operation
-        and optionally pushes other stages onto the call stack
-    '''
-    # 
-    def __call__(self, flow, data):
-        '''
-            this is the minimum flow stage, it simply returns None,
-            and thus indicates that the current branch is complete
-        '''
-        pass
- 
-class FlowFunction(FlowStage):
-    ''' 
-        wraps a function takign an input and returning a result; 
-        in effect this implements one-to-one behavior
-    '''
-    def __init__(self, callable, stop = None):
-        self.callable  = callable
-        self.stop      = stop
-    # 
-    def __call__(self, flow, data):
-        '''
-            executes the callable and passes this data onto the next 
-            stage in the flow; since this only pushes one item on
-            to the stack, it is tail-recursive
-        '''
-        ret = self.callable(data)
-        if ret is not self.stop:
-            flow.push(ret)
-
-class FlowChain(FlowStage):
-    ''' 
-        enables one or more sub-flows to be added to the flow
-    '''
-    def __init__(self, flows):
-        flows = list(flows)
-        flows.reverse()
-        self.flows = flows
-    # 
-    def __call__(self, flow, data):
-        '''
-            adds each of the flows to the current stack, in the
-            order provided by the sequence
-        '''
-        def start(flow, subflow):
-            curr = subflow.stageHead
-            flow.push(data, curr.stage, curr.next)
-        for item in self.flows:
-            flow.push(item, start)
-        flow.push(data, mayskip = 1)
- 
-class FlowContext(FlowStage):
-    ''' 
-        represents a branch of execution which may hold accumulated
-        results and may have 'flush' handlers attached, which fire
-        when the context is closed
-    '''
-    def __init__(self, onFlush = None):
-        self.onFlush = onFlush
-
-    def __call__(self, flow, data):
-        ''' 
-            adds the _FlowContext to the FlowStack's _context stack
-        '''
-        cntx = _FlowContext(flow.context)
-        if self.onFlush: 
-            cntx.addFlush(FlowLinkItem(self.onFlush))
-        flow.context = cntx
-        flow.push(cntx, cntx.onFlush)
-        flow.push(data)
-
-class _FlowContext:
-    '''
-        flow context provides two services:
-
-          (a) it provides a location for 'flush' callbacks
-              which are applied when the context is over; and
-          (b) providing a place for semi-global variables 
-              which one or more flows below the context
-              can use without restriction
-
-    '''
+class _Context:
     def __init__(self, parent = None):
         self._parent = parent
         self._flush  = []
         self._dict   = {}
-    #
+     
     def addFlush(self, flowLink, bucket = None):
-        ''' 
+        """ 
            registers a flowLink to be executed using data from the
            given bucket once the context has been popped.
-        '''
+        """
         self._flush.append((flowLink, bucket))
-    #
+     
     def onFlush(self, flow, cntx):
-        '''
+        """
            cleans up the context and fires onFlush events
-        '''
+        """
         assert flow.context is self
         assert flow.context is cntx
         if not(self._flush):
             flow.context = self._parent
             return 
         (link, bucket) = self._flush.pop(0)
-        data = self.get(bucket, None)
+        data = getattr(self, bucket, None)
         flow.push(cntx, self.onFlush)
         flow.push(data, link.stage, link.next)
+    
+    def __getattr__(self, attr):
+        return getattr(self._parent, attr)
+
     #
     #  Making the flow context emulate a mapping,
     #  by recursively handling particular operations
     # 
-    def _search(self, key):
-        curr = self
-        while curr:
-            if key in curr._dict:
-                return curr._dict
-            curr = self._parent
-    def __contains__(self, key):
-        if self._search(key):
-            return 1
-    def __getitem__(self, key):
-        dict = self._search(key)
-        if dict: return dict[key]
-        raise KeyError(key)
-    def __setitem__(self, key, val):
-        self._dict[key] = val
-    def get(self, key, default):
-        dict = self._search(key)
-        if dict: return dict[key]
-        return default
-    def has_key(self,key):
-        return self._search(key)
+    #    def _search(self, key):
+    #        curr = self
+    #        while curr:
+    #            if key in curr._dict:
+    #                return curr._dict
+    #            curr = self._parent
+    #    def __contains__(self, key):
+    #        if self._search(key):
+    #            return 1
+    #    def __getitem__(self, key):
+    #        dict = self._search(key)
+    #        if dict: return dict[key]
+    #        raise KeyError(key)
+    #    def __setitem__(self, key, val):
+    #        self._dict[key] = val
+    #    def get(self, key, default):
+    #        dict = self._search(key)
+    #        if dict: return dict[key]
+    #        return default
+    #    def has_key(self,key):
+    #        return self._search(key)
 
-class FlowBranch(FlowStage):
-    '''
-        allows callable objects returning an iterator to be used
-        within the system; this implements one-to-many behavior
-    '''
-    def __init__(self, callable, onFinish = None):
-        self.callable = callable
-        self.onFinish = onFinish
-    # 
-    def __call__(self, flow, data):
-        '''
-            executes the callable, and if an iterator object 
-            is returned, schedules its next method
-        '''
-        ret = self.callable(data)
-        if ret is not None:
-            next = iter(ret).next
-            flow.push(next, self.iterate)
-    #
-    def iterate(self, flow, next):
-        '''
-            if the next method has results, then schedule the
-            next stage of the flow, otherwise finish up
-        '''
-        try:
-            data = next()
-            flow.push(next, self.iterate)
-            flow.push(data)
-        except StopIteration:
-            if self.onFinish:
-               self.onFinish()
-
-class FlowMerge(FlowStage):
-    '''
-        takes multiple calls and aggregates them; the constructor for
-        this merge takes several arguments:
-
-            start      the starting value, if this is callable, it 
-                       will be executed to produce a starting value
-
-            func       the function or operator which will merge the 
-                       output; the function has two paramater, first
-                       is the current accumulated value, and second is
-                       the value passed via the stream; the output 
-                       depends on the following parameter
-
-            reduce     If this boolean value is true, then the result
-                       of the function will be the new aggregate value;
-                       in this way most operators can be used.  Clearly,
-                       then, if reduce is true, the merge will pass one
-                       and only one value to the next stage
-
-                       Otherwise, the argument is expected to be a tuple;
-                       first is the new accumulated value and the second 
-                       is a value to be passed on to the next stage.  
-                       To handle mutable reductions, if the result is None
-                       then the accumulated value won't be replaced and
-                       a result won't be passed on; this works if the 
-                       function is mutating the accumulated value
-
-            bucket     This is the name of the bucket to store the
-                       accumulated value in.  If you leave this blank,
-                       then a unique bucket name will be used.
-
-        Since reducing to a single list is often useful, the default
-        parameters of this function do exactly that.
-
-        Note that both of these use the outer-most Context for
-        their merging; thus it could encompass nested iterators, 
-        etc.  Introducing an intermediate Context can be used to
-        limit the merging to one Branch.
-    '''
-    def __init__(self, func = lambda lst, val: lst.append(val) or lst,
-                       start = lambda: [], bucket = None, reduce = 1):
-        if not bucket: bucket = id(self)
-        self.bucket    = str(bucket)
-        self.start     = start
-        self.func      = func
-        self.reduce    = reduce
-    #
-    def __call__(self, flow, data):
-        cntx = flow.context
-        if not cntx.has_key(self.bucket):
-             start = self.start
-             if callable(start): start = start()
-             cntx[self.bucket] = start
-             cntx.addFlush(flow.nextLinkItem(), self.bucket)
-        curr = self.func(cntx[self.bucket], data)
-        if self.reduce:
-            cntx[self.bucket] = curr
-        else:
-            if curr:
-                 (save, data) = curr
-                 cntx[self.bucket] = save
-                 if data: flow.push(data)
-
-class FlowLinkItem:
-    '''
-       a Flow is implemented as a series of FlowStage objects
+class LinkItem:
+    """
+       a Flow is implemented as a series of Stage objects
        in a linked-list; this is the link node
         
-         stage   a FlowStage in the linked list
-         next    next FlowLinkItem in the list
+         stage   a Stage in the linked list
+         next    next LinkItem in the list
  
-    '''
+    """
     def __init__(self,stage):
         self.stage = stage
         self.next  = None
 
 class FlowIterator:
-    '''
+    """
        This is an iterator base class which can be used to build
        iterators which are constructed and run within a Flow
-    '''
+    """
     #
     def __init__(self, data = None):
         from twisted.internet.reactor import callInThread
@@ -426,37 +487,37 @@ class FlowIterator:
         return self._tunnel
     #
     def next(self):
-        ''' 
+        """ 
             The method used to fetch the next value, make sure
             to return a list of rows, not just a row
-        '''
+        """
         raise StopIteration
 
 class _TunnelIterator:
-    '''
+    """
        This is an iterator which tunnels output from an iterator
        executed in a thread to the main thread.   Note, unlike
        regular iterators, this one throws a PauseFlow exception
        which must be handled by calling reactor.callLater so that
        the producer threads can have a chance to send events to 
        the main thread.
-    '''
+    """
     def __init__(self, source):
-        '''
+        """
             This is the setup, the source argument is the iterator
             being wrapped, which exists in another thread.
-        '''
+        """
         self.source     = source
         self.isFinished = 0
         self.failure    = None
         self.buff       = []
     #
     def process(self):
-        '''
+        """
             This is called in the 'source' thread, and 
             just basically sucks the iterator, appending
             items back to the main thread.
-        '''
+        """
         from twisted.internet.reactor import callFromThread
         try:
             while 1:
