@@ -31,7 +31,6 @@ class MyResource(resource.Resource):
         return "Hello, world!"
     &lt;/pre&gt;
 </pre>
-    <hr />
 
     <p>For example, this is how one defines a Resource:</p>
 <pre class="python">
@@ -42,7 +41,6 @@ class MyResource(resource.Resource):
         return "Hello, world!"
    
 </pre>
-    <hr />
 
     <p>Note that you should never have leading indentation inside a
     &lt;pre&gt; block -- this makes it hard for readers to
@@ -60,7 +58,7 @@ class MyResource(resource.Resource):
     "Hello, world!"
     &lt;/pre&gt;
 </pre>
-    <hr />
+
 <pre class="python-interpreter">
 &gt;&gt;&gt; from twisted.web import resource
 &gt;&gt;&gt; class MyResource(resource.Resource):
@@ -70,7 +68,6 @@ class MyResource(resource.Resource):
 &gt;&gt;&gt; MyResource().render(None)
 "Hello, world!"
 </pre>
-    <hr />
 
     <h3>"shell"</h3>
 <pre>
@@ -78,11 +75,10 @@ class MyResource(resource.Resource):
     $ mktap web --path /var/www
     &lt;/pre&gt;
 </pre>
-    <hr />
+
 <pre class="shell">
 $ mktap web --path /var/www
 </pre>
-    <hr />
 
     <h2>Code inside paragraph text</h2>
 
@@ -117,7 +113,7 @@ $ mktap web --path /var/www
         &lt;/p&gt;
     
 </pre>
-    <hr />
+
 <div class="boxed">
         <p>
     To add a <code class="API">twisted.web.widgets.Widget</code>
@@ -134,7 +130,6 @@ $ mktap web --path /var/www
         </p>
 
 </div>
-    <hr />
 
     <h2>Headers</h2>
 
