@@ -48,7 +48,9 @@ class DummyService(pb.Service):
         """
         # Note: I don't need to go back and forth between identity and
         # perspective here, so I _never_ need to specify identityName.
-        return DummyPerspective("any", self)
+        p = DummyPerspective("any")
+        p.setService(self)
+        return p
 
 class IOPump:
     """Utility to pump data between clients and servers for protocol testing.
@@ -126,10 +128,7 @@ class SimpleCopy(pb.Copyable):
         self.y = {"Hello":"World"}
         self.z = ['test']
 
-class SimpleLocalCopy:
-    def setCopyableState(self, state):
-        self.__dict__.update(state)
-
+class SimpleLocalCopy(pb.RemoteCopy):
     def check(self):
         # checks based on above '__init__'
         assert self.x == 1
@@ -190,7 +189,7 @@ class RatherBaroqueCache(pb.RemoteCache):
 
 pb.setCopierForClass(str(VeryVeryComplicatedCacheable), RatherBaroqueCache)
 
-class SimpleLocalCache:
+class SimpleLocalCache(pb.RemoteCache):
     def setCopyableState(self, state):
         self.__dict__.update(state)
 

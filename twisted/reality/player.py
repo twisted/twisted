@@ -1,16 +1,16 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -42,47 +42,18 @@ import cStringIO
 StringIO = cStringIO
 del cStringIO
 
-class Player(styles.Versioned, thing.Thing, pb.Perspective):
+class Player(thing.Thing, pb.Perspective):
     """Player
 
     A convenience class for sentient beings (implying turing-test quality AI)
     """
-    def __init__(self, name, reality='', identityName="Nobody"):
+    def __init__(self, name, identityName="Nobody"):
         """Initialize me.
         """
         self.identityName = identityName
-        thing.Thing.__init__(self, name, reality)
+        thing.Thing.__init__(self, name)
+        pb.Perspective.__init__(self, name)
 
-    def __getstate__(self):
-        st1 = thing.Thing.__getstate__(self)
-        st2 = styles.Versioned.__getstate__(self, st1)
-        return st2
-
-    persistenceVersion = 1
-
-    def upgradeToVersion1(self):
-        print 'upgrading player',self.name
-        pb.Perspective.__init__(self, self.name, self.reality)
-
-    def set_reality(self, reality):
-        if self.reality is reality:
-            return
-        assert self.reality is None, 'player migration not implemented.'
-        thing.Thing.set_reality(self, reality)
-        pb.Perspective.__init__(self, self.name, self.reality, self.identityName)
-
-    def set_service(self, svc):
-        """Don't really set the service, since it can be retrieved through self.reality.
-        """
-        assert svc == self.reality, "Service _must_ be the same as reality."
-    
-    def get_service(self):
-        """Return my reality, so that it's not duplicately stored.
-
-        This is so that my passport.Perspective methods work properly.
-        """
-        return self.reality
-    
     hollow = 1
     def indefiniteArticle(self, observer):
         return ""
@@ -200,7 +171,7 @@ class Player(styles.Versioned, thing.Thing, pb.Perspective):
                                           sentence.directString()),
                             to_other   = (self,' says, "%s"' %
                                           sentence.directString()))
-        
+
     def ability_emote(self, sentence):
         """`emote' a text string (perform an arbitrary action with no effect on the world).
         """
@@ -209,15 +180,15 @@ class Player(styles.Versioned, thing.Thing, pb.Perspective):
     def ability_ls(self, sentence):
         """reminds the user to switch back to a shell.
         """
-        self.hears(r"""__      ___ __ ___  _ __   __ _ 
+        self.hears(r"""__      ___ __ ___  _ __   __ _
 \ \ /\ / / '__/ _ \| '_ \ / _` |
  \ V  V /| | | (_) | | | | (_| |
   \_/\_/ |_|  \___/|_| |_|\__, |
-                          |___/ 
-          _           _               
+                          |___/
+          _           _
 __      _(_)_ __   __| | _____      __
 \ \ /\ / / | '_ \ / _` |/ _ \ \ /\ / /
- \ V  V /| | | | | (_| | (_) \ V  V / 
+ \ V  V /| | | | | (_| | (_) \ V  V /
   \_/\_/ |_|_| |_|\__,_|\___/ \_/\_/""")
 
 
@@ -430,11 +401,11 @@ unpickleable.
                 sio = StringIO.StringIO()
                 traceback.print_exc(file=sio)
                 o.hears(sio.getvalue())
-                
+
         c = Referenceable()
         c.remote_ok = ok
         c.remote_cancel = cancel
-        
+
         code = self.code_space.get(snipname, "")
         self.request("Snippet %s" % snipname,code,c)
 

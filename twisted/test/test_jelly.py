@@ -18,6 +18,7 @@
 """Test cases for 'jelly' object serialization.
 """
 
+import types
 from pyunit import unittest
 from twisted.spread import jelly
 #from twisted import sexpy
@@ -162,11 +163,14 @@ class JellyTestCase(unittest.TestCase):
                 return (self.other,)
             def __setstate__(self, state):
                 self.other = state[0]
+            def __hash__(self):
+                return hash(self.other)
         a = A()
         t1 = TupleState(a)
         t2 = TupleState(a)
         t3 = TupleState((t1, t2))
-        t3prime = jelly.unjelly(jelly.jelly(t3))
+        d = {t1: t1, t2: t2, t3: t3, "t3": t3}
+        t3prime = jelly.unjelly(jelly.jelly(d))["t3"]
         assert t3prime.other[0].other is t3prime.other[1].other
 
     def testClassSecurity(self):

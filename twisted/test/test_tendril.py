@@ -102,7 +102,7 @@ class DummyService:
         else:
             return p
 
-    def addParticipant(self, name):
+    def createParticipant(self, name):
         self.participants[name] = DummyPerspective(name, self)
         return self.participants[name]
 
@@ -136,7 +136,7 @@ class TendrilTest(unittest.TestCase):
         self.tendril.joinGroup('tendriltest')
 
         self.group = self.service.getGroup('tendriltest')
-        self.participant = self.service.addParticipant('TheParticipant')
+        self.participant = self.service.createParticipant('TheParticipant')
         self.participant.joinGroup('tendriltest')
 
 

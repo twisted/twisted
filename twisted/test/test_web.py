@@ -91,7 +91,7 @@ class GuardTest(unittest.TestCase):
         ident.setPassword("joe")
         self.app.authorizer.addIdentity(ident)
         self.svc = passport.Service("simple", self.app)
-        self.psp = passport.Perspective('jethro',self.svc,ident.name)
+        self.psp = passport.Perspective('jethro',ident.name)
         self.svc.addPerspective(self.psp)
         ident.addKeyForPerspective(self.psp)
 

@@ -31,7 +31,7 @@ class AccountCreation(html.Interface):
             ident = passport.Identity(u, app)
             ident.setPassword(p)
             app.authorizer.addIdentity(ident)
-            part = svc.addParticipant(u)
+            part = svc.createParticipant(u)
             part.setIdentity(ident)
             ident.addKeyForPerspective(part)
             if part:

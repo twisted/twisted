@@ -87,19 +87,18 @@ class ServiceTestCase(unittest.TestCase):
                           app2)
 
     def testaddPerspective(self):
-        p = passport.Perspective("perspective for service-test",
-                                 self.service)
+        p = passport.Perspective("perspective for service-test")
         self.service.addPerspective(p)
 
     def testgetPerspective(self):
         pname = "perspective for service-test"
-        p = passport.Perspective(pname, self.service)
+        p = passport.Perspective(pname)
         self.service.addPerspective(p)
         self.service.getPerspective(pname)
 
     def testGetSetPerspetiveSanity(self):
         pname = "perspective for service-test"
-        p = passport.Perspective(pname, self.service)
+        p = passport.Perspective(pname)
         self.service.addPerspective(p)
         q = self.service.getPerspectiveNamed(pname)
         self.assertEqual(pname, q.getPerspectiveName())
@@ -154,14 +153,12 @@ class PerspectiveTestCase(unittest.TestCase):
         self.app = self.App("app for perspective-test")
         self.service = self.Service("service for perspective-test",
                                     self.app)
-        self.perspective = passport.Perspective("test perspective",
-                                                self.service)
+        self.perspective = passport.Perspective("test perspective")
 
 
     def testConstruction(self):
-        passport.Perspective("test perspective", self.service)
-        passport.Perspective("test perspective", self.service,
-                             "testIdentityName")
+        passport.Perspective("test perspective")
+        passport.Perspective("test perspective", "testIdentityName")
 
     def testConstruction_invalidPerspectiveName(self):
         self.assertRaises(TypeError, passport.Perspective,
@@ -294,14 +291,14 @@ class IdentityTestCase(unittest.TestCase):
 
     def test_addKeyForPerspective(self):
         service = self.Service("one", self.app)
-        perspective = self.Perspective("two", service)
+        perspective = self.Perspective("two")
 
         self.ident.addKeyForPerspective(perspective)
         self.assert_(("one", "two") in self.ident.getAllKeys())
 
     def test_getPerspectiveForKey(self):
         service = self.Service("one", self.app)
-        perspective = self.Perspective("two", service)
+        perspective = self.Perspective("two")
 
         self.ident.addKeyForPerspective(perspective)
         p = self.ident.getPerspectiveForKey("one","two")
@@ -317,7 +314,7 @@ class IdentityTestCase(unittest.TestCase):
         service = self.Service("one", self.app)
 
         for n in ("p1","p2","p3"):
-            perspective = self.Perspective(n, service)
+            perspective = self.Perspective(n)
             self.ident.addKeyForPerspective(perspective)
 
         keys = self.ident.getAllKeys()

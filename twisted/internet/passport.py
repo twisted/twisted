@@ -66,9 +66,15 @@ class Service:
             self.application = application
             application.addService(self)
 
+    def createPerspective(self, name):
+        """Create a perspective from self.perspectiveClass and add it to this service.
+        """
+        self.perspectives[name] = self.perspectiveClass(name)
+
     def addPerspective(self, perspective):
         """Add a perspective to this Service.
         """
+        perspective.setService(self)
         self.perspectives[perspective.getPerspectiveName()] = perspective
 
     def getPerspectiveNamed(self, name):
@@ -98,7 +104,8 @@ class Perspective:
     perform upon a service, and the state associated with that
     user for that service.
     """
-    def __init__(self, perspectiveName, service, identityName="Nobody"):
+    service = None
+    def __init__(self, perspectiveName, identityName="Nobody"):
         """Create me.
 
         I require a name for myself and a reference to the service
@@ -106,7 +113,6 @@ class Perspective:
         default, which will normally not resolve.)
         """
         self.perspectiveName = perspectiveName
-        self.service = service
         self.identityName = identityName
 
     def setIdentityName(self, name):
@@ -146,6 +152,11 @@ class Perspective:
         """
         return self.service
 
+    def setService(self, service):
+        """Change what service I am a part of.
+        """
+        self.service = service
+
     def getIdentityRequest(self):
         """Request my identity.
         """
@@ -179,6 +190,9 @@ class Perspective:
         """
         log.msg('detached [%s]' % str(self.__class__))
 
+
+# ugh, load order
+Service.perspectiveClass = Perspective
 
 def respond(challenge, password):
     """Respond to a challenge.

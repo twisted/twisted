@@ -123,8 +123,8 @@ class WordsClientInterface:
 
 
 class Participant(pb.Perspective, styles.Versioned):
-    def __init__(self, name, service):
-        pb.Perspective.__init__(self, name, service)
+    def __init__(self, name):
+        pb.Perspective.__init__(self, name)
         self.name = name
         self.status = OFFLINE
         self.contacts = []
@@ -135,24 +135,8 @@ class Participant(pb.Perspective, styles.Versioned):
 
     persistenceVersion = 1
 
-    def upgradeToVersion1(self):
-        self.status = OFFLINE
-        self.client = None
-        styles.requireUpgrade(self.service)
-        pb.Perspective.__init__(self, self.name, self.service)
-        log.msg("Creating account for %s" % self.name)
-        ident = passport.Identity(self.name, self.service.application)
-        ident.setAlreadyHashedPassword(self.password)
-        del self.password
-        self.setIdentity(ident)
-        ident.addKeyForPerspective(self)
-        try:
-            self.service.application.authorizer.addIdentity(ident)
-        except KeyError:
-            print 'unable to add words identity for %s'% self.name
-
     def __getstate__(self):
-        state = self.__dict__.copy()
+        state = styles.Versioned.__getstate__(self)
         # Assumptions:
         # * self.client is a RemoteReference, or otherwise represents
         #   a transient presence.
@@ -347,10 +331,11 @@ class Service(pb.Service, styles.Versioned):
             self.groups[name] = group
         return group
 
-    def addParticipant(self, name):
+    def createParticipant(self, name):
         if not self.participants.has_key(name):
             log.msg("Created New Participant: %s" % name)
-            p = Participant(name, self)
+            p = Participant(name)
+            p.setService(self)
             self.participants[name] = p
             return p
 

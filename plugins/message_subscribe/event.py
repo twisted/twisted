@@ -45,7 +45,9 @@ class EventPublishService(pb.Service):
                 pass
 
     def getPerspectiveNamed(self, name):
-        return EventPublishPerspective("any", self)
+        p = EventPublishPerspective("any")
+        p.setService(self)
+        return p
 
 
 class EventNotifier(pb.Referenceable):

@@ -68,7 +68,7 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
 
     realname = 'Tendril'
     versionName = 'Tendril'
-    versionNum = '$Revision: 1.5 $'[11:-2]
+    versionNum = '$Revision: 1.6 $'[11:-2]
     versionEnv = copyright.longversion
 
     helptext = (
@@ -82,7 +82,7 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
         """Create a new Tendril client.
 
         service -- a twisted.words.service.Service, or at least
-        something with a 'serviceName' attribute and 'addParticipant'
+        something with a 'serviceName' attribute and 'createParticipant'
         and 'getPerspectiveNamed' methods which work like a
         words..Service.
 
@@ -136,7 +136,7 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
                 self.service.getPerspectiveNamed(self.perspectiveName))
         except wordsService.UserNonexistantError:
             self.perspective = (
-                self.service.addParticipant(self.perspectiveName))
+                self.service.createParticipant(self.perspectiveName))
             if not self.perspective:
                 raise RuntimeError, ("service %s won't give me my "
                                      "perspective named %s"
@@ -672,7 +672,7 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
             p = self.service.getPerspectiveNamed(nick +
                                                  self.networkSuffix)
         except wordsService.UserNonexistantError:
-            p = self.service.addParticipant(nick + self.networkSuffix)
+            p = self.service.createParticipant(nick + self.networkSuffix)
             if not p:
                 raise wordsService.wordsError("Eeek!  Couldn't get OR "
                                               "make a perspective for "

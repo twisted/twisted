@@ -23,7 +23,9 @@ class SimplePerspective(pb.Perspective):
         return text
 class SimpleService(pb.Service):
     def getPerspectiveNamed(self, name):
-        return SimplePerspective(name, self)
+        p = SimplePerspective(name)
+        p.setService(self)
+        return p
 if __name__ == '__main__':
     import pbecho
     app = main.Application("pbecho")

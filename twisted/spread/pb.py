@@ -463,6 +463,10 @@ class RemoteCopy:
     constructor which requires args in a subclass of RemoteCopy!
     """
 
+    def postUnjelly(self):
+        """I will be invoked after the data I was sent with has been fully unjellied.
+        """
+
     def setCopyableState(self, state):
         """I will be invoked with the state to copy locally.
 
@@ -901,9 +905,8 @@ class _NetUnjellier(jelly._Unjellier):
         """
         global copyTags
         inst = copyTags[rest[0]]()
-        cbl = [inst.setCopyableState, None]
-        self.unjellyInto(cbl, 1, rest[1])
-        self.stateCallbacks.append(cbl)
+        inst.setCopyableState(self._unjelly(rest[1]))
+        self.postCallbacks.append(inst.postUnjelly)
         return inst
 
     def _unjelly_cache(self, rest):
@@ -912,9 +915,8 @@ class _NetUnjellier(jelly._Unjellier):
         cNotProxy = copyTags[rest[1]]()
         cProxy = RemoteCacheProxy(self.broker, cNotProxy, luid)
         self.broker.cacheLocally(luid, cNotProxy)
-        cbl = [cNotProxy.setCopyableState, None]
-        self.unjellyInto(cbl, 1, rest[2])
-        self.stateCallbacks.append(cbl)
+        cNotProxy.setCopyableState(self._unjelly(rest[2]))
+        self.postCallbacks.append(cProxy.postUnjelly)
         return cProxy
 
     def _unjelly_cached(self, rest):

@@ -22,17 +22,18 @@ Test cases for twisted.reality module.
 from pyunit import unittest
 
 from twisted import reality
+from twisted.reality import error
 
 class ContainmentTestCase(unittest.TestCase):
     def setUp(self):
         r = self.reality = reality.Reality()
-        self.ball =   reality.Thing  ("ball", r)
-        self.box =    reality.Thing  ("box",  r)
-        self.table =  reality.Thing  ("table",r)
-        self.slab =   reality.Thing  ("slab", r)
-        self.bob =    reality.Player ("bob",  r)
-        self.room =   reality.Room   ("room", r)
-        self.area =   reality.Room   ("area", r)
+        self.ball =   reality.Thing("ball")
+        self.box =    reality.Thing("box")
+        self.table =  reality.Thing("table")
+        self.slab =   reality.Thing("slab")
+        self.bob =    reality.Player("bob")
+        self.room =   reality.Room("room")
+        self.area =   reality.Room("area")
 
 
     def tearDown(self):
@@ -43,15 +44,18 @@ class ContainmentTestCase(unittest.TestCase):
 
     def testBasicContainment(self):
         self.ball.location = self.room
+        print "CONTAINMENT:", self.room._Thing__index.data
         assert self.room.find('ball') is self.ball
         assert self.ball.location is self.room,\
                "Ball was located " + str(self.ball.location)
         assert self.ball.place is self.room,\
                "Ball was placed " + str(self.ball.place)
         del self.ball.location
-        try:                     self.room.find('ball')
-        except reality.CantFind: pass
-        else:                    assert 0, "This should have failed!"
+        try:
+            self.room.find('ball')
+        except error.CantFind: pass
+        else:
+            assert 0, "This should have failed!"
         assert self.ball.location is None, "location attribute didn't go None"
         assert self.ball.place is None, "place didn't go None"
 
@@ -65,7 +69,7 @@ class ContainmentTestCase(unittest.TestCase):
         assert self.table.find('ball') is self.ball
         try:
             self.ball.move(destination = self.room, actor = self.bob)
-        except reality.Failure:
+        except error.Failure:
             pass
         else:
             assert 0, "This should fail."
@@ -93,7 +97,7 @@ class ContainmentTestCase(unittest.TestCase):
         for x in (self.room, self.table):
             try:
                 x.find('ball')
-            except reality.CantFind:
+            except error.CantFind:
                 pass
             else:
                 assert 0, "Shoudldn't be able to find 'ball'"
@@ -139,7 +143,7 @@ class ContainmentTestCase(unittest.TestCase):
         try:
             self.room.find('ball')
             assert 0, "shouldn't be able to find ball."
-        except reality.CantFind:
+        except error.CantFind:
             pass
         self.box.surface = 1
         self.ball.location = self.box
@@ -157,7 +161,7 @@ class ContainmentTestCase(unittest.TestCase):
         largeNumber = 15
         things = []
         for i in range(largeNumber):
-            thing = reality.Thing("thing"+str(i), self.reality)
+            thing = reality.Thing("thing"+str(i))
             thing.surface = 1
             things.append(thing)
 

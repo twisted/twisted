@@ -386,6 +386,20 @@ class _Tuple(NotKnown):
             if not self.locs:
                 self.resolveDependants(tuple(self.l))
 
+class _DictKeyAndValue:
+    def __init__(self, dict):
+        self.dict = dict
+    def __setitem__(self, n, obj):
+        if n not in (1, 0):
+            raise AssertionError("DictKeyAndValue should only ever be called with 0 or 1")
+        if n: # value
+            self.value = obj
+        else:
+            self.key = obj
+        if hasattr(self, "key") and hasattr(self, "value"):
+            self.dict[self.key] = self.value
+
+
 class _Dereference(NotKnown):
     def __init__(self, id):
         NotKnown.__init__(self)
@@ -396,12 +410,12 @@ class _Unjellier:
         self.taster = taster
         self.persistentLoad = persistentLoad
         self.references = {}
-        self.stateCallbacks = []
+        self.postCallbacks = []
 
     def unjelly(self, obj):
         o = self._unjelly(obj)
-        for m, s in self.stateCallbacks:
-            m(s)
+        for m in self.postCallbacks:
+            m()
         return o
 
     def _unjelly(self, obj):
@@ -467,10 +481,9 @@ class _Unjellier:
     def _unjelly_dictionary(self, lst):
         d = {}
         for k, v in lst:
-            key = self._unjelly(k)
-            if isinstance(key, NotKnown):
-                raise "dictionary keys restricted until further notice"
-            self.unjellyInto(d, key, v)
+            kvd = _DictKeyAndValue(d)
+            self.unjellyInto(kvd, 0, k)
+            self.unjellyInto(kvd, 1, v)
         return d
 
 
@@ -516,12 +529,13 @@ class _Unjellier:
             raise InsecureJelly("Instance found with non-class class.")
         if hasattr(clz, "__setstate__"):
             inst = instance(clz, {})
-            cbl = [inst.__setstate__, None]
-            self.unjellyInto(cbl, 1, rest[1])
-            self.stateCallbacks.append(cbl)
+            state = self._unjelly(rest[1])
+            inst.__setstate__(state)
         else:
             state = self._unjelly(rest[1])
             inst = instance(clz, state)
+        if hasattr(clz, 'postUnjelly'):
+            self.postCallbacks.append(inst.postUnjelly)
         return inst
 
     def _unjelly_unpersistable(self, rest):

@@ -37,7 +37,7 @@ class FakeStdIO:
         pass
 
 class Perspective(pb.Perspective):
-    def __init__(self, perspectiveName, service, identityName="Nobody"):
+    def __init__(self, perspectiveName, identityName="Nobody"):
         pb.Perspective.__init__(self, perspectiveName,
                                 service, identityName)
         self.localNamespace = {
@@ -133,7 +133,9 @@ class Service(pb.Service):
         return dict
 
     def getPerspectiveNamed(self, name):
-        return Perspective(name, self)
+        p = Perspective(name)
+        p.setService(self)
+        return p
 
     def __str__(self):
         s = "<%s in application \'%s\'>" % (self.serviceName,
