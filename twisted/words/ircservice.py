@@ -20,8 +20,9 @@
 # and database access
 
 # System Imports
-import fnmatch
+# import fnmatch # used in /list, which is disabled pending security
 import string
+import time
 
 # Twisted Imports
 from twisted.protocols import irc, protocol
@@ -48,7 +49,19 @@ class IRCChatter(irc.IRC, service.WordsClientInterface):
     def notifyStatusChanged(self, name, status):
         self.receiveDirectMessage(
             "ContactServ",
-            "%s is %s" % (name,service.statuses[status]))
+            "%s is %s" % (name, service.statuses[status]))
+##         # This didn't work very well.
+##         if status is service.ONLINE:
+##             self.sendMessage(irc.RPL_ISON, ":%s" % (name,))
+##         elif status is service.AWAY:
+##             # self.sendMessage(irc.RPL_AWAY, ":%s is %s"
+##             irc.IRC.sendMessage(self, irc.RPL_AWAY, ":%s is %s"
+##                                 % (name, service.statuses[status]))
+##         elif status is service.OFFLINE:
+##             self.sendMessage('QUIT', ":offline",
+##             # irc.IRC.sendMessage(self, 'QUIT', ":offline",
+##                                 prefix="%s@%s!%s"
+##                                 % (name, name, self.servicename))
 
     def memberJoined(self, member, group):
         #>> :glyph_!glyph@adsl-64-123-27-108.dsl.austtx.swbell.net JOIN :#python
@@ -105,11 +118,11 @@ class IRCChatter(irc.IRC, service.WordsClientInterface):
     def sendMessage(self, command, *parameter_list, **kw):
         if not kw.has_key('prefix'):
             kw['prefix'] = self.servicename
-
         if not kw.has_key('to'):
             kw['to'] = self.nickname
 
         arglist = [self, command, kw['to']] + list(parameter_list)
+        #arglist = [self, command] + list(parameter_list)
         apply(irc.IRC.sendMessage, arglist, kw)
 
 
@@ -180,8 +193,8 @@ class IRCChatter(irc.IRC, service.WordsClientInterface):
                     self.logInAs(participant, self.passwd)
         else:
             # XXX: Is this error string appropriate?
-            self.sendLine(irc.ERR_NICKNAMEINUSE,
-                          nickname, ":this username is invalid")
+            self.sendMessage(irc.ERR_NICKNAMEINUSE,
+                             nickname, ":this username is invalid")
 
     def logInAs(self, participant, password):
         """Spawn appropriate callbacks to log in as this participant.
@@ -227,7 +240,8 @@ class IRCChatter(irc.IRC, service.WordsClientInterface):
 
         [REQUIRED]
         """
-        pass
+        self.sendMessage(irc.ERR_NOOPERHOST,
+                         ":O-lines not applicable to Words service.")
 
 
     # Note: this is *user* MODE, but we also have channel MODE
@@ -252,8 +266,9 @@ class IRCChatter(irc.IRC, service.WordsClientInterface):
 
         [REQUIRED]
         """
-        pass
-
+        self.sendMessage(irc.ERR_NOSERVICEHOST,
+                         ":No support for signing up services "
+                         "via the IRC interface.")
 
     def irc_QUIT(self, prefix, params):
         """Quit
@@ -262,18 +277,17 @@ class IRCChatter(irc.IRC, service.WordsClientInterface):
 
         [REQUIRED]
         """
-        pass # XXX - NotImplementedError
-
+        self.sendMessage('ERROR', ":You QUIT")
+        self.transport.loseConnection()
 
     def irc_SQUIT(self, prefix, params):
-        """Squit
+        """SQuit
 
         Parameters: <server> <comment>
 
         [REQUIRED]
         """
-        pass
-
+        self.sendMessage(irc.ERR_NOPRIVILEGES, ":No.")
 
     def irc_JOIN(self, prefix, params):
         """Join message
@@ -308,7 +322,7 @@ class IRCChatter(irc.IRC, service.WordsClientInterface):
             self.participant.leaveGroup(channame)
         except pb.Error, e:
             self.sendMessage(irc.ERR_NOTONCHANNEL,
-                             "#%s :%s" % (channame, e))
+                             "#" + channame, ":%s" % (e,))
         else:
             self.memberLeft(self.nickname, channame)
 
@@ -489,9 +503,6 @@ class IRCChatter(irc.IRC, service.WordsClientInterface):
                 except pb.Error, e:
                     self.receiveDirectMessage("*error*", str(e))
                     print 'error chatting to channel:',str(e)
-
-            elif name in map(lambda x: x.name, self.participant.groups):
-                self.groupBotMessage(name, text)
             else:
                 try:
                     self.participant.directMessage(name, text)
@@ -507,15 +518,6 @@ class IRCChatter(irc.IRC, service.WordsClientInterface):
             else:
                 self.receiveDirectMessage("NickServ", "You haven't logged in yet.")
 
-
-
-    def groupBotMessage(self, group, command):
-        log.msg("%s to %s" % (command, group))
-        l = len('topic')
-        if command[:l] == "topic":
-            group = self.service.getGroup(group)
-            group.setMetadata({"topic": command[l+1:],
-                               "topic_author": self.nickname})
 
     def irc_NOTICE(self, prefix, params):
         """Notice
@@ -544,7 +546,11 @@ class IRCChatter(irc.IRC, service.WordsClientInterface):
 
         [REQUIRED]
         """
-        pass # XXX - NotImplementedError
+        self.sendMessage(irc.RPL_LUSERCLIENT,
+                         ":There are %s users on %s hosts." %
+                         ("some", "all the"))
+        self.sendMessage(irc.RPL_LUSERME,
+                         ":All your base are belong to us.")
 
 
     def irc_VERSION(self, prefix, params):
@@ -554,8 +560,8 @@ class IRCChatter(irc.IRC, service.WordsClientInterface):
 
         [REQUIRED]
         """
-        pass # XXX - NotImplementedError
-
+        self.sendMessage(irc.RPL_VERSION, copyright.version,
+                         self.servicename, ":http://twistedmatrix.com/")
 
     def irc_STATS(self, prefix, params):
         """Stats message
@@ -564,8 +570,12 @@ class IRCChatter(irc.IRC, service.WordsClientInterface):
 
         [REQUIRED]
         """
-        pass # XXX - NotImplementedError
-
+        if params:
+            letter = params[0]
+        else:
+            letter = ''
+        self.sendMessage(irc.RPL_ENDOFSTATS, letter,
+                         ":That is all.")
 
     def irc_LINKS(self, prefix, params):
         """Links message
@@ -574,8 +584,8 @@ class IRCChatter(irc.IRC, service.WordsClientInterface):
 
         [REQUIRED]
         """
-        pass # XXX - NotImplementedError
-
+        self.sendMessage(irc.RPL_ENDOFLINKS, '*',
+                         ":End of links.")
 
     def irc_TIME(self, prefix, params):
         """Time message
@@ -584,7 +594,8 @@ class IRCChatter(irc.IRC, service.WordsClientInterface):
 
         [REQUIRED]
         """
-        pass # XXX - NotImplementedError
+        self.sendMessage(irc.RPL_TIME, ":%s" %
+                         (time.asctime(time.localtime()),))
 
 
     def irc_CONNECT(self, prefix, params):
@@ -594,8 +605,7 @@ class IRCChatter(irc.IRC, service.WordsClientInterface):
 
         [REQUIRED]
         """
-        pass
-
+        self.sendMessage(irc.ERR_NOPRIVILEGES, ":No.")
 
     def irc_TRACE(self, prefix, params):
         """Trace message
@@ -604,7 +614,12 @@ class IRCChatter(irc.IRC, service.WordsClientInterface):
 
         [REQUIRED]
         """
-        pass
+        self.sendMessage(irc.RPL_TRACENEWTYPE, "Trace a path over")
+        self.sendMessage(irc.RPL_TRACEUNKNOWN, "references intangible,")
+        self.sendMessage(irc.RPL_TRACEEND, self.servicename,
+                         copyright.version, ":internet come home.")
+        # This response does not conform strictly to RFC 2812,
+        # but it is haiku compliant.
 
 
     def irc_INFO(self, prefix, params):
@@ -614,7 +629,9 @@ class IRCChatter(irc.IRC, service.WordsClientInterface):
 
         [REQUIRED]
         """
-        pass
+        self.sendMessage(irc.RPL_INFO, ":Info requested")
+        self.sendMessage(irc.RPL_INFO, ":valuable commodity")
+        self.sendMessage(irc.RPL_ENDOFINFO, ":What's it worth to you?")
 
 
     def irc_SERVLIST(self, prefix, params):
@@ -624,8 +641,9 @@ class IRCChatter(irc.IRC, service.WordsClientInterface):
 
         [REQUIRED]
         """
-        pass
-
+        self.sendMessage(irc.RPL_SERVLISTEND,
+                         ":I'd tell you, but this is an unsecured line.")
+        
 
     def irc_SQUERY(self, prefix, params):
         """Squery
@@ -668,7 +686,8 @@ class IRCChatter(irc.IRC, service.WordsClientInterface):
             self.sendMessage(irc.RPL_ENDOFWHO, "#" + group.name,
                              ":End of /WHO list.")
         else:
-            self.sendLine(irc.RPL_ENDOFWHO, ":User /WHO not implemented")
+            self.sendMessage(irc.RPL_ENDOFWHO,
+                             ":User /WHO not implemented")
 
 
     def irc_WHOIS(self, prefix, params):
@@ -748,7 +767,14 @@ class IRCChatter(irc.IRC, service.WordsClientInterface):
 
         [REQUIRED]
         """
-        pass # XXX - NotImplementedError
+        if not params or not params[0]:
+            self.sendMessage(irc.ERR_NEEDMOREPARAMS,
+                             ':The voices...  "kill," they say. "kill."')
+        else:
+            object = string.join(params)
+            self.sendMessage(irc.ERR_NOPRIVILEGES,
+                             ":I don't think the %s would "
+                             "like that very much." % (object,))
 
 
     def irc_PING(self, prefix, params):
@@ -768,7 +794,7 @@ class IRCChatter(irc.IRC, service.WordsClientInterface):
 
         [REQUIRED]
         """
-        pass # XXX - NotImplementedError
+        pass
 
 
     def irc_ERROR(self, prefix, params):
@@ -778,7 +804,7 @@ class IRCChatter(irc.IRC, service.WordsClientInterface):
 
         [REQUIRED]
         """
-        pass # XXX - NotImplementedError
+        pass
 
 
     def irc_AWAY(self, prefix, params):
@@ -813,7 +839,7 @@ class IRCChatter(irc.IRC, service.WordsClientInterface):
 
         [Optional]
         """
-        pass
+        self.sendMessage(irc.ERR_NOPRIVILEGES, ":After you.")
 
 
     def irc_RESTART(self, prefix, params):
@@ -833,7 +859,8 @@ class IRCChatter(irc.IRC, service.WordsClientInterface):
 
         [Optional]
         """
-        pass
+        self.sendMessage(irc.ERR_SUMMONDISABLED,
+                         ":You don't have enough mana to cast that spell.")
 
 
     def irc_USERS(self, prefix, params):
@@ -873,8 +900,12 @@ class IRCChatter(irc.IRC, service.WordsClientInterface):
 
         [Optional]
         """
-        pass
-
+        ison = params[:]
+        for nick in params:
+            # if not self.service.isOnline(nick):
+            #     ison.remove(nick)
+            # self.sendMessage(irc.RPL_ISON, ":" + string.join(ison))
+            pass
 
 class IRCGateway(protocol.Factory, coil.Configurable):
     configCreatable = 0
