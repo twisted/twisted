@@ -1304,10 +1304,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 self.__cbExpunge, self.__ebExpunge, (tag,), None, (tag,), None
             )
         else:
-            self.sendPositiveResponse(tag, 'CLOSE completed')
-            self.mbox.removeListener(self)
-            self.mbox = None
-            self.state = 'auth'
+            self.sendNegativeResponse(tag, 'EXPUNGE ignored on read-only mailbox')
 
     select_EXPUNGE = (do_EXPUNGE,)
 
