@@ -63,6 +63,7 @@ class Perspective(pb.Perspective):
                     val = eval(code, self.service.namespace)
                     if val is not None:
                         resfile.write(str(val)+'\n')
+                        self.service.namespace["_"] = val
                 finally:
                     sys.stdout = out
                     sys.stderr = err
