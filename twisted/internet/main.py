@@ -225,7 +225,7 @@ def run(installSignalHandlers=1):
                         timeout = newTimeout
 
                 # A bit of explanation to clear up the following expression:
-                
+
                 # If a delayed event processor calls main.shutDown(), then we
                 # don't want the file descriptor list to be polled.  Since
                 # 'running' will be either 1 or 0, if it's 1, the value for
@@ -233,7 +233,7 @@ def run(installSignalHandlers=1):
                 # evaluate to false (0), which causes doSelect to execute with
                 # a timeout of 0, allowing one last gasp for any FDs that want
                 # to be run before the shut-down is complete.
-                
+
                 doSelect(running and timeout)
         except select.error:
             log.msg('shutting down after select() loop interruption')

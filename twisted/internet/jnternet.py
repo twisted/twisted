@@ -1,16 +1,16 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -39,9 +39,9 @@ class JConnection(abstract.FileDescriptor,
                   protocol.Transport,
                   styles.Ephemeral):
     """A java connection class."""
-    
+
     writeBlocker = None
-    
+
     def __init__(self, skt, protocol):
         # print 'made a connection'
         self.skt = skt
@@ -74,15 +74,15 @@ class JConnection(abstract.FileDescriptor,
             self.skt.close()
             self.protocol.connectionLost()
             abstract.FileDescriptor.connectionLost(self)
-    
+
     def loseConnection(self):
         self.writeQ.put(None)
 
 
 class Blocker(threading.Thread):
-    
+
     stopped = 0
-    
+
     def __init__(self, q):
         threading.Thread.__init__(self)
         self.q = q
@@ -106,7 +106,7 @@ BEGIN_CONSUMING = 1
 END_CONSUMING = 2
 
 class WriteBlocker(Blocker):
-    
+
     def __init__(self, fdes, q):
         Blocker.__init__(self, q)
         self.fdes = fdes
@@ -171,7 +171,7 @@ class AcceptBlocker(Blocker):
 
 class JMultiplexor:
     """Fakes multiplexing using multiple threads and an action queue."""
-    
+
     def __init__(self):
         self.readers = []
         self.writers = []
@@ -179,7 +179,7 @@ class JMultiplexor:
 
     def run(self, **kwargs):
         main.running = 1
-        
+
         while 1:
             # run the delayeds
             timeout = None
@@ -190,18 +190,18 @@ class JMultiplexor:
                     ((timeout is None) or
                      (newTimeout < timeout))):
                     timeout = newTimeout
-            
+
             # wait at most `timeout` seconds for action to be added to queue
             try:
                 self.q.wait(timeout)
             except timeoutqueue.TimedOut:
                 pass
-            
+
             # run actions in queue
             for i in range(self.q.qsize()):
                 meth, arg = self.q.get()
                 meth(arg)
-            
+
             # check if we should shutdown
             if not main.running:
                 print "Shutting down jython event loop..."
@@ -210,7 +210,7 @@ class JMultiplexor:
                         callback()
                     except:
                         log.deferr()
-                
+
                 System.exit(0)
 
 
@@ -236,7 +236,7 @@ def portGotSocket(tcpPort, skt):
     # make this into an address...
     protocol = tcpPort.factory.buildProtocol(None)
     transport = JConnection(skt, protocol)
-        
+
     # make read and write blockers
     protocol.makeConnection(transport, tcpPort)
     wb = WriteBlocker(transport, theMultiplexor.q)

@@ -1,16 +1,16 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -31,22 +31,22 @@ import log
 lastRebuild = time.time()
 
 class Sensitive:
-    
+
     """A utility mixin that's sensitive to rebuilds.
 
     This is a mixin for classes (usually those which represent collections of
     callbacks) to make sure that their code is up-to-date before running.
     """
-    
+
     lastRebuild = lastRebuild
-    
+
     def needRebuildUpdate(self):
         yn = (self.lastRebuild < lastRebuild)
         return yn
 
     def rebuildUpToDate(self):
         self.lastRebuild = time.time()
-    
+
     def latestVersionOf(self, object):
         """Get the latest version of an object.
 
@@ -147,16 +147,16 @@ def rebuild(module, doLog=1):
     fromOldModule = values.has_key
     classes = classes.keys()
     functions = functions.keys()
-    
+
     if doLog:
         print
         print '  (reload   %s)' % str(module.__name__)
-        
+
     # Boom.
     reload(module)
     # Make sure that my traceback printing will at least be recent...
     linecache.clearcache()
-    
+
     if doLog:
         print '  (cleaning %s): ' % str(module.__name__),
 
@@ -179,7 +179,7 @@ def rebuild(module, doLog=1):
         modcount = modcount + 1
         if mod == module or mod is None:
             continue
-        
+
         if mod.__name__ != '__main__' and not hasattr(mod, '__file__'):
             # It's a builtin module; nothing to replace here.
             continue

@@ -259,4 +259,3 @@ CREATE TABLE forum_permissions
                WHERE posts.post_id = %d""" % (post_id)
 
         return self.runQuery(sql)
-

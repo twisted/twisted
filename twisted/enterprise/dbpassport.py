@@ -7,19 +7,19 @@ import string
 class DatabaseAuthorizer(authorizer.Authorizer, adbapi.Augmentation):
     """A PyPgSQL authorizer for Twisted Internet Passport
     """
-    
+
     schema = """
     CREATE TABLE twisted_identities
     (
       identity_name     varchar(64) PRIMARY KEY,
       password          varchar(64)
     );
-    
+
     CREATE TABLE twisted_services
     (
       service_name      varchar(64) PRIMARY KEY
     );
-    
+
     CREATE TABLE twisted_perspectives
     (
       identity_name     varchar(64) NOT NULL,
@@ -27,13 +27,13 @@ class DatabaseAuthorizer(authorizer.Authorizer, adbapi.Augmentation):
       service_name      varchar(64) NOT NULL,
       perspective_type  varchar(64)
     );
-     
+
     """
 
     def __init__(self, dbpool):
         self.perspectiveCreators = {}
         adbapi.Augmentation.__init__(self, dbpool)
-        
+
     def addIdentity(self, identity):
         """Create an identity.
         """
@@ -52,7 +52,7 @@ class DatabaseAuthorizer(authorizer.Authorizer, adbapi.Augmentation):
     def getIdentityRequest(self, name):
         """This name corresponds to the 'source_name' column of the metrics_sources table.
         Check in that table for a corresponding entry.
-        """ 
+        """
         sql = """
         SELECT   twisted_identities.identity_name,
                  twisted_identities.password,
@@ -103,7 +103,7 @@ class DatabaseAuthorizer(authorizer.Authorizer, adbapi.Augmentation):
         """
         sql="""SELECT service_name FROM twisted_services"""
         return self.runQuery(sql)
-    
+
     def addEmptyIdentity(self, identityName, hashedPassword, callback=None, errback=None):
         """Create an empty identity (no perspectives). Used by web admin interface.
         """
@@ -136,11 +136,9 @@ class DatabaseAuthorizer(authorizer.Authorizer, adbapi.Augmentation):
         return self.runOperation(sql).addCallbacks(callback, errback)
 
     def changePassword(self, identityName, hashedPassword, callback=None, errback=None):
-        passwd = base64.encodestring(hashedPassword)        
+        passwd = base64.encodestring(hashedPassword)
         sql = """UPDATE twisted_identities
                  SET password = '%s'
                  WHERE identity_name = '%s'""" %\
                    (adbapi.safe(passwd), adbapi.safe(identityName) )
         return self.runOperation(sql).addCallbacks(callback, errback)
-        
-        
