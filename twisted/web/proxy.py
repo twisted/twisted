@@ -15,7 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 from twisted.protocols import http
 from twisted.internet import tcp
-from twisted.web import resource
+from twisted.web import resource, server
 import urlparse
 
 
@@ -30,7 +30,6 @@ class ProxyClient(http.HTTPClient):
 
     def connectionMade(self):
         self.sendCommand(self.command, self.rest)
-        print "sending", `self.command`, `self.rest`
         for header, value in self.headers.items():
             self.sendHeader(header, value)
         self.endHeaders()
@@ -86,15 +85,21 @@ class ReverseProxy(http.HTTP):
 
 class ReverseProxyResource(resource.Resource):
 
+    children = classChildren = {}
+
     def __init__(self, host, port, path):
         self.host = host
         self.port = port
         self.path = path
 
     def getChild(self, path, request):
-        return ReverseProxy(self.host, self.port, self.path+'/'+path)
+        return ReverseProxyResource(self.host, self.port, self.path+'/'+path)
 
     def render(self, request):
-        clientProtocol = ProxyClient(command, rest, version,
-                                     request.getAllHeaders(), data, request)
+        request.received['host'] = self.host
+        clientProtocol = ProxyClient(request.method, self.path, 
+                                     request.clientproto, 
+                                     request.getAllHeaders(), request.content,
+                                     request)
         client = tcp.Client(self.host, self.port, clientProtocol)
+        return server.NOT_DONE_YET
