@@ -173,6 +173,10 @@ class TestSuite:
     def runOneTest(self, testClass, testCase, method, output):
         testCase.caseMethodName = method.__name__
         ok = 0
+        # The 'ok' flag is to make sure we only report one result per test.
+        # It would be nice to clean this sequence up; there is a lot of
+        # duplicated code here.
+        
         if not ASSERTION_IS_ERROR:
             failingExceptionType = AssertionError
         else:
@@ -254,7 +258,7 @@ class TestSuite:
                 testCase.fail(msg)
             if components.implements(reactor, interfaces.IReactorThreads):
                 reactor.suggestThreadPoolSize(0)
-                if hasattr(reactor, 'threadpool'):
+                if hasattr(reactor, 'threadpool') and reactor.threadpool:
                     reactor.threadpool.stop()
                     reactor.threadpool = None
         except failingExceptionType, e:
@@ -285,11 +289,13 @@ class TestSuite:
             gc.collect()
 
         for e in log.flushErrors():
-            if todo:
-                output.reportResults(testClass, method, EXPECTED_FAILURE, e)
-            else:
-                output.reportResults(testClass, method, ERROR, e)
-            ok = 0
+            if ok:
+                if todo:
+                    output.reportResults(testClass, method, EXPECTED_FAILURE,
+                                         e)
+                else:
+                    output.reportResults(testClass, method, ERROR, e)
+                ok = 0
 
         if ok:
             if todo:

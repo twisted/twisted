@@ -177,8 +177,7 @@ def err(stuff):
                     _keptErrors.append(stuff)
             else:
                 _keptErrors.append(stuff)
-        else:
-            stuff.printTraceback(file=logerr)
+        stuff.printTraceback(file=logerr)
     else:
         logerr.write(str(stuff)+"\n")
 

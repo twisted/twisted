@@ -1,3 +1,11 @@
+2003-04-23  Brian Warner  <warner@lothar.com>
+
+	* twisted/python/log.py (err): always log Failures to the logfile. If
+	we're doing _keepErrors, then also add them to _keptErrors.
+
+	* twisted/trial/unittest.py (TestSuite.runOneTest): only do
+	reportResults once per test. Handle reactor.threadpool being None.
+
 2003-04-22  Bob Ippolito <bob@redivi.com>
 
 	* twisted/python/compat.py: Complete iter implementation with
