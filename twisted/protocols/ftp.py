@@ -32,17 +32,14 @@ from cStringIO import StringIO
 from math import floor
 
 # Twisted Imports
-from twisted.internet import abstract, reactor, protocol, error
+from twisted.internet import abstract, reactor, protocol, error, defer
 from twisted.internet.interfaces import IProducer, IConsumer, IProtocol, IFinishableConsumer
 from twisted.protocols import basic, policies
 from twisted.internet.protocol import ClientFactory, ServerFactory, Protocol, \
                                       ConsumerToProtocolAdapter
 
-from twisted import application
-from twisted import internet
-from twisted.internet import defer
-from twisted.python import failure
-from twisted.python import log, components
+from twisted import application, internet, python
+from twisted.python import failure, log, components
 
 from twisted.cred import error, portal, checkers, credentials
 
@@ -177,6 +174,10 @@ RESPONSE = {
    
         
 # -- Custom Exceptions --
+class TLDNotSetInRealmError(Exception):
+    '''raised if the tld (root) directory for the FTPRealm was not set 
+    before requestAvatar was called'''
+    pass
 
 class FileNotFoundError(Exception):
     pass
@@ -516,7 +517,9 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             self.cleanupDTP()
         self.setTimeout(None)
         self.factory.currentInstanceNum -= 1
-
+        if hasattr(self.shell, 'logout') and self.shell.logout is not None:
+            self.shell.logout()
+            
     def timeoutConnection(self):
         log.msg('FTP timed out')
         self.transport.loseConnection()
@@ -645,6 +648,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
                        BogusClientError,            # called if PI & DTP clients don't match
                        FTPTimeoutError,             # called when FTP connection times out
                        ClientDisconnectError)       # called if client disconnects prematurely during DTP transfer
+                       
         if r == defer.TimeoutError:                     
             self.reply(CANT_OPEN_DATA_CNX)
         elif r in (BogusClientError, FTPTimeoutError):
@@ -652,6 +656,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             self.transport.loseConnection()
         elif r == ClientDisconnectError:
             self.reply(CNX_CLOSED_TXFR_ABORTED)
+
         # if we timeout, or if an error occurs, 
         # all previous commands are junked
         self.blocked = None                         
@@ -814,9 +819,13 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         self.reply(USR_LOGGED_IN_PROCEED)
 
     def _ebLogin(self, failure):
-        # hack? error.UnhandledCredentials instead of...?
-        failure.trap(error.UnauthorizedLogin, error.UnhandledCredentials)
-        self.reply(AUTH_FAILURE, '')
+        r = failure.trap(error.UnauthorizedLogin, TLDNotSetInRealmError)
+        if r == TLDNotSetInRealmError:
+            log.debug(failure.getErrorMessage())
+            self.reply(REQ_ACTN_NOT_TAKEN, 'internal server error')
+            self.transport.loseConnection()
+        else:
+            self.reply(AUTH_FAILURE, '')
 
     def ftp_TYPE(self, params):
         p = params[0].upper()
@@ -1015,7 +1024,6 @@ class FTPFactory(protocol.Factory):
         
 # -- Cred Objects --
 
-
 class IFTPShell(components.Interface):
     """An abstraction of the shell commands used by the FTP protocol
     for a given user account
@@ -1160,6 +1168,7 @@ class IFTPShell(components.Interface):
         pass
 
 
+
 import pwd, grp
 
 def _callWithDefault(default, _f, *_a, **_kw):
@@ -1168,28 +1177,71 @@ def _callWithDefault(default, _f, *_a, **_kw):
     except KeyError:
         return default
 
+def _memberGIDs(gid):
+    """returns a list of all gid's that are a member of group with id
+    """
+    gr_mem = 3
+    return grp.getgrgid(gid)[gr_mem]
+
+def _testPermissions(uid, gid, spath, mode='r'):
+    """checks to see if uid has proper permissions to access path with mode
+    @param uid: numeric user id
+    @type uid: int
+    @param gid: numeric group id
+    @type gid: int
+    @param spath: the path on the server to test
+    @type spath: string
+    @param mode: 'r' or 'w' (read or write)
+    @type mode: string
+    @returns: a True if the uid can access path
+    @rval: Boolean
+    """
+    import os.path as osp 
+    import stat
+    if mode not in ['r', 'w']:
+        raise ValueError("mode argument must be 'r' or 'w'")
+    
+    readMasks = {'usr': stat.S_IRUSR, 'grp': stat.S_IRGRP, 'oth': stat.S_IROTH}
+    writeMasks = {'usr': stat.S_IWUSR, 'grp': stat.S_IWGRP, 'oth': stat.S_IWOTH}
+    modes = {'r': readMasks, 'w': writeMasks}
+    if osp.exists(spath):
+        s = os.lstat(spath)
+        if uid == 0:    # root is superman, can access everything
+            return True
+        elif modes[mode]['usr'] & s.st_mode > 0 and uid == s.st_uid:
+            return True
+        elif ((modes[mode]['grp'] & s.st_mode > 0) and 
+                (gid == s.st_gid or gid in _memberGIDs(gid))):
+            return True
+        elif modes[mode]['oth'] & s.st_mode > 0:
+            return True
+    return False   
+
 class FTPAnonymousShell(object):
     """"""
     __implements__ = (IFTPShell,)
 
-    def __init__(self, user=None):
+    uid      = None        # uid of anonymous user for shell
+    gid      = None        # gid of anonymous user for shell
+    clientwd = '/'
+    filepath = None
+
+    def __init__(self, user=None, tld=None):
         """Constructor
         @param user: the name of the user whose permissions we'll be using
         @type user: string
         """
         self.user     = user        # user name
-        self.uid      = None        # uid of anonymous user for shell
-        self.gid      = None        # gid of anonymous user for shell
-        self.clientwd = None
-        self.tld      = None
+        self.tld      = tld
         self.debug    = True
 
         # TODO: self.user needs to be set to something!!!
         if self.user is None:
             uid = os.getuid()
             self.user = pwd.getpwuid(os.getuid())[0]
-
             self.getUserUIDAndGID()
+        if self.tld is not None:
+            self.filepath = python.FilePath(self.tld)
 
     def getUserUIDAndGID(self):
         """used to set up permissions checking. finds the uid and gid of 
@@ -1205,15 +1257,6 @@ COULD NOT SET ANONYMOUS UID! Name %s could not be found.
 We will continue using the user %s.
 """ % (self.user, pwd.getpwuid(os.getuid())[pw_name]))
 
-    def _anonUserErrorMsg(self):
-        pass
-
-    # basically, i'm thinking of the paths as a list of path elements
-    #
-    # some terminology:
-    # client absolute path = an absolute path minus the tld
-    # server absolute path = a full absolute path on the filesystem
-    # client relative path = a path relative to the client's working directory
 
     def pwd(self):
         return self.clientwd
@@ -1232,7 +1275,7 @@ We will continue using the user %s.
             lpath = lpath[:-1]
         if rpath and rpath[0] == os.sep:
             rpath = rpath[1:]
-        return "%s/%s" % (lpath, rpath)
+        return "%s%s%s" % (lpath, os.sep, rpath)
 
     def mapCPathToSPath(self, rpath):
         if not rpath or rpath[0] != '/':      # if this is not an absolute path
@@ -1360,7 +1403,6 @@ We will continue using the user %s.
        
     def list(self, path):
         sio = self.getUnixLongListString(path)
-        #log.debug(sio.getvalue())
         return (sio, len(sio.getvalue()))
 
     def mdtm(self, path):
@@ -1407,13 +1449,15 @@ class FTPRealm:
 
     def requestAvatar(self, avatarId, mind, *interfaces):
         if IFTPShell in interfaces:
-            avatar = FTPAnonymousShell()
-            avatar.tld = self.tld
+            if self.tld is None:
+                raise TLDNotSetInRealmError("you must set FTPRealm's tld to a non-None value before creating avatars!!!")
+            avatar = FTPAnonymousShell(user=self.user, tld=self.tld)
             avatar.clientwd = self.clientwd
-            avatar.user = self.user
             avatar.logout = self.logout
             return IFTPShell, avatar, avatar.logout
         raise NotImplementedError("Only IFTPShell interface is supported by this realm")
+
+
 
 
 # --- FTP CLIENT  -------------------------------------------------------------
@@ -1977,8 +2021,6 @@ class FTPFileListProtocol(basic.LineReceiver):
             dict = match.groupdict()
             dict['size'] = int(dict['size'])
             self.files.append(dict)
-
-
 
 def parsePWDResponse(response):
     """Returns the path from a response to a PWD command.
