@@ -10,7 +10,7 @@
 
 <ul>
 
-<li>Root Models are the data entry point for every woven Page. All Model data for display on a Page should be made available through this Root Model. Described further in the <a href="page#rootmodels">Page section</a>.</li>
+<li>Root Models are the data entry point for every woven Page. All Model data for display on a Page should be made available through this Root Model. Described further in the <a href="pageindepth.html#rootmodels">Page section</a>.</li>
 
 <li><a href="#submodelpaths">Submodel Paths</a> allow Woven to locate the correct Model data for a node.</li>
 
@@ -99,7 +99,7 @@ model = {'name': "Donovan",
 &lt;html&gt;
 </pre>
 
-<p>The List widget makes copies of the <code>pattern</code> nodes without knowing or caring which directives have been placed on them, or how many children are contained within the node. It then simply sets the <code>model=</code> attribute of each of the nodes to the correct index into the list. More about pattern directives is available in the <a href="02view_in_depth">Views</a> section.</p>
+<p>The List widget makes copies of the <code>pattern</code> nodes without knowing or caring which directives have been placed on them, or how many children are contained within the node. It then simply sets the <code>model=</code> attribute of each of the nodes to the correct index into the list. More about pattern directives is available in the <a href="viewindepth.html">Views</a> section.</p>
 
 <p>In the above example, even though the <code>interests</code> list had been placed on the Model stack, we were able to access the <code>name</code> string without knowing its absolute path by using the relative path <code>../name</code>, and we were able to render the <code>interests</code> list with a different View Widget using the relative path <code>.</code>.</p>
 
@@ -151,7 +151,7 @@ class RowUpdater(model.Model):
 
 <h2>Registering an IModel adapter for a class</h2>
 
-  <p>Woven makes use of the twisted component system. Components, which are discussed in the <a href="components">Components</a> section, allow classes to declare that they implement a specific Interface for another class. This is useful if you already have classes in which you store data, and wish to create thin IModel adapter wrappers around them:</p>
+  <p>Woven makes use of the twisted component system. Components, which are discussed in the <a href="components.html">Components</a> section, allow classes to declare that they implement a specific Interface for another class. This is useful if you already have classes in which you store data, and wish to create thin IModel adapter wrappers around them:</p>
 
 <pre class="python">
 class MyData:
