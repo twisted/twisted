@@ -42,6 +42,8 @@ What's new in 0.13.0?
   
   Delayed docs in doc/delayeds.html now give correct information.
   
+  web.guard now attaches/detaches to perspectives like PB does.
+  
   Lots of bug fixes.
   
   Experimental stuff:
