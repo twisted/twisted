@@ -513,18 +513,22 @@ class Session:
         """Call this callback when the session expires or logs out."""
         self.expireCallbacks.append(callback)
     
+    def expire(self):
+        """Expire/logout of the session."""
+        log.msg("expired session %s" % self.uid)
+        del self.site.sessions[self.uid]
+        for c in self.expireCallbacks:
+            c()
+        self.expireCallbacks = []
+
     def touch(self):
         self.lastModified = time.time()
 
-    def expire(self):
+    def checkExpired(self):
         # If I haven't been touched in 15 minutes:
         if time.time() - self.lastModified > 900:
             if self.site.sessions.has_key(self.uid):
-                log.msg("expired session %s" % self.uid)
-                del self.site.sessions[self.uid]
-                for c in self.expireCallbacks:
-                    c()
-                self.expireCallbacks = []
+                self.expire()
             else:
                 log.msg("no session to expire: %s" % self.uid)
         else:
@@ -592,7 +596,7 @@ class Site(protocol.Factory, coil.Configurable, roots.Collection):
         uid = self._mkuid()
         s = Session(self, uid)
         session = self.sessions[uid] = s
-        main.addTimeout(s.expire, 1800)
+        main.addTimeout(s.checkExpired, 1800)
         return session
 
     def getSession(self, uid):
