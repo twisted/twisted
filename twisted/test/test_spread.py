@@ -25,7 +25,7 @@ from twisted.spread.util import LocalAsyncForwarder
 from twisted.internet import defer
 from twisted.python.components import Interface
 
-class IForwarded:
+class IForwarded(Interface):
     def forwardMe(self):
         pass
     def forwardDeferred(self):
