@@ -427,6 +427,9 @@ class Process(styles.Ephemeral):
         try:
             import resource
             maxfds = resource.getrlimit(resource.RLIMIT_NOFILE)[1] + 1
+            # OS-X reports 9223372036854775808. That's a lot of fds to close
+            if maxfds > 1024:
+                maxfds = 1024
         except:
             maxfds = 256
 
