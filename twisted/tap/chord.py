@@ -20,7 +20,7 @@ I am the support module for making a chord service with mktap.
 """
 
 from twisted.spread import chord, pb
-from twisted.internet import tcp, passport
+from twisted.internet import tcp
 from twisted.python import usage
 import sys
 

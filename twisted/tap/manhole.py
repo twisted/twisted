@@ -21,7 +21,7 @@ I am the support module for making a manhole server with mktap.
 
 from twisted.manhole import service
 from twisted.spread import pb
-from twisted.internet import tcp, passport
+from twisted.internet import tcp
 from twisted.python import usage
 import sys
 

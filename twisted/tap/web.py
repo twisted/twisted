@@ -22,7 +22,7 @@ import string, os
 
 # Twisted Imports
 from twisted.web import server, static, twcgi, script, test, distrib
-from twisted.internet import tcp, passport
+from twisted.internet import tcp
 from twisted.python import usage
 from twisted.spread import pb
 

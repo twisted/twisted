@@ -31,7 +31,6 @@ from twisted.python import usage
 from twisted.spread import pb
 from twisted.words import service, ircservice, webwords
 from twisted.web import server
-from twisted.internet import passport
 
 import sys
 
