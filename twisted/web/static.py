@@ -317,10 +317,16 @@ class File(resource.Resource, styles.Versioned):
         f.indexNames = self.indexNames[:]
         return f
 
+    # methods to allow subclasses to e.g. decrypt files on the fly:    
     def openForReading(self):
         """Open a file and return it."""
         return open(self.path,'rb')
-    
+
+    def getFileSize(self):
+        """Return file size."""
+        return os.path.getsize(self.path)
+
+
     def render(self, request):
         """You know what you doing."""
 
@@ -331,7 +337,7 @@ class File(resource.Resource, styles.Versioned):
               os.stat(self.path)
 
         #for content-length
-        fsize = size
+        fsize = size = self.getFileSize()
 
         if os.path.isdir(self.path): # stat.S_ISDIR(mode) (see above)
             if self.path[-1] == '/':
