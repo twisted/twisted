@@ -1,10 +1,13 @@
 #!/usr/bin/python
-import os, sys
+import os, sys, getopt
 
-if sys.argv[1:2]==["-d"]:
-	run_dch = 1
-else:
-	run_dch = 0
+run_dch, install = 0, None
+
+for (opt, val) in getopt.getopt(sys.argv[1:], "di:"):
+	if opt == "-d":
+		run_dch = 1
+	if opt == "-i":
+		install = val
 
 here = os.path.dirname(os.path.abspath(sys.argv[0]))
 parent = os.path.dirname(here)
@@ -20,3 +23,16 @@ os.chdir("twisted-%(version)s" % vars())
 if run_dch:
 	os.system("dch")
 os.system("debuild -us -uc")
+
+if install:
+	current = os.getcwd()
+	os.chdir("..")
+	for file in os.listdir('.'):
+		if not os.path.isfile(file):
+			continue
+		base = file.split("_")[0]
+		os.system("rm -f %(install)s/%(base)s*" % vars())
+		os.system("cp %(file)s %(install)s" % vars())
+	os.chdir(install)
+	os.system("%(current)s/admin/createpackages "
+	          "%(current)s/admin/override" % vars())
