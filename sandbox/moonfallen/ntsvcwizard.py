@@ -5,12 +5,14 @@ gtk2reactor.install()
 import sys
 import os.path
 
+from path import path
+
 # win32all
 from win32ui import CreateFileDialog
 import win32con
 
 # gtk2
-import gtk
+import gtk, gobject
 from gtk import glade
 
 # twisted
@@ -53,6 +55,14 @@ class WizardThing:
         self.gw_pathtoicon.set_position(len(ico))
         self.gw_icondisplay.set_from_file(ico)
 
+        store = gtk.ListStore(gobject.TYPE_STRING, gobject.TYPE_STRING)
+        self.gw_datalist.set_model(store)
+        TVC=gtk.TreeViewColumn
+        CRT=gtk.CellRendererText
+        self.gw_datalist.append_column(TVC("Source File", CRT(), text=1))
+        self.gw_datalist.append_column(TVC("Install Destination",
+                                       CRT(), text=1))
+
     def on_ntsvcwizard_destroy(self, widget):
         log.msg("Goodbye.")
         self.deferredResult.callback(None)
@@ -91,6 +101,19 @@ class WizardThing:
                 self.gw_pathtoicon.set_text(pn)
                 self.gw_pathtoicon.set_position(len(pn))
                 self.gw_icondisplay.set_from_file(pn)
+
+    def on_browsefordata_clicked(self, widget):
+        dlg = CreateFileDialog(1, None,
+                               os.path.join(os.getcwd(), '*'),
+                               win32con.OFN_ALLOWMULTISELECT,
+                               None, None)
+        if dlg.DoModal() == win32con.IDOK:
+            pns = dlg.GetPathNames()
+            datafiles = self.gw_datalist.get_model()
+            for p in pns:
+                pth = path(p)
+                tup = (pth, path('/') / pth.basename())
+                datafiles.append(tup)  # FIXME - both columns display same
 
     def setNewValues(self):
         cf = self.gw_pathtotap.get_text()
