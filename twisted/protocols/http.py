@@ -463,7 +463,7 @@ class Request:
             self.transport.write(data)
 
         # if we have producer, register it with transport
-        if self.producer is not None:
+        if self.producer is not None and not self.finished:
             self.transport.registerProducer(self.producer, self.streamingProducer)
 
         # if we're finished, clean up
