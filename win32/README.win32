@@ -33,8 +33,10 @@ compiler, which is the default on windows.  Just issue the command:
 $ python setup.py install
 
 * With Cygwin ***
-With Cygwin installed, you need to make sure the gcc-mingw package is
-installed. You also need libpython22.a (or libpython23.a as appropriate).  
+With Cygwin installed, you need to make sure these two packages are installed:
+- gcc
+- gcc-mingw
+You also need libpython22.a (or libpython23.a as appropriate).  
 Instructions can be found at http://sebsauvage.net/python/mingw.html .
 
 Once that's done, just issue the command:
@@ -43,7 +45,7 @@ $ python setup.py build --compiler=mingw32 install
 
 If for some reason extensions won't build, try this instead:
 
-$ python setup.py install --skip-build
+$ python setup.py build_py build_scripts install --skip-build
 
 
 OFFICIAL
