@@ -398,7 +398,44 @@ alert("I hate you");
         self.assertEquals(expected, actual)
 
     testSpacing.todo = "AAARGH white space swallowing screws this up"
+
+    def testLaterCloserSimple(self):
+        s = "<ul><li>foo<li>bar<li>baz</ul>"
+        d = microdom.parseString(s, beExtremelyLenient=1)
+        expected = "<ul><li>foo</li><li>bar</li><li>baz</li></ul>"
+        actual = d.documentElement.toxml()
+        self.assertEquals(expected, actual)
+
+    def testLaterCloserTable(self):
+        s = ("<table>"
+             "<tr><th>name<th>value<th>comment"
+             "<tr><th>this<td>tag<td>soup"
+             "<tr><th>must<td>be<td>handled"
+             "</table>")
+        expected = ("<table>"
+                    "<tr><th>name</th><th>value</th><th>comment</th></tr>"
+                    "<tr><th>this</th><td>tag</td><td>soup</td></tr>"
+                    "<tr><th>must</th><td>be</td><td>handled</td></tr>"
+                    "</table>")
+        d = microdom.parseString(s, beExtremelyLenient=1)
+        actual = d.documentElement.toxml()
+        self.assertEquals(expected, actual)
+        
+    testLaterCloserTable.todo = "Table parsing needs to be fixed."
     
+    def testLaterCloserDL(self):
+        s = ("<dl>"
+             "<dt>word<dd>definition"
+             "<dt>word<dt>word<dd>definition<dd>definition"
+             "</dl>")
+        expected = ("<dl>"
+                    "<dt>word</dt><dd>definition</dd>"
+                    "<dt>word</dt><dt>word</dt><dd>definition</dd><dd>definition</dd>"
+                    "</dl>")
+        d = microdom.parseString(s, beExtremelyLenient=1)
+        actual = d.documentElement.toxml()
+        self.assertEquals(expected, actual)
+        
     def testUnicodeTolerance(self):
         import struct
         s = '<foo><bar><baz /></bar></foo>'
