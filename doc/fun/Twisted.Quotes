@@ -5102,3 +5102,7 @@ person.
 <arg> argh, my wife calls to complain about her mother while im in the
       middle of trying to understand someone elses metaclasses
 %
+<Moof> I'm tryign to compile pyopenssl
+<Moof> but there's a syntax error in Python.h
+<mwh> this seems unlikely, on the face of it
+%
