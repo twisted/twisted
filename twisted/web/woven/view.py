@@ -142,9 +142,9 @@ class View(template.DOMTemplate):
                         #print "model", m
                         break
                 else:
-                    warnings.warn("POTENTIAL ERROR: Node had a model=%s "
-                                  "attribute, but the submodel did not "
-                                  "exist." % (submodel, ))
+                    raise Exception("Node had a model=%s "
+                                  "attribute, but the submodel was not "
+                                  "found in %s." % (submodel, filter(lambda x: x, self.modelStack)))
                     m = self.getTopOfModelStack()
         else:
             m = None
@@ -209,8 +209,6 @@ class View(template.DOMTemplate):
                             interfaces.IController, 
                             None,
                             components.getAdapterClassWithInheritance)
-        if controller is None:
-            controller = input.DefaultHandler(model)
 
         return controller
 
@@ -259,16 +257,15 @@ class View(template.DOMTemplate):
                 if namespace is None:
                     continue
                 view = namespace.getSubview(request, node, model, viewName)
-                if view:
+                if view is not None:
                     break
             if view is None:
 
                 raise NotImplementedError("You specified view name %s on a "
                                           "node, but no factory_%s method was "
-                                          "found in %s or %s." % (viewName,
+                                          "found in %s." % (viewName,
                                                                   viewName,
-                                                                  self,
-                                                                  widgets))
+                                                                  self.viewStack))
         elif node.getAttribute("model"):
             # If no "view" attribute was specified on the node, see if there
             # is a IView adapter registerred for the model.
@@ -291,20 +288,22 @@ class View(template.DOMTemplate):
         if submodelName is None:
             submodelName = ""
         model = self.getNodeModel(request, node, submodelName)
-        controller = self.getNodeController(request, node, submodelName, model)
-        controller.parent = self.controllerStack[0]
-        self.controllerStack.insert(0, controller)
         view = self.getNodeView(request, node, submodelName, model)
-        if hasattr(view, 'setController'):
+        controller = self.getNodeController(request, node, submodelName, model)
+
+        if view or controller:
             if model is None:
                 model = self.getTopOfModelStack()
+            if not view or not isinstance(view, widgets.Widget):
+                view = widgets.DefaultWidget(model)
+            if not controller:
+                controller = input.DefaultHandler(model)            
+            controller.parent = self.controllerStack[0]
+
             model.addView(view)
             if not getattr(view, 'submodel', None):
                 view.setSubmodel(submodelName)
-
-        if view is None:
-            view = widgets.DefaultWidget(model)
-        else:
+    
             id = node.getAttribute("id")
             if not id:
                 id = "woven_id_" + str(self.currentId)
@@ -312,19 +311,26 @@ class View(template.DOMTemplate):
                 view['id'] = id
             self.subviews[id] = view
             view.parent = self.viewStack[0]
-            if hasattr(view, 'model') and view.model != self.modelStack[0]:
+            # If a Widget was constructed directly with a model that so far
+            # is not in modelspace, we should put it on the stack so other
+            # Widgets below this one can find it.
+            if view.model is not self.getTopOfModelStack():
                 self.modelStack[0] = view.model
-        view.setController(controller)
-        view.setNode(node)
-        self.viewStack.insert(0, view)
+            view.setController(controller)
+            view.setNode(node)
+    
+            if not getattr(controller, 'submodel', None):
+                controller.setSubmodel(submodelName)
+            # xxx refactor this into a widget interface and check to see if the object implements IWidget
+            # the view may be a deferred; this is why this check is required
+            controller.setView(view)
+            
+            controllerResult = controller.handle(request)
+        else:
+            controllerResult = (None, None)
 
-        if not getattr(controller, 'submodel', None):
-            controller.setSubmodel(submodelName)
-        # xxx refactor this into a widget interface and check to see if the object implements IWidget
-        # the view may be a deferred; this is why this check is required
-        controller.setView(view)
-        
-        controllerResult = controller.handle(request)
+        self.controllerStack.insert(0, controller)
+        self.viewStack.insert(0, view)
         self.outstandingCallbacks += 1
         self.handleControllerResults(controllerResult, request, node, 
                                     controller, view, NO_DATA_YET)

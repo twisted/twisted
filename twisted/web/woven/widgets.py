@@ -339,7 +339,7 @@ class Widget(view.View):
                                             sm, name, self.templateNode)
                     if default is _RAISE:
                         raise Exception(msg)
-                    log.write(msg)
+                    warnings.warn(msg)
                     return default
                 slots = [node]
             self.slots[name] = slots
@@ -350,7 +350,6 @@ class Widget(view.View):
         clone = slot.cloneNode(1)
         slot.parentNode = parentNode
         return clone
-
 
 wvfactory_Widget = viewFactory(Widget)
 
