@@ -63,6 +63,6 @@ class EcoTestCase(unittest.TestCase):
   [comment "sleep long enough so we can measure memory usage"]
   [call sleep 1]
   [return 0]]"""
-  assert eco.eval(ack) == 'int main(int argc, char * * argv) {\nint  n = ((argc == 2) ? (atoi(argv[1])) : (1));;\nprintf("Ack(3,%d): %d\\n", n, Ack(3, n));\n/* sleep long enough so we can measure memory usage */;\nsleep(1);\nreturn 0}'
+        assert eco.eval(ack) == 'int main(int argc, char * * argv) {\nint  n = ((argc == 2) ? (atoi(argv[1])) : (1));;\nprintf("Ack(3,%d): %d\\n", n, Ack(3, n));\n/* sleep long enough so we can measure memory usage */;\nsleep(1);\nreturn 0}'
   
 testCases = [EcoTestCase]
