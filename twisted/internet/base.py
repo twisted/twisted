@@ -83,10 +83,8 @@ class DelayedCall:
             self.time += secondsLater
             self.resetter(self)
 
-    def __cmp__(self, other):
-        if isinstance(other, DelayedCall):
-            return cmp((self.time, self.func, self.args, self.kw), (other.time, other.func, other.args, other.kw))
-        raise TypeError
+    def __lt__(self, other):
+        return self.time < other.time
 
     def __str__(self):
         try:
