@@ -42,6 +42,7 @@ class PauseFlow(Exception):
       library is to support complicated flows where this 
       exception can be raised.
   """
+PauseFlowValue = PauseFlow()
 
 class Flow:
     """ a sequence of Stages which can be executed more than once
@@ -59,35 +60,25 @@ class Flow:
         """ the no-op stage """
         return self._append(Stage())
 
-    def addCallable(self, callable, stop=None):
+    def addCallable(self, callable, skip = None):
         """ wraps a function or other callable for use in a flow
 
             This wraps a callable with a single input parameter
             and an optional output value, one-to-one behavior.
-            If the return value is stop (None if you don't have 
+            If the return value is skip (None if you don't have 
             a return statement) then the next stage is not processed.
-
-                def func(data):
-                    # do something and then process
-                    # the next stage
-                    return data
              
             Optionally, if the callback happens to accept two 
             arguments rather than one, it will be passed the 
             context first and the data value second.  The context
             exists for the life of the flow, so it can be used
             to stuff away variables as needed.
-
-                def func(context, data):
-                    # context is mutable to 
-                    # store all kinds of items
-                    return data
             
             Note that this implementation is tail recursive, that is, 
             in most cases each callable finishes executing before the 
             next stage is pushed onto the stack.
         """
-        return self._append(Callable(callable, stop))
+        return self._append(Callable(callable, skip))
 
     def addBranch(self, callable, onFinish = None):
         """ wraps an iterator; in effect one-to-many behavior
@@ -149,32 +140,27 @@ class Flow:
         """
         return self._append(Reduce(callable, start, inplace))
 
-    def addMergeToList(self):
+    def addReduceToList(self):
         """ accumulates events into a list """
         return self._append(Reduce())
-    
 
-    def addFilter(self, callable, stop = None, isGlobal = 0):
-        """ a general filtering callback
+    def addMerge(self, callable, start = None, skip = None):
+        """ a more general reduce, resulting in more than one output
 
-            This stage is a general filter, where the callable 
-            function is passed two arguments:
+            This is a more general form of 'reduce' where M messages
+            may be merged into N messages (N < M).   To do this, the
+            output may be delayed one call; thus, to know that the 
+            stage is to produce a result, it may have to look at the
+            next value.
 
-               context    the current context, where the argument
-                          can assign attribute values to keep track
-                          of state between calls (global context if
-                          isGlobal is true
-
-               data       the current data value from the previous
-                          stage
-
-            Unlike addCallable, this operation is called once a 
-            the very end when the context is being flushed (and
-            in this case data is None).  Regardless, the value of
-            the call (if it is not stop) is passed on to the 
-            next stage for further processing.
+            Thus, the callable for this function has two inputs
+            (just like result); however, the output is a tuple
+            containing two items, the accumulated value to be
+            passed in the next call and the value (if any) to 
+            send on to the next stage.   At the end of input,
+            the accumulated value is then sent to the next stage.
         """
-        return self._append(Filter(callable, stop, isGlobal))
+        return self._append(Merge(callable, start, skip))
 
     def addContext(self, onFlush = None):
         """ adds a nested context, provides for end notification
@@ -229,9 +215,9 @@ class Stage:
         pass
  
 class Callable(Stage):
-    def __init__(self, callable, stop = None):
+    def __init__(self, callable, skip = None):
         self.callable    = callable
-        self.stop        = stop
+        self.skip        = skip
         self.withContext = (2 == getArgumentCount(callable, 1))
      
     def __call__(self, flow, data):
@@ -241,7 +227,8 @@ class Callable(Stage):
             ret = self.callable(flow.context,data)
         else:
             ret = self.callable(data)
-        if ret is not self.stop:
+        if ret is PauseFlowValue: return 1
+        if ret is not self.skip:
             flow.push(ret)
 
 class Branch(Stage):
@@ -255,6 +242,7 @@ class Branch(Stage):
             ret = self.callable(flow.context,data)
         else:
             ret = self.callable(data)
+        if ret is PauseFlowValue: return 1
         if ret is not None:
             next = iter(ret).next
             flow.push(next, self.iterate)
@@ -262,6 +250,7 @@ class Branch(Stage):
     def iterate(self, flow, next):
         try:
             data = next()
+            if data is PauseFlowValue: return 1
             flow.push(next, self.iterate)
             flow.push(data)
         except StopIteration:
@@ -271,15 +260,19 @@ class Branch(Stage):
                 else:
                     ret = self.onFinish()
 
-class Reduce(Stage):
-    def __init__(self, callable = lambda lst, val: lst.append(val) or lst,
-                       start = lambda: [], inplace = 0):
+class _Merge(Stage):
+    '''
+       A base class for both Reduce and Merge, performing
+       the common functionality of setting up an aggregation
+       bucket in the current context, etc.
+    '''
+    def __init__(self, callable, start = None, skip = None):
         self.bucket   = "_%d" % id(self)
         self.start    = start
         self.callable = callable
-        self.inplace  = inplace
+        self.skip     = skip
         self.withContext = (3 == getArgumentCount(callable, 2))
-    #
+     
     def __call__(self, flow, data):
         cntx = flow.context
         if not hasattr(cntx, self.bucket): 
@@ -288,29 +281,37 @@ class Reduce(Stage):
                 startArgs = getArgumentCount(start, 0)
                 if startArgs > 0: start = start(flow.context)
                 else: start = start()
-            cntx.addFlush(flow.nextLinkItem(), self.bucket)
+            cntx.addFlush(flow.nextLinkItem(), self.bucket, self.skip)
             setattr(cntx, self.bucket, start)
         curr = getattr(cntx, self.bucket)
         if self.withContext: curr = self.callable(cntx, curr, data)
         else:                curr = self.callable(curr, data)
-        if not self.inplace: setattr(cntx, self.bucket, curr)
+        return curr
 
-class Filter(Stage):
-    def __init__(self, callable, stop = None, isGlobal = 0):
-        self.bucket   = "_%d" % id(self)
-        self.callable    = callable
-        self.stop        = stop
-        self.isGlobal    = isGlobal
-    #
+class Reduce(_Merge):
+    def __init__(self, callable = lambda lst, val: lst.append(val) or lst,
+                       start = lambda: [], inplace = 0, skip = None):
+        _Merge.__init__(self, callable, start, skip)
+        self.inplace = inplace
+
     def __call__(self, flow, data):
-        if self.isGlobal: cntx = flow.global_context
-        else:             cntx = flow.context
-        if not hasattr(cntx, self.bucket): 
-            cntx.addFlush(flow.currLinkItem(), self.bucket)
-            setattr(cntx, self.bucket, None)
-        curr = self.callable(cntx, curr)
-        if curr is not self.stop:
-            flow.push(curr)
+        curr = _Merge.__call__(self, flow, data)
+        if curr is PauseFlowValue: return 1
+        if not self.inplace:
+            setattr(flow.context, self.bucket, curr)
+
+class Merge(_Merge):
+    def __init__(self, callable, start = None, skip = None):
+        _Merge.__init__(self, callable, start, skip)
+     
+    def __call__(self, flow, data):
+        curr = _Merge.__call__(self, flow, data)
+        if not curr: return
+        if curr is PauseFlowValue: return 1
+        (aggregate_value, return_value) = curr
+        setattr(flow.context, self.bucket, aggregate_value)
+        if return_value is not self.skip:
+            flow.push(return_value)
 
 class Context(Stage):
     def __init__(self, onFlush = None):
@@ -397,10 +398,9 @@ class Stack:
             if not(stage): raise "unconsumed data"
             try:
                 pause = stage(self, data)
-            except PauseFlow: 
-                self.push(data, stage, next)
-                pause = 1
+            except PauseFlow: pause = 1
             if pause:
+                self.push(data, stage, next)
                 from twisted.internet import reactor
                 reactor.callLater(self._waitInterval,self.execute)
                 return 1
@@ -411,12 +411,12 @@ class _Context:
         self._flush  = []
         self._dict   = {}
      
-    def addFlush(self, flowLink, bucket = None):
+    def addFlush(self, flowLink, bucket = None, skip = None):
         """ 
            registers a flowLink to be executed using data from the
            given bucket once the context has been popped.
         """
-        self._flush.append((flowLink, bucket))
+        self._flush.append((flowLink, bucket, skip))
      
     def onFlush(self, flow, cntx):
         """
@@ -427,10 +427,11 @@ class _Context:
         if not(self._flush):
             flow.context = self._parent
             return 
-        (link, bucket) = self._flush.pop(0)
-        data = getattr(self, bucket, None)
+        (link, bucket, skip) = self._flush.pop(0)
+        data = getattr(self, bucket, skip)
         flow.push(cntx, self.onFlush)
-        flow.push(data, link.stage, link.next)
+        if data is not skip:
+            flow.push(data, link.stage, link.next)
     
     def __getattr__(self, attr):
         return getattr(self._parent, attr)
@@ -448,7 +449,7 @@ class LinkItem:
         self.stage = stage
         self.next  = next
 
-class FlowIterator:
+class Iterator:
     """
        This is an iterator base class which can be used to build
        iterators which are constructed and run within a Flow
@@ -519,9 +520,9 @@ class _TunnelIterator:
             raise self.failure
         raise PauseFlow
 
-class FlowQueryIterator(FlowIterator):
+class QueryIterator(Iterator):
     def __init__(self, pool, sql, fetchall=0):
-        FlowIterator.__init__(self)
+        Iterator.__init__(self)
         self.curs = None
         self.sql  = sql
         self.pool = pool
@@ -546,4 +547,3 @@ class FlowQueryIterator(FlowIterator):
             #self.curs.close()
             raise StopIteration
         return res
-
