@@ -31,7 +31,9 @@ class SiteConfigurator(coil.Configurator):
     __implements__ = (coil.IConfigurator, coil.IStaticCollection)
     
     configurableClass = server.Site
-    configTypes = {'resource': [resource.IResource, "Resource", "The resource at the site's root."] }
+    configTypes = {'resource': [resource.IResource, "Resource", "The resource at the site's root."],
+                   'logPath':  [types.StringType, "Logfile", "Path to web log file."],
+                   }
     configName = 'HTTP Web Site'
     
     def listStaticEntities(self):
@@ -40,6 +42,13 @@ class SiteConfigurator(coil.Configurator):
     def getStaticEntity(self, name):
         if name == 'resource':
             return self.instance.resource
+
+    def config_logPath(self, logPath):
+        if logPath:
+            self.instance.logPath = logPath
+        else:
+            self.instance.logPath = None
+
 
 components.registerAdapter(SiteConfigurator, server.Site, coil.ICollection)
 
