@@ -79,7 +79,7 @@ def setqotr(qotr, do):
     if qotr is None or not do:
         return
     res = []
-    fp = file("README")
+    fp = iter(file("README"))
     for line in fp:
         res.append(line)
         if line=="Quote of the Release:\n":
@@ -114,4 +114,9 @@ def main():
     run(c)
 
 if __name__=='__main__':
-    main()
+   qotr='''\
+Haha foolish humans
+I am your ruler.
+ROOR
+'''
+   setqotr(qotr, 1)
