@@ -22,7 +22,7 @@ import os
 
 class TestInternet(unittest.TestCase):
 
-    def testTCP(self):
+    def testUNIX(self):
         s = service.MultiService()
         s.startService()
         c = compat.IOldApplication(s)
@@ -40,6 +40,28 @@ class TestInternet(unittest.TestCase):
         factory.protocol = Foo
         factory.line = None
         c.connectUNIX('./hello.skt', factory)
+        while factory.line is None:
+            reactor.iterate(0.1)
+        s.stopService()
+        self.assertEqual(factory.line, 'lalala')
+
+    def testTCP(self):
+        s = service.MultiService()
+        s.startService()
+        c = compat.IOldApplication(s)
+        factory = protocol.ServerFactory()
+        factory.protocol = wire.Echo
+        c.listenTCP(0, factory)
+        num = list(s)[0]._port.getHost()[2]
+        class Foo(basic.LineReceiver):
+            def connectionMade(self):
+                self.transport.write('lalala\r\n')
+            def lineReceived(self, line):
+                self.factory.line = line
+        factory = protocol.ClientFactory()
+        factory.protocol = Foo
+        factory.line = None
+        c.connectTCP('localhost', num, factory)
         while factory.line is None:
             reactor.iterate(0.1)
         s.stopService()
