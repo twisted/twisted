@@ -51,13 +51,13 @@ class ProxyClient(http.HTTPClient):
         self.father.transport.loseConnection()
 
 
-class Proxy(http.HTTP):
+class ProxyRequest(http.Request):
 
     protocols = {'http': ProxyClient}
     ports = {'http': 80}
 
-    def requestReceived(self, command, path, version, data):
-        parsed = urlparse.urlparse(path)
+    def process(self):
+        parsed = urlparse.urlparse(self.uri)
         protocol = parsed[0]
         host = parsed[1]
         port = self.ports[protocol]
@@ -69,19 +69,27 @@ class Proxy(http.HTTP):
         class_ = self.protocols[protocol]
         if not self.received.has_key('host'):
             self.received['host'] = host
-        clientProtocol = class_(command, rest, version, self.received, data, 
-                                self)
+        clientProtocol = class_(self.method, rest, self.clientproto, self.received,
+                                self.content.read(), self)
         client = tcp.Client(host, port, clientProtocol)
 
+class Proxy(http.HTTPChannel):
 
-class ReverseProxy(http.HTTP):
+    requestFactory = ProxyRequest
 
-    def requestReceived(self, command, path, version, data):
+
+class ReverseProxyRequest(http.Request):
+
+    def process(self):
         self.received['host'] = self.factory.host
-        clientProtocol = ProxyClient(command, path, version, self.received, 
-                                     data, self)
+        clientProtocol = ProxyClient(self.method, self.uri, self.clientproto, self.getAllHeaders(), 
+                                     self.content.read(), self)
         client = tcp.Client(self.factory.host, self.factory.port,
                             clientProtocol)
+
+class ReverseProxy(http.HTTPChannel):
+
+    requestFactory = ReverseProxyRequest
 
 
 class ReverseProxyResource(resource.Resource):
