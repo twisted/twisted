@@ -144,8 +144,11 @@ def getElementsByTagName(iNode, name):
     return gathered
 
 def gatherTextNodes(iNode):
-    """Collect the text nodes for each node in the tree rooted at iNode, in a
-preorder traversal.  '<a>1<b>2<c>3</c>4</b></a>' -> 1234.
+    """Visit each child node and collect its text data, if any, into a string.
+For example::
+    >>> doc=microdom.parseString('<a>1<b>2<c>3</c>4</b></a>')
+    >>> gatherTextNodes(doc.documentElement)
+    '1234'
 @return: the gathered nodes as a single string
 @rtype: str
 """
