@@ -1,0 +1,175 @@
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head><title>Using the Lore Documentation System</title></head>
+
+<body>
+<h1>Using the Lore Documentation System</h1>
+
+<h2>Writing Lore Documents</h2>
+
+<h3>Overview</h3>
+
+<p>Lore documents are a special subset of XHTML documents. They use specific
+subset of XHTML, together with custom classes, to allow a wide variety of
+document elements, including some Python-specific ones. Lore documents, in
+particular, are well-formed XML documents. XML can be written using a wide
+variety of tools: from run of the mill editors such as vi, through editors
+with XML help like EMACS and ending with XML specific tools like (need name
+of XML editor here). Here, we will not cover the specifics of writing XML
+documents, except for a very broad overview.</p>
+
+<p>XML documents contain elements, which are delimited by an opening tag
+which looks like <code>&lt;tag-name attribute="value"&gt; and ends with
+a closing tag, which looks like <code>&lt;/tag-name&gt;</code>. If an
+elements happen to contain nothing, it can be shortened to
+<code>&lt;tag-name /&gt;</code>. Elements can contain other elements, or
+text. Text can contain any characters except &lt;, &gt; and &amp;. These
+characters are rendered by &amp;lt;, &amp;gt; and &amp;amp;, respectively.</p>
+
+<p>A Lore document is a single <code>html</code> element. Inside this element,
+there are exactly two top-level elements: <code>head</code> and
+<code>body</code>. The <code>head</code> element must contain exactly one
+element: <code>title</code>, containing the title of the document.
+Most of the document will be contained in the <code>body</code> element.
+The <code>body</code> element must start with an <code>h1</code> (top-level
+header) element, which contains the exact same content as the
+<code>title</code> element.</p>
+
+<p>Thus, a fairly minimal Lore document might look like:</p>
+
+<pre class="html-listing">
+&lt;html&gt;
+&lt;head&gt;&lt;title&gt;Title&lt;/title&gt;&lt;/head&gt;
+&lt;body&gt;&lt;h1&gt;Title&lt;/h1&gt;&lt;/body&gt;
+&lt;/html&gt;
+</pre>
+
+<h3>Elements and Their Uses</h3>
+
+<p><code>p</code>: The paragraph element. Most of the document should be inside
+   paragraphs.</p>
+
+<p><code>span</code>: The span element is an element which has no meaning
+   -- unless it has a special <code>class</code> attributes.
+   The following classes have the stated meanings:
+<dl>
+<dt><code>footnote</code></dt>
+<dd>a small comment which should not be inside the main text-flow.</dd>
+<dt><code>manhole-output</code></dt>
+<dd>This signifies, within a manhole transcript, that the enclosed text is
+    the output and not something the user has to input.</dd>
+</dl>
+</p>
+
+<p><code>div</code>: The div element is equivalent to a span, except it always
+   appears outside paragraphs. The following classes have the given meanings:
+<dl>
+<dt><code>note</code></dt>
+<dd>A short note which is not necessary for the understanding of the text.</dd>
+<dt><code>doit</code></dt>
+<dd>An indication that the discussed feature is not complete or implemented
+    yet.</dd>
+<dt><code>boxed</code></dt>
+<dd>An indication that the text should be clearly seperated from its
+    surroundings.</dd>
+</dl></p>
+
+<p><code>a</code>: This element can have several meanings, depending on
+   the attributes:
+<dl>
+<dt><code>name</code> attribute</dt>
+<dd>Add a label to the current position, which might be used in this document
+    or other documents to refer to.</dd>
+<dt><code>href=URL</code></dt>
+<dd>Refer to some WWW resource.</dd>
+<dt><code>href=relative-path</code>, <code>href=relative-path#label</code> or
+    <code>href=#label</code></dt>
+<dd>Refer to a position in a Lore resource.</dd>
+<dt><code>href=relative-path</code> with <code>class=py-listing</code> or
+    <code>class=html-listing</code></dt>
+<dd>Indicate the given resource is a part of the text flow, and should be
+    inlined (and if possible, syntax highlighted).</dd>
+</dl></p>
+
+<p><code>ol</code>, <code>ul</code>: A list. It can be enumerated or
+   bulleted. Inside a list, the element <code>li</code> (for a list element)
+   is valid.</code></p>
+
+<p><code>h2</code>, <code>h3</code>: Second- and third-level section
+   headings.</p>
+
+<p><code>code</code>: a string which has meaning to the computer.
+   There are many possible classes:
+<dl>
+<dt><code>API</code></dt>
+<dd>A class, function or a module. It does not have to be a fully qualified
+    name -- but if it isn't, a <code>base</code> attribute is necessary.
+    Example:
+  <code>&lt;code class="API" base="urllib"&gt;urlencode&lt;code&gt;</code>.</dd>
+<dt><code>shell</code></dt>
+<dd>Shell (usually Bourn) code.</dd>
+<dt><code>python</code></dt>
+<dd>Python code</dd>
+<dt><code>py-prototype</code></dt>
+<dd>Function prototype</dd>
+<dt><code>py-filename</code></dt>
+<dd>Python file</dd>
+<dt><code>py-src-string</code></dt>
+<dd>Python string</dd>
+<dt><code>py-signature</code></dt>
+<dd>Function signature</dd>
+<dt><code>py-src-parameter</code></dt>
+<dd>Parameter</dd>
+<dt><code>py-src-identifier</code></dt>
+<dd>Identifier</dd>
+<dt><code>py-src-keyword</code></dt>
+<dd>Keyword</dd>
+</dl></p>
+
+<p><code>pre</code>: Preformatted text, usually for file listings. It can
+be used with the <code>html-listing</code> and <code>py-listing</code>
+classes to indicate how to syntax color. Other possible classes are
+<code>shell</code> (to indicate a shell-transcript) or
+<code>python-interpreter</code> (to indicate an interactive interpreter
+transcript).</p>
+
+<p><code>img</code>: Insert the image indicated by the <code>src</code>
+attribute.</p>
+
+<p><code>q</code>: The quote signs (<code>"</code>) are not recommended
+except in preformatted or code environment. Instead, quote by using the
+<code>q</code> element which allows nested quotes and properly distinguishes
+opening quote from closing quote.</p>
+
+<p><code>em</code>, <code>strong</code>: Emphasise (or strongly emphasise)
+text.</p>
+
+<p><code>table</code>: Tabular data. Inside a table, use the <code>tr</code>
+element for each rows, and inside it use either <code>td</code> for a regular
+table cell or <code>th</code> for a table header (column or row).</p>
+
+<p><code>blockquote</code>: A long quote which should be properly seperated
+from the main text.</p>
+
+<p><code>cite</code>: Cite a resource.</p>
+
+<h2>Writing Lore XHTML Templates</h2>
+
+<p>One of Lore's output formats is XHTML. Lore itself is very markup-light,
+but the output XHTML is much more markup intensive. Part of the auto-generated
+markup is directed by a special template.<p>
+
+<p>The output of Lore is inserted into template in the following way:</p>
+
+<ul>
+<li>The title is appended into each element with class <code>title</code>.</li>
+<li>The body is inserted into the first element that has class
+    <code>body</code>.
+<li>The table of contents is inserted into the first element that has class
+    <code>toc</code>. 
+</ul>
+
+<p>In particular, most of the header is not tempered with -- so it is
+easy to indicate a CSS stylesheet in the template.</p>
+
+</body>
+</html>
