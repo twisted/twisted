@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_internet -*-
-# $Id: default.py,v 1.83 2003/07/28 22:09:05 itamarst Exp $
+# $Id: default.py,v 1.84 2003/09/28 03:29:29 exarkun Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -44,15 +44,15 @@ from twisted.internet.base import ReactorBase
 
 try:
     from twisted.internet import ssl
-    sslEnabled = 1
-except:
-    sslEnabled = 0
+    sslEnabled = True
+except ImportError:
+    sslEnabled = False
 
 try:
     from twisted.internet import unix
-    unixEnabled = 1
-except:
-    unixEnabled = 0
+    unixEnabled = True
+except ImportError:
+    unixEnabled = False
 
 from main import CONNECTION_LOST
 
