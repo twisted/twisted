@@ -4,6 +4,7 @@
 Usage: twistd [options]
 Options:
      -t --threaded    use threads
+     -q --quiet       be a little more quiet
      -n --nodaemon    don't daemonize
      -p --profile     run profiler
      -l --logfile     log to a specified file, - for stdout
@@ -35,7 +36,8 @@ from twisted.persisted import styles
 class ServerOptions(usage.Options):
     optFlags = [['nodaemon','n'],
                 ['profile','p'],
-                ['threaded','t']]
+                ['threaded','t'],
+                ['quiet','q']]
     optStrings = [['logfile','l','twistd.log'],
                   ['file','f','twistd.spl'],
                   ['pidfile','','twistd.pid'],
@@ -63,7 +65,8 @@ if os.path.exists(config.pidfile):
         os.kill(pid, 0)
     except OSError:
         # The pid doesnt exists.
-        print 'Removing stale pidfile %s' % config.pidfile
+        if not config.quiet:
+            print 'Removing stale pidfile %s' % config.pidfile
         os.remove(config.pidfile)
     else:
         sys.exit('A server is already running, PID %s' % open(config.pidfile).read())

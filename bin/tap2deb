@@ -80,7 +80,8 @@ case "$1" in
 	                  --pidfile=$pidfile \
 	                  --rundir=$rundir \
 	                  --file=$file \
-	                  --logfile=$logfile
+	                  --logfile=$logfile \
+	                  --quiet
 	echo "."	
     ;;
 
