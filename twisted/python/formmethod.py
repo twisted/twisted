@@ -93,6 +93,15 @@ class Password(String):
     """
 
 
+class VerifiedPassword(String):
+    """A string that should be obscured when input and needs verification."""
+    
+    def coerce(self, vals):
+        if len(vals) != 2 or vals[0] != vals[1]:
+            raise InputError, "Please enter the same password twice."
+        return str(vals[0])
+
+
 class Hidden(String):
     """A string which is not displayed.
 

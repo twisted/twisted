@@ -113,12 +113,6 @@ class FormFillerWidget(widgets.Widget):
         r.text(str(self.getValue(request, model)))
         return r
 
-    def input_password(self, request, content, model, templateAttributes={}):
-        return content.input(
-            type="password",
-            size=str(templateAttributes.get('size', "60")),
-            name=model.name)
-
     def input_hidden(self, request, content, model, templateAttributes={}):
         return content.input(type="hidden",
                              name=model.name,
@@ -241,6 +235,28 @@ class FormFillerWidget(widgets.Widget):
             div.br()
         div.text("Day: ")
         div.input(type="text", size="2", maxlength="2", name=model.name, value=str(day))
+        return div
+
+    def input_password(self, request, content, model, templateAttributes={}):
+        return content.input(
+            type="password",
+            size=str(templateAttributes.get('size', "60")),
+            name=model.name)
+
+    def input_verifiedpassword(self, request, content, model, templateAttributes={}):
+        breakLines = model.getHint('breaklines', 1)
+        values = self.getValues(request, model)
+        if not values:
+            p1, p2 = "", ""
+        else:
+            p1, p2 = values
+        div = content.div()
+        div.text("Password: ")
+        div.input(type="password", size="20", name=model.name, value=str(p1))
+        if breakLines:
+            div.br()
+        div.text("Verify: ")
+        div.input(type="password", size="20", name=model.name, value=str(p2))
         return div
 
 
@@ -498,9 +514,9 @@ class FormProcessor(resource.Resource):
             return ''
 
     mangle_string = mangle_single
-    mangle_password = mangle_single
     mangle_text = mangle_single
     mangle_integer = mangle_single
+    mangle_password = mangle_single
     mangle_integerrange = mangle_single
     mangle_float = mangle_single
     mangle_choice = mangle_single
