@@ -20,6 +20,7 @@ I am the support module for making a manhole server with mktap.
 """
 
 from twisted.manhole import service
+from twisted.cred import authorizer
 from twisted.spread import pb
 from twisted.python import usage
 import sys
@@ -37,7 +38,9 @@ class Options(usage.Options):
 
 
 def updateApplication(app, config):
-    svc = service.Service(application=app)
+    auth = authorizer.DefaultAuthorizer(app)
+    svc = service.Service("manhole", serviceParent=app,
+                          authorizer=auth)
     p = svc.createPerspective(config.opts['user'])
     p.makeIdentity(config.opts['password'])
     try:
