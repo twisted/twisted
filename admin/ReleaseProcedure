@@ -37,8 +37,8 @@ $SOMEWHERE/admin/release-twisted -v <version> --checkout --release=/twisted/Rele
  * restart the main Twisted server
 cd /var/www
 kill `cat twistd.pid`
-mv web-shutdown.tap web-`date +%Y-%M-%D`.tap
-./start-twistd.sh web-`date +%Y-%M-%D`.tap
+mv web-shutdown.tap web-`date +%Y-%M-%d`.tap
+./start-twisted.sh web-`date +%Y-%M-%d`.tap
 
  * Restart snibril's server
 su jh; ~jh/bin/stop; ~jh/bin/start; exit
