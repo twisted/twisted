@@ -176,4 +176,4 @@ this file directly.
 
 038 Integrate mbac's client FTP protocol.
 
-039 Log management, rollover and viewing PB service.
+039 Remote log viewing and management PB service in lumberjack package.
