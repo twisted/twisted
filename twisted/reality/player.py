@@ -369,9 +369,10 @@ this will prompt you for a description.  enter something."""
 
         obj = sentence.directObject()
 
-        def setdesc(self,desc):
-            obj.description=desc
-        def forgetit(self): pass
+        def setdesc(desc, obj=obj):
+            obj.description = desc
+        def forgetit():
+            pass
         c = pb.Referenced()
         c.obj = obj
         c.remote_ok=setdesc
