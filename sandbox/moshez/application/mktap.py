@@ -49,15 +49,19 @@ def getid(uid, gid):
             gid = grp.getgrnam(gid)[2]
     return uid, gid
 
-def saveApplications(p, type, enc, filename):
+def saveApplication(p, type, enc, filename):
     p.setStyle(type)
-    p.save(filename=(not enc) and filename,
-           passphrase=enc and util.getPassword("Encryption passphrase: "))
+    if enc:
+        passphrase = util.getPassword("Encryption passphrase: ")
+        filename = None
+    else:
+        passphrase = None
+    p.save(filename=filename, passphrase=passphrase)
 
 
 def loadPlugins(debug = None, progress = None):
     try:
-        plugins = getPlugIns("tap", debug, progress)
+        plugins = plugin.getPlugIns("tap", debug, progress)
     except IOError:
         print "Couldn't load the plugins file!"
         sys.exit(2)
@@ -128,6 +132,7 @@ class GeneralOptions:
     def parseArgs(self, *args):
         self.args = args
 
+
 class FirstPassOptions(usage.Options, GeneralOptions):
     def __init__(self):
         usage.Options.__init__(self)
@@ -155,7 +160,6 @@ class FirstPassOptions(usage.Options, GeneralOptions):
 
     def postOptions(self):
         if self.recursing:
-            GeneralOptions.postOptions(self)
             return
         debug = progress = None
         if self['debug']:
@@ -178,18 +182,20 @@ class FirstPassOptions(usage.Options, GeneralOptions):
                 sys.exit(2)
         
 
-def getApplication(uid, gid, filename):
+def getApplication(uid, gid, name, filename):
     if filename and os.path.exists(filename):
         return sob.load(filename, 'pickle')
     else:
-        uid, gid = getid(uid, gid):
-        return service.Application(options.subCommand, uid, gid)
+        uid, gid = getid(uid, gid)
+        return service.Application(name, uid, gid)
 
-def makeService(mod, s):
+def makeService(mod, s, options):
     if hasattr(mod, 'updateApplication'):
-        mod.updateApplication(compat.IOldApplication(s), options.subOptions)
+        ser = service.MultiService()
+        mod.updateApplication(compat.IOldApplication(ser), options)
     else:
-        mod.makeService(options.subOptions).setServiceParent(s)
+        ser = mod.makeService(options)
+    ser.setServiceParent(s)
 
 def run():
     options = FirstPassOptions()
@@ -201,17 +207,18 @@ def run():
     except KeyboardInterrupt:
         sys.exit(1)
     mod = getModule(options.tapLookup, options.subCommand)
-    a = getApplication(options['uid'], options['gid'], options['append'])
+    a = getApplication(options['uid'], options['gid'],
+                       options.subCommand, options['append'])
     if options['appname']:
         service.IProcess(a).processName = options['appname']
     s = service.IServiceCollection(a)
     try:
-        makeService(mod, s)
+        makeService(mod, s, options.subOptions)
     except usage.error, ue:
         print "Usage Error: %s" % ue
         options.subOptions.opt_help()
         sys.exit(2)
     except KeyboardInterrupt:
         sys.exit(1)
-    saveApplication(sob.IPersistant(a),
+    saveApplication(sob.IPersistable(a),
                     options['type'], options['encrypted'], options['append'])
