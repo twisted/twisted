@@ -87,13 +87,14 @@ class UDPTestCase(unittest.TestCase):
 
     def testBindError(self):
         server = Server()
-        port = reactor.listenUDP(10123, server, interface='127.0.0.1')
+        port = reactor.listenUDP(0, server, interface='127.0.0.1')
+        n = port.getHost()[2]
         reactor.iterate()
         reactor.iterate()
         reactor.iterate()
-        self.assertEquals(server.transport.getHost(), ('INET_UDP', '127.0.0.1', 10123))
+        self.assertEquals(server.transport.getHost(), ('INET_UDP', '127.0.0.1', n))
         server2 = Server()
-        self.assertRaises(error.CannotListenError, reactor.listenUDP, 10123, server2, interface='127.0.0.1')
+        self.assertRaises(error.CannotListenError, reactor.listenUDP, n, server2, interface='127.0.0.1')
         port.stopListening()
         reactor.iterate()
         reactor.iterate()
