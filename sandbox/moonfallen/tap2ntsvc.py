@@ -11,6 +11,10 @@ from twisted.python import usage, util
 from twisted.application.app import reactorTypes
 from twisted.persisted.sob import guessType
 
+# sort out what __file__ really is so py2exe can work
+if not os.path.isfile(__file__):
+    __file__ = sys.executable
+
 cftypes=('python', 'xml', 'source', 'pickle')
 
 class Tap2NtsvcOptions(usage.Options):
