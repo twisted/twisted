@@ -124,7 +124,15 @@ twisted.web.test in it."""
         if not isinstance(self.opts['root'], static.File):
             raise usage.UsageError("You can only use --allow_ignore_ext "
                                    "after --path.")
-        self.opts['root'].allowExt = 1
+        self.opts['root'].ignoreExt('*')
+
+    def opt_ignore_ext(self, ext):
+        """Specify an extension to ignore.  These will be processed in order.
+        """
+        if not isinstance(self.opts['root'], static.File):
+            raise usage.UsageError("You can only use --ignore_ext "
+                                   "after --path.")
+        self.opts['root'].ignoreExt(ext)
 
     def postOptions(self):
         if self['https']:
@@ -165,7 +173,8 @@ def updateApplication(app, config):
                       pb.BrokerFactory(distrib.ResourcePublisher(site)))
     else:
         from twisted.internet.ssl import DefaultOpenSSLContextFactory
-        app.listenSSL(int(config['https']), site,
-                      DefaultOpenSSLContextFactory(config['privkey'],
-                                                   config['certificate']))
+        if config['https']:
+            app.listenSSL(int(config['https']), site,
+                          DefaultOpenSSLContextFactory(config['privkey'],
+                                                       config['certificate']))
         app.listenTCP(int(config.opts['port']), site)

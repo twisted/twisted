@@ -192,7 +192,13 @@ class File(resource.Resource, styles.Versioned):
 
     ### Versioning
 
-    persistenceVersion = 5
+    persistenceVersion = 6
+
+    def upgradeToVersion6(self):
+        if self.allowExt:
+            self.ignoredExts = []
+            self.ignoreExt("*")
+        del self.allowExt
 
     def upgradeToVersion5(self):
         if not isinstance(self.registry, Registry):
@@ -216,7 +222,7 @@ class File(resource.Resource, styles.Versioned):
             self.indexNames = [self.indexName]
             del self.indexName
 
-    def __init__(self, path, defaultType="text/html", allowExt=0, registry=None):
+    def __init__(self, path, defaultType="text/html", ignoredExts=(), registry=None, allowExt=0):
         """Create a file with the given path.
         """
         resource.Resource.__init__(self)
@@ -229,13 +235,20 @@ class File(resource.Resource, styles.Versioned):
         if self.encoding is not None:
             p, ext = os.path.splitext(p)
         self.defaultType = defaultType
-        self.allowExt = allowExt
+        if (ignoredExts == 1) or (ignoredExts == 0) or (ignoredExts == () and allowExt):
+            self.ignoredExts = ['*']
+        else:
+            self.ignoredExts = list(ignoredExts)
+        
         if not registry:
             self.registry = Registry()
         else:
             self.registry = registry
 
         self.type = self.contentTypes.get(string.lower(ext), defaultType)
+
+    def ignoreExt(self, ext):
+        self.ignoredExts.append(ext)
 
     def getChild(self, path, request):
         """See twisted.web.Resource.getChild.
@@ -264,15 +277,18 @@ class File(resource.Resource, styles.Versioned):
         # If we're told to, allow requests for 'foo' to return
         # 'foo.bar'.
         ##
-        if not os.path.exists(childPath):
-            if self.allowExt and path and os.path.isdir(self.path):
-                for fn in os.listdir(self.path):
-                    if os.path.splitext(fn)[0]==path:
-                        log.msg('    Returning %s' % fn)
-                        childPath = os.path.join(self.path, fn)
-                        break
-                else:
-                    childPath = os.path.join(self.path, path)
+        if not os.path.exists(childPath) and path and os.path.isdir(self.path):
+            for ignoredExt in self.ignoredExts:
+                newChildPath = os.path.join(self.path, path+ignoredExt)
+                if os.path.exists(newChildPath):
+                    childPath = newChildPath
+                    break
+                elif ignoredExt == '*':
+                    for fn in os.listdir(self.path):
+                        if os.path.splitext(fn)[0]==path:
+                            log.msg('    Returning %s' % fn)
+                            childPath = os.path.join(self.path, fn)
+                            break
 
         if not os.path.exists(childPath):
             # Before failing ask index.foo if it knows about this child
@@ -448,7 +464,7 @@ class File(resource.Resource, styles.Versioned):
         fl.close()
 
     def createSimilarFile(self, path):
-        return self.__class__(path, self.defaultType, self.allowExt, self.registry)
+        return self.__class__(path, self.defaultType, self.ignoredExts, self.registry)
 
 
 class DirectoryListing(widgets.StreamWidget):
