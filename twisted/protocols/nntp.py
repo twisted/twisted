@@ -723,25 +723,20 @@ class NNTPServer(NNTPClient):
         if self.currentGroup is None:
             self.sendLine('412 no newsgroup has been selected')
         else:
-            if article is None:
+            if not article:
                 if self.currentIndex is None:
                     self.sendLine('420 no current article has been selected')
-                    return
                 else:
                     article = self.currentIndex
             else:
                 if article[0] == '<':
-                    # XXX - FIXME: Request for article by message-id not implemented
-                    self.sendLine('501 %s <message-id> not implemented :(' % (cmd,))
-                    return
+                    return func(self.currentGroup, index = None, id = article)
                 else:
                     try:
                         article = int(article)
+                        return func(self.currentGroup, article) 
                     except ValueError, e:
                         self.sendLine('503 command syntax error')
-                        return
-
-            return func(self.currentGroup, article) 
 
 
     def do_ARTICLE(self, article = None):

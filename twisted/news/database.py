@@ -167,13 +167,15 @@ class NewsStorage:
         """
         raise NotImplementedError
 
-    
-    def articleRequest(self, group, index):
+
+    def articleRequest(self, group, index, id = None):
         """
         Returns a deferred whose callback will be passed the full article
         text (headers and body) for the article of the specified index
         in the specified group, and whose errback will be invoked if the
-        article or group does not exist.
+        article or group does not exist.  If id is not None, index is
+        ignored and the article with the given Message-ID will be returned
+        instead, along with its index in the specified group
         """
         raise NotImplementedError
 
@@ -306,7 +308,10 @@ class PickleStorage(NewsStorage):
         return defer.succeed(0)
 
 
-    def articleRequest(self, group, index):
+    def articleRequest(self, group, index, id = None):
+        if id is not None:
+            raise NotImplementedError
+
         if self.db.has_key(group):
             if self.db[group].has_key(index):
                 a = self.db[group][index]
@@ -602,16 +607,25 @@ class NewsStorageAugmentation(adbapi.Augmentation, NewsStorage):
         )
 
 
-    def articleRequest(self, group, index):
-        sql = """ 
-            SELECT postings.article_index, articles.message_id, articles.header, articles.body
-            FROM groups,articles LEFT OUTER JOIN postings
-            ON postings.article_id = articles.article_id
-            WHERE postings.article_index = %d
-            AND postings.group_id = groups.group_id
-            AND groups.name = '%s'
-        """ % (index, adbapi.safe(group))
-        
+    def articleRequest(self, group, index, id = None):
+        if id is not None:
+            sql = """
+                SELECT postings.article_index, articles.message_id, articles.header, articles.body
+                FROM groups,postings LEFT OUTER JOIN articles
+                ON articles.message_id = '%s'
+                WHERE groups.name = '%s'
+                AND groups.group_id = postings.group_id
+            """ % (adbapi.safe(id), adbapi.safe(group))
+        else:
+            sql = """ 
+                SELECT postings.article_index, articles.message_id, articles.header, articles.body
+                FROM groups,articles LEFT OUTER JOIN postings
+                ON postings.article_id = articles.article_id
+                WHERE postings.article_index = %d
+                AND postings.group_id = groups.group_id
+                AND groups.name = '%s'
+            """ % (index, adbapi.safe(group))
+
         return self.runQuery(sql).addCallback(
             lambda result: (result[0][0], result[0][1], result[0][2] + '\r\n' + result[0][3])
         )
