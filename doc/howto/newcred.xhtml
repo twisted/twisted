@@ -137,6 +137,11 @@ For example, a username/password pair is static, but a
 challenge/response server is an active state-machine that will require 
 several method calls in order to determine a result.</p>
 
+<p>Twisted comes with a number of credentials interfaces and implementations
+in the <code class="API">twisted.cred.credentials</code> module,
+such as <code class="API" base="twisted.cred.credentials">IUsernamePassword</code>
+and <code class="API" base="twisted.cred.credentials">IUsernameHashedPassword</code>.</p>
+
     <h3>The Realm</h3>
 <p>A realm is an interface which connects your universe of <q>business 
 objects</q> to the authentication system.</p>
