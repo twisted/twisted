@@ -54,6 +54,22 @@ class IOldApplication(components.Interface):
     def getServiceNamed(self, name):
         pass
 
+    def unlistenWith(self, portType, *args, **kw):
+        pass
+
+    def unlistenTCP(self, port, interface=''):
+        pass
+
+    def unlistenUNIX(self, filename):
+        pass
+
+    def unlistenUDP(self, port, interface=''):
+        pass
+
+    def unlistenSSL(self, port, interface=''):
+        pass
+
+
 
 
 class ServiceNetwork:
@@ -105,6 +121,32 @@ class ServiceNetwork:
 
     def getServiceNamed(self, name):
         return self.app.getServiceNamed(name)
+
+    def unlistenWith(self, portType, *args, **kw):
+        warnings.warn("unlisten* does not work anymore. Name services "
+                      "that you want to be able to remove",
+                      category=RuntimeWarning)
+
+    def unlistenTCP(self, port, interface=''):
+        warnings.warn("unlisten* does not work anymore. Name services "
+                      "that you want to be able to remove",
+                      category=RuntimeWarning)
+
+    def unlistenUNIX(self, filename):
+        warnings.warn("unlisten* does not work anymore. Name services "
+                      "that you want to be able to remove",
+                      category=RuntimeWarning)
+
+    def unlistenUDP(self, port, interface=''):
+        warnings.warn("unlisten* does not work anymore. Name services "
+                      "that you want to be able to remove",
+                      category=RuntimeWarning)
+
+    def unlistenSSL(self, port, interface=''):
+        warnings.warn("unlisten* does not work anymore. Name services "
+                      "that you want to be able to remove",
+                      category=RuntimeWarning)
+
 
 components.registerAdapter(ServiceNetwork,
                            service.IServiceCollection, IOldApplication)
