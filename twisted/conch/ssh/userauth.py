@@ -110,8 +110,11 @@ class SSHUserAuthServer(service.SSHService):
     def _ebBadAuth(self, reason):
         if self.method != 'none': # ignore 'none' as a method
             log.msg('%s failed auth %s' % (self.user, self.method))
-            log.msg('potential reason:')
-            reason.printTraceback()
+            log.msg('reason:')
+            if reason.type == error.ConchError:
+                log.msg(str(reason))
+            else:
+                reason.printTraceback()
             self.loginAttempts += 1
             if self.loginAttempts > self.attemptsBeforeDisconnect:
                 self.transport.sendDisconnect(transport.DISCONNECT_NO_MORE_AUTH_METHODS_AVAILABLE,
