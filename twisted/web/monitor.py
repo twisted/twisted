@@ -18,12 +18,21 @@ from twisted.web import client
 from twisted.internet import reactor
 import md5
 
+class IChangeNotified:
+    pass
+
+class BaseChangeNotified:
+
+    __implements__ = IChangeNotified,
+
+
 class ChangeChecker:
 
     working = 0
     call = None
 
-    def __init__(self, url, delay=60):
+    def __init__(self, notified, url, delay=60):
+        self.notified = notified
         self.url = url
         self.md5 = None
         self.delay = delay
@@ -58,15 +67,24 @@ class ChangeChecker:
         if not self.working:
             return
         if md5 != self.md5:
-            self.reportChange(self.md5, md5)
+            self.notified.reportChange(self.md5, md5)
             self.md5 = md5
         else:
-            self.reportNoChange()
+            self.notified.reportNoChange()
         if not self.call:
             self.call = reactor.callLater(self.delay, self._getPage)
 
-    def reportChange(self, old, new):
-        """status or content of the web resource has changed"""
 
-    def reportNoChange(self):
-        """status and content of the web resource has not changed"""
+class ProxyChangeChecker(ChangeChecker):
+
+    def __init__(self, proxyHost, proxyPort, notified, url, delay=60):
+        self.proxyHost = proxyHost
+        self.proxyPort = proxyPort
+        ChangeChecker.__init__(self, notified, url, delay)
+
+    def _getPage(self):
+        factory = client.HTTPClientFactory(self.proxyHost, self.url)
+        reactor.connectTCP(self.proxyHost, self.proxyPort, factory)
+        d = factory.deferred
+        d.addErrback(self.noPage)
+        d.addCallback(self.page)
