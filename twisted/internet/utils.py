@@ -19,6 +19,7 @@
 
 from twisted.internet import protocol, reactor, defer
 from twisted.python import failure
+from twisted.names import client
 
 try:
     import cStringIO as StringIO
@@ -144,10 +145,9 @@ class SRVConnector:
             if self.domain is None:
                 self.connectionFailed(error.DNSLookupError("Domain is not defined."))
                 return
-            from twisted.names import client
-            d = client.theResolver.lookupService('_%s._%s.%s' % (self.service,
-                                                                 self.protocol,
-                                                                 self.domain))
+            d = client.lookupService('_%s._%s.%s' % (self.service,
+                                                     self.protocol,
+                                                     self.domain))
             d.addCallback(self._cbGotServers)
             d.addCallback(lambda x, self=self: self._reallyConnect())
             d.addErrback(self.connectionFailed)
