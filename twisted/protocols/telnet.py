@@ -234,7 +234,11 @@ class Telnet(protocol.Protocol):
         checkUserAndPass method. If the login is successful, I call
         loggedIn()."""
         self.write(IAC+WONT+ECHO+"*****\r\n")
-        if not self.checkUserAndPass(self.username, paswd):
+        try:
+            checked = self.checkUserAndPass(self.username, paswd):
+        except:
+            return "Done"
+        if not checked:
             return "Done"
         self.loggedIn()
         return "Command"
