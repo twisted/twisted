@@ -39,6 +39,7 @@ import test_toc
 import test_words
 import test_persisted
 import test_pureber
+import test_web
 
 from pyunit import unittest
 
@@ -62,7 +63,7 @@ def testSuite():
              test_rebuild.testCases    + test_toc.testCases        +
              test_smtp.testCases       + test_pop3.testCases       +
              test_words.testCases      + test_persisted.testCases  +
-             test_pureber.testCases    +
+             test_pureber.testCases    + test_web.testCases        + 
              # Leave this one at the end.
              test_import.testCases)
     return makeBigSuite(cases)
