@@ -37,6 +37,7 @@ that subclasses do not implement a __del__ method.
 """
 
 import types
+import weakref
 
 from twisted.python import components
 
@@ -130,6 +131,11 @@ class Model:
         self.subviews = {}
         self.initialize(*args, **kwargs)
     
+    def __getstate__(self):
+        self.views = []
+        self.subviews = {}
+        return self.__dict__
+    
     def initialize(self, *args, **kwargs):
         """
         Hook for subclasses to initialize themselves without having to
@@ -142,10 +148,12 @@ class Model:
         Add a view for the model to keep track of.
         """
         if view not in self.views:
-            self.views.append(view)
+            self.views.append(weakref.ref(view))
     
     def addSubview(self, name, subview):
-        self.subviews[name] = subview
+        subviewList = self.subviews.get(name, [])
+        subviewList.append(weakref.ref(subview))
+        self.subviews[name] = subviewList
 
     def removeView(self, view):
         """
@@ -164,9 +172,15 @@ class Model:
         """
         if changed is None: changed = {}
         for view in self.views:
-            view.modelChanged(changed)
+            ref = view()
+            if ref is not None:
+                ref.modelChanged(changed)
         for key, value in self.subviews.items():
-            value.modelChanged(changed)
+            if changed.has_key(key):
+                for item in value:
+                    ref = item()
+                    if ref is not None:
+                        ref.modelChanged(changed)
 
     def __eq__(self, other):
         if other is None: return 0

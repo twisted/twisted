@@ -45,7 +45,6 @@ class WController(mvc.Controller, resource.Resource):
 
     def process(self, request, **kwargs):
         log.msg("Processing results: ", kwargs)
-        return template.RESTART_RENDERING
 
 
 def registerControllerForModel(controller, model):

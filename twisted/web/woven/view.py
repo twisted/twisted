@@ -142,6 +142,10 @@ class WView(template.DOMTemplate):
         # xxx refactor this into a widget interface and check to see if the object implements IWidget
         # the view may be a deferred; this is why this check is required
         if hasattr(view, 'setController'):
+            if view.wantsAllNotifications:
+                self.model.addView(view)
+            else:
+                self.model.addSubview(submodel, view)
             view.setController(controller)
             view.setNode(node)
             if not getattr(view, 'submodel', None):
@@ -218,6 +222,7 @@ class WView(template.DOMTemplate):
             if request.args.has_key(node.getAttribute('name')):
                 del request.args[node.getAttribute('name')]
             result = controller.commit(request, node, data)
+            self.model.notify({'request': request, controller.submodel: data})
             if isinstance(result, defer.Deferred):
                 self.outstandingCallbacks += 1
                 result.addCallback(self.handleCommitCallback, request)
@@ -230,10 +235,6 @@ class WView(template.DOMTemplate):
         if not self.outstandingCallbacks:
             log.msg("Sending page from commit callback!")
             self.sendPage(request)
-
-    def process(self, request, **kwargs):
-        log.msg("Processing results: ", kwargs)
-        return template.RESTART_RENDERING
 
     def handleProcessCallback(self, result, request):
         self.sendPage(request, result)

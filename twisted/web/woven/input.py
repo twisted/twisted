@@ -111,8 +111,7 @@ class InputHandler(Controller):
         if data != self.view.getData():
             model = self._getMyModel()
             model.setData(data)
-            self.model.notify({self.submodel: data})
-            self.view.generateDOM(request, node)
+
 
 class SingleValue(InputHandler):
     def getInput(self, request):

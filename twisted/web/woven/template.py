@@ -259,6 +259,7 @@ class DOMTemplate(Resource, View):
         outstanding callbacks when it returns.
         """
         try:
+            request.d = document
             self.setUp(request, document)
             # Don't let outstandingCallbacks get to 0 until the
             # entire tree has been recursed

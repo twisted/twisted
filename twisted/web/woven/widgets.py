@@ -87,6 +87,7 @@ class Widget(mvc.View):
        - we are really being called to enable an operation on an attribute
          of the model, which we will call the submodel
     """
+    wantsAllNotifications = 0
     tagName = None
     def __init__(self, model, submodel = None):
         self.errorFactory = Error
@@ -218,6 +219,19 @@ class Widget(mvc.View):
             self.node = become.generateDOM(request, node)
         return self.node
 
+    def modelChanged(self, payload):
+        request = payload['request']
+        oldNode = self.node
+        if payload.has_key(self.submodel):
+            data = payload[self.submodel]
+        else:
+            data = self.getData()
+        self.setUp(request, oldNode, data)
+        newNode = self.generateDOM(request, oldNode)
+        mutator = template.NodeNodeMutator(newNode)
+        mutator.d = request.d
+        mutator.generate(request, oldNode)
+    
     def __setitem__(self, item, value):
         self.attributes[item] = value
     
