@@ -27,6 +27,7 @@ if string.find(os.path.abspath(sys.argv[0]),'Twisted') != -1:
         os.path.dirname(os.path.abspath(sys.argv[0]))))
 ### end of preamble
 
+from twisted import copyright
 from twisted.python import usage, util, runtime, register
 from twisted.lumberjack import logfile
 util.addPluginDir()
@@ -66,6 +67,13 @@ class ServerOptions(usage.Options):
             sys.exit()
         self.python = os.path.join(fname, 'config.tac')
 
+    def opt_version(self):
+        """Print version information and exit.
+        """
+        print 'twistd (the Twisted daemon) %s' % copyright.version
+        print copyright.copyright
+        sys.exit()
+
     opt_g = opt_plugin
 
 config = ServerOptions()
@@ -89,7 +97,6 @@ if platformType != 'posix' or config.debug:
     config.nodaemon = 1
 
 # Twisted Imports
-from twisted import copyright
 from twisted.python import usage, log, runtime
 from twisted.internet import main
 from twisted.persisted import styles
