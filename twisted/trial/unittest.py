@@ -2,7 +2,7 @@
 Twisted Test Framework
 """
 
-from twisted.python import reflect, log
+from twisted.python import reflect, log, failure
 import sys, time, string, traceback, types, os, glob
 
 log.startKeepingErrors()
@@ -252,11 +252,16 @@ class TextReporter(Reporter):
         Reporter.reportSuccess(self, testClass, method)
 
     def _formatError(self, flavor, (testClass, method, error)):
+        if isinstance(error, failure.Failure):
+            tb = error.getBriefTraceback()
+        else:
+            tb = string.join(apply(traceback.format_exception, error))
+            
         ret = ("%s\n%s: %s (%s)\n%s\n%s" %
                (self.DOUBLE_SEPARATOR,
                 flavor, method.__name__, testClass.__name__,
                 self.SEPARATOR,
-                string.join(apply(traceback.format_exception, error))))
+                tb))
         return ret
 
     def write(self, format, *args):
