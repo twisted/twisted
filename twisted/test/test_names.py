@@ -76,7 +76,7 @@ class LookupDNSTestCase(unittest.TestCase):
     
     def setUp(self):
         self.results = []
-        self.resolver = dns.Resolver(["192.114.42.86"])
+        self.resolver = dns.Resolver(["207.19.98.16"])
     
     def _testLookup(self, domain, type, result):
         d = self.resolver.resolve(domain, type)
