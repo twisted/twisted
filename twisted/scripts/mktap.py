@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: mktap.py,v 1.29 2003/03/05 17:11:23 itamarst Exp $
+# $Id: mktap.py,v 1.30 2003/03/14 05:35:01 exarkun Exp $
 
 """ Implementation module for the `mktap` command.
 """
@@ -131,6 +131,8 @@ def run():
         options.parseOptions(sys.argv[1:])
         # XXX - Yea, this is FILTH FILTH FILTH
         if options['debug'] or options['progress']:
+            from twisted.python import log
+            log.startLogging(sys.stdout)
             tapLookup = loadPlugins(options['debug'], options['progress'])
     except SystemExit:
         # We don't really want to catch this at all...
