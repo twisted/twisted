@@ -152,32 +152,29 @@ GET /
 
 class HTTPLoopbackTestCase(unittest.TestCase):
     
-    expectedHeaders = {'Request' : '/foo/bar',
-                       'Command' : 'GET',
-                       'Version' : 'HTTP/1.0',
-                       'Content-Length' : '21'}
+    expectedHeaders = {'request' : '/foo/bar',
+                       'command' : 'GET',
+                       'version' : 'HTTP/1.0',
+                       'content-length' : '21'}
     numHeaders = 0
     gotStatus = 0
     gotResponse = 0
     gotEndHeaders = 0
     
     def _handleStatus(self, version, status, message):
-        print "status"
         self.gotStatus = 1
         self.assertEquals(version, "HTTP/1.0")
         self.assertEquals(status, "200")
     
     def _handleResponse(self, data):
-        print "response"
         self.gotResponse = 1
         self.assertEquals(data, "'''\n10\n0123456789'''\n")
     
     def _handleHeader(self, key, value):
         self.numHeaders = self.numHeaders + 1
-        self.assertEquals(self.expectedHeaders[key], value)
+        self.assertEquals(self.expectedHeaders[string.lower(key)], value)
     
     def _handleEndHeaders(self):
-        print "headers"
         self.gotEndHeaders = 1
         self.assertEquals(self.numHeaders, 4)
     
