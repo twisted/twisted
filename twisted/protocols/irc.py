@@ -290,12 +290,12 @@ class IRCClient(basic.LineReceiver):
             self.sendLine(fmt % (message,))
         else:
             lines = split(message, length - len(fmt) - 2)
-            reactor.callLater(2, self.reducingMsg, (fmt, lines))
+            self.reducingMsg(fmt, lines)
 
     def reducingMsg(self, fmt, lines):
         self.sendLine(fmt % lines[0])
         if len(lines) > 1:
-            reactor.callLater(2, self.reducingMsg, (fmt, lines[1:]))
+            reactor.callLater(2, self.reducingMsg, fmt, lines[1:])
 
     def notice(self, user, message):
         self.sendLine("NOTICE %s :%s" % (user, message))
