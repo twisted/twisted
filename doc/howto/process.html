@@ -11,19 +11,75 @@
     <h1>Using Processes</h1>
     
     <h2>Overview</h2>
-      <p>Along with connection to servers across the internet, Twisted also connects to local processes with much the same API.  The API is described in more detail in <code class="API">twisted.internet.interfaces.IReactorProcess</code>, <code class="API">twisted.internet.interfaces.IProcessTransport</code>, and <code class="API">twisted.internet.protocol.ProcessProtocol</code>.</p>
+
+<p>Along with connection to servers across the internet, Twisted also
+connects to local processes with much the same API. The API is described in
+more detail in <code
+class="API">twisted.internet.interfaces.IReactorProcess</code>, <code
+class="API">twisted.internet.interfaces.IProcessTransport</code>, and <code
+class="API">twisted.internet.protocol.ProcessProtocol</code>.</p>
 
     <h2>Running Another Process</h2>
-      <p>Processes are run through the reactor, using <code class="python">reactor.spawnProcess()</code>.  It requires two arguments, processProtocol and executable, and optionally takes five more: arguments, environment, path, userID, and groupID.</p>
-    <ul>
-    <li>processProtocol should be an instance of a subclass of <code class="API">twisted.internet.protocol.ProcessProtocol</code>, whos interface is described in a section below.</li>
-    <li>executable is the full path of the program to run. It will be connected to processProtocol.</li>
-    <li>arguments is a list of command line arguments to be passed to the process.  The first should be the name of the process.</li>
-    <li>environment is a dictionary containing the environment to pass through to the process.</li>
-    <li>path is the directory to run the process in.  The default is the current directory.</li>
-    <li>userID and groupID are the user ID and group ID to run the subprocess as.</li>
-    </ul>
-    <p><code class="python">reactor.spawnProcess()</code> returns an instance that implements <code class="API">twisted.internet.interfaces.IProcessTransport</code>.</p>
+
+<p>Processes are run through the reactor, using <code
+class="python">reactor.spawnProcess()</code>. Pipes are created to the child
+process, and added to the reactor core so that the application will not
+block while sending data into or pulling data out of the new process. <code
+class="python">reactor.spawnProcess()</code> requires two arguments,
+processProtocol and executable, and optionally takes six more: arguments,
+environment, path, userID, groupID, and usePTY.</p>
+
+
+<pre class="python">
+from twisted.internet import reactor
+
+mypp = MyProcessProtocol()
+reactor.spawnProcess(processProtocol, executable, args=[program, arg1, arg2],
+                     env={'HOME': os.environ['HOME']}, path,
+                     uid, gid, usePTY)
+</pre>
+
+<ul>
+
+  <li><tt>processProtocol</tt> should be an instance of a subclass of <code
+  class="API">twisted.internet.protocol.ProcessProtocol</code>. The
+  interface is described below.</li>
+
+  <li><tt>executable</tt> is the full path of the program to run. It will be
+  connected to processProtocol.</li>
+
+  <li><tt>args</tt> is a list of command line arguments to be passed to the
+  process. <tt>args[0]</tt> should be the name of the process.</li>
+
+  <li><tt>env</tt> is a dictionary containing the environment to pass
+  through to the process.</li>
+
+  <li><tt>path</tt> is the directory to run the process in. The child will
+  switch to the given directory just before starting the new program. The
+  default is to stay in the current directory.</li>
+
+  <li><tt>uid</tt> and <tt>gid</tt> are the user ID and group ID to run the
+  subprocess as. Of course, changing identities will be more likely to
+  succeed if you start as root.</li>
+
+  <li><tt>usePTY</tt> specifies whether the child process should be run with
+  a pty, or if it should just get a pair of pipes. Interactive programs
+  (where you don't know when it may read or write) need to be run with
+  ptys.</li>
+
+</ul>
+
+<p><tt>args</tt> and <tt>env</tt> have empty default values, but many
+programs depend upon them to be set correctly. At the very least,
+<tt>args[0]</tt> should probably be the same as <tt>executable</tt>. If you
+just provide <tt>os.environ</tt> for <tt>env</tt>, the child program will
+inherit the environment from the current process, which is usually the
+civilized thing to do (unless you want to explicitly clean the environment
+as a security precaution). </p>
+  
+<p><code class="python">reactor.spawnProcess()</code> returns an instance
+that implements <code
+class="API">twisted.internet.interfaces.IProcessTransport</code>.</p>
 
   <h2>Writing a ProcessProtocol</h2>
     <p>The ProcessProtocol you pass to spawnProcess is your interaction with the process.  It has a very similar signature to a regular Protocol, but it has several extra methods to deal with events specific to a process.  In our example, we will interface with 'wc' to create a word count of user-given text.  First, we'll start by importing the required modules, and writing the initialization for our ProcessProtocol.</p>
@@ -69,5 +125,132 @@ wcProcess = WCProcessProtocol("accessing protocols through Twisted is fun!\n")
 reactor.spawnProcess(wcProcess, 'wc', ['wc'])
 reactor.run()
 </pre>
+
+
+<h2>Things that can happen to your ProcessProtocol</h2>
+
+<p>These are the methods that you can usefully override in your subclass of
+<tt>ProcessProtocol</tt>:</p>
+
+<ul>
+
+  <li><tt>.connectionMade</tt>: This is called when the program is started,
+  and makes a good place to write data into the stdin pipe (using <code
+  class="python">self.transport.write()</code>).</li>
+
+  <li><tt>.outReceived(data)</tt>: This is called with data that was
+  received from the process' stdout pipe. Pipes tend to provide data in
+  larger chunks than sockets (one kilobyte is a common buffer size), so you
+  may not experience the "random dribs and drabs" behavior typical of
+  network sockets, but regardless you should be prepared to deal if you
+  don't get all your data in a single call. To do it properly,
+  <tt>outReceived</tt> ought to simply accumulate the data and put off doing
+  anything with it until the process has finished.</li>
+
+  <li><tt>.errReceived(data)</tt>: This is called with data from the
+  process' stderr pipe. It behaves just like <tt>outReceived</tt>.</li>
+
+  <li><tt>.inConnectionLost</tt>: This is called when the reactor notices
+  that the process' stdin pipe has closed. Programs don't typically close
+  their own stdin, so this will probably get called when your
+  ProcessProtocol has shut down the write side with <code
+  class="python">self.transport.loseConnection()</code>.</li>
+
+  <li><tt>.outConnectionLost</tt>: This is called when the program closes
+  its stdout pipe. This usually happens when the program terminates.</li>
+
+  <li><tt>.errConnectionLost</tt>: Same as <tt>outConnectionLost</tt>, but
+  for stderr instead of stdout.</li>
+
+  <li><p><tt>.processEnded(status)</tt>: This is called when the child
+  process has been reaped, and receives information about the process' exit
+  status. The status is passed in the form of a <code class="API"
+  base="twisted.python.failure">Failure</code> instance, created with a
+  <tt>.value</tt> that either holds a <code class="API"
+  base="twisted.internet.error">ProcessDone</code> object if the process
+  terminated normally (it died of natural causes instead of receiving a
+  signal, and if the exit code was 0), or a <code class="API"
+  base="twisted.internet.error">ProcessTerminated</code> object (with an
+  <tt>.exitCode</tt> attribute) if something went wrong. This scheme may
+  seem a bit weird, but I trust that it proves useful when dealing with
+  exceptions that occur in asynchronous code.</p>
+
+  <!-- XXX: check twisted/internet/process.py:v1.30:line357, I think
+  death-by-signal wouldn't be reported properly. -->
+  
+  <p>This will always be called <b>after</b> <tt>inConnectionLost</tt>,
+  <tt>outConnectionLost</tt>, and <tt>errConnectionLost</tt> are
+  called.</p></li>
+
+</ul>
+
+<p>The base-class definitions of these functions are all no-ops. This will
+result in all stdout and stderr being thrown away. Note that it is important
+for data you don't care about to be thrown away: if the pipe were not read,
+the child process would eventually block as it tried to write to a full
+pipe.</p>
+
+
+<h2>Things you can do from your ProcessProtocol</h2>
+
+<p>The following are the basic ways to control the child process:</p>
+
+<ul>
+
+  <li><tt>self.transport.write(data)</tt>: Stuff some data in the stdin
+  pipe. Note that this <tt>write</tt> method will queue any data that can't
+  be written immediately. Writing will resume in the future when the pipe
+  becomes writable again.</li>
+
+  <li><tt>self.transport.closeStdin</tt>: Close the stdin pipe. Programs
+  which act as filters (reading from stdin, modifying the data, writing to
+  stdout) usually take this as a sign that they should finish their job and
+  terminate. For these programs, it is important to close stdin when you're
+  done with it, otherwise the child process will never quit.</li>
+
+  <li><tt>self.transport.closeStdout</tt>: Not usually called, since you're
+  putting the process into a state where any attempt to write to stdout will
+  cause a SIGPIPE error. This isn't a nice thing to do to the poor
+  process.</li>
+  
+  <li><tt>self.transport.closeStderr</tt>: Not usually called, same reason
+  as <tt>closeStdout</tt>.</li>
+
+  <li><tt>self.transport.loseConnection</tt>: Close all three pipes.</li>
+
+  <li><tt>os.kill(self.transport.pid, signal.SIGKILL)</tt>: Kill the child
+  process. This will eventually result in <tt>processEnded</tt> being
+  called.</li>
+  
+</ul>
+
+
+<h2>Verbose Example</h2>
+
+<p>Here is an example that is rather verbose about exactly when all the
+methods are called. It writes a number of lines into the <tt>wc</tt> program
+and then parses the output.</p>
+
+<a href="listings/process/process.py" class="py-listing">process.py</a>
+
+<p>The exact output of this program depends upon the relative timing of some
+un-synchronized events. In particular, the program may observe the child
+process close its stderr pipe before or after it reads data from the stdout
+pipe. One possible transcript would look like this:</p>
+
+<pre class="shell">
+% ./process.py 
+connectionMade!
+inConnectionLost! stdin is closed! (we probably did it)
+errConnectionLost! The child closed their stderr.
+outReceived! with 24 bytes!
+outConnectionLost! The child closed their stdout!
+I saw 40 lines
+processEnded, status 0
+quitting
+Main loop terminated.
+% 
+</pre>
+
   </body>
 </html>
