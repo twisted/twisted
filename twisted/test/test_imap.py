@@ -18,6 +18,8 @@
 Test case for twisted.protocols.imap4
 """
 
+from __future__ import nested_scopes
+
 from twisted.protocols import imap4, loopback
 from twisted.internet import defer
 from twisted.trial import unittest
