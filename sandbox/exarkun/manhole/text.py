@@ -14,7 +14,6 @@ class _Attribute(object):
     def serialize(self, write, attrs=None):
         if attrs is None:
             attrs = helper.CharacterAttribute()
-
         for ch in self.children:
             if isinstance(ch, str):
                 write(attrs.toVT102(only=True))
@@ -29,9 +28,6 @@ class _ColorAttr(_Attribute):
         self.children = []
 
     def serialize(self, write, attrs=None):
-        if not self.children:
-            return
-
         setattr(attrs, self.ground, self.color)
         super(_ColorAttr, self).serialize(write, attrs)
 
@@ -40,9 +36,6 @@ class _NormalAttr(_Attribute):
         self.children = []
 
     def serialize(self, write, attrs):
-        if not self.children:
-            return
-
         attrs.__init__()
         super(_NormalAttr, self).serialize(write, attrs)
 
@@ -56,9 +49,6 @@ class _OtherAttr(_Attribute):
         return _OtherAttr(self.attrname, not self.attrvalue)
 
     def serialize(self, write, attrs):
-        if not self.children:
-            return
-
         if getattr(attrs, self.attrname) and not self.attrvalue:
             # We have to turn everything off, then turn back on everything
             # except this one attribute.
@@ -66,7 +56,6 @@ class _OtherAttr(_Attribute):
         elif not getattr(attrs, self.attrname) and self.attrvalue:
             # We just need to turn on one little thing.
             setattr(attrs, self.attrname, True)
-
         super(_OtherAttr, self).serialize(write, attrs)
 
 class _ForegroundColorAttr(_Attribute):

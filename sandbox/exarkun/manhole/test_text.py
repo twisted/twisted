@@ -40,3 +40,9 @@ class Serialization(unittest.TestCase):
         self.assertEquals(
             text.flatten(A.bold['Hello, ', A.underline['world.']], self.attrs),
             '\x1b[1mHello, \x1b[4mworld.')
+
+        self.assertEquals(
+            text.flatten(
+                A.bold[A.reverseVideo['Hello, ', A.normal['world'], '.']],
+                self.attrs),
+            '\x1b[1;7mHello, \x1b[0mworld\x1b[1;7m.')
