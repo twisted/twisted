@@ -53,7 +53,7 @@ class LatexSpitter:
         getLatexText(node, buf.write, latexEscape)
         parents = domhelpers.getParents(node.parentNode)[:-1]
         text = buf.getvalue()
-        if not [n.tagName in ('pre', 'code') for n in parents]:
+        if not [1 for n in parents if n.tagName in ('pre', 'code')]:
             text = text.replace('<', '$<$').replace('>', '$>$')
         self.writer(text)
 
