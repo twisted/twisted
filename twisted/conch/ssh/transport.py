@@ -354,7 +354,7 @@ class SSHServerTransport(SSHTransportBase):
                            MP(f)+NS(keys.signData(self.factory.privateKeys[self.keyAlg], exchangeHash)))
             self._keySetup(sharedSecret, exchangeHash)
         elif self.kexAlg == 'diffie-hellman-group-exchange-sha1':
-            self.kexAlg = 'diffie-helmman-group-exchange-sha1-old'
+            self.kexAlg = 'diffie-hellman-group-exchange-sha1-old'
             self.ideal = struct.unpack('>L', packet)[0]
             self.g, self.p = self.factory.getDHPrime(self.ideal)
             self.sendPacket(MSG_KEX_DH_GEX_GROUP, MP(self.p)+MP(self.g))
@@ -384,14 +384,16 @@ class SSHServerTransport(SSHTransportBase):
 
         # TODO: This could be computed when self.p is set up
         #  or do as openssh does and scan f for a single '1' bit instead
+
         minimum = math.floor(math.log(self.p) / math.log(2)) + 1
         tries = 0
-        y = Util.number.getRandomNumber(16, entropy.get_bytes)
+        pSize = Util.number.size(self.p)
+        y = Util.number.getRandomNumber(pSize, entropy.get_bytes)
         while tries < 10 and y < minimum:
             tries += 1
-            y = Util.number.getRandomNumber(16, entropy.get_bytes)
+            y = Util.number.getRandomNumber(pSize, entropy.get_bytes)
         assert(y >= minimum) # TODO: test_conch just hangs if this is hit
-        # the chance of it being hit is about 10e-19
+        # the chance of it being hit are really really high
 
         f = pow(self.g, y, self.p)
         sharedSecret = _MPpow(clientDHPubKey, y, self.p)
