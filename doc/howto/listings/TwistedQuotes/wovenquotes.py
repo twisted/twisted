@@ -1,4 +1,4 @@
-# webmvcquotes
+# wovenquotes
 
 from twisted.web.woven import model, view, controller
 from twisted.web.woven import widgets, input

@@ -18,6 +18,8 @@
 webmvc.py
 
 The webmvc module collects together most of the modules and functions you will need to use Twisted's model view controller architecture for the web.
+
+WebMVC has been Deprecated and is now named Woven. The objects contained in this module are now defined in three submodules, woven.model, woven.view, and woven.controller.
 """
 
 from twisted.python import log
