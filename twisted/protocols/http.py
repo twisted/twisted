@@ -826,6 +826,10 @@ class Request:
                 return name
         return names[0]
 
+    def connectionLost(self, reason):
+        """connection was lost"""
+        pass
+
 
 class HTTPChannel(basic.LineReceiver):
     """A receiver for HTTP requests."""
@@ -973,6 +977,10 @@ class HTTPChannel(basic.LineReceiver):
                 self.requests[0].noLongerQueued()
         else:
             self.transport.loseConnection()
+
+    def connectionLost(self, reason):
+        for request in self.requests:
+            request.connectionLost(reason)
 
 
 class HTTPFactory(protocol.ServerFactory):
