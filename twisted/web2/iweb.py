@@ -6,31 +6,54 @@
 from twisted.python import components
 from zope.interface import Attribute
 
+# server.py interfaces
 class IResource(components.Interface):
+    # Shared interface with inevow.IResource
     """
         I am a web resource.
     """
 
-    requestAdapter = Attribute(
-        "If not None this should be a callable that takes the current request "
-        "object as an argument and returns the adapted request object that the "
-        "resource wants to use.")
-    
-    def locateChild(self, segments, request):
+    def locateChild(self, ctx, segments):
         """Locate another object which can be adapted to IResource
         Return a tuple of resource, path segments
         """
 
-    def getDynamicChild(self, path, request):
-        """This is the last ditch effort in the locateChild process, this should
-            always be overridden by the user resources
-        """
-
-    def render(self, request):
+    def renderHTTP(self, ctx):
         """Return a string or a deferred which will fire a string. This string
         will be written to the web browser which initiated this request.
         """
+
+class ICanHandleException(components.Interface):
+    # Shared interface with inevow.ICanHandleException
+    def renderHTTP_exception(self, request, failure):
+        """Render an exception to the given request object.
+        """
+
+    def renderInlineException(self, context, reason):
+        """Return stan representing the exception, to be printed in the page,
+        not replacing the page."""
+
+class IRemainingSegments(components.Interface):
+    # Shared interface with inevow.IRemainingSegments
+    """During the URL traversal process, requesting this from the context
+    will result in a tuple of the segments remaining to be processed.
     
+    Equivalent to request.postpath in twisted.web
+    """
+
+
+class ICurrentSegments(components.Interface):
+    # Shared interface with inevow.ICurrentSegments
+    """Requesting this from the context will result in a tuple of path segments
+    which have been consumed to reach the current Page instance during
+    the URL traversal process.
+
+    Equivalent to request.prepath in twisted.web
+    """
+
+
+
+# http.py interfaces
 class IRequest(components.Interface):
     """I'm a request for a web resource
     First draft of public interface.
@@ -66,7 +89,6 @@ class IRequest(components.Interface):
     out_headers = Attribute("")
     sentLength = Attribute("")
     
-
 class IChanRequestCallbacks(components.Interface):
     """The bits that are required of a Request for interfacing with a
     IChanRequest object"""

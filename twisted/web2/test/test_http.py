@@ -2,7 +2,7 @@ from __future__ import nested_scopes
 
 import time
 from twisted.trial import unittest
-from twisted.web2 import http, http_headers, responsecode
+from twisted.web2 import http, http_headers, responsecode, error
 
 class PreconditionTestCase(unittest.TestCase):
     def checkPreconditions(self, request, expectedResult, expectedCode,
@@ -13,7 +13,7 @@ class PreconditionTestCase(unittest.TestCase):
         
         try:
             request.checkPreconditions(entityExists=entityExists)
-        except http.HTTPError, e:
+        except error.Error, e:
             preconditionsPass = False
             code = e.code
         self.assertEquals(preconditionsPass, expectedResult)

@@ -9,9 +9,9 @@ import urllib
 import stat
 
 # twisted imports
-from nevow import inevow
-from nevow import rend
-from nevow import stan
+from twisted.web2 import iweb
+
+from nevow import rend, loaders
 from nevow.tags import *
 
 def formatFileSize(size):
@@ -79,7 +79,7 @@ class DirectoryLister(rend.Page):
         return files
 
     def data_header(self, context, data):
-        request = context.locate(inevow.IRequest)
+        request = context.locate(iweb.IRequest)
         return "Directory listing for %s" % urllib.unquote(request.uri)
 
     def render_tableLink(self, context, data):
@@ -91,7 +91,7 @@ class DirectoryLister(rend.Page):
     __str__ = __repr__
 
 
-    docFactory = rend.stan(html[
+    docFactory = loaders.stan(html[
       head[
         title(data=directive('header'))[str],
         style['''

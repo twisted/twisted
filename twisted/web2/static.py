@@ -17,9 +17,7 @@ import time
 
 # Sibling Imports
 from twisted.web2 import error, http_headers
-from twisted.web2 import http, iweb, stream
-from twisted.web2.util import redirectTo
-from twisted.web2 import dirlist
+from twisted.web2 import http, iweb, stream, responsecode
 
 # Twisted Imports
 from twisted.python import threadable, components, filepath
@@ -27,10 +25,23 @@ from twisted.python.util import InsensitiveDict
 from twisted.python.runtime import platformType
 from zope.interface import implements
 
-from nevow import inevow, rend
+dangerousPathError = error.Error(responsecode.NOT_FOUND, "Invalid request URL.")
 
+def redirectTo(URL, request):
+    # FIXME:
+    request.setResponseCode(FOUND)
+    request.setHeader("location", url)
+    return """
+<html>
+    <head>
+        <meta http-equiv=\"refresh\" content=\"0;URL=%(url)s\">
+    </head>
+    <body bgcolor=\"#FFFFFF\" text=\"#000000\">
+    <a href=\"%(url)s\">click here</a>
+    </body>
+</html>
+""" % {'url': URL}
 
-dangerousPathError = error.NoResource("Invalid request URL.")
 
 def isDangerous(path):
     return path == '..' or '/' in path or os.sep in path
@@ -47,7 +58,8 @@ class Data:
         self.data = data
         self.type = type
 
-    def render(self, request):
+    def renderHTTP(self, ctx):
+        request = iweb.IRequest(ctx)
         request.out_headers.setRawHeaders("content-type", (self.type, ))
         request.out_headers.setHeader("content-length", len(self.data))
         if request.method == "HEAD":
@@ -205,6 +217,7 @@ class File:
         self.ignoredExts.append(ext)
 
     def directoryListing(self):
+        from twisted.web2 import dirlist
         return dirlist.DirectoryLister(self.fp.path,
                                        self.listNames(),
                                        self.contentTypes,
@@ -224,7 +237,7 @@ class File:
         self.fp.restat()
         
         if not self.fp.isdir():
-            return rend.FourOhFour(), ()
+            return None, ()
 
         if path:
             fpath = self.fp.child(path)
@@ -236,7 +249,7 @@ class File:
         if not fpath.exists():
             fpath = fpath.siblingExtensionSearch(*self.ignoredExts)
             if fpath is None:
-                return rend.FourOhFour(), ()
+                return None, ()
 
         # Don't run processors on directories - if someone wants their own
         # customized directory rendering, subclass File instead.
@@ -254,10 +267,11 @@ class File:
 
         return self.createSimilarFile(fpath.path), segments[1:]
 
-    def render(self, request):
+    def renderHTTP(self, context):
         """You know what you doing."""
         self.fp.restat()
-
+        request = iweb.IRequest(context)
+        
         if self.type is None:
             self.type, self.encoding = getTypeAndEncoding(self.fp.basename(),
                                                           self.contentTypes,
@@ -371,3 +385,14 @@ class ASISProcessor:
         return FourOhFour(), ()
 
 components.backwardsCompatImplements(ASISProcessor)
+
+
+# Test code
+if __name__ == '__builtin__':
+    # Running from twistd -y
+    from twisted.application import service, strports
+    from twisted.web2 import server
+    res = File('/')
+    application = service.Application("demo")
+    s = strports.service('8080', server.Site(res))
+    s.setServiceParent(application)

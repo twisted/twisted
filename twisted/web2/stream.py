@@ -66,7 +66,9 @@ class BufferedStream:
             except:
                 self._onDone.errback()
         
-            
+    def pauseProducing(self):
+        pass
+    
     def stopProducing(self):
         self._onDone.errback(main.CONNECTION_LOST)
 
@@ -101,8 +103,14 @@ class BaseFileProducer:
         self.consumer.registerProducer(self, False)
         return self.finishedCallback
 
+    def pauseProducing(self):
+        pass
+
     def stopProducing(self):
-        self.finishedCallback.errback(main.CONNECTION_LOST)
+        finishedCallback = self.finishedCallback
+        if finishedCallback:
+            self.finishedCallback = None
+            finishedCallback.errback(main.CONNECTION_LOST)
 
 class SendfileProducer(BaseFileProducer):
     def convertFromBase(self):

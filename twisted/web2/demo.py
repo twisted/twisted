@@ -1,7 +1,5 @@
-
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 """I am a simple test resource.
 """
@@ -10,7 +8,6 @@ from twisted.python import log
 from twisted.web2 import static
 
 class Test(static.Data):
-    isLeaf = True
     def __init__(self):
         static.Data.__init__(
             self,
@@ -27,3 +24,17 @@ class Test(static.Data):
             """,
             "text/html")
 
+    def locateChild(self, ctx, segments):
+        name = segments[0]
+        if name == '':
+            return self, ()
+        return None, ()
+
+if __name__ == '__builtin__':
+    # Running from twistd -y
+    from twisted.application import service, strports
+    from twisted.web2 import server
+    res = Test()
+    application = service.Application("demo")
+    s = strports.service('8080', server.Site(res))
+    s.setServiceParent(application)

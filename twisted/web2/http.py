@@ -28,9 +28,10 @@ from twisted.python import log, components
 from zope.interface import implements
 
 # sibling imports
-import responsecode
-import http_headers
-import iweb
+from twisted.web2 import responsecode
+from twisted.web2 import http_headers
+from twisted.web2 import iweb
+from twisted.web2 import error
 
 PERSIST_NO_PIPELINE = 2
 
@@ -64,11 +65,6 @@ class StringTransport:
         return getattr(self.__dict__['s'], attr)
 
 
-class HTTPError(Exception):
-    def __init__(self, code):
-        Exception.__init__(self, "HTTP Error %d" % code)
-        self.code = code
-    
 # response codes that must have empty bodies
 NO_BODY_CODES = (204, 304)
 
@@ -251,12 +247,12 @@ class Request:
         match = self.in_headers.getHeader("if-match")
         if match:
             if not matchETag(match, False):
-                raise HTTPError(responsecode.PRECONDITION_FAILED)
+                raise error.Error(responsecode.PRECONDITION_FAILED)
 
         unmod_since = self.in_headers.getHeader("if-unmodified-since")
         if unmod_since:
             if not lastModified or lastModified > unmod_since:
-                raise HTTPError(responsecode.PRECONDITION_FAILED)
+                raise error.Error(responsecode.PRECONDITION_FAILED)
 
         # Now check if-none-match/if-modified-since.
         # This bit is tricky, because of the requirements when both IMS and INM
@@ -283,13 +279,13 @@ class Request:
                 # would break. 
                 canBeWeak = not self.in_headers.hasHeader('Range')
                 if notModified != False and matchETag(inm, canBeWeak):
-                    raise HTTPError(responsecode.NOT_MODIFIED)
+                    raise error.Error(responsecode.NOT_MODIFIED)
             else:
                 if notModified != False and matchETag(inm, False):
-                    raise HTTPError(responsecode.PRECONDITION_FAILED)
+                    raise error.Error(responsecode.PRECONDITION_FAILED)
         else:
             if notModified == True:
-                raise HTTPError(responsecode.NOT_MODIFIED)
+                raise error.Error(responsecode.NOT_MODIFIED)
 
     def checkIfRange(self):
         """Checks for the If-Range header, and if it exists, checks if the
@@ -388,7 +384,7 @@ class HTTPChannelRequest:
         if protovers[0] != 'http':
             self._abortWithError(responsecode.BAD_REQUEST, "Unknown protocol: %s" % strversion)
         
-        self.version = protovers[1:2]
+        self.version = protovers[1:3]
         
         # Check for HTTP 0 or HTTP 1.
         if self.version[0] > 1:
@@ -705,7 +701,7 @@ class HTTPChannelRequest:
     def _cleanup(self):
         """Called when have finished responding and are no longer queued."""
         if self.producer:
-            log.err(RuntimeError("Producer was not unregistered for %s" % self.uri))
+            log.err(RuntimeError("Producer was not unregistered for %s" % self))
             self.unregisterProducer()
         self.channel.requestWriteFinished(self, self.persistent)
         del self.transport

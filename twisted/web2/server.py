@@ -27,53 +27,23 @@ try:
 except ImportError:
     from urllib import unquote
 
+from zope.interface import implements
 # Twisted Imports
 from twisted.internet import reactor, defer
 from twisted.python import log, components
 from twisted import copyright
 
 # Sibling Imports
-import resource
-import http
-import iweb
-import responsecode
-from twisted.web2 import http_headers
+from twisted.web2 import resource, http, iweb, responsecode
+from twisted.web2 import http_headers, context, error
 
-
-# Support for other methods may be implemented on a per-resource basis.
-supportedMethods = ('GET', 'HEAD', 'POST')
-
-
-class UnsupportedMethod(Exception):
-    """Raised by a resource when faced with a strange request method.
-
-    RFC 2616 (HTTP 1.1) gives us two choices when faced with this situtation:
-    If the type of request is known to us, but not allowed for the requested
-    resource, respond with NOT_ALLOWED.  Otherwise, if the request is something
-    we don't know how to deal with in any case, respond with NOT_IMPLEMENTED.
-
-    When this exception is raised by a Resource's render method, the server
-    will make the appropriate response.
-
-    This exception's first argument MUST be a sequence of the methods the
-    resource *does* support.
-    """
-
-    allowedMethods = ()
-
-    def __init__(self, allowedMethods, *args):
-        if not operator.isSequenceType(allowedMethods):
-            s = ("First argument must be a sequence of supported methodds, "
-                 "but my first argument is not a sequence.")
-            raise TypeError, s
-        Exception.__init__(self, allowedMethods, *args)
-        self.allowedMethods = allowedMethods
-        
-
-server_version = "TwistedWeb/2.0a1"
-class Request(http.Request, components.Componentized):
+server_version = "TwistedWeb/2.0a2"
+class Request(http.Request):
+    implements(iweb.IRequest)
+    
     site = None
     prepathuri = None
+    
     def __init__(self, *args, **kw):
         self.notifications = []
         if kw.has_key('site'):
@@ -83,7 +53,6 @@ class Request(http.Request, components.Componentized):
             self.prepathuri = kw['prepathuri']
             del kw['prepathuri']
         
-        components.Componentized.__init__(self)
         http.Request.__init__(self, *args, **kw)
 
     def defaultHeaders(self):
@@ -93,7 +62,10 @@ class Request(http.Request, components.Componentized):
 
     def parseURL(self):
         (self.scheme, self.host, self.path,
-         self.fragment, argstring, fragment) = urlparse.urlparse(self.uri)
+         self.params, argstring, fragment) = urlparse.urlparse(self.uri)
+        
+        # FIXME: denial of service risk here. argstring may be arbitrary data.
+        # Parsing it into a hashtable with a known hash algorithm is dangerous.
         self.args = cgi.parse_qs(argstring, True)
         
     def getHost(self):
@@ -102,8 +74,8 @@ class Request(http.Request, components.Componentized):
         host = self.in_headers.getHeader('host')
         if not host:
             if self.clientproto >= (1,1):
-                request.setResponseCode(400)
-                request.write('')
+                self.setResponseCode(responsecode.BAD_REQUEST)
+                self.write('')
                 return
             host = self.chanRequest.channel.transport.getHost().host
         return host
@@ -120,6 +92,7 @@ class Request(http.Request, components.Componentized):
             return
         # Resource Identification
         if self.prepathuri:
+            # We were given an initial prepath.
             prepath = map(unquote, self.prepathuri[1:].split('/'))
             self.postpath = map(unquote, self.path[1:].split('/'))
             
@@ -129,90 +102,85 @@ class Request(http.Request, components.Componentized):
         else:
             self.prepath = []
             self.postpath = map(unquote, self.path[1:].split('/'))
+        self.sitepath = self.prepath[:]
+        
+        requestContext = context.RequestContext(tag=self)
+        requestContext.remember(tuple(self.prepath), iweb.ICurrentSegments)
+        requestContext.remember(tuple(self.postpath), iweb.IRemainingSegments)
+        
         # make content string.
         # FIXME: make resource interface for choosing how to
         # handle content.
         self.content = StringIO.StringIO()
-        self.deferredResource = self.site.getResourceFor(self)
-        self.deferredResource.addErrback(self.processingFailed)
+        self.deferredContext = self.site.getPageContextForRequestContext(requestContext)
+        self.deferredContext.addErrback(self._processingFailed, requestContext)
         
     def handleContentChunk(self, data):
+        # FIXME: this sucks.
         self.content.write(data)
     
     def handleContentComplete(self):
         # This sets up a seperate deferred chain because we don't want the
         # errbacks for rendering to be called for errors from before.
-        self.deferredResource.addCallback(self._renderAndFinish)
+        self.deferredContext.addCallback(self._renderAndFinish)
         
-    def _renderAndFinish(self, resource):
-        d = defer.maybeDeferred(self.renderResource, resource)
-        d.addCallback(self._cbFinishRender)
-        d.addErrback(self._checkValidMethod)
-        d.addErrback(self.processingFailed)
+    def _renderAndFinish(self, pageContext):
+        d = defer.maybeDeferred(pageContext.tag.renderHTTP, pageContext)
+        d.addCallback(self._cbFinishRender, pageContext)
+        d.addErrback(self._processingFailed, pageContext)
         
-    def renderResource(self, resrc):
-        from nevow import inevow
-        if components.implements(resrc, inevow.IResource):
-            render = resrc.renderHTTP
-        else:
-            render = resrc.render
-        m = getattr(resrc, 'requestAdapter', None)
-        if m:
-            req = m(self)
-        else:
-            req = self
-        return render(req)
+    def _processingFailed(self, reason, ctx):
+        # Give a ICanHandleException implementer a chance to render the page.
+        
+        def _processingFailed_inner(ctx, reason):
+            if self.startedWriting:
+                raise Exception("Cannot output error page: already started writing.")
+            handler = iweb.ICanHandleException(ctx)
+            return handler.renderHTTP_exception(ctx, reason)
+        
+        d = defer.maybeDeferred(_processingFailed_inner, ctx, reason)
+        d.addCallback(self._cbFinishRender, ctx)
+        d.addErrback(self._processingReallyFailed, ctx, reason)
+        return d
     
-    def _checkValidMethod(self, reason):
-        reason.trap(UnsupportedMethod)
-        self.setResponseCode(responsecode.NOT_IMPLEMENTED)
-        self.out_headers.setHeader('content-type',('text','html',()))
-        self.write('')
-        self.finish()
-
-    def returnErrorPage(self, error):
-        ErrorPage.createFromRequest(self)
-    
-    def processingFailed(self, reason):
+    def _processingReallyFailed(self, reason, ctx, origReason):
+        log.msg("Exception rendering error page:", isErr=1)
         log.err(reason)
+        log.msg("Original exception:", isErr=1)
+        log.err(origReason)
         if self.startedWriting:
             # If we've already started writing, there's nothing to be done
             # but give up and rudely close the connection.
-            # Anything else runs the risk of e.g. corrupting caches.
+            # Anything else runs the risk of e.g. corrupting caches or
+            # spitting out html in the middle of an image.
             self.chanRequest.abortConnection()
-            return reason
-        if self.site.displayTracebacks:
-            body = ("<html><head><title>"
-                    "web.Server Traceback (most recent call last)"
-                    "</title></head>"
-                    "<body>"
-                    "<b>web.Server Traceback (most recent call last):</b>\n\n"
-                    "%s\n\n</body></html>\n"
-                    % webutil.formatFailure(reason))
-        else:
-            body = ("<html><head><title>Processing Failed</title></head><body>"
-                    "<b>Processing Failed</b></body></html>")
+            return
+        
         self.setResponseCode(responsecode.INTERNAL_SERVER_ERROR)
-        self.out_headers.setHeader('content-type',http_headers.MimeType('text','html'))
+        body = ("<html><head><title>Internal Server Error</title</head>"
+                "<body><h1>Internal Server Error</h1>An error occurred rendering the requested page. Additionally, an error occured rendering the error page.</body></html>")
+        
+        # reset headers
+        self.out_headers = http_headers.Headers()
+        self.defaultHeaders()
         self.out_headers.setHeader('content-length', len(body))
+        
         self.write(body)
         self.finish()
-        return reason
+        return
 
-    def _cbFinishRender(self, html):
+    def _cbFinishRender(self, html, ctx):
         resource = iweb.IResource(html, None)
         if resource:
-            d = defer.maybeDeferred(resource.render, self)
-            d.addCallback(self._cbFinishRender)
-            d.addErrback(self.processingFailed)
-            return d
-        if isinstance(html, str):
+            pageContext = context.PageContext(tag=resource, parent=ctx)
+            return _renderAndFinish(pageContext)
+        elif isinstance(html, str):
             self.write(html)
             self.finish()
         else:
-            self.processingFailed(TypeError("html is not a string"))
-        return html
-            
+            raise TypeError("html is not a string")
+        return
+    
     def notifyFinish(self):
         """Notify when finishing the request
 
@@ -279,45 +247,52 @@ class Site(http.HTTPFactory):
         channel.site = self
         return channel
 
-    def getResourceFor(self, request):
-        """Get a resource for a request.
-
-        This iterates through the resource heirarchy, calling
-        locateChild on each resource it finds for a path element,
-        stopping when it hits an element where isLeaf is true.
+    def getPageContextForRequestContext(self, ctx):
+        """Retrieve a resource from this site for a particular request. The
+        resource will be wrapped in a PageContext which keeps track
+        of how the resource was located.
         """
-        request.site = self
-        # Sitepath is used to determine cookie names between distributed
-        # servers and disconnected sites.
-        request.sitepath = copy.copy(request.prepath)
-        if not request.postpath:
-            return defer.succeed(iweb.IResource(self.resource))
-        print self.resource.__class__
-        return self.getChild(iweb.IResource(self.resource), request,
-                             tuple(request.postpath))
+        path = iweb.IRemainingSegments(ctx)
+        res = iweb.IResource(self.resource)
+        pageContext = context.PageContext(tag=res, parent=ctx)
+        return defer.maybeDeferred(res.locateChild, pageContext, path).addCallback(
+            self.handleSegment, ctx.tag, path, pageContext
+        )
 
-    def getChild(self, res, request, path):
-        d = defer.maybeDeferred(res.locateChild, request,  path)
-        d.addCallback(self.handleSegment, request, path, res)
-        return d
-
-    def handleSegment(self, result, request, path, res):
-        from nevow import inevow
+    def handleSegment(self, result, request, path, pageContext):
         newres, newpath = result
-        if components.implements(newres, inevow.IResource):
-            pass
-        else:
-            newres = iweb.IResource(newres, persist=True)
-        
-        size = len(path)-len(newpath)
-        request.prepath.extend(request.postpath[:size])
-        del request.postpath[:size]
-        
+        # If the child resource is None then display a error page
+        if newres is None:
+            raise error.Error(code=responsecode.NOT_FOUND)
+
+        # If we got a deferred then we need to call back later, once the
+        # child is actually available.
+        if isinstance(newres, defer.Deferred):
+            return newres.addCallback(
+                lambda actualRes: self.handleSegment(
+                    (actualRes, newpath), request, path, pageContext))
+
+        newres = iweb.IResource(newres, persist=True)
+        if newres is pageContext.tag:
+            assert not newpath is path, "URL traversal cycle detected when attempting to locateChild %r from resource %r." % (path, res)
+            assert  len(newpath) < len(path), "Infinite loop impending..."
+
+        ## We found a Resource... update the request.prepath and postpath
+        for x in xrange(len(path) - len(newpath)):
+            request.prepath.append(request.postpath.pop(0))
+
+        ## Create a context object to represent this new resource
+        ctx = context.PageContext(tag=newres, parent=pageContext)
+        ctx.remember(tuple(request.prepath), iweb.ICurrentSegments)
+        ctx.remember(tuple(request.postpath), iweb.IRemainingSegments)
+
         if not newpath:
-            return newres
-        if newres is res:
-            assert newpath is not path, ("URL traversal cycle detected when "
-                                         "attempting to locateChild %r from "
-                                         "resource %r." % (path, res))
-            assert len(newpath) < len(path), "Infinite loop impending..."
-        return self.getChild(newres, request, newpath)
+            return ctx
+
+        return defer.maybeDeferred(
+            newres.locateChild, ctx, newpath
+        ).addErrback(
+            request._processingFailed, ctx
+        ).addCallback(
+            self.handleSegment, request, newpath, ctx
+        )
