@@ -783,7 +783,7 @@ class WidgetPage(Page):
     <HTML>
     <STYLE>
     %%%%self.stylesheet%%%%
-    </style>
+    </STYLE>
     <HEAD>
     <TITLE>%%%%self.title%%%%</title>
     <BASE href="%%%%request.prePathURL()%%%%">
