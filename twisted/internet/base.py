@@ -433,16 +433,7 @@ class ReactorBase:
             return
         if not self.threadpool:
             self._initThreadPool()
-        theThreadPool = self.threadpool
-        oldSize = theThreadPool.max
-        theThreadPool.max = size
-        if oldSize > size:
-            from twisted.python import threadpool
-            for i in range(oldSize - size):
-                theThreadPool.q.put(threadpool.WorkerStop)
-        else:
-            theThreadPool._startSomeWorkers()
-
+        self.threadpool.adjustPoolsize(maxthreads=size)
 
     # backwards compatibility
 
