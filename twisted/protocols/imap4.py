@@ -523,12 +523,15 @@ class IMAP4Server(basic.LineReceiver):
     def _ebExpunge(self, failure, tag):
         self.sendBadResponse(tag, 'EXPUNGE failed: ' + str(failure.value))
     
-    def select_SEARCH(self, tag, args):
+    def select_SEARCH(self, tag, args, uid=0):
         query = parseNestedParens(args)
         d = self.mbox.search(query)
-        maybeDeferred(d, self._cbSearch, self._ebSearch, (tag,), (tag,))
+        maybeDeferred(d, self._cbSearch, self._ebSearch, (tag, uid), (tag,))
     
-    def _cbSearch(self, result, tag):
+    def _cbSearch(self, result, tag, uid):
+        if uid:
+            topPart = self.mbox.getUIDValidity() << 16
+            result = map(topPart.__or__, result)
         ids = ' '.join([str(i) for i in result])
         self.sendUntaggedResponse('SEARCH ' + ids)
         self.sendPositiveResponse(tag, 'SEARCH completed')
@@ -536,27 +539,34 @@ class IMAP4Server(basic.LineReceiver):
     def _ebSearch(self, failure, tag):
         self.sendBadResponse(tag, 'SEARCH failed: ' + str(failure.value))
 
-    def select_FETCH(self, tag, args):
+    def select_FETCH(self, tag, args, uid=0):
         parts = args.split(None, 1)
         if len(parts) != 2:
             raise IllegalClientResponse, args
         messages, args = parts
         messages = parseIdList(messages)
         query = parseNestedParens(args)
+        if uid:
+            topPart = self.mbox.getUIDValidity() << 16
+            messages = map(topPart.__or__, messages)
         d = self.mbox.fetch(messages, query)
-        maybeDeferred(d, self._cbFetch, self._ebFetch, (tag,), (tag,))
+        maybeDeferred(d, self._cbFetch, self._ebFetch, (tag, uid), (tag,))
     
-    def _cbFetch(self, results, tag):
-        for ((mId, part), value) in results.items():
-            self.sendUntaggedResponse(
-                '%d %s %s' % (mId, part, collapseNestedLists(value))
-            )
+    def _cbFetch(self, results, tag, uid):
+        for (mId, parts) in results.items():
+            for (portion, value) in parts.items():
+                if uid:
+                    topPart = self.mbox.getUIDValidity() << 16
+                    value.extend(['UID', str(mId | topPart)])
+                self.sendUntaggedResponse(
+                    '%d %s %s' % (mId, portion, collapseNestedLists(value))
+                )
         self.sendPositiveResponse(tag, 'FETCH completed')
 
     def _ebFetch(self, failure, tag):
         self.sendBadResponse(tag, 'FETCH failed: ' + str(failure.value))
 
-    def select_STORE(self, tag, args):
+    def select_STORE(self, tag, args, uid=0):
         parts = parseNestedParens(args)
         if 2 >= len(parts) >= 3:
             messages = parseIdList(parts[0])
@@ -576,7 +586,7 @@ class IMAP4Server(basic.LineReceiver):
         else:
             mode = 0
         
-        d = self.mbox.store(messages, flags, mode)
+        d = self.mbox.store(messages, flags, mode, uid)
         maybeDeferred(d, self._cbStore, self._ebStore, (tag, silent), (tag,))
 
     def _cbStore(self, result, tag, silent):
@@ -587,6 +597,69 @@ class IMAP4Server(basic.LineReceiver):
 
     def _ebStore(self, failure, tag):
         self.sendBadResponse(tag, 'Server error: ' + str(failure.value))
+    
+    def select_COPY(self, tag, args, uid=0):
+        parts = args.split(None, 1)
+        if len(parts) != 2:
+            raise IllegalClientResponse, args
+        messages = parseIdList(parts[0])
+        mbox = self.account.select(parts[1])
+        if not mbox:
+            self.sendNegativeResponse(tag, 'No such mailbox: ' + parts[1])
+        else:
+            if uid:
+                topPart = self.mbox.getUIDValidity() << 16
+                for i in range(len(messages)):
+                    messages[i] = messages[i] | topPart
+            d = self.mbox.fetch(messages, ['BODY', [], 'INTERNALDATE', 'FLAGS'])
+            maybeDeferred(d, self._cbCopy, self._ebCopy, (tag, mbox), (tag, mbox))
+    
+    def _cbCopy(self, messages, tag, mbox):
+        # XXX - This should handle failures with a rollback or something
+        addedDeferreds = []
+        addedIDs = []
+        failures = []
+        for (id, msg) in messages.items():
+            body = msg['BODY']
+            flags = msg['FLAGS']
+            date = msg['INTERNALDATE']
+            try:
+                d = mbox.addMessage(body, flags, date)
+            except Exception, e:
+                failures.append(e)
+            else:
+                if isinstance(d, defer.Deferred):
+                    addedDeferreds.append(d)
+                else:
+                    addedIDs.append(d)
+        d = defer.DeferredList(addedDeferreds)
+        d.addCallback(self._cbCopied, addedIDs, failures, tag, mbox)
+    
+    def _cbCopied(self, deferredIds, ids, failures, tag, mbox):
+        for (result, status) in deferredIds:
+            if status:
+                ids.append(result)
+            else:
+                failures.append(result.value)
+        if failures:
+            self.sendNegativeResponse(tag, '[ALERT] Some messages were not copied')
+        else:
+            self.sendPositiveResponse(tag, 'COPY completed')
+        self.account.release(mbox)
+
+    def select_UID(self, tag, args):
+        parts = args.split(None, 1)
+        if len(parts) != 2:
+            raise IllegalClientResponse, args
+        
+        command = parts[0].upper()
+        args = parts[1]
+        
+        if command not in ('COPY', 'FETCH', 'STORE'):
+            raise IllegalClientResponse, args
+        
+        f = getattr(self, 'select_' + command)
+        f(tag, args, uid=1)
 
 class UnhandledResponse(IMAP4Exception): pass
 
@@ -1125,6 +1198,10 @@ class IMAP4Client(basic.LineReceiver):
         
         @type date: C{str}
         @param data: The date to associate with this message.
+        
+        @rtype: C{Deferred}
+        @return: A deferred whose callback is invoked when this command
+        succeeds or whose errback is invoked if it fails.
         """
         L = len(message)
         fmt = '%s (%s)%s%s {%d}'
@@ -2201,8 +2278,9 @@ class IMailbox(components.Interface):
         message.
         
         @rtype: C{Deferred}
-        @return: A deferred whose callback is invoked if the message
-        is added successfully and whose errback is invoked otherwise.
+        @return: A deferred whose callback is invoked with the message
+        id if the message is added successfully and whose errback is
+        invoked otherwise.
         
         @raise ReadOnlyMailbox: Raised if this Mailbox is not open for
         read-write.
@@ -2242,8 +2320,8 @@ class IMailbox(components.Interface):
         @param parts: The message portions to retrieve.
 
         @rtype: C{dict} or C{Deferred}
-        @return: A C{dict} mapping 2-C{tuples} of message identifier and message
-        portions to strings representing that portion of that message, or a
+        @return: A C{dict} mapping message identifiers to C{dicts} mapping
+        portion identifiers to strings representing that portion of that message, or a
         C{Deferred} whose callback will be invoked with such a C{dict}.
         """
 
