@@ -20,7 +20,7 @@
 
 import calendar
 import time
-from twisted.web import html
+from twisted.web import html 
 
 class Calendar(html.Interface):
     isLeaf=1
@@ -30,7 +30,8 @@ class Calendar(html.Interface):
         self.ids=[]
         self.user=user
         self.password=password
-    def make_day(self,d,m,y):
+
+    def makeDay(self,d,m,y):
         if not self.events.has_key(y):
             self.events[y]={m:{d:[]}}
         else:
@@ -40,7 +41,7 @@ class Calendar(html.Interface):
                 if not self.events[y][m].has_key(d):
                     self.events[y][m][d]=[]
 
-    def get_day(self,d,m,y):
+    def getDay(self,d,m,y):
         if not self.events.has_key(y):
             return []
         if not self.events[y].has_key(m):
@@ -62,7 +63,7 @@ class Calendar(html.Interface):
         if c: c="&"+c
         return c
 
-    def set_args(self,request):
+    def setArgs(self,request):
         request.path=self._getpath(request)
         curtime=time.localtime(time.time())
         self.curmonth=curtime[1]
@@ -79,9 +80,8 @@ class Calendar(html.Interface):
         self.auth=self.authorize(request)
 
     def pagetitle(self,request):
-        self.set_args(request)
+        self.setArgs(request)
         return html.Interface.pagetitle(self,request)
-        #return "Calendar for %s %s" % (calendar.month_name[self.month],self.year)
 
     def content(self,request):
         if request.args.has_key("action"):
@@ -100,7 +100,7 @@ class Calendar(html.Interface):
                 import cPickle
                 self.ids=cPickle.loads(request.args["data"][0])
                 for id in self.ids:
-                    self.make_day(id.d,id.m,id.y)
+                    self.makeDay(id.d,id.m,id.y)
                     self.events[id.y][id.m][id.d].append(id)
         c="""<table border=0 cellpadding=2>
 <tr>"""
@@ -111,7 +111,7 @@ class Calendar(html.Interface):
         for week in days:
             c=c+"<tr>"
             for day in week:
-                ev=self.get_day(day,self.month,self.year)
+                ev=self.getDay(day,self.month,self.year)
                 if day==self.day and self.month==self.curmonth and self.year==self.curyear:
                     day="<b>%s</b>"%day
                 if day:
@@ -126,21 +126,6 @@ class Calendar(html.Interface):
         c=self.box(request,"%s %s"%(calendar.month_name[self.month],self.year),c)
         if self.auth:
             c=c+'<a href="%s?action=post%s">Post an Event</a>'%(request.path,self.auth)
-        #date=(self.month,self.year)
-        #if date[0]==12:
-        #    next=(1,date[1]+1)
-        #else:
-        #    next=(date[0]+1,date[1])
-        #if date[0]==1:
-        #    prev=(12,date[1]-1)
-        #else:
-        #    prev=(date[0]-1,date[1])
-        #url=request.path+"?month=%s&year=%s"
-        #nexturl=url%next
-        #prevurl=url%prev
-        #c=c+"""<a href="%s">%s %s <</a>"""%(prevurl,calendar.month_name[prev[0]],prev[1])
-        #c=c+"&nbsp"*20
-        #c=c+"""<a href="%s">> %s %s</a>"""%(nexturl,calendar.month_name[next[0]],next[1])
         return c
 
     def handlePost(self,request):
@@ -159,8 +144,8 @@ class Calendar(html.Interface):
             d=int(request.args["d"][0])
             m=int(calendar.month_name.index(request.args["m"][0]))
             y=int(request.args["y"][0])
-            self.make_day(d,m,y)
-            e=Event(len(self.ids),request.args["title"][0],request.args["data"][0],d,m,y)
+            self.makeDay(d,m,y)
+            e=CalendarEvent(len(self.ids),request.args["title"][0],request.args["data"][0],d,m,y)
             self.events[y][m][d].append(e)
             self.ids.append(e)
     
@@ -182,7 +167,7 @@ class Calendar(html.Interface):
         c=c+"""<a href="%s?action=del&id=%s%s">Delete</a>"""%(request.path,e.id,self.auth)
         return self.box(request,e.short,c)
 
-class Event:
+class CalendarEvent:
     def __init__(self,id,short,long,d,m,y):
         self.id=id
         self.short=short
