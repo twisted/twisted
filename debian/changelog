@@ -1,3 +1,9 @@
+twisted (0.99-0.0rc1.unofficial.reportbugsanddie) unstable; urgency=low
+
+  * Changelog entry to let the RC build
+
+ -- Moshe Zadka <moshez@pyramid.twistedmatrix.com>  Tue, 13 Aug 2002 06:34:50 -0500
+
 twisted (0.19.0-2) unstable; urgency=low
 
   * Gagh, make python2.2-twisted any, not all. 
