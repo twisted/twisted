@@ -141,6 +141,8 @@ class Application(log.Logger):
                 except socket.error:
                     print 'port %s already bound' % port.port
                     return
+            for service in self.services.values():
+                service.startService()
             self.running = 1
             threadable.dispatcher.disown(self)
         if not running:

@@ -59,6 +59,10 @@ class Service:
         self.perspectives = {}
         self.setApplication(application)
 
+    def startService(self):
+        """LOADING IS COMPLETE.  END OF LINE.
+        """
+
     def setApplication(self, application):
         assert not self.application, "Application already set!"
         if application:
