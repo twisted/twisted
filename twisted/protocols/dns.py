@@ -27,12 +27,13 @@ Future Plans: Fix message encoding!  Get rid of some toplevels,
 """
 
 # System imports
-import StringIO, struct, random
+import StringIO, struct, random, types
 from socket import inet_aton, inet_ntoa
 
 # Twisted imports
 from twisted.internet import protocol, defer, error
-from twisted.python import log
+from twisted.python import log, util
+
 
 PORT = 53
 
@@ -45,7 +46,7 @@ QUERY_TYPES = {
     252: 'AFRX',  253: 'MAILB',
     254: 'MAILA', 255: 'ALL_RECORDS'
 }
-REV_TYPES = dict([
+REV_TYPES = util.dict([
     (v, k) for (k, v) in QUERY_TYPES.items()
 ])
 for (k, v) in REV_TYPES.items():
@@ -56,7 +57,7 @@ del k, v
 QUERY_CLASSES = {
     1: 'IN',  2: 'CS',  3: 'CH',  4: 'HS',  255: 'ANY'
 }
-REV_CLASSES = dict([
+REV_CLASSES = util.dict([
     (v, k) for (k, v) in QUERY_CLASSES.items()
 ])
 for (k, v) in REV_CLASSES.items():
@@ -76,7 +77,7 @@ def str2time(s):
         ('M', 60), ('H', 60 * 60), ('D', 60 * 60 * 24),
         ('W', 60 * 60 * 24 * 7), ('Y', 60 * 60 * 24 * 365)
     )
-    if isinstance(s, str):
+    if isinstance(s, types.StringType):
         s = s.upper().strip()
         for (suff, mult) in suffixes:
             if s.endswith(suff):
@@ -386,7 +387,7 @@ class Record_A:
     address = None
 
     def __init__(self, address = 0):
-        if isinstance(address, str):
+        if isinstance(address, types.StringType):
             address = inet_aton(address)
         self.address = address
 

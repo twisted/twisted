@@ -88,7 +88,7 @@ class Resolver:
 
 
     def parseConfig(self, conf):
-        lines = file(conf).readlines()
+        lines = open(conf).readlines()
         for l in lines:
             l = l.strip()
             if l.startswith('nameserver'):
