@@ -220,7 +220,8 @@ def getPrivateKeyObject_openssh(data, passphrase):
     if type(decodedKey[0]) == type([]):
         decodedKey = decodedKey[0] # this happens with encrypted keys
     if kind == 'RSA':
-        return RSA.construct(decodedKey[1: 6])
+    	n,e,d,p,q=decodedKey[1:6]
+        return RSA.construct((n,e,d,p,q))
     elif kind == 'DSA':
         p, q, g, y, x = decodedKey[1: 6]
         return DSA.construct((y, g, p, q, x))
@@ -248,15 +249,18 @@ def makePrivateKeyString_lsh(obj, passphrase):
     #assert not passphrase
     keyType = objectType(obj)
     if keyType == 'ssh-rsa':
+        p,q=obj.p,obj.q
+        if p > q:
+            (p,q)=(q,p)
         return sexpy.pack([['private-key', ['rsa-pkcs1',
                         ['n', common.MP(obj.n)[4:]],
                         ['e', common.MP(obj.e)[4:]],
                         ['d', common.MP(obj.d)[4:]],
-                        ['p', common.MP(obj.p)[4:]],
-                        ['q', common.MP(obj.q)[4:]],
-                        ['a', common.MP(obj.d%(obj.p-1))[4:]],
-                        ['b', common.MP(obj.d%(obj.q-1))[4:]],
-                        ['c', common.MP(Util.number.inverse(obj.q, obj.p))[4:]]]]])
+                        ['p', common.MP(q)[4:]],
+                        ['q', common.MP(p)[4:]],
+                        ['a', common.MP(obj.d%(q-1))[4:]],
+                        ['b', common.MP(obj.d%(p-1))[4:]],
+                        ['c', common.MP(Util.number.inverse(p, q))[4:]]]]])
     elif keyType == 'ssh-dss':
         return sexpy.pack([['private-key', ['dsa',
                         ['p', common.MP(obj.p)[4:]],
@@ -271,7 +275,11 @@ def makePrivateKeyString_openssh(obj, passphrase):
     keyType = objectType(obj)
     if keyType == 'ssh-rsa':
         keyData = '-----BEGIN RSA PRIVATE KEY-----\n'
-        objData = [0, obj.n, obj.e, obj.d, obj.p, obj.q, obj.d%(obj.p-1), obj.d%(obj.q-1),Util.number.inverse(obj.q, obj.p)]
+        p,q=obj.p,obj.q
+        if p > q:
+            (p,q) = (q,p)
+	# p is less than q
+        objData = [0, obj.n, obj.e, obj.d, q, p, obj.d%(q-1), obj.d%(p-1),Util.number.inverse(p, q)]
     elif keyType == 'ssh-dss':
         keyData = '-----BEGIN DSA PRIVATE KEY-----\n'
         objData = [0, obj.p, obj.q, obj.g, obj.y, obj.x]
@@ -297,7 +305,19 @@ def makePrivateKeyString_openssh(obj, passphrase):
         keyData += '-----END RSA PRIVATE KEY-----'
     elif keyType == 'ssh-dss':
         keyData += '-----END DSA PRIVATE KEY-----'
-    return keyData   
+    return keyData
+
+def makePrivateKeyBlob(obj):
+    keyType = objectType(obj)
+    if keyType == 'ssh-rsa':
+        return common.NS(keyType) + common.MP(obj.n) + common.MP(obj.e) + \
+               common.MP(obj.d) + common.MP(obj.u) + common.MP(obj.q) + \
+               common.MP(obj.p)
+    elif keyType == 'ssh-dss':
+        return common.NS(keyType) + common.MP(obj.p) + common.MP(obj.q) + \
+               common.MP(obj.g) + common.MP(obj.y) + common.MP(obj.x)
+    else:
+        raise ValueError('trying to get blob for invalid key type: %s' % keyType)
 
 def objectType(obj):
     """
