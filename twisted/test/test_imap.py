@@ -12,7 +12,7 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-7  USA
 
 """
 Test case for twisted.protocols.imap4
@@ -1821,16 +1821,16 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
         self.function = self.client.fetchInternalDate
         self.messages = '13'
         self.msgObjs = [
-            FakeyMessage({}, (), 'Tuesday', '', 23232, None),
-            FakeyMessage({}, (), '20-Oct-1981 03:25:19 -0500', '', 101, None),
-            FakeyMessage({}, (), '15-Feb-1985 01:30:05 +0900', '', 202, None),
-            FakeyMessage({}, (), '01-Jun-1992 13:51:48 -0100', '', 303, None),
+            FakeyMessage({}, (), 'Fri, 02 Nov 2003 21:25:10 GMT', '', 23232, None),
+            FakeyMessage({}, (), 'Thu, 29 Dec 2013 11:31:52 EST', '', 101, None),
+            FakeyMessage({}, (), 'Mon, 10 Mar 1992 02:44:30 CST', '', 202, None),
+            FakeyMessage({}, (), 'Sat, 11 Jan 2000 14:40:24 PST', '', 303, None),
         ]
         self.expected = {
-            0: {'INTERNALDATE': 'Tuesday'},
-            1: {'INTERNALDATE': '20-Oct-1981 03:25:19 -0500'},
-            2: {'INTERNALDATE': '15-Feb-1985 01:30:05 +0900'},
-            3: {'INTERNALDATE': '01-Jun-1992 13:51:48 -0100'},
+            0: {'INTERNALDATE': '02-Nov-2003 21:25:10 +0000'},
+            1: {'INTERNALDATE': '29-Dec-2013 11:31:52 -0500'},
+            2: {'INTERNALDATE': '10-Mar-1992 02:44:30 -0600'},
+            3: {'INTERNALDATE': '11-Jan-2000 14:40:24 -0800'},
         }
         self._fetchWork(uid)
 
@@ -2013,12 +2013,12 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
         ]
         self.expected = {
             0: {'FLAGS': ['\\XYZ', '\\YZX', 'Abc'],
-                'INTERNALDATE': 'Sun, 25 Jul 2010 06:20:30 -0400 (EDT)',
+                'INTERNALDATE': '25-Jul-2010 06:20:30 -0400',
                 'RFC822.SIZE': '6',
                 'ENVELOPE': [None, None, [[None, None, None]], [[None, None, None]], None, None, None, None, None, None],
                 'BODY': [None, None, [], None, None, None, '6']},
             1: {'FLAGS': ['\\One', '\\Two', 'Three'],
-                'INTERNALDATE': 'Mon, 14 Apr 2003 19:43:44 -0400',
+                'INTERNALDATE': '14-Apr-2003 19:43:44 -0400',
                 'RFC822.SIZE': '12',
                 'ENVELOPE': [None, None, [[None, None, None]], [[None, None, None]], None, None, None, None, None, None],
                 'BODY': [None, None, [], None, None, None, '12']},
@@ -2040,11 +2040,11 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
         self.expected = {
             0: {'ENVELOPE': [None, None, [[None, None, None]], [[None, None, None]], None, None, None, None, None, None],
                 'RFC822.SIZE': '6',
-                'INTERNALDATE': 'Mon, 14 Apr 2003 19:43:44 +0400',
+                'INTERNALDATE': '14-Apr-2003 19:43:44 +0400',
                 'FLAGS': []},
             1: {'ENVELOPE': [None, None, [[None, None, None]], [[None, None, None]], None, None, None, None, None, None],
                 'RFC822.SIZE': '6',
-                'INTERNALDATE': 'Tue, 15 Apr 2003 19:43:44 +0200',
+                'INTERNALDATE': '15-Apr-2003 19:43:44 +0200',
                 'FLAGS': []},
         }
         self._fetchWork(uid)
@@ -2060,7 +2060,7 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
         ]
         self.expected = {
             0: {'FLAGS': ['\\X'],
-                'INTERNALDATE': '19 Mar 2003 19:22:21 -0500',
+                'INTERNALDATE': '19-Mar-2003 19:22:21 -0500',
                 'RFC822.SIZE': '0'},
         }
         self._fetchWork(uid)

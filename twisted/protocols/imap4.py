@@ -50,6 +50,7 @@ import twisted.cred.credentials
 import rfc822
 import base64
 import binascii
+import time
 import hmac
 import re
 import tempfile
@@ -1565,7 +1566,23 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         self.transport.write('FLAGS ' + '(%s)' % (' '.join(msg.getFlags())))
 
     def spew_internaldate(self, id, msg):
-        self.transport.write('INTERNALDATE ' + _quote(msg.getInternalDate()))
+        idate = msg.getInternalDate()
+        ttup = rfc822.parsedate_tz(idate)
+        if ttup is None:
+            log.msg("%d:%r: unpareseable internaldate: %r" % (id, msg, idate))
+            raise IMAP4Exception("Internal failure generating INTERNALDATE")
+
+        odate = time.strftime("%d-%b-%Y %H:%M:%S ", ttup[:9])
+        if ttup[9] is None:
+            odate = odate + "+0000"
+        else:
+            if ttup[9] >= 0:
+                sign = "+"
+            else:
+                sign = "-"
+            odate = odate + sign + str(((abs(ttup[9]) / 3600) * 100 + (abs(ttup[9]) % 3600) / 60)).zfill(4)
+
+        self.transport.write('INTERNALDATE ' + _quote(odate))
 
     def spew_rfc822header(self, id, msg):
         hdrs = _formatHeaders(msg.getHeaders(True))

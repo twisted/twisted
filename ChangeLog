@@ -1,5 +1,10 @@
 2003-11-20  Jp Calderone  <exarkun@twistedmatrix.com>
 
+	* twisted/protocols/imap4.py: Fixed incorrect generation of
+	INTERNALDATE information.
+
+2003-11-20  Jp Calderone  <exarkun@twistedmatrix.com>
+
 	* twisted/internet/abstract.py: Added an assert to
 	FileDescriptor.resumeProducing to prevent it from being
 	called when the transport is no longer connected.
