@@ -36,6 +36,13 @@ Twisted applications.  See <code class="API">twisted.coil</code>.</dd>
 <dt>Conch</dt>
 <dd>Twisted's SSH implementation.</dd>
 
+<dt>Connector</dt>
+<dd>Object used to interface between client connections and protocols, usually
+used with a <code class="API">twisted.internet.protocol.ClientFactory</code> to
+give you control over how a client connection reconnects.  See 
+<code class="API">twisted.internet.interfaces.IConnector</code> and 
+<a href="clients.html">Writing Clients</a>.</dd>
+
 <dt>Cred</dt>
 <dd>Twisted's authentication API, <code class="API">twisted.cred</code>.  See 
 <a href="cred.html">Introduction to Twisted Cred</a> and 
