@@ -138,10 +138,10 @@ def whenReady(d):
         publish.whenReady(serverObject.getMeAPublishable()).addCallback(lookAtThePublishable)
     """
     d2 = defer.Deferred()
-    d.addCallbacks(_pubReady, d2.armAndErrback,
+    d.addCallbacks(_pubReady, d2.errback,
                    callbackArgs=(d2,))
     return d2
 
 def _pubReady(result, d2):
     '(internal)'
-    result.callWhenActivated(d2.armAndCallback)
+    result.callWhenActivated(d2.callback)

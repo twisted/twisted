@@ -328,9 +328,9 @@ class SNACBased(OscarConnection):
             d = self.requestCallbacks[snac[4]]
             del self.requestCallbacks[snac[4]]
             if snac[1]!=1:
-                d.armAndCallback(snac)
+                d.callback(snac)
             else:
-                d.armAndErrback(snac)
+                d.errback(snac)
             return
         func=getattr(self,'oscar_%02X_%02X'%(snac[0],snac[1]),None)
         if not func:
@@ -600,7 +600,7 @@ class BOSConnection(SNACBased):
         return d
 
     def _cbRequestSelfInfo(self, snac, d):
-        d.armAndCallback(self.parseUser(snac[5]))
+        d.callback(self.parseUser(snac[5]))
 
     def initSSI(self):
         """
@@ -611,7 +611,7 @@ class BOSConnection(SNACBased):
         self.sendSNAC(0x13, 0x02, '').addCallback(self._cbInitSSI, d)
 
     def _cbInitSSI(self, snac, d):
-        d.armAndCallback({}) # don't even bother parsing this
+        d.callback({}) # don't even bother parsing this
 
     def requestSSI(self, timestamp = 0, revision = 0):
         """
@@ -625,7 +625,7 @@ class BOSConnection(SNACBased):
 
     def _cbRequestSSI(self, snac, d, args = ()):
         if snac[1] == 0x0f: # same SSI as we have
-            d.armAndCallback(None)
+            d.callback(None)
         itemdata = snac[5][3:]
         if args:
             revision, groups, permit, deny, permitMode, visibility = args
@@ -667,7 +667,7 @@ class BOSConnection(SNACBased):
             self.requestCallbacks[snac[4]] = d2
             d2.addCallback(self._cbRequestSSI, d, (revision, groups, permit, deny, permitMode, visibility))
             return
-        d.armAndCallback((groups[0].users,permit,deny,permitMode,visibility,timestamp,revision)) 
+        d.callback((groups[0].users,permit,deny,permitMode,visibility,timestamp,revision)) 
 
     def activateSSI(self):
         """
@@ -892,7 +892,7 @@ class OSCARService(SNACBased):
     def clientReady(self):
         SNACBased.clientReady(self)
         if self.d:
-            self.d.armAndCallback(self)
+            self.d.callback(self)
             self.d = None
 
 class ChatNavService(OSCARService):
@@ -924,7 +924,7 @@ class ChatNavService(OSCARService):
         shortName = tlvs[0x6a]
         inviteTime = struct.unpack('!L',tlvs[0xca])[0]
         info = (exchange,fullName,instance,shortName,inviteTime)
-        d.armAndCallback(info)
+        d.callback(info)
 
     def createChat(self, shortName):
         #d = defer.Deferred()
@@ -939,7 +939,7 @@ class ChatNavService(OSCARService):
         exchange, length = struct.unpack('!HB',snac[5][4:7])
         fullName = snac[5][7:7+length]
         instance = struct.unpack('!H',snac[5][7+length:9+length])[0]
-        #d.armAndCallback((exchange, fullName, instance))
+        #d.callback((exchange, fullName, instance))
         return exchange, fullName, instance
     
 class ChatService(OSCARService):
@@ -969,7 +969,7 @@ class ChatService(OSCARService):
 #            self.instance = struct.unpack('!H',data[3+length:5+length])[0]
 #            tlvs = readTLVs(data[8+length:])
 #            self.name = tlvs[0xd3]
-#            self.d.armAndCallback(self)
+#            self.d.callback(self)
 #        except KeyError:
         data = snac[3]
         self.exchange, length = struct.unpack('!HB',data[:3])
@@ -977,7 +977,7 @@ class ChatService(OSCARService):
         self.instance = struct.unpack('!H',data[3+length:5+length])[0]
         tlvs = readTLVs(data[8+length:])
         self.name = tlvs[0xd3]
-        self.d.armAndCallback(self)
+        self.d.callback(self)
 
     def oscar_0E_03(self,snac):
         users=[]
@@ -1078,7 +1078,7 @@ class OscarAuthenticator(OscarConnection):
             self.cookie=tlvs[6]
             server,port=string.split(tlvs[5],":")
             bos=self.BOSClass(self.username,self.cookie)
-            if self.deferred: self.deferred.armAndCallback(bos)
+            if self.deferred: self.deferred.callback(bos)
             reactor.clientTCP(server,int(port),bos)
             self.disconnect()
         elif tlvs.has_key(8):
@@ -1098,7 +1098,7 @@ class OscarAuthenticator(OscarConnection):
 
     def error(self,error,url):
         log.msg("ERROR! %s %s" % (error,url))
-        if self.deferred: self.deferred.armAndErrback((error,url))
+        if self.deferred: self.deferred.errback((error,url))
         self.transport.loseConnection()
 
 FLAP_CHANNEL_NEW_CONNECTION = 0x01

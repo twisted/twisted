@@ -853,7 +853,7 @@ class Broker(banana.Banana):
         """
         d = self.waitingForAnswers[requestID]
         del self.waitingForAnswers[requestID]
-        d.armAndErrback(self.unserialize(fail))
+        d.errback(self.unserialize(fail))
 
     ##
     # refcounts
@@ -1081,20 +1081,20 @@ class _ObjectRetrieval:
         if not self.term:
             self.term = 1
             del self.broker
-            self.deferred.armAndErrback(error.ConnectionLost())
+            self.deferred.errback(error.ConnectionLost())
 
     def connectionMade(self):
         assert not self.term, "How did this get called?"
         x = self.broker.remoteForName("root")
         del self.broker
         self.term = 1
-        self.deferred.armAndCallback(x)
+        self.deferred.callback(x)
 
     def connectionFailed(self):
         if not self.term:
             self.term = 1
             del self.broker
-            self.deferred.armAndErrback(error.ConnectError(string="Connection failed"))
+            self.deferred.errback(error.ConnectError(string="Connection failed"))
 
 
 class BrokerClientFactory(protocol.ClientFactory):
@@ -1166,14 +1166,14 @@ def connect(host, port, username, password, serviceName,
     """
     d = defer.Deferred()
     getObjectAt(host,port,timeout).addCallbacks(
-        _connGotRoot, d.armAndErrback,
+        _connGotRoot, d.errback,
         callbackArgs=[d, client, serviceName,
                       username, password, perspectiveName])
     return d
 
 def _connGotRoot(root, d, client, serviceName,
                  username, password, perspectiveName):
-    logIn(root, client, serviceName, username, password, perspectiveName).armAndChain(d)
+    logIn(root, client, serviceName, username, password, perspectiveName).chainDeferred(d)
 
 def authIdentity(authServRef, username, password):
     """Return a Deferred which will do the challenge-response dance and
@@ -1181,20 +1181,20 @@ def authIdentity(authServRef, username, password):
     """
     d = defer.Deferred()
     authServRef.callRemote('username', username).addCallbacks(
-        _cbRespondToChallenge, d.armAndErrback,
+        _cbRespondToChallenge, d.errback,
         callbackArgs=(password,d))
     return d
 
 def _cbRespondToChallenge((challenge, challenger), password, d):
     challenger.callRemote("respond", identity.respond(challenge, password)).addCallbacks(
-        d.armAndCallback, d.armAndErrback)
+        d.callback, d.errback)
 
 def logIn(authServRef, client, service, username, password, perspectiveName=None):
     """I return a Deferred which will be called back with a Perspective.
     """
     d = defer.Deferred()
     authServRef.callRemote('username', username).addCallbacks(
-        _cbLogInRespond, d.armAndErrback,
+        _cbLogInRespond, d.errback,
         callbackArgs=(d, client, service, password,
                       perspectiveName or username))
     return d
@@ -1202,12 +1202,12 @@ def logIn(authServRef, client, service, username, password, perspectiveName=None
 def _cbLogInRespond((challenge, challenger), d, client, service, password, perspectiveName):
     challenger.callRemote('respond',
         identity.respond(challenge, password)).addCallbacks(
-        _cbLogInResponded, d.armAndErrback,
+        _cbLogInResponded, d.errback,
         callbackArgs=(d, client, service, perspectiveName))
 
 def _cbLogInResponded(identity, d, client, serviceName, perspectiveName):
     if identity:
-        identity.callRemote("attach", serviceName, perspectiveName, client).armAndChain(d)
+        identity.callRemote("attach", serviceName, perspectiveName, client).chainDeferred(d)
     else:
         from twisted import cred
-        d.armAndErrback(cred.error.Unauthorized("invalid username or password"))
+        d.errback(cred.error.Unauthorized("invalid username or password"))

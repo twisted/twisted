@@ -85,9 +85,9 @@ class DeferredTestCase(unittest.TestCase):
         def cb(resultList, result=result):
             result.extend(resultList)
         dl.addCallbacks(cb, cb)
-        defr1.armAndCallback("1")
-        defr2.armAndErrback(GenericError("2"))
-        defr3.armAndCallback("3")
+        defr1.callback("1")
+        defr2.errback(GenericError("2"))
+        defr3.callback("3")
         self.failUnlessEqual([result[0],
                     #result[1][1] is now a Failure instead of an Exception
                               (result[1][0], str(result[1][1].value)),
