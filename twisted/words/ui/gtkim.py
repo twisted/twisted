@@ -33,17 +33,14 @@ class Group(pb.RemoteCache):
 pb.setCopierForClass("twisted.words.service.Group", Group)
 
 
-class AccountManager(gtk.GtkWindow):
-    def __init__(self, imgui, *args, **kw):
+class AccountManager(gtk.GtkWindow, gtkutil.ButtonBar):
+    def __init__(self, *args, **kw):
         apply(gtk.GtkWindow.__init__, (self,)+args, kw)
-        self.imgui = imgui
         self.accounts = []
         vbox = gtk.GtkVBox(gtk.FALSE, 5)
         vbox.set_border_width(5)
         self.add(vbox)
-        titles = [
-            'Username', 'Online', 'Auto-Login', 'Gateway'
-            ]
+        titles = ['Username', 'Online', 'Auto-Login', 'Gateway']
         clist = gtk.GtkCList(len(titles), titles)
         clist.signal_connect("select_row", self.rowSelected)
         clist.set_shadow_type(gtk.SHADOW_OUT)
@@ -53,24 +50,79 @@ class AccountManager(gtk.GtkWindow):
         scrolled.add(clist)
         hb = gtk.GtkHBox(gtk.FALSE, 0)
         vbox.pack_start(hb, gtk.FALSE, gtk.TRUE, 0)
-        addB = gtk.GtkButton("Add")
-        modifyB = gtk.GtkButton("Modify")
-        loginB = gtk.GtkButton("Logon")
-        deleteB = gtk.GtkButton("Delete")
-        map(hb.add, [addB, modifyB, loginB, deleteB])
-        self.imgui.im.connect(self.event_attach, "attach")
-        self.imgui.im.connect(self.event_detach, "detach")
+        self.getButtonList(container=hb)
         self.signal_connect('destroy', gtk.mainquit, None)
 
+    barButtons = ['Add', 'Modify', 'Logon', 'Delete']
+    def button_Add(self, btn):
+        AddAccount(gtk.WINDOW_TOPLEVEL)
+
+    def button_Modify(self, btn):
+        print 'modify clicked!'
+
+    def button_Logon(self, btn):
+        print 'logon clicked!'
+
+    def button_Delete(self, btn):
+        print 'delete clicked!'
 
     def rowSelected(self, clist, row, column, event, data):
         print 'hi'
-        
-    def event_attach(self, gateway):
-        print 'i attached to', gateway
 
-    def event_detach(self, gateway):
-        print 'i detached from', gateway
+class _AccountInstantiator:
+    def __init__(self, this, vb, klas):
+        self.this = this
+        self.vb = vb
+        self.klas = klas
+
+    def activate(self, mitem):
+        print 'CHANGIN',mitem
+        k = self.klas()
+        old = self.this.currentAcct
+        if old:
+            self.vb.remove(old)
+        self.this.currentAcct = k
+        self.vb.pack_start(k, padding=2)
+        k.show_all()
+
+class AddAccount(gtk.GtkWindow):
+    currentAcct = None
+    def __init__(self, *args, **kw):
+        apply(gtk.GtkWindow.__init__, (self,)+args, kw)
+        vb = gtk.GtkVBox()
+        hb = gtk.GtkHBox()
+        vb.pack_start(hb, expand=gtk.FALSE, fill=gtk.TRUE, padding=2)
+        hb.pack_start(gtk.GtkLabel("Account Type:"),
+                      expand=gtk.FALSE, fill=gtk.FALSE, padding=2)
+        om = gtk.GtkOptionMenu()
+        # m = om.get_menu()
+        m = gtk.GtkMenu()
+        for name, klas in registeredTypes:
+            i = gtk.GtkMenuItem(name)
+            m.append(i)
+            i.connect("activate", _AccountInstantiator(self, vb, klas).activate)
+        om.set_menu(m)
+        hb.pack_start(om, expand=gtk.TRUE, fill=gtk.TRUE, padding=2)
+        self.add(vb)
+        self.set_usize(300, 300)
+        self.show_all()
+
+class DummyAOLPanel(gtk.GtkFrame):
+    def __init__(self):
+        gtk.GtkFrame.__init__(self, "AOL Account")
+        self.add(gtk.GtkButton("AOL!"))
+class DummyIRCPanel(gtk.GtkFrame):
+    def __init__(self):
+        gtk.GtkFrame.__init__(self, "IRC Account")
+        self.add(gtk.GtkButton("IRC!"))
+class DummyTRPanel(gtk.GtkFrame):
+    def __init__(self):
+        gtk.GtkFrame.__init__(self, "Twisted Reality Account")
+        self.add(gtk.GtkButton("Reality!"))
+
+registeredTypes = [("Dummy AOL", DummyAOLPanel),
+                   ("Dummy IRC", DummyIRCPanel),
+                   ("Dummy Twisted Reality", DummyTRPanel)]
 
 class AddContact(gtkutil.GetString):
     def __init__(self, im):
@@ -329,8 +381,6 @@ im.ContactList=ContactList
 
 
 def main():
-    imgui = im.InstanceMessengerGUI(im.InstanceMessenger(),
-                                    Conversation, ContactList, GroupSession, None)
-    am = AccountManager(imgui, gtk.WINDOW_TOPLEVEL)
+    am = AccountManager(gtk.WINDOW_TOPLEVEL)
     am.show_all()
     gtk.mainloop()

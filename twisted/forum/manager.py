@@ -115,39 +115,31 @@ CREATE TABLE forum_permissions
                  WHERE forum_id = %d
                  AND user_name = '%s'""" % ( forum_id, user_name)
         self.runQuery(sql, callback, errrback)
-        
-    def postMessage(self, forum_id, user_name, thread_id, parent_id, subject, body):
-        """Post a message to a forum. Could be in reply to a message or a new thread.
-        """
-        #TODO: must check permissions before inserting!
-        #      this requires "userData" be passed to checkPermissions so that
-        #      the actual message data can be available when the permission
-        #      check completes.
-        #
-        #self.checkPermission(forum_id, user_name, self.postMessage2)
 
-        #def postMessage2(self, data):
-        #"""Second half of posting a message.
-        #"""
-        #if len(data) == 0:
-        #    print "ERROR: user doesnt have permission to post to this forum."
-        #    return
-        
-        sql = """INSERT INTO posts
-                 (forum_id, parent_id, thread_id, subject, user_name, posted, body)
-                 VALUES
-                 (%d, %d, %d, '%s', '%s', now(), '%s')""" % (forum_id, parent_id, thread_id, subject, user_name, body)
-        print "SR DEBUG:", sql        
-        self.runOperation(sql)
+    def _messagePoster(self, trans, forum_id, user_name, thread_id, parent_id, subject, body):
+        trans.execute("""SELECT access_level
+                         FROM forum_permissions
+                         WHERE forum_id = %d
+                         AND user_name = '%s'""" % ( forum_id, user_name))
+        result = trans.fetchall()
+        if result:
+            trans.execute("""INSERT INTO posts
+            (forum_id, parent_id, thread_id, subject, user_name, posted, body)
+            VALUES
+            (%d, %d, %d, '%s', '%s', now(), '%s')""" %
+            (forum_id, parent_id, thread_id, subject, user_name, body))
+            return "Posted successfully!"
+        else:
+            return "You don't have permission to post to this forum!"
+
+    def postMessage(self, forum_id, user_name, thread_id, parent_id, subject, body):
+        """Post a message to a forum.
+        """
+        return self.runInteraction(self._messagePoster, forum_id, user_name, thread_id, parent_id, subject, body)
 
     def newMessage(self, forum_id, user_name, subject, body):
         """Post a new message - start a new thread."""
-        #TODO: must check permissions before inserting!
-        sql = """INSERT INTO posts
-                 (forum_id, parent_id, thread_id, subject, user_name, posted, body)
-                 VALUES
-                 (%d, 0, 0, '%s', '%s', now(), '%s')""" % (forum_id, subject, user_name, body)
-        self.runOperation(sql)        
+        return self.postMessage(forum_id, user_name, 0, 0, subject, body)
         
     def getForums(self, user_name, callbackIn, errbackIn):
         """Gets the list of forums and the number of msgs in each one. Only shows forums

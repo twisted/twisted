@@ -421,17 +421,18 @@ class BrokerTestCase(unittest.TestCase):
         assert complex[0].check()
         vcc.setFoo4()
         pump.pump(); pump.pump(); pump.pump()
-        assert complex[0].checkFoo4()
+        assert complex[0].checkFoo4(), "method was not called."
         assert len(coll) == 2
         cp = coll[0][0]
         assert cp.checkMethod().im_self is cp, "potential refcounting issue"
         assert cp.checkSelf() is cp, "other potential refcounting issue"
-        assert cp.__class__ is pb.RemoteCacheProxy, "class was %s" % str(cp.__class__)
-        assert cp._RemoteCacheProxy__instance is coll[1][0]._RemoteCacheProxy__instance
+        # No longer need to do this...
+        # assert cp.__class__ is pb.RemoteCacheProxy, "class was %s" % str(cp.__class__)
+        # assert cp._RemoteCacheProxy__instance is coll[1][0]._RemoteCacheProxy__instance
         col2 = []
         o2.putCache(cp, pbcallback = col2.append)
         # now, refcounting (similiar to testRefCount)
-        luid = cp._RemoteCacheProxy__luid
+        luid = cp.luid
         assert s.remotelyCachedObjects.has_key(luid), "remote cache doesn't have it"
         del coll
         del cp
@@ -446,7 +447,8 @@ class BrokerTestCase(unittest.TestCase):
         pump.pump()
         pump.pump()
         # The GC is done with it.
-        assert not s.remotelyCachedObjects.has_key(luid)
+        assert not s.remotelyCachedObjects.has_key(luid), "Server still had it after GC"
+        assert not c.locallyCachedObjects.has_key(luid), "Client still had it after GC"
         # The objects were the same (testing lcache identity)
         assert col2[0]
         # test equality of references to methods

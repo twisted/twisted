@@ -16,11 +16,12 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 import gtk
+import string
 
 from twisted.spread import pb
 from twisted.internet import tcp
 from twisted import copyright
-
+from twisted.python import reflect
 
 normalFont = gtk.load_font("-adobe-courier-medium-r-normal-*-*-120-*-*-m-*-iso8859-1")
 boldFont = gtk.load_font("-adobe-courier-bold-r-normal-*-*-120-*-*-m-*-iso8859-1")
@@ -34,6 +35,19 @@ def cbutton(name, callback):
     b = gtk.GtkButton(name)
     b.connect('clicked', callback)
     return b
+
+class ButtonBar:
+    barButtons = None
+    def getButtonList(self, prefix='button_', container=None):
+        result = []
+        buttons = self.barButtons or \
+                  reflect.prefixedMethodNames(self.__class__, prefix)
+        for b in buttons:
+            bName = string.replace(b, '_', ' ')
+            result.append(cbutton(bName, getattr(self,prefix+b)))
+        if container:
+            map(container.add, result)
+        return result
 
 def scrollify(widget):
     #widget.set_word_wrap(gtk.TRUE)

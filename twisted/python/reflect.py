@@ -302,7 +302,8 @@ def addMethodNamesToDict(classObj, dict, prefix, baseClass=None):
     starting with 'prefix' in 'dict' with a value of 1. if baseClass isn't
     None, methods will only be added if classObj is-a baseClass
 
-    the resulting dict should look something like:
+    If the class in question has the methods 'prefix_methodname' and
+    'prefix_methodname2', the resulting dict should look something like:
     {"methodname": 1, "methodname2": 1}.
     """
     for base in classObj.__bases__:

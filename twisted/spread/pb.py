@@ -202,7 +202,7 @@ class Perspective(passport.Perspective):
     on invoking methods on other objects, see ViewPoint.)
     """
 
-    def remoteMessageReceived(self, broker, message, args, kw):
+    def perspectiveMessageReceived(self, broker, message, args, kw):
         """This method is called when a network message is received.
 
         I will call::
@@ -295,18 +295,10 @@ class AsReferenceable(Referenceable):
     """AsReferenceable: a reference directed towards another object.
     """
 
-    def __init__(self, object):
+    def __init__(self, object, messageType="remote"):
         """Initialize me with an object.
         """
-        self.object = object
-
-    def remoteMessageReceived(self, broker, message, args, kw):
-        """Redirect this call to the object I'm a reference to.
-        """
-        return self.object.remoteMessageReceived(broker, message, args, kw)
-
-
-
+        self.remoteMessageReceived = getattr(object, messageType + "MessageReceived")
 
 class ViewPoint(Referenceable):
     """I act as an indirect reference to an object accessed through a Perspective.
@@ -487,7 +479,7 @@ class RemoteCopy:
 
         self.__dict__ = state
 
-class RemoteCache(RemoteCopy):
+class RemoteCache(RemoteCopy, Serializable):
     """A cache is a local representation of a remote Cacheable object.
 
     This represents the last known state of this object.  It may
@@ -516,6 +508,42 @@ class RemoteCache(RemoteCopy):
             print ("%s didn't accept %s and %s" % (method, args, kw))
             raise
         return broker.serialize(state, None, method, args, kw)
+
+    def remoteSerialize(self, broker):
+        """serialize me (only for the broker I'm for) as the original cached reference
+        """
+
+        assert broker is self.broker, "You cannot exchange cached proxies between brokers."
+        print 'local cache',self.luid
+        return 'lcache', self.luid
+
+    def __really_del__(self):
+        """Final finalization call, made after all remote references have been lost.
+        """
+
+    def __cmp__(self, other):
+        """Compare me [to another RemoteCacheProxy.
+        """
+        if isinstance(other, self.__class__):
+            return cmp(id(self.__dict__), id(other.__dict__))
+        else:
+            return cmp(id(self.__dict__), other)
+
+    def __hash__(self):
+        """Hash me.
+        """
+        return id(self.__dict__)
+
+    def __del__(self):
+        """Do distributed reference counting on finalize.
+        """
+        try:
+            print 'decache: %s' % self
+            self.broker.decCacheRef(self.luid)
+        except:
+            traceback.print_exc(file=log.logfile)
+
+
 
 copyTags = {}
 
@@ -573,6 +601,7 @@ def setCopierForClassTree(module, baseClass, prefix=None):
             if issubclass(i_, baseClass):
                 setCopierForClass('%s%s' % (prefix, i), i_)
 
+
 class RemoteCacheMethod:
     """A method on a reference to a RemoteCache.
     """
@@ -598,6 +627,7 @@ class RemoteCacheMethod:
 
     # this method is deprecated
     do = __call__
+
 
 class RemoteCacheObserver:
     """I am a reverse-reference to the peer's RemoteCache.
@@ -799,84 +829,6 @@ class RemoteReference(Serializable, styles.Ephemeral):
         if self.doRefCount:
             self.broker.sendDecRef(self.luid)
 
-class RemoteCacheProxy(Serializable):
-    """I am an ugly implementation detail.
-
-    Cacheable objects have to be manually reference counted in order
-    to properly do handshaking on removing references to them.  I aid
-    in that; when you *think* you have a reference to a RemoteCache,
-    you actually have a reference to me.
-    """
-
-    __inited = 0
-    def __init__(self, broker, instance, luid):
-        self.__broker = broker
-        self.__instance = instance
-        self.__luid = luid
-        self.__inited = 1
-
-    def remoteSerialize(self, broker):
-        """serialize me (only for the broker I'm for) as the original cached reference
-        """
-
-        assert broker is self.__broker, "You cannot exchange cached proxies between brokers."
-        return 'lcache', self.__luid
-
-    def __getattr__(self, name):
-        """Get a method or attribute from my cache.
-        """
-
-        assert name != '_RemoteCacheProxy__instance', "Infinite recursion."
-        inst = self.__instance
-        maybeMethod = getattr(inst, name)
-        if isinstance(maybeMethod, types.MethodType):
-            if maybeMethod.im_self is inst:
-                psuedoMethod = new.instancemethod(maybeMethod.im_func,
-                                                  self,
-                                                  RemoteCacheProxy)
-                return psuedoMethod
-        if maybeMethod is inst:
-            return self
-        return maybeMethod
-
-    def __repr__(self):
-        """String representation.
-        """
-        return "RemoteCacheProxy(%s)" % repr(self.__instance)
-
-    def __str__(self):
-        """Printable representation.
-        """
-        return "RemoteCacheProxy(%s)" % str(self.__instance)
-
-    def __setattr__(self, name, value):
-        """Set an attribute of my cache.
-        """
-        if self.__inited:
-            setattr(self.__instance, name, value)
-        else:
-            self.__dict__[name] = value
-
-    def __cmp__(self, other):
-        """Compare me [to another RemoteCacheProxy.
-        """
-        if isinstance(other, RemoteCacheProxy):
-            return cmp(self.__instance, other.__instance)
-        else:
-            return cmp(self.__instance, other)
-
-    def __hash__(self):
-        """Hash me.
-        """
-        return hash(self.__instance)
-
-    def __del__(self):
-        """Do distributed reference counting on finalize.
-        """
-        try:
-            self.__broker.decCacheRef(self.__luid)
-        except:
-            traceback.print_exc(file=log.logfile)
 
 
 class Local:
@@ -937,6 +889,10 @@ class _NetJellier(jelly._Jellier):
         map(sxp.append, tup)
         return self._preserve(instance, sxp)
 
+class _RemoteCacheDummy:
+    """Ignore.
+    """
+
 class _NetUnjellier(jelly._Unjellier):
     """An unjellier for PB.
 
@@ -959,17 +915,35 @@ class _NetUnjellier(jelly._Unjellier):
     def _unjelly_cache(self, rest):
         global copyTags
         luid = rest[0]
-        cNotProxy = copyTags[rest[1]]()
-        cProxy = RemoteCacheProxy(self.broker, cNotProxy, luid)
+        cNotProxy = _RemoteCacheDummy() #copyTags[rest[1]]()
+        cNotProxy.broker = self.broker
+        cNotProxy.luid = luid
+        cNotProxy.__class__ = copyTags[rest[1]]
+        cProxy = _RemoteCacheDummy() # (self.broker, cNotProxy, luid)
+        cProxy.__class__ = cNotProxy.__class__
+        cProxy.__dict__ = cNotProxy.__dict__
+        init = getattr(cProxy, "__init__", None)
+        if init:
+            init()
+        cProxy.setCopyableState(self._unjelly(rest[2]))
+        # Might have changed due to setCopyableState method; we'll assume that
+        # it's bad form to do so afterwards.
+        cNotProxy.__dict__ = cProxy.__dict__
+        # chomp, chomp -- some existing code uses "self.__dict__ =", some uses
+        # "__dict__.update".  This is here in order to handle both cases.
+        cNotProxy.broker = self.broker
+        cNotProxy.luid = luid
+        # Must be done in this order otherwise __hash__ isn't right!
         self.broker.cacheLocally(luid, cNotProxy)
-        cNotProxy.setCopyableState(self._unjelly(rest[2]))
         self.postCallbacks.append(cProxy.postUnjelly)
         return cProxy
 
     def _unjelly_cached(self, rest):
         luid = rest[0]
         cNotProxy = self.broker.cachedLocallyAs(luid)
-        cProxy = RemoteCacheProxy(self.broker, cNotProxy, luid)
+        cProxy = _RemoteCacheDummy()
+        cProxy.__class__ = cNotProxy.__class__
+        cProxy.__dict__ = cNotProxy.__dict__
         return cProxy
 
     def _unjelly_lcache(self, rest):
@@ -1420,14 +1394,20 @@ class Broker(banana.Banana):
         If the reference count is zero, free the reference, then send an
         'uncached' directive.
         """
+        print 'decaching',objectID
         if self.remotelyCachedObjects[objectID].decref() == 0:
             puid = self.remotelyCachedObjects[objectID].object.processUniqueID()
             del self.remotelyCachedLUIDs[puid]
             del self.remotelyCachedObjects[objectID]
+            self.sendCall("uncache", objectID)
 
     def proto_uncache(self, objectID):
         """(internal) Tell the client it is now OK to uncache an object.
         """
+        obj = self.locallyCachedObjects[objectID]
+        def reallyDel(obj=obj):
+            obj.__really_del__()
+        obj.__del__ = reallyDel
         del self.locallyCachedObjects[objectID]
 
 class BrokerFactory(protocol.Factory, styles.Versioned, coil.Configurable):
@@ -1507,7 +1487,7 @@ class IdentityWrapper(Referenceable):
         # self.broker.perspectives.append((perspective, remoteRef, self.identity))
         self.broker.notifyOnDisconnect(
             _Detacher(perspective, remoteRef, self.identity).detach)
-        return AsReferenceable(perspective)
+        return AsReferenceable(perspective, "perspective")
 
     # (Possibly?) TODO: Implement 'remote_detach' as well.
 

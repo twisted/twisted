@@ -17,7 +17,7 @@
 
 
 """
-This is the beginnings of a Python interpreter in Python.
+This is the beginnings of a Python virtual machine in Python.
 """
 
 import dis
@@ -142,6 +142,7 @@ class Function(Object):
     def operator_call(self, args, kw, old):
         argmap = {}
         if len(args) > self.func_code.co_argcount:
+            print args
             assert 0, 'too many args'
         for argn in range(len(args)):
             argmap[self.func_code.co_varnames[argn]] = args[argn]
@@ -169,7 +170,7 @@ class Class(Object):
 
     def operator_getattr(self, attr, frame):
         if self.dict.has_key(attr):
-            obj = dict[attr]
+            obj = self.dict[attr]
             if isinstance(obj, Function):
                 obj = Method(self, None, obj)
             frame.push(obj)
@@ -184,6 +185,9 @@ class Class(Object):
         if obj is not None:
             frame.push(wrap(obj))
             return frame
+        if self.dict.has_key(attr):
+            if isinstance(self.dict[attr], Function):
+                return Method(self, None, self.dict[attr])
         assert 0, "attribute error"
         
 
@@ -198,7 +202,8 @@ class Method(Object):
         if self.im_self is not None:
             return self.im_func.operator_call((self.im_self,)+args, kw, frame)
         else:
-            assert isinstance(args[0], Instance) and args[0].classobj == self.im_self, 'wrong type for method'
+##            if not (isinstance(args[0], Instance) and args[0].classobj == self.im_self):
+##                raise something
             return self.im_func.operator_call(args, kw, frame)
 
 class Instance(Object):
@@ -343,6 +348,11 @@ class Frame(Object):
 
     def op_POP_BLOCK(self, none):
         self.blockstack.pop()
+        return 1, self
+
+    def op_END_FINALLY(self, none):
+        print 'op end finally!'
+        return 1, self
 
     def op_CALL_FUNCTION(self, (posparam, varparam)):
         args = []
@@ -451,7 +461,8 @@ class Frame(Object):
         TOS = self.pop()
         TOS1 = self.pop()
         # XXX TOS1 + TOS
-        self.push("DUMMY")
+        print TOS, TOS1
+        self.push(TOS1.operator_add(TOS, self))
         return 1, self
 
     def op_LOAD_CONST(self, const):
@@ -539,7 +550,7 @@ def wrap(obj):
 def instance_create(klass, inst, args, kw):
     try:
         func = klass.__init__
-    except:
+    except AttributeError:
         return inst
     else:
         func((inst,)+args, kw)
@@ -577,6 +588,8 @@ if __name__ == '__main__':
     ##        print 'bye'
         class foo:
             x = 1
+            def __init__(self):
+                print self
         f = foo()
         return 1
     dis.dis(dostuff)

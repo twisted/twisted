@@ -5,14 +5,13 @@ from twisted.spread import pb
 from twisted.enterprise import adbapi
 from twisted.web import widgets, server
 
-import gadgets
-import service
+from twisted.forum import gadgets, service
 
 # Create Twisted application object
 application = main.Application("forum")
 
 # Connect to a database.
-dbpool = adbapi.ConnectionPool("pyPgSQL.PgSQL", "localhost:5432", database="sean")
+dbpool = adbapi.ConnectionPool("pyPgSQL.PgSQL", database="twisted")
 
 # Create the service
 forumService = service.ForumService("posting", application, dbpool)

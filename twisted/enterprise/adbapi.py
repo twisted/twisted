@@ -13,8 +13,7 @@ import traceback
 class Transaction:
     def __init__(self, pool, connection):
         self._connection = connection
-        self._cursor = connection.cursor()
-        self.cursor = connection.cursor
+        cursor = self._cursor = connection.cursor()
         self.execute = cursor.execute
         self.fetchone = cursor.fetchone
         self.executemany = cursor.executemany
@@ -63,6 +62,9 @@ class ConnectionPool(pb.Referenceable):
         try:
             curs.execute(qstr)
             if eater is not None:
+                # XXX BROKEN!  Need to close the cursor after the records have
+                # all been fetched.  Also need to actually loop over the full
+                # set of records rather than just getting one chunk.
                 task.schedule(eater, curs.fetchmany(chunkSize))
                 result = None
             else:
@@ -100,32 +102,33 @@ class ConnectionPool(pb.Referenceable):
     def operation(self, qstr, callback, errback, eater=None, chunkSize=1):
         threadtask.dispatch(callback, errback, self._runOperation, qstr)
 
-    def interact(self, interaction, callback, errback):
+    def interaction(self, interaction, callback, errback, *args, **kw):
         """Interact with the database.
 
         Arguments:
 
-          * interaction: a callable object which takes 1 argument; a transaction.
+          * interaction: a callable object whose first argument is an adbapi.Transaction.
+          
+          * *args and **kw: additional arguments to be passed to 'interaction'
 
-        The callable object presented here will be executed in an arbitrary
-        thread.  'callback' will be made in the main thread upon success and
-        'errback' will be called upon failure.  If 'callback' is called, that
-        means that the transaction was committed; if 'errback', it was rolled
-        back.  This does not apply in databases which do not support
-        transactions.
+        The callable object presented here will be executed in a pooled thread.
+        'callback' will be made in the main thread upon success and 'errback'
+        will be called upon failure.  If 'callback' is called, that means that
+        the transaction was committed; if 'errback', it was rolled back.  This
+        does not apply in databases which do not support transactions.
         """
-        threadtask.dispatch(callback, errback, self._runInteraction, interaction)
+        apply(threadtask.dispatch, (callback, errback, self._runInteraction, interaction) + args, kw)
 
-    def _runInteraction(self, interaction):
-        if not trans:
-            self.transactions[tid] = trans = Transaction(self, self.connect())
+    def _runInteraction(self, interaction, *args, **kw):
+        trans = Transaction(self, self.connect())
         try:
-            interaction(trans)
+            apply(interaction, (trans,)+args, kw)
         except:
-            print 'Exception in SQL query!  rolling back...'
+            print 'Exception in SQL interaction!  rolling back...'
             trans._connection.rollback()
             raise
         else:
+            trans._cursor.close()
             trans._connection.commit()
 
             
@@ -180,5 +183,10 @@ class Augmentation:
         d.addCallbacks(callback or self.operationDone,
                        errback or self.operationError)
         self.dbpool.operation(updateSQL, d.callback, d.errback)
+        return d
+
+    def runInteraction(self, interaction, *args, **kw):
+        d = defer.Deferred()
+        apply(self.dbpool.interaction, (interaction,d.callback,d.errback,)+args, kw)
         return d
 

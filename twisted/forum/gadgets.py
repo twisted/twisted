@@ -28,7 +28,7 @@ class ForumGadget(widgets.Gadget, widgets.StreamWidget):
         self.service = service
         self.putWidget('threads', ThreadsGadget(self.app, self.service))
         self.putWidget('posts',   PostsGadget(self.app, self.service))
-        self.putWidget('full',    FullGadget(self.app, self.service))                
+        self.putWidget('full',    FullGadget(self.app, self.service))
         self.putWidget('details', DetailsGadget(self.app, self.service))
         self.putWidget('reply',   ReplyForm(self.app, self.service))
         self.putWidget('new',     NewPostForm(self.app, self.service))
