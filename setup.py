@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.37 2002/04/27 22:51:31 glyph Exp $
+$Id: setup.py,v 1.38 2002/05/27 23:46:56 carmstro Exp $
 """
 
 import distutils, os, sys, string
@@ -153,7 +153,7 @@ class install_data_twisted(install_data):
 ### Call setup()
 #############################################################################
 
-ver = string.replace(copyright.version, '-', '_') #RM doesn't like '-'
+ver = string.replace(copyright.version, '-', '_') #RPM doesn't like '-'
 setup_args = {
     'name': "Twisted",
     'version': ver,
@@ -177,14 +177,11 @@ your toaster.
         "twisted.coil.plugins",
         "twisted.cred",
         "twisted.enterprise",
-        # "twisted.forum",
         "twisted.im",
         "twisted.internet",
-        "twisted.lumberjack",
         "twisted.mail",
         "twisted.manhole",
         "twisted.manhole.ui",
-        # "twisted.metrics",
         "twisted.names",
         "twisted.persisted",
         "twisted.protocols",
