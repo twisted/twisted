@@ -20,13 +20,10 @@
 """
 
 
-import os
 import time
 import string
 import operator
-import stat
 import md5
-import binascii
 
 from twisted.protocols import basic
 from twisted.internet import protocol
@@ -34,6 +31,36 @@ from twisted.internet import defer
 from twisted.python import components
 from twisted.python import log
 from twisted import cred
+import twisted.cred.error
+import twisted.cred.credentials
+
+##
+## Authentication
+##
+class IAPOP(cred.credentials.ICredentials):
+    """
+    @ivar magic: The challenge bytes
+    @ivar username: The username
+    @ivar digest: The response bytes
+    """
+    def check(self, password):
+        """Validate against the given password"""
+
+class APOPCredentials:
+    __implements__ = (IAPOP,)
+    
+    def __init__(self, magic, username, digest):
+        self.magic = magic
+        self.username = username
+        self.digest = digest
+    
+    def check(self, password):
+        seed = self.magic + password
+        my_digest = md5.new(seed).hexdigest()
+        if my_digest == self.digest:
+            return True
+        return False   
+##
 
 class POP3Error(Exception):
     pass
@@ -43,6 +70,10 @@ class POP3(basic.LineReceiver):
     magic = None
     _userIs = None
     highest = 0
+    
+    # A reference to the newcred Portal instance we will authenticate
+    # through.
+    portal = None
     
     def connectionMade(self):
         if self.magic is None:
@@ -73,12 +104,13 @@ class POP3(basic.LineReceiver):
         raise POP3Error("Unknown protocol command: " + command)
 
     def do_APOP(self, user, digest):
-        d = defer.maybeDeferred(None, self.authenticateUserAPOP, user, digest)
+        d = defer.maybeDeferred(self.authenticateUserAPOP, user, digest)
         d.addCallbacks(self._cbMailbox, self._ebMailbox
         ).addErrback(self._ebUnexpected)
     
-    def _cbMailbox(self, mbox):
-        self.mbox = mbox
+    def _cbMailbox(self, (interface, avatar, logout)):
+        self.mbox = avatar
+        self._onLogout = logout
         self.successResponse('Authentication succeeded')
     
     def _ebMailbox(self, failure):
@@ -95,7 +127,7 @@ class POP3(basic.LineReceiver):
     def do_PASS(self, password):
         user = self._userIs
         self._userIs = None
-        d = defer.maybeDeferred(None, self.authenticateUserAPOP, user, password)
+        d = defer.maybeDeferred(self.authenticateUserAPOP, user, password)
         d.addCallbacks(self._cbMailbox, self._ebMailbox
         ).addErrback(self._ebUnexpected)
 
@@ -206,22 +238,48 @@ class POP3(basic.LineReceiver):
         self.transport.loseConnection()
 
     def authenticateUserAPOP(self, user, digest):
-        """Stub for APOP authentication.
+        """Perform authentication of an APOP login.
         
-        Override this to perform some useful operation
+        @type user: C{str}
+        @param user: The name of the user attempting to log in.
+        
+        @type digest: C{str}
+        @param digest: The response string with which the user replied.
+        
+        @rtype: C{Deferred}
+        @return: A deferred whose callback invoked if the login is
+        successful, and whose errback will be invoked otherwise.
         """
-        return Mailbox()
+        if self.portal is not None:
+            return self.portal.login(
+                APOPCredentials(self.magic, user, digest),
+                None,
+                None
+            )
+        return defer.fail(cred.error.UnauthorizedLogin())
 
     def authenticateUserPASS(self, user, password):
-        """Stub for USER/PASS authentication.
+        """Perform authentication of a username/password login.
         
-        Override this to perform some useful operation
+        @type user: C{str}
+        @param user: The name of the user attempting to log in.
+        
+        @type password: C{str}
+        @param password: The password to attempt to authenticate with.
+        
+        @rtype: C{Deferred}
+        @return: A deferred whose callback invoked if the login is
+        successful, and whose errback will be invoked otherwise.
         """
-        return Mailbox()
-
+        if self.portal is not None:
+            return self.portal.login(
+                cred.credentials.UsernamePassword(user, password),
+                None,
+                None
+            )
+        return defer.fail(cred.error.UnauthorizedLogin())
 
 class IMailbox(components.Interface):
-    
     def listMessages(self, i=None):
         """"""
 
@@ -241,8 +299,9 @@ class IMailbox(components.Interface):
         """"""
 
 class Mailbox:
+    __implements__ = (IMailbox,)
 
-    def listMessages(self):
+    def listMessages(self, i=None):
         return []
     def getMessage(self, i):
         raise ValueError
@@ -298,8 +357,7 @@ class POP3Client(basic.LineReceiver):
             if method is not None:
                 method(*args)
         except:
-            from twisted.python import log
-            log.deferr()
+            log.err()
 
     def lineReceived(self, line):
         if self.mode == SHORT or self.mode == FIRST_LONG:
@@ -314,13 +372,12 @@ class POP3Client(basic.LineReceiver):
                 line = line[1:]
             self._dispatch(self.command+"_continue", None, line)
 
-    def apopAuthenticate(self, user, password):
-        digest = md5.new(magic+password).digest()
-        digest = string.join(map(lambda x: "%02x"%ord(x), digest), '')
+    def apopAuthenticate(self, user, password, magic):
+        digest = md5.new(magic + password).hexdigest()
         self.apop(user, digest)
 
     def apop(self, user, digest):
-        self.sendLong('APOP', user+' '+digest)
+        self.sendLong('APOP', ' '.join(user, digest))
     def retr(self, i):
         self.sendLong('RETR', i)
     def dele(self, i):

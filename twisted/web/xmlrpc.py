@@ -110,7 +110,7 @@ class XMLRPC(resource.Resource):
             )
         else:
             request.setHeader("content-type", "text/xml")
-            defer.maybeDeferred(None, function, *args).addErrback(
+            defer.maybeDeferred(function, *args).addErrback(
                 self._ebRender
             ).addCallback(
                 self._cbRender, request

@@ -441,7 +441,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             uncoded = base64.decodestring(result)
         except TypeError:
             raise error.Unauthorized, "Malformed Response - not base64"
-        d = maybeDeferred(None, auth.authenticateResponse, savedState, uncoded)
+        d = maybeDeferred(auth.authenticateResponse, savedState, uncoded)
         d.addCallbacks(
             self.__cbAuthResp,
             self.__ebAuthResp,
@@ -476,7 +476,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if len(args) != 2:
             self.sendBadResponse(tag, 'Wrong number of arguments')
         else:
-            maybeDeferred(None, self.authenticateLogin, *args).addCallbacks(
+            maybeDeferred(self.authenticateLogin, *args).addCallbacks(
                 self.__cbLogin, self.__ebLogin, (tag,), None, (tag,), None
             )
 
@@ -632,7 +632,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         names = names[1]
         mbox = self.account.select(mailbox, 0)
         if mbox:
-            maybeDeferred(None, mbox.requestStatus, names).addCallbacks(
+            maybeDeferred(mbox.requestStatus, names).addCallbacks(
                 self.__cbStatus, self.__ebStatus,
                 (tag, mailbox), None, (tag, mailbox), None
             )
@@ -726,7 +726,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def select_CLOSE(self, tag, args):
         if self.mbox.isWriteable():
-            maybeDeferred(None, self.mbox.expunge).addCallbacks(
+            maybeDeferred(self.mbox.expunge).addCallbacks(
                 self.__cbClose, self.__ebClose, (tag,), None, (tag,), None
             )
         else:
@@ -746,7 +746,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def select_EXPUNGE(self, tag, args):
         if self.mbox.isWriteable():
-            maybeDeferred(None, self.mbox.expunge).addCallbacks(
+            maybeDeferred(self.mbox.expunge).addCallbacks(
                 self.__cbExpunge, self.__ebExpunge, (tag,), None, (tag,), None
             )
         else:
@@ -769,7 +769,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def select_SEARCH(self, tag, args, uid=0):
         query = parseNestedParens(args)
-        maybeDeferred(None, self.mbox.search, query, uid=uid).addCallbacks(
+        maybeDeferred(self.mbox.search, query, uid=uid).addCallbacks(
             self.__cbSearch, self.__ebSearch,
             (tag,), None, (tag,), None
         )
@@ -792,7 +792,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         query = parseNestedParens(args)
         while len(query) == 1 and isinstance(query[0], types.ListType):
             query = query[0]
-        maybeDeferred(None, self.mbox.fetch, messages, query, uid=uid).addCallbacks(
+        maybeDeferred(self.mbox.fetch, messages, query, uid=uid).addCallbacks(
             self.__cbFetch, self.__ebFetch,
             (tag,), None, (tag,), None
         )
@@ -829,7 +829,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         else:
             mode = 0
 
-        maybeDeferred(None, self.mbox.store, messages, flags, mode, uid=uid).addCallbacks(
+        maybeDeferred(self.mbox.store, messages, flags, mode, uid=uid).addCallbacks(
             self.__cbStore, self.__ebStore, (tag, silent), None, (tag,), None
         )
 
@@ -853,7 +853,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if not mbox:
             self.sendNegativeResponse(tag, 'No such mailbox: ' + parts[1])
         else:
-            maybeDeferred(None,
+            maybeDeferred(
                 self.mbox.fetch, messages,
                 ['BODY', [], 'INTERNALDATE', 'FLAGS'],
                 uid=uid
@@ -1317,7 +1317,7 @@ class IMAP4Client(basic.LineReceiver):
         @return: A deferred whose callback is invoked if login is successful
         and whose errback is invoked otherwise.
         """
-        d = maybeDeferred(None, self.getCapabilities)
+        d = maybeDeferred(self.getCapabilities)
         d.addCallbacks(
             self.__cbLoginCaps,
             self.__ebLoginCaps,
