@@ -18,8 +18,10 @@
 Gnutella, v0.4
 http://www9.limewire.com/developer/gnutella_protocol_0.4.pdf
 
-This module is incomplete.  The "GnutellaTalker" class is almost complete.
-The "GnutellaRouter" and "GnutellaServent" classes are yet to be written.
+This module is incomplete.  The "GnutellaTalker" class is complete.  The
+"GnutellaPinger" and "GnutellaPonger" are complete and able to chat with one
+another.  The "GnutellaRouter" and "GnutellaServent" classes are yet to be
+written.
 """
 
 # system imports
