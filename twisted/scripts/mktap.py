@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -15,6 +14,16 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+#
+# $Id: mktap.py,v 1.2 2002/03/19 00:03:14 jh Exp $
+
+""" Implementation module for the `mktap` command.
+"""
+## Copied from bin/mktap 1.26!
+
+"""
+This might have to be added to the stubs created in setup.py;
+since it does not say what it really does, I cannot say for now.
 
 ### Twisted Preamble
 # This makes sure that users don't have to set up their environment
@@ -26,6 +35,7 @@ if string.find(os.path.abspath(sys.argv[0]),'Twisted') != -1:
         os.path.dirname(os.path.abspath(sys.argv[0]))))
 sys.path.append('.')
 ### end of preamble
+"""
 
 from twisted.protocols import telnet
 from twisted.internet import app, tcp
@@ -35,9 +45,14 @@ from twisted.manhole import service
 manholeService = service
 del service
 
-import sys, traceback, os, cPickle, glob
+import sys, traceback, os, cPickle, glob, string
 
 from twisted.python.plugin import getPlugIns
+
+
+# !!! This code makes it hard to NOT run it as top-level code;
+# should be refactored; also, I bet that it shares a lot with
+# other scripts (i.e. is badly cut'n'pasted).
 
 try:
     plugins = getPlugIns("tap")
@@ -54,7 +69,6 @@ for plug in plugins:
     tapLookup[shortTapName] = plug
 
 tapMods = tapLookup.keys()
-
 
 class GeneralOptions(usage.Options):
     synopsis="""\
@@ -78,7 +92,7 @@ Usage::
                   ['manholePort', None, pb.portno]]
 
     help = 0
-    
+
     def opt_help(self):
         """display this message"""
         # Ugh, we can't print the help now, we need to let getopt
@@ -88,6 +102,7 @@ Usage::
     def parseArgs(self, *args):
         self.args = args
 
+
 def getModule(type):
     try:
         mod = tapLookup[type].load()
@@ -96,64 +111,72 @@ def getModule(type):
         print """Please select one of: %s""" % string.join(tapMods)
         sys.exit(2)
 
-options = GeneralOptions()
-if hasattr(os, 'getgid'):
-    options.uid = os.getuid()
-    options.gid = os.getgid()
-try:
-    options.parseOptions(sys.argv[1:])
-except Exception, e:
-    print str(e)
-    print str(options)
-    sys.exit(2)
+# Rest of code in "run"
 
-if options.help or not options.args:
-    if options.args:
-        mod = getModule(options.args[0])
-        config = mod.Options()
-        config.opt_help()
-        sys.exit()
+def run():
+    options = GeneralOptions()
+    if hasattr(os, 'getgid'):
+        options.uid = os.getuid()
+        options.gid = os.getgid()
+    try:
+        options.parseOptions(sys.argv[1:])
+    except Exception, e:
+        print str(e)
+        print str(options)
+        sys.exit(2)
+
+    if options.help or not options.args:
+        if options.args:
+            mod = getModule(options.args[0])
+            config = mod.Options()
+            config.opt_help()
+            sys.exit()
+        else:
+            usage.Options.opt_help(options)
+            sys.exit()
     else:
-        usage.Options.opt_help(options)
-        sys.exit()
-else:
-    mod = getModule(options.args[0])
-try:
-    config = mod.Options()
-    config.parseOptions(options.args[1:])
-except usage.error, ue:
-    print "Usage Error: %s" % ue
-    config.opt_help()
-    sys.exit(1)
+        mod = getModule(options.args[0])
+    try:
+        config = mod.Options()
+        config.parseOptions(options.args[1:])
+    except usage.error, ue:
+        print "Usage Error: %s" % ue
+        config.opt_help()
+        sys.exit(1)
 
-if not options.append:
-    a = app.Application(options.args[0], int(options.uid), int(options.gid))
-else:
-    a = cPickle.load(open(options.append))
+    if not options.append:
+        a = app.Application(options.args[0], int(options.uid), int(options.gid))
+    else:
+        a = cPickle.load(open(options.append))
 
-haveBroker = 0
-mod.updateApplication(a, config)
+    haveBroker = 0
+    mod.updateApplication(a, config)
 
-# backwards compatible interface
-if hasattr(mod, "getPorts"):
-    print "The use of getPorts() is deprecated."
-    for portno, factory in mod.getPorts():
-        a.listenTCP(portno, factory)
+    # backwards compatible interface
+    if hasattr(mod, "getPorts"):
+        print "The use of getPorts() is deprecated."
+        for portno, factory in mod.getPorts():
+            a.listenTCP(portno, factory)
 
-# this seems a rather broken mechanism
-for proto in a.ports:
-    if isinstance(proto, pb.BrokerFactory):
-        haveBroker = 1
-        break
+    # this seems a rather broken mechanism
+    for proto in a.ports:
+        if isinstance(proto, pb.BrokerFactory):
+            haveBroker = 1
+            break
 
-# Would you like a manhole with that?
-if options.manholePass:
-    if not haveBroker:
-        bkr = pb.BrokerFactory(pb.AuthRoot(a))
-        a.listenTCP(options.manholePort, bkr)
+    # Would you like a manhole with that?
+    if options.manholePass:
+        if not haveBroker:
+            bkr = pb.BrokerFactory(pb.AuthRoot(a))
+            a.listenTCP(options.manholePort, bkr)
 
-    svc = manholeService.Service(application=a)
-    p = svc.createPerspective(options.manholeUser)
-    p.makeIdentity(options.manholePass)
+        svc = manholeService.Service(application=a)
+        p = svc.createPerspective(options.manholeUser)
+        p.makeIdentity(options.manholePass)
 
-a.save()
+    a.save()
+
+# Make it script-callable for testing purposes
+if __name__ == "__main__":
+    run()
+
