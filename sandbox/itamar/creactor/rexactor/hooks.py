@@ -2,7 +2,7 @@
 
 from twisted.internet import tcp
 
-import tcp as ctcp
+from rexactor import tcp as ctcp
 
 
 class CServer(ctcp._CMixin, tcp.Server):

@@ -3,10 +3,10 @@ from distutils.extension import Extension
 from Pyrex.Distutils import build_ext
 
 setup(
-  name = "creactor",
+  name = "rexactor",
+  packages=["rexactor"],
   ext_modules=[ 
-    Extension("tcp", ["tcp.pyx"]),
-    Extension("sample", ["sample.pyx"]),
+    Extension("rexactor.tcp", ["rexactor/tcp.pyx"]),
     ],
   cmdclass = {'build_ext': build_ext}
 )
