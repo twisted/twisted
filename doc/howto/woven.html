@@ -24,7 +24,8 @@ structures.
 <p>
 Twisted's solution is to provide a Model-View-Controller based
 component framework, which allows you to construct complex HTML
-"Views" out of many small interacting components, or "woven.widgets".
+<q>Views<q> out of many small interacting components, or 
+<code class="API" base="twisted.web">woven.widgets</q>.
 </p>
 
 <p>
@@ -41,8 +42,8 @@ Model View Controller is a development strategy which
 involves breaking up program logic into three separate domains:
 Model objects, whose job it is to contain data; View objects, whose
 job it is to present this data to the user; and Controller objects,
-whose job it is to handle events such as "user input from a form" and
-"fetch URL" and update the model and view with the user's desired changes.
+whose job it is to handle events such as <q>user input from a form</q> and
+<q>fetch URL</q> and update the model and view with the user's desired changes.
 </p>
 
 <p>
@@ -118,13 +119,13 @@ page on our site:
 <a href="listings/TwistedQuotes/WovenQuotes.xhtml" class="html-listing">Listing 1: WovenQuotes.html: Twisted Quotes Web Template</a>
 
 <p>
-Notice that we have placed "model", "view" and "controller"
+Notice that we have placed <q>model</q>, <q>view</q> and <q>controller</q>
 attributes on those elements that we are interested in operating
 on. When DOMTemplate is iterating the template looking for nodes to
 operate on, any node with these attributes will be looked for in both
 the view and controller. If a node has view attribute of "foo" the
 method <code>factory_foo</code> will be looked for in the view, and if a node has a
-controller attribute of "bar" the method <code>factory_bar</code> will be looked
+controller attribute of <q>bar</q> the method <code>factory_bar</code> will be looked
 for in the controller.
 </p>
 
@@ -147,8 +148,8 @@ So, to bring our template to life, we first override setUp to
 prepare the view for rendering. We then add <code>factory_quote</code> and
 <code>factory_title</code> methods on our view subclass. In the case of title we
 can simply return a domwidgets.Text instance. Since this factory was
-called in response to a node with the model attribute set to "title",
-when the node is rendered it will use the "title" attribute of the
+called in response to a node with the model attribute set to <q>title</q>,
+when the node is rendered it will use the <q>title</q> attribute of the
 model as it's data. For our quote factory, we have implemented a
 custom widget. This makes our logic componentized and reusable. The
 same QuoteWidget could potentially be used to render multiple
@@ -168,8 +169,8 @@ DOM text node, and insert it into the tree.
 Finally, we provide a <code>factory_newQuote</code> method on the controller
 which returns a custom InputHandler subclass. There are a few methods
 handlers may override to deal with data, but in this case we override
-"check", which decides if the input the user entered was valid, and
-"commit", which applies the user's input. For check, we simply see if
+<q>check</q>, which decides if the input the user entered was valid, and
+<q>commit</q>, which applies the user's input. For check, we simply see if
 the user entered anything at all; for commit, we append the newly
 entered quote to the end of the quotefile.
 </p>
