@@ -2,9 +2,11 @@
 from interfaces import IConchUser
 from error import ConchError
 from ssh.connection import OPEN_UNKNOWN_CHANNEL_TYPE
+from twisted.python import components
+from zope import interface
 
 class ConchUser:
-    __implements__ = IConchUser
+    interface.implements(IConchUser)
 
     def __init__(self):
         self.channelLookup = {}
@@ -33,3 +35,4 @@ class ConchUser:
             return 0
         return f(data)
 
+components.backwardsCompatImplements(ConchUser)

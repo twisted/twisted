@@ -30,9 +30,9 @@ class ConchOptions(usage.Options):
                      ['connection-usage', 'K', None],
                      ['port', 'p', None, 'Connect to this port.  Server must be on the same port.'],
                      ['option', 'o', None, 'Ignored OpenSSH options'],
-                     ['host-key-algorithms', '', ''],
-                     ['known-hosts', '', 'File to check for host keys'],
-                     ['user-authentications', '', 'Types of user authentications to use.'],
+                     ['host-key-algorithms', '', None],
+                     ['known-hosts', '', None, 'File to check for host keys'],
+                     ['user-authentications', '', None, 'Types of user authentications to use.'],
                    ]
 
     optFlags = [['version', 'V', 'Display version number only.'],

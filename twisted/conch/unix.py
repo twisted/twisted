@@ -17,6 +17,7 @@
 
 from twisted.cred import portal
 from twisted.python import components, log
+from zope import interface
 from ssh import session, forwarding, filetransfer
 from ssh.filetransfer import FXF_READ, FXF_WRITE, FXF_APPEND, FXF_CREAT, FXF_TRUNC, FXF_EXCL
 from ssh.connection import OPEN_UNKNOWN_CHANNEL_TYPE
@@ -38,11 +39,13 @@ except ImportError:
     utmp = None
 
 class UnixSSHRealm:
-    __implements__ = portal.IRealm
+    interface.implements(portal.IRealm)
 
     def requestAvatar(self, username, mind, *interfaces):
         user = UnixConchUser(username)
         return interfaces[0], user, user.logout
+
+components.backwardsCompatImplements(UnixSSHRealm)
 
 class UnixConchUser(ConchUser):
 
@@ -128,7 +131,7 @@ class UnixConchUser(ConchUser):
 
 class SSHSessionForUnixConchUser:
 
-    __implements__ = ISession
+    interface.implements(ISession)
 
     def __init__(self, avatar):
         self.avatar = avatar
@@ -290,9 +293,11 @@ class SSHSessionForUnixConchUser:
                 self.avatar.conn.transport.sendIgnore('\x00'*(8+len(data)))
         self.oldWrite(data)
 
+components.backwardsCompatImplements(SSHSessionForUnixConchUser)
+
 class SFTPServerForUnixConchUser:
 
-    __implements__ = ISFTPServer
+    interface.implements(ISFTPServer)
 
     def __init__(self, avatar):
         self.avatar = avatar
@@ -376,9 +381,11 @@ class SFTPServerForUnixConchUser:
     def realPath(self, path):
         return self._absPath(path)
 
+components.backwardsCompatImplements(SFTPServerForUnixConchUser
+)
 class UnixSFTPFile:
 
-    __implements__ = ISFTPFile
+    interface.implements(ISFTPFile)
 
     def __init__(self, server, filename, flags, attrs):
         self.server = server
@@ -424,6 +431,8 @@ class UnixSFTPFile:
 
     def setAttrs(self, attrs):
         raise NotImplementedError
+
+components.backwardsCompatImplements(UnixSFTPFile)
 
 class UnixSFTPDirectory:
 

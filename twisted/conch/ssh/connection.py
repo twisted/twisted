@@ -49,8 +49,7 @@ class SSHConnection(service.SSHService):
             self.transport.avatar.conn = self
     
     def serviceStopped(self):
-        for channel in self.channels.values():
-            channel.closed()
+        map(self.channelClosed, self.channels.values())
 
     # packet methods
     def ssh_GLOBAL_REQUEST(self, packet):
@@ -70,9 +69,11 @@ class SSHConnection(service.SSHService):
 
     def ssh_REQUEST_SUCCESS(self, packet):
         data = packet
+        log.msg('RS')
         self.deferreds['global'].pop(0).callback(data)
 
     def ssh_REQUEST_FAILURE(self, packet):
+        log.msg('RF')
         self.deferreds['global'].pop(0).errback(
             error.ConchError('global request failed', packet))
 
@@ -179,11 +180,7 @@ class SSHConnection(service.SSHService):
         log.callWithLogger(channel, channel.closeReceived)
         channel.remoteClosed = 1
         if channel.localClosed and channel.remoteClosed:
-            del self.localToRemoteChannel[localChannel]
-            del self.channels[localChannel]
-            del self.channelsToRemoteChannel[channel]
-            self.deferreds[localChannel] = []
-            log.callWithLogger(channel, channel.closed)
+            self.channelClosed(channel)
 
     def ssh_CHANNEL_REQUEST(self, packet):
         localChannel = struct.unpack('>L', packet[: 4])[0]
@@ -354,11 +351,7 @@ class SSHConnection(service.SSHService):
                                     self.channelsToRemoteChannel[channel]))
         channel.localClosed = 1
         if channel.localClosed and channel.remoteClosed:
-            del self.localToRemoteChannel[channel.id]
-            del self.channels[channel.id]
-            del self.channelsToRemoteChannel[channel]
-            self.deferreds[channel.id] = []
-            log.callWithLogger(channel, channel.closed)
+            self.channelClosed(channel)
 
     # methods to override
     def getChannel(self, channelType, windowSize, maxPacket, data):
@@ -425,6 +418,20 @@ class SSHConnection(service.SSHService):
             return 0
         return f(data)
 
+    def channelClosed(self, channel):
+        """
+        Called when a channel is closed.
+        It clears the local state related to the channel, and calls 
+        channel.closed().
+        MAKE SURE CALL THIS METHOD, even if you subclass SSHConnection.
+        If you don't, things will break mysteriously.
+        """
+        channel.localClosed = channel.remoteClosed = 1
+        del self.localToRemoteChannel[channel.id]
+        del self.channels[channel.id]
+        del self.channelsToRemoteChannel[channel]
+        self.deferreds[channel.id] = []
+        log.callWithLogger(channel, channel.closed)
 
 MSG_GLOBAL_REQUEST = 80
 MSG_REQUEST_SUCCESS = 81

@@ -25,6 +25,7 @@ from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
 from twisted.internet import defer
 from twisted.python import components, failure, reflect
 from credentials import ISSHPrivateKey, IPluggableAuthenticationModules
+from zope import interface
 
 def verifyCryptedPassword(crypted, pw):
     if crypted[0] == '$': # md5_crypt encrypted
@@ -35,7 +36,7 @@ def verifyCryptedPassword(crypted, pw):
 
 class UNIXPasswordDatabase:
     credentialInterfaces = IUsernamePassword,
-    __implements__ = ICredentialsChecker
+    interface.implements(ICredentialsChecker)
 
     def requestAvatarId(self, credentials):
         if pwd:
@@ -66,9 +67,11 @@ class UNIXPasswordDatabase:
         
         return defer.fail(UnauthorizedLogin())
 
+components.backwardsCompatImplements(UNIXPasswordDatabase)
+
 class SSHPublicKeyDatabase:
     credentialInterfaces = ISSHPrivateKey,
-    __implements__ = ICredentialsChecker
+    interface.implements(ICredentialsChecker)
 
     def requestAvatarId(self, credentials):
         if not self.checkKey(credentials):
@@ -114,9 +117,10 @@ class SSHPublicKeyDatabase:
                     continue
         return 0
 
-class PluggableAuthenticationModulesChecker:
-    __implements__ = ICredentialsChecker
+components.backwardsCompatImplements(SSHPublicKeyDatabase)
 
+class PluggableAuthenticationModulesChecker:
+    interface.implements(ICredentialsChecker)
     credentialInterfaces = IPluggableAuthenticationModules,
 
     def requestAvatarId(self, credentials):
@@ -127,8 +131,10 @@ class PluggableAuthenticationModulesChecker:
         d.addCallback(lambda x: credentials.username)
         return d
 
+components.backwardsCompatImplements(PluggableAuthenticationModulesChecker)
+
 class SSHProtocolChecker:
-    __implements__ = ICredentialsChecker
+    interface.implements(ICredentialsChecker)
 
     checkers = {}
 
@@ -146,7 +152,7 @@ class SSHProtocolChecker:
             self.checkers[credentialInterface] = checker
 
     def requestAvatarId(self, credentials):
-        ifac = components.getInterfaces(credentials)
+        ifac = interface.providedBy(credentials)
         for i in ifac:
             c = self.checkers.get(i)
             if c is not None:
@@ -170,3 +176,5 @@ class SSHProtocolChecker:
         avatarId.
         """
         return 1
+
+components.backwardsCompatImplements(SSHProtocolChecker)

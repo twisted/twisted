@@ -1,4 +1,6 @@
 from twisted.cred import credentials
+from twisted.python import components
+from zope import interface
 
 class ISSHPrivateKey(credentials.ICredentials):
     """I encapsulate an SSH public key to be checked against a users private
@@ -16,12 +18,14 @@ class ISSHPrivateKey(credentials.ICredentials):
     """
 
 class SSHPrivateKey:
-    __implements__ = ISSHPrivateKey
+    interface.implements(ISSHPrivateKey)
     def __init__(self, username, blob, sigData, signature):
         self.username = username
         self.blob = blob
         self.sigData = sigData
         self.signature = signature
+
+components.backwardsCompatImplements(SSHPrivateKey)
 
 class IPluggableAuthenticationModules(credentials.ICredentials):
     """I encapsulate the authentication of a user via PAM (Pluggable
@@ -39,11 +43,13 @@ class IPluggableAuthenticationModules(credentials.ICredentials):
     """
 
 class PluggableAuthenticationModules:
-    __implements__ = IPluggableAuthenticationModules
+    interface.implements(IPluggableAuthenticationModules)
 
     def __init__(self, username, pamConversion):
         self.username = username
         self.pamConversion = pamConversion
+
+components.backwardsCompatImplements(PluggableAuthenticationModules)
 
 IUsernamePassword = credentials.IUsernamePassword
 UsernamePassword = credentials.UsernamePassword

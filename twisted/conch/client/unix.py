@@ -256,8 +256,7 @@ class SSHUnixClientProtocol(SSHUnixProtocol):
     def msg_closed(self, lst):
         channelID = lst[0]
         channel = self.channels[channelID]
-        del self.channels[channelID]
-        channel.closed()
+        self.channelClosed(channel)
 
 class SSHUnixServerProtocol(SSHUnixProtocol):
 

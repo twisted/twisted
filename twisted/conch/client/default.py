@@ -78,8 +78,8 @@ def isInKnownHosts(host, pubKey, options):
         return 0
     for line in known_hosts.xreadlines():
         split = line.split()
-#        if len(split) != 3: # old 4-field known_hosts entry (ssh1?)
-#            continue
+        if len(split) < 3:
+            continue
         hosts, hostKeyType, encodedKey = split[:3]
         if host not in hosts.split(','): # incorrect host
             continue
@@ -104,7 +104,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         self.options = options
 
     def serviceStarted(self):
-        if 'SSH_AUTH_SOCK' in os.environ:
+        if 'SSH_AUTH_SOCK' in os.environ and not self.options['noagent']:
             log.msg('using agent')
             cc = protocol.ClientCreator(reactor, agent.SSHAgentClient)
             d = cc.connectUNIX(os.environ['SSH_AUTH_SOCK'])

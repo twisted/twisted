@@ -58,6 +58,12 @@ class SSHClientTransport(transport.SSHClientTransport):
 
     def __init__(self, factory):
         self.factory = factory
+        self.unixServer = None
+
+    def connectionLost(self, reason):
+        transport.SSHClientTransport.connectionLost(self, reason)
+        if self.unixServer:
+            self.unixServer.stopListening()
 
     def receiveError(self, code, desc):
         if not self.factory.d: return
@@ -95,7 +101,8 @@ class SSHClientTransport(transport.SSHClientTransport):
                 peer = self.transport.getPeer()
                 filename = os.path.expanduser("~/.conch-%s-%s-%i" % (user, peer.host, peer.port))
                 try:
-                    reactor.listenUNIX(filename, unix.SSHUnixServerFactory(service), mode=0600, wantPID=1)
+                    u = unix.SSHUnixServerFactory(service)
+                    self.unixServer = reactor.listenUNIX(filename, u, mode=0600, wantPID=1)
                 except Exception, e:
                     log.msg('error trying to listen on %s' % filename)
                     log.err(e)

@@ -15,8 +15,9 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from __future__ import nested_scopes
-import os, struct, sys
-from twisted.conch import checkers, avatar 
+import os, struct, sys, signal
+from twisted.conch import checkers, avatar
+from twisted.conch.client import options, default, connect
 from twisted.conch.error import ConchError
 from twisted.conch.ssh import keys, transport, factory, userauth, connection, common, session,channel
 from twisted.cred import portal
@@ -429,10 +430,6 @@ class SSHTestClientConnection(connection.SSHConnection):
         if self.results == self.totalResults:
             self.transport.expectedLoseConnection = 1
             theTest.fac.proto.expectedLoseConnection = 1
-        if self.results == self.totalResults:
-            self.transport.expectedLoseConnection = 1
-            theTest.fac.proto.expectedLoseConnection = 1
-            #self.loseConnection()
             self.serviceStopped()
             reactor.crash()
 
@@ -824,7 +821,7 @@ class SSHTestOpenSSHProcess(protocol.ProcessProtocol):
         theTest.fac.proto.expectedLoseConnection = 1
 
     def errReceived(self, data):
-        print "ERR(ssh): '%s'" % data
+        log.msg("ERR(ssh): '%s'" % data)
 
     def processEnded(self, reason):
         global theTest
@@ -833,8 +830,19 @@ class SSHTestOpenSSHProcess(protocol.ProcessProtocol):
         self.buf = self.buf.replace('\r\n', '\n')
         theTest.assertEquals(self.buf, 'goodbye\n')
 
+class SSHTestConnectionForUnix(connection.SSHConnection):
+
+    def __init__(self, p, exe, cmds):
+        connection.SSHConnection.__init__(self)
+        self.spawn = (p, exe, cmds)
+
+    def serviceStarted(self):
+        reactor.spawnProcess(*self.spawn)
+
 class SSHTransportTestCase(unittest.TestCase):
 
+    sigchldHandler = None
+    
     def setUp(self):
         open('rsa_test','w').write(privateRSA_openssh)
         open('rsa_test.pub','w').write(publicRSA_openssh)
@@ -843,8 +851,13 @@ class SSHTransportTestCase(unittest.TestCase):
         os.chmod('dsa_test', 33152)
         os.chmod('rsa_test', 33152)
         open('kh_test','w').write('localhost '+publicRSA_openssh)
+        if hasattr(reactor, "_handleSigchld") and hasattr(signal, "SIGCHLD"):
+            self.sigchldHandler = signal.signal(signal.SIGCHLD, reactor._handleSigchld)
 
     def tearDown(self):
+        if self.sigchldHandler:
+            signal.signal(signal.SIGCHLD, self.sigchldHandler)
+
         for f in ['rsa_test','rsa_test.pub','dsa_test','dsa_test.pub', 'kh_test']:
             os.remove(f)
         self.server.stopListening()
@@ -896,6 +909,7 @@ class SSHTransportTestCase(unittest.TestCase):
                    '-oPasswordAuthentication=no '
                    # Always use the RSA key, since that's the one in kh_test.
                    '-oHostKeyAlgorithms=ssh-rsa '
+                   '-a '
                    '-i dsa_test '
                    'localhost '
                    'echo goodbye')
@@ -956,11 +970,13 @@ class SSHTransportTestCase(unittest.TestCase):
         if runtime.platformType == 'win32':
             raise unittest.SkipTest, "can't run cmdline client on win32"
         cmd = ('%s %s -p %i -l testuser '
-               '--known-hosts ./kh_test '
+               '--known-hosts kh_test '
                '--user-authentications publickey '
                '--host-key-algorithms ssh-rsa '
+               '-a '
                '-K direct '
                '-i dsa_test '
+               #'-v '
                'localhost '
                'echo goodbye')
         global theTest
@@ -1010,3 +1026,80 @@ class SSHTransportTestCase(unittest.TestCase):
         except:
             pass
 
+    def testOurServerUnixClient(self):
+        if runtime.platformType == 'win32':
+            raise unittest.SkipTest, "can't run cmdline client on win32"
+        cmd1 = ('-p %i -l testuser '
+                '--known-hosts kh_test '
+                '--user-authentications publickey '
+                '--host-key-algorithms ssh-rsa '
+                '-a '
+                '-K direct '
+                '-i dsa_test '
+                'localhost'
+                )
+        cmd2 = ('%s %s -p %i -l testuser '
+                '-K unix '
+                #'-v '
+                'localhost '
+                'echo goodbye'
+                )
+        global theTest
+        theTest = self
+        realm = ConchTestRealm()
+        p = portal.Portal(realm)
+        p.registerChecker(ConchTestPublicKeyChecker())
+        fac = SSHTestFactory()
+        fac.portal = p
+        theTest.fac = fac
+        self.server = reactor.listenTCP(0, fac, interface="127.0.0.1")
+        port = self.server.getHost().port
+        import twisted
+        exe = sys.executable
+        twisted_path = os.path.dirname(twisted.__file__)
+        conch_path = os.path.abspath('%s/../bin/conch' % twisted_path)
+        cmds1 = (cmd1 % port).split()
+        cmds2 = (cmd2 % (exe, conch_path, port)).split()
+        p = SSHTestOpenSSHProcess()
+        def _failTest():
+            try:
+                os.kill(p.transport.pid, 9)
+            except OSError:
+                pass
+            try:
+                fac.proto.transport.loseConnection()
+            except AttributeError:
+                pass
+            reactor.iterate(0.1)
+            reactor.iterate(0.1)
+            reactor.iterate(0.1)
+            p.done = 1
+            self.fail('test took too long')
+        #env = {'PYTHONPATH':':'.join(sys.path)}
+        timeout = reactor.callLater(10, _failTest)
+        o = options.ConchOptions()
+        def _(host, *args):
+            o['host'] = host
+        o.parseArgs = _
+        o.parseOptions(cmds1)
+        vhk = default.verifyHostKey
+        uao = default.SSHUserAuthClient(o['user'], o, SSHTestConnectionForUnix(p, exe, cmds2))
+        connect.connect(o['host'], int(o['port']), o, vhk, uao)
+        
+        # wait for process to finish
+        while not p.done:
+            reactor.iterate(0.1)
+        # cleanup
+        #os.kill(p1.transport.pid, 9)
+        fac.proto.done = 1
+        fac.proto.transport.loseConnection()
+        reactor.iterate()
+        reactor.iterate()
+        reactor.iterate()
+
+        try:
+            timeout.cancel()
+        except:
+            pass
+
+    #testOurServerUnixClient.skip = "doesn't work yet"
