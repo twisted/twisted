@@ -1,3 +1,19 @@
+# Twisted, the Framework of Your Internet
+# Copyright (C) 2001-2003 Matthew W. Lefkowitz
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+#
 from twisted.trial import unittest
 from twisted.application import app, service
 
@@ -51,19 +67,3 @@ application = service.Application("hello")
 """)
         a1 = app.loadApplication(config, None)
         self.assertEqual(service.IService(a1).name, "hello")
-            
-
-'''
-def loadApplication(config, passphrase):
-def installReactor(reactor):
-def runReactor(config, oldstdout, oldstderr):
-def runReactorWithLogging(config, oldstdout, oldstderr):
-def getPassphrase(needed):
-def getApplication(config, passphrase):
-def reportProfile(report_profile, name):
-def run(runApp, ServerOptions):
-def initialLog():
-def scheduleSave(app):
-def saveApplication(p, type, enc, filename):
-def loadPersisted(filename, kind, passphrase):
-'''
