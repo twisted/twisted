@@ -124,11 +124,15 @@ if os.path.exists(config.pidfile):
 
     try:
         os.kill(pid, 0)
-    except OSError:
-        # The pid doesnt exists.
-        if not config.quiet:
-            print 'Removing stale pidfile %s' % config.pidfile
-        os.remove(config.pidfile)
+    except OSError, why:
+	import errno
+	if why[0] == errno.ESRCH:
+	    # The pid doesnt exists.
+	    if not config.quiet:
+		print 'Removing stale pidfile %s' % config.pidfile
+		os.remove(config.pidfile)
+	else:
+	    sys.exit('Can\'t check status of PID %s from pidfile %s: %s' % (pid, config.pidfile, why[1]))
     else:
         sys.exit('A server is already running, PID %s' %  pid)
 
