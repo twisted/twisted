@@ -1,3 +1,11 @@
+2003-10-21  Andrew Bennetts  <spiv@twistedmatrix.com>
+
+	* twisted/lore/tree.py, twisted/lore/lint.py,
+	doc/howto/stylesheet.css: add a plain 'listing' class, for file
+	listings that aren't python source or HTML.  This has slightly changed
+	the classes in the generated HTML, so custom stylesheets may need
+	updating.
+
 2003-10-19  Brian Warner  <warner@lothar.com>
 
 	* twisted/trial/reporter.py (TextReporter._formatError): use the

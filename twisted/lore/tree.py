@@ -90,16 +90,16 @@ def addPyListings(document, d):
         data = cStringIO.StringIO(text.removeLeadingTrailingBlanks(data))
         htmlizer.filter(data, outfile)
         val = outfile.getvalue()
-        _replaceWithListing(node, val, fn)
+        _replaceWithListing(node, val, fn, "py-listing")
 
 
-def _replaceWithListing(node, val, fn):
-    caption = domhelpers.getNodeText(node)
-    if caption == os.path.basename(fn):
-        caption = 'Source listing'
-    text = ('<div class="py-listing">%s<div class="py-caption">%s - '
-            '<a href="%s"><span class="py-filename">%s</span></a></div></div>' %
-            (val, caption, fn, fn))
+def _replaceWithListing(node, val, fn, class_):
+    captionTitle = domhelpers.getNodeText(node)
+    if captionTitle == os.path.basename(fn):
+        captionTitle = 'Source listing'
+    text = ('<div class="%s">%s<div class="caption">%s - '
+            '<a href="%s"><span class="filename">%s</span></a></div></div>' %
+            (class_, val, captionTitle, fn, fn))
     newnode = microdom.parseString(text).documentElement
     node.parentNode.replaceChild(newnode, node)
 
@@ -110,7 +110,17 @@ def addHTMLListings(document, d):
         fn = node.getAttribute("href")
         val = ('<pre class="htmlsource">\n%s</pre>' %
                cgi.escape(open(os.path.join(d, fn)).read()))
-        _replaceWithListing(node, val, fn)
+        _replaceWithListing(node, val, fn, "html-listing")
+
+
+def addPlainListings(document, d):
+    for node in domhelpers.findElementsWithAttribute(document, "class",
+                                                     "listing"):
+        fn = node.getAttribute("href")
+        val = ('<pre>\n%s</pre>' %
+               cgi.escape(open(os.path.join(d, fn)).read()))
+        _replaceWithListing(node, val, fn, "listing")
+
 
 def getHeaders(document):
     return domhelpers.findElements(document, 
@@ -233,6 +243,7 @@ def munge(document, template, linkrel, d, fullpath, ext, url, config):
     fontifyPython(document)
     addPyListings(document, d)
     addHTMLListings(document, d)
+    addPlainListings(document, d)
     fixLinks(document, ext)
     putInToC(template, generateToC(document))
     footnotes(document)

@@ -90,14 +90,14 @@ pre
   display: block; /* IE hack; prevents following line from being sucked into the py-listing box. */
 }
 
-.py-listing 
+.py-listing, .html-listing, .listing 
 {
   margin: 1ex;
   border: thin solid black;
   background-color: #eee;
 }
 
-.py-listing pre
+.py-listing pre, .html-listing pre, .listing pre
 {
   margin: 0px;
   border: none;
@@ -112,7 +112,7 @@ pre
   border-bottom: thin solid black;
   }
 
-.py-listing .htmlsource
+.html-listing .htmlsource
 {
   margin-top: 0;
   margin-bottom: 0;
@@ -120,14 +120,14 @@ pre
   border-bottom: thin solid black;
   }
 
-.py-caption
+.caption
 {
   text-align: center;
   padding-top: 0.5em;
   padding-bottom: 0.5em;
 }
 
-.py-filename
+.filename
 {
   font-style: italic;
   }

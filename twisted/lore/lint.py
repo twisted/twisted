@@ -205,7 +205,7 @@ span = list2dict(['footnote', 'manhole-output', 'index'])
 
 div = list2dict(['note', 'boxed', 'doit'])
 
-a = list2dict(['py-listing', 'html-listing', 'absolute'])
+a = list2dict(['listing', 'py-listing', 'html-listing', 'absolute'])
 
 pre = list2dict(['python', 'shell', 'python-interpreter', 'elisp'])
 
