@@ -15,8 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-"""
+"""Twisted Words: a Twisted Chat service."""
 
-Twisted Words: a Twisted Chat service.
-
-"""
+import warnings
+warnings.warn("twisted.words will be undergoing a rewrite at some point in the future.")

@@ -15,3 +15,6 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 """Instance Messenger, Pan-protocol chat client."""
+
+import warnings
+warnings.warn("twisted.im will be undergoing a rewrite at some point in the future.")
