@@ -22,7 +22,7 @@ These protocols are either provided by inetd, or are not provided at all.
 import time, struct
 
 # twisted import
-from twisted.internet import protocol
+from twisted.internet import protocol, interfaces
 
 
 class Echo(protocol.Protocol):
@@ -43,6 +43,8 @@ class Discard(protocol.Protocol):
 class Chargen(protocol.Protocol):
     """Generate repeating noise (RFC 864)"""
     noise = r'@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~ !"#$%&?'
+
+    __implements__ = interfaces.IProducer
 
     def connectionMade(self):
         self.transport.registerProducer(self, 0)
