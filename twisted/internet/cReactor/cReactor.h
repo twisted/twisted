@@ -419,6 +419,8 @@ cReactorJob * cReactorJobQueue_PopWait(cReactorJobQueue *queue);
 
 /* Set up the cDelayedCall module */
 void cDelayedCall_init(void);
+/* Set up cReactorTCP */
+void cReactorTCP_init(void);
 
 /* Create a cDelayedCall object. */
 cDelayedCall * cDelayedCall_new(int delay_ms,

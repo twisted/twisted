@@ -95,6 +95,7 @@ initcReactor(void)
         kill(0, SIGTRAP);
     }
     cDelayedCall_init();
+    cReactorTCP_init();
 
     Py_InitModule3("cReactor", cReactor_methods, "The Twisted C Reactor.");
 }

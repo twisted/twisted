@@ -28,6 +28,8 @@
 #include <fcntl.h>
 #include <stdio.h>
 
+static PyObject *CannotListenError;
+
 /* Forward declare the type object. */
 staticforward PyTypeObject cReactorListeningPortType;
 
@@ -318,9 +320,6 @@ cReactorTCP_listenTCP(PyObject *self, PyObject *args, PyObject *kw)
         return NULL;
     }
 
-    if (strlen(interface) > 0) {
-        printf("Warning: cReactor.listenTCP does not yet honor the 'interface' parameter\n");
-    }
 
     /*
     printf("listenTCP: %d ", port);
@@ -362,12 +361,22 @@ cReactorTCP_listenTCP(PyObject *self, PyObject *args, PyObject *kw)
     addr.sin_family         = AF_INET;
     addr.sin_port           = htons(port);
     addr.sin_addr.s_addr    = htonl(INADDR_ANY);
+
+    if (strlen(interface) > 0) {
+        if (inet_aton(interface, &addr.sin_addr) == 0) {
+            close(sock);
+            return PyErr_Format(PyExc_ValueError,
+                                "invalid interface '%s'", interface);
+        }
+    }
     
-    /* Bind. */
+    /* Bind. If this fails, we must return CannotListenError. */
     if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0)
     {
         close(sock);
-        return PyErr_SetFromErrno(PyExc_RuntimeError);
+        PyErr_SetObject(CannotListenError,
+                        Py_BuildValue("sii", interface, port, errno));
+        return NULL;
     }
 
     /* Enable listening. */
@@ -471,6 +480,18 @@ cReactorListeningPort_repr(PyObject *self)
 {
     UNUSED(self);
     return PyString_FromString("<cReactorListeningPort>");
+}
+
+void
+cReactorTCP_init(void)
+{
+    CannotListenError =
+        cReactorUtil_FromImport("twisted.internet.error",
+                                "CannotListenError");
+    if (!CannotListenError) {
+        PyErr_Print();
+        return;
+    }
 }
 
 /* The ListeningPort type. */
