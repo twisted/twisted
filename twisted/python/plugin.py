@@ -92,7 +92,11 @@ def getPlugIns(plugInType, debugInspection=0, showProgress=0):
                     if os.path.exists(tmlname):
                         dropin = DropIn(pname)
                         ns = {'register': dropin.register}
-                        execfile(tmlname, ns)
+                        try:
+                            execfile(tmlname, ns)
+                        except Exception, e:
+                            print "Exception in %s: %s" % (tmlname, e)
+                            continue
                         found = 1
                         if showProgress:
                             log.logfile.write('+')
