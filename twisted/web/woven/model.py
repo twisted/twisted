@@ -52,6 +52,26 @@ try:
 except:
     pass
 
+class DictionaryModel:
+    __implements__ = mvc.IModel
+
+    parent = None
+    name = None
+    def __init__(self, orig):
+        self.orig = orig
+
+    def getSubmodel(self, name):
+        return self.orig[name]
+
+    def setSubmodel(self, name, value):
+        self.orig[name] = value
+
+    def getData(self):
+        return self.orig
+
+    def setData(self, data):
+        setattr(self.parent, self.name, data)
+
 
 class Wrapper:
     __implements__ = mvc.IModel
@@ -78,6 +98,7 @@ from twisted.internet import defer
 
 try:
     components.registerAdapter(ListModel, types.ListType, mvc.IModel)
+    components.registerAdapter(DictionaryModel, types.DictionaryType, mvc.IModel)
     components.registerAdapter(Wrapper, types.StringType, mvc.IModel)
     components.registerAdapter(Wrapper, types.TupleType, mvc.IModel)
     components.registerAdapter(Wrapper, defer.Deferred, mvc.IModel)
