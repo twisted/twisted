@@ -72,17 +72,13 @@ class HTTPPageGetter(http.HTTPClient):
         l = self.headers.get('location')
         if not l:
             self.handleStatusDefault()
-        host, port, url = _parse(l[0])
-        self.factory.host = host
+        host, port, url = _parse(l[0], defaultPort=self.transport.addr[1])
+        # if it's a relative redirect, e.g., /foo, then host==''
+        if host:
+            self.factory.host = host
+        self.factory.port = port
         self.factory.url = url
 
-        # XXX I have _no idea_ what this code that dp wrote was trying
-        # to do, but it's terribly wrong -- radix
-##        if if len(l) >= 5 and l[:5] == 'http:':
-##            self.factory.host = host
-##            self.factory.port = port
-##        else:
-##            self.factory.host, self.factory.port = self.transport.addr
         reactor.connectTCP(self.factory.host, self.factory.port, self.factory)
         self.quietLoss = 1
         self.transport.loseConnection()
@@ -238,10 +234,10 @@ class HTTPDownloader(HTTPClientFactory):
             self.file.write(data)
 
 
-def _parse(url):
+def _parse(url, defaultPort=80):
     parsed = urlparse.urlparse(url)
     url = urlparse.urlunparse(('','')+parsed[2:])
-    host, port = parsed[1], 80
+    host, port = parsed[1], defaultPort
     if ':' in host:
         host, port = host.split(':')
         port = int(port)
