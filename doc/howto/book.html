@@ -15,16 +15,15 @@
     eventually.</p>
 
     <p>The current working theme of this document for code examples is a "quote
-    of the day" server.  While we have no formal repository for such a server
-    yet, it would be useful to structure your code examples as feature
-    additions to this hypothetical service.</p>
+    of the day" server.  Current code for the server is in 
+    <code>listings/TwistedQuotes</code>.</p>
 
     <ul>
       <li>
         Introduction 
 
         <ul>
-          <li>Overview</li>
+          <li><a href="overview.html">Overview</a></li>
 
           <li>
             Feature Breakdown 
@@ -33,32 +32,34 @@
               <li><a href="web-overview.html">Overview of Twisted
               Web</a></li>
 
-              <li>Overview of Twisted Spread</li>
+              <li><a href="pb.html">Overview of Twisted Spread</a></li>
 
               <li><a href="enterprise.html" >Overview of Twisted
               Enterprise</a></li>
 
               <li>Overview of Twisted Internet</li>
 
-              <li>Tying them all together with Twisted Cred &amp;
-              Coil</li>
+              <li><a href="cred.html">Twisted Cred</a></li>
 
               <li>Discussion of examples in Forum, Words, Mail</li>
 
-              <li>Twisted Python and other low-level frequently
-              re-used code</li>
+              <li><a href="options.html">usage.Options HOWTO</a></li>
             </ul>
           </li>
         </ul>
       </li>
 
-      <li class="doit">
+      <li>
         The Basics
 
         <ul>
-          <li >Getting your Server Set Up</li>
+          <li><a href="installing-twisted.html">Installation</a></li>
+          <li><a href="basics.html">Using the Utilities</a></li>
+          <li><a href="using-twistedweb.html">Bringing Up a Web Server</a></li>
+          <li><a href="telnet.html">Using Telnet to Configure Twisted</a></li>
+          <li><a href="manhole.html">Using Manhole to Configure Twisted</a></li>
 
-          <li >Platform support
+          <li>Platform support
           <ul>
             <li>UNIX</li>
             <li>Windows</li>
@@ -71,51 +72,36 @@
         High-Level Twisted
 
         <ul>
+          <li><a href="application.html">Using Application</a></li>
+          <li><a href="plugin.html">Writing a Plugin</a></li>
           <li>
             Asynchronous Programming 
 
             <ul>
               <li>Abstract Concepts</li>
 
-              <li><a href="defer.html">Working with
-              twisted.internet.defer</a></li>
+              <li><a href="defer.html">Deferring execution</a></li>
 
-              <li>Examples of Systems Using Deferreds</li>
             </ul>
           </li>
 
-          <li>
-            Common Application Elements: Using Twisted Cred
-
-            <ul>
-              <li>Simulation model of services</li>
-
-              <li>Distinctions between similar
-              concepts e.g. "plugin" and "service", "perspective"
-              and "identity"</li>
-            </ul>
-          </li>
+          <li><a href="pb-tour.html">Perspective Broker</a></li>
+          <li><a href="pb-cred.html">Twisted Cred Usage</a></li>
 
           <li>
             Web Applications 
 
             <ul>
-              <li>Resources, CGIs, Static Content and Linking in
-              Twisted</li>
+              <li><a href="woven.html">Woven</a></li>
               <li><a href="domtemplate.html">Dynamic Content with DOMTemplate</a>
               </li>
-              <li><a href="widgets.html">Web Widgets</a>
-              <ul>
-                <li>Gadgets, Widgets, Pages: introducing a common
-                look and feel</li>
-                
-                <li>Database queries with Widgets (maybe more space
-                should be devoted to enterprise?)</li>
-              </ul> </li>
+              <li><a href="widgets.html">Web Widgets</a></li>
+              <li><a href="resource-templates.html">Resource Templates</a></li>
               <li>Authentication on the Web</li>
             </ul>
           </li>
 
+          <li><a href="row.html">The Row Database Abstraction</a></li>
           <li>
             Interactive Applications 
 
@@ -137,10 +123,11 @@
         <ul>
           <li>Using the Reactor
           <ul>
+            <li><a href="reactor-basics.html">Reactor Basics</a></li>
             <li>TCP</li>
             <li>UDP</li>
             <li>SSL</li>
-            <li>Time</li>
+            <li><a href="time.html">Time</a></li>
           </ul>
           </li>
 
@@ -155,16 +142,9 @@
             </ul>
           </li>
 
-          <li class="doit">Toolkits: Interfacing Twisted with your toolkit of
-          choice
-          <ul>
-            <li>PyGTK </li>
-            <li>Tkinter </li>
-            <li>WxWindows </li>
-            <li>PyUI </li>
-            <li>MFC </li>
-          </ul> </li>
+          <li><a href="choosing-reactor.html">Choosing a Reactor</a></li>
 
+          <li><a href="threading.html">Using Threads</a></li>
           <li>
             Transports 
 
@@ -180,37 +160,7 @@
         </ul>
       </li>
 
-      <li>
-        Administration and Deployment concerns (Note: Coil isn't
-        actually done yet, but it may be useful to write this
-        section based on what *should* be happening, to get
-        requirements for it...) 
-
-        <ul>
-          <li>Configuring a new service using Coil</li>
-
-          <li class="doit">Writing your service to be a Plugin
-          <ul>
-            <li>For COIL</li>
-            <li>For TAP</li>
-          </ul></li>
-          
-
-          <li>Writing your service to be configurable using
-          Coil</li>
-
-          <li>Creating database interfaces, connecting things to
-          them, etc...</li>
-        </ul>
-      </li>
     </ul>
-    <hr />
-
-    <address>
-      <a href="mailto:glyph@twistedmatrix.com">Glyph Lefkowitz</a>
-    </address>
-    <!-- Created: Wed Jan 23 08:22:16 CST 2002 -->
-    <!-- hhmts start --> Last modified: Thu Jun 20 05:23:15 CDT 2002 <!-- hhmts end -->
   </body>
 </html>
 
