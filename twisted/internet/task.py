@@ -64,6 +64,11 @@ class LoopingCall:
     def stop(self):
         """Stop running function."""
         assert self.running
+        reactor.callLater(0, self._reallyStop)
+    
+    def _reallyStop(self):
+        if not self.running:
+            return
         self.running = False
         if self.call is not None:
             self.call.cancel()
@@ -76,6 +81,7 @@ class LoopingCall:
         try:
             self.f(*self.a, **self.kw)
         except:
+            self.running = False
             d, self.deferred = self.deferred, None
             d.errback()
         else:

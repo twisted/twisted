@@ -53,6 +53,17 @@ class LoopTestCase(unittest.TestCase):
     def _testFailure_yesfailure(self, err):
         err.trap(TestException)
 
+    def testFailAndStop(self):        
+        def foo(x):
+            self.lc.stop()
+            raise TestException(x)
+
+        self.lc = lc = task.LoopingCall(foo, "bar")
+        d = lc.start(0.1)
+        err = unittest.deferredError(d)
+        err.trap(TestException)
+        reactor.iterate() # catch any issues from scheduled stop()
+    
     def testDelayedStart(self):
         ran = []
         def foo():
