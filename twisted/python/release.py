@@ -98,7 +98,7 @@ def sh(command):#, sensitive=0):
     if debug:# or sensitive:
         if raw_input("%r ?? " % command).startswith('n'):
             return
-    print command
+    log.msg(command=command)
     if os.system(command) != 0:
         raise CommandFailed(command)
 
