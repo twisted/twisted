@@ -63,6 +63,10 @@ def format_frames(frames, write, detail="default"):
             for name, val in globalVars:
                 w("  %s : %s\n" %  (name, repr(val)))
 
+# slyphon: i have a need to check for this value in trial
+#          so I made it a module-level constant
+EXCEPTION_CAUGHT_HERE = "--- <exception caught here> ---" 
+
 class Failure:
     """A basic abstraction for an error that has occurred.
 
@@ -309,7 +313,7 @@ class Failure:
         if self.frames:
             w( 'Traceback (most recent call last):\n')
             format_frames(self.stack[-traceupLength:], w)
-            w("--- <exception caught here> ---\n")
+            w("%s\n" % (EXCEPTION_CAUGHT_HERE,))
             format_frames(self.frames, w)
         else:
             w("Failure: ")
@@ -338,7 +342,7 @@ class Failure:
            (self.count,
             (self.pickled and ' (pickled) ') or ' '))
         format_frames(self.stack, w, "verbose")
-        w("--- <exception caught here> ---\n")
+        w("%s\n" % (EXCEPTION_CAUGHT_HERE,))
         format_frames(self.frames, w, "verbose")
         if isinstance(self.value, Failure):
             w(" (chained Failure)\n")

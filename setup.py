@@ -242,6 +242,7 @@ desktop environments, and your toaster.
         "twisted.protocols.gps",
         "twisted.protocols.mice",
         "twisted.python",
+        "twisted.python.pymodules",
         "twisted.runner",
         "twisted.scripts",
         "twisted.spread",

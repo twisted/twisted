@@ -1,249 +1,379 @@
-# -*- test-case-name: twisted.test.test_trial -*-
+# -*- test-case-name: twisted.test.test_trial.TestMktemp -*-
 #
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 #
+# Author: Jonathan D. Simms <slyphon@twistedmatrix.com>
+# Original Author: Jonathan Lange <jml@twistedmatrix.com>
 
-import sys, time, pdb, string, types, inspect, traceback
+from __future__ import generators
 
-from twisted.python import reflect, failure
+import sys, time, pdb, string, types
+import traceback, os.path as osp, warnings
 
-# test results, passed as resultType to Reporter.reportResults()
-SKIP, EXPECTED_FAILURE, FAILURE, ERROR, UNEXPECTED_SUCCESS, SUCCESS = \
-      "skip", "expected failure", "failure", "error", "unexpected success", \
-      "success"
+from twisted.python import reflect, failure, log
+from twisted.python.compat import sets, adict
+from twisted.internet import defer
+from twisted.trial import itrial, util
+import zope.interface as zi
 
-class Reporter:
-    """I report results from a run of a test suite.
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
 
-    In all lists below, 'Results' are either a twisted.python.failure.Failure
-    object, an exc_info tuple, or a string.
+#******************************************************************************
+# turn this off if you're having trouble with traceback printouts or some such
+
+HIDE_TRIAL_INTERNALS = True
+
+#******************************************************************************
+
+# test results, passed as resultType to Reporter.endTest()
+STATUSES = (SKIP, EXPECTED_FAILURE, FAILURE,
+            ERROR, UNEXPECTED_SUCCESS, SUCCESS) = ("skips", "expectedFailures",
+                                                   "failures", "errors",
+                                                   "unexpectedSuccesses",
+                                                   "successes")
+WORDS = {SKIP: '[SKIPPED]',
+         EXPECTED_FAILURE: '[TODO]',
+         FAILURE: '[FAIL]', ERROR: '[ERROR]',
+         UNEXPECTED_SUCCESS: '[SUCCESS!?!]',
+         SUCCESS: '[OK]'}
+
+LETTERS = {SKIP: 'S', EXPECTED_FAILURE: 'T',
+           FAILURE: 'F', ERROR: 'E',
+           UNEXPECTED_SUCCESS: '!', SUCCESS: '.'}
+
+SEPARATOR = '-' * 79
+DOUBLE_SEPARATOR = '=' * 79
+
+_basefmt = "caught exception in %s, your TestCase is broken\n\n"
+SET_UP_CLASS_WARN = _basefmt % 'setUpClass'
+SET_UP_WARN = _basefmt % 'setUp'
+TEAR_DOWN_WARN = _basefmt % 'tearDown'
+TEAR_DOWN_CLASS_WARN = _basefmt % 'tearDownClass'
+DIRTY_REACTOR_POLICY_WARN = "This failure will cause all methods in your class to be reported as ERRORs in the summary"
+UNCLEAN_REACTOR_WARN = "REACTOR UNCLEAN! traceback(s) follow: "
+
+PASSED, FAILED = "PASSED", "FAILED"
+
+methNameWarnMsg = adict(setUpClass = SET_UP_CLASS_WARN,
+                        setUp = SET_UP_WARN,
+                        tearDown = TEAR_DOWN_WARN,
+                        tearDownClass = TEAR_DOWN_CLASS_WARN)
+
+# -------------------------------------------------------------------------------
+
+def formatFailureTraceback(fail):
+    if HIDE_TRIAL_INTERNALS:
+        sio = StringIO()
+        fail.printTraceback(sio)
+        L = []
+        for line in sio.getvalue().split('\n'):
+            if (line.find(failure.EXCEPTION_CAUGHT_HERE) != -1) or L:
+                L.append(line)
+        return "\n".join(L[1:])
+    return fail.getTraceback()
+
+def formatMultipleFailureTracebacks(failList):
+    if failList:
+        s = '\n'.join(["%s\n\n" % itrial.IFormattedFailure(fail) for fail in failList])
+        return s
+    return ''
+
+def formatTestMethodFailures(testMethod):
+    return itrial.IFormattedFailure(testMethod.errors + testMethod.failures)
+
+def makeLoggingMethod(name, f):
+    def loggingMethod(*a, **kw):
+        print "%s.%s(*%r, **%r)" % (name, f.func_name, a, kw)
+        return f(*a, **kw)
+    return loggingMethod
+
+class MethodCallLoggingType(type):
+    def __new__(cls, name, bases, attrs):
+        for (k, v) in attrs.items():
+            if isinstance(v, types.FunctionType):
+                attrs[k] = makeLoggingMethod(name, v)
+        return super(MethodCallLoggingType, cls).__new__(cls, name, bases, attrs)
+
+class TestStatsBase(object):
+    zi.implements(itrial.ITestStats)
+
+    importErrors = None
     
-    @ivar errors: Tests which have encountered an error.
-    @type errors: List of (testClass, method, Results) tuples.
-    @ivar failures: Tests which have failed.
-    @type failures: List of (testClass, method, Results) tuples.
-    @ivar skips: Tests which have been skipped.
-    @type skips: List of (testClass, method, Results) tuples.
-    @ivar expectedFailures: Tests which failed but are marked as 'todo'
-    @type expectedFailures: List of (testClass, method, Results) tuples.
-    @ivar unexpectedSuccesses: Tests which passed but are marked as 'todo'
-    @type unexpectedSuccesses: List of (testClass, method, Results) tuples.
-    @ivar imports: Import errors encountered while assembling the test suite.
-    @type imports: List of (moduleName, exception) tuples.
+    def __init__(self, original):
+        #print "original: %r" % (original,)
+        self.original = original
 
-    @ivar numTests: The number of tests I have reports for.
-    @type numTests: int
-    @ivar expectedTests: The number of tests I expect to run.
-    @type expectedTests: int
-    @ivar debugger: Run the debugger when encountering a failing test.
-    @type debugger: bool
-    """
-    def __init__(self):
-        self.errors = []
-        self.failures = []
-        self.skips = []
-        self.expectedFailures = []
-        self.unexpectedSuccesses = []
-        self.imports = []
-        self.numTests = 0
-        self.expectedTests = 0
-        self.debugger = False
+    def _collect(self):
+        raise NotImplementedError, "should be overridden in subclasses"
 
-    def start(self, expectedTests):
-        self.expectedTests = expectedTests
-        self.startTime = time.time()
+    def get_skips(self):
+        return self._collect(SKIP) 
 
-    def reportImportError(self, name, exc):
-        self.imports.append((name, exc))
+    def get_errors(self):
+        return self._collect(ERROR)
 
-    def reportStart(self, testClass, method):
-        pass
+    def get_failures(self):
+        return self._collect(FAILURE)
 
-    def reportResults(self, testClass, method, resultType, results=None):
-        tup = (testClass, method, results)
-        self.numTests += 1
-        if resultType in (FAILURE, ERROR, EXPECTED_FAILURE):
-            if self.debugger:
-                if isinstance(results, failure.Failure):
-                    print "Failure, not Exception -- can't postmortem."
-                    pdb.set_trace()
-                else:
-                    pdb.post_mortem(results[2])
-        if resultType == SKIP:
-            self.skips.append(tup)
-        elif resultType == FAILURE:
-            self.failures.append(tup)
-        elif resultType == EXPECTED_FAILURE:
-            self.expectedFailures.append(tup)
-        elif resultType == ERROR:
-                self.errors.append(tup)
-        elif resultType == UNEXPECTED_SUCCESS:
-            self.unexpectedSuccesses.append(tup)
-        elif resultType == SUCCESS:
-            pass # SUCCESS COUNTS FOR NOTHING!
-        else:
-            raise ValueError, "bad value for resultType: %s" % resultType
-        
-    def getRunningTime(self):
-        if hasattr(self, 'stopTime'):
-            return self.stopTime - self.startTime
-        else:
-            return time.time() - self.startTime
+    def get_expectedFailures(self):
+        return self._collect(EXPECTED_FAILURE) 
+
+    def get_unexpectedSuccesses(self):
+        return self._collect(UNEXPECTED_SUCCESS)
+
+    def get_successes(self):
+        return self._collect(SUCCESS)
+
+    def runningTime(self):
+        o = self.original
+        return o.endTime - o.startTime
+    runningTime = property(runningTime)
+
+
+class TestStats(TestStatsBase):
+    # this adapter is used for both TestSuite and TestModule objects
+    importErrors = property(lambda self: self.original.couldNotImport.items())
+
+    def _collect(self, status):
+        meths = []
+        for r in self.original.runners:
+            meths.extend(r.methodsWithStatus.get(status, []))
+        return meths     
+
+    def numTests(self):
+        n = 0
+        for r in self.original.runners:
+            n += itrial.ITestStats(r).numTests
+        return n
+    numTests = property(numTests)
 
     def allPassed(self):
-        return not (self.errors or self.failures)
+        for r in self.original.runners:
+            if not itrial.ITestStats(r).allPassed:
+                return False
+        return True
+    allPassed = property(allPassed)
+       
 
-    def stop(self):
-        self.stopTime = time.time()
+class TestCaseStats(TestStatsBase):
+    def _collect(self, status):
+        """return a list of all TestMethods with status"""
+        return self.original.methodsWithStatus.get(status, [])
 
-class MinimalReporter(Reporter):
+    def numTests(self):
+        return len(self.original.methodNames)
+    numTests = property(numTests)
 
-    def __init__(self, fp):
-        Reporter.__init__(self)
-        self.fp = fp
+    def allPassed(self):
+        for status in (ERROR, FAILURE):
+            if status in self.original.methodsWithStatus:
+                return False
+        return True
+    allPassed = property(allPassed)
 
-    def stop(self):
-        Reporter.stop(self)
-        t =  (self.getRunningTime(), self.expectedTests, self.numTests,
-               len(self.imports), len(self.errors), len(self.failures),
-               len(self.skips))
-        self.fp.write(' '.join(map(str,t))+'\n')
 
-class TextReporter(Reporter):
-    SEPARATOR = '-' * 79
-    DOUBLE_SEPARATOR = '=' * 79
 
-    def __init__(self, stream=sys.stdout, tbformat='plain'):
+def formatError(tm, tbformat=None):
+
+    ret = [DOUBLE_SEPARATOR,
+           '%s: %s (%s)\n' % (WORDS[tm.status], tm.name,
+                              reflect.qual(tm.klass))]
+
+    ret.extend([(msg + '\n') for msg in (tm.skip, itrial.ITodo(tm.todo).msg) if msg is not None])
+
+    if tm.status not in (SUCCESS, SKIP, UNEXPECTED_SUCCESS):
+        return "%s\n\n%s" % ('\n'.join(ret), itrial.IFormattedFailure(tm.errors + tm.failures))
+##         for error in util.iterchain(tm.errors, tm.failures):
+##             if error is None:
+##                 continue
+##             elif isinstance(error, failure.Failure):
+##                 # XXX: Need to figure out how to get the right formatting
+##                 if tbformat == 'cgitb':
+##                     import cgitb
+##                     tb = cgitb.text((error.type, error.value, error.tb),
+##                                     context=5)
+##                 else:
+##                     tb = error.getTraceback()  
+##             elif isinstance(error, types.TupleType):
+##                 d = {'plain': traceback,
+##                      'emacs': util}
+##                 tb = ''.join(d[tbformat].format_exception(*error))
+##             else:
+##                 tb = "%s\n" % (error,)
+##             ret.append(str(tb))
+    return '\n'.join(ret)
+    
+
+def formatImportError(name, error):
+    if isinstance(error, failure.Failure):
+        what = error.getBriefTraceback()
+    elif type(error) == types.TupleType:
+        what = error.args[0]
+    else:
+        what = "%s\n" % error
+    ret = "Could not import %s: %s\n" % (name, what)
+    return ret
+
+
+class BrokenTestCaseWarning(Warning):
+    """emitted as a warning when an exception occurs in one of
+    setUp, tearDown, setUpClass, or tearDownClass"""
+
+
+class Reporter(object):
+    zi.implements(itrial.IReporter)
+    zi.classProvides(itrial.IReporterFactory)
+    debugger = None
+
+    def __init__(self, stream=sys.stdout, tbformat='plain', args=None, realtime=False):
         self.stream = stream
         self.tbformat = tbformat
-        Reporter.__init__(self)
+        self.args = args
+        self.realtime = realtime
+        super(Reporter, self).__init__(stream, tbformat, args, realtime)
 
-    def reportResults(self, testClass, method, resultType, results=None):
-        letters = {SKIP: 'S', EXPECTED_FAILURE: 'T',
-                   FAILURE: 'F', ERROR: 'E',
-                   UNEXPECTED_SUCCESS: '!', SUCCESS: '.'}
-        self.write(letters.get(resultType, '?'))
-        Reporter.reportResults(self, testClass, method, resultType, results)
+    def setUpReporter(self):
+        return defer.succeed(None)
 
-    def _formatError(self, flavor, (testClass, method, error)):
-        if isinstance(error, failure.Failure):
-            tb = error.getBriefTraceback()
-        elif isinstance(error, types.TupleType):
-            d = {'plain': traceback,
-                 'emacs': util}
-            tb = ''.join(d[self.tbformat].format_exception(*error))
-        else:
-            tb = "%s\n" % error
+    def tearDownReporter(self):
+        return defer.succeed(None)
 
-        ret = ("%s\n%s: %s (%s)\n%s\n%s" %
-               (self.DOUBLE_SEPARATOR,
-                flavor, method.__name__, reflect.qual(testClass),
-                self.SEPARATOR,
-                tb))
-        return ret
+    def startTest(self, method):
+        pass
 
-    def _formatImportError(self, name, error):
-        if isinstance(error, failure.Failure):
-            what = error.getBriefTraceback()
-        elif type(error) == types.TupleType:
-            what = error.args[0]
-        else:
-            what = "%s\n" % error
-        ret = "Could not import %s: %s\n" % (name, what)
-        return ret
-    
+    def reportImportError(self, name, exc):
+        pass
+
     def write(self, format, *args):
+        s = str(format)
+        assert isinstance(s, type(''))
+
         if args:
-            self.stream.write(format % args)
+            self.stream.write(s % args)
         else:
-            self.stream.write(format)
+            self.stream.write(s)
         self.stream.flush()
 
-    def writeln(self, format=None, *args):
-        if format is not None:
-            self.stream.write(format % args)
-        self.stream.write('\n')
-        self.stream.flush()
+    def startModule(self, name):
+        pass
 
-    def _statusReport(self):
+    def startClass(self, name):
+        pass
+
+    def endModule(self, module):
+        pass
+
+    def endClass(self, klass):
+        pass
+        
+    def upDownError(self, userMeth):
+        minfo = itrial.IMethodInfo(userMeth)
+        tbStr = '\n'.join([e.getTraceback() for e in userMeth.errors]) # if not e.check(unittest.SkipTest)])
+        log.msg(tbStr)
+        msg = "%s%s" % (methNameWarnMsg[minfo.name], tbStr)
+        warnings.warn(msg, BrokenTestCaseWarning, stacklevel=2)
+
+    def cleanupErrors(self, errs):
+        warnings.warn("%s\n%s" % (UNCLEAN_REACTOR_WARN, itrial.IFormattedFailure(errs)),
+                      BrokenTestCaseWarning)
+
+    def endTest(self, method):
+        method = itrial.ITestMethod(method)
+        if self.realtime:
+            for err in util.iterchain(method.errors, method.failures):
+                err.printTraceback(sys.stdout)
+
+##         if method.status in (FAILURE, ERROR, EXPECTED_FAILURE):
+##             if self.debugger:
+##                 pdb.Pdb().set_trace()
+##                 if isinstance(results, failure.Failure):
+##                     print "Failure, not Exception -- can't postmortem."
+##                 else:
+##                     pdb.post_mortem(results[2])
+
+    def _reportStatus(self, tsuite):
+        tstats = itrial.ITestStats(tsuite)
         summaries = []
-        if self.failures:
-            summaries.append('failures=%d' % len(self.failures))
-        if self.errors:
-            summaries.append('errors=%d' % len(self.errors))
-        if self.skips:
-            summaries.append('skips=%d' % len(self.skips))
-        if self.expectedFailures:
-            summaries.append('expectedFailures=%d' % \
-                             len(self.expectedFailures))
-        if self.unexpectedSuccesses:
-            summaries.append('unexpectedSuccesses=%d' % \
-                             len(self.unexpectedSuccesses))
+        for stat in STATUSES:
+            num = len(getattr(tstats, "get_%s" % stat)())
+            if num:
+                summaries.append('%s=%d' % (stat, num))
+
         summary = (summaries and ' ('+', '.join(summaries)+')') or ''
-        if self.failures or self.errors:
-            # maybe include self.unexpectedSuccesses here
-            # do *not* include self.expectedFailures.. that's the whole point
-            status = 'FAILED'
+
+        if tstats.get_failures() or tstats.get_errors():
+            status = FAILED
         else:
-            status = 'OK'
-        return '%s%s' % (status, summary)
+            status = PASSED
+        self.write("%s%s\n", status, summary)
 
-    def stop(self):
-        Reporter.stop(self)
-        self.writeln()
-        for error in self.skips:
-            self.write(self._formatError('SKIPPED', error))
-        for error in self.expectedFailures:
-            self.write(self._formatError('EXPECTED FAILURE', error))
-        for error in self.unexpectedSuccesses:
-            self.write(self._formatError('UNEXPECTED SUCCESS', error))
-        for error in self.failures:
-            self.write(self._formatError('FAILURE', error))
-        for error in self.errors:
-            self.write(self._formatError('ERROR', error))
-        self.writeln(self.SEPARATOR)
-        self.writeln('Ran %d tests in %.3fs', self.numTests, self.getRunningTime())
-        if self.imports:
-            self.writeln()
-            for name, error in self.imports:
-                self.write(self._formatImportError(name, error))
-        self.writeln()
-        self.writeln(self._statusReport())
+    def _reportFailures(self, tstats):
+        for meth in getattr(tstats, "get_%s" % SKIP)():
+            self.write(formatError(meth))
 
-class TimingTextReporter(TextReporter):
+        for status in [EXPECTED_FAILURE, FAILURE, ERROR]:
+            for meth in getattr(tstats, "get_%s" % status)():
+                if meth.hasTbs:
+                    self.write(formatError(meth, self.tbformat))
 
-    def reportStart(self, testClass, method):
-        self.testStartedAt = time.time()
-        self.write('%s (%s) ... ', method.__name__, reflect.qual(testClass))
+        for name, error in tstats.importErrors:
+            self.write(formatImportError(name, error))
 
-    def reportResults(self, testClass, method, resultType, results=None):
-        stopped = time.time()
-        t = stopped-self.testStartedAt
-        words = {SKIP: '[SKIPPED]',
-                 EXPECTED_FAILURE: '[TODO]',
-                 FAILURE: '[FAIL]', ERROR: '[ERROR]',
-                 UNEXPECTED_SUCCESS: '[SUCCESS!?!]',
-                 SUCCESS: '[OK]'}
-        self.writeln(words.get(resultType, "[??]")+" "+"(%.02f secs)" % t)
-        Reporter.reportResults(self, testClass, method, resultType, results)
+    def endSuite(self, suite):
+        tstats = itrial.ITestStats(suite)
+        self.write("\n")
+        self._reportFailures(tstats)
+
+        self.write("%s\n" % SEPARATOR)
+        self.write('Ran %d tests in %.3fs\n', tstats.numTests,
+                   tstats.runningTime)
+        self.write('\n')
+        self._reportStatus(suite)
+
+
+class MinimalReporter(Reporter):
+    def endSuite(self, suite):
+        tstats = itrial.ITestStats(suite)
+        t = (tstats.runningTime, tstats.numTests, tstats.numTests,
+             # XXX: expectedTests == runTests
+             len(tstats.importErrors), len(tstats.errors),
+             len(tstats.failures), len(tstats.skips))
+        self.stream.write(' '.join(map(str,t))+'\n')
+
+
+class TextReporter(Reporter):
+    def __init__(self, stream=sys.stdout, tbformat='plain', args=None, realtime=False):
+        super(TextReporter, self).__init__(stream, tbformat, args, realtime)
+        self.seenModules, self.seenClasses = sets.Set(), sets.Set()
+
+    def endTest(self, method):
+        self.write(LETTERS.get(itrial.ITestMethod(method).status, '?'))
+        super(TextReporter, self).endTest(method)
+
 
 class VerboseTextReporter(TextReporter):
+    # This is actually the bwverbose option
+    def startTest(self, method):
+        tm = itrial.ITestMethod(method)
+        self.write('%s (%s) ... ', tm.name, reflect.qual(tm.klass))
+        super(VerboseTextReporter, self).startTest(method)
+        
+    def endTest(self, method):
+        self.write("%s\n" % WORDS.get(itrial.ITestMethod(method).status, "[??]"))
 
-    def reportStart(self, testClass, method):
-        self.write('%s (%s) ... ', method.__name__, reflect.qual(testClass))
+class TimingTextReporter(VerboseTextReporter):
+    def endTest(self, method):
+        self.write("%s" % WORDS.get(method.status, "[??]") + " "
+                   + "(%.03f secs)\n" % method.runningTime())
 
-    def reportResults(self, testClass, method, resultType, results=None):
-        words = {SKIP: '[SKIPPED]',
-                 EXPECTED_FAILURE: '[TODO]',
-                 FAILURE: '[FAIL]', ERROR: '[ERROR]',
-                 UNEXPECTED_SUCCESS: '[SUCCESS!?!]',
-                 SUCCESS: '[OK]'}
-        self.writeln(words.get(resultType, "[??]"))
-        Reporter.reportResults(self, testClass, method, resultType, results)
 
-class TreeReporter(TextReporter):
+class TreeReporter(VerboseTextReporter):
+    #__metaclass__ = MethodCallLoggingType
+    currentLine = ''
     columns = 79
 
     BLACK = 30
@@ -255,46 +385,68 @@ class TreeReporter(TextReporter):
     CYAN = 36
     WHITE = 37
 
-    def __init__(self, stream=sys.stdout, tbformat='plain'):
-        TextReporter.__init__(self, stream, tbformat)
-        self.lastModule = None
-        self.lastClass = None
+    def __init__(self, stream=sys.stdout, tbformat='plain', args=None, realtime=False):
+        super(TreeReporter, self).__init__(stream, tbformat, args, realtime)
+        self.words = {SKIP: ('[SKIPPED]', self.BLUE),
+                      EXPECTED_FAILURE: ('[TODO]', self.BLUE),
+                      FAILURE: ('[FAIL]', self.RED),
+                      ERROR: ('[ERROR]', self.RED),
+                      UNEXPECTED_SUCCESS: ('[SUCCESS!?!]', self.RED),
+                      SUCCESS: ('[OK]', self.GREEN)}
 
-    def reportStart(self, testClass, method):
-        if testClass.__module__ != self.lastModule:
-            self.writeln(testClass.__module__)
-            self.lastModule = testClass.__module__
-        if testClass != self.lastClass:
-            self.writeln('  %s' % testClass.__name__)
-            self.lastClass = testClass
+    def _getText(self, status):
+        return self.words.get(status, ('[??]', self.BLUE))
 
-        docstr = inspect.getdoc(method)
-        if docstr:
+    def write(self, format, *args):
+        if args:
+            format = format % args
+        self.currentLine = format
+        super(TreeReporter, self).write(self.currentLine)
+
+    def startModule(self, module):
+        modName = itrial.IModuleName(module)
+        if modName not in self.seenModules:
+            self.seenModules.add(modName)
+            self.write('  %s\n' % modName)
+
+    def startClass(self, klass):
+        clsName = itrial.IClassName(klass)
+        if clsName not in self.seenClasses:
+            self.seenClasses.add(clsName)
+            self.write('    %s\n' % clsName)
+
+    def cleanupErrors(self, errs):
+        self.write(self.color('    cleanup errors', self.RED))
+        self.endLine(*self._getText(ERROR))
+        super(TreeReporter, self).cleanupErrors(errs)
+
+    def upDownError(self, method):
+        m = itrial.IMethodInfo(method)
+        self.write(self.color("  %s" % m.name, self.RED)) 
+        self.endLine(*self._getText(ERROR))
+        super(TreeReporter, self).upDownError(m)
+        
+    def startTest(self, method):
+        tm = itrial.ITestMethod(method)
+        if tm.docstr:
             # inspect trims whitespace on the left; the lstrip here is
             # for those odd folks who start docstrings with a blank line.
-            what = docstr.lstrip().split('\n', 1)[0]
+            what = tm.docstr.lstrip().split('\n', 1)[0]
         else:
-            what = method.__name__
-        self.currentLine = '    %s ... ' % (what,)
-        self.write(self.currentLine)
+            what = tm.name 
+        self.write('      %s ... ', what)
+
+    def endTest(self, method):
+        Reporter.endTest(self, method)
+        tm = itrial.ITestMethod(method)
+        self.endLine(*self._getText(tm.status))
 
     def color(self, text, color):
         return '%s%s;1m%s%s0m' % ('\x1b[', color, text, '\x1b[')
 
     def endLine(self, message, color):
         spaces = ' ' * (self.columns - len(self.currentLine) - len(message))
-        self.write(spaces)
-        self.writeln(self.color(message, color))
+        super(TreeReporter, self).write(spaces)
+        super(TreeReporter, self).write("%s\n" % (self.color(message, color),))
 
-    def reportResults(self, testClass, method, resultType, results=None):
-        words = {SKIP: ('[SKIPPED]', self.BLUE),
-                 EXPECTED_FAILURE: ('[TODO]', self.BLUE),
-                 FAILURE: ('[FAIL]', self.RED),
-                 ERROR: ('[ERROR]', self.RED),
-                 UNEXPECTED_SUCCESS: ('[SUCCESS!?!]', self.RED),
-                 SUCCESS: ('[OK]', self.GREEN)}
-        text = words.get(resultType, ('[??]', self.BLUE))
-        self.endLine(text[0], text[1])
-        Reporter.reportResults(self, testClass, method, resultType, results)
 
-import util

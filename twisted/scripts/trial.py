@@ -1,18 +1,127 @@
 # -*- test-case-name: twisted.test.test_trial -*-
 #
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
-# See LICENSE for details.
+# Twisted, the Framework of Your Internet
+# Copyright (C) 2001 Matthew W. Lefkowitz
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+# Author/Maintainer: Jonathan D. Simms <slyphon@twistedmatrix.com>
+# Originally written by: Jonathan Lange <jml@twistedmatrix.com>
+#                        and countless contributors
 
-# FIXME
-# - Hangs.
+import sys, os, inspect, types, errno, pdb, new
+import shutil, random, gc, re, warnings, time
+import os.path as osp
+from os.path import join as opj
+from cStringIO import StringIO
 
-from twisted.python import usage, reflect, failure
-from twisted.trial import unittest, util, reporter as reps
 from twisted.application import app
+from twisted.internet import defer
+from twisted.python import usage, reflect, failure, log, plugin
+from twisted.python.compat import sets
+from twisted.python.util import spewer
+from twisted.spread import jelly
+from twisted.trial import runner, util, itrial, registerAdapter, remote
+from twisted.trial.itrial import ITrialDebug 
 
-import sys, os, types, inspect
-import re
+import zope.interface as zi
+
+class LogError(Exception):
+    pass
+
+class _DebugLogObserver(object):
+    validChannels = ('reporter', 'kbd', 'parseargs',
+                     'wait', 'testTests', 'timeout',
+                     'reactor')
+
+    def __init__(self, *channels):
+        L = []
+        for c in channels:
+            if c not in self.validChannels:
+                raise LogError, c
+            L.append(c)
+        self.channels = L
+        self.install()
+
+    def __call__(self, events):
+        iface = events.get('iface', None)
+        if (iface is not None
+            and iface is not itrial.ITrialDebug):
+            return
+        for c in self.channels:
+            if c in events:
+                print "TRIAL DEBUG: %s" % (''.join(events[c]),)
+
+    def install(self):
+        log.addObserver(self)
+
+    def remove(self):
+        if self in log.theLogPublisher.observers:
+            log.removeObserver(self)
+
+
+class PluginError(Exception):
+    pass
+
+class ReporterPlugins(object):
+    default = None
+    def __init__(self):
+        self.dotz = 0
+
+    def load(self):
+        # without this frobbing of stdout/err the plugin system spews a whole ton
+        # of deprecation warnings and other nonsense
+        sio = StringIO()
+        self.origout, self.origerr, sys.stdout, sys.stderr = sys.stdout, sys.stderr, sio, sio
+        try:
+            self.pluginFlags, self.optToQual = [], {}
+            self.plugins = plugin.getPlugIns("trial_reporter", None, None)
+            for p in self.plugins:
+                self.pluginFlags.append([p.longOpt, p.shortOpt, p.description])
+                qual = "%s.%s" % (p.module, p.klass)
+                self.optToQual[p.longOpt] = qual
+
+                # find the default
+                d = getattr(p, 'default', None)
+                if d is not None:
+                    self.default = qual
+
+            if self.default is None:
+                raise PluginError, "no default reporter specified"
+                    
+        finally:
+            sys.stdout, sys.stderr = self.origout, self.origerr
+        
+        return self
+
+    def _progress(self, pct):
+        pct = round(pct * 10)
+        self.origout.write("." * pct - self.dotz)
+        self.origout.flush()
+        self.dotz += pct
+
+    def getReporter(self, config):
+        """return the class of the selected reporter
+        @param config: a usage.Options instance after parsing options
+        """
+        for opt, qual in self.optToQual.iteritems():
+            if config[opt]:
+                nany = reflect.namedAny(qual)
+                log.msg(iface=ITrialDebug, reporter="reporter option: %s, returning %r" % (opt, nany))
+                return nany
+        return reflect.namedAny(self.default)
+
 
 class Options(usage.Options):
     synopsis = """%s [options] [[file|package|module|TestCase|testmethod]...]
@@ -20,16 +129,16 @@ class Options(usage.Options):
 
     optFlags = [["help", "h"],
                 ["text", "t", "Text mode (ignored)"],
-                ["verbose", "v", "Verbose output"],
-                ["timing", None, "Timing output"],
-                ["bwverbose", "o", "Colorless verbose output"],
-                ["jelly", "j", "Jelly (machine-readable) output"],
+                ["rterrors", "e", "realtime errors, print out tracebacks as soon as they occur"],
                 ["summary", "s", "summary output"],
                 ["debug", "b", "Run tests in the Python debugger. Will load '.pdbrc' from current directory if it exists."],
                 ["profile", None, "Run tests under the Python profiler"],
                 ["benchmark", None, "Run performance tests instead of unit tests."],
                 ["until-failure", "u", "Repeat test until it fails"],
-                ["recurse", "R", "Search packages recursively"]]
+                ["recurse", "R", "Search packages recursively"],
+                ['doctest', None, 'search modules for doctests (EXPERIMENTAL)'],
+                ['psyco', None, 'run tests with psyco.full() (EXPERIMENTAL)']]
+                
 
     optParameters = [["reactor", "r", None,
                       "Which reactor to use out of: " + \
@@ -37,17 +146,27 @@ class Options(usage.Options):
                      ["logfile", "l", "test.log", "log file name"],
                      ["random", "z", None,
                       "Run tests in random order using the specified seed"],
-                     ]
+                     ["reporter-args", None, None,
+                      "a string passed to the reporter's 'args' kwarg"]]
 
-    tracer = None
+
 
     def __init__(self):
+        self.repPlugins = ReporterPlugins().load()
+        self.optFlags.extend(self.repPlugins.pluginFlags)
         usage.Options.__init__(self)
+        self._logObserver = None
         self['modules'] = []
         self['packages'] = []
         self['testcases'] = []
         self['methods'] = []
         self['_couldNotImport'] = {}
+        self['reporter'] = None
+        self['debugflags'] = []
+        self['cleanup'] = []
+
+    def getReporter(self):
+        return self.repPlugins.getReporter(self) # ARGH, this is massively retarded!
 
     def opt_coverage(self, coverdir):
         """Generate coverage information in the given directory
@@ -56,47 +175,48 @@ class Options(usage.Options):
         print "Setting coverage directory to %s." % (coverdir,)
         import trace
 
-        # WOO MONKEY PATCH
+        # begin monkey patch --------------------------- 
         def find_executable_linenos(filename):
             """Return dict where keys are line numbers in the line number table."""
             #assert filename.endswith('.py') # YOU BASTARDS
             try:
                 prog = open(filename).read()
             except IOError, err:
-                print >> sys.stderr, ("Not printing coverage data for %r: %s"
-                                      % (filename, err))
+                sys.stderr.write("Not printing coverage data for %r: %s\n" % (filename, err))
+                sys.stderr.flush()
                 return {}
             code = compile(prog, filename, "exec")
             strs = trace.find_strings(filename)
             return trace.find_lines(code, strs)
 
-        #kaching!
         trace.find_executable_linenos = find_executable_linenos
+        # end monkey patch ------------------------------
 
-        #countfile = abs(os.path.join('_trial_temp', 'coverage.count'))
         self.coverdir = os.path.abspath(os.path.join('_trial_temp', coverdir))
-        self.tracer = trace.Trace(count=1, trace=0)#, infile=countfile, outfile=countfile)
+        self.tracer = trace.Trace(count=1, trace=0)
         sys.settrace(self.tracer.globaltrace)
 
-    def opt_reactor(self, reactorName):
-        # this must happen before parseArgs does lots of imports
-        app.installReactor(reactorName)
-        print "Using %s reactor" % app.reactorTypes[reactorName]
-        
-    def opt_testmodule(self, file):
+
+    def opt_testmodule(self, filename):
         "Module to find a test case for"
         # only look at the first two lines of the file. Try to behave as
         # much like emacs local-variables scanner as is sensible
-        if not os.path.isfile(file):
+
+        # XXX: This doesn't make sense! ------------------------------------
+        if not os.path.isfile(filename): 
             return
+
         # recognize twisted/test/test_foo.py, which is itself a test case
-        d,f = os.path.split(file)
+        d,f = os.path.split(filename)
         if d == "twisted/test" and f.startswith("test_") and f.endswith(".py"):
             self['modules'].append("twisted.test." + f[:-3])
             return
-        f = open(file, "r")
+        # ------------------------------------------------------------------
+
+        f = file(filename, "r")
         lines = [f.readline(), f.readline()]
         f.close()
+
         m = []
         for line in lines:
             # insist upon -*- delimiters
@@ -127,7 +247,6 @@ class Options(usage.Options):
 
     def opt_file(self, filename):
         "Filename of module to test"
-        from twisted.python import reflect
         self['modules'].append(reflect.filenameToModuleName(filename))
 
     def opt_method(self, method):
@@ -137,31 +256,28 @@ class Options(usage.Options):
     def opt_spew(self):
         """Print an insanely verbose log of everything that happens.  Useful
         when debugging freezes or locks in complex code."""
-        from twisted.python.util import spewer
         sys.settrace(spewer)
+        
+    def opt_reporter(self, opt=None):
+        """the fully-qualified name of the class to use as the reporter for
+        this run. The class must implement twisted.trial.itrial.IReporter.
+        by default, the stream argument will be sys.stdout
+        """
+        if opt is None:
+            raise UsageError, 'must specify a fully qualified class name'
+        self['reporter'] = reflect.namedAny(opt)
 
     def opt_disablegc(self):
         """Disable the garbage collector"""
-        import gc
         gc.disable()
 
     def opt_tbformat(self, opt):
-        """Specify the format to display tracebacks with. Valid formats are 'plain' and 'emacs'."""
-        if opt not in ('plain', 'emacs'):
-            raise usage.UsageError("tbformat must be 'plain' or 'emacs'.")
+        """Specify the format to display tracebacks with. Valid formats are 'plain', 'emacs',
+        and 'cgitb' which uses the nicely verbose stdlib cgitb.text function"""
+        if opt not in ('plain', 'emacs', 'cgitb'):
+            raise usage.UsageError("tbformat must be 'plain', 'emacs', or 'cgitb'.")
         self['tbformat'] = opt
 
-    opt_m = opt_module
-    opt_p = opt_package
-    opt_c = opt_testcase
-    opt_M = opt_method
-
-    opt_f = opt_file
-
-    #     ["extra","x", None,
-    #      "Add an extra argument.  "
-    #      "(This is a hack necessary for "
-    #      "interfacing with emacs's `gud'.)" ]
     extra = None
     def opt_extra(self, arg):
         """
@@ -172,43 +288,100 @@ class Options(usage.Options):
             self.extra = []
         self.extra.append(arg)
 
+    def opt_recursionlimit(self, arg):
+        """see sys.setrecursionlimit()"""
+        try:
+            sys.setrecursionlimit(int(arg))
+        except (TypeError, ValueError):
+            raise usage.UsageError, "argument to recursionlimit must be an integer"
+
+    def opt_trialdebug(self, arg):
+        """turn on trial's internal debugging flags"""
+        try:
+            self._logObserver = _DebugLogObserver(arg)
+        except LogError, e:
+            raise usage.UsageError, "%s not a valid debugging channel" % (e.args[0])
+
+
+    # the short, short version
+    opt_c = opt_testcase
+    opt_f = opt_file
+    opt_m = opt_module
+    opt_M = opt_method
+    opt_p = opt_package
     opt_x = opt_extra
 
+    tracer = None
+
     def parseArgs(self, *args):
+        def _dbg(msg):
+            if self._logObserver is not None:
+                log.msg(iface=ITrialDebug, parseargs=msg)
+
         if self.extra is not None:
             args = list(args)
             args.extend(self.extra)
+
         for arg in args:
-            if (os.sep in arg):
-                # It's a file.
+            _dbg("arg: %s" % (arg,))
+            if os.sep in arg:
+                _dbg("contains os.sep, must be a file or directory")
                 if not os.path.exists(arg):
-                    import errno
                     raise IOError(errno.ENOENT, os.strerror(errno.ENOENT), arg)
-                if arg.endswith(os.sep) and (arg != os.sep):
+
+                if arg.endswith(os.sep) and arg != os.sep:
+                    _dbg("arg endswith os.sep")
                     arg = arg[:-len(os.sep)]
-                name = reflect.filenameToModuleName(arg)
-                if os.path.isdir(arg):
-                    self['packages'].append(name)
-                else:
-                    self['modules'].append(name)
-                continue
+                    _dbg("arg now %s" % (arg,))
+                arg = reflect.filenameToModuleName(arg)
+
+##                 _dbg("name: %s" % (name,))
+##                 if os.path.isdir(arg):
+##                     _dbg("adding package: %s" % (name,))
+##                     self['packages'].append(name)
+##                 else:
+##                     _dbg("adding module: %s" % (name,))
+##                     self['modules'].append(name)
+##                 continue
 
             if arg.endswith('.py'):
-                # *Probably* a file.
-                if os.path.exists(arg):
-                    arg = reflect.filenameToModuleName(arg)
-                    self['modules'].append(arg)
+                _dbg("*Probably* a file.")
+                if osp.exists(arg):
+                    modstr = osp.abspath(arg)
+                    _dbg("osp.exists, appending '%s' to self['modules']" % (modstr,))
+                    self['modules'].append(mod)
                     continue
 
+            if osp.isdir(arg) and osp.exists(opj(arg, '__init__.py')):
+                _dbg("it's a package")
+                self['packages'].append(osp.split(arg)[1])
+                continue
+
+##             _dbg("try doing an execfile")
+##             if osp.isfile(arg) and os.sep not in arg:
+##                 name, ext = osp.splitext(arg)
+##                 m = new.module(name)
+##                 sourcestring = file(arg, 'rb').read()
+##                 exec sourcestring in m.__dict__
+##                 sys.modules[name] = m
+##                 self['modules'].append(m)
+##                 continue
+
+            ###########################################################################
+            # WTF?+!
             # a non-default reactor must have been installed by now: it
             # imports the module, which installs a reactor
             try:
+                _dbg("trying reflect.namedAny(%s)" % (arg,))
                 arg = reflect.namedAny(arg)
             except ValueError:
                 raise usage.UsageError, "Can't find anything named %r to run" % arg
             except:
-                self['_couldNotImport'][arg] = failure.Failure()
+                f = failure.Failure()
+                _dbg("caught failure: %s" % (f.getTraceback(),))
+                self['_couldNotImport'][arg] = f
                 continue
+            ############################################################################
 
             if inspect.ismodule(arg):
                 filename = os.path.basename(arg.__file__)
@@ -222,95 +395,95 @@ class Options(usage.Options):
             elif inspect.ismethod(arg):
                 self['methods'].append(arg)
             else:
-                # Umm, seven?
                 self['methods'].append(arg)
 
     def postOptions(self):
+        def _mustBeInt():
+            raise usage.UsageError("Argument to --random must be a positive integer")
+            
         if self['random'] is not None:
             try:
                 self['random'] = long(self['random'])
             except ValueError:
-                raise usage.UsageError("Argument to --random must be a positive integer")
+                _mustBeInt()
             else:
                 if self['random'] < 0:
-                    raise usage.UsageError("Argument to --random must be a positive integer")
+                    _mustBeInt()
                 elif self['random'] == 0:
-                    import time
                     self['random'] = long(time.time() * 100)
 
         if not self.has_key('tbformat'):
             self['tbformat'] = 'plain'
 
-def call_until_failure(reporter, callable, *args, **kwargs):
-    count = 1
-    print "Test Pass %d" % count
-    callable(*args, **kwargs)
-    while reporter.allPassed():
-        count += 1
-        print "Test Pass %d" % count
-        callable(*args, **kwargs)
+        if self['psyco']:
+            try:
+                import psyco
+                psyco.full()
+            except ImportError:
+                print "couldn't import psyco, so continuing on without..."
 
-def run():
-    if len(sys.argv) == 1:
-        sys.argv.append("--help")
 
-    config = Options()
-    try:
-        config.parseOptions()
-    except usage.error, ue:
-        print "%s: %s" % (sys.argv[0], ue)
-        os._exit(1)
+# options
+# ----------------------------------------------------------
+# config and run
 
-    reporter = reallyRun(config)
+def _setUpAdapters():
+    from twisted.trial import reporter
+    for a, o, i in [(runner.TestCaseRunner, itrial.ITestCaseFactory, itrial.ITestRunner),
+                    (runner.TestModuleRunner, types.ModuleType, itrial.ITestRunner),
+                    (runner.PyUnitTestCaseRunner, itrial.IPyUnitTCFactory, itrial.ITestRunner),
+                    (runner.TestCaseRunner, runner.DocTestCase, itrial.ITestRunner),
+                    (runner.TestCaseMethodRunner, types.MethodType, itrial.ITestRunner),
+                    (runner.TestMethod, types.MethodType, itrial.ITestMethod),
+                    (reporter.TestStats, itrial.ITestSuite, itrial.ITestStats),
+                    (reporter.TestStats, runner.TestModuleRunner, itrial.ITestStats),
+                    (reporter.TestCaseStats, runner.TestCaseRunner, itrial.ITestStats),
+                    (reporter.TestCaseStats, runner.TestCaseMethodRunner, itrial.ITestStats),
+                    (reporter.TestCaseStats, runner.PyUnitTestCaseRunner, itrial.ITestStats),
+                    (reporter.formatFailureTraceback, failure.Failure, itrial.IFormattedFailure),
+                    (reporter.formatMultipleFailureTracebacks, types.ListType, itrial.IFormattedFailure),
+                    (reporter.formatMultipleFailureTracebacks, types.TupleType, itrial.IFormattedFailure),
+                    (reporter.formatTestMethodFailures, itrial.ITestMethod, itrial.IFormattedFailure),
+                    (util._getModuleNameFromModuleType, types.ModuleType, itrial.IModuleName),
+                    (util._getModuleNameFromClassType, types.ClassType, itrial.IModuleName),
+                    (util._getModuleNameFromMethodType, types.MethodType, itrial.IModuleName),
+                    (util._getModuleNameFromFunctionType, types.FunctionType, itrial.IModuleName),
+                    (util._getClassNameFromClass, types.ClassType, itrial.IClassName),
+                    (util._getClassNameFromMethodType, types.MethodType, itrial.IClassName),
+                    (util._getFQClassName, types.ClassType, itrial.IFQClassName),
+                    (util._getFQClassName, types.MethodType, itrial.IFQClassName),
+                    (util._getFQMethodName, types.MethodType, itrial.IFQMethodName),
+                    (util._getClassFromMethodType, types.MethodType, itrial.IClass),
+                    (util._getClassFromFQString, types.StringType, itrial.IClass),
+                    (util._getModuleFromMethodType, types.MethodType, itrial.IModule),
+                    (lambda x: x, types.StringType, itrial.IClassName),
+                    (lambda x: x, types.StringType, itrial.IModuleName),
+                    (runner.TupleTodo, types.TupleType, itrial.ITodo),
+                    (runner.StringTodo, types.StringType, itrial.ITodo),
+                    (runner.TodoBase, types.NoneType, itrial.ITodo),
+                    (runner.TupleTimeout, types.TupleType, itrial.ITimeout),
+                    (runner.NumericTimeout, types.FloatType, itrial.ITimeout),
+                    (runner.NumericTimeout, types.IntType, itrial.ITimeout),
+                    (runner.TimeoutBase, types.NoneType, itrial.ITimeout),
+                    (remote.JellyableTestMethod, itrial.ITestMethod, jelly.IJellyable)]:
+        registerAdapter(a, o, i)
 
-    if config.tracer:
-        sys.settrace(None)
-        results = config.tracer.results()
-        results.write_results(show_missing=1, summary=False, coverdir=config.coverdir)
+    
+    # MONKEY PATCH -----------------------------------------
+    unittest = eval("__import__('unittest')", {}, {})
+    from twisted.trial import unittest as twunit
+    unittest.TestCase = twunit.TestCase
+    # ------------------------------------------------------
 
-    sys.exit(not reporter.allPassed())
-
-def reallyRun(config):
+def _initialDebugSetup(config):
     # do this part of debug setup first for easy debugging of import failures
     if config['debug']:
-        from twisted.internet import defer
-        from twisted.python import failure
         defer.Deferred.debug = True
         failure.startDebugMode()
 
-    suite = unittest.TestSuite(config['benchmark'])
-    suite.couldNotImport.update(config['_couldNotImport'])
-    if config['recurse']:
-        for package in config['packages']:
-            suite.addPackageRecursive(package)
-    else:
-        for package in config['packages']:
-            suite.addPackage(package)
-    for module in config['modules']:
-        suite.addModule(module)
-    for testcase in config['testcases']:
-        if type(testcase) is types.StringType:
-            case = reflect.namedObject(testcase)
-        else:
-            case = testcase
-        if type(case) is types.ClassType and util.isTestClass(case):
-            suite.addTestClass(case)
-    for testmethod in config['methods']:
-        suite.addMethod(testmethod)
 
-    testdir = os.path.abspath("_trial_temp")
-    if os.path.exists(testdir):
-       import shutil, random
-       try:
-          shutil.rmtree(testdir)
-       except OSError, e:
-          print "Error deleting:", e
-          os.rename(testdir, os.path.abspath("_trial_temp_old%s" % random.randint(0, 99999999)))
-    os.mkdir(testdir)
-    os.chdir(testdir)
-
+def _setUpLogging(config):
     if config['logfile']:
-       from twisted.python import log
        # we should SEE deprecation warnings
        def seeWarnings(x):
            if x.has_key('warning'):
@@ -318,65 +491,168 @@ def reallyRun(config):
                print x['format'] % x
        log.addObserver(seeWarnings)
        log.startLogging(open(config['logfile'], 'a'), 0)
-
+    
+def _getReporter(config):
     tbformat = config['tbformat']
 
-    # XXX Yuck. We should just have a --reporter option. Then we could
-    # have a dict of {reportername: reporterclass}, look up
-    # config['reporter'] in it, and instantiate the result with the
-    # args.
+    log.msg(iface=ITrialDebug, reporter="config['reporter']: %s" % (config['reporter'],))
+    if config['reporter'] is not None:
+        return config['reporter']
 
-    if config['verbose']:
-        reporter = reps.TreeReporter(sys.stdout, tbformat)
-    elif config['bwverbose']:
-        reporter = reps.VerboseTextReporter(sys.stdout, tbformat)
-    elif config['summary']:
-        reporter = reps.MinimalReporter(sys.stdout)
-    elif config['jelly']:
-        import twisted.trial.remote
-        reporter = twisted.trial.remote.JellyReporter(sys.stdout)
-    elif config['timing']:
-        reporter = reps.TimingTextReporter(sys.stdout, tbformat)
-    else:
-        reporter = reps.TextReporter(sys.stdout, tbformat)
-
-    if config['debug']:
-        reporter.debugger = 1
-        import pdb
-        dbg = pdb.Pdb()
-        try:
-            rcFile = open("../.pdbrc")
-        except IOError:
-            hasattr(sys, 'exc_clear') and sys.exc_clear()
-        else:
-            dbg.rcLines.extend(rcFile.readlines())
-        if config['until-failure']:
-            call_until_failure(reporter,
-                               dbg.run,
-                               "suite.run(reporter, config['random'])",
-                               globals(), locals())
-        else:
-            dbg.run("suite.run(reporter, config['random'])",
-                    globals(), locals())
-    elif config['profile']:
-        if config['until-failure']:
-            raise RuntimeError, \
-                  "you cannot use both --until-failure and --profile"
-        import profile
-        prof = profile.Profile()
-        try:
-            prof.runcall(suite.run, reporter, config['random'])
-            prof.dump_stats('profile.data')
-        except SystemExit:
-            pass
-        prof.print_stats()
-    else:
-        if config['until-failure']:
-            call_until_failure(reporter,
-                               suite.run, reporter, config['random'])
-        else:
-            suite.run(reporter, config['random'])
+    reporter = config.getReporter()
+    log.msg(iface=ITrialDebug, reporter="using reporter class: %r" % (reporter,))
     return reporter
 
-if __name__ == '__main__':
-    run()
+def _getJanitor(config=None):
+    j = util.Janitor()
+    return j
+
+def _getSuite(config):
+    def _dbg(msg):
+        log.msg(iface=itrial.ITrialDebug, parseargs=msg)
+    reporterKlass = _getReporter(config)
+    log.msg(iface=ITrialDebug, reporter="using reporter reporterKlass: %r" % (reporterKlass,))
+    
+    suite = runner.TestSuite(reporterKlass(args=config['reporter-args'], realtime=config['rterrors']),
+                             _getJanitor(),
+                             benchmark=config['benchmark'],
+                             doctests=config['doctest'])
+    suite.couldNotImport.update(config['_couldNotImport'])
+
+    for package in config['packages']:
+        if isinstance(package, types.StringType):
+            try:
+                package = reflect.namedModule(package)
+            except ImportError, e:
+                suite.couldNotImport[package] = failure.Failure()
+                continue
+        if config['recurse']:
+            _dbg("addPackageRecursive(%s)" % (package,))
+            suite.addPackageRecursive(package)
+        else:
+            _dbg("addPackage(%s)" % (package,))
+            suite.addPackage(package)
+
+    for module in config['modules']:
+        _dbg("addingModules: %s" % module)
+        suite.addModule(module)
+    for testcase in config['testcases']:
+        if isinstance(testcase, types.StringType):
+            case = reflect.namedObject(testcase)
+        else:
+            case = testcase
+        suite.addTestClass(case)
+    for testmethod in config['methods']:
+        suite.addMethod(testmethod)
+    return suite
+
+
+def _setUpTestdir():
+    testdir = os.path.abspath("_trial_temp")
+    if os.path.exists(testdir):
+       try:
+           shutil.rmtree(testdir)
+       except OSError, e:
+           # XXX Left-over debug print?  This is a pretty-dodgy exception handler,
+           # overall.  Also, this block is also incorrectly indented.
+           os.rename(testdir, os.path.abspath("_trial_temp_old%s" % random.randint(0, 99999999)))
+    os.mkdir(testdir)
+    os.chdir(testdir)
+
+
+def _setUpDebugging(config, suite):
+    suite.reporter.debugger = 1
+    dbg = pdb.Pdb()
+    try:
+        rcFile = open("../.pdbrc")
+    except IOError:
+        hasattr(sys, 'exc_clear') and sys.exc_clear()
+    else:
+        dbg.rcLines.extend(rcFile.readlines())
+    if config['until-failure']:
+        call_until_failure(suite.reporter,
+                           dbg.run,
+                           "suite.run(config['random'])",
+                           globals(), locals())
+    else:
+        dbg.run("suite.run(config['random'])",
+                globals(), locals())
+
+
+def _doProfilingRun(config, suite):
+    if config['until-failure']:
+        raise RuntimeError, \
+              "you cannot use both --until-failure and --profile"
+    import profile
+    prof = profile.Profile()
+    try:
+        prof.runcall(suite.run, config['random'])
+        prof.dump_stats('profile.data')
+    except SystemExit:
+        pass
+    prof.print_stats()
+
+# hotshot is broken as of right now :/
+
+##     import hotshot, hotshot.stats
+##     prof = hotshot.Profile('profile.data', 1, 1)
+##     prof.runctx("suite.run(config['random'])", globals(), locals())
+##     prof.close()
+##     stats = hotshot.stats.load('profile.data')
+##     stats.strip_dirs()
+##     stats.print_stats()
+
+
+def call_until_failure(suite, callable, *args, **kwargs):
+    count = 1
+    print "Test Pass %d" % count
+    callable(*args, **kwargs)
+    while itrial.ITestStats(suite).allPassed:
+        count += 1
+        print "Test Pass %d" % count
+        callable(*args, **kwargs)
+
+
+def reallyRun(config, suite):
+    if config['debug']:
+        _setUpDebugging(config, suite)
+    elif config['profile']:
+        _doProfilingRun(config, suite)
+    else:
+        if config['until-failure']:
+            call_until_failure(suite, suite.run, config['random'])
+        else:
+            suite.run(config['random'])
+    return suite 
+
+
+def run():
+    _setUpAdapters()
+    if len(sys.argv) == 1:
+        sys.argv.append("--help")
+
+    config = Options()
+    try:
+        config.parseOptions()
+    except usage.error, ue:
+        raise SystemExit, "%s: %s" % (sys.argv[0], ue)
+
+    _initialDebugSetup(config)
+    suite = _getSuite(config)
+    _setUpTestdir()
+    _setUpLogging(config)
+
+    reallyRun(config, suite)
+
+    if config.tracer:
+        sys.settrace(None)
+        results = config.tracer.results()
+        results.write_results(show_missing=1, summary=False, coverdir=config.coverdir)
+
+    sys.exit(not itrial.ITestStats(suite).allPassed)
+
+## def run():
+##     import hotshot
+##     prof = hotshot.Profile("pythongrind.prof", lineevents=1)
+##     prof.runcall(_run)
+##     prof.close()
