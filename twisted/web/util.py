@@ -233,7 +233,7 @@ def htmlIndent(snippetLine):
 def formatFailure(myFailure):
 
     exceptionHTML = """
-<p class="error">%s: %s</h2>
+<p class="error">%s: %s</p>
 """
 
     frameHTML = """
