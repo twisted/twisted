@@ -13,16 +13,11 @@ namespace CSReactor {
     Exception failure {get; set;}
   }
 
-  public interface IAddress {
-    IPEndPoint EndPoint { get; set; }
-    int Port { get; set; }
-  }
-
   public interface ITransport {
     void write(String data);
     void writeSequence(ICollection data);
     void loseConnection();
-    IAddress getHost();
+    IPEndPoint getHost();
   }
 
   public interface IProtocol {
@@ -36,8 +31,7 @@ namespace CSReactor {
   }
 	
   public interface IFactory {
-    System.Type ProtocolClass { get; set; }
-    IProtocol buildProtocol(IPEndPoint ipep, int port);
+    IProtocol buildProtocol();
     void doStart();
     void doStop();
   }
@@ -46,14 +40,14 @@ namespace CSReactor {
     protected bool connected = false;
     protected ITransport transport;
     protected IFactory factory;
-    protected IAddress address = null;
+    protected IPEndPoint address = null;
 		
     public BaseProtocol() : this(null, null) {}
 
-    public BaseProtocol(IAddress address) : this(address, null) {
+    public BaseProtocol(IPEndPoint address) : this(address, null) {
     }
 
-    public BaseProtocol(IAddress address, IFactory factory) {
+    public BaseProtocol(IPEndPoint address, IFactory factory) {
       this.address = address;
       this.factory = factory;
     }
@@ -88,45 +82,26 @@ namespace CSReactor {
   public class Factory : IFactory {
     /* System.Type protocolClass = typeof(Foo)
      */
-    private System.Type protocolClass;
-    public System.Type ProtocolClass {
-      get { return this.protocolClass; }
-      set { this.protocolClass = value; }
-    }
-		
-    public Factory() : this(null) {}
-
-    public Factory(Type protocolClass) {
-      this.protocolClass = protocolClass;
-    }
 		
     public virtual void doStart() {}
     public virtual void doStop() {}
-    public virtual IProtocol buildProtocol(IPEndPoint ipep, int port) {
-      IProtocol p = (IProtocol)Activator.CreateInstance(protocolClass);
-      p.Factory = this;
-      return p;
+    public virtual IProtocol buildProtocol() {
+      return this.buildProtocol(null, null);
+    }
+    public virtual IProtocol buildProtocol(IPEndPoint addr) {
+      return this.buildProtocol(addr, null);
+    }
+    public virtual IProtocol buildProtocol(IPEndPoint addr, IFactory factory) {
+      // YOU MUST OVERRIDE THIS IN SUBCLASSES!
+      return null;
     }
   }
 	
-  public class Address : IAddress {
-    protected IPEndPoint endPoint;
-    protected int port;
-    public IPEndPoint EndPoint {
-      get { return this.EndPoint; }
-      set { this.endPoint = value; }
-    }
-    public int Port {
-      get { return this.port; }
-      set { this.port = value; }
-    }
-  }
-	
-  public class BaseTransport : ITransport {
+  public class Transport : ITransport {
     public virtual void write(String data) {}
     public virtual void writeSequence(ICollection data) {}
     public virtual void loseConnection() {}
-    public virtual IAddress getHost() { return null; }
+    public virtual IPEndPoint getHost() { return null; }
   }
 
   public class TwistedServer {
