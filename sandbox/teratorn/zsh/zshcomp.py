@@ -8,7 +8,7 @@ pressing Tab at the command line work.
 # we should use for generation
 generateFor = [('twistd', 'ServerOptions')]
 
-import sys, commands
+import sys, commands, itertools
 from twisted import scripts
 from twisted.python import reflect
 
@@ -26,7 +26,10 @@ class writeZshCode:
         self.optFlags = getattr(optionsClass, 'optFlags', [])
         self.altArgDescr = getattr(optionsClass, 'zsh_altArgDescr', {})
         self.multiUse = getattr(optionsClass, 'zsh_multiUse', [])
+        self.mutuallyExclusive = getattr(optionsClass, 'zsh_mutuallyExclusive', [])
         self.actions = getattr(optionsClass, 'zsh_actions', {})
+
+        self.excludes = self.makeExcludesDict() 
 
         self.writeHeader()
 
@@ -35,6 +38,48 @@ class writeZshCode:
         self.writeOptFlagLines()
 
         self.writeFooter()
+
+    def makeExcludesDict(self):
+        """return a dict that maps each option name appearing in
+        self.mutuallyExclusive to a list of those option names that
+        is it mutually exclusive with (can't appear on the cmd line with)"""
+
+        #create a mapping of long option name -> single character name
+        longToShort = {}
+        for optList in itertools.chain(self.optParams, self.optFlags):
+            try:
+                if optList[1] != None:
+                    longToShort[optList[0]] = optList[1]
+            except IndexError:
+                pass
+
+        excludes = {}
+        for lst in self.mutuallyExclusive:
+            for i, long in enumerate(lst):
+                tmp = []
+                tmp.extend(lst[:i])
+                tmp.extend(lst[i+1:])
+                for name in tmp[:]:
+                    if name in longToShort:
+                        tmp.append(longToShort[name])
+
+                if lst[i] in excludes:
+                    excludes[lst[i]].extend(tmp)
+                else:
+                    excludes[lst[i]] = tmp
+
+        return excludes
+
+    def makeExcludeStrings(self, long, short):
+        excludeList = self.excludes.get(long, [])
+        if short and long not in self.multiUse:
+            longExcludes = excludeList + [short]
+            shortExcludes = excludeList + [long]
+        else:
+            longExcludes = excludeList
+            shortExcludes = excludeList
+        
+        return excludeString(longExcludes), excludeString(shortExcludes)
 
     def writeHeader(self):
         self.file.write('#compdef %s\n' % self.cmd_name)
@@ -54,7 +99,7 @@ class writeZshCode:
                 descr = None
             elif length == 4:
                 long, short = optList[:2]
-                descr = '[%s]' % optList[3]
+                descr = '[%s]' % firstLine(optList[3])
             else:
                 raise SystemExit, 'optList has invalid length'
 
@@ -64,22 +109,19 @@ class writeZshCode:
                 if descr == None:
                     descr = ''
 
-            longExclude = ''
-            shortExclude = ''
-            multi = ''
-            #shortExclude = '(-%s)' % short
             action = self.actions.get(long, ' ')
+
+            longExcludeStr, shortExcludeStr = self.makeExcludeStrings(long, short)
+            multi = ''
             if short:
                 if long in self.multiUse:
                     multi = '*'
-                else:
-                    longExclude = '(--%s)' % long
-                    shortExclude = '(-%s)' % short
-
-                self.file.write(escape('%s%s-%s%s:%s:%s' % (longExclude, multi, short, descr, long, action)))
+                self.file.write(escape('%s%s-%s%s:%s:%s' %
+                                      (shortExcludeStr, multi, short, descr, long, action)))
                 self.file.write(' \\\n')
 
-            self.file.write(escape('%s%s--%s=%s:%s:%s' % (shortExclude, multi, long, descr, long, action)))
+            self.file.write(escape('%s%s--%s=%s:%s:%s' %
+                                  (longExcludeStr, multi, long, descr, long, action)))
             self.file.write(' \\\n')
 
     def writeOptFlagLines(self):
@@ -103,20 +145,17 @@ class writeZshCode:
                 if descr == None:
                     descr = ''
 
-            longExclude = ''
-            shortExclude = ''
+            longExcludeStr, shortExcludeStr = self.makeExcludeStrings(long, short)
             multi = ''
             if short:
                 if long in self.multiUse:
                     multi = '*'
-                else:
-                    longExclude = '(--%s)' % long
-                    shortExclude = '(-%s)' % short
-
-                self.file.write(escape('%s%s-%s%s' % (longExclude, multi, short, descr)))
+                self.file.write(escape('%s%s-%s%s' %
+                                      (shortExcludeStr, multi, short, descr)))
                 self.file.write(' \\\n')
 
-            self.file.write(escape('%s%s--%s%s' % (shortExclude, multi, long, descr)))
+            self.file.write(escape('%s%s--%s%s' %
+                                  (longExcludeStr, multi, long, descr)))
             self.file.write(' \\\n')
 
     def addAdditionalOptions(self):
@@ -138,9 +177,22 @@ class writeZshCode:
             else:
                 raise SystemExit, 'opt_ method has wrong number of arguments'
 
+def prependHyphens(s):
+    """character options get one dash. word options get two."""
+    if len(s) == 1: return '-%s' % s
+    else: return '--%s' % s
+
+def excludeString(seq):
+    """take a list of option names and return a zsh exclusion list string"""
+    if seq:
+        return '(%s)' % ' '.join(map(prependHyphens, seq))
+    else:
+        return ''
+
 def firstLine(s):
     try:
-        i = s.find('\n')
+        i = s.index('\n')
+        print 'found newline'
         return s[:i]
     except ValueError:
         return s
