@@ -29,7 +29,7 @@ from twisted.python.runtime import platform
 from twisted.cred.authorizer import DefaultAuthorizer
 
 # Sibling Imports
-import main, defer
+import main, defer, error
 
 
 class _SSLlistener:
