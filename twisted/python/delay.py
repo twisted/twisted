@@ -28,8 +28,6 @@ twisted.reality.Reality and twisted.internet for details.
 
 # System Imports
 import os
-import sys
-import copy
 
 if os.name != 'java':
     import errno
@@ -187,7 +185,7 @@ class Time:
         now = time()
         newQueue = []
         for seconds, func, args, kw in self.queue:
-            newQueue.append(seconds - now, func, args, kw)
+            newQueue.append([seconds - now, func, args, kw])
         return {'queue': newQueue}
 
     def timeout(self):
