@@ -227,7 +227,7 @@ class Connection(abstract.FileDescriptor):
             return self.socket.send(data)
         except socket.error, se:
             if se.args[0] == EINTR:
-                self.writeSomeData(data)
+                return self.writeSomeData(data)
             elif se.args[0] == EWOULDBLOCK:
                 return 0
             else:
