@@ -40,6 +40,10 @@ Change to a supplied directory before running (default .)
 \fB\-r\fR, \fB\--reactor\fR \fI<reactor>\fR
 Choose which ReactorCore event loop to use, such as 'poll' or 'gtk'.
 .TP
+\fB\-r\fR, \fB\--spew\fR
+Write an extremely verbose log of everything that happens.  Useful for
+debugging freezes or locks in complex code.
+.TP
 \fB\-f\fR, \fB\--file\fR \fI<tap file>\fR
 Read the given .tap file (default twistd.tap)
 .TP
