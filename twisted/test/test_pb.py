@@ -297,6 +297,8 @@ class BrokerTestCase(unittest.TestCase):
         pump.pump()
         assert x.caught is z, "X should have caught Z"
 
+        # make sure references to remote methods are equals
+        self.assertEquals(y.throw, y.throw)
 
     def testResult(self):
         c, s, pump = connectedServerAndClient()
@@ -447,7 +449,8 @@ class BrokerTestCase(unittest.TestCase):
         assert not s.remotelyCachedObjects.has_key(luid)
         # The objects were the same (testing lcache identity)
         assert col2[0]
-
+        # test equality of references to methods
+        self.assertEquals(o2.getCache, o2.getCache)
 
     def whatTheHell(self, obj):
         print '!?!?!?!?', repr(obj)

@@ -148,11 +148,19 @@ class Message:
         self.obj = obj
         self.name = name
 
-    def send(self, *args, **kw):
+    def __cmp__(self, other):
+        return cmp((self.obj, self.name), other)
+    
+    def __hash__(self):
+        return hash((self.obj, self.name))
+    
+    def __call__(self, *args, **kw):
         """Asynchronously invoke a remote method.
         """
         self.obj.remoteInstanceDo(self.name, args, kw)
-
+    
+    # this is deprecated
+    send = __call__
 
 def noOperation(*args, **kw):
     """Do nothing.
@@ -572,18 +580,24 @@ class RemoteCacheMethod:
     def __init__(self, name, broker, cached, perspective):
         """(internal) initialize.
         """
-
         self.name = name
         self.broker = broker
         self.perspective = perspective
         self.cached = cached
 
-    def do(self, *args, **kw):
+    def __cmp__(self, other):
+        return cmp((self.name, self.broker, self.perspective, self.cached), other)
+    
+    def __hash__(self):
+        return hash((self.name, self.broker, self.perspective, self.cached))
+    
+    def __call__(self, *args, **kw):
         """(internal) action method.
         """
-
         self.cached.remoteCacheDo(self.broker, self.name, self.perspective, args, kw)
 
+    # this method is deprecated
+    do = __call__
 
 class RemoteCacheObserver:
     """I am a reverse-reference to the peer's RemoteCache.
@@ -626,7 +640,7 @@ class RemoteCacheObserver:
 
         if key[:2]=='__' and key[-2:]=='__':
             raise AttributeError(key)
-        return RemoteCacheMethod(key, self.broker, self.cached, self.perspective).do
+        return RemoteCacheMethod(key, self.broker, self.cached, self.perspective)
 
 
 class Cacheable(Copyable):
@@ -746,7 +760,7 @@ class RemoteReference(Serializable, styles.Ephemeral):
 
         if key[:2]=='__' and key[-2:]=='__':
             raise AttributeError(key)
-        return Message(self, key).send
+        return Message(self, key)
 
 
     def remoteInstanceDo(self, key, args, kw):
@@ -990,7 +1004,6 @@ class Broker(banana.Banana):
     def expressionReceived(self, sexp):
         """Evaluate an expression as it's received.
         """
-
         if isinstance(sexp, types.ListType):
             command = sexp[0]
             methodName = "proto_%s" % command
