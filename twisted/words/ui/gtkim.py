@@ -15,10 +15,6 @@ class Group(pb.Cache):
 
 pb.setCopierForClass("twisted.words.service.Group", Group)
 
-def defocusify(widget):
-    widget.unset_flags(gtk.CAN_FOCUS)
-
-
 
 class AddContact(gtk.GtkWindow):
     def __init__(self, contactList):
@@ -50,7 +46,7 @@ class Conversation(gtk.GtkWindow):
         self.set_title("%s - Instance Messenger" % contact)
         self.text = gtk.GtkText()
         vb = gtk.GtkVBox()
-        defocusify(self.text)
+        gtkutil.defocusify(self.text)
         self.text.set_word_wrap(gtk.TRUE)
         vb.pack_start(gtkutil.scrollify(self.text), 1, 1, 0)
         self.entry = gtk.GtkEntry()

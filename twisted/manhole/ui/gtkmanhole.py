@@ -1,6 +1,5 @@
 import gtk, sys, string
 
-from twisted.words.ui import gtkim
 from twisted.spread.ui import gtkutil
 from twisted.internet import ingtkernet
 from twisted.spread import pb
@@ -45,7 +44,7 @@ class Interaction(gtk.GtkWindow):
         vp = gtk.GtkVPaned()
 
         self.output = gtk.GtkText()
-        gtkim.defocusify(self.output)
+        gtkutil.defocusify(self.output)
         self.output.set_word_wrap(gtk.TRUE)
         vp.pack1(gtkutil.scrollify(self.output), gtk.TRUE, gtk.FALSE)
 
@@ -53,7 +52,7 @@ class Interaction(gtk.GtkWindow):
         self.input.set_editable(gtk.TRUE)
         self.input.connect("key_press_event", self.processKey)
         self.input.set_word_wrap(gtk.TRUE)
-        vp.pack2(gtkim.scrollify(self.input), gtk.FALSE, gtk.TRUE)
+        vp.pack2(gtkutil.scrollify(self.input), gtk.FALSE, gtk.TRUE)
         vb.pack_start(vp, 1,1,0)
 
         self.add(vb)
