@@ -15,18 +15,18 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from twisted.internet import reactor
 from twisted.spread import pb
-from twisted.internet import main
 def success(message):
     print "Message received:",message
-    main.shutDown()
+    reactor.stop()
 def failure(error):
     print "Failure...",error
-    main.shutDown()
+    reactor.stop()
 def connected(perspective):
     perspective.callRemote('echo', "hello world").addCallbacks(success, failure)
     print "connected."
 pb.connect("localhost", pb.portno,
            "guest", "guest",
            "pbecho", "guest", 30).addCallbacks(connected, failure)
-main.run()
+reactor.run()
