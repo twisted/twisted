@@ -59,6 +59,11 @@ class FilePathTestCase(unittest.TestCase):
         f2 = self.path.child('sub1').child('file2')
         self.failUnlessEqual(f2.open().read(), self.f2content)
 
+    def testPreauthChild(self):
+        fp = FilePath('.')
+        fp.preauthChild('foo/bar')
+        self.assertRaises(InsecurePath, fp.child, '/foo')
+
     def testStatCache(self):
         p = self.path.child('stattest')
         p.touch()
