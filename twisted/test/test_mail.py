@@ -229,7 +229,6 @@ class MaildirTestCase(unittest.TestCase):
             i = i + 1
 
         mb = mail.maildir.MaildirMailbox(self.d)
-        
         self.assertEquals(mb.listMessages(), range(1, 11))
         self.assertEquals(mb.listMessages(1), 2)
         self.assertEquals(mb.listMessages(5), 6)
@@ -478,6 +477,8 @@ class RelayTestCase(unittest.TestCase):
         
         for peer in doRelay:
             user = empty()
+            user.orig = 'user@host'
+            user.dest = 'tsoh@resu'
             user.protocol = empty()
             user.protocol.transport = empty()
             user.protocol.transport.getPeer = lambda: peer
