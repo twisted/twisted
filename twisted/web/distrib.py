@@ -145,7 +145,7 @@ class ResourcePublisher(pb.Root, styles.Versioned):
     persistenceVersion = 2
 
     def upgradeToVersion2(self):
-        self.application.removeIdentity("web")
+        self.application.authorizer.removeIdentity("web")
         del self.application.services[self.serviceName]
         del self.serviceName
         del self.application
