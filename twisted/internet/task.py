@@ -125,10 +125,25 @@ class Scheduler:
         for function, args, kwargs in tasks:
             apply(function, args, kwargs)
 
+
 def initThreads():
-    global theScheduler, thread
+    global theScheduler, thread, schedule
     import thread
+    
+    # Sibling Imports
+    import main
+    
+    # there may already be a registered scheduler, so we need to get
+    # rid of it.
+    try:
+        main.removeDelayed(theScheduler)
+    except NameError:
+        pass
+    
     theScheduler = ThreadedScheduler()
+    schedule = theScheduler.addTask
+    main.addDelayed(theScheduler)
+
 
 threadable.whenThreaded(initThreads)
 theScheduler = Scheduler()
