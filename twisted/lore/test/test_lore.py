@@ -193,14 +193,15 @@ class TestFactory(unittest.TestCase):
         self.assertEqualFiles1("lore_index_file_out.html", "lore_index_file.html")
 
     def test_book(self):
-        fn = sp('lore_test_book.book')
+        tmp = self.makeTemp()
         inputFilename = sp('lore_index_test.xhtml')
 
-        bf = open(fn, 'w')
+        bookFilename = os.path.join(tmp, 'lore_test_book.book')
+        bf = open(bookFilename, 'w')
         bf.write('Chapter(r"%s", None)\r\n' % inputFilename)
         bf.close()
 
-        book = htmlbook.Book(fn)
+        book = htmlbook.Book(bookFilename)
         expected = {'indexFilename': None, 
                     'chapters': [(inputFilename, None)],
                     }
