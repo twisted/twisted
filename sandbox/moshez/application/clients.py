@@ -21,6 +21,7 @@ class _AbstractClient(service.Service):
         #self._connection.stopConnecting()
 
     def getConnection(self):
+        from twisted.internet import reactor
         return getattr(reactor, self.method)(*self.args, **self.kwargs)
 
 

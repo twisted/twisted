@@ -1,7 +1,7 @@
 import os
 import cPickle as pickle
 import cStringIO as StringIO
-from twisted.python import components
+from twisted.python import components, log, runtime
 
 def encrypt(passphrase, data):
     import md5
@@ -30,7 +30,7 @@ class Persistant:
 
     def __init__(self, original, name):
         self.original = original
-        self.basename = name
+        self.name = name
 
     def _getFilename(self, filename, ext, tag):
         if filename:
@@ -65,7 +65,7 @@ class Persistant:
             from twisted.persisted.marmalade import jellyToXML
             dumpFunc = jellyToXML
             ext = "tax"
-        elif self.persistStyle == "aot":
+        elif self.style == "aot":
             from twisted.persisted.aot import jellyToSource
             dumpFunc = jellyToSource
             ext = "tas"
@@ -84,7 +84,7 @@ class Persistant:
         finalname, filename = self._getFilename(filename, ext, tag)
         log.msg("Saving "+self.name+" application to "+finalname+"...")
         self._saveTemp(filename, passphrase, dumpFunc)
-        if runtime.platform.getType() == "win32" and os.path.isfile(finalname):
+        if runtime.platformType == "win32" and os.path.isfile(finalname):
                 os.remove(finalname)
         os.rename(filename, finalname)
         log.msg("Saved.")

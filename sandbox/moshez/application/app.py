@@ -1,16 +1,18 @@
-from twisted.python import components
+from twisted.python import components, runtime, log
 from twisted.application import service, persist
+import os
 
 class Application(service.MultiService, components.Componentized):
 
     processName = None
 
     def __init__(self, name, uid=None, gid=None):
-        MultiService.__init__(self)
+        service.MultiService.__init__(self)
+        components.Componentized.__init__(self)
         self.setName(name)
         self.setComponent(persist.IPersistable,
                           persist.Persistant(self, self.name))
-        if platform.getType() == "posix":
+        if runtime.platformType == "posix":
             if uid is None:
                 uid = os.getuid()
             self.uid = uid
@@ -40,5 +42,6 @@ class Application(service.MultiService, components.Componentized):
             log.msg('set uid/gid %s/%s' % (self.uid, self.gid))
 
     def scheduleSave(self):
-        p = self.getComponents(persist.IPersistable)
+        from twisted.internet import reactor
+        p = self.getComponent(persist.IPersistable)
         reactor.addSystemEventTrigger('after', 'shutdown', p.save, 'shutdown')

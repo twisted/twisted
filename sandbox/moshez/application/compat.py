@@ -1,5 +1,5 @@
-from twisted.python import components
-from twisted.application import servers, clients, persist
+from twisted.python import components, log
+from twisted.application import servers, clients, persist, service
 
 class IOldApplication(components.Interface):
 
@@ -138,5 +138,9 @@ class ServiceNetwork:
         log.callWithLogger(self, reactor.run,
                            installSignalHandlers=installSignalHandlers)
 
+    def __getattr__(self, name):
+        return getattr(self.app, name)
 
-components.registerAdapter(service.IServiceCollection, ServiceNetwork)
+
+components.registerAdapter(ServiceNetwork,
+                           service.IServiceCollection, IOldApplication)

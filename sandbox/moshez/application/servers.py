@@ -30,6 +30,7 @@ class _AbstractServer(service.Service):
         self._port.stopListening()
 
     def getPort(self):
+        from twisted.internet import reactor
         return getattr(reactor, self.method)(*self.args, **self.kwargs)
 
 
