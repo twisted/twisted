@@ -101,7 +101,7 @@ class ISlicer(Interface):
 
     trackReferences = Attribute("True if the object we slice is referenceable: i.e. it is useful or necessary to send multiple copies as a single instance and a bunch of References, rather than as separate copies. Instances are referenceable, as are mutable containers like lists.")
 
-    def slice(self, streamable, banana):
+    def slice(streamable, banana):
         """Return an iterator which provides Index Tokens and the Body
         Tokens of the object's serialized form. This is frequently
         implemented with a generator (i.e. 'yield' appears in the body of
@@ -111,7 +111,7 @@ class ISlicer(Interface):
         If a Violation exception is raised, slicing will cease. An ABORT
         token followed by a CLOSE token will be emitted."""
 
-    def registerReference(self, refid, obj):
+    def registerReference(refid, obj):
         """Register the relationship between 'refid' (a number taken from
         the cumulative count of OPEN tokens sent over our connection: 0 is
         the object described by the very first OPEN sent over the wire) and
@@ -123,7 +123,7 @@ class ISlicer(Interface):
         (they might only be valid within a single RPC invocation, for
         example)."""
 
-    def childAborted(self, v):
+    def childAborted(v):
         """Notify the Slicer that one of its child tokens (as produced by
         its .slice iterator) emitted an ABORT token, terminating their token
         stream. The corresponding Unslicer (receiving this token stream)
@@ -132,7 +132,7 @@ class ISlicer(Interface):
         here.
         """
 
-    def slicerForObject(self, obj):
+    def slicerForObject(obj):
         """Get a new Slicer for some child object. Slicers usually delegate
         this method up to the RootSlicer. References are handled by
         producing a ReferenceSlicer here. These references can have various
@@ -163,7 +163,7 @@ class IUnslicer(Interface):
     # Note, however, that it is not valid to both call abandonUnslicer *and*
     # raise a Violation. That would discard too much.
 
-    def setConstraint(self, constraint):
+    def setConstraint(constraint):
         """Add a constraint for this unslicer. The unslicer will enforce
         this constraint upon all incoming data. The constraint must be of an
         appropriate type (a ListUnslicer will only accept a ListConstraint,
@@ -176,7 +176,7 @@ class IUnslicer(Interface):
         be made to consume) before it finally accepts or rejects the input.
         """
 
-    def start(self, count):
+    def start(count):
         """Called to initialize the new slice. The 'count' argument is the
         reference id: if this object might be shared (and therefore the
         target of a 'reference' token), it should call
@@ -185,7 +185,7 @@ class IUnslicer(Interface):
         Deferred there instead.
         """
 
-    def checkToken(self, typebyte, size):
+    def checkToken(typebyte, size):
         """Check to see if the given token is acceptable (does it conform to
         the constraint?). It will not be asked about ABORT or CLOSE tokens,
         but it *will* be asked about OPEN. It should enfore a length limit
@@ -198,7 +198,7 @@ class IUnslicer(Interface):
         still raise BananaError).
         """
 
-    def openerCheckToken(self, typebyte, size, opentype):
+    def openerCheckToken(typebyte, size, opentype):
         """'typebyte' is the type of an incoming index token. 'size' is the
         value of header associated with this typebyte. 'opentype' is a list
         of open tokens that we've received so far, not including the one
@@ -211,7 +211,7 @@ class IUnslicer(Interface):
         RootUnslicer.
         """
 
-    def doOpen(self, opentype):
+    def doOpen(opentype):
         """opentype is a tuple. Return None if more index tokens are
         required. Check to see if this kind of child object conforms to the
         constraint, raise Violation if not. Create a new Unslicer (usually
@@ -219,7 +219,7 @@ class IUnslicer(Interface):
         constraint on the child unslicer, if any.
         """
 
-    def receiveChild(self, childobject):
+    def receiveChild(childobject):
         """'childobject' is being handed to this unslicer. It may be a
         primitive type (number or string), or a composite type produced by
         another Unslicer. It might be an UnbananaFailure if something went
