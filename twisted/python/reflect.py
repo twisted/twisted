@@ -265,6 +265,7 @@ class Summer(Accessor):
                     Accessor.reallySet(self,y,v)
         Accessor.reallySet(self,k,v)
 
+
 class Promise:
     """I represent an object not yet available.
 
@@ -284,6 +285,7 @@ class Promise:
     def __getattr__(self, key):
         return QueueMethod(key, self.calls)
 
+
 class QueueMethod:
     """ I represent a method that doesn't exist yet."""
     def __init__(self, name, calls):
@@ -291,6 +293,7 @@ class QueueMethod:
         self.calls = calls
     def __call__(self, *args):
         self.calls.append((self.name, args))
+
 
 def funcinfo(function):
     """
