@@ -224,7 +224,7 @@ class InterfaceTestCase(unittest.TestCase):
             reactor.iterate(0.01)
 
         self.assertEquals(self._called, 1)
-        self.assert_( 0 < self._calledTime - start - 0.5 < 0.2 )
+        self.assertApproximates(self._calledTime, start + 0.5, 0.2 )
         self.assertRaises(error.AlreadyCalled, i.cancel)
 
         del self._called
@@ -250,8 +250,8 @@ class InterfaceTestCase(unittest.TestCase):
         # both should be called sometime during this
         while time.time() - start < 0.9:
             reactor.iterate(0.01)
-        self.assert_(-0.1 < self._resetcallbackTime - start - 0.5 < 0.1)
-        self.assert_(-0.1 < self._delaycallbackTime - start - 0.8 < 0.1)
+        self.assertApproximates(self._resetcallbackTime, start + 0.5, 0.1)
+        self.assertApproximates(self._delaycallbackTime, start + 0.8, 0.1)
 
         del self._resetcallbackTime
         del self._delaycallbackTime
@@ -263,7 +263,7 @@ class InterfaceTestCase(unittest.TestCase):
         start = time.time()
         t = threading.Thread(target=wake).start()
         reactor.iterate(5)
-        self.assert_( abs(time.time() - start - 0.5) < 0.5 )
+        self.assertApproximates(time.time(), start + 0.5, 0.5)
 
 
 class ReactorCoreTestCase(unittest.TestCase):

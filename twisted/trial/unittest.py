@@ -51,6 +51,11 @@ class TestCase:
     assertRaises = failUnlessRaises
     assert_ = failUnless
 
+    def assertApproximates(self, first, second, tolerance, msg=None):
+        if abs(first - second) > tolerance:
+            raise AssertionError, (msg or "%s ~== %s" % (first, second))
+
+
 def isTestClass(testClass):
     return issubclass(testClass, TestCase)
 
