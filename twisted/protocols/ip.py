@@ -34,6 +34,8 @@ class IPHeader:
         self.dont_fragment = (frag_off & 0x4000 != 0)
         self.more_fragments = (frag_off & 0x2000 != 0)
 
+MAX_SIZE = 2L**32
+
 class IPProtocol(protocol.AbstractDatagramProtocol):
     __implements__ = raw.IRawPacketProtocol
 
@@ -44,7 +46,7 @@ class IPProtocol(protocol.AbstractDatagramProtocol):
         proto = raw.IRawDatagramProtocol(proto)
         if num < 0:
             raise TypeError, 'Added protocol must be positive or zero'
-        if num >= 2**32:
+        if num >= MAX_SIZE:
             raise TypeError, 'Added protocol must fit in 32 bits'
         if num not in self.ipProtos:
             self.ipProtos[num] = []

@@ -404,7 +404,7 @@ class IPTestCase(unittest.TestCase):
         """Adding a protocol with a number >=2**32 raises an exception."""
         e = ip.IPProtocol()
         try:
-            e.addProto(2**32, MyProtocol([]))
+            e.addProto(2L**32, MyProtocol([]))
         except TypeError, e:
             if e.args == ('Added protocol must fit in 32 bits',):
                 pass
@@ -417,7 +417,7 @@ class IPTestCase(unittest.TestCase):
         """Adding a protocol with a number >=2**32 raises an exception."""
         e = ip.IPProtocol()
         try:
-            e.addProto(2**32+1, MyProtocol([]))
+            e.addProto(2L**32+1, MyProtocol([]))
         except TypeError, e:
             if e.args == ('Added protocol must fit in 32 bits',):
                 pass
