@@ -161,9 +161,6 @@ class POP3(basic.LineReceiver, policies.TimeoutMixin):
             return f(*args)
         raise POP3Error("Unknown protocol command: " + command)
 
-    def getVersionString(self):
-        return longversion
-
     def listCapabilities(self):
         baseCaps = [
             "TOP",
@@ -171,15 +168,18 @@ class POP3(basic.LineReceiver, policies.TimeoutMixin):
             "UIDL",
         ]
         
-        extCaps = [
-            ("EXPIRE", lambda: self.timeOut),
-            ("IMPLEMENTATION", self.getVersionString)
-        ]
-        
-        for (c, f) in  extCaps:
-            v = f()
-            if v:
-                baseCaps.append("%s %s" % (c, v))
+        extCaps = ('IMPLEMENTATION', 'EXPIRE', 'LOGIN_DELAY', 'SASL') 
+
+        if components.implements(self.factory, IServerFactory):
+            for s in extCaps:
+                try:
+                    v = getattr(self.factory, 'cap_%s' % (s,))()
+                except NotImplementedError:
+                    pass
+                except:
+                    log.err()
+                else:
+                    baseCaps.append("%s %s" % (s.replace('_', '-'), v))
         return baseCaps
 
     def do_CAPA(self):
@@ -392,6 +392,19 @@ class POP3(basic.LineReceiver, policies.TimeoutMixin):
                 IMailbox
             )
         raise cred.error.UnauthorizedLogin()
+
+class IServerFactory(components.Interface):
+    def cap_IMPLEMENTATION(self):
+        """Return a string describing this POP3 server implementation."""
+    
+    def cap_EXPIRE(self):
+        """Return the minimum number of seconds messages are retained."""
+    
+    def cap_LOGIN_DELAY(self):
+        """Return the minimum number of seconds between client logins."""
+    
+    def cap_SASL(self):
+        """Return a string describing supported authentication schemes."""
 
 class IMailbox(components.Interface):
     def listMessages(self, index=None):

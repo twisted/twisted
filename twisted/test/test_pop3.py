@@ -238,14 +238,29 @@ QUIT''', '\n')
         self.runTest(lines, expected_output)
 
 
+class TestServerFactory:
+    __implements__ = (pop3.IServerFactory,)
+
+    def cap_IMPLEMENTATION(self):
+        return "Test Implementation String"
+    
+    def cap_EXPIRE(self):
+        return 60
+    
+    def cap_SASL(self):
+        return "SCHEME_1 SCHEME_2"
+    
+    def cap_LOGIN_DELAY(self):
+        return 120
+
 class CapabilityTestCase(unittest.TestCase):
     def setUp(self):
-        self.caps = pop3.POP3().listCapabilities()
-        
-        # Protocol-level CAPA response
         p = pop3.POP3()
+        p.factory = TestServerFactory()
         p.transport = StringIO.StringIO()
         p.do_CAPA()
+    
+        self.caps = p.listCapabilities()
         self.pcaps = p.transport.getvalue().splitlines()
 
     def testUIDL(self):
@@ -261,10 +276,17 @@ class CapabilityTestCase(unittest.TestCase):
         self.assertIn("USER", self.pcaps)
     
     def testEXPIRE(self):
-        self.assertIn("EXPIRE %d" % (pop3.POP3.timeOut,), self.caps)
-        self.assertIn("EXPIRE %d" % (pop3.POP3.timeOut,), self.pcaps)
+        self.assertIn("EXPIRE 60", self.caps)
+        self.assertIn("EXPIRE 60", self.caps)
     
     def testIMPLEMENTATION(self):
-        self.assertIn("IMPLEMENTATION %s" % (pop3.longversion,), self.caps)
-        self.assertIn("IMPLEMENTATION %s" % (pop3.longversion,), self.pcaps)
-        
+        self.assertIn("IMPLEMENTATION Test Implementation String", self.caps)
+        self.assertIn("IMPLEMENTATION Test Implementation String", self.pcaps)
+
+    def testSASL(self):
+        self.assertIn("SASL SCHEME_1 SCHEME_2", self.caps)
+        self.assertIn("SASL SCHEME_1 SCHEME_2", self.pcaps)
+    
+    def testLOGIN_DELAY(self):
+        self.assertIn("LOGIN-DELAY 120", self.caps)
+        self.assertIn("LOGIN-DELAY 120", self.pcaps)
