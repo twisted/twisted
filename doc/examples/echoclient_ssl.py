@@ -16,13 +16,11 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from OpenSSL import SSL
+import sys
 
 from twisted.internet.protocol import ClientFactory
 from twisted.protocols.basic import LineReceiver
-from twisted.internet.app import Application
 from twisted.internet import ssl, reactor
-from echoserv_ssl import ServerContextFactory
-import sys
 
 
 class EchoClient(LineReceiver):
@@ -52,6 +50,10 @@ class EchoClientFactory(ClientFactory):
         print 'connection lost:', reason.getErrorMessage()
         reactor.stop()
 
-factory = EchoClientFactory()
-reactor.connectSSL('localhost', 8000, factory, ssl.ClientContextFactory())
-reactor.run()
+def main():
+    factory = EchoClientFactory()
+    reactor.connectSSL('localhost', 8000, factory, ssl.ClientContextFactory())
+    reactor.run()
+
+if __name__ == '__main__':
+    main()
