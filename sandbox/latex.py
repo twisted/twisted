@@ -9,6 +9,7 @@ class LatexSpitter(XMLParser):
 
     ignoring = 0
     normalizing = 1
+    baseLevel = 0
 
     def __init__(self, writer, currDir='.'):
         self.writer = writer
@@ -40,6 +41,7 @@ class LatexSpitter(XMLParser):
 
     def _headerStart(self, h, attributes):
         level = int(h[1])-2
+        level += self.baseLevel
         self.writer('\\'+level*'sub'+'section{')
 
     def start_h1(self, _, _1):
@@ -66,6 +68,7 @@ class LatexSpitter(XMLParser):
         self.ignoring = 0
 
     start_h2 = start_h3 = start_h4 = _headerStart
+
     mapStart_title = '\\title{'
     mapEnd_title = mapEnd_h2 = mapEnd_h3 = mapEnd_h4 = '}'
 
@@ -96,11 +99,17 @@ class LatexSpitter(XMLParser):
     mapEnd_em = '\\end{em}'
 
 
+class SectionLatexSpitter(LatexSpitter):
+
+    baseLevel = 1
+    mapStart_title = '\\section{'
+    mapEnd_body = mapStart_body = mapStart_html = None
+
 def main():
     import sys
     f = open(sys.argv[1])
     fout = open(os.path.splitext(sys.argv[1])[0]+'.tex', 'w')
-    spitter = LatexSpitter(fout.write, os.path.dirname(sys.argv[1]))
+    spitter = SectionLatexSpitter(fout.write, os.path.dirname(sys.argv[1]))
     spitter.makeConnection(None)
     spitter.dataReceived(f.read())
 
