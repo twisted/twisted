@@ -16,6 +16,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from twisted.python import log
+from twisted.cred import identity
 
 class Perspective:
     """I am an Identity's view onto a service.
@@ -53,7 +54,7 @@ class Perspective:
         where the distinction between Perspective and Identity is weak,
         such as single-Service servers.
         """
-        ident = Identity(self.perspectiveName, self.service.application)
+        ident = identity.Identity(self.perspectiveName, self.service.application)
         self.setIdentityName(self.perspectiveName)
         ident.setPassword(password)
         ident.addKeyForPerspective(self)
