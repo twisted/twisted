@@ -24,7 +24,7 @@ from twisted.protocols import telnet
 import types
 
 
-class ShellFactoryConfigurator(app.ProtocolFactoryConfigurator):
+class ShellFactoryConfigurator(coil.Configurator):
 
     configurableClass = telnet.ShellFactory
     

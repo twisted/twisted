@@ -17,7 +17,7 @@
 """Coil plugin for FTP server."""
 
 # Twisted Imports
-from twisted.coil import app, coil
+from twisted.coil import coil
 from twisted.protocols import ftp
 from twisted.python import roots
 
@@ -42,7 +42,7 @@ import types, os
 #        return "Username"
 
 
-class FTPConfigurator(app.ProtocolFactoryConfigurator, roots.Locked):
+class FTPConfigurator(coil.Configurator, roots.Locked):
 
     configurableClass = ftp.FTPFactory
     
@@ -57,7 +57,7 @@ class FTPConfigurator(app.ProtocolFactoryConfigurator, roots.Locked):
 
     def __init__(self, instance):
         roots.Locked.__init__(self)
-        app.ProtocolFactoryConfigurator.__init__(self, instance)
+        coil.Configurator.__init__(self, instance)
         #self.putEntity("users", UserCollection(self.instance))
         self.lock()
     

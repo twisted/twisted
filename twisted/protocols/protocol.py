@@ -21,15 +21,25 @@ Start here if you are looking to write a new protocol implementation for
 Twisted Python.  The Protocol class contains some introductory material.
 """
 
-from twisted.python import log
+from twisted.python import log, components
+
+
+class IFactory(components.Interface):
+    """Interface for protocol factories.
+    
+    Must implement startFactory, stopFactory and buildProtocol.
+    """
+
 
 class Factory:
     """This is a factory which produces protocols.
 
-    This interface only requires that you implement one method; buildProtocol.
-    By default, this will create a protocol of the class given in
+    By default, buildProtocol will create a protocol of the class given in
     self.protocol.
     """
+    
+    __implements__ = [IFactory]
+    
     protocol = None
 
     def startFactory(self):

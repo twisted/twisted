@@ -19,9 +19,15 @@
 
 
 # System Imports
-from twisted.python import roots
+from twisted.python import roots, components
+from twisted.coil import coil
 
-class Resource(roots.Homogenous):
+
+class IResource(components.Interface):
+    """A web resource."""
+
+
+class Resource(coil.ConfigCollection):
     """I define a web-accessible resource.
 
     I serve 2 main purposes; one is to provide a standard representation for
@@ -29,6 +35,10 @@ class Resource(roots.Homogenous):
     abstract directory structure for URL retrieval.
     """
 
+    __implements__ = [IResource, coil.IConfigCollection]
+    
+    entityType = IResource
+    
     server = None
 
     def __init__(self):
@@ -143,7 +153,6 @@ class Resource(roots.Homogenous):
         """
         raise NotImplementedError("%s called" % str(self.__class__.__name__))
 
-Resource.entityType = Resource
 
 #t.w imports
 #This is ugly, I know, but since error.py directly access resource.Resource

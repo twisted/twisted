@@ -21,7 +21,7 @@ This is used as the root of the config tree.
 
 # Twisted Imports
 from twisted.protocols import protocol
-from twisted.python import roots, reflect
+from twisted.python import roots, reflect, components
 from twisted.cred import service
 
 # Sibling Imports
@@ -31,17 +31,17 @@ import coil
 import string
 
 
-class PortCollection(roots.Homogenous):
+class PortCollection(coil.ConfigCollection):
     """A collection of Ports; names may only be strings which represent port numbers.
     """
     
-    entityType = protocol.Factory
+    entityType = protocol.IFactory
 
     def __init__(self, app, ptype):
         self.app = app
         self.mod = reflect.namedModule('twisted.internet.'+ptype)
         self.ptype = ptype
-        roots.Homogenous.__init__(self)
+        coil.ConfigCollection.__init__(self)
 
     def listStaticEntities(self):
         ret = []
@@ -80,13 +80,13 @@ class PortCollection(roots.Homogenous):
         return "Port Number"
 
 
-class ServiceCollection(roots.Homogenous):
+class ServiceCollection(coil.ConfigCollection):
     """A collection of Service objects."""
     
-    entityType = service.Service
+    entityType = service.IService
 
     def __init__(self, app):
-        roots.Homogenous.__init__(self)
+        coil.ConfigCollection.__init__(self)
         self.app = app
 
     def listStaticEntities(self):
@@ -103,17 +103,20 @@ class ServiceCollection(roots.Homogenous):
     def delEntity(self, name):
         del self.app.services[name]
 
+    def getEntityType(self):
+        return "Service"
 
-class ApplicationConfig(roots.Locked):
+
+class ApplicationConfig(coil.StaticCollection):
     """The root of the application configuration."""
     
     def __init__(self, app):
-        roots.Locked.__init__(self)
+        coil.StaticCollection.__init__(self)
         self.app = app
         self._addEntitiesAndLock()
 
     def _addEntitiesAndLock(self):
-        l = roots.Locked()
+        l = coil.StaticCollection()
         self.putEntity('ports', l)
         l.putEntity("tcp", PortCollection(self.app, 'tcp'))
         try:
@@ -124,19 +127,3 @@ class ApplicationConfig(roots.Locked):
         l.lock()
         self.putEntity("services", ServiceCollection(self.app))
         self.lock()
-
-
-class ServiceConfigurator(coil.Configurator):
-    """Superclass for service configurators."""
-    
-    configurableClass = service.Service
-
-
-class ProtocolFactoryConfigurator(coil.Configurator):
-    """Superclass for protocol factory configurators."""
-    
-    configurableClass = protocol.Factory
-
-
-coil.registerConfigurator(ServiceConfigurator, None)
-coil.registerConfigurator(ProtocolFactoryConfigurator, None)

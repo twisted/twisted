@@ -23,7 +23,7 @@ import string
 
 # Twisted Imports
 from twisted.web import widgets
-from twisted.python import roots
+from twisted.python import roots, components, reflect
 from twisted.python.plugin import getPlugIns
 from twisted.web import widgets, html
 from twisted.protocols import protocol, http
@@ -110,12 +110,11 @@ class AppConfiguratorPage(widgets.Presentation):
     def displayTreeElement(self, write, inName, inPath, collection, indentLevel=0):
         subIndent = indentLevel + 1
         for name, entity in collection.listStaticEntities():
-            cfg = coil.getConfigurator(entity)
-            if isinstance(cfg, roots.Collection): entity = cfg
-            if isinstance(entity, roots.Collection):
+            collection = coil.getCollection(entity)
+            if collection is not None:
                 write('%s + <a href="%s/%s">%s</a> <br>' %
                       (indentLevel * '&nbsp;', inPath, name, name))
-                self.displayTreeElement(write, name, '%s/%s' % (inPath, name), entity, subIndent)
+                self.displayTreeElement(write, name, '%s/%s' % (inPath, name), collection, subIndent)
             else:
                 write("%s. %s <br>" % (subIndent * '&nbsp;', name))
 
@@ -129,25 +128,17 @@ class AppConfiguratorPage(widgets.Presentation):
             obj = self.app
             for elem in path:
                 if elem:                # '' doesn't count
-                    try:
-                        newobj = obj.getStaticEntity(elem)
-                    except AttributeError:
-                        newobj = None
-                    if newobj is None:
-                        # see if we can get subobject from configurator
-                        cfg = coil.getConfigurator(obj)
-                        if isinstance(cfg, roots.Collection):
-                            newobj = cfg.getStaticEntity(elem)
-                            if newobj is not None:
-                                obj = newobj
-                                continue
-                        
+                    collection = coil.getCollection(obj)
+                    if collection is None:
+                        obj = None
+                    else:
+                        obj = collection.getStaticEntity(elem)
+                    
+                    if obj is None:    
                         # no such subobject
                         request.setResponseCode(http.TEMPORARY_REDIRECT)
                         request.setHeader('location', request.prePathURL())
                         return ['Redirecting...']
-                    else:
-                        obj = newobj
         else:
             obj = self.app
         ret = []
@@ -159,11 +150,10 @@ class AppConfiguratorPage(widgets.Presentation):
             ret.extend(widgets.TitleBox("Configuration", ConfigForm(self, cfg, linkfrom)).display(request))
         
         # add a form for a collection of objects
-        if not isinstance(obj, roots.Homogenous) and cfg:
-            coll = cfg
-        else:
-            coll = obj
-        if isinstance(coll, roots.Homogenous):
+        print obj
+        coll = coil.getCollection(obj)
+        print coll
+        if components.implements(coll, coil.IConfigCollection):
             if coll.entityType in (types.StringType, types.IntType, types.FloatType):
                 ret.extend(widgets.TitleBox("Delete Items", ImmutableCollectionDeleteForm(self, coll, linkfrom)).display(request))
                 colClass = ImmutableCollectionForm
@@ -174,24 +164,21 @@ class AppConfiguratorPage(widgets.Presentation):
         ret.append(html.PRE(str(obj)))
         return ret
 
-    def makeConfigMenu(self, cfgType):
-        configuratorType = coil.configurators.get(cfgType, None)
+    def makeConfigMenu(self, interface):
         l = []
-        if configuratorType:
-            for claz in coil.theClassHierarchy.getSubClasses(configuratorType, 1):
-                if issubclass(claz, coil.Configurator):
-                    realClass = coil.getConfigurableClass(claz)
-                    if coil.hasFactory(realClass):
-                        nm = getattr(claz, 'configName', None) or str(realClass)
-                        l.append(['new '+str(realClass), 'new '+nm])
-        for methId, desc in self.dispensers.get(configuratorType, []):
+        if 1:
+            for realClass in coil.getImplementors(interface):
+                cfgClass = coil.getConfiguratorClass(realClass)
+                nm = getattr(cfgClass, 'configName', None) or str(realClass)
+                l.append(['new '+str(realClass), 'new '+nm])
+        for methId, desc in self.dispensers.get(interface, []):
             l.append(['dis '+str(methId), desc])
         return l
 
     def makeConfigurable(self, cfgInfo, container, name):
         cmd, args = string.split(cfgInfo, ' ', 1)
         if cmd == "new": # create
-            obj = coil.createConfigurable(coil.getClass(args), container, name)
+            obj = coil.createConfigurable(reflect.namedClass(args), container, name)
         elif cmd == "dis": # dispense
             methodId = int(args)
             obj = self.dispenseMethods[methodId]()
@@ -199,8 +186,8 @@ class AppConfiguratorPage(widgets.Presentation):
         configurator = coil.getConfigurator(obj)
         
         if configurator:
-            for methodName, klass, desc in configurator.configDispensers:
-                supclas = coil.theClassHierarchy.getSuperClasses(klass, 1) + (klass,)
+            for methodName, interface, desc in configurator.configDispensers():
+                supclas = components.superInterfaces(interface)
                 for k in supclas:
                     if not self.dispensers.has_key(k):
                         self.dispensers[k] = []
@@ -216,7 +203,7 @@ class ConfigForm(widgets.Form):
     """A form for configuring an object."""
     
     def __init__(self, configurator, cfgr, linkfrom):
-        if not isinstance(cfgr, coil.Configurator):
+        if not components.implements(cfgr, coil.IConfigurator):
             raise TypeError
         self.configurator = configurator  # this is actually a AppConfiguratorPage
         self.cfgr = cfgr
@@ -230,7 +217,7 @@ class ConfigForm(widgets.Form):
         myFields = []
         for name, (cfgType, prompt, description) in allowed.items():
             current = existing.get(name)
-            if isinstance(cfgType, types.ClassType):
+            if isinstance(cfgType, types.ClassType) and issubclass(cfgType, components.Interface):
                 inputType = 'menu'
                 inputValue = self.configurator.makeConfigMenu(cfgType)
                 if current:

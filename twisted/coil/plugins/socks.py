@@ -17,14 +17,14 @@
 """Coil plugin for SOCKSv4 proxy."""
 
 # Twisted Imports
-from twisted.coil import app, coil
+from twisted.coil import coil
 from twisted.protocols import socks
 
 # System Imports
 import types
 
 
-class SOCKSConfigurator(app.ProtocolFactoryConfigurator):
+class SOCKSConfigurator(coil.Configurator):
 
     configurableClass = socks.SOCKSv4Factory
     

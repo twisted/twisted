@@ -20,13 +20,17 @@ Twisted Cred Service
 """
 
 # Twisted Imports
-from twisted.python import defer, log
+from twisted.python import defer, log, components
 
 # Sibling Imports
 from perspective import Perspective
 
 # System Imports
 import types
+
+
+class IService(components.Interface):
+    """A service for internet applications."""
 
 
 class Service:
@@ -37,6 +41,9 @@ class Service:
 
     (See Also: twisted.spread.pb.Service)
     """
+    
+    __implements__ = [IService]
+    
     # ugh, load order
     perspectiveClass = Perspective
 

@@ -17,16 +17,9 @@
 from pyunit import unittest
 
 from twisted.coil import coil
+from twisted.python import components
 
 import types
-
-# classes for testClassHierarchy
-class A: pass
-class B(A): pass
-class C(B): pass
-class D: pass
-class E(C, D): pass
-class F(A): pass
 
 class MyConfigurable:
 
@@ -44,7 +37,15 @@ class MyConfig(coil.Configurator):
         "bar": [types.StringType, "Bar", "A bar of stuff."]
         }
 
+class IFoo(components.Interface):
+    pass
+
+class IBar(IFoo):
+    pass
+
 class CustomConfigurable:
+    
+    __implements__ = [IBar]
     
     def __init__(self, name):
         self.name = name
@@ -64,6 +65,8 @@ class CustomConfig(coil.Configurator):
     def config_foo(self, foo):
         self.instance.foo = 2 * foo
 
+coil.registerConfigurator(CustomConfig, customFactory)
+
 
 class CoilTest(unittest.TestCase):
     
@@ -73,23 +76,22 @@ class CoilTest(unittest.TestCase):
         c.configure({'foo':1, 'bar':'hi'})
         self.assertEquals(o.foo, 1)
         self.assertEquals(o.bar, 'hi')
+        self.assertEquals(c.getConfiguration(), {'foo':1, 'bar':'hi'})
         self.failUnlessRaises(coil.InvalidConfiguration,
                               c.configure, {'foo':'hi'})
         self.failUnlessRaises(coil.InvalidConfiguration,
                               c.configure, {'bar':1})
+        self.assertEquals(c.getInstance(), o)
 
     def testCustomConfigurable(self):
-        coil.registerConfigurator(CustomConfig, customFactory)
         c = coil.createConfigurable(CustomConfigurable, None, "testName")
         self.assertEquals(c.name, "testName")
         config = coil.getConfigurator(c)
         config.configure({'foo' : 'test'})
         self.assertEquals(c.foo, 'testtest')
     
-    def testClassHierarchy(self):
-        r = coil.ClassHierarchy()
-        map(r.registerClass, (A, B, C, D, E, F))
-        subs = list(r.getSubClasses(A, 1))
-        subs.sort(lambda a, b: cmp(str(a), str(b)))
-        self.failUnlessEqual(subs, [B, C, E, F])
-
+    def testRegistration(self):
+        self.assertEquals(CustomConfig, coil.getConfiguratorClass(CustomConfigurable))
+        self.assert_(coil.hasFactory(CustomConfigurable))
+        self.assertEquals(coil.getImplementors(IFoo), [CustomConfigurable])
+        self.assertEquals(coil.getImplementors(IBar), [CustomConfigurable])

@@ -17,13 +17,13 @@
 """Coil plugin for manhole service."""
 
 # Twisted Imports
-from twisted.coil import app, coil
+from twisted.coil import coil
 from twisted.manhole import service
 
 # System Imports
 import types
 
-class ManholeConfigurator(app.ServiceConfigurator):
+class ManholeConfigurator(coil.Configurator):
 
     configurableClass = service.Service
     

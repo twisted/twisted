@@ -17,17 +17,17 @@
 """Coil plugin for manhole service."""
 
 # Twisted Imports
-from twisted.coil import app, coil
+from twisted.protocols import protocol
+from twisted.coil import coil
 from twisted.words import service, ircservice, webwords
+from twisted.web import resource
 
 # System Imports
 import types
 
-# Sibling imports
-import web
 
 
-class WordsConfigurator(app.ServiceConfigurator):
+class WordsConfigurator(coil.Configurator):
 
     configurableClass = service.Service
     
@@ -38,13 +38,12 @@ class WordsConfigurator(app.ServiceConfigurator):
     configName = 'Twisted Words Service'
 
     def __init__(self, instance):
-        app.ServiceConfigurator.__init__(self, instance)
-        self._setConfigDispensers()
+        coil.Configurator.__init__(self, instance)
     
-    def _setConfigDispensers(self):
-        self.configDispensers = [
-            ['makeIRCGateway', IRCGatewayConfigurator, "IRC chat gateway to %s" % self.instance.serviceName],
-            ['makeWebAccounts', WordsGadgetConfigurator, "Public Words Website for %s" % self.instance.serviceName]
+    def configDispensers(self):
+        return [
+            ['makeIRCGateway', protocol.IFactory, "IRC chat gateway to %s" % self.instance.serviceName],
+            ['makeWebAccounts', resource.IResource, "Public Words Website for %s" % self.instance.serviceName]
             ]
 
     def makeWebAccounts(self):
@@ -59,17 +58,4 @@ class WordsConfigurator(app.ServiceConfigurator):
 def wordsFactory(container, name):
     return service.Service(name, container.app)
 
-
-class IRCGatewayConfigurator(app.ProtocolFactoryConfigurator):
-    
-    configurableClass = ircservice.IRCGateway
-
-
-class WordsGadgetConfigurator(web.ResourceConfigurator):
-    
-    configurableClass = webwords.WordsGadget
-
-
 coil.registerConfigurator(WordsConfigurator, wordsFactory)
-coil.registerConfigurator(IRCGatewayConfigurator, None)
-coil.registerConfigurator(WordsGadgetConfigurator, None)

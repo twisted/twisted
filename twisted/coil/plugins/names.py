@@ -17,24 +17,15 @@
 """Coil plugin for twisted.names DNS server."""
 
 # Twisted Imports
-from twisted.coil import app, coil
+from twisted.coil import coil
 from twisted.names import dns
-from twisted.python import roots
+from twisted.python import roots, components
 
 # System Imports
 import types, string
 
 
-class Domain:
-    """Dummy class for domains."""
-
-class DomainConfigurator(coil.Configurator):
-    """Base class for domain configurators."""
-
-    configurableClass = Domain
-
-
-class SimpleDomainConfigurator(DomainConfigurator):
+class SimpleDomainConfigurator(coil.Configurator):
     """Configurator for SimpleDomains."""
     
     configurableClass = dns.SimpleDomain
@@ -50,30 +41,25 @@ class SimpleDomainConfigurator(DomainConfigurator):
 def simpleDomainFactory(container, name):
     return dns.SimpleDomain(name, "127.0.0.1")
 
-
-coil.registerConfigurator(DomainConfigurator, None)
 coil.registerConfigurator(SimpleDomainConfigurator, simpleDomainFactory)
 
 
-class DNSServerConfigurator(app.ProtocolFactoryConfigurator, roots.Homogenous):
+class DNSServerConfigurator(coil.Configurator, coil.ConfigCollection):
     """Configurator for DNS server."""
     
-    entityType = Domain
+    __implements__ = [coil.IConfigurator, coil.IConfigCollection]
+    
+    entityType = dns.IDomain
     
     configurableClass = dns.DNSServerFactory
     
     def __init__(self, instance):
-        app.ProtocolFactoryConfigurator.__init__(self, instance)
-        roots.Homogenous.__init__(self, instance.boss.domains)
-
-    def entityConstraint(self, entity):
-        # Domain class is not superclass of all domain classes, so we need to
-        # check that the configurator for an added entity is an instance of
-        # a DomainConfigurator subclass.
-        return isinstance(coil.getConfigurator(entity), DomainConfigurator)
+        coil.Configurator.__init__(self, instance)
+        coil.ConfigCollection.__init__(self, instance.boss.domains)
 
 
 def dnsServerFactory(container, name):
     return dns.DNSServerFactory()
 
 coil.registerConfigurator(DNSServerConfigurator, dnsServerFactory)
+components.registerAdapter(DNSServerConfigurator, dns.DNSServerFactory, coil.IConfigCollection)

@@ -24,126 +24,42 @@ This is a work in progress.
 
 # System Imports
 import types
-import string
-import sys
-import os
 
 # Twisted Imports
-from twisted.python.util import getPluginDirs
-from twisted.python import log, reflect
-
-
-class ClassHierarchy:
-    """A class which represents a hierarchy of classes.
-
-    It's possible in python to identify all base classes of a particular class
-    fairly easily, but not to identify all of its subclasses.  This class
-    allows you to register and then query for sub-classes of a given class.
-    """
-    def __init__(self):
-        self.classes = {}
-
-    def getSubClasses(self, classOrString, asClasses=0):
-        """Get a tuple of all registered subclasses of a given class.
-
-        The class may be specified either by the actual class or a descriptive
-        string.  An optional flag, asClasses, specifies whether those classes
-        should be returned as class objects or as strings.  By default, I will
-        return strings.
-        """
-        if isinstance(classOrString, types.ClassType):
-            className = str(classOrString)
-        else:
-            className = classOrString
-        if not self.classes.has_key(className):
-            log.msg('no class %s registered' % className)
-            return ()
-        superClasses, subClasses = self.classes[className]
-        if asClasses:
-            return tuple(map(reflect.namedClass, subClasses))
-        else:
-            return tuple(subClasses)
-
-    def getSuperClasses(self, classOrString, asClasses=0):
-        """Get a tuple of all registered superclasses of a given class.
-
-        The class may be specified either by the actual class or a descriptive
-        string.  An optional flag, asClasses, specifies whether those classes
-        should be returned as class objects or as strings.  By default, I will
-        return strings.
-        """
-        if isinstance(classOrString, types.ClassType):
-            className = str(classOrString)
-        else:
-            className = classOrString
-        superClasses, subClasses = self.classes[className]
-        if asClasses:
-            return tuple(map(reflect.namedClass, superClasses))
-        else:
-            return tuple(superClasses)
-
-    def registerClass(self, inClass):
-        """Register a class.
-        """
-        className = str(inClass)
-        if self.classes.has_key(className):
-            superClasses, subClasses = self.classes[className]
-        else:
-            superClasses, subClasses = [], []
-            self.classes[className] = superClasses, subClasses
-        for base in reflect.allYourBase(inClass):
-            baseName = str(base)
-            if baseName not in superClasses:
-                self.registerClass(base)
-                baseSuper, baseSub = self.classes[str(base)]
-                baseSub.append(className)
-                superClasses.append(baseName)
-
-
-theClassHierarchy = ClassHierarchy()
-configurators = {}
-configurables = {}
-factories = {}
-
-def registerConfigurator(configuratorClass, factory):
-    """Register a configurator and factory for a class.
-    
-    If factory is None then new instances will not be created directly
-    by coil.
-    """
-    configurableClass = configuratorClass.configurableClass
-    if configurators.has_key(configurableClass):
-        raise ValueError, "class %s already has a Configurator" % configurableClass
-    if configurables.has_key(configuratorClass):
-        raise ValueError, "configurator %s already registered" % configuratorClass
-    theClassHierarchy.registerClass(configuratorClass)
-    configurators[configurableClass] = configuratorClass
-    configurables[configuratorClass] = configurableClass
-    if factory is not None:
-        factories[configurableClass] = factory
-
-def hasFactory(configurableClass):
-    return factories.has_key(configurableClass)
-
-def getConfigurableClass(configuratorClass):
-    return configurables[configuratorClass]
-
-def getConfigurator(instance):
-    """Return a configurator for a configurable instance, or None."""
-    try:
-        klass = instance.__class__
-    except AttributeError:
-        return None
-    try:
-        configuratorClass = configurators[klass]
-    except KeyError:
-        return None
-    return configuratorClass(instance)
+from twisted.python import log, components, reflect, roots
 
 
 class InvalidConfiguration(Exception):
     """I am is raised in the case of an invalid configuration.
     """
+
+# map between classes and their factories
+factories = {}
+# map between interfaces and a list of classes implementing them
+interfaceImplementors = {}
+
+
+# methods for coil
+
+def registerConfigurator(configuratorClass, factory=None):
+    """Register a configurator for a class."""
+    configurableClass = configuratorClass.configurableClass
+    components.registerAdapter(configuratorClass, configurableClass, IConfigurator)
+    if factory is not None:
+        registerFactory(configurableClass, factory)
+
+def registerFactory(configurableClass, factory):
+    """Register a factory for a class."""
+    factories[configurableClass] = factory
+    for i in components.getInterfaces(configurableClass):
+        if interfaceImplementors.has_key(i):
+            interfaceImplementors[i].append(configurableClass)
+        else:
+            interfaceImplementors[i] = [configurableClass]
+
+def hasFactory(configurableClass):
+    """Check if factory is available for this class."""
+    return factories.has_key(configurableClass)
 
 def createConfigurable(configurableClass, container, name):
     """Instantiate a configurable.
@@ -155,8 +71,28 @@ def createConfigurable(configurableClass, container, name):
         raise TypeError("No configurator registered for %s" % configurableClass)
     return factories[configurableClass](container, name)
 
+def getCollection(obj):
+    """Get an object implementing ICollection for obj."""
+    if components.implements(obj, IConfigurator):
+        obj = obj.getInstance()
+    return components.getAdapter(obj, ICollection, None)
 
-class Configurator:
+def getConfigurator(obj):
+    """Get an object implement IConfigurator for obj."""
+    return components.getAdapter(obj, IConfigurator, None)
+
+def getConfiguratorClass(klass):
+    """Return an IConfigurator class for given class."""
+    return components.getAdapterClass(klass, IConfigurator, None)
+
+def getImplementors(interface):
+    """Return list of registered classes that implement an interface."""
+    return interfaceImplementors.get(interface, [])
+
+
+# interfaces for coil
+
+class IConfigurator(components.Interface):
     """A configurator object.
 
     I have an attribute, configurableClass, which is the class of objects
@@ -168,12 +104,67 @@ class Configurator:
     either python type objects, classes, or objects describing a desired 'hint'
     to the interface (such as 'boolean' or ['choice', 'a', 'b', 'c']). 
     (XXX Still in flux.)
-
-    I have a list attribute, configDispensers, that indicates what methods on
-    me may be called with no arguments to create an instance of another
-    configurable.  It is a list of the form [(method name, class, descString), ...].
-    The class should be a configurator class.
+    """
     
+    def getInstance(self):
+        """Return instance being configured."""
+        raise NotImplementedError
+    
+    def getType(self, name):
+        """Get the type of a configuration variable."""
+        raise NotImplementedError
+    
+    def configDispensers(self):
+        """Indicates what methods on me may be called with no arguments to create
+        an instance of another configurable.  It returns a list of the form
+        [(method name, interface, descString), ...].
+        """
+        raise NotImplementedError
+    
+    def configure(self, dict):
+        """Configure our instance, given a dict of properties.
+        
+        Will raise a InvalidConfiguration exception on bad input.
+        """
+        raise NotImplementedError
+    
+    def getConfiguration(self):
+        """Return a mapping of attribute to value.
+
+        The returned key are the attributes mentioned in configTypes.
+        """
+        raise NotImplementedError
+
+
+class ICollection(components.Interface):
+    """A collection for coil."""
+
+
+class IStaticCollection(ICollection):
+    """A coil collection to which we can't add items."""
+
+    def listStaticEntities(self):
+        """Return list of children."""
+        raise NotImplementedError
+    
+    def getStaticEntity(self, name):
+        """Return a child given its name."""
+        raise NotImplementedError
+
+
+class IConfigCollection(ICollection):
+    """A coil collection to which objects can be added.
+    
+    Must have an attribute entityType, which is either an Interface
+    which added objects must implement, or a StringType, IntType or FloatType.
+    """
+
+
+# utility classes for coil
+
+class Configurator:
+    """A configurator object implementing default behaviour.
+
     Custom handling of configuration-item-setting can be had by adding
     configure_%s(self, value) methods to my subclass. The default is to set
     an attribute on the instance that will be configured.
@@ -181,14 +172,10 @@ class Configurator:
     A method getConfiguration should return a mapping of attribute to value, for
     attributes mentioned in configTypes. The default is to get the attribute from
     the instance that is being configured.
-    
-    Specific types of Configurators should form a class heirarchy. For example,
-    lets say we have a Domain interface that classes need to implement in order
-    to be used in a mail server. We would then make a DomainConfigurator, and
-    all Configurators for domains classes should inherit from DomainConfigurator,
-    even if the configurable classes do not have a common base class.
     """
-
+    
+    __implements__ = [IConfigurator]
+    
     # Change this attribute in subclasses.
     configurableClass = None
     
@@ -196,15 +183,20 @@ class Configurator:
 
     configName = None
 
-    configDispensers = []
-
-
     def __init__(self, instance):
         """Initialize this configurator with the instance it will be configuring."""
         if not isinstance(instance, self.configurableClass):
             raise TypeError, "%s is not a %s" % (instance, self.configurableClass)
         self.instance = instance
 
+    def configDispensers(self):
+        """Return list of dispensers."""
+        return []
+    
+    def getInstance(self):
+        """Return the instance being configured."""
+        return self.instance
+    
     def getType(self, name):
         """Get the type of a configuration variable."""
         if self.configTypes.has_key(name):
@@ -213,14 +205,16 @@ class Configurator:
             return None
     
     def configure(self, dict):
-        """Set a list of configuration variables.
-        """
+        """Set a list of configuration variables."""
         items = dict.items()
         
         for name, value in items:
             t = self.getType(name)
-            if isinstance(t, types.TypeType) or isinstance(t, types.ClassType):
+            if isinstance(t, types.TypeType):
                 if not isinstance(value, t) or (value is None):
+                    raise InvalidConfiguration("type mismatch")
+            elif isinstance(t, types.ClassType) and issubclass(t, components.Interface):
+                if not components.implements(value, t) or (value is None):
                     raise InvalidConfiguration("type mismatch")
             elif t == 'boolean':
                 try:
@@ -249,3 +243,44 @@ class Configurator:
             result[k] = getattr(self.instance, k)
         return result
 
+
+class StaticCollection(roots.Locked):
+    """A roots.Locked that implement IStaticCollection."""
+    
+    __implements__ = [IStaticCollection]
+
+
+class ConfigCollection(roots.Constrained):
+    """A default implementation of IConfigCollection."""
+    
+    __implements__ = [IConfigCollection]
+    
+    # override in subclasses
+    entityType = components.Interface
+    
+    def entityConstraint(self, entity):
+        if isinstance(self.entityType, types.TypeType) and isinstance(entity, self.entityType):
+            return 1
+        elif components.implements(entity, self.entityType):
+            return 1
+        else:
+            raise roots.ConstraintViolation("%s of incorrect type (%s)" %
+                                      (entity, self.entityType))
+
+    def getNameType(self):
+        return "Name"
+
+    def getEntityType(self):
+        return self.entityType.__name__
+
+
+class CollectionWrapper:
+    """Wrap an existing roots.Collection as a IConfigCollection."""
+    
+    __implements__ = [IConfigCollection]
+    
+    def __init__(self, collection):
+        self._collection = collection
+    
+    def __getattr__(self, attr):
+        return getattr(self._collection, attr)

@@ -17,19 +17,31 @@
 """Coil plugin for web support."""
 
 from twisted.web import static, server, resource, vhost, test, proxy
-from twisted.coil import app, coil
+from twisted.coil import coil
+from twisted.python import components
 
 import types
 
 
 # site configuration
 
-class SiteConfigurator(app.ProtocolFactoryConfigurator):
+class SiteConfigurator(coil.Configurator):
     """Configurator for web sites."""
     
+    __implements__ = [coil.IConfigurator, coil.IStaticCollection]
+    
     configurableClass = server.Site
-    configTypes = {'resource': [resource.Resource, "Resource", "The resource at the site's root."] }
+    configTypes = {'resource': [resource.IResource, "Resource", "The resource at the site's root."] }
     configName = 'HTTP Web Site'
+    
+    def listStaticEntities(self):
+        return [['resource', self.instance.resource]]
+
+    def getStaticEntity(self, name):
+        if name == 'resource':
+            return self.instance.resource
+
+components.registerAdapter(SiteConfigurator, server.Site, coil.ICollection)
 
 def siteFactory(container, name):
     d = static.Data(
@@ -48,15 +60,14 @@ coil.registerConfigurator(SiteConfigurator, siteFactory)
 
 # resource configuration
 
-class ResourceConfigurator(coil.Configurator):
-    """Base class for web resource configurators."""
+class MimeTypeCollection(coil.ConfigCollection):
+
+    entityType = types.StringType
+
+
+class StaticConfigurator(coil.Configurator, coil.StaticCollection):
     
-    configurableClass = resource.Resource
-
-coil.registerConfigurator(ResourceConfigurator, None)
-
-
-class StaticConfigurator(ResourceConfigurator):
+    __implements__ = [coil.IConfigurator, coil.IStaticCollection]
     
     configurableClass = static.File
     
@@ -68,6 +79,13 @@ class StaticConfigurator(ResourceConfigurator):
 
     configName = 'Web Filesystem Access'
 
+    def __init__(self, instance):
+        coil.Configurator.__init__(self, instance)
+        coil.StaticCollection.__init__(self)
+        self.putEntity("Mime-types", MimeTypeCollection(self.instance.contentTypes))
+        self.putEntity("Resources", coil.CollectionWrapper(self.instance))
+        self.lock()
+    
     def config_execCGI(self, allowed):
         instance = self.instance
         if allowed:
@@ -97,9 +115,9 @@ def staticFactory(container, name):
     return static.File("somewhere/outthere")
 
 coil.registerConfigurator(StaticConfigurator, staticFactory)
+components.registerAdapter(StaticConfigurator, static.File, coil.ICollection)
 
-
-class TestConfigurator(ResourceConfigurator):
+class TestConfigurator(coil.Configurator):
 
     configurableClass = test.Test
     configName = "Web Test Widget"
@@ -110,7 +128,7 @@ def testFactory(container, name):
 coil.registerConfigurator(TestConfigurator, testFactory)
 
 
-class VirtualHostConfigurator(ResourceConfigurator):
+class VirtualHostConfigurator(coil.Configurator):
     
     configurableClass = vhost.NameVirtualHost
     configName = "Virtual Host Resource"
@@ -121,7 +139,7 @@ def vhostFactory(container, name):
 coil.registerConfigurator(VirtualHostConfigurator, vhostFactory)
 
 
-class ReverseProxyConfigurator(ResourceConfigurator):
+class ReverseProxyConfigurator(coil.Configurator):
 
     configurableClass = proxy.ReverseProxyResource
     configName = "HTTP Reverse Proxy"

@@ -79,6 +79,10 @@ class File(resource.Resource, styles.Versioned):
     File is a resource that represents a plain non-interpreted file.
     It's constructor takes a file path.
     """
+    
+    # we don't implement IConfigCollection
+    __implements__ = [resource.IResource]
+    
     contentTypes = {
         ".css": "text/css",
         ".exe": "application/x-executable",

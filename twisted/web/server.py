@@ -557,7 +557,9 @@ class Session:
 
 version = "TwistedWeb/%s" % copyright.version
 
-class Site(protocol.Factory, roots.Collection):
+
+class Site(protocol.Factory):
+    
     counter = 0
 
     def __init__(self, resource):
@@ -565,15 +567,6 @@ class Site(protocol.Factory, roots.Collection):
         """
         self.sessions = {}
         self.resource = resource
-
-    # emulate collection for listing
-
-    def listStaticEntities(self):
-        return [['resource', self.resource]]
-
-    def getStaticEntity(self, name):
-        if name == 'resource':
-            return self.resource
 
     def __getstate__(self):
         d = copy.copy(self.__dict__)

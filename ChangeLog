@@ -1,3 +1,8 @@
+2002-04-08  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
+
+        * coil refactored yet again, this time to use components and adapters.
+        The design is now much cleaner.
+
 2002-04-08  Glyph Lefkowitz  <glyph@zelda.twistedmatrix.com>
 
 	* twisted/spread/jelly.py: Refactored jelly to provide (a) more
@@ -15,9 +20,7 @@
 	* twisted/python/usage.py, twisted/test/test_usage.py, bin/mktap, twisted/tap/*.py:
 	Made the usage.Options interface better -- options are now stored in the
 	'opts' dict. This is backwards compatible, and I added a deprecation warning.
-	
 
->>>>>>> 1.41
 2002-04-01  Chris Armstrong  <carmstro@twistedmatrix.com>
 
 	* .: Releasing Twisted 0.16.0.

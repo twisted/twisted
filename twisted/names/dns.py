@@ -17,7 +17,7 @@
 
 from twisted.protocols import dns, protocol
 from twisted.internet import tcp, udp, main
-from twisted.python import defer
+from twisted.python import defer, components
 import random, string, struct
 
 DNS, TCP = range(2)
@@ -286,8 +286,17 @@ def IPtoBytes(ip):
     return string.join(map(chr, map(int, string.split(ip, '.'))), '')
 
 
+class IDomain(components.Interface):
+    """A DNS domain."""
+
+    def getAnswers(self, message, name, type):
+        raise NotImplementedError
+
+
 class SimpleDomain:
 
+    __implements__ = [IDomain]
+    
     ttl = 60*60*24
 
     def __init__(self, name, ip):

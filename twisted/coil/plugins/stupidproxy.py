@@ -17,14 +17,14 @@
 """Coil plugin for telnet shell."""
 
 # Twisted Imports
-from twisted.coil import app, coil
+from twisted.coil import coil
 from twisted.internet import stupidproxy
 
 # System Imports
 import types
 
 
-class ProxyConfigurator(app.ProtocolFactoryConfigurator):
+class ProxyConfigurator(coil.Configurator):
 
     configurableClass = stupidproxy.StupidFactory
     
