@@ -8,6 +8,7 @@
 <style type="text/css">
 /*<![CDATA[*/
 .done { color: #005500; background-color: #99ff99 }
+.notdone { color: #550000; background-color: #ff9999;}
 /*]]>*/
 </style>
   </head>
@@ -26,7 +27,7 @@
 
     <table border="1" cellpadding="3">
       <tr>
-        <td colspan="6">
+        <td colspan="7">
           <h2>Twisted API-Stable Platform</h2>
         </td>
       </tr>
@@ -43,9 +44,11 @@
         <th>Desirable</th>
 
         <th>Possible Remaining Incompatible Changes</th>
+
+        <th>Release to be Stable By</th>
       </tr>
 
-      <tr>
+      <tr class="notdone">
         <td>twisted.internet</td>
 
         <td>Glyph Lefkowitz</td>
@@ -55,17 +58,18 @@
         API on to other main loops which it does not necessarily
         control.</td>
 
-        <td>Fixing tkinternet to not use threads any longer</td>
+        <td>Connectors for SSL.  UDP refactor.</td>
 
-        <td>improved Jython support, and support for Java 1.4's
-        nbio, C optimization of the regular mainloop.</td>
+        <td>Improved Jython support, and support for Java 1.4's
+        nbio, C optimization of the regular mainloop, refactor of app.connectTCP so
+          Connector doesn't touch reactor implementation.</td>
 
-        <td>Moving a few packages around, a final decision on how,
-        exactly, the packages must be imported in order to work
-        correctly.</td>
+        <td>None known.</td>
+        
+        <td>1.0</td>
       </tr>
 
-      <tr>
+      <tr class="notdone">
         <td>twisted.protocols</td>
 
         <td>Moshe Zadka</td>
@@ -73,15 +77,17 @@
         <td>Wire-protocol implementations of various protocols,
         decoupled from any processing logic.</td>
 
-        <td>HTTP 1.1 support, improved handling of FTP, a
-        readline-style input line for telnet</td>
+        <td>Improved handling of FTP</td>
 
-        <td>curses-over-telnet, ssh protocol implementation</td>
+        <td>A readline-style input line for telnet, curses-over-telnet, ssh
+          protocol implementation</td>
 
         <td>None that I can think of.</td>
+        
+        <td>Individual modules by 1.0; probably the whole package will never be.</td>
       </tr>
 
-      <tr>
+      <tr class="notdone">
         <td>twisted.mail</td>
 
         <td>Moshe Zadka</td>
@@ -94,9 +100,11 @@
 
         <td>pretty much everything; lots will break when we move to
         support twisted.cred.</td>
+
+        <td>1.4</td>
       </tr>
 
-      <tr>
+      <tr class="notdone">
         <td>twisted.web</td>
 
         <td>Chris Armstrong</td>
@@ -104,16 +112,17 @@
         <td>Support for document- and file-based protocols: http,
         ftp, WebDAV, XMLRPC.</td>
 
-        <td>HTTP 1.1 support, real file-upload support</td>
+        <td>HTTP 1.1 support completion</td>
 
         <td>ZPT integration</td>
 
-        <td>Adding a distinction between a Request and an
-        Connection may result in some minor breakages, but I think
-        it can be fixed without any damage.</td>
+        <td>Probably some templating things will be changed around in future
+          releases.</td>
+
+        <td>1.0, mostly</td>
       </tr>
 
-      <tr>
+      <tr class="notdone">
         <td>twisted.names</td>
 
         <td>????</td>
@@ -128,6 +137,10 @@
 
         <td>Since it's not really being used, I'm not concerned
         about breakages.</td>
+
+        <td>
+          1.4
+        </td>
       </tr>
 
       <tr class="done">
@@ -142,24 +155,28 @@
         <td>None that I can think of.</td>
 
         <td>None that I can think of.</td>
+
+        <td>1.0</td>
       </tr>
 
-      <tr>
+      <tr class="notdone">
         <td>twisted.cred</td>
 
         <td>Glyph Lefkowitz</td>
 
         <td>An authentication abstraction.</td>
 
-        <td>API cleanup.</td>
+        <td>API cleanup.  Removal of dependence of twisted.internet.</td>
 
         <td>More authentication back-ends.</td>
 
         <td>A few redundant methods should disappear, but I don't
         think anyone was using them.</td>
+
+        <td>1.0</td>
       </tr>
 
-      <tr>
+      <tr class="notdone">
         <td>twisted.im</td>
 
         <td>Paul Swartz</td>
@@ -174,25 +191,31 @@
 
         <td>It's not really in use yet, so breakages should not
         affect external parties.</td>
+
+        <td>1.4</td>
       </tr>
 
-      <tr>
+      <tr class="notdone">
         <td>twisted.words</td>
 
-        <td>Paul Swartz</td>
+        <td>Glyph Lefkowitz</td>
 
         <td>Individual and group chat server for Twisted.</td>
 
-        <td>Multiple servers rebroadcasting messages.</td>
+        <td>Multiple servers rebroadcasting messages.  Moderation
+          facilities.</td>
 
         <td>Lots of bots that do cool things on the server side.
         Total IRCD compatibility with respect to Hybrid
         Services-style bots.</td>
 
-        <td>More APIs will become asynchronous.</td>
+        <td>PB wire protocol will break and there will be a near-total rewrite,
+          moving to refpath-style protocol.</td>
+
+        <td>1.4</td>
       </tr>
 
-      <tr>
+      <tr class="done">
         <td>twisted.manhole</td>
 
         <td>Kevin Turner</td>
@@ -207,36 +230,36 @@
         <td>More services related to debugging.</td>
 
         <td>None that I can think of.</td>
+
+        <td>1.2</td>
       </tr>
 
-      <tr>
+      <tr class="notdone">
         <td>twisted.spread</td>
 
         <td>Glyph Lefkowitz</td>
 
         <td>Twisted's remote object protocol support.</td>
 
-        <td>Versioning for banana. An RFC cementing the wire-level
-        protocol. Standard for local method calls on references
-        (local_ naming convention). Perspective.observe() and other
-        methods to automate automatically unsubscribing for events
-        on logout. Standardized way of per-object protocol
-        versioning.</td>
+        <td>An RFC cementing the wire-level protocol. Standard for local method
+          calls on references (local_ naming convention). Perspective.observe()
+          and other methods to automate automatically unsubscribing for events
+          on logout. Standardized way of per-object protocol
+          versioning.</td>
 
         <td>Persistent stateless references. Full implementations
-        of PB for more languages. ASCII version of the 'banana'
-        level protocol for debugging and easier protocol
-        implementation.</td>
+          of PB for more languages. ASCII version of the 'banana'
+          level protocol for debugging and easier protocol
+          implementation.</td>
 
-        <td>Wire-level protocols will break one more time --
-        banana's versioning is an additional feature that changes
-        the way the wire works. I also want to change the
-        wire-level representation of copy to shave a few more bytes
-        of state copying and make the basic types stick out less
-        :).</td>
+        <td>Object-level protocols may have a small breakage as we move to a
+          different model for locating services, but it should be possible to avoid
+          this.</td>
+
+        <td>1.1</td>
       </tr>
 
-      <tr>
+      <tr class="notdone">
         <td>twisted.tap</td>
 
         <td>Moshe Zadka</td>
@@ -247,11 +270,15 @@
 
         <td>None I can think of.</td>
 
-        <td>None I can think of.</td>
+        <td>This isn't really a package that external developers use.  It may
+          be best to destroy this package and move tap modules into their
+          appropriate packages rather than aggregating them here.</td>
+
+        <td>n/a</td>
       </tr>
 
       <tr>
-        <td colspan="6">
+        <td colspan="7">
           <h2>Currently Core Packages that should be Broken
           Out</h2>
         </td>
@@ -269,6 +296,8 @@
         <td>None I can think of.</td>
 
         <td>None I can think of.</td>
+
+        <td>n/a</td>
       </tr>
 
       <tr class="done">
@@ -284,6 +313,7 @@
         integration with twisted.words and twisted.mail.</td>
 
         <td>None I can think of.</td>
+        <td>n/a</td>
       </tr>
 
       <tr class="done">
@@ -299,10 +329,11 @@
         bug-buddy...)</td>
 
         <td>None I can think of.</td>
+        <td>n/a</td>
       </tr>
 
       <tr>
-        <td colspan="6">
+        <td colspan="7">
           <h2>Seperate Packages</h2>
           (these have their own timeline and are separate from
           Twisted's versioning scheme)
@@ -322,6 +353,7 @@
         <td>If I started typing here, I would never stop.</td>
 
         <td>Pretty much everything, I'd imagine.</td>
+        <td>n/a</td>
       </tr>
     </table>
   </body>
