@@ -86,6 +86,8 @@ twisted.web.test in it."""
             }
 
     def opt_processor(self, proc):
+        """`ext=class' where `class' is added as a Processor for files ending with `ext'.
+        """
         if not isinstance(self.opts['root'], static.File):
             raise usage.UsageError("You can only use --processor after --path.")
         ext, klass = proc.split('=', 1)
@@ -108,6 +110,7 @@ twisted.web.test in it."""
 
 
     def opt_resource_script(self, name):
+        """An .rpy file to be used as the root resource of the webserver."""
         self.opts['root'] = script.ResourceScriptWrapper(name)
 
 
@@ -135,6 +138,8 @@ twisted.web.test in it."""
         self.opts['root'].ignoreExt(ext)
 
     def opt_flashconduit(self, port=None):
+        """Start a flashconduit on the specified port.
+        """
         if not port:
             port = "4321"
         self.opts['flashconduit'] = port
