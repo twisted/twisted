@@ -454,7 +454,7 @@ class Request(pb.Copyable, http.HTTP):
         else:
             hostport = ':%d' % port
         return urllib.quote('http://%s%s/%s' % (
-            self.getHeader("host"),
+            string.split(self.getHeader("host"), ':', 1)[0],
             hostport,
             string.join(self.prepath, '/')), "/:")
 
