@@ -288,7 +288,7 @@ class DTPFactory(protocol.Factory):
             self.action = None
         return p
 
-class FTP(protocol.Protocol, DTPFactory):
+class FTP(basic.LineReceiver, DTPFactory):
     """The FTP-Protocol."""
     user   = None
     passwd = None
@@ -309,8 +309,10 @@ class FTP(protocol.Protocol, DTPFactory):
 
     def reply(self, key, s = ''):
         if string.find(ftp_reply[key], '%s') > -1:
+            print ftp_reply[key] % s + '\r\n'
             self.transport.write(ftp_reply[key] % s + '\r\n')
         else:
+            print ftp_reply[key] + '\r\n'
             self.transport.write(ftp_reply[key] + '\r\n')
             
     # This command is IMPORTANT! Must also get rid of it :)
@@ -542,6 +544,7 @@ class FTP(protocol.Protocol, DTPFactory):
         if self.dtpPort is None:
             self.reply('notimpl')   # and will not be; standard noauth-reply
             return
+        if params == "-a": params = '' # bug in konqueror
         # The reason for this long join, is to exclude access below the root
         npath = self.buildFullpath(params)
         if not os.path.isdir(npath):
@@ -582,10 +585,10 @@ class FTP(protocol.Protocol, DTPFactory):
             self.dtp.finishGet() # not 100 % perfect on uploads
         self.reply('abort')
 
-    def processLine(self, line):
+    def lineReceived(self, line):
         "Process the input from the client"
         line = string.strip(line)
-        print line
+        print repr(line)
         command = string.split(line)
         if command == []:
             self.reply('unknown')
@@ -613,11 +616,7 @@ class FTP(protocol.Protocol, DTPFactory):
         else:
             self.reply('unknown', string.upper(command))
 
-    def dataReceived(self, line):
-        self.processLine(line)
-        return 0
-        
-                  
+
 class FTPFactory(protocol.Factory):
     command = ''
     userdict = {}
