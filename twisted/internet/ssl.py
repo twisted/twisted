@@ -146,9 +146,9 @@ class Client(Connection, tcp.TCPClient):
     """I am an SSL client.
     """
     
-    def __init__(self, host, port, ctxFactory, connector, reactor=None):
+    def __init__(self, host, port, bindAddress, ctxFactory, connector, reactor=None):
         self.ctxFactory = ctxFactory
-        tcp.TCPClient.__init__(self, host, port, connector, reactor)
+        tcp.TCPClient.__init__(self, host, port, bindAddress, connector, reactor)
     
     def createInternetSocket(self):
         """(internal) create an SSL socket
