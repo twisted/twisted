@@ -310,6 +310,16 @@ class Block(Stage):
                 raise TypeError("Invalid stage result")
             return stage.next()
 
+class CooperateDeferred(Cooperate):
+    """ Cooperate, with indirect rescheduling
+
+        This is similar to cooperate, in that all objects on the
+        call stack are popped; but differs in that it registers the
+        flow.Deferred's execute function instead of using callLater
+    """
+    def __init__(self, deferred):
+        self.deferred = deferred
+
 class DeferredWrapper(Stage):
     """ Wraps a Deferred object into a stage
 
@@ -322,7 +332,7 @@ class DeferredWrapper(Stage):
     def __init__(self, deferred, *trap):
         Stage.__init__(self, trap)
         deferred.addBoth(self._callback)
-        self._cooperate = Cooperate()
+        self._cooperate = CooperateDeferred(deferred)
         self._result    = None
         self._stop_next = 0
     def _callback(self, res):
@@ -428,7 +438,7 @@ class Deferred(defer.Deferred):
         self._stage = wrap(stage)
         from twisted.internet import reactor
         reactor.callLater(0, self._execute)
-    def _execute(self):
+    def _execute(self, dummy = None):
         cmd = self._stage
         while 1:
             result = cmd._yield()
@@ -438,8 +448,11 @@ class Deferred(defer.Deferred):
                 return
             if result:
                 if isinstance(result, Cooperate):
-                    from twisted.internet import reactor
-                    reactor.callLater(result.timeout, self._execute)
+                    if isinstance(result, CooperateDeferred):
+                        result.deferred.addBoth(self._execute)
+                    else:
+                        from twisted.internet import reactor
+                        reactor.callLater(result.timeout, self._execute)
                     return
                 raise TypeError("Invalid stage result")
             if not self.failureAsResult: 
@@ -473,8 +486,9 @@ class QueryIterator:
         return self
     def next_fetchall(self):
         if self.curs:
+            ret = self.curs.fetchall()
             self.curs = None
-            return self.curs.fetchall()
+            return ret
         raise StopIteration
     def next_fetchmany(self):
         ret = self.curs.fetchmany()

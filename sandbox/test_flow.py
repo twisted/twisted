@@ -191,8 +191,9 @@ class FlowTest(unittest.TestCase):
         from twisted.internet import reactor 
         a = defer.Deferred()
         reactor.callLater(0, lambda: a.callback("test"))
-        rhs = unittest.deferredResult(flow.Deferred(a))
-        self.assertEquals(rhs, ['test'])
+        b = flow.Merge(a, [1,2, flow.Cooperate(),3])
+        rhs = unittest.deferredResult(flow.Deferred(b))
+        self.assertEquals(rhs, ['test',1, 2, 3])
 
     def testThreaded(self):
         class CountIterator:
