@@ -21,9 +21,11 @@ def uniquify(lst):
     """Make the elements of a list unique by inserting them into a dictionary.
     """
     dict = {}
+    result = []
     for k in lst:
+        if not dict.has_key(k): result.append(k)
         dict[k] = 1
-    return dict.keys()
+    return result
 
 def getPluginDirs():
     import twisted
