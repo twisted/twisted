@@ -11,7 +11,7 @@
 from twisted.python import components
 from zope.interface import implements
 
-from twisted.web2 import iweb, http, http_headers, server
+from twisted.web2 import iweb, http, http_headers, server, responsecode
 from twisted.web2.responsecode import *
 
 class Resource(object):
@@ -83,7 +83,9 @@ class Resource(object):
         m = getattr(self, 'http_' + iweb.IRequest(ctx).method, None)
         if not m:
             # FIXME: duplication between 'allowedMethods' and method impls...
-            return error.MethodNotAllowed(self.allowedMethods)
+            response = http.Response(responsecode.NOT_ALLOWED)
+            response.headers.setHeader('allow', self.allowedMethods)
+            return response
         return m(ctx)
 
     def http_HEAD(self, ctx):
@@ -115,7 +117,8 @@ class Resource(object):
         """Your class should implement this method to do default page rendering.
         """
         raise NotImplementedError("Subclass must implement render method.")
-    
+
+
 class PostableResource(Resource):
     def http_POST(self, ctx):
         """Reads and parses the incoming body data then calls render."""

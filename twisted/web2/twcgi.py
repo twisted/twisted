@@ -5,6 +5,15 @@
 
 
 """I hold resource classes and helper classes that deal with CGI scripts.
+
+Things which are still not working properly:
+
+  - CGIScript.render doesn't set REMOTE_ADDR or REMOTE_HOST in the
+    environment
+
+  - CGIProcessProtocol.connectionMade needs to set up a stream to feed
+    the request data into the CGI process.
+
 """
 
 # System Imports
@@ -14,35 +23,41 @@ import sys
 import urllib
 
 # Twisted Imports
-from twisted.internet import reactor, protocol
+from twisted.internet import defer, protocol, reactor
 from twisted.spread import pb
 from twisted.python import log, filepath
 
 # Sibling Imports
-import http
-import server
 import error
+import http
+import iweb
 import resource
+import responsecode
+import server
 import static
-from server import NOT_DONE_YET
+import stream
 
 class CGIDirectory(resource.Resource, filepath.FilePath):
+    addSlash = True
+    
     def __init__(self, pathname):
         resource.Resource.__init__(self)
         filepath.FilePath.__init__(self, pathname)
 
-    def getChild(self, path, request):
-        fnp = self.child(path)
+    def locateChild(self, ctx, segments):
+        fnp = self.child(segments[0])
         if not fnp.exists():
-            return static.File.childNotFound
+            print fnp.path, 'does not exist'
+            return static.File.childNotFound, ()
         elif fnp.isdir():
-            return CGIDirectory(fnp.path)
+            return CGIDirectory(fnp.path), segments[1:]
         else:
-            return CGIScript(fnp.path)
-        return error.NoResource()
+            return CGIScript(fnp.path), segments[1:]
+        return None, ()
 
-    def render(self, request):
-        return error.NoResource("CGI directories do not support directory listing.").render(request)
+    def render(self, ctx):
+        errormsg = 'CGI directories do not support directory listing'
+        return http.Response(responsecode.FORBIDDEN)
 
 class CGIScript(resource.LeafResource):
     """I represent a CGI script.
@@ -57,32 +72,42 @@ class CGIScript(resource.LeafResource):
         self.filename = filename
         resource.LeafResource.__init__(self)
 
-    def render(self, request):
+    def render(self, ctx):
         """Do various things to conform to the CGI specification.
 
         I will set up the usual slew of environment variables, then spin off a
         process.
         """
+        request = iweb.IRequest(ctx)
+
+        # Make sure that we don't have an unknown content-length
+        if request.stream.length is None:
+            return http.Response(responsecode.LENGTH_REQUIRED)
+
         script_name = "/"+string.join(request.prepath, '/')
         python_path = string.join(sys.path, os.pathsep)
-        serverName = string.split(request.getRequestHostname(), ':')[0]
-        env = {"SERVER_SOFTWARE":   server.version,
-               "SERVER_NAME":       serverName,
-               "GATEWAY_INTERFACE": "CGI/1.1",
-               "SERVER_PROTOCOL":   request.clientproto,
-               "SERVER_PORT":       str(request.getHost()[2]),
-               "REQUEST_METHOD":    request.method,
-               "SCRIPT_NAME":       script_name, # XXX
-               "SCRIPT_FILENAME":   self.filename,
-               "REQUEST_URI":       request.uri,
-        }
+        server_name = request.host.split(':')[0]
+        env = {
+            "SERVER_SOFTWARE":   server.VERSION,
+            "SERVER_NAME":       server_name,
+            "GATEWAY_INTERFACE": "CGI/1.1",
+            "SERVER_PROTOCOL":   "HTTP/%i.%i" % request.clientproto,
+            "SERVER_PORT":       str(request.getHost()[2]),
+            "REQUEST_METHOD":    request.method,
+            "SCRIPT_NAME":       script_name, # XXX
+            "SCRIPT_FILENAME":   self.filename,
+            "REQUEST_URI":       request.uri,
+            "CONTENT_LENGTH":    str(request.stream.length),
+            }
 
-        client = request.getClient()
-        if client is not None:
-            env['REMOTE_HOST'] = client
-        ip = request.getClientIP()
-        if ip is not None:
-            env['REMOTE_ADDR'] = ip
+        ## This doesn't work in compat.py right now, either.
+        #client = request.getClient()
+        #if client is not None:
+        #    env['REMOTE_HOST'] = client
+        #ip = request.getClientIP()
+        #if ip is not None:
+        #    env['REMOTE_ADDR'] = ip
+
         pp = self.postpath
         if pp:
             env["PATH_INFO"] = "/"+string.join(pp, '/')
@@ -98,23 +123,30 @@ class CGIScript(resource.LeafResource):
             env['QUERY_STRING'] = ''
             qargs = []
 
-        # Propogate HTTP headers
-        for title, header in request.getAllHeaders().items():
+        # Propagate HTTP headers
+        for title, header in request.headers.getAllRawHeaders():
             envname = string.upper(string.replace(title, '-', '_'))
             if title not in ('content-type', 'content-length'):
                 envname = "HTTP_" + envname
-            env[envname] = header
-        # Propogate our environment
+            env[envname] = ','.join(header)
+            
+        # Propagate our environment
         for key, value in os.environ.items():
             if not env.has_key(key):
                 env[key] = value
+
         # And they're off!
-        self.runProcess(env, request, qargs)
-        return NOT_DONE_YET
+        return self.runProcess(env, request, qargs)
+
+    def http_POST(self, ctx):
+        return self.render(ctx)
 
     def runProcess(self, env, request, qargs=[]):
-        p = CGIProcessProtocol(request)
+        d = defer.Deferred()
+        p = CGIProcessProtocol(request, d)
         reactor.spawnProcess(p, self.filename, [self.filename]+qargs, env, os.path.dirname(self.filename))
+        return d
+
 
 class FilteredScript(CGIScript):
     """I am a special version of a CGI script, that uses a specific executable.
@@ -128,8 +160,10 @@ class FilteredScript(CGIScript):
     filter = '/usr/bin/cat'
 
     def runProcess(self, env, request, qargs=[]):
-        p = CGIProcessProtocol(request)
-        reactor.spawnProcess(p, self.filter, [self.filter, self.filename]+qargs, env, os.path.dirname(self.filename))
+        d = defer.Deferred()
+        proc = CGIProcessProtocol(request)
+        reactor.spawnProcess(proc, self.filter, [self.filter, self.filename]+qargs, env, os.path.dirname(self.filename))
+        return d
 
 
 class PHP3Script(FilteredScript):
@@ -147,22 +181,13 @@ class PHPScript(FilteredScript):
     filter = '/usr/bin/php4'
 
 
-class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
+class CGIProcessProtocol(protocol.ProcessProtocol):
     handling_headers = 1
     headers_written = 0
     headertext = ''
     errortext = ''
 
     # Remotely relay producer interface.
-
-    def view_resumeProducing(self, issuer):
-        self.resumeProducing()
-
-    def view_pauseProducing(self, issuer):
-        self.pauseProducing()
-
-    def view_stopProducing(self, issuer):
-        self.stopProducing()
 
     def resumeProducing(self):
         self.transport.resumeProducing()
@@ -173,15 +198,24 @@ class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
     def stopProducing(self):
         self.transport.loseConnection()
 
-    def __init__(self, request):
+    def __init__(self, request, deferred):
         self.request = request
+        self.deferred = deferred
+        self.stream = stream.ProducerStream()
+        self.response = http.Response(stream=self.stream)
 
     def connectionMade(self):
+        """
         self.request.registerProducer(self, 1)
         self.request.content.seek(0, 0)
         content = self.request.content.read()
         if content:
             self.transport.write(content)
+            """
+        # FIXME: Send client data to CGI script.
+        # Use StreamProducer to do stuff.
+        s = stream.StreamProducer(self.request.stream)
+        s.beginProducing(self.transport.pipes[0])
 
     def errReceived(self, error):
         self.errortext = self.errortext + error
@@ -193,43 +227,60 @@ class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
         # First, make sure that the headers from the script are sorted
         # out (we'll want to do some parsing on these later.)
         if self.handling_headers:
-            text = self.headertext + output
-            headerEnds = []
+            fullText = self.headertext + output
+            header_endings = []
             for delimiter in '\n\n','\r\n\r\n','\r\r', '\n\r\n':
-                headerend = string.find(text,delimiter)
+                headerend = fullText.find(delimiter)
                 if headerend != -1:
-                    headerEnds.append((headerend, delimiter))
-            if headerEnds:
-                headerEnds.sort()
-                headerend, delimiter = headerEnds[0]
-                self.headertext = text[:headerend]
+                    header_endings.append((headerend, delimiter))
+            # Have we noticed the end of our headers in this chunk?
+            if header_endings:
+                header_endings.sort()
+                headerend, delimiter = header_endings[0]
                 # This is a final version of the header text.
+                self.headertext = fullText[:headerend]
                 linebreak = delimiter[:len(delimiter)/2]
-                headers = string.split(self.headertext, linebreak)
-                for header in headers:
-                    br = string.find(header,': ')
-                    if br == -1:
-                        log.msg( 'ignoring malformed CGI header: %s' % header )
-                    else:
-                        headerName = string.lower(header[:br])
-                        headerText = header[br+2:]
-                        if headerName == 'location':
-                            self.request.setResponseCode(http.FOUND)
-                        if headerName == 'status':
-                            try:
-                                statusNum = int(headerText[:3]) #"XXX <description>" sometimes happens.
-                            except:
-                                log.msg( "malformed status header" )
-                            else:
-                                self.request.setResponseCode(statusNum)
-                        else:
-                            self.request.setHeader(headerName,headerText)
-                output = text[headerend+len(delimiter):]
+                # Write all our headers to self.response
+                for header in self.headertext.split(linebreak):
+                    self._addResponseHeader(header)
+                output = fullText[headerend+len(delimiter):]
                 self.handling_headers = 0
+                # Trigger our callback with a response
+                self._sendResponse()
+            # If we haven't hit the end of our headers yet, then
+            # everything we've seen so far is _still_ headers
             if self.handling_headers:
-                self.headertext = text
+                self.headertext = fullText
+        # If we've stopped handling headers at this point, write
+        # whatever output we've got.
         if not self.handling_headers:
-            self.request.write(output)
+            self.stream.write(output)
+
+    def _addResponseHeader(self, header):
+        """
+        Save a header until we're ready to write our Response.
+        """
+        breakpoint = header.find(': ')
+        if breakpoint == -1:
+            log.msg('ignoring malformed CGI header: %s' % header)
+        else:
+            name = header.lower()[:breakpoint]
+            text = header[breakpoint+2:]
+            if name == 'location':
+                self.response.code = responsecode.FOUND
+            if name == 'status':
+                try:
+                    statusNum = int(text[:3]) # "123 <description>" sometimes happens.
+                except:
+                    log.msg("malformed status header: %s" % header)
+                else:
+                    self.response.code = statusNum
+            else:
+                ##self.request.setHeader(name, text)
+                self.response.headers.setRawHeaders(
+                    name,
+                    self.response.headers.getRawHeaders(name, [])+[text]
+                    )
 
     def processEnded(self, reason):
         if reason.value.exitCode != 0:
@@ -239,9 +290,13 @@ class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
             log.msg("Errors from CGI %s: %s" % (self.request.uri, self.errortext))
         if self.handling_headers:
             log.msg("Premature end of headers in %s: %s" % (self.request.uri, self.headertext))
-            self.request.write(
-                error.ErrorPage(http.INTERNAL_SERVER_ERROR,
-                                "CGI Script Error",
-                                "Premature end of script headers.").render(self.request))
-        self.request.unregisterProducer()
-        self.request.finish()
+            self.response = http.Response(responsecode.INTERNAL_SERVER_ERROR)
+            self._sendResponse()
+        self.stream.finish()
+
+    def _sendResponse(self):
+        """
+        Call our deferred (from CGIScript.render) with a response.
+        """
+        self.deferred.callback(self.response)
+

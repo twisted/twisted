@@ -273,7 +273,8 @@ class Request(http.Request):
             self.parseURL()
             self.host = self.getHost()
         except:
-            self._processingFailed(failure.Failure(), requestContext)
+            failedDeferred = self._processingFailed(failure.Failure(), requestContext)
+            failedDeferred.addCallback(self._renderAndFinish)
             return
 
 
