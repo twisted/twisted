@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.88 $"[11:-2]
+__version__ = "$Revision: 1.89 $"[11:-2]
 
 # Sibling imports
 import interfaces
@@ -506,7 +506,7 @@ class View:
             if not controller:
                 controller = input.DefaultHandler(model)
 
-            if not isinstance(view, widgets.DefaultWidget):
+            if model is not peek(self.viewStack).model and not isinstance(view, widgets.DefaultWidget):
                 model.addView(view)
             submodelList = [x.name for x in filterStack(self.modelStack) if x.name]
             submodelList.reverse()
@@ -516,10 +516,7 @@ class View:
 
             theId = node.attributes.get("id")
             if self.livePage and not theId:
-                #curId = getattr(request, 'currentId', 0)
-                curId = id(view)
-                theId = "woven_id_" + str(curId)
-                #request.currentId = curId + 1
+                theId = "woven_id_%d" % id(view)
                 view.setupMethods.append(utils.createSetIdFunction(theId))
                 view.outgoingId = theId
                 #print "SET AN ID", theId
