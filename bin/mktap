@@ -58,7 +58,8 @@ So far *apptype* can be 'web', 'words', 'reality', 'toc', 'mail' and 'telnet'
                   ['manholePass', None, None,
                    "Password for manhole service."
                    " (If a password is not specified,"
-                   " no manhole service will be created.)"]]
+                   " no manhole service will be created.)"],
+                  ['manholePort', None, pb.portno]]
 
 
     def opt_help(self):
@@ -119,11 +120,11 @@ for num, proto in mod.getPorts(a, config):
         haveBroker = 1
     a.listenOn(num, proto)
 
-# Have the option to build a manhole into anything.
+# Would you like a manhole with that?
 if options.manholePass:
     if not haveBroker:
         bkr = pb.BrokerFactory(pb.AuthRoot(a))
-        a.listenOn(pb.portno, bkr)
+        a.listenOn(options.manholePort, bkr)
 
     i = passport.Identity(options.manholeUser, a)
     i.setPassword(options.manholePass)

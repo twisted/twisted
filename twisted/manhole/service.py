@@ -37,9 +37,22 @@ class FakeStdIO:
         pass
 
 class Perspective(pb.Perspective):
+    def __init__(self, perspectiveName, service, identityName="Nobody"):
+        pb.Perspective.__init__(self, perspectiveName,
+                                service, identityName)
+        self.localNamespace = {
+            }
+
     def perspective_do(self, mesg):
         """returns a list of ["type", "message"] pairs to the client for
-        display"""
+        display
+
+        Types include:
+            out -- material sent to sys.stdout
+            err -- material sent to sys.stderr
+            result -- the resulting value of the expression
+            error -- exceptions and tracebacks
+        """
         fn = str(self.service)
         output = []
         log.msg(">>> %s" % mesg)
@@ -60,10 +73,11 @@ class Perspective(pb.Perspective):
                 sys.stdout = fakeout
                 sys.stderr = fakeerr
                 try:
-                    val = eval(code, self.service.namespace)
+                    val = eval(code, self.service.namespace,
+                               self.localNamespace)
                     if val is not None:
                         resfile.write(str(val)+'\n')
-                        self.service.namespace["_"] = val
+                        self.localNamespace["_"] = val
                 finally:
                     sys.stdout = out
                     sys.stderr = err
@@ -82,6 +96,9 @@ class Perspective(pb.Perspective):
                         src = src_lines[lineNum]
                         tb_list[i] = (filename, lineNum, func, src)
 
+            # XXX: We should include an option to send back unformatted
+            # lists instead of these strings, should the client prefer
+            # to do its own formatting.
             tb_list = traceback.format_list(tb_list)
             ex_list = traceback.format_exception_only(eType, eVal)
             s = string.join(tb_list + ex_list, '')
@@ -94,7 +111,14 @@ class Service(pb.Service):
     # must implement something to retrieve a perspective.
     def __init__(self, serviceName='twisted.manhole', application=None):
         pb.Service.__init__(self, serviceName, application)
-        self.namespace = {'__name__': str(self)}
+
+        self.namespace = {
+            # I'd specify __name__ so we don't get it from __builtins__,
+            # but that seems to have the potential for breaking imports.
+            #'__name__': "PAK CHOOIE UNF",
+            # sys, so sys.modules will be readily available
+            'sys': sys
+            }
 
     def __getstate__(self):
         """This returns the persistent state of this shell factory.

@@ -155,7 +155,8 @@ class Participant(pb.Perspective, styles.Versioned):
         except KeyError:
             print 'unable to add words identity for %s'% self.name
 
-    def __setstate__(self, state):
+    def __getstate__(self):
+        state = self.__dict__.copy()
         # Assumptions:
         # * self.client is a RemoteReference, or otherwise represents
         #   a transient presence.
@@ -165,7 +166,7 @@ class Participant(pb.Perspective, styles.Versioned):
         # * Because we are not online, we are in no groups.
         state["groups"] = []
 
-        self.__dict__.update(state)
+        return state
 
     def attached(self, client, identity):
         """Attach a client which implements WordsClientInterface to me.
@@ -293,8 +294,8 @@ class Group(pb.Cacheable):
         self.members = []
         self.topic = "Welcome to '%s'." % self.name
 
-    def __setstate__(self, persistentState):
-        self.__dict__ = persistentState
+    def __getstate__(self):
+        state = self.__dict__.copy()
         self.members = []
 
     def getStateToCopyFor(self, participant):

@@ -152,7 +152,12 @@ class IRCClient(basic.LineReceiver):
     this class also contains reasonable implementations of many common
     CTCP methods.
 
-    TODO: Add flood protection/rate limiting for my CTCP replies.
+    TODO:
+     * Login for IRCnets which require a PASS
+     * Limit the length of messages sent (because the IRC server probably
+       does).
+     * Add flood protection/rate limiting for my CTCP replies.
+     * NickServ cooperation.  (a mix-in?)
     """
 
     nickname = 'irc'
@@ -206,11 +211,19 @@ class IRCClient(basic.LineReceiver):
     ### user input commands, client->server
     ### Your client will want to invoke these.
 
-    def join(self, channel):
-        self.sendLine("JOIN #%s" % channel)
+    def join(self, channel, key=None):
+        if key:
+            self.sendLine("JOIN #%s %s" (channel, key))
+        else:
+            self.sendLine("JOIN #%s" % (channel,))
 
-    def leave(self, channel):
-        self.sendLine("PART #%s" % channel)
+    def leave(self, channel, reason=None):
+        if reason:
+            self.sendLine("PART #%s :%s" % (channel, reason))
+        else:
+            self.sendLine("PART #%s" % (channel,))
+
+    part = leave
 
     def say(self, channel, message):
         self.sendLine("PRIVMSG #%s :%s" % (channel, message))
@@ -430,13 +443,11 @@ class IRCClient(basic.LineReceiver):
             names = reflect.prefixedMethodNames(self.__class__,
                                                 'ctcpQuery_')
 
-            names = map(lambda s: s[10:], names)
-
             self.ctcpMakeReply(nick, [('CLIENTINFO',
                                        string.join(names, ' '))])
         else:
             args = string.split(data)
-            method = getattr(self, args[0], None)
+            method = getattr(self, 'ctcpQuery_%s' % (args[0],), None)
             if not method:
                 self.ctcpMakeReply(nick, [('ERRMSG',
                                            "CLIENTINFO %s :"

@@ -55,11 +55,6 @@ class ProxiedParticipant(wordsService.WordsClientInterface,
 
 class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
     """I connect to the IRC server and broker traffic.
-
-    TODO (and many of these belong in irc.IRCClient):
-     * Login for IRCnets which require a PASS
-     * Joining keyed channels.
-     * NickServ cooperation.
     """
 
     networkSuffix = '@opn'
@@ -73,7 +68,7 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
 
     realname = 'Tendril'
     versionName = 'Tendril'
-    versionNum = '$Revision: 1.4 $'[11:-2]
+    versionNum = '$Revision: 1.5 $'[11:-2]
     versionEnv = copyright.longversion
 
     helptext = (
