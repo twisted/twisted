@@ -117,6 +117,9 @@ class Node:
             return 0
         return self.isEqualToNode(n)
 
+    def __hash__(self):
+        return id(self)
+    
     def isEqualToNode(self, n):
         for a, b in zip(self.childNodes, n.childNodes):
             if not a == b:

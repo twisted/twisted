@@ -363,3 +363,7 @@ class MicroDOMTest(TestCase):
 
         s = '<p>foo<b a="c"><foo z="foo" /><foo /><bar c="y" /></b></p>'
         self.assertEquals(s, n.toxml())
+
+    def testDict(self):
+        n = microdom.Element("p")
+        d = {n : 1} # will fail if Element is unhashable
