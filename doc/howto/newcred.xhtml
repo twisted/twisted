@@ -3,26 +3,42 @@
     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
-    <title>New Cred: Authentication for the 24th Century</title>
+    <title>Cred: Pluggable Authentication</title>
   </head>
   <body>
-    <h1>New Cred: Authentication for the 24th Century</h1>
+    <h1>Cred: Pluggable Authentication</h1>
 
-    <h2>Old Cred</h2>
-<p>Authentication in Twisted services comes from modules in the 'twisted.cred'
-package.  The old API for authentication was complex, large, and did not handle
-multiple types of authentication well.  The new API is much smaller and easier
-to use, and hopefully will be widely adopted outside of the Twisted internals.
+    <h2>Goals</h2>
+
+<p>Cred is an authentication system. It allows a protocol to take credentials, such as
+a username/password pair, and login, getting back a business logic object specific to
+that protocol and "user". For example, POP3 might pass username and password and get
+back a mailbox object for the specified email account. Cred is designed to allow
+both the backend implementation of the business logic - the avatar - and the authentication
+database to be decided during deployment. For example, the same POP3 server should
+be able to authenticate against /etc/passwd or an LDAP server without having to know
+anything about how or where mail is stored. 
 </p>
 
-    <h2>The Portal</h2>
-<p>This is the ineffable mystery at the core of login.  There is one 
+<p>To sketch out how this works - a realm is in charge of avatars, business logic objects.
+A portal stores a realm, and a number of credential checkers. A protocol stores a reference
+to the portal. Login consists of passing credentials and a request interface (e.g. IMailbox)
+to the portal. The portal passes the credentials to the appropriate credential checker, which
+returns an avatar ID. The ID is passed to the realm, which returns the appropriate avatar.
+For a Portal that has a realm that creates mailbox objects and a credential checker that
+checks /etc/passwd, login consists of passing in a username/password and the IMailbox interface
+to the portal. The portal passes this to the /etc/passwd credential checker, gets back a avatar 
+ID corresponding to an email account, passes that to the realm and gets back a mailbox object for that
+email account.</p>
+
+    <h2>Cred objects</h2>
+    <h3>The Portal</h3>
+<p>This is the the core of login, the point of integration between all the objects
+in the cred system.  There is one 
 concrete implementation of Portal, and no interface - it does a very 
 simple task.  A <code class="API" base="twisted.cred.portal">Portal</code>
 associates one (1) Realm with a collection of 
 CredentialChecker instances.  (More on those later.)</p>
-
-<p>The closest analogue of this in Old Cred was the Authorizer.</p>
 
 <p>If you are writing a protocol that needs to authenticate against 
 something, you will need a reference to a Portal, and to nothing else.  
@@ -33,26 +49,37 @@ This has only 2 methods -</p>
 
 <p>The docstring is quite expansive (see <code class="API">twisted.cred.portal</code>), but in 
 brief, this is what you call when you need to call in order to connect 
-a user to the system.  The result is a deferred which fires a tuple of:</p>
+a user to the system.  Typically you only pass in one interface, and the mind is 
+<code class="python">None</class>. The interfaces are the possible interfaces the returned
+avatar is expected to implement, in order of preference. 
+The result is a deferred which fires a tuple of:</p>
     <ul>
-	<li>interface (which was one of the interfaces passed in the *interfaces 
+	<li>interface the avatar implements (which was one of the interfaces passed in the *interfaces 
 tuple)</li>
-	<li>an object that implements that interface (an Aspect of an Avatar)</li>
+	<li>an object that implements that interface (an avatar)</li>
     <li>logout, a 0-argument callable which disconnects the connection that was 
 established by this call to login</li>
     </ul>
+<p>The logout method has to be called when the avatar is logged out. For POP3 this means
+when the protocol is disconnected or logged out, etc..</p>
 </li>
 <li><code class="API" base="twisted.cred.portal.Portal">registerChecker</code><code>(checker, *credentialInterfaces)</code>
 
-<p>which adds a CredentialChecker to the portal.</p>
+<p>which adds a CredentialChecker to the portal. The optional list of interfaces are interfaces of credentials
+that the checker is able to check.</p>
 </li></ul>
 
-    <h2>The Mind</h2>
+    <h3>The Mind</h3>
+
+<p>As mentioned before, the mind is usually None, so you can skip this
+bit if you want.</p>
+
 <p>Masters of Perspective Broker already know this object as the ill-named 
 <q>client object</q>.  There is no <q>mind</q> class, or even interface, but it 
 is an object which serves an important role - any notifications which 
 are to be relayed to an authenticated client are passed through a 
-'mind'.</p>
+'mind'. In addition, it allows passing more information to the realm during 
+login in addition to the avatar ID.</p>
 
 <p>The name may seem rather unusual, but considering that a Mind is 
 representative of the entity on the <q>other end</q> of a network connection
@@ -77,7 +104,7 @@ interface.</p>
 and it's not used in simple usages of cred, so feel free to pass None 
 until you find yourself requiring something like this.)</p>
 
-    <h2>The CredentialChecker</h2>
+    <h3>The CredentialChecker</h3>
 <p>This is an object implementing <code class="API"
 base="twisted.cred.checkers">ICredentialChecker</code> which resolves some
 Credentials to an avatar ID.  
@@ -98,7 +125,7 @@ checker mechanisms soon.</p>
 the user, and return <code class="API">twisted.cred.checkers.ANONYMOUS</code>
 for anonymous access.</p>
 
-    <h2>The Credentials</h2>
+    <h3>The Credentials</h3>
 <p>Oddly enough, this represents some credentials that the user presents.  
 Usually this will just be a small static blob of data, but in some 
 cases it will actually be an object connected to a network protocol.  
@@ -106,10 +133,9 @@ For example, a username/password pair is static, but a
 challenge/response server is an active state-machine that will require 
 several method calls in order to determine a result.</p>
 
-    <h2>The Realm</h2>
+    <h3>The Realm</h3>
 <p>A realm is an interface which connects your universe of <q>business 
-objects</q> to the authentication system.  This is similar to the Old Cred 
-    <q>Service</q>.</p>
+objects</q> to the authentication system.</p>
 
 <p><code class="API" base="twisted.cred.portal">IRealm</code> is another one-method interface:</p>
 
@@ -131,32 +157,39 @@ argument is for.</p>
 <p>Since requestAvatar should be called from a Deferred callback, it may 
 return a Deferred or a synchronous result.</p>
 
-<p>At the moment, there is only an interface for the Realm.  However, it 
-is expected that a utility class will be written in the near future to 
-facilitate log-in methods, a re-directing method similar to 
-<q>Perspective.attached</q> for Avatars, and at least somewhat automated 
-compositing of Realms.  However, in writing the code for cred and 
-guard, there has been no need for such a thing yet.</p>
+    <h3>The Avatar</h3>
 
-    <h2>The Avatar</h2>
-<p>This object has the dubious distinction of appearing nowhere in the 
-code; in fact, very few things will ever touch an actual Avatar, and it 
-is not clear that it will have an interface.  However, <em>aspects</em> of an 
-avatar are returned in deferreds from the above methods, which is to 
-say, things that implement particular interfaces which communicate with 
-various protocols that may access your Realm.</p>
+<p>An avatar is a business logic object for a specific user. For POP3, it's
+a mailbox, for a first-person-shooter it's the object that interacts with
+the game, the actor as it were. Avatars are specific to an application,
+and each avatar represents a single "user".</p>
 
-<p>This is (hopefully, obviously) similar to a 'Perspective'.  However, an 
-Avatar separates 2 concerns which were muddied previously - <em>access</em> to 
-a realm and <em>storage of user data</em> within a realm.  The avatar itself 
-stores the data, and the aspects interface to it.  The avatar itself 
-may of course implement its own aspects, but it is suggested in most 
-cases to register adapters that do this.  (Perspective Broker will keep 
-its name, because the Avatar Aspect that communicates with the remote 
-object protocol will still be called a Perspective.)</p>
+    <h2>Responsibilities</h2>
 
-<h2>TODO (hopefully) short example of using new cred to authenticate</h2>
+    <h3>Server protocol implementation</h3>
 
-<h2>TODO example of writing a new kind of authentication</h2>
+<p>The protocol implementor should define the interface the avatar should implement,
+and design the protocol to have a portal attached. When a user logs in using the
+protocol, a credential object is created, passed to the portal, and an avatar
+with the appropriate interface is requested. When the user logs out or the protocol
+is disconnected, the avatar should be logged out.</p>
+
+<p>The protocol designer should not hardcode how users are authenticated or the
+realm implemented. For example, a POP3 protocol implementation would require a portal whose
+realm returns avatars implementing IMailbox and whose credential checker accepts
+username/password credentials, but that is all.</p>
+
+   <h3>Application implementation</h3>
+
+<p>The application developer can implement realms and credential checkers. For example,
+she might implement a realm that returns IMailbox implementing avatars, using MySQL
+for storage, or perhaps a credential checker that uses LDAP for authentication.</p>
+
+   <h3>Deployment</h3>
+
+<p>Deployment involves tying together a protocol, an appropriate realm and a credential
+checker. For example, a POP3 server can be constructed by attaching to it a portal
+that wraps the MySQL-based realm and an /etc/passwd credential checker, or perhaps
+the LDAP credential checker if that is more useful.</p>
+
 </body></html>
-
