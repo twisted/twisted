@@ -42,29 +42,28 @@
       <dd>The following N bytes are a list of elements.</dd>
 
       <dt>Integer -- 0x81</dt>
-      <dd>The value of this element is the positive integer N. Following bytes are not part of this element.</dd>
+      <dd>The value of this element is the positive integer N. Following bytes are not part of this element. Integers can have values of 0 &lt;= N &lt;= 2147483647.</dd>
 
       <dt>String -- 0x82</dt>
       <dd>The following N bytes are a string element.</dd>
 
       <dt>Negative Integer -- 0x83</dt>
-      <dd>The value of this element is the negative integer -N. Following bytes are not part of this element.</dd>
+      <dd>The value of this element is the integer N * -1, i.e. -N. Following bytes are not part of this element. Negative integers can have values of 0 &gt;= -N &gt;= -2147483648.</dd>
 
       <dt>Float - 0x84</dt>
       <dd>The next 8 bytes are the float encoded in IEEE 754 floating-point "double format" bit layout.
 	No length bytes should have been defined.
       </dd>
 
-      <dt>Large Integer -- 0x81 (optional)</dt>
-      <dd>The value of this element is the positive large integer N. Following bytes are not part of this element.</dd>
+      <dt>Large Integer -- 0x81</dt>
+      <dd>The value of this element is the positive large integer N. Following bytes are not part of this element. Large integers have no size limitation.</dd>
 
-      <dt>Large Negative Integer -- 0x83 (optional)</dt>
-      <dd>The value of this element is the negative large integer -N. Following bytes are not part of this element.</dd>
+      <dt>Large Negative Integer -- 0x83</dt>
+      <dd>The value of this element is the negative large integer -N. Following bytes are not part of this element. Large integers have no size limitation.</dd>
     </dl>
 
     <p>
-      Large integers do not need to be supported - they are intended for arbitary length integers.
-      Regular integers types (positive and negative) are limited to 32-bit values.
+      Large integers do not need to be are intended for arbitary length integers. Regular integers types (positive and negative) are limited to 32-bit values.
     </p>
 
     <h3>Examples</h3>
