@@ -273,6 +273,10 @@ class XMLParser(Protocol):
                 self.tagAttributes[self.attrname] = self.attrval
                 self.gotTagStart(self.tagName, self.tagAttributes)
                 return 'bodydata'
+            if byte == '\\':
+                # I saw this in actual HTML once:
+                # <font size=\"3\"><sup>SM</sup></font>
+                return
         self._parseError("Invalid intial attribute value: %r" % byte)
 
     attrname = ''
