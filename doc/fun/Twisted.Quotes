@@ -2943,3 +2943,10 @@ dollars, instead of being dead, i am now an oil magnate in my native country."
 language feature.
 <faassen> rc: well, it's an acquired taste.
 %
+<Stravad> Python has that instance id thingy for everything
+<glyph> Stravad: uh, that's not an OID, that's &foo; :-)
+<radix> glyph: !?
+<dash> radix: that's what id() does
+<radix> kill me
+<radix> I read that as an XML entity
+%
