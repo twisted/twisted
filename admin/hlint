@@ -6,8 +6,9 @@ from twisted.python import reflect
 
 class TagChecker:
 
-    def __init__(self, allowed):
-        self.allowed = allowed
+    def __init__(self, allowedTags, allowedCodeClasses):
+        self.allowedTags = allowedTags
+        self.allowedCodeClasses = allowedCodeClasses
 
     def check(self, dom, filename):
         for method in reflect.prefixedMethods(self, 'check_'):
@@ -19,14 +20,12 @@ class TagChecker:
 
     def check_disallowedElements(self, dom, filename):
         def m(node, self=self):
-            return not self.allowed(node.tagName)
+            return not self.allowedTags(node.tagName)
         for element in domhelpers.findElements(dom, m):
             self._reportError(filename, element,
                                'unrecommended tag %s' % element.tagName)
 
     def check_codeClass(self, dom, filename):
-        classes = ['shell', 'API', 'python', 'py-prototype', 'py-filename',
-                   'py-src-string', 'py-signature', 'py-src-parameter']
         def matcher(element, classes=classes):
             if element.tagName != 'code':
                 return 0
@@ -48,15 +47,22 @@ class TagChecker:
                 continue 
             self._reportError(filename, node.parentNode, 'contains quote')
 
+def list2dict(l):
+    d = {}
+    for el in l:
+        d[el] = None
+    return d
+
+classes = list2dict(['shell', 'API', 'python', 'py-prototype', 'py-filename',
+                     'py-src-string', 'py-signature', 'py-src-parameter'])
+
+tags = list2dict(["html", "title", "head", "body", "h1", "h2", "h3", "ol", "ul",
+                  "dl", "li", "dt", "dd", "p", "code", "img", "blockquote", "a",
+                  "cite", "div", "span", "strong", "em", "pre", "q", "table",
+                  "tr", "td", "th", "style"])
 def main():
     import sys
-    allowed = {}
-    for tag in ("html", "title", "head", "body", "h1", "h2", "h3", "ol", "ul",
-                "dl", "li", "dt", "dd", "p", "code", "img", "blockquote", "a",
-                "cite", "div", "span", "strong", "em", "pre", "q", "table",
-                "tr", "td", "th", "style"):
-        allowed[tag] = None
-    checker = TagChecker(allowed.has_key)
+    checker = TagChecker(tags.has_key, classes.has_key)
     for file in sys.argv[1:]:
         dom = tree.parseFileAndReport(file)
         if not dom:
