@@ -15,43 +15,29 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: mktap.py,v 1.38 2003/07/30 16:09:56 moshez Exp $
-
-""" Implementation module for the `mktap` command.
-"""
-
-from twisted.internet import app
-from twisted.python import usage, util
-
-import sys, traceback, os, glob, operator
+from twisted.application import service, compat, app
+from twisted.python import usage, util, plugin
+import sys, os
 try:
-    import cPickle
+    import pwd, grp
 except ImportError:
-    import pickle as cPickle
-try:
-    import pwd
-except ImportError:
-    pwd = None
-try:
-    import grp
-except ImportError:
-    grp = None
+    def getid(uid, gid):
+        return map(int, (uid or 0, gid or 0))
+else:
+    def getid(uid, gid):
+        try:
+            uid = int(uid or 0)
+        except ValueError:
+            uid = pwd.getpwnam(uid)[2]
+        try:
+            gid = int(gid or 0)
+        except ValueError:
+            gid = grp.getgrnam(gid)[2]
+        return uid, gid
 
-
-from twisted.python.plugin import getPlugIns
-from twisted.python import log
-
-# !!! This code should be refactored; also,
-# I bet that it shares a lot with other scripts
-# (i.e. is badly cut'n'pasted).
 
 def loadPlugins(debug = None, progress = None):
-    try:
-        plugins = getPlugIns("tap", debug, progress)
-    except IOError:
-        print "Couldn't load the plugins file!"
-        sys.exit(2)
-
+    plugins = plugin.getPlugIns("tap", debug, progress)
     tapLookup = {}
     for plug in plugins:
         if hasattr(plug, 'tapname'):
@@ -59,80 +45,68 @@ def loadPlugins(debug = None, progress = None):
         else:
             shortTapName = plug.module.split('.')[-1]
         tapLookup[shortTapName] = plug
-
     return tapLookup
 
+def makeService(mod, s, options):
+    if hasattr(mod, 'updateApplication'):
+        ser = service.MultiService()
+        mod.updateApplication(compat.IOldApplication(ser), options)
+    else:
+        ser = mod.makeService(options)
+    return ser
 
-def getModule(tapLookup, type):
-    try:
-        mod = tapLookup[type].load()
-        return mod
-    except KeyError:
-        print """Please select one of: %s""" % ' '.join(tapLookup.keys())
-        sys.exit(2)
+def addToApplication(ser, name, append, procname, type, encrypted, uid, gid):
+    if append and os.path.exists(append):
+        a = service.loadApplication(append, 'pickle', None)
+    else:
+        a = service.Application(append, uid, gid)
+    if procname:
+        service.IProcess(a).processName = procname
+    ser.setServiceParent(service.IServiceCollection(a))
+    sob.IPersistable(a).setStyle(type)
+    passphrase = app.getSavePassphrase(encrypted)
+    if passphrase:
+        append = None
+    sob.IPersistable(a).save(filename=append, passphrase=passphrase)
 
-class GeneralOptions:
+class FirstPassOptions(usage.Options):
     synopsis = """Usage:    mktap [options] <command> [command options] """
 
-    uid = gid = None
-    if hasattr(os, 'getgid'):
-        uid, gid = os.getuid(), os.getgid()
+    recursing = 0
+    params = ()
+    
     optParameters = [
-        ['uid', 'u', uid, "The uid to run as."],
-        ['gid', 'g', gid, "The gid to run as."],
-        ['append', 'a', None,   "An existing .tap file to append the plugin to, rather than creating a new one."],
-        ['type', 't', 'pickle', "The output format to use; this can be 'pickle', 'xml', or 'source'."],
+        ['uid', 'u', None, "The uid to run as."],
+        ['gid', 'g', None, "The gid to run as."],
+        ['append', 'a', None,
+         "An existing .tap file to append the plugin to, rather than "
+         "creating a new one."],
+        ['type', 't', 'pickle',
+         "The output format to use; this can be 'pickle', 'xml', "
+         "or 'source'."],
         ['appname', 'n', None, "The process name to use for this application."]
     ]
-    del uid, gid
+    if hasattr(os, 'getgid'):
+        optParameters[0][2], optParameters[1][2] = os.getuid(), os.getgid()
 
     optFlags = [
-        ['xml', 'x',       "DEPRECATED: same as --type=xml"],
-        ['source', 's',    "DEPRECATED: same as --type=source"],
-        ['encrypted', 'e', "Encrypt file before writing (will make the extension of the resultant file begin with 'e')"],
-        
+        ['encrypted', 'e', "Encrypt file before writing "
+                           "(will make the extension of the resultant "
+                           "file begin with 'e')"],
         ['debug', 'd',     "Show debug information for plugin loading"],
         ['progress', 'p',  "Show progress information for plugin loading"],
+        ['help', 'h',  "Display this message"],
     ]
 
     def init(self, tapLookup):
-        self.subCommands = []
-        for (x, y) in tapLookup.items():
-            self.subCommands.append(
-                [x, None, (lambda obj = y: obj.load().Options()), getattr(y, 'description', '')]
-             )
-        self.subCommands.sort()
-        self['help'] = 0 # default
+        sc = [ [name, None, (lambda obj=module:obj.load().Options()),
+                getattr(module, 'description', '')]
+                                     for name, module in tapLookup.items()]
+        sc.sort()
+        self.subCommands = sc
 
-    def postOptions(self):
-        # backwards compatibility for old --xml and --source options
-        if self['xml']:
-            self['type'] = 'xml'
-        if self['source']:
-            self['type'] = 'source'
-
-    def opt_help(self):
-        """Display this message"""
-        self['help'] = 1
-    opt_h = opt_help
-
-    def parseArgs(self, *args):
-        self.args = args
-
-class FirstPassOptions(usage.Options, GeneralOptions):
-    def __init__(self):
-        usage.Options.__init__(self)
-        self['help'] = 0
-        self.params = []
-        self.recursing = 0
-    
-    def opt_help(self):
-        """Display this message"""
-        self['help'] = 1
-    opt_h = opt_help
-    
     def parseArgs(self, *rest):
-        self.params.extend(rest)
+        self.params += rest
 
     def _reportDebug(self, info):
         print 'Debug: ', info
@@ -146,7 +120,6 @@ class FirstPassOptions(usage.Options, GeneralOptions):
 
     def postOptions(self):
         if self.recursing:
-            GeneralOptions.postOptions(self)
             return
         debug = progress = None
         if self['debug']:
@@ -154,102 +127,33 @@ class FirstPassOptions(usage.Options, GeneralOptions):
         if self['progress']:
             progress = self._reportProgress
             self.pb = util.makeStatBar(60, 1.0)
-        self.tapLookup = loadPlugins(debug, progress)
+        try:
+            self.tapLookup = loadPlugins(debug, progress)
+        except IOError:
+            raise usage.UsageError("Couldn't load the plugins file!")
         self.init(self.tapLookup)
-        
         self.recursing = 1
         self.parseOptions(self.params)
-
         if not hasattr(self, 'subOptions') or self['help']:
-            print str(self)
-            sys.exit(2)
-        elif hasattr(self, 'subOptions'):
-            if self.subOptions.has_key('help') and self.subOptions['help']:
-                print str(self.subOptions)
-                sys.exit(2)
-        
-
-# Rest of code in "run"
+            raise usage.UsageError(str(self))
+        if hasattr(self, 'subOptions') and self.subOptions.get('help'):
+            raise usage.UsageError(str(self.subOptions))
+        if not self.tapLookup.has_key(self.subCommand):
+            raise usage.UsageError("Please select one of: "+
+                                   ' '.join(self.tapLookup))
+       
 
 def run():
     options = FirstPassOptions()
     try:
         options.parseOptions(sys.argv[1:])
     except usage.UsageError, e:
-        print str(options)
-        print str(e)
+        print "%s\n%s" % (options, e)
         sys.exit(2)
-    except (SystemExit, KeyboardInterrupt):
+    except KeyboardInterrupt:
         sys.exit(1)
-    except:
-        import traceback
-        print 'An error unexpected occurred:'
-        traceback.print_exc()
-        sys.exit(2)
-
-    mod = getModule(options.tapLookup, options.subCommand)
-
-    if options['uid'] is not None:
-        try:
-            options['uid'] = int(options['uid'])
-        except ValueError:
-            if not pwd:
-                raise
-            options['uid'] = pwd.getpwnam(options['uid'])[2]
-    if options['gid'] is not None:
-        try:
-            options['gid'] = int(options['gid'])
-        except ValueError:
-            if not grp:
-                raise
-            options['gid'] = grp.getgrnam(options['gid'])[2]
-
-    if not options['append']:
-        a = app.Application(options.subCommand, options['uid'], options['gid'])
-    else:
-        if os.path.exists(options['append']):
-            a = cPickle.load(open(options['append'], 'rb'))
-        else:
-            a = app.Application(options.subCommand, int(options['uid']), int(options['gid']))
-
-    try:
-        mod.updateApplication(a, options.subOptions)
-    except usage.error, ue:
-        print "Usage Error: %s" % ue
-        options.subOptions.opt_help()
-        sys.exit(2)
-    except (SystemExit, KeyboardInterrupt):
-        sys.exit(1)
-    except:
-        import traceback
-        print 'An error unexpected occurred:'
-        traceback.print_exc()
-        sys.exit(2)
-
-    if options['appname']:
-        a.processName = options['appname']
-
-    # backwards compatible interface
-    if hasattr(mod, "getPorts"):
-        print "The use of getPorts() is deprecated."
-        for portno, factory in mod.getPorts():
-            a.listenTCP(portno, factory)
-
-    a.persistStyle = ({'xml': 'xml',
-                       'source': 'aot',
-                       'pickle': 'pickle'}
-                       [options['type']])
-    if options['encrypted']:
-        try:
-            import Crypto
-            a.save(passphrase=util.getPassword("Encryption passphrase: "))
-        except ImportError:
-            print "The --encrypt flag requires the PyCrypto module, no file written."
-    elif options['append']:
-        a.save(filename=options['append'])
-    else:
-        a.save()
-
-# Make it script-callable for testing purposes
-if __name__ == "__main__":
-    run()
+    ser = makeService(options.tapLookup[options.subCommand].load(),
+                      options.subOptions)
+    addToApplication(options.subCommand, options['append'], options['appname'],
+                     options['type'], options['encrypted'],
+                     *getid(options['uid'], options['gid']))
