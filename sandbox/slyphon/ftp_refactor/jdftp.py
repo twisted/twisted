@@ -178,13 +178,13 @@ class AnonUserDeniedError(Exception):
     pass
 
 class IsNotADirectoryError(Exception):
-    '''raised when RMD is called on a path that isn't a directory
-    '''
+    """raised when RMD is called on a path that isn't a directory
+    """
     pass
 
 class OperationFailedError(Exception):
-    '''raised when a command like rmd or mkdir fails for a reason other than permissions errors
-    '''
+    """raised when a command like rmd or mkdir fails for a reason other than permissions errors
+    """
     pass
 
 class CmdSyntaxError(Exception):
@@ -194,8 +194,8 @@ class CmdArgSyntaxError(Exception):
     pass
 
 class CmdNotImplementedError(Exception):
-    '''raised when an unimplemented command is given to the server
-    '''
+    """raised when an unimplemented command is given to the server
+    """
     pass
 
 class CmdNotImplementedForArgError(Exception):
@@ -211,10 +211,10 @@ class DTPError(Exception):
     pass
 
 class BogusClientError(Exception):
-    '''thrown when a client other than the one we opened this 
+    """thrown when a client other than the one we opened this 
     DTP connection for attempts to connect, or a client attempts to
     get us to connect to an ip that differs from the one where the 
-    request came from'''
+    request came from"""
     pass
 
 class PathBelowTLDError(Exception):
@@ -224,11 +224,11 @@ class ClientDisconnectError(Exception):
     pass
 
 class BadCmdSequenceError(Exception):
-    '''raised when a client sends a series of commands in an illogical sequence'''
+    """raised when a client sends a series of commands in an illogical sequence"""
     pass
 
 class AuthorizationError(Exception):
-    '''raised when client authentication fails'''
+    """raised when client authentication fails"""
     pass
 
 # -- DTP Protocol --
@@ -264,17 +264,17 @@ def debugDeferred(self, *_):
     log.debug('debugDeferred(): %s' % str(_))
  
 def _getFPName(fp):
-    '''returns a file object's name attr if it has one,
+    """returns a file object's name attr if it has one,
     otherwise it returns "name"
-    '''
+    """
     if hasattr(fp, 'name'):
         return fp.name
     return 'file'   # stringIO objects have no .name attr
 
 class DTP(protocol.Protocol):
-    '''The Data Transfer Protocol for this FTP-PI instance
+    """The Data Transfer Protocol for this FTP-PI instance
     all dtp_* methods return a deferred
-    '''
+    """
     def connectionMade(self):
         """Will start an transfer, if one is queued up, 
         when the client connects"""
@@ -300,9 +300,9 @@ class DTP(protocol.Protocol):
         return chunk.replace('\n', '\r\n') #.replace('\r\n.', '\r\n..')
 
     def dtp_RETR(self): # RETR = sendFile
-        '''ssnds a file object out the wire
+        """ssnds a file object out the wire
         @param fpSizeTuple a tuple of a file object and that file's size
-        '''
+        """
         filename = _getFPName(self.pi.fp)
 
         log.debug('sendfile sending %s' % filename)
@@ -429,10 +429,10 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
 #        self.__testingautologin()
 
     def __testingautologin(self):
-        import warnings; warnings.warn('''
+        import warnings; warnings.warn("""
 
             --> DEBUGGING CODE ACTIVE!!! <--
-''')
+""")
         reactor._pi = self
         #lr = self.lineReceived
         #lr('USER anonymous')
@@ -464,7 +464,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         policies.TimeoutMixin.setTimeout(self, seconds)
 
     def reply(self, key, s=''):                                               
-        '''format a RESPONSE and send it out over the wire'''
+        """format a RESPONSE and send it out over the wire"""
         if string.find(RESPONSE[key], '%s') > -1:
             log.debug(RESPONSE[key] % s + ENDLN)
             self.transport.write(RESPONSE[key] % s + ENDLN)
@@ -647,7 +647,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             d.addErrback(self._ebDTP)
 
     def _finishedFileTransfer(self, *arg):
-        '''called back when a file transfer has been completed by the dtp'''
+        """called back when a file transfer has been completed by the dtp"""
         log.debug('finishedFileTransfer! cleaning up DTP')
         if self.fp is not None:
             if self.fp.tell() == self.fpsize:
@@ -659,7 +659,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             self.fp.close()
 
     def _cbDTPCommand(self):
-        '''called back when any DTP command has completed successfully'''
+        """called back when any DTP command has completed successfully"""
         log.debug("DTP Command success")
 
     def ftp_USER(self, params):
@@ -739,7 +739,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
                 raise AuthorizationError('internal server error')
 
     def _cbAnonLogin(self, (interface, avatar, logout)):
-        '''sets up anonymous login avatar'''
+        """sets up anonymous login avatar"""
         assert interface is IFTPShell
         peer = self.transport.getPeer()
 #       log.debug("Anonymous login from %s:%s" % (peer[1], peer[2]))
@@ -748,7 +748,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         self.reply(GUEST_LOGGED_IN_PROCEED)
 
     def _cbLogin(self, (interface, avatar, logout)):
-        '''sets up authorized user login avatar'''
+        """sets up authorized user login avatar"""
         assert interface is IFTPShell
         self.shell = avatar
         self.logout = logout
@@ -986,13 +986,13 @@ class IFTPShell(components.Interface):
         pass
 
     def cdup(self):
-        '''changes to the parent of the current working directory
-        '''
+        """changes to the parent of the current working directory
+        """
         pass
 
     def size(self, path):
-        '''returns the size of the file specified by path in bytes
-        '''
+        """returns the size of the file specified by path in bytes
+        """
         pass
 
     def mkd(self, path):
@@ -1067,7 +1067,7 @@ class IFTPShell(components.Interface):
         pass
 
     def mdtm(self, path):
-        '''returns the date of path in the form of %Y%m%d%H%M%S'''
+        """returns the date of path in the form of %Y%m%d%H%M%S"""
         pass
 
 
