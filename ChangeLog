@@ -1,3 +1,7 @@
+2003-05-05  Brian Warner  <warner@lothar.com>
+
+	* setup.py (setup_args): s/licence/license/, preferred in python-2.3
+
 2003-05-05  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* .: Releasing Twisted 1.0.5rc1.

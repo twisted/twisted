@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.112 2003/05/05 04:49:16 radix Exp $
+$Id: setup.py,v 1.113 2003/05/05 23:59:15 warner Exp $
 """
 
 import distutils, os, sys, string
@@ -182,7 +182,7 @@ setup_args = {
     'maintainer': "Glyph Lefkowitz",
     'maintainer_email': "glyph@twistedmatrix.com",
     'url': "http://twistedmatrix.com/",
-    'licence': "GNU LGPL",
+    'license': "GNU LGPL",
     'long_description': """\
 Twisted is a framework to build frameworks. It is expected that one
 day the project will expanded to the point that the framework will
