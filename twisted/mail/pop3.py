@@ -136,7 +136,8 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
             self.magic = self.generateMagic()
         self.successResponse(self.magic)
         self.setTimeout(self.timeOut)
-        log.msg("New connection from " + str(self.transport.getPeer()))
+        if getattr(self.factory, 'noisy', True):
+            log.msg("New connection from " + str(self.transport.getPeer()))
 
     def connectionLost(self, reason):
         if self._onLogout is not None:
@@ -318,7 +319,8 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         self.mbox = avatar
         self._onLogout = logout
         self.successResponse('Authentication succeeded')
-        log.msg("Authenticated login for " + user)
+        if getattr(self.factory, 'noisy', True):
+            log.msg("Authenticated login for " + user)
 
     def _ebMailbox(self, failure):
         failure = failure.trap(cred.error.LoginDenied, cred.error.LoginFailed)
@@ -326,7 +328,8 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
             self.failResponse("Access denied: " + str(failure))
         elif issubclass(failure, cred.error.LoginFailed):
             self.failResponse('Authentication failed')
-        log.msg("Denied login attempt from " + str(self.transport.getPeer()))
+        if getattr(self.factory, 'noisy', True):
+            log.msg("Denied login attempt from " + str(self.transport.getPeer()))
 
     def _ebUnexpected(self, failure):
         self.failResponse('Server error: ' + failure.getErrorMessage())
