@@ -120,7 +120,7 @@ class FlowTest(unittest.TestCase):
                 if not(val):
                     raise flow.StopIteration
                 self.count -= 1
-                return [val]
+                return val
         def res(x): self.assertEqual([5,4,3,2,1], x)
         from twisted.internet import reactor
         f = flow.DeferredFlow(CountIterator(5))

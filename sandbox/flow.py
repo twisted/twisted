@@ -265,7 +265,7 @@ class ThreadedIterator:
                 try:
                     while 1:
                         val = self.source.next()
-                        self.buff.extend(val)    # lists are thread safe
+                        self.buff.append(val)    # lists are thread safe
                 except StopIteration:
                     callFromThread(self.stop)
                 except: 
