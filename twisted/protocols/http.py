@@ -473,7 +473,8 @@ class Request:
             self.transport.write("0\r\n\r\n")
 
         # log request
-        self.channel.factory.log(self)
+        if hasattr(self.channel, "factory"):
+            self.channel.factory.log(self)
         
         self.finished = 1
         if not self.queued:
