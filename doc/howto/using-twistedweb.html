@@ -106,14 +106,14 @@ resource = MyGreatResource()
 <a name="SpreadableWebServers" />
 <h3>Spreadable Web Servers</h3>
 
-<p> One of the most interesting applications of Twisted.Web is the distributed webserver; multiple servers can all answer requests on the same port, using the <code class="API">twisted.spread</code> package for "spreadable" computing.  In two different directories, run the commands:  </p>
+<p> One of the most interesting applications of Twisted.Web is the distributed webserver; multiple servers can all answer requests on the same port, using the <code class="API">twisted.spread</code> package for <q>spreadable</q> computing.  In two different directories, run the commands:  </p>
 
 <pre class="shell">
 % mktap web --user
 % mktap web --personal [other options, if you desire]
 </pre>
 
-<p> Both of these create a <code>web.tap</code>; you need to run both at the same time.  Once you have, go to <code>http://localhost:8080/your_username.twistd/</code> -- you will see the front page from the server you created with the <code>--personal</code> option.  What's happening here is that the request you've sent is being relayed from the central (User) server to your own (Personal) server, over a PB connection.  This technique can be highly useful for small "community" sites; using the code that makes this demo work, you can connect one HTTP port to multiple resources running with different permissions on the same machine, on different local machines, or even over the internet to a remote site.  </p>
+<p> Both of these create a <code>web.tap</code>; you need to run both at the same time.  Once you have, go to <code>http://localhost:8080/your_username.twistd/</code> -- you will see the front page from the server you created with the <code>--personal</code> option.  What's happening here is that the request you've sent is being relayed from the central (User) server to your own (Personal) server, over a PB connection.  This technique can be highly useful for small <q>community</q> sites; using the code that makes this demo work, you can connect one HTTP port to multiple resources running with different permissions on the same machine, on different local machines, or even over the internet to a remote site.  </p>
 
 
 <h3>Serving PHP/Perl/CGI</h3>
@@ -146,7 +146,7 @@ resource.indexNames = ['index.pl']
 names which then uses reverse proxy (in Apache, via <code>mod_proxy</code>) to different
 internal web servers, possibly on different machines. However, naive 
 configuration causes miscommunication: the internal server firmly believes it
-is running on "internal-name:port", and will generate URLs to that effect,
+is running on <q>internal-name:port</q>, and will generate URLs to that effect,
 which will be completely wrong when received by the client.</p>
 
 <p>While Apache has the ProxyPassReverse directive, it is really a hack
