@@ -1,5 +1,5 @@
 #!/bin/sh
-NAME=python2.2-twisted
+NAME=python@VERSION@-twisted
 
 dpkg --listfiles $NAME |
         awk '$0~/\.py$/ {print $0"c\n" $0"o"}' |

@@ -1,0 +1,11 @@
+?package(python@VERSION@-twisted):\
+needs=x11\
+section="Apps/Net"\
+title="Twisted Instant Messenger (@VERSION@)"\
+command="/usr/bin/t-im@VERSION@"
+
+?package(python@VERSION@-twisted):\
+needs=x11\
+section="Apps/Net"\
+title="Manhole Twisted Client (@VERSION@)"\
+command="/usr/bin/manhole@VERSION@"

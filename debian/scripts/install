@@ -23,6 +23,9 @@ def install(files, target, mode='644'):
 def debdir(dir):
     return os.path.join(basedir, dir)
 
+def verread(f):
+    return open(f).read().replace("@VERSION@", version)
+
 docdir = debdir('usr/share/doc/%s' % package)
 mandir = debdir('usr/share/man/man1')
 menudir = debdir('usr/lib/menu/')
@@ -51,8 +54,8 @@ for file in all('doc/man'):
     install([file], os.path.join(mandir, target))
     system('gzip -9 %s' % os.path.join(mandir, target))
 
-install(['debian/%s.menu' % package],
-        os.path.join(menudir, package))
+s = verread('debian/%s.menu' % package)
+open(os.path.join(menudir, package), 'w').write(s)
 
 def strip(_, dirname, fnames):
     for fname in fnames:
@@ -66,5 +69,6 @@ os.path.walk(basedir, strip, None)
 makedirs(debdir('DEBIAN'))
 
 for maint in 'prerm postrm postinst'.split():
-    install(['debian/%s.%s' % (package, maint)],
-            debdir('DEBIAN/%s' % maint), 755)
+    s = verread('debian/python-twisted.%s.in' % maint)
+    open(debdir('DEBIAN/%s' % maint), 'w').write(s)
+    system("chmod 755 %s" % debdir('DEBIAN/%s' % maint))
