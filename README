@@ -181,7 +181,7 @@ Configuring Servers
 "Spreadable" Webserver
 
   The web server can also host a telnet server as well as other services;
-  mkwebserver --help can detail some of those options.  One of the most
+  mktap web --help can detail some of those options.  One of the most
   interesting applications, however, is the distributed webserver; multiple
   servers can all answer requests on the same port, using the twisted.spread
   package for "spreadable" computing.  In two different directories, run the
