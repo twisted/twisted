@@ -284,7 +284,17 @@ class JavaPort:
         ReadBlocker(transport, self.reactor.q).start()
 
 
+class Errno:
+    """A class which will pretend to be a module."""
+
+    def __getattr__(self, name):
+        return 1
+
+
 def install():
+    # jython has no errno module, so we fake it
+    import sys
+    sys.modules["errno"] = Errno()
     reactor = JReactor()
     import main
     main.installReactor(reactor)
