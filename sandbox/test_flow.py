@@ -84,6 +84,21 @@ class FlowTest(unittest.TestCase):
         f.execute(3); f.execute(4); f.execute(5)
         self.assertEqual(result,[0,1,3,6,10,15])
 
+    def testSequenceViaGenerator(self):
+        result = []
+        #
+        #   # uncomment to test in 2.3 and up
+        # 
+        #   def countdown(val):
+        #       while val > 0:
+        #           yield val
+        #           val -= 1
+        #   f = Flow()
+        #   f.addSequence(countdown)
+        #   f.addCallable(lambda data: result.append(data))
+        #   f.execute(3)
+        #   self.assertEqual(result,[3,2,1])
+
     def testReduceInplace(self):
         import operator
         result = []

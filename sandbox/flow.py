@@ -571,7 +571,7 @@ class _TunnelIterator:
         try:
             while 1:
                 val = self.source.next()
-                callFromThread(self.buff.extend,val)
+                self.buff.extend(val)    # lists are thread safe
         except StopIteration:
             callFromThread(self.stop)
         self.source = None
