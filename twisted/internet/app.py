@@ -243,6 +243,11 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable,
     def upgradeToVersion9(self):
         self._authorizer = self.authorizer
         del self.authorizer
+        self.tcpConnectors = self.connectors
+        del self.connectors
+        self.sslConnectors = []
+        self.unixConnectors = []
+
 
     def upgradeToVersion8(self):
         self.persistStyle = "pickle"
@@ -250,10 +255,6 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable,
             if self.asXML:
                 self.persistStyle = "xml"
             del self.asXML
-        self.tcpConnectors = self.connectors
-        del self.connectors
-        self.sslConnectors = []
-        self.unixConnectors = []
 
     def upgradeToVersion7(self):
         print 'upgrading 7'
