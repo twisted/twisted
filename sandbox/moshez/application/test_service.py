@@ -1,5 +1,22 @@
+# Twisted, the Framework of Your Internet
+# Copyright (C) 2001-2003 Matthew W. Lefkowitz
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+#
 from twisted.trial import unittest
 from twisted.application import service
+from twisted.persisted import sob
 from twisted.python import components
 import copy
 
@@ -154,9 +171,26 @@ class TestApplication(unittest.TestCase):
         service.Application("hello", 5)
         service.Application("hello", 5, 6)
 
-'''
-class IProcess(components.Interface):
-class Process:
-    def __init__(self, uid=None, gid=None):
-def Application(name, uid=None, gid=None):
-'''
+    def testProcessComponent(self):
+        a = service.Application("hello")
+        self.assertEqual(service.IProcess(a).uid, 0)
+        self.assertEqual(service.IProcess(a).gid, 0)
+        a = service.Application("hello", 5)
+        self.assertEqual(service.IProcess(a).uid, 5)
+        self.assertEqual(service.IProcess(a).gid, 0)
+        a = service.Application("hello", 5, 6)
+        self.assertEqual(service.IProcess(a).uid, 5)
+        self.assertEqual(service.IProcess(a).gid, 6)
+
+    def testServiceComponent(self):
+        a = service.Application("hello")
+        self.assert_(service.IService(a) is service.IServiceCollection(a))
+        self.assertEqual(service.IService(a).name, "hello")
+        self.assertEqual(service.IService(a).parent, None)
+
+    def testPersistableComponent(self):
+        a = service.Application("hello")
+        p = sob.IPersistable(a)
+        self.assertEqual(p.style, 'pickle')
+        self.assertEqual(p.name, 'hello')
+        self.assert_(p.original is a)
