@@ -21,7 +21,7 @@ from twisted.internet import protocol, reactor, defer
 import cStringIO
 
 
-def callProtocolWithDeferred(protocol, executable, args=(), env={}, path='.'):
+def _callProtocolWithDeferred(protocol, executable, args=(), env={}, path='.'):
     d = defer.Deferred() 
     p = protocol(d)
     reactor.spawnProcess(p, executable, (executable,)+args, env, path)
@@ -47,7 +47,7 @@ class _BackRelay(protocol.ProcessProtocol):
             self.deferred.callback(self.s.getvalue())
 
 
-def getProcessOutput(executable, args=(), env={}, path='.'):
+def getProcessOutput(executable, args=(), env={}, path='.', reactor=reactor):
     """Spawn a process and return its output as a deferred returning a string.
 
     @param executable: The file name to run and get the output of - the
@@ -62,8 +62,11 @@ def getProcessOutput(executable, args=(), env={}, path='.'):
 
     @param path: the path to run the subprocess in - defaults to the
                  current directory.
+
+    @param reactor: the reactor to use - defaults to the default reactor
     """
-    return callProtocolWithDeferred(_BackRelay, executable, args, env, path)
+    return _callProtocolWithDeferred(_BackRelay, executable, args, env, path,
+                                    reactor)
 
 
 class _ValueGetter(protocol.ProcessProtocol):
@@ -75,6 +78,7 @@ class _ValueGetter(protocol.ProcessProtocol):
         self.deferred.callback(reason.value.exitCode)
 
 
-def getProcessValue(executable, args=(), env={}, path='.'):
+def getProcessValue(executable, args=(), env={}, path='.', reactor=reactor):
     """Spawn a process and return its exit code as a Deferred."""
-    return callProtocolWithDeferred(_ValueGetter, executable, args, env, path)
+    return _callProtocolWithDeferred(_ValueGetter, executable, args, env, path,
+                                    reactor)
