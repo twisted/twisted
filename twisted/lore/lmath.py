@@ -70,9 +70,10 @@ def doFile(fn, docsdir, ext, url, templ, linkrel='', d=None):
 
 class ProcessingFunctionFactory(default.ProcessingFunctionFactory):
 
-    doFile = [doFile]
-
     latexSpitters = {None: MathLatexSpitter}
+
+    def getDoFile(self):
+        return doFile
 
     def getLintChecker(self):
         checker = lint.getDefaultChecker()

@@ -15,6 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 import sys, os
+import tree #todo: get rid of this later
 
 class NoProcessorError(Exception):
     pass
@@ -86,9 +87,40 @@ class NullReportingWalker(Walker):
     def percentdone(self, percent, fname):
         pass
 
-def getProcessor(module, output, d):
+def parallelGenerator(originalFileName, outputExtension):
+    return os.path.splitext(originalFileName)[0]+outputExtension
+
+def fooAddingGenerator(originalFileName, outputExtension):
+    return os.path.splitext(originalFileName)[0]+"foo"+outputExtension
+
+def outputdirGenerator(originalFileName, outputExtension, inputdir, outputdir):
+    originalFileName = os.path.abspath(originalFileName)
+    if originalFileName[:len(inputdir)] != inputdir:
+        raise ("Original file name '" + originalFileName +
+              "' not under input directory '" + inputdir + "'")
+
+    adjustedPath = outputdir + originalFileName[len(inputdir):]
+    return tree.getOutputFileName(adjustedPath, outputExtension)
+
+def getFilenameGenerator(config, outputExt):
+    if config.get('outputdir'):
+        return (lambda originalFileName, outputExtension:
+            outputdirGenerator(originalFileName, outputExtension,
+                               os.path.abspath(config.get('inputdir')),
+                               os.path.abspath(config.get('outputdir'))))
+    else:
+        return tree.getOutputFileName
+
+def getProcessor(module, output, config):
     try:
         m = getattr(module.factory, 'generate_'+output)
     except AttributeError:
         raise NoProcessorError("cannot generate "+output+" output")
-    return m(d)
+
+    if config.get('ext'):
+        ext = config['ext']
+    else:
+        from default import htmlDefault
+        ext = htmlDefault['ext']
+
+    return m(config, getFilenameGenerator(config, ext))

@@ -64,6 +64,15 @@ def getProcessor(input, output, config):
         print "%s: %s" % (sys.argv[0], e)
 
 
+def getWalker(df, opt):
+    klass = process.Walker
+    if opt['plain']: 
+        klass = process.PlainReportingWalker
+    if opt['null']: 
+        klass = process.NullReportingWalker
+    return klass(df, opt['inputext'], opt['linkrel'])
+
+
 def run():
     opt = Options()
     try:
@@ -72,23 +81,23 @@ def run():
         print '%s: %s' % (sys.argv[0], errortext)
         print '%s: Try --help for usage details.' % sys.argv[0]
         sys.exit(1)
+
     df = getProcessor(opt['input'], opt['output'], opt.config)
     if not df:
         sys.exit(1)
-    klass = process.Walker
-    if opt['plain']: 
-        klass = process.PlainReportingWalker
-    if opt['null']: 
-        klass = process.NullReportingWalker
-    w = klass(df, opt['inputext'], opt['linkrel'])
+
+    walker = getWalker(df, opt)
+
     if opt['files']:
-        for fn in opt['files']:
-            w.walked.append(('', fn))
+        for filename in opt['files']:
+            walker.walked.append(('', filename))
     else:
-        w.walkdir(opt['docsdir'] or '.')
-    w.generate()
-    if w.failures:
-        for (file, errors) in w.failures:
+        walker.walkdir(opt['docsdir'] or '.')
+
+    walker.generate()
+
+    if walker.failures:
+        for (file, errors) in walker.failures:
             for error in errors:
                 print "%s:%s" % (file, error)
         sys.exit(1)

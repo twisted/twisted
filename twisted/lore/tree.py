@@ -63,9 +63,9 @@ def fixAPI(document, url):
         node.removeAttribute('base')
 
 def fontifyPython(document):
-    def matcher(n):
-        return (n.nodeName == 'pre' and n.hasAttribute('class') and
-                n.getAttribute('class') == 'python')
+    def matcher(node):
+        return (node.nodeName == 'pre' and node.hasAttribute('class') and
+                node.getAttribute('class') == 'python')
     for node in domhelpers.findElements(document, matcher):
         fontifyPythonNode(node)
 
@@ -82,46 +82,46 @@ def fontifyPythonNode(node):
     node.parentNode.replaceChild(newel, node)
 
 
-def addPyListings(document, d):
+def addPyListings(document, dir):
     for node in domhelpers.findElementsWithAttribute(document, "class",
                                                      "py-listing"):
-        fn = node.getAttribute("href")
+        filename = node.getAttribute("href")
         outfile = cStringIO.StringIO()
-        lines = map(string.rstrip, open(os.path.join(d, fn)).readlines())
+        lines = map(string.rstrip, open(os.path.join(dir, filename)).readlines())
         data = '\n'.join(lines[int(node.getAttribute('skipLines', 0)):])
         data = cStringIO.StringIO(text.removeLeadingTrailingBlanks(data))
         htmlizer.filter(data, outfile)
         val = outfile.getvalue()
-        _replaceWithListing(node, val, fn, "py-listing")
+        _replaceWithListing(node, val, filename, "py-listing")
 
 
-def _replaceWithListing(node, val, fn, class_):
+def _replaceWithListing(node, val, filename, class_):
     captionTitle = domhelpers.getNodeText(node)
-    if captionTitle == os.path.basename(fn):
+    if captionTitle == os.path.basename(filename):
         captionTitle = 'Source listing'
     text = ('<div class="%s">%s<div class="caption">%s - '
             '<a href="%s"><span class="filename">%s</span></a></div></div>' %
-            (class_, val, captionTitle, fn, fn))
+            (class_, val, captionTitle, filename, filename))
     newnode = microdom.parseString(text).documentElement
     node.parentNode.replaceChild(newnode, node)
 
 
-def addHTMLListings(document, d):
+def addHTMLListings(document, dir):
     for node in domhelpers.findElementsWithAttribute(document, "class",
                                                      "html-listing"):
-        fn = node.getAttribute("href")
+        filename = node.getAttribute("href")
         val = ('<pre class="htmlsource">\n%s</pre>' %
-               cgi.escape(open(os.path.join(d, fn)).read()))
-        _replaceWithListing(node, val, fn, "html-listing")
+               cgi.escape(open(os.path.join(dir, filename)).read()))
+        _replaceWithListing(node, val, filename, "html-listing")
 
 
-def addPlainListings(document, d):
+def addPlainListings(document, dir):
     for node in domhelpers.findElementsWithAttribute(document, "class",
                                                      "listing"):
-        fn = node.getAttribute("href")
+        filename = node.getAttribute("href")
         val = ('<pre>\n%s</pre>' %
-               cgi.escape(open(os.path.join(d, fn)).read()))
-        _replaceWithListing(node, val, fn, "listing")
+               cgi.escape(open(os.path.join(dir, filename)).read()))
+        _replaceWithListing(node, val, filename, "listing")
 
 
 def getHeaders(document):
@@ -237,16 +237,16 @@ def setVersion(template, version):
         node.appendChild(microdom.Text(version))
       
 
-def munge(document, template, linkrel, d, fullpath, ext, url, config):
+def munge(document, template, linkrel, dir, fullpath, ext, url, config):
     fixRelativeLinks(template, linkrel)
     addMtime(template, fullpath)
     removeH1(document)
     fixAPI(document, url)
     fontifyPython(document)
     fixLinks(document, ext)
-    addPyListings(document, d)
-    addHTMLListings(document, d)
-    addPlainListings(document, d)
+    addPyListings(document, dir)
+    addHTMLListings(document, dir)
+    addPlainListings(document, dir)
     putInToC(template, generateToC(document))
     footnotes(document)
     notes(document)
@@ -257,8 +257,8 @@ def munge(document, template, linkrel, d, fullpath, ext, url, config):
     setTitle(template, title)
 
     authors = domhelpers.findNodesNamed(document, 'link')
-    authors = [(n.getAttribute('title',''), n.getAttribute('href', ''))
-               for n in authors if n.getAttribute('rel', '') == 'author']
+    authors = [(node.getAttribute('title',''), node.getAttribute('href', ''))
+               for node in authors if node.getAttribute('rel', '') == 'author']
     setAuthors(template, authors)
 
     body = domhelpers.findNodesNamed(document, "body")[0]
@@ -268,9 +268,9 @@ def munge(document, template, linkrel, d, fullpath, ext, url, config):
     tmplbody.setAttribute("class", "content")
 
 
-def parseFileAndReport(fn):
+def parseFileAndReport(filename):
     try:
-        return microdom.parse(open(fn))
+        return microdom.parse(open(filename))
     except microdom.MismatchedTags, e:
         raise process.ProcessingFailure(
               "%s:%s: begin mismatched tags <%s>/</%s>" %
@@ -280,11 +280,20 @@ def parseFileAndReport(fn):
     except microdom.ParseError, e:
         raise process.ProcessingFailure("%s:%s:%s" % (e.line, e.col, e.message))
     except IOError, e:
-        raise process.ProcessingFailure(e.strerror)
+        raise process.ProcessingFailure(e.strerror + ", filename was '" + filename + "'")
 
-def doFile(fn, linkrel, ext, url, templ, d=None):
-    d = d or {}
-    doc = parseFileAndReport(fn)
-    cn = templ.cloneNode(1)
-    munge(doc, cn, linkrel, os.path.dirname(fn), fn, ext, url, d)
-    cn.writexml(open(os.path.splitext(fn)[0]+ext, 'wb'))
+def getOutputFileName(originalFileName, outputExtension):
+    return os.path.splitext(originalFileName)[0]+outputExtension
+
+def makeSureDirectoryExists(filename):
+    dirname = os.path.dirname(filename)
+    if (not os.path.exists(dirname)):
+        os.mkdir(dirname)
+
+def doFile(filename, linkrel, ext, url, templ, options={}, outfileGenerator=getOutputFileName):
+    doc = parseFileAndReport(filename)
+    clonedNode = templ.cloneNode(1)
+    munge(doc, clonedNode, linkrel, os.path.dirname(filename), filename, ext, url, options)
+    newFilename = outfileGenerator(filename, ext)
+    makeSureDirectoryExists(newFilename)
+    clonedNode.writexml(open(newFilename, 'wb'))

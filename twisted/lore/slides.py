@@ -340,11 +340,14 @@ class TwoPagebreakLatex(PagebreakLatex):
 
 
 class SlidesProcessingFunctionFactory(default.ProcessingFunctionFactory):
-    doFile = [doFile]
+
     latexSpitters = default.ProcessingFunctionFactory.latexSpitters.copy()
     latexSpitters['prosper'] = ProsperSlides
     latexSpitters['page'] = PagebreakLatex
     latexSpitters['twopage'] = TwoPagebreakLatex
+
+    def getDoFile(self):
+        return doFile
 
     def generate_mgp(self, d):
         template = d.get('template', 'template.mgp')

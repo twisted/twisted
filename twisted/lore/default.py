@@ -24,21 +24,22 @@ htmlDefault = {'template': 'template.tpl', 'baseurl': '%s', 'ext': '.html'}
 
 class ProcessingFunctionFactory:
 
-    doFile = [tree.doFile]
+    def getDoFile(self):
+        return tree.doFile
 
-    def generate_html(self, d):
+    def generate_html(self, options, filenameGenerator=tree.getOutputFileName):
         n = htmlDefault.copy()
-        n.update(d)
-        d = n
+        n.update(options)
+        options = n
         try:
-            fp = open(d['template'])
+            fp = open(options['template'])
             templ = microdom.parse(fp)
         except IOError, e:
             raise process.NoProcessorError(e.filename+": "+e.strerror)
         except sux.ParseError, e:
             raise process.NoProcessorError(str(e))
-        df = lambda file, linkrel: self.doFile[0](file, linkrel, d['ext'],
-                                           d['baseurl'], templ, d)
+        df = lambda file, linkrel: self.getDoFile()(file, linkrel, options['ext'],
+                                                    options['baseurl'], templ, options, filenameGenerator)
         return df
 
     latexSpitters = {None: latex.LatexSpitter,
@@ -47,10 +48,10 @@ class ProcessingFunctionFactory:
                      'book': latex.BookLatexSpitter,
                      }
 
-    def generate_latex(self, d):
+    def generate_latex(self, options):
         spitter = self.latexSpitters[None]
         for (key, value) in self.latexSpitters.items():
-            if key and d.get(key):
+            if key and options.get(key):
                spitter = value
         df = lambda file, linkrel: latex.convertFile(file, spitter)
         return df
@@ -58,7 +59,7 @@ class ProcessingFunctionFactory:
     def getLintChecker(self):
         return lint.getDefaultChecker()
 
-    def generate_lint(self, d):
+    def generate_lint(self, options):
         checker = self.getLintChecker()
         return lambda file, linkrel: lint.doFile(file, checker)
 
