@@ -355,7 +355,7 @@ class GenerateDocs(Transaction):
         print "makeDocs: epydoc."
         sh('''cd %s &&  ./admin/epyrun -o doc/api &&
               cp doc/api/index.html doc/api/index.html.bak &&
-              cp doc/api/tree.html doc/api/index.html'''
+              cp doc/api/epydoc-index.html doc/api/index.html'''
            % (tdir))
 
         print "makeDocs: generate-domdocs."
