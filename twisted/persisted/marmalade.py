@@ -38,6 +38,10 @@ except:
 import types
 import copy_reg
 
+#for some reason, __builtins__ == __builtin__.__dict__ in the context where this is used.
+#Can someone tell me why?
+import __builtin__ 
+
 def getValueElement(node):
     """Get the one child element of a given element.
 
@@ -305,7 +309,7 @@ class DOMJellier:
                 return node
             node = self.document.createElement("UNNAMED")
             self.prepareElement(node, obj)
-            if objType is types.ListType:
+            if objType is types.ListType or __builtin__.__dict__.has_key('object') and isinstance(obj, NodeList):
                 node.tagName = "list"
                 for subobj in obj:
                     node.appendChild(self.jellyToNode(subobj))
@@ -388,7 +392,7 @@ def unjellyFromXML(stringOrFile):
 
 
 try:
-    from xml.dom.minidom import Text, Element, Node, Document, parse, parseString, CDATASection
+    from xml.dom.minidom import Text, Element, Node, Document, parse, parseString, CDATASection, NodeList
 except ImportError:
     def jellyToXML(object, file=None):
         raise NotImplementedError
