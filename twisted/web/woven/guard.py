@@ -6,7 +6,7 @@ L{UsernamePasswordWrapper}.
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.29 $"[11:-2]
+__version__ = "$Revision: 1.30 $"[11:-2]
 
 import random
 import time
@@ -379,7 +379,7 @@ class UsernamePasswordWrapper(Resource):
 
     def _ebFilter(self, f):
         f.trap(LoginFailed, UnauthorizedLogin)
-        raise fm.FormException(str(f.value))
+        raise fm.FormException(password="Login failed, please enter correct username and password.")
 
     def getChild(self, path, request):
         s = request.getSession()
