@@ -544,7 +544,26 @@ failure of the message transmission to the application:</p>
         print 'Sent', numOk, 'messages'
 </pre></code></blockquote>
 
+<p><strong><em>XXX</em></strong> Say something about sentMail's args
+or something.</p>
+
+<h3>SMTP Client 8</h3>
+
+<p>Thus far we have succeeded in creating a Twisted client application
+which starts up, connects to a (possibly) remote host, transmits some
+data, and disconnects.  Notably missing, however, is application
+shutdown.  Hitting ^C is fine during development, but it's not exactly
+a long-term solution.  Fortunately, programmatic shutdown is extremely
+simple.  <a href="smtpclient-8.tac">smtpclient-8.tac</a> extends
+<code>sentMail</code> with these two lines:</p>
+
+<blockquote><code><pre>
+        from twisted.internet import reactor
+        reactor.stop()
+</pre></code></blockquote>
+
 <p></p>
+
 
 </body>
 </html>
