@@ -1,4 +1,6 @@
+import sys
 from twisted.internet import reactor, protocol
+from twisted.python import log
 from fusion import creactor
 import echo
 
@@ -15,6 +17,7 @@ class PyEcho(echo.Echo):
 
 
 def main():
+    log.startLogging(sys.stdout)
     f = protocol.ServerFactory()
     f.buildProtocol = lambda _: PyEcho()
     creactor.listenTCP(1234, f)

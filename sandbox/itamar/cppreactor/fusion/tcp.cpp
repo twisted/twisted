@@ -1,5 +1,7 @@
+#include <iostream>
 #include <unistd.h>
 #include <stdlib.h>
+#include <limits.h>
 #include <errno.h>
 #include <boost/python.hpp> 
 using namespace boost::python;
@@ -8,69 +10,201 @@ using namespace boost::python;
 using namespace Twisted;
 
 
-static object None = import("__builtin__").attr("None");
-
-Twisted::TCPTransport::TCPTransport(object self)
-{
-    this->self = self;
+namespace {
+    object None = import("__builtin__").attr("None");
 }
+
+void TwistedImpl::IOVecManager::ensureEnoughSpace() 
+{
+    if (m_len > m_offset + m_used) {
+	return;
+    }
+    // no slot at end, check if we can move
+    if (m_offset > 128) {
+	::memmove(m_vecs, m_vecs + m_offset, m_used);
+	m_offset = 0;
+    } else {
+	// allocate more
+	m_vecs = (iovec*) ::realloc(m_vecs, m_len + 2048);
+	m_len += 2048;
+    }
+}
+
+
+namespace {
+    boost::pool<> chunkpool(sizeof(char) * TwistedImpl::LocalBuffer::CHUNK_SIZE);
+}
+
+char* TwistedImpl::LocalBufferManager::getBuffer(size_t bytes)
+{
+    // first, make sure we have a buffer with sufficient 
+    if (m_localbuffers.empty() || m_localbuffers.back().available() < bytes) {
+	LocalBuffer b;
+	b.numchunks = bytes / LocalBuffer::CHUNK_SIZE;
+	if (bytes % LocalBuffer::CHUNK_SIZE)
+	    b.numchunks++;
+	b.offset = 0;
+	b.len = 0;
+	b.buf = (char*) chunkpool.ordered_malloc(b.numchunks);
+	m_localbuffers.push_back(b);
+    }
+    LocalBuffer& b = m_localbuffers.back();
+    b.len += bytes;
+    return b.buf;
+}
+
+void TwistedImpl::LocalBufferManager::didntUse(size_t bytes)
+{
+    assert (!m_localbuffers.empty());
+    LocalBuffer& b = m_localbuffers.back();
+    assert (bytes <= b.len);
+    b.len -= bytes;
+}
+
+void TwistedImpl::LocalBufferManager::freePartOfBuffer(size_t bytes)
+{
+    assert (!m_localbuffers.empty());
+    LocalBuffer& b = m_localbuffers.front();
+    assert (bytes <= b.len);
+    b.len -= bytes;
+    if (b.len == 0) {
+	b.offset = 0;
+	if (m_localbuffers.size() == 1)
+	    return;
+	if (m_localbuffers.back().available() > 0) {
+	    chunkpool.ordered_free(b.buf, b.numchunks);
+	    m_localbuffers.pop_front();
+	} else {
+	    m_localbuffers.push_back(b);
+	    m_localbuffers.pop_front();
+	}
+	return;
+    } else {
+	b.offset += bytes;
+    }
+}
+
+TwistedImpl::LocalBufferManager::~LocalBufferManager()
+{
+    for (std::deque<LocalBuffer>::iterator it = m_localbuffers.begin();
+	 it != m_localbuffers.end(); ++it) {
+	chunkpool.ordered_free(it->buf, it->numchunks);
+    }
+}
+
+Twisted::TCPTransport::TCPTransport(object self) : 
+    m_self(self), m_hasproducer(false), m_writable(false), 
+    m_bufferedbytes(0), connected(0), producerPaused(0),
+    streamingProducer(0), disconnecting(0) {}
 
 void Twisted::TCPTransport::initProtocol()
 {
-    extract<Twisted::Protocol*> pchecker(self.attr("protocol"));
+    extract<Twisted::Protocol*> pchecker(m_self.attr("protocol"));
     if (pchecker.check()) {
-	this->protocol = pchecker();
-	if (this->protocol == NULL) {
+	m_protocol = pchecker();
+	if (m_protocol == NULL) {
 	    // XXX throw exception.
 	}
-	this->protocol->init(object(self.attr("protocol")).ptr());
-	this->sockfd = extract<int>(self.attr("fileno")());
+	m_protocol->init(object(m_self.attr("protocol")).ptr());
+	m_sockfd = extract<int>(m_self.attr("fileno")());
     } else {
-	this->protocol = 0;
+	m_protocol = 0;
     }
 }
 
 object Twisted::TCPTransport::doRead()
 {
-    if (protocol) {
-	if (buflen == 0) {
-	    protocol->bufferFull();
+    if (m_protocol) {
+	if (m_readbuflen == 0) {
+	    m_protocol->bufferFull();
 	    return None;
 	}
-	int result = ::read(sockfd, buffer, buflen);
+	int result = ::read(m_sockfd, m_readbuffer, m_readbuflen);
 	if (result == 0) {
 	    return import("twisted.internet.main").attr("CONNECTION_DONE");
 	} else if (result > 0) {
-	    buffer += result;
-	    buflen -= result;
-	    protocol->dataReceived(buffer - result, result);
+	    m_readbuffer += result;
+	    m_readbuflen -= result;
+	    m_protocol->dataReceived(m_readbuffer - result, result);
 	} else if (result == EWOULDBLOCK) {
 	    return None;
 	} else {
 	    return import("twisted.internet.main").attr("CONNECTION_LOST");
 	}
     } else {
-	return import("twisted.internet.tcp").attr("Connection").attr("doRead")(self);
+	return import("twisted.internet.tcp").attr("Connection").attr("doRead")(m_self);
     }
     return None;
 }
 
-void Twisted::TCPTransport::write(const char* buf,
-				  size_t buflen,
-				  deallocateFunc dealloc,
-				  void* extra)
+object Twisted::TCPTransport::doWrite()
 {
-    // XXX totally inefficient, redo twisted's buffering system.
-    self.attr("write")(str(buf, buflen));
-    if (dealloc != NULL) {
-	dealloc(buf, buflen, extra);
+    std::cerr << "doWrite" << std::endl;
+    if (!m_protocol) {
+	std::cerr << 1 << std::endl;
+	return import("twisted.internet.tcp").attr("Connection").attr("doWrite")(m_self);
     }
+    m_iovec.twiddleFirst();
+    ssize_t result = ::writev(m_sockfd, m_iovec.m_vecs + m_iovec.m_offset, 
+			  std::min(int(m_iovec.m_used), IOV_MAX));
+    m_iovec.untwiddleFirst();
+    if (result < 0) {
+	if (errno == EINTR) {
+	    std::cerr << 2 << std::endl;
+	    return doWrite(); // try again
+	} else if (errno == EWOULDBLOCK) {
+	    std::cerr << 3 << std::endl;
+	    return object(0);
+	} else {
+	    std::cerr << 4 << std::endl;
+	    return import("twisted.internet.main").attr("CONNECTION_LOST");
+	}
+    }
+    if (result > 0) {
+	wrote(result);
+    }
+    if (m_bufferedbytes == 0) {
+	stopWriting();
+	if (m_hasproducer && (!this->streamingProducer || this->producerPaused)) {
+	    m_producer.attr("resumeProducing")();
+	    this->producerPaused = true;
+	} else if (this->disconnecting) {
+	    std::cerr << 5 << std::endl;
+	    return m_self.attr("_postLoseConnection")();
+	}
+    }
+    std::cerr << 6 << std::endl;
+    return None;
 }
 
-void Twisted::deleteDeallocate(const char* buf, size_t buflen, void* extra) {
-    delete[] buf;
+void Twisted::TCPTransport::wrote(size_t bytes)
+{
+    if (bytes == 0)
+	return;
+    assert (bytes <= m_bufferedbytes);
+    m_bufferedbytes -= bytes;
+    if (m_iovec.m_bytessent) {
+	bytes += m_iovec.m_bytessent;
+	m_iovec.m_bytessent = 0;
+    }
+    while (bytes > 0) {
+	iovec* vec = m_iovec.m_vecs + m_iovec.m_offset;
+	if (vec->iov_len > bytes) {
+	    m_iovec.m_bytessent = bytes;
+	    return;
+	}
+	bytes -= vec->iov_len;
+	m_iovec.m_offset++;
+	m_iovec.m_used--;
+	std::pair<bool,OwnerPtr> p = m_iovec.m_ownerqueue.front();
+	m_iovec.m_ownerqueue.pop();
+	if (!p.first) {
+	    // local storage
+	    m_local.freePartOfBuffer(vec->iov_len);
+	}
+    }
+    assert (bytes == 0);
 }
-
 
 
 BOOST_PYTHON_MODULE(tcp)
@@ -78,6 +212,14 @@ BOOST_PYTHON_MODULE(tcp)
     class_<TCPTransport>("TCPTransportMixin", init<object>())
 	.def("initProtocol", &TCPTransport::initProtocol)
 	.def("doRead", &TCPTransport::doRead)
+	.def("doWrite", &TCPTransport::doWrite)
+	.def("startWriting", &TCPTransport::startWriting)
+	.def("stopWriting", &TCPTransport::stopWriting)
+	.def_readwrite("connected", &TCPTransport::connected)
+	.def_readwrite("disconnecting", &TCPTransport::disconnecting)
+	.def_readwrite("producerPaused", &TCPTransport::producerPaused)
+	.def_readwrite("streamingProducer", &TCPTransport::streamingProducer)
+	.add_property("producer", &TCPTransport::_getProducer, &TCPTransport::_setProducer)
 	;
     class_<Protocol, bases<>, boost::noncopyable>("Protocol", no_init)
 	.def("connectionMade", &Protocol::connectionMade)

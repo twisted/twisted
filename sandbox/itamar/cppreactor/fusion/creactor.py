@@ -8,8 +8,8 @@ from fusion import udp as cudp
 class CServer(ctcp.TCPTransportMixin, tcp.Server):
 
     def __init__(self, *args, **kwargs):
-        tcp.Server.__init__(self, *args, **kwargs)
         ctcp.TCPTransportMixin.__init__(self, self)
+        tcp.Server.__init__(self, *args, **kwargs)
         self.initProtocol()
 
 
@@ -21,8 +21,8 @@ class CPort(tcp.Port):
 class CClient(ctcp.TCPTransportMixin, tcp.Client):
 
     def __init__(self, *args, **kwargs):
-        tcp.Client.__init__(self, *args, **kwargs)
         ctcp.TCPTransportMixin.__init__(self, self)
+        tcp.Client.__init__(self, *args, **kwargs)
     
     def _connectDone(self):
         self.protocol = self.connector.buildProtocol(self.getPeer())
