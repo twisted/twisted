@@ -200,7 +200,10 @@ class Walker:
         for node in findElementsWithAttribute(document, "class", "API"):
             if len(node.childNodes) > 1:
                 print 'There are too many child nodes of this API link.'
-            newref = self.cache.match(node.childNodes[0].nodeValue)
+            base = ""
+            if node.hasAttribute("base"):
+                base = node.getAttribute("base") + "."
+            newref = self.cache.match(base + node.childNodes[0].nodeValue)
             if newref:
                 node2 = document.createElement("a")
                 node2.setAttribute("href", newref)
