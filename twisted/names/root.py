@@ -39,6 +39,7 @@ from twisted.protocols import dns
 from twisted.names import common
 
 def retry(t, p, *args):
+    assert t, "Timeout is required"
     t = list(t)
     def errback(failure):
         failure.trap(defer.TimeoutError)
@@ -76,6 +77,7 @@ class Resolver(common.ResolverBase):
         return d
 
 def lookupNameservers(host, atServer, p=None):
+    # print 'Nameserver lookup for', host, 'at', atServer, 'with', p
     if p is None:
         p = dns.DNSDatagramProtocol(_DummyController())
         p.noisy = False
@@ -87,6 +89,7 @@ def lookupNameservers(host, atServer, p=None):
     )
 
 def lookupAddress(host, atServer, p=None):
+    # print 'Address lookup for', host, 'at', atServer, 'with', p
     if p is None:
         p = dns.DNSDatagramProtocol(_DummyController())
         p.noisy = False
@@ -96,6 +99,27 @@ def lookupAddress(host, atServer, p=None):
         (atServer, dns.PORT),               # Server to query
         [dns.Query(host, dns.A, dns.IN)]    # Question to ask
     )
+
+def extractAuthority(msg, cache):
+    records = msg.answers + msg.authority + msg.additional
+    nameservers = [r for r in records if r.type == dns.NS]
+    
+    # print 'Records for', soFar, ':', records
+    # print 'NS for', soFar, ':', nameservers
+
+    if not records:
+        raise IOError("No records")
+    for r in records:
+        if r.type == dns.A:
+            cache[str(r.name)] = r.payload.dottedQuad()
+    for r in records:
+        if r.type == dns.NS:
+            if str(r.payload.name) in cache:
+                return cache[str(r.payload.name)], nameservers
+    for addr in records:
+        if addr.type == dns.A and addr.name == r.name:
+            return addr.payload.dottedQuad(), nameservers
+    return None, nameservers
 
 def discoverAuthority(host, roots, cache=None, p=None):
     if cache is None:
@@ -116,30 +140,8 @@ def discoverAuthority(host, roots, cache=None, p=None):
         yield msg
         msg = msg.next()
 
-        records = msg.answers + msg.authority + msg.additional
-        nameservers = [r for r in records if r.type == dns.NS]
-        
-        # print 'Records for', soFar, ':', records
-        # print 'NS for', soFar, ':', nameservers
+        newAuth, nameservers = extractAuthority(msg, cache)
 
-        if not records:
-            raise IOError("No records")
-        
-        for r in records:
-            if r.type == dns.A:
-                cache[str(r.name)] = r.payload.dottedQuad()
-
-        newAuth = None
-        for r in records:
-            if r.type == dns.NS:
-                if str(r.payload.name) in cache:
-                    newAuth = cache[str(r.payload.name)]
-                    break
-        else:
-            for addr in records:
-                if addr.type == dns.A and addr.name == r.name:
-                    newAuth = addr.payload.dottedQuad()
-                    break
         if newAuth is not None:
             authority = newAuth
         else:
