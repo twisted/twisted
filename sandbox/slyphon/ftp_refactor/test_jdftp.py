@@ -224,11 +224,15 @@ class DummyClient(basic.LineReceiver):
     logname = None
     def __init__(self):
         self.lines = []
+        self.rawData = []
     def connectionMade(self):
         self.f = self.factory   # to save typing in pdb :-)
     def lineReceived(self,line):
-        #log.debug('DummyClient %s received line: %s' % (self.logname,line))
         self.lines.append(line)
+    def rawDataReceived(self, data):
+        self.rawData.append(data)
+    def lineLengthExceeded(self, line):
+        pass
 
 class ConnectedFTPServer(object):
     c    = None
@@ -277,6 +281,8 @@ class ConnectedFTPServer(object):
         dc.logname = 'ftp-dtp'
         dc.factory = protocol.ClientFactory()
         dc.factory.protocol = DummyClient
+        dc.setRawMode()
+        del dc.lines
         dc.makeConnection(CustomFileWrapper(self.dcio))
 
         iop = IOPump(dc, ds, self.dcio, self.dsio)
@@ -373,6 +379,9 @@ class BogusAvatar(object):
 
     def retr(self, path=None):
         log.debug('BogusAvatar.retr')
+        
+        self.path = path
+        
         if self.filesize is not None:
             size = self.filesize
         else:
@@ -387,13 +396,13 @@ class BogusAvatar(object):
         
         del text[(size - 2):]
         text.extend(endln)
+        
         sio = NonClosingStringIO(''.join(text))
         self.finalFileSize = len(sio.getvalue())
         log.msg("BogusAvatar.retr: file size = %d" % self.finalFileSize)
         sio.seek(0)
         self.sentfile = sio
         return (sio, self.finalFileSize)
-
 
     def stor(self, params):
         pass
@@ -403,6 +412,7 @@ class BogusAvatar(object):
         for f in bogusfiles:
             sio.write(f['listrep'])
         sio.seek(0)
+        self.sentlist = sio
         return (sio, len(sio.getvalue()))
 
     def mdtm(self, path):
@@ -525,36 +535,37 @@ class TestFTPServer(FTPTestCase):
         sr.ftp_RETR('/home/foo/foo.txt')
         iop.flush()
         diop.flush()
-        log.debug(dc.lines)
-        self.failUnless(len(dc.lines) >= 1)
+        log.debug(dc.rawData)
+        self.failUnless(len(dc.rawData) >= 1)
 
-    testTYPE.todo = 'ask someone about how to test if binary/ascii is working properly'
+    #testTYPE.todo = 'ask someone about how to test if binary/ascii is working properly'
 
     def testRETR(self):
         cli, sr, iop, send = self.cnx.getCSTuple()
-        self.cnx.loadAvatar()
+        avatar = self.cnx.loadAvatar()
 
         sr.ftp_TYPE('L')
-        iop.flush()
+        self.assert_(self.cnx.s.binary == True)
 
+        iop.flush()
         self.cnx.hookUpDTP()
         dc, ds, diop = self.cnx.getDtpCSTuple()
         sr.dtpTxfrMode = ftp.PASV
         self.assert_(sr.blocked is None)
         self.assert_(sr.dtpTxfrMode == ftp.PASV)
-        #iop.flush()
-        #diop.flush()
         log.msg('about to send RETR command')
-        send('RETR /home/foo/foo.txt')
+        
+        filename = '/home/foo/foo.txt'
+        
+        send('RETR %s' % filename)
         iop.flush()
         diop.flush()
-        log.msg("reached post flush")
-        log.msg('dc.lines: %s' % dc.lines)
-        self.assert_(len(dc.lines) >= 1)
- 
+        log.msg('dc.rawData: %s' % dc.rawData)
+        self.assert_(len(dc.rawData) >= 1)
+        self.failUnlessEqual(avatar.path, filename)
+        self.failUnlessEqual(''.join(dc.rawData), avatar.sentfile.getvalue())
         
     #testRETR.todo = 'not quite there yet'
-
 
     def testSYST(self):
         cli, sr, iop, send = self.cnx.getCSTuple()
@@ -566,22 +577,38 @@ class TestFTPServer(FTPTestCase):
 
     def testLIST(self):
         cli, sr, iop, send = self.cnx.getCSTuple()
-        self.cnx.loadAvatar()
-        sr.dtpTxfrMode = ftp.PASV
+        avatar = self.cnx.loadAvatar()
+        sr.dtpTxfrMode = ftp.PASV 
         self.cnx.hookUpDTP()
         dc, ds, diop = self.cnx.getDtpCSTuple()
+        self.assert_(hasattr(self.cnx.s, 'binary'))
+        self.cnx.s.binary = True
         sr.ftp_LIST('/')
         iop.flush()
         diop.flush()
-        log.debug('dc.lines: %s' % dc.lines)
-        self.assert_(len(dc.lines) > 1)
-        testlist = [b['listrep'] for b in bogusfiles]
-        for n in xrange(len(dc.lines)):
-            self.assertEqual(testlist[n][:-1], dc.lines[n])
+        log.debug('dc.rawData: %s' % dc.rawData)
+        self.assert_(len(dc.rawData) > 1)
+        avatarsent = avatar.sentlist.getvalue()
+        dcrx = ''.join(dc.rawData)
+        #print avatarsent.strip(), dcrx.strip()
+        self.assertEqual(avatarsent, dcrx, 
+"""
+avatar's sentlist != dtp client's ''.join(rawData)
+
+avatar's sentlist:
+
+%s
+
+''.join(dc.rawData):
+
+%s
+""" % (avatarsent, dcrx))
+
     
+    #testLIST.todo = 'something is b0rK3n'
 
 class TestDTPTesting(FTPTestCase):
-    def testEffectsOfChunkSizeOnDTPTesting(self):
+    def testDTPTestingSanityCheck(self):
         filesizes = [(n*100) for n in xrange(100,110)]
         for fs in filesizes:
             self.tearDown()
@@ -599,18 +626,15 @@ class TestDTPTesting(FTPTestCase):
         sr.ftp_RETR('')
         iop.flush()
         diop.flush()
-        log.debug('dc.lines size: %d' % len(dc.lines))
-        rxLines = ''.join(dc.lines)
+        log.debug('dc.rawData size: %d' % len(dc.rawData))
+        rxLines = ''.join(dc.rawData)
         lenRxLines = len(rxLines)
         sizes = 'filesize before txmit: %d, filesize after txmit: %d' % (avatar.finalFileSize, lenRxLines)
         percent = 'percent actually received %f' % ((float(lenRxLines) / float(avatar.finalFileSize))*100)
         log.debug(sizes)
         log.debug(percent)
-        print sizes
-        print percent
-        self.assertEquals(avatar.sentfile.getvalue(), sr.fp.getvalue())
+        self.assertEquals(lenRxLines, avatar.finalFileSize)
 
-    testEffectsOfChunkSizeOnDTPTesting.todo = "let's find out what's wrong"
 
 
 
