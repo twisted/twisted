@@ -16,9 +16,12 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from twisted.python import usage
+# FIXME
+# - Hangs.
+
+from twisted.python import usage, reflect
 from twisted.trial import unittest
-import sys, os
+import sys, os, types
 
 class Options(usage.Options):
     optFlags = [["help", "h"],
@@ -33,6 +36,7 @@ class Options(usage.Options):
         usage.Options.__init__(self)
         self['modules'] = []
         self['packages'] = []
+        self['testcases'] = []
 
     def opt_module(self, module):
         "Module to test"
@@ -42,6 +46,10 @@ class Options(usage.Options):
         "Package to test"
         self['packages'].append(package)
 
+    def opt_testcase(self, case):
+        "TestCase to test"
+        self['testcases'].append(case)
+
     def opt_file(self, filename):
         "Filename of module to test"
         from twisted.python import reflect
@@ -49,6 +57,7 @@ class Options(usage.Options):
 
     opt_m = opt_module
     opt_p = opt_package
+    opt_c = opt_testcase
     opt_f = opt_file
 
 
@@ -64,7 +73,6 @@ def run():
         os._exit(1)
 
     if config['reactor']:
-        from twisted.python import reflect
         mod = 'twisted.internet.' + config['reactor']
         print "Using %s reactor" % mod
         reflect.namedModule(mod).install()
@@ -74,7 +82,11 @@ def run():
         suite.addPackage(package)
     for module in config['modules']:
         suite.addModule(module)
-
+    for testcase in config['testcases']:
+        case = reflect.namedObject(testcase)
+        if type(case) is types.ClassType and unittest.isTestClass(case):
+            suite.addTestClass(case)
+    
     testdir = "_trial_temp"
     if os.path.exists(testdir):
        import shutil
