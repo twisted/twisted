@@ -49,11 +49,11 @@
 #
 #  (more to follow)
 #
-from __future__ import generators
+
 
 
 import os, glob, types, warnings, time, sys, gc, cPickle as pickle, signal
-import os.path as osp, fnmatch, random
+import os.path as osp, itertools, fnmatch
 from os.path import join as opj
 
 import doctest
@@ -68,7 +68,6 @@ from twisted.trial.itrial import ITestCaseFactory, IReporter, \
 from twisted.trial.reporter import SKIP, EXPECTED_FAILURE, FAILURE, \
      ERROR, UNEXPECTED_SUCCESS, SUCCESS
 import zope.interface as zi
-
 
 
 # --- Exceptions and Warnings ------------------------ 
@@ -307,7 +306,7 @@ class TestSuite(Timed):
         if seed is not None:
             r = random.Random(seed)
             r.shuffle(tests)
-            self.reporter.write('Running tests shuffled with seed %d' % seed)
+            self.reporter.writeln('Running tests shuffled with seed %d' % seed)
 
 
         # set up SIGCHLD signal handler so that parents of spawned processes will be
@@ -698,7 +697,7 @@ class TestMethod(MethodInfoBase):
         #       should probably allow for more complex specifications. Perhaps I will define a 
         #       Todo object that will allow for greater flexibility/complexity.
         # 
-        for f in util.iterchain(self.failures, self.errors):
+        for f in itertools.chain(self.failures, self.errors):
             if not itrial.ITodo(self.todo).isExpected(f):
                 return ERROR
         return EXPECTED_FAILURE
@@ -734,8 +733,8 @@ class TestMethod(MethodInfoBase):
     def _eb(self, f):
         log.msg(f.printTraceback())
         if f.check(unittest.FAILING_EXCEPTION,
-                   unittest.FailTest):
-                   #doctest.DocTestTestFailure):
+                   unittest.FailTest,
+                   doctest.DocTestTestFailure):
             self.failures.append(f)
         elif f.check(KeyboardInterrupt):
             log.msg(iface=ITrialDebug, kbd="KEYBOARD INTERRUPT")

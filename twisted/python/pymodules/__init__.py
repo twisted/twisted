@@ -1,4 +1,0 @@
-"""
-cross version compatibility files
-"""
-

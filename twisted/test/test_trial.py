@@ -22,7 +22,7 @@ from StringIO import StringIO
 import zope.interface as zi
 
 from pprint import pprint
-import sys, os, os.path as osp
+import sys, os, os.path as osp, itertools
 from os.path import join as opj
 from sets import Set
 
@@ -147,14 +147,16 @@ class ChProcessProtoocol(protocol.ProcessProtocol):
 
 class SpawningMixin:
     def spawnChild(self, args):
+        PYTHON = sys.executable
         TRIAL = procutils.which('trial')[0]
 
         env = {}
         env['PATH'] = os.environ.get('PATH', '')
+        env['PYTHONPATH'] = os.environ.get('PYTHONPATH', '')
 
         done = defer.Deferred()
         self.cpp = ChProcessProtoocol(done)
-        self.process = procutils.spawnPythonProcess(self.cpp, args, env)
+        self.process = reactor.spawnProcess(self.cpp, PYTHON, args, env)
         return done
 
 
@@ -223,11 +225,11 @@ class FunctionallyTestTrial(unittest.TestCase, SpawningMixin):
 
     def testLeftoverSockets(self):
         args = self.args + ['twisted.test.trialtest1.ReactorCleanupTests.test_socketsLeftOpen']
+
         def _cb(cpp):
             self._failUnlessIn(reporter.UNCLEAN_REACTOR_WARN)
             self._failUnlessIn(util.DIRTY_REACTOR_MSG)
         return self.spawnChild(args).addCallback(_cb)
-    testLeftoverSockets.todo = "temporarily broken by changes to get newtrial working"
 
     def testLeftoverPendingCalls(self):
         args = self.args + ['twisted.test.trialtest1.ReactorCleanupTests.test_leftoverPendingCalls']
