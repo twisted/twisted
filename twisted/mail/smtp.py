@@ -1299,7 +1299,7 @@ class ESMTP(SMTP):
 
 class SenderMixin:
     """Utility class for sending emails easily.
-    
+
     Use with SMTPSenderFactory or ESMTPSenderFactory.
     """
     done = 0
@@ -1446,10 +1446,15 @@ class ESMTPSender(SenderMixin, ESMTPClient):
     requireAuthentication = True
     requireTransportSecurity = True
 
-    def __init__(self, username, secret, *args, **kw):
+    def __init__(self, username, secret, contextFactory=None, *args, **kw):
         self.heloFallback = 0
         self.username = username
-        ESMTPClient.__init__(self, secret, self._getContextFactory(), *args, **kw)
+
+        if contextFactory is None:
+            contextFactory = self._getContextFactory()
+
+        ESMTPClient.__init__(self, secret, contextFactory, *args, **kw)
+
         self._registerAuthenticators()
 
     def _registerAuthenticators(self):
@@ -1480,18 +1485,19 @@ class ESMTPSenderFactory(SMTPSenderFactory):
 
     protocol = ESMTPSender
 
-    def __init__(self, username, password, fromEmail, toEmail, file, deferred, retries=5,
+    def __init__(self, username, password, fromEmail, toEmail, file, deferred, retries=5, contextFactory=None,
                  heloFallback=False, requireAuthentication=True, requireTransportSecurity=True):
 
         SMTPSenderFactory.__init__(self, fromEmail, toEmail, file, deferred, retries)
         self.username = username
         self.password = password
+        self._contextFactory = contextFactory
         self._heloFallback = heloFallback
         self._requireAuthentication = requireAuthentication
         self._requireTransportSecurity = requireTransportSecurity
 
     def buildProtocol(self, addr):
-        p = self.protocol(self.username, self.password, self.domain, len(self.toEmail)*2+2)
+        p = self.protocol(self.username, self.password, self._contextFactory, self.domain, len(self.toEmail)*2+2)
         p.heloFallback = self._heloFallback
         p.requireAuthentication = self._requireAuthentication
         p.requireTransportSecurity = self._requireTransportSecurity
