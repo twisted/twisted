@@ -1361,7 +1361,7 @@ class AuthChallenger(Referenceable):
 
     See also: AuthServ
     """
-    
+
     def __init__(self, ident, serv, challenge):
         self.ident = ident
         self.challenge = challenge
@@ -1378,7 +1378,7 @@ class AuthServ(Referenceable):
 
     See also: AuthRoot
     """
-    
+
     def __init__(self, app, broker):
         self.app = app
         self.broker = broker
@@ -1481,8 +1481,38 @@ class AuthClient:
             self.errback("invalid username or password")
 
 class connect:
+    """Connects and authenticates, then retrieves a PB service.
+
+    Required arguments:
+        callback -- will be called with your perspective to the service
+        errback -- will be called if an error prevents me from connecting
+        host -- the host the service is running on
+        port -- the port on the host to connect to
+        username -- the name you will be identified as to the authorizer
+        password -- the password for this username
+        service -- the service to request
+
+    Optional (keyword) arguments:
+        perspective -- the name of the perspective to request, if
+            different than the username
+        client -- XXX the "reference" argument to passport.Perspective.attached
+        timeout -- see twisted.internet.tcp.Client
+
+    (I'm a utility function which happens to be implemented as a
+    class.  So I will return a new "connect" instance, but you'll be
+    best off ignoring that.)
+    """
+        
+    # Would it be worth hiding this behind a wrapper _function_, just so
+    # the definition types would feel more natural?
+        
     def __init__(self, callback, errback, host, port, username, password,
                  service, perspective=None, client=None, timeout=None):
+        """Connects and authenticates, then retrieves a PB service.
+
+        See pb.connect.__doc__
+        and pay no attention to the man behind the curtain."""
+
         self.callback = callback
         self.errback = errback
         self.username = username
