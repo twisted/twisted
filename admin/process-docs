@@ -3,15 +3,16 @@ set -e
 url=http://twistedmatrix.com/documents/TwistedDocs/TwistedDocs-$1/api/%s.html
 templ=doc/howto/template.tpl
 echo "Man-->Lore"
-./bin/lore -p --input man --output lore --config ext=-man.html doc/man/*.1
+./bin/lore -p --input man --output lore --config ext=-man.xhtml doc/man/*.1
 for doc in doc doc/man doc/howto doc/specifications doc/vision; do
 	echo "Lore-->Lint"
-	./bin/lore -n --output lint $doc/*.html |sed 's/^/WARNING: /'
+	./bin/lore -n --output lint $doc/*.xhtml |sed 's/^/WARNING: /'
 	echo "Lore-->HTML"
 	./bin/lore -p --config template=$templ --config baseurl=$url \
-	           --config version=$1 -l ../howto/ $doc/*.html
+	           --config ext=.html --config version=$1 -l ../howto/ \
+	           $doc/*.xhtml
 	echo "Lore-->LaTeX"
-	./bin/lore -p --output latex --config section $doc/*.html
+	./bin/lore -p --output latex --config section $doc/*.xhtml
 done
 cp admin/book.tex doc/howto
 cd doc/howto
@@ -20,4 +21,4 @@ latex book.tex </dev/null | sed '/^LaTeX Warning:/s/^/WARNING: /'
 dvips -o book.ps book.dvi
 ps2pdf13 book.ps book.pdf
 rm *.eps *.tex *.aux *.log book.dvi book.toc ../man/*.tex \
-   ../specifications/*.tex ../man/*-man.html ../vision/*.tex ../*.tex
+   ../specifications/*.tex ../man/*-man.xhtml ../vision/*.tex ../*.tex
