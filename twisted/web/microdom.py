@@ -192,9 +192,7 @@ class Element(Node):
             stream.write(attr)
             stream.write("=")
             stream.write('"')
-            val = val.replace('"', '&quot;')
-            val = val.replace('&', '&amp;')            
-            stream.write(val)
+            stream.write(val.replace('"', '&quot;'))
             stream.write('"')
         if self.childNodes:
             stream.write(">"+newl+addindent)
