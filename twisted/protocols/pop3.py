@@ -157,14 +157,17 @@ class POP3(basic.LineReceiver):
 
     def listCapabilities(self):
         return [
-            "TOP",
+            # "TOP",
             "USER",
-            "UIDL",
-            "IMPLEMENTATION " + self.getVersionString(),
+            # "UIDL",
+            # "IMPLEMENTATION " + self.getVersionString(),
         ]
 
     def do_CAPA(self):
+        self.sendLine("-ERR bleh")
+        return
         map(self.sendLine, self.listCapabilities())
+        self.sendLine(".")
 
     def do_APOP(self, user, digest):
         d = defer.maybeDeferred(self.authenticateUserAPOP, user, digest)
