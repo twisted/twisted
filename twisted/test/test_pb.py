@@ -858,3 +858,64 @@ class ConnectionTestCase(unittest.TestCase):
         p = dR(d)
         self.assert_(isinstance(p, pb.RemoteReference))
         p.broker.transport.loseConnection()
+
+
+# yay new cred, everyone use this:
+
+from twisted.cred import portal, checkers, credentials
+
+class MyRealm:
+    """A test realm."""
+
+    def __init__(self):
+        self.p = MyPerspective()
+    
+    def requestAvatar(self, avatarId, mind, interface):
+        assert interface == pb.IPerspective
+        assert mind == "BRAINS!"
+        self.p.loggedIn = 1
+        return pb.IPerspective, self.p, self.p.logout
+
+class MyPerspective(pb.Referenceable):
+
+    def remote_getViewPoint(self):
+        return MyView()
+
+    def logout(self):
+        self.loggedOut = 1
+
+class MyView(pb.Viewable):
+
+    def view_check(self, user):
+        return isinstance(user, MyPerspective)
+
+
+class NewCredTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.realm = MyRealm()
+        self.portal = portal.Portal(self.realm)
+        self.checker = checkers.InMemoryUsernamePasswordDatabaseDontUse()
+        self.checker.addUser("user", "pass")
+        self.portal.registerChecker(self.checker)
+        self.factory = pb.PBServerFactory(self.portal)
+        self.port = reactor.listenTCP(0, self.factory, interface="127.0.0.1")
+        self.portno = self.port.getHost()[-1]
+
+    def tearDown(self):
+        self.port.stopListening()
+        reactor.iterate()
+        reactor.iterate()
+    
+    def testLoginLogout(self):
+        factory = pb.PBClientFactory()
+        d = factory.login(credentials.UsernamePassword("user", "pass"), "BRAINS!")
+        reactor.connectTCP("127.0.0.1", self.portno, factory)
+        p = dR(d)
+        self.assertEquals(self.realm.p.loggedIn, 1)
+        self.assert_(isinstance(p, pb.RemoteReference))
+        factory.disconnect()        
+        reactor.iterate()
+        reactor.iterate()
+        reactor.iterate()
+        self.assertEquals(self.realm.p.loggedOut, 1)

@@ -52,7 +52,7 @@ applied when serializing arguments.
 # Future Imports
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.135 $"[11:-2]
+__version__ = "$Revision: 1.136 $"[11:-2]
 
 
 # System Imports
@@ -70,6 +70,7 @@ from twisted.python import log, failure
 from twisted.internet import reactor, defer, protocol, error
 from twisted.cred import authorizer, service, perspective, identity
 from twisted.persisted import styles
+from twisted.python.components import Interface
 
 # Sibling Imports
 from twisted.spread.interfaces import IJellyable, IUnjellyable
@@ -953,17 +954,8 @@ class BrokerFactory(protocol.Factory, styles.Versioned):
     def __init__(self, objectToBroker):
         self.objectToBroker = objectToBroker
 
-    configTypes = {'objectToBroker': Root}
-    configName = 'PB Broker Factory'
-
-    def configInit(self, container, name):
-        self.__init__(AuthRoot(container.app))
-
     def config_objectToBroker(self, newObject):
         self.objectToBroker = newObject
-
-    def getConfiguration(self):
-        return {"objectToBroker": self.objectToBroker}
 
     def upgradeToVersion2(self):
         app = self.app
@@ -983,7 +975,7 @@ class BrokerFactory(protocol.Factory, styles.Versioned):
         pass
 
 
-### AUTH STUFF
+### DEPRECATED AUTH STUFF
 
 class AuthRoot(Root):
     """I provide AuthServs as root objects to Brokers for a BrokerFactory.
@@ -1092,6 +1084,7 @@ class AuthServ(Referenceable):
             challenge = ident.challenge()
             return challenge, AuthChallenger(ident, self, challenge)
 
+    
 class _ObjectRetrieval:
     """(Internal) Does callbacks for L{getObjectAt}.
     """
@@ -1200,7 +1193,7 @@ def getObjectAtSSL(host, port, timeout=None, contextFactory=None):
       objects.  (OPTIONAL)
 
     @returns: A Deferred which will be passed a remote reference to the
-      root object of a PB server.x
+      root object of a PB server.
     """
     warnings.warn("This is deprecated. Use PBClientFactory.", DeprecationWarning, 2)
     bf = PBClientFactory()
@@ -1208,7 +1201,7 @@ def getObjectAtSSL(host, port, timeout=None, contextFactory=None):
         from twisted.internet import ssl
         contextFactory = ssl.ClientContextFactory()
     reactor.connectSSL(host, port, bf, contextFactory, timeout)
-    return d.getRootObject()
+    return bf.getRootObject()
 
 def connect(host, port, username, password, serviceName,
             perspectiveName=None, client=None, timeout=None):
@@ -1401,6 +1394,33 @@ class IdentityConnector:
 
 # this is the new shiny API you should be using:
 
+import md5
+import random
+from twisted.cred.credentials import ICredentials, IUsernameHashedPassword
+
+def respond(challenge, password):
+    """Respond to a challenge.
+    
+    This is useful for challenge/response authentication.
+    """
+    m = md5.new()
+    m.update(password)
+    hashedPassword = m.digest()
+    m = md5.new()
+    m.update(hashedPassword)
+    m.update(challenge)
+    doubleHashedPassword = m.digest()
+    return doubleHashedPassword
+
+def challenge():
+    """I return some random data."""
+    crap = ''
+    for x in range(random.randrange(15,25)):
+        crap = crap + chr(random.randint(65,90))
+    crap = md5.new(crap).digest()
+    return crap
+
+
 class PBClientFactory(protocol.ClientFactory):
     """Client factory for PB brokers.
 
@@ -1455,8 +1475,12 @@ class PBClientFactory(protocol.ClientFactory):
                        perspectiveName=None, client=None):
         """Get perspective from remote PB server.
 
+        New systems should use login() instead.
+        
         @return Deferred of RemoteReference to the perspective.
         """
+        warnings.warn("Please update your backend to use updated APIs.",
+                      DeprecationWarning, 2)
         if perspectiveName == None:
             perspectiveName = username
         d = self.getRootObject()
@@ -1469,7 +1493,7 @@ class PBClientFactory(protocol.ClientFactory):
             self._cbRespondToChallenge, password)
 
     def _cbRespondToChallenge(self, (challenge, challenger), password):
-        return challenger.callRemote("respond", identity.respond(challenge, password))
+        return challenger.callRemote("respond", respond(challenge, password))
 
     def _cbGetPerspective(self, identityWrapper, serviceName, perspectiveName, client):
         return identityWrapper.callRemote(
@@ -1484,3 +1508,126 @@ class PBClientFactory(protocol.ClientFactory):
         """
         if self._broker:
             self._broker.transport.loseConnection()
+
+    def _cbSendUsername(self, root, username, password, client):
+        return root.callRemote("login", username).addCallback(
+            self._cbResponse, password, client)
+
+    def _cbResponse(self, (challenge, challenger), password, client):
+        return challenger.callRemote("respond", respond(challenge, password), client)
+
+    def login(self, credentials, client=None):
+        """Login and get perspective from remote PB server.
+
+        Currently only credentials implementing IUsernamePassword are
+        supported.
+
+        @return Deferred of RemoteReference to the perspective.
+        """
+        d = self.getRootObject()
+        d.addCallback(self._cbSendUsername, credentials.username, credentials.password, client)
+        return d
+
+
+class PBServerFactory(protocol.ServerFactory):
+    """Server factory for perspective broker."""
+
+    def __init__(self, portal):
+        self.portal = portal
+
+    def buildProtocol(self, addr):
+        """Return a Broker attached to me (as the service provider).
+        """
+        proto = Broker(0)
+        proto.factory = self
+        proto.setNameForLocal("root", _PortalWrapper(self.portal, proto))
+        return proto
+
+    def clientConnectionMade(self, protocol):
+        pass
+
+
+class IUsernameMD5Password(ICredentials):
+    """I encapsulate a username and a hashed password.
+    
+    This credential is used for username/password over
+    PB. CredentialCheckers which check this kind of credential must
+    store the passwords in plaintext form or as a MD5 digest.
+    
+    @type username: C{str} or C{Deferred}
+    @ivar username: The username associated with these credentials.
+    """
+    
+    def checkPassword(self, password):
+        """Validate these credentials against the correct password.
+        
+        @param password: The correct, plaintext password against which to
+        @check.
+        
+        @return: a deferred which becomes, or a boolean indicating if the
+        password matches.
+        """
+
+    def checkMD5Password(self, password):
+        """Validate these credentials against the correct MD5 digest of password.
+        
+        @param password: The correct, plaintext password against which to
+        @check.
+        
+        @return: a deferred which becomes, or a boolean indicating if the
+        password matches.
+        """
+
+
+class IPerspective(Interface):
+    """A perspective object.
+
+    This will typically be a Referenceable which is a PB-specific wrapper
+    around an avatar.
+    """
+
+
+class _PortalWrapper(Referenceable):
+    """Root object, used to login to portal."""
+
+    def __init__(self, portal, broker):
+        self.portal = portal
+        self.broker = broker
+
+    def remote_login(self, username):
+        """Start of username/password login."""
+        c = challenge()
+        return c, _PortalAuthChallenger(self, username, c)
+
+
+class _PortalAuthChallenger(Referenceable):
+    """Called with response to password challenge."""
+
+    __implements__ = IUsernameHashedPassword, IUsernameMD5Password
+    
+    def __init__(self, portalWrapper, username, challenge):
+        self.portalWrapper = portalWrapper
+        self.username = username
+        self.challenge = challenge
+    
+    def remote_respond(self, response, mind):
+        self.response = response
+        d = self.portalWrapper.portal.login(self, mind, IPerspective)
+        d.addCallback(self._loggedIn)
+        return d
+
+    def _loggedIn(self, (interface, perspective, logout)):
+        self.portalWrapper.broker.notifyOnDisconnect(logout)
+        return perspective
+    
+    # IUsernameHashedPassword:
+    def checkPassword(self, password):
+        return self.checkMD5Password(md5.md5(password).digest())
+
+    # IUsernameMD5Password
+    def checkMD5Password(self, md5Password):
+        md = md5.new()
+        md.update(md5Password)
+        md.update(self.challenge)
+        correct = md.digest()
+        return self.response == correct
