@@ -65,15 +65,16 @@ class SSHConnection(service.SSHService):
             self.channels[localChannel] = channel
             self.channelsToRemoteChannel[channel] = senderChannel
             self.localToRemoteChannel[localChannel] = senderChannel
-            self.transport.sendPacket(MSG_CHANNEL_OPEN_CONFIRMATION, struct.pack('>4L',
-                                        senderChannel, localChannel, windowSize, maxPacket) +\
-                                      channel.specificData)
+            self.transport.sendPacket(MSG_CHANNEL_OPEN_CONFIRMATION, 
+                struct.pack('>4L', senderChannel, localChannel, 
+                    channel.localWindowSize,
+                    channel.localMaxPacket) + channel.specificData)
             channel.channelOpen()
         else:
             reason, textualInfo = channel
             self.transport.sendPacket(MSG_CHANNEL_OPEN_FAILURE,
-                                      struct.pack('>2L', senderChannel, reason) + \
-                                      common.NS(textualINFO) + common.NS(''))
+                                struct.pack('>2L', senderChannel, reason) + \
+                                common.NS(textualINFO) + common.NS(''))
 
     def ssh_CHANNEL_OPEN_CONFIRMATION(self, packet):
         localChannel, remoteChannel, windowSize, maxPacket = struct.unpack('>4L', packet[:16])
@@ -82,6 +83,8 @@ class SSHConnection(service.SSHService):
         channel.conn = self
         self.localToRemoteChannel[localChannel] = remoteChannel
         self.channelsToRemoteChannel[channel] = remoteChannel
+        channel.remoteWindowSize = windowSize
+        channel.remoteMaxPacket = maxPacket
         channel.channelOpen(specificData)
 
     def ssh_CHANNEL_OPEN_FAILURE(self, packet):
@@ -101,8 +104,18 @@ class SSHConnection(service.SSHService):
 
     def ssh_CHANNEL_DATA(self, packet):
         localChannel = struct.unpack('>L', packet[:4])[0]
+        channel = self.channels[localChannel]
         data = common.getNS(packet[4:])[0]
-        self.channels[localChannel].dataReceived(data)
+        # XXX should this move to dataReceived to put client in charge?
+        if len(data) > channel.localWindowLeft:
+            data = data[:channel.localWindowLeft]
+        channel.localWindowLeft -= len(data)
+        if channel.localWindowLeft < channel.localWindowSize / 2:
+            log.msg('adjusting lwindow %s %s' % (channel.localWindowLeft,
+                                                channel.localWindowSize))
+            self.adjustWindow(channel, channel.localWindowSize - \
+                                channel.localWindowLeft)
+        channel.dataReceived(data)
 
     def ssh_CHANNEL_EXTENDED_DATA(self, packet):
         localChannel, typeCode = struct.unpack('>2L', packet[:8])
@@ -151,9 +164,11 @@ class SSHConnection(service.SSHService):
 
     # methods for users of the connection to call
     def openChannel(self, channel, extra = ''):
+        log.msg('opening channel %s with %s %s' % (self.localChannelID,
+                channel.localWindowSize, channel.localMaxPacket))
         self.transport.sendPacket(MSG_CHANNEL_OPEN, common.NS(channel.name) 
                 + struct.pack('>3L', self.localChannelID,
-                    channel.windowSize, channel.maxPacket)
+                    channel.localWindowSize, channel.localMaxPacket)
                 + extra)
         channel.id = self.localChannelID
         self.channels[self.localChannelID] = channel
@@ -171,6 +186,12 @@ class SSHConnection(service.SSHService):
             self.deferreds[channel.id] = []
         self.deferreds[channel.id].append(d)
         return d
+
+    def adjustWindow(self, channel, bytesToAdd):
+        self.transport.sendPacket(MSG_CHANNEL_WINDOW_ADJUST, struct.pack('>2L',
+                                    self.channelsToRemoteChannel[channel], 
+                                    bytesToAdd))
+        channel.localWindowLeft += bytesToAdd
         
     def sendData(self, channel, data):
         self.transport.sendPacket(MSG_CHANNEL_DATA, struct.pack('>L',
@@ -197,7 +218,7 @@ class SSHConnection(service.SSHService):
     def getChannel(self, channelType, windowSize, maxPacket, data):
         """the other side requested a channel of some sort.
         channelType is the string describing the channel
-        windowSize is the initial size of the window
+        windowSize is the initial size of the remote window
         maxPacket is the largest size of packet this channel should send
         data is any other packet data
 
@@ -207,7 +228,9 @@ class SSHConnection(service.SSHService):
         if self.transport.isClient:
             return OPEN_ADMINISTRATIVELY_PROHIBITED, 'not on the client bubba'
         if channelType == 'session':
-            return SSHSession(windowSize, maxPacket, self)
+            return SSHSession(remoteWindow = windowSize, 
+                              remoteMaxPacket = maxPacket, 
+                              conn = self)
         return OPEN_UNKNOWN_CHANNEL_TYPE, "don't know %s" % channelTypes
 
     def gotGlobalRequest(self, requestType, data):
@@ -223,12 +246,17 @@ class SSHConnection(service.SSHService):
         
 class SSHChannel:
     name = None # only needed for client channels
-    def __init__(self, window, maxPacket, conn = None):
+    def __init__(self, localWindow = 0, localMaxPacket = 0, 
+                       remoteWindow = 0, remoteMaxPacket = 0,
+                       conn = None):
         self.conn = conn
-        self.windowSize = window
-        self.windowLeft = window
-        self.maxPacket = maxPacket
+        self.localWindowSize = localWindow or 65536 
+        self.localWindowLeft = self.localWindowSize 
+        self.localMaxPacket = localMaxPacket or 16384
+        self.remoteWindowLeft = remoteWindow
+        self.remoteMaxPacket = remoteMaxPacket
         self.specificData = ''
+        self.buf = ''
 
     def channelOpen(self):
         log.msg('channel %s open' % self.id)
@@ -237,9 +265,10 @@ class SSHChannel:
         log.msg('other side refused channel %s\nreason: %s' % (self.id, reason))
 
     def addWindowBytes(self, bytes):
-        log.msg('adding bytes to window')
-        self.windowSize = self.windowSize + bytes
-        self.windowLeft = self.windowLeft + bytes
+        log.msg('adding bytes to rwindow %s' % bytes)
+        self.remoteWindowLeft = self.remoteWindowLeft + bytes
+        if self.buf:
+            self.write('')
 
     def requestReceived(self, requestType, data):
         foo = requestType.replace('-','_')
@@ -263,10 +292,22 @@ class SSHChannel:
 
     # transport stuff
     def write(self, data):
-        if len(data) > self.windowLeft:
-            log.msg('adjusting window %s %s' % (self.windowLeft, len(data)))
-            self.conn.adjustWindow(self, len(data))
-        self.conn.sendData(self, data)
+        if self.buf:
+            data += self.buf
+            self.buf = ''
+        if len(data) > self.remoteWindowLeft:
+            data, self.buf = data[:self.remoteWindowLeft], \
+                             data[self.remoteWindowLeft:]
+            log.msg('waiting for %s more window' % len(self.buf))
+        if not data: return
+        while len(data) > self.remoteMaxPacket:
+            log.msg('way too much data')
+            self.conn.sendData(self, data[:self.remoteMaxPacket])
+            data = data[self.remoteMaxPacket:]
+            self.remoteWindowLeft -= self.remoteMaxPacket
+        if data:
+            self.conn.sendData(self, data)
+        self.remoteWindowLeft -= len(data)
 
     def writeSequence(self, data):
         self.write(''.join(data))

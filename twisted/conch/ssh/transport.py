@@ -51,12 +51,12 @@ class SSHTransportBase(protocol.Protocol):
     ourVersionString = ('SSH-'+protocolVersion+'-'+serverVersion+' '+comment).strip()
 
     supportedCiphers = ('aes256-cbc', 'aes192-cbc', 'aes128-cbc', 'cast128-cbc',
-                        'blowfish', 'idea-cbc', '3des-cbc', 'arcfour')
+                        'blowfish', 'idea-cbc', '3des-cbc')
     supportedMACs = ('hmac-sha1', 'hmac-md5')
     supportedKeyExchanges = ('diffie-hellman-group-exchange-sha1',
                              'diffie-hellman-group1-sha1')
-    supportedPublicKeys = ('ssh-rsa', 'ssh-dss', )
-    supportedCompressions = ('zlib', 'none')
+    supportedPublicKeys = ('ssh-rsa', 'ssh-dss')
+    supportedCompressions = ('none', 'zlib', 'none')
     supportedLanguages = ()
 
     gotVersion = 0
@@ -130,13 +130,13 @@ class SSHTransportBase(protocol.Protocol):
         else:
             first = self.buf[:bs]
         packetLen, randomLen = struct.unpack('!LB',first[:5])
-        #if packetLen > 1048576: # 1024 ** 2
-        #    self.sendDisconnect(DISCONNECT_PROTOCOL_ERROR, 'bad packet length')
-        #    return           
-        if (packetLen+4)%bs != 0:
-            self.sendDisconnect(DISCONNECT_PROTOCOL_ERROR, 'bad packet mod')
-            return
+        if packetLen > 1048576: # 1024 ** 2
+            self.sendDisconnect(DISCONNECT_PROTOCOL_ERROR, 'bad packet length %s' % packetLen)
+            return           
         if len(self.buf) < packetLen: return # not enough packet
+        if (packetLen+4)%bs != 0:
+            self.sendDisconnect(DISCONNECT_PROTOCOL_ERROR, 'bad packet mod (%s%%%s == %s' % (packetLen+4,bs,(packetLen+4)%bs))
+            return
         encData, self.buf = self.buf[:4+packetLen], self.buf[4+packetLen:]
         if self.currentEncryptions:
             packet = first + self.currentEncryptions.decrypt(encData[bs:])
@@ -553,7 +553,7 @@ class SSHCiphers:
         'arcfour':('ARC4', 16),
         'idea-cbc':('IDEA', 16),
         'cast128-cbc':('CAST', 16),
-        'none':None,
+        'none':(None, None),
     }
     macMap = {
         'hmac-sha1':'sha',
@@ -593,10 +593,10 @@ class SSHCiphers:
         return HMAC.new(key[:ds], digestmod=mod)
 
     def encrypt(self, blocks):
-        return self.outCip.encrypt(blocks)
+        return self.outCip and self.outCip.encrypt(blocks) or blocks
 
     def decrypt(self, blocks):
-        return self.inCip.decrypt(blocks)
+        return self.inCip and self.inCip.decrypt(blocks) or blocks
 
     def makeMAC(self, seqid, data):
         c = self.outMAC.copy()

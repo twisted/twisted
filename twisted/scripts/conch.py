@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.3 2002/11/07 23:01:15 z3p Exp $
+# $Id: conch.py,v 1.4 2002/11/09 04:09:24 z3p Exp $
 
 #""" Implementation module for the `ssh` command.
 #"""
@@ -158,12 +158,14 @@ class SSHConnection(connection.SSHConnection):
     def serviceStarted(self):
 # port forwarding will go here
         if not options['notty']:
-            self.openChannel(SSHSession(1048576, 4294967295L))
+            self.openChannel(SSHSession())
 
 class SSHSession(connection.SSHChannel):
     name = 'session'
     
     def channelOpen(self, foo):
+        global session
+        session = self
         # turn off local echo
         fd = sys.stdin.fileno()
         try:
@@ -175,7 +177,7 @@ class SSHSession(connection.SSHChannel):
             new[6][tty.VMIN] = 1
             new[6][tty.VTIME] = 0
             tty.tcsetattr(fd, tty.TCSANOW, new)
-            tty.setraw(sys.stdout.fileno())
+            tty.setraw(fd)
         c = connection.SSHSessionClient()
         c.dataReceived = self.write
         stdio.StandardIO(c)
@@ -205,15 +207,18 @@ class SSHSession(connection.SSHChannel):
             sys.stderr.flush()
 
     def eofReceived(self):
+        log.msg('got eof')
         sys.stdin.close()
 
     def closed(self):
+        log.msg('closed %s' % self)
         if len(self.conn.channels) == 1: # just us left
             reactor.stop()
 
     def request_exit_status(self, data):
         global exitStatus
         exitStatus = struct.unpack('>L', data)[0]
+        log.msg('exit status: %s' % exitStatus)
 
 # Make it script-callable for testing purposes
 if __name__ == "__main__":
