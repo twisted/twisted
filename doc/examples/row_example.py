@@ -13,11 +13,6 @@ a database and manipulate them.
 
 manager = None
 
-def runTests(ignore=0):
-    global manager
-    print "running tests."
-    manager.loadObjectsFrom("testrooms", forceChildren=1).addCallback(gotRooms)
-
 def gotRooms(rooms):
     print "got Rooms.", rooms
     if not rooms:
@@ -102,7 +97,8 @@ application = Application("testApp")
 
 def kickOffTests(ignoredResult=0):
     global manager
-    manager = sqlreflector.SQLReflector(dbpool, [RoomRow, FurnitureRow, RugRow, LampRow], runTests)
+    manager = sqlreflector.SQLReflector(dbpool, [RoomRow, FurnitureRow, RugRow, LampRow])
+    manager.loadObjectsFrom("testrooms", forceChildren=1).addCallback(gotRooms)
 
 kf = row.KeyFactory(100000,50000)
 

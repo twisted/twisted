@@ -92,11 +92,9 @@ files. The XML reflector is currently extremely slow.</p>
 <pre class="python">
 
 from twisted.enterprise.sqlreflector import SQLReflector
-def runTests(result):
-    print "Done initializing"
 
 dbpool = adbapi.ConnectionPool("pyPgSQL.PgSQL")
-reflector = SQLReflector( dbpool, [RoomRow], runTests )
+reflector = SQLReflector( dbpool, [RoomRow] )
 </pre>
 
 <h2>Creating Row Objects</h2>
