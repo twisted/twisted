@@ -26,7 +26,7 @@ from twisted.protocols import dns
 
 
 class RountripDNSTestCase(unittest.TestCase):
-    """Decoding and then encoding various objects."""
+    """Encoding and then decoding various objects."""
     
     names = ["example.org", "go-away.fish.tv", "23strikesback.net"]
     
@@ -58,4 +58,18 @@ class RountripDNSTestCase(unittest.TestCase):
                     self.assertEquals(result.type, dnstype)
                     self.assertEquals(result.cls, dnscls)
     
+    def testRR(self):
+        # encode the RR
+        f = StringIO()
+        dns.RR("test.org", 3, 4, 17, "foobar").encode(f)
+        
+        # decode the result
+        f.seek(0, 0)
+        result = dns.RR()
+        result.decode(f)
+        self.assertEquals(result.name.name, "test.org")
+        self.assertEquals(result.type, 3)
+        self.assertEquals(result.cls, 4)
+        self.assertEquals(result.ttl, 17)
+        self.assertEquals(result.data, "foobar")
 
