@@ -1,3 +1,5 @@
 Twisted Lore
 
 Lore was recently split out of Twisted. This needs more work.
+
+Twisted Lore depends on Twisted and Twisted Web.
