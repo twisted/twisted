@@ -72,11 +72,12 @@ fakeOut("wxPython.wx")
 
 from twisted.python import components
 
-class NonMetaInterface:
+class Interface:
     pass
-NonMetaInterface.__doc__ = components.Interface.__doc__
 
-components.Interface = NonMetaInterface
+Interface.__module__ = 'twisted.python.components'
+Interface.__doc__ = components.Interface.__doc__
+components.Interface = Interface
 
 # initial twisted
 from twisted.python import reflect
