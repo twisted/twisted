@@ -7,7 +7,8 @@ from TwistedQuotes import quoters
 class QuoteResource(template.DOMTemplate):
     """I am a DOMTemplate that displays a fancy quote page."""
     
-    #The template; this must be valid XML (parsable by Python's DOM implementation)
+    # The template; this must be valid XML (parsable by Python's DOM
+    # implementation)
     templateFile = "WebQuotes.xhtml"
     
     def __init__(self, filenames):
