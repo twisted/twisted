@@ -63,3 +63,10 @@ class DirTestCase(unittest.TestCase):
         i.next()
         d.seek(l)
         self.assertEquals(d.tell(), l)
+
+    def testScan(self):
+        d = self.d
+        L = list(d.scan(lambda d: d.name.startswith('5')))
+        self.assertEquals(len(L), 1)
+        self.assertEquals(L[0].name, '5')
+

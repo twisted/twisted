@@ -171,6 +171,11 @@ PyDirObjectIterator_free(PyDirObjectIterator *self) {
 	PyObject_Del(self);
 }
 
+static PyObject *
+PyDirObjectIterator_iter(PyDirObjectIterator *self) {
+	Py_INCREF(self);
+	return (PyObject *)self;
+}
 
 static PyObject *
 PyDirObjectIterator_next(PyDirObjectIterator *self) {
@@ -229,7 +234,7 @@ static PyTypeObject PyDirObjectIterator_Type = {
 	0,							/* tp_clear */
 	0,							/* tp_richcompare */
 	0,							/* tp_weaklistoffset */
-	0,							/* tp_iter */
+	(getiterfunc)PyDirObjectIterator_iter,		/* tp_iter */
 	(iternextfunc)PyDirObjectIterator_next,	/* tp_iternext */
 	0,							/* tp_methods */
 	0,							/* tp_members */
@@ -293,6 +298,16 @@ PyDirObject_free(PyDirObject *self) {
 static PyObject *
 PyDirObject_iter(PyDirObject *self) {
 	return PyDirObjectIterator_FromDirObjectAndCallable(self, Py_None);
+}
+
+static PyObject *
+PyDirObject_scan(PyDirObject *self, PyObject* args) {
+	PyObject *func;
+	
+	if (!PyArg_ParseTuple(args, "O:scan", &func))
+		return NULL;
+	
+	return PyDirObjectIterator_FromDirObjectAndCallable(self, func);
 }
 
 static PyObject *
@@ -397,6 +412,8 @@ static PyMethodDef PyDirObject_methods[] = {
 		"tell() -> report the current position in this directory"},
 	{"seek", (PyCFunction)PyDirObject_seek, METH_VARARGS,
 		"seek(pos) -> change the current position in this directory"},
+	{"scan", (PyCFunction)PyDirObject_scan, METH_VARARGS,
+		"scan(pred) -> iterate over some of the contents of this directory"},
 	{"close", (PyCFunction)PyDirObject_close, METH_NOARGS,
 		"close(pos) -> close this directory"},
 	{NULL,	NULL},
