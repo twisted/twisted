@@ -9,10 +9,10 @@ DEFAULTPACKAGE=python$(DEFAULT)-twisted
 
 indeppackages=twisted python-twisted python-twisted-conch twisted-doc \
          twisted-quotes \
-         $(addsuffix -twisted $(addprefix python versions)) \
-         $(addsuffix -twisted-conch $(addprefix python versions))
+         $(addsuffix -twisted,$(addprefix python,$(versions))) \
+         $(addsuffix -twisted-conch,$(addprefix python,$(versions)))
 
-archpackages=$(addsuffix -twisted-bin $(addprefix python versions))
+archpackages=$(addsuffix -twisted-bin,$(addprefix python,$(versions)))
 
 packages=$(indeppackages) $(archpackages)
 
@@ -28,7 +28,7 @@ clean:
 	rm -rf build
 	find . -name "*.pyc" |xargs -r rm
 	# Add here commands to clean up after the build process.
-        for package in $(packages);\
+	for package in $(packages);\
 		do rm -rf debian/$$package;\
 	done
 	rm -rf debian/files debian/substvars
@@ -37,8 +37,9 @@ clean:
 install: install-stamp
 install-stamp: build-stamp 
 
-        set -e;for package in $(packages);\
-		do install -d debian/$$package/DEBIAN/;\
+	set -e;for package in $(packages);\
+		do rm -rf debian/$$package;\
+		install -d debian/$$package/DEBIAN/;\
 		install -d debian/$$package/usr/share/doc/$$package/;\
 		install -m 644 \
 		      debian/copyright debian/$$package/${DOC}/$$packag/;\
@@ -49,7 +50,6 @@ install-stamp: build-stamp
 
 	set -e; for version in $(versions); \
 		do package=python$$version-twisted;\
-		rm -rf debian/$package;\
 		/usr/bin/python$$version setup.py install \
                    --no-compile --root debian/$$package; \
 		install -d debian/$$package/usr/share/man/man1;\
@@ -58,22 +58,22 @@ install-stamp: build-stamp
 		install -m 644 ChangeLog debian/$$package/$$doc/changelog;\
 		gzip -9 debian/$$package/$$doc/changelog;\
 		install -m 644 TODO README CREDITS debian/$$package/$$doc/;\
-		set -e;for file in debian/$$package/usr/bin;\
-			do sed "1s|.*|#!/usr/bin/python$$version" $$file >\
+		for file in debian/$$package/usr/bin/*;\
+			do sed "1s|.*|#!/usr/bin/python$$version|" $$file >\
 			   $$file$$version;\
 			rm $$file;\
 			chmod 755 $$file$$version;\
 		done;\
-		set -e;for file in doc/man/*.1;\
-    			target=`basename $$file .1`$$version.1;\
+		for file in doc/man/*.1;\
+    			do target=`basename $$file .1`$$version.1;\
 			install -m 644 $$file \
 			        debian/$$package/usr/share/man/man1/$$target;\
 		done;\
-		gzip -9 debian/$$package/usr/share/man/man1/*.1
+		gzip -9 debian/$$package/usr/share/man/man1/*.1;\
 		sed "s/@VERSION@/$$version/g" debian/python-twisted.menu.in >\
 		    debian/$$package/usr/lib/menu/$$package;\
-		set -e;for maint in prerm postrm postinst;\
-			do sed -e "s/@VERSION@/$$version/g" \
+		for maint in prerm postrm postinst;\
+			do sed "s/@VERSION@/$$version/g" \
 			debian/python-twisted.$$maint.in > \
 			debian/$$package/DEBIAN/$$maint;\
 			chmod 755 debian/$$package/DEBIAN/$$maint;\
@@ -81,14 +81,14 @@ install-stamp: build-stamp
 	done
 
 	set -e;for file in debian/$(DEFAULTPACKAGE)/usr/bin/*;\
-		do target=`echo $$file | sed "s/$$version//"`;\
+		do target=`echo $$file | sed "s/$(DEFAULT)$$//"`;\
 		ln -s `basename $$file` $$target;\
 		ln -s `basename $$file`.1.gz \
-		      debian/$(DEFAULTPACKAGE/usr/share/man/man1/`basename $$target`.1.gz;\
+		      debian/$(DEFAULTPACKAGE)/usr/share/man/man1/`basename $$target`.1.gz;\
 	done
 
 	set -e; for version in $(versions);\
-		package=python$$version-twisted;\
+		do package=python$$version-twisted;\
 		binpackage=python$$version-twisted-bin;\
 		for file in `find debian/python$$version-twisted -name "*.so"`;\
 			do target=`echo $$file | sed 's/twisted/twisted-bin/'`;\
