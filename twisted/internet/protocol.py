@@ -44,7 +44,7 @@ class Factory:
         """
         if not self.numPorts:
             if self.noisy:
-                log.msg("Starting factory %s" % self)
+                log.msg("Starting factory %r" % self)
             self.startFactory()
         self.numPorts = self.numPorts + 1
 
@@ -60,7 +60,7 @@ class Factory:
         self.numPorts = self.numPorts - 1
         if not self.numPorts:
             if self.noisy:
-                log.msg("Stopping factory %s" % self)
+                log.msg("Stopping factory %r" % self)
             self.stopFactory()
 
     def startFactory(self):
@@ -138,11 +138,16 @@ class ClientFactory(Factory):
 class _InstanceFactory(ClientFactory):
     """Factory used by ClientCreator."""
 
+    noisy = False
+    
     def __init__(self, reactor, instance, deferred):
         self.reactor = reactor
         self.instance = instance
         self.deferred = deferred
 
+    def __repr__(self):
+        return "<ClientCreator factory: %r>" % (self.instance, )
+    
     def buildProtocol(self, addr):
         self.reactor.callLater(0, self.deferred.callback, self.instance)
         return self.instance
