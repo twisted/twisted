@@ -124,9 +124,11 @@ def getCache(module):
         try:
             cache = pickle.load(file(dropcache))
             lastCached = getmtime(dropcache)
+            dirtyCache = False
         except:
             cache = {}
             lastCached = 0
+            dirtyCache = True
         try:
             dropinNames = os.listdir(p)
         except WindowsError, e:
@@ -152,6 +154,7 @@ def getCache(module):
 
         for moduleName, lastChanged in pys.iteritems():
             if lastChanged >= lastCached or moduleName not in cache:
+                dirtyCache = True
                 try:
                     provider = namedAny(module.__name__ + '.' + moduleName)
                 except:
@@ -162,25 +165,26 @@ def getCache(module):
 
         topcache.update(cache)
 
-        newCacheData = pickle.dumps(cache, 2)
-        tmpCacheFile = dropcache + ".new"
-        try:
-            stage = 'opening'
-            f = file(tmpCacheFile, 'wb')
-            stage = 'writing'
-            f.write(newCacheData)
-            stage = 'closing'
-            f.close()
-            stage = 'renaming'
-            os.rename(tmpCacheFile, dropcache)
-        except (OSError, IOError), e:
-            # A large number of errors can occur here.  There's nothing we
-            # can really do about any of them, but they are also non-fatal
-            # (they only slow us down by preventing results from being
-            # cached).  Notify the user of the error, but proceed as if it
-            # had not occurred.
-            log.msg("Error %s plugin cache file %r (%r): %r" % (
-                stage, tmpCacheFile, dropcache, os.strerror(e.errno)))
+        if dirtyCache:
+            newCacheData = pickle.dumps(cache, 2)
+            tmpCacheFile = dropcache + ".new"
+            try:
+                stage = 'opening'
+                f = file(tmpCacheFile, 'wb')
+                stage = 'writing'
+                f.write(newCacheData)
+                stage = 'closing'
+                f.close()
+                stage = 'renaming'
+                os.rename(tmpCacheFile, dropcache)
+            except (OSError, IOError), e:
+                # A large number of errors can occur here.  There's nothing we
+                # can really do about any of them, but they are also non-fatal
+                # (they only slow us down by preventing results from being
+                # cached).  Notify the user of the error, but proceed as if it
+                # had not occurred.
+                log.msg("Error %s plugin cache file %r (%r): %r" % (
+                    stage, tmpCacheFile, dropcache, os.strerror(e.errno)))
 
     return topcache
 
