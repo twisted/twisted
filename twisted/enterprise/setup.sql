@@ -32,7 +32,7 @@ CREATE TABLE accounts
 (
     name        varchar(32) not null,
     passwd    varchar(32) not null,
-    accountid   integer not null
+    account_id   integer not null
 )
 go
 

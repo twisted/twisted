@@ -33,7 +33,7 @@ class DbClient(pb.Referenceable):
     def doLogin(self):
         """This begins the login process"""
         self.client = pb.Broker()
-        tcp.Client(self.host, 8732, self.client)
+        tcp.Client(self.host, 8787, self.client)
         self.client.requestIdentity("twisted", "matrix", callback = self.preConnected, errback  = self.couldntConnect)
 
     def couldntConnect(self, err):

@@ -27,10 +27,10 @@ def getDebug():
     return 0
 
 def mgr():
-    return manager.ManagerSingle( service =  "postgres",
-                                  server = 'nothing',
-                                  database = "glyph",
-                                  username = "glyph",
+    return manager.ManagerSingle( service =  "sybase",
+                                  server = 'metallica',
+                                  database = "twisted",
+                                  username = "twisted",
                                   host = 'localhost',
                                   port = '5433',
                                   password = "matrix")
@@ -90,7 +90,7 @@ class ServiceTestCase(unittest.TestCase):
 
     def testBulk(self):
         if getDebug(): print "starting Bulk"
-        NUMREQUESTS = 100
+        NUMREQUESTS = 1000
         for i in range(0,NUMREQUESTS):
             request = requests.PasswordRequest('testuser', self.gotData, self.gotError)
             self.manager.addRequest(request)
