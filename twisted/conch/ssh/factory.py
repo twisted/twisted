@@ -41,6 +41,8 @@ class SSHFactory(protocol.Factory):
             self.privateKeys = self.getPrivateKeys()
         if not hasattr(self,'primes'):
             self.primes = self.getPrimes()
+            if not self.primes:
+                log.msg('disabling diffie-hellman-group-exchange because we cannot find moduli file')
 
     def buildProtocol(self, addr):
         t = transport.SSHServerTransport()
@@ -63,6 +65,8 @@ class SSHFactory(protocol.Factory):
 
 class OpenSSHFactory(SSHFactory):
     dataRoot = '/usr/local/etc'
+    moduliRoot = '/usr/local/etc' # for openbsd which puts moduli in a different
+                                  # directory from keys
     def getPublicKeys(self):
         ks = {}
         for file in os.listdir(self.dataRoot):
@@ -87,7 +91,7 @@ class OpenSSHFactory(SSHFactory):
         return ks
     def getPrimes(self):
         try:
-            return primes.parseModuliFile(self.dataRoot+'/moduli')
+            return primes.parseModuliFile(self.moduliRoot+'/moduli')
         except IOError:
             return None
 

@@ -43,7 +43,8 @@ class Options(usage.Options):
     synopsis = "Usage: mktap sshd [-i <interface>] [-p <port>] [-d <dir>] "
     optParameters = [["interface", "i", "", "local interface to which we listen"],
                   ["port", "p", 5822, "Port on which to listen"],
-                  ["data", "d", "/etc", "directory to look for host keys in"]]
+                  ["data", "d", "/etc", "directory to look for host keys in"],
+                  ["moduli", "", None, "directory to look for moduli in (if different from --data"]]
 
     longdesc = "Makes a SSH server.."
 
@@ -56,5 +57,6 @@ def updateApplication(app, config):
     t.authorizer = config.opts.has_key('auth') and config.opts['auth'] or authorizer.OpenSSHConchAuthorizer()
     t.authorizer.setApplication(app)
     t.dataRoot = config.opts['data']
+    t.moduliRoot = config.opts['moduli'] or config.opts['data']
     portno = int(config.opts['port'])
     app.listenTCP(portno, t, interface=config.opts['interface'])
