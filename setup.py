@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (c) 2001 by Twisted Matrix Laboratories
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.26 2002/03/21 13:35:56 itamarst Exp $
+$Id: setup.py,v 1.27 2002/03/27 23:52:09 jh Exp $
 """
 
 import distutils, os, sys, string
@@ -105,7 +105,8 @@ class build_scripts_create(build_scripts):
             try:
                 if sys.platform == "win32":
                     file.write('@echo off\n'
-                        '%(python)s -c "from %(package)s.scripts.%(module)s import run; run()" %%$\n'
+                        'if NOT "%%_4ver%%" == "" %(python)s -c "from %(package)s.scripts.%(module)s import run; run()" %%$\n'
+                        'if     "%%_4ver%%" == "" %(python)s -c "from %(package)s.scripts.%(module)s import run; run()" %%*\n'
                         % script_vars)
                 else:
                     file.write('#! %(python)s\n'
