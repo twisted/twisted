@@ -3,7 +3,7 @@
 ### Twisted Preamble
 # This makes sure that users don't have to set up their environment
 # specially in order to run these programs from bin/.
-import sys, os, string
+import sys, os, string, shutil
 if string.find(os.path.abspath(sys.argv[0]), os.sep+'Twisted') != -1:
     sys.path.insert(0, os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]
 ), os.pardir, os.pardir)))
@@ -11,6 +11,7 @@ sys.path.insert(0, os.curdir)
 ### end of preamble
 
 import os, sys
+tmp_dir = '_epyrun_tmp' #only used for partial builds
 
 # HACK: Don't import stuff that we don't like
 
@@ -211,7 +212,7 @@ for i in range(1, len(sys.argv)):
             #sanity check on names
             for name in names:
                 if 'twisted' not in name:
-                    raise SystemExit, "You can only specify twisted modules or packages"
+                    raise SystemExit, 'You can only specify twisted modules or packages'
             document_all = False
             sys.argv[i:] = []
             #if -o was specified, we need to change it to point to a tmp dir
@@ -220,9 +221,10 @@ for i in range(1, len(sys.argv)):
             try:
                 i = sys.argv.index('-o')
                 old_out_dir = sys.argv[i+1]
-                sys.argv[i+1] = 'doc/tmp/'
+                os.mkdir(tmp_dir)
+                sys.argv[i+1] = tmp_dir
             except ValueError:
-                sys.argv[1:1] = ['-o', 'doc/tmp/']
+                sys.argv[1:1] = ['-o', tmp_dir]
             break
 
 if document_all:
@@ -263,10 +265,15 @@ if 0:
 else:
     cli()
 
+def moveFilesOut(arg, dirname, fnames): #used when doing partial builds
+    for fn in fnames:
+        if fn.startswith('twisted.'):
+            shutil.move('%s%s%s' % (tmp_dir, os.sep, fn), old_out_dir)
+        
 if not document_all:
     #move module html files in to place (skip index.html and friends since they won't be right)
-    os.system('mv doc/tmp/twisted.*.html %s' % old_out_dir)
-    #clean up - remove html files in doc/tmp/
-    os.system('rm doc/tmp/*.html doc/tmp/*.css')
+    os.path.walk(tmp_dir, moveFilesOut, None)
+    #clean up
+    shutil.rmtree(tmp_dir)
 
 print 'Done!'
