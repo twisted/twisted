@@ -1,3 +1,10 @@
+twisted (0.99.2-1) unstable; urgency=low
+
+  * New upstream
+  * Fixed build dependencies (Closes: #159258)
+
+ -- Moshe Zadka <moshez@debian.org>  Mon, 23 Sep 2002 08:56:05 -0500
+
 twisted (0.99.0+0.99.1rc5-1) unstable; urgency=low
 
   * changelog entry to let the deb build.
