@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import os, struct
+import os, struct, sys
 from twisted.conch import identity, error
 from twisted.conch.ssh import keys, transport, factory, userauth, connection, common, session
 from twisted.cred import authorizer
@@ -22,16 +22,19 @@ from twisted.internet import reactor, defer, app, protocol
 from twisted.python import log
 from pyunit import unittest
 
-publicRSA = "ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAEEAtGjpLkkSunM1pejcYuIPPH4vO/Duf734AKqjl2n7a4jhRJ8XRdRpw1+YZlCvQ4JJCD5wc74RWukctaO1Nkjz7w== Paul@MOO"
+publicRSA = "ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAGEArzJx8OYOnJmzf4tfBEvLi8DVPrJ3/c9k2I/Az64fxjHf9imyRJbixtQhlH9lfNjUIx+4LmrJH5QNRsFporcHDKOTwTTYLh5KmRpslkYHRivcJSkbh/C+BR3utDS555mV comment"
 
 privateRSA = """-----BEGIN RSA PRIVATE KEY-----
-MIIBNwIBAAJBALRo6S5JErpzNaXo3GLiDzx+Lzvw7n+9+ACqo5dp+2uI4USfF0XU
-acNfmGZQr0OCSQg+cHO+EVrpHLWjtTZI8+8CASMCQAUnkaI8miKVk9GKT3CKHbFF
-bxBXV0V6dMzRrOcRqBkD3NzN7Am6JCigGKXkUI9XywW94zCGCE+ZTLKDI+ZQU0sC
-IQDoDLiPtxHzeS2S5BVL5lUb+7dZGfH6u1mb0ApLgk5bTwIhAMcHv0I6T4S8TqbU
-BF/ELGtDkQe3ePO9mgR9q4E2/zVhAiANQo40GRb3+Eu/QDu7Mbu4dMimAXuKq564
-ckm7LAR6PwIgYKv9z7XsG+ZvWFhZ5V9IxmKlh2e+Z8J+Ai5pPsLw/KsCIF0pE6qv
-cXe26viSsgdUpS7mgSJABCwOYRBE+BlwH2tU
+MIIByAIBAAJhAK8ycfDmDpyZs3+LXwRLy4vA1T6yd/3PZNiPwM+uH8Yx3/YpskSW
+4sbUIZR/ZXzY1CMfuC5qyR+UDUbBaaK3Bwyjk8E02C4eSpkabJZGB0Yr3CUpG4fw
+vgUd7rQ0ueeZlQIBIwJgbh+1VZfr7WftK5lu7MHtqE1S1vPWZQYE3+VUn8yJADyb
+Z4fsZaCrzW9lkIqXkE3GIY+ojdhZhkO1gbG0118sIgphwSWKRxK0mvh6ERxKqIt1
+xJEJO74EykXZV4oNJ8sjAjEA3J9r2ZghVhGN6V8DnQrTk24Td0E8hU8AcP0FVP+8
+PQm/g/aXf2QQkQT+omdHVEJrAjEAy0pL0EBH6EVS98evDCBtQw22OZT52qXlAwZ2
+gyTriKFVoqjeEjt3SZKKqXHSApP/AjBLpF99zcJJZRq2abgYlf9lv1chkrWqDHUu
+DZttmYJeEfiFBBavVYIF1dOlZT0G8jMCMBc7sOSZodFnAiryP+Qg9otSBjJ3bQML
+pSTqy7c3a2AScC/YyOwkDaICHnnD3XyjMwIxALRzl0tQEKMXs6hH8ToUdlLROCrP
+EhQ0wahUTCk1gKA4uPD6TMTChavbh4K63OvbKg==
 -----END RSA PRIVATE KEY-----"""
 
 publicDSA = "ssh-dss AAAAB3NzaC1kc3MAAABBAIbwTOSsZ7Bl7U1KyMNqV13Tu7yRAtTr70PVI3QnfrPumf2UzCgpL1ljbKxSfAi05XvrE/1vfCFAsFYXRZLhQy0AAAAVAM965Akmo6eAi7K+k9qDR4TotFAXAAAAQADZlpTW964haQWS4vC063NGdldT6xpUGDcDRqbm90CoPEa2RmNOuOqi8lnbhYraEzypYH3K4Gzv/bxCBnKtHRUAAABAK+1osyWBS0+P90u/rAuko6chZ98thUSY2kLSHp6hLKyy2bjnT29h7haELE+XHfq2bM9fckDx2FLOSIJzy83VmQ== Paul@MOO"
@@ -157,8 +160,10 @@ class SSHTestServer(SSHTestBase, transport.SSHServerTransport): pass
 
 class SSHTestServerAuth(userauth.SSHUserAuthServer):
 
+    authCount = None # this will be set by each test 
+
     def areDone(self):
-        return len(self.authenticatedWith)==2
+        return len(self.authenticatedWith) == self.authCount
 
 class SSHTestClientAuth(userauth.SSHUserAuthClient):
 
@@ -189,7 +194,7 @@ class SSHTestClient(SSHTestBase, transport.SSHClientTransport):
     def verifyHostKey(self, key, fp):
         global theTest
         theTest.assertEquals(key, keys.getPublicKeyString(data = publicRSA))
-        theTest.assertEquals(fp,'34:f1:6f:02:29:ad:17:f9:8f:96:8a:9b:94:c7:49:43')
+        theTest.assertEquals(fp,'3d:13:5f:cb:c9:79:8a:93:06:27:65:bc:3d:0b:8f:af')
         return 1
 
     def connectionSecure(self):
@@ -374,14 +379,14 @@ class SSHTestFactory(factory.SSHFactory):
 
     def getPublicKeys(self):
         return {
-            'ssh-rsa':keys.getPublicKeyString('rsa_test.pub'),
-            'ssh-dss':keys.getPublicKeyString('dsa_test.pub')
+            'ssh-rsa':keys.getPublicKeyString(data=publicRSA),
+            'ssh-dss':keys.getPublicKeyString(data=publicDSA)
         }
 
     def getPrivateKeys(self):
         return {
-            'ssh-rsa':keys.getPrivateKeyObject('rsa_test'),
-            'ssh-dss':keys.getPrivateKeyObject('dsa_test')
+            'ssh-rsa':keys.getPrivateKeyObject(data=privateRSA),
+            'ssh-dss':keys.getPrivateKeyObject(data=privateDSA)
         }
 
     def getPrimes(self):
@@ -392,6 +397,20 @@ class SSHTestFactory(factory.SSHFactory):
     def getService(self, trans, name):
         return factory.SSHFactory.getService(self, trans, name)
 
+class SSHTestOpenSSHProcess(protocol.ProcessProtocol):
+
+    buf = ''
+    
+    def outReceived(self, data):
+        self.buf += data
+        theTest.fac.proto.expectedLoseConnection = 1
+
+    def processEnded(self, reason):
+        global theTest
+        theTest.assertEquals(reason.value.exitCode, 0, 'exit code was not 0: %i' % reason.value.exitCode)
+        theTest.assertEquals(self.buf, 'hello\r\n')
+        reactor.crash()
+
 class SSHTransportTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -399,10 +418,19 @@ class SSHTransportTestCase(unittest.TestCase):
         open('rsa_test.pub','w').write(publicRSA)
         open('dsa_test.pub','w').write(publicDSA)
         open('dsa_test','w').write(privateDSA)
+        os.chmod('dsa_test', 33152)
+        os.chmod('rsa_test', 33152)
+        open(os.path.expanduser('~/.ssh/known_hosts'),'a').write('localhost '+publicRSA)
 
     def tearDown(self):
         for f in ['rsa_test','rsa_test.pub','dsa_test','dsa_test.pub']:
             os.remove(f)
+        lines = open(os.path.expanduser('~/.ssh/known_hosts'),'r').readlines()
+        try:
+            lines.remove('localhost ' + publicRSA)
+        except ValueError:
+            lines.remove('localhost ' + publicRSA + '\n')
+        open(os.path.expanduser('~/.ssh/known_hosts'), 'w').writelines(lines)
 
     def testOurServerOurClient(self):
         """test the SSH server against the SSH client
@@ -411,10 +439,31 @@ class SSHTransportTestCase(unittest.TestCase):
         theTest = self
         auth = ConchTestAuthorizer()
         ident = ConchTestIdentity('testuser', auth)
+        SSHTestServerAuth.authCount = 2
         auth.addIdentity(ident)
         fac = SSHTestFactory()
         fac.authorizer = auth
+        theTest.fac = fac
         host = reactor.listenTCP(0, fac).getHost()
         port = host[2]
         reactor.connectTCP('localhost', port, SSHTestClientFactory())
+        reactor.run()
+
+    def testOurServerOpenSSHClient(self):
+        """test the SSH server against the OpenSSH client
+        """
+        cmdline = '/usr/bin/ssh -l testuser -p %i -oPasswordAuthentication=no -i dsa_test localhost echo hello'
+        global theTest
+        theTest = self
+        auth = ConchTestAuthorizer()
+        ident = ConchTestIdentity('testuser', auth)
+        SSHTestServerAuth.authCount = 1 # only public key
+        auth.addIdentity(ident)
+        fac = SSHTestFactory()
+        fac.authorizer = auth
+        theTest.fac = fac
+        host = reactor.listenTCP(0, fac).getHost()
+        port = host[2]
+        cmds = (cmdline % port).split()
+        reactor.spawnProcess(SSHTestOpenSSHProcess(), 'ssh', cmds)
         reactor.run()
