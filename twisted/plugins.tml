@@ -60,7 +60,7 @@ register("Twisted Words",
          type="tap")
 
 register("Twisted News",
-         "twisted.tap.news",
+         "twisted.news.tap",
          description="News Server",
          type='tap',
          tapname="news")

@@ -20,7 +20,7 @@ Maintainer: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
 Stability: semi-stable
 """
 
-from twisted.protocols import nntp
+from twisted.news import nntp
 from twisted.internet import protocol, reactor
 
 import time
