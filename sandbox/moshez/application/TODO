@@ -1,8 +1,0 @@
-* Manual
-  * What is Service and ServiceCollection
-    * Writing new services
-  * What Application is
-  * Running network servers and clients
-  * Writing .tac files
-  * Writing tap plugins
-* Port tkmktap
