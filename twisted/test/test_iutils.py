@@ -8,6 +8,7 @@ Test running processes.
 """
 
 from twisted.trial import unittest, util
+from twisted.test.test_process import SignalMixin
 
 import gzip, os, popen2, time, sys, signal
 
@@ -16,7 +17,7 @@ from twisted.internet import reactor, utils, interfaces
 from twisted.python import components
 
 
-class UtilsTestCase(unittest.TestCase):
+class UtilsTestCase(unittest.TestCase, SignalMixin):
     """Test running a process."""
     
     output = None
