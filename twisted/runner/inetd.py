@@ -116,20 +116,3 @@ class InetdFactory(ServerFactory):
     
     def __init__(self, service):
         self.service = service
-
-
-def main(options=None):
-    from twisted.runner import inetdtap as tap
-    # Parse options, read various config files
-    if not options:
-        options = tap.Options()
-        options.parseOptions()
-    
-    app = Application('tinet')
-    tap.updateApplications(app, options)
-    app.run(save=0)
-
-
-if __name__ == '__main__':
-    main()
-
