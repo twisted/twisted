@@ -326,8 +326,11 @@ lorePath = os.path.join("twisted", 'lore')
 mailTestPath = os.path.join('twisted', 'mail', 'test')
 mailTestFiles = ['rfc822.message', 'process.alias.sh']
 
-testPath = os.path.join("twisted", 'test')
-testFiles = ['server.pem', 'template.tpl']
+loreTestPath = os.path.join('twisted', 'lore', 'test')
+loreTestFiles = ['template.tpl']
+
+webTestPath = os.path.join('twisted', 'web', 'test')
+webTestFiles = ['server.pem']
 
 wovenPath = os.path.join('twisted', 'web', 'woven')
 wovenFiles = ['FlashConduitGlue.html', 'WebConduitGlue.html',
@@ -347,7 +350,8 @@ setup_args['data_files']=[
     ]
 
 for pathname, filenames in [(wovenPath, wovenFiles),
-                            (testPath, testFiles),
+                            (loreTestPath, loreTestFiles),
+                            (webTestPath, webTestFiles),
                             (mailTestPath, mailTestFiles)]:
     setup_args['data_files'].extend(
         [(pathname, [os.path.join(pathname, filename)])
