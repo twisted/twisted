@@ -229,7 +229,7 @@ objdoc.DocMap._add = _add
 objdoc.make_uid = make_uid
 
 # HACK: add dummy im_func attr to Method to make epydoc happy
-Method.im_func = None
+Method.im_func = property(lambda s: s)
 
 # HACK: teach inspect.getargspec how to extract info from Methods
 import inspect
