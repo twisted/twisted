@@ -23,6 +23,8 @@ Keywords:
 User-Agent: tin/1.4.5-20010409 ("One More Nightmare") (UNIX) (Linux/2.4.17 (i686))
 
 this is a test
+.
+..
 ...
 lala
 moo
@@ -67,7 +69,7 @@ class TestNNTPClient(nntp.NNTPClient):
         self.assertEquals(len(info), 6)
         self.assertEquals(info, GROUP)
         
-        self.postArticle(string.replace(POST_STRING, '\n', '\r\n'))
+        self.postArticle(POST_STRING)
     
     
     def getSubscriptionsFailed(self, error):
@@ -78,7 +80,7 @@ class TestNNTPClient(nntp.NNTPClient):
         raise AssertionError("fetchGroup() failed: %s" % (error,))
 
 
-    def postFailed(self, err):
+    def postFailed(self, error):
         raise AssertionError("postArticle() failed: %s" % (error,))
 
 
@@ -87,15 +89,10 @@ class TestNNTPClient(nntp.NNTPClient):
 
     
     def gotArticle(self, info):
-        origPost = POST_STRING.replace('\n', '\r\n')
-        origBody = origPost.split('\r\n\r\n')[1]
-        newBody = info.split('\r\n\r\n', 1)[1]
+        origBody = POST_STRING.split('\n\n')[1]
+        newBody = info.split('\n\n', 1)[1]
 
-        # XXX The strip shouldn't be necessary, but I don't
-        # know where it needs fixing and I don't want to commit
-        # a broken test.  Tailing whitespace is irrelevant anyway. :)
-        self.assertEquals(origBody.strip(), newBody.strip())
-
+        self.assertEquals(origBody, newBody)
         
         # We're done
         self.transport.loseConnection()

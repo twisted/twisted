@@ -450,9 +450,11 @@ class NNTPClient(basic.LineReceiver):
 
     def _stateArticle(self, line):
         if line != '.':
+            if line.startswith('.'):
+                line = line[1:]
             self._newLine(line, 0)
         else:
-            self.gotArticle('\n'.join(self._endState()))
+            self.gotArticle('\n'.join(self._endState())+'\n')
 
 
     def _stateHead(self, line):
@@ -464,16 +466,18 @@ class NNTPClient(basic.LineReceiver):
 
     def _stateBody(self, line):
         if line != '.':
+            if line.startswith('.'):
+                line = line[1:]
             self._newLine(line, 0)
         else:
-            self.gotBody('\n'.join(self._endState()))
+            self.gotBody('\n'.join(self._endState())+'\n')
 
 
     def _headerPost(self, (code, message)):
         if code == 340:
-            self.transport.write(self._postText[0])
-            if self._postText[-2:] != '\r\n':
-                self.sendLine('\r\n')
+            self.transport.write(self._postText[0].replace('\n', '\r\n').replace('\r\n.', '\r\n..'))
+            if self._postText[0][-1:] != '\n':
+                self.sendLine('')
             self.sendLine('.')
             del self._postText[0]
             self._newState(None, self.postFailed, self._headerPosted)
@@ -737,8 +741,6 @@ class NNTPServer(basic.LineReceiver):
             defer = self.factory.backend.postRequest(article)
             defer.addCallbacks(self._gotPost, self._errPost)
         else:
-            if line and line[0] == '.':
-                line = line[1:]
             self.message = self.message + line + '\r\n'
 
 
@@ -781,8 +783,6 @@ class NNTPServer(basic.LineReceiver):
             d = self.factory.backend.postRequest(article)
             d.addCallbacks(self._didTakeThis, self._errTakeThis)
         else:
-            if line and line[0] == '.':
-                line = line[1:]
             self.message = self.message + line + '\r\n'
 
 
@@ -848,15 +848,12 @@ class NNTPServer(basic.LineReceiver):
         self.currentIndex = index
         self.sendLine('220 %d %s article' % (index, id))
         s = basic.FileSender()
-        d = s.beginFileTransfer(article, self.transport, self.transformChunk)
+        d = s.beginFileTransfer(article, self.transport)
         d.addCallback(self.finishedFileTransfer)
     
     ##   
-    ## Helpers for FileSender
+    ## Helper for FileSender
     ##
-    def transformChunk(self, chunk):
-        return chunk.replace('\n', '\r\n').replace('\r\n.', '\r\n..')
-
     def finishedFileTransfer(self, lastsent):
         if lastsent != '\n':
             line = '\r\n.'
@@ -920,8 +917,9 @@ class NNTPServer(basic.LineReceiver):
             body = StringIO.StringIO(body)
         self.currentIndex = index
         self.sendLine('221 %d %s article retrieved' % (index, id))
+        self.lastsent = ''
         s = basic.FileSender()
-        d = s.beginFileTransfer(body, self.transport, self.transformChunk)
+        d = s.beginFileTransfer(body, self.transport)
         d.addCallback(self.finishedFileTransfer)
 
     def _errBody(self, failure):
@@ -1010,8 +1008,6 @@ class NNTPServer(basic.LineReceiver):
             
             self.message = ''
         else:
-            if line.startswith('.'):
-                line = line[1:]
             self.message = self.message + line + '\r\n'
 
 
