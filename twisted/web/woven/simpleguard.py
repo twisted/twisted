@@ -45,6 +45,8 @@ class MarkAuthenticatedResource:
 
     __implements__ = resource.IResource,
 
+    isLeaf = False
+
     def __init__(self, resource, name):
         self.authenticated = Authenticated(name)
         self.resource = resource
