@@ -73,7 +73,7 @@ class DirectoryListing(html.Interface):
         return io.getvalue()
 
     def pagetitle(self, request):
-        return "Directory Listing For %s" % request.path[:-len('.idx')]
+        return "Directory Listing For %s" % request.path
     def content(self, request):
         return "<CENTER>"+self.runBox(request, "Directory Contents",
                                       self.directoryContents)+"</CENTER>"
@@ -175,11 +175,6 @@ class File(resource.Resource, coil.Configurable):
         """
         if path == '..':
             return error.NoResource()
-        if path == '.idx':
-            if os.path.exists(os.path.join(self.path,self.indexName)):
-                return error.NoResource()
-            else:
-                return DirectoryListing(self.path)
         if path == '':
             path = self.indexName
             # This next step is so urls like
@@ -187,7 +182,10 @@ class File(resource.Resource, coil.Configurable):
             # will be represented (internally) as
             #     ['foo','bar','baz','index.qux']
             # So that request.childLink() will work correctly.
-            request.prepath[-1] = self.indexName
+            if os.path.exists(os.path.join(self.path,self.indexName)):
+                request.prepath[-1] = self.indexName
+            else:
+                return DirectoryListing(self.path)
         newpath = os.path.join(self.path, path)
         # forgive me, oh lord, for I know not what I do
         p, ext = os.path.splitext(newpath)
@@ -206,30 +204,12 @@ class File(resource.Resource, coil.Configurable):
             mode, ino, dev, nlink, uid, gid, size, atime, mtime, ctime =\
                   os.stat(self.path)
         except OSError:
-            # This part is quite hacky, but it gets the job done.  What I'm
-            # saying here is to redirect to .idx (the directory index) if this
-            # is supposed to be an index.html but no index.html actually
-            # exists.
-            if os.path.basename(self.path) == self.indexName:
-                request.setResponseCode(http.MOVED_PERMANENTLY)
-                request.setHeader("location","http://%s%s.idx" % (
-                    request.getHeader("host"),
-                    (string.split(request.uri,'?')[0])))
-                return ' '
             return error.NoResource().render(request)
         if stat.S_ISDIR(mode):
-            # tack a '/' on to the response -- this isn't exactly correct, but
-            # works for the avg. case now.  If you're looking for an index
-            # which doesn't exist, tack on a "/.idx" instead, which will cause
-            # the directory index to be loaded.
-            if os.path.exists(os.path.join(self.path,self.indexName)):
-                loc = ''
-            else:
-                loc = '.idx'
-            request.setHeader("location","http://%s%s/%s" % (
+            # tack a '/' on to the response if it's a directory.
+            request.setHeader("location","http://%s%s/" % (
                 request.getHeader("host"),
-                (string.split(request.uri,'?')[0]),
-                loc))
+                (string.split(request.uri,'?')[0])))
             request.setResponseCode(http.MOVED_PERMANENTLY)
             return " "
         request.setHeader('accept-ranges','bytes')
