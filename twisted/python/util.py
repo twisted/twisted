@@ -592,6 +592,16 @@ try:
                 return
             
     def initgroups(uid, primaryGid):
+        """Initializes the group access list.
+
+        This is done by reading the group database /etc/group and using all
+        groups of which C{uid} is a member.  The additional group
+        C{primaryGid} is also added to the list.
+
+        If the given user is a member of more than C{NGROUPS}, arbitrary
+        groups will be silently discarded to bring the number below that
+        limit.
+        """       
         try:
             # Try to get the maximum number of groups
             max_groups = os.sysconf("SC_NGROUPS_MAX")
@@ -623,7 +633,11 @@ try:
 
 except:
     def initgroups(uid, primaryGid):
-        pass
+        """Do nothing.
+
+        Underlying platform support require to manipulate groups is missing.
+        """
+
 
 def switchUID(uid, gid, euid=False):
     if euid:
