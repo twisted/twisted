@@ -454,24 +454,28 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
     def __init__(self):
         self.portal      = None
         self.shell       = None     # the avatar
-        self.user        = None     # the username of the client connected 
+        self.user        = None     # the username of the client connected
         self.peerHost    = None     # the (type,ip,port) of the client
         self.dtpTxfrMode = None     # PASV or PORT, no default
-        self.blocked     = None     # a command queue for pipelining 
-        self.binary      = True     # binary transfers? False implies ASCII. DEFAULT = True
+        self.blocked     = None     # a command queue for pipelining
         self.dtpFactory  = None     # generates a single DTP for this session
         self.dtpInstance = None     # a DTP protocol instance
         self.dtpPort     = None     # object returned from listenTCP
         self.dtpInetPort = None     # result of dtpPort.getHost() used for saving inet port number
         self.dtpHostPort = None     # client address/port to connect to on PORT command
 
+        self.binary      = True     # binary transfers? False implies ASCII. defaults to True
+
     def connectionMade(self):
-        log.debug('ftp-pi connectionMade: instance %d' % self.instanceNum)
-        if self.instanceNum >= self.factory.maxProtocolInstances:
+        log.debug('ftp-pi connectionMade: instance %s' % self.instanceNum)
+
+        # TODO: add tests for this!
+        if (self.factory.maxProtocolInstances is not None and 
+                self.instanceNum >= self.factory.maxProtocolInstances): 
             self.reply(TOO_MANY_CONNECTIONS)
             self.transport.loseConnection()
             return
-        self.reply(WELCOME_MSG)                     #TODO: fix welcome to tell client we support pipelining
+        self.reply(WELCOME_MSG)                     
         self.peerHost = self.transport.getPeer()
         self.setTimeout(self.timeOut)
 #        self.__testingautologin()
@@ -964,25 +968,29 @@ class FTPFactory(protocol.Factory):
     """
     protocol = FTP
     allowAnonymous = True
-    #userAnonymous = 'anonymous'        # this is set in the Realm
+    userAnonymous = 'anonymous'        
     timeOut = 600
 
-    maxProtocolInstances = 100
+    maxProtocolInstances = None
     currentInstanceNum = 0
     instances = []
 
-    def __init__(self, portal=None):
+    def __init__(self, portal=None, userAnonymous='anonymous', 
+                       maxProtocolInstances=None):
         self.portal = portal
+        self.userAnonymous = 'anonymous'
+        self.maxProtocolInstances = maxProtocolInstances
 
     def buildProtocol(self, addr):
-        log.debug('%d of %d max ftp instances: ' % (self.currentInstanceNum, self.maxProtocolInstances))
+        log.debug('%s of %s max ftp instances: ' % (self.currentInstanceNum, self.maxProtocolInstances))
         pi            = protocol.Factory.buildProtocol(self, addr)
         pi.protocol   = self.protocol
         pi.portal     = self.portal
         pi.timeOut    = FTPFactory.timeOut
         pi.factory    = self
-        self.currentInstanceNum += 1
-        pi.instanceNum = self.currentInstanceNum
+        if self.maxProtocolInstances is not None:
+            self.currentInstanceNum += 1
+            pi.instanceNum = self.currentInstanceNum
         self.instances.append(pi)
         return pi
 
@@ -991,8 +999,8 @@ class FTPFactory(protocol.Factory):
         # to avoid reactor complaints
         [p.setTimeout(None) for p in self.instances if p.timeOut is not None]
         
-
 # -- Cred Objects --
+
 
 class IFTPShell(components.Interface):
     """An abstraction of the shell commands used by the FTP protocol

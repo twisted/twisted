@@ -355,7 +355,7 @@ TestUtilityFunctions.todo = 'workin on it'
 
 class TestFTPFactory(FTPTestCase):
     def testBuildProtocol(self):
-        ftpf = ftp.FTPFactory()
+        ftpf = ftp.FTPFactory(maxProtocolInstances=1)
         cinum = ftpf.currentInstanceNum
         p = ftpf.buildProtocol(('i', None, 30000))
         self.failUnless(components.implements(ftpf, interfaces.IProtocolFactory), 
@@ -374,6 +374,8 @@ class TestFTPFactory(FTPTestCase):
         self.failUnlessEqual(p.instanceNum, ftpf.currentInstanceNum)
         self.failUnlessEqual(len(ftpf.instances), 1)
         self.failUnlessEqual(ftpf.instances[0], p)
+
+    testBuildProtocol.todo = "add test for maxProtocolInstances=None"
         
 class TestFTPServer(FTPTestCase):
     def testNotLoggedInReply(self):
