@@ -275,12 +275,18 @@ class SectionLatexSpitter(LatexSpitter):
 
     baseLevel = 1
 
+    start_title = '\\section{'
+
     def visitNode_title(self, node):
-        self.writer('\\section{')
         self.visitNodeDefault(node)
         self.writer('\\label{%s}}\n' % os.path.basename(self.filename))
 
     start_title = end_title = end_body = start_body = start_html = None
+
+
+class ChapterLatexSpitter(SectionLatexSpitter):
+    baseLevel = 0
+    start_title = '\\chapter{'
 
 
 class HeadingLatexSpitter(BaseLatexSpitter):

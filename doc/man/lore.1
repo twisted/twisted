@@ -29,10 +29,13 @@ formats, lore and mlore support html, latex and lint, while man allows
 lore.
 .TP
 \fI--config\fR
-Add input/output-specific information. In the core Lore, it doesn't
-depend on the input at all: HTML output allows for 'ext=<extension>',
+Add input/output-specific information. 
+HTML output allows for 'ext=<extension>',
 'template=<template>' and 'baseurl=<format string for API URLs>'. LaTeX
-output allows for 'section', and Lore output allows for 'ext=<extension>'.
+output allows for 'section' or 'chapter' in Lore, and nothing in Math-Lore. 
+Lore output allows for 'ext=<extension>'. Lint output allows nothing.
+Note that disallowed \fI--config\fR options are merely ignored, and do
+not cause errors.
 .SH DESCRIPTION
 The exact HTML syntax to follow is documented in Twisted's doc-standard.html.
 If no files are given, all *.html documents in docsdir will be processed.

@@ -67,31 +67,17 @@ def doFile(fn, docsdir, ext, url, templ, linkrel=''):
     cn.writexml(open(os.path.splitext(fn)[0]+ext, 'wb'))
 
 
-class ProcessingFunctionFactory:
+class ProcessingFunctionFactory(default.ProcessingFunctionFactory):
 
-    def generate_html(self, d):
-        n = default.htmlDefault.copy()
-        n.update(d)
-        d = n
-        if d['ext'] == "None":
-            ext = ""
-        else:
-            ext = d['ext']
-        templ = microdom.parse(open(d['template']))
-        df = lambda file, linkrel: doFile(file, linkrel, d['ext'],
-                                          d['baseurl'], templ)
-        return df
+    doFile = [doFile]
 
-    def generate_latex(self, d):
-        df = lambda file, linkrel: latex.convertFile(file,
-                                   latex.MathLatexSpitter)
-        return df
+    latexSpitters = {None: MathLatexSpitter}
 
-    def generate_lint(self, d):
+    def getLintChecker(self):
         checker = lint.getDefaultChecker()
         checker.allowedClasses = checker.allowedClasses.copy()
         checker.allowedClasses['div'].__self__['latexmacros'] = 1
         checker.allowedClasses['span'].__self__['latexformula'] = 1
-        return lambda file, linkrel: lint.doFile(file, checker)
+        return checker
 
 factory = ProcessingFunctionFactory()

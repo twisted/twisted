@@ -23,6 +23,8 @@ htmlDefault = {'template': 'template.tpl', 'baseurl': '%s', 'ext': '.xhtml'}
 
 class ProcessingFunctionFactory:
 
+    doFile = [tree.doFile]
+
     def generate_html(self, d):
         n = htmlDefault.copy()
         n.update(d)
@@ -32,21 +34,27 @@ class ProcessingFunctionFactory:
         else:
             ext = d['ext']
         templ = microdom.parse(open(d['template']))
-        df = lambda file, linkrel: tree.doFile(file, linkrel, d['ext'],
+        df = lambda file, linkrel: self.doFile[0](file, linkrel, d['ext'],
                                            d['baseurl'], templ)
         return df
 
+    latexSpitters = {None: latex.LatexSpitter,
+                     'section': latex.SectionLatexSpitter,
+                     'chapter': latex.ChapterLatexSpitter}
+
     def generate_latex(self, d):
-        if d.get('section'):
-            df = lambda file, linkrel: latex.convertFile(file,
-                                       latex.SectionLatexSpitter)
-        else:
-            df = lambda file, linkrel: latex.convertFile(file,
-                                       latex.LatexSpitter)
+        spitter = self.latexSpitters[None]
+        for (key, value) in self.latexSpitters.items():
+            if key and d.get(key):
+               spitter = value
+        df = lambda file, linkrel: latex.convertFile(file, spitter)
         return df
 
+    def getLintChecker(self):
+        return lint.getDefaultChecker()
+
     def generate_lint(self, d):
-        checker = lint.getDefaultChecker()
+        checker = self.getLintChecker()
         return lambda file, linkrel: lint.doFile(file, checker)
 
 factory = ProcessingFunctionFactory()
