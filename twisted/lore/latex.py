@@ -170,7 +170,7 @@ class LatexSpitter:
         for child in node.childNodes:
             numCols = max(numCols, len(child.childNodes))
         numCols += 1
-        self.writer('\\begin{tabular}{@{}'+'l'*numCols+'@{}}')
+        self.writer('\\begin{table}[ht]\\begin{center}\\begin{tabular}{@{}'+'l'*numCols+'@{}}')
         for child in node.childNodes:
             th = 0
             for col in child.childNodes:
@@ -184,6 +184,10 @@ class LatexSpitter:
             if th:
                 self.writer('\\hline\n')
         self.writer('\\end{tabular}\n')
+        if node.hasAttribute('title'):
+            self.writer('\\caption{%s}' 
+                        % latexEscape(node.getAttribute('title')))
+        self.writer('\\end{center}\\end{table}\n')
          
     visitNode_div = visitNode_span
 
