@@ -39,6 +39,20 @@ class LatexSpitter(XMLParser):
         m = getattr(self, "end_"+name, None)
         m and m(name)
 
+    def start_img(self, _, attributes):
+        fileName = attributes['src']
+        target, ext = os.path.splitext(fileName)
+        ext = ext[1:]
+        m = getattr(self, 'convert_'+ext, None)
+        if not m:
+            return
+        target = os.path.basename(target)+'.eps'
+        m(fileName, target)
+        self.writer('\\includegraphics{%s}\n' % target)
+
+    def convert_png(self, src, target):
+        os.system("pngtopnm %s | pnmtops > %s" % (src, target))
+
     def _headerStart(self, h, attributes):
         level = int(h[1])-2
         level += self.baseLevel
