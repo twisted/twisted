@@ -64,7 +64,7 @@ from twisted.python.failure import Failure
 from twisted.python.compat import StopIteration, iter
 import types
 
-def wrap(obj, trap = None):
+def wrap(obj, *trap):
     """ Wraps various objects for use within a flow """
     if isinstance(obj, Stage):
         return obj
@@ -105,7 +105,7 @@ class Stage(Instruction):
         iterable object which must be passed to a yield statement 
         before each call to next().   Usage...
 
-           iterable = DerivedStage(trap=(SpamError, EggsError))
+           iterable = DerivedStage( ... , SpamError, EggsErrorx))
            yield iterable
            for result in iterable:
                // handle good result, or SpamError or EggsError
@@ -133,13 +133,7 @@ class Stage(Instruction):
                      // handle iterable.result
 
     """      
-    def __init__(self, trap = None):
-        if trap:
-            import types
-            if type(trap) == types.ClassType: 
-                trap = (trap,)
-        else:
-            trap = tuple()
+    def __init__(self, *trap):
         self._ready = 0
         self._trap = trap
         self.stop   = 0
@@ -186,8 +180,8 @@ class Wrapper(Stage):
         means to stop without providing a result, while all other
         exceptions provide a Failure self.result followed by stoppage.
     """
-    def __init__(self, callable, trap):
-        Stage.__init__(self, trap)
+    def __init__(self, callable, *trap):
+        Stage.__init__(self, *trap)
         self._callable   = callable
         self._next_stage = None
         self._stop_next  = 0
@@ -198,6 +192,11 @@ class Wrapper(Stage):
                 self._next_stage = result
                 return Continue
             return result
+        # this blows the non-deferred depenency...
+        from twisted.internet import defer
+        if isinstance(result, defer.Deferred):
+            self._next_stage = DeferredWrapper(result)
+            return Continue
         self.result = result
     def _yield(self):
         """ executed during a yield statement """
@@ -242,8 +241,8 @@ class Callable(Wrapper):
 
 class Iterable(Wrapper):
     """ Wraps iterables (generator/iterator) for use in a flow """      
-    def __init__(self, iterable, trap):
-        Wrapper.__init__(self, iterable.next, trap)
+    def __init__(self, iterable, *trap):
+        Wrapper.__init__(self, iterable.next, *trap)
 
 class Merge(Stage):
     """ Merges two or more Stages results into a single stream
@@ -320,10 +319,10 @@ class DeferredWrapper(Stage):
         would then cause the stream to only be resumed once
         the deferred has finished
     """
-    def __init__(self, deferred, trap = None, delay = 0):
+    def __init__(self, deferred, *trap):
         Stage.__init__(self, trap)
         deferred.addBoth(self._callback)
-        self._cooperate = Cooperate(delay)
+        self._cooperate = Cooperate()
         self._result    = None
         self._stop_next = 0
     def _callback(self, res):
@@ -360,12 +359,12 @@ class Threaded(Stage):
         that attribute is true, then this wrapper will assume that
         data arrives in chunks via a sequence instead of by values.
     """
-    def __init__(self, iterable, trap = None, delay = 0):
+    def __init__(self, iterable, *trap):
         Stage.__init__(self, trap)
         self._iterable  = iterable
         self._stop      = 0
         self._buffer    = []
-        self._cooperate = Cooperate(delay)
+        self._cooperate = Cooperate()
         if getattr(iterable, 'chunked', 0):
             self._append = self._buffer.extend
         else:
