@@ -2,12 +2,6 @@ from twisted.trial import unittest
 from twisted.trial.assertions import *
 import os
 from twisted.web import static
-from twisted.protocols import loopback
-from twisted.internet import protocol
-from twisted.test.test_protocols import StringIOWithoutClosing
-import string, random, urllib, cgi
-
-from twisted.web.test.test_http import DummyHTTPHandler
 
 class FakeRequest:
     method = 'GET'
