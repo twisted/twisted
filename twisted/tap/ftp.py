@@ -24,7 +24,7 @@ class Options(usage.Options):
     opt_p = opt_port
 
 def getPorts(app, config):
-    t = ftp2.ShellFactory()
+    t = ftp.ShellFactory()
     try:
         portno = config.portno
     except AttributeError:
