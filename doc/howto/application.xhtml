@@ -74,7 +74,6 @@ application = service.Application("myapplication")
 s = service.IService(application)
 sc = service.IServiceCollection(application)
 proc = service.IProcess(application)
-proc = service.IProcess(application)
 per = sob.IPersistable(application)
 </pre>
 
@@ -89,8 +88,9 @@ is possible to get named services from it by name. All services can be
 gotten from it via either indexing or iteration.</p>
 
 <p>Services can have a parent. Parents are set using
-<code>setServiceParent</code>. The parent must always be something
-that complies with the <code>IServiceCollection</code> interface.</p>
+<code>setServiceParent</code>. Services are detached from their parent with
+<code>disownServiceParent</code>. The parent must always be something that
+complies with the <code>IServiceCollection</code> interface.</p>
 
 <p>Most services will inherit from <code>Service</code>. This class
 will set an attribute <code>running</code> to a true value
@@ -118,7 +118,7 @@ named <code>FooClient</code>. The arguments to its constructor are the
 same as the arguments to the method. It calls the method on application
 start-up. It might, or might not, stop the connection on application
 shut-down. (This limitation will be removed at some point, and guaranteed
-disconnection will be implemnted.)</p>
+disconnection will be implemented.)</p>
 
 <p>The last service in <code>twisted.application.internet</code> is
 <code>TimerService</code>. The constructor takes a period, a callable
