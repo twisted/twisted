@@ -5,15 +5,28 @@ from __future__ import generators
 import sys
 import zipfile
 import py_compile
+
 # we're going to ignore failures to import tkinter and fall back
-# to using the console for this
-try:
-    import Tkinter
-    from Tkinter import *
-except ImportError:
-    pass
+# to using the console if the required dll is not found
+
+# Scary kludge to work around tk84.dll bug: 
+# https://sourceforge.net/tracker/index.php?func=detail&aid=814654&group_id=5470&atid=105470
+# Without which(): you get a windows missing-dll popup message
+from twisted.runner.procutils import which
+if sys.version_info[:2]==(2,2):
+    tkdll='tk83.dll'
+else:
+    tkdll='tk84.dll'
+if which(tkdll):
+    try:
+        import Tkinter
+        from Tkinter import *
+        from twisted.internet import tksupport
+    except ImportError:
+        pass
+
 # twisted
-from twisted.internet import tksupport, reactor, defer
+from twisted.internet import reactor, defer
 from twisted.python import failure, log, zipstream, util, usage, log
 # local
 import os.path

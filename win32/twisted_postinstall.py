@@ -45,11 +45,12 @@ def install(sitepackages, prefix):
     # FIXME - should be able to do it this way (one invocation)
 #    if os.path.isfile(doczip):
 #        args.extend(['--zipfile', doczip, '--ziptargetdir', docdir])
-    args.extend(['--compiledir', join(sitepackages, 'twisted'),)
+    args.extend(['--compiledir', join(sitepackages, 'twisted'),])
     tkunzip.run(args)
 
     if os.path.isfile(doczip):
-        tkunzip.run(['tkunzip', '--zipfile', doczip, '--ziptargetdir', docdir,)
+        tkunzip.run(['tkunzip', '--zipfile', doczip, '--ziptargetdir',
+                     docdir,])
 
 
 if __name__=='__main__':
