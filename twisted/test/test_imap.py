@@ -38,6 +38,7 @@ from twisted.trial import unittest
 from twisted.python import util
 from twisted.python import components
 from twisted.python.util import sibpath
+from twisted.python import failure
 
 from twisted import cred
 import twisted.cred.error
@@ -827,12 +828,30 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
             return self.client.login('testuser', 'password-test')
         def delete():
             return self.client.delete('delete/me')
-        d = self.connected.addCallbacks(strip(login))
+        d = self.connected.addCallback(strip(login))
         d.addCallbacks(strip(delete), self._ebGeneral)
         d.addCallbacks(self._cbStopClient, self._ebGeneral)
         self.loopback()
         
         self.assertEquals(SimpleServer.theAccount.mailboxes.keys(), [])
+
+    def testIllegalDelete(self):
+        self.stashed = None
+        def login():
+            return self.client.login('testuser', 'password-test')
+        def delete():
+            return self.client.delete('inbox')
+        def stash(result):
+            self.stashed = result
+
+        d = self.connnected.addCallback(strip(login))
+        d.addCallbacks(strip(delete), self._ebGeneral)
+        d.addBoth(stash)
+        d.addCallbacks(self._cbStopClient, self._ebGeneral)
+        self.loopback()
+        
+        self.failUnless(isinstance(self.stashed, failure.Failure))
+
 
     def testNonExistentDelete(self):
         def login():
