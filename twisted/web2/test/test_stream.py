@@ -4,7 +4,7 @@ from twisted.trial import unittest
 from twisted.trial.util import wait, spinUntil
 from twisted.trial.assertions import *
 from twisted.internet import reactor, defer, interfaces
-
+from twisted.python import log
 from zope.interface import Interface, Attribute, implements
 
 from twisted.python.util import sibpath
@@ -123,7 +123,7 @@ class MemoryStreamTest(SimpleStreamTests, unittest.TestCase):
 
 
 class TestStreamer:
-    implements(stream.IStream)
+    implements(stream.IStream, stream.IByteStream)
 
     length = None
 
@@ -251,8 +251,8 @@ class ProcessStreamerTest(unittest.TestCase):
         d = stream.readStream(p.outStream, l.append)
         def verify(_):
             assertEquals("".join(l), ("x" * 1000) * 100)
-        p.run()
-        return d.addCallback(verify)
+        d2 = p.run()
+        return d.addCallback(verify).addCallback(lambda _: d2)
 
     def test_errouput(self):
         p = self.runCode("import sys\nfor i in range(100): sys.stderr.write('x' * 1000)")
@@ -278,7 +278,22 @@ class ProcessStreamerTest(unittest.TestCase):
         p = self.runCode("raise ValueError")
         l = []
         from twisted.internet.error import ProcessTerminated
-        return p.run().addErrback(lambda _: _.trap(ProcessTerminated) and l.append(1)).addCallback(lambda _: assertEquals(l, [1]))
+        def verify(_):
+            assertEquals(l, [1])
+            assert_(p.outStream.closed)
+            assert_(p.errStream.closed)
+        return p.run().addErrback(lambda _: _.trap(ProcessTerminated) and l.append(1)).addCallback(verify)
+
+    def test_inputerror(self):
+        p = self.runCode("import sys\nsys.stdout.write(sys.stdin.read())",
+                         TestStreamer(["hello", defer.fail(ZeroDivisionError())]))
+        l = []
+        d = stream.readStream(p.outStream, l.append)
+        d2 = p.run()
+        def verify(_):
+            assertEquals("".join(l), "hello")
+            return d2
+        return d.addCallback(verify).addCallback(lambda _: log.flushErrors(ZeroDivisionError))
 
 
 class AdapterTestCase(unittest.TestCase):
