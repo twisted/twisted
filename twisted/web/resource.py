@@ -66,7 +66,7 @@ class Resource:
         """
         return error.NoResource()
 
-    def getChildWithDefault(self,path, request):
+    def getChildWithDefault(self, path, request):
         """(internal) Retrieve a static or dynamically generated child resource from me.
 
         Arguments are similiar to getChild.
@@ -79,6 +79,19 @@ class Resource:
                 return dict[path]
 
         return self.getChild(path, request)
+
+    def getChildForRequest(self, request):
+        """(internal) Get a child of mine dependant on a particular request.
+
+        This will be called on me as a top-level resource of a site in order to
+        retrieve my appropriate child or grandchild to display.
+        """
+        res = self
+        while request.postpath and not res.isLeaf:
+            pathElement = request.postpath.pop(0)
+            request.prepath.append(pathElement)
+            res = res.getChildWithDefault(pathElement, request)
+        return res
 
 
     def putChild(self, path, child):

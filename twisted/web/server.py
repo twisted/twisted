@@ -280,9 +280,11 @@ class Request(pb.Copyable, http.HTTP):
     def getAllHeaders(self):
         return self.received
 
+    session = None
+
     def getSession(self):
         # Session management
-        if not hasattr(self, 'session'):
+        if not self.session:
             cookietxt = self.getHeader("cookie")
             if cookietxt:
                 cookie = string.split(cookietxt, '; ')
@@ -290,8 +292,14 @@ class Request(pb.Copyable, http.HTTP):
                 for cook in cookie:
                     k, v = string.split(cook, '=')
                     vals[k] = v
-                self.session = self.site.getSession(vals['TWISTED_SESSION'])
-            else:
+                sessionCookie = vals.get('TWISTED_SESSION')
+                if sessionCookie:
+                    try:
+                        self.session = self.site.getSession(sessionCookie)
+                    except KeyError:
+                        pass
+            # if it still hasn't been set, fix it up.
+            if not self.session:
                 self.session = self.site.makeSession()
                 self.setHeader('Set-Cookie',
                                'TWISTED_SESSION='+self.session.uid)
@@ -420,13 +428,7 @@ class Site(protocol.Factory):
         stopping when it hits an element where isLeaf is true.
         """
         request.site = self
-        res = self.resource
-        while request.postpath and not res.isLeaf:
-            pathElement = request.postpath.pop(0)
-            request.prepath.append(pathElement)
-            res = res.getChildWithDefault(pathElement, request)
-
-        return res
+        return self.resource.getChildForRequest(request)
 
 
 class HTTPClient(tcp.Client):
