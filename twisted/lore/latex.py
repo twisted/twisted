@@ -125,7 +125,9 @@ class LatexSpitter(BaseLatexSpitter):
         level = (int(node.tagName[1])-2)+self.baseLevel
         self.writer('\n\n\\'+level*'sub'+'section{')
         #self.visitNodeDefault(node)
-        getLatexText(node, self.writer, latexEscape)
+        #getLatexText(node, self.writer, latexEscape)
+        spitter = HeadingLatexSpitter(self.writer, self.currDir, self.filename)
+        spitter.visitNodeDefault(node)
         self.writer('}\n')
 
     def visitNode_a_listing(self, node):
@@ -231,6 +233,13 @@ class SectionLatexSpitter(LatexSpitter):
 
     start_title = end_title = end_body = start_body = start_html = None
 
+
+class HeadingLatexSpitter(BaseLatexSpitter):
+    start_q = "``"
+    end_q = "''"
+
+    writeNodeData = LatexSpitter.writeNodeData.im_func
+    
 
 def processFile(spitter, fin):
     dom = microdom.parse(fin).documentElement
