@@ -313,6 +313,8 @@ class FTPClientAndServerTests(FTPServerTests):
             ce = self.callbackException
             raise ce[0], ce[1], ce[2]
 
+        log.flushErrors(ftp.ConnectionLost)
+
 
 class FTPPassiveClientAndServerTests(FTPClientAndServerTests):
     """Identical to FTPClientTests, except with passive transfers.
