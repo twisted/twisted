@@ -19,7 +19,15 @@
     and how to use a particular implementation is available via
     "<a href="choosing-reactor.html">Choosing a Reactor</a>". </p>
 
-    <p> The reactor usually implements a set of interfaces: </p>
+    <p> You can get to the reactor object using the following code:</p>
+
+<pre class="python">
+from twisted.internet import reactor
+</pre>
+
+    <p> The reactor usually implements a set of interfaces, but 
+       depending on the chosen reactor and the platform, some of
+       the interfaces may not be implemented: </p>
 
     <ul>
       <li><code class="API" base="twisted.internet.interfaces"
