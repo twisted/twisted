@@ -12,7 +12,9 @@ This is mainly for use of internal Twisted code. We encourage you to use
 the latest version of Python directly from your code, if possible.
 """
 
-import sys, types, socket, struct, __builtin__, exceptions, UserDict
+from __future__ import generators
+
+import os, sys, types, socket, struct, __builtin__, exceptions, UserDict
 
 #elif sys.version_info[:2] == (2, 2):
 #    def dict(*arg, **kwargs):
@@ -110,6 +112,38 @@ if sys.version_info[:2] == (2,2):
         return d
 else:
     adict = dict
+
+try:
+    os.walk
+except AttributeError:
+    def walk(top, topdown=True, onerror=None):
+        from os.path import join, isdir, islink
+
+        try:
+            names = os.listdir(top)
+        except OSError, e:
+            if onerror is not None:
+                onerror(err)
+            return
+
+        nondir, dir = [], []
+        nameLists = [nondir, dir]
+        for name in names:
+            nameLists[isdir(join(top, name))].append(name)
+
+        if topdown:
+            yield top, dir, nondir
+
+        for name in dir:
+            path = join(top, name)
+            if not islink(path):
+                for x in walk(path, topdown, onerror):
+                    yield x
+
+        if not topdown:
+            yield top, dir, nondir
+    os.walk = walk
+
 
 # Compatibility with compatibility
 # We want to get rid of these as quickly as we can
