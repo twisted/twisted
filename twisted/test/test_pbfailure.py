@@ -105,8 +105,9 @@ class PBFailureTest(unittest.TestCase):
     def success(self, result):
         if result in [42, 420, 4200]:
             self.total = self.total + 1
-        if self.total == 3:
-            reactor.stop()
+#        if self.total == 3:
+#            pass
+#            #reactor.stop()
 
     def failurePoop(self, fail):
         fail.trap(PoopError)
@@ -122,6 +123,7 @@ class PBFailureTest(unittest.TestCase):
 
     def timeOut(self):
         reactor.stop()
-        raise TimeoutError("Never got all three failures!")
+        if self.total != 3:
+            raise TimeoutError("Never got all three failures!")
 
 testCases = [PBFailureTest]
