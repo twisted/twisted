@@ -71,7 +71,7 @@ class Gtk2Reactor(default.PosixReactorBase):
 	if hasattr(source, 'fileno'):
             # handle python objects
             def wrapper(source, condition, real_s=source, real_cb=callback):
-                real_cb(real_s, condition)
+                return real_cb(real_s, condition)
             return gtk.input_add(source.fileno(), condition, wrapper)
         else:
             return gtk.input_add(source, condition, callback)
@@ -151,7 +151,8 @@ class Gtk2Reactor(default.PosixReactorBase):
                 # If source disconnected, don't call the rest of the methods.
                 break
         self.simulate()
-
+        return 1
+    
     def simulate(self):
         """Run simulation loops and reschedule callbacks.
         """
