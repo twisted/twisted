@@ -74,7 +74,7 @@ class Service:
         self.running = 1
 
     def stopService(self):
-        self.running = 1
+        self.running = 0
 
 
 class IServiceCollection(components.Interface):
