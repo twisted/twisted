@@ -60,8 +60,8 @@ class BodyTest(unittest.TestCase):
         self.assertEquals(b.position, (1, 1, 1))
 
     def testMultipleMovement(self):
-        x = point.Body(self.space, 1e9, (10, 0, 0), (-1, 0, 1))
-        y = point.Body(self.space, 1e9, (0, 0, 10), (0, 1, -1))
+        x = point.Body(self.space, 1, (10, 0, 0), (-1, 0, 1))
+        y = point.Body(self.space, 1, (0, 0, 10), (0, 1, -1))
 
         self.space._updatePosition()
         self.assertEquals(x.position, (9, 0, 1))
@@ -70,4 +70,3 @@ class BodyTest(unittest.TestCase):
         self.space._updatePosition()
         self.assertEquals(x.position, (8, 0, 2))
         self.assertEquals(y.position, (0, 2, 8))
-
