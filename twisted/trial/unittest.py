@@ -116,6 +116,14 @@ class TestCase:
     def failIfEqual(self, first, second, msg=None):
         if not first != second:
             raise FailTest, (msg or '%r == %r' % (first, second))
+    
+    def failUnlessIn(self, containee, container, msg=None):
+        if containee not in container:
+            raise FailTest, (msg or "%r not in %r" % (containee, container))
+
+    def failIfIn(self, containee, container, msg=None):
+        if containee in container:
+            raise FailTest, (msg or "%r in %r" % (containee, container))
 
     assertEqual = assertEquals = failUnlessEqual
     assertNotEqual = assertNotEquals = failIfEqual
@@ -123,6 +131,8 @@ class TestCase:
     assert_ = failUnless
     failIfEquals = failIfEqual
     assertIdentical = failUnlessIdentical
+    assertIn = failUnlessIn
+    assertNotIn = failIfIn
 
     def assertApproximates(self, first, second, tolerance, msg=None):
         if abs(first - second) > tolerance:
