@@ -61,6 +61,7 @@ The following attributes on the monitor can be set to configure behaviour
 """
 
 import os, time
+from signal import SIGTERM, SIGKILL
 from twisted.python import log
 from twisted.internet import app, protocol, reactor, process
 from twisted.protocols import basic
@@ -190,7 +191,7 @@ class ProcessMonitor(app.ApplicationService):
 
     def _forceStopProcess(self, proc):
         try:
-            proc.signalProcess(9)
+            proc.signalProcess(SIGKILL)
         except process.ProcessExitedAlready:
             pass
 
@@ -200,7 +201,7 @@ class ProcessMonitor(app.ApplicationService):
         proc = self.protocols[name].transport
         del self.protocols[name]
         try:
-            proc.signalProcess(15)
+            proc.signalProcess(SIGTERM)
         except process.ProcessExitedAlready:
             pass
         else:
@@ -235,7 +236,7 @@ def main():
     mon.addProcess('baz', ['/bin/sh', '-c',
                    'echo welcome;while :;do echo blah;sleep 5;done'])
     reactor.callLater(30, lambda mon=mon:
-                          os.kill(mon.protocols['baz'].transport.pid, 15))
+                          os.kill(mon.protocols['baz'].transport.pid, SIGTERM))
     reactor.callLater(60, mon.restartAll)
     application.run(save=0)
 
