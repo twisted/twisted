@@ -98,8 +98,16 @@ class FileTransferTestRealm:
 class SFTPTestBase(unittest.TestCase):
 
     def setUp(self):
-        os.mkdir('sftp_test')
-        os.mkdir('sftp_test/testDirectory')
+        try:
+            os.mkdir('sftp_test')
+        except OSError, e:
+            if e.args[0] == 17:
+                pass
+        try:
+            os.mkdir('sftp_test/testDirectory')
+        except OSError, e:
+            if e.args[0] == 17:
+                pass
 
         f=file('sftp_test/testfile1','w')
         f.write('a'*10+'b'*10)
@@ -359,23 +367,23 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, SFTPTestBase):
         self.failUnlessEqual(helpRes, cftp.StdioClient(None).cmd_HELP('').strip())
 
     def testGet(self):
-        getRes = self._getCmdResult('get testfile1 sftp_test/testfile2')
+        getRes = self._getCmdResult('get testfile1 "sftp_test/test file2"')
         f1 = file('sftp_test/testfile1').read()
-        f2 = file('sftp_test/testfile2').read()
+        f2 = file('sftp_test/test file2').read()
         self.failUnlessEqual(f1, f2, "get failed")
         log.msg(repr(getRes))
-        self.failUnlessEqual(getRes, "transferred %s/sftp_test/testfile1 to sftp_test/testfile2" % os.getcwd())
-        self.failIf(self._getCmdResult('rm testfile2'))
-        self.failIf(os.path.exists('sftp_test/testfile2'))
+        self.failUnless(getRes.endswith("Transferred %s/sftp_test/testfile1 to sftp_test/test file2" % os.getcwd()))
+        self.failIf(self._getCmdResult('rm "test file2"'))
+        self.failIf(os.path.exists('sftp_test/test file2'))
 
     def testPut(self):
-        putRes = self._getCmdResult('put sftp_test/testfile1 testfile2')
+        putRes = self._getCmdResult('put sftp_test/testfile1 "test\\"file2"')
         f1 = file('sftp_test/testfile1').read()
-        f2 = file('sftp_test/testfile2').read()
-        self.failUnlessEqual(f1, f2, "get failed")
-        self.failUnlessEqual(putRes, "transferred sftp_test/testfile1 to %s/sftp_test/testfile2" % os.getcwd())
-        self.failIf(self._getCmdResult('rm testfile2'))
-        self.failIf(os.path.exists('sftp_test/testfile2'))
+        f2 = file('sftp_test/test"file2').read()
+        self.failUnlessEqual(f1, f2, "put failed")
+        self.failUnless(putRes.endswith('Transferred sftp_test/testfile1 to %s/sftp_test/test"file2' % os.getcwd()))
+        self.failIf(self._getCmdResult('rm "test\\"file2"'))
+        self.failIf(os.path.exists('sftp_test/test"file2'))
         
     def testLink(self):
         linkRes = self._getCmdResult('ln testLink testfile1')

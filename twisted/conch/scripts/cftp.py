@@ -17,7 +17,7 @@ from twisted.internet import reactor, stdio, defer, utils
 from twisted.python import log, usage, failure
 
 import os, sys, getpass, struct, tty, fcntl, base64, signal, stat, errno
-import fnmatch, pwd
+import fnmatch, pwd, time
 
 class ClientOptions(options.ConchOptions):
     
@@ -42,6 +42,9 @@ class ClientOptions(options.ConchOptions):
         self['localPath'] = localPath 
 
 def run():
+    import hotshot
+    prof = hotshot.Profile('cftp.prof')
+    prof.start()
     args = sys.argv[1:]
     if '-l' in args: # cvs is an idiot
         i = args.index('-l')
@@ -61,6 +64,8 @@ def run():
         log.discardLogs()
     doConnect(options)
     reactor.run()
+    prof.stop()
+    prof.close()
 
 def handleError():
     from twisted.python import failure
@@ -105,6 +110,17 @@ def _ebExit(f):
 
 def _ignore(*args): pass
 
+class FileWrapper:
+
+    def __init__(self, f):
+        self.f = f
+        self.total = 0.0
+        f.seek(0, 2) # seek to the end
+        self.size = f.tell()
+
+    def __getattr__(self, attr):
+        return getattr(self.f, attr)
+
 class StdioClient(basic.LineReceiver):
 
     ps = 'cftp> '
@@ -114,6 +130,7 @@ class StdioClient(basic.LineReceiver):
         self.client = client
         self.currentDirectory = ''
         self.file = f
+        self.useProgressBar = (not f and 1) or 0
 
     def connectionMade(self):
         self.client.realPath('').addCallback(self._cbSetCurDir)
@@ -191,7 +208,35 @@ class StdioClient(basic.LineReceiver):
             self.client.transport.loseConnection()
         self._newLine()
 
+    def _getFilename(self, line):
+        line.lstrip()
+        if not line:
+            return None, ''
+        if line[0] in '\'"':
+            ret = []
+            line = list(line)
+            try:
+                for i in range(1,len(line)):
+                    c = line[i]
+                    if c == line[0]:
+                        return ''.join(ret), ''.join(line[i+1:]).lstrip()
+                    elif c == '\\': # quoted character
+                        del line[i]
+                        if line[i] not in '\'"\\':
+                            raise IndexError, "bad quote: \\%s" % line[i]
+                        ret.append(line[i])
+                    else:
+                        ret.append(line[i])
+            except IndexError:
+                raise IndexError, "unterminated quote"
+        ret = line.split(None, 1)
+        if len(ret) == 1:
+            return ret[0], ''
+        else:
+            return ret
+           
     def cmd_CD(self, path):
+        path, rest = self._getFilename(path)
         if not path.endswith('/'):
             path += '/'
         newPath = path and os.path.join(self.currentDirectory, path) or ''
@@ -210,21 +255,24 @@ class StdioClient(basic.LineReceiver):
         self.currentDirectory = path
 
     def cmd_CHGRP(self, rest):
-        grp, path = rest.split(' ', 1)
+        grp, rest = rest.split(None, 1)
+        path, rest = self._getFilename(rest)
         grp = int(grp)
         d = self.client.getAttrs(path)
         d.addCallback(self._cbSetUsrGrp, path, grp=grp)
         return d
     
     def cmd_CHMOD(self, rest):
-        mod, path = rest.split(' ', 1)
+        mod, rest = rest.split(None, 1)
+        path, rest = self._getFilename(rest)
         mod = int(mod, 8)
         d = self.client.setAttrs(path, {'permissions':mod})
         d.addCallback(_ignore)
         return d
     
     def cmd_CHOWN(self, rest):
-        usr, path = rest.split(' ', 1)
+        usr, rest = rest.split(None, 1)
+        path, rest = self._getFilename(rest)
         usr = int(usr)
         d = self.client.getAttrs(path)
         d.addCallback(self._cbSetUsrGrp, path, usr=usr)
@@ -239,11 +287,13 @@ class StdioClient(basic.LineReceiver):
         return d
 
     def cmd_GET(self, rest):
-        if ' ' in rest:
-            remote, local = rest.split()
+        remote, rest = self._getFilename(rest)
+        if rest:
+            local, rest = self._getFilename(rest)
         else:
-            remote = local = rest
-        lf = file(local, 'w')
+            local = remote
+        log.msg((remote, local))
+        lf = file(local, 'w', 0)
         path = os.path.join(self.currentDirectory, remote)
         d = self.client.openFile(path, filetransfer.FXF_READ, {})
         d.addCallback(self._cbGetOpenFile, lf)
@@ -255,12 +305,24 @@ class StdioClient(basic.LineReceiver):
         return f
 
     def _cbGetOpenFile(self, rf, lf):
+        if self.useProgressBar:
+            return rf.getAttrs().addCallback(self._cbGetFileSize, rf, lf)
+        else:
+            return self._cbGetStartReading(rf, lf)
+
+    def _cbGetFileSize(self, attrs, rf, lf):
+        rf.size = attrs['size']
+        return self._cbGetStartReading(rf, lf)
+
+    def _cbGetStartReading(self, rf, lf):
         bufferSize = self.client.transport.conn.options['buffersize']
         numRequests = self.client.transport.conn.options['requests']
+        rf.total = 0.0
         dList = []
         chunks = []
+        startTime = time.time()
         for i in range(numRequests):            
-            d = self._cbGetRead('', rf, lf, chunks, 0, bufferSize)
+            d = self._cbGetRead('', rf, lf, chunks, 0, bufferSize, startTime)
             dList.append(d)
         dl = defer.DeferredList(dList, fireOnOneErrback=1)
         dl.addCallback(self._cbGetDone, rf, lf)
@@ -276,11 +338,58 @@ class StdioClient(basic.LineReceiver):
                 chunks.insert(i, (end, chunk[0]))
                 return (end, chunk[0] - end)
             end = chunk[1]
-        bufSize = self.client.transport.conn.options['buffersize']
+        bufSize = int(self.client.transport.conn.options['buffersize'])
         chunks.append((end, end + bufSize))
         return (end, bufSize)
+   
+    def _abbrevSize(self, size):
+        # from http://mail.python.org/pipermail/python-list/1999-December/018395.html
+        _abbrevs = [
+            (1<<50L, 'PB'),
+            (1<<40L, 'TB'), 
+            (1<<30L, 'GB'), 
+            (1<<20L, 'MB'), 
+            (1<<10L, 'kb'),
+            (1, '')
+            ]
 
-    def _cbGetRead(self, data, rf, lf, chunks, start, size):
+        for factor, suffix in _abbrevs:
+            if size > factor:
+                break
+        return '%.1f' % (size/factor) + suffix
+
+    def _abbrevTime(self, t):
+        if t > 3600: # 1 hour
+            hours = int(t / 3600)
+            t -= (3600 * hours)
+            mins = int(t / 60)
+            t -= (60 * mins)
+            return "%i:%02i:%02i" % (hours, mins, t)
+        else:
+            mins = int(t/60)
+            t -= (60 * mins)
+            return "%02i:%02i" % (mins, t)
+
+    def _printProgessBar(self, f, startTime):
+        diff = time.time() - startTime
+        total = f.total
+        try:
+            winSize = struct.unpack('4H', 
+                fcntl.ioctl(0, tty.TIOCGWINSZ, '12345679'))
+        except IOError:
+            winSize = [None, 80]
+        speed = total/diff
+        if speed:
+            timeLeft = (f.size - total) / speed
+        else:
+            timeLeft = 0
+        front = f.name
+        back = '%3i%% %s %sps %s ' % ((total/f.size)*100, self._abbrevSize(total),
+                self._abbrevSize(total/diff), self._abbrevTime(timeLeft))
+        spaces = (winSize[1] - (len(front) + len(back) + 1)) * ' '
+        self.transport.write('\r%s%s%s' % (front, spaces, back)) 
+
+    def _cbGetRead(self, data, rf, lf, chunks, start, size, startTime):
         if data and isinstance(data, failure.Failure):
             log.msg('get read err: %s' % data)
             reason = data
@@ -298,6 +407,9 @@ class StdioClient(basic.LineReceiver):
                 i = chunks.index((start, start + size))
                 del chunks[i]
                 chunks.insert(i, (start, start + len(data)))
+            rf.total += len(data)
+        if self.useProgressBar:
+            self._printProgessBar(rf, startTime)
         chunk = self._getNextChunk(chunks)
         if not chunk:
             return
@@ -305,20 +417,23 @@ class StdioClient(basic.LineReceiver):
             start, length = chunk
         log.msg('asking for %i -> %i' % (start, start+length))
         d = rf.readChunk(start, length)
-        d.addBoth(self._cbGetRead, rf, lf, chunks, start, length)
+        d.addBoth(self._cbGetRead, rf, lf, chunks, start, length, startTime)
         return d
 
     def _cbGetDone(self, ignored, rf, lf):
         log.msg('get done')
         rf.close()
         lf.close()
-        return "transferred %s to %s" % (rf.name, lf.name)
+        if self.useProgressBar:
+            self.transport.write('\n')
+        return "Transferred %s to %s" % (rf.name, lf.name)
    
     def cmd_PUT(self, rest):
-        if ' ' in rest:
-            local, remote= rest.split()
+        local, rest = self._getFilename(rest)
+        if rest:
+            remote, rest = self._getFilename(rest)
         else:
-            remote = local = rest
+            remote = local
         lf = file(local, 'r')
         path = os.path.join(self.currentDirectory, remote)
         d = self.client.openFile(path, filetransfer.FXF_WRITE|filetransfer.FXF_CREAT, {})
@@ -328,24 +443,30 @@ class StdioClient(basic.LineReceiver):
 
     def _cbPutOpenFile(self, rf, lf):
         numRequests = self.client.transport.conn.options['requests']
+        if self.useProgressBar:
+            lf = FileWrapper(lf)
         dList = []
         chunks = []
+        startTime = time.time()
         for i in range(numRequests):
-            d = self._cbPutWrite(None, rf, lf, chunks)
+            d = self._cbPutWrite(None, rf, lf, chunks, startTime)
             if d:
                 dList.append(d)
         dl = defer.DeferredList(dList, fireOnOneErrback=1)
         dl.addCallback(self._cbPutDone, rf, lf)
         return dl
 
-    def _cbPutWrite(self, ignored, rf, lf, chunks):
+    def _cbPutWrite(self, ignored, rf, lf, chunks, startTime):
         chunk = self._getNextChunk(chunks)
         start, size = chunk
         lf.seek(start)
         data = lf.read(size)
+        if self.useProgressBar:
+            lf.total += len(data)
+            self._printProgessBar(lf, startTime)
         if data:
             d = rf.writeChunk(start, data)
-            d.addCallback(self._cbPutWrite, rf, lf, chunks)
+            d.addCallback(self._cbPutWrite, rf, lf, chunks, startTime)
             return d
         else:
             return
@@ -353,14 +474,19 @@ class StdioClient(basic.LineReceiver):
     def _cbPutDone(self, ignored, rf, lf):
         lf.close()
         rf.close()
-        return 'transferred %s to %s' % (lf.name, rf.name)
+        if self.useProgressBar:
+            self.transport.write('\n')
+        return 'Transferred %s to %s' % (lf.name, rf.name)
 
-        
     def cmd_LCD(self, path):
         os.chdir(path)
 
     def cmd_LN(self, rest):
-        linkpath, targetpath = rest.split(' ')
+        linkpath, rest = self._getFilename(rest)
+        targetpath, rest = self._getFilename(rest)
+        linkpath, targetpath = map(
+                lambda x: os.path.join(self.currentDirectory, x),
+                (linkpath, targetpath))
         return self.client.makeLink(linkpath, targetpath).addCallback(_ignore)
 
     def cmd_LS(self, rest):
@@ -376,7 +502,11 @@ class StdioClient(basic.LineReceiver):
         else:
             verbose = 0 
         rest = rest[:-1]
-        fullPath = os.path.join(self.currentDirectory, rest)
+        path, rest = self._getFilename(rest)
+        if not path:
+            fullPath = self.currentDirectory + '/'
+        else:
+            fullPath = os.path.join(self.currentDirectory, path)
         head, tail = os.path.split(fullPath)
         if '*' in tail or '?' in tail:
             glob = 1
@@ -430,10 +560,12 @@ class StdioClient(basic.LineReceiver):
             return '\n'.join(lines)
 
     def cmd_MKDIR(self, path):
+        path, rest = self._getFilename(path)
         path = os.path.join(self.currentDirectory, path)
         return self.client.makeDirectory(path, {}).addCallback(_ignore)
 
     def cmd_RMDIR(self, path):
+        path, rest = self._getFilename(path)
         path = os.path.join(self.currentDirectory, path)
         return self.client.removeDirectory(path).addCallback(_ignore)
 
@@ -441,6 +573,7 @@ class StdioClient(basic.LineReceiver):
         os.system("mkdir %s" % path)
 
     def cmd_RM(self, path):
+        path, rest = self._getFilename(path)
         path = os.path.join(self.currentDirectory, path)
         return self.client.removeFile(path).addCallback(_ignore)
 
@@ -448,7 +581,11 @@ class StdioClient(basic.LineReceiver):
         os.system("ls %s" % rest)
 
     def cmd_RENAME(self, rest):
-        oldpath, newpath = rest.split(' ')
+        oldpath, rest = self._getFilename(rest)
+        newpath, rest = self._getFilename(rest)
+        oldpath, newpath = map (
+                lambda x: os.path.join(self.currentDirectory, x),
+                (oldpath, newpath))
         return self.client.renameFile(oldpath, newpath).addCallback(_ignore)
 
     def cmd_EXIT(self, ignored):
@@ -475,6 +612,7 @@ ln linkpath targetpath          Symlink remote file.
 lpwd                            Print the local working directory.
 ls [-l] [path]                  Display remote directory listing.
 mkdir path                      Create remote directory.
+progress                        Toggle progress bar.
 put local-path [remote-path]    Put local file.
 pwd                             Print the remote working directory.
 quit                            Disconnect from the server.
@@ -490,6 +628,10 @@ version                         Print the SFTP version.
 
     def cmd_LPWD(self, ignored):
         return os.getcwd()
+
+    def cmd_PROGRESS(self, ignored):
+        self.useProgressBar = not self.useProgressBar
+        return "%ssing progess bar." % (self.useProgressBar and "U" or "Not u")
 
     def cmd_EXEC(self, rest):
         shell = pwd.getpwnam(getpass.getuser())[6]
