@@ -41,7 +41,6 @@ from twisted.protocols import dns
 
 import common
 
-
 class Resolver(common.ResolverBase):
     __implements__ = (interfaces.IResolver,)
 
@@ -50,7 +49,7 @@ class Resolver(common.ResolverBase):
 
     factory = None
     servers = None
-    dynamicServers = ()
+    dynServers = ()
     pending = None
     protocol = None
     connections = None
@@ -122,12 +121,11 @@ class Resolver(common.ResolverBase):
                 if mtime != self._lastResolvTime:
                     log.msg('%s changed, reparsing' % (self.resolv,))
                     self._lastResolvTime = mtime
-                    self.parseConfig()
+                    self.parseConfig(resolvConf)
         from twisted.internet import reactor
         self._parseCall = reactor.callLater(self._resolvReadInterval, self.maybeParseConfig)
 
-    def parseConfig(self):
-        resolvConf = file(self.resolv)
+    def parseConfig(self, resolvConf):
         servers = []
         for L in resolvConf:
             L = L.strip()
@@ -141,7 +139,7 @@ class Resolver(common.ResolverBase):
             elif L.startswith('search'):
                 self.search = L.split()[1:]
                 self.domain = None
-        self.dynamicServers = servers
+        self.dynServers = servers
 
 
     def pickServer(self):
@@ -151,17 +149,17 @@ class Resolver(common.ResolverBase):
         TODO: Weight servers for response time so faster ones can be
         preferred.
         """
-        if not self.servers and not self.dynamicServers:
+        if not self.servers and not self.dynServers:
             return None
         serverL = len(self.servers)
-        dynL = len(self.dynamicServers)
+        dynL = len(self.dynServers)
 
         self.index += 1
         self.index %= (serverL + dynL)
         if self.index < serverL:
             return self.servers[self.index]
         else:
-            return self.dynamicServers[self.index - serverL]
+            return self.dynServers[self.index - serverL]
 
     def connectionMade(self, protocol):
         self.connections.append(protocol)
