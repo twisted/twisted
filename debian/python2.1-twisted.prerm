@@ -1,8 +1,4 @@
 #!/bin/sh
-if [ \( "$1" = "upgrade" -o "$1" = "remove" \) -a -L /usr/doc/twisted ]; then
-	rm -f /usr/doc/twisted
-fi
-
 NAME=python2.1-twisted
 
 dpkg --listfiles $NAME |

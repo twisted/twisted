@@ -15,7 +15,7 @@ def all(dir):
 def system(command):
     ret = os.system(command)
     if ret != 0:
-        raise OSError(ret)
+	sys.exit(3)
 
 def install(files, target, mode='644'):
     system('install -m %s %s %s' % (mode, ' '.join(files), target))

@@ -18,21 +18,31 @@ Description: Event-based framework for internet applications. (dummy package)
  It replaces the "twisted" package, which was non-policy compliant.
 
 Package: python2.1-twisted
-Architecture: any
-Depends: ${shlibs:Depends}, python2.1
-Recommends: python2.1-tk, python2.1-xml
+Architecture: all
+Depends: python2.1, python2.1-twisted-bin
+Recommends: python2.1-xml
 Suggests: python2.1-pyopenssl, twisted-doc
-Description: Event-based framework for internet applications.
+Description: Event-based framework for internet applications. (Python 2.1)
  It includes a web server, a telnet server, a multiplayer RPG engine, a 
  generic client and server for remote object access, and APIs for creating 
  new protocols.
  . 
- This version is usable with python2.1
+ This version is usable with Python 2.1.
+
+Package: python2.1-twisted-bin
+Architecture: any
+Depends: ${shlibs:Depends}, python2.1
+Description: Event-based framework for internet applications
+ It includes a web server, a telnet server, a multiplayer RPG engine, a 
+ generic client and server for remote object access, and APIs for creating 
+ new protocols.
+ . 
+ This package contains the architectures specific files for python2.1-twisted
 
 Package: python2.2-twisted
 Architecture: any
-Depends: ${shlibs:Depends}, python2.2
-Recommends: python2.2-tk, python2.2-xml
+Depends: python2.2, python2.2-twisted-bin
+Recommends: python2.2-xml
 Suggests: python2.2-pyopenssl, twisted-doc
 Description: Event-based framework for internet applications.
  It includes a web server, a telnet server, a multiplayer RPG engine, a 
@@ -40,6 +50,16 @@ Description: Event-based framework for internet applications.
  new protocols.
  . 
  This version is usable with python2.2
+
+Package: python2.2-twisted-bin
+Architecture: any
+Depends: ${shlibs:Depends}, python2.1
+Description: Event-based framework for internet applications
+ It includes a web server, a telnet server, a multiplayer RPG engine, a 
+ generic client and server for remote object access, and APIs for creating 
+ new protocols.
+ . 
+ This package contains the architectures specific files for python2.2-twisted
 
 Package: twisted-doc
 Architecture: all

@@ -6,10 +6,9 @@
 
 build: build-stamp
 build-stamp:
-	rm -rf debian/python2.1-twisted debian/python2.2-twisted
-	install -d debian/python2.1-twisted debian/python2.2-twisted
-	/usr/bin/python2.1 setup.py install --no-compile --root debian/python2.1-twisted
-	/usr/bin/python2.2 setup.py install --no-compile --root debian/python2.2-twisted
+	set -e; for version in 2.1 2.2; \
+		do /usr/bin/python$$version setup.py build; \
+	done
 	touch build-stamp
 
 clean:
@@ -17,17 +16,34 @@ clean:
 	rm -rf build
 	find . -name "*.pyc" |xargs -r rm
 	# Add here commands to clean up after the build process.
-	rm -rf debian/python*-twisted debian/twisted-doc
+	rm -rf debian/python*-twisted debian/python*-twisted-bin debian/twisted-doc
 	rm -rf debian/files debian/substvars
 
 
 install: install-stamp
 install-stamp: build-stamp 
 	chmod +x debian/scripts/*
-	debian/scripts/install 2.1
-	debian/scripts/install 2.2
+	set -e; for version in 2.1 2.2; \
+		do rm -rf debian/python$$version-twisted; \
+		install -d debian/python$$version-twisted; \
+		/usr/bin/python$$version setup.py install \
+                   --no-compile --root debian/python$$version-twisted; \
+		debian/scripts/install $$version; \
+		install -d debian/python$$version-twisted-bin/usr/share/doc; \
+		install -d debian/python$$version-twisted-bin/DEBIAN; \
+		install -m 644 debian/python$$version-twisted-bin.README.Debian\
+		              debian/python$$version-twisted-bin/usr/share/doc;\
+		for file in `find debian/python$$version-twisted -name "*.so"`;\
+			do target=`echo $$file | sed 's/twisted/twisted-bin/'`;\
+			if [ ! -d `dirname $$target` ]; then\
+				install -d `dirname $$target`; \
+			fi; \
+			mv $$file $$target; \
+		done; \
+	done
 	debian/scripts/defaultpy
 
+	install -d debian/twisted-doc/DEBIAN/
 	install -d debian/twisted-doc/usr/share/doc/twisted-doc/
 	install -d debian/twisted-doc/usr/share/doc/twisted-doc/examples
 	install -d debian/twisted-doc/usr/share/doc/twisted-doc/howto
@@ -45,9 +61,6 @@ install-stamp: build-stamp
 	cp -ar doc/api/* debian/twisted-doc/usr/share/doc/twisted-doc/
 	install -m 644  doc/examples/*.py \
 	                debian/twisted-doc/usr/share/doc/twisted-doc/examples/
-	install -d debian/twisted-doc/DEBIAN/
-	install -m 755 debian/twisted-doc.prerm debian/twisted-doc/DEBIAN/prerm
-	install -m 755 debian/twisted-doc.postinst debian/twisted-doc/DEBIAN/postinst
 
 	install -d debian/python-twisted/usr/share/doc/python-twisted
 	install -d debian/python-twisted/DEBIAN
@@ -58,9 +71,8 @@ install-stamp: build-stamp
 	gzip -9 debian/python-twisted/usr/share/doc/python-twisted/changelog.Debian
 	install -m 644 debian/python-twisted.README.Debian \
 	               debian/python-twisted/usr/share/doc/python-twisted/README.Debian
-	install -m 755 debian/python-twisted.prerm debian/python-twisted/DEBIAN/prerm
-	install -m 755 debian/python-twisted.postinst debian/python-twisted/DEBIAN/postinst
 	touch install-stamp
+
 
 binary-indep: build install
 	dpkg-gencontrol -isp -ptwisted-doc -Pdebian/twisted-doc
@@ -73,10 +85,6 @@ binary-indep: build install
 	chmod -R go=rX debian/python-twisted
 	dpkg --build debian/python-twisted ..
 
-
-binary-arch: build install
-	find debian -name "*.so" | xargs -n 1 dpkg-shlibdeps
-
 	dpkg-gencontrol -isp -ppython2.1-twisted -Pdebian/python2.1-twisted
 	chown -R root.root debian/python2.1-twisted
 	chmod -R go=rX debian/python2.1-twisted
@@ -86,6 +94,19 @@ binary-arch: build install
 	chown -R root.root debian/python2.2-twisted
 	chmod -R go=rX debian/python2.2-twisted
 	dpkg --build debian/python2.2-twisted ..
+
+binary-arch: build install
+	find debian -name "*.so" | xargs -n 1 dpkg-shlibdeps
+
+	dpkg-gencontrol -isp -ppython2.1-twisted-bin -Pdebian/python2.1-twisted-bin
+	chown -R root.root debian/python2.1-twisted-bin
+	chmod -R go=rX debian/python2.1-twisted-bin
+	dpkg --build debian/python2.1-twisted-bin ..
+
+	dpkg-gencontrol -isp -ppython2.2-twisted-bin -Pdebian/python2.2-twisted-bin
+	chown -R root.root debian/python2.2-twisted-bin
+	chmod -R go=rX debian/python2.2-twisted-bin
+	dpkg --build debian/python2.2-twisted-bin ..
 
 source diff:                                                                  
 	@echo >&2 'source and diff are obsolete - use dpkg-source -b'; false
