@@ -34,6 +34,9 @@ except:
     from org.python.core import PyMethod
     instancemethod = PyMethod
 
+
+oldModules = {"twisted.python.explorer": "twisted.manhole.explorer"}
+
 ## First, let's register support for some stuff that really ought to
 ## be registerable...
 
@@ -80,6 +83,10 @@ def pickleModule(module):
 
 def unpickleModule(name):
     'support function for copy_reg to unpickle module refs'
+    if oldModules.has_key(name):
+        print "Module has moved:",name,
+        name = oldModules[name]
+        print name
     return __import__(name,None,None,'x')
 
 
