@@ -17,7 +17,7 @@ class RWHandle(log.Logger, styles.Ephemeral):
     readbuf = None
     offset = 0
     writing = 0
-    reading = 0
+    reading = 1
     bufferSize = 2**2**2**2
     writeBufferedSize = 0 # how much we have in the write buffer
     bufferhandlers = None
@@ -43,6 +43,9 @@ class RWHandle(log.Logger, styles.Ephemeral):
             i(*a, **kw)
 
     def write(self, buffer, **kw):
+        print "RWHandle.write(%(buffer)r, %(kw)s" % locals()
+        print "    self.writebuf %r, self.offset %s, self.writing %s" % \
+            (self.writebuf, self.offset, self.writing)
         self.writebuf.append((buffer, kw))
         self.writeBufferedSize += len(buffer)
         if self.writeBufferedSize >= self.bufferSize: # what's the proper semantics for this?
@@ -64,8 +67,9 @@ class RWHandle(log.Logger, styles.Ephemeral):
         # XXX: bytes == 0 should be checked by OverlappedOp, as it is an error condition
         self.offset += bytes
         self.writeBufferedSize -= bytes
-        if self.offset == len(self.writebuf[0]):
+        if self.offset == len(self.writebuf[0][0]):
             del self.writebuf[0]
+            self.offset = 0
         if self.writebuf == []:
             self.writing = 0
             self.callBufferHandlers(type = "buffer empty")
@@ -101,8 +105,8 @@ class RWHandle(log.Logger, styles.Ephemeral):
 
 # this is a handle with special read/write ops and error handling, Protocol dispatch and connection loss
 class Socket(RWHandle):
-    read_op = WSARecvOp
-    write_op = WSASendOp
+#    read_op = WSARecvOp
+#    write_op = WSASendOp
 
     def __init__(self, sock, protocol, client, server, sessionno):
         RWHandle.__init__(self)

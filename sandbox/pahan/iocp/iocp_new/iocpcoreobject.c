@@ -187,6 +187,11 @@ static PyObject *iocpcore_doIteration(iocpcore* self, PyObject *args) {
     // steal its reference, then clobber it to death! I mean free it!
     object = ov->callback;
     if(object) {
+        // this is retarded. GQCS only sets error value if it wasn't succesful
+        // (what about forth case, when handle is closed?)
+        if(res) {
+            err = 0;
+        }
         ret = PyObject_CallFunction(object, "ll", err, bytes);
         if(!ret) {
             return NULL;
@@ -196,6 +201,84 @@ static PyObject *iocpcore_doIteration(iocpcore* self, PyObject *args) {
     }
     free(ov);
     return Py_BuildValue("");
+}
+
+static PyObject *iocpcore_WriteFile(iocpcore* self, PyObject *args) {
+    HANDLE handle;
+    char *buf;
+    int buflen, res, len = -1;
+    DWORD err, bytes;
+    PyObject *object;
+    MyOVERLAPPED *ov;
+    if(!PyArg_ParseTuple(args, "lt#O|l", &handle, &buf, &buflen, &object, &len)) {
+        return NULL;
+    }
+    if(len == -1) {
+        len = buflen;
+    }
+    if(len <= 0 || len > buflen) {
+        PyErr_SetString(PyExc_ValueError, "Invalid length specified");
+    }
+    if(!PyCallable_Check(object)) {
+        PyErr_SetString(PyExc_TypeError, "Callback must be callable");
+    }
+    ov = malloc(sizeof(MyOVERLAPPED));
+    if(!ov) {
+        PyErr_NoMemory();
+        return NULL;
+    }
+    memset(ov, 0, sizeof(MyOVERLAPPED));
+    Py_INCREF(object);
+    ov->callback = object;
+    CreateIoCompletionPort(handle, self->iocp, 0, 1);
+    printf("calling WriteFile(%d, %p, %d, %p, %p)\n", handle, buf, len, &bytes, ov);
+    Py_BEGIN_ALLOW_THREADS;
+    res = WriteFile(handle, buf, len, &bytes, (OVERLAPPED *)ov);
+    Py_END_ALLOW_THREADS;
+    err = GetLastError();
+    printf("    wf returned %d, err %d\n", res, err);
+    if(!res && err != ERROR_IO_PENDING) {
+        return PyErr_SetFromWindowsErr(err);
+    }
+    return Py_BuildValue("ll", err, bytes);
+}
+
+static PyObject *iocpcore_ReadFile(iocpcore* self, PyObject *args) {
+    HANDLE handle;
+    char *buf;
+    int buflen, res, len = -1;
+    DWORD err, bytes;
+    PyObject *object;
+    MyOVERLAPPED *ov;
+    if(!PyArg_ParseTuple(args, "lw#O|l", &handle, &buf, &buflen, &object, &len)) {
+        return NULL;
+    }
+    if(len == -1) {
+        len = buflen;
+    }
+    if(len <= 0 || len > buflen) {
+        PyErr_SetString(PyExc_ValueError, "Invalid length specified");
+    }
+    if(!PyCallable_Check(object)) {
+        PyErr_SetString(PyExc_TypeError, "Callback must be callable");
+    }
+    ov = malloc(sizeof(MyOVERLAPPED));
+    if(!ov) {
+        PyErr_NoMemory();
+        return NULL;
+    }
+    memset(ov, 0, sizeof(MyOVERLAPPED));
+    Py_INCREF(object);
+    ov->callback = object;
+    CreateIoCompletionPort(handle, self->iocp, 0, 1);
+    Py_BEGIN_ALLOW_THREADS;
+    res = ReadFile(handle, buf, len, &bytes, (OVERLAPPED *)ov);
+    Py_END_ALLOW_THREADS;
+    err = GetLastError();
+    if(!res && err != ERROR_IO_PENDING) {
+        return PyErr_SetFromWindowsErr(err);
+    }
+    return Py_BuildValue("ll", err, bytes);
 }
 
 static PyObject *iocpcore_WSARecv(iocpcore* self, PyObject *args) {
@@ -331,6 +414,10 @@ PyObject *iocpcore_AllocateReadBuffer(PyObject *self, PyObject *args)
 static PyMethodDef iocpcore_methods[] = {
     {"doIteration", (PyCFunction)iocpcore_doIteration, METH_VARARGS,
      "Perform one event loop iteration"},
+    {"issueWriteFile", (PyCFunction)iocpcore_WriteFile, METH_VARARGS,
+     "Issue an overlapped WriteFile operation"},
+    {"issueReadFile", (PyCFunction)iocpcore_ReadFile, METH_VARARGS,
+     "Issue an overlapped ReadFile operation"},
     {"issueWSARecv", (PyCFunction)iocpcore_WSARecv, METH_VARARGS,
      "Issue an overlapped WSARecv operation"},
     {"issueWSASend", (PyCFunction)iocpcore_WSASend, METH_VARARGS,
