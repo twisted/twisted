@@ -22,6 +22,7 @@ if runtime.platformType != 'posix':
 # End hack
 
 from twisted.python import log, syslog
+from twisted.python.util import switchUID
 from twisted.application import app, service
 from twisted import copyright
 import os, errno, signal
@@ -130,21 +131,15 @@ def daemonize():
                 raise
 
 def shedPrivileges(euid, uid, gid):
-    extra = 'e'*int(euid)
-    try:
-        for (method, value) in zip(['gid', 'uid'], [gid, uid]):
-            getattr(os, 'set'+extra+method)(value)
-    except OSError:
-        pass
-    else:
-        log.msg('set %suid/%sgid %s/%s' % (extra, extra, uid, gid))
+    switchUID(uid, gid, euid)
+    log.msg('set %suid/%sgid %s/%s' % (extra, extra, uid, gid))
 
 def launchWithName(name):
     if name and name != sys.argv[0]:
         exe = os.path.realpath(sys.executable)
         log.msg('Changing process name to ' + name)
         os.execv(exe, [name, sys.argv[0], '--originalname']+sys.argv[1:])
-    
+
 def setupEnvironment(config):
     if config['chroot'] is not None:
         os.chroot(config['chroot'])
@@ -163,7 +158,7 @@ def startApplication(config, application):
     service.IService(application).privilegedStartService()
     shedPrivileges(config['euid'], process.uid, process.gid)
     app.startApplication(application, not config['no_save'])
- 
+
 
 def runApp(config):
     passphrase = app.getPassphrase(config['encrypted'])

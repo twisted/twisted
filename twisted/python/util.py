@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes, generators
 
-__version__ = '$Revision: 1.48 $'[11:-2]
+__version__ = '$Revision: 1.49 $'[11:-2]
 
 import os
 import sys
@@ -565,9 +565,35 @@ def dsu(list, key):
     L2.sort()
     return [e[2] for e in L2]
 
+try:
+    import pwd, grp
+    from os import setgroups
+    def initgroups(uid, primaryGid):
+        username = pwd.getpwuid(uid)[0]
+        l=[primaryGid]
+        for groupname, password, gid, userlist in grp.getgrall():
+            if username in userlist:
+                l.append(gid)
+        setgroups(l)
+except:
+    def initgroups(uid, primaryGid):
+        pass
+
+def switchUID(uid, gid, euid=False):
+    if euid:
+        setuid = os.geteuid
+        setgid = os.setegid
+    else:
+        setuid = os.setuid
+        setgid = os.setgid
+    setgid(gid)
+    initgroups(uid, gid)
+    setuid(uid)
+
 __all__ = [
     "uniquify", "padTo", "getPluginDirs", "addPluginDir", "sibpath",
     "getPassword", "dict", "println", "keyed_md5", "makeStatBar",
     "OrderedDict", "spewer", "searchupwards", "LineLog", "raises",
-    "IntervalDifferential", "FancyStrMixin", "FancyEqMixin", "dsu"
+    "IntervalDifferential", "FancyStrMixin", "FancyEqMixin", "dsu",
+    "switchUID"
 ]

@@ -36,33 +36,14 @@ try:
 except ImportError:
     fcntl = None
 
-try:
-    import pwd, grp
-    from os import setgroups
-    def initgroups(uid, primaryGid):
-        username = pwd.getpwuid(uid)[0]
-        l=[primaryGid]
-        for groupname, password, gid, userlist in grp.getgrall():
-            if username in userlist:
-                l.append(gid)
-        setgroups(l)
-except:
-    def initgroups(uid, primaryGid):
-        pass
-
-def switch_uid(uid, gid):
-    os.setgid(gid)
-    initgroups(uid, gid)
-    os.setuid(uid)
-
 from twisted.persisted import styles
 from twisted.python import log, failure
+from twisted.python.util import switchUID
 from twisted.internet import protocol
 
 # Sibling Imports
 import abstract, main, fdesc, error
 from main import CONNECTION_LOST, CONNECTION_DONE
-
 
 reapProcessHandlers = {}
 
@@ -242,7 +223,7 @@ class Process(styles.Ephemeral):
         nuances of setXXuid on UNIX: it will assume that either your effective
         or real UID is 0.)
 
-        @param childFDs: a dictionary mapping 
+        @param childFDs: a dictionary mapping
             fd_in_child -> current_fd_in_parent/'r'/'w'
 
              If the value is a number, it specifies one of the parent's fds
@@ -257,7 +238,7 @@ class Process(styles.Ephemeral):
              If it is the string 'w', a pipe will be created and attached,
              and the parent will be able to write into that pipe. This is
              useful for the child's stdin.
-             
+
             If childFDs is not passed, the default behaviour is to use a
             mapping that opens the usual stdin/stdout/stderr pipes.
         """
@@ -402,7 +383,7 @@ class Process(styles.Ephemeral):
         the parent's parentFD. As an example, a bash command run like
         'command 2>&1' would correspond to an fdmap of {0:0, 1:1, 2:1}.
         'command >foo.txt' would be {0:0, 1:os.open('foo.txt'), 2:2}.
-        
+
         Step 1: close all file descriptors that aren't values of fdmap.
         This means 0 .. maxfds.
 
@@ -452,7 +433,7 @@ class Process(styles.Ephemeral):
         if debug: print >>errfd, "fdmap", fdmap
         childlist = fdmap.keys()
         childlist.sort()
-        
+
         for child in childlist:
             target = fdmap[child]
             if target == child:
@@ -501,9 +482,9 @@ class Process(styles.Ephemeral):
             os.chdir(path)
         # set the UID before I actually exec the process
         if settingUID:
-            switch_uid(uid, gid)
+            switchUID(uid, gid)
         os.execvpe(command, args, environment)
-        
+
     def reapProcess(self):
         """Try to reap a process (without blocking) via waitpid.
 
@@ -676,7 +657,7 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
 
                 # set the UID before I actually exec the process
                 if settingUID:
-                    switch_uid(uid, gid)
+                    switchUID(uid, gid)
                 os.execvpe(command, args, environment)
             except:
                 stderr = os.fdopen(1, 'w')
