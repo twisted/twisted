@@ -57,9 +57,9 @@ and a while, a iterator in the flow (perhaps one nested several layers deep)
 may have to block on a resource.  In this case, the flow must be paused so
 that other flows in the system have a chance to produce results.  So, rather
 than blocking, the entire state of the iterator chain must be saved so that
-it can be resumed later.   Furthermore, tradational exception handling
+it can be resumed later.   Furthermore, traditional exception handling
 doesn't work since the call stack for a given request may be paused
-indefinately.  Helping the programmer manage these sorts of things is what
+indefinitely.  Helping the programmer manage these sorts of things is what
 the flow module does.   While it does not depend on generators, to use
 flow effectively, generators are very useful.</p>
 
@@ -87,8 +87,8 @@ class Counter:
         self.count -= 1
         if ret: return ret
         raise StopIteration
-
         return ret
+
 def list(it):
     ret = []
     import sys
@@ -107,6 +107,8 @@ print list(Counter(3))
 
 # prints: [3, 2, 1]
 </pre>
+
+<h3>State pattern</h3>
 
 <p>Often times it is useful for an iterator to change state during
 its production of values.  This can be done nicely with the 'state'
@@ -130,15 +132,15 @@ class States:
     def next(self):
         return self.state()
 
-dump(States())
+print list(States())
 
-# prints:
-#   one
-#   two
+# prints: ['one', 'two']
 
 </pre>
 
-<p>Luckily, with Python 2.2, there is a wonderful syntax sugar for creating
+<h3>Generators</h3>
+
+<p>With Python 2.2, there is a wonderful syntax sugar for creating
 iterators... generators.   When a generator is first executed, an iterator
 is returned.  And from there on, each invocation of <code>next()</code>
 gives the subsequent value produced by the <code>yield</code> statement.
@@ -199,14 +201,20 @@ print list(Consumer())
 # prints: [3,2,1]
 </pre>
 
-<p>The problem with this approach, is that a producer could potentially
-block, and if it did, the entire process could potentially stop servicing
-other requests.   Thus, some mechanism for pausing the flow and rebuilding
-it is required.   The flow module provides this ability to Cooperate
-by placing itself between each iterator in the flow.  This is accomplished
-in code, by creating a wrapper object for each iterable, which you
-should yield just before each call to next().  In the yield, the wrapper
-can then use any underlying cooperative multi-tasking mechanisms.</p>
+<p>The problem with this approach, in a cooperative multi-tasking
+environment, is that a producer could potentially block, and if it 
+did, the entire process would stop servicing all other requests.
+Thus, some mechanism for pausing the flow and running it later
+is required.</p>
+
+<h3>Flow Basics</h3>
+
+<p>The flow module provides this ability to cooperate with other tasks by
+placing a control mechanism between each stage of a flow.  This is
+accomplished in code , by creating a wrapper object for each iterable,
+which one should yield before every call to next(), implicit or otherwise.
+In the yield, the control mechanism can then take over to support the
+underlying cooperative multi-tasking mechanism.</p>
 
 <pre>
 from __future__ import generators
@@ -247,6 +255,7 @@ def Consumer():
 print list(flow.Block(Consumer))
 
 # prints: [3, 1]
+</pre>
 
 <h3>Handling failures</h3>
 
@@ -349,9 +358,9 @@ print list(flow.Block(mrg))
 <code>Cooperate</code> does very little and the overhead imposed by flow
 doesn't offset the functionality.  However, when flow is combined with
 Twisted's <code>reactor.callLater</code> and
-<code>internet.defer.Deferred</code> mechanism, things are very nice.  In
+<code>internet.defer.Deferred</code> mechanism, things get very cosy. In
 the example below, the first two items in the list are produced (although
-they arn't delivered yet), other events in the reactor are allowed to
+they are not delivered yet), other events in the reactor are allowed to
 proceed, and then the last item in the list is produced.</p>
 
 
