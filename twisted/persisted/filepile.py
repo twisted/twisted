@@ -162,7 +162,10 @@ class _FilePileStackEntry:
         listing and sort it according to self.cmpfunc.
         """
         if self.dirlist is None:
-            self.dirlist = os.listdir(self.dirname)
+            try:
+                self.dirlist = os.listdir(self.dirname)
+            except OSError:
+                self.dirlist = []
             self.dirlist.sort(self.cmpfunc)
             if forwards:
                 self.pos = -1
@@ -450,6 +453,16 @@ class FilePile:
         else:
             fullpath = self.itemPath(*abstractPath)
         self.sorter.saveItem(item, fullpath)
+
+    def atKey(self, key):
+        try:
+            item = self.itemsBetween(key).next()
+        except StopIteration:
+            raise KeyError(key)
+        cmpr = self.sorter.compareItemToKey(item, key)
+        if cmpr != 0:
+            raise KeyError(key)
+        return item
 
 class _Betweener:
     def __init__(self, itemIter, compare, startKey, endKey, stopAfter):
