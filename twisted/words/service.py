@@ -118,7 +118,7 @@ class Participant(pb.Perspective):
     perspective_directMessage = directMessage
     perspective_addContact = addContact
     perspective_removeContact = removeContact
-
+    perspective_groupMessage = groupMessage
 
 class Group(pb.Cached):
 

@@ -136,8 +136,7 @@ class JoinGroup(gtk.GtkWindow):
 
     def joinGroup(self, text):
         self.contactList.persp.joinGroup(text.get_text())
-        self.contactList.groups.append(text.get_text())
-        GroupSession(text.get_text(),self.contactList)
+        self.contactList.groups[text.get_text()] = GroupSession(text.get_text(),self.contactList)
 
 
 class ContactList(gtk.GtkWindow, pb.Referenced):
@@ -161,7 +160,7 @@ class ContactList(gtk.GtkWindow, pb.Referenced):
         self.list.set_column_width(0, 50)
         self.list.signal_connect("select_row", self.contactSelected)
        
-        self.groups = []
+        self.groups = {}
        
         vb.pack_start(gtkutil.scrollify(self.list), gtk.TRUE, gtk.TRUE, 0)
         
