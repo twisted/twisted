@@ -94,10 +94,13 @@ class DelayedCall:
             try:
                 func = self.func.im_class.__name__ + '.' + func
             except:
-                pass
+                func = self.func
+                if hasattr(func, 'func_code'):
+                    func = func.func_code # func_code's repr sometimes has more useful info
         except:
             func = reflect.safe_repr(self.func)
-        return "<DelayedCall [%ds] called=%s cancelled=%s %s%s>" % (self.time - time(), self.called, self.cancelled, func, reflect.safe_repr(self.args))
+        return "<DelayedCall [%ds] called=%s cancelled=%s %s%s>" % (self.time - time(), self.called, self.cancelled, func,
+                                                                    reflect.safe_repr(self.args))
 
 class ReactorBase:
     """Default base class for Reactors.
