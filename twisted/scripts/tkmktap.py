@@ -134,7 +134,7 @@ class TkMkAppFrame(Tkinter.Frame):
             opt = coil.load().Options()
         except:
             f = StringIO.StringIO()
-            traceback.print_stack(file=f)
+            traceback.print_exc(file=f)
             # XXX - Why is this so narrow?
             tkMessageBox.showerror(title="Options Error", message=f.getvalue(), parent=self)
             return
