@@ -314,7 +314,7 @@ class IMailbox(components.Interface):
         """Retrieve the size of one or more messages.
         
         @type index: C{int} or C{None}
-        @param inedx: The number of the message for which to retrieve the size,
+        @param index: The number of the message for which to retrieve the size,
         or None to retrieve the size of all messages.
         
         @rtype: C{int} or any iterable of C{int}
