@@ -403,6 +403,7 @@ class List(Widget):
        |         <td><span view="Text" model="1" /></td>
        |         <td><span view="Text" model="2" /></td>
        |     </tr>
+       |     <tr class="listFooter"><td colspan="2">All done!</td></tr>
        | </table>
 
     Where blah is the name of a list on the model; eg:                          
@@ -414,6 +415,7 @@ class List(Widget):
     def generateDOM(self, request, node):
         node = Widget.generateDOM(self, request, node)
         listHeader = domhelpers.getIfExists(node, 'listHeader')
+        listFooter = domhelpers.getIfExists(node, 'listFooter')
         emptyList = domhelpers.getIfExists(node, 'emptyList')
         # xxx with this implementation all elements of the list must use the same view widget
         listItems = domhelpers.locateNodes(node, 'itemOf', self.submodel.split('/')[-1])
@@ -444,6 +446,8 @@ class List(Widget):
                 newNode.parentNode = node
         elif not emptyList is None:
             node.appendChild(emptyList)
+        if not listFooter is None:
+            node.appendChild(listFooter)
         return node
 
 class ColumnList(List):
