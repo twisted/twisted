@@ -32,7 +32,6 @@ from cStringIO import StringIO
 # Twisted Imports
 from twisted.internet import interfaces
 from twisted.python import log
-from twisted.python.util import OrderedDict
 from twisted.persisted import styles
 from twisted.python.runtime import platform
 from twisted.cred.authorizer import DefaultAuthorizer
@@ -55,7 +54,7 @@ class _AbstractServiceCollection:
     def __init__(self):
         """Create an abstract service collection.
         """
-        self.services = OrderedDict()
+        self.services = {}
 
     def getServiceNamed(self, serviceName):
         """Retrieve the named service from this application.
@@ -195,7 +194,6 @@ class MultiService(_AbstractServiceCollection, ApplicationService):
         """
         ApplicationService.stopService(self)
         v = self.services.values()
-        v.reverse()
         l = [svc.stopService() for svc in v]
         # The default stopService returns None, but you can't make that part
         # of a DeferredList.
@@ -244,10 +242,10 @@ class Application(log.Logger, styles.Versioned,
 
     running = 0
     processName = None
-    
+
     #
     # XXX
-    # 
+    #
     # The profusion of xyzPorts, xyzListeners, _listenerDict, and
     # _extraListeners has long since passed the point of excess.
     # Someone who feels like taking the time should merge all of these
@@ -255,7 +253,7 @@ class Application(log.Logger, styles.Versioned,
     # one for things that are -actually- listening and connecting.
     # This requires another version bump and an upgrade function, of course.
     #
-    
+
 
     def __init__(self, name, uid=None, gid=None, authorizer=None, authorizer_=None):
         """Initialize me.
@@ -287,8 +285,8 @@ class Application(log.Logger, styles.Versioned,
         self.extraConnectors = []
         # a list of twisted.python.delay.Delayeds
         self.delayeds = []              # check
-        # an ordered dict of ApplicationServices
-        self.services = OrderedDict()   # check
+        # a dict of ApplicationServices
+        self.services = {}              # check
         # a cred authorizer
         a = authorizer or authorizer_
         if a:
@@ -302,7 +300,7 @@ class Application(log.Logger, styles.Versioned,
                 gid = os.getgid()
             self.gid = gid
 
-    persistenceVersion = 13
+    persistenceVersion = 12
 
     _authorizer = None
 
@@ -313,9 +311,6 @@ class Application(log.Logger, styles.Versioned,
             self._authorizer = DefaultAuthorizer()
             self._authorizer.setApplication(self)
         return self._authorizer
-
-    def upgradeToVersion13(self):
-        self.services = OrderedDict(self.services)
 
     def upgradeToVersion12(self):
         up = []
@@ -546,7 +541,7 @@ class Application(log.Logger, styles.Versioned,
         if self.running:
             from twisted.internet import reactor
             return reactor.listenSSL(port, factory, ctxFactory, backlog, interface)
-    
+
     def unlistenSSL(self, port, interface=''):
         """
         Stop an SSL Port listening on the given interface and port.
@@ -705,7 +700,6 @@ class Application(log.Logger, styles.Versioned,
     def _beforeShutDown(self):
         l = []
         services = self.services.values()
-        services.reverse()
         for service in services:
             try:
                 d = service.stopService()
