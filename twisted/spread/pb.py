@@ -52,7 +52,7 @@ applied when serializing arguments.
 # Future Imports
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.122 $"[11:-2]
+__version__ = "$Revision: 1.123 $"[11:-2]
 
 
 # System Imports
@@ -552,7 +552,17 @@ class Broker(banana.Banana):
                     d.errback(failure.Failure(PBConnectionLost()))
                 except:
                     log.deferr()
-        for notifier in self.disconnects:
+        # Assure all Cacheable.stoppedObserving are called
+        for lobj in self.remotelyCachedObjects.values():
+            cacheable = lobj.object
+            perspective = lobj.perspective
+            try:
+                cacheable.stoppedObserving(perspective, RemoteCacheObserver(self, cacheable, perspective))
+            except:
+                log.deferr()        
+        # Loop on a copy to prevent notifiers to mixup
+        # the list by calling dontNotifyOnDisconnect
+        for notifier in self.disconnects[:]:
             try:
                 notifier()
             except:
