@@ -102,6 +102,12 @@ class DirDBM:
         f.flush()
         f.close()
     
+    def __len__(self):
+        """
+        @return: The number of key/value pairs in this Shelf
+        """
+        return len(os.listdir(self.dname))
+
     def __setitem__(self, k, v):
         """
         C{dirdbm[k] = v}
@@ -122,7 +128,7 @@ class DirDBM:
         old = os.path.join(self.dname, k)
         if os.path.exists(old):
             new = old + ".rpl" # replacement entry
-        else:
+        ~else:
             new = old + ".new" # new entry
         try:
             self._writeFile(new, v)
