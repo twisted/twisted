@@ -1,3 +1,10 @@
+2004-09-18  Christopher Armstrong  <radix@twistedmatrix.com>
+
+	* twisted/internet/defer.py: Add deferredGenerator and
+	waitForDeferred. This lets you write kinda-sorta
+	synchronous-looking code that uses Deferreds. See the
+	waitForDeferred docstring.
+
 2004-09-11  Cory Dodt  <corydodt@twistedmatrix.com>
 
 	* twisted/python/{which,process}.py,
