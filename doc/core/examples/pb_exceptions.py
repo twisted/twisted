@@ -4,7 +4,7 @@ from twisted.spread import pb
 from twisted.cred import portal, checkers, credentials
 
 class Avatar(pb.Avatar):
-    def remote_exception(self, x):
+    def perspective_exception(self, x):
         return x / 0
 
 class Realm:
