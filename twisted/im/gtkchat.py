@@ -13,7 +13,9 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
 import string
+import time
 
 import gtk
 
@@ -93,6 +95,30 @@ class ContactsList:
 
 
 
+def colorhash(name):
+    h = hash(name)
+    l = [0x5555ff,
+         0x55aa55,
+         0x55aaff,
+         0xff5555,
+         0xff55ff,
+         0xffaa55]
+    index = l[h % len(l)]
+    return '%06.x' % (abs(hash(name)) & index)
+
+
+def _msgDisplay(output, name, text, color, isEmote):
+    text = string.replace(text, '\n', '\n\t')
+    ins = output.insert
+    ins(None, color, None, "[ %s ] " % time.strftime("%H:%M:%S"))
+    if isEmote:
+        ins(None, color, None, "* %s " % name)
+        ins(None, None, None, "%s\n" % text)
+    else:
+        ins(None, color, None, "<%s> " % name)
+        ins(None, None, None, "%s\n" % text)
+
+
 class Conversation(InputOutputWindow):
     """GUI representation of a conversation.
     """
@@ -102,6 +128,11 @@ class Conversation(InputOutputWindow):
                                    "ConversationMessageEntry",
                                    "ConversationOutput")
         self.person = person
+        alloc_color = self.output.get_colormap().alloc
+        self.personColor = alloc_color("#%s" % colorhash(person.name))
+        self.myColor = alloc_color("#0000ff")
+        print "allocated my color %s and person color %s" % (
+            self.myColor, self.personColor)
 
     def getTitle(self):
         return "Conversation - " + self.person.name
@@ -114,21 +145,12 @@ class Conversation(InputOutputWindow):
         self.person.sendMessage(text, metadata).addCallback(self._cbTextSent, text, metadata)
 
     def showMessage(self, text, metadata=None):
-        text = string.replace(text, '\n', '\n\t')
-        msg = "<%s> %s\n" % (self.person.name, text)
-        if metadata:
-            if metadata.get("style", None) == "emote":
-                msg = "* %s %s\n" % (self.person.name, text)
-        self.output.insert_defaults(msg)
+        _msgDisplay(self.output, self.person.name, text, self.personColor,
+                    (metadata and metadata.get("style", None) == "emote"))
 
     def _cbTextSent(self, result, text, metadata=None):
-        print 'result:',result
-        text = string.replace(text, '\n', '\n\t')
-        msg = "<%s> %s\n" % (self.person.client.name, text)
-        if metadata:
-            if metadata.get("style", None) == "emote":
-                msg = "* %s %s\n" % (self.person.client.name, text)
-        self.output.insert_defaults(msg)
+        _msgDisplay(self.output, self.person.client.name, text, self.myColor,
+                    (metadata and metadata.get("style", None) == "emote"))
 
 class GroupConversation(InputOutputWindow):
     def __init__(self, group):
@@ -139,6 +161,9 @@ class GroupConversation(InputOutputWindow):
         self.group = group
         self.members = []
         self.membersHidden = 0
+        self._colorcache = {}
+        alloc_color = self.output.get_colormap().alloc
+        self.myColor = alloc_color("#0000ff")
         self.xml.get_widget("NickLabel").set_text(self.group.client.name)
 
     def hidden(self, w):
@@ -155,13 +180,22 @@ class GroupConversation(InputOutputWindow):
             metadata = {"style": "emote"}
         self.group.sendGroupMessage(text, metadata).addCallback(self._cbTextSent, text, metadata=metadata)
 
+    def _cacheColorHash(self, name):
+        if self._colorcache.has_key(name):
+            return self._colorcache[name]
+        else:
+            alloc_color = self.output.get_colormap().alloc
+            c = alloc_color('#%s' % colorhash(name))
+            self._colorcache[name] = c
+            return c
+
     def showGroupMessage(self, sender, text, metadata=None):
-        text = string.replace(text, '\n', '\n\t')
-        msg = "<%s> %s\n" % (sender, text)
-        if metadata:
-            if metadata.get("style", None) == "emote":
-                msg = "* %s %s\n" % (sender, text)
-        self.output.insert_defaults(msg)
+        _msgDisplay(self.output, sender, text, self._cacheColorHash(sender),
+                    (metadata and metadata.get("style", None) == "emote"))
+
+    def _cbTextSent(self, result, text, metadata=None):
+        _msgDisplay(self.output, self.group.client.name, text, self.myColor,
+                    (metadata and metadata.get("style", None) == "emote"))
 
     def setGroupMembers(self, members):
         self.members = members
@@ -205,15 +239,6 @@ class GroupConversation(InputOutputWindow):
         print "ACTIVATING TOPIC!!"
         self.group.setTopic(e.get_text())
 
-
-    def _cbTextSent(self, result, text, metadata=None):
-        print text
-        text = string.replace(text, '\n', '\n\t')
-        msg = "<%s> %s\n" % (self.group.client.name, text)
-        if metadata:
-            if metadata.get("style", None) == "emote":
-                msg = "* %s %s\n" % (self.group.client.name, text)
-        self.output.insert_defaults(msg)
 
 class GtkChatClientUI:
     # IM-GUI Utility functions
