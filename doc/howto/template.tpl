@@ -16,7 +16,7 @@ href="stylesheet.css" />
 	
     </div>
 
-    <p><a href="index.xhtml">Index</a></p>
+    <p><a href="index.html">Index</a></p>
     <span class="version">Version: </span>
   </body>
 </html>
