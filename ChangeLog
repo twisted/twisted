@@ -1,3 +1,13 @@
+2002-04-18  Chris Armstrong  <carmstro@twistedmatrix.com>
+
+	* .: Releasing Twisted 0.17.2.
+
+2002-04-17  Glyph Lefkowitz  <glyph@twistedmatrix.com>
+
+	* twisted/spread/pb.py: Errors during jelly serialization used to
+	just blow up; now they more properly return a Deferred Failure. This
+	will make hangs in PB apps (most notably distributed web) less common.
+
 2002-04-17  Donovan Preston <dp@twistedmatrix.com>
 
 	* Major changes to the capabilities of the static web server, in an 
