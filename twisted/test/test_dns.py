@@ -107,4 +107,6 @@ class RoundtripDNSTestCase(unittest.TestCase):
 
         for k in records:
             k1, k2 = k(), k()
-            self.assertEquals(hash(k1), hash(k2))
+            hk1 = hash(k1)
+            hk2 = hash(k2)
+            self.assertEquals(hk1, hk2, "%s != %s (for %s)" % (hk1,hk2,k))
