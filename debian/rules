@@ -80,6 +80,14 @@ install-stamp: build-stamp
 	install -m 644 debian/python-twisted.README.Debian \
 	               debian/python-twisted/usr/share/doc/python-twisted/README.Debian
 
+	install -d debian/twisted/usr/share/doc/twisted
+	install -d debian/twisted/DEBIAN
+	install -m 644 debian/copyright \
+	               debian/twisted/usr/share/doc/twisted/
+	install -m 644 debian/changelog \
+	               debian/twisted/usr/share/doc/twisted/changelog.Debian
+	gzip -9 debian/twisted/usr/share/doc/twisted/changelog.Debian
+
 	install -d debian/twisted-quotes/usr/share/doc/twisted-quotes
 	install -d debian/twisted-quotes/DEBIAN
 	install -m 644 debian/copyright \
@@ -104,6 +112,11 @@ binary-indep: build install
 	chown -R root.root debian/twisted-quotes
 	chmod -R go=rX debian/twisted-quotes
 	dpkg --build debian/twisted-quotes ..
+
+	dpkg-gencontrol -isp -ptwisted -Pdebian/twisted
+	chown -R root.root debian/twisted
+	chmod -R go=rX debian/twisted
+	dpkg --build debian/twisted ..
 
 	dpkg-gencontrol -isp -ppython-twisted -Pdebian/python-twisted
 	chown -R root.root debian/python-twisted
