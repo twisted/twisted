@@ -10,19 +10,22 @@ Major new features
  - Major efficiency improvements in reactor.callLater/DelayedCall.
  - Half-close support for TCP/SSL. (loseWriteConnection).
 
-Miscellaneous fixes/features
+Miscellaneous features/fixes
 ----------------------------
- - Removed some functions that were deprecated since Twisted 1.0.
+ - New plugin system: twisted.plugin
  - Better debugging support. Control-C will break you into PDB.
+ - The twistd command has --uid --gid command line arguments.
+ - *Incompatibility: mktap defaults to not change UID/GID, instead of saving
+   the invoking user's UID/GID.
+ - Removed some functions that were deprecated since Twisted 1.0.
+
  - More correct daemonization in twistd.
  - twisted.python.log: do not close the log because of invalid format string.
  - Disabled automatic import of cBanana. 
  - Boolean support for twisted.persisted.marmalade.
  - Refactor of plugin and application HOWTO documentation
  - Async HOWTO expanded muchly.
- - The twistd command has --uid --gid command line arguments.
- - *Incompatibility: mktap defaults to not change UID/GID, instead of saving
-   the invoking user's UID/GID.
+ - twisted.python.usage outputs the actual defaults, not passed in values.
 
 twisted.trial
 -------------
@@ -32,22 +35,20 @@ twisted.internet
 ----------------
  - Multi-listen UDP multicast support
  - protocol.ClientCreator has a connectSSL.
+ - defer.deferredGenerator: allows you to write Deferred code w/o callbacks.
+ - New defer.DeferredLock/DeferredSemaphore/DeferredQueue.
+ - Add utils.getProcessOutputAndValue to get stdout/err/value.
+
+ - Default DNS resolver is now non-blocking.
  - Increased default TCP accept backlog from 5 to 50.
  - Make buffering large amounts of TCP data work on Windows.
  - Fixed SSL disconnect to not wait for remote host. Fixes issue with firefox.
-
- - defer.deferredGenerator: allows you to write Deferred code w/o callbacks.
  - Separate state for Deferred finalization so that GC-loops preventing
    finalization don't occur.
- - New defer.DeferredLock/DeferredSemaphore/DeferredQueue.
-
  - Many Process bugfixes
- - Add utils.getProcessOutputAndValue to get stdout/err/value.
- - Default DNS resolver is now non-blocking.
-
+ - Processes spawned on windows can successfully use sockets
  - gtk2reactor can optionally use glib event loop instead of gtk
  - gtk2reactor notifies gobject to initialize thread support
-
  - Fix registering a streaming producer on a transport.
  - Close client sockets explicitly after failed connections.
 
@@ -58,6 +59,7 @@ twisted.protocols
  - Bugfixes in twisted.protocols.loopback
  - Improve speed of twisted.protocols.LineReceiver.
  - LineReceiver implements IProducer. (stop/pause/resumeProducing)
+ - SOCKSv4 properly closes connections
 
 twisted.enterprise
 ------------------
@@ -70,15 +72,9 @@ twisted.enterprise
 1.3.0 (May 14, 2004):
 
 - Address objects for IPv4 and Unix addresses throughout twisted.internet.
-
 - Improved connected UDP APIs.
-
 - Refactored SSH client support.
-
 - Initial implementation of Windows I/O Completion Ports event loop.
-
 - Bug fixes and feature enhancements.
-
 - Nevow support for Lore (so your Lore documents can use Nevow directives).
-
 - This is the last release before Twisted begins splitting up.
