@@ -356,10 +356,7 @@ class GenerateDocs(Transaction):
             raise DirectoryDoesntExist("GenerateDocs: %s doesn't exist!" % tdir)
         
         print "makeDocs: epydoc."
-        sh('''cd %s &&  ./admin/epyrun -o doc/api &&
-              cp doc/api/index.html doc/api/index.html.bak &&
-              cp doc/api/epydoc-index.html doc/api/index.html'''
-           % (tdir))
+        sh('cd %s &&  ./admin/epyrun -o doc/api' % (tdir))
 
         print "makeDocs: process-docs."
         sh('cd %s && ./admin/process-docs %s' % (tdir, ver))
@@ -368,8 +365,6 @@ class GenerateDocs(Transaction):
         print "copyDist: Stripping *.pyc, .cvsignore"
         for x in ['*.pyc', '.cvsignore']:
             sh('find %s -name "%s" | xargs rm -f' % (tdir, x))
-
-        sh('rm -f %s/doc/api/index.html.bak' % tdir)
 
 
     def undoIt(self, opts, fail):
