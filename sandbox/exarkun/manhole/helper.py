@@ -34,7 +34,12 @@ class TerminalBuffer(protocol.Protocol):
             self.x = 0
             self._scrollDown()
         if b != '\r' and b != '\n':
-            self.lines[self.y][self.x] = (b, self._currentCharacterAttributes())
+            ch = (b, self._currentCharacterAttributes())
+            if self.modes.get(insults.IRM):
+                self.lines[self.y][self.x] = ch
+            else:
+                self.lines[self.y][self.x:self.x] = [ch]
+                self.lines[self.y].pop()
             self.x += 1
 
     def _emptyLine(self, width):

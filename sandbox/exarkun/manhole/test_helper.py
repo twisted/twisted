@@ -2,6 +2,7 @@
 from helper import TerminalBuffer
 from insults import ServerProtocol, ClientProtocol
 from insults import G0, G1, G2, G3
+from insults import IRM
 
 from twisted.trial import unittest
 
@@ -68,7 +69,28 @@ class BufferTestCase(unittest.TestCase):
         self.assertEquals(
             str(self.term),
             s + (self.term.fill * (WIDTH - len(s))) + '\n' +
-            '\n'.join([self.term.fill * WIDTH for i in range(HEIGHT - 1)]))
+            '\n'.join([self.term.fill * WIDTH for i in xrange(HEIGHT - 1)]))
+
+    def testOvertype(self):
+        s = "hello, world."
+        self.term.write(s)
+        self.term.cursorBackward(len(s))
+        self.term.setModes([IRM])
+        self.term.write("H")
+        self.assertEquals(
+            str(self.term),
+            ("H" + s[1:]) + (self.term.fill * (WIDTH - len(s))) + '\n' +
+            '\n'.join([self.term.fill * WIDTH for i in xrange(HEIGHT - 1)]))
+
+    def testInsert(self):
+        s = "ello, world."
+        self.term.write(s)
+        self.term.cursorBackward(len(s))
+        self.term.write("H")
+        self.assertEquals(
+            str(self.term),
+            ("H" + s) + (self.term.fill * (WIDTH - len(s) - 1)) + '\n' +
+            '\n'.join([self.term.fill * WIDTH for i in xrange(HEIGHT - 1)]))
 
     def testWritingInTheMiddle(self):
         s = "Hello, world."
@@ -77,9 +99,9 @@ class BufferTestCase(unittest.TestCase):
         self.term.write(s)
         self.assertEquals(
             str(self.term),
-            '\n'.join([self.term.fill * WIDTH for i in range(5)]) + '\n' +
+            '\n'.join([self.term.fill * WIDTH for i in xrange(5)]) + '\n' +
             (self.term.fill * 5) + s + (self.term.fill * (WIDTH - 5 - len(s))) + '\n' +
-            '\n'.join([self.term.fill * WIDTH for i in range(HEIGHT - 6)]))
+            '\n'.join([self.term.fill * WIDTH for i in xrange(HEIGHT - 6)]))
 
     def testWritingWrappedAtEndOfLine(self):
         s = "Hello, world."
