@@ -18,7 +18,7 @@
 
 # twisted imports
 from twisted.protocols import http
-from twisted.internet import reactor
+from twisted.internet import reactor, protocol
 from twisted.web import resource, server
 
 # system imports
@@ -57,6 +57,30 @@ class ProxyClient(http.HTTPClient):
         self.father.transport.loseConnection()
 
 
+class ProxyClientFactory(protocol.ClientFactory):
+
+    def __init__(self, command, rest, version, headers, data, father):
+        self.father = father
+        self.command = command
+        self.rest = rest
+        self.headers = headers
+        self.data = data
+        self.version = version
+
+
+    def buildProtocol(self, addr):
+        return ProxyClient(self.command, self.rest, self.version,
+                           self.headers, self.data, self.father)
+
+
+    def clientConnectionFailed(self, connector, reason):
+        self.father.transport.write("HTTP/1.0 501 Gateway error\r\n")
+        self.father.transport.write("Content-Type: text/html\r\n")
+        self.father.transport.write("\r\n")
+        self.father.transport.write('''<H1>Could not connect</H1>''')
+
+
+
 class ProxyRequest(http.Request):
 
     protocols = {'http': ProxyClient}
@@ -76,9 +100,11 @@ class ProxyRequest(http.Request):
         headers = self.getAllHeaders().copy()
         if not headers.has_key('host'):
             headers['host'] = host
-        clientProtocol = class_(self.method, rest, self.clientproto, headers,
-                                self.content.read(), self)
-        client = reactor.clientTCP(host, port, clientProtocol)
+        self.content.seek(0, 0)
+        s = self.content.read()
+        clientFactory = class_(self.method, rest, self.clientproto, headers,
+                               s, self)
+        reactor.connectTCP(host, port, clientFactory)
 
 class Proxy(http.HTTPChannel):
 
@@ -89,10 +115,12 @@ class ReverseProxyRequest(http.Request):
 
     def process(self):
         self.received_headers['host'] = self.factory.host
-        clientProtocol = ProxyClient(self.method, self.uri, self.clientproto, self.getAllHeaders(), 
-                                     self.content.read(), self)
-        client = reactor.clientTCP(self.factory.host, self.factory.port,
-                            clientProtocol)
+        clientFactory = ProxyClientFactory(self.method, self.uri,
+                                            self.clientproto,
+                                            self.getAllHeaders(), 
+                                            self.content.read(), self)
+        reactor.connectTCP(self.factory.host, self.factory.port,
+                           clientFactory)
 
 class ReverseProxy(http.HTTPChannel):
 
@@ -100,6 +128,7 @@ class ReverseProxy(http.HTTPChannel):
 
 
 class ReverseProxyResource(resource.Resource):
+
     def __init__(self, host, port, path):
         resource.Resource.__init__(self)
         self.host = host
@@ -110,10 +139,11 @@ class ReverseProxyResource(resource.Resource):
         return ReverseProxyResource(self.host, self.port, self.path+'/'+path)
 
     def render(self, request):
-        request.received['host'] = self.host
-        clientProtocol = ProxyClient(request.method, self.path, 
+        request.received_headers['host'] = self.host
+        clientFactory = ProxyClientFactory(request.method, self.path, 
                                      request.clientproto, 
-                                     request.getAllHeaders(), request.content,
+                                     request.getAllHeaders(),
+                                     request.content.read(),
                                      request)
-        client = reactor.clientTCP(self.host, self.port, clientProtocol)
+        reactor.connectTCP(self.host, self.port, clientFactory)
         return server.NOT_DONE_YET
