@@ -58,6 +58,7 @@ import msvcrt
 # Twisted imports
 from twisted.internet import abstract, default
 from twisted.python import log, threadable
+from twisted.internet.interfaces import IReactorFDSet
 
 # System imports
 import os
@@ -75,6 +76,8 @@ events = {}
 
 class Win32Reactor(default.PosixReactorBase):
     """Reactor that uses Win32 event APIs."""
+
+    __implements__ = (default.PosixReactorBase.__implements__, IReactorFDSet)
     
     def _makeSocketEvent(self, fd, action, why, events=events):
         """Make a win32 event object for a socket."""
