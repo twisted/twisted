@@ -41,6 +41,7 @@ import time, string, re, base64, types, socket, os, random
 import MimeWriter, tempfile, rfc822
 import warnings
 import binascii
+import sys
 
 try:
     from cStringIO import StringIO
@@ -273,7 +274,7 @@ class Address:
                           )+|.) # or any single character''',re.X)
     atomre = re.compile(atom) # match any one atom character
 
-    def __init__(self, addr):
+    def __init__(self, addr, defaultDomain=None):
         if isinstance(addr, User):
             addr = addr.dest
         if isinstance(addr, Address):
@@ -321,7 +322,9 @@ class Address:
         self.local = ''.join(local)
         self.domain = ''.join(domain)
         if self.domain == '':
-            self.domain = DNSNAME
+            if defaultDomain is None:
+                defaultDomain = DNSNAME
+            self.domain = defaultDomain
         
     dequotebs = re.compile(r'\\(.)')
 
@@ -354,13 +357,14 @@ class User:
     """
 
     def __init__(self, destination, helo, protocol, orig):
-        self.dest = Address(destination)
+        host = getattr(protocol, 'host', None)
+        self.dest = Address(destination, host)
         self.helo = helo
         self.protocol = protocol
         if isinstance(orig, Address):
             self.orig = orig
         else:
-            self.orig = Address(orig)
+            self.orig = Address(orig, host)
 
     def __getstate__(self):
         """Helper for pickle.
@@ -514,7 +518,7 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
             return
 
         try:
-            addr = Address(m.group('path'))
+            addr = Address(m.group('path'), self.host)
         except AddressError, e:
             self.sendCode(553, str(e))
             return
