@@ -29,6 +29,7 @@ lowerUpperRE = re.compile(r'([a-z])([A-Z])')
 
 def latexEscape(text):
     text = escapingRE.sub(lambda x: (x.group()=='\\' and '$\\backslash$') or
+                                    (x.group()=='~' and '\\~{}') or
                                     '\\'+x.group(), text)
     return text.replace('\n', ' ')
 
