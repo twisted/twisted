@@ -38,6 +38,52 @@ statuses = {
     2: "Away"
     }
 
+class WordsError(pb.Error):
+    pass
+
+class NotInCollectionError(WordsError):
+    pass
+
+class NotInGroupError(NotInCollectionError):
+    def __init__(self, groupName, pName=None):
+        WordsError.__init__(self, groupName, pName)
+        self.group = groupName
+        self.pName = pName
+
+    def __str__(self):
+        if self.pName:
+            pName = "'%s' is" % (pName,)
+        else:
+            pName = "You are"
+        s = ("%s not in group '%s'." % (pName, self.group))
+        return s
+
+class UserNonexistantError(NotInCollectionError):
+    def __init__(self, pName):
+        WordsError.__init__(self, pName)
+        self.pName = pName
+
+    def __str__(self):
+        return "'%s' does not exist." % (self.pName,)
+
+class WrongStatusError(WordsError):
+    def __init__(self, status, pName=None):
+        WordsError.__init__(self, status, pName)
+        self.status = status
+        self.pName = pName
+
+    def __str__(self):
+        if self.pName:
+            pName = "'%s'" % (self.pName,)
+        else:
+            pName = "User"
+
+        status = statuses.get(self.status,
+                              'unknown? (%s)' % (self.status,))
+
+        s = ("%s status is '%s'." % (pName, status))
+        return s
+
 
 class WordsClientInterface:
     """A client to a perspective on the twisted.words service.
@@ -137,7 +183,10 @@ class Participant(pb.Perspective, styles.Versioned):
         log.msg("detached: %s" % self.name)
         self.client = None
         for group in self.groups[:]:
-            self.leaveGroup(group.name)
+            try:
+                self.leaveGroup(group.name)
+            except NotInGroupError:
+                pass
         self.changeStatus(OFFLINE)
 
     def addContact(self, contactName):
@@ -152,12 +201,14 @@ class Participant(pb.Perspective, styles.Versioned):
                 self.contacts.remove(contact)
                 contact.reverseContacts.remove(self)
                 return
-        raise pb.Error("No such contact '%s'." % (contactName,))
+        raise NotInCollectionError("No such contact '%s'."
+                                   % (contactName,))
 
     def joinGroup(self, name):
         group = self.service.getGroup(name)
         if group in self.groups:
-            raise pb.Error("You're already in group '%s'." % (name,))
+            # We're in that group.  Don't make a fuss.
+            return
         group.addMember(self)
         self.groups.append(group)
 
@@ -167,7 +218,7 @@ class Participant(pb.Perspective, styles.Versioned):
                 self.groups.remove(group)
                 group.removeMember(self)
                 return
-        raise pb.Error("You're not in group '%s'." % (name,))
+        raise NotInGroupError(name)
 
     def getGroupMembers(self, groupName):
         for group in self.groups:
@@ -175,13 +226,13 @@ class Participant(pb.Perspective, styles.Versioned):
                 self.client.receiveGroupMembers(map(lambda m: m.name,
                                                     group.members),
                                                 group.name)
-        raise pb.Error("You're not in group '%s'." % (groupName,))
+        raise NotInGroupError(groupName)
 
     def receiveDirectMessage(self, sender, message):
         if self.client:
             self.client.receiveDirectMessage(sender.name, message)
         else:
-            raise pb.Error("%s not logged in." % self.name)
+            raise WrongStatusError(self.status, self.name)
 
     def receiveGroupMessage(self, sender, group, message):
         if sender is not self and self.client:
@@ -194,10 +245,7 @@ class Participant(pb.Perspective, styles.Versioned):
         self.client.memberLeft(member.name, group.name)
 
     def directMessage(self, recipientName, message):
-        try:
-            recipient = self.service.getPerspectiveNamed(recipientName)
-        except KeyError:
-            raise pb.Error("No such user '%s'." % (recipientName,))
+        recipient = self.service.getPerspectiveNamed(recipientName)
         recipient.receiveDirectMessage(self, message)
 
     def groupMessage(self, groupName, message):
@@ -205,7 +253,7 @@ class Participant(pb.Perspective, styles.Versioned):
             if group.name == groupName:
                 group.sendMessage(self, message)
                 return
-        raise pb.Error("You're not in group '%s'." % (groupName,))
+        raise NotInGroupError(groupName)
 
     # Establish client protocol for PB.
     perspective_changeStatus = changeStatus
@@ -216,6 +264,16 @@ class Participant(pb.Perspective, styles.Versioned):
     perspective_groupMessage = groupMessage
     perspective_leaveGroup = leaveGroup
     perspective_getGroupMembers = getGroupMembers
+
+    def __str__(self):
+        if self.identityName != "Nobody":
+            id_s = '(id:%s)' % (self.identityName, )
+        else:
+            id_s = ''
+        s = ("<%s '%s'%s on %s at %x>"
+             % (self.__class__, self.name, id_s,
+                self.service.serviceName, id(self)))
+        return s
 
 class Group(pb.Cacheable):
 
@@ -242,9 +300,13 @@ class Group(pb.Cacheable):
         self.members.append(participant)
 
     def removeMember(self, participant):
-        self.members.remove(participant)
-        for member in self.members:
-            member.memberLeft(participant, self)
+        try:
+            self.members.remove(participant)
+        except ValueError:
+            raise NotInGroupError(self.name, participant.name)
+        else:
+            for member in self.members:
+                member.memberLeft(participant, self)
 
     def sendMessage(self, sender, message):
         for member in self.members:
@@ -284,7 +346,12 @@ class Service(pb.Service, styles.Versioned):
             return p
 
     def getPerspectiveNamed(self, name):
-        return self.participants[name]
+        try:
+            p = self.participants[name]
+        except KeyError:
+            raise UserNonexistantError(name)
+        else:
+            return p
 
     def __str__(self):
         s = "<%s in app '%s' at %x>" % (self.serviceName,

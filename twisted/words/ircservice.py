@@ -1,16 +1,16 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -125,7 +125,7 @@ class IRCChatter(irc.IRC):
             # self.sendLine(":%s!nowhere NICK :%s" %(self.nickname, nickname))
             try:
                 participant = self.service.getPerspectiveNamed(nickname)
-            except KeyError:
+            except service.UserNonexistantError:
                 self.sendMessage(irc.ERR_ERRONEUSNICKNAME,
                                  nickname, ":this username is invalid",
                                  to=nickname)
@@ -284,7 +284,7 @@ class IRCChatter(irc.IRC):
             self.participant.leaveGroup(channame)
         except pb.Error, e:
             self.sendMessage(irc.ERR_NOTONCHANNEL,
-                             "#%s :%s" % (channame, str(e)))
+                             "#%s :%s" % (channame, e))
         else:
             self.memberLeft(self.nickname, channame)
 
@@ -444,11 +444,11 @@ class IRCChatter(irc.IRC):
             else:
                 try:
                     self.participant.directMessage(name, text)
-                except (KeyError, pb.Error):
+                except service.WordsError, e:
                     ### << PRIVMSG vasdfasdf :hi
                     ### >> :niven.openprojects.net 401 glyph vasdfasdf :No such nick/channel
                     self.sendMessage(irc.ERR_NOSUCHNICK, name,
-                                     ":No such nick/channel")
+                                     ":%s" % (e,))
         else:
             if name == '*login*':
                 self.logInAs(self.pendingLogin, text)
