@@ -124,6 +124,9 @@ class Identity:
     def verifyPassword(self, challenge, hashedPassword):
         """Verify a challenge/response password.
         """
+        if self.hashedPassword is None:
+            # no password was set, so we can't log in
+            return 0
         md = md5.new()
         md.update(self.hashedPassword)
         md.update(challenge)
@@ -137,7 +140,9 @@ class Identity:
         This is insecure, but necessary to support legacy protocols such
         as IRC, POP3, HTTP, etc.
         """
-
+        if self.hashedPassword is None:
+            # no password was set, so we can't log in
+            return 0
         md = md5.new()
         md.update(plaintext)
         userPass = md.digest()

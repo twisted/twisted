@@ -218,6 +218,11 @@ class PerspectiveTestCase(unittest.TestCase):
         self.perspective.setIdentity(i)
         self.assertEqual(self.perspective.identityName, "id test name")
 
+    def test_identityWithNoPassword(self):
+        i = self.Identity("id test name")
+        self.assert_(not i.verifyPassword("foo", "bar"))
+        self.assert_(not i.verifyPlainPassword("foo"))
+    
     def testsetIdentity_invalid(self):
         self.assertRaises(TypeError,
                           self.perspective.setIdentity,
