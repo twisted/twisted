@@ -1,3 +1,8 @@
+2003-09-18  Stephen Thorne  <stephen@thorne.id.au>
+
+	* twisted/web/woven/widgets.py: Stop the 'Option' widget from having a
+    name="" attribute. Closes issue255.
+
 2003-09-16  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* .: Releasing Twisted 1.0.8alpha1.

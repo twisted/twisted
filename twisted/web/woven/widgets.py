@@ -661,7 +661,7 @@ class Select(Input):
     tagName = 'select'
 
 
-class Option(Input):
+class Option(Widget):
     tagName = 'option'
     def initialize(self):
         self.text = ''
@@ -677,8 +677,10 @@ class Option(Input):
 
     def setUp(self, request, node, data):
         self.add(Text(self.text or data))
-        Input.setUp(self, request, node, data)
-
+        if data is None:
+            data = ''
+        if not self.attributes.has_key('value'):
+            self['value'] = str(data)
 
 class Anchor(Widget):
     tagName = 'a'
