@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.80 $"[11:-2]
+__version__ = "$Revision: 1.81 $"[11:-2]
 
 # Sibling imports
 import interfaces
@@ -205,14 +205,7 @@ class View:
         # First see if templateDirectory + templateFile is a file
         templatePath = os.path.join(self.templateDirectory, self.templateFile)
         if not os.path.exists(templatePath):
-            templatePath = None
-        if not templatePath:
-            # If not, use acquisition to look for the name above this object
-            # look up an object named by our template data member
-            templateRef = request.pathRef().locate(self.templateFile)
-            # Build a reference to the template on disk
-            self.templateDirectory = templateRef.parentRef().getObject().path
-            templatePath = os.path.join(self.templateDirectory, self.templateFile)
+            return
         # Check to see if there is an already parsed copy of it
         mtime = os.path.getmtime(templatePath)
         cachedTemplate = templateCache.get(templatePath, None)

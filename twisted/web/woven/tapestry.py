@@ -7,7 +7,7 @@ THIS MODULE IS HIGHLY EXPERIMENTAL AND MAY BE DEPRECATED SOON.
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.11 $"[11:-2]
+__version__ = "$Revision: 1.12 $"[11:-2]
 
 # System Imports
 import sys
@@ -20,8 +20,6 @@ from twisted.internet.defer import Deferred
 from twisted.web.resource import Resource, IResource
 from twisted.web.static import redirectTo, addSlash, File, Data
 from twisted.web.server import NOT_DONE_YET
-
-from twisted.spread.refpath import PathReferenceAcquisitionContext
 
 from twisted.python.reflect import qual
 from twisted.python import components
@@ -172,10 +170,6 @@ class Tapestry(Resource):
         return redirectTo(addSlash(request), request)
 
     def getChild(self, path, request):
-        if isinstance(request, PathReferenceAcquisitionContext):
-            # temporary hack to get around acquisition, since we rather
-            # explicitly don't want it here.
-            return None
         if path == '': path = 'index'
         path = path.replace(".","_")
         cm = getattr(self, "wchild_"+path, None)

@@ -231,15 +231,6 @@ class DOMTemplate(Resource):
                 self.templateDirectory = os.path.split(mod.__file__)[0]
         # First see if templateDirectory + templateFile is a file
         templatePath = os.path.join(self.templateDirectory, self.templateFile)
-        if not os.path.exists(templatePath):
-            templatePath = None
-        if not templatePath:
-            # If not, use acquisition to look for the name above this object
-            # look up an object named by our template data member
-            templateRef = request.pathRef().locate(self.templateFile)
-            # Build a reference to the template on disk
-            self.templateDirectory = templateRef.parentRef().getObject().path
-            templatePath = os.path.join(self.templateDirectory, self.templateFile)
         # Check to see if there is an already compiled copy of it
         templateName = os.path.splitext(self.templateFile)[0]
         compiledTemplateName = '.' + templateName + '.pxp'
@@ -249,8 +240,6 @@ class DOMTemplate(Resource):
         os.stat(compiledTemplatePath)[stat.ST_MTIME] < os.stat(templatePath)[stat.ST_MTIME]):
             compiledTemplate = microdom.parse(templatePath)
             pickle.dump(compiledTemplate, open(compiledTemplatePath, 'wb'), 1)
-#            parent = templateRef.parentRef().getObject()
-#            parent.savePickleChild(compiledTemplatePath, compiledTemplate)
         else:
             compiledTemplate = pickle.load(open(compiledTemplatePath, "rb"))
         return compiledTemplate

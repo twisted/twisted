@@ -1,4 +1,4 @@
-
+# -*- test-case-name: twisted.test.test_web -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -282,38 +282,30 @@ class File(resource.Resource, styles.Versioned):
         """
         self.ignoredExts.append(ext)
 
+    childNotFound = error.NoResource("File not found.")
+    _suckItCodeRed = error.NoResource("Invalid request URL.")
+
     def getChild(self, path, request):
         """See twisted.web.Resource.getChild.
         """
+        if not os.path.isdir(self.path):
+            return self.childNotFound
+
         if path == '..':
-            return error.NoResource("Invalid request URL.")
+            return self._suckItCodeRed
 
         if path == '':
-            childPath = self.path
-        else:
-            childPath = os.path.join(self.path, path)
-        try:
-            mode, ino, dev, nlink, uid, gid, size, atime, mtime, ctime =\
-                  os.stat(childPath)
-        except OSError:
-            mode=0
+            for indexName in self.indexNames:
+                if os.path.exists(os.path.join(self.path, indexName)):
+                    path = indexName
+                    break
+            else:
+                return widgets.WidgetPage(DirectoryListing(self.path,
+                                                           self.listNames()))
 
-        if os.path.isdir(childPath): # 'stat.S_ISDIR(mode)' is faster but doesn't work on jython
-            # If someone is looking for children with a PathReferenceContext,
-            # the request won't have a prepath, and we shouldn't do this kind
-            # of mangling anyway because it has already been done.
-            if hasattr(request, 'postpath') and not request.postpath and string.split(request.uri,'?')[0][-1] != '/':
-                return Redirect(request)
-            if os.path.exists(childPath):
-                if hasattr(request, 'postpath') and not request.postpath and \
-                                                not self.getIndex(request):
-                    return widgets.WidgetPage(DirectoryListing(self.path, self.listNames()))
+        childPath = os.path.join(self.path, path)
 
-        ##
-        # If we're told to, allow requests for 'foo' to return
-        # 'foo.bar'.
-        ##
-        if not os.path.exists(childPath) and path and os.path.isdir(self.path):
+        if not os.path.exists(childPath):
             for ignoredExt in self.ignoredExts:
                 newChildPath = os.path.join(self.path, path+ignoredExt)
                 if os.path.exists(newChildPath):
@@ -325,47 +317,14 @@ class File(resource.Resource, styles.Versioned):
                             log.msg('    Returning %s' % fn)
                             childPath = os.path.join(self.path, fn)
                             break
-
-        if not os.path.exists(childPath):
-            # Before failing ask index.foo if it knows about this child
-            index = self.getIndex(request)
-            if index:
-                child = index.getChild(path, request)
-                if child:
-                    return child
-            return error.NoResource("File not found.")
+            else:
+                return self.childNotFound
 
         # forgive me, oh lord, for I know not what I do
         p, ext = os.path.splitext(childPath)
         processor = self.processors.get(ext)
         if processor:
-            #the `registry' argument is new, so we have to do this nasty hack
-            try:
-                p = processor(childPath, self.registry)
-            except TypeError: # this isn't very robust :(
-                potentialErrorMessage = widgets.formatFailure(failure.Failure())
-                try:
-                    p = processor(childPath)
-                except TypeError:
-                    #So it raised TypeError _both_ times, that means it's
-                    #probably not because of processor's signature
-                    return error.ErrorPage(500, "Internal Error", potentialErrorMessage)
-                import warnings
-                #this really should be a very short phase-out period; I doubt there are even any third-party processors
-                warnings.warn("warning: Processor %s doesn't use the signature (childPath, registry), it should." % processor,
-                              category=DeprecationWarning, stacklevel=2)
-
-
-            if components.implements(p, resource.IResource):
-                return p
-            else:
-                adapter = components.getAdapter(p, resource.IResource, None)
-                if not adapter:
-                    raise NotImplementedError("%s instance does not implement "
-                                              "IResource, and there is no "
-                                              "registered adapter." %
-                                              p.__class__)
-                return adapter
+            return resource.IResource(processor(childPath, self.registry))
 
         f = self.createSimilarFile(childPath)
         f.processors = self.processors
@@ -391,16 +350,11 @@ class File(resource.Resource, styles.Versioned):
         mode, ino, dev, nlink, uid, gid, size, atime, mtime, ctime =\
               os.stat(self.path)
 
+        if os.path.isdir(self.path): # stat.S_ISDIR(mode) (see above)
+            return self.redirect(request)
+
         #for content-length
         fsize = size = self.getFileSize()
-
-        if os.path.isdir(self.path): # stat.S_ISDIR(mode) (see above)
-            if self.path[-1] == os.sep:
-                index = self.getIndex(request)
-                if index:
-                    return index.render(request)
-            else:
-                return self.redirect(request)
 
         request.setHeader('accept-ranges','bytes')
 
@@ -444,7 +398,7 @@ class File(resource.Resource, styles.Versioned):
                 #sending, not the full size of the on-server entity.
                 fsize = end - int(start)
 
-            request.setHeader('content-length',fsize)
+            request.setHeader('content-length', str(fsize))
         except:
             traceback.print_exc(file=log.logfile)
 
@@ -458,21 +412,6 @@ class File(resource.Resource, styles.Versioned):
 
     def redirect(self, request):
         return redirectTo(addSlash(request), request)
-
-    def getIndex(self, request):
-        if not hasattr(request, 'prepath'): return
-        for name in self.indexNames:
-            ##
-            # This next step is so urls like
-            #     /foo/bar/baz/
-            # will be represented (internally) as
-            #     ['foo','bar','baz','index.qux']
-            # So that request.childLink() will work correctly.
-            ##
-            if os.path.exists(os.path.join(self.path, name)):
-                request.prepath[-1] = name
-                request.acqpath[-1] = name
-                return self.getChild(name, request)
 
     def listNames(self):
         if not os.path.isdir(self.path): return []
@@ -525,6 +464,12 @@ class DirectoryListing(widgets.StreamWidget):
                 url = url + '/'
             write('<li><a href="%s">%s</a></li>' % (url, path))
         write("</ul>\n")
+
+    def __repr__(self):
+        return '<DirectoryListing of %r>' % self.path
+
+    def __str__(self):
+        return repr(self)
 
 class FileTransfer(pb.Viewable):
     """

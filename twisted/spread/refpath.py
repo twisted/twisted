@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-__version__ = "$Revision: 1.16 $"[11:-2]
+__version__ = "$Revision: 1.17 $"[11:-2]
 
 """
 
@@ -57,140 +57,6 @@ class PathReferenceContext:
         for p in self.path:
             o = o.getChild(p, self)
         return o
-
-class PathReferenceAcquisitionContext(PathReferenceContext):
-    def __init__(self, request, path):
-        self.request = request
-        self.root = request.site.resource
-        self.path = path
-        # Make sure we have our own copy of these lists,
-        # so they can be mutated.
-        self.prepath = []
-        self.postpath = copy(path)
-
-    def __getattr__(self, name):
-        """
-        We need to delegate any methods which we don't override
-        to the real request object that got passed to us.
-        """
-        return getattr(self.request, name)
-    
-    def _lookup(self, name, acquire=0, debug=0):
-        if debug: log.msg("Looking for %s" % name)
-        obRef = self
-        ob = self.getObject()
-        while obRef:
-            if debug: log.msg(obRef)
-            if acquire and hasattr(ob, name):
-                return getattr(ob, name)
-            elif hasattr(ob, 'listNames'):
-                names = ob.listNames()
-                if debug: log.msg('%s %s %s' % (name, names, name in names))
-                if name in names:
-                    if acquire:
-                        return ob.getChild(name, self)
-                    else:
-                        foundPath = copy(obRef.path)
-                        foundPath.append(name)
-                        return PathReferenceAcquisitionContext(self.request, foundPath)
-
-            # When the loop gets to the top of the containment heirarchy,
-            # obRef will be set to None.
-            # Then the loop will exit into the else.
-            if obRef.path:
-                obRef = obRef.parentRef()
-                ob = obRef.getObject()
-            else:
-                obRef = None
-        else:
-            raise AttributeError, "%s not found." % name
-
-    def getIndex(self):
-        """
-        Dereference this path reference object, then look for an object
-        named 'index' inside of it and return it.
-        """
-        thisOb = self.getObject()
-        if hasattr(self.root, 'indexNames'):
-            indexNames = self.root.indexNames
-        else:
-            indexNames = ['index']
-        
-        childNames = thisOb.listNames()
-        for indexName in indexNames:
-            if indexName in childNames:
-                return thisOb.getChild(indexName, self)
-        return None
-
-    def parentRef(self):
-        """
-        Return a reference to my parent.
-        """
-        return PathReferenceAcquisitionContext(self.request, self.path[:-1])
-
-    def childRef(self, name):
-        """
-        Return a reference to the named child.
-        """
-        newPath = copy(self.path)
-        newPath.append(name)
-        return PathReferenceAcquisitionContext(self.request, newPath)
-
-    def siblingRef(self, name):
-        """
-        Return a reference to a sibling of mine.
-        """
-        newPath = copy(self.path)
-        newPath[-1] = name
-        return PathReferenceAcquisitionContext(self.request, newPath)
-
-    def diskPath(self):
-        """
-        Return the path to me on disk.
-        """
-        self.getObject()
-        pathList = [self.root.path]
-        log.msg("PathReferenceAcquisitionContext.path:", self.path)
-        pathList.extend(self.path)
-        return apply(os.path.join, pathList)
-
-    def relativePath(self, request):
-        """
-        Return the URL to the resource, relative to the current request object
-        """
-        log.msg(self.path, request.prepath)
-        relPath = copy(self.path)
-        for segNum in range(len(request.prepath)):
-            if relPath[0] == request.prepath[segNum]:
-                relPath.pop(0)
-            else:
-                upNum = len(request.prepath) - segNum
-                break
-        upPath = ['..'] * (upNum - 1)
-        upPath.insert(0, '.')
-        upPath.extend(relPath)
-        return "/".join(upPath)
-
-    def fullURL(self, request):
-        """Return the absolute URL to the resource.
-        """
-        return "http%s://%s/%s" % (
-            request.isSecure() and 's' or '',
-            request.getHeader("host"),
-            '/'.join(self.path))
-        
-    def locate(self, name, debug=0):
-        """
-        Get a reference to an object with the given name which is somewhere
-        on the path above us.
-        """
-        return self._lookup(name, debug=debug)
-
-    def acquire(self, name, debug=0):
-        """
-        Look for an attribute or element by name in all of our parents
-        """
-        return self._lookup(name, acquire=1, debug=debug)
 
 class PathReference:
     def __init__(self):

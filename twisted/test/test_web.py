@@ -24,6 +24,19 @@ from twisted.python import log, reflect
 
 class DummyRequest:
     uri='http://dummy/'
+    method = 'GET'
+
+    def getHeader(self, h):
+        return None
+
+    def registerProducer(self, prod,s):
+        self.go = 1
+        while self.go:
+            prod.resumeProducing()
+
+    def unregisterProducer(self):
+        self.go = 0
+
     def __init__(self, postpath, session=None):
         self.sitepath = []
         self.written = []
@@ -33,10 +46,13 @@ class DummyRequest:
         self.session = None
         self.protoSession = session or server.Session(0, self)
         self.args = {}
+        self.outgoingHeaders = {}
 
     def setHeader(self, name, value):
         """TODO: make this assert on write() if the header is content-length
         """
+        self.outgoingHeaders[name.lower()] = value
+
     def getSession(self):
         if self.session:
             return self.session
@@ -253,6 +269,8 @@ class GoogleTestCase(unittest.TestCase):
         self.assertEquals(r, 'http://twistedmatrix.com/')
 
 from twisted.web import static
+from twisted.web import script
+
 class StaticFileTest(unittest.TestCase):
 
     def testStaticPaths(self):
@@ -260,15 +278,32 @@ class StaticFileTest(unittest.TestCase):
         dp = os.path.join(self.caseMethodName,"hello")
         ddp = os.path.join(dp, "goodbye")
         tp = os.path.join(dp,"world.txt")
+        tpy = os.path.join(dp,"wyrld.rpy")
         os.makedirs(dp)
         f = open(tp,"wb")
         f.write("hello world")
+        f = open(tpy, "wb")
+        f.write("""
+from twisted.web.static import Data
+resource = Data('dynamic world','text/plain')
+""")
         f = static.File(dp)
+        f.processors = {
+            '.rpy': script.ResourceScript,
+            }
+
         f.indexNames = f.indexNames + ['world.txt']
         self.assertEquals(f.getChild('', DummyRequest([''])).path,
                           tp)
+        self.assertEquals(f.getChild('wyrld.rpy', DummyRequest(['wyrld.rpy'])
+                                     ).__class__,
+                          static.Data)
         f = static.File(dp)
-        self.assertEquals(f.getChild('world.txt', DummyRequest(['world.txt']))
-                          .path, tp)
-        self.assertEquals(f.getChild('', DummyRequest([''])).__class__,
-                          static.DirectoryListing)
+        wtextr = DummyRequest(['world.txt'])
+        wtext = f.getChild('world.txt', wtextr)
+        self.assertEquals(wtext.path, tp)
+        wtext.render(wtextr)
+        self.assertEquals(wtextr.outgoingHeaders.get('content-length'),
+                          str(len('hello world')))
+        self.assertNotEquals(f.getChild('', DummyRequest([''])).__class__,
+                             static.File)

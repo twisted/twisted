@@ -338,15 +338,12 @@ class Request(pb.Copyable, http.Request, components.Componentized):
             hostport,
             string.join(self.prepath, '/')), "/:")
 
-    def pathRef(self):
-        return refpath.PathReferenceAcquisitionContext(self, self.acqpath)
-
     def rememberRootURL(self):
         """
         Remember the currently-processed part of the URL for later
         recalling.
         """
-        self.appRootURL = self.pathRef().parentRef().fullURL(self)
+        self.appRootURL = self.prePathURL()
 
     def getRootURL(self):
         """

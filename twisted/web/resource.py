@@ -20,7 +20,6 @@
 
 
 # System Imports
-from twisted.spread.refpath import PathReferenceAcquisitionContext
 from twisted.internet import defer
 from twisted.python import roots, components, reflect
 from twisted.coil import coil
