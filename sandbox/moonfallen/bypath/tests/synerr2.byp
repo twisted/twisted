@@ -1,0 +1,12 @@
+# node is always the matched node
+# document is always the root document
+# python code always begins with one level of indentation
+
+/html/head: # 'hi mom'
+    node.appendChild(document.createTextNode('hi'))
+    # the following should raise a syntaxerror
+    print document.\
+
+    createTextNode
+
+    print 'hi'
