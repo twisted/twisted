@@ -133,10 +133,7 @@ if threadable.threaded:
 else:
     theScheduler = Scheduler()
 
-def schedule(function, *args, **kwargs):
-    """Add a task to the scheduler.
-    """
-    apply(theScheduler.addTask, (function,) + args, kwargs)
+schedule = theScheduler.addTask
 
 def doAllTasks():
     """Run all tasks in the scheduler.
