@@ -260,7 +260,6 @@ class _Jellier:
         if self.persistentStore:
             persistent = self.persistentStore(instance, self)
         if persistent is not None:
-            tp = type(persistent)
             sxp.append(persistent_atom)
             sxp.append(persistent)
         elif self.taster.isModuleAllowed(instance.__class__.__module__):
@@ -557,8 +556,7 @@ class _Unjellier:
 
     def _unjelly_persistent(self, rest):
         if self.persistentLoad:
-            pid = rest[0]
-            pload = self.persistentLoad(rest[0],self)
+            pload = self.persistentLoad(rest[0], self)
             return pload
         else:
             return Unpersistable("persistent callback not found")

@@ -19,7 +19,7 @@
 
 from twisted.protocols import protocol
 from twisted.persisted import styles
-import types, copy, cStringIO, math, struct
+import types, copy, cStringIO, struct
 
 def int2b128(integer, stream):
     if integer == 0:
@@ -197,11 +197,6 @@ class Banana(protocol.Protocol, styles.Ephemeral):
         self.outgoingSymbols = copy.copy(self.outgoingVocabulary)
         self.outgoingSymbolCount = 0
 
-    def intern(self, sym):
-        write = self.transport.write
-        self.outgoingSymbolCount = self.outgoingSymbolCount + 1
-        self.outgoingSymbols[sym] = self.outgoingSymbolCount
-
     def sendEncoded(self, obj):
         io = cStringIO.StringIO()
         self._encode(obj, io.write)
@@ -245,7 +240,7 @@ class Banana(protocol.Protocol, styles.Ephemeral):
                 write(STRING)
                 write(obj)
         else:
-            assert 0, "could not send object: %s" % repr(obj)
+            raise RuntimeError, "could not send object: %s" % repr(obj)
 
 class Canana(Banana):
     def connectionMade(self):
