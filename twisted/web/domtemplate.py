@@ -108,7 +108,11 @@ class MethodLookup:
             return self._bytag[str(node.nodeName)]
         return None
 
+
 class DOMTemplate(Resource):
+    """A resource that renders pages using DOM."""
+    
+    isLeaf = 1
     templateFile = ''
     template = ''
     _cachedTemplate = None
@@ -248,7 +252,7 @@ class DOMTemplate(Resource):
         into the DOM tree. Return the new node.
         """
         if isinstance(result, Widget):
-            return self.processWidget(request, widget, node)
+            return self.processWidget(request, result, node)
         elif isinstance(result, minidom.Node):
             return self.processNode(request, result, node)
         elif isinstance(result, Deferred):
@@ -258,7 +262,7 @@ class DOMTemplate(Resource):
             # Got to wait until the callback comes in
             return None
         elif isinstance(result, types.StringType):
-            return self.processString(request, string, node)
+            return self.processString(request, result, node)
 
     def recurseChildren(self, request, node):
         """
@@ -300,9 +304,9 @@ class DOMTemplate(Resource):
 
     def processString(self, request, html, node):
         try:
-            child = parseString(html)
+            child = minidom.parseString(html)
         except Exception, e:
-            print "damn, error parsing, probably invalid xml", e
+            print "damn, error parsing, probably invalid xml:", e
             child = self.d.createTextNode(html)
         return self.processNode(request, child, node)
 
