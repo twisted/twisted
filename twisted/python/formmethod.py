@@ -325,9 +325,9 @@ class Submit(Choice):
     """Submit button or a reasonable facsimile thereof."""
 
     def __init__(self, name, choices=[("Submit", "submit", "Submit form")],
-                 reset=0, shortDesc=None, longDesc=None, allowNone=0):
+                 reset=0, shortDesc=None, longDesc=None, allowNone=0, hints=None):
         Choice.__init__(self, name, choices=choices, shortDesc=shortDesc,
-                        longDesc=longDesc)
+                        longDesc=longDesc, hints=hints)
         self.allowNone = allowNone
         self.reset = reset
 
