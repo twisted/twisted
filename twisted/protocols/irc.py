@@ -42,7 +42,7 @@ Test coverage needs to be better.
 <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-__version__ = '$Revision: 1.64 $'[11:-2]
+__version__ = '$Revision: 1.65 $'[11:-2]
 
 from twisted.internet import reactor, protocol
 from twisted.persisted import styles
@@ -765,7 +765,11 @@ class IRCClient(basic.LineReceiver):
           address = args.pop()
           arg = string.join(args,' ')[1:-1]
 
-        port = int(port)
+        try:
+            port = int(port)
+        except ValueError:
+            raise IRCBadMessage, "Indecipherable port %r" % (port,)
+
         if '.' in address:
             pass
         else:
@@ -773,7 +777,7 @@ class IRCClient(basic.LineReceiver):
                 address = long(address)
             except ValueError:
                 raise IRCBadMessage,\
-                      "Indecipherable address '%s'" % (address,)
+                      "Indecipherable address %r" % (address,)
             else:
                 address = (
                     (address >> 24) & 0xFF,
