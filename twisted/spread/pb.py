@@ -52,7 +52,7 @@ applied when serializing arguments.
 # Future Imports
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.129 $"[11:-2]
+__version__ = "$Revision: 1.130 $"[11:-2]
 
 
 # System Imports
@@ -1173,7 +1173,7 @@ def getObjectAt(host, port, timeout=None):
         reactor.connectTCP(host, port, bf, timeout)
     return d
 
-def getObjectAtSSL(host, port,  timeout=None):
+def getObjectAtSSL(host, port, timeout=None, contextFactory=None):
     """Establishes a PB connection over SSL and returns with a RemoteReference.
 
     @param host: the host to connect to
@@ -1182,13 +1182,18 @@ def getObjectAtSSL(host, port,  timeout=None):
 
     @param timeout: a value in milliseconds to wait before failing by
       default. (OPTIONAL)
+    
+    @param contextFactory: A factory object for producing SSL.Context
+      objects.  (OPTIONAL)
 
     @returns: A Deferred which will be passed a remote reference to the
       root object of a PB server.x
     """
     bf, d = getObjectRetriever()
-    from twisted.internet import ssl
-    reactor.connectSSL(host, port, bf, ssl.ClientContextFactory(), timeout)
+    if contextFactory is None:
+        from twisted.internet import ssl
+        contextFactory = ssl.ClientContextFactory()
+    reactor.connectSSL(host, port, bf, contextFactory, timeout)
     return d
 
 def connect(host, port, username, password, serviceName,
