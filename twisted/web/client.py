@@ -17,7 +17,10 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-"""HTTP client."""
+"""HTTP client.
+
+API Stability: unstable
+"""
 
 from twisted.protocols import http
 from twisted.internet import defer, protocol, reactor
