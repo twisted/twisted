@@ -840,9 +840,9 @@ class HTTPChannel(basic.LineReceiver):
                 self.transport.loseConnection()
                 return
             command, request, version = parts
-            self.__command = command
-            self.__path = request
-            self.__version = version
+            self._command = command
+            self._path = request
+            self._version = version
             if version == 'HTTP/0.9':
                 self.allHeadersReceived()
                 self.allContentReceived()
@@ -873,15 +873,15 @@ class HTTPChannel(basic.LineReceiver):
         self.requests[-1].received_headers[header] = data
 
     def allContentReceived(self):
-        command = self.__command
-        path = self.__path
-        version = self.__version
+        command = self._command
+        path = self._path
+        version = self._version
 
         # reset ALL state variables, so we don't interfere with next request
         self.length = 0
-        self.__header = ''
+        self._header = ''
         self.__first_line = 1
-        del self.__command, self.__path, self.__version
+        del self._command, self._path, self._version
 
         req = self.requests[-1]
         req.requestReceived(command, path, version)
@@ -899,7 +899,7 @@ class HTTPChannel(basic.LineReceiver):
     def allHeadersReceived(self):
         req = self.requests[-1]
         req.parseCookies()
-        self.persistent = self.checkPersistence(req, self.__version)
+        self.persistent = self.checkPersistence(req, self._version)
         req.gotLength(self.length)
 
     def checkPersistence(self, request, version):
