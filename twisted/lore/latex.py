@@ -62,7 +62,6 @@ class LatexSpitter:
         m(node)
 
     def visitNodeDefault(self, node):
-        print node.tagName
         s = getattr(self, 'mapStart_'+node.tagName, None)
         if s:
             self.writer(s)
