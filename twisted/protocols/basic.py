@@ -52,8 +52,8 @@ class NetstringReceiver(protocol.Protocol):
 
     MAX_LENGTH = 99999
     brokenPeer = 0
-    mode = LENGTH
-    length = 0
+    __mode = LENGTH
+    __length = 0
 
     def stringReceived(self, line):
         """
@@ -62,16 +62,16 @@ class NetstringReceiver(protocol.Protocol):
         raise NotImplementedError
 
     def doData(self):
-        buffer,self.__data = self.__data[:int(self.length)],self.__data[int(self.length):]
-        self.length = self.length - len(buffer)
+        buffer,self.__data = self.__data[:int(self.__length)],self.__data[int(self.__length):]
+        self.__length = self.__length - len(buffer)
         self.__buffer = self.__buffer + buffer
-        if self.length != 0:
+        if self.__length != 0:
             return
         self.stringReceived(self.__buffer)
-        self.mode = COMMA
+        self.__mode = COMMA
 
     def doComma(self):
-        self.mode = LENGTH
+        self.__mode = LENGTH
         if self.__data[0] != ',':
             if DEBUG:
                 raise NetstringParseError(repr(self.__data))
@@ -90,24 +90,24 @@ class NetstringReceiver(protocol.Protocol):
         self.__data = self.__data[m.end():]
         if m.group(1):
             try:
-                self.length = self.length * (10**len(m.group(1))) + long(m.group(1))
+                self.__length = self.__length * (10**len(m.group(1))) + long(m.group(1))
             except OverflowError:
                 raise NetstringParseError, "netstring too long"
-            if self.length > self.MAX_LENGTH:
+            if self.__length > self.MAX_LENGTH:
                 raise NetstringParseError, "netstring too long"
         if m.group(2):
             self.__buffer = ''
-            self.mode = DATA
+            self.__mode = DATA
 
     def dataReceived(self, data):
         self.__data = data
         try:
             while self.__data:
-                if self.mode == DATA:
+                if self.__mode == DATA:
                     self.doData()
-                elif self.mode == COMMA:
+                elif self.__mode == COMMA:
                     self.doComma()
-                elif self.mode == LENGTH:
+                elif self.__mode == LENGTH:
                     self.doLength()
                 else:
                     raise RuntimeError, "mode is not DATA, COMMA or LENGTH"
