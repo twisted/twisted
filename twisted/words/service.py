@@ -272,10 +272,10 @@ class Participant(pb.Perspective, styles.Versioned):
                                                 message)
 
     def memberJoined(self, member, group):
-        self.client.memberJoined(member.name, group.name)
+        self.client.callRemote('memberJoined', member.name, group.name)
 
     def memberLeft(self, member, group):
-        self.client.memberLeft(member.name, group.name)
+        self.client.callRemote('memberLeft', member.name, group.name)
 
     def directMessage(self, recipientName, message, metadata=None):
         # XXX getPerspectiveNamed is misleading here -- this ought to look up

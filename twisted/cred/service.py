@@ -50,7 +50,7 @@ class Service:
         Arguments: application, a twisted.internet.app.Application instance.
         """
         if not isinstance(serviceName, types.StringType):
-            raise TypeError
+            raise TypeError("%s is not a string." % serviceName)
         self.serviceName = serviceName
         self.perspectives = {}
         self.setApplication(application)
@@ -77,9 +77,9 @@ class Service:
     def setApplication(self, application):
         from twisted.internet import app
         if application and not isinstance(application, app.Application):
-            raise TypeError
+            raise TypeError( "%s is not an Application" % application)
         if self.application and self.application is not application:
-            raise RuntimeError, "Application already set!"
+            raise RuntimeError( "Application already set!" )
         if application:
             self.application = application
             application.addService(self)
@@ -104,7 +104,8 @@ class Service:
         """Return a perspective that represents a user for this service. (DEPRECATED)
 
         Raises a KeyError if no such user exists.  Override this method to
-        provide dynamic instantiation of perspectives.
+        provide dynamic instantiation of perspectives -- it is deprecated to
+        call this method directly.
         """
         return self.perspectives[name]
 

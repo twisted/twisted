@@ -23,7 +23,7 @@ import string, os
 # Twisted Imports
 from twisted.web import server, static, twcgi, script, test, distrib
 from twisted.internet import tcp
-from twisted.python import usage
+from twisted.python import usage, reflect
 from twisted.spread import pb
 
 import sys
@@ -77,6 +77,12 @@ twisted.web.test in it."""
             '.php3': twcgi.PHPScript,
             '.epy': script.PythonScript
             }
+
+    def opt_class(self, className):
+        """Create a Resource subclass with a zero-argument constructor.
+        """
+        classObj = reflect.namedClass(className)
+        self.root = classObj()
 
     opt_s = opt_static
 

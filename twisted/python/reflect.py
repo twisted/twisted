@@ -25,6 +25,7 @@ metaclasses somehow, but I don't understand them, so nyah :-)
 import sys
 import types
 import cStringIO
+import string
 
 # Sibling Imports
 import reference
@@ -245,6 +246,11 @@ def isinst(inst,clazz):
 
 def namedModule(name):
     return __import__(name, {}, {}, 'x')
+
+def namedClass(name):
+    classSplit = string.split(name, '.')
+    module = namedModule(string.join(classSplit[:-1]))
+    return getattr(module, classSplit[-1])
 
 def _reclass(clazz):
     clazz = getattr(namedModule(clazz.__module__),clazz.__name__)

@@ -66,6 +66,7 @@ from flavors import Copyable
 from flavors import Cacheable
 from flavors import RemoteCopy
 from flavors import RemoteCache
+from flavors import RemoteCacheObserver
 from flavors import copyTags
 from flavors import setCopierForClass
 from flavors import setCopierForClassTree
@@ -193,7 +194,7 @@ class Perspective(perspective.Perspective):
         try:
             state = apply(method, args, kw)
         except TypeError:
-            print ("%s didn't accept %s and %s" % (method, args, kw))
+            log.msg("%s didn't accept %s and %s" % (method, args, kw))
             raise
         return broker.serialize(state, self, method, args, kw)
 
@@ -321,11 +322,15 @@ class Local:
     """(internal) A reference to a local object.
     """
 
-    def __init__(self, object):
+    def __init__(self, object, perspective=None):
         """Initialize.
         """
         self.object = object
+        self.perspective = perspective
         self.refcount = 1
+
+    def __repr__(self):
+        return "<pb.Local %r ref:%s>" % (self.object, self.refcount)
 
     def incref(self):
         """Increment and return my reference count.
@@ -635,13 +640,13 @@ class Broker(banana.Banana):
         """
         return RemoteReference(None, self, name, 0)
 
-    def cachedRemotelyAs(self, instance):
+    def cachedRemotelyAs(self, instance, incref=0):
         """Returns an ID that says what this instance is cached as remotely, or None if it's not.
         """
 
         puid = instance.processUniqueID()
         luid = self.remotelyCachedLUIDs.get(puid)
-        if luid is not None:
+        if (luid is not None) and (incref):
             self.remotelyCachedObjects[luid].incref()
         return luid
 
@@ -658,7 +663,7 @@ class Broker(banana.Banana):
         self.remotelyCachedLUIDs[puid] = luid
         # This table may not be necessary -- for now, it's to make sure that no
         # monkey business happens with id(instance)
-        self.remotelyCachedObjects[luid] = Local(instance)
+        self.remotelyCachedObjects[luid] = Local(instance, self.serializingPerspective)
         return luid
 
     def cacheLocally(self, cid, instance):
@@ -863,9 +868,18 @@ class Broker(banana.Banana):
         'uncached' directive.
         """
         refs = self.remotelyCachedObjects[objectID].decref()
-        # print 'decaching: %s #refs: %s' % (objectID, refs)
+        # log.msg('decaching: %s #refs: %s' % (objectID, refs))
         if refs == 0:
-            puid = self.remotelyCachedObjects[objectID].object.processUniqueID()
+            lobj = self.remotelyCachedObjects[objectID]
+            cacheable = lobj.object
+            perspective = lobj.perspective
+            # TODO: force_decache needs to be able to force-invalidate a
+            # cacheable reference.
+            try:
+                cacheable.stoppedObserving(perspective, RemoteCacheObserver(self, cacheable, perspective))
+            except:
+                log.deferr()
+            puid = cacheable.processUniqueID()
             del self.remotelyCachedLUIDs[puid]
             del self.remotelyCachedObjects[objectID]
             self.sendCall("uncache", objectID)
@@ -873,7 +887,7 @@ class Broker(banana.Banana):
     def proto_uncache(self, objectID):
         """(internal) Tell the client it is now OK to uncache an object.
         """
-        # print "uncaching %d" % objectID
+        # log.msg("uncaching %d" % objectID)
         obj = self.locallyCachedObjects[objectID]
         def reallyDel(obj=obj):
             obj.__really_del__()
@@ -993,7 +1007,7 @@ class AuthServ(Referenceable):
 
     def remote_username(self, username):
         defr = self.app.authorizer.getIdentityRequest(username)
-        defr.addCallbacks(self.mkchallenge, self.mkchallenge)
+        defr.addCallback(self.mkchallenge)
         return defr
 
     def mkchallenge(self, ident):

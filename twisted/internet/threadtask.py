@@ -37,12 +37,13 @@ class ThreadDispatcher(threadpool.ThreadPool):
         from twisted.internet import main
         from twisted.internet import threadtask
         tpool = ThreadDispatcher()
-        main.callBeforeShutdown(tpool.stop)
+        main.callDuringShutdown(tpool.stop)
 
     """
 
     def __init__(self, *args, **kwargs):
         apply(threadpool.ThreadPool.__init__, (self,) + args, kwargs)
+        main.callWhenRunning(self.start)
         self._callbacks = []
 
     def _runWithCallback(self, callback, errback, func, args, kwargs):

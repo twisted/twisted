@@ -37,6 +37,7 @@ class ThreadPoolTestCase(unittest.TestCase):
     
     def testPersistence(self):
         tp = threadpool.ThreadPool(7, 20, 200)
+        tp.start()
         time.sleep(0.1)
         self.assertEquals(len(tp.threads), 7)
         self.assertEquals(tp.min, 7)
@@ -46,6 +47,7 @@ class ThreadPoolTestCase(unittest.TestCase):
         # check that unpickled threadpool has same number of threads
         s = pickle.dumps(tp)
         tp2 = pickle.loads(s)
+        tp2.start()
         time.sleep(0.1)
         self.assertEquals(len(tp2.threads), 7)
         self.assertEquals(tp2.min, 7)
@@ -57,6 +59,7 @@ class ThreadPoolTestCase(unittest.TestCase):
 
     def testCounter(self):
         tp = threadpool.ThreadPool()
+        tp.start()
         c = Counter()
         
         for i in range(1000):

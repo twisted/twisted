@@ -7,9 +7,9 @@ from twisted.internet import main
 # TODO: turn this into real unit test!!!!
 
 
-"""Schema for this test program:
+testSchema = """
 
-DROP TABLE testrooms;
+-- DROP TABLE testrooms;
 
 CREATE TABLE testrooms
 (
@@ -57,14 +57,17 @@ def runTests(stuff):
     global manager
     manager.loadObjectsFrom("testrooms", [("roomId", "int4")], None, RoomRow).addCallback(gotRooms).arm()
 
+def createSchema():
+    return dbpool.runOperation(testSchema).addCallbacks(kickOffTests, kickOffTests)
+
 def gotRooms(rooms):
     print "got Rooms.", dir(rooms[0])
-    
+
     for room in rooms:
         print "  ROOM:", room
         if room.roomId == 10:
             room.moveTo( int(random.random() * 100) , int(random.random() * 100) )
-            room.updateRow().addCallback(onUpdate).arm()
+            manager.updateRow(room).addCallback(onUpdate).arm()
 
 def onUpdate(data):
     print "updated row."
@@ -81,18 +84,18 @@ def onUpdate(data):
     newRoom.height = 20
     
     #insert row into database
-    newRoom.insertRow().addCallback(onInsert).arm()
+    manager.insertRow(newRoom).addCallback(onInsert).arm()
 
 def onInsert(data):
     print "row inserted", newRoom.roomId
-    newRoom.deleteRow().addCallback(onDelete).arm()    
+    manager.deleteRow(newRoom).addCallback(onDelete).arm()
 
 def onDelete(data):
     print "row deleted."
     newRoom2 = RoomRow()
     newRoom2.assignKeyAttr("roomId", 10)
-    newRoom2.selectRow().addCallback(onSelected).arm()
-    
+    manager.selectRow(newRoom2).addCallback(onSelected).arm()
+
 
 def onSelected(room):
     print "\ngot Room:", room
@@ -105,19 +108,21 @@ def tick():
 
 newRoom = None
 
-dbpool = adbapi.ConnectionPool("pyPgSQL.PgSQL", "localhost:5432", database="sean")
-manager = adbapi.Augmentation(dbpool)
+dbpool = adbapi.ConnectionPool("pyPgSQL.PgSQL")
+stubs = [ (RoomRow, "testrooms", [("roomId","int4")]) ]
 
 # Create Twisted application object
 application = main.Application("testApp")
 
-stubs = [ (RoomRow, "testrooms", [("roomId","int4")]) ]
-reflector = row.DBReflector(manager, stubs)
-reflector.populate().addCallback(runTests).arm()
+def kickOffTests(ignoredResult):
+    global manager
+    manager = row.DBReflector(dbpool, stubs, runTests)
+
+createSchema().addCallback(kickOffTests).arm()
 
 kf = row.KeyFactory(100000,50000)
 
 # make sure we can be shut down on windows.
 main.addTimeout(tick, 0.5)
 
-application.run()
+application.run(save=0)

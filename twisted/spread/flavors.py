@@ -373,7 +373,7 @@ class Cacheable(Copyable):
         return either a full state or a reference to an existing cache.
         """
 
-        luid = broker.cachedRemotelyAs(self)
+        luid = broker.cachedRemotelyAs(self, 1)
         if luid is None:
             luid = broker.cacheRemotely(self)
             p = broker.serializingPerspective
@@ -384,6 +384,13 @@ class Cacheable(Copyable):
             return cache_atom, luid, type_, jstate
         else:
             return cached_atom, luid
+
+    def stoppedObserving(self, perspective, observer):
+        """This method is called when a client has stopped observing me.
+
+        The 'observer' argument is the same as that passed in to
+        getStateToCacheAndObserveFor.
+        """
 
 
 
@@ -458,7 +465,7 @@ class RemoteCache(RemoteCopy, Serializable):
         """
 
     def __cmp__(self, other):
-        """Compare me [to another RemoteCacheProxy.
+        """Compare me [to another RemoteCache.
         """
         if isinstance(other, self.__class__):
             return cmp(id(self.__dict__), id(other.__dict__))
@@ -477,7 +484,7 @@ class RemoteCache(RemoteCopy, Serializable):
         """Do distributed reference counting on finalize.
         """
         try:
-            # print 'decache: %s %d' % (self, self.luid)
+            # log.msg( ' --- decache: %s %s' % (self, self.luid) )
             if self.broker:
                 self.broker.decCacheRef(self.luid)
         except:

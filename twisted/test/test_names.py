@@ -19,12 +19,14 @@
 """
 Test cases for twisted.names.
 """
+import socket
 
 from pyunit import unittest
 
 from twisted.names import dns
 from twisted.internet import main, udp
 from twisted.protocols import protocol
+from twisted.python import log
 
 
 class DNSFactory(protocol.ServerFactory):
@@ -79,18 +81,23 @@ class LookupDNSTestCase(unittest.TestCase):
         self.resolver = dns.Resolver(["207.19.98.16"])
     
     def _testLookup(self, domain, type, result):
-        d = self.resolver.resolve(domain, type)
-        d.addCallback(self._result).addErrback(self._error)
-        d.arm()
-        while len(self.results) == 0:
-            main.iterate()
-        self.assertEquals(self.results[0], result)
+        try:
+            socket.gethostbyname(domain)
+        except socket.error:
+            log.msg("host not available through normal means")
+        else:
+            d = self.resolver.resolve(domain, type)
+            d.addCallback(self._result).addErrback(self._error)
+            d.arm()
+            while len(self.results) == 0:
+                main.iterate()
+            self.assertEquals(self.results[0], result)
         
     def _result(self, result):
         self.results.append(result)
     
     def _error(self, error):
-        raise RuntimeError, error
+        self.results.append(None)
 
     def testA(self):
         self._testLookup("zoteca.com", 1, "209.163.251.206")

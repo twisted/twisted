@@ -26,7 +26,7 @@ from twisted.protocols import protocol
 from twisted.python import log
 from twisted.persisted import styles
 from twisted.python.runtime import platform
-from twisted.cred import authorizer
+from twisted.cred.authorizer import DefaultAuthorizer
 
 
 class Application(log.Logger, styles.Versioned):
@@ -37,7 +37,7 @@ class Application(log.Logger, styles.Versioned):
     """
 
     running = 0
-    def __init__(self, name, uid=None, gid=None, authorizer_=None):
+    def __init__(self, name, uid=None, gid=None, authorizer=None, authorizer_=None):
         """Initialize me.
 
         Arguments:
@@ -48,7 +48,7 @@ class Application(log.Logger, styles.Versioned):
 
           * gid: (optional) a POSIX group-id.  Only used on POSIX systems.
 
-          * authorizer_: a twisted.cred.authorizer.Authorizer.
+          * authorizer: a twisted.cred.authorizer.Authorizer.
 
         If uid and gid arguments are not provided, this application will
         default to having the uid and gid of the user and group who created it.
@@ -63,7 +63,7 @@ class Application(log.Logger, styles.Versioned):
         # a list of twisted.internet.cred.service.Services
         self.services = {}
         # a cred authorizer
-        self.authorizer = authorizer_ or authorizer.DefaultAuthorizer()
+        self.authorizer = authorizer or authorizer_ or DefaultAuthorizer()
         self.authorizer.setApplication(self)
         if platform.getType() == "posix":
             self.uid = uid or os.getuid()
@@ -94,7 +94,7 @@ class Application(log.Logger, styles.Versioned):
         """Version 1 Persistence Upgrade
         """
         log.msg("Upgrading %s Application." % repr(self.name))
-        self.authorizer = authorizer.DefaultAuthorizer()
+        self.authorizer = DefaultAuthorizer()
         self.services = {}
 
     def getServiceNamed(self, serviceName):
@@ -256,7 +256,7 @@ class Application(log.Logger, styles.Versioned):
     def logPrefix(self):
         """A log prefix which describes me.
         """
-        return self.name+" application"
+        return "*%s*" % self.name
 
     def run(self, save=1, installSignalHandlers=1):
         """Run this application, running the main loop if necessary.

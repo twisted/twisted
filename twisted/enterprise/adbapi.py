@@ -24,17 +24,6 @@ from twisted.internet import task, main
 from twisted.internet.threadtask import ThreadDispatcher
 from twisted.python import reflect, log, defer, failure
 
-# sibling imports
-import row
-
-
-def defaultFactoryMethod(rowClass, data, kw):
-    """Default factory method used by loadObjects to create rowObject instances.
-    """
-    newObject = rowClass()
-    newObject.__dict__.update(kw)
-    return newObject
-
 class Transaction:
     def __init__(self, pool, connection):
         self._connection = connection
@@ -62,7 +51,7 @@ class ConnectionPool(pb.Referenceable):
         self.threadID = thread.get_ident
         self.connections = {}
         self.dispatcher = ThreadDispatcher(3, 5)
-        main.callDuringShutdown(self.dispatcher.stop)
+        main.callDuringShutdown(self.close)
 
     def __getstate__(self):
         return {'dbapiName': self.dbapiName,
@@ -80,7 +69,8 @@ class ConnectionPool(pb.Referenceable):
         if not conn:
             conn = apply(self.dbapi.connect, self.connargs, self.connkw)
             self.connections[tid] = conn
-            log.msg('Database Connected %s %s %s' %( self.dbapiName, self.connargs, self.connkw ))
+            log.msg('adbapi connecting: %s %s%s' %
+                    ( self.dbapiName, self.connargs or '', self.connkw or ''))
         return conn
 
     def _runQuery(self, args, kw):
@@ -112,6 +102,9 @@ class ConnectionPool(pb.Referenceable):
     def operation(self, callback, errback, *args, **kw):
         self.dispatcher.runInThread(callback, errback, self._runOperation, args, kw)
 
+    def synchronousOperation(self, *args, **kw):
+        self._runOperation(args, kw)
+
     def interaction(self, interaction, callback, errback, *args, **kw):
         """Interact with the database.
 
@@ -129,6 +122,16 @@ class ConnectionPool(pb.Referenceable):
         """
         apply(self.dispatcher.runInThread, (callback, errback, self._runInteraction, interaction) + args, kw)
 
+    def runOperation(self, *args, **kw):
+        d = defer.Deferred()
+        apply(self.operation, (d.callback,d.errback)+args, kw)
+        return d
+
+    def runInteraction(self, interaction, *args, **kw):
+        d = defer.Deferred()
+        apply(self.interaction, (interaction,d.callback,d.errback,)+args, kw)
+        return d
+
     def _runInteraction(self, interaction, *args, **kw):
         trans = Transaction(self, self.connect())
         try:
@@ -144,9 +147,8 @@ class ConnectionPool(pb.Referenceable):
             return result
 
     def close(self):
-        print "Closing connections:"
+        self.dispatcher.stop()
         for connection in self.connections.values():
-            print "closing: ", connection
             connection.close()
 
 class Augmentation:
@@ -204,57 +206,9 @@ class Augmentation:
         apply(self.dbpool.interaction, (interaction,d.callback,d.errback,)+args, kw)
         return d
 
-    def loadObjectsFrom(self, tableName, keyColumns, data, rowClass, whereClause = "1 = 1", factoryMethod = defaultFactoryMethod):
-        """Create a set of python objects of <rowClass> from the contents of a table
-        populated with appropriate data members. The constructor for <rowClass> must take
-        no args. Example to use this:
 
-        class EmployeeRow(row.rowClass):
-            pass
+def safe(text):
+    """Make a string safe to include in an SQL statement
+    """
+    return text.replace("'", "''")
 
-        def gotEmployees(employees):
-            for emp in employees:
-                emp.manager = "fred smith"
-                emp.updateRow()
-
-        manager.loadObjectsFrom("employee",
-                                ["employee_name", "varchar"],
-                                userData,
-                                employeeFactory,
-                                EmployeeRow,
-                                "employee_name like 'm%%'"
-                                ).addCallback(gotEmployees)
-
-        NOTE: this functionality is experimental. be careful.
-        """
-        return self.runInteraction(self._objectLoader, tableName, keyColumns, data, rowClass, whereClause, factoryMethod)
-
-    def _objectLoader(self, transaction, tableName, keyColumns, data, rowClass, whereClause, factoryMethod):
-        """worker method to load objects from a table.
-        """
-        # get the data from the table
-        sql = """SELECT """
-        first = 1
-        for column, typeid, type in rowClass.dbColumns:
-            if first:
-                first = 0
-            else:
-                sql = sql + ","
-            sql = sql + " %s" % column
-        sql = sql + " FROM %s WHERE %s""" % (tableName, whereClause)
-        transaction.execute(sql)
-        rows = transaction.fetchall()
-        # construct the objects
-        results = []
-        for r in rows:
-            kw = row.makeKW(rowClass, r)
-            resultObject = apply(factoryMethod, (rowClass, data, kw) )
-            results.append(resultObject)
-
-        #print "RESULTS", results
-        return results
-
-
-
-
-safe = row.safe

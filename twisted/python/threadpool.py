@@ -50,8 +50,11 @@ class ThreadPool:
     min = 5
     max = 20
     qlen = 0
+    joined = 0
+    started = 0
+    workers = 0
     
-    def __init__(self, minthreads=5, maxthreads=20, qlen=0):
+    def __init__(self, minthreads=5, maxthreads=20, qlen=100):
         assert minthreads <= maxthreads, 'minimum is greater than maximum'
         self.q = Queue.Queue(qlen)
         self.qlen = qlen
@@ -60,23 +63,28 @@ class ThreadPool:
         self.waiters = []
         self.threads = []
         self.working = {}
-        self._initWorkers()
     
-    def _initWorkers(self):
+    def start(self):
+        """Start the threadpool.
+        """
         self.workers = self.min
         self.joined = 0
+        self.started = 1
         for i in range(self.min):
             threading.Thread(target=self._worker).start()
 
-    def __setstate__(self, dict):
-        self.__dict__ = dict
-        self.__init__(minthreads=self.min, maxthreads=self.max, qlen=self.qlen)
-    
+    def __setstate__(self, state):
+        self.__dict__ = state
+        self.q = Queue.Queue(self.qlen)
+
     def __getstate__(self):
         state = {}
         state['min'] = self.min
         state['max'] = self.max
         state['qlen'] = self.qlen
+        state['threads'] = []
+        state['waiters'] = []
+        state['working'] = {}
         return state
     
     def _startSomeWorkers(self):
@@ -94,7 +102,7 @@ class ThreadPool:
         if self.joined: return
         o=(owner,func,args,kw)
         self.q.put(o)
-        if not self.waiters:
+        if self.started and not self.waiters:
             self._startSomeWorkers()
     
     def _runWithCallback(self, callback, errback, func, args, kwargs):

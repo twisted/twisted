@@ -27,7 +27,7 @@ from pyunit import unittest
 from twisted.spread import pb, util
 from twisted.protocols import protocol
 from twisted.internet import main
-from twisted.python import defer, failure
+from twisted.python import defer, failure, log
 from twisted.cred import identity
 
 
@@ -179,9 +179,18 @@ class VeryVeryComplicatedCacheable(pb.Cacheable):
                 "y": self.y,
                 "foo": self.foo}
 
+    def stoppedObserving(self, perspective, observer):
+        log.msg("stopped observing")
+        observer.callRemote("end")
+        if observer == self.observer:
+            self.observer = None
+
 class RatherBaroqueCache(pb.RemoteCache):
     def observe_foo(self, newFoo):
         self.foo = newFoo
+
+    def observe_end(self):
+        log.msg("the end of things")
 
     def checkFoo4(self):
         return (self.foo == 4)
@@ -420,16 +429,12 @@ class BrokerTestCase(unittest.TestCase):
         o2.callRemote("getCache").addCallback(coll.append)
         complex = []
         o3.callRemote("getCache").addCallback(complex.append)
-        pump.pump() # ask for first cache
-        pump.pump() # respond with it
-        pump.pump() # ask for second cache
-        pump.pump() # respond with it
-        pump.pump() # just for good luck
-        pump.pump()
+        o3.callRemote("getCache").addCallback(complex.append)
+        pump.flush()
         # `worst things first'
         assert complex[0].check()
         vcc.setFoo4()
-        pump.pump(); pump.pump(); pump.pump()
+        pump.flush()
         assert complex[0].checkFoo4(), "method was not called."
         assert len(coll) == 2
         cp = coll[0][0]
@@ -440,28 +445,36 @@ class BrokerTestCase(unittest.TestCase):
         # assert cp._RemoteCacheProxy__instance is coll[1][0]._RemoteCacheProxy__instance
         col2 = []
         o2.callRemote('putCache',cp).addCallback(col2.append)
+        pump.flush()
+        # The objects were the same (testing lcache identity)
+        assert col2[0]
+        # test equality of references to methods
+        self.assertEquals(o2.remoteMethod("getCache"), o2.remoteMethod("getCache"))
+
         # now, refcounting (similiar to testRefCount)
         luid = cp.luid
+        baroqueLuid = complex[0].luid
         assert s.remotelyCachedObjects.has_key(luid), "remote cache doesn't have it"
         del coll
         del cp
+        pump.flush()
+        del complex
+        del col2
+        # extra nudge...
+        pump.flush()
+        # del vcc.observer
         # nudge the gc
         if sys.hexversion >= 0x2000000 and os.name != "java":
             import gc
             gc.collect()
         # try to nudge the GC even if we can't really
-        pump.pump()
-        pump.pump()
-        pump.pump()
-        pump.pump()
-        pump.pump()
+        pump.flush()
         # The GC is done with it.
         assert not s.remotelyCachedObjects.has_key(luid), "Server still had it after GC"
         assert not c.locallyCachedObjects.has_key(luid), "Client still had it after GC"
-        # The objects were the same (testing lcache identity)
-        assert col2[0]
-        # test equality of references to methods
-        self.assertEquals(o2.remoteMethod("getCache"), o2.remoteMethod("getCache"))
+        assert not s.remotelyCachedObjects.has_key(baroqueLuid), "Server still had complex after GC"
+        assert not c.locallyCachedObjects.has_key(baroqueLuid), "Client still had complex after GC"
+        assert vcc.observer is None, "observer was not removed"
 
     def whatTheHell(self, obj):
         print '!?!?!?!?', repr(obj)

@@ -248,11 +248,21 @@ try:
 except NameError:
     logOwner = LogOwner()
 
+    
+def _threaded_msg(stuff):
+    loglock.acquire()
+    real_msg(stuff)
+    loglock.release()
+
 def initThreads():
-    global logOwner
+    import thread
+    global logOwner, real_msg, msg, loglock
     oldLogOwner = logOwner
     logOwner = ThreadedLogOwner()
     logOwner.ownersPerThread[logOwner.threadId()] = oldLogOwner.owners
+    real_msg = msg
+    msg = _threaded_msg
+    loglock = thread.allocate_lock()
 
 threadable.whenThreaded(initThreads)
 

@@ -250,7 +250,9 @@ def run(installSignalHandlers=1):
 
         if platform.getType() == 'posix':
             signal.signal(signal.SIGCHLD, process.reapProcess)
-
+    for function in _whenRunning:
+        function()
+    _whenRunning[:] = []
     try:
         try:
             while running:
@@ -295,6 +297,19 @@ def disconnectAll():
             log.deferr()
         log.logOwner.disown(reader)
 
+_whenRunning = []
+
+def callWhenRunning(function):
+    """Add a function to be called when the system starts running.
+
+    If the system is already running, then the function runs immediately.  If
+    the system has not yet started running, the function will be queued to get
+    run when the mainloop starts.
+    """
+    if running:
+        function()
+    else:
+        _whenRunning.append(function)
 
 def callBeforeShutdown(function):
     """Add a function to be called before shutdown begins.
