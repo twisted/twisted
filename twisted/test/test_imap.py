@@ -614,7 +614,7 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
         self.connected.addCallback(strip(getCaps)).addErrback(self._ebGeneral)
         self.loopback()
         
-        self.assertEquals({'IMAP4rev1': None}, caps)
+        self.assertEquals({'IMAP4rev1': None, 'NAMESPACE': None}, caps)
     
     def testCapabilityWithAuth(self):
         caps = {}
@@ -627,7 +627,7 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
         self.connected.addCallback(strip(getCaps)).addErrback(self._ebGeneral)
         self.loopback()
         
-        self.assertEquals({'IMAP4rev1': None, 'AUTH': ['CRAM-MD5']}, caps)
+        self.assertEquals({'IMAP4rev1': None, 'NAMESPACE': None, 'AUTH': ['CRAM-MD5']}, caps)
     
     def testLogout(self):
         self.loggedOut = 0
@@ -672,6 +672,23 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
 
         self.assertEquals(self.server.account, None)
         self.assertEquals(self.server.state, 'unauth')
+
+    def testNamespace(self):
+        self.namespaceArgs = None
+        def login():
+            return self.client.login('testuser', 'password-test')
+        def namespace():
+            def gotNamespace(args):
+                self.namespaceArgs = args
+                self._cbStopClient(None)
+            return self.client.namespace().addCallback(gotNamespace)
+        
+        d = self.connected.addCallback(strip(login))
+        d.addCallback(strip(namespace))
+        d.addErrback(self._ebGeneral)
+        self.loopback()
+        
+        self.assertEquals(self.namespaceArgs, (('', '/'), (), ()))
 
     def testSelect(self):
         SimpleServer.theAccount.addMailbox('test-mailbox')

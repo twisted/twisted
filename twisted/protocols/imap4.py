@@ -327,7 +327,7 @@ class LiteralFile:
 
         
 class Command:
-    _1_RESPONSES = ('CAPABILITY', 'FLAGS', 'LIST', 'LSUB', 'STATUS', 'SEARCH')
+    _1_RESPONSES = ('CAPABILITY', 'FLAGS', 'LIST', 'LSUB', 'STATUS', 'SEARCH', 'NAMESPACE')
     _2_RESPONSES = ('EXISTS', 'EXPUNGE', 'FETCH', 'RECENT')
     _OK_RESPONSES = ('UIDVALIDITY', 'READ-WRITE', 'READ-ONLY', 'UIDNEXT', 'PERMANENTFLAGS')
     defer = None
@@ -462,6 +462,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if self.ctx and self.canStartTLS and not self.startedTLS:
             cap['LOGINDISABLED'] = None
             cap['STARTTLS'] = None
+        cap['NAMESPACE'] = None
         return cap
 
     def connectionMade(self):
@@ -489,12 +490,12 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if passon is not None:
             self.setLineMode(passon)
 
-    def sendLine(self, line):
-        print 'C:', repr(line)
-        return basic.LineReceiver.sendLine(self, line)
+#    def sendLine(self, line):
+#        print 'C:', repr(line)
+#        return basic.LineReceiver.sendLine(self, line)
 
     def lineReceived(self, line):
-        print 'S:', repr(line)
+#        print 'S:', repr(line)
         self.resetTimeout()
         if self._pendingLiteral:
             self._pendingLiteral.callback(line)
@@ -962,6 +963,18 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         else:
             self.sendBadResponse(tag, 'Server error: ' + str(failure.value))
             log.err(failure)
+
+    def do_NAMESPACE(self, tag):
+        personal = public = shared = None
+        if implements(self.account, INamespacePresenter):
+            personal = self.account.getPersonalNamespaces()
+            public = self.account.getSharedNamespaces()
+            shared = self.account.getSharedNamespaces()
+        self.sendUntaggedResponse('NAMESPACE ' + collapseNestedLists([personal, public, shared]))
+        self.sendPositiveResponse(tag, "NAMESPACE command completed")
+
+    auth_NAMESPACE = (do_NAMESPACE,)
+    select_NAMESPACE = auth_NAMESPACE
 
     def _parseMbox(self, name):
         try:
@@ -1934,6 +1947,33 @@ class IMAP4Client(basic.LineReceiver):
     def __ebLoginTLS(self, failure):
         log.err(failure)
         return failure
+
+    def namespace(self):
+        """Retrieve information about the namespaces available to this account
+        
+        This command is allowed in the Authenticated and Selected states.
+        
+        @rtype: C{Deferred}
+        @return: A deferred whose callback is invoked with a three-tuple of
+        lists containing two-tuples of strings representing namespace names
+        and namespace hierarchical delimiters.
+        """
+        cmd = 'NAMESPACE'
+        resp = ('NAMESPACE',)
+        d = self.sendCommand(Command(cmd, wantResponse=resp))
+        d.addCallback(self.__cbNamespace)
+        return d
+    
+    def __cbNamespace(self, (lines, last)):
+        for line in lines:
+            parts = line.split(None, 1)
+            if len(parts) == 2:
+                if parts[0] == 'NAMESPACE':
+                    # XXX UGGG parsing hack :(
+                    r = parseNestedParens('(' + parts[1] + ')')[0]
+                    return tuple([e and tuple(e) or () for e in r])
+        log.err("No NAMESPACE response to NAMESPACE command")
+        return ((),) * 3
 
     def select(self, mailbox):
         """Select a mailbox
@@ -3395,7 +3435,8 @@ class IAccount(components.Interface):
     """Interface for Account classes
     
     Implementors of this interface must also subclass
-    C{twisted.cred.perspective.Perspective}
+    C{twisted.cred.perspective.Perspective} and should consider implementing
+    C{INamespacePresenter}.
     """
 
     def addMailbox(self, name, mbox = None):
@@ -3545,8 +3586,48 @@ class IAccount(components.Interface):
         given criteria.
         """
     
+class INamespacePresenter(components.Interface):
+    def getPersonalNamespaces(self):
+        """Report the available personal namespaces.
+        
+        Typically there should be only one personal namespace.  A common
+        name for it is \"\", and its hierarchical delimiter is usually
+        \"/\".
+        
+        @rtype: iterable of two-tuples of strings
+        @return: The personal namespaces and their hierarchical delimiters.
+        If no namespaces of this type exist, None should be returned.
+        """
+        
+    def getSharedNamespaces(self):
+        """Report the available shared namespaces.
+        
+        Shared namespaces do not belong to any individual user but are
+        usually to one or more of them.  Examples of shared namespaces
+        might be \"#news\" for a usenet gateway.
+        
+        @rtype: iterable of two-tuples of strings
+        @return: The shared namespaces and their hierarchical delimiters.
+        If no namespaces of this type exist, None should be returned.
+        """
+
+    def getUserNamespaces(self):
+        """Report the available user namespaces.
+        
+        These are namespaces that contain folders belonging to other users
+        access to which this account has been granted.
+        
+        @rtype: iterable of two-tuples of strings
+        @return: The user namespaces and their hierarchical delimiters.
+        If no namespaces of this type exist, None should be returned.
+        """
+
 class MemoryAccount(perspective.Perspective):
-    __implements__ = (perspective.Perspective.__implements__, IAccount)
+    __implements__ = (
+        perspective.Perspective.__implements__,
+        IAccount,
+        INamespacePresenter
+    )
 
     mailboxes = None
     subscriptions = None
@@ -3562,6 +3643,9 @@ class MemoryAccount(perspective.Perspective):
         self.top_id += 1
         return id
 
+    ##
+    ## IAccount
+    ##
     def addMailbox(self, name, mbox = None):
         name = name.upper()
         if self.mailboxes.has_key(name):
@@ -3652,6 +3736,18 @@ class MemoryAccount(perspective.Perspective):
         ref = self._inferiorNames(ref.upper())
         wildcard = wildcardToRegexp(wildcard, '/')
         return [(i, self.mailboxes[i]) for i in ref if wildcard.match(i)]
+
+    ##
+    ## INamespacePresenter
+    ##
+    def getPersonalNamespaces(self):
+        return ["", "/"]
+    
+    def getSharedNamespaces(self):
+        return None
+    
+    def getOtherNamespaces(self):
+        return None
 
 _statusRequestDict = {
     'MESSAGES': 'getMessageCount',
@@ -4047,7 +4143,6 @@ class IMailbox(components.Interface):
         read-write.
         """
 
-
 class _FetchParser:
     class Envelope:
         # Response should be a list of fields from the message:
@@ -4417,5 +4512,5 @@ __all__ = [
     'MismatchedNesting', 'MismatchedQuoting', 'IClientAuthentication',
     'CramMD5ClientAuthenticator', 'MailboxException', 'MailboxCollision',
     'NoSuchMailbox', 'ReadOnlyMailbox', 'IAccount', 'MemoryAccount',
-    'IMailbox', 'statusRequestHelper',
+    'IMailbox', 'statusRequestHelper', 'INamespacePresenter',
 ]
