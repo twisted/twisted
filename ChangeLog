@@ -1,3 +1,9 @@
+2004-4-18  Christopher Armstrong  <radix@twistedmatrix.com>
+
+	* twisted.news, twisted.protocols.nntp: Moved into a third party
+	package. Deprecated backwards-compatibility exists by importing
+	from the third-party package if available.
+
 2004-4-11  Paul Swartz <z3p@twistedmatrix.com>
 
 	* twisted.conch: refactored the Conch client to separate connecting

@@ -237,7 +237,6 @@ desktop environments, and your toaster.
         "twisted.manhole",
         "twisted.manhole.ui",
         "twisted.names",
-        "twisted.news",
         "twisted.pair",
         "twisted.persisted",
         "twisted.persisted.journal",
