@@ -818,7 +818,6 @@ class SSHTestOpenSSHProcess(protocol.ProcessProtocol):
         self.done = 1
         theTest.assertEquals(reason.value.exitCode, 0, 'exit code was not 0: %s' % reason.value.exitCode)
         self.buf = self.buf.replace('\r\n', '\n')
-        log.msg('FOO %s' % repr(self.buf))
         theTest.assertEquals(self.buf, 'goodbye\n')
 
 class SSHTestConnectionForUnix(connection.SSHConnection):
@@ -1036,8 +1035,6 @@ class SSHTransportTestCase(unittest.TestCase):
         except:
             pass
 
-    testOurServerCmdLineClient.todo = "This seems to be broken -- maybe because stdio sucks?"
-    
     def testOurServerUnixClient(self):
         """Test the Conch server against the client over a UNIX socket"""
         if runtime.platformType == 'win32':

@@ -12,7 +12,7 @@ from twisted.conch.client import agent, connect, default, options
 from twisted.conch.error import ConchError
 from twisted.conch.ssh import connection, common
 from twisted.conch.ssh import session, forwarding, channel
-from twisted.internet import reactor, stdio, defer
+from twisted.internet import reactor, stdio, defer, task
 from twisted.python import log, usage
 
 import os, sys, getpass, struct, tty, fcntl, base64, signal, stat, errno
@@ -125,11 +125,14 @@ def handleError():
     from twisted.python import failure
     global exitStatus
     exitStatus = 2
+    reactor.callLater(0.01, _stopReactor)
+    log.err(failure.Failure())
+    raise
+
+def _stopReactor():
     try:
         reactor.stop()
     except: pass
-    log.err(failure.Failure())
-    raise
 
 def doConnect():
 #    log.deferr = handleError # HACK
@@ -157,16 +160,14 @@ def _ebExit(f):
     else:
         s = str(f)
     exitStatus = "conch: exiting with error %s" % f
-    try:
-        reactor.stop()
-    except: pass
+    reactor.callLater(0.1, _stopReactor)
 
 def onConnect():
 #    if keyAgent and options['agent']:
 #        cc = protocol.ClientCreator(reactor, SSHAgentForwardingLocal, conn)
 #        cc.connectUNIX(os.environ['SSH_AUTH_SOCK'])
     if hasattr(conn.transport, 'sendIgnore'):
-        keepAlive()
+        _KeepAlive(conn)
     if options.localForwards:
         for localPort, hostport in options.localForwards:
             reactor.listenTCP(localPort,
@@ -191,21 +192,37 @@ def onConnect():
                 import errno
                 if e.errno != errno.EBADF:
                     raise
-def keepAlive():
-    conn.transport.sendIgnore('')
-    reactor.callLater(300, keepAlive)
-
 def stopConnection():
     remoteForwards = options.remoteForwards
     for remotePort, hostport in remoteForwards:
         log.msg('cancelling %s:%s' % (remotePort, hostport))
         conn.cancelRemoteForwarding(remotePort)
     if not options['reconnect']:
-        try:
-            reactor.stop()
-        except RuntimeError: # ignore "can't stop stopped reactor"
-            pass
+        reactor.callLater(0.1, _stopReactor)
 
+class _KeepAlive:
+
+    def __init__(self, conn):
+        self.conn = conn
+        self.globalTimeout = None
+        self.lc = task.LoopingCall(self.sendGlobal)
+        self.lc.start(300)
+
+    def sendGlobal(self):
+        d = self.conn.sendGlobalRequest("conch-keep-alive@twistedmatrix.com",
+                "", wantReply = 1)
+        d.addBoth(self._cbGlobal)
+        self.globalTimeout = reactor.callLater(10, self._ebGlobal)
+
+    def _cbGlobal(self, res):
+        if self.globalTimeout:
+            self.globalTimeout.cancel()
+            self.globalTimeout = None
+
+    def _ebGlobal(self):
+        if self.globalTimeout:
+            self.globalTimeout = None
+            self.conn.transport.loseConnection()
 
 class SSHConnection(connection.SSHConnection):
     def serviceStarted(self):
@@ -370,7 +387,6 @@ class SSHSession(channel.SSHChannel):
         if t==connection.EXTENDED_DATA_STDERR:
             log.msg('got %s stderr data' % len(data))
             sys.stderr.write(data)
-            sys.stderr.flush()
 
     def eofReceived(self):
         log.msg('got eof')
