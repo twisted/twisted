@@ -20,8 +20,7 @@
 
 This is used by twisted.web.
 
-API Stability: Server HTTP support is pretty stable, unless methods say
-               otherwise, client HTTP is not stable.
+API Stability: Server HTTP support is semi-stable, client HTTP is unstable.
 
 Future Plans:
  - HTTP client support will at some point be refactored to support HTTP/1.1.
