@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (c) 2001 by Twisted Matrix Laboratories
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.11 2002/01/28 09:41:12 itamarst Exp $
+$Id: setup.py,v 1.12 2002/02/22 16:50:02 itamarst Exp $
 """
 
 import distutils, os, sys
@@ -52,12 +52,19 @@ your toaster.
 """,
     'packages': [
         "twisted",
+        # "twisted.bugs",
         "twisted.cred",
+        # "twisted.eco",
         "twisted.enterprise",
+        # "twisted.forum",
+        "twisted.im",
         "twisted.internet",
+        "twisted.lumberjack",
         "twisted.mail",
         "twisted.manhole",
         "twisted.manhole.ui",
+        # "twisted.metrics",
+        # "twisted.names",
         "twisted.persisted",
         "twisted.protocols",
         "twisted.protocols.ldap",
@@ -83,7 +90,7 @@ if hasattr(distutils.dist.DistributionMetadata, 'get_platforms'):
 
 if os.name == 'posix':
     import glob
-    setup_args['scripts'] = filter(os.path.isfile, glob.glob('bin/*'))
+    setup_args['scripts'] = ['bin/manhole', 'bin/mktap', 'bin/gnusto', 'bin/twistd', 'bin/im', 'bin/t-im', 'bin/faucet']
 
 #'"
 # for building C banana...
@@ -92,9 +99,11 @@ def extpath(path):
     return os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), path)
     
 
-setup_args['ext_modules'] = [
-    Extension("twisted.spread.cBanana", [extpath("twisted/spread/cBanana.c")]),
-    ]
+# cBanana is currently broken
+
+#setup_args['ext_modules'] = [
+#    Extension("twisted.spread.cBanana", [extpath("twisted/spread/cBanana.c")]),
+#    ]
 
 apply(setup, (), setup_args)
 
