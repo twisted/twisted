@@ -141,6 +141,10 @@ class IRCGateway(irc.IRCClient,gateway.Gateway):
         message=params[2]
         self.receiveDirectMessage(nickname,"AWAY: %s"%message)
 
+    def irc_RPL_TOPIC(self,prefix,params):
+        self.im.send(self,"receiveGroupTopic",group=params[1][1:],topic=params[2])
+        
+
     def irc_NICK(self,prefix,params):
 	oldname=string.split(prefix,"!")[0]
 	if self._ingroups.has_key(oldname):

@@ -231,8 +231,8 @@ class Conversation(Toplevel):
         return "break"
 
     def endConversation(self):
-        self.im.endConversation(self.gateway, self.target)
         self.destroy()
+        self.im.endConversation(self.gateway, self.target)
 
     def messageReceived(self, message):
         self.out.insert(END,"\n%s <%s> %s" % (timeheader(), self.target, message))
@@ -294,8 +294,9 @@ class ContactList(Toplevel):
         self.columnconfigure(1,weight=0)
         self.rowconfigure(1,weight=0)
 
-        self.im.im.connect(self.event_sendFileRequest,"sendFileRequest")
-        self.im.im.connect(self.event_receiveSendFile,"receiveSendFile")
+#        self.im.im.connect(self.event_sendFileRequest,"sendFileRequest")
+#        self.im.im.connect(self.event_receiveSendFile,"receiveSendFile")
+        self.im.im.connect_class(self)
 
     def close(self):
         self.tk.quit()
@@ -377,12 +378,16 @@ class ContactList(Toplevel):
         user=self.box.curselection()
         if not user: return
         username=user.node.user
+        state=user.node.status
         gateway2=user.parent.parent.node.gateway
         if gateway2!=gateway:
-            user=None
+            username=None
             state=None
-        func(self.im,gateway,user,state)
+        func(self.im,gateway,username,state)
 
+    def event_receiveGroupTopic(self,gateway,group,topic):
+        g=self.im.groups[str(gateway)+group]
+        g.setTopic(topic)
     def event_sendFileRequest(self,gateway,user,file,numfiles,size,description,address):
         AskSendFile(self,gateway,user,file,numfiles,size,description,address)
 
@@ -487,6 +492,7 @@ class UserNode(tktree.Node):
     def __init__(self,user,status):
         tktree.Node.__init__(self)
         self.user=user
+        self.status=status
         if status!="Offline" and status!="Online":
             self.name="%s (%s)"%(user,status)
         else:
@@ -571,8 +577,8 @@ class GroupSession(Toplevel):
         return "break"
 
     def leaveGroup(self):
-        self.im.leaveGroup(self.gateway,self.name)
         self.destroy()
+        self.im.leaveGroup(self.gateway,self.name)
 
     def showExtrasMenu(self,e):
         m=Menu()
@@ -637,6 +643,8 @@ class GroupSession(Toplevel):
         #else:
         #    print "user %s not in group %s!" % (member, self.name)
 
+    def setTopic(self,topic):
+        self.title("%s - %s - Instance Messenger - %s" % (self.name, self.gateway.name, topic))
     def nickComplete(self, e):
         start=self.input.get("1.0",END)[:-1]
         users=self.userlist.get(0,END)
@@ -879,6 +887,7 @@ class AccountManager(Toplevel):
                 self._modifyaccount(account,"False")
 
 def handleError(gateway,event_name,message):
+    return
     global imclient
     strgate=str(gateway)
     for key,value in imclient.conversations.items():

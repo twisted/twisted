@@ -51,6 +51,14 @@ def dehtml(text):
     text=string.replace(text,'&#34;','"')
     return text
 
+def html(text):
+    text=string.replace(text,'"','&#34;')
+    text=string.replace(text,'&amp;','&')
+    text=string.replace(text,'&lt;','<')
+    text=string.replace(text,'&gt;','>')
+    text=string.replace(text,"\n","<br>")
+    return '<html><body bgcolor="white"><font color="black">%s</font></body></html>'%text
+
 class TOCGateway(gateway.Gateway,toc.TOCClient):
     """This is the interface between IM and a TOC server
     """
@@ -228,14 +236,14 @@ class TOCGateway(gateway.Gateway,toc.TOCClient):
         pass
         
     def event_directMessage(self,user,message):
-        self.say(user,message)
+        self.say(user,html(message))
 
     def event_groupMessage(self,group,message):
         for k in self._roomid.keys():
             if self._roomid[k]==group:
                 id=k
         if not id: return
-        self.chat_say(id,message)
+        self.chat_say(id,html(message))
 
     def event_acceptSendFile(self,user,file):
         cookie=self._rvous[user+file]

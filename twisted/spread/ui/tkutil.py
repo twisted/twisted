@@ -214,7 +214,7 @@ class ProgressBar:
                  fillColor="blue", background="gray",
                  labelColor="yellow", labelFont="Verdana",
                  labelText="", labelFormat="%d%%",
-                 value=50, bd=2):
+                 value=0, bd=2):
         # preserve various values
         self.master=master
         self.orientation=orientation
