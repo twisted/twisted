@@ -330,7 +330,7 @@ class MetaInterface(interface.InterfaceClass):
         registry.register([self], to, '', using)
 
     def __getattr__(self, attr):
-        if attr == "_v_repr":
+        if attr.startswith("_v_"):
             raise AttributeError # z.i internal thing,
         if attr != "__instadapt__": # __instadapt__ is part of our own backwards compat layer
             warnings.warn("Don't get attributes (in this case, %r) off Interface, use "
