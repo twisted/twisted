@@ -18,7 +18,6 @@
 
 from twisted.xish import domish, xpath
 from twisted.protocols import xmlstream
-from twisted.internet import app, reactor
 
 def componentFactory(componentid, password, ip, port):
     a = ComponentAuthenticator(componentid, password)
@@ -59,7 +58,9 @@ class ComponentAuthenticator(xmlstream.Authenticator):
         self.xmlstream.dispatch(self.xmlstream, xmlstream.STREAM_AUTHD_EVENT)
 
 
-class Service(app.ApplicationService):
+from twisted.application import service
+
+class Service(service.Service):
     """ Business logic superclass for external/connect components
 
     This class provides the necessary functionality to create a new piece
@@ -77,8 +78,6 @@ class Service(app.ApplicationService):
         @param jabberId: Jabber ID of this component (used to login to router)
 
         """
-        app.ApplicationService.__init__(self, jabberId, serviceParent)
-
         # Setup defaults
         self.jabberId = jabberId
         self.jabberPassword = None
@@ -140,14 +139,13 @@ class Service(app.ApplicationService):
     def startService(self):
         """ If you subclass me, you MUST call me """
         assert self._xsFactory != None
-
         # Start the connections
-        self._xsConnector = reactor.connectTCP(self._xsFactory.host, self._xsFactory.port,
+        from twisted.internet import reactor
+        self._xsConnector = reactor.connectTCP(self._xsFactory.host,
+                                               self._xsFactory.port,
                                                self._xsFactory)
 
     def stopService(self):
         """ If you subclass me, you MUST call me """
         self._xsFactory.stopTrying()
         self._xsConnector.transport.loseConnection()
-
-    
