@@ -22,7 +22,11 @@ Documented in RFC 2543.
 """
 
 # system imports
-import socket, time
+import socket
+import random
+import time
+import md5
+import sys
 
 # twisted imports
 from twisted.python import log, util
@@ -109,6 +113,7 @@ statusCodes = {
 specialCases = {
     'cseq': 'CSeq',
     'call-id': 'Call-ID',
+    'www-authenticate': 'WWW-Authenticate',
 }
 
 def unq(s):
@@ -807,80 +812,48 @@ class BasicAuthorizer:
             return cred.credentials.UsernamePassword(*p)
         raise SIPError(400)
 
-#class DigestedCredentials(cred.credentials.UsernameHashedPassword):
-#    """Yet Another Simple Digest-MD5 authentication scheme"""
-#    
-#    def __init__(self, username, challenge, response):
-#        self.username = username
-#        self.when, self.r1, self.r2 = challenge.decode('hex').split('-')
-#        self.response = response.decode('hex')
-#    
-#    def checkPassword(self, password):
-#        return md5.,md5(self.username + ':' + password) 
-#
-#class DigestAuthorizer:
-#    CHALLENGE_LIFETIME = 15
-#    
-#    __implements__ = (IAuthorizer,)
-#    
-#    def __init__(self):
-#        self.outstanding = {}
-#    
-#    def getChallenge(self, peer):
-#        # I am uncertain of the effectiveness of this form of challenge.
-#        # Time is included so as to limit the possibility of replay attacks.
-#        # No responses to challenges more than 5 or 10 seconds will be
-#        # accepted.  The random numbers are included to increase the size of
-#        # the challenge.
-#
-#        # The peer address could be included to limit the possible field of
-#        # repliers.  No responses from anyone whose address does not match
-#        # the address in the challenge would then be accepted.  RFC 2617
-#        # contains a note suggesting that including the client address in
-#        # the nonce (this challenge) is neither effective nor desirable,
-#        # primarily due to the existence of proxy farms.
-#
-#        t = str(time.time())
-#        
-#        # XXX - Something needs to clean this dictionary out
-#        self.outstanding[t] = True
-#        
-#        r1 = random.randrange(sys.maxint)
-#        r2 = random.randrange(sys.maxint)
-#        # p = peer[0] + ':' + str(peer[1])
-#        return ('-'.join((t, r1, r2))).encode('hex')
-#
-#    def decode(self, response):
-#        response = ' '.join(response.splitlines())
-#        parts = map(str.split, response.split(','))
-#        auth = dict([(k, unq(v)) for (k, v) in [p.split('=', 1) for p in parts]])
-#        try:
-#            username = auth['username']
-#            response = auth['response']
-#            challenge = auth['nonce']
-#        except KeyError:
-#            raise SIPError(401)
-#        try:
-#            return DigestedCredentials(username, challenge, response)
-#        except:
-#            raise SIPError(400)
-#
-#    def validate(self, username, password, challenge, response):
-#        try:
-#            t, r1, r2 = challenge.decode('hex').split('-')
-#        except:
-#            raise SIPError(400)
-#        else:
-#            try:
-#                del self.outstanding[t]
-#            except KeyError:
-#                raise SIPError(401)
-#            
-#            if time.time() - self.CHALLENGE_LIFETIME > t:
-#                raise SIPError(401)
-#
-#            r = md5.md5(password + ':' + challenge)
-#            return r.hexdigest() == response                
+class DigestedCredentials(cred.credentials.UsernameHashedPassword):
+    """Yet Another Simple Digest-MD5 authentication scheme"""
+    
+    def __init__(self, username, challenge, response):
+        self.username = username
+        self.challenge = challenge.decode('base64')
+        self.response = response.decode('hex')
+    
+    def checkPassword(self, password):
+        return md5.md5(self.username + ':' + password)  == self.response
+
+class DigestAuthorizer:
+    CHALLENGE_LIFETIME = 15
+    
+    __implements__ = (IAuthorizer,)
+    
+    def __init__(self):
+        self.outstanding = {}
+    
+    def getChallenge(self, peer):
+        c = tuple([random.randrange(sys.maxint) for _ in range(3)])
+        c = '%d%d%d' % c
+        self.outstanding[c] = True
+        return 'nonce="%(nonce)s",qop-options=auth,opaque="%(opaque)s"' % {
+            'nonce': c.encode('base64').strip(),
+            'opaque': str(random.randrange(sys.maxint))
+        } 
+        
+    def decode(self, response):
+        response = ' '.join(response.splitlines())
+        parts = response.split(',')
+        auth = dict([(k, unq(v)) for (k, v) in [p.split('=', 1) for p in parts]])
+        try:
+            username = auth['username']
+            response = auth['response']
+            challenge = auth['nonce']
+        except KeyError:
+            raise SIPError(401)
+        try:
+            return DigestedCredentials(username, challenge, response)
+        except:
+            raise SIPError(400)
 
 class RegisterProxy(Proxy):
     """A proxy that allows registration for a specific domain.
@@ -894,7 +867,7 @@ class RegisterProxy(Proxy):
 
     authorizers = {
         'basic': BasicAuthorizer(),
-#        'digest': DigestAuthorizer(),
+        'digest': DigestAuthorizer(),
     }
     
     def __init__(self, *args, **kw):
@@ -919,17 +892,12 @@ class RegisterProxy(Proxy):
     def unauthorized(self, message, host, port):
         m = self.responseFromRequest(401, message)
         for (scheme, auth) in self.authorizers.iteritems():
-            nonce = auth.getChallenge((host, port))
-            if nonce is None:
-                continue
-            
-            while True:
-                cnonce = random.randrange(sys.maxint)
-                if cnonce not in self.liveChallanges:
-                    break
-            
-            v = '%s realm="%s", nonce="%s"' % (scheme.title(), self.host, nonce)
-            m.headers.setdefault('www-authentication', []).append(v)
+            chal = auth.getChallenge((host, port))
+            if chal is None:
+                value = '%s realm="%s"' % (scheme.title(), self.host)
+            else:
+                value = '%s %s,realm="%s"' % (scheme.title(), chal, self.host)
+            m.headers.setdefault('www-authenticate', []).append(value)
         self.deliverResponse(m)
 
     def login(self, message, host, port):
@@ -944,6 +912,7 @@ class RegisterProxy(Proxy):
                 log.err()
                 self.deliverResponse(self.responseFromRequest(500, message))
             else:
+                c.username += '@' + self.host
                 self.portal.login(c, None, IContact
                     ).addCallback(self._cbLogin, message, host, port
                     ).addErrback(self._ebLogin, message, host, port
