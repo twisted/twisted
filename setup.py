@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.135 2003/09/20 19:38:33 itamarst Exp $
+$Id: setup.py,v 1.136 2003/09/21 16:43:44 itamarst Exp $
 """
 
 import distutils, os, sys, string
@@ -138,6 +138,11 @@ class build_ext_twisted(build_ext):
         else:
             define_macros = []
 
+        if not self._compile_helper("#define X 1\n"):
+            print "Compiler not found, skipping C extensions."
+            self.extensions = []
+            return
+        
         # Extension modules to build.
         exts = [
             Extension("twisted.spread.cBanana",
