@@ -275,7 +275,7 @@ class ComponentizedTestCase(unittest.TestCase):
         a2 = Stacker(c)
         c.addComponent(a2, ignoreClass=1, stack=1)
         self.assertEqual(IStacker(c), a2)
-        self.assertEqual(components.isuper(IStacker, a2), a)
+        self.assertEqual(c.isuper(IStacker, a2), a)
 
 class AdapterTestCase(unittest.TestCase):
     """Test adapters."""
