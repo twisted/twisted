@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: mktap.py,v 1.20 2002/09/11 18:00:04 exarkun Exp $
+# $Id: mktap.py,v 1.21 2002/09/30 08:25:20 moshez Exp $
 
 """ Implementation module for the `mktap` command.
 """
@@ -140,7 +140,10 @@ def run():
     if not options['append']:
         a = app.Application(options.subCommand, int(options['uid']), int(options['gid']))
     else:
-        a = cPickle.load(open(options['append'], 'rb'))
+        if os.path.exists(options['append']):
+            a = cPickle.load(open(options['append'], 'rb'))
+        else:
+            a = app.Application(options.subCommand, int(options['uid']), int(options['gid']))
 
     try:
         mod.updateApplication(a, options.subOptions)
@@ -171,6 +174,8 @@ def run():
             a.save(passphrase=util.getPassword("Encryption passphrase: "))
         except ImportError:
             print "The --encrypt flag requires the PyCrypto module, no file written."
+    elif options['append']:
+        a.save(filename=options['append']) 
     else:
         a.save()
 
