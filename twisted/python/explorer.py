@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: explorer.py,v 1.9 2002/01/14 10:18:12 acapnotic Exp $
+# $Id: explorer.py,v 1.10 2002/01/24 10:32:14 itamarst Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -44,7 +44,7 @@ class Pool(UserDict.UserDict):
             return self.data[oid]
         else:
             klass = typeTable.get(type(object), ExplorerGeneric)
-            e = new.instance(klass, None)
+            e = new.instance(klass, {})
             self.data[oid] = e
             klass.__init__(e, object, identifier)
             return e
