@@ -50,6 +50,13 @@ class RawCookieMirrorResource(resource.Resource):
     def render(self, request):
         return repr(request.getHeader('cookie'))
 
+class ErrorResource(resource.Resource):
+
+    def render(self, request):
+        request.setResponseCode(401)
+        request.setHeader("content-length", "0")
+        return ""
+
 
 class WebClientTestCase(unittest.TestCase):
     def _listen(self, site):
@@ -65,6 +72,7 @@ class WebClientTestCase(unittest.TestCase):
         r = static.File(name)
         r.putChild("redirect", util.Redirect("/file"))
         r.putChild("wait", LongTimeTakingResource())
+        r.putChild("error", ErrorResource())
         site = server.Site(r, timeout=None)
         self.port = self._listen(site)
         reactor.iterate(); reactor.iterate()
@@ -133,11 +141,18 @@ class WebClientTestCase(unittest.TestCase):
         f = unittest.deferredError(client.getPage(self.getURL("nosuchfile")))
         f.trap(error.Error)
         self.assertEquals(f.value.args[0], "404")
+        f = unittest.deferredError(client.getPage(self.getURL("error")))
+        f.trap(error.Error)
+        self.assertEquals(f.value.args[0], "401")
 
     def testDownloadServerError(self):
         f = unittest.deferredError(client.downloadPage(self.getURL("nosuchfile"), "nosuchfile"))
         f.trap(error.Error)
         self.assertEquals(f.value.args[0], "404")
+        # this is different since content length is 0, and HTTPClient SUCKS
+        f = unittest.deferredError(client.downloadPage(self.getURL("error"), "error"))
+        f.trap(error.Error)
+        self.assertEquals(f.value.args[0], "401")
         
     def testFactoryInfo(self):
         url = self.getURL('file')
