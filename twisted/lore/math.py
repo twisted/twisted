@@ -14,6 +14,8 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
+from __future__ import nested_scopes
+
 import os, tempfile
 from twisted.web import domhelpers, microdom
 import latex, tree
@@ -56,9 +58,37 @@ def formulaeToImages(document, dir):
                                        baseimgname)
         node.parentNode.replaceChild(newNode, node)
 
+
 def doFile(fn, docsdir, ext, url, templ, linkrel=''):
     doc = tree.parseFileAndReport(fn)
     formulaeToImages(doc, os.path.dirname(fn))
     cn = templ.cloneNode(1)
     tree.munge(doc, cn, linkrel, docsdir, fn, ext, url)
     cn.writexml(open(os.path.splitext(fn)[0]+ext, 'wb'))
+
+
+class ProcessingFunctionFactory:
+
+    def generate_html(self, d):
+        if d['ext'] == "None":
+            ext = ""
+        else:
+            ext = d['ext']
+        templ = microdom.parse(open(d['template']))
+        df = lambda file, linkrel: doFile(file, linkrel, d['ext'],
+                                          d['baseurl'], templ)
+        return df
+
+    def generate_latex(self, d):
+        df = lambda file, linkrel: latex.convertFile(file,
+                                   latex.MathLatexSpitter)
+        return df
+
+    def generate_lint(self, d):
+        checker = lint.getDefaultChecker()
+        checker.allowedClasses = checker.allowedClasses.copy()
+        checker.allowedClasses['div']['latexmacros'] = 1
+        checker.allowedClasses['span']['latexformula'] = 1
+        return lambda file, linkrel: lint.doFile(file, checker)
+
+factory = ProcessingFunctionFactory()

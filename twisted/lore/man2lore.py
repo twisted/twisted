@@ -20,6 +20,7 @@
 This is nasty and hackish (and doesn't support lots of real groff), but is good
 enough for converting fairly simple man pages.
 """
+from __future__ import nested_scopes
 
 import re
 quoteRE = re.compile('"(.*?)"')
@@ -145,6 +146,13 @@ class ManConverter:
         elif self.tp == 2:
             self.tp = 3
 
+class ProcessingFunctionFactory:
+
+    def generate_lore(self, d):
+        return lambda file,_: ManConvertor().convert(open(file),
+                                    open(os.path.splitext(file)+d['ext'], 'w'))
+
+factory = ProcessingFunctionFactory()
 
 if __name__ == '__main__':
     import sys
