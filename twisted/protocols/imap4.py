@@ -1657,7 +1657,7 @@ class IMAP4Client(basic.LineReceiver):
 
     def _store(self, messages, cmd, flags):
         d = self.sendCommand('STORE', ' '.join((messages, cmd, '(%s)' % ' '.join(flags))))
-        d.addCallback(self._cbStore)
+        d.addCallback(self._cbFetch, lookFor='FLAGS')
         return d
 
 class IllegalIdentifierError(IMAP4Exception): pass
