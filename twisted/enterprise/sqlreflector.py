@@ -142,6 +142,7 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
         
         # construct the row objects
         results = []
+        newRows = []
         for args in rows:
             kw = {}
             for i in range(0,len(args)):
@@ -154,12 +155,13 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
             resultObject = self.findInCache(tableInfo.rowClass, kw)
             if not resultObject:
                 resultObject = apply(tableInfo.rowFactoryMethod[0], (tableInfo.rowClass, data, kw) )
-                self.addToCache(resultObject)                
+                self.addToCache(resultObject)
+                newRows.append(resultObject)
             results.append(resultObject)
 
         # add these rows to the parentRow if required
         if parentRow:
-            self.addToParent(parentRow, results, tableName)
+            self.addToParent(parentRow, newRows, tableName)
             
         # load children or each of these rows if required
         for relationship in tableInfo.relationships:

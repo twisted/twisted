@@ -74,7 +74,7 @@ class XMLReflector(reflector.Reflector):
         tableInfo = self.schema[tableName]
         filenames = os.listdir(d)
         results = []
-        
+        newRows = []
         for filename in filenames:
             if filename.find(self.extension) != len(filename) - len(self.extension):
                 continue
@@ -96,12 +96,13 @@ class XMLReflector(reflector.Reflector):
             resultObject = self.findInCache(tableInfo.rowClass, proxy.kw)
             if not resultObject:
                 resultObject = apply(tableInfo.rowFactoryMethod[0], (tableInfo.rowClass, data, proxy.kw) )
-                self.addToCache(resultObject)                
+                self.addToCache(resultObject)
+                newRows.append(resultObject)
             results.append(resultObject)
 
         # add these rows to the parentRow if required
         if parentRow:
-            self.addToParent(parentRow, results, tableName)
+            self.addToParent(parentRow, newRows, tableName)
 
         # load children or each of these rows if required
         for relationship in tableInfo.relationships:

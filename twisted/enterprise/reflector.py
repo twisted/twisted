@@ -119,7 +119,9 @@ class Reflector:
         
         if not relationship.containerMethod:
             if hasattr(parentRow, "childRows"):
-                parentRow.childRows.extend(rows)
+                for row in rows:
+                    if row not in parentRow.childRows:
+                        parentRow.childRows.append(row)
             else:
                 parentRow.childRows = rows
             return

@@ -94,9 +94,14 @@ class EnterpriseTestCase(unittest.TestCase):
     
     def testQuery(self):
         self.reflector.insertRow(self.newRow)
-        self.reflector.loadObjectsFrom(tableName).addCallback(self.gotData)
-        assert len(self.data) == 1, "no rows on query"
-        assert len(self.data[0].childRows) == 10, "didnt load child rows"
+        self.reflector.loadObjectsFrom(childTableName, parentRow=self.newRow).addCallback(self.gotData)
+        assert len(self.data) > 0, "no rows on query"
+        assert len(self.newRow.childRows) == 10, "didnt load child rows: %d" % len(self.newRow.childRows)
+
+        # loading these objects a second time shouldnt re-add them to the parentRow.
+        self.reflector.loadObjectsFrom(childTableName, parentRow=self.newRow).addCallback(self.gotData)
+        assert len(self.data) > 0, "no rows on query"
+        assert len(self.newRow.childRows) == 10, "child rows added more than once!: %d" % len(self.newRow.childRows)        
         
     def testUpdate(self):
         self.reflector.insertRow(self.newRow)
