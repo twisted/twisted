@@ -38,7 +38,7 @@ class OrderedDict:
 
     def __init__(self, dict):
         self.dict = dict
-        self.l = []
+        self.l = dict.keys()
 
     def __setitem__(self, k, v):
         self.l.append(k)
@@ -138,6 +138,21 @@ Content-Length: 10
     requests = string.replace(requests, '\n', '\r\n')
     
     expected_response = "HTTP/1.1 200 OK\015\012Request: /\015\012Command: GET\015\012Version: HTTP/1.1\015\012Content-length: 13\015\012\015\012'''\012None\012'''\012HTTP/1.1 200 OK\015\012Request: /\015\012Command: POST\015\012Version: HTTP/1.1\015\012Content-length: 21\015\012\015\012'''\01210\0120123456789'''\012HTTP/1.1 200 OK\015\012Request: /\015\012Command: POST\015\012Version: HTTP/1.1\015\012Content-length: 21\015\012\015\012'''\01210\0120123456789'''\012HTTP/1.1 200 OK\015\012Request: /\015\012Command: HEAD\015\012Version: HTTP/1.1\015\012Content-length: 13\015\012\015\012"
+
+class HTTP1_1_close_TestCase(HTTP1_0TestCase):
+
+    requests = '''\
+GET / HTTP/1.1
+Accept: text/html
+Connection: close
+
+GET / HTTP/1.0
+
+'''
+
+    requests = string.replace(requests, '\n', '\r\n')
+    
+    expected_response = "HTTP/1.1 200 OK\015\012Connection: close\015\012Request: /\015\012Command: GET\015\012Version: HTTP/1.1\015\012Content-length: 13\015\012\015\012'''\012None\012'''\012"
 
 
 class HTTP0_9TestCase(HTTP1_0TestCase):
