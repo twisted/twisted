@@ -350,7 +350,18 @@ class TkConfigFrame(Tkinter.Frame):
 
 
     def updateConfig(self, options):
-        for (opt, var) in self.getOptFlags() + self.getOptParameters():
+        for (opt, var) in self.getOptFlags():
+
+            if not var:
+                continue # XXX - this is poor - add a '-' button to remove options 
+
+            f = getattr(options, 'opt_' + opt, None)
+            if f:
+                f()
+            else:
+                options[opt] = var
+
+        for (opt, var) in self.getOptParameters():
 
             if not var:
                 continue # XXX - this is poor - add a '-' button to remove options 
@@ -370,12 +381,11 @@ class TkConfigFrame(Tkinter.Frame):
             flags.extend(self.options.optFlags)
 
         d = {}
-        helpFunc = getattr(self.options, 'opt_help', None)
         for meth in reflect.prefixedMethodNames(self.options.__class__, 'opt_'):
             full = 'opt_' + meth
             func = getattr(self.options, full)
             
-            if not usage.flagFunction(func) or func == helpFunc:
+            if not usage.flagFunction(func) or meth in ('help', 'version'):
                 continue
             
             existing = d.setdefault(func, meth)
