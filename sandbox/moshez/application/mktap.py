@@ -16,13 +16,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 from twisted.application import service, compat, app
-from twisted.persisted import sob
 from twisted.python import usage, util, plugin
-import sys, traceback, os
-try:
-    import cPickle
-except ImportError:
-    import pickle as cPickle
+import sys, os
 try:
     import pwd
 except ImportError:
@@ -171,14 +166,6 @@ class FirstPassOptions(usage.Options, GeneralOptions):
                 print str(self.subOptions)
                 sys.exit(2)
         
-
-def getApplication(uid, gid, name, filename):
-    if filename and os.path.exists(filename):
-        return sob.load(filename, 'pickle')
-    else:
-        uid, gid = getid(uid, gid)
-        return service.Application(name, uid, gid)
-
 def makeService(mod, s, options):
     if hasattr(mod, 'updateApplication'):
         ser = service.MultiService()
@@ -197,18 +184,9 @@ def run():
     except KeyboardInterrupt:
         sys.exit(1)
     mod = getModule(options.tapLookup, options.subCommand)
-    a = getApplication(options['uid'], options['gid'],
-                       options.subCommand, options['append'])
-    if options['appname']:
-        service.IProcess(a).processName = options['appname']
-    s = service.IServiceCollection(a)
-    try:
-        makeService(mod, s, options.subOptions)
-    except usage.error, ue:
-        print "Usage Error: %s" % ue
-        options.subOptions.opt_help()
-        sys.exit(2)
-    except KeyboardInterrupt:
-        sys.exit(1)
-    app.saveApplication(sob.IPersistable(a),
+    a = app.loadOrCreate(options.subCommand, options['append'],
+                         options['appname'],
+                         *getid(options['uid'], options['gid']))
+    makeService(mod, service.IServiceCollection(a), options.subOptions)
+    app.saveApplication(a,
                     options['type'], options['encrypted'], options['append'])

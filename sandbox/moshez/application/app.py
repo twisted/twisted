@@ -217,3 +217,12 @@ def guessType(filename):
         '.tax': 'xml',
         '.etax': 'xml'
     }[ext]
+
+def loadOrCreate(name, filename, procname, uid, gid):
+    if filename and os.path.exists(filename):
+        a = sob.load(filename, 'pickle')
+    else:
+        a = service.Application(name, uid, gid)
+    if options['appname']:
+        service.IProcess(a).processName = options['appname']
+    return a
