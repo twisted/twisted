@@ -50,4 +50,4 @@ class StolenTCPTestCase(test_tcp.ProperlyCloseFilesTestCase, test_tcp.WriteDataT
         self.totalConnections = 0
 
 if not OpenSSL:
-    del ProperlyCloseFilesTestCase
+    del StolenTCPTestCase
