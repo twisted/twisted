@@ -123,11 +123,6 @@ def copyDist(opts):
 
     shutil.copytree('Twisted', tdir)
 
-    #shwack the crap
-    print "copyDist: Stripping *.pyc, .cvsignore"
-    for x in ['*.pyc', '.cvsignore']:
-        os.system('find %s -name "%s" | xargs rm -f' % (tdir, x))
-
 
 
 def makeDocs(opts):
@@ -147,6 +142,11 @@ def makeDocs(opts):
     os.system('./admin/generate-domdocs -v %s --docsdir doc/specifications' % ver)
     os.chdir("..")
     
+    #shwack the crap
+    print "copyDist: Stripping *.pyc, .cvsignore"
+    for x in ['*.pyc', '.cvsignore']:
+        os.system('find %s -name "%s" | xargs rm -f' % (tdir, x))
+
 
 
 def makeBalls(opts):
