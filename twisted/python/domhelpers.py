@@ -1,5 +1,7 @@
 # domhelpers.py
 
+from xml.dom import minidom
+
 class NodeLookupError(Exception): pass
 
 def substitute(request, node, subs):
