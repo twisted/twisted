@@ -172,7 +172,8 @@ class EchoClientFactory(ReconnectingClientFactory):
                                                                                                                                                             
     def clientConnectionFailed(self, connector, reason):
         print 'Connection failed. Reason:', reason
-        ReconnectingClientFactory.clientConnectionFailed(self, connector, reason)
+        ReconnectingClientFactory.clientConnectionFailed(self,
+                connector, reason)
 </pre>
     
     <h2>A Higher-Level Example: ircLogBot</h2>
