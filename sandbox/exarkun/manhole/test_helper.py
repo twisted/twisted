@@ -171,6 +171,26 @@ class BufferTestCase(unittest.TestCase):
         self.assertEquals(ch[0], '!')
         self.assertEquals(ch[1].charset, G0)
 
+    def testShifting(self):
+        s1 = "Hello"
+        s2 = "World"
+        s3 = "Bye!"
+        self.term.write("Hello\n")
+        self.term.shiftOut()
+        self.term.write("World\n")
+        self.term.shiftIn()
+        self.term.write("Bye!\n")
+
+        g = G0
+        h = 0
+        for s in (s1, s2, s3):
+            for i in range(len(s)):
+                ch = self.term.getCharacter(i, h)
+                self.assertEquals(ch[0], s[i])
+                self.assertEquals(ch[1].charset, g)
+            g = g == G0 and G1 or G0
+            h += 1
+
 class Loopback(unittest.TestCase):
     def setUp(self):
         self.server = ServerProtocol()
