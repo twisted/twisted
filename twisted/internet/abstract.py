@@ -123,8 +123,8 @@ class FileDescriptor(log.Logger, styles.Ephemeral):
             if self.producer is not None and ((not self.streamingProducer)
                                               or self.producerPaused):
                 # tell them to supply some more.
-                self.producer.resumeProducing()
                 self.producerPaused = 0
+                self.producer.resumeProducing()
             elif self.disconnecting:
                 # But if I was previously asked to let the connection die, do
                 # so.
