@@ -582,6 +582,133 @@ usefulness!</p>
   </li>
 </ul>
 
+<h2>Handling either synchronous or asynchronous results</h2>
+<p>
+In some applications, there are functions that might be either asynchronous or
+synchronous. For example, a user authentication function might be able to
+check in memory whether a user is authenticated, allowing the authentication
+function to return an immediate result, or it may need to wait on
+network data, in which case the programmer will return a Deferred to be fired
+when that data arrives. However, a function that wants to check if a user is
+authenticated will then need to be able to deal with immediate results and
+with Deferreds.
+</p>
+
+<p>
+In this example, the library function <code>authenticateUser</code> uses the
+application function <code>isValidUser</code> to authenticate a user:
+</p>
+
+<pre class="python">
+def authenticateUser(isValidUser, user):
+    if isValidUser(user):
+        print "User is authenticated"
+    else:
+        print "User is not authenticated"
+</pre>
+
+<p>
+However, it
+assumes that <code>isValidUser</code> returns immediately, whereas
+<code>isValidUser</code> may
+actually authenticate the user asynchronously and return a Deferred. It is
+possible to adapt this trivial user authentication code to accept either a
+synchronous <code>isValidUser</code> or an asynchronous <code>isValidUser</code>, allowing the
+library to handle either type of function. It is, however, also possible to
+adapt synchronous functions to return Deferreds. This section describes both
+alternatives: handling functions that might be synchronous or asynchronous in
+the library function (<code>authenticateUser</code>) or in the application
+code.
+</p>
+
+<h3>Handling possible Deferreds in the library code</h3>
+
+<p>
+Here is an example of a synchronous user authentication function that might be
+passed to <code>authenticateUser</code>:
+</p>
+
+<pre class="python">
+def synchronousIsValidUser(d, user):
+    return user in ["Alice", "Angus", "Agnes"]
+</pre>
+
+<p>
+However, here's an <code>asynchronousIsValidUser</code> function that returns
+a Deferred:
+</p>
+
+<pre class="python">
+from twisted.internet import reactor
+
+def asynchronousIsValidUser(d, user):
+    d = Deferred()
+    reactor.callLater(2, d.callback, user in ["Alice", "Angus", "Agnes"])
+    return d
+</pre>
+
+<p> Our original implementation of <code>authenticateUser</code> expected
+<code>isValidUser</code> to be synchronous, but now we need to change it to handle both
+synchronous and asynchronous implementations of <code>isValidUser</code>. For this, we
+use <code class="API" base="twisted.internet.defer">maybeDeferred</code> to
+call <code>isValidUser</code>, ensuring that the result of <code>isValidUser</code> is a Deferred,
+even if <code>isValidUser</code> is a synchronous function:
+</p>
+
+<pre class="python">
+from twisted.internet import defer
+
+def printResult(result):
+    if result:
+        print "User is authenticated"
+    else:
+        print "User is not authenticated"
+
+def authenticateUser(isValidUser, user):
+    d = defer.maybeDeferred(isValidUser, user)
+    d.addCallback(printResult)
+</pre>
+
+<p>
+Now <code>isValidUser</code> could be either <code>synchronousIsValidUser</code> or
+<code>asynchronousIsValidUser</code>.
+</p>
+
+<h3>Returning a Deferred from synchronous functions</h3>
+
+<p>
+An alternative is for
+<code>authenticateUser</code> to require that the
+implementation of <code>isValidUser</code> return a Deferred:
+</p>
+
+<pre class="python">
+def printResult(result):
+    if result:
+        print "User is authenticated"
+    else:
+        print "User is not authenticated"
+
+def authenticateUser(isValidUser, user):
+    d = isValidUser(user)
+    d.addCallback(printResult)
+</pre>
+<p>
+In this case, the author
+of <code>synchronousIsValidUser</code> would use <code class="API"
+base="twisted.internet">defer.succeed</code> to return a fired Deferred which
+will call the first callback with <code>result</code>, rather than returning
+the result itself:
+</p>
+
+<pre class="python">
+from twisted.internet import defer
+
+def immediateIsValidUser(d, user):
+    result = user in ["Alice", "Angus", "Agnes"]
+    return defer.succeed(result)
+</pre>
+
 <h2>DeferredList</h2>
 
 <p>Sometimes you want to be notified after several different events have all
