@@ -1,3 +1,8 @@
+2003-03-13  Tommi Virtanen  <tv@twistedmatrix.com>
+
+	* twisted/tap/procmon.py, twisted/plugins.tml: support for mktapping
+	ProcessMonitors.
+
 2003-03-11  Bob Ippolito <bob@redivi.com>
 
     * twisted/internet/: Replaced apply() in non-deprecated 
