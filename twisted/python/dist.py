@@ -53,8 +53,10 @@ def setup(**kw):
     if 'cmdclass' not in kw:
         kw['cmdclass'] = {
             'install_data': install_data_twisted,
-            'build_scripts': build_scripts_twisted,
-            }
+            'build_scripts': build_scripts_twisted}
+        if sys.version_info[:3] < (2, 3, 0):
+            kw['cmdclass']['build_py'] = build_py_twisted
+
     if 'detectExtensions' in kw:
         if 'ext_modules' not in kw:
             kw['ext_modules'] = [True] # distutils is so lame
@@ -215,6 +217,18 @@ if sys.platform == 'darwin' and sys.version == BROKEN_CONFIG:
         sysconfig._config_vars['LDSHARED'] = y
 
 ## Helpers and distutil tweaks
+
+class build_py_twisted(build_py.build_py):
+    """
+    Changes behavior in Python 2.2 to support simultaneous specification of
+    `packages' and `py_modules'.
+    """
+    def run(self):
+        if self.py_modules:
+            self.build_modules()
+        if self.packages:
+            self.build_packages()
+        self.byte_compile(self.get_outputs(include_bytecode=0))
 
 class build_scripts_twisted(build_scripts.build_scripts):
     """Renames scripts so they end with '.py' on Windows."""
