@@ -120,9 +120,10 @@ def lore(ver, docdir):
        "--config ext=.html --config version=%(ver)s "
        "--config noapi=please -l ../howto/ "
        "%(docdir)s/*.xhtml" % {'ver': ver, 'docdir': docdir})
+    sh("rm -f %(docdir)s/*.xhtml" % {'docdir': docdir})
 
 def tar(tdir):
-    sh('find Twisted.exp -name "*.pyc" | xargs rm -f')
+    sh('find Twisted.exp %(tdir)s -name "*.pyc" | xargs rm -f' % locals())
     sh('tar cjhf %(tdir)s.tar.bz2 %(tdir)s' % locals())
 
 
@@ -146,7 +147,7 @@ def makeDocCore(opts):
 
     for docdir in ['howto', 'howto/tutorial', 'howto/policy', 'upgrades',
                    'upgrades/2.0', # ugh
-                   'specifications', 'vision']:
+                   'specifications', 'vision', '']:
         lore(ver, os.path.join('doc/core', docdir))
 
     #shwack the crap
