@@ -387,6 +387,8 @@ class SimpleServer(imap4.IMAP4Server):
         raise cred.error.UnauthorizedLogin()
 
 class SimpleClient(imap4.IMAP4Client):
+    startedTLS = False
+
     def __init__(self, deferred, contextFactory = None):
         imap4.IMAP4Client.__init__(self, contextFactory)
         self.deferred = deferred
@@ -406,6 +408,12 @@ class SimpleClient(imap4.IMAP4Client):
     def newMessages(self, exists, recent):
         self.events.append(['newMessages', exists, recent])
         self.transport.loseConnection()
+
+    # Let us notice when TLS is started
+    def _IMAP4Client__cbLoginTLS(self, *args):
+        r = imap4.IMAP4Client._IMAP4Client__cbLoginTLS(self, *args)
+        self.startedTLS = True
+        return r
 
 class IMAP4HelperMixin:
     serverCTX = None
@@ -437,13 +445,14 @@ class IMAP4HelperMixin:
         failure.printTraceback()
         raise failure.value
     
-    def loopback(self):
-        loopback.loopback(self.server, self.client)
+    loopback = lambda self: loopback.loopback(self.server, self.client)
 
 class TLSTestCase(IMAP4HelperMixin, unittest.TestCase):
     serverCTX = ServerTLSContext()
     clientCTX = ClientTLSContext()
-    
+
+    loopback = lambda self: loopback.loopbackTCP(self.server, self.client)
+
     def testAPileOfThings(self):
         SimpleServer.theAccount.addMailbox('inbox')
         called = []
@@ -463,11 +472,15 @@ class TLSTestCase(IMAP4HelperMixin, unittest.TestCase):
             called.append(None)
             return self.client.logout()
         
+        self.client.requireTransportSecurity = True
+
         methods = [login, list, status, examine, logout]
         map(self.connected.addCallback, map(strip, methods))
         self.connected.addCallbacks(self._cbStopClient, self._ebGeneral)
         self.loopback()
         
+        self.assertEquals(self.server.startedTLS, True)
+        self.assertEquals(self.client.startedTLS, True)
         self.assertEquals(len(called), len(methods))
 
 class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
