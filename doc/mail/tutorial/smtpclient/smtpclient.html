@@ -146,20 +146,20 @@ exarkun@boson:~/mail/tutorial/smtpclient$ twistd -noy smtpclient-2.tac
 2005/03/27 18:55 EST [-] Loaded.
 2005/03/27 18:55 EST [-] Starting factory &lt;twisted.internet.protocol.ClientFactory instance at 0xb791e46c&gt;
 2005/03/27 18:55 EST [-] Traceback (most recent call last):
-          File "/home/exarkun/pythonpath/twisted/scripts/twistd.py", line 187, in runApp
+          File "twisted/scripts/twistd.py", line 187, in runApp
             app.runReactorWithLogging(config, oldstdout, oldstderr)
-          File "/home/exarkun/pythonpath/twisted/application/app.py", line 128, in runReactorWithLogging
+          File "twisted/application/app.py", line 128, in runReactorWithLogging
             reactor.run()
-          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/internet/posixbase.py", line 200, in run
+          File "twisted/internet/posixbase.py", line 200, in run
             self.mainLoop()
-          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/internet/posixbase.py", line 208, in mainLoop
+          File "twisted/internet/posixbase.py", line 208, in mainLoop
             self.runUntilCurrent()
         --- &lt;exception caught here&gt; ---
-          File "/home/exarkun/pythonpath/twisted/internet/base.py", line 533, in runUntilCurrent
+          File "twisted/internet/base.py", line 533, in runUntilCurrent
             call.func(*call.args, **call.kw)
-          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/internet/tcp.py", line 489, in resolveAddress
+          File "twisted/internet/tcp.py", line 489, in resolveAddress
             if abstract.isIPAddress(self.addr[0]):
-          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/internet/abstract.py", line 315, in isIPAddress
+          File "twisted/internet/abstract.py", line 315, in isIPAddress
             parts = string.split(addr, '.')
           File "/usr/lib/python2.4/string.py", line 292, in split
             return s.split(sep, maxsplit)
@@ -207,24 +207,24 @@ exarkun@boson:~/mail/tutorial/smtpclient$ twistd -noy smtpclient-3.tac
 2005/03/27 19:10 EST [-] Starting factory &lt;twisted.internet.protocol.ClientFactory instance at 0xb791e48c&gt;
 2005/03/27 19:10 EST [-] Enabling Multithreading.
 2005/03/27 19:10 EST [Uninitialized] Traceback (most recent call last):
-          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/python/log.py", line 56, in callWithLogger
+          File "twisted/python/log.py", line 56, in callWithLogger
             return callWithContext({"system": lp}, func, *args, **kw)
-          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/python/log.py", line 41, in callWithContext
+          File "twisted/python/log.py", line 41, in callWithContext
             return context.call({ILogContext: newCtx}, func, *args, **kw)
-          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/python/context.py", line 52, in callWithContext
+          File "twisted/python/context.py", line 52, in callWithContext
             return self.currentContext().callWithContext(ctx, func, *args, **kw)
-          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/python/context.py", line 31, in callWithContext
+          File "twisted/python/context.py", line 31, in callWithContext
             return func(*args,**kw)
         --- &lt;exception caught here&gt; ---
-          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/internet/selectreactor.py", line 139, in _doReadOrWrite
+          File "twisted/internet/selectreactor.py", line 139, in _doReadOrWrite
             why = getattr(selectable, method)()
-          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/internet/tcp.py", line 543, in doConnect
+          File "twisted/internet/tcp.py", line 543, in doConnect
             self._connectDone()
-          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/internet/tcp.py", line 546, in _connectDone
+          File "twisted/internet/tcp.py", line 546, in _connectDone
             self.protocol = self.connector.buildProtocol(self.getPeer())
-          File "/home/exarkun/pythonpath/twisted/internet/base.py", line 641, in buildProtocol
+          File "twisted/internet/base.py", line 641, in buildProtocol
             return self.factory.buildProtocol(addr)
-          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/internet/protocol.py", line 99, in buildProtocol
+          File "twisted/internet/protocol.py", line 99, in buildProtocol
             p = self.protocol()
         exceptions.TypeError: 'NoneType' object is not callable
 
@@ -257,7 +257,7 @@ smtpClientFactory.protocol = protocol.Protocol
 again traceback free:</p>
 
 <blockquote><code><pre>
-exarkun@boson:~/Projects/svn/Twisted/trunk/doc/mail/tutorial/smtpclient$ twistd -noy smtpclient-4.tac
+exarkun@boson:~/doc/mail/tutorial/smtpclient$ twistd -noy smtpclient-4.tac
 2005/03/27 19:29 EST [-] Log opened.
 2005/03/27 19:29 EST [-] twistd SVN-Trunk (/usr/bin/python2.4 2.4.1) starting up
 2005/03/27 19:29 EST [-] reactor class: twisted.internet.selectreactor.SelectReactor
@@ -319,7 +319,7 @@ behaves as an SMTP client.  What happens when we try to run this
 version?</p>
 
 <blockquote><code><pre>
-exarkun@boson:~/Projects/svn/Twisted/trunk/doc/mail/tutorial/smtpclient$ twistd -noy smtpclient-5.tac
+exarkun@boson:~/doc/mail/tutorial/smtpclient$ twistd -noy smtpclient-5.tac
 2005/03/27 19:42 EST [-] Log opened.
 2005/03/27 19:42 EST [-] twistd SVN-Trunk (/usr/bin/python2.4 2.4.1) starting up
 2005/03/27 19:42 EST [-] reactor class: twisted.internet.selectreactor.SelectReactor
@@ -328,24 +328,24 @@ exarkun@boson:~/Projects/svn/Twisted/trunk/doc/mail/tutorial/smtpclient$ twistd 
 2005/03/27 19:42 EST [-] Starting factory &lt;twisted.internet.protocol.ClientFactory instance at 0xb791e54c&gt;
 2005/03/27 19:42 EST [-] Enabling Multithreading.
 2005/03/27 19:42 EST [Uninitialized] Traceback (most recent call last):
-          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/python/log.py", line 56, in callWithLogger
+          File "twisted/python/log.py", line 56, in callWithLogger
             return callWithContext({"system": lp}, func, *args, **kw)
-          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/python/log.py", line 41, in callWithContext
+          File "twisted/python/log.py", line 41, in callWithContext
             return context.call({ILogContext: newCtx}, func, *args, **kw)
-          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/python/context.py", line 52, in callWithContext
+          File "twisted/python/context.py", line 52, in callWithContext
             return self.currentContext().callWithContext(ctx, func, *args, **kw)
-          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/python/context.py", line 31, in callWithContext
+          File "twisted/python/context.py", line 31, in callWithContext
             return func(*args,**kw)
         --- &lt;exception caught here&gt; ---
-          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/internet/selectreactor.py", line 139, in _doReadOrWrite
+          File "twisted/internet/selectreactor.py", line 139, in _doReadOrWrite
             why = getattr(selectable, method)()
-          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/internet/tcp.py", line 543, in doConnect
+          File "twisted/internet/tcp.py", line 543, in doConnect
             self._connectDone()
-          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/internet/tcp.py", line 546, in _connectDone
+          File "twisted/internet/tcp.py", line 546, in _connectDone
             self.protocol = self.connector.buildProtocol(self.getPeer())
-          File "/home/exarkun/pythonpath/twisted/internet/base.py", line 641, in buildProtocol
+          File "twisted/internet/base.py", line 641, in buildProtocol
             return self.factory.buildProtocol(addr)
-          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/internet/protocol.py", line 99, in buildProtocol
+          File "twisted/internet/protocol.py", line 99, in buildProtocol
             p = self.protocol()
         exceptions.TypeError: __init__() takes at least 2 arguments (1 given)
 
@@ -353,7 +353,7 @@ exarkun@boson:~/Projects/svn/Twisted/trunk/doc/mail/tutorial/smtpclient$ twistd 
 2005/03/27 19:43 EST [-] Received SIGINT, shutting down.
 2005/03/27 19:43 EST [-] Main loop terminated.
 2005/03/27 19:43 EST [-] Server Shut Down.
-exarkun@boson:~/Projects/svn/Twisted/trunk/doc/mail/tutorial/smtpclient$ 
+exarkun@boson:~/doc/mail/tutorial/smtpclient$ 
 </pre></code></blockquote>
 
 
@@ -401,7 +401,7 @@ smtpClientFactory = SMTPClientFactory()
 <strong>still</strong> isn't quite traceback-free.</p>
 
 <blockquote><code><pre>
-exarkun@boson:~/Projects/svn/Twisted/trunk/doc/mail/tutorial/smtpclient$ PYTHONPATH=~/Projects/svn/Twisted/trunk/ twistd -noy smtpclient-6.tac
+exarkun@boson:~/doc/mail/tutorial/smtpclient$ twistd -noy smtpclient-6.tac
 2005/03/29 21:17 EST [-] Log opened.
 2005/03/29 21:17 EST [-] twistd SVN-Trunk (/usr/bin/python2.4 2.4.1) starting up
 2005/03/29 21:17 EST [-] reactor class: twisted.internet.selectreactor.SelectReactor
@@ -410,32 +410,32 @@ exarkun@boson:~/Projects/svn/Twisted/trunk/doc/mail/tutorial/smtpclient$ PYTHONP
 2005/03/29 21:17 EST [-] Starting factory <__builtin__.SMTPClientFactory instance at 0xb77fd68c>
 2005/03/29 21:17 EST [-] Enabling Multithreading.
 2005/03/29 21:17 EST [ESMTPClient,client] Traceback (most recent call last):
-          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/python/log.py", line 56, in callWithLogger
+          File "twisted/python/log.py", line 56, in callWithLogger
             return callWithContext({"system": lp}, func, *args, **kw)
-          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/python/log.py", line 41, in callWithContext
+          File "twisted/python/log.py", line 41, in callWithContext
             return context.call({ILogContext: newCtx}, func, *args, **kw)
-          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/python/context.py", line 52, in callWithContext
+          File "twisted/python/context.py", line 52, in callWithContext
             return self.currentContext().callWithContext(ctx, func, *args, **kw)
-          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/python/context.py", line 31, in callWithContext
+          File "twisted/python/context.py", line 31, in callWithContext
             return func(*args,**kw)
         --- <exception caught here> ---
-          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/internet/selectreactor.py", line 139, in _doReadOrWrite
+          File "twisted/internet/selectreactor.py", line 139, in _doReadOrWrite
             why = getattr(selectable, method)()
-          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/internet/tcp.py", line 351, in doRead
+          File "twisted/internet/tcp.py", line 351, in doRead
             return self.protocol.dataReceived(data)
-          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/protocols/basic.py", line 221, in dataReceived
+          File "twisted/protocols/basic.py", line 221, in dataReceived
             why = self.lineReceived(line)
-          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/mail/smtp.py", line 1039, in lineReceived
+          File "twisted/mail/smtp.py", line 1039, in lineReceived
             why = self._okresponse(self.code,'\n'.join(self.resp))
-          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/mail/smtp.py", line 1281, in esmtpState_serverConfig
+          File "twisted/mail/smtp.py", line 1281, in esmtpState_serverConfig
             self.tryTLS(code, resp, items)
-          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/mail/smtp.py", line 1294, in tryTLS
+          File "twisted/mail/smtp.py", line 1294, in tryTLS
             self.authenticate(code, resp, items)
-          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/mail/smtp.py", line 1343, in authenticate
+          File "twisted/mail/smtp.py", line 1343, in authenticate
             self.smtpState_from(code, resp)
-          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/mail/smtp.py", line 1062, in smtpState_from
+          File "twisted/mail/smtp.py", line 1062, in smtpState_from
             self._from = self.getMailFrom()
-          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/mail/smtp.py", line 1137, in getMailFrom
+          File "twisted/mail/smtp.py", line 1137, in getMailFrom
             raise NotImplementedError
         exceptions.NotImplementedError:
 
@@ -443,7 +443,7 @@ exarkun@boson:~/Projects/svn/Twisted/trunk/doc/mail/tutorial/smtpclient$ PYTHONP
 2005/03/29 21:17 EST [-] Received SIGINT, shutting down.
 2005/03/29 21:17 EST [-] Main loop terminated.
 2005/03/29 21:17 EST [-] Server Shut Down.
-exarkun@boson:~/Projects/svn/Twisted/trunk/doc/mail/tutorial/smtpclient$
+exarkun@boson:~/doc/mail/tutorial/smtpclient$
 </pre></code></blockquote>
 
 <p>What we have accomplished with this iteration of the example is to
@@ -544,8 +544,14 @@ failure of the message transmission to the application:</p>
         print 'Sent', numOk, 'messages'
 </pre></code></blockquote>
 
-<p><strong><em>XXX</em></strong> Say something about sentMail's args
-or something.</p>
+<p>Each of the arguments to <code>sentMail</code> provides some
+information about the success or failure of the message transmission
+transaction.  <code>code</code> is the response code from the ultimate
+command.  For successful transactions, it will be 250.  For transient
+failures (those which should be retried), it will be between 400 and
+499, inclusive.  For permanent failures (this which will never work,
+no matter how many times you retry them), it will be between 500 and
+599.</p>
 
 <h3>SMTP Client 8</h3>
 
@@ -562,8 +568,123 @@ simple.  <a href="smtpclient-8.tac">smtpclient-8.tac</a> extends
         reactor.stop()
 </pre></code></blockquote>
 
-<p></p>
+<p>The <code>stop</code> method of the reactor causes the main event
+loop to exit, allowing a Twisted server to shut down.  With this
+version of the example, we see that the program actually terminates
+after sending the message, without user-intervention:</p>
 
+<blockquote><code><pre>
+exarkun@boson:~/doc/mail/tutorial/smtpclient$ twistd -noy smtpclient-8.tac
+2005/04/01 19:52 EST [-] Log opened.
+2005/04/01 19:52 EST [-] twistd SVN-Trunk (/usr/bin/python2.4 2.4.1) starting up
+2005/04/01 19:52 EST [-] reactor class: twisted.internet.selectreactor.SelectReactor
+2005/04/01 19:52 EST [-] Loading smtpclient-8.tac...
+2005/04/01 19:52 EST [-] Loaded.
+2005/04/01 19:52 EST [-] Starting factory &lt;__builtin__.SMTPClientFactory instance at 0xb791beec&gt;
+2005/04/01 19:52 EST [-] Enabling Multithreading.
+2005/04/01 19:52 EST [SMTPTutorialClient,client] Sent 1 messages
+2005/04/01 19:52 EST [SMTPTutorialClient,client] Stopping factory &lt;__builtin__.SMTPClientFactory instance at 0xb791beec&gt;
+2005/04/01 19:52 EST [-] Main loop terminated.
+2005/04/01 19:52 EST [-] Server Shut Down.
+exarkun@boson:~/doc/mail/tutorial/smtpclient$
+</pre></code></blockquote>
+
+<h3>SMTP Client 9</h3>
+
+<p>One task remains to be completed in this tutorial SMTP client:
+instead of always sending mail through a well-known host, we will look
+up the mail exchange server for the recipient address and try to
+deliver the message to that host.<p>
+
+<p>The first step we'll take in adding this feature is to define a
+function which returns the mail exchange host for a particular
+domain:</p>
+
+<blockquote><code><pre>
+def getMailExchange(host):
+    return 'localhost'
+</pre></code></blockquote>
+
+<p>Obviously this doesn't return the correct mail exchange host yet
+(in fact, it returns the exact same host we have been using all
+along), but pulling out the logic for determining which host to
+connect to into a function like this is the first step towards our
+ultimate goal.  Now that we have <code>getMailExchange</code>, we'll
+call it when constructing our <code>TCPClient</code> service:</p>
+
+<blockquote><code><pre>
+smtpClientService = internet.TCPClient(
+    getMailExchange('example.net'), 25, smtpClientFactory)
+</pre></code></blockquote>
+
+<p>We'll expand on the definition of <code>getMailExchange</code> in
+the next example.</p>
+
+<h3>SMTP Client 10</h3>
+
+<p>In the previous example we defined <code>getMailExchange</code> to
+return a string representing the mail exchange host for a particular
+domain.  While this was a step in the right direction, it turns out
+not to be a very big one.  Determining the mail exchange host for a
+particular domain is going to involve network traffic (specifically,
+some DNS requests).  These might take an arbitrarily large amount of
+time, so we need to introduce a <code>Deferred</code> to represent the
+result of <code>getMailExchange</code>.  We do this first by
+redefining it:</p>
+
+<blockquote><code><pre>
+def getMailExchange(host):
+    return defer.succeed('localhost')
+</pre></code></blockquote>
+
+<p><code>defer.succeed</code> is a function which creates a new
+<code>Deferred</code> which already has a result, in this case
+<code>'localhost'</code>.  Now we need to adjust our
+<code>TCPClient</code>-constructing code to expect and properly handle
+this <code>Deferred</code>:</p>
+
+<blockquote><code><pre>
+def cbMailExchange(exchange):
+    smtpClientFactory = SMTPClientFactory()
+
+    smtpClientService = internet.TCPClient(exchange, 25, smtpClientFactory)
+    smtpClientService.setServiceParent(application)
+
+getMailExchange('example.net').addCallback(cbMailExchange)
+</pre></code></blockquote>
+
+<p>An in-depth exploration of <code>Deferred</code>s is beyond the
+scope of this document.  For such a look, see the <a href="">Deferred
+Execution Howto</a>.  However, in brief, what this version of the code
+does is to delay the creation of the <code>TCPClient</code> until the
+<code>Deferred</code> returned by <code>getMailExchange</code> fires.
+Once it does, we proceed normally through the creation of our
+<code>SMTPClientFactory</code> and <code>TCPClient</code>, as well as
+set the <code>TCPClient</code>'s service parent, just as we did in the
+previous examples.</p>
+
+<h3>SMTP Client 11</h3>
+
+<p>At last we're ready to perform the mail exchange lookup.  We do
+this by calling on an object provided specifically for this task,
+<code>twisted.mail.relaymanager.MXCalculator</code>:</p>
+
+<blockquote><code><pre>
+def getMailExchange(host):
+    def cbMX(mxRecord):
+        return str(mxRecord.exchange)
+    return relaymanager.MXCalculator().getMX(host).addCallback(cbMX)
+</pre></code></blockquote>
+
+<p>Because <code>getMX</code> returns a <code>Record_MX</code> object
+rather than a string, we do a little bit of post-processing to get the
+results we want.  We have already converted the rest of the tutorial
+application to expect a <code>Deferred</code> from
+<code>getMailExchange</code>, so no further changes are required.</p>
+
+<h3>Conclusion</h3>
+
+<p>XXX wrap it up</p>
 
 </body>
 </html>
