@@ -578,6 +578,11 @@ class IRCClient(basic.LineReceiver):
         """
         pass
 
+    def userQuit(self, user):
+        """Called when I see another user disconnect from the network.
+        """
+        pass
+
     def userKicked(self, kickee, channel, kicker, message):
         """Called when I observe someone else being kicked from a channel.
         """
@@ -815,6 +820,10 @@ class IRCClient(basic.LineReceiver):
             self.left(channel)
         else:
             self.userLeft(nick, channel)
+
+    def irc_QUIT(self, prefix, params):
+        nick = string.split(prefix,'!')[0]
+        self.userQuit(nick, params[0])
 
     def irc_MODE(self, prefix, params):
         channel, rest = params[0], params[1:]
