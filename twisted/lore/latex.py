@@ -173,7 +173,8 @@ class LatexSpitter(BaseLatexSpitter):
         self.visitNodeDefault(node)
         href = node.getAttribute('href')
         if urlparse.urlparse(href)[0] in supported_schemes:
-            if node.childNodes[0].data != href:
+            text = domhelpers.getNodeText(node)
+            if text != href:
                 self.writer('\\footnote{%s}' % latexEscape(href))
         else:
             path, fragid = (href.split('#', 1) + [None])[:2]
