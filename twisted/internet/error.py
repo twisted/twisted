@@ -1,5 +1,6 @@
 # Twisted, the Framework of Your Internet
-# Copyright (C) 2002 Bryce "Zooko" Wilcox-O'Hearn
+# Copyright (C) 2002 Matthew W. Lefkowitz
+# author: Bryce "Zooko" Wilcox-O'Hearn, 2002
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
