@@ -99,7 +99,7 @@ class BugsDatabase(adbapi.Augmentation):
     
     def createComment(self, bug_id, name, email, comment):
         sql = """INSERT into bugs_comments (bug_id, submittor_name, submittor_email, comment)
-                 VALUES (%d, %s, %s, %s)"""
+                 VALUES (%s, %s, %s, %s)"""
         return self.runOperation(sql, (bug_id, name, email, comment))
     
     def getAllBugs(self, callbackIn, errbackIn):
@@ -114,5 +114,5 @@ class BugsDatabase(adbapi.Augmentation):
     
     def updateBugStatus(self, bug_id, assigned, status):
         sql = """UPDATE bugs_items SET assigned = %s, status = %s, date_modified = now()
-                 WHERE bug_id = %d"""
+                 WHERE bug_id = %s"""
         return self.runOperation(sql, (assigned, status, bug_id))
