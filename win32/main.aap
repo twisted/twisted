@@ -21,14 +21,14 @@ HERE=`os.getcwd()`
                 normf=os.path.normpath(f)
                 i2dct=quickdict(idct, what=normf)
                 yield itemtmpl % i2dct
-        
+
 
     def geniss(iss_template, dodocs):
         """Return the inno setup file"""
         tdct=quickdict(setupbase=_top.setupbase, version=_top.Version,
                        pyversion=_top.pyversion)
         template='%(setupbase)s-%(version)s.win32-py%(pyversion)s' % tdct
-        
+
         import setup
         df=list(renderDatafilesToIss(setup.setup_args['data_files']))
         data_files='\n'.join(df)
@@ -48,21 +48,16 @@ HERE=`os.getcwd()`
 
         return iss_template % dct
 
-    def getBuildingTwistedVersion(dir):
+    def getBuildingTwistedVersion():
         """Return the version of Twisted in $HERE, which may be
         different from the version of Twisted in sys.path.
         """
-        sys.path.insert(0, _recipe.HERE)
-        # get rid of twisted from sys.path
-        if sys.modules.has_key('twisted'):
-            del sys.modules['twisted']
-        import twisted        
-        from twisted.copyright import version
+        execfile("./twisted/copyright.py", globals())
         return version
 
 
 # get the version of twisted from the tree being built, not sys.path
-Version=`getBuildingTwistedVersion(_recipe.HERE)`
+Version=`getBuildingTwistedVersion()`
 
 # PyVersion is variant rather than a regular string variable so the script
 # will accept only one of these two values

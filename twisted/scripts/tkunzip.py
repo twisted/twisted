@@ -17,7 +17,7 @@ if sys.version_info[:2]==(2,2):
     tkdll='tk83.dll'
 else:
     tkdll='tk84.dll'
-if which(tkdll):
+if which(tkdll) or which('DLLs/%s' % tkdll):
     try:
         import Tkinter
         from Tkinter import *
