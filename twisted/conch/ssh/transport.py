@@ -259,6 +259,7 @@ class SSHTransportBase(protocol.Protocol):
             return self.isVerified("in") and self.isVerified("out")
 
 class SSHServerTransport(SSHTransportBase):
+    isClient = 0
     def ssh_KEXINIT(self, packet):
         self.clientKexInitPayload = chr(MSG_KEXINIT) + packet
         cookie = packet[:16]
@@ -400,6 +401,7 @@ class SSHServerTransport(SSHTransportBase):
         return k1+k2
 
 class SSHClientTransport(SSHTransportBase):
+    isClient = 1
     def ssh_KEXINIT(self, packet):
         self.serverKexInitPayload = chr(MSG_KEXINIT) + packet
         cookie = packet[:16]

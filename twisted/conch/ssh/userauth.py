@@ -57,7 +57,7 @@ class SSHUserAuthServer(service.SSHService):
         f = getattr(self,'auth_%s'%kind, None)
         if f:
             return f(identity, data)
-        raise error.ConchError('bad auth for %s' % kind) # this should make it err back
+        raise error.ConchError('bad auth type: %s' % kind) # this should make it err back
 
     def ssh_USERAUTH_REQUEST(self, packet):
         user, nextService, method, rest = getNS(packet, 3)
@@ -83,16 +83,16 @@ class SSHUserAuthServer(service.SSHService):
         else:
             self.transport.sendPacket(MSG_USERAUTH_FAILURE, NS(','.join(self.supportedAuthentications))+'\xff')
 
-    def _ebBadAuth(self, foo):
-        if isinstance(foo, failure.Failure):
-            foo.trap(error.ConchError)
+    def _ebBadAuth(self, reason):
+        if isinstance(reason, failure.Failure):
+            reason.trap(error.ConchError)
         elif foo == "unauthorized":
             pass
         else:
-            raise foo
+            raise reason
         if self.method != 'none': # ignore 'none' as a method
             log.msg('%s failed auth %s' % (self.user, self.method))
-            log.msg('potential reason: %s' % foo)
+            log.msg('potential reason: %s' % reason)
             self.loginAttempts += 1
             if self.loginAttempts > self.attemptsBeforeDisconnect:
                 self.transport.sendDisconnect(transport.DISCONNECT_NO_MORE_AUTH_METHODS_AVAILABLE,

@@ -16,7 +16,7 @@
 # 
 
 import struct
-from twisted.internet import protocol
+from twisted.internet import protocol, reactor
 try:
     from twisted.internet import ptypro
 except ImportError:
@@ -33,25 +33,22 @@ class SSHConnection(service.SSHService):
     channelsToRemoteChannel = {}
     deferreds = {}
 
+    # packet methods
     def ssh_GLOBAL_REQUEST(self, packet):
         requestType, rest = common.getNS(packet)
         wantReply, rest = ord(rest[0]), rest[1:]
-        f = getattr(self, 'global_%s' % requestType.replace('-','_'))
         reply = MSG_REQUEST_FAILURE
         data = ''
-        if f:
-            ret = f(rest)
-
-            if ret:
-                reply = MSG_REQUEST_SUCCESS
-                if type(ret) in (types.TupleType, types.ListType):
-                    data = ret[1]
-            else:
-                reply = MSG_REQUEST_FAILURE
+        ret = self.gotGlobalRequest(requestType, rest)
+        if ret:
+            reply = MSG_REQUEST_SUCCESS
+            if type(ret) in (types.TupleType, types.ListType):
+                data = ret[1]
+        else:
+            reply = MSG_REQUEST_FAILURE
         if wantReply:
             self.transport.sendPacket(reply, data)
                 
-    
     def ssh_CHANNEL_OPEN(self, packet):
         channelType, rest = common.getNS(packet)
         senderChannel, windowSize, maxPacket = struct.unpack('>3L', rest[:12])
@@ -82,7 +79,6 @@ class SSHConnection(service.SSHService):
         self.localToRemoteChannel[localChannel] = remoteChannel
         self.channelsToRemoteChannel[channel] = remoteChannel
         channel.channelOpen(specificData)
-
 
     def ssh_CHANNEL_WINDOW_ADJUST(self, packet):
         localChannel, bytesToAdd = struct.unpack('>2L', packet[:8])
@@ -122,15 +118,16 @@ class SSHConnection(service.SSHService):
     def ssh_CHANNEL_SUCCESS(self, packet):
         localChannel = struct.unpack('>L', packet[:4])[0]
         if self.deferreds.has_key(localChannel):
-            self.deferreds[localChannel].callback(packet[4:])
-            del self.deferreds[localChannel]
+            d = self.deferreds[localChannel].pop(0)
+            d.callback(packet[4:])
 
     def ssh_CHANNEL_FAILURE(self, packet):
         localChannel = struct.unpack('>L', packet[:4])[0]
         if self.deferreds.has_key(localChannel):
-            self.deferreds[localChannel].errback(ConchError('channel request failed'))
-            del self.deferreds[localChannel]
+            d = self.deferreds[localChannel].pop(0)
+            d.errback(ConchError('channel request failed'))
 
+    # methods for users of the connection to call
     def openChannel(self, channel, extra = ''):
         self.transport.sendPacket(MSG_CHANNEL_OPEN, common.NS(channel.name) 
                 + struct.pack('>3L', self.localChannelID,
@@ -142,12 +139,15 @@ class SSHConnection(service.SSHService):
 
     def sendRequest(self, channel, requestType, data, wantReply = 0):
         log.msg('sending request for channel %s, request %s' % (channel.id, requestType))
-        d = defer.Deferred()
+        
         self.transport.sendPacket(MSG_CHANNEL_REQUEST, struct.pack('>L',
                                             self.channelsToRemoteChannel[channel]) + \
                                             common.NS(requestType)+chr(wantReply) + \
                                             data)
-        self.deferreds[channel.id] = d
+        d = defer.Deferred()
+        if not self.deferreds.has_key(channel.id):
+            self.deferreds[channel.id] = []
+        self.deferreds[channel.id].append(d)
         return d
         
     def sendData(self, channel, data):
@@ -167,13 +167,33 @@ class SSHConnection(service.SSHService):
                                             self.channelsToRemoteChannel[channel]))        
         del self.channelsToRemoteChannel[channel]
 
-    def getChannel(self, channelType, windowSize, maxPacket, packet):
-        if not hasattr(self.transport, 'factory'):
+    # methods to override
+    def getChannel(self, channelType, windowSize, maxPacket, data):
+        """the other side requested a channel of some sort.
+        channelType is the string describing the channel
+        windowSize is the initial size of the window
+        maxPacket is the largest size of packet this channel should send
+        data is any other packet data
+
+        either this returns something that is a subclass of SSHChannel (although
+        this isn't enforced), or a tuple of errorCode, errorString.
+        """
+        if self.transport.isClient:
             return OPEN_ADMINISTRATIVELY_PROHIBITED, 'not on the client bubba'
         if channelType == 'session':
             return SSHSession(windowSize, maxPacket, self)
         return OPEN_UNKNOWN_CHANNEL_TYPE, "don't know %s" % channelTypes
 
+    def gotGlobalRequest(self, requestType, data):
+        """we got a global request.  pretty much, this is just used by the client
+        to request that we forward a port from the server to the client.
+        returns either:
+            1: request accepted
+            1, <data>: request accepted with request specific data
+            0: request denied
+        """
+        return 0
+        
 class SSHChannel:
     name = None # only needed for client channels
     def __init__(self, window, maxPacket, conn = None):
@@ -185,6 +205,9 @@ class SSHChannel:
 
     def channelOpen(self):
         log.msg('channel %s open' % self.id)
+
+    def openFailed(self):
+        log.msg('other side refused channel %s' % self.id)
 
     def addWindowBytes(self, bytes):
         self.windowSize = self.windowSize + bytes
@@ -255,6 +278,7 @@ class SSHSession(SSHChannel):
         shell = '/bin/sh' # fix this
         try:
             ptypro.Process(shell, [shell], self.environ, '/tmp', SSHSessionProtocol(self)) # fix this too
+            #reactor.spawnProcess(SSHSessionProtocol(self), shell, ['-'], self.environ)
         except OSError, ImportError:
             log.msg('failed to get pty')
             return 0
