@@ -17,7 +17,8 @@
 See twisted.internet.interfaces.IReactor*.
 """
 
-print "Installing SelectReactor, since unspecified."
+from twisted.python import log
+log.msg("Installing SelectReactor, since unspecified.")
 import sys
 del sys.modules['twisted.internet.reactor']
 from twisted.internet import default
