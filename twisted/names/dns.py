@@ -281,13 +281,18 @@ class NS(dns.RR):
         strio.write(s.getvalue())
 
 
+def IPtoBytes(ip):
+    """Convert IP address into bytes - raises ValueError on errors."""
+    return string.join(map(chr, map(int, string.split(ip, '.'))), '')
+
+
 class SimpleDomain:
 
     ttl = 60*60*24
 
     def __init__(self, name, ip):
         self.name = name
-        self.ip = string.join(map(chr, map(int, string.split(ip, '.'))), '')
+        self.ip = IPtoBytes(ip)
 
     def getAnswers(self, message, name, type):
         if type == dns.MX:
@@ -330,3 +335,12 @@ class DNSServerBoss(DNSBoss):
             self.domains[name].getAnswers(message, query.name.name, query.type)
         protocol.writeMessage(message)
         protocol.transport.loseConnection()
+
+
+class DNSServerFactory(protocol.ServerFactory):
+    """A simple DNS server factory."""
+    
+    protocol = dns.DNS
+    
+    def __init__(self):
+        self.boss = DNSServerBoss()

@@ -159,13 +159,17 @@ class AppConfiguratorPage(widgets.Presentation):
             ret.extend(widgets.TitleBox("Configuration", ConfigForm(self, cfg, linkfrom)).display(request))
         
         # add a form for a collection of objects
-        if isinstance(obj, roots.Homogenous):
-            if obj.entityType in (types.StringType, types.IntType, types.FloatType, types.LongType):
-                ret.extend(widgets.TitleBox("Delete Items", ImmutableCollectionDeleteForm(self, obj, linkfrom)).display(request))
+        if not isinstance(obj, roots.Homogenous) and cfg:
+            coll = cfg
+        else:
+            coll = obj
+        if isinstance(coll, roots.Homogenous):
+            if coll.entityType in (types.StringType, types.IntType, types.FloatType):
+                ret.extend(widgets.TitleBox("Delete Items", ImmutableCollectionDeleteForm(self, coll, linkfrom)).display(request))
                 colClass = ImmutableCollectionForm
             else:
                 colClass = CollectionForm
-            ret.extend(widgets.TitleBox("Listing", colClass(self, obj, linkfrom)).display(request))
+            ret.extend(widgets.TitleBox("Listing", colClass(self, coll, linkfrom)).display(request))
         
         ret.append(html.PRE(str(obj)))
         return ret
