@@ -46,13 +46,13 @@ class Transaction:
 class ConnectionPool(pb.Referenceable):
     """I represent a pool of connections to a DB-API 2.0 compliant database.
 
-    You can pass keywords args cp_min and cp_max that will specify the size
-    of the thread pool used to serve database requests (possibly this is
-    deprecated - it does not work at the moment in any case). You can also
-    pass the noisy arg which determines whether informational log messages
-    are generated during the pool's operation.
+    You can pass the noisy arg which determines whether informational
+    log messages are generated during the pool's operation.
     """
     noisy = 1
+
+    # XXX - make the min and max attributes (and cp_min and cp_max
+    # kwargs to __init__) actually do something?
     min = 3
     max = 5
 
