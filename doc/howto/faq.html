@@ -82,24 +82,30 @@ bug (hopefully as much information needed to reproduce it: OS, CVS versions
 of any important files, Python version, code you wrote or things you did
 to trigger the bug, etc.) to the <a href="http://twistedmatrix.com/cgi-bin/mailman/listinfo/twisted-python">mailing list</a></p>
 
-<h2>How do I serve PHP files with twisted.web?</h2>
+<h2>How do I serve PHP/Perl/CGI files with twisted.web?</h2>
 
-<p>The following code will start up a webserver that will serve PHP-pages by CGI. Look at <code>twisted.web.twcgi</code>
+<p><code>twisted.web</code> allows you to serve any CGI programs. By default twisted.web serves .cgi-files, .php,
+and .php3 in addition to twisted-specific kinds of resources. Therefore, if your language is represented you'll want to setup a
+webserver as explained in <a href="using-twistedweb.html">Using Twisted.Web Server.</a>, and point your browser
+at your files and see if they render properly.<br/>
+Everything related to CGI is located in the <code>twisted.web.twcgi</code>, and it's here you'll find the classes that you need to subclass in 
+order to support the language of your (or somebody elses) taste. You'll also need to create your own kind of resource if you are using
+a non-unix operatingsystem (such as Windows), or if the default resources has wrong pathnames to the parsers.</p>
+
+<p>The following snippet is a .rpy that serves perl-files. Look at <code>twisted.web.twcgi</code>
 for more examples regarding twisted.web and CGI.</p>
 
 <pre class="python">
 from twisted.internet import main, app
 from twisted.web import server, static, twcgi
 
-class PHPFile(static.File):
-    processors = {'.php': twcgi.PHPScript}
-    indexNames = ['index.php']+static.File.indexNames
+class PerlScript(twcgi.FilteredScript):
+    filter = '/usr/bin/perl' # Points to the perl parser
 
-application = app.Application("phpwebserver")
-root = PHPFile("/var/www/phpsite", allowExt=1) # allowExt is not required, but allows foo.net/index to render index.php
-site = server.Site(root)
-application.listenTCP(8080, site)
-application.run()
+application = app.Application("perlwebserver")
+resource = static.File("/perlsite") # Points to the perl website
+resource.processors = {".pl": PerlScript} # Files that end with .pl will be processed by PerlScript
+resource.indexNames = ['index.pl']
 </pre>
 
 </body></html>
