@@ -101,29 +101,11 @@ class Client(tcp.BaseClient):
     addressFamily = socket.AF_UNIX
     socketType = socket.SOCK_STREAM
     
-    REQ_FLAGS = (stat.S_IFSOCK | # that's not a socket
-                 stat.S_IRUSR  | # that's not readable
-                 stat.S_IWUSR)   # that's not writable
-
     def __init__(self, filename, connector, reactor=None):
-        # Base __init__ is invoked later.  Yea, it's evil.
         self.connector = connector
-        err = skt = whenDone = None
-
-        try:
-            mode = os.stat(filename)[0]
-        except OSError, ose:
-            # no such file or directory
-            err = error.BadFileError(string="No such file or directory")
-        else:
-            if (mode & self.REQ_FLAGS) != self.REQ_FLAGS:
-                err = error.BadFileError(string="File is not socket or unreadable/unwritable")
-            else:
-                self.realAddress = self.addr = filename
-                skt = self.createInternetSocket()
-                whenDone = self.doConnect
-
-        self._finishInit(whenDone, skt, err, reactor)
+        self.realAddress = self.addr = filename
+        self._finishInit(self.doConnect, self.createInternetSocket(),
+                         None, reactor)
 
     def getPeer(self):
         return ('UNIX', repr(self.addr))
