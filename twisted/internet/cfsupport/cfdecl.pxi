@@ -97,6 +97,7 @@ cdef extern from "pymactoolbox.h":
     cdef void CFRunLoopStop(CFRunLoopRef rl)
     cdef void CFRunLoopAddSource(CFRunLoopRef rl, CFRunLoopSourceRef source, CFStringRef mode)
     cdef void CFRunLoopRemoveSource(CFRunLoopRef rl, CFRunLoopSourceRef source, CFStringRef mode)
+    cdef CFStringRef CFRunLoopCopyCurrentMode(CFRunLoopRef rl)
 
     cdef void CFRunLoopAddTimer(CFRunLoopRef rl, CFRunLoopTimerRef timer, CFStringRef mode)
     cdef void CFRunLoopRemoveTimer(CFRunLoopRef rl, CFRunLoopTimerRef timer, CFStringRef mode)

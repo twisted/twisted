@@ -67,6 +67,16 @@ cdef class PyCFRunLoop:
             raise ValueError, "CFRunLoopReference is invalid"
         CFRunLoopStop(_runLoop)
 
+    def currentMode(self):
+        cdef CFTypeRef _currentMode
+        cdef CFTypeRef _runLoop
+        if CFObj_Convert(self.cf, &_runLoop) == 0:
+            raise ValueError, "CFRunLoopReference is invalid"
+        _currentMode = CFRunLoopCopyCurrentMode(_runLoop)
+        if _currentMode == NULL:
+            return None
+        return CFObj_New(_currentMode)
+        
     def addSocket(self, PyCFSocket socket not None):
         cdef CFTypeRef _runLoop
         if CFObj_Convert(self.cf, &_runLoop) == 0:

@@ -42,8 +42,14 @@ import sys
 import cfsupport as cf
 
 from twisted.python import log, threadable, failure
-from twisted.internet import main, default
+from twisted.internet import main, default, error
 from weakref import WeakKeyDictionary
+
+# cache two extremely common "failures" without traceback info
+_faildict = {
+    error.ConnectionDone: failure.Failure(error.ConnectionDone()),
+    error.ConnectionLost: failure.Failure(error.ConnectionLost()),
+}
 
 class SelectableSocketWrapper(object):
     _objCache = WeakKeyDictionary()
@@ -123,69 +129,42 @@ class SelectableSocketWrapper(object):
         self.writing = False
         self.wouldWrite = False
     
+    def _finishReadOrWrite(self, fn, faildict=_faildict):
+        try:
+            why = fn()
+        except:
+            why = sys.exc_info()[1]
+            log.err()
+        if why:
+            try:
+                f = faildict.get(why.__class__) or failure.Failure(why)
+                self.objConnectionLost(f)
+            except:
+                log.err()
+        if self.reactor.running:
+            self.reactor.simulate()
+
     def doRead(self):
-        reactor = self.reactor
         obj = self.obj
         if not obj:
             return
         if not self.reading:
             self.wouldRead = True
-            if not self.writing:
-                pass
-            if reactor.running:
-                reactor.simulate()
-            else:
-                pass
+            if self.reactor.running:
+                self.reactor.simulate()
             return
-        try:
-            why = obj.doRead()
-        except:
-            why = sys.exc_info()[1]
-            log.msg('Error in %r.doRead()' % (obj,))
-            log.deferr()
-        if why:
-            try:
-                f = failure.Failure(why)
-                f.printTraceback()
-                self.objConnectionLost(f)
-            except:
-                log.deferr()
-        if reactor.running:
-            reactor.simulate()
-        else:
-            pass
+        self._finishReadOrWrite(obj.doRead)
 
     def doWrite(self):
-        reactor = self.reactor
         obj = self.obj
         if not obj:
             return
         if not self.writing:
             self.wouldWrite = True
-            if not self.reading:
-                pass
-            if reactor.running:
-                reactor.simulate()
-            else:
-                pass
+            if self.reactor.running:
+                self.reactor.simulate()
             return
-        try:
-            why = obj.doWrite()
-        except:
-            why = sys.exc_info()[1]
-            log.msg('Error in %r.doWrite()' % (obj,))
-            log.deferr()
-        if why:
-            try:
-                f = failure.Failure(why)
-                f.printTraceback()
-                self.objConnectionLost(f)
-            except:
-                log.deferr()
-        if reactor.running:
-            reactor.simulate()
-        else:
-            pass
+        self._finishReadOrWrite(obj.doWrite)
  
     def __hash__(self):
         return hash(self.fd)
@@ -213,17 +192,25 @@ class CFReactor(default.PosixReactorBase):
             self.getRunLoop(runLoop)
         default.PosixReactorBase.__init__(self)
 
+    def installWaker(self):
+        self.callLater(0, default.PosixReactorBase.installWaker, self)
+    
     def getRunLoop(self, runLoop=None):
         if self.runLoop is None:
+            # If Foundation is loaded, assume they want the current
+            # NSRunLoop, not the base CFRunLoop.
+            # If None or an NSRunLoop instance is given, then we assume
+            # the user has caused it to begin running.  In reality, 
+            # NSApplication probably started it for them.
+            #
+            # If this is a wrong guess, the user can make the runloop go
+            # on their own after reactor.run().  It's a pretty good guess,
+            # though.
             if 'Foundation' in sys.modules:
-                # Foundation is loaded, assume they want the current
-                # NSRunLoop, not the base CFRunLoop.
                 from Foundation import NSRunLoop
                 nsRunLoop = runLoop or NSRunLoop.currentRunLoop()
                 if isinstance(nsRunLoop, NSRunLoop):
                     runLoop = nsRunLoop.getCFRunLoop()
-                    # Assume that it's already started.. 
-                    # can't seem to determine this otherwise =/
                     self.inheritedRunLoop = True
             self.runLoop = cf.PyCFRunLoop(runLoop)
         return self.runLoop
@@ -259,7 +246,7 @@ class CFReactor(default.PosixReactorBase):
     def run(self, installSignalHandlers=1, withRunLoop=None):
         if self.running:
             raise ValueError, "Reactor already running"
-        if False and installSignalHandlers:
+        if installSignalHandlers:
             self.pollInterval = self.shortIntervalOfTime
         runLoop = self.getRunLoop(withRunLoop)
         self._startup()
