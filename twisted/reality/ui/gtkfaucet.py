@@ -1,6 +1,5 @@
 
 import gtk
-import gnome.ui
 import string
 import traceback
 
@@ -47,9 +46,9 @@ class ResponseWindow(gtk.GtkWindow):
         vb.pack_start(scrl)
         bb.set_spacing(0)
         bb.set_layout(gtk.BUTTONBOX_END)
-        cancelb=gnome.ui.GnomeStockButton(gnome.ui.STOCK_BUTTON_CANCEL)
+        cancelb=gtk.GtkButton("Cancel")
         bb.add(cancelb)
-        okb=gnome.ui.GnomeStockButton(gnome.ui.STOCK_BUTTON_OK)
+        okb=gtk.GtkButton("OK")
         cancelb.set_flags(gtk.CAN_DEFAULT)
         okb.set_flags(gtk.CAN_DEFAULT)
         okb.set_flags(gtk.HAS_DEFAULT)

@@ -2,7 +2,8 @@
 """
 A module for authentication.
 
-This provides challenge/response authentication, a standardized exception for 
+This provides challenge/response authentication utilities, a standardized
+exception for unauthorized actions, and a very basic authentication class.
 
 """
 

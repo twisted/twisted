@@ -59,3 +59,7 @@ this file directly.
     twisted.words; having standard a way to transfer "large" (100MB+) packets
     across or in tandem with a PB connection without breaking anything would be
     very good.
+
+009 HEAD and other HTTP subtleties for Twisted.Web.  There are many things in
+    the HTTP RFC(s) that Twisted.Web does not do properly and should.  This
+    could perhaps be broken out into multiple TODO items.
