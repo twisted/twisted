@@ -1,3 +1,21 @@
+# Twisted, the Framework of Your Internet
+# Copyright (C) 2003 Matthew W. Lefkowitz
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of version 2.1 of the GNU Lesser General
+# Public License as published by the Free Software Foundation.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307
+# USA
+#
+#
 """ Flow -- async data flow
 
     This module provides a mechanism for using async data flows through
@@ -105,6 +123,9 @@ class Flow:
     def __init__(self, iterable):
         self.results = []
         self._stack  = [Generator(iterable)]
+    def _addResult(self, result):
+        """ private called as top-level results are added"""
+        self.results.append(result)
     def _execute(self):
         """ private execute, execute flow till a Cooperate is found """
         while self._stack:
@@ -113,13 +134,18 @@ class Flow:
             if head.stop:
                 self._stack.pop()
             else:
+                result = head.result
                 if isinstance(result, FlowCommand):
                     if isinstance(result, Cooperate):
                         return result.timeout
                     assert(isinstance(result, Generator))
                     self._stack.append(result)
                 else:
-                    self.results.append(result)
+                    if len(self._stack) > 1:
+                        self._stack.pop()
+                    else:
+                        if self._addResult(result):
+                            return
     def execute(self):
         """ continually execute, using sleep for Cooperate """
         from time import sleep
@@ -128,50 +154,53 @@ class Flow:
             if timeout is None: break
             sleep(timeout)
 
-from twisted.internet import defer, reactor
+from twisted.internet import defer
 class DeferredFlow(Flow, defer.Deferred):
-   """ a version of Flow using Twisted's reactor and Deferreds
-
-       In this version, a call to execute isn't required.  Instead,
-       the iterable is scheduled right away using the reactor.  And,
-       the Cooperate is implemented through the reactor's callLater.
-
-       Since more than one (possibly failing) result could be returned,
-       this uses the same semantics as DeferredList
-   """
-   def __init__(self, iterable, delay = 0, 
-                fireOnOneCallback=0, fireOnOneErrback=0):
-       """initialize a DeferredFlow
-       @param iterable:          top level iterator / generator
-       @param delay:             delay when scheduling reactor.callLater
-       @param fireOnOneCallback: a flag indicating that the first good 
-                                 yielded result should be sent via Callback
-       @param fireOnOneErrback:  a flag indicating that the first failing
-                                 yield result should be sent via Errback
-       """
-       defer.Deferred.__init__(self)
-       Flow.__init__(iterable)
-       self.fireOnOneCallback = fireOnOneCallback
-       self.fireOnOneErrback  = fireOnOneErrback
-       reactor.callLater(delay, self._execute)
-   def execute(self): 
-       raise TypeError("Deferred Flow is auto-executing") 
-   def _execute(self):
-       timeout = Flow._execute(self)
-       if timeout is None:
-           # emulate DeferredList behavior rather than invent...
-           if self.fireOnOneErrback or self.fireOnOneCallback:
-               idx = 0
-               for result in self.results:
-                    isFail = isinstance(result, failure.Failure)
-                    if self.fireOnOneErrback and isFail:
-                        self.errback(fail.Failure((result,idx)))
-                        return
-                    if self.fireOnOneCallback and not isFail:
-                        self.callback((result,idx))
-                        return
-                    idx += 1
-           self.callback(self.results)
-       else:
-           reactor.callLater(timeout, self._execute)
+    """ a version of Flow using Twisted's reactor and Deferreds
+ 
+        In this version, a call to execute isn't required.  Instead,
+        the iterable is scheduled right away using the reactor.  And,
+        the Cooperate is implemented through the reactor's callLater.
+ 
+        Since more than one (possibly failing) result could be returned,
+        this uses the same semantics as DeferredList
+    """
+    def __init__(self, iterable, delay = 0, 
+                 fireOnOneCallback=0, fireOnOneErrback=0):
+        """initialize a DeferredFlow
+        @param iterable:          top level iterator / generator
+        @param delay:             delay when scheduling reactor.callLater
+        @param fireOnOneCallback: a flag indicating that the first good 
+                                  yielded result should be sent via Callback
+        @param fireOnOneErrback:  a flag indicating that the first failing
+                                  yield result should be sent via Errback
+        """
+        from twisted.internet import reactor
+        defer.Deferred.__init__(self)
+        Flow.__init__(self,iterable)
+        self.fireOnOneCallback = fireOnOneCallback
+        self.fireOnOneErrback  = fireOnOneErrback
+        reactor.callLater(delay, self._execute)
+    def execute(self): 
+        raise TypeError("Deferred Flow is auto-executing") 
+    def _addResult(self, result):
+        """ emulate DeferredList behavior, short circut if event is fired """
+        if not self.called:
+            if self.fireOnOneCallback:
+                if not isinstance(result, failure.Failure):
+                    self.callback((result,len(self.results)))
+                    return 1
+            if self.fireOnOneErrback:
+                if isinstance(result, failure.Failure):
+                    self.errback(fail.Failure((result,len(self.results))))
+                    return 1
+            self.results.append(result)
+    def _execute(self):
+        timeout = Flow._execute(self)
+        if timeout is None:
+            if not self.called:
+                self.callback(self.results)
+        else:
+            from twisted.internet import reactor
+            reactor.callLater(timeout, self._execute)
  
