@@ -18,17 +18,24 @@ from twisted.web import resource
 
 class RewriterResource(resource.Resource):
 
-    isLeaf = 1
-
-    def __init__(self, resource, *rewriteRules):
-        self.resource = resource
+    def __init__(self, orig, *rewriteRules):
+	resource.Resource.__init__(self)
+        self.resource = orig
         self.rewriteRules = list(rewriteRules)
 
-    def render(self, request):
+    def _rewrite(self, request):
         for rewriteRule in self.rewriteRules:
             rewriteRule(request)
-        resource = self.resource.getChildForRequest(request)
-        return resource.render(request)
+
+    def getChild(self, path, request):
+        request.postpath.insert(0, path)
+        self._rewrite(request)
+        path = request.postpath.pop(0)
+        return self.resource.getChildWithDefault(path, request)
+
+    def render(self, request):
+        self._rewrite(request)
+        return self.resource.render(request)
 
 
 def tildeToUsers(request):
