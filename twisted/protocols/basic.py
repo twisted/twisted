@@ -28,7 +28,7 @@ import struct
 import time
 
 # Twisted imports
-from twisted.internet import protocol
+from twisted.internet import reactor, protocol
 from twisted.python import log
 
 
