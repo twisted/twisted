@@ -532,7 +532,7 @@ class MakeDebs(Transaction):
         sh('rm -rf %(twisted_dir)s' % vars())
         sh('../Twisted-%(ver)s/admin/createpackages ../override'% vars())
 
-        sh('rm -rf Twisted-%(ver)s' % vars())
+        sh('rm -rf ../Twisted-%(ver)s' % vars())
         sh('rm -rf /sid-chroot/tmp/%s' % unique)
 
     def undoIt(self, opts, fail):
