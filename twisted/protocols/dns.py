@@ -277,7 +277,6 @@ class Name:
     def __str__(self):
         return self.name
 
-
 class Query:
     """
     Represent a single DNS query.
@@ -523,7 +522,7 @@ class Record_SOA(tputil.FancyEqMixin, tputil.FancyStrMixin):
     __implements__ = (IEncodable,)
 
     compareAttributes = ('serial', 'mname', 'rname', 'refresh', 'expire', 'retry', 'ttl')
-    showAttributes = ('mname', 'rname', 'serial', 'refresh', 'retry', 'expire', 'minimum', 'ttl')
+    showAttributes = (('mname', 'mname', '%s'), ('rname', 'rname', '%s'), 'serial', 'refresh', 'retry', 'expire', 'minimum', 'ttl')
 
     TYPE = SOA
     
@@ -694,7 +693,8 @@ class Record_SRV(tputil.FancyEqMixin, tputil.FancyStrMixin):                # EX
     __implements__ = (IEncodable,)
     TYPE = SRV
 
-    showAttributes = compareAttributes = ('priority', 'weight', 'target', 'port', 'ttl')
+    compareAttributes = ('priority', 'weight', 'target', 'port', 'ttl')
+    showAttributes = ('priority', 'weight', ('target', 'target', '%s'), 'port', 'ttl')
 
     def __init__(self, priority=0, weight=0, port=0, target='', ttl=None):
         self.priority = int(priority)
@@ -726,8 +726,9 @@ class Record_AFSDB(tputil.FancyStrMixin, tputil.FancyEqMixin):
     __implements__ = (IEncodable,)
     TYPE = AFSDB
 
-    showAttributes = compareAttributes = ('subtype', 'hostname', 'ttl')
-    
+    compareAttributes = ('subtype', 'hostname', 'ttl')
+    showAttributes = ('subtype', ('hostname', 'hostname', '%s'), 'ttl')
+
     def __init__(self, subtype=0, hostname='', ttl=None):
         self.subtype = int(subtype)
         self.hostname = Name(hostname)
@@ -754,7 +755,8 @@ class Record_RP(tputil.FancyEqMixin, tputil.FancyStrMixin):
     __implements__ = (IEncodable,)
     TYPE = RP
 
-    showAttributes = compareAttributes = ('mbox', 'txt', 'ttl')
+    compareAttributes = ('mbox', 'txt', 'ttl')
+    showAttributes = (('mbox', 'mbox', '%s'), ('txt', 'txt', '%s'), 'ttl')
 
     def __init__(self, mbox='', txt='', ttl=None):
         self.mbox = Name(mbox)
@@ -851,7 +853,8 @@ class Record_MX(tputil.FancyStrMixin, tputil.FancyEqMixin):
     __implements__ = (IEncodable,)
     TYPE = MX
 
-    showAttributes = compareAttributes = ('preference', 'exchange', 'ttl')
+    compareAttributes = ('preference', 'exchange', 'ttl')
+    showAttributes = ('preference', ('exchange', 'exchange', '%s'), 'ttl')
 
     def __init__(self, preference=0, exchange='', ttl=None):
         self.preference, self.exchange = int(preference), Name(exchange)
