@@ -157,3 +157,5 @@ class TestInternet(unittest.TestCase):
                 method = getattr(internet, tran+side).method
                 prefix = {'Server': 'listen', 'Client': 'connect'}[side]
                 self.assert_(hasattr(reactor, prefix+method))
+                o = getattr(internet, tran+side)
+                self.assertEqual(service.IService(o), o)
