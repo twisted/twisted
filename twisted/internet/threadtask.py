@@ -71,13 +71,3 @@ class ThreadDispatcher(threadpool.ThreadPool):
         log.msg("stopping thread dispatcher " +str(self))
         threadpool.ThreadPool.stop(self)
 
-
-theDispatcher = ThreadDispatcher()
-
-def dispatchApply(callback, errback, func, args, kw):
-    theDispatcher.dispatchApply(log.logOwner.owner(), callback, errback, func, args, kw)
-
-def dispatch(callback, errback, func, *args, **kw):
-    theDispatcher.dispatchApply(log.logOwner.owner(), callback, errback, func, args, kw)
-
-reactor.addSystemEventTrigger('during', 'shutdown', theDispatcher.stop)
