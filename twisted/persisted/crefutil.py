@@ -40,6 +40,8 @@ class NotKnown:
         assert not self.resolved
         self.dependants.append( (mutableObject, key) )
 
+    resolvedObject = None
+
     def resolveDependants(self, newObject):
         self.resolved = 1
         self.resolvedObject = newObject
@@ -56,10 +58,10 @@ class _Tuple(NotKnown):
     def __init__(self, l):
         NotKnown.__init__(self)
         self.l = l
-        self.locs = []
+        self.locs = range(len(l))
         for idx in xrange(len(l)):
-            if isinstance(l[idx], NotKnown):
-                self.locs.append(idx)
+            if not isinstance(l[idx], NotKnown):
+                self.locs.remove(idx)
                 l[idx].addDependant(self, idx)
 
     def __setitem__(self, n, obj):
