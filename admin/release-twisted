@@ -30,17 +30,9 @@ class Options(usage.Options):
     optParameters = [
         ['base-version', None, None,
          "(required) The BASE of the version of this release"],
-        ['tinyver', None, None,
-         "(optional) The alpha or rc revision."],
         ['commands', None, None,
          "(optional) The individual steps to run; You should only use "
          "this if something broke"],
-        ['releasedir', None, '/twisted/Releases',
-         "The directory to put tarballs."],
-        ['docdir', None, '/twisted/TwistedDocs',
-         "The directory to deploy documentation to."],
-        ['sfname', None, None,
-         "Your username on sourceforge."],
         ]
     optParameters += [[x+'-version', None, None, x+" version"]
                         for x in dist.twisted_subprojects]
@@ -82,10 +74,7 @@ class Options(usage.Options):
             if not self['nopermanent']:
                 commands += [
                     finalizeTag,
-                    releaseBalls,
-                    releaseSourceforge,
                     ]
-                commands += [updateWebDocs]
 
         self['commands'] = commands
 
@@ -175,21 +164,41 @@ def lore(ver, docdir):
 
 def makeDocsCore(opts):
     ver = opts['base-version']
-    tdir = 'Twisted.exp'
-
-    os.chdir(tdir)
+    os.chdir('Twisted.exp')
 
     for docdir in ['howto', 'howto/tutorial', 'howto/policy',
                    'specifications', 'vision']:
         lore(ver, os.path.join('doc/core', docdir))
 
     #shwack the crap
-    sh('find . -name "*.pyc" | xargs rm -f')
+
+def makeMakeDoc(projname):
+    def makeDoc(opts):
+        os.chdir('Twisted.exp')
+        base = 'doc/%s' % (projname,)
+        for sub in ('howto', 'examples'):
+            sub = os.path.join(base, sub)
+            if os.path.exists(sub):
+                lore(opts['%s-version' % projname], sub)
+    return makeMakeDoc
+
+makeDocConch = makeMakeDoc('conch')
+makeDocFlow = makeMakeDoc('flow')
+makeDocLore = makeMakeDoc('lore')
+makeDocMail = makeMakeDoc('mail')
+makeDocNames = makeMakeDoc('names')
+makeDocNews = makeMakeDoc('news')
+makeDocPair = makeMakeDoc('pair')
+makeDocRunner = makeMakeDoc('runner')
+makeDocWeb = makeMakeDoc('web')
+makeDocWeb2 = makeMakeDoc('web2')
+makeDocWords = makeMakeDoc('words')
+makeDocXish = makeMakeDoc('xish')
 
 
-def makeDocsConch(opts):
-    os.chdir("Twisted.exp")
-    lore(opts['base-version'], 'doc/conch/howto')
+def tar(tdir):
+    sh('find Twisted.exp -name "*.pyc" | xargs rm -f')
+    sh('tar cjhf %(tdir)s.tar.bz2 %(tdir)s' % locals())
 
 def makeBallCore(opts):
     ver = opts['base-version']
@@ -213,8 +222,8 @@ def makeBallCore(opts):
     ln -s `pwd`/Twisted.exp/bin/* %(tdir)s/bin
     rm -f %(tdir)s/bin/{%(twisted_subprojects)s}
     ''' % locals())
+    tar(tdir)
 
-    sh('tar cjhf %(tdir)s.tar.bz2 %(tdir)s' % locals())
 
 def makeBallSumo(opts):
     ver = opts['base-version']
@@ -233,7 +242,7 @@ def makeBallSumo(opts):
     ln -s `pwd`/Twisted.exp/setup.py %(tdir)s/
     ''' % locals())
 
-    sh('tar cjhf %(tdir)s.tar.bz2 %(tdir)s' % locals())
+    tar(tdir)
 
 
 def createSubprojectDirectory(proj, version):
@@ -268,9 +277,7 @@ def makeMakeBall(proj):
             raise "NEED --%s-version!" % (proj,)
         projdir = 'Twisted%s-%s' % (proj.capitalize(), projver,)
         createSubprojectDirectory(proj, projver)
-        sh('''
-        tar cjhf %(projdir)s.tar.bz2 %(projdir)s
-        ''' % locals())
+        tar(projdir)
     return makeBall
 
 
@@ -290,115 +297,6 @@ makeBallXish = makeMakeBall('xish')
 def finalizeTag(opts):
     sh('svn mv -m "Finalizing release of %s" %s %s'
        % (opts['base-version'], opts['temptagurl'], opts['tagurl']))
-
-
-def releaseBalls(opts):
-    rel = opts['releasedir']
-    ver = opts['base-version']
-    tdir = "Twisted-%s" % ver
-
-    if not os.path.exists(rel):
-        print "Distribute: Creating", rel
-        os.mkdir(rel)
-
-    if not os.path.exists("%s/old" % rel):
-        print "Distribute: creating %s/old" % rel
-        os.mkdir("%s/old" % rel)
-
-    sh('mv %(rel)s/*.tar.gz %(rel)s/*.tar.bz2 %(rel)s/old || true' % locals())
-
-    sh('''
-    cp Twisted_NoDocs-%(ver)s.tar.gz  %(rel)s &&
-    cp Twisted_NoDocs-%(ver)s.tar.bz2 %(rel)s
-    ''' % locals())
-
-
-    sh('''
-    cp TwistedDocs-%(ver)s.tar.gz  %(rel)s &&
-    cp TwistedDocs-%(ver)s.tar.bz2 %(rel)s
-    ''' % locals())
-
-    sh('''
-    cp %(tdir)s.tar.gz %(rel)s &&
-    cp %(tdir)s.tar.bz2 %(rel)s
-    ''' % locals())
-
-def releaseSourceforge(opts):
-    name = opts['sfname']
-    rel = opts['releasedir']
-    ver = opts['base-version']
-    path = '/home/users/'+name[0]+'/'+name[:2]+'/'+name 
-    sh("ssh %(name)s@shell.sf.net mkdir Twisted-%(ver)s || true" % vars())
-    sh("scp -r %(rel)s/Twisted*%(ver)s* debian-%(ver)s "
-       "%(name)s@shell.sf.net:%(path)s/Twisted-%(ver)s/" % vars())
-    sh("echo "
-       "'"
-       "umask 0002&&"
-       "rm -f /home/groups/t/tw/twisted/htdocs/debian/woody/Packages.gz&&"
-       "rm -f /home/groups/t/tw/twisted/htdocs/debian/woody/Sources.gz&&"
-       "rm -f /home/groups/t/tw/twisted/htdocs/debian/woody/override&&"
-       "rm -f /home/groups/t/tw/twisted/htdocs/debian/Packages.gz&&"
-       "rm -f /home/groups/t/tw/twisted/htdocs/debian/Sources.gz&&"
-       "rm -f /home/groups/t/tw/twisted/htdocs/debian/override&&"
-       "mv Twisted-%(ver)s/debian-%(ver)s/woody/* "
-          "/home/groups/t/tw/twisted/htdocs/debian/woody/&&"
-       "rmdir Twisted-%(ver)s/debian-%(ver)s/woody&&"
-       "mv Twisted-%(ver)s/debian-%(ver)s/* "
-          "/home/groups/t/tw/twisted/htdocs/debian/&&"
-       "rmdir Twisted-%(ver)s/debian-%(ver)s&&"
-       "mv Twisted-%(ver)s/* /home/groups/t/tw/twisted/htdocs&&"
-       "cd /home/groups/t/tw/twisted/htdocs&&"
-       "tar xzf TwistedDocs-%(ver)s.tar.gz'"
-       "|ssh %(name)s@shell.sf.net newgrp twisted" % vars())
-
-
-def updateWebDocs(opts):
-    os.chdir(opts['docdir'])
-
-    tdocdir = os.path.join(opts['docdir'],
-                           'TwistedDocs-%s' % opts['base-version'])
-
-    tbz2 = '%s/TwistedDocs-%s.tar.bz2' % (opts['releasedir'],
-                                          opts['base-version'])
-    if os.path.exists(tdocdir):
-        raise DirectoryExists('%s already exists!' % tdocdir)
-
-    sh('tar xjf %s' % tbz2)
-
-    # lore-ize all the docs
-
-    os.chdir('%s/howto' % tdocdir)
-
-    template = os.path.abspath('website-template.tpl')
-
-    lorecmd = (("lore -p --config template=%s " % template)
-               + "--config baseurl="
-               "http://twistedmatrix.com/documents/current/api/%s.html")
-    sh("%s --config ext= *.xhtml" % lorecmd)
-    os.chdir('..')
-    for dir in ['examples', 'historic',
-                'specifications', 'vision']:
-        os.chdir(dir)
-        sh('%s  --config ext= -l../howto/ *.xhtml' % lorecmd)
-        os.chdir('..')
-
-    os.chdir('man')
-    sh('lore -p --config ext=.xhtml -l../howto -iman -olore *.1')
-    sh('%s --config ext=-man -l ../howto *.xhtml' % lorecmd)
-
-    os.chdir('../..') # should be in docdir now
-
-    # 'deploy' to web
-
-    if os.path.exists('current'):
-        if os.path.islink('current'):
-            os.unlink('current')
-        else:
-            raise Exception("'current' exists and is NOT a symlink. "
-                            "Won't remove.")
-
-    os.symlink(tdocdir, 'current')
-
 
 if __name__=='__main__':
     main()
