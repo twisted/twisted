@@ -1,3 +1,8 @@
+2002-11-18  Itamar Shtull-Trauring  <twisted@itamarst.org>
+
+	* twisted/protocols/policies.py: bandwidth throttling and 
+	connection limiting for protocol factories.
+
 2002-11-16  Itamar Shtull-Trauring  <twisted@itamarst.org>
 
 	* Multicast UDP socket support in most reactors.
