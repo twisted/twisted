@@ -46,7 +46,7 @@ POLL_DISCONNECTED = (select.POLLHUP | select.POLLERR | select.POLLNVAL)
 class PollReactor(default.PosixReactorBase):
     """A reactor that uses poll(2)."""
 
-    def _updateRegisteration(self, fd):
+    def _updateRegistration(self, fd):
         """Register/unregister an fd with the poller."""
         try:
             poller.unregister(fd)
@@ -77,7 +77,7 @@ class PollReactor(default.PosixReactorBase):
                 return
         if mdict.has_key(fd):
             del mdict[fd]
-            self._updateRegisteration(fd)
+            self._updateRegistration(fd)
 
     def addReader(self, reader):
         """Add a FileDescriptor for notification of data available to read.
@@ -86,7 +86,7 @@ class PollReactor(default.PosixReactorBase):
         if not reads.has_key(fd):
             selectables[fd] = reader
             reads[fd] =  1
-            self._updateRegisteration(fd)
+            self._updateRegistration(fd)
 
     def addWriter(self, writer, writes=writes, selectables=selectables):
         """Add a FileDescriptor for notification of data available to write.
@@ -95,7 +95,7 @@ class PollReactor(default.PosixReactorBase):
         if not writes.has_key(fd):
             selectables[fd] = writer
             writes[fd] =  1
-            self._updateRegisteration(fd)
+            self._updateRegistration(fd)
 
     def removeReader(self, reader):
         """Remove a Selectable for notification of data available to read.
