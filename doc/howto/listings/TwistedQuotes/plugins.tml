@@ -5,3 +5,10 @@ register("Quote of the Day TAP Builder",
          """,
          type="tap",
          tapname="qotd")
+
+register("Quote of the Day Configuration",
+         "TwistedQuotes.coil",
+         description="""
+         Example of a Coil configuration module.
+         """,
+         type="coil")
