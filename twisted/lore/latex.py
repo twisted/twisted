@@ -156,9 +156,17 @@ class LatexSpitter(BaseLatexSpitter):
             if node.childNodes[0].data != href:
                 self.writer('\\footnote{%s}' % latexEscape(href))
         else:
-            if href.startswith('#'):
-                href = self.filename + href
-            ref = href.replace('#', 'HASH')
+            path, fragid = (href.split('#', 1) + [None])[:2]
+            if path == '':
+                path = self.filename
+            else:
+                # Hack for linking to man pages from howtos, i.e.
+                # ../doc/foo-man.html -> foo-man.html
+                path = os.path.basename(path)
+            if fragid:
+                ref = path + 'HASH' + fragid
+            else:
+                ref = path
             self.writer(' (page \\pageref{%s})' % ref)
 
     def visitNode_a_name(self, node):
