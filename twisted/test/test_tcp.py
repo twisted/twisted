@@ -566,6 +566,14 @@ class ConnectionLosingProtocol(protocol.Protocol):
         self.master._connectionMade()
         self.master.ports.append(self.transport)
 
+class NoopProtocol(protocol.Protocol):
+    def connectionMade(self):
+        self.d = defer.Deferred()
+        self.master.serverConns.append(self.d)
+
+    def connectionLost(self, reason):
+        self.d.callback(True)
+
 class ProperlyCloseFilesTestCase(PortCleanerUpper):
 
     numberRounds = 2048
@@ -573,8 +581,12 @@ class ProperlyCloseFilesTestCase(PortCleanerUpper):
 
     def setUp(self):
         PortCleanerUpper.setUp(self)
+
         f = protocol.ServerFactory()
-        f.protocol = protocol.Protocol
+        f.protocol = NoopProtocol
+        f.protocol.master = self
+        self.serverConns = []
+
         self.listener = reactor.listenTCP(0, f, interface="127.0.0.1")
         self.ports.append(self.listener)
         
@@ -588,6 +600,14 @@ class ProperlyCloseFilesTestCase(PortCleanerUpper):
         self.connector = connector
 
         self.totalConnections = 0
+
+    def tearDown(self):
+        # Wait until all the protocols on the server-side of this test have been
+        # disconnected, to avoid leaving junk in the reactor.
+        for d in self.serverConns:
+            util.wait(d)
+
+        PortCleanerUpper.tearDown(self)
     
     def testProperlyCloseFiles(self):
         self.connector()
