@@ -14,6 +14,7 @@ class LatexSpitter(XMLParser):
     def __init__(self, writer, currDir='.'):
         self.writer = writer
         self.currDir = currDir
+        self.spans = []
 
     def gotTagStart(self, name, attributes):
         s = getattr(self, "mapStart_"+name, None)
@@ -81,6 +82,18 @@ class LatexSpitter(XMLParser):
     def end_a(self, _):
         self.ignoring = 0
 
+    def start_span(self, _, attributes):
+        class_ = attributes.get('class')
+        self.spans.append(class_)
+        if class_:
+            self.gotTagStart('span_'+class_, attributes)
+
+    def end_span(self, _):
+        class_ = self.spans.pop()
+        if class_:
+            self.gotTagEnd('span_'+class_)
+
+
     start_h2 = start_h3 = start_h4 = _headerStart
 
     mapStart_title = '\\title{'
@@ -115,6 +128,8 @@ class LatexSpitter(XMLParser):
     mapEnd_strong = mapEnd_em = '\\end{em}'
 
     mapStart_q = mapEnd_q = '"'
+    mapStart_span_footnote = '\\footnote{'
+    mapEnd_span_footnote = '}'
 
 
 class SectionLatexSpitter(LatexSpitter):

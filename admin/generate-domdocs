@@ -296,6 +296,25 @@ def putInToC(document, toc):
         i = parent.childNodes.index(h1)
         parent.childNodes[i+1:i+1] = [toc]
 
+def footnotes(document):
+    footnotes = findElementsWithAttribute(document, "class", "footnote")
+    if not footnotes:
+        return
+    footnoteElement = dom.Element('ul')
+    id = 0
+    for footnote in footnotes:
+        href = dom.parseString('<a href="#footnote-%d"><super>*</super></a>'
+                               % id).documentElement
+        target = dom.Element('a', attributes={'name': 'footnote-%d' % id})
+        target.childNodes = [footnote]
+        footnoteContent = dom.Element('li')
+        footnoteContent.childNodes = [target]
+        footnoteElement.childNodes.append(footnoteContent)
+        footnote.parentNode.replaceChild(href, footnote)
+    body = findNodesNamed(document, "body")[0]
+    header = dom.parseString('<h2>Footnotes</h2>').documentElement
+    body.childNodes.append(header)
+    body.childNodes.append(footnoteElement)
 
 def munge(document, template, linkrel, d, fullpath, ext, cache):
     for doc in (template, document):
@@ -311,6 +330,7 @@ def munge(document, template, linkrel, d, fullpath, ext, cache):
     addPyListings(document, d)
     addHTMLListings(document, d)
     putInToC(document, generateToC(document))
+    footnotes(document)
 
     # the title
     findNodesNamed(template, "title")[0].childNodes.extend(
