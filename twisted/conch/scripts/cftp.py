@@ -42,9 +42,9 @@ class ClientOptions(options.ConchOptions):
         self['localPath'] = localPath 
 
 def run():
-    import hotshot
-    prof = hotshot.Profile('cftp.prof')
-    prof.start()
+#    import hotshot
+#    prof = hotshot.Profile('cftp.prof')
+#    prof.start()
     args = sys.argv[1:]
     if '-l' in args: # cvs is an idiot
         i = args.index('-l')
@@ -64,8 +64,8 @@ def run():
         log.discardLogs()
     doConnect(options)
     reactor.run()
-    prof.stop()
-    prof.close()
+#    prof.stop()
+#    prof.close()
 
 def handleError():
     from twisted.python import failure
@@ -278,7 +278,6 @@ class StdioClient(basic.LineReceiver):
             local, rest = self._getFilename(rest)
         else:
             local = os.path.split(remote)[1]
-            s = os.stat(local)
         log.msg((remote, local))
         lf = file(local, 'w', 0)
         path = os.path.join(self.currentDirectory, remote)
