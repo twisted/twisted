@@ -77,7 +77,7 @@ class NetstringReceiver(protocol.Protocol):
                 raise NetstringParseError
         self.__data = self.__data[m.end():]
         if m.group(1):
-            self.length = self.length * (10**len(m.group(1))) + int(m.group(1))
+            self.length = self.length * (10**len(m.group(1))) + long(m.group(1))
         if m.group(2):
             self.__buffer = ''
             self.mode = DATA 
