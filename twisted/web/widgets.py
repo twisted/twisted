@@ -76,6 +76,7 @@ class Presentation(Widget):
         self.addVariables(namespace, request)
         # This variable may not be obscured...
         namespace['request'] = request
+        namespace['self'] = self
         for elem in self.tmpl:
             flip = not flip
             if flip:
