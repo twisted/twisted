@@ -14,12 +14,15 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-"""Main `application' configuration and persistence support.
+"""This module is DEPRECATED.
 
-API Stability: stable
 
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
+
+import warnings
+warnings.warn("twisted.internet.app is deprecated, use twisted.application instead.", DeprecationWarning)
+
 
 # System Imports
 import os
