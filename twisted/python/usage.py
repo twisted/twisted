@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: usage.py,v 1.51 2003/09/05 07:34:16 tv Exp $
+# $Id: usage.py,v 1.52 2003/09/05 08:40:37 exarkun Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -112,9 +112,8 @@ class Options(UserDict.UserDict):
     subCommand = None
     defaultSubCommand = None
     parent = None
-    def __init__(self, parent=None):
+    def __init__(self):
         UserDict.UserDict.__init__(self)
-        self.parent = parent
         self.opts = self.data
         # These are strings/lists we will pass to getopt
         self.longOpt = []
@@ -195,7 +194,8 @@ class Options(UserDict.UserDict):
             for (cmd, short, parser, doc) in self.subCommands:
                 if sub == cmd or sub == short:
                     self.subCommand = cmd
-                    self.subOptions = parser(parent=self)
+                    self.subOptions = parser()
+                    parser.parent = self
                     self.subOptions.parseOptions(rest)
                     break
             else:
