@@ -14,8 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 from twisted.python import usage
-from twisted.application import app, service, convert
-from twisted.persisted import sob
+from twisted.application import app
 
 class ConvertOptions(usage.Options):
     synopsis = "Usage: tapconvert [options]"
@@ -52,11 +51,8 @@ def run():
     if options.opts['decrypt']:
         import getpass
         passphrase = getpass.getpass('Passphrase: ')
-    a = app.loadPersisted(options["in"], options["typein"], passphrase)
-    if sob.IPersistable(a, None) is None: # we have an old-style application
-        a = compat.convert(a)
-    app.saveApplication(a, options['typeout'],
-                           options["encrypt"], options["out"])
+    app.convertStyle(options["in"], options["typein"], passphrase,
+                     options["out"], options['typeout'], options["encrypt"])
 
 if __name__ == '__main__':
     run()

@@ -226,3 +226,9 @@ def loadOrCreate(name, filename, procname, uid, gid):
     if options['appname']:
         service.IProcess(a).processName = options['appname']
     return a
+
+def convertStyle(filein, typein, passphrase, fileout, typeout, encrypt):
+    a = app.loadPersisted(filein, typein, passphrase)
+    if sob.IPersistable(a, None) is None: # we have an old-style application
+        a = compat.convert(a)
+    app.saveApplication(a, typeout, encrypt, fileout)
