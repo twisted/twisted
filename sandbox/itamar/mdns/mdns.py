@@ -17,6 +17,8 @@ This makes sure you only run one resolver per process.
 # Check TTL of responses is 255
 #
 # Make ServiceSubscriptions pickleable?!
+#
+# Publishing!!!!
 
 import random
 
@@ -35,7 +37,7 @@ class ISubscriber(Interface):
     def serviceAdded(self, name, host, port):
         """Service connected to network."""
 
-    def serviceRemoved(self, name, host, port):
+    def serviceRemoved(self, name):
         """Service is no longer in network."""
 
 
@@ -66,23 +68,30 @@ class ServiceSubscription(Ephemeral):
         self.service = service
         self.resolver = resolver
         self.subscribers = []
+        # in all cases name is unicode string, the Instance part of the
+        # <Instance>.<Service>.<Domain> full string
         self.addresses = {} # map name to (domainname, port)
+        self.expires = {} # map name to DelayedCall
+        self.timeouts = {} # mpa name to list of timeouts
         self.intervals = self._generateIntervals()
         self._sendQuery()
 
+    def getName(self, instanceName):
+        return unicode(instanceName[:-len(self.service) - 1], "UTF-8")
+    
     def _sendQuery(self):
         """Send out the DNS query for this service."""
         # XXX add Known Answers, first should be set to ask for unicast
-        self.resolver.protocol.write([dns.Query(self.service, dns.PTR, dns.IN)])
+        self.resolver.protocol.write(queries=[dns.Query(self.service, dns.PTR, dns.IN)])
         self._scheduledQuery = reactor.callLater(self.intervals.next(),
                                                  self._sendQuery)
     
     def _generateIntervals(self):
         """Intervals of querying for the records."""
-        for i in (1, 3, 7, 15, 31, 63, 128):
+        for i in (1, 3, 7, 15, 31, 63, 128, 256):
             yield i
         while True:
-            yield 256
+            yield 600
     
     def unsubscribe(self, subscriber):
         self.subscribers.remove(subscriber)
@@ -95,16 +104,42 @@ class ServiceSubscription(Ephemeral):
 
     def gotPTR(self, record):
         """Called by resolver with PTR for our service type."""
-        name = str(record.payload.name)
+        # we use the SRV's TTL to expire PTR records, as if the SRV
+        # goes away the PTR is useless, and so long as it exists
+        # we're happy.
+        name = self.getName(str(record.name))
         if not self.addresses.has_key(name):
-            self.resolver.query(dns.Query(name, dns.SRV, dns.IN))
-        
-    def gotSRV(self, name, record):
+            self.resolver.query(dns.Query(str(record.name), dns.SRV, dns.IN))
+
+    def _expire(self, name, write=True):
+        assert isinstance(name, unicode)
+        timeouts = self.timeouts[name]
+        if timeouts:
+            self.expires[name] = reactor.callLater(timeouts[0], self._expire, name)
+            self.timeouts[name] = timeouts[1:]
+            if write:
+                self.resolver.protocol.write(queries=[
+                    dns.Query("%s.%s" % (name.encode("UTF-8"), self.service), dns.SRV, dns.IN)])
+        else:
+            del self.expires[name]
+            del self.timeouts[name]
+            del self.addresses[name]
+            for s in self.subscribers:
+                s.serviceRemoved(name)
+    
+    def gotSRV(self, instanceName, record):
         """Called by resolver with SRV for our service type."""
-        # XXX deal with TTLs
-        if self.addresses.has_key(name):
-            return         # XXX deal with TTLs
+        name = self.getName(instanceName)
+        ttl = record.ttl
+        timeouts = [((x + random.uniform(0, 0.02))) * ttl for x in (0.8, 0.05, 0.05)]
+        if self.addresses.has_key(name):            
+            self.expires[name].cancel()
+            self.timeouts[name] = timeouts
+            self._expire(name, write=False)
+            return
         self.addresses[name] = str(record.target), record.port
+        self.timeouts[name] = timeouts
+        self._expire(name, write=False)
         for s in self.subscribers:
             s.serviceAdded(name, str(record.target), record.port)
 
@@ -162,7 +197,7 @@ class mDNSResolver(Ephemeral):
         else:
             self.queries[(query.type, str(query.name))] = [[d], timeouts[1:]]
             reactor.callLater(timeouts[0], self._queryTimeout, query)
-            self.protocol.write([query])
+            self.protocol.write(queries=[query])
         return d
     
     def _queryTimeout(self, query):
@@ -177,7 +212,7 @@ class mDNSResolver(Ephemeral):
         elif self.protocol.transport:
             l[1] = timeouts[1:]
             reactor.callLater(timeouts[0], self._queryTimeout, query)
-            self.protocol.write([query])
+            self.protocol.write(queries=[query])
 
     def _cbResolved(self, message, domain):
         for r in message.answers:
@@ -193,14 +228,21 @@ class mDNSResolver(Ephemeral):
         if self.cachedDomains.has_key(domain):
             return defer.succeed(self.cachedDomains[domain])
         else:
-            return self.query(dns.Query(domain, dns.ALL_RECORDS, dns.IN)).addCallback(
+            return self.query(dns.Query(domain, dns.A, dns.IN)).addCallback(
                 self._cbResolved, domain)
     
     # internal methods
     
     def messageReceived(self, message, address):
-        print message.queries, message.answers
+        #print message.queries, message.answers, message.answer
+        if not message.answer:
+            # a query. it might have some Known Answers, but those
+            # are not authorative and should be ignored.
+            return
         for r in message.answers:
+            # Mac OS X doesn't set authoritative bit?!
+            #if not r.isAuthoritative():
+            #    continue
             pattern = (r.type, str(r.name))
             if self.queries.has_key(pattern):
                 for d in self.queries[pattern][0]:
@@ -209,16 +251,16 @@ class mDNSResolver(Ephemeral):
             if r.type == dns.PTR:
                 service = r.name.name
                 if self.subscriptions.has_key(service):
-                    self.subscriptions[service].gotPTR(r)
+                    self.subscriptions[service].gotPTR(r.payload)
             elif r.type == dns.SRV:
-                name = r.name.name
+                instanceName = r.name.name
                 for service, subscription in self.subscriptions.items():
                     # for service '_ichat._tcp.local', the name for
                     # iChat user might be 'Mr Smith._ichat._tcp.local'
-                    if name.endswith(service):
+                    if instanceName.endswith(service):
                         # we might have gotten A record with this SRV, so to make sure we have its
                         # IP cached we put off the notification slightly
-                        reactor.callLater(0, subscription.gotSRV, name[:-len(service) - 1], r.payload)
+                        reactor.callLater(0, subscription.gotSRV, instanceName, r.payload)
                         break
             elif r.type == dns.A:
                 name = str(r.name)
@@ -245,7 +287,7 @@ class mDNSDatagramProtocol(protocol.DatagramProtocol):
         self.mResolver = mResolver
 
     def startListening(self):
-        reactor.listenMulticast(5353, self, listenMultiple=True)
+        reactor.listenMulticast(5353, self, maxPacketSize=1024, listenMultiple=True)
         self.transport.joinGroup(MDNS_ADDRESS)
         self.transport.setTTL(255)
 
@@ -254,11 +296,12 @@ class mDNSDatagramProtocol(protocol.DatagramProtocol):
         m.fromStr(data)
         self.mResolver.messageReceived(m, addr)
 
-    def write(self, queries, id=None):
+    def write(self, queries=(), answers=(), id=None):
         if id is None:
             id = random.randrange(2 ** 10, 2 ** 15)
         m = dns.Message(id, recDes=1)
         m.queries = queries
+        m.answers = answers
         self.transport.write(m.toStr(), (MDNS_ADDRESS, 5353))
 
 
