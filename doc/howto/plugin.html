@@ -5,7 +5,8 @@
 
 <body>
 <h1>Writing a New Plug-In for Twisted</h1>
-<h2>So You Want to be a Twisted Hacker</h2>
+
+<h2>Getting Started</h2>
 
 <p>Twisted is a very general and powerful tool.  It can power anything
 connected to a network, from your corporate message-broadcasting network to
@@ -58,22 +59,29 @@ class="python">Application</code> instance; in essence the full state of a
 running process.</p>
 
 <p>The central concept that a Twisted system administrator will work with are
-files that contain <code class="python">Application</code> instances serialized
-in various formats optimized for different uses.  .TAP files are optimized for
-speed of loading and saving, .TAX files are editable by administrators familiar
-with XML syntax, and .TAS files are generated Python source code, most useful
+files that contain
+<code base="twisted.internet.app" class="API">Application</code>
+instances serialized
+in various formats optimized for different uses. <code>.TAP</code> files are
+optimized for speed of loading and saving, <code>.TAX</code> files are
+editable by administrators familiar
+with XML syntax, and <code>.TAS</code> files are generated Python source code,
+most useful
 for developers.  The two command-line programs which work with these files are
 <code class="shell">mktap</code> and <code class="shell">twistd</code>.  The
-<code class="shell">mktap</code> utility create .TA* files from simple
+<code class="shell">mktap</code> utility create <code>.TA*</code> files from
+simple
 command-line arguments, and the <code class="shell">twistd</code> daemon will
 load and run those files.</p>
 
 <p>There are many ways in which your code will be called by various parts of
 the Twisted framework by the time you're done.  The initial one we're going to
 focus on here is a plug-in for the <code class="shell">mktap</code> utility.
-<code>mktap</code> produces complete, runnable <code>Application</code>
+<code class="shell">mktap</code> produces complete, runnable
+<code class="API" base="twisted.internet.app">Application</code>
 instances, so no additional work is necessary to make your code work with
-<code>twistd</code>.  First we will go through the process of creating a
+<code class="shell">twistd</code>.  First we will go through the process of
+creating a
 plug-in that Twisted can find, then we make it adhere to the <code
 class="shell">mktap</code> interface.  Finally we will load that plug-in with a
 server.</p>
@@ -92,8 +100,10 @@ generic.  Any one of the Twisted <a
 href="http://twistedmatrix.com/products/dot-products" ><q>dot-products</q></a>
 can
 define mechanisms for extensibility using plug-ins.  Two Twisted dot-products
-already load such plug-ins.  The twisted.tap package loads Twisted Application
-builder modules (TAP plug-ins) and the twisted.coil package loads configuration
+already load such plug-ins.  The 
+<code class="API">twisted.tap</code>package loads Twisted Application
+builder modules (TAP plug-ins) and the
+<code class="API">twisted.coil</code> package loads configuration
 modules (COIL plug-ins).  </p>
 
 <p>Twisted finds its plug-ins by using pre-existing Python concepts; the load
@@ -102,7 +112,8 @@ href="http://www.python.org/doc/current/tut/node8.html#SECTION008400000000000000
 >Python package</a> (that is, a directory whose parent is on sys.path which
 contains an <code class="shell">__init__.py</code>) can potentially contain
 some number of plug-ins.  Packages which contain plug-ins are called
-<q>drop-ins</q>, because you <q>drop</q> them into your sys.path. The only
+<q>drop-ins</q>, because you <q>drop</q> them into your
+<code>sys.path</code>. The only
 difference
 between a package and a drop-in is the existence of a file named <code
 class="shell">plugins.tml</code> (TML for Twisted Module List) that contains
@@ -184,7 +195,8 @@ writing your first one.</p>
 Aspects of this application will be explored in more depth
 throughout in the Twisted documentation. </p>
 
-<p>TwistedQuotes is a very simple plugin which is a great demonstration of
+<p><code>TwistedQuotes</code> is a very simple plugin which is a great
+demonstration of
 Twisted's power.  It will export a small kernel of functionality -- Quote of
 the Day -- which can be accessed through every interface that Twisted supports:
 web pages, e-mail, instant messaging, a specific Quote of the Day protocol, and
@@ -192,12 +204,14 @@ more.</p>
 
 <h3>Before you Begin</h3>
 
-<p>First, make a directory, TwistedQuotes, where you're going to keep
-your code.  The path of least resistance is probably just to make a
+<p>First, make a directory, <code>TwistedQuotes</code>, where you're going to
+keep
+your code.  If you installed Twisted from source, the path of least resistance
+is probably just to make a
 directory inside your <code class="shell">Twisted-X.X.X</code>
 directory, which will already be in your <code
 class="python">sys.path</code>.  If you want to put it elsewhere, make
-sure that your TwistedQuotes directory is a package on your python
+sure that your <code>TwistedQuotes</code> directory is a package on your python
 path.</p>
 
 <div class="note"><p>The directory you add to your PYTHONPATH
@@ -310,11 +324,14 @@ tools, this is command-line oriented.  (It is possible to implement a graphical
 front-end to mktap, using the same plug-in structure, but this has not been
 done yet.)</p>
 
-<p>Creating the extension to <code>mktap</code> is done through implementing a
-module that follows the <code>mktap</code> plug-in interface, and then
+<p>Creating the extension to <code class="shell">mktap</code> is done through
+implementing a
+module that follows the <code class="shell">mktap</code> plug-in interface,
+and then
 registering it to be found and loaded by <code>twisted.python.plugin</code>.
 As described above, registration is done by adding a call to
-<code>register</code> in the file <code>TwistedQuotes/plugins.tml</code></p>
+<code class="python">register</code> in the file
+<code class="shell">TwistedQuotes/plugins.tml</code></p>
 
 <p>(You'll need to put this code into a file called <code
 class="shell">quotetap.py</code> in your <code
@@ -329,7 +346,7 @@ class="API">twisted.python.usage.Options</code>.  It must also have a function
  <code class="python">updateApplication(app, config)</code>, which will be
 passed an instance of a <code
 class="API">twisted.internet.app.Application</code> and an instance of the
-Options class defined in the module itself, <code
+<code class="python">Options</code> class defined in the module itself, <code
 class="python">TwistedQuotes.quotetap.Options</code>.  Command-line options
 given on the <code class="shell">mktap</code> command line fill in the values
 in <code class="python">Options</code> and are used in <code
@@ -391,8 +408,7 @@ unique functionality in it running inside of a server.  You should be familiar
 with the concept of a drop-in and a plug-in, and understand both how to create
 them and how to install them from other people on your system.</p>
 
-<p>I think that this indicates that Twisted is a very powerful, flexible
-framework.  But wait, there's more!  By following the rules I set out at the
+<p>By following the rules I set out at the
 beginning of this HOWTO, we have accidentally implemented another piece of
 useful functionality. </p>
 
@@ -438,7 +454,8 @@ Commands:
     zoot             Zoot TAP builder module
 </pre>
 
-<p>Not only does our Options class get instantiated by <code
+<p>Not only does our <code class="python">Options</code> class get
+instantiated by <code
 class="shell">mktap</code> directly, the user can query mktap for interactive
 help!  This is just one small benefit to using Twisted as it was designed.  As
 more tools that use the <code class="py-src-string"><q>tap</q></code> style of
