@@ -141,14 +141,14 @@ class InputHandler(controller.Controller):
         It has been determined that the input for the entire form is completely
         valid; it is now safe for all handlers to commit changes to the model.
         """
-        data = str(data)
-        if data != self.view.getData():
-            if self._commit is None:
+        if self._commit is None:
+            data = str(data)
+            if data != self.view.getData():
                 self.model.setData(data)
-            else:
-                self._commit(data)
-            self.model.notify({'request': request, self.submodel: data})
-
+                self.model.notify({'request': request, self.submodel: data})
+        else:
+            self._commit(data)
+    
 
 wcfactory_InputHandler = controllerFactory(InputHandler)
 
