@@ -17,18 +17,18 @@ be displayed.</p>
 <p>To begin, we write an HTML template for the directory index:</p>
 
 <pre>
-  &lt;html&gt;
-    &lt;head&gt;
-      &lt;title model="title" view="Text"&gt;Directory listing&lt;/title&gt;
-    &lt;/head&gt;
-    &lt;body&gt;
-      &lt;h1 model="title" view="Text"&gt;&lt;/h1&gt;
-      &lt;ul model="directory" view="List"&gt;
-        &lt;li pattern="listItem"&gt;&lt;a view="Anchor" /&gt;&lt;/li&gt;
-        &lt;li pattern="emptyList"&gt;This directory is empty.&lt;/li&gt;
-      &lt;/ul&gt;
-    &lt;/body&gt;
-  &lt;/html&gt;
+&lt;html&gt;
+  &lt;head&gt;
+    &lt;title model="title" view="Text"&gt;Directory listing&lt;/title&gt;
+  &lt;/head&gt;
+  &lt;body&gt;
+    &lt;h1 model="title" view="Text"&gt;&lt;/h1&gt;
+    &lt;ul model="directory" view="List"&gt;
+      &lt;li pattern="listItem"&gt;&lt;a view="Anchor" /&gt;&lt;/li&gt;
+      &lt;li pattern="emptyList"&gt;This directory is empty.&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/body&gt;
+&lt;/html&gt;
 </pre>
 
 <p>The main things that distinguish a Woven template from standard XHTML
@@ -43,36 +43,36 @@ items.</p>
 <p>Next, we create a <code class="API">Page</code> that will display the
 directory listing, filling the template above (after a few imports):</p>
 
-<pre>
-  import os
-  from twisted.internet import app 
-  from twisted.web.woven import page
-  from twisted.web import server
+<pre class="python">
+import os
+from twisted.internet import app 
+from twisted.web.woven import page
+from twisted.web import server
 
-  class DirectoryListing(woven.page.Page):
+class DirectoryListing(woven.page.Page):
 
-      templateFile = "directory-listing.xhtml"
-  
-      def initialize(self, *args, **kwargs):
-          self.directory = kwargs['directory']
-  
-      def wmfactory_title(self, request):
-          return self.directory
-  
-      def wmfactory_directory(self, request):
-          files = os.listdir(self.directory)
-          for i in xrange(len(files)):
-              if os.path.isdir(os.path.join(self.directory,files[i])):
-                  files[i] = files[i] + '/'
-          return files
-  
-      def getDynamicChild(self, name, request):
-          path = os.path.join(self.directory,name)
-          if os.path.exists(path):
-              if os.path.isdir(path):
-                  return DirectoryListing(directory=path)
-              else:
-                  return ImageDisplay(image=path)
+    templateFile = "directory-listing.xhtml"
+
+    def initialize(self, *args, **kwargs):
+        self.directory = kwargs['directory']
+
+    def wmfactory_title(self, request):
+        return self.directory
+
+    def wmfactory_directory(self, request):
+        files = os.listdir(self.directory)
+        for i in xrange(len(files)):
+            if os.path.isdir(os.path.join(self.directory,files[i])):
+                files[i] = files[i] + '/'
+        return files
+
+    def getDynamicChild(self, name, request):
+        path = os.path.join(self.directory,name)
+        if os.path.exists(path):
+            if os.path.isdir(path):
+                return DirectoryListing(directory=path)
+            else:
+                return ImageDisplay(image=path)
 </pre>
 
 <p>Due to the somewhat complex inheritance hierarchy in Woven's internals,
@@ -104,25 +104,25 @@ view for list items is Anchor, each item in the list will be formatted as an
 like this:</p>
 
 <pre>
-  &lt;html&gt;
-    &lt;head&gt;
-      &lt;title&gt;/Users/ashort/Pictures&lt;/title&gt;
-    &lt;/head&gt;
-    &lt;body&gt;
-      &lt;h1&gt;/Users/ashort/Pictures&lt;/h1&gt;
-      &lt;ul&gt;
-        &lt;li&gt;
-          &lt;a href="foo.jpeg"&gt;foo.jpeg&lt;/a&gt;
-        &lt;/li&gt;
-        &lt;li&gt;
-          &lt;a href="baz.png"&gt;baz.png&lt;/a&gt;
-        &lt;/li&gt;
-        &lt;li&gt;
-          &lt;a href="MoreImages/"&gt;MoreImages/&lt;/a&gt;
-        &lt;/li&gt;
-      &lt;/ul&gt;
-    &lt;/body&gt;
-  &lt;/html&gt;
+&lt;html&gt;
+  &lt;head&gt;
+    &lt;title&gt;/Users/ashort/Pictures&lt;/title&gt;
+  &lt;/head&gt;
+  &lt;body&gt;
+    &lt;h1&gt;/Users/ashort/Pictures&lt;/h1&gt;
+    &lt;ul&gt;
+      &lt;li&gt;
+        &lt;a href="foo.jpeg"&gt;foo.jpeg&lt;/a&gt;
+      &lt;/li&gt;
+      &lt;li&gt;
+        &lt;a href="baz.png"&gt;baz.png&lt;/a&gt;
+      &lt;/li&gt;
+      &lt;li&gt;
+        &lt;a href="MoreImages/"&gt;MoreImages/&lt;/a&gt;
+      &lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/body&gt;
+&lt;/html&gt;
 </pre>
 
 <p>As you can see, the nodes marked with 'model' and 'view' are replaced with
@@ -133,31 +133,31 @@ in the list.</p>
 <p>For displaying the actual images, we use this template:</p>
 
 <pre>
-  &lt;html&gt;
-    &lt;head&gt;
-      &lt;title model="image" view="Text"&gt;Filename&lt;/title&gt;
-    &lt;/head&gt;
-    &lt;body&gt;
-      &lt;img src="preview" /&gt;
-    &lt;/body&gt;
-  &lt;/html&gt;
+&lt;html&gt;
+  &lt;head&gt;
+    &lt;title model="image" view="Text"&gt;Filename&lt;/title&gt;
+  &lt;/head&gt;
+  &lt;body&gt;
+    &lt;img src="preview" /&gt;
+  &lt;/body&gt;
+&lt;/html&gt;
 </pre>
 
 And here is the definition of 'ImageDisplay'::
 
-<pre>
-  class ImageDisplay(page.Page):
+<pre class="python">
+class ImageDisplay(page.Page):
 
-      templateFile="image-display.xhtml"
+    templateFile="image-display.xhtml"
 
-      def initialize(self, *args, **kwargs):
-          self.image = kwargs['image']
+    def initialize(self, *args, **kwargs):
+        self.image = kwargs['image']
 
-      def wmfactory_image(self, request):
-          return self.image
+    def wmfactory_image(self, request):
+        return self.image
 
-      def wchild_preview(self, request):
-          return static.File(self.image)
+    def wchild_preview(self, request):
+        return static.File(self.image)
 </pre>
 
 
@@ -169,21 +169,21 @@ requested URL.</p>
 <p>Finally, we create a webserver set to start with a directory listing, and
 connect it to a port:</p>
 
-<pre>
-  rootDirectory = os.path.expanduser("~/Pictures")
-  site = server.Site(DirectoryListing(directory=rootDirectory))
-  application = app.Application("PicturePile") 
-  application.listenTCP(8088, site)
+<pre class="python">
+rootDirectory = os.path.expanduser("~/Pictures")
+site = server.Site(DirectoryListing(directory=rootDirectory))
+application = app.Application("PicturePile") 
+application.listenTCP(8088, site)
 </pre>
 
 <p>And then start the server:</p>
 
-<pre>
-  if __name__ == '__main__': 
-      import sys               
-      from twisted.python import log 
-      log.startLogging(sys.stdout, 0) 
-      application.run() 
+<pre class="python">
+if __name__ == '__main__': 
+    import sys               
+    from twisted.python import log 
+    log.startLogging(sys.stdout, 0) 
+    application.run() 
 </pre>
 
 <h2>Custom Views</h2>
@@ -192,18 +192,18 @@ connect it to a port:</p>
 changing the view for the links to <q>thumbnail</q>:</p>
 
 <pre>
-    &lt;html&gt;
-    &lt;head&gt;
-      &lt;title model="title" view="Text"&gt;Directory listing&lt;/title&gt;
-    &lt;/head&gt;
-    &lt;body&gt;
-      &lt;h1 model="title" view="Text"&gt;&lt;/h1&gt;
-      &lt;ul model="directory" view="List"&gt;
-        &lt;li pattern="listItem"&gt;&lt;a view="thumbnail" /&gt;&lt;/li&gt;
-        &lt;li pattern="emptyList"&gt;This directory is empty.&lt;/li&gt;
-      &lt;/ul&gt;
-    &lt;/body&gt;
-  &lt;/html&gt;
+&lt;html&gt;
+  &lt;head&gt;
+    &lt;title model="title" view="Text"&gt;Directory listing&lt;/title&gt;
+  &lt;/head&gt;
+  &lt;body&gt;
+    &lt;h1 model="title" view="Text"&gt;&lt;/h1&gt;
+    &lt;ul model="directory" view="List"&gt;
+      &lt;li pattern="listItem"&gt;&lt;a view="thumbnail" /&gt;&lt;/li&gt;
+      &lt;li pattern="emptyList"&gt;This directory is empty.&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/body&gt;
+&lt;/html&gt;
 </pre>
 
 <p>Woven doesn't include a standard <q>thumbnail</q> widget, so we'll have
@@ -214,8 +214,8 @@ with initial lowercase letters.)</p>
 <p>The simplest way to do it is with a 'wvupdate_' (short for Woven
 View Update) method on our DirectoryListing class:</p>
 
-<pre>
-      def wvupdate_thumbnail(self, request, node, data):
+<pre class="python">
+    def wvupdate_thumbnail(self, request, node, data):
         a = microdom.lmx(node)
         a['href'] = data
         if os.path.isdir(os.path.join(self.directory,data)):
@@ -247,7 +247,7 @@ directory listing. Again, we start with the template:</p>
 an 'adjuster' view on the 'select' tag that looks for the right 'option' tag
 and puts 'selected=1' on it (the default size being 200):</p>
 
-<pre>
+<pre class="python">
     def wvupdate_adjuster(self, request, widget, data):
         size = request.args.get('thumbnailSize',('200',))[0]
         domhelpers.locateNodes(widget.node.childNodes, 
@@ -265,7 +265,7 @@ each tree and return all nodes that have the requested key-value pair.</p>
 <p>Next, we modify the 'thumbnail' view to look at the arguments from the
 HTTP request and use that as the size for the images:</p>
 
-<pre>
+<pre class="python">
     def wvupdate_thumbnail(self, request, node, data):
         size = request.args.get('thumbnailSize',('200',))[0]
         a = microdom.lmx(node)
@@ -292,14 +292,14 @@ href= "components.html" >Components</a> documentation. So, we start with an
 interface, and a class that implements it, and registration of our class upon
 Session:</p>
 
-<pre>
-  class IPreferences(components.Interface):
-      pass
+<pre class="python">
+class IPreferences(components.Interface):
+    pass
 
-  class Preferences(components.Adapter):
-      __implements__ = IPreferences
+class Preferences(components.Adapter):
+    __implements__ = IPreferences
     
-  components.registerAdapter(Preferences, server.Session, IPreferences)
+components.registerAdapter(Preferences, server.Session, IPreferences)
 </pre>
 
 <p>**Figure 1**. From picturepile4.py.</p>
@@ -310,23 +310,22 @@ Session:</p>
 'wvupdate_adjuster', to retrieve their size data from the Preferences object
 stored on the Session, instead of the HTTP request:</p>
 
-<pre>
-  def wvupdate_thumbnail(self, request, node, data):
-      prefs = request.getSession(IPreferences)
-      size = getattr(prefs, 'size','200')
-      a = microdom.lmx(node)
-      a['href'] = data
-      if os.path.isdir(os.path.join(self.directory,data)):
-          a.text(data)
-      else:
-          a.add('img', src=(data+'/preview'),width=size,height=size)
+<pre class="python">
+    def wvupdate_thumbnail(self, request, node, data):
+        prefs = request.getSession(IPreferences)
+        size = getattr(prefs, 'size','200')
+        a = microdom.lmx(node)
+        a['href'] = data
+        if os.path.isdir(os.path.join(self.directory,data)):
+            a.text(data)
+        else:
+            a.add('img', src=(data+'/preview'),width=size,height=size)
 
-  def wvupdate_adjuster(self, request, widget, data):
-      prefs = request.getSession(IPreferences)
-      size = getattr(prefs, 'size','200')
-      domhelpers.locateNodes(widget.node.childNodes, 
-                                   'value', size)[0].setAttribute('selected', 
-                                                                  '1')
+    def wvupdate_adjuster(self, request, widget, data):
+        prefs = request.getSession(IPreferences)
+        size = getattr(prefs, 'size','200')
+        domhelpers.locateNodes(widget.node.childNodes, 
+                               'value', size)[0].setAttribute('selected', '1')
 </pre>
 
 <p>**Figure 2**. DirectoryListing.wvupdate_thumbnail and DirectoryListing.wvupdate_adjuster, from picturepile4.py.</p>
@@ -340,9 +339,9 @@ desirable at times to separate out input handling, which is what controllers
 are for. So, we add a 'wcfactory_' (short for Woven Controller Factory) method
 to DirectoryListing:</p>
 
-<pre>
-  def wcfactory_adjuster(self, request, node, model):
-      return ImageSizer(model, name='thumbnailSize')
+<pre class="python">
+    def wcfactory_adjuster(self, request, node, model):
+        return ImageSizer(model, name='thumbnailSize')
 </pre>
 
 <p>**Figure 3**. DirectoryListing.wcfactory_adjuster, from picturepile4.py.</p>
@@ -353,11 +352,11 @@ and calls 'handleValid' if the check succeeds; in this case, we retrieve the
 Preferences component from the session, and store the size received from the
 form upon it:</p>
 
-<pre>
-  class ImageSizer(input.Anything):
-      def handleValid(self, request, data):
-          prefs = request.getSession(IPreferences)
-          prefs.size = data 
+<pre class="python">
+class ImageSizer(input.Anything):
+    def handleValid(self, request, data):
+        prefs = request.getSession(IPreferences)
+        prefs.size = data 
 </pre>
 
 <p>**Figure 4**. From picturepile4.py.</p>
