@@ -27,11 +27,16 @@ if string.find(os.path.abspath(sys.argv[0]),'Twisted') != -1:
 sys.path.append('.')
 ### end of preamble
 
-from twisted.internet import gtkreactor
-gtkreactor.install()
-
-from twisted.im.gtkaccount import AccountManager
-AccountManager()
+if os.name == 'java':
+    from twisted.internet import javareactor
+    javareactor.install()
+    from twisted.im.jyaccount import AccountManager
+    AccountManager()
+else:
+    from twisted.internet import gtkreactor
+    gtkreactor.install()
+    from twisted.im.gtkaccount import AccountManager
+    AccountManager()
 
 from twisted.internet import reactor
 reactor.run()
