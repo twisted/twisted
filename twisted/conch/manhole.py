@@ -182,7 +182,15 @@ class Manhole(recvline.HistoricRecvLine):
         if async:
             if self._needsNewline():
                 self.terminal.nextLine()
-            self.terminal.write(self.ps[self.pn] + ''.join(self.lineBuffer))
+
+            self.terminal.write(self.ps[self.pn])
+
+            oldBuffer = self.lineBuffer
+            self.lineBuffer = []
+            self.lineBufferIndex = 0
+
+            for ch in oldBuffer:
+                self.characterReceived(ch)
 
     def lineReceived(self, line):
         more = self.interpreter.push(line)
