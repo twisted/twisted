@@ -97,7 +97,7 @@ class SFTPTestBase(unittest.TestCase):
 
         f=file('sftp_test/testfile1','w')
         f.write('a'*10+'b'*10)
-        f.write(file('/dev/urandom').read(1024*128)) # random data
+        f.write(file('/dev/urandom').read(1024*64)) # random data
         os.chmod('sftp_test/testfile1', 0644)
         file('sftp_test/testRemoveFile', 'w').write('a')
         file('sftp_test/testRenameFile', 'w').write('a')
