@@ -13,7 +13,7 @@ class TestCase:
         pass
 
     def fail(self, message=None):
-        raise AssertionError, msg
+        raise AssertionError, message
 
     def failIf(self, condition, message=None):
         if condition:
