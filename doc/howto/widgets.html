@@ -69,10 +69,14 @@
     with interpolated python expressions. It should look something
     like:</p>
 
-    <p><code class="python">template = '''
-    &lt;html&gt;&lt;head&gt;&lt;title&gt;%%%%self.title%%%%&lt;/title&gt;&lt;/head&gt;
-    &lt;body&gt;%%%%self.getContent(request)%%%%&lt;/body&gt;&lt;/html&gt;
-    '''</code></p>
+<pre class="python">
+template = '''\
+    &lt;html&gt;
+    &lt;head&gt;&lt;title&gt;%%%%self.title%%%%&lt;/title&gt;&lt;/head&gt;
+    &lt;body&gt;%%%%self.getContent(request)%%%%
+    &lt;/body&gt;&lt;/html&gt;
+'''
+</pre>
 
     <p>As you can see, Python expressions are denoted with
     surrounding sets of 4 <code>%</code>s. The expressions are
@@ -103,23 +107,35 @@
     want to get the title from the current widget you're
     displaying:</p>
 
-    <p><code class="python">template =
-    '''&lt;html&gt;&lt;head&gt;&lt;title&gt;%%%%self.widget.title%%%%&lt;/title&gt;&lt;/head&gt;&lt;/html&gt;'''</code></p>
+<pre class="python">
+template = '''\
+&lt;html&gt;
+&lt;head&gt;&lt;title&gt;%%%%self.widget.title%%%%&lt;/title&gt;
+&lt;/head&gt;&lt;/html&gt;
+'''
+</pre>
 
     <p>instead of:</p>
 
-    <p><code class="python">template =
-    '''&lt;html&gt;&lt;head&gt;&lt;title&gt;%%%%title%%%%&lt;/title&gt;&lt;/head&gt;&lt;/html&gt;'''</code></p>
+<pre class="python">
+template = '''\
+&lt;html&gt;
+&lt;head&gt;&lt;title&gt;%%%%title%%%%&lt;/title&gt;&lt;/head&gt;
+&lt;/html&gt;
+'''
+</pre>
 
     <h2>Adding Widgets to a Gadget</h2>
 
     <p>I had some code like this in one of my Gadgets: <code
     class="python">self.putWidget("Foo",
     widgets.TitleBox(MyWidget()))</code>. Later whenever trying to
-    access this widget I got this traceback:</p>
+    access this widget I got this traceback (word wrapped for readability):</p>
 <pre class="python">
-Traceback evaluating code in twisted.words.webwords.Page:Traceback (most recent call last): 
-  File "/usr/lib/python2.1/site-packages/twisted/web/widgets.py", line 86, in display 
+Traceback evaluating code in twisted.words.webwords.Page:Traceback
+(most recent call last): 
+  File "/usr/lib/python2.1/site-packages/twisted/web/widgets.py",
+  line 86, in display 
     x = eval(elem, namespace, namespace) 
   File "&lt;string&gt;", line 0, in ? 
 AttributeError: TitleBox instance has no attribute 'getHeader' 
@@ -139,16 +155,18 @@ AttributeError: TitleBox instance has no attribute 'getHeader'
 
     <h2>Return values of display()</h2>
 
-    <p>If you ever get this traceback:</p>
+    <p>If you ever get this traceback (word wrapped for readability):</p>
 <pre class="python">
 web.Server Traceback 
  
 Traceback (most recent call last): 
   File "/home/punck/cvs/Twisted/twisted/web/server.py", line 215, in process 
     body = resrc.render(self) 
-  File "/usr/lib/python2.1/site-packages/twisted/web/widgets.py", line 408, in render 
+  File "/usr/lib/python2.1/site-packages/twisted/web/widgets.py", line 408,
+  in render 
     displayed = self.display(request) 
-  File "/usr/lib/python2.1/site-packages/twisted/web/widgets.py", line 97, in display 
+  File "/usr/lib/python2.1/site-packages/twisted/web/widgets.py", line 97,
+  in display 
     tm.extend(val) 
 AttributeError: TitleBox instance has no attribute '__len__' 
 </pre>
