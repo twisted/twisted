@@ -320,6 +320,8 @@ connectionDone.cleanFailure()
 
 class Protocol(BaseProtocol):
 
+    __implements__ = (interfaces.IProtocol,)
+
     def dataReceived(self, data):
         """Called whenever data is received.
 
@@ -370,7 +372,8 @@ class ProtocolToConsumerAdapter(components.Adapter):
     def unregisterProducer(self):
         pass
 
-components.registerAdapter(ProtocolToConsumerAdapter, Protocol, interfaces.IConsumer)
+components.registerAdapter(ProtocolToConsumerAdapter, interfaces.IProtocol,
+                           interfaces.IConsumer)
 
 class ConsumerToProtocolAdapter(components.Adapter):
     """
@@ -390,8 +393,8 @@ class ConsumerToProtocolAdapter(components.Adapter):
     def connectionMade(self):
         pass
 
-#XXX - Can't register ConsumerToProtocolAdapter as an adapter for
-#"Consumer", because it doesn't exist - we need Interface adaptation!!
+components.registerAdapter(ConsumerToProtocolAdapter, interfaces.IConsumer,
+                           interfaces.IProtocol)
 
 class ProcessProtocol(BaseProtocol):
     """Processes have some additional methods besides receiving data.

@@ -862,23 +862,16 @@ class FTPClient(basic.LineReceiver):
 
         @param command: string of an FTP command to execute then receive the
             results of (e.g. LIST, RETR)
-        @param protocol: A L{Protocol} *instance*, or something
-            that can be adapted to one e.g. an L{FTPFileListProtocol}.
+        @param protocol: A L{Protocol} *instance* e.g. an
+            L{FTPFileListProtocol}, or something that can be adapted to one.
             Typically this will be an L{IConsumer} implemenation.
 
         @returns: L{Deferred}.
         """
-        if components.implements(protocol, IConsumer):
-            adapt = components.getAdapter(protocol, IProtocol, None,
-                                          adapterClassLocator=components.getAdapterClassWithInheritance)
-            if adapt is None:
-                protocol = ConsumerToProtocolAdapter(protocol)
-            else:
-                protocol = adapt
+        protocol = IProtocol(protocol)
 
         # First define a helpful class and function 
 
-        # FIXME: Need to cope with uploads too....
         class ProtocolWrapper(Protocol):
             def __init__(self, original, deferred):
                 self.original = original
