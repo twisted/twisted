@@ -1,0 +1,8 @@
+This directory holds the auto-generated zsh completion
+functions for twisted commands. Re-generate with
+python zshcomp.py path/to/this/dir
+
+This directory needs to be under the twisted package so
+that is can be dynamically located on the filesystem
+by _twisted_zsh_stub
+
