@@ -59,7 +59,7 @@ So far *apptype* can be one of: %s
     optFlags = [['help', 'h']]
     optStrings = [['uid', 'u', '0'],
                   ['gid', 'g', '0'],
-                  ['append', 'a', ''],
+                  ['append', 'a', None],
                   ['manholeUser', None, 'manhole',
                    "Login username for manhole service."],
                   ['manholePass', None, None,
