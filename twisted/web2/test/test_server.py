@@ -59,8 +59,6 @@ class TestChanRequest:
         pass
 
 
-
-
 class BaseTestResource(resource.Resource):
     responseCode = 200
     responseText = 'This is a fake resource.'

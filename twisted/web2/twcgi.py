@@ -41,16 +41,17 @@ def createCGIEnvironment(ctx, request=None):
     
     script_name = "/" + string.join(request.prepath, '/')
     python_path = string.join(sys.path, os.pathsep)
-    server_name = request.host.split(':')[0]
+    server_name = request.getHost().split(':')[0]
+    server_port = (request.getHost().split(':')+[''])[1]
 
     # See http://hoohoo.ncsa.uiuc.edu/cgi/env.html for CGI interface spec
     env = os.environ.copy()
     env.update({
         "SERVER_SOFTWARE":   server.VERSION,
         "SERVER_NAME":       server_name,
+        "SERVER_PORT":       server_port,
         "GATEWAY_INTERFACE": "CGI/1.1",
         "SERVER_PROTOCOL":   "HTTP/%i.%i" % request.clientproto,
-        "SERVER_PORT":       str(request.getHost()[2]),
         "REQUEST_METHOD":    request.method,
         "PATH_INFO":         '', # Will get filled in later
         "PATH_TRANSLATED":   '', # For our purposes, equiv. to PATH_INFO

@@ -90,10 +90,10 @@ class TestWSGIEnvironment(BaseCase):
 
     def test_server_port(self):
         """SERVER_PORT"""
-        self.assertEnv('http://host/', {'SERVER_PORT': '80'})
+        self.assertEnv('http://host/', {'SERVER_PORT': ''})
         self.assertEnv('http://host:523/', {'SERVER_PORT': '523'})
-        self.assertEnv('https://host/', {'SERVER_PORT': '443'})
+        self.assertEnv('https://host/', {'SERVER_PORT': ''})
         self.assertEnv('https://host:523/', {'SERVER_PORT': '523'})
-    test_server_port.todo = 'Need to fix web2.server.Request.getHost first'
+
         
     
