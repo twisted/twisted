@@ -17,7 +17,11 @@
 
 """File Transfer Protocol support for Twisted Python.
 
-The goal for this server is that it should be secure, high-performance, and
+This module is unstable.
+
+Maintainer: Andrew Bennetts <spiv@twistedmatrix.com>
+
+The goal for the server is that it should be secure, high-performance, and
 overloaded with stupid features.
 
 TODO:
@@ -298,7 +302,10 @@ class DTPFactory(protocol.ClientFactory):
         return p
 
 class FTP(basic.LineReceiver, DTPFactory):
-    """The FTP-Protocol."""
+    """An FTP server.
+    
+    This class is unstable (it will be heavily refactored to support dynamic
+    content, etc)."""
     user   = None
     passwd = None
     root   = None
@@ -716,6 +723,8 @@ class FTPClient(basic.LineReceiver):
     """A Twisted FTP Client
 
     Supports active and passive transfers.
+
+    This class is semi-stable.
     """
     debug = 0
     def __init__(self, username='anonymous', 
