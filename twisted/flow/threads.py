@@ -25,6 +25,8 @@
     Support for threads within a flow
 """
 
+from __future__ import nested_scopes
+
 from base import *
 from twisted.python.failure import Failure
 from twisted.internet import reactor
