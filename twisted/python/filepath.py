@@ -45,7 +45,7 @@ class FilePath:
 
     Instantiate me with a pathname (for example,
     FilePath('/home/myuser/public_html')) and I will attempt to only provide
-    access to files which reside insidpe that path.  I may be a path to a file,
+    access to files which reside inside that path.  I may be a path to a file,
     a directory, or a file which does not exist.
 
     The correct way to use me is to instantiate me, and then do ALL filesystem
