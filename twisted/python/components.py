@@ -300,16 +300,12 @@ class Adapter:
           persisted on the Componentized.
     @cvar multiComponent: If this adapter is persistent, should it be
           automatically registered for all appropriate interfaces.
-    @cvar stackable: If this is True, when 
-          componentized.getComponent(MyInterface) is called, the adapter
-          instance will be stacked.
     """
 
     # These attributes are used with Componentized.
 
     temporaryAdapter = 0
     multiComponent = 1
-    stackable = 0
 
     def __init__(self, original):
         """Set my 'original' attribute to be the object I am adapting.
@@ -357,8 +353,6 @@ class Componentized(styles.Versioned):
         """Utility method that calls addComponent.  I take an adapter class and
         instantiate it with myself as the first argument.
 
-        @param stack: Whether to stack the adapter.
-
         @return: The adapter instantiated.
         """
         adapt = adapterClass(self)
@@ -367,7 +361,6 @@ class Componentized(styles.Versioned):
 
     def setComponent(self, interfaceClass, component):
         """
-        @param stack: Whether to stack the adapter.
         """
         self._adapterCache[reflect.qual(interfaceClass)] = component
 
@@ -385,9 +378,6 @@ class Componentized(styles.Versioned):
         been registered as an adapter for my class according to the rules of
         getComponent.
 
-
-        @param stack: Whether to stack the adapter.
-
         @return: the list of appropriate interfaces
         """
         for iface in tupleTreeToList(component.__implements__):
@@ -395,15 +385,6 @@ class Componentized(styles.Versioned):
                 (self.locateAdapterClass(self.__class__, iface, None, registry)
                  == component.__class__)):
                 self._adapterCache[reflect.qual(iface)] = component
-
-    def _insertAdapter(self, iface, adapter, stack):
-        iface = reflect.qual(iface)
-        if stack:
-            assert adapter not in self._adapterCache.get(iface, [])
-            self._adapterCache.setdefault(iface, []).append(adapter)
-        else:
-            assert len(self._adapterCache.get(iface, [])) <= 1, "This may be meaningful in the future, but not now!"
-            self._adapterCache[iface] = [adapter]
         
     def unsetComponent(self, interfaceClass):
         """Remove my component specified by the given interface class."""
