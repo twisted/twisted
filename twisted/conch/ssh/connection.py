@@ -22,11 +22,12 @@ This module is unstable.
 Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 """
 
-import struct
+import struct, tty
+
 from twisted.internet import protocol, reactor, process
 from twisted.python import log
 from twisted.conch import error
-import service, common
+import service, common, ttymodes
 
 class SSHConnection(service.SSHService):
     name = 'ssh-connection'
@@ -284,9 +285,30 @@ class SSHSession(SSHChannel):
         shell = '/bin/sh' # fix this
         try:
             self.client = SSHSessionClient()
-            p = reactor.spawnProcess(SSHSessionProtocol(self, self.client), \
+            pty = reactor.spawnProcess(SSHSessionProtocol(self, self.client), \
                 shell, ["-"], self.environ, '/tmp', usePTY = 1)
-            p.setWindowSize(*self.winSize)
+            pty.setWindowSize(*self.winSize)
+            if self.modes:
+                attr = tty.tcgetattr(pty.fd)
+                for mode, val in self.modes:
+                    if not ttymodes.TTYMODES.has_key(mode): continue
+                    ttymode = ttymodes.TTYMODES[mode]
+                    if len(ttymode) == 2: # flag
+                        if not hasattr(tty, ttymode[1]): continue
+                        ttyval = getattr(tty, ttymode[1])
+                        if val:
+                            attr[ttymode[0]] = attr[ttymode[0]] & ttyval
+                        else:
+                            attr[ttymode[0]] = attr[ttymode[0]] & ~ttyval
+                    elif ttymode == 'OSPEED':
+                        attr[tty.OSPEED] = getattr(tty, 'B%s'%val)
+                    elif ttymode == 'ISPEED':
+                        attr[tty.ISPEED] = getattr(tty, 'B%s'%val)
+                    else:
+                        if not hasattr(tty, ttymode): continue
+                        ttyval = getattr(tty, ttymode)
+                        attr[tty.CC][ttyval] = chr(val)
+                tty.tcsetattr(pty.fd, tty.TCSANOW, attr)
         except OSError, ImportError:
             log.msg('failed to get pty')
             return 0
@@ -304,7 +326,7 @@ class SSHSession(SSHChannel):
         modes = common.getNS(rest[16:])[0]
         self.environ['TERM'] = term
         self.winSize = (rows, cols, xpixel, ypixel)
-# XXX handle modes
+        self.modes = [(ord(modes[i]), struct.unpack('>L',modes[i+1:i+5])[0]) for i in range(0, len(modes)-1, 5)]
         return 1
 
     def subsystem_python(self):
@@ -330,7 +352,7 @@ class SSHSession(SSHChannel):
     def dataReceived(self, data):
         if not hasattr(self, 'client'):
             log.msg("hmm, got data, but we don't have a client: %s" % repr(data))
-            self.conn.sendClose(self)
+            #self.conn.sendClose(self)
             return
         self.client.dataReceived(data)
 
@@ -357,7 +379,6 @@ class SSHSessionProtocol(protocol.Protocol, protocol.ProcessProtocol):
         self.client = client
 
     def connectionMade(self):
-        print self.transport
         self.client.transport = self.transport
 
     def dataReceived(self, data):

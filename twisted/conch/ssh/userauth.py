@@ -35,16 +35,15 @@ class SSHUserAuthServer(service.SSHService):
     name = 'ssh-userauth'
     loginTimeout = 10 * 60 * 60 # 10 minutes before we disconnect them
     attemptsBeforeDisconnect = 20 # number of attempts to allow before a disconnect
-    supportedAuthentications = ['publickey','password']
-
     protocolMessages = None # set later
 
-    authenticatedWith = []
-    loginAttempts = 0
-    user = None
-    nextService = None
-    
     def serviceStarted(self):
+        self.supportedAuthentications = ['publickey','password']
+        self.authenticatedWith = []
+        self.loginAttempts = 0
+        self.user = None
+        self.nextService = None
+
         if not self.transport.isEncrypted('out'):
             self.supportedAuthentications.remove('password')
             # don't let us transport password in plaintext
