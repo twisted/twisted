@@ -47,12 +47,11 @@ class DomainQueuer:
     def willRelay(self, protocol):
         """Check whether we agree to relay
 
-        The default is to relay for non-inet connections or for
-        localhost inet connections. Note that this means we are
-        an open IPv6 relay
+        The default is to relay for all connections over UNIX
+        sockets and all connections from localhost.
         """
         peer = protocol.transport.getPeer()
-        return peer[0] != 'INET' or peer[1] == '127.0.0.1'
+        return peer[0] == 'UNIX' or peer[1] == '127.0.0.1'
 
     def startMessage(self, user):
         """Add envelope to queue and returns ISMTPMessage."""

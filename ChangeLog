@@ -1,3 +1,9 @@
+2003-06-09  Jp Calderone  <exarkun@twistedmatrix.com>
+
+	* twisted/mail/relay.py: Default relaying rule change from all
+	local and all non-INET connections to all local and all UNIX
+	connections.
+
 2003-06-08  Jp Calderone  <exarkun@twistedmatrix.com>
 
 	* twisted/internet/interfaces.py: Added ITLSTransport interface,
