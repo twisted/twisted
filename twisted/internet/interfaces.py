@@ -946,8 +946,13 @@ class ITCPTransport(ITransport):
         """Returns tuple ('INET', host, port)."""
     
 class ITLSTransport(ITCPTransport):
+    """A TCP transport that supports switching to TLS midstream.
+
+    Once TLS mode is started the transport will implement ISSLTransport.
+    """
+    
     def startTLS(self, contextFactory):
-        """Initiate TLS negotiation
+        """Initiate TLS negotiation.
         
         @param contextFactory: A context factory (see ssl.py)
         """
