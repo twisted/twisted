@@ -4,7 +4,7 @@ from twisted.python import dist
 
 if __name__ == '__main__':
     dist.setup(
-        twisted_subproject=sys.argv[0],
+        twisted_subproject="pair",
         # metadata
         name="Twisted Pair",
         version="0.1.0",

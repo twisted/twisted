@@ -16,7 +16,7 @@ def detectExtensions(builder):
 
 if __name__ == '__main__':
     dist.setup(
-        twisted_subproject=sys.argv[0],
+        twisted_subproject="runner",
         # metadata
         name="Twisted Runner",
         version="0.1.0",
