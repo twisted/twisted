@@ -427,12 +427,12 @@ class File(resource.Resource, styles.Versioned):
             resource.Resource.putChild(self, name, child)
         # xxx use a file-extension-to-save-function dictionary instead
         if type(child) == type(""):
-            fl = open(os.path.join(self.path, name), 'w')
+            fl = open(os.path.join(self.path, name), 'wb')
             fl.write(child)
         else:
             if '.' not in name:
                 name = name + '.trp'
-            fl = open(os.path.join(self.path, name), 'w')
+            fl = open(os.path.join(self.path, name), 'wb')
             from pickle import Pickler
             pk = Pickler(fl)
             pk.dump(child)
