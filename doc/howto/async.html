@@ -1,0 +1,86 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head><title>Asynchronous Programming</title></head>
+
+<h1>Asynchronous Programming</h1>
+
+
+<h2>Introduction</h2>
+
+<p>There are three ways to write network programs:</p>
+
+<ol>
+    <li>Handle each connection in a separate process</li>
+    <li>Handle each connection in a separate thread</li>
+    <li>Use non-blocking system calls to handle all connections
+        in one thread.</li>
+</ol>
+
+<p>When dealing with many connections in one thread, the
+scheduling is the responsibility of the application, not the
+operating system, and is usually implemented by calling a
+registered function when each connection is ready to for
+reading or writing -- commonly known as asynchronous, event-driven or
+callback-based programming.</p>
+
+<p>Since multi-threaded programming is often tricky, even with
+high level abstractions, and since forking Python processes has
+many disadvantages, like Python's reference counting not
+playing well with copy-on-write and problems with shared state,
+it was felt the best option was an event-driven framework. A
+benefit of such approach is that by letting other event-driven
+frameworks take over the main loop, server and client code are
+essentially the same - making peer-to-peer a reality.</p>
+
+<p>However, event-driven programming still contains some tricky
+aspects. As each callback must be finished as soon as possible,
+it is not possible to keep persistent state in function-local
+variables. In addition, some programming techniques, such as
+recursion, are impossible to use -- for example, this rules out protocol
+handlers being recursive-descent parsers. Event-driven programming has
+a reputation of being hard to use due to the frequent need to
+write state machines. Twisted was built with the assumption
+that with the right library, event-driven programming is easier
+then multi-threaded programming.</p>
+
+<h2>Async Design Issues</h2>
+
+<p>In Python, many time code is divided into a generic class calling
+overridable methods which subclasses implement. In that, and similar,
+cases, it is important to think about likely implementations. If it is
+conceivable that an implementation might perform an action which takes
+a long time (either because of network or CPU issues), then one should
+design that method to be asynchronous. In general, this means to transform
+the method to be callback based. In Twisted, it usually means returning
+a <a href="defer.html">Deferred</a>.</p>
+
+<p>Since non-volatile state cannot be kept in local variables, because each
+method must return quickly, it is usually kept in instance variables. In cases
+where recursion would have been tempting, it is usually necessary to keep
+stacks manually, using Python's list and the <code>.append</code> and
+<code>.pop</code> method. Because those state machines frequently get
+non-trivial, it is better to layer them such that each one state machine
+does one thing --- converting events from one level of abstraction to the
+next higher level of abstraction. This allows the code to be clearer, as
+well as easier to debug.</p>
+
+<h2>Using Reflection</h2>
+
+<p>One consequence of using the callback style of programming is the
+need to name small chunks of code. While this may seem like a trivial
+issue, used correctly it can prove to be an advantage. If strictly
+consistent naming is used, then much of the common code in parsers of
+the form of if/else rules or long cases can be avoided. For example,
+the SMTP client code has an instance variable which signifies what it
+is trying to do. When receiving a response from the server, it just calls
+the method <code>"do_%s_%s" % (self.state, responseCode)</code>. This
+eliminates the requirement for registering the callback or adding to
+large if/else chains. In addition, subclasses can easily override or
+change the actions when receiving some responses, with no additional
+harness code.</p>.
+
+</body></html>
