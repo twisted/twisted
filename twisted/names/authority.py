@@ -17,7 +17,10 @@
 
 from __future__ import nested_scopes
 
-import os, copy, operator
+import os
+import copy
+import operator
+import time
 
 from twisted.protocols import dns
 from twisted.internet import defer
@@ -26,15 +29,21 @@ from twisted.python import failure
 import common
 
 def getSerial(filename = '/tmp/twisted-names.serial'):
-    # Never forget to bump the serial again
-    import time, os
+    """Return a monotonically increasing (across program runs) integer.
+    
+    State is stored in the given file.  If it does not exist, it is
+    created with rw-/---/--- permissions.
+    """
     serial = time.strftime('%Y%m%d')
 
-    os.umask(0177)
-    if not os.path.exists(filename):
-        f = file(filename, 'w')
-        f.write(serial + ' 0')
-        f.close()
+    o = os.umask(0177)
+    try:
+        if not os.path.exists(filename):
+            f = file(filename, 'w')
+            f.write(serial + ' 0')
+            f.close()
+    finally:
+        os.umask(o)
 
     serialFile = file(filename, 'r')
     lastSerial, ID = serialFile.readline().split()
