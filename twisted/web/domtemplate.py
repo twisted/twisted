@@ -119,7 +119,7 @@ class MethodLookup:
         return None
 
 # If no widget/handler was found in the container controller or view, these modules will be searched.
-import domhandlers, domwidgets
+import dominput, domwidgets
 
 class DefaultHandler(Controller):
     def handle(self, request):
@@ -351,7 +351,7 @@ class DOMTemplate(Resource, View):
         if controllerName:
             controllerFactory = getattr(self.controller, 'factory_' + controllerName, DefaultHandler)
             if controllerFactory is DefaultHandler:
-                controllerFactory = getattr(domhandlers, controllerName, DefaultHandler)
+                controllerFactory = getattr(dominput, controllerName, DefaultHandler)
 
         return controllerFactory(self.model)
     
