@@ -80,6 +80,14 @@ class IMAP4UTF7TestCase(unittest.TestCase):
         for (input, output) in self.tests:
             # XXX - Piece of *crap* 2.1
             self.assertEquals(input, imap4.decoder(output)[0])
+    
+    def testPrintableSingletons(self):
+        # All printables represent themselves
+        for o in range(0x20, 0x26) + range(0x27, 0x7f):
+            self.failUnlessEqual(chr(o), chr(o).encode('imap4-utf-7'))
+            self.failUnlessEqual(chr(o), chr(o).decode('imap4-utf-7'))
+        self.failUnlessEqual('&'.encode('imap4-utf-7'), '&-')
+        self.failUnlessEqual('&-'.decode('imap4-utf-7'), '&')
 
 class BufferingConsumer:
     def __init__(self):

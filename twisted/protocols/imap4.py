@@ -1574,6 +1574,10 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def spew_rfc822(self, id, msg):
         self.transport.write('RFC822 ')
+        if components.implements(msg, IMessageFile):
+            return FileProducer(msg.open()
+                ).beginProducing(self.transport
+                )
         return MessageProducer(msg
             ).beginProducing(self.transport
             )
@@ -1601,6 +1605,8 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             self.transport.write(str(part) + ' ' + _literal(hdrs))
         elif part.empty:
             self.transport.write(str(part) + ' ')
+            if components.implements(msg, IMessageFile):
+                return FileProducer(msg.open()).beginProducing(self.transport)
             return MessageProducer(msg).beginProducing(self.transport)
         else:
             self.transport.write('BODY ' + collapseNestedLists([getBodyStructure(msg)]))
@@ -4273,6 +4279,14 @@ class IMessage(IMessagePart):
         @return: An RFC822-formatted date string.
         """
 
+class IMessageFile(components.Interface):
+    def open(self):
+        """Return an file-like object opened for reading.
+        
+        Reading from the returned file will return all the bytes
+        of which this message consists.
+        """
+
 class ISearchableMailbox(components.Interface):
     def search(self, query, uid):
         """Search for messages that meet the given query criteria.
@@ -4972,7 +4986,7 @@ def encoder(s):
     r = []
     _in = []
     for c in s:
-        if ord(c) in (range(0x20, 0x25) + range(0x27, 0x7e)):
+        if ord(c) in (range(0x20, 0x26) + range(0x27, 0x7f)):
             if _in:
                 r.extend(['&', modified_base64(''.join(_in)), '-'])
                 del _in[:]
