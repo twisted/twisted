@@ -19,3 +19,34 @@
 
 class Unauthorized(Exception):
     """Standard unauthorized error."""
+
+class DuplicateIdentity(KeyError):
+    """There already exists an identity with that name."""
+    # Descends from KeyError for backwards compatibility: That's what
+    # DefaultAuthorizer.addIdentity used to raise.
+    def __init__(self, name):
+        KeyError.__init__(self, name)
+        self.name = name
+
+    def __repr__(self):
+        return "<%s name %s>" % (self.__class__.__name__,
+                                 repr(self.name))
+
+    def __str__(self):
+        return "There is already an identity named %s." % (self.name,)
+
+class KeyNotFound(KeyError, Unauthorized):
+    """None of the keys on your keyring seem to fit here."""
+    def __init__(self, serviceName, perspectiveName):
+        KeyError.__init__(self, (serviceName, perspectiveName))
+        self.serviceName = serviceName
+        self.perspectiveName = perspectiveName
+
+    def __repr__(self):
+        return "<%s (%r, %r)>" % (self.__class__.__name__,
+                                  repr(self.serviceName),
+                                  repr(self.perspectiveName))
+
+    def __str__(self):
+        return "No key for service %r, perspective %r." % (
+            repr(self.serviceName), repr(self.perspectiveName))

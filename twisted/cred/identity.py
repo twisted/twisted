@@ -40,7 +40,7 @@ from twisted.internet import defer
 # Sibling Imports
 from util import respond
 from util import challenge
-from error import Unauthorized
+from error import Unauthorized, KeyNotFound
 
 
 class Identity:
@@ -100,13 +100,15 @@ class Identity:
     def requestPerspectiveForKey(self, serviceName, perspectiveName):
         """Get a perspective request (a Deferred) for the given key.
 
-        If this identity does not have access to the given (serviceName,
-        perspectiveName) pair, I will raise KeyError.
+        If this identity does not have access to the given C{(serviceName,
+        perspectiveName)} pair, I will raise L{KeyNotFound<error.KeyNotFound>}.
         """
         try:
             check = self.keyring[(serviceName, perspectiveName)]
-        except KeyError, ke:
-            return defer.fail(failure.Failure())
+        except KeyError:
+            e = error.KeyNotFound(serviceName, perspectiveName)
+            return defer.fail(failure.Failure(e, KeyNotFound,
+                                              sys.exc_info()[2]))
         return self.authorizer.getServiceNamed(serviceName).getPerspectiveForIdentity(perspectiveName, self)
 
     def getAllKeys(self):
@@ -126,7 +128,7 @@ class Identity:
     def save(self):
         """Persist this Identity to the authorizer.
         """
-        self.authorizer.addIdentity(self)
+        return self.authorizer.addIdentity(self)
 
     ### Authentication Mechanisms
 

@@ -69,6 +69,9 @@ class Authorizer(Accessor):
 
     def addIdentity(self, identity):
         """Create an identity and make a callback when it has been created.
+
+        @raises L{DuplicateIdentity<error.DuplicateIdentity>}:
+            There is already an identity by this name.
         """
         raise NotImplementedError()
 
@@ -106,8 +109,10 @@ class DefaultAuthorizer(Authorizer):
         """Add an identity to me.
         """
         if self.identities.has_key(identity.name):
-            raise KeyError("Already have an identity by that name.")
+            #? return defer.fail(error.DuplicateIdentity(identity.name))
+            raise error.DuplicateIdentity(identity.name)
         self.identities[identity.name] = identity
+        #? return defer.succeed(None)
 
     def removeIdentity(self, identityName):
         del self.identities[identityName]
@@ -115,7 +120,7 @@ class DefaultAuthorizer(Authorizer):
     def getIdentityRequest(self, name):
         """Get a Deferred callback registration object.
 
-        I return a deferred (twisted.internet.defer.Deferred) which will
+        I return a L{deferred<twisted.internet.defer.Deferred>} which will
         be called back to when an identity is discovered to be available
         (or errback for unavailable).  It will be returned unarmed, so
         you must arm it yourself.
