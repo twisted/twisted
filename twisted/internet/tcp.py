@@ -160,7 +160,6 @@ class Client(Connection):
         try:
             self.socket.connect(self.addr)
         except socket.error, se:
-            print "SR DEBUG:", se.args[0], EWOULDBLOCK, EALREADY, EINPROGRESS
             if se.args[0] == EMYSTERY:
                 self.startWriting()
             elif se.args[0] in (EWOULDBLOCK, EALREADY, EINPROGRESS, EINVALIDARG):
