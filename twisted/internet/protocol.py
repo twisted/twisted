@@ -413,6 +413,11 @@ class DatagramProtocol:
     numPorts = 0
     noisy = "sure, why not"
 
+    def __getstate__(self):
+        d = self.__dict__.copy()
+        d['transport'] = None
+        return d
+
     def doStart(self):
         """Make sure startProtocol is called."""
         if not self.numPorts:
