@@ -51,6 +51,7 @@ unpersistable_atom = "unpersistable"# u
 typeNames = {
     types.StringType: "string",
     types.IntType: "int",
+    types.LongType: "long",
     types.FloatType: "float",
     types.ClassType: "class",
     types.DictType: "dictionary",
@@ -172,6 +173,15 @@ class _Jellier:
         integer itself).
         """
         return nt
+
+    def _jelly_long(self, ng):
+        """(internal)
+        
+        Return the serialized representation of a long integer (this will only
+        work for long ints that can fit into a regular integer, currently, but
+        that limitation is temporary)
+        """
+        return int(ng)
 
     def _jelly_float(self, loat):
         """(internal)

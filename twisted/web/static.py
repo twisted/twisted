@@ -18,9 +18,11 @@
 """I deal with static resources.
 """
 
+
 # System Imports
 import os, string, stat
 import cStringIO
+import traceback
 StringIO = cStringIO
 del cStringIO
 
@@ -32,7 +34,7 @@ import html
 
 # Twisted Imports
 from twisted.protocols import http
-from twisted.python import threadable
+from twisted.python import threadable, log
 from twisted.internet import abstract
 from twisted.spread import pb
 

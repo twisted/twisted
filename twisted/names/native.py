@@ -14,19 +14,11 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+print "twisted.names.native is now obsolete. dont import it."
+
 import socket
 
 error = getattr(socket, 'gai_error', socket.error)
 
-class Resolver:
-
-    def resolve(self, name, callback, errback=None, type=1, timeout=10):
-        if type != 1:
-            errback()
-            return
-        try:
-            address = socket.gethostbyname(name)
-        except error:
-            errback()
-        else:
-            callback(address)
+from twisted.internet.main import Resolver

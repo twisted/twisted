@@ -140,19 +140,21 @@ class Client(Connection):
                 protocol.connectionFailed()
                 return
             # success.
-            self.addr = port
+            self.realAddress = self.addr = port
             # we are using unix sockets
             skt = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            whenDone = self.doConnect
         else:
-           skt = self.createInternetSocket()
-           self.addr = (host, port)
+            skt = self.createInternetSocket()
+            self.addr = (host, port)
+            whenDone = self.resolveAddress
         self.host = host
         self.port = port
         Connection.__init__(self, skt, protocol)
         self.doWrite = self.doConnect
         self.doRead = self.doConnect
-        self.resolveAddress()
         self.logstr = self.protocol.__class__.__name__+",client"
+        whenDone()
 	if timeout is not None:
 	    main.addTimeout(self.failIfNotConnected, timeout)
 
@@ -169,14 +171,14 @@ class Client(Connection):
 
     def resolveAddress(self):
         if abstract.isIPAddress(self.addr[0]):
-            self.setRealdAddress(self.addr[0])
+            self._setRealAddress(self.addr[1])
         else:
-            main.resolver.resolve(self.addr[0], self.setRealAddress, 
+            main.resolver.resolve(self.addr[0], self._setRealAddress,
                                                 self.failIfNotConnected)
 
-    def setRealAddress(self, address):
-        print 'real address:',repr(address),repr(self.addr)
-        self.realAddress = address
+    def _setRealAddress(self, address):
+        # print 'real address:',repr(address),repr(self.addr)
+        self.realAddress = (address, self.addr[1])
         self.doConnect()
 
     def doConnect(self):
@@ -184,11 +186,9 @@ class Client(Connection):
         
         Then, call the protocol's makeConnection, and start waiting for data.
         """
-        print 'attempting connect!'
         try:
-            self.socket.connect((self.realAddress, self.addr[1]))
+            self.socket.connect(self.realAddress)
         except socket.error, se:
-            print 'socket error in connect:',se
             if se.args[0] == EISCONN:
                 pass
             elif se.args[0] in (EINPROGRESS, EWOULDBLOCK, EALREADY, EINVAL):
@@ -196,7 +196,6 @@ class Client(Connection):
                 self.startReading()
                 return
             else:
-                print "unknown socket error in connect",se
                 self.protocol.connectionFailed()
                 self.stopWriting()
                 return
@@ -300,7 +299,6 @@ class Port(abstract.FileDescriptor):
         """
         s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
         s.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
-        s.setblocking(0)
         return s
 
     def __getstate__(self):
@@ -331,7 +329,8 @@ class Port(abstract.FileDescriptor):
             self.unixsocket = 1
         else:
             skt = self.createInternetSocket()
-            skt.bind( (self.interface, self.port) )
+            skt.bind((self.interface, self.port))
+        skt.setblocking(0)
         skt.listen(self.backlog)
         self.connected = 1
         self.socket = skt
