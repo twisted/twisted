@@ -57,9 +57,7 @@ class IReactorTCP(Interface):
 
        @returns: an object that satisfies the IListeningPort interface
 
-        Throws:
-
-          a CannotListenError, as defined in twisted.internet.error, if it
+       @raise CannotListenError: as defined in twisted.internet.error, if it
           cannot listen on this port (e.g., it cannot bind to the required port
           number)
         """
@@ -79,9 +77,9 @@ class IReactorTCP(Interface):
         @param bindAddress: a (host, port) tuple of local address to bind
                             to, or None.
 
-        Returns an object implementing IConnector. This connector will call
-        various callbacks on the factory when a connection is made, failed, or
-        lost - see ClientFactory docs for details.
+        @returns:  An object implementing IConnector. This connector will call
+           various callbacks on the factory when a connection is made,
+           failed, or lost - see ClientFactory docs for details.
         """
 
 
