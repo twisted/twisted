@@ -21,20 +21,51 @@ import urlparse
 
 class HTTPPageGetter(http.HTTPClient):
 
+    quietLoss = 0
+
     def connectionMade(self):
         self.sendCommand('GET', self.factory.url)
         self.sendHeader('Host', self.factory.host)
         self.sendHeader('User-Agent', self.factory.agent)
         self.endHeaders()
+        self.headers = {}
+
+    def handleHeader(self, key, value):
+        key = key.lower()
+        l = self.headers[key] = self.headers.get(key, [])
+        l.append(value)
 
     def handleStatus(self, version, status, message):
-        if status != '200':
-            self.factory.noPage(failure.Failure(ValueError(status, message)))
-            self.transport.loseConnection()
+        self.version, self.status, self.message = version, status, message
+
+    def handleEndHeaders(self):
+        m = getattr(self, 'handleStatus_'+self.status, 'handleStatusDefault')
+        m()
+
+    handleStatus_200 = lambda *args: None
+
+    def handleStatusDefault(self):
+        self.factory.noPage(failure.Failure(ValueError(self.status,
+                                                       self.message)))
+        self.transport.loseConnection()
+
+
+    def handleStatus_301(self):
+        l = self.headers.get('location')
+        if not l:
+            self.handleStatusDefault()
+        host, port, url = _parse(l[0]) 
+        self.factory.host, self.factory.url = host, url
+        reactor.connectTCP(host, port, self.factory)
+        self.quietLoss = 1
+        self.transport.loseConnection()
+
+    handleStatus_302 = handleStatus_301
 
     def connectionLost(self, reason):
-        http.HTTPClient.connectionLost(self, reason)
-        self.factory.noPage(reason)
+        if not self.quietLoss:
+            http.HTTPClient.connectionLost(self, reason)
+            self.factory.noPage(reason)
 
     def handleResponse(self, response):
         self.factory.page(response)
@@ -42,7 +73,7 @@ class HTTPPageGetter(http.HTTPClient):
 
 class HTTPPageDownloader(HTTPPageGetter):
 
-    def handleEndHeaders(self):
+    def handleStatus_200(self):
         self.factory.pageStart()
 
     def handleResponsePart(self, data):
@@ -132,14 +163,3 @@ def downloadPage(url, file):
     factory = HTTPDownloader(host, url, file)
     reactor.connectTCP(host, port, factory)
     return factory.deferred
-
-if __name__ == '__main__':
-    d = getPage('http://moshez.org/links.html')
-    def printValue(value):
-        print value
-        reactor.stop()
-    def printError(error):
-        print "an error occured"
-        reactor.stop()
-    d.addCallbacks(callback=printValue, errback=printError)
-    reactor.run()
