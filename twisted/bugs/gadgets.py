@@ -26,9 +26,19 @@ from twisted.web import widgets
 class BugsPage(widgets.WidgetPage):
     """Default look for bug pages."""
     
+    stylesheet = '''
+    P, BODY, TD, OL, UL, MENU, BLOCKQUOTE, DIV
+    {
+        font-family: Lucida, Verdana, Helvetica, Arial;
+    }
+    '''
+    
     template = '''
     <html>
     <head>
+    <style>
+    %%%%self.stylesheet%%%%
+    </style>
     <title>%%%%self.title%%%%</title>
     <base href="%%%%request.prePathURL()%%%%">
     </head>
@@ -109,17 +119,41 @@ class CreateNewForm(widgets.Form):
         return ["Posted new bug."]
 
 
+class AddCommentsForm(widgets.Form):
+    """Form for adding comments to a bug."""
+    
+    def __init__(self, database):
+        self.database = database
+    
+    def getFormFields(self, request, fieldSet=[]):
+        bug_id = int(request.args.get('bug_id',[0])[0])
+        formFields = [['string', 'Name: ', 'name', ''],
+                      ['string', 'Email:', 'email', ''],
+                      ['text', 'Comment:', 'comment', ''],
+                      ['hidden', '', 'bug_id', bug_id],
+                     ]
+        return widgets.Form.getFormFields(self, request, formFields)
+        
+    def process(self, write, request, submit, bug_id, name, email, comment):
+        write(self.database.createComment(bug_id, name, email, comment).addCallback(self._cbPosted))
+
+    def _cbPosted(self, result):
+        return ["Added new comment."]
+
+
 class ViewBug(widgets.Widget):
     """Display a bug."""
     
     def __init__(self, database):
         self.database = database
+        self.addComments = AddCommentsForm(database)
     
     def display(self, request):
-        self.bug_id = int(request.args.get('bug_id',[0])[0])
+        bug_id = int(request.args.get('bug_id',[0])[0])
         db = self.database
-        return [db.getBug(self.bug_id).addCallback(self._cbBug), "\n<hr>\n",
-                db.getBugComments(self.bug_id).addCallback(self._cbComments)]
+        return [db.getBug(bug_id).addCallback(self._cbBug), "\n<p>&nbsp; </p>\n<h3>Add a comment</h3>\n"] + \
+               self.addComments.display(request) + \
+               ['<p>&nbsp; </p>\n', db.getBugComments(bug_id).addCallback(self._cbComments)]
     
     def _cbBug(self, result):
         l = []
@@ -131,8 +165,8 @@ class ViewBug(widgets.Widget):
         l.append('<b>Last modified:</b> %s<br>\n' % result[5])
         l.append('<b>Version:</b> %s<br>\n'% result[6])
         l.append('<b>OS:</b> %s<br>\n' % result[7])
-        l.append('<b>Type:</b> %s<br>\n' % result[8])
-        l.append('<b>Status:</b> %s<br>\n</p>\n' % result[9])
+        l.append('<b>Type:</b> %s<br>\n' % result[9])
+        l.append('<b>Status:</b> %s<br>\n' % result[10])
         l.append('<b>Assigned to:</b> %s<br>\n</p>\n' % result[3])
         l.append('<pre>\n%s\n</pre>' % desc)
         return l
