@@ -18,6 +18,7 @@
 from __future__ import nested_scopes
 
 import cgi
+import types
 
 from twisted.python import log
 from twisted.python import components
@@ -93,7 +94,7 @@ class Controller(resource.Resource):
                 warnings.warn("factory_ methods are deprecated; please use "
                               "wcfactory_ instead", DeprecationWarning)
         if cm:
-            if cm.func_code.co_argcount == 1:
+            if cm.func_code.co_argcount == 1 and not type(vm) == types.LambdaType:
                 warnings.warn("A Controller Factory takes "
                               "(request, node, model) "
                               "now instead of (model)", DeprecationWarning)

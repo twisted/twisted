@@ -33,6 +33,7 @@ from twisted.web import resource, microdom
 
 
 import warnings
+import types
 
 
 NO_DATA_YET = 2
@@ -223,7 +224,7 @@ class View(template.DOMTemplate):
                 warnings.warn("factory_ methods are deprecated; please use "
                               "wvfactory_ instead", DeprecationWarning)
         if vm:
-            if vm.func_code.co_argcount == 3:
+            if vm.func_code.co_argcount == 3 and not type(vm) == types.LambdaType:
                  warnings.warn("wvfactory_ methods take (request, node, "
                                "model) instead of (request, node) now. \n"
                                "Please instanciate your widgets with a "
