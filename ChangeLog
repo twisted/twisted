@@ -397,17 +397,10 @@
 
 2002-11-23  Jp Calderone <exarkun@twistedmatrix.com>
 
-<<<<<<< ChangeLog
-        * twisted/names/client.py, twisted/names/server.py: Client and
-          server domain name APIs
-
-        * twisted/tap/dns.py: 'mktap dns'
-=======
 	* twisted/names/client.py, twisted/names/server.py: Client and
 	  server domain name APIs
 
 	* twisted/tap/dns.py: 'mktap dns'
->>>>>>> 1.190
 
 2002-11-23  Moshe Zadka <moshez@twistedmatrix.com>
 
