@@ -210,17 +210,10 @@ class Walker:
                 node.childNodes = [node2]
         for node in findElementsWithAttribute(document, "class", "py-listing"):
             fn = node.getAttribute("href")
+            outfile = cStringIO.StringIO()
             fontifyFiles(open(os.path.join(d, fn)), outfile)
             val = outfile.getvalue()
-            
-            #somebody please let me know if there is a better way to convert from '<' to &lt;
-            import htmlentitydefs
-            reverseEntityDefs = {}
-            for key, value in htmlentitydefs.entitydefs.items():
-                reverseEntityDefs[value]=key
-            val = map(lambda x, red = reverseEntityDefs: red.has_key(x) and '&%s;' % red[x] or x, val)
-            val = string.join(val, '')
-            
+
             text = str('<div class="py-listing">'
                        '<pre class="python">%s</pre>'
                        '<div class="py-caption">%s - '
@@ -249,8 +242,16 @@ class Walker:
         
         for node in findElementsWithAttribute(document, "class", "html-listing"):
             fn = node.getAttribute("href")
-            outfile = cStringIO.StringIO()
             val = open(os.path.join(d, fn)).read()
+
+            #somebody please let me know if there is a better way to convert from '<' to &lt;
+            import htmlentitydefs
+            reverseEntityDefs = {}
+            for key, value in htmlentitydefs.entitydefs.items():
+                reverseEntityDefs[value]=key
+            val = map(lambda x, red = reverseEntityDefs: red.has_key(x) and '&%s;' % red[x] or x, val)
+            val = string.join(val, '')
+
             text = str('<div class="py-listing">'
                             '<pre>%s</pre>'
                             '<div class="py-caption">%s - '
