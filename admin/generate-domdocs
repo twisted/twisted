@@ -37,7 +37,7 @@ from pprint import pprint
 from twisted import copyright
 from twisted.python import usage
 
-from xml.dom import minidom as dom
+from twisted.web import microdom as dom
 
 def findNodes(parent, matcher, accum=None):
     if accum is None:
@@ -54,7 +54,7 @@ def findNodes(parent, matcher, accum=None):
 def findElements(parent, matcher):
     return findNodes(
         parent,
-        lambda n, matcher=matcher: n.nodeType == dom.Element.nodeType and matcher(n))
+        lambda n, matcher=matcher: isinstance(n, dom.Element) and matcher(n))
 
 def findElementsWithAttribute(parent, attribute, value=None):
     if value:
