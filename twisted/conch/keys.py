@@ -31,7 +31,7 @@ class BadKeyError(Exception):
     """
     raised when a key isn't what we expected from it.
 
-    XXX: we really need to check for bad keys    
+    XXX: we really need to check for bad keys
     """
 
 def getPublicKeyString(filename, line=0):
@@ -114,7 +114,8 @@ def verifySignature(obj, sig, data):
     }
     objType = objectType(obj)
     sigType, sigData = common.getNS(sig)
-    assert objType == sigType, 'object and signature are not of same type'
+    if objType != sigType: # object and signature are not of same type
+        return 0
     return mapping[objType](obj, sigData, data)
 
 def verifySignature_rsa(obj, sig, data):
@@ -146,27 +147,3 @@ def printKey(obj):
                 print '\t'+o
 
 ID_SHA1 = '\x30\x21\x30\x09\x06\x05\x2b\x0e\x03\x02\x1a\x05\x00\x04\x14'
-
-def test():
-    testData = 'this is the testData'
-    try:
-        rsaKey = getPrivateKeyObject(os.path.expanduser('~/.ssh/id_rsa'))
-        rsaPub = getPublicKeyObject(os.path.expanduser('~/.ssh/id_rsa.pub'))
-    except IOError:
-        print 'passing on rsa test, no rsa key'
-    else:
-        signature = signData(rsaKey, testData)
-        assert verifySignature(rsaKey, signature, testData)
-        assert verifySignature(rsaPub, signature, testData)
-        print 'rsa is ok'
-    try:
-        dsaKey = getPrivateKeyObject(os.path.expanduser('~/.ssh/id_dsa'))
-        dsaPub = getPublicKeyObject(os.path.expanduser('~/.ssh/id_dsa.pub'))
-    except IOError:
-        print 'passing on dsa test, no dsa key'
-    else:
-        signature = signData(dsaKey, testData)
-        assert verifySignature(dsaKey, signature, testData), 'dsa is not ok'
-        assert verifySignature(dsaPub, signature, testData)
-        print 'dsa is ok'
-if __name__=='__main__': test()

@@ -79,6 +79,12 @@ class ConchKeysHandlingTestCase(unittest.TestCase):
         self.assert_(keys.verifySignature(pub, sig, testData),
                      'verifying with public %s failed' %
                          keys.objectType(pub))
+        self.failIf(keys.verifySignature(priv, sig, 'other data'),
+                    'verified bad data with %s' %
+                        keys.objectType(priv))
+        self.failIf(keys.verifySignature(priv, 'bad sig', testData),
+                    'verified badsign with %s' % 
+                        keys.objectType(priv))
 
 
 class SSHTestBase:
