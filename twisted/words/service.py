@@ -296,6 +296,11 @@ class Participant(pb.Perspective, styles.Versioned):
         if self.client:
             self.client.callRemote('setGroupMetadata', dict_, groupName)
 
+    def perspective_setGroupMetadata(self, dict_, groupName):
+        for group in self.groups:
+            if group.name == groupName:
+                group.setMetadata(dict_)
+
     # Establish client protocol for PB.
     perspective_changeStatus = changeStatus
     perspective_joinGroup = joinGroup

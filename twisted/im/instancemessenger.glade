@@ -794,9 +794,29 @@
       </widget>
 
       <widget>
+	<class>GtkEntry</class>
+	<name>TopicEntry</name>
+	<can_focus>True</can_focus>
+	<signal>
+	  <name>activate</name>
+	  <handler>on_TopicEntry_activate</handler>
+	  <last_modification_time>Sat, 23 Feb 2002 02:57:41 GMT</last_modification_time>
+	</signal>
+	<editable>True</editable>
+	<text_visible>True</text_visible>
+	<text_max_length>0</text_max_length>
+	<text>&lt;TOPIC NOT RECEIVED&gt;</text>
+	<child>
+	  <padding>0</padding>
+	  <expand>True</expand>
+	  <fill>True</fill>
+	</child>
+      </widget>
+
+      <widget>
 	<class>GtkLabel</class>
-	<name>TopicLabel</name>
-	<label>&lt;TOPIC NOT RECEIVED&gt;</label>
+	<name>AuthorLabel</name>
+	<label>author</label>
 	<justify>GTK_JUSTIFY_CENTER</justify>
 	<wrap>False</wrap>
 	<xalign>0.5</xalign>
@@ -805,8 +825,8 @@
 	<ypad>0</ypad>
 	<child>
 	  <padding>0</padding>
-	  <expand>True</expand>
-	  <fill>True</fill>
+	  <expand>False</expand>
+	  <fill>False</fill>
 	</child>
       </widget>
 
@@ -834,7 +854,6 @@
       <name>GroupHPaned</name>
       <handle_size>6</handle_size>
       <gutter_size>6</gutter_size>
-      <position>245</position>
       <child>
 	<padding>0</padding>
 	<expand>True</expand>
@@ -865,6 +884,7 @@
       <widget>
 	<class>GtkVBox</class>
 	<name>vbox8</name>
+	<width>110</width>
 	<homogeneous>False</homogeneous>
 	<spacing>0</spacing>
 	<child>

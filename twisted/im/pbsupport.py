@@ -58,13 +58,16 @@ class TwistedWordsGroup:
         """
         #for backwards compatibility with older twisted.words servers.
         if metadata:
-            d=self.account.perspective.groupMessage(self.name,
+            d=self.account.perspective.callRemote('groupMessage', self.name,
                                                     text, metadata)
             d.addErrback(self.metadataFailed,
                          "* "+text)
             return d
         else:
             return self.account.perspective.callRemote('groupMessage', self.name, text)
+
+    def setTopic(self, text):
+        self.account.perspective.callRemote('setGroupMetadata', {'topic': text, 'topic_author': self.account.name}, self.name)
 
     def metadataFailed(self, result, text):
         print "result:",result,"text:",text

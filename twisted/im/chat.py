@@ -153,7 +153,8 @@ class GroupConversation(InputOutputWindow):
         self.refreshMemberList()
 
     def setTopic(self, topic, author):
-        self.xml.get_widget("TopicLabel").set_text("%s -- %s" % (topic, author))
+        self.xml.get_widget("TopicEntry").set_text(topic)
+        self.xml.get_widget("AuthorLabel").set_text(author)
 
     def memberJoined(self, member):
         self.members.append(member)
@@ -184,6 +185,11 @@ class GroupConversation(InputOutputWindow):
 
         if lw.selection:
             self.group.account.perspective.addContact(self.members[lw.selection[0]])
+
+    def on_TopicEntry_activate(self, e):
+        print "ACTIVATING TOPIC!!"
+        self.group.setTopic(e.get_text())
+        
 
     def _cbTextSent(self, result, text, metadata=None):
         print text
