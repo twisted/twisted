@@ -19,6 +19,7 @@
 from __future__ import nested_scopes
 
 from twisted.internet import defer
+from twisted.internet import error
 from twisted.python import log
 from twisted.python.failure import Failure
 from twisted.spread import pb
@@ -232,7 +233,7 @@ class PBAccount(basesupport.AbstractAccount):
             d.addCallback(registerMany)
             return d
         else:
-            raise error.ConnectionInProgress()
+            raise error.ConnectionError("Connection in progress")
 
 
     def _startLogOn(self, chatui):

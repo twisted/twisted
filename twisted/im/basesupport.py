@@ -30,6 +30,8 @@ from twisted.internet.protocol import Protocol
 from twisted.python.reflect import prefixedMethods
 from twisted.persisted import styles
 
+from twisted.internet import error
+
 class AbstractGroup:
     def __init__(self, name, account):
         self.name = name
@@ -213,7 +215,7 @@ class AbstractAccount(styles.Versioned):
             d.addCallback(chatui.registerAccountClient)
             return d
         else:
-            raise error.ConnectionInProgress()
+            raise error.ConnectionError("Connection in progress")
 
     def getGroup(self, name):
         """Group factory.

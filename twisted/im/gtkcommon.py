@@ -132,7 +132,7 @@ class InputOutputWindow:
 
             elif result: #only happens when len(result) == 1
                 entry.freeze()
-                apply(entry.delete_text, pos)
+                entry.delete_text(*pos)
                 entry.set_position(pos[0])
                 entry.insert_defaults(result[0])
                 entry.set_position(oldpos+len(result[0])-len(word))
@@ -195,7 +195,7 @@ def autoConnectMethods(*objs):
 
 def openGlade(*args, **kwargs):
     # print "opening glade file"
-    r = apply(GladeXML, args, kwargs)
+    r = GladeXML(*args, **kwargs)
     if r._o:
         return r
     else:
