@@ -340,7 +340,7 @@ class FileSender:
     lastSent = ''
     deferred = None
 
-    def beginFileTransfer(self, file, consumer, transform):
+    def beginFileTransfer(self, file, consumer, transform = None):
         """Begin transferring a file
         
         @type file: Any file-like object
@@ -377,7 +377,8 @@ class FileSender:
             self.consumer.unregisterProducer()
             return
         
-        chunk = self.transform(chunk)
+        if self.transform:
+            chunk = self.transform(chunk)
         self.consumer.write(chunk)
         self.lastSent = chunk[-1]
 
