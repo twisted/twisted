@@ -104,7 +104,7 @@ class ResolverBase:
         return defer.DeferredList([
             self._lookup(name, dns.IN, type, timeout).addErrback(
                 lambda f: f.trap(NotImplementedError) and []
-            ) for type in range(1, 17)
+            ) for type in dns.QUERY_TYPES.keys()
         ]).addCallback(
             lambda r: reduce(operator.add, [res[1] for res in r if res[0]], [])
         )

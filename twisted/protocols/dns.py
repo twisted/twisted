@@ -46,14 +46,16 @@ QUERY_TYPES = {
     17: 'RP',    18: 'AFSDB', 
     # 19 through 32?  Eh, I'll get to 'em.
 
-    33: 'SRV',
+    33: 'SRV'
+}
 
-    # "Extended" queries (Hey, half of these are deprecated, good job)
+# "Extended" queries (Hey, half of these are deprecated, good job)
+EXT_QUERIES = {
     252: 'AFRX',  253: 'MAILB',
     254: 'MAILA', 255: 'ALL_RECORDS'
 }
 REV_TYPES = util.dict([
-    (v, k) for (k, v) in QUERY_TYPES.items()
+    (v, k) for (k, v) in QUERY_TYPES.items() + EXT_QUERIES.items()
 ])
 for (k, v) in REV_TYPES.items():
     exec "%s = %d" % (k, v)
@@ -765,6 +767,10 @@ class Record_TXT:
         if isinstance(other, Record_TXT):
             return self.data == other.data
         return 0
+    
+    
+    def __str__(self):
+        return '<TXT %r>' % self.data
 
 
 class Message:
