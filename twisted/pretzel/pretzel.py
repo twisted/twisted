@@ -19,18 +19,23 @@
 class SaltGrain:
     """I am a very simple SaltGrain implementation that just prints messages
     out."""
-    def __init__(self):
+    def __init__(self, breadstick):
+        self.breadstick = breadstick
         self.network = "print"
 
-    def sendMessage(self, sender, network, message):
-        print "<%s@%s> %s" % (sender, network, message)
+    def sendMessage(self, sender, message):
+        print "<%s@%s> %s" % (sender[0], sender[1], message)
+
+    def sendPrivMessage(self, sender, sendee, message):
+        print "(To %s:) <%s@%s> %s" % (sendee[0], sender[0], sender[1], message)
 
 
 class WordsGrain:
     def __init__(self, user, password, host, groups):
         self.network = "words"
 
-    def sendMessage(self, sender, network, message):
+    def sendMessage(self, sender, message):
+        pass
         
 
 class BreadStick:
@@ -43,13 +48,39 @@ class BreadStick:
     sendMessages to me and I will distribute them.
     """
 
-    def __init__(self, protocols=[]):
-        self.grains = grains 
-
+    def __init__(self, features=()):
+        self.features = list(features)
+        self.name = "bob"
+        
     def addGrainOfSalt(self, saltGrain):
-        self.grains.append(saltGrain)
+        self.grains[saltGrain.network] = saltGrain
+
+    def addFeature(self, feature):
+        self.features.append(feature)
 
     def sendMessage(self, sender, message):
-        for p in self.grains:
-            p.sendMessage(sender, p.network, message)
+        """I send a message to everyone on all SaltGrains.
+        'sender' is a 2-tuple of (person, network), and 'message'
+        is a string
+        """
+        for f in self.features:
+            if not f.do(sender, message): #if the feature does not want the 
+                                          #message to be sent out everywhere,
+                                          #then it should return false.
+                break
+        for p in self.grains.keys():
+            self.grains[p].sendMessage(sender, message)
 
+    def sendPrivMessage(self, sender, sendee, message):
+        """I send a private message to someone on a specific SaltGrain.
+        'sender' and 'sendee' are 2-tuples of (person, network). 'message'
+        is a string.
+        """
+        try:
+            self.grains[sendee[1]].sendPrivMessage(sender, sendee, message)
+        except KeyError:
+            try:
+                self.grains[sender[1]].sendPrivMessage([self.name, self.name], sender, "That network doesn't exist!")
+            except KeyError: #this really shouldn't happen
+                print "gack!"
+                
