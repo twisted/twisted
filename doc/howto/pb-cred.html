@@ -41,7 +41,9 @@ Sending a message to the group could just be:</p>
 
 <pre class="python">
 class Group(pb.Referenceable):
-  ...
+
+# ...
+
   def remote_sendMessage(self, from_user, message):
     for user in self.users:
       user.callRemote("sendMessage", "[%s]: %s" % (from_user, message))
@@ -71,7 +73,7 @@ class User(pb.Referenceable):
   def remote_sendMessage(self, group, message):
     g = findgroup(group)
     for user in g.users:
-      user.callRemote("sendMessage", "[%s]: %s" % (self.name, message)
+      user.callRemote("sendMessage", "[%s]: %s" % (self.name, message))
 </pre>
 
 <p>This improves matters because, as long as Alice only has a reference to
@@ -92,7 +94,7 @@ class UserGroup(pb.Referenceable):
   def remote_sendMessage(self, message):
     name = self.user.name
     for user in self.group.users:
-      user.callRemote("sendMessage", "[%s]: %s" % (name, message)
+      user.callRemote("sendMessage", "[%s]: %s" % (name, message))
 </pre>
 
 
