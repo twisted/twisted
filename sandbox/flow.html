@@ -17,41 +17,37 @@
 <p>When creating services which handle more than once client at a given
 time, the current state of each request must be managed.  A typical way to
 keep the current state is to use the call stack, a stack of functions and
-their arguments.  Unfortunately, things get complicated quick.</p>
+their arguments.  Unfortunately, this doesn't work well when you have
+more than one simultaneous request.</p>
 
 <p>One primary approach to this problem is preemptive multi-tasking, where
 each request is handled by a new process or thread which has its own
-call stack.  The difference between processes and threads, from the
+call stack.  The primary difference between processes and threads, from the
 programmer's perspective, is primarily in how objects common to multiple
 requests are shared.   For processes, one must use sockets or shared memory;
 in threads, the programmer must take care to lock objects which could be
-touched by other threads.  In either case, the underlying system preempts
-the programmer and thus the programmer must take special care to make sure
-that any part of their code uses shared objects appropriately.</p>
+touched by other threads.  In either case, each request is given its own
+call stack, making things easy for the programmer.  However, the programmer
+must take extra care with information that is not managed with the stack
+and are shared between requests.</p>
 
 <p>Another approach, is to use a event-driven approach, where each request
-is broken down into distinct chunks of work, and when each chunk is done, it
-schedules the next chunk to be run.  This is called cooperative
+is broken down into distinct stages of work, and when each stage is done, 
+it schedules the next stage to be run.  This is called cooperative
 multi-tasking.   The Twisted framework primarily uses this approach to
-handling multiple requests.  In Twisted, the execution of each chunk is
+handling multiple requests.  In Twisted, the execution of each stage is
 typically scheduled with <code>reactor.callLater</code> and the result of
-each chunk is reported with a call-back, usually managed by a
+each stage is reported with a call-back, usually managed by a
 <code>internet.defer.Deferred</code> object.</p>
 
 <p>While this <code>Deferred</code> approach is very good, it starts to have
-problems when the flow of the request is not a simple linear chain.
-Basically, for each state of the request you would have a code block that is
-executed, with a <code>Deferred</code> object used to register its
-call-backs.  Each call-back is then typically used to <code>callLater</code>
-the next state in the data flow.   Things get complicated when one stage
-needs to report results incrementally, or when the following state depends
-upon information from the current state.</p>
-
-<p>An alternative cooperative multitasking approach is to view data flows as
-a hierarchy of iterators, where the last stage in the flow 'pulls'
-information from previous stages.   This approach allows for a more granular
-control of the flow, giving both incremental results and also allowing the
-next state of the information to be chosen more dynamically.  Unfortunately,
+problems when the flow of the request is not a simple linear sequence of
+stages, or when results must flow between stages incrementally. An 
+alternative cooperative multitasking approach is to view data flows as
+a hierarchy of stages, where the last stage in the flow pulls from previous
+stages, and so on.  This approach allows for a more granular control of 
+the flow, giving both incremental results and also allowing the next 
+state of the information to be chosen more dynamically.  Unfortunately,
 this approach is somewhat complicated since building iterators isn't easy.
 Luckily, in version 2.2 and up, Python has generators, which are, in short,
 syntax sugar for making iterators.</p>
@@ -61,7 +57,11 @@ and a while, a iterator in the flow (perhaps one nested several layers deep)
 may have to block on a resource.  In this case, the flow must be paused so
 that other flows in the system have a chance to produce results.  So, rather
 than blocking, the entire state of the iterator chain must be saved so that
-it can be resumed later.   This is what the flow module does.</p>
+it can be resumed later.   Furthermore, tradational exception handling
+doesn't work since the call stack for a given request may be paused
+indefinately.  Helping the programmer manage these sorts of things is what
+the flow module does.   While it does not depend on generators, to use
+flow effectively, generators are very useful.</p>
 
 <h3>Iterators and generators</h3>
 
@@ -74,6 +74,7 @@ In Python 2.2, the for syntax knows about iterators, making them
 very nice to use.</p>
 
 <pre class="python">
+
 from twisted.python.compat import iter, StopIteration
 
 class Counter:
@@ -84,29 +85,27 @@ class Counter:
     def next(self):
         ret = self.count
         self.count -= 1
-        if ret &lt; 1:
-            raise StopIteration
-        return ret
+        if ret: return ret
+        raise StopIteration
 
-def dump(it):
+        return ret
+def list(it):
+    ret = []
     import sys
     if sys.version_info &gt;= (2,2):
         for x in it:
-           print x
+           ret.append(x)
     else:
         it = iter(it)
         try:
             while 1:
-                print it.next()
+                ret.append(it.next())
         except StopIteration: pass
+    return ret
 
-dump(Counter(3))
+print list(Counter(3))
 
-# prints:
-#   3
-#   2
-#   1
-
+# prints: [3, 2, 1]
 </pre>
 
 <p>Often times it is useful for an iterator to change state during
@@ -158,15 +157,12 @@ def States():
     yield "two"
 
 
-dump(Counter(3))
-dump(States())
+print list(Counter(3))
+print list(States())
 
 # prints:
-#    3
-#    2
-#    1
-#    one
-#    two
+#    [3, 2, 1]
+#    ['one', 'two']
 
 </pre>
 
