@@ -16,7 +16,7 @@
 
 import re, os, cStringIO, stat, time, cgi, glob
 from twisted import copyright
-from twisted.python import usage, htmlizer
+from twisted.python import htmlizer
 from twisted.web import microdom, domhelpers
 
 
