@@ -19,6 +19,7 @@
 from twisted.protocols import http
 from twisted.internet import defer, protocol, reactor
 from twisted.python import failure
+from twisted.web import error
 import urlparse
 
 class HTTPPageGetter(http.HTTPClient):
@@ -87,7 +88,7 @@ class HTTPPageGetter(http.HTTPClient):
         if self.failed:
             self.factory.noPage(
                 failure.Failure(
-                    ValueError(
+                    error.Error(
                         self.status, self.message, response)))
             self.transport.loseConnection()
         else:

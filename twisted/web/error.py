@@ -27,6 +27,8 @@ class Error(Exception):
         message = message or http.responses.get(code)
         Exception.__init__(self, code, message)
 
+    def __str__(self):
+        return '%s %s' % (self[0], self[1])
 
 class ErrorPage(resource.Resource):
     def __init__(self, status, brief, detail):
