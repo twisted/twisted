@@ -39,6 +39,22 @@ class PathReferenceContext:
         return o
 
 class PathReferenceAcquisitionContext(PathReferenceContext):
+    def __init__(self, request, path):
+        self.request = request
+        self.root = request.site.resource
+        self.path = path
+        # Make sure we have our own copy of these lists,
+        # so they can be mutated.
+        self.prepath = []
+        self.postpath = copy(path)
+
+    def __getattr__(self, name):
+        """
+        We need to delegate any methods which we don't override
+        to the real request object that got passed to us.
+        """
+        return getattr(self.request, name)
+    
     def _lookup(self, name, acquire=0, debug=0):
         if debug: print "Looking for ", name
         obRef = self
@@ -56,7 +72,7 @@ class PathReferenceAcquisitionContext(PathReferenceContext):
                     else:
                         foundPath = copy(obRef.path)
                         foundPath.append(name)
-                        return PathReferenceAcquisitionContext(foundPath, obRef.root)
+                        return PathReferenceAcquisitionContext(self.request, foundPath)
 
             # When the loop gets to the top of the containment heirarchy,
             # obRef will be set to None.
@@ -75,7 +91,9 @@ class PathReferenceAcquisitionContext(PathReferenceContext):
             testOb = PathReferenceContext([self.path[0]], self.root).getObject()
             if testOb.__module__ == 'twisted.web.error':
                 self.path.pop(0)
-        return PathReferenceContext.getObject(self)
+        # Use the loop in site.getRequestFor
+        # It may implement caching in the future
+        return self.request.site.getResourceFor(self)
 
     def getIndex(self):
         """
@@ -97,7 +115,7 @@ class PathReferenceAcquisitionContext(PathReferenceContext):
         """
         Return a reference to my parent.
         """
-        return PathReferenceAcquisitionContext(self.path[:-1], self.root)
+        return PathReferenceAcquisitionContext(self.request, self.path[:-1])
 
     def childRef(self, name):
         """
@@ -105,7 +123,7 @@ class PathReferenceAcquisitionContext(PathReferenceContext):
         """
         newPath = copy(self.path)
         newPath.append(name)
-        return PathReferenceAcquisitionContext(newPath, self.root)
+        return PathReferenceAcquisitionContext(self.request, newPath)
 
     def siblingRef(self, name):
         """
@@ -113,7 +131,7 @@ class PathReferenceAcquisitionContext(PathReferenceContext):
         """
         newPath = copy(self.path)
         newPath[-1] = name
-        return PathReferenceAcquisitionContext(newPath, self.root)
+        return PathReferenceAcquisitionContext(self.request, newPath)
 
     def diskPath(self):
         """
@@ -121,6 +139,7 @@ class PathReferenceAcquisitionContext(PathReferenceContext):
         """
         self.getObject()
         pathList = [self.root.path]
+        print "PathReferenceAcquisitionContext.path: ", self.path
         pathList.extend(self.path)
         return apply(os.path.join, pathList)
 
@@ -141,14 +160,14 @@ class PathReferenceAcquisitionContext(PathReferenceContext):
         upPath.extend(relPath)
         return "/".join(upPath)
 
-    def locate(self, name, debug=0):
+    def locate(self, name, debug=1):
         """
         Get a reference to an object with the given name which is somewhere
         on the path above us.
         """
         return self._lookup(name, debug=debug)
 
-    def acquire(self, name, debug=0):
+    def acquire(self, name, debug=1):
         """
         Look for an attribute or element by name in all of our parents
         """

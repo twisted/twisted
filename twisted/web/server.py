@@ -306,7 +306,7 @@ class Request(pb.Copyable, http.Request):
             string.join(self.prepath, '/')), "/:")
 
     def pathRef(self):
-        return refpath.PathReferenceAcquisitionContext(self.acqpath, self.site.resource)
+        return refpath.PathReferenceAcquisitionContext(self, self.acqpath)
 
 class _RemoteProducerWrapper:
     def __init__(self, remote):
