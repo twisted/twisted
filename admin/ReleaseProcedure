@@ -23,6 +23,10 @@ TEST, TEST.
  * twisted/copyright.py: Update the version number.
 
  * CVS tag release-X_X_X. switch to a new tmp directory and cvs export the newly-tagged version.
+ * When going from one RC to the next (or to final release):
+   * cvs co -r release-X_X_XrcN
+   * cvs up -A <files-that-you-want-to-merge>
+   * cvs tag -c release-X_X_XrcN+1
 
  * Alright, we're ready to pack it up!
  * from one directory above "Twisted" CVS repos, run './Twisted/admin/release-twisted -v <version>'

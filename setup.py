@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.48 2002/08/15 12:36:41 radix Exp $
+$Id: setup.py,v 1.49 2002/08/16 03:43:16 radix Exp $
 """
 
 import distutils, os, sys, string
@@ -323,14 +323,19 @@ else:
 # Include all extension modules here, whether they are built or not.
 # The custom built_ext command will wipe out this list anyway, but it
 # is required for sdist to work.
+
+#X-platform:
 setup_args['ext_modules'] = [
     Extension("twisted.spread.cBanana",
               ["twisted/spread/cBanana.c"],
               define_macros=define_macros),
-    Extension("twisted.internet.cReactor",
-              glob('twisted/internet/cReactor/*.c'),
-              define_macros=define_macros),
+
     ]
+if os.name == "posix":
+    setup_args['ext_modules'].append(
+        Extension("twisted.internet.cReactor",
+              glob('twisted/internet/cReactor/*.c'),
+              define_macros=define_macros))
 
 apply(setup, (), setup_args)
 
