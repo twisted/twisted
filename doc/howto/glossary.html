@@ -1,0 +1,200 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Twisted Glossary</title>
+</head>
+
+<body>
+<h1>Twisted Glossary</h1>
+
+<dl>
+
+<dt>Application</dt>
+<dd>A <code class="API">twisted.internet.app.Application</code>.  There are
+HOWTOs on <a href="basics">manipulating</a> existing ones, as well as
+<a href="application">writing</a> your own.</dd>
+
+<dt>Authorizer</dt>
+<dd>An object responsible for managing Identities.  See 
+<code class="API">twisted.cred.authorizer</code>.</dd>
+
+<dt>Banana</dt>
+<dd>The low-level data marshalling layer of Twisted Spread.  See 
+<code class="API">twisted.spread.banana</code>.</dd>
+
+<dt>Broker</dt>
+<dd>A <code class="API">twisted.spread.pb.Broker</code>, the object request
+broker for Twisted Spread.</dd>
+
+<dt>Conch</dt>
+<dd>Twisted's SSH implementation.</dd>
+
+<dt>COIL</dt>
+<dd>"COnfiguration ILlumination".  It is an end-user interface for configuring
+Twisted applications.  See <code class="API">twisted.coil</code>.</dd>
+
+<dt>CVSToys</dt>
+<dd>A nifty set of tools for CVS, available at 
+<a href="http://twistedmatrix.com/users/acapnotic/wares/code/CVSToys/">http://twistedmatrix.com/users/acapnotic/wares/code/CVSToys/</a>.</dd>
+
+<dt>Deferred</dt>
+<dd>A instance of <code class="API">twisted.internet.defer.Deferred</code>, an
+abstraction for handling chains of callbacks and error handlers ("errbacks").
+See the <a href="defer">Deferring Execution</a> HOWTO.</dd>
+
+<dt>Enterprise</dt>
+<dd>Twisted's RDBMS support.  It contains 
+<code class="API">twisted.enterprise.adbapi</code> for asynchronous access to
+any standard DB-API 2.0 module, and 
+<code class="API">twisted.enterprise.row</code>, a "Relational Object Wrapper".
+See <a href="enterprise">Introduction to Twisted Enterprise</a> and 
+<a href="row">Twisted Enterprise Row Objects</a> for more details.</dd>
+
+<dt>Errback</dt>
+<dd>A callback attached to a Deferred with .addErrback to handle errors.</dd>
+
+<dt>Factory</dt>
+<dd>In general, an object that constructs other objects.  In Twisted, a Factory usually refers to a <code class="API">twisted.internet.protocol.Factory</code>,
+which constructs Protocol instances for incoming or outgoing connections.  See 
+<a href="servers">Writing Servers</a> and <a href="clients">Writing
+Clients</a>.</dd>
+
+<dt>Failure</dt>
+<dd>A <code class="API">twisted.python.failure.Failure</code>, used for passing
+errors through asynchronous callbacks in Twisted and remote object calls in
+Twisted Spread.</dd>
+
+<dt>Identity</dt>
+<dd>A <code class="API">twisted.cred.identity.Identity</code> object
+represents a single user with a username and a password of some sort.</dd>
+
+<dt>IM</dt>
+<dd>Abbreviation of "Instance Messenger".</dd>
+
+<dt>Instance Messenger</dt>
+<dd>Instance Messenger is a multi-protocol chat program that comes with
+Twisted.  It can communicate via TOC with the AOL servers, via IRC, as well as
+via PB with Twisted Words.  See <code class="API">twisted.im</code>.</dd>
+
+<dt>Issues</dt>
+<dd>Twisted's Issue Tracker, found in 
+<code class="API">twisted.issues</code>.</dd>
+
+<dt>Jelly</dt>
+<dd>The serialization layer for Twisted Spread, although it can be used
+seperately from Twisted Spread as well.  It is similar in purpose to Python's
+standard <code>pickle</code> module, but is more network-friendly.  See 
+<code class="API">twisted.spread.jelly</code>.</dd>
+
+<dt>Manhole</dt>
+<dd>A debugging/administration interface to a Twisted application.  See <a href="manhole">Debugging with Manhole</a>.</dd>
+
+<dt>Marmalade</dt>
+<dd>An XML-based serialisation module.  See <code class="API">twisted.persisted.marmalade</code>.</dd>
+
+<dt>Microdom</dt>
+<dd>A partial DOM implementation using SUX.  It is simple and pythonic, rather
+than strictly standards-compliant.  See 
+<code class="API">twisted.web.microdom</code>.</dd>
+
+<dt>Names</dt>
+<dd>Twisted's DNS server, found in <code class="API">twisted.names</code>.</dd>
+
+<dt>PB</dt>
+<dd>Abbreviation of "Perspective Broker".</dd>
+
+<dt>Perspective</dt>
+<dd>A <code class="API">twisted.cred.perspective.Perspective</code>.  A 
+perspective is an Identity's view on a Service.</dd>
+
+<dt>Perspective Broker</dt>
+<dd>The high-level object layer of Twisted Spread, implementing semantics for
+method calling and object copying, caching, and referencing.  See 
+<code class="API">twisted.spread.pb</code>.</dd>
+
+<dt>Protocol</dt>
+<dd>A instance of <code class="API">twisted.internet.protocol.Protocol</code>.
+In general each network connection has its own Protocol instance to manage
+connection-specific state.  There is a collection of pre-written standard
+protocols in <code class="API">twisted.protocols</code>.  See also
+<a href="servers">Writing Servers</a> and <a href="clients">Writing
+Clients</a>.</dd>
+
+<dt>PSU</dt>
+<dd>There is no PSU.</dd>
+
+<dt>Reactor</dt>
+<dd>The core event-loop of a Twisted application.  See 
+<a href="reactor-basics">Reactor Basics</a>.</dd>
+
+<dt>Reality</dt>
+<dd>The <a href="http://twistedmatrix.com/products/reality">Twisted Reality</a>
+text adventure system is now a seperate project.</dd>
+
+<dt>Resource</dt>
+<dd>A <code class="API">twisted.web.resource.Resource</code>, which are served
+by Twisted Web.  Resources can be as simple as a static file on disk, or they
+can have dynamically generated content.</dd>
+
+<dt>ROW</dt>
+<dd><b>R</b>elational <b>O</b>bject <b>W</b>rapper, an object-oriented
+interface to a relational database.  See <a href="row">Twisted Enterprise Row
+Objects</a>.</dd>
+
+<dt>Service</dt>
+<dd>A <code class="API">twisted.cred.service.Service</code>.  See 
+<a href="pb-cred">Twisted cred usage</a> for a description of how they
+relate to Applications, Perspectives and Identities.</dd>
+
+<dt>Spread</dt>
+<dd><a href="http://twistedmatrix.com/products/spread">Twisted Spread</a> is
+Twisted's remote-object suite.  It consists of three layers: Perspective
+Broker, Jelly and Banana.  See <a href="pb">Writing Applications with
+Perspective Broker</a>.</dd>
+
+<dt>Sturdy</dt>
+<dd>A persistent reference manager for PB.  See 
+<code class="API">twisted.spread.sturdy</code>.</dd>
+
+<dt>SUX</dt>
+<dd><b>S</b>mall <b>U</b>ncomplicated <b>X</b>ML, Twisted's simple XML parser
+written in pure Python.  See 
+<code class="API">twisted.protocols.sux</code>.</dd>
+
+<dt>TAP</dt>
+<dd><b>T</b>wisted <b>A</b>pplication <b>P</b>ickle.  A serialised application
+that created with <code>mktap</code> and runnable by <code>twistd</code>.  See
+<a href="basics">Using the Utilities</a>.</dd>
+
+<dt>Tendril</dt>
+<dd>A bridge between Twisted Words and IRC.  See <code class="API">twisted.words.tendril</code>.</dd>
+
+<dt>Twisted Matrix Laboratories</dt>
+<dd>The team behind Twisted.  
+<a href="http://twistedmatrix.com/">http://twistedmatrix.com</a>.</dd>
+
+<dt>Usage</dt>
+<dd>The <code class="API">twisted.python.usage</code> module, a replacement for
+the standard <code>getopt</code> module for parsing command-lines which is much
+easier to work with.  See <a href="usage">Parsing command-lines</a>.</dd>
+
+<dt>Words</dt>
+<dd>Twisted Words is a multi-protocol chat server that uses the Perspective
+Broker protocol as its native communication style.  See 
+<code class="API">twisted.words</code>.</dd>
+
+<dt>Woven</dt>
+<dd><b>W</b>eb <b>O</b>ject <b>V</b>isualization <b>En</b>vironment.  A web
+templating system based on XML and the Model-View-Controller design pattern.
+See <a href="woven">Developing Componentized Applications using Woven</a>.</dd>
+
+<dt>Zoot</dt>
+<dd>Twisted's Gnutella implementation (currently very incomplete).  See 
+<code class="API">twisted.zoot</code>.</dd>
+
+</dl>
+
+</body></html>

@@ -1,5 +1,5 @@
 
-BODY
+body
 {
   margin-left: 2em;
   margin-right: 2em;
@@ -11,7 +11,7 @@ BODY
 .done { color: #005500; background-color: #99ff99 }
 .notdone { color: #550000; background-color: #ff9999;}
 
-PRE
+pre
 {
   padding: 1em;
   font-family: Neep Alt, Courier New, Courier;
@@ -113,12 +113,12 @@ PRE
 {
   font-style: italic;
   }
-HR
+hr
 {
   display: inline;
   }
 
-UL
+ul
 {
   padding: 0px;
   margin: 0px;
@@ -127,7 +127,18 @@ UL
   border-left: 1em;
   }
 
-LI
+li
 {
   padding: 2px;
+  }
+
+dt
+{
+  font-weight: bold;
+  margin-left: 1ex;
+  }
+
+dd
+{
+  margin-bottom: 1em;
   }
