@@ -70,33 +70,58 @@ def execute(callable, *args, **kw):
     else:
         return succeed(result)
 
-def maybeDeferred(deferred, func, *args, **kw):
+def maybeDeferred(f, *args, **kw):
     """Invoke a function that may or may not return a deferred.
     
     Call the given function with the given arguments.  If the returned
-    object is a Deferred, chain it with the C{deferred} parameter, otherwise
-    if it is not a C{Failure}, pass it to C{deferred.callback}.  If a
-    C{Failure} is returned, pass it to C{deferred.callback}, and do likewise
-    for any exception raised after wrapping it in a C{Failure}.
+    object is a C{Deferred}, return it.  If the returned object is a C{Failure},
+    wrap it with C{fail} and return it.  Otherwise, wrap it in C{succeed} and
+    return it.  If an exception is raised, convert it to a C{Failure}, wrap it
+    in C{fail}, and then return it.
+
+    @type f: Any callable
+    @param f: The callable to invoke
     
-    If C{deferred} is C{None}, a new C{Deferred} is instantiated and used
-    instead.  This C{Deferred} is returned.
+    @param args: The arguments to pass to C{f}
+    @param kw: The keyword arguments to pass to C{f}
     
+    @rtype: C{Deferred}
+    @return: The result of the function call, wrapped in a C{Deferred} if
+    necessary.
+
     API Stability: Unstable
     """
-    if deferred is None:
-        deferred = Deferred()
+    deferred = None
+    if isinstance(f, Deferred) or f is None:
+        import warnings
+        warnings.warn("First argument to maybeDeferred() should no longer be a Deferred or None.  Just pass the function and the arguments.", DeprecationWarning)
+        deferred = f
+        f = args[0]
+        args = args[1:]
+
     try:
-        result = func(*args, **kw)
+        result = f(*args, **kw)
     except:
-        deferred.errback(failure.Failure())
+        if deferred is None:
+            return fail(failure.Failure())
+        else:
+            deferred.errback(failure.Failure())
     else:
         if isinstance(result, Deferred):
-            result.chainDeferred(deferred)
+            if deferred is None:
+                return result
+            else:
+                result.chainDeferred(deferred)
         elif isinstance(result, failure.Failure):
-            deferred.errback(result)
+            if deferred is None:
+                return fail(result)
+            else:
+                deferred.errback(result)
         else:
-            deferred.callback(result)
+            if deferred is None:
+                return succeed(result)
+            else:
+                deferred.callback(result)
     return deferred
 
 def timeout(deferred):

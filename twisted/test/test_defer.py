@@ -194,7 +194,7 @@ class DeferredTestCase(unittest.TestCase):
     
     def testMaybeDeferred(self):
         S, E = [], []
-        d = defer.maybeDeferred(None, (lambda x: x + 5), 10)
+        d = defer.maybeDeferred((lambda x: x + 5), 10)
         d.addCallbacks(S.append, E.append)
         self.assertEquals(E, [])
         self.assertEquals(S, [15])
@@ -204,7 +204,7 @@ class DeferredTestCase(unittest.TestCase):
             '10' + 5
         except TypeError, e:
             expected = str(e)
-        d = defer.maybeDeferred(None, (lambda x: x + 5), '10')
+        d = defer.maybeDeferred((lambda x: x + 5), '10')
         d.addCallbacks(S.append, E.append)
         self.assertEquals(S, [])
         self.assertEquals(len(E), 1)
@@ -212,12 +212,12 @@ class DeferredTestCase(unittest.TestCase):
         
         d = defer.Deferred()
         reactor.callLater(0.2, d.callback, 'Success')
-        r = unittest.deferredResult(defer.maybeDeferred(None, lambda: d))
+        r = unittest.deferredResult(defer.maybeDeferred(lambda: d))
         self.assertEquals(r, 'Success')
         
         d = defer.Deferred()
         reactor.callLater(0.2, d.errback, failure.Failure(RuntimeError()))
-        r = unittest.deferredError(defer.maybeDeferred(None, lambda: d))
+        r = unittest.deferredError(defer.maybeDeferred(lambda: d))
         r.trap(RuntimeError)
 
 
