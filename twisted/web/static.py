@@ -89,10 +89,15 @@ class File(resource.Resource):
     indexName = "index.html"
 
     def __init__(self, path):
+        """Create a file with the given path.
+        """
         resource.Resource.__init__(self)
-        p = self.path = os.path.abspath(path)
+        self.path = path
+        # Remove the dots from the path to split
+        p = os.path.abspath(path)
         p, ext = os.path.splitext(p)
         self.encoding = self.contentEncodings.get(string.lower(ext))
+        # if there was an encoding, get the next suffix
         if self.encoding is not None:
             p, ext = os.path.splitext(p)
         self.type = self.contentTypes.get(string.lower(ext))

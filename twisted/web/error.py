@@ -15,6 +15,7 @@ class error(Exception):
 
 class ErrorPage(resource.Resource):
     def __init__(self, status, brief, detail):
+        resource.Resource.__init__(self)
         self.code = status
         self.brief = brief
         self.detail = detail
