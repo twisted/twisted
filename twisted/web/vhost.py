@@ -132,7 +132,7 @@ class VHostMonsterResource(resource.Resource):
     """
     def getChild(self, path, request):
         if path == 'http':
-            request.isSequre = lambda: 0
+            request.isSecure = lambda: 0
         elif path == 'https':
-            request.isSequre = lambda: 1
+            request.isSecure = lambda: 1
         return _HostResource()
