@@ -201,6 +201,15 @@ base="twisted.internet.utils">getProcessOutput</code>, in <code
 class="API">twisted.internet.utils</code>.</p>
 
 
+<h3>My Deferred or DeferredList never fires, so my program just mysteriously
+hangs!  What's wrong?</h3>
+
+<p>It really depends on what your program is doing, but the most common cause
+is this: it <em>is</em> firing -- but it's an error, not a success, and you
+have forgotten to add an <a href="glossary.html#errback">errback</a>, so
+nothing happens.  Always add errbacks!</p>
+
+
 <h2>Web</h2>
 
 <h3>Is the Twisted web server a toy?</h3>
