@@ -354,21 +354,29 @@ class="python">addErrback</code>. In particular, consider these two cases:</p>
 <pre class="python">
 # Case 1
 d = getDeferredFromSomewhere()
-d.addCallback(callback1)
-d.addErrback(errback1)
-d.addCallback(callback2)
-d.addErrback(errback2)
+d.addCallback(callback1)       # A
+d.addErrback(errback1)         # B
+d.addCallback(callback2)       
+d.addErrback(errback2)        
 
 # Case 2
 d = getDeferredFromSomewhere()
-d.addCallbacks(callback1, errback1)
-d.addCallbacks(callback2, errback2)
+d.addCallbacks(callback1, errback1)  # C
+d.addCallbacks(callback2, errback2)  
 </pre>
 
 <p>If an error occurs in <code class="python">callback1</code>, then for Case 1
 <code class="python">errback1</code> will be called with the failure. For Case
 2, <code class="python">errback2</code> will be called. Be careful with your
 callbacks and errbacks.</p>
+
+<p>What this means in a practical sense is in Case 1, "A" will handle a success
+condition from <code>getDeferredFromSomewhere</code>, and "B" will handle any
+errors that occur <em>from either the upstream source, or that occur in 'A'</em>.
+In Case 2, "C"'s errback1 <em>will only handle an error condition raised by
+<code>getDeferredFromSomewhere</code></em>, it will not do any handling of errors raised in
+callback1.</p>
+
 
 <h3>Unhandled Errors</h3>
 
