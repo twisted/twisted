@@ -144,7 +144,7 @@ components.registerAdapter(UserStatusTree, IFingerService, resource.IResource)
 
 class UserStatus(page.Page):
 
-    template='''<html><head><title view="Text" model="user"/></heaD>
+    template='''<html><head><title view="Text" model="user"/></head>
     <body><h1 view="Text" model="user"/>
     <p model="status" view="Text" />
     </body></html>'''
