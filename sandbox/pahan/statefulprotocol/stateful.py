@@ -23,42 +23,56 @@ except ImportError:
 
 from struct import pack, unpack
 
-def _blowUp(data):
-    """A kind reminder"""
-    raise NotImplementedError, "please override the implicit_state tuple attribute in the subclass"
+class StatefulProtocol(protocol.Protocol):
+    """A Protocol that stores state for you.
 
-class ImplicitStateProtocol(protocol.Protocol):
-    implicit_state = (_blowUp, 0)
-    buffer = None
-
-    def dataReceived(self, data):
-        while 1:
-            if not self.buffer:
-                self.buffer = StringIO()
-            left = self.implicit_state[1] - self.buffer.tell()
-            if left > len(data):
-                self.buffer.write(data)
-                return
-            self.buffer.write(data[:left])
-            data = data[left:]
-            message = self.buffer.getvalue()
-            self.buffer.reset()
-            self.buffer.truncate()
-            self.buffer.write(data)
-            next = self.implicit_state[0](message)
-            if next is not None:
-                self.implicit_state = next
-
-class MyInt32StringReceiver(ImplicitStateProtocol):
-    MAX_LENGTH = 99999
+    state is a pair (function, num_bytes). When num_bytes bytes of data arrives
+    from the network, function is called. It is expected to return the next
+    state or None to keep same state. Initial state is returned by
+    getInitialState (override it).
+    """
+    _sful_state = None
+    _sful_buffer = None
+    _sful_offset = 0
 
     def connectionMade(self):
-        self.implicit_state = (self._getHeader, 4)
+        self._sful_buffer = StringIO()
+        self._sful_state = self.getInitialState()
+
+    def getInitialState(self):
+        raise NotImplementedError
+
+    def dataReceived(self, data):
+        self._sful_buffer.seek(0, 2)
+        self._sful_buffer.write(data)
+        blen = self._sful_buffer.tell() # how many bytes total is in the buffer
+        self._sful_buffer.seek(self._sful_offset)
+        while blen - self._sful_offset >= self._sful_state[1]:
+            d = self._sful_buffer.read(self._sful_state[1])
+            self._sful_offset += self._sful_state[1]
+            next = self._sful_state[0](d)
+            if self.transport.disconnecting: # XXX: argh stupid hack borrowed right from LineReceiver
+                return # dataReceived won't be called again, so who cares about consistent state
+            if next:
+                self._sful_state = next
+        if self._sful_offset != 0:
+            b = self._sful_buffer.read()
+            self._sful_buffer.reset()
+            self._sful_buffer.truncate()
+            self._sful_buffer.write(b)
+            self._sful_offset = 0
+
+class MyInt32StringReceiver(StatefulProtocol):
+    MAX_LENGTH = 99999
+
+    def getInitialState(self):
+        return self._getHeader, 4
 
     def _getHeader(self, msg):
         length, = unpack("!i", msg)
         if length > self.MAX_LENGTH:
-            return None
+            self.transport.loseConnection()
+            return
         return self._getString, length
 
     def _getString(self, msg):
