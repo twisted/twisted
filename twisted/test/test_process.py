@@ -390,10 +390,10 @@ class FDChecker(protocol.ProcessProtocol):
         self.done = True
 
 class FDTest(unittest.TestCase):
-    def setUp(self):
+    def NOTsetUp(self):
         from twisted.internet import process
         process.Process.debug_child = True
-    def tearDown(self):
+    def NOTtearDown(self):
         from twisted.internet import process
         process.Process.debug_child = False
         
