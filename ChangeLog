@@ -1,3 +1,8 @@
+2002-10-01  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
+
+	* twisted/protocols/http.py: Fixed many bugs in protocol parsing,
+	found by new unit tests.
+
 2002-9-30  Moshe Zadka <moshez@twistedmatrix.com>
 
 	* twisted/protocols/sux.py twisted/web/microdom.py: Made is possible
