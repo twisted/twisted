@@ -242,6 +242,9 @@ class FileLogObserver:
                 text = eventDict['failure'].getTraceback()
             elif eventDict.has_key('format'):
                 text = eventDict['format'] % eventDict
+            else:
+                # we don't know how to log this
+                return
         else:
             text = ' '.join(map(str, edm))
         y,mon,d,h,min, iigg,nnoo,rree,daylight = time.localtime(eventDict['time'])
