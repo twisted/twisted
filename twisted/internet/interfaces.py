@@ -200,6 +200,10 @@ class IReactorCore(Interface):
         it is possible to lose data and put your system in an inconsistent
         state by calling this.  However, it is necessary, as sometimes a system
         can become wedged in a pre-shutdown call.
+
+        It's also useful since you can still run() the event loop again after
+        this has been called, unlike stop(), so it's useful for test code
+        that uses the reactor.
         """
 
     def iterate(self, delay=0):
