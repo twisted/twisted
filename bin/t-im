@@ -28,7 +28,10 @@ sys.path.append('.')
 ### end of preamble
 
 import gtk                              # 3 .. 2 .. 1 ..
-import gnome.ui                         # get ready!
+try:
+    import gnome.ui                         # get ready!
+except ImportError:
+    print "Gnome support disabled"
 
 
 from twisted.internet import ingtkernet, tcp
