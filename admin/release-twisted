@@ -60,7 +60,7 @@ class Options(usage.Options):
 
                      ['cvsroot', 'c', defaultRoot, "The CVSROOT to export and/or checkout from. (only revelant for --exp and --checkout)."],
 
-                     ['root', 't', util.sibpath(sys.argv[0], '../../Twisted.CVS'), "The directory containing your CVS checkout (unneccessary if using --checkout)."]]
+                     ['root', 't', os.path.abspath('Twisted.CVS'), "The directory containing your CVS checkout (unneccessary if using --checkout)."]]
 
     longdesc = "Specify -v and all steps to execute; if no steps are given, default is %r." % defaultOptions
     
@@ -402,7 +402,7 @@ class CreateTarballs(Transaction):
         sh('''
               tar --exclude %(tdir)s/doc -czf Twisted_NoDocs-%(ver)s.tar.gz  %(tdir)s && 
               tar --exclude %(tdir)s/doc -cjf Twisted_NoDocs-%(ver)s.tar.bz2 %(tdir)s && 
-              zip -9 -r Twisted_NoDocs-%(ver)s.zip %(tdir)s -x %(tdir)s/doc > /dev/null && 
+              zip -9 -r Twisted_NoDocs-%(ver)s.zip %(tdir)s -x %(tdir)s/doc > /dev/null
            ''' % locals())
 
         print "CreateTarballs: Twisted"
@@ -454,7 +454,7 @@ class Release(Transaction):
             os.mkdir("%s/old" % rel)
 
         print "Release: Moving old releases to %s/old" % rel
-        sh('mv %(rel)s/*.tar.gz %(rel)s/*.tar.bz2 %(rel)s/*.zip %(rel)s/old' % locals())
+        sh('mv %(rel)s/*.tar.gz %(rel)s/*.tar.bz2 %(rel)s/*.zip %(rel)s/old || true' % locals())
 
         print "Release: Copying Twisted_NoDocs."
         sh('''
@@ -499,8 +499,7 @@ class MakeDebs(Transaction):
         tgz = os.path.join(rel, 'Twisted-%s.tar.gz' % ver)
         unique = '%s.%s' % (time.time(), os.getpid())
         os.mkdir('/sid-chroot/tmp/%s' % unique)
-        os.chdir('/sid-chroot/tmp/%s' % unique)
-        sh('tar xzf %s' % tgz)
+        sh('cd /sid-chroot/tmp/%s && tar xzf %s' % (unique, tgz))
         sh("ssh -p 9022 localhost "
                   "'cd /tmp/%(unique)s && ./Twisted-%(ver)s/admin/make-deb -a'"%vars())
         if not os.path.isdir(os.path.join(rel, 'debian-%s' % ver)):
