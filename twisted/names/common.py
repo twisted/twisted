@@ -120,7 +120,7 @@ if hasattr(socket, 'inet_ntop'):
     def extractRecord(resolver, name, answers, level = 10):
         if not level:
             return None
-        for r in ans:
+        for r in answers:
             if r.name == name and r.type == dns.A6:
                 return socket.inet_ntop(socket.AF_INET6, r.payload.address)
         for r in ans:
