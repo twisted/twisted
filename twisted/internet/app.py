@@ -346,8 +346,8 @@ class Application(log.Logger, styles.Versioned, roots.Locked):
             for port in self.ports:
                 try:
                     port.startListening()
-                except socket.error:
-                    log.msg('port %s already bound' % port.port)
+                except socket.error, msg:
+                    log.msg('error on port %s: %s' % (port.port, msg[1]))
                     return
             for connector in self.connectors:
                 connector.startConnecting()
