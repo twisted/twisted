@@ -158,7 +158,7 @@ class WSGIHandler(object):
             result = self.application(self.environment, self.startWSGIResponse)
             self.handleResult(result)
         except:
-            log.err(f)
+            log.err()
             pass
 
 

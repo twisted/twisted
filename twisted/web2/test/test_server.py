@@ -89,6 +89,7 @@ class BaseCase(unittest.TestCase):
     
     method = 'GET'
     version = (1, 1)
+    wait_timeout = 5.0
     
     def chanrequest(self, root, uri, headers, method, version, prepath):
         site = server.Site(root)
@@ -119,16 +120,16 @@ class BaseCase(unittest.TestCase):
                                   (responseCode, headers, htmlData)
         """
         d = self.getResponseFor(*request_data)
-        def _gotResponse((code, headers, data)):
-            expected_code, expected_headers, expected_data = expected_response
-            self.assertEquals(code, expected_code)
-            if expected_data is not None:
-                self.assertEquals(data, expected_data)
-            for key, value in expected_headers.iteritems():
-                self.assertEquals(headers.getHeader(key), value)
-        d.addCallback(_gotResponse)
-        util.wait(d)
+        d.addCallback(self._cbGotResponse, expected_response)
+        util.wait(d, timeout=self.wait_timeout)
 
+    def _cbGotResponse(self, (code, headers, data), expected_response):
+        expected_code, expected_headers, expected_data = expected_response
+        self.assertEquals(code, expected_code)
+        if expected_data is not None:
+            self.assertEquals(data, expected_data)
+        for key, value in expected_headers.iteritems():
+            self.assertEquals(headers.getHeader(key), value)
 
 
 class SampleWebTest(BaseCase):

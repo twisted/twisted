@@ -79,7 +79,7 @@ def defaultErrorHandler(request, response):
     message = ERROR_MESSAGES.get(response.code, None)
     if message is None:
         # No message specified for that code
-        return respones
+        return response
     
     message = message % {
         'uri':_escape(request.uri),
