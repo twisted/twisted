@@ -110,7 +110,7 @@ class PicklesicleTest(unittest.TestCase):
         freezer.dirty(bob)
         freezer.clean()
         l = []
-        alice._tracker = gcall(l.append, True)
+        alice._tracker = gcall(l.append, 1)
         del alice
         assert l, "Alice not garbage collected."
         assert len(filter(lambda x: isinstance(x, Friend),
