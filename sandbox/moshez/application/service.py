@@ -163,14 +163,13 @@ class Process:
             self.gid = gid
     
 
-class Application(components.Componentized):
-
-    def __init__(self, name, uid=None, gid=None):
-        components.Componentized.__init__(self)
-        service = MultiService()
-        service.setName(name)
-        self.setComponent(IServiceCollection, service)
-        self.setComponent(IService, service)
-        self.setComponent(sob.IPersistable, sob.Persistant(self, name))
-        if runtime.platformType == "posix":
-            self.setComponent(IProcess, Process(uid, gid))
+def Application(name, uid=None, gid=None):
+    ret = components.Componentized()
+    service = MultiService()
+    service.setName(name)
+    ret.setComponent(IServiceCollection, service)
+    ret.setComponent(IService, service)
+    ret.setComponent(sob.IPersistable, sob.Persistant(ret, name))
+    if runtime.platformType == "posix":
+        ret.setComponent(IProcess, Process(uid, gid))
+    return ret
