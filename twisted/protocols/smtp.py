@@ -114,3 +114,74 @@ class DomainSMTP(SMTP):
             user, domain = string.split(recipient, '@', 1)
             self.factory.domains[domain].saveMessage(origin, user, message,
                                                      domain)
+
+
+class SMTPClient(basic.LineReceiver):
+
+    def __init__(self, identity):
+        self.identity = identity
+
+    def connectionMade(self):
+        self.state = 'helo'
+
+    def lineReceived(self, line):
+        if len(line)<4 or (line[3] not in ' -'):
+            raise ValueError("invalid line from SMTP server %s" % line)
+        if line[3] == '-':
+            return
+        code = int(line[:3])
+        method =  getattr(self, 'smtpCode_%d_%s' % (code, self.state), 
+                                'smtpCode_default')
+        method(line[4:])
+
+    def smtpCode_220_helo(self, line):
+        self.sendLine('HELO '+self.identity)
+        self.state = 'from'
+
+    def smtpCode_250_from(self, line):
+        if self.getmail():
+            self.sendLine('MAIL FROM:<%s>' % self.getMail().from_)
+            self.state = 'afterFrom'
+        else:
+            self.sendLine('QUIT')
+            self.state = 'quit'
+
+    def smtpCode_250_afterFrom(self, line):
+        self.toAddresses = self.getMail().to
+        self.successAddresses = []
+        self.state = 'to'
+        self.sendToOrData()
+
+    def smtpCode_221_quit(self, line):
+        self.loseConnection()
+
+    def smtpCode_default(self, line):
+        self.loseConnection()
+
+    def sendToOrData(self):
+        if not self.toAddresses:
+            if self.successAddresses:
+                self.sendLine('DATA')
+                self.state = 'data'
+            else:
+                self.sentMail([])
+                self.smtpCode_250_from('')
+        else:
+            self.lastAddress = self.toAddresses.pop()
+            self.sendLine('RCPT TO:<%s>' % self.lastAddress)
+
+    def smtpCode_250_to(self, line):
+        self.successAddresses.append(self.lastAddress)
+        self.sendToOrData()
+
+    def smtpCode_354_data(self, line):
+        for line in string.split(self.getMail().data, '\n')[:-1]:
+            if line[0] == '.':
+                line = line+'.'
+            self.sendLine(line)
+        self.sendLine(line)
+        self.state = 'afterData'
+
+    def smtpCode_250_afterData(self, line):
+        self.sentMail(self.successAddresses)
+        self.smtpCode_250_from('')
