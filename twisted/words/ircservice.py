@@ -699,7 +699,12 @@ class IRCChatter(irc.IRC):
 
         [Optional]
         """
-        pass
+        if params: # message
+            self.participant.changeStatus(service.AWAY)
+            self.sendMessage("306", "You are now away.")
+        else:
+            self.participant.changeStatus(service.ONLINE)
+            self.sendMessage("305", "You are no longer away.")
 
 
     def irc_REHASH(self, prefix, params):
