@@ -98,7 +98,7 @@ class TWWTest(DOMTemplateTest):
 # Test a fancier widget, and controllers handling submitted input
 
 
-class MDemo(model.Model):
+class MDemo(model.AttributeModel):
     foo = "Hello world"
     color = 'blue'
 
@@ -177,7 +177,7 @@ class ControllerTest(WovenTC):
 
 identityList = ['asdf', 'foo', 'fredf', 'bob']
 
-class MIdentityList(model.Model):
+class MIdentityList(model.AttributeModel):
     def __init__(self):
         model.Model.__init__(self)
         self.identityList = defer.Deferred()
@@ -225,7 +225,7 @@ class ListDeferredTest(WovenTC):
 # Test 5
 # Test nested lists
 
-class LLModel(model.Model):
+class LLModel(model.AttributeModel):
     data = [['foo', 'bar', 'baz'],
             ['gum', 'shoe'],
             ['ggg', 'hhh', 'iii']
@@ -265,7 +265,7 @@ class NestedListTest(WovenTC):
 # Test 6
 # Test notification when a model is a dict or a list
 
-class MNotifyTest(model.Model):
+class MNotifyTest(model.AttributeModel):
     def initialize(self, *args, **kwargs):
         self.root = {"inventory": [], 'log': ""}
 
