@@ -194,7 +194,9 @@ from twisted.web import static, server
 root = static.File("/var/www/htdocs")
 application = service.Application('web')
 site = server.Site(root)
-internet.TCPServer(80, site).setServiceParent(service.IServiceCollection(application))
+sc = service.IServiceCollection(application)
+i = internet.TCPServer(80, site)
+i.setServiceParent(sc)
 </pre>
 
 <p>Most advanced configurations will be in the form of tweaking the
@@ -269,8 +271,10 @@ root = static.File("/var/www/htdocs")
 root.ignoreExt(".rpy")
 root.processors = {'.rpy': script.ResourceScript}
 application = service.Application('web')
+sc = service.IServiceCollection(application)
 site = server.Site(root)
-internet.TCPServer(80, site).setServiceParent(service.IServiceCollection(application))
+i = internet.TCPServer(80, site)
+i.setServiceParent(sc)
 </pre>
 
 <p>Now, a URL such as <code>/foo</code> might be served from a Resource
@@ -307,8 +311,10 @@ baz.ignoreExt('.rpy')
 root.addHost('baz', baz)
 
 application = service.Application('web')
+sc = service.IServiceCollection(application)
 site = server.Site(root)
-internet.TCPServer(80, site).setServiceParent(service.IServiceCollection(application))
+i = internet.TCPServer(80, site)
+i.setServiceParent(sc)
 </pre>
 
 <h3>Advanced Techniques</h3>
@@ -328,8 +334,10 @@ for dir in os.listdir("/var/vhosts"):
     root.addHost(dir, static.File(os.path.join("/var/vhosts", dir)))
 
 application = service.Application('web')
+sc = service.IServiceCollection(application)
 site = server.Site(root)
-internet.TCPServer(80, site).setServiceParent(service.IServiceCollection(application))
+i = internet.TCPServer(80, site)
+i.setServiceParent(sc)
 </pre>
 
 <pre class="python">
@@ -564,7 +572,9 @@ root = vhost.NameVirtualHost()
 root.addHost(vhostName, reverseProxy)
 site = server.Site(root)
 application = service.Application('web-proxy')
-internet.TCPServer(80, site).setServiceParent(service.IServiceCollection(application))
+sc = service.IServiceCollection(application)
+i = internet.TCPServer(80, site)
+i.setServiceParent(sc)
 </pre>
 
 <h2>Rewriting URLs</h2>
