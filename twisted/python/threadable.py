@@ -137,7 +137,7 @@ class _ThreadedWaiter(_Waiter):
                 cond.notify()
                 cond.release()
 
-class XLock:
+class _XLock:
 
     """
     Exclusive lock class.  The advantage of this over threading.RLock
@@ -232,7 +232,7 @@ def init(with_threads=1):
     """Initialize threading. Should be run once, at the beginning of program.
     """
     global threaded, _to_be_synched, Waiter
-    global threadingmodule, threadmodule
+    global threadingmodule, threadmodule, XLock
     if threaded == with_threads:
         return
     elif threaded:
@@ -241,6 +241,7 @@ def init(with_threads=1):
     if threaded:
         print 'Enabling Multithreading.'
         Waiter = _ThreadedWaiter
+        XLock = _XLock
         apply(synchronize, _to_be_synched)
         _to_be_synched = []
         import thread, threading
@@ -251,9 +252,10 @@ def init(with_threads=1):
     else:
         Waiter = _Waiter
         # Hack to allow XLocks to be unpickled on an unthreaded system.
-        global XLock
-        class XLock:
+        class DummyXLock:
             pass
+        XLock = DummyXLock
+
 
 def isInIOThread():
     """Are we in the thread responsable for I/O requests (the event loop)?
