@@ -507,7 +507,8 @@ class GuardTest(unittest.TestCase):
         # now let's try with a request for the session-cookie URL that has a cookie set
         url = "/"+(oldreq.headers['location'].split('http://fake.com/',1))[1]
         req = chan.makeFakeRequest(url)
-        self.assertEquals(req.headers['location'], 'http://fake.com/xxx/')
+        self.assertEquals(req.headers['location'].split('?')[0],
+                          'http://fake.com/xxx/')
         for sz in swrap.sessions.values():
             sz.expire()
 

@@ -3,7 +3,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.15 $"[11:-2]
+__version__ = "$Revision: 1.16 $"[11:-2]
 
 import random
 import time
@@ -164,7 +164,10 @@ class SessionWrapper(Resource):
                 #                  ^
                 #                  we are this getChild
                 # with a matching cookie
-                rd = Redirect(urlToChild(*request.postpath))
+                rd = Redirect(urlToChild(*request.postpath) +
+                              # this next bit prevents 'redirect cycles' in
+                              # wget (and possibly other browsers)
+                              "?__session_just_started__=1")
                 rd.isLeaf = 1
                 return rd
             else:
