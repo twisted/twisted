@@ -38,7 +38,7 @@ def addReader(reader):
         reads[fd] =  1
         _updateRegisteration(fd)
 
-def addWriter(writer):
+def addWriter(writer, writes=writes, selectables=selectables):
     """Add a FileDescriptor for notification of data available to write.
     """
     fd = writer.fileno()
@@ -55,7 +55,7 @@ def removeReader(reader):
         del reads[fd]
         _updateRegisteration(fd)
 
-def removeWriter(writer):
+def removeWriter(writer, writes=writes):
     """Remove a Selectable for notification of data available to write.
     """
     fd = writer.fileno()
@@ -72,7 +72,7 @@ def doPoll(timeout,
     """Poll the poller for new events."""
     timeout = int(timeout * 1000) # convert seconds to milliseconds
 
-    for fd, event in poller.poll():
+    for fd, event in poller.poll(timeout):
         selectable = selectables[fd]
         log.logOwner.own(selectable)
         
