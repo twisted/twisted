@@ -255,7 +255,7 @@ class Element(Node):
             stream.write('"')
             stream.write(val.replace('"', '&quot;'))
             stream.write('"')
-        if self.childNodes:
+        if self.childNodes or self.tagName.lower() in ('a', 'li', 'div', 'span'):
             stream.write(">"+newl+addindent)
             for child in self.childNodes:
                 child.writexml(stream, indent+addindent, addindent, newl)
