@@ -173,9 +173,14 @@ class AdapterRegistry(ZopeAdapterRegistry):
         """
         assert interfaceClasses, "You need to pass an Interface"
         if not issubclass(origInterface, Interface):
+            # fix up __implements__ if it's old style
+            if hasattr(origInterface, "__implements__") and isinstance(origInterface.__implements__, (tuple, MetaInterface)):
+                for i in tupleTreeToList(origInterface.__implements__):
+                    declarations.classImplements(origInterface, i)
+            # create marker interface
             class IMarker(Interface):
                 pass
-            declarations.directlyProvides(origInterface, IMarker)
+            declarations.classImplements(origInterface, IMarker)
             self.classInterfaces[origInterface] = IMarker
             origInterface = IMarker
         self.register(interfaceClasses, origInterface, '', adapterFactory)
@@ -366,7 +371,7 @@ class Componentized(styles.Versioned):
                 del self._adapterCache[k]
                 l.append(reflect.namedObject(k))
         return l
-
+    
     def getComponent(self, interface, registry=None, default=None):
         """Create or retrieve an adapter for the given interface.
 
