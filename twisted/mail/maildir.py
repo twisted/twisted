@@ -35,7 +35,7 @@ class AbstractMaildirDomain:
         """
         return self.userDirectory(name) is not None
 
-    def saveMessage(self, name, message, domain):
+    def saveMessage(self, origin, name, message, domain):
         """ UNDOCUMENTED
         """
         dir = os.path.join(self.userDirectory(name), 'inbox')

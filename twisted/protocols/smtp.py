@@ -104,15 +104,13 @@ class DomainSMTP(SMTP):
         except ValueError:
             return 0
         if not self.factory.domains.has_key(domain):
-            print "no such domain", domain
             return 0
         if not self.factory.domains[domain].exists(user, domain):
-            print "no such user in", self.factory.domains[domain]
             return 0
         return 1
 
     def handleMessage(self, helo, origin, recipients, message):
         for recipient in recipients:
             user, domain = string.split(recipient, '@', 1)
-            self.factory.domains[domain].saveMessage(user, message,
+            self.factory.domains[domain].saveMessage(origin, user, message,
                                                      domain)
