@@ -87,7 +87,9 @@ class ThreadsTestCase(unittest.TestCase):
             else:
                 if time.time() > when + 5:
                     if c.index > 0:
-                        self.fail("threads lost a count")
+                        self.fail("threads lost a count, index is %d "
+                                  " time is %s, when is %s" %
+                                  (c.index, time.time(), when))
                     else:
                         self.fail("threads never started")
             oldIndex = c.index
