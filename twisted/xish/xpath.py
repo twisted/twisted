@@ -201,13 +201,16 @@ def intern(queryString):
     return __internedQueries[queryString]
 
 def matches(xpathstr, elem):
-    return internQuery(xpathstr).matches(elem)
+    return intern(xpathstr).matches(elem)
 
 def queryForStringList(xpathstr, elem):
-    return internQuery(xpathstr).queryForStringList(elem)
+    return intern(xpathstr).queryForStringList(elem)
+
+def queryForString(xpathstr, elem):
+    return intern(xpathstr).queryForString(elem)
 
 def queryForNodes(xpathstr, elem):
-    return internQuery(xpathstr).queryForNodes(elem)
+    return intern(xpathstr).queryForNodes(elem)
 
 # Convenience main to generate new xpathparser.py
 if __name__ == "__main__":
