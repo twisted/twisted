@@ -254,7 +254,8 @@ class Connector:
     """Connect a protocol to a server using TCP and if it fails make a new one."""
 
     transportFactory = Client
-
+    protocol = None
+    
     def __init__(self, host, portno, protocolFactory, timeout=30):
         self.host = host
         self.portno = portno
@@ -270,7 +271,11 @@ class Connector:
     def startConnecting(self):
         proto = self.factory.buildProtocol((self.host, self.portno))
         self.transportFactory(self.host, self.portno, proto, self.timeout, self)
-
+        self.protocol = proto
+    
+    def getProtocol(self):
+        """Get the current protocol instance."""
+        return self.protocol
 
 
 class Server(Connection):
