@@ -13,7 +13,7 @@ from twisted.cred import portal
 from twisted.conch import avatar
 from twisted.conch.ssh import filetransfer, session
 from twisted.protocols import loopback
-from twisted.internet import defer, reactor, protocol
+from twisted.internet import defer, reactor, protocol, interfaces
 from twisted.internet.utils import getProcessOutputAndValue
 from twisted.python import components, log, failure
 from twisted.test import test_process
@@ -281,7 +281,7 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, SFTPTestBase):
         while (not self.processProtocol.buffer) and (time.time() < timeout):
             reactor.iterate(0.1)
         if time.time() > timeout:
-            raise RuntimeError("timeout")
+            self.skip = "couldn't start process"
         else:
             self.processProtocol.clearBuffer()
             fac.proto.expectedLoseConnection = 1
@@ -464,3 +464,6 @@ if not unix:
     TestOurServerCmdLineClient.skip = "don't run on non-posix"
     TestOurServerBatchFile.skip = "don't run on non-posix"
 
+if not interfaces.IReactorProcess(reactor, None):
+    TestOurServerCmdLineClient.skip = "don't run w/o spawnprocess"
+    TestOurServerBatchFile.skip = "don't run w/o/ spawnProcess"
