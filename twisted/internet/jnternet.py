@@ -21,10 +21,11 @@
 # Twisted Imports
 from twisted.protocols import protocol
 from twisted.persisted import styles
-from twisted.python import timeoutqueue
+from twisted.python import timeoutqueue, log
 
 # Java Imports
 from java.net import Socket, ServerSocket, SocketException
+from java.lang import System
 import jarray
 
 # System Imports
@@ -37,8 +38,10 @@ import abstract
 class JConnection(abstract.FileDescriptor,
                   protocol.Transport,
                   styles.Ephemeral):
-
+    """A java connection class."""
+    
     writeBlocker = None
+    
     def __init__(self, skt, protocol):
         # print 'made a connection'
         self.skt = skt
@@ -67,15 +70,21 @@ class JConnection(abstract.FileDescriptor,
 
     def connectionLost(self, arg=None):
         # print 'closing the connection'
-        self.skt.close()
-        self.protocol.connectionLost()
-
+        if not self.disconnected:
+            self.skt.close()
+            self.protocol.connectionLost()
+            abstract.FileDescriptor.connectionLost(self)
+    
     def loseConnection(self):
         self.writeQ.put(None)
 
-class Blocker:
+
+class Blocker(threading.Thread):
+    
     stopped = 0
+    
     def __init__(self, q):
+        threading.Thread.__init__(self)
         self.q = q
 
     def block(self):
@@ -87,8 +96,8 @@ class Blocker:
             if obj:
                 self.q.put(obj)
 
-    def start(self):
-        threading.Thread(target=self.blockForever).start()
+    def run(self):
+        self.blockForever()
 
     def stop(self):
         self.stopped = 1
@@ -97,6 +106,7 @@ BEGIN_CONSUMING = 1
 END_CONSUMING = 2
 
 class WriteBlocker(Blocker):
+    
     def __init__(self, fdes, q):
         Blocker.__init__(self, q)
         self.fdes = fdes
@@ -126,21 +136,30 @@ class WriteBlocker(Blocker):
                 self.fdes.ostream.flush()
             except SocketException:
                 self.stop()
+                return (self.fdes.connectionLost, None)
+
 
 class ReadBlocker(Blocker):
+
     def __init__(self, fdes, q):
         Blocker.__init__(self, q)
         self.fdes = fdes
 
     def block(self):
         bytes = jarray.zeros(8192, 'b')
-        l = self.fdes.istream.read(bytes)
+        try:
+            l = self.fdes.istream.read(bytes)
+        except SocketException:
+            self.stop()
+            return (self.fdes.connectionLost, 0)
         if l == -1:
             self.stop()
-            return (self.fdes.connectionLost,0)
+            return (self.fdes.connectionLost, 0)
         return (self.fdes.protocol.dataReceived, bytes[:l].tostring())
 
+
 class AcceptBlocker(Blocker):
+
     def __init__(self, svr, q):
         Blocker.__init__(self, q)
         self.svr = svr
@@ -149,13 +168,22 @@ class AcceptBlocker(Blocker):
         skt = self.svr.sskt.accept()
         return (self.svr.gotSocket, skt)
 
+
 class JMultiplexor:
+    """Fakes multiplexing using multiple threads and an action queue."""
+    
     def __init__(self):
         self.readers = []
         self.writers = []
         self.q = timeoutqueue.TimeoutQueue()
 
     def run(self):
+        main.running = 1
+        # attempt to install a shutdown hook
+        #if hasattr(java.lang.Runtime, 'addShutdownHook'):
+        #    shutdownThread = java.lang.Thread(RunShutdown())
+        #    java.lang.Runtime.getRuntime().addShutdownHook(shutdownThread)
+
         while 1:
             # run the delayeds
             timeout = None
@@ -177,6 +205,16 @@ class JMultiplexor:
             for i in range(self.q.qsize()):
                 meth, arg = self.q.get()
                 meth(arg)
+            
+            # check if we should shutdown
+            if not main.running:
+                for callback in main.shutdowns:
+                    try:
+                        callback()
+                    except:
+                        traceback.print_exc(file=log.logfile)
+                
+                System.exit(0)
 
 
 theMultiplexor = JMultiplexor()
@@ -186,6 +224,11 @@ def doNothing(arg):
 
 def wakeUp():
     theMultiplexor.q.put((doNothing, None))
+
+def shutDown():
+    if main.running:
+        main.running = 0
+        wakeUp()
 
 def portStartListening(tcpPort):
     sskt = ServerSocket(tcpPort.port, tcpPort.backlog)
@@ -198,11 +241,11 @@ def portGotSocket(tcpPort, skt):
     transport = JConnection(skt, protocol)
         
     # make read and write blockers
+    protocol.makeConnection(transport, tcpPort)
     wb = WriteBlocker(transport, theMultiplexor.q)
     wb.start()
     transport.writeBlocker = wb
     ReadBlocker(transport, theMultiplexor.q).start()
-    protocol.makeConnection(transport, tcpPort)
 
 
 # change port around
@@ -213,3 +256,4 @@ tcp.Port.gotSocket = portGotSocket
 import main
 main.run = theMultiplexor.run
 main.wakeUp = wakeUp
+main.shutDown = shutDown
