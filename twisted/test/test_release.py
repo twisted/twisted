@@ -7,29 +7,31 @@ from twisted.python import release
 class HappyTransaction(release.Transaction):
     def doIt(self, stuff):
         stuff.append(':-)')
-        return stuff
 
 class SadTransaction(release.Transaction):
     def doIt(self, stuff):
         raise release.CommandFailed(stuff)
     def undoIt(self, l, failure):
         l.append(failure.check(release.CommandFailed))
-        return l
 
 
 class TransactionTest(unittest.TestCase):
     def testHappy(self):
-        A.assertEquals(HappyTransaction().run(["hoo"]), ["hoo", ":-)"])
+        l = ["hoo"]
+        HappyTransaction().run(l)
+        A.assertEquals(l, ["hoo", ":-)"])
 
     def testSad(self):
         l = []
-        SadTransaction().run(l)
-        self.assertEquals(l, [release.CommandFailed])
+        A.assertRaises(release._TransactionFailed,
+                       SadTransaction().run, l)
+        A.assertEquals(l, [release.CommandFailed])
 
     def testMultiple(self):
         l = []
-        release.runTransactions([HappyTransaction, SadTransaction], l)
-        self.assertEquals(l, [":-)", release.CommandFailed])
+        release.runTransactions([HappyTransaction, SadTransaction, HappyTransaction], l)
+        A.assertEquals(l, [":-)", release.CommandFailed])
+
 
 
 class UtilityTest(unittest.TestCase):
@@ -39,12 +41,9 @@ class UtilityTest(unittest.TestCase):
             os.mkdir('releaseCh')
             os.chdir('releaseCh')
             1/0
-        try:
-            release.runChdirSafe(chAndBreak)
-        except ZeroDivisionError:
-            A.assertEquals(cwd, os.getcwd())
-        else:
-            A.fail("Didn't raise ZeroDivisionError!?")
+        A.assertRaises(ZeroDivisionError,
+                       release.runChdirSafe, chAndBreak)
+        A.assertEquals(cwd, os.getcwd())
 
     def testReplaceInFile(self):
         in_ = 'foo\nhey hey $VER\nbar'

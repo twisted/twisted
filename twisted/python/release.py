@@ -21,6 +21,10 @@ class DirectoryDoesntExist(OSError):
 class CommandFailed(OSError):
     pass
 
+class _TransactionFailed(OSError):
+    """
+    Don't raise this, it's internal.
+    """
 
 class Transaction:
     """I am a dead-simple Transaction."""
@@ -28,19 +32,19 @@ class Transaction:
     sensitiveUndo = 0
 
     def run(self, data):
-        """
-        Try to run this self.doIt; if it fails, call self.undoIt and
-        return a Failure.
-        """
-        log.msg(transaction="Starting %s" % (self.__class__.__name__,))
         try:
             return runChdirSafe(self.doIt, data)
         except:
             f = failure.Failure()
+
+            log.msg(transaction="ERROR: %s failed."
+                    % (self.__class__.__name__,),
+                    failure=f)
+
             if self.sensitiveUndo:
                 if raw_input("Are you sure you want to roll back "
                              "this transaction? ").lower().startswith('n'):
-                    return f
+                    raise _TransactionFailed(f)
             log.msg(transaction="rolling back %s."
                     % (self.__class__.__name__,))
             try:
@@ -49,7 +53,8 @@ class Transaction:
                 log.msg(transaction="Argh, the rollback failed.")
                 import traceback
                 traceback.print_exc()
-            return f
+            raise _TransactionFailed(f)
+        
 
     def doIt(self, data):
         """Le's get it on!"""
@@ -60,22 +65,13 @@ class Transaction:
         print "%s HAS NO ROLLBACK!" % self.__class__.__name__
 
 
-def runTransactions(transactions, *args):
-    last = None
 
+def runTransactions(transactions, data):
     for trans in transactions:
         try:
-            f = trans().run(*args)
-        except:
-            lastmsg = ''
-            if last is not None:
-                lastmsg = "Last successful command was %s." % (last,)
-            f = failure.Failure()
-            log.msg(transaction="ERROR: %s failed. %s"
-                    % (trans.__name__, lastmsg),
-                    failure=f)
-            break
-        last = trans
+            trans().run(data)
+        except _TransactionFailed:
+            return
 
 
 def main():
