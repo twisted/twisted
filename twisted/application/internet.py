@@ -101,9 +101,10 @@ arguments given to the constructor.
 'Server':
 """Serve %(tran)s clients
 
-Call listen%(method)s when the service starts, with the
+Call reactor.listen%(method)s when the service starts, with the
 arguments given to the constructor. When the service stops,
-stop listening.
+stop listening. See twisted.internet.interfaces for documentation
+on arguments to the reactor method.
 """,
 }
 
