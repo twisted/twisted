@@ -17,6 +17,7 @@
 
 from twisted.cred import portal
 from twisted.python import components, log
+from twisted.internet.process import ProcessExitedAlready
 from zope import interface
 from ssh import session, forwarding, filetransfer
 from ssh.filetransfer import FXF_READ, FXF_WRITE, FXF_APPEND, FXF_CREAT, FXF_TRUNC, FXF_EXCL
@@ -143,7 +144,7 @@ class SSHSessionForUnixConchUser:
         if not utmp:
             return
         ipAddress = self.avatar.conn.transport.transport.getPeer().host
-        packedIp = struct.unpack('L', socket.inet_aton(ipAddress))[0]
+        packedIp ,= struct.unpack('L', socket.inet_aton(ipAddress))
         ttyName = self.ptyTuple[2][5:]
         t = time.time()
         t1 = int(t)
@@ -216,18 +217,18 @@ class SSHSessionForUnixConchUser:
             self.getPtyOwnership()
         self.pty = reactor.spawnProcess(proto, \
                 shell, command, self.environ, homeDir,
-                uid, gid, usePTY = self.ptyTuple or 1)
+                uid, gid, usePTY = self.ptyTuple or 0)
         if self.ptyTuple:
             self.addUTMPEntry()
             if self.modes:
                 self.setModes()
-        else:
-            tty.setraw(self.pty.fileno(), tty.TCSANOW)
+#        else:
+#            tty.setraw(self.pty.pipes[0].fileno(), tty.TCSANOW)
         self.avatar.conn.transport.transport.setTcpNoDelay(1)
 
     def getPtyOwnership(self):
         ttyGid = os.stat(self.ptyTuple[2])[5]
-        uid = self.avatar.getUserGroupId()[0]
+        uid, gid = self.avatar.getUserGroupId()
         euid, egid = os.geteuid(), os.getegid()
         os.setegid(0)
         os.seteuid(0)
@@ -272,7 +273,7 @@ class SSHSessionForUnixConchUser:
         if self.pty:
             try:
                 self.pty.signalProcess('HUP')
-            except OSError:
+            except (OSError,ProcessExitedAlready):
                 pass
             self.pty.loseConnection()
             self.addUTMPEntry(0)
