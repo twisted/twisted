@@ -4,10 +4,14 @@
 Protocol for passing files between processes.
 """
 
+import os
 import sys
 import struct
+import socket
 
-from eunuchs.sendmsg import sendmsg
+sys.path.insert(0, "../../pahan/sendmsg")
+from sendmsg import sendmsg
+from eunuchs.recvmsg import recvmsg
 
 from twisted.internet import protocol
 from twisted.internet import unix
@@ -15,34 +19,66 @@ from twisted.python import log
 
 SCM_RIGHTS = 0x01
 
-class Port(unix.Port):
-    def sendmsg(self, data, flags=0, ancillary=()):
-        assert sendmsg(fd=self.fileno(), data=data, flags=flags, ancillary=ancillary) == len(data)
+class Server(unix.Server):
+    def sendFileDescriptors(self, fileno, data="Filler"):
+        """
+        @param fileno: An iterable of the file descriptors to pass.
+        """
+        payload = struct.pack("%di" % len(fileno), *fileno)
+        r = sendmsg(self.fileno(), data, 0, (socket.SOL_SOCKET, SCM_RIGHTS, payload))
+        print 'Sent', r
+        return r
 
-    def sendFileDescriptor(self, fileno):
-        s = struct.pack('!I', fileno)
-        fmt = '!III'
-        cmsg = struct.pack(fmt, struct.calcsize(fmt), socket.SOL_SOCKET, SCM_RIGHTS) + s
+
+class Port(unix.Port):
+    transport = Server
+
+
+class Client(unix.Client):
+    def doRead(self):
+        try:
+            msg, addr, _, ancillary = recvmsg(self.fileno())
+        except:
+            log.err()
+        else:
+            buf = ancillary[0][2]
+            fds = []
+            while buf:
+                fd, buf = buf[:4], buf[4:]
+                fds.append(struct.unpack("i", fd)[0])
+            try:
+                self.protocol.fileDescriptorsReceived(fds)
+            except:
+                log.err()
+        return unix.Client.doRead(self)
+
+class Connector(unix.Connector):
+    def _makeTransport(self):
+        return Client(self.address, self, self.reactor)
 
 class FileDescriptorSendingProtocol(protocol.Protocol):
     """
-    Protocol for sending and receiving file descriptors.
-    
     Must be used with L{Port} as the transport.
     """
 
-    typeToMethod = {
-        SCM_RIGHTS: 'SCM_RIGHTS',
-    }
+    def connectionMade(self):
+        files = [file(x) for x in os.listdir('.') if os.path.isfile(x)]
+        self.transport.sendFileDescriptors([f.fileno() for f in files])
 
-    def messageReceived(self, msg):
-        return getattr(self, 'msg_' + self.typeToMethod.get(msg.type, 'UNKNOWN'))(msg)
+class FileDescriptorReceivingProtocol(protocol.Protocol):
+    """
+    Must be used with L{Port} as the transport.
+    """
 
-    def msg_SCM_RIGHTS(self, msg):
-        print 'SCM_RIGHTS', repr(msg)
+    def dataReceived(self, data):
+        print 'Got some random data', repr(data)
 
-    def msg_UNKNOWN(self, msg):
-        print 'UNKNOWN', repr(msg)
+    def fileDescriptorsReceived(self, fds):
+        print 'Now I own', fds
+        print 'I am going to read them:'
+        for f in fds:
+            f = os.fdopen(f, 'r')
+            print repr(f.read(80))
 
 def main():
     log.startLogging(sys.stdout)
@@ -50,7 +86,12 @@ def main():
     from twisted.internet import reactor
     f = protocol.ServerFactory()
     f.protocol = FileDescriptorSendingProtocol
-    p = reactor.listenWith(Port, 'fd_control', f)
+    s = reactor.listenWith(Port, 'fd_control', f)
+    
+    f = protocol.ClientFactory()
+    f.protocol = FileDescriptorReceivingProtocol
+    c = reactor.connectWith(Connector, 'fd_control', f, 60, reactor=reactor)
+
     reactor.run()
 
 if __name__ == '__main__':
