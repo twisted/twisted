@@ -41,10 +41,20 @@ class Controller(resource.Resource):
 
     __implements__ = (interfaces.IController, resource.IResource)
 
-    def __init__(self, *args):
+    def __init__(self, m, inputhandlers=None):
         resource.Resource.__init__(self)
-        self.model = args[-1]
+        self.model = m
         self.subcontrollers = []
+        viewFactory = components.getAdapterClass(self.model.__class__, interfaces.IView, None)
+        if viewFactory is not None:
+            self.view = viewFactory(self.model, controller=self)
+            self.view.setController(self)
+        if inputhandlers is None:
+            self._inputhandlers = []
+        else:
+            self._inputhandlers = inputhandlers
+        self._valid = {}
+        self._invalid = {}
 
     def setView(self, view):
         self.view = view
@@ -62,14 +72,15 @@ class Controller(resource.Resource):
         be called to produce the Resource object to handle the next
         segment of the path.
         """
-        if not request.postpath:
+        if not name:
             method = "index"
         else:
-            method = request.postpath[0]
+            method = name
         f = getattr(self, "wchild_%s" % method, None)
         if f:
-            request.prepath.append(request.postpath.pop(0))
             return f(request)
+        elif name == '':
+            return self
         else:
             return resource.Resource.getChild(self, name, request)
 
@@ -79,13 +90,27 @@ class Controller(resource.Resource):
         the model. You can override me to perform more advanced
         template lookup logic.
         """
+        # Handle any inputhandlers that were passed in to the controller first
+        for ih in self._inputhandlers:
+            ih._parent = self
+            ih.handle(request)
+        return self.view.render(request, doneCallback=self.gatheredControllers, block=block)
 
-        self.setUp(request)
-        self.view = components.getAdapter(self.model, interfaces.IView, None)
-        self.view.setController(self)
-        for subcontroller in self.subcontrollers:
-            subcontroller.handle(request)
-        return self.view.render(request, block=block)
+    def gatheredControllers(self, v, d, request):
+        process = {}
+        for key, value in self._valid.items():
+            key.commit(request, None, value)
+            process[key.submodel] = value
+        self.process(request, **process)
+        from twisted.web.woven import view
+        view.doSendPage(v, d, request)
+        #return view.View.render(self, request, block=0)
+
+    def aggregateValid(self, request, input, data):
+        self._valid[input] = data
+        
+    def aggregateInvalid(self, request, input, data):
+        self._invalid[input] = data
 
     def process(self, request, **kwargs):
         log.msg("Processing results: ", kwargs)
@@ -98,6 +123,7 @@ class Controller(resource.Resource):
         By default, we don't do anything
         """
         return (None, None)
+
 
 WController = Controller
 

@@ -44,6 +44,9 @@ DEBUG = 0
 
 _RAISE = 1
 
+class Dummy:
+    pass
+
 class Widget(view.View):
     """
     A Widget wraps an object, its model, for display. The model can be a
@@ -69,8 +72,9 @@ class Widget(view.View):
 
 
     tagName = None
-    def __init__(self, model = None, submodel = None, setup = None):
+    def __init__(self, model = None, submodel = None, setup = None, controller = None):
         self.errorFactory = Error
+        self.controller = controller
         self.become = None
         self._reset()
         view.View.__init__(self, model)
@@ -281,7 +285,10 @@ class Widget(view.View):
         return self.node
 
     def modelChanged(self, payload):
-        request = payload['request']
+        request = payload.get('request', None)
+        if request is None:
+            request = Dummy()
+            request.d = document
         oldNode = self.node
         if payload.has_key(self.submodel):
             data = payload[self.submodel]
@@ -292,6 +299,7 @@ class Widget(view.View):
         mutator.d = request.d
         mutator.generate(request, oldNode)
         self.node = newNode
+        parent = self.parent; viewStack = self.viewStack; modelStack = self.modelStack; controllerStack = self.controllerStack
         self.recurseChildren(request, newNode)
         return newNode
 
@@ -355,20 +363,6 @@ class Widget(view.View):
 wvfactory_Widget = viewFactory(Widget)
 
 
-class WidgetNodeMutator(template.NodeMutator):
-    """A WidgetNodeMutator replaces the node that is passed into generate
-    with the result of generating the Widget it adapts.
-    """
-    def generate(self, request, node):
-        newNode = self.data.generate(request, node)
-        if isinstance(newNode, defer.Deferred):
-            return newNode
-        nodeMutator = template.NodeNodeMutator(newNode)
-        return nodeMutator.generate(request, node)
-
-components.registerAdapter(WidgetNodeMutator, Widget, template.INodeMutator)
-
-
 class DefaultWidget(Widget):
     def generate(self, request, node):
         """
@@ -387,6 +381,11 @@ class DefaultWidget(Widget):
             return gen
         return node
 
+    def modelChanged(self, payload):
+        """We're not concerned if the model has changed.
+        """
+        pass
+
 wvfactory_DefaultWidget = viewFactory(DefaultWidget)
 wvfactory_None = viewFactory(DefaultWidget)
 
@@ -395,7 +394,7 @@ class Text(Widget):
     """
     A simple Widget that renders some text.
     """
-    def __init__(self, text, raw=0, clear=1):
+    def __init__(self, text, raw=0, clear=1, *args, **kwargs):
         """
         @param text: The text to render.
         @type text: A string or L{model.Model}.
@@ -405,9 +404,9 @@ class Text(Widget):
         self.raw = raw
         self.clear = clear
         if isinstance(text, model.Model):
-            Widget.__init__(self, text)
+            Widget.__init__(self, text, *args, **kwargs)
         else:
-            Widget.__init__(self, model.Model())
+            Widget.__init__(self, model.Model(), *args, **kwargs)
         self.text = text
 
     def generateDOM(self, request, node):
@@ -436,9 +435,11 @@ class Image(Text):
     A simple Widget that creates an `img' tag.
     """
     tagName = 'img'
+    border = '0'
     def generateDOM(self, request, node):
         #`self.text' is lame, perhaps there should be a DataWidget that Text
         #and Image both subclass.
+        node.setAttribute('border', self.border)
         if isinstance(self.text, model.Model):
             data = self.getData()
         else:
@@ -452,8 +453,8 @@ wvfactory_Image = viewFactory(Image)
 
 class Error(Widget):
     tagName = 'span'
-    def __init__(self, model, message=""):
-        Widget.__init__(self, model)
+    def __init__(self, model, message="", *args, **kwargs):
+        Widget.__init__(self, model, *args, **kwargs)
         self.message = message
 
     def generateDOM(self, request, node):
@@ -624,7 +625,7 @@ def appendModel(newNode, modelName):
     if curModel is None:
         newModel = str(modelName)
     else:
-        newModel = curModel + '/' + str(modelName)
+        newModel = str(modelName) + '/' + curModel
     newNode.setAttribute('model', newModel)
 
 
@@ -658,6 +659,7 @@ class List(Widget):
 
     """
     tagName = None
+    defaultItemView = "DefaultWidget"
     def generateDOM(self, request, node):
         node = Widget.generateDOM(self, request, node)
         listHeader = self.getPattern('listHeader', None)
@@ -699,7 +701,7 @@ class List(Widget):
 
             appendModel(newNode, itemNum)
             if not newNode.getAttribute("view"):
-                newNode.setAttribute("view", "DefaultWidget")
+                newNode.setAttribute("view", self.defaultItemView)
             parentNode.appendChild(newNode)
 
 wvfactory_List = viewFactory(List)
@@ -746,8 +748,8 @@ wvfactory_KeyedList = viewFactory(KeyedList)
 
 
 class ColumnList(List):
-    def __init__(self, model, columns=1, start=0, end=0):
-        List.__init__(self, model)
+    def __init__(self, model, columns=1, start=0, end=0, *args, **kwargs):
+        List.__init__(self, model, *args, **kwargs)
         self.columns = columns
         self.start = start
         self.end = end

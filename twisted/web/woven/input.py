@@ -48,6 +48,16 @@ class InputHandler(controller.Controller):
     """
     invalidErrorText = "Error!"
 
+    def __init__(self, model, parent=None, check=None, commit = None, invalidErrorText = None, submodel=None):
+        controller.Controller.__init__(self, model)
+        self._check = check
+        self._commit = commit
+        self._parent = parent
+        if invalidErrorText is not None:
+            self.invalidErrorText = invalidErrorText
+        if submodel is not None:
+            self.submodel = submodel
+
     def getInput(self, request):
         """
         Return the data associated with this handler from the request, if any.
@@ -80,21 +90,38 @@ class InputHandler(controller.Controller):
         Check whether the input in the request is valid for this handler
         and return a boolean indicating validity.
         """
-        raise NotImplementedError
+        if self._check is None:
+            raise NotImplementedError
+        return self._check(data)
 
     def handleValid(self, request, data):
         """
         It has been determined that the input for this handler is valid;
         however, that does not mean the entire form is valid.
         """
-        pass
+        self._parent.aggregateValid(request, self, data)
 
+    def aggregateValid(self, request, inputhandler, data):
+        """By default we just pass the method calls all the way up to the root
+        Controller. However, an intelligent InputHandler could override this
+        and implement a state machine that waits for all data to be collected
+        and then fires.
+        """
+        self._parent.aggregateValid(request, self, data)
+ 
     def handleInvalid(self, request, data):
         """
         Once it has been determined that the input is invalid, we should
         tell our view to report this fact to the user.
         """
+        self._parent.aggregateInvalid(request, self, data)
         self.view.setError(request, self.invalidErrorText)
+
+    def aggregateInvalid(self, request, inputhandler, data):
+        """By default we just pass this method call all the way up to the root
+        Controller.
+        """
+        self._parent.aggregateInvalid(request, self, data)
 
     _getMyModel = utils._getModel
 
@@ -103,12 +130,14 @@ class InputHandler(controller.Controller):
         It has been determined that the input for the entire form is completely
         valid; it is now safe for all handlers to commit changes to the model.
         """
-        if not self.submodel or not self.model: return
         data = str(data)
-        assert ';' not in self.submodel, "Semicolon is not legal in handler ids."
-
+        print "commit got called.", self.__dict__
         if data != self.view.getData():
-            self.model.setData(data)
+            if self._commit is None:
+                self.model.setData(data)
+            else:
+                print "committing in inputhandler"
+                self._commit(data)
             self.model.notify({'request': request, self.submodel: data})
 
 
@@ -159,9 +188,8 @@ class Integer(SingleValue):
             return 0
 
     def handleInvalid(self, request, data):
-        if data is not None:
-            self.view.setError(request, "%s is not an integer."
-                            " Please enter an integer." % data)
+        self.invalidErrorText = "%s is not an integer. Please enter an integer." % data
+        SingleValue.handleInvalid(self, request, data)
 
 wcfactory_Integer = controllerFactory(Integer)
 
@@ -179,9 +207,8 @@ class Float(SingleValue):
             return 0
 
     def handleInvalid(self, request, data):
-        if data is not None:
-            self.view.setError(request, "%s is not an float."
-                                " Please enter a float." % data)
+        self.invalidErrorText = "%s is not an float. Please enter a float." % data
+        SingleValue.handleInvalid(self, request, data)
 
 wcfactory_Float = controllerFactory(Float)
 
@@ -231,6 +258,7 @@ class NewObject(SingleValue):
         """
         The user has entered an invalid project name.
         """
-        self.view.setError(request, self.errorReason)
+        self.invalidErrorText = self.errorReason
+        SingleValue.handleInvalid(self, request, data)
 
 wcfactory_NewObject = controllerFactory(NewObject)

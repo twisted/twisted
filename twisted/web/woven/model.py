@@ -89,12 +89,16 @@ class Model:
             ref = view()
             if ref is not None:
                 retVal.append((ref, ref.modelChanged(changed)))
+            else:
+                self.views.remove(view)
         for key, value in self.subviews.items():
             if value.wantsAllNotifications or changed.has_key(key):
                 for item in value:
                     ref = item()
                     if ref is not None:
                         retVal.append((ref, ref.modelChanged(changed)))
+                    else:
+                        self.views.remove(view)
         return retVal
 
     def __eq__(self, other):

@@ -145,6 +145,8 @@ class ChangeColor(input.Anything):
     def commit(self, request, node, data):
         session = request.getSession()
         session.color = data
+        self.model.setData(data)
+        self.model.notify({'request': request})
 
 
 class CDemo(controller.Controller):

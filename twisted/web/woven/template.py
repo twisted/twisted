@@ -177,7 +177,7 @@ class DOMTemplate(Resource):
     _cachedTemplate = None
     __implements__ = (Resource.__implements__)
 
-    def __init__(self, model = None, templateFile = None):
+    def __init__(self, templateFile = None):
         Resource.__init__(self)
         if templateFile:
             self.templateFile = templateFile
@@ -218,7 +218,9 @@ class DOMTemplate(Resource):
         for speed.
         """
         if not self.templateDirectory:
-            self.templateDirectory = os.path.split(sys.modules[self.__module__].__file__)[0]
+            mod = sys.modules[self.__module__]
+            if hasattr(mod, '__file__'):
+                self.templateDirectory = os.path.split(mod.__file__)[0]
         # First see if templateDirectory + templateFile is a file
         templatePath = os.path.join(self.templateDirectory, self.templateFile)
         if not os.path.exists(templatePath):
