@@ -97,7 +97,10 @@ class ConnectedSocket(log.Logger, styles.Ephemeral, object):
                 self.socket.shutdown(1)
 
     def connectionLost(self, reason):
-#        log.msg("connectionLost called with reason", reason)
+        log.msg("connectionLost called with reason", reason, "for socket", id(self))
+        import traceback
+        for i in traceback.format_stack():
+            log.msg(i[:-1])
         self.state = "disconnected"
         protocol = self.protocol
         del self.protocol

@@ -1,4 +1,4 @@
-import struct, socket, os
+import struct, socket, os, errno
 
 from twisted.python import failure
 
@@ -7,6 +7,9 @@ import error
 
 SO_UPDATE_ACCEPT_CONTEXT = 0x700B
 SO_UPDATE_CONNECT_CONTEXT = 0x7010
+
+ERROR_CONNECTION_REFUSED = 1225
+winerrcodeMapping = {ERROR_CONNECTION_REFUSED: errno.WSAECONNREFUSED}
 
 class OverlappedOp:
     def __init__(self, transport):
@@ -86,10 +89,14 @@ class AcceptExOp(OverlappedOp):
 class ConnectExOp(OverlappedOp):
     def ovDone(self, ret, bytes, (handle, sock)):
         if ret:
-            self.transport.connectErr(failure.Failure(error.ConnectError)) # finish the mapping in error.py
+            print "ConnectExOp err", ret
+            self.transport.connectErr(failure.Failure(error.errnoMapping.get(winerrcodeMapping.get(ret), error.ConnectError)())) # finish the mapping in error.py
         else:
             if have_connectex:
-                sock.setsockopt(socket.SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, "")
+                try:
+                    sock.setsockopt(socket.SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, "")
+                except socket.error, se:
+                    self.transport.connectErr(failure.Failure(error.ConnectError()))
             self.transport.connectDone()
 
     def threadedDone(self, _):

@@ -1,7 +1,7 @@
 from sets import Set
 import socket
 
-from twisted.internet import interfaces
+from twisted.internet import interfaces, address
 from twisted.persisted import styles
 from twisted.python import log, reflect
 
@@ -52,7 +52,7 @@ class ListeningPort(log.Logger, styles.Ephemeral, object):
         self.accept_op.initiateOp(self.socket.fileno())
 
     def handle_listening_acceptDone(self, sock, addr):
-        protocol = self.factory.buildProtocol(addr)
+        protocol = self.factory.buildProtocol(self.buildAddress(addr, server = True))
         if protocol is None:
             sock.close()
         else:
