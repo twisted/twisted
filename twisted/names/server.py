@@ -126,7 +126,7 @@ class DNSServerFactory(protocol.ServerFactory):
 
     def recursiveLookupFailed(self, failure, message, protocol, address):
         message.rCode = dns.ESERVER
-        self.sendReply(protocol, message, protocol, address)
+        self.sendReply(protocol, message, address)
         if self.verbose:
             log.msg("Recursive lookup failed")
 
