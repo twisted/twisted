@@ -239,20 +239,39 @@ class Options(usage.Options):
                             if module not in self['modules']:
                                 self['modules'].append(module)
 
+
+    def _deprecateOption(self, optName, alt):
+        msg = ("the --%s option is deprecated, "
+               "please just specify the %s on the command line "
+               "and trial will do the right thing") % (optName, alt)
+        warnings.warn(msg)
+
     def opt_module(self, module):
-        "Module to test"
+        "Module to test (DEPRECATED)"
+        self._deprecateOption('module', "fully qualified module name")
         self._tryNamedAny(module)
 
     def opt_package(self, package):
-        "Package to test"
+        "Package to test (DEPRECATED)"
+        self._deprecateOption('package', "fully qualified package name")
         self._tryNamedAny(package)
 
     def opt_testcase(self, case):
-        "TestCase to test"
+        "TestCase to test (DEPRECATED)"
+        self._deprecateOption('testcase', "fully qualified TestCase name")
         self._tryNamedAny(case)
 
     def opt_file(self, filename):
-        "Filename of module to test"
+        "Filename of module to test (DEPRECATED)"
+        self._deprecateOption('file', "path to your test file")
+        self._handleFile(filename)
+
+    def opt_method(self, method):
+        "Method to test (DEPRECATED)"
+        self._deprecateOption('method', "fully qualified method name")
+        self._tryNamedAny(method)
+
+    def _handleFile(self, filename):
         m = None
         if osp.isfile(filename):
             try:
@@ -269,10 +288,6 @@ class Options(usage.Options):
                 
         self['modules'].append(m)
 
-
-    def opt_method(self, method):
-        "Method to test"
-        self._tryNamedAny(method)
 
     def opt_spew(self):
         """Print an insanely verbose log of everything that happens.  Useful
@@ -401,7 +416,7 @@ class Options(usage.Options):
             elif arg.endswith('.py'):
                 _dbg("*Probably* a file.")
                 if osp.exists(arg):
-                    self.opt_file(arg)
+                    self._handleFile(arg)
                     continue
 
             elif osp.isdir(arg):
