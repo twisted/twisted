@@ -41,20 +41,20 @@ class OverlappedOp(defer.Deferred):
 #        else:
         if ret:
             if ret in (error.ERROR_INVALID_USER_BUFFER, error.ERROR_NOT_ENOUGH_MEMORY):
-                print "%s errbacks NonFatalException" % (self,)
+#                print "%s errbacks NonFatalException" % (self,)
                 self.errback(error.NonFatalException())
             elif ret == error.ERROR_OPERATION_ABORTED:
-                print "%s errbacks OperationCancelledException" % (self,)
+#                print "%s errbacks OperationCancelledException" % (self,)
                 self.errback(error.OperationCancelledException())
             elif ret == error.ERROR_NETNAME_DELETED:
-                print "%s errbacks HandleClosedException" % (self,)
+#                print "%s errbacks HandleClosedException" % (self,)
                 self.errback(error.HandleClosedException())
             else:
-                print "%s errbacks UnknownException" % (self,)
+#                print "%s errbacks UnknownException" % (self,)
                 self.errback(error.UnknownException())
             return True
         elif fIo and bytes == 0:
-                print "%s errbacks HandleClosedException" % (self,)
+#                print "%s errbacks HandleClosedException" % (self,)
                 self.errback(error.HandleClosedException())
                 return True
         else:
@@ -69,7 +69,7 @@ class OverlappedOp(defer.Deferred):
 
 class ReadFileOp(OverlappedOp):
     def ovDone(self, ret, bytes):
-        print "ReadFileOp.ovDone(%(ret)s, %(bytes)s)" % locals()
+#        print "ReadFileOp.ovDone(%(ret)s, %(bytes)s)" % locals()
         if not self.handleError(ret, bytes):
             self.callback((bytes, {}))
         self.cleanUp()
@@ -78,16 +78,16 @@ class ReadFileOp(OverlappedOp):
         self.buffer = buffer # save a reference so that things don't blow up
         self.handle = handle
         try:
-            print "in ReadFileOp.initiateOp, calling issueReadFileOp with (%(handle)r)" % locals()
+#            print "in ReadFileOp.initiateOp, calling issueReadFileOp with (%(handle)r)" % locals()
             (ret, bytes) = self.reactor.issueReadFile(handle, buffer, self.ovDone)
-            print "in ReadFileOp.initiateOp, issueReadFileOp returned (%(ret)s, %(bytes)s), handle %(handle)s" % locals()
+#            print "in ReadFileOp.initiateOp, issueReadFileOp returned (%(ret)s, %(bytes)s), handle %(handle)s" % locals()
         except Exception:
             self.cleanUp()
             raise
 
 class WriteFileOp(OverlappedOp):
     def ovDone(self, ret, bytes):
-        print "WriteFileOp.ovDone(%(ret)s, %(bytes)s)" % locals()
+#        print "WriteFileOp.ovDone(%(ret)s, %(bytes)s)" % locals()
         if not self.handleError(ret, bytes):
             self.callback(bytes)
         self.cleanUp()
@@ -96,9 +96,9 @@ class WriteFileOp(OverlappedOp):
         self.buffer = buffer # save a reference so that things don't blow up
         self.handle = handle
         try:
-            print "in WriteFileOp.initiateOp, calling issueWriteFileOp with (%(handle)r)" % locals()
+#            print "in WriteFileOp.initiateOp, calling issueWriteFileOp with (%(handle)r)" % locals()
             (ret, bytes) = self.reactor.issueWriteFile(handle, buffer, self.ovDone)
-            print "in WriteFileOp.initiateOp, issueWriteFileOp returned (%(ret)s, %(bytes)s), handle %(handle)s" % locals()
+#            print "in WriteFileOp.initiateOp, issueWriteFileOp returned (%(ret)s, %(bytes)s), handle %(handle)s" % locals()
         except Exception:
             self.cleanUp()
             raise
@@ -126,11 +126,11 @@ class AcceptExOp(OverlappedOp):
     acc_sock = None
 
     def ovDone(self, ret, bytes):
-        print "AcceptExOp.ovDone(%(ret)s, %(bytes)s)" % locals()
-        print "    self.acc_sock.fileno() %s self.handle %s" % (self.acc_sock.fileno(), self.handle)
+#        print "AcceptExOp.ovDone(%(ret)s, %(bytes)s)" % locals()
+#        print "    self.acc_sock.fileno() %s self.handle %s" % (self.acc_sock.fileno(), self.handle)
         if not self.handleError(ret, bytes, False):
             self.acc_sock.setsockopt(SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, struct.pack("I", self.handle))
-            print "AcceptExOp.ovDone callbacking with self.acc_sock %s, peername %s" % \
+#            print "AcceptExOp.ovDone callbacking with self.acc_sock %s, peername %s" % \
                     (self.acc_sock._sock, self.acc_sock.getpeername())
             self.callback((self.acc_sock, self.acc_sock.getpeername()))
         self.cleanUp()
@@ -146,14 +146,14 @@ class AcceptExOp(OverlappedOp):
             self.acc_sock = socket(family, type, protocol)
             self.buffer = self.reactor.AllocateReadBuffer(max_addr*2 + 32)
             (ret, bytes) = self.reactor.issueAcceptEx(self.handle, self.acc_sock.fileno(), self.ovDone, self.buffer)
-            print "in AcceptExOp.initiateOp, issueAcceptEx returned (%(ret)s, %(bytes)s)" % locals()
+#            print "in AcceptExOp.initiateOp, issueAcceptEx returned (%(ret)s, %(bytes)s)" % locals()
         except Exception:
             self.cleanUp()
             raise
 
 class ConnectExOp(OverlappedOp):
     def ovDone(self, ret, bytes):
-        print "ConnectExOp.ovDone(%(ret)s, %(bytes)s)" % locals()
+#        print "ConnectExOp.ovDone(%(ret)s, %(bytes)s)" % locals()
         if not self.handleError(ret, bytes, False):
             self.sock.setsockopt(SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, "")
             self.callback(None)

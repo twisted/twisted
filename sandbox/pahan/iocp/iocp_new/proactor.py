@@ -42,6 +42,17 @@ class Proactor(iocpcore, default.PosixReactorBase):
         p.startListening()
         return p
 
+    def connectTCP(self, host, port, factory, timeout=30, bindAddress=None):
+        c = tcp.Connector((host, port), factory, timeout, bindAddress)
+        c.connect()
+        return c
+    
+    def disconnectAll(self):
+        pass
+
+    def removeAll(self):
+        pass
+
 def install():
     p = Proactor()
     from twisted.internet import main

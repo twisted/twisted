@@ -14,15 +14,15 @@ typedef struct {
 
 typedef struct {
     PyObject_HEAD
-    PyObject *cur_ops;
+//    PyObject *cur_ops;
     HANDLE iocp;
 } iocpcore;
 
 static void
 iocpcore_dealloc(iocpcore* self)
 {
-    PyDict_Clear(self->cur_ops);
-    Py_DECREF(self->cur_ops);
+//    PyDict_Clear(self->cur_ops);
+//    Py_DECREF(self->cur_ops);
     CloseHandle(self->iocp);
     self->ob_type->tp_free((PyObject*)self);
 }
@@ -39,33 +39,37 @@ iocpcore_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
             Py_DECREF(self);
             return PyErr_SetFromWindowsErr(0);
         }
-        self->cur_ops = PyDict_New();
-        if(!self->cur_ops) {
-            CloseHandle(self->iocp);
-            Py_DECREF(self);
-            return NULL;
-        }
+//        self->cur_ops = PyDict_New();
+//        if(!self->cur_ops) {
+//            CloseHandle(self->iocp);
+//            Py_DECREF(self);
+//            return NULL;
+//        }
     }
     return (PyObject *)self;
 }
 
 static PyObject *iocpcore_doIteration(iocpcore* self, PyObject *args) {
     long timeout;
+    double ftimeout;
     PyObject *tm, *ret, *object;
     DWORD bytes;
     unsigned long key;
     MyOVERLAPPED *ov;
     int res, err;
-    if(!PyArg_ParseTuple(args, "O", &tm)) {
-        return NULL;
-    }
-    if(tm == Py_None) {
-        timeout = INFINITE;
-    } else if(PyFloat_Check(tm)) {
-        timeout = (int)(PyFloat_AsDouble(tm) * 1000);
+    if(!PyArg_ParseTuple(args, "d", &ftimeout)) {
+        PyErr_Clear();
+        if(!PyArg_ParseTuple(args, "O", &tm)) {
+            return NULL;
+        }
+        if(tm == Py_None) {
+            timeout = INFINITE;
+        } else {
+            PyErr_SetString(PyExc_TypeError, "Wrong timeout argument");
+            return NULL;
+        }
     } else {
-        PyErr_SetString(PyExc_TypeError, "Wrong type for timeout parameter");
-        return NULL;
+        timeout = (int)(ftimeout * 1000);
     }
     Py_BEGIN_ALLOW_THREADS;
     res = GetQueuedCompletionStatus(self->iocp, &bytes, &key, (OVERLAPPED**)&ov, timeout);
@@ -92,9 +96,11 @@ static PyObject *iocpcore_doIteration(iocpcore* self, PyObject *args) {
         if(res) {
             err = 0;
         }
-        printf("calling callback with err %d, bytes %d\n", err, bytes);
+//        printf("calling callback with err %d, bytes %d\n", err, bytes);
         ret = PyObject_CallFunction(object, "ll", err, bytes);
         if(!ret) {
+            Py_DECREF(object);
+            PyMem_Free(ov);
             return NULL;
         }
         Py_DECREF(ret);
@@ -132,12 +138,12 @@ static PyObject *iocpcore_WriteFile(iocpcore* self, PyObject *args) {
     Py_INCREF(object);
     ov->callback = object;
     CreateIoCompletionPort(handle, self->iocp, 0, 1);
-    printf("calling WriteFile(%d, 0x%p, %d, 0x%p, 0x%p)\n", handle, buf, len, &bytes, ov);
+//    printf("calling WriteFile(%d, 0x%p, %d, 0x%p, 0x%p)\n", handle, buf, len, &bytes, ov);
     Py_BEGIN_ALLOW_THREADS;
     res = WriteFile(handle, buf, len, &bytes, (OVERLAPPED *)ov);
     Py_END_ALLOW_THREADS;
     err = GetLastError();
-    printf("    wf returned %d, err %d\n", res, err);
+//    printf("    wf returned %d, err %d\n", res, err);
     if(!res && err != ERROR_IO_PENDING) {
         return PyErr_SetFromWindowsErr(err);
     }
@@ -175,12 +181,12 @@ static PyObject *iocpcore_ReadFile(iocpcore* self, PyObject *args) {
     Py_INCREF(object);
     ov->callback = object;
     CreateIoCompletionPort(handle, self->iocp, 0, 1);
-    printf("calling ReadFile(%d, 0x%p, %d, 0x%p, 0x%p)\n", handle, buf, len, &bytes, ov);
+//    printf("calling ReadFile(%d, 0x%p, %d, 0x%p, 0x%p)\n", handle, buf, len, &bytes, ov);
     Py_BEGIN_ALLOW_THREADS;
     res = ReadFile(handle, buf, len, &bytes, (OVERLAPPED *)ov);
     Py_END_ALLOW_THREADS;
     err = GetLastError();
-    printf("    rf returned %d, err %d\n", res, err);
+//    printf("    rf returned %d, err %d\n", res, err);
     if(!res && err != ERROR_IO_PENDING) {
         return PyErr_SetFromWindowsErr(err);
     }
@@ -345,6 +351,7 @@ static int makesockaddr(int sock_family, PyObject *args, struct sockaddr **addr_
             PyErr_SetString(PyExc_ValueError, "Can't parse ip address string");
             return 0;
         }
+//        printf("makesockaddr setting addr, %lu, %d, %hu\n", result, AF_INET, htons((short)port));
         addr->sin_addr.s_addr = result;
         addr->sin_family = AF_INET;
         addr->sin_port = htons((short)port);
@@ -383,11 +390,13 @@ static PyObject *iocpcore_ConnectEx(iocpcore* self, PyObject *args) {
     Py_INCREF(object);
     ov->callback = object;
     CreateIoCompletionPort((HANDLE)handle, self->iocp, 0, 1);
+//    printf("calling ConnectEx(%d, 0x%p, %d, 0x%p)\n", handle, addr, addrlen, ov);
     Py_BEGIN_ALLOW_THREADS;
     res = gConnectEx(handle, addr, addrlen, NULL, 0, NULL, (OVERLAPPED *)ov);
     Py_END_ALLOW_THREADS;
     PyMem_Free(addr);
     err = WSAGetLastError();
+//    printf("    ce returned %d, err %d\n", res, err);
     if(!res && err != ERROR_IO_PENDING) {
         return PyErr_SetFromWindowsErr(err);
     }
@@ -413,10 +422,10 @@ static PyMethodDef iocpcore_methods[] = {
      "Issue an overlapped WriteFile operation"},
     {"issueReadFile", (PyCFunction)iocpcore_ReadFile, METH_VARARGS,
      "Issue an overlapped ReadFile operation"},
-    {"issueWSARecv", (PyCFunction)iocpcore_WSARecv, METH_VARARGS,
-     "Issue an overlapped WSARecv operation"},
-    {"issueWSASend", (PyCFunction)iocpcore_WSASend, METH_VARARGS,
-     "Issue an overlapped WSASend operation"},
+//    {"issueWSARecv", (PyCFunction)iocpcore_WSARecv, METH_VARARGS,
+//     "Issue an overlapped WSARecv operation"},
+//    {"issueWSASend", (PyCFunction)iocpcore_WSASend, METH_VARARGS,
+//     "Issue an overlapped WSASend operation"},
     {"issueAcceptEx", (PyCFunction)iocpcore_AcceptEx, METH_VARARGS,
      "Issue an overlapped AcceptEx operation"},
     {"issueConnectEx", (PyCFunction)iocpcore_ConnectEx, METH_VARARGS,
