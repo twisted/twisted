@@ -46,7 +46,7 @@ class ServerOptions(usage.Options):
 
     optFlags = [['nodaemon','n',  "don't daemonize"],
                 ['profile','p',   "run profiler"],
-                ['debug', 'b',    "run the application in the Python Debugger (implies nodaemon)"],
+                ['debug', 'b',    "run the application in the Python Debugger (implies nodaemon), sending SIGINT will drop into debugger"],
                 ['quiet','q',     "be a little more quiet"],
                 ['no_save','o',   "do not save state on shutdown"],
                 ['euid', '',     "Set only effective user-id rather than real user-id. "
@@ -180,6 +180,12 @@ def loadApplication(config, passphrase):
     else:
         data = open(filename, mode).read()
         return decode(filename, data)
+
+
+def debugSignalHandler(*args):
+    """Break into debugger."""
+    import pdb
+    pdb.set_trace()
 
 
 def run():
@@ -358,6 +364,9 @@ def run():
             import pdb
             sys.stdout = oldstdout
             sys.stderr = oldstderr
+            if os.name == "posix":
+                import signal
+                signal.signal(signal.SIGINT, debugSignalHandler)
             pdb.run("application.run(%d)" % (not config.opts['no_save']),
                     globals(), locals())
         else:

@@ -1,3 +1,8 @@
+2002-10-04  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
+
+	* twisd: when running in debug mode (-b), sending a SIGINT signal
+	to the process will drop into the debugger prompt.
+
 2002-10-01  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
 
 	* twisted/protocols/http.py: Fixed many bugs in protocol parsing,
