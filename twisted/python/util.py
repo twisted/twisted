@@ -70,14 +70,40 @@ def sibpath(path, sibling):
     return os.path.join(os.path.dirname(os.path.abspath(path)), sibling)
 
 
-def getPassword(prompt = ''):
-    import getpass
-    while 1:
-        p = getpass.getpass(prompt)
-        while p != getpass.getpass('Verify: '):
-            print "Passwords don't match, starting over"
-            p = getpass.getpass(prompt)
-        return p
+def getPassword(prompt = '', confirm = 0):
+    """Obtain a password by prompting or from stdin.
+
+    If stdin is a terminal, prompt for a new password, and confirm (if
+    C{confirm} is true) by asking again to make sure the user typed the same
+    thing, as keystrokes will not be echoed.
+
+    If stdin is not a terminal, read in a line and use it as the password,
+    less the trailing newline, if any.
+
+    @returns: C{str}
+    """
+    # If standard input is a terminal, I prompt for a password and
+    # confirm it.  Otherwise, I use the first line from standard
+    # input, stripping off a trailing newline if there is one.
+    if os.isatty(sys.stdin.fileno()):
+        gotit = 0
+        while not gotit:
+            try1 = getpass.getpass(prompt)
+            if not confirm:
+                return try1
+            try2 = getpass.getpass("Confirm: ")
+            if try1 == try2:
+                gotit = 1
+            else:
+                sys.stderr.write("Passwords don't match.\n")
+        else:
+            password = try1
+    else:
+        password = sys.stdin.readline()
+        if password[-1] == '\n':
+            password = password[:-1]
+    return password
+
 
 def dict(*a, **k):
     import warnings

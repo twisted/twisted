@@ -68,7 +68,6 @@ except ImportError:
             elif elide == 1:
                 i = parts.index('')
                 parts[i:i+1] = ['0'] * (9 - len(parts))
-            print parts
             parts = [int(x, 16) for x in parts]
             return struct.pack('!HHHHHHHH', *parts)
         else:
