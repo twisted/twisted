@@ -86,9 +86,18 @@ pre
 }
 .py-listing 
 {
+  margin: 1ex;
   border: thin solid black;
   background-color: #eee;
 }
+
+.py-listing pre
+{
+  margin: 0px;
+  border: none;
+  border-bottom: thin solid black;
+}
+
 .py-listing .python 
 {
   margin-top: 0;
@@ -108,7 +117,10 @@ pre
 .py-caption
 {
   text-align: center;
- }
+  padding-top: 0.5em;
+  padding-bottom: 0.5em;
+}
+
 .py-filename
 {
   font-style: italic;
