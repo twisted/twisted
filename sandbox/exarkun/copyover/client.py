@@ -1,4 +1,7 @@
+import os
 import sys
+import struct
+import socket
 
 try:
     import cPickle as pickle
@@ -56,7 +59,6 @@ class Connector(unix.Connector):
 
 class UNIXClient(internet._AbstractClient):
     def _getConnection(self):
-        print 'get connection'
         from twisted.internet import reactor
         return reactor.connectWith(Connector, *self.args, **self.kwargs)
 
@@ -67,8 +69,8 @@ class _FileDescriptorUnpickler:
 
     def persistent_load(self, id):
         r = None
-        id = int(id)
         kname, mode, id = id.split(":")
+        id = int(id)
         if id in self.fdmemo:
             return self.fdmemo[id]
         if kname == "file":
@@ -89,19 +91,16 @@ class FileDescriptorReceivingProtocol(protocol.Protocol):
     """
     
     def __init__(self, id, d):
-        print 'hi'
         self.id = id
         self.d = d
 
     def connectionMade(self):
-        print 'fie'
         self.transport.write("%s\r\n" % (self.id,))
 
     def dataReceived(self, data):
         print 'Got some random data', repr(data)
 
     def fileDescriptorsReceived(self, fds):
-        print 'guy'
         self.d.callback(fds)
         self.transport.loseConnection()
 
@@ -119,14 +118,16 @@ class FileDescriptorRequestFactory(protocol.ClientFactory):
         return p
 
 class UserStateReceiver(pb.Referenceable):
+    def stateReceived(self, state):
+        print state
+
     def unproxyFileDescriptors(self, fds, state):
-        print 'unproxying'
         s = StringIO.StringIO(state)
         p = FileDescriptorUnpickler(s, fds)
-        return p.load()
+        self.stateReceived(p.load())
+        return True
 
     def remote_takeUser(self, id, state, path):
-        print 'takeUser', id, state, path
         d = defer.Deferred()
         f = FileDescriptorRequestFactory(id, d)
         client = UNIXClient(path, f, 60).startService()

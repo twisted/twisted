@@ -58,7 +58,9 @@ class _FileDescriptorPickler:
         self.fdmap = fdmap
 
     def __id(self, fileno):
-        self.fdmap[len(self.fdmap)] = fileno
+        id = len(self.fdmap)
+        self.fdmap[id] = fileno
+        return id
 
     def persistent_id(self, obj):
         if isinstance(obj, FileType):
@@ -158,7 +160,7 @@ class UserStateSender(pb.Avatar):
         s = StringIO.StringIO()
         p = FileDescriptorPickler(s, d)
         p.dump(state)
-        s = s.getvalue()
+        state = s.getvalue()
         self.id += 1
         self.idmap[self.id] = d
         return self._sendUserStateWithID(self.id, state, opj(self.dir, self.path))
@@ -176,7 +178,9 @@ class Realm:
         return pb.IPerspective, a, a.logout
 
 def sendSomeState(avatar):
-    avatar.sendUserState([1, 2, 3])
+    global f
+    f = [file("client.py"), file("server.py")]
+    avatar.sendUserState(f)
 
 def main():
     log.startLogging(sys.stdout)
