@@ -42,7 +42,7 @@ Test coverage needs to be better.
     <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-__version__ = '$Revision: 1.61 $'[11:-2]
+__version__ = '$Revision: 1.62 $'[11:-2]
 
 from twisted.internet import reactor, protocol
 from twisted.persisted import styles
@@ -197,6 +197,13 @@ class IRCClient(basic.LineReceiver):
     this class also contains reasonable implementations of many common
     CTCP methods.
 
+    TODO
+    ====
+     - Limit the length of messages sent (because the IRC server probably
+       does).
+     - Add flood protection/rate limiting for my CTCP replies.
+     - NickServ cooperation.  (a mix-in?)
+
     @ivar nickname: Nickname the client will use.
     @ivar password: Password used to log on to the server.  May be C{None}.
     @ivar realname: Supplied to the server during login as the \"Real name\"
@@ -204,8 +211,8 @@ class IRCClient(basic.LineReceiver):
 
     @ivar userinfo: Sent in reply to a X{USERINFO} CTCP query.  If C{None}, no
         USERINFO reply will be sent.
-            \"This is used to transmit a string which is settable by
-            the user (and never should be set by the client).\"
+        \"This is used to transmit a string which is settable by
+        the user (and never should be set by the client).\"
     @ivar fingerReply: Sent in reply to a X{FINGER} CTCP query.  If C{None}, no
         FINGER reply will be sent.
     @type fingerReply: Callable or String
@@ -221,13 +228,6 @@ class IRCClient(basic.LineReceiver):
     @ivar lineRate: Minimum delay between lines sent to the server.  If
         C{None}, no delay will be imposed.
     @type lineRate: Number of Seconds.
-
-    TODO
-    ====
-     - Limit the length of messages sent (because the IRC server probably
-       does).
-     - Add flood protection/rate limiting for my CTCP replies.
-     - NickServ cooperation.  (a mix-in?)
     """
 
     nickname = 'irc'
@@ -306,7 +306,7 @@ class IRCClient(basic.LineReceiver):
 
         By default, this is equivalent to IRCClient.privmsg, but if your
         client makes any automated replies, you must override this!
-        From the RFC:
+        From the RFC::
 
             The difference between NOTICE and PRIVMSG is that
             automatic replies MUST NEVER be sent in response to a
@@ -371,7 +371,7 @@ class IRCClient(basic.LineReceiver):
         """I recieved a message-of-the-day banner from the server.
 
         motd is a list of strings, where each string was sent as a seperate
-        message from the server. To display, you might want to use
+        message from the server. To display, you might want to use::
             
             string.join(motd, '\n')
 
