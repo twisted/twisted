@@ -298,7 +298,7 @@ L{twisted.trial.interfaces}.
 import os, errno, warnings
 
 from twisted.internet import defer
-from twisted.trial.util import deferredResult, deferredError
+from twisted.trial.util import deferredResult, deferredError, wait
 from twisted.trial import itrial
 
 # get assert* methods, fail* methods, FailTest and SkipTest
