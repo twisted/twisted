@@ -1474,7 +1474,7 @@ AIM (OSCAR)
 	  <handler>createAccount</handler>
 	  <last_modification_time>Sun, 27 Jan 2002 11:25:05 GMT</last_modification_time>
 	</signal>
-	<stock_button>GNOME_STOCK_BUTTON_OK</stock_button>
+	<label>OK</label>
 	<relief>GTK_RELIEF_NORMAL</relief>
       </widget>
 
@@ -1488,7 +1488,7 @@ AIM (OSCAR)
 	  <handler>destroyMe</handler>
 	  <last_modification_time>Sun, 27 Jan 2002 11:27:12 GMT</last_modification_time>
 	</signal>
-	<stock_button>GNOME_STOCK_BUTTON_CANCEL</stock_button>
+	<label>Cancel</label>
 	<relief>GTK_RELIEF_NORMAL</relief>
       </widget>
     </widget>
