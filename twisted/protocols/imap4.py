@@ -3743,12 +3743,31 @@ class _FetchParser:
         header = None
         partialBegin = None
         partialLength = None
+        def __str__(self):
+            base = 'BODY'
+            if self.peek:
+                base += '.PEEK'
+            if self.header:
+                base += '[%s]' % (self.header,)
+            if self.partialBegin is not None:
+                base += '<%d.%d>' % (self.partialBegin, self.partialLength)
+            return base
     class BodyStructure:
         pass
     class Header:
         negate = False
         fields = None
         part = None
+        def __str__(self):
+            base = 'HEADER'
+            if self.fields:
+                base += '.FIELDS'
+                if self.negate:
+                    base += '.NOT'
+                base += '(%s)' % (' '.join(self.fields),)
+            if self.part:
+                base = '.'.join(map(str, self.part)) + '.'
+            return base
     class Text:
         part = None
     class MIME:
