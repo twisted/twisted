@@ -284,6 +284,38 @@ class IReactorUNIX(Interface):
         """
 
 
+class IReactorUNIXDatagram(Interface):
+    """datagram UNIX socket methods."""
+
+    def connectUNIXDatagram(self, address, protocol, maxPacketSize=8192, mode=0666, bindAddress=None):
+        """Connect a client protocol to a datagram UNIX socket.
+
+        @param address: a path to a unix socket on the filesystem.
+
+        @param protocol: a L{twisted.internet.protocol.ConnectedDatagramProtocol} instance
+
+        @param maxPacketSize: maximum packet size to accept
+        
+        @param mode: mode to set on the unix socket.
+
+        @param bindAddress: address to bind to
+        """
+
+    def listenUNIXDatagram(self, address, protocol, maxPacketSize=8192, mode=0666):
+        """Listen on a datagram UNIX socket.
+
+        @param address: a path to a unix socket on the filesystem.
+
+        @param protocol: a L{twisted.internet.protocol.DatagramProtocol} instance.
+
+        @param maxPacketSize: maximum packet size to accept
+
+        @param mode: mode to set on the unix socket.
+
+        @returns: an L{IListeningPort}.
+        """
+
+
 class IReactorUDP(Interface):
     """UDP socket methods.
 
@@ -981,6 +1013,35 @@ class IUDPConnectedTransport(Interface):
 
     def getHost(self):
         """Return ('INET_UDP', interface, port) we are listening on."""
+
+
+class IUNIXDatagramTransport(Interface):
+    """Transport for UDP PacketProtocols."""
+
+    def write(self, packet, address):
+        """Write packet to given address.
+
+        Might raise error.ConnectionRefusedError.
+        """
+
+    def getHost(self):
+        """Return ('UNIX_DGRAM', address) we are listening on."""
+
+
+class IUNIXDatagramConnectedTransport(Interface):
+    """Transport for UDP ConnectedPacketProtocols."""
+
+    def write(self, packet):
+        """Write packet to address we are connected to.
+
+        Might raise error.ConnectionRefusedError.
+        """
+
+    def getHost(self):
+        """Return ('UNIX_DGRAM', address) we are listening on."""
+
+    def getPeer(self):
+        """Return ('UNIX_DGRAM', address) we are connected to."""
 
 
 class IMulticastTransport(Interface):
