@@ -41,7 +41,7 @@ def runSetup(project, args):
         sys.stderr.write(" (File '%s' not found)\n" % (setupPy,))
         sys.exit(1)
 
-    result = spawnv(os.P_WAIT, sys.executable,
+    result = os.spawnv(os.P_WAIT, sys.executable,
                    [sys.executable, setupPy] + args)
     if result != 0:
         sys.stderr.write("Error: Subprocess exited with result %d for project %s\n" %
