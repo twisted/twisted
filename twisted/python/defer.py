@@ -20,7 +20,6 @@
 # System Imports
 import types
 import sys
-from cStringIO import StringIO
 
 class AlreadyArmedError(Exception):
     pass
