@@ -66,6 +66,13 @@ class BaseTestResource(resource.Resource):
     responseText = 'This is a fake resource.'
     addSlash = True
 
+    def __init__(self, children=[]):
+        """ children is a list of ('path', resrc) tuples
+        """
+
+        for i in children:
+            self.putChild(i[0], i[1])
+
     def render(self, ctx):
         return http.Response(self.responseCode, stream=self.responseStream())
 

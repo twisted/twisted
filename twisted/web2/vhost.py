@@ -87,5 +87,7 @@ class VHostURIRewrite(resource.Resource):
         req = iweb.IRequest(ctx)
         req.headers.setHeader('host', self.host)
         req.host = self.host
+        req.path = '/'+'/'.join(segments)
+        req.prepath = req.prepath[:-1]
 
         return self.resource.locateChild(ctx, segments)
