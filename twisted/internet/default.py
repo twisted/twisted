@@ -66,10 +66,9 @@ if platformType == 'posix':
 
 if platformType == "win32":
     try:
-        from twisted.internet import wprocess
-    except ImportError, e:
-        print e
-        wprocess = None
+        import win32process
+    except ImportError:
+        win32process = None
 
 
 class PosixReactorBase(ReactorBase):
@@ -168,9 +167,14 @@ class PosixReactorBase(ReactorBase):
             else:
                 return process.Process(self, executable, args, env, path,
                                        processProtocol, uid, gid, childFDs)
-        elif p == "win32":
-            return wprocess.Process(self, processProtocol, executable,
-                                    args, env, path)
+        # This is possible, just needs work - talk to itamar if you want this.
+        #elif p == "win32":
+        #    if win32process:
+        #        threadable.init(1)
+        #        import win32eventreactor
+        #        return win32eventreactor.Process(self, processProtocol, executable, args, env, path)
+        #    else:
+        #        raise NotImplementedError, "process not available since win32all is not installed"
         else:
             raise NotImplementedError, "process only available in this " \
                   "reactor on POSIX, use win32eventreactor on Windows"
