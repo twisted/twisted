@@ -23,6 +23,7 @@ import StringIO
 import string
 import hmac
 import base64
+from zope.interface import implements
 
 from twisted.trial import unittest
 from twisted import mail
@@ -267,7 +268,7 @@ QUIT''', '\n')
 
 
 class TestServerFactory:
-    __implements__ = (pop3.IServerFactory,)
+    implements(pop3.IServerFactory)
 
     def cap_IMPLEMENTATION(self):
         return "Test Implementation String"

@@ -30,6 +30,7 @@ import operator
 import base64
 import binascii
 import md5
+from zope.interface import implements
 
 from twisted.mail import smtp
 from twisted.protocols import basic
@@ -48,7 +49,7 @@ import twisted.cred.credentials
 ## Authentication
 ##
 class APOPCredentials:
-    __implements__ = (cred.credentials.IUsernamePassword,)
+    implements(cred.credentials.IUsernamePassword)
 
     def __init__(self, magic, username, digest):
         self.magic = magic
@@ -61,7 +62,9 @@ class APOPCredentials:
         if my_digest == self.digest:
             return True
         return False
-##
+
+components.backwardsCompatImplements(APOPCredentials)
+
 
 class _HeadersPlusNLines:
     def __init__(self, f, n):
@@ -107,9 +110,10 @@ class _HeadersPlusNLines:
 class POP3Error(Exception):
     pass
 
+
 class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
-    __implements__ = (interfaces.IProducer,)
+    implements(interfaces.IProducer)
 
     magic = None
     _userIs = None
@@ -139,6 +143,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
     blocked = None
 
     def connectionMade(self):
+        components.fixClassImplements(self.factory.__class__)
         if self.magic is None:
             self.magic = self.generateMagic()
         self.successResponse(self.magic)
@@ -211,7 +216,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
             "POTENCE",
         ]
 
-        if components.implements(self.factory, IServerFactory):
+        if IServerFactory.providedBy(self.factory):
             # Oh my god.  We can't just loop over a list of these because
             # each has spectacularly different return value semantics!
             try:
@@ -526,6 +531,9 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
             )
         raise cred.error.UnauthorizedLogin()
 
+components.backwardsCompatImplements(POP3)
+
+
 class IServerFactory(components.Interface):
     """Interface for querying additional parameters of this POP3 server.
 
@@ -630,7 +638,7 @@ class IMailbox(components.Interface):
         """
 
 class Mailbox:
-    __implements__ = (IMailbox,)
+    implements(IMailbox)
 
     def listMessages(self, i=None):
         return []
@@ -644,6 +652,9 @@ class Mailbox:
         pass
     def sync(self):
         pass
+
+components.backwardsCompatImplements(Mailbox)
+
 
 NONE, SHORT, FIRST_LONG, LONG = range(4)
 
