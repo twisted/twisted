@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-__version__ = "$Revision: 1.40 $"[11:-2]
+__version__ = "$Revision: 1.41 $"[11:-2]
 
 import types
 import weakref
@@ -56,7 +56,7 @@ class Model:
         self.submodels = {}
         self._getter = kwargs.get('getter')
         self._setter = kwargs.get('setter')
-        self.cachedValid = 0
+        self.cachedFor = None
         self.initialize(*args, **kwargs)
 
     def __getstate__(self):
@@ -64,6 +64,12 @@ class Model:
         self.subviews = {}
         self.submodels = {}
         return self.__dict__
+
+    def invalidateCache(self, request):
+        """Invalidate the cache for this object, so the next time
+        getData is called, it's getter method is called again.
+        """
+        self.cachedFor = None
 
     def initialize(self, *args, **kwargs):
         """
@@ -108,7 +114,7 @@ class Model:
         MVC paradigm of querying the model for things you're interested
         in.
         """
-        self.cachedValid = 0
+        self.cachedFor = None
         if changed is None: changed = {}
         retVal = []
         for view in self.views:
@@ -240,20 +246,19 @@ class Model:
         pass
 
     def getData(self, request=None):
-        if self._getter is not None:
+        if self.cachedFor != id(request) and self._getter is not None:
             func = self._getter
             num = 1
             if hasattr(func, 'im_func'):
                 num = 2
                 func = func.im_func
             args, varargs, varkw, defaults = inspect.getargspec(func)
-            self.cachedValid = 1
+            self.cachedFor = id(request)
             self.dataWillChange()
             if len(args) == num:
                 self.orig = self.original = self._getter(request)
             else:
                 self.orig = self.original = self._getter()
-            return self.original
         return self.original
 
     def setData(self, request=None, data=None):
@@ -268,13 +273,13 @@ class Model:
                 num = 3
                 func = func.im_func
             args, varargs, varkw, defaults = inspect.getargspec(func)
-            self.cachedValid = 0
+            self.cachedFor = None
             if len(args) == num:
                 return self._setter(request, data)
             return self._setter(data)
         else:
             if hasattr(self, 'parent') and self.parent:
-                self.parent.setSubmodel(None, self.name, data)
+                self.parent.setSubmodel(request, self.name, data)
             self.orig = self.original = data
 
 
@@ -305,6 +310,7 @@ class MethodModel(Model):
 
         sm = Model.getSubmodel(self, request, name)
         if sm is not None:
+            sm.cachedFor = id(request)
             sm._getter = getattr(self, "wmfactory_"+name)
         return sm
 
@@ -336,44 +342,6 @@ class Wrapper(Model):
 
     def dataWillChange(self):
         pass
-
-    def getData(self, request=None):
-        if self._getter is not None:
-            func = self._getter
-            num = 1
-            if hasattr(func, 'im_func'):
-                num = 2
-                func = func.im_func
-            args, varargs, varkw, defaults = inspect.getargspec(func)
-            self.cachedValid = 1
-            self.dataWillChange()
-            if len(args) == num:
-                self.orig = self.original = self._getter(request)
-            else:
-                self.orig = self.original = self._getter()
-            return self.original
-
-        return self.original
-
-    def setData(self, request=None, data=None):
-        if self._setter is not None:
-            func = self._setter
-            num = 2
-            if hasattr(func, 'im_func'):
-                num = 3
-                func = func.im_func
-            args, varargs, varkw, defaults = inspect.getargspec(func)
-            self.cachedValid = 0
-            if len(args) == num:
-                return self._setter(request, data)
-            return self._setter(data)
-        if data is None:
-            warnings.warn("Warning!")
-            data = request
-            request = None
-        if self.parent:
-            self.parent.setSubmodel(None, self.name, data)
-        self.orig = self.original = data
 
     def __repr__(self):
         myLongName = reflect.qual(self.__class__)
