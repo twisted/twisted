@@ -237,6 +237,14 @@ class Connection(abstract.FileDescriptor):
                 return
             else:
                 return main.CONNECTION_LOST
+        except SSL.SysCallError, (retval, desc):
+            # Yes, SSL might be None, but self.socket.recv() can *only*
+            # raise socket.error, if anything else is raised, it must be an
+            # SSL socket, and so SSL can't be None. (That's my story, I'm
+            # stickin' to it)
+            if retval == -1 and desc == 'Unexpected EOF':
+                return main.CONNECTION_DONE
+            raise
         if not data:
             return main.CONNECTION_DONE
         return self.protocol.dataReceived(data)
