@@ -608,6 +608,13 @@ def _setUpTestdir():
 def _getDebugger():
     dbg = pdb.Pdb()
     try:
+        import readline
+    except ImportError:
+        print "readline module not available"
+        hasattr(sys, 'exc_clear') and sys.exc_clear()
+        pass
+
+    try:
         rcFile = open("../.pdbrc")
     except IOError:
         hasattr(sys, 'exc_clear') and sys.exc_clear()
@@ -616,8 +623,8 @@ def _getDebugger():
     return dbg
 
 def _setUpDebugging(config, suite):
-    suite.reporter.debugger = 1
-    _getDebugger().run("suite.run(config['random'])", globals(), locals())
+    suite.debugger = suite.reporter.debugger = True
+    _getDebugger().runcall(suite.run, config['random'])
 
 def _doProfilingRun(config, suite):
     if config['until-failure']:

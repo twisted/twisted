@@ -110,6 +110,7 @@ class TestSuite(Timed):
     zi.implements(itrial.ITestSuite)
     moduleGlob = 'test_*.py'
     sortTests = 1
+    debugger = False
 
     def __init__(self, reporter, janitor, benchmark=0):
         self.reporter = IReporter(reporter)
@@ -188,6 +189,9 @@ class TestSuite(Timed):
 
     def getReporter(self):
         return self.reporter
+
+    def isDebuggingRun(self):
+        return self.debugger
 
     def run(self, seed=None):
         self.startTime = time.time()
@@ -324,15 +328,18 @@ class UserMethodWrapper(MethodInfoBase):
         pass
 
 
-class JanitorAndReporterMixin:
+class ParentAttributeMixin:
     def getJanitor(self):
         return self.parent.getJanitor()
 
     def getReporter(self):
         return self.parent.getReporter()
 
+    def isDebuggingRun(self):
+        return self.parent.isDebuggingRun()
 
-class TestRunnerBase(Timed, JanitorAndReporterMixin):
+
+class TestRunnerBase(Timed, ParentAttributeMixin):
     zi.implements(itrial.ITestRunner)
     _tcInstance = None
     methodNames = setUpClass = tearDownClass = methodsWithStatus = None
@@ -604,7 +611,7 @@ class BenchmarkCaseRunner(TestCaseRunner):
             registerAdapter(TestMethod, types.MethodType, itrial.ITestMethod)
         
 
-class TestMethod(MethodInfoBase, JanitorAndReporterMixin):
+class TestMethod(MethodInfoBase, ParentAttributeMixin):
     zi.implements(itrial.ITestMethod, itrial.IMethodInfo, itrial.ITimeout)
     _status = parent = todo = timeout = None
 
@@ -742,8 +749,9 @@ class TestMethod(MethodInfoBase, JanitorAndReporterMixin):
                 # Run the test method
                 reporter.startTest(self)
                 try:
-                    sys.stdout = util._StdioProxy(sys.stdout)
-                    sys.stderr = util._StdioProxy(sys.stderr)
+                    if not self.isDebuggingRun():
+                        sys.stdout = util._StdioProxy(sys.stdout)
+                        sys.stderr = util._StdioProxy(sys.stderr)
                     orig = UserMethodWrapper(self.original, janitor,
                                              raiseOnErr=False,
                                              timeout=self.timeout)
@@ -753,10 +761,11 @@ class TestMethod(MethodInfoBase, JanitorAndReporterMixin):
                 finally:
                     self.endTime = time.time()
 
-                    self.stdout = sys.stdout.getvalue()
-                    self.stderr = sys.stderr.getvalue()
-                    sys.stdout = sys.stdout.original
-                    sys.stderr = sys.stderr.original
+                    if not self.isDebuggingRun():
+                        self.stdout = sys.stdout.getvalue()
+                        self.stderr = sys.stderr.getvalue()
+                        sys.stdout = sys.stdout.original
+                        sys.stderr = sys.stderr.original
 
                     # Run the tearDown method
                     um = UserMethodWrapper(self.tearDown, janitor)
