@@ -245,7 +245,7 @@ class ProcessStreamerTest(unittest.TestCase):
     def test_output(self):
         p = self.runCode("import sys\nfor i in range(100): sys.stdout.write('x' * 1000)")
         l = []
-        d = stream.pullStream(p.outStream, l.append)
+        d = stream.readStream(p.outStream, l.append)
         def verify(_):
             assertEquals("".join(l), ("x" * 1000) * 100)
         p.run()
@@ -254,7 +254,7 @@ class ProcessStreamerTest(unittest.TestCase):
     def test_errouput(self):
         p = self.runCode("import sys\nfor i in range(100): sys.stderr.write('x' * 1000)")
         l = []
-        d = stream.pullStream(p.errStream, l.append)
+        d = stream.readStream(p.errStream, l.append)
         def verify(_):
             assertEquals("".join(l), ("x" * 1000) * 100)
         p.run()
@@ -262,9 +262,9 @@ class ProcessStreamerTest(unittest.TestCase):
 
     def test_input(self):
         p = self.runCode("import sys\nsys.stdout.write(sys.stdin.read())",
-                         stream.MemoryStream("hello world"))
+                         "hello world")
         l = []
-        d = stream.pullStream(p.outStream, l.append)
+        d = stream.readStream(p.outStream, l.append)
         d2 = p.run()
         def verify(_):
             assertEquals("".join(l), "hello world")
@@ -291,12 +291,12 @@ class AdapterTestCase(unittest.TestCase):
             assertEquals(s.read(), None)
 
 
-class PullStreamTestCase(unittest.TestCase):
+class ReadStreamTestCase(unittest.TestCase):
 
     def test_pull(self):
         l = []
         s = TestStreamer(['abcd', defer.succeed('efgh'), 'ijkl'])
-        return pullStream(s, l.append).addCallback(
+        return readStream(s, l.append).addCallback(
             lambda _: assertEquals(l, ["abcd", "efgh", "ijkl"]))
         
     def test_pullFailure(self):
@@ -305,12 +305,16 @@ class PullStreamTestCase(unittest.TestCase):
         def test(result):
             result.trap(RuntimeError)
             assertEquals(l, ["abcd"])
-        return pullStream(s, l.append).addErrback(test)
+        return readStream(s, l.append).addErrback(test)
     
     def test_pullException(self):
         class Failer:
             def read(self): raise RuntimeError
-        return pullStream(Failer(), lambda _: None).addErrback(lambda _: _.trap(RuntimeError))
+        return readStream(Failer(), lambda _: None).addErrback(lambda _: _.trap(RuntimeError))
+
+    def test_processingException(self):
+        s = TestStreamer(['abcd', defer.succeed('efgh'), 'ijkl'])
+        return readStream(s, lambda x: 1/0).addErrback(lambda _: _.trap(ZeroDivisionError))
 
 
 class ProducerStreamTestCase(unittest.TestCase):

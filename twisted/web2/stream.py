@@ -348,7 +348,7 @@ class CompoundStream:
 
 
 
-class _StreamPuller:
+class _StreamReader:
     """Process a stream's data using callbacks for data and stream finish."""
 
     def __init__(self, stream, gotDataCallback):
@@ -382,15 +382,21 @@ class _StreamPuller:
             self.result.callback(None)
             del self.result
             return
-        self.gotDataCallback(data)
+        try:
+            self.gotDataCallback(data)
+        except:
+            self._gotError(Failure())
+            return
         reactor.callLater(0, self._read)
 
-def pullStream(stream, gotDataCallback):
+def readStream(stream, gotDataCallback):
     """Pass a stream's data to a callback.
 
-    Returns Deferred which will be triggered on finish.
+    Returns Deferred which will be triggered on finish.  Errors in
+    reading the stream or in processing it will be returned via this
+    Deferred.
     """
-    return _StreamPuller(stream, gotDataCallback).run()
+    return _StreamReader(stream, gotDataCallback).run()
 
 
 def readAndDiscard(stream):
@@ -398,7 +404,7 @@ def readAndDiscard(stream):
 
     Returns Deferred which will be triggered on finish.
     """
-    return pullStream(stream, lambda _: None)
+    return readStream(stream, lambda _: None)
 
 
 def fallbackSplit(stream, point):
@@ -744,7 +750,7 @@ class ProcessStreamer:
     def __init__(self, inputStream, program, args, env={}):
         self.outStream = ProducerStream()
         self.errStream = ProducerStream()
-        self._protocol = _ProcessStreamerProtocol(inputStream, self.outStream, self.errStream)
+        self._protocol = _ProcessStreamerProtocol(IByteStream(inputStream), self.outStream, self.errStream)
         self._program = program
         self._args = args
         self._env = env
@@ -851,5 +857,5 @@ class BufferedStream(object):
 
 __all__ = ['IStream', 'IByteStream', 'FileStream', 'MemoryStream', 'CompoundStream',
            'readAndDiscard', 'fallbackSplit', 'ProducerStream', 'StreamProducer',
-           'BufferedStream', 'pullStream', 'ProcessStreamer']
+           'BufferedStream', 'readStream', 'ProcessStreamer']
 
