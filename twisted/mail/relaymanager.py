@@ -78,7 +78,7 @@ class ManagedRelayerMixin:
         self.manager.notifyDone(self.factory)
 
 class SMTPManagedRelayer(ManagedRelayerMixin, relay.SMTPRelayer):
-    def __init__(self, manager, messages, *args, **kw):
+    def __init__(self, messages, manager, *args, **kw):
         """
         @type messages: C{list} of C{str}
         @param messages: Filenames of messages to relay
@@ -90,7 +90,7 @@ class SMTPManagedRelayer(ManagedRelayerMixin, relay.SMTPRelayer):
         relay.SMTPRelayer.__init__(self, messages, *args, **kw)
 
 class ESMTPManagedRelayer(ManagedRelayerMixin, relay.ESMTPRelayer):
-    def __init__(self, manager, messages, *args, **kw):
+    def __init__(self, messages, manager, *args, **kw):
         """
         @type messages: C{list} of C{str}
         @param messages: Filenames of messages to relay
