@@ -341,6 +341,16 @@ class TestTypeMapper(unittest.TestCase):
         self.assertEquals(typemap.getMapper((int,int,int)),
                           typemap.getMapper((int,int,int)))
 
+class IntToIntThing(Storable):
+    __schema__ = {
+        'dict': compound.DictOf(int, (int,int,int))
+        }
+
+class StrToIntThing(Storable):
+    __schema__ = {
+        'dict': compound.DictOf(str, (int,int,int))
+        }
+
 class TestFixedClasses(unittest.TestCase):
     def setUp(self):
         self.db = database.Database(self.caseMethodName)
@@ -432,6 +442,25 @@ class TestFixedClasses(unittest.TestCase):
         self.assertEquals(a6.getData(), '6' * 10)
         self.assertEquals(a7.getData(), '7' * 10)
 
+    def testDictOf(self):
+        idh = IntToIntThing()
+        sdh = StrToIntThing()
+        pydict = {"a": (1, 2, 3),
+                  "b": (4, 5, 6)}
+        sdh.dict = pydict
+        pydict['c'] = 7, 8, 9
+        self.assertEquals(pydict.get('c'),
+                          sdh.dict.get('c'))
+        self.db.insert(sdh)
+        self.assertEquals(pydict.get('c'),
+                          sdh.dict.get('c'))
+        pydict['d'] = 10, 11, 12
+        sdh.dict['d'] = 13, 14, 15
+        self.assertNotEqual(pydict.get('d'),
+                            sdh.dict.get('d'))
+        del sdh.dict['d']
+        self.failIf(sdh.dict.has_key('d'))
+
     def testListOf(self):
         import gc
         lst = ListOfStorables()
@@ -476,7 +505,7 @@ class TestFixedClasses(unittest.TestCase):
         gc.collect()
         self.failUnlessEqual(len(lst.list), 0)
 
-    def testDictOf(self):
+    def testStorableDictionary(self):
         sd = compound.StorableDictionary(self.db, str, int)
         rd = {}
         self.failUnlessEqual(len(sd), 0)

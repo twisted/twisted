@@ -293,6 +293,51 @@ class StorableListTypeMapper(ObjectTypeMapper):
         else:
             return ObjectTypeMapper.highToLow(self, db, obj)
 
+class StorableDictionaryTypeMapper(ObjectTypeMapper):
+    def __init__(self, keyClass, valueClass):
+        from twisted.world.compound import StorableDictionaryStore
+        self.keyClass = keyClass
+        self.valueClass = valueClass
+
+    def getKeyType(self):
+        return getMapper(self.keyClass)
+    
+    def getValueType(self):
+        return getMapper(self.valueClass)
+
+    def lowToHigh(self, db, tup):
+        o = ObjectTypeMapper.lowToHigh(self,db,tup)
+        from twisted.world.compound import StorableDictionaryFacade
+        return StorableDictionaryFacade(o)
+
+    def highToLow(self, db, obj):
+        from twisted.world.compound import StorableDictionaryFacade, StorableDictionaryStore
+        if isinstance(obj, dict):
+            newstor = StorableDictionaryStore(db, self.getKeyType(), self.getValueType())
+            StorableDictionaryFacade(newstor).update(obj)
+            return self.highToLow(db, newstor)
+        elif isinstance(obj, StorableDictionaryFacade):
+            return self.highToLow(db, obj.original)
+        elif isinstance(obj, StorableDictionaryStore):
+            return ObjectTypeMapper.highToLow(self, db, obj)
+        else:
+            # XXX TODO: while the lower-level database supports a "slot for
+            # anything", the list/dict typemappers sorta breaks that for lists
+            # & dictionaries.  On the one hand, using typemappers really
+            # constrains the surprisin behavior of setattr/setitem to the one
+            # place where you declare it to be explicitly surprising
+            # (twisted.world will not create copies o objects unless they are
+            # specificially being put into an "OK to copy dicts here" or "OK to
+            # copy lists here" slot).  On the other hand, this is really
+            # inconvenient if you want to create a "bag" data structure.  maybe
+            # we need a "really totally ambivalent" slot that will happily
+            # create monstrously inefficient ints/lists/dicts/strings depending
+            # on what's put into it?
+            raise AttributeError("You're putting something that looks nothing "
+                                 "at all like a dict (%s) into a slot that can "
+                                 "only hold dicts." % repr(obj))
+
+
 class TypeMapperMapper(AbstractTypeMapper):
     def __init__(self):
         pass

@@ -373,8 +373,8 @@ class StorableDictionaryFacade(Adapter):
     def __getitem__(self, key, default=_Nothing):
         return self.original.getDictItem(key, default)
 
-
-    get = __getitem__
+    def get(self, key, default=None):
+        return self.__getitem__(key, default)
 
     def __len__(self):
         return self.original.keyValueCount
@@ -428,6 +428,10 @@ class StorableDictionaryFacade(Adapter):
         newStor = self.original.copy()
         return StorableDictionaryFacade(newStor)
 
+    def update(self, otherdict):
+        for k, v in otherdict.iteritems():
+            self[k] = v
+
 def StorableDictionary(db, keyType, valueType):
     stor = StorableDictionaryStore(db, keyType, valueType)
     return StorableDictionaryFacade(stor)
@@ -446,3 +450,4 @@ class FloatList(StorableList):
 
 from twisted.world.typemap import getMapper
 from twisted.world.typemap import StorableListTypeMapper as ListOf
+from twisted.world.typemap import StorableDictionaryTypeMapper as DictOf
