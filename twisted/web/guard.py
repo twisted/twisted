@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-"""Cred integration for twisted.web.
+"""DEPRECATED.
 
 You probably should be using twisted.web.woven.guard instead.
 """
@@ -31,6 +31,9 @@ import html
 import resource
 import widgets
 from server import NOT_DONE_YET
+
+import warnings
+warnings.warn("Please use twisted.web.woven.guard", DeprecationWarning, 2)
 
 
 class _Detacher:
