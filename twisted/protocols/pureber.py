@@ -15,6 +15,22 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 """Pure, simple, BER encoding and decoding"""
 
+# This BER library is currently aimed at supporting LDAP, thus
+# the following restrictions from RFC2251 apply:
+#
+# (1) Only the definite form of length encoding will be used.
+#
+# (2) OCTET STRING values will be encoded in the primitive form
+#     only.
+#
+# (3) If the value of a BOOLEAN type is true, the encoding MUST have
+#     its contents octets set to hex "FF".
+#
+# (4) If a value of a type is its default value, it MUST be absent.
+#     Only some BOOLEAN and INTEGER types have default values in
+#     this protocol definition.
+
+
 import string
 from twisted.python.mutablestring import MutableString
 
@@ -105,6 +121,12 @@ class BERBase:
 
     def __len__(self):
         return len(str(self))
+
+    def __cmp__(self, other):
+        if isinstance(other, BERBase):
+            return cmp(str(self), str(other))
+        else:
+            return -1
 
 class BERStructured(BERBase):
     def identification(self):
@@ -285,6 +307,7 @@ class BEREnumerated(BERInteger):
     tag = 0x0a
 
 class BERSequence(BERStructured, UserList.UserList):
+    # TODO __getslice__ calls __init__ with no args.
     tag = 0x10
 
     def decode(self, encoded, berdecoder):
