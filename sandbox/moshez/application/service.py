@@ -14,6 +14,18 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
+"""Service architecture for Twisted
+
+Services are arranged in a hierarchy. At the leafs of the hierarchy,
+the services which actually interact with the outside world are started.
+Services can be named or anonymous -- usually, they will be named if
+there is need to access them through the hierarchy (from a parent or
+a sibling).
+
+API Stability: unstable
+
+Maintainer: U{Moshe Zadka<mailto:moshez@twistedmatrix.com>}
+"""
 from twisted.python import components
 from twisted.internet import defer
 from twisted.persisted import sob
@@ -21,6 +33,10 @@ from twisted.persisted import sob
 class IService(components.Interface):
 
     """
+    A service.
+
+    Run start-up and shut-down code at the appropriate times.
+
     @type name:            C{string}
     @ivar name:            The name of the service (or None)
     @type running:         C{boolean}
@@ -50,7 +66,13 @@ class IService(components.Interface):
         """Start the the service."""
 
     def stopService(self):
-        """Stop the the service."""
+        """Stop the the service.
+
+        @rtype: C{Deferred}
+        @return: a deferred which is triggered when the service has
+        finished shutting down. If shutting down is immediate,
+        a value can be returned (usually, None).
+        """
 
     def privilegedStartService(self):
         """Do preperation work for starting the service.
@@ -60,6 +82,14 @@ class IService(components.Interface):
 
 
 class Service:
+
+    """
+    Base class for services
+
+    Most services should inherit from this class. It handles the
+    book-keeping reponsibilities of starting and stopping, as well
+    as not serializing this book-keeping information.
+    """
 
     __implements__ = IService,
 
@@ -100,6 +130,13 @@ class Service:
 
 class IServiceCollection(components.Interface):
 
+    """Collection of services.
+
+    Contain several services, and manage their start-up/shut-down.
+    Services can be accessed by name if they have a name, and it
+    is always possible to iterate over them.
+    """
+    
     def getServiceNamed(self, name):
         """Get the child service with a given name.
 
@@ -129,6 +166,14 @@ class IServiceCollection(components.Interface):
 
 
 class MultiService(Service):
+
+    """Straightforward Service Container
+
+    Hold a collection of services, and manage them in a simplistic
+    way. No service will wait for another, but this object itself
+    will not finish shutting down until all of its child services
+    will finish.
+    """
 
     __implements__ = Service.__implements__, IServiceCollection
 
@@ -179,7 +224,8 @@ class MultiService(Service):
 
 class IProcess(components.Interface):
 
-    """
+    """Process running parameters
+
     Represents parameters for how processes should be run.
 
     @ivar processName: the name the process should have in ps (or None)
@@ -193,11 +239,19 @@ class IProcess(components.Interface):
 
 class Process:
 
-    __implements__ = IProcess,
+    """Process running parameters
 
+    Sets up uid/gid in the constructor, and has a default
+    of C{None} as C{processName}.
+    """
+    __implements__ = IProcess,
     processName = None
 
     def __init__(self, uid=None, gid=None):
+        """Set uid and gid
+
+        By default, uid or gid will be 0 (superuser)
+        """
         self.uid = uid or 0
         self.gid = gid or 0
     
