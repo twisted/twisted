@@ -27,7 +27,7 @@ class _Ugg:
 class TerminalSessionTransport:
     protocolFactory = insults.ServerProtocol
 
-    def __init__(self, proto, avatar):
+    def __init__(self, proto, avatar, width, height):
         self.proto = proto
         self.avatar = avatar
         self.chainedProtocol = self.protocolFactory()
@@ -37,6 +37,8 @@ class TerminalSessionTransport:
         self.chainedProtocol.makeConnection(_Ugg(write=self.proto.write,
                                                  name="Chained Proto Transport"))
 
+        self.chainedProtocol.terminalSize(width, height)
+
 class TerminalSession:
     transportFactory = TerminalSessionTransport
 
@@ -44,10 +46,10 @@ class TerminalSession:
         self.avatar = avatar
 
     def getPty(self, term, windowSize, attrs):
-        pass
+        self.width, self.height = windowSize[:2]
 
     def openShell(self, proto):
-        self.transportFactory(proto, self.avatar)
+        self.transportFactory(proto, self.avatar, self.width, self.height)
 
     def execCommand(self, proto, cmd):
         raise econch.ConchError("Cannot execute commands")
