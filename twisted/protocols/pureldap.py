@@ -26,6 +26,9 @@ def alloc_ldap_message_id():
     next_ldap_message_id=next_ldap_message_id+1
     return r
 
+class LDAPString(BEROctetString):
+    pass
+
 class LDAPMessage(BERSequence):
     def decode(self, encoded, berdecoder):
         BERSequence.decode(self, encoded, berdecoder)
@@ -222,16 +225,234 @@ class LDAPUnbindRequest(LDAPProtocolRequest):
     def __str__(self):
         return str(BERNull(tag=self.tag))
 
-class LDAPAttributeValueAssertion:
-    def __init__(self, attr, asser=None):
-        self.attr=attr
-        self.asser=asser
+class LDAPAttributeDescription(BEROctetString):
+    pass
+
+class LDAPAttributeValueAssertion(BERSequence):
+    def decode(self, encoded, berdecoder):
+        BERSequence.decode(self, encoded, berdecoder)
+        self.attributeDesc=self.data[0]
+        self.assertionValue=self.data[1]
+        assert len(self.data)==2
+        
+    def __init__(self, attributeDesc=None, assertionValue=None,
+                 encoded=None, berdecoder=None):
+        BERSequence.__init__(self, value=[])
+        if self.attributeDesc!=None:
+            assert encoded==None
+            self.attributeDesc=attributeDesc
+            self.assertionValue=assertionValue
+        elif encoded!=None:
+            assert attributeDesc==None
+            assert assertionValue==None
+            assert berdecoder
+            self.decode(encoded, berdecoder)
+        else:
+            raise "You must give either value or encoded"
 
     def __str__(self):
-        r=str(BEROctetString(self.attr, tag=0x87))
-        if self.asser!=None:
-            r=r+str(BEROctetString(self.asser))
-        return r
+        return str(BERSequence([self.attributeDesc,
+                                self.assertionValue],
+                               tag=self.tag))
+
+
+class LDAPFilter:
+    def decode(self, encoded, berdecoder):
+        self.value=ber2object(LDAPBERDecoderContext_Filter(fallback=berdecoder, inherit=berdecoder), encoded)
+        assert self.value
+
+    def __init__(self, encoded=None, berdecoder=None):
+        if encoded!=None:
+            assert berdecoder
+            self.decode(encoded, berdecoder)
+        else:
+            raise "You must give either value or encoded"
+
+    def __str__(self):
+        return str(self.value)
+
+class LDAPFilterSet(BERSet):
+    pass
+
+class LDAPFilter_and(LDAPFilterSet):
+    tag = CLASS_CONTEXT|0x00
+    pass
+
+class LDAPFilter_or(LDAPFilterSet):
+    tag = CLASS_CONTEXT|0x01
+    pass
+
+class LDAPFilter_not(LDAPFilter):
+    tag = CLASS_CONTEXT|0x02
+    pass
+
+class LDAPFilter_equalityMatch(LDAPAttributeValueAssertion):
+    tag = CLASS_CONTEXT|0x03
+    pass
+
+class LDAPFilter_substrings_initial(LDAPString):
+    tag = CLASS_CONTEXT|0x00
+    pass
+
+class LDAPFilter_substrings_any(LDAPString):
+    tag = CLASS_CONTEXT|0x01
+    pass
+
+class LDAPFilter_substrings_final(LDAPString):
+    tag = CLASS_CONTEXT|0x02
+    pass
+
+class LDAPBERDecoderContext_Filter_substrings(BERDecoderContext):
+    Identities = {
+        LDAPFilter_substrings_initial.tag: LDAPFilter_substrings_initial,
+        LDAPFilter_substrings_any.tag: LDAPFilter_substrings_any,
+        LDAPFilter_substrings_final.tag: LDAPFilter_substrings_final,
+        }
+
+class LDAPFilter_substrings(BERSequence):
+    tag = CLASS_CONTEXT|0x04
+
+    def decode(self, encoded, berdecoder):
+        BERSequence.decode(self, encded, LDAPBERDecoderContext_Filter_substrings(fallback=berdecoder))
+        assert len(self.data)==2
+        self.type=self.data[0]
+        assert len(self.data[1])>=1
+        self.substrings=self.data[1]
+
+    def __init__(self, type=None, substrings=None, encoded=None, berdecoder=None, tag=None):
+        BERSequence.__init__(self, value=[], tag=tag)
+        if type!=None and substrings!=None:
+            assert encoded==None
+            self.type=type
+            self.substrings=substrings
+        elif encoded!=None:
+            assert berdecoder
+            self.decode(encoded, berdecoder)
+        else:
+            raise "You must give either value or encoded"
+
+    def __str__(self):
+        return str(BERSequence([
+            LDAPString(self.type),
+            BERSequence(self.substrings)], tag=self.tag))
+
+class LDAPFilter_greaterOrEqual(LDAPAttributeValueAssertion):
+    tag = CLASS_CONTEXT|0x05
+    pass
+
+class LDAPFilter_lessOrEqual(LDAPAttributeValueAssertion):
+    tag = CLASS_CONTEXT|0x06
+    pass
+
+class LDAPFilter_present(LDAPAttributeDescription):
+    tag = CLASS_CONTEXT|0x07
+    pass
+
+class LDAPFilter_approxMatch(LDAPAttributeValueAssertion):
+    tag = CLASS_CONTEXT|0x08
+    pass
+
+class LDAPMatchingRuleId(LDAPString):
+    pass
+
+class LDAPAssertionValue(BEROctetString):
+    pass
+
+class LDAPMatchingRuleAssertion_matchingRule(LDAPMatchingRuleId):
+    tag = CLASS_CONTEXT|0x01
+    pass
+
+class LDAPMatchingRuleAssertion_type(LDAPAttributeDescription):
+    tag = CLASS_CONTEXT|0x02
+    pass
+
+class LDAPMatchingRuleAssertion_matchValue(LDAPAssertionValue):
+    tag = CLASS_CONTEXT|0x03
+    pass
+
+class LDAPMatchingRuleAssertion_dnAttributes(BERBoolean):
+    tag = CLASS_CONTEXT|0x04
+    pass
+
+class LDAPBERDecoderContext_MatchingRuleAssertion(BERDecoderContext):
+    Identities = {
+        LDAPMatchingRuleAssertion_matchingRule.tag: LDAPMatchingRuleAssertion_matchingRule,
+        LDAPMatchingRuleAssertion_type.tag: LDAPMatchingRuleAssertion_type,
+        LDAPMatchingRuleAssertion_matchValue.tag: LDAPMatchingRuleAssertion_matchValue,
+        LDAPMatchingRuleAssertion_dnAttributes.tag: LDAPMatchingRuleAssertion_dnAttributes,
+        }
+
+class LDAPMatchingRuleAssertion(BERSequence):
+    def decode(self, encoded, berdecoder):
+        BERSequence.decode(self, encoded, LDAPBERDecoderContext_MatchingRuleAssertion(fallback=berdecoder, inherit=berdecoder))
+        assert 1<=len(self.data)<=4
+        self.matchingRule=None
+        self.type=None
+        self.matchValue=None
+        self.dnAttributes=None
+        if isinstance(self.data[0], LDAPMatchingRuleAssertion_matchingRule):
+            self.matchingRule=self.data[0]
+            del self.data[0]
+        if len(self.data)>1 \
+           and isinstance(self.data[0], LDAPMatchingRuleAssertion_type):
+            self.type=self.data[0]
+            del self.data[0]
+        if len(self.data)>1 \
+           and isinstance(self.data[0], LDAPMatchingRuleAssertion_matchValue):
+            self.matchValue=self.data[0]
+            del self.data[0]
+        if len(self.data)>1 \
+           and isinstance(self.data[0], LDAPMatchingRuleAssertion_dnAttributes):
+            self.dnAttributes=self.data[0]
+            del self.data[0]
+        assert self.matchValue
+        if not self.dnAttributes:
+            self.dnAttributes=None
+
+    def __init__(self, matchingRule=None, type=None,
+                 matchValue=None, dnAttributes=None,
+                 encoded=None, berdecoder=None, tag=None):
+        BERSequence.__init__(self, value=[])
+        if matchValue!=None:
+            assert encoded==None
+            self.matchingRule=matchingRule
+            self.type=type
+            self.matchValue=matchValue
+            self.dnAttributes=dnAttributes
+            if not self.dnAttributes:
+                self.dnAttributes=None
+        elif encoded!=None:
+            assert matchingRule==None
+            assert type==None
+            assert matchValue==None
+            assert dnAttributes==None
+            assert berdecoder
+            self.decode(encoded, berdecoder)
+        else:
+            raise "You must give either value or encoded"
+
+    def __str__(self):
+        return str(BERSequence(
+            filter(lambda x: x!=None, [self.matchingRule, self.type, self.matchValue, self.dnAttributes]), tag=self.tag))
+
+class LDAPFilter_extensibleMatch(LDAPMatchingRuleAssertion):
+    tag = CLASS_CONTEXT|0x09
+    pass
+
+
+class LDAPBERDecoderContext_Filter(BERDecoderContext):
+    Identities = {
+        LDAPFilter_and.tag: LDAPFilter_and,
+        LDAPFilter_or.tag: LDAPFilter_or,
+        LDAPFilter_not.tag: LDAPFilter_not,
+        LDAPFilter_equalityMatch.tag: LDAPFilter_equalityMatch,
+        LDAPFilter_substrings.tag: LDAPFilter_substrings,
+        LDAPFilter_greaterOrEqual.tag: LDAPFilter_greaterOrEqual,
+        LDAPFilter_lessOrEqual.tag: LDAPFilter_lessOrEqual,
+        LDAPFilter_present.tag: LDAPFilter_present,
+        LDAPFilter_approxMatch.tag: LDAPFilter_approxMatch,
+        LDAPFilter_extensibleMatch.tag: LDAPFilter_extensibleMatch,
+        }
 
 LDAP_SCOPE_baseObject=0
 LDAP_SCOPE_singleLevel=1
@@ -242,21 +463,7 @@ LDAP_DEREF_derefInSearching=1
 LDAP_DEREF_derefFindingBaseObj=2
 LDAP_DEREF_derefAlways=3
 
-LDAPFilterMatchAll = LDAPAttributeValueAssertion('objectclass')
-
-"""
-Filter ::= CHOICE {
-and             [0] SET OF Filter,
-or              [1] SET OF Filter,
-not             [2] Filter,
-equalityMatch   [3] AttributeValueAssertion,
-substrings      [4] SubstringFilter,
-greaterOrEqual  [5] AttributeValueAssertion,
-lessOrEqual     [6] AttributeValueAssertion,
-present         [7] AttributeDescription,
-approxMatch     [8] AttributeValueAssertion,
-extensibleMatch [9] MatchingRuleAssertion }
-"""
+LDAPFilterMatchAll = LDAPFilter_present('objectclass')
 
 class LDAPSearchRequest(LDAPProtocolRequest):
     tag=CLASS_APPLICATION|0x03
@@ -409,7 +616,7 @@ class LDAPSearchResultDone(LDAPResult):
 #    pass
 #class LDAPAbandonRequest(LDAPProtocolRequest):
 #    tag = 0x15
-#    needs_answer=1
+#    needs_answer=0
 #    pass
 
 
