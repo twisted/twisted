@@ -20,6 +20,35 @@
 I do something very much like Pickle; however, pickle's main goal seems to be
 efficiency (both in space and time); jelly's main goals are security, human
 readability, and portability to other environments.
+
+
+This is how Jelly converts various objects to s-expressions:
+
+Integer: 1 --> 1
+
+List: [1, 2] --> ['list', 1, 2]
+
+String: "hello" --> "hello"
+
+Float: 2.3 --> 2.3
+
+Dictionary: {'a' : 1, 'b' : 'c'} --> ['dictionary', ['b', 'c'], ['a', 1]]
+
+Module: UserString --> ['module', 'UserString']
+
+Class: UserString.UserString --> ['class', ['module', 'UserString'], 'UserString']
+
+Function: string.join --> ['function', 'join', ['module', 'string']]
+
+Instance: s is an instance of UserString.UserString, with a __dict__ {'data': 'hello'}:
+['instance', ['class', ['module', 'UserString'], 'UserString'], ['dictionary', ['data', 'hello']]]
+
+Class Method: UserString.UserString.center:
+['method', 'center', ['None'], ['class', ['module', 'UserString'], 'UserString']]
+
+Instance Method: s.center, where s is an instance of UserString.UserString:
+['method', 'center', ['instance', ['reference', 1, ['class', ['module', 'UserString'], 'UserString']], ['dictionary', ['data', 'd']]], ['dereference', 1]]
+
 """
 
 import string
