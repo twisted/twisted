@@ -9,6 +9,7 @@ Test running processes.
 from __future__ import nested_scopes
 
 from twisted.trial import unittest
+from twisted.trial.util import spinUntil, spinWhile
 from twisted.python import log
 
 import gzip
@@ -90,9 +91,10 @@ class EchoProtocol(protocol.ProcessProtocol):
 
     def processEnded(self, reason):
         self.finished = 1
-        if not isinstance(reason.value, error.ProcessDone):
-            print reason
-            raise "process didn't terminate normally"
+        if not reason.check(error.ProcessDone):
+            self.failure = "process didn't terminate normally: %s" % reason
+            return
+        self.failure = None
 
 class SignalProtocol(protocol.ProcessProtocol):
     def __init__(self, sig, testcase):
@@ -105,20 +107,24 @@ class SignalProtocol(protocol.ProcessProtocol):
 
     def processEnded(self, reason):
         self.going = 0
-        reason.trap(error.ProcessTerminated)
+        if not reason.check(error.ProcessTerminated):
+            self.failure = "wrong termination: %s" % reason
+            return
         v = reason.value
-        self.testcase.assertEquals(v.exitCode, None,
-                                   "SIG%s: exitCode is %s, not None" % \
-                                   (self.signal, v.exitCode))
-        self.testcase.assertEquals(v.signal,
-                                   getattr(signal,'SIG'+self.signal),
-                                   "SIG%s: .signal was %s, wanted %s" % \
-                                   (self.signal, v.signal,
-                                    getattr(signal,'SIG'+self.signal)))
-        self.testcase.assertEquals(os.WTERMSIG(v.status),
-                                   getattr(signal,'SIG'+self.signal),
-                                   'SIG%s: %s' % (self.signal,
-                                                  os.WTERMSIG(v.status)))
+        if v.exitCode is not None:
+            self.failure = "SIG%s: exitCode is %s, not None" % \
+                           (self.signal, v.exitCode)
+            return
+        if v.signal != getattr(signal,'SIG'+self.signal):
+            self.failure = "SIG%s: .signal was %s, wanted %s" % \
+                           (self.signal, v.signal,
+                            getattr(signal,'SIG'+self.signal))
+            return
+        if os.WTERMSIG(v.status) != getattr(signal,'SIG'+self.signal):
+            self.failure = 'SIG%s: %s' % (self.signal,
+                                          os.WTERMSIG(v.status))
+            return
+        self.failure = None
 
 class SignalMixin:
     sigchldHandler = None
@@ -149,9 +155,7 @@ class ProcessTestCase(SignalMixin, unittest.TestCase):
         p = TestProcessProtocol()
         reactor.spawnProcess(p, exe, [exe, "-u", scriptPath], env=None)
 
-        timeout = time.time() + 10
-        while not p.finished and not (time.time() > timeout):
-            reactor.iterate(0.01)
+        spinUntil(lambda :p.finished, 10)
         self.failUnless(p.finished)
         self.assertEquals(p.stages, [1, 2, 3, 4, 5])
 
@@ -173,8 +177,8 @@ class ProcessTestCase(SignalMixin, unittest.TestCase):
         scriptPath = util.sibpath(__file__, "process_echoer.py")
         p = EchoProtocol()
         reactor.spawnProcess(p, exe, [exe, "-u", scriptPath], env=None)
-        while not p.finished:
-            reactor.iterate(0.01)
+        spinUntil(lambda :p.finished, 20)
+        self.failIf(p.failure, p.failure)
         self.assert_(hasattr(p, 'buffer'))
         self.assertEquals(len(p.buffer), len(p.s * 10))
 
@@ -192,13 +196,7 @@ class TestTwoProcessesBase:
         self.processes = [None, None]
         self.pp = [None, None]
         self.done = 0
-        self.timeout = None
         self.verbose = 0
-    def tearDown(self):
-        if self.timeout:
-            self.timeout.cancel()
-            self.timeout = None
-        # I don't think I can use os.kill outside of POSIX, so skip cleanup
 
     def createProcesses(self, usePTY=0):
         exe = sys.executable
@@ -218,36 +216,26 @@ class TestTwoProcessesBase:
         self.failIf(pp.finished, "Process finished too early")
         p.loseConnection()
         if self.verbose: print self.pp[0].finished, self.pp[1].finished
-
-    def giveUp(self):
-        self.timeout = None
-        self.done = 1
-        if self.verbose: print "timeout"
-        self.fail("timeout")
         
     def check(self):
         #print self.pp[0].finished, self.pp[1].finished
         #print "  ", self.pp[0].num, self.pp[1].num
         if self.pp[0].finished and self.pp[1].finished:
             self.done = 1
+        return self.done
             
     def testClose(self):
         if self.verbose: print "starting processes"
         self.createProcesses()
         reactor.callLater(1, self.close, 0)
         reactor.callLater(2, self.close, 1)
-        self.timeout = reactor.callLater(5, self.giveUp)
-        self.check()
-        while not self.done:
-            reactor.iterate(0.01)
-            self.check()
+        spinUntil(self.check, 5)
 
 class TestTwoProcessesNonPosix(TestTwoProcessesBase, SignalMixin, unittest.TestCase):
     pass
 
 class TestTwoProcessesPosix(TestTwoProcessesBase, SignalMixin, unittest.TestCase):
     def tearDown(self):
-        TestTwoProcessesBase.tearDown(self)
         self.check()
         for i in (0,1):
             pp, process = self.pp[i], self.processes[i]
@@ -256,13 +244,7 @@ class TestTwoProcessesPosix(TestTwoProcessesBase, SignalMixin, unittest.TestCase
                     os.kill(process.pid, signal.SIGTERM)
                 except OSError:
                     print "OSError"
-        now = time.time()
-        self.check()
-        while not self.done or (time.time() > now + 5):
-            reactor.iterate(0.01)
-            self.check()
-        if not self.done:
-            print "unable to shutdown child processes"
+        spinUntil(self.check, 5, msg="unable to shutdown child processes")
 
     def kill(self, num):
         if self.verbose: print "kill [%d] with SIGTERM" % num
@@ -277,33 +259,21 @@ class TestTwoProcessesPosix(TestTwoProcessesBase, SignalMixin, unittest.TestCase
         self.createProcesses(usePTY=0)
         reactor.callLater(1, self.kill, 0)
         reactor.callLater(2, self.kill, 1)
-        self.timeout = reactor.callLater(5, self.giveUp)
-        self.check()
-        while not self.done:
-            reactor.iterate(0.01)
-            self.check()
+        spinUntil(self.check, 5)
 
     def testClosePty(self):
         if self.verbose: print "starting processes"
         self.createProcesses(usePTY=1)
         reactor.callLater(1, self.close, 0)
         reactor.callLater(2, self.close, 1)
-        self.timeout = reactor.callLater(5, self.giveUp)
-        self.check()
-        while not self.done:
-            reactor.iterate(0.01)
-            self.check()
+        spinUntil(self.check, 5)
     
     def testKillPty(self):
         if self.verbose: print "starting processes"
         self.createProcesses(usePTY=1)
         reactor.callLater(1, self.kill, 0)
         reactor.callLater(2, self.kill, 1)
-        self.timeout = reactor.callLater(5, self.giveUp)
-        self.check()
-        while not self.done:
-            reactor.iterate(0.01)
-            self.check()
+        spinUntil(self.check, 5)
 
 class FDChecker(protocol.ProcessProtocol):
     state = 0
@@ -402,10 +372,7 @@ class FDTest(SignalMixin, unittest.TestCase):
                              path=None,
                              childFDs={0:"w", 1:"r", 2:2,
                                        3:"w", 4:"r", 5:"w"})
-        timeout = time.time() + 5
-        while not p.done and time.time() < timeout:
-            reactor.iterate(0.01)
-        self.failUnless(p.done, "timeout")
+        spinUntil(lambda :p.done, 5)
         self.failIf(p.failed, p.failed)
 
     if sys.platform.find("freebsd") != -1:
@@ -422,10 +389,7 @@ class FDTest(SignalMixin, unittest.TestCase):
                              path=None,
                              childFDs={1:"r", 2:2},
                              )
-        timeout = time.time() + 7
-        while not p.closed and time.time() < timeout:
-            reactor.iterate(0.01)
-        self.failUnless(p.closed, "timeout")
+        spinUntil(lambda :p.closed, 7)
         self.failUnlessEqual(p.outF.getvalue(),
                              "here is some text\ngoodbye\n")
 
@@ -472,8 +436,7 @@ class PosixProcessBase:
         reactor.spawnProcess(p, cmd, ['true'], env=None,
                              usePTY=self.usePTY)
 
-        while not p.finished:
-            reactor.iterate(0.01)
+        spinUntil(lambda :p.finished)
         p.reason.trap(error.ProcessDone)
         self.assertEquals(p.reason.value.exitCode, 0)
         self.assertEquals(p.reason.value.signal, None)
@@ -487,8 +450,7 @@ class PosixProcessBase:
         reactor.spawnProcess(p, cmd, ['false'], env=None,
                              usePTY=self.usePTY)
 
-        while not p.finished:
-            reactor.iterate(0.01)
+        spinUntil(lambda :p.finished)
         p.reason.trap(error.ProcessTerminated)
         self.assertEquals(p.reason.value.exitCode, 1)
         self.assertEquals(p.reason.value.signal, None)
@@ -497,16 +459,13 @@ class PosixProcessBase:
         exe = sys.executable
         scriptPath = util.sibpath(__file__, "process_signal.py")
         signals = ('HUP', 'INT', 'KILL')
-        protocols = []
         for sig in signals:
             p = SignalProtocol(sig, self)
             reactor.spawnProcess(p, exe, [exe, "-u", scriptPath, sig],
                                  env=None,
                                  usePTY=self.usePTY)
-            protocols.append(p)
-
-        while reduce(lambda a,b:a+b,[p.going for p in protocols]):
-            reactor.iterate(0.01)
+            spinWhile(lambda :p.going)
+            self.failIf(p.failure, p.failure)
 
 class PosixProcessTestCase(SignalMixin, unittest.TestCase, PosixProcessBase):
     # add three non-pty test cases
@@ -522,15 +481,15 @@ class PosixProcessTestCase(SignalMixin, unittest.TestCase, PosixProcessBase):
         p.transport.write("abc")
         p.transport.write("123")
         p.transport.closeStdin()
-        timeout = time.time() + 10
-        while not p.closed and not (time.time() > timeout):
-            reactor.iterate(0.01)
-        self.failUnless(p.closed)
-        self.assertEquals(p.outF.getvalue(), "hello, worldabc123", "Error message from process_twisted follows:\n\n%s\n\n" % p.errF.getvalue())
+        spinUntil(lambda :p.closed, 10)
+        self.assertEquals(p.outF.getvalue(), "hello, worldabc123",
+                          "Error message from process_twisted follows:"
+                          "\n\n%s\n\n" % p.errF.getvalue())
 
     def testStderr(self):
         # we assume there is no file named ZZXXX..., both in . and in /tmp
-        if not os.path.exists('/bin/ls'): raise RuntimeError("/bin/ls not found")
+        if not os.path.exists('/bin/ls'):
+            raise RuntimeError("/bin/ls not found")
 
         p = Accumulator()
         reactor.spawnProcess(p, '/bin/ls',
@@ -539,8 +498,7 @@ class PosixProcessTestCase(SignalMixin, unittest.TestCase, PosixProcessBase):
                              env=None, path="/tmp",
                              usePTY=self.usePTY)
 
-        while not p.closed:
-            reactor.iterate(0.01)
+        spinUntil(lambda :p.closed)
         self.assertEquals(lsOut, p.errF.getvalue())
 
     def testProcess(self):
@@ -554,10 +512,7 @@ class PosixProcessTestCase(SignalMixin, unittest.TestCase, PosixProcessBase):
         p.transport.write(s)
         p.transport.closeStdin()
 
-        timeout = time.time() + 10
-        while not p.closed and not (time.time() > timeout):
-            reactor.iterate(0.01)
-        self.failUnless(p.closed)
+        spinUntil(lambda :p.closed, 10)
         f = p.outF
         f.seek(0, 0)
         gf = gzip.GzipFile(fileobj=f)
@@ -581,10 +536,7 @@ class PosixProcessTestCasePTY(SignalMixin, unittest.TestCase, PosixProcessBase):
         reactor.spawnProcess(p, exe, [exe, "-u", scriptPath], env=None,
                             path=None, usePTY=self.usePTY)
         p.transport.write("hello world!\n")
-        timeout = time.time() + 10
-        while not p.closed and not (time.time() > timeout):
-            reactor.iterate(0.01)
-        self.failUnless(p.closed)
+        spinUntil(lambda :p.closed, 10)
         self.assertEquals(p.outF.getvalue(), "hello world!\r\nhello world!\r\n", "Error message from process_tty follows:\n\n%s\n\n" % p.outF.getvalue())
     
 class Win32ProcessTestCase(SignalMixin, unittest.TestCase):
@@ -599,8 +551,7 @@ class Win32ProcessTestCase(SignalMixin, unittest.TestCase):
         p.transport.write("hello, world")
         p.transport.closeStdin()
 
-        while not p.closed:
-            reactor.iterate(0.01)
+        spinUntil(lambda :p.closed)
         self.assertEquals(p.errF.getvalue(), "err\nerr\n")
         self.assertEquals(p.outF.getvalue(), "out\nhello, world\nout\n")
 
