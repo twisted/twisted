@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.11 2002/05/25 11:47:58 glyph Exp $
+# $Id: default.py,v 1.12 2002/05/27 11:02:55 itamarst Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -202,6 +202,10 @@ class _Win32Waker(log.Logger, styles.Ephemeral):
         """
         self.r.recv(8192)
 
+    def connectionLost(self):
+        self.r.close()
+        self.w.close()
+
 
 class _UnixWaker(log.Logger, styles.Ephemeral):
     """This class provides a simple interface to wake up the select() loop.
@@ -251,7 +255,23 @@ reads = {}
 writes = {}
 
 
+def win32select(r, w, e, timeout=None):
+    """Win32 select wrapper."""
+    if not r and not w:
+        # windows select() exits immediately when no sockets
+        if timeout == None:
+            timeout = 0.1
+        else:
+            timeout = min(timeout, 0.001)
+        sleep(timeout)
+        return [], [], []
+    r, w, e = select.select(r, w, w, timeout)
+    return r, w+e, []
 
+if platform.getType() == "win32":
+    _select = win32select
+else:
+    _select = select.select
 
 
 class SelectReactor(PosixReactorBase):
@@ -287,20 +307,11 @@ class SelectReactor(PosixReactorBase):
         This will run all selectables who had input or output readiness
         waiting for them.
         """
-        if not reads and not writes and platform.getType() == 'win32':
-            # windows select() exits immediately when no sockets
-            if timeout == None:
-                timeout = 0.1
-            else:
-                timeout = min(timeout, 0.001)
-            sleep(timeout)
-            return
-        
         while 1:
             try:
-                r, w, ignored = select.select(reads.keys(),
-                                              writes.keys(),
-                                              [], timeout)
+                r, w, ignored = _select(reads.keys(),
+                                        writes.keys(),
+                                        [], timeout)
                 break
             except ValueError, ve:
                 # Possibly a file descriptor has gone negative?

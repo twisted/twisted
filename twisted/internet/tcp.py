@@ -28,6 +28,7 @@ import copy
 import socket
 import sys
 import string
+import select
 
 if os.name == 'nt':
     EINVAL      = 10022
@@ -50,6 +51,7 @@ elif os.name != 'java':
 from twisted.protocols import protocol
 from twisted.persisted import styles
 from twisted.python import log, defer
+from twisted.python.runtime import platform
 
 from twisted.internet.interfaces import IConnector
 # Sibling Imports
@@ -212,6 +214,14 @@ class Client(Connection):
 
         Then, call the protocol's makeConnection, and start waiting for data.
         """
+        if platform.getType() == "win32":
+            r, w, e = select.select([], [], [self.fileno()], 0.0)
+            if e:
+                self.protocol.connectionFailed()
+                self.stopReading()
+                self.stopWriting()
+                return
+
         try:
             self.socket.connect(self.realAddress)
         except socket.error, se:
