@@ -172,7 +172,7 @@ class View(template.DOMTemplate):
                 viewMethod = getattr(namespace, 'factory_' + viewName, None)
                 if viewMethod is not None:
                     warnings.warn("factory_ methods are deprecated; please use "
-                                  "wcfactory_ instead", DeprecationWarning)
+                                  "wvfactory_ instead", DeprecationWarning)
                     break
 
             if viewMethod is None:
