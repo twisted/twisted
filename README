@@ -69,8 +69,7 @@ What can I do with it?
 
 Unit Tests
 
-  See our unit tests run in a lovely Tkinter GUI, proving that the software is
-  BugFree(TM)::
+  See our unit tests run proving that the software is BugFree(TM)::
 
    % admin/runtests
 
