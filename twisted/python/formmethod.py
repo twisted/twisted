@@ -207,11 +207,11 @@ class Choice(Argument):
     be selected at once.
     """
     def __init__(self, name, choices=[], default=[], shortDesc=None,
-                 longDesc=None, hints=None):
+                 longDesc=None, hints=None, allowNone=1):
         self.choices = choices
         if choices and not default:
             default.append(choices[0][1])
-        Argument.__init__(self, name, default, shortDesc, longDesc, hints)
+        Argument.__init__(self, name, default, shortDesc, longDesc, hints, allowNone=allowNone)
 
     def coerce(self, inIdent):
         for ident, val, desc in self.choices:
@@ -232,9 +232,9 @@ class Flags(Argument):
     once.
     """
     def __init__(self, name, flags=(), default=(), shortDesc=None,
-                 longDesc=None, hints=None):
+                 longDesc=None, hints=None, allowNone=1):
         self.flags = flags
-        Argument.__init__(self, name, default, shortDesc, longDesc, hints)
+        Argument.__init__(self, name, default, shortDesc, longDesc, hints, allowNone=allowNone)
 
     def coerce(self, inFlagKeys):
         if not inFlagKeys:
