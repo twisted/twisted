@@ -17,7 +17,7 @@
 entries = {}
 indexFilename = "index.xhtml"
 
-def setIndexFilename(filename):
+def setIndexFilename(filename="index.xhtml"):
     global indexFilename
     indexFilename = filename
 

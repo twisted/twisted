@@ -20,7 +20,9 @@ from twisted.python import usage, plugin, reflect
 class Options(usage.Options):
 
     optFlags = [["plain", 'p', "Report filenames without progress bar"],
-                ["null", 'n', "Do not report filenames"]]
+                ["null", 'n', "Do not report filenames"],
+                ["number", 'N', "Add chapter/section numbers to section headings"],
+]
 
     optParameters = [
                      ["input", "i", 'lore'],

@@ -36,7 +36,10 @@ from twisted.scripts import lore
 
 import os
 
-options = {"template" : sibpath(__file__, "template.tpl"), 'baseurl': '%s', 'ext': '.xhtml' }
+def sp(originalFileName):
+    return sibpath(__file__, originalFileName)
+
+options = {"template" : sp("template.tpl"), 'baseurl': '%s', 'ext': '.xhtml' }
 d = options
 
 def filenameGenerator(originalFileName, outputExtension):
@@ -48,8 +51,12 @@ def filenameGenerator2(originalFileName, outputExtension):
 
 class TestFactory(unittest.TestCase):
 
-    file = sibpath(__file__, 'simple.html')
+    file = sp('simple.html')
     linkrel = ""
+
+    def setUp(self):
+        indexer.setIndexFilename()
+        indexer.clearEntries()
 
     def testProcessingFunctionFactory(self):
         htmlGenerator = factory.generate_html(options)
@@ -74,6 +81,7 @@ class TestFactory(unittest.TestCase):
         self.assertEqualFiles('good_simple.xhtml', 'simple1.xhtml')
 
     def test_munge(self):
+        indexer.setIndexFilename("lore_index_file.html")
         doc = microdom.parse(open(self.file))
         templ = microdom.parse(open(d['template']))
         node = templ.cloneNode(1)
@@ -84,19 +92,19 @@ class TestFactory(unittest.TestCase):
         self.assertEqualsFile('good_internal.xhtml', node.toprettyxml())
 
     def test_getProcessor(self):
-        options = { 'template': sibpath(__file__, 'template.tpl'), 'ext': '.xhtml', 'baseurl': 'burl',
+        options = { 'template': sp('template.tpl'), 'ext': '.xhtml', 'baseurl': 'burl',
                     'filenameMapping': None }
         p = process.getProcessor(default, "html", options)
-        p(sibpath(__file__, 'simple3.html'), self.linkrel)
+        p(sp('simple3.html'), self.linkrel)
         self.assertEqualFiles('good_simple.xhtml', 'simple3.xhtml')
 
     def test_getProcessorWithFilenameGenerator(self):
-        options = { 'template': sibpath(__file__, 'template.tpl'),
+        options = { 'template': sp('template.tpl'),
                     'ext': '.xhtml',
                     'baseurl': 'burl',
                     'filenameMapping': 'addFoo' }
         p = process.getProcessor(default, "html", options)
-        p(sibpath(__file__, 'simple4.html'), self.linkrel)
+        p(sp('simple4.html'), self.linkrel)
         self.assertEqualFiles('good_simple.xhtml', 'simple4foo.xhtml')
 
     def test_outputdirGenerator(self):
@@ -125,18 +133,20 @@ class TestFactory(unittest.TestCase):
         # generate the output file
         templ = microdom.parse(open(d['template']))
 
-        tree.doFile(sibpath(__file__, 'lore_index_test.xhtml'), self.linkrel, '.html', d['baseurl'], templ, d)
+        tree.doFile(sp('lore_index_test.xhtml'), self.linkrel, '.html', d['baseurl'], templ, d)
         self.assertEqualFiles("lore_index_test_out.html", "lore_index_test.html")
 
     def test_indexEntriesAdded(self):
+        indexer.addEntry('lore_index_test.html', 'index02', 'language of programming')
+        indexer.addEntry('lore_index_test.html', 'index01', 'programming language')
         indexer.setIndexFilename("lore_index_file.html")
         indexer.generateIndex()
         self.assertEqualFiles1("lore_index_file_out.html", "lore_index_file.html")
 
     def test_runningLore(self):
         options = lore.Options()
-        templateFilename = sibpath(__file__, 'template.tpl')
-        inputFilename = sibpath(__file__, 'lore_index_test.xhtml')
+        templateFilename = sp('template.tpl')
+        inputFilename = sp('lore_index_test.xhtml')
         indexFilename = 'theIndexFile'
         options.parseOptions(['--null', '--config', 'template=%s' % templateFilename,
                               '--index=%s' % indexFilename,
@@ -147,9 +157,9 @@ class TestFactory(unittest.TestCase):
 
     def test_runningLoreMultipleFiles(self):
         options = lore.Options()
-        templateFilename = sibpath(__file__, 'template.tpl')
-        inputFilename = sibpath(__file__, 'lore_index_test.xhtml')
-        inputFilename2 = sibpath(__file__, 'lore_index_test2.xhtml')
+        templateFilename = sp('template.tpl')
+        inputFilename = sp('lore_index_test.xhtml')
+        inputFilename2 = sp('lore_index_test2.xhtml')
         indexFilename = 'theIndexFile'
         options.parseOptions(['--null', '--config', 'template=%s' % templateFilename,
                               '--index=%s' % indexFilename,
@@ -160,6 +170,30 @@ class TestFactory(unittest.TestCase):
         self.assertEqualFiles("lore_index_test_out.html", "lore_index_test.html")
         self.assertEqualFiles("lore_index_test_out2.html", "lore_index_test2.html")
 
+    def test_NumberedSections(self):
+        # run two files through lore, with numbering turned on
+        # every h2 should be numbered:
+        # first  file's h2s should be 1.1, 1.2
+        # second file's h2s should be 2.1, 2.2
+        templateFilename = sp('template.tpl')
+        inputFilename = sp('lore_index_test.xhtml')
+        inputFilename2 = sp('lore_index_test2.xhtml')
+        indexFilename = 'theIndexFile'
+        options = lore.Options()
+        options.parseOptions(['--null',
+                              '--index=%s' % indexFilename,
+                              '--config', 'template=%s' % templateFilename,
+                              '--config', 'ext=%s' % ".tns",
+                              '--number',
+                              inputFilename, inputFilename2])
+        result = lore.runGivenOptions(options)
+
+        self.assertEquals(None, result)
+        #self.assertEqualFiles1("lore_index_file_out_multiple.html", indexFilename + ".tns")
+        #                       VVV change to new, numbered files  
+        self.assertEqualFiles("lore_index_test_out.html", "lore_index_test.tns")
+        self.assertEqualFiles("lore_index_test_out2.html", "lore_index_test2.tns")
+
 ########################################
 
     def assertEqualFiles1(self, exp, act):
@@ -169,11 +203,11 @@ class TestFactory(unittest.TestCase):
 
     def assertEqualFiles(self, exp, act):
         if (exp == act): return True
-        fact = open(sibpath(__file__, act))
+        fact = open(sp(act))
         self.assertEqualsFile(exp, fact.read())
 
     def assertEqualsFile(self, exp, act):
-        expected = open(sibpath(__file__, exp)).read()
+        expected = open(sp(exp)).read()
         self.assertEqualsString(expected, act)
 
     def assertEqualsString(self, expected, act):
