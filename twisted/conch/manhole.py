@@ -189,8 +189,7 @@ class Manhole(recvline.HistoricRecvLine):
             self.lineBuffer = []
             self.lineBufferIndex = 0
 
-            for ch in oldBuffer:
-                self.characterReceived(ch)
+            self._deliverBuffer(oldBuffer)
 
     def lineReceived(self, line):
         more = self.interpreter.push(line)
@@ -266,12 +265,17 @@ class ColoredManhole(Manhole):
                 ''.join(self.lineBuffer))
 
 
-    def characterReceived(self, ch):
+    def characterReceived(self, ch, moreCharactersComing):
         if self.mode == 'insert':
             self.lineBuffer.insert(self.lineBufferIndex, ch)
         else:
             self.lineBuffer[self.lineBufferIndex:self.lineBufferIndex+1] = [ch]
         self.lineBufferIndex += 1
+
+        if moreCharactersComing:
+            # Skip it all, we'll get called with another character in
+            # like 2 femptoseconds.
+            return
 
         if ch == ' ':
             # Don't bother to try to color whitespace

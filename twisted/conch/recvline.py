@@ -190,11 +190,11 @@ class RecvLine(insults.TerminalProtocol):
         if m is not None:
             m()
         elif keyID in string.printable:
-            self.characterReceived(keyID)
+            self.characterReceived(keyID, False)
         else:
             log.msg("Received unhandled keyID: %r" % (keyID,))
 
-    def characterReceived(self, ch):
+    def characterReceived(self, ch, moreCharactersComing):
         if self.mode == 'insert':
             self.lineBuffer.insert(self.lineBufferIndex, ch)
         else:
@@ -279,6 +279,11 @@ class HistoricRecvLine(RecvLine):
         b = tuple(self.historyLines)
         return b[:self.historyPosition], b[self.historyPosition:]
 
+    def _deliverBuffer(self, buf):
+        for ch in buf[:-1]:
+            self.characterReceived(ch, True)
+        self.characterReceived(buf[-1], False)
+
     def handle_UP(self):
         if self.lineBuffer and self.historyPosition == len(self.historyLines):
             self.historyLines.append(self.lineBuffer)
@@ -289,8 +294,7 @@ class HistoricRecvLine(RecvLine):
             self.historyPosition -= 1
             self.lineBuffer = []
 
-            for ch in self.historyLines[self.historyPosition]:
-                self.characterReceived(ch)
+            self._deliverBuffer(self.historyLines[self.historyPosition])
 
     def handle_DOWN(self):
         if self.historyPosition < len(self.historyLines) - 1:
@@ -300,8 +304,7 @@ class HistoricRecvLine(RecvLine):
             self.historyPosition += 1
             self.lineBuffer = []
 
-            for ch in self.historyLines[self.historyPosition]:
-                self.characterReceived(ch)
+            self._deliverBuffer(self.historyLines[self.historyPosition])
         else:
             self.handle_HOME()
             self.terminal.eraseToLineEnd()
