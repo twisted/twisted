@@ -296,14 +296,14 @@ class MetaInterface(interface.InterfaceClass):
                     adapter = conform(self)
                 except TypeError:
                     if sys.exc_info()[2].tb_next is not None:
-                        raise CannotAdapt
+                        raise CannotAdapt("%s to %s" % (adaptable, self))
                 else:
                     if adapter is not None:
                         return adapter
             adapter = self.__adapt__(adaptable)
             if adapter == None:
                 if default == _Nothing:
-                    raise CannotAdapt
+                    raise CannotAdapt("%s to %s" % (adaptable, self))
                 else:
                     return default
             _adapterPersistence[(id(adaptable), self)] = adapter
@@ -319,7 +319,7 @@ class MetaInterface(interface.InterfaceClass):
             else:
                 adapter = default
         if adapter == default and default == _Nothing:
-            raise CannotAdapt
+            raise CannotAdapt("%s to %s" % (adaptable, self))
         return adapter
     
     def adaptWith(self, using, to, registry=None):
