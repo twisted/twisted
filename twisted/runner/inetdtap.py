@@ -21,14 +21,14 @@ Stability: semi-stable
 
 Maintainer: U{Andrew Bennetts<spiv@twistedmatrix.com>}
 
-Future Plans: Bugfixes (don't call reactor.listenTCP or forkPassingFD when
-creating a TAP!), more configurability.
+Future Plans: more configurability.
 """
 
 import pwd, grp
 from twisted.runner import inetd, inetdconf
 from twisted.python import log, usage
 from twisted.internet.protocol import ServerFactory
+from twisted.application import internet, service as appservice
 
 
 class Options(usage.Options):
@@ -40,9 +40,27 @@ class Options(usage.Options):
 
     optFlags = [['nointernal', 'i', "Don't run internal services"]]
 
+class RPCServer(internet.TCPServer):
 
-def updateApplication(app, config):
-    
+    def __init__(self, rpcVersions, rpcConf, proto, service):
+        internet.TCPServer.__init__(0, ServerFactory())
+        self.rpcConf = rpcConf
+        self.proto = proto
+        self.service = service
+
+    def startService(self):
+        internet.TCPServer.startService(self)
+        import portmap
+        portNo = self._port.getHost()[2]
+        service = self.service
+        for version in rpcVersions:
+            portmap.set(self.rpcConf.services[name], version, self.proto,
+                        portNo)
+            inetd.forkPassingFD(service.program, service.programArgs,
+                                os.environ, service.user, service.group, p)
+
+def makeService(config):
+    s = appservice.MultiService()
     conf = inetdconf.InetdConf()
     conf.parseFile(open(config['file']))
 
@@ -129,20 +147,16 @@ def updateApplication(app, config):
             factory = ServerFactory()
             factory.protocol = inetd.internalProtocols[service.name]
         elif rpc:
-            proto = protocolDict[protocol]
-            p = reactor.listenTCP(0, ServerFactory())
-            portNo = p.getHost()[2]
-            for version in rpcVersions:
-                portmap.set(rpcConf.services[name], version, proto, portNo)
-            forkPassingFD(service.program, service.programArgs, os.environ,
-                          service.user, service.group, p)
+            i = RPCServer(rpcVersions, rpcConf, proto, service)
+            i.setServiceParent(s)
             continue
         else:
             # Non-internal non-rpc services use InetdFactory
             factory = inetd.InetdFactory(service)
 
         if protocol == 'tcp':
-            app.listenTCP(service.port, factory)
+            klass = internet.TCPServer
         elif protocol == 'udp':
-            app.listenUDP(service.port, factory)
-
+            klass = internet.UDPServer
+        klass(service.port, factory).setServiceParent(s)
+        return s
