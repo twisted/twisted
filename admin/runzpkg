@@ -4,8 +4,10 @@
 # Make a ~/.zpkg.resources file that contains 
 
 # zpkgsetup /path/to/zpkgtools/zpkgsetup
+# zope /path/to/Zope3/src/zope
+# zope.interface /path/to/Zope3/src/zope/interface
 
-# on a line. This will make it so zpkg doesn't have to download
+# This will make it so zpkg doesn't have to download
 # zpkgsetup every time you run it.
 
 zpkg --support twistedzpkg \

@@ -13,10 +13,7 @@
   extensions get build, and docs get included, but exarkun hates
   non-specific tests.
 
-* Get twistedsumo including z.i
-
 * finish refactoring/rewriting release-twisted to support releasing of
   all of our packages
-
 
 * Poke Martin to release PyOpenSSL when 2.0 is almost out.
