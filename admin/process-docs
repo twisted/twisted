@@ -3,7 +3,7 @@ set -e -x
 baseurl=http://twistedmatrix.com/documents/TwistedDocs/TwistedDocs-$1/api/%s.html
 templ=doc/howto/template.tpl
 ./bin/lore -p --input man --output lore --config ext=-man.html doc/man/*.1
-for doc in doc/man doc/howto doc/specifications; do
+for doc in doc/man doc/howto doc/specifications doc/vision/; do
   for command in "--output lint" "--config template=$templ --config baseurl=$baseurl -l ../howto" "--output latex --config section"; do
      ./bin/lore -p $command $doc/*.html
   done
@@ -14,4 +14,4 @@ for i in 1 2 3;do latex book.tex;done
 dvips -o book.ps book.dvi
 ps2pdf13 book.ps book.pdf
 rm *.eps *.tex *.aux *.log book.dvi book.toc ../man/*.tex \
-   ../specifications/*.tex ../man/*-man.html
+   ../specifications/*.tex ../man/*-man.html ../vision/*.tex
