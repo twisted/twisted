@@ -87,6 +87,11 @@ class Expect(object):
                     return
                 else:
                     raise RuntimeError, "something un-Expected happened"
+        else:
+            if s[0] != 'send':
+                raise RuntimeError, 'this is weird'
+            self.child.transport.write(s[1])
+            self.step = None
 
 
 def runTest():
