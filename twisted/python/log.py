@@ -209,9 +209,9 @@ class Logger:
         return bytes
 
     def __prefix(self):
-        y,mon,d,h,min, i,g,no,re = time.localtime(time.time())
-        return ("%0.4d/%0.2d/%0.2d %0.2d:%0.2d [%s] " %
-                 (y,mon,d,h,min , self.logPrefix()))
+        y,mon,d,h,min, i,g,no,daylight = time.localtime(time.time())
+        return ("%0.4d/%0.2d/%0.2d %0.2d:%0.2d %s [%s] " %
+                 (y,mon,d,h,min,time.tzname[daylight], self.logPrefix()))
 
     def logPrefix(self):
         """
