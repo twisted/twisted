@@ -1,0 +1,285 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Parallel Data Flows</title>
+</head>
+
+<body>
+<h1>Parallel Data Flows</h1>
+
+<h2>Background</h2>
+
+<h3>Handling more than one Request</h3>
+
+<p>When creating services which handle more than once client at a given
+time, the current state of each request must be managed.  A typical way to
+keep the current state is to use the call stack, a stack of functions and
+their arguments.  Unfortunately, things get complicated quick.</p>
+
+<p>One primary approach to this problem is preemptive mutlti-tasking, where
+each request is handled by a new process or thread which has its own
+callstack.  The difference between processes and threads, from the
+programmer's perspective, is primarly in how objects common to multiple
+requests are shared.   For processes, one must use sockets or shared memory;
+in threads, the programmer must take care to lock objects which could be
+touched by other threads.  In either case, the underlying system preempts
+the programmer and thus the programmer must take special care to make sure
+that any part of their code uses shared objects appropriately.</p>
+
+<p>Another approach, is to use a event-driven approach, where each request
+is broken down into distinct chunks of work, and when each chunk is done, it
+schedules the next chunk to be run.  This is called cooperative
+multi-tasking.   The Twisted framework primarly uses this approach to
+handling multiple requests.  In Twisted, the execution of each chunk is
+typically scheduled with <code>reactor.callLater</code> and the result of
+each chunk is reported with a callback, usually managed by a
+<code>internet.defer.Deferred</code> object.</p>
+
+<p>While this <code>Deferred</code> approach is very good, it starts to have
+problems when the flow of the request is not a simple linear chain.
+Basically, for each state of the request you would have a code block that is
+executed, with a <code>Deferred</code> object used to register its
+callbacks.  Each callback is then typically used to <code>callLater</code>
+the next state in the data flow.   Things get complicated when one stage
+needs to report results incrementally, or when the following state depends
+upon information from the current state.</p>
+
+<p>An alternative cooperative multitasking approach is to view data flows as
+a hierarchy of iterators, where the last stage in the flow 'pulls'
+information from previous stages.   This approach allows for a more granular
+control of the flow, giving both incremental results and also allowing the
+next state of the information to be chosen more dynamically.  Unfortunately,
+this approach is somewhat complicated since building iterators isn't easy.
+Luckly, in version 2.2 and up, Python has generators, which are, in short,
+syntax sugar for making iterators.</p>
+
+<p>A further complication to this iterator based approach is that every once
+and a while, a iterator in the flow (perhaps one nested several layers deep)
+may have to block on a resource.  In this case, the flow must be paused so
+that other flows in the system have a chance to produce results.  So, rather
+than blocking, the entire state of the iterator chain must be saved so that
+it can be resumed later.   This is what the flow module does.</p>
+
+<h3>Iterators and Wraps</h3>
+
+<p>An iterator is basically an object which produces a sequence of values.
+Python's iterators are simply objects with an <code>__iter__()</code> 
+member function which returns an object (usually itself) which has a
+<code>next()</code> member function.   The <code>next()</code> method is
+then invoked till it raises a <code>StopIteration</code> exception.
+In Python 2.2, the for syntax knows about iterators, making them
+very nice to use.</p>
+
+<pre class="python">
+from twisted.python.compat import iter, StopIteration
+
+class Counter:
+    def __init__(self, count):
+        self.count = count
+    def __iter__(self):
+        return self
+    def next(self):
+        ret = self.count
+        self.count -= 1
+        if self.count &lt; 1:
+            raise StopIteration
+        return ret
+
+def dump(it):
+    import sys
+    if sys.version_info &gt;= (2,2):
+        for x in it:
+           print x
+    else:
+        it = iter(it)
+        try:
+            while 1:
+                print it.next()
+        except StopIteration: pass
+
+dump(Counter(3))
+
+# prints:
+#   3
+#   2
+#   1
+
+</pre>
+
+<p>Often times it is useful for an iterator to change state during
+its production of values.  This can be done nicely with the 'state'
+pattern.  Simply store in the iterator the next function to be run.
+</p>
+
+<pre class="python">
+from twisted.python.compat import iter, StopIteration
+
+class States:
+    def __iter__(self):
+        self.state = self.next_initial
+        return self
+    def next_initial(self):
+        self.state = self.next_middle
+        return "one"
+    def next_middle(self):
+        self.state = self.next_final
+        return "two"
+    def next_final(self):
+        raise StopIteration
+    def next(self):
+        return self.state()
+
+dump(States())
+
+# prints:
+#   one
+#   two
+
+</pre>
+
+<p>Luckly, with Python 2.2, there is a wonderful syntax sugar for creating
+iterators... generators.   When a generator is first executed, an iterator
+is returned.  And from there on, each invocation of <code>next()</code>
+gives the subsequent value produced by the <code>yield</code> statement.
+With generators, the two iterators above become very easy to express.
+
+<pre class="python">
+from __future__ import generators
+def Counter(count):
+    while count > 0:
+        yield count
+        count -= 1
+
+def States():
+    yield "one"
+    yield "two"
+
+
+dump(Counter(3))
+dump(States())
+
+# prints:
+#    3
+#    2
+#    1
+#    one
+#    two
+
+</pre>
+
+<p>An important detail here, is that code which uses both iterators and
+generators (dump) can be expressed in a manner which works in with 2.1 and
+thus can be included in Twisted's codebase.  One technical difference
+between iterators and generators, is that raising an exception from a
+generator permanently halts the generator, while raising an exception from
+an iterator's <code>next()</code> method does not necessarly stop the
+iterator, that is, one could call the <code>next()</code> method again and
+possibly get results.   From here on, we use the generator syntax for
+expressing iterators.</p>
+
+<h2>Introducing Flow</h2>
+
+<p>It is possible, and often useful to view a data flow as a nested
+iterator.  In this view, the 'last' iterator in the chain 'pulls'
+data from previous iterators in the data flow. If you wish, you may
+call the last iterator a consumer, and the first iterator a producer.
+In the following example, we use the counter generator defined above
+as our producer.
+</p>
+
+<pre class="python">
+
+def Consumer():
+    for result in Counter(3):
+        if 2 != result:
+            yield result
+
+dump(Consumer())
+
+# prints:
+#   3
+#   1
+
+</pre>
+
+<p>The problem with this approach, is that a producer could potentially
+block, and if it did, the entire process could potentially stop servicing
+other requests.   Thus, some mechanism for pausing the flow and rebuilding
+it is required.   The flow module provides this ability to Cooperate
+by placing itself between each iterator in the flow.</p>
+
+<pre>
+import flow
+
+def Consumer():
+    producer = flow.Wrap(Counter(3))
+    while 1:
+        yield producer
+        result = producer.getResult()
+        if 2 != result:
+            yield result
+
+dump(flow.Flow(Consumer))
+</pre>
+
+<p>Alternatively, the wrapper has to member variables, <code>stop</code>
+which is true if the iterator being wrapped has finished, and
+<code>result</code> which is the last value produced.   The advantage
+of the code above, is that the flow itself can be paused and resumed
+when a producer blocks.  This can be shown by using two Flow objects
+at the same time:</p>
+
+<pre class="python">
+from __future__ import generators
+import flow
+
+def States():
+    yield "one"
+    yield "two"
+
+def Counter(count):
+    while count &gt; 0:
+        if not count % 2:
+            yield flow.Cooperate()
+        print "-| producing", count
+        yield count
+        count -= 1
+
+def Consumer():
+    producer = flow.Wrap(Counter(3))
+    while 1:
+        yield producer
+        result = producer.getResult()
+        if 2 != result:
+            yield result
+
+def AnotherConsumer():
+    producer = flow.Wrap(States())
+    while 1:
+        yield producer
+        yield producer.getResult()
+
+one = flow.Flow(Consumer())
+two = flow.Flow(AnotherConsumer())
+print one.next()
+print two.next()
+print one.next()
+print two.next()
+
+# prints:
+#  -| producing 3
+#  3
+#  one
+#  -| producing 2
+#  -| producing 1
+#  1
+#  two
+
+</pre>
+
+
+</body>
+</html>
