@@ -37,55 +37,6 @@ from twisted.python import failure, log
 
 import resolve, common
 
-class Authority(common.ResolverBase):
-    """
-    Guess.
-    """
-
-    def __init__(self, filename):
-        common.ResolverBase.__init__(self)
-
-        g, l = self.setupConfigNamespace(), {}
-        execfile(filename, g, l)
-        if not l.has_key('zone'):
-            raise ValueError, "No zone defined in " + filename
-        
-        self.records = {}
-        for rr in l['zone']:
-            if isinstance(rr[1], dns.Record_SOA):
-                self.soa = rr
-            self.records.setdefault(rr[0].lower(), []).append(rr[1])
-
-
-    def wrapRecord(self, type):
-        return lambda name, *arg, **kw: (name, type(*arg, **kw))
-
-
-    def setupConfigNamespace(self):
-        r = {}
-        for record in [x for x in dir(dns) if x.startswith('Record_')]:
-            type = getattr(dns, record)
-            f = self.wrapRecord(type)
-            r[record[len('Record_'):]] = f
-        return r
-
-
-    def _lookup(self, name, cls, type, timeout = 10):
-        try:
-            r = []
-            for rec in self.records[name.lower()]:
-                if rec.TYPE == type or type == dns.ALL_RECORDS:
-                    rec = copy.copy(rec)
-                    rec.ttl = max(self.soa[1].minimum, self.soa[1].expire)
-                    r.append(rec)
-            return defer.succeed(r)
-        except KeyError:
-            if name.lower().endswith(self.soa[0].lower()):
-                # We are the authority and we didn't find it.  Goodbye.
-                return defer.fail(failure.Failure(dns.AuthoritativeDomainError(name)))
-            return defer.fail(failure.Failure(dns.DomainError(name)))
-
-
 class DNSServerFactory(protocol.ServerFactory):
     cache = None
 

@@ -42,7 +42,12 @@ QUERY_TYPES = {
     5:  'CNAME', 6:  'SOA',   7:  'MB',   8:   'MG',
     9:  'MR',    10: 'NULL',  11: 'WKS',  12:  'PTR',
     13: 'HINFO', 14: 'MINFO', 15: 'MX',   16:  'TXT',
-    
+
+    # 17 through 32?  Eh, I'll get to 'em.
+
+    33: 'SRV',
+
+    # "Extended" queries (Hey, half of these are deprecated, good job)
     252: 'AFRX',  253: 'MAILB',
     254: 'MAILA', 255: 'ALL_RECORDS'
 }
@@ -487,7 +492,7 @@ class Record_NULL:                   # EXPERIMENTAL
 
 # XXX - This *can't* be right, can it?
 # XXX - Nope, it's not.  See below.
-class Record_WKS:
+class Record_WKS:                    # OBSOLETE
     __implements__ = (IEncodable,)
     TYPE = WKS
 
@@ -521,6 +526,38 @@ class Record_WKS:
 
     def __str__(self):
         return '<WKS addr=%s proto=%d>' % (self.address, self.protocol)
+
+
+class Record_SRV:                # EXPERIMENTAL
+    __implements__ = (IEncodable,)
+    TYPE = SRV
+    
+    def __init__(self, priority = 0, weight = 0, port = 0, target = ''):
+        self.priority = int(priority)
+        self.weight = int(weight)
+        self.port = int(port)
+        self.target = Name(target)
+    
+    
+    def encode(self, strio, compDict = None):
+        strio.write(struct.pack('!HHH', self.priority, self.weight, self.port))
+        self.target.encode(strio, compDict)
+    
+    
+    def decode(self, strio):
+        r = struct.unpack('!HHH', readPrecisely(strio, struct.calcsize('!HHH')))
+        self.priority, self.weight, self.port = r
+        self.target = Name()
+        self.target.decode(strio)
+    
+    
+    def __eq__(self, other):
+        if isinstance(other, Record_SRV):
+            return (self.priority == other.priority and
+                    self.weight == other.weight and
+                    self.port == other.port and
+                    str(self.target) == str(other.target))
+        return 0
 
 
 class Record_HINFO:
@@ -592,7 +629,7 @@ class Record_MX:
     TYPE = MX
 
     def __init__(self, preference = 0, exchange = ''):
-        self.preference, self.exchange = preference, Name(exchange)
+        self.preference, self.exchange = int(preference), Name(exchange)
 
 
     def encode(self, strio, compDict = None):
@@ -653,6 +690,9 @@ class Record_TXT:
 class Message:
     headerFmt = "!H2B4H"
     headerSize = struct.calcsize( headerFmt )
+
+    # Question, answer, additional, and nameserver lists
+    queries = answers = add = ns = None
 
     def __init__(self, id=0, answer=0, opCode=0, recDes=0, recAv=0,
                        auth=0, rCode=OK, trunc=0, maxSize=512):

@@ -18,13 +18,12 @@
 Domain Name Server
 """
 
-import os
+import os, traceback
 
 from twisted.python import usage
-from twisted.names import server
 from twisted.protocols import dns
 
-import traceback
+import server, authority
 
 class Options(usage.Options):
     optParameters = [
@@ -44,13 +43,21 @@ class Options(usage.Options):
     def __init__(self):
         usage.Options.__init__(self)
         self['verbose'] = 0
+        self.bindfiles = []
         self.zonefiles = []
     
     
-    def opt_zonefile(self, filename):
+    def opt_pyzone(self, filename):
+        """Specify the filename of a Python syntax zone definition"""
         if not os.path.exists(filename):
             raise usage.UsageError(filename + ": No such file")
         self.zonefiles.append(filename)
+
+    def opt_bindzone(self, filename):
+        """Specify the filename of a BIND9 syntax zone definition"""
+        if not os.path.exists(filename):
+            raise usage.UsageError(filename + ": No such file")
+        self.bindfiles.append(filename)
 
 
     def opt_verbose(self):
@@ -62,7 +69,13 @@ class Options(usage.Options):
         self.zones = []
         for f in self.zonefiles:
             try:
-                self.zones.append(server.Authority(f))
+                self.zones.append(authority.PySourceAuthority(f))
+            except Exception, e:
+                traceback.print_exc()
+                raise usage.UsageError("Invalid syntax in " + f)
+        for f in self.bindfiles:
+            try:
+                self.zones.append(authority.BindAuthority(f))
             except Exception, e:
                 traceback.print_exc()
                 raise usage.UsageError("Invalid syntax in " + f)

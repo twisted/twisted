@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import operator
+import operator, sys
 
 from twisted.protocols import dns
 from twisted.internet import defer
@@ -79,8 +79,11 @@ class ResolverBase:
     def lookupNull(self, name, timeout = 10):
         return self._lookup(name, dns.IN, dns.NULL, timeout)
 
-    def lookupServices(self, name, timeout = 10):
+    def lookupWellKnownServices(self, name, timeout = 10):
         return self._lookup(name, dns.IN, dns.WKS, timeout)
+
+    def lookupService(self, name, timeout = 10):
+        return self._lookup(name, dns.IN, dns.SRV, timeout)
 
     def lookupHostInfo(self, name, timeout = 10):
         return self._lookup(name, dns.IN, dns.HINFO, timeout)
@@ -93,9 +96,11 @@ class ResolverBase:
     
     def lookupAllRecords(self, name, timeout = 10):
         return defer.DeferredList([
-            self._lookup(name, dns.IN, type, timeout) for type in range(1, 17)
+            self._lookup(name, dns.IN, type, timeout).addErrback(
+                lambda f: f.trap(NotImplementedError) and []
+            ) for type in range(1, 17)
         ]).addCallback(
-            lambda r: reduce(operator.add, [res[1] for res in r if r[0]], [])
+            lambda r: reduce(operator.add, [res[1] for res in r if res[0]], [])
         )
 
 
@@ -108,12 +113,14 @@ typeToMethod = {
     dns.MG:    'lookupMailGroup',
     dns.MR:    'lookupMailRename',
     dns.NULL:  'lookupNull',
-    dns.WKS:   'lookupServices',
+    dns.WKS:   'lookupWellKnownServices',
     dns.PTR:   'lookupPointer',
     dns.HINFO: 'lookupHostInfo',
     dns.MINFO: 'lookupMailboxInfo',
     dns.MX:    'lookupMailExchange',
     dns.TXT:   'lookupText',
+    
+    dns.SRV:   'lookupService',
     
     dns.ALL_RECORDS:  'lookupAllRecords',
 }

@@ -49,7 +49,7 @@ class Resolver:
     
     def _lookup(self, name, cls, type, timeout):
         if cls != dns.IN or type != dns.A:
-            raise NotImplementedError
+            raise NotImplementedError, (type, cls)
         return self.lookupAddress(name, timeout)
 
 
@@ -58,3 +58,6 @@ class Resolver:
         if res is not None:
             return defer.succeed([res])
         return defer.fail(failure.Failure(dns.DomainError(name)))
+
+
+    lookupAllRecords = lookupAddress

@@ -90,6 +90,9 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
                         dns.Record_MINFO(rmailbx='r mail box', emailbx='e mail box'),
                         soa_record
                     ],
+                    'http.tcp.test-domain.com': [
+                        dns.Record_SRV(257, 16383, 43690, 'some.other.place.fool')
+                    ],
                     'host.test-domain.com': [
                         dns.Record_A('123.242.1.5'),
                         dns.Record_A('0.255.0.255'),
@@ -235,4 +238,12 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
         self.namesTest(
             self.resolver.lookupMailboxInfo('test-domain.com'),
             [dns.Record_MINFO(rmailbx='r mail box', emailbx='e mail box')]
+        )
+
+
+    def testSRV(self):
+        """Test DNS 'SRV' record queries"""
+        self.namesTest(
+            self.resolver.lookupService('http.tcp.test-domain.com'),
+            [dns.Record_SRV(257, 16383, 43690, 'some.other.place.fool')]
         )
