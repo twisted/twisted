@@ -99,7 +99,6 @@ class AtLeastImportTestCase(unittest.TestCase):
         from twisted.web import test
         from twisted.web import vhost
         from twisted.web import guard
-        from twisted.web import webcred
         from twisted.web import error
     
     def test_words(self):
