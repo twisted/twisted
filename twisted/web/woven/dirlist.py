@@ -68,7 +68,7 @@ class DirectoryLister(page.Page):
             <td model="type" view="Text"></td>
             <td model="encoding" view="Text"></td>
         </tr>
-        <tr class="even" pattern="listItem">
+        <tr class="odd" pattern="listItem">
             <td><a model="link" view="Link" /></td>
             <td model="type" view="Text"></td>
             <td model="encoding" view="Text"></td>
