@@ -1,16 +1,16 @@
 # -*- test-case-name: twisted.test.test_task -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -34,7 +34,7 @@ class LoopingCall:
     @ivar a: A tuple of arguments to pass the function.
     @ivar kw: A dictionary of keyword arguments to pass to the function.
     """
-    
+
     call = None
     running = False
     deferred = None
@@ -53,7 +53,7 @@ class LoopingCall:
         @param interval: The number of seconds between calls.  May be less than
         one.  Precision will depend on the underlying platform, the available
         hardware, and the load on the system.
-        
+
         @return: A Deferred whose callback will be invoked with C{self} when
         C{self.stop} is called, or whose errback will be invoked if the function
         raises an exception.
@@ -71,11 +71,12 @@ class LoopingCall:
         """Stop running function."""
         assert self.running
         self.running = False
-        self.call.cancel()
-        self.call = None
+        if self.call is not None:
+            self.call.cancel()
+            self.call = None
         d, self.deferred = self.deferred, None
         d.callback(self)
-    
+
     def _loop(self):
         self.call = None
         try:
@@ -84,7 +85,7 @@ class LoopingCall:
             d, self.deferred = self.deferred, None
             d.errback()
             return
-        
+
         fromNow = self.starttime - seconds()
 
         while self.running:
