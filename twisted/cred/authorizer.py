@@ -1,4 +1,3 @@
-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -19,7 +18,8 @@
 from twisted.internet import defer
 
 # Sibling Imports
-from twisted.cred import identity
+from twisted.cred import identity, error
+
 
 class Authorizer:
     """An interface to a set of identities.
@@ -96,5 +96,5 @@ class DefaultAuthorizer(Authorizer):
         if self.identities.has_key(name):
             req.callback(self.identities[name])
         else:
-            req.errback("unauthorized")
+            req.errback(error.Unauthorized("unauthorized"))
         return req

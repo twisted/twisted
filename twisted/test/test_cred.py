@@ -56,13 +56,16 @@ class ServiceTestCase(unittest.TestCase):
     App = AppForServiceTest
     
     def setUp(self):
-        self.service = service.Service("test service")
+        self.service = service.Service("test service", authorizer=authorizer.Authorizer())
 
     def testConstruction(self):
-        app = self.App("test app for service-test")
+        appl = self.App("test app for service-test")
+        auth = authorizer.Authorizer()
+        parent = app.MultiService("test")
         service.Service("test service")
-        service.Service("test service", app)
-
+        service.Service("test service", authorizer=auth)
+        service.Service("test service", parent)
+    
     def testConstruction_serviceName(self):
         """serviceName is frequently used as a key, thus it is expected
         to be hashable."""
@@ -70,25 +73,25 @@ class ServiceTestCase(unittest.TestCase):
         self.assertRaises(TypeError, service.Service,
                           ForeignObject("Not a Name"))
 
-    def testsetApplication(self):
-        appl = self.App("test app for service-test")
-        self.service.setApplication(appl)
-        self.assert_(self.service.application is appl)
+    def testsetServiceParent(self):
+        parent = app.MultiService("test")
+        self.service.setServiceParent(parent)
+        self.assert_(self.service.serviceParent is parent)
 
-    def testsetApplication_invalid(self):
-        "setApplication should not accept bogus argument."
+##    def testsetApplication_invalid(self):
+##        "setApplication should not accept bogus argument."
 
-        self.assertRaises(TypeError, self.service.setApplication,
-                          ForeignObject("Not an Application"))
+##        self.assertRaises(TypeError, self.service.setApplication,
+##                          ForeignObject("Not an Application"))
 
-    def testsetApplication_again(self):
-        "setApplication should bail if already set."
+##    def testsetApplication_again(self):
+##        "setApplication should bail if already set."
 
-        app1 = self.App("test app for service-test")
-        app2 = self.App("another app?")
-        self.service.setApplication(app1)
-        self.assertRaises(RuntimeError, self.service.setApplication,
-                          app2)
+##        app1 = self.App("test app for service-test")
+##        app2 = self.App("another app?")
+##        self.service.setApplication(app1)
+##        self.assertRaises(RuntimeError, self.service.setApplication,
+##                          app2)
 
     def testgetPerspective(self):
         self.pname = pname = "perspective for service-test"
@@ -151,7 +154,7 @@ class PerspectiveTestCase(unittest.TestCase):
         self.app = self.App("app for perspective-test")
         self.auth = authorizer.DefaultAuthorizer()
         self.service = self.Service("service for perspective-test",
-                                    self.app)
+                                    authorizer=self.auth)
         self.perspective = perspective.Perspective("test perspective")
         self.perspective.setService(self.service)
 
@@ -277,18 +280,18 @@ class IdentityTestCase(unittest.TestCase):
     Perspective = PerspectiveForIdentityTest
 
     def setUp(self):
-        self.app = self.App("app for identity-test")
-        self.ident = identity.Identity("test identity", self.app)
+        self.auth = authorizer.DefaultAuthorizer()
+        self.ident = identity.Identity("test identity", authorizer=self.auth)
 
     def testConstruction(self):
-        identity.Identity("test name", self.app)
+        identity.Identity("test name", authorizer=self.auth)
 
     def test_addKeyByString(self):
         self.ident.addKeyByString("one", "two")
         self.assert_(("one", "two") in self.ident.getAllKeys())
 
     def test_addKeyForPerspective(self):
-        service = self.Service("one", self.app)
+        service = self.Service("one", authorizer=self.auth)
         perspective = self.Perspective("two", service)
 
         self.ident.addKeyForPerspective(perspective)
@@ -297,7 +300,7 @@ class IdentityTestCase(unittest.TestCase):
     def test_getAllKeys(self):
         self.assert_(len(self.ident.getAllKeys()) == 0)
 
-        service = self.Service("one", self.app)
+        service = self.Service("one", authorizer=self.auth)
 
         for n in ("p1","p2","p3"):
             perspective = self.Perspective(n, service)

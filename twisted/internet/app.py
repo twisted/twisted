@@ -99,6 +99,7 @@ class ApplicationService(Accessor, styles.Versioned):
     serviceType = None
     serviceName = None
     serviceParent = None
+    serviceRunning = 0
     persistenceVersion = 1
 
     def __init__(self, serviceName, serviceParent=None, application=None):

@@ -25,6 +25,8 @@ from twisted.internet import defer
 # Sibling Imports
 from util import respond
 from util import challenge
+from error import Unauthorized
+
 
 class Identity:
     """An identity, with different methods for verification.
@@ -139,7 +141,7 @@ class Identity:
         req = defer.Deferred()
         if self.hashedPassword is None:
             # no password was set, so we can't log in
-            req.errback("account is disabled")
+            req.errback(Unauthorized("account is disabled"))
             return req
         md = md5.new()
         md.update(self.hashedPassword)
@@ -148,7 +150,7 @@ class Identity:
         if hashedPassword == correct:
             req.callback("password verified")
         else:
-            req.errback("incorrect password")
+            req.errback(Unauthorized("incorrect password"))
         return req
 
     def verifyPlainPassword(self, plaintext):
@@ -160,7 +162,7 @@ class Identity:
         req = defer.Deferred()
         if self.hashedPassword is None:
             # no password was set, so we can't log in
-            req.errback("account is disabled")
+            req.errback(Unauthorized("account is disabled"))
             return req
         md = md5.new()
         md.update(plaintext)
@@ -168,7 +170,7 @@ class Identity:
         if userPass == self.hashedPassword:
             req.callback("password verified")
         else:
-            req.errback("incorrect password")
+            req.errback(Unauthorized("incorrect password"))
         return req
 
 
