@@ -82,17 +82,17 @@ class IMAP4Server(basic.LineReceiver):
         if self._pendingSize > 0:
             self._pendingBuffer.append(data)
         else:
-            passon = None
+            passon = ''
             if self._pendingSize < 0:
                 data, passon = data[:self._pendingSize], data[self._pendingSize:]
             self._pendingBuffer.append(data)
-            tag, cmd = self._pendingLiteral
             rest = ''.join(self._pendingBuffer)
             self._pendingBuffer = None
             self._pendingSize = None
+            self._pendingLiteral.callback(rest)
             self._pendingLiteral = None
-            self.dispatchCommand(tag, cmd, rest)
-            self.setLineMode(passon)
+            if passon:
+                self.setLineMode(passon)
     
     def lineReceived(self, line):
         # print 'S: ' + line
@@ -108,22 +108,8 @@ class IMAP4Server(basic.LineReceiver):
             raise IllegalClientResponse(line) 
     
         cmd = cmd.upper()
-        if rest and rest[0] == '{' and rest[-1] == '}':
-            try:
-                octets = int(rest[1:-1])
-            except ValueError:
-                # XXX - This is rude.
-                self.transport.loseConnection()
-                raise IllegalClientResponse(line)
-            else:
-                if self.lookupCommand(cmd):
-                    self._setupForLiteral(octets, (tag, cmd))
-                    self.setRawMode()
-                else:
-                    self.sendBadResponse(tag, 'Unsupported command')
-        else:
-            self.dispatchCommand(tag, cmd, rest)
-    
+        self.dispatchCommand(tag, cmd, rest)
+
     def dispatchCommand(self, tag, cmd, rest):
         f = self.lookupCommand(cmd)
         if f:
@@ -156,11 +142,13 @@ class IMAP4Server(basic.LineReceiver):
     def sendContinuationRequest(self, msg = 'Ready for additional command text'):
         self.sendLine('+ ' + msg)
 
-    def _setupForLiteral(self, octets, rest):
+    def _setupForLiteral(self, octets):
         self._pendingBuffer = []
         self._pendingSize = octets
-        self._pendingLiteral = rest
+        self._pendingLiteral = defer.Deferred()
         self.sendContinuationRequest('Ready for %d octets of text' % octets)
+        self.setRawMode()
+        return self._pendingLiteral
 
     def _respond(self, state, tag, message):
         if not tag:
@@ -409,7 +397,51 @@ class IMAP4Server(basic.LineReceiver):
     def _ebStatus(self, failure, tag, box):
         self.sendBadResponse(tag, 'STATUS %s failed: %s' % (box, failure))
     
+    def auth_APPEND(self, tag, args):
+        parts = parseNestedParens(args)
+        if len(parts) == 2:
+            flags = ()
+            date = currentTime()
+            size = parts[1]
+        elif len(parts) == 3:
+            if isinstance(parts[1], types.StringType):
+                flags = ()
+                date = parts[1]
+            else:
+                flags = parts[1]
+                date = currentTime()
+            size = parts[2]
+        elif len(parts) ==  4:
+            flags = tuple(parts[1])
+            date = parts[2]
+            size = parts[3]
+        else:
+            raise IllegalClientResponse, args
+        if not size.startswith('{') or not size.endswith('}'):
+            raise IllegalClientResponse, args
+        try:
+            size = int(size[1:-1])
+        except ValueError:
+            raise IllegalClientResponse, args
+        
+        mbox = self.account.select(parts[0])
+        if not mbox:
+            self.sendNegativeResponse(tag, '[TRYCREATE] No such mailbox')
+        d = self._setupForLiteral(size)
+        d.addCallback(self._cbContinueAppend, tag, mbox, flags, date)
+        d.addErrback(self._ebAppend, tag)
+
+    def _cbContinueAppend(self, rest, tag, mbox, flags, date):
+        d = mbox.addMessage(rest, flags, date)
+        d.addCallback(self._cbAppend, tag)
+        d.addErrback(self._ebAppend, tag)
     
+    def _cbAppend(self, result, tag):
+        self.sendPositiveResponse(tag, 'APPEND complete')
+    
+    def _ebAppend(self, failure, tag):
+        self.sendBadResponse(tag, 'APPEND failed: ' + str(failure))
+
 
 class UnhandledResponse(IMAP4Exception): pass
 
@@ -525,16 +557,14 @@ class IMAP4Client(basic.LineReceiver):
                 raise IllegalServerResponse(tag + ' ' + rest)
             else:
                 if tag == '+':
-                    d, lines = self.tags[self.waiting]
-                    d.callback(lines)
-                    del self.tags[self.waiting]
-                    self.waiting = None
-                    self._flushQueue()
+                    d, lines, continuation = self.tags[self.waiting]
+                    continuation.callback(lines)
+                    self.tags[self.waiting] = (d, lines, None)
                 else:
                     self.tags[self.waiting][1].append(rest)
         else:
             try:
-                d, lines = self.tags[tag]
+                d, lines, _ = self.tags[tag]
             except KeyError:
                 # XXX - This is rude.
                 self.transport.loseConnection()
@@ -552,18 +582,18 @@ class IMAP4Client(basic.LineReceiver):
     
     def _flushQueue(self):
         if self.queued:
-            d, t, command, args = self.queued.pop(0)
-            self.tags[t] = d, []
+            d, t, command, args, continuation = self.queued.pop(0)
+            self.tags[t] = (d, [], continuation)
             self.sendLine(' '.join((t, command, args)))
             self.waiting = t
 
-    def sendCommand(self, command, args = ''):
+    def sendCommand(self, command, args = '', continuation=None):
         d = defer.Deferred()
         t = self.makeTag()
         if self.waiting:
-            self.queued.append((d, t, command, args))
+            self.queued.append((d, t, command, args, continuation))
             return d
-        self.tags[t] = d, []
+        self.tags[t] = (d, [], continuation)
         self.sendLine(' '.join((t, command, args)))
         self.waiting = t
         return d
@@ -931,6 +961,39 @@ class IMAP4Client(basic.LineReceiver):
                 except Exception, e:
                     raise IllegalServerResponse('(%s %s): %s' % (k, status[k], str(e)))
         return status
+    
+    def append(self, mailbox, message, flags = (), date = None):
+        """Add the given message to the currently selected mailbox
+        
+        @type mailbox: C{str}
+        @param mailbox: The mailbox to which to add this message.
+
+        @type message: C{str}
+        @param message: The message to add, in RFC822 format.
+        
+        @type flags: Any iterable of C{str}
+        @param flags: The flags to associated with this message.
+        
+        @type date: C{str}
+        @param data: The date to associate with this message.
+        """
+        L = len(message)
+        fmt = '%s (%s)%s%s {%d}'
+        if date:
+            date = '"%s"' % date
+        cmd = fmt % (mailbox, ' '.join(flags), date and ' ' or '', date, L)
+        continuation = defer.Deferred()
+        continuation.addCallback(self._cbContinueAppend, message)
+        d = self.sendCommand('APPEND', cmd, continuation)
+        d.addCallback(self._cbAppend)
+        return d
+    
+    def _cbContinueAppend(self, lines, message):
+        self.transport.write(message)
+    
+    def _cbAppend(self, result):
+        return None
+
 
 class MismatchedNesting(Exception):
     pass
@@ -1259,4 +1322,22 @@ class IMailbox(components.Interface):
         requested names is returned.  If the process of looking this
         information up would be costly, a deferred whose callback will
         eventually be passed this dictionary is returned instead.
+        """
+    
+    def addMessage(self, message, flags, date = None):
+        """Add the given message to this mailbox.
+        
+        @type message: C{str}
+        @param message: The RFC822 formatted message
+        
+        @type flags: Any iterable of C{str}
+        @param flags: The flags to associate with this message
+        
+        @type date: C{str}
+        @param date: If specified, the date to associate with this
+        message.
+        
+        @rtype: C{Deferred}
+        @return: A deferred whose callback is invoked if the message
+        is added successfully and whose errback is invoked otherwise.
         """

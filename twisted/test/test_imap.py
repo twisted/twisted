@@ -20,9 +20,12 @@ Test case for twisted.protocols.imap4
 
 from __future__ import nested_scopes
 
+import os
+
 from twisted.protocols import imap4, loopback
 from twisted.internet import defer
 from twisted.trial import unittest
+from twisted.python import util
 
 def strip(f):
     return lambda result: f()
@@ -116,6 +119,7 @@ class IMAP4HelperTestCase(unittest.TestCase):
 
 class SimpleMailbox:
     flags = ('\\Flag1', 'Flag2', '\\AnotherSysFlag', 'LastFlag')
+    messages = []
 
     def getFlags(self):
         return self.flags
@@ -154,6 +158,10 @@ class SimpleMailbox:
         if 'UNSEEN' in names:
             r['UNSEEN'] = self.getUnseenCount()
         return defer.succeed(r)
+    
+    def addMessage(self, message, flags, date = None):
+        self.messages.append((message, flags, date))
+        return defer.succeed(None)
 
 class SimpleServer(imap4.IMAP4Server):
     def authenticateLogin(self, username, password):
@@ -514,4 +522,28 @@ class IMAP4ServerTestCase(unittest.TestCase):
             self.statused,
             {'MESSAGES': 9, 'UIDNEXT': '10', 'UNSEEN': 4}
         )
+
+    def testAppend(self):
+        infile = util.sibpath(__file__, 'rfc822.message')
+        message = file(infile).read()
+        SimpleServer.theAccount.addMailbox('root/subthing')
+        def login():
+            return self.client.login('testuser', 'password-test')
+        def append():
+            return self.client.append('root/subthing', message, (), 'This Date String Is Illegal')
         
+        d = self.connected.addCallback(strip(login))
+        d.addCallbacks(strip(append), self._ebGeneral)
+        d.addCallbacks(strip(self._cbStopClient), self._ebGeneral)
+        loopback.loopback(self.server, self.client)
+        
+        mb = SimpleServer.theAccount.mailboxes['ROOT/SUBTHING']
+        self.assertEquals(
+            1,
+            len(mb.messages)
+        )
+        self.assertEquals(
+            [(message, (), 'This Date String Is Illegal')],
+            mb.messages
+        )
+
