@@ -44,7 +44,7 @@ def _guiUpdate(reactor, widget, delay):
     except Tkinter.TclError:
         log.deferr()
         return
-    reactor.callLater(delay, _guiUpdate, reactor, widget)
+    reactor.callLater(delay, _guiUpdate, reactor, widget, delay)
 
 
 def install(widget, ms=10, reactor=None):
