@@ -477,7 +477,11 @@ class Service(pb.Service, styles.Versioned):
             raise UserNonexistantError(name)
 
     def addBot(self, name, bot):
-        p = self.createPerspective(name)
+        try:
+            p = self.getPerspectiveNamed(name)
+        except UserNonexistantError:
+            p = self.createPerspective(name)
+
         bot.setupBot(p) # XXX this method needs a better name
         from twisted.spread.util import LocalAsyncForwarder
         p.attached(LocalAsyncForwarder(bot, IWordsClient, 1), None)
