@@ -14,6 +14,15 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 # 
+
+"""Implementation of the ssh-userauth service.  Currently implemented authentication types are public-key and password.
+
+This module is unstable.
+
+Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
+"""
+
+
 import os.path, base64
 from twisted import cred
 from twisted.conch import error

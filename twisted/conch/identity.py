@@ -14,6 +14,14 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 # 
+
+"""Identity for Conch.  This adds the method validatePublicKey which checks to see if a public key is a valid identifier for a user.
+
+This module is unstable.
+
+Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
+"""
+
 import os
 import base64
 import binascii

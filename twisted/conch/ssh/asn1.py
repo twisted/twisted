@@ -15,7 +15,13 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 # 
 
-# really really basic ASN.1 parser, so we can read private keys from SSH
+"""A basic ASN.1 parser to parse private SSH keys.
+
+This module is unstable.
+
+Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
+"""
+
 from Crypto.Util import number
 
 def parse(data):

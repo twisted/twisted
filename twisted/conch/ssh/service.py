@@ -15,6 +15,14 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 # 
 
+"""The parent class for all the SSH services.  Currently implemented services are: ssh-userauth and ssh-connection.
+
+This module is unstable.
+
+Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
+"""
+
+
 from twisted.python import log
 
 class SSHService:

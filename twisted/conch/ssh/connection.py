@@ -15,6 +15,13 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 # 
 
+"""This module contains the implementation of the ssh-connection service, which allows access to the shell and port-forwarding.
+
+This module is unstable.
+
+Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
+"""
+
 import struct
 from twisted.internet import protocol, reactor
 try:

@@ -14,7 +14,17 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+"""An implementation of the OSCAR protocol, which AIM and ICQ use to communcate.
+
+This module is unstable.
+
+Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
+"""
+
+
 from __future__ import nested_scopes    # BAD!  This creates 2.1+ dependency
+# doesn't matter because we depend on 2.1 anyways
+
 
 from twisted.internet import reactor, main, defer, protocol
 from twisted.python import log
@@ -26,6 +36,7 @@ import socket
 import random
 import time
 import types
+import re
 
 def logPacketData(data):
     lines = len(data)/16
@@ -170,25 +181,40 @@ class OSCARUser:
             s=s+', '+', '.join(o)
         s=s+'>'
         return s
-            
+
+               
 class SSIGroup:
-    def __init__(self, name, tlvs):
+    def __init__(self, name, tlvs = {}):
         self.name = name
+        #self.tlvs = []
+        #self.userIDs = []
+        self.usersToID = {}
         self.users = []
-        if not tlvs.has_key(0xC8): return
-        buddyIDs = tlvs[0xC8]
-        while buddyIDs:
-            bid = struct.unpack('!H',buddyIDs[:2])[0]
-            buddyIDs = buddyIDs[2:]
-            self.users.append(bid)
+        #if not tlvs.has_key(0xC8): return
+        #buddyIDs = tlvs[0xC8]
+        #while buddyIDs:
+        #    bid = struct.unpack('!H',buddyIDs[:2])[0]
+        #    buddyIDs = buddyIDs[2:]
+        #    self.users.append(bid)
+
+    def findIDFor(self, user):
+        return self.usersToID[user]
 
     def addUser(self, buddyID, user):
-        i = self.users.index(buddyID)
-        self.users[i] = user
+        self.usersToID[user] = buddyID
+        self.users.append(user)
+        user.group = self
+
+    def oscarRep(self, groupID, buddyID):
+        tlvData = TLV(0xc8, reduce(lambda x,y:x+y, [struct.pack('!H',self.usersToID[x]) for x in self.users]))
+        return struct.pack('!H', len(self.name)) + self.name + \
+               struct.pack('!HH', groupID, buddyID) + '\000\001' + tlvData
+
 
 class SSIBuddy:
-    def __init__(self, name, tlvs):
+    def __init__(self, name, tlvs = {}):
         self.name = name
+        self.tlvs = tlvs
         for k,v in tlvs.items():
             if k == 0x013c: # buddy comment
                 self.buddyComment = v
@@ -209,6 +235,12 @@ class SSIBuddy:
                     self.alertWhen.append('unaway')
             elif k == 0x013e:
                 self.alertSound = v
+
+    def oscarRep(self, groupID, buddyID):
+        tlvData = reduce(lambda x,y: x+y, map(lambda (k,v):TLV(k,v), self.tlvs.items())) or '\000\000'
+        return struct.pack('!H', len(self.name)) + self.name + \
+               struct.pack('!HH', groupID, buddyID) + '\000\000' + tlvData
+
 
 class OscarConnection(protocol.Protocol):
     def connectionMade(self):
@@ -301,7 +333,7 @@ class SNACBased(OscarConnection):
         d = defer.Deferred()
         d.reqid = reqid
 
-        d.addErrback(self._ebDeferredError,fam,sub,data) # XXX for testing
+        #d.addErrback(self._ebDeferredError,fam,sub,data) # XXX for testing
 
         self.requestCallbacks[reqid] = d
         self.sendFLAP(SNAC(fam,sub,reqid,data))
@@ -391,6 +423,8 @@ class BOSConnection(SNACBased):
         0x0b:(1, 0x0104, 0x0001),
         0x0c:(1, 0x0104, 0x0001)
     }
+
+    capabilities = None
         
     def __init__(self,username,cookie):
         SNACBased.__init__(self,cookie)
@@ -399,7 +433,8 @@ class BOSConnection(SNACBased):
         self.awayMessage = None
         self.services = {}
 
-        self.capabilities = CAP_CHAT
+        if not self.capabilities:
+            self.capabilities = [CAP_CHAT]
 
     def parseUser(self,data,count=None):
         l=ord(data[0])
@@ -547,9 +582,14 @@ class BOSConnection(SNACBased):
                     flags.append(v)
                 else:
                     log.msg('unknown TLV for incoming IM, %04x, %s' % (k,repr(v)))
+
+#  unknown tlv for user SNewdorf
+#  t: 29
+#  v: '\x00\x00\x00\x05\x02\x01\xd2\x04r\x00\x01\x01\x10/\x8c\x8b\x8a\x1e\x94*\xbc\x80}\x8d\xc4;\x1dEM'
+# XXX what is this?
             self.receiveMessage(user, multiparts, flags)
         elif channel == 2: # rondevouz
-            status = struct.unpack('!H',tlvs[5][:2])
+            status = struct.unpack('!H',tlvs[5][:2])[0]
             requestClass = tlvs[5][10:26]
             moreTLVs = readTLVs(tlvs[5][26:])
             if requestClass == CAP_CHAT: # a chat request
@@ -562,6 +602,18 @@ class BOSConnection(SNACBased):
                 else:
                     self.services[SERVICE_CHATNAV].getChatInfo(exchange, name, instance).\
                         addCallback(self._cbGetChatInfoForInvite, user, moreTLVs[12])
+            elif requestClass == CAP_SEND_FILE:
+                if moreTLVs.has_key(11): # cancel
+                    log.msg('cancelled file request')
+                    log.msg(status)
+                    return # handle this later
+                name = moreTLVs[10001][9:-7]
+                desc = moreTLVs[12]
+                log.msg('file request from %s, %s, %s' % (user, name, desc))
+                self.receiveSendFileRequest(user, name, desc, cookie)
+            else:
+                log.msg('unsupported rondevouz: %s' % requestClass)
+                log.msg(repr(moreTLVs))
         else:
             log.msg('unknown channel %02x' % channel)
             log.msg(tlvs)
@@ -607,25 +659,22 @@ class BOSConnection(SNACBased):
         this sends the rate request for family 0x13 (Server Side Information)
         so we can then use it
         """
-        d = defer.Deferred()
-        self.sendSNAC(0x13, 0x02, '').addCallback(self._cbInitSSI, d)
+        return self.sendSNAC(0x13, 0x02, '').addCallback(self._cbInitSSI)
 
     def _cbInitSSI(self, snac, d):
-        d.callback({}) # don't even bother parsing this
+        return {} # don't even bother parsing this
 
     def requestSSI(self, timestamp = 0, revision = 0):
         """
         request the server side information
         if the deferred gets None, it means the SSI is the same
         """
-        d = defer.Deferred()
-        self.sendSNAC(0x13, 0x05,
-            struct.pack('!LH',timestamp,revision)).addCallback(self._cbRequestSSI, d)
-        return d
+        return self.sendSNAC(0x13, 0x05,
+            struct.pack('!LH',timestamp,revision)).addCallback(self._cbRequestSSI)
 
-    def _cbRequestSSI(self, snac, d, args = ()):
+    def _cbRequestSSI(self, snac, args = ()):
         if snac[1] == 0x0f: # same SSI as we have
-            d.callback(None)
+            return 
         itemdata = snac[5][3:]
         if args:
             revision, groups, permit, deny, permitMode, visibility = args
@@ -663,17 +712,51 @@ class BOSConnection(SNACBased):
         timestamp = struct.unpack('!L',itemdata)[0]
         if not timestamp: # we've got more packets coming
             # which means add some deferred stuff
-            d2 = defer.Deferred()
-            self.requestCallbacks[snac[4]] = d2
-            d2.addCallback(self._cbRequestSSI, d, (revision, groups, permit, deny, permitMode, visibility))
-            return
-        d.callback((groups[0].users,permit,deny,permitMode,visibility,timestamp,revision)) 
+            d = defer.Deferred()
+            self.requestCallbacks[snac[4]] = d
+            d.addCallback(self._cbRequestSSI, (revision, groups, permit, deny, permitMode, visibility))
+            return d
+        return groups[0].users,permit,deny,permitMode,visibility,timestamp,revision)
 
     def activateSSI(self):
         """
         active the data stored on the server (use buddy list, permit deny settings, etc.)
         """
         self.sendSNACnr(0x13,0x07,'')
+
+    def startModifySSI(self):
+        """
+        tell the OSCAR server to be on the lookout for SSI modifications
+        """
+        self.sendSNACnr(0x13,0x11,'')
+
+    def addItemSSI(self, item, groupID = None, buddyID = None):
+        """
+        add an item to the SSI server.  if buddyID == 0, then this should be a group.
+        this gets a callback when it's finished, but you can probably ignore it.
+        """
+        if not groupID:
+            groupID = item.group.group.findIDFor(item.group)
+        if not buddyID:
+            buddyID = item.group.findIDFor(item)
+        return self.sendSNAC(0x13,0x08, item.oscarRep(groupID, buddyID))
+
+    def modifyItemSSI(self, item, groupID = None, buddyID = None)
+        if not groupID:
+            groupID = item.group.group.findIDFor(item.group)
+        if not buddyID:
+            buddyID = item.group.findIDFor(item)
+        return self.sendSNAC(0x13,0x09, item.oscarRep(groupID, buddyID))
+
+    def delItemSSI(self, item, groupID = None, buddyID = None):
+        if not groupID:
+            groupID = item.group.group.findIDFor(item.group)
+        if not buddyID:
+            buddyID = item.group.findIDFor(item)
+        return self.sendSNAC(0x13,0x0A, item.oscarRep(groupID, buddyID))
+
+    def endModifySSI(self):
+        self.sendSNACnr(0x13,0x12,'')
 
     def setProfile(self, profile):
         """
@@ -686,7 +769,7 @@ class BOSConnection(SNACBased):
             tlvs =  TLV(1,'text/aolrtf; charset="us-ascii"') + \
                     TLV(2,self.profile)
         
-        tlvs = tlvs + TLV(5, self.capabilities)
+        tlvs = tlvs + TLV(5, ''.join(self.capabilities))
         self.sendSNACnr(0x02, 0x04, tlvs)
 
     def setAway(self, away = None):
@@ -743,11 +826,11 @@ class BOSConnection(SNACBased):
         if offline:
             data = data + TLV(6,'')
         if wantAck:
-            return self.sendSNAC(0x04, 0x06, data).addCallback(self._cbSendMessageAck, user)
-            self.sendSNACnr(0x04, 0x06, data)
+            return self.sendSNAC(0x04, 0x06, data).addCallback(self._cbSendMessageAck, user, message)
+        self.sendSNACnr(0x04, 0x06, data)
 
-    def _cbSendMessageAck(self, snac, user):
-        return user
+    def _cbSendMessageAck(self, snac, user, message):
+        return user, message
 
     def connectService(self, service, wantCallback = 0, extraData = ''):
         """
@@ -799,18 +882,23 @@ class BOSConnection(SNACBased):
         return oldLevel, newLevel
 
     def getInfo(self, user):
+        #if user.
         return self.sendSNAC(0x02, 0x05, '\x00\x01'+chr(len(user))+user).addCallback(self._cbGetInfo)
 
     def _cbGetInfo(self, snac):
-        tlvs = readTLVs(snac[5])
-        return tlvs[0x02]
+        user, rest = self.parseUser(snac[5],1)
+        tlvs = readTLVs(rest)
+        return tlvs.get(0x02,None)
 
     def getAway(self, user):
         return self.sendSNAC(0x02, 0x05, '\x00\x03'+chr(len(user))+user).addCallback(self._cbGetAway)
 
     def _cbGetAway(self, snac):
-        tlvs = readTLVs(snac[5])
+        user, rest = self.parseUser(snac[5],1)
+        tlvs = readTLVs(rest)
         return tlvs.get(0x04,None) # return None if there is no away message
+
+    #def acceptSendFileRequest(self, 
 
     # methods to be overriden by the client
     def initDone(self):
@@ -870,6 +958,12 @@ class BOSConnection(SNACBased):
         called when a member leaves the chat
         """
         pass     
+
+    def receiveSendFileRequest(self, user, file, description, cookie):
+        """
+        called when someone tries to send a file to us
+        """
+        pass
 
 class OSCARService(SNACBased):
     def __init__(self, bos, cookie, d = None):
@@ -1091,7 +1185,10 @@ class OscarAuthenticator(OscarConnection):
             else: error=repr(errorcode)
             self.error(error,errorurl)
         else:
+            log.msg('hmm, weird tlvs for %s cookie packet' % str(self))
             log.msg(tlvs)
+            log.msg('snac')
+            log.msg(str(snac))
         return "None"
 
     def oscar_None(self,data): pass
