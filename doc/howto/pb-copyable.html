@@ -177,7 +177,7 @@ dictionary value]), it must inherit from one of the four <code class="API"
 base="twisted.spread.flavors">Serializable</code> classes. In this section,
 we focus on <code class="API" base="twisted.spread.flavors">Copyable</code>.
 The copyable subclass of <code>LilyPond</code> is called
-<code>RemotePond</code>. We create an instance of it and send it through
+<code>CopyPond</code>. We create an instance of it and send it through
 <code>callRemote</code> as an argument to the receiver's
 <code>remote_takePond</code> method. The Jelly layer will serialize
 (<q>jelly</q>) that object as an instance with a class name of
