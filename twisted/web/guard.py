@@ -81,13 +81,13 @@ class AuthForm(widgets.Form):
         # data processing step...
         io = StringIO()
         io.write(self.formatError("Login incorrect."))
-        self.format(self.getFormFields(request), io.write)
+        self.format(self.getFormFields(request), io.write, request)
         return io.getvalue()
 
     def didntGetIdentity(self, unauth, request):
         io = StringIO()
         io.write(self.formatError("Login incorrect."))
-        self.format(self.getFormFields(request), io.write)
+        self.format(self.getFormFields(request), io.write, request)
         return io.getvalue()
 
     def process(self, write, request, submit, username, password, perspective):
