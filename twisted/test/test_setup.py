@@ -17,9 +17,13 @@
 import os, sys
 from twisted.trial import unittest
 import twisted
-sys.path.insert(0, os.path.dirname(os.path.dirname(twisted.__file__)))
-import setup
-sys.path.pop(0)
+d = os.path.dirname(os.path.dirname(twisted.__file__))
+if os.path.isfile(os.path.join(d, 'setup.py')):
+    sys.path.insert(0, d)
+    import setup
+    sys.path.pop(0)
+else:
+     setup = None
 
 class CheckingPackagesTestCase(unittest.TestCase):
 
@@ -31,6 +35,8 @@ class CheckingPackagesTestCase(unittest.TestCase):
 
     def testPackages(self):
         """Making sure all packages are in setup"""
+        if setup is None:
+            raise unittest.SkipTest("no setup -- installed version?")
         foundPackages = []
         os.chdir(os.path.dirname(setup.__file__))
         def visit(dirlist, directory, files):
