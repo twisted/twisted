@@ -134,7 +134,7 @@ class QOTD(Protocol):
 
     def connectionMade(self):
         self.transport.write("An apple a day keeps the doctor away\r\n") 
-        self.transport.loseConnction()
+        self.transport.loseConnection()
 
 # Next lines are magic:
 factory = Factory()
