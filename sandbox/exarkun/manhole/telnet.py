@@ -592,7 +592,7 @@ class Telnet(protocol.Protocol):
         state.us.state = 'no'
         state.us.negotiating = False
         d = state.us.onResult
-        state.us.onResult = d
+        state.us.onResult = None
         d.callback(True)
         self.disableLocal(option)
 
