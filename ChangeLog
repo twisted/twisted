@@ -1,3 +1,8 @@
+2002-12-11  Paul Swartz <z3p@twistedmatix.com>
+
+    * twisted/conch/*: enabled 'exec' on the server, disabled core dumps,
+    and some fixes
+
 2002-12-10  Paul Swartz  <z3p@twistedmatrix.com>
 
     * twisted/conch/*: many fixes to conch server, now works and can run
