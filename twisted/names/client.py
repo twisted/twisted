@@ -210,7 +210,7 @@ class Resolver(common.ResolverBase):
         reason.trap(dns.DNSQueryTimeoutError)
 
         # If there are no servers left to be tried, adjust the timeout
-        # move to the next longest timeout period and move all the
+        # to the next longest timeout period and move all the
         # "used" addresses back to the list of addresses to try.
         if not addressesLeft:
             addressesLeft = addressesUsed
