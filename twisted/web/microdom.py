@@ -121,6 +121,8 @@ class Document(Node, Accessor):
         if documentElement:
             self.appendChild(documentElement)
 
+    doctype = None
+
     def get_documentElement(self):
         return self.childNodes[0]
 
@@ -130,6 +132,8 @@ class Document(Node, Accessor):
 
     def writexml(self, stream, indent='', addindent='', newl=''):
         stream.write('<?xml version="1.0"?>' + newl)
+        if self.doctype:
+            stream.write("<!DOCTYPE "+self.doctype+">" + newl)
         self.documentElement.writexml(stream, indent, addindent, newl)
 
     # of dubious utility (?)
@@ -297,6 +301,7 @@ class MicroDOMParser(XMLParser):
         self.documents = []
         self.autoClosedTags = autoClosedTags
         self._shouldAutoClose = ''
+        self._mddoctype = None
 
     # parser options:
     caseInsensitive = 1
@@ -311,6 +316,9 @@ class MicroDOMParser(XMLParser):
     def _autoclose(self):
         if self._shouldAutoClose:
             self.gotTagEnd(self._shouldAutoClose)
+
+    def gotDoctype(self, doctype):
+        self._mddoctype = doctype
 
     def gotTagStart(self, name, attributes):
         self._autoclose()
@@ -370,13 +378,17 @@ def parse(readable):
         mdp.dataReceived(r)
         r = readable.read(1024)
     d = mdp.documents[0]
-    return Document(d)
+    doc = Document(d)
+    doc.doctype = mdp._mddoctype
+    return doc
 
 def parseString(st):
     mdp = MicroDOMParser()
     mdp.makeConnection(None)
     mdp.dataReceived(st)
     d = mdp.documents[0]
-    return Document(d)
+    doc = Document(d)
+    doc.doctype = mdp._mddoctype
+    return doc
 
 

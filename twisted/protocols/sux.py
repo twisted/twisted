@@ -183,6 +183,8 @@ class XMLParser(Protocol):
             return
         elif byte in identChars:
             # XXX FIXME really handle !DOCTYPE at some point
+            if self.tagName == '!DOCTYPE':
+                return 'doctype'
             if self.tagName[0] in '!?':
                 return 'waitforgt'
             return 'attrname'
@@ -192,6 +194,18 @@ class XMLParser(Protocol):
             self.gotTagStart(self.tagName, self.tagAttributes)
             return 'bodydata'
         self._parseError("Unexpected character: %s" % repr(byte))
+
+    def begin_doctype(self, byte):
+        self.doctype = byte
+
+    def do_doctype(self, byte):
+        if byte == '>':
+            return 'bodydata'
+        self.doctype += byte
+
+    def end_doctype(self):
+        self.gotDoctype(self.doctype)
+        self.doctype = None
 
     def do_waitforgt(self, byte):
         if byte == '>':
@@ -307,6 +321,14 @@ class XMLParser(Protocol):
 
         Default behaviour is to call the gotText method'''
         self.gotText(cdata)
+
+    def gotDoctype(self, doctype):
+        """Encountered DOCTYPE
+
+        This is really grotty: it basically just gives you everything between
+        '<!DOCTYPE' and '>' as an argument.
+        """
+        print '!DOCTYPE', repr(doctype)
 
     def gotTagEnd(self, name):
         '''Encountered closing tag

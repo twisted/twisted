@@ -72,6 +72,15 @@ class DOMHelpersTest(unittest.TestCase):
         helloNode = d.getElementById("hello")
         self.failUnlessEqual(helloNode, d.documentElement)
 
+    def testDoctype(self):
+        d = microdom.parseString('''<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<dummy/>
+''')
+        d2 = microdom.parseString(d.toxml())
+        assert d.doctype, "Doctype not set!"
+        assert d.doctype == d2.doctype, "Doctypes not equal"
+
 
 class DOMTemplateTest(WovenTC):
     resourceFactory = SimpleTemplate
@@ -188,9 +197,7 @@ class MIdentityList(model.Model):
 class VIdentityList(view.View):
     template = """<html>
     <ul id="list" view="identityList" model="identityList">
-        <li itemOf="identityList">
-            <span view="text" />
-        </li>
+        <li itemOf="identityList" view="text" />
     </ul>
 </html>"""
 
