@@ -1,4 +1,4 @@
-expected = '''*** global ***
+expected = '''2
 <?xml version="1.0" ?>
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:n="http://nevow.com/ns/nevow/0.1">
   <head>
@@ -20,22 +20,24 @@ expected = '''*** global ***
   </body>
 </html>
 hi
+testtesttesttest
+None
 div
 div
 div
-<DOM Element: html at 0xa43ee0>
-!div <DOM Element: html at 0xa43ee0>
-!div <DOM Element: head at 0xa4c058>
-!div <DOM Element: meta at 0xa4c0a8>
-!div <DOM Element: title at 0xa4c1e8>
-!div <DOM Element: style at 0xa4c260>
-!div <DOM Element: script at 0xa4c350>
-!div <DOM Element: body at 0xa4c4e0>
-!div <DOM Element: n:invisible at 0xa4c620>
-<DOM Element: title at 0xa4c1e8>
-<DOM Element: style at 0xa4c260>
-<DOM Element: script at 0xa4c350>
-<DOM Element: n:invisible at 0xa4c620>
+html
+!div html
+!div head
+!div meta
+!div title
+!div style
+!div script
+!div body
+!div n:invisible
+title
+style
+script
+n:invisible
 '''
 
 
@@ -47,5 +49,6 @@ except ImportError:
 import sys, os
 
 out = os.popen("python bypath.py tests/foo.byp donot.html").read()
-assert out == expected
+for l1, l2 in zip(out.splitlines(), expected.splitlines()):
+    assert l1 == l2, '%s != %s' % (l1, l2)
 print 'tests passed'

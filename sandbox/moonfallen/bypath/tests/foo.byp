@@ -1,5 +1,10 @@
 python:
-    pass
+    x = 1
+python:
+    print x+1
+    class Foo:
+        def test(self):
+            print 'testtesttesttest'
 
 # node is always the matched node
 # document is always the root document
@@ -10,13 +15,14 @@ node   /html/head: # select the head node by absolute path
     print document.toxml()
 
     1+1;print 'hi'
+    print Foo().test()
 
 node   //div :  # clean up whitespace around xpath expressions
     print 'div' # there are mult. divs so this should run mult. times
 
 node /html[head]: # var. xpath idioms, select the html node that contains a head
     if node:  # test different levels of indentation
-        print node
+        print node.name
 
 # test whitespace at the end of the line.
 node //foo:      
@@ -27,8 +33,8 @@ node /html[foo]: # not a real node..
     1/0     # this should never get executed
 
 node //*[name() != 'div']: # any non-div node -- test internal spaces
-    print '!div', node
+    print '!div', node.name
 
 # test comment parsing
 node //*[string-length(name()) > string-length('   #')]:
-    print node
+    print node.name

@@ -5,13 +5,50 @@ import re
 from xml.dom import minidom
 from xml import xpath
 
+class BaseEvaluator:
+    namespace = {}
+    def __init__(self, xml):
+        BaseEvaluator.rememberNamespace({'document': xml})
+
+    def evaluate(self, source, sourcename):
+        if len(source.strip()) > 0:
+            compiled = compile(source, sourcename, 'exec')
+            self.internalEvaluate(compiled)
+
+    def evalInNamespace(self, compiled, addlNamespace={}):
+        _l = self.namespace.copy()
+        _l.update(addlNamespace)
+        eval(compiled, {}, _l)
+        for k in addlNamespace:
+            _l.pop(k, None)
+        BaseEvaluator.rememberNamespace(_l)
+
+    def rememberNamespace(cls, namespace):
+        cls.namespace.update(namespace)
+    rememberNamespace = classmethod(rememberNamespace)
+
+
+class ExprEvaluator(BaseEvaluator):
+    """Evaluator for node ...: blocks"""
+    def __init__(self, xml, nodes):
+        self.nodes = nodes
+        BaseEvaluator.__init__(self, xml)
+    def internalEvaluate(self,  compiled):
+        if len(self.nodes) > 0:
+            for node in self.nodes:
+                self.evalInNamespace(compiled, {'node':node})
+
+class PythonEvaluator(BaseEvaluator):
+    """Evaluator for python ...: blocks"""
+    def internalEvaluate(self, compiled):
+        self.evalInNamespace(compiled)
+
 class Program:
     def __init__(self, xmlfile):
+        self.evaluator = None
         self.leading = ''
         self.python_buffer = []
-        self.nodes = []
         self.xml = minidom.parse(xmlfile)
-        self.namespace = {'document': self.xml}
         self.byp_scanner = sre.Scanner([
                 (r'\s*$|\s*#.*', self.got_comment),
                 (r'^node\s+.*:', self.got_expr),
@@ -28,20 +65,16 @@ class Program:
         raise RuntimeError("Syntax error: %s" % (token,))
     def got_expr(self, scanner, token):
         xpath_expr = token[:-1].split(None, 1)[1].strip()
-        self.nodes = xpath.Evaluate(xpath_expr, self.xml)
+        nodes = xpath.Evaluate(xpath_expr, self.xml)
+        self.evaluator = ExprEvaluator(self.xml, nodes)
     def got_comment(self, scanner, _):
         pass
     def finishPython(self):
         source = '\n'.join(self.python_buffer)
-        _g = self.namespace.copy()
-        if len(source.strip()) > 0:
-            compiled = compile(source, 'foo.byp', 'exec')
-            if len(self.nodes) > 0:
-                for node in self.nodes:
-                    _g.update({'node': node})
-                    eval(compiled, _g, {}) 
+        if self.evaluator is not None:
+            self.evaluator.evaluate(source, 'FIXME')
+            self.evaluator = None
         self.python_buffer = []
-        self.nodes = []
 
     def got_byp(self, scanner, token):
         self.finishPython()
@@ -57,10 +90,18 @@ class Program:
         self.python_buffer.append(token[len(self.leading):])
 
     def got_whiteLine(self, scanner, token):
+        """Vertical whitespace does affect Python syntax, so if we're in a
+        Python block, add a white line.  For example, \ at the end of a line
+        followed by whitespace is a syntax error.  Also vertical whitespace may
+        be present in multiline strings.
+        """
         if len(self.python_buffer) > 0:
-            self.python_buffer.append('')
+            if len(token) < len(self.leading):
+                self.python_buffer.append('')
+            else:
+                self.python_buffer.append(token[len(self.leading):])
     def got_global(self, scanner, token):
-        print '*** global ***'
+        self.evaluator = PythonEvaluator(self.xml)
 
     def finish(self):
         self.finishPython()
