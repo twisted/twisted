@@ -13,7 +13,7 @@
 <h2>Introduction</h2>
 
 <p><a href="http://www.xmlrpc.com">XML-RPC</a> is a simple request/reply protocol that runs over HTTP. It is simple,
-easy to implement and supported by most computer languages. Twisted's XML-RPC
+easy to implement and supported by most programming languages. Twisted's XML-RPC
 support uses the xmlrpclib library for parsing - it's included with Python 2.2,
 but can be downloaded for Python 2.1 from <a href="http://www.pythonware.com/products/xmlrpc/">Pythonware</a>.</p>
 
@@ -117,7 +117,7 @@ is described, the URL to that service will be given there.</p>
 which accepts a method name and a variable argument list (but no named
 arguments, as these are not supported by XML-RPC). It returns a deferred,
 which will be called back with the result. If there is any error, at any
-level, the errback will be cauled. The exception will be the relevant Twisted
+level, the errback will be called. The exception will be the relevant Twisted
 error in the case of a problem with the underlying connection (for example,
 a timeout), <code>IOError</code> containing the status and message in the case
 of a non-200 status or a <code>xmlrpclib.Fault</code> in the case of an
@@ -145,6 +145,24 @@ reactor.run()
 <pre>
 [8, 15]
 </pre>
+
+<h2>Serving SOAP and XML-RPC simultaneously</h2>
+
+<p><code class="API">twisted.web.xmlrpc.XMLRPC</code> and <code
+class="API">twisted.web.soap.SOAPPublisher</code> are both <code class="API"
+base="twisted.web.resource">Resources</code>.  So, to serve both XML-RPC and
+SOAP in the one web server, you can use the <code class="API"
+base="twisted.web.resource.IResource">putChild</code> method of Resources.</p>
+
+<p>The following example uses an empty <code class="API"
+base="twisted.web">resource.Resource</code> as the root resource for a <code
+class="API" base="twisted.web.server">Site</code>, and then adds
+<code>/RPC2</code> and <code>/SOAP</code> paths to it.</p>
+
+<a href="listings/TwistedQuotes/xmlAndSoapQuote.py" class="py-listing">xmlAndSoapQuote.py</a>
+
+<p>Refer to <a href="using-twistedweb.html#development">Twisted Web
+Development</a> for more details about Resources.</p>
 
   </body>
 </html>
