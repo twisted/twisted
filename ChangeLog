@@ -4,6 +4,9 @@
 	  Forgot to add these before rc1 :-) You can use the portforwarder
 	  with Coil and mktap again (previously "stupidproxy")
 
+	* twisted/web/static.py: Fixed a bunch of bugs related to redirection
+	for directories.
+
 	* .: Releasing Twisted 0.18.0rc2
 
 2002-05-30  Glyph Lefkowitz  <glyph@twistedmatrix.com>
