@@ -103,11 +103,11 @@ class ITerminalTransport(iinternet.ITransport):
         If no cursor state was previously saved, move the cursor to the home position.
         """
 
-    def setMode(self, modes):
+    def setModes(self, modes):
         """Set the given modes on the terminal.
         """
 
-    def resetMode(self, mode):
+    def resetModes(self, mode):
         """Reset the given modes on the terminal.
         """
 
@@ -497,11 +497,11 @@ class ServerProtocol(protocol.Protocol):
         del self._savedCursorPos
         self.write('\x1b8')
 
-    def setMode(self, modes):
+    def setModes(self, modes):
         # XXX Support ANSI-Compatible private modes
         self.write('\x1b[%sh' % (';'.join(map(str, modes)),))
 
-    def resetMode(self, modes):
+    def resetModes(self, modes):
         # XXX Support ANSI-Compatible private modes
         self.write('\x1b[%sl' % (';'.join(map(str, modes)),))
 
@@ -737,7 +737,7 @@ class ClientProtocol(protocol.Protocol):
                 if self._escBuf is None:
                     self._escBuf = []
                 if b in CST:
-                    self._handleControlSequence(''.join(self._escBuf) + b)
+                    self._handleControlSequence(''.join(self._escBuf), b)
                     del self._escBuf
                     self.state = 'data'
                 else:
@@ -754,26 +754,24 @@ class ClientProtocol(protocol.Protocol):
             else:
                 raise ValueError("Illegal state")
 
-    def _handleControlSequence(self, buf):
-        buf = '\x1b[' + buf
-        f = getattr(self.controlSequenceParser, CST[buf[-1]], None)
+    def _handleControlSequence(self, buf, terminal):
+        f = getattr(self.controlSequenceParser, CST[terminal], None)
         if f is None:
-            self.protocol.unhandledControlSequence(buf)
+            self.protocol.unhandledControlSequence('\x1b[' + buf + terminal)
         else:
-            f(self, self.protocol, buf[:-1])
+            f(self, self.protocol, buf)
 
     class ControlSequenceParser:
         def _makeSimple(ch, fName):
-            s = '\x1b['
             n = 'cursor' + fName
             def simple(self, proto, handler, buf):
-                if buf == s:
+                if not buf:
                     getattr(handler, n)(1)
                 else:
                     try:
-                        m = int(buf[2:])
+                        m = int(buf)
                     except ValueError:
-                        handler.unhandledControlSequence(buf + ch)
+                        handler.unhandledControlSequence('\x1b[' + buf + ch)
                     else:
                         getattr(handler, n)(m)
             return simple
@@ -785,44 +783,33 @@ class ClientProtocol(protocol.Protocol):
         del _makeSimple
 
         def h(self, proto, handler, buf):
-            if buf.startswith('\x1b['):
-                # XXX - Handle '?' to introduce ANSI-Compatible private modes.
-                modes = buf[2:].split(';')
-                handler.setMode(modes)
-            else:
-                handler.unhandledControlSequence(buf + 'h')
+            # XXX - Handle '?' to introduce ANSI-Compatible private modes.
+            handler.setModes(buf.split(';'))
 
         def l(self, proto, handler, buf):
-            if buf.startswith('\x1b['):
-                # XXX - Handle '?' to introduce ANSI-Compatible private modes.
-                modes = buf[2:].split(';')
-                handler.resetMode(modes)
-            else:
-                handler.unhandledControlSequence(buf + 'l')
+            # XXX - Handle '?' to introduce ANSI-Compatible private modes.
+            handler.resetModes(buf.split(';'))
 
         def r(self, proto, handler, buf):
-            if buf.startswith('\x1b['):
-                parts = buf[2:].split(';')
-                if len(parts) == 1:
-                    handler.setScrollRegion(None, None)
-                elif len(parts) == 2:
-                    try:
-                        if parts[0]:
-                            pt = int(parts[0])
-                        else:
-                            pt = None
-                        if parts[1]:
-                            pb = int(parts[1])
-                        else:
-                            pb = None
-                    except ValueError:
-                        handler.unhandledControlSequence(buf + 'r')
+            parts = buf.split(';')
+            if len(parts) == 1:
+                handler.setScrollRegion(None, None)
+            elif len(parts) == 2:
+                try:
+                    if parts[0]:
+                        pt = int(parts[0])
                     else:
-                        handler.setScrollRegion(pt, pb)
+                        pt = None
+                    if parts[1]:
+                        pb = int(parts[1])
+                    else:
+                        pb = None
+                except ValueError:
+                    handler.unhandledControlSequence('\x1b[' + buf + 'r')
                 else:
-                    handler.unhandledControlSequence(buf + 'r')
+                    handler.setScrollRegion(pt, pb)
             else:
-                handler.unhandledControlSequence(buf + 'r')
+                handler.unhandledControlSequence('\x1b[' + buf + 'r')
 
     controlSequenceParser = ControlSequenceParser()
 
