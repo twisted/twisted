@@ -1,7 +1,7 @@
 #! /usr/bin/python
 
 from twisted.spread import pb
-import twisted.internet.app
+from twisted.internet import reactor
 
 class Two(pb.Referenceable):
     def remote_print(self, arg):
@@ -21,8 +21,7 @@ class One(pb.Root):
             print "One.checkTwo(): our twos are the same"
         
 
-app = twisted.internet.app.Application("pb2server")
 two = Two()
 root_obj = One(two)
-app.listenTCP(8800, pb.BrokerFactory(root_obj))
-app.run(save=0)
+reactor.listenTCP(8800, pb.BrokerFactory(root_obj))
+reactor.run()
