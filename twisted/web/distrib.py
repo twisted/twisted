@@ -15,6 +15,11 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+"""Distributed web servers.
+
+This is going to have to be refactored so that argument parsing is done
+by each subprocess and not by the main web server (i.e. GET, POST etc.).
+"""
 
 # System Imports
 import types, os, copy, string, cStringIO
