@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.35 2003/02/14 11:59:32 z3p Exp $
+# $Id: conch.py,v 1.36 2003/02/14 12:23:48 z3p Exp $
 
 #""" Implementation module for the `conch` command.
 #"""
@@ -24,9 +24,8 @@ from twisted.conch.ssh import transport, userauth, connection, common, keys
 from twisted.conch.ssh import session, forwarding, channel
 from twisted.internet import reactor, stdio, defer, protocol
 from twisted.python import usage, log
-from twisted.spread import banana
 
-import os, sys, getpass, struct, tty, fcntl, base64, signal, stat
+import os, sys, getpass, struct, tty, fcntl, base64, signal
 
 class GeneralOptions(usage.Options):
     synopsis = """Usage:    ssh [options] host [command]
@@ -51,7 +50,6 @@ class GeneralOptions(usage.Options):
                 ['noshell', 'N', 'Do not execute a shell or command.'],
                 ['subsystem', 's', 'Invoke command (mandatory) as SSH2 subsystem.'],
                 ['log', 'v', 'Log to stderr'],
-                ['nocache', 'I', 'Do not use an already existing connection if it exists.'],
                 ['nox11', 'x']]
 
     identitys = []
@@ -149,11 +147,7 @@ def run():
     host = options['host']
     port = int(options['port'] or 22)
     log.msg((host,port))
-    filename = "~/.conch-%(user)s-%(host)s-%(port)s" % options
-    if not options['nocache'] and os.path.exists(filename):
-            reactor.connectUNIX(filename, SSHUnixFactory())
-    else:
-        reactor.connectTCP(host, port, SSHClientFactory())
+    reactor.connectTCP(host, port, SSHClientFactory())
     fd = sys.stdin.fileno()
     try:
         old = tty.tcgetattr(fd)
@@ -175,168 +169,6 @@ def handleError():
     log.err(failure.Failure())
     reactor.stop()
     raise
-
-class SSHUnixFactory(protocol.ClientFactory):
-    noisy = 1
-    
-    def stopFactory(self):
-        reactor.stop()
-
-    def startedConnecting(self, connector):
-        fd = connector.transport.fileno()
-        stats = os.fstat(fd)
-        if not stat.I_MODE(stats[0]) == 0600:
-            log.msg("socket mode is not 0600: %s" % oct(stat.I_MODE(stats[0])))
-        elif stats[4] != os.getuid():
-            log.msg("socket not owned by us: %s" % stats[4])
-        elif stats[5] != os.getgid():
-            log.msg("socket not owned by our group: %s" % stats[5])
-        else:
-            return
-        connector.stopConnecting()
-
-    def buildProtocl(self, addr):
-        global conn
-        conn = SSHUnixClientProtocol()
-        return conn
-
-class SSHUnixClientProtocol(banana.Banana): #
-    knownDialects = ['none']
-
-    def __init__(self):
-        banana.Banana.__init__(self)
-        self.channelQueue = []
-        self.channels = {}
-        self.deferredQueue = []
-        self.deferreds = {}
-
-    def expressionReceived(self, lst):
-        vocabName = lst[0]
-        if self.isClient:
-            fn = "client_%s" % vocabName
-        else:
-            fn = "server_%s" % vocabName
-        func = getattr(self, fn)
-        func(lst[1:])
-
-    def sendMessage(vocabName, *lst):
-        self.sendEncoded([vocabName] + lst)
-
-    def returnDeferred(self):
-        d = defer.Deferred()
-        self.deferredQueue.append(d)
-        return d
-
-    def moveDeferred(self, dn):
-        self.deferreds[dn] = self.deferredQueue.pop(0)
-
-    def sendGlobalRequest(self, request, data, wantReply = 0):
-        self.sendMessage('sendGlobalRequest', request, data, wantReply)
-        if wantReply:
-            return self.returnDeferred()
-    
-    def openChannel(self, channel, extra = ''):
-        self.channelQueue.append(channel)
-        self.sendMessage('openChannel', cPickle.dumps(channel), extra)
-
-    def sendRequest(self, channel, requestType, data, wantReply = 0):
-        self.sendMessage('sendRequest', channel.id, requestType, data, wantReply)
-        if wantReply:
-            self.returnDeferred()
-
-    def adjustWindow(self, channel, bytesToAdd):
-        self.sendMessage('adjustWindow', channel.id, bytesToAdd)
-
-    def sendData(self, channel, data):
-        self.sendMessage('sendData', channel.id, data)
-
-    def sendExtendedData(self, channel, dataType, data):
-        self.sendMessage('sendExtendedData', channel.id, data)
-
-    def sendClose(self, channel):
-        self.sendMessage('sendClose', channel.id)
-
-    def client_returnDeferred(self, lst):
-        deferredID = lst[0]
-        self.deferreds[deferredID] = self.deferredQueue.pop(0)
-
-    def client_callbackDeferred(self, lst):
-        deferredID, result = lst
-        d = self.deferreds[deferredID]
-        del self.deferreds[deferredID]
-        d.callback(cPickle.loads(result))
-
-    def client_errbackDeferred(self, lst):
-        deferredID, result = lst
-        d = self.deferreds[deferredID]
-        del self.deferreds[deferredID]
-        d.errback(cPickle.loads(result))
-
-    def client_channelID(self, lst):
-        channelID = lst[0]
-        self.channels[channelID] = self.channelQueue.pop(0)
-
-    def client_channelOpen(self, lst):
-        channelID, specificData = lst
-        self.channels[channelID].channelOpen(specificData)
-
-    def client_addWindowBytes(self, lst):
-        channelID, bytes = lst
-        self.channels[channelID].addWindowBytes(bytes)
-
-    def client_requestReceived(self, lst):
-        channelID, requestType, data = lst
-        d = self.channels[channelID].requestReceived(requestType, data)
-
-#    def client_openFailed(
-
-if 0:
-    def server_globalRequest(self, lst):
-        requestName, data, wantReply = lst
-        d = conn.sendGlobalRequest(requestName, data, wantReply)
-        if wantReply:
-            dn = self.returnDeferred(d)
-            self.callRemote('globalRequest', dn)
-
-    def server_openChannel(self, lst):
-        name, windowSize, maxPacket, extra = lst
-        channel = SSHUnixChannel(self, name, windowSize, maxPacket)
-        conn.openChannel(channel, extra)
-
-    def server_sendRequest(self, lst):
-        cn, requestType, data, wantReply = lst
-        channel = conn.channels[cn]
-        d = conn.sendRequest(channel, requestType, data, wantReply)
-        if wantReply:
-            dn = self.returnDeferred(d)
-            self.callRemote('sendRequest', dn)
-
-    def server_adjustWindow(self, lst):
-        cn, bytesToAdd = lst
-        channel = conn.channels[cn]
-        conn.adjustWindow(channel, bytesToAdd)
-
-    def server_sendData(self, lst):
-        cn, data = lst
-        channel = conn.channels[cn]
-        conn.sendData(channel, data)
-
-    def server_sendExtended(self, lst):
-        cn, dataType, data = lst
-        channel = conn.channels[cn]
-        conn.sendExtendedData(channel, dataType, data)
-
-    def server_sendEOF(self, lst):
-        (cn, ) = lst
-        channel = conn.channels[cn]
-        conn.sendEOF(channel)
-
-    def server_sendClose(self, lst):
-        (cn, ) = lst
-        channel = conn.channels[cn]
-        conn.sendClose(channel)
-
-
 
 class SSHClientFactory(protocol.ClientFactory):
     noisy = 1 
