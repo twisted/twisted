@@ -260,7 +260,7 @@ class FlowTest(unittest.TestCase):
         self.assertEqual(lhs,rhs)
 
     def testFailure(self):
-        self.assertRaises(flow.Failure, list, flow.Block(badgen()))
+        self.assertRaises(ZeroDivisionError, list, flow.Block(badgen()))
         self.assertEqual(['x',ZeroDivisionError],
                          list(flow.Block(badgen(),ZeroDivisionError)))
         self.assertEqual(['x',ZeroDivisionError],

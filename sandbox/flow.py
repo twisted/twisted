@@ -297,9 +297,19 @@ class Stage(Instruction):
                 return self.results.pop(0)
         if self.stop:
             raise StopIteration()
+
         if self.failure:
             self.stop = True
-            return self.failure.trap(*self._trap)
+
+            cr = self.failure.check(*self._trap)
+
+            if cr:
+                return cr
+
+            if self.failure.tb:
+                raise self.failure.value.__class__, self.failure.value, self.failure.tb
+            raise self.failure.value
+
         raise NotReadyError("Must 'yield' this object before calling next()")
 
     def _yield(self):
@@ -492,11 +502,13 @@ def wrap(obj, *trap):
         obj = obj()
 
     typ = type(obj)
+
     if typ is type([]) or typ is type(tuple()):
         return _List(obj)
+
     if typ is type(''):
         return _String(obj)
-     
+
     if isinstance(obj, defer.Deferred):
         return _Deferred(obj, *trap)
 
