@@ -52,7 +52,7 @@ class ConnectionPool:
 
     You can pass cp_min, cp_max or both to set the minimum and maximum
     number of connections that will be opened by the pool. You can pass
-    the noisy arg which determines whether informational log messages are
+    the cp_noisy arg which determines whether informational log messages are
     generated during the pool's operation.
 
     You can pass a function cp_openfun which will get called after
