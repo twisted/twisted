@@ -1276,16 +1276,20 @@ class FTPAnonymousShell(object):
 
 class FTPRealm:
     __implements__ = (portal.IRealm,)
-    ANONYMOUS_DIR = '/home/jonathan'
+    ANONYMOUS_DIR = '/usr/local/ftp'
+    clientwd = '/'
+    user = 'anonymous'
+    logout = None
+    tld = ANONYMOUS_DIR         # tld = Top Level Directory, i.e. the root directory on the server
 
     def requestAvatar(self, avatarId, mind, *interfaces):
         if IFTPShell in interfaces:
             if avatarId == checkers.ANONYMOUS:
                 avatar = FTPAnonymousShell()
-                avatar.tld = self.ANONYMOUS_DIR
-                avatar.clientwd = '/'
-                avatar.user = 'anonymous'
-                avatar.logout = None
+                avatar.tld = self.tld
+                avatar.clientwd = self.clientwd
+                avatar.user = self.user
+                avatar.logout = self.logout
             return IFTPShell, avatar, avatar.logout
         raise NotImplementedError("Only IFTPShell interface is supported by this realm")
 
