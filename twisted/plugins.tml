@@ -65,12 +65,6 @@ register("Twisted News",
          type='tap',
          tapname="news")
 
-register("Twisted Process Monitor",
-         "twisted.tap.procmon",
-         description="Process Monitor.",
-         type='tap',
-         tapname="procmon")
-
 # Bot Plugins
 
 register("Bot-Creating Bot",
