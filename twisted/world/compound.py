@@ -232,6 +232,10 @@ class _Nothing:
     this can stop torg
     """
 
+UNUSED = 0
+USED = 1
+ACTIVE = 2
+
 class StorableDictionaryStore(StorableList):
     __schema__ = StorableList.__schema__.copy()
     __schema__.update({
@@ -239,7 +243,7 @@ class StorableDictionaryStore(StorableList):
         })
     
     def __init__(self, db, keyType, valueType):
-        typeMapper = getMapper((bool, keyType, valueType))
+        typeMapper = getMapper((int, keyType, valueType))
         StorableList.__init__(self, db, typeMapper)
         self[:] = [typeMapper.null()] * self.initialPad
 
@@ -250,7 +254,54 @@ class StorableDictionaryStore(StorableList):
         # this requires allocating a new arena to copy stuff into, but hanging
         # on to the old arena so that we can read the data out of it.  It has
         # completely different semantics than StorableList.expand().
-        raise NotImplementedError("StorableDictionary._embiggen")
+
+        # first get me a new place to put my shiny new data
+        
+        # just double for the time being, though this is certainly sub-optimal
+        # collision-wise
+        howMuch = self.allocLength
+        sameFileAlloc = self.fragfile.findSpace(self._inmem_oid,
+                                                self.allocLength + howMuch)
+        oldFragFile = self.fragfile
+        oldOffset = self.allocBegin
+        oldLength = self.allocLength
+        if sameFileAlloc is not None:
+            self.allocBegin, self.allocLength = sameFileAlloc
+        else:
+            self.findFragFile(self.allocLength + howMuch)
+        self.contentLength = self.allocLength
+        for k, v in self.crazyGenerator(oldFragFile, oldOffset, oldLength):
+            self.setDictItem(k, v)
+        # at the end of that, the new fragfile is in place again, so nothing
+        # has changed (we hope)
+        oldFragFile.free(self._inmem_oid, oldOffset, oldLength)
+
+    def _updateMeHarder(self, ff, ab, al):
+        self.fragfile = ff
+        self.allocBegin = ab
+        self.allocLength = al
+        self.contentLength = al
+        self.updateFragData()
+
+    def crazyGenerator(self, oldFragFile, oldOffset, oldLength):
+        """
+        ``There's no reality, there's only illusion
+          there's no real sanity, just plain confusion''
+                -- Thomas Dolby & Robin Williams, soundtrack to Toys
+        """
+        newFragFile = self.fragfile
+        newOffset = self.allocBegin
+        newLength = self.allocLength
+        _new = (newFragFile, newOffset, newLength)
+        _old = (oldFragFile, oldOffset, oldLength)
+        _upd = self._updateMeHarder
+        _upd(*_old)
+        for rowUsed, rowKey, rowValue in self:
+            if rowUsed == ACTIVE:
+                _upd(*_new)
+                yield rowKey, rowValue
+                _upd(*_old)
+        _upd(*_new)
  
     def getHash(self, inKey):
         return hash(inKey)
@@ -260,28 +311,53 @@ class StorableDictionaryStore(StorableList):
         for i in xrange(len(self)):
             pos = self.computePosition(h,i)
             rowUsed, rowKey, rowValue = self[pos]
-            if not rowUsed:
+            if rowUsed == UNUSED:
                 if default is _Nothing:
                     raise KeyError("No such key in persistent dict %s" % inKey)
                 else:
                     return default
+            elif rowUsed == USED:
+                continue
             if rowKey == inKey:
                 return rowValue
 
     def setDictItem(self, inKey, inValue):
         h = self.getHash(inKey)
         for i in xrange(len(self)):
-            pos = self.computePosition(h,i)
+            pos = self.computePosition(h, i)
             rowUsed, rowKey, rowValue = self[pos]
-            if (not rowUsed) or (inKey == rowKey):
-                StorableList.__setitem__(self, pos, (True, inKey, inValue))
+            if (rowUsed in (UNUSED, USED)) or (inKey == rowKey):
+                StorableList.__setitem__(self, pos, (ACTIVE, inKey, inValue))
                 if inKey != rowKey:
                     self.keyValueCount += 1
                 break
         else:
             # oh god let's hope that we never actually get _here_
             self._embiggen()
-            self[inKey] = inValue
+            self.setDictItem(inKey, inValue)
+
+    def delDictItem(self, inKey):
+        h = self.getHash(inKey)
+        for i in xrange(len(self)):
+            pos = self.computePosition(h, i)
+            print 'deleting',inKey,pos
+            rowUsed, rowKey, rowValue = self[pos]
+            if rowUsed == UNUSED:
+                raise KeyError('Storable dictionary did not have key %r' % inKey)
+            elif rowUsed == USED:
+                continue
+            if inKey == rowKey:
+                tmn = list(self.typeMapper.null())
+                tmn[0] = USED
+                self[pos] = tuple(tmn)
+                return
+        else:
+            raise 'what the shit, yo'
+
+    def iterDictItems(self):
+        for rowUsed, rowKey, rowValue in self:
+            if rowUsed == ACTIVE:
+                yield rowKey, rowValue
 
 from twisted.python.components import Adapter
 
@@ -291,8 +367,12 @@ class StorableDictionaryFacade(Adapter):
     def __setitem__(self, key, value):
         self.original.setDictItem(key, value)
 
+    def __delitem__(self, key):
+        self.original.delDictItem(key)
+
     def __getitem__(self, key, default=_Nothing):
         return self.original.getDictItem(key, default)
+
 
     get = __getitem__
 
@@ -302,6 +382,51 @@ class StorableDictionaryFacade(Adapter):
     def has_key(self, key):
         return (self.original.getDictItem(key, _otherNothing)
                 is not _otherNothing)
+
+    __contains__ = has_key
+
+    def setdefault(self, key, failobj=None):
+        if not self.has_key(key):
+            self[key] = failobj
+            return failobj
+        return self[key]
+
+    def clear(self):
+        raise NotImplementedError(
+            "Why do you need to be clearing a stored dictionary?")
+
+    # generators
+    def iteritems(self):
+        return self.original.iterDictItems()
+
+    def iterkeys(self):
+        for k, v in self.original.iterDictItems():
+            yield k
+
+    def itervalues(self):
+        for k, v in self.original.iterDictItems():
+            yield v
+
+    def items(self):
+        return list(self.original.iterDictItems())
+
+    def keys(self):
+        return list(self.iterkeys())
+
+    def values(self):
+        return list(self.itervalues())
+
+    def popitem(self):
+        if len(self):
+            k, v = self.iteritems().next()
+            del self[k]
+            return k, v
+        else:
+            raise KeyError("popitem(): (storable) dictionary is empty")
+
+    def copy(self):
+        newStor = self.original.copy()
+        return StorableDictionaryFacade(newStor)
 
 def StorableDictionary(db, keyType, valueType):
     stor = StorableDictionaryStore(db, keyType, valueType)

@@ -477,10 +477,28 @@ class TestFixedClasses(unittest.TestCase):
 
     def testDictOf(self):
         sd = compound.StorableDictionary(self.db, str, int)
+        rd = {}
         self.failUnlessEqual(len(sd), 0)
         sd['hello'] = 1
+        rd['hello'] = 1
         self.failUnlessEqual(len(sd), 1)
         self.failUnless(sd.has_key('hello'))
+        for x in range(100):
+            for d in sd,rd:
+                d[str(x)] = x * 10
+            self.failUnlessEqual(sd[str(x)], rd[str(x)])
+        l1 = sd.items(); l1.sort()
+        l2 = rd.items(); l2.sort()
+        self.failUnlessEqual(l1, l2)
+        for x in range(50):
+            for d in rd,sd:
+                del d[str(x)]
+            #self.failUnless(not sd.has_key(str(x)))
+        l1 = sd.items(); l1.sort()
+        l2 = rd.items(); l2.sort()
+        self.failUnlessEqual(l1, l2)
+        
+            
 
 
     def testStringList(self):
