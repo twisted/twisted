@@ -60,13 +60,14 @@ class AbstractMaildirDomain:
         """
         dir = os.path.join(self.userDirectory(name), 'inbox')
         fname = _generateMaildirName() 
-        filename = os.path.join(dir, 'new', fname)
+        filename = os.path.join(dir, 'tmp', fname)
         fp = open(filename, 'w')
         try:
             fp.write("Delivered-To: %(name)s@%(domain)s\n" % vars())
             fp.write(message)
         finally:
             fp.close()
+        os.rename(filename, os.path.join(dir, 'new', fname))
 
 
 class MaildirMailbox(pop3.Mailbox):
@@ -109,11 +110,12 @@ class MaildirMailbox(pop3.Mailbox):
     def deleteMessage(self, i):
         """Delete a message
 
-        This only moves a message to the del/ subdirectory,
+        This only moves a message to the .Trash/ subfolder,
         so it can be undeleted by an administrator.
         """
         os.rename(self.list[i], 
-                  os.path.join(self.path,'del',os.path.basename(self.list[i])))
+                  os.path.join(self.path, '.Trash', 'cur',
+                               os.path.basename(self.list[i])))
         self.list[i] = 0
 
 
@@ -153,9 +155,12 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
         if not os.path.isdir(dir):
             os.mkdir(dir)
             os.mkdir(os.path.join(dir, 'inbox'))
-            os.mkdir(os.path.join(dir, 'inbox', 'new'))
-            os.mkdir(os.path.join(dir, 'inbox', 'cur'))
-            os.mkdir(os.path.join(dir, 'inbox', 'del'))
+            for subdir in ['new', 'cur', 'tmp', '.Trash']:
+                os.mkdir(os.path.join(dir, 'inbox', subdir))
+            for subdir in ['new', 'cur', 'tmp']:
+                os.mkdir(os.path.join(dir, 'inbox', '.Trash', subdir))
+            fp=open(os.path.join(dir, 'inbox', '.Trash', 'maildirfolder'), 'w')
+            fp.close()
         return dir
 
     def authenticateUserAPOP(self, user, magic, digest, domain):
