@@ -346,15 +346,6 @@ def genprefix():
 class _Attr(CharacterData):
     "Support class for getAttributeNode."
 
-def _selectDict(dct, caseInsensitive, preserveCase):
-    """Return a copy of the dct with case sensitivity/preserving 
-    turned on as appropriate.
-    """
-    if caseInsensitive:
-        return InsensitiveDict(dct, preserve=preserveCase)
-    else:
-        return dct
-
 class Element(Node):
 
     preserveCase = 0
@@ -378,8 +369,9 @@ class Element(Node):
             for k, v in self.attributes.items():
                 self.attributes[k] = unescape(v)
 
-        self.attributes=_selectDict(self.attributes, caseInsensitive, 
-                                    preserveCase)
+        if caseInsensitive:
+            self.attributes = InsensitiveDict(self.attributes, 
+                                              preserve=preserveCase)
 
         self.endTagName = self.nodeName = self.tagName = tagName
         self._filename = filename
