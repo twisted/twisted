@@ -310,6 +310,7 @@ class ConnectorTestCase(PortCleanerUpper):
         self.ports.append(p)
         
         def startedConnecting(connector):
+            self.assert_(hasattr(connector, 'socket'))
             connector.stopConnecting()
 
         factory = ClientStartStopFactory()
