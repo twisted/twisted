@@ -201,6 +201,16 @@ base="twisted.internet.utils">getProcessOutput</code>, in <code
 class="API">twisted.internet.utils</code>.</p>
 
 
+<h3>Why don't my spawnProcess programs see my environment variables?</h3>
+
+<p><code class="API"
+base="twisted.internet.interfaces.IReactorProcess">spawnProcess</code>
+defaults to clearing the environment of child processes as a security
+feature. You can either provide a dictionary with exactly the name-value
+pairs you want the child to use, or you can simply pass in
+<code>os.environ</code> to inherit the complete environment. </p>
+
+
 <h3>My Deferred or DeferredList never fires, so my program just mysteriously
 hangs!  What's wrong?</h3>
 

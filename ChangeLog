@@ -1,5 +1,7 @@
 2003-07-30  Brian Warner  <warner@lothar.com>
 
+	* doc/howto/faq.html: mention spawnProcess vs. os.environ
+
 	* doc/howto/test-standard.html: document usage of .todo and .skip
 
 2003-07-28  Brian Warner  <warner@lothar.com>
