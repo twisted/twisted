@@ -32,7 +32,7 @@ from twisted.python import log
 # Sibling Imports
 
 import adbapi
-from twisted.enterprise.util import DBError, NOQUOTE, getKeyColumn
+from twisted.enterprise.util import DBError, NOQUOTE, getKeyColumn, dbTypeMap
 
 class RowObject:
     """I represent a row in a table in a relational database.
