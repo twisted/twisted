@@ -370,7 +370,7 @@ PyObject * cReactorTime_getDelayedCalls(PyObject *self, PyObject *args);
 PyObject * cReactorTCP_listenTCP(PyObject *self, PyObject *args, PyObject *kw);
 
 /* XXX: <itamar> clientTCP is in flux */
-PyObject * cReactorTCP_clientTCP(PyObject *self, PyObject *args);
+PyObject * cReactorTCP_connectTCP(PyObject *self, PyObject *args);
 
 /* Apply a callable in the main thread. */
 PyObject * cReactorThread_callFromThread(PyObject *self, PyObject *args, PyObject *kw);

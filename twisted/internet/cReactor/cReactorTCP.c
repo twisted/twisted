@@ -409,9 +409,9 @@ cReactorTCP_listenTCP(PyObject *self, PyObject *args, PyObject *kw)
 
 
 PyObject *
-cReactorTCP_clientTCP(PyObject *self, PyObject *args)
+cReactorTCP_connectTCP(PyObject *self, PyObject *args)
 {
-    return cReactor_not_implemented(self, args, "cReactor_clientTCP");
+    return cReactor_not_implemented(self, args, "cReactor_connectTCP");
 }
 
 

@@ -65,8 +65,8 @@ static PyMethodDef cReactor_methods[] =
     /* IReactorTCP */
     { "listenTCP",          (PyCFunction)cReactorTCP_listenTCP,
       (METH_VARARGS | METH_KEYWORDS), "listenTCP" },
-    { "clientTCP",          cReactorTCP_clientTCP,
-      METH_VARARGS, "clientTCP" },
+    { "connectTCP",          cReactorTCP_connectTCP,
+      METH_VARARGS, "connectTCP" },
 
     /* IReactorThread */
     { "callFromThread",         (PyCFunction)cReactorThread_callFromThread,
