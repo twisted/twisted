@@ -7,13 +7,6 @@ Quote of the Release:
 For information on what's new in Twisted 0.17.0, see the ChangeLog file
 that comes with the distribution, or http://twistedmatrix.com/ChangeLog.txt.
 
-NOTE:
-
-  There has been a special addition to the 0.17 release series: The Twisted
-  Matrix Laboratories license registration service. PLEASE see
-  doc/howto/register.html for more information.
-
-
 What is this?
 
   Twisted is an event-based framework for internet applications.  It includes a
