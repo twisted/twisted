@@ -63,11 +63,13 @@ class SingletonRunner:
 
     def runTests(self, output):
         testCase = self.testClass()
+        testCase.setUpClass()
         method = getattr(testCase, self.methodName)
         output.reportStart(self.testClass, method)
         tester = unittest.Tester(self.testClass, testCase, method, self.runTest)
         results = tester.run()
         output.reportResults(self.testClass, method, *results)
+        testCase.tearDownClass()
 
 
 class TestClassRunner:
