@@ -1030,7 +1030,7 @@ class ProcessAliasTestCase(test_process.SignalMixin, unittest.TestCase):
     def testAliasResolution(self):
         aliases = {}
         domain = {'': TestDomain(aliases, ['user1', 'user2', 'user3'])}
-        A1 = mail.alias.AliasGroup(['user1', '|process', '/file'], domain, 'alias1')
+        A1 = mail.alias.AliasGroup(['user1', '|echo', '/file'], domain, 'alias1')
         A2 = mail.alias.AliasGroup(['user2', 'user3'], domain, 'alias2')
         A3 = mail.alias.AddressAlias('alias1', domain, 'alias3')
         aliases.update({
@@ -1044,7 +1044,7 @@ class ProcessAliasTestCase(test_process.SignalMixin, unittest.TestCase):
         p = reactor.spawnProcess(protocol.ProcessProtocol(), "echo")
         expected = map(str, [
             mail.alias.AddressAlias('user1', None, None),
-            mail.alias.MessageWrapper(p, 'process'),
+            mail.alias.MessageWrapper(p, 'echo'),
             mail.alias.FileWrapper('/file'),
         ])
         expected.sort() 
@@ -1063,7 +1063,7 @@ class ProcessAliasTestCase(test_process.SignalMixin, unittest.TestCase):
         r3.sort()
         expected = map(str, [
             mail.alias.AddressAlias('user1', None, None),
-            mail.alias.MessageWrapper(p, 'process'),
+            mail.alias.MessageWrapper(p, 'echo'),
             mail.alias.FileWrapper('/file'),
         ])
         expected.sort() 
@@ -1085,14 +1085,14 @@ class ProcessAliasTestCase(test_process.SignalMixin, unittest.TestCase):
         self.assertEquals(aliases['alias2'].resolve(aliases), None)
         self.assertEquals(aliases['alias3'].resolve(aliases), None)
         
-        A4 = mail.alias.AliasGroup(['|process', 'alias1'], domain, 'alias4')
+        A4 = mail.alias.AliasGroup(['|echo', 'alias1'], domain, 'alias4')
         aliases['alias4'] = A4
         
         p = reactor.spawnProcess(protocol.ProcessProtocol(), "echo")
         r = map(str, A4.resolve(aliases).objs)
         r.sort()
         expected = map(str, [
-            mail.alias.MessageWrapper(p, 'process')
+            mail.alias.MessageWrapper(p, 'echo')
         ])
         self.assertEquals(r, expected)
 if not components.implements(reactor, interfaces.IReactorProcess):
