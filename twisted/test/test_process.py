@@ -200,8 +200,13 @@ class PosixProcessTestCase(unittest.TestCase):
     
 
     def testNormalTermination(self):
+        if os.path.exists('/bin/true'): cmd = '/bin/true'
+        elif os.path.exists('/usr/bin/true'): cmd = '/usr/bin/true'
+        else: raise RuntimeError("true not found in /bin or /usr/bin")
+
         p = TrivialProcessProtocol()
-        reactor.spawnProcess(p, '/bin/true', ['true'])
+        reactor.spawnProcess(p, cmd, ['true'])
+
         while not p.finished:
             reactor.iterate(0.01)
         p.reason.trap(error.ProcessDone)
@@ -209,8 +214,13 @@ class PosixProcessTestCase(unittest.TestCase):
 
 
     def testAbnormalTermination(self):
+        if os.path.exists('/bin/false'): cmd = '/bin/false'
+        elif os.path.exists('/usr/bin/false'): cmd = '/usr/bin/false'
+        else: raise RuntimeError("false not found in /bin or /usr/bin")
+        
         p = TrivialProcessProtocol()
-        reactor.spawnProcess(p, '/bin/false', ['false'])
+        reactor.spawnProcess(p, cmd, ['false'])
+
         while not p.finished:
             reactor.iterate(0.01)
         p.reason.trap(error.ProcessTerminated)
