@@ -119,7 +119,7 @@ class PosixProcessTestCase(unittest.TestCase):
         p.transport.closeStdin()
         while not p.closed:
             reactor.iterate()
-        self.assertEquals(p.outF.getvalue(), "hello, worldabc123", p.errF.getvalue())
+        self.assertEquals(p.outF.getvalue(), "hello, worldabc123", "Error message from process_twisted follows:\n\n%s\n\n" % p.errF.getvalue())
     
     def testProcess(self):
         if os.path.exists('/bin/gzip'): cmd = '/bin/gzip'
