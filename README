@@ -23,6 +23,14 @@ What's new in 0.10.0?
 
   Many minor bugfixes and enhancements to Twisted Web/Reality/Spread/Internet.
 
+  "Twisted Manhole", 'direct manipulation' service for Twisted, both server and
+  client.  The client is a much nicer way to deal with remotely accessible code
+  than the standard telnet way.
+
+  Lots more documentation.
+
+  Acceptance test automation.
+
   Copyright text added.
 
 What is this?
