@@ -26,11 +26,12 @@ import win32api, win32con
 from runtime import platform
 
 
-# XXX can this use python's builtin _winreg?
+# XXX fix this to use python's builtin _winreg?
+
 def getProgramsMenuPath():
     """Get the path to the Programs menu.
     
-    @return the filesystem location of the common Start Menu.
+    @return the filesystem location of the common Start Menu->Programs.
 
     Probably will break on non-US Windows.
     """
@@ -40,3 +41,11 @@ def getProgramsMenuPath():
     hShellFolders = win32api.RegOpenKeyEx(win32con.HKEY_LOCAL_MACHINE, 
                                           keyname, 0, win32con.KEY_READ)
     return win32api.RegQueryValueEx(hShellFolders, 'Common Programs')[0]
+
+
+def getProgramFilesPath():
+    """Get the path to the Program Files folder."""
+    keyname = 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion'
+    currentV = win32api.RegOpenKeyEx(win32con.HKEY_LOCAL_MACHINE, 
+                                     keyname, 0, win32con.KEY_READ)
+    return win32api.RegQueryValueEx(currentV, 'ProgramFilesDir')[0]
