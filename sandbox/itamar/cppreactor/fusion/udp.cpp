@@ -3,8 +3,6 @@
 using namespace Twisted;
 
 
-static object None = import("__builtin__").attr("None");
-
 Twisted::UDPPort::UDPPort(object self)
 {
     this->connected = false;
@@ -12,6 +10,7 @@ Twisted::UDPPort::UDPPort(object self)
     extract<Twisted::DatagramProtocol*> pchecker(self.attr("protocol"));
     if (pchecker.check()) {
 	this->protocol = pchecker();
+	this->pyprotocol = object(self.attr("protocol")).ptr();
 	this->protocol->init(object(self.attr("protocol")).ptr());
 	this->sockfd = extract<int>(self.attr("fileno")());
 	this->buflen = extract<int>(self.attr("maxPacketSize"));
@@ -29,13 +28,13 @@ object Twisted::UDPPort::doRead()
 		ssize_t recvlen = ::read(sockfd, buffer, buflen);
 		if (recvlen < 0) {
 		    if (recvlen == EWOULDBLOCK || recvlen == EAGAIN || recvlen == EINTR) {
-			return None;
+			return object();
 		    }
 		    if (recvlen == ECONNREFUSED) {
-			protocol->connectionRefused();
+			call_method<void>(pyprotocol, "connectionRefused");
 		    }
 		    /* XXX log error? */
-		    return None;
+		    return object();
 		}
 		protocol->datagramReceived(buffer, recvlen);
 	    }
@@ -46,10 +45,10 @@ object Twisted::UDPPort::doRead()
 		ssize_t recvlen = ::recvfrom(sockfd, buffer, buflen, 0, (sockaddr*)&recvaddr, &addrlen);
 		if (recvlen < 0) {
 		    if (recvlen == EWOULDBLOCK || recvlen == EAGAIN || recvlen == EINTR) {
-			return None;
+			return object();
 		    }
 		    /* XXX log error? */
-		    return None;
+		    return object();
 		}
 		protocol->datagramReceived(buffer, recvlen, recvaddr);
 	    }
@@ -57,18 +56,21 @@ object Twisted::UDPPort::doRead()
     } else {
 	return import("twisted.internet.udp").attr("Port").attr("doRead")(object(extract<object>(self)));
     }
-    return None;
+    return object();
 }
 
 
 int Twisted::UDPPort::write(const char* buf, size_t buflen)
 {
+    if (sockfd == -1) {
+	return -1;
+    }
     int result = ::write(sockfd, buf, buflen);
     if (result < 0) {
 	if (result == EINTR) {
 	    this->write(buf, buflen);
 	} else if (result == ECONNREFUSED) {
-	    this->protocol->connectionRefused();
+	    call_method<void>(this->pyprotocol, "connectionRefused"); 
 	} else {
 	    return result;
 	}
@@ -78,6 +80,9 @@ int Twisted::UDPPort::write(const char* buf, size_t buflen)
 
 int Twisted::UDPPort::write(const char* buf, size_t buflen, sockaddr_in sender)
 {
+    if (sockfd == -1) {
+	return -1;
+    }
     int result = ::sendto(sockfd, buf, buflen, 0, (sockaddr*) &sender, sizeof(sender));
     if (result < 0) {
 	if (result == EINTR) {
@@ -96,5 +101,8 @@ BOOST_PYTHON_MODULE(udp)
 	;
     class_<DatagramProtocol, bases<>, boost::noncopyable>("DatagramProtocol", no_init)
 	.def("makeConnection", &DatagramProtocol::makeConnection)
+	.def("stopProtocol", &DatagramProtocol::stopProtocol)
+	.def("startProtocol", &DatagramProtocol::startProtocol)
+	.def("connectionRefused", &DatagramProtocol::connectionRefused)
 	;
 }

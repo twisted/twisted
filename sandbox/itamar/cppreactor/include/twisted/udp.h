@@ -21,6 +21,7 @@ namespace Twisted
     {
     private:
 	DatagramProtocol* protocol;
+	PyObject* pyprotocol;
 	PyObject* self;
 	int sockfd;
 	char* buffer;
@@ -32,11 +33,17 @@ namespace Twisted
 	    delete[] buffer;
 	}
 	object doRead();
-	/* For non-connected UDP */
-	int write(const char* buf, size_t buflen, struct sockaddr_in sender);
-	/* For connected UDP */
-	int write(const char* buf, size_t buflen);
 	void wasConnected() { connected = true; }
+
+	/* Public API for use of DatagramProtocol subclasses: */
+	object stopListening() {
+	    this->sockfd = -1; // so writes don't blow up later on.
+	    return call_method<object>(pyprotocol, "stopListening");
+	}
+	/* For non-connected UDP. Returns negative number on errors: */
+	int write(const char* buf, size_t buflen, struct sockaddr_in sender);
+	/* For connected UDP. Returns negative number on errors: */
+	int write(const char* buf, size_t buflen);
     };
 
     class DatagramProtocol
@@ -55,17 +62,11 @@ namespace Twisted
 	void makeConnection(object t) {
 	    this->portobj = t;
 	    this->transport = extract<UDPPort*>(t);
-	    this->startProtocol();
-	}
-	virtual void startProtocol() {
 	    call_method<void>(self, "startProtocol");
 	}
-	virtual void stopProtocol() {
-	     call_method<void>(self, "stopProtocol");
-	}
-	virtual void connectionRefused() {
-	     call_method<void>(self, "connectionRefused");
-	}
+	virtual void startProtocol() {}
+	virtual void stopProtocol() {}
+	virtual void connectionRefused() {}
 	/* For non-connected UDP */
 	virtual void datagramReceived(const char* buf, size_t buflen, struct sockaddr_in sender) {};
 	/* For connected UDP */
