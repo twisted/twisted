@@ -1130,3 +1130,11 @@ class TestDomain:
             if aliases:
                 return lambda: aliases
             raise smtp.SMTPBadRcpt(user)
+
+
+from twisted.python.runtime import platformType
+import types
+if platformType != "posix":
+    for o in locals().values():
+        if isinstance(o, (types.ClassType, type)) and issubclass(o, unittest.TestCase):
+            o.skip = "twisted.mail only works on posix"
