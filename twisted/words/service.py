@@ -52,7 +52,7 @@ class NotInGroupError(NotInCollectionError):
 
     def __str__(self):
         if self.pName:
-            pName = "'%s' is" % (pName,)
+            pName = "'%s' is" % (self.pName,)
         else:
             pName = "You are"
         s = ("%s not in group '%s'." % (pName, self.group))
@@ -155,12 +155,23 @@ class Participant(pb.Perspective, styles.Versioned):
         except KeyError:
             print 'unable to add words identity for %s'% self.name
 
+    def __setstate__(self, state):
+        # Assumptions:
+        # * self.client is a RemoteReference, or otherwise represents
+        #   a transient presence.
+        state["client"] = None
+        # * Because we have no client, we are not online.
+        state["status"] = OFFLINE
+        # * Because we are not online, we are in no groups.
+        state["groups"] = []
+
+        self.__dict__.update(state)
+
     def attached(self, client, identity):
         """Attach a client which implements WordsClientInterface to me.
         """
         if ((self.client is not None)
             and self.client.__class__ != styles.Ephemeral):
-            print self.client
             raise passport.Unauthorized("duplicate login not permitted.")
         log.msg("attached: %s" % self.name)
         self.client = client
@@ -265,7 +276,7 @@ class Participant(pb.Perspective, styles.Versioned):
     perspective_leaveGroup = leaveGroup
     perspective_getGroupMembers = getGroupMembers
 
-    def __str__(self):
+    def __repr__(self):
         if self.identityName != "Nobody":
             id_s = '(id:%s)' % (self.identityName, )
         else:
