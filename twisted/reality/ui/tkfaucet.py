@@ -86,7 +86,7 @@ class MainWindow(Toplevel, pb.Referenceable):
         
     def tryAgain(self, er):
         print 'oops',er
-        showerror('Oops', er)
+        #showerror('Oops', er)
         
     def disco(self):
         print 'disconnected'
