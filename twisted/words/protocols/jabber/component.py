@@ -16,6 +16,8 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from zope.interface import implements
+
 from twisted.xish import domish, xpath, utility, xmlstream
 from twisted.words.protocols.jabber import jstrports
 
@@ -79,7 +81,7 @@ class IService(components.Interface):
         """
 
 class Service(service.Service):
-    __implements__ = (IService, )
+    implements(IService)
 
     def componentConnected(self, xmlstream):
         pass
@@ -92,6 +94,7 @@ class Service(service.Service):
 
     def send(self, obj):
         self.parent.send(obj)
+components.backwardsCompatImplements(Service)
 
 class ServiceManager(service.MultiService):
     """ Business logic representing a managed component connection to a Jabber router
@@ -131,7 +134,7 @@ class ServiceManager(service.MultiService):
     def _connected(self, xs):
         self.xmlstream = xs
         for c in self:
-            if components.implements(c, IService):
+            if IService.providedBy(c):
                 c.transportConnected(xs)
 
     def _authd(self, xs):
@@ -143,7 +146,7 @@ class ServiceManager(service.MultiService):
         # Notify all child services which implement
         # the IService interface
         for c in self:
-            if components.implements(c, IService):
+            if IService.providedBy(c):
                 c.componentConnected(xs)
 
     def _disconnected(self, _):
@@ -152,7 +155,7 @@ class ServiceManager(service.MultiService):
         # Notify all child services which implement
         # the IService interface
         for c in self:
-            if components.implements(c, IService):
+            if IService.providedBy(c):
                 c.componentDisconnected()
 
     def send(self, obj):
