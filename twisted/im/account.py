@@ -9,8 +9,8 @@ from twisted.im.locals import GLADE_FILE, SETTINGS_FILE, autoConnectMethods
 
 ### This generic
 ### stuff uses the word "account" in a very different way -- chat accounts are
-### potential sources of messages, faucet accounts are individual network
-### connections.
+### potential sources of messages, InstanceMessenger accounts are individual
+### network connections.
 
 class AccountManager:
     def __init__(self):
