@@ -23,11 +23,7 @@ Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 """
 
 import struct
-from twisted.internet import protocol, reactor
-try:
-    from twisted.internet import ptypro
-except ImportError:
-    ptypro = None
+from twisted.internet import protocol, reactor, process
 from twisted.python import log
 from twisted.conch import error
 import service, common
@@ -285,13 +281,12 @@ class SSHSession(SSHChannel):
         if not self.environ.has_key('TERM'): # we didn't get a pty-req
             log.msg('tried to get shell without pty, failing')
             return 0
-        if not ptypro:
-            log.msg("we don't support psuedo-terminals on this system")
-            return 0
         shell = '/bin/sh' # fix this
         try:
             self.client = SSHSessionClient()
-            ptypro.Process(shell, ["-"], self.environ, '/tmp', SSHSessionProtocol(self, self.client)) # fix this too
+            p = reactor.spawnProcess(SSHSessionProtocol(self, self.client), \
+                shell, ["-"], self.environ, '/tmp', usePTY = 1)
+            p.setWindowSize(*self.winSize)
         except OSError, ImportError:
             log.msg('failed to get pty')
             return 0
@@ -302,22 +297,14 @@ class SSHSession(SSHChannel):
     def request_exec(self, data):
         log.msg('disabled exec')
         return 0
-        if not ptypro:
-            log.msg("we don't support psuedo-terminals on this system")
-            return 0
-        log.msg('accepted exec (horribly insecure) %s' % data[4:])
-        args = data[4:].split()
-        ptypro.Process(args[0], args, self.environ, '/tmp', self)
-        return 1
 
     def request_pty_req(self, data):
         term, rest = common.getNS(data)
-        cols, rows, foo, bar = struct.unpack('>4L', rest[:16])
+        cols, rows, xpixel, ypixel = struct.unpack('>4L', rest[:16])
         modes = common.getNS(rest[16:])[0]
         self.environ['TERM'] = term
-        self.environ['ROWS'] = str(rows)
-        self.environ['COLUMNS'] = str(cols)
-        # XXX handle modes
+        self.winSize = (rows, cols, xpixel, ypixel)
+# XXX handle modes
         return 1
 
     def subsystem_python(self):
@@ -370,7 +357,8 @@ class SSHSessionProtocol(protocol.Protocol, protocol.ProcessProtocol):
         self.client = client
 
     def connectionMade(self):
-            self.client.transport = self.transport
+        print self.transport
+        self.client.transport = self.transport
 
     def dataReceived(self, data):
         self.session.write(data)
@@ -384,7 +372,7 @@ class SSHSessionProtocol(protocol.Protocol, protocol.ProcessProtocol):
         self.session.loseConnection()
 
     def processEnded(self, reason = None):
-        if reason: self.session.conn.sendRequest(self.session, 'exit-status', struct.pack('!L', reason.exitCode))
+        if reason and hasattr(reason, 'exitCode'): self.session.conn.sendRequest(self.session, 'exit-status', struct.pack('!L', reason.exitCode))
         self.session.loseConnection()
 
 class SSHSessionClient:

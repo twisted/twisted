@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.43 2002/09/29 04:27:50 z3p Exp $
+# $Id: default.py,v 1.44 2002/10/09 18:15:29 z3p Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -254,7 +254,10 @@ class PosixReactorBase(ReactorBase):
                      uid=None, gid=None, usePTY = 0):
         p = platform.getType()
         if p == 'posix':
-            return process.Process(self, executable, args, env, path, processProtocol, uid, gid, usePTY)
+            if usePTY:
+                return process.PTYProcess(self, executable, args, env, path, processProtocol, uid, gid)
+            else:
+                return process.Process(self, executable, args, env, path, processProtocol, uid, gid)
         # This is possible, just needs work - talk to itamar if you want this.
         #elif p == "win32":
         #    if win32process:

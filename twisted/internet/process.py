@@ -24,7 +24,7 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
 # System Imports
-import os, sys, traceback, select, errno
+import os, sys, traceback, select, errno, tty, fcntl, termios, struct
 
 try:
     import pty
@@ -200,8 +200,11 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
         stdout_read, stdout_write = os.pipe()
         stderr_read, stderr_write = os.pipe()
         stdin_read,  stdin_write  = os.pipe()
-        if usePTY and pty:
-            self.pid = pty.fork()[0]
+        if usePTY:
+            if pty:
+                self.pid = pty.fork()[0]
+            else:
+                raise Exception('cannot use pty')
         else:
             self.pid = os.fork()
         if self.pid == 0: # pid is 0 in the child process
@@ -397,3 +400,168 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
         except:
             log.deferr()
         self.maybeCallProcessEnded()
+
+class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
+    """An operating-system Process that uses PTY support."""
+
+    def __init__(self, reactor, command, args, environment, path, proto,
+                 uid=None, gid=None):
+        """Spawn an operating-system process.
+
+        This is where the hard work of disconnecting all currently open
+        files / forking / executing the new process happens.  (This is
+        executed automatically when a Process is instantiated.)
+
+        This will also run the subprocess as a given user ID and group ID, if
+        specified.  (Implementation Note: this doesn't support all the arcane
+        nuances of setXXuid on UNIX: it will assume that either your effective
+        or real UID is 0.)
+        """
+        abstract.FileDescriptor.__init__(self, reactor)
+        settingUID = (uid is not None) or (gid is not None)
+        if settingUID:
+            curegid = os.getegid()
+            currgid = os.getgid()
+            cureuid = os.geteuid()
+            curruid = os.getuid()
+            if uid is None:
+                uid = cureuid
+            if gid is None:
+                gid = curegid
+            # prepare to change UID in subprocess
+            os.setuid(0)
+            os.setgid(0)
+        pid, fd = pty.fork()
+        self.pid=pid
+        if pid == 0: # pid is 0 in the child process
+            try:
+                attrs = tty.tcgetattr(1)
+                attrs[3] = attrs[3] & ~tty.ICANON & ~tty.ECHO
+                attrs[6][tty.VMIN] = 1
+                attrs[6][tty.VTIME] = 0
+                tty.tcsetattr(1, tty.TCSANOW, attrs)
+
+                sys.settrace(None)
+
+                if path:
+                    os.chdir(path)
+                # set the UID before I actually exec the process
+                if settingUID:
+                    os.setuid(uid)
+                    os.setgid(gid)
+                os.execvpe(command, args, environment)
+            except:
+                stderr = os.fdopen(fd, 'w')
+                stderr.write("Upon execvpe %s %s in environment %s\n:" %
+                             (command, str(args),
+                              "id %s" % id(environment)))
+                traceback.print_exc(file=stderr)
+                stderr.flush()
+            os._exit(1)
+        fdesc.setNonBlocking(fd)
+        self.fd=fd
+        self.startReading()
+        self.connected = 1
+        self.proto = proto
+        self.lostProcess = 0
+        try:
+            self.proto.makeConnection(self)
+        except:
+            log.deferr()
+        registerReapProccessHandler(self.pid, self)
+
+    def setWindowSize(self, rows, cols, xpixels = 0, ypixels = 0):
+# set the window size for applications like curses
+# idea stolen from pexpect
+        fcntl.ioctl(self.fd, termios.TIOCSWINSZ, 
+                    struct.pack('4H', rows, cols, xpixels, ypixels))
+
+    def reapProcess(self):
+        """Try to reap a process (without blocking) via waitpid.
+
+        This is called when sigchild is caught or a Process object loses its
+        "connection" (stdout is closed) This ought to result in reaping all
+        zombie processes, since it will be called twice as often as it needs
+        to be.
+
+        (Unfortunately, this is a slightly experimental approach, since
+        UNIX has no way to be really sure that your process is going to
+        go away w/o blocking.  I don't want to block.)
+        """    
+        try:
+            pid, status = os.waitpid(self.pid, os.WNOHANG)
+        except OSError, e:
+            if e.errno == 10: # no child process
+                pid = None
+            else:
+                raise
+        except:
+            log.deferr()
+            pid = None
+        if pid:
+            self.processEnded(status)
+            del reapProcessHandlers[pid]
+
+    def processEnded(self, status):
+        self.status = status
+        self.lostProcess = 1
+        self.maybeCallProcessEnded()
+
+    def doRead(self):
+        """Called when my standard output stream is ready for reading.
+        """
+        try:
+            return fdesc.readFromFD(self.fd, self.proto.outReceived)
+        except OSError:
+            return CONNECTION_LOST
+
+    def fileno(self):
+        """This returns the file number of standard output on this process.
+        """
+        return self.fd
+
+    def maybeCallProcessEnded(self):
+        if self.lostProcess == 2:
+            try:
+                if self.status != -1:
+                    exitCode = self.status >> 8
+                else:
+                    exitCode = None # wonder when this happens
+                if exitCode:
+                    self.proto.processEnded(failure.Failure(error.ProcessTerminated(exitCode)))
+                else:
+                    self.proto.processEnded(failure.Failure(error.ProcessDone()))
+            except:
+                log.deferr()
+        else:
+            self.lostProcess += 1
+            self.reapProcess()
+
+    def connectionLost(self, reason):
+        """I call this to clean up when one or all of my connections has died.
+        """
+        abstract.FileDescriptor.connectionLost(self, reason)
+        self.maybeCallProcessEnded()
+
+    def writeSomeData(self, data):
+        """Write some data to the open process.
+        """
+        try:
+            rv = os.write(self.fd, self.unsent)
+            if rv == len(self.unsent):
+                self.startReading()
+            return rv
+        except IOError, io:
+            if io.args[0] == errno.EAGAIN:
+                return 0
+            return CONNECTION_LOST
+        except OSError, ose:
+            if ose.errno == errno.EPIPE:
+                return CONNECTION_LOST
+            raise
+
+    def write(self, data):
+        self.stopReading()
+        abstract.FileDescriptor.write(self, data)
+
+
