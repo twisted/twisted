@@ -18,14 +18,16 @@
 # dominput
 
 import os
+import inspect
 
 from twisted.internet import defer
 from twisted.python import log
 from twisted.python.reflect import qual
 
+from twisted.web import domhelpers
 from twisted.web.woven import template, controller, utils
 
-__version__ = "$Revision: 1.25 $"[11:-2]
+__version__ = "$Revision: 1.26 $"[11:-2]
 
 controllerFactory = controller.controllerFactory
 
@@ -73,6 +75,9 @@ class InputHandler(controller.Controller):
     def initialize(self):
         pass
 
+    def setNode(self, node):
+        self.node = node
+
     def getInput(self, request):
         """
         Return the data associated with this handler from the request, if any.
@@ -108,7 +113,9 @@ class InputHandler(controller.Controller):
         """
         if self._check is None:
             raise NotImplementedError(qual(self.__class__)+'.check')
-        return self._check(data)
+        # self._check is probably a bound method or simple function that
+        # doesn't have a reference to this InputHandler; pass it
+        return self._check(self, request, data)
 
     def handleValid(self, request, data):
         """
@@ -261,3 +268,132 @@ class NewObject(SingleValue):
         SingleValue.handleInvalid(self, request, data)
 
 
+class DictAggregator(Anything):
+    """An InputHandler for a <form> tag, for triggering a function
+    when all of the form's individual inputs have been validated.
+    Also for use gathering a dict of arguments to pass to a parent's
+    aggregateValid if no commit function is passed.
+    
+    Usage example:
+    <form controller="theForm" action="">
+        <input controller="Integer" 
+            view="InputText" model="anInteger" />
+        <input controller="Anything" 
+            view="InputText" model="aString" />
+        <input type="submit" />
+    </form>
+    
+    def theCommitFunction(anInteger=None, aString=None):
+        '''Note how the keyword arguments match up with the leaf model
+        names above
+        '''
+        print "Yay", anInteger, aString
+    
+    class CMyController(controller.Controller):
+        def wcfactory_theForm(self, request, node, m):
+            return input.FormAggregator(m, commit=theCommitFunction)
+    """
+    def aggregateValid(self, request, inputhandler, data):
+        """Aggregate valid input from inputhandlers below us until
+        we have enough input to pass to the commit function that
+        was passed to the constructor.
+        """
+        if self._commit:
+            # Introspect the commit function to see what 
+            # keyword arguments it takes
+            func = self._commit
+            if hasattr(func, 'im_func'):
+                func = func.im_func
+            args, varargs, varkw, defaults = inspect.getargspec(
+                                                            func)
+            subcontrollerNames = args[-len(defaults):]
+            wantsRequest = args[1] == 'request'
+        else:
+            # Introspect the template to see if we still have
+            # controllers that will be giving us input
+            subcontrollerNodes = domhelpers.findElementsWithAttributeShallow(
+                    self.view.node, "controller")
+            if len(subcontrollerNodes) != 1:
+                # Evil hack. We don't really know what the subcontroller names
+                # are, so just set subcontrollerNames to a list of impossible
+                # to satisfy names until there's only one controller left
+                # directly below our node
+                subcontrollerNames = ['']
+            else:
+                subcontrollerNames = []
+
+        self._valid[inputhandler] = data
+        gathered = [x.model.name for x in self._valid.keys()]
+        
+        for required in subcontrollerNames:
+            if required not in gathered:
+                # We're still missing some input
+                break
+        else:
+            # We've got all the input
+            # Gather it into a dict and call the commit function
+            results = {}
+            for item in self._valid:
+                results[item.model.name] = self._valid[item]
+            if self._commit:
+                if wantsRequest:
+                    self._commit(request, **results)
+                else:
+                    self._commit(**results)
+            else:
+                self._parent.aggregateValid(request, self, results)
+            return results
+
+class ListAggregator(Anything):
+    def aggregateValid(self, request, inputhandler, data):
+        """Aggregate valid input from inputhandlers below us into a 
+        list until we have all input from controllers below us to pass 
+        to the commit function that was passed to the constructor or
+        our parent's aggregateValid.
+        """
+        if self._commit:
+            # Introspect the commit function to see what 
+            # keyword arguments it takes
+            func = self._commit
+            if hasattr(func, 'im_func'):
+                func = func.im_func
+            args, varargs, varkw, defaults = inspect.getargspec(
+                                                            func)
+            self.numArgs = len(args)
+            wantsRequest = args[1] == 'request'
+            if wantsRequest:
+                numArgs -= 1
+        else:
+            # Introspect the template to see if we still have
+            # controllers that will be giving us input
+            
+            # aggregateValid is called before the view renders the node, so
+            # we can count the number of controllers below us the first time
+            # we are called
+            if not hasattr(self, 'numArgs'):
+                self.numArgs = len(domhelpers.findElementsWithAttributeShallow(
+                    self.view.node, "controller"))
+
+        if not hasattr(self, '_validList'):
+            self._validList = []
+        self._validList.append(data)
+        
+        if len(self._validList) == self.numArgs:
+            # We've got all the input
+            # Gather it into a dict and call the commit function
+            if self._commit:
+                if wantsRequest:
+                    self._commit(request, *self._validList)
+                else:
+                    self._commit(*self._validList)
+            else:
+                self._parent.aggregateValid(request, self, self._validList)
+            return self._validList
+
+    def commit(self, request, node, data):
+        """If we're using the ListAggregator, we don't want the list of items
+        to be rerendered
+        xxx Need to have a "node complete" message sent to the controller
+        so we can reset state, so controllers can be re-run or ignore input the second time
+        """
+        pass

@@ -17,7 +17,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.34 $"[11:-2]
+__version__ = "$Revision: 1.35 $"[11:-2]
 
 import os
 import cgi
@@ -119,6 +119,9 @@ class Controller(resource.Resource):
     def setView(self, view):
         self.view = view
 
+    def setNode(self, node):
+        self.node = node
+
     def setUp(self, request, *args):
         """
         @type request: L{twisted.web.server.Request}
@@ -157,6 +160,7 @@ class Controller(resource.Resource):
         for ih in self._inputhandlers:
             ih._parent = self
             ih.handle(request)
+        self._inputhandlers = []
         for key, value in self._valid.items():
             key.commit(request, None, value)
         self._valid = {}
@@ -213,10 +217,10 @@ class Controller(resource.Resource):
         """
         return (None, None)
 
-    def domChanged(self, request, node):
-        parent = getattr(self, 'parent', None)
+    def domChanged(self, request, widget, node):
+        parent = getattr(self, '_parent', None)
         if parent is not None:
-            parent.domChanged(request, node)
+            parent.domChanged(request, widget, node)
 
     def pageRenderComplete(self, request):
         """Override this to recieve notification when the view rendering
@@ -232,6 +236,7 @@ class LiveController(Controller):
     page has been sent to the browser, and can translate client-side
     javascript events into server-side events.
     """
+    pageSession = None
     def render(self, request):
         """First, check to see if this request is attempting to hook up the
         output conduit. If so, do it. Otherwise, unlink the current session's
@@ -249,8 +254,8 @@ class LiveController(Controller):
             eventTarget = request.args['woven_clientSideEventTarget'][0]
             eventArgs = request.args.get('woven_clientSideEventArguments', [])
             #print "EVENT", eventName, eventTarget, eventArgs
-            self.view = sess.getCurrentPage()
-            request.d = self.view.d
+            self.view = sess.getCurrentPage().view
+            #request.d = self.view.d
             target = self.view.subviews[eventTarget]
             target.onEvent(request, eventName, *eventArgs)
             sess.sendScript('woven_clientToServerEventComplete()')
@@ -262,29 +267,39 @@ class LiveController(Controller):
 
         # Unlink the current page in this user's session from MVC notifications
         page = sess.getCurrentPage()
+        #request.currentId = getattr(sess, 'currentId', 0)
         if page is not None:
-            page.unlinkViews()
+            page.view.unlinkViews()
             sess.setCurrentPage(None)
+        print "PAGE SESSION IS NONE"
         self.pageSession = None
         return Controller.render(self, request)
 
     def gatheredControllers(self, v, d, request):
         Controller.gatheredControllers(self, v, d, request)
         sess = request.getSession(interfaces.IWovenLivePage)
-        #print "THIS PAGE IS GOING LIVE:", self
+        print "THIS PAGE IS GOING LIVE:", self
         self.pageSession = sess
         sess.setCurrentPage(self)
+        sess.currentId = request.currentId
 
-    def domChanged(self, request, node):
+    def domChanged(self, request, widget, node):
         print "DOM CHANGED"
-        if self.pageSession is not None:
+        sess = request.getSession(interfaces.IWovenLivePage)
+        if sess is not None:
+            if not hasattr(node, 'getAttribute'):
+                return
             nodeId = node.getAttribute('id')
             nodeXML = node.toxml()
             nodeXML = nodeXML.replace('\n', '')
             nodeXML = nodeXML.replace('\r', '')
             nodeXML = nodeXML.replace("'", "\\'")
             js = "top.woven_replaceElement('%s', '%s')" % (nodeId, nodeXML)
-            self.pageSession.sendScript(js)
+            view = sess.getCurrentPage().view
+            #for key in widget.subviews.keys():
+            #    view.subviews[key].unlinkViews()
+            view.subviews.update(widget.subviews)
+            sess.sendScript(js)
 
     def wchild_WebConduit2_js(self, request):
         print "returning js file"

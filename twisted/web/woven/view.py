@@ -17,7 +17,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.62 $"[11:-2]
+__version__ = "$Revision: 1.63 $"[11:-2]
 
 # Sibling imports
 import interfaces
@@ -98,6 +98,7 @@ class View:
 
     viewLibraries = []
     setupStacks = 1
+    doneCallback = None
     def __init__(self, m, templateFile=None, templateDirectory=None, controller=None, doneCallback=None, modelStack=None, viewStack=None, controllerStack=None):
         """
         A view must be told what its model is, and may be told what its
@@ -114,9 +115,10 @@ class View:
             self.modelStack = None
             self.viewStack = None
             self.controllerStack = None
-            if doneCallback is None:
+            if doneCallback is None and self.doneCallback is None:
                 self.doneCallback = doSendPage
             else:
+                print "DoneCallback", doneCallback
                 self.doneCallback = doneCallback
         if templateFile:
             self.templateFile = templateFile
@@ -151,7 +153,8 @@ class View:
         return self
 
     def render(self, request, doneCallback=None):
-        request.currentId = 0
+        if not getattr(request, 'currentId', 0):
+            request.currentId = 0
         request.currentPage = self
         if self.controller is None:
             self.controller = controller.Controller(self.model)
@@ -256,6 +259,8 @@ class View:
                 self.outstandingNodes.insert(0, 1)
                 self.handleNode(request, node)
             else:
+                if hasattr(node, 'getAttribute') and (node.getAttribute('view') or node.getAttribute('controller')):
+                    self.outstandingNodes = [node] + self.outstandingNodes
                 if hasattr(node, 'childNodes') and node.childNodes:
                     self.recurseChildren(request, node)
         
@@ -365,9 +370,9 @@ class View:
 
         # Look up a controller factory.
         if controllerName:
-            if not node.hasAttribute('name'):
-                warnings.warn("POTENTIAL ERROR: %s had a controller, but not a "
-                              "'name' attribute." % node)
+            #if not node.hasAttribute('name'):
+            #    warnings.warn("POTENTIAL ERROR: %s had a controller, but not a "
+            #                  "'name' attribute." % node)
             controllerStack = self.controllerStack
             while controllerStack is not None:
                 namespace, controllerStack = controllerStack
@@ -534,6 +539,7 @@ class View:
                 controller.setSubmodel(submodelName)
 
             controller.setView(view)
+            controller.setNode(node)
 
             controllerResult = controller.handle(request)
             controllerResult = (None, None)
@@ -609,7 +615,7 @@ class View:
 
     def renderFailure(self, failure, request):
         try:
-            xml = request.d.toxml()
+            xml = request.d.toprettyxml()
         except:
             xml = ""
 #         if not hasattr(request, 'channel'):
@@ -634,7 +640,7 @@ class View:
 
 class LiveView(View):
     def wvfactory_webConduitGlue(self, request, node, m):
-    	return View(m, templateFile="WebConduitGlue.html")
+        return View(m, templateFile="WebConduitGlue.html")
     
     def wvupdate_woven_flashConduitSessionView(self, request, wid, mod):
         print "updating flash thingie"
