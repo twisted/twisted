@@ -540,7 +540,7 @@ class Broker(banana.Banana):
                 notifier()
             except:
                 log.deferr()
-    
+
     waitingForAnswers = None
 
     def connectionLost(self, reason):
@@ -1153,7 +1153,7 @@ def connect(host, port, username, password, serviceName,
     Optional (keyword) arguments:
         perspectiveName -- the name of the perspective to request, if
             different than the username
-        client -- XXX the "reference" argument to
+        client -- XXX the \"reference\" argument to
                   perspective.Perspective.attached
         timeout -- see twisted.internet.tcp.Client
 
