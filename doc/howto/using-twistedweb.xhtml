@@ -236,7 +236,7 @@ reactor.run()
 
 <p><code>File</code> resources, be they root object or children thereof,
 have two important attributes that often need to be modified:
-<code>indices</code> and <code>processors</code>. <code>indices</code>
+<code>indexNames</code> and <code>processors</code>. <code>indexNames</code>
 determines which files are treated as <q>index files</q> -- served
 up when a directory is rendered. <code>processors</code> determine how
 certain file extensions are treated.</p>
@@ -250,7 +250,7 @@ from twisted.application import internet, service
 from twisted.web import static, server, script
 
 root = static.File("/var/www/htdocs")
-root.indices=['index.rpy']
+root.indexNames=['index.rpy']
 root.processors = {'.rpy': script.ResourceScript}
 application = service.Application('web')
 sc = service.IServiceCollection(application)
