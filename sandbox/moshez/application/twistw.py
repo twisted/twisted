@@ -53,6 +53,8 @@ def runApp(config):
     service.IService(application).startService()
     if not config['no_save']:
         apprun.scheduleSave(application)
+    reactor.addSystemEventTrigger('before', 'shutdown',
+                                  service.IService(application).stopService)
     def callMeAgain():
         reactor.callLater(0.1, callMeAgain)
     reactor.callLater(0.1, callMeAgain)

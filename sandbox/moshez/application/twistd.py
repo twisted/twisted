@@ -160,6 +160,9 @@ def startApplication(config, application):
     service.IService(application).startService()
     if not config['no_save']:
         apprun.scheduleSave(application)
+    reactor.addSystemEventTrigger('before', 'shutdown',
+                                  service.IService(application).stopService)
+ 
 
 def runApp(config):
     passphrase = apprun.getPassphrase(config['encrypted'])
