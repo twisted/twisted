@@ -1,21 +1,30 @@
+# -*- test-case-name: twisted.test.test_unix -*-
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
-from twisted.internet import interfaces, reactor, protocol, error, address
-from twisted.python import components, lockfile
+from twisted.internet import interfaces, reactor, protocol, error, address, defer
+from twisted.python import components, lockfile, failure
 from twisted.protocols import loopback
 from twisted.trial import unittest
+from twisted.trial.util import spinWhile, spinUntil, wait
 import stat, os
 
 
-class CancelProtocol(protocol.Protocol):
-
+class MyProtocol(protocol.Protocol):
+    made = closed = failed = 0
+    data = ""
     def connectionMade(self):
-        reactor.callLater(0.1, self.transport.loseConnection)
+        self.made = 1
 
+    def dataReceived(self, data):
+        self.data += data
+
+    def connectionLost(self, reason):
+        self.closed = 1
 
 class TestClientFactory(protocol.ClientFactory):
+    protocol = None
 
     def __init__(self, testcase, name):
         self.testcase = testcase
@@ -23,59 +32,122 @@ class TestClientFactory(protocol.ClientFactory):
     
     def buildProtocol(self, addr):
         self.testcase.assertEquals(address.UNIXAddress(self.name), addr)
-        return protocol.Protocol()
-
+        self.protocol = MyProtocol()
+        return self.protocol
 
 class Factory(protocol.Factory):
+    protocol = stopped = None
 
     def __init__(self, testcase, name):
         self.testcase = testcase
         self.name = name
+    
+    def stopFactory(self):
+        self.stopped = True
 
     def buildProtocol(self, addr):
         self.testcase.assertEquals(None, addr)
-        return CancelProtocol()
+        self.protocol = p = MyProtocol()
+        return p
 
 
-class UnixSocketTestCase(unittest.TestCase):
+class PortCleanerUpper(unittest.TestCase):
+    callToLoseCnx = 'loseConnection'
+    def setUp(self):
+        self.ports = []
+
+    def tearDown(self):
+        self.cleanPorts(*self.ports)
+
+    def _addPorts(self, *ports):
+        for p in ports:
+            self.ports.append(p)
+
+    def cleanPorts(self, *ports):
+        for p in ports:
+            if not hasattr(p, 'disconnected'):
+                raise RuntimeError, ("You handed something to cleanPorts that"
+                                     " doesn't have a disconnected attribute, dummy!")
+            if not p.disconnected:
+                d = getattr(p, self.callToLoseCnx)()
+                if isinstance(d, defer.Deferred):
+                    wait(d)
+                else:
+                    try:
+                        util.spinUntil(lambda :p.disconnected)
+                    except:
+                        failure.Failure().printTraceback()
+
+
+class UnixSocketTestCase(PortCleanerUpper):
     """Test unix sockets."""
 
     def testDumber(self):
         filename = self.mktemp()
-        l = reactor.listenUNIX(filename, Factory(self, filename))
-        reactor.connectUNIX(filename, TestClientFactory(self, filename))
-        self.runReactor(0.3, True)
-        l.stopListening()
+        f = Factory(self, filename)
+        l = reactor.listenUNIX(filename, f)
+        tcf = TestClientFactory(self, filename)
+        c = reactor.connectUNIX(filename, tcf)
+
+        spinUntil(lambda :getattr(f.protocol, 'made', None) and 
+                          getattr(tcf.protocol, 'made', None))
+
+        self._addPorts(l, c.transport, tcf.protocol.transport, f.protocol.transport)
 
     def testMode(self):
         filename = self.mktemp()
-        l = reactor.listenUNIX(filename, Factory(self, filename), mode = 0600)
+        f = Factory(self, filename)
+        l = reactor.listenUNIX(filename, f, mode = 0600)
         self.assertEquals(stat.S_IMODE(os.stat(filename)[0]), 0600)
-        reactor.connectUNIX(filename, TestClientFactory(self, filename))
-        self.runReactor(0.2, True)
-        l.stopListening()
+        tcf = TestClientFactory(self, filename)
+        c = reactor.connectUNIX(filename, tcf)
+        self._addPorts(l, c.transport)
 
     def testPIDFile(self):
         filename = self.mktemp()
-        l = reactor.listenUNIX(filename, Factory(self, filename), mode = 0600, wantPID=1)
+        f = Factory(self, filename)
+        l = reactor.listenUNIX(filename, f, mode = 0600, wantPID=1)
         self.assert_(lockfile.checkLock(filename))
-        reactor.connectUNIX(filename, TestClientFactory(self, filename), checkPID=1)
-        self.runReactor(0.2, True)
-        l.stopListening()
-        reactor.iterate(0.1)
+        tcf = TestClientFactory(self, filename)
+        c = reactor.connectUNIX(filename, tcf, checkPID=1)
+        
+        spinUntil(lambda :getattr(f.protocol, 'made', None) and 
+                          getattr(tcf.protocol, 'made', None))
+
+        self._addPorts(l, c.transport, tcf.protocol.transport, f.protocol.transport)
+        self.cleanPorts(*self.ports)
+
         self.assert_(not lockfile.checkLock(filename))
 
 class ClientProto(protocol.ConnectedDatagramProtocol):
+    started = stopped = False
+    gotback = None
+
+    def stopProtocol(self):
+        self.stopped = True
+
+    def startProtocol(self):
+        self.started = True
+
     def datagramReceived(self, data):
         self.gotback = data
 
 class ServerProto(protocol.DatagramProtocol):
+    started = stopped = False
+    gotwhat = gotfrom = None
+
+    def stopProtocol(self):
+        self.stopped = True
+
+    def startProtocol(self):
+        self.started = True
+
     def datagramReceived(self, data, addr):
         self.gotfrom = addr
         self.gotwhat = data
         self.transport.write("hi back", addr)
 
-class DatagramUnixSocketTestCase(unittest.TestCase):
+class DatagramUnixSocketTestCase(PortCleanerUpper):
     """Test datagram UNIX sockets."""
     def testExchange(self):
         clientaddr = self.mktemp()
@@ -84,21 +156,19 @@ class DatagramUnixSocketTestCase(unittest.TestCase):
         cp = ClientProto()
         s = reactor.listenUNIXDatagram(serveraddr, sp)
         c = reactor.connectUNIXDatagram(serveraddr, cp, bindAddress = clientaddr)
-        reactor.iterate()
-        reactor.iterate()
-        reactor.iterate()
-        reactor.iterate()
+            
+        
+        spinUntil(lambda:sp.started and cp.started)
+        
         cp.transport.write("hi")
-        reactor.iterate()
-        reactor.iterate()
-        reactor.iterate()
-        reactor.iterate()
-        reactor.iterate()
-        reactor.iterate()
+
+        spinUntil(lambda:sp.gotwhat == "hi" and cp.gotback == "hi back")
+
         s.stopListening()
         c.stopListening()
         os.unlink(clientaddr)
         os.unlink(serveraddr)
+        spinWhile(lambda:s.connected and c.connected)
         self.failUnlessEqual("hi", sp.gotwhat)
         self.failUnlessEqual(clientaddr, sp.gotfrom)
         self.failUnlessEqual("hi back", cp.gotback)

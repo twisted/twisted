@@ -436,6 +436,7 @@ class TestOurServerBatchFile(test_process.SignalMixin, SFTPTestBase):
 
     def tearDown(self):
         self.server.stopListening()
+        util.spinWhile(lambda:self.server.connected)
         SFTPTestBase.tearDown(self)
 
     def _getBatchOutput(self, f):

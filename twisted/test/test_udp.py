@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.test.test_udp -*-
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -47,7 +48,35 @@ class GoodClient(Server):
         self.refused = 1
 
 
-class OldConnectedUDPTestCase(unittest.TestCase):
+class PortCleanerUpper(unittest.TestCase):
+    callToLoseCnx = 'loseConnection'
+    def setUp(self):
+        self.ports = []
+
+    def tearDown(self):
+        self.cleanPorts(*self.ports)
+
+    def _addPorts(self, *ports):
+        for p in ports:
+            self.ports.append(p)
+
+    def cleanPorts(self, *ports):
+        for p in ports:
+            if not hasattr(p, 'disconnected'):
+                raise RuntimeError, ("You handed something to cleanPorts that"
+                                     " doesn't have a disconnected attribute, dummy!")
+            if not p.disconnected:
+                d = getattr(p, self.callToLoseCnx)()
+                if isinstance(d, defer.Deferred):
+                    wait(d)
+                else:
+                    try:
+                        util.spinUntil(lambda :p.disconnected)
+                    except:
+                        failure.Failure().printTraceback()
+
+
+class OldConnectedUDPTestCase(PortCleanerUpper):
     def testStartStop(self):
         client = Client()
         port2 = reactor.connectUDP("127.0.0.1", 8888, client)

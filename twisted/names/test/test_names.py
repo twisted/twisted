@@ -10,7 +10,7 @@ from __future__ import nested_scopes
 import sys, socket, operator, copy
 from twisted.trial import unittest
 from twisted.trial.util import deferredResult as dR
-from twisted.trial.util import wait
+from twisted.trial.util import wait, spinWhile, spinUntil
 
 from twisted.internet import reactor, protocol, defer, error
 from twisted.names import client, server, common, authority, hosts, dns
@@ -133,6 +133,7 @@ my_domain_com = NoFileAuthority(
         }
     )
 
+
 class ServerDNSTestCase(unittest.TestCase):
     """Test cases for DNS server and client."""
 
@@ -155,21 +156,22 @@ class ServerDNSTestCase(unittest.TestCase):
                 break
 
         self.resolver = client.Resolver(servers=[('127.0.0.1', port)])
-
-
+    
     def tearDown(self):
-        self.listenerTCP.stopListening()
-        self.listenerUDP.stopListening()
-
-
+        self.listenerTCP.loseConnection()
+        wait(self.listenerUDP.stopListening())
+        if getattr(self.resolver.protocol, 'transport', None) is not None:
+            wait(self.resolver.protocol.transport.stopListening())
+        spinUntil(lambda :self.listenerUDP.disconnected and 
+                          self.listenerTCP.disconnected)
+                   
     def namesTest(self, d, r):
         self.response = None
         def setDone(response):
             self.response = response
         d.addBoth(setDone)
 
-        while not self.response:
-            reactor.iterate(0.1)
+        spinUntil(lambda :self.response)
 
         if isinstance(self.response, failure.Failure):
             raise self.response
@@ -182,6 +184,7 @@ class ServerDNSTestCase(unittest.TestCase):
 
     def testAddressRecord1(self):
         """Test simple DNS 'A' record queries"""
+        reactor.debug = True
         self.namesTest(
             self.resolver.lookupAddress('test-domain.com'),
             [dns.Record_A('127.0.0.1', ttl=19283784)]

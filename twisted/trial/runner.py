@@ -280,7 +280,7 @@ class MethodInfoBase(Timed):
         self.errors = []
 
     def runningTime(self):
-        return self.endTime - self.startTime 
+        return self.endTime - self.startTime
 
 
 class UserMethodError(Exception):

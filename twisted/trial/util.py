@@ -132,7 +132,7 @@ class Janitor(object):
         # don't import reactor when module is loaded
         from twisted.internet import reactor
         s = None
-        reactor.iterate(0.01) # flush short-range timers
+        reactor.iterate(0.1) # flush short-range timers
         pending = reactor.getDelayedCalls()
         if pending:
             s = PENDING_TIMED_CALLS_MSG
@@ -176,14 +176,35 @@ class Janitor(object):
              gc.collect()
 
 
+def spinUntil(f, timeout=4.0, msg="condition not met before timeout"):
+    """spin the reactor while condition returned by f() == False or timeout seconds have elapsed
+    i.e. spin until f() is True
+    """
+    assert callable(f)
+    from twisted.internet import reactor
+    now = time.time()
+    stop = now + timeout
+    while not f():
+        if time.time() == stop:
+            raise defer.TimeoutError, msg
+        reactor.iterate(0.1)
+
+def spinWhile(f, timeout=4.0, msg="f did not return false before timeout"):
+    """spin the reactor while condition returned by f() == True or until timeout seconds have elapsed
+    i.e. spin until f() is False
+    """
+    assert callable(f)
+    from twisted.internet import reactor
+    now = time.time()
+    stop = now + timeout
+    while f():
+        if time.time() == stop:
+            raise defer.TimeoutError, msg
+        reactor.iterate(0.1)
+
 
 def _wait(d, timeout=None):
-#    this is private and should only be used by trial!
-#    if you use this function directly YOU WILL UNLEASH THE
-#    WHITESPACE-EATING NANOVIRUSES!
-
-#    B{YOU HAVE BEEN WARNED!}
-    from twisted.trial import unittest, itrial 
+    from twisted.trial import unittest, itrial
     from twisted.internet import reactor
 
     def _dbg(msg):
@@ -195,6 +216,8 @@ def _wait(d, timeout=None):
 
     resultSet = []
     d.addBoth(resultSet.append)
+
+    # TODO: refactor following to use spinWhile
 
     if itimeout.duration is None:
         while not resultSet:
