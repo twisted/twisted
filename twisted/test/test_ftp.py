@@ -57,7 +57,7 @@ class FTPClientTests(unittest.TestCase):
             d = client.retrieveFile('/file/that/doesnt/exist', p)
             d.addCallback(lambda r, self=self: 
                             self.fail('Callback incorrectly called: %r' % r))
-            d.addBoth(lambda ignored,r=reactor: r.stop() or r)
+            d.addBoth(lambda ignored,r=reactor: r.crash() or r)
 
             id = reactor.callLater(2, self.timeout)
             reactor.run()
@@ -73,7 +73,7 @@ class FTPClientTests(unittest.TestCase):
                 pass
 
     def timeout(self):
-        reactor.stop()
+        reactor.crash()
         self.fail('Timed out')
 
     def writeResponses(self, protocol, responses):

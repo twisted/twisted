@@ -109,7 +109,7 @@ class DeferredTestCase(unittest.TestCase):
         l = []
         d.addErrback(l.append)
         # Make sure the reactor is shutdown
-        d.addBoth(lambda x, r=reactor: r.stop() or r)
+        d.addBoth(lambda x, r=reactor: r.crash())
 
         self.assertEquals(l, [])
         reactor.run()
