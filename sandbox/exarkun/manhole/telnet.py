@@ -2,7 +2,7 @@
 import struct
 
 from twisted.application import internet
-from twisted.internet import protocol
+from twisted.internet import protocol, interfaces as iinternet
 from twisted.protocols import telnet
 from twisted.python import components, log
 
@@ -80,48 +80,89 @@ DONT =          chr(254)  # Indicates the demand that the
                           # to perform, the indicated option.
 IAC =           chr(255)  # Data Byte 255.
 
-class ITelnetListener(components.Interface):
-    def connectionMade(self):
-        """A connection has been established.
+class ITelnetProtocol(iinternet.IProtocol):
+    def unhandledCommand(self, command, argument):
+        """A command was received but not understood.
         """
 
-    def dataReceived(self, bytes):
-        """Some data arrived.
+    def unhandledSubnegotiation(self, bytes):
+        """A subnegotiation command was received but not understood.
         """
 
-    def subnegotiationCommandReceived(self, bytes):
-        """A subnegotiation command was received.
+    def allowEnable(self, option):
+        """Indicate whether or not the given option can be enabled.
+
+        This will never be called with a currently enabled option.
         """
 
-    def connectionLost(self, reason):
-        """The connection was lost.
+    def enable(self, option):
+        """Enable the given option.
+
+        This will only be called after allowEnable(option) returns True.
         """
 
-class TelnetListener:
+    def disable(self, option):
+        """Disable the given option.
+        """
+
+class ITelnetTransport(iinternet.ITransport):
+    def requestEnable(self, option):
+        pass
+
+    def requestDisable(self, option):
+        pass
+
+class TelnetProtocol(protocol.Protocol):
     def __init__(self, proto):
         self.proto = proto
 
-    def connectionMade(self):
+    def unhandledCommand(self, command, argument):
         pass
 
-    def dataReceived(self, data):
+    def unhandledSubnegotiation(self, bytes):
         pass
 
-    def subnegotiationCommandReceived(self, bytes):
+    def allowEnable(self, option):
+        return False
+
+    def enable(self, option):
         pass
 
-    def connectionLost(self, reason):
+    def disable(self, option):
         pass
+
 
 class Telnet(protocol.Protocol):
-    commandMap = {
-        WILL: 'WILL',
-        WONT: 'WONT',
-        DO: 'DO',
-        DONT: 'DONT'}
+    """
+    @ivar commandMap: A mapping of bytes to callables.  When a
+    telnet command is received, the command byte (the first byte
+    after IAC) is looked up in this dictionary.  If a callable is
+    found, it is invoked with the argument of the command, or None
+    if the command takes no argument.  Values should be added to
+    this dictionary if commands wish to be handled.  By default,
+    only WILL, WONT, DO, and DONT are handled.  These should not
+    be overridden, as this class handles them correctly and
+    provides an API for interacting with them.
 
-    negotiationMap = {
-        }
+    @ivar negotiationMap: A mapping of bytes to callables.  When
+    a subnegotiation command is received, the command byte (the
+    first byte after SE) is looked up in this dictionary.  If
+    a callable is found, it is invoked with the argument of the
+    subnegotiation.  Values should be added to this dictionary if
+    subnegotiations are to be handled.  By default, no values are
+    handled.
+
+    @ivar options: A mapping of option bytes to their current
+    state.  This state is likely of little use to user code.
+    Changes should not be made to it.
+
+    @ivar state: A string indicating the current parse state.  It
+    can take on the values "data", "escaped", "command",
+    "subnegotiation", and "subnegotiation-escaped".  Changes
+    should not be made to it.
+
+    @ivar transport: This protocol's transport object.
+    """
 
     # One of a lot of things
     state = 'data'
@@ -137,6 +178,52 @@ class Telnet(protocol.Protocol):
 
     def write(self, bytes):
         self.transport.write(bytes)
+
+    def requestEnable(self, option):
+        s = self.getOptionState(option)
+        if s.us.state == 'no':
+            s.him.state = 'wantyes'
+            s.onResult = d = defer.Deferred()
+            self.do(option)
+            return d
+        elif s.us.state == 'yes':
+            return defer.fail(AlreadyEnabled(option))
+        elif s.us.state == 'wantno':
+            if s.us.stateq:
+                return defer.fail(AlreadyQueued(option))
+            else:
+                s.him.stateq = True
+                s.onResult = d = defer.Deferred()
+                return d
+        elif s.us.state == 'wantyes':
+            if s.us.stateq:
+                s.him.stateq = False
+            else:
+                return defer.fail(AlreadyNegotiating(option))
+        else:
+            raise ValueError("Illegal state")
+
+    def requestDisable(self, option):
+        s = self.getOptionState(option)
+        if s.us.state == 'no':
+            return defer.fail(AlreadyDisabled(option))
+        elif s.us.state == 'yes':
+            s.him.state = 'wantno'
+            s.onResult = d = defer.Deferred()
+            self.dont(option)
+            return d
+        elif s.us.state == 'wantno':
+            if s.us.stateq:
+                s.him.stateq = False
+            else:
+                return defer.fail(AlreadyNegotiating(option))
+        elif s.us.state == 'wantyes':
+            if s.us.stateq:
+                return defer.fail(AlreadyQueued(option))
+            else:
+                s.him.stateq = True
+        else:
+            raise ValueError("Illegal state")
 
     def dataReceived(self, data):
         # Most grossly inefficient implementation ever
@@ -182,18 +269,32 @@ class Telnet(protocol.Protocol):
             else:
                 raise ValueError("How'd you do this?")
 
+    def applicationByteReceived(self, byte):
+        """Called with application-level data.
+        """
+
+    def unhandledCommand(self, command, argument):
+        """Called for commands for which no handler is installed.
+        """
+
     def commandReceived(self, command, argument):
         cmdFunc = self.commandMap.get(command)
         if cmdFunc is None:
-            log.msg("Unhandled telnet command: %d %s" % (ord(command), argument and ord(argument)))
+            self.unhandledCommand(command, argument)
         else:
             cmdFunc(argument)
 
-    def applicationByteReceived(self, byte):
-        pass
+    def unhandledSubnegotiation(self, command, bytes):
+        """Called for subnegotiations for which no handler is installed.
+        """
 
     def negotiate(self, bytes):
-        pass
+        command, bytes = bytes[0], bytes[1:]
+        cmdFunc = self.negotiationMap.get(command)
+        if cmdFunc is None:
+            self.unhandledSubnegotiation(command, bytes)
+        else:
+            cmdFunc(bytes)
 
     # DO/DONT WILL/WONT are a bit more complex.  They require us to
     # track state to avoid negotiation loops and the like.
@@ -228,7 +329,7 @@ class Telnet(protocol.Protocol):
         self.write(IAC + WONT + option)
 
     def getOptionState(self, opt):
-        return self.options.get(opt, self._OptionState())
+        return self.options.setdefault(opt, self._OptionState())
 
     def _dodontwillwont(self, option, s, pfx, ack, neg):
         state = self.getOptionState(option)
@@ -306,47 +407,81 @@ class Telnet(protocol.Protocol):
     def enable(self, option):
         pass
 
-class Telnet2(Telnet):
-    handler = None
-    handlerFactory = TelnetListener
+    def disable(self, option):
+        pass
+
+class TelnetTransport(Telnet):
+    """
+    @ivar protocol: An instance of the protocol to which this
+    transport is connected, or None before the connection is
+    established and after it is lost.
+
+    @ivar protocolFactory: A callable which returns protocol
+    instances.  This will be invoked when a connection is
+    established.  It is passed the TelnetTransport instance
+    as the first argument, and any additional arguments which
+    were passed to __init__.
+
+    @ivar protocolArgs: A tuple of additional arguments to
+    pass to protocolFactory.
+
+    @ivar protocolKwArgs: A dictionary of additional arguments
+    to pass to protocolFactory.
+    """
+
+    protocol = None
+    protocolFactory = None
 
     def __init__(self, *a, **kw):
         Telnet.__init__(self)
-        self.handlerArgs = a
-        self.handlerKwArgs = kw
+        self.protocolArgs = a
+        self.protocolKwArgs = kw
 
     def connectionMade(self):
-        self.handler = self.handlerFactory(self, *self.handlerArgs, **self.handlerKwArgs)
-        self.handler.connectionMade()
-        for cmdName in 'NOP', 'DM', 'BRK', 'IP', 'AO', 'AYT', 'EC', 'EL', 'GA':
-            fname = 'telnet_' + cmdName
-            setattr(self, fname, getattr(self.handler, fname, lambda: None))
+        p = self.protocol = self.protocolFactory(self)
+        p.makeConnection(self)
 
-    def negotiate(self, bytes):
-        command, bytes = bytes[0], bytes[1:]
-        cmdFunc = self.negotiationMap.get(command)
-        if cmdFunc is None:
-            self.handler.unknownNegotiation(command, bytes)
-        else:
-            cmdFunc(bytes)
+    def allowEnable(self, option):
+        return self.protocol.allowEnable(option)
+
+    def enable(self, option):
+        Telnet.enable(self, option)
+        self.protocol.enable(option)
+
+    def disable(self, option):
+        Telnet.disable(self, option)
+        self.protocol.disable(option)
+
+    def unhandledSubnegotiation(self, bytes):
+        self.protocol.unhandledSubnegotiation(bytes)
+
+    def unhandledCommand(self, command, argument):
+        self.protocol.unhandledCommand(command, argument)
 
     def applicationByteReceived(self, bytes):
-        self.handler.dataReceived(bytes)
+        self.protocol.dataReceived(bytes)
 
     def connectionLost(self, reason):
-        self.handler.connectionLost(reason)
-        del self.handler
+        self.protocol.connectionLost(reason)
+        del self.protocol
 
-class TelnetBootstrapProtocol(telnet.Telnet):
-    protocol = None
+class BootstrapProtocol(TelnetProtocol):
+    protocolFactory = None
 
+    def __init__(self, proto, *a, **kw):
+        self.proto = self.protocolFactory(self, proto, *a, **kw)
+
+class TelnetBootstrapProtocol(TelnetTransport):
     def connectionMade(self):
-        self.transport.write(telnet.IAC + telnet.DO + telnet.LINEMODE)
-        self.transport.write(telnet.IAC + telnet.WILL + telnet.ECHO)
-        self.transport.write(telnet.IAC + telnet.DO + NAWS)
-        p = self.protocol()
-        p.makeConnection(self)
-        self.chainedProtocol = p
+        TelnetTransport.connectionMade(self)
+        for opt in (telnet.LINEMODE, telnet.ECHO, telnet.NAWS):
+            self.requestEnable(opt)
+
+    def allowEnable(self, opt):
+        return opt in (telnet.LINEMODE, telnet.ECHO, telnet.NAWS)
+
+    def enable(self, opt):
+        pass
 
     def iacSBchunk(self, chunk):
         if chunk[0] == NAWS:

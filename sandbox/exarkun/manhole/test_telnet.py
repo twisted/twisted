@@ -4,8 +4,8 @@ import telnet
 from twisted.trial import unittest
 from twisted.test import proto_helpers
 
-class TestHandler:
-    def __init__(self, proto):
+class TestProtocol:
+    def __init__(self, proto, enableable=()):
         self.bytes = ''
         self.subcmd = ''
         self.calls = []
@@ -17,7 +17,10 @@ class TestHandler:
         for cmd in ('NOP', 'DM', 'BRK', 'IP', 'AO', 'AYT', 'EC', 'EL', 'GA'):
             d[getattr(telnet, cmd)] = lambda arg, cmd=cmd: self.calls.append(cmd)
 
-    def connectionMade(self):
+        self.enabled = []
+        self.enableable = enableable
+
+    def makeConnection(self, transport):
         pass
 
     def dataReceived(self, bytes):
@@ -29,10 +32,19 @@ class TestHandler:
     def neg_TEST_COMMAND(self, payload):
         self.subcmd = payload
 
+    def allowEnable(self, option):
+        return option in self.enableable
+
+    def enable(self, option):
+        self.enabled.append(option)
+
+    def disable(self, option):
+        self.enabled.remove(option)
+
 class TelnetTestCase(unittest.TestCase):
     def setUp(self):
-        self.p = telnet.Telnet2()
-        self.p.handlerFactory = TestHandler
+        self.p = telnet.TelnetTransport()
+        self.p.protocolFactory = TestProtocol
         self.t = proto_helpers.StringTransport()
         self.p.makeConnection(self.t)
 
@@ -40,7 +52,7 @@ class TelnetTestCase(unittest.TestCase):
         # Just send a bunch of bytes.  None of these do anything
         # with telnet.  They should pass right through to the
         # application layer.
-        h = self.p.handler
+        h = self.p.protocol
 
         L = ["here are some bytes la la la",
              "some more arrive here",
@@ -57,7 +69,7 @@ class TelnetTestCase(unittest.TestCase):
         # Send a bunch of bytes and a couple quoted \xFFs.  Unquoted,
         # \xFF is a telnet command.  Quoted, one of them from each pair
         # should be passed through to the application layer.
-        h = self.p.handler
+        h = self.p.protocol
 
         L = ["here are some bytes\xff\xff with an embedded IAC",
              "and here is a test of a border escape\xff",
@@ -72,7 +84,7 @@ class TelnetTestCase(unittest.TestCase):
         # Send a single simple telnet command and make sure
         # it gets noticed and the appropriate method gets
         # called.
-        h = self.p.handler
+        h = self.p.protocol
 
         cmd = telnet.IAC + getattr(telnet, cmdName)
         L = ["Here's some bytes, tra la la",
@@ -114,7 +126,7 @@ class TelnetTestCase(unittest.TestCase):
     def testSubnegotiation(self):
         # Send a subnegotiation command and make sure it gets
         # parsed and that the correct method is called.
-        h = self.p.handler
+        h = self.p.protocol
 
         cmd = telnet.IAC + telnet.SB + '\x12hello world' + telnet.SE
         L = ["These are some bytes but soon" + cmd,
@@ -129,7 +141,7 @@ class TelnetTestCase(unittest.TestCase):
     def testSubnegotiationWithEscape(self):
         # Send a subnegotiation command with an embedded escaped SE.  Make sure
         # that SE gets passed to the correct method.
-        h = self.p.handler
+        h = self.p.protocol
 
         cmd = telnet.IAC + telnet.SB + '\x12' + telnet.IAC + telnet.SE + telnet.SE
         L = ["Some bytes are here" + cmd + "and here",
@@ -147,7 +159,7 @@ class TelnetTestCase(unittest.TestCase):
         # method.
         cmd = telnet.IAC + telnet.SB + '\x12' + telnet.IAC + telnet.SE + 'hello' + telnet.SE
         for i in range(len(cmd)):
-            h = self.p.handler = TestHandler(self.p)
+            h = self.p.protocol = TestProtocol(self.p)
 
             a, b = cmd[:i], cmd[i:]
             L = ["first part" + a,
@@ -166,7 +178,7 @@ class TelnetTestCase(unittest.TestCase):
         bytes = "surrounding bytes" + cmd + "to spice things up"
         self.p.dataReceived(bytes)
 
-        self.assertEquals(self.p.handler.bytes, bytes.replace(cmd, ''))
+        self.assertEquals(self.p.protocol.bytes, bytes.replace(cmd, ''))
         self.assertEquals(self.t.value(), telnet.IAC + telnet.DONT + '\x12')
 
     def testRefuseDo(self):
@@ -176,6 +188,100 @@ class TelnetTestCase(unittest.TestCase):
         bytes = "surrounding bytes" + cmd + "to spice things up"
         self.p.dataReceived(bytes)
 
-        self.assertEquals(self.p.handler.bytes, bytes.replace(cmd, ''))
+        self.assertEquals(self.p.protocol.bytes, bytes.replace(cmd, ''))
         self.assertEquals(self.t.value(), telnet.IAC + telnet.WONT + '\x12')
 
+    def testAcceptWont(self):
+        # Try to disable an option.  The server must allow any option to
+        # be disabled at any time.  Make sure it disables it and sends
+        # back an acknowledgement of this.
+        cmd = telnet.IAC + telnet.WONT + '\x29'
+
+        # Jimmy it - after these two lines, the server will be in a state
+        # such that it believes the option to have beenp previously enabled
+        # via normal negotiation.
+        s = self.p.getOptionState('\x29')
+        s.us.state = s.him.state = 'yes'
+
+        bytes = "fiddle dee" + cmd
+        self.p.dataReceived(bytes)
+
+        self.assertEquals(self.p.protocol.bytes, bytes.replace(cmd, ''))
+        self.assertEquals(self.t.value(), telnet.IAC + telnet.DONT + '\x29')
+
+    def testAcceptDont(self):
+        # Try to disable an option.  The server must allow any option to
+        # be disabled at any time.  Make sure it disables it and sends
+        # back an acknowledgement of this.
+        cmd = telnet.IAC + telnet.DONT + '\x29'
+
+        # Jimmy it - after these two lines, the server will be in a state
+        # such that it believes the option to have beenp previously enabled
+        # via normal negotiation.
+        s = self.p.getOptionState('\x29')
+        s.us.state = s.him.state = 'yes'
+
+        bytes = "fiddle dum " + cmd
+        self.p.dataReceived(bytes)
+
+        self.assertEquals(self.p.protocol.bytes, bytes.replace(cmd, ''))
+        self.assertEquals(self.t.value(), telnet.IAC + telnet.WONT + '\x29')
+
+    def testIgnoreWont(self):
+        # Try to disable an option.  The option is already disabled.  The
+        # server should send nothing in response to this.
+        cmd = telnet.IAC + telnet.WONT + '\x47'
+
+        bytes = "dum de dum" + cmd + "tra la la"
+        self.p.dataReceived(bytes)
+
+        self.assertEquals(self.p.protocol.bytes, bytes.replace(cmd, ''))
+        self.assertEquals(self.t.value(), '')
+
+    def testIgnoreDont(self):
+        # Try to disable an option.  The option is already disabled.  The
+        # server should send nothing in response to this.  Doing so could
+        # lead to a negotiation loop.
+        cmd = telnet.IAC + telnet.DONT + '\x47'
+
+        bytes = "dum de dum" + cmd + "tra la la"
+        self.p.dataReceived(bytes)
+
+        self.assertEquals(self.p.protocol.bytes, bytes.replace(cmd, ''))
+        self.assertEquals(self.t.value(), '')
+
+    def testIgnoreWill(self):
+        # Try to enable an option.  The option is already enabled.  The
+        # server should send nothing in response to this.  Doing so could
+        # lead to a negotiation loop.
+        cmd = telnet.IAC + telnet.WILL + '\x56'
+
+        # Jimmy it - after these two lines, the server will be in a state
+        # such that it believes the option to have beenp previously enabled
+        # via normal negotiation.
+        s = self.p.getOptionState('\x56')
+        s.us.state = s.him.state = 'yes'
+
+        bytes = "tra la la" + cmd + "dum de dum"
+        self.p.dataReceived(bytes)
+
+        self.assertEquals(self.p.protocol.bytes, bytes.replace(cmd, ''))
+        self.assertEquals(self.t.value(), '')
+
+    def testIgnoreDo(self):
+        # Try to enable an option.  The option is already enabled.  The
+        # server should send nothing in response to this.  Doing so could
+        # lead to a negotiation loop.
+        cmd = telnet.IAC + telnet.DO + '\x56'
+
+        # Jimmy it - after these two lines, the server will be in a state
+        # such that it believes the option to have beenp previously enabled
+        # via normal negotiation.
+        s = self.p.getOptionState('\x56')
+        s.us.state = s.him.state = 'yes'
+
+        bytes = "tra la la" + cmd + "dum de dum"
+        self.p.dataReceived(bytes)
+
+        self.assertEquals(self.p.protocol.bytes, bytes.replace(cmd, ''))
+        self.assertEquals(self.t.value(), '')
