@@ -123,7 +123,12 @@ class Telnet(protocol.Protocol):
         AYT: 'AYT',
         EC: 'EC',
         EL: 'EL',
-        GA: 'GA'}
+        GA: 'GA',
+
+        WILL: 'WILL',
+        WONT: 'WONT',
+        DO: 'DO',
+        DONT: 'DONT'}
 
     subcommandMap = {
         }
@@ -133,6 +138,9 @@ class Telnet(protocol.Protocol):
 
     def __init__(self):
         self.options = {}
+
+    def write(self, bytes):
+        self.transport.write(bytes)
 
     def dataReceived(self, data):
         # Most grossly inefficient implementation ever
@@ -244,8 +252,8 @@ class Telnet(protocol.Protocol):
             state = 'no'
             stateq = False
         def __init__(self):
-            self.us = _Perspective()
-            self.him = _Perspective()
+            self.us = self._Perspective()
+            self.him = self._Perspective()
 
     def do(self, option):
         """Request an option be enabled.
@@ -268,78 +276,83 @@ class Telnet(protocol.Protocol):
         self.write(IAC + WONT + option)
 
     def getOptionState(self, opt):
-        return self.options.get(opt, _OptionState())
+        return self.options.get(opt, self._OptionState())
 
-    def _dodontwillwont(self, option, s, pfx):
+    def _dodontwillwont(self, option, s, pfx, ack, neg):
         state = self.getOptionState(option)
         view = getattr(state, s)
-        getattr(self, '_' + pfx + '_' + view.state)(option, view)
+        getattr(self, '_' + pfx + '_' + view.state)(option, view, ack, neg)
 
-    def _dowill(self, option, s):
-        self._dodontwillwont(option, s, 'dowill')
+    def _dowill(self, option, s, ack, neg):
+        self._dodontwillwont(option, s, 'dowill', ack, neg)
 
-    def _dowill_no(self, option, state):
+    def _dowill_no(self, option, state, ack, neg):
         if self.allowEnable(option):
             self.enable(option)
             state.state = 'yes'
-            self.do(option)
+            ack(option)
         else:
-            self.dont(option)
+            neg(option)
 
-    def _dowill_yes(self, option, state):
+    def _dowill_yes(self, option, state, ack, neg):
         pass
 
-    def _dowill_wantno(self, option, state):
+    def _dowill_wantno(self, option, state, ack, neg):
+        # This is an error state.  The peer is defective.
         if state.stateq:
-            # This is an error state.  The peer is defective.
             state.state = 'yes'
             state.stateq = False
         else:
-            # This is an error state.  The peer is defective.
             state.state = 'no'
 
-    def _dowill_wantyes(self, option, state):
+    def _dowill_wantyes(self, option, state, ack, neg):
         if state.stateq:
             state.state = 'wantno'
             state.stateq = False
-            self.dont(option)
+            neg(option)
         else:
             state.state = 'yes'
 
-    def _dontwont(self, option, s):
-        self._dodontwillwont(option, s, 'dontwont')
+    def _dontwont(self, option, s, ack, neg):
+        self._dodontwillwont(option, s, 'dontwont', ack, neg)
 
-    def _dontwont_no(self, option, state):
+    def _dontwont_no(self, option, state, ack, neg):
         pass
 
-    def _dontwont_yes(self, option, state):
-        self.setOptionState(option, s, 'no')
-        self.dont(option)
+    def _dontwont_yes(self, option, state, ack, neg):
+        state.state = 'no'
+        neg(option)
 
-    def _dontwont_wantno(self, option, state):
-        if self.state[sq]:
+    def _dontwont_wantno(self, option, state, ack, neg):
+        if state.stateq:
             state.state = 'wantyes'
             state.stateq = False
-            self.do(option)
+            ack(option)
         else:
             state.state = 'no'
 
-    def _dontwont_wantyes(self, option, state):
+    def _dontwont_wantyes(self, option, state, ack, neg):
         state.state = 'no'
-        if state[sq]:
+        if state.stateq:
             state.stateq = False
 
     def telnet_WILL(self, option):
-        self._dowill(option, 'him')
+        self._dowill(option, 'him', self.do, self.dont)
 
     def telnet_WONT(self, option):
-        self._dontwont(option, 'him')
+        self._dontwont(option, 'him', self.do, self.dont)
 
     def telnet_DO(self, option):
-        self._dowill(option, 'us')
+        self._dowill(option, 'us', self.will, self.wont)
 
     def telnet_DONT(self, option):
-        self._dontwont(option, 'us')
+        self._dontwont(option, 'us', self.will, self.wont)
+
+    def allowEnable(self, option):
+        return False
+
+    def enable(self, option):
+        pass
 
 class Telnet2(Telnet):
     handler = None

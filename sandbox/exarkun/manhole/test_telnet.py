@@ -38,6 +38,9 @@ class TelnetTestCase(unittest.TestCase):
         self.p.makeConnection(self.t)
 
     def testRegularBytes(self):
+        # Just send a bunch of bytes.  None of these do anything
+        # with telnet.  They should pass right through to the
+        # application layer.
         h = self.p.handler
 
         L = ["here are some bytes la la la",
@@ -52,6 +55,9 @@ class TelnetTestCase(unittest.TestCase):
         self.assertEquals(h.bytes, ''.join(L))
 
     def testIACEscape(self):
+        # Send a bunch of bytes and a couple quoted \xFFs.  Unquoted,
+        # \xFF is a telnet command.  Quoted, one of them from each pair
+        # should be passed through to the application layer.
         h = self.p.handler
 
         L = ["here are some bytes\xff\xff with an embedded IAC",
@@ -64,6 +70,9 @@ class TelnetTestCase(unittest.TestCase):
         self.assertEquals(h.bytes, ''.join(L).replace('\xff\xff', '\xff'))
 
     def _simpleCommandTest(self, cmdName):
+        # Send a single simple telnet command and make sure
+        # it gets noticed and the appropriate method gets
+        # called.
         h = self.p.handler
 
         cmd = telnet.IAC + getattr(telnet, cmdName)
@@ -104,6 +113,8 @@ class TelnetTestCase(unittest.TestCase):
         self._simpleCommandTest("GA")
 
     def testSubnegotiation(self):
+        # Send a subnegotiation command and make sure it gets
+        # parsed and that the correct method is called.
         h = self.p.handler
 
         cmd = telnet.IAC + telnet.SB + '\x12hello world' + telnet.SE
@@ -117,6 +128,8 @@ class TelnetTestCase(unittest.TestCase):
         self.assertEquals(h.subcmd, list("hello world"))
 
     def testSubnegotiationWithEscape(self):
+        # Send a subnegotiation command with an embedded escaped SE.  Make sure
+        # that SE gets passed to the correct method.
         h = self.p.handler
 
         cmd = telnet.IAC + telnet.SB + '\x12' + telnet.IAC + telnet.SE + telnet.SE
@@ -130,6 +143,9 @@ class TelnetTestCase(unittest.TestCase):
         self.assertEquals(h.subcmd, [telnet.SE])
 
     def testBoundardySubnegotiation(self):
+        # Send a subnegotiation command.  Split it at every possible byte boundary
+        # and make sure it always gets parsed and that it is passed to the correct
+        # method.
         cmd = telnet.IAC + telnet.SB + '\x12' + telnet.IAC + telnet.SE + 'hello' + telnet.SE
         for i in range(len(cmd)):
             h = self.p.handler = TestHandler(self.p)
@@ -143,3 +159,24 @@ class TelnetTestCase(unittest.TestCase):
 
             self.assertEquals(h.bytes, ''.join(L).replace(cmd, ''))
             self.assertEquals(h.subcmd, [telnet.SE] + list('hello'))
+
+    def testRefuseWill(self):
+        # Try to enable an option.  The server should refuse to enable it.
+        cmd = telnet.IAC + telnet.WILL + '\x12'
+
+        bytes = "surrounding bytes" + cmd + "to spice things up"
+        self.p.dataReceived(bytes)
+
+        self.assertEquals(self.p.handler.bytes, bytes.replace(cmd, ''))
+        self.assertEquals(self.t.value(), telnet.IAC + telnet.DONT + '\x12')
+
+    def testRefuseDo(self):
+        # Try to enable an option.  The server should refuse to enable it.
+        cmd = telnet.IAC + telnet.DO + '\x12'
+
+        bytes = "surrounding bytes" + cmd + "to spice things up"
+        self.p.dataReceived(bytes)
+
+        self.assertEquals(self.p.handler.bytes, bytes.replace(cmd, ''))
+        self.assertEquals(self.t.value(), telnet.IAC + telnet.WONT + '\x12')
+
