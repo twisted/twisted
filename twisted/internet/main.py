@@ -535,7 +535,7 @@ def installWaker():
         waker = _Waker()
         addReader(waker)
 
-if threadable.threaded:
+if threadable.threaded and os.name != 'java':
     installWaker()
 
 def addPluginDir():

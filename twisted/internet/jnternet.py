@@ -27,7 +27,7 @@ from java.net import Socket, ServerSocket
 import jarray
 
 # System Imports
-import threading, Queue
+import threading, Queue, time
 
 # Sibling Imports
 import abstract
@@ -151,14 +151,36 @@ class JMultiplexor:
         self.writers = []
         self.q = Queue.Queue()
 
+    def timeout(self, seconds):
+        time.sleep(seconds)
+        if self.q.empty():
+            self.q.put((doNothing, None))
+    
     def run(self):
         while 1:
+            # run the delayeds
+            timeout = None
+            for delayed in main.delayeds:
+                delayed.runUntilCurrent()
+                newTimeout = delayed.timeout()
+                if ((newTimeout is not None) and
+                    ((timeout is None) or
+                     (newTimeout < timeout))):
+                    timeout = newTimeout
+            threading.Thread(target=self.timeout, args=(timeout,)).start()
+            
             # print 'blocking'
             meth, arg = self.q.get()
             # print 'running',repr(meth),'with',repr(arg)
             meth(arg)
 
 theMultiplexor = JMultiplexor()
+
+def doNothing(arg):
+    pass
+
+def wakeUp():
+    theMultiplexor.q.put((doNothing, None))
 
 def portStartListening(tcpPort):
     sskt = ServerSocket(tcpPort.port, tcpPort.backlog)
@@ -184,3 +206,4 @@ tcp.Port.gotSocket = portGotSocket
 
 import main
 main.run = theMultiplexor.run
+main.wakeUp = wakeUp
