@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.127 2003/07/31 18:53:10 moonfallen Exp $
+$Id: setup.py,v 1.128 2003/07/31 19:09:02 moonfallen Exp $
 """
 
 import distutils, os, sys, string
@@ -94,8 +94,7 @@ class build_ext_twisted(build_ext):
         Check if the given header can be included by trying to compile a file
         that contains only an #include line.
         """
-        compiler = new_compiler(compiler=self.compilername, verbose=self.verbose)
-        compiler.announce("checking for %s ..." % header_name, 0)
+        self.compiler.announce("checking for %s ..." % header_name, 0)
 
         conftest = open("conftest.c", "w")
         conftest.write("#include <%s>\n" % header_name)
@@ -105,7 +104,7 @@ class build_ext_twisted(build_ext):
         # instead but it defaults to None in unixccompiler.py.
         ok = 1
         try:
-            compiler.compile(["conftest.c"], output_dir='')
+            self.compiler.compile(["conftest.c"], output_dir='')
         except CompileError:
             ok = 0
 
