@@ -1198,7 +1198,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         self.sendPositiveResponse(tag, 'STATUS complete')
 
     def __ebStatus(self, failure, tag, box):
-        self.sendBadResponse(tag, 'STATUS %s failed: %s' % (box, failure))
+        self.sendBadResponse(tag, 'STATUS %s failed: %s' % (box, str(failure.value)))
 
     def do_APPEND(self, tag, mailbox, flags, date, message):
         mailbox = self._parseMbox(mailbox)
@@ -1655,7 +1655,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             self.sendPositiveResponse(tag, 'COPY completed')
     
     def __ebCopy(self, failure, tag):
-        self.sendBadResponse(tag, 'COPY failed')
+        self.sendBadResponse(tag, 'COPY failed:' + str(failure.value))
         log.err(failure)
 
     def do_UID(self, tag, command, line):
