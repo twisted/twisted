@@ -678,7 +678,8 @@ that package.
         globDict[k] = v
     globDict['__doc__'] = modoc
     import warnings
-    warnings.warn("%s is DEPRECATED. See %s." % (origModuleName, projectURL),
+    warnings.warn("%s has moved to %s. See %s." % (origModuleName, newModuleName,
+                                                   projectURL),
                   DeprecationWarning, stacklevel=3)
     return
 
