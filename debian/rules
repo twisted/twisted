@@ -28,7 +28,7 @@ install-stamp: build-stamp
 		/usr/bin/python$$version setup.py install \
                    --no-compile --root debian/python$$version-twisted; \
 		debian/scripts/install $$version; \
-		binpackage=python$$version-twisted-bin
+		binpackage=python$$version-twisted-bin;\
 		install -d debian/$$binpackage/$DOC/$$binpackage/;\
 		install -d debian/$$binpackage/DEBIAN; \
 		install -m 644 debian/copyright \
