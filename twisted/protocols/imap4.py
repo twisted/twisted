@@ -469,9 +469,9 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def connectionMade(self):
         self.tags = {}
+        self.canStartTLS = implements(self.transport, ITLSTransport)
         self.setTimeout(self.timeOut)
         self.sendServerGreeting()
-        self.canStartTLS = implements(self.transport, ITLSTransport)
     
     def connectionLost(self, reason):
         self.setTimeout(None)
