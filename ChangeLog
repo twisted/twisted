@@ -1,3 +1,7 @@
+2004-01-13  Itamar Shtull-Trauring  <itamar@itamarst.org>
+
+	* twisted/web/soap.py: Beginning of client SOAP support.
+
 2004-01-10  Andrew Bennetts <spiv@twistedmatrix.com>
 
 	* twisted/protocols/ftp.py: Added support for partial downloads

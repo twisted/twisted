@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.test.test_soap -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 # 
@@ -25,14 +26,13 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org}
 Future plans:
 SOAPContext support of some kind.
 Pluggable method lookup policies.
-Figure out why None doesn't work, and write tests.
 """
 
 # SOAPpy
 import SOAPpy
 
 # twisted imports
-from twisted.web import server, resource
+from twisted.web import server, resource, client
 from twisted.internet import defer
 from twisted.python import log, failure
 
@@ -123,3 +123,27 @@ class SOAPPublisher(resource.Resource):
         request.setHeader("Content-length", str(len(response)))
         request.write(response)
         request.finish()
+
+
+class Proxy:
+    """A Proxy for making remote SOAP calls.
+
+    Pass the URL of the remote SOAP server to the constructor.
+
+    Use proxy.callRemote('foobar', 1, 2) to call remote method
+    'foobar' with args 1 and 2, proxy.callRemote('foobar', x=1)
+    will call foobar with named argument 'x'.
+    """
+
+    # at some point this should have namespace, encoding etc. kwargs
+    def __init__(self, url):
+        self.url = url
+
+    def _cbGotResult(self, result):
+        return SOAPpy.parseSOAPRPC(result).Result
+        
+    def callRemote(self, method, *args, **kwargs):
+        payload = SOAPpy.buildSOAP(args=args, kw=kwargs, method=method)
+        return client.getPage(self.url, postdata=payload, method="POST",
+                              headers={'content-type': 'text/xml'}
+                              ).addCallback(self._cbGotResult)
