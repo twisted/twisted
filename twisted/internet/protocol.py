@@ -39,11 +39,13 @@ class Factory:
     protocol = None
 
     numPorts = 0
+    noisy = "sure, why not"
 
     def doStart(self):
         """Make sure startFactory is called."""
         if not self.numPorts:
-            log.msg("Starting factory %s" % self)
+            if self.noisy:
+                log.msg("Starting factory %s" % self)
             self.startFactory()
         self.numPorts = self.numPorts + 1
 
@@ -52,7 +54,8 @@ class Factory:
         assert self.numPorts > 0
         self.numPorts = self.numPorts - 1
         if not self.numPorts:
-            log.msg("Stopping factory %s" % self)
+            if self.noisy:
+                log.msg("Stopping factory %s" % self)
             self.stopFactory()
 
     def startFactory(self):

@@ -1099,6 +1099,7 @@ class _ObjectRetrieval:
 
 
 class BrokerClientFactory(protocol.ClientFactory):
+    noisy = 0
 
     def __init__(self, protocol):
         if not isinstance(protocol,Broker): raise TypeError, "protocol is not an instance of Broker"
@@ -1209,4 +1210,5 @@ def _cbLogInResponded(identity, d, client, serviceName, perspectiveName):
     if identity:
         identity.callRemote("attach", serviceName, perspectiveName, client).armAndChain(d)
     else:
+        # XXX: Return a recognizable Failure type
         d.armAndErrback("invalid username or password")
