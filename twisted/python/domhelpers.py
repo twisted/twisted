@@ -80,6 +80,17 @@ def superPrependAttribute(node, key, value):
         for child in node.childNodes:
             superPrependAttribute(child, key, value)
 
+def superAppendAttribute(node, key, value):
+    if not hasattr(node, 'setAttribute'): return
+    old = node.getAttribute(key)
+    if old:
+        node.setAttribute(key, old + '/' + value)
+    else:
+        node.setAttribute(key, value)
+    if node.hasChildNodes():
+        for child in node.childNodes:
+            superAppendAttribute(child, key, value)
+
 class RawText(minidom.Text):
     """This is an evil and horrible speed hack. Basically, if you have a big
     chunk of XML that you want to insert into the DOM, but you don't want

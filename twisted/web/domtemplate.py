@@ -396,22 +396,32 @@ class DOMTemplate(Resource, View):
             return node
 
         id = node.getAttribute('model')
-        if not id: id = node.getAttribute('id')
-        if not id: id = node.getAttribute('class')
+#        if not id: id = node.getAttribute('id')
+#        if not id: id = node.getAttribute('class')
         
         controller = self.getNodeController(request, node)
         view, viewMethod, result = self.getNodeView(request, node)
 
+        submodel_prefix = node.getAttribute("_submodel_prefix")
+        if submodel_prefix and id:
+            submodel = "/".join([submodel_prefix, id])
+        elif id:
+            submodel = id
+        elif submodel_prefix:
+            submodel = submodel_prefix
+        else:
+            submodel = ""
+
         controller.setView(view)
         if not getattr(controller, 'submodel', None):
-            controller.setSubmodel(id)
+            controller.setSubmodel(submodel)
         # xxx refactor this into a widget interface and check to see if the object implements IWidget
         # the view may be a deferred; this is why this check is required
         if hasattr(view, 'setController'):
             view.setController(controller)
             view.setNode(node)
-            if id and not getattr(view, 'submodel', None):
-                view.setSubmodel(id)
+            if not getattr(view, 'submodel', None):
+                view.setSubmodel(submodel)
         
         success, data = controller.handle(request)
         if success is not None:

@@ -4,7 +4,7 @@ import traceback
 import urllib
 from twisted.web.microdom import parseString
 
-from twisted.python.mvc import View, Model
+from twisted.python import components, mvc
 from twisted.python import domhelpers, log
 from twisted.internet import defer
 
@@ -16,7 +16,27 @@ DOMWidgets are views which can be composed into bigger views.
 
 DEBUG = 0
 
-class Widget(View):
+def _getModel(self):
+    if not isinstance(self.model, mvc.Model): # see __class__.doc
+         return self.model
+
+    submodelList = self.submodel.split('/')
+    currentModel = self.model
+    for element in submodelList:
+        parentModel = currentModel
+        currentModel = currentModel.getSubmodel(element)
+        if currentModel is None:
+            return None
+        adapted = components.getAdapter(currentModel, mvc.IModel, None)
+        if adapted is None:
+            adapted = mvc.Wrapper(currentModel)
+        #assert adapted is not None, "No IModel adapter registered for %s" % currentModel
+        adapted.parent = parentModel
+        adapted.name = element
+        currentModel = adapted
+    return adapted
+
+class Widget(mvc.View):
     """A Widget wraps an object, its model, for display. The model can be a
     simple Python object (string, list, etc.) or it can be an instance of MVC.Model.
     (The former case is for interface purposes, so that the rest of the code does
@@ -30,7 +50,7 @@ class Widget(View):
     def __init__(self, model, submodel = None):
         self.errorFactory = Error
         self.attributes = {}
-        View.__init__(self, model)
+        mvc.View.__init__(self, model)
         self.become = None
         self.children = []
         self.node = None
@@ -53,28 +73,27 @@ class Widget(View):
         """
         self.submodel = submodel
 
+    _getMyModel = _getModel
+
     def getData(self):
         """
         I have a model; however since I am a widget I am only responsible
         for a portion of that model. This method returns the portion I am
         responsible for.
         """
-        if not isinstance(self.model, Model): # see __class__.doc
-            return self.model
+        currentModel = self._getMyModel()
+        if currentModel is None:
+            return None
+        if hasattr(currentModel, 'getData'):
+            return currentModel.getData()
+        # Must have been set to a simple type
+        return currentModel
 
-        assert self.submodel is not None, 'The model attribute was not set on the node; e.g. &lt;div model="foo" view="Text"&gt; would apply the Text widget to model.foo.'
-        assert ';' not in self.submodel, "Semicolon is not legal in widget ids."
-        
-        # This call to eval is safe because id is only specified in the TEMPLATE, never
-        # in the request submitted by the user.
-        # if a hacker hacks your templates, they could make this do bad
-        # stuff possibly. So secure your filesystem.
-        # of course by the time they hack your filesystem they could just
-        # edit the python source to do anything they want.        
-        try:
-            return eval ("self.model." + self.submodel)
-        except:
-            return ""
+    def setData(self, data):
+        currentModel = self._getMyModel()
+        if currentModel is None:
+            raise NotImplementedError, "Can't set the data when there's no model to set it on."
+        currentModel.setData(data)
 
     def add(self, item):
         self.children.append(item)
@@ -165,14 +184,14 @@ class Widget(View):
 
 class Text(Widget):
     def __init__(self, text):
-        if isinstance(text, Model):
+        if isinstance(text, mvc.Model):
             Widget.__init__(self, text)
         else:
-            Widget.__init__(self, Model())
+            Widget.__init__(self, mvc.Model())
         self.text = text
     
     def generateDOM(self, request, node):
-        if isinstance(self.text, Model):
+        if isinstance(self.text, mvc.Model):
             textNode = document.createTextNode(str(self.getData()))
             if node is None:
                 return textNode
@@ -185,7 +204,7 @@ class Text(Widget):
 class Image(Text):
     tagName = 'img'
     def generateDOM(self, request, node):
-        if isinstance(self.text, Model):
+        if isinstance(self.text, mvc.Model):
             data = self.getData()
         else:
             data = self.text
@@ -300,7 +319,9 @@ class List(Widget):
         # xxx with this implementation all elements of the list must use the same view widget
         listItem = domhelpers.get(node, 'listItem')
         domhelpers.clearNode(node)
-        for itemNum in range(len(self.getData())):
+        submodel = self.submodel
+        data = self.getData()
+        for itemNum in range(len(data)):
             # theory: by appending copies of the li node
             # each node will be handled once we exit from
             # here because handleNode will then recurse into
@@ -308,7 +329,8 @@ class List(Widget):
             
             newNode = listItem.cloneNode(1)
             
-            domhelpers.superPrependAttribute(newNode, 'model', self.submodel + '[' + str(itemNum) + ']')
+            domhelpers.superAppendAttribute(newNode, '_submodel_prefix', self.submodel)
+            domhelpers.superAppendAttribute(newNode, '_submodel_prefix', str(itemNum))
             node.appendChild(newNode)
         return node
 
@@ -344,7 +366,8 @@ class ColumnList(List):
                 row = listRow.cloneNode(1)
                 node.appendChild(row)
             newNode = listItem.cloneNode(1)
-            domhelpers.superPrependAttribute(newNode, 'model', self.submodel + '[' + str(itemNum + self.start) + ']')
+            domhelpers.superAppendAttribute(newNode, '_submodel_prefix', self.submodel)
+            domhelpers.superAppendAttribute(newNode, '_submodel_prefix', str(itemNum + self.start))
             row.appendChild(newNode)
         return node
         

@@ -5,6 +5,8 @@ import os
 from twisted.python.mvc import Controller
 from twisted.python import log
 
+from twisted.web import domwidgets
+
 class InputHandler(Controller):
     """
     A handler is like a controller, but it operates on something contained inside
@@ -68,6 +70,8 @@ class InputHandler(Controller):
         """
         self.view.setError("Error!")
 
+    _getMyModel = domwidgets._getModel
+    
     def commit(self, request, node, data):
         """
         It has been determined that the input for the entire form is completely
@@ -78,7 +82,8 @@ class InputHandler(Controller):
         assert ';' not in self.submodel, "Semicolon is not legal in handler ids."
 
         if data != self.view.getData():
-            exec "self.model." + self.submodel + " = " + `data`
+            model = self._getMyModel()
+            model.setData(data)
             self.model.notify({self.submodel: data})
             self.view.generateDOM(request, node)
 

@@ -136,7 +136,7 @@ class CharacterData(Node):
 
 class Text(CharacterData):
     def writexml(self, stream, indent='', addindent='', newl=''):
-        stream.write(self.nodeValue)
+        stream.write(str(self.nodeValue))
 
 class CDATASection(CharacterData):
     def writexml(self, stream, indent='', addindent='', newl=''):

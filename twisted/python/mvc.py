@@ -37,6 +37,8 @@ while trying to learn as much as possible from previous implementations.
 # This module creates lots of circular references
 # Do we care?
 
+import types
+
 from twisted.python import components
 
 # Should these interfaces be somewhere else?
@@ -85,6 +87,26 @@ class IView(components.Interface):
         
     def setController(controller):
         """Set the controller that this view is related to."""
+
+    def getSubmodel(self, name):
+        """Get a submodel out of this model by name.
+        """
+    
+    def setSubmodel(self, name, value):
+        """Set the named submodel on this model to the given value.
+        """
+
+    def getData(self):
+        """Return the actual data represented by this Model, if this
+        model is just a wrapper. Otherwise, return self.
+        """
+    
+    def setData(self, data):
+        """Set the actual data represented by this Model wrapper. This
+        model must have a parent reference obtained by using getSubmodel
+        for this to work.
+        """
+
 
 class IController(components.Interface):
     """A MVC Controller"""
@@ -165,6 +187,22 @@ class Model:
         else:
             return 1
 
+    protected_names = []
+    
+    def getSubmodel(self, name):
+        if name not in self.protected_names:
+            return getattr(self, name, None)
+
+    def setSubmodel(self, name, value):
+        if name not in self.protected_names:
+            setattr(self, name, value)
+
+    def getData(self):
+        return self
+    
+    def setData(self, data):
+        raise NotImplementedError, "How to implement this?"
+
 
 class View:
     """
@@ -220,3 +258,52 @@ class Controller:
 
     def setView(self, view):
         self.view = view
+
+class ListModel:
+    __implements__ = IModel
+    
+    parent = None
+    name = None
+    def __init__(self, orig):
+        self.orig = orig
+
+    def getSubmodel(self, name):
+        return self.orig[int(name)]
+    
+    def setSubmodel(self, name, value):
+        self.orig[int(name)] = value
+
+    def getData(self):
+        return self.orig
+    
+    def setData(self, data):
+        setattr(self.parent, self.name, data)
+
+
+components.registerAdapter(ListModel, types.ListType, IModel)
+
+class Wrapper:
+    __implements__ = IModel
+    
+    parent = None
+    name = None
+    def __init__(self, orig):
+        self.orig = orig
+
+    def getSubmodel(self, name):
+        raise NotImplementedError
+    
+    def setSubmodel(self, name, value):
+        raise NotImplementedError
+
+    def getData(self):
+        return self.orig
+    
+    def setData(self, data):
+        self.parent.setSubmodel(self.name, data)
+
+components.registerAdapter(Wrapper, types.StringType, IModel)
+components.registerAdapter(Wrapper, types.TupleType, IModel)
+
+from twisted.internet import defer
+components.registerAdapter(Wrapper, defer.Deferred, IModel)
