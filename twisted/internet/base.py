@@ -134,15 +134,11 @@ class DelayedCall(styles.Ephemeral):
         return self.time <= other.time
 
     def __str__(self):
-        try:
+        if hasattr(self.func, 'func_name'):
             func = self.func.func_name
-            try:
+            if hasattr(self.func, 'im_class'):
                 func = self.func.im_class.__name__ + '.' + func
-            except:
-                func = self.func
-                if hasattr(func, 'func_code'):
-                    func = func.func_code # func_code's repr sometimes has more useful info
-        except:
+        else:
             func = reflect.safe_repr(self.func)
 
         L = ["<DelayedCall %s [%ss] called=%s cancelled=%s %s%s" % (

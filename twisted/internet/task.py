@@ -11,9 +11,9 @@ API Stability: Unstable
 """
 
 from twisted.python.runtime import seconds
+from twisted.python import reflect
 
-from twisted.internet import reactor
-from twisted.internet import defer
+from twisted.internet import reactor, defer
 
 class LoopingCall:
     """Call a function repeatedly.
@@ -58,7 +58,7 @@ class LoopingCall:
         self.count = 0
         self.interval = interval
         if now:
-            self._loop()
+            self()
         else:
             self._reschedule()
         return d
@@ -78,7 +78,7 @@ class LoopingCall:
         d, self.deferred = self.deferred, None
         d.callback(self)
 
-    def _loop(self):
+    def __call__(self):
         self.call = None
         try:
             self.f(*self.a, **self.kw)
@@ -91,7 +91,7 @@ class LoopingCall:
     
     def _reschedule(self):
         if self.interval == 0:
-            self.call = reactor.callLater(0, self._loop)
+            self.call = reactor.callLater(0, self)
             return
 
         fromNow = self.starttime - seconds()
@@ -101,5 +101,17 @@ class LoopingCall:
             fromStart = self.count * self.interval
             delay = fromNow + fromStart
             if delay > 0:
-                self.call = reactor.callLater(delay, self._loop)
+                self.call = reactor.callLater(delay, self)
                 return
+
+    def __repr__(self):
+        if hasattr(self.f, 'func_name'):
+            func = self.f.func_name
+            if hasattr(self.f, 'im_class'):
+                func = self.f.im_class.__name__ + '.' + func
+        else:
+            func = reflect.safe_repr(self.f)
+
+        return 'LoopingCall<%r>(%s, *%s, **%s)' % (
+            self.interval, func, reflect.safe_repr(self.a),
+            reflect.safe_repr(self.kw))
