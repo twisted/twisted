@@ -127,22 +127,28 @@ class LatexSpitter:
                     % latexEscape(fileName))
 
     def visitNode_a_href(self, node):
-        self.visitNodeDefault(node)
         href = node.getAttribute('href')
+        externalhref = None
+        if href.startswith('http://') or href.startswith('https://'):
+            externalhref = 1
+            # If the text of the link is the url already, don't bother
+            # repeating the url.
+            if node.childNodes[0].data == href:
+                del node.childNodes[0]
+            externalhref = '\\url{%s}' % href
+        
+        self.visitNodeDefault(node)
         ref = None
         if href.startswith('#'):
             ref = self.filename + 'HASH' + href[1:]
         elif href.find('#') != 1 and not href.startswith('http:'):
             ref = href.replace('#', 'HASH')
-        elif href.startswith('http:'):
-            # If the text of the link is the url already, don't bother
-            # repeating the url.
-            if node.childNodes[0].data != href:
-                self.writer('\\url{%s}' % href)
-        else:
+        elif not externalhref:
             ref = href
         if ref:
             self.writer(' (page \\pageref{%s})' % ref)
+        if externalhref:
+            self.writer(externalhref)
 
     def visitNode_a_name(self, node):
         self.writer('\\label{%sHASH%s}' % (self.filename,
@@ -189,6 +195,9 @@ class LatexSpitter:
 
     mapStart_q = "``"
     mapEnd_q = "''"
+
+    mapStart_span_url = '\\url{'
+    mapEnd_span_url = '}'
 
     mapStart_span_footnote = '\\footnote{'
     mapEnd_span_footnote = '}'
