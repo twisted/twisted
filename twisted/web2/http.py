@@ -32,7 +32,7 @@ from zope.interface import implements
 from twisted.web2 import responsecode
 from twisted.web2 import http_headers
 from twisted.web2 import iweb
-from twisted.web2 import error
+from twisted.web2 import stream
 
 PERSIST_NO_PIPELINE = 2
 
@@ -68,10 +68,42 @@ class StringTransport:
     def __getattr__(self, attr):
         return getattr(self.__dict__['s'], attr)
 
+class HTTPError(Exception):
+    pass
 
-# response codes that must have empty bodies
-NO_BODY_CODES = (204, 304)
-
+class Response(object):
+    implements(iweb.IResponse)
+    
+    code = responsecode.OK
+    headers = None
+    stream = None
+    
+    def __init__(self, code=None, headers=None, stream=None):
+        if code is not None:
+            self.code=code
+        if headers is not None:
+            self.headers=headers
+        else:
+            self.headers = http_headers.Headers()
+        self.stream = stream
+        
+class NotModifedResponse(Response):
+    def __init__(oldResponse=None):
+        Response.__init__(self, responsecode.NOT_MODIFIED)
+        
+        if oldResponse is not None:
+            headers=http_headers.Headers()
+            for header in (
+                # Required from sec 10.3.5:
+                'date', 'etag', 'content-location', 'expires',
+                'cache-control', 'vary',
+                # Others:
+                'server', 'proxy-authenticate', 'www-authenticate', 'warning'):
+                header = oldResponse.headers.getRawHeaders(header)
+                if header is not None:
+                    self.headers.setRawHeaders(header)
+    
+    
 
 def checkPreconditions(request, response, entityExists=True):
     """Check to see if this request passes the conditional checks specified
@@ -96,7 +128,7 @@ def checkPreconditions(request, response, entityExists=True):
     # if the code is some sort of error code, don't do anything
     if not ((response.code >= 200 and response.code <= 299)
             or response.code == responsecode.PRECONDITION_FAILED):
-        return
+        return False
 
     etag = response.headers.getHeader("etag")
     lastModified = response.headers.getHeader("last-modified")
@@ -114,12 +146,12 @@ def checkPreconditions(request, response, entityExists=True):
     match = request.headers.getHeader("if-match")
     if match:
         if not matchETag(match, False):
-            raise error.Error(responsecode.PRECONDITION_FAILED)
+            raise HTTPError(responsecode.PRECONDITION_FAILED)
 
     unmod_since = request.headers.getHeader("if-unmodified-since")
     if unmod_since:
         if not lastModified or lastModified > unmod_since:
-            raise error.Error(responsecode.PRECONDITION_FAILED)
+            raise HTTPError(responsecode.PRECONDITION_FAILED)
 
     # Now check if-none-match/if-modified-since.
     # This bit is tricky, because of the requirements when both IMS and INM
@@ -146,13 +178,13 @@ def checkPreconditions(request, response, entityExists=True):
             # would break. 
             canBeWeak = not request.headers.hasHeader('Range')
             if notModified != False and matchETag(inm, canBeWeak):
-                raise error.Error(responsecode.NOT_MODIFIED)
+                raise HTTPError(NotModifiedResponse(response))
         else:
             if notModified != False and matchETag(inm, False):
-                raise error.Error(responsecode.PRECONDITION_FAILED)
+                raise HTTPError(responsecode.PRECONDITION_FAILED)
     else:
         if notModified == True:
-            raise error.Error(responsecode.NOT_MODIFIED)
+            raise HTTPError(NotModifiedResponse(response))
 
 def checkIfRange(request, response):
     """Checks for the If-Range header, and if it exists, checks if the
@@ -161,12 +193,14 @@ def checkIfRange(request, response):
     ifrange = request.headers.getHeader("if-range")
 
     if ifrange is None:
-        return False
+        return True
     if isinstance(ifrange, http_headers.ETag):
         return ifrange.match(response.headers.getHeader("etag"), strongCompare=True)
     else:
         return ifrange == response.headers.getHeader("last-modified")
 
+# response codes that must have empty bodies
+NO_BODY_CODES = (responsecode.NO_CONTENT, responsecode.NOT_MODIFIED)
 
 class Request(object):
     """A HTTP request.
@@ -268,14 +302,18 @@ class Request(object):
         """
         Write a response.
         """
-        if not self.startedWriting:
-            if not self._acceptedData:
-                self.chanRequest.persistent = False
-                if response.code < 300:
-                    warnings.warn("Warning! Didn't call acceptData, but responded with success code.", stacklevel=2)
-            
-            self.startedWriting = True
-            self.chanRequest.writeHeaders(response.code, response.headers)
+        if not self._acceptedData:
+            self.chanRequest.persistent = False
+            if response.code < 300:
+                warnings.warn("Warning! Didn't call acceptData, but responded with success code.", stacklevel=2)
+
+        self.startedWriting = True
+        if response.code not in NO_BODY_CODES:
+            if response.stream is None:
+                response.headers.setHeader('content-length', 0)
+            elif response.stream.length is not None:
+                response.headers.setHeader('content-length', response.stream.length)
+        self.chanRequest.writeHeaders(response.code, response.headers)
         
         # if this is a "HEAD" request, we shouldn't return any data
         if self.method == "HEAD":
@@ -285,7 +323,7 @@ class Request(object):
         if response.code in NO_BODY_CODES:
             return
 
-        d = response.beginProducing(self.chanRequest)
+        d = stream.StreamProducer(response.stream).beginProducing(self.chanRequest)
         d.addCallback(self._finish).addErrback(self._error)
 
 components.backwardsCompatImplements(Request)

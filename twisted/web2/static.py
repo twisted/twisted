@@ -59,10 +59,9 @@ class Data:
         self.type = type
 
     def renderHTTP(self, ctx):
-        response = server.SimpleResponse()
+        response = http.Response()
         response.headers.setRawHeaders("content-type", (self.type, ))
-        response.headers.setHeader("content-length", len(self.data))
-        response.data = self.data
+        response.stream = stream.MemoryStream(self.data)
         return response
 
 components.backwardsCompatImplements(Data)
@@ -88,28 +87,6 @@ class Registry(components.Componentized):
 
     def getCachedPath(self, path):
         return self._pathCache.get(path)
-
-class UnsatisfiableRangeRequest(Exception):
-    pass
-
-def canonicalizeRange(startend, entitySize):
-    """Return canonicalized (start, end) or raises UnsatisfiableRangeRequest
-    exception. NOTE: end is the last byte *inclusive*, which is not
-    the usual convention in python!"""
-    
-    start,end = startend
-    # handle "-500" ranges
-    if start is None:
-        start = min(0, size-end)
-        end = None
-    
-    if end is None or end >= size:
-        end = size - 1
-
-    if start >= size:
-        raise UnsatisfiableRangeRequest
-    
-    return start,end
 
 def loadMimeTypes(mimetype_locations=['/etc/mime.types']):
     """
@@ -270,6 +247,7 @@ class File:
         """You know what you doing."""
         self.fp.restat()
         request = iweb.IRequest(context)
+        response = http.Response()
         
         if self.type is None:
             self.type, self.encoding = getTypeAndEncoding(self.fp.basename(),
@@ -283,12 +261,10 @@ class File:
         if self.fp.isdir():
             return self.redirectWithSlash(request)
 
-        request.out_headers.setHeader('accept-ranges',('bytes',))
-
         if self.type:
-            request.out_headers.setRawHeaders('content-type', (self.type,))
+            response.headers.setRawHeaders('content-type', (self.type,))
         if self.encoding:
-            request.out_headers.setHeader('content-encoding', self.encoding)
+            response.headers.setHeader('content-encoding', self.encoding)
 
         try:
             f = self.fp.open()
@@ -302,10 +278,9 @@ class File:
         st = os.fstat(f.fileno())
         
         #for content-length
-        start = 0
         size = st.st_size
         
-        request.out_headers.setHeader('last-modified', st.st_mtime)
+        response.headers.setHeader('last-modified', st.st_mtime)
         
         # Mark ETag as weak if it was modified recently, as it could
         # be modified again without changing mtime.
@@ -315,41 +290,17 @@ class File:
             "%X-%X-%X" % (st.st_ino, st.st_size, st.st_mtime),
             weak=weak)
         
-        request.out_headers.setHeader('etag', etag)
+        response.headers.setHeader('etag', etag)
         
-        request.checkPreconditions()
+        http.checkPreconditions(request, response)
         
-        rangespec = request.in_headers.getHeader('range')
-
-        
-        # If file size is 0, don't try to do range stuff.
-        if size > 0 and rangespec is not None:
-            # Check that we support range requested, and that the If-Range check
-            # doesn't fail.
-            # TODO: support returning multipart/byteranges for multi-part ranges
-            if angespec[0] == 'bytes' and len(rangespec[1]) == 1 and request.checkIfRange():
-                # This is a request for partial data...
-                try:
-                    start,end = canonicalizeRange(rangespec[1][0], size)
-                except UnsatisfiableRangeRequest:
-                    pass
-                else:
-                    request.code = http.PARTIAL_CONTENT
-                    request.out_headers.setHeader('content-range',('bytes',start, end, size))
-                    #content-length should be the actual size of the stuff we're
-                    #sending, not the full size of the on-server entity.
-                    size = end - start
-
-        request.out_headers.setHeader('content-length', size)
-        
-        # if this is a "HEAD" request, we shouldn't return any data
-        if request.method == "HEAD":
-            return ''
+        response.headers.setHeader('content-length', size)
         
         # return data
-        request.acceptData()
+        request.acceptData() #FIXME
         
-        return stream.FileProducer(f, start, size).beginProducing(request)
+        response.stream = stream.FileStream(f, 0, size)
+        return response
 
     def redirectWithSlash(self, request):
         return redirectTo(addSlash(request), request)

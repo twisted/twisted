@@ -57,7 +57,7 @@ class ICurrentSegments(components.Interface):
 class IResponse(components.Interface):
     code = Attribute("The HTTP response code")
     headers = Attribute("A http_headers.Headers instance of headers to send")
-    data = Attribute("A stream.IStream")
+    stream = Attribute("A stream.IStream")
 
 class IRequest(components.Interface):
     """I'm a request for a web resource

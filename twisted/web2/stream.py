@@ -1,417 +1,549 @@
-from twisted.internet import defer,main,protocol
-from twisted.python import components
-from zope.interface import implements, Attribute
+"""
+def flen(f):
+    f.seek(0, 2)
+    return f.tell()
 
-class IStream(components.Interface):
-    def beginProducing(self, consumer):
-        pass
+f=open('/etc/resolv.conf')
+s=stream2.FileStream(f, 0, flen(f))
+c=stream2.CompoundStream()
+c.addStream(s)
+c.addStr("***************")
+a,b=c.split(10)
+"""
+  
+"""
+IPullProducer:
+ - resumeProducing() is really read, with a consumer.write() callback.
+ - consumer.registerProducer/unregisterProducer unnecessary.
 
-    finishedCallback = Attribute("A Deferred to call when done")
+IPushProducer:
+ - resumeProducing() says to start writing data. read()
+ - pauseProducing() stop writing data
 
+PullStream:
+ - passive, has read() method, which returns data, or a deferred if no data available.
 
-class BufferedStream:
-    """This lets you (a producer) write strings and streams and it will buffer
-    it until a consumer has been registered with beginProducing().
+PushStream:
+ - active, has beginProducing(consumer) method, and then write()s to consumer.
+ - resumeProducing() says to start writing data.
+ - pauseProducing() stop writing data
 
-    This lets you easily interleave files and text.
-    """
+StreamProducer: 
+ - converts a pull stream into a producer
+ - calls push.write(pull.read()) until pauseProducing is called.
+
+ProducerStream
+ - converts producers into a pull stream
+ - when read() is called, returns a deferred, and calls producer.resumeProducing() and waits for a write() call.
+"""
+
+import copy
+from zope.interface import Interface, Attribute, implements
+from twisted.internet.defer import Deferred
+from twisted.internet import interfaces as ti_interfaces, defer
+
+class IStream(Interface):
+    length = Attribute("""How much data is in this stream. Can be None if unknown.""")
+    
+    def read():
+        """Read some data.
+        Returns an object conforming to the buffer interface, or
+        else a Deferred.
+        """
+    def split(point):
+        """Split this stream into two, at byte position 'point'.
+
+        Returns a tuple of (before, after). A stream should not be used
+        after calling split on it.
+
+        If you cannot be implement this trivially, try return fallbackSplit(self, point).
+        """
+
+    def close():
+        """Prematurely close."""
+
+class ISendfileableStream(Interface):
+    def read(sendfile=False):
+        """
+        Read some data.
+        If sendfile == False, returns an object conforming to the buffer
+        interface, or else a Deferred.
+
+        If sendfile == True, returns either the above, or a SendfileBuffer.
+        """
+        
+class SimpleStream:
     implements(IStream)
+    
+    length = None
+    start = None
+    
+    def read(self):
+        return None
 
-    registered = False
-    consumer = None
+    def close(self):
+        self.length = 0
+    
+    def split(self, point):
+        if self.length is not None:
+            if point > self.length:
+                raise ValueError("split point (%d) > length (%d)" % (point, self.length))
+        b = copy.copy(self)
+        self.length = point
+        if b.length is not None:
+            b.length -= point
+        b.start += point
+        return (self, b)
+        
+# maximum mmap size
+MMAP_LIMIT = 4*1024*1024
+# minimum mmap size
+MMAP_THRESHOLD = 8*1024
+
+class FileStream(SimpleStream):
+    implements(ISendfileableStream)
+    """A producer that produces data from a file"""
+    # 65K, minus some slack
+    CHUNK_SIZE = 2 ** 2 ** 2 ** 2 - 32
+
+    f = None
+    def __init__(self, f, start=0, length=None):
+        self.f = f
+        self.start = start
+        self.length = length
+        
+    def read(self, sendfile=False):
+        if self.f is None:
+            return None
+
+        if self.length == 0:
+            self.f = None
+            return None
+
+        readSize = self.CHUNK_SIZE
+        if self.length is not None:
+            readSize = min(self.length, readSize)
+
+        if sendfile and self.length is not None:
+            # XXX: Yay using non-existent sendfile support!
+            res = SendfileBuffer(self.f, self.start, readSize)
+            self.length -= readSize
+            self.start += readSize
+            return res
+        
+        self.f.seek(self.start)
+        b = self.f.read(readSize)
+        bytesRead = len(b)
+        if not bytesRead:
+            if self.length is not None:
+                raise RuntimeError("Ran out of data reading file %r, expected %d more bytes" % (self.f, self.length))
+            else:
+                self.f = None
+                return None
+        else:
+            if self.length is not None:
+                self.length -= bytesRead
+            self.start += bytesRead
+            return b
+
+    def close(self):
+        self.f = None
+        SimpleStream.close(self)
+        
+class MemoryStream(SimpleStream):
+    def __init__(self, mem, start=0, length=None):
+        self.mem = mem
+        self.start = start
+        if length is None:
+            self.length = len(mem) - start
+        else:
+            if len(mem) < length:
+                raise ValueError("len(mem) < start + length")
+            self.length = length
+
+    def read(self):
+        if self.mem is None:
+            return None
+        if self.length == 0:
+            result = None
+        else:
+            result = buffer(self.mem, self.start, self.length)
+        self.mem = None
+        self.length = 0
+        return result
+
+    def close(self):
+        self.mem = None
+        SimpleStream.close(self)
+        
+class CompoundStream:
+    """An IStream which is composed of a bunch of substreams."""
+    
+    implements(IStream, ISendfileableStream)
+    deferred = None
+    length = 0
+    
+    def __init__(self):
+        self.buckets = []
+        
+    def addStream(self, bucket):
+        """Add a stream to the output"""
+        self.buckets.append(bucket)
+        if self.length is not None:
+            if bucket.length is None:
+                self.length = None
+            else:
+                self.length += bucket.length
+
+    def addStr(self, s):
+        """Shortcut to add a string to the output. 
+        Simply calls self.addStream(MemoryStream(s))
+        """
+        self.addStream(MemoryStream(s))
+
+    def read(self, sendfile=False):
+        if self.deferred is not None:
+            raise RuntimeError("Call to read while read is already outstanding")
+
+        if not self.buckets:
+            return None
+        
+        if sendfile and ISendfileableStream.providedBy(self.buckets[0]):
+            result = self.buckets[0].read(sendfile)
+        else:
+            result = self.buckets[0].read()
+        
+        if isinstance(result, Deferred):
+            self.deferred = result
+            result.addCallback(self._gotRead, sendfile)
+            return result
+        
+        return self._gotRead(result, sendfile)
+        
+    def _gotRead(self, result, sendfile):
+        if result is None:
+            del self.buckets[0]
+            # Next bucket
+            return self.read(sendfile)
+        
+        if self.length is not None:
+            self.length -= len(result)
+        self.deferred = None
+        return result
+    
+    def split(self, point):
+        num = 0
+        origPoint = point
+        for bucket in self.buckets:
+            num+=1
+
+            if point == 0:
+                b = CompoundStream()
+                b.buckets = self.buckets[num:]
+                del self.buckets[num:]
+                return self,b
+            
+            if bucket.length is None:
+                # Indeterminate length bucket.
+                # give up and use fallback splitter.
+                return fallbackSplit(self, origPoint)
+            
+            if point < bucket.length:
+                before,after = bucket.split(point)
+                b = CompoundStream()
+                b.buckets = self.buckets[num:]
+                b.buckets[0] = after
+                
+                del self.buckets[num+1:]
+                self.buckets[num] = before
+                return self,b
+            
+            point -= bucket.length
+    
+    def close(self):
+        for bucket in self.buckets:
+            bucket.close()
+        self.buckets = []
+        self.length = 0
+
+def readAndDiscard(stream):
+    def _gotData(data):
+        if data is not None:
+            readAndDiscard(stream)
+    
+    while True:
+        result = stream.read()
+        if result is None:
+            break
+        if isinstance(result, Deferred):
+            # FIXME: what about errback?
+            result.addCallback(_gotData)
+            break
+
+def fallbackSplit(stream, point):
+    after = PostTruncaterStream(stream, point)
+    before = TruncaterStream(stream, point, after)
+    return (before, after)
+
+class TruncaterStream:
+    def __init__(self, stream, point, postTruncater):
+        self.stream = stream
+        self.length = point
+        self.postTruncater = postTruncater
+        
+    def read(self):
+        if self.length == 0:
+            if self.postTruncater is not None:
+                self.postTruncater.sendInitialSegment('')
+            self.stream = None
+            return None
+        
+        result = self.stream.read()
+        if isinstance(result, Deferred):
+            return result.addCallback(self._gotRead)
+        else:
+            return self._gotRead(result)
+        
+    def _gotRead(self, data):
+        if data is None:
+            raise ValueError("Ran out of data for a split of a indeterminate length source")
+        if self.length > len(data):
+            self.length -= len(data)
+            return data
+        else:
+            before = buffer(data, 0, self.length)
+            after = buffer(data, self.length)
+            self.length = 0
+            if self.postTruncater is not None:
+                self.postTruncater.sendInitialSegment(after)
+                self.postTruncater = None
+                self.stream = None
+            return before
+    
+    def split(self, point):
+        if point > self.length:
+            raise ValueError("split point (%d) > length (%d)" % (point, self.length))
+        
+        post = PostTruncaterStream(TruncaterStream(stream, self.length - point, self.postTruncater))
+        self.length = point
+        self.postTruncater = post
+        return self, post
+    
+    def close(self):
+        if self.postTruncater is not None:
+            self.postTruncater.notifyClosed(self)
+        else:
+            # Nothing cares about the rest of the stream
+            self.stream.close()
+            self.stream = None
+            self.length = 0
+            
+
+class PostTruncaterStream:
+    deferred = None
+    sentInitialSegment = False
+    truncaterClosed = None
     closed = False
+    
+    length = None
+    def __init__(self, stream, point):
+        self.stream = stream
+        self.deferred = Deferred()
+        if stream.length is not None:
+            self.length = stream.length - point
+
+    def read(self):
+        if not self.sentInitialSegment:
+            self.sentInitialSegment = True
+            if self.truncaterClosed is not None:
+                readAndDiscard(self.truncaterClosed)
+                self.truncaterClosed = None
+            return self.deferred
+        
+        return self.stream.read()
+    
+    def split(self, point):
+        return fallbackSplit(self, point)
+        
+    def close(self):
+        self.closed = True
+        if self.truncaterClosed is not None:
+            # have first half close itself
+            self.truncaterClosed.postTruncater = None
+            self.truncaterClosed.close()
+        elif self.sentInitialSegment:
+            # first half already finished up
+            self.stream.close()
+            
+        self.stream = None
+        self.deferred = None
+    
+    # Callbacks from TruncaterStream
+    def sendInitialSegment(self, data):
+        if self.deferred is not None:
+            self.deferred.callback(data)
+        
+    def notifyClosed(self, truncater):
+        if self.closed:
+            # we are closed, have first half really close
+            self.truncater.postTruncater = None
+            self.truncater.close()
+        elif self.sentInitialSegment:
+            # We are trying to read, read up first half
+            readAndDiscard(self, truncater)
+        else:
+            # Idle, store closed info.
+            self.truncaterClosed = truncater
+
+            
+class ProducerStream:
+    """Turns producers into a IStream.
+    Thus, implements IConsumer and IStream."""
+
+    implements(IStream, ti_interfaces.IConsumer)
+    length = None
+    closed = False
+    producer = None
+    producerPause = False
+    deferred = None
+    
+    bufferSize = 5
     
     def __init__(self):
         self.buffer = []
-    
-    def beginProducing(self, consumer):
-        self.consumer = consumer
-        d = self._onDone = defer.Deferred()
-        self.registered = True
-        self.consumer.registerProducer(self, False)
-        return d
-    
-    def write(self, data):
-        self.buffer.append(data)
 
-        if not self.registered and self.consumer is not None:
-            self.registered = True
-            self.consumer.registerProducer(self, False)
-            
-    def close(self):
-        self.closed = True
+    # IStream implementation
+    def read(self):
+        if self.buffer:
+            result = self.buffer[0]
+            del self.buffer[0]
+            return result
+        elif self.closed:
+            return None
+        else:
+            deferred = self.deferred = Deferred()
+            if self.producer is not None and (not self.streamingProducer
+                                              or self.producerPaused):
+                self.producerPaused = False
+                self.producer.resumeProducing()
+                
+            return deferred
+        
+    def split(self, point):
+        return fallbackSplit(self, point)
     
-        if not self.registered and self.consumer is not None:
-            self._onDone.callback(None)
-            
-    def resumeProducing(self):
-        if len(self.buffer) == 0:
-            self.consumer.unregisterProducer()
-            self.registered = False
-            if self.closed:
-                self._onDone.callback(None)
+    def close(self):
+        self.buffer=[]
+        self.closed = True
+        if self.producer is not None:
+            self.producer.stopProducing()
+            self.producer = None
+        self.deferred = None
+    
+    # IConsumer implementation
+    def write(self, data):
+        if self.closed:
             return
         
-        data = self.buffer[0]
-        del self.buffer[0]
-        
-        if isinstance(data, str):
-            self.consumer.write(data)
+        if self.deferred:
+            deferred = self.deferred
+            self.deferred = None
+            deferred.callback(data)
         else:
-            try:
-                self.consumer.unregisterProducer()
-                d = IProducer(data).beginProducing(self.consumer)
-                d.addCallbacks(lambda x: self.consumer.registerProducer(self, False),
-                               lambda err: self._onDone.errback(err))
-            except:
-                self._onDone.errback()
-        
-    def pauseProducing(self):
-        pass
-    
-    def stopProducing(self):
-        self._onDone.errback(main.CONNECTION_LOST)
+            self.buffer.append(data)
+            if(self.producer is not None and self.streamingProducer
+               and len(self.buffer) > self.bufferSize):
+                producer.pauseProducing()
+                self.producerPaused = True
 
-components.backwardsCompatImplements(BufferedStream)
+    def finish(self):
+        self.closed = True
+        if self.deferred is not None:
+            deferred = self.deferred
+            self.deferred = None
+            deferred.callback(None)
 
-# The following three classes implement sending a file to a consumer.
-# It is somewhat complicated by the fact that sendfile is supported, and
-# requires a slightly different set of state, and that we can't know ahead
-# of time if the consumer will accept sendfile calls.
-
-class BaseFileProducer:
-    """A producer that produces data from a file"""
-    CHUNK_SIZE = 2 ** 2 ** 2 ** 2
-
-    sendfileable = True #assumed true until proven otherwise
-    
-    def __init__(self, f, start=None, length=None, closeWhenDone=True):
-        self.f = f
-        self.offset = start
-        self.bytesRemaining = length
+    def registerProducer(self, producer, streaming):
+        if self.producer is not None:
+            raise RuntimeError("Cannot register producer %s, because producer %s was never unregistered." % (producer, self.producer))
         
-        self.closeWhenDone = closeWhenDone
-        self.finishedCallback = defer.Deferred()
-        if self.closeWhenDone:
-            def _close(x):
-                self.f.close()
-                return x
-            self.finishedCallback.addBoth(_close)
-        
-    def beginProducing(self, consumer):
-        self.consumer = consumer
-        self.consumer.registerProducer(self, False)
-        return self.finishedCallback
-
-    def pauseProducing(self):
-        pass
-
-    def stopProducing(self):
-        finishedCallback = self.finishedCallback
-        if finishedCallback:
-            self.finishedCallback = None
-            finishedCallback.errback(main.CONNECTION_LOST)
-
-class SendfileProducer(BaseFileProducer):
-    def convertFromBase(self):
-        # Two changes necessary:
-        # - self.offset needs to be set.
-        # - self.bytesRemaining needs to be set if it is None
-        
-        if self.offset is None:
-            self.offset = self.f.tell()
-        if self.bytesRemaining is None: # when no limit was specified
-            self.f.seek(0, 2) # seek to end of file
-            self.bytesRemaining = f.tell() - self.offset
-            
-        self.__class__ = SendfileProducer
-
-    def resumeProducing(self):
-        if not self.f:
-            raise "resumeProducing() called but I have no file!"
-        readSize = min(self.bytesRemaining, self.CHUNK_SIZE)
-
-        try:
-            amt = self.consumer.sendfile(self.f, self.offset, readSize)
-            self.bytesRemaining -= amt
-            self.offset += amt
-            if self.bytesRemaining == 0:
-                self.consumer.unregisterProducer()
-                self.finishedCallback.callback('')
-                self.finishedCallback = self.f = self.consumer = None
-        except IOError:
-            # we can't sendfile for some reason, revert to normal IO.
-            self.sendfileable = False
-            FileProducer.convertFromSendfile(self)
-            self.resumeProducing(self)
-        
-class FileProducer(BaseFileProducer):
-    def convertFromBase(self):
-        # - Uses the file pointer, not self.offset
-        # - Seek the file to self.offset.
-        if self.offset is not None:
-            self.f.seek(self.offset)
-        
-    # change the class to SendfileProducer, if possible.
-    def beginProducing(self, consumer):
-        if hasattr(consumer, 'sendfile'): # fixme: interface?
-            try:
-                SendfileProducer.convertFromBase(self)
-            except IOError:
-                pass
-            else:
-                return self.beginProducing(consumer) # redispatch to new class
-        
-        # otherwise:
-        self.convertFromBase()
-        return BaseFileProducer.beginProducing(self, consumer)
-        
-    def resumeProducing(self):
-        if not self.f:
-            raise "resumeProducing() called but I have no file!"
-        readSize = self.CHUNK_SIZE
-        if self.bytesRemaining is not None:
-            readSize = min(self.bytesRemaining, readSize)
-        
-        b = self.f.read(readSize)
-        if not b:
-            self.consumer.unregisterProducer()
-            self.finishedCallback.callback('')
-            self.finishedCallback = self.f = self.consumer = None
+        if self.closed:
+            producer.stopProducing()
         else:
-            if self.bytesRemaining is not None:
-                self.bytesRemaining -= len(b)
-            self.consumer.write(b)
-    
-class StreamFilter:
-    """A base class for stream filters. A passthrough subclass would override
-       write(data) to call self.consumer.write(data).
-       """
-    
-    def __init__(self, istream):
-        """istream is the stream we're going to filter."""
-        self.finishedCallback = defer.Deferred()
-        self.istream = istream
+            self.producer = producer
+            self.streamingProducer = streaming
+            if not streaming:
+                producer.resumeProducing()
 
-    def beginProducing(self, consumer):
-        self.consumer = consumer
-        # This calls self.registerProducer() and thus consumer.registerProducer
-        self.istream.beginProducing(self).chainDeferred(self.finishedCallback)
-        
-        return self.finishedCallback
-
-# Producer methods, called from consumer.
-    def resumeProducing(self):
-        self.producer.resumeProducing()
-
-    def pauseProducing(self):
-        self.producer.pauseProducing()
-
-    def stopProducing(self):
-        self.producer.stopProducing()
-
-# Consumer methods, called from producer
-    def registerProducer(self, producer, push):
-        self.producer = producer
-        self.consumer.registerProducer(self, push)
-        
     def unregisterProducer(self):
-        self.consumer.unregisterProducer()
         self.producer = None
-    
-class SimpleStreamFilter(StreamFilter):
-    """A simple stream filter that calls self.consumer.write(fun(data))
-    to filter the data, with the given fun."""
-    def __init__(self, istream, fun):
-        StreamFilter.__init__(self, istream)
-        self.write = lambda data: self.consumer.write(fun(data))
+        
+class StreamProducer:
+    """A push producer which gets its data by reading a stream."""
+    implements(ti_interfaces.IPushProducer)
 
-
-
-########### The rest of this file is mostly just playing around ###########
-### Test Reimplementation of LineReceiver as a StreamFilter to see how this goes.
-class LineReceiver(StreamFilter):
-    """A stream that converts data into lines and/or raw data, depending on mode.
-    
-    In line mode, each line that's received calls the consumers writeLine
-    method.  In raw data mode, each chunk of raw data becomes a
-    call to L{writeRawData}.  The L{setLineMode} and L{setRawMode}
-    methods switch between the two modes.
-    
-    This is useful for line-oriented protocols such as IRC, HTTP, POP, etc.
-    
-    @cvar delimiter: The line-ending delimiter to use. By default this is
-                     '\\r\\n'.
-    @cvar MAX_LENGTH: The maximum length of a line to allow (If a
-                      sent line is longer than this, the connection is dropped).
-                      Default is 16384.
-    """
-    line_mode = 1
-    __buffer = ''
-    delimiter = '\r\n'
-    MAX_LENGTH = 16384
+    deferred = None
+    finishedCallback = None
     paused = False
+    consumer = None
     
-    def clearLineBuffer(self):
-        """Clear buffered data."""
-        self.__buffer = ""
+    def __init__(self, stream, enforceStr=True):
+        self.stream = stream
+        self.enforceStr = enforceStr
+        
+    def beginProducing(self, consumer):
+        if self.stream is None:
+            return defer.succeed(None)
+        
+        self.consumer = consumer
+        finishedCallback = self.finishedCallback = Deferred()
+        self.consumer.registerProducer(self, True)
+        self.resumeProducing()
+        return finishedCallback
     
-    def write(self, data):
-        """Protocol.dataReceived.
-        Translates bytes into lines, and calls lineReceived (or
-        rawDataReceived, depending on mode.)
-        """
-        buf = self.__buffer+data
-        lastoffset=0
-        while self.line_mode:
-            if self.paused:
-                break
-
-            offset=buf.find(self.delimiter, lastoffset)
-            if offset == -1:
-                self.__buffer=buf=buf[lastoffset:]
-                if len(buf) > self.MAX_LENGTH:
-                    line=buf
-                    self.__buffer=''
-                    return self.lineLengthExceeded(line)
-                break
-            
-            line=buf[lastoffset:offset]
-            lastoffset=offset+len(self.delimiter)
-            
-            if len(line) > self.MAX_LENGTH:
-                line=buf[lastoffset:]
-                self.__buffer=''
-                return self.lineLengthExceeded(line)
-            why = self.consumer.writeLine(line)
-            if why:
-                self.__buffer = buf[lastoffset:]
-                return why
-        else:
-            if not self.paused:
-                data=buf[lastoffset:]
-                self.__buffer=''
-                if data:
-                    return self.consumer.writeRawData(data)
-
-    def setLineMode(self, extra=''):
-        """Sets the line-mode of this receiver.
-
-        If you are calling this from a rawDataReceived callback,
-        you can pass in extra unhandled data, and that data will
-        be parsed for lines.  Further data received will be sent
-        to lineReceived rather than rawDataReceived.
-        """
-        self.line_mode = 1
-        return self.dataReceived(extra)
-
-    def setRawMode(self):
-        """Sets the raw mode of this receiver.
-        Further data received will be sent to rawDataReceived rather
-        than lineReceived.
-        """
-        self.line_mode = 0
-
-    def lineLengthExceeded(self, line):
-        """Called when the maximum line length has been reached.
-        Override if it needs to be dealt with in some special way.
-        """
-        return self.producer.stopProducing()
-
-    def pauseProducing(self):
-        self.paused = True
-        StreamFilter.pauseProducing(self)
-
     def resumeProducing(self):
         self.paused = False
-        self.dataReceived('')
-        StreamFilter.resumeProducing(self)
-
-    def stopProducing(self):
-        self.paused = True
-        StreamFilter.stopProducing(self)
-
-
-class StreamProtocol(protocol.Protocol):
-    begun = False
-    
-    def __init__(self):
-        self.finishedCallback = defer.Deferred()
-        self.istream = self
-        self.ostream = BufferedStream()
+        if self.deferred is not None:
+            return
         
-    def connectionMade(self):
-        if self.begun:
-            self.consumer.registerProducer(self.transport, True)
+        data = self.stream.read()
+        
+        if isinstance(data, Deferred):
+            # FIXME: what about errback?
+            self.deferred = data.addCallback(self._doWrite)
         else:
-            self.transport.stopReading()
-            
-        self.ostream.beginProducing(self.transport)
+            self._doWrite(data)
+
+    def _doWrite(self, data):
+        if self.consumer is None:
+            return
+        if data is None:
+            # The end.
+            self.consumer.unregisterProducer()
+            self.finishedCallback.callback(None)
+            self.finishedCallback = self.deferred = self.consumer = self.stream = None
+            return
         
-    def beginProducing(self, consumer):
-        self.consumer = consumer
-        # shortcut the extra method call
-        self.dataReceived = self.consumer.write
-
-        if self.transport:
-            self.transport.startReading()
-            self.consumer.registerProducer(self.transport, True)
-        self.begun = True
-        return self.finishedCallback
-
-    def connectionLost(self, reason):
-        self.finishedCallback.callback(reason)
-
-# Producer methods, called from consumer.
-    def resumeProducing(self):
-        self.transport.startReading()
-
+        self.deferred = None
+        if self.enforceStr:
+            # XXX: sucks that we have to do this. make transport.write(buffer) work!
+            data = str(data)
+        self.consumer.write(data)
+        
+        if not self.paused:
+            self.resumeProducing()
+        
     def pauseProducing(self):
-        self.transport.stopReading()
+        self.paused = True
 
     def stopProducing(self):
-        self.transport.loseConnection()
-
-    def dataReceived(self, data):
-        #NOTE: this method isn't actually used, it's replaced in beginProducing
-        self.consumer.write(data)
-
-
-if __name__ == '__builtin__':
-    # Simple test for running with twistd
-    from twisted.application import service
-    from twisted.application import internet
-
-    class SimpleConsumer:
-        def __init__(self, **kw):
-            for k,v in kw.iteritems():
-                setattr(self, k, v)
-
-        def registerProducer(self, producer, pull):
-            pass
-
-        def unregisterProducer(self):
-            pass
-
-    class SimpleProtocol:
-        def __init__(self, istream, ostream):
-            self.istream, self.ostream = istream, ostream
-            istream = LineReceiver(istream)
-            consumer = SimpleConsumer(writeLine=lambda data: ostream.write("YoHoHo, Line=%s\n\r"%data),
-                                      writeRawData=lambda data: ostream.write("YoHoHo, Raw Data=%s\r\n"%data))
-            istream.beginProducing(consumer).addBoth(lambda d: ostream.close())
+        if self.finishedCallback is not None:
+            from twisted.internet import main
+            self.finishedCallback.callback(main.CONNECTION_LOST)
+        self.paused = True
+        if self.stream is not None:
+            self.stream.close()
+        if self.consumer is not None:
+            self.consumer.unregisterProducer()
             
-            
-    class SimpleFactory(protocol.ServerFactory):
-        protocol = StreamProtocol
-
-        def buildProtocol(self, addr):
-            p = protocol.ServerFactory.buildProtocol(self, addr)
-            p2 = SimpleProtocol(p.istream, p.ostream)
-            return p
-            
-    application = service.Application("simple")
-    internet.TCPServer(
-        8000, 
-        SimpleFactory()
-        ).setServiceParent(application)
+        self.finishedCallback = self.deferred = self.consumer = self.stream = None

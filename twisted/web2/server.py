@@ -36,27 +36,21 @@ from twisted.web2 import version as web2_version
 
 _errorMarker = object()
 
-class SimpleResponse(object):
-    implements(iweb.IResponse)
-    
-    code = responsecode.OK
-    data = ""
-    headers = None
-    
-    def __init__(self):
-        self.headers = http_headers.Headers()
-        self.headers.setHeader('server', web2_version)
-        self.headers.setHeader('date', time.time())
+def defaultHeadersFilter(request, response):
+    if not response.headers.hasHeader('server'):
+        response.headers.setHeader('server', web2_version)
+    if not response.headers.hasHeader('date'):
+        response.headers.setHeader('date', time.time())
+    return response
 
-    def beginProducing(self, consumer):
-        consumer.write(self.data)
-        return defer.succeed(None)
-        
+import rangefilter
+
 class Request(http.Request):
     implements(iweb.IRequest)
     
     site = None
     _initialprepath = None
+    responseFilters = [rangefilter.rangefilter, defaultHeadersFilter]
     
     def __init__(self, *args, **kw):
         self.notifications = []
@@ -224,24 +218,27 @@ class Request(http.Request):
         body = ("<html><head><title>Internal Server Error</title></head>"
                 "<body><h1>Internal Server Error</h1>An error occurred rendering the requested page. Additionally, an error occured rendering the error page.</body></html>")
         
-        response = SimpleResponse()
+        response = http.Response()
         response.code = responsecode.INTERNAL_SERVER_ERROR
         response.headers.setHeader('content-type', http_headers.MimeType('text','html'))
         response.headers.setHeader('content-length', len(body))
-        response.data = body
+        response.stream = stream.MemoryStream(body)
         return response
 
-    def _cbFinishRender(self, response, ctx):
-        resource = iweb.IResource(response, None)
+    def _cbFinishRender(self, result, ctx):
+        resource = iweb.IResource(result, None)
         if resource:
             pageContext = context.PageContext(tag=resource, parent=ctx)
             d = defer.maybeDeferred(resource.renderHTTP, pageContext)
             d.addCallback(self._cbFinishRender, pageContext)
             return d
         else:
-            result = iweb.IResponse(response)
-            if result:
-                self.writeResponse(result)
+            response = iweb.IResponse(result)
+            if response:
+                d = defer.succeed(response)
+                for f in self.responseFilters:
+                    d.addCallback(lambda response: f(self, response))
+                d.addCallback(self.writeResponse)
             else:
                 raise TypeError("html is not a resource or a response")
         return
