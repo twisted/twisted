@@ -50,6 +50,15 @@ def fail(result):
 
 class Deferred:
     """This is a callback which will be put off until later.
+    
+    Why do we want this? Well, in cases where a function in a threaded
+    program would block until it gets a result, for Twisted it should
+    not block. Instead, it should return a Deferred.
+    
+    This can be implemented for protocols that run over the network by
+    writing an asynchronous protocol for twisted.internet. For methods
+    that come from outside packages that are not under our control, we use
+    threads (see for example twisted.enterprise.adbapi).
     """
 
     armed = 0
