@@ -1,154 +1,152 @@
-<?xml version="1.0"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
-    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<HTML>
+<HEAD>
+  <META NAME="GENERATOR" CONTENT="Adobe PageMill 3.0 Win">
+  <TITLE>Twisted Enterprise Row Objects</TITLE>
+</HEAD>
+<BODY>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
-  <head>
-    <title>Twisted Enterprise Row Objects</title>
-  </head>
+<P>&lt;?xml version=&quot;1.0&quot;?&gt; <!DOCTYPE-- html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head>
+</head><body></P>
 
-  <body>
-    <h1>Twisted Enterprise Row Objects</h1>
+<H1>Twisted Enterprise Row Objects</H1>
 
-    <p>The <code class="API">twisted.enterprise.row</code> module is
-    a method of interfacing simple python objects with rows in
-    relational database tables. It has two components: the <code
-    class="API" base="twisted.enterprise.row">RowObject</code> class which
-    developers sub-class for each relational table that their code
-    interacts with, and the <code class="API" base="twisted.enterprise.row"
-    >DBReflector</code> which generates and contains the SQL to perform
-    updates, inserts, queries and deletes against the database.</p>
+<P>The <CODE>twisted.enterprise.row</CODE> module is a method
+of interfacing simple python objects with rows in relational database
+tables. It has two components: the <CODE>RowObject</CODE> class
+which developers sub-class for each relational table that their
+code interacts with, and the <CODE>DBReflector</CODE> which generates
+and contains the SQL to perform updates, inserts, queries and
+deletes against the database.</P>
 
-    <p>The row module is intended for applications such as on-line
-    games, and web-site that require a back-end database interface.
-    It is not a full functioned object-relational mapper for python
-    - it deals best with simple data types structured in ways that
-    can be easily represented in a relational database. It is well
-    suited to building a python interface to an existing relational
-    database, and slightly less suited to added database
-    persistance to an existing python application.</p>
+<P>The row module is intended for applications such as on-line
+games, and web-site that require a back-end database interface.
+It is not a full functioned object-relational mapper for python
+- it deals best with simple data types structured in ways that
+can be easily represented in a relational database. It is well
+suited to building a python interface to an existing relational
+database, and slightly less suited to added database persistance
+to an existing python application.</P>
 
-    <p>Currently, the row module requires the use of PostgreSQL.</p>
+<P>Currently, the row module requires the use of PostgreSQL.</P>
 
-    <h2>Class Definitions</h2>
+<H2>Class Definitions</H2>
 
-    <p>To interface to relational database tables, the developer
-    must create a class derived from the <code class="API"
-    >twisted.enterprise.row.RowObject</code> class for each table. These
-    derived classes must define a class attribute "rowColumns"
-    which contains a list of the columns in the database table that
-    class corresponds to. The class should also define a class
-    attribute called "dbKeyColumns" which is a list of the primary
-    key columns of the table with a tuple of (columnName,
-    columnType) for each column. For example:</p>
-<pre class="python">
+<P>To interface to relational database tables, the developer must
+create a class derived from the <CODE>twisted.enterprise.row.RowObject</CODE>
+class for each table. These derived classes must define a number
+of class attributes which contains information about the database
+table that class corresponds to. The required class attributes
+are:</P>
+
+<UL>
+  <LI>rowColumns - list of the columns in the table with the correct
+  case
+  <LI>dbKeyColumns - list of key columns in form: [(columnName,
+  typeName)]
+  <LI>tableName - the name of the database table
+</UL>
+
+<P>There are also two optional class attributes that can be specified:</P>
+
+<UL>
+  <LI>foreignKeys - list of foreign keys to other database tables
+  in the form: [(tableName, [(columnName, columnType)]]
+  <LI>factoryMethod - a method that creates instances of this class
+</UL>
+
+<P>For example:</P>
+
+<PRE>
 class RoomRow(row.RowObject):
-    rowColumns = ["roomId","town_id","name","owner","posx","posy","width","height"]
-    dbKeyColumns = [("id", "int4")]
-</pre>
+    rowColumns    = [&quot;roomId&quot;,&quot;town_id&quot;,&quot;name&quot;,&quot;owner&quot;,&quot;posx&quot;,&quot;posy&quot;,&quot;width&quot;,&quot;height&quot;]
+    dbKeyColumns  = [(&quot;id&quot;, &quot;int4&quot;)]
+    tableName     = &quot;testrooms&quot;
+    factoryMethod = [myRowFactory]</PRE>
 
-    <p>The items in the rowColumns list will become data members of
-    classes of this type when they are created by the
-    DBReflector.</p>
+<P>The items in the rowColumns list will become data members of
+classes of this type when they are created by the DBReflector.</P>
 
-    <h2>Initialization</h2>
+<H2>Initialization</H2>
 
-    <p>The initialization phase builds the SQL for the database
-    interactions. It uses the system catalogs of the database to do
-    this, but requires some basic information to get started. The
-    "stubs" data passed into the DBReflector is of the format:</p>
-<pre class="python">
- [ (ClassObject, TableName, Primary Key Columns) ]
-</pre>
+<P>The initialization phase builds the SQL for the database interactions.
+It uses the system catalogs of the database to do this, but requires
+some basic information to get started. The class attributes of
+the classes derived from RowClass are used for this. Those clases
+are passed to the DBReflector when it is created.</P>
 
-    <p>The "ClassObject" is a python class derived from the
-    RowObject class - eg. the RoomRow class defined above. The
-    "TableName" is the name of a table in the relational database.
-    The "Primary Key Columns" is a list of the primary keys of the
-    table containing tuples of (columnName, columnType) - note that
-    this corresponds to the dbKeyColumns attribute of the class
-    defined above. The stubs list may contain data for more than
-    one database table. An example stubs list for the RoomRow class
-    we specified above:</p>
-<pre class="python">
-stubs = [ (RoomRow, "testrooms", RoomRow.dbKeyColumns) ]
-</pre>
+<P>An example class list for the RoomRow class we specified above:</P>
 
-    <p>Once the classes are defined and the stubs list ready, a
-    DBReflector can be instanciated. This requires a Twisted
-    Enterprise ConnectionPool object, and takes a callback method
-    to be run when the initialization is finished. For example:</p>
-<pre class="python">
+<PRE>
 def runTests(result):
-    print "Done initializing"
+    print &quot;Done initializing&quot;
 
-dbpool = adbapi.ConnectionPool("pyPgSQL.PgSQL")
-stubs = [ (RoomRow, "testrooms", [("roomId","int4")]) ]
-reflector = row.DBReflector(dbpool, stubs, runTests)
-</pre>
+dbpool = adbapi.ConnectionPool(&quot;pyPgSQL.PgSQL&quot;)
+reflector = row.DBReflector( dbpool, [RoomRow], runTests )
+</PRE>
 
-    <h2>Creating Row Objects</h2>
+<H2>Creating Row Objects</H2>
 
-    <p>There are three methods of creating RowObjects - batch
-    loading from the database, single object selection from the
-    database, and creating a new instance ready to be inserted.</p>
+<P>There are three methods of creating RowObjects - batch loading
+from the database, single object selection from the database,
+and creating a new instance ready to be inserted.</P>
 
-    <p>To load a set of rows from the database and create RowObject
-    instances for each of the rows, use the loadObjectsFrom method
-    of the DBReflector. This takes a tableName, primary key
-    columns, a "user data" parameter, an SQL "where clause". The
-    where clause may be omitted which will retrieve all the rows
-    from the table. For example:</p>
-<pre class="python">
+<P>To load a set of rows from the database and create RowObject
+instances for each of the rows, use the loadObjectsFrom method
+of the DBReflector. This takes a tableName, an optional &quot;user
+data&quot; parameter, and an optional SQL &quot;where clause&quot;.
+The where clause may be omitted which will retrieve all the rows
+from the table. For example:</P>
+
+<PRE>
 def gotRooms(rooms):
     for room in rooms:
-        print "Got room:", room.id
+        print &quot;Got room:&quot;, room.id
 
-refector.loadObjectsFrom("testrooms", RoomRow.dbKeyColumns, userData, RoomRow, "id &gt; 5", ).addCallback(gotRooms)
-</pre>
+refector.loadObjectsFrom(&quot;testrooms&quot;, whereClause=&quot;id &gt; 5&quot;, ).addCallback(gotRooms)</PRE>
 
-    <p>For more advanced RowObject construction, loadObjectsFrom
-    may also be passed a factoryMethod that will be called for each
-    of the rows with the class object, the userData parameter, and
-    a dictionary of data from the database keyed by column name.
-    This factory method should return a fully populated RowObject
-    instance and may be used to do pre-processing, lookups, and
-    data transformations before exposing the data to user code. An
-    example factory method:</p>
-<pre class="python">
+<P>For more advanced RowObject construction, loadObjectsFrom may
+use a factoryMethod that was specified as a class attribute for
+the RowClass derived class. This method will be called for each
+of the rows with the class object, the userData parameter, and
+a dictionary of data from the database keyed by column name. This
+factory method should return a fully populated RowObject instance
+and may be used to do pre-processing, lookups, and data transformations
+before exposing the data to user code. An example factory method:</P>
+
+<PRE>
 def testRoomFactory(roomClass, userData, kw):
     newRoom = roomClass(userData)
     newRoom.__dict__.update(kw)
-    return newRoom
-</pre>
+    return newRoom</PRE>
 
-    <p>To load a single RowObject from the database, create an
-    instance and assign a key value to it, then use the "selectRow"
-    method of the DBReflector to populate it with data the
-    database. This assumes that a row exists in the corresponding
-    database table with a key value that matches the assigned
-    primary key attributes of the row object instance. For
-    example:</p>
-<pre class="python">
+<P>To load a single RowObject from the database, create an instance
+and assign a key value to it, then use the &quot;selectRow&quot;
+method of the DBReflector to populate it with data the database.
+This assumes that a row exists in the corresponding database table
+with a key value that matches the assigned primary key attributes
+of the row object instance. For example:</P>
+
+<PRE>
     newRoom = RoomRow()
-    newRoom.assignKeyAttr("roomId", 10)
-    reflector.selectRow(newRoom).addCallback(onSelected)
-</pre>
+    newRoom.assignKeyAttr(&quot;roomId&quot;, 10)
+    reflector.selectRow(newRoom).addCallback(onSelected)</PRE>
 
-    <p>Note that the "assignKeyAttr" method must be used to set
-    primary key attributes - regular attribute assignment of a
-    primary key attribute of a rowObject will raise an exception.
-    This prevents the database identity of RowObject from being
-    changed by mistake.</p>
+<P>Note that the &quot;assignKeyAttr&quot; method must be used
+to set primary key attributes - regular attribute assignment of
+a primary key attribute of a rowObject will raise an exception.
+This prevents the database identity of RowObject from being changed
+by mistake.</P>
 
-    <p>The last method of creating a row object is for new
-    instances that do not already exist in the database table. In
-    this case, create a new instance and assign its primary key
-    attributes and all of its member data attributes, then pass it
-    to the "insertRow" method of the DBReflector. For example:</p>
-<pre class="python">
+<P>The last method of creating a row object is for new instances
+that do not already exist in the database table. In this case,
+create a new instance and assign its primary key attributes and
+all of its member data attributes, then pass it to the &quot;insertRow&quot;
+method of the DBReflector. For example:</P>
+
+<PRE>
     newRoom = RoomRow()
-    newRoom.assignKeyAttr("roomId", 11)
+    newRoom.assignKeyAttr(&quot;roomId&quot;, 11)
     newRoom.town_id = 20
     newRoom.name = 'newRoom1'
     newRoom.owner = 'fred'
@@ -156,47 +154,44 @@ def testRoomFactory(roomClass, userData, kw):
     newRoom.posy = 100
     newRoom.width = 15
     newRoom.height = 20
-    reflector.insertRow(newRoom).addCallback(onInsert)
-</pre>
+    reflector.insertRow(newRoom).addCallback(onInsert)</PRE>
 
-    <p>This will insert a new row into the database table for this
-    new RowObject instance.</p>
+<P>This will insert a new row into the database table for this
+new RowObject instance.</P>
 
-    <h2>Updating Row Objects</h2>
+<H2>Updating Row Objects</H2>
 
-    <p>RowObjects have a "dirty" member attribute that is set to 1
-    when any of the member attributes of the instance that map to
-    database columns are changed. This dirty flag can be used to
-    tell when RowObjects need to be updated back to the database.
-    In addition, the "setDirty" method can be overridden to provide
-    more complex automated handling such as dirty lists (be sure to
-    call the base class setDirty though!).</p>
+<P>RowObjects have a &quot;dirty&quot; member attribute that is
+set to 1 when any of the member attributes of the instance that
+map to database columns are changed. This dirty flag can be used
+to tell when RowObjects need to be updated back to the database.
+In addition, the &quot;setDirty&quot; method can be overridden
+to provide more complex automated handling such as dirty lists
+(be sure to call the base class setDirty though!).</P>
 
-    <p>When it is determined that a RowObject instance is dirty and
-    need to have its state updated into the database, pass that
-    object to the "updateRow" method of the DBReflector. For
-    example:</p>
-<pre class="python">
-    reflector.updateRow(room).addCallback(onUpdated)
-</pre>
+<P>When it is determined that a RowObject instance is dirty and
+need to have its state updated into the database, pass that object
+to the &quot;updateRow&quot; method of the DBReflector. For example:</P>
 
-    <p>For more complex behavior, the reflector can generate the
-    SQL for the update but not perform the update. This can be
-    useful for batching up multiple updates into single requests.
-    For example:</p>
-<pre class="python">
-    updateSQL = reflector.updateRowSQL(room)
-</pre>
+<PRE>
+    reflector.updateRow(room).addCallback(onUpdated)</PRE>
 
-    <h2>Deleting Row Objects</h2>
+<P>For more complex behavior, the reflector can generate the SQL
+for the update but not perform the update. This can be useful
+for batching up multiple updates into single requests. For example:</P>
 
-    <p>To delete a row from a database pass the RowObject instance
-    for that row to the DBReflector "deleteRow" method. Deleting
-    the python Rowobject instance does <em>not</em> automatically
-    delete the row from the database. For example:</p>
-<pre class="python">
-    reflector.deleteRow(room)
-</pre>
-  </body>
-</html>
+<PRE>
+    updateSQL = reflector.updateRowSQL(room)</PRE>
 
+<H2>Deleting Row Objects</H2>
+
+<P>To delete a row from a database pass the RowObject instance
+for that row to the DBReflector &quot;deleteRow&quot; method.
+Deleting the python Rowobject instance does <EM>not</EM> automatically
+delete the row from the database. For example:</P>
+
+<PRE>
+    reflector.deleteRow(room)</PRE>
+
+</BODY>
+</HTML>

@@ -175,3 +175,6 @@ this file directly.
 038 *{?}* Integrate mbac's client FTP protocol.
 
 039 Remote log viewing and management PB service in lumberjack package.
+
+040 Support for serial data-type in twisted.enterprise.row
+

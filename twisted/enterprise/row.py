@@ -24,6 +24,8 @@ This is an extremely thin wrapper.
 
 import string
 import time
+import traceback
+import weakref
 
 # Twisted Imports
 
@@ -51,20 +53,22 @@ class RowObject:
     instance of objects of this class from database tables.
 
     Once created, the "key column" attributes cannot be changed.
+
+
+    ### Class Attributes that users must supply
+       rowKeyColumns     # list of key columns in form: [(columnName, typeName)]
+       rowTableName      # name of database table
+       rowColumns        # list of the columns in the table with the correct case.
+                         # this will be used to create member variables.
+       rowFactoryMethod  # method to create an instance of this class. HACK: must be in a list!!! [factoryMethod] (optional)
+       rowForeignKeys    # keys to other tables (optional)
+                        
     """
 
-    ### Class Attributes populated by the DBReflector
-
-    dbColumns = []     # list of column names and types for the table I came from
-    dbKeyColumns = []  # list of key columns to identify instances in the db
-    tableName = ""
     populated = 0    # set on the class when the class is "populated" with SQL
     dirty = 0        # set on an instance then the instance is out-of-sync with the database
 
-    ### Class Attributes that users must supply
 
-    rowColumns = []  # list of the columns in the table with the correct case.
-                     # this will be used to create member variables.
 
     def assignKeyAttr(self, attrName, value):
         """Assign to a key attribute.
@@ -73,7 +77,7 @@ class RowObject:
         keys of db objects.
         """
         found = 0
-        for keyColumn, type in self.dbKeyColumns:
+        for keyColumn, type in self.rowKeyColumns:
             if keyColumn == attrName:
                 found = 1
         if not found:
@@ -130,6 +134,12 @@ class RowObject:
         self.__dict__["dirty"] = flag
 
 
+    def getKeyTuple(self):
+        keys = []
+        keys.append(self.rowTableName)
+        for keyName, keyType in self.rowKeyColumns:
+            keys.append( getattr(self, keyName) )
+        return tuple(keys)
 
 def defaultFactoryMethod(rowClass, data, kw):
     """Used by loadObjects to create rowObject instances.
@@ -140,29 +150,54 @@ def defaultFactoryMethod(rowClass, data, kw):
 
 
 class _TableInfo:
-    """(Internal)
+    """(internal)
 
-    A collection of attributes related to a class / table union.
+    Info about a table/class and it's relationships. Also serves as a container for
+    generated SQL.
     """
-    def __init__(self,
-                 rowClass,
-                 tableName,
-                 dbColumns,
-                 dbKeyColumns,
-                 selectSQL,
-                 updateSQL,
-                 insertSQL,
-                 deleteSQL):
-        "Initialize me."
-        self.rowClass = rowClass
-        self.tableName = tableName
-        self.dbColumns = dbColumns
-        self.dbKeyColumns = dbKeyColumns
-        self.selectSQL = selectSQL
-        self.updateSQL = updateSQL
-        self.insertSQL = insertSQL
-        self.deleteSQL = deleteSQL
+    def __init__(self, rc):
+        self.rowClass = rc
+        self.rowTableName = rc.rowTableName
+        self.rowKeyColumns = rc.rowKeyColumns
+        
+        if hasattr(rc, "rowForeignKeys"):
+            self.rowForeignKeys = rc.rowForeignKeys
+        else:
+            self.rowForeignKeys = []
 
+        if hasattr(rc, "rowFactoryMethod"):
+            if rc.rowFactoryMethod:
+                self.rowFactoryMethod = rc.rowFactoryMethod
+            else:
+                self.rowFactoryMethod = [defaultFactoryMethod]
+        else:
+            self.rowFactoryMethod = [defaultFactoryMethod]
+
+        self.selectSQL = None
+        self.updateSQL = None
+        self.deleteSQL = None
+        self.insertSQL = None
+        self.childTables = []
+        self.dbColumns = []
+
+    def addForeignKey(self, childTableName, childColumns, localColumns, childRowClass):
+        self.childTables.append( _TableRelationship(childTableName, localColumns, childColumns, childRowClass) )
+
+class _TableRelationship:
+    """(Internal)
+    
+    A foreign key relationship between two tables.
+    """
+    def __init__(self, childTableName,
+                 parentColumns,
+                 childColumns,
+                 childRowClass):
+        self.childTableName = childTableName            
+        self.parentColumns = parentColumns
+        self.childColumns = childColumns
+        self.childRowClass = childRowClass
+        
+        
 class DBReflector(adbapi.Augmentation):
     """I reflect on a database and load RowObjects from it.
 
@@ -174,7 +209,7 @@ class DBReflector(adbapi.Augmentation):
     """
     populated = 0
 
-    def __init__(self, dbpool, stubs, populatedCallback):
+    def __init__(self, dbpool, rowClasses, populatedCallback):
         """
         Initialize me against a database.
 
@@ -182,24 +217,96 @@ class DBReflector(adbapi.Augmentation):
 
           * dbpool: a database pool.
 
-          * stubs: a set of definitions of classes to construct, of the form [
-            (StubClass, databaseTableName, KeyColumns) ]
+          * rowClasses: a list of row class objects that describe the database schema.
 
-            Each StubClass is a user-defined class that the
-            constructed class will be constructed from.  It should be
-            derived from RowObject.
-
+          * populatedCallback: method to be called when all database initialization is done
         """
 
         adbapi.Augmentation.__init__(self, dbpool)
-        self.stubs = stubs
-        self.rowClasses = {}
+        self.rowCache = weakref.WeakValueDictionary() # doesnt hold references to cached rows.
+        self.rowClasses = rowClasses
+        self.schema = {}
         self.populatedCallback = populatedCallback
         self._populate()
 
-    def loadObjectsFrom(self, tableName, keyColumns, data, rowClass,
-                        whereClause = "1 = 1",
-                        factoryMethod = defaultFactoryMethod):
+
+    def _populate(self):
+        
+        # egregiously bad hack, obviously, but we need to avoid calling a
+        # cached callback before persistence is really done, and while the
+        # mainloop is not running.  I'm not sure what the correct behavior here
+        # should be. --glyph
+        
+        from twisted.internet import reactor
+        reactor.callLater(0, self._really_populate)
+
+    def _really_populate(self):
+        self.runInteraction(self._transPopulateSchema).addCallbacks(
+            self.populatedCallback)
+
+    def _transPopulateSchema(self, transaction):
+        """Used to construct the row classes in a single interaction.
+        """
+        for rc in self.rowClasses:
+            if not issubclass(rc, RowObject):
+                raise DBError("Stub class (%s) is not derived from RowObject" % str(rc.rowClass))
+
+            self._populateSchemaFor(transaction, rc)
+        self.populated = 1
+
+    def _populateSchemaFor(self, transaction, rc):
+        """construct all the SQL for database operations on <tableName> and
+        populate the class <rowClass> with that info.
+        NOTE: works with Postgresql for now...
+        NOTE: 26 - 29 are system column types that you shouldn't use...
+
+        """
+        attributes = ("rowColumns", "rowKeyColumns", "rowTableName" )
+        for att in attributes:
+            if not hasattr(rc, att):
+                raise DBError("RowClass must have class variable: %s" % att)
+            
+        tableInfo = _TableInfo(rc)
+        #print "populating: ", tableInfo.rowClass, tableInfo.rowTableName        
+        sql = """
+          SELECT pg_attribute.attname, pg_type.typname, pg_attribute.atttypid
+          FROM pg_class, pg_attribute, pg_type
+          WHERE pg_class.oid = pg_attribute.attrelid
+          AND pg_attribute.atttypid = pg_type.oid
+          AND pg_class.relname = '%s'
+          AND pg_attribute.atttypid not in (26,27,28,29)\
+        """ % tableInfo.rowTableName
+
+        # get the columns for the table
+        try:
+            transaction.execute(sql)
+        except ValueError, e:
+            log.msg("No data trying to populate schema <%s>. [%s] SQL was: '%s'" % (tableInfo.rowTableName,  e, sql))
+            raise e
+        except:
+            log.msg("Unknown ERROR: %s" % sql)
+            raise
+        columns = transaction.fetchall()
+
+        tableInfo.dbColumns = columns
+        tableInfo.selectSQL = self.buildSelectSQL(tableInfo.rowClass, tableInfo.rowTableName, columns, tableInfo.rowKeyColumns)
+        tableInfo.updateSQL = self.buildUpdateSQL(tableInfo.rowClass, tableInfo.rowTableName, columns, tableInfo.rowKeyColumns)
+        tableInfo.insertSQL = self.buildInsertSQL(tableInfo.rowTableName, columns)
+        tableInfo.deleteSQL = self.buildDeleteSQL(tableInfo.rowTableName, tableInfo.rowKeyColumns)
+
+        self.schema[ tableInfo.rowTableName ] = tableInfo
+        
+        # add the foreign key to the parent table.
+        for foreignTableName, localColumns, foreignColumns in tableInfo.rowForeignKeys:
+            self.schema[foreignTableName].addForeignKey(tableInfo.rowTableName, localColumns, foreignColumns, tableInfo.rowClass)
+        
+    def __setstate__(self, state):
+        self.__dict__ = state
+        self._populate()
+
+
+    def loadObjectsFrom(self, tableName, data = None, whereClause = "1 = 1", parent = None):
+
         """Load a set of RowObjects from a database.
 
         Create a set of python objects of <rowClass> from the contents
@@ -216,25 +323,22 @@ class DBReflector(adbapi.Augmentation):
                     manager.updateRow(emp)
 
             manager.loadObjectsFrom("employee",
-                                    ["employee_name", "varchar"],
                                     userData,
-                                    employeeFactory,
-                                    EmployeeRow,
                                     "employee_name like 'm%%'"
                                     ).addCallback(gotEmployees)
 
         NOTE: this functionality is experimental. be careful.
         """
-        return self.runInteraction(self._objectLoader, tableName, keyColumns,
-                                   data, rowClass, whereClause, factoryMethod)
+        return self.runInteraction(self._objectLoader, tableName, data, whereClause, parent)
 
-    def _objectLoader(self, transaction, tableName, keyColumns, data, rowClass, whereClause, factoryMethod):
+    def _objectLoader(self, transaction, tableName, data, whereClause, parent):
         """worker method to load objects from a table.
         """
+        tableInfo = self.schema[tableName]
         # get the data from the table
         sql = 'SELECT '
         first = 1
-        for column, typeid, type in rowClass.dbColumns:
+        for column, typeid, type in tableInfo.dbColumns:
             if first:
                 first = 0
             else:
@@ -248,93 +352,72 @@ class DBReflector(adbapi.Augmentation):
         for args in rows:
             kw = {}
             for i in range(0,len(args)):
-                columnName = rowClass.dbColumns[i][0]
-                for attr in rowClass.rowColumns:
+                columnName = tableInfo.dbColumns[i][0]
+                for attr in tableInfo.rowClass.rowColumns:
                     if string.lower(attr) == string.lower(columnName):
                         kw[attr] = args[i]
                         break
-            resultObject = apply(factoryMethod, (rowClass, data, kw) )
+            # find the row in the cache or add it
+            resultObject = self.findInCache(tableInfo.rowClass, kw)
+            if not resultObject:
+                resultObject = apply(tableInfo.rowFactoryMethod[0], (tableInfo.rowClass, data, kw) )
+                self.addToCache(resultObject)                
             results.append(resultObject)
 
+
+        if self.schema[ tableName ]:
+            self.loadChildRows(tableInfo.rowClass, results, transaction, data)
+
+        # NOTE: using the tableName as the container is a temporary measure until containment is figured out.
+        if parent:
+            setattr(parent, tableName, results)
         return results
 
-    def _populate(self):
-        
-        # egregiously bad hack, obviously, but we need to avoid calling a
-        # cached callback before persistence is really done, and while the
-        # mainloop is not running.  I'm not sure what the correct behavior here
-        # should be. --glyph
-        
-        from twisted.internet import reactor
-        reactor.callLater(0, self._really_populate)
-
-    def _really_populate(self):
-        self.runInteraction(self._transPopulateClasses).addCallbacks(
-            self.populatedCallback)
-
-    def _transPopulateClasses(self, transaction):
-        """Used to construct the row classes in a single interaction.
+    def loadChildRows(self, rowClass, rows, transaction, data):
+        """Load the child rows for each row in the set.
         """
-        for (stubClass, tableName, keyColumns) in self.stubs:
-            # log.msg( "retrieving class %s for table %s" %(repr(stubClass), tableName))
-            if not issubclass(stubClass, RowObject):
-                raise DBError("Stub class (%s) is not derived from RowObject" % str(stubClass))
+        for newRow in rows:
+            for relationship in self.schema[ rowClass.rowTableName ].childTables:
+                whereClause = ""
+                first = 1
+                for i in range(0,len(relationship.childColumns)):
+                    if first:
+                        first = 0
+                    else:
+                        whereClause += " AND "
+                    value = quote(getattr(newRow, relationship.parentColumns[i][0]), relationship.parentColumns[i][1])
+                    whereClause += " %s.%s = %s" % (relationship.childTableName,
+                                                        relationship.childColumns[i][0],
+                                                        value)
+                self._objectLoader(transaction,
+                                   relationship.childTableName,
+                                   data,
+                                   whereClause,
+                                   newRow)
 
-            self._populateRowClass(transaction, stubClass, tableName, keyColumns)
-        self.populated = 1
+    def addToCache(self, rowObject):
+        """Should this be recursive?! requires better container knowledge..."""
+        self.rowCache[ rowObject.getKeyTuple() ] = rowObject
+        #print "Adding to Cache <%s> %s" % (keys, rowObject)
 
-    def _populateRowClass(self, transaction, rowClass, tableName, keyColumns):
-        """construct all the SQL for database operations on <tableName> and
-        populate the class <rowClass> with that info.
-        NOTE: works with Postgresql for now...
-        NOTE: 26 - 29 are system column types that you shouldn't use...
+    def findInCache(self, rowClass, kw):
+        keys = []
+        keys.append(rowClass.rowTableName)
+        for keyName, keyType in rowClass.rowKeyColumns:
+            keys.append( kw[keyName] )
+        keyTuple = tuple(keys)
+        if self.rowCache.has_key(keyTuple):
+            #print "found object in cache:", keyTuple
+            return self.rowCache[keyTuple]
+        return None
 
-        """
-        sql = """
-          SELECT pg_attribute.attname, pg_type.typname, pg_attribute.atttypid
-          FROM pg_class, pg_attribute, pg_type
-          WHERE pg_class.oid = pg_attribute.attrelid
-          AND pg_attribute.atttypid = pg_type.oid
-          AND pg_class.relname = '%s'
-          AND pg_attribute.atttypid not in (26,27,28,29)\
-        """ % tableName
-
-        # get the columns for the table
-        try:
-            transaction.execute(sql)
-        except ValueError, e:
-            log.msg("No data trying to populate rowclass <%s>. [%s] SQL was: '%s'" % (tableName,  e, sql))
-            raise e
-        except:
-            log.msg("Unknown ERROR: %s" % sql)
-            raise
-        columns = transaction.fetchall()
-
-        # populate rowClass data
-
-        # TODO: peek at 'dbColumns' and 'dbKeyColumns' and make sure
-        # they're the same if the class is already populated
-
-        rowClass.tableName = tableName
-        rowClass.dbColumns = columns
-        rowClass.dbKeyColumns = keyColumns
-        rowClass.populated = 1
-
-        self.rowClasses[str(rowClass)] = _TableInfo(
-            rowClass,
-            tableName,
-            columns,
-            keyColumns,
-            self.buildSelectSQL(rowClass, tableName, columns, keyColumns),
-            self.buildUpdateSQL(rowClass, tableName, columns, keyColumns),
-            self.buildInsertSQL(tableName, columns),
-            self.buildDeleteSQL(tableName, keyColumns))
-        return rowClass
-
-    def __setstate__(self, state):
-        self.__dict__ = state
-        self._populate()
-
+    def removeFromCache(self, rowObject):
+        """should this be recursive!??"""
+        key = rowObject.getKeyTuple()
+        if not self.rowCache.has_key(key):
+            raise DBError("Row object not in cache: %s", rowObject)
+        del self.rowCache[key]
+        
     def getTableInfo(self, rowObject):
         """Get a TableInfo record about a particular instance.
 
@@ -352,7 +435,7 @@ class DBReflector(adbapi.Augmentation):
             not previously registered.
         """
         try:
-            return self.rowClasses[str(rowObject.__class__)]
+            return self.schema[rowObject.rowTableName]
         except KeyError:
             raise DBError("class %s was not registered with %s" % (
                 rowObject.__class__, self))
@@ -460,13 +543,15 @@ class DBReflector(adbapi.Augmentation):
         """build SQL to update my current state.
         """
         args = []
+        tableInfo = self.schema[rowObject.rowTableName]
         # build update attributes
-        for column, type, typeid in rowObject.dbColumns:
+        for column, type, typeid in tableInfo.dbColumns:
             if not getKeyColumn(rowObject.__class__, column):
                 args.append(rowObject.findAttribute(column))
         # build where clause
-        for keyColumn, type in rowObject.dbKeyColumns:
+        for keyColumn, type in tableInfo.rowKeyColumns:
             args.append( rowObject.findAttribute(keyColumn))
+
         return self.getTableInfo(rowObject).updateSQL % tuple(args)
 
 
@@ -482,8 +567,9 @@ class DBReflector(adbapi.Augmentation):
         """build SQL to insert my current state.
         """
         args = []
+        tableInfo = self.schema[rowObject.rowTableName]        
         # build values
-        for column, type, typeid in rowObject.dbColumns:
+        for column, type, typeid in tableInfo.dbColumns:
             args.append(rowObject.findAttribute(column))
         return self.getTableInfo(rowObject).insertSQL % tuple(args)
 
@@ -492,14 +578,16 @@ class DBReflector(adbapi.Augmentation):
         """
         rowObject.setDirty(0)
         sql = self.insertRowSQL(rowObject)
+        self.addToCache(rowObject)
         return self.runOperation(sql)
 
     def deleteRowSQL(self, rowObject):
         """build SQL to delete me from the db.
         """
         args = []
+        tableInfo = self.schema[rowObject.rowTableName]        
         # build where clause
-        for keyColumn, type in rowObject.dbKeyColumns:
+        for keyColumn, type in tableInfo.rowKeyColumns:
             args.append(rowObject.findAttribute(keyColumn))
 
         return self.getTableInfo(rowObject).deleteSQL % tuple(args)
@@ -508,12 +596,14 @@ class DBReflector(adbapi.Augmentation):
         """delete the row for this object from the database.
         """
         sql = self.deleteRowSQL(rowObject)
+        self.removeFromCache(rowObject)
         return self.runOperation(sql)
 
     def selectRowSQL(self, rowObject):
         args = []
+        tableInfo = self.schema[rowObject.rowTableName]        
         # build where clause
-        for keyColumn, type in rowObject.dbKeyColumns:
+        for keyColumn, type in tableInfo.rowKeyColumns:
             args.append(rowObject.findAttribute(keyColumn))
         return self.getTableInfo(rowObject).selectSQL % tuple(args)
 
@@ -529,16 +619,15 @@ class DBReflector(adbapi.Augmentation):
         if len(data) == 0:
             raise DBError("select data was empty")
         actualPos = 0
-        for i in range(0, len(rowObject.dbColumns)):
-            if not getKeyColumn(rowObject.__class__, rowObject.dbColumns[i][0] ):
+        tableInfo = self.schema[rowObject.rowTableName]        
+        for i in range(0, len(tableInfo.dbColumns)):
+            if not getKeyColumn(rowObject.__class__, tableInfo.dbColumns[i][0] ):
                 for col in rowObject.rowColumns:
-                    if string.lower(col) == string.lower(rowObject.dbColumns[i][0]):
+                    if string.lower(col) == string.lower(tableInfo.dbColumns[i][0]):
                         setattr(rowObject, col, data[0][actualPos] )
                 actualPos = actualPos + 1
         rowObject.setDirty(0)
         return rowObject
-
-
 
 
 class KeyFactory:
@@ -595,7 +684,8 @@ dbTypeMap = {
 ### Utility functions
 
 def getKeyColumn(rowClass, name):
-    for keyColumn, type in rowClass.dbKeyColumns:
+
+    for keyColumn, type in rowClass.rowKeyColumns:
         if string.lower(name) == keyColumn:
             return name
     return None
