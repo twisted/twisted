@@ -4,11 +4,14 @@ function onkeyevent(theEvent)
         theEvent = event
     }
 	code = theEvent.keyCode;
-	if (code==13) {
+	if (code==13 || code==10) {
 		var inputText = document.getElementById('inputText')
-		send(inputText.value)
+		send('None', inputText.value)
 	}
+        
 }
+
+document.onkeypress = onkeyevent
 
 function send(recipient, text) {
     if (text) {
@@ -17,7 +20,7 @@ function send(recipient, text) {
         // and changed it to italics on receive :D
         var inputText = document.getElementById("inputText")
         inputText.value = ""
-        inputText.focus()
+        focusInput() // inputText.focus()
     }
 }
 
@@ -32,7 +35,8 @@ function recv(stuff) {
 }
 
 function focusInput() {
-    document.getElementById('inputText').focus()
+    foo = document.getElementById('inputText')
+    foo.focus()
+    foo.onkeypress = onkeyevent
 }
 
-document.onkeypress = onkeyevent

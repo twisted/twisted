@@ -4,6 +4,8 @@ from twisted.web import server, static, script, trp
 from twisted.spread import pb
 from twisted.manhole import service
 from twisted import words
+import twisted.words.service
+import twisted.words.ircservice
 application = app.Application("issueconduit")
 
 r = repo.IssueRepository("twisted.issues", application)
@@ -22,3 +24,4 @@ web = server.Site(root)
 bkr = pb.BrokerFactory(pb.AuthRoot(application))
 application.listenTCP(8787, bkr)
 application.listenTCP(8080, web)
+application.listenTCP(6667, words.ircservice.IRCGateway(word))
