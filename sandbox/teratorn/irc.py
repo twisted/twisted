@@ -43,7 +43,7 @@ Test coverage needs to be better.
 <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-__version__ = '$Revision: 1.3 $'[11:-2]
+__version__ = '$Revision: 1.4 $'[11:-2]
 
 from twisted.internet import reactor, protocol, defer
 from twisted.persisted import styles
@@ -359,7 +359,7 @@ class IncomingDccFile(protocol.ClientFactory):
 
     The L{IRCClient.gotIncomingFile} method will receive an instance of this class for each DCC SEND we receive.
     .
-    You should store and manage this instance outside of the originating IRCClient. Once they are established, DCC sessions may operate independantly of the irc protocol. Thus we shouldn't be forced to keep stale IRCClient's around because they contain information about active DCC sessions."""
+    You should store and manage this instance outside of the originating IRCClient. Once they are established, DCC sessions may operate independently of the IRC protocol. Thus we shouldn't be forced to keep stale IRCClient's around because they contain information about active DCC sessions."""
     protocol = DccFileWriter
     accepted = False
     resume_overwrite = False
@@ -453,12 +453,12 @@ class IncomingDccFile(protocol.ClientFactory):
         self._makeConnection()        # a transfer where we asked to resume
    
     def _makeConnection(self):
+        self._ircClient._incomingDccFiles.remove(self)
         # at this point, we don't need a reference to the IRCClient any more
         del self._ircClient
         reactor.connectTCP(self.address, self.port, self)
         
     def buildProtocol(self, addr):
-        print 'protocol'
         self.protocol_instance = self.protocol(self)
         return self.protocol_instance
 
@@ -467,17 +467,22 @@ class DccFileReader(protocol.Protocol, styles.Ephemeral):
     def connectionMade(self):
         self.factory.listeningPort.stopListening()
         d = basic.FileSender().beginFileTransfer(self.factory.file_obj, self.transport)
+        d.addBoth(self._cbFileSenderDone)
         d.chainDeferred(self.factory.deferred)
         
     def dataReceived(self, data):
         print 'dataReceived:', repr(data)
 
+    def _cbFileSenderDone(self, arg):
+        self.transport.loseConnection()
+        return arg
+
 class OutgoingDccFile(protocol.Factory):
     """An outgoing DCC file offer - don't use this class directly - use L{IRCClient.sendFile} instead.
 
-    When you call sendFile() an instance of this class will be returned to you. These instances contain a 'deferred' attribute which will callback once the file is successfully sent, or errback if some bad happend along the way..
+    When you call sendFile() an instance of this class will be returned to you. These instances contain a 'deferred' attribute which will callback once the file is successfully sent, or errback if something bad happened along the way.
     
-    You should store and manage this instance outside of the originating IRCClient. Once they are established, DCC sessions may operate independantly of the irc protocol. Thus we shouldn't be forced to keep stale IRCClient's around because they contain information about active DCC sessions."""
+    You should store and manage this instance outside of the originating IRCClient. Once they are established, DCC sessions may operate independently of the IRC protocol. Thus we shouldn't be forced to keep stale IRCClient's around because they contain information about active DCC sessions."""
     protocol = DccFileReader
     def __init__(self, file_obj, user, ircClient, mode=None, resumable=True):
         # XXX resumable
@@ -514,7 +519,8 @@ class OutgoingDccFile(protocol.Factory):
         self.resumePos = resumePos
 
     def buildProtocol(self, addr):
-        # we don't need our reference to the ircClient any more
+        self._ircClient._outgoingDccFiles.remove(self)
+        # we don't need our reference to the IRCClient any more
         del self._ircClient
         self.protocol_instance = self.protocol()
         self.protocol_instance.factory = self
@@ -600,10 +606,12 @@ class IRCClient(basic.LineReceiver):
 
     delimiter = '\n' # '\r\n' will also work (see dataReceived)
 
-    incomingDccFiles = []
-    outgoingDccFiles = []
     incomingDccFileClass = IncomingDccFile
     outgoingDccFileClass = OutgoingDccFile
+
+    _incomingDccFiles = []
+    _outgoingDccFiles = []
+
     default_dcc_destdir = "."
 
     __pychecker__ = 'unusednames=params,prefix,channel'
@@ -1308,10 +1316,6 @@ class IRCClient(basic.LineReceiver):
         @param incomingFile: An instance of IncomingDccFile"""
         incomingFile.reject()
 
-    def _cbIncomingFileDone(self, arg, incomingFile):
-        self.incomingDccFiles.remove(incomingFile)
-        return arg
-
     def dcc_TSEND(self, user, channel, data):
         self.dcc_SEND(user, channel, data, mode='turbo')
 
@@ -1338,8 +1342,7 @@ class IRCClient(basic.LineReceiver):
                 pass
 
         incomingFile = self.incomingDccFileClass(self, user, address, port, filename, size, mode)
-        self.incomingDccFiles.append(incomingFile)
-        incomingFile.deferred.addBoth(self._cbIncomingFileDone, incomingFile)
+        self._incomingDccFiles.append(incomingFile)
         self.gotIncomingFile(incomingFile)
  
     def dcc_ACCEPT(self, user, channel, data):
@@ -1372,13 +1375,8 @@ class IRCClient(basic.LineReceiver):
             raise "srcfile must be a string or file-like-object"
 
         outgoingFile = self.outgoingDccFileClass(file_obj, user, self, mode, resumable)
-        self.outgoingDccFiles.append(outgoingFile)
-        outgoingFile.deferred.addBoth(self._cbOutgoingFileDone, outgoingFile)
+        self._outgoingDccFiles.append(outgoingFile)
         return outgoingFile
-
-    def _cbOutgoingFileDone(self, arg, outgoingFile):
-        self.outgoingDccFiles.remove(outgoingFile)
-        return arg
 
     def dcc_RESUME(self, user, channel, data):
         data = text.splitQuoted(data)
