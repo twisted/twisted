@@ -14,9 +14,9 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import re, os, cStringIO, time, cgi, glob
+import re, os, cStringIO, time, cgi, glob, string
 from twisted import copyright
-from twisted.python import htmlizer
+from twisted.python import htmlizer, text
 from twisted.web import microdom, domhelpers
 
 
@@ -84,7 +84,10 @@ def addPyListings(document, d):
                                                      "py-listing"):
         fn = node.getAttribute("href")
         outfile = cStringIO.StringIO()
-        htmlizer.filter(open(os.path.join(d, fn)), outfile)
+        lines = map(string.rstrip, open(os.path.join(d, fn)).readlines())
+        data = '\n'.join(lines[int(node.getAttribute('skipLines', 0)):])
+        data = cStringIO.StringIO(text.removeLeadingTrailingBlanks(data))
+        htmlizer.filter(data, outfile)
         val = outfile.getvalue()
         _replaceWithListing(node, val, fn)
 

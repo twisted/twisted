@@ -19,7 +19,7 @@ from twisted.lore import tree
 from twisted.web import domhelpers
 from twisted.python import reflect
 
-import parser, urlparse
+import parser, urlparse, os.path
 
 class TagChecker:
 
@@ -133,6 +133,20 @@ class TagChecker:
                 if text != node.getAttribute('href',''):
                     self._reportError(filename, node, 
                                       'link text does not match href')
+
+    def check_a_py_listing(self, dom, filename):
+        for node in domhelpers.findNodesNamed(dom, 'a'):
+            if node.getAttribute('class') == 'py-listing':
+                fn = os.path.join(os.path.dirname(filename), 
+                                  node.getAttribute('href'))
+                lines = open(fn).readlines()
+                lines = lines[int(node.getAttribute('skipLines', 0)):]
+                for line, num in zip(lines, range(len(lines))):
+                    if line.count('59 Temple Place, Suite 330, Boston'):
+                        self._reportError(filename, node,
+                            'included source file %s has licence boilerplate.'
+                            '  Use skipLines="%d".'
+                            % (fn, int(node.getAttribute('skipLines',0))+num+1))
 
 
 def list2dict(l):

@@ -17,7 +17,7 @@
 
 from twisted.web import microdom, domhelpers
 from twisted.python import text
-import os, re
+import os, re, string
 from cStringIO import StringIO
 
 import urlparse
@@ -134,7 +134,9 @@ class LatexSpitter(BaseLatexSpitter):
     def visitNode_a_listing(self, node):
         fileName = os.path.join(self.currDir, node.getAttribute('href'))
         self.writer('\\begin{verbatim}\n')
-        self.writer(open(fileName).read())
+        lines = map(string.rstrip, open(fileName).readlines())
+        lines = lines[int(node.getAttribute('skipLines', 0)):]
+        self.writer(text.removeLeadingTrailingBlanks('\n'.join(lines)))
         self.writer('\\end{verbatim}')
         # Write a caption for this source listing
         self.writer('\\begin{center}\\raisebox{1ex}[1ex]{Source listing for '
