@@ -27,6 +27,9 @@ from twisted import cred
 import twisted.cred.portal
 import twisted.cred.checkers
 
+from zope.interface import implements
+
+
 # request, prefixed by random CRLFs
 request1 = "\n\r\n\n\r" + """\
 INVITE sip:foo SIP/2.0
@@ -306,12 +309,12 @@ class ParseTestCase(unittest.TestCase):
 
 
 class DummyLocator:
-    __implements__ = sip.ILocator,
+    implements(sip.ILocator)
     def getAddress(self, logicalURL):
         return defer.succeed(sip.URL("server.com", port=5060))
 
 class FailingLocator:
-    __implements__ = sip.ILocator,
+    implements(sip.ILocator)
     def getAddress(self, logicalURL):
         return defer.fail(LookupError())
     

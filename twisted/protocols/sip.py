@@ -28,9 +28,10 @@ import random
 import time
 import md5
 import sys
+from zope.interface import implements
 
 # twisted imports
-from twisted.python import log, util
+from twisted.python import log, util, components
 from twisted.internet import protocol, defer, reactor
 from twisted.python.components import Interface
 
@@ -904,7 +905,7 @@ class BasicAuthorizer:
     This form of authentication is broken and insecure.  Do not use it.
     """
 
-    __implements__ = (IAuthorizer,)
+    implements(IAuthorizer)
     
     def getChallenge(self, peer):
         return None
@@ -925,6 +926,9 @@ class BasicAuthorizer:
         if len(p) == 2:
             return cred.credentials.UsernamePassword(*p)
         raise SIPError(400)
+
+components.backwardsCompatImplements(BasicAuthorizer)
+
 
 class DigestedCredentials(cred.credentials.UsernameHashedPassword):
     """Yet Another Simple Digest-MD5 authentication scheme"""
@@ -963,7 +967,7 @@ class DigestedCredentials(cred.credentials.UsernameHashedPassword):
 class DigestAuthorizer:
     CHALLENGE_LIFETIME = 15
     
-    __implements__ = (IAuthorizer,)
+    implements(IAuthorizer)
     
     def __init__(self):
         self.outstanding = {}
@@ -999,6 +1003,9 @@ class DigestAuthorizer:
             return DigestedCredentials(username, auth, self.outstanding)
         except:
             raise SIPError(400)
+
+components.backwardsCompatImplements(DigestAuthorizer)
+
 
 class RegisterProxy(Proxy):
     """A proxy that allows registration for a specific domain.
@@ -1146,7 +1153,7 @@ class RegisterProxy(Proxy):
 class InMemoryRegistry:
     """A simplistic registry for a specific domain."""
 
-    __implements__ = IRegistry, ILocator
+    implements(IRegistry, ILocator)
     
     def __init__(self, domain):
         self.domain = domain # the domain we handle registration for
@@ -1198,3 +1205,5 @@ class InMemoryRegistry:
 
     def unregisterAddress(self, domainURL, logicalURL, physicalURL):
         return self._expireRegistration(logicalURL.username)
+
+components.backwardsCompatImplements(InMemoryRegistry)
