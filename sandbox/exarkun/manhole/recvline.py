@@ -7,37 +7,42 @@ class RecvLineHandler:
     width = 80
     height = 24
 
-    def __init__(self, proto, historyFilename=None):
+    def __init__(self, proto):
         self.proto = proto
-        self.historyFilename = historyFilename
-        self._loadHistory()
+
+        # A list containing the characters making up the current line
+        self.lineBuffer = []
+
+        # A zero-based (wtf else?) index into self.lineBuffer.
+        # Indicates the current cursor position.
+        self.lineBufferIndex = 0
 
         # Hmm, state sucks.  Oh well.
         # For now we will just take over the whole terminal.
         self.proto.eraseDisplay()
-        self.proto.setMode([insults.IRM])
-        self.proto.cursorPosition(2, self.height - 2)
+        self.proto.cursorPosition(0, self.height)
+        self.setInsertMode()
 
+        # A map of keyIDs to bound instance methods.
         self.keyHandlers = {
-            proto.UP_ARROW: self.handle_UP,
-            proto.DOWN_ARROW: self.handle_DOWN,
             proto.LEFT_ARROW: self.handle_LEFT,
             proto.RIGHT_ARROW: self.handle_RIGHT,
             '\r': self.handle_RETURN,
             '\x7f': self.handle_BACKSPACE}
 
-    def _loadHistory(self):
-        if self.historyFilename is not None:
-            self.history = list(file(self.historyFilename))
-        else:
-            self.history = []
-        self.history.append('')
-        self.historyPosition = len(self.history) + 1
+    def setInsertMode(self):
+        self.mode = 'insert'
+        self.proto.setMode([insults.IRM])
+
+    def setTypeoverMode(self):
+        self.mode = 'typeover'
+        self.proto.resetMode([insults.IRM])
 
     def terminalSize(self, width, height):
+        # XXX - Clear the previous input line, redraw it at the new cursor position
         self.width = width
         self.height = height
-        self.proto.cursorPosition(2, self.height - 2)
+        self.proto.cursorPosition(0, self.height)
 
     def unhandledControlSequence(self, seq):
         pass
@@ -53,45 +58,45 @@ class RecvLineHandler:
         if m is not None:
             m()
         elif keyID in string.printable:
-            self.history[-1] += keyID
+            if self.mode == 'insert':
+                self.lineBuffer.insert(self.lineBufferIndex, keyID)
+            else:
+                self.lineBuffer[self.lineBufferIndex:self.lineBufferIndex+1] = [keyID]
+            self.lineBufferIndex += 1
             self.proto.write(keyID)
-
-    def displayLine(self, line):
-        self.proto.cursorPosition(2, self.height - 2)
-        self.proto.eraseLine()
-        self.proto.write(line)
-
-    def resetInputLine(self):
-        self.history[-1] = self.history[self.historyPosition]
-        self.displayLine(self.history[-1])
-
-    def handle_UP(self):
-        if self.historyPosition > 0:
-            self.historyPosition -= 1
-            self.resetInputLine()
-
-    def handle_DOWN(self):
-        if self.historyPosition < len(self.history) - 1:
-            self.historyPosition += 1
-            self.resetInputLine()
+        else:
+            print 'Received', repr(keyID)
 
     def handle_LEFT(self):
-        self.proto.cursorBackward()
+        if self.lineBufferIndex > 0:
+            self.lineBufferIndex -= 1
+            self.proto.cursorBackward()
 
     def handle_RIGHT(self):
-        self.proto.cursorForward()
+        if self.lineBufferIndex < len(self.lineBuffer):
+            self.lineBufferIndex += 1
+            self.proto.cursorForward()
 
     def handle_BACKSPACE(self):
-        if self.history[-1]:
+        if self.lineBufferIndex > 0:
+            self.lineBufferIndex -= 1
+            del self.lineBuffer[self.lineBufferIndex]
             self.proto.cursorBackward()
             self.proto.deleteCharacter()
-            self.history[-1] = self.history[-1][:-1]
 
     def handle_DELETE(self):
-        self.proto.deleteCharacter()
+        if self.lineBufferIndex < len(self.lineBuffer) - 1:
+            del self.lineBuffer[self.lineBufferIndex]
+            self.proto.deleteCharacter()
 
     def handle_RETURN(self):
-        self.history.append('')
-        self.historyPosition = len(self.history)
+        line = ''.join(self.lineBuffer)
+        self.lineBuffer = []
+        self.lineBufferIndex = 0
         self.proto.eraseLine()
-        self.proto.cursorPosition(2, self.height - 2)
+        self.proto.cursorPosition(0, self.height)
+
+        self.lineReceived(line)
+
+    def lineReceived(self, line):
+        print 'Received line!', repr(line)

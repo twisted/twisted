@@ -1,9 +1,8 @@
 
 import random, string
 
-from twisted.application import internet, service
-from twisted.internet import protocol, task
-from twisted.protocols import telnet
+from twisted.application import service
+from twisted.internet import task
 from twisted.python import log
 
 import insults
@@ -177,37 +176,9 @@ class DemoHandler(insults.TerminalListener):
         self._call.start(self.interval)
 
 
-from telnet import TelnetBootstrapProtocol
-
-class SillyProtocol(insults.ServerProtocol):
-    handlerFactory = DemoHandler
-
-class SillyBootstrap(TelnetBootstrapProtocol):
-    protocol = SillyProtocol
-
-from twisted.python import components
-from ssh import session, TerminalUser, TerminalSession, TerminalSessionTransport, ConchFactory
-
-class DemoSessionTransport(TerminalSessionTransport):
-    protocolFactory = SillyProtocol
-
-class DemoSession(TerminalSession):
-    transportFactory = DemoSessionTransport
-
-components.registerAdapter(DemoSession, TerminalUser, session.ISession)
-
-def makeService(args):
-    f = protocol.ServerFactory()
-    f.protocol = SillyBootstrap
-    tsvc = internet.TCPServer(args['telnet'], f)
-
-    f = ConchFactory()
-    csvc = internet.TCPServer(args['ssh'], f)
-
-    m = service.MultiService()
-    tsvc.setServiceParent(m)
-    csvc.setServiceParent(m)
-    return m
-
 application = service.Application("Insults Demo App")
-makeService({'telnet': 6023, 'ssh': 6022}).setServiceParent(application)
+
+from demolib import makeService
+makeService({'handler': DemoHandler,
+             'telnet': 6023,
+             'ssh': 6022}).setServiceParent(application)
