@@ -167,8 +167,12 @@ class WebClientTestCase(unittest.TestCase):
         
 
     def testRedirect(self):
-        self.assertEquals(unittest.deferredResult(client.getPage(self.getURL("redirect"))),
-                          "0123456789")
+        self.assertEquals("0123456789",
+            unittest.deferredResult(client.getPage(self.getURL("redirect"))))
+        f = unittest.deferredError(client.getPage(self.getURL("redirect"), 
+                                                  followRedirect = 0))
+        f.trap(error.PageRedirect)
+        self.assertEquals(f.value.location, "/file")
 
     def testPartial(self):
         name = self.mktemp()

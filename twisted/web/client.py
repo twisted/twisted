@@ -31,7 +31,7 @@ import urlparse, os, types
 class HTTPPageGetter(http.HTTPClient):
 
     quietLoss = 0
-    
+    followRedirect = 1 
     failed = 0
 
     def connectionMade(self):
@@ -79,15 +79,25 @@ class HTTPPageGetter(http.HTTPClient):
         if not l:
             self.handleStatusDefault()
         url = l[0]
-        scheme, host, port, path = _parse(url, defaultPort=self.transport.addr[1])
-        self.factory.setURL(url)
-
-        if self.factory.scheme == 'https':
-            from twisted.internet import ssl
-            contextFactory = ssl.ClientContextFactory()
-            reactor.connectSSL(self.factory.host, self.factory.port, self.factory, contextFactory)
+        if self.followRedirect:
+            scheme, host, port, path = \
+                _parse(url, defaultPort=self.transport.addr[1])
+            self.factory.setURL(url)
+    
+            if self.factory.scheme == 'https':
+                from twisted.internet import ssl
+                contextFactory = ssl.ClientContextFactory()
+                reactor.connectSSL(self.factory.host, self.factory.port, 
+                                   self.factory, contextFactory)
+            else:
+                reactor.connectTCP(self.factory.host, self.factory.port, 
+                                   self.factory)
         else:
-            reactor.connectTCP(self.factory.host, self.factory.port, self.factory)
+            self.handleStatusDefault()
+            self.factory.noPage(
+                failure.Failure(
+                    error.PageRedirect(
+                        self.status, self.message, location = url)))
         self.quietLoss = 1
         self.transport.loseConnection()
 
@@ -179,7 +189,9 @@ class HTTPClientFactory(protocol.ClientFactory):
     path = None
 
     def __init__(self, url, method='GET', postdata=None, headers=None,
-                 agent="Twisted PageGetter", timeout=0, cookies=None):
+                 agent="Twisted PageGetter", timeout=0, cookies=None,
+                 followRedirect=1):
+        self.protocol.followRedirect = followRedirect
         self.timeout = timeout
         self.agent = agent
 

@@ -26,9 +26,17 @@ class Error(Exception):
     def __init__(self, code, message = None, response = None):
         message = message or http.responses.get(code)
         Exception.__init__(self, code, message, response)
+        self.status = code
 
     def __str__(self):
         return '%s %s' % (self[0], self[1])
+
+class PageRedirect(Error):
+    """A request that resulted in a http redirect """
+    def __init__(self, code, message = None, response = None, location = None):
+        message = message or ("%s to %s" % (http.responses.get(code), location))
+        Error.__init__(self, code, message, response)
+        self.location = location
 
 class ErrorPage(resource.Resource):
     def __init__(self, status, brief, detail):
