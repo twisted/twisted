@@ -22,7 +22,7 @@ from twisted.protocols import irc, protocol
 from twisted.internet import main, app
 
 # system imports
-import string
+import string, time
 
 
 class LogBot(irc.IRCClient):
@@ -30,13 +30,13 @@ class LogBot(irc.IRCClient):
 
     def connectionMade(self):
         self.file = open(self.factory.filename, "a")
-        self.log("[connected]")
+        self.log("[connected at %s]" % time.asctime(time.localtime(time.time())))
         self.setNick("twistedbot")
         self.join(self.factory.channel)
 
     def connectionLost(self):
         irc.IRCClient.connectionLost(self)
-        self.log("[disconnected]")
+        self.log("[disconnected at %s]" % time.asctime(time.localtime(time.time())))
         self.file.close()
 
     def log(self, s):
