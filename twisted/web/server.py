@@ -413,7 +413,7 @@ class Request(pb.Copyable, http.HTTP):
         """Remote version of registerProducer; same interface.
         (requires a remote producer.)
         """
-        self.registerProducer(producer, streaming)
+        self.registerProducer(_RemoteProducerWrapper(producer), streaming)
 
     ### these calls remain local
 
@@ -513,6 +513,12 @@ class Request(pb.Copyable, http.HTTP):
             if '.' in name:
                 return name
         return names[0]
+
+class _RemoteProducerWrapper:
+    def __init__(self, remote):
+        self.resumeProducing = remote.remoteMethod("resumeProducing")
+        self.pauseProducing = remote.remoteMethod("pauseProducing")
+        self.stopProducing = remote.remoteMethod("stopProducing")
 
 
 class Session:

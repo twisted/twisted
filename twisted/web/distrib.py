@@ -37,6 +37,20 @@ import static
 import widgets
 from server import NOT_DONE_YET
 
+class _ReferenceableProducerWrapper(pb.Referenceable):
+    def __init__(self, producer):
+        self.producer = producer
+
+    def remote_resumeProducing(self, issuer):
+        self.producer.resumeProducing()
+
+    def remote_pauseProducing(self, issuer):
+        self.producer.pauseProducing()
+
+    def remote_stopProducing(self, issuer):
+        self.producer.stopProducing()
+
+
 class Request(pb.RemoteCopy, server.Request):
     def setCopyableState(self, state):
         pb.RemoteCopy.setCopyableState(self, state)
@@ -45,7 +59,11 @@ class Request(pb.RemoteCopy, server.Request):
         self.finish           = self.remote.remoteMethod('finish')
         self.setHeader        = self.remote.remoteMethod('setHeader')
         self.setResponseCode  = self.remote.remoteMethod('setResponseCode')
-        self.registerProducer = self.remote.remoteMethod('registerProducer')
+
+    def registerProducer(self, producer, streaming):
+        self.remote.callRemote("registerProducer",
+                               _ReferenceableProducerWrapper(producer),
+                               streaming)
 
 
 pb.setCopierForClass(str(server.Request), Request)
