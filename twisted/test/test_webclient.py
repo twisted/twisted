@@ -50,6 +50,7 @@ class RawCookieMirrorResource(resource.Resource):
     def render(self, request):
         return repr(request.getHeader('cookie'))
 
+
 class WebClientTestCase(unittest.TestCase):
     def _listen(self, site):
         return reactor.listenTCP(0, site, interface="127.0.0.1")
@@ -128,10 +129,16 @@ class WebClientTestCase(unittest.TestCase):
         self.failUnless(f.check(IOError))
         os.unlink("unwritable")
 
-    def testError(self):
+    def testServerError(self):
         f = unittest.deferredError(client.getPage(self.getURL("nosuchfile")))
         f.trap(error.Error)
+        self.assertEquals(f.value.args[0], "404")
 
+    def testDownloadServerError(self):
+        f = unittest.deferredError(client.downloadPage(self.getURL("nosuchfile"), "nosuchfile"))
+        f.trap(error.Error)
+        self.assertEquals(f.value.args[0], "404")
+        
     def testFactoryInfo(self):
         url = self.getURL('file')
         scheme, host, port, path = client._parse(url)
