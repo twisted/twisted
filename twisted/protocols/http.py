@@ -31,12 +31,10 @@ from cStringIO import StringIO
 import tempfile
 import base64
 import cgi
-import urllib
 import socket
 import math
 import time
 import calendar
-import cgi
 
 # sibling imports
 import basic
@@ -452,7 +450,7 @@ class Request:
             key, pdict = cgi.parse_header(ctype)
             if key == 'application/x-www-form-urlencoded':
                 args.update(
-                    cgi.parse_qs(self.content.read()))
+                    cgi.parse_qs(self.content.read(), 1))
             elif key == mfd:
                 args.update(
                     cgi.parse_multipart(self.content, pdict))

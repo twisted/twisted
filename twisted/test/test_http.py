@@ -330,6 +330,28 @@ GET /?key=value&multiple=two+words&multiple=more%20words&empty= HTTP/1.0
         testcase = self
         class MyRequest(http.Request):
             def process(self):
+                testcase.assertEquals(self.method, "GET")
+                testcase.assertEquals(self.args["key"], ["value"])
+                testcase.assertEquals(self.args["empty"], [""])
+                testcase.assertEquals(self.args["multiple"], ["two words", "more words"])
+                testcase.didRequest = 1
+                self.finish()
+                
+        self.runRequest(httpRequest, MyRequest)
+
+    def testPOST(self):
+        query = 'key=value&multiple=two+words&multiple=more%20words&empty='
+        httpRequest = '''\
+POST / HTTP/1.0
+Content-Length: %d
+Content-Type: application/x-www-form-urlencoded
+
+%s''' % (len(query), query)
+
+        testcase = self
+        class MyRequest(http.Request):
+            def process(self):
+                testcase.assertEquals(self.method, "POST")
                 testcase.assertEquals(self.args["key"], ["value"])
                 testcase.assertEquals(self.args["empty"], [""])
                 testcase.assertEquals(self.args["multiple"], ["two words", "more words"])
