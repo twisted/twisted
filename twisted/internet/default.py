@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.8 2002/05/20 11:03:28 glyph Exp $
+# $Id: default.py,v 1.9 2002/05/22 08:54:38 itamarst Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -21,7 +21,7 @@
 """
 
 from bisect import insort
-from time import time
+from time import time, sleep
 import os
 import socket
 import signal
@@ -286,6 +286,15 @@ class SelectReactor(PosixReactorBase):
         This will run all selectables who had input or output readiness
         waiting for them.
         """
+        if not reads and not writes and platform.getType() == 'win32':
+            # windows select() exits immediately when no sockets
+            if timeout == None:
+                timeout = 0.1
+            else:
+                timeout = min(timeout, 0.001)
+            sleep(timeout)
+            return
+        
         while 1:
             try:
                 r, w, ignored = select.select(reads.keys(),
