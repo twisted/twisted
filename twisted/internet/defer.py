@@ -24,6 +24,7 @@ Maintainer: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
 
 from __future__ import nested_scopes
+import traceback
 
 # Twisted imports
 from twisted.python import log, failure
@@ -150,9 +151,14 @@ class Deferred:
     default = 0
     paused = 0
     timeoutCall = None
+    # enable .debug to record creation/first-invoker call stacks, and they
+    # will be added to any AlreadyCalledErrors we raise
+    debug = False
 
     def __init__(self):
         self.callbacks = []
+        if self.debug:
+            self.creator = traceback.format_stack()[:-1]
 
     def addCallbacks(self, callback, errback=None,
                      callbackArgs=None, callbackKeywords=None,
@@ -261,7 +267,20 @@ class Deferred:
 
     def _startRunCallbacks(self, result):
         if self.called:
-            raise AlreadyCalledError()
+            if not self.debug:
+                raise AlreadyCalledError
+            extra = "\n"
+            if hasattr(self, "creator"):
+                extra += " C: Deferred was created:\n C:"
+                extra += "".join(self.creator).rstrip().replace("\n","\n C:")
+                extra += "\n"
+            if hasattr(self, "invoker"):
+                extra += " I: First Invoker was:\n I:"
+                extra += "".join(self.invoker).rstrip().replace("\n","\n I:")
+                extra += "\n"
+            raise AlreadyCalledError(extra)
+        if self.debug:
+            self.invoker = traceback.format_stack()[:-2]
         self.called = True
         self.result = result
         if self.timeoutCall:

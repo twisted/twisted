@@ -264,17 +264,128 @@ class DeferredTestCase(unittest.TestCase):
         r = unittest.deferredError(defer.maybeDeferred(lambda: d))
         r.trap(RuntimeError)
 
-    def testAlreadyCalled(self):
-        d = defer.Deferred()
-        d.addCallback(self._callback)
-        d.callback("hello")
-        self.failUnlessRaises(defer.AlreadyCalledError, d.callback, "twice")
+class AlreadyCalledTestCase(unittest.TestCase):
+    def setUp(self):
+        defer.Deferred.debug = True
+    def tearDown(self):
+        defer.Deferred.debug = False
 
-        d = defer.Deferred()
-        d.addCallback(self._callback)
+    def _callback(self, *args, **kw):
+        pass
+    def _errback(self, *args, **kw):
+        pass
+
+    def _call_1(self, d):
         d.callback("hello")
-        self.failUnlessRaises(defer.AlreadyCalledError,
-                              d.errback, failure.Failure(RuntimeError()))
+    def _call_2(self, d):
+        d.callback("twice")
+    def _err_1(self, d):
+        d.errback(failure.Failure(RuntimeError()))
+    def _err_2(self, d):
+        d.errback(failure.Failure(RuntimeError()))
+
+    def testAlreadyCalled_CC(self):
+        d = defer.Deferred()
+        d.addCallbacks(self._callback, self._errback)
+        self._call_1(d)
+        self.failUnlessRaises(defer.AlreadyCalledError, self._call_2, d)
+
+    def testAlreadyCalled_CE(self):
+        d = defer.Deferred()
+        d.addCallbacks(self._callback, self._errback)
+        self._call_1(d)
+        self.failUnlessRaises(defer.AlreadyCalledError, self._err_2, d)
+
+    def testAlreadyCalled_EE(self):
+        d = defer.Deferred()
+        d.addCallbacks(self._callback, self._errback)
+        self._err_1(d)
+        self.failUnlessRaises(defer.AlreadyCalledError, self._err_2, d)
+
+    def testAlreadyCalled_EC(self):
+        d = defer.Deferred()
+        d.addCallbacks(self._callback, self._errback)
+        self._err_1(d)
+        self.failUnlessRaises(defer.AlreadyCalledError, self._call_2, d)
+
+
+    def _count(self, linetype, func, lines, expected):
+        count = 0
+        for line in lines:
+            if (line.startswith(' %s:' % linetype) and
+                line.endswith(' %s' % func)):
+                count += 1
+        self.failUnless(count == expected)
+
+    def _check(self, e, caller, invoker1, invoker2):
+        # make sure the debugging information is vaguely correct
+        lines = e.args[0].split("\n")
+        # the creator should list the creator (testAlreadyCalledDebug) but not
+        # _call_1 or _call_2 or other invokers
+        self._count('C', caller, lines, 1)
+        self._count('C', '_call_1', lines, 0)
+        self._count('C', '_call_2', lines, 0)
+        self._count('C', '_err_1', lines, 0)
+        self._count('C', '_err_2', lines, 0)
+        # invoker should list the first invoker but not the second
+        self._count('I', invoker1, lines, 1)
+        self._count('I', invoker2, lines, 0)
+
+    def testAlreadyCalledDebug_CC(self):
+        d = defer.Deferred()
+        d.addCallbacks(self._callback, self._errback)
+        self._call_1(d)
+        try:
+            self._call_2(d)
+        except defer.AlreadyCalledError, e:
+            self._check(e, "testAlreadyCalledDebug_CC", "_call_1", "_call_2")
+        else:
+            self.fail("second callback failed to raise AlreadyCalledError")
+
+    def testAlreadyCalledDebug_CE(self):
+        d = defer.Deferred()
+        d.addCallbacks(self._callback, self._errback)
+        self._call_1(d)
+        try:
+            self._err_2(d)
+        except defer.AlreadyCalledError, e:
+            self._check(e, "testAlreadyCalledDebug_CE", "_call_1", "_err_2")
+        else:
+            self.fail("second errback failed to raise AlreadyCalledError")
+
+    def testAlreadyCalledDebug_EC(self):
+        d = defer.Deferred()
+        d.addCallbacks(self._callback, self._errback)
+        self._err_1(d)
+        try:
+            self._call_2(d)
+        except defer.AlreadyCalledError, e:
+            self._check(e, "testAlreadyCalledDebug_EC", "_err_1", "_call_2")
+        else:
+            self.fail("second callback failed to raise AlreadyCalledError")
+
+    def testAlreadyCalledDebug_EE(self):
+        d = defer.Deferred()
+        d.addCallbacks(self._callback, self._errback)
+        self._err_1(d)
+        try:
+            self._err_2(d)
+        except defer.AlreadyCalledError, e:
+            self._check(e, "testAlreadyCalledDebug_EE", "_err_1", "_err_2")
+        else:
+            self.fail("second errback failed to raise AlreadyCalledError")
+
+    def testNoDebugging(self):
+        defer.Deferred.debug = False
+        d = defer.Deferred()
+        d.addCallbacks(self._callback, self._errback)
+        self._call_1(d)
+        try:
+            self._call_2(d)
+        except defer.AlreadyCalledError, e:
+            self.failIf(e.args)
+        else:
+            self.fail("second callback failed to raise AlreadyCalledError")
 
 
 class LogTestCase(unittest.TestCase):
