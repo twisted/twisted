@@ -490,7 +490,9 @@ class SaneTestFTPServer(unittest.TestCase):
         self.assertEqual(port, server.dtpPort.getHost().port)
 
         # Hack: clean up the DTP port directly
-        wait(server.dtpPort.stopListening())
+        d = server.dtpPort.stopListening()
+        if d is not None:
+            wait(d)
         server.dtpFactory = None
 
     def testSYST(self):
@@ -560,7 +562,9 @@ class SaneTestFTPServer(unittest.TestCase):
     def tearDown(self):
         # Clean up sockets
         self.client.transport.loseConnection()
-        wait(self.port.stopListening())
+        d = self.port.stopListening()
+        if d is not None:
+            wait(d)
         
         # Clean up temporary directory
         shutil.rmtree(self.directory)
@@ -849,8 +853,9 @@ class FTPClientTests(unittest.TestCase):
                 pass
         finally:
             try:
-                port.stopListening()
-                reactor.iterate()
+                d = port.stopListening()
+                if d is not None:
+                    wait(d)
             except:
                 pass
     
