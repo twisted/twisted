@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.85 $"[11:-2]
+__version__ = "$Revision: 1.86 $"[11:-2]
 
 # Sibling imports
 import interfaces
@@ -564,11 +564,11 @@ class View:
             self.viewStack = (view, self.viewStack)
 
     def handleControllerResults(self, 
-        controllerResult, request, node, controller, view, success):
+        controllerResult, request, node, controller, view):
         """Handle a deferred from a controller.
         """
         self.outstandingCallbacks -= 1
-        if controllerResult is not None:
+        if isinstance(controllerResult, defer.Deferred):
             self.outstandingCallbacks += 1
             controllerResult.addCallback(
                 self.handleControllerResults,
@@ -578,8 +578,10 @@ class View:
                 view)
             controllerResult.addErrback(self.renderFailure, request)
         else:
-            returnNode = self.dispatchResult(request, node, view)
+            viewResult = view.generate(request, node)
+            returnNode = self.dispatchResult(request, node, viewResult)
             self.handleNewNode(request, returnNode)
+        return controllerResult
 
     def handleNewNode(self, request, returnNode):
         if not isinstance(returnNode, defer.Deferred):
