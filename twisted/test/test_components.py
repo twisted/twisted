@@ -267,16 +267,6 @@ class ComponentizedTestCase(unittest.TestCase):
         assert co4 == None
         assert co1 is co3
 
-    def testAdapterStack(self):
-        c = CComp()
-        a = Stacker(c)
-        c.addComponent(a, ignoreClass=1)
-        self.assertEqual(IStacker(c), a)
-        a2 = Stacker(c)
-        c.addComponent(a2, ignoreClass=1, stack=1)
-        self.assertEqual(IStacker(c), a2)
-        self.assertEqual(c.isuper(IStacker, a2), a)
-
 class AdapterTestCase(unittest.TestCase):
     """Test adapters."""
 
