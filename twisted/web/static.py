@@ -88,6 +88,8 @@ class File(resource.Resource, styles.Versioned):
         ".exe": "application/x-executable",
         ".gif": "image/gif",
         ".gtar": "application/x-gtar",
+        ".html": "text/html",
+        ".htm": "text/html",
         ".java": "text/plain",
         ".jpeg": "image/jpeg",
         ".jpg": "image/jpeg",
