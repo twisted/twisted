@@ -32,11 +32,13 @@ import struct
 
 # Twisted imports
 from twisted.python.runtime import platform
-from twisted.internet import defer, protocol
+from twisted.internet import defer, protocol, interfaces
 from twisted.python import log
 from twisted.protocols import dns
 
 class Resolver:
+    __implements__ = (interfaces.IResolver,)
+
     index = 0
 
     factory = None
@@ -57,8 +59,8 @@ class Resolver:
         configuration file.
         
         @type timeout: C{int}
-        @param timeout: Number of seconds after which to fail with a
-        TimeoutError
+        @param timeout: Default number of seconds after which to fail with a
+        C{twisted.internet.defer.TimeoutError}
         
         @raise ValueError: Raised if no nameserver addresses can be found.
         """
@@ -73,8 +75,10 @@ class Resolver:
         if not len(self.servers):
             raise ValueError, "No nameservers specified"
         
+        self.timeout = timeout
+        
         from twisted.internet import reactor
-        self.protocol = dns.DNSClientProtocol(self, timeout)
+        self.protocol = dns.DNSClientProtocol(self)
         reactor.listenUDP(0, self.protocol, maxPacketSize=512)
         
         self.factory = DNSClientFactory(self, timeout)
@@ -104,24 +108,33 @@ class Resolver:
 
     def connectionMade(self, protocol):
         self.connections.append(protocol)
-        for (d, q) in self.pending:
+        # XXX - need to use timeout
+        for (d, q, t) in self.pending:
             protocol.query(q).chainDeferred(d)
         del self.pending[:]
 
 
-    def queryUDP(self, *queries):
+    def queryUDP(self, queries, timeout = None):
         """
         Make a number of DNS queries via UDP.
 
-        @type queries: Any non-zero number of C{dns.Query} instances
+        @type queries: A C{list} of C{dns.Query} instances
         @param queries: The queries to make.
         
+        @type timeout: C{int}
+        @param timeout: Number of seconds after which to give up the query.
+
         @rtype: C{Deferred}
+        @raise C{twisted.internet.defer.TimeoutError}: When the query times
+        out.
         """
-        return self.protocol.query((self.pickServer(), dns.PORT), queries)
+        address = (self.pickServer(), dns.PORT)
+        if timeout is None:
+            timeout = self.timeout
+        return self.protocol.query(address, queries, timeout)
 
 
-    def queryTCP(self, *queries):
+    def queryTCP(self, queries, timeout = None):
         """
         Make a number of DNS queries via TCP.
 
@@ -133,7 +146,7 @@ class Resolver:
         if not len(self.connections):
             from twisted.internet import reactor
             reactor.connectTCP(self.pickServer(), dns.PORT, self.factory)
-            self.pending.append((defer.Deferred(), queries))
+            self.pending.append((defer.Deferred(), queries, timeout))
             return self.pending[-1][0]
         else:
             return self.connections[0].query(queries)
@@ -148,16 +161,22 @@ class Resolver:
         return getOfType
 
 
-    def lookupAddress(self, name):
-        return self.queryUDP(dns.Query(name, dns.A, dns.IN)).addCallback(self.filterAnswers(dns.A))
+    def lookupAddress(self, name, timeout = None):
+        return self.queryUDP(
+            [dns.Query(name, dns.A, dns.IN)], timeout
+        ).addCallback(self.filterAnswers(dns.A))
 
 
-    def lookupMailExchange(self, name):
-        return self.queryUDP(dns.Query(name, dns.MX, dns.IN)).addCallback(self.filterAnswers(dns.MX))
+    def lookupMailExchange(self, name, timeout = None):
+        return self.queryUDP(
+            [dns.Query(name, dns.MX, dns.IN)], timeout
+        ).addCallback(self.filterAnswers(dns.MX))
 
 
-    def lookupNameservers(self, name):
-        return self.queryUDP(dns.Query(name, dns.NS, dns.IN)).addCallback(self.filterAnswers(dns.NS))
+    def lookupNameservers(self, name, timeout = None):
+        return self.queryUDP(
+            [dns.Query(name, dns.NS, dns.IN)], timeout
+        ).addCallback(self.filterAnswers(dns.NS))
 
 
 class ThreadedResolver(Resolver):

@@ -55,6 +55,19 @@ class IConnector(Interface):
         """
 
 
+class IResolver(Interface):
+    
+    def lookupAddress(self, name, timeout = 10):
+        """Resolve the domain name C{name} into an IP address.
+        
+        @type name: C{str}
+        @type timeout: C{int}
+        @rtype: C{Deferred}
+        @raise C{twisted.internet.defer.TimeoutError}: Raised if the name
+        cannot be resolved within the specified timeout period.
+        """
+
+
 class IReactorTCP(Interface):
 
     def listenTCP(self, port, factory, backlog=5, interface=''):

@@ -712,10 +712,11 @@ class DNSClientProtocol(protocol.DatagramProtocol):
     id = 1000
     liveMessages = {}
     
-    def __init__(self, controller, timeout = 10, reissue = 1):
+    timeout = 10
+    reissue = 1
+    
+    def __init__(self, controller):
         self.controller = controller
-        self.startCount = int(timeout / float(reissue))
-        self.reissue = reissue
 
 
     def pickID(self):
@@ -740,7 +741,7 @@ class DNSClientProtocol(protocol.DatagramProtocol):
             i.cancel()
 
 
-    def _reissueQuery(self, message, address, counter):
+    def _reissueQuery(self, message, address, counter, timer):
         if counter <= 0:
             d, _ = self.liveMessages[message.id]
             d.errback(error.TimeoutError(message.queries))
@@ -751,13 +752,13 @@ class DNSClientProtocol(protocol.DatagramProtocol):
             self.liveMessages[message.id] = (
                 d,
                 reactor.callLater(
-                    self.reissue, self._reissueQuery, message, address,
+                    timer, self._reissueQuery, message, address,
                     counter - 1
                 )
             )
 
 
-    def query(self, address, queries):
+    def query(self, address, queries, timeout = None, reissue = None):
         """
         Send out a message with the given queries.
         
@@ -776,11 +777,17 @@ class DNSClientProtocol(protocol.DatagramProtocol):
         id = self.pickID()
         m = Message(id, recDes=1)
         m.queries = queries
+
+        if timeout is None:
+            timeout = self.timeout
+        if reissue is None:
+            reissue = self.reissue
+
         d, _ = self.liveMessages[id] = (
             defer.Deferred(),
             reactor.callLater(
-                self.reissue, self._reissueQuery, m, address,
-                self.startCount
+                reissue, self._reissueQuery, m, address,
+                int(timeout / float(reissue)), reissue
             )
         )
         self.writeMessage(m, address)
@@ -834,7 +841,7 @@ class TCPDNSClientProtocol(protocol.Protocol):
                 d.callback(m)
 
 
-    def query(self, queries):
+    def query(self, queries, timeout = None):
         """
         Send out a message with the given queries.
         
