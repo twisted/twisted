@@ -1,18 +1,25 @@
-Twisted 0.9.1
+Twisted 0.9.2
 
 Quote of the Release:
 
-  <Acapnotic> glyph: why are you being an asshole and insisting on seven bits
-              instead of eight, anyway?
-  <glyph> Acapnotic: because I gave up that bit in exchange for eternal life
+  <matsaleh> glyph has been *trying* to bring me up to speed on twisted
+  <matsaleh> all I know is that if he gets any smarter i'm in trouble
+  <dash> matsaleh: we already are, i think
 
-What's new in 0.9.1?
+What's new in 0.9.2?
 
-  A few bug and "completeness" fixes for PB and the spreadable webserver.
+  InGTKernet, the Twisted.Internet/GTK module, has been re-introduced, this
+  time much more robust than in its previous incarnation. (Servers with delayed
+  events work!)  This allows for writing GUI GTK clients and servers with ease.
 
-  There is now a basic IRC server as well as a client.
+  Logging has been considerably improved aesthetically, and now works properly
+  on platforms that don't support the idiosyncratic Unix version of strftime
+  format characters.
 
-  Benjamin Bruheim contributed an "edna" derivative.
+  twisted.python.rebuild allows for relatively robust reloading on the fly,
+  even in a very stateful persistent server.
+
+  Twisted Reality is now a PB service, and the GTK faucet returns!
 
 What is this?
 

@@ -4,7 +4,7 @@ Copyright information for Twisted.
 """
 
 
-version="0.9.1"
+version="0.9.2"
 
 disclaimer="""
 THIS IS ALPHA QUALITY SOFTWARE AND SHOULD NOT BE USED FOR ANY PURPOSES
