@@ -60,6 +60,17 @@ class Options(usage.Options):
         print "Using %s reactor" % mod
         reflect.namedModule(mod).install()
         
+    def opt_testmodule(self, file):
+        "Module to find a test case for"
+        m = [line.split()[3] for line in open(file).readlines()
+                    if line.startswith('# -*- test-case-name: ')]
+        for module in m:
+            self['modules'].append(module)
+        m = [line.split()[2] for line in open(file).readlines()
+                    if line.startswith('# test-case-name: ')]
+        for module in m:
+            self['modules'].append(module[1:-1])
+
     def opt_module(self, module):
         "Module to test"
         self['modules'].append(module)
