@@ -21,14 +21,22 @@ def keyGenerator():
 generateKey = keyGenerator().next
 
 
-def simplify(seq, indent='  '):
+def simplify(seq, newline='\n', indent='  ', indentlevel = 0):
     lst = []
     strjoin = ''.join
-    indentlevel = 0
+    if indentlevel != 0:
+        yield '\n' + (indent * indentlevel)
     for x in seq:
-        if isinstance(x, (IndentPush, IndentPop)):
-            continue
+        if isinstance(x, IndentPush):
+            indentlevel += 1
+            lst.append(newline + (indent * indentlevel))
+        elif isinstance(x , IndentPop):
+            indentlevel -= 1
+            lst.append(newline + (indent * indentlevel))
         if isinstance(x, StringTypes):
+            if x and x[0] == '<':
+                if (lst and lst[-1].find('\n') == -1):
+                    lst.append(newline + (indent * indentlevel))
             lst.append(x)
         else:
             if lst:
@@ -40,16 +48,33 @@ def simplify(seq, indent='  '):
 
 
 class IStanInstruction(components.Interface):
-    """An object which modifies the current stan virtual machine state.
+    """I modify the current stan virtual machine state.
     """
-    def operate(state):
+    def operate(request, state):
+        """I mutate state in place depending on the operation 
+        I wish to perform upon the virtual machine.
+        """ 
         pass
 
 
 class IStanExpandable(components.Interface):
-    """An object which expands to a list of stan instructions to process.
+    """I expand to a list of stan instructions to process.
     """
     def generate():
+        """I return a list of stan instructions.
+        """
+
+
+class IStanRuntimeRenderable(components.Interface):
+    """I defer the rendering of my content until runtime
+    when some model data is available.
+    """
+    def render(request, model):
+        """I return a dynamically generated list of stan instructions 
+        at runtime.
+        I am given a request and a piece of model data which
+        I may want to take into consideration when expanding.
+        """
         pass
 
 
@@ -106,13 +131,25 @@ class XMLAbominationTagPrototype(object):
         return XMLAbominationTagPrototype(self.name, **kwargs)
     
     def children(self, *items):
-        items = [(not (isinstance(x, XMLAbominationTagPrototype)) and x or x.children()) for x in items]
-        return Tag(self.name, self.attributes, items) 
+        newItems = []
+        for x in items:
+            if not (isinstance(x, XMLAbominationTagPrototype)):
+                if isinstance(x, types.SliceType):
+                    x.stop.setTag(x.start)
+                    newItems.append(x.stop)
+                else:
+                    newItems.append(x)
+            else:
+                print "child", x
+                newItems.append(x.children())
+
+        return Tag(self.name, self.attributes, newItems) 
 
     def with(self, **kwargs):
         return TagWith(self, **kwargs)
     
     def __getitem__(self, items):
+        print "getitem", items
         if not isinstance(items, (list, tuple)):
             items = [items]
         return self.children(*items)
@@ -127,7 +164,20 @@ class Tag(object):
         self.name = name
         self.attributes = attributes
         self.children = items
-    
+
+    def clone(self, deep=1):
+        if not deep:
+            new = XMLAbominationTagPrototype(self.name)
+            new.attributes = self.attributes[:]
+            
+        return Tag(self.name, self.attributes[:], self.children[:])
+
+    def getAttribute(self, name):
+        for attr in self.attributes:
+            if attr.name == name:
+                return attr
+        return None
+
     def generate(self):
         key = generateKey()
         yield '<' + self.name
@@ -151,7 +201,7 @@ class Tag(object):
         yield '>'
         
     def __repr__(self):
-        return '<Tag name=%r id=%s attributes=%r len(children)=%d>' % (self.name, hex(id(self)), self.attributes, len(self.children))
+        return 'Tag(%r, %r, %r)' % (self.name, self.attributes, self.children)
 
 
 class _Nothing(object):
@@ -170,14 +220,14 @@ class TagWith(object):
         self.tag = self.tag.children(*items)
         return self
 
+    def __call__(self, *args, **kwargs):
+        return self.tag(*args, **kwargs)
+
     def __getitem__(self, items):
         if not isinstance(items, (list, tuple)):
             items = [items]
         return self.children(*items)
-        
-    def __call__(self, model, callstack, viewstack):
-        pass
-    
+
     def generate(self):
         pops = []
         if self.model is not _Nothing or self.view is not _Nothing:
@@ -185,9 +235,7 @@ class TagWith(object):
             pops.append(Popper(key))
             if self.view is _Nothing:
                 self.view = View(key)
-            elif callable(self.view):
-                self.view = self.view(key)
-            else:
+            elif isinstance(self.view, StringTypes):
                 ## it's a string; look for a view factory
                 ## xxx not implemented yet
                 self.view = View(key)
@@ -197,9 +245,26 @@ class TagWith(object):
             yield pops.pop()
 
 
+class With(TagWith):
+    __implements__ = IStanExpandable,
+    tag = ""
+    def __init__(self, model=_Nothing, view=_Nothing, pattern=_Nothing):
+        self.model = model
+        self.view = view
+        self.pattern = pattern
+
+    def setTag(self, tag):
+        self.tag = tag
+
+
+_with = With
+
+
 class Attribute(object):
     __implements__ = IStanExpandable,
     def __init__(self, name, value):
+        if name.startswith('_'):
+            name = name[1:]
         self.name = name
         self.value = value
 
@@ -215,22 +280,24 @@ class Attribute(object):
 
 
 class View(object):
-    def __init__(self, key, collected = None):
-        self.key = key
-        if collected is None:
-            self.collected = []
-        else:
-            self.collected = collected
+    __implements__ = IStanRuntimeRenderable
+    def __init__(self, *args):
+        self.collected = []
         self._updaters = [self.update]
+        self.patterns = {}
 
     def __call__(self, **kwargs):
         self.attributes.update(kwargs)
+        return self
 
     def __getitem__(self, items):
         if not isinstance(items, (list, tuple)):
             items = [items]
         self.children.extend(items)
         return self.children
+
+    def getPattern(self, pattern):
+        return self.patterns[pattern].clone()
 
     def update(self, model):
         """The view is being rendered against the given model;
@@ -240,13 +307,17 @@ class View(object):
         """
         pass
 
-    def generate(self, model):
+    def render(self, request, model):
         print "view generated", model, self.collected
         self.children = []
         self.attributes = {}
         for updater in self._updaters:
             updater(model)
-        new = self.collected[0](**self.attributes)[self.children]
+        if not callable(self.collected[0]):
+            new = XMLAbominationTagPrototype(self.collected[0].name, **self.attributes)[self.children]
+            new.attributes.extend(self.collected[0].attributes)
+        else:
+            new = self.collected[0](**self.attributes)[self.children]
         for chunk in new.generate():
             yield chunk
 
@@ -254,12 +325,18 @@ class View(object):
         if self.collected:
             return something
         print "view collecting", something
+        if hasattr(something, 'children'):
+            for child in something.children:
+                pattern = child.getAttribute('pattern')
+                if pattern is not None:
+                    self.patterns[pattern.value] = child
+            print "children", something.children
         self.collected.append(something)
 
 
 class StanInstruction(object):
     __implements__ = IStanInstruction
-    def operate(self, state):
+    def operate(self, request, state):
         print "operate", self
 
 
@@ -273,10 +350,10 @@ class Pusher(StanInstruction):
     def __repr__(self):
         return 'Pusher(%r, %r, %r, %r)' % (self.key, self.model, self.view, self.controller)
 
-    def operate(self, state):
-        StanInstruction.operate(self, state)
+    def operate(self, request, state):
+        StanInstruction.operate(self, request, state)
         state['views'].append(self.view)
-        model = state['models'][-1].getSubmodel(self.model)
+        model = state['models'][-1].getSubmodel(request, self.model)
         state['models'].append(model)
         state['collectors'].append(self.view.collect)
 
@@ -288,12 +365,13 @@ class Popper(StanInstruction):
     def __repr__(self):
         return 'Popper(%r)' % self.key
 
-    def operate(self, state):
-        StanInstruction.operate(self, state)
+    def operate(self, request, state):
+        StanInstruction.operate(self, request, state)
         view = state['views'].pop()
         model = state['models'].pop()
         state['collectors'].pop()
-        return view.generate(model.getData())
+        if implements(view, IStanRuntimeRenderable):
+            return view.render(request, model.getData())
 
 
 class IndentPush(StanInstruction):
@@ -303,6 +381,8 @@ class IndentPush(StanInstruction):
     def __repr__(self):
         return 'IndentPush(%r)' % (self.key,)
 
+    def operate(self, request, state):
+        state['indentlevel'][0] = state['indentlevel'][0] + 1
 
 class IndentPop(StanInstruction):
     def __init__(self, key):
@@ -311,6 +391,8 @@ class IndentPop(StanInstruction):
     def __repr__(self):
         return 'IndentPop(%r)' % (self.key,)
 
+    def operate(self, request, state):
+        state['indentlevel'][0] = state['indentlevel'][0] - 1
 
 """
 class CondIf:
@@ -380,11 +462,13 @@ class Driver(object):
         instructionstack = []
         instructions = self.instructions
         collector = []
+        indentlevel = [0]
         self.done = 0
         state = {
                     'views': viewstack, 
                     'models': modelstack,
-                    'collectors': collector}
+                    'collectors': collector,
+                    'indentlevel': indentlevel}
         while not self.done:
             try:
                 opcode = instructions.next()
@@ -402,18 +486,22 @@ class Driver(object):
             if isinstance(opcode, StringTypes):
                 request.write(opcode)
             elif implements(opcode, IStanInstruction):
-                result = opcode.operate(state)
+                result = opcode.operate(request, state)
                 if result is not None:
                     ## The instruction wanted to perform more instructions
                     ## ie we expanded a macro
                     instructionstack.append(instructions)
-                    instructions = result
+                    instructions = simplify(result, indentlevel=indentlevel[0])
                     ## handle these instructions before exhausting the original generator
 
 
 class Text(View):
+    def __init__(self, color="black"):
+        View.__init__(self)
+        self.color = color
+
     def update(self, model):
-        self[
+        self(style="color: %s" % self.color)[
             str(model)
         ]
 
@@ -423,17 +511,17 @@ if __name__ == '__main__':
     print ''
 
     x = XMLAbomination()
-    simpleDoc = (
-        x.html[
-            x.head[
-                x.title['A simple doc']
-            ],
-            x.body(style='awesome')[
-                x.h1['html sux'],
-                x.h2.with(model='name', view=Text),
+    simpleDoc = x.html[
+        x.head[
+            x.title['A simple doc']
+        ],
+        x.body(style='awesome')[
+            x.h1['html sux'],
+            x.h2(_class="fred").with(model='name', view=Text(color="blue"))[
+                x.span(pattern="listItem")["Nothing."]
             ]
         ]
-    )
+    ]
 
     indent = 0
 
@@ -449,7 +537,8 @@ if __name__ == '__main__':
     driver = Driver(condensed, one)
     request = StringIO()
     driver.render(request)
-    print "one", request.getvalue()
+    print "one"
+    print request.getvalue()
 
     print ''
     print ''
@@ -461,7 +550,8 @@ if __name__ == '__main__':
     driver = Driver(condensed, two)
     request = StringIO()
     driver.render(request)
-    print "two", request.getvalue()
+    print "two"
+    print request.getvalue()
 
 
     from twisted.web import resource
@@ -480,10 +570,10 @@ if __name__ == '__main__':
                 return server.NOT_DONE_YET
             return """
 <html><body>
-<form action="">
-<input type="text" name="name" />
-<input type="submit" />
-</form>
+    <form action="">
+        <input type="text" name="name" />
+        <input type="submit" />
+    </form>
 </body></html>
 """
 
@@ -491,3 +581,4 @@ if __name__ == '__main__':
     from twisted.internet import reactor
     reactor.listenTCP(8081, site)
     reactor.run()
+
