@@ -160,7 +160,8 @@ class FormFillerWidget(widgets.Widget):
             errorNodes[errorNode.getAttribute('errorFor')] = errorNode
         argz={}
         # list to figure out which nodes are in the template already and which aren't
-        for arg in self.model.fmethod.getArgs():
+        argList = self.model.fmethod.getArgs()
+        for arg in argList:
             argz[arg.name] = arg
         for inNode in domhelpers.getElementsByTagName(node, 'input'):
             nName = inNode.getAttribute("name")
@@ -169,7 +170,8 @@ class FormFillerWidget(widgets.Widget):
             del argz[nName]
         if argz:
             shell = self.createShell(request, node, data)
-            for remArg in argz.values():
+            # create inputs, in the same order they were passed to us:
+            for remArg in [arg for arg in argList if argz.has_key(arg.name)]:
                 inputNode, errorNode = self.createInput(request, shell, remArg)
                 errorNodes[remArg.name] = errorNode
                 inputNodes[remArg.name] = inputNode
