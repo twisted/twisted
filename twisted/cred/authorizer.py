@@ -24,6 +24,8 @@ Stability: semi-stable
 
 """
 
+# System imports
+import warnings
 
 # Twisted Imports
 from twisted.internet import defer
@@ -40,8 +42,7 @@ class Authorizer(Accessor):
     @cvar identityClass:          The type of Identity that is created
                                   and managed by this authorizer.
     @type serviceCollection:      L{_AbstractServiceCollection<twisted.internet.app._AbstractServiceCollection>}
-    @ivar serviceCollection:      The set of services that are using
-                                  this authorizer.
+    @ivar serviceCollection:      The set of services that are using this authorizer.
     """
 
     def __init__(self, serviceCollection=None):
@@ -53,9 +54,15 @@ class Authorizer(Accessor):
         return self.serviceCollection
 
     def setApplication(self, app):
-        """Set the application for this authorizer.
+        """Set the application for this authorizer. DEPRECATED.
         """
+        warnings.warn("setApplication is deprecated, use setServiceCollection instead.",
+                      category=DeprecationWarning, stacklevel=3)
         self.serviceCollection = app
+
+    def setServiceCollection(self, collection):
+        """Set the service collection for this authorizer."""
+        self.serviceCollection = collection
 
     identityClass = identity.Identity
 
