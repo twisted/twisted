@@ -47,7 +47,7 @@ class SingleClientPerspective(perspective.Perspective):
         assert self.client is not None, "No client to send a message to!"
         # Nor is the 'message' method defined by twisted.cred -- your client
         # can have any interface you desire, any type of object may be passed
-        # to 'attach'.
+        # to 'attached'.
         self.client.message(message)
 
     def __getstate__(self):
