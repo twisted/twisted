@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.23 2002/07/27 23:17:12 itamarst Exp $
+# $Id: default.py,v 1.24 2002/07/28 18:43:54 glyph Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -169,12 +169,25 @@ class BCFactory(protocol.ClientFactory):
 
     def __init__(self, protocol):
         self.protocol = protocol
+        self.connector = None
+
+    def startedConnecting(self, connector):
+        self.connector = connector
+
+    def loseConnection(self):
+        if self.connector:
+            self.connector.stopConnecting()
+        elif self.protocol:
+            self.protocol.transport.loseConnection()
 
     def buildProtocol(self, addr):
+        self.connector = None
         return self.protocol
 
     def connectionFailed(self, connector, reason):
+        self.connector = None
         self.protocol.connectionFailed()
+        self.protocol = None
 
 
 
@@ -305,6 +318,7 @@ class PosixReactorBase(ReactorBase):
                       category=DeprecationWarning, stacklevel=2)
         f = BCFactory(protocol)
         self.connectTCP(host, port, f, timeout)
+        return f
 
 
     # IReactorSSL (sometimes, not implemented)

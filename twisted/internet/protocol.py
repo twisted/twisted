@@ -179,6 +179,17 @@ class Protocol:
         to this Protocol.  The connection has been closed.
         """
 
+    def connectionFailed(self):
+        """(Deprecated)
+
+        This used to be called when the connection was not properly
+        established.
+        """
+        import warnings
+        warnings.warn("connectionFailed is deprecated.  See new Client API",
+                      category=DeprecationWarning, stacklevel=2)
+
+
 
 class ProcessProtocol(Protocol):
     """Processes have some additional methods besides receiving data.

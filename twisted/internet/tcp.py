@@ -171,13 +171,16 @@ class BaseClient(Connection):
     
     def failIfNotConnected(self, err):
         # XXX workaround for sillines in reactor.resolve()
+        if (self.connected or
+            self.disconnected or
+            not (hasattr(self, "connector"))):
+            return
         if err == "address not found":
             err = error.UnknownHostError()
-        if (not self.connected) and (not self.disconnected):
-            self.connector.connectionFailed(failure.Failure(err))
-            self.stopReading()
-            self.stopWriting()
-            del self.connector
+        self.connector.connectionFailed(failure.Failure(err))
+        self.stopReading()
+        self.stopWriting()
+        del self.connector
 
     def createInternetSocket(self):
         """(internal) Create an AF_INET socket.
