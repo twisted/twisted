@@ -24,7 +24,7 @@ Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 
 import struct, tty
 
-from twisted.internet import protocol, reactor, process
+from twisted.internet import protocol, reactor, defer
 from twisted.python import log
 from twisted.conch import error
 import service, common, ttymodes
@@ -314,6 +314,7 @@ class SSHSession(SSHChannel):
             return 0
         else:
             log.msg('starting shell %s' % shell)
+            self.pty = pty
             return 1
 
     def request_exec(self, data):
@@ -327,6 +328,11 @@ class SSHSession(SSHChannel):
         self.environ['TERM'] = term
         self.winSize = (rows, cols, xpixel, ypixel)
         self.modes = [(ord(modes[i]), struct.unpack('>L',modes[i+1:i+5])[0]) for i in range(0, len(modes)-1, 5)]
+        return 1
+
+    def request_window_change(self, data):
+        cols, rows, xpixel, ypixel = struct.unpack('>4L', data)
+        self.pty.setWindowSize(rows, cols, xpixel, ypixel)
         return 1
 
     def subsystem_python(self):
@@ -396,7 +402,7 @@ class SSHSessionProtocol(protocol.Protocol, protocol.ProcessProtocol):
         if reason and hasattr(reason, 'exitCode'): self.session.conn.sendRequest(self.session, 'exit-status', struct.pack('!L', reason.exitCode))
         self.session.loseConnection()
 
-class SSHSessionClient:
+class SSHSessionClient(protocol.Protocol):
 
     def dataReceived(self, data):
         self.transport.write(data)
