@@ -837,10 +837,12 @@ if Crypto:
                 self.spawn = (p, exe, cmds)
             else:
                 self.spawn = None
+            self.connected = 0
 
         def serviceStarted(self):
             if self.spawn:
                 reactor.callLater(0,reactor.spawnProcess, env=None, *self.spawn)
+            self.connected = 1
 
 class SSHTransportTestCase(unittest.TestCase):
 
