@@ -720,7 +720,7 @@ class _Counter:
         if ret[0]=='\x00':
             ret=ret[1:]
         if len(ret) < self.bs:
-            ret = '\x00'*(self.bs-len(ret)-1) + ret
+            ret = '\x00'*(self.bs-len(ret)) + ret
         self.count += 1
         if self.count == 2L ** self.bs:
             self.count = 0
