@@ -1,11 +1,11 @@
-Twisted 0.99.3alpha4
+Twisted 0.99.3rc1
 
 Quote of the Release:
 
 <jml> is there a doc on twisted's version numbering conventions?
 <dash> jml: glyph rolls dice
 
-For information on what's new in Twisted 0.99.3alpha4, see the ChangeLog file
+For information on what's new in Twisted 0.99.3rc1, see the ChangeLog file
 that comes with the distribution, or http://twistedmatrix.com/ChangeLog.txt.
 
 What is this?
