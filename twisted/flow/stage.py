@@ -24,6 +24,7 @@
 
 """
 from base import *
+from wrap import wrap
 from twisted.python.failure import Failure
 
 class Filter(Stage):

@@ -24,6 +24,8 @@
 """
 
 import twisted.python.compat
+from twisted.internet import reactor
+import time
 
 #
 # Exceptions used within flow

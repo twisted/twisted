@@ -25,6 +25,7 @@
 """
 
 from base import *
+from wrap import wrap
 from twisted.internet import defer
 
 class Block(Controller,Stage):

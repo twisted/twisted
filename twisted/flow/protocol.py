@@ -25,7 +25,9 @@
     enough to deserve its own module.
 """
 
+import types
 from base import *
+from wrap import wrap
 from stage import Callback
 from twisted.internet import protocol
 from twisted.internet.error import ConnectionLost, ConnectionDone
