@@ -1,5 +1,10 @@
 2002-03-29  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
 
+        * Added Qt event loop support, written by Sirtaj Singh Kang and
+        Aleksandar Erkalovic.
+
+2002-03-29  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
+
         * Added a 'coil' command for configuring TAP files
 
 2002-03-15  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
