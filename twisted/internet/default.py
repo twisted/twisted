@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_internet -*-
-# $Id: default.py,v 1.87 2003/11/10 00:47:01 itamarst Exp $
+# $Id: default.py,v 1.88 2003/11/20 01:16:12 itamarst Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -111,7 +111,7 @@ class PosixReactorBase(ReactorBase):
         methods; it must block SIGCHLD if it is unable to guarantee this.
         """
         self.callLater(0, process.reapAllProcesses)
-        self.waker.wakeUp()
+        self.wakeUp()
 
     def startRunning(self, installSignalHandlers=1):
         threadable.registerAsIOThread()
