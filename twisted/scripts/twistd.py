@@ -15,10 +15,12 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 # Ugh, hack to tell people to NOT USE twistd ON WINDOWS
-from twisted.python import runtime
-import sys
-if runtime.platform == 'posix':
-    sys.exit("use twistw, not twistd")
+# FUCK THIS: someone with windows figure out a test.
+# I'm done.
+#from twisted.python import runtime
+#import sys
+#if runtime.platform == 'posix':
+#     sys.exit("use twistw, not twistd")
 # End hack
 
 from twisted.python import log, syslog
