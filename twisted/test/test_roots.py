@@ -27,7 +27,18 @@ class RootsTest(unittest.TestCase):
         collection.delEntity("x")
         self.failUnlessEqual(collection.getStaticEntity('x'),
                              None)
-
+        try:
+            collection.storeEntity("x", None)
+        except NotImplementedError:
+            pass
+        else:
+            self.fail()
+        try:
+            collection.removeEntity("x", None)
+        except NotImplementedError:
+            pass
+        else:
+            self.fail()
 
     def testConstrained(self):
         class const(roots.Constrained):
