@@ -109,7 +109,8 @@ what new class will be generating LaTeX from your input format.  We redefine
 because this
 class knows what to do with the new input we have already defined.  Last, you
 must define the module-level variable <code
-    class="py-src-identifier">factory</code>.  It should an instance with the same
+    class="py-src-identifier">factory</code>.  It should be an instance with
+  the same
 interface as <code class="py-src-identifier">ProcessingFunctionFactory</code>
 (e.g. an instance of a subclass, in this case, <code
     class="py-src-identifier">MyProcessingFunctionFactory</code>).</p>
@@ -127,7 +128,7 @@ our handler for &lt;span&gt; tags with the <code>class="productname"</code>
 identifier.  Lore knows to try methods <code>visitNode_span_*</code> and
 <code>visitNode_div_*</code> whenever it encounters a new
 class in one of these tags.  This is why the class names have to be valid
-python identifiers.</p>
+Python identifiers.</p>
 
 <p>Now let's see what Lore does with these new classes with the following
 input file:</p>
@@ -141,8 +142,9 @@ structure should look like this:</p>
 <pre>
 1st_example.html
 myhtml/
-       plugins.tml
+       __init__.py
        factory.py
+       plugins.tml
        spitters.py
 </pre>
 
