@@ -21,6 +21,8 @@
 # sibling imports
 import reflect, util
 
+from twisted.persisted import styles
+
 # system imports
 import types
 import warnings
@@ -220,7 +222,7 @@ class Adapter:
         """
         return self.original.getComponent(interface)
 
-class Componentized:
+class Componentized(styles.Versioned):
     """I am a mixin to allow you to be adapted in various ways persistently.
 
     I define a list of persistent adapters.  This is to allow adapter classes
@@ -232,6 +234,7 @@ class Componentized:
     is specific to Twisted.
     """
 
+    persistenceVersion = 1
 
     def __init__(self):
         self._adapterCache = {}
@@ -249,7 +252,7 @@ class Componentized:
         self.addComponent(adapterClass(self), ignoreClass)
 
     def setComponent(self, interfaceClass, component):
-        self._adapterCache[interfaceClass] = component
+        self._adapterCache[reflect.qual(interfaceClass)] = component
 
     def addComponent(self, component, ignoreClass=0):
         """
@@ -271,12 +274,12 @@ class Componentized:
             if (ignoreClass or
                 (self.locateAdapterClass(self.__class__, iface, None)
                  == component.__class__)):
-                self._adapterCache[iface] = component
+                self._adapterCache[reflect.qual(iface)] = component
 
 
     def unsetComponent(self, interfaceClass):
         """Remove my component specified by the given interface class."""
-        del self._adapterCache[interfaceClass]
+        del self._adapterCache[reflect.qual(interfaceClass)]
 
     def removeComponent(self, component):
         """
@@ -294,7 +297,7 @@ class Componentized:
         for k, v in self._adapterCache.items():
             if v is component:
                 del self._adapterCache[k]
-                l.append(k)
+                l.append(reflect.namedObject(k))
         return l
 
     def getComponent(self, interface):
@@ -313,8 +316,9 @@ class Componentized:
         interfaces (with addComponent), set the attribute 'multiComponent' to
         True on your adapter class.
         """
-        if self._adapterCache.has_key(interface):
-            return self._adapterCache[interface]
+        k = reflect.qual(interface)
+        if self._adapterCache.has_key(k):
+            return self._adapterCache[k]
         elif implements(self, interface):
             return self
         else:
@@ -323,12 +327,18 @@ class Componentized:
             if adapter is not None and not (
                 hasattr(adapter, "temporaryAdapter") and
                 adapter.temporaryAdapter):
-                self._adapterCache[interface] = adapter
+                self._adapterCache[k] = adapter
                 if (hasattr(adapter, "multiComponent") and
                     adapter.multiComponent and
                     hasattr(adapter, '__implements__')):
                     self.addComponent(adapter)
             return adapter
+
+    def upgradeToVersion1(self):
+        # To let Componentized instances interact correctly with
+        # rebuild(), we cannot use class objects as dictionary keys.
+        for (k, v) in self._adapterCache.items():
+            self._adapterCache[reflect.qual(k)] = v
 
 
 __all__ = ["Interface", "implements", "getInterfaces", "superInterfaces",

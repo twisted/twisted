@@ -96,6 +96,16 @@ class RebuildTestCase(unittest.TestCase):
         #x[0].do()
         assert x[0].__class__ is crash_test_dummy.X, 'huh?'
 
+    def testComponentInteraction(self):
+        x = crash_test_dummy.XComponent()
+        x.setAdapter(crash_test_dummy.IX, crash_test_dummy.XA)
+        oldComponent = x.getComponent(crash_test_dummy.IX)
+        rebuild.rebuild(crash_test_dummy, 0)
+        newComponent = x.getComponent(crash_test_dummy.IX)
+
+        self.assertEquals(newComponent.__class__, crash_test_dummy.XA)
+
+
     if sys.version_info >= (2, 2, 0):
         def testUpdateInstance(self):
             global Foo, Buz
