@@ -3,9 +3,9 @@ in releases.
 
 == **/topfiles ==
 
-Project-specific READMEs (and other files, like ChangeLogs and NEWS
-files) are located in **/topfiles/, where ** is twisted or any of its
-separated subprojects.
+Project-specific READMEs (and other files, like setup.py, ChangeLogs 
+and NEWS files) are located in **/topfiles/, where ** is twisted or 
+any of its separated subprojects.
 
 == bin/ ==
 The executable scripts that come with Twisted core are in
