@@ -101,6 +101,24 @@ class LookupsTestCaseII(unittest.TestCase):
                                                   "reallySet.__doc__"),
                                  reflect.Summer.reallySet.__doc__)
 
+    def testExceptionHandling(self):
+        # If the namedAny causes a module to be imported, errors in the
+        # import should not be masked.
+        self.assertRaises(
+            ZeroDivisionError, 
+            reflect.namedAny, "twisted.test.reflect_helper_ZDE")
+        self.assertRaises(
+            ValueError,
+            reflect.namedAny, "twisted.test.reflect_helper_VE")
+
+        # And attributes that don't exist should raise an AttributeError
+        self.assertRaises(
+            AttributeError,
+            reflect.namedAny, "twisted.nosuchmoduleintheworld")
+        self.assertRaises(
+            AttributeError,
+            reflect.namedAny, "twisted.python.reflect.Summer.nosuchattributeintheworld")
+
 class ObjectGrep(unittest.TestCase):
     def testDictionary(self):
         o = object()
