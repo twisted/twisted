@@ -99,7 +99,7 @@ class LoggingProtocol(protocol.ProcessProtocol):
     def processEnded(self, reason):
         if not self.empty:
             self.output.dataReceived('\n')
-        self.service.connectionLost(self.name)
+        self.service.connectionLost(self.name, self.transport.pid)
 
 
 class ProcessMonitor(app.ApplicationService):
@@ -164,12 +164,12 @@ class ProcessMonitor(app.ApplicationService):
             self.stopProcess(name)
         self.consistency.cancel()
 
-    def connectionLost(self, name):
-        if self.murder.has_key(name):
-            self.murder[name].cancel()
-            del self.murder[name]
-            return
-        del self.protocols[name]
+    def connectionLost(self, name, pid):
+        if self.murder.has_key(pid):
+            self.murder[pid].cancel()
+            del self.murder[pid]
+        if self.protocols.has_key(name):
+            del self.protocols[name]
         if time.time()-self.timeStarted[name]<self.threshold:
             delay = self.delay[name] = min(1+2*self.delay.get(name, 0), 3600)
         else:
@@ -193,13 +193,12 @@ class ProcessMonitor(app.ApplicationService):
         pid = self.protocols[name].transport.pid
         del self.protocols[name] 
         os.kill(pid, 15)
-        self.murder[name] = reactor.callLater(self.killTime, os.kill, pid, 9)
+        self.murder[pid] = reactor.callLater(self.killTime, os.kill, pid, 9)
         
 
     def restartAll(self):
         for name in self.processes.keys():
             self.stopProcess(name)
-            self.startProcess(name)
            
 
 
