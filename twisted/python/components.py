@@ -249,5 +249,6 @@ class Componentized:
                 self._adapterCache[interface] = adapter
             return adapter
 
+
 __all__ = ["Interface", "implements", "getInterfaces", "superInterfaces",
-           "registerAdapter", "getAdapterClass", "getAdapter"]
+           "registerAdapter", "getAdapterClass", "getAdapter", "Componentized"]
