@@ -937,7 +937,7 @@ class AliasTestCase(unittest.TestCase):
         'After a blank line',
         'Last line'
     ]
-
+    
     def testHandle(self):
         result = {}
         lines = [
@@ -1015,6 +1015,13 @@ class ProcessAliasTestCase(test_process.SignalMixin, unittest.TestCase):
         'Last line'
     ]
     
+    def setUpClass(self):
+        self.DNSNAME = smtp.DNSNAME
+        smtp.DNSNAME = ''
+    
+    def tearDownClass(self):
+        smtp.DNSNAME = self.DNSNAME
+
     def tearDown(self):
         reactor.iterate()
 
