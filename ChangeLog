@@ -1,3 +1,7 @@
+2003-04-16  Kevin Turner  <acapnotic@twistedmatrix.com>
+
+	* .: Release 1.0.4rc1.
+
 2003-04-15  Jp Calderone  <exarkun@twistedmatrix.com>
 
 	* admin/accepttests, admin/accepttests.py: Acceptance tests
@@ -6,8 +10,8 @@
 
 2003-04-14  Brian Warner  <warner@lothar.com>
 
-	* twisted/python/threadable.py (init): 
-	* twisted/spread/newjelly.py (SecurityOptions.allowBasicTypes): 
+	* twisted/python/threadable.py (init):
+	* twisted/spread/newjelly.py (SecurityOptions.allowBasicTypes):
 	* twisted/spread/jelly.py (SecurityOptions.allowBasicTypes):
 	Remove old apply() calls.
 
@@ -109,7 +113,7 @@
 	Instead of a pygtk bug we've got the limited gtk_input_add API,
 	which hides POLLHUP/POLLERR, so detecting closed fds might not be
 	as reliable.
- 
+
 2003-04-11  Andrew Bennetts  <spiv@twistedmatrix.com>
 
 	* twisted/lore:
