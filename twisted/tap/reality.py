@@ -56,7 +56,7 @@ def getPorts(app, config):
 
     spigot = plumbing.Spigot(rdf)
     site = server.Site(plumbing.Web(rdf))
-    bf = pb.BrokerFactory(app)
+    bf = pb.BrokerFactory(pb.AuthRoot(app))
 
     return [(8080, site),
             (4040, spigot),

@@ -36,7 +36,6 @@ def connected(perspective):
 pb.connect(connected, failure,
            "localhost", pb.portno,
            "guest", "guest",
-           "pbecho", "any",
-           None)
+           "pbecho", "any")
 
 main.run()

@@ -199,7 +199,7 @@ class Application(log.Logger, styles.Versioned):
             threadable.dispatcher.disown(self)
 
 theTimeouts = delay.Delayed() # A delay for non-peristent delayed actions
-theTimeouts.ticks = 1
+theTimeouts.ticktime = 1
 
 def addTimeout(method, seconds):
     """Add a method which will time out after a given interval.

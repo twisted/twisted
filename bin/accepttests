@@ -148,7 +148,7 @@ def runExampleTest():
     scmd("python %s/pbecho.py" % examplesDir)
     twistdf("pbecho-start")
     message("You should see a 'hello world'")
-    scmd("python %s/pbclient.py" % examplesDir)
+    scmd("python %s/pbechoclient.py" % examplesDir)
     pause()
     killit()
 
@@ -156,9 +156,9 @@ def runMailTest():
     message("Starting mail test")
     os.mkdir("dump")
     os.mkdir("dump2")
-    scmd("./bin/mktap mail --domain foo.bar=dump --user postmaster=postmaster")
-    scmd("./bin/mktap --append mail.tap mail --relay 127.0.0.1,8025=dump2 "
-         "            --smtp 8026 --pop 8111")
+    scmd("mktap mail --domain foo.bar=dump --user postmaster=postmaster")
+    scmd("mktap --append mail.tap mail --relay 127.0.0.1,8025=dump2"
+         "      --smtp 8026 --pop 8111")
     twistdf("mail")
     import smtplib, poplib
     s = smtplib.SMTP('127.0.0.1', 8026)

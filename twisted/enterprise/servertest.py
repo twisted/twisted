@@ -49,7 +49,7 @@ ticker = delay.Delayed()
 ticker.ticktime = 1
 ticker.loop(func=manager.update, args=(), ticks=0)
 
-pbs = pb.BrokerFactory()
+pbs = pb.BrokerFactory(pb.AuthRoot(app))
 pbs.addService("db", service )
 app.listenOn(8787, pbs)
 app.addDelayed(ticker)

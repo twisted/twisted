@@ -55,4 +55,4 @@ def getPorts(app, config):
         portno = config.portno
     except AttributeError:
         portno = pb.portno
-    return [(portno, pb.BrokerFactory(app))]
+    return [(portno, pb.BrokerFactory(pb.AuthRoot(app)))]

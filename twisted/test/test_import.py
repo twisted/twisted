@@ -84,7 +84,7 @@ class AtLeastImportTestCase(unittest.TestCase):
         from twisted.web import html
         from twisted.web import twcgi
         ## from twisted.web import distributed
-        from twisted.web import calendar
+        from twisted.web import cal
         from twisted.web import script
         from twisted.web import static
         from twisted.web import test

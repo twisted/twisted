@@ -97,8 +97,10 @@ class Login(gtk.GtkWindow):
         perspeclbl=gtk.GtkLabel("Perspective:")
         hostlbl=gtk.GtkLabel("Hostname:")
         portlbl=gtk.GtkLabel("Port #:")
-
-        self.logstat  = gtk.GtkLabel("Protocol PB-%s" % pb.Broker.version)
+        self.allLabels = [
+            userlbl, passlbl, servicelbl, perspeclbl, hostlbl, portlbl
+            ]
+        self.logstat = gtk.GtkLabel("Protocol PB-%s" % pb.Broker.version)
         self.okbutton = cbutton("Log In", self.login)
 
         okbtnbx = gtk.GtkHButtonBox()
@@ -128,16 +130,19 @@ class Login(gtk.GtkWindow):
         self.signal_connect('destroy',gtk.mainquit,None)
 
     def loginReset(self):
+        print 'doing login reset'
         self.logstat.set_text("Idle.")
 
     def loginReport(self, txt):
+        print 'setting login report',repr(txt)
         self.logstat.set_text(txt)
-        gtk.timeout_add(30000, self.loginReset)
+        gtk.timeout_add(59000, self.loginReset)
 
     def login(self, btn):
         host = self.hostname.get_text()
         port = self.port.get_text()
         service = self.service.get_text()
+        perspective = self.perspective.get_text()
         # Maybe we're connecting to a unix socket, so don't make any
         # assumptions
         try:
@@ -146,24 +151,28 @@ class Login(gtk.GtkWindow):
             pass
         user = self.username.get_text()
         pswd = self.password.get_text()
-        b = pb.Broker()
-        self.broker = b
-        b.requestIdentity(user, pswd,
-                          callback   = self.gotIdentity,
-                          errback    = self.couldNotConnect)
-        b.notifyOnDisconnect(self.disconnected)
-        tcp.Client(host, port, b)
-
-    def gotIdentity(self, identity):
-        # XXX HACKAGE: identity name and perspective name must currently be the
-        # same!!!
-        identity.attach(self.service.get_text(), self.perspective.get_text() or self.username.get_text(),
-                        self.pbReferenceable, pbcallback=self.pbCallback)
-
+        self.loginReport("connecting...")
+        # putting this off to avoid a stupid bug in gtk where it won't redraw
+        # if you input_add a connecting socket (!??)
+        afterOneTimeout(10, pb.connect,
+                        self.pbCallback, self.couldNotConnect,
+                        host, port, user, pswd,
+                        service, perspective or user,
+                        self.pbReferenceable, 30)
+        
     def couldNotConnect(self, msg):
-        print 'couldNotConnect', msg
-        self.loginReport("could not connect.")
+        self.loginReport("couldn't connect: %s" % str(msg))
 
-    def disconnected(self):
-        print 'disconnected'
-        self.loginReport("disconnected from server.")
+class _TimerOuter:
+    def __init__(self, timeout, cmd, args):
+        self.args = args
+        self.cmd = cmd
+        self.tid = gtk.timeout_add(timeout, self.doIt)
+        
+    def doIt(self):
+        gtk.timeout_remove(self.tid)
+        apply(self.cmd, self.args)
+
+def afterOneTimeout(timeout, cmd, *args):
+    _TimerOuter(timeout, cmd, args)
+

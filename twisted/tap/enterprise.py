@@ -73,7 +73,7 @@ class Options(usage.Options):
 
 
 def getPorts(app, config):
-    bf = pb.BrokerFactory(app)
+    bf = pb.BrokerFactory(pb.AuthRoot(app))
     mgr = manager.ManagerSingle(
         service  = config.service,
         server   = config.server,

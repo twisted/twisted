@@ -70,13 +70,10 @@ class Issue:
 class ResourceSubscription(resource.Resource):
     isLeaf = 1
     waiting = 0
-    def __init__(self, host, port, service="twisted.web.distrib", username="web", password="web"):
+    def __init__(self, host, port):
         resource.Resource.__init__(self)
         self.host = host
         self.port = port
-        self.service = service
-        self.username = username
-        self.password = password
         self.pending = []
         self.publisher = None
 
@@ -93,18 +90,11 @@ class ResourceSubscription(resource.Resource):
         state['pending'] = []
         return state
 
-    def preConnected(self, identity):
-        """Retrieved identity, now get the publisher perspective...
-        """
-        identity.attach(self.service, "any", None,
-                        pbcallback = self.connected,
-                        pberrback = self.notConnected)
-
-
     def connected(self, publisher):
         """I've connected to a publisher; I'll now send all my requests.
         """
         log.msg('connected to publisher')
+        publisher.broker.notifyOnDisconnect(self.booted)
         self.publisher = publisher
         self.waiting = 0
         for request in self.pending:
@@ -114,7 +104,7 @@ class ResourceSubscription(resource.Resource):
     def notConnected(self, msg):
         """I can't connect to a publisher; I'll now reply to all pending requests.
         """
-        log.msg( "could not connect to distributed web service: %s" % msg)
+        log.msg("could not connect to distributed web service: %s" % msg)
         self.waiting = 0
         self.publisher = None
         for request in self.pending:
@@ -123,9 +113,7 @@ class ResourceSubscription(resource.Resource):
         self.pending = []
 
     def booted(self):
-        log.msg( 'lost pb connection' )
-        self.waiting = 0
-        self.publisher = None
+        self.notConnected("connection dropped")
 
     def render(self, request):
         """Render this request, from my server.
@@ -139,13 +127,10 @@ class ResourceSubscription(resource.Resource):
             self.pending.append(request)
             if not self.waiting:
                 self.waiting = 1
-                broker = pb.Broker()
-                broker.requestIdentity(self.username,
-                                       self.password,
-                                       callback = self.preConnected,
-                                       errback  = self.notConnected)
-                broker.notifyOnDisconnect(self.booted)
-                c = tcp.Client(self.host, self.port, broker)
+                pb.getObjectAt(
+                    self.host, self.port,
+                    self.connected,
+                    self.notConnected, 10)
         else:
             i = Issue(request)
             self.publisher.request(request,
@@ -153,30 +138,23 @@ class ResourceSubscription(resource.Resource):
                                    pberrback=i.failed)
         return NOT_DONE_YET
 
-class ResourcePublisher(pb.Service, pb.Perspective, styles.Versioned):
-    def __init__(self, site, app, name='twisted.web.distrib'):
-        pb.Service.__init__(self, name, app)
-        pb.Perspective.__init__(self, "any", self, "any")
+class ResourcePublisher(pb.Root, styles.Versioned):
+    def __init__(self, site):
         self.site = site
 
-    persistenceVersion = 1
+    persistenceVersion = 2
 
-    def upgradeToVersion1(self):
-        """Version 1 Persistence Upgrade
-        """
-        from twisted.internet.main import theApplication
-        styles.requireUpgrade(theApplication)
-        pb.Service.__init__(self, 'twisted.web.distrib', theApplication)
-        pb.Perspective.__init__(self, "any", self, "any")
-        ident = passport.Identity('web', theApplication)
-        ident.setPassword('web')
-        ident.addKeyForPerspective(self)
-        theApplication.authorizer.addIdentity(ident)
+    def upgradeToVersion2(self):
+        self.application.removeIdentity("web")
+        del self.application.services[self.serviceName]
+        del self.serviceName
+        del self.application
+        del self.perspectiveName
 
     def getPerspectiveNamed(self, name):
         return self
 
-    def perspective_request(self, request):
+    def remote_request(self, request):
         res = self.site.getResourceFor(request)
         log.msg( request )
         return res.render(request)

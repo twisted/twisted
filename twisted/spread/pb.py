@@ -27,7 +27,8 @@ Perspective Broker
   translucent interface layer to those proxies.
 
   The protocol is not opaque, because it provides objects which represent the
-  remote proxies and req uire no context (server references, IDs) to operate on.
+  remote proxies and req uire no context (server references, IDs) to operate
+  on.
 
   It is not transparent because it does *not* attempt to make remote objects
   behave identically, or even similiarly, to local objects.  Method calls are
@@ -84,8 +85,8 @@ class Serializable:
     What it means to be "serializable" is that an object can be passed to or
     returned from a remote method.  Certain basic types (dictionaries, lists,
     tuples, numbers, strings) are serializable by default; however, classes
-    need to choose a specific serialization style: Referenceable, Viewable, Copyable
-    or Cacheable.
+    need to choose a specific serialization style: Referenceable, Viewable,
+    Copyable or Cacheable.
 
     You may also pass [lists, dictionaries, tuples] of Serializable instances
     to or return them from remote methods, as many levels deep as you like.
@@ -198,6 +199,7 @@ class Referenceable(Serializable):
     This means that the peer will be able to call methods on me; a method call
     xxx() from my peer will be resolved to methods of the name remote_xxx.
     """
+
     def remoteMessageReceived(self, broker, message, args, kw):
         """A remote message has been received.  Dispatch it appropriately.
 
@@ -222,6 +224,18 @@ class Referenceable(Serializable):
         """
         return remote_atom, broker.registerReference(self)
 
+
+class Root(Referenceable):
+    def rootObject(self, broker):
+        """A BrokerFactory is requesting to publish me as a root object.
+
+        When a BrokerFactory is sending me as the root object, this method will
+        be invoked to allow per-broker versions of an object.  By default I
+        return myself.
+        """
+        return self
+
+
 class AsReferenceable(Referenceable):
     """AsReferenceable: a reference directed towards another object.
     """
@@ -236,26 +250,6 @@ class AsReferenceable(Referenceable):
         return self.object.remoteMessageReceived(broker, message, args, kw)
 
 
-class IdentityWrapper(Referenceable):
-    """I delegate most functionality to a passport.Identity.
-    """
-    def __init__(self, broker, identity):
-        """Initialize, specifying an identity to wrap.
-        """
-        self.identity = identity
-        self.broker = broker
-
-    def remote_attach(self, serviceName, perspectiveName, remoteRef):
-        """Attach the remote reference to a requested perspective.
-        """
-        perspective = self.identity.getPerspectiveForKey(serviceName, perspectiveName)
-        perspective = perspective.attached(remoteRef, self.identity)
-        # Make sure that when connectionLost happens, this perspective will be
-        # tracked in order that 'detached' will be called.
-        self.broker.perspectives.append((perspective, remoteRef, self.identity))
-        return AsReferenceable(perspective)
-
-    # (Possibly?) TODO: Implement 'remote_detach' as well.
 
 
 class ViewPoint(Referenceable):
@@ -854,15 +848,16 @@ class Broker(banana.Banana):
     """I am a broker for objects.
     """
 
-    version = 3
+    version = 4
     username = None
-    requestedIdentity = None
 
     def __init__(self):
         banana.Banana.__init__(self)
-        self.perspectives = []
         self.disconnected = 0
         self.disconnects = []
+        self.failures = []
+        self.connects = []
+        self.localObjects = {}
 
     def expressionReceived(self, sexp):
         """Evaluate an expression as it's received.
@@ -884,7 +879,8 @@ class Broker(banana.Banana):
         Check to make sure that both ends of the protocol are speaking the same
         version dialect.
         """
-        assert vnum == self.version, "Version Incompatibility: %s %s" % (self.version, vnum)
+        if vnum != self.version:
+            raise ProtocolError("Version Incompatibility: %s %s" % (self.version, vnum))
 
 
     def sendCall(self, *exp):
@@ -899,49 +895,7 @@ class Broker(banana.Banana):
         probably be changed to close the connection or raise an exception in
         the future.)
         """
-        log.msg( "Didn't understand command:", repr(command) )
-
-    def proto_login(self, username):
-        """Receive a user name and respond with a challenge.
-
-        This is the second step in the protocol, the first being version number
-        checking.  The peer to this is requestIdentity.
-        """
-        self.username = username
-        defr = self.factory.app.authorizer.getIdentityRequest(username)
-        defr.addCallbacks(self.gotIdentityForLogin, self.noIdentityForLogin)
-        defr.arm()
-
-    def gotIdentityForLogin(self, identity):
-        """(internal) Callback for when login identity is available.
-        """
-        self.loginIdentity = identity
-        self.challenge = identity.challenge()
-        self.sendCall("challenge", self.challenge)
-
-    def noIdentityForLogin(self, error):
-        """(internal) Callback for when login identity is not available.
-        """
-        log.msg("pb closing connection: %s" % error)
-        self.sendCall("not_logged_in", "unauthorized")
-        self.transport.loseConnection()
-
-    def proto_password(self, password):
-        """Receive a password, and authenticate using it.
-
-        This will use the main Application's authorizer to authenticate, using
-        the previously-sent challenge and previously-received username.
-        """
-        if self.loginIdentity.verifyPassword(self.challenge, password):
-            # the password has been verified!  Let's continue.
-            self.setNameForLocal("identity", IdentityWrapper(self, self.loginIdentity))
-            self.sendCall("logged_in")
-        else:
-            log.msg("Unauthorized Login Attempt: %s" % self.username)
-            self.sendCall("not_logged_in", "unauthorized")
-            # TODO; this should do some more heuristics rather than just
-            # closing the connection immediately.
-            self.transport.loseConnection()
+        log.msg("Didn't understand command:", repr(command))
 
     def connectionMade(self):
         """Initialize.
@@ -957,7 +911,8 @@ class Broker(banana.Banana):
         self.currentRequestID = 0
         self.currentLocalID = 0
         # Dictionary mapping LUIDs to local objects.
-        self.localObjects = {}
+        # set above to allow root object to be assigned before connection is made
+        # self.localObjects = {}
         # Dictionary mapping PUIDs to LUIDs.
         self.luids = {}
         # Dictionary mapping LUIDs to local (remotely cached) objects. Remotely
@@ -975,45 +930,30 @@ class Broker(banana.Banana):
         security.allowTypes("copy", "cache", "cached", "local", "remote", "lcache")
         self.jellier = None
         self.unjellier = None
-        if self.requestedIdentity:
-            apply(self.requestIdentity, self.requestedIdentity)
-            del self.requestedIdentity
-
-    def connectionFailed(self):
-        """The connection failed; bail on any awaiting perspective requests.
-        """
-        if self.requestedIdentity:
-            username, password, callback, errback = self.requestedIdentity
+        for notifier in self.connects:
             try:
-                errback('connection failed')
+                notifier()
             except:
                 traceback.print_exc(file=log.logfile)
-            del self.requestedIdentity
+
+    def connectionFailed(self):
+        for notifier in self.failures:
+            try:
+                notifier()
+            except:
+                traceback.print_exc(file=log.logfile)
 
     def connectionLost(self):
         """The connection was lost.
         """
         self.disconnected = 1
         # nuke potential circular references.
-        for perspective, client, identity in self.perspectives:
-            try:
-                perspective.detached(client, identity)
-            except:
-                log.msg("Exception in perspective detach ignored:")
-                traceback.print_exc(file=log.logfile)
-        self.perspectives = None
-        self.localObjects = None
         self.luids = None
         for callback, errback in self.waitingForAnswers.values():
             try:
                 errback(PB_CONNECTION_LOST)
             except:
                 traceback.print_exc(file=log.logfile)
-        try:
-            if hasattr(self, 'loginCallback'):
-                self.loginErrback('disconnected')
-        except:
-            traceback.print_exc(file=log.logfile)
         for notifier in self.disconnects:
             try:
                 notifier()
@@ -1021,7 +961,6 @@ class Broker(banana.Banana):
                 traceback.print_exc(file=log.logfile)
         self.disconnects = None
         self.waitingForAnswers = None
-        self.awaitingPerspectives = None
         self.localSecurity = None
         self.remoteSecurity = None
         self.remotelyCachedObjects = None
@@ -1030,6 +969,12 @@ class Broker(banana.Banana):
 
     def notifyOnDisconnect(self, notifier):
         self.disconnects.append(notifier)
+
+    def notifyOnFail(self, notifier):
+        self.failures.append(notifier)
+
+    def notifyOnConnect(self, notifier):
+        self.connects.append(notifier)
 
     def localObjectForID(self, luid):
         """Get a local object for a locally unique ID.
@@ -1133,7 +1078,6 @@ class Broker(banana.Banana):
                 'kw': kw
                 })
             return object
-                
         self.jellier = _NetJellier(self)
         self.perspective = perspective
         self.jellyMethod = method
@@ -1158,55 +1102,6 @@ class Broker(banana.Banana):
         finally:
             self.perspective = None
             self.unjellier = None
-
-    def proto_logged_in(self):
-        """Received when the identity authenticates correctly.
-        """
-        self.loginCallback(self.remoteForName('identity'))
-        self._cleanupLogin()
-
-    def proto_not_logged_in(self, message):
-        """Received when a perspective authenticates incorrectly.
-        """
-        self.loginErrback(message)
-        self._cleanupLogin()
-
-    def _cleanupLogin(self):
-        del self.loginCallback
-        del self.loginErrback
-
-    def requestIdentity(self, username, password, callback=noOperation, errback=printTraceback):
-        """
-        Request the identity from this broker, making a callback when it's finished.
-
-        Arguments:
-
-          * username: this is the username you wish to authenticate with.
-
-          * password: this is the password you wish to authenticate with.  pass
-            it in plaintext, it will be hashed using a challenge-response
-            authentication handshake automatically.
-
-          * callback: a callback which will be made (with a reference to the
-            resulting identity as the argument) if and when the authentication
-            succeeds.
-
-          * errback: a callback which will be made (with an error message as
-            the argument) if and when the authentication fails.
-
-        """
-        if self.connected:
-            self.sendCall("login", username)
-            self.loginCallback = callback
-            self.loginErrback = errback
-            self.password = password
-        else:
-            self.requestedIdentity = (username, password, callback, errback)
-
-    def proto_challenge(self, challenge):
-        """Use passport.respond to respond to the server's challenge.
-        """
-        self.sendCall("password", passport.respond(challenge, self.password))
 
     def newLocalID(self):
         """Generate a new LUID.
@@ -1383,22 +1278,190 @@ class Broker(banana.Banana):
 class BrokerFactory(protocol.Factory, styles.Versioned):
     """I am a server for object brokerage.
     """
+    persistenceVersion = 2
+    def __init__(self, objectToBroker):
+        self.objectToBroker = objectToBroker
 
-    def __init__(self, application):
-        """Initialize me, indicating an object with a getService method.
-        """
-        self.app = application
+## Due to a spelling error in a previous release, persistenceVersion=1 objects
+## may still have persistenceVersion=None, so this could cause a
+## double-upgrade.
+##    def upgradeToVersion1(self):
+##        del self.services
+##        from twisted.internet.main import theApplication
+##        self.__init__(theApplication)
 
-    def upgradeToVersion1(self):
-        del self.services
-        from twisted.internet.main import theApplication
-        self.__init__(theApplication)
+    def upgradeToVersion2(self):
+        app = self.app
 
-    # XXX REFACTOR: addService AND getService REMOVED.
     def buildProtocol(self, addr):
         """Return a Broker attached to me (as the service provider).
         """
         proto = Broker()
         proto.factory = self
+        proto.setNameForLocal("root", self.objectToBroker.rootObject(proto))
         return proto
 
+### AUTH STUFF
+
+class AuthRoot(Referenceable):
+    def __init__(self, app):
+        self.app = app
+
+    def rootObject(self, broker):
+        return AuthServ(self.app, broker)
+
+class _Detacher:
+    def __init__(self, perspective, remoteRef, identity):
+        self.perspective = perspective
+        self.remoteRef = remoteRef
+        self.identity = identity
+
+    def detach(self):
+        self.perspective.detached(self.perspective, self.identity)
+
+class IdentityWrapper(Referenceable):
+    """I delegate most functionality to a passport.Identity.
+    """
+    def __init__(self, broker, identity):
+        """Initialize, specifying an identity to wrap.
+        """
+        self.identity = identity
+        self.broker = broker
+
+    def remote_attach(self, serviceName, perspectiveName, remoteRef):
+        """Attach the remote reference to a requested perspective.
+        """
+        perspective = self.identity.getPerspectiveForKey(serviceName, perspectiveName)
+        perspective = perspective.attached(remoteRef, self.identity)
+        # Make sure that when connectionLost happens, this perspective will be
+        # tracked in order that 'detached' will be called.
+        # self.broker.perspectives.append((perspective, remoteRef, self.identity))
+        self.broker.notifyOnDisconnect(
+            _Detacher(perspective, remoteRef, self.identity).detach)
+        return AsReferenceable(perspective)
+
+    # (Possibly?) TODO: Implement 'remote_detach' as well.
+
+
+class AuthChallenger(Referenceable):
+    def __init__(self, ident, serv, challenge):
+        self.ident = ident
+        self.challenge = challenge
+        self.serv = serv
+
+    def remote_respond(self, response):
+        if self.ident:
+            if self.ident.verifyPassword(self.challenge, response):
+                return IdentityWrapper(self.serv.broker, self.ident)
+
+
+class AuthServ(Referenceable):
+    
+    def __init__(self, app, broker):
+        self.app = app
+        self.broker = broker
+
+    def remote_username(self, username):
+        defr = self.app.authorizer.getIdentityRequest(username)
+        defr.addCallbacks(self.mkchallenge, self.mkchallenge)
+        return defr
+
+    def mkchallenge(self, ident):
+        challenge = passport.challenge()
+        if type(ident) == types.StringType:
+            # it's an error, so we must fail.
+            return challenge, AuthChallenger(None, self, challenge)
+        else:
+            return challenge, AuthChallenger(ident, self, challenge)
+
+class _ObjectRetrieval:
+    def __init__(self, broker, cb, eb):
+        self.cb = cb
+        self.eb = eb
+        self.term = 0
+        self.broker = broker
+        # XXX REFACTOR: this seems weird.
+        # I'm not inheriting because I have to delegate at least 2 of these
+        # things anyway.
+        broker.notifyOnFail(self.connectionFailed)
+        broker.notifyOnConnect(self.connectionMade)
+        broker.notifyOnDisconnect(self.connectionLost)
+
+    def connectionLost(self):
+        if not self.term:
+            self.term = 1
+            del self.broker
+            self.eb("connection lost")
+
+    def connectionMade(self):
+        assert not self.term, "How did this get called?"
+        x = self.broker.remoteForName("root")
+        del self.broker
+        self.term = 1
+        self.cb(x)
+
+    def connectionFailed(self):
+        if not self.term:
+            self.term = 1
+            del self.broker
+            self.eb("connection failed")
+
+def getObjectAt(host, port, cb, eb, timeout=None):
+    b = Broker()
+    _ObjectRetrieval(b, cb, eb)
+    tcp.Client(host, port, b, timeout)
+
+class AuthClient:
+    # Python NEEDS continuations.
+    def __init__(self, authServRef, localRef, serviceName, userName,
+                 password, callback, errback, perspectiveName=None):
+        self.localRef = localRef
+        self.userName = userName
+        self.password = password
+        self.serviceName = serviceName
+        self.callback = callback
+        self.errback = errback
+        self.authServRef = authServRef
+        if perspectiveName is None:
+            self.perspectiveName = userName
+        else:
+            self.perspectiveName = perspectiveName
+        authServRef.username(userName, pbcallback=self.respond, pberrback=errback)
+
+    def respond(self, (challenge, challenger)):
+        challenger.respond(
+            passport.respond(challenge, self.password),
+            pbcallback=self.responded,
+            pberrback=self.errback)
+    def responded(self, identity):
+        if identity:
+            identity.attach(
+                self.serviceName,
+                self.perspectiveName,
+                self.localRef,
+                pbcallback=self.callback,
+                pberrback=self.errback)
+        else:
+            self.errback("invalid username or password")
+
+class connect:
+    def __init__(self, callback, errback, host, port, username, password,
+                 service, perspective=None, client=None, timeout=None):
+        self.callback = callback
+        self.errback = errback
+        self.username = username
+        self.password = password
+        self.service = service
+        if perspective is None:
+            self.perspective = username
+        else:
+            self.perspective = perspective
+        self.client = client
+        getObjectAt(host, port, self.gotRoot, self.dontGotRoot, timeout)
+
+    def gotRoot(self, root):
+        AuthClient(root, self.client, self.service, self.username, self.password,
+                   self.callback, self.errback, self.perspective)
+
+    def dontGotRoot(self, err):
+        self.errback(err)

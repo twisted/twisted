@@ -32,12 +32,14 @@ class makeConnection:
         self.username=username
         self.attached=0
         self.ref=WordsGateway(username)
-        b=pb.Broker()
-        b.requestIdentity(username,password,callback=self.gotIdentity,errback=self.connectionFailed)
-        b.notifyOnDisconnect(self.connectionLost)
-        tcp.Client(server,int(port),b)
+        pb.connect(
+            self.pbCallback, self.connectionFailed,
+            server, int(port),
+            username, password,
+            service, username, # need to fix this, maybe?
+            self.ref, 60
+            )
         self.connected=1
-        self.b=b
 
     def connectionFailed(self,tb):
         if self.connected:
@@ -53,13 +55,11 @@ class makeConnection:
                 self.im.detachGateway(self.ref)
         self.connected=0
     
-    def gotIdentity(self,identity):
-        identity.attach(self.service,self.username,self.ref,pbcallback=self.pbCallback)
-
     def pbCallback(self,perspective):
+        perspective.broker.notifyOnDisconnect(self.connectionLost)
         self.im.attachGateway(self.ref)
         self.ref.connected(perspective)
-        self.ref.b=self.b
+        self.ref.b=perspective.broker
         self.attached=1
         
 class WordsGateway(gateway.Gateway,pb.Referenceable):

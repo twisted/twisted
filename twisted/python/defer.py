@@ -18,6 +18,7 @@
 
 # System Imports
 import traceback
+import types
 from cStringIO import StringIO
 
 # Twisted Imports
@@ -72,12 +73,15 @@ class Deferred:
                 kw = kw or {}
                 try:
                     # print callback, result, args, kw
+                    # print 'defres:',callback,result
                     result = apply(callback, (result,)+args, kw)
+                    if type(result) != types.StringType:
+                        isError = 0
                 except:
                     io = StringIO()
                     traceback.print_exc(file=io)
                     gv = io.getvalue()
-                    print gv
+                    print 'Deferred Error', gv
                     result = gv
                     isError = 1
         else:

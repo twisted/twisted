@@ -32,17 +32,14 @@ class DbClient(pb.Referenceable):
 
     def doLogin(self):
         """This begins the login process"""
-        self.client = pb.Broker()
-        tcp.Client(self.host, 8787, self.client)
-        self.client.requestIdentity("twisted", "matrix", callback = self.preConnected, errback  = self.couldntConnect)
+        pb.connect(self.gotConnection, self.coulntConnect,
+                   self.host, pb.portno,
+                   "twisted", "matrix",
+                   "twisted.enterprise.db", "twisted")
 
     def couldntConnect(self, err):
         """Called when an error occurs"""
         print "Could not connect.", err
-
-    def preConnected(self, identity):
-        print "preConnected."
-        identity.attach("twisted.enterprise.db","twisted",  None, pbcallback=self.gotConnection, pberrback=self.couldntConnect)
 
     def gotConnection(self, dbUser):
         print 'connected:', dbUser

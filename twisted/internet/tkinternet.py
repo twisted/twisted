@@ -69,14 +69,14 @@ def waiter():
     waiterthread = thread.get_ident()
     while 1:
         # Do the select, see if there's any input waiting...
-        print 'tkinternet: waiting on select'
+        # print 'tkinternet: waiting on select'
         select.select(main.reads.keys(), main.writes.keys(), [])
         if stopped:
             return
-        print 'tkinternet: waiting for condition'
+        # print 'tkinternet: waiting for condition'
         # Wait for the main thread to be done before select()ing again
         _condition.acquire()
-        print 'tkinternet: scheduling event'
+        # print 'tkinternet: scheduling event'
         # Tell the main thread to go boogie when there is...
         _root.after(0, worker)
         _condition.wait()
@@ -91,7 +91,28 @@ def install(widget):
     _condition = threading.Condition()
     _root = widget
     t = threading.Thread(target=waiter)
+    t.setDaemon(1)
     t.start()
+
+# capture the old functions from main
+from main import addReader, addWriter, addDelayed
+
+def wakeAddReader(reader):
+    addReader(reader)
+    main.waker.wakeUp()
+
+def wakeAddWriter(writer):
+    addWriter(writer)
+    main.waker.wakeUp()
+
+def wakeAddDelayed(delayed):
+    addDelayed(delayed)
+    main.waker.wakeUp()
+
+# Replace them with versions that do wakeUp.
+main.addReader = wakeAddReader
+main.addWriter = wakeAddWriter
+main.addDelayed = wakeAddDelayed
 
 def isInIOThread():
     import thread

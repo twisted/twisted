@@ -243,19 +243,13 @@ class Login(Toplevel):
         except:
             port = self.port.get()
         password=self.password.get()
-        broker = pb.Broker()
         self.m = MainWindow()
         self.m.withdraw()
         # he's a hack, he's a hack
-        broker.requestIdentity(username, password,
-                               callback=self.gotIdentity,
-                               errback=self.m.tryAgain)
-        broker.notifyOnDisconnect(self.m.disco)
-        tcp.Client(hostname, port, broker)
-
-    def gotIdentity(self, identity):
-        # he's a man with a happy knack
-        identity.attach(self.worldname.get(), self.username.get(), self.m, pbcallback=self.m.loggedIn)
+        pb.connect(self.m.loggedIn, self.m.tryAgain,
+                   hostname, port,
+                   username, password,
+                   self.worldname.get(), username, self.m, 60)
 
 def main():
     global root

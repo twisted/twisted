@@ -94,9 +94,8 @@ def connectedServerAndClient():
     svc = DummyService("test", app)
     ident.addKeyForPerspective(svc.getPerspectiveNamed("any"))
     app.authorizer.addIdentity(ident)
-    svr = pb.BrokerFactory(app)
+    svr = pb.BrokerFactory(pb.AuthRoot(app))
     s = svr.buildProtocol(('127.0.0.1',))
-    c.requestIdentity("guest", "guest")
     s.copyTags = {}
 
     cio = StringIO()
@@ -450,14 +449,23 @@ class BrokerTestCase(unittest.TestCase):
         # The objects were the same (testing lcache identity)
         assert col2[0]
 
+
+    def whatTheHell(self, obj):
+        print '!?!?!?!?', repr(obj)
+
     def testViewPoint(self):
         c, s, pump = connectedServerAndClient()
         pump.pump()
-        ident = c.remoteForName("identity")
+        authRef = c.remoteForName("root")
         accum = []
-        ident.attach("test", "any", None, pbcallback=accum.append)
+        pb.AuthClient(authRef, None, "test", "guest", "guest",
+                   accum.append, self.whatTheHell, "any")
+        # ident = c.remoteForName("identity")
+        # ident.attach("test", "any", None, pbcallback=accum.append)
         pump.pump() # send call
         pump.pump() # get response
+        while pump.pump(): # uh, do it more
+            pass
         test = accum.pop() # okay, this should be our perspective...
         test.getDummyViewPoint(pbcallback=accum.append)
         pump.pump() # send call

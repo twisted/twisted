@@ -16,27 +16,18 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from twisted.spread import pb
-from twisted.internet import tcp, main
+from twisted.internet import main, tcp
 
-def success(message):
-    print "Message received:",message
+def gotObject(object):
+    print "got object:",object
+    object.echo("hello network", pbcallback=gotEcho)
+def gotEcho(echo):
+    print 'server echoed:',echo
     main.shutDown()
 
-def failure(error):
-    print "Failure...",error
+def gotNoObject(reason):
+    print "no object:",reason
     main.shutDown()
 
-def connected(perspective):
-    perspective.echo("hello world",
-                     pbcallback=success,
-                     pberrback=failure)
-    print "connected."
-
-# run a client
-pb.connect(connected, failure,
-           "localhost", pb.portno,
-           "guest", "guest",
-           "pbecho", "any",
-           None)
-
+pb.getObjectAt("localhost", 8789, gotObject, gotNoObject)
 main.run()

@@ -136,7 +136,7 @@ class Client(Connection):
                 return
             if not (mode & (stat.S_IFSOCK |  # that's not a socket
                             stat.S_IROTH  |  # that's not readable
-                            stat.S_IWOTH  )):# that's not writable
+                            stat.S_IWOTH )):# that's not writable
                 protocol.connectionFailed()
                 return
             # success.
@@ -159,9 +159,10 @@ class Client(Connection):
 	    main.addTimeout(self.failIfNotConnected, timeout)
 
     def failIfNotConnected(self):
-        if not self.connected:
+        if (not self.connected) and (not self.disconnected):
 	    self.protocol.connectionFailed()
-	    self.loseConnection()
+            self.stopReading()
+            self.stopWriting()
 
     def createInternetSocket(self):
         """(internal) Create an AF_INET socket.
@@ -173,8 +174,9 @@ class Client(Connection):
         if abstract.isIPAddress(self.addr[0]):
             self._setRealAddress(self.addr[1])
         else:
-            main.resolver.resolve(self.addr[0], self._setRealAddress,
-                                                self.failIfNotConnected)
+            main.resolver.resolve(self.addr[0],
+                                  self._setRealAddress,
+                                  self.failIfNotConnected)
 
     def _setRealAddress(self, address):
         # print 'real address:',repr(address),repr(self.addr)
@@ -197,6 +199,7 @@ class Client(Connection):
                 return
             else:
                 self.protocol.connectionFailed()
+                self.stopReading()
                 self.stopWriting()
                 return
         # If I have reached this point without raising or returning, that means

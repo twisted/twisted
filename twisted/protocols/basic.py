@@ -50,7 +50,7 @@ class NetstringReceiver(protocol.Protocol):
         raise NotImplementedError
 
     def doData(self):
-        buffer,self.__data = self.__data[:self.length],self.__data[self.length:]
+        buffer,self.__data = self.__data[:int(self.length)],self.__data[int(self.length):]
         self.length = self.length - len(buffer)
         self.__buffer = self.__buffer + buffer
         if self.length != 0:

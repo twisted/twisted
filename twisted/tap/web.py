@@ -130,16 +130,9 @@ def getPorts(app, config):
 
         pw_name, pw_passwd, pw_uid, pw_gid, pw_gecos, pw_dir, pw_shell \
                  = pwd.getpwuid(os.getuid())
-        ident = passport.Identity('web', app)
-        ident.setPassword('web')
-        app.authorizer.addIdentity(ident)
-        service = distrib.ResourcePublisher(site, app, 'twisted.web.distrib')
-        # It's both a service _and_ a perspective.
-        ident.addKeyForPerspective(service)
-        factory = pb.BrokerFactory(app)
         ports.append((os.path.join(pw_dir,
                                    distrib.UserDirectory.userSocketName),
-                      factory))
+                      pb.BrokerFactory(distrib.ResourcePublisher(site))))
     else:
         ports.append((int(config.port), site))
     return ports

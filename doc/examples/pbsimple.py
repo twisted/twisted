@@ -16,27 +16,14 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from twisted.spread import pb
-from twisted.internet import tcp, main
-
-def success(message):
-    print "Message received:",message
-    main.shutDown()
-
-def failure(error):
-    print "Failure...",error
-    main.shutDown()
-
-def connected(perspective):
-    perspective.echo("hello world",
-                     pbcallback=success,
-                     pberrback=failure)
-    print "connected."
-
-# run a client
-pb.connect(connected, failure,
-           "localhost", pb.portno,
-           "guest", "guest",
-           "pbecho", "any",
-           None)
-
-main.run()
+from twisted.internet import main
+class Echoer(pb.Root):
+    def remote_echo(self, st):
+        print 'echoing:', st
+        return st
+if __name__ == '__main__':
+    import pbsimple
+    app = main.Application("pbsimple")
+    ef =  pb.BrokerFactory(Echoer())
+    app.listenOn(8789, ef)
+    app.run()

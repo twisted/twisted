@@ -189,6 +189,18 @@ def respond(challenge, password):
     doubleHashedPassword = m.digest()
     return doubleHashedPassword
 
+def challenge():
+    """I return some random data.
+
+    This is a method rather than a module-level function because it is
+    anticipated that we will want to change this to store salted passwords.
+    """
+    crap = ''
+    for x in range(random.randrange(15,25)):
+        crap = crap + chr(random.randint(65,90))
+    crap = md5.new(crap).digest()
+    return crap
+
 
 class Identity:
     """An identity, with different methods for verification.
@@ -259,17 +271,7 @@ class Identity:
         self.hashedPassword = cyphertext
 
     def challenge(self):
-        """I return some random data.
-
-        This is a method rather than a module-level function because it is
-        anticipated that we will want to change this to store salted passwords.
-        """
-        crap = ''
-        for x in range(random.randrange(15,25)):
-            crap = crap + chr(random.randint(65,90))
-        crap = md5.new(crap).digest()
-        crap = 'hi'
-        return crap
+        return challenge()
 
     def verifyPassword(self, challenge, hashedPassword):
         """Verify a challenge/response password.
@@ -304,6 +306,9 @@ class Authorizer:
         """
         raise NotImplementedError()
 
+    def removeIdentity(self, identityName):
+        raise NotImplementedError()
+
     def getIdentityRequest(self, name):
         """Request an identity, and make the given callback when it's received.
 
@@ -313,7 +318,7 @@ class Authorizer:
         Note that this is asynchronous specifically to provide support for
         authenticating users from a database.
         """
-        raise NotImplementedError("twisted.internet.passport.Authorizer.requestIdentity")
+        raise NotImplementedError("%s.getIdentityRequest"%str(self.__class__))
 
 
 class DefaultAuthorizer(Authorizer):
@@ -333,6 +338,9 @@ class DefaultAuthorizer(Authorizer):
         if self.identities.has_key(identity.name):
             raise KeyError("Already have an identity by that name.")
         self.identities[identity.name] = identity
+
+    def removeIdentity(self, identityName):
+        del self.identities[identityName]
 
     def getIdentityRequest(self, name):
         """Get a Deferred callback registration object.
