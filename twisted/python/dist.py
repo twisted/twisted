@@ -10,6 +10,11 @@ from distutils import core
 
 
 def setup(**kw):
+    if 'cmdclass' not in kw:
+        kw['cmdclass'] = {
+            'install_data': install_data_twisted,
+            'build_scripts': build_scripts_twisted,
+            }
     if 'detectExtensions' in kw:
         if 'ext_modules' not in kw:
             kw['ext_modules'] = [True] # distutils is so lame
