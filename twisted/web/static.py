@@ -71,7 +71,9 @@ class File(resource.Resource):
         ".tgz": "application/x-gtar",
         ".gtar": "application/x-gtar",
         ".zip": "application/x-zip",
-        ".py": "text/plain",
+        ".py": "text/x-python",
+        ".lisp": "text/x-lisp",
+        ".oz": "text/x-oz",
         ".java": "text/plain",
         ".pdf": "application/x-pdf",
         }
