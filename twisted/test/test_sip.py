@@ -485,7 +485,7 @@ class RegistrationTestCase(unittest.TestCase):
         self.assertEquals(len(self.registry.users), 0)
         self.assertEquals(len(self.sent), 1)
         dest, m = self.sent[0]
-        self.assertEquals(m.code, 501)
+        self.assertEquals(m.code, 401)
     
     def testWrongDomainRegister(self):
         r = sip.Request("REGISTER", "sip:wrong.com")
