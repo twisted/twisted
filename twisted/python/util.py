@@ -79,21 +79,8 @@ def getPassword(prompt = ''):
             p = getpass.getpass(prompt)
         return p
 
-# Python 2.1 forward-compatibility hacks
-# FIXME: Perhaps these should be explicitly placed in twisted.python.compat,
-#        rather than being a side-effect of importing t.p.util.
-try:
-    dict = dict
-except NameError:
-    def dict(args):
-        r = {}
-        for (k, v) in args:
-            r[k] = v
-        return r
-
-import types
-try:
-    types.StringTypes
-except AttributeError:
-    types.StringTypes = (types.StringType,)
-
+def dict(*a, **k):
+    import warnings
+    import twisted.python.compat
+    warnings.warn('twisted.python.util.dict is deprecated.  Use twisted.python.compat.dict instead')
+    return twisted.python.compat.dict(*a, **k)
