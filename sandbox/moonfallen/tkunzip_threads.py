@@ -45,6 +45,9 @@ class ProgressBar:
         self.update()
         self.canvas.pack(side='top', fill='x', expand='no')
 
+    def destroy(self):
+        reactor.stop()
+
     def pack(self, *args, **kwargs):
         self.frame.pack(*args, **kwargs)
     
