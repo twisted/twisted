@@ -212,6 +212,8 @@ class MultiService(Service):
             self.namedServices[service.name] = service
         self.services.append(service)
         if self.running:
+            # It may be too late for that, but we will do our best
+            service.privilegedStartService()
             service.startService()
 
     def removeService(self, service):
