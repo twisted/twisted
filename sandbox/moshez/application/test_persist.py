@@ -37,6 +37,19 @@ class PersistTestCase(unittest.TestCase):
                 o1 = persist.load('persisttest.'+style, style)
                 self.failUnlessEqual(o, o1)
 
+    def testNames(self):
+        o = [1,2,3]
+        p = persist.Persistant(o, 'object')
+        for style in 'xml source pickle'.split():
+            p.setStyle(style)
+            p.save()
+            o1 = persist.load('object.ta'+style[0], style)
+            self.failUnlessEqual(o, o1)
+            for tag in 'lala lolo'.split():
+                p.save(tag)
+                o1 = persist.load('object-'+tag+'.ta'+style[0], style)
+                self.failUnlessEqual(o, o1)
+      
     def testEncryptedStyles(self):
         try:
             import Crypto
