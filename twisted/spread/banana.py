@@ -35,7 +35,7 @@ def b1282int(st):
         oneHundredAndTwentyEight = 128l
     else:
         oneHundredAndTwentyEight = 128
-    i = 0l
+    i = 0
     place = 0
     for char in st:
         num = ord(char)
