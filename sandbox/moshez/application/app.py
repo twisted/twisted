@@ -147,19 +147,19 @@ class ServerOptions(usage.Options):
         when debugging freezes or locks in complex code."""
         sys.settrace(util.spewer)
 
+    def parseOptions(self, options=None):
+        usage.Options.parseOptions(self, options or sys.argv[1:] or ["--help"])
+
 
 def run(runApp, ServerOptions):
-    # make default be "--help"
-    if len(sys.argv) == 1:
-        sys.argv.append("--help")
     config = ServerOptions()
     try:
         config.parseOptions()
     except usage.error, ue:
-        config.opt_help()
+        print config
         print "%s: %s" % (sys.argv[0], ue)
-        os._exit(1)
-    runApp(config)
+    else:
+        runApp(config)
 
 def initialLog():
     from twisted.internet import reactor
