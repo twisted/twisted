@@ -26,12 +26,6 @@ import string, struct
 import StringIO
 
 class StringIOWithoutClosing(StringIO.StringIO):
-
-    def read(self, i=None):
-        r = StringIO.StringIO.read(self, i)
-        print 'read:', repr(r)
-        return r
-
     def close(self):
         pass
 
