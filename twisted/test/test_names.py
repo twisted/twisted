@@ -35,7 +35,7 @@ try:
 except:
     IPV6 = False
 else:
-    IPv6 = True
+    IPV6 = True
 
 def justPayload(results):
     return [r.payload for r in results[0]]
