@@ -197,7 +197,6 @@ class FileMessage:
         self.fp.close()
         os.remove(self.name)
 
-
 class MailService(service.Service):
     """An email service."""
 

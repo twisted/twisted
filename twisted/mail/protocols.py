@@ -79,6 +79,7 @@ class SMTPFactory(smtp.SMTPFactory):
     protocol = DomainSMTP
 
     def __init__(self, service):
+        smtp.SMTPFactory.__init__(self)
         self.service = service
     
     def buildProtocol(self, addr):

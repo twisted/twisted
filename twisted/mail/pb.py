@@ -65,7 +65,7 @@ class Maildir(pb.Referenceable):
     def getSubFolder(self, name):
         if name[0] == '.':
             raise IOError("subfolder name cannot begin with a '.'")
-        name = string.replace(name, '/', ':')
+        name = name.replace('/', ':')
         if self.virtualDirectoy == '.':
             name = '.'+name
         else:

@@ -24,6 +24,11 @@ import socket
 import time
 import md5
 
+try:
+    import cStringIO as StringIO
+except ImportError:
+    import StringIO
+
 from twisted.protocols import pop3
 from twisted.protocols import smtp
 from twisted.persisted import dirdbm
