@@ -1,6 +1,6 @@
 * Movement
   * test_* will go into twisted/test
-  * twistd/mktap will go into twisted/scripts
+  * twistd/mktap/tapconvert will go into twisted/scripts
   * Everythin else will go into twisted/application
 * Changes
   * twisted/internet/app.py will give a DeprecationWarning
