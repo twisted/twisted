@@ -566,16 +566,20 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
         return getattr(self, 'state_' + self.mode)(line)
 
     def state_COMMAND(self, line):
-        words = line.split(None, 1)
-        try:
-            command = words[0]
-        except IndexError:
-            self.sendSyntaxError()
+        # Ignore leading and trailing whitespace, as well as an arbitrary
+        # amount of whitespace between the command and its argument, though
+        # it is not required by the protocol, for it is a nice thing to do.
+        line = line.strip()
+
+        parts = line.split(None, 1)
+        if parts:
+            method = self.lookupMethod(parts[0]) or self.do_UNKNOWN
+            if len(parts) == 2:
+                method(parts[1])
+            else:
+                method('')
         else:
-            method = self.lookupMethod(command)
-            if method is None:
-                method = self.do_UNKNOWN
-            method(line[len(command):].strip())
+            self.sendSyntaxError()
 
     def sendSyntaxError(self):
         self.sendCode(500, 'Error: bad syntax')
@@ -658,7 +662,7 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
         if failure.check(SMTPBadSender):
             self.sendCode(failure.value.code,
                           'Cannot receive for specified address %s: %s'
-                          % (repr(str(failure.value.addr)), failure.value.resp))
+                          % (quoteaddr(failure.value.addr), failure.value.resp))
         elif failure.check(SMTPServerError):
             self.sendCode(failure.value.code, failure.value.resp)
         else:
