@@ -199,6 +199,7 @@ _resetLogDateTimeID = None
 def _resetLogDateTime():
     global _logDateTime
     global _resetLogDateTime
+    global _resetLogDateTimeID
     _logDateTime = datetimeToLogString()
     _resetLogDateTimeID = reactor.callLater(1, _resetLogDateTime)
 
