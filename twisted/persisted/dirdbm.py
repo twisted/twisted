@@ -28,13 +28,16 @@ import os
 import types
 import base64
 import string
+import cPickle
 _open = __builtins__['open']
 
 class DirDBM:
     """A directory with a DBM interface.
+    
     This class presents a hash-like interface to a directory of small,
-    flat files.
+    flat files. It can only use strings as keys or values.
     """
+    
     def __init__(self, name):
         """Initialize.
         """
@@ -69,7 +72,7 @@ class DirDBM:
         """
         assert type(k) == types.StringType
         k = self._encode(k)
-        try:    return _open(os.path.join(self.dname, k)).read()
+        try:    return _open(os.path.join(self.dname, k), "rb").read()
         except: raise KeyError(k)
 
     def __delitem__(self, k):
@@ -78,7 +81,7 @@ class DirDBM:
         assert type(k) == types.StringType
         k = self._encode(k)
         try:    os.remove(os.path.join(self.dname, k))
-        except: raise KeyError(k)
+        except (OSError, IOError): raise KeyError(k)
 
     def keys(self):
         """dirdbm.keys(); return a list of filenames
@@ -119,6 +122,35 @@ class DirDBM:
     def close(self):
         """close this dbm: no-op, for dbm-style interface compliance
         """
+
+
+class Shelf(DirDBM):
+    """A directory with a DBM shelf interface.
+    
+    This class presents a hash-like interface to a directory of small,
+    flat files. Keys must be strings, but values can be any given object.
+    """
+    
+    def __setitem__(self, k, v):
+        """shelf[foo] = bar; create or modify a textfile in this directory
+        """
+        assert type(k) == types.StringType
+        k = self._encode(k)
+        f = _open(os.path.join(self.dname, k), "wb")
+        cPickle.Pickler(f, 1).dump(v)
+        f.flush()
+        f.close()
+
+    def __getitem__(self, k):
+        """dirdbm[foo]; get the contents of a file in this directory as a pickle
+        """
+        assert type(k) == types.StringType
+        k = self._encode(k)
+        try:
+            f = _open(os.path.join(self.dname, k), "rb")
+            return cPickle.Unpickler(f).load()
+        except (OSError, IOError, cPickle.UnpicklingError):
+            raise KeyError(k)
 
 
 def open(file, flag = None, mode = None):

@@ -82,4 +82,13 @@ class DirDbmTestCase(unittest.TestCase):
         assert len(d.items()) == 0, "database has items"
 
 
-testCases = [DirDbmTestCase]
+class ShelfTestCase(DirDbmTestCase):
+
+    def setUp(self):
+        self.path = tempfile.mktemp()
+        self.dbm = dirdbm.Shelf(self.path)
+        self.items = (('abc', 'foo'), ('/lalal', '\000\001'), ('\000\012', 'baz'),
+                      ('int', 12), ('float', 12.0), ('tuple', (None, 12)))
+
+
+testCases = [DirDbmTestCase, ShelfTestCase]
