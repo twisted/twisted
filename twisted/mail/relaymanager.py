@@ -418,7 +418,20 @@ class MXCalculator:
         if resolver is None:
             from twisted.names.client import theResolver as resolver
         self.resolver = resolver
-            
+
+    def __getstate__(self):
+        from twisted.names.client import theResolver
+
+        d = self.__dict__.copy()
+        if d['resolver'] is theResolver:
+            d['resolver'] = None
+        return d
+    
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        if self.resolver is None:
+            from twisted.names.client import theResolver
+            self.resolver = theResolver
 
     def markBad(self, mx):
         self.badMXs[mx] = time.time() + self.timeOutBadMX
