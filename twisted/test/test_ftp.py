@@ -686,17 +686,36 @@ class ChildProcessProtocol(protocol.ProcessProtocol):
 # -- Client Tests -----------------------------------------------------------
 
 
+class PrintLines(protocol.Protocol):
+    """Helper class used by FTPFileListingTests."""
+
+    def __init__(self, lines):
+        self._lines = lines
+
+    def connectionMade(self):
+        for line in self._lines:
+            self.transport.write(line + "\r\n")
+        self.transport.loseConnection()
+
+class MyFTPFileListProtocol(ftp.FTPFileListProtocol):
+    def __init__(self):
+        self.other = []
+        ftp.FTPFileListProtocol.__init__(self)
+
+    def unknownLine(self, line):
+        self.other.append(line)
 
 class FTPFileListingTests(unittest.TestCase):
+    def getFilesForLines(self, lines):
+        fileList = MyFTPFileListProtocol()
+        loopback.loopback(PrintLines(lines), fileList)
+        return fileList.files, fileList.other
+
     def testOneLine(self):
         # This example line taken from the docstring for FTPFileListProtocol
-        fileList = ftp.FTPFileListProtocol()
-        class PrintLine(protocol.Protocol):
-            def connectionMade(self):
-                self.transport.write('-rw-r--r--   1 root     other        531 Jan 29 03:26 README\n')
-                self.transport.loseConnection()
-        loopback.loopback(PrintLine(), fileList)
-        file = fileList.files[0]
+        line = '-rw-r--r--   1 root     other        531 Jan 29 03:26 README'
+        (file,), other = self.getFilesForLines([line])
+        self.failIf(other, 'unexpect unparsable lines: %s' % repr(other))
         self.failUnless(file['filetype'] == '-', 'misparsed fileitem')
         self.failUnless(file['perms'] == 'rw-r--r--', 'misparsed perms')
         self.failUnless(file['owner'] == 'root', 'misparsed fileitem')
@@ -704,6 +723,41 @@ class FTPFileListingTests(unittest.TestCase):
         self.failUnless(file['size'] == 531, 'misparsed fileitem')
         self.failUnless(file['date'] == 'Jan 29 03:26', 'misparsed fileitem')
         self.failUnless(file['filename'] == 'README', 'misparsed fileitem')
+        self.failUnless(file['nlinks'] == 1, 'misparsed nlinks')
+        self.failIf(file['linktarget'], 'misparsed linktarget')
+
+    def testVariantLines(self):
+        line1 = 'drw-r--r--   2 root     other        531 Jan  9  2003 A'
+        line2 = 'lrw-r--r--   1 root     other          1 Jan 29 03:26 B -> A'
+        line3 = 'woohoo! '
+        (file1, file2), (other,) = self.getFilesForLines([line1, line2, line3])
+        self.failUnless(other == 'woohoo! \r', 'incorrect other line')
+        # file 1
+        self.failUnless(file1['filetype'] == 'd', 'misparsed fileitem')
+        self.failUnless(file1['perms'] == 'rw-r--r--', 'misparsed perms')
+        self.failUnless(file1['owner'] == 'root', 'misparsed owner')
+        self.failUnless(file1['group'] == 'other', 'misparsed group')
+        self.failUnless(file1['size'] == 531, 'misparsed size')
+        self.failUnless(file1['date'] == 'Jan  9  2003', 'misparsed date')
+        self.failUnless(file1['filename'] == 'A', 'misparsed filename')
+        self.failUnless(file1['nlinks'] == 2, 'misparsed nlinks')
+        self.failIf(file1['linktarget'], 'misparsed linktarget')
+        # file 2
+        self.failUnless(file2['filetype'] == 'l', 'misparsed fileitem')
+        self.failUnless(file2['perms'] == 'rw-r--r--', 'misparsed perms')
+        self.failUnless(file2['owner'] == 'root', 'misparsed owner')
+        self.failUnless(file2['group'] == 'other', 'misparsed group')
+        self.failUnless(file2['size'] == 1, 'misparsed size')
+        self.failUnless(file2['date'] == 'Jan 29 03:26', 'misparsed date')
+        self.failUnless(file2['filename'] == 'B', 'misparsed filename')
+        self.failUnless(file2['nlinks'] == 1, 'misparsed nlinks')
+        self.failUnless(file2['linktarget'] == 'A', 'misparsed linktarget')
+
+    def testUnknownLine(self):
+        files, others = self.getFilesForLines(['ABC', 'not a file'])
+        self.failIf(files, 'unexpected file entries')
+        self.failUnless(others == ['ABC\r', 'not a file\r'],
+                        'incorrect unparsable lines: %s' % repr(others))
 
     def testYear(self):
         # This example derived from bug description in issue 514.

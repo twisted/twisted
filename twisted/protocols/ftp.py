@@ -2025,17 +2025,20 @@ class FTPFileListProtocol(basic.LineReceiver):
 
         -rw-r--r--   1 root     other        531 Jan 29 03:26 README
 
-    If you need different evil for a wacky FTP server, you can override this.
+    If you need different evil for a wacky FTP server, you can
+    override either C{fileLinePattern} or C{parseDirectoryLine()}.
 
     It populates the instance attribute self.files, which is a list containing
     dicts with the following keys (examples from the above line):
-        - filetype: e.g. 'd' for directories, or '-' for an ordinary file
-        - perms:    e.g. 'rw-r--r--'
-        - owner:    e.g. 'root'
-        - group:    e.g. 'other'
-        - size:     e.g. 531
-        - date:     e.g. 'Jan 29 03:26'
-        - filename: e.g. 'README'
+        - filetype:   e.g. 'd' for directories, or '-' for an ordinary file
+        - perms:      e.g. 'rw-r--r--'
+        - nlinks:     e.g. 1
+        - owner:      e.g. 'root'
+        - group:      e.g. 'other'
+        - size:       e.g. 531
+        - date:       e.g. 'Jan 29 03:26'
+        - filename:   e.g. 'README'
+        - linktarget: e.g. 'some/file'
 
     Note that the 'date' value will be formatted differently depending on the
     date.  Check U{http://cr.yp.to/ftp.html} if you really want to try to parse
@@ -2044,9 +2047,10 @@ class FTPFileListProtocol(basic.LineReceiver):
     @ivar files: list of dicts describing the files in this listing
     """
     fileLinePattern = re.compile(
-        r'^(?P<filetype>.)(?P<perms>.{9})\s+\d*\s*'
+        r'^(?P<filetype>.)(?P<perms>.{9})\s+(?P<nlinks>\d*)\s*'
         r'(?P<owner>\S+)\s+(?P<group>\S+)\s+(?P<size>\d+)\s+'
-        r'(?P<date>...\s+\d+\s+[\d:]+)\s+(?P<filename>.*?)\r?$'
+        r'(?P<date>...\s+\d+\s+[\d:]+)\s+(?P<filename>([^ ]|\\ )*?)'
+        r'( -> (?P<linktarget>[^\r]*))?\r?$'
     )
     delimiter = '\n'
 
@@ -2054,11 +2058,56 @@ class FTPFileListProtocol(basic.LineReceiver):
         self.files = []
 
     def lineReceived(self, line):
+        d = self.parseDirectoryLine(line)
+        if d is None:
+            self.unknownLine(line)
+        else:
+            self.addFile(d)
+
+    def parseDirectoryLine(self, line):
+        """Return a dictionary of fields, or None if line cannot be parsed.
+
+        @param line: line of text expected to contain a directory entry
+        @type line: str
+
+        @return: dict
+        """
         match = self.fileLinePattern.match(line)
-        if match:
-            dict = match.groupdict()
-            dict['size'] = int(dict['size'])
-            self.files.append(dict)
+        if match is None:
+            return None
+        else:
+            d = match.groupdict()
+            d['filename'] = d['filename'].replace(r'\ ', ' ')
+            d['nlinks'] = int(d['nlinks'])
+            d['size'] = int(d['size'])
+            if d['linktarget']:
+                d['linktarget'] = d['linktarget'].replace(r'\ ', ' ')
+            return d
+
+    def addFile(self, info):
+        """Append file information dictionary to the list of known files.
+
+        Subclasses can override or extend this method to handle file
+        information differently without affecting the parsing of data
+        from the server.
+
+        @param info: dictionary containing the parsed representation
+                     of the file information
+        @type info: dict
+        """
+        self.files.append(info)
+
+    def unknownLine(self, line):
+        """Deal with received lines which could not be parsed as file
+        information.
+
+        Subclasses can override this to perform any special processing
+        needed.
+
+        @param line: unparsable line as received
+        @type line: str
+        """
+        pass
 
 def parsePWDResponse(response):
     """Returns the path from a response to a PWD command.
