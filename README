@@ -1,12 +1,14 @@
-Twisted 0.10.3
+Twisted 0.11.0
 
 Quote of the Release:
 
   Adventure, excitement... a Jedi craves not these things.
         -- Silent Bob, in "Mallrats"
 
-What's new in 0.10.3?
+What's new in 0.11.0?
 
+  twisted servers can now run using jython, albeit in an inefficient manner.
+  
   twisted.names, a DNS system, was checked in. It is still being worked on.
 
   SSL support is now much more robust, and dirdbm works much better as well.
