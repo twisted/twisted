@@ -19,92 +19,94 @@
 """
 Test cases for twisted.names.
 """
-import socket
-
+import sys
 from pyunit import unittest
 
-from twisted.names import dns
 from twisted.internet import reactor, protocol
+from twisted.names import client, server
+from twisted.protocols import dns
 from twisted.python import log
 
 
-class DNSFactory(protocol.ServerFactory):
+PORT = 2053
 
-    protocol = dns.DNS
-    
-    def __init__(self):
-        self.boss = dns.DNSServerBoss()
-    
-    
-class ServerDNSTestCase(unittest.TestCase):
+class NoFileAuthority:
+    def __init__(self, soa, records):
+        self.soa, self.records = soa, records
+
+
+class ServerDNSTestCase(unittest.DeferredTestCase):
     """Test cases for DNS server and client."""
     
     def setUp(self):
-        # hack until moshez lets me set the port for queries
-        dns.DNS_PORT = 2053
-    
+        self.factory = server.DNSServerFactory([
+            NoFileAuthority(
+                soa = dns.Record_SOA(
+                    mname = 'test-domain.com',
+                    rname = 'root.test-domain.com',
+                    serial = 100,
+                    refresh = 1234,
+                    minimum = 7654,
+                    expire = 19283784,
+                    retry = 15
+                ),
+                records = {
+                    'test-domain.com': [
+                        dns.Record_A('127.0.0.1'),
+                        dns.Record_NS('39.28.189.39'),
+                        dns.Record_MX(10, 'host.test-domain.com'),
+                        dns.Record_HINFO(os='Linux', cpu='A Fast One, Dontcha know')
+                    ],
+                    'host.test-domain.com': [
+                        dns.Record_A('123.242.1.5'),
+                        dns.Record_A('0.255.0.255')
+                    ],
+                    'host-two.test-domain.com': [
+#
+#  Python bug
+#                        dns.Record_A('255.255.255.255'),
+#
+                        dns.Record_A('255.255.255.254'),
+                        dns.Record_A('0.0.0.0')
+                    ]
+                }
+            )
+        ])
+        
+        from twisted.internet import reactor
+        reactor.listenTCP(PORT, self.factory)
+        
+        p = dns.DNSClientProtocol(self.factory)
+        reactor.listenUDP(PORT, p)
+        
+        self.resolver = client.Resolver(servers=[('127.0.0.1', PORT)])
+
+
     def tearDown(self):
-        dns.DNS_PORT = 53
-    
+        pass
+
+
     def testServer(self):
-        factory = DNSFactory()
-        factory.boss.addDomain("example.foo", dns.SimpleDomain("example.foo", "1.1.1.1"))
-        p = reactor.listenUDP(2053, factory)
-        reactor.iterate()
-        reactor.iterate()
-        
-        resolver = dns.Resolver(["localhost"])
-        d = resolver.resolve("example.foo")
-        d.addCallback(self.tS_result).addErrback(self.tS_error)
-        
-        while not hasattr(self, "gotAnswer"):
-            reactor.iterate()
-        del self.gotAnswer
-        p.loseConnection()
-        reactor.iterate()
-    
-    def tS_result(self, result):
-        self.assertEquals(result, "1.1.1.1")
-        self.gotAnswer = 1
-    
-    def tS_error(self, error):
-        self.gotAnswer = 1
-        raise RuntimeError, error
+        r = self.resolver
 
+        # Test A records
+        self.deferredFailUnlessEqual(
+            r.lookupAddress('test-domain.com'),
+            ['127.0.0.1']
+        )
+        self.deferredFailUnlessEqual(
+            r.lookupAddress('host.test-domain.com').addCallback(
+                lambda r: (r.sort(), r)[1]
+            ),
+            ['0.255.0.255', '123.242.1.5']
+        )
+        self.deferredFailUnlessEqual(
+            r.lookupAddress('host-two.test-domain.com').addCallback(
+                lambda r: (r.sort(), r)[1]
+            ),
+            ['0.0.0.0', '255.255.255.255']
+        )
 
-class LookupDNSTestCase(unittest.TestCase):
-    
-    def setUp(self):
-        self.results = []
-        self.resolver = dns.Resolver(["207.19.98.16"])
-    
-    def _testLookup(self, domain, type, result):
-        try:
-            socket.gethostbyname(domain)
-        except socket.error:
-            log.msg("host not available through normal means")
-        else:
-            d = self.resolver.resolve(domain, type)
-            d.addCallback(self._result).addErrback(self._error)
-            while len(self.results) == 0:
-                reactor.iterate()
-            self.assertEquals(self.results[0], result)
-        
-    def _result(self, result):
-        self.results.append(result)
-    
-    def _error(self, error):
-        self.results.append(None)
-
-    def testA(self):
-        self._testLookup("zoteca.com", 1, "209.163.251.206")
-    
-    def testMX(self):
-        self._testLookup("zoteca.com", 15, ['israel2.maxnm.com', 'www.maxnm.com'])
-
-
-# XXX move this test into accepttests
-del LookupDNSTestCase
-
-# XXX disabled cause twisted.names needs to be changed to new API
-del ServerDNSTestCase
+        from twisted.internet import reactor
+        for i in range(10):
+            reactor.iterate(0.1)
