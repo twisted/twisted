@@ -72,8 +72,7 @@ class WelcomeMessage(Protocol):
     connectionLost.</p>
     
     <h2>ClientFactory</h2>
-    <p>With the new API, Protocols no longer connect directly using
-    reactor.client*.  Instead, we use reactor.connect* and a ClientFactory.
+    <p>We use reactor.connect* and a ClientFactory.
     The ClientFactory is in charge of creating the Protocol, and also receives
     events relating to the connection state.  This allows it to do things like
     reconnect on the event of a connection error.  Here is an example of a
