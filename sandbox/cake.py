@@ -2,6 +2,8 @@
 Cake is like eacher, but upside down and on fire. >:)
 """
 
+from cStringIO import StringIO
+
 class _later:
     pass
 later = _later()
@@ -38,11 +40,12 @@ class Cake(object):
         else:
             self._prevcake_, self._meth_, self._args_ = args
             self._kwargs_ = kwargs
-        #print 'new cake: %r %r %r' % (self, args, kwargs)
         
     def __repr__(self):
         return '<Cake _meth_=%r _args_=%r _kwargs_=%r>' % (self._meth_, self._args_, self._kwargs_)
         return object.__repr__(self)
+
+    __str__ = __repr__
 
     def __getattr__(self, arg):
         return Cake(self, arg)
@@ -56,28 +59,113 @@ class Yeast(object):
         self.ferment = curry(klassmethod, later, *args, **kwargs)
 
     def __get__(self, sugar, klass=None):
-        if not klass:
+        if klass is None:
             return None
         return self.ferment(sugar)
 
-def bake(cake, res):
+def call_fmt(fn, args, kwargs):
+    return (fn or '') + '(' + ', '.join(map(repr, args or ()) + [('%s=%r' % item) for item in (kwargs and kwargs.items() or ())]) + ')'
+
+class Recipe(Cake):
+    def __init__(self, cake):
+        self.callstack = preheat(cake)
+
+    def __call__(self, res):
+        for fn, args, kwargs in self.callstack:
+            if isinstance(fn, Recipe):
+                res = fn(res)
+            else:
+                _res = getattr(res, fn)(*args, **kwargs)
+                res = _res is None and res or _res
+        return res
+
+    def __repr__(self):
+        return 'input.' + '.'.join([call_fmt(*tpl) for tpl in self.callstack])
+
+    __str__ = __repr__
+        
+class Compiler:
+    def __init__(self, recipe, indent = '    '):
+        self.code = StringIO()
+        self.recipe = recipe
+        self.local_num = 0
+        self.locals = {}
+        self.locals_cache = {}
+        self.indent = indent
+    
+    def newlocal(self, obj):
+        if id(obj) in self.locals_cache:
+            return self.locals_cache[id(obj)]
+        name = 'local_' + str(self.local_num)
+        self.local_num += 1
+        self.locals_cache[id(obj)] = name
+        self.locals[name] = obj
+        return name
+
+    def compile(self):
+        for fn, args, kwargs in self.recipe.callstack:
+            self.compile_step(fn, args, kwargs)
+        self.writeln('return res')
+        return self.code.getvalue(), self.locals
+
+    def compile_step(self, fn, args, kwargs):
+        if (fn[:2] == fn[-2:] == '__'):
+            return getattr(self, 'handle_' + fn[2:-2], self.write_code)(fn, args, kwargs)
+        return self.write_code(fn, args, kwargs)
+    
+    def writeln(self, s):
+        self.code.write(self.indent + s + '\n')
+
+    # optimize all you like here, isn't this really f'ing scary?
+
+    def handle_getitem(self, fn, args, kwargs):
+        self.writeln('res = res[%s]' % self.newlocal(args[0]))
+
+    def handle_add(self, fn, args, kwargs):
+        self.writeln('res = res + %s' % self.newlocal(args[0]))
+
+    def write_code(self, fn, args, kwargs):
+        if not (args or kwargs):
+            self.writeln('_res = res.%s()' % fn)
+        elif not kwargs:
+            self.writeln('_res = res.%s(*%s)' % (fn, self.newlocal(args)))
+        elif not args:
+            self.writeln('_res = res.%s(**%s)' % (fn, self.newlocal(kwargs)))
+        else:
+            self.writeln('_res = res.%s(*%s, **%s)' % (fn, self.newlocal(args), self.newlocal(kwargs)))
+        self.writeln('res = _res is None and res or _res')
+
+def code_recipe(recipe, indent=''):
+    return Compiler(recipe, indent).compile()
+
+def compile_recipe(recipe):
+    res = []
+    codestring, locals = code_recipe(recipe, indent='    ')
+    locals['callback'] = res.append
+    codeobject = compile('def bake(res):\n' + codestring + 'callback(bake)', '<almost-baked cake>', 'exec')
+    eval(codeobject, locals, globals())
+    return res[0]
+
+def preheat(cake):
     stack = []
     while cake is not None:
         stack.append(cake)
         cake = cake._prevcake_
-    
+    callstack = []
     while stack:
         cake = stack.pop()
-        #print repr(cake)
+        if isinstance(cake, Recipe):
+            callstack.append((cake, None, None))
+            continue
         if cake._args_ is not None:
             prevcake = cake
             while prevcake._meth_ is None:
                 prevcake = prevcake._prevcake_
-            #print prevcake._meth_, cake._args_, cake._kwargs_
-            _res = getattr(res, prevcake._meth_)(*cake._args_, **cake._kwargs_)
-            #print res, _res
-            res = _res is None and res or _res
-    return res
+            callstack.append((prevcake._meth_, cake._args_, cake._kwargs_))
+    return callstack
+ 
+def bake(cake, res):
+    return Recipe(cake)(res)
 
 _SPECIALS = """
     __hash__
@@ -106,7 +194,14 @@ if __name__=='__main__':
     cake2 = cake1 + [1, 2, 3]
     cake3 = cake2.sort()
     cake4 = cake3[2:4]
-    for x in (cake1, cake2, cake3, cake4):
+    cake5 = Recipe(cake4)
+    print cake5
+    cake6 = (cake5 + [12, 13, 14]).sort().pop()
+    for x in (cake6, cake5, cake4, cake3, cake2, cake1):
         print bake(x, [60])
     cakes = [x + 10 for x in map(cake + 1, [1, 2, 3, 4])]
     print map(curry(bake, later, 4), cakes)
+    print code_recipe(cake5)[0].strip()
+    fn = compile_recipe(cake5)
+    print fn([60])
+    print fn([12, 100, 40, 1, 2, 3, 4, 5, 6, 9, 7, 10, 10.1, 10.2, 10.3, 11, 12, 13, 14])
