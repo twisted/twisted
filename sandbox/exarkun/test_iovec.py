@@ -1,6 +1,7 @@
 # -*- coding: Latin-1 -*-
 
 import iovec
+import time
 
 import tempfile
 import socket
@@ -13,63 +14,14 @@ def arith(x):
 
 HARD_CHUNK_SIZE = 37
 
-class IOVectorTestCase(unittest.TestCase):
-    def testAllocDealloc(self):
-        v = iovec.iovec()
-        del v
-    
-    def testAppend(self):
-        v = iovec.iovec()
-        for s in [chr(i + ord('a')) * i for i in range(1, HARD_CHUNK_SIZE+1)]:
-            v.append(s)
-        self.assertEquals(arith(HARD_CHUNK_SIZE), v.bytes)
-
-    def testExtend(self):
-        v = iovec.iovec()
-        v.extend([chr(i + ord('a')) * i for i in range(1, HARD_CHUNK_SIZE+1)])
-        self.assertEquals(arith(HARD_CHUNK_SIZE), v.bytes)
-        
-    def testWriteToFile(self):
-        v = iovec.iovec()
-        for s in [chr(i + ord('a')) * i for i in range(1, HARD_CHUNK_SIZE+1)]:
-            v.append(s)
-
-        self.assertEquals(arith(HARD_CHUNK_SIZE), v.bytes)
-        f = tempfile.TemporaryFile('w+')
-        self.assertEquals(arith(HARD_CHUNK_SIZE), v.write(f))
-        self.assertEquals(0, v.bytes)
-        
-        f.seek(0, 0)
-        self.assertEquals(f.read(), ''.join([chr(i + ord('a')) * i for i in range(1, HARD_CHUNK_SIZE+1)]))
-
+class IOVec(unittest.TestCase):
     def testWriteToFileDescriptor(self):
-        v = iovec.iovec()
-        for s in [chr(i + ord('a')) * i for i in range(1, HARD_CHUNK_SIZE+1)]:
-            v.append(s)
-        self.assertEquals(arith(HARD_CHUNK_SIZE), v.bytes)
+        s = [chr(i + ord('a')) * i for i in range(1, HARD_CHUNK_SIZE+1)]
         f = tempfile.TemporaryFile('w+')
-        
-        self.assertEquals(arith(HARD_CHUNK_SIZE), v.write(f.fileno()))
+        self.assertEquals(arith(HARD_CHUNK_SIZE), iovec.writev(f.fileno(), s))
         
         f.seek(0, 0)
-        self.assertEquals(f.read(), ''.join([chr(i + ord('a')) * i for i in range(1, HARD_CHUNK_SIZE+1)]))
-
-    def testIllegalWrites(self):
-        v = iovec.iovec()
-        for s in ['x' * i for i in range(1, 101)]:
-            v.append(s)
-        self.assertEquals(v.bytes, arith(100))
-
-        class Pah:
-            def fileno(self):
-                return 'a string'
-
-        self.assertRaises(iovec.error, v.write, Pah())
-        
-        del Pah.fileno
-        self.assertRaises(AttributeError, v.write, Pah())
-        self.assertRaises(AttributeError, v.write, 'a string')
-        self.assertEquals(v.bytes, arith(100))
+        self.assertEquals(f.read(), ''.join(s))
 
     def testIncompleteWrites(self):
         server = socket.socket()
@@ -80,49 +32,48 @@ class IOVectorTestCase(unittest.TestCase):
         port = server.getsockname()[1]
         
         client = socket.socket()
-        client.setblocking(0)
+        client.setblocking(False)
         try:
             client.connect(('', port))
         except:
             pass
         
         s, _ = server.accept()
-        
-        v = iovec.iovec()
-        for i in range(1000, 2000):
-            v.append(chr(ord('a') + i % 26) * i)
-        self.assertEquals(v.bytes, arith(1999)-arith(999))
-        
-        written = v.write(client)
-        # print
-        # print written
-        # print
+        s.setblocking(False)
 
-    def testRead(self):
-        v = iovec.iovec()
-        v.extend(map(str, range(100)))
-        expect = StringIO()
-        expect.write(''.join(map(str, range(100))))
-        expect.seek(0)
-        self.assertEquals(v.read(120), expect.read(120))
-        self.assertEquals(v.read(500), None)
-        self.assertEquals(v.bytes, 70)
-        self.assertEquals(v.read(69), expect.read(69))
-        self.assertEquals(v.bytes, 1)
-        self.assertEquals(v.read(2), None)
-        self.assertEquals(v.read(1), expect.read(1))
-        self.assertEquals(v.read(), expect.read())
-        self.assertEquals(v.read(1), None)
-        self.assertEquals(v.bytes, 0)
-        v.extend(map(str, range(100)))
-        expect.seek(0)
-        self.assertEquals(v.read(120), expect.read(120))
-        self.assertEquals(v.read(500), None)
-        self.assertEquals(v.bytes, 70)
-        self.assertEquals(v.read(69), expect.read(69))
-        self.assertEquals(v.bytes, 1)
-        self.assertEquals(v.read(2), None)
-        self.assertEquals(v.read(1), expect.read(1))
-        self.assertEquals(v.read(), expect.read())
-        self.assertEquals(v.read(1), None)
-        self.assertEquals(v.bytes, 0)
+        bytes = ''
+        v = [chr(ord('a') + i % 26) * i for i in range(1000, 2000)]
+        shouldGet = ''.join(v)
+
+        while v:
+            written = iovec.writev(client.fileno(), v)
+            while True:
+                try:
+                    bytes += s.recv(written * 10)
+                except:
+                    break
+            
+            while v and written >= len(v[0]):
+                written -= len(v[0])
+                del v[0]
+            
+            if written > 0:
+                v[0] = v[0][:written]
+                written = 0
+            
+        while True:
+            try:
+                bytes += s.recv(1024 * 1024)
+            except Exception, e:
+                print e
+                break         
+
+        # file('first', 'w').write('\n'.join(splitup(bytes)))
+        # file('second', 'w').write('\n'.join(splitup(shouldGet)))
+        
+        self.assertEquals(len(bytes), len(shouldGet))
+        self.assertEquals(bytes, shouldGet)
+
+def splitup(s):
+    for i in range(0, len(s) + 80, 80):
+        yield s[i:i+80]
