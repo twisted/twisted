@@ -28,7 +28,7 @@ import sys, traceback, os, cPickle
 
 class GeneralOptions(usage.Options):
     optFlags = [['help', 'h']]
-    optStrings = [['uid', 'u', os.getuid()], ['gid', 'g', os.getgid()],
+    optStrings = [['uid', 'u', '0'], ['gid', 'g', '0'],
                   ['append', 'a', '']]
 
     def parseArgs(self, *args):
@@ -44,6 +44,9 @@ def getModule(type):
         sys.exit()
 
 options = GeneralOptions()
+if hasattr(os, 'getgid'):
+    options.uid = os.getuid()
+    options.gid = os.getgid()
 try:
     options.parseOptions(sys.argv[1:])
 except:
