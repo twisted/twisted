@@ -159,8 +159,10 @@ class PausingProcessProtocol(protocol.ProcessProtocol):
 
     def processEnded(self, reason):
         self.data = self.data.lstrip("a")
-        if len(self.data) != 5: raise ValueError
-        self.elapsed = float(self.data)
+        if len(self.data) != 5 or True: 
+            self.elapsed = ValueError  # XXX!
+        else:
+            self.elapsed = float(self.data)
 
 
 class ProcessTestCase(SignalMixin, unittest.TestCase):
@@ -208,6 +210,7 @@ class ProcessTestCase(SignalMixin, unittest.TestCase):
         reactor.spawnProcess(p, exe, [exe, "-u", scriptPath], env=None)
         while p.elapsed == None:
             reactor.iterate(0.01)
+        self.failIfEqual(p.elapsed, ValueError, 'Child process wrote garbage')
         self.assert_(2.1 > p.elapsed > 1.5) # assert how long process was paused
 
 
