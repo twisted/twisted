@@ -10,7 +10,7 @@
 <h2>Basic Example</h2>
 
 <p>The first example to look at is a complete (although somewhat trivial)
-application. It uses <code>BrokerFactory()</code> on the server side, and
+application. It uses <code>PBServerFactory()</code> on the server side, and
 <code>PBClientFactory()</code> on the client side.</p>
 
 <a href="../examples/pbsimple.py" class="py-listing" skipLines="16"
@@ -31,18 +31,18 @@ invoke those methods.</p>
 
 <p>The <code class="API" base="twisted.spread">pb.Root</code>-ish object is
 given to a 
-<code class="API" base="twisted.spread">pb.BrokerFactory</code><code>()</code>.
+<code class="API" base="twisted.spread">pb.PBServerFactory</code><code>()</code>.
 This is a <code class="API" base="twisted.internet.protocol">Factory</code>
 object like any other: the 
 <code class="API" base="twisted.internet.protocol">Protocol</code> objects it
 creates for new connections know how to speak the PB protocol. The object you
-give to <code>pb.BrokerFactory()</code> becomes the <q>root object</q>, which
+give to <code>pb.PBServerFactory()</code> becomes the <q>root object</q>, which
 simply makes it available for the client to retrieve. The client may only
 request references to the objects you want to provide it: this helps you
 implement your security model. Because it is so common to export just a single
 object (and because a <code>remote_*</code> method on that one can return a
 reference to any other object you might want to give out), the simplest example
-is one where the <code class="API" base="twisted.spread.pb">BrokerFactory</code>
+is one where the <code class="API" base="twisted.spread.pb">PBServerFactory</code>
 is given the root object, and the client retrieves it.</p>
 
 <p>The client side uses
@@ -105,7 +105,7 @@ success callback) is an instance the
 <code class="API" base="twisted.spread.pb">RemoteReference</code> class. This
 means you can use it to invoke methods on the remote object that it refers to.
 Only instances of 
-<code class="API" base="twisted.spread.pb">RemoteReference</code> eligible for
+<code class="API" base="twisted.spread.pb">RemoteReference</code> are eligible for
 <code>.callRemote()</code>. The
 <code class="API" base="twisted.spread.pb">RemoteReference</code> object is the
 one that lives on the remote side (the client, in this case), not the local
@@ -147,68 +147,54 @@ inherit from <code class="API" base="twisted.spread">pb.Referenceable</code>
 but not from <code class="API" base="twisted.spread">pb.Root</code> can be
 remotely called, but only 
 <code class="API" base="twisted.spread">pb.Root</code>-ish objects can be given
-to the <code class="API" base="twisted.spread.pb">BrokerFactory</code>.)</p>
+to the <code class="API" base="twisted.spread.pb">PBServerFactory</code>.)</p>
 
 <h2>Complete Example</h2>
 
-<p>A service is the <q>global</q> state associated with your application, which
-can contain things such as support for archiving objects, basic abstractions
-common to all users, and collections of domain-specific objects.  A perspective
-is the representation of a user with respect to a particular service.  For PB,
-a Perspective is where all interaction begins.  When a user logs in for the
-first time, all the methods they can initially call are methods of their
-Perspective.  The Perspective's methods can return objects which themselves
-have methods that you can call, as well as copies of objects, as described
-later. </p>
-
-<a href="listings/TwistedQuotes/pbquote.py" class="py-listing">Quote Service
-and Perspective</a>
+<a href="listings/TwistedQuotes/pbquote.py"
+class="py-listing">QuoteReader Root object</a>
 
 <p>For examples of these, we're returning to the TwistedQuotes project
-discussed in the <q>Writing Plugins</q>.  The PB <code
-class="python">Service</code> for
-TwistedQuotes is pretty small.  The only thing it needs to keep track of for
-itself is the quoter object; PB's service, that we will inherit from, already
-keeps track of perspectives.</p>
+discussed in the <q>Writing Plugins</q>.  The root object for
+TwistedQuotes is pretty small.  The only thing it needs to keep track
+of for itself is the quoter object.</p>
 
-<p>The perspective is a <code class="python">QuoteReader</code>, which
-publishes one method.
-By subclassing <code class="API" base="twisted.spread.pb">Perspective</code>,
-we are declaring that all methods with
-the <code class="python">perspective_</code> prefix are remotely accessible.</p>
+<p>The QuoteReader publishes one method. By subclassing <code class="API"
+base="twisted.spread.pb">Root</code>, we are declaring that all
+methods with the <code class="python">remote_</code> prefix are
+remotely accessible.</p>
 
-<p>In order to get this Service published, so that we can actually connect to
+<p>In order to get this Root published, so that we can actually connect to
 it, we need to re-visit the TAP building plugin, so we can actually get an
-Application that has a PB broker factory listening on a port.  (The default
+Application that has a PBServerFactory listening on a port.  (The default
 port for PB is 8787.)  </p>
 
 <a href="listings/TwistedQuotes/quotetap2.py" class="py-listing">TAP Plugin
-with PB Quotes Service support</a>
+with PB Quotes support</a>
 
-<p>In the TAP builder, we create a <code class="python">QuoteService</code>
-that wraps the quoter.  We then create a 
-<code class="python">QuoteReader</code> perspective and attach it to the 
-<code class="python">QuoteService</code>, through the 
-<code class="python">createPerspective</code> call inherited from 
-<code class="API" base="twisted.spread.pb">Service</code>.  Finally, we
-register with the <code class="python">QuoteService</code>'s authorizer.</p>
+<p>In the TAP builder, all we need to do is create our QuoteReader
+instance (making sure to pass it our quoter object), give it to a
+PBServerFactory, and create a TCPServer so that it can listen on a TCP
+port.</p>
 
 <p>Accessing this through a client is fairly easy, as we use the
-<code class="API" base="twisted.spread">pb.PBClientFactory.getPerspective</code>
+<code class="API" base="twisted.spread">pb.PBClientFactory.getRootObject</code>
 method.</p>
 
 <a href="listings/TwistedQuotes/pbquoteclient.py" class="py-listing">PB Quotes
 Client Code</a>
 
-<p><code class="API" base="twisted.spread">pb.PBClientFactory.getPerspective</code> 
-will handle all the details of waiting for the creation of a
-connection and authenticating.  It returns a 
-<code class="API" base="twisted.internet.defer">Deferred</code>, which will
-have its callback called when the reactor connects to the remote server and
-<code class="API" base="twisted.">pb.PBClientFactory</code> connects to a
-perspective, and have its <code class="python">errback</code> called when the
-object-connection fails for any reason, whether it's host lookup failure,
-connection refusal, or incorrect authentication credentials.  </p>
+<p><code class="API"
+base="twisted.spread">pb.PBClientFactory.getRootObject</code> will
+handle all the details of waiting for the creation of a connection.
+It returns a <code class="API"
+base="twisted.internet.defer">Deferred</code>, which will have its
+callback called when the reactor connects to the remote server and
+<code class="API" base="twisted.">pb.PBClientFactory</code> gets the
+root, and have its <code class="python">errback</code> called when the
+object-connection fails for any reason, whether it was host lookup
+failure, connection refusal, or some server-side error.
+</p>
 
 <p>In this example, the <code class="python">connected</code> callback should
 be made when the script is run.  Looking at the code, it should be clear that
@@ -224,23 +210,25 @@ Saved.
 An apple a day keeps the doctor away.
 </pre>
 
-<p>The argument to this callback, <code class="python">perspective</code>, is a
-<code class="API" base="twisted.spread.pb">RemoteReference</code>.  The
-<code class="python">perspective</code> reference represents a reference to a
-<code class="python">QuoteReader</code> perspective object.</p>
+<p>The argument to this callback, <code class="python">root</code>, is
+a <code class="API" base="twisted.spread.pb">RemoteReference</code>.
+It represents a reference to the <code
+class="python">QuoteReader</code> object.</p>
 
-<p><code class="API" base="twisted.spread.pb">RemoteReference</code> objects
-have one method which is their purpose for being: 
-<code class="python">callRemote</code>.  This method allows you to call a
-remote method on the object being referred to by the Reference.  
-<code class="API" base="twisted.spread.pb">RemoteReference.callRemote</code>,
-like <code class="API" base="twisted.spread">pb.PBClientFactory.getPerspective</code>, returns a
-<code class="API" base="twisted.internet.defer">Deferred</code>.  When a
-response to the method-call being sent arrives, the 
-<code class="API" base="twisted.internet.defer">Deferred</code>'s
-<code class="python">callback</code> or <code class="python">errback</code>
+<p><code class="API" base="twisted.spread.pb">RemoteReference</code>
+objects have one method which is their purpose for being: <code
+class="python">callRemote</code>.  This method allows you to call a
+remote method on the object being referred to by the Reference.  <code
+class="API"
+base="twisted.spread.pb">RemoteReference.callRemote</code>, like <code
+class="API"
+base="twisted.spread">pb.PBClientFactory.getRootObject</code>, returns
+a <code class="API" base="twisted.internet.defer">Deferred</code>.
+When a response to the method-call being sent arrives, the <code
+class="API" base="twisted.internet.defer">Deferred</code>'s <code
+class="python">callback</code> or <code class="python">errback</code>
 will be made, depending on whether an error occurred in processing the
-method-call.</p>
+method call.</p>
 
 <p>This introduction to PB does not showcase all of the features that it
 provides, but hopefully it gives you a good idea of where to get started
@@ -349,22 +337,21 @@ object.</p>
 about when they go wrong? The Python Way is to raise an exception of some
 sort. The Twisted Way is the same.</p>
 
-<p>The only special thing you do is to define your <code>Exception</code>
-subclass by deriving it from 
-<code class="API" base="twisted.spread">pb.Error</code>.  (You do define
-<code>Exception</code> subclasses, right? String exceptions are, like,
-<em>so</em> 5 minutes ago. Get with the new century, ok?). When any
-remotely-invokable method (like <code>remote_*</code> or
-<code>perspective_*</code>) raises a <code>pb.Error</code>-derived exception, a
-serialized form of that Exception object will be sent back over the 
-wire<span class="footnote">To be precise, the Failure will be sent if
-<em>any</em> exception is raised, not just pb.Error-derived ones.
-But the server will print ugly error messages if you raise ones that aren't
-derived from pb.Error.</span>. The other side (which did
-<code>callRemote</code>) will have the <q><code>errback</code></q> callback run
-with a <code class="API" base="twisted.python.failure">Failure</code> object
-that contains a copy of the exception object. This <code>Failure</code> object
-can be queried to retrieve the error message and a stack traceback.</p>
+<p>The only special thing you do is to define your
+<code>Exception</code> subclass by deriving it from <code class="API"
+base="twisted.spread">pb.Error</code>.  When any remotely-invokable
+method (like <code>remote_*</code> or <code>perspective_*</code>)
+raises a <code>pb.Error</code>-derived exception, a serialized form of
+that Exception object will be sent back over the wire<span
+class="footnote">To be precise, the Failure will be sent if
+<em>any</em> exception is raised, not just pb.Error-derived ones.  But
+the server will print ugly error messages if you raise ones that
+aren't derived from pb.Error.</span>. The other side (which did
+<code>callRemote</code>) will have the <q><code>errback</code></q>
+callback run with a <code class="API"
+base="twisted.python.failure">Failure</code> object that contains a
+copy of the exception object. This <code>Failure</code> object can be
+queried to retrieve the error message and a stack traceback.</p>
 
 <p><code class="API" base="twisted.python.failure">Failure</code> is a
 special class, defined in <code>twisted/python/failure.py</code>, created to

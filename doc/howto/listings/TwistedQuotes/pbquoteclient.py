@@ -5,8 +5,8 @@ log.discardLogs()
 from twisted.internet import reactor
 from twisted.spread import pb
 
-def connected(perspective):
-    perspective.callRemote('nextQuote').addCallbacks(success, failure)
+def connected(root):
+    root.callRemote('nextQuote').addCallbacks(success, failure)
 
 def success(quote):
     stdout.write(quote + "\n")
@@ -22,14 +22,11 @@ reactor.connectTCP(
     pb.portno, # port number
     factory, # factory
     )
-factory.getPerspective(
-    "guest", # identity name
-    "guest", # password
-    "twisted.quotes", # service name
-    "guest", # perspective name (usually same as identity)
-    None, # client reference, used to initiate server->client calls
-    ).addCallbacks(connected, # what to do when we get connected
-                   failure) # and what to do when we can't
+
+
+
+factory.getRootObject().addCallbacks(connected, # when we get the root
+                                     failure)   # when we can't
 
 reactor.run() # start the main loop
 
