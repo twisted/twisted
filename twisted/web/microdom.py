@@ -29,6 +29,7 @@ to use this outside of Twisted applications.  However, it seems to work just
 fine for the documentation generator, which parses a fairly representative
 sample of XML.
 
+Microdom mainly focuses on working with HTML and XHTML.
 """
 
 from __future__ import nested_scopes
