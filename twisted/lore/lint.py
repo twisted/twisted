@@ -23,10 +23,6 @@ import parser, urlparse, os.path
 
 class TagChecker:
 
-    def __init__(self, allowedTags, allowedClasses):
-        self.allowedTags = allowedTags
-        self.allowedClasses = allowedClasses
-
     def check(self, dom, filename):
         for method in reflect.prefixedMethods(self, 'check_'):
             method(dom, filename)
@@ -36,6 +32,13 @@ class TagChecker:
         if hlint != 'off':
             pos = getattr(element, '_markpos', None) or (0, 0)
             print "%s:%s:%s: %s" % ((filename,)+pos+(error,))
+
+
+class DefaultTagChecker(TagChecker):
+
+    def __init__(self, allowedTags, allowedClasses):
+        self.allowedTags = allowedTags
+        self.allowedClasses = allowedClasses
 
     def check_disallowedElements(self, dom, filename):
         def m(node, self=self):
@@ -193,7 +196,7 @@ allowed = {'code': classes.has_key, 'span': span.has_key, 'div': div.has_key,
            'ol': lambda x: x=='toc', 'li': lambda x: x=='ignoretoc'}
 
 def getDefaultChecker():
-    return TagChecker(tags.has_key, allowed)
+    return DefaultTagChecker(tags.has_key, allowed)
 
 def doFile(file, checker):
     dom = tree.parseFileAndReport(file)
