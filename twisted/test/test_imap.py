@@ -767,7 +767,7 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
                 'root/subthing',
                 message,
                 ('\\SEEN', '\\DELETED'),
-                'This Date String Is Illegal'
+                'Tue, 17 Jun 2003 11:22:16 -0600 (MDT)',
             )
         
         d = self.connected.addCallback(strip(login))
@@ -778,7 +778,7 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
         mb = SimpleServer.theAccount.mailboxes['ROOT/SUBTHING']
         self.assertEquals(1, len(mb.messages))
         self.assertEquals(
-            (['\\SEEN', '\\DELETED'], 'This Date String Is Illegal', 0),
+            (['\\SEEN', '\\DELETED'], 'Tue, 17 Jun 2003 11:22:16 -0600 (MDT)', 0),
             mb.messages[0][1:]
         )
         self.assertEquals(open(infile).read(), mb.messages[0][0].getvalue())
@@ -1206,9 +1206,9 @@ class FetchSearchStoreCopyTestCase(unittest.TestCase, IMAP4HelperMixin):
             return self.client.fetchInternalDate(self.messages, uid=uid)
         
         self.expected = {
-            10: {'INTERNALDATE': 'Friday'},
-            20: {'INTERNALDATE': 'Thursday'},
-            21: {'INTERNALDATE': 'Mon, Jan 23, 1976'},
+            10: {'INTERNALDATE': '20-Oct-1981 03:25:19 -0500'},
+            20: {'INTERNALDATE': '15-Feb-1985 01:30:05 +0900'},
+            21: {'INTERNALDATE': '01-Jun-1992 13:51:48 -0100'},
         }
         self.messages = '1,69,72,103'
         self.parts = ['INTERNALDATE']
@@ -1329,14 +1329,14 @@ class FetchSearchStoreCopyTestCase(unittest.TestCase, IMAP4HelperMixin):
         self.expected = {
             1: {
                 'FLAGS': 'XXX put some flags here',
-                'INTERNALDATE': 'XXX date',
+                'INTERNALDATE': 'Sun, 25 Jul 2010 06:20:30 -0400 (EDT)',
                 'RFC822SIZE': '12345',
                 'ENVELOPE': 'XXX envelope',
                 'BODY': 'XXX body',
             },
             3: {
                 'FLAGS': 'XXX put some flags here',
-                'INTERNALDATE': 'XXX date',
+                'INTERNALDATE': 'Mon, 14 Apr 2003 19:43:44 -0400',
                 'RFC822SIZE': '12345',
                 'ENVELOPE': 'XXX envelope',
                 'BODY': 'XXX body',
@@ -1382,7 +1382,7 @@ class FetchSearchStoreCopyTestCase(unittest.TestCase, IMAP4HelperMixin):
         self.expected = {
             1: {
                 'FLAGS': [],
-                'INTERNALDATE': 'XXX date',
+                'INTERNALDATE': '19 Mar 2003 19:22:21 -0500',
                 'RFC822SIZE': '12345',
             },
         }
