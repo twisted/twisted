@@ -54,7 +54,8 @@ from cPickle import load
 import traceback
 
 # Twisted Imports
-from twisted.python import usage, threadable, log
+from twisted import copyright
+from twisted.python import usage, threadable, log, runtime
 from twisted.internet import main
 from twisted.persisted import styles
 
@@ -145,7 +146,9 @@ oldstdout = sys.stdout
 oldstderr = sys.stderr
 log.startLogging(logFile)
 sys.stdout.flush()
-
+log.msg("twistd %s (%s %s) starting up" % (copyright.version,
+                                           sys.executable,
+                                           runtime.shortPythonVersion()))
 if not config.python:
     print "Loading %s..." % config.file
     sys.modules['__main__'] = EverythingEphemeral()

@@ -16,8 +16,14 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 # System imports
-import os
+import os, sys
 
+def shortPythonVersion():
+    hv = sys.hexversion
+    major = (hv & 0xff000000) >> 24
+    minor = (hv & 0x00ff0000) >> 16
+    teeny = (hv & 0x0000ff00) >> 8
+    return "%s.%s.%s" % (major,minor,teeny)
 
 class Platform:
     """Gives us information about the platform we're running on"""
