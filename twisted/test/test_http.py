@@ -18,7 +18,7 @@
 """Test HTTP support."""
 
 from pyunit import unittest
-from twisted.protocols import http, protocol
+from twisted.protocols import http, protocol, loopback
 from twisted.test.test_protocols import StringIOWithoutClosing
 import string
 
@@ -34,6 +34,16 @@ class DummyHTTPHandler(http.HTTP):
         self.sendHeader("Content-Length", len(request))
         self.endHeaders()
         self.transport.write(request)
+        self.transport.loseConnection()
+
+
+class LoopbackHTTPClient(http.HTTPClient):
+
+    def connectionMade(self):
+        self.sendCommand("GET", "/foo/bar")
+        self.sendHeader("Content-Length", 10)
+        self.endHeaders()
+        self.transport.write("0123456789")
 
 
 class HTTPTestCase(unittest.TestCase):
@@ -82,14 +92,18 @@ class HTTPLoopbackTestCase(unittest.TestCase):
     
     expectedHeaders = {'Request' : '/foo/bar',
                        'Command' : 'GET',
-                       'Version' : '1.0',
-                       'Content-Length' : '10'}
+                       'Version' : 'HTTP/1.0',
+                       'Content-Length' : '21'}
     numHeaders = 0
     
-    def _handleResponse(self, data):
-        self.assertEquals(data, '0123456789')
+    def _handleStatus(self, version, status, message):
+        self.assertEquals(version, "HTTP/1.0")
+        self.assertEquals(status, "200")
     
-    def _handleHeaders(self, key, value):
+    def _handleResponse(self, data):
+        self.assertEquals(data, "'''\n10\n0123456789'''\n")
+    
+    def _handleHeader(self, key, value):
         self.numHeaders = self.numHeaders + 1
         self.assertEquals(self.expectedHeaders[key], value)
     
@@ -97,8 +111,11 @@ class HTTPLoopbackTestCase(unittest.TestCase):
         self.assertEquals(self.numHeaders, 4)
     
     def testLoopback(self):
-        pass
-        # XXX add test here
+        server = DummyHTTPHandler()
+        client = LoopbackHTTPClient()
+        client.handleResponse = self._handleResponse
+        client.handleHeader = self._handleHeader
+        client.handleEndHeaders = self._handleEndHeaders
+        client.handleStatus = self._handleStatus
+        loopback.loopback(server, client)
 
-    
-    
