@@ -52,7 +52,10 @@ class Controller(resource.Resource):
         self.subcontrollers = []
         if self.setupStacks:
             self.setupControllerStack()
-        viewFactory = components.getAdapterClass(self.model.__class__, interfaces.IView, None)
+        if self.model is not None:
+            viewFactory = components.getAdapterClass(self.model.__class__, interfaces.IView, None)
+        else:
+            viewFactory = None
         if viewFactory is not None:
             self.view = viewFactory(self.model, controller=self)
             self.view.setController(self)

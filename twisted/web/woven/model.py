@@ -32,7 +32,7 @@ def adaptToIModel(m, parent, submodel):
     return adapted
 
 
-class Model(object):
+class Model:
     """
     A Model which keeps track of views which are looking at it in order
     to notify them when the model changes.
