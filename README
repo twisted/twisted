@@ -34,25 +34,44 @@ What is this?
 
 What's new in 0.12.1?
 
-  Apparently nothing, yet.
+  This is mainly a bug fix release, with some minor new features.
+
+  New features in Manhole: new '/browse' and '/watch' commands that allow you
+  to look at an object or watch method call/attribute changes on it. Also
+  some minor protocol changes for better performance.
+
+  Behind-the-scenes updates to InstanceMessenger, the multi-protocol chat
+  client. Hopefully this design will stick; it seems good.
+
+  Overhaul of twisted.web.widgets: hopefully there will be documentation
+  (or at least examples) soon!
+
+  More robust DirDBM - atomic writes and crash recovery.
+
+  Tons of fixed bugs.
 
 What can I do with it?
 
-  First, put /where/you/untarred/Twisted-x.x.x/bin into your PATH, or
-  equivalent variable for your OS.  If you plan to do Python development using
-  Twisted, you probably want to put /where/you/untarred/Twisted-x.x.x into your
-  PYTHONPATH environment variable as well.  Currently these scripts take a
-  UNIX-centric view of the world, but to the best of my knowledge they function
-  on win32 as well.
+  To install Twisted, run "python setup.py build" which will build any C
+  extension modules (there is currently only one, and it is optional - there
+  is a pure-python version that will be used if the C module isn't available),
+  and then run "python setup.py install" as root to copy Twisted into Python's
+  site-packages directory, as well as install all executables.
 
   Although there is lots of infrastructure support in Twisted, the immediately
-  useful application for the end-user is Twisted Web.  Twisted Web is
-  a webserver, written entirely in python, which is designed to be "zero
-  maintenance".  We run the twistedmatrix.com website from it, and I can
-  testify that it has met its goals at least for me! The server can comfortably
-  handle 50 dynamic-content requests per second on fairly old hardware (I have
-  a Pentium II/333); however, since Twisted is entirely in Python, it's quite
-  easy to script the webserver to do whatever you like!
+  useful applications for the end-user are Twisted Web and Instance Messenger.
+  Twisted Web is a webserver, written entirely in python, which is designed to
+  be "zero maintenance".  We run the twistedmatrix.com website from it, and I 
+  can testify that it has met its goals at least for me! The server can 
+  comfortably handle 50 dynamic-content requests per second on fairly old 
+  hardware (I have a Pentium II/333); however, since Twisted is entirely in
+  Python, it's quite easy to script the webserver to do whatever you like!
+
+  Instance Messenger is a multi-protocol chat client; it's easy to use: just
+  run 'im' and an "account manager" window will pop up. You can create and
+  modify accounts with it, and connect to/disconnect from them. Currently it
+  can support Twisted's own chat service, Twisted Words, Internet Relay Chat
+  (IRC), and AOL Instant Messenger (with the TOC protocol).
 
 Unit Tests
 
@@ -75,13 +94,16 @@ Basic Servers
   Pickle file; your servers and all of their component objects are saved in
   that file, and can be loaded with the Twisted Daemon.
 
+  Note that the following examples only create the .tap files with the servers
+  inside of them: to actually run the servers, see "Running Servers" below.
+
   The normal type of server to create is a webserver.  You can run this
   command::
 
     % mktap web --static static
 
   which will make a "static" webserver (one that reads from the filesystem) and
-  run it from the provided 'static' directory.  This creates a file named
+  serve pages from the provided 'static' directory.  This creates a file named
   'web.tap'.  By default, this server will run on port 8080, but you can change
   it with the --port option.
 
