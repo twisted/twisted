@@ -148,8 +148,8 @@ class MessagesParser(basic.LineReceiver):
     
     def lineReceived(self, line):
         if self.state == "firstline":
-            while line.endswith("\n\r"):
-                line = line[:-2]
+            while line[-1:] == "\n" or line[-1:] == "\r":
+                line = line[:-1]
             #line = line.rstrip("\n\r")
             if not line:
                 return
