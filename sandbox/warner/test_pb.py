@@ -7,8 +7,8 @@ import sys
 #log.startLogging(sys.stderr)
 
 from zope.interface import implements, implementsOnly
-from twisted.python import components, failure
-from twisted.internet import reactor
+from twisted.python import components, failure, reflect
+from twisted.internet import reactor, defer
 from twisted.trial import unittest
 
 dr = unittest.deferredResult
@@ -437,11 +437,12 @@ class TestCall(unittest.TestCase, TargetMixin):
 
 class MyCopyable1(pb.Copyable):
     # the getTypeToCopy name will be the fully-qualified class name, which
-    # (I think) will depend upon how you import this
+    # will depend upon how you first import this
     pass
 class MyRemoteCopy1(pb.RemoteCopy):
     pass
-pb.registerRemoteCopy("test_pb.MyCopyable1", MyRemoteCopy1)
+#print "MyCopyable1:", reflect.qual(MyCopyable1)
+pb.registerRemoteCopy(reflect.qual(MyCopyable1), MyRemoteCopy1)
 
 class MyCopyable2(pb.Copyable):
     def getTypeToCopy(self):
@@ -491,6 +492,7 @@ class RIHelper(pb.RemoteInterface):
     def set(obj=schema.Any()): return bool
     def get(): return schema.Any()
     def echo(obj=schema.Any()): return schema.Any()
+    def defer(obj=schema.Any()): return schema.Any()
 
 class HelperTarget(pb.Referenceable):
     implements(RIHelper)
@@ -502,6 +504,10 @@ class HelperTarget(pb.Referenceable):
     def remote_echo(self, obj):
         self.obj = obj
         return obj
+    def remote_defer(self, obj):
+        d = defer.Deferred()
+        reactor.callLater(1, d.callback, obj)
+        return d
 
 class TestCopyable(unittest.TestCase, TargetMixin):
 
@@ -612,6 +618,16 @@ class TestReferenceable(unittest.TestCase, TargetMixin):
         res = dr(d)
         return res
 
+    def defer(self, arg):
+        rr, target = self.setupTarget(HelperTarget())
+        d = rr.callRemote("defer", obj=arg)
+        res = dr(d)
+        return res
+
+    def testDefer(self):
+        res = self.defer(12)
+        self.failUnlessEqual(res, 12)
+
     def testRef1(self):
         # Referenceables turn into RemoteReferences
         r = Target()
@@ -623,6 +639,27 @@ class TestReferenceable(unittest.TestCase, TargetMixin):
         self.failUnlessEqual(res.interfaceNames, ['RIMyTarget'])
 
     def testRef2(self):
+        # sending a Referenceable over the wire multiple times should result
+        # in equivalent RemoteReferences
+        r = Target()
+        res1 = self.send(r)
+        res2 = self.send(r)
+        self.failUnless(res1 == res2)
+        self.failUnless(res1 is res2) # newpb does this, oldpb didn't
+
+    def testRef3(self):
+        # those RemoteReferences can be used to invoke methods on the sender.
+        # 'r' lives on side A. The anonymous target lives on side B. From
+        # side A we invoke B.set(r), and we get the matching RemoteReference
+        # 'rr' which lives on side B. Then we use 'rr' to invoke r.getName
+        # from side A.
+        r = Target()
+        r.name = "ernie"
+        rr = self.send(r)
+        res = dr(rr.callRemote("getName"))
+        self.failUnlessEqual(res, "ernie")
+
+    def testRef4(self):
         # Referenceables survive round-trips
         r = Target()
         res = self.echo(r)
@@ -803,3 +840,24 @@ class Test3Way(unittest.TestCase):
         if helper.passed != True:
             # should be a Failure instance
             helper.passed.raiseException()
+
+# TODO: tests to port from oldpb suite
+# testTooManyRefs: sending pb.MAX_BROKER_REFS across the wire should die
+# testFactoryCopy?
+# testBadSerialization: make sure deferred is errbacked
+# testDisconnection: need to add rr.notifyOnDisconnect
+
+# tests which aren't relevant right now but which might be once we port the
+# corresponding functionality:
+#
+# testObserve, testCache (pb.Cacheable)
+# testViewPoint
+# testPublishable (spread.publish??)
+# SpreadUtilTestCase (spread.util)
+# NewCredTestCase
+
+# tests which aren't relevant and aren't like to ever be
+#
+# PagingTestCase
+# ConnectionTestCase (oldcred)
+# NSPTestCase
