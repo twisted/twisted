@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: mktap.py,v 1.14 2002/07/11 19:02:09 carmstro Exp $
+# $Id: mktap.py,v 1.15 2002/08/09 00:29:24 exarkun Exp $
 
 """ Implementation module for the `mktap` command.
 """
@@ -53,21 +53,31 @@ for plug in plugins:
 
 tapMods = tapLookup.keys()
 
+def findAGoodName(x): return getattr(x, 'tapname', getattr(x, 'name', getattr(x, 'module')))
+
+def getModule(type):
+    try:
+        mod = tapLookup[type].load()
+        return mod
+    except KeyError:
+        print """Please select one of: %s""" % string.join(tapMods)
+        sys.exit(2)
+
 class GeneralOptions(usage.Options):
-    synopsis="""\
-Usage::
-
-  mktap 'apptype' [application_options]
-  mktap --help 'apptype'
-
-'apptype' can be one of: %s
-""" % string.join(tapMods)
+    synopsis = """Usage:    mktap [options] <command> [command options]
+ """
 
     optParameters = [['uid', 'u', '0'],
                   ['gid', 'g', '0'],
                   ['append', 'a', None]]
     optFlags = [['xml', 'x', "Output as XML, rather than pickle."],
                 ['source', 's', "Output as Python source-code (AOT format), rather than pickle."]]
+
+    subCommands = [
+        [x, None, (lambda obj = y: obj.load().Options()), getattr(y, 'description', '')] for (x, y) in tapLookup.items()
+    ]
+        
+
     def __init__(self):
         usage.Options.__init__(self)
         self['help'] = 0 # default
@@ -82,14 +92,6 @@ Usage::
         self.args = args
 
 
-def getModule(type):
-    try:
-        mod = tapLookup[type].load()
-        return mod
-    except KeyError:
-        print """Please select one of: %s""" % string.join(tapMods)
-        sys.exit(2)
-
 # Rest of code in "run"
 
 def run():
@@ -99,40 +101,31 @@ def run():
         options['gid'] = os.getgid()
     try:
         options.parseOptions(sys.argv[1:])
-    except:
+    except Exception, e:
+        if isinstance(e, SystemExit):
+            # We don't really want to catch this at all...
+            raise
         print str(sys.exc_value)
         print str(options)
         sys.exit(2)
 
-    if options['help'] or not options.args:
-        if options.args:
-            mod = getModule(options.args[0])
-            config = mod.Options()
-            config.opt_help()
-            sys.exit()
-        else:
-            usage.Options.opt_help(options)
-            sys.exit()
-    else:
-        mod = getModule(options.args[0])
-    try:
-        config = mod.Options()
-        config.parseOptions(options.args[1:])
-    except usage.error, ue:
-        print "Usage Error: %s" % ue
-        config.opt_help()
-        sys.exit(1)
-        
+    if options['help'] or not hasattr(options, 'subOptions'):
+        if hasattr(options, 'subOptions'):
+            options.subOptions.opt_help()
+        usage.Options.opt_help(options)
+        sys.exit()
+
+    mod = getModule(options.subCommand)
     if not options['append']:
-        a = app.Application(options.args[0], int(options['uid']), int(options['gid']))
+        a = app.Application(options.subCommand, int(options['uid']), int(options['gid']))
     else:
         a = cPickle.load(open(options['append'], 'rb'))
 
     try:
-        mod.updateApplication(a, config)
+        mod.updateApplication(a, options.subOptions)
     except usage.error, ue:
         print "Usage Error: %s" % ue
-        config.opt_help()
+        options.subOptions.opt_help()
         sys.exit(1)
 
     # backwards compatible interface

@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: usage.py,v 1.24 2002/08/08 03:34:29 exarkun Exp $
+# $Id: usage.py,v 1.25 2002/08/09 00:29:26 exarkun Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -70,6 +70,25 @@ class Options(UserDict.UserDict):
     a default value:
     | optParameters = [['outfile', 'O', 'outfile.log, 'Description...']]
      
+    subCommands is a list of 4-tuples of (command name, command shortcut,
+    parser class, documentation).  If the first non-option argument found is
+    one of the given command names, an instance of the given parser class is
+    instantiated and given the remainder of the arguments to parse and
+    self.opts[command] is set to the command name.  For example:
+
+    | subCommands = [
+          ['inquisition', 'inquest', InquisitionOptions, 'Perform an inquisition'],
+          ['holyquest', 'quest', HolyQuestOptions, 'Embark upon a holy quest']
+      ]
+
+    In this case, "<program> holyquest --horseback --for-grail" will cause
+    HolyQuestOptions to be instantiated and asked to parse
+    ['--horseback', '--for-grail'].  Currently, only the first sub-command
+    is parsed, and all options following it are passed to its parser.  If a
+    subcommand is found, the subCommand attribute is set to its name and the
+    subOptions attribute is set to the Option instance that parsers the 
+    remaining options.
+
     If you want to handle your own options, define a method named
     opt_paramname that takes (self, option) as arguments. option
     will be whatever immediately follows the parameter on the
@@ -160,14 +179,25 @@ class Options(UserDict.UserDict):
                     raise UsageError, "No such option '%s'" % (opt,)
 
             optMangled = self.synonyms[optMangled]
+            
             self.__dispatch[optMangled](opt, arg)
-
-
-
-        try:
-            apply(self.parseArgs,args)
-        except TypeError:
-            raise UsageError("Wrong number of arguments.")
+        
+        if len(args):
+            sub, rest = args[0], args[1:]
+            subCommands = getattr(self, 'subCommands', [])
+            for (cmd, short, parser, doc) in subCommands:
+                if sub == cmd or sub == short:
+                    self.subCommand = cmd
+                    self.subOptions = parser()
+                    self.subOptions.parseOptions(rest)
+                    break
+            else:
+                raise UsageError("Unknown command: %s" % sub)
+        else:
+            try:
+                apply(self.parseArgs,args)
+            except TypeError:
+                raise UsageError("Wrong number of arguments.")
 
         self.postOptions()
 
@@ -351,6 +381,21 @@ class Options(UserDict.UserDict):
     def __str__(self, width=None):
         if not width:
             width = int(os.environ.get('COLUMNS', '80'))
+        
+        if hasattr(self, 'subCommands'):
+            cmdDicts = []
+            for (cmd, short, parser, desc) in self.subCommands:
+                cmdDicts.append(
+                    {'long': cmd,
+                     'short': short,
+                     'doc': desc,
+                     'optType': 'command',
+                     'default': None
+                    })
+            chunks = docMakeChunks(cmdDicts, width)
+            commands = 'Commands:\n' + ''.join(chunks)
+        else:
+            commands = ''
 
         longToShort = {}
         for key, value in self.synonyms.items():
@@ -406,7 +451,7 @@ class Options(UserDict.UserDict):
         else:
             s = "Options: None\n"
 
-        return synopsis + s + longdesc
+        return synopsis + s + longdesc + commands
 
     #def __repr__(self):
     #    XXX: It'd be cool if we could return a succinct representation
@@ -430,7 +475,7 @@ def docMakeChunks(optList, width=80):
     for opt in optList:
         optLen = len(opt.get('long', ''))
         if optLen:
-            if opt.get('optType', None) != "flag":
+            if opt.get('optType', None) == "parameter":
                 # these take up an extra character
                 optLen = optLen + 1
             maxOptLen = max(optLen, maxOptLen)
@@ -454,7 +499,7 @@ def docMakeChunks(optList, width=80):
 
         if opt.get('long', None):
             long = opt['long']
-            if opt.get("optType", None) != "flag":
+            if opt.get("optType", None) == "parameter":
                 long = long + '='
 
             long = "%-*s" % (maxOptLen, long)
@@ -463,14 +508,17 @@ def docMakeChunks(optList, width=80):
         else:
             long = " " * (maxOptLen + len('--'))
 
-        column1 = "  %2s%c --%s  " % (short, comma, long)
+        if opt.get('optType', None) == 'command':
+            column1 = '    %s      ' % long
+        else:
+            column1 = "  %2s%c --%s  " % (short, comma, long)
 
         if opt.get('doc', ''):
             doc = opt['doc']
         else:
             doc = ''
 
-        if (opt.get("optType", None) != "flag") \
+        if (opt.get("optType", None) == "parameter") \
            and not (opt.get('default', None) is None):
             doc = "%s [default: %s]" % (doc, opt['default'])
 
@@ -487,43 +535,3 @@ def docMakeChunks(optList, width=80):
         optChunks.append(string.join(optLines, ''))
 
     return optChunks
-
-
-class DeepOptions(Options):
-    """An option list parser class that can pass suboptions to other Options objects
-    
-    subCommands is a list of 4-tuples of (command name, command shortcut,
-    parser class, documentation).  If the first non-option argument found is
-    one of the given command names, an instance of the given parser class is
-    instantiated and given the remainder of the arguments to parse and
-    self.opts[command] is set to the command name.  For example:
-
-    | subCommands = [
-          ('inquisition', 'inquest', InquisitionOptions, 'Perform an inquisition'),
-          ('holyquest', 'quest', HolyQuestOptions, 'Embark upon a holy quest')
-      ]
-
-    In this case, "holyquest --horseback --for-grail" will cause
-    HolyQuestOptions to be instantiated and asked to parse
-    ['--horseback', '--for-grail']
-    """
-    
-    subCommands = []
-    
-    def parseArgs(self, *args):
-        self.subCommand = None
-        cmd, opts = args[0], args[1:]
-        for (command, short, parser, doc) in self.subCommands:
-            if cmd == command or cmd == short:
-                self.subCommand = parser()
-                self.subCommand.parseOptions(opts)
-                return
-        
-        print str(self)
-
-    def __str__(self):
-        commands = '\n'
-        for (cmd, short, p, doc) in self.subCommands:
-            commands = commands + '%-20s %s\n' % (cmd, doc)
-        
-        return Options.__str__(self) + '\n\nCommands:' + commands
