@@ -25,7 +25,7 @@ Maintainer: U{Moshe Zadka<mailto:moshez@twistedmatrix.com>}
 # TODO
 # * Write tests
 # * Move to twisted.persisted
-import os, md5
+import os, md5, sys
 import cPickle as pickle
 import cStringIO as StringIO
 from twisted.python import components, log, runtime
@@ -98,10 +98,10 @@ class Persistant:
     def _saveTemp(self, filename, passphrase, dumpFunc):
         f = open(filename, 'wb')
         if passphrase is None:
-            dumpFunc(self, f)
+            dumpFunc(self.original, f)
         else:
             s = StringIO.StringIO()
-            dumpFunc(self, s)
+            dumpFunc(self.original, s)
             f.write(_encrypt(passphrase, s.getvalue()))
         f.close()
 
@@ -109,7 +109,7 @@ class Persistant:
         if self.style == "xml":
             from twisted.persisted.marmalade import jellyToXML as dumpFunc
             ext = "tax"
-        elif self.style == "aot":
+        elif self.style == "source":
             from twisted.persisted.aot import jellyToSource as dumpFunc
             ext = "tas"
         else:
@@ -163,9 +163,9 @@ def load(filename, style, passphrase=None):
     """
     mode = 'r'
     if style=='source':
-        from twisted.persisted.marmalade import unjellyFromXML as load
-    elif style=='xml':
         from twisted.persisted.aot import unjellyFromSource as load
+    elif style=='xml':
+        from twisted.persisted.marmalade import unjellyFromXML as load
     else:
         load, mode = pickle.load, 'rb'
     if passphrase:
