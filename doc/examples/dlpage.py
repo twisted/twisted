@@ -4,6 +4,6 @@ from twisted.python.util import println
 import sys
 
 downloadPage(sys.argv[1], "foo").addCallbacks(
-   lambda value:(println("done"),reactor.stop()),
+   lambda value:reactor.stop(),
    lambda error:(println("an error occured",error),reactor.stop()))
 reactor.run()
