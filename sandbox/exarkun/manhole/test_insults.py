@@ -166,3 +166,27 @@ class ClientControlSequences(unittest.TestCase):
         self.proto.expects(pmock.once()).singleShift3().after("a")
 
         self.parser.dataReceived("\x1bN\x1bO")
+
+    def testKeypadMode(self):
+        self.proto.expects(pmock.once()).applicationKeypadMode().id("a")
+        self.proto.expects(pmock.once()).numericKeypadMode().after("a")
+
+        self.parser.dataReceived("\x1b=\x1b>")
+
+    def testCursor(self):
+        self.proto.expects(pmock.once()).saveCursor().id("a")
+        self.proto.expects(pmock.once()).restoreCursor().after("a")
+
+        self.parser.dataReceived("\x1b7\x1b8")
+
+    def testReset(self):
+        self.proto.expects(pmock.once()).reset()
+
+        self.parser.dataReceived("\x1bc")
+
+    def testIndex(self):
+        self.proto.expects(pmock.once()).index().id("a")
+        self.proto.expects(pmock.once()).reverseIndex().id("b").after("a")
+        self.proto.expects(pmock.once()).nextLine().after("b")
+
+        self.parser.dataReceived("\x1bD\x1bM\x1bE")
