@@ -89,7 +89,7 @@ class _TLSMixin:
 
     def getPeerCertificate(self):
         return self.socket.get_peer_certificate()
-    
+
     def doRead(self):
         if self.writeBlockedOnRead:
             self.writeBlockedOnRead = 0
@@ -119,7 +119,7 @@ class _TLSMixin:
         Connection.loseConnection(self)
         if self.connected:
             self.startReading()
-    
+
     def doWrite(self):
         if self.writeBlockedOnRead:
             self.stopWriting()
@@ -182,7 +182,7 @@ class _TLSMixin:
             # from the socket
             self.stopWriting()
             self.startReading()
-            
+
             # don't close socket just yet
             return None
 
@@ -418,7 +418,7 @@ class BaseClient(Connection):
             else:
                 self.failIfNotConnected(error.getConnectError((connectResult, os.strerror(connectResult))))
                 return
-        
+
         # If I have reached this point without raising or returning, that means
         # that the socket is connected.
         del self.doWrite
@@ -450,7 +450,7 @@ class Client(BaseClient):
         # BaseClient.__init__ is invoked later
         self.connector = connector
         self.addr = (host, port)
-        
+
         whenDone = self.resolveAddress
         err = None
         skt = None
@@ -623,7 +623,7 @@ class Port(base.BasePort):
                     elif e.args[0] == EPERM:
                         continue
                     raise
-                
+
                 protocol = self.factory.buildProtocol(addr)
                 if protocol is None:
                     skt.close()
