@@ -169,6 +169,10 @@ class WView(template.DOMTemplate):
         if not isinstance(returnNode, defer.Deferred):
             self.recurseChildren(request, returnNode)
 
+        if not self.outstandingCallbacks:
+            log.msg("Sending page from controller callback!")
+            self.sendPage(request)
+
     def sendPage(self, request):
         """
         Check to see if handlers recorded any errors before sending the page
@@ -177,14 +181,18 @@ class WView(template.DOMTemplate):
         stop = 0
         if failures:
             stop = self.handleFailures(request, failures)
+            self.handlerResults[0] = []
         if not stop:
             successes = self.handlerResults.get(1, None)
             if successes:
                 process = self.handleSuccesses(request, successes)
+                self.handlerResults[1] = []
                 stop = self.controller.process(request, **process)
                 if isinstance(stop, defer.Deferred):
+                    stop.addCallback(self.handleProcessCallback, request)
+                    stop.addErrback(template.renderFailure, request)
                     stop = template.STOP_RENDERING
-        
+    
         if not stop:
             log.msg("Sending page!")
             page = str(self.d.toxml())
@@ -220,13 +228,14 @@ class WView(template.DOMTemplate):
         self.outstandingCallbacks -= 1
         if not self.outstandingCallbacks:
             log.msg("Sending page from commit callback!")
-            page = str(self.d.toxml())
-            request.write(page)
-            request.finish()
+            self.sendPage(request)
 
     def process(self, request, **kwargs):
         log.msg("Processing results: ", kwargs)
         return template.RESTART_RENDERING
+
+    def handleProcessCallback(self, result, request):
+        self.sendPage(request, result)
 
 
 def registerViewForModel(view, model):
