@@ -570,6 +570,8 @@ class DecimalSorter:
         # the very *embodiment* simplicitiy
         exp = self.exp
         l = []
+        if i == 0:
+            return ['0']
         while i:
             l.append(str(i))
             i = (i // (10 ** exp)) * 10 ** exp
