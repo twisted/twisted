@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: usage.py,v 1.41 2003/05/18 05:36:34 moshez Exp $
+# $Id: usage.py,v 1.42 2003/05/20 00:41:20 acapnotic Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -102,6 +102,7 @@ class Options(UserDict.UserDict):
     doc/howto/options.html in you Twisted directory.
     """
 
+    subCommand = None
     def __init__(self):
         UserDict.UserDict.__init__(self)
         self.opts = self.data
@@ -214,7 +215,6 @@ class Options(UserDict.UserDict):
         Override this method in your subclass to do something after
         the options have been parsed and assigned, like validate that
         all options are sane.
-
         """
         pass
 
