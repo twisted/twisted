@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.129 2003/07/31 19:13:01 moonfallen Exp $
+$Id: setup.py,v 1.130 2003/07/31 22:29:33 moonfallen Exp $
 """
 
 import distutils, os, sys, string
@@ -71,15 +71,6 @@ class install_data_twisted(install_data):
 # allows us to detect (only at build time) what extentions we want to build.
 
 class build_ext_twisted(build_ext):
-
-    def run(self):
-        # save the name of the compiler for later, because distutils
-        # does VERY EVIL THINGS and overwrites self.compiler (a
-        # string) with self.compiler (an instance of compiler)
-        self.compilername=self.compiler
-        build_ext.run(self)
-        
-
     def build_extensions(self):
         """
         Override the build_ext build_extensions method to call our
