@@ -228,16 +228,13 @@ def trimFilename(name, N):
     """
     # XXX: this function is *not* perfect
     # if N > num path elements you still get an elipsis prepended
-    def _recurse(lst, pth):
-        head, tail = osp.split(pth)
-        lst.insert(0, tail)
-        if head and head != os.sep:
-            _recurse(lst, head)
-        else:
-            return lst
-
     L = []
-    _recurse(L, name)
+    while 1:
+        head, tail = osp.split(name)
+        L.insert(0, tail)
+        if not head or head == os.sep:
+            break
+        name = head
 
     if len(L) <= N:
         return "%s" % (os.sep.join(L),)
