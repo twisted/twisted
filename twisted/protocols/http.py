@@ -346,7 +346,8 @@ class HTTPClient(basic.LineReceiver):
             self.handleStatus(version, status, message)
             return
         if line:
-            key, val = line.split(': ', 1)
+            key, val = line.split(':', 1)
+            val = val.lstrip()
             self.handleHeader(key, val)
             if key.lower() == 'content-length':
                 self.length = int(val)
