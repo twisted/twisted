@@ -498,10 +498,10 @@ class GuardTest(unittest.TestCase):
         # redirect set?
         self.failUnless(req.headers.has_key('location'))
         # redirect matches cookie?
-        self.assertEquals(req.headers['location'].split('/')[-1], cookie)
+        self.assertEquals(req.headers['location'].split('/')[-1], guard.SESSION_KEY+cookie)
         # URL is correct?
         self.assertEquals(req.headers['location'],
-                          'http://fake.com/xxx/'+cookie)
+                          'http://fake.com/xxx/'+guard.SESSION_KEY+cookie)
         oldreq = req
         
         # now let's try with a request for the session-cookie URL that has a cookie set
