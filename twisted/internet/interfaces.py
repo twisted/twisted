@@ -37,8 +37,8 @@ class IReactorTCP(Interface):
 
           * protocol: a twisted.internet.protocol.Protocol instance
 
-          * timeout: amount of time to wait before assuming the connection has
-            failed.
+          * timeout: number of seconds to wait before assuming the connection 
+            has failed.
         """
 
 class IReactorSSL(Interface):
