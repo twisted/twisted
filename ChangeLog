@@ -1,3 +1,9 @@
+2003-05-05  Christopher Armstrong  <radix@twistedmatrix.com>
+
+	* .: Releasing Twisted 1.0.5rc1.
+
+	* .: Releasing Twisted 1.0.5rc2 (only a Debian build problem fixed).
+
 2003-05-05  Brian Warner  <warner@lothar.com>
 
 	* twisted/trial/reporter.py: remove ResultTypes, it doesn't really
@@ -7,10 +13,6 @@
 	top-level to TestSuite.run(). This fixes the problem of errors
 	being eaten by code which imports unittest for other reasons (like
 	to use trial.remote reporting)
-
-2003-05-05  Christopher Armstrong  <radix@twistedmatrix.com>
-
-	* .: Releasing Twisted 1.0.5rc1.
 
 2003-05-04  Brian Warner  <warner@lothar.com>
 
