@@ -40,5 +40,5 @@ def convert(oldApp):
             klass(*args).setServiceParent(ret)
     for service in oldApp.services.values():
         service.disownServiceParent()
-        service.setParent(ret)
+        service.setServiceParent(ret)
     return ret
