@@ -1,9 +1,25 @@
+# Twisted, the Framework of Your Internet
+# Copyright (C) 2001 Matthew W. Lefkowitz
+# 
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
+# 
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+# 
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+
 # TODO:
 # failure detection
 # voluntary delinking
 # successor list
 # HyperChord
-
 
 import random
 import sha
@@ -54,7 +70,7 @@ class Node(pb.Copyable, pb.Perspective):
         """Intialize finger tables of local node.
         n2 is a node already on the network or None if we're the first."""
         if n2:
-            n2.findSuccessor(self.id).addCallback(lambda x: self.getNodeAt(x).addCallback(iHatePython, callbackArgs=(1,)))
+            n2.findSuccessor(self.id).addCallback(lambda x, self=self: self.getNodeAt(x).addCallback(iHatePython, callbackArgs=(1,)))
             self.finger[1].notify(self.address, pbanswer=0)
             self.findPredecessor(self.id).addCallback(iHatePython2)
             for i in range(1, NBIT):
@@ -62,7 +78,7 @@ class Node(pb.Copyable, pb.Perspective):
                   self.finger[i].id):
                     self.finger[i+1] = self.finger[i]
                 else:
-                    n2.findSuccessor(self.start(i+1)).addCallback(lambda x: self.getNodeAt(x).addCallback(iHatePython, callbackArgs=(i+1,)))
+                    n2.findSuccessor(self.start(i+1)).addCallback(lambda x, self=self, i=i: self.getNodeAt(x).addCallback(iHatePython, callbackArgs=(i+1,)))
             n2.notify(self.address, pbanswer=0)
         else:
             self.finger[1] = None
@@ -157,3 +173,15 @@ class Node(pb.Copyable, pb.Perspective):
             return 2L**NBIT
         else:
             return r
+
+class ChordService(pb.Service):
+    def __init__(self, address, port, serviceName, application=None):
+        pb.Service.__init__(self, serviceName, application)
+        self.address = address
+        self.portno = port
+        
+    def createPerspective(self, name):
+        p = Node(self.address, name, name, self.portno)
+        self.perspectives[name] = p
+        p.setService(self)
+        return p
