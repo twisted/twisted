@@ -779,7 +779,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
                         credentials.UsernamePassword(self.user, self.passwd),
                         None,
                         IFTPShell
-                    ).addCallbacks(self._cbLogin, self.ebLogin
+                    ).addCallbacks(self._cbLogin, self._ebLogin
                     )
             else:
                 raise AuthorizationError('internal server error')
@@ -801,7 +801,8 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         self.reply(USR_LOGGED_IN_PROCEED)
 
     def _ebLogin(self, failure):
-        failure.trap(error.UnauthorizedLogin)
+        # hack? error.UnhandledCredentials instead of...?
+        failure.trap(error.UnauthorizedLogin, error.UnhandledCredentials)
         self.reply(AUTH_FAILURE, '')
 
     def ftp_TYPE(self, params):
