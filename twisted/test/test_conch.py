@@ -16,7 +16,7 @@
 
 from __future__ import nested_scopes
 import os, struct, sys
-from twisted.conch import error, checkers
+from twisted.conch import error, checkers, realm
 from twisted.conch.ssh import keys, transport, factory, userauth, connection, common, session,channel
 from twisted.cred import portal
 from twisted.cred.credentials import IUsernamePassword
@@ -136,11 +136,34 @@ class ConchTestRealm:
         a = ConchTestAvatar()
         return interfaces[0], a, a.logout
 
-class ConchTestAvatar:
+class ConchTestAvatar(realm.ConchUser):
     loggedOut = False
     
+    def __init__(self):
+        realm.ConchUser.__init__(self)
+        self.channelLookup.update({'session': session.SSHSession})
+
     def logout(self):
         loggedOut = True
+
+class ConchSessionForTestAvatar:
+
+    def __init__(self, avatar):
+        theTest.assert_(isinstance(avatar, ConchTestAvatar))
+
+    def getPty(self, *args):
+        theTest.fail("should not have gotten pty request")
+
+    def openShell(self, *args):
+        theTest.fail("should not have gotten shell request")
+
+    def execCommand(self, proto, cmd):
+        theTest.assert_(cmd.split()[0] in ['true', 'false', 'echo'])
+        reactor.spawnProcess(proto, \
+                                     cmd.split()[0], cmd.split(), {}, '/tmp')
+
+from twisted.python import components
+components.registerAdapter(ConchSessionForTestAvatar, ConchTestAvatar, session.ISession)
 
 class ConchTestPublicKeyChecker(checkers.SSHPublicKeyDatabase):
     def checkKey(self, credentials):
@@ -242,27 +265,6 @@ class SSHTestClientFactory(protocol.ClientFactory):
         global theTest
         theTest.fail('connection between client and server failed!')
         reactor.crash()
-
-class SSHTestServerConnection(connection.SSHConnection):
-
-    def getChannel(self, ct, ws, mp, d):
-        if ct != 'session':
-            global theTest
-            theTest.fail('should not get %s as a channel type' % ct)
-            reactor.crash()
-        return SSHTestServerSession(remoteWindow = ws,
-                                    remoteMaxPacket = mp,
-                                    conn = self)
-
-class SSHTestServerSession(channel.SSHChannel):
-
-    def request_exec(self, data):
-        program = common.getNS(data)[0].split()
-        log.msg('execing %s' % (program,))
-        self.client = session.SSHSessionClient()
-        reactor.spawnProcess(session.SSHSessionProtocol(self, self.client), \
-                             program[0], program, {}, '/tmp')
-        return 1
 
 class SSHTestClientConnection(connection.SSHConnection):
 
@@ -401,7 +403,7 @@ class SSHTestFactory(factory.SSHFactory):
 
     services = {
         'ssh-userauth':userauth.SSHUserAuthServer,
-        'ssh-connection':SSHTestServerConnection
+        'ssh-connection':connection.SSHConnection
     }
 
     def buildProtocol(self, addr):
@@ -449,7 +451,7 @@ class SSHTestOpenSSHProcess(protocol.ProcessProtocol):
     def processEnded(self, reason):
         global theTest
         self.done = 1
-        theTest.assertEquals(reason.value.exitCode, 0, 'exit code was not 0: %i' % reason.value.exitCode)
+        theTest.assertEquals(reason.value.exitCode, 0, 'exit code was not 0: %s' % reason.value.exitCode)
         self.buf = self.buf.replace('\r\n', '\n')
         theTest.assertEquals(self.buf, 'hello\n')
 
