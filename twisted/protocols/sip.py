@@ -586,11 +586,9 @@ class Base(protocol.DatagramProtocol):
         Destination is based on topmost Via header."""
         destVia = parseViaHeader(responseMessage.headers["via"][0])
         # XXX we don't do multicast yet
-        port = destVia.port or self.PORT
-        if destVia.received:
-            destAddr = URL(host=destVia.received, port=port)
-        else:
-            destAddr = URL(host=destVia.host, port=port)
+        host = destVia.received or destVia.host
+        port = destVia.rport or destVia.port or self.PORT
+        destAddr = URL(host=host, port=port)
         self.sendMessage(destAddr, responseMessage)
 
     def responseFromRequest(self, code, request):
@@ -721,9 +719,9 @@ class Proxy(Base):
         senderVia = parseViaHeader(message.headers["via"][0])
         if senderVia.host != srcHost:
             senderVia.received = srcHost
-            message.headers["via"][0] = senderVia.toString()
         if senderVia.port != srcPort:
             senderVia.rport = srcPort
+        if senderVia.received is not None or senderVia.rport is not None:
             message.headers["via"][0] = senderVia.toString()
         message.headers["via"].insert(0, viaHeader.toString())
         name, uri, tags = parseAddress(message.headers["to"][0], clean=1)
@@ -742,11 +740,9 @@ class Proxy(Base):
         Destination is based on topmost Via header."""
         destVia = parseViaHeader(responseMessage.headers["via"][0])
         # XXX we don't do multicast yet
+        host = destVia.received or destVia.host
         port = destVia.rport or destVia.port or self.PORT
-        if destVia.received:
-            destAddr = URL(host=destVia.received, port=port)
-        else:
-            destAddr = URL(host=destVia.host, port=port)
+        destAddr = URL(host=host, port=port)
         self.sendMessage(destAddr, responseMessage)
 
     def responseFromRequest(self, code, request):
