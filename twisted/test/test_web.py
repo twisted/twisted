@@ -33,6 +33,10 @@ class DummyRequest:
         self.session = None
         self.protoSession = session or server.Session(0, self)
         self.args = {}
+
+    def setHeader(self, name, value):
+        """TODO: make this assert on write() if the header is content-length
+        """
     def getSession(self):
         if self.session:
             return self.session
