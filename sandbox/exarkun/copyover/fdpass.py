@@ -1,5 +1,3 @@
-# -*- coding: Latin-1 -*-
-
 """
 Protocol for passing files between processes.
 """
@@ -11,14 +9,15 @@ import socket
 
 sys.path.insert(0, "../../pahan/sendmsg")
 from sendmsg import sendmsg
-from eunuchs.recvmsg import recvmsg
+from sendmsg import recvmsg
+from sendmsg import SCM_RIGHTS
 
 from twisted.internet import protocol
 from twisted.internet import defer
 from twisted.internet import unix
 from twisted.python import log
 
-SCM_RIGHTS = 0x01
+from twisted.application import internet
 
 class Server(unix.Server):
     def sendFileDescriptors(self, fileno, data="Filler"):
@@ -38,7 +37,7 @@ class Port(unix.Port):
 class Client(unix.Client):
     def doRead(self):
         try:
-            msg, addr, _, ancillary = recvmsg(self.fileno())
+            msg, flags, ancillary = recvmsg(self.fileno())
         except:
             log.err()
         else:
@@ -57,6 +56,16 @@ class Connector(unix.Connector):
     def _makeTransport(self):
         return Client(self.address, self, self.reactor)
 
+class UNIXServer(internet.UNIXServer):
+    def _getPort(self):
+        from twisted.internet import reactor
+        return reactor.listenWith(Port, *self.args, **self.kwargs)
+
+class UNIXClient(internet.UNIXClient):
+    def _getConnection(self):
+        from twisted.internet import reactor
+        return reactor.connectWith(Connector, *self.args, **self.kwargs)
+    
 class FileDescriptorSendingProtocol(protocol.Protocol):
     """
     Must be used with L{Port} as the transport.
@@ -82,20 +91,29 @@ class FileDescriptorReceivingProtocol(protocol.Protocol):
             print repr(f.read(80))
         self.factory.rDeferred.callback(self)
 
-def main():
-    log.startLogging(sys.stdout)
-
-    from twisted.internet import reactor
+def makeServer(service):
     f = protocol.ServerFactory()
     f.protocol = FileDescriptorSendingProtocol
-    s = reactor.listenWith(Port, 'fd_control', f)
-    
+    s = UNIXServer('fd_control', f)
+    s.setServiceParent(service)
+    return s
+
+def makeClient(service):
+    from twisted.internet import reactor
     f = protocol.ClientFactory()
     f.protocol = FileDescriptorReceivingProtocol
     f.rDeferred = defer.Deferred().addCallback(lambda _: reactor.stop())
-    c = reactor.connectWith(Connector, 'fd_control', f, 60, reactor=reactor)
+    c = UNIXClient('fd_control', f, 60, reactor=reactor)
+    c.setServiceParent(service)
+    return c
 
-    reactor.run()
+def main():
+    from twisted.application import service
+    
+    a = service.Application("File Descriptor Passing Application")
+    makeServer(a)
+    makeClient(a)
 
-if __name__ == '__main__':
-    main()
+    return a
+
+application = main()
