@@ -439,6 +439,7 @@ class DOMTemplate(Resource, View):
         process = {}
         for controller, data, node in successes:
             process[str(node.getAttribute('name'))] = data
+            del request.args[node.getAttribute('name')]
             controller.commit(request, node, data)
         return process
 

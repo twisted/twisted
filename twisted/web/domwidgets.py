@@ -226,7 +226,7 @@ class Option(Input):
 class Anchor(Widget):
     tagName = 'a'
     def initialize(self):
-        self.baseHREF = ""
+        self.baseHREF = ''
         self.parameters = {}
     
     def setLink(self, href):
@@ -240,7 +240,7 @@ class Anchor(Widget):
         params = urllib.urlencode(self.parameters)
         if params:
             href = href + '?' + params
-        self['href'] = href
+        self['href'] = href or self.getData()
         node = Widget.generateDOM(self, request, node)
         node.appendChild(document.createTextNode(str(self.getData())))
         return node
