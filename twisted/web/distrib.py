@@ -168,7 +168,7 @@ class ResourcePublisher(pb.Service, pb.Perspective, styles.Versioned):
         styles.requireUpgrade(theApplication)
         pb.Service.__init__(self, 'twisted.web.distrib', theApplication)
         pb.Perspective.__init__(self, "any", self, "any")
-        ident = passport.Identity('web')
+        ident = passport.Identity('web', theApplication)
         ident.setPassword('web')
         ident.addKeyForPerspective(self)
         theApplication.authorizer.addIdentity(ident)
