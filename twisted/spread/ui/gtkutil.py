@@ -21,6 +21,7 @@ import string
 from twisted.spread import pb
 from twisted import copyright
 from twisted.python import reflect
+from twisted.cred.credentials import UsernamePassword
 
 normalFont = gtk.load_font("-adobe-courier-medium-r-normal-*-*-120-*-*-m-*-iso8859-1")
 boldFont = gtk.load_font("-adobe-courier-bold-r-normal-*-*-120-*-*-m-*-iso8859-1")
@@ -185,10 +186,17 @@ class Login(gtk.GtkWindow):
         self.service_tx = service
         self.perspective_tx = perspective or user
         afterOneTimeout(10, self.__actuallyConnect)
+    
     def __actuallyConnect(self):
-        pb.connect(self.host_tx, self.port_tx, self.user_tx, self.pswd_tx,
-                   self.service_tx, self.perspective_tx, self.pbReferenceable, 30).addCallbacks(
-            self.pbCallback, self.couldNotConnect)
+        from twisted.application import internet
+
+        f = pb.PBClientFactory()
+        internet.TCPClient(self.host_tx, self.port_tx, f)
+        creds = UsernamePassword(self.user_tx, self.pswd_tx)
+        f.login(creds, self.pbReferenceable
+            ).addCallbacks(self.pbCallback, self.couldNotConnect
+            ).setTimeout(30
+            )
 
     def couldNotConnect(self, msg):
         self.loginReport("couldn't connect: %s" % str(msg))

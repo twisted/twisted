@@ -23,6 +23,7 @@ from twisted import copyright
 from twisted.internet import defer
 from twisted.python import failure, log, util
 from twisted.spread import pb
+from twisted.cred.credentials import UsernamePassword
 
 from twisted.internet import error as netError
 
@@ -160,17 +161,24 @@ class LoginDialog(GladeKeeper):
         except ValueError:
             pass
 
-        _identityConnector = pb.IdentityConnector(**idParams)
+        f = pb.PBClientFactory()
+        from twisted.internet import reactor
+        reactor.connectTCP(idParams['host'], idParams['port'], f)
+        creds = UsernamePassword(idParams['identityName'], idParams['password'])
+        f.login(creds, self.client
+            ).addCallbacks(self._cbGotPerspective, self._ebFailedLogin
+            ).setTimeout(30
+            )
         self.statusMsg("Contacting server...")
 
-        serviceName = self._serviceNameEntry.get_text()
-        perspectiveName = self._perspectiveNameEntry.get_text()
-        if not perspectiveName:
-            perspectiveName = idParams['identityName']
+        # serviceName = self._serviceNameEntry.get_text()
+        # perspectiveName = self._perspectiveNameEntry.get_text()
+        # if not perspectiveName:
+        #     perspectiveName = idParams['identityName']
 
-        d = _identityConnector.requestService(serviceName, perspectiveName,
-                                              self.client)
-        d.addCallbacks(self._cbGotPerspective, self._ebFailedLogin)
+        # d = _identityConnector.requestService(serviceName, perspectiveName,
+        #                                       self.client)
+        # d.addCallbacks(self._cbGotPerspective, self._ebFailedLogin)
         # setCursor to waiting
 
     def _cbGotPerspective(self, perspective):

@@ -22,6 +22,8 @@
 from twisted import copyright
 from twisted.spread import pb
 from twisted.python import log, components, failure
+from twisted.cred import portal
+from twisted.application import service
 
 # sibling imports
 import explorer
@@ -102,7 +104,7 @@ class IManholeClient(components.Interface):
         """
 
 def runInConsole(command, console, globalNS=None, localNS=None,
-                 filename=None, args=None, kw=None):
+                 filename=None, args=None, kw=None, unsafeTracebacks=False):
     """Run this, directing all output to the specified console.
 
     If command is callable, it will be called with the args and keywords
@@ -158,7 +160,7 @@ def runInConsole(command, console, globalNS=None, localNS=None,
         # source lines in the traceback for frames in the local command
         # buffer.  But I can't figure out when that's triggered, so it's
         # going away in the conversion to Failure, until you bring it back.
-        errfile.write(pb.failure2Copyable(fail))
+        errfile.write(pb.failure2Copyable(fail, unsafeTracebacks))
 
     if console:
         fakeout.consolidate()
@@ -197,14 +199,16 @@ _defaultCapabilities = {
     "Explorer": 'Set'
     }
 
-class Perspective(pb.Perspective):
+class Perspective(pb.Avatar):
     lastDeferred = 0
-    def __init__(self, perspectiveName, identityName="Nobody"):
-        pb.Perspective.__init__(self, perspectiveName, identityName)
+    def __init__(self, service):
         self.localNamespace = {
+            "service": service,
+            "avatar": self,
             "_": None,
             }
         self.clients = {}
+        self.service = service
 
     def __getstate__(self):
         state = self.__dict__.copy()
@@ -212,10 +216,6 @@ class Perspective(pb.Perspective):
         if state['localNamespace'].has_key("__builtins__"):
             del state['localNamespace']['__builtins__']
         return state
-
-    def setService(self, service):
-        pb.Perspective.setService(self, service)
-        # self.browser.globalNamespace = service.namespace
 
     def attached(self, client, identity):
         """A client has attached -- welcome them and add them to the list.
@@ -226,9 +226,6 @@ class Perspective(pb.Perspective):
 
         msg = self.service.welcomeMessage % {
             'you': getattr(identity, 'name', str(identity)),
-            'serviceName': self.service.getServiceName(),
-            'app': getattr(self.service.application, 'name',
-                           "some application"),
             'host': host,
             'longversion': copyright.longversion,
             }
@@ -240,15 +237,11 @@ class Perspective(pb.Perspective):
             self._cbClientCapable, self._ebClientCapable,
             callbackArgs=(client,),errbackArgs=(client,))
 
-        return pb.Perspective.attached(self, client, identity)
-
     def detached(self, client, identity):
         try:
             del self.clients[client]
         except KeyError:
             pass
-
-        return pb.Perspective.detached(self, client, identity)
 
     def runInConsole(self, command, *args, **kw):
         """Convience method to \"runInConsole with my stuff\".
@@ -259,7 +252,8 @@ class Perspective(pb.Perspective):
                             self.localNamespace,
                             str(self.service),
                             args=args,
-                            kw=kw)
+                            kw=kw,
+                            unsafeTracebacks=self.service.unsafeTracebacks)
 
 
     ### Methods for communicating to my clients.
@@ -366,18 +360,34 @@ class Perspective(pb.Perspective):
                               self.receiveExplorer)
 
 
-class Service(pb.Service):
-    perspectiveClass = Perspective
-    serviceType = "manhole"
+class Realm:
+
+    __implements__ = portal.IRealm
+
+    def __init__(self, service):
+        self.service = service
+        self._cache = {}
+
+    def requestAvatar(self, avatarId, mind, *interfaces):
+        if pb.IPerspective not in interfaces:
+            raise NotImplementedError("no interface")
+        if avatarId in self._cache:
+            p = self._cache[avatarId]
+        else:
+            p = Perspective(self.service)
+        p.attached(mind, avatarId)
+        def detached():
+            p.detached(mind, avatarId)
+        return (pb.IPerspective, p, detached)
+
+class Service(service.Service):
 
     welcomeMessage = (
-        "\nHello %(you)s, welcome to %(serviceName)s "
-        "in %(app)s on %(host)s.\n"
+        "\nHello %(you)s, welcome to Manhole "
+        "on %(host)s.\n"
         "%(longversion)s.\n\n")
 
-    def __init__(self, serviceName='twisted.manhole', serviceParent=None, authorizer=None):
-        pb.Service.__init__(self, serviceName, serviceParent, authorizer)
-
+    def __init__(self, unsafeTracebacks=False):
         self.namespace = {
             # I'd specify __name__ so we don't get it from __builtins__,
             # but that seems to have the potential for breaking imports.
@@ -385,21 +395,16 @@ class Service(pb.Service):
             # sys, so sys.modules will be readily available
             'sys': sys
             }
+        self.unsafeTracebacks = unsafeTracebacks
 
     def __getstate__(self):
         """This returns the persistent state of this shell factory.
         """
         # TODO -- refactor this and twisted.reality.author.Author to
         # use common functionality (perhaps the 'code' module?)
-        dict = pb.Service.__getstate__(self)
+        dict = self.__dict__.copy()
         ns = dict['namespace'].copy()
         dict['namespace'] = ns
         if ns.has_key('__builtins__'):
             del ns['__builtins__']
         return dict
-
-    def __str__(self):
-        s = "<%s in application \'%s\'>" % (self.getServiceName(),
-                                            getattr(self.application,
-                                                    'name', "???"))
-        return s

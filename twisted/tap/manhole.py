@@ -20,20 +20,22 @@ I am the support module for making a manhole server with mktap.
 """
 
 from twisted.manhole import service
-from twisted.cred import authorizer
 from twisted.spread import pb
 from twisted.python import usage, util
+from twisted.cred import portal, checkers
+from twisted.application import strports
 import os, sys
-
 
 class Options(usage.Options):
     synopsis = "mktap manhole [options]"
-    optParameters = [["user", "u", "admin", "Name of user to allow to log in"]]
-    def opt_port(self, opt):
-        try:
-            self['port'] = int(opt)
-        except ValueError:
-            raise usage.error("Invalid argument to 'port'!")
+    optParameters = [
+           ["user", "u", "admin", "Name of user to allow to log in"],
+           ["port", "p", str(pb.portno), "Port to listen on"],
+    ]
+
+    optFlags = [
+        ["tracebacks", "T", "Allow tracebacks to be sent over the network"],
+    ]
 
     def opt_password(self, password):
         """Required.  '-' will prompt or read a password from stdin.
@@ -45,23 +47,16 @@ class Options(usage.Options):
             self['password'] = util.getPassword(confirm=1)
         else:
             self['password'] = password
+    opt_w = opt_password
 
     def postOptions(self):
         if not self.has_key('password'):
             self.opt_password('-')
 
-    opt_p = opt_port
-    opt_w = opt_password
-
-
-def updateApplication(app, config):
-    auth = authorizer.DefaultAuthorizer(app)
-    svc = service.Service("twisted.manhole", serviceParent=app,
-                          authorizer=auth)
-    p = svc.createPerspective(config['user'])
-    p.makeIdentity(config['password'])
-    try:
-        portno = config['port']
-    except KeyError:
-        portno = pb.portno
-    app.listenTCP(portno, pb.BrokerFactory(pb.AuthRoot(auth)))
+def makeService(config):
+    port, user, password = config['port'], config['user'], config['password']
+    p = portal.Portal(
+        service.Realm(service.Service(config["tracebacks"])),
+        [checkers.InMemoryUsernamePasswordDatabaseDontUse(**{user: password})]
+    )
+    return strports.service(port, pb.PBServerFactory(p, config["tracebacks"]))
