@@ -33,10 +33,12 @@ from twisted.internet.protocol import ServerFactory
 
 class Options(usage.Options):
 
-    optParameters = [['rpc', 'r', '/etc/rpc'],
-                     ['file', 'f', '/etc/inetd.conf'],]
+    optParameters = [
+        ['rpc', 'r', '/etc/rpc', 'RPC procedure table file'],
+        ['file', 'f', '/etc/inetd.conf', 'Service configuration file']
+    ]
 
-    optFlags = [['nointernal', 'i']]
+    optFlags = [['nointernal', 'i', "Don't run internal services"]]
 
 
 def updateApplication(app, config):
