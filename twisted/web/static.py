@@ -20,7 +20,7 @@
 
 
 # System Imports
-import os, string, stat
+import os, string
 import cStringIO
 import traceback
 import types
@@ -32,7 +32,6 @@ import urllib
 import server
 import error
 import resource
-import html
 import widgets
 
 # Twisted Imports
@@ -331,7 +330,7 @@ class File(resource.Resource, styles.Versioned):
             pk.dump(child)
         fl.close()
 
-class DirectoryListing(File, widgets.StreamWidget):
+class DirectoryListing(widgets.StreamWidget):
     def __init__(self, pathname):
         self.path = pathname
 
