@@ -691,28 +691,18 @@ class FTPCommand:
         self.ready = 1
 
 
-class ProtocolProtocol(Protocol):
-    """A convenient wrapper for a Protocol object.
-
-    This needs a better name.
+# Used in FTPClient.retrieve
+class ObjectWrapper:
+    """Simple wrapper for an object
+    
+    Useful for overriding methods or attributes of an object without modifying
+    the original object.
     """
-    def __init__(self, protocol):
-        self.protocol = protocol
+    def __init__(self, object):
+        self.object = object
 
-    def makeConnection(self, transport, server=None):
-        self.protocol.makeConnection(self, transport, server)
-
-    def connectionMade(self):
-        self.protocol.connectionMade()
-
-    def connectionLost(self):
-        self.protocol.connectionLost()
-
-    def connectionFailed(self):
-        self.protocol.connectionFailed()
-
-    def dataReceived(self, data):
-        self.protocol.dataReceived(data)
+    def __getattr__(self, name):
+        return getattr(self.object, name)
 
         
 class FTPClient(basic.LineReceiver):
@@ -855,9 +845,9 @@ class FTPClient(basic.LineReceiver):
 
             # Use a wrapper so that we can override connectionLost without
             # modifying the Protocol instance passed to us
-            class ProtocolWrapper(ProtocolProtocol):
+            class ProtocolWrapper(ObjectWrapper):
                 def connectionLost(self):
-                    ProtocolProtocol.connectionLost(self)
+                    self.object.connectionLost()
                     # Signal that transfer has completed
                     self.portCmd.transferDeferred.callback(None)
             
