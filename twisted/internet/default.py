@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_internet -*-
-# $Id: default.py,v 1.80 2003/06/06 03:24:18 itamarst Exp $
+# $Id: default.py,v 1.81 2003/06/25 13:58:22 spiv Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -29,7 +29,6 @@ from time import time, sleep
 import os
 import socket
 import sys
-import types
 
 from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorUNIX
 from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorSSL, IReactorArbitrary
@@ -424,9 +423,7 @@ class SelectReactor(PosixReactorBase):
                  # I'm caching these global attributes so the interpreter
                  # will hit them in the local namespace.
                  reads=reads,
-                 writes=writes,
-                 rhk=reads.has_key,
-                 whk=writes.has_key):
+                 writes=writes):
         """Run one iteration of the I/O monitor loop.
 
         This will run all selectables who had input or output readiness
