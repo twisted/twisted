@@ -1,3 +1,11 @@
+2005-02-10  Jp Calderone  <exarkun@twistedmatrix.com>
+
+	* twisted/internet/defer.py: DeferredLock, DeferredSemaphore, and
+	DeferredQueue added.
+
+	* twisted/test/test_defer.py: Tests for above mentioned three new
+	classes.
+
 2004-11-27  Brian Warner  <warner@lothar.com>
 
 	* util.py (SignalStateManager.save): don't save signal handlers

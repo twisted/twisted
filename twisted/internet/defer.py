@@ -727,6 +727,8 @@ class DeferredLock(_ConcurrencyPrimitive):
 
 class DeferredSemaphore(_ConcurrencyPrimitive):
      """A semaphore for event driven systems.
+
+     API stability: Unstable
      """
 
      def __init__(self, tokens):
@@ -737,7 +739,7 @@ class DeferredSemaphore(_ConcurrencyPrimitive):
      def acquire(self):
          """Attempt to acquire the token.
 
-         @return Deferred which returns on token acquisition.
+         @return: a Deferred which fires on token acquisition.
          """
          assert self.tokens >= 0, "Internal inconsistency??  tokens should never be negative"
          d = Deferred()
@@ -795,6 +797,10 @@ class DeferredQueue(object):
          self.backlog = backlog
 
      def put(self, obj):
+         """Add an object to this queue.
+
+         @raise QueueOverflow: Too many objects are in this queue.
+         """
          if self.waiting:
              self.waiting.pop(0).callback(obj)
          elif self.size is not None and len(self.pending) < self.size:
@@ -803,6 +809,13 @@ class DeferredQueue(object):
              raise QueueOverflow()
 
      def get(self):
+         """Attempt to retrieve and remove an object from the queue.
+
+         @return: a Deferred which fires with the next object available in the queue.
+
+         @raise QueueUnderflow: Too many (more than C{backlog})
+         Deferreds are already waiting for an object from this queue.
+         """
          if self.pending:
              return succeed(self.pending.pop(0))
          elif self.size is not None and len(self.waiting) < self.backlog:
@@ -816,5 +829,5 @@ class DeferredQueue(object):
 __all__ = ["Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS",
            "AlreadyCalledError", "TimeoutError", "gatherResults",
            "maybeDeferred", "waitForDeferred", "deferredGenerator",
-           "DeferredLock", "DeferredSemaphore"
+           "DeferredLock", "DeferredSemaphore", "DeferredQueue",
           ]
