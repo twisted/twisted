@@ -284,12 +284,10 @@ class TestSuite:
             gc.collect()
 
         for e in log.flushErrors():
-            if ok:
-                if todo:
-                    output.reportResults(testClass, method, EXPECTED_FAILURE,
-                                         e)
-                else:
-                    output.reportResults(testClass, method, ERROR, e)
+            if todo:
+                output.reportResults(testClass, method, EXPECTED_FAILURE, e)
+            else:
+                output.reportResults(testClass, method, ERROR, e)
             ok = 0
 
         if ok:
