@@ -65,6 +65,7 @@ statusCodes = {
     180: "Ringing",
     181: "Call Is Being Forwarded",
     182: "Queued",
+    183: "Session Progress",
 
     200: "OK",
 
@@ -80,30 +81,39 @@ statusCodes = {
     402: "Payment Required",
     403: "Forbidden",
     404: "Not Found",
+    405: "Method Not Allowed",
     406: "Not Acceptable",
     407: "Proxy Authentication Required",
     408: "Request Timeout",
-    409: "Conflict",
+    409: "Conflict", # Not in RFC3261
     410: "Gone",
-    411: "Length Required",
+    411: "Length Required", # Not in RFC3261
     413: "Request Entity Too Large",
     414: "Request-URI Too Large",
     415: "Unsupported Media Type",
+    416: "Unsupported URI Scheme",
     420: "Bad Extension",
-    480: "Temporarily not available",
-    481: "Call Leg/Transaction Does Not Exist",
+    421: "Extension Required",
+    423: "Interval Too Brief",
+    480: "Temporarily Unavailable",
+    481: "Call/Transaction Does Not Exist",
     482: "Loop Detected",
     483: "Too Many Hops",
     484: "Address Incomplete",
     485: "Ambiguous",
     486: "Busy Here",
+    487: "Request Terminated",
+    488: "Not Acceptable Here",
+    491: "Request Pending",
+    493: "Undecipherable",
     
     500: "Internal Server Error",
     501: "Not Implemented",
-    502: "Bad Gateway",
+    502: "Bad Gateway", # no donut
     503: "Service Unavailable",
-    504: "Gateway Time-out",
+    504: "Server Time-out",
     505: "SIP Version not supported",
+    513: "Message Too Large",
     
     600: "Busy Everywhere",
     603: "Decline",
@@ -115,9 +125,11 @@ specialCases = {
     'cseq': 'CSeq',
     'call-id': 'Call-ID',
     'www-authenticate': 'WWW-Authenticate',
-    'proxy-authenticate': 'Proxy-Authenticate',
-    'proxy-authorization':'Proxy-Authorization',
 }
+
+def dashCapitalize(s):
+    ''' Capitalize a string, making sure to treat - as a word seperator '''
+    return '-'.join([ x.capitalize() for x in s.split('-')])
 
 def unq(s):
     if s[0] == s[-1] == '"':
@@ -295,7 +307,7 @@ class URL:
             w(";%s" % v)
         if self.headers:
             w("?")
-            w("&".join([("%s=%s" % (specialCases.get(h) or h.capitalize(), v)) for (h, v) in self.headers.items()]))
+            w("&".join([("%s=%s" % (specialCases.get(h) or dashCapitalize(h), v)) for (h, v) in self.headers.items()]))
         return "".join(l)
 
     def __str__(self):
@@ -439,7 +451,7 @@ class Message:
         s = "%s\r\n" % self._getHeaderLine()
         for n, vs in self.headers.items():
             for v in vs:
-                s += "%s: %s\r\n" % (specialCases.get(n) or n.capitalize(), v)
+                s += "%s: %s\r\n" % (specialCases.get(n) or dashCapitalize(n), v)
         s += "\r\n"
         s += self.body
         return s
