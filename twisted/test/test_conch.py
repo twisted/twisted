@@ -22,6 +22,7 @@ from twisted.cred import authorizer
 from twisted.internet import reactor, defer, app, protocol
 from twisted.python import log
 from pyunit import unittest
+from Crypto.PublicKey import RSA, DSA
 
 publicRSA = "ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAGEArzJx8OYOnJmzf4tfBEvLi8DVPrJ3/c9k2I/Az64fxjHf9imyRJbixtQhlH9lfNjUIx+4LmrJH5QNRsFporcHDKOTwTTYLh5KmRpslkYHRivcJSkbh/C+BR3utDS555mV comment"
 
@@ -38,7 +39,7 @@ pSTqy7c3a2AScC/YyOwkDaICHnnD3XyjMwIxALRzl0tQEKMXs6hH8ToUdlLROCrP
 EhQ0wahUTCk1gKA4uPD6TMTChavbh4K63OvbKg==
 -----END RSA PRIVATE KEY-----"""
 
-publicDSA = "ssh-dss AAAAB3NzaC1kc3MAAABBAIbwTOSsZ7Bl7U1KyMNqV13Tu7yRAtTr70PVI3QnfrPumf2UzCgpL1ljbKxSfAi05XvrE/1vfCFAsFYXRZLhQy0AAAAVAM965Akmo6eAi7K+k9qDR4TotFAXAAAAQADZlpTW964haQWS4vC063NGdldT6xpUGDcDRqbm90CoPEa2RmNOuOqi8lnbhYraEzypYH3K4Gzv/bxCBnKtHRUAAABAK+1osyWBS0+P90u/rAuko6chZ98thUSY2kLSHp6hLKyy2bjnT29h7haELE+XHfq2bM9fckDx2FLOSIJzy83VmQ== Paul@MOO"
+publicDSA = "ssh-dss AAAAB3NzaC1kc3MAAABBAIbwTOSsZ7Bl7U1KyMNqV13Tu7yRAtTr70PVI3QnfrPumf2UzCgpL1ljbKxSfAi05XvrE/1vfCFAsFYXRZLhQy0AAAAVAM965Akmo6eAi7K+k9qDR4TotFAXAAAAQADZlpTW964haQWS4vC063NGdldT6xpUGDcDRqbm90CoPEa2RmNOuOqi8lnbhYraEzypYH3K4Gzv/bxCBnKtHRUAAABAK+1osyWBS0+P90u/rAuko6chZ98thUSY2kLSHp6hLKyy2bjnT29h7haELE+XHfq2bM9fckDx2FLOSIJzy83VmQ== comment"
 
 privateDSA = """-----BEGIN DSA PRIVATE KEY-----
 MIH4AgEAAkEAhvBM5KxnsGXtTUrIw2pXXdO7vJEC1OvvQ9UjdCd+s+6Z/ZTMKCkv
@@ -72,6 +73,7 @@ class SSHKeysHandlingTestCase(unittest.TestCase):
         pubKey = keys.getPublicKeyObject('dsa_test.pub')
         self._testKey(privKey, pubKey)
         self._testKeyFromString(privKey, pubKey, privateDSA, publicDSA)
+        self._testGenerateKey(privKey, pubKey, privateDSA, publicDSA)
 
     def testRSA(self):
         """test RSA keys
@@ -80,6 +82,7 @@ class SSHKeysHandlingTestCase(unittest.TestCase):
         pubKey = keys.getPublicKeyObject('rsa_test.pub')
         self._testKey(privKey, pubKey)
         self._testKeyFromString(privKey, pubKey, privateRSA, publicRSA)
+        self._testGenerateKey(privKey, pubKey, privateRSA, publicRSA)
 
     def _testKey(self, priv, pub):
         testData = 'this is the test data'
@@ -108,6 +111,15 @@ class SSHKeysHandlingTestCase(unittest.TestCase):
             if hasattr(pubFS, k):
                 if getattr(pubFS, k) != getattr(pubKey, k):
                     self.fail('getting %s public key from string failed' % keyType)
+
+    def _testGenerateKey(self, privKey, pubKey, privData, pubData):
+        assert keys.makePublicKeyString(pubKey, 'comment') == pubData, repr(keys.makePublicKeyString(pubKey, 'comment'))
+        assert keys.makePublicKeyString(privKey, 'comment') == pubData
+        assert keys.makePrivateKeyString(privKey) == privData, "%s\n!=\n                %s" %(repr(keys.makePrivateKeyString(privKey)) , repr(privData))
+        encData = keys.makePrivateKeyString(privKey, passphrase='test')
+        assert keys.getPrivateKeyObject(data = encData, passphrase = 'test')==\
+               privKey
+        
 
 theTest = None
 
@@ -473,7 +485,7 @@ class SSHTransportTestCase(unittest.TestCase):
         host = reactor.listenTCP(0, fac).getHost()
         port = host[2]
         ssh_path = None
-        for p in ['/usr/local', '/usr', '']:
+        for p in ['/usr', '', '/usr/local']:
             if os.path.exists(p+'/bin/ssh'):
                 ssh_path = p+'/bin/ssh'
                 break
@@ -487,7 +499,10 @@ class SSHTransportTestCase(unittest.TestCase):
                 os.kill(p.transport.pid, 9)
             except OSError:
                 pass
-            fac.proto.transport.loseConnection()
+            try:
+                fac.proto.transport.loseConnection()
+            except AttributeError:
+                pass
             reactor.iterate(0.1)
             reactor.iterate(0.1)
             reactor.iterate(0.1)
