@@ -219,7 +219,6 @@ class IGroupConversation(Interface):
     def setGroupMembers(self, members):
         """Sets the list of members in the group and displays it to the user
         """
-        self.members = members
 
     def setTopic(self, topic, author):
         """Displays the topic (from the server) for the group conversation window
@@ -227,7 +226,6 @@ class IGroupConversation(Interface):
         @type topic: string
         @type author: string (XXX: Not Person?)
         """
-        raise NotImplementedError("Subclasses must implement this method")
 
     def memberJoined(self, member):
         """Adds the given member to the list of members in the group conversation
