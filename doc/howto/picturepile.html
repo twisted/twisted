@@ -51,6 +51,7 @@ from twisted.internet import app
 from twisted.web.woven import page
 from twisted.web import server
 from twisted.web import microdom
+from twisted.web import static
 
 class DirectoryListing(page.Page):
 
@@ -81,6 +82,12 @@ class DirectoryListing(page.Page):
         return files
 
     def getDynamicChild(self, name, request):
+        # Protect against malicious URLs like '..'
+        if static.isDangerous(name):
+            return static.dangerousPathError
+
+        # Return a DirectoryListing or an ImageDisplay resource, depending on
+        # whether the path corresponds to a directory or to a file
         path = os.path.join(self.directory,name)
         if os.path.exists(path):
             if os.path.isdir(path):
