@@ -133,9 +133,6 @@ class IResolver(IResolverSimple):
     def lookupText(self, name, timeout = 10):
         """Lookup the TXT records associated with C{name}."""
 
-    def lookupText(self, name, timeout = 10):
-        """Lookup the TXT records associated with C{name}."""
-
     def lookupResponsibility(self, name, timeout = 10):
         """Lookup the RP records associated with C{name}."""
 
