@@ -80,8 +80,6 @@ class ManConverter:
         words = line.split()
         words[0] = '\\fB' + words[0] + '\\fR'
         self.text(' '.join(words))
-        #self.paraCheck()
-        #self.write('<strong>%s</strong> ' % line)
 
     def macro_PP(self, line):
         self.closeTags()

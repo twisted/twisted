@@ -3,11 +3,6 @@ set -e
 for file in doc/man/*.1;
 do filename=`echo $file | sed 's/\.1$//'`
    python twisted/lore/man2lore.py $filename.1 > $filename-man.html
-   #groff -Thtml -man $filename.1 | \
-   #egrep -v '(^<a name=.*></a>$)|(^<a href.*<br>$)|(<hr>)|(^<tr )|(^<td )|(^ *cols=)|(^<meta )' | \
-   #sed -e 's#^<table.*#<p>#' -e 's#</td>.*#</p>#' -e 's/<b>/<strong>/g' \
-   #    -e 's#</b>#</strong>#g' -e 's/<i>/<em>/g' -e 's#</i>#</em>#g' \
-   #    -e 's/align=center//' -e 's#<br>#</p><p>#' > $filename.html
 done
 baseurl=http://twistedmatrix.com/documents/TwistedDocs/TwistedDocs-$1/api/%s.html
 templ=doc/howto/template.tpl
