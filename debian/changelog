@@ -4,6 +4,7 @@ twisted (0.10.2-1) unstable; urgency=low
   * bug fixes
   * timeouts for client sockets 
   * Tutorial about plugins
+  * Mail has changed API in an incompatible way
 
  -- Moshe Zadka <moshez@debian.org>  Wed, 12 Sep 2001 23:00:59 +0300
 
