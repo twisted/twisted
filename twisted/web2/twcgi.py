@@ -11,9 +11,6 @@ Things which are still not working properly:
   - CGIScript.render doesn't set REMOTE_ADDR or REMOTE_HOST in the
     environment
 
-  - CGIProcessProtocol.connectionMade needs to set up a stream to feed
-    the request data into the CGI process.
-
 """
 
 # System Imports
@@ -84,7 +81,7 @@ class CGIScript(resource.LeafResource):
         if request.stream.length is None:
             return http.Response(responsecode.LENGTH_REQUIRED)
 
-        script_name = "/"+string.join(request.prepath, '/')
+        script_name = "/" + string.join(request.prepath, '/')
         python_path = string.join(sys.path, os.pathsep)
         server_name = request.host.split(':')[0]
         env = {
@@ -149,20 +146,28 @@ class CGIScript(resource.LeafResource):
 
 
 class FilteredScript(CGIScript):
-    """I am a special version of a CGI script, that uses a specific executable.
+    """
+    I am a special version of a CGI script, that uses a specific executable
+    (or, the first existing executable in a list of executables).
 
     This is useful for interfacing with other scripting languages that adhere
-    to the CGI standard (cf. PHPScript).  My 'filter' attribute specifies what
-    executable to run, and my 'filename' init parameter describes which script
+    to the CGI standard (cf. PHPScript).  My 'filters' attribute specifies what
+    executables to try to run, and my 'filename' init parameter describes which script
     to pass to the first argument of that script.
     """
 
-    filter = '/usr/bin/cat'
+    filters = '/usr/bin/cat',
 
     def runProcess(self, env, request, qargs=[]):
         d = defer.Deferred()
-        proc = CGIProcessProtocol(request)
-        reactor.spawnProcess(proc, self.filter, [self.filter, self.filename]+qargs, env, os.path.dirname(self.filename))
+        proc = CGIProcessProtocol(request, d)
+        for filterscript in self.filters:
+            if os.path.exists(filterscript):
+                reactor.spawnProcess(proc, filterscript, [filterscript, self.filename]+qargs, env, os.path.dirname(self.filename))
+                break
+        else:
+            log.err(self.__class__.__name__ + ' could not find any of: ' + ', '.join(self.filters))
+            return http.Response(responsecode.INTERNAL_SERVER_ERROR)
         return d
 
 
@@ -170,7 +175,7 @@ class PHP3Script(FilteredScript):
     """I am a FilteredScript that uses the default PHP3 command on most systems.
     """
 
-    filter = '/usr/bin/php3'
+    filters = '/usr/bin/php3',
 
 
 class PHPScript(FilteredScript):
@@ -178,7 +183,7 @@ class PHPScript(FilteredScript):
     Sometimes, php wants the path to itself as argv[0]. This is that time.
     """
 
-    filter = '/usr/bin/php4'
+    filters = '/usr/bin/php4-cgi', '/usr/bin/php4'
 
 
 class CGIProcessProtocol(protocol.ProcessProtocol):
@@ -205,17 +210,17 @@ class CGIProcessProtocol(protocol.ProcessProtocol):
         self.response = http.Response(stream=self.stream)
 
     def connectionMade(self):
-        """
-        self.request.registerProducer(self, 1)
-        self.request.content.seek(0, 0)
-        content = self.request.content.read()
-        if content:
-            self.transport.write(content)
-            """
-        # FIXME: Send client data to CGI script.
-        # Use StreamProducer to do stuff.
+        # Send input data over to the CGI script.
+        def _failedProducing(reason):
+            # If you really care.
+            #log.err(reason)
+            pass
+        def _finishedProducing(result):
+            self.transport.closeChildFD(0)
         s = stream.StreamProducer(self.request.stream)
-        s.beginProducing(self.transport.pipes[0])
+        producingDeferred = s.beginProducing(self.transport.pipes[0])
+        producingDeferred.addCallback(_finishedProducing)
+        producingDeferred.addErrback(_failedProducing)
 
     def errReceived(self, error):
         self.errortext = self.errortext + error
