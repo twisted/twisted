@@ -225,9 +225,9 @@ def init(with_threads=1):
         return
     elif threaded:
         raise RuntimeError("threads cannot be disabled, once enabled")
-    threaded = with_threads
-    if threaded:
+    if with_threads:
         log.msg('Enabling Multithreading.')
+        threaded = with_threads
         import thread, threading
         threadmodule = thread
         threadingmodule = threading
