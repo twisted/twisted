@@ -244,7 +244,7 @@ P, BODY, TD, OL, UL, MENU, BLOCKQUOTE, DIV
             io.write(inputFunc(request, inputName, customData))
             io.write("</td></tr>")
 
-        io.write('<TR><TD></TD><TD ALIGN="right"><INPUT TYPE="submit" NAME=submit VALUE="%s"></td</tr>' % submit)
+        io.write('<TR><TD></TD><TD ALIGN="right"><INPUT TYPE="submit" NAME=submit VALUE="%s"></td></tr>' % submit)
         io.write("</TABLE>")
         io.write("</FORM>")
         return io.getvalue()

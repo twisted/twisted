@@ -86,7 +86,7 @@ class Request(pb.Copied, http.HTTP):
         del x['site']
         x['remote'] = pb.Proxy(issuer, self)
         return x
-    
+
     # HTML generation helpers
 
     def sibLink(self, name):
@@ -149,11 +149,11 @@ class Request(pb.Copied, http.HTTP):
         "Process a request."
         # Log the request to a file.
         log.msg( self )
-        
+
         # cache the client information, we'll need this later to be pickled and
         # sent with the request so CGIs will work remotely
         self.client = self.transport.getPeer()
-        
+
         # set various default headers
         self.setHeader('server', version)
         self.setHeader('date', date_time_string())
@@ -350,7 +350,7 @@ class Request(pb.Copied, http.HTTP):
 
 class Session:
     """A user's session with a system.
-    
+
     This utility class contains no functionality, but is used to represent a
     session.
     """
@@ -406,7 +406,7 @@ class Site(protocol.Factory):
             (string.split(request.uri,'?')[0])))
         request.setResponseCode(http.MOVED_PERMANENTLY)
         return 'redirect!'
-        
+
     def getChildWithDefault(self, pathEl, request):
         """Emulate a resource's getChild method.
         """
