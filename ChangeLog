@@ -1,3 +1,9 @@
+2003-04-04  Itamar Shtull-Trauring  <itamar@itamarst.org>
+
+	* twisted/web/microdom.py: parseXML and parseXMLString functions
+	that are setup to use the correct settings for strict XML parsing
+	and manipulation.
+
 2003-03-31  Brian Warner  <warner@lothar.com>
 
 	* twisted/trial/unittest.py: use SkipTest's argument as a reason
