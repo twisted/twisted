@@ -1,5 +1,18 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
 <html>
+
+<head>
+<title>Transluscent Inter-Process Service Migration</title>
+</head>
+
 <body>
+
+<h1>Translucent Inter-Process Service Migration</h1>
+<p>Jean-Paul Calderone<br />
+exarkun@divmod.com</p>
 
 <h2>Abstract</h2>
 
@@ -153,8 +166,7 @@ logic and serialization logic.  Annotated versions of the serializer and
 deserializer for <code>twisted.internet.abstract.FileDescriptor</code> are
 given below:</p>
 
-<pre>
-<code>
+<pre class="python">
 from twisted.spread import interfaces as ispread
 from twisted.python import components
 
@@ -256,11 +268,10 @@ class FileDescriptorUnjellier:
 def socketInMyPocket(skt, instance, attribute, mode):
     setattr(instance, attribute, skt)
     instance.fileno = skt.fileno
-    if mode & READ:
+    if mode &amp; READ:
         instance.startReading()
-    if mode & WRITE:
+    if mode &amp; WRITE:
         instance.startWriting()
-</code>
 </pre>
 
 <h3>Real File Descriptors</h3>
@@ -269,10 +280,9 @@ def socketInMyPocket(skt, instance, attribute, mode):
 descriptors they represent can be migrated as well.  A reactor-based API
 based on <code>sendmsg(2)</code> and <code>recvmsg(2)</code> is used by
 this migration implementation, and part of its implementation is presented
-below:
+below:</p>
 
-<pre>
-<code>
+<pre class="python">
 
 from twisted.internet import unix
 
@@ -311,7 +321,6 @@ class Client(unix.Client):
                     break
         return unix.Client.doRead(self)
 
-</code>
 </pre>
 
 <p><code>FileDescriptorJellier</code> and <code>FileDescriptorUnjellier
@@ -333,7 +342,7 @@ to be possible.</p>
 <p>The first portion of a transcript of a brief telnet session
 with this server is as follows:</p>
 
-<pre>
+<pre class="shell">
 exarkun@boson:~$ telnet localhost 8000
 Trying ::1...
 Trying 127.0.0.1...
@@ -356,7 +365,7 @@ retrieve both the telnet server and all connected clients from
 the service originator.  The remainder of the transcript results
 from the migration client running the telnet server:</p>
 
-<pre>
+<pre class="shell">
 >>> os.getpid()
 884
 >>> try:
