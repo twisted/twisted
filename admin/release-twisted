@@ -507,6 +507,8 @@ class MakeDebs(Transaction):
         sys.stdout.write("Moving files to %s" % os.path.join(rel, 'debian-%s'%ver))
         sys.stdout.flush()
         for file in glob.glob('/sid-chroot/tmp/%s/*' % unique):
+            if not os.path.isfile(file):
+                continue
             sh('cp %(file)s %(rel)s/debian-%(ver)s' % vars())
             sys.stdout.write(".")
             sys.stdout.flush()
