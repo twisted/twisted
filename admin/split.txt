@@ -1,0 +1,13 @@
+Instructions for splitting out packages for the Great Twisted Split
+* move tests
+* make sure to SVN add test/__init__.py!
+* add twisted.foo.test to setup.py
+* move protocols
+* update all imports
+* add protocol backwards compatibility (see twisted.protocols.nntp for e.g.)
+* test protocol backwards compatibility (add stuff to test_split_compat)
+* update test-case-names
+* If project has scripts, make twisted.proj.scripts; add bin/proj/foo
+* grep the package for 'import', note any dependencies and their
+  nature in topfiles/foo/README.
+* grep all of twisted for relevant imports
