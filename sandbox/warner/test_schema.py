@@ -11,6 +11,10 @@ INTSIZE = HEADER+1
 STR10 = HEADER+1+10
 
 class ConformTest(unittest.TestCase):
+    """This tests how Constraints are asserted on outbound objects (where the
+    object already exists). Inbound constraints are checked in
+    test_banana.InboundByteStream in the various testConstrainedFoo methods.
+    """
     def conforms(self, c, obj):
         c.checkObject(obj)
     def violates(self, c, obj):
