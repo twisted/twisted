@@ -41,10 +41,11 @@ class IRCPerson(basesupport.AbstractPerson):
         self.chat.getContactsList().setContactStatus(self)
 
     def sendMessage(self, text, meta=None):
-        if meta and meta.get("style", None) == "emote":
-            self.client.ctcpMakeQuery(self.name,[('ACTION', text)])
-            return succeed(text)
-        self.client.msg(self.name,text)
+        for line in string.split(text, '\n'):
+            if meta and meta.get("style", None) == "emote":
+                self.client.ctcpMakeQuery(self.name,[('ACTION', line)])
+            else:
+                self.client.msg(self.name, line)
         return succeed(text)
 
 class IRCGroup(basesupport.AbstractGroup):
@@ -91,12 +92,13 @@ class IRCProto(basesupport.AbstractClientMixin, irc.IRCClient):
         return self.chat.getPerson(name,self,IRCPerson)
 
     def connectionMade(self):
+        # XXX: Why do I duplicate code in IRCClient.register?
         try:
             print 'connection made on irc service!?', self
             if self.account.password:
                 self.sendLine("PASS :%s" % self.account.password)
             self.setNick(self.account.nickname)
-            self.sendLine("USER %s foo bar :GTK-IM user"%self.nickname)
+            self.sendLine("USER %s foo bar :Twisted-IM user" % (self.nickname,))
             for channel in self.account.channels:
                 self.joinGroup(channel)
             self.account._isOnline=1
