@@ -63,7 +63,8 @@ def deferredResult(d, timeout=None):
     """
     warnings.warn(("twisted.trial.util.deferredResult is DEPRECATED! "
                    "Return a deferred from your test method, "
-                   "and trial will do the Right Thing"), DeprecationWarning)
+                   "and trial will do the Right Thing"), DeprecationWarning,
+                  stacklevel=2)
     result = _getDeferredResult(d, timeout)
     if isinstance(result, failure.Failure):
         raise result

@@ -631,7 +631,7 @@ class TestCase(object):
         """
         warnings.warn("runReactor is deprecated. return a deferred from " +
                       "your test method, and trial will wait for results",
-                      DeprecationWarning)
+                      DeprecationWarning, stacklevel=2)
         from twisted.internet import reactor
 
         if seconds:
