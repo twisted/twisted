@@ -170,33 +170,29 @@ class KQueueReactor(default.PosixReactorBase):
                 return
             else:
                 raise
-
+        _drdw = self._doWriteOrRead
         for event in l:
             why = None
             fd, filter = event.ident, event.filter
             selectable = selectables[fd]
-            log.logOwner.own(selectable)
+            log.callWithLogger(selectable, _drdw, selectable, fd, filter)
 
-            try:
-                if filter == EVFILT_READ:
-                    why = selectable.doRead()
-                if filter == EVFILT_WRITE:
-                    why = selectable.doWrite()
-                if not selectable.fileno() == fd:
-                    why = main.CONNECTION_LOST
-            except:
-                why = sys.exc_value
-                log.deferr()
+    def _doWriteOrRead(self, selectable, fd, filter):
+        try:
+            if filter == EVFILT_READ:
+                why = selectable.doRead()
+            if filter == EVFILT_WRITE:
+                why = selectable.doWrite()
+            if not selectable.fileno() == fd:
+                why = main.CONNECTION_LOST
+        except:
+            why = sys.exc_value
+            log.deferr()
 
-            if why:
-                self.removeReader(selectable)
-                self.removeWriter(selectable)
-                try:
-                    selectable.connectionLost(failure.Failure(why))
-                except:
-                    log.deferr()
-
-            log.logOwner.disown(selectable)
+        if why:
+            self.removeReader(selectable)
+            self.removeWriter(selectable)
+            selectable.connectionLost(failure.Failure(why))
 
     doIteration = doKEvent
 
