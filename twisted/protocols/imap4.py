@@ -93,6 +93,20 @@ class IMailboxListener(components.Interface):
         new set on that message.
         """
 
+    def newMessages(self, exists, recent):
+        """Indicates that the number of messages in a mailbox has changed.
+        
+        @type exists: C{int} or C{None}
+        @param exists: The total number of messages now in this mailbox.
+        If the total number of messages has not changed, this should be
+        C{None}.
+
+        @type recent: C{int}
+        @param recent: The number of messages now flagged \\Recent.
+        If the total number of messages has not changed, this should be
+        C{None}.
+        """
+
 class IMAP4Server(basic.LineReceiver):
     """
     Protocol implementation for an IMAP4rev1 server.
@@ -194,7 +208,7 @@ class IMAP4Server(basic.LineReceiver):
             try:
                 f(tag, rest)
             except IllegalClientResponse, e:
-                self.sendBadResponse(tag, 'Illegal syntax')
+                self.sendBadResponse(tag, 'Illegal syntax: ' + str(e))
             except IllegalOperation, e:
                 self.sendNegativeResponse(tag, str(e))
             except Exception, e:
@@ -236,10 +250,10 @@ class IMAP4Server(basic.LineReceiver):
     def _respond(self, state, tag, message):
         if not tag:
             tag = '*'
-        if not message:
-            self.sendLine(' '.join((tag, state)))
-        else:
+        if message:
             self.sendLine(' '.join((tag, state, message)))
+        else:
+            self.sendLine(' '.join((tag, state)))
 
     def listCapabilities(self):
         caps = ['IMAP4rev1']
@@ -473,15 +487,15 @@ class IMAP4Server(basic.LineReceiver):
         if len(names) != 2:
             raise IllegalClientResponse(args)
         mailbox, names = names
-        try:
-            d = self.account.requestStatus(mailbox, names)
-        except MailboxException, e:
-            self.sendNegativeResponse(tag, str(e))
-        else:
+        mbox = self.account.select(mailbox, 0)
+        if mbox:
+            d = mbox.requestStatus(names)
             maybeDeferred(
                 d, self._cbStatus, self._ebStatus,
                 (tag, mailbox), (tag, mailbox)
             )
+        else:
+            self.sendNegativeResponse(tag, str(e))
     select_STATUS = auth_STATUS
 
     def _cbStatus(self, status, tag, box):
@@ -676,7 +690,7 @@ class IMAP4Server(basic.LineReceiver):
         else:
             mode = 0
 
-        d = self.mbox.store(messages, flags, mode, uid)
+        d = self.mbox.store(messages, flags, mode)
         maybeDeferred(d, self._cbStore, self._ebStore, (tag, silent), (tag,))
 
     def _cbStore(self, result, tag, silent):
@@ -749,6 +763,26 @@ class IMAP4Server(basic.LineReceiver):
 
         f = getattr(self, 'select_' + command)
         f(tag, args, uid=1)
+    
+    
+    #
+    # IMailboxListener implementation
+    # 
+    def modeChanged(self, writeable):
+        if writeable:
+            self.sendPositiveResponse(message='[READ-WRITE]')
+        else:
+            self.sendPositiveResponse(message='[READ-ONLY]')
+
+    def flagsChanged(self, newFlags):
+        for (mId, flags) in newFlags.items():
+            self.sendUntaggedResponse('%d FETCH (FLAGS (%s))' % (mId, ' '.join(flags)))
+
+    def newMessages(self, exists, recent):
+        if exists is not None:
+            self.sendUntaggedResponse('%d EXISTS' % exists)
+        if recent is not None:
+            self.sendUntaggedResponse('%d RECENT' % recent)
 
 class UnhandledResponse(IMAP4Exception): pass
 
@@ -763,6 +797,8 @@ class NoSupportedAuthentication(IMAP4Exception):
 class IllegalServerResponse(IMAP4Exception): pass
 
 class IMAP4Client(basic.LineReceiver):
+    __implements__ = (IMailboxListener,)
+
     tags = None
     waiting = None
     queued = None
@@ -859,9 +895,7 @@ class IMAP4Client(basic.LineReceiver):
     def _defaultHandler(self, tag, rest):
         if tag == '*' or tag == '+':
             if not self.waiting:
-                # XXX - This is rude.
-                self.transport.loseConnection()
-                raise IllegalServerResponse(tag + ' ' + rest)
+                self._extraInfo([rest])
             else:
                 cmd = self.tags[self.waiting]
                 if tag == '+':
@@ -895,7 +929,25 @@ class IMAP4Client(basic.LineReceiver):
             self.waiting = t
     
     def _extraInfo(self, lines):
-        print 'Extra crap', lines
+        # XXX - This is terrible.
+        # XXX - Also, this should collapse temporally proximate calls into single
+        #       invocations of IMailboxListener methods, where possible.
+        flags = {}
+        for L in lines:
+            if L.find('EXISTS') != -1:
+                self.newMessages(int(L.split()[0]), None)
+            elif L.find('RECENT') != -1:
+                self.newMessages(None, int(L.split()[0]))
+            elif L.find('READ-ONLY') != -1:
+                self.modeChanged(0)
+            elif L.find('READ-WRITE') != -1:
+                self.modeChanged(1)
+            elif L.find('FETCH') != -1:
+                flags.update(self._cbFetch(([L], None), ('FLAGS',)))
+            else:
+                log.msg('Unhandled unsolicited response: ' + repr(L))
+        if flags:
+            self.flagsChanged(flags)
 
     def sendCommand(self, cmd):
         cmd.defer = defer.Deferred()
@@ -1693,8 +1745,16 @@ class IMAP4Client(basic.LineReceiver):
                         raise IllegalServerResponse, line
                     else:
                         data = parseNestedParens(parts[2])
+                        while len(data) == 1 and isinstance(data, types.ListType):
+                            data = data[0]
                         if data[0] in lookFor:
                             flags.setdefault(id, []).extend(data[1])
+                        else:
+                            print '(1)Ignoring ', data
+                else:
+                    print '(2)Ignoring ', parts
+            else:
+                print '(3)Ignoring ', parts
         return flags
 
     def fetchSpecific(self, messages, headerType=None, headerNumber=None,
@@ -1858,6 +1918,19 @@ class IMAP4Client(basic.LineReceiver):
         d = self.sendCommand(Command('STORE', args, wantResponse=('FETCH',)))
         d.addCallback(self._cbFetch, lookFor='FLAGS')
         return d
+    
+    #
+    # IMailboxListener methods
+    #
+    def modeChanged(self, writeable):
+        """Override me"""
+    
+    def flagsChanged(self, newFlags):
+        """Override me"""
+    
+    def newMessages(self, exists, recent):
+        """Override me"""
+
 
 class IllegalIdentifierError(IMAP4Exception): pass
 
@@ -2304,35 +2377,146 @@ class ReadOnlyMailbox(MailboxException):
 
 class IAccount(components.Interface):
     def addMailbox(self, name, mbox = None):
-        """"""
+        """Add a new mailbox to this account
+        
+        @type name: C{str}
+        @param name: The name associated with this mailbox.  It may not
+        contain multiple hierarchical parts.
+        
+        @type mbox: An object implementing C{IMailbox}
+        @param mbox: The mailbox to associate with this name.  If C{None},
+        a suitable default is created and used.
+        
+        @rtype: C{Deferred} or C{bool}
+        @return: A true value if the creation succeeds, or a deferred whose
+        callback will be invoked when the creation succeeds.
+        
+        @raise C{MailboxException}: Raised if this mailbox cannot be added for
+        some reason.  This may also be raised asynchronously, if a C{Deferred}
+        is returned.
+        """
     
     def create(self, pathspec):
-        """"""
+        """Create a new mailbox from the given hierarchical name.
+        
+        @type pathspec: C{str}
+        @param pathspec: The full hierarchical name of a new mailbox to create.
+        If any of the inferior hierarchical names to this one do not exist,
+        they are created as well.
+        
+        @rtype: C{Deferred} or C{bool}
+        @return: A true value if the creation succeeds, or a deferred whose
+        callback will be invoked when the creation succeeds.
+        
+        @raise C{MailboxException}: Raised if this mailbox cannot be added. 
+        This may also be raised asynchronously, if a C{Deferred} is
+        returned.
+        """
     
     def select(self, name, rw=1):
-        """"""
+        """Acquire a mailbox, given its name.
+        
+        @type name: C{str}
+        @param name: The mailbox to acquire
+        
+        @type rw: C{bool}
+        @param rw: If a true value, request a read-write version of this
+        mailbox.  If a false value, request a read-only version.
+        """
     
     def delete(self, name):
-        """"""
+        """Delete the mailbox with the specified name.
+        
+        @type name: C{str}
+        @param name: The mailbox to delete.
+        
+        @rtype: C{Deferred} or C{bool}
+        @return: A true value if the mailbox is successfully deleted, or a
+        C{Deferred} whose callback will be invoked when the deletion
+        completes.
+
+        @raise C{MailboxException}: Raised if this mailbox cannot be deleted.
+        This may also be raised asynchronously, if a C{Deferred} is returned.
+        """
     
     def rename(self, oldname, newname):
-        """"""
+        """Rename a mailbox
+        
+        @type oldname: C{str}
+        @param oldname: The current name of the mailbox to rename.
+        
+        @type newname: C{str}
+        @param newname: The new name to associate with the mailbox.
+        
+        @rtype: C{Deferred} or C{bool}
+        @return: A true value if the mailbox is successfully renamed, or a
+        C{Deferred} whose callback will be invoked when the rename operation
+        is completed.
+        
+        @raise C{MailboxException}: Raised if this mailbox cannot be
+        renamed.  This may also be raised asynchronously, if a C{Deferred}
+        is returned.
+        """
     
     def isSubscribed(self, name):
-        """"""
+        """Check the subscription status of a mailbox
+        
+        @type name: C{str}
+        @param name: The name of the mailbox to check
+        
+        @rtype: C{Deferred} or C{bool}
+        @return: A true value if the given mailbox is currently subscribed
+        to, a false value otherwise.  A C{Deferred} may also be returned
+        whose callback will be invoked with one of these values.  """
     
     def subscribe(self, name):
-        """"""
+        """Subscribe to a mailbox
+        
+        @type name: C{str}
+        @param name: The name of the mailbox to subscribe to
+        
+        @rtype: C{Deferred} or C{bool}
+        @return: A true value if the mailbox is subscribed to successfully,
+        or a Deferred whose callback will be invoked with this value when
+        the subscription is successful.
+
+        @raise C{MailboxException}: Raised if this mailbox cannot be
+        subscribed to.  This may also be raised asynchronously, if a
+        C{Deferred} is returned.
+        """
     
     def unsubscribe(self, name):
-        """"""
+        """Unsubscribe from a mailbox
+        
+        @type name: C{str}
+        @param name: The name of the mailbox to unsubscribe from
+        
+        @rtype: C{Deferred} or C{bool}
+        @return: A true value if the mailbox is unsubscribed from successfully,
+        or a Deferred whose callback will be invoked with this value when
+        the unsubscription is successful.
+
+        @raise C{MailboxException}: Raised if this mailbox cannot be
+        unsubscribed from.  This may also be raised asynchronously, if a
+        C{Deferred} is returned.
+        """
     
     def listMailboxes(self, ref, wildcard):
-        """"""
+        """List all the mailboxes that meet a certain criteria
+        
+        @type ref: C{str}
+        @param ref: The context in which to apply the wildcard
+        
+        @type wildcard: C{str}
+        @param wildcard: An expression against which to match mailbox names.
+        '*' matches any number of characters in a mailbox name, and '%'
+        matches similarly, but will not match across hierarchical boundaries.
+        
+        @rtype: C{list} of C{tuple}
+        @return: A list of C{(mailboxName, mailboxObject)} which meet the
+        given criteria.
+        """
     
-    def requestStatus(self, mailbox, names):
-        """"""
-
 class MemoryAccount:
     __implements__ = (IAccount,)
 
@@ -2356,6 +2540,7 @@ class MemoryAccount:
         if mbox is None:
             mbox = self._emptyMailbox(name, self.allocateID())
         self.mailboxes[name] = mbox
+        return 1
 
     def create(self, pathspec):
         paths = filter(None, pathspec.split('/'))
@@ -2438,13 +2623,6 @@ class MemoryAccount:
         ref = self._inferiorNames(ref.upper())
         wildcard = wildcardToRegexp(wildcard, '/')
         return [(i, self.mailboxes[i]) for i in ref if wildcard.match(i)]
-
-    def requestStatus(self, mailbox, names):
-        mailbox = mailbox.upper()
-        if not self.mailboxes.has_key(mailbox):
-            raise NoSuchMailbox, mailbox
-        return self.mailboxes[mailbox].requestStatus(names)
-
 
 class IMailbox(components.Interface):
     def getUIDValidity(self):
