@@ -5,30 +5,30 @@ from nevow import appserver
 from login import createResource
 from mechanize import Browser
 import re
+import ClientCookie
 
-class BrowsingTest(unittest.TestCase):
-    def setUp(self):
-        self.url = "http://localhost:8081/"
+#ClientCookie.getLogger("ClientCookie").setLevel(ClientCookie.DEBUG)
 
+class ActualTests:
     def test_main(self):
-        b = Browser()
+        b = self.browser
         b.open(self.url)
         self.assertEquals(b.title(), 'Main page')
 
     def test_unauth_secret(self):
-        b = Browser()
+        b = self.browser
         b.open(self.url)
         b.follow_link(text_regex=re.compile(r'deep secret'))
         self.assertEquals(b.title(), 'Log In')
 
     def test_unauth_another(self):
-        b = Browser()
+        b = self.browser
         b.open(self.url)
         b.follow_link(text_regex=re.compile(r'another deep'))
         self.assertEquals(b.title(), 'Log In')
 
     def test_auth_secret(self):
-        b = Browser()
+        b = self.browser
         b.open(self.url)
         b.follow_link(text_regex=re.compile(r'deep secret'))
         self.assertEquals(b.title(), 'Log In')
@@ -42,7 +42,7 @@ class BrowsingTest(unittest.TestCase):
         self.failUnless(url.endswith('/secret/stuff/stuff/stuff/'))
 
     def test_auth_another(self):
-        b = Browser()
+        b = self.browser
         b.open(self.url)
         b.follow_link(text_regex=re.compile(r'another deep'))
         self.assertEquals(b.title(), 'Log In')
@@ -57,9 +57,9 @@ class BrowsingTest(unittest.TestCase):
 
 
     def test_auth_traversal(self):
-        b = Browser()
+        b = self.browser
         b.open(self.url)
-        b.follow_link(text_regex=re.compile(r'secret'))
+        r=b.follow_link(text_regex=re.compile(r'secret'))
         self.assertEquals(b.title(), 'Log In')
         b.select_form(name='login')
         b["username"] = "test"
@@ -69,3 +69,24 @@ class BrowsingTest(unittest.TestCase):
         b.follow_link(text_regex=re.compile(r'up'))
         b.follow_link(text_regex=re.compile(r'another'))
         self.assertEquals(b.title(), "Hello again!")
+
+
+# TODO self.url = "http://localhost:8081/" won't work,
+# as mechanize tries to look for cookies set by "localhost.local",
+# of which there are none.
+
+class TestWithCookies(unittest.TestCase, ActualTests):
+    def setUp(self):
+        self.url = "http://127.0.0.1:8081/"
+        self.browser = Browser()
+
+class DenyAllCookiesPolicy(ClientCookie.DefaultCookiePolicy):
+    def set_ok(self, cookie, request, unverifiable):
+        return False
+
+class TestWithOutCookies(unittest.TestCase, ActualTests):
+    def setUp(self):
+        self.url = "http://127.0.0.1:8081/"
+        self.browser = Browser()
+        jar = ClientCookie.CookieJar(policy=DenyAllCookiesPolicy())
+        self.browser.set_cookiejar(jar)
