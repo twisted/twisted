@@ -29,7 +29,7 @@ accepting mail for a small set of domains.
 The classes here are meant to facilitate support for such a configuration
 for the twisted.mail SMTP server
 """
-from twisted.python import delay, log
+from twisted.python import delay, log, failure
 from twisted.mail import relay, mail, bounce
 from twisted.internet import reactor, protocol
 import os, string, time, cPickle
@@ -308,7 +308,7 @@ class MXCalculator:
 
     def getMXAnswer(self, deferred, answers):
         if not answers:
-            deferred.errback("No MX found")
+            deferred.errback(failure.Failure(IOError("No MX found")))
         for answer in answers:
             if not self.badMXs.has_key(answer):
                 deferred.callback(answer)

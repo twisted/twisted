@@ -28,7 +28,7 @@ import socket
 # Twisted Imports
 
 from twisted.python import log
-from twisted.python import threadable
+from twisted.python import threadable, failure
 from twisted.python.runtime import platform
 from twisted.persisted import styles
 from twisted.python.components import implements
@@ -47,12 +47,12 @@ class DummyResolver:
     """
     def resolve(self, deferred, name, type=1, timeout=10):
         if type != 1:
-            deferred.errback("type not supportded")
+            deferred.errback(failure.Failure(ValueError("type not supportded")))
             return
         try:
             address = socket.gethostbyname(name)
         except socket.error:
-            deferred.errback("address not found")
+            deferred.errback(failure.Failure(IOError("address not found")))
         else:
             deferred.callback(address)
 

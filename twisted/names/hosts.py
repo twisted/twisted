@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+from twisted.python import failure
 import string
 
 def searchFileFor(file, name):
@@ -39,9 +40,9 @@ class Resolver:
 
     def resolve(self, deferred, name, type=1, timeout=10):
         if type != 1:
-            errback("type not supported")
+            errback(failure.Failure(ValueError("type not supported")))
         res = searchFileFor(self.file, name)
         if res is not None:
             deferred.callback(res)
         else:
-            deferred.errback("address not found")
+            deferred.errback(failure.Failure(IOError("address not found")))

@@ -145,11 +145,11 @@ class ReactorBase:
             try:
                 address = socket.gethostbyname(name)
             except socket.error:
-                deferred.errback("address not found")
+                deferred.errback(failure.Failure(IOError("address not found")))
             else:
                 deferred.callback(address)
         else:
-            deferred.errback("type not supportded")
+            deferred.errback(failure.Failure(ValueError("type not supportded")))
         return deferred
 
     # Installation.

@@ -17,7 +17,7 @@
 
 from twisted.protocols import dns
 from twisted.internet import reactor, udp, tcp, defer, protocol
-from twisted.python import components
+from twisted.python import components, failure
 import random, string, struct
 
 DNS, TCP = range(2)
@@ -134,11 +134,12 @@ class SentQuery:
         self.done = 1
         self.removeAll()
         if not message.answers:
-            self.errback("No answers")
+            self.errback(failure.Failure(ValueError("No answers")))
             return
         process = getattr(self, 'processAnswer_%d' % self.type, None)
         if process is None:
-            self.errback("No processor for answer type %s" % self.type)
+            self.errback(failure.Failure(AttributeError("prcoessAnswer_%s" %
+                                                        self.type)))
             return
         process(message)
 
@@ -172,7 +173,7 @@ class SentQuery:
                     n.decode(answer.strio)
                     name = n.name
         if not answers:
-            self.errback("No answers")
+            self.errback(failure.Failure(IOError("No answers")))
             return
         answer = random.choice(answers)
         self.callback(string.join(map(str, map(ord, answer.data)), '.'))
