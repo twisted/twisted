@@ -24,7 +24,7 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
 # system imports
-import sys, os, select
+import sys, os, select, errno
 
 # Twisted Imports
 from twisted.internet import protocol
@@ -61,6 +61,8 @@ class StandardIOWriter(abstract.FileDescriptor):
         except OSError, ose:
             if ose.errno == errno.EPIPE:
                 return CONNECTION_LOST
+            if ose.errno == errno.EAGAIN:
+                return 0
             raise
 
     def write(self, data):
