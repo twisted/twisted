@@ -69,7 +69,7 @@ class DOMJellyable:
         if method:
             method(jellier, element)
         else:
-            element.addChild(jellier.jellyToNode(self.__dict__))
+            element.appendChild(jellier.jellyToNode(self.__dict__))
 
     def unjellyFromDOM(self, unjellier, element):
         pDOMVersion = element.getAttribute("marmalade:version") or "0"
