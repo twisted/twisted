@@ -1,5 +1,5 @@
 #run twistd -y on me
-from twisted.application import app, compat, servers, timer, clients
+from twisted.application import app, compat, servers, timer, clients, service
 from twisted.protocols import wire
 from twisted.internet import protocol
 from twisted.python import util
@@ -18,4 +18,15 @@ class Foo(protocol.Protocol):
 factory = protocol.ClientFactory()
 factory.protocol = Foo
 clients.TCPClient('localhost', 8081, factory).setParent(appl)
+class FooService(service.Service):
+    def startService(self):
+        service.Service.startService(self)
+        print 'lala, starting'
+    def stopService(self):
+        service.Service.stopService(self)
+        print 'lala, stopping'
+        print self.parent.getServiceNamed(self.name) is self
+foo = FooService()
+foo.setName('foo')
+foo.setParent(appl)
 application = compat.IOldApplication(appl)
