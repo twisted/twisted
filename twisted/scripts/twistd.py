@@ -1,4 +1,4 @@
-# Twisted, the Framework of Your Internet
+
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
 # This library is free software; you can redistribute it and/or
@@ -80,7 +80,12 @@ class ServerOptions(usage.Options):
                   ['chroot', None, None,
                    'Chroot to a supplied directory before running'],
                   ['reactor', 'r', None,
-                   'Which reactor to use out of: %s.' % ', '.join(reactorTypes.keys())]]
+                   'Which reactor to use out of: %s.' % ', '.join(reactorTypes.keys())],
+                  ['report-profile', None, None,
+                   'E-mail address to use when reporting dynamic execution profiler stats.  '
+                   'This should not be combined with other profiling options.  '
+                   'This will only take effect if the application to be run has an application '
+                   'name.']]
 
     def opt_plugin(self, pkgname):
         """read config.tac from a plugin package, as with -y
@@ -438,6 +443,14 @@ directory, or use my --pidfile and --logfile parameters to avoid clashes.
         except:
             log.msg("Failed to unlink PID file:")
             log.deferr()
+    if config['report-profile']:
+        if application.processName:
+            from twisted.python.dxprofile import report
+            log.msg("Sending DXP stats...")
+            report(config['report-profile'], application.processName)
+            log.msg("DXP stats sent.")
+        else:
+            log.err("--report-profile specified but application has no name (--appname unspecified)")
     log.msg("Server Shut Down.")
 
 
