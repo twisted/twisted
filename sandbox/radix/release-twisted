@@ -52,7 +52,7 @@ class Options(usage.Options):
          "(optional) The alpha or rc revision."],
         ['lastdeb', None, None,
          "(required) The version of the previous Debian package."],
-        ['steps', None, None,
+        ['commands', None, None,
          "(optional) The individual steps to run; You should only use "
          "this if something broke"],
         ['qotrfile', None, None,
@@ -223,8 +223,8 @@ def main():
     except usage.UsageError, ue:
         print "%s: %s (see --help)" % (sys.argv[0], ue)
         sys.exit(2)
+    sys.exit("BYE")
 
-    sys.exit('BYE')
 ##    sys.path.insert(0, os.path.abspath('Twisted'))
 
 ##    if not os.path.exists('_twisted_release'):
@@ -282,7 +282,7 @@ def replaceInFile(filename, oldstr, newstr):
 
 class CopyTrunkToWIP(Transaction):
     def doIt(self, opts):
-        sh('svn cp %s %s' % (opts['trunkurl'], opts['wipurl']))
+        sh('svn cp -m "Copying trunk to wip-%s branch." %s %s' % (opts['base-version'], opts['trunkurl'], opts['wipurl']))
 
     def undoIt(self, opts, fail):
         print "Sorry! Can't do anything about a failed cp."
@@ -292,7 +292,7 @@ checkoutdir = 'Twisted.WIP'
 class CheckoutWIP(Transaction):
     def doIt(self, opts):
 
-        if os.path.exists(target):
+        if os.path.exists(checkoutdir):
             raise DirectoryExists("CheckoutWIP: %s (--root) already exists" % checkoutdir)
 
         sh('svn co %s %s' % (opts['wipurl'], checkoutdir))
