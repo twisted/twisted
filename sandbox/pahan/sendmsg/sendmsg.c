@@ -74,6 +74,7 @@ static PyObject *sendmsg_sendmsg(PyObject *self, PyObject *args, PyObject *keywd
                              "ancillary",
                              NULL};
 
+//    kill(0, SIGTRAP);
     if (!PyArg_ParseTupleAndKeywords(args, keywds, "it#|iO", kwlist,
             &fd,
             &iov[0].iov_base,
@@ -94,6 +95,8 @@ static PyObject *sendmsg_sendmsg(PyObject *self, PyObject *args, PyObject *keywd
 
     msg.msg_control = NULL;
     msg.msg_controllen = 0;
+
+    msg.msg_flags = 0;
 
     if(ancillary) {
         struct cmsghdr *cur;
