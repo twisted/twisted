@@ -205,7 +205,7 @@ CREATE TABLE forum_permissions
 
     def newMessage(self, forum_id, user_name, subject, body):
         """Post a new message - start a new thread."""
-        return self.postMessage(forum_id, user_name, 0, 0, subject, body)
+        return self.postMessage(forum_id, user_name, 0, 0, 0, subject, body)
         
     def getForums(self, user_name, callbackIn, errbackIn):
         """Gets the list of forums and the number of msgs in each one. Only shows forums

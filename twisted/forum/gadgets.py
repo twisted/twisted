@@ -2,6 +2,7 @@
 ## DO NOT USE THIS!!!
 
 import string
+import time
 
 from twisted.web import widgets, guard
 from twisted.python import defer
@@ -54,7 +55,17 @@ class ForumBaseGadget(widgets.Gadget, widgets.StreamWidget):
         self.service = service
         widgets.Gadget.__init__(self)
 
+    def displayHeader(self, request):
+        title = "<table border=0 width=100%%> <tr> <td> %s:</td> <td> <a href='/'>%s</a></td> <td align=right> logged in as %s </td></tr></table><hr>" % (
+            time.ctime(),
+            self.service.desc,
+            request.getSession().forumPerspective.perspectiveName)
+        return title
 
+    def displayFooter(self):
+        text = "<hr> <i> Twisted Forums - %s </i>" % self.service.desc
+        return text
+    
 """The forum application has these functional pages:
      intro   - (/)        - List of forums
      threads - (/threads) - List of threads in a forum
@@ -75,7 +86,7 @@ class GuardedForum(guard.ResourceGuard):
                                      service.serviceName, "forumIdentity", "forumPerspective")
 
 class ForumsGadget(ForumBaseGadget):
-    title = "Posting Board"
+    title = " "
 
     def __init__(self, app, service):
         ForumBaseGadget.__init__(self, app, service)
@@ -91,7 +102,7 @@ class ForumsGadget(ForumBaseGadget):
         """Display the intro list of forums. This is only called if there is no URI.
         """
         d = self.service.manager.getForums('poster', self.gotForums, self.gotError)
-        return [d]
+        return [self.displayHeader(request),d]
 
     def gotForums(self, data):
         l = []
@@ -104,8 +115,8 @@ class ForumsGadget(ForumBaseGadget):
 
         for (id, name, desc, posts) in data:
             l.append( "<tr> <td> <a href='/threads/?forum_id=%d'>%s</a></td><td> %d </td> <td> %s</d></tr>\n" % (id,name, posts, desc) )
-        l.append('</table>'
-                 '<hr> <i> Twisted Forums </i>' )
+        l.append('</table>' )
+        l.append(self.displayFooter())
         return l
             
 
@@ -124,7 +135,7 @@ class ThreadsGadget(ForumBaseGadget):
         self.forum_id = int(request.args.get('forum_id',[0])[0])
         print "Getting threads for forum: %d" % self.forum_id
         d = self.service.manager.getTopMessages(self.forum_id, 'poster', self.onThreadData, self.onThreadError)
-        return [d]
+        return [self.displayHeader(request),d]
 
     def onThreadData(self, data):
         l = []
@@ -152,7 +163,7 @@ class ThreadsGadget(ForumBaseGadget):
         l.append( '</table><br>' )
         l.append( '[<a href="/new/?forum_id=%d">Start a new thread</a>]' % (self.forum_id) )
         l.append( '[<a href="/">Return to Forums</a>]' )                
-        l.append( '<hr> <i> Twisted Forums </i>' )        
+        l.append( self.displayFooter() )
         return l
 
     def onThreadError(self, error):
@@ -172,7 +183,7 @@ class FullGadget(ForumBaseGadget):
         self.post_id = int(request.args.get('post_id',[0])[0])        
         print "Getting posts for thread %d for forum: %d" % (self.post_id, self.forum_id)
         d = self.service.manager.getFullMessages(self.forum_id, self.post_id, 'poster', self.onPostData, self.onPostError)
-        return [d]
+        return [self.displayHeader(request),d]
 
     def onPostData(self, data):
         if len(data) == 0:
@@ -186,24 +197,27 @@ class FullGadget(ForumBaseGadget):
             if first == -1:
                 first = post_id
                 l.append( '<tr bgcolor="#ff9900">' )
+                l.append( '<td COLOR="#000000"><b> Topic </b> </td>')                
                 l.append( '<td COLOR="#000000"><b> Author </b> </td>' )
-                l.append( '<td COLOR="#000000"><b> Topic: %s </b> </td>'%subject )        
+                l.append( '<td COLOR="#000000"><b> Body </b> </td>')                
                 l.append( '</tr>\n' )
 
             body = string.replace(body, "\n", "<br>")
-            l.append( '<tr> <td valign=top > <b> %s </b> <br> </td>' % (username) )
-            l.append( '<td> <i> %s </i> (%s) <hr> %s <br></td> </tr>\n' % ( subject, posted, body) )
+            l.append( '<tr> <td valign=top> %s  </td>' % (subject) )
+            l.append( '<td valign=top> %s  </td> ' % ( username) )
+            l.append( '<td valign=top> <i>%s</i><hr> %s <br> </td> </tr>\n' % (posted, body) )
 
         l.append( '<tr bgcolor="#ff9900">' )
         l.append( '<td COLOR="#000000" width=30%> </td>' )
-        l.append( '<td COLOR="#000000"> </td>' )        
+        l.append( '<td COLOR="#000000"> </td>' )
+        l.append( '<td COLOR="#000000"> </td>' )                
         l.append( '</tr>\n' )
 
         l.append( '</table>' )
 
         l.append( '[<a href="/threads/?forum_id=%d">Back to forum</a> ]' % self.forum_id)
         l.append( '[<a href="/reply/?post_id=%d&amp;forum_id=%d&amp;thread_id=%d">Reply</a>]' % (post_id, self.forum_id, first) )
-        l.append( '<hr> <i> Twisted Forums </i>' )        
+        l.append( self.displayFooter() )
         return l
 
     
@@ -223,7 +237,7 @@ class PostsGadget(ForumBaseGadget):
         self.post_id = int(request.args.get('post_id',[0])[0])        
         print "Getting posts for thread %d for forum: %d" % (self.post_id, self.forum_id)
         d = self.service.manager.getThreadMessages(self.forum_id, self.post_id, self.onPostData, self.onPostError)
-        return [d]
+        return [self.displayHeader(request),d]
 
     def onPostData(self, data):
         if len(data) == 0:
@@ -248,7 +262,7 @@ class PostsGadget(ForumBaseGadget):
         l.append( '</tr></table>\n<BR>' )
 
         l.append( self.formatList(0) )
-        l.append( '<hr> <i> Twisted Forums </i>' )        
+        l.append( self.displayFooter() )
         return l
 
     def formatList(self, idIn):
@@ -277,7 +291,7 @@ class DetailsGadget(ForumBaseGadget):
         self.post_id = int(request.args.get('post_id',[0])[0])
         print "Getting details for post %d" % (self.post_id)
         d = self.service.manager.getMessage(self.post_id, self.onDetailData, self.onDetailError)
-        return [d]
+        return [self.displayHeader(request),d]
 
     def onDetailData(self, data):
         (post_id, parent_id, forum_id, thread_id, subject, posted, user, body) = data[0]
@@ -286,7 +300,7 @@ class DetailsGadget(ForumBaseGadget):
         l.append( '(#%d)Posted on <i>%s</i> by <i>%s</i> <HR>' % (post_id,posted, user) )
         #l.append( '<PRE>' + body  + '</PRE>')
         l.append(  body )        
-        l.append( '<hr> <i> Twisted Forums </i>' )    
+        l.append( self.displayFooter() )
         return l
 
 
@@ -340,11 +354,12 @@ class ReplyForm(widgets.Form, widgets.Gadget):
         return [d]
     
     def process(self, write, request, submit, subject, body, post_id, forum_id, thread_id):
-        body = string.replace(body,"'","''")                
-        self.service.manager.postMessage(self.forum_id, 'poster', self.thread_id, int(post_id), 0, subject, body)
+        body = string.replace(body,"'","''")
+        name = self.request.getSession().forumPerspective.perspectiveName
+        self.service.manager.postMessage(self.forum_id, name, self.thread_id, int(post_id), 0, subject, body)
         write("Posted reply to '%s'.<hr>\n" % subject)
         write("<a href='/threads/?forum_id=%s'>Return to Threads</a>" % self.forum_id)
-
+        
     def insertDone(self, done):
         print 'INSERT SUCCESS'
 
@@ -399,7 +414,8 @@ class NewPostForm(widgets.Form, widgets.Gadget):
     
     def process(self, write, request, submit, subject, body, forum_id):
         body = string.replace(body,"'","''")
-        self.service.manager.newMessage(self.forum_id, 'poster', subject, body)             
+        name = self.request.getSession().forumPerspective.perspectiveName        
+        self.service.manager.newMessage(self.forum_id, name, subject, body)             
         write("Posted new message '%s'.<hr>\n" % subject)
         write("<a href='/threads/?forum_id=%s'>Return to Threads</a>" % self.forum_id)
 

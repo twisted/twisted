@@ -16,12 +16,19 @@ auth = dbpassport.DatabaseAuthorizer(dbpool)
 application = main.Application("forum", authorizer=auth)
 
 # Create the service
-forumService = service.ForumService("posting", application, dbpool)
+forumService = service.ForumService("posting", application, dbpool, "Forum Test Site")
 
 # Create posting board object
-gdgt = gadgets.ForumsGadget(application, forumService)
+gdgt = gadgets.GuardedForum(forumService)
 
 # Accept incoming connections!
-application.listenOn(8485, server.Site(gdgt))
+s = server.Site(gdgt)
+s.app = application
+application.listenOn(8485, s)
+
+
+reg = gadgets.RegisterUser(application, forumService)
+regsite = server.Site(reg)
+application.listenOn(8488, regsite)
 
 # Done.

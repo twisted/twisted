@@ -19,10 +19,11 @@ class ForumUser(pb.Perspective):
 
 class ForumService(pb.Service):
 
-    def __init__(self, name, app, dbpool):
+    def __init__(self, name, app, dbpool, desc ):
         pb.Service.__init__(self, name, app)
         self.dbpool = dbpool
         self.manager = manager.ForumDB(dbpool)
+        self.desc = desc
 
         
     def getPerspectiveRequest(self, name):
