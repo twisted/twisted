@@ -20,7 +20,7 @@ Test cases for twisted.protocols package.
 """
 
 from pyunit import unittest
-from twisted.protocols import protocol, basic, http, smtp, pop3 # , netexprs
+from twisted.protocols import protocol, basic, http, smtp, pop3, wire
 import string
 import StringIO
 
@@ -50,6 +50,42 @@ class LineTester(basic.LineReceiver):
         if self.length == 0:
             self.setLineMode(rest)
 
+class WireTestCase(unittest.TestCase):
+
+    def testEcho(self):
+        t = StringIOWithoutClosing()
+        a = wire.Echo()
+        a.makeConnection(protocol.FileWrapper(t))
+        a.dataReceived("hello")
+        a.dataReceived("world")
+        a.dataReceived("how")
+        a.dataReceived("are")
+        a.dataReceived("you")
+        self.failUnlessEqual(t.getvalue(), "helloworldhowareyou")
+
+    def testWho(self):
+        t = StringIOWithoutClosing()
+        a = wire.Who()
+        a.makeConnection(protocol.FileWrapper(t))
+        self.failUnlessEqual(t.getvalue(), "root\r\n")
+
+    def testQOTD(self):
+        t = StringIOWithoutClosing()
+        a = wire.QOTD()
+        a.makeConnection(protocol.FileWrapper(t))
+        self.failUnlessEqual(t.getvalue(), 
+                             "An apple a day keeps the doctor away.\r\n")
+
+    def testDiscard(self):
+        t = StringIOWithoutClosing()
+        a = wire.Discard()
+        a.makeConnection(protocol.FileWrapper(t))
+        a.dataReceived("hello")
+        a.dataReceived("world")
+        a.dataReceived("how")
+        a.dataReceived("are")
+        a.dataReceived("you")
+        self.failUnlessEqual(t.getvalue(), "")
 
 class LineReceiverTestCase(unittest.TestCase):
 
@@ -303,30 +339,6 @@ QUIT''', '\n')
         self.failUnlessEqual(expected_output, a.getvalue(),
                              "\nExpected:\n%s\nResults:\n%s\n"
                              % (expected_output, a.getvalue()))
-
-##class ObjectAccumulator(netexprs.PseudoSexprsReceiver):
-
-##    def __init__(self):
-##        netexprs.PseudoSexprsReceiver.__init__(self)
-##        self.objects = []
-
-##    def objectReceived(self, o):
-##        self.objects.append(o)
-
-
-##class NetexprsReceiverTestCase(unittest.TestCase):
-
-##    object = { (1,2): [1, 'hello', 'world'], 1.0: {}}
-
-##    def testBuffer(self):
-##        t = StringIOWithoutClosing()
-##        o = ObjectAccumulator()
-##        o.makeConnection(protocol.FileWrapper(t))
-##        o.sendObject(self.object)
-##        output = t.getvalue()
-##        o.dataReceived(output)
-##        if o.objects[0] != self.object:
-##             raise AssertionError(o.objects[0])
 
 testCases = [LineReceiverTestCase, NetstringReceiverTestCase, HTTPTestCase,
              SMTPTestCase, POP3TestCase]
