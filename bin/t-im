@@ -38,7 +38,7 @@ from twisted.internet import ingtkernet, tcp
 #from twisted.python import reflect
 ingtkernet.install()
 
-from twisted.im.account import AccountManager
+from twisted.im.gtkaccount import AccountManager
 
 AccountManager()
 gtk.mainloop()

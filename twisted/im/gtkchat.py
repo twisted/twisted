@@ -18,10 +18,9 @@ import string
 import gtk
 
 from twisted.im.locals import GLADE_FILE, autoConnectMethods, InputOutputWindow, openGlade
-from twisted.im.account import onlineAccounts
 
 class GroupJoinWindow:
-    def __init__(self):
+    def __init__(self, chatui):
         self.xml = openGlade(GLADE_FILE, root="JoinGroupWindow")
         self.widget = self.xml.get_widget("JoinGroupWindow")
         autoConnectMethods(self)
@@ -34,8 +33,8 @@ class GroupJoinWindow:
             i = gtk.GtkMenuItem(acct.accountName)
             m.append(i)
             i.connect('activate', self.on_AccountSelectorMenu_activate, acct)
-        if onlineAccounts:
-            self.currentAccount = onlineAccounts[0]
+        if chatui.onlineAccounts:
+            self.currentAccount = chatui.onlineAccounts[0]
         self.widget.show_all()
 
     def on_AccountSelectorMenu_activate(self, m, acct):
@@ -48,7 +47,7 @@ class GroupJoinWindow:
 
 
 class ContactsList:
-    def __init__(self):
+    def __init__(self, chatui):
         self.xml = openGlade(GLADE_FILE, root="ContactsWidget")
         self.widget = self.xml.get_widget("ContactsWidget")
         self.people = []
@@ -57,6 +56,7 @@ class ContactsList:
         autoConnectMethods(self)
         self.selectedPerson = None
         self.xml.get_widget("OnlineCount").set_text("Online: 0")
+        self.chat = chatui
 
     def setContactStatus(self, person):
         if person not in self.people:
@@ -68,10 +68,10 @@ class ContactsList:
 
     def on_PlainSendIM_clicked(self, b):
         if self.selectedPerson:
-            c = getConversation(self.selectedPerson)
+            c = self.chat.getConversation(self.selectedPerson)
 
     def on_PlainJoinChat_clicked(self, b):
-        GroupJoinWindow()
+        GroupJoinWindow(self.chat)
 
     def refreshContactsLists(self):
         # HIDEOUSLY inefficient
@@ -214,63 +214,64 @@ class GroupConversation(InputOutputWindow):
                 msg = "* %s %s\n" % (self.group.account.name, text)
         self.output.insert_defaults(msg)
 
-# IM-GUI Utility functions
+class GtkChatClientUI:
+    # IM-GUI Utility functions
+    def __init__(self):
+        self.conversations = {}         # cache of all direct windows
+        self.groupConversations = {}    # cache of all group windows
+        self.personCache = {}           # keys are (name, account)
+        self.groupCache = {}            # cache of all groups
+        self.theContactsList = None
+        self.onlineAccounts = []     # list of message sources currently online
+        
+    def registerAccount(self,account):
+        self.onlineAccounts.append(account)
 
-theContactsList = None
+    def unregisterAccount(self,account):
+        self.onlineAccounts.remove(account)
 
-def getContactsList():
-    global theContactsList
-    if not theContactsList:
-        theContactsList = ContactsList()
-        w = gtk.GtkWindow(gtk.WINDOW_TOPLEVEL)
-        w.set_title("Contacts List")
-        w.add(theContactsList.widget)
-        w.show_all()
-    return theContactsList
+    def getContactsList(self):
+        if not self.theContactsList:
+            self.theContactsList = ContactsList(self)
+            w = gtk.GtkWindow(gtk.WINDOW_TOPLEVEL)
+            w.set_title("Contacts List")
+            w.add(self.theContactsList.widget)
+            w.show_all()
+        return self.theContactsList
 
-conversations = {}                      # cache of all direct windows
-
-def getConversation(person):
-    conv = conversations.get(person)
-    if not conv:
-        conv = Conversation(person)
-        conversations[person] = conv
-    conv.show()
-    return conv
-
-groupConversations = {}                 # cache of all group windows
-
-def getGroupConversation(group, stayHidden=0):
-    conv = groupConversations.get(group)
-    if not conv:
-        conv = GroupConversation(group)
-        groupConversations[group] = conv
-    if not stayHidden:
+    def getConversation(self, person):
+        conv = self.conversations.get(person)
+        if not conv:
+            conv = Conversation(person)
+            self.conversations[person] = conv
         conv.show()
-    return conv
+        return conv
 
-personCache = {}                        # keys are (name, account)
+    def getGroupConversation(self, group, stayHidden=0):
+        if group.name[0] == '#':
+            raise 'oops'
+        conv = self.groupConversations.get(group)
+        if not conv:
+            conv = GroupConversation(group)
+            self.groupConversations[group] = conv
+        if not stayHidden:
+            conv.show()
+        return conv
 
-def getPerson(name, account, Class):
-    p = personCache.get((name, account))
-    if not p:
-        p = Class(name, account)
-        personCache[name, account] = p
-    return p
+    def getPerson(self, name, account, Class):
+        p = self.personCache.get((name, account))
+        if not p:
+            p = Class(name, account, self)
+            self.personCache[name, account] = p
+        return p
 
-groupCache = {}                         # cache of all groups
+    def getGroup(self, name, account, Class):
+        g = self.groupCache.get((name, account))
+        if not g:
+            g = Class(name, account)
+            self.groupCache[name, account] = g
+        return g
 
-def getGroup(name, account, Class):
-    g = groupCache.get((name, account))
-    if not g:
-        g = Class(name, account)
-        groupCache[name, account] = g
-    return g
-
-
-
-
-
-### --- End IM-Gui utility functions
+    ### --- End IM-Gui utility functions
 
 

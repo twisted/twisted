@@ -21,11 +21,11 @@ import gtk
 from twisted.im.locals import GLADE_FILE, SETTINGS_FILE, autoConnectMethods,\
      openGlade
 
+import gtkchat
 
-### This generic
-### stuff uses the word "account" in a very different way -- chat accounts are
-### potential sources of messages, InstanceMessenger accounts are individual
-### network connections.
+### This generic stuff uses the word "account" in a very different way -- chat
+### accounts are potential sources of messages, InstanceMessenger accounts are
+### individual network connections.
 
 class AccountManager:
     def __init__(self):
@@ -34,6 +34,7 @@ class AccountManager:
         autoConnectMethods(self)
         self.widget = self.xml.get_widget("AccountManager")
         self.widget.show_all()
+        self.chatui = gtkchat.GtkChatClientUI()
         try:
             f = open(SETTINGS_FILE)
             self.accounts = cPickle.load(f)
@@ -51,7 +52,8 @@ class AccountManager:
         w = self.xml.get_widget("accountsList")
         w.clear()
         for acct in self.accounts:
-            l = [acct.accountName, acct.isOnline and 'yes' or 'no', acct.autoLogin and 'yes' or 'no', acct.gatewayType]
+            l = [acct.accountName, acct.isOnline and 'yes' or 'no',
+                 acct.autoLogin and 'yes' or 'no', acct.gatewayType]
             w.append(l)
 
     def lockNewAccount(self, b):
@@ -76,7 +78,7 @@ class AccountManager:
     def on_LogOnButton_clicked(self, b):
         lw = self.xml.get_widget("accountsList")
         if lw.selection:
-            self.accounts[lw.selection[0]].logOn()
+            self.accounts[lw.selection[0]].logOn(self.chatui)
             
 
 
@@ -134,15 +136,6 @@ class NewAccount:
 
     def on_NewAccountWindow_destroy(self, w):
         self.manager.lockNewAccount(0)
-
-onlineAccounts = []                     # list of message sources currently online
-
-def registerAccount(account):
-    onlineAccounts.append(account)
-
-def unregisterAccount(account):
-    onlineAccounts.remove(account)
-
 
 from twisted.im.pbsupport import PBAccountForm
 from twisted.im.tocsupport import TOCAccountForm

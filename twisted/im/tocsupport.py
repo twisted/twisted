@@ -16,8 +16,7 @@
 import string, re
 
 from twisted.protocols import toc
-from twisted.im.locals import GLADE_FILE, autoConnectMethods, ONLINE, OFFLINE, AWAY, openGlade
-from twisted.im.chat import getContactsList, getGroup, getGroupConversation, getPerson, getConversation
+from twisted.im.locals import GLADE_FILE, ONLINE, OFFLINE, AWAY, openGlade
 from twisted.internet import tcp
 from twisted.python.defer import succeed
       
@@ -43,10 +42,11 @@ def html(text):
     return '<html><body bgcolor="white"><font color="black">%s</font></body></html>'%text
 
 class TOCPerson:
-    def __init__(self,name,tocClient):
-        self.name=name
-        self.account=tocClient
-        self.status=OFFLINE
+    def __init__(self,name,tocClient,chatui):
+        self.name = name
+        self.account = tocClient
+        self.status = OFFLINE
+        self.chat = chatui
 
     def isOnline(self):
         return self.status!=OFFLINE
@@ -56,7 +56,7 @@ class TOCPerson:
 
     def setStatus(self,status):
         self.status=status
-        getContactsList().setContactStatus(self)
+        self.chat.getContactsList().setContactStatus(self)
 
     def sendMessage(self, text, meta=None):
         if meta:
@@ -66,10 +66,11 @@ class TOCPerson:
         return succeed(text)
 
 class TOCGroup:
-    def __init__(self,name,tocClient):
+    def __init__(self,name,tocClient,chatui):
         self.name=name
         self.account=tocClient
         self.roomID=self.account.roomID[name]
+        self.chat = chatui
 
     def sendGroupMessage(self, text, meta=None):
         if meta:
@@ -82,20 +83,22 @@ class TOCGroup:
         self.account.chat_leave(self.roomID)
         
 class TOCProto(toc.TOCClient):
-    def __init__(self, account):
+    def __init__(self, account, chatui):
         self.account = account
         toc.TOCClient.__init__(self, account.username, account.password)
         self.roomID={}
         self.roomIDreverse={}
+        self.chat = chatui
 
     def _debug(self, m):
         pass #print '<toc debug>', repr(m)
 
     def getGroupConversation(self, name,hide=0):
-        return getGroupConversation(getGroup(name,self,TOCGroup),hide)
+        return self.chat.getGroupConversation(self.chat.getGroup(name,self,TOCGroup),
+                                         hide)
 
     def getPerson(self,name):
-        return getPerson(name,self,TOCPerson)
+        return self.chat.getPerson(name,self,TOCPerson)
 
     def onLine(self):
         self.account.isOnline = 1
@@ -119,8 +122,8 @@ class TOCProto(toc.TOCClient):
     def tocNICK(self,data):
         self.name=data[0]
         self.accountName = "%s (TOC)"%data[0]
-        registerAccount(self)
-        getContactsList()
+        self.chat.registerAccount(self)
+        self.chat.getContactsList()
 
     ### Error Messages
     def hearError(self, code, args):
@@ -131,7 +134,8 @@ class TOCProto(toc.TOCClient):
     def hearMessage(self,username,message,autoreply):
         if autoreply:
             message='<AUTO-REPLY>: '+message
-        getConversation(self.getPerson(username)).showMessage(dehtml(message))
+        self.chat.getConversation(self.getPerson(username)
+                             ).showMessage(dehtml(message))
     def updateBuddy(self,username,online,evilness,signontime,idletime,userclass,away):
         if online: status=ONLINE
         elif away: status=AWAY
@@ -192,8 +196,8 @@ class TOCAccount:
     def isOnline(self):
         return self.isOnline
 
-    def logOn(self):
-        tcp.Client(self.host, self.port, TOCProto(self))
+    def logOn(self, chatui):
+        tcp.Client(self.host, self.port, TOCProto(self, chatui))
 
 class TOCAccountForm:
     def __init__(self, maanger):
@@ -208,4 +212,4 @@ class TOCAccountForm:
             self.xml.get_widget("TOCHost").get_text(),
             int(self.xml.get_widget("TOCPort").get_text()) )
 
-from twisted.im.account import registerAccount
+
