@@ -213,6 +213,7 @@ class EchoServer(recvline.HistoricRecvLine):
 left = "\x1b[D"
 insert = "\x1b[2~"
 home = "\x1b[1~"
+delete = "\x1b[3~"
 end = "\x1b[4~"
 backspace = "\x7f"
 
@@ -280,6 +281,13 @@ class Loopback(unittest.TestCase):
              "second xxxx",
              ">>>"])
 
+    def testDelete(self):
+        self._test(
+            "delete xxxx" + left * 4 + delete * 4 + "line\n",
+            [">>> delete line",
+             "delete line",
+             ">>>"])
+
     def testInsert(self):
         self._test(
             "third ine" + left * 3 + insert + "l\n",
@@ -307,4 +315,3 @@ class Loopback(unittest.TestCase):
             [">>> end line",
              "end line",
              ">>>"])
-
