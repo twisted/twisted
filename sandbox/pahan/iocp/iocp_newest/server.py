@@ -36,7 +36,7 @@ class ListeningPort(log.Logger, styles.Ephemeral, object):
         return "<%s on %s>" % (self.factory.__class__, 'address')
 
     def handle_disconnected_startListening(self):
-        log.msg("%s starting on %s" % (self.factory.__class__, 'address')
+        log.msg("%s starting on %s" % (self.factory.__class__, 'address'))
         try:
             skt = socket.socket(*self.sockinfo)
             skt.bind(self.addr)
