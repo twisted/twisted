@@ -149,24 +149,6 @@ register("Twisted Inetd Server",
          type='tap',
          tapname='inetd')
 
-register("Zoot",
-         "twisted.zoot.zoottap",
-         description="Zoot TAP builder module",
-         type='tap',
-         tapname="zoot")
-
-register("Zoot Pinger",
-         "twisted.zoot.pingertap",
-         description="Zoot Pinger TAP builder module",
-         type='tap',
-         tapname="pinger")
-
-register("Zoot Ponger",
-         "twisted.zoot.pongertap",
-         description="Zoot Ponger TAP builder module",
-         type='tap',
-         tapname="ponger")
-
 register("Twisted DNS Server",
          "twisted.names.tap",
          description="A Domain Name Server",
