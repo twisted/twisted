@@ -1,3 +1,13 @@
+twisted (0.18.0) unstable; urgency=low
+
+  * New upstream release
+  * Lots of debian changes:
+    * building python2.1-twisted, python2.2-twisted
+    * python-twisted depends on python2.1-twisted
+    * menu support for t-im and manhole enabled 
+
+ -- Moshe Zadka <moshez@debian.org>  Thu, 23 May 2002 19:18:21 +0300
+
 twisted (0.17.3-1) unstable; urgency=low
 
   * New upstream release 
