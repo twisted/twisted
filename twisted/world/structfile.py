@@ -195,7 +195,7 @@ class StructuredFile:
         for row in self:
             f.write('<tr><td>')
             f.write('</td><td>'.join([str(x) for x in row]))
-            f.write('</tr>')
+            f.write('</td></tr>')
         f.write("</table>")
 
     def close(self):
