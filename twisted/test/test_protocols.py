@@ -8,7 +8,7 @@ Test cases for twisted.protocols package.
 
 from twisted.trial import unittest
 from twisted.protocols import basic, wire, portforward
-from twisted.internet import reactor, protocol
+from twisted.internet import reactor, protocol, defer
 
 import string, struct
 import StringIO
@@ -300,8 +300,9 @@ class Int32TestCase(unittest.TestCase, LPTestCaseMixin):
 
 class Portforwarding(unittest.TestCase):
     def testPortforward(self):
+        serverProtocol = wire.Echo()
         realServerFactory = protocol.ServerFactory()
-        realServerFactory.protocol = wire.Echo
+        realServerFactory.protocol = lambda: serverProtocol
         realServerPort = reactor.listenTCP(0, realServerFactory,
                                            interface='127.0.0.1')
 
@@ -327,4 +328,9 @@ class Portforwarding(unittest.TestCase):
             c += 1
 
         self.assertEquals(''.join(received), 'x' * nBytes)
-
+        
+        clientProtocol.transport.loseConnection()
+        serverProtocol.transport.loseConnection()
+        return defer.gatherResults([
+            realServerPort.stopListening(),
+            proxyServerPort.stopListening()])
