@@ -56,80 +56,80 @@ register("Twisted Names",
 
 # TAP Builder modules
 
-register("Twisted Web Automated TAP builder",
+register("Twisted Web TAP builder",
          "twisted.tap.web",
          description="""
-         Builds a Twisted Application instance that contains a general-purpose
-         web server, which can serve from a filesystem or application resource.
+         A general-purpose web server which can serve from a 
+	 filesystem or application resource.
          """,
          type="tap",
          tapname="web")
 
-register("Twisted FTP Automated TAP builder",
+register("Twisted FTP TAP builder",
          "twisted.tap.ftp",
-         description="automated TAP building",
+         description="An FTP server.",
          type="tap")
 
-register("Twisted Mail Automated TAP builder",
+register("Twisted Mail TAP builder",
          "twisted.tap.mail",
-         description="automated TAP building",
+         description="An email service.",
          type="tap")
 
-register("Twisted Manhole Automated TAP builder",
+register("Twisted Manhole TAP builder",
          "twisted.tap.manhole",
-         description="automated TAP building",
+         description="An interactive remote debugger service.",
          type="tap")
 
-register("Twisted Port-Forwarding Automated TAP builder",
+register("Twisted Port-Forwarding TAP builder",
          "twisted.tap.portforward",
-         description="automated TAP building",
+         description="A simple port-forwarder.",
          type="tap")
 
-register("Twisted SOCKS Automated TAP builder",
+register("Twisted SOCKS TAP builder",
          "twisted.tap.socks",
-         description="automated TAP building",
+         description="A SOCKSv4 proxy service.",
          type="tap")
 
-register("Twisted SSH Automated TAP builder",
+register("Twisted SSH TAP builder",
          "twisted.tap.ssh",
-         descrption="automated TAP building",
+         descrption="An sshv2 service.",
          type="tap")
 
-register("Twisted Telnet Shell Automated TAP builder",
+register("Twisted Telnet Shell TAP builder",
          "twisted.tap.telnet",
-         description="automated TAP building",
+         description="A simple, telnet-based remote debugging service.",
          type="tap")
 
-register("Twisted TOC Server Automated TAP builder",
+register("Twisted TOC Server TAP builder",
          "twisted.tap.toc",
-         description="automated TAP building",
+         description="An AIM TOC service.",
          type="tap")
 
-register("Twisted Words Automated TAP builder",
+register("Twisted Words TAP builder",
          "twisted.tap.words",
-         description="automated TAP building",
+         description="A chat service.",
          type="tap")
 
-register("Twisted Coil Automated TAP builder",
+register("Twisted Coil TAP builder",
          "twisted.tap.coil",
-         description="automated TAP building",
+         description="A web-based configuration manager.",
          type="tap")
 
-register("Twisted Instance Messenger Automated TAP builder",
+register("Twisted Instance Messenger TAP builder",
          "twisted.im.tap",
-         description="automated TAP building",
+         description="A multi-protocol chat client.",
          type="tap",
          tapname="im")
 
-register("Twisted Sister: Automated Parent TAP builder",
+register("Twisted Sister 'Parent' TAP builder",
          "twisted.sister.parentap",
-         description="automated TAP building",
+         description="Parent service.",
          type="tap",
          tapname="parent")
 
-register("Twisted Sister: Automated Sister TAP builder",
+register("Twisted Sister 'Sister' TAP builder",
          "twisted.sister.sistap",
-         description="automated TAP building",
+         description="Sister service.",
          type="tap",
          tapname="sister")
 
@@ -139,8 +139,9 @@ register("Twisted News Automated TAP Builder",
          type='tap',
          tapname="news")
 
-register("Twisted Issues Automated TAP Builder",
+register("Twisted Issues TAP Builder",
          "twisted.issues.issuetap",
+	 description="Bug reporting/tracking service.",
          type="tap",
          tapname="issues")
 
