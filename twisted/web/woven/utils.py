@@ -171,7 +171,19 @@ class SetId:
         self.theId = theId
     
     def __call__(self, request, wid, data):
-        wid['id'] = self.theId
+        id = wid.attributes.get('id', None)
+        if not id:
+            wid.setAttribute('id', self.theId)
+        else:
+            top = wid
+            while getattr(top, 'parent', None) is not None:
+                top = top.parent
+            if top.subviews.has_key(self.theId):
+                del top.subviews[self.theId]
+            top.subviews[id] = wid
+            if wid.parent.subviews.has_key(self.theId):
+                del wid.parent.subviews[self.theId]
+            wid.parent.subviews[id] = wid
 
 
 def createSetIdFunction(theId):
