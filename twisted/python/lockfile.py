@@ -30,6 +30,7 @@ class LockFile:
             pass
         fileStat = list(os.stat(filename))
         del fileStat[3]
+        os.remove(uniq)
         if fileStat != uniqStat:
             raise DidNotGetLock()
         self.filename = filename
