@@ -145,9 +145,7 @@ class TwoProcessProtocol(protocol.ProcessProtocol):
     def outReceived(self, data):
         pass
     def processEnded(self, reason):
-        print "TwoProcessProtocol.processEnded [%d]" % self.num
         self.finished = 1
-        self.check()
         
 class TestTwoProcessesBase:
     def setUp(self):
@@ -166,7 +164,7 @@ class TestTwoProcessesBase:
         exe = sys.executable
         scriptPath = util.sibpath(__file__, "process_reader.py")
         for num in (0,1):
-            self.pp[num] = TrivialProcessProtocol()
+            self.pp[num] = TwoProcessProtocol()
             self.pp[num].num = num 
             p = reactor.spawnProcess(self.pp[num],
                                      exe, [exe, "-u", scriptPath],
@@ -211,13 +209,14 @@ class TestTwoProcessesPosix(TestTwoProcessesBase, unittest.TestCase):
     def tearDown(self):
         TestTwoProcessesBase.tearDown(self)
         self.check()
-        if self.done:
-            return
-        import signal
         for i in (0,1):
             pp, process = self.pp[i], self.processes[i]
             if not pp.finished:
-                os.kill(process.pid, signal.SIGTERM)
+                try:
+                    import signal
+                    os.kill(process.pid, signal.SIGTERM)
+                except OSError:
+                    print "OSError"
         now = time.time()
         self.check()
         while not self.done or (time.time() > now + 5):
@@ -255,7 +254,6 @@ class TestTwoProcessesPosix(TestTwoProcessesBase, unittest.TestCase):
         while not self.done:
             reactor.iterate(0.01)
             self.check()
-    testClosePty.todo = "still doesn't work yet"
     
     def testKillPty(self):
         if self.verbose: print "starting processes"
@@ -429,6 +427,7 @@ if runtime.platform.getType() != 'posix':
     del PosixProcessTestCasePTY
     del TestTwoProcessesPosix
 else:
+    # do this before running the tests: it uses SIGCHLD and stuff internally
     lsOut = popen2.popen3("/bin/ls ZZXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")[2].read()
     # make sure SIGCHLD handler is installed, as it should be on reactor.run().
     # problem is reactor may not have been run when this test runs.

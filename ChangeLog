@@ -1,5 +1,8 @@
 2003-04-12  Brian Warner  <warner@lothar.com>
 
+	* twisted/test/test_process.py (PosixProcessTestCasePTY): remove
+	testClosePty.todo now that it works
+
 	* twisted/internet/process.py (PTYProcess.connectionLost): Treat
 	PTYs more like sockets: loseConnection sets .disconnecting and
 	lets the write pipe drain, then the PTY is closed in
