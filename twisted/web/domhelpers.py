@@ -35,7 +35,7 @@ def _get(node, nodeId):
     (internal) Get a node with the specified C{nodeId} as any of the C{class},
     C{id} or C{model} attributes.
     """
-    if hasattr(node, 'hasAttributes') and node.hasAttributes() and ((str(node.getAttribute("id")) == nodeId) or (str(node.getAttribute("class")) == nodeId) or (str(node.getAttribute("model")) == nodeId) or (str(node.getAttribute("slot")) == nodeId)):
+    if hasattr(node, 'hasAttributes') and node.hasAttributes() and ((str(node.getAttribute("id")) == nodeId) or (str(node.getAttribute("class")) == nodeId) or (str(node.getAttribute("model")) == nodeId) or (str(node.getAttribute("pattern")) == nodeId)):
         return node
     if node.hasChildNodes():
         if hasattr(node.childNodes, 'length'):
