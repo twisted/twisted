@@ -43,7 +43,7 @@ Test coverage needs to be better.
 <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-__version__ = '$Revision: 1.5 $'[11:-2]
+__version__ = '$Revision: 1.6 $'[11:-2]
 
 from twisted.internet import reactor, protocol, defer
 from twisted.persisted import styles
@@ -327,6 +327,7 @@ class IRC(protocol.Protocol):
 
 
 class DccFileWriter(protocol.Protocol, styles.Ephemeral):
+    """A protocol to receive an incoming DCC file transfer."""
     def __init__(self, factory):
         self.factory = factory
         self.file_obj = factory.file_obj
@@ -357,7 +358,7 @@ class DccFileWriter(protocol.Protocol, styles.Ephemeral):
 class IncomingDccFile(protocol.ClientFactory):
     """An incoming DCC file offer.
 
-    The L{IRCClient.gotIncomingFile} method will receive an instance of this class for each DCC SEND we receive.
+    The L{IRCClient.gotIncomingFile} method will receive an instance of this class for each DCC file offer we receive.
     .
     You should store and manage this instance outside of the originating IRCClient. Once they are established, DCC sessions may operate independently of the IRC protocol. Thus we shouldn't be forced to keep stale IRCClient's around because they contain information about active DCC sessions."""
     protocol = DccFileWriter
@@ -383,14 +384,14 @@ class IncomingDccFile(protocol.ClientFactory):
         Call this to retreive the incoming dcc file.
         
         @param destfile: A file path to open and use, or a file-like-object that data will be written to. 
-        @type destfile: A string, or a file-like-object.
+        @type destfile: C{str} or file-like-object.
         @param resume_overwrite: An optional parameter. Specifies whether to resume, overwrite, or do neither (default). 
-        @type resume_overwrite: One of \"resume\", \"overwrite\", or False.
+        @type resume_overwrite: \"resume\", \"overwrite\", or C{False}.
 
-        @return: A L{Deferred}. It will callback when the file is saved, or errback if an error occurs along the way (including if the file sizes mismatch).
+        @return: L{Deferred} instance. It will callback when the file is saved, or errback if something bad happened along the way (including if the file sizes mismatch).
 
         @raise IOError: If destfile is a path and opening it failed.
-        @raise DccFileExists: If destfile is a path, and resume_overwrite is False, and the path exists.
+        @raise DccFileExists: If destfile is a path, the path exists, and resume_overwrite is False.
         """
         if self.accepted:
             raise "accept() already called successfully!"
@@ -453,6 +454,7 @@ class IncomingDccFile(protocol.ClientFactory):
         self.protocol_instance = self.protocol(self)
         return self.protocol_instance
 
+
 class DccFileReader(protocol.Protocol, styles.Ephemeral):
     """A protocol for sending a file over DCC"""
     def connectionMade(self):
@@ -468,6 +470,7 @@ class DccFileReader(protocol.Protocol, styles.Ephemeral):
         self.transport.loseConnection()
         return arg
 
+
 class OutgoingDccFile(protocol.Factory):
     """An outgoing DCC file offer - don't use this class directly - use L{IRCClient.sendFile} instead.
 
@@ -476,7 +479,7 @@ class OutgoingDccFile(protocol.Factory):
     You should store and manage this instance outside of the originating IRCClient. Once they are established, DCC sessions may operate independently of the IRC protocol. Thus we shouldn't be forced to keep stale IRCClient's around because they contain information about active DCC sessions."""
     protocol = DccFileReader
     def __init__(self, file_obj, user, ircClient, mode=None, resumable=True):
-        # XXX resumable
+        # TODO: resumable
         self.file_obj = file_obj
         self.user = user
         self._ircClient = ircClient
@@ -978,6 +981,9 @@ class IRCClient(basic.LineReceiver):
     def irc_RPL_WELCOME(self, prefix, params):
         self.signedOn()
 
+    def irc_RPL_WHOISUSER(self, prefix, params):
+        print prefix, params
+
     def irc_JOIN(self, prefix, params):
         nick = string.split(prefix,'!')[0]
         channel = params[-1]
@@ -1262,10 +1268,11 @@ class IRCClient(basic.LineReceiver):
                                % (user, dcctype))
 
     def gotIncomingFile(self, incomingFile):
-        """Got a DCC SEND offer.
-        Implement this method with your app-specific logic.
-        By default we reject all incoming files.
-        @param incomingFile: An instance of IncomingDccFile"""
+        """A DCC file transfer has been offered to us.
+
+        Implement this method with your app-specific logic. By default we reject all incoming files.
+        @param incomingFile: L{IncomingDccFile} instance.
+        """
         incomingFile.reject()
 
     def dcc_TSEND(self, user, channel, data):
@@ -1323,7 +1330,21 @@ class IRCClient(basic.LineReceiver):
         log.msg("Odd, we got a DCC ACCEPT, but couldn't find a matching incomingFile")
 
     def sendFile(self, srcfile, user, mode='fast', resumable=True):
-        """Offer a file to a remote user."""
+        """Offer a file to a remote user.
+       
+        If srcfile is a path, we will attempt to open it immediately. IOError will raise if that fails. Otherwise an instance of OutgoingDccFile will be returned. You may use it's 'deferred' attribute if needed. It will callback once the file has been successfully sent, or errback if something bad happend along the way.
+
+        @param srcfile: A file path to open and use, or a file-like-object that data will be read from
+        @type srcfile: C{str} or file-like-object
+        @param user: The plain username to send to (without hostmask)
+        @type user: C{str}
+        @param mode: The DCC sending mode to use. May be one of 'slow', 'fast', or 'turbo'. Slow mode waits for each dcc ack before sending more data. Fast mode uses a send-ahead method where it may write more blocks of data before receiving the dcc ack for the previous block(s). Turbo mode uses the alternate 'DCC TSEND' method, and if the remote client supports this, then they won't send us any dcc ack's.
+        @type mode: C{str}
+        @param resumable: If True, we will try our best to service any 'DCC RESUME' requests. Otherwise such requests are ignored.
+        @type resumable: C{bool}
+        @rtype: L{OutgoingDccFile} instance.
+        @raise IOError: If srcfile is a path, and opening it fails.
+        """
 
         # need to get a file-object if we weren't passed one
         if type(srcfile) == types.StringType:
