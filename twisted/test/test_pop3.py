@@ -90,8 +90,7 @@ class MyPOP3Downloader(protocols.pop3.POP3Client):
         self.quit()
 
     def handle_QUIT(self, line):
-        code, data = string.split(line)
-        if code != '+OK':
+        if line[:3] != '+OK':
             raise AssertionError, 'code is '+code
 
 
