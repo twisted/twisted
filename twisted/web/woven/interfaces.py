@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.test.test_woven -*-
 
-__version__ = "$Revision: 1.11 $"[11:-2]
+__version__ = "$Revision: 1.12 $"[11:-2]
 
 from twisted.python import components
 
@@ -131,6 +131,11 @@ class IView(components.Interface):
                 # whatever you want
         """
 
+    def __adapt__(adaptable, default):
+        if hasattr(adaptable, 'original'):
+            return IView(adaptable.original, default)
+        return default
+
 
 class IController(components.Interface):
     """A MVC Controller"""
@@ -174,6 +179,11 @@ class IController(components.Interface):
         instanciated when template node <div controller="foo" /> is
         encountered.
         """
+
+    def __adapt__(adaptable, default):
+        if hasattr(adaptable, 'original'):
+            return IController(adaptable.original, default)
+        return default
 
 
 class IWovenLivePage(components.Interface):
