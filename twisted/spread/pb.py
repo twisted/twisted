@@ -67,7 +67,7 @@ applied when serializing arguments.
 @author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
 
-__version__ = "$Revision: 1.154 $"[11:-2]
+__version__ = "$Revision: 1.155 $"[11:-2]
 
 
 # System Imports
@@ -896,11 +896,9 @@ class Broker(banana.Banana):
                 self._sendError(CopyableFailure(e), requestID)
         except:
             if answerRequired:
-                log.msg("Peer will receive following PB traceback:")
+                log.msg("Peer will receive following PB traceback:", isError=True)
                 f = CopyableFailure()
                 self._sendError(f, requestID)
-            else:
-                log.msg("Peer will not receive following PB traceback:")
             log.deferr()
         else:
             if answerRequired:
