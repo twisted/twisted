@@ -295,7 +295,7 @@ class Process(abstract.FileDescriptor):
         # notify protocol
         self.protocol.makeConnection(self)
 
-        self.reactor.addEvent(self.hProcess, self, self.inConnectionLost)
+        self.reactor.addEvent(self.hProcess, self, 'inConnectionLost')
         threading.Thread(target=self.doWrite).start()
         threading.Thread(target=self.doReadOut).start()
         threading.Thread(target=self.doReadErr).start()
