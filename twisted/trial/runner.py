@@ -62,8 +62,7 @@ from os.path import join as opj
 
 from twisted.internet import defer
 from twisted.python import components, reflect, log, failure
-from twisted import trial
-from twisted.trial import itrial, util, unittest, adaptWithDefault
+from twisted.trial import itrial, util, unittest
 from twisted.trial.itrial import ITestCaseFactory, IReporter, ITrialDebug
 from twisted.trial.reporter import SKIP, EXPECTED_FAILURE, FAILURE, \
      ERROR, UNEXPECTED_SUCCESS, SUCCESS
@@ -113,10 +112,8 @@ class TestSuite(Timed):
             self._registerBenchmarkAdapters()
 
     def _registerBenchmarkAdapters(self):
-            trial.registerAdapter(None, itrial.ITestCaseFactory,
-                            itrial.ITestRunner)
-            trial.registerAdapter(BenchmarkCaseRunner, itrial.ITestCaseFactory,
-                            itrial.ITestRunner)
+        from twisted import trial
+        trial.benchmarking = True
 
     def addMethod(self, method):
         self.tests.append(method)
@@ -533,7 +530,7 @@ class TestClassAndMethodBase(TestRunnerBase):
     def _apply(self, f):                  # XXX: need to rename this
         for mname in self.methodNames:
             m = getattr(self._testCase, mname)
-            tm = adaptWithDefault(itrial.ITestMethod, m, default=None)
+            tm = itrial.ITestMethod(m, None)
             if tm == None:
                 continue
 
@@ -682,15 +679,6 @@ class PyUnitTestCaseRunner(TestClassAndMethodBase):
 class BenchmarkCaseRunner(TestCaseRunner):
     """I run benchmarking tests"""
     methodPrefix = 'benchmark'
-    def runTests(self, randomize=False):
-        # need to hook up randomize for Benchmark test cases
-        trial.registerAdapter(None, types.MethodType, itrial.ITestMethod)
-        trial.registerAdapter(BenchmarkMethod, types.MethodType, itrial.ITestMethod)
-        try:
-            super(BenchmarkCaseRunner, self).runTests()
-        finally:
-            trial.registerAdapter(None, types.MethodType, itrial.ITestMethod)
-            trial.registerAdapter(TestMethod, types.MethodType, itrial.ITestMethod)
         
 class StatusMixin:
     _status = None

@@ -7,80 +7,45 @@
 
 """Unit testing framework."""
 
+from twisted.python import components
 try:
     from zope.interface import interface, declarations
     from zope.interface.adapter import AdapterRegistry
 except ImportError:
     raise ImportError, "you need zope.interface installed (http://zope.org/Products/ZopeInterface/)"
 
+#XXX: Having this be here is pretty damn lame, but it's better than the whole
+# mess with adapter registries that was here before.
+benchmarking = False
 
-class TrialAdapterRegistry(object):
-    # we define a private adapter registry here to avoid conflicts and
-    # have a bit more control
+def makeTestRunner(orig):
+    if benchmarking:
+        return runner.BenchmarkCaseRunner(orig)
+    else:
+        return runner.TestCaseRunner(orig)
 
-    def setUpRegistry(self, hooksListIndex=-1):
-        self._registry = AdapterRegistry()
-        interface.adapter_hooks.insert(hooksListIndex, self._hook)
-
-    def registerAdapter(self, adapterFactory, origInterface, *interfaceClasses):
-        if not hasattr(self, '_registry'):
-            self.setUpRegistry()
-
-        assert interfaceClasses, "You need to pass an Interface"
-
-        if not isinstance(origInterface, interface.InterfaceClass):
-            origInterface = declarations.implementedBy(origInterface)
-
-        for interfaceClass in interfaceClasses:
-            factory = self._registry.get(origInterface).selfImplied.get(interfaceClass, {}).get('')
-            if factory and adapterFactory is not None:
-                raise ValueError("an adapter (%r, %r, %r) was already registered." % (
-                                 factory, origInterface, interfaceClasses))
-
-        for interfaceClass in interfaceClasses:
-            self._registry.register([origInterface], interfaceClass, '', adapterFactory)
-
-
-    def adaptWithDefault(self, iface, orig, default=None):
-        # GUH! zi sucks
-        face = default
-        try:
-            face = iface(orig)
-        except TypeError, e:
-            if e.args[0] == 'Could not adapt':
-                pass
-            else:
-                raise
-        return face
-
-    def _clearAdapterRegistry(self):
-        """FOR INTERNAL USE ONLY"""
-        del self._registry
-        assert self._hook in interface.adapter_hooks
-        interface.adapter_hooks.remove(self._hook)
-
-    # add global adapter lookup hook for our newly created registry
-    def _hook(self, iface, ob):
-        factory = self._registry.lookup1(declarations.providedBy(ob), iface)
-        if factory is None:
-            return None
-        else:
-            return factory(ob)
-
-    def _setUpAdapters(self):
-        import types
-        from twisted.trial import reporter, runner, itrial, adapters, remote
-        from twisted.trial import tdoctest, doctest
-        from twisted.spread import jelly
-        from twisted.python import failure
-        for a, o, i in [
+def makeTestMethod(orig):
+    if benchmarking:
+        return runner.BenchmarkMethod(orig)
+    else:
+        return runner.TestMethod(orig)
+    
+def _setUpAdapters():
+    from twisted.spread import jelly
+    from twisted.python import failure
+    # sibling imports
+    import types
+    import reporter, runner, itrial, adapters, remote
+    import tdoctest, doctest
+    
+    for a, o, i in [
 
 # ---- ITestRunner and ITestMethod adapters -----------
-(runner.TestCaseRunner, itrial.ITestCaseFactory, itrial.ITestRunner),
+(makeTestRunner, itrial.ITestCaseFactory, itrial.ITestRunner),
 (runner.TestModuleRunner, types.ModuleType, itrial.ITestRunner),
 (runner.PyUnitTestCaseRunner, itrial.IPyUnitTCFactory, itrial.ITestRunner),
 (runner.TestCaseMethodRunner, types.MethodType, itrial.ITestRunner),
-(runner.TestMethod, types.MethodType, itrial.ITestMethod),
+(makeTestMethod, types.MethodType, itrial.ITestMethod),
 
 # ---- Doctest support --------------------------------
 (tdoctest.DocTestRunnerToITestMethod, tdoctest.DocTestRunner, itrial.ITestMethod),
@@ -140,18 +105,7 @@ class TrialAdapterRegistry(object):
 #(runner.UserMethodWrapper, types.MethodType, itrial.IUserMethod),
 (remote.JellyableTestMethod, itrial.ITestMethod, jelly.IJellyable)]:
 
-            self.registerAdapter(a, o, i)
+        components.registerAdapter(a, o, i)
 
+_setUpAdapters()
 
-#XXX: refactor this so that things which need to adjust the global registry
-#     don't use these module-level names
-
-_trialRegistry = TrialAdapterRegistry()
-
-_setUpAdapters = _trialRegistry._setUpAdapters
-
-registerAdapter = _trialRegistry.registerAdapter
-adaptWithDefault = _trialRegistry.adaptWithDefault
-
-
-__all__ = ['registerAdapter', 'adaptWithDefault']

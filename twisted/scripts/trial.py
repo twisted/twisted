@@ -1,20 +1,7 @@
 # -*- test-case-name: twisted.trial.test.test_trial -*-
-#
-# Twisted, the Framework of Your Internet
-# Copyright (C) 2001 Matthew W. Lefkowitz
-#
-# This library is free software; you can redistribute it and/or
-# modify it under the terms of version 2.1 of the GNU Lesser General Public
-# License as published by the Free Software Foundation.
-#
-# This library is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-# Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public
-# License along with this library; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# See LICENSE for details.
 
 # Author/Maintainer: Jonathan D. Simms <slyphon@twistedmatrix.com>
 # Originally written by: Jonathan Lange <jml@twistedmatrix.com>
@@ -30,7 +17,7 @@ from twisted.application import app
 from twisted.python import usage, reflect, failure, log, plugin
 from twisted.python.util import spewer
 from twisted.spread import jelly
-from twisted.trial import runner, util, itrial, registerAdapter, remote
+from twisted.trial import runner, util, itrial, remote
 from twisted.trial import adapters, reporter, tdoctest, _setUpAdapters
 from twisted.trial.itrial import ITrialDebug
 
@@ -673,8 +660,6 @@ def run():
         config.parseOptions()
     except usage.error, ue:
         raise SystemExit, "%s: %s" % (sys.argv[0], ue)
-
-    _setUpAdapters()
 
     _initialDebugSetup(config)
 

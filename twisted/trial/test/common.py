@@ -14,6 +14,7 @@ from twisted.internet import defer
 from twisted.trial.assertions import assertIdentical, assertEqual, assert_
 from twisted.trial.assertions import assertSubstring
 
+from twisted.python import components
 import zope.interface as zi
 
 FAILURE_MSG = "this test failed"
@@ -120,7 +121,6 @@ class BogusReporter(reporter.TreeReporter):
 
 
 class RegistryBaseMixin(object):
-    trialGlobalNames = ('_trialRegistry', '_setUpAdapters', 'registerAdapter', 'adaptWithDefault')
     _suite = None
 
     # the following is a flag to the reporter.verify() method that gets reset to 
@@ -138,20 +138,9 @@ class RegistryBaseMixin(object):
     stdio = property(lambda self: self.tm.stderr + self.tm.stdout)
 
     def setUpClass(self):
-        # here we replace the trial.__init__ adapter registry 
-        # with our own to make sure tests don't alter global state
-        self.hookslen = len(zi.interface.adapter_hooks)
-        self.registry = trial.TrialAdapterRegistry()
-        self.registry.setUpRegistry(hooksListIndex=0)
         self.janitor = util._Janitor()
-        self.origReg = {}
-        for name in self.trialGlobalNames[1:]:
-            self.origReg[name] = getattr(trial, name)
-            setattr(trial, name, getattr(self.registry, name))
-        trial._trialRegistry = self.registry
 
     def setUp(self):
-        self.registry._setUpAdapters()
         self.reporter = BogusReporter()
 
     def _getSuite(self, newSuite=False, benchmark=0):
@@ -166,15 +155,9 @@ class RegistryBaseMixin(object):
     suite = property(_getSuite)
 
     def tearDown(self):
-        self.registry._clearAdapterRegistry()
         self.reporter.verify(self.failIfImportErrors, self.checkReporterSetup)
         self.failIfImportErrors = True
         self._suite = None
-
-    def tearDownClass(self):
-        assertEqual(len(zi.interface.adapter_hooks), self.hookslen)
-        for k, v in self.origReg.iteritems():
-            setattr(trial, k, v)
 
     def getReporter(self):
         return self.reporter

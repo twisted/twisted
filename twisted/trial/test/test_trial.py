@@ -68,6 +68,8 @@ class TestBenchmark(object):
 
     def testBenchmark(self):
         from twisted.trial.test.common import BogusReporter
+        from twisted import trial
+        
         suite = runner.TestSuite(BogusReporter(), util._Janitor(), benchmark=True)
         suite.addTestClass(self.Benchmark)
         suite.run()
@@ -75,22 +77,20 @@ class TestBenchmark(object):
         stats = pickle.load(file('test.stats', 'rb'))
         failUnlessEqual(stats, {itrial.IFQMethodName(self.Benchmark.benchmarkValues): statdatum})
 
-    def tearDownClass(self):
-        # this is nasty, but Benchmark tests change global state by
-        # deregistering adapters
-        from twisted.trial import registerAdapter
-        for a, o, i in [(None, itrial.ITestCaseFactory, itrial.ITestRunner),
-                        (runner.TestCaseRunner, itrial.ITestCaseFactory, itrial.ITestRunner)]:
-            registerAdapter(a, o, i)
 
 
 class Benchmark(common.RegistryBaseMixin, unittest.TestCase):
     def testBenchmark(self):
+        from twisted import trial
         # this is side-effecty and awful, for details, take a look at the
         # suite property of common.RegistryBaseMixin 
         self._getSuite(newSuite=True, benchmark=True)
         self.suite.addTestClass(TestBenchmark.Benchmark)
         self.suite.run()
+
+        # Sucks but less than before
+        trial.benchmarking = False
+        
         stats = pickle.load(file('test.stats', 'rb'))
         failUnlessEqual(stats, {itrial.IFQMethodName(TestBenchmark.Benchmark.benchmarkValues): statdatum})
 

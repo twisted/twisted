@@ -10,7 +10,7 @@ import warnings, time, random, types, re, traceback
 from pprint import pformat
 import os.path as osp
 
-from twisted.trial import itrial, runner, doctest, adaptWithDefault, unittest, adapters
+from twisted.trial import itrial, runner, doctest, unittest, adapters
 from twisted.trial.reporter import  FAILURE, ERROR, SUCCESS
 from twisted.python import reflect, failure, util as tputil, log
 
@@ -297,7 +297,7 @@ class ModuleDocTestsRunner(DocTestRunnerBase):
             random.shuffle(tests)
 
         for test in tests:
-            runner = adaptWithDefault(itrial.ITestRunner, test, default=None)
+            runner = itrial.ITestRunner(test, None)
             if runner == None:
                 continue
             runner.parent = self

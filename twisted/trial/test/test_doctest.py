@@ -11,7 +11,7 @@ import exceptions, sys
 
 from twisted import trial
 from twisted.trial import doctest, runner, tdoctest, unittest, reporter
-from twisted.trial import itrial, TrialAdapterRegistry
+from twisted.trial import itrial
 from twisted.trial.reporter import  FAILURE, ERROR, SUCCESS
 from twisted.trial.assertions import *
 from twisted.python import failure
