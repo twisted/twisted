@@ -45,6 +45,7 @@ class DoomProtocol(SimpleProtocol):
             self.transport.loseConnection()
 
 class LoopbackTestCase(unittest.TestCase):
+    loopbackFunc = loopback.loopback
     def testRegularFunction(self):
         s = SimpleProtocol()
         c = SimpleProtocol()
@@ -54,7 +55,7 @@ class LoopbackTestCase(unittest.TestCase):
             s.transport.loseConnection()
         s.conn.addCallback(sendALine)
 
-        loopback.loopback(s, c)
+        self.loopbackFunc.im_func(s, c)
         self.assertEquals(c.lines, ["THIS IS LINE ONE!"])
     
     def testSneakyHiddenDoom(self):
@@ -65,7 +66,14 @@ class LoopbackTestCase(unittest.TestCase):
             s.sendLine("DOOM LINE")
         s.conn.addCallback(sendALine)
         
-        loopback.loopback(s, c)
+        self.loopbackFunc.im_func(s, c)
         self.assertEquals(s.lines, ['Hello 1', 'Hello 2', 'Hello 3'])
         self.assertEquals(c.lines, ['DOOM LINE', 'Hello 1', 'Hello 2', 'Hello 3'])
+
+class LoopbackTCPTestCase(LoopbackTestCase):
+    loopbackFunc = loopback.loopbackTCP
+
+    def testSneakyHiddenDoom(self):
+        LoopbackTestCase.testSneakyHiddenDoom(self)
+    testSneakyHiddenDoom.todo = 1
 
