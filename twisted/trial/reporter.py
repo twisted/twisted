@@ -153,6 +153,16 @@ class TextReporter(Reporter):
                 tb))
         return ret
 
+    def _formatImportError(self, name, error):
+        if isinstance(error, failure.Failure):
+            what = error.getErrorMessage()
+        elif type(error) == types.TupleType:
+            what = error.args[0]
+        else:
+            what = "%s\n" % error
+        ret = "Could not import %s: %s\n" % (name, what)
+        return ret
+    
     def write(self, format, *args):
         if args:
             self.stream.write(format % args)
@@ -204,14 +214,12 @@ class TextReporter(Reporter):
             self.write(self._formatError('ERROR', error))
         self.writeln(self.SEPARATOR)
         self.writeln('Ran %d tests in %.3fs', self.numTests, self.getRunningTime())
-        self.writeln()
-        self.writeln(self._statusReport())
         if self.imports:
             self.writeln()
-            for name, exc in self.imports:
-                self.writeln('Could not import %s: %s'
-                             % (name, exc.args[0]))
-            self.writeln()
+            for name, error in self.imports:
+                self.write(self._formatImportError(name, error))
+        self.writeln()
+        self.writeln(self._statusReport())
 
 class TimingTextReporter(TextReporter):
 

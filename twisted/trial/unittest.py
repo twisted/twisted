@@ -245,8 +245,8 @@ class TestSuite:
         if type(module) is types.StringType:
             try:
                 module = reflect.namedModule(module)
-            except (ImportError, Warning), e:
-                self.couldNotImport[module] = e
+            except:
+                self.couldNotImport[module] = failure.Failure()
                 return
         names = dir(module)
         for name in names:

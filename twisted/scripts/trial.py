@@ -18,7 +18,7 @@
 # FIXME
 # - Hangs.
 
-from twisted.python import usage, reflect
+from twisted.python import usage, reflect, failure
 from twisted.trial import unittest, util, reporter as reps
 import sys, os, types, inspect
 
@@ -52,6 +52,7 @@ class Options(usage.Options):
         self['packages'] = []
         self['testcases'] = []
         self['methods'] = []
+        self['_couldNotImport'] = {}
 
     def opt_reactor(self, reactorName):
         # this must happen before parseArgs does lots of imports
@@ -124,12 +125,15 @@ class Options(usage.Options):
                     self['modules'].append(arg)
                     continue
 
-            # this is a problem: it imports the module, which installs a
-            # reactor, and this happens before --reactor is processed
+            # a non-default reactor must have been installed by now: it
+            # imports the module, which installs a reactor
             try:
                 arg = reflect.namedAny(arg)
             except ValueError:
                 raise usage.UsageError, "Can't find anything named %r to run" % arg
+            except:
+                self['_couldNotImport'][arg] = failure.Failure()
+                continue
 
             if inspect.ismodule(arg):
                 filename = os.path.basename(arg.__file__)
@@ -171,6 +175,7 @@ def run():
         os._exit(1)
 
     suite = unittest.TestSuite()
+    suite.couldNotImport.update(config['_couldNotImport'])
     if config['recurse']:
         for package in config['packages']:
             suite.addPackageRecursive(package)

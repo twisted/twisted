@@ -1,3 +1,20 @@
+2003-05-16  Brian Warner  <warner@lothar.com>
+
+	* twisted/scripts/trial.py: catch failures during import of test
+	modules named on the command line too.
+
+	* twisted/trial/unittest.py (TestSuite.addModule): catch all failures
+	during import so that syntax errors in test files don't prevent
+	other tests from being run.
+
+	* twisted/trial/reporter.py (TextReporter): handle both Failures
+	and exception tuples in import errors. Emit the messages before the
+	last summary line so that test-result parsers can still find the
+	pass/fail counts.
+
+	* doc/howto/faq.html: Add note about Ephemeral in the
+	import-from-self twistd entry.
+
 2003-05-13  Brian Warner  <warner@lothar.com>
 
 	* twisted/trial/runner.py: sort tests by name within a TestCase
