@@ -314,13 +314,11 @@ class Process(abstract.FileDescriptor):
     def connectionLost(self):
         """Shut down resources."""
         self.reactor.removeEvent(self.hProcess)
-        del self.reactor
         abstract.FileDescriptor.connectionLost(self)
         self.closeStdin()
         win32file.CloseHandle(self.hStdoutR)
         win32file.CloseHandle(self.hStderrR)
         self.protocol.processEnded()
-        del self.protocol
     
     def doWrite(self):
         """Runs in thread."""
