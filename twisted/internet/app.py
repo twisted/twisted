@@ -20,6 +20,7 @@
 import os
 import string
 import socket
+import types
 
 # Twisted Imports
 from twisted.internet import interfaces
@@ -55,6 +56,58 @@ class _SSLlistener:
 
     def listen(self):
         self.app.listenSSL(self.port, self.fac, self.ctx, self.backlog, self.interface)
+
+
+class ApplicationService:
+    """I am a service you can add to an application.
+
+    I represent some chunk of functionality which may be bound to many or no
+    event sources.  By adding an ApplicationService to an Application, it will
+    be notified when the Application starts and stops (or removes/shuts down
+    the service).  See the startService and stopService calls.
+
+    Since services may want to incorporate certain other elements, notably
+    Perspective Broker (remote invocation) accessibility and authentication,
+    derivatives of ApplicationService exist in twisted.cred.service and
+    twisted.spread.pb.  These may be more suitable for your service than
+    directly subclassing ApplicationService.
+    """
+
+    application = None
+    serviceType = None
+    serviceName = None
+
+    def __init__(self, serviceName, application=None):
+        """Create me, attached to the given application.
+
+        Arguments: application, a twisted.internet.app.Application instance.
+        """
+        if not isinstance(serviceName, types.StringType):
+            raise TypeError("%s is not a string." % serviceName)
+        self.serviceName = serviceName
+        self.setApplication(application)
+
+    def setApplication(self, application):
+        from twisted.internet import app
+        if application and not isinstance(application, app.Application):
+            raise TypeError( "%s is not an Application" % application)
+        if self.application and self.application is not application:
+            raise RuntimeError( "Application already set!" )
+        if application:
+            self.application = application
+            application.addService(self)
+
+    def startService(self):
+        """This call is made as a service starts up.
+        """
+        log.msg("%s (%s) starting" % (self.__class__, self.serviceName))
+        return None
+
+    def stopService(self):
+        """This call is made before shutdown.
+        """
+        log.msg("%s (%s) stopping" % (self.__class__, self.serviceName))
+        return None
 
 
 class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
@@ -141,7 +194,7 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
             n2.setAttribute("parent:ctxfactory", 1)
             n.appendChild(n2)
             sslnode.appendChild(n)
-        for connector in self.connectors:
+        for connector in self.tcpConnectors:
             n = jellier.jellyToNode(connector.factory)
             n.setAttribute("parent:connect", "%s:%d" % (connector.host, connector.portno))
             if connector.timeout != 30:
@@ -195,7 +248,7 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
                             listener.setFactory)
             if subnode.tagName == 'tcp':
                 self.tcpPorts = []
-                self.connectors = []
+                self.tcpConnectors = []
                 for facnode in self._getChildElements(subnode):
                     if facnode.hasAttribute("parent:connect"):
                         s = facnode.getAttribute("parent:connect")
@@ -261,7 +314,6 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
     def upgradeToVersion4(self):
         """Version 4 Persistence Upgrade
         """
-        self.connectors = []
 
     def upgradeToVersion3(self):
         """Version 3 Persistence Upgrade

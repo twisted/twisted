@@ -21,7 +21,7 @@ Twisted Cred Service
 
 # Twisted Imports
 from twisted.python import log, components
-from twisted.internet import defer
+from twisted.internet import defer, app
 
 # Sibling Imports
 from perspective import Perspective
@@ -31,10 +31,11 @@ import types
 
 
 class IService(components.Interface):
-    """A service for internet applications."""
+    """An authorized service for internet applications.
+    """
 
 
-class Service:
+class Service(app.ApplicationService):
     """I am a service that internet applications interact with.
 
     I represent a set of abstractions which users may interact with over a
@@ -57,11 +58,8 @@ class Service:
 
         Arguments: application, a twisted.internet.app.Application instance.
         """
-        if not isinstance(serviceName, types.StringType):
-            raise TypeError("%s is not a string." % serviceName)
-        self.serviceName = serviceName
         self.perspectives = {}
-        self.setApplication(application)
+        app.ApplicationService.__init__(self, serviceName, application)
 
     def cachePerspective(self, perspective):
         """Cache a perspective loaded from an external data source.
@@ -81,16 +79,6 @@ class Service:
         if self.perspectives.has_key(perspective.perspectiveName):
             if perspective._service_cached:
                 del self.perspectives[perspective.perspectiveName]
-
-    def setApplication(self, application):
-        from twisted.internet import app
-        if application and not isinstance(application, app.Application):
-            raise TypeError( "%s is not an Application" % application)
-        if self.application and self.application is not application:
-            raise RuntimeError( "Application already set!" )
-        if application:
-            self.application = application
-            application.addService(self)
 
     def createPerspective(self, name):
         """Create a perspective from self.perspectiveClass and add it to this service.
@@ -153,14 +141,3 @@ class Service:
         """
         return self.serviceType or str(self.__class__)
 
-    def startService(self):
-        """This call is made as a service starts up.
-        """
-        log.msg("%s (%s) starting" % (self.__class__, self.serviceName))
-        return None
-
-    def stopService(self):
-        """This call is made before shutdown.
-        """
-        log.msg("%s (%s) stopping" % (self.__class__, self.serviceName))
-        return None
