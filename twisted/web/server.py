@@ -247,6 +247,13 @@ class Request(pb.Copyable, http.Request, components.Componentized):
         return reason
 
     def notifyFinish(self):
+        """Notify when finishing the request
+
+        @return: A deferred. The deferred will be triggered when the
+        request is finished -- with a C{None} value if the request
+        finishes successfully or with an error if the request is stopped
+        by the client.
+        """
         self.notifications.append(defer.Deferred())
         return self.notifications[-1]
 
