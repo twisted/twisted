@@ -44,38 +44,38 @@ reactor.spawnProcess(processProtocol, executable, args=[program, arg1, arg2],
 
 <ul>
 
-  <li><tt>processProtocol</tt> should be an instance of a subclass of <code
+  <li><code>processProtocol</code> should be an instance of a subclass of <code
   class="API">twisted.internet.protocol.ProcessProtocol</code>. The
   interface is described below.</li>
 
-  <li><tt>executable</tt> is the full path of the program to run. It will be
+  <li><code>executable</code> is the full path of the program to run. It will be
   connected to processProtocol.</li>
 
-  <li><tt>args</tt> is a list of command line arguments to be passed to the
-  process. <tt>args[0]</tt> should be the name of the process.</li>
+  <li><code>args</code> is a list of command line arguments to be passed to the
+  process. <code>args[0]</code> should be the name of the process.</li>
 
-  <li><tt>env</tt> is a dictionary containing the environment to pass
+  <li><code>env</code> is a dictionary containing the environment to pass
   through to the process.</li>
 
-  <li><tt>path</tt> is the directory to run the process in. The child will
+  <li><code>path</code> is the directory to run the process in. The child will
   switch to the given directory just before starting the new program. The
   default is to stay in the current directory.</li>
 
-  <li><tt>uid</tt> and <tt>gid</tt> are the user ID and group ID to run the
+  <li><code>uid</code> and <code>gid</code> are the user ID and group ID to run the
   subprocess as. Of course, changing identities will be more likely to
   succeed if you start as root.</li>
 
-  <li><tt>usePTY</tt> specifies whether the child process should be run with
+  <li><code>usePTY</code> specifies whether the child process should be run with
   a pty, or if it should just get a pair of pipes. Interactive programs
   (where you don't know when it may read or write) need to be run with
   ptys.</li>
 
 </ul>
 
-<p><tt>args</tt> and <tt>env</tt> have empty default values, but many
+<p><code>args</code> and <code>env</code> have empty default values, but many
 programs depend upon them to be set correctly. At the very least,
-<tt>args[0]</tt> should probably be the same as <tt>executable</tt>. If you
-just provide <tt>os.environ</tt> for <tt>env</tt>, the child program will
+<code>args[0]</code> should probably be the same as <code>executable</code>. If you
+just provide <code>os.environ</code> for <code>env</code>, the child program will
 inherit the environment from the current process, which is usually the
 civilized thing to do (unless you want to explicitly clean the environment
 as a security precaution). </p>
@@ -133,56 +133,56 @@ reactor.run()
 <h2>Things that can happen to your ProcessProtocol</h2>
 
 <p>These are the methods that you can usefully override in your subclass of
-<tt>ProcessProtocol</tt>:</p>
+<code>ProcessProtocol</code>:</p>
 
 <ul>
 
-  <li><tt>.connectionMade</tt>: This is called when the program is started,
+  <li><code>.connectionMade</code>: This is called when the program is started,
   and makes a good place to write data into the stdin pipe (using <code
   class="python">self.transport.write()</code>).</li>
 
-  <li><tt>.outReceived(data)</tt>: This is called with data that was
+  <li><code>.outReceived(data)</code>: This is called with data that was
   received from the process' stdout pipe. Pipes tend to provide data in
   larger chunks than sockets (one kilobyte is a common buffer size), so you
   may not experience the "random dribs and drabs" behavior typical of
   network sockets, but regardless you should be prepared to deal if you
   don't get all your data in a single call. To do it properly,
-  <tt>outReceived</tt> ought to simply accumulate the data and put off doing
+  <code>outReceived</code> ought to simply accumulate the data and put off doing
   anything with it until the process has finished.</li>
 
-  <li><tt>.errReceived(data)</tt>: This is called with data from the
-  process' stderr pipe. It behaves just like <tt>outReceived</tt>.</li>
+  <li><code>.errReceived(data)</code>: This is called with data from the
+  process' stderr pipe. It behaves just like <code>outReceived</code>.</li>
 
-  <li><tt>.inConnectionLost</tt>: This is called when the reactor notices
+  <li><code>.inConnectionLost</code>: This is called when the reactor notices
   that the process' stdin pipe has closed. Programs don't typically close
   their own stdin, so this will probably get called when your
   ProcessProtocol has shut down the write side with <code
   class="python">self.transport.loseConnection()</code>.</li>
 
-  <li><tt>.outConnectionLost</tt>: This is called when the program closes
+  <li><code>.outConnectionLost</code>: This is called when the program closes
   its stdout pipe. This usually happens when the program terminates.</li>
 
-  <li><tt>.errConnectionLost</tt>: Same as <tt>outConnectionLost</tt>, but
+  <li><code>.errConnectionLost</code>: Same as <code>outConnectionLost</code>, but
   for stderr instead of stdout.</li>
 
-  <li><p><tt>.processEnded(status)</tt>: This is called when the child
+  <li><p><code>.processEnded(status)</code>: This is called when the child
   process has been reaped, and receives information about the process' exit
   status. The status is passed in the form of a <code class="API"
   base="twisted.python.failure">Failure</code> instance, created with a
-  <tt>.value</tt> that either holds a <code class="API"
+  <code>.value</code> that either holds a <code class="API"
   base="twisted.internet.error">ProcessDone</code> object if the process
   terminated normally (it died of natural causes instead of receiving a
   signal, and if the exit code was 0), or a <code class="API"
   base="twisted.internet.error">ProcessTerminated</code> object (with an
-  <tt>.exitCode</tt> attribute) if something went wrong. This scheme may
+  <code>.exitCode</code> attribute) if something went wrong. This scheme may
   seem a bit weird, but I trust that it proves useful when dealing with
   exceptions that occur in asynchronous code.</p>
 
   <!-- XXX: check twisted/internet/process.py:v1.30:line357, I think
   death-by-signal wouldn't be reported properly. -->
   
-  <p>This will always be called <b>after</b> <tt>inConnectionLost</tt>,
-  <tt>outConnectionLost</tt>, and <tt>errConnectionLost</tt> are
+  <p>This will always be called <b>after</b> <code>inConnectionLost</code>,
+  <code>outConnectionLost</code>, and <code>errConnectionLost</code> are
   called.</p></li>
 
 </ul>
@@ -200,29 +200,29 @@ pipe.</p>
 
 <ul>
 
-  <li><tt>self.transport.write(data)</tt>: Stuff some data in the stdin
-  pipe. Note that this <tt>write</tt> method will queue any data that can't
+  <li><code>self.transport.write(data)</code>: Stuff some data in the stdin
+  pipe. Note that this <code>write</code> method will queue any data that can't
   be written immediately. Writing will resume in the future when the pipe
   becomes writable again.</li>
 
-  <li><tt>self.transport.closeStdin</tt>: Close the stdin pipe. Programs
+  <li><code>self.transport.closeStdin</code>: Close the stdin pipe. Programs
   which act as filters (reading from stdin, modifying the data, writing to
   stdout) usually take this as a sign that they should finish their job and
   terminate. For these programs, it is important to close stdin when you're
   done with it, otherwise the child process will never quit.</li>
 
-  <li><tt>self.transport.closeStdout</tt>: Not usually called, since you're
+  <li><code>self.transport.closeStdout</code>: Not usually called, since you're
   putting the process into a state where any attempt to write to stdout will
   cause a SIGPIPE error. This isn't a nice thing to do to the poor
   process.</li>
   
-  <li><tt>self.transport.closeStderr</tt>: Not usually called, same reason
-  as <tt>closeStdout</tt>.</li>
+  <li><code>self.transport.closeStderr</code>: Not usually called, same reason
+  as <code>closeStdout</code>.</li>
 
-  <li><tt>self.transport.loseConnection</tt>: Close all three pipes.</li>
+  <li><code>self.transport.loseConnection</code>: Close all three pipes.</li>
 
-  <li><tt>os.kill(self.transport.pid, signal.SIGKILL)</tt>: Kill the child
-  process. This will eventually result in <tt>processEnded</tt> being
+  <li><code>os.kill(self.transport.pid, signal.SIGKILL)</code>: Kill the child
+  process. This will eventually result in <code>processEnded</code> being
   called.</li>
   
 </ul>
@@ -231,7 +231,7 @@ pipe.</p>
 <h2>Verbose Example</h2>
 
 <p>Here is an example that is rather verbose about exactly when all the
-methods are called. It writes a number of lines into the <tt>wc</tt> program
+methods are called. It writes a number of lines into the <code>wc</code> program
 and then parses the output.</p>
 
 <a href="listings/process/process.py" class="py-listing">process.py</a>

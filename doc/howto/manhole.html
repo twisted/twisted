@@ -17,7 +17,7 @@ administration and debugging tool. </p>
 <p>There are two ways to add a manhole port to your application. One is a
 simple telnet-like shell, and the other is a Perspective Broker -based
 service that uses a special Gtk+-based graphical client program named
-'<tt>manhole</tt>'.</p>
+'<code>manhole</code>'.</p>
 
 
 <h2>Using the Manhole Telnet Server</h2>
@@ -43,8 +43,8 @@ Factory) listening on a different point:</p>
 
 <p>With this in place, you can telnet to port 8007, give the username "boss"
 and password "sekrit", and you'll end up with a shell that behaves very much
-like the Python interpreter that you get by running <tt>python</tt> all by
-itself, with lines you type prefixed with <tt>&gt;&gt;&gt;</tt>.</p>
+like the Python interpreter that you get by running <code>python</code> all by
+itself, with lines you type prefixed with <code>&gt;&gt;&gt;</code>.</p>
 
 
 <pre class="shell">
@@ -71,7 +71,7 @@ An apple a day keeps the doctor away.
 </pre>
 
 <p>The initial namespace of the manhole interpreter is defined by a
-dictionary stored in the '<tt>namespace</tt>' attribute of the ShellFactory.
+dictionary stored in the '<code>namespace</code>' attribute of the ShellFactory.
 For convenience, you can put references to any objects you like in that dict
 (<code class="python">f.namespace['foo'] = 12</code>), and then retrieve
 them by name from the telnet session.</p>
@@ -87,7 +87,7 @@ to our servers (the protocol <code class="API"
 base="twisted.internet.protocol">Factory</code> instances and everything
 hanging off of them). We start by gaining access to the main <code
 class="API" base="twisted.internet.app">Application</code> instance through
-a global variable stored in the <tt>app</tt> module:</p>
+a global variable stored in the <code>app</code> module:</p>
 
 <pre class="python-interpreter">
 &gt;&gt;&gt; import twisted.internet.app         
@@ -167,7 +167,7 @@ setup first. This involves creating an Authorizer, creating a Perspective
 and Identity, assigning a username and password to the Identity, then
 finally creating the Service. These steps are part of the normal
 initialization of any PB application, but when you're just starting with
-Twisted, you're probably writing simple servers using <tt>listenTCP</tt>,
+Twisted, you're probably writing simple servers using <code>listenTCP</code>,
 and haven't dealt with all those new classes yet. There is a shortcut that
 takes advantage of some of the ".tap" configuration code. It isn't pretty or
 clear, but adding the marked four lines will result in a password-protected
@@ -180,13 +180,13 @@ Manhole Perspective being added to your application:</p>
 arbitrary Service to an Application.</p>
 
 <p>With this in place and running, you're ready to connect with the manhole
-client. This is a Gtk+-based GUI application named <tt>manhole</tt> that
+client. This is a Gtk+-based GUI application named <code>manhole</code> that
 gets installed along with the rest of twisted. Execute the command <code
 class="shell">manhole</code> to start the client, and it will bring up a
 dialog that asks for hostname, port number, Service name, username, and
 password (and also "Perspective" but don't worry about that for now). Use
 the default host/port of localhost/8787 to indicate where the
-<tt>twisted.manhole</tt> service is listening, and use boss/sekrit for the
+<code>twisted.manhole</code> service is listening, and use boss/sekrit for the
 username and password. Use the default Service name 'twisted.manhole', and
 leave the Perspective blank.</p>
 
@@ -225,10 +225,10 @@ service = a.getServiceNamed("manhole")
 objects really nice. These are <code>/browse</code> and <code>/watch</code>.
 You can <code>/browse</code> any type of object, and it will give you some
 nice information about that object in the "Spelunking" window that pops up
-when <tt>manhole</tt> establishes a connection to the <tt>manhole</tt>
+when <code>manhole</code> establishes a connection to the <code>manhole</code>
 Service. <code>/watch</code>-ing an object adds hooks to the object,
 allowing you to watch modifications to it in real time. Try the following in
-the <tt>manhole</tt> window and watch what happens in the "Spelunking"
+the <code>manhole</code> window and watch what happens in the "Spelunking"
 box:</p>
 
 <pre class="python-interpreter">

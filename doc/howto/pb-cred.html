@@ -469,7 +469,7 @@ with the code inside the <code>pb.connect()</code> function to implement both
 sides of the challenge-response sequence. When you (as the client) use
 <code>pb.connect()</code> to get to a given host/port, you end up talking to a
 single <code>Authorizer</code>. The username/password you give get matched
-against the <tt>Identities</code> provided by that authorizer, and then the
+against the <code>Identities</code> provided by that authorizer, and then the
 servicename/perspectivename you give are matched against the ones authorized
 by the <code>Identity</code> (in its <code>.keyring</code> attribute). You
 eventually get back a remote reference to a <code>Perspective</code>

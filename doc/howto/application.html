@@ -28,7 +28,7 @@ ask for more from it. Twisted provides this for you.</p>
   <b>configuration arguments</b>:
 
   <p>suppose your QOTD server behaves a bit more like the normal port 17
-  server and pulls a random line from <tt>/usr/share/fortunes</tt>. Your
+  server and pulls a random line from <code>/usr/share/fortunes</code>. Your
   QOTDFactory() might take a filename to indicate where the QOTD protocols
   should pull these lines. It would be nice if the person installing your
   quote server didn't have to modify any Python code to change where this
@@ -71,10 +71,10 @@ one. The difference is that the App won't starting listening on those ports
 right away, but will wait until it starts to run.</p>
 
 <p>When you're done setting up the ports, you have two options: you can
-start running the app immediately, by calling the <tt>.run()</tt> method, or
-you can save the Application out to a file by calling the <tt>.save()</tt>
+start running the app immediately, by calling the <code>.run()</code> method, or
+you can save the Application out to a file by calling the <code>.save()</code>
 method. The saved application can then be started later by using the
-<tt>twistd</tt> utility.</p>
+<code>twistd</code> utility.</p>
 
 <h2>Example Application</h2>
 
@@ -84,13 +84,13 @@ simply sends the current time to each client.:</p>
 
 <a href="listings/application/app1.py" class="py-listing">app1.py</a>
 
-<p>This program will start listening to port 8813 in the <tt>app.run()</tt>
+<p>This program will start listening to port 8813 in the <code>app.run()</code>
 call, and won't return from that call until the server is terminated
 (probably when you send it SIGINT).</p>
 
 <p>To use the second option and launch the server later, just use
-<tt>.save()</tt> instead of <tt>.run()</tt>. The <tt>.save()</tt> method
-takes a base name for the generated <tt>.tap</tt> file:</p>
+<code>.save()</code> instead of <code>.run()</code>. The <code>.save()</code> method
+takes a base name for the generated <code>.tap</code> file:</p>
 
 <pre class="python">
 ...
@@ -100,10 +100,10 @@ app.save("start")
 </pre>
 
 <p>When you run this program, it will create a file called
-<tt>daytime-start.tap</tt>, and then exit. (The name is obtained by
-combining the application name with the argument to <tt>.save()</tt>). To
-start the server from the "freeze-dried" <tt>.tap</tt> file, use
-<tt>twistd</tt> (text wrapped to be more readable):</p>
+<code>daytime-start.tap</code>, and then exit. (The name is obtained by
+combining the application name with the argument to <code>.save()</code>). To
+start the server from the "freeze-dried" <code>.tap</code> file, use
+<code>twistd</code> (text wrapped to be more readable):</p>
 
 <pre class="shell">
 % ./app2.py 
@@ -124,20 +124,20 @@ Saved.
 % 
 </pre>
 
-<p>That will "thaw out" the <tt>.tap</tt> file, create the Application, and
+<p>That will "thaw out" the <code>.tap</code> file, create the Application, and
 then run it just as if you'd invoked app.run() yourself. It forks the new
 server off into the background (so twistd itself completes instead of
 waiting for the server to die), writes the server's process ID to a file
 called "twistd.pid", and directs all the server's stdout messages to a file
 called "twistd.log" (these file names can be changed by appropriate
-arguments to <tt>twistd</tt>: see <tt>twistd -h</tt> for a list).</p>
+arguments to <code>twistd</code>: see <code>twistd -h</code> for a list).</p>
 
-<p>When you try this example, be aware that <tt>twistd</tt> returns right
+<p>When you try this example, be aware that <code>twistd</code> returns right
 away, but it takes a second or two for the server to actually start. The
-<tt>twistd.pid</tt> file won't be created until it does. Wait a moment
-before doing <tt>ls</tt> or <tt>netstat</tt>, or you'll think that the
+<code>twistd.pid</code> file won't be created until it does. Wait a moment
+before doing <code>ls</code> or <code>netstat</code>, or you'll think that the
 server failed to start. If it persists in failing, look in
-<tt>twistd.log</tt> for details. Remember that trying to bind to a reserved
+<code>twistd.log</code> for details. Remember that trying to bind to a reserved
 port will fail unless you're root, and the exception will be listed at the
 end of the log file.</p>
 
@@ -150,12 +150,12 @@ end of the log file.</p>
 <p>When the server is shut down, you'll notice that it creates a file called
 "daytimer-shutdown.tap" in the directory it was run from (again, the name is
 derived from the application name and the word "shutdown"). This
-<tt>.tap</tt> file is just like the "daytimer-start.tap" created by your
+<code>.tap</code> file is just like the "daytimer-start.tap" created by your
 original setup program, except that it represents the state of the
 Application object as it existed just before shutdown, rather than when it
 was freshly created by your code.</p>
 
-<p>Also note that the <tt>twistd.pid</tt> file is automatically deleted when
+<p>Also note that the <code>twistd.pid</code> file is automatically deleted when
 the application shuts down.</p>
 
 
@@ -163,8 +163,8 @@ the application shuts down.</p>
 
 <p>You can add persistent data (like that
 sequence number described above) to the protocol Factory object, and it will
-get saved in the <tt>-shutdown.tap</tt> file. Then, if you restart the
-server with <tt>twistd -f daytimer-shutdown.tap</tt>, the new server will
+get saved in the <code>-shutdown.tap</code> file. Then, if you restart the
+server with <code>twistd -f daytimer-shutdown.tap</code>, the new server will
 get the data saved by the old server, and it can pick up where the old one
 left off, as if the server had been running continuously the whole time.</p>
 
@@ -197,8 +197,8 @@ Saved.
 </pre>
 
 <p>Note that the stdout of the process is being directed into the log file,
-contained in <tt>twistd.log</tt>. Now stop the server, verify that it is no
-longer running, then restart it from the saved-at-shutdown <tt>.tap</tt>
+contained in <code>twistd.log</code>. Now stop the server, verify that it is no
+longer running, then restart it from the saved-at-shutdown <code>.tap</code>
 file:</p>
 
 <pre class="shell">
@@ -211,7 +211,7 @@ localhost [127.0.0.1] 8123 (?) : Connection refused
 %
 </pre>
 
-<p>Notice how the saved <tt>.nextkey</tt> attribute was restored, and the
+<p>Notice how the saved <code>.nextkey</code> attribute was restored, and the
 application picks up where it left off.</p>
 
 
@@ -219,7 +219,7 @@ application picks up where it left off.</p>
 
 <p>To do this right, you'll want to follow the sequence described by the
 "writing plugins" document. Instead of writing a short program that creates
-a <tt>.tap</tt> file (by creating an Application, doing various .listenTCPs
+a <code>.tap</code> file (by creating an Application, doing various .listenTCPs
 on it, then calling .save), you will write a subroutine called
 updateApplication(). This subroutine should take a bunch of config arguments
 (using the usage.Options class described in the plugins document) and use
@@ -227,17 +227,17 @@ them to create Factories and feed them to .listenTCP on an <b>existing</b>
 Application instance.</p>
 
 <p>With that in place, and a few files to register this new server you've
-created, a utility program called '<tt>mktap</tt>' can relieve you of the
+created, a utility program called '<code>mktap</code>' can relieve you of the
 business of gathering user arguments and creating the app instance.
-<tt>mktap</tt> can use the Options subclass you define in your build-a-tap
-class to figure out what arguments are legal (<tt>--port</tt> taking a
-number, <tt>--quotes</tt> taking a filename, etc), provide <tt>--help</tt>
+<code>mktap</code> can use the Options subclass you define in your build-a-tap
+class to figure out what arguments are legal (<code>--port</code> taking a
+number, <code>--quotes</code> taking a filename, etc), provide <code>--help</code>
 with a list of valid arguments, and parse everything the user passes in
-<tt>argv[]</tt>. It creates the Application, then passes the app and the
-parsed options to your <tt>updateApplication()</tt> method, where you do the
-server-specific creation of a Factory and the various <tt>listenTCP</tt>
-calls. Then <tt>mktap</tt> saves out the <tt>.tap</tt> file, ready for
-starting by <tt>twistd</tt>.</p>
+<code>argv[]</code>. It creates the Application, then passes the app and the
+parsed options to your <code>updateApplication()</code> method, where you do the
+server-specific creation of a Factory and the various <code>listenTCP</code>
+calls. Then <code>mktap</code> saves out the <code>.tap</code> file, ready for
+starting by <code>twistd</code>.</p>
 
 <p>The end result is that installing your new server is simplified to the
 following steps:</p>
@@ -246,23 +246,23 @@ following steps:</p>
 
   <li>Unpack your server module (including the classes and plugin glue
   files) into somewhere on your PYTHONPATH, perhaps
-  <tt>/usr/local/lib/python</tt>.</li>
+  <code>/usr/local/lib/python</code>.</li>
 
-  <li>Run the standard <tt>mktap</tt> program, giving it the name of your
+  <li>Run the standard <code>mktap</code> program, giving it the name of your
   module and whatever configuration arguments it requires. Watch it create a
-  <tt>.tap</tt> file.</li>
+  <code>.tap</code> file.</li>
 
-  <li>Use <tt>twistd</tt> to start the server contained in the <tt>.tap</tt>
+  <li>Use <code>twistd</code> to start the server contained in the <code>.tap</code>
   file. </li>
 </ul>
 
 <p>Pretty easy. At least your users will think so.</p>
 
-<p><b>And</b>, once your application is defined by the <tt>.tap</tt> file,
-there are other tools that can be used to configure it. <tt>coil</tt> is one
+<p><b>And</b>, once your application is defined by the <code>.tap</code> file,
+there are other tools that can be used to configure it. <code>coil</code> is one
 that provides a nice web-based UI to change the various parameters.
-<tt>tap2deb</tt> is a tool that creates installable Debian <tt>.deb</tt>
-packages from your <tt>.tap</tt> file, making installation even easier.</p>
+<code>tap2deb</code> is a tool that creates installable Debian <code>.deb</code>
+packages from your <code>.tap</code> file, making installation even easier.</p>
 
 <p>The Application object has some other features designed to solve common
 server needs:</p>
