@@ -11,7 +11,7 @@ if sh -c 'which python2.3 > /dev/null'; then PYTHON=2.3; fi
 LORE="python$PYTHON ./bin/lore"
 echo "Man-->Lore"
 $LORE -p --input man --output lore --config ext=-man.xhtml doc/man/*.1
-for doc in doc doc/man doc/howto doc/howto/tutorial doc/specifications doc/vision; do
+for doc in doc doc/man doc/howto doc/howto/tutorial doc/howto/policy doc/specifications doc/vision; do
 	echo "Lore-->Lint"
 	$LORE -n --output lint $doc/*.xhtml |sed 's/^/WARNING: /'
 	echo "Lore-->HTML"
