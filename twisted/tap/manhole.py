@@ -13,19 +13,25 @@ usage_message = """Usage: mktap manhole [OPTIONS]
 
 Options:
         --port <#>, -p:         set the port number to <#>.
+        --user <name>, -u:      set the username to <name>.
+        --password <word>, -w:  set the password to <word>.
 """
 
 class Options(usage.Options):
+    optStrings = [["password", "w", "admin"],
+                  ["user", "u", "admin"]]
     def opt_port(self, opt):
         try:
-	    self.portno = int(opt)
-	except ValueError:
-	    raise usage.error("Invalid argument to 'port'!")
+            self.portno = int(opt)
+        except ValueError:
+            raise usage.error("Invalid argument to 'port'!")
     opt_p = opt_port
 
+
 def getPorts(app, config):
+    
     bf = pb.BrokerFactory()
-    bf.addService("manhole", service.Service())
+    bf.addService("manhole", service.Service({config.user: config.password}))
     try:
         portno = config.portno
     except AttributeError:
