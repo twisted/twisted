@@ -471,7 +471,8 @@ base="twisted.spread">jelly</code>). The easiest way to make it possible to
 copy entire class instances over the wire is to have them inherit from <code
 class="API" base="twisted.spread">pb.Copyable</code>, and then to use
 <code>setUnjellyableForClass(remoteClass, localClass)</code> on the
-receiving side. See XXX for an example.</p></span>.
+receiving side. See <a href="pb-copyable.xhtml">Passing Complex Types</a>
+for an example.</p></span>.
 
 The receiving end of the connection gets to decide what to accept and what
 to reject. It indicates its disapproval by raising a <code class="API"

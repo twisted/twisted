@@ -4,7 +4,7 @@ from twisted.spread import pb
 from twisted.cred import checkers, portal
 from twisted.internet import reactor
 
-class MyPerspective(pb.Perspective):
+class MyPerspective(pb.Avatar):
     def __init__(self, name):
         self.name = name
     def perspective_foo(self, arg):
