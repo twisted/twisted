@@ -61,6 +61,12 @@ class BounceDomain:
         """No user exists in a BounceDomain -- always return 0
         """
         failure(user)
+    
+    def authenticateUserAPOP(self, user, digest):
+        return None
+    
+    def authenticateUserPASS(self, user, password):
+        return None
 
 
 class FileMessage:

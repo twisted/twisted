@@ -28,6 +28,7 @@ class POP3Error(Exception):
 class POP3(basic.LineReceiver):
 
     magic = None
+    _userIs = None
 
     def connectionMade(self):
         if self.magic is None:
@@ -42,14 +43,19 @@ class POP3(basic.LineReceiver):
         self.sendLine('-ERR ' + str(message))
 
     def lineReceived(self, line):
+#        print 'Received ', repr(line)
         try:
             return apply(self.processCommand, tuple(string.split(line)))
         except (ValueError, AttributeError, POP3Error, TypeError), e:
             self.failResponse('bad protocol or server: %s: %s' % (e.__class__.__name__, e))
     
+#    def sendLine(self, line):
+#        print 'Sending ', repr(line)
+#        basic.LineReceiver.sendLine(self, line)
+    
     def processCommand(self, command, *args):
         command = string.upper(command)
-        if self.mbox is None and command != 'APOP':
+        if self.mbox is None and command not in ('APOP', 'USER', 'PASS'):
             raise POP3Error("not authenticated yet: cannot do %s" % command)
         f = getattr(self, 'do_' + command, None)
         if f:
@@ -58,7 +64,17 @@ class POP3(basic.LineReceiver):
 
     def do_APOP(self, user, digest):
         self.mbox = self.authenticateUserAPOP(user, digest)
-        self.successResponse()
+        self.successResponse('Authentication succeeded')
+
+    def do_USER(self, user):
+        self._userIs = user
+        self.successResponse('USER accepted, send PASS')
+
+    def do_PASS(self, password):
+        user = self._userIs
+        self._userIs = None
+        self.mbox = self.authenticateUserPASS(user, password)
+        self.successResponse('Authentication succeeded')
 
     def do_STAT(self):
         msg = self.mbox.listMessages()
@@ -155,6 +171,17 @@ class POP3(basic.LineReceiver):
         self.transport.loseConnection()
 
     def authenticateUserAPOP(self, user, digest):
+        """Stub for APOP authentication.
+        
+        Override this to perform some useful operation
+        """
+        return Mailbox()
+
+    def authenticateUserPASS(self, user, password):
+        """Stub for USER/PASS authentication.
+        
+        Override this to perform some useful operation
+        """
         return Mailbox()
 
 

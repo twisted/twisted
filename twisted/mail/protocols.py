@@ -61,17 +61,27 @@ class VirtualPOP3(pop3.POP3):
                           # with NS, e.g.
 
     def authenticateUserAPOP(self, user, digest):
+        domain = self.lookupDomain(user, digest)
+        mbox = domain.authenticateUserAPOP(user, self.magic, digest, domain)
+        if mbox is None:
+            raise pop3.POP3Error("bad authentication")
+        return mbox
+
+    def authenticateUserPASS(self, user, password):
+        domain = self.service.domains['']
+        mbox = domain.authenticateUserPASS(user, password)
+        if mbox is None:
+            raise pop3.POP3Error("bad authentication")
+        return mbox
+
+    def lookupDomain(self, user, digest):
         try:
             user, domain = string.split(user, self.domainSpecifier, 1)
         except ValueError:
             domain = ''
         if not self.service.domains.has_key(domain):
              raise pop3.POP3Error("no such domain %s" % domain)
-        domain = self.service.domains[domain]
-        mbox = domain.authenticateUserAPOP(user, self.magic, digest, domain)
-        if mbox is None:
-            raise pop3.POP3Error("bad authentication")
-        return mbox
+        return self.service.domains[domain]
 
 
 class POP3Factory(protocol.ServerFactory):

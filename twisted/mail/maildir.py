@@ -163,17 +163,20 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
         The directory structure of a MailddirDirdbmDomain is:
 
         /passwd <-- a dirdbm file
-        /USER/inbox/{cur,new,del} <-- each user has these three directories
+        /USER/{cur,new,del} <-- each user has these three directories
         """
         AbstractMaildirDomain.__init__(self, service, root)
-        self.dbm = dirdbm.open(os.path.join(root, 'passwd'))
+        dbm = os.path.join(root, 'passwd')
+        if not os.path.exists(dbm):
+            os.makedirs(dbm)
+        self.dbm = dirdbm.open(dbm)
         self.postmaster = postmaster
 
     def userDirectory(self, name):
         """Get the directory for a user
 
         If the user exists in the dirdbm file, return the directory
-        os.path.join(root, name, 'inbox'), creating it if necessary.
+        os.path.join(root, name), creating it if necessary.
         Otherwise, returns postmaster's mailbox instead if bounces
         go to postmaster, otherwise return None
         """
@@ -184,14 +187,13 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
         dir = os.path.join(self.root, name)
         if not os.path.isdir(dir):
             os.mkdir(dir)
-            os.mkdir(os.path.join(dir, 'inbox'))
             for subdir in ['new', 'cur', 'tmp', '.Trash']:
-                os.mkdir(os.path.join(dir, 'inbox', subdir))
+                os.mkdir(os.path.join(dir, subdir))
             for subdir in ['new', 'cur', 'tmp']:
-                os.mkdir(os.path.join(dir, 'inbox', '.Trash', subdir))
-            fp=open(os.path.join(dir, 'inbox', '.Trash', 'maildirfolder'), 'w')
+                os.mkdir(os.path.join(dir, '.Trash', subdir))
+            fp=open(os.path.join(dir, '.Trash', 'maildirfolder'), 'w')
             fp.close()
-        return os.path.join(dir, 'inbox')
+        return dir
 
     def authenticateUserAPOP(self, user, magic, digest, domain):
         """Return Mailbox to valid APOP authentications
@@ -204,4 +206,11 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
         my_digest = md5.new(magic+self.dbm[user]).digest()
         my_digest = string.join(map(lambda x: "%02x"%ord(x), my_digest), '')
         if digest == my_digest:
-            return MaildirMailbox(os.path.join(self.root, user, 'inbox'))
+            return MaildirMailbox(os.path.join(self.root, user))
+
+    def authenticateUserPASS(self, username, password):
+        if not self.dbm.has_key(username) or self.dbm[username] != password:
+            return None
+        return MaildirMailbox(os.path.join(self.root, username))
+
+        
