@@ -31,6 +31,12 @@ try:
 except:
     pty = None
 
+try:
+    from initgroups import initgroups
+    import pwd
+except:
+    def initgroups(*args): pass
+
 from twisted.persisted import styles
 from twisted.python import log, failure
 from twisted.internet import protocol
@@ -443,14 +449,18 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
 
                 if path:
                     os.chdir(path)
+                for fd in range(3, 256):
+                    try:    os.close(fd)
+                    except: pass
                 # set the UID before I actually exec the process
                 if settingUID:
-                    os.setuid(uid)
                     os.setgid(gid)
+                    initgroups(pwd.getpwuid(uid)[0], gid)
+                    os.setuid(uid)
                 os.execvpe(command, args, environment)
             except:
-                stderr = os.fdopen(fd, 'w')
-                stderr.write("Upon execvpe %s %s in environment %s\n:" %
+                stderr = os.fdopen(1, 'w')
+                stderr.write("Upon execvpe %s %s in environment %s:\n" %
                              (command, str(args),
                               "id %s" % id(environment)))
                 traceback.print_exc(file=stderr)
