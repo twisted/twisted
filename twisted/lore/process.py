@@ -19,6 +19,9 @@ import sys, os
 class NoProcessorError(Exception):
     pass
 
+class ProcessingFailure(Exception):
+    pass
+
 cols = 79
 
 def dircount(d):
@@ -32,6 +35,7 @@ class Walker:
         self.linkrel = linkrel
         self.fext = fext
         self.walked = []
+        self.failures = []
 
     def walkdir(self, topdir):
         self.basecount = dircount(topdir)
@@ -52,7 +56,10 @@ class Walker:
             i += 1
             fname = os.path.splitext(fullpath)[0]
             self.percentdone((float(i) / len(self.walked)), fname)
-            self.df(fullpath, linkrel)
+            try:
+                self.df(fullpath, linkrel)
+            except ProcessingFailure, e:
+                self.failures.append((fullpath, e))
         self.percentdone(1., None)
 
     def percentdone(self, percent, fname):

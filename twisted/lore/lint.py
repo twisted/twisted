@@ -15,7 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 # 
 
-from twisted.lore import tree
+from twisted.lore import tree, process
 from twisted.web import domhelpers
 from twisted.python import reflect
 
@@ -28,6 +28,8 @@ class TagChecker:
     def check(self, dom, filename):
         for method in reflect.prefixedMethods(self, 'check_'):
             method(dom, filename)
+        if self.hadErrors:
+            raise process.ProcessingFailure("invalid format")
 
     def _reportError(self, filename, element, error):
         hlint = element.hasAttribute('hlint') and element.getAttribute('hlint')

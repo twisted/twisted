@@ -44,6 +44,20 @@ class Options(usage.Options):
         self['files'] = files
 
 
+def getProcessor(input, output, config):
+    plugins = plugin.getPlugIns("lore", 0, 0)
+    for plug in plugins:
+        if plug.tapname == input:
+            module = plug
+            break
+    else:
+        print '%s: no such input: %s' % (sys.argv[0], input)
+        return
+    module = module.load()
+    try:
+        return process.getProcessor(module, output, config)
+    except process.NoProcessorError, e:
+        print "%s: %s" % (sys.argv[0], e)
 
 def run():
     opt = Options()
@@ -53,19 +67,8 @@ def run():
         print '%s: %s' % (sys.argv[0], errortext)
         print '%s: Try --help for usage details.' % sys.argv[0]
         sys.exit(1)
-    plugins = plugin.getPlugIns("lore", 0, 0)
-    for plug in plugins:
-        if plug.tapname == opt['input']:
-            module = plug
-            break
-    else:
-        print '%s: no such input: %s' % (sys.argv[0], opt['input'])
-        sys.exit(1)
-    module = module.load()
-    try:
-        df = process.getProcessor(module, opt['output'], opt.config)
-    except process.NoProcessorError, e:
-        print "%s: %s" % (sys.argv[0], e)
+    df = getProcessor(opt['input'], opt['output'], opt.config)
+    if not df:
         sys.exit(1)
     klass = process.Walker
     if opt['plain']: 
@@ -79,3 +82,8 @@ def run():
     else:
         w.walkdir(opt['docsdir'] or '.')
     w.generate()
+    if w.failures:
+        for (file, errors) in w.failures:
+            for error in errors:
+                print "%s:%s" % (file, error)
+        sys.exit(1)

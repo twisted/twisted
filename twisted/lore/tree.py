@@ -18,7 +18,7 @@ import re, os, cStringIO, time, cgi, string
 from twisted import copyright
 from twisted.python import htmlizer, text
 from twisted.web import microdom, domhelpers
-
+import process
 
 # relative links to html files
 def fixLinks(document, ext):
@@ -214,12 +214,13 @@ def parseFileAndReport(fn):
     try:
         return microdom.parse(open(fn))
     except microdom.MismatchedTags, e:
-        print ("%s:%s:%s: begin mismatched tags <%s>/</%s>" %
-               (e.filename, e.begLine, e.begCol, e.got, e.expect))
-        print ("%s:%s:%s: end mismatched tags <%s>/</%s>" %
-               (e.filename, e.endLine, e.endCol, e.got, e.expect))
+        raise process.ProcessingFailure(
+              "%s:%s: begin mismatched tags <%s>/</%s>" %
+               (e.begLine, e.begCol, e.got, e.expect),
+              "%s:%s: end mismatched tags <%s>/</%s>" %
+               (e.endLine, e.endCol, e.got, e.expect))
     except microdom.ParseError, e:
-        print e
+        raise process.ProcessingFailure("%s:%s:%s" % (e.line, e.col, e.message))
 
 def doFile(fn, linkrel, ext, url, templ):
     doc = parseFileAndReport(fn)
