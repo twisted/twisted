@@ -1,37 +1,24 @@
-Twisted 0.10.0
+Twisted 0.10.1
 
 Quote of the Release:
 
-  <glyph> but one person's identity could have multiple perspectives
-  <e@ircnet> multiple perspective disorder
+  <moshez> glyph: yes, TCP connection forwarder is good.
+  <illume> why not twisted.internet.tcp_forwarder then?
+  <moshez> illume: because I wanted to use the word "stupid" in code.
 
-What's new in 0.10.0?
+What's new in 0.10.1?
 
-  Twisted Enterprise, relational database integration with Twisted.  Currently
-  it is comprised of a multithreaded database request processing service that
-  can handle multiple database connections, but there are plans to expand it to
-  provide more traditional "application-server" style services.
+  twisted.web.proxy, an HTTP proxy, HTTP reverse proxy, and HTTP reverse proxy
+  implemented as a Resource, allowing proxying to be nested within a website.
 
-  "Passport" addition to Twisted Internet.  This is a system-wide way of
-  representing services, identities, and perspectives.  Previously just for PB,
-  this model is being applied to all protocols so that a user need have only
-  one account with the system, but can access it through whatever protocols are
-  available.
+  twisted.internet.stupidproxy, a TCP connection forwarder.
 
-  "Versioned" persistence style, which provides for a smooth way to upgrade
-  state from one version of Twisted persistent state to another.
+  Renaming of many classes in twisted.spread.pb for improved readability.
 
-  Many minor bugfixes and enhancements to Twisted Web/Reality/Spread/Internet.
+  New convention for dealing with Twisted plugins; --plugin option for twistd.
 
-  "Twisted Manhole", 'direct manipulation' service for Twisted, both server and
-  client.  The client is a much nicer way to deal with remotely accessible code
-  than the standard telnet way.
-
-  Lots more documentation.
-
-  Acceptance test automation.
-
-  Copyright text added.
+  twisted.web.widgets, an integrated presentation framework for use with
+  Twisted.Web.
 
 What is this?
 
