@@ -54,7 +54,7 @@ def suggestThreadPoolSize(size):
     oldSize = theThreadPool.max
     theThreadPool.max = size
     if oldSize > size:
-        import threadpool
+        from twisted.python import threadpool
         for i in range(oldSize - size):
             theThreadPool.q.put(threadpool.WorkerStop)
     else:
