@@ -21,8 +21,8 @@ Test cases for twisted.reality module.
 
 from pyunit import unittest
 
-from twisted import reality
 from twisted.reality import error
+from twisted import reality
 
 class ContainmentTestCase(unittest.TestCase):
     def setUp(self):
@@ -34,7 +34,6 @@ class ContainmentTestCase(unittest.TestCase):
         self.bob =    reality.Player("bob")
         self.room =   reality.Room("room")
         self.area =   reality.Room("area")
-
 
     def tearDown(self):
         for x in 'ball', 'table', 'slab', 'bob', 'room':
@@ -67,12 +66,7 @@ class ContainmentTestCase(unittest.TestCase):
         assert self.ball.location is self.table
         assert self.ball.place is self.table
         assert self.table.find('ball') is self.ball
-        try:
-            self.ball.move(destination = self.room, actor = self.bob)
-        except error.Failure:
-            pass
-        else:
-            assert 0, "This should fail."
+        self.failUnlessRaises(error.Failure, self.ball.move, destination=self.room, actor=self.bob)
         self.ball.component = 0
         self.ball.location = self.room
         assert self.room.find('ball') is self.ball
@@ -95,12 +89,7 @@ class ContainmentTestCase(unittest.TestCase):
         self.ball.location = self.slab
         assert self.slab.find('ball') is self.ball
         for x in (self.room, self.table):
-            try:
-                x.find('ball')
-            except error.CantFind:
-                pass
-            else:
-                assert 0, "Shoudldn't be able to find 'ball'"
+            self.failUnlessRaises(error.CantFind, x.find, 'ball')
 
     def testSurfaceContainment(self):
         self.table.surface = 1
