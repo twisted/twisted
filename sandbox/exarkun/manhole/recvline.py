@@ -49,12 +49,10 @@ class RecvLineHandler:
         print 'Resetting', modes
 
     def keystrokeReceived(self, keyID):
-        print repr(keyID)
         m = self.keyHandlers.get(keyID)
         if m is not None:
             m()
         elif keyID in string.printable:
-            print repr(keyID)
             self.history[-1] += keyID
             self.proto.write(keyID)
 
