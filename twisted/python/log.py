@@ -213,10 +213,19 @@ class Log:
 
     def __init__(self, file, ownable):
         self.file = file
-        for attr in file_protocol:
-            if not hasattr(self,attr):
-                setattr(self,attr,getattr(file,attr))
 
+    def __getattr__(self, attr):
+        if attr in file_protocol:
+            return getattr(self.file, attr)
+        else:
+            raise AttributeError, attr
+    
+    def __setattr__(self, attr, value):
+        if attr in file_protocol:
+            setattr(self.file, attr, value)
+        else:
+            self.__dict__[attr] = value
+    
     def write(self,bytes):
         if not bytes:
             return
