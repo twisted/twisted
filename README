@@ -20,6 +20,9 @@ What's new in 0.10.1?
   twisted.web.widgets, an integrated presentation framework for use with
   Twisted.Web.
 
+  Added finger implementation in twisted.protocols.finger, and some less useful
+  protocols (such as echo) in twisted.protocols.wire.
+
 What is this?
 
   Twisted is an event-based framework for internet applications.  It includes a
