@@ -4,6 +4,7 @@ from __future__ import nested_scopes
 import cgi
 from twisted.web import microdom, domhelpers
 from twisted.python import reflect
+from twisted import copyright
 
 class BadStream(Exception):
      pass
@@ -244,7 +245,7 @@ class JabberIQMixin:
              def _(query):
                  myTo, myFrom = from_, to
                  e = microdom.Element('iq', {'id': id, 'from': to,
-                                             'to': 'from})
+                                             'to': from, type: 'error'})
                  e.appendChild(query)
                  self.writeElement(e)
              d.addCallback(_)
@@ -253,7 +254,7 @@ class JabberIQMixin:
                  code, text = failure.value
                  myTo, myFrom = from_, to
                  e = microdom.Element('iq', {'id': id, 'from': to,
-                                             'to': 'from})
+                                             'to': from, type: 'result'})
                  error = microdom.Element('error', {'code': code})
                  error.appendChild(microdom.Text(cgi.escape(text)))
                  e.appendChild(error)
@@ -261,8 +262,32 @@ class JabberIQMixin:
              d.addErrback(_)
 
     def methodCalled(self, type, ns, from_, to, id, query):
-        # fail
+        if ns.startswith("http://"):
+            return self.methodCalledURL(type, ns, from_, to, id, query)
+        else:
+            n = ns.replace(":", "_")
+            m = getattr(self, "methodCalled_"+n, self.methodCalledUnknown)
+            return m(type, ns, from_, to, id, query)
+
+    def methodCalledUnknown(self, type, ns, from_, to, id, query):
         return defer.fail(IQFailure(502, "I am a silly monkey"))
+
+    methodCalledURL = methodCalledUnknown
+
+
+class JabberIQAdMixin:
+
+    "Free advertisement is fun"
+
+    def methodCalled_jabber_iq_version(self, type, ns, from_, to, id, query):
+        e = microdom.Element(query, {'xmlns': ns})
+        name = microdom.Element('name')
+        name.appendChild(microdom.Text("TwistedJabber"))
+        e.appendChild(name)
+        version = microdom.Element('version')
+        version.appendChild(microdom.Text(copyright.version))
+        e.appendChild(version)
+        return defer.succeed(e)
 
 
 class JabberIQLoggingInMixin(JabberIQMixin):
@@ -305,5 +330,5 @@ class JabberCoreMixin(JabberMessageMixin, JabberPresenceMixin, JabberIQMixin):
     pass
 
 class JabberCoreClientMixin(JabberMessageMixin, JabberPresenceMixin,
-                            JabberIQLoggingInMixin):
+                            JabberIQLoggingInMixin, JabberIQAdMixin):
     pass
