@@ -16,7 +16,7 @@ import distutils
 from distutils.core import Extension
 
 if os.path.exists('twisted'):
-    sys.path.append('.') # eek! need this to import twisted. sorry.
+    sys.path.insert(0, '.') # eek! need this to import twisted. sorry.
 from twisted import copyright
 from twisted.python import dist, util
 
