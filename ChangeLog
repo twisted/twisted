@@ -1,3 +1,7 @@
+2002-04-04  Glyph Lefkowitz  <glyph@twistedmatrix.com>
+
+	* Removed __getattr__ backwards compatibility in PB
+
 2002-04-03  Chris Armstrong  <carmstro@twistedmatrix.com>
 
 	* twisted/python/usage.py, twisted/test/test_usage.py, bin/mktap, twisted/tap/*.py:
@@ -5,32 +9,33 @@
 	'opts' dict. This is backwards compatible, and I added a deprecation warning.
 	
 
+>>>>>>> 1.41
 2002-04-01  Chris Armstrong  <carmstro@twistedmatrix.com>
 
 	* .: Releasing Twisted 0.16.0.
 
 2002-03-29  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
 
-        * Added Qt event loop support, written by Sirtaj Singh Kang and
-        Aleksandar Erkalovic.
+	* Added Qt event loop support, written by Sirtaj Singh Kang and
+	Aleksandar Erkalovic.
 
 2002-03-29  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
 
-        * Added a 'coil' command for configuring TAP files
+	* Added a 'coil' command for configuring TAP files
 
 2002-03-15  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
 
-        * XML-RPC published methods can now return Deferreds, and Twisted
-        will Do The Right Thing.
+	* XML-RPC published methods can now return Deferreds, and Twisted
+	will Do The Right Thing.
 
 2002-03-13  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
 
-        * Refactored coil, the configuration mechanism for Twisted.
-        See twisted.coil and twisted.coil.plugins for examples of how
-        to use the new interface. Chris Armstrong did some UI improvements
-        for coil as well.
+	* Refactored coil, the configuration mechanism for Twisted.
+	See twisted.coil and twisted.coil.plugins for examples of how
+	to use the new interface. Chris Armstrong did some UI improvements
+	for coil as well.
 
-        * Checked in win32 Process support, and fixed win32 event loop.
+	* Checked in win32 Process support, and fixed win32 event loop.
 
 2002-03-11  Glyph Lefkowitz  <glyph@janus.twistedmatrix.com>
 
@@ -42,7 +47,7 @@
 2002-03-09  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
 
 	* Automatic log rotation for twistd. In addition, sending SIGUSR1
-        to twistd will rotate the log.
+	to twistd will rotate the log.
 
 2002-03-07  Chris Armstrong  <carmstro@twistedmatrix.com>
 

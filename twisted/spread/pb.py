@@ -283,15 +283,6 @@ class RemoteReference(Serializable, styles.Ephemeral):
         """
         return self.broker._sendMessage('',self.perspective, self.luid, name, args, kw)
 
-    def __getattr__(self, key):
-        """(Deprecated) Return a RemoteMethod.
-        """
-        if (key[:2]=='__' and key[-2:]=='__'):
-            raise AttributeError(key)
-        file, lineno, func, nne = traceback.extract_stack()[-2] # caller
-        log.msg("%s:%s %s calls obsolete 'transparent' RemoteMethod %s" % (file, lineno, func, key))
-        return self.remoteMethod(key)
-
     def remoteMethod(self, key):
         """Get a RemoteMethod for this key.
         """
@@ -399,7 +390,7 @@ class _NetUnjellier(jelly._Unjellier):
     def _unjelly_cache(self, rest):
         global copyTags
         luid = rest[0]
-        cNotProxy = _RemoteCacheDummy() #copyTags[rest[1]]()
+        cNotProxy = _RemoteCacheDummy()
         cNotProxy.broker = self.broker
         cNotProxy.luid = luid
         cNotProxy.__class__ = copyTags[rest[1]]
