@@ -1096,6 +1096,9 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def do_DELETE(self, tag, name):
         name = self._parseMbox(name)
+        if name.lower() == 'inbox':
+            self.sendNegativeResponse(tag, 'You cannot delete the inbox')
+            return
         try:
             self.account.delete(name)
         except MailboxException, m:
