@@ -295,7 +295,7 @@ class IReactorCore(Interface):
             'after', or 'during', describing when to call it relative to the
             event's execution.
 
-          * eventType: this is a string describing the type of event.  It
+          * eventType: this is a string describing the type of event.
 
           * callable: the object to call before shutdown.
 
