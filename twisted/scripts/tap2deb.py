@@ -51,11 +51,13 @@ def run():
         sys.exit("%s: %s" % (sys.argv[0], ue))
 
     tap_file = config['tapfile']
-    protocol = config['protocol'] or os.path.splitext(tap_file)[0]
+    base_tap_file = os.path.basename(config['tapfile'])
+    protocol = (config['protocol'] or os.path.splitext(base_tap_file)[0])
     deb_file = config['debfile'] or 'twisted-'+protocol
     version = config['version']
     maintainer = config['maintainer']
-    description = config['description'] or ('A TCP server for %(protocol)s' % vars())
+    description = config['description'] or ('A TCP server for %(protocol)s' %
+                                            vars())
     long_description = config['long_description'] or 'Automatically created by tap2deb'
     twistd_option = type_dict[config['type']]
     date = string.strip(os.popen('822-date').read())
@@ -75,7 +77,7 @@ def run():
     '''\
 /etc/init.d/%(deb_file)s
 /etc/default/%(deb_file)s
-/etc/%(tap_file)s
+/etc/%(base_tap_file)s
 ''' % vars())
 
     save_to_file(os.path.join('.build', directory, 'debian', 'default'), 
@@ -242,7 +244,7 @@ install-stamp: build-stamp
 	dh_installdirs
 
 	# Add here commands to install the package into debian/tmp.
-	cp %(tap_file)s debian/tmp/etc/
+	cp %(base_tap_file)s debian/tmp/etc/
 	cp debian/init.d debian/tmp/etc/init.d/%(deb_file)s
 	cp debian/default debian/tmp/etc/default/%(deb_file)s
 	cp debian/copyright debian/tmp/usr/share/doc/%(deb_file)s/
