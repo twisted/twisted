@@ -145,7 +145,7 @@ class XMLParser(Protocol):
                 self.gotTagStart(self.tagName, {})
             return 'bodydata'
         else:
-            self._parseError(repr(byte))
+            self._parseError('unexpected %r'% byte)
 
     def begin_expectcdata(self, byte):
         self.cdatabuf = byte
