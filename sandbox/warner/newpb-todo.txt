@@ -26,6 +26,7 @@ putting this in the protocol will oblige other implementations to handle them
 too.
 
 * change the method-call syntax to include an interfacename
+DONE
 
 Scope the method name to the interface. This implies (I think) one of two
 things:
@@ -70,6 +71,7 @@ From glyph:
 http://svn.twistedmatrix.com/cvs/trunk/pynfo/admin.py?view=markup&rev=44&root=pynfo
 
 ** use the methods of the RemoteInterface as the "method name"
+DONE (provisional), using RIFoo['add']
 
  rr.callRemote(RIFoo.add, **args)
 
