@@ -21,6 +21,8 @@ from twisted.python import usage
 
 class Options(usage.Options):
 
+    optFlags = [["plain", 'p', "Report filenames without progress bar"]]
+
     optParameters = [
                      ["docsdir", "d", None],
                      ["linkrel", "l", ''],
@@ -59,11 +61,13 @@ def run():
         print '%s: Try --help for usage details.' % sys.argv[0]
         sys.exit(1)
     df = makeProcessingFunction(opt)
-    w = process.Walker(df, '.html', opt['linkrel'])
+    klass = process.Walker
+    if opt['plain']: 
+        klass = process.PlainReportingWalker
+    w = klass(df, '.html', opt['linkrel'])
     if opt['files']:
         for fn in opt['files']:
             w.walked.append(('', fn))
     else:
         w.walkdir(opt['docsdir'] or '.')
     w.generate()
-    print

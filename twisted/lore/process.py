@@ -50,15 +50,23 @@ class Walker:
             fname = os.path.splitext(fullpath)[0]
             self.percentdone((float(i) / len(self.walked)), fname)
             self.df(fullpath, linkrel)
-        self.percentdone(1., "*Done*")
+        self.percentdone(1., None)
 
     def percentdone(self, percent, fname):
         # override for neater progress bars
         proglen = 40
         hashes = int(percent * proglen)
         spaces = proglen - hashes
-        progstat = "[%s%s] (%s)" %('#' * hashes, ' ' * spaces,fname)
+        progstat = "[%s%s] (%s)" %('#' * hashes, ' ' * spaces,fname or "*Done*")
         progstat += (cols - len(progstat)) * ' '
         progstat += '\r'
         sys.stdout.write(progstat)
         sys.stdout.flush()
+        if fname is None:
+            print
+
+class PlainReportingWalker(Walker):
+
+    def percentdone(self, percent, fname):
+        if fname:
+            print fname
