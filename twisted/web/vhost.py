@@ -123,6 +123,7 @@ class _HostResource(resource.Resource):
         prefixLen = 3+request.isSecure()+4+len(path)+len(request.prepath[-3])
         request.path = '/'+'/'.join(request.postpath)
         request.uri = request.uri[prefixLen:]
+        del request.prepath[:3]
         return request.site.getResourceFor(request)
 
 
