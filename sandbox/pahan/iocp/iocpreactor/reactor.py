@@ -11,7 +11,7 @@ completables = {}
 
 # XXX: perhaps need to inherit from ReactorBase and incur some code duplication
 class IOCPProactor(PosixReactorBase):
-    __implements__ = (IReactorCore, IReactorTime, IReactorThreads, IReactorPluggableResolver)
+    __implements__ = (IReactorCore, IReactorTime)
 
     def installWaker(self):
         if not self.waker:

@@ -23,7 +23,17 @@ Design decision: call recursive read in abstract.IoHandle or in each IoHandle
 subclass? Latter, for now.
 
 Write buffering:
-buffer is empty list:
-    start writing the string
-buffer is non-empty:
-    add to buffer
+None? Issue write
+Some string? concat+append (this sucks)
+
+Write complete? Adjust index, issue another write if data left, otherwise set buffer to None
+
+Invariant! dataBuffer = None implies offset = 0
+
+disregard for now:
+    buffer is empty list:
+        start writing the string
+    buffer is non-empty:
+        add to buffer
+if buffer is None, schedule write
+if not, append to buffer

@@ -6,7 +6,8 @@ from win32file import AllocateReadBuffer
 
 class IoHandle(log.Logger, styles.Ephemeral):
     __implements__ = (interfaces.ITransport,)
-    dataBuffers = [] # list of strings, first one is being sent
+#    dataBuffer = None # TODO: pretty please refactor me to be a list and later to use scatter/gather IO
+#    offset = 0
 
     def __init__(self, reactor=None):
         if not reactor:
@@ -15,7 +16,9 @@ class IoHandle(log.Logger, styles.Ephemeral):
         self.readbuf = AllocateReadBuffer(8192)
 
     def write(self, data):
+        self.issueWrite(data)
 
     def do_1(self, ret, bytes):
         """write done"""
+        pass
 
