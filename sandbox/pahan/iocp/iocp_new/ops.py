@@ -6,8 +6,8 @@ from twisted.python import log
 from twisted import internet
 import twisted.internet.error # this enables access to name "internet.error"
 
-from getsockinfo import getsockinfo
 import error
+import iocpdebug
 
 SO_UPDATE_ACCEPT_CONTEXT = 0x700B
 SO_UPDATE_CONNECT_CONTEXT = 0x7010
@@ -72,7 +72,7 @@ class OverlappedOp(defer.Deferred):
 
 class ReadFileOp(OverlappedOp):
     def ovDone(self, ret, bytes):
-        if __debug__:
+        if iocpdebug.debug:
             print "ReadFileOp.ovDone(%(ret)s, %(bytes)s)" % locals()
         if not self.handleError(ret, bytes):
             self.callback((bytes, {}))
@@ -91,7 +91,7 @@ class ReadFileOp(OverlappedOp):
 
 class WriteFileOp(OverlappedOp):
     def ovDone(self, ret, bytes):
-        if __debug__:
+        if iocpdebug.debug:
             print "WriteFileOp.ovDone(%(ret)s, %(bytes)s)" % locals()
         if not self.handleError(ret, bytes):
             self.callback(bytes)
@@ -131,7 +131,7 @@ class AcceptExOp(OverlappedOp):
     acc_sock = None
 
     def ovDone(self, ret, bytes):
-        if __debug__:
+        if iocpdebug.debug:
             print "AcceptExOp.ovDone(%(ret)s, %(bytes)s)" % locals()
 #        print "    self.acc_sock.fileno() %s self.handle %s" % (self.acc_sock.fileno(), self.handle)
         if not self.handleError(ret, bytes, False):
@@ -165,7 +165,7 @@ class AcceptExOp(OverlappedOp):
 
 class ConnectExOp(OverlappedOp):
     def ovDone(self, ret, bytes):
-        if __debug__:
+        if iocpdebug.debug:
             print "ConnectExOp.ovDone(%(ret)s, %(bytes)s)" % locals()
         if not self.handleError(ret, bytes, False):
             try:

@@ -6,6 +6,7 @@ from twisted.python import reflect, log
 from abstract import ConnectedSocket
 from ops import AcceptExOp
 import address, error
+import iocpdebug
 
 class ServerSocket(ConnectedSocket):
     def __init__(self, sock, protocol, sf, sessionno):
@@ -71,7 +72,7 @@ class SocketPort(styles.Ephemeral):
             sock.close()
 
     def acceptErr(self, err):
-        if __debug__:
+        if iocpdebug.debug:
             print "acceptErr", err
             err.printTraceback()
         if isinstance(err, error.NonFatalException):

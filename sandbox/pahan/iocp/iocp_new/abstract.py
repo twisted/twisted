@@ -7,6 +7,7 @@ from twisted.internet import main, defer
 
 from ops import ReadFileOp, WriteFileOp
 import address, error
+import iocpdebug
 
 class RWHandle(log.Logger, styles.Ephemeral):
     # TODO: use a saner data structure for buffer entries or for buffer itself, for example an instance and a queue
@@ -39,12 +40,12 @@ class RWHandle(log.Logger, styles.Ephemeral):
         self.bufferEvents = {"buffer full": Set(), "buffer empty": Set()}
 
     def addBufferCallback(self, handler, event):
-        if __debug__:
+        if iocpdebug.debug:
             print "addBufferCallback(%s, %s, %s)" % (self, handler, event)
         self.bufferEvents[event].add(handler)
 
     def removeBufferCallback(self, handler, event):
-        if __debug__:
+        if iocpdebug.debug:
             print "removeBufferCallback(%s, %s, %s)" % (self, handler, event)
         self.bufferEvents[event].remove(handler)
 
@@ -53,7 +54,7 @@ class RWHandle(log.Logger, styles.Ephemeral):
             i(*a, **kw)
 
     def write(self, buffer, **kw):
-        if __debug__:
+        if iocpdebug.debug:
             print "RWHandle.write(buffer of len %s, %s" % (len(buffer), kw)
             print "    len(self.writebuf) %s, self.offset %s, self.writing %s" % \
             (len(self.writebuf), self.offset, self.writing)
@@ -100,7 +101,7 @@ class RWHandle(log.Logger, styles.Ephemeral):
         # XXX: got to pass a buffer to dataReceived to avoid copying, but most of the stuff expects that
         # to support str methods. Perhaps write a perverse C extension for this, but copying IS necessary
         # if protocol wants to store this string. I wish this was C++! No, wait, I don't.
-        if __debug__:
+        if iocpdebug.debug:
             print "RwHandle.readDone(%s, (%s, %s))" % (self, bytes, kw)
             print "    self.reading is", self.reading
         self.dataReceived(self.readbuf[:bytes], **kw)
@@ -111,7 +112,7 @@ class RWHandle(log.Logger, styles.Ephemeral):
         raise NotImplementedError
     
     def readErr(self, err):
-        if __debug__:
+        if iocpdebug.debug:
             print "RwHandle.readErr(%s, %s)" % (self, err)
         if isinstance(err, error.NonFatalException):
             self.startReading() # delay or just fail?
@@ -119,7 +120,7 @@ class RWHandle(log.Logger, styles.Ephemeral):
             self.stopWorking(err)
 
     def writeErr(self, err):
-        if __debug__:
+        if iocpdebug.debug:
             print "RwHandle.writeErr(%s, %s)" % (self, err)
             import traceback
             traceback.print_stack()
@@ -224,7 +225,7 @@ class ConnectedSocket(RWHandle):
         self.protocol.dataReceived(data)
 
     def handleDead(self, reason):
-        if __debug__:
+        if iocpdebug.debug:
             print "ConnectedSocket.handleDead(%s, %s)" % (self, reason)
         protocol = self.protocol
         del self.protocol
@@ -244,7 +245,7 @@ class ConnectedSocket(RWHandle):
                 raise
 
     def loseConnection(self):
-        if __debug__:
+        if iocpdebug.debug:
             print "ConnectedSocket.loseConnection(%s)" % (self,)
         def callback():
             self.removeBufferCallback(callback, "buffer empty")

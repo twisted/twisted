@@ -6,6 +6,7 @@ from twisted.internet import defer
 from twisted.python import log
 
 import server, client
+import iocpdebug
 
 class TcpMixin:
     def getTcpNoDelay(self):
@@ -30,7 +31,7 @@ class Port(server.SocketPort):
     proto = 0
     transport = ServerSocket
     def __init__(self, (host, port), factory, backlog, **kw):
-        if __debug__:
+        if iocpdebug.debug:
             print "listening on (%s, %s)" % (host, port)
         if isinstance(port, types.StringTypes):
             try:
@@ -53,7 +54,7 @@ class Connector(client.SocketConnector):
 
     def prepareAddress(self):
         host, port = self.addr
-        if __debug__:
+        if iocpdebug.debug:
             print "connecting to (%s, %s)" % (host, port)
         if isinstance(port, types.StringTypes):
             try:
