@@ -27,7 +27,6 @@ Maintainer: U{Moshe Zadka<mailto:moshez@twistedmatrix.com>}
 from twisted.python import components
 from twisted.application import internet, service
 from twisted.persisted import sob
-from twisted.internet import app as oldapp
 import warnings
 
 
@@ -301,11 +300,13 @@ class _ServiceNetwork:
         s.setServiceParent(self.app)
 
     def addService(self, service):
+        from twisted.internet import app as oldapp
         if isinstance(service, oldapp.ApplicationService):
             service = _NewService(service)
         self.app.addService(service)
 
     def removeService(self, service):
+        from twisted.internet import app as oldapp
         if isinstance(service, oldapp.ApplicationService):
             service = _NewService(service)
         self.app.removeService(service)
