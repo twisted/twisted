@@ -182,11 +182,19 @@ class TestSuite:
         if ok:
             output.reportSuccess(testClass, method)
         
-    def run(self, output):
+    def run(self, output, seed = None):
         output.start(self.numTests)
         testClasses = self.testClasses.keys()
         testClasses.sort(lambda x,y: cmp((x.__module__, x.__name__),
                                          (y.__module__, y.__name__)))
+
+        r = None
+        if seed is not None:
+            import random
+            r = random.Random(seed)
+            r.shuffle(testClasses)
+            output.writeln('Running tests shuffled with seed %d' % seed)
+
         for testClass in testClasses:
             testCase = testClass()
             for method in self.testClasses[testClass]:

@@ -31,7 +31,9 @@ class Options(usage.Options):
                 ["debug", "b", "Run tests in the Python debugger"]]
     optParameters = [["reactor", "r", None,
                       "The Twisted reactor to install before running the tests (looked up as a module contained in twisted.internet)"],
-                     ["logfile", "l", "test.log", "log file name"]]
+                     ["logfile", "l", "test.log", "log file name"],
+                     ["random", "z", None, 
+                      "Run tests in random order using the specified seed"]]
 
     def __init__(self):
         usage.Options.__init__(self)
@@ -61,6 +63,18 @@ class Options(usage.Options):
     opt_c = opt_testcase
     opt_f = opt_file
 
+    def postOptions(self):
+        if self['random'] is not None:
+            try:
+                self['random'] = int(self['random'])
+            except ValueError:
+                raise usage.UsageError("Argument to --random must be a positive integer")
+            else:
+                if self['random'] < 0:
+                    raise usage.UsageError("Argument to --random must be a positive integer")
+                elif self['random'] == 0:
+                    import time
+                    self['random'] = int(time.time() * 100)
 
 def run():
     if len(sys.argv) == 1:
@@ -111,7 +125,7 @@ def run():
         import pdb
         pdb.run("suite.run(reporter)", globals(), locals())
     else:
-        suite.run(reporter)
+        suite.run(reporter, config['random'])
         sys.exit(not reporter.allPassed())
 
 if __name__ == '__main__':
