@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = '$Revision: 1.32 $'[11:-2]
+__version__ = '$Revision: 1.33 $'[11:-2]
 
 import os, sys
 from UserDict import UserDict
@@ -184,9 +184,9 @@ def getPassword(prompt = 'Password: ', confirm = 0, forceTTY = 0):
 
 def dict(*a, **k):
     import warnings
-    import twisted.python.compat
-    warnings.warn('twisted.python.util.dict is deprecated.  Use twisted.python.compat.dict instead')
-    return twisted.python.compat.dict(*a, **k)
+    import __builtin__
+    warnings.warn('twisted.python.util.dict is deprecated.  Use __builtin__.dict instead')
+    return __builtin__.dict(*a, **k)
 
 def println(*a):
     sys.stdout.write(' '.join(map(str, a))+'\n')

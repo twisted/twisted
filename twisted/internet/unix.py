@@ -33,7 +33,6 @@ if not hasattr(socket, 'AF_UNIX'):
 from twisted.internet import base, tcp, error
 from twisted.internet.error import CannotListenError
 from twisted.python import log
-from twisted.python.compat import *
 
 class Server(tcp.Server):
     def __init__(self, sock, protocol, client, server, sessionno):

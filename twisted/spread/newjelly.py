@@ -65,7 +65,7 @@ Instance Method: s.center, where s is an instance of UserString.UserString:
 @author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
 
-__version__ = "$Revision: 1.8 $"[11:-2]
+__version__ = "$Revision: 1.9 $"[11:-2]
 
 # System Imports
 import string
@@ -105,7 +105,6 @@ from new import instancemethod
 from twisted.python.reflect import namedObject, namedModule, qual
 from twisted.persisted.crefutil import NotKnown, _Tuple, _InstanceMethod, _DictKeyAndValue, _Dereference
 from twisted.python import runtime
-from twisted.python.compat import bool
 
 if runtime.platform.getType() == "java":
     from org.python.core import PyStringMap

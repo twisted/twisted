@@ -59,8 +59,7 @@ else:
 
 # Twisted imports
 from twisted.internet import protocol, defer, error
-from twisted.python.compat import dict, isinstance
-from twisted.python import log, compat, failure
+from twisted.python import log, failure
 
 
 PORT = 53
@@ -186,7 +185,7 @@ class Name:
     __implements__ = (IEncodable,)
 
     def __init__(self, name=''):
-        assert isinstance(name, compat.StringTypes)
+        assert isinstance(name, types.StringTypes)
         self.name = name
 
     def encode(self, strio, compDict=None):
@@ -604,7 +603,7 @@ class Record_AAAA:               # OBSOLETE (or headed there)
     TYPE = AAAA
     
     def __init__(self, address = '::'):
-        self.address = compat.inet_pton(socket.AF_INET6, address)
+        self.address = socket.inet_pton(socket.AF_INET6, address)
 
 
     def encode(self, strio, compDict = None):
@@ -622,7 +621,7 @@ class Record_AAAA:               # OBSOLETE (or headed there)
 
 
     def __str__(self):
-        return '<AAAA %s>' % (compat.inet_ntop(socket.AF_INET6, self.address),)
+        return '<AAAA %s>' % (socket.inet_ntop(socket.AF_INET6, self.address),)
 
 
 class Record_A6:
@@ -631,7 +630,7 @@ class Record_A6:
     
     def __init__(self, prefixLen = 0, suffix = '::', prefix = ''):
         self.prefixLen = prefixLen
-        self.suffix = compat.inet_pton(socket.AF_INET6, suffix)
+        self.suffix = socket.inet_pton(socket.AF_INET6, suffix)
         self.prefix = Name(prefix)
         self.bytes = int((128 - self.prefixLen) / 8.0)
 
@@ -665,7 +664,7 @@ class Record_A6:
     def __str__(self):
         return '<A6 %s %s (%d)>' % (
             self.prefix,
-            compat.inet_ntop(socket.AF_INET6, self.suffix),
+            socket.inet_ntop(socket.AF_INET6, self.suffix),
             self.prefixLen
         )
 

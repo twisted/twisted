@@ -1,4 +1,3 @@
-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 # 
@@ -21,8 +20,6 @@
 import types
 from twisted.trial import unittest
 from twisted.spread import newjelly, pb
-
-from twisted.python.compat import *
 
 class A:
     """

@@ -2,10 +2,9 @@
 #
 # page.py
 
-__version__ = "$Revision: 1.20 $"[11:-2]
+__version__ = "$Revision: 1.21 $"[11:-2]
 
 from twisted.python import reflect
-from twisted.python.compat import *
 from twisted.web import resource
 from twisted.web.woven import model, view, controller, interfaces, template
 

@@ -17,11 +17,10 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-import sys
+import sys, types
 from struct import pack
 
 from twisted.python import reflect
-from twisted.python.compat import True, False
 
 from twisted.world import hashless
 from twisted.world.util import Backwards
@@ -110,7 +109,7 @@ class MetaStorable(type):
         klassdict['_schema_orig'] = scma
 
         # [(typ, name), (typ, name)...] schema is deprecated
-        if not isinstance(scma, dict):
+        if not isinstance(scma, types.DictType):
             warnings.warn('%s.__schema__ should now be a name->type dict' % (subklass,), 
                 DeprecationWarning)
             scma = _upgradeSchema(scma)

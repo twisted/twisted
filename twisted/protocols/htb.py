@@ -30,7 +30,7 @@ shaper for the Linux kernel<http://luxik.cdi.cz/~devik/qos/htb/>}.
 
 from __future__ import nested_scopes
 
-__version__ = '$Revision: 1.3 $'[11:-2]
+__version__ = '$Revision: 1.4 $'[11:-2]
 
 from twisted.python.components import Interface
 
@@ -39,7 +39,6 @@ from twisted.python.components import Interface
 # the same true of os.times?
 from time import time
 
-from twisted.python.compat import *
 import pcp
 
 class Bucket:

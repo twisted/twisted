@@ -52,9 +52,6 @@ except ImportError:
 # Sibling Imports
 import failure
 
-from twisted.python.compat import *
-
-
 class Settable:
     """
     A mixin class for syntactic sugar.  Lets you assign attributes by

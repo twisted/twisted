@@ -19,7 +19,6 @@ from twisted.trial import unittest
 
 from twisted.python import log
 from twisted.python import failure
-from twisted.python.compat import *
 
 class LogTest(unittest.TestCase):
 

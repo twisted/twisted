@@ -31,7 +31,6 @@ import cPickle
 
 # Twisted Imports
 from twisted.python import reflect
-from twisted.python.compat import True, False, bool
 
 # Sibling Imports
 from twisted.world import hashless

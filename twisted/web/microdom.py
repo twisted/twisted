@@ -41,11 +41,10 @@ from cStringIO import StringIO
 # Twisted Imports
 from twisted.protocols.sux import XMLParser, ParseError
 from twisted.python import reflect
-from twisted.python.compat import isinstance, StringTypes
 
 # create NodeList class
 from types import ListType as NodeList
-from types import UnicodeType
+from types import StringTypes, UnicodeType
 import sys
 dictsAreNotSequences=0
 try:

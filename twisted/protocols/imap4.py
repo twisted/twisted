@@ -29,7 +29,6 @@ from twisted.protocols import basic
 from twisted.internet import defer
 from twisted.internet.defer import maybeDeferred
 from twisted.python import log, components, util, failure
-from twisted.python.compat import *
 from twisted.cred import identity, error, perspective
 
 import base64, binascii, operator, re, string, time, types, rfc822, random
@@ -192,11 +191,7 @@ class IMAP4Server(basic.LineReceiver):
             self._pendingLiteral = None
             rest.seek(0, 0)
             callback(rest)
-            # XXX: here lies an lstrip sacrificed for the sake of 2.2.0
-            stripped = passon
-            while stripped and stripped[0] in '\r\n':
-                stripped = stripped[1:]
-            self.setLineMode(stripped)
+            self.setLineMode(passon.lstrip('\r\n'))
 
     def lineReceived(self, line):
         # print 'S: ' + line.replace('\r', '\\r')
@@ -933,11 +928,7 @@ class IMAP4Client(basic.LineReceiver):
             self._pendingSize = None
             rest.seek(0, 0)
             self._parts.append(rest.read())
-            # XXX: another ex- lstrip, dropped for 2.2.0 compatibility
-            stripped = passon
-            while stripped and stripped[0] in '\r\n':
-                stripped = stripped[1:]
-            self.setLineMode(stripped)
+            self.setLineMode(passon.lstrip('\r\n'))
 
     def lineReceived(self, line):
         # print 'C: ' + line
@@ -2589,7 +2580,7 @@ def collapseNestedLists(items):
     for i in items:
         if i is None:
             pieces.extend([' ', 'NIL'])
-        elif isinstance(i, StringTypes):
+        elif isinstance(i, types.StringTypes):
             if _needsLiteral(i):
                 pieces.extend([' ', '{', str(len(i)), '}', IMAP4Server.delimiter, i])
             elif (not i.startswith('BODY')) and _needsQuote(i):

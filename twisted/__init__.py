@@ -18,3 +18,8 @@
 """
 Twisted: The Framework Of Your Internet.
 """
+
+# Ensure compat gets imported
+from python import compat
+del compat
+

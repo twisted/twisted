@@ -18,7 +18,6 @@
 #
 
 from __future__ import generators
-from twisted.python.compat import *
 
 from fileutils import openPlus
 

@@ -40,7 +40,6 @@ TODO:
 from __future__ import nested_scopes
 from twisted.internet.protocol import Protocol, FileWrapper
 from twisted.python.reflect import prefixedMethodNames
-from twisted.python.compat import dict
 
 import string
 

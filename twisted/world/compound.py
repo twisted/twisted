@@ -31,9 +31,6 @@ from twisted.world.typemap import TypeMapperMapper
 ##     """
 ##     """
 
-# hack, hack
-from twisted.python.compat import *
-
 class StorableList(Allocation):
     __schema__ = {
         'typeMapper': TypeMapperMapper,

@@ -21,7 +21,6 @@
 # twisted imports
 from twisted.python import log, util
 from twisted.internet import protocol
-from twisted.python.compat import *
 
 # sibling imports
 import basic

@@ -24,8 +24,6 @@ For reporting test results in a seperate process.
 
 from __future__ import nested_scopes
 
-from twisted.python.compat import *
-
 import reporter
 
 from twisted.internet import protocol

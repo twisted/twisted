@@ -21,7 +21,6 @@
 # Twisted Imports
 
 from twisted.python import finalize
-from twisted.python.compat import True, False
 
 # Sibling Imports
 

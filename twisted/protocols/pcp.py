@@ -18,9 +18,8 @@
 
 """Producer-Consumer Proxy."""
 
-__version__ = '$Revision: 1.2 $'[11:-2]
+__version__ = '$Revision: 1.3 $'[11:-2]
 
-from twisted.python.compat import *
 from twisted.python import log
 from twisted.internet import interfaces
 

@@ -36,7 +36,6 @@ rate is expected to be monotonically increasing.
 from __future__ import nested_scopes
 
 # twisted imports
-from twisted.python.compat import *
 from twisted.python import reflect, log, failure, components
 import twisted.python.util
 

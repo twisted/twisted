@@ -23,7 +23,6 @@
 from twisted.protocols import basic
 from twisted.internet import protocol, defer, reactor
 from twisted.python import log, components, util
-from twisted.python.compat import isinstance, StringTypes
 
 # System imports
 import time, string, re, base64, types, socket, os, random
@@ -212,7 +211,7 @@ class Address:
         if isinstance(addr, Address):
             self.__dict__ = addr.__dict__.copy()
             return
-        elif not isinstance(addr, StringTypes):
+        elif not isinstance(addr, types.StringTypes):
             addr = str(addr)
         self.local = ''
         self.domain = ''
@@ -921,7 +920,7 @@ class SMTPSenderFactory(protocol.ClientFactory):
     protocol = SMTPSender
     
     def __init__(self, fromEmail, toEmail, file, deferred, retries=5):
-        if isinstance(toEmail, StringTypes):
+        if isinstance(toEmail, types.StringTypes):
             toEmail = [toEmail]
         self.fromEmail = Address(fromEmail)
         self.toEmail = toEmail

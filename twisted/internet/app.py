@@ -21,8 +21,6 @@ API Stability: stable
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
-from twisted.python.compat import *
-
 # System Imports
 import os
 import string
@@ -48,7 +46,6 @@ from twisted.python.runtime import platform
 from twisted.cred.authorizer import DefaultAuthorizer
 from twisted.python.reflect import Accessor
 from twisted.python.util import OrderedDict
-from twisted.python.compat import StringTypes
 
 from twisted.python import context
 

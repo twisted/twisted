@@ -17,13 +17,11 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-
-from types import NoneType, ClassType
+from types import NoneType, ClassType, DictType
 import struct
 
 from twisted.python import components, reflect
 from twisted.world import structfile
-from twisted.python.compat import True, False, bool
 
 class ITypeMapper(components.Interface):
     """
@@ -313,7 +311,7 @@ class StorableDictionaryTypeMapper(ObjectTypeMapper):
 
     def highToLow(self, db, obj):
         from twisted.world.compound import StorableDictionaryFacade, StorableDictionaryStore
-        if isinstance(obj, dict):
+        if isinstance(obj, DictType):
             newstor = StorableDictionaryStore(db, self.getKeyType(), self.getValueType())
             StorableDictionaryFacade(newstor).update(obj)
             return self.highToLow(db, newstor)
