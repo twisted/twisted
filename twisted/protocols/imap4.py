@@ -294,15 +294,16 @@ class IMAP4Server(basic.LineReceiver):
         try:
             savedState, challenge = auth.authenticateResponse(savedState, result)
         except AuthenticationError, e:
-            print e
-            self.sendNegativeResponse(tag, 'Authentication failed')
+            self.sendNegativeResponse(tag, 'Authentication failed: ' + str(e))
         else:
-            if challenge == 1:
+            if components.implements(challenge, IAccount):
                 self.sendPositiveResponse(tag, 'Authentication successful')
                 self.state = 'auth'
+                self.account = challenge
             else:
-                d = self.sendContinuationRequest(challenge)
-                d.addCallback(self._cbAuthChunk, savedState, tag)
+                self._pendingLiteral = defer.Deferred()
+                self.sendContinuationRequest(challenge)
+                self._pendingLiteral.addCallback(self._cbAuthChunk, savedState, tag)
 
     def unauth_LOGIN(self, tag, args):
         args = parseNestedParens(args)
@@ -2225,11 +2226,15 @@ class CramMD5ServerAuthenticator:
     # RFC 2195
     __implements__ = (IServerAuthentication,)
 
-    def __init__(self, host, users = None):
+    def __init__(self, host, users = None, accounts = None):
         self.host = host
         if users is None:
             users = {}
+        if accounts is None:
+            accounts = {}
         self.users = users
+        self.accounts = accounts
+        assert self.users.keys() == self.accounts.keys()
 
     def getName(self):
         return "CRAM-MD5"
@@ -2261,7 +2266,11 @@ class CramMD5ServerAuthenticator:
 
         if verify != digest:
             raise AuthenticationError, "Invalid response"
-        return None, 1
+        return None, self.accounts[name]
+    
+    def addUser(self, name, secret, account):
+        self.users[name] = secret
+        self.accounts[name] = account
 
 class CramMD5ClientAuthenticator:
     __implements__ = (IClientAuthentication,)
@@ -2293,7 +2302,40 @@ class ReadOnlyMailbox(MailboxException):
     def __str__(self):
         return 'Mailbox open in read-only state'
 
-class Account:
+class IAccount(components.Interface):
+    def addMailbox(self, name, mbox = None):
+        """"""
+    
+    def create(self, pathspec):
+        """"""
+    
+    def select(self, name, rw=1):
+        """"""
+    
+    def delete(self, name):
+        """"""
+    
+    def rename(self, oldname, newname):
+        """"""
+    
+    def isSubscribed(self, name):
+        """"""
+    
+    def subscribe(self, name):
+        """"""
+    
+    def unsubscribe(self, name):
+        """"""
+    
+    def listMailboxes(self, ref, wildcard):
+        """"""
+    
+    def requestStatus(self, mailbox, names):
+        """"""
+
+class MemoryAccount:
+    __implements__ = (IAccount,)
+
     mailboxes = None
     subscriptions = None
     top_id = 0

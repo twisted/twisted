@@ -283,7 +283,7 @@ class SimpleMailbox:
             self.messages.remove(i)
         return [i[3] for i in delete]
     
-class Account(imap4.Account):
+class Account(imap4.MemoryAccount):
     def _emptyMailbox(self, name, id):
         return SimpleMailbox()
 
@@ -753,11 +753,14 @@ class AuthenticatorTestCase(unittest.TestCase):
         failure.printTraceback(open('failure.log', 'w'))
         raise failure.value
 
-    def testAuthenticate(self):
-        # raise unittest.SkipTest, "No authentication schemes implemented to test"
-        
-        self.client.registerAuthenticator(imap4.CramMD5ClientAuthenticator('testuser'))
-        self.server.registerChallenger(imap4.CramMD5ServerAuthenticator('test-domain.com', {'testuser': 'secret'}))
+    def testCramMD5(self):
+        a = Account()
+        cAuth = imap4.CramMD5ClientAuthenticator('testuser')
+        sAuth = imap4.CramMD5ServerAuthenticator('test-domain.com')
+        sAuth.addUser('testuser', 'secret', a)
+
+        self.client.registerAuthenticator(cAuth)
+        self.server.registerChallenger(sAuth)
         self.authenticated = 0
 
         def auth():
@@ -771,4 +774,4 @@ class AuthenticatorTestCase(unittest.TestCase):
         loopback.loopback(self.server, self.client)
         
         self.assertEquals(self.authenticated, 1)
-
+        self.assertEquals(self.server.account, a)
