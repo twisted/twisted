@@ -25,15 +25,6 @@ from twisted.python import usage
 import sys
 
 
-usage_message = """Usage: mktap chord [OPTIONS]
-
-Options:
-        --port <#>, -p:         set the port number to <#>.
-        --user <name>, -u:      set the username to <name>. default 'user'
-        --password <word>, -w:  set the password to <word>. default 'password'
-        --ip <address>, -i:     set the public IP address to <address>.
-"""
-
 class Options(usage.Options):
     optStrings = [["password", "w", "admin"],
                   ["user", "u", "admin"],

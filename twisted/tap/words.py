@@ -19,13 +19,6 @@
 I am a support module for creating chat servers with mktap.
 """
 
-usage_message = """Usage:
-
-  mktap words [--irc *irc-port*]
-              [--port *pb-port*]
-
-Run this to generate a TAP for a twisted.words server."""
-
 from twisted.internet import tcp
 from twisted.python import usage
 from twisted.spread import pb

@@ -46,10 +46,6 @@ This creates a web.tap file that can be used by twistd.  If you specify
 no arguments, it will be a demo webserver that has the Test class from
 twisted.web.test in it."""
 
-    #def opt_help(self):
-    #    print usage_message
-    #    sys.exit(0)
-
     def opt_user(self):
         """Makes a server with ~/public_html and ~/.twistd-web-service support for users.
         """

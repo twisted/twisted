@@ -26,14 +26,6 @@ from twisted.python import usage
 import sys
 
 
-usage_message = """Usage: mktap manhole [OPTIONS]
-
-Options:
-        --port <#>, -p:         set the port number to <#>.
-        --user <name>, -u:      set the username to <name>.
-        --password <word>, -w:  set the password to <word>.
-"""
-
 class Options(usage.Options):
     optStrings = [["password", "w", "admin"],
                   ["user", "u", "admin"]]
