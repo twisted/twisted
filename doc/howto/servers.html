@@ -128,7 +128,7 @@ production-grade Twisted server, though.</p>
 
 <pre class="python">
 from twisted.protocols.protocol import Protocol, Factory
-from twisted.internet.main import Application
+from twisted.internet.app import Application
 
 class QOTD(Protocol):
 
@@ -288,7 +288,7 @@ example.</p>
 
 <pre class="python">
 from twisted.internet.protocols.protocol import Factory, Protocol
-from twisted.internet.main import Application
+from twisted.internet.app import Application
 
 class QOTD(Protocol):
 

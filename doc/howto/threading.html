@@ -31,14 +31,14 @@ However, note that most parts of Twisted are <i>not</i> thread-safe.
 <p>
 Most code in Twisted is not thread-safe. For example, writing data to a
 transport from a protocol is not thread-safe. Therefore, we want a way
-to schedule methods to be run in the main event loop. As discussed in
-the <a href="time.html">Scheduling</a> document, this can be
-done using <code class="python">twisted.internet.task</code>
-module.
+to schedule methods to be run in the main event loop. This can be done using
+the function <code class="API">twisted.internet.interfaces.IReactorCore.callFromThread</code>:
 </p>
 
 <pre class="python">
-from twisted.internet import task
+from twisted.internet import reactor
+from twisted.python import threadable
+threadable.init(1)
 
 def notThreadSafe(x):
      """do something that isn't thread-safe"""
@@ -46,7 +46,7 @@ def notThreadSafe(x):
 
 def threadSafeScheduler():
     """Run in thread-safe manner."""
-    task.schedule(notThreadSafe, 3) # will run 'notThreadSafe(3)' in the event loop
+    reactor.callFromThread(notThreadSafe, 3) # will run 'notThreadSafe(3)' in the event loop
 </pre>
 
 </body>

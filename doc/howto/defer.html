@@ -56,7 +56,10 @@ def gotData(d):
 
 g = Getter()
 g.getData(3, gotData)
+
 # run the program's event loop here
+from twisted.internet import reactor
+reactor.run()
 </pre>
 
 <h2>Deferreds</h2>
@@ -117,6 +120,8 @@ d.addErrback(printError) # printError will be called on an error
 d.arm()
 
 # run main event loop here
+from twisted.internet import reactor
+reactor.run()
 </pre>
 
 </body>

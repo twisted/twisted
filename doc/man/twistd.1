@@ -30,7 +30,10 @@ The log file will be rotated on SIGUSR1.
 Save pid in specified file (default twistd.pid)
 .TP
 \fB\-d\fR, \fB\--rundir\fR \fI<directory>\fR
-change to a supplied directory before running (default .)
+Change to a supplied directory before running (default .)
+.TP
+\fB\-r\fR, \fB\--reactor\fR \fI<reactor>\fR
+Choose which ReactorCore event loop to use, such as 'poll' or 'gtk'.
 .TP
 \fB\-f\fR, \fB\--file\fR \fI<tap file>\fR
 Read the given .tap file (default twistd.tap)
