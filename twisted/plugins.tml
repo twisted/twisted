@@ -134,3 +134,9 @@ register("Twisted News Automated TAP Builder",
          description="News Server",
          type='tap',
          tapname="news")
+
+register("Zoot TAP Builder",
+         "twisted.zoot.zoottap",
+         description="Zoot TAP builder module",
+         type='tap',
+         tapname="zoot")

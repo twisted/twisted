@@ -102,6 +102,8 @@ class GnutellaTalker(LineReceiver):
         self.transport.write(struct.pack(HEADERENCODING, (self._nextDescriptorId(), 0, ttl, 0, 0,)))
 
         # xxxxk
+        # xxx
+
     # METHODS OF INTEREST TO SUBCLASSES
     def pingReceived(self, descriptorId, ttl, hops):
         """
