@@ -252,6 +252,11 @@ collected by deleting all references to it when you are done with it, e.g.
 after <code class="python">callback()</code> is called.</p> 
 
 
+<h3>My exceptions and tracebacks aren't getting printed!</h3>
+
+<p>See previous question.</p>
+
+
 <h3>How do I use Deferreds to make my blocking code non-blocking?</h3><a name="deferreds-aren't-magic" />
 
 <p>You don't.  Deferreds don't magically turn a blocking function call into a
@@ -267,11 +272,6 @@ convenience function, <code class="API"
 base="twisted.internet.threads">deferToThread</code>, to help you with the
 threaded approach -- but be sure to read <a href="threading.xhtml">Using
 Threads in Twisted</a>.</p>
-
-
-<h3>My exceptions and tracebacks aren't getting printed!</h3>
-
-<p>See previous question.</p>
 
 
 <h3>I get <q>exceptions.ValueError: signal only works in main thread</q> when I
