@@ -176,6 +176,26 @@ class Perspective(perspective.Perspective):
     on invoking methods on other objects, see ViewPoint.)
     """
 
+    def brokerAttached(self, reference, identity, broker):
+        """An intermediary method to override.
+
+        Normally you will want to use 'attached', as described in
+        twisted.cred.perspective.Perspective.attached; however, this method
+        serves the same purpose, and in some circumstances, you are sure that
+        the protocol that objects will be attaching to your Perspective with is
+        Perspective Broker, and in that case you may wish to get the Broker
+        object they are connecting with, for example, to determine what host
+        they are connecting from.  Bear in mind that when overriding this
+        method, other, non-PB protocols will not notify you of being attached
+        or detached.
+        """
+        return self.attached(reference, identity)
+
+    def brokerDetached(self, reference, identity, broker):
+        """See brokerAttached.
+        """
+        return self.detached(reference, identity)
+
     def perspectiveMessageReceived(self, broker, message, args, kw):
         """This method is called when a network message is received.
 
@@ -449,7 +469,7 @@ class Broker(banana.Banana):
                 notifier()
             except:
                 log.deferr()
-
+    waitingForAnswers = None
     def connectionLost(self):
         """The connection was lost.
         """
@@ -457,11 +477,12 @@ class Broker(banana.Banana):
         self.disconnected = 1
         # nuke potential circular references.
         self.luids = None
-        for d in self.waitingForAnswers.values():
-            try:
-                d.errback(PB_CONNECTION_LOST)
-            except:
-                print_excFullStack(file=log.logfile)
+        if self.waitingForAnswers:
+            for d in self.waitingForAnswers.values():
+                try:
+                    d.errback(PB_CONNECTION_LOST)
+                except:
+                    print_excFullStack(file=log.logfile)
         for notifier in self.disconnects:
             try:
                 notifier()
@@ -738,8 +759,7 @@ class Broker(banana.Banana):
         """
         d = self.waitingForAnswers[requestID]
         del self.waitingForAnswers[requestID]
-        d.arm()
-        d.errback(descriptiveString)
+        d.armAndErrback(descriptiveString)
 
     def sendDecRef(self, objectID):
         """(internal) Send a DECREF directive.
@@ -845,13 +865,16 @@ class AuthRoot(Root):
         return AuthServ(self.app, broker)
 
 class _Detacher:
-    def __init__(self, perspective, remoteRef, identity):
+    def __init__(self, perspective, remoteRef, identity, broker):
         self.perspective = perspective
         self.remoteRef = remoteRef
         self.identity = identity
+        self.broker = broker
 
     def detach(self):
-        self.perspective.detached(self.remoteRef, self.identity)
+        self.perspective.brokerDetached(self.remoteRef,
+                                        self.identity,
+                                        self.broker)
 
 class IdentityWrapper(Referenceable):
     """I delegate most functionality to a identity.Identity.
@@ -872,10 +895,15 @@ class IdentityWrapper(Referenceable):
             callbackArgs = [remoteRef])
 
     def _attached(self, perspective, remoteRef):
-        perspective = perspective.attached(remoteRef, self.identity)
+        perspective = perspective.brokerAttached(remoteRef,
+                                                 self.identity,
+                                                 self.broker)
         # Make sure that when connectionLost happens, this perspective
         # will be tracked in order that 'detached' will be called.
-        self.broker.notifyOnDisconnect(_Detacher(perspective, remoteRef, self.identity).detach)
+        self.broker.notifyOnDisconnect(_Detacher(perspective,
+                                                 remoteRef,
+                                                 self.identity,
+                                                 self.broker).detach)
         return AsReferenceable(perspective, "perspective")
 
     # (Possibly?) TODO: Implement 'remote_detach' as well.
