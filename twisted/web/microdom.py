@@ -422,8 +422,8 @@ class lmx:
         return lambda **kw: self.add(name,**kw)
     def __setitem__(self, key, val):
         self.node.setAttribute(key, val)
-    def text(self, txt):
-        nn = Text(txt)
+    def text(self, txt, raw=0):
+        nn = Text(txt, raw=raw)
         self.node.appendChild(nn)
         return self
     def add(self, tagName, **kw):
