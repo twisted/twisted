@@ -29,6 +29,10 @@ from twisted.python import log, util
 # Sibling Imports
 from reflect import namedModule
 
+try:
+    from os.path import realpath as cacheTransform
+except ImportError:
+    from os.path import abspath as cacheTransform
 
 class PlugIn:
     """I am a Python module registered in a plugins.tml file.
@@ -134,7 +138,7 @@ def getPluginFileList(debugInspection=None, showProgress=None):
     result = []
     loaded = {}
     seenNames = {}
-    paths = filter(os.path.isdir, map(os.path.realpath, sys.path))
+    paths = filter(os.path.isdir, map(cacheTransform, sys.path))
 
     progress = 0.0
     increments = 1.0 / len(paths)
