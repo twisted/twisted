@@ -153,16 +153,22 @@ class Deferred:
     def pause(self):
         """Stop processing on a Deferred until unpause() is called.
         """
-        self.paused = 1
+        self.paused = self.paused + 1
 
 
     def unpause(self):
         """Process all callbacks made since pause() was called.
         """
-        self.paused = 0
+        self.paused = self.paused - 1
+        if self.paused:
+            return
         if self.called:
             self._runCallbacks()
 
+    def _continue(self, result, isError):
+        self.result = result
+        self.isError = isError
+        self._runCallbacks()
 
     def _startRunCallbacks(self, result, isError):
         if self.called:
@@ -178,12 +184,25 @@ class Deferred:
             return
         cb = self.callbacks
         self.callbacks = []
-        for item in cb:
+        while cb:
+            item = cb.pop(0)
             callback, args, kw = item[self.isError]
             args = args or ()
             kw = kw or {}
             try:
                 self.result = apply(callback, (self.result,)+tuple(args), kw)
+                if isinstance(self.result, Deferred):
+                    self.callbacks = cb
+                    # note: this will cause _runCallbacks to be called
+                    # recursively sometimes... this shouldn't cause any
+                    # problems, since all the state has been set back to the
+                    # way it's supposed to be, but it is useful to know in case
+                    # something goes wrong
+                    self.result.addCallbacks(self._continue,
+                                             self._continue,
+                                             callbackArgs=(0,),
+                                             errbackArgs=(1,))
+                    break
                 if type(self.result) != types.StringType:
                     # TODO: make this hack go away; it has something to do
                     # with PB returning strings from errbacks that are
@@ -198,7 +217,7 @@ class Deferred:
                 # if this was the last pair of callbacks, we must make sure
                 # that the error was logged, otherwise we'll never hear about
                 # it.
-                if item is cb[-1]:
+                if not cb:
                     logError(self.result)
 
 

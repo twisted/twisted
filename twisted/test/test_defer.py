@@ -26,7 +26,12 @@ from twisted.internet import reactor
 
 
 class DeferredTestCase(unittest.TestCase):
-
+    
+    def setUp(self):
+        self.callback_results = None
+        self.errback_results = None
+        self.callback2_results = None
+        
     def _callback(self, *args, **kw):
         self.callback_results = args, kw
         return args[0]
@@ -38,8 +43,6 @@ class DeferredTestCase(unittest.TestCase):
         self.errback_results = args, kw
 
     def testCallbackWithoutArgs(self):
-        self.callback_results = None
-        self.errback_results = None
         deferred = defer.Deferred()
         deferred.addCallback(self._callback)
         deferred.callback("hello")
@@ -47,8 +50,6 @@ class DeferredTestCase(unittest.TestCase):
         self.failUnlessEqual(self.callback_results, (('hello',), {}))
 
     def testCallbackWithArgs(self):
-        self.callback_results = None
-        self.errback_results = None
         deferred = defer.Deferred()
         deferred.addCallback(self._callback, "world")
         deferred.callback("hello")
@@ -56,8 +57,6 @@ class DeferredTestCase(unittest.TestCase):
         self.failUnlessEqual(self.callback_results, (('hello', 'world'), {}))
 
     def testCallbackWithKwArgs(self):
-        self.callback_results = None
-        self.errback_results = None
         deferred = defer.Deferred()
         deferred.addCallback(self._callback, world="world")
         deferred.callback("hello")
@@ -66,9 +65,6 @@ class DeferredTestCase(unittest.TestCase):
                              (('hello',), {'world': 'world'}))
 
     def testTwoCallbacks(self):
-        self.callback_results = None
-        self.callback2_results = None
-        self.errback_results = None
         deferred = defer.Deferred()
         deferred.addCallback(self._callback)
         deferred.addCallback(self._callback2)
@@ -129,6 +125,19 @@ class DeferredTestCase(unittest.TestCase):
         d.pause()
         d.addCallback(self._callback)
         d.unpause()
+
+    def testReturnDeferred(self):
+        d = defer.Deferred()
+        d2 = defer.Deferred()
+        d2.pause()
+        d.addCallback(lambda r, d2=d2: d2)
+        d.addCallback(self._callback)
+        d.callback(1)
+        assert self.callback_results is None, "Should not have been called yet."
+        d2.callback(2)
+        assert self.callback_results is None, "Still should not have been called yet."
+        d2.unpause()
+        assert self.callback_results[0][0] == 2, "Result should have been from second deferred:%s"% (self.callback_results,)
 
 
 

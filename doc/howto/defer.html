@@ -3,23 +3,23 @@
     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
 <html xmlns="http://www.w3.org/1999/xhtml">
-  <head>
-    <title>Deferreds - A Substitute for Blocking</title>
-    <meta http-equiv="content-type"
-    content="text/html; charset=ISO-8859-1" />
-  </head>
+<head>
+<title>Deferreds - A Substitute for Blocking</title>
+<meta http-equiv="content-type"
+content="text/html; charset=ISO-8859-1" />
+</head>
 
-  <body text="#000000" bgcolor="#ffffff">
-    <h1>Deferring Execution in the Twisted Framework</h1>
+<body text="#000000" bgcolor="#ffffff">
+<h1>Deferring Execution in the Twisted Framework</h1>
 
-    <h2>The Problem</h2>
+<h2>The Problem</h2>
 
-    <h3>Dealing with Blocking Code</h3>
+<h3>Dealing with Blocking Code</h3>
 
-    <p>When coding I/O based programs - networking code, databases,
-    file access - there are many APIs that are blocking, and many
-    methods where the common idiom is to block until a result is
-    gotten.</p>
+<p>When coding I/O based programs - networking code, databases,
+file access - there are many APIs that are blocking, and many
+methods where the common idiom is to block until a result is
+gotten.</p>
 <pre class="python">
 class Getter:
 
@@ -31,15 +31,14 @@ g = Getter()
 print g.getData(3)
 </pre>
 
-    <h3>Don't Call Us, We'll Call You</h3>
+<h3>Don't Call Us, We'll Call You</h3>
 
-    <p>Twisted can not support blocking calls in
-    most of its code, since it is single threaded, and event based.
-    The solution for this issue is to refactor the code, so that
-    instead of blocking until data is available, we return
-    immediately, and use a callback to notify the requester once
-    the data eventually arrives. Looking at how this is usually implemented
-    will help us understand the necessity for Deferreds.</p>
+<p>Twisted can not support blocking calls in most of its code, since it is
+single threaded, and event based.  The solution for this issue is to refactor
+the code, so that instead of blocking until data is available, we return
+immediately, and use a callback to notify the requester once the data
+eventually arrives. Looking at how this is usually implemented will help us
+understand the necessity for Deferreds.</p>
 
 <pre class="python">
 class Getter:
@@ -66,26 +65,24 @@ no way to distinguish between different calls to gotData from different
 sessions.  <code>Deferred</code> solves these problems, by creating a single,
 unified way to defer execution of code that depends on blocking calls.</p>
 
-    <h2>Deferreds</h2>
+<h2>Deferreds</h2>
 
-    <p>A <code class="API">twisted.internet.defer.Deferred</code>
-    is a promise that a function will at some point have a result.
-    We can attach callback functions to a Deferred, and once it
-    gets a result these callbacks will be called. In addition
-    Deferreds allow the developer to register a callback for an
-    error, with the default behavior of logging the error. This is
-    an asynchronous equivalent of the common idiom of blocking
-    until a result is returned or an exception it raised.</p>
+<p>A <code class="API">twisted.internet.defer.Deferred</code> is a promise that
+a function will at some point have a result.  We can attach callback functions
+to a Deferred, and once it gets a result these callbacks will be called. In
+addition Deferreds allow the developer to register a callback for an error,
+with the default behavior of logging the error. This is an asynchronous
+equivalent of the common idiom of blocking until a result is returned or an
+exception it raised.</p>
 
-    <p>As we said, multiple callbacks can be added to a Deferred.
-    The first callback in the Deferred's callback chain will be
-    called with the result, the second with the result of the first
-    callback, and so on. Why do we need this? Well, consider a
-    Deferred returned by twisted.enterprise.adbapi - the result of
-    a SQL query. A web widget might add a callback that converts
-    this result into HTML, and pass the Deferred onwards, where the
-    callback will be used by twisted to return the result to the
-    HTTP client.</p>
+<p>As we said, multiple callbacks can be added to a Deferred.  The first
+callback in the Deferred's callback chain will be called with the result, the
+second with the result of the first callback, and so on. Why do we need this?
+Well, consider a Deferred returned by twisted.enterprise.adbapi - the result of
+a SQL query. A web widget might add a callback that converts this result into
+HTML, and pass the Deferred onwards, where the callback will be used by twisted
+to return the result to the HTTP client.</p>
+
 <pre class="python">
 import sys
 from twisted.internet import defer
@@ -122,60 +119,59 @@ from twisted.internet import reactor
 reactor.run()
 </pre>
 
-    <h3>Visual Explanation</h3>
+<h3>Visual Explanation</h3>
 
-    <div align="center">
-      <img src="../img/deferred-attach.png" />
-    </div>
+<div align="center">
+<img src="../img/deferred-attach.png" />
+</div>
 
-    <ol>
-      <li>Requesting method (data sink) requests data, gets
-      Deferred object.</li>
+<ol>
+  <li>Requesting method (data sink) requests data, gets
+  Deferred object.</li>
+  
+  <li>Requesting method attaches callbacks to Deferred
+  object.</li>
+</ol>
+<img src="../img/deferred-process.png" align="left" /> 
 
-      <li>Requesting method attaches callbacks to Deferred
-      object.</li>
-    </ol>
-    <img src="../img/deferred-process.png" align="left" /> 
+<ol>
+  
+  <li>When the result is ready, give it to the Deferred
+  object. <code>.callback(result)</code> if the operation succeeded,
+  <code>.errback(failure)</code> if it failed. Note that
+  <code>failure</code> is typically an instance of a <code
+  class="API">twisted.python.failure.Failure</code>
+  instance.</li>
+  
+  <li>Deferred object triggers previously-added (call/err)back
+  with the <code>result</code> or <code>failure</code>.
+  Execution then follows the following rules, going down the
+  chain of callbacks to be processed. 
+  
+  <ul>
+    <li>Result of the callback is always passed as the first
+    argument to the next callback, creating a chain of
+    processors.</li>
+    
+    <li>If a callback raises an exception, switch to
+    errback.</li>
+    
+    <li>An unhandled failure gets passed down the line of
+    errbacks, this creating an asynchronous analog to a
+    series to a series of <code>except:</code>
+    statements.</li>
+    
+    <li>If an errback doesn't raise an exception or return a
+    <code class="API">twisted.python.failure.Failure</code>
+    instance, switch to callback.</li>
+  </ul> </li>
+</ol>
+<br clear="all" />
 
-    <ol>
-      <li>When the result is ready, give it to the Deferred object.
-      <code>.callback(result)</code> if the operation succeeded,
-      <code>.errback(failure)</code> if it failed. Note that
-      <code>failure</code> is typically an instance of a <code
-      class="API">twisted.python.failure.Failure</code>
-      instance.</li>
 
-      <li>
-        Deferred object triggers previously-added (call/err)back
-        with the <code>result</code> or <code>failure</code>.
-        Execution then follows the following rules, going down the
-        chain of callbacks to be processed. 
+<h3>More about callbacks</h3>
 
-        <ul>
-          <li>Result of the callback is always passed as the first
-          argument to the next callback, creating a chain of
-          processors.</li>
-
-          <li>If a callback raises an exception, switch to
-          errback.</li>
-
-          <li>An unhandled failure gets passed down the line of
-          errbacks, this creating an asynchronous analog to a
-          series to a series of <code>except:</code>
-          statements.</li>
-
-          <li>If an errback doesn't raise an exception or return a
-          <code class="API">twisted.python.failure.Failure</code>
-          instance, switch to callback.</li>
-        </ul>
-      </li>
-    </ol>
-    <br clear="all" />
-     
-
-    <h3>More about callbacks</h3>
-
-    <p>You add multiple callbacks to a Deferred:</p>
+<p>You add multiple callbacks to a Deferred:</p>
 <pre class="python">
 g = Getter()
 d = g.getResult(3)
@@ -183,55 +179,48 @@ d.addCallback(processResult)
 d.addCallback(printResult)
 </pre>
 
-    <p>Each callback feeds its return value into the next callback
-    (callbacks will be called in the order you add them). Thus in
-    the previous example, <code
-    class="python">processResult</code>'s return value will be
-    passed to <code class="python">printResult</code>, instead of
-    the value initially passed into the callback. This gives you a
-    flexible way to chain results together, possibly modifying
-    values along the way, (for example, you may wish to
-    pre-processed database query results).</p>
+<p>Each callback feeds its return value into the next callback (callbacks will
+be called in the order you add them). Thus in the previous example, <code
+class="python">processResult</code>'s return value will be passed to <code
+class="python">printResult</code>, instead of the value initially passed into
+the callback. This gives you a flexible way to chain results together, possibly
+modifying values along the way, (for example, you may wish to pre-processed
+database query results).</p>
 
-    <h3>More about errbacks</h3>
+<h3>More about errbacks</h3>
 
-    <p>Deferred's error handling is modeled after Python's
-    exception handling. In the case that no errors occur, all the
-    callbacks run, one after the other, as described above.</p>
+<p>Deferred's error handling is modeled after Python's
+exception handling. In the case that no errors occur, all the
+callbacks run, one after the other, as described above.</p>
 
-    <p>If the errback is called instead of the callback (e.g.
-    because a DB query raised an error), then a <code
-    class="API">twisted.python.failure.Failure</code> is passed
-    into the first errback (you can add multiple errbacks, just
-    like with callbacks). You can think of your errbacks as being
-    like <code class="python">except</code> blocks of ordinary
-    Python code.</p>
+<p>If the errback is called instead of the callback (e.g.  because a DB query
+raised an error), then a <code
+class="API">twisted.python.failure.Failure</code> is passed into the first
+errback (you can add multiple errbacks, just like with callbacks). You can
+think of your errbacks as being like <code class="python">except</code> blocks
+of ordinary Python code.</p>
 
-    <p>Unless you explicitly <code class="python">raise</code> an
-    error in except block, the <code
-    class="python">Exception</code> is caught and stops
-    propagating, and normal execution continues. The same thing
-    happens with errbacks: unless you explicitly <code
-    class="python">return</code> a <code
-    class="python">Failure</code> or (re-)raise an exception, the
-    error stops propagating, and normal callbacks continue
-    executing from that point (using the value returned from the
-    errback). If the errback does returns a <code
-    class="python">Failure</code> or raise an exception, then that
-    is passed to the next errback, and so on.</p>
+<p>Unless you explicitly <code class="python">raise</code> an error in except
+block, the <code class="python">Exception</code> is caught and stops
+propagating, and normal execution continues. The same thing happens with
+errbacks: unless you explicitly <code class="python">return</code> a <code
+class="python">Failure</code> or (re-)raise an exception, the error stops
+propagating, and normal callbacks continue executing from that point (using the
+value returned from the errback). If the errback does returns a <code
+class="python">Failure</code> or raise an exception, then that is passed to the
+next errback, and so on.</p>
 
-    <p><b>Note:</b> If an errback doesn't return anything, then it
-    effectively returns <code class="python">None</code>, meaning
-    that callbacks will continue to be executed after this errback.
-    This may not be what you expect to happen, so be careful. Make
-    sure your errbacks return a <code class="python">Failure</code>
-    (probably the one that was passed to it), or a meaningful
-    return value for the next callback.</p>
+<p><b>Note:</b> If an errback doesn't return anything, then it effectively
+returns <code class="python">None</code>, meaning that callbacks will continue
+to be executed after this errback.  This may not be what you expect to happen,
+so be careful. Make sure your errbacks return a <code
+class="python">Failure</code> (probably the one that was passed to it), or a
+meaningful return value for the next callback.</p>
 
-    <p>Also, <code
-    class="API">twisted.python.failure.Failure</code> instances
-    have a useful method called trap, allowing you to effectively
-    do the equivalent of:</p>
+<p>Also, <code class="API">twisted.python.failure.Failure</code> instances have
+a useful method called trap, allowing you to effectively do the equivalent
+of:</p>
+
 <pre class="python">
 try:
     # code that may throw an exception
@@ -240,7 +229,7 @@ except (SpamException, EggException):
     # Handle SpamExceptions and EggExceptions
 </pre>
 
-    <p>You do this by:</p>
+<p>You do this by:</p>
 <pre class="python">
 def errorHandler(failure):
     failure.trap(SpamException, EggException)
@@ -250,18 +239,16 @@ d.addCallback(cookSpamAndEggs)
 d.addErrback(errorHandler)
 </pre>
 
-    <p>If none of arguments passed to <code
-    class="python">failure.trap</code> match the error encapsulated
-    in that <code class="python">Failure</code>, then it re-raises
-    the error.</p>
+<p>If none of arguments passed to <code class="python">failure.trap</code>
+match the error encapsulated in that <code class="python">Failure</code>, then
+it re-raises the error.</p>
 
-    <p><b>Note:</b> There's another potential "gotcha" here.
-    There's a convenience method <code
-    class="API">twisted.internet.defer.Deferred.addCallbacks</code>
-    which is similar to, but not exactly the same as, <code
-    class="python">addCallback</code> followed by <code
-    class="python">addErrback</code>. In particular, consider these
-    two cases:</p>
+<p><b>Note:</b> There's another potential "gotcha" here.  There's a convenience
+method <code class="API">twisted.internet.defer.Deferred.addCallbacks</code>
+which is similar to, but not exactly the same as, <code
+class="python">addCallback</code> followed by <code
+class="python">addErrback</code>. In particular, consider these two cases:</p>
+
 <pre class="python">
 # Case 1
 d = getDeferredFromSomewhere()
@@ -276,187 +263,196 @@ d.addCallbacks(callback1, errback1)
 d.addCallbacks(callback2, errback2)
 </pre>
 
-    <p>If an error occurs in <code class="python">callback1</code>,
-    then for Case 1 <code class="python">errback1</code> will be
-    called with the failure. For Case 2, <code
-    class="python">errback2</code> will be called. Be careful with
-    your callbacks and errbacks.</p>
+<p>If an error occurs in <code class="python">callback1</code>, then for Case 1
+<code class="python">errback1</code> will be called with the failure. For Case
+2, <code class="python">errback2</code> will be called. Be careful with your
+callbacks and errbacks.</p>
 
-    <h2>Class Overview</h2>
+<h2>Class Overview</h2>
 
-    <p>This is the overview API reference for Deferred. It is not
-    meant to be a substitute for the docstrings in the Deferred
-    class, but can provide guidelines for its use.</p>
+<p>This is the overview API reference for Deferred. It is not meant to be a
+substitute for the docstrings in the Deferred class, but can provide guidelines
+for its use.</p>
 
-    <h3>Basic Callback Functions</h3>
+<h3>Basic Callback Functions</h3>
 
-    <ul>
-      <li>
-        <code class="py-prototype">addCallbacks(self, callback[, errback, callbackArgs,
-        errbackArgs, errbackKeywords, asDefaults])</code> 
+<ul>
+  <li>
+  <code class="py-prototype">addCallbacks(self, callback[, errback, callbackArgs,
+  errbackArgs, errbackKeywords, asDefaults])</code> 
+  
+  <p>This is the method with which you will use to interact
+  with Deferred. It adds a pair of callbacks "parallel" to
+  each other (see diagram above) in the list of callbacks
+  made when the Deferred is called back to. The signature of
+  a method added using addCallbacks should be
+  <code>myMethod(result, *methodArgs,
+  **methodKeywords)</code>. If your method is passed in the
+  callback slot, for example, all arguments in the tuple
+  <code>callbackArgs</code> will be passed as
+  <code>*methodArgs</code> to your method.</p>
+  
+  <p>There exist various convenience methods that are
+  derivative of addCallbacks. I will not cover them in detail
+  here, but it is important to know about them in order to
+  create concise code.</p>
+  
+  <ul>
+    <li>
+    <code class="py-prototype">addCallback(callback, *callbackArgs,
+    **callbackKeywords)</code> 
+    
+    <p>Adds your callback at the next point in the
+    processing chain, while adding an errback that will
+    re-raise its first argument, not affecting further
+    processing in the error case.</p>
+    </li>
+    
+    <li>
+    <code class="py-prototype">addErrback(errback, *errbackArgs,
+    **errbackKeywords)</code> 
+    
+    <p>Adds your errback at the next point in the
+    processing chain, while adding a callback that will
+    return its first argument, not affecting further
+    processing in the success case.</p>
+    </li>
+    
+    <li>
+    <code class="py-prototype">addBoth(callbackOrErrback,
+    *callbackOrErrbackArgs,
+    **callbackOrErrbackKeywords)</code> 
+    
+    <p>This method adds the same callback into both sides
+    of the processing chain at both points. Keep in mind
+    that the type of the first argument is indeterminate if
+    you use this method! Use it for <code>finally:</code>
+    style blocks.</p>
+    </li>
+  </ul> </li>
+  
+  <li>
+  <code class="py-prototype">callback(result)</code> 
+  
+  <p>Run success callbacks with the given result. <em>This
+  can only be run once.</em> Running it twice will raise
+  <code
+  class="API">twisted.internet.defer.AlreadyCalledError</code>.
+  If further callbacks or errbacks are added after this
+  point, addCallbacks will run the callbacks immediately.</p>
+  </li>
+  
+  <li>
+  <code class="py-prototype">errback(failure)</code> 
+  
+  <p>Run error callbacks with the given failure. <em>This can
+  only be run once.</em> Running it twice will raise <code
+  class="API">twisted.internet.defer.AlreadyCalledError</code>.
+  If further callbacks or errbacks are added after this
+  point, addCallbacks will run the callbacks immediately.</p>
+  </li>
+</ul>
 
-        <p>This is the method with which you will use to interact
-        with Deferred. It adds a pair of callbacks "parallel" to
-        each other (see diagram above) in the list of callbacks
-        made when the Deferred is called back to. The signature of
-        a method added using addCallbacks should be
-        <code>myMethod(result, *methodArgs,
-        **methodKeywords)</code>. If your method is passed in the
-        callback slot, for example, all arguments in the tuple
-        <code>callbackArgs</code> will be passed as
-        <code>*methodArgs</code> to your method.</p>
 
-        <p>There exist various convenience methods that are
-        derivative of addCallbacks. I will not cover them in detail
-        here, but it is important to know about them in order to
-        create concise code.</p>
 
-        <ul>
-          <li>
-            <code class="py-prototype">addCallback(callback, *callbackArgs,
-            **callbackKeywords)</code> 
+<h3>Chaining Deferreds</h3>
 
-            <p>Adds your callback at the next point in the
-            processing chain, while adding an errback that will
-            re-raise its first argument, not affecting further
-            processing in the error case.</p>
-          </li>
+<p>If you need one Deferred to wait on another, all you need to do is return a
+Deferred from a method added to addCallbacks.  Specifically, if you return
+Deferred B from a method added to Deferred A using A.addCallbacks, Deferred A's
+processing chain will stop until Deferred B's .callback() method is called; at
+that point, the next callback in A will be passed the result of the last
+callback in Deferred B's processing chain at the time.</p>
 
-          <li>
-            <code class="py-prototype">addErrback(errback, *errbackArgs,
-            **errbackKeywords)</code> 
+<p>If this seems confusing, don't worry about it right now -- when you run into
+a situation where you need this behavior, you will probably recognize it
+immediately and realize why this happens.  If you want to chain deferreds
+manually, there is also a convenience method to help you.</p>
 
-            <p>Adds your errback at the next point in the
-            processing chain, while adding a callback that will
-            return its first argument, not affecting further
-            processing in the success case.</p>
-          </li>
+<ul>
+  <li>
+  <code class="py-prototype">chainDeferred(otherDeferred)</code> 
+  
+  <p>Add <code>otherDeferred</code> to the end of this
+  Deferred's processing chain. When self.callback is called,
+  the result of my processing chain up to this point will be
+  passed to <code>otherDeferred.callback</code>. Further
+  additions to my callback chain do not affect
+  <code>otherDeferred</code></p>
+  <p>This is the same as <code
+  class="python">self.addCallbacks(otherDeferred.callback,
+  otherDeferred.errback)</code></p>
+  </li>
+</ul>
+    
+<h3>Automatic Error Conditions</h3>
 
-          <li>
-            <code class="py-prototype">addBoth(callbackOrErrback,
-            *callbackOrErrbackArgs,
-            **callbackOrErrbackKeywords)</code> 
+<ul>
+  <li>
+  <code class="py-prototype">setTimeout(seconds[, timeoutFunc])</code> 
+  
+  <p>Set a timeout function to be triggered if this Deferred
+  is not called within that time period. By default, this
+  will raise a TimeoutError after <code>seconds</code>.</p>
+  </li>
+</ul>
 
-            <p>This method adds the same callback into both sides
-            of the processing chain at both points. Keep in mind
-            that the type of the first argument is indeterminate if
-            you use this method! Use it for <code>finally:</code>
-            style blocks.</p>
-          </li>
-        </ul>
-      </li>
+<h3>A Brief Interlude: Technical Details</h3>
 
-      <li>
-        <code class="py-prototype">callback(result)</code> 
+<p>While deferreds greatly simplify the process of writing asynchronous code by
+providing a standard for registering callbacks, there are some subtle and
+sometimes confusing rules that you need to follow if you are going to use
+them. This mostly applies to people who are writing new systems that use
+Deferreds internally, and not writers of applications that just add callbacks
+to Deferreds produced and processed by other systems. Nevertheless, it is good
+to know.</p>
 
-        <p>Run success callbacks with the given result. <em>This
-        can only be run once.</em> Running it twice will raise
-        <code
-        class="API">twisted.internet.defer.AlreadyCalledError</code>.
-        If further callbacks or errbacks are added after this
-        point, addCallbacks will run the callbacks immediately.</p>
-      </li>
+<p>Deferreds are one-shot. A generalization of the Deferred API to generic
+event-sources is in progress -- watch this space for updates! -- but Deferred
+itself is only for events that occur once. You can only call
+<code>Deferred.callback</code> or <code>Deferred.errback</code> once. The
+processing chain continues each time you add new callbacks to an
+already-called-back-to Deferred.</p>
 
-      <li>
-        <code class="py-prototype">errback(failure)</code> 
+<p>The important consequence of this is that <strong>sometimes, addCallbacks
+will call its argument synchronously, and sometimes it will not</strong>. In
+situations where callbacks modify state, it is highly desirable for the chain
+of processing to halt until all callbacks are added. (For the curious: the code
+for <code class="API">twisted.web.widgets</code> has a textbook example of
+this.) For this, it is possible to <code>pause</code> and <code>unpause</code>
+a Deferred's processing chain while you are adding lots of callbacks.</p>
 
-        <p>Run error callbacks with the given failure. <em>This can
-        only be run once.</em> Running it twice will raise <code
-        class="API">twisted.internet.defer.AlreadyCalledError</code>.
-        If further callbacks or errbacks are added after this
-        point, addCallbacks will run the callbacks immediately.</p>
-      </li>
-    </ul>
+<p>Be careful when you use these methods! If you <code>pause</code> a Deferred,
+it is <em>your</em> responsibility to make sure that you unpause it; code that
+calls <code>callback</code> or <code>errback</code> should
+<strong>never</strong> call <code>unpause</code>, as this would negate its
+usefulness!</p>
 
-    <h3>Chaining Deferreds</h3>
+<h3>Advanced Processing Chain Control</h3>
 
-    <ul>
-      <li>
-        <code class="py-prototype">chainDeferred(otherDeferred)</code> 
-
-        <p>Add <code>otherDeferred</code> to the end of this
-        Deferred's processing chain. When self.callback is called,
-        the result of my processing chain up to this point will be
-        passed to <code>otherDeferred.callback</code>. Further
-        additions to my callback chain do not affect
-        <code>otherDeferred</code></p>
-      </li>
-    </ul>
-
-    <h3>Automatic Error Conditions</h3>
-
-    <ul>
-      <li>
-        <code class="py-prototype">setTimeout(seconds[, timeoutFunc])</code> 
-
-        <p>Set a timeout function to be triggered if this Deferred
-        is not called within that time period. By default, this
-        will raise a TimeoutError after <code>seconds</code>.</p>
-      </li>
-    </ul>
-
-    <h3>A Brief Interlude: Technical Details</h3>
-
-    <p>While deferreds greatly simplify the process of writing
-    asynchronous code by providing a standard for registering
-    callbacks, there are some subtle and sometimes confusing rules
-    that you need to follow if you are going to use them. This
-    mostly applies to people who are writing new systems that use
-    Deferreds internally, and not writers of applications that just
-    add callbacks to Deferreds produced and processed by other
-    systems. Nevertheless, it is good to know.</p>
-
-    <p>Deferreds are one-shot. A generalization of the Deferred API
-    to generic event-sources is in progress -- watch this space for
-    updates! -- but Deferred itself is only for events that occur
-    once. You can only call <code>Deferred.callback</code> or
-    <code>Deferred.errback</code> once. The processing chain
-    continues each time you add new callbacks to an
-    already-called-back-to Deferred.</p>
-
-    <p>The important consequence of this is that <strong>sometimes,
-    addCallbacks will call its argument synchronously, and
-    sometimes it will not</strong>. In situations where callbacks
-    modify state, it is highly desirable for the chain of
-    processing to halt until all callbacks are added. (For the
-    curious: the code for <code
-    class="API">twisted.web.widgets</code> has a textbook example
-    of this.) For this, it is possible to <code>pause</code> and
-    <code>unpause</code> a Deferred's processing chain while you
-    are adding lots of callbacks.</p>
-
-    <p>Be careful when you use these methods! If you
-    <code>pause</code> a Deferred, it is <em>your</em>
-    responsibility to make sure that you unpause it; code that
-    calls <code>callback</code> or <code>errback</code> should
-    <strong>never</strong> call <code>unpause</code>, as this would
-    negate its usefulness!</p>
-
-    <h3>Advanced Processing Chain Control</h3>
-
-    <ul>
-      <li>
-        <code class="py-prototype">pause()</code> 
-
-        <p>Cease calling any methods as they are added, and do not
-        respond to <code>callback</code>, until
-        <code>self.unpause()</code> is called.</p>
-      </li>
-
-      <li>
-        <code class="py-prototype">unpause()</code> 
-
-        <p>If <code>callback</code> has been called on this
-        Deferred already, call all the callbacks that have been
-        added to this Deferred since <code>pause</code> was
-        called.</p>
-
-        <p>Whether it was called or not, this will put this
-        Deferred in a state where further calls to
-        <code>addCallbacks</code> or <code>callback</code> will
-        work as normal.</p>
-      </li>
-    </ul>
-  </body>
+<ul>
+  <li>
+  <code class="py-prototype">pause()</code> 
+  
+  <p>Cease calling any methods as they are added, and do not
+  respond to <code>callback</code>, until
+  <code>self.unpause()</code> is called.</p>
+  </li>
+  
+  <li>
+  <code class="py-prototype">unpause()</code> 
+  
+  <p>If <code>callback</code> has been called on this
+  Deferred already, call all the callbacks that have been
+  added to this Deferred since <code>pause</code> was
+  called.</p>
+  
+  <p>Whether it was called or not, this will put this
+  Deferred in a state where further calls to
+  <code>addCallbacks</code> or <code>callback</code> will
+  work as normal.</p>
+  </li>
+</ul>
+</body>
 </html>
 
