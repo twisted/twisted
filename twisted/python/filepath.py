@@ -243,7 +243,6 @@ class FilePath:
         """
         import glob
         path = self.path[-1] == '/' and self.path + pattern or slash.join([self.path, pattern])
-        print "path is", path
         return map(self.clonePath, glob.glob(path))
 
     def basename(self):
