@@ -407,16 +407,14 @@ class CreateTarballs(Transaction):
         
         print "CreateTarballs: Twisted_NoDocs."
         sh('''
-              tar --exclude %(tdir)s/doc -czf Twisted_NoDocs-%(ver)s.tar.gz  %(tdir)s && 
-              tar --exclude %(tdir)s/doc -cjf Twisted_NoDocs-%(ver)s.tar.bz2 %(tdir)s && 
-              zip -9 -r Twisted_NoDocs-%(ver)s.zip %(tdir)s -x %(tdir)s/doc > /dev/null
+              tar --exclude %(tdir)s/doc -cf - %(tdir)s |gzip -9 > Twisted_NoDocs-%(ver)s.tar.gz && 
+              tar --exclude %(tdir)s/doc -cjf Twisted_NoDocs-%(ver)s.tar.bz2 %(tdir)s
            ''' % locals())
 
         print "CreateTarballs: Twisted"
         sh('''
-              tar czf   %(tdir)s.tar.gz  %(tdir)s &&
-              tar cjf   %(tdir)s.tar.bz2 %(tdir)s &&
-              zip -9 -r %(tdir)s.zip     %(tdir)s > /dev/null
+              tar cf - %(tdir)s | gzip -9 > %(tdir)s.tar.gz&&
+              tar cjf   %(tdir)s.tar.bz2 %(tdir)s 
            ''' % locals())
 
         print "makeBalls: TwistedDocs"
@@ -425,19 +423,16 @@ class CreateTarballs(Transaction):
              cd %(tdir)s && 
              mv doc %(docdir)s
 
-             tar czf   %(docdir)s.tar.gz  %(docdir)s && 
+             tar czf -  %(docdir)s | gzip -9 > %(docdir)s.tar.gz&& 
              mv %(docdir)s.tar.gz ../ && 
 
              tar cjf   %(docdir)s.tar.bz2 %(docdir)s && 
-             mv %(docdir)s.tar.bz2 ../ && 
-
-             zip -9 -r %(docdir)s.zip %(docdir)s > /dev/null && 
-             mv %(docdir)s.zip ../
+             mv %(docdir)s.tar.bz2 ../
              ''' % locals())
 
     def undoIt(self, opts, fail):
         ver = opts['version']
-        for ext in ['zip', 'tar.gz', 'tar.bz2']:
+        for ext in ['tar.gz', 'tar.bz2']:
             for prefix in ['Twisted_NoDocs', 'TwistedDocs', 'Twisted']:
                 try:
                     sh('rm -f %s-%s.%s' % (prefix, ver, ext))
@@ -461,13 +456,12 @@ class Release(Transaction):
             os.mkdir("%s/old" % rel)
 
         print "Release: Moving old releases to %s/old" % rel
-        sh('mv %(rel)s/*.tar.gz %(rel)s/*.tar.bz2 %(rel)s/*.zip %(rel)s/old || true' % locals())
+        sh('mv %(rel)s/*.tar.gz %(rel)s/*.tar.bz2 %(rel)s/old || true' % locals())
 
         print "Release: Copying Twisted_NoDocs."
         sh('''
               cp Twisted_NoDocs-%(ver)s.tar.gz  %(rel)s &&
-              cp Twisted_NoDocs-%(ver)s.tar.bz2 %(rel)s &&
-              cp Twisted_NoDocs-%(ver)s.zip     %(rel)s
+              cp Twisted_NoDocs-%(ver)s.tar.bz2 %(rel)s
              ''' % locals())
 
 
