@@ -229,6 +229,7 @@ def parseViaHeader(value):
     parts = value.split(";")
     sent, params = parts[0], parts[1:]
     protocolinfo, by = sent.split(" ", 1)
+    by = by.strip()
     result = {}
     pname, pversion, transport = protocolinfo.split("/")
     if pname != "SIP" or pversion != "2.0":

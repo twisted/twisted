@@ -210,6 +210,13 @@ class ViaTestCase(unittest.TestCase):
     def checkRoundtrip(self, v):
         s = v.toString()
         self.assertEquals(s, sip.parseViaHeader(s).toString())
+
+    def testExtraWhitespace(self):
+        v1 = sip.parseViaHeader('SIP/2.0/UDP 192.168.1.1:5060')
+        v2 = sip.parseViaHeader('SIP/2.0/UDP     192.168.1.1:5060')
+        self.assertEquals(v1.transport, v2.transport)
+        self.assertEquals(v1.host, v2.host)
+        self.assertEquals(v1.port, v2.port)
     
     def testComplex(self):
         s = "SIP/2.0/UDP first.example.com:4000;ttl=16;maddr=224.2.0.1 ;branch=a7c6a8dlze (Example)"
