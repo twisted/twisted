@@ -191,6 +191,28 @@ class FlowTest(unittest.TestCase):
         rhs = unittest.deferredResult(d)
         self.assertEquals([range(9)],rhs)
 
+    def testConcurrent(self):
+        ca = flow.Callback()
+        ca.name = 'a'
+        cb = flow.Callback()
+        cb.name = 'b'
+        def testBoth(ca,cb):
+            both = flow.Concurrent(ca,cb)
+            yield both
+            for stage in both:
+                yield (stage.name, stage.result)
+                yield both
+        d = flow.Deferred(testBoth(ca,cb))
+        ca.callback(1)
+        cb.callback(2)
+        ca.callback(3)
+        ca.callback(4)
+        ca.finish()
+        cb.callback(5)
+        cb.finish()
+        rhs = unittest.deferredResult(d)
+        self.assertEquals([('a',1),('b',2),('a',3),('a',4),('b',5)],rhs)
+
     def testCallbackFailure(self):
         cb = flow.Callback()
         d = flow.Deferred(buildlist(cb))

@@ -305,49 +305,66 @@ class Zip(Stage):
         self.result = tuple(self.result)
         self._index  = 0
 
-class Queue(Stage):
-    """ Builds a queue of stages executing concurrently
+class Concurrent(Stage):
+    """ Executes stages concurrently
 
-        This stage merges two or more stages, returning each stage as it
-        becomes available.   This can be used if you have N callbacks, and
-        you want to yield and wait for the first available one that 
-        produces results, then you should use next() to extract the value
-        of the yielded stage.
+        This stage allows two or more stages (branches) to be executed 
+        at the same time.  It returns each stage as it becomes available.
+        This can be used if you have N callbacks, and you want to yield 
+        and wait for the first available one that produces results.   Once
+        a stage is retuned, its next() method should be used to extract 
+        the value for the stage.
     """
+
+    class Instruction(CallLater):
+        def __init__(self, inst):
+            self.inst = inst
+        def callLater(self, callable):
+            for inst in self.inst:
+                inst.callLater(callable)
+
     def __init__(self, *stages):
         Stage.__init__(self)
-        self._queue = []
+        self._stages = []
         for stage in stages:
-            self._queue.append(wrap(stage))
-        self._curr = None
-        self._instruction = []
+            self._stages.append(wrap(stage))
 
     def _yield(self):
         if self.stop:
             return
-        while self._queue:
-            curr = self._queue.pop(0)
+        stages = self._stages
+        coop = None
+        later = []
+        exit = None
+        while stages:
+            if stages[0] is exit:
+                break
+            curr = stages.pop(0)
             result = curr._yield()
-            if result: 
-                self._queue.append(curr)
-                if self._curr is curr:
-                    self._curr = None
-                    if self._instruction:
-                        return self._instruction.pop(0)
-                    return result
-                if not isinstance(result,Cooperate):
-                    self._instruction.append(result)
-                if self._curr is None:
-                    self._curr = curr
+            if curr.stop:
+                exit = None
                 continue
+            if not exit:
+                exit = curr
+            stages.append(curr)
+            if result:
+                if isinstance(result, Cooperate):
+                    coop = result
+                    continue
+                if isinstance(result, CallLater):
+                    later.append(result)
+                    continue
+                raise Unsupported(result)
             self.result = curr
-            if not curr.stop:
-                self._queue.append(curr)
-                return
+            return
+        if later:
+            return Concurrent.Instruction(later)
+        if coop:
+            return coop
         self.result = None
         self.stop = True
 
-class Merge(Queue):
+class Merge(Concurrent):
     """ Merges two or more Stages results into a single stream
 
         This Stage can be used for merging two stages into a single
@@ -355,14 +372,14 @@ class Merge(Queue):
         Note that while this code may be deterministic, applications of
         this module should not depend upon a particular order.
 
-        [1, Cooperate(), 2] + [3, 4] => [1, 3, 4, 2 ]
+        [1, Cooperate(), 2] + [3, 4] => [1, 3, 2, 4]
 
     """
     def _yield(self):
         if self.fail or self.stop:
             self.stop = True
             return
-        res = Queue._yield(self)
+        res = Concurrent._yield(self)
         if res: return res
         if self.result:
             if self.result.fail:
