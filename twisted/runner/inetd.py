@@ -63,15 +63,11 @@ def forkPassingFD(exe, args, env, user, group, fdesc):
     pid = os.fork()
     if pid == 0:    # Child
         try:
-            # Close stdin/stdout (we keep stderr from the parent to report
-            # errors with)
-            for fd in range(2):
-                os.close(fd)
-            
             # Make the socket be fd 0 
             # (and fd 1, although I'm not sure if that matters)
-            os.dup(fdesc.fileno())
-            os.dup(fdesc.fileno())
+            # (we keep stderr from the parent to report errors with)
+            os.dup2(fdesc.fileno(), 0)
+            os.dup2(fdesc.fileno(), 1)
 
             # Close unused file descriptors
             for fd in range(3, 256):
@@ -86,7 +82,7 @@ def forkPassingFD(exe, args, env, user, group, fdesc):
             os.execvpe(exe, args, env)
         except:
             # If anything goes wrong, just die.
-            stderr = os.fdopen(2, 'w')
+            from sys import stderr
             stderr.write('Unable to spawn child:\n')
             traceback.print_exc(file=stderr)
 
