@@ -376,7 +376,10 @@ class SmartHostSMTPRelayingManager:
     def _ebExchange(self, failure, factory, domain):
         log.err('Error setting up managed relay factory for ' + domain)
         log.err(failure)
-        map(self.queue.setWaiting, self.managed[factory])
+        def setWaiting(queue, messages):
+            map(queue.setWaiting, messages)
+        from twisted.internet import reactor
+        reactor.callLater(30, setWaiting, self.queue, self.managed[factory])
         del self.managed[factory]
 
 class SmartHostESMTPRelayingManager(SmartHostSMTPRelayingManager):
