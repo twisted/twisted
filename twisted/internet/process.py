@@ -20,6 +20,7 @@
 
 # System Imports
 import os, sys
+import errno
 
 if os.name == 'posix':
     # Inter-process communication and FCNTL fun isn't available on windows.
