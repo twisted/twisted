@@ -168,7 +168,7 @@ class SSHSessionProtocol(protocol.Protocol, protocol.ProcessProtocol):
         self.session.loseConnection()
 
     def processEnded(self, reason = None):
-        if reason and hasattr(reason, 'exitCode'): self.session.conn.sendRequest(self.session, 'exit-status', struct.pack('!L', reason.exitCode))
+        if reason and hasattr(reason.value, 'exitCode'): self.session.conn.sendRequest(self.session, 'exit-status', struct.pack('!L', reason.value.exitCode))
         self.session.loseConnection()
 
 class SSHSessionClient(protocol.Protocol):

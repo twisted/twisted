@@ -14,9 +14,9 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import os
+import os, struct
 from twisted.conch import identity, error
-from twisted.conch.ssh import keys, transport, factory, userauth
+from twisted.conch.ssh import keys, transport, factory, userauth, connection, common, session
 from twisted.cred import authorizer
 from twisted.internet import reactor, defer, app, protocol
 from twisted.python import log
@@ -97,10 +97,13 @@ class SSHKeysHandlingTestCase(unittest.TestCase):
         keyType = keys.objectType(privKey)
         privFS = keys.getPrivateKeyObject(data = privData)
         pubFS = keys.getPublicKeyObject(b64data = pubData)
-        self.assert_(privFS.__dict__ == privKey.__dict__,
-                     'getting %s private key from string failed' % keyType)
-        self.assert_(pubFS.__dict__ == pubKey.__dict__,
-                     'getting %s public key from string failed' % keyType)
+        for k in privFS.keydata:
+            if getattr(privFS, k) != getattr(privKey, k):
+                self.fail('getting %s private key from string failed' % keyType)
+        for k in pubFS.keydata:
+            if hasattr(pubFS, k):
+                if getattr(pubFS, k) != getattr(pubKey, k):
+                    self.fail('getting %s public key from string failed' % keyType)
 
 theTest = None
 
@@ -183,13 +186,14 @@ class SSHTestClientAuth(userauth.SSHUserAuthClient):
 
 class SSHTestClient(SSHTestBase, transport.SSHClientTransport):
 
-    def checkFingerprint(self, fp):
+    def verifyHostKey(self, key, fp):
         global theTest
+        theTest.assertEquals(key, keys.getPublicKeyString(data = publicRSA))
         theTest.assertEquals(fp,'34:f1:6f:02:29:ad:17:f9:8f:96:8a:9b:94:c7:49:43')
         return 1
 
     def connectionSecure(self):
-        self.requestService(SSHTestClientAuth('testuser',SSHTestConnection()))
+        self.requestService(SSHTestClientAuth('testuser',SSHTestClientConnection()))
 
 class SSHTestClientFactory(protocol.ClientFactory):
     noisy = 0
@@ -203,23 +207,159 @@ class SSHTestClientFactory(protocol.ClientFactory):
         theTest.fail('connection between client and server failed!')
         reactor.crash()
 
-class SSHTestConnection:
+class SSHTestServerConnection(connection.SSHConnection):
+
+    def getChannel(self, ct, ws, mp, d):
+        if ct != 'session':
+            global theTest
+            theTest.fail('should not get %s as a channel type' % ct)
+            reactor.crash()
+        return SSHTestServerSession(remoteWindow = ws,
+                                    remoteMaxPacket = mp,
+                                    conn = self)
+
+class SSHTestServerSession(connection.SSHChannel):
+
+    def request_exec(self, data):
+        program = common.getNS(data)[0].split()
+        log.msg('execing %s' % (program,))
+        self.client = session.SSHSessionClient()
+        reactor.spawnProcess(session.SSHSessionProtocol(self, self.client), \
+                             program[0], program, {}, '/tmp', usePTY = 1)
+        return 1
+        
+class SSHTestClientConnection(connection.SSHConnection):
 
     name = 'ssh-connection'
+    results = 0
 
     def serviceStarted(self):
-        self.transport.expectedLoseConnection = 1
-        if not hasattr(self.transport, 'factory'):
-            # make the client end the connection
+        self.openChannel(SSHTestTrueChannel(conn = self))
+        self.openChannel(SSHTestFalseChannel(conn = self))
+        c = SSHTestEchoChannel(conn = self)
+        self.openChannel(c)
+
+class SSHTestTrueChannel(connection.SSHChannel):
+
+    name = 'session'
+
+    def openFailed(self, reason):
+        global theTest
+        theTest.fail('true open failed: %s' % reason)
+        reactor.crash() 
+ 
+    def channelOpen(self, ignore):
+        d = self.conn.sendRequest(self, 'exec', common.NS('true'), 1)
+        d.addErrback(self._ebRequestFailed)
+        log.msg('opened true')
+
+    def _ebRequestFailed(self, reason):
+        global theTest
+        theTest.fail('true exec failed: %s' % reason)
+        reactor.crash()
+
+    def dataReceived(self, data):
+        global theTest
+        theTest.fail('got data when using true')
+        reactor.crash()
+
+    def request_exit_status(self, status):
+        status = struct.unpack('>L', status)[0]
+        if status != 0:
             global theTest
+            theTest.fail('true exit status was not 0: %i' % status)
             reactor.crash()
+        self.conn.results +=1
+        log.msg('finished true')
+        if self.conn.results == 3: # all tests run
+            self.conn.transport.expectedLoseConnection = 1
+            reactor.crash()
+        return 1
+
+class SSHTestFalseChannel(connection.SSHChannel):
+
+    name = 'session'
+    
+    def openFailed(self, reason):
+        global theTest
+        theTest.fail('false open failed: %s' % reason)
+        reactor.crash()
+
+    def channelOpen(self, ignore):
+        d = self.conn.sendRequest(self, 'exec', common.NS('false'), 1)
+        d.addErrback(self._ebRequestFailed)
+        log.msg('opened false')
+
+    def _ebRequestFailed(self, reason):
+        global theTest
+        theTest.fail('false exec failed: %s' % reason)
+        reactor.crash()
+
+    def dataReceived(self, data):
+        global theTest
+        theTest.fail('got data when using false')
+        reactor.crash()
+
+    def request_exit_status(self, status):
+        status = struct.unpack('>L', status)[0]
+        if status == 0:
+            global theTest
+            theTest.fail('false exit status was 0')
+            reactor.crash()
+        self.conn.results +=1
+        log.msg('finished false')
+        if self.conn.results == 3: # all tests run
+            self.conn.transport.expectedLoseConnection = 1
+            reactor.crash()
+        return 1 
+
+class SSHTestEchoChannel(connection.SSHChannel):
+
+    name = 'session'
+    buf = ''
+
+    def openFailed(self, reason):
+        global theTest
+        theTest.fail('echo open failed: %s' % reason)
+        reactor.crash()
+
+    def channelOpen(self, ignore):
+        d = self.conn.sendRequest(self, 'exec', common.NS('echo hello'), 1)
+        d.addErrback(self._ebRequestFailed)
+        log.msg('opened echo')
+
+    def _ebRequestFailed(self, reason):
+        global theTest
+        theTest.fail('echo exec failed: %s' % reason)
+        reactor.crash()
+
+    def dataReceived(self, data):
+        self.buf += data
+
+    def request_exit_status(self, status):
+        status = struct.unpack('>L', status)[0]
+        if status != 0:
+            global theTest
+            theTest.fail('echo exit status was not 0: %i' % status)
+            reactor.crash()
+        if self.buf != 'hello\r\n':
+            global theTest
+            theTest.fail('echo did not return hello: %s' % repr(self.buf))
+            reactor.crash()
+
+        self.conn.results +=1
+        log.msg('finished echo')
+        if self.conn.results == 3: # all tests run
+            self.conn.transport.expectedLoseConnection = 1
+            reactor.crash()
+        return 1
 
 class SSHTestFactory(factory.SSHFactory):
     noisy = 0
 
     services = {
         'ssh-userauth':SSHTestServerAuth,
-        'ssh-connection':SSHTestConnection
+        'ssh-connection':SSHTestServerConnection
     }
 
     def buildProtocol(self, addr):
