@@ -173,7 +173,7 @@ if __name__ == '__main__':
     screen = Screen(stdscr)   # create Screen object
     stdscr.refresh()
     ircFactory = IRCFactory(screen)
-    reactor.addReader(screen) # add sceen object as a reader with the reactor
+    reactor.addReader(screen) # add screen object as a reader to the reactor
     reactor.connectTCP("irc.freenode.net",6667,ircFactory) # connect to IRC
     reactor.run() # have fun!
     screen.close()
