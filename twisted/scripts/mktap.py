@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: mktap.py,v 1.5 2002/04/03 19:00:57 carmstro Exp $
+# $Id: mktap.py,v 1.6 2002/04/10 02:13:54 carmstro Exp $
 
 """ Implementation module for the `mktap` command.
 """
@@ -134,7 +134,12 @@ def run():
         a = cPickle.load(open(options.opts['append']))
 
     haveBroker = 0
-    mod.updateApplication(a, config)
+    try:
+        mod.updateApplication(a, config)
+    except usage.error, ue:
+        print "Usage Error: %s" % ue
+        config.opt_help()
+        sys.exit(1)
 
     # backwards compatible interface
     if hasattr(mod, "getPorts"):
