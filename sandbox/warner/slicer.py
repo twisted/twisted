@@ -9,7 +9,7 @@ from twisted.internet.defer import Deferred
 from twisted.python import log, reflect
 
 import tokens
-from tokens import Violation, BananaError
+from tokens import Violation, BananaError, tokenNames, UnbananaFailure
 import schema
 
 class IBananaSlicer:
@@ -297,7 +297,8 @@ class RootSlicer(BaseSlicer):
             return slicer
         slicerFactory = self.slicerFactoryForObject(obj)
         if not slicerFactory:
-            raise KeyError, "I don't know how to slice %s" % type(obj)
+            raise KeyError("I don't know how to slice %s (%s)" \
+                           % (obj, type(obj)))
         slicer = slicerFactory()
         return slicer
 
@@ -366,25 +367,30 @@ class IBananaUnslicer:
         Deferred there instead.
         """
 
-    def checkToken(self, typebyte):
+    def checkToken(self, typebyte, size):
         """Check to see if the given token is acceptable (does it conform to
         the constraint?). It will not be asked about ABORT or CLOSE tokens,
-        but it *will* be asked about OPEN. It should return a length limit
+        but it *will* be asked about OPEN. It should enfore a length limit
         for long tokens (STRING and LONGINT/LONGNEG types). If STRING is
-        acceptable, then VOCAB should be too. A return value of None
-        indicates that unlimited lengths are acceptable. Should raise
-        Violation if the schema indiates the token is not acceptable. Should
-        raise BananaError if the type byte violates the basic Banana
-        protocol. (if no schema is in effect, this should never raise
-        Violation, but might still raise BananaError).
+        acceptable, then VOCAB should be too. It should return None if the
+        token and the size are acceptable. Should raise Violation if the
+        schema indiates the token is not acceptable. Should raise
+        BananaError if the type byte violates the basic Banana protocol. (if
+        no schema is in effect, this should never raise Violation, but might
+        still raise BananaError).
         """
 
-    def openerCheckToken(self, typebyte):
-        """'typebyte' is the type of an incoming index token. Ask the
-        current opener if this token is acceptable. Usually implemented by
-        calling self.opener.openerCheckToken, thus delegating the question
-        to the RootUnslicer.
-        """
+    def openerCheckToken(self, typebyte, size, opentype):
+        """'typebyte' is the type of an incoming index token. 'size' is the
+        value of header associated with this typebyte. 'opentype' is a list
+        of open tokens that we've received so far, not including the one
+        that this token hopes to create.
+
+        This method should ask the current opener if this index token is
+        acceptable, and is used in lieu of checkToken() when the receiver is
+        in the index phase. Usually implemented by calling
+        self.opener.openerCheckToken, thus delegating the question to the
+        RootUnslicer. """
 
     def doOpen(self, opentype):
         """opentype is a tuple. Return None if more index tokens are
@@ -432,13 +438,6 @@ class IBananaUnslicer:
         unslicer, starting at the root of the object tree."""
 
 
-class UnbananaFailure:
-    def __init__(self, where="<unknown>", failure=None):
-        self.where = where
-        self.failure = failure
-    def __repr__(self):
-        return "<%s at: %s>" % (self.__class__, self.where)
-
 def setInstanceState(inst, state):
     """Utility function to default to 'normal' state rules in unserialization.
     """
@@ -464,11 +463,11 @@ class BaseUnslicer:
     def start(self, count):
         pass
 
-    def checkToken(self, typebyte):
-        return None # unlimited
+    def checkToken(self, typebyte, size):
+        return # no restrictions
 
-    def openerCheckToken(self, typebyte, opentype):
-        return self.opener.openerCheckToken(typebyte, opentype)
+    def openerCheckToken(self, typebyte, size, opentype):
+        return self.opener.openerCheckToken(typebyte, size, opentype)
 
     def open(self, opentype):
         """Return an IBananaUnslicer object based upon the 'opentype' tuple.
@@ -510,6 +509,14 @@ class BaseUnslicer:
     def receiveClose(self):
         raise NotImplementedError
 
+    def reportViolation(self, why):
+        """If this unslicer raises a Violation, this method is given a
+        chance to do some cleanup or error-reporting. 'why' is the
+        UnbananaFailure that wraps the Violation: this method may modify it
+        or return a different one.
+        """
+        return why
+
     def finish(self):
         pass
 
@@ -522,6 +529,8 @@ class BaseUnslicer:
         stored in any/all Unslicers who cares to. Generally this is the
         RootUnslicer, but child slices could do it too if they wished.
         """
+        # TODO: examine how abandoned child objects could mess up this
+        # counter
         pass
 
     def getObject(self, counter):
@@ -529,15 +538,19 @@ class BaseUnslicer:
         """
         return None
 
-    def abort(self, failure):
-        self.protocol.abandonUnslicer(failure, self)
+    def propagateUnbananaFailures(self, obj):
+        """Call this from receiveChild() if you want to deal with failures
+        in your children by reporting a failure to your parent.
+        """
+        if isinstance(obj, UnbananaFailure):
+            raise Violation(failure=obj)
 
     def explode(self, failure):
         """If something goes wrong in a Deferred callback, it may be too
         late to reject the token and to normal error handling. I haven't
         figured out how to do sensible error-handling in this situation.
         This method exists to make sure that the exception shows up
-        *somewhere*. If this is called, it is also like that a placeholder
+        *somewhere*. If this is called, it is also likely that a placeholder
         (probably a Deferred) will be left in the unserialized object about
         to be handed to the RootUnslicer.
         """
@@ -551,7 +564,7 @@ class LeafUnslicer(BaseUnslicer):
     # checkToken should reject OPEN tokens
 
     def doOpen(self, opentype):
-        raise Violation, "'%s' does not accept sub-objects" % self
+        raise Violation("'%s' does not accept sub-objects" % self)
 
 class UnicodeUnslicer(LeafUnslicer):
     # accept a UTF-8 encoded string
@@ -561,21 +574,17 @@ class UnicodeUnslicer(LeafUnslicer):
         assert isinstance(constraint, schema.StringConstraint)
         self.constraint = constraint
 
-    def checkToken(self, typebyte):
+    def checkToken(self, typebyte, size):
         if typebyte != tokens.STRING:
             raise BananaError("UnicodeUnslicer only accepts strings",
                               self.where())
         if self.constraint:
-            return self.constraint.checkToken(typebyte)
-        return None # no size limit
+            self.constraint.checkToken(typebyte, size)
 
     def receiveChild(self, obj):
-        if isinstance(obj, UnbananaFailure):
-            self.abort(obj)
-            return
+        self.propagateUnbananaFailures(obj)
         if self.string != None:
-            raise BananaError("already received a string",
-                              self.where())
+            raise BananaError("already received a string", self.where())
         self.string = unicode(obj, "UTF-8")
 
     def receiveClose(self):
@@ -602,14 +611,13 @@ class ListUnslicer(BaseUnslicer):
             print "%s[%d].start with %s" % (self, self.count, self.list)
         self.protocol.setObject(count, self.list)
 
-    def checkToken(self, typebyte):
+    def checkToken(self, typebyte, size):
         if self.maxLength != None and len(self.list) >= self.maxLength:
             # list is full, no more tokens accepted
             # this is hit if the max+1 item is a primitive type
-            raise Violation
+            raise Violation("the list is full")
         if self.itemConstraint:
-            return self.itemConstraint.checkToken(typebyte)
-        return None # unlimited
+            self.itemConstraint.checkToken(typebyte, size)
 
     def doOpen(self, opentype):
         # decide whether the given object type is acceptable here. Raise a
@@ -618,7 +626,7 @@ class ListUnslicer(BaseUnslicer):
         # unslicer.
         if self.maxLength != None and len(self.list) >= self.maxLength:
             # this is hit if the max+1 item is a non-primitive type
-            raise Violation
+            raise Violation("the list is full")
         if self.itemConstraint:
             self.itemConstraint.checkOpentype(opentype)
         unslicer = self.open(opentype)
@@ -637,6 +645,7 @@ class ListUnslicer(BaseUnslicer):
     def receiveChild(self, obj):
         if self.debug:
             print "%s[%d].receiveChild(%s)" % (self, self.count, obj)
+        self.propagateUnbananaFailures(obj)
         # obj could be a primitive type, a Deferred, or a complex type like
         # those returned from an InstanceUnslicer. However, the individual
         # object has already been through the schema validation process. The
@@ -647,15 +656,13 @@ class ListUnslicer(BaseUnslicer):
             # this is redundant
             # (if it were a non-primitive one, it would be caught in doOpen)
             # (if it were a primitive one, it would be caught in checkToken)
-            raise Violation
+            raise Violation("the list is full")
         if isinstance(obj, Deferred):
             if self.debug:
                 print " adding my update[%d] to %s" % (len(self.list), obj)
             obj.addCallback(self.update, len(self.list))
             obj.addErrback(self.printErr)
             self.list.append(obj) # placeholder
-        elif isinstance(obj, UnbananaFailure):
-            self.abort(obj)
         else:
             self.list.append(obj)
 
@@ -689,18 +696,18 @@ class TupleUnslicer(BaseUnslicer):
         self.deferred = Deferred()
         self.protocol.setObject(count, self.deferred)
 
-    def checkToken(self, typebyte):
+    def checkToken(self, typebyte, size):
         if self.constraints == None:
-            return None
+            return
         if len(self.list) >= len(self.constraints):
-            raise Violation
-        return self.constraints[len(self.list)].checkToken(typebyte)
+            raise Violation("the tuple is full")
+        self.constraints[len(self.list)].checkToken(typebyte, size)
 
     def doOpen(self, opentype):
         where = len(self.list)
         if self.constraints != None:
             if where >= len(self.constraints):
-                raise Violation
+                raise Violation("the tuple is full")
             self.constraints[where].checkOpentype(opentype)
         unslicer = self.open(opentype)
         if unslicer:
@@ -716,12 +723,11 @@ class TupleUnslicer(BaseUnslicer):
             self.checkComplete()
 
     def receiveChild(self, obj):
+        self.propagateUnbananaFailures(obj)
         if isinstance(obj, Deferred):
             obj.addCallback(self.update, len(self.list))
             obj.addErrback(self.explode)
             self.list.append(obj) # placeholder
-        elif isinstance(obj, UnbananaFailure):
-            self.abort(obj)
         else:
             self.list.append(obj)
         
@@ -769,22 +775,21 @@ class DictUnslicer(BaseUnslicer):
         self.protocol.setObject(count, self.d)
         self.key = None
 
-    def checkToken(self, typebyte):
+    def checkToken(self, typebyte, size):
         if self.maxKeys != None:
             if len(self.d) >= self.maxKeys:
-                raise Violation
+                raise Violation("the dict is full")
         if self.gettingKey:
             if self.keyConstraint:
-                return self.keyConstraint.checkToken(typebyte)
+                self.keyConstraint.checkToken(typebyte, size)
         else:
             if self.valueConstraint:
-                return self.valueConstraint.checkToken(typebyte)
-        return None # unlimited
+                self.valueConstraint.checkToken(typebyte, size)
 
     def doOpen(self, opentype):
         if self.maxKeys != None:
             if len(self.d) >= self.maxKeys:
-                raise Violation
+                raise Violation("the dict is full")
         if self.gettingKey:
             if self.keyConstraint:
                 self.keyConstraint.checkOpentype(opentype)
@@ -806,9 +811,7 @@ class DictUnslicer(BaseUnslicer):
         self.d[key] = value
 
     def receiveChild(self, obj):
-        if isinstance(obj, UnbananaFailure):
-            self.abort(obj)
-            return
+        self.propagateUnbananaFailures(obj)
         if self.gettingKey:
             self.receiveKey(obj)
         else:
@@ -826,11 +829,9 @@ class DictUnslicer(BaseUnslicer):
                               self.where())
         try:
             if self.d.has_key(key):
-                raise BananaError("duplicate key '%s'" % key,
-                                  self.where())
+                raise BananaError("duplicate key '%s'" % key, self.where())
         except TypeError:
-            raise BananaError("unhashable key '%s'" % key,
-                              self.where())
+            raise BananaError("unhashable key '%s'" % key, self.where())
         self.key = key
 
     def receiveValue(self, value):
@@ -861,7 +862,7 @@ class VocabUnslicer(LeafUnslicer):
         self.gettingKey = True
         self.key = None
 
-    def checkToken(self, typebyte):
+    def checkToken(self, typebyte, size):
         if self.gettingKey:
             if typebyte != tokens.INT:
                 raise BananaError("VocabUnslicer only accepts INT keys",
@@ -872,9 +873,7 @@ class VocabUnslicer(LeafUnslicer):
                                   self.where())
 
     def receiveChild(self, token):
-        if isinstance(token, UnbananaFailure):
-            self.abort(token)
-            return
+        self.propagateUnbananaFailures(token)
         if self.gettingKey:
             if self.d.has_key(token):
                 raise BananaError("duplicate key '%s'" % token,
@@ -897,21 +896,26 @@ class VocabUnslicer(LeafUnslicer):
 class BrokenDictUnslicer(DictUnslicer):
     dieInFinish = 0
 
+    def receiveKey(self, key):
+        if key == "die":
+            raise Violation("aaagh")
+        if key == "please_die_in_finish":
+            self.dieInFinish = 1
+        DictUnslicer.receiveKey(self, key)
+
     def receiveValue(self, value):
         if value == "die":
-            raise "aaaaaaaaargh"
-        if value == "please_die_in_finish":
-            self.dieInFinish = 1
+            raise Violation("aaaaaaaaargh")
         DictUnslicer.receiveValue(self, value)
 
     def receiveClose(self):
         if self.dieInFinish:
-            raise "dead in receiveClose()"
+            raise Violation("dead in receiveClose()")
         DictUnslicer.receiveClose(self)
 
 class ReallyBrokenDictUnslicer(DictUnslicer):
     def start(self, count):
-        raise "dead in start"
+        raise Violation("dead in start")
 
 
 class Dummy:
@@ -942,7 +946,7 @@ class InstanceUnslicer(BaseUnslicer):
         self.classname = None
         self.attrname = None
 
-    def checkToken(self, typebyte):
+    def checkToken(self, typebyte, size):
         if self.gettingClassname:
             if typebyte not in (tokens.STRING, tokens.VOCAB):
                 raise BananaError("InstanceUnslicer classname must be string",
@@ -954,9 +958,7 @@ class InstanceUnslicer(BaseUnslicer):
         # TODO: use schema to determine attribute value constraint
 
     def receiveChild(self, obj):
-        if isinstance(obj, UnbananaFailure):
-            self.abort(obj)
-            return
+        self.propagateUnbananaFailures(obj)
         if self.gettingClassname:
             self.classname = obj
             self.gettingClassname = False
@@ -1017,15 +1019,13 @@ class ReferenceUnslicer(LeafUnslicer):
     def setConstraint(self, constraint):
         self.constraint = constraint
 
-    def checkToken(self, typebyte):
+    def checkToken(self, typebyte,size):
         if typebyte != tokens.INT:
             raise BananaError("ReferenceUnslicer only accepts INTs",
                               self.where())
 
     def receiveChild(self, num):
-        if isinstance(num, UnbananaFailure):
-            self.abort(num)
-            return
+        self.propagateUnbananaFailures(num)
         if self.finished:
             raise BananaError("ReferenceUnslicer only accepts one int",
                               self.where())
@@ -1044,15 +1044,13 @@ class ReferenceUnslicer(LeafUnslicer):
 class ModuleUnslicer(LeafUnslicer):
     finished = False
 
-    def checkToken(self, typebyte):
+    def checkToken(self, typebyte, size):
         if typebyte not in (tokens.STRING, tokens.VOCAB):
             raise BananaError("ModuleUnslicer only accepts strings",
                               self.where())
 
     def receiveChild(self, name):
-        if isinstance(name, UnbananaFailure):
-            self.abort(name)
-            return
+        self.propagateUnbananaFailures(name)
         if self.finished:
             raise BananaError("ModuleUnslicer only accepts one string",
                               self.where())
@@ -1070,15 +1068,13 @@ class ModuleUnslicer(LeafUnslicer):
 class ClassUnslicer(LeafUnslicer):
     finished = False
 
-    def checkToken(self, typebyte):
+    def checkToken(self, typebyte, size):
         if typebyte not in (tokens.STRING, tokens.VOCAB):
             raise BananaError("ClassUnslicer only accepts strings",
                               self.where())
 
     def receiveChild(self, name):
-        if isinstance(name, UnbananaFailure):
-            self.abort(name)
-            return
+        self.propagateUnbananaFailures(name)
         if self.finished:
             raise BananaError("ClassUnslicer only accepts one string",
                               self.where())
@@ -1103,7 +1099,7 @@ class MethodUnslicer(BaseUnslicer):
     # 1: expecting an instance (or None for unbound methods)
     # 2: expecting a class
 
-    def checkToken(self, typebyte):
+    def checkToken(self, typebyte, size):
         if self.state == 0:
             if typebyte not in (tokens.STRING, tokens.VOCAB):
                 raise BananaError("MethodUnslicer methodname must be a string",
@@ -1133,9 +1129,7 @@ class MethodUnslicer(BaseUnslicer):
         return unslicer
 
     def receiveChild(self, obj):
-        if isinstance(obj, UnbananaFailure):
-            self.abort(obj)
-            return
+        self.propagateUnbananaFailures(obj)
         if self.state == 0:
             self.im_func = obj
             self.state = 1
@@ -1172,15 +1166,13 @@ class MethodUnslicer(BaseUnslicer):
 class FunctionUnslicer(LeafUnslicer):
     finished = False
 
-    def checkToken(self, typebyte):
+    def checkToken(self, typebyte, size):
         if typebyte not in (tokens.STRING, tokens.VOCAB):
             raise BananaError("FunctionUnslicer only accepts strings",
                               self.where())
 
     def receiveChild(self, name):
-        if isinstance(name, UnbananaFailure):
-            self.abort(name)
-            return
+        self.propagateUnbananaFailures(name)
         if self.finished:
             raise BananaError("FunctionUnslicer only accepts one string",
                               self.where())
@@ -1195,7 +1187,7 @@ class FunctionUnslicer(LeafUnslicer):
         return self.func
 
 class NoneUnslicer(LeafUnslicer):
-    def checkToken(self, typebyte):
+    def checkToken(self, typebyte, size):
         raise BananaError("NoneUnslicer does not accept any tokens",
                           self.where())
     def receiveClose(self):
@@ -1206,24 +1198,25 @@ class BooleanUnslicer(LeafUnslicer):
     constraint = None
 
     def setConstraint(self, constraint):
+        assert isinstance(constraint, schema.BooleanConstraint)
         self.constraint = constraint
 
-    def checkToken(self, typebyte):
+    def checkToken(self, typebyte, size):
         if typebyte != tokens.INT:
             raise BananaError("BooleanUnslicer only accepts an INT token",
                               self.where())
-
-    def receiveChild(self, obj):
-        if isinstance(obj, UnbananaFailure):
-            self.abort(obj)
-            return
         if self.value != None:
             raise BananaError("BooleanUnslicer only accepts one token",
                               self.where())
+
+    def receiveChild(self, obj):
+        self.propagateUnbananaFailures(obj)
+        assert type(obj) == int
         if self.constraint:
             if self.constraint.value != None:
                 if bool(obj) != self.constraint.value:
-                    raise Violation
+                    raise Violation("This boolean can only be %s" % \
+                                    self.constraint.value)
         self.value = bool(obj)
 
     def receiveClose(self):
@@ -1274,14 +1267,16 @@ class RootUnslicer(BaseUnslicer):
         # IntegerConstraint, then only integers will be accepted.
         self.constraint = constraint
 
-    def checkToken(self, typebyte):
+    def checkToken(self, typebyte, size):
         if self.constraint:
-            return self.constraint.checkToken(typebyte)
-        return None
+            self.constraint.checkToken(typebyte, size)
 
-    def openerCheckToken(self, typebyte, opentype):
+    def openerCheckToken(self, typebyte, size, opentype):
         if typebyte == tokens.STRING:
-            return self.maxIndexLength
+            if size > self.maxIndexLength:
+                why = "STRING token is too long, %d>%d" % \
+                      (size, self.maxIndexLength)
+                raise Violation(why)
         elif typebyte == tokens.VOCAB:
             return None
         else:
@@ -1305,9 +1300,7 @@ class RootUnslicer(BaseUnslicer):
             # call. The RootUnslicer will set it (to itself) in
             # RootUnslicer.doOpen() .
         except KeyError:
-            where = self.where() + ".<OPEN(%s)>" % (opentype,)
-            raise BananaError("unknown OPEN type '%s'" % (opentype,),
-                              where)
+            raise Violation("unknown OPEN type '%s'" % (opentype,))
         return child
 
     def openTop(self, opentype):
@@ -1327,9 +1320,6 @@ class RootUnslicer(BaseUnslicer):
                 child.setConstraint(self.constraint)
         return child
 
-    def receiveAbort(self, token):
-        raise ValueError, "top-level should never receive ABORT tokens"
-
     def receiveChild(self, obj):
         if self.protocol.debug:
             print "RootUnslicer.receiveChild(%s)" % (obj,)
@@ -1345,7 +1335,7 @@ class RootUnslicer(BaseUnslicer):
         self.protocol.receivedObject(obj) # give finished object to Banana
 
     def receiveClose(self):
-        raise ValueError, "top-level should never receive CLOSE tokens"
+        raise BananaError("top-level should never receive CLOSE tokens")
 
     def describeSelf(self):
         return "root"

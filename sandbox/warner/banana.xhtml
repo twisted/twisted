@@ -14,14 +14,24 @@ sentence is lying. So there.</em>
 <h2>Banana tokens</h2>
 
 <p>At the lowest layer, the wire transport takes the form of Tokens. These
-all take the shape of header/type-byte/body, where the type byte has its
-high bit set, to distinguish it from the header bytes that precede it. Some
-tokens have bodies, some do not, and the length of all bodies are determined
-by data in the header. The bodies are composed of arbitrary bytes. For most
-tokens, the header is a base-128 number, but for some it may be a UTF-7
-encoded string. (?? maybe just strict ASCII. the high bit of all bytes in
-the header must be zero). The maximum legal header length is 64 bytes, so
-tokens which treat it as a number have a maximum value of 2**(64*7)-1.</p>
+all take the shape of header/type-byte/body.</p>
+
+<ul>
+ <li>Header: zero or more bytes, all of which have the high bit clear (they
+ range in value from 0 to 127). They form a little-endian base-128 number,
+ so 1 is represented as 0x01, 128 is represented as 0x00 0x01, 130 as 0x02
+ 0x01, etc. 0 can be represented by any string of 0x00 bytes, including an
+ empty string. The maximum legal header length is 64 bytes, so it has a
+ maximum value of 2**(64*7)-1. Not all tokens have headers.</li>
+
+ <li>Type Byte: the high bit is set to distinguish it from the header bytes
+ that precede it (it has a value from 128 to 255). The Type Byte determines
+ how to interpret both the header and the body. All valid type bytes are
+ listed below.</li>
+
+ <li>Body: zero or more arbitrary bytes, length is specified by the
+ header. Not all tokens have bodies.</li>
+</ul>
 
 <p>Tokens are described below as [header-TOKEN-body], where either
 <q>header</q> or <q>body</q> may be empty. For example, [len-LIST-empty]
@@ -324,7 +334,8 @@ The new Unslicer is pushed onto the stack.</p>
 <p><q>ABORT</q> tokens indicate that something went wrong on the sending
 side and that the current object is to be aborted. It causes the receiver to
 ignore all tokens until the CLOSE token which closes the current node. This
-is implemented by replacing the top-most slice with a DiscardUnslicer.</p>
+is implemented with a simple counter of how many levels of discarding we
+have left to do.</p>
 
 <p><q>CLOSE</q> tokens finish the current node. The slice will pass its
 completed object up to the <q>childFinished</q> method of its parent.</p>
@@ -420,8 +431,8 @@ This method can do one of the following things:</p>
   Banana protocol object simply remains in the Index Phase and continues to
   accumulate index tokens.</li>
 
-  <li>Raise a Violation</li>
-  <li>Raise some other exception</li>
+  <li>Raise a Violation. If the open type is unrecognized, then a Violation
+  is a good way to indicate it.</li>
 </ul>
 
 <p>When a new Unslicer object is pushed on the top of the stack, it has its
@@ -429,8 +440,8 @@ This method can do one of the following things:</p>
 whatever internal state is necessary to record the incoming content tokens.
 Each created object will have a separate Unslicer instance. (TODO: could
 optimize with singleton Unslicer objects, using start/finish methods to do
-cleanup). The start method can run normally, or raise a Violation exception,
-or some other exception.</p>
+cleanup). The start method can run normally, or raise a Violation
+exception.</p>
 
 <p>This Unslicer is responsible for all incoming tokens until either 1: it
 pushes a new one on the stack, or 2: it receives a CLOSE token.</p>
@@ -444,24 +455,25 @@ the length bytes by having the high bit set (the type byte is always 0x80 or
 greater). When the typebyte is received, the topmost Unslicer is asked about
 its suitability by calling the <code>.checkToken</code> method. (note that
 CLOSE and ABORT tokens are always legal, and are not submitted to
-checkToken). This method is expected to do one of the following:</p>
+checkToken). Both the typebyte and the header's numeric value are passed to
+this methoed, which is expected to do one of the following:</p>
 
 <ul>
-  <li>Return an integer called <code>sizelimit</code>. If the token body is
-  larger than sizelimit, the token will be rejected. This is used for
-  STRING, LONGINT, and LONGNEG tokens.</li>
+  <li>Return None to indicate that the token and the header value are
+  acceptable.</li>
 
-  <li>Raise a <code>Violation</code> exception to reject the token. This
-  will cause the remainder of the current OPEN sequence to be discarded (all
-  tokens through the matching CLOSE token). Unslicers should raise this if
-  their constraints will not accept the incoming object: for example a
-  constraint which is expecting a series of integers can accept
-  INT/NEG/LONGINT/LONGNEG tokens and reject OPEN/STRING/VOCAB/FLOAT tokens.
-  The topmost Unslicer (the same one which raised Violation) will receive
-  (through its <code>.receiveChild</code> method) an UnbananaFailure object
-  which encapsulates the reason for the rejection </li>
-
-  <li>Raise some other exception</li>
+  <li>Raise a <code>Violation</code> exception to reject the token or the
+  header value. This will cause the remainder of the current OPEN sequence
+  to be discarded (all tokens through the matching CLOSE token). Unslicers
+  should raise this if their constraints will not accept the incoming
+  object: for example a constraint which is expecting a series of integers
+  can accept INT/NEG/LONGINT/LONGNEG tokens and reject
+  OPEN/STRING/VOCAB/FLOAT tokens. They should also raise this if the header
+  indicates, e.g., a STRING which is longer than the constraint is willing
+  to accept, or a LONGINT/LONGNEG which is too large. The topmost Unslicer
+  (the same one which raised Violation) will receive (through its
+  <code>.receiveChild</code> method) an UnbananaFailure object which
+  encapsulates the reason for the rejection </li>
 </ul>
 
 <p>If the token sequence is in the <q>index phase</q> (i.e. it is just after
@@ -481,8 +493,8 @@ number, boolean, or None. This object is handed to the topmost Unslicer's
 <ul>
   <li>Run normally: if the object is acceptable, it should append or record
   it somehow.</li>
+
   <li>Raise Violation, just like checkToken.</li>
-  <li>Raise some other exception</li>
 
   <li>invoke <code>self.abort</code>, which does
   <code>protocol.abandonUnslicer</code></li>
@@ -490,7 +502,7 @@ number, boolean, or None. This object is handed to the topmost Unslicer's
 
 <p>If the child is handed an UnbananaFailure object, and it wishes to pass
 it upwards to its parent, then <code>self.abort</code> is the appropriate
-thing to do. Raising an exception will accomplish the same thing, but with a
+thing to do. Raising a Violation will accomplish the same thing, but with a
 new UnbananaFailure that describes the exception raised here instead of the
 one raised by a child object. It is bad to both call <code>abort</code> and
 raise an exception.</p>
@@ -510,12 +522,11 @@ raise an exception.</p>
   The Deferred will be fired (with the object) when it completes.</li>
 
   <li>Raise Violation</li>
-  <li>Raise some other exception</li>
 </ul>
 
 <p>After receiveClose has finished, the child is told to clean up by calling
 its <code>.finish</code> method. This can complete normally or raise a
-Violation, BananaError, or something else.</p>
+Violation.</p>
 
 <p>Then, the old top-most Unslicer is popped from the stack and discarded.
 Its parent is now the new top-most Unslicer, and the newly-unserialized
@@ -535,41 +546,47 @@ Most Violations are raised by the <code>checkOpentype</code> and
 <code>checkObject</code> methods of the various classes in
 <code>schema.py</code>.</p>
 
-<p>Exceptions which occur in an Unslicer (whether Violations or something
-more serious) can be confined to a single sub-tree of the object graph. The
-object being deserialized (and all of its children) is abandoned, and all
-remaining tokens for that object are discarded. However, the parent object
-(to which the abandoned object would have been given) gets to decide what
-happens next: it can either fail itself, or absorb the failure (much like an
-exception handler can choose to re-raise the exception or eat it).</p>
+<p>Violations which occur in an Unslicer can be confined to a single
+sub-tree of the object graph. The object being deserialized (and all of its
+children) is abandoned, and all remaining tokens for that object are
+discarded. However, the parent object (to which the abandoned object would
+have been given) gets to decide what happens next: it can either fail
+itself, or absorb the failure (much like an exception handler can choose to
+re-raise the exception or eat it).</p>
 
-<p>Confinable exceptions are wrapped in an <code>UnbananaFailure</code>
-object. The UnbananaFailure behaves like a regular
+<p>When a Violation occurs, it is wrapped in an <code>UnbananaFailure</code>
+object (just like Deferreds wrap exceptions in Failure objects). The
+UnbananaFailure behaves like a regular
 <code>twisted.python.failure.Failure</code> object, except that it has an
 attribute named <code>.where</code> which indicate the object-graph pathname
-where the problem occurred. The UnbananaFailure is passed up the Unslicer
-stack in lieu of an actual object. Most Unslicers have code in their
-<code>receiveChild</code> methods to detect an UnbananaFailure and trigger
-an abort, which causes all further tokens of the sub-tree to be discarded.
-The connection is not dropped. Unslicers which partition their children's
-sub-graphs (like the PBRootUnslicer, for which each child is a separate
-operation) can simply ignore the UnbananaFailure, or respond to it by
-sending an error message to the other end.</p>
+where the problem occurred.</p>
 
-<p>Other exceptions may occur during deserialization. Unrecognized opentypes
-will probably cause a KeyError when the opener attempts to map them to an
-Unserializer class. Coding erors could cause unexpected exceptions. If these
-occur in the context of an Unslicer, they are wrapped in UnbananaFailures
-and handled just like Violations. The only difference is that non-Violations
-are always logged with <code>log.err</code> (including a traceback), whereas
-Violations are passed through the Banana.logViolation method which may or
-may not log it (and will probably not include a traceback).</p>
+<p>The Unslicer which caused the Violation is given a chance to do cleanup
+or error-reporting by invoking its <code>reportViolation</code> method. It
+is given the UnbananaFailure so it can modify or copy it. The default
+implementation simply returns the is expected to return the UnbananaFailure
+it was given, but it is also allowed to return a different one. It must
+return an UnbananaFailure: it cannot ignore the Violation by returning None.
+This method should not raise any exceptions: doing so will cause the
+connection to be dropped.</p>
 
-<p>Exceptions which occur outside of an Unslicer indicate coding errors or
-severe protocol violations and cause the connection to be dropped. The
-exception is logged on the local side with <code>log.err</code>, but the
-remote end will not be given any reason for the disconnection. Protocol
-violations are indicated with a BananaError exception.</p>
+<p>The UnbananaFailure returned by <code>reportViolation</code> is passed up
+the Unslicer stack in lieu of an actual object. Most Unslicers have code in
+their <code>receiveChild</code> methods to detect an UnbananaFailure and
+trigger an abort (<code>propagateUnbananaFailures</code>), which causes all
+further tokens of the sub-tree to be discarded. The connection is not
+dropped. Unslicers which partition their children's sub-graphs (like the
+PBRootUnslicer, for which each child is a separate operation) can simply
+ignore the UnbananaFailure, or respond to it by sending an error message to
+the other end.</p>
+
+<p>Other exceptions may occur during deserialization. These indicate coding
+errors or severe protocol violations and cause the connection to be dropped
+(they are not caught by the Banana code and thus propagate all the way up to
+the reactor, which drops the socket). The exception is logged on the local
+side with <code>log.err</code>, but the remote end will not be told any
+reason for the disconnection. The banana code uses the BananaError exception
+to indicate protocol violations, but others may be encountered.</p>
 
 <p>The Banana object can also choose to respond to Violations by terminating
 the connection. For example, the <code>.hangupOnLengthViolation</code> flag

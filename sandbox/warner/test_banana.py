@@ -136,7 +136,7 @@ class UnbananaTestMixin:
 
     def assertRaisesBananaError(self, where, f, *args):
         try:
-            f(*args)
+            ret = f(*args)
         except Exception, e:
             if not isinstance(e, BananaError):
                 print "wrong exception type: %s" % e
@@ -147,7 +147,9 @@ class UnbananaTestMixin:
                     print "where", where
                     self.fail("BananaError '%s' didn't occur at '%s'" % \
                               (e, where))
-        self.hangup = True # to stop the tearDown check
+            self.hangup = True # to stop the tearDown check
+            return
+        self.fail("didn't fail, ret=%s" % ret)
 
     def checkUnbananaFailure(self, res, where, failtype=None):
         self.failUnless(isinstance(res, UnbananaFailure))
@@ -351,55 +353,50 @@ class FailureTests(UnbananaTestMixin, unittest.TestCase):
         
     def test_dict1(self):
         # dies during open because of bad opentype
-        self.assertRaisesBananaError("root.[1].<OPEN(('bad',))>",
-                                     self.do,
-                                     [OPENlist(0), 1,
-                                       ("OPEN", "bad", 1),
-                                        "a", 2,
-                                        "b", 3,
-                                       CLOSE(1),
-                                      CLOSE(0)])
+        res = self.do([OPENlist(0), 1,
+                        ("OPEN", "bad", 1),
+                         "a", 2,
+                         "b", 3,
+                        CLOSE(1),
+                       CLOSE(0)])
+        self.checkUnbananaFailure(res, "root.[1]")
 
     def test_dict2(self):
         # dies during start
-        self.assertRaisesBananaError("root.[1].{}.<START>",
-                                     self.do,
-                                     [OPENlist(0), 1,
-                                      OPENdict2(1), "a", 2, "b", 3, CLOSE(1),
-                                      CLOSE(0)])
+        res = self.do([OPENlist(0), 1,
+                       OPENdict2(1), "a", 2, "b", 3, CLOSE(1),
+                       CLOSE(0)])
+        self.checkUnbananaFailure(res, "root.[1].{}")
         #"dead in start"
 
     def test_dict3(self):
         # dies during key
-        self.assertRaisesBananaError("root.[1].{}",
-                                     self.do,
-                                     [OPENlist(0), 1,
-                                      OPENdict1(1), "a", 2, "die", CLOSE(1),
-                                      CLOSE(0)])
+        res = self.do([OPENlist(0), 1,
+                       OPENdict1(1), "a", 2, "die", CLOSE(1),
+                       CLOSE(0)])
+        self.checkUnbananaFailure(res, "root.[1].{}")
         #"aaaaaaaaargh"
 
     def test_dict4(self):
         # dies during value
-        self.assertRaisesBananaError("root.[1].{}[b].<receiveChild(die)>",
-                                     self.do,
-                                     [OPENlist(0), 1,
-                                       OPENdict1(1),
-                                        "a", 2,
-                                        "b", "die",
-                                       CLOSE(1),
-                                      CLOSE(0)])
+        res = self.do([OPENlist(0), 1,
+                        OPENdict1(1),
+                         "a", 2,
+                         "b", "die",
+                        CLOSE(1),
+                       CLOSE(0)])
+        self.checkUnbananaFailure(res, "root.[1].{}[b]")
         # "aaaaaaaaargh"
         
     def test_dict5(self):
         # dies during finish
-        self.assertRaisesBananaError("root.[1].{}.<CLOSE>",
-                                     self.do,
-                                     [OPENlist(0), 1,
-                                       OPENdict1(1),
-                                        "a", 2,
-                                        "please_die_in_finish", 3,
-                                       CLOSE(1),
-                                      CLOSE(0)])
+        res = self.do([OPENlist(0), 1,
+                        OPENdict1(1),
+                         "a", 2,
+                         "please_die_in_finish", 3,
+                        CLOSE(1),
+                       CLOSE(0)])
+        self.checkUnbananaFailure(res, "root.[1].{}")
         # "dead in receiveClose()"
         
 class BananaTests(unittest.TestCase):
@@ -919,6 +916,8 @@ class InboundByteStream(unittest.TestCase):
         self.conform2(self.FALSE(),
                       False,
                       schema.BooleanConstraint())
+        # booleans have ints, not strings. To do otherwise is a protocol
+        # error, not a schema Violation. 
         self.assertRaises(BananaError, self.decode2,
                           join(self.OPEN("boolean",1), self.STRING("vrai"),
                                self.CLOSE(1)),

@@ -1,0 +1,40 @@
+-*- outline -*-
+
+non-independent things left to do on newpb
+
+* implement CopyableFailure, allow remote methods to return errors
+
+This includes building all the class-marshalling registration framework, and
+creating some kind of configurable PBErrorResponseConstraint, and making the
+response constraint accept both good results and size-limited failures.
+
+* make ISliceable and some adapters to match
+
+This can be used in lieu of subclassing from pb.Referenceable or pb.Copyable.
+
+Also, it should be possible to pass a reference with variable forms:
+
+ rr.callRemote("foo", 1, Reference(obj))
+ rr.callRemote("bar", 2, Copy(obj))
+
+This should probably adapt the object to IReferenceable or ICopyable, which
+are like ISliceable except they can pass the object by reference or by
+value. The slicing process should be:
+
+ look up the type() in a table: this handles all basic types
+ else adapt the object to ISliceable, use the result
+ else raise an Unsliceable exception
+  (and point the user to the docs on how to fix it)
+
+The adapter returned by IReferenceable or ICopyable should implement
+ISliceable, so no further adaptation will be done.
+
+* make slicer/unslicers for pb.RemoteInterfaces
+
+exarkun's use case requires these Interfaces to be passable by reference
+(i.e. by name). It would also be interesting to let them be passed (and
+requested!) by value, so you can ask a remote peer exactly what their
+objects will respond to (the method names, the argument values, the return
+value). This also requires that constraints be serializable.
+
+* build/port the .rootObject framework, then pb.login

@@ -4,12 +4,12 @@ import types, struct
 
 from twisted.internet import protocol, error
 from twisted.python.failure import Failure
+from twisted.python import log
 
-from slicer import RootSlicer, RootUnslicer, \
-     UnbananaFailure, VocabSlicer, SimpleTokens
+from slicer import RootSlicer, RootUnslicer, VocabSlicer, SimpleTokens
 from tokens import Violation, SIZE_LIMIT, STRING, LIST, INT, NEG, \
      LONGINT, LONGNEG, VOCAB, FLOAT, OPEN, CLOSE, ABORT, tokenNames, \
-     BananaError, BananaError2
+     BananaError, UnbananaFailure
 
 def int2b128(integer, stream):
     if integer == 0:
@@ -87,6 +87,7 @@ class Banana(protocol.Protocol):
     unslicerClass = RootUnslicer
     hangupOnLengthViolation = False
     debug = False
+    logViolations = False
 
     def __init__(self):
         self.initSend()
@@ -264,19 +265,17 @@ class Banana(protocol.Protocol):
         # OPEN(vocab) sequence.
         self.incomingVocabulary = vocabDict
 
-
-    def getLimit(self, typebyte):
+    def checkToken(self, typebyte, size):
         # the purpose here is to limit the memory consumed by the body of a
         # STRING, OPEN, LONGINT, or LONGNEG token (i.e., the size of a
-        # primitive type). This will never be called with ABORT or CLOSE
-        # types.
+        # primitive type). If the sender wants to feed us more data than we
+        # want to accept, the checkToken() method should raise a Violation.
+        # This will never be called with ABORT or CLOSE types.
         top = self.receiveStack[-1]
         if self.inOpen:
-            limit = top.openerCheckToken(typebyte, self.opentype)
+            top.openerCheckToken(typebyte, size, self.opentype)
         else:
-            limit = top.checkToken(typebyte) # might raise Violation
-        if self.debug: print "getLimit(0x%x)=%s" % (ord(typebyte), limit)
-        return limit
+            top.checkToken(typebyte, size) # might raise Violation
 
 
     def dataReceived(self, chunk):
@@ -318,7 +317,13 @@ class Banana(protocol.Protocol):
             # The body may or may not be complete.
 
             typebyte = buffer[pos]
-            sizelimit = SIZE_LIMIT # default limit is 1k
+            if pos > 64:
+                # redundant?
+                raise BananaError("token prefix is limited to 64 bytes")
+            if pos:
+                header = b1282int(buffer[:pos])
+            else:
+                header = 0
 
             # rejected is set as soon as a violation is detected. The
             # appropriate UnbananaFailure will be delivered to the parent
@@ -335,35 +340,20 @@ class Banana(protocol.Protocol):
             # determine if this token will be accepted, and if so, how large
             # it is allowed to be (for STRING and LONGINT/LONGNEG)
 
-            if not rejected:
+            if (not rejected) and (typebyte not in (ABORT, CLOSE)):
                 # CLOSE and ABORT are always legal. All others (including
                 # OPEN) can be rejected by the schema: for example, a list
-                # of integers would reject STRING, VOCAB, and OPEN
-                if typebyte not in (ABORT, CLOSE):
-                    try:
-                        sizelimit = self.getLimit(typebyte)
-                    except Violation:
-                        where = self.describe()
-                        e = BananaError("schema rejected %s token" % \
-                                        tokenNames[typebyte],
-                                        where + "<checkToken>")
-                        rejected = True
-                        gotItem(UnbananaFailure(self.describe(), e))
-                    except BananaError, e:
-                        where = self.describe()
-                        e.where = where
-                        raise e
-                    except:
-                        # TODO: I think BananaError2 can go away, since we
-                        # can modify a Failure and then re-raise it
-                        e = BananaError2(Failure(),
-                                         self.describe() + "<checkToken>")
-                        raise e
+                # of integers would reject STRING, VOCAB, and OPEN because
+                # none of those will produce integers. If the unslicer's
+                # .checkToken rejects the tokentype, its .receiveChild will
+                # immediately get an UnbananaFailure
+                try:
+                    self.checkToken(typebyte, header)
+                except Violation, v:
+                    rejected = True
+                    gotItem(UnbananaFailure(v, self.describe()))
 
-            header = buffer[:pos]
             rest = buffer[pos+1:]
-            if len(header) > 64:
-                raise BananaError("token prefix is limited to 64 bytes")
 
             # determine what kind of token it is. Each clause finishes in
             # one of four ways:
@@ -384,23 +374,11 @@ class Banana(protocol.Protocol):
             if typebyte == LIST:
                 raise BananaError("oldbanana peer detected, " +
                                   "compatibility code not yet written")
-                #header = b1282int(header)
-                #if header > SIZE_LIMIT:
-                #    raise BananaError("Security precaution: List too long.")
                 #listStack.append((header, []))
                 #buffer = rest
 
             elif typebyte == STRING:
-                strlen = b1282int(header)
-                if not rejected and sizelimit != None and strlen > sizelimit:
-                    if self.hangupOnLengthViolation:
-                        raise BananaError("String too long.")
-                    else:
-                        # need to skip 'strlen' bytes and feed a BananaFailure
-                        # to the current unslicer
-                        rejected = True
-                        e = BananaError("String too long.")
-                        gotItem(UnbananaFailure(self.describe(), e))
+                strlen = header
                 if len(rest) >= strlen:
                     # the whole string is available
                     buffer = rest[strlen:]
@@ -417,23 +395,12 @@ class Banana(protocol.Protocol):
 
             elif typebyte == INT:
                 buffer = rest
-                header = b1282int(header)
                 obj = int(header)
             elif typebyte == NEG:
                 buffer = rest
-                header = b1282int(header)
                 obj = -int(header)
             elif typebyte == LONGINT or typebyte == LONGNEG:
-                strlen = b1282int(header)
-                if not rejected and sizelimit != None and strlen > sizelimit:
-                    if self.hangupOnLengthViolation:
-                        raise BananaError("Longint too long.")
-                    else:
-                        # need to skip 'strlen' bytes and feed a
-                        # BananaFailure to the current unslicer
-                        rejected = True
-                        e = BananaError("Longint too long.")
-                        gotItem(UnbananaFailure(self.describe(), e))
+                strlen = header
                 if len(rest) >= strlen:
                     # the whole number is available
                     buffer = rest[strlen:]
@@ -452,8 +419,10 @@ class Banana(protocol.Protocol):
 
             elif typebyte == VOCAB:
                 buffer = rest
-                header = b1282int(header)
                 obj = self.incomingVocabulary[header]
+                # TODO: bail if expanded string is too big
+                # this actually means doing self.checkToken(VOCAB, len(obj))
+                # but we have to make sure we handle the rejection properly
 
             elif typebyte == FLOAT:
                 if len(rest) >= 8:
@@ -466,7 +435,7 @@ class Banana(protocol.Protocol):
 
             elif typebyte == OPEN:
                 buffer = rest
-                self.openCount = b1282int(header)
+                self.openCount = header
                 if rejected:
                     # either 1) we are discarding everything, or 2) we
                     # rejected the OPEN token. In either case, discard
@@ -481,7 +450,7 @@ class Banana(protocol.Protocol):
 
             elif typebyte == CLOSE:
                 buffer = rest
-                count = b1282int(header)
+                count = header
                 if self.discardCount:
                     self.discardCount -= 1
                 else:
@@ -490,12 +459,13 @@ class Banana(protocol.Protocol):
 
             elif typebyte == ABORT:
                 buffer = rest
-                count = b1282int(header)
+                count = header
                 self.discardCount += 1
-                # TODO: this isn't really a BananaError, but we need
-                # *something* to describe it
-                e = BananaError("ABORT received")
-                gotItem(UnbananaFailure(self.describe(), e))
+                # TODO: this isn't really a Violation, but we need something
+                # to describe it. It does behave identically to what happens
+                # when receiveChild raises a Violation.
+                v = Violation("ABORT received")
+                self.handleViolation(v, "receive-abort", True)
                 continue
 
             else:
@@ -534,23 +504,13 @@ class Banana(protocol.Protocol):
                 return # they want more index tokens, leave .inOpen=True
             if self.debug:
                 print " opened[%d] with %s" % (openCount, child)
-        except Violation:
+        except Violation, v:
             # must discard the rest of the child object. There is no new
             # unslicer pushed yet, so we don't use abandonUnslicer
             self.discardCount += 1
             self.inOpen = False
-
-            # and give an UnbananaFailure to the parent who rejected it
-            where = self.describe() + ".<OPEN(%s)>" % (opentype,)
-            failure = UnbananaFailure(where, Failure())
-            top.receiveChild(failure)
+            self.handleViolation(v, "doOpen", False)
             return
-        except BananaError:
-            raise
-        except:
-            # blow up, but make a note of which object caused the problem
-            where = self.describe() + ".<OPEN(%s)>" % (opentype,)
-            raise BananaError2(Failure(), where)
 
         self.objectCounter += 1
         self.inOpen = False
@@ -559,40 +519,23 @@ class Banana(protocol.Protocol):
         self.receiveStack.append(child)
         try:
             child.start(objectCount)
-        except Violation:
+        except Violation, v:
             # the child is now on top, so use abandonUnslicer to discard the
             # rest of the child
-            where = self.describe() + ".<START>"
-            f = UnbananaFailure(where, Failure())
-            self.abandonUnslicer(f, child)
-        except BananaError:
-            raise
-        except:
-            where = self.describe() + ".<START>"
-            raise BananaError2(Failure(), where)
+            self.handleViolation(v, "start", True)
 
     def handleToken(self, token):
         top = self.receiveStack[-1]
         if self.debug: print "handleToken(%s)" % token
         try:
             top.receiveChild(token)
-        except Violation:
+        except Violation, v:
             # this is how the child says "I've been contaminated". If they
             # want to handle bad input better, they should deal with
-            # whatever they get (and have the ability to restrict that
+            # whatever they get (and they have the ability to restrict that
             # earlier, with checkToken and doOpen). At this point we have to
             # give up on them.
-            #
-            # It is not valid for a child to do both
-            # 'self.protocol.abandonUnslicer()' and 'raise Violation'
-
-            f = UnbananaFailure(self.describe(), Failure())
-            self.abandonUnslicer(f, top)
-        except BananaError:
-            raise
-        except:
-            where = self.describe() + ".<receiveChild(%s)>" % (token,)
-            raise BananaError2(Failure(), where)
+            self.handleViolation(v, "receiveChild", True)
 
     def handleClose(self, closeCount):
         if self.debug:
@@ -606,23 +549,18 @@ class Banana(protocol.Protocol):
 
         try:
             obj = child.receiveClose()
-        except Violation:
+        except Violation, v:
             # the child is contaminated. However, they're finished, so we
             # don't have to discard anything. Just give an UnbananaFailure
-            # to the parent.
-            where = self.describe() + ".<CLOSE>"
-            obj = UnbananaFailure(where, Failure())
-        except BananaError:
-            raise
-        except:
-            where = self.describe() + ".<CLOSE>"
-            raise BananaError2(Failure(), where)
+            # to the parent instead of the object they would have returned.
+            self.handleViolation(v, "receiveClose", True, discard=False)
+            return
 
         if self.debug: print "receiveClose returned", obj
 
         try:
             child.finish()
-        except Violation:
+        except Violation, v:
             # .finish could raise a Violation if an object that references
             # the child is just now deciding that they don't like it
             # (perhaps their TupleConstraint couldn't be asserted until the
@@ -632,99 +570,68 @@ class Banana(protocol.Protocol):
             # raised the Violation. The .where attribute will point to this
             # child, which is the node that caused somebody problems, but
             # will be marked <FINISH>, which indicates that it wasn't the
-            # child itself which raised the Violation.
+            # child itself which raised the Violation. TODO: not true
             #
             # TODO: it would be more useful if the UF could also point to
             # the completing object (the one which raised Violation).
 
-            where = self.describe() + ".<FINISH>"
-            obj = UnbananaFailure(where, Failure())
-        except BananaError:
-            raise
-        except:
-            where = self.describe() + ".<FINISH>"
-            raise BananaError2(Failure(), where)
+            self.handleViolation(v, "finish", True, discard=False)
+            return
 
         self.receiveStack.pop()
 
-        parent = self.receiveStack[-1]
-        try:
-            if self.debug: print "receiveChild()"
-            if isinstance(obj, UnbananaFailure):
-                if self.debug: print "%s .childFinished for UF" % parent
-                self.startDiscarding(obj, parent)
-            parent.receiveChild(obj)
-        except Violation:
-            # the parent didn't like the child object and is now
-            # contaminated. This is just like receiveToken failing
-            f = UnbananaFailure(self.describe(), Failure())
-            self.abandonUnslicer(f, parent)
-        except BananaError:
-            raise
-        except:
-            where = self.describe() + ".<receiveChild(%s)>" % (obj,)
-            raise BananaError2(Failure(), where)
+        # now deliver the object (or the UbF) to the parent)
+        self.handleToken(obj)
 
-    def abandonUnslicer(self, failure, leaf=None):
-        """The top-most Unslicer has decided to give up. We must discard all
-        tokens until the matching CLOSE is received. The UnbananaFailure
-        must be delivered to the late unslicer's parent.
-
-        leaf is a paranoia debug check, used to make sure abandonUnslicer is
-        called by the slicer that is currently in control.
+    def handleViolation(self, v, methname, doPop, discard=True):
+        """An Unslicer has decided to give up, or we have given up on it
+        (because we received an ABORT token). 
         """
 
-        if self.debug:
-            print "## abandonUnslicer called"
-            if isinstance(failure, UnbananaFailure):
-                print "##  while decoding '%s'" % failure.where
-            print "## current stack leading up to abandonUnslicer:"
-            import traceback
-            traceback.print_stack()
-            if not isinstance(failure, UnbananaFailure) and failure.failure:
-                print "## exception that triggered abandonUnslicer:"
-                print failure.failure.getBriefTraceback()
-
-        old = self.receiveStack.pop()
-        try:
-            old.finish() # ??
-        except Violation:
-            # they've already failed once
-            pass
-        # let other exceptions pop up here, because the .where argument
-        # isn't really useful (TODO: really?)
-
-        assert leaf == old
-
-        if not self.receiveStack:
-            # uh oh, the RootUnslicer broke. have to drop the connection
-            # now
-            print "RootUnslicer broken! hang up or else"
-            raise RuntimeError, "RootUnslicer broken: hang up or else"
-
-        self.discardCount += 1 # throw out everything until matching CLOSE
+        if v.failure:
+            # this is a nested failure. Use the UnbananaFailure inside
+            f = v.failure
+            assert isinstance(f, UnbananaFailure)
+        else:
+            where = self.describe()
+            f = UnbananaFailure(v, where)
+            if self.logViolations:
+                log.msg("Violation in %s at %s" % (methname, where))
+                log.err()
         top = self.receiveStack[-1]
-        try:
-            top.receiveChild(failure)
-        except Violation:
-            # they didn't like it either. This is like receiveToken failing.
-            # Propogate it up. The RootUnslicer is expected to log the
-            # UnbananaFailure and not raise another Violation, so this
-            # shouldn't go all the way up to the top.
+        f = top.reportViolation(f)
+        assert isinstance(f, UnbananaFailure)
 
-            # note that simplistic Unslicers who deal with UF by raising
-            # Violation allows a mild recursion attack: we have a stack here
-            # that is as deep as the object tree was when the Violation took
-            # place.
+        if doPop:
+            if self.debug:
+                print "## abandonUnslicer called"
+                print "##  while decoding '%s'" % f.where
+                print "## current stack leading up to abandonUnslicer:"
+                import traceback
+                traceback.print_stack()
+                print "## exception that triggered abandonUnslicer:"
+                print f
 
-            # TODO: need a mechanism to chain the UnbananaFailures
-            self.abandonUnslicer(failure, top)
-        except BananaError:
-            raise
-        except:
-            where = self.describe() + \
-                    ".<abandonUnslicer-receiveChild(%s)>" % failure
-            raise BananaError2(Failure(), where)
+            old = self.receiveStack.pop()
+            if discard:
+                # throw out everything until matching CLOSE
+                self.discardCount += 1
+
+            try:
+                # TODO: if handleClose encountered a Violation in .finish,
+                # we will end up calling it a second time
+                old.finish() # ??
+            except Violation:
+                pass # they've already failed once
+
+            if not self.receiveStack:
+                # Oh my god, you killed the RootUnslicer! You bastard!
+                # now there's nobody left to 
+                raise BananaError("we abandoned the RootUnslicer!")
+
+        # and give the UnbananaFailure to the (new) parent
+        self.handleToken(f)
+
 
     def describe(self):
         where = []

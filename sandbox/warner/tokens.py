@@ -1,5 +1,6 @@
 #! /usr/bin/python
 
+from twisted.python.failure import Failure
 from twisted.python.components import Interface
 
 # delimiter characters.
@@ -36,7 +37,26 @@ SIZE_LIMIT = 1000 # default limit on the body length of long tokens (STRING,
                   # LONGINT, LONGNEG)
 
 class Violation(Exception):
-    pass
+    """This exception is raised in response to a schema violation. It
+    indicates that the incoming token stream has violated a constraint
+    imposed by the recipient. The current Unslicer is abandoned and the
+    error is propagated upwards to the enclosing Unslicer parent by
+    providing an UnbananaFailure object to the parent's .receiveChild
+    method. All remaining tokens for the current Unslicer are to be dropped.
+    """
+
+    """.failure: when a child raises a Violation, the parent's
+    .receiveChild() will get a UnbananaFailure() that wraps it. If the
+    parent wants to propagate the failure up towards the root, it should
+    take that UbF and raise a Violation(failure=ubf). This tells the
+    unbanana code to use the original UbF instead of creating a nest of
+    Violation/UbFs as deep as the current serialization stack.
+    """
+
+    def __init__(self, *args, **kwargs):
+        Exception.__init__(self, *args)
+        self.failure = kwargs.get("failure", None)
+
 
 
 class BananaError(Exception):
@@ -49,23 +69,30 @@ class BananaError(Exception):
     where the failure was noticed.
     """
 
-    def __init__(self, why, where="?"):
+    def __init__(self, why, where=None):
         self.why = why
         self.where = where
 
     def __str__(self):
-        return "BananaError(in %s): %s" % (self.where, self.why)
+        if self.where:
+            return "BananaError(in %s): %s" % (self.where, self.why)
+        else:
+            return "BananaError: %s" % (self.where,)
 
-class BananaError2(BananaError):
-    """This exception is raised when something else goes wrong during the
-    unserialization process. This catches arbitrary exceptions in Unslicer
-    methods.
-
-    This exists solely to add the .where attribute to the raised exception.
+class UnbananaFailure(Failure):
+    """This subclass of Failure adds a .where attribute which records the
+    object-graph pathname where the problem occurred. It indicates a
+    recoverable failure (one which will cause the containing sub-tree to be
+    discarded but which does not require the connection be dropped).
     """
 
+    def __init__(self, exc, where):
+        self.where = where
+        Failure.__init__(self, exc)
+
     def __str__(self):
-        return "BananaError2(in %s): %s" % (self.where, self.why)
+        return "[UnbananaFailure in %s: %s]" % (self.where,
+                                                self.getBriefTraceback())
 
 class IReferenceable(Interface):
     # TODO: really?

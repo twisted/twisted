@@ -250,3 +250,15 @@ class CreateTest(unittest.TestCase):
         self.failUnlessEqual(len(c.alternatives), 2)
         self.check(c.alternatives[0], schema.IntegerConstraint)
         self.check(c.alternatives[1], schema.StringConstraint)
+
+
+# now test unserialization with constraints
+
+from test_banana import UnbananaTestMixin, OPENlist, CLOSE
+
+class UnslicerTest(UnbananaTestMixin, unittest.TestCase):
+    def test_list(self):
+        c = schema.ListConstraint(int, 3)
+        self.banana.rootUnslicer.setConstraint(c)
+        res = self.do([OPENlist(0),1,2,3,"a","b",CLOSE(0)])
+        self.checkUnbananaFailure(res, "root.[3]")

@@ -40,11 +40,11 @@ modifiers:
 
 """
 
-import types
-from twisted.python import failure
+import types, inspect
+from twisted.python import failure, components
 
 from tokens import Violation, SIZE_LIMIT, STRING, LIST, INT, NEG, \
-     LONGINT, LONGNEG, VOCAB, FLOAT, OPEN
+     LONGINT, LONGNEG, VOCAB, FLOAT, OPEN, tokenNames
 
 everythingTaster = {
     # he likes everything
@@ -65,12 +65,17 @@ openTaster = {
 class UnboundedSchema(Exception):
     pass
 
+class IConstraint(components.Interface):
+    pass
+
 class Constraint:
     """
     Each __schema__ attribute is turned into an instance of this class, and
     is eventually given to the unserializer (the 'Unslicer') to enforce as
     the tokens are arriving off the wire.
     """
+
+    __implements__ = IConstraint,
 
     taster = everythingTaster
     """the Taster is a dict that specifies which basic token types are
@@ -79,19 +84,33 @@ class Constraint:
     longer than LIMIT bytes.
     """
 
+    strictTaster = False
+    """If strictTaster is True, taste violations are raised as BananaErrors
+    (indicating a protocol error) rather than a mere Violation.
+    """
+
     opentypes = None
     """opentypes is a list of currently acceptable OPEN token types. None
     indicates that all types are accepted. An empty list indicates that no
     OPEN tokens are accepted.
     """
 
-    def checkToken(self, typebyte):
+    name = None
+    """Used to describe the Constraint in a Violation error message"""
+
+    def checkToken(self, typebyte, size):
         """Check the token type. Raise an exception if it is not accepted
-        right now, or return a body-length limit if it is ok."""
-        if not self.taster.has_key(typebyte):
-            raise Violation("this primitive type is not accepted right now")
-            # really, start discarding instead
-        return self.taster[typebyte]
+        right now, or if the body-length limit is exceeded."""
+
+        limit = self.taster.get(typebyte, "not in list")
+        if limit == "not in list":
+            if self.strictTaster:
+                raise BananaError("invalid token type")
+            else:
+                raise Violation("%s token rejected by %s" % \
+                                (tokenNames[typebyte], self.name))
+        if limit and size > limit:
+            raise Violation("token too large: %d>%d" % (size, limit))
 
     def setNumberTaster(self, maxValue):
         self.taster = {INT: None,
@@ -169,6 +188,7 @@ Any = Constraint # accept everything
 
 class StringConstraint(Constraint):
     opentypes = [] # redundant, as taster doesn't accept OPEN
+    name = "StringConstraint"
 
     def __init__(self, maxLength=1000):
         self.maxLength = maxLength
@@ -189,6 +209,7 @@ class StringConstraint(Constraint):
 class IntegerConstraint(Constraint):
     opentypes = [] # redundant
     # taster set in __init__
+    name = "IntegerConstraint"
 
     def __init__(self, maxBytes=-1):
         # -1 means s_int32_t: INT/NEG instead of INT/NEG/LONGINT/LONGNEG
@@ -220,6 +241,8 @@ class IntegerConstraint(Constraint):
         return 1
 
 class NumberConstraint(IntegerConstraint):
+    name = "NumberConstraint"
+
     def __init__(self, maxBytes=1024):
         assert maxBytes != -1  # not valid here
         IntegerConstraint.__init__(self, maxBytes)
@@ -260,8 +283,10 @@ def OPENBYTES(dummy):
 
 class BooleanConstraint(Constraint):
     taster = openTaster
+    strictTaster = True
     opentypes = [("boolean",)]
     _myint = IntegerConstraint()
+    name = "BooleanConstraint"
 
     def __init__(self, value=None):
         # self.value is a joke. This allows you to use a schema of
@@ -294,6 +319,7 @@ class InterfaceConstraint(Constraint):
     # classname-to-class/factory map?
     taster = openTaster
     opentypes = [("instance",)]
+    name = "InterfaceConstraint"
 
     def __init__(self, interface):
         self.interface = interface
@@ -305,6 +331,7 @@ class InterfaceConstraint(Constraint):
 class ClassConstraint(Constraint):
     taster = openTaster
     opentypes = [("instance",)]
+    name = "ClassConstraint"
 
     def __init__(self, klass):
         self.klass = klass
@@ -313,6 +340,8 @@ class ClassConstraint(Constraint):
             raise Violation
 
 class PolyConstraint(Constraint):
+    name = "PolyConstraint"
+
     def __init__(self, *alternatives):
         self.alternatives = [makeConstraint(a) for a in alternatives]
         self.alternatives = tuple(self.alternatives)
@@ -349,6 +378,7 @@ ChoiceOf = PolyConstraint
 class TupleConstraint(Constraint):
     taster = openTaster
     opentypes = [("tuple",)]
+    name = "TupleConstraint"
 
     def __init__(self, *elemConstraints):
         self.constraints = [makeConstraint(e) for e in elemConstraints]
@@ -384,6 +414,7 @@ class ListConstraint(Constraint):
 
     taster = openTaster
     opentypes = [("list",)]
+    name = "ListConstraint"
 
     def __init__(self, constraint, maxLength=30):
         self.constraint = makeConstraint(constraint)
@@ -416,6 +447,7 @@ ListOf = ListConstraint
 class DictConstraint(Constraint):
     taster = openTaster
     opentypes = [("dict",)]
+    name = "DictConstraint"
 
     def __init__(self, keyConstraint, valueConstraint, maxKeys=30):
         self.keyConstraint = makeConstraint(keyConstraint)
@@ -462,6 +494,7 @@ class AttributeDictConstraint(Constraint):
     """
     taster = openTaster
     opentypes = [("attrdict",)]
+    name = "AttributeDictConstraint"
 
     def __init__(self, *attrTuples, **kwargs):
         self.ignoreUnknown = kwargs.get('ignoreUnknown', False)
@@ -514,10 +547,11 @@ class AttributeDictConstraint(Constraint):
             raise Violation("object is missing required keys: %s" % \
                             ",".join(allkeys))
 
-class MethodArgumentsConstraint(Constraint):
-    """This is a constraint for the argument list for a remotely-invokable
-    method. It gets to require, deny, or impose further constraints upon a
-    set of named arguments.
+class RemoteMethodSchema:
+    """
+    This is a constraint for a single remotely-invokable method. It gets to
+    require, deny, or impose further constraints upon a set of named
+    arguments.
 
     This constraint is created by using keyword arguments with the same
     names as the target method's arguments. Two special names are used:
@@ -532,78 +566,66 @@ class MethodArgumentsConstraint(Constraint):
     of these objects.
     """
 
+    __implements__ = IConstraint,
+
     taster = {} # this should not be used as a top-level constraint
     opentypes = [] # overkill
     ignoreUnknown = False
     acceptUnknown = False
 
-    def __init__(self, **kwargs):
+    # under development
+    def __init__(self, method=None, _response=None, __options=[], **kwargs):
+        if method:
+            self.initFromMethod(method)
+            return
+        self.argumentNames = []
+        self.argConstraints = {}
+        self.required = []
+        self.responseConstraint = None
+        # __response in the argslist gets treated specially, I think it is
+        # mangled into _RemoteMethodSchema__response or something. When I
+        # change it to use _response instead, it works.
+        if _response:
+            self.responseConstraint = makeConstraint(_response)
+        self.options = {} # return, wait, reliable, etc
+
         if kwargs.has_key("__ignoreUnknown__"):
             self.ignoreUnknown = kwargs["__ignoreUnknown__"]
             del kwargs["__ignoreUnknown__"]
         if kwargs.has_key("__acceptUnknown__"):
             self.acceptUnknown = kwargs["__acceptUnknown__"]
             del kwargs["__acceptUnknown__"]
-        # build up a list of required arguments for later checking
-        self.args = {}
-        self.required = []
+
         for argname, constraint in kwargs.items():
+            self.argumentNames.append(argname)
+            constraint = makeConstraint(constraint)
+            self.argConstraints[argname] = constraint
             if not isinstance(constraint, Optional):
                 self.required.append(argname)
-            self.args[argname] = makeConstraint(constraint)
 
-    def getArgConstraint(self, argname):
-        if self.args.has_key(argname):
-            c = self.args[argname]
-            if isinstance(c, Optional):
-                c = c.constraint
-            return (True, c)
-        # what do we do with unknown arguments?
-        if self.ignoreUnknown:
-            return (False, None)
-        if self.acceptUnknown:
-            return (True, None)
-        raise Violation("unknown argument '%s'" % argname)
+    def initFromMethod(self, method):
+        # call this with the Interface's prototype method: the one that has
+        # argument constraints expressed as default arguments, and which
+        # does nothing but returns the appropriate return type
 
-    def checkArgs(self, argdict):
-        # this is called on the inbound side. Each argument has already been
-        # checked individually, so all we have to do is verify global things
-        # like all required arguments have been provided.
-        for argname in self.required:
-            if not argdict.has_key(argname):
-                raise Violation("missing required argument '%s'" % argname)
+        names, _, _, typeList = inspect.getargspec(method)
+        assert names[0] == "self"
+        names.pop(0)
+        assert len(names) == len(typeList)
+        self.argumentNames = names
+        self.argConstraints = {}
+        self.required = []
+        for i in range(len(names)):
+            argname = names[i]
+            constraint = typeList[i]
+            if not isinstance(constraint, Optional):
+                self.required.append(argname)
+            self.argConstraints[argname] = makeConstraint(constraint)
 
-    def checkObject(self, kwargs):
-        for argname, argvalue in kwargs.items():
-            accept, constraint = self.getArgConstraint(argname)
-            if not accept:
-                # this argument will be ignored by the far end. TODO: emit a
-                # warning
-                pass
-            constraint.checkObject(argvalue)
-        self.checkArgs(kwargs)
-
-    def maxSize(self, seen=None):
-        if self.acceptUnknown:
-            raise UnboundedSchema # there is no limit on that thing
-        if self.ignoreUnknown:
-            # for now, we ignore unknown arguments by accepting the object
-            # and then throwing it away. This makes us vulnerable to the
-            # memory consumed by that object. TODO: in the CallUnslicer,
-            # arrange to discard the ignored object instead of receiving it.
-            # When this is done, ignoreUnknown will not cause the schema to
-            # be unbounded and this clause should be removed.
-            raise UnboundedSchema
-        # TODO: implement the rest of maxSize, just like a dictionary
-        raise NotImplementedError
-
-class RemoteMethodSchema:
-    # under development
-    def __init__(self):
-        self.argumentNames = []
-        self.argsConstraint = None
-        self.responseConstraint = None
+        # call the method, its 'return' value is the return constraint
+        self.responseConstraint = makeConstraint(method(None))
         self.options = {} # return, wait, reliable, etc
+
 
     def mapArguments(self, args, kwargs):
         """Create a dictionary of arguments. All positional arguments must
@@ -624,26 +646,121 @@ class RemoteMethodSchema:
             kwargs[name] = args[i]
         return kwargs
 
-    def getArgsConstraint(self):
-        # return a MethodArgumentsConstraint
-        return self.argsConstraint
+    def getArgConstraint(self, argname):
+        c = self.argConstraints.get(argname)
+        if c:
+            if isinstance(c, Optional):
+                c = c.constraint
+            return (True, c)
+        # what do we do with unknown arguments?
+        if self.ignoreUnknown:
+            return (False, None)
+        if self.acceptUnknown:
+            return (True, None)
+        raise Violation("unknown argument '%s'" % argname)
 
     def getResponseConstraint(self):
         return self.responseConstraint
 
+    def checkArgs(self, argdict):
+        # this is called on the inbound side. Each argument has already been
+        # checked individually, so all we have to do is verify global things
+        # like all required arguments have been provided.
+        for argname in self.required:
+            if not argdict.has_key(argname):
+                raise Violation("missing required argument '%s'" % argname)
+
+    # outbound side
+
+    def checkAllArgs(self, argdict):
+        for argname, argvalue in argdict.items():
+            accept, constraint = self.getArgConstraint(argname)
+            if not accept:
+                # this argument will be ignored by the far end. TODO: emit a
+                # warning
+                pass
+            constraint.checkObject(argvalue)
+        self.checkArgs(argdict)
+
+    def checkResults(self, results):
+        if self.responseConstraint:
+            try:
+                self.responseConstraint.checkObject(results)
+            except Violation, v:
+                if v.args:
+                    v.args[0] += " in outbound method results"
+                else:
+                    v.args = ("in outbound method results",)
+                raise v
+
+    def maxSize(self, seen=None):
+        if self.acceptUnknown:
+            raise UnboundedSchema # there is no limit on that thing
+        if self.ignoreUnknown:
+            # for now, we ignore unknown arguments by accepting the object
+            # and then throwing it away. This makes us vulnerable to the
+            # memory consumed by that object. TODO: in the CallUnslicer,
+            # arrange to discard the ignored object instead of receiving it.
+            # When this is done, ignoreUnknown will not cause the schema to
+            # be unbounded and this clause should be removed.
+            raise UnboundedSchema
+        # TODO: implement the rest of maxSize, just like a dictionary
+        raise NotImplementedError
+
+
 class RemoteReferenceSchema:
+    __implements__ = IConstraint,
+    missingMethods = False
     # under development
-    def __init__(self):
-        self.methods = {} # values are RemoteMethodSchema instances
+
+    def __init__(self, interfaces):
+        # 'interfaces' is a dict which maps interface name to Interfaces. On
+        # the remote side, we might be missing Interfaces, in which case
+        # those values will be None
+        self.methods = {} # maps method name to RemoteMethodSchema instance
+        self.interfaces = interfaces
+        self.interfaceNames = interfaces.keys()
+
+        if not interfaces:
+            # the remote object didn't tell us what interfaces it supports
+            self.missingMethods = True
+        if not interfaces or None in interfaces.values():
+            # the remote object supports Interfaces that we don't know
+            # about, which means that there are probably some methods we
+            # don't know about, which means that we can't be confident that
+            # any particular method name is invalid
+            self.missingMethods = True
+
+        # now figure out the legal methods
+        for iface in interfaces.values():
+            if not iface:
+                continue
+            for name in iface.methods:
+                assert(name not in self.methods,
+                       "overlapping method '%s'" % name)
+                m = iface.__dict__[name]
+                assert(isinstance(m, RemoteMethodSchema),
+                       "method %s is %s" % (name, m))
+                self.methods[name] = m
+
     def getMethods(self):
         return self.methods.keys()
+
     def getMethodSchema(self, methodname):
-        return self.methods[methodname]
-    
+        s = self.methods.get(methodname)
+        if s:
+            return s
+        if not self.missingMethods:
+            why = "method '%s' not defined in any RemoteInterface" \
+                  % methodname
+            raise Violation(why)
+        return None
 
 
 #TODO
 class Shared(Constraint):
+    name = "Shared"
+
     def __init__(self, constraint, refLimit=None):
         self.constraint = makeConstraint(constraint)
         self.refLimit = refLimit
@@ -662,6 +779,8 @@ class Shared(Constraint):
 
 #TODO: might be better implemented with a .optional flag
 class Optional(Constraint):
+    name = "Optional"
+
     def __init__(self, constraint, default):
         self.constraint = makeConstraint(constraint)
         self.default = default
@@ -684,7 +803,8 @@ class Optional(Constraint):
 FailureConstraint = StringConstraint
 
 def makeConstraint(t):
-    if isinstance(t, Constraint):
+    #if isinstance(t, Constraint):
+    if components.implements(t, IConstraint):
         return t
     map = {
         types.StringType: StringConstraint(),
@@ -697,7 +817,7 @@ def makeConstraint(t):
     if c:
         return c
     try:
-        if issubclass(t, components.Interface):
+        if isinstance(t, type) and issubclass(t, components.Interface):
             return InterfaceConstraint(t)
     except NameError:
         pass # if t is not a class, issubclass raises an exception
@@ -709,6 +829,23 @@ def makeConstraint(t):
         return PolyConstraint(*t)
 
     raise UnknownSchemaType
+
+
+
+def callable(method, **kw):
+    names, _, _, typeList = inspect.getargspec(method)
+    assert names[0] == "self"
+    names.pop(0)
+    assert len(names) == len(typeList)
+    s = RemoteMethodSchema()
+    s.argumentNames = names
+    d = {}
+    for i in range(len(names)):
+        d[names[i]] = typeList[i]
+    s.argsConstraint = MethodArgumentsConstraint(**d)
+    # call the method, its 'return' value is the return constraint
+    s.responseConstraint = makeConstraint(method(None))
+    return s
 
 
 
