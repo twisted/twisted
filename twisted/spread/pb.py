@@ -52,7 +52,7 @@ applied when serializing arguments.
 # Future Imports
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.126 $"[11:-2]
+__version__ = "$Revision: 1.127 $"[11:-2]
 
 
 # System Imports
@@ -407,6 +407,7 @@ class CopyableFailure(failure.Failure, Copyable):
 class CopiedFailure(RemoteCopy, failure.Failure):
     def printTraceback(self, file=None):
         if not file: file = log.logfile
+        file.write("Traceback from remote host -- ")
         file.write(self.traceback)
 
     printBriefTraceback = printTraceback
@@ -820,11 +821,11 @@ class Broker(banana.Banana):
                 self._sendError(CopyableFailure(e), requestID)
         except:
             if answerRequired:
+                log.msg("Peer will receive following PB traceback:")
                 f = CopyableFailure()
                 self._sendError(f, requestID)
-                log.msg("Peer Will Receive PB Traceback:")
             else:
-                log.msg("Peer Will Ignore PB Traceback:")
+                log.msg("Peer will not receive following PB traceback:")
             log.deferr()
         else:
             if answerRequired:
@@ -858,6 +859,9 @@ class Broker(banana.Banana):
     ##
 
     def _sendFailure(self, fail, requestID):
+        """Log error and then send it."""
+        log.msg("Peer will receive following PB traceback:")
+        log.err(fail)
         self._sendError(fail, requestID)
 
     def _sendError(self, fail, requestID):
