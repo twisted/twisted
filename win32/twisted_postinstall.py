@@ -164,7 +164,7 @@ echo -:- -:- -:- -:- -:--:- -:- -:- -:- -:--:- -:- -:- -:- -:-
         # tkconch
         # XXX: Works only of Crypto is available...
         conch_shortcut_path=os.path.join(menu_path, "TkConch (ssh).lnk")
-        create_shortcut(os.path.join(exec_dir, "python.exe"),
+        create_shortcut(os.path.join(exec_dir, "pythonw.exe"),
                         "TkConch",
                         conch_shortcut_path,
                         os.path.join(scripts_dir, "tkconch.py"),
