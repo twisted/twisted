@@ -42,6 +42,7 @@ class ServerOptions(usage.Options):
 
     optFlags = [['nodaemon','n',  "don't daemonize"],
                 ['profile','p',   "run profiler"],
+                ['debug', 'b',    "run the application in the Python Debugger (implies nodaemon)"],
                 ['quiet','q',     "be a little more quiet"],
                 ['no_save','o',   "do not save state on shutdown"]]
 
@@ -82,8 +83,8 @@ if platformType != 'java':
     os.chdir(config.rundir)
 sys.path.append(config.rundir)
 
-if platformType != 'posix':
-    # only posix can fork
+if platformType != 'posix' or config.debug:
+    # only posix can fork, and debugging requires nodaemon
     config.nodaemon = 1
 
 # Twisted Imports
@@ -197,6 +198,9 @@ try:
     if config.profile:
         import profile
         profile.run("application.run(%d)" % (not config.no_save))
+    elif config.debug:
+        import pdb
+        pdb.run("application.run(%d)" % (not config.no_save))
     else:
         application.run(not config.no_save)
 except:
