@@ -4,7 +4,7 @@ def _parseTCP(factory, port, interface="", backlog=5):
 def _parseUNIX(factory, address, mode='666', backlog=5):
     return (address, factory), {'mode': int(mode, 8), 'backlog': backlog}
 
-def _parseSSL(reactor, factory, port, privateKey="server.pem", certKey=None
+def _parseSSL(reactor, factory, port, privateKey="server.pem", certKey=None,
               sslmethod=None, interface='', backlog=5):
     from twisted.internet import ssl
     if certKey is None:
@@ -39,3 +39,17 @@ def listen(description, factory):
     from twisted.internet import reactor
     name, (args, kw) = parse(description, factory)
     return getattr(reactor, 'listen'+name)(*args, **kw)
+
+def _test():
+    from twisted.protocols import wire
+    from twisted.internet import protocol, reactor
+    f = protocol.ServerFactory()
+    f.protocol = wire.Echo
+    listen("unix:lala", f)
+    s = service("unix:lolo", f)
+    s.startService()
+    reactor.addSystemEventTrigger('before', 'shutdown', s.stopService)
+    reactor.run()
+
+if __name__ == '__main__':
+    _test()
