@@ -99,16 +99,12 @@ class WxReactor(default.SelectReactor):
     def simulate(self):
         """Run simulation loops and reschedule callbacks.
         """
-        start = seconds()
-        while self.running:
-            self.runUntilCurrent()
-            t = self.timeout()
-            if t == None or t > 0.001:
-                t = 0.001
-            #t2 = self.running and t
-            self.doIteration(t)
-            if seconds() - start > 0.001:
-                break
+        if self.running:
+            t = 0.01
+            start = seconds()
+            while t > 0:
+                self.iterate(t)
+                t = 0.01 - (seconds() - start)
 
 
 def install():
