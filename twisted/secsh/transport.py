@@ -3,6 +3,7 @@ import struct
 import md5
 import sha
 import hmac
+import zlib
 
 # external library imports
 from Crypto import Util
@@ -29,8 +30,8 @@ class SSHTransportBase(protocol.Protocol):
     supportedKeyExchanges = (#'diffie-hellman-group1-sha1',
         'diffie-hellman-group-exchange-sha1',)
 #                             'diffie-hellman-group1-sha1')
-    supportedPublicKeys = ('ssh-rsa', )
-    supportedCompressions = ('zlib', 'none')
+    supportedPublicKeys = ('ssh-rsa', 'ssh-dss', )
+    supportedCompressions = ('none',) # compression doesn't work
     supportedLanguages = ()
 
     gotVersion = 0
@@ -63,12 +64,11 @@ class SSHTransportBase(protocol.Protocol):
                         NS(','.join(self.supportedCompressions)) + \
                         NS(','.join(self.supportedLanguages)) + \
                         NS(','.join(self.supportedLanguages)) + \
-                        '\000' + '\000\000\000\001'
+                        '\000' + '\000\000\000\000'
         self.sendPacket(MSG_KEXINIT, self.ourKexInitPayload[1:])
         #self.sendDebug('this is a test', 1)
 
     def sendPacket(self, messageType, payload):
-        print 'sending packet with first byte',messageType
         payload = chr(messageType) + payload
         if self.outgoingCompression:
             payload = self.outgoingCompression.compress(payload)
@@ -137,7 +137,6 @@ class SSHTransportBase(protocol.Protocol):
 
     def dataReceived(self, data):
         self.buf = self.buf + data
-        cont = 1
         if not self.gotVersion:
             parts = self.buf.split('\n')
             for p in parts:
@@ -188,6 +187,7 @@ class SSHTransportBase(protocol.Protocol):
         self.receiveDebug(alwaysDisplay, message, lang)
 
     def setService(self, service):
+        print 'setting service for',self,'to',service.name
         self.service = service
         service.transport = self
         self.service.serviceStarted()
@@ -260,8 +260,8 @@ class SSHServerTransport(SSHTransportBase):
             h.update(sharedSecret)
             exchangeHash = h.digest()
             print 'hash', h.hexdigest()
-            self.sendPacket(MSG_KEXDH_REPLY, NS(self.factory.publicKey[self.keyAlg]) + \
-                            MP(f) + NS(keys.pkcs1Sign(self.factory.privateKey[self.keyAlg], exchangeHash)))
+            self.sendPacket(MSG_KEXDH_REPLY, NS(self.factory.publicKeys[self.keyAlg]) + \
+                            MP(f) + NS(keys.signData(self.factory.privateKeys[self.keyAlg], exchangeHash)))
             self._keySetup(sharedSecret, exchangeHash)
         elif self.kexAlg == 'diffie-hellman-group-exchange-sha1':
             self.kexAlg =  'diffie-helmman-group-exchange-sha1-old'
@@ -299,17 +299,23 @@ class SSHServerTransport(SSHTransportBase):
         exchangeHash = h.digest()
 #        print 'hash', h.hexdigest()
         self.sendPacket(MSG_KEX_DH_GEX_REPLY, NS(self.factory.publicKeys[self.keyAlg]) + \
-                        MP(f) + NS(keys.pkcs1Sign(self.factory.privateKeys[self.keyAlg], exchangeHash)))
+                        MP(f) + NS(keys.signData(self.factory.privateKeys[self.keyAlg], exchangeHash)))
         self._keySetup(sharedSecret, exchangeHash)
 
     def ssh_NEWKEYS(self, packet):
         self.currentEncryptions = self.nextEncryptions
+        if self.outgoingCompressionType == 'zlib':
+            self.outgoingCompression = zlib.compressobj(6)
+            #self.outgoingCompression.compress = lambda x: self.outgoingCompression.compress(x) + self.outgoingCompression.flush(zlib.Z_SYNC_FLUSH)
+        if self.incomingCompressionType == 'zlib':
+            self.incomingCompression = zlib.decompressobj()
 
     def ssh_SERVICE_REQUEST(self, packet):
         service, rest = getNS(packet)
         cls = self.factory.services.get(service, None)
         if not cls:
             self.sendDisconnect(DISCONNECT_SERVICE_NOT_AVAILABLE, "don't have service %s" % service)
+            return
         else:
             self.sendPacket(MSG_SERVICE_ACCEPT, NS(service))
             self.setService(cls())
@@ -342,6 +348,7 @@ class SSHClientTransport(SSHTransportBase):
 #        print kexAlgs, keyAlgs, encCS, encSC, macCS, macSC, compCS, compSC, langCS, langSC, repr(rest)
         kexAlg = ffs(self.supportedKeyExchanges, kexAlgs)
         self.kexAlg = kexAlg
+        self.keyAlg = ffs(self.supportedPublicKeys, keyAlgs)
         self.nextEncryptions = SSHCiphers(
             ffs(self.supportedCiphers, encCS),
             ffs(self.supportedCiphers, encSC),
@@ -369,7 +376,7 @@ class SSHClientTransport(SSHTransportBase):
 #            print repr(pubKey)
             f, packet = getMP(packet)
             signature, packet = getNS(packet)
-            serverRSAkey = keys.getPublicKeyObject(data=pubKey)
+            serverKey = keys.getPublicKeyObject(data=pubKey)
             fingerprint = ':'.join(map(lambda c:'%02x'%ord(c),md5.new(pubKey).digest()))
             sharedSecret = MP(pow(f, self.x, DH_PRIME))
             if not self.checkFingerprint(fingerprint):
@@ -386,7 +393,8 @@ class SSHClientTransport(SSHTransportBase):
             h.update(sharedSecret)
             exchangeHash = h.digest()
             #print 'hash', h.hexdigest()
-            if not keys.pkcs1Verify(serverRSAkey, signature, exchangeHash):
+            keys.printKey(serverKey)
+            if not keys.verifySignature(serverKey, signature, exchangeHash):
                 self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED, 'bad signature')
                 return
             #print "woo we've got keyness"
@@ -402,7 +410,7 @@ class SSHClientTransport(SSHTransportBase):
         pubKey, packet = getNS(packet)
         f, packet = getMP(packet)
         signature, packet = getNS(packet)
-        serverRSAkey = keys.getPublicKeyObject(data = pubKey)
+        serverKey = keys.getPublicKeyObject(data = pubKey)
         sharedSecret = MP(pow(f, self.x, self.p))
         fingerprint = ':'.join(map(lambda c:'%02x'%ord(c),md5.new(pubKey).digest()))
         if not self.checkFingerprint(fingerprint):
@@ -422,7 +430,8 @@ class SSHClientTransport(SSHTransportBase):
         h.update(sharedSecret)
         exchangeHash = h.digest()
         #print 'hash', h.hexdigest()
-        if not keys.pkcs1Verify(serverRSAkey, signature, exchangeHash):
+        keys.printKey(serverKey)
+        if not keys.verifySignature(serverKey, signature, exchangeHash):
             self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED, 'bad signature')
             return
         #print "woo we've got keyness"
@@ -448,19 +457,17 @@ class SSHClientTransport(SSHTransportBase):
     def ssh_NEWKEYS(self, packet):
         self.currentEncryptions = self.nextEncryptions
         if self.outgoingCompressionType == 'zlib':
-            import zlib
-            self.outgoingCompression = zlib.compressobj(9)
+            self.outgoingCompression = zlib.compressobj(6)
             #self.outgoingCompression.compress = lambda x: self.outgoingCompression.compress(x) + self.outgoingCompression.flush(zlib.Z_SYNC_FLUSH)
         if self.incomingCompressionType == 'zlib':
-            import zlib
             self.incomingCompression = zlib.decompressobj()
         self.connectionSecure()
 
     def ssh_SERVICE_ACCEPT(self, packet):
-        self.setService(self, self.instance)
+        self.setService(self.instance)
 
-    def requestService(self, service, instance):
-        self.sendPacket(MSG_SERVICE_REQUEST, NS(service))
+    def requestService(self, instance):
+        self.sendPacket(MSG_SERVICE_REQUEST, NS(instance.name))
         self.instance = instance
         
     # client methods
@@ -588,3 +595,7 @@ import transport
 for v in dir(transport):
     if v[:4]=='MSG_':
         messages[getattr(transport,v)] = v # doesn't handle doubles
+
+
+
+

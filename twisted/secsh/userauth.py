@@ -61,7 +61,7 @@ class SSHUserAuthServer(service.SSHService):
         b = NS(self.transport.sessionID) + chr(MSG_USERAUTH_REQUEST) + \
             NS(user) + NS(self.nextService) + NS('publickey') + chr(self.hasSigType) + \
             NS(keys.objectType(pubKey)) + NS(blob)
-        return keys.pkcs1Verify(pubKey, signature, b)
+        return keys.verifySignature(pubKey, signature, b)
 
 #    def aut
 
@@ -83,10 +83,10 @@ class SSHUserAuthServer(service.SSHService):
 class SSHUserAuthClient(service.SSHService):
     name = 'ssh-userauth'
     protocolMessages = None # set later
-    def __init__(self, user, nextService, cls):
+    def __init__(self, user, instance):
         self.user = user
-        self.nextService = nextService
-        self.cls = cls
+        self.instance = instance
+        self.authenticatedWith = []
         self.triedPublicKeys = []
 
     def serviceStarted(self):
@@ -95,22 +95,22 @@ class SSHUserAuthClient(service.SSHService):
     def askForAuth(self, kind, extraData):
         self.lastAuth = kind
         self.transport.sendPacket(MSG_USERAUTH_REQUEST, NS(self.user) + \
-                                  NS(self.nextService) + NS(kind) + extraData)
+                                  NS(self.instance.name) + NS(kind) + extraData)
     def tryAuth(self, kind):
         f= getattr(self,'auth_%s'%kind, None)
         if f:
             return f()
         
     def ssh_USERAUTH_SUCCESS(self, packet):
-        self.transport.setService = self.nextService
-        self.nextService.transport = self.transport
-        self.nextService.serviceStarted()
+        self.transport.setService(self.instance)
 
     def ssh_USERAUTH_FAILURE(self, packet):
         canContinue, partial = getNS(packet)
         canContinue = canContinue.split(',')
         print canContinue
         partial = ord(partial)
+        if partial:
+            self.authenticatedWith.append(self.lastAuth)
         for method in canContinue:
             if method not in self.authenticatedWith and self.tryAuth(method):
                 break
@@ -121,10 +121,10 @@ class SSHUserAuthClient(service.SSHService):
             privateKey = keys.getPrivateKeyObject(os.path.expanduser('~/.ssh/id_rsa'))
             publicKey = keys.getPublicKeyString(os.path.expanduser('~/.ssh/id_rsa.pub'))
             b = NS(self.transport.sessionID) + chr(MSG_USERAUTH_REQUEST) + \
-                NS(self.user) + NS(self.nextService) + NS('publickey') + '\xff' + \
+                NS(self.user) + NS(self.instance.name) + NS('publickey') + '\xff' + \
                 NS('ssh-rsa') + NS(publicKey)
             self.askForAuth('publickey', '\xff' + NS('ssh-rsa') + NS(publicKey) + \
-                            NS(keys.pkcs1Sign(privateKey, b)))
+                            NS(keys.signData(privateKey, b)))
         elif self.lastAuth == 'password':
             prompt, language, rest = getNS(packet, 2)
             op = getpass('Old Password: ')
@@ -149,7 +149,7 @@ class SSHUserAuthClient(service.SSHService):
     def getPassword(self, prompt = None):
         if not prompt:
             prompt = 'Password for %s: ' % self.user
-        return d.succeed(getpass(prompt))
+        return defer.succeed(getpass(prompt))
 
 def getpass(prompt = "Password: "):
     import termios, sys
@@ -179,3 +179,7 @@ for v in dir(userauth):
 
 SSHUserAuthServer.protocolMessages = messages
 SSHUserAuthClient.protocolMessages = messages
+
+
+
+

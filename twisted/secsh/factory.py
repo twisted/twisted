@@ -20,6 +20,7 @@ class SSHFactory(protocol.Factory):
 
     def buildProtocol(self, addr):
         t = transport.SSHServerTransport()
+        t.supportedPublicKeys = self.privateKeys.keys()
         t.factory = self
         return t
 
@@ -56,3 +57,6 @@ class OpenSSHFactory(SSHFactory):
         return ks
     def getPrimes(self):
         return primes.parseModuliFile(self.dataRoot+'/moduli')
+
+
+

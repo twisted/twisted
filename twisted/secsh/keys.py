@@ -44,15 +44,15 @@ def getPublicKeyObject(filename=None, line = 0, data = ''):
         return DSA.construct((y,g,p,q))
 
 def getPrivateKeyObject(filename):
-    objectMapping = {
-        'RSA':RSA,
-        'DSA':DSA,
-    }
     data = open(filename).readlines()
     kind = data[0][11:14]
     keyData = base64.decodestring(''.join(data[1:-1]))
     decodedKey = asn1.parse(keyData)
-    return objectMapping[kind].construct(decodedKey[1:6])
+    if kind == 'RSA':
+        return RSA.construct(decodedKey[1:6])
+    elif kind == 'DSA':
+        p,q,g,y,x = decodedKey[1:6]
+        return DSA.construct((y,g,p,q,x))
 
 def objectType(obj):
     keyDataMapping = {
@@ -62,7 +62,6 @@ def objectType(obj):
     return keyDataMapping[tuple(obj.keydata)]
 
 def pkcs1Pad(data, lMod):
-    print 'len', lMod
     lenPad = lMod - 2 - len(data)
     return '\x01' + ('\xff'*lenPad) + '\x00' + data
 
@@ -71,29 +70,91 @@ def pkcs1Digest(data, lMod):
     return pkcs1Pad(ID_SHA1 + digest, lMod)
 
 def lenSig(obj):
-    print 'obj size', obj.size()
     return obj.size()/8
 
-def pkcs1Sign(obj, data):
+def signData(obj, data):
+    mapping = {
+        'ssh-rsa':signData_rsa,
+        'ssh-dss':signData_dsa
+    }
     objType = objectType(obj)
-    sigData =pkcs1Digest(data, lenSig(obj))
-    sig = obj.sign(sigData, '\x03')
-    if objType == 'ssh-dss':
-        ret = ''.join(map(Util.number.long_to_bytes, sig))
-    elif objType == 'ssh-rsa':
-        ret = common.MP(sig[0])
-    return common.NS(objType)+ret
+    return common.NS(objType) + mapping[objType](obj,data)
 
-def pkcs1Verify(obj, sig, data):
+def signData_rsa(obj, data):
+    sigData = pkcs1Digest(data, lenSig(obj))
+    sig = obj.sign(sigData, '')[0] 
+    return common.NS(Util.number.long_to_bytes(sig)) # get around adding the \x00 byte
+
+def signData_dsa(obj, data):
+    sigData = sha.new(data).digest()
+    randData = open('/dev/random').read(19)
+    sig = obj.sign(sigData, randData)
+    return common.NS(''.join(map(Util.number.long_to_bytes, sig)))
+
+def verifySignature(obj, sig, data):
+    mapping = {
+        'ssh-rsa':verifySignature_rsa,
+        'ssh-dss':verifySignature_dsa,
+    }
     objType = objectType(obj)
-    sigType, sigData, rest = common.getNS(sig, 2)
+    sigType, sigData = common.getNS(sig)
     assert objType == sigType, 'object and signature are not of same type'
-    #original = obj.encrypt(sigData, '\x03')[0] # make the data random
-    if sigType == 'ssh-dss':
-        sigTuple = map(Util.number.bytes_to_long, [sigData[:20],sigData[20:]])
-        print sigTuple, len(sigData)
-    elif sigType == 'ssh-rsa':
-        sigTuple = [Util.number.bytes_to_long(sigData)]
+    return mapping[objType](obj, sigData, data)
+
+def verifySignature_rsa(obj, sig, data):
+    sigTuple = [common.getMP(sig)[0]]
     return obj.verify(pkcs1Digest(data, lenSig(obj)), sigTuple)
 
+def verifySignature_dsa(obj, sig, data):
+    sig = common.getNS(sig)[0]
+    l = len(sig)/2
+    sigTuple = map(Util.number.bytes_to_long, [sig[:l],sig[l:]])
+    return obj.verify(sha.new(data).digest(), sigTuple)
+
+def printKey(obj):
+    print '%s %s (%s bits)' % (objectType(obj),
+                               obj.hasprivate() and 'Private Key' or 'Public Key',
+                               obj.size())
+    for k in obj.keydata:
+        if hasattr(obj, k):
+            print 'attr', k
+            by = common.MP(getattr(obj,k))[4:]
+            while by:
+                m = by[:15]
+                by = by[15:]
+                o = ''
+                for c in m:
+                    o=o+'%02x:'%ord(c)
+                if len(m)<15:
+                    o=o[:-1]
+                print '\t'+o
+
 ID_SHA1 = '\x30\x21\x30\x09\x06\x05\x2b\x0e\x03\x02\x1a\x05\x00\x04\x14'
+
+def test():
+    testData = 'this is the testData'
+    try:
+        rsaKey = getPrivateKeyObject(os.path.expanduser('~/.ssh/id_rsa'))
+        rsaPub = getPublicKeyObject(os.path.expanduser('~/.ssh/id_rsa.pub'))
+    except IOError:
+        print 'passing on rsa test, no rsa key'
+    else:
+        signature = signData(rsaKey, testData)
+        assert verifySignature(rsaKey, signature, testData)
+        assert verifySignature(rsaPub, signature, testData)
+        print 'rsa is ok'
+    try:
+        dsaKey = getPrivateKeyObject(os.path.expanduser('~/.ssh/id_dsa'))
+        dsaPub = getPublicKeyObject(os.path.expanduser('~/.ssh/id_dsa.pub'))
+    except IOError:
+        print 'passing on dsa test, no dsa key'
+    else:
+        signature = signData(dsaKey, testData)
+        assert verifySignature(dsaKey, signature, testData), 'dsa is not ok'
+        assert verifySignature(dsaPub, signature, testData)
+        print 'dsa is ok'
+if __name__=='__main__': test()
+
+
+
+
