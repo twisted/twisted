@@ -27,11 +27,13 @@ import string, time
 
 class LogBot(irc.IRCClient):
     """A logging IRC bot."""
+    def __init__(self):
+        self.nickname = "twistedbotII"
 
     def connectionMade(self):
+	irc.IRCClient.connectionMade(self)
         self.file = open(self.factory.filename, "a")
         self.log("[connected at %s]" % time.asctime(time.localtime(time.time())))
-        self.setNick("twistedbot")
         self.join(self.factory.channel)
 
     def connectionLost(self):
