@@ -1,15 +1,3 @@
-* Write more tests
-  * Some parts of app.py aren't tested
-  * Some parts of mktap might be able to be tested
-  * twistd/twistw would be nice to test, maybe by explicitly
-    running a new process
-* Doc-strings
-  * app.py
-  * mktap.py
-  * tapconvert.py
-  * twistd.py
-  * twistw.py
-* Improve twistw -- add service registration/running abilities
 * Manual
   * What is Service and ServiceCollection
     * Writing new services
@@ -17,3 +5,4 @@
   * Running network servers and clients
   * Writing .tac files
   * Writing tap plugins
+* Port tkmktap
