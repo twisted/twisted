@@ -80,9 +80,9 @@ test_domain_com = NoFileAuthority(
             dns.Record_MG('mail.group.someplace'),
             dns.Record_TXT('A First piece of Text', 'a SecoNd piece')
         ] + (IPV6 and [
-            dns.Record_A6(128, 'ABCD::4321', 'some.computer.com'),
-            dns.Record_A6(16, '0069::0', 'some.network.tld'),
-            dns.Record_A6(112, '5634:1294:AFCB:56AC:48EF:34C3:01FF:0', 'tra.la.la.net')
+            dns.Record_A6(0, 'ABCD::4321', ''),
+            dns.Record_A6(12, '0:0069::0', 'some.network.tld'),
+            dns.Record_A6(8, '0:5634:1294:AFCB:56AC:48EF:34C3:01FF', 'tra.la.la.net')
         ] or []) + [
             dns.Record_TXT('Some more text, haha!  Yes.  \0  Still here?'),
             dns.Record_MR('mail.redirect.or.whatever'),
@@ -316,9 +316,9 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
             """Test DNS 'A6' record queries (IPv6)"""
             self.namesTest(
                 self.resolver.lookupAddress6('test-domain.com'),
-                [dns.Record_A6(128, 'ABCD::4321', 'some.computer.com'),
-                 dns.Record_A6(16, '0069::0', 'some.network.tld'),
-                 dns.Record_A6(112, '5634:1294:AFCB:56AC:48EF:34C3:01FF:0', 'tra.la.la.net')]
+                [dns.Record_A6(0, 'ABCD::4321', ''),
+                 dns.Record_A6(12, '0:0069::0', 'some.network.tld'),
+                 dns.Record_A6(8, '0:5634:1294:AFCB:56AC:48EF:34C3:01FF', 'tra.la.la.net')]
              )
 
 

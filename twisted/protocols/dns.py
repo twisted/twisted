@@ -28,7 +28,7 @@ Future Plans: Get rid of some toplevels, maybe.  Put in a better
 
 # System imports
 import StringIO, struct, random, types, socket
-from math import ceil
+from math import ceil, floor
 
 # Twisted imports
 from twisted.internet import protocol, defer, error
@@ -51,7 +51,7 @@ QUERY_TYPES = {
 
     33: 'SRV',
     
-    38: 'A6'
+    38: 'A6', 39: 'DNAME'
 }
 
 # "Extended" queries (Hey, half of these are deprecated, good job)
@@ -437,6 +437,8 @@ class Record_MR(SimpleRecord):       # EXPERIMENTAL
 class Record_PTR(SimpleRecord):
     TYPE = PTR
 
+class Record_DNAME(SimpleRecord):
+    TYPE = DNAME
 
 class Record_A:
     __implements__ = (IEncodable,)
@@ -598,39 +600,44 @@ class Record_A6:
     __implements__ = (IEncodable,)
     TYPE = A6
     
-    def __init__(self, prefix = 0, address = '::', name = ''):
-        self.prefix = prefix
-        self.bytes = int(ceil((128 - self.prefix) / 8.0))
-        self.address = socket.inet_pton(socket.AF_INET6, address)
-        self.name = Name(name)
-    
-    
+    def __init__(self, prefixLen = 0, suffix = '::', prefix = ''):
+        self.prefixLen = prefixLen
+        self.bytes = int(self.prefixLen / 8.0)
+        self.suffix = socket.inet_pton(socket.AF_INET6, suffix)
+        self.prefix = Name(prefix)
+
+
     def encode(self, strio, compDict = None):
-        strio.write(struct.pack('!B', self.prefix))
-        strio.write(self.address[:self.bytes])
-        # This may not be compressed
-        self.name.encode(strio, None)
-    
-    
+        strio.write(struct.pack('!B', self.prefixLen))
+        if self.prefixLen != 128:
+            strio.write(self.suffix[16-self.bytes:])
+        if self.prefixLen != 0:
+            # This may not be compressed
+            self.prefix.encode(strio, None)
+
+
     def decode(self, strio, length = None):
-        self.prefix = struct.unpack('!B', readPrecisely(strio, 1))[0]
-        self.bytes = int(ceil((128 - self.prefix) / 8.0))
-        self.address = readPrecisely(strio, self.bytes)
-        self.name.decode(strio)
-    
-    
+        self.prefixLen = struct.unpack('!B', readPrecisely(strio, 1))[0]
+        self.bytes = int(self.prefixLen / 8.0)
+        if self.prefixLen != 128:
+            self.suffix = '\x00' * self.bytes + readPrecisely(strio, 16 - self.bytes)
+        if self.prefixLen != 0:
+            self.prefix.decode(strio)
+
+
     def __eq__(self, other):
         if isinstance(other, Record_A6):
-            return (self.prefix == other.prefix and
-                    self.address[:self.bytes] == other.address[:self.bytes] and
-                    self.name == other.name)
+            return (self.prefixLen == other.prefixLen and
+                    self.suffix[16-self.bytes:] == other.suffix[16-self.bytes:] and
+                    self.prefix == other.prefix)
         return 0
-    
-    
+
+
     def __str__(self):
-        return '<A6 %s/%d %s>' % (
-            socket.inet_ntop(socket.AF_INET6, self.address),
-            self.prefix, self.name
+        return '<A6 %s %s (%d)>' % (
+            self.prefix,
+            socket.inet_ntop(socket.AF_INET6, self.suffix),
+            self.prefixLen
         )
 
 
