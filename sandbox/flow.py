@@ -108,9 +108,21 @@ class NotReadyError(RuntimeError):
         or accessing its 'result' variable.
     """
     pass
-NotReady = NotReadyError("Must 'yield' this object before calling next()")
+_NotReady = NotReadyError("Must 'yield' this object before calling next()")
 
-class Cooperate(Instruction):
+
+class CallLater(Instruction):
+    """ Instruction to support callbacks
+
+        This is the instruction which is returned during the yield
+        of the DeferredWrapper and Callback stage.   The underlying 
+        flow driver should call the 'callLater' function with the 
+        callable to be executed after each callback.
+    """
+    def callLater(self, callable):
+        pass
+
+class Cooperate(CallLater):
     """ Requests that processing be paused so other tasks can resume
 
         Yield this object when the current chain would block or periodically
@@ -121,9 +133,11 @@ class Cooperate(Instruction):
     """
     def __init__(self, timeout = 0):
         self.timeout = timeout
+    def callLater(self, callable):
+        reactor.callLater(self.timeout, callable)
 
 class Stage(Instruction):
-    """ Processing component in the current flow stack
+    """ Abstract base defining protocol for iterator/generators in a flow
 
         This is the primary component in the flow system, it is an
         iterable object which must be passed to a yield statement 
@@ -161,7 +175,7 @@ class Stage(Instruction):
         self._trap = trap
         self.stop = False
         self.fail = False
-        self.result = NotReady
+        self.result = _NotReady
     
     def __iter__(self):
         return self
@@ -180,11 +194,11 @@ class Stage(Instruction):
             called before the stage is yielded. 
         """
         result = self.result
-        self.result = NotReady
+        self.result = _NotReady
         if self.stop:
             raise StopIteration()
-        if result is NotReady:
-            raise NotReady
+        if result is _NotReady:
+            raise _NotReady
         if self.fail:
             return result.trap(*self._trap)
         return result
@@ -291,16 +305,14 @@ class Zip(Stage):
         self.result = tuple(self.result)
         self._index  = 0
 
-class Merge(Stage):
-    """ Merges two or more Stages results into a single stream
+class Queue(Stage):
+    """ Builds a queue of stages executing concurrently
 
-        This Stage can be used for merging two stages into a single
-        stage, all while maintaining the ability to pause during Cooperate.
-        Note that while this code may be deterministic, applications of
-        this module should not depend upon a particular order.
-
-        [1, Cooperate(), 2] + [3, 4] => [1, 3, 4, 2 ]
-
+        This stage merges two or more stages, returning each stage as it
+        becomes available.   This can be used if you have N callbacks, and
+        you want to yield and wait for the first available one that 
+        produces results, then you should use next() to extract the value
+        of the yielded stage.
     """
     def __init__(self, *stages):
         Stage.__init__(self)
@@ -311,8 +323,7 @@ class Merge(Stage):
         self._instruction = []
 
     def _yield(self):
-        if self.fail or self.stop:
-            self.stop = True
+        if self.stop:
             return
         while self._queue:
             curr = self._queue.pop(0)
@@ -329,16 +340,34 @@ class Merge(Stage):
                 if self._curr is None:
                     self._curr = curr
                 continue
-            self.result = curr.result
-            if curr.fail:
-                self.fail = True
-                self.result = curr.result
-                return
+            self.result = curr
             if not curr.stop:
                 self._queue.append(curr)
                 return
         self.result = None
         self.stop = True
+
+class Merge(Queue):
+    """ Merges two or more Stages results into a single stream
+
+        This Stage can be used for merging two stages into a single
+        stage, all while maintaining the ability to pause during Cooperate.
+        Note that while this code may be deterministic, applications of
+        this module should not depend upon a particular order.
+
+        [1, Cooperate(), 2] + [3, 4] => [1, 3, 4, 2 ]
+
+    """
+    def _yield(self):
+        if self.fail or self.stop:
+            self.stop = True
+            return
+        res = Queue._yield(self)
+        if res: return res
+        if self.result:
+            if self.result.fail:
+                self.fail = True
+            self.result = self.result.result
 
 class Block(Stage):
     """ A stage which Blocks on Cooperate events
@@ -371,16 +400,6 @@ class Block(Stage):
                 raise Unsupported(result)
             return stage.next()
 
-class CallLater(Instruction):
-    """ Instruction to support callbacks
-
-        This is the instruction which is returned during the yield
-        of the DeferredWrapper and Callback stage.   The underlying 
-        flow driver should call the 'callLater' function with the 
-        callable to be executed after each callback.
-    """
-    def callLater(self, callable):
-        pass
 
 class Callback(Stage):
     """ Converts a single-thread push interface into a pull interface.
@@ -574,9 +593,6 @@ class Deferred(defer.Deferred):
                     self.callback(self._results)
                 return
             if result:
-                if isinstance(result, Cooperate):
-                    reactor.callLater(result.timeout, self._execute)
-                    return
                 if isinstance(result, CallLater):
                     result.callLater(self._execute)
                     return
