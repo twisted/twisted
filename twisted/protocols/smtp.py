@@ -405,26 +405,6 @@ class IMessage(components.Interface):
 
         semantics should be to discard the message
         """
-    
-    # Let a message play around in a queue
-    # If I accidentally commit these, please disregard them.
-    def enqueue(self, queue):
-        """Add this message to the given queue.
-        
-        @type queue: C{IQueue} implementor
-        """
-    
-    def dequeue(self):
-        """Remove this message from its queue.
-        """
-    
-    def waiting(self):
-        """Set this message as waiting for delivery within its queue.
-        """
-    
-    def delivering(self):
-        """Set this message as being delivered within its queue.
-        """
 
 class SMTP(basic.LineReceiver, policies.TimeoutMixin):
     """SMTP server-side protocol."""
