@@ -1,9 +1,11 @@
 
-import code, sys
+import code, sys, StringIO, tokenize
 
 import insults, recvline
 
 from twisted.internet import defer
+from twisted.python.htmlizer import TokenPrinter
+from twisted.python import log
 
 class FileWrapper:
     softspace = 0
@@ -94,6 +96,30 @@ class ManholeInterpreter(code.InteractiveInterpreter):
     def write(self, data, async=False):
         self.handler.addOutput(data, async)
 
+class VT102Writer:
+    typeToColor = {
+        'identifier': '\x1b[31m',
+        'keyword': '\x1b[32m',
+        'parameter': '\x1b[33m',
+        'variable': '\x1b[34m'}
+
+    normalColor = '\x1b[0m'
+
+    def __init__(self):
+        self.written = []
+
+    def color(self, type):
+        return self.typeToColor.get(type, '')
+
+    def write(self, token, type=None):
+        self.written.append(self.color(type))
+        self.written.append(token)
+        self.written.append(self.normalColor)
+
+    def __str__(self):
+        s = ''.join(self.written)
+        return s.splitlines()[-2]
+
 class Manhole(recvline.HistoricRecvLine):
 
     def connectionMade(self):
@@ -132,3 +158,32 @@ class Manhole(recvline.HistoricRecvLine):
         if not self.transport.lastWrite.endswith('\r\n') and not self.transport.lastWrite.endswith('\x1bE'):
             self.transport.write('\r\n')
         self.transport.write(self.ps[self.pn])
+
+class ColoredManhole(Manhole):
+    def characterReceived(self, ch):
+        if self.mode == 'insert':
+            self.lineBuffer.insert(self.lineBufferIndex, ch)
+        else:
+            self.lineBuffer[self.lineBufferIndex:self.lineBufferIndex+1] = [ch]
+        self.lineBufferIndex += 1
+
+        w = VT102Writer()
+        p = TokenPrinter(w.write).printtoken
+        s = StringIO.StringIO('\n'.join(self.interpreter.buffer) +
+                              '\n' +
+                              ''.join(self.lineBuffer))
+
+        # Try to write some junk
+        try:
+            tokenize.tokenize(s.readline, p)
+        except tokenize.TokenError:
+            # We couldn't do it.  Strange.  Oh well, just add the character.
+            self.transport.write(ch)
+        else:
+            # Success!  Clear the source on this line.
+            self.transport.cursorBackward(100) # len(self.lineBuffer))
+            self.transport.eraseToLineEnd()
+
+            # And write a new, colorized one.
+            self.transport.write(self.ps[self.pn] + str(w))
+

@@ -73,14 +73,17 @@ class RecvLine(insults.TerminalProtocol):
         if m is not None:
             m()
         elif keyID in string.printable:
-            if self.mode == 'insert':
-                self.lineBuffer.insert(self.lineBufferIndex, keyID)
-            else:
-                self.lineBuffer[self.lineBufferIndex:self.lineBufferIndex+1] = [keyID]
-            self.lineBufferIndex += 1
-            self.transport.write(keyID)
+            self.characterReceived(keyID)
         else:
             log.msg("Received unhandled keyID: %r" % (keyID,))
+
+    def characterReceived(self, ch):
+        if self.mode == 'insert':
+            self.lineBuffer.insert(self.lineBufferIndex, ch)
+        else:
+            self.lineBuffer[self.lineBufferIndex:self.lineBufferIndex+1] = [ch]
+        self.lineBufferIndex += 1
+        self.transport.write(ch)
 
     def handle_TAB(self):
         n = self.TABSTOP - (len(self.lineBuffer) % self.TABSTOP)

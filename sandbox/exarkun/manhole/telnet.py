@@ -3,7 +3,6 @@ import struct
 
 from twisted.application import internet
 from twisted.internet import protocol, interfaces as iinternet, defer
-from twisted.protocols import telnet
 from twisted.python import components, log
 
 MODE = chr(1)
@@ -45,6 +44,11 @@ FF =             chr(12)  # Moves the printer to the top
                           # the same horizontal position.
 CR =             chr(13)  # Moves the printer to the left
                           # margin of the current line.
+
+ECHO  =           chr(1)  # User-to-Server:  Asks the server to send
+                          # Echos of the transmitted data.
+LINEMODE =      chr(34)   # Allow line buffering to be
+                          # negotiated about.
 
 SE =            chr(240)  # End of subnegotiation parameters.
 NOP =           chr(241)  # No operation.
@@ -232,9 +236,8 @@ class Telnet(protocol.Protocol):
         need to be escaped, as this function will escape any value which
         requires it.
         """
-        bytes = bytes.replace(telnet.IAC, telnet.IAC * 2)
-        bytes = bytes.replace(telnet.SE, telnet.IAC + telnet.SE)
-        self._write(telnet.IAC + telnet.SB + bytes + telnet.SE)
+        bytes = bytes.replace(IAC, IAC * 2)
+        self._write(IAC + SB + bytes + IAC + SE)
 
     def dataReceived(self, data):
         # Most grossly inefficient implementation ever
@@ -347,7 +350,7 @@ class Telnet(protocol.Protocol):
         self._write(IAC + WONT + option)
 
     class _OptionState:
-        state = 'no'
+        state = 'un'
         negotiating = False
         onResult = None
 
@@ -380,6 +383,7 @@ class Telnet(protocol.Protocol):
         pass
 
     willMap = {('no', False): will_no_false,   ('no', True): will_no_true,
+               ('un', False): will_no_false,   ('un', True): will_no_true,
                ('yes', False): will_yes_false, ('yes', True): will_yes_true}
 
     def telnet_WONT(self, option):
@@ -412,6 +416,7 @@ class Telnet(protocol.Protocol):
         d.callback(True)
 
     wontMap = {('no', False): wont_no_false,   ('no', True): wont_no_true,
+               ('un', False): wont_no_false,   ('un', True): wont_no_true,
                ('yes', False): wont_yes_false, ('yes', True): wont_yes_true}
 
     def telnet_DO(self, option):
@@ -442,6 +447,7 @@ class Telnet(protocol.Protocol):
         pass
 
     doMap = {('no', False): do_no_false,   ('no', True): do_no_true,
+             ('un', False): do_no_false,   ('un', True): do_no_true,
              ('yes', False): do_yes_false, ('yes', True): do_yes_true}
 
     def telnet_DONT(self, option):
@@ -469,6 +475,7 @@ class Telnet(protocol.Protocol):
         d.callback(True)
 
     dontMap = {('no', False): dont_no_false,   ('no', True): dont_no_true,
+               ('un', False): dont_no_false,   ('un', True): dont_no_true,
                ('yes', False): dont_yes_false, ('yes', True): dont_yes_true}
 
     def allowEnable(self, option):
@@ -563,20 +570,23 @@ class TelnetBootstrapProtocol(TelnetProtocol, ProtocolTransportMixin):
     def connectionMade(self):
         self.transport.negotiationMap[NAWS] = self.telnet_NAWS
 
-        for opt in (telnet.LINEMODE, NAWS, SUPPRESS_GO_AHEAD):
+        for opt in (LINEMODE, NAWS, SUPPRESS_GO_AHEAD):
             self.transport.requestEnable(opt).addErrback(log.err)
-
-        self.transport.write(telnet.IAC + telnet.WILL + telnet.ECHO)
+        self.transport.write(IAC + WILL + ECHO)
+        # self.transport.requestDisable(ECHO).addErrback(log.err)
 
         self.protocol = self.protocolFactory(*self.protocolArgs, **self.protocolKwArgs)
         self.protocol.makeConnection(self)
 
     def allowEnable(self, opt):
-        return opt in (telnet.LINEMODE, NAWS, SUPPRESS_GO_AHEAD, telnet.ECHO)
+        if opt == ECHO:
+            return True
+        print 'Refusing to allow to enable', repr(opt)
+        return False
 
     def enable(self, opt):
-        if opt == telnet.LINEMODE:
-            self.transport.requestNegotiation(telnet.LINEMODE, MODE + chr(TRAPSIG))
+        if opt == LINEMODE:
+            self.transport.requestNegotiation(LINEMODE, MODE + chr(TRAPSIG))
         elif opt == NAWS:
             pass
         else:
