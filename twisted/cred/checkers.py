@@ -26,7 +26,8 @@ class ICredentialsChecker(components.Interface):
         'world:asdf', 'goodbye', ':world'].  This misconfiguration will have an
         ill effect in any case, but accidentally granting anonymous access is a
         worse failure mode than simply granting access to an untypeable
-        username.
+        username.  We do not want an instance of 'object', because that would
+        create potential problems with persistence.
         """
 
 ANONYMOUS = ()
