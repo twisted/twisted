@@ -150,7 +150,7 @@ class Win32Reactor(default.PosixReactorBase):
                                 writes=writes):
         if timeout is None:
             #timeout = INFINITE
-            timeout = 5000
+            timeout = 100
         else:
             timeout = int(timeout * 1000)
 
