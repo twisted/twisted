@@ -15,7 +15,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 # 
 
-"""Implementation of the ssh-userauth service.  Currently implemented authentication types are public-key and password.
+"""Implementation of the ssh-userauth service.
+Currently implemented authentication types are public-key and password.
 
 This module is unstable.
 
@@ -24,7 +25,7 @@ Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 
 import struct
 from twisted.conch import error, credentials
-from twisted.internet import app, defer, reactor
+from twisted.internet import defer, reactor
 from twisted.python import failure, log
 from common import NS, getNS, MP
 import keys, transport, service
