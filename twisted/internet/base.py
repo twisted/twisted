@@ -25,8 +25,8 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 import socket # needed only for sync-dns
 
 import warnings, sys
-from time import time
 from bisect import insort
+
 try:
     import fcntl
 except ImportError:
@@ -39,9 +39,9 @@ from twisted.internet.interfaces import IReactorProcess, IReactorPluggableResolv
 from twisted.internet.interfaces import IConnector, IDelayedCall
 from twisted.internet import main, error, abstract, defer
 from twisted.python import threadable, log, failure, reflect
+from twisted.python.runtime import seconds
 from twisted.internet.defer import Deferred, DeferredList
 from twisted.persisted import styles
-
 
 class DelayedCall(styles.Ephemeral):
 
@@ -98,7 +98,7 @@ class DelayedCall(styles.Ephemeral):
         elif self.called:
             raise error.AlreadyCalled
         else:
-            self.time = time() + secondsFromNow
+            self.time = seconds() + secondsFromNow
             self.resetter(self)
 
     def delay(self, secondsLater):
@@ -144,7 +144,7 @@ class DelayedCall(styles.Ephemeral):
         except:
             func = reflect.safe_repr(self.func)
         return "<DelayedCall %s [%ss] called=%s cancelled=%s %s%s>" % (
-            id(self), self.time - time(), self.called, self.cancelled, func,
+            id(self), self.time - seconds(), self.called, self.cancelled, func,
             reflect.safe_repr(self.args))
 
 
@@ -364,7 +364,7 @@ class ReactorBase:
         assert callable(_f), "%s is not callable" % _f
         assert sys.maxint >= _seconds >= 0, \
                "%s is not greater than or equal to 0 seconds" % (_seconds,)
-        tple = DelayedCall(time() + _seconds, _f, args, kw,
+        tple = DelayedCall(seconds() + _seconds, _f, args, kw,
                            self._pendingTimedCalls.remove,
                            self._resetCallLater)
         insort(self._pendingTimedCalls, tple)
@@ -389,7 +389,7 @@ class ReactorBase:
 
     def timeout(self):
         if self._pendingTimedCalls:
-            t = self._pendingTimedCalls[-1].time - time()
+            t = self._pendingTimedCalls[-1].time - seconds()
             if t < 0:
                 t = 0
             return t
@@ -411,7 +411,7 @@ class ReactorBase:
                     log.err()
                 count += 1
             del self.threadCallQueue[:count]
-        now = time()
+        now = seconds()
         while self._pendingTimedCalls and (self._pendingTimedCalls[-1].time <= now):
             call = self._pendingTimedCalls.pop()
             try:

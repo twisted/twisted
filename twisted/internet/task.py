@@ -22,11 +22,7 @@ API Stability: Unstable
 @author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
 """
 
-from twisted.python.runtime import platformType
-if platformType == 'win32':
-    from time import clock as time
-else:
-    from time import time
+from twisted.python.runtime import seconds
 
 from twisted.internet import reactor
 from twisted.internet import defer
@@ -65,7 +61,7 @@ class LoopingCall:
         assert not self.running
         self.running = True
         d = self.deferred = defer.Deferred()
-        self.starttime = time()
+        self.starttime = seconds()
         self.count = 0
         self.interval = interval
         self._loop()
@@ -89,7 +85,7 @@ class LoopingCall:
             d.errback()
             return
         
-        fromNow = self.starttime - time()
+        fromNow = self.starttime - seconds()
 
         while self.running:
             self.count += 1
