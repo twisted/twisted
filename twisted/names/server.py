@@ -34,6 +34,7 @@ for resolvers to deal with.  Fix it.
 
 from __future__ import nested_scopes
 import copy
+import time
 
 # Twisted imports
 from twisted.internet import protocol, defer
@@ -97,6 +98,9 @@ class DNSServerFactory(protocol.ServerFactory):
             protocol.writeMessage(message)
         else:
             protocol.writeMessage(message, address)
+        
+        if self.verbose > 1:
+            log.msg("Processed query in %0.3f seconds" % (time.time() - message.timeReceived))
 
 
     def gotResolverResponse(self, (ans, auth, add), protocol, message, address):
@@ -121,12 +125,12 @@ class DNSServerFactory(protocol.ServerFactory):
 
 
     def gotResolverError(self, failure, protocol, message, address):
-        if isinstance(failure.value, (dns.DomainError, dns.AuthoritativeDomainError)):
+        if failure.check(dns.DomainError, dns.AuthoritativeDomainError):
             message.rCode = dns.ENAME
         else:
             message.rCode = dns.ESERVER
-            print 'HEY IT IS A FAILURE'
-            failure.printTraceback()
+            log.err()
+        
         self.sendReply(protocol, message, address)
         if self.verbose:
             log.msg("Lookup failed")
@@ -172,6 +176,8 @@ class DNSServerFactory(protocol.ServerFactory):
 
 
     def messageReceived(self, message, protocol, address = None):
+        message.timeReceived = time.time()
+    
         if self.verbose:
             if self.verbose > 1:
                 s = ' '.join([str(q) for q in message.queries])
@@ -181,9 +187,7 @@ class DNSServerFactory(protocol.ServerFactory):
             if not len(s):
                 log.msg("Empty query from %r" % ((address or protocol.transport.getPeer()),))
             else:
-                log.msg("%s query from %r for %s" % (s,
-                                                     address or protocol.transport.getPeer(),
-                                                     ','.join([str(q.name) for q in message.queries])))
+                log.msg("%s query from %r" % (s, address or protocol.transport.getPeer()))
 
         message.recAv = self.canRecurse
         message.answer = 1
