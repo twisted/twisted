@@ -102,7 +102,7 @@ class TwistedSocketNotifier(QSocketNotifier):
                 log.deferr()
             self.reactor.removeReader(w)
             self.reactor.removeWriter(w)
-        elif why is not None:
+        elif self.watcher:
             self.setEnabled(1)
         self.reactor.simulate()
 
