@@ -1,3 +1,10 @@
+2004-10-07  Jp Calderone  <exarkun@twistedmatrix.com>
+
+	* Transports: Add a maximum to the number of bytes that will be
+	held in the write buffer even after they have been sent.  This
+	puts a maximum on the cost of writing faster than the network
+	can accommodate.
+
 2004-10-06  Itamar Shtull-Trauring  <itamar@itamarst.org>
 
 	* Transports: New TCP/SSL/etc. buffering algorithm. All writes are
