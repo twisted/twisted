@@ -43,7 +43,9 @@ class DirDBM:
     """
     
     def __init__(self, name):
-        """Initialize.
+        """
+        @type name: str
+        @param name: Base path to use for the directory storage.
         """
         self.dname = os.path.abspath(name)
         if not os.path.isdir(self.dname):
@@ -99,7 +101,15 @@ class DirDBM:
         f.close()
     
     def __setitem__(self, k, v):
-        """dirdbm[foo] = bar; create or modify a textfile in this directory
+        """
+        C{dirdbm[k] = v}
+        Create or modify a textfile in this directory
+
+        @type k: str
+        @param k: key to set
+        
+        @type v: str
+        @param v: value to associate with C{k}
         """
         assert type(k) == types.StringType, AssertionError("DirDBM key must be a string")
         assert type(v) == types.StringType, AssertionError("DirDBM value must be a string")
@@ -122,7 +132,15 @@ class DirDBM:
             os.rename(new, old)
 
     def __getitem__(self, k):
-        """dirdbm[foo]; get the contents of a file in this directory as a string
+        """
+        C{dirdbm[k]}
+        Get the contents of a file in this directory as a string.
+        
+        @type k: str
+        @param k: key to lookup
+        
+        @return: The value associated with C{k}
+        @raise KeyError: Raised when there is no such key
         """
         assert type(k) == types.StringType, AssertionError("DirDBM key must be a string")
         path = os.path.join(self.dname, self._encode(k))
@@ -132,7 +150,14 @@ class DirDBM:
             raise KeyError, k
 
     def __delitem__(self, k):
-        """del dirdbm[foo]; delete a file in this directory
+        """
+        C{del dirdbm[foo]}
+        Delete a file in this directory.
+        
+        @type k: str
+        @param k: key to delete
+        
+        @raise KeyError: Raised when there is no such key
         """
         assert type(k) == types.StringType, AssertionError("DirDBM key must be a string")
         k = self._encode(k)
@@ -140,12 +165,14 @@ class DirDBM:
         except (OSError, IOError): raise KeyError(self._decode(k))
 
     def keys(self):
-        """dirdbm.keys(); return a list of filenames
+        """
+        @return: a C{list} of filenames (keys).
         """
         return map(self._decode, os.listdir(self.dname))
 
     def values(self):
-        """dirdbm.values(); return a list of file-contents
+        """
+        @return: a C{list} of file-contents (values).
         """
         vals = []
         keys = self.keys()
@@ -154,7 +181,8 @@ class DirDBM:
         return vals
 
     def items(self):
-        """dirdbm.items(); return an interspersed list of tuples of keys() and values()
+        """
+        @return: a C{list} of 2-tuples containing key/value pairs.
         """
         items = []
         keys = self.keys()
@@ -163,20 +191,62 @@ class DirDBM:
         return items
 
     def has_key(self, key):
-        """dirdbm.has_key(key); return whether the file `key' exists.
+        """
+        @type key: str
+        @param key: The key to test
+        
+        @return: A true value if this dirdbm has the specified key, a faluse
+        value otherwise.
         """
         assert type(key) == types.StringType, AssertionError("DirDBM key must be a string")
         key = self._encode(key)
         return os.path.isfile(os.path.join(self.dname, key))
-    
+
+
+    def get(self, key, default = None):
+        """
+        @type key: str
+        @param key: The key to lookup
+        
+        @param default: The value to return if the given key does not exist
+        
+        @return: The value associated with C{key} or C{default} if not
+        C{self.has_key(key)}
+        """
+        if self.has_key(key):
+            return self[key]
+        else:
+            return default
+
+
+    def __contains__(self, key):
+        """
+        C{key in dirdbm}
+
+        @type key: str
+        @param key: The key to test
+                
+        @return: A true value if C{self.has_key(key)}, a false value otherwise.
+        """
+        assert type(key) == types.StringType, AssertionError("DirDBM key must be a string")
+        key = self._encode(key)
+        return os.path.isfile(os.path.join(self.dname, key))
+
+
     def update(self, dict):
-        """dirdbm.update(dict); update me from another dict-style interface
+        """
+        Add all the key/value pairs in C{dict} to this dirdbm.  Any conflicting
+        keys will be overwritten with the values from C{dict}.
+
+        @type dict: mapping
+        @param dict: A mapping of key/value pairs to add to this dirdbm.
         """
         for key, val in dict.items():
             self[key]=val
             
     def close(self):
-        """close this dbm: no-op, for dbm-style interface compliance
+        """
+        Close this dbm: no-op, for dbm-style interface compliance.
         """
 
 
@@ -188,19 +258,40 @@ class Shelf(DirDBM):
     """
     
     def __setitem__(self, k, v):
-        """shelf[foo] = bar; create or modify a textfile in this directory
+        """
+        C{shelf[foo] = bar}
+        Create or modify a textfile in this directory.
+
+        @type k: str
+        @param k: The key to set
+
+        @param v: The value to associate with C{key}
         """
         v = cPickle.dumps(v)
         DirDBM.__setitem__(self, k, v)
 
     def __getitem__(self, k):
-        """dirdbm[foo]; get the contents of a file in this directory as a pickle
+        """
+        C{dirdbm[foo]}
+        Get and unpickle the contents of a file in this directory.
+        
+        @type k: str
+        @param k: The key to lookup
+        
+        @return: The value associated with the given key
+        @raise KeyError: Raised if the given key does not exist
         """
         return cPickle.loads(DirDBM.__getitem__(self, k))
 
 
 def open(file, flag = None, mode = None):
-    """open(file); This is for 'anydbm' compatibility
+    """
+    This is for 'anydbm' compatibility.
+    
+    @param file: The parameter to pass to the DirDBM constructor.
+
+    @param flag: ignored
+    @param mode: ignored
     """
     return DirDBM(file)
 
