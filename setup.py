@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.46 2002/08/15 01:24:44 radix Exp $
+$Id: setup.py,v 1.47 2002/08/15 07:15:53 radix Exp $
 """
 
 import distutils, os, sys, string
@@ -207,7 +207,11 @@ class build_ext_twisted(build_ext):
             define_macros = []
         
         # Extension modules to build.
-        exts = []
+        exts = [
+            Extension("twisted.spread.cBanana",
+                      ["twisted/spread/cBanana.c"],
+                      define_macros=define_macros),
+            ]
 
         # The C reactor
         # TODO: possibly test for other headers that it uses (autoconf style).
@@ -314,14 +318,17 @@ if os.name == 'nt':
 else:
     define_macros = []
         
-# We need to include at least one extension module or the build_ext command
-# will not run and our custom command will not execute.  We'll use C banana
-# because it should build anywhere.
+# Include all extension modules here, whether they are built or not.
+# The custom built_ext command will wipe out this list anyway, but it
+# is required for sdist to work.
 setup_args['ext_modules'] = [
-         Extension("twisted.spread.cBanana",
-                    ["twisted/spread/cBanana.c"],
-                    define_macros=define_macros)
-]
+    Extension("twisted.spread.cBanana",
+              ["twisted/spread/cBanana.c"],
+              define_macros=define_macros),
+    Extension("twisted.internet.cReactor",
+              glob('twisted/internet/cReactor/*.c'),
+              define_macros=define_macros),
+    ]
 
 apply(setup, (), setup_args)
 

@@ -15,7 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 # Twisted - Distutils distribution files
 #
-# $Id: MANIFEST.in,v 1.7 2002/04/26 05:08:41 carmstro Exp $
+# $Id: MANIFEST.in,v 1.8 2002/08/15 07:15:53 radix Exp $
 
 include CREDITS LICENSE README
 include MANIFEST.in
@@ -27,5 +27,6 @@ recursive-include doc *.html
 recursive-include doc/img *
 recursive-include pyunit *.py
 recursive-include static *
+recursive-include twisted *.h
 
 global-exclude */CVS/*
