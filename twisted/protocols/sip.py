@@ -29,6 +29,9 @@ from twisted.python import log, util
 from twisted.internet import protocol, defer, reactor
 from twisted.python.components import Interface
 
+from twisted import cred
+import twisted.cred.credentials
+
 # sibling imports
 import basic
 
@@ -65,6 +68,10 @@ statusCodes = {100: "Trying",
                305: "Use Proxy",
                380: "Alternative Service",
 
+               400: "Bad Request",
+               401: "Unauthorized",
+               402: "Payment Required",
+               403: "Forbidden",
                404: "Not Found",
                406: "Not Acceptable",
                407: "Proxy Authentication Required",
@@ -568,6 +575,9 @@ class RegistrationError(Exception):
     """Registration was not possible."""
 
 
+class IContact(Interface):
+    """A user of a registrar or proxy"""
+
 class IRegistry(Interface):
     """Allows registration of logical->physical URL mapping."""
 
@@ -694,6 +704,8 @@ class RegisterProxy(Proxy):
     Unregistered users won't be handled.
     """
 
+    portal = None
+
     registry = None # should implement IRegistry
         
     def handle_REGISTER_request(self, message, (host, port)):
@@ -701,6 +713,65 @@ class RegisterProxy(Proxy):
 
         Currently registration is not proxied.
         """
+        if self.portal is None:
+            # There is no portal.  Let anyone in.
+            self.register(message, host, port)
+        else:
+            # There is a portal.  Check for credentials.
+            if not message.headers.has_key("authorization"):
+                self.unauthorized(message, host, port)
+            else:
+                self.login(message, host, port)
+    
+    def unauthorized(self, message, host, port):
+        self.deliverResponse(self.responseFromRequest(401, message))
+
+    def login(self, message, host, port):
+        parts = message.headers['authorization'][0].split(None, 1)
+        f = getattr(self, 'authorize_' + parts[0].upper())
+        if f:
+            try:
+                f(parts[1:], message, host, port
+                    ).addCallback(self._cbLogin, message, host, port
+                    ).addErrback(self._ebLogin, message, host, port
+                    )
+            except:
+                log.err()
+                self.deliverResponse(self.responseFromRequest(500, message))
+        else:
+            self.deliverResponse(self.responseFromRequest(501, message))
+
+    def _cbLogin(self, (i, a, l), message, host, port):
+        # It's stateless, matey.  What a joke.
+        self.register(message, host, port)
+    
+    def _ebLogin(self, failure, message, host, port):
+        self.unauthorized(message, host, port)
+
+    def authorize_BASIC(self, parts, message, host, port):
+        enc = parts[0]
+        # At least one SIP client improperly pads its Base64 encoded messages
+        for i in range(3):
+            try:
+                creds = (enc + ('=' * i)).decode('base64')
+            except:
+                pass
+            else:
+                break
+        else:
+            self.deliverResponse(self.responseFromRequest(400, message))
+            return
+
+        parts = creds.split(':', 1)
+        if len(parts) != 2:
+            self.deliverResponse(self.responseFromRequest(400, message))
+            return
+
+        creds = cred.credentials.UsernamePassword(*parts)
+        return self.portal.login(creds, None, IContact)
+
+    def register(self, message, host, port):
+        """Allow all users to register"""
         name, toURL, params = parseAddress(message.headers["to"][0], clean=1)
         if message.headers.has_key("contact"):
             contact = message.headers["contact"][0]
@@ -779,8 +850,9 @@ class InMemoryRegistry:
 if __name__ == '__main__':
     import sys
     log.startLogging(sys.stdout)
-    registrar = RegisterProxy(host="192.168.123.128")
-    registry = InMemoryRegistry("192.168.123.128")
+    registrar = RegisterProxy(host="192.168.1.1")
+    registrar.portal = 5
+    registry = InMemoryRegistry("192.168.1.1")
     registrar.registry = registry
     registry.locator = registry
     reactor.listenUDP(PORT, registrar)

@@ -20,6 +20,9 @@ from twisted.trial import unittest
 from twisted.protocols import sip
 from twisted.internet import defer, reactor
 
+from twisted import cred
+import twisted.cred.portal
+import twisted.cred.checkers
 
 # request, prefixed by random CRLFs
 request1 = "\n\r\n\n\r" + """\
@@ -82,6 +85,9 @@ l: 4
 
 abcd""".replace("\n", "\r\n")
 
+class TestRealm:
+    def requestAvatar(self, avatarId, mind, *interfaces):
+        return sip.IContact, None, lambda: None
 
 class MessageParsingTestCase(unittest.TestCase):
 
@@ -177,14 +183,14 @@ class MakeMessageTestCase(unittest.TestCase):
     def testRequest(self):
         r = sip.Request("INVITE", "sip:foo")
         r.addHeader("foo", "bar")
-        self.assertEquals(r.toString(), "INVITE sip:foo SIP/2.0\r\nfoo: bar\r\n\r\n")
+        self.assertEquals(r.toString(), "INVITE sip:foo SIP/2.0\r\nFoo: bar\r\n\r\n")
 
     def testResponse(self):
         r = sip.Response(200, "OK")
         r.addHeader("foo", "bar")
         r.addHeader("Content-Length", "4")
         r.bodyDataReceived("1234")
-        self.assertEquals(r.toString(), "SIP/2.0 200 OK\r\nfoo: bar\r\ncontent-length: 4\r\n\r\n1234")
+        self.assertEquals(r.toString(), "SIP/2.0 200 OK\r\nFoo: bar\r\nContent-length: 4\r\n\r\n1234")
 
     def testStatusCode(self):
         r = sip.Response(200)
@@ -416,6 +422,53 @@ class RegistrationTestCase(unittest.TestCase):
         desturl = unittest.deferredResult(
             self.proxy.locator.getAddress(sip.URL(username="joe", host="bell.example.com")))
         self.assertEquals((desturl.host, desturl.port), ("client.com", 1234))
+
+    def addPortal(self):
+        r = TestRealm()
+        p = cred.portal.Portal(r)
+        c = cred.checkers.InMemoryUsernamePasswordDatabaseDontUse()
+        c.addUser('userXname', 'passXword')
+        p.registerChecker(c)
+        self.proxy.portal = p
+
+    def testFailedAuthentication(self):
+        self.addPortal()
+        self.register()
+        
+        self.assertEquals(len(self.registry.users), 0)
+        self.assertEquals(len(self.sent), 1)
+        dest, m = self.sent[0]
+        self.assertEquals(m.code, 401)
+
+    def testBasicAuthentication(self):
+        self.addPortal()
+
+        r = sip.Request("REGISTER", "sip:bell.example.com")
+        r.addHeader("to", "sip:joe@bell.example.com")
+        r.addHeader("contact", "sip:joe@client.com:1234")
+        r.addHeader("via", sip.Via("client.com").toString())
+        r.addHeader("authorization", "Basic " + "userXname:passXword".encode('base64'))
+        self.proxy.datagramReceived(r.toString(), ("client.com", 5060))
+        
+        self.assertEquals(len(self.registry.users), 1)
+        self.assertEquals(len(self.sent), 1)
+        dest, m = self.sent[0]
+        self.assertEquals(m.code, 200)
+    
+    def testFailedBasicAuthentication(self):
+        self.addPortal()
+
+        r = sip.Request("REGISTER", "sip:bell.example.com")
+        r.addHeader("to", "sip:joe@bell.example.com")
+        r.addHeader("contact", "sip:joe@client.com:1234")
+        r.addHeader("via", sip.Via("client.com").toString())
+        r.addHeader("authorization", "Basic " + "userXname:password".encode('base64'))
+        self.proxy.datagramReceived(r.toString(), ("client.com", 5060))
+        
+        self.assertEquals(len(self.registry.users), 0)
+        self.assertEquals(len(self.sent), 1)
+        dest, m = self.sent[0]
+        self.assertEquals(m.code, 401)
     
     def testWrongDomainRegister(self):
         r = sip.Request("REGISTER", "sip:wrong.com")
