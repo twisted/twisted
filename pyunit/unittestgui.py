@@ -202,7 +202,9 @@ class TkTestRunner(BaseGUITestRunner):
 	self.failCountVar = tk.IntVar()
 	self.errorCountVar = tk.IntVar()
 	self.remainingCountVar = tk.IntVar()
-        self.top = tk.Frame()
+        self.win = tk.Toplevel()
+        self.win.group(self.root)
+        self.top = tk.Frame(self.win)
 	self.top.pack(fill=tk.BOTH, expand=1)
         self.createWidgets()
 
@@ -384,10 +386,15 @@ class ProgressBar(tk.Frame):
                                             text=percentString)
 
 def main(initialTestName=""):
-    root = tk.Tk()
+    root = tk.Tk(baseName='pyunit',className='pyUnit')
+    root.group(root)
+    root.withdraw()
+    root.update()
     root.title("PyUnit")
+    root.command('python "%s"' % (string.join(sys.argv,'" "'),))
     runner = TkTestRunner(root, initialTestName)
-    root.protocol('WM_DELETE_WINDOW', root.quit)
+    runner.win.title("PyUnit")
+    runner.win.protocol('WM_DELETE_WINDOW', root.quit)
     root.mainloop()
 
 
