@@ -15,7 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from twisted.trial import unittest
-from twisted.internet import reactor, protocol, error, app
+from twisted.internet import reactor, protocol, error, app, abstract
 from twisted.internet.defer import SUCCESS, FAILURE, Deferred, succeed, fail
 from twisted.python import threadable, log
 threadable.init(1)
@@ -626,6 +626,18 @@ class MultiServiceTestCase(unittest.TestCase):
     def tearDown(self):
         log.flushErrors (StopError)
         self.failUnless(self.callbackRan, "Callback was never run.")
+
+
+class DummyProducer:
+    def resumeProducing(self):
+         pass
+
+class TestProducer(unittest.TestCase):
+
+    def testDoubleProducer(self):
+        fd = abstract.FileDescriptor()
+        fd.registerProducer(DummyProducer(), 0)
+        self.assertRaises(RuntimeError, fd.registerProducer, DummyProducer(), 0)
 
 if __name__ == '__main__':
     unittest.main()
