@@ -270,7 +270,7 @@ class Element(Node):
             stream.write(self.tagName)
             stream.write(">")
         else:
-            stream.write("/>")
+            stream.write(" />")
 
     def __repr__(self):
         rep = "Element(%s" % repr(self.nodeName)
