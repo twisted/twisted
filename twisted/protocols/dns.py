@@ -31,7 +31,7 @@ import StringIO, struct
 from socket import inet_aton, inet_ntoa
 
 # Twisted imports
-from twisted.internet import protocol, defer
+from twisted.internet import protocol, defer, error
 from twisted.python import log
 
 PORT = 53
@@ -540,10 +540,8 @@ class Record_MX:
 
 
     def encode(self, strio, compDict = None):
-        s = StringIO.StringIO()
-        s.write(struct.pack('!H', self.preference))
-        self.exchange.encode(s, compDict)
-        strio.write(struct.pack('!H', len(s.getvalue())) + s.getvalue())
+        strio.write(struct.pack('!H', self.preference))
+        self.exchange.encode(strio, compDict)
 
 
     def decode(self, strio):
@@ -714,8 +712,10 @@ class DNSClientProtocol(protocol.DatagramProtocol):
     id = 1000
     liveMessages = {}
     
-    def __init__(self, controller):
+    def __init__(self, controller, timeout = 10, reissue = 1):
         self.controller = controller
+        self.startCount = int(timeout / float(reissue))
+        self.reissue = reissue
 
 
     def pickID(self):
@@ -723,20 +723,37 @@ class DNSClientProtocol(protocol.DatagramProtocol):
         return DNSClientProtocol.id
 
 
-    def writeMessage(self, addr, message):
-        self.transport.write(message.toStr(), addr)
+    def writeMessage(self, message, address):
+        self.transport.write(message.toStr(), address)
 
 
     def datagramReceived(self, data, addr):
         m = Message()
         m.fromStr(data)
         try:
-            d = self.liveMessages[m.id]
+            d, i = self.liveMessages[m.id]
         except KeyError:
             self.controller.messageReceived(m, self, addr)
         else:
             del self.liveMessages[m.id]
             d.callback(m)
+            i.cancel()
+
+
+    def _reissueQuery(self, message, address, counter):
+        if counter <= 0:
+            d, _ = self.liveMessages[message.id]
+            d.errback(error.TimeoutError(message.queries))
+            del self.liveMessages[message.id]
+        else:
+            self.writeMessage(message, address)
+            self.liveMessages[message.id] = (
+                d,
+                reactor.callLater(
+                    self.reissue, self._reissueQuery, message, address,
+                    counter - 1
+                )
+            )
 
 
     def query(self, address, queries):
@@ -755,10 +772,16 @@ class DNSClientProtocol(protocol.DatagramProtocol):
         @rtype: C{Deferred}
         """
         id = self.pickID()
-        d = self.liveMessages[id] = defer.Deferred()
+        d = self.liveMessages[id] = (
+            defer.Deferred(),
+            reactor.callLater(
+                self.reissue, self._reissueQuery, m, address,
+                self.startCount
+            )
+        )
         m = Message(id, recDes=1)
         m.queries = queries
-        self.writeMessage(address, m)
+        self.writeMessage(m, address)
         return d
 
 
