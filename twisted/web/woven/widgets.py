@@ -192,6 +192,7 @@ class Widget(mvc.View):
         data = self.getData()
         if isinstance(data, defer.Deferred):
             data.addCallback(self.setDataCallback, request, node)
+            data.addErrback(renderFailure, request)
             return data
         self.setUp(request, node, data)
         result = self.generateDOM(request, node)
@@ -467,7 +468,7 @@ class List(Widget):
 
     A List should be specified in the template HTML as so::
 
-       | <ul id="blah" view="List">
+       | <ul model="blah" view="List">
        |     <li id="emptyList">This will be displayed if the list is empty.</li>
        |     <li id="listItem" view="Text">Foo</li>
        | </ul>

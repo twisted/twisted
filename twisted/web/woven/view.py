@@ -64,6 +64,8 @@ class WView(template.DOMTemplate):
         # Look up an InputHandler
         controllerFactory = DefaultHandler
         if controllerName:
+            if not node.hasAttribute('name'):
+                log.msg("POTENTIAL ERROR: %s had a controller, but not a 'name' attribute." % node)
             namespaces = [self.controller]
             for namespace in namespaces:
                 controllerFactory = getattr(namespace, 'factory_' + controllerName, None)
