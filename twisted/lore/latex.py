@@ -62,6 +62,7 @@ class LatexSpitter:
         m(node)
 
     def visitNodeDefault(self, node):
+        print node.tagName
         s = getattr(self, 'mapStart_'+node.tagName, None)
         if s:
             self.writer(s)
@@ -157,7 +158,7 @@ class LatexSpitter:
     def visitNode_span(self, node):
         if not node.hasAttribute('class'):
             return self.visitNodeDefault(node)
-        node.tagName += node.getAttribute('class')
+        node.tagName += '_'+node.getAttribute('class')
         self.visitNode(node)
 
     visitNode_div = visitNode_span
