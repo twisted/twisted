@@ -9,6 +9,8 @@ Plugin system for Twisted.
 @author: U{Glyph Lefkowitz<mailto:exarkun@twistedmatrix.com>
 """
 
+from __future__ import generators
+
 import os, errno
 
 from zope.interface import Interface, providedBy
