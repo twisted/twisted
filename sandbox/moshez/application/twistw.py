@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 from twisted.python import util, log, logfile
-from twisted.application import app, service
+from twisted.application import app, service, internet
 import sys, os
 
 util.addPluginDir()
@@ -40,10 +40,6 @@ def startLogging(logfilename):
     log.startLogging(logFile)
     sys.stdout.flush()
 
-def callMeAgain():
-    from twisted.internet import reactor
-    reactor.callLater(0.1, callMeAgain)
-
 def runApp(config):
     passphrase = app.getPassphrase(config['encrypted'])
     app.installReactor(config['reactor'])
@@ -56,7 +52,7 @@ def runApp(config):
     service.IService(application).privilegedStartService()
     app.startApplication(application, not config['no_save'])
     service.IService(application).startService()
-    callMeAgain()
+    app.startApplication(internet.TimerService(0.1, lambda:None), 0)
     app.runReactorWithLogging(config, oldstdout, oldstderr)
     app.reportProfile(config['report-profile'], application.processName)
     log.msg("Server Shut Down.")
