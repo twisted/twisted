@@ -8,6 +8,9 @@ banana.xhtml: banana.html
 test:
 	../../bin/trial -v test_banana
 
+test2:
+	../../bin/trial -o test_schema
+
 clean:
 	rm -f *~ *.pyc *.xhtml
 	rm -rf _trial_temp

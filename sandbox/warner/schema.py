@@ -40,6 +40,9 @@ modifiers:
 
 """
 
+import types
+import banana, slicer
+
 everythingTaster = {
     banana.STRING: banana.SIZE_LIMIT,
     banana.LIST: None,
@@ -53,6 +56,12 @@ everythingTaster = {
     banana.CLOSE: None,
     banana.ABORT: None,
     }
+
+class UnboundedSchema(Exception):
+    pass
+
+class Violation(Exception):
+    pass
 
 class Constraint:
     """
@@ -77,7 +86,7 @@ class Constraint:
         """Check the token type. Raise an exception if it is not accepted
         right now, or return a body-length limit if it is ok."""
         if not self.taster.has_key(typebyte):
-            raise BananaError("this primitive type is not accepted right now"
+            raise BananaError("this primitive type is not accepted right now")
             # really, start discarding instead
         return self.taster[typebyte]
 
@@ -113,42 +122,106 @@ class Constraint:
         """
         return
 
+    def maxSize(self, seen=None):
+        """I return the maximum size (in bytes) which could be consumed by
+        the serialized form of an object which conforms to my constraint,
+        including all possible sub-objects which I contain. I raise an
+        UnboundedSchema exception if there is no bound.
+        """
+        raise UnboundedSchema
+
+    def maxDepth(self):
+        """I return the greatest number Slicer objects that might exist on
+        the SlicerStack (or Unslicers on the UnslicerStack) while processing
+        an object which conforms to this constraint. This is effectively the
+        maximum depth of the object tree. I raise UnboundedSchema if there is
+        no bound.
+        """
+        raise UnboundedSchema
+
 Any = Constraint # accept everything
+
+
+# constraints which describe individual banana tokens
 
 class StringConstraint(Constraint):
     def __init__(self, maxLength=1000):
         self.maxLength = maxLength
         self.taster = {banana.STRING: self.maxLength}
     def checkObject(self, obj):
-        if type(obj) != types.StringTypes:
+        if not isinstance(obj, types.StringTypes):
             raise Violation
-        if len(obj) > self.maxLength:
+        if self.maxLength != None and len(obj) > self.maxLength:
             raise Violation
-
-class BooleanConstraint(Constraint):
-    def checkObject(self, obj):
-        if type(obj) != types.BooleanType:
-            raise Violation
+    def maxSize(self, seen=None):
+        if self.maxLength == None:
+            raise UnboundedSchema
+        return 64+1+self.maxLength
+    def maxDepth(self, seen=None):
+        return 1
 
 class IntegerConstraint(Constraint):
     def __init__(self, maxValue=2**32):
         self.maxValue = maxValue
         self.setNumberTaster(maxValue)
     def checkObject(self, obj):
-        if type(obj) not in (types.IntType, types.LongType):
+        if not isinstance(obj, (types.IntType, types.LongType)):
             raise Violation
         if abs(obj) > self.maxValue:
             raise Violation
+    def maxSize(self, seen=None):
+        # TODO: not 8, log256(self.maxValue)
+        return 64+1+8
+    def maxDepth(self, seen=None):
+        return 1
+
+class SmallIntegerConstraint(IntegerConstraint):
+    def __init__(self):
+        self.maxValue = 2**32
 
 class NumberConstraint(Constraint):
     def __init__(self, maxIntValue=2**32):
         self.maxIntValue = maxIntValue
         self.setNumberTaster(maxValue)
     def checkObject(self, obj):
-        if type(obj) not in (types.IntType, types.LongType, types.FloatType):
+        if not isinstance(obj, (types.IntType, types.LongType,
+                                types.FloatType)):
             raise Violation
         if abs(obj) > self.maxValue:
             raise Violation
+    def maxSize(self, seen=None):
+        # TODO: same as IntegerConstraint
+        return 64+1+8
+    def maxDepth(self, seen=None):
+        return 1
+
+# constraints which describe OPEN sequences
+
+COUNTERBYTES = 0 # max size of opencount
+
+def OPENBYTES(name=None):
+    # an OPEN,type,CLOSE sequence takes:
+    if name == None:
+        strlen = StringConstraint().maxSize(None)
+    else:
+        strlen = StringConstraint(len(name)).maxSize(None)
+    return COUNTERBYTES+1 + strlen + COUNTERBYTES+1
+
+
+class BooleanConstraint(Constraint):
+    taster = {banana.INT: 2**32}
+    opentypes = []
+    _myint = SmallIntegerConstraint()
+
+    def checkObject(self, obj):
+        if type(obj) != types.BooleanType:
+            raise Violation
+    def maxSize(self, seen=None):
+        if not seen: seen = []
+        return OPENBYTES("boolean") + self._myint.maxSize(seen)
+    def maxDepth(self, seen=None):
+        if not seen: seen = []
+        return 1+self._myint.maxDepth(seen)
 
 class InterfaceConstraint(Constraint):
     def __init__(self, interface):
@@ -162,7 +235,7 @@ class ClassConstraint(Constraint):
     def __init__(self, klass):
         self.klass = klass
 class PolyConstraint(Constraint):
-    def __init__(self, alternatives):
+    def __init__(self, *alternatives):
         self.alternatives = alternatives
     def checkObject(self, obj):
         ok = False
@@ -174,6 +247,24 @@ class PolyConstraint(Constraint):
                 pass
         if not ok:
             raise Violation
+    def maxSize(self, seen=None):
+        if not seen: seen = []
+        if self in seen:
+            # TODO: if the PolyConstraint contains itself directly, the effect
+            # is a nop. If a descendent contains the ancestor PolyConstraint,
+            # then I think it's unbounded.. must draw this out
+            raise UnboundedSchema # recursion
+        seen.append(self)
+        return reduce(max, [c.maxSize(seen[:])
+                            for c in self.alternatives])
+    def maxDepth(self, seen=None):
+        if not seen: seen = []
+        if self in seen:
+            raise UnboundedSchema # recursion
+        seen.append(self)
+        return reduce(max, [c.maxDepth(seen[:]) for c in self.alternatives])
+
+ChoiceOf = PolyConstraint
 
 class TupleConstraint(Constraint):
     def __init__(self, *elemConstraints):
@@ -185,6 +276,21 @@ class TupleConstraint(Constraint):
             raise Violation
         for i in range(len(self.constraints)):
             self.constraints[i].checkObject(obj[i])
+    def maxSize(self, seen=None):
+        if not seen: seen = []
+        if self in seen:
+            raise UnboundedSchema # recursion
+        seen.append(self)
+        return OPENBYTES("tuple") + sum([c.maxSize(seen[:])
+                                         for c in self.constraints])
+    def maxDepth(self, seen=None):
+        if not seen: seen = []
+        if self in seen:
+            raise UnboundedSchema # recursion
+        seen.append(self)
+        return 1 + reduce(max, [c.maxDepth(seen[:])
+                                for c in self.constraints])
+
 TupleOf = TupleConstraint
 
 class ListConstraint(Constraint):
@@ -202,37 +308,117 @@ class ListConstraint(Constraint):
             raise Violation
         for o in obj:
             self.constraint.checkObject(o)
+    def maxSize(self, seen=None):
+        if not seen: seen = []
+        if self in seen:
+            raise UnboundedSchema # recursion
+        seen.append(self)
+        if self.maxLength == None:
+            raise UnboundedSchema
+        return (OPENBYTES("list") +
+                self.maxLength * self.constraint.maxSize(seen))
+    def maxDepth(self, seen=None):
+        if not seen: seen = []
+        if self in seen:
+            raise UnboundedSchema # recursion
+        seen.append(self)
+        return 1 + self.constraint.maxDepth(seen)
+
 ListOf = ListConstraint
 
 class DictConstraint(Constraint):
-    def __init__(self, keyconstraint, valueconstraint):
+    def __init__(self, keyconstraint, valueconstraint, maxKeys=30):
         self.keyconstraint = keyconstraint
         self.valueconstraint = valueconstraint
+        self.maxKeys = maxKeys
     def checkObject(self, obj):
         if type(obj) != types.DictType:
             raise Violation
         for key, value in obj.iteritems():
             self.keyconstraint.checkObject(key)
             self.valueconstraint.checkObject(value)
+    def maxSize(self, seen=None):
+        if not seen: seen = []
+        if self in seen:
+            raise UnboundedSchema # recursion
+        seen.append(self)
+        if self.maxKeys == None:
+            raise UnboundedSchema
+        keySize = self.keyconstraint.maxSize(seen[:])
+        valueSize = self.valueconstraint.maxSize(seen[:])
+        return OPENBYTES("dict") + self.maxKeys * (keySize + valueSize)
+    def maxDepth(self, seen=None):
+        if not seen: seen = []
+        if self in seen:
+            raise UnboundedSchema # recursion
+        seen.append(self)
+        keyDepth = self.keyconstraint.maxDepth(seen[:])
+        valueDepth = self.valueconstraint.maxDepth(seen[:])
+        return 1 + max(keyDepth, valueDepth)
+
 DictOf = DictConstraint
 
 class AttributeDictConstraint(Constraint):
-    def __init__(self, *attrTuples, ignoreUnknown=False):
+    def __init__(self, ignoreUnknown=False, *attrTuples):
         self.keys = {}
         for name, constraint in attrTuples:
             assert name not in self.keys.keys()
             self.keys[name] = makeConstraint(constraint)
         self.ignoreUnknown = ignoreUnknown
+    def maxSize(self, seen=None):
+        if not seen: seen = []
+        if self in seen:
+            raise UnboundedSchema # recursion
+        seen.append(self)
+        return OPENBYTES("attributedict") + \
+               sum([StringConstraint(len(name)).maxSize(seen) +
+                    constraint.maxSize(seen[:])
+                    for name, constraint in self.keys.iteritems()])
+    def maxDepth(self, seen=None):
+        if not seen: seen = []
+        if self in seen:
+            raise UnboundedSchema # recursion
+        seen.append(self)
+        # all the attribute names are 1-deep, so the min depth of the dict
+        # items is 1. The other "1" is for the AttributeDict container itself
+        return 1 + reduce(max, [c.maxDepth(seen[:])
+                                for c in self.itervalues()], 1)
+
+
 
 class Shared(Constraint):
     def __init__(self, constraint, refLimit=None):
         self.constraint = makeConstraint(constraint)
         self.refLimit = refLimit
+    def maxSize(self, seen=None):
+        if not seen: seen = []
+        if self in seen:
+            raise UnboundedSchema # recursion
+        seen.append(self)
+        return self.constraint.maxSize(seen)
+    def maxDepth(self, seen=None):
+        if not seen: seen = []
+        if self in seen:
+            raise UnboundedSchema # recursion
+        seen.append(self)
+        return self.constraint.maxDepth(seen)
 
 class Optional(Constraint):
     def __init__(self, constraint, default):
         self.constraint = makeConstraint(constraint)
         self.default = default
+    def maxSize(self, seen=None):
+        if not seen: seen = []
+        if self in seen:
+            raise UnboundedSchema # recursion
+        seen.append(self)
+        return self.constraint.maxSize(seen)
+    def maxDepth(self, seen=None):
+        if not seen: seen = []
+        if self in seen:
+            raise UnboundedSchema # recursion
+        seen.append(self)
+        return self.constraint.maxDepth(seen)
 
 
 
@@ -242,9 +428,9 @@ def makeConstraint(t):
     map = {
         types.StringType: StringConstraint(),
         types.BooleanType: BooleanConstraint(),
-        types.IntType: IntegerConstraint()
-        types.LongType: IntegerConstraint(maxValue=2**10000)
-        types.FloatType: NumberConstraint()
+        types.IntType: IntegerConstraint(),
+        types.LongType: IntegerConstraint(maxValue=2**10000),
+        types.FloatType: NumberConstraint(),
         }
     c = map.get(t, None)
     if c:
@@ -265,7 +451,7 @@ def makeConstraint(t):
 
 
 
-class ListUnslicer(BaseUnslicer):
+class ListUnslicer(slicer.BaseUnslicer):
     constraint = Any()
     # .opener usually chains to RootUnslicer.opener
     # .constraint is populated by our creator (in doOpen)
@@ -327,7 +513,7 @@ class ListUnslicer(BaseUnslicer):
         return "[%d]" % len(self.list)
 
 
-class ReferenceUnslicer(LeafUnslicer):
+class ReferenceUnslicer(slicer.LeafUnslicer):
 
     def receiveToken(self, token):
         if hasattr(self, 'obj'):

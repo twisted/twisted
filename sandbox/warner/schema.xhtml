@@ -45,7 +45,7 @@ X = Attributes(
                                         # to avoid making the serializer do extra work
     ('asdf', ListOf(Narf, maxLength=30)),
     ('fdsa', (Narf, String(maxLength=5), int)),
-    ('qqqq', DictOf(str, Narf)),
+    ('qqqq', DictOf(str, Narf, maxKeys=30)),
     ('larg', AttributeDict(('A', int),
                            ('X', Number),
                            ('Z', float))),
