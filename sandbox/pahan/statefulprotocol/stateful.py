@@ -32,9 +32,6 @@ class StatefulProtocol(protocol.Protocol):
     getInitialState (override it).
     """
     _sful_data = None, None, 0
-    _sful_state = None
-    _sful_buffer = None
-    _sful_offset = 0
 
     def makeConnection(self, transport):
         protocol.Protocol.makeConnection(self, transport)
