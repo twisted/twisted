@@ -116,6 +116,65 @@ reactor.run()
     base="twisted.internet.protocol.ClientFactory">clientConnectionLost</code>
     is called when a connection was made and then disconnected.</p>
     
+    <h3>Reconnection</h3>
+    <p>Many times, the connection of a client will be lost unintentionally due
+    to network errors. One way to reconnect after a disconnection would be to
+    call <code class="python">connector.connect()</code> when the
+    connection is lost:
+    </p>
+    <pre class="python">
+from twisted.internet.protocol import ClientFactory
+class EchoClientFactory(ClientFactory):
+    
+    def clientConnectionLost(self, connector, reason):
+        connector.connect()
+    </pre>
+    <p>The connector passed as the first
+    argument is the interface between a connection and a protocol.  When the
+    connection fails and the factory receives the clientConnectionLost event,
+    the factory can call <code class="python">connector.connect()</code> to
+    start the connection over again from scratch.</p>
+
+    <p>
+    However, most programs that want this functionality should implement <code
+    class="API"
+    base="twisted.internet.protocol">ReconnectingClientFactory</code> instead,
+    which tries to reconnect if a connection is lost or fails, and which
+    exponentially delays repeated reconnect attempts.
+    </p>
+
+    <p>
+    Here is the Echo protocol implemented with a ReconnectingClientFactory:
+    </p>
+
+    <pre class="python">
+from twisted.internet.protocol import Protocol, ReconnectingClientFactory
+from sys import stdout
+class Echo(Protocol):
+                                                                                                                                                            
+    def dataReceived(self, data):
+        stdout.write(data)
+                                                                                                                                                            
+class EchoClientFactory(ReconnectingClientFactory):
+                                                                                                                                                            
+    def startedConnecting(self, connector):
+        print 'Started to connect.'
+                                                                                                                                                            
+    def buildProtocol(self, addr):
+        print 'Connected.'
+        print 'Resetting reconnection delay'
+        self.resetDelay()
+        return Echo()
+                                                                                                                                                            
+    def clientConnectionLost(self, connector, reason):
+        print 'Lost connection.  Reason:', reason
+        ReconnectingClientFactory.clientConnectionLost(self, connector, reason)
+                                                                                                                                                            
+    def clientConnectionFailed(self, connector, reason):
+        print 'Connection failed. Reason:', reason
+        ReconnectingClientFactory.clientConnectionFailed(self, connector, reason)
+</pre>
+    
     <h2>A Higher-Level Example: ircLogBot</h2>
     
     <h3>Overview of ircLogBot</h3>
@@ -129,26 +188,6 @@ reactor.run()
     traffic on it to a file.  It demonstrates some of the connection-level logic
     of reconnecting on a lost connection, as well as storing persistent data in
     the Factory.</p>
-    
-    <h3>Reconnection</h3>
-    <p>Many times, the connection of a client will be lost unintentionally due
-    to network errors.  In the case of the ircLogBot, leaving the bot
-    disconnected will result in the loss of the log data until the
-    administrator reconnects the bot.  However, with the API this can be
-    automated.  The relevant part of ircLogBot.py follows:</p>
-    <pre class="python">
-from twisted.internet import protocol
-class LogBotFactory(protocol.ClientFactory):
-    
-    def clientConnectionLost(self, connector, reason):
-        connector.connect()
-    </pre>
-    
-    <p>That last line is the most important.  The connector passed as the first
-    argument is the interface between a connection and a protocol.  When the
-    connection fails and the factory receives the clientConnectionLost event,
-    the factory can call <code class="python">connector.connect()</code> to
-    start the connection over again from scratch.</p>
     
     <h3>Persistent Data in the Factory</h3>
 
