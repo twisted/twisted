@@ -22,12 +22,7 @@ from twisted.web import microdom
 cols = 79
 
 def dircount(d):
-    ents = d.split("/")
-    cou = 0
-    for el in ents:
-        if el and el != '.':
-            cou += 1
-    return cou
+    return len([1 for el in d.split("/") if el != '.'])
 
 
 class Walker:
