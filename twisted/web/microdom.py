@@ -66,6 +66,7 @@ def getElementsByTagName(iNode, name):
     return matches
 
 def getElementsByTagNameNoCase(iNode, name):
+    name = name.lower()
     matches = []
     matches_append = matches.append
     slice=[iNode]
@@ -331,8 +332,6 @@ class _Attr(CharacterData):
 import new
 
 class Element(Node):
-    preserveCase = 0
-    caseInsensitive = 0
     def __init__(self, tagName, attributes=None, parentNode=None, 
                         filename=None, markpos=None, 
                         caseInsensitive=1, preserveCase=0):
