@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_tendril -*-
-# $Id: tendril.py,v 1.27 2002/09/05 23:39:21 acapnotic Exp $
+# $Id: tendril.py,v 1.28 2002/09/05 23:55:38 acapnotic Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -195,7 +195,7 @@ class TendrilIRC(irc.IRCClient, styles.Ephemeral):
 
     realname = 'Tendril'
     versionName = 'Tendril'
-    versionNum = '$Revision: 1.27 $'[11:-2]
+    versionNum = '$Revision: 1.28 $'[11:-2]
     versionEnv = copyright.longversion
 
     helptext = TendrilFactory.helptext
@@ -810,7 +810,7 @@ class TendrilWords(wordsService.WordsClient):
     def ircPartParticipant(self, nick, groupName):
         participant = self._getParticipant(nick)
         try:
-            participant.words.leaveGroup(groupName)
+            participant.leaveGroup(groupName)
         except wordsService.NotInGroupError:
             pass
 
