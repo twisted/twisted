@@ -1,5 +1,10 @@
 2003-06-05  Brian Warner  <warner@lothar.com>
 
+	* twisted/conch/ssh/transport.py (ssh_KEX_DH_GEX_INIT): don't use
+	small values for DH parameter 'y'. openssh rejects these because they
+	make it trivial to reconstruct the shared secret. This caused a test
+	failure about 1024 times out of every 65536.
+
 	* twisted/test/test_dirdbm.py (DirDbmTestCase.testModificationTime):
 	dodge a kernel bug that lets mtime get skewed from time(), causing
 	an occasional test failure

@@ -29,6 +29,7 @@ import struct
 import md5
 import sha
 import zlib
+import math # for math.log
 
 # external library imports
 from Crypto import Util
@@ -368,7 +369,28 @@ class SSHServerTransport(SSHTransportBase):
 
     def ssh_KEX_DH_GEX_INIT(self, packet):
         clientDHPubKey, foo = getMP(packet)
+
+        # if y < 1024, openssh will reject us: "bad server public DH value".
+        # y<1024 means f will be short, and of the form 2^y, so an observer
+        # could trivially derive our secret y from f. Openssh detects this
+        # and complains, so avoid creating such values by requiring y to be
+        # larger than ln2(self.p)
+
+        # TODO: we should also look at the value they send to us and reject
+        # insecure values of f (if g==2 and f has a single '1' bit while the
+        # rest are '0's, then they must have used a small y also).
+
+        # TODO: This could be computed when self.p is set up
+        #  or do as openssh does and scan f for a single '1' bit instead
+        minimum = math.floor(math.log(self.p) / math.log(2)) + 1
+        tries = 0
         y = Util.number.getRandomNumber(16, entropy.get_bytes)
+        while tries < 10 and y < minimum:
+            tries += 1
+            y = Util.number.getRandomNumber(16, entropy.get_bytes)
+        assert(y >= minimum) # TODO: test_conch just hangs if this is hit
+        # the chance of it being hit is about 10e-19
+
         f = pow(self.g, y, self.p)
         sharedSecret = _MPpow(clientDHPubKey, y, self.p)
         h = sha.new()
