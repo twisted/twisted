@@ -15,28 +15,36 @@ Requirements
 
 Installation
 
-  Debian packages are available with these sources - for woody:
+  * Debian 
+    packages are available with these sources - for woody:
 
-    deb http://twisted.sourceforge.net/debian/woody/ ./
+      deb http://twisted.sourceforge.net/debian/woody/ ./
 
-  and for sarge/sid:
+    and for sarge/sid:
 
-    deb http://twisted.sourceforge.net/debian/ ./
+      deb http://twisted.sourceforge.net/debian/ ./
 
-  Sid and sarge both have Twisted as well, but not necessarily the latest
-  version.
+    Sid and sarge both have Twisted as well, but not necessarily the latest
+    version.
 
-  FreeBSD and Gentoo both have Twisted in their package repositories.
+  * FreeBSD, Gentoo 
+    Twisted is in their package repositories.
 
-  Mac OS X packages and dependences can be obtained from:
+  * Mac OS X 
+    packages and dependences can be obtained from:
 
-    http://undefined.org/python/pimp/
+      http://undefined.org/python/pimp/
   
-  Win32 EXEs are available from http://twisted.sf.net, as well as tarballs
-  for other platforms. As with other Python packages, the standard way of
-  installing from source is: 
-
-    python setup.py install
+  * Win32 
+    EXEs are available from http://twisted.sf.net, as well as tarballs
+    for other platforms. 
   
-  For RPM based platforms there is a spec file in the admin/ folder in the
-  tarball.
+  * Other
+    As with other Python packages, the standard way of installing from source 
+    is:
+
+      python setup.py install
+  
+  * RPM (Redhat, Mandrake, SuSE, etc)
+    For RPM based platforms there is a spec file in the admin/ folder in the
+    tarball.
