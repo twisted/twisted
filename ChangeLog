@@ -1,5 +1,10 @@
 2003-04-14  Brian Warner  <warner@lothar.com>
 
+	* twisted/python/threadable.py (init): 
+	* twisted/spread/newjelly.py (SecurityOptions.allowBasicTypes): 
+	* twisted/spread/jelly.py (SecurityOptions.allowBasicTypes):
+	Remove old apply() calls.
+
 	* twisted/spread/flavors.py (Copyable.jellyFor): Use proper
 	jellier .prepare/.preserve dance when .invoker is non-None. This
 	fixes jellying of circular references when passed through PB

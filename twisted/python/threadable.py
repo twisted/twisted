@@ -239,7 +239,7 @@ def init(with_threads=1):
         log.msg('Enabling Multithreading.')
         Waiter = _ThreadedWaiter
         XLock = _XLock
-        apply(synchronize, _to_be_synched)
+        synchronize(*_to_be_synched)
         _to_be_synched = []
         import thread, threading
         threadmodule = thread

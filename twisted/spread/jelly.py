@@ -65,7 +65,7 @@ Instance Method: s.center, where s is an instance of UserString.UserString:
 @author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
 
-__version__ = "$Revision: 1.43 $"[11:-2]
+__version__ = "$Revision: 1.44 $"[11:-2]
 
 # System Imports
 import string
@@ -767,7 +767,7 @@ class SecurityOptions:
         """SecurityOptions.allowBasicTypes()
         Allow all `basic' types.  (Dictionary and list.  Int, string, and float are implicitly allowed.)
         """
-        apply(self.allowTypes, self.basicTypes)
+        self.allowTypes(*self.basicTypes)
 
     def allowTypes(self, *types):
         """SecurityOptions.allowTypes(typeString): Allow a particular type, by its name.
