@@ -578,7 +578,7 @@ class Port(base.BasePort):
         self.interface = interface
 
     def __repr__(self):
-        return "<%s on %s>" % (self.factory.__class__, self.port)
+        return "<%s on %s>" % (self.factory.__class__, self.getHost().port)
 
     def createInternetSocket(self):
         s = base.BasePort.createInternetSocket(self)

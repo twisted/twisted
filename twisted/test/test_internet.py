@@ -5,7 +5,7 @@
 from twisted.trial import unittest
 from twisted.internet import reactor, protocol, error, app, abstract
 from twisted.internet.defer import SUCCESS, FAILURE, Deferred, succeed, fail
-from twisted.python import threadable, log
+from twisted.python import util, threadable, log
 threadable.init(1)
 
 import sys
@@ -195,7 +195,7 @@ class InterfaceTestCase(unittest.TestCase):
         self.assertEquals(d, {'a': 1})
         self._called = 1
         self._calledTime = time.time()
-    
+
     def testCallLater(self):
         # add and remove a callback
         def bad():
@@ -262,7 +262,7 @@ class InterfaceTestCase(unittest.TestCase):
             self.failUnless(d.getTime() - (time.time() + 10) < 1)
         finally:
             d.cancel()
-    
+
     def testWakeUp(self):
         """reactor.wakeUp should terminate reactor.iterate(5)"""
         def wake(reactor=reactor):
@@ -332,7 +332,7 @@ class ReactorCoreTestCase(unittest.TestCase):
         #print "elapsed", elapsed
         self.failUnless(elapsed < 8)
         t.cancel()
-        
+
     def timeout(self):
         print "test timed out"
         self.problem = 1
@@ -340,7 +340,7 @@ class ReactorCoreTestCase(unittest.TestCase):
     def count(self):
         self.counter += 1
 
-# XXX calling reactor.stop() in test suite causes problems with other tests        
+# XXX calling reactor.stop() in test suite causes problems with other tests
 #     def testStop(self):
 #         """reactor.stop should fire shutdown triggers"""
 #         # make sure shutdown triggers are run when the reactor is stopped
@@ -554,7 +554,7 @@ class DummyProducer:
     stopped = 0
     def resumeProducing(self):
          self.resumed += 1
-    
+
     def stopProducing(self):
          self.stopped += 1
 
@@ -574,3 +574,28 @@ class TestProducer(unittest.TestCase):
         dp = DummyProducer()
         fd.registerProducer(dp, 0)
         self.assertEquals(dp.stopped, 1)
+
+class PortStringification(unittest.TestCase):
+    def testTCP(self):
+        p = reactor.listenTCP(0, protocol.ServerFactory())
+        portNo = p.getHost().port
+        self.assertNotEqual(str(p).find(str(portNo)), -1,
+                            "%d not found in %s" % (portNo, p))
+
+    def testUDP(self):
+        p = reactor.listenUDP(0, protocol.DatagramProtocol())
+        portNo = p.getHost().port
+        self.assertNotEqual(str(p).find(str(portNo)), -1,
+                            "%d not found in %s" % (portNo, p))
+
+    try:
+        from twisted.internet import ssl
+    except ImportError:
+        pass
+    else:
+        def testSSL(self, ssl=ssl):
+            pem = util.sibpath(__file__, 'server.pem')
+            p = reactor.listenSSL(0, protocol.ServerFactory(), ssl.DefaultOpenSSLContextFactory(pem, pem))
+            portNo = p.getHost().port
+            self.assertNotEqual(str(p).find(str(portNo)), -1,
+                                "%d not found in %s" % (portNo, p))

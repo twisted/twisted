@@ -60,14 +60,14 @@ class Port(base.BasePort):
         self.interface = interface
         self.setLogStr()
         self._connectedAddr = None
-    
+
     def __repr__(self):
-        return "<%s on %s>" % (self.protocol.__class__, self.port)
+        return "<%s on %s>" % (self.protocol.__class__, self.getHost().port)
 
     def getHandle(self):
         """Return a socket object."""
         return self.socket
-    
+
     def startListening(self):
         """Create and bind my socket, and begin listening on it.
 
@@ -106,7 +106,7 @@ class Port(base.BasePort):
                     return
                 if (no == ECONNREFUSED) or (platformType == "win32" and no == WSAECONNRESET):
                     if self._connectedAddr:
-                        self.protocol.connectionRefused()                        
+                        self.protocol.connectionRefused()
                 else:
                     raise
             except:
@@ -162,7 +162,7 @@ class Port(base.BasePort):
             raise ValueError, "please pass only IP addresses, not domain names"
         self._connectedAddr = (host, port)
         self.socket.connect((host, port))
-    
+
     def _loseConnection(self):
         self.stopReading()
         if self.connected: # actually means if we are *listening*
@@ -180,7 +180,7 @@ class Port(base.BasePort):
     def loseConnection(self):
         warnings.warn("Please use stopListening() to disconnect port", DeprecationWarning, stacklevel=2)
         self.stopListening()
-    
+
     def connectionLost(self, reason=None):
         """Cleans up my socket.
         """
