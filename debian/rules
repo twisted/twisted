@@ -116,8 +116,5 @@ binary-arch: build install
 	chmod -R go=rX debian/python2.2-twisted-bin
 	dpkg --build debian/python2.2-twisted-bin ..
 
-source diff:                                                                  
-	@echo >&2 'source and diff are obsolete - use dpkg-source -b'; false
-
 binary: binary-indep binary-arch
 .PHONY: build clean binary-indep binary-arch binary install
