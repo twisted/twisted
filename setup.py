@@ -18,6 +18,11 @@ from distutils.core import setup, Extension
 from twisted import copyright
 from twisted.python import dist, util
 
+# 2.2 doesn't have __file__ in main-scripts.
+try:
+    __file__
+except NameError:
+    __file__ = sys.argv[0]
 
 class build_ext_twisted(dist.build_ext_twisted):
     def _detect_modules(self):
