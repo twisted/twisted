@@ -208,6 +208,7 @@ def shutDown(a=None, b=None):
     """
     global running
     if running:
+        removeReader(waker)
         running = 0
         log.msg('Starting Shutdown Sequence.')
         threadable.dispatcher.stop()
