@@ -14,18 +14,16 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-# Ugh, hack to tell people to NOT USE twistd ON WINDOWS
-# FUCK THIS: someone with windows figure out a test.
-# I'm done.
-#from twisted.python import runtime
-#import sys
-#if runtime.platform == 'posix':
-#     sys.exit("use twistw, not twistd")
-# End hack
+#Don't use twistd on windows
+from twisted.python import runtime
+import sys
+if runtime.platformType != 'posix':
+     sys.exit("Please use twistw on windows, not twistd")
+ End hack
 
 from twisted.python import log, syslog
 from twisted.application import app, service
-import sys, os, errno, signal
+import os, errno, signal
 
 class ServerOptions(app.ServerOptions):
     synopsis = "Usage: twistd [options]"
