@@ -123,6 +123,11 @@ class RebuildTestCase(unittest.TestCase):
             rebuild.updateInstance(b)
             assert hasattr(b, 'foo'), "Missing method on rebuilt instance"
             assert hasattr(b, 'x'), "Missing class attribute on rebuilt instance"
-       
+
+    def testBananaInteraction(self):
+        from twisted.python import rebuild
+        from twisted.spread import banana
+        rebuild.latestClass(banana.Banana)
+
 
 testCases = [RebuildTestCase]

@@ -27,7 +27,7 @@ for more details.
 @author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
 
-__version__ = "$Revision: 1.34 $"[11:-2]
+__version__ = "$Revision: 1.35 $"[11:-2]
 
 from twisted.internet import protocol
 from twisted.persisted import styles
@@ -71,7 +71,7 @@ VOCAB    = chr(0x87)
 
 HIGH_BIT_SET = chr(0x80)
 
-class Banana(protocol.Protocol, styles.Ephemeral):
+class Pynana(protocol.Protocol, styles.Ephemeral):
     knownDialects = ["pb", "none"]
 
     def connectionReady(self):
@@ -286,8 +286,10 @@ class Banana(protocol.Protocol, styles.Ephemeral):
                 write(obj)
         else:
             raise RuntimeError, "could not send object: %s" % repr(obj)
+Banana = Pynana
 
-class Canana(Banana):
+
+class Canana(Pynana):
 
     def connectionMade(self):
         self.state = cBanana.newState()
@@ -304,8 +306,6 @@ class Canana(Banana):
         buffer = self.buffer + chunk
         processed = cBanana.dataReceived(self.state, buffer, self.callExpressionReceived)
         self.buffer = buffer[processed:]
-
-Pynana = Banana
 
 try:
     import cBanana
