@@ -20,6 +20,8 @@
 
 """Basic classes and interfaces for journal."""
 
+from __future__ import nested_scopes
+
 # system imports
 import os, cPickle, time
 
@@ -100,7 +102,7 @@ class ICommand(Interface):
     """A serializable command which interacts with a journaled service."""
 
     def execute(self, journaledService, runTime):
-        """Run the command."""
+        """Run the command and return result."""
 
 
 class ICommandLog(Interface):
@@ -121,3 +123,104 @@ class ICommandLog(Interface):
         @return: list of (time, command) tuples, sorted with ascending times.
         """
 
+
+class LoadingService:
+    """Base class for journalled service used with Wrappables."""
+
+    def loadObject(self, objType, objId):
+        """Return object of specified type and id."""
+        raise NotImplementedError
+
+
+class Wrappable:
+    """Base class for objects used with LoadingService."""
+
+    objectType = None # override in base class
+
+    def getUid(self):
+        """Return uid for loading with LoadingService.loadObject"""
+        raise NotImplementedError
+
+
+class WrapperCommand:
+    
+    __implements__ = ICommand
+
+    def __init__(self, methodName, obj, *args, **kwargs):
+        self.obj = obj
+        self.objId = obj.getUid()
+        self.objType = obj.objectType
+        self.methodName = methodName
+        self.args = args
+        self.kwargs = kwargs
+
+    def execute(self, svc, commandTime):
+        if not hasattr(self, "obj"):
+            obj = svc.loadObject(self.objType, self.objId)
+        else:
+            obj = self.obj
+        return apply(getattr(obj, self.methodName), self.args, self.kwargs)
+
+    def __getstate__(self):
+        d = self.__dict__.copy()
+        del d["obj"]
+        return d
+
+
+def command(methodName, cmdClass=WrapperCommand):
+    """Wrap a method so it gets turned into command automatically.
+
+    For use with Wrappables.
+
+    Usage::
+
+        | class Foo(Wrappable):
+        |     objectType = "foo"
+        |     def getUid(self):
+        |         return self.id
+        |     def _bar(self, x):
+        |         return x + 1
+        |
+        |     bar = command('_bar')
+
+    The resulting callable will have signature identical to wrapped
+    function, except that it expects journal as first argument, and
+    returns a Deferred.
+    """
+    def wrapper(obj, journal, *args, **kwargs):
+        return journal.executeCommand(cmdClass(methodName, obj, args, kwargs))
+    return wrapper
+
+
+class ServiceWrapperCommand:
+
+    __implements__ = ICommand
+
+    def __init__(self, methodName, args=(), kwargs={}):
+        self.methodName = methodName
+        self.args = args
+        self.kwargs = kwargs
+
+    def execute(self, svc, commandTime):
+        return apply(getattr(svc, self.methodName), self.args, self.kwargs)
+
+    def __repr__(self):
+        return "<ServiceWrapperCommand: %s, %s, %s>" % (self.methodName, self.args, self.kwargs)
+    
+    def __cmp__(self, other):
+        if hasattr(other, "__dict__"):
+            return cmp(self.__dict__, other.__dict__)
+        else:
+            return 0
+
+
+def serviceCommand(methodName, cmdClass=ServiceWrapperCommand):
+    """Wrap methods into commands for a journalled service.
+
+    The resulting callable will have signature identical to wrapped
+    function, except that it expects journal as first argument, and
+    returns a Deferred.
+    """
+    def wrapper(obj, journal, *args, **kwargs):
+        return journal.executeCommand(cmdClass(methodName, args, kwargs))
+    return wrapper

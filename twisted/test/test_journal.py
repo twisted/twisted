@@ -2,46 +2,11 @@
 
 from pyunit import unittest
 
-from twisted.persisted.journal.base import ICommand, MemoryJournal
+from twisted.persisted.journal.base import ICommand, MemoryJournal, serviceCommand, ServiceWrapperCommand
 from twisted.persisted.journal.picklelog import DirDBMLog
 
 import tempfile
 
-
-
-class AddEntry:
-    
-    __implements__ = ICommand
-    
-    def __init__(self, key, value):
-        self.key = key
-        self.value = value
-
-    def execute(self, svc, time):
-        svc.add(self.key, self.value)
-
-    def __eq__(self, other):
-        if hasattr(other, "__dict__"):
-            return self.__dict__ == other.__dict__
-        else:
-            return 0
-
-
-class DeleteEntry:
-
-    __implements__ = ICommand
-
-    def __init__(self, key):
-        self.key = key
-
-    def execute(self, svc, time):
-        svc.delete(self.key)
-
-    def __eq__(self, other):
-        if hasattr(other, "__dict__"):
-            return self.__dict__ == other.__dict__
-        else:
-            return 0
 
 
 class AddTime:
@@ -49,7 +14,7 @@ class AddTime:
     __implements__ = ICommand
 
     def execute(self, svc, cmdtime):
-        svc.addtime(cmdtime)
+        svc.values["time"] = cmdtime
 
 
 class Service:
@@ -64,13 +29,11 @@ class Service:
         else:
             self.values = result
 
-    # next 4 methods are "business logic":
-
-    def add(self, key, value):
+    def _add(self, key, value):
         """Add a new entry."""
         self.values[key] = value
     
-    def delete(self, key):
+    def _delete(self, key):
         """Delete an entry."""
         del self.values[key]
 
@@ -78,19 +41,17 @@ class Service:
         """Return value of an entry."""
         return self.values[key]
 
-    def addtime(self, t):
+    def addtime(self):
         """Set a key 'time' with the current time."""
-        self.values["time"] = t
+        journal.executeCommand(AddTime())
 
     # and now the command wrappers
     
-    def command_add(self, journal, key, value):
-        journal.executeCommand(AddEntry(key, value))
+    add = serviceCommand("_add")
 
-    def command_delete(self, journal, key):
-        journal.executeCommand(DeleteEntry(key))
+    delete = serviceCommand("_delete")
 
-    def command_addtime(self, journal):
+    def addtime(self, journal):
         """Set a key 'time' with the current time."""
         journal.executeCommand(AddTime())
 
@@ -109,36 +70,37 @@ class JournalTestCase(unittest.TestCase):
 
     def testCommandExecution(self):
         svc = self.svc
-
-        svc.add("foo", "bar")
+        svc.add(svc.journal, "foo", "bar")
         self.assertEquals(svc.get("foo"), "bar")
 
-        svc.delete("foo")
+        svc.delete(svc.journal, "foo")
         self.assertRaises(KeyError, svc.get, "foo")
     
     def testLogging(self):
         svc = self.svc
         log = self.svc.journal.log
         j = self.svc.journal
-        svc.command_add(j, "foo", "bar")
-        svc.command_add(j, 1, "hello")
-        svc.command_delete(j, "foo")
+        svc.add(j, "foo", "bar")
+        svc.add(j, 1, "hello")
+        svc.delete(j, "foo")
 
-        commands = [AddEntry("foo", "bar"), AddEntry(1, "hello"), DeleteEntry("foo")]
+        commands = [ServiceWrapperCommand("_add", ("foo", "bar")),
+                    ServiceWrapperCommand("_add", (1, "hello")),
+                    ServiceWrapperCommand("_delete", ("foo",))]
 
         self.assertEquals(log.getCurrentIndex(), 3)
-
         for i in range(1, 4):
-            self.assertEquals(commands[i-1:], [c for t, c in log.getCommandsSince(i)])
+            for a, b in zip(commands[i-1:], [c for t, c in log.getCommandsSince(i)]):
+                self.assertEquals(a, b)
 
     def testRecovery(self):
         svc = self.svc
         j = svc.journal
-        svc.command_add(j, "foo", "bar")
-        svc.command_add(j, 1, "hello")
+        svc.add(j, "foo", "bar")
+        svc.add(j, 1, "hello")
         # we sync *before* delete to make sure commands get executed
         svc.journal.sync(svc.values)
-        svc.command_delete(j, "foo")
+        svc.delete(j, "foo")
         del svc, self.svc
 
         # first, load from snapshot
@@ -155,7 +117,7 @@ class JournalTestCase(unittest.TestCase):
 
     def testTime(self):
         svc = self.svc
-        svc.command_addtime(svc.journal)
+        svc.addtime(svc.journal)
         t = svc.get("time")
 
         log = self.svc.journal.log
