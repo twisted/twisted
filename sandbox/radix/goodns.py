@@ -1,11 +1,23 @@
+# Twisted, the Framework of Your Internet
+# Copyright (C) 2001-2004 Matthew W. Lefkowitz
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+#
+
 """
-
-All of the lookupFoo functions take function-specific arguments,
-followed by several optional keyword arguments:
-
-
+GooDNS, a high-level DNS lookup library.
 """
-
 
 from twisted.names import client, common
 from twisted.protocols import dns
@@ -21,7 +33,9 @@ D_NS = 4
 def _scroungeRecords(result, reqkey, dnstype,
                      cnameLevel, nsLevel, resolver):
     """
-    Inspired by twisted.names.common.extractRecords.
+    Find relevant records in a list of RRs, following CNAME and NS
+    records if necessary. Inspired by
+    L{twisted.names.common.extractRecord}.
 
     @return: [] or the RRHeaders matching dnstype and reqkey
     @rtype: (Maybe a Deferred resulting in) a list or []
@@ -142,8 +156,8 @@ def lookupPointer(name, cnameLevel=D_CNAME, nsLevel=D_NS,
     """
     Look up a PTR record for a given name.
 
-    @rtype: str
-    @return: A hostname.
+    @rtype: list of str
+    @return: hostnames.
     """
     d = resolver.lookupPointer(name, timeout)
     d.addCallback(_scroungeRecords, name, dns.PTR,
@@ -161,8 +175,8 @@ def lookupAddress(name, cnameLevel=D_CNAME, nsLevel=D_NS,
     """
     Look up an A record for a given name.
 
-    @rtype: str
-    @return: An IPv4 address.
+    @rtype: list of str
+    @return: IPv4 addresses.
     """
     d = resolver.lookupAddress(name, timeout)
     d.addCallback(_scroungeRecords, name, dns.A,
