@@ -63,6 +63,11 @@ class NoLengthResource(resource.Resource):
     def render(self, request):
         return "nolength"
     
+class HostHeaderResource(resource.Resource):
+
+    def render(self, request):
+        return request.received_headers["host"]
+
 
 class WebClientTestCase(unittest.TestCase):
     def _listen(self, site):
@@ -80,13 +85,13 @@ class WebClientTestCase(unittest.TestCase):
         r.putChild("wait", LongTimeTakingResource())
         r.putChild("error", ErrorResource())
         r.putChild("nolength", NoLengthResource())
+        r.putChild("host", HostHeaderResource())
         site = server.Site(r, timeout=None)
         self.port = self._listen(site)
         reactor.iterate(); reactor.iterate()
         self.portno = self.port.getHost()[2]
 
     def tearDown(self):
-
         if serverCallID and serverCallID.active():
             serverCallID.cancel()
         self.port.stopListening()
@@ -96,6 +101,15 @@ class WebClientTestCase(unittest.TestCase):
     def getURL(self, path):
         return "http://127.0.0.1:%d/%s" % (self.portno, path)
 
+    def testHostHeader(self):
+        # if we pass Host header explicitly, it should be used, otherwise
+        # it should extract from url
+        self.assertEquals(unittest.deferredResult(client.getPage(self.getURL("host"))),
+                          "127.0.0.1")
+        self.assertEquals(unittest.deferredResult(client.getPage(self.getURL("host"),
+                                                                 headers={"Host": "www.example.com"})),
+                          "www.example.com")
+    
     def testGetPage(self):
         self.assertEquals(unittest.deferredResult(client.getPage(self.getURL("file"))),
                           "0123456789")

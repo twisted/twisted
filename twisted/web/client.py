@@ -22,11 +22,14 @@
 API Stability: unstable
 """
 
+import urlparse, os, types
+
 from twisted.protocols import http
 from twisted.internet import defer, protocol, reactor
 from twisted.python import failure
+from twisted.python.util import InsensitiveDict
 from twisted.web import error
-import urlparse, os, types
+
 
 class HTTPPageGetter(http.HTTPClient):
 
@@ -37,7 +40,7 @@ class HTTPPageGetter(http.HTTPClient):
     def connectionMade(self):
         method = getattr(self.factory, 'method', 'GET')
         self.sendCommand(method, self.factory.path)
-        self.sendHeader('Host', self.factory.host)
+        self.sendHeader('Host', self.factory.headers.get("host", self.factory.host))
         self.sendHeader('User-Agent', self.factory.agent)
         if self.factory.cookies:
             l=[]
@@ -200,9 +203,9 @@ class HTTPClientFactory(protocol.ClientFactory):
             cookies = {}
         self.cookies = cookies
         if headers is not None:
-            self.headers = headers
+            self.headers = InsensitiveDict(headers)
         else:
-            self.headers = {}
+            self.headers = InsensitiveDict()
         if postdata is not None:
             self.headers.setdefault('Content-Length', len(postdata))
         self.postdata = postdata
