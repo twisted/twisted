@@ -10,13 +10,12 @@
 
 <h1>Twisted Enterprise Row Objects</h1>
 
-<p>The <code>twisted.enterprise.row</code> module is a method
-of interfacing simple python objects with rows in relational database
-tables. It has two components: the <code>RowObject</code> class
-which developers sub-class for each relational table that their
-code interacts with, and the <code>DBReflector</code> which generates
-and contains the SQL to perform updates, inserts, queries and
-deletes against the database.</p>
+<p>The <code>twisted.enterprise.row</code> module is a method of
+interfacing simple python objects with rows in relational database
+tables. It has two components: the <code>RowObject</code> class which
+developers sub-class for each relational table that their code
+interacts with, and the <code>Reflector</code> which is responsible
+for updates, inserts, queries and deletes against the database.</p>
 
 <p>The row module is intended for applications such as on-line
 games, and web-site that require a back-end database interface.
@@ -73,24 +72,31 @@ class RoomRow(row.RowObject):
 </pre>
 
 <p>The items in the rowColumns list will become data members of
-classes of this type when they are created by the DBReflector.</p>
+classes of this type when they are created by the Reflector.</p>
 
 <h2>Initialization</h2>
 
 <p>The initialization phase builds the SQL for the database interactions.
 It uses the system catalogs of the database to do this, but requires
 some basic information to get started. The class attributes of
-the classes derived from RowClass are used for this. Those clases
-are passed to the DBReflector when it is created.</p>
+the classes derived from RowClass are used for this. Those classes
+are passed to a Reflector when it is created.</p>
 
-<p>An example class list for the RoomRow class we specified above:</p>
+<p>There are currently two available reflectors in Twisted Enterprise,
+the SQL Reflector for relational databases which uses the python DB
+API, and the XML Reflector which uses a file system containing XML
+files. The XML reflector is currently extremely slow.</p>
+
+<p>An example class list for the RoomRow class we specified above using the SQLReflector:</p>
 
 <pre class="python">
+
+from twisted.enterprise.sqlreflector import SQLReflector
 def runTests(result):
     print "Done initializing"
 
 dbpool = adbapi.ConnectionPool("pyPgSQL.PgSQL")
-reflector = row.DBReflector( dbpool, [RoomRow], runTests )
+reflector = SQLReflector( dbpool, [RoomRow], runTests )
 </pre>
 
 <h2>Creating Row Objects</h2>
@@ -132,7 +138,7 @@ def testRoomFactory(roomClass, userData, kw):
 that do not already exist in the database table. In this case,
 create a new instance and assign its primary key attributes and
 all of its member data attributes, then pass it to the &quot;insertRow&quot;
-method of the DBReflector. For example:</p>
+method of the Reflector. For example:</p>
 
 <pre class="python">
     newRoom = RoomRow()
@@ -191,7 +197,7 @@ to provide more complex automated handling such as dirty lists
 
 <p>When it is determined that a RowObject instance is dirty and
 need to have its state updated into the database, pass that object
-to the &quot;updateRow&quot; method of the DBReflector. For example:</p>
+to the &quot;updateRow&quot; method of the Reflector. For example:</p>
 
 <pre class="python">
 reflector.updateRow(room).addCallback(onUpdated)
@@ -208,7 +214,7 @@ updateSQL = reflector.updateRowSQL(room)
 <h2>Deleting Row Objects</h2>
 
 <p>To delete a row from a database pass the RowObject instance
-for that row to the DBReflector &quot;deleteRow&quot; method.
+for that row to the Reflector &quot;deleteRow&quot; method.
 Deleting the python Rowobject instance does <em>not</em> automatically
 delete the row from the database. For example:</p>
 
