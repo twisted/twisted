@@ -1,3 +1,16 @@
+"""mDNS.
+
+Usage:
+
+1. Call the module-level function startListening() when your app wishes
+   to use mDNS. Call the module-level function sttopListening() when your app finishes
+   using mDNS.
+
+2. Use top level functions getIP() and subscribeService().
+
+This makes sure you only run one resolver per process.
+"""
+
 # TODO
 #
 # Check TTL of responses is 255
@@ -77,6 +90,8 @@ class mDNSResolver:
     is only need for one such object during a program's lifetime.
     """
 
+    _users = 0
+
     def __init__(self):
         self.protocol = mDNSDatagramProtocol(self)
         self.subscriptions = {} # map service name to ServiceSubscription
@@ -85,12 +100,19 @@ class mDNSResolver:
     # external API
     
     def startListening(self):
-        self.protocol.startListening()
+        self._users += 1
+        if self._users == 1:
+            self.protocol.startListening()
     
     def stopListening(self):
-        # XXX
-        pass
-            
+        if self._users == 0:
+            # or raise error?
+            return
+        self._users -= 1
+        if self._users == 0:
+            self.protocol.transport.stopListening()
+            # XXX other cleanup
+    
     def subscribeService(self, service, subscriber):
         assert isinstance(service, str)
         if not self.subscriptions.has_key(service):
@@ -148,6 +170,17 @@ class mDNSDatagramProtocol(dns.DNSDatagramProtocol):
         self.transport.setTTL(255)
 
 
+theResolver = mDNSResolver()
+startListening = theResolver.startListening
+stopListening = theResolver.stopListening
+getIP = theResolver.getIP
+subscribeService = theResolver.subscribeService
+
+
+__all__ = ["IServiceSubscription", "ISubscriber", "stopListening", "startListening",
+           "getIP", "subscribeService"]
+
+
 if __name__ == '__main__':
     class Sub:
         def _resolved(self, ip, host):
@@ -155,10 +188,9 @@ if __name__ == '__main__':
         
         def serviceAdded(self, name, host, port):
             print "%s is ('%s', %s)" % (name, host, port)
-            d.getIP(host).addCallback(self._resolved, host)
+            getIP(host).addCallback(self._resolved, host)
     
-    d = mDNSResolver()
-    d.startListening()
+    startListening()
     print "Subscribing to _workstation._tcp.local, which should show all Macs on network"
-    d.subscribeService("_workstation._tcp.local", Sub())
+    subscribeService("_workstation._tcp.local", Sub())
     reactor.run()
