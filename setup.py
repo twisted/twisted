@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.34 2002/04/11 04:33:19 carmstro Exp $
+$Id: setup.py,v 1.35 2002/04/11 21:48:19 glyph Exp $
 """
 
 import distutils, os, sys, string
@@ -234,9 +234,13 @@ setup_args['data_files'] = [(imPath, [os.path.join(imPath, 'instancemessenger.gl
 
 def extpath(path):
     return os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), path)
-    
+if os.name == 'nt':
+    define_macros = [("WIN32", "1")]
+else:
+    define_macros = []
 setup_args['ext_modules'] = [
-    Extension("twisted.spread.cBanana", [extpath("twisted/spread/cBanana.c")]),
+    Extension("twisted.spread.cBanana", [extpath("twisted/spread/cBanana.c")],
+              define_macros=define_macros),
     ]
 
 apply(setup, (), setup_args)
