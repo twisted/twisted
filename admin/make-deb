@@ -1,0 +1,15 @@
+#!/usr/bin/python
+import os, sys
+
+here = os.path.dirname(os.path.abspath(sys.argv[0]))
+parent = os.path.dirname(here)
+root = os.path.basename(parent)
+print root
+version = root.split("-")[1]
+
+os.chdir(os.path.dirname(parent))
+os.system("mv Twisted-%(version)s twisted-%(version)s" % vars())
+os.system("tar czf twisted_%(version)s.orig.tar.gz "
+                  "twisted-%(version)s" % vars())
+os.chdir("twisted-%(version)s" % vars())
+os.system("debuild -us -uc")
