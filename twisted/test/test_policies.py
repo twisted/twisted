@@ -7,11 +7,11 @@
 from __future__ import nested_scopes
 from StringIO import StringIO
 
-from twisted.trial import unittest, util
+from twisted.trial import unittest
 
 import time
 
-from twisted.internet import protocol, reactor, defer
+from twisted.internet import protocol, reactor
 from twisted.protocols import policies
 
 
@@ -257,7 +257,7 @@ class TimeoutTestCase(unittest.TestCase):
         self.assert_(client.disconnected)
 
         # Clean up
-        util.wait(defer.maybeDeferred(port.loseConnection))
+        return port.loseConnection()
 
     def testThatSendingDataAvoidsTimeout(self):
         # Create a server which times out inactive connections
@@ -274,7 +274,7 @@ class TimeoutTestCase(unittest.TestCase):
 
         self.failUnlessEqual(self.failed, 0)
         self.failUnlessEqual(client.data, 'foo'*4)
-        util.wait(defer.maybeDeferred(port.loseConnection))
+        return port.loseConnection()
 
     def testThatReadingDataAvoidsTimeout(self):
         # Create a server that sends occasionally
@@ -291,7 +291,7 @@ class TimeoutTestCase(unittest.TestCase):
         reactor.run()
 
         self.failUnlessEqual(self.failed, 0)
-        util.wait(defer.maybeDeferred(sport.loseConnection))
+        return sport.loseConnection()
 
 class TimeoutTester(protocol.Protocol, policies.TimeoutMixin):
     timeOut  = 3
