@@ -190,18 +190,19 @@ def munge(document, template, linkrel, d, fullpath, ext, url):
     tmplbody.setAttribute("class", "content")
 
 
-def doFile(fn, docsdir, ext, url, templ):
+def parseFileAndReport(fn):
     try:
-        doc = microdom.parse(open(fn))
+        return microdom.parse(open(fn))
     except microdom.MismatchedTags, e:
         print ("%s:%s:%s: begin mismatched tags <%s>/</%s>" %
                (e.filename, e.begLine, e.begCol, e.got, e.expect))
         print ("%s:%s:%s: end mismatched tags <%s>/</%s>" %
                (e.filename, e.endLine, e.endCol, e.got, e.expect))
-        return
     except microdom.ParseError, e:
         print e
-        return
+
+def doFile(fn, docsdir, ext, url, templ):
+    doc = parseFileAndReport(fn)
     cn = templ.cloneNode(1)
     munge(doc, cn, '', docsdir, fn, ext, url)
     cn.writexml(open(os.path.splitext(fn)[0]+ext, 'wb'))
