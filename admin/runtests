@@ -16,23 +16,6 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-
-"""
-Usage: python RunTests.py [-t] [-v] [-q] [--file <python file>] [<reactor>]
-
-Run a python GUI which starts up a UnitTestRunner for the Twisted
-test-suite.
-
-Flags:
- -h -- display this usage message
- -t -- always use text-mode (otherwise try GUI first)
- -v -- text-mode will be more verbose
- -q -- text-mode will be quieter (doesn't print progress dots)
- -Q -- text-mode will be even quieter
- --file -- path to a python file containing test cases
- --module -- python module containing test cases (e.g. twisted.test.test_pb)
-"""
-
 ### Twisted Preamble
 # This makes sure that users don't have to set up their environment
 # specially in order to run these programs from bin/.
@@ -41,140 +24,11 @@ if string.find(os.path.abspath(sys.argv[0]), os.sep+'Twisted') != -1:
     sys.path.insert(0, os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]), os.pardir, os.pardir)))
 sys.path.insert(0, os.curdir)
 ### end of preamble
-    
-from twisted.test import test_all
-import getopt
 
-class TestProgram:
-    value = 0
-    file = None
+from twisted.scripts import trial
 
-    def __init__(self, argv=None):
-        self.modules = []
-        if argv is None:
-            argv = ["runtests"]
+if len(sys.argv) == 1:
+    sys.argv.extend(['-p', 'twisted.test'])
 
-        self.startupVerbosity = 1
-        opts, args = getopt.getopt(argv[1:], "tvqQh",
-                                   ["file=","module=", "help"])
+trial.run()
 
-        if ('-h', '') in opts or ('--help', '') in opts:
-            print __doc__
-            sys.exit(0)
-            
-        if ('-t', '') in opts:
-            text_mode = 'always'
-        else:
-            text_mode = 0
-
-        if ('-v', '') in opts:
-            self.verbosity = 2
-        elif ('-q', '') in opts:
-            self.verbosity = 0
-        elif ('-Q', '') in opts:
-            self.verbosity = 0
-            self.startupVerbosity = 0
-        else:
-            self.verbosity = 1
-
-        for k, v in opts:
-            if k == '--file':
-                self.file = v
-            elif k == '--module':
-                self.modules.append(v)
-
-        if args:
-            reactor = args[-1]
-        else:
-            reactor = "default"
-        self._installReactor(reactor)
-        self._installHooks()
-        try:
-            if not text_mode:
-                try:
-                    self.value = self.runGUI()
-                except GuiGoError, e:
-                    if self.startupVerbosity:
-                        print e
-                        print "Falling back to text mode."
-                else:
-                    return
-
-            self.value = self.runText()
-        finally:
-            from twisted.internet import reactor
-            # reactor.stop() # <-- won't be able to run during/after phases!
-            reactor.suggestThreadPoolSize(0)
-
-    def _installHooks(self):
-        """Override default behaviours in order to facilitate testing."""
-        # log.deferr() should raise exception instead of logging it
-        from twisted.python import log
-        log.startKeepingErrors()
-    
-    def _installReactor(self, reactor):
-        """Install a reactor which will be used for testing."""
-        from twisted.python import runtime
-        platformType = runtime.platform.getType()
-        if platformType == 'java':
-            from twisted.internet import javareactor
-            javareactor.install()
-        else:
-            reactorTypes = {
-                'gtk': 'twisted.internet.gtkreactor',
-                'gtk2': 'twisted.internet.gtk2reactor',
-                'default': 'twisted.internet.default',
-                'win32': 'twisted.internet.win32eventreactor',
-                'win': 'twisted.internet.win32eventreactor',
-                'poll': 'twisted.internet.pollreactor',
-                'qt': 'twisted.internet.qtreactor',
-                'c': 'twisted.internet.cReactor',
-                'kqueue': 'twisted.internet.kqreactor'
-                }
-            from twisted.python.reflect import namedModule
-            namedModule(reactorTypes[reactor]).install()
-
-        from twisted.internet import reactor
-        if self.startupVerbosity:
-            print 'reactor class: %s' % reactor.__class__
-
-    def runText(self):
-        from pyunit import unittest
-        from twisted.test import test_all
-
-        loader = test_all.TestLoader()
-        test = loader.loadTestsFromMyPackage(self.file, self.modules)
-
-        runner = unittest.TextTestRunner(verbosity = self.verbosity)
-        result = runner.run(test)
-
-        success = result.wasSuccessful() # and (not loader.load_errors)
-
-        if loader.load_errors:
-            print "The following test modules had errors when loading:\n"
-            print loader.loadErrorText()
-
-        # 0 means Ok
-        return (not success)
-
-    def runGUI(self):
-        try:
-            import Tkinter
-        except ImportError, e:
-            raise GuiGoError, e
-        try:
-            from pyunit import unittestgui
-            unittestgui.main('twisted.test.test_all.testSuite')
-        except Tkinter.TclError, e:
-            raise GuiGoError, e
-
-
-class GuiGoError(Exception):
-    """The gui won't go for me, no no no.
-
-    But the gui don't -- the gui won't -- go for me.
-    """
-    pass
-
-main = TestProgram
-sys.exit(main(sys.argv).value)
