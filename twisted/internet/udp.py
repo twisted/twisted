@@ -323,7 +323,7 @@ class MulticastMixin:
         return self.socket.getsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL)
 
     def setTTL(self, ttl):
-        ttl = struct.pack("b", ttl)
+        ttl = struct.pack("B", ttl)
         self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
 
     def joinGroup(self, addr, interface=""):
