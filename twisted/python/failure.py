@@ -300,7 +300,7 @@ class Failure:
     def printTraceback(self, file=None):
         """Emulate Python's standard error reporting mechanism.
         """
-        if file is None: file = log.logfile
+        if file is None: file = log.logerr
         w = file.write
         if self.frames:
             w( 'Traceback (most recent call last):\n')
@@ -317,7 +317,7 @@ class Failure:
     def printBriefTraceback(self, file=None):
         """Print a traceback as densely as possible.
         """
-        if file is None: file = log.logfile
+        if file is None: file = log.logerr
         w = file.write
         w("Traceback: %s, %s\n" % (self.type, self.value))
         format_frames(self.frames, w, "brief")
@@ -328,7 +328,7 @@ class Failure:
     def printDetailedTraceback(self, file=None):
         """Print a traceback with detailed locals and globals information.
         """
-        if file is None: file = log.logfile
+        if file is None: file = log.logerr
         w = file.write
         w( '*--- Failure #%d%s---\n' %
            (self.count,
