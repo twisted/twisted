@@ -69,6 +69,8 @@ from twisted.trial.reporter import SKIP, EXPECTED_FAILURE, FAILURE, \
      ERROR, UNEXPECTED_SUCCESS, SUCCESS
 import zope.interface as zi
 
+from __future__ import generators
+
 
 # --- Exceptions and Warnings ------------------------ 
 
