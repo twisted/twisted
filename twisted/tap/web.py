@@ -87,8 +87,7 @@ twisted.web.test in it."""
 
     def opt_processor(self, proc):
         if not isinstance(self.opts['root'], static.File):
-            print "You can only use --processor after --path."
-            sys.exit(2)
+            raise usage.UsageError("You can only use --processor after --path.")
         ext, klass = proc.split('=', 1)
         self.opts['root'].processors[ext] = reflect.namedClass(klass)
 
@@ -115,8 +114,7 @@ twisted.web.test in it."""
     def opt_mime_type(self, defaultType):
         """Specify the default mime-type for static files."""
         if not isinstance(self.opts['root'], static.File):
-            print "You can only use --mime_type after --path."
-            sys.exit(2)
+            raise usage.UsageError("You can only use --mime_type after --path.")
         self.opts['root'].defaultType = defaultType
     opt_m = opt_mime_type
 
@@ -124,9 +122,16 @@ twisted.web.test in it."""
     def opt_allow_ignore_ext(self):
         """Specify wether or not a request for 'foo' should return 'foo.ext'"""
         if not isinstance(self.opts['root'], static.File):
-            print "You can only use --allow_ignore_ext after --path."
-            sys.exit(2)
+            raise usage.UsageError("You can only use --allow_ignore_ext "
+                                   "after --path.")
         self.opts['root'].allowExt = 1
+
+    def postOptions(self):
+        if self['https']:
+            try:
+                from twisted.internet.ssl import DefaultOpenSSLContextFactory
+            except ImportError:
+                raise usage.UsageError("SSL support not installed")
 
 
 def updateApplication(app, config):
@@ -159,14 +164,8 @@ def updateApplication(app, config):
                                    distrib.UserDirectory.userSocketName),
                       pb.BrokerFactory(distrib.ResourcePublisher(site)))
     else:
-        if config['https']:
-            try:
-                from twisted.internet.ssl import DefaultOpenSSLContextFactory
-            except ImportError:
-                print "SSL support not installed. "
-                sys.exit(2)
-            app.listenSSL(int(config['https']),
-                          site,
-                          DefaultOpenSSLContextFactory(config['privkey'],
-                                                       config['certificate']))
+        from twisted.internet.ssl import DefaultOpenSSLContextFactory
+        app.listenSSL(int(config['https']), site,
+                      DefaultOpenSSLContextFactory(config['privkey'],
+                                                   config['certificate']))
         app.listenTCP(int(config.opts['port']), site)
