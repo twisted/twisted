@@ -1,7 +1,7 @@
 ?package(python@VERSION@-twisted):\
 needs=x11\
 section="Apps/Net"\
-title="Twisted Instant Messenger (@VERSION@)"\
+title="Twisted Instance Messenger (@VERSION@)"\
 command="/usr/bin/t-im@VERSION@"
 
 ?package(python@VERSION@-twisted):\
