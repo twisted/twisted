@@ -61,7 +61,6 @@ def fakeOut(modname):
             setattr(prevmod, modpath[m], nm)
         sys.modules[mp] = nm
         prevmod = nm
-        print mp
 
 fakeOut("gnome.ui")
 fakeOut("pygtk")
@@ -201,6 +200,8 @@ def addMod(arg, path, files):
 epydoc_flags = ["--html", "--latex", "--dvi", "--ps", "--pdf", "--private", "--no-private", "--show-imports", "--builtins", "--ignore-param-mismatch", "--separate-classes", "-q", "-v", "--check", "-h", "-V"]
 
 document_all = True
+
+names = ['twisted'] #default, may be overriden below
 #get list of modules/pkgs on cmd-line
 for i in range(1, len(sys.argv)):
     value = sys.argv[i]
@@ -209,26 +210,34 @@ for i in range(1, len(sys.argv)):
             pass
         else:
             names = sys.argv[i:]
-            #sanity check on names
-            for name in names:
-                if 'twisted' not in name:
-                    raise SystemExit, 'You can only specify twisted modules or packages'
             document_all = False
             sys.argv[i:] = []
+            #sanity check on names
+            for i in range(len(names)):
+                if not names[i].startswith('twisted'):
+                    j = names[i].find('twisted') 
+                    if j != -1:
+                        #strip off any leading directories before the 'twisted'
+                        #dir. this makes it easy to specify full paths, such as
+                        #from TwistedEmacs
+                        names[i] = names[i][j:]
+                    else:
+                        raise SystemExit, 'You can only specify twisted modules or packages'
             #if -o was specified, we need to change it to point to a tmp dir
             #otherwise add our own -o option
             old_out_dir = None
             try:
                 i = sys.argv.index('-o')
                 old_out_dir = sys.argv[i+1]
-                os.mkdir(tmp_dir)
+                try:
+                    os.mkdir(tmp_dir)
+                except OSError:
+                    pass
                 sys.argv[i+1] = tmp_dir
             except ValueError:
                 sys.argv[1:1] = ['-o', tmp_dir]
             break
 
-if document_all:
-    names = ['twisted'] #default, may be overriden below
 
 osrv = sys.argv
 sys.argv=["IGNORE"]
