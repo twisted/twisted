@@ -47,7 +47,7 @@ class IRCChatter(irc.IRC):
 
     def notifyStatusChanged(self, name, status):
         self.receiveDirectMessage(
-            "*contact*",
+            "ContactServ",
             "%s is %s" % (name,service.statuses[status]))
 
     def memberJoined(self, member, group):
@@ -154,7 +154,7 @@ class IRCChatter(irc.IRC):
                                  self.servicename, copyright.version,
                                   'w', 'n') # user and channel modes
                 if self.passwd is None:
-                    self.receiveDirectMessage("*login*", "Password?")
+                    self.receiveDirectMessage("NickServ", "Password?")
                     self.pendingLogin = participant
                 else:
                     self.logInAs(participant, self.passwd)
@@ -179,7 +179,7 @@ class IRCChatter(irc.IRC):
             self.identity = ident
             self.pendingLogin.attached(self, self.identity)
             self.participant = self.pendingLogin
-            self.receiveDirectMessage("*login*", "Authentication accepted.  Thank you.")
+            self.receiveDirectMessage("NickServ", "Authentication accepted.  Thank you.")
         else:
             self.notLoggedIn("unauthorized")
         del self.pendingLogin
@@ -188,7 +188,7 @@ class IRCChatter(irc.IRC):
     def notLoggedIn(self, message):
         """Login failed.
         """
-        self.receiveDirectMessage("*login*", "Login failed: %s" % message)
+        self.receiveDirectMessage("NickServ", "Login failed: %s" % message)
 
     def irc_USER(self, prefix, params):
         """User message -- Set your realname.
@@ -428,7 +428,7 @@ class IRCChatter(irc.IRC):
         name = params[0]
         text = params[-1]
         if self.participant:
-            if name == '*contact*':
+            if name == 'ContactServ':
                 # crude contacts interface
                 cmds = string.split(text, ' ', 1)
                 if cmds[0] == 'add':
@@ -436,7 +436,7 @@ class IRCChatter(irc.IRC):
                 elif cmds[0] == 'remove':
                     self.participant.removeContact(cmds[1])
                 else:
-                    self.receiveDirectMessage("*contact*", "unknown command")
+                    self.receiveDirectMessage("ContactServ", "unknown command")
             elif name[0] == '#':
                 log.msg( 'talking to channel %s %s %s ' % (self.nickname, prefix, params ))
                 channame = name[1:]
@@ -454,10 +454,10 @@ class IRCChatter(irc.IRC):
                     self.sendMessage(irc.ERR_NOSUCHNICK, name,
                                      ":%s" % (e,))
         else:
-            if name == '*login*':
+            if name == 'NickServ':
                 self.logInAs(self.pendingLogin, text)
             else:
-                self.receiveDirectMessage("*login*", "You haven't logged in yet.")
+                self.receiveDirectMessage("NickServ", "You haven't logged in yet.")
 
 
 
