@@ -14,14 +14,10 @@ class IUnitTest(Interface):
         pass
 
 def isTestClass(testClass):
-    from pyunit import unittest # pyunit stuff for backward compatibility
-    return (implements(testClass, IUnitTest) or
-            issubclass(testClass, unittest.TestCase))
+    return implements(testClass, IUnitTest)
 
 def isTestCase(testCase):
-    from pyunit import unittest
-    return (implements(testCase, IUnitTest) or
-            isinstance(testCase, unittest.TestCase))
+    return implements(testCase, IUnitTest)
 
 class TestSuite:
     methodPrefix = 'test'
@@ -40,11 +36,7 @@ class TestSuite:
 
     def addTestClass(self, testClass):
         #print 'adding class %s' % testClass
-        from pyunit import unittest
-        if issubclass(testClass, unittest.TestCase):
-            testCase = testClass('id') # dodgy hack
-        else:
-            testCase = testClass()
+        testCase = testClass()
         self.addTestCase(testCase)
 
     def addModule(self, module):
