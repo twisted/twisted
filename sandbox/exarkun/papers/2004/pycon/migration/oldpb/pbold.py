@@ -98,7 +98,3 @@ vars(_Jellier)['jelly'] = monkeyJelly
 vars(SecurityOptions)['isModuleAllowed'] = lambda self, klass: True
 vars(SecurityOptions)['isClassAllowed'] = lambda self, klass: True
 vars(SecurityOptions)['isTypeAllowed'] = lambda self, klass: True
-
-class FileDescriptorAwareBroker(pb.Broker):
-    def fileDescriptorsReceived(self, descriptors):
-        self.descriptors.extend(descriptors)
