@@ -21,7 +21,7 @@ from pyunit import unittest
 import os, tempfile
 
 # twisted imports
-from twisted.lumberjack import logfile
+from twisted.python import logfile
 
 
 class LogFileTestCase(unittest.TestCase):

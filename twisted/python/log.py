@@ -81,6 +81,7 @@ def msg(stuff):
 
 _keepErrors = 0
 _keptErrors = []
+_ignoreErrors = []
 
 def startKeepingErrors():
     """Support function for testing frameworks.
@@ -98,6 +99,7 @@ def flushErrors(*errorTypes):
     Return a list of errors that occurred since the last call to flushErrors().
     (This will return None unless startKeepingErrors has been called.)
     """
+
     global _keptErrors
     k = _keptErrors
     _keptErrors = []
@@ -111,13 +113,32 @@ def flushErrors(*errorTypes):
                 err(erk)
     return k
 
+def ignoreErrors(*types):
+    for type in types:
+        _ignoreErrors.append(type)
 
+def clearIgnores():
+    global _ignoreErrors
+    _ignoreErrors = []
+    
 def err(stuff):
     """Write a failure to the log.
     """
     if isinstance(stuff, failure.Failure):
         if _keepErrors:
-            _keptErrors.append(stuff)
+            if _ignoreErrors:
+                keep = 0
+                for err in _ignoreErrors:
+                    r = stuff.check(err)
+                    if r:
+                        keep = 0
+                        break
+                    else:
+                        keep = 1
+                if keep:
+                    _keptErrors.append(stuff)
+            else:
+                _keptErrors.append(stuff)
         stuff.printTraceback(file=logfile)
     else:
         msg(stuff)

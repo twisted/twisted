@@ -360,7 +360,7 @@ class Site(http.HTTPFactory):
         self.resource = resource
 
     def _openLogFile(self, path):
-        from twisted.lumberjack import logfile
+        from twisted.python import logfile
         return logfile.LogFile(os.path.basename(path), os.path.dirname(path))
 
     def __getstate__(self):
