@@ -203,6 +203,7 @@ def makeBallCore(opts):
     ln -s `pwd`/Twisted.exp/LICENSE %(tdir)s/
     ln -s `pwd`/Twisted.exp/twisted/topfiles/* %(tdir)s/
     ln -s `pwd`/Twisted.exp/doc/core %(tdir)s/doc
+    ln -s `pwd`/Twisted.exp/doc/fun %(tdir)s/doc/fun
     ln -s `pwd`/Twisted.exp/bin/* %(tdir)s/bin
     rm -f %(tdir)s/bin/{%(twisted_subprojects)s}
 
