@@ -477,27 +477,27 @@ class QuotingTestCase(unittest.TestCase):
             self.assertEquals(util.quote(value, typ), expected)
 
 
-if gadfly is None: GadflyTestCase.skip = 1
+if gadfly is None: GadflyTestCase.skip = "gadfly module not available"
 elif not getattr(gadfly, 'connect', None): gadfly.connect = gadfly.gadfly
 
-if sqlite is None: SQLiteTestCase.skip = 1
+if sqlite is None: SQLiteTestCase.skip = "sqlite module not available"
 
-if PgSQL is None: PostgresTestCase.skip = 1
+if PgSQL is None: PostgresTestCase.skip = "pyPgSQL module not available"
 else:
     try:
         conn = PgSQL.connect(database=PostgresTestCase.DB_NAME,
                              user=PostgresTestCase.DB_USER,
                              password=PostgresTestCase.DB_PASS)
         conn.close()
-    except:
-        PostgresTestCase.skip = 1
+    except Exception, e:
+        PostgresTestCase.skip = "Connection to PgSQL server failed: " + str(e)
 
-if MySQLdb is None: MySQLTestCase.skip = 1
+if MySQLdb is None: MySQLTestCase.skip = "MySQLdb module not available"
 else:
     try:
         conn = MySQLdb.connect(db=MySQLTestCase.DB_NAME,
                                user=MySQLTestCase.DB_USER,
                                passwd=MySQLTestCase.DB_PASS)
         conn.close()
-    except:
-        MySQLTestCase.skip = 1
+    except Exception, e:
+        MySQLTestCase.skip = "Connection to MySQL server failed: " + str(e)
