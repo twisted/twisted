@@ -426,7 +426,7 @@ class Port(abstract.FileDescriptor):
             try:
                 skt.bind((self.interface, self.port))
             except socket.error, le:
-                raise CannotListenError, (self.interface, self.port, le,)
+                raise CannotListenError, (self.interface, self.port, str(le))
         skt.setblocking(0)
         skt.listen(self.backlog)
         self.connected = 1
