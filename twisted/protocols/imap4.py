@@ -1084,11 +1084,10 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             self.state = 'auth'
 
         name = self._parseMbox(name)
-        defer.maybeDeferred(
-            self.account.select, self._parseMbox(name), rw
-        ).addCallback(self._cbSelectWork, cmdName, tag
-        ).addErrback(self._ebSelectWork, cmdName, tag
-        )
+        maybeDeferred(self.account.select, self._parseMbox(name), rw
+            ).addCallback(self._cbSelectWork, cmdName, tag
+            ).addErrback(self._ebSelectWork, cmdName, tag
+            )
 
     def _ebSelectWork(self, failure, cmdName, tag):
         self.sendBadResponse(tag, "%s failed: Server error" % (cmdName,))
@@ -1225,7 +1224,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def _listWork(self, tag, ref, mbox, sub, cmdName):
         mbox = self._parseMbox(mbox)
-        defer.maybeDeferred(self.account.listMailboxes, ref, mbox
+        maybeDeferred(self.account.listMailboxes, ref, mbox
             ).addCallback(self._cbListWork, tag, sub, cmdName
             ).addErrback(self._ebListWork, tag
             )
@@ -1743,7 +1742,13 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def do_COPY(self, tag, messages, mailbox, uid=0):
         mailbox = self._parseMbox(mailbox)
-        mbox = self.account.select(mailbox)
+        maybeDeferred(self.account.select, mailbox
+            ).addCallback(self._cbCopySelectedMailbox, tag, messages, uid
+            ).addErrback(self._ebCopySelectedMailbox, tag
+            )
+    select_COPY = (do_COPY, arg_seqset, arg_astring)
+
+    def _cbCopySelectedMailbox(self, mbox, tag, messages, uid):
         if not mbox:
             self.sendNegativeResponse(tag, 'No such mailbox: ' + mailbox)
         else:
@@ -1753,18 +1758,19 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 ).addErrback(self.__ebCopy, tag
                 )
 
-    select_COPY = (do_COPY, arg_seqset, arg_astring)
+    def _ebCopySelectedMailbox(self, failure, tag):
+        self.sendBadResponse(tag, 'Server error: ' + str(failure.value))
 
     def __cbCopy(self, messages, tag, mbox):
         # XXX - This should handle failures with a rollback or something
         addedDeferreds = []
         addedIDs = []
         failures = []
-        
+
         fastCopyMbox = IMessageCopier(mbox, default=None)
         for (id, msg) in messages:
             if fastCopyMbox is not None:
-                d = defer.maybeDeferred(fastCopyMbox.copy, msg)
+                d = maybeDeferred(fastCopyMbox.copy, msg)
                 addedDeferreds.append(d)
                 continue
 
@@ -4379,7 +4385,7 @@ class IMessageFile(components.Interface):
 class ISearchableMailbox(components.Interface):
     def search(self, query, uid):
         """Search for messages that meet the given query criteria.
-        
+
         If this interface is not implemented by the mailbox, L{IMailbox.fetch}
         and various methods of L{IMessage} will be used instead.
 
@@ -4402,16 +4408,16 @@ class ISearchableMailbox(components.Interface):
 class IMessageCopier(components.Interface):
     def copy(self, messageObject):
         """Copy the given message object into this mailbox.
-        
+
         The message object will be one which was previously returned by
         L{IMailbox.fetch}.
-        
+
         Implementations which wish to offer better performance than the
         default implementation should implement this interface.
-        
+
         If this interface is not implemented by the mailbox, IMailbox.addMessage
         will be used instead.
-        
+
         @rtype: C{Deferred} or C{int}
         @return: Either the UID of the message or a Deferred which fires
         with the UID when the copy finishes.
@@ -4419,7 +4425,7 @@ class IMessageCopier(components.Interface):
 
 class IMailboxInfo(components.Interface):
     """Interface specifying only the methods required for C{listMailboxes}.
-    
+
     Implementations can return objects implementing only these methods for
     return to C{listMailboxes} if it can allow them to operate more
     efficiently.
