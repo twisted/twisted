@@ -60,7 +60,7 @@ class Options(usage.Options):
 
                      ['cvsroot', 'c', defaultRoot, "The CVSROOT to export and/or checkout from. (only revelant for --exp and --checkout)."],
 
-                     ['root', 't', 'Twisted.CVS', "The directory containing your CVS checkout (unneccessary if using --checkout)."]]
+                     ['root', 't', util.sibpath(sys.argv[0], '../../Twisted.CVS'), "The directory containing your CVS checkout (unneccessary if using --checkout)."]]
 
     longdesc = "Specify -v and all steps to execute; if no steps are given, default is %r." % defaultOptions
     
@@ -181,17 +181,20 @@ def main():
 
     sys.path.insert(0, os.path.abspath('Twisted'))
 
-    print "going to do", opts['commands']
+    print "going to do", [x.__name__ for x in opts['commands']]
 
     last = None
 
     for command in opts['commands']:
         try:
-            command().run(opts)
+            f = command().run(opts)
+            if f is not None:
+                raise f
         except:
-            print "ERROR: %s failed. last successful command was %s. Traceback follows:" (command.__name__, last)
+            print "ERROR: %s failed. last successful command was %s. Traceback follows:" % (command.__name__, last)
             import traceback
             traceback.print_exc()
+            break
         
         last = command
 
@@ -273,10 +276,10 @@ class UpdateVersion(Transaction):
         newver = opts['version']
 
         r = opts['root']
-        self.files = ('%s/README' % r, '%s/doc/howto/installing-twisted.html' % r, '%s/twisted/copyright.py' % r)
+        self.files = ('README', 'doc/howto/installing-twisted.html', 'twisted/copyright.py')
         for file in self.files:
-            replaceInFile(file, oldver, newver)
-        sh('cd %s &&  cvs -q diff' % (r))
+            replaceInFile(os.path.join(r, file), oldver, newver)
+        sh('cd %s &&  cvs -q diff || true' % (r))
         sh('cd %s &&  cvs commit -m "Preparing for %s" %s' % (r, newver, ' '.join(self.files)), 1)
 
     def undoIt(self, opts, fail):
