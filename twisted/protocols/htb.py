@@ -30,7 +30,7 @@ shaper for the Linux kernel<http://luxik.cdi.cz/~devik/qos/htb/>}.
 
 from __future__ import nested_scopes
 
-__version__ = '$Revision: 1.4 $'[11:-2]
+__version__ = '$Revision: 1.5 $'[11:-2]
 
 from twisted.python.components import Interface
 
@@ -199,7 +199,7 @@ class ShapedConsumer(pcp.ProducerConsumerProxy):
     # Providing a Pull interface means I don't have to try to schedule
     # traffic with callLaters.
     iAmStreaming = False
-    
+
     def __init__(self, consumer, bucket):
         pcp.ProducerConsumerProxy.__init__(self, consumer)
         self.bucket = bucket

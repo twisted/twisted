@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: gtk2manhole.py,v 1.8 2003/06/10 00:08:29 exarkun Exp $
+# $Id: gtk2manhole.py,v 1.9 2003/09/07 19:58:09 acapnotic Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -21,7 +21,7 @@
 # Note: Because GTK 2.x Python bindings are only available for Python 2.2,
 # this code may use Python 2.2-isms.
 
-__version__ = '$Revision: 1.8 $'[11:-2]
+__version__ = '$Revision: 1.9 $'[11:-2]
 
 from twisted import copyright
 from twisted.internet import reactor
@@ -41,6 +41,8 @@ import code, types, inspect
 #  Command history.
 #  Explorer.
 #  Code doesn't cleanly handle opening a second connection.  Fix that.
+#  Make some acknowledgement of when a command has completed, even if
+#     it has no return value so it doesn't print anything to the console.
 
 class OfflineError(Exception):
     pass

@@ -18,7 +18,7 @@
 
 """Producer-Consumer Proxy."""
 
-__version__ = '$Revision: 1.3 $'[11:-2]
+__version__ = '$Revision: 1.4 $'[11:-2]
 
 from twisted.python import log
 from twisted.internet import interfaces
@@ -67,7 +67,7 @@ class BasicProducerConsumerProxy:
                 self.outstandingPull = True
 
         if self.producer is not None:
-            self.producer.resumeProducing()            
+            self.producer.resumeProducing()
 
     def stopProducing(self):
         if self.producer is not None:
@@ -81,7 +81,7 @@ class BasicProducerConsumerProxy:
         if self.paused or (not self.iAmStreaming and not self.outstandingPull):
             # We could use that fifo queue here.
             self._buffer.append(data)
-            
+
         elif self.consumer is not None:
             self.consumer.write(data)
             self.outstandingPull = False
@@ -146,7 +146,7 @@ class ProducerConsumerProxy(BasicProducerConsumerProxy):
 
         if not self.iAmStreaming:
             self.outstandingPull = not bytesSent
-        
+
         if self.producer is not None:
             bytesBuffered = reduce(operator.add,
                                    [len(s) for s in self._buffer], 0)
@@ -170,7 +170,7 @@ class ProducerConsumerProxy(BasicProducerConsumerProxy):
         if self.paused or (not self.iAmStreaming and not self.outstandingPull):
             # We could use that fifo queue here.
             self._buffer.append(data)
-            
+
         elif self.consumer is not None:
             assert not self._buffer, (
                 "Writing fresh data to consumer before my buffer is empty!")
@@ -190,7 +190,7 @@ class ProducerConsumerProxy(BasicProducerConsumerProxy):
             bytesBuffered = reduce(operator.add,
                                    [len(s) for s in self._buffer], 0)
             if bytesBuffered >= self.bufferSize:
-                
+
                 self.producer.pauseProducing()
                 self.producerPaused = True
 

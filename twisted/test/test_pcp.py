@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-__version__ = '$Revision: 1.3 $'[11:-2]
+__version__ = '$Revision: 1.4 $'[11:-2]
 
 from StringIO import StringIO
 from twisted.trial import unittest
@@ -371,3 +371,10 @@ class BufferedPullTests(unittest.TestCase):
         self.failUnlessEqual(self.underlying.getvalue(), "datum" * 20)
         # but there should be some left over
         self.failUnlessEqual(self.proxy._buffer, ["datum"])
+
+
+# TODO:
+#  test that web request finishing bug (when we weren't proxying
+#    unregisterProducer but were proxying finish, web file transfers
+#    would hang on the last block.)
+#  test what happens if writeSomeBytes decided to write zero bytes.
