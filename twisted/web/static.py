@@ -177,7 +177,7 @@ class File(resource.Resource, styles.Versioned):
         ##
         if self.allowExt:
             for fn in os.listdir(self.path):
-                if os.path.splitext(fn)[0]==path:
+                if '.' in fn and os.path.splitext(fn)[0]==path:
                     log.msg('    Returning %s' % fn)
                     path = fn
 
