@@ -1516,6 +1516,9 @@ class BadResponse(FTPError):
 class UnexpectedResponse(FTPError):
     pass
 
+class UnexpectedData(FTPError):
+    pass
+
 class FTPCommand:
     def __init__(self, text=None, public=0):
         self.text = text
@@ -1554,8 +1557,10 @@ class SenderProtocol(Protocol):
 
     #Protocol stuff
     def dataReceived(self, data):
-        assert 0, ("We received data from the server - "
-                   "this shouldn't happen.")
+        raise UnexpectedData(
+            "Received data from the server on a "
+            "send-only data-connection"
+        )
 
     def makeConnection(self, transport):
         Protocol.makeConnection(self, transport)
