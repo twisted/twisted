@@ -19,7 +19,7 @@
 import md5
 
 # Twisted Imports
-from twisted.python import defer
+from twisted.python import defer, failure
 
 # Sibling Imports
 from util import respond

@@ -8,7 +8,12 @@ hopefully encompass all forms of remote access which can emulate subsets of PB
 
 """
 
+# system imports
 import types
+
+# twisted imports
+from twisted.python import log
+
 
 copy_atom = "copy"
 cache_atom = "cache"
@@ -457,7 +462,7 @@ class RemoteCache(RemoteCopy, Serializable):
             # print 'decache: %s %d' % (self, self.luid)
             self.broker.decCacheRef(self.luid)
         except:
-            traceback.print_exc(file=log.logfile)
+            log.deferr()
 
 class RemoteCacheMethod:
     """A method on a reference to a RemoteCache.
@@ -482,6 +487,7 @@ class RemoteCacheMethod:
         """
         cacheID = self.broker.cachedRemotelyAs(self.cached)
         if cacheID is None:
+            from pb import ProtocolError
             raise ProtocolError("You can't call a cached method when the object hasn't been given to the peer yet.")
         return self.broker._sendMessage('cache', self.perspective, cacheID, self.name, args, kw)
 
