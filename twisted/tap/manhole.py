@@ -46,11 +46,9 @@ class Options(usage.Options):
 
 
 def getPorts(app, config):
-    i = passport.Identity(config.user, app)
-    i.setPassword(config.password)
-    app.authorizer.addIdentity(i)
     svc = service.Service(application=app)
-    i.addKeyForPerspective(svc.getPerspectiveNamed(config.user))
+    p = svc.createPerspective(config.user)
+    p.makeIdentity(config.password)
     try:
         portno = config.portno
     except AttributeError:

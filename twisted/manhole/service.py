@@ -15,13 +15,17 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from twisted import copyright
+
 from twisted.spread import pb
 from twisted.python import explorer, log
 
-import string
 from cStringIO import StringIO
 
-import sys, copy
+import copy
+import operator
+import string
+import sys
 import traceback
 
 class FakeStdIO:
@@ -29,99 +33,215 @@ class FakeStdIO:
         self.type = type
         self.list = list
 
-    def write(self,text):
-        log.msg("%s: %s" % (self.type,string.strip(text)))
+    def write(self, text):
+        log.msg("%s: %s" % (self.type, string.strip(str(text))))
         self.list.append([self.type, text])
 
     def flush(self):
         pass
 
+class ManholeClientInterface:
+    def console(self, list_of_messages):
+        """Takes a list of (type, message) pairs to display.
+
+        Types include:
+            \"out\" -- string sent to sys.stdout
+
+            \"err\" -- string sent to sys.stderr
+
+            \"result\" -- string repr of the resulting value
+                 of the expression
+
+            \"error\" -- a dictionary with two members:
+                \'traceback\' -- traceback.extract_tb output; a list of
+                     tuples (filename, line number, function name, text)
+                     suitable for feeding to traceback.format_list.
+
+                \'exception\' -- a list of one or more strings, each
+                     ending in a newline.
+                     (traceback.format_exception_only output)
+        """
+
+    def receiveBrowserObject(self, objectLink):
+        """Receives a ObjectLink from a watch or browse command.
+        """
+
+def runInConsole(command, console, globalNS=None, localNS=None,
+                 filename=None, args=None, kw=None):
+    """Run this, directing all output to the specified console.
+
+    If command is callable, it will be called with the args and keywords
+    provided.  Otherwise, command will be compiled and eval'd.
+    (Wouldn't you like a macro?)
+
+    Returns the command's return value.
+
+    The console is called with a list of (type, message) pairs for
+    display, see ManholeClientInterface.console.
+    """
+    output = []
+    fakeout = FakeStdIO("out", output)
+    fakeerr = FakeStdIO("err", output)
+    errfile = FakeStdIO("error", output)
+    code = None
+    val = None
+    if filename is None:
+        filename = str(console)
+    if args is None:
+        args = ()
+    if kw is None:
+        kw = {}
+    if localNS is None:
+        localNS = globalNS
+    if (globalNS is None) and (not operator.isCallable(command)):
+        raise ValueError("Need a namespace to evaluate the command in.")
+
+    try:
+        out = sys.stdout
+        err = sys.stderr
+        sys.stdout = fakeout
+        sys.stderr = fakeerr
+        try:
+            if operator.isCallable(command):
+                val = apply(command, args, kw)
+            else:
+                try:
+                    code = compile(command, filename, 'eval')
+                except:
+                    code = compile(command, filename, 'single')
+
+                if code:
+                    val = eval(code, globalNS, localNS)
+        finally:
+            sys.stdout = out
+            sys.stderr = err
+    except:
+        (eType, eVal, tb) = sys.exc_info()
+        tb_list = traceback.extract_tb(tb)[1:]
+        del tb
+        if not operator.isCallable(command):
+            # Fill in source lines from 'command' when we can.
+            for i in xrange(len(tb_list)):
+                tb_line = tb_list[i]
+                (filename_, lineNum, func, src) = tb_line
+                if ((src == None)
+                    and (filename_ == filename)
+                    and (func == '?')):
+
+                    src_lines = string.split(str(command), '\n')
+                    if len(src_lines) > lineNum:
+                        src = src_lines[lineNum]
+                        tb_list[i] = (filename_, lineNum, func, src)
+
+        # tb_list = traceback.format_list(tb_list)
+        ex_list = traceback.format_exception_only(eType, eVal)
+        # s = string.join(tb_list + ex_list, '')
+        # errfile.write(s)
+        errfile.write({'traceback': tb_list,
+                       'exception': ex_list})
+
+    if console:
+        console(output)
+
+    return val
+
 class Perspective(pb.Perspective):
     def __init__(self, perspectiveName, identityName="Nobody"):
         pb.Perspective.__init__(self, perspectiveName, identityName)
         self.localNamespace = {
+            "_": None,
             }
-
         self.browser = explorer.ObjectBrowser(None, self.localNamespace)
+        self.localNamespace["_browser"] = self.browser
+
+        self.clients = {}
 
     def setService(self, service):
         pb.Perspective.setService(self, service)
         self.browser.globalNamespace = service.namespace
 
-    def perspective_do(self, mesg):
-        """returns a list of ["type", "message"] pairs to the client for
-        display
+    def attached(self, client, identity):
+        self.clients[client] = identity
 
-        Types include:
-            out -- material sent to sys.stdout
-            err -- material sent to sys.stderr
-            result -- the resulting value of the expression
-            error -- exceptions and tracebacks
-        """
-        fn = str(self.service)
-        output = []
-        log.msg(">>> %s" % mesg)
-        fakeout = FakeStdIO("out", output)
-        fakeerr = FakeStdIO("err", output)
-        resfile = FakeStdIO("result", output)
-        errfile = FakeStdIO("error", output)
-        code = None
+        msg = self.service.welcomeMessage % {
+            'you': getattr(identity, 'name', str(identity)),
+            'serviceName': self.service.getServiceName(),
+            'app': self.service.application.name,
+            'host': 'some computer somewhere',
+            'longversion': copyright.longversion,
+            }
+
+        client.console([("out", msg)])
+
+        return pb.Perspective.attached(self, client, identity)
+
+    def detached(self, client, identity):
         try:
+            del self.clients[client]
+        except KeyError:
+            pass
+
+        return pb.Perspective.detached(self, client, identity)
+
+    def console(self, message):
+        clients = self.clients.keys()
+        for client in clients:
             try:
-                code = compile(mesg, fn, 'eval')
-            except:
-                code = compile(mesg, fn, 'single')
+                client.console(message)
+            except pb.ProtocolError:
+                # Stale broker.
+                self.detached(client, None)
 
-            if code:
-                out = sys.stdout
-                err = sys.stderr
-                sys.stdout = fakeout
-                sys.stderr = fakeerr
-                try:
-                    val = eval(code, self.service.namespace,
-                               self.localNamespace)
-                    if val is not None:
-                        resfile.write(str(val)+'\n')
-                        self.localNamespace["_"] = val
-                finally:
-                    sys.stdout = out
-                    sys.stderr = err
-        except:
-            (eType, eVal, tb) = sys.exc_info()
-            # Drop this frame off the traceback report.
-            tb_list = traceback.extract_tb(tb)[1:]
-            del tb
-            # Fill in source lines from 'mesg' when we can.
-            for i in xrange(len(tb_list)):
-                tb_line = tb_list[i]
-                (filename, lineNum, func, src) = tb_line
-                if ((src == None) and (filename == fn) and (func == '?')):
-                    src_lines = string.split(mesg, '\n')
-                    if len(src_lines) > lineNum:
-                        src = src_lines[lineNum]
-                        tb_list[i] = (filename, lineNum, func, src)
+    def receiveBrowserObject(self, objectLink):
+        clients = self.clients.keys()
+        for client in clients:
+            try:
+                client.receiveBrowserObject(objectLink)
+            except pb.ProtocolError:
+                # Stale broker.
+                self.detached(client, None)
 
-            # XXX: We should include an option to send back unformatted
-            # lists instead of these strings, should the client prefer
-            # to do its own formatting.
-            tb_list = traceback.format_list(tb_list)
-            ex_list = traceback.format_exception_only(eType, eVal)
-            s = string.join(tb_list + ex_list, '')
-            errfile.write(s)
+    def perspective_do(self, mesg):
+        log.msg(">>> %s" % mesg)
+        val = self.runInConsole(mesg)
+        if val is not None:
+            self.localNamespace["_"] = val
+            self.console([("result", repr(val) + '\n')])
         log.msg("<<<")
-        return output
 
     def perspective_browse(self, identifier):
-        """Returns documentation and stuff for the specified identifier.
-        """
+        object = self.runInConsole(identifier)
+        if object:
+            self.receiveBrowserObject(
+                self.browser.browseObject(object, identifier))
 
-        retval = self.browser.browseIdentifier(identifier)
-        print "Browse %s returns:\n%s" % (identifier, retval)
-        return retval
+    def perspective_watch(self, identifier):
+        object = self.runInConsole(identifier)
+        if object:
+            self.browser.browseObject(object, identifier)
+            self.receiveBrowserObject(
+                self.browser.browseObject(object, identifier))
+            self.browser.watchObject(object, identifier,
+                                     self.receiveBrowserObject)
+
+    def runInConsole(self, command, *args, **kw):
+        return runInConsole(command,
+                            self.console,
+                            self.service.namespace,
+                            self.localNamespace,
+                            str(self.service),
+                            args=args,
+                            kw=kw)
 
 class Service(pb.Service):
-    # By default, "guest"/"guest" will work as login and password, though you
-    # must implement something to retrieve a perspective.
+    perspectiveClass = Perspective
+    serviceType = "manhole"
+
+    welcomeMessage = (
+        "\nHello %(you)s, welcome to %(serviceName)s "
+        "in %(app)s on %(host)s.\n"
+        "%(longversion)s.\n\n")
+
     def __init__(self, serviceName='twisted.manhole', application=None):
         pb.Service.__init__(self, serviceName, application)
 
@@ -136,8 +256,8 @@ class Service(pb.Service):
     def __getstate__(self):
         """This returns the persistent state of this shell factory.
         """
-        # TODO -- refactor this and twisted.reality.author.Author to use common
-        # functionality (perhaps the 'code' module?)
+        # TODO -- refactor this and twisted.reality.author.Author to
+        # use common functionality (perhaps the 'code' module?)
         dict = self.__dict__
         ns = copy.copy(dict['namespace'])
         dict['namespace'] = ns
@@ -145,12 +265,7 @@ class Service(pb.Service):
             del ns['__builtins__']
         return dict
 
-    def getPerspectiveNamed(self, name):
-        p = Perspective(name)
-        p.setService(self)
-        return p
-
     def __str__(self):
-        s = "<%s in application \'%s\'>" % (self.serviceName,
-                                                    self.application.name)
+        s = "<%s in application \'%s\'>" % (self.getServiceName(),
+                                            self.application.name)
         return s

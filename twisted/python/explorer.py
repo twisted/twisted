@@ -16,10 +16,10 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from twisted.spread import pb, jelly
-import string, sys, types
+import new, string, sys, types
 
 # sibling
-import text
+import reflect, text
 
 def typeString(type):
     return jelly.typeNames.get(type, type.__name__)
@@ -139,13 +139,7 @@ class ObjectBrowser:
         else:
             self.localNamespace = {}
 
-        self.typeTable = {types.InstanceType: self.browse_instance,
-                          types.ClassType: self.browse_class,
-                          types.MethodType: self.browse_method,
-                          types.FunctionType: self.browse_function,
-                          types.ModuleType: self.browse_module,
-                          types.BuiltinFunctionType: self.browse_builtin,
-                          }
+        self.watchUninstallers = {}
 
     def browseStrictlyIdentifier(self, identifier):
         """
@@ -177,14 +171,68 @@ class ObjectBrowser:
     def browseObject(self, object, identifier=None):
         """Browse the given object.
         """
-        method = self.typeTable.get(type(object), self.browse_other)
+        method = self.typeTable.get(type(object),
+                                    self.__class__.browse_other)
 
-        return method(object, identifier)
+        return method(self, object, identifier)
 
-    def browse_other(self, thing, identifier):
+    def watchIdentifier(self, identifier, callback):
+        object = eval(identifier,
+                      self.globalNamespace,
+                      self.localNamespace)
+        return self.watchObject(object, identifier, callback)
+
+    def watchObject(self, object, identifier, callback):
+        if type(object) is not types.InstanceType:
+            raise TypeError, "Sorry, can only place a watch on Instances."
+
+        dct = {}
+        reflect.addMethodNamesToDict(object.__class__, dct, '')
+        for k in object.__dict__.keys():
+            dct[k] = 1
+
+        members = dct.keys()
+
+        uninstallers = []
+
+        clazzNS = {}
+        clazz = new.classobj('Watching%s%X' %
+                             (object.__class__.__name__, id(object)),
+                             (_MonkeysSetattrMixin, object.__class__,),
+                             clazzNS)
+
+        clazzNS['_watchEmitChanged'] = new.instancemethod(
+            lambda slf, i=identifier, b=self, cb=callback:
+            cb(b.browseObject(slf, i)),
+            None, clazz)
+
+        orig_class = object.__class__
+        object.__class__ = clazz
+
+        for name in members:
+            m = getattr(object, name)
+            print name, type(m)
+            # Only hook bound methods.
+            if ((type(m) is types.MethodType)
+                and (m.im_self is not None)):
+
+                monkey = _WatchMonkey(object)
+                monkey.install(name)
+                uninstallers.append(monkey.uninstall)
+
+        # XXX: This probably prevents these objects from ever having a
+        # zero refcount.  Leak, Leak!
+        ## self.watchUninstallers[object] = uninstallers
+
+    def browse_other(self, thing, identifier, seenThings=None):
         """
         returns an ObjectLink with no special properties.
         """
+        if seenThings is None:
+            seenThings = {}
+
+        seenThings[id(thing)] = 'Set'
+
         thingType = type(thing)
         if thingType in (types.StringType, types.NoneType,
                          types.IntType, types.LongType,
@@ -193,13 +241,17 @@ class ObjectBrowser:
             thing = thing
 
         elif thingType in (types.ListType, types.TupleType):
-            # If there's a circular reference here, well, then,
-            # won't that suck?
             lst = [None] * len(thing)
             for i in xrange(len(thing)):
                 iIdentifier = "%s[%d]" % (identifier, i)
 
-                lst[i] = self.browse_other(thing[i], iIdentifier)
+                if seenThings.has_key(id(thing[i])):
+                    lst[i] = ObjectLink(str(thing[i]), iIdentifier,
+                                        type(thing[i]))
+                else:
+                    seenThings[id(thing[i])] = 'Set'
+                    lst[i] = self.browse_other(thing[i], iIdentifier,
+                                               seenThings)
 
             if thingType is types.TupleType:
                 thing = tuple(lst)
@@ -216,8 +268,21 @@ class ObjectBrowser:
 
                 valueIdentifier = "%s[%s]" % (identifier, key)
 
-                dct[self.browse_other(key, keyIdentifier)] = (
-                    self.browse_other(value, valueIdentifier))
+                if seenThings.has_key(id(key)):
+                    key = ObjectLink(str(key), keyIdentifier, type(key))
+                else:
+                    seenThings[id(key)] = 'Set'
+                    key = self.browse_other(key, keyIdentifier,
+                                            seenThings)
+                if seenThings.has_key(id(value)):
+                    value = ObjectLink(str(value), valueIdentifier,
+                                       type(value))
+                else:
+                    seenThings[id(value)] = 'Set'
+                    value = self.browse_other(value, valueIdentifier,
+                                              seenThings)
+
+                dct[key] = value
 
             thing = dct
         else:
@@ -323,13 +388,16 @@ class ObjectBrowser:
         this also includes 'self' and 'class' elements.
         """
 
-        link = self.browse_function(method.im_func, identifier)
+        function = method.im_func
+        if type(function) is types.InstanceType:
+            function = function.__call__.im_func
+        link = self.browse_function(function, identifier)
         link.value['class'] = self.browse_other(method.im_class,
                                              identifier + '.im_class')
         link.value['self'] = self.browse_other(method.im_self,
                                             identifier + '.im_self')
         link.setType(types.MethodType)
-        if self:
+        if method.im_self:
             # I'm a bound method -- eat the 'self' arg.
             del link.value['signature'][0]
         return link
@@ -429,3 +497,69 @@ class ObjectBrowser:
                 }
 
         return ObjectLink(rval, identifier, types.ModuleType)
+
+    typeTable = {types.InstanceType: browse_instance,
+                 types.ClassType: browse_class,
+                 types.MethodType: browse_method,
+                 types.FunctionType: browse_function,
+                 types.ModuleType: browse_module,
+                 types.BuiltinFunctionType: browse_builtin,
+                 }
+
+
+class _WatchMonkey:
+    """I hang on a method and tell you what I see.
+
+    TODO: Aya!  Now I just do browseObject all the time, but I could
+        tell you what got called with what when and returning what.
+    """
+    oldMethod = None
+
+    def __init__(self, instance):
+        """
+
+        instance -- to watch
+        """
+        self.instance = instance
+
+    def install(self, methodIdentifier):
+        oldMethod = getattr(self.instance, methodIdentifier, None)
+
+        # XXX: this conditional probably isn't effective.
+        if oldMethod is not self:
+            setattr(self.instance, methodIdentifier,
+                    new.instancemethod(self, self.instance,
+                                       self.instance.__class__))
+            self.oldMethod = (methodIdentifier, oldMethod)
+
+    def uninstall(self):
+        if self.oldMethod is None:
+            # Not installed.
+            return
+
+        # XXX: This probably doesn't work if multiple monkies are hanging
+        # on a method and they're not removed in order.
+        if self.oldMethod[1] is None:
+            delattr(self.instance, self.oldMethod[0])
+        else:
+            setattr(self.instance, self.oldMethod[0], self.oldMethod[1])
+
+    def __call__(self, instance, *a, **kw):
+        if self.oldMethod[1]:
+            rval = apply(self.oldMethod[1], a, kw)
+        else:
+            rval = None
+
+        instance._watchEmitChanged()
+        return rval
+
+class _MonkeysSetattrMixin:
+    def __setattr__(self, k, v):
+        if hasattr(self.__class__.__bases__[1], '__setattr__'):
+            # Hack!  Using __bases__[1] is Bad, but since we created
+            # this class, we can be reasonably sure it'll work.
+            self.__class__.__bases__[1].__setattr__(self, k, v)
+        else:
+            self.__dict__[k] = v
+
+        self._watchEmitChanged()

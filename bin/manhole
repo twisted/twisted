@@ -55,6 +55,7 @@ except usage.UsageError, e:
 
 i = gtkmanhole.Interaction()
 lw = gtkutil.Login(i.connected,
+                   i.client,
                    initialUser=config.user,
                    initialPassword=config.password,
                    initialService=config.service,

@@ -23,6 +23,9 @@ from twisted.internet import ingtkernet
 from twisted.spread import pb
 ingtkernet.install()
 
+True = gtk.TRUE
+False = gtk.FALSE
+
 normalFont = gtk.load_font("-adobe-courier-medium-r-normal-*-*-120-*-*-m-*-iso8859-1")
 font = normalFont
 boldFont = gtk.load_font("-adobe-courier-bold-r-normal-*-*-120-*-*-m-*-iso8859-1")
@@ -44,116 +47,74 @@ def findBeginningOfLineWithPoint(entry):
 def isCursorOnFirstLine(entry):
     firstnewline = string.find(entry.get_chars(0,-1), '\n')
     if entry.get_point() <= firstnewline or firstnewline == -1:
-        #print "cursor is on first line"
         return 1
 
 def isCursorOnLastLine(entry):
     if entry.get_point() >= string.rfind(string.rstrip(entry.get_chars(0,-1)), '\n'):
-        #print "cursor is on last line"
         return 1
 
+class Interaction(gtk.GtkWindow, pb.Referenceable):
+    loginWindow = None
 
-class Interaction(gtk.GtkWindow):
     def __init__(self):
         gtk.GtkWindow.__init__(self, gtk.WINDOW_TOPLEVEL)
         self.set_title("Manhole Interaction")
 
-        vb = gtk.GtkVBox()
-        vp = gtk.GtkVPaned()
+        vbox = gtk.GtkVBox()
+        pane = gtk.GtkVPaned()
 
-        self.output = gtk.GtkText()
-        gtkutil.defocusify(self.output)
-        self.output.set_word_wrap(gtk.TRUE)
-        vp.pack1(gtkutil.scrollify(self.output), gtk.TRUE, gtk.FALSE)
+        self.output = OutputConsole(toplevel=self)
+        pane.pack1(gtkutil.scrollify(self.output), gtk.TRUE, gtk.FALSE)
 
-        self.input = gtk.GtkText()
-        self.input.set_editable(gtk.TRUE)
-        self.input.connect("key_press_event", self.processKey)
-        self.input.set_word_wrap(gtk.TRUE)
-        vp.pack2(gtkutil.scrollify(self.input), gtk.FALSE, gtk.TRUE)
-        vb.pack_start(vp, 1,1,0)
+        self.input = InputText(toplevel=self)
+        pane.pack2(gtkutil.scrollify(self.input), gtk.FALSE, gtk.TRUE)
+        vbox.pack_start(pane, 1,1,0)
 
-        self.add(vb)
+        self.add(vbox)
         self.input.grab_focus()
         self.signal_connect('destroy', gtk.mainquit, None)
-        self.history = []
-        self.histpos = 0
 
-    loginWindow = None
-    linemode = 0
+        self.display = BrowserDisplay(self)
+        # The referencable attached to the Perspective
+        self.client = self
+        self.remote_receiveBrowserObject=self.display.receiveBrowserObject
+        self.remote_console = self.output.console
 
-    def historyUp(self):
-        if self.histpos > 0:
-            self.histpos = self.histpos - 1
-            self.input.delete_text(0, -1)
-            self.input.insert_defaults(self.history[self.histpos])
-            self.input.set_point(1)
+    def connected(self, perspective):
+        self.loginWindow.hide()
+        self.name = self.loginWindow.username.get_text()
+        self.hostname = self.loginWindow.hostname.get_text()
+        perspective.broker.notifyOnDisconnect(self.connectionLost)
+        self.perspective = perspective
+        self.show_all()
+        self.set_title("Manhole: %s@%s" % (self.name, self.hostname))
 
-    def historyDown(self):
-        if self.histpos < len(self.history) - 1:
-            self.histpos = self.histpos + 1
-            self.input.delete_text(0, -1)
-            self.input.insert_defaults(self.history[self.histpos])
-        elif self.histpos == len(self.history) - 1:
-            self.histpos = self.histpos + 1
-            self.input.delete_text(0, -1)
+        # This is .connected? Sloppy.  But then, isn't colour
+        # allocation always?
+        win = self.get_window()
+        blue = win.colormap.alloc(0x0000, 0x0000, 0xffff)
+        red = win.colormap.alloc(0xffff, 0x0000, 0x0000)
+        orange = win.colormap.alloc(0xaaaa, 0x8888, 0x0000)
+        black = win.colormap.alloc(0x0000, 0x0000, 0x0000)
+        gray = win.colormap.alloc(0x6666, 0x6666, 0x6666)
+        self.output.textStyles = {"out": black,   "err": orange,
+                                  "result": blue, "error": red,
+                                  "command": gray}
 
-    def processKey(self, entry, event):
-        if event.keyval == gtk.GDK.Return:
-            l = self.input.get_length()
-            # if l is 0, this coredumps gtk ;-)
-            if not l:
-                self.input.emit_stop_by_name("key_press_event")
-                return
-            lpos = findBeginningOfLineWithPoint(self.input)
-            pt = entry.get_point()
-            #print 'HELLO',pt,lpos
-            isShift = event.state & gtk.GDK.SHIFT_MASK
-            #print isShift
-            if (self.input.get_chars(l-1,-1) == ":"):
-                #print "woo!"
-                self.linemode = 1
-            elif isShift:
-                self.linemode = 1
-                self.input.insert_defaults('\n')
-            elif (not self.linemode) or (pt == lpos):
-                self.sendMessage(entry)
-                self.input.delete_text(0, -1)
-                self.input.emit_stop_by_name("key_press_event")
-                self.linemode = 0
-        elif event.keyval == gtk.GDK.Up and isCursorOnFirstLine(self.input):
-            self.historyUp()
-            gtk.idle_add(self.focusInput)
-            self.input.emit_stop_by_name("key_press_event")
-        elif event.keyval == gtk.GDK.Down and isCursorOnLastLine(self.input):
-            self.historyDown()
-            gtk.idle_add(self.focusInput)
-            self.input.emit_stop_by_name("key_press_event")
+    def connectionLost(self, reason=None):
+        if not reason:
+            reason = "Connection Lost"
+        self.loginWindow.loginReport(reason)
+        self.hide()
+        self.loginWindow.show()
 
-    def focusInput(self):
-        self.input.grab_focus()
-        return gtk.FALSE # do not requeue
-    maxBufSz = 10000
 
-    def messageReceived(self, message):
-        # print "received: ", message
-        t = self.output
-        t.set_point(t.get_length())
-        t.freeze()
-        for element in message:
-            # print 'processing',element
-            t.insert(font, self.textStyles[element[0]], None, element[1])
-        l = t.get_length()
-        diff = self.maxBufSz - l
-        if diff < 0:
-            diff = - diff
-            t.delete_text(0,diff)
-        t.thaw()
-        a = t.get_vadjustment()
-        a.set_value(a.upper - a.page_size)
-        self.input.grab_focus()
+class BrowserDisplay:
+    def __init__(self, toplevel=None):
+        if toplevel:
+            self.toplevel = toplevel
 
-    def browseObjectReceived(self, obj):
+    def receiveBrowserObject(self, obj):
         """Display a browser ObjectLink.
         """
         # This is a stop-gap implementation.  Ideally, everything
@@ -161,8 +122,8 @@ class Interaction(gtk.GtkWindow):
         # select referenced objects to browse them with
         # browse(selectedLink.identifier)
 
-        if obj.type in map(explorer.typeString, [type.FunctionType,
-                                                 type.MethodType]):
+        if obj.type in map(explorer.typeString, [types.FunctionType,
+                                                 types.MethodType]):
             arglist = []
             for arg in obj.value['signature']:
                 if arg.has_key('default'):
@@ -190,12 +151,107 @@ class Interaction(gtk.GtkWindow):
         else:
             s = str(obj) + '\n'
 
-        self.messageReceived([('out',s)])
+        self.toplevel.output.console([('out',s)])
 
+class OutputConsole(gtk.GtkText):
+    maxBufSz = 10000
+
+    def __init__(self, toplevel=None):
+        gtk.GtkText.__init__(self)
+        gtkutil.defocusify(self)
+        self.set_word_wrap(gtk.TRUE)
+
+        if toplevel:
+            self.toplevel = toplevel
+
+    def console(self, message):
+        self.set_point(self.get_length())
+        self.freeze()
+        for element in message:
+            if element[0] == 'error':
+                s = traceback.format_list(element[1]['traceback'])
+                s.extend(element[1]['exception'])
+                s = string.join(s, '')
+            else:
+                s = element[1]
+            self.insert(font, self.textStyles[element[0]],
+                        None, s)
+        l = self.get_length()
+        diff = self.maxBufSz - l
+        if diff < 0:
+            diff = - diff
+            self.delete_text(0,diff)
+        self.thaw()
+        a = self.get_vadjustment()
+        a.set_value(a.upper - a.page_size)
+        # self.input.grab_focus()
+
+
+class InputText(gtk.GtkText):
+    linemode = 0
     blockcount = 0
 
+    def __init__(self, toplevel=None):
+        gtk.GtkText.__init__(self)
+        self.set_editable(gtk.TRUE)
+        self.connect("key_press_event", self.processKey)
+        self.set_word_wrap(gtk.TRUE)
+
+        self.history = []
+        self.histpos = 0
+
+        if toplevel:
+            self.toplevel = toplevel
+
+    def historyUp(self):
+        if self.histpos > 0:
+            self.histpos = self.histpos - 1
+            self.delete_text(0, -1)
+            self.insert_defaults(self.history[self.histpos])
+            self.set_point(1)
+
+    def historyDown(self):
+        if self.histpos < len(self.history) - 1:
+            self.histpos = self.histpos + 1
+            self.delete_text(0, -1)
+            self.insert_defaults(self.history[self.histpos])
+        elif self.histpos == len(self.history) - 1:
+            self.histpos = self.histpos + 1
+            self.delete_text(0, -1)
+
+    def processKey(self, entry, event):
+        stopSignal = False
+        if event.keyval == gtk.GDK.Return:
+            l = self.get_length()
+            # if l is 0, this coredumps gtk ;-)
+            if not l:
+                self.emit_stop_by_name("key_press_event")
+                return
+            lpos = findBeginningOfLineWithPoint(self)
+            pt = entry.get_point()
+            isShift = event.state & gtk.GDK.SHIFT_MASK
+            if (self.get_chars(l-1,-1) == ":"):
+                self.linemode = 1
+            elif isShift:
+                self.linemode = 1
+                self.insert_defaults('\n')
+            elif (not self.linemode) or (pt == lpos):
+                self.sendMessage(entry)
+                self.delete_text(0, -1)
+                stopSignal = True
+                self.linemode = 0
+        elif event.keyval == gtk.GDK.Up and isCursorOnFirstLine(self):
+            self.historyUp()
+            stopSignal = True
+        elif event.keyval == gtk.GDK.Down and isCursorOnLastLine(self):
+            self.historyDown()
+            stopSignal = True
+
+        if stopSignal:
+            self.emit_stop_by_name("key_press_event")
+
     def sendMessage(self, unused_data=None):
-        text = self.input.get_chars(0,-1)
+        text = self.get_chars(0,-1)
         if self.linemode:
             self.blockcount = self.blockcount + 1
             fmt = ">>> # begin %s\n%%s\n#end %s\n" % (
@@ -204,57 +260,32 @@ class Interaction(gtk.GtkWindow):
             fmt = ">>> %s\n"
         self.history.append(text)
         self.histpos = len(self.history)
-        self.messageReceived([['command',fmt % text]])
+        self.toplevel.output.console([['command',fmt % text]])
 
-        method = self.perspective.do
-        callback = self.messageReceived
+        method = self.toplevel.perspective.do
 
         split = string.split(text,' ',1)
         if len(split) == 2:
             (statement, remainder) = split
             if statement == 'browse':
-                method = self.perspective.browse
+                method = self.toplevel.perspective.browse
                 text = remainder
-                callback = self.browseObjectReceived
+            elif statement == 'watch':
+                method = self.toplevel.perspective.watch
+                text = remainder
 
         try:
-            method(text, pbcallback=callback)
+            method(text)
         except pb.ProtocolError:
             # ASSUMPTION: pb.ProtocolError means we lost our connection.
             (eType, eVal, tb) = sys.exc_info()
             del tb
             s = string.join(traceback.format_exception_only(eType, eVal),
                             '')
-            self.connectionLost(s)
+            self.toplevel.connectionLost(s)
         except:
             traceback.print_exc()
             gtk.mainquit()
-
-
-    def connected(self, perspective):
-        self.loginWindow.hide()
-        self.name = self.loginWindow.username.get_text()
-        self.hostname = self.loginWindow.hostname.get_text()
-        perspective.broker.notifyOnDisconnect(self.connectionLost)
-        self.perspective = perspective
-        self.show_all()
-        self.set_title("Manhole: %s@%s" % (self.name, self.hostname))
-        win = self.get_window()
-        blue = win.colormap.alloc(0x0000, 0x0000, 0xffff)
-        red = win.colormap.alloc(0xffff, 0x0000, 0x0000)
-        orange = win.colormap.alloc(0xaaaa, 0x8888, 0x0000)
-        black = win.colormap.alloc(0x0000, 0x0000, 0x0000)
-        gray = win.colormap.alloc(0x6666, 0x6666, 0x6666)
-        self.textStyles = {"out": black,   "err": orange,
-                           "result": blue, "error": red,
-                           "command": gray}
-
-    def connectionLost(self, reason=None):
-        if not reason:
-            reason = "Connection Lost"
-        self.loginWindow.loginReport(reason)
-        self.hide()
-        self.loginWindow.show()
 
 class ObjectLink(pb.RemoteCopy, explorer.ObjectLink):
     """RemoteCopy of explorer.ObjectLink"""
