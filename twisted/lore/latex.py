@@ -449,7 +449,6 @@ class BookLatexSpitter(LatexSpitter):
 
 def processFile(spitter, fin):
     dom = microdom.parse(fin).documentElement
-    tree.expandAPI(dom)
     spitter.visitNode(dom)
 
 

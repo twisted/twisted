@@ -55,17 +55,7 @@ def fixAPI(document, url):
         node2 = microdom.Element('a', {'href': url%fullname, 'title': fullname})
         node2.childNodes = node.childNodes
         node.childNodes = [node2]
-
-def expandAPI(document):
-    seenAPI = {}
-    for node in domhelpers.findElementsWithAttribute(document, "class", "API"):
-        api = _getAPI(node)
-        if seenAPI.get(api) or node.hasAttribute('noexpand'):
-            continue
-        node.childNodes[0].nodeValue = api
         node.removeAttribute('base')
-        seenAPI[api] = 1
-
 
 def fontifyPython(document):
     def matcher(n):
@@ -230,7 +220,6 @@ def munge(document, template, linkrel, d, fullpath, ext, url, config):
     fixRelativeLinks(template, linkrel)
     addMtime(template, fullpath)
     removeH1(document)
-    expandAPI(document)
     fixAPI(document, url)
     fontifyPython(document)
     addPyListings(document, d)
