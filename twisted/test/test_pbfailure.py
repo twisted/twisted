@@ -71,13 +71,14 @@ class PBFailureTest(unittest.TestCase):
         auth = authorizer.DefaultAuthorizer()
         appl = app.Application("pbfailure", authorizer=auth)
         SimpleService("pbfailure",auth,appl,self).getPerspectiveNamed("guest").makeIdentity("guest")
-        appl.listenTCP(PORTNO, pb.BrokerFactory(pb.AuthRoot(auth)))
+        p = reactor.listenTCP(PORTNO, pb.BrokerFactory(pb.AuthRoot(auth)))
+        self.n = p.getHost()[2]
         appl.run(save=0)
         log.flushErrors(PoopError, FailError, DieError)
 
 
     def runClient(self):
-        pb.connect("localhost", PORTNO, "guest", "guest",
+        pb.connect("localhost", self.n, "guest", "guest",
                    "pbfailure", "guest", 30).addCallbacks(self.connected, self.notConnected)
         self.id = reactor.callLater(10, self.timeOut)
 
