@@ -1,16 +1,16 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -27,7 +27,7 @@ Perspective Broker
   translucent interface layer to those proxies.
 
   The protocol is not opaque, because it provides objects which represent the
-  remote proxies and req uire no context (server references, IDs) to operate
+  remote proxies and require no context (server references, IDs) to operate
   on.
 
   It is not transparent because it does *not* attempt to make remote objects
@@ -474,7 +474,7 @@ class RemoteCacheMethod:
         """(internal) action method.
         """
         self.cached.remoteCacheDo(self.broker, self.name, self.perspective, args, kw)
-        
+
 
 class RemoteCacheObserver:
     """I am a reverse-reference to the peer's RemoteCache.
@@ -493,19 +493,19 @@ class RemoteCacheObserver:
     def __repr__(self):
         return "<RemoteCacheObserver(%s, %s, %s) at %s>" % (
             self.broker, self.cached, self.perspective, id(self))
-    
+
     def __hash__(self):
         """generate a hash unique to all RemoteCacheObservers for this broker/perspective/cached triplet
         """
         return (  (hash(self.broker) % 2**10)
                 + (hash(self.perspective) % 2**10)
                 + (hash(self.cached) % 2**10))
-    
+
     def __cmp__(self, other):
         """compare me to another RemoteCacheObserver
         """
         return cmp((self.broker, self.perspective, self.cached), other)
-    
+
     def __getattr__(self, key):
         """Create a RemoteCacheMethod.
         """
@@ -536,7 +536,7 @@ class Cacheable(Copyable):
         client receives it that are not propogated.
         """
         return self.getStateToCopyFor(perspective)
-    
+
     def remoteSerialize(self, broker):
         """Return an appropriate tuple to serialize me.
 
@@ -658,7 +658,7 @@ class RemoteReference(Serializable, styles.Ephemeral):
 
 class RemoteCacheProxy(Serializable):
     """I am an ugly implementation detail.
-    
+
     Cacheable objects have to be manually reference counted in order to
     properly do handshaking on removing references to them.  I aid in that;
     when you *think* you have a reference to a RemoteCache, you actually have a
@@ -980,7 +980,7 @@ class Broker(banana.Banana):
         """Get a local object for a locally unique ID.
 
         I will return an object previously stored with self.registerReference,
-        or None if 
+        or None if
         """
         lob = self.localObjects.get(luid)
         if lob is None:
@@ -1019,7 +1019,7 @@ class Broker(banana.Banana):
         Note that this does not check the validity of the name, only creates a
         translucent reference for it.  In order to check the validity of an
         object, you can use the special message '__ping__'.
-        
+
         object.__ping__() will always be answered with a 1 or 0 (never an
         error) depending on whether the peer knows about the object or not.
         """
@@ -1033,7 +1033,7 @@ class Broker(banana.Banana):
         if luid is not None:
             self.remotelyCachedObjects[luid].incref()
         return luid
-    
+
     def remotelyCachedForLUID(self, luid):
         """Returns an instance which is cached remotely, with this LUID.
         """
@@ -1167,7 +1167,7 @@ class Broker(banana.Banana):
 
     def proto_cachemessage(self, requestID, objectID, message, answerRequired, netArgs, netKw):
         self._recvMessage(self.cachedLocallyAs, requestID, objectID, message, answerRequired, netArgs, netKw)
-        
+
     def _recvMessage(self, findObjMethod, requestID, objectID, message, answerRequired, netArgs, netKw):
         """Received a message-send.
 
@@ -1356,7 +1356,7 @@ class AuthChallenger(Referenceable):
 
 
 class AuthServ(Referenceable):
-    
+
     def __init__(self, app, broker):
         self.app = app
         self.broker = broker
