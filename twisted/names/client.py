@@ -29,6 +29,7 @@ better caching, respect timeouts
 from __future__ import nested_scopes
 
 import socket
+import os
 
 # Twisted imports
 from twisted.python.runtime import platform
@@ -77,7 +78,7 @@ class Resolver(common.ResolverBase):
         else:
             self.servers = servers
         
-        if resolv:
+        if resolv and os.path.exists(resolv):
             self.parseConfig(resolv)
         
         if not len(self.servers):
