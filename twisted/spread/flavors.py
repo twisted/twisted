@@ -94,9 +94,9 @@ def setCopierForClassTree(module, baseClass, prefix=None):
 
 
 class Serializable:
-    """(internal) An object that can be passed remotely.
+    """An object that can be passed remotely.
 
-    This is a style of object which can be serialized by Perspective
+    I am a style of object which can be serialized by Perspective
     Broker.  Objects which wish to be referenceable or copied remotely
     have to subclass Serializable.  However, clients of Perspective
     Broker will probably not want to directly subclass Serializable; the
