@@ -19,6 +19,8 @@
 """
 Test cases for twisted.names.
 """
+from __future__ import nested_scopes
+
 import sys, socket, operator
 from twisted.trial import unittest
 
@@ -29,12 +31,6 @@ from twisted.python import log, failure
 
 # Contort ourselves horribly until inet_pton is standard
 IPV6 = hasattr(socket, 'inet_pton')
-
-gotResponse = 0
-
-def setDone(message):
-    global gotResponse
-    gotResponse = message
 
 def justPayload(results):
     return [r.payload for r in results[0]]
@@ -143,19 +139,18 @@ class ServerDNSTestCase(unittest.TestCase):
 
 
     def namesTest(self, d, r):
-        global gotResponse
-        gotResponse = None
+        self.response = None
+        def setDone(response):
+            self.response = response
         d.addBoth(setDone)
         
-        iters = 100
-        while iters and not gotResponse:
-            reactor.iterate(0.05)
-            iters -= 1
+        while not self.response:
+            reactor.iterate(0.1)
 
-        if isinstance(gotResponse, failure.Failure):
-            raise gotResponse.value
+        if isinstance(self.response, failure.Failure):
+            raise self.response
         
-        results = justPayload(gotResponse)
+        results = justPayload(self.response)
         assert len(results) == len(r), "%s != %s" % (map(str, results), map(str, r))
         for rec in results:
             assert rec in r, "%s not in %s" % (rec, map(repr, r))
