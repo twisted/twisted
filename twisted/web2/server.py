@@ -274,11 +274,8 @@ class Request(http.Request):
                 lambda actualRes: self._handleSegment(
                     (actualRes, newpath), path, pageContext))
 
-        # Needs this because IResource is a new interface, and we're
-        # adapting an object with old interfaces.
-        if hasattr(newres, "__class__"):
-            components.fixClassImplements(newres.__class__)
         newres = iweb.IResource(newres)
+        
         if newres is pageContext.tag:
             assert not newpath is path, "URL traversal cycle detected when attempting to locateChild %r from resource %r." % (path, pageContext.tag)
             assert  len(newpath) < len(path), "Infinite loop impending..."
@@ -348,17 +345,15 @@ class Request(http.Request):
                 d.addCallback(filterit, f)
             d.addCallback(self.writeResponse)
             return d
-        else:
-            if hasattr(result, "__class__"):
-                components.fixClassImplements(result.__class__)
-            resource = iweb.IResource(result, None)
-            if resource:
-                pageContext = context.PageContext(tag=resource, parent=ctx)
-                d = defer.maybeDeferred(resource.renderHTTP, pageContext)
-                d.addCallback(self._cbFinishRender, pageContext)
-                return d
-            else:
-                raise TypeError("html is not a resource or a response")
+
+        resource = iweb.IResource(result, None)
+        if resource:
+            pageContext = context.PageContext(tag=resource, parent=ctx)
+            d = defer.maybeDeferred(resource.renderHTTP, pageContext)
+            d.addCallback(self._cbFinishRender, pageContext)
+            return d
+
+        raise TypeError("html is not a resource or a response")
     
     def notifyFinish(self):
         """Notify when finishing the request

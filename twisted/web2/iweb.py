@@ -4,7 +4,7 @@
 """
 
 from twisted.python import components
-from zope.interface import Attribute, Interface
+from zope.interface import Attribute, Interface, interface
 
 # server.py interfaces
 class IResource(Interface):
@@ -21,6 +21,22 @@ class IResource(Interface):
         """Return an IResponse or a deferred which will fire an IResponse. This response
         will be written to the web browser which initiated the request.
         """
+
+# Is there a better way to do this than this funky extra class?
+class SpecialAdaptInterfaceClass(interface.InterfaceClass):
+    # A special adapter for IResource to handle the extra step of adapting
+    # from IOldResource-providing resources.
+    def __adapt__(self, other):
+        result = interface.InterfaceClass.__adapt__(self, other)
+        if result is not None:
+            return result
+        
+        result = IOldResource(other, None)
+        if hasattr(result, "__class__"):
+            components.fixClassImplements(result.__class__)
+        if result is not None:
+            return IResource(result)
+IResource.__class__ = SpecialAdaptInterfaceClass
 
 class IOldResource(components.Interface):
     # Shared interface with inevow.IResource

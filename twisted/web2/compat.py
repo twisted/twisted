@@ -5,7 +5,7 @@ from urllib import quote, string
 import UserDict, math
 from cStringIO import StringIO
 
-from twisted.web2 import http_headers, iweb, http, stream
+from twisted.web2 import http_headers, iweb, http, stream, responsecode
 from twisted.web import http as old_http
 from twisted.internet import defer
 from twisted.python import components
@@ -97,6 +97,7 @@ class OldRequestAdapter(components.Componentized):
     # host = ####
     
     def __init__(self, request):
+        components.Componentized.__init__(self)
         self.request = request
         self.response = http.Response(stream=stream.ProducerStream())
 
@@ -169,7 +170,7 @@ class OldRequestAdapter(components.Componentized):
         
     def getHost(self):
         # FIXME, need a real API to acccess this.
-        return self.original.chanRequest.channel.transport.getHost()
+        return self.request.chanRequest.channel.transport.getHost()
 
     def setHost(self, host, port, ssl=0):
         pass
@@ -215,7 +216,7 @@ class OldRequestAdapter(components.Componentized):
 
         The request should have finish() called after this.
         """
-        self.setResponseCode(FOUND)
+        self.setResponseCode(responsecode.FOUND)
         self.setHeader("location", url)
     
     def prePathURL(self):
@@ -260,7 +261,7 @@ class OldResourceAdapter(object):
         self.__dict__['_OldResourceAdapter__original']=original
         
     def locateChild(self, ctx, segments):
-        self.__original.locateChild(ctx, segments)
+        return self.__original.locateChild(ctx, segments)
     
     def renderHTTP(self, ctx):
         oldRequest = iweb.IOldRequest(ctx)
