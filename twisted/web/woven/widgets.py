@@ -1,4 +1,4 @@
-
+# -*- test-case-name: twisted.test.test_woven -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -232,7 +232,7 @@ class Widget(view.View):
         if DEBUG:
             template = node.toxml()
             log.msg(template)
-        if self.tagName and str(node.tagName) != self.tagName:
+        if node is not self.templateNode:
             parent = node.parentNode
             node = document.createElement(self.tagName)
             node.parentNode = parent
