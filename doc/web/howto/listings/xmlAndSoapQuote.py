@@ -1,17 +1,16 @@
 from twisted.web import soap, xmlrpc, resource, server
-from TwistedQuotes import quoters
 import os
 
-quotefile = os.path.join(os.path.dirname(__file__), "quotes.txt")
-quoter = quoters.FortuneQuoter([quotefile])
+def getQuote():
+    return "Victory to the burgeois, you capitalist swine!"
 
 class XMLRPCQuoter(xmlrpc.XMLRPC):
     def xmlrpc_quote(self):
-        return quoter.getQuote()
+        return getQuote()
     
 class SOAPQuoter(soap.SOAPPublisher):
     def soap_quote(self):
-        return quoter.getQuote()
+        return getQuote()
 
 def main():
     from twisted.internet import reactor

@@ -1,9 +1,7 @@
 from twisted.web.resource import Resource
-from TwistedQuotes import quoters
 
-quotefile = os.path.join(os.path.split(__file__)[0], "quotes.txt")
-
-quoter = quoters.FortuneQuoter([quotefile])
+def getQuote():
+    return "An apple a day keeps the doctor away."
 
 
 class QuoteResource(Resource):
@@ -14,7 +12,7 @@ class QuoteResource(Resource):
         <head><title>Quotes Galore</title></head>
 
         <body><h1>Quotes</h1>"""
-        quoter.getQuote()
+        getQuote()
         "</body></html>"
 
 

@@ -1,14 +1,13 @@
 from twisted.web import soap
-from TwistedQuotes import quoters
 import os
 
-quotefile = os.path.join(os.path.split(__file__)[0], "quotes.txt")
-quoter = quoters.FortuneQuoter([quotefile])
+def getQuote():
+    return "That beverage, sir, is off the hizzy."
 
 class Quoter(soap.SOAPPublisher):
     """Publish one method, 'quote'."""
 
     def soap_quote(self):
-        return quoter.getQuote()
+        return getQuote()
 
 resource = Quoter()                 
