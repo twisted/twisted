@@ -502,6 +502,19 @@ class BaseUnslicer:
     def abort(self, failure):
         self.protocol.abandonUnslicer(failure, self)
 
+    def explode(self, failure):
+        """If something goes wrong in a Deferred callback, it may be too
+        late to reject the token and to normal error handling. I haven't
+        figured out how to do sensible error-handling in this situation.
+        This method exists to make sure that the exception shows up
+        *somewhere*. If this is called, it is also like that a placeholder
+        (probably a Deferred) will be left in the unserialized object about
+        to be handed to the RootUnslicer.
+        """
+        print "KABOOM"
+        print failure
+        self.protocol.exploded = failure
+
 class LeafUnslicer(BaseUnslicer):
     # inherit from this to reject any child nodes
 
@@ -527,6 +540,9 @@ class UnicodeUnslicer(LeafUnslicer):
         return None # no size limit
 
     def receiveChild(self, obj):
+        if isinstance(obj, UnbananaFailure):
+            self.abort(obj)
+            return
         if self.string != None:
             raise BananaError("already received a string",
                               self.where())
@@ -548,15 +564,12 @@ class ListUnslicer(BaseUnslicer):
         self.maxLength = constraint.maxLength
         self.itemConstraint = constraint.constraint
 
-    def setup(self, count):
+    def start(self, count):
         #self.opener = foo # could replace it if we wanted to
         self.list = []
         self.count = count
         if self.debug:
             print "%s[%d].start with %s" % (self, self.count, self.list)
-
-    def start(self, count):
-        self.setup(count)
         self.protocol.setObject(count, self.list)
 
     def checkToken(self, typebyte):
@@ -627,22 +640,61 @@ class ListUnslicer(BaseUnslicer):
     def describeSelf(self):
         return "[%d]" % len(self.list)
 
-class TupleUnslicer(ListUnslicer):
+class TupleUnslicer(BaseUnslicer):
     debug = False
+    constraints = None
+
+    def setConstraint(self, constraint):
+        assert isinstance(constraint, schema.TupleConstraint)
+        self.constraints = constraint.constraints
 
     def start(self, count):
-        self.setup(count)
+        self.list = []
+        self.count = count
+        if self.debug:
+            print "%s[%d].start with %s" % (self, self.count, self.list)
         # TODO: optimize by keeping count of child Deferreds rather than
         # scanning the whole self.list each time
         self.finished = False
         self.deferred = Deferred()
         self.protocol.setObject(count, self.deferred)
 
+    def checkToken(self, typebyte):
+        if self.constraints == None:
+            return None
+        if len(self.list) >= len(self.constraints):
+            raise Violation
+        return self.constraints[len(self.list)].checkToken(typebyte)
+
+    def doOpen(self, opentype):
+        where = len(self.list)
+        if self.constraints != None:
+            if where >= len(self.constraints):
+                raise Violation
+            self.constraints[where].checkOpentype(opentype)
+        unslicer = self.opener(opentype)
+        unslicer.opener = self.opener
+        if self.constraints != None:
+            unslicer.setConstraint(self.constraints[where])
+        return unslicer
+
     def update(self, obj, index):
-        ListUnslicer.update(self, obj, index)
+        if self.debug:
+            print "%s[%d].update: [%d]=%s" % (self, self.count, index, obj)
+        self.list[index] = obj
         if self.finished:
             self.checkComplete()
 
+    def receiveChild(self, obj):
+        if isinstance(obj, Deferred):
+            obj.addCallback(self.update, len(self.list))
+            obj.addErrback(self.explode)
+            self.list.append(obj) # placeholder
+        elif isinstance(obj, UnbananaFailure):
+            self.abort(obj)
+        else:
+            self.list.append(obj)
+        
     def checkComplete(self):
         if self.debug:
             print "%s[%d].checkComplete" % (self, self.count)
@@ -666,9 +718,21 @@ class TupleUnslicer(ListUnslicer):
         self.finished = 1
         return self.checkComplete()
 
+    def describeSelf(self):
+        return "[%d]" % len(self.list)
+
 
 class DictUnslicer(BaseUnslicer):
     gettingKey = True
+    keyConstraint = None
+    valueConstraint = None
+    maxKeys = None
+
+    def setConstraint(self, constraint):
+        assert isinstance(constraint, schema.DictConstraint)
+        self.keyConstraint = constraint.keyConstraint
+        self.valueConstraint = constraint.valueConstraint
+        self.maxKeys = constraint.maxKeys
 
     def start(self, count):
         self.d = {}
@@ -676,18 +740,45 @@ class DictUnslicer(BaseUnslicer):
         self.key = None
 
     def checkToken(self, typebyte):
-        # TODO: check constraint
+        if self.maxKeys != None:
+            if len(self.d) >= self.maxKeys:
+                raise Violation
+        if self.gettingKey:
+            if self.keyConstraint:
+                return self.keyConstraint.checkToken(typebyte)
+        else:
+            if self.valueConstraint:
+                return self.valueConstraint.checkToken(typebyte)
         return None # unlimited
 
     def doOpen(self, opentype):
-        # TODO: check constraint
-        return BaseUnslicer.doOpen(self, opentype)
+        if self.maxKeys != None:
+            if len(self.d) >= self.maxKeys:
+                raise Violation
+        if self.gettingKey:
+            if self.keyConstraint:
+                self.keyConstraint.checkOpentype(opentype)
+        else:
+            if self.valueConstraint:
+                self.valueConstraint.checkOpentype(opentype)
+        unslicer = self.opener(opentype)
+        unslicer.opener = self.opener
+        if self.gettingKey:
+            if self.keyConstraint:
+                unslicer.setConstraint(self.keyConstraint)
+        else:
+            if self.valueConstraint:
+                unslicer.setConstraint(self.valueConstraint)
+        return unslicer
 
     def update(self, value, key):
         # this is run as a Deferred callback, hence the backwards arguments
         self.d[key] = value
 
     def receiveChild(self, obj):
+        if isinstance(obj, UnbananaFailure):
+            self.abort(obj)
+            return
         if self.gettingKey:
             self.receiveKey(obj)
         else:
@@ -751,6 +842,9 @@ class VocabUnslicer(LeafUnslicer):
                                   self.where())
 
     def receiveChild(self, token):
+        if isinstance(token, UnbananaFailure):
+            self.abort(token)
+            return
         if self.gettingKey:
             if self.d.has_key(token):
                 raise BananaError("duplicate key '%s'" % token,
@@ -830,6 +924,9 @@ class InstanceUnslicer(BaseUnslicer):
         # TODO: use schema to determine attribute value constraint
 
     def receiveChild(self, obj):
+        if isinstance(obj, UnbananaFailure):
+            self.abort(obj)
+            return
         if self.gettingClassname:
             self.classname = obj
             self.gettingClassname = False
@@ -896,6 +993,9 @@ class ReferenceUnslicer(LeafUnslicer):
                               self.where())
 
     def receiveChild(self, num):
+        if isinstance(num, UnbananaFailure):
+            self.abort(num)
+            return
         if self.finished:
             raise BananaError("ReferenceUnslicer only accepts one int",
                               self.where())
@@ -920,6 +1020,9 @@ class ModuleUnslicer(LeafUnslicer):
                               self.where())
 
     def receiveChild(self, name):
+        if isinstance(name, UnbananaFailure):
+            self.abort(name)
+            return
         if self.finished:
             raise BananaError("ModuleUnslicer only accepts one string",
                               self.where())
@@ -943,6 +1046,9 @@ class ClassUnslicer(LeafUnslicer):
                               self.where())
 
     def receiveChild(self, name):
+        if isinstance(name, UnbananaFailure):
+            self.abort(name)
+            return
         if self.finished:
             raise BananaError("ClassUnslicer only accepts one string",
                               self.where())
@@ -998,6 +1104,9 @@ class MethodUnslicer(BaseUnslicer):
         return unslicer
 
     def receiveChild(self, obj):
+        if isinstance(obj, UnbananaFailure):
+            self.abort(obj)
+            return
         if self.state == 0:
             self.im_func = obj
             self.state = 1
@@ -1040,6 +1149,9 @@ class FunctionUnslicer(LeafUnslicer):
                               self.where())
 
     def receiveChild(self, name):
+        if isinstance(name, UnbananaFailure):
+            self.abort(name)
+            return
         if self.finished:
             raise BananaError("FunctionUnslicer only accepts one string",
                               self.where())
@@ -1068,6 +1180,9 @@ class BooleanUnslicer(LeafUnslicer):
                               self.where())
 
     def receiveChild(self, obj):
+        if isinstance(obj, UnbananaFailure):
+            self.abort(obj)
+            return
         if self.value != None:
             raise BananaError("BooleanUnslicer only accepts one token",
                               self.where())
@@ -1153,6 +1268,11 @@ class RootUnslicer(BaseUnslicer):
         self.objects = {}
         if isinstance(obj, NewVocabulary):
             self.protocol.setIncomingVocabulary(obj.nv)
+            return
+        if self.protocol.exploded:
+            print "protocol exploded, can't deliver object"
+            print self.protocol.exploded
+            self.protocol.receivedObject(self.protocol.exploded)
             return
         self.protocol.receivedObject(obj) # give finished object to Banana
 

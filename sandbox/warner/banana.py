@@ -174,6 +174,7 @@ class Banana(protocol.Protocol):
         self.buffer = ''
         self.skipBytes = 0 # used to discard a single long token
         self.discardCount = 0 # used to discard non-primitive objects
+        self.exploded = None # last-ditch error catcher
 
     def printStack(self, verbose=0):
         print "STACK:"
@@ -584,7 +585,9 @@ class Banana(protocol.Protocol):
         """
 
         if self.debug:
-            print "## abandonUnslicer called while decoding '%s'" % failure.where
+            print "## abandonUnslicer called"
+            if isinstance(failure, UnbananaFailure):
+                print "##  while decoding '%s'" % failure.where
             print "## current stack leading up to abandonUnslicer:"
             import traceback
             traceback.print_stack()

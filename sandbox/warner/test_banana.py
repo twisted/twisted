@@ -590,14 +590,17 @@ class TestBananaMixin:
         assert len(str) < 128
         return chr(len(str)) + "\x82" + str
 
+def join(*args):
+    return "".join(args)
+
 class ByteStream(TestBananaMixin, unittest.TestCase):
 
     def test_list(self):
         obj = [1,2]
-        expected = "".join([self.OPEN("list", 0),
-                            self.INT(1), self.INT(2),
-                            self.CLOSE(0),
-                            ])
+        expected = join(self.OPEN("list", 0),
+                         self.INT(1), self.INT(2),
+                        self.CLOSE(0),
+                        )
         self.wantEqual(self.encode(obj), expected)
 
     def test_ref6(self):
@@ -605,15 +608,15 @@ class ByteStream(TestBananaMixin, unittest.TestCase):
         obj = ([],)
         obj[0].append((obj,))
         OPEN = self.OPEN; CLOSE = self.CLOSE; INT = self.INT; STR = self.STR
-        expected = "".join([OPEN("tuple",0),
-                             OPEN("list",1),
-                              OPEN("tuple",2),
-                               OPEN("reference",3),
-                                INT(0),
-                               CLOSE(3),
-                              CLOSE(2),
-                             CLOSE(1),
-                            CLOSE(0)])
+        expected = join(OPEN("tuple",0),
+                         OPEN("list",1),
+                          OPEN("tuple",2),
+                           OPEN("reference",3),
+                            INT(0),
+                           CLOSE(3),
+                          CLOSE(2),
+                         CLOSE(1),
+                        CLOSE(0))
         self.wantEqual(self.encode(obj), expected)
 
     def test_two(self):
@@ -624,17 +627,17 @@ class ByteStream(TestBananaMixin, unittest.TestCase):
         # needs OrderedDictSlicer for the test to work
         OPEN = self.OPEN; CLOSE = self.CLOSE; INT = self.INT; STR = self.STR
 
-        expected = "".join([OPEN("instance",0), STR(fooname),
-                             STR("a"), INT(1),
-                             STR("b"),
-                              OPEN("list",1),
-                               INT(2), INT(3),
-                               CLOSE(1),
-                             STR("c"),
-                               OPEN("instance",2), STR(barname),
-                                STR("d"), INT(4),
-                               CLOSE(2),
-                            CLOSE(0)])
+        expected = join(OPEN("instance",0), STR(fooname),
+                         STR("a"), INT(1),
+                         STR("b"),
+                          OPEN("list",1),
+                           INT(2), INT(3),
+                          CLOSE(1),
+                         STR("c"),
+                           OPEN("instance",2), STR(barname),
+                            STR("d"), INT(4),
+                           CLOSE(2),
+                        CLOSE(0))
         self.wantEqual(self.encode(f1), expected)
 
 class InboundByteStream(unittest.TestCase):
@@ -664,6 +667,9 @@ class InboundByteStream(unittest.TestCase):
         num = -num
         assert num < 128
         return chr(num) + "\x83"
+    def STRING(self, string):
+        assert len(string) < 128
+        return chr(len(string)) + "\x82" + string
 
     def decode(self, string):
         banana = TestBanana()
@@ -689,6 +695,7 @@ class InboundByteStream(unittest.TestCase):
         self.check("", "\x82")
         self.check("", "\x00\x82")
         self.check("", "\x00\x00\x82")
+        self.check("", "\x00" * 64 + "\x82")
         self.assertRaises(BananaError, self.decode, "\x00" * 65)
         #self.decode("\x00" * 65 + "\x82")
         self.assertRaises(BananaError, self.decode, "\x00" * 65 + "\x82")
@@ -696,6 +703,7 @@ class InboundByteStream(unittest.TestCase):
         self.check("a", "\x01\x82a")
         self.check("b"*130, "\x02\x01\x82" + "b"*130 + "extra")
         self.check("c"*1025, "\x01\x08\x82" + "c" * 1025 + "extra")
+        self.check("fluuber", self.STRING("fluuber"))
 
     def decode2(self, string, constraint, childConstraint=None):
         banana = TestBanana()
@@ -704,53 +712,187 @@ class InboundByteStream(unittest.TestCase):
         banana.object = None
         banana.dataReceived(string)
         return banana.object
-    def check2(self, stream, obj, constraint, childConstraint=None):
+    def conform2(self, stream, obj, constraint, childConstraint=None):
         obj2 = self.decode2(stream, constraint, childConstraint)
         self.failUnlessEqual(obj, obj2)
-    def violates(self, stream, where, constraint, childConstraint=None):
+    def violate2(self, stream, where, constraint, childConstraint=None):
         obj2 = self.decode2(stream, constraint, childConstraint)
-        self.failUnless(isinstance(obj2, slicer.UnbananaFailure))
+        self.failUnless(isinstance(obj2, slicer.UnbananaFailure),
+                        "unslicer failed to fail")
         self.failUnlessEqual(obj2.where, where)
 
     def testConstrainedInt(self):
         pass # TODO: after implementing new LONGINT token
 
     def testConstrainedString(self):
-        self.check2("\x82", "",
+        self.conform2("\x82", "",
                     schema.StringConstraint(10))
-        self.check2("\x0a\x82" + "a"*10 + "extra", "a"*10,
+        self.conform2("\x0a\x82" + "a"*10 + "extra", "a"*10,
                     schema.StringConstraint(10))
-        self.violates("\x0b\x82" + "a"*11 + "extra",
+        self.violate2("\x0b\x82" + "a"*11 + "extra",
                       "root",
                       schema.StringConstraint(10))
 
     def testList(self):
         self.check([1,2],
-                   (self.OPENlist(1) + self.INT(1) + self.INT(2) +
-                    self.CLOSE(1)))
+                   join(self.OPENlist(1), self.INT(1), self.INT(2),
+                        self.CLOSE(1)))
         self.check([1,"b"],
-                   (self.OPENlist(1) + self.INT(1) +
-                    "\x01\x82b" +
-                    self.CLOSE(1)))
+                   join(self.OPENlist(1), self.INT(1),
+                        "\x01\x82b",
+                        self.CLOSE(1)))
         self.check([1,2,[3,4]],
-                   (self.OPENlist(1) + self.INT(1) + self.INT(2) +
-                    (self.OPENlist(2) + self.INT(3) + self.INT(4) +
-                     self.CLOSE(2)) +
-                    self.CLOSE(1)))
+                   join(self.OPENlist(1), self.INT(1), self.INT(2),
+                         self.OPENlist(2), self.INT(3), self.INT(4),
+                         self.CLOSE(2),
+                        self.CLOSE(1)))
 
     def testConstrainedList(self):
-        self.check2((self.OPENlist(1) + self.INT(1) + self.INT(2) +
-                     self.CLOSE(1)),
-                    [1,2],
-                    schema.ListOf(int))
-        self.violates((self.OPENlist(1) + self.INT(1) +
-                       "\x01\x82b" +
-                       self.CLOSE(1)),
+        self.conform2(join(self.OPENlist(1), self.INT(1), self.INT(2),
+                           self.CLOSE(1)),
+                      [1,2],
+                      schema.ListOf(int))
+        self.violate2(join(self.OPENlist(1), self.INT(1), "\x01\x82b",
+                           self.CLOSE(1)),
                       "root.[1]",
                       schema.ListOf(int))
+        self.conform2(join(self.OPENlist(1),
+                            self.INT(1), self.INT(2), self.INT(3),
+                           self.CLOSE(1)),
+                      [1,2,3],
+                      schema.ListOf(int, maxLength=3))
+        self.violate2(join(self.OPENlist(1),
+                            self.INT(1), self.INT(2), self.INT(3), self.INT(4),
+                           self.CLOSE(1)),
+                      "root.[3]",
+                      schema.ListOf(int, maxLength=3))
+        a100 = chr(100) + "\x82" + "a"*100
+        b100 = chr(100) + "\x82" + "b"*100
+        self.conform2(join(self.OPENlist(1), a100, b100, self.CLOSE(1)),
+                      ["a"*100, "b"*100],
+                      schema.ListOf(schema.StringConstraint(100), 2))
+        self.violate2(join(self.OPENlist(1), a100, b100, self.CLOSE(1)),
+                      "root.[0]",
+                      schema.ListOf(schema.StringConstraint(99), 2))
+        self.violate2(join(self.OPENlist(1), a100, b100, a100, self.CLOSE(1)),
+                      "root.[2]",
+                      schema.ListOf(schema.StringConstraint(100), 2))
 
+        self.conform2(join(self.OPENlist(1),
+                            self.OPENlist(2),
+                             self.INT(11), self.INT(12),
+                            self.CLOSE(2),
+                            self.OPENlist(3),
+                             self.INT(21), self.INT(22), self.INT(23),
+                            self.CLOSE(3),
+                           self.CLOSE(1)),
+                      [[11,12], [21, 22, 23]],
+                      schema.ListOf(schema.ListOf(int, maxLength=3)))
 
-    
+        self.violate2(join(self.OPENlist(1),
+                            self.OPENlist(2),
+                             self.INT(11), self.INT(12),
+                            self.CLOSE(2),
+                            self.OPENlist(3),
+                             self.INT(21), self.INT(22), self.INT(23),
+                            self.CLOSE(3),
+                           self.CLOSE(1)),
+                      "root.[1].[2]",
+                      schema.ListOf(schema.ListOf(int, maxLength=2)))
+
+    def testTuple(self):
+        self.check((1,2),
+                   join(self.OPENtuple(1), self.INT(1), self.INT(2),
+                        self.CLOSE(1)))
+
+    def testConstrainedTuple(self):
+        self.conform2(join(self.OPENtuple(1), self.INT(1), self.INT(2),
+                           self.CLOSE(1)),
+                      (1,2),
+                      schema.TupleOf(int, int))
+        self.violate2(join(self.OPENtuple(1),
+                           self.INT(1), self.INT(2), self.INT(3),
+                           self.CLOSE(1)),
+                      "root.[2]",
+                      schema.TupleOf(int, int))
+        self.violate2(join(self.OPENtuple(1),
+                           self.INT(1), self.STRING("not a number"),
+                           self.CLOSE(1)),
+                      "root.[1]",
+                      schema.TupleOf(int, int))
+        self.conform2(join(self.OPENtuple(1),
+                           self.INT(1), self.STRING("twine"),
+                           self.CLOSE(1)),
+                      (1, "twine"),
+                      schema.TupleOf(int, str))
+        self.conform2(join(self.OPENtuple(1),
+                           self.INT(1),
+                            self.OPENlist(2),
+                             self.INT(1), self.INT(2), self.INT(3),
+                            self.CLOSE(2),
+                           self.CLOSE(1)),
+                      (1, [1,2,3]),
+                      schema.TupleOf(int, schema.ListOf(int)))
+        self.conform2(join(self.OPENtuple(1),
+                           self.INT(1),
+                            self.OPENlist(2),
+                             self.OPENlist(3), self.INT(2), self.CLOSE(3),
+                             self.OPENlist(4), self.INT(3), self.CLOSE(4),
+                            self.CLOSE(2),
+                           self.CLOSE(1)),
+                      (1, [[2], [3]]),
+                      schema.TupleOf(int, schema.ListOf(schema.ListOf(int))))
+        self.violate2(join(self.OPENtuple(1),
+                           self.INT(1),
+                            self.OPENlist(2),
+                             self.OPENlist(3),
+                              self.STRING("nan"),
+                             self.CLOSE(3),
+                             self.OPENlist(4), self.INT(3), self.CLOSE(4),
+                            self.CLOSE(2),
+                           self.CLOSE(1)),
+                      "root.[1].[0].[0]",
+                      schema.TupleOf(int, schema.ListOf(schema.ListOf(int))))
+
+    def testDict(self):
+        self.check({1:"a", 2:["b","c"]},
+                   join(self.OPENdict(1),
+                        self.INT(1), self.STRING("a"),
+                        self.INT(2), self.OPENlist(2),
+                         self.STRING("b"), self.STRING("c"),
+                        self.CLOSE(2),
+                        self.CLOSE(1)))
+
+    def testConstrainedDict(self):
+        self.conform2(join(self.OPENdict(1),
+                           self.INT(1), self.STRING("a"),
+                           self.INT(2), self.STRING("b"),
+                           self.INT(3), self.STRING("c"),
+                           self.CLOSE(1)),
+                      {1:"a", 2:"b", 3:"c"},
+                      schema.DictOf(int, str))
+        self.conform2(join(self.OPENdict(1),
+                           self.INT(1), self.STRING("a"),
+                           self.INT(2), self.STRING("b"),
+                           self.INT(3), self.STRING("c"),
+                           self.CLOSE(1)),
+                      {1:"a", 2:"b", 3:"c"},
+                      schema.DictOf(int, str, maxKeys=3))
+        self.violate2(join(self.OPENdict(1),
+                           self.INT(1), self.STRING("a"),
+                           self.INT(2), self.INT(10),
+                           self.INT(3), self.STRING("c"),
+                           self.CLOSE(1)),
+                      "root.{}[2]",
+                      schema.DictOf(int, str))
+        self.violate2(join(self.OPENdict(1),
+                           self.INT(1), self.STRING("a"),
+                           self.INT(2), self.STRING("b"),
+                           self.INT(3), self.STRING("c"),
+                           self.CLOSE(1)),
+                      "root.{}",
+                      schema.DictOf(int, str, maxKeys=2))
+
 class ConstrainedRootUnslicer(RootUnslicer):
     openRegistry = slicer.UnslicerRegistry2
 
