@@ -1,3 +1,8 @@
+2004-01-10  Andrew Bennetts <spiv@twistedmatrix.com>
+
+	* twisted/protocols/ftp.py: Added support for partial downloads
+	and uploads to FTPClient (see the offset parameter of retrieveFile).
+
 2004-01-09  Jp Calderone  <exarkun@twistedmatrix.com>
 
 	* twisted/protocols/imap4.py: Add IMessageCopier interface to allow
