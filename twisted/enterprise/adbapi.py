@@ -223,7 +223,7 @@ class ConnectionPool:
                 log.msg('adbapi connecting: %s %s%s' % (self.dbapiName,
                                                         self.connargs or '',
                                                         self.connkw or ''))
-            conn = apply(self.dbapi.connect, self.connargs, self.connkw)
+            conn = self.dbapi.connect(*self.connargs, **self.connkw)
             self.connections[tid] = conn
         return conn
 
@@ -244,7 +244,7 @@ class ConnectionPool:
         conn = self.connect()
         curs = conn.cursor()
         try:
-            apply(curs.execute, args, kw)
+            curs.execute(*args, **kw)
             result = curs.fetchall()
             curs.close()
             conn.commit()
@@ -259,7 +259,7 @@ class ConnectionPool:
         conn = self.connect()
         curs = conn.cursor()
         try:
-            apply(curs.execute, args, kw)
+            curs.execute(*args, **kw)
             curs.close()
             conn.commit()
         except:
@@ -278,7 +278,7 @@ class ConnectionPool:
 
     def __setstate__(self, state):
         self.__dict__ = state
-        apply(self.__init__, (self.dbapiName, )+self.connargs, self.connkw)
+        self.__init__(self.dbapiName, *self.connargs, **self.connkw)
 
     def _deferToThread(self, f, *args, **kwargs):
         """Internal function.
@@ -307,9 +307,8 @@ class ConnectionPool:
 
     def interaction(self, interaction, callback, errback, *args, **kw):
         warnings.warn("This is deprecated. Use runInteraction", DeprecationWarning)
-        apply(self._deferToThread,
-              (self._runInteraction, interaction) + args, kw).addCallbacks(
-            callback, errback)
+        self._deferToThread(self._runInteraction, interaction,
+                            *args, **kw).addCallbacks(callback, errback)
 
 
 class Augmentation:
@@ -364,21 +363,22 @@ class Augmentation:
         warnings.warn("This is deprecated. Use the ConnectionPool.",
                       DeprecationWarning)
         d = defer.Deferred()
-        apply(self.dbpool.query, (d.callback, d.errback)+args, kw)
+        self.dbpool.query(d.callback, d.errback, *args, **kw)
         return d
 
     def runOperation(self, *args, **kw):
         warnings.warn("This is deprecated. Use the ConnectionPool.",
                       DeprecationWarning)
         d = defer.Deferred()
-        apply(self.dbpool.operation, (d.callback,d.errback)+args, kw)
+        self.dbpool.operation(d.callback, d.errback, *args, **kw)
         return d
 
     def runInteraction(self, interaction, *args, **kw):
         warnings.warn("This is deprecated. Use the ConnectionPool.",
                       DeprecationWarning)
         d = defer.Deferred()
-        apply(self.dbpool.interaction, (interaction,d.callback,d.errback,)+args, kw)
+        self.dbpool.interaction(interaction, d.callback, d.errback,
+                                *args, **kw)
         return d
 
 

@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.test.test_enterprise -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -171,8 +172,8 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
             # find the row in the cache or add it
             resultObject = self.findInCache(tableInfo.rowClass, kw)
             if not resultObject:
-                resultObject = apply(tableInfo.rowFactoryMethod[0],
-                                     (tableInfo.rowClass, data, kw))
+                meth = tableInfo.rowFactoryMethod[0]
+                resultObject = meth(tableInfo.rowClass, data, kw)
                 self.addToCache(resultObject)
                 newRows.append(resultObject)
             results.append(resultObject)
