@@ -3,7 +3,8 @@
 	* twisted/web/vhost.py: add a virtual host monster to support twisted
 	sites behind a reverse proxy
 
-	* twisted/tap/web.py twisted/web/script.py doc/man/mktap.1: adding an option to have a resource script as the root
+	* twisted/tap/web.py twisted/web/script.py
+        doc/man/mktap.1: adding an option to have a resource script as the root
 
 2002-10-13  Moshe Zadka <moshez@twistedmatrix.com>
 
@@ -32,9 +33,6 @@
 
 	* .: Releasing 0.99.4
 
-  2002-10-07  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
-  
-  	* .: Release 0.99.4rc1
 2002-10-07  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
 
 	* .: Release 0.99.4rc1
