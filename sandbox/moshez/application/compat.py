@@ -80,7 +80,7 @@ class IOldApplication(components.Interface):
 
 
 
-class ServiceNetwork:
+class _ServiceNetwork:
 
     __implements__ = IOldApplication,
 
@@ -171,7 +171,7 @@ class ServiceNetwork:
                       category=RuntimeWarning)
 
 
-components.registerAdapter(ServiceNetwork,
+components.registerAdapter(_ServiceNetwork,
                            service.IServiceCollection, IOldApplication)
 
 
