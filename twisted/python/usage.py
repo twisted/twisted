@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: usage.py,v 1.39 2003/01/16 03:32:31 exarkun Exp $
+# $Id: usage.py,v 1.40 2003/04/11 16:56:17 exarkun Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -173,7 +173,7 @@ class Options(UserDict.UserDict):
             opts, args = getopt.getopt(options,
                                        self.shortOpt, self.longOpt)
         except getopt.error, e:
-            raise UsageError, e
+            raise UsageError, str(e).capitalize()
 
 
         for opt, arg in opts:
@@ -203,7 +203,7 @@ class Options(UserDict.UserDict):
                 raise UsageError("Unknown command: %s" % sub)
         else:
             try:
-                apply(self.parseArgs,args)
+                self.parseArgs(*args)
             except TypeError:
                 raise UsageError("Wrong number of arguments.")
 
@@ -403,7 +403,7 @@ class Options(UserDict.UserDict):
             chunks = docMakeChunks(cmdDicts, width)
             commands = 'Commands:\n' + ''.join(chunks)
         else:
-            commands = ''
+            commands = '\n'
 
         longToShort = {}
         for key, value in self.synonyms.items():

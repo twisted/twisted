@@ -219,7 +219,9 @@ def makeStatBar(width, maxPosition, doneChar = '=', undoneChar = '-', currentCha
 """ % (doneChar * 3, currentChar, undoneChar * 3, width, maxPosition, currentChar)
     return statBar
 
+
 __all__ = [
     "uniquify", "padTo", "getPluginDirs", "addPluginDir", "sibpath",
-    "getPassword", "dict", "println", "keyed_md5", "makeStatBar"
+    "getPassword", "dict", "println", "keyed_md5", "makeStatBar",
+    "OrderedDict",
 ]

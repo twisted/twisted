@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: mktap.py,v 1.32 2003/04/09 06:46:25 exarkun Exp $
+# $Id: mktap.py,v 1.33 2003/04/11 16:56:18 exarkun Exp $
 
 """ Implementation module for the `mktap` command.
 """
@@ -25,7 +25,7 @@ from twisted.internet import app
 from twisted.python import usage, util
 from twisted.spread import pb
 
-import sys, traceback, os, cPickle, glob
+import sys, traceback, os, cPickle, glob, operator
 try:
     import pwd
 except ImportError:
@@ -72,9 +72,8 @@ def getModule(tapLookup, type):
         print """Please select one of: %s""" % ' '.join(tapLookup.keys())
         sys.exit(2)
 
-class GeneralOptions(usage.Options):
-    synopsis = """Usage:    mktap [options] <command> [command options]
- """
+class GeneralOptions:
+    synopsis = """Usage:    mktap [options] <command> [command options] """
 
     uid = gid = None
     if hasattr(os, 'getgid'):
@@ -88,14 +87,16 @@ class GeneralOptions(usage.Options):
     ]
     del uid, gid
 
-    optFlags = [['xml', 'x',       "DEPRECATED: same as --type=xml"],
-                ['source', 's',    "DEPRECATED: same as --type=source"],
-                ['encrypted', 'e', "Encrypt file before writing (will make the extension of the resultant file begin with 'e')"],
-                ['debug', 'd',     "Show debug information for plugin loading"]]
+    optFlags = [
+        ['xml', 'x',       "DEPRECATED: same as --type=xml"],
+        ['source', 's',    "DEPRECATED: same as --type=source"],
+        ['encrypted', 'e', "Encrypt file before writing (will make the extension of the resultant file begin with 'e')"],
+        
+        ['debug', 'd',     "Show debug information for plugin loading"],
+        ['progress', 'p',  "Show progress information for plugin loading"],
+    ]
 
-
-    def __init__(self, tapLookup):
-        usage.Options.__init__(self)
+    def init(self, tapLookup):
         self.subCommands = []
         for (x, y) in tapLookup.items():
             self.subCommands.append(
@@ -104,64 +105,90 @@ class GeneralOptions(usage.Options):
         self.subCommands.sort()
         self['help'] = 0 # default
 
-    def opt_help(self):
-        """display this message"""
-        # Ugh, we can't print the help now, we need to let getopt
-        # finish parsinsg and parseArgs to run.
-        self['help'] = 1
-
-    def opt_progress(self):
-        """Display the progress of plugin-loading"""
-        import warnings
-        warnings.warn('The --progress flag is deprecated')
-    opt_p = opt_progress
-
     def postOptions(self):
-        self['debug'] = int(self['debug'])
-
         # backwards compatibility for old --xml and --source options
         if self['xml']:
             self['type'] = 'xml'
         if self['source']:
             self['type'] = 'source'
 
+    def opt_help(self):
+        """Display this message"""
+        self['help'] = 1
+    opt_h = opt_help
+
     def parseArgs(self, *args):
         self.args = args
 
+class FirstPassOptions(usage.Options, GeneralOptions):
+    def __init__(self):
+        usage.Options.__init__(self)
+        self['help'] = 0
+        self.params = []
+        self.recursing = 0
+    
+    def opt_help(self):
+        """Display this message"""
+        self['help'] = 1
+    opt_h = opt_help
+    
+    def parseArgs(self, *rest):
+        self.params.extend(rest)
+
+    def _reportDebug(self, info):
+        print 'Debug: ', info
+    
+    def _reportProgress(self, info):
+        s = self.pb(info)
+        if s:
+            print '\rProgress: ', s,
+        if info == 1.0:
+            print '\r' + (' ' * 79) + '\r',
+
+    def postOptions(self):
+        if self.recursing:
+            GeneralOptions.postOptions(self)
+            return
+        debug = progress = None
+        if self['debug']:
+            debug = self._reportDebug
+        if self['progress']:
+            progress = self._reportProgress
+            self.pb = util.makeStatBar(60, 1.0)
+        self.tapLookup = loadPlugins(debug, progress)
+        self.init(self.tapLookup)
+        
+        self.recursing = 1
+        self.parseOptions(self.params)
+
+        if not hasattr(self, 'subOptions') or self['help']:
+            print str(self)
+            sys.exit(2)
+        elif hasattr(self, 'subOptions'):
+            if self.subOptions.has_key('help') and self.subOptions['help']:
+                print str(self.subOptions)
+                sys.exit(2)
+        
 
 # Rest of code in "run"
 
 def run():
-    debugInfo = []
-    tapLookup = loadPlugins(debugInfo.append, None)
-    options = GeneralOptions(tapLookup)
+    options = FirstPassOptions()
     try:
-        try:
-            options.parseOptions(sys.argv[1:])
-        finally:
-            if options['debug']:
-                for debug in debugInfo:
-                    log.err(debug)
-    except (SystemExit, KeyboardInterrupt):
-        # We don't really want to catch these at all...
-        raise
-    except Exception, e:
-        # XXX: While developing, I find myself frequently disabling
-        # this except block when I want to see what screwed up code
-        # caused my updateApplication crash.  That probably means
-        # we're not doing something right here.  - KMT
-        print str(sys.exc_value)
+        options.parseOptions(sys.argv[1:])
+    except usage.UsageError, e:
         print str(options)
+        print str(e)
         sys.exit(2)
-    
+    except (SystemExit, KeyboardInterrupt):
+        sys.exit(1)
+    except:
+        import traceback
+        print 'An error unexpected occurred:'
+        print ''.join(traceback.format_exception(*sys.exc_info())[-3:])
+        sys.exit(2)
 
-    if options['help'] or not hasattr(options, 'subOptions'):
-        if hasattr(options, 'subOptions'):
-            options.subOptions.opt_help()
-        usage.Options.opt_help(options)
-        sys.exit()
-
-    mod = getModule(tapLookup, options.subCommand)
+    mod = getModule(options.tapLookup, options.subCommand)
 
     if options['uid'] is not None:
         try:
@@ -191,7 +218,14 @@ def run():
     except usage.error, ue:
         print "Usage Error: %s" % ue
         options.subOptions.opt_help()
+        sys.exit(2)
+    except (SystemExit, KeyboardInterrupt):
         sys.exit(1)
+    except:
+        import traceback
+        print 'An error unexpected occurred:'
+        print ''.join(traceback.format_exception(*sys.exc_info())[-3:])
+        sys.exit(2)
 
     if options['appname']:
         a.processName = options['appname']
