@@ -58,26 +58,27 @@ class EventDispatcher:
         self.prefix = eventprefix
         self._eventObservers = {}
         self._xpathObservers = {}
+        self._orderedXpathObserverKeys = []
         self._dispatchDepth = 0  # Flag indicating levels of dispatching in progress
         self._updateQueue = [] # Queued updates for observer ops
 
     def _isEvent(self, event):
         return _isStr(event) and self.prefix == event[0:len(self.prefix)]
 
-    def addOnetimeObserver(self, event, observerfn, *args, **kwargs):
-        self._addObserver(True, event, observerfn, *args, **kwargs)
+    def addOnetimeObserver(self, event, observerfn, priority = None, *args, **kwargs):
+        self._addObserver(True, event, observerfn, priority, *args, **kwargs)
 
-    def addObserver(self, event, observerfn, *args, **kwargs):
-        self._addObserver(False, event, observerfn, *args, **kwargs)
+    def addObserver(self, event, observerfn, priority = None, *args, **kwargs):
+        self._addObserver(False, event, observerfn, priority, *args, **kwargs)
 
     # AddObserver takes several different types of arguments
     # - xpath (string or object form)
     # - event designator (string that starts with a known prefix)
-    def _addObserver(self, onetime, event, observerfn, *args, **kwargs):
+    def _addObserver(self, onetime, event, observerfn, priority, *args, **kwargs):
         # If this is happening in the middle of the dispatch, queue
         # it up for processing after the dispatch completes
         if self._dispatchDepth > 0:
-            self._updateQueue.append(lambda:self.addObserver(event, observerfn, *args, **kwargs))
+            self._updateQueue.append(lambda:self.addObserver(event, observerfn, priority, *args, **kwargs))
             return
 
         observers = None
@@ -89,6 +90,10 @@ class EventDispatcher:
             else:
                 # Treat as xpath
                 event = xpath.intern(event)
+                if (priority != None):
+                    event.priority = priority
+                else:
+                    event.priority = 0
                 observers = self._xpathObservers
         else:
             # Treat as xpath
@@ -100,6 +105,12 @@ class EventDispatcher:
             observers[event] = cbl
         else:
             observers[event].addCallback(onetime, observerfn, *args, **kwargs)
+
+        # Update the priority ordered list of xpath keys --
+        # This really oughta be rethought for efficiency
+        self._orderedXpathObserverKeys = self._xpathObservers.keys()
+        self._orderedXpathObserverKeys.sort()
+        self._orderedXpathObserverKeys.reverse()
 
 
     def removeObserver(self, event, observerfn):
@@ -123,6 +134,12 @@ class EventDispatcher:
         assert event in observers
         observers[event].removeCallback(observerfn)
 
+        # Update the priority ordered list of xpath keys --
+        # This really oughta be rethought for efficiency
+        self._orderedXpathObserverKeys = self._xpathObservers.keys()
+        self._orderedXpathObserverKeys.sort()
+        self._orderedXpathObserverKeys.reverse()
+
 
     def dispatch(self, object, event = None):
         # Aiyiyi! If this dispatch occurs within a dispatch
@@ -134,7 +151,8 @@ class EventDispatcher:
             if event in self._eventObservers:
                 self._eventObservers[event].callback(object)
         else:
-            for (query, callbacklist) in self._xpathObservers.iteritems():
+            for query in self._orderedXpathObserverKeys:
+                callbacklist = self._xpathObservers[query]
                 if query.matches(object):
                     callbacklist.callback(object)
 

@@ -1,3 +1,4 @@
+
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -37,6 +38,19 @@ class CallbackTracker2 (CallbackTracker):
 
     def call2(self, _):
         self.dispatcher.addObserver("/presence", self.call)
+
+class OrderedCallbackTracer:
+    def __init__(self):
+        self.callList = []
+
+    def call1(self, object):
+        self.callList.append(self.call1)
+
+    def call2(self, object):
+        self.callList.append(self.call2)
+
+    def call3(self, object):
+        self.callList.append(self.call3)
 
 class EventDispatcherTest(unittest.TestCase):
     def testStuff(self):
@@ -98,5 +112,26 @@ class EventDispatcherTest(unittest.TestCase):
         self.assertEquals(cb.called, 1)
         d.dispatch(msg)
         self.assertEquals(cb.called, 1)
+
+    def testPriorityDispatch(self):
+        d = EventDispatcher()
+        msg = Element(("ns", "message"))
+        msg.addElement("foobar")
+        cb = OrderedCallbackTracer()
+
+        # In order for the priority patch to work, each
+        # XPath must be unique (since we do intern'ing
+        # All of the xpaths below should match our example
+        # with varying degrees of detail
+        d.addObserver("/message", cb.call1)
+        d.addObserver("/message[@xmlns='ns']", cb.call2, 5)
+        d.addObserver("/message/foobar", cb.call3, 1)
+
+        expectedOrder = [cb.call2, cb.call3, cb.call1]
+
+        d.dispatch(msg)
+
+        self.assertEquals(expectedOrder, cb.callList)
+        
         
 
