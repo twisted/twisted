@@ -118,7 +118,7 @@ class Function:
         if i != len(args):
             raise TypeError("Wrong number of arguments!")
         
-        newEnv = extendEnv(VAR, self.env, lisp_map(lambda x, env=self.env: cons(car(x), evalExp(cadr(x), env)),  bindings))
+        newEnv = extendEnv(VAR, self.env, func_map(lambda x, env=self.env: cons(car(x), evalExp(cadr(x), env)),  bindings))
         return evalExp(self.body, newEnv)
 
 class Macro(Function):
@@ -203,7 +203,7 @@ def backquotize(exp, env):
         return func_list(exp)
             
 def eval_let(exp, env):
-    newEnv = extendEnv(VAR, env, lisp_map(lambda x, env=env: cons(car(x), evalExp(cadr(x), env)), car(exp)))
+    newEnv = extendEnv(VAR, env, func_map(lambda x, env=env: cons(car(x), evalExp(cadr(x), env)), car(exp)))
     exp = cdr(exp)
     while exp:
         rv = evalExp(car(exp), newEnv)
