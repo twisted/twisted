@@ -5,9 +5,9 @@
 
 """Test code for basic Factory classes"""
 
-from twisted.trial import unittest
+from twisted.trial import unittest, util
 
-from twisted.internet import reactor
+from twisted.internet import reactor, defer
 from twisted.internet.protocol import Factory, ReconnectingClientFactory
 from twisted.protocols.basic import Int16StringReceiver
 import time, pickle
@@ -65,6 +65,7 @@ class ReconnectingFactoryTestCase(unittest.TestCase):
         now = time.time()
         while len(f.allMessages) != 2 and (time.time() < now + 10):
             reactor.iterate(0.1)
+        util.wait(defer.maybeDeferred(port.stopListening))
         
         self.assertEquals(len(f.allMessages), 2,
                           "not enough messages -- %s" % f.allMessages)
