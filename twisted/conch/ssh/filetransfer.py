@@ -371,6 +371,8 @@ class FileTransferServer(FileTransferBase):
             elif reason.value.errno == errno.EACCES: # permission denied
                 code = FX_PERMISSION_DENIED
                 message = reason.value.strerror
+            else:
+                log.err(reason)
         elif reason.type == EOFError: # EOF
             code = FX_EOF
             if reason.value.args:
@@ -395,21 +397,24 @@ class FileTransferServer(FileTransferBase):
         euid = os.geteuid()
         egid = os.getegid()
         uid, gid = self.avatar.getUserGroupId()
+        os.setegid(0)
+        os.seteuid(0)
         os.setegid(gid)
         os.seteuid(uid)
-        # the next two lines fix some kind of timing error with WinSCP
-        if os.geteuid() != uid: raise IOError(errno.EACCES)
-        if os.getegid() != gid: raise IOError(errno.EACCES)
         try:
             if not hasattr(f,'__iter__'):
                 f = [(f, ) + args]
             for i in f:
                 r = i[0](*i[1:])
         except:
+            os.setegid(0)
+            os.seteuid(0)
             os.setegid(egid)
             os.seteuid(euid)
             raise
         else:
+            os.setegid(0)
+            os.seteuid(0)
             os.setegid(egid)
             os.seteuid(euid)
             return r
