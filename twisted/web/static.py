@@ -152,7 +152,10 @@ class File(resource.Resource, styles.Versioned):
                     request.prepath[-1] = path
                     break
             else:
-                return widgets.WidgetPage(DirectoryListing(self.path))
+                if os.path.exists(self.path):
+                    return widgets.WidgetPage(DirectoryListing(self.path))
+                else:
+                    return error.NoResource("File not found.")
         newpath = os.path.join(self.path, path)
         # forgive me, oh lord, for I know not what I do
         p, ext = os.path.splitext(newpath)
