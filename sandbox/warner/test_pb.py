@@ -553,6 +553,15 @@ class MyRemoteCopy3Unslicer(flavors.RemoteCopyUnslicer):
 components.registerAdapter(MyCopyable3Slicer, MyCopyable3, tokens.ISlicer)
 pb.registerRemoteCopy("MyCopyable3name", MyRemoteCopy3Unslicer)
 
+class MyCopyable4(pb.Copyable):
+    pass
+class MyRemoteCopy4(pb.RemoteCopy):
+    stateSchema = schema.AttributeDictConstraint(('foo', int),
+                                                 ('bar', str))
+    pass
+pb.registerRemoteCopy(reflect.qual(MyCopyable4), MyRemoteCopy4)
+
+
 class RIHelper(pb.RemoteInterface):
     def set(obj=schema.Any()): return bool
     def set2(obj1=schema.Any(), obj2=schema.Any()): return bool
@@ -597,6 +606,12 @@ class TestCopyable(unittest.TestCase, TargetMixin):
         d = rr.callRemote("set", obj=arg)
         self.failUnless(dr(d))
         return target.obj
+
+    def failToSend(self, arg):
+        rr, target = self.setupTarget(HelperTarget())
+        d = rr.callRemote("set", obj=arg)
+        why = de(d)
+        return why
 
     def testCopy0(self):
         res = self.send(1)
@@ -664,6 +679,27 @@ class TestCopyable(unittest.TestCase, TargetMixin):
         self.failUnlessEqual(res.e, 2)
         self.failUnlessEqual(res.f, "yes")
         self.failIf(hasattr(res, "a"))
+
+    def testCopy4(self):
+        obj = MyCopyable4()
+        obj.foo = 12
+        obj.bar = "bar"
+        res = self.send(obj)
+        self.failUnless(isinstance(res, MyRemoteCopy4))
+        self.failUnlessEqual(res.foo, 12)
+        self.failUnlessEqual(res.bar, "bar")
+
+        obj.bad = "unwanted attribute"
+        why = self.failToSend(obj)
+        self.failUnless(why.check(Violation))
+        self.failUnless("unknown attribute 'bad'" in str(why))
+        del obj.bad
+
+        obj.foo = "not a number"
+        why = self.failToSend(obj)
+        self.failUnless(why.check(Violation))
+        self.failUnless("STRING token rejected by IntegerConstraint" \
+                        in str(why))
 
 
 # test how a Referenceable gets transformed into a RemoteReference as it

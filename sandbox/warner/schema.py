@@ -513,6 +513,7 @@ class AttributeDictConstraint(Constraint):
 
     def __init__(self, *attrTuples, **kwargs):
         self.ignoreUnknown = kwargs.get('ignoreUnknown', False)
+        self.acceptUnknown = kwargs.get('acceptUnknown', False)
         self.keys = {}
         for name, constraint in (list(attrTuples) +
                                  kwargs.get('attributes', {}).items()):

@@ -188,16 +188,16 @@ class IRemoteCopy(Interface):
         subject to change. Therefore you must be careful about how much state
         inspection you perform within this method."""
         
-    def getStateSchema(self):
-        """I return an AttributeDictConstraint object which places
-        restrictions on incoming attribute values. These restrictions are
-        enforced as the tokens are received, before the state is passed to
-        setCopyableState."""
+    stateSchema = interface.Attribute("""I return an AttributeDictConstraint
+    object which places restrictions on incoming attribute values. These
+    restrictions are enforced as the tokens are received, before the state is
+    passed to setCopyableState.""")
+
 
 class RemoteCopy(object):
     implements(IRemoteCopy)
 
-    stateSchema = None
+    stateSchema = None # always a class attribute
     nonCyclic = False
 
     def __init__(self):
@@ -206,8 +206,6 @@ class RemoteCopy(object):
 
     def setCopyableState(self, state):
         self.__dict__ = state
-    def getStateSchema(self):
-        return self.stateSchema
 
 class RemoteCopyUnslicer(slicer.BaseUnslicer):
     attrname = None
@@ -227,6 +225,9 @@ class RemoteCopyUnslicer(slicer.BaseUnslicer):
         if self.attrname == None:
             if typebyte not in (tokens.STRING, tokens.VOCAB):
                 raise BananaError("RemoteCopyUnslicer keys must be STRINGs")
+        else:
+            if self.attrConstraint:
+                self.attrConstraint.checkToken(typebyte, size)
 
     def doOpen(self, opentype):
         if self.attrConstraint:
@@ -255,6 +256,7 @@ class RemoteCopyUnslicer(slicer.BaseUnslicer):
                 raise BananaError("unreferenceable object in attribute")
             self.setAttribute(self.attrname, obj)
             self.attrname = None
+            self.attrConstraint = None
 
     def setAttribute(self, name, value):
         self.d[name] = value
