@@ -130,18 +130,18 @@ class buildlist:
     def yield_finish(self):
         raise flow.StopIteration
 
-class testBoth:
+class testconcur:
     """ interweving two concurrent stages
 
-        def testBoth(ca,cb):
-            both = flow.Concurrent(ca,cb)
+        def testconcur(*stages):
+            both = flow.Concurrent(*stages)
             yield both
             for stage in both:
                 yield (stage.name, stage.result)
                 yield both
     """
-    def __init__(self, ca, cb):
-        self.both = flow.Concurrent(ca,cb)
+    def __init__(self, *stages):
+        self.both = flow.Concurrent(*stages)
     def __iter__(self):
         self.next = self.yield_both
         return self
@@ -173,6 +173,15 @@ class FlowTest(unittest.TestCase):
         lhs = ['Title',(1,'one'),(2,'two'),(3,'three')]
         rhs = list(flow.Block(consumer()))
         self.assertEqual(lhs,rhs)
+
+    def testFailure(self):
+        self.assertRaises(flow.Failure, list, flow.Block(badgen()))
+        self.assertEqual(['x',ZeroDivisionError],
+                         list(flow.Block(badgen(),ZeroDivisionError)))
+        self.assertEqual(['x',ZeroDivisionError],
+                         list(flow.Block(flow.wrap(badgen()),ZeroDivisionError)))
+        #self.assertEqual(list(flow.Block(badgen(),ZeroDivisionError)),['a'])
+        # self.assertRaises(ZeroDivisionError,flow.Block(badgen()))
 
     def testMerge(self):
         lhs = [1,'a',2,'b','c',3]
@@ -210,7 +219,7 @@ class FlowTest(unittest.TestCase):
         ca.name = 'a'
         cb = flow.Callback()
         cb.name = 'b'
-        d = flow.Deferred(testBoth(ca,cb))
+        d = flow.Deferred(testconcur(ca,cb))
         ca.callback(1)
         cb.callback(2)
         ca.callback(3)

@@ -75,6 +75,13 @@ from twisted.internet import defer, reactor
 def wrap(obj, *trap):
     """ Wraps various objects for use within a flow """
     if isinstance(obj, Stage):
+        if trap:
+            # merge trap list
+            trap = list(trap)
+            for ex in obj._trap:
+                if ex not in trap:
+                    trap.append(ex)
+            obj._trap = tuple(trap)
         return obj
 
     if isinstance(obj, defer.Deferred):
@@ -399,10 +406,10 @@ class Block(Stage):
         [1,2, Cooperate(), 3] => [1,2,3]
 
     """
-    def __init__(self, stage, block=time.sleep):
+    def __init__(self, stage, *trap):
         Stage.__init__(self)
-        self._stage = wrap(stage)
-        self.block = block
+        self._stage = wrap(stage,*trap)
+        self.block = time.sleep
 
     def next(self):
         """ fetch the next value from the Stage flow """
@@ -416,7 +423,6 @@ class Block(Stage):
                         continue
                 raise Unsupported(result)
             return stage.next()
-
 
 class Callback(Stage):
     """ Converts a single-thread push interface into a pull interface.
@@ -619,6 +625,7 @@ class Deferred(defer.Deferred):
                     self.errback(cmd.result)
                     return
             self._results.append(cmd.result)
+
 
 class QueryIterator:
     """ Converts a database query into a result iterator """
