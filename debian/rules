@@ -10,9 +10,6 @@ DOC=usr/share/doc
 DEFAULT=2.2
 DEFAULTPACKAGE=python$(DEFAULT)-twisted
 
-foo:
-	echo $(versions)
-
 indeppackages=twisted python-twisted python-twisted-conch twisted-doc \
          twisted-quotes \
          $(addsuffix -twisted,$(addprefix python,$(versions))) \
