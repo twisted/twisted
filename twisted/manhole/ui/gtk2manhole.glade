@@ -182,7 +182,7 @@
 		  <property name="can_focus">True</property>
 		  <property name="editable">False</property>
 		  <property name="justification">GTK_JUSTIFY_LEFT</property>
-		  <property name="wrap_mode">GTK_WRAP_NONE</property>
+		  <property name="wrap_mode">GTK_WRAP_WORD</property>
 		  <property name="cursor_visible">True</property>
 		  <property name="pixels_above_lines">0</property>
 		  <property name="pixels_below_lines">0</property>
