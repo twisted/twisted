@@ -17,6 +17,7 @@
 from pyunit import unittest
 
 from twisted.internet import protocol, reactor, error
+from twisted.python import failure
 
 
 class Mixin:
@@ -116,4 +117,71 @@ class UDPTestCase(unittest.TestCase):
         port1.stopListening(); port2.stopListening()
         reactor.iterate(); reactor.iterate()
 
+
+class MulticastTestCase(unittest.TestCase):
+
+    def _resultSet(self, result, l):
+        l.append(result)
+
+    def runUntilSuccess(self, method, *args, **kwargs):
+        l = []
+        d = method(*args, **kwargs)
+        d.addCallback(self._resultSet, l).addErrback(self._resultSet, l)
+        while not l:
+            reactor.iterate()
+        if isinstance(l[0], failure.Failure):
+            raise l[0].value
+
+    def setUp(self):
+        self.server = Server()
+        self.client = Client()
+        self.port1 = reactor.listenMulticast(0, self.server)
+        self.port2 = reactor.connectMulticast("127.0.0.1", self.server.transport.getHost()[2], self.client)
+        reactor.iterate()
+        reactor.iterate()
+
+    def tearDown(self):
+        self.port1.stopListening()
+        self.port2.stopListening()
+        del self.server
+        del self.client
+        del self.port1
+        del self.port2
+        reactor.iterate()
+        reactor.iterate()
+    
+    def testTTL(self):
+        for o in self.client, self.server:
+            self.assertEquals(o.transport.getTTL(), 1)
+            o.transport.setTTL(2)
+            self.assertEquals(o.transport.getTTL(), 2)
+
+    def testLoopback(self):
+        for o in self.client, self.server:
+            self.assertEquals(o.transport.getLoopbackMode(), 1)
+            o.transport.setLoopbackMode(0)
+            self.assertEquals(o.transport.getLoopbackMode(), 0)
+    
+    def testInterface(self):
+        for o in self.client, self.server:
+            self.assertEquals(o.transport.getOutgoingInterface(), "0.0.0.0")
+            self.runUntilSuccess(o.transport.setOutgoingInterface, "127.0.0.1")
+            self.assertEquals(o.transport.getOutgoingInterface(), "127.0.0.1")
+
+    def testJoinLeave(self):
+        for o in self.client, self.server:
+            self.runUntilSuccess(o.transport.joinGroup, "225.0.0.250")
+            self.runUntilSuccess(o.transport.leaveGroup, "225.0.0.250")
+
+    def testMulticast(self):
+        c = Server()
+        p = reactor.listenMulticast(0, c)
+        reactor.iterate(); reactor.iterate()
+        self.runUntilSuccess(self.server.transport.joinGroup, "225.0.0.250")
+        c.transport.write("hello world", ("225.0.0.250", self.server.transport.getHost()[2]))
+        reactor.iterate(); reactor.iterate()
+        self.assertEquals(self.server.packets[0][0], "hello world")
+        p.stopListening()
+
+        
         

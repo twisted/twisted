@@ -244,7 +244,8 @@ class MulticastMixin:
 
     def getOutgoingInterface(self):
         i = self.socket.getsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF)
-        return socket.inet_ntoa(i)
+        # is this cross-platform?
+        return socket.inet_ntoa(struct.pack("<l", i))
     
     def setOutgoingInterface(self, addr):
         """Returns Deferred of success."""
@@ -256,20 +257,18 @@ class MulticastMixin:
         return 1
     
     def getLoopbackMode(self):
-        mode = self.socket.getsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP)
-        return struct.unpack("b", mode)[0]
+        return self.socket.getsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP)
     
     def setLoopbackMode(self, mode):
         mode = struct.pack("b", operator.truth(mode))
         self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, mode)
 
     def getTTL(self):
-        ttl = self.socket.getsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL)
-        return struct.unpack("b", ttl)[0]
+        return self.socket.getsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL)
     
     def setTTL(self, ttl):
         ttl = struct.pack("b", ttl)
-        self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, ttl)
+        self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
 
     def joinGroup(self, addr, interface=""):
         """Join a multicast group. Returns Deferred of success."""
