@@ -136,7 +136,7 @@ class TLSTestCase(unittest.TestCase):
             reactor.iterate(0.01)
             i += 1
         
-        self.failUnless(sf.done, "Never finished reading all lines")
+        self.failUnless(sf.done, "Never finished reading all lines: %s" % sf.lines)
         self.assertEquals(
             sf.lines,
             UnintelligentProtocol.pretext + UnintelligentProtocol.posttext
