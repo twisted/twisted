@@ -400,7 +400,7 @@ class FileTransferServer(FileTransferBase):
         d.addErrback(self._ebStatus, requestId, "open failed")
 
     def _cbOpenFile(self, fileObj, requestId):
-        fileId = str(id(fileObj))
+        fileId = str(hash(fileObj))
         if fileId in self.openFiles:
             raise KeyError, 'id already open'
         self.openFiles[fileId] = fileObj
@@ -505,7 +505,7 @@ class FileTransferServer(FileTransferBase):
         d.addErrback(self._ebStatus, requestId, "opendir failed")
 
     def _cbOpenDirectory(self, dirObj, requestId):
-        handle = str(id(dirObj))
+        handle = str(hash(dirObj))
         if handle in self.openDirs:
             raise KeyError, "already opened this directory"
         self.openDirs[handle] = [dirObj, iter(dirObj)]
@@ -675,22 +675,16 @@ class FileTransferServer(FileTransferBase):
                 f = [(f, ) + args]
             for i in f:
                 r = i[0](*i[1:])
-        except:
+        finally:
             os.setegid(0)
             os.seteuid(0)
             os.setegid(egid)
             os.seteuid(euid)
-            raise
-        else:
-            os.setegid(0)
-            os.seteuid(0)
-            os.setegid(egid)
-            os.seteuid(euid)
-            return r
+        return r
 
     def _setAttrs(self, path, attrs):
         """
-        NOTE: this function assumes it is runner as the logged-in user:
+        NOTE: this function assumes it runs as the logged-in user:
         i.e. under _runAsUser()
         """
         if attrs.has_key("uid") and attrs.has_key("gid"):
