@@ -64,7 +64,121 @@ class Article:
             xover.append(self.getHeader(i))
         return xover
 
-class PickleStorage:
+
+class NewsStorage:
+    """
+    An interface for storing and requesting news articles
+    """
+    
+    def listRequest(self):
+        """
+        Returns a deferred whose callback will be passed a list of 4-tuples
+        containing (name, max index, min index, flags) for each news group
+        """
+        raise NotImplementedError
+
+
+    def subscriptionRequest(self):
+        """
+        Returns a deferred whose callback will be passed the list of
+        recommended subscription groups for new server users
+        """
+        raise NotImplementedError
+    
+    
+    def postRequest(self, message):
+        """
+        Returns a deferred whose callback will be invoked if 'message'
+        is successfully posted to one or more specified groups and
+        whose errback will be invoked otherwise.
+        """
+        raise NotImplementedError
+    
+    
+    def overviewRequest(self):
+        """
+        Returns a deferred whose callback will be passed the a list of
+        headers describing this server's overview format.
+        """
+        raise NotImplementedError
+
+
+    def xoverRequest(self, group, low, high):
+        """
+        Returns a deferred whose callback will be passed a list of xover
+        headers for the given group over the given range.  If low is None,
+        the range starts at the first article.  If high is None, the range
+        ends at the last article.
+        """
+        raise NotImplementedError
+
+
+    def xhdrRequest(self, group, low, high, header):
+        """
+        Returns a deferred whose callback will be passed a list of XHDR data
+        for the given group over the given range.  If low is None,
+        the range starts at the first article.  If high is None, the range
+        ends at the last article.
+        """
+        raise NotImplementedError
+
+    
+    def listGroupRequest(self, group):
+        """
+        Returns a deferred whose callback will be passed a two-tuple of
+        (group name, [article indices])
+        """
+        raise NotImplementedError
+    
+    
+    def groupRequest(self, group):
+        """
+        Returns a deferred whose callback will be passed a five-tuple of
+        (group name, article count, highest index, lowest index, group flags)
+        """
+        raise NotImplementedError
+
+    
+    def articleExistsRequest(self, id):
+        """
+        Returns a deferred whose callback will be passed with a true value
+        if a message with the specified Message-ID exists in the database
+        and with a false value otherwise.
+        """
+        raise NotImplementedError
+
+    
+    def articleRequest(self, group, index):
+        """
+        Returns a deferred whose callback will be passed the full article
+        text (headers and body) for the article of the specified index
+        in the specified group, and whose errback will be invoked if the
+        article or group does not exist.
+        """
+        raise NotImplementedError
+
+    
+    def headRequest(self, group, index):
+        """
+        Returns a deferred whose callback will be passed the header for
+        the article of the specified index in the specified group, and
+        whose errback will be invoked if the article or group does not
+        exist.
+        """
+        raise NotImplementedError
+
+    
+    def bodyRequest(self, group, index):
+        """
+        Returns a deferred whose callback will be passed the body for
+        the article of the specified index in the specified group, and
+        whose errback will be invoked if the article or group does not
+        exist.
+        """
+        raise NotImplementedError
+
+
+class PickleStorage(NewsStorage):
     """A trivial NewsStorage implementation using pickles
     
     Contains numerous flaws and is generally unsuitable for any
@@ -228,80 +342,3 @@ class PickleStorage:
                     for i in groups:
                         self.db[i] = {}
                 self.flush()
-
-class DatabaseStorage(adbapi.Augmentation):
-    """
-    A DB-API 2.0 NewsStorage implementation
-    """
-
-    def __init__(self):
-        self._dbPool = adbapi.ConnectionPool('pgdb', 'localhost', 'news', 'news')
-        adbapi.Augmentation.__init__(self, DatabaseStorage._dbPool)
-
-    def listRequest(self):
-        sql = "SELECT name FROM Groups ORDER BY name"
-        return self.runOperation(sql)
-
-    def articleRequest(self, group, index):
-        sql = "SELECT head, body FROM Articles WHERE group = ? AND index = ?"
-        return self.runOperation(sql, group, index)
-
-    def headRequest(self, group, index):
-        sql = "SELECT head FROM Articles WHERE group = ? AND index = ?"
-        return self.runOperation(sql, group, index)
-
-    def bodyRequest(self, group, index):
-        sql = "SELECT body FROM Articles WHERE group = ? AND index = ?"
-        return self.runOperation(sql, group, index)
-
-class NewsSQLdb:
-    CREATE_GROUP = """
-        create table Groups (
-            id        int auto_increment,
-            name    text,
-            
-            key(id)
-        )
-    """
-
-    CREATE_ARTICLE = """
-        create table Articles (
-            number    int,
-            id        text,
-            gid        int,
-            header    text,
-            body    text
-        )
-    """
- 
-    def __init__(self, db, host = 'localhost', port = 3306, user = 'news', pwd = 'news'):
-        self.db = MySQLdb.Connect(host=host, port=port, user=user, passwd=pwd)
-        self.cursor = self.db.cursor()
-
-        try:
-            self.db.select_db(db)
-        except MySQLdb.OperationalError:
-            self.cursor.execute('create database %s' % db)
-            self.db.select_db(db)
-            self.cursor = self.db.cursor()
-
-        if self.cursor.execute('show tables') != 2:
-            try:
-                self.cursor.execute(NewsSQLdb.CREATE_GROUP)
-                self.cursor.execute(NewsSQLdb.CREATE_ARTICLE)
-            except Exception, e:
-                self.cursor.execute('drop table if exists Groups')
-                self.cursor.execute('drop table if exists Articles')
-                raise e
-
-    def getGroups(self):
-        QUERY = """
-            select max(number), min(number) from Articles 
-            where gid=%d
-        """
-        l = []
-        self.cursor.execute('select name, id from Groups')
-        for i in self.cursor.fetchall():
-            self.cursor.execute(QUERY % i[1])
-            l.append(self.fetchall())
-        return l
