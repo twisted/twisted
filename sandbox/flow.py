@@ -557,7 +557,27 @@ class Callback(Stage):
         Once this stage is constructed, its callback, errback, and 
         finish member variables may be called by a producer.   The
         results of which can be obtained by yielding the Callback and
-        then calling next()
+        then calling next().   For example:
+
+            # 'pull' consumer
+            def printer(source): 
+                yield source
+                for data in source:
+                    print data
+                    yield source
+                print "done"
+           
+            # glue, convert push to pull 
+            cb = flow.Callback()
+            d = flow.Deferred(printer(cb))
+            d.addCallback(lambda _: reactor.stop())
+
+            # 'push' producer
+            reactor.callLater(0, lambda: cb.result("one"))
+            reactor.callLater(.5, lambda: cb.result("two"))
+            reactor.callLater(1, lambda: cb.finish())
+            reactor.run()
+
     """
     class Instruction(CallLater):
         def __init__(self):
