@@ -1,0 +1,96 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Webizing your application with DOMTemplate</title>
+</head>
+
+<body>
+<h1>Twisted Web's DOM Templates</h1>
+
+<h2>Intro</h2>
+
+<p>
+Most templating systems provide commands that you embed in the HTML to
+repeat elements, include fragments from other files, etc. This works
+fairly well for simple constructs and people tend to get a false sense of
+simplicity from this. However, as soon as the programmer wants to make
+the logic even slightly more complicated, the templating system must be
+bent and abused in ways it was never meant to be used.
+</p>
+
+<p>
+The theory behind DOMTemplate is that Python code, rather than special
+syntax in the HTML template, should be used to manipulate the structure of
+the HTML. DOMTemplate uses the DOM, a w3c standard tree-based
+representation of an HTML document that provides an API that allows you
+to traverse nodes in the tree, examine their attributes, move, add, and
+delete them. For more information on using DOM in Python, see 
+<a href="http://python.org/doc/lib/module-xml.dom.html">The xml.dom module documentation</a>.
+</p>
+
+<h2>Before we begin</h2>
+
+<p>
+You'll need to start a plain Twisted Web server.
+</p>
+
+<pre class="shell">
+mktap web --path ~/public_html
+twistd -f web.tap
+</pre>
+
+<p>
+Once you do this you should be able to throw any files in ~/public_html, and they'll be
+served on localhost:8080. Twisted Web also supports a number of special script types;
+the one we'll be using here is an .rpy, or Resorce Script.
+</p>
+
+<p>
+A Resource script is simply a python file ending with the extension '.rpy',
+which is required to create an instance of a (subclass of) a
+twisted.web.resource.Resource. The Resource subclass we'll be using in this
+example is, of course, DOMTemplate.
+</p>
+
+<h2>Getting To It</h2>
+
+<p> A DOMTemplate subclass must do two things: specify a template, and indicate
+which elements it is interested in, so it can process their respective Nodes
+when they are found in the template. The first simply requires a 'template'
+attribute to be a string of the (valid XML) template. To accomplish the second,
+we define the 'getTemplateMethods' method in our DOMTemplate subclass. This
+method is expected to return a list of dicts; there are a number of things that
+the dict can contain. The one thing that is required is a 'method' key, whose
+value must be a method that takes (request, node) as its arguments. You must
+have at least one other item with key 'class', 'id', or 'tag'; whenever a
+class, id, or tag is found with the value of what you specified in the dict,
+the associated method will be called to process that Node.  </p>
+
+<p>
+In our example we associate the method 'getTitle' with all
+nodes with class="title" or id="title", and 'getQuote' with all nodes with class="quote". We do this
+with the list <code class="python">[{'class': 'title', 'id': 'title', 'method': self.getTitle},
+{'class': 'quote', 'method': self.getQuote}]</code>
+
+</p>
+
+<p>
+<a href="listings/TwistedQuotes/webquote.rpy" class="py-listing">Listing 1:
+webquote.rpy: Twisted Quotes Web Interface</a>
+</p>
+
+<p>
+<a href="listings/TwistedQuotes/webquote.rpy">See it in action!</a>
+</p>
+
+<hr />
+<address><a href="mailto:radix@twistedmatrix.com">Christopher Armstrong</a></address>
+<!-- Created: Thu Jun 20 22:42:25 EDT 2002 -->
+<!-- hhmts start -->
+Last modified: Thu Jun 20 22:51:38 EDT 2002
+<!-- hhmts end -->
+</body>
+</html>
