@@ -553,7 +553,7 @@ class InstallDebs(Transaction):
             if os.path.isfile('%(target)s/%(file)s' % vars()):
                 sh('mv %(target)s/%(file)s %(target)s/%(file)s.old')
             if os.path.isfile('%(target)s/woody/%(file)s' % vars()):
-                sh('mv %(target)s/woody/%(file)s %(target)s/woody/%(file)s.old')
+                sh('mv %(target)s/woody/%(file)s %(target)s/woody/%(file)s.old' % vars())
         for file in os.listdir('%(rel)s/debian-%(ver)s/' % vars()):
             if file == 'woody':
                 continue
