@@ -245,9 +245,9 @@ class DOMTemplate(Resource, View):
         os.stat(compiledTemplatePath)[stat.ST_MTIME] < os.stat(templatePath)[stat.ST_MTIME]):
             compiledTemplate = minidom.parse(templatePath)
             from cPickle import dump
-            dump(compiledTemplate, open(compiledTemplateName, 'wb'), 1)
+            dump(compiledTemplate, open(compiledTemplatePath, 'wb'), 1)
 #            parent = templateRef.parentRef().getObject()
-#            parent.savePickleChild(compiledTemplateName, compiledTemplate)
+#            parent.savePickleChild(compiledTemplatePath, compiledTemplate)
         else:
             from cPickle import load
             compiledTemplate = load(open(compiledTemplatePath))
