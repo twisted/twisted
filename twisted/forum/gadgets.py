@@ -457,8 +457,8 @@ class RegisterUser(webcred.SessionPerspectiveMixin, widgets.Form):
         return ["Creating identity...",self.service.application.authorizer.addIdentity(newIdentity).addCallbacks(self._doneIdentity, self._errIdentity)]
 
     def _errIdentity(self, failure):
-        failure.trap(self.manager.dbpool.dbapi.OperationalError)
-        return self.tryAgain("This identity is already taken.", self.request)
+        if failure.trap(self.manager.dbpool.dbapi.OperationalError):
+            return self.tryAgain("This identity is already taken.", self.request)
 
     def _doneIdentity(self, result):
         # create the forum user in the database

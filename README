@@ -1,12 +1,13 @@
-Twisted 0.15.3
+Twisted 0.15.4
 
 Quote of the Release:
 
-<Acapnotic> Ooh, I just figured out what my first twisted.reality creation will be.
-<dash> Acapnotic: oh?
-<Acapnotic> "Being Glyph Lefkowitz"
+<itamar> woo, more [<insert functionality here> --ed] tests 
+<radix> yay 
 
-For information on what's new in Twisted 0.15.0, see the ChangeLog file
+[Thanks for all the unittests, Itamar. :-) --ed]
+
+For information on what's new in Twisted 0.15.4, see the ChangeLog file
 that comes with the distribution, or http://twistedmatrix.com/ChangeLog.txt.
 
 
