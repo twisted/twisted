@@ -54,16 +54,6 @@ def reapAllProcesses():
         process.reapProcess()
 
 
-    # Try to reap unregistered processes, too
-    while 1:
-        try:
-            pid, status = os.waitpid(-1, os.WNOHANG)
-            if pid == 0:
-                break
-            log.msg("Reaping unregistered pid %d! Status: %d" % (pid, status))
-        except OSError:
-            break
-
 def registerReapProcessHandler(pid, process):
     if reapProcessHandlers.has_key(pid):
         raise RuntimeError
@@ -243,6 +233,9 @@ class Process(styles.Ephemeral):
             mapping that opens the usual stdin/stdout/stderr pipes.
         """
 
+        if not proto:
+            assert 'r' not in childFDs.values() and 'w' not in childFDs.values()
+
         self.lostProcess = False
 
         settingUID = (uid is not None) or (gid is not None)
@@ -295,7 +288,7 @@ class Process(styles.Ephemeral):
                 helpers[childFD] = writeFD   # parent writes to this
                 fdesc.setNonBlocking(writeFD)
             else:
-                assert type(target) == int
+                assert type(target) == int, '%r should be an int' % (target,)
                 fdmap[childFD] = target      # parent ignores this
         if debug: print "fdmap", fdmap
         if debug: print "helpers", helpers
@@ -370,7 +363,8 @@ class Process(styles.Ephemeral):
         self.proto = proto
         try:
             # the 'transport' is used for some compatibility methods
-            self.proto.makeConnection(self)
+            if self.proto is not None:
+                self.proto.makeConnection(self)
         except:
             log.err()
         registerReapProcessHandler(self.pid, self)
@@ -586,7 +580,8 @@ class Process(styles.Ephemeral):
                 e = error.ProcessTerminated(exitCode, sig, self.status)
             else:
                 e = error.ProcessDone(self.status)
-            self.proto.processEnded(failure.Failure(e))
+            if self.proto is not None:
+                self.proto.processEnded(failure.Failure(e))
         except:
             log.err()
 

@@ -25,15 +25,11 @@ Future Plans: Bugfixes.  Specifically for UDP and Sun-RPC, which don't work
 correctly yet.
 """
 
-import os, pwd, grp, traceback, socket, commands
+import os, socket
 
-from twisted.internet.app import Application
-from twisted.internet import reactor
+from twisted.internet import process, reactor
 from twisted.internet.protocol import Protocol, ServerFactory
-from twisted.python import log, usage
 from twisted.protocols import wire
-
-import inetdconf
 
 try:
     import portmap
@@ -54,70 +50,22 @@ internalProtocols = {
 # Protocol map
 protocolDict = {'tcp': socket.IPPROTO_TCP, 'udp': socket.IPPROTO_UDP}
 
-def forkPassingFD(exe, args, env, user, group, fdesc, childStderr=None):
-    """Run exe as a child process, passing fdesc as fd 0.
-    
-    This will also make sure that fdesc is removed from the parent's reactor.
-
-    If you have no stderr (e.g. you are running daemonised), pass a log file or
-    some other valid file descriptor to childStderr, for errors to go to.
-    """
-    # This is half-cannibalised from twisted.internet.process.Process
-    pid = os.fork()
-    if pid == 0:    # Child
-        try:
-            if childStderr is not None:
-                # Dup this first, in case has a low fileno (0 or 1) that would
-                # get clobbered
-                stderrfd = os.dup(childStderr.fileno())
-
-            # Make the socket be fd 0 
-            # (and fd 1, although I'm not sure if that matters)
-            # (we keep stderr from the parent to report errors with)
-            os.dup2(fdesc.fileno(), 0)
-            os.dup2(fdesc.fileno(), 1)
-            
-            if childStderr is not None:
-                os.dup2(stderrfd, 2)
-
-            # Close unused file descriptors
-            for fd in range(3, 256):
-                try: os.close(fd)
-                except: pass
-            
-            # Set uid/gid
-            os.setgid(group)
-            os.setuid(user)
-            
-            # Start the new process
-            os.execvpe(exe, args, env)
-        except:
-            # If anything goes wrong, just die.
-            from sys import stderr
-            stderr.write('Unable to spawn child:\n')
-            traceback.print_exc(file=stderr)
-
-            # Close the socket so the client doesn't think it's still
-            # connected to a server
-            try:
-                s = socket.fromfd(0, socket.AF_INET, socket.SOCK_STREAM)
-                s.shutdown(2)
-            except:
-                pass
-        os._exit(1)
-    else:           # Parent
-        reactor.removeReader(fdesc)
-        reactor.removeWriter(fdesc)
-    
 
 class InetdProtocol(Protocol):
     """Forks a child process on connectionMade, passing the socket as fd 0."""
     def connectionMade(self):
-        service = self.factory.service
-        forkPassingFD(service.program, service.programArgs, os.environ,
-                      service.user, service.group, self.transport, 
-                      self.factory.stderrFile)
+        sockFD = self.transport.fileno()
+        childFDs = {0: sockFD, 1: sockFD}
+        if self.factory.stderrFile:
+            childFDs[2] = self.factory.stderrFile
 
+        service = self.factory.service
+        process.Process(None, service.program, service.programArgs, os.environ,
+                        None, None, service.user, service.group, childFDs)
+
+        reactor.removeReader(self.transport)
+        reactor.removeWriter(self.transport)
+                        
 
 class InetdFactory(ServerFactory):
     protocol = InetdProtocol
