@@ -4,15 +4,18 @@
 
 register("Twisted Words",
          "twisted.words.service",
-         description="A chat and collaboration system.")
+         description="A chat and collaboration system.",
+         type='coil')
 
 register("Twisted Reality",
          "twisted.reality.reality",
-         description="MUD and MOO-like services for Twisted.")
+         description="MUD and MOO-like services for Twisted.",
+         type='coil')
 
 register("Twisted Web",
          "twisted.web.server",
-         description="Web servers & services for Twisted")
+         description="Web servers & services for Twisted",
+         type='coil')
 
 ## Pending Moshe's integration of coil w/ mail.
 ##register("Twisted Mail",
@@ -21,7 +24,13 @@ register("Twisted Web",
 
 register("Twisted Manhole",
          "twisted.manhole.service",
-         description="Mail protocol implementation for Twisted.")
+         description="Mail protocol implementation for Twisted.",
+         type='coil')
+
+register("Telnet Shell Plugin",
+         "twisted.protocols.telnet",
+         description="Shell access through telnet.  Warning: This is insecure!",
+         type='coil')
 
 ## Pending making this realistically work...
 ##register("Twisted Forum",

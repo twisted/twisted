@@ -94,8 +94,8 @@ def formatFailure(myFailure):
                 string.replace(html.escape(string.rstrip(snipLine)),
                                '  ','&nbsp;'),
                 '\t', '&nbsp; &nbsp; &nbsp; &nbsp; ')
-                                      
-            
+
+
             if snipLineNo == lineno:
                 color = 'bgcolor="#ffffff"'
             else:
@@ -136,7 +136,7 @@ class Widget:
 class StreamWidget(Widget):
     """A 'streamable' component of a webpage.
     """
-    
+
     def stream(self, write, request):
         """Call 'write' multiple times with a string argument to represent this widget.
         """
@@ -163,7 +163,7 @@ class WidgetMixin(Widget):
     data available to the 'display' methods of those classes, usually by adding
     it to a Session.
     """
-    
+
     def display(self):
         raise NotImplementedError("%s.display" % self.__class__)
 
@@ -288,7 +288,7 @@ class Form(StreamWidget):
     In order to use me, you probably want to set self.formFields (or override
     'getFormFields') and override 'process'.  In order to demonstrate how this
     is done, here is a small sample Form subclass::
-    
+
       |  from twisted.web import widgets
       |  class HelloForm(widgets.Form):
       |      formFields = [
@@ -349,7 +349,7 @@ class Form(StreamWidget):
           * 'checkgroup': a group of checkboxes
 
           * 'password': a 'string' field where the contents are not visible as the user types
-        
+
           * 'file': a file-upload form (EXPERIMENTAL)
 
         'Display Name' is a descriptive string that will be used to
@@ -467,8 +467,8 @@ class Form(StreamWidget):
         a string to the response, 'request' is a twisted.web.request.Request
         instance, and 'submit' is the name of the submit action taken.
 
-        The remainder of my arguments must be correctly named.  They will each be named after one of the 
-        
+        The remainder of my arguments must be correctly named.  They will each be named after one of the
+
         """
         write("Submit: %s <br> %s" % (submit, html.PRE(pprint.PrettyPrinter().pformat(kw))))
 
@@ -536,14 +536,14 @@ class Form(StreamWidget):
 
         This is handy in forms that process Deferred results.  Normally you can
         just raise a FormInputError() and this will happen by default.
-        
+
         """
         l = []
         w = l.append
         w(self.formatError(err))
         self.format(self.getFormFields(req), w, req)
         return l
-    
+
     def stream(self, write, request):
         """Render the results of displaying or processing the form.
         """
@@ -623,7 +623,7 @@ class RenderSession:
             if isinstance(item, defer.Deferred):
                 self.lst[i] = (self._addDeferred(item), item)
                 toArm.append(item)
-    
+
         self.keepRendering()
         for item in toArm:
             item.arm()
@@ -646,7 +646,7 @@ class RenderSession:
             self.needsHeaders = self.needsHeaders - decNeedsHeaders
         else:
             result = [FORGET_IT]
-        
+
         # Make sure result is a sequence,
         if not type(result) in (types.ListType, types.TupleType):
             result = [result]
@@ -708,7 +708,7 @@ class RenderSession:
                 # If I haven't moved yet, and the widget wants to take
                 # over the page, let it do so!
                 return
-            
+
             if isinstance(item, types.StringType):
                 self.beforeBody = 0
                 self.request.write(item)

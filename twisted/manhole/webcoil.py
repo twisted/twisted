@@ -20,6 +20,7 @@ import string
 
 from twisted.web import widgets
 from twisted.python import roots
+from twisted.python.plugin import getPlugIns
 from twisted.web import widgets, html
 from twisted.protocols import protocol, http
 
@@ -29,15 +30,37 @@ class ConfigRoot(widgets.Gadget, widgets.Widget):
     def __init__(self, application):
         widgets.Gadget.__init__(self)
         self.putWidget("config", Configurator(application))
+        self.putWidget('plugin', PluginLoader())
         self.addFile("images")
 
     def display(self, request):
-        request.setResponseCode(http.MOVED_PERMANENTLY)
+        request.setResponseCode(http.FOUND)
         request.setHeader("location",
                           request.prePathURL() + 'config')
         return ['no content']
 
 
+class PluginLoader(widgets.Form):
+    def getFormFields(self, request):
+        plugins = getPlugIns("coil")
+        mnuList = []
+        for plugin in plugins:
+            if not plugin.isLoaded():
+                mnuList.append([plugin.module, plugin.name])
+            else:
+                mnuList.append([plugin.module, plugin.name + ' (already loaded)'])
+        return [['menu', 'Plugin to load?', 'pluginToLoad', mnuList]]
+
+    def process(self, write, request, submit, pluginToLoad):
+        plugins = getPlugIns('coil')
+        for plugin in plugins:
+            print plugin.module
+            if plugin.module == pluginToLoad:
+                write( 'loaded ' + plugin.module + '('+pluginToLoad+')' )
+                plugin.load()
+                break
+        else:
+            write( 'could not load' + plugin.module )
 
 class Configurator(widgets.Presentation):
     """A web configuration interface for Twisted.
