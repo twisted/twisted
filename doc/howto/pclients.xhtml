@@ -38,24 +38,24 @@ caching mechanism:</p>
 class SimpleAvatar(pb.Avatar):
     greetings = 0
     def __init__(self, name): 
-	self.name = name
+        self.name = name
     def perspective_greet(self):
-	self.greetings += 1
-	return "&lt;%d&gt;hello %s" % (self.greetings, self.name)
+        self.greetings += 1
+        return "&lt;%d&gt;hello %s" % (self.greetings, self.name)
 
 class CachingRealm:
     __implements__ = portal.IRealm,
 
     def __init__(self):
-	self.avatars = {}
+        self.avatars = {}
 
     def requestAvatar(self, avatarId, mind, *interfaces):
-	if pb.IPerspective not in interfaces: raise NotImplementedError
-	if avatarId in self.avatars:
-	    p = self.avatars[avatarId]
-	else: 
-	    p = self.avatars[avatarId] = SimpleAvatar(avatarId)
-	return pb.IPerspective, p, lambda:None
+        if pb.IPerspective not in interfaces: raise NotImplementedError
+        if avatarId in self.avatars:
+            p = self.avatars[avatarId]
+        else: 
+            p = self.avatars[avatarId] = SimpleAvatar(avatarId)
+        return pb.IPerspective, p, lambda:None
 </pre>       
 
 <p>This gives us a perspective which counts the number of greetings it
@@ -74,30 +74,30 @@ else. Here is an example of that:</p>
 class Greeter:
     greetings = 0
     def hello(self):
-	self.greetings += 1
-	return "&lt;%d&gt;hello" % (self.greetings, self.name)
+        self.greetings += 1
+        return "&lt;%d&gt;hello" % (self.greetings, self.name)
 
 class SimpleAvatar(pb.Avatar):
     greetings = 0
     def __init__(self, name, greeter): 
-	self.name = name
-	self.greeter = greeter
+        self.name = name
+        self.greeter = greeter
     def perspective_greet(self):
-	return self.greeter.hello()+' '+self.name
+        return self.greeter.hello()+' '+self.name
 
 class CachingRealm:
     __implements__ = portal.IRealm,
 
     def __init__(self):
-	self.greeters = {}
+        self.greeters = {}
 
     def requestAvatar(self, avatarId, mind, *interfaces):
-	if pb.IPerspective not in interfaces: raise NotImplementedError
-	if avatarId in self.greeters:
-	    p = self.greeters[avatarId]
-	else: 
-	    p = self.greeters[avatarId] = Greeter()
-	return pb.IPerspective, SimpleAvatar(avatarId, p), lambda:None
+        if pb.IPerspective not in interfaces: raise NotImplementedError
+        if avatarId in self.greeters:
+            p = self.greeters[avatarId]
+        else: 
+            p = self.greeters[avatarId] = Greeter()
+        return pb.IPerspective, SimpleAvatar(avatarId, p), lambda:None
 </pre>
 
 <p>It might seem tempting to use this pattern to have an avatar which
@@ -111,29 +111,29 @@ class SimpleAvatar(pb.Avatar):
     greetings = 0
     connections = 0
     def __init__(self, name): 
-	self.name = name
+        self.name = name
     def connect(self):
-	self.connections += 1
+        self.connections += 1
     def disconnect(self):
-	self.connections -= 1
+        self.connections -= 1
     def perspective_greet(self):
-	self.greetings += 1
-	return "&lt;%d&gt;hello %s" % (self.greetings, self.name)
+        self.greetings += 1
+        return "&lt;%d&gt;hello %s" % (self.greetings, self.name)
 
 class CachingRealm:
     __implements__ = portal.IRealm,
 
     def __init__(self):
-	self.avatars = {}
+        self.avatars = {}
 
     def requestAvatar(self, avatarId, mind, *interfaces):
-	if pb.IPerspective not in interfaces: raise NotImplementedError
-	if avatarId in self.avatars:
-	    p = self.avatars[avatarId]
-	else: 
-	    p = self.avatars[avatarId] = SimpleAvatar(avatarId)
-	p.connect()
-	return pb.IPerspective, p, p.disconnect
+        if pb.IPerspective not in interfaces: raise NotImplementedError
+        if avatarId in self.avatars:
+            p = self.avatars[avatarId]
+        else: 
+            p = self.avatars[avatarId] = SimpleAvatar(avatarId)
+        p.connect()
+        return pb.IPerspective, p, p.disconnect
 </pre>
 
 <p>It is possible to use such a pattern to define an arbitrary limit for
@@ -144,29 +144,29 @@ class SimpleAvatar(pb.Avatar):
     greetings = 0
     connections = 0
     def __init__(self, name): 
-	self.name = name
+        self.name = name
     def connect(self):
-	self.connections += 1
+        self.connections += 1
     def disconnect(self):
-	self.connections -= 1
+        self.connections -= 1
     def perspective_greet(self):
-	self.greetings += 1
-	return "&lt;%d&gt;hello %s" % (self.greetings, self.name)
+        self.greetings += 1
+        return "&lt;%d&gt;hello %s" % (self.greetings, self.name)
 
 class CachingRealm:
     __implements__ = portal.IRealm,
 
     def __init__(self, max=1):
-	self.avatars = {}
-	self.max = max
+        self.avatars = {}
+        self.max = max
 
     def requestAvatar(self, avatarId, mind, *interfaces):
-	if pb.IPerspective not in interfaces: raise NotImplementedError
-	if avatarId in self.avatars:
-	    p = self.avatars[avatarId]
-	else: 
-	    p = self.avatars[avatarId] = SimpleAvatar(avatarId)
-	if p.connections >= self.max:
+        if pb.IPerspective not in interfaces: raise NotImplementedError
+        if avatarId in self.avatars:
+            p = self.avatars[avatarId]
+        else: 
+            p = self.avatars[avatarId] = SimpleAvatar(avatarId)
+        if p.connections &gt;= self.max:
             raise ValueError("too many connections")
         p.connect()
         return pb.IPerspective, p, p.disconnect
