@@ -37,6 +37,7 @@ from twisted.internet import protocol
 from twisted.protocols import dns
 from twisted.python import log
 
+import client
 
 class Authority:
     """
@@ -75,6 +76,14 @@ class DNSServerFactory(protocol.ServerFactory):
         self.verbose = verbose
 
 
+    def startFactory(self):
+        self.resolver = client.theResolver
+
+
+    def stopFactory(self):
+        del self.resolver
+
+
     def buildProtocol(self, addr):
         p = dns.TCPDNSClientProtocol(self)
         p.factory = self
@@ -99,6 +108,29 @@ class DNSServerFactory(protocol.ServerFactory):
             protocol.writeMessage(message, address)
 
 
+    def gotRecursiveResponse(self, answers, message, protocol, address):
+        answers = answers.answers
+        message.auth = 0
+        if len(answers):
+            message.answers = answers
+        else:
+            message.rCode = dns.ENAME
+        self.sendReply(protocol, message, address)
+        if self.verbose:
+            log.msg(
+                "Recursive lookup found %d record%s" % (
+                    len(answers), len(answers) != 1 and "s" or ""
+                )
+            )
+            
+    
+    def recursiveLookupFailed(self, failure, message, protocol, address):
+        message.rCode = dns.ESERVER
+        self.sendReply(protocol, message, protocol, address)
+        if self.verbose:
+            log.msg("Recursive lookup failed")
+
+
     def handleQuery(self, message, protocol, address):
         answers = []
         for q in message.queries:
@@ -110,11 +142,23 @@ class DNSServerFactory(protocol.ServerFactory):
         if len(answers):
             message.answers = answers
             message.auth = 1
+            self.sendReply(protocol, message, address)
+        elif self.resolver:
+            # Try a recursive lookup!  Hoot!
+            if address:
+                self.resolver.queryUDP(message.queries).addCallback(
+                    self.gotRecursiveResponse, message, protocol, address
+                )
+            else:
+                self.resolver.queryTCP(message.queries).addCallback(
+                    self.gotRecursiveResponse, protocol, None
+                ).addErrback(
+                    self.recursiveLookupFailed, message, protocol, address
+                )
+            log.msg("Handling query recursively")
         else:
-            message.answers = []
-            message.rCode = dns.ENAME
-
-        self.sendReply(protocol, message, address)
+            mesage.answers = []
+            self.sendReply(protocol, message, address)
 
 
     def handleInverseQuery(self, message, protocol, address):
@@ -144,7 +188,7 @@ class DNSServerFactory(protocol.ServerFactory):
             else:
                 log.msg("%s query from %r" % (s, address or protocol.transport.getPeer()))
 
-        message.recAv = 0
+        message.recAv = self.resolver is not None
         message.answer = 1
 
         if message.opCode == dns.OP_QUERY:
