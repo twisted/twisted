@@ -152,11 +152,8 @@ class QTReactor(default.PosixReactorBase):
 
     def doIteration(self, delay=0.0):
         log.msg(channel='system', event='iteration', reactor=self)
-        if delay is None:
-            delay = 1000
-        else:
-            delay = int(delay * 1000)
-        self.qApp.processEvents(delay)
+        self.callLater(delay, self.crash)
+        self.run()
 
     def run(self, installSignalHandlers=1):
         self.running = 1
