@@ -41,11 +41,11 @@ class FlowTest(unittest.TestCase):
         f.execute(11)
         self.assertEqual(result, [3,12])
 
-    def testBranch(self):  
+    def testSequence(self):  
         result = []
         def dataSource(data):  return [1, 1+data, 1+data*2]
         f = Flow()
-        f.addBranch(dataSource)
+        f.addSequence(dataSource)
         f.addCallable(lambda data: data + 1)
         f.addCallable(lambda data: result.append(data))
         f.execute(2)
@@ -55,18 +55,18 @@ class FlowTest(unittest.TestCase):
         import operator
         result = []
         f = Flow()
-        f.addBranch(lambda data: [1,1+data,1+data*2])
+        f.addSequence(lambda data: [1,1+data,1+data*2])
         f.addReduce(operator.add, 0)
         f.addCallable(lambda data: result.append(data))
         f.execute(1)
         f.execute(2)
         self.assertEqual(result,[6,9])
 
-    def testBranchViaIterator(self):
+    def testSequenceViaIterator(self):
         import operator
         result = []
         f = Flow()
-        f.addBranch(CountIterator)
+        f.addSequence(CountIterator)
         f.addReduce(operator.add, 0)
         f.addCallable(lambda data: result.append(data))
         f.execute(0); f.execute(1); f.execute(2)
@@ -77,8 +77,9 @@ class FlowTest(unittest.TestCase):
         import operator
         result = []
         f = Flow()
-        def myadd(aggregate, data): aggregate[0] += data 
-        f.addBranch(CountIterator)
+        def myadd(aggregate, data): 
+            aggregate[0] += data 
+        f.addSequence(CountIterator)
         f.addReduce(myadd, lambda: [0], inplace = 1 )
         f.addCallable(lambda data: result.append(data[0]))
         f.execute(0); f.execute(1); f.execute(2)
@@ -91,49 +92,56 @@ class FlowTest(unittest.TestCase):
         def mymerge(curr, data):
             if curr: return (None,"%s%s" % (curr, data))
             return (str(data),None)
-        f.addBranch(CountIterator)
+        f.addSequence(CountIterator)
         f.addMerge(mymerge)
         f.addCallable(lambda data: result.append(data))
         f.execute(3);
         f.execute(4);
         self.assertEqual(result,['32','10','43','21','0'])
      
-def testFlowConnect(self):
-    from twisted.enterprise.adbapi import ConnectionPool
-    pool = ConnectionPool("mx.ODBC.EasySoft","<some dsn>")
-    def printResult(x): print x
-    def printDone(): print "done"
-    sql = "<some query>"
-    f = Flow()
-    f.waitInterval = 1
-    f.addBranch(QueryIterator(pool,sql),onFinish=printDone)
-    f.addCallable(printResult)
-    f.execute()
+    def testContext(self):
+        class dummy: pass
+        dummy = dummy()
+        dummy.increment = 3
+        result = []
+        f = Flow()
+        f.addCallable(lambda cntx, data: data + cntx.increment)
+        f.addCallable(lambda data: result.append(data))
+        f.execute(2, dummy)
+        self.assertEqual(result, [5])
 
-def testIterator():
-    class CountIterator(Iterator):
-        def next(self): # this is run in a separate thread
-            print "."
-            from time import sleep
-            sleep(.5)
-            val = self.data
-            if not(val):
-                print "done counting"
-                raise StopIteration
-            self.data -= 1
-            return [val]
-    def printResult(data): print data
-    def finished(): print "finished"
-    f = Flow()
-    f.addBranch(CountIterator, onFinish=finished)
-    f.addCallable(printResult)
-    f.waitInterval = 1
-    f.execute(5)
+    def testChain(self):
+        result = []
+        a = Flow()
+        a.addCallable(lambda data: result.append(('a',data)))
+        b = Flow()
+        b.addCallable(lambda data: result.append(('b',data)))
+        f = Flow()
+        f.addChain(a,b)
+        f.execute(3)
+        self.assertEqual(result, [('a',3),('b',3)])
 
+    def testThreaded(self):
+        class CountIterator(Iterator):
+            def next(self): # this is run in a separate thread
+                from time import sleep
+                sleep(.1)
+                val = self.data
+                if not(val):
+                    raise StopIteration
+                self.data -= 1
+                return [val]
+        result = []
+        def finished(): result.append('Finished')
+        f = Flow()
+        f.addSequence(CountIterator, onFinish=finished)
+        f.addCallable(lambda data: result.append(data))
+        f.waitInterval = 1
+        f.execute(5)
+        from twisted.internet import reactor
+        reactor.callLater(1,reactor.stop)
+        reactor.run()
+        self.assertEqual(result, [5,4,3,2,1,'Finished'])
 
 if '__main__' == __name__:
     unittest.main()
-    #testIterator()
-    #from twisted.internet import reactor
-    #reactor.callLater(5,reactor.stop)
-    #reactor.run()

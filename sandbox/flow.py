@@ -80,7 +80,7 @@ class Flow:
         """
         return self._append(Callable(callable, skip))
 
-    def addBranch(self, callable, onFinish = None):
+    def addSequence(self, callable, onFinish = None):
         """ wraps an iterator; in effect one-to-many behavior
 
             This wraps an iterable object so that it can be used
@@ -110,12 +110,12 @@ class Flow:
             callable has two arguments, then the current context 
             is passed as the first argument.
         """            
-        return self._append(Branch(callable, onFinish))
+        return self._append(Sequence(callable, onFinish))
     
     def addReduce(self, callable, start = None, inplace = 0):
         """ aggregates results; in effect many-to-one behavior
 
-            This stage is the opposite of the Branch stage, it accepts
+            This stage is the opposite of the Sequence stage, it accepts
             multiple calls and aggregates them into a single call.
     
                 callable   the function or operator which will merge the 
@@ -231,7 +231,7 @@ class Callable(Stage):
         if ret is not self.skip:
             flow.push(ret)
 
-class Branch(Stage):
+class Sequence(Stage):
     def __init__(self, callable, onFinish = None):
         self.callable    = callable
         self.onFinish    = onFinish
@@ -272,7 +272,7 @@ class _Merge(Stage):
         self.callable = callable
         self.skip     = skip
         self.withContext = (3 == getArgumentCount(callable, 2))
-     
+ 
     def __call__(self, flow, data):
         cntx = flow.context
         if not hasattr(cntx, self.bucket): 
@@ -347,7 +347,7 @@ class Stack:
         further items back on to the call stack.  Once the stage
         returns, the stack is checked and iteration continues.
     """
-    def __init__(self, flowitem, data, context, waitInterval):
+    def __init__(self, flowitem, data, context = None, waitInterval = 0):
         """ bootstraps the processing of the flow
 
              flowitem      the very first stage in the process
@@ -356,13 +356,10 @@ class Stack:
         """
         self._waitInterval = waitInterval
         self._stack   = []
-        self.global_context = _Context()
+        self.global_context = _Context(context)
         self.context = self.global_context
         self._stack.append((self.context, self.context.onFlush, None))
         self._stack.append((data, flowitem.stage, flowitem.next))
-        if context:
-           for key in context.keys():
-               setattr(self.context, key, context[key])
  
     def currLinkItem(self): 
         """ returns the current stage in the process """
@@ -409,7 +406,6 @@ class _Context:
     def __init__(self, parent = None):
         self._parent = parent
         self._flush  = []
-        self._dict   = {}
      
     def addFlush(self, flowLink, bucket = None, skip = None):
         """ 
