@@ -15,6 +15,14 @@ from twisted.internet import main
 from twisted.python import threadable, log
 from twisted.python.defer import Deferred, DeferredList
 
+
+def _nmin(a, b):
+    if a is None:
+        return b
+    if b is None:
+        return a
+    return min(a, b)
+
 class ReactorBase:
     """Default base class for Reactors.
     """
@@ -222,11 +230,13 @@ class ReactorBase:
 
     def timeout(self):
         if self._pendingTimedCalls:
+            # print 'pending timed calls', self._pendingTimedCalls
             t = self._pendingTimedCalls[0][0] - time()
             if t < 0:
-                return 0
-            else:
-                return min(t, self._delayeds.timeout())
+                t = 0
+            mt = _nmin(t, self._delayeds.timeout())
+            # print 'returning mt', mt
+            return mt
         else:
             return self._delayeds.timeout()
 

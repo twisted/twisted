@@ -179,7 +179,7 @@ class Client(Connection):
             self.reactor.callLater(0, protocol.connectionFailed)
 
     def failIfNotConnected(self, *ignored):
-        print 'failing if not connected'
+        # print 'failing if not connected'
         if (not self.connected) and (not self.disconnected):
             if self.connector:
                 self.connector.connectionFailed()
