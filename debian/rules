@@ -75,6 +75,7 @@ install-stamp: build-stamp
 			       -e "/update-menus/d" \
 			debian/python-twisted.$$maint.in > \
 			debian/$$package/DEBIAN/$$maint;\
+			chmod 755 debian/$$package/DEBIAN/$$maint;\
 		done;\
 	done
 		
@@ -172,6 +173,11 @@ binary-indep: build install
 	chmod -R go=rX debian/python$$ver-twisted;\
 	dpkg --build debian/python$$ver-twisted ..;\
 	done
+
+	dpkg-gencontrol -isp -ppython-twisted-conch -Pdebian/python-twisted-conch
+	chown -R root.root debian/python-twisted-conch
+	chmod -R go=rX debian/python-twisted-conch
+	dpkg --build debian/python-twisted-conch ..
 
 	for ver in $(versions); \
 	do dpkg-gencontrol -isp -ppython$$ver-twisted-conch -Pdebian/python$$ver-twisted-conch;\
