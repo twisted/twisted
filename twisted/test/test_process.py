@@ -106,6 +106,20 @@ class Accumulator(protocol.ProcessProtocol):
 
 class PosixProcessTestCase(unittest.TestCase):
     """Test running processes."""
+
+    def testStdio(self):
+        """twisted.internet.stdio test."""
+        exe = sys.executable
+        scriptPath = util.sibpath(__file__, "process_twisted.py")
+        p = Accumulator()
+        reactor.spawnProcess(p, exe, [exe, "-u", scriptPath], None, None)
+        p.transport.write("hello, world")
+        p.transport.write("abc")
+        p.transport.write("123")
+        p.transport.closeStdin()
+        while not p.closed:
+            reactor.iterate()
+        self.assertEquals(p.outF.getvalue(), "hello, worldabc123")
     
     def testProcess(self):
         if os.path.exists('/bin/gzip'): cmd = '/bin/gzip'

@@ -15,8 +15,13 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-
-import sys
+# system imports
+import sys, os
+import fcntl
+if (sys.hexversion >> 16) >= 0x202:
+    FCNTL = fcntl
+else:
+    import FCNTL
 
 # Twisted Imports
 from twisted.internet import protocol
@@ -39,10 +44,12 @@ class StandardIO(abstract.FileDescriptor, protocol.Transport):
         This will fail if a StandardIO has already been instantiated.
         """
         global _stdio_in_use
-        if_stdio_in_use:
+        if _stdio_in_use:
             raise RuntimeError, "Standard IO already in use."
         _stdio_in_use = 1
-        self.fileno = sys.stdin.fileno
+        self.fileno = sys.__stdin__.fileno
+        # set stdin to non-blocking
+        fcntl.fcntl(self.fileno(), FCNTL.F_SETFL, os.O_NONBLOCK)
         self.protocol = protocol
         self.protocol.makeConnection(self)
         self.startReading()
@@ -50,19 +57,18 @@ class StandardIO(abstract.FileDescriptor, protocol.Transport):
     def write(self, data):
         """Write some data to standard output.
         """
-        sys.stdout.write(data)
+        sys.__stdout__.write(data)
         # This is an asynchronous framework, but stdout *really* ought to be
         # flushable in a reasonable amount of time.
-        sys.stdout.flush()
+        sys.__stdout__.flush()
         
     def doRead(self):
         """Some data's readable from standard input.
         """
-        # assume line-buffered.
-        line = sys.stdin.readline()
-        if line == '':
+        data = os.read(self.fileno(), 8192)
+        if data == '':
             return CONNECTION_LOST
-        self.protocol.dataReceived(line)
+        self.protocol.dataReceived(data)
 
     def connectionLost(self):
         """The connection was lost.
