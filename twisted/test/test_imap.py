@@ -835,7 +835,7 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
         
         self.assertEquals(SimpleServer.theAccount.mailboxes.keys(), [])
 
-    def testIllegalDelete(self):
+    def testIllegalInboxDelete(self):
         self.stashed = None
         def login():
             return self.client.login('testuser', 'password-test')
@@ -844,7 +844,7 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
         def stash(result):
             self.stashed = result
 
-        d = self.connnected.addCallback(strip(login))
+        d = self.connected.addCallback(strip(login))
         d.addCallbacks(strip(delete), self._ebGeneral)
         d.addBoth(stash)
         d.addCallbacks(self._cbStopClient, self._ebGeneral)
