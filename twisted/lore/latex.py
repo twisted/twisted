@@ -125,7 +125,7 @@ class LatexSpitter:
 
     def visitNode_a_listing(self, node):
         fileName = os.path.join(self.currDir, node.getAttribute('href'))
-        self.writer('\\begin{verbatim}')
+        self.writer('\\begin{verbatim}\n')
         self.writer(open(fileName).read())
         self.writer('\\end{verbatim}')
         # Write a caption for this source listing
