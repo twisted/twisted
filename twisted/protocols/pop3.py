@@ -120,9 +120,11 @@ class POP3(basic.LineReceiver):
             interface = IMailbox
             avatar = ial
             logout = lambda: None
+        else:
+            interface, avatar, logout = ial
 
         if interface is not IMailbox:
-            self.failureResponse('Authentication failed')
+            self.failResponse('Authentication failed')
             log.err("_cbMailbox() called with an interface other than IMailbox")
             return
 

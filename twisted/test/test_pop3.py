@@ -52,7 +52,7 @@ class DummyDomain:
        self.users[name].append(message)
 
    def authenticateUserAPOP(self, name, digest, magic, domain):
-       return None, ListMailbox(self.users[name]), lambda: None
+       return pop3.IMailbox, ListMailbox(self.users[name]), lambda: None
 
 
 class ListMailbox:
@@ -162,7 +162,7 @@ class DummyPOP3(pop3.POP3):
     magic = '<moshez>'
 
     def authenticateUserAPOP(self, user, password):
-        return None, DummyMailbox(), lambda: None
+        return pop3.IMailbox, DummyMailbox(), lambda: None
 
 class DummyMailbox(pop3.Mailbox):
 
