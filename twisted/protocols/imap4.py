@@ -2,6 +2,6 @@ from twisted.python import util
 
 util.moduleMovedForSplit('twisted.protocols.imap4', 'twisted.mail.imap4',
                          'IMAP4 protocol support', 'Mail',
-                         'http://projects.twistedmatrix.com/mail',
+                         'http://twistedmatrix.com/projects/mail',
                          globals())
 
