@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_internet -*-
-# $Id: default.py,v 1.85 2003/11/03 18:28:32 itamarst Exp $
+# $Id: default.py,v 1.86 2003/11/03 18:38:13 itamarst Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -168,7 +168,7 @@ class PosixReactorBase(ReactorBase):
         #    else:
         #        raise NotImplementedError, "process not available since win32all is not installed"
         else:
-            raise NotImplementedError, "process only available in this reactor on POSIX"
+            raise NotImplementedError, "process only available in this reactor on POSIX, use win32eventreactor on Windows"
 
 
     # IReactorUDP
