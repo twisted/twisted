@@ -257,9 +257,10 @@ def formatFailure(myFailure):
     io = StringIO()
     w = io.write
     w(stylesheet)
-
+    w('<a href="#tbend">')
     w(exceptionHTML % (html.escape(str(myFailure.type)),
                        html.escape(str(myFailure.value))))
+    w('</a>')
     w('<div class="stackTrace">')
     first = 1
     for method, filename, lineno, localVars, globalVars in myFailure.frames:
@@ -309,6 +310,7 @@ def formatFailure(myFailure):
             
         w('</div>') # frame
     w('</div>') # stacktrace
+    w('<a name="tbend"> </a>')
     w(exceptionHTML % (html.escape(str(myFailure.type)),
                        html.escape(str(myFailure.value))))
 
