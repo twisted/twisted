@@ -36,12 +36,19 @@ class Argument:
 class String(Argument):
     """A single string.
     """
+    defaultDefault = ''
+
     def coerce(self, val):
         return str(val)
+
+class Text(String):
+    """A long string.
+    """
 
 class Integer(Argument):
     """A single integer.
     """
+    defaultDefault = 0
     def coerce(self, val):
         return int(val)
 
@@ -81,6 +88,12 @@ class Flags(Argument):
                 raise InputError("Invalid Flag: %s" % inFlagKey)
         return outFlags
 
+
+class CheckGroup(Flags):
+    pass
+
+class RadioGroup(Choice):
+    pass
 
 class Boolean(Argument):
     def coerce(self, inVal):

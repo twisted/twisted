@@ -15,15 +15,6 @@ from twisted.web.woven import model, view, controller, widgets, input, interface
 from twisted.web.microdom import parseString
 
 class lmx:
-    """
-    
-     ___   _     _____     _______ 
-    |_ _| | |   |_ _\ \   / / ____|
-     | |  | |    | | \ \ / /|  _|  
-     | |  | |___ | |  \ V / | |___ 
-    |___| |_____|___|  \_/  |_____|
-    
-    """
     createElement = widgets.document.createElement
     def __init__(self, node):
         self.node = node
@@ -51,19 +42,71 @@ class FormFillerWidget(widgets.Widget):
         """Create a `shell' node that will hold the additional form elements, if one is required.
         """
         return lmx(node).table(border="0")
+    
+    def input_single(self, request, content, arg):
+        return content.input(type="text",
+                             size="60",
+                             name=arg.name)
+
+    def input_text(self, request, content, arg):
+        r = content.textarea(cols="60",
+                             rows="10",
+                             name=arg.name,
+                             wrap="virtual")
+        r.text(arg.default)
+        return r
+
+    input_integer = input_single
+    input_string = input_single
+    input_float = input_single
+
+    def input_choice(self, request, content, arg):
+        s = content.select(name=arg.name)
+        for tag, value, desc in arg.choices:
+            s.option(value=tag).text(desc)
+        return s
+
+    def input_radiogroup(self, request, content, arg):
+        s = content.div()
+        for tag, value, desc in arg.choices:
+            s.div().input(name=arg.name,
+                          type="radio").text(desc)
+        return s
+
+    def input_checkgroup(self, request, content, arg):
+        s = content.div()
+        for tag, value, desc in arg.choices:
+            s.input(type="checkbox",
+                    name=arg.name,
+                    value=tag).text(desc)
+            # checked="1"
+        return s
+
+    def input_boolean(self, request, content, arg):
+        i = content.input(type="checkbox",
+                          name=arg.name)
+        return i
+
+    def input_password(self, request, content, arg):
+        return content.input(type="password",
+                             size="60",
+                             name=arg.name)
 
     def createInput(self, request, shell, arg):
         tr = shell.tr()
         tr.td(align="right", valign="top").text(arg.getShortDescription()+":")
-        body = tr.td(valign="top")
-        return (body.input(type="text", name=arg.name).node,
-                body.div(style="color: green").
+        content = tr.td(valign="top")
+        imeth = getattr(self,"input_"+(arg.__class__.__name__.lower()))
+        # content.input(type="text", name=arg.name).node
+        return (imeth(request, content, arg).node,
+                content.div(style="color: green").
                 text(arg.getLongDescription()).node)
 
     def setUp(self, request, node, data):
         # node = widgets.Widget.generateDOM(self,request,node)
         lmn = lmx(node)
-        lmn['action'] = (request.prepath+request.postpath)[-1]
+        if not node.hasAttribute('action'):
+            lmn['action'] = (request.prepath+request.postpath)[-1]
         lmn['method'] = 'post'
         lmn['enctype'] = 'multipart/form-data'
         self.errorNodes = errorNodes = {}                     # name: nodes which trap errors
@@ -189,6 +232,7 @@ class FormProcessor(resource.Resource):
             return ''
 
     mangle_string = mangle_single
+    mangle_text = mangle_single
     mangle_integer = mangle_single
     mangle_float = mangle_single
     mangle_choice = mangle_single
