@@ -8,7 +8,7 @@
       </h1>
       <p>
         Twisted has undergone several major revisions since Moshe Zadka and I
-        wrote the "The Twisted Network Framework".  Most of these changes have
+        wrote the <a href="ipc10paper.html">"The Twisted Network Framework"</a>.  Most of these changes have
         not deviated from the central vision of the framework, but almost all
         of the code listings have been re-visited and enhanced in some way.
       </p>
@@ -84,6 +84,7 @@
       </p>
       <p>
 <blockquote>
+Listing 9: A remotely accessible object and accompanying call
 <pre class="python">
 # Server Side
 class MyObject(pb.Referenceable):
@@ -100,12 +101,13 @@ class MyObject(pb.Referenceable):
     myRemoteReference.doIt().addCallbacks(myCallback,
                                           myErrback)
 </pre>
-<h6>Listing 9: A remotely accessible object and accompanying call</h6>
+
 </blockquote>
       </p>
       <p>
 
 <blockquote>
+Listing 10: An object responding to its calling perspective
 <pre class="python">
 # Server Side
 class Greeter(pb.Viewable):
@@ -117,12 +119,13 @@ class Greeter(pb.Viewable):
     remoteGreeter.greet().addCallback(sys.stdout.write)
     ...
 </pre>
-<h6>Listing 10: An object responding to its calling perspective</h6>
+
 </blockquote>
       </p>
       <p>
 <blockquote>
-<pre>
+Listing 12: A client for Echoer objects.
+<pre class="python">
 from twisted.spread import pb
 from twisted.internet import main
 def gotObject(object):
@@ -137,12 +140,12 @@ def gotNoObject(reason):
 pb.getObjectAt("localhost", 8789, gotObject, gotNoObject, 30)
 main.run()
 </pre>
-<h6>Listing 12: A client for Echoer objects.</h6>
 </blockquote>
 
 
 <blockquote>
-<pre>
+Listing 13: A PB server using twisted's "passport" authentication.
+<pre class="python">
 from twisted.spread import pb
 from twisted.internet import main
 class SimplePerspective(pb.Perspective):
@@ -159,11 +162,12 @@ if __name__ == '__main__':
     app.listenTCP(pb.portno, pb.BrokerFactory(pb.AuthRoot(app)))
     app.save("start")
 </pre>
-<h6>Listing 13: A PB server using twisted's "passport" authentication.</h6>
+
 </blockquote>
 
 <blockquote>
-<pre>
+Listing 14: Connecting to an Authorized Service
+<pre class="python">
 from twisted.spread import pb
 from twisted.internet import main
 def success(message):
@@ -181,11 +185,12 @@ pb.connect("localhost", pb.portno, "guest", "guest",
                                                failure)
 main.run()
 </pre>
-<h6>Listing 14: Connecting to an Authorized Service</h6>
+
 </blockquote>
 
 <blockquote>
-<pre>
+Listing 15: A Twisted GUI application
+<pre class="python">
 from twisted.internet import main, ingtkernet
 from twisted.spread.ui import gtkutil
 import gtk
@@ -210,11 +215,12 @@ l = gtkutil.Login(EchoClient, None, initialService="pbecho")
 l.show_all()
 gtk.mainloop()
 </pre>
-<h6>Listing 15: A Twisted GUI application</h6>
+
 </blockquote>
 
 <blockquote>
-<pre>
+Listing 16: an event-based web widget.
+<pre class="python">
 from twisted.spread import pb
 from twisted.python import defer
 from twisted.web import widgets
@@ -237,7 +243,7 @@ if __name__ == "__main__":
     a.listenTCP(8080, server.Site(EchoDisplay()))
     a.run()
 </pre>
-<h6>Listing 16: an event-based web widget.</h6>
+
 </blockquote>
 
 

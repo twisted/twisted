@@ -8,7 +8,7 @@
       <h2>Naming</h2>
       <p>
         Try to choose names which are both easy to remember and meaningful.
-        Some silliness is OK at the module naming level (see twisted.spread...)
+        Some silliness is OK at the module naming level (see <code class="API">twisted.spread</code>...)
         but when choosing class names, be as precise as possible.  Write code
         with a dictionary and thesaurus open on the table next to you.
       </p>
@@ -23,8 +23,8 @@
       <h2>Testing</h2>
       <p>
         Unit tests are written using the PyUnit framework.  Many examples are
-        in the twisted.test package, and all tests should be integrated through
-        the main test suite builder in twisted.test.test_all.
+        in the <code class="API">twisted.test</code> package, and all tests should be integrated through
+        the main test suite builder in <code class="API">twisted.test.test_all</code>.
       </p>
       <p>
         Acceptance tests are all automated by the bin/accepttests script
@@ -54,7 +54,7 @@
       <p>
         By default, objects from modules in Twisted ought to be imported
         directly into the namespace of the module that uses them, like this:
-        <code>from twisted.python.defer import Deferred</code>
+        <code class="python">from twisted.python.defer import Deferred</code>
       </p>
       <p>
         In some cases, however, Twisted takes advantage of the dynamic binding
@@ -69,8 +69,8 @@
         Volatile modules will have a __volatile__ attribute set to 1, and
         should always have a docstring snippet like the one that follows:
         
-        <blockquote>
-          <pre>
+
+          <pre class="python">
 """
 NOTE: this is a __volatile__ module.  This means that if you are using it
 externally, you should know that its contents may change at any time.  In
@@ -85,7 +85,7 @@ but instead like this::
     module.Class()
 """
           </pre>
-        </blockquote>
+
       </p>
       <h2>Packages</h2>
       <p>
@@ -105,7 +105,7 @@ but instead like this::
         example, to break a large module out into several smaller
         files, the accepted way to do this is to promote from within
         the module.  For example,
-<pre>
+<pre class="python">
 # parent/
 # --- __init__.py ---
 import child
@@ -164,7 +164,7 @@ parent.Foo = Foo
       </p>
       <p>
         For example,
-        <pre>
+        <pre class="python">
 def foo2bar(f):
     """I am a function to convert foos to bars.
 
@@ -318,7 +318,7 @@ def foo2bar(f):
     <address><a href="mailto:glyph@helix.twistedmatrix.com">Glyph Lefkowitz</a></address>
 <!-- Created: Thu Apr 26 07:53:26 CDT 2001 -->
 <!-- hhmts start -->
-Last modified: Tue Mar 12 22:03:28 EST 2002
+Last modified: Sun Mar 17 00:30:20 EST 2002
 <!-- hhmts end -->
   </body>
 </html>

@@ -25,13 +25,15 @@
     &lt;/p&gt;
 
     &lt;pre class="python"&gt;
-        from twisted.web import resource
+from twisted.web import resource
 
-        class MyResource(resource.Resource):
-            def render(self, request):
-                return "Hello, world!"
+class MyResource(resource.Resource):
+    def render(self, request):
+        return "Hello, world!"
     &lt;/pre&gt;
-   
+</pre>
+Note that you should never have leading indentation inside a &lt;pre&gt; block -- this makes it hard for readers to copy/paste the code.
+<pre>
 
 <b>"python-interpreter"</b>
 
@@ -123,10 +125,16 @@
       <code>&lt;/p&gt;</code>s to <code>&lt;br /&gt;</code>s. 
     </p>
 
+    <p>
+      Don't use tables for formatting. 'nuff said.
+    </p>
+
+    
+
     <hr />
-    <address>
-      <a href="mailto:radix@twistedmatrix.com">Chris Armstrong</a>
-    </address>
+      <address>
+        <a href="mailto:radix@twistedmatrix.com">Chris Armstrong</a>
+      </address>
   </body>
 </html>
 

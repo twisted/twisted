@@ -35,6 +35,10 @@ class SGMLFilter(sgmllib.SGMLParser):
 
     def unknown_starttag(self, tag, attrs):
         tag, attrs = self.start(tag, attrs)
+        #ugh :(
+        if tag in ('hr', 'br'):
+            self.write('<%s />' % tag)
+            return
         if tag:
             if not attrs:
                 self.write("<%s>" % tag)
