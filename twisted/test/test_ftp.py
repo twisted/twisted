@@ -31,7 +31,7 @@ from twisted.trial import unittest
 from twisted.protocols import basic
 from twisted.internet import reactor, protocol, defer, interfaces
 from twisted.cred import error, portal, checkers, credentials
-from twisted.python import log, components
+from twisted.python import log, components, failure
 
 from twisted.protocols import ftp, loopback
 
@@ -764,8 +764,6 @@ class FTPClientTests(unittest.TestCase):
             except:
                 pass
     
-    testFailedRETR.todo = "OW! OW! STOP POKING ME! This is SPIV's responsibility!"
-
     def timeout(self):
         reactor.crash()
         self.fail('Timed out')
@@ -774,4 +772,15 @@ class FTPClientTests(unittest.TestCase):
         for response in responses:
             reactor.callLater(0.1, protocol.lineReceived, response)
 
+    def testErrbacksUponDisconnect(self):
+        ftpClient = ftp.FTPClient()
+        d = ftpClient.list('some path', Dummy())
+        m = []
+        def _eb(failure):
+            m.append(failure)
+            return None
+        d.addErrback(_eb)
+        from twisted.internet.main import CONNECTION_LOST
+        ftpClient.connectionLost(failure.Failure(CONNECTION_LOST))
+        self.failUnless(1, len(m))
 

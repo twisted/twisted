@@ -1642,12 +1642,20 @@ class FTPClient(basic.LineReceiver):
         self.response = []
 
         self.passive = passive
+        self._failed = 0
 
     def fail(self, error):
         """Disconnect, and also give an error to any queued deferreds."""
         self.transport.loseConnection()
-        while self.actionQueue:
-            ftpCommand = self.popCommandQueue()
+        self._fail(error)
+
+    def _fail(self, error):
+        """Errback all queued deferreds."""
+        if self._failed:
+            # We're recursing; bail out here for simplicity
+            return error
+        self._failed = 1
+        for ftpCommand in self.actionQueue:
             ftpCommand.fail(Failure(ConnectionLost('FTP connection lost', error)))
         return error
 
@@ -1745,7 +1753,8 @@ class FTPClient(basic.LineReceiver):
         This method returns a DeferredList.
         """
         cmds = [FTPCommand(command, public=1) for command in commands]
-        cmdsDeferred = DeferredList([cmd.deferred for cmd in cmds])
+        cmdsDeferred = DeferredList([cmd.deferred for cmd in cmds], 
+                                    fireOnOneErrback=True)
 
         if self.passive:
             # Hack: use a mutable object to sneak a variable out of the 
@@ -1773,6 +1782,10 @@ class FTPClient(basic.LineReceiver):
 
             results = [cmdsDeferred, pasvCmd.deferred, protocol.deferred]
             d = DeferredList(results, fireOnOneErrback=1)
+
+            # Suppress errors; we've already reported this via d
+            # FIXME: Do the other components of this DeferredList need this too?
+            cmdsDeferred.addErrback(lambda err: None)   
 
             # Ensure the connection is always closed
             def close(x, m=_mutable):
@@ -1904,7 +1917,7 @@ class FTPClient(basic.LineReceiver):
         """
         if path is None:
             path = ''
-        return self.receiveFromConnection('LIST ' + self.escapePath(path), protocol)
+        return self.receiveFromConnection(['LIST ' + self.escapePath(path)], protocol)
         
     def nlst(self, path, protocol):
         """Retrieve a short file listing into the given protocol instance.
@@ -1918,7 +1931,7 @@ class FTPClient(basic.LineReceiver):
         """
         if path is None:
             path = ''
-        return self.receiveFromConnection('NLST ' + self.escapePath(path), protocol)
+        return self.receiveFromConnection(['NLST ' + self.escapePath(path)], protocol)
 
     def queueStringCommand(self, command, public=1):
         """Queues a string to be issued as an FTP command
@@ -2004,7 +2017,10 @@ class FTPClient(basic.LineReceiver):
             
         # Run the next command
         self.sendNextCommand()
-        
+
+    def connectionLost(self, reason):
+        self._fail(reason)
+
 
 class FTPFileListProtocol(basic.LineReceiver):
     """Parser for standard FTP file listings
