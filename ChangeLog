@@ -1,3 +1,9 @@
+2003-05-03  Jp Calderone  <exarkun@twistedmatrix.com>
+
+	* twisted/internet/tcp.py, twisted/internet/ssl.py: TLS support
+	added to TCP connections; startTLS() method added to transport
+	objects to switch from unencrypted to encrypted mode.
+
 2003-05-02  Jp Calderone  <exarkun@twistedmatrix.com>
 
 	* twisted/internet/protocol.py: Added continueTrying attribute to
