@@ -569,11 +569,11 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def lineReceived(self, line):
 #        print 'S:', repr(line)
-        self.resetTimeout()
-
         if self.blocked is not None:
             self.blocked.append(line)
             return
+
+        self.resetTimeout()
 
         f = getattr(self, 'parse_' + self.parseState)
         try:
@@ -1611,10 +1611,11 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def do_FETCH(self, tag, messages, query, uid=0):
         if query:
-            maybeDeferred(self.mbox.fetch, messages, uid=uid).addCallbacks(
-                self.__cbFetch, self.__ebFetch,
-                (tag, query, uid), None, (tag,), None
-            )
+            maybeDeferred(self.mbox.fetch, messages, uid=uid
+                ).addCallback(iter
+                ).addCallback(self.__cbFetch, tag, query, uid
+                ).addErrback(self.__ebFetch, tag
+                )
         else:
             self.sendPositiveResponse(tag, 'FETCH complete')
 
@@ -1623,11 +1624,14 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def __cbFetch(self, results, tag, query, uid):
         if self.blocked is None:
             self.blocked = []
+            self._oldTimeout = self.setTimeout(None)
         try:
             id, msg = results.next()
         except StopIteration:
             self.sendPositiveResponse(tag, 'FETCH completed')
             self._unblock()
+            self.setTimeout(self._oldTimeout)
+            del self._oldTimeout
         else:
             self.spewMessage(id, msg, query, uid
                 ).addCallback(lambda _: self.__cbFetch(results, tag, query, uid)

@@ -16,6 +16,7 @@ except ImportError:
 import os
 import sys
 import types
+import time
 from zope.interface import implements
 
 from twisted.mail.imap4 import MessageSet
@@ -735,8 +736,9 @@ class SimpleMailbox:
         self.closed = True
 
 class Account(imap4.MemoryAccount):
+    mailboxFactory = SimpleMailbox
     def _emptyMailbox(self, name, id):
-        return SimpleMailbox()
+        return self.mailboxFactory()
 
     def select(self, name, rw=1):
         mbox = imap4.MemoryAccount.select(self, name)
@@ -2298,6 +2300,52 @@ class TLSTestCase(IMAP4HelperMixin, unittest.TestCase):
 
         self.loopback()
         self.assertEquals(len(success), 1)
+
+class SlowMailbox(SimpleMailbox):
+    howSlow = 2
+
+    # Not a very nice implementation of fetch(), but it'll
+    # do for the purposes of testing.
+    def fetch(self, messages, uid):
+        from twisted.internet import reactor
+
+        d = defer.Deferred()
+        reactor.callLater(self.howSlow, d.callback, ())
+        return d
+
+class Timeout(IMAP4HelperMixin, unittest.TestCase):
+    def testLongFetchDoesntTimeout(self):
+        SimpleServer.theAccount.mailboxFactory = SlowMailbox
+        SimpleServer.theAccount.addMailbox('mailbox-test')
+
+        self.server.setTimeout(0.1)
+        self.stillConnected = False
+
+        def login():
+            return self.client.login('testuser', 'password-test')
+        def select():
+            return self.client.select('mailbox-test')
+        def fetch():
+            return self.client.fetchUID('1:*')
+        def stillConnected():
+            self.stillConnected = not self.server.transport.shouldLose
+
+        d = self.connected.addCallback(strip(login))
+        d.addCallback(strip(select))
+        d.addCallback(strip(fetch))
+        d.addCallback(strip(stillConnected))
+        d.addCallback(self._cbStopClient)
+        d.addErrback(self._ebGeneral)
+        self.loopback()
+
+        self.failUnless(self.stillConnected)
+
+    def testIdleClientDoesDisconnect(self):
+        self.server.setTimeout(0.2)
+
+        now = time.time()
+        self.loopback()
+        self.failUnless(time.time() - now < 0.4)
 
 if ClientTLSContext is None:
     for case in (TLSTestCase,):
