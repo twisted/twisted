@@ -40,11 +40,15 @@ class DefaultException(Exception):
 def format_frames(frames, write, detail="default"):
     """Format and write frames.
 
-    'frames' is a list of frames as used by Failure.frames, with each
-    frame being a list of
-    (funcName, fileName, lineNumber, locals.items(), globals.items())
-
-    Three detail levels are available: default, brief, and verbase.
+    @param frames: is a list of frames as used by Failure.frames, with
+        each frame being a list of
+       (funcName, fileName, lineNumber, locals.items(), globals.items())
+    @type frames: list
+    @param write: this will be called with formatted strings.
+    @type write: callable
+    @param detail: Three detail levels are available:
+        default, brief, and verbose.
+    @type detail: string
     """
     if detail not in ('default', 'brief', 'verbose'):
         raise ValueError, "Detail must be default, brief, or verbose."
@@ -73,12 +77,12 @@ class Failure:
     This is necessary because Python's built-in error mechanisms are
     inconvenient for asynchronous communication.
 
-    The exception instance responsible for this failure, and the type
-    of the exception, can be accessed through my 'value' and 'type'
-    attributes.
+    @ivar value: The exception instance responsible for this failure.
+    @ivar type: The exception's class.
     """
 
     pickled = 0
+    stack = None
 
     def __init__(self, exc_value=None, exc_type=None, exc_tb=None):
         """Initialize me with an explanation of the error.
