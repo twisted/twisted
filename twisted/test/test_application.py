@@ -607,4 +607,5 @@ class TestCompat(unittest.TestCase):
         from twisted.internet.app import ApplicationService
         svc = ApplicationService("foo", serviceParent=c)
         self.assertEquals(c.getServiceNamed("foo"), svc)
+        self.assertEquals(s.getServiceNamed("foo").name, "foo")
         c.removeService(svc)

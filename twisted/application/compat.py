@@ -215,10 +215,10 @@ class _NewService:
         raise RuntimeError
 
     def setServiceParent(self, parent):
-        self.service.serviceParent = parent
+        self.service.setServiceParent(parent)
 
     def disownServiceParent(self):
-        self.service.serviceParent = None
+        self.service.disownServiceParent()
 
     def startService(self):
         self.running = 1
@@ -231,6 +231,12 @@ class _NewService:
     def privilegedStartService(self):
         pass
 
+    def get_name(self):
+        return self.service.serviceName
+
+    name = property(get_name)
+    del get_name
+    
     def __cmp__(self, other):
         return cmp(self.service, other)
 
@@ -371,10 +377,10 @@ def convert(oldApp):
         if hasattr(s, 'privileged'):
             s.privileged = 1
     for s in oldApp.services.values():
-        s = _NewService(s)
+        if not components.implements(s, service.IService):
+            s = _NewService(s)
         s.disownServiceParent()
-        s.setServiceParent(c)
-        c.addService(s)
+        s.setServiceParent(IOldApplication(c))
     return ret
 
 
