@@ -919,7 +919,6 @@ class Account:
             for others in self.mailboxes.keys():
                 if others != name and others.startswith(name):
                     raise MailboxException, "Hierarchically inferior mailboxes exist and \\Noselect is set"
-        del self.mailboxes[name]
         mbox.destroy()
 
 
@@ -956,5 +955,6 @@ class IMailbox(components.Interface):
         """Called before this mailbox is deleted, permanently.
         
         If necessary, all resources held by this mailbox should be cleaned
-        up here.
+        up here.  This function _must_ set the \\Noselect flag on this
+        mailbox.
         """
