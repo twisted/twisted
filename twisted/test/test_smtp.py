@@ -116,10 +116,7 @@ Someone set up us the bomb!\015
         protocol.lineReceived('QUIT')
         if self.mbox != self.factory.domains['baz.com'].messages:
             raise AssertionError(self.factory.domains['baz.com'].messages)
-
-        # protocol.transport.loseConnection()
-        # reactor.iterate()
-        protocol.timeoutID.cancel()
+        protocol.setTimeout(None)
 
 mail = '''\
 Subject: hello
@@ -168,7 +165,6 @@ class LoopbackTestCase(LoopbackMixin):
         protocol.factory = factory
         clientProtocol = self.clientClass()
         self.loopback(protocol, clientProtocol)
-        # protocol.timeoutID.cancel()
 
 class LoopbackSMTPTestCase(LoopbackTestCase, unittest.TestCase):
     clientClass = MySMTPClient
@@ -339,9 +335,8 @@ To: foo
                 if not re.match(resp, data):
                     raise AssertionError, (resp, data)
                 self.assertEquals(a.message, msgdata)
-        # a.transport.loseConnection()
-        # reactor.iterate()
-        a.timeoutID.cancel()
+        a.setTimeout(None)
+
 
 class AnotherESMTPTestCase(AnotherTestCase, unittest.TestCase):
     serverClass = DummyESMTP
