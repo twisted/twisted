@@ -32,6 +32,7 @@ try:
     from os import remove as rmlink
     from os import rename as mvlink
 except:
+    import shutil
     def symlink(value, filename):
         newlinkname = filename+"."+unique()+'.newlink'
         newvalname = os.path.join(newlinkname,"symlink")
