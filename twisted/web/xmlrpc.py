@@ -254,7 +254,8 @@ class Proxy:
     def callRemote(self, method, *args):
         factory = QueryFactory(self.url, self.host, method, *args)
         if self.secure:
-            reactor.connectSSL(self.host, self.port or 443, factory)
+            from twisted.internet import ssl
+            reactor.connectSSL(self.host, self.port or 443, factory, ssl.ClientContextFactory())
         else:
             reactor.connectTCP(self.host, self.port or 80, factory)
         return factory.deferred
