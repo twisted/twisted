@@ -49,7 +49,10 @@ def ResourceScript(path, registry):
     be an instance of (a subclass of) web.resource.Resource; it will be
     renderred.
     """
-    glob = {'__file__': path, 'resource': error.ErrorPage(500, "Whoops! Internal Error", rpyNoResource), 'registry': registry}
+    glob = {'__file__': path,
+            'resource': error.ErrorPage(500, "Whoops! Internal Error",
+                                        rpyNoResource),
+            'registry': registry}
 
     execfile(path, glob, glob)
 
