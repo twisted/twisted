@@ -176,3 +176,19 @@ class ObjectGrep(unittest.TestCase):
         w = weakref.ref(m)
         
         self.assertIn("().im_self.attr[2][0][2]{'Foosh'}", reflect.objgrep(w, o, reflect.isSame))
+
+class GetClass(unittest.TestCase):
+	def testOld(self):
+		class OldClass:
+			pass
+		old = OldClass()
+		self.assertIn(reflect.getClass(OldClass).__name__, ('class', 'classobj'))
+		self.assertEquals(reflect.getClass(old).__name__, 'OldClass')
+
+	def testNew(self):
+		class NewClass(object):
+			pass
+		new = NewClass()
+		self.assertEquals(reflect.getClass(NewClass).__name__, 'type')
+		self.assertEquals(reflect.getClass(new).__name__, 'NewClass')
+		

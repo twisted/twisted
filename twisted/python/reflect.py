@@ -324,6 +324,14 @@ def getcurrent(clazz):
         return clazz
     return currclass
 
+def getClass(obj):
+    """Return the class or type of object 'obj'.
+    Returns sensible result for oldstyle and newstyle instances and types."""
+    if hasattr(obj, '__class__'):
+        return obj.__class__
+    else:
+        return type(obj)
+
 # class graph nonsense
 
 # I should really have a better name for this...
