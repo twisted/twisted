@@ -76,7 +76,7 @@ class Widget(view.View):
     # Don't do lots of work setting up my stacks; they will be passed to me
     setupStacks = 0
     tagName = None
-    def __init__(self, model = None, submodel = None, setup = None, controller = None, viewStack=None):
+    def __init__(self, model = None, submodel = None, setup = None, controller = None, viewStack=None, *args, **kwargs):
         """
         @type model: L{interfaces.IModel}
 
@@ -101,14 +101,14 @@ class Widget(view.View):
         else:
             self.setupMethods = []
         self.viewStack = viewStack
-        self.initialize()
+        self.initialize(*args, **kwargs)
 
     def _reset(self):
         self.attributes = {}
         self.slots = {}
         self._children = []
 
-    def initialize(self):
+    def initialize(self, *args, **kwargs):
         """
         Use this method instead of __init__ to initialize your Widget, so you
         don't have to deal with calling the __init__ of the superclass.
