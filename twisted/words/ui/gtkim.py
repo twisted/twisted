@@ -79,6 +79,34 @@ class Conversation(gtk.GtkWindow):
     def removeFromList(self, win, evt):
         del self.contactList.conversations[self.contact]
 
+class GroupSession(gtk.GtkWindow):
+    def __init__(self, name, contactList):
+        self.name = name
+        self.contactList = contactList
+        gtk.GtkWindow.__init__(self, gtk.WINDOW_TOPLEVEL)
+        self.set_title("%s - Instance Messenger" % name)
+        self.vb = gtk.GtkVBox()
+        self.output = gtk.GtkText()
+        self.output.set_word_wrap(gtk.TRUE)
+        self.vb.pack_start(gtkutil.scrollify(self.output), 0,0,1)
+
+        self.input = gtk.GtkEntry()
+        self.vb.pack_start(self.input,0,0,1)
+        self.input.connect('activate', self.sendMessage)
+        self.add(self.vb)
+        self.show_all()
+
+    def sendMessage(self, entry):
+        self.contactList.persp.groupMessage(self.name, entry.get_chars(0,-1))
+        entry.set_text("")
+
+    def displayMessage(self, sender, message):
+        self.output.insert_defaults("<%s> %s" % (sender,message))
+
+    def memberJoined(self,member):
+        self.output.insert_defaults("%s joined!" % member)
+        
+
 class MessageSent:
     def __init__(self, conv, mesg):
         self.conv = conv
@@ -91,6 +119,26 @@ class MessageSent:
         self.conv.messageReceived("could not send message %s: %s"
                                   % (repr(self.mesg), tb), "error", errorFont )
         
+
+
+class JoinGroup(gtk.GtkWindow):
+    def __init__(self, contactList):
+        self.contactList = contactList
+        gtk.GtkWindow.__init__(self, gtk.WINDOW_TOPLEVEL)
+        hb = gtk.GtkHBox()
+        desc = gtk.GtkLabel("Which group?")
+        input = gtk.GtkEntry()
+        hb.pack_start(desc,0,0,1)
+        hb.pack_start(input,0,0,1)
+        input.connect('activate', self.joinGroup)
+        self.add(hb)
+        self.show_all()
+
+    def joinGroup(self, text):
+        self.contactList.persp.joinGroup(text.get_text())
+        self.contactList.groups.append(text.get_text())
+        GroupSession(text.get_text(),self.contactList)
+
 
 class ContactList(gtk.GtkWindow, pb.Referenced):
     def __init__(self):
@@ -112,14 +160,18 @@ class ContactList(gtk.GtkWindow, pb.Referenced):
         self.list.set_column_width(1, 150)
         self.list.set_column_width(0, 50)
         self.list.signal_connect("select_row", self.contactSelected)
-        
+       
+        self.groups = []
+       
         vb.pack_start(gtkutil.scrollify(self.list), gtk.TRUE, gtk.TRUE, 0)
         
         addContactButton = gtkutil.cbutton("Add Contact", self.addContact)
         sendMessageButton = gtkutil.cbutton("Send Message", self.sendMessage)
+        joinGroupButton = gtkutil.cbutton("Join Group", self.joinGroup)
         hb = gtk.GtkHBox()
         hb.pack_start(addContactButton)
         hb.pack_start(sendMessageButton)
+        hb.pack_start(joinGroupButton)
         
         vb.pack_start(hb, gtk.FALSE, gtk.FALSE, 0)
         self.add(vb)
@@ -134,9 +186,18 @@ class ContactList(gtk.GtkWindow, pb.Referenced):
             self.conversations[target] = x
         return x
 
+    def joinGroup(self, bleh):
+        JoinGroup(self)
+
     def remote_receiveDirectMessage(self, sender, message):
         w = self.conversationWith(sender)
         w.messageReceived(message)
+
+    def remote_receiveGroupMessage(self,sender,group, message):
+        self.groups[group].displayMessage(sender,message)
+
+    def remote_memberJoined(self,member,group):
+        self.groups[group].memberJoined(member)
     
     def contactSelected(self, clist, row, column, event):
         print 'event on',row
