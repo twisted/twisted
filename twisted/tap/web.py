@@ -25,7 +25,7 @@ from twisted.web import server, static, twcgi, script, test, distrib, trp
 from twisted.internet import interfaces
 from twisted.python import usage, reflect
 from twisted.spread import pb
-from twisted.application import internet, service
+from twisted.application import internet, service, strports
 
 
 class Options(usage.Options):
@@ -185,7 +185,7 @@ def makeService(config):
                           DefaultOpenSSLContextFactory(config['privkey'],
                                                        config['certificate']))
             i.setServiceParent(s)
-        internet.TCPServer(int(config['port']), site).setServiceParent(s)
+        strports.service(config['port'], site).setServiceParent(s)
     
     flashport = config.get('flashconduit', None)
     if flashport:
