@@ -1,3 +1,5 @@
+from __future__ import generators, nested_scopes
+
 from twisted.internet import reactor
 
 from twisted.trial import unittest, util

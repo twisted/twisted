@@ -11,7 +11,7 @@ API Stability: stable
 Maintainer: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
 
-from __future__ import nested_scopes
+from __future__ import nested_scopes, generators
 import traceback
 
 # Twisted imports
