@@ -26,13 +26,17 @@ class HTTPPageGetter(http.HTTPClient):
     quietLoss = 0
 
     def connectionMade(self):
-        self.sendCommand('GET', self.factory.url)
+        method = getattr(self.factory, 'method', 'GET')
+        self.sendCommand(method, self.factory.url)
         self.sendHeader('Host', self.factory.host)
         self.sendHeader('User-Agent', self.factory.agent)
         for (key, value) in self.factory.headers.items():
             self.sendHeader(key, value)
         self.endHeaders()
         self.headers = {}
+        data = getattr(self.factory, 'postdata', None)
+        if data is not None:
+            self.transport.write(data)
 
     def handleHeader(self, key, value):
         key = key.lower()
@@ -101,10 +105,16 @@ class HTTPClientFactory(protocol.ClientFactory):
 
     protocol = HTTPPageGetter
 
-    def __init__(self, host, url, agent="Twisted PageGetter"):
-        self.host=host
-        self.url=url
-        self.agent=agent
+    def __init__(self, host, url, method='GET', postdata=None, headers=None, agent="Twisted PageGetter"):
+        if headers is not None:
+            self.headers = headers
+        if postdata is not None:
+            self.headers.setdefault('Content-Length', len(postdata))
+        self.postdata = postdata
+        self.method = method
+        self.host = host
+        self.url = url
+        self.agent = agent
         self.waiting = 1
         self.deferred = defer.Deferred()
 
@@ -131,11 +141,9 @@ class HTTPDownloader(HTTPClientFactory):
     protocol = HTTPPageDownloader
     value = None
 
-    def __init__(self, host, url, fileName, agent="Twisted client"):
-        self.host = host
-        self.url = url
+    def __init__(self, host, url, fileName, method='GET', postdata=None, headers=None, agent="Twisted client"):
+        HTTPClientFactory.__init__(self, host, url, method=method, postdata=postdata, headers=headers, agent=agent)
         self.fileName = fileName
-        self.agent = agent
         self.deferred = defer.Deferred()
         self.waiting = 1
         self.file = None
@@ -164,7 +172,7 @@ def _parse(url):
         port = int(port)
     return host, port, url
 
-def getPage(url):
+def getPage(url, *args, **kwargs):
     '''download a web page
 
     Download a page. Return a deferred, which will
@@ -172,12 +180,12 @@ def getPage(url):
     of the error.
     '''
     host, port, url = _parse(url)
-    factory = HTTPClientFactory(host, url)
+    factory = HTTPClientFactory(host, url, *args, **kwargs)
     reactor.connectTCP(host, port, factory)
     return factory.deferred
 
-def downloadPage(url, file):
+def downloadPage(url, file, *args, **kwargs):
     host, port, url = _parse(url)
-    factory = HTTPDownloader(host, url, file)
+    factory = HTTPDownloader(host, url, file, *args, **kwargs)
     reactor.connectTCP(host, port, factory)
     return factory.deferred
