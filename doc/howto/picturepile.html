@@ -1,0 +1,374 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>PicturePile: a tutorial Woven application</title>
+</head>
+<body>
+<h1>PicturePile: a tutorial Woven application</h1>
+
+<p>To illustrate the basic design of a Woven app, we're going to walk through
+building a simple image gallery. Given a directory of images, it will display a
+listing of that directory; when a subdirectory or image is clicked on, it will
+be displayed.</p>
+
+<p>To begin, we write an HTML template for the directory index:</p>
+
+<pre>
+  &lt;html&gt;
+    &lt;head&gt;
+      &lt;title model="title" view="Text"&gt;Directory listing&lt;/title&gt;
+    &lt;/head&gt;
+    &lt;body&gt;
+      &lt;h1 model="title" view="Text"&gt;&lt;/h1&gt;
+      &lt;ul model="directory" view="List"&gt;
+        &lt;li pattern="listItem"&gt;&lt;a view="Anchor" /&gt;&lt;/li&gt;
+        &lt;li pattern="emptyList"&gt;This directory is empty.&lt;/li&gt;
+      &lt;/ul&gt;
+    &lt;/body&gt;
+  &lt;/html&gt;
+</pre>
+
+<p>The main things that distinguish a Woven template from standard XHTML
+are the 'model', 'view', and 'pattern' attributes on tags. Predictably,
+'model' and 'view' specify which model and view will be chosen to fill the
+corresponding node. The 'pattern' attribute is used with views that have
+multiple parts, such as List. This example uses two patterns List provides;
+'listItem' marks the node that will be used as the template for each item
+in the list, and 'emptyList' marks the node displayed when the list has no
+items.</p>
+
+<p>Next, we create a <code class="API">Page</code> that will display the
+directory listing, filling the template above (after a few imports):</p>
+
+<pre>
+  import os
+  from twisted.internet import app 
+  from twisted.web.woven import page
+  from twisted.web import server
+
+  class DirectoryListing(woven.page.Page):
+
+      templateFile = "directory-listing.xhtml"
+  
+      def initialize(self, *args, **kwargs):
+          self.directory = kwargs['directory']
+  
+      def wmfactory_title(self, request):
+          return self.directory
+  
+      def wmfactory_directory(self, request):
+          files = os.listdir(self.directory)
+          for i in xrange(len(files)):
+              if os.path.isdir(os.path.join(self.directory,files[i])):
+                  files[i] = files[i] + '/'
+          return files
+  
+      def getDynamicChild(self, name, request):
+          path = os.path.join(self.directory,name)
+          if os.path.exists(path):
+              if os.path.isdir(path):
+                  return DirectoryListing(directory=path)
+              else:
+                  return ImageDisplay(image=path)
+</pre>
+
+<p>Due to the somewhat complex inheritance hierarchy in Woven's internals,
+a lot of processing is done in the '__init__' method for Page. Therefore, a
+separate 'initialize' method is provided so that one can easily access keyword
+args without having to disturb the internal setup; it is called with the same
+args that Page.__init__ receives.</p>
+
+<p>The 'templateFile' attribute tells the Page what file to load the template
+from; in this case, we will store the templates in the same directory as the
+Python module. The 'wmfactory' (short for Woven Model Factory) methods return
+objects to be used as models; In this case, 'wmfactory_title' will return a
+string, the directory's name, and 'wmfactory_directory' will return a list of
+strings, the directory's content.</p>
+
+<p>Upon rendering, Woven will scan the template's DOM tree for nodes to fill;
+when it encounters one, it gets the model (in this case by calling methods
+on the Page prefixed with 'wmfactory_'), then creates a view for that model;
+this page uses standard widgets for its models and so contains no custom view
+code. The view fills the DOM node with the appropriate data. Here, the view
+for 'title' is <code class="API">Text</code>, and so will merely insert the
+string. The view for 'directory' is <code class="API">List</code>, and so
+each element of the list will be formatted within the '&lt;ul&gt;'. Since the
+view for list items is Anchor, each item in the list will be formatted as an
+'&lt;a&gt;' tag.</p>
+
+<p>So, for a directory <q>Images</q> containing <q>foo.jpeg</q>,
+<q>baz.png</q>, and a directory <q>MoreImages</q>, the rendered page will look
+like this:</p>
+
+<pre>
+  &lt;html&gt;
+    &lt;head&gt;
+      &lt;title&gt;/Users/ashort/Pictures&lt;/title&gt;
+    &lt;/head&gt;
+    &lt;body&gt;
+      &lt;h1&gt;/Users/ashort/Pictures&lt;/h1&gt;
+      &lt;ul&gt;
+        &lt;li&gt;
+          &lt;a href="foo.jpeg"&gt;foo.jpeg&lt;/a&gt;
+        &lt;/li&gt;
+        &lt;li&gt;
+          &lt;a href="baz.png"&gt;baz.png&lt;/a&gt;
+        &lt;/li&gt;
+        &lt;li&gt;
+          &lt;a href="MoreImages/"&gt;MoreImages/&lt;/a&gt;
+        &lt;/li&gt;
+      &lt;/ul&gt;
+    &lt;/body&gt;
+  &lt;/html&gt;
+</pre>
+
+<p>As you can see, the nodes marked with 'model' and 'view' are replaced with
+the data from their models, as formatted by their views. In particular, the
+List view repeated the node marked with the 'listItem' pattern for each item
+in the list.</p>
+
+<p>For displaying the actual images, we use this template:</p>
+
+<pre>
+  &lt;html&gt;
+    &lt;head&gt;
+      &lt;title model="image" view="Text"&gt;Filename&lt;/title&gt;
+    &lt;/head&gt;
+    &lt;body&gt;
+      &lt;img src="preview" /&gt;
+    &lt;/body&gt;
+  &lt;/html&gt;
+</pre>
+
+And here is the definition of 'ImageDisplay'::
+
+<pre>
+  class ImageDisplay(page.Page):
+
+      templateFile="image-display.xhtml"
+
+      def initialize(self, *args, **kwargs):
+          self.image = kwargs['image']
+
+      def wmfactory_image(self, request):
+          return self.image
+
+      def wchild_preview(self, request):
+          return static.File(self.image)
+</pre>
+
+
+<p>Instead of using 'getDynamicChild', this class uses a 'wchild_' method to
+return the image data when the 'preview' child is requested. 'getDynamicChild'
+is only called if there are no 'wchild_' methods available to handle the
+requested URL.</p>
+
+<p>Finally, we create a webserver set to start with a directory listing, and
+connect it to a port:</p>
+
+<pre>
+  rootDirectory = os.path.expanduser("~/Pictures")
+  site = server.Site(DirectoryListing(directory=rootDirectory))
+  application = app.Application("PicturePile") 
+  application.listenTCP(8088, site)
+</pre>
+
+<p>And then start the server:</p>
+
+<pre>
+  if __name__ == '__main__': 
+      import sys               
+      from twisted.python import log 
+      log.startLogging(sys.stdout, 0) 
+      application.run() 
+</pre>
+
+<h2>Custom Views</h2>
+
+<p>Now, let's add thumbnails to our directory listing. We begin by
+changing the view for the links to <q>thumbnail</q>:</p>
+
+<pre>
+    &lt;html&gt;
+    &lt;head&gt;
+      &lt;title model="title" view="Text"&gt;Directory listing&lt;/title&gt;
+    &lt;/head&gt;
+    &lt;body&gt;
+      &lt;h1 model="title" view="Text"&gt;&lt;/h1&gt;
+      &lt;ul model="directory" view="List"&gt;
+        &lt;li pattern="listItem"&gt;&lt;a view="thumbnail" /&gt;&lt;/li&gt;
+        &lt;li pattern="emptyList"&gt;This directory is empty.&lt;/li&gt;
+      &lt;/ul&gt;
+    &lt;/body&gt;
+  &lt;/html&gt;
+</pre>
+
+<p>Woven doesn't include a standard <q>thumbnail</q> widget, so we'll have
+to write the code for this view ourselves. (Standard widgets are named with
+initial capital letters; by convention, custom views are named like methods,
+with initial lowercase letters.)</p>
+
+<p>The simplest way to do it is with a 'wvupdate_' (short for Woven
+View Update) method on our DirectoryListing class:</p>
+
+<pre>
+      def wvupdate_thumbnail(self, request, node, data):
+        a = microdom.lmx(node)
+        a['href'] = data
+        if os.path.isdir(os.path.join(self.directory,data)):
+            a.text(data)
+        else:
+            a.add('img', src=(data+'/preview'),width='200',height='200')
+</pre>
+
+<p>When the 'thumbnail' view is requested, this method is called with the HTTP
+request, the DOM node marked with this view, and the data from the associated
+model (in this case, the name of the image or directory). With this approach,
+we can now modify the DOM as necessary. First, we wrap the node in <code
+class="API">lmx</code>, a class provided by Twisted's DOM implementation that
+provides convenient syntax for modifying DOM nodes; attributes can be treated
+as dictionary keys, and the 'text' and 'add' methods provide for adding text
+to the node and adding children, respectively. If this item is a directory, a
+textual link is displayed; else, it produces an 'IMG' tag of fixed size.</p>
+
+<h2>Simple Input Handling</h2>
+
+<p>Limiting thumbnails to a single size is rather inflexible; our app would
+be nicer if one could adjust it. Let's add a list of thumbnail sizes to the
+directory listing. Again, we start with the template:</p>
+
+<a href="listings/PicturePile/directory-listing3.html" class="html-listing">directory-listing3.html</a>
+
+<p>This time, we add a form with a list of thumbnail sizes named
+'thumbnailSize': we want the form to reflect the selected option, so we place
+an 'adjuster' view on the 'select' tag that looks for the right 'option' tag
+and puts 'selected=1' on it (the default size being 200):</p>
+
+<pre>
+    def wvupdate_adjuster(self, request, widget, data):
+        size = request.args.get('thumbnailSize',('200',))[0]
+        domhelpers.locateNodes(widget.node.childNodes, 
+                               'value', size)[0].setAttribute('selected', '1')
+</pre>
+
+**Figure 2**. DirectoryListing.wvupdate_adjuster, in picturepile3.py
+
+<p>'request.args' is a dictionary, mapping argument names to lists of values
+(since multiple HTTP arguments are possible). In this case, we only care about
+the first argument named 'thumbnailSize'. 'domhelpers.locateNodes' is a helper
+function which, given a list of DOM nodes, a key, and a value, will search
+each tree and return all nodes that have the requested key-value pair.</p>
+
+<p>Next, we modify the 'thumbnail' view to look at the arguments from the
+HTTP request and use that as the size for the images:</p>
+
+<pre>
+    def wvupdate_thumbnail(self, request, node, data):
+        size = request.args.get('thumbnailSize',('200',))[0]
+        a = microdom.lmx(node)
+        a['href'] = data
+        if os.path.isdir(os.path.join(self.directory,data)):
+            a.text(data)
+        else:
+            a.add('img', src=(data+'/preview'),width=size,height=size)
+</pre>
+
+**Figure 3**. DirectoryListing.wvupdate_thumbnail, in picturepile3.py
+
+<h2>Sessions</h2>
+
+<p>A disadvantage to the approach taken in the previous section is that
+subdirectories do receive the same thumbnail sizing as their parents; also,
+reloading the page sets it back to the default size of 200x200. To remedy
+this, we need a way to store data that lasts longer than a single page
+render. Fortunately, twisted.web provides this in the form of a Session
+object. Since only one Session exists per user for all applications on the
+server, the Session object is Componentized, and each application adds
+adapters to contain their own state and behaviour, as explained in the <a
+href= "components.html" >Components</a> documentation. So, we start with an
+interface, and a class that implements it, and registration of our class upon
+Session:</p>
+
+<pre>
+  class IPreferences(components.Interface):
+      pass
+
+  class Preferences(components.Adapter):
+      __implements__ = IPreferences
+    
+  components.registerAdapter(Preferences, server.Session, IPreferences)
+</pre>
+
+<p>**Figure 1**. From picturepile4.py.</p>
+
+<p>We're just going to store data on this class, so no methods are defined.</p>
+
+<p>Next, we change our view methods, 'wvupdate_thumbnail' and
+'wvupdate_adjuster', to retrieve their size data from the Preferences object
+stored on the Session, instead of the HTTP request:</p>
+
+<pre>
+  def wvupdate_thumbnail(self, request, node, data):
+      prefs = request.getSession(IPreferences)
+      size = getattr(prefs, 'size','200')
+      a = microdom.lmx(node)
+      a['href'] = data
+      if os.path.isdir(os.path.join(self.directory,data)):
+          a.text(data)
+      else:
+          a.add('img', src=(data+'/preview'),width=size,height=size)
+
+  def wvupdate_adjuster(self, request, widget, data):
+      prefs = request.getSession(IPreferences)
+      size = getattr(prefs, 'size','200')
+      domhelpers.locateNodes(widget.node.childNodes, 
+                                   'value', size)[0].setAttribute('selected', 
+                                                                  '1')
+</pre>
+
+<p>**Figure 2**. DirectoryListing.wvupdate_thumbnail and DirectoryListing.wvupdate_adjuster, from picturepile4.py.</p>
+
+<h3>Controllers</h3>
+
+<p>Now we turn to the question of how the data gets into the session in
+the first place. While it is possible to to place it there from within the
+'wvupdate_' methods, since they both have access to the HTTP request, it is
+desirable at times to separate out input handling, which is what controllers
+are for. So, we add a 'wcfactory_' (short for Woven Controller Factory) method
+to DirectoryListing:</p>
+
+<pre>
+  def wcfactory_adjuster(self, request, node, model):
+      return ImageSizer(model, name='thumbnailSize')
+</pre>
+
+<p>**Figure 3**. DirectoryListing.wcfactory_adjuster, from picturepile4.py.</p>
+
+<p>ImageSizer is a controller. It checks the input for validity (in this
+case, since it subclasses Anything, it merely ensures the input is non-empty)
+and calls 'handleValid' if the check succeeds; in this case, we retrieve the
+Preferences component from the session, and store the size received from the
+form upon it:</p>
+
+<pre>
+  class ImageSizer(input.Anything):
+      def handleValid(self, request, data):
+          prefs = request.getSession(IPreferences)
+          prefs.size = data 
+</pre>
+
+<p>**Figure 4**. From picturepile4.py.</p>
+
+<p>Finally, we must modify the template to use our new controller. Since we
+are concerned with the input from the '&lt;select&gt;' element of the form, we
+place the controller upon it:</p>
+
+<a href="listings/PicturePile/directory-listing4.html" class="html-listing">directory-listing4.html</a>
+
+<p>Now, the selected size will be remembered across subdirectories and
+page reloads.</p>
+
+</body></html>

@@ -1,0 +1,23 @@
+
+    <html>
+    <head>
+      <title model="title" view="Text">Directory listing</title>
+    </head>
+    <body>
+      <h1 model="title" view="Text"></h1>
+      <form action="">
+        Thumbnail size:
+        <select name="thumbnailSize" onChange="submit()" view="adjuster"
+          controller="adjuster">
+          <option value="400">400x400</option>
+          <option value="200">200x200</option>
+          <option value="100">100x100</option>
+          <option value="50">50x50</option>
+        </select>
+      </form>
+      <ul model="directory" view="List">
+        <li pattern="listItem"><a view="thumbnail" /></li>
+        <li pattern="emptyList">This directory is empty.</li>
+      </ul>
+    </body>
+  </html> 
