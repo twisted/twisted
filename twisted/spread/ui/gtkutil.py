@@ -18,6 +18,9 @@ def scrollify(widget):
     # scrl.set_update_policy(gtk.POLICY_AUTOMATIC)
     return scrl
 
+def defocusify(widget):
+    widget.unset_flags(gtk.CAN_FOCUS)
+
 
 class Login(gtk.GtkWindow):
     def __init__(self, callback,
