@@ -48,6 +48,12 @@ class IOldApplication(components.Interface):
     def connectUNIX(self, address, factory, timeout=30):
         pass
 
+    def addService(self, service):
+        pass
+
+    def getServiceNamed(self, name):
+        pass
+
 
 
 class ServiceNetwork:
@@ -93,6 +99,12 @@ class ServiceNetwork:
     def connectUNIX(self, address, factory, timeout=30):
         s = internet.UNIXClient(address, factory, timeout)
         s.setServiceParent(self.app)
+
+    def addService(self, service):
+        self.app.addService(service)
+
+    def getServiceNamed(self, name):
+        return self.app.getServiceNamed(name)
 
 components.registerAdapter(ServiceNetwork,
                            service.IServiceCollection, IOldApplication)
