@@ -100,7 +100,10 @@ class XMLParser(Protocol):
         if byte in string.whitespace:
             return
         if byte != '<':
-            self._parseError("First char of document wasn't <")
+            if self.beExtremelyLenient:
+                return 'bodydata'
+            else:
+                self._parseError("First char of document wasn't <")
         return 'tagstart'
 
     def begin_tagstart(self, byte):
@@ -262,8 +265,14 @@ class XMLParser(Protocol):
             return
         elif byte in '"\'':
             return 'attrval'
-        elif self.beExtremelyLenient and byte in lenientIdentChars:
-            return 'messyattr'
+        elif self.beExtremelyLenient:
+            if byte in lenientIdentChars:
+                return 'messyattr'
+            if byte == '>':
+                self.attrval = 'True'
+                self.tagAttributes[self.attrname] = self.attrval
+                self.gotTagStart(self.tagName, self.tagAttributes)
+                return 'bodydata'
         self._parseError("Invalid intial attribute value: %r" % byte)
 
     attrname = ''
