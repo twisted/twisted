@@ -31,7 +31,8 @@ reactorTypes = {
     'poll': 'twisted.internet.pollreactor',
     'qt': 'twisted.internet.qtreactor',
     'cf' : 'twisted.internet.cfreactor',
-    'kqueue': 'twisted.internet.kqreactor'
+    'kqueue': 'twisted.internet.kqreactor',
+    'iocp': 'twisted.internet.iocp',
     }
 
 def installReactor(reactor):
