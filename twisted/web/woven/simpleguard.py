@@ -15,16 +15,18 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 from twisted.cred import portal
-from twisted.web import resource
-from twisted.web.woven.guard import UsernamePasswordWrapper, SessionWrapper
+from twisted.web import resource, util
+from twisted.web.woven import guard
 
 
 class Authenticated:
+
     def __init__(self, name=None):
         self.name = name
 
     def __nonzero__(self):
         return bool(self.name)
+
 
 class MarkAuthenticatedResource:
 
@@ -42,12 +44,15 @@ class MarkAuthenticatedResource:
         request.setComponent(Authenticated, self.authenticated)
         return self.resource.getChildWithDefault(path, request)
 
+
 class MarkingRealm:
 
-    __implements__ = portal.IRealm
-    def __init__(self, resource):
+    __implements__ = portal.IRealm,
+
+    def __init__(self, resource, nonauthenticated=None):
         self.resource = resource
-        self.nonauthenticated = MarkAuthenticatedResource(resource, None)
+        self.nonauthenticated = (nonauthenticated or
+                                 MarkAuthenticatedResource(resource, None))
 
     def requestAvatar(self, avatarId, mind, *interfaces):
         if resource.IResource not in interfaces:
@@ -59,39 +64,15 @@ class MarkingRealm:
         else:
             return resource.IResource, self.nonauthenticated, lambda:None
 
-from twisted.web import util
-def guardResource(resource, checkers, callback=lambda _: util.ParentRedirect(), errback=None):
-    myPortal = portal.Portal(MarkingRealm(resource))
+
+def parentRedirect(_):
+    return util.ParentRedirect()
+
+def guardResource(resource, checkers, callback=parentRedirect, errback=None,
+                  nonauthenticated=None):
+    myPortal = portal.Portal(MarkingRealm(resource, nonauthenticated))
     for checker in checkers:
         myPortal.registerChecker(checker)
-    return SessionWrapper(UsernamePasswordWrapper(myPortal, callback=callback, errback=errback))
-
-# Everything below here is user code:
-if __name__ == '__main__':
-    from twisted.cred import checkers
-    from twisted.web import server
-
-    class SimpleResource(resource.Resource):
-
-        def getChild(self, path, request):
-            return self
-
-        def render(self, request):
-            auth = request.getComponent(Authenticated)
-            if auth:
-                return "hello my friend "+auth.name
-            else:
-                return """
-                I don't think we've met
-                <a href="perspective-init">login</a>
-                """
-
-
-    checker = checkers.InMemoryUsernamePasswordDatabaseDontUse()
-    checker.addUser("bob", "12345")
-    anon = checkers.AllowAnonymousAccess()
-    
-    from twisted.internet import reactor
-    reactor.listenTCP(8889, server.Site(
-               resource = guardResource(SimpleResource(), [checker, anon])))
-    reactor.run()
+    un = guard.UsernamePasswordWrapper(myPortal,
+                                       callback=callback, errback=errback)
+    return guard.SessionWrapper(un)
