@@ -942,7 +942,7 @@ class Broker(banana.Banana):
     def connectionFailed(self):
         """The connection failed; bail on any awaiting perspective requests.
         """
-        for callback, errback in self.awaitingPerspectives.values():
+        for perspective, username, password, referenced, callback, errback in self.expq:
             try:
                 errback()
             except:
@@ -967,6 +967,11 @@ class Broker(banana.Banana):
                 errback(PB_CONNECTION_LOST)
             except:
                 traceback.print_exc(file=log.logfile)
+        for callback, errback in self.awaitingPerspectives.items():
+            try:
+                errback()
+            except:
+                traceback.print_exc(file=log.logfile)
         for notifier in self.disconnects:
             try:
                 notifier()
@@ -974,12 +979,12 @@ class Broker(banana.Banana):
                 traceback.print_exc(file=log.logfile)
         self.disconnects = None
         self.waitingForAnswers = None
+        self.awaitingPerspectives = None
         self.localSecurity = None
         self.remoteSecurity = None
         self.remotelyCachedObjects = None
         self.remotelyCachedLUIDs = None
         self.locallyCachedObjects = None
-        self.waitingForAnswers = None
 
     def notifyOnDisconnect(self, notifier):
         self.disconnects.append(notifier)
