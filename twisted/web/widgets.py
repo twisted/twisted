@@ -244,6 +244,12 @@ def htmlFor_checkgroup(write, name, value):
         checked = (checked and 'checked = "1"') or ''
         write('<INPUT TYPE="checkbox" NAME="%s" VALUE="%s" %s />%s<br />\n' % (name, optionName, checked, displayName))
 
+def htmlFor_radio(write, name, value):
+    "A radio button group."
+    for optionName, displayName, checked in value:
+        checked = (checked and 'checked = "1"') or ''
+        write('<INPUT TYPE="radio" NAME="%s" VALUE="%s" %s />%s<br />\n' % (name, optionName, checked, displayName))
+
 class FormInputError(Exception):
     pass
 
@@ -283,7 +289,8 @@ class Form(Widget):
         'multimenu': htmlFor_multimenu,
         'password': htmlFor_password,
         'checkbox': htmlFor_checkbox,
-        'checkgroup': htmlFor_checkgroup
+        'checkgroup': htmlFor_checkgroup,
+        'radio': htmlFor_radio,
     }
 
     formParse = {
@@ -325,6 +332,8 @@ class Form(Widget):
 
           - 'checkgroup': a group of checkboxes
 
+          - 'radio': a group of radio buttons
+
           - 'password': a 'string' field where the contents are not visible as the user types
 
           - 'file': a file-upload form (EXPERIMENTAL)
@@ -339,8 +348,8 @@ class Form(Widget):
         The 'Input Value' is usually a string, but its value can depend on the
         'Input Type'.  'int' it is an integer, 'menu' it is a list of pairs of
         strings, representing (value, name) pairs for the menu options.  Input
-        value for 'checkgroup' should be a list of ('inputName', 'Display
-        Name', 'checked') triplets.
+        value for 'checkgroup' and 'radio' should be a list of ('inputName',
+        'Display Name', 'checked') triplets.
 
         The 'Description' field is an (optional) string which describes the form
         item to the user.
@@ -381,7 +390,7 @@ class Form(Widget):
                         inputValue = 0
                 else:
                     inputValue = 0
-            elif inputType == 'checkgroup':
+            elif inputType in ('checkgroup', 'radio'):
                 if request.args.has_key(inputName):
                     keys = request.args[inputName]
                 else:
@@ -483,7 +492,7 @@ class Form(Widget):
                         formData = 0
                 else:
                     formData = 0
-            elif inputType in ['checkgroup', 'multimenu']:
+            elif inputType in ['checkgroup', 'radio', 'multimenu']:
                 if args.has_key(inputName):
                     formData = args[inputName]
                     del args[inputName]
