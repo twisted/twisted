@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: mktap.py,v 1.17 2002/08/27 10:56:11 glyph Exp $
+# $Id: mktap.py,v 1.18 2002/09/06 04:58:00 acapnotic Exp $
 
 """ Implementation module for the `mktap` command.
 """
@@ -74,7 +74,7 @@ class GeneralOptions(usage.Options):
     subCommands = [
         [x, None, (lambda obj = y: obj.load().Options()), getattr(y, 'description', '')] for (x, y) in tapLookup.items()
     ]
-        
+    subCommands.sort()
 
     def __init__(self):
         usage.Options.__init__(self)
@@ -100,6 +100,11 @@ def run():
     try:
         options.parseOptions(sys.argv[1:])
     except Exception, e:
+        # XXX: While developing, I find myself frequently disabling
+        # this except block when I want to see what screwed up code
+        # caused my updateApplication crash.  That probably means
+        # we're not doing something right here.  - KMT
+
         if isinstance(e, SystemExit):
             # We don't really want to catch this at all...
             raise
@@ -131,15 +136,15 @@ def run():
         print "The use of getPorts() is deprecated."
         for portno, factory in mod.getPorts():
             a.listenTCP(portno, factory)
-   
+
     #backwards compatibility for old --xml and --source options
     if options['xml']:
         options['type'] = 'xml'
     if options['source']:
         options['type'] = 'source'
-   
-    a.persistStyle = ({'xml': 'xml', 
-                       'source': 'aot', 
+
+    a.persistStyle = ({'xml': 'xml',
+                       'source': 'aot',
                        'pickle': 'pickle'}
                        [options['type']])
     a.save()
@@ -147,4 +152,3 @@ def run():
 # Make it script-callable for testing purposes
 if __name__ == "__main__":
     run()
-
