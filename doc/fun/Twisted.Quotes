@@ -4833,3 +4833,9 @@ person.
 <moshez> radix: you know what's shocking? technically, you and I share the same universe
 <radix> moshez: I fight to make that untrue every day
 %
+*** warner has joined channel #twisted
+<glyph> warner: newpb!
+<kenaan> Twisted: warner * r10709 sandbox/warner/ (10 files): revamp exceptions, remote calls kinda work now
+<exarkun> OMG
+<glyph> see everybody? now _that_ is the kind of response I like
+%
