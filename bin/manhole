@@ -29,8 +29,8 @@ if string.find(os.path.abspath(sys.argv[0]),'Twisted') != -1:
         os.path.dirname(os.path.abspath(sys.argv[0]))))
 ### end of preamble
 
-from twisted.internet import ingtkernet
-ingtkernet.install()
+from twisted.internet import gtkreactor
+gtkreactor.install()
 from twisted.internet import reactor
 from twisted.python import usage
 from twisted.spread.ui import gtkutil

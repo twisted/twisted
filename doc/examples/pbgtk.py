@@ -15,10 +15,10 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from twisted.internet import ingtkernet
+from twisted.internet import gtkreactor
+gtkreactor.install()
 from twisted.spread.ui import gtkutil
 import gtk
-ingtkernet.install()
 class EchoClient:
     def __init__(self, echoer):
         l.hide()
@@ -37,4 +37,5 @@ class EchoClient:
         self.echoer.callRemote('echo',txt).addCallback(self.outry.set_text)
 l = gtkutil.Login(EchoClient, None, initialService="pbecho")
 l.show_all()
-gtk.mainloop()
+from twisted.internet import reactor
+reactor.run()

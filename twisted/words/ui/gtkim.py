@@ -19,8 +19,8 @@
 # System Imports
 import gtk
 import time
-from twisted.internet import ingtkernet
-ingtkernet.install()
+from twisted.internet import gtkreactor
+gtkreactor.install()
 
 # Twisted Imports
 from twisted.spread import pb

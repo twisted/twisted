@@ -20,8 +20,8 @@ This module provides support for Twisted to interact with the PyGTK mainloop.
 
 In order to use this support, simply do the following::
 
-    |  from twisted.internet import ingtkernet
-    |  ingtkernet.install()
+    |  from twisted.internet import gtkreactor
+    |  gtkreactor.install()
 
 Then use twisted.internet APIs as usual.  The other methods here are not
 intended to be called directly.
