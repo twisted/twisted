@@ -85,6 +85,10 @@ SSL certificate to use for HTTPS. [default: server.pem]
 .TP
 \fB-k\fR, \fB--privkey\fR \fI<filename>\fR
 SSL certificate to use for HTTPS. [default: server.pem]
+.TP
+\fB--processor\fR \fI<ext>=<class name>\fR
+Adds a processor to those file names. (Only usable if after
+.B --path)
 .PP
 This creates a web.tap file that can be used by twistd. If you
 specify no arguments, it will be a demo webserver that has the Test
