@@ -920,8 +920,6 @@ class IMAP4Client(basic.LineReceiver):
                 self._parts.append(line)
                 tag, rest = self._tag, ''.join(self._parts)
                 self._tag, self._parts = None, []
-                
-                print 'Dispatching with %r %r' % (tag, rest)
                 self.dispatchCommand(tag, rest)
             else:
                 # Otherwise, this line stands alone!
@@ -1881,7 +1879,6 @@ class IMAP4Client(basic.LineReceiver):
 
     def __cbFetch(self, (lines, last)):
         flags = {}
-        print '__cbFetch((%r, %r))' % (lines, last)
         for line in lines:
             parts = line.split(None, 2)
             if len(parts) == 3:
