@@ -26,9 +26,6 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 # system imports
 import sys, os, select, errno
 
-# Twisted Imports
-from twisted.python import log
-
 # Sibling Imports
 import abstract, fdesc, protocol
 from main import CONNECTION_LOST
