@@ -42,7 +42,7 @@ try:
 except:
     defaultRoot = None
 
-defaultOptions = '--upver --tag --export --dist --docs --balls --rel --deb'
+defaultOptions = '--upver --tag --export --dist --docs --balls --rel --deb' # --debi'
 
 
 
@@ -112,6 +112,11 @@ class Options(usage.Options):
         Reqs: release and access to the twistedmatrix.com unstable chroot (through localhost: this means you need to run the script from pyramid!)."""
         self['commands'].append(MakeDebs)
 
+    def opt_debi(self):
+        """Copies a debian mini-repository in ~/Releases/debian-ver/ to /twisted/Debian/.
+        Reqs: debs and existence of skeleton in /twisted/Debian"""
+        self['commands'].append(InstallDebs)
+
     def opt_debug(self):
         """Enable debug-mode: ask before running *every* shell command."""        
         global debug
@@ -169,7 +174,7 @@ def main():
         print "Please specify a version."
         sys.exit(2)
 
-    defaultCommands = [UpdateVersion, Tag, Export, PrepareDist, GenerateDocs, CreateTarballs, Release, MakeDebs]
+    defaultCommands = [UpdateVersion, Tag, Export, PrepareDist, GenerateDocs, CreateTarballs, Release, MakeDebs]#, InstallDebs]
 
     if not opts['commands']:
         opts['commands'] = defaultCommands
@@ -525,8 +530,39 @@ class MakeDebs(Transaction):
         sh('rm -rf /sid-chroot/tmp/%s' % unique)
 
     def undoIt(self, opts, fail):
-        pass
+        rel = opts['release']
+        ver = opts['version']
+        sh("rm -rf %(rel)s/debian-%(ver)s" % vars())
     
+
+class InstallDebs(Transaction):
+
+    target = '/twisted/Debian'
+
+    def doIt(self, opts):
+        rel = opts['release']
+        ver = opts['version']
+        target = self.target
+        for file in ('Packages.gz', 'Sources.gz', 'override'):
+            if os.path.isfile('%(target)s/%(file)s' % vars()):
+                sh('mv %(target)s/%(file)s %(target)s/%(file)s.old')
+            if os.path.isfile('%(target)s/woody/%(file)s' % vars()):
+                sh('mv %(target)s/woody/%(file)s %(target)s/woody/%(file)s.old')
+        for file in os.listdir('%(rel)s/debian-%(ver)s/' % vars()):
+            if file == 'woody':
+                continue
+            sh("cp %(rel)s/debian-%(ver)s/*twisted* %(target)s/" % vars())
+        sh("cp %(rel)s/debian-%(ver)s/woody/* %(target)s/woody/" % vars())
+
+    def undoIt(self):
+        rel = opts['release']
+        ver = opts['version']
+        target = self.target
+        for dir in (target, target+'/woody'):
+            for file in glob.glob('%(dir)s/*.old' % vars()):
+                new = os.path.splitext(file)[0]
+                sh('mv %(target)s/%(file)s %(target)s/%(new)s')
+            sh('rm %(dir)s/*%(ver)s*' % vars())
 
 if __name__=='__main__':
     main()
