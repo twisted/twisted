@@ -127,7 +127,7 @@ def greedyWrap(inString, width=80):
     if inString.find('\n\n') >= 0:
         paragraphs = string.split(inString, '\n\n')
         for para in paragraphs:
-            outLines.extend(greedyWrap(para) + ['\n\n'])
+            outLines.extend(greedyWrap(para) + [''])
         return outLines
     inWords = string.split(inString)
 
