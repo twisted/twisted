@@ -12,7 +12,6 @@ Done yields "were you happy with that" msgs
 """
 from twisted.web import wmvc, server 
 from twisted.python import components
-from twisted.internet import  app
 from twisted.words.service import WordsClient, IWordsClient, IWordsPolicy
 from twisted.issues import repo, robot
 
@@ -77,13 +76,12 @@ class ChatConduitSession(WordsClient):
         self.session = session
         self.complained = 0
         self.recipient = "IssueBot"
-        ChatConduitSession.id = ChatConduitSession.id + 1
+        ChatConduitSession.id += 1
         self.cached = []
         self.request = None
         self.name = "webchat%s" % self.id
         session.notifyOnExpire(self.die)
-        self.service = app.theApplication.getServiceNamed('twisted.words')
-        self.service.addBot(self.name, self)
+        self.service = None
 
         
     def die(self):
@@ -97,6 +95,13 @@ class ChatConduitSession(WordsClient):
         for item in self.cached:
             self.output(item)
 
+    def setModel(self, model):
+        # TODO: maybe a sanity check...?
+        if not self.service:
+            self.service = model.wordsService
+            self.issueRepo = model.issueRepo
+            self.service.addBot(self.name, self)
+
     def setupBot(self, voice):
 
         self.voice = voice
@@ -104,9 +109,9 @@ class ChatConduitSession(WordsClient):
         # get the repo, create a perspective, get the issuebot, add
         # our notifier, add our policy to the notifier, tell the
         # notifier about ourself, put it in the issuebot's
-        # voiceToPerson, eat the path
+        # voiceToPerson, eat the path.  EAT THE PATH.
 
-        repository = app.theApplication.getServiceNamed('twisted.issues')
+        repository = self.issueRepo
         issuePerson = repository.createPerspective(self.name)
         issuebot = filter(lambda x: isinstance(x, robot.IssueBot),
                           self.service.bots)[0]
@@ -145,7 +150,9 @@ components.registerAdapter(ChatConduitSession, server.Session, IConduitSession)
 
 
 class MWebConduit(wmvc.WModel):
-    pass
+    def __init__(self, wordsService, issueRepo):
+        self.wordsService = wordsService
+        self.issueRepo = issueRepo
 
 
 class VWebConduit(wmvc.WView):
@@ -155,6 +162,7 @@ class VWebConduit(wmvc.WView):
 class CWebConduit(wmvc.WController):
     def render(self, request):
         session = request.getSession(IConduitSession)
+        session.setModel(self.model)
         input = request.args.get("input", [None])[0]
         if input:
             session.input(input)

@@ -1,6 +1,6 @@
 # -*- Python -*-
 from twisted.internet import app
-from twisted.issues import repo, robot
+from twisted.issues import robot
 from twisted.web import server, static, script, trp
 from twisted.spread import pb
 from twisted.manhole import service
@@ -9,6 +9,7 @@ import twisted.words.service
 import twisted.words.ircservice
 import twisted.words.botbot
 from twisted.cred.authorizer import DefaultAuthorizer
+
 application = app.Application("issueconduit")
 authorizer = DefaultAuthorizer(application)
 
