@@ -49,20 +49,20 @@ def pamAuthenticateThread(service, user, conv):
 
     pam = PAM.pam()
     pam.start(service, user, _conv)
-    gid = os.getgid()
-    uid = os.getuid()
+    gid = os.getegid()
+    uid = os.geteuid()
     os.setegid(0)
     os.seteuid(0)
     try:
         pam.authenticate() # these will raise
         pam.acct_mgmt()
     except:
-        os.setgid(gid)
-        os.setuid(uid)
+        os.setegid(gid)
+        os.seteuid(uid)
         raise
     else:
-        os.setgid(gid)
-        os.setuid(uid)
+        os.setegid(gid)
+        os.seteuid(uid)
         return 1
 
 def defConv(items):
