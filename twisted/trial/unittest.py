@@ -71,6 +71,10 @@ else:
 
 
 class TestCase:
+
+    expectedAssertions = None
+    _assertions = 0
+
     def setUpClass(self):
         pass
 
@@ -78,23 +82,34 @@ class TestCase:
         pass
     
     def setUp(self):
-        pass
+        self._assertions = 0
+        self.expectedAssertions = None
 
     def tearDown(self):
-        pass
+        if self.expectedAssertions is not None:
+            self.assertEquals(self._assertions, self.expectedAssertions,
+                              "There were not enough assertions: "
+                              "%s were run, %s were expected" %
+                              (self._assertions, self.expectedAssertions))
+
 
     def fail(self, message=None):
         raise FailTest, message
 
+    # make sure to increment self._assertions in any of these assertion methods!
+    
     def failIf(self, condition, message=None):
+        self._assertions += 1
         if condition:
             raise FailTest, message
 
     def failUnless(self, condition, message=None):
+        self._assertions += 1
         if not condition:
             raise FailTest, message
 
     def failUnlessRaises(self, exception, f, *args, **kwargs):
+        self._assertions += 1
         try:
             if not twisted.python.util.raises(exception, f, *args, **kwargs):
                 raise FailTest, '%s not raised' % exception.__name__
@@ -106,22 +121,27 @@ class TestCase:
                                                          exception.__name__)
 
     def failUnlessEqual(self, first, second, msg=None):
+        self._assertions += 1
         if not first == second:
             raise FailTest, (msg or '%r != %r' % (first, second))
 
     def failUnlessIdentical(self, first, second, msg=None):
+        self._assertions += 1
         if first is not second:
             raise FailTest, (msg or '%r is not %r' % (first, second))
 
     def failIfEqual(self, first, second, msg=None):
+        self._assertions += 1
         if not first != second:
             raise FailTest, (msg or '%r == %r' % (first, second))
     
     def failUnlessIn(self, containee, container, msg=None):
+        self._assertions += 1
         if containee not in container:
             raise FailTest, (msg or "%r not in %r" % (containee, container))
 
     def failIfIn(self, containee, container, msg=None):
+        self._assertions += 1
         if containee in container:
             raise FailTest, (msg or "%r in %r" % (containee, container))
 
@@ -135,6 +155,7 @@ class TestCase:
     assertNotIn = failIfIn
 
     def assertApproximates(self, first, second, tolerance, msg=None):
+        self._assertions += 1
         if abs(first - second) > tolerance:
             raise FailTest, (msg or "%s ~== %s" % (first, second))
     
