@@ -106,9 +106,17 @@ class ShellFactory(protocol.Factory):
     username = "admin"
     password = "admin"
     protocol = Shell
+    service = None
 
     def __init__(self):
-        self.namespace = {}
+        self.namespace = {
+            'factory': self,
+            'service': None,
+            '_': None
+        }
+
+    def setService(self, service):
+        self.namespace['service'] = self.service = service
 
     def __getstate__(self):
         """This returns the persistent state of this shell factory.

@@ -35,4 +35,6 @@ class Options(usage.Options):
 def makeService(config):
     t = telnet.ShellFactory()
     t.username, t.password = config['username'], config['password']
-    return strports.service(config['port'], t)
+    s = strports.service(config['port'], t)
+    t.setService(s)
+    return s
