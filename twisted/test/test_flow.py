@@ -19,9 +19,10 @@
 from twisted.flow import flow
 from twisted.flow.threads import Threaded, QueryIterator
 from twisted.trial import unittest
-from twisted.python import failure
+from twisted.python import failure, threadable
 from twisted.internet import defer, reactor, protocol
 from time import sleep
+threadable.init()
 
 class slowlist:
     """ this is a generator based list
@@ -415,6 +416,14 @@ class FlowTest(unittest.TestCase):
         d = flow.Deferred(Threaded(CountIterator(5)))
         self.assertEquals(expect, unittest.deferredResult(d))
 
+    def testThreadedError(self):
+        # is this the expected behaviour?
+        def iterator():
+            yield 1
+            raise ValueError
+        f = unittest.deferredError(flow.Deferred(Threaded(iterator())))
+        f.trap(ValueError)
+    
     def testThreadedSleep(self):
         expect = [5,4,3,2,1]
         d = flow.Deferred(Threaded(CountIterator(5)))

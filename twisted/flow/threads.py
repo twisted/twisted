@@ -122,7 +122,7 @@ class Threaded(Stage):
             except StopIteration:
                 reactor.callFromThread(self._stopping)
             except: 
-                self.failure = Faliure()
+                self.failure = Failure()
                 reactor.callFromThread(self._cooperate)
             self._cooperate.immediate = True
 
@@ -130,6 +130,7 @@ class Threaded(Stage):
         if self.results or self.stop or self.failure:
             return
         return self._cooperate
+
 
 class QueryIterator:
     """ Converts a database query into a result iterator
