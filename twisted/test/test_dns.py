@@ -24,8 +24,12 @@ from StringIO import StringIO
 
 from twisted.protocols import dns
 
+import socket
+# Contort ourselves horribly until inet_pton is standard
+IPV6 = hasattr(socket, 'AF_INET6')
 
-class RountripDNSTestCase(unittest.TestCase):
+
+class RoundtripDNSTestCase(unittest.TestCase):
     """Encoding and then decoding various objects."""
     
     names = ["example.org", "go-away.fish.tv", "23strikesback.net"]
@@ -90,8 +94,16 @@ class RountripDNSTestCase(unittest.TestCase):
             self.assertEquals(str(result.name), s)
 
     def testHashable(self):
-        for k in dns.__dict__:
-            if k.startswith('Record_'):
-                klass = getattr(dns, k)
-                self.assertEquals(hash(klass()), hash(klass()))
-    
+        records = [
+            dns.Record_NS, dns.Record_MD, dns.Record_MF, dns.Record_CNAME,
+            dns.Record_MB, dns.Record_MG, dns.Record_MR, dns.Record_PTR,
+            dns.Record_DNAME, dns.Record_A, dns.Record_SOA, dns.Record_NULL,
+            dns.Record_WKS, dns.Record_SRV, dns.Record_AFSDB, dns.Record_RP,
+            dns.Record_HINFO, dns.Record_MINFO, dns.Record_MX, dns.Record_TXT
+        ]
+        
+        if IPV6:
+            records.extend([dns.Record_AAAA, dns.Record_A6])
+
+        for k in records:
+            self.assertEquals(hash(k()), hash(k()))
