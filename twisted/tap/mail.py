@@ -9,6 +9,10 @@ usage_message = """Usage:
 
 Options:
 
+        -r, --relay <ip>,<port>=<path>
+                relay mail we do not know how to handle to this IP,
+                using the given path as a queue directory
+
         -d, --domain <domain>=<path>
                 generate an SMTP/POP3 virtual domain which saves to "path"
 
@@ -35,17 +39,17 @@ This creates a mail.tap file that can be used by twistd.
 """
 
 # Twisted Imports
-from twisted.mail import mail, maildir
+from twisted.mail import mail, maildir, relay, relaymanager
 from twisted.protocols import pop3, smtp
 from twisted.internet import tcp
-from twisted.python import usage
+from twisted.python import usage, delay
 
 import sys
 
 
 class Options(usage.Options):
     optStrings = [["pop", "p", 8110],["smtp", "s", 8025],
-		  ["telnet", "t", ""]]
+		  ["telnet", "t", ""],["relay", "r", '']]
 
     def __init__(self):
         self.domains = {}
@@ -78,6 +82,16 @@ def getPorts(app, config):
         from twisted.protocols import telnet
 	factory = telnet.ShellFactory()
 	ports.append((int(config.telnet), factory))
+    if config.relay:
+        addr, dir = string.split(config.relay, '=', 1)
+        ip, port = string.split(addr, ',', 1)
+        port = int(port)
+        default = relay.DomainPickler(dir)
+        delayed = delay.Delayed()
+        manager = relaymanager.SmartHostSMTPRelayingManager(dir, (ip, port))
+        relaymanager.attachManagerToDelayed(manager, delayed)
+        config.domains = mail.DomainWithDefaultDict(config.domains, default)
+        app.addDelayed(delayed)
     ports.append((int(config.pop), 
                  mail.createDomainsFactory(pop3.VirtualPOP3, config.domains)))
     ports.append((int(config.smtp), 

@@ -5,7 +5,7 @@ twisted (0.9.6-1) unstable; urgency=low
   * Added docs about writing new twisted servers
   * Changed mail API: now, saveMessage gets the SMTP from too
   * Removed spurious prints from twisted.mail.mail
-  * New file: twisted.mail.relay, relaying infrastructure
+  * Possible to relay mail to unknown domains via smart host
   * tap2deb can create policy compliant Debian packages around .tap's
   * Fixed debian/rules clean target (closes: Bug#108245)
   * New arguments to twistd: --python, --no_save

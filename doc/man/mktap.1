@@ -75,6 +75,10 @@ http://twistedmatrix.com/reality.epy.
 start the server on.
 .SH \fBmail\fR options
 .TP
+\fB\-r\fR, \fB\--relay\fR \fI<ip>,<port>=<queue directory>\fR
+Relay mail to all unknown domains through given IP and port,
+using queue directory as temporary place to place files.
+.TP
 \fB\-d\fR, \fB\--domain\fR \fI<domain>\fR=\fI<path>\fR
 generate an SMTP/POP3 virtual maildir domain named "domain" which saves to 
 "path"
