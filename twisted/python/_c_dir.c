@@ -560,23 +560,6 @@ dir_listLinks(PyObject *self, PyObject *args) {
 }
 
 static PyMethodDef dir_functions[] = {
-	{"isFifo", (PyCFunction)dir_isFifo, METH_VARARGS,
-		"isFifo() -> True if this entry is of FIFO type"},
-	{"isCharDevice", (PyCFunction)dir_isCharDevice, METH_VARARGS,
-		"isCharDevice() -> True if this entry is of CHR type"},
-	{"isBlockDevice", (PyCFunction)dir_isBlockDevice, METH_VARARGS,
-		"isBlockDevice() -> True if this entry is of BLK type"},
-	{"isDirectory", (PyCFunction)dir_isDirectory, METH_VARARGS,
-		"isDirectory() -> True if this entry is of DIR type"},
-	{"isRegularFile", (PyCFunction)dir_isRegularFile, METH_VARARGS,
-		"isRegularFile() -> True if this entry is of REG type"},
-	{"isSymbolicLink", (PyCFunction)dir_isSymbolicLink, METH_VARARGS,
-		"isSymbolicLink() -> True if this entry is of SYM type"},
-	{"isSocket", (PyCFunction)dir_isSocket, METH_VARARGS,
-		"isSocket() -> True if this entry is of SOCK type"},
-	{"isWhiteout", (PyCFunction)dir_isWhiteout, METH_VARARGS,
-		"isWhiteout() -> True if this entry is of WHT type"},
-
 	{"listDirectories", (PyCFunction)dir_listDirectories, METH_VARARGS,
 		"listDirectories(path) -> List the directories in the given path"},
 	{"listLinks", (PyCFunction)dir_listLinks, METH_VARARGS,
