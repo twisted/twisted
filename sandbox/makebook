@@ -8,4 +8,4 @@ latex book.tex
 dvips -o book.ps book.dvi
 rm -f book.ps.bz2
 bzip2 -9 book.ps
-rm *.tex *.aux *.log book.dvi
+rm *.eps *.tex *.aux *.log book.dvi
