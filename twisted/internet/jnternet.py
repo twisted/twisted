@@ -24,7 +24,7 @@ from twisted.persisted import styles
 from twisted.python import timeoutqueue
 
 # Java Imports
-from java.net import Socket, ServerSocket
+from java.net import Socket, ServerSocket, SocketException
 import jarray
 
 # System Imports
@@ -121,8 +121,11 @@ class WriteBlocker(Blocker):
             self.consuming = 0
         else:
             # bytes = jarray.array(map(ord, data), 'b')
-            self.fdes.ostream.write(data)
-            self.fdes.ostream.flush()
+            try:
+                self.fdes.ostream.write(data)
+                self.fdes.ostream.flush()
+            except SocketException:
+                self.stop()
 
 class ReadBlocker(Blocker):
     def __init__(self, fdes, q):
