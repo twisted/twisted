@@ -34,7 +34,7 @@ class SSHUserAuthServer(service.SSHService):
     loginTimeout = 10 * 60 * 60 # 10 minutes before we disconnect them
     attemptsBeforeDisconnect = 20 # number of attempts to allow before a disconnect
     protocolMessages = None # set later
-    supportedMethods = ['publickey', 'password']
+    supportedMethods = ['publickey', 'password', 'keyboard-interactive']
 
     def serviceStarted(self):
         self.supportedAuthentications = self.supportedMethods[:] 
@@ -71,7 +71,11 @@ class SSHUserAuthServer(service.SSHService):
         kind = kind.replace('-', '_')
         f = getattr(self,'auth_%s'%kind, None)
         if f:
-            return f(data)
+            ret = f(data)
+            if not ret:
+                return defer.fail(error.ConchError('%s return None instead of a Deferred' % kind))
+            else:
+                return ret
         return defer.fail(error.ConchError('bad auth type: %s' % kind))
 
     def ssh_USERAUTH_REQUEST(self, packet):
@@ -82,6 +86,8 @@ class SSHUserAuthServer(service.SSHService):
         self.nextService = nextService
         self.method = method
         d = self.tryAuth(method, user, rest)
+        if not d:
+            self._ebBadAuth(ConchError('auth returned none'))
         d.addCallbacks(self._cbFinishedAuth)
         d.addErrback(self._ebMaybeBadAuth)
         d.addErrback(self._ebBadAuth)
@@ -139,58 +145,49 @@ class SSHUserAuthServer(service.SSHService):
         c = credentials.UsernamePassword(self.user, password)
         return self.portal.login(c, None, None)
 
-#    def auth_keyboard_interactive(self, ident, packet):
-#        if packet != '':
-#            self.transport.sendDisconnect(transport.DISCONNECT_PROTOCOL_ERROR, "keyboard_interactive auth takes no data")
-#        if hasattr(self, '_pamDeferred'):
-#            return defer.fail(error.ConchError('cannot run kbd-int twice at once'))
-#        d = pamauth.pamAuthenticate('ssh', ident.name, self._pamConv)
-#        return d
-#
-#    def _pamConv(self, items):
-#        resp = []
-#        for message, kind in items:
-#            if kind == 1: # password
-#                resp.append((message, 0))
-#            elif kind == 2: # text
-#                resp.append((message, 1))
-#            elif kind in (3, 4):
-#                return defer.fail(error.ConchError('cannot handle PAM 3 or 4 messages'))
-#            else:
-#                return defer.fail(error.ConchError('bad PAM auth kind %i' % kind))
-#        packet = NS('')+NS('')+NS('')
-#        packet += struct.pack('>L', len(resp))
-#        for prompt, echo in resp:
-#            packet += NS(prompt)
-#            packet += chr(echo)
-#        self.transport.sendPacket(MSG_USERAUTH_INFO_REQUEST, packet)
-#        self._pamDeferred = defer.Deferred()
-#        return self._pamDeferred
-#
-#    def ssh_USERAUTH_INFO_RESPONSE(self, packet):
-#        if not self.identity:
-#            return defer.fail(error.ConchError('bad username'))
-#        d = self._pamDeferred
-#        del self._pamDeferred
-#        try:
-#            resp = []
-#            numResps = struct.unpack('>L', packet[:4])[0]
-#            packet = packet[4:]
-#            while packet:
-#                response, packet = getNS(packet)
-#                resp.append((response, 0))
-#            assert len(resp) == numResps
-#        except:
-#            d.errback(failure.Failure())
-#        else:
-#            d.callback(resp)
-#            
+    def auth_keyboard_interactive(self, packet):
+        if hasattr(self, '_pamDeferred'):
+            self.transport.sendDisconnect(transport.DISCONNECT_PROTOCOL_ERROR, "only one keyboard interactive attempt at a time")
+            return failure.Failure(error.IgnoreAuthentication())
+        c = credentials.PluggableAuthenticationModules(self.user, self._pamConv)
+        return self.portal.login(c, None, None)
 
-    # overwrite on the client side            
-    def areDone(self):
-        return len(self.authenticatedWith)>0
-        
+    def _pamConv(self, items):
+        resp = []
+        for message, kind in items:
+            if kind == 1: # password
+                resp.append((message, 0))
+            elif kind == 2: # text
+                resp.append((message, 1))
+            elif kind in (3, 4):
+                return defer.fail(error.ConchError('cannot handle PAM 3 or 4 messages'))
+            else:
+                return defer.fail(error.ConchError('bad PAM auth kind %i' % kind))
+        packet = NS('')+NS('')+NS('')
+        packet += struct.pack('>L', len(resp))
+        for prompt, echo in resp:
+            packet += NS(prompt)
+            packet += chr(echo)
+        self.transport.sendPacket(MSG_USERAUTH_INFO_REQUEST, packet)
+        self._pamDeferred = defer.Deferred()
+        return self._pamDeferred
 
+    def ssh_USERAUTH_INFO_RESPONSE(self, packet):
+        d = self._pamDeferred
+        del self._pamDeferred
+        try:
+            resp = []
+            numResps = struct.unpack('>L', packet[:4])[0]
+            packet = packet[4:]
+            while packet:
+                response, packet = getNS(packet)
+                resp.append((response, 0))
+            assert len(resp) == numResps
+        except:
+            d.errback(failure.Failure())
+        else:
+            d.callback(resp)
+            
 class SSHUserAuthClient(service.SSHService):
     name = 'ssh-userauth'
     protocolMessages = None # set later
@@ -349,10 +346,3 @@ for v in dir(userauth):
 
 SSHUserAuthServer.protocolMessages = messages
 SSHUserAuthClient.protocolMessages = messages
-
-try:
-    import pamauth
-except:
-    pass
-else:
-    SSHUserAuthServer.supportedMethods.append('keyboard-interactive')

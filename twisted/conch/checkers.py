@@ -14,6 +14,11 @@ except:
     md5_crypt = None
     shadow = None
 
+try:
+    import pamauth
+except ImportError:
+    pamauth = None
+
 from twisted.conch import error
 from twisted.conch.ssh import keys
 from twisted.cred.checkers import ICredentialsChecker
@@ -21,7 +26,7 @@ from twisted.cred.credentials import IUsernamePassword
 from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
 from twisted.internet import defer
 from twisted.python import components, failure, reflect
-from credentials import ISSHPrivateKey
+from credentials import ISSHPrivateKey, IPluggableAuthenticationModules
 
 def verifyCryptedPassword(crypted, pw):
     if crypted[0] == '$': # md5_crypt encrypted
@@ -107,7 +112,20 @@ class SSHPublicKeyDatabase:
                         return 1
                 except binascii.Error:
                     continue
-        return 0 
+        return 0
+
+class PluggableAuthenticationModulesChecker:
+    __implements__ = ICredentialsChecker
+
+    credentialInterfaces = IPluggableAuthenticationModules,
+
+    def requestAvatarId(self, credentials):
+        if not pamauth:
+            return defer.fail(UnauthorizedLogin())
+        d = pamauth.pamAuthenticate('ssh', credentials.username,
+                                       credentials.pamConversion)
+        d.addCallback(lambda x: credentials.username)
+        return d
 
 class SSHProtocolChecker:
     __implements__ = ICredentialsChecker

@@ -1,3 +1,8 @@
+2003-07-06  Paul Swartz  <z3p@twistedmatrix.com>
+	* twisted/conch/[checkers,credentials,pamauth].py,
+	  twisted/conch/ssh/userauth.py, twisted/tap/conch.py: made PAM
+	  work again as an authentication.
+
 2003-07-05  Dave Peticolas  <dave@krondo.com>
 
 	* twisted/test/test_enterprise.py: more tests. Add mysql test.
