@@ -217,8 +217,6 @@ class AsReferenceable(Referenceable):
         self.remoteMessageReceived = getattr(object, messageType + "MessageReceived")
 
 
-local_atom = "local"
-
 class RemoteReference(Serializable, styles.Ephemeral):
     """This is a translucent reference to a remote object.
 
@@ -229,11 +227,6 @@ class RemoteReference(Serializable, styles.Ephemeral):
     I am a "translucent" reference because although no additional
     bookkeeping overhead is given to the application programmer for
     manipulating a reference, return values are asynchronous.
-
-    All attributes besides '__double_underscored__' are RemoteMethod
-    instances; these act like methods which return Deferreds. However,
-    this method of calling remote methods is deprecated - use callRemote
-    instead.
 
     See also twisted.python.defer.
     """
@@ -287,6 +280,19 @@ class RemoteReference(Serializable, styles.Ephemeral):
 
     def callRemote(self, name, *args, **kw):
         """Asynchronously invoke a remote method.
+
+        Arguments:
+
+          * name: the name of the remote method to invoke
+
+          * *args: arguments to serialize for the remote function
+
+          * **kw: keyword arguments to serialize for the remote function.
+
+        Returns:
+
+          a Deferred which will be fired when the result of this remote call is
+          received.
         """
         return self.broker._sendMessage('',self.perspective, self.luid, name, args, kw)
 
