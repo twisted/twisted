@@ -1,3 +1,22 @@
+twisted (0.19.0-1) unstable; urgency=low
+
+  * New upstream release
+  * Debian packaging changes:
+    * split python2.x-twisted into python2.x-twisted and python2.x-twisted-bin
+    * unfortunately, because of distutils mind boggling stupidity, it will
+      do most of the work for building the arch-independant utilities when
+      building the c module
+    * fortunately, twisted will now take up much less room in the archive
+
+ -- Moshe Zadka <moshez@debian.org>  Wed, 19 Jun 2002 18:01:50 +0300
+
+twisted (0.18.0-2) unstable; urgency=low
+
+  * The "Aaaaarrrgghhh, I'm stupid release"
+  * debian/control: python2.1-twisted needs to Conflict:/Replace: twisted too
+
+ -- Moshe Zadka <moshez@debian.org>  Tue, 18 Jun 2002 20:22:08 +0300
+
 twisted (0.18.0-1) unstable; urgency=low
 
   * New upstream release
