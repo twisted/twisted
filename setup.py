@@ -40,9 +40,9 @@ def runSetup(project, args):
         sys.stderr.write("Error: No such project '%s'.\n" % (project,))
         sys.stderr.write(" (File '%s' not found)\n" % (setupPy,))
         sys.exit(1)
-    
-    result = os.spawnvp(os.P_WAIT, sys.executable,
-                        [sys.executable, setupPy] + args)
+
+    result = spawnv(os.P_WAIT, sys.executable,
+                   [sys.executable, setupPy] + args)
     if result != 0:
         sys.stderr.write("Error: Subprocess exited with result %d for project %s\n" %
                          (result, project))
@@ -90,4 +90,9 @@ def main(args):
         runSetup(project, args)
         
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    try:
+        main(sys.argv[1:])
+    except KeyboardInterrupt:
+        sys.exit(1)
+
+    
