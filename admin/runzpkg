@@ -1,6 +1,6 @@
 #!/bin/sh
 # A couple notes.
-# First, get a checkout (or a release, if one exists) of zpkgtools.
+# First, get a checkout (or a release, if one exists) of zpkgtools and Zope3.
 # Make a ~/.zpkg.resources file that contains 
 
 # zpkgsetup /path/to/zpkgtools/zpkgsetup
