@@ -98,6 +98,23 @@ installer should install executable scripts to someplace like
 <code>C:\Python22\scripts\</code>, *nix installers put them in
 <code>$PREFIX/bin</code>, which should be in your $PATH.</p>
 
+<h3>Why do the Debian packages for Alphas and Release Candidates have weird versions containing old version numbers?</h3>
+
+<p>
+An example: 1.0.6+1.0.7rc1-1
+</p>
+
+<p>
+
+In Debian versioning, 1.0.7rc1 is <em>greater than</em> 1.0.7. This
+means that if you install a package with Version: 1.0.7rc1, and then
+that package gets a new version 1.0.7, apt will not upgrade it for
+you, because 1.0.7 looks like an older version. So, we prefix the
+previous version to the actual version. 1.0.6+1.0.7rc1 is <em>less
+than</em> 1.0.7.
+
+</p>
+
 <h2>Core Twisted</h2>
 
 <h3>How can I access self.factory from my Protocol's __init__?</h3>
