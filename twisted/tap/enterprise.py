@@ -83,7 +83,7 @@ def getPorts(app, config):
     app.authorizer.addIdentity(i)
     p = dbservice.DbUser(config.pbusername, svc, i.name)
     svc.addPerspective(p)
-    i.addKeyFor(p)
+    i.addKeyForPerspective(p)
 
     return [(int(config.pbport), bf)]
 

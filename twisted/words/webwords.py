@@ -33,7 +33,7 @@ class AccountCreation(html.Interface):
             app.authorizer.addIdentity(ident)
             part = svc.addParticipant(u)
             part.setIdentity(ident)
-            ident.addKeyFor(part)
+            ident.addKeyForPerspective(part)
             if part:
                 return "Participant Added."
             else:

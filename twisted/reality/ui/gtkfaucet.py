@@ -323,7 +323,7 @@ class GameWindow(gtk.GtkWindow, pb.Referenced):
     def remote_request(self,q,d,c):
         ResponseWindow(q,d,c)
         return None
-        
+
     def reitem(self):
         txt=self.itembox
         txt.freeze()
@@ -334,7 +334,7 @@ class GameWindow(gtk.GtkWindow, pb.Referenced):
         x=string.join(items,'\n')
         txt.insert_defaults(x)
         txt.thaw()
-        
+
     def redesc(self):
         txt=self.descbox
         txt.freeze()
@@ -356,16 +356,16 @@ class GameWindow(gtk.GtkWindow, pb.Referenced):
         x = string.join(mn + values + ex)
         txt.insert_defaults(x)
         txt.thaw()
-        
+
     def clear_key(self):
         self.cmdarea.emit_stop_by_name("key_press_event")
 
-        
+
 def main():
     global lw
     gw = GameWindow()
     lw = gtkutil.Login(gw.connected, gw,
-                       "Damien (reality)", "admin",
-                       "localhost", "twisted.reality")
+                       initialUser="guest", initialPassword="guest",
+                       initialHostname="localhost", initialService="twisted.reality")
     lw.show_all()
     gtk.mainloop()

@@ -51,7 +51,7 @@ class Application(log.Logger):
             self.uid = uid or os.getuid()
             self.gid = gid or os.getgid()
 
-    def getService(self, serviceName):
+    def getServiceNamed(self, serviceName):
         """Retrieve the named service from this application.
 
         Raise a KeyError if there is no such service name.
@@ -187,8 +187,6 @@ def shutDown(a=None, b=None):
         running = 0
         log.msg('Starting Shutdown Sequence.')
         threadable.dispatcher.stop()
-        for callback in shutdowns:
-            callback()
     else:
         log.msg('Duplicate Shutdown Ignored.')
 
@@ -343,7 +341,12 @@ def run():
             except:
                 traceback.print_exc(file=log.logfile)
             threadable.dispatcher.disown(reader)
-
+        # TODO: implement shutdown callbacks for gtk & tk
+        for callback in shutdowns:
+            try:
+                callback()
+            except:
+                traceback.print_exc(file=log.logfile)
 def addReader(reader):
     """Add a FileDescriptor for notification of data available to read.
     """

@@ -1,0 +1,157 @@
+#!/usr/bin/env python
+import os, sys, shutil, time
+
+def cmd(st):
+    d = os.path.dirname(sys.argv[0])
+    if not d:
+        d = '.'
+    c = os.path.join(d,'') + st
+    print "Running Command: %s" % repr(c)
+    return os.system(c)
+
+def browse(url):
+    scmd(webbrowser+" "+url)
+
+def scmd(st):
+    print 'Running System Command: %s' % repr(st)
+    return os.system(st)
+
+def message(*m):
+    print '/------'
+    print '|####'
+    for line in m:
+        print '|####', line
+    print '|####'
+    print '\------'
+
+def twistd(f):
+    cmd("twistd -f %s.tap" %f)
+    time.sleep(0.5)
+
+def killit():
+    scmd("kill `cat twistd.pid`")
+    # Give it a sec to come down.
+    time.sleep(0.5)
+
+def pause():
+    print "Hit enter to continue."
+    raw_input()
+
+def basicWebTest():
+    message("Running Basic Web Test")
+    cmd("mktap web")
+    twistd("web")
+    message("You should see a rather complex bunch of widgetry now.")
+    browse("http://localhost:8080/")
+    killit()
+
+def staticWebTest():
+    message("Running Static Web Test")
+    cmd("mktap web --static %s/../static" % (os.path.dirname(sys.argv[0]) or '.'))
+    twistd("web")
+    message("You should see an 'it worked' page now.")
+    browse("http://localhost:8080/")
+    killit()
+
+
+def distWebTest():
+    message("Running Distributed Web Test")
+    # make directories to stage the test
+    scmd("mkdir Personal")
+    scmd("mkdir User")
+    # make & start personal server
+    os.chdir("Personal")
+    cmd("mktap web --personal")
+    twistd("web")
+    os.chdir("..")
+    # make & start the user server
+    os.chdir("User")
+    cmd("mktap web --user")
+    twistd("web")
+    os.chdir("..")
+    # browse a dead web page
+    message("This should say 'Unable to connect to distributed server'",
+            "If it doesn't finish loading, it's broken.  Reload a few times..")
+    browse("http://localhost:8080/nobody.twistd")
+    # browse a live web page
+    message("This should be a bunch-of-widgets test page.")
+    browse("http://localhost:8080/%s.twistd" % username)
+    # clean up
+    os.chdir("User")
+    killit()
+    os.chdir("../Personal")
+    killit()
+    os.chdir("..")
+    shutil.rmtree("User")
+    shutil.rmtree("Personal")
+
+def runTelnetTest():
+    message("Running Telnet Test")
+    cmd("mktap telnet -p 8023 -u username -w password")
+    twistd("telnet")
+    message("Log in with the username 'username', password 'password'.",
+            "You should be able to execute python code.",
+            "Log out with '^]close'")
+    scmd("telnet localhost 8023")
+    killit()
+
+def runWordsTest():
+    message("Running Words Test")
+    cmd("mktap words")
+    twistd("words")
+    message("Create yourself an account, username 'test' password 'testing'.")
+    browse("http://localhost:8080/create")
+    # omit irc test for now
+    #message("You will have to '/msg *login* testing' to log in.")
+    #scmd(ircclient+" test localhost")
+    message("Now let's test the 'im' interface.")
+    cmd("im")
+    killit()
+
+def runRealityTest():
+    message("Running Reality Test")
+    for mapname, loginname, password in [('TRDemo', 'guest', 'guest'),
+                                         ('Inheritance', 'damien', 'admin')]:
+        if os.path.exists(mapname):
+            os.chdir(mapname)
+            cmd("gnusto build_map a b")
+            cmd("mktap reality -m a")
+            twistd("reality")
+            message("Log in now, username %s password %s" %
+                    (repr(loginname), repr(password)))
+            cmd("faucet")
+            message("Now again, with the TK interface.")
+            cmd("faucet --toolkit tk")
+            message("Log in again on the telnet interface.")
+            scmd("telnet localhost 4040")
+            message("Now take a look at the website, after logging in")
+            browse("http://localhost:8080/")
+            killit()
+            os.chdir("..")
+        else:
+            message("reality map %s not found, skipping" % mapname)
+
+def runAllTests():
+    message("Starting test.")
+    #basicWebTest()
+    #staticWebTest()
+    #distWebTest()
+    #runTelnetTest()
+    runWordsTest()
+    #runRealityTest()
+    message('All tests run.')
+
+
+try:
+    webbrowser = os.environ['WEBBROWSER']
+    username = os.environ['USER']
+    ircclient = os.environ['IRCCLIENT']
+except KeyError:
+    message("Required Environment Variables:",
+            "  * WEBBROWSER: a command which will run a web browser.",
+            "                (this should block until the window has been closed.)",
+            "  * IRCCLIENT: an IRC client in the style of ircii",
+            "  * USER: your UNIX username.")
+else:
+    runAllTests()
+

@@ -114,8 +114,8 @@ def getPorts(app, config):
     ports = []
     if config.telnet:
         from twisted.protocols import telnet
-	factory = telnet.ShellFactory()
-	ports.append((int(config.telnet), factory))
+        factory = telnet.ShellFactory()
+        ports.append((int(config.telnet), factory))
     try:
         root = config.root
         config.root.indexName = config.index
@@ -134,14 +134,13 @@ def getPorts(app, config):
         ident.setPassword('web')
         app.authorizer.addIdentity(ident)
         service = distrib.ResourcePublisher(site, app, 'twisted.web.distrib')
-        ident.addKeyFor(service.getPerspectiveNamed('web'))
+        # It's both a service _and_ a perspective.
+        ident.addKeyForPerspective(service)
         factory = pb.BrokerFactory(app)
         ports.append((os.path.join(pw_dir,
                                    distrib.UserDirectory.userSocketName),
                       factory))
     else:
         ports.append((int(config.port), site))
-    
     return ports
-       
 

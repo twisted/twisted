@@ -64,12 +64,10 @@ class GetString(gtk.GtkWindow):
 
 class Login(gtk.GtkWindow):
     def __init__(self, callback,
-                 referenced = None,
-                 initialUser = "guest",
-                 initialPassword = "guest",
-                 initialHostname = "localhost",
-                 initialService  = "",
-                 initialPortno   = pb.portno):
+                 referenced=None,
+                 initialUser="guest", initialPassword="guest",
+                 initialHostname="localhost",initialPortno=str(pb.portno),
+                 initialService="", initialPerspective=""):
         gtk.GtkWindow.__init__(self,gtk.WINDOW_TOPLEVEL)
         version_label = gtk.GtkLabel("Twisted v%s" % copyright.version)
         self.pbReferenced = referenced
@@ -77,37 +75,41 @@ class Login(gtk.GtkWindow):
         # version_label.show()
         self.username = gtk.GtkEntry()
         self.password = gtk.GtkEntry()
-        self.service  = gtk.GtkEntry()
+        self.service = gtk.GtkEntry()
+        self.perspective = gtk.GtkEntry()
         self.hostname = gtk.GtkEntry()
-        self.port     = gtk.GtkEntry()
+        self.port = gtk.GtkEntry()
         self.password.set_visibility(gtk.FALSE)
 
         self.username.set_text(initialUser)
         self.password.set_text(initialPassword)
         self.service.set_text(initialService)
+        self.perspective.set_text(initialPerspective)
         self.hostname.set_text(initialHostname)
         self.port.set_text(str(initialPortno))
 
         userlbl=gtk.GtkLabel("Username:")
         passlbl=gtk.GtkLabel("Password:")
         servicelbl=gtk.GtkLabel("Service:")
+        perspeclbl=gtk.GtkLabel("Perspective:")
         hostlbl=gtk.GtkLabel("Hostname:")
         portlbl=gtk.GtkLabel("Port #:")
-        
+
         self.logstat  = gtk.GtkLabel("Protocol PB-%s" % pb.Broker.version)
         self.okbutton = cbutton("Log In", self.login)
 
         okbtnbx = gtk.GtkHButtonBox()
         okbtnbx.add(self.okbutton)
-        
+
         vbox = gtk.GtkVBox()
         vbox.add(version_label)
-        table = gtk.GtkTable(2,5)
+        table = gtk.GtkTable(2,6)
         z=0
         for i in [[userlbl,self.username],
                   [passlbl,self.password],
                   [hostlbl,self.hostname],
                   [servicelbl,self.service],
+                  [perspeclbl,self.perspective],
                   [portlbl,self.port]]:
             table.attach(i[0],0,1,z,z+1)
             table.attach(i[1],1,2,z,z+1)
@@ -148,7 +150,10 @@ class Login(gtk.GtkWindow):
         tcp.Client(host, port, b)
 
     def gotIdentity(self, identity):
-        identity.attach(self.service.get_text(), self.pbReferenced, pbcallback=self.pbCallback)
+        # XXX HACKAGE: identity name and perspective name must currently be the
+        # same!!!
+        identity.attach(self.service.get_text(), self.perspective.get_text() or self.username.get_text(),
+                        self.pbReferenced, pbcallback=self.pbCallback)
 
     def couldNotConnect(self, msg):
         print 'couldNotConnect', msg

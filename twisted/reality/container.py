@@ -75,7 +75,7 @@ class Box(thing.Thing):
         self.isOpen = 1
         self.contents.surface = 1
         self.description = {'open/close': self.openDesc}
-        
+
     def action_Close(self, actor):
         self.isOpen = 0
         self.contents.surface = 0

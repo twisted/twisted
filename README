@@ -1,4 +1,4 @@
-Twisted 0.9.5
+Twisted 0.10.0
 
 Quote of the Release::
 
@@ -6,11 +6,15 @@ Quote of the Release::
   * rik wonders what glyph returns
   <radix> rik: NOT_DONE_YET
 
-What's new in 0.9.5?
+What's new in 0.10.0?
 
-  Lots of bugfixes for PB, Web, and Internet.
+  Twisted Enterprise, a relational database integration server for Twisted.
 
-  Much better docstrings for PB.
+  "Passport" addition to twisted internet.  This is a system-wide way of
+  representing services, identities, and perspectives.  Previously just for PB,
+  this model is being applied to all protocols so that a user will have only
+  one account with the system, but can access it through whatever protocols are
+  available.
 
 What is this?
 
@@ -89,7 +93,7 @@ Basic Servers
     % im
 
   A AOL Instant Messanger TOC Server is also available::
-    
+
     % mktap toc -p 5190
 
   which creates the TOC server, running on port 5190.  To create a user, simply

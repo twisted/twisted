@@ -107,7 +107,7 @@ class Player(thing.Thing, pb.Perspective):
         self.intelligence = LocalIntelligence(remoteIntelligence)
         return self
 
-    def detached(self, i):
+    def detached(self, remoteIntelligence, identity):
         log.msg("player logout: [%s]" % self.name)
         del self.intelligence
         self.oldlocation = self.location

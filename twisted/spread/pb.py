@@ -247,11 +247,11 @@ class IdentityWrapper(Referenced):
     def remote_attach(self, serviceName, perspectiveName, remoteRef):
         """Attach the remote reference to a requested perspective.
         """
-        perspective = self.identity.getKey(serviceName, perspectiveName).getPerspective()
+        perspective = self.identity.getPerspectiveForKey(serviceName, perspectiveName)
         perspective = perspective.attached(remoteRef, self.identity)
         # Make sure that when connectionLost happens, this perspective will be
         # tracked in order that 'detached' will be called.
-        self.broker.perspectives.append((perspective, remoteRef))
+        self.broker.perspectives.append((perspective, remoteRef, self.identity))
         return AsReferenced(perspective)
 
     # (Possibly?) TODO: Implement 'remote_detach' as well.
@@ -334,8 +334,16 @@ class Proxied(Serializable):
     proxy = Proxy
 
     def remoteSerialize(self, broker):
+        """Serialize a proxy for me.
+        """
         # getPerspective will have to return different values from different
         # threads, if this is ever to be made thread safe!
+        # ^^ dunno who wrote this, but getPerspective() in this context is
+        # definitely thread-specific state, since these methods are always
+        # called inside the serialize() call on a broker.  I suspect that
+        # that whole call would need to be synchronized in order to get
+        # thread safety. No need for this to be thread safe now, as far as I
+        # know though.  --glyph
         return self.proxy(broker.getPerspective(), self).remoteSerialize(broker)
 
 
@@ -773,7 +781,7 @@ class _NetJellier(jelly._Jellier):
         """
         jelly._Jellier.__init__(self, broker.localSecurity, None)
         self.broker = broker
-        
+
     def _jelly_instance(self, instance):
         """(internal) replacement method
         """
@@ -784,7 +792,7 @@ class _NetJellier(jelly._Jellier):
             str(self.broker.jellyMethod),
             str(self.broker.jellyArgs),
             str(self.broker.jellyKw))
-            
+
         sxp = self._prepare(instance)
         tup = instance.remoteSerialize(self.broker)
         map(sxp.append, tup)
@@ -851,7 +859,7 @@ class _NetUnjellier(jelly._Unjellier):
 class Broker(banana.Banana):
     """I am a broker for objects.
     """
-    
+
     version = 3
     username = None
     requestedIdentity = None
@@ -866,6 +874,7 @@ class Broker(banana.Banana):
         """Evaluate an expression as it's received.
         """
         if isinstance(sexp, types.ListType):
+            print sexp
             command = sexp[0]
             methodName = "proto_%s" % command
             method = getattr(self, methodName, None)
@@ -876,7 +885,7 @@ class Broker(banana.Banana):
         else:
             raise ProtocolError("Non-list expression received.")
 
-        
+
     def proto_version(self, vnum):
         """Protocol message: (version version-number)
         Check to make sure that both ends of the protocol are speaking the same
@@ -996,9 +1005,9 @@ class Broker(banana.Banana):
         """
         self.disconnected = 1
         # nuke potential circular references.
-        for perspective, client in self.perspectives:
+        for perspective, client, identity in self.perspectives:
             try:
-                perspective.detached(client)
+                perspective.detached(client, identity)
             except:
                 log.msg("Exception in perspective detach ignored:")
                 traceback.print_exc(file=log.logfile)
@@ -1031,7 +1040,7 @@ class Broker(banana.Banana):
 
     def notifyOnDisconnect(self, notifier):
         self.disconnects.append(notifier)
-        
+
     def localObjectForID(self, luid):
         """Get a local object for a locally unique ID.
 

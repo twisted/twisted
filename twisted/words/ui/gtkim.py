@@ -293,7 +293,7 @@ def main():
     global lw,b
     b = im.InstanceMessenger()
     lw = gtkutil.Login(our_connected, b,
-                       initialPassword="guest",
+                       initialHostname='twistedmatrix.com',
                        initialService="twisted.words")
     lw.show_all()
     gtk.mainloop()

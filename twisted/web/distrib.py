@@ -95,7 +95,7 @@ class ResourceSubscription(resource.Resource):
     def preConnected(self, identity):
         """Retrieved identity, now get the publisher perspective...
         """
-        identity.attach(self.service, None,
+        identity.attach(self.service, "any", None,
                         pbcallback = self.connected,
                         pberrback = self.notConnected)
 
@@ -155,7 +155,7 @@ class ResourceSubscription(resource.Resource):
 class ResourcePublisher(pb.Service, pb.Perspective):
     def __init__(self, site, app, name='twisted.web.distrib'):
         pb.Service.__init__(self, name, app)
-        pb.Perspective.__init__(self, "web", self, "web")
+        pb.Perspective.__init__(self, "any", self, "any")
         self.site = site
 
     def getPerspectiveNamed(self, name):

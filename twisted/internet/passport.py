@@ -29,38 +29,6 @@ class Unauthorized(Exception):
     """An exception that is raised when unauthorized actions are attempted.
     """
 
-class Key:
-    """A key to a Perspective linked through an Identity.
-
-    I can 'unlock' a particular service for an Identity, because I represent a
-    perspective with that service.  Keys are the way that Perspectives are
-    attached to an Identity.
-    """
-    def __init__(self, service, perspective, identity):
-        """(internal) Construct a key.
-
-        This is usually done inside Identity.setKey.  
-        """
-        self.service = service
-        self.identity = identity
-        self.perspective = perspective
-
-    def getService(self):
-        """Get the service that I am a key to.
-        """
-        svc = self.identity.application.getService(self.service)
-        return svc
-
-    def getPerspective(self):
-        """Get the perspective that I am a key to.
-
-        This should only be done _after_ authentication!  I retrieve
-        identity.application[service][perspective].
-        """
-        svc = self.getService()
-        psp = svc.getPerspectiveNamed(self.perspective)
-        return psp
-
 class Service:
     """I am a service that internet applications interact with.
 
@@ -227,47 +195,42 @@ class Identity:
         self.application = application
         self.keyring = {}
 
-    def getKey(self, serviceName, perspectiveName):
-        """Get a key from my keyring.
-
-        If that key does not exist, raise Unauthorized.  This will return an
-        instance of a Key.
-        """
-        k = (serviceName, perspectiveName)
-        if not self.keyring.has_key(k):
-            raise Unauthorized("You have no key for %s." % k)
-        return self.keyring[k]
-
-    def addKeyFor(self, perspective):
+    def addKeyForPerspective(self, perspective):
         """Add a key for the given perspective.
         """
         perspectiveName = perspective.getPerspectiveName()
         serviceName = perspective.service.getServiceName()
-        self.setKey(serviceName, perspectiveName)
+        self.addKeyByString(serviceName, perspectiveName)
 
-    def setKey(self, serviceName, perspectiveName):
-        """Set a key on my keyring.
+    def addKeyByString(self, serviceName, perspectiveName):
+        """Put a key on my keyring.
 
         This key will give me a token to access to some service in the future.
         """
-        self.keyring[(serviceName, perspectiveName)] = Key(
-            serviceName, perspectiveName, self)
+        self.keyring[(serviceName, perspectiveName)] = 1
+
+    def getPerspectiveForKey(self, serviceName, perspectiveName):
+        """Get a perspective for the given key.
+
+        If this identity does not have access to the given (serviceName,
+        perspectiveName) pair, I will raise KeyError.
+        """
+        check = self.keyring[(serviceName, perspectiveName)]
+        return self.application.getServiceNamed(serviceName).getPerspectiveNamed(perspectiveName)
 
     def getAllKeys(self):
         """Returns a list of all services and perspectives this identity can connect to.
 
         This returns a sequence of keys.
         """
-        return self.keyring.values()
+        return self.keyring.keys()
 
     def removeKey(self, serviceName, perspectiveName):
         """Remove a key from my keyring.
 
-        If this key is not present, raise Unauthorized.
+        If this key is not present, raise KeyError.
         """
-        if not self.keyring.has_key(serviceName):
-            raise Unauthorized("You cannot remove the key %s." % serviceName)
-        del self.keyring[serviceName]
+        del self.keyring[(serviceName, perspectiveName)]
 
     def setPassword(self, plaintext):
         if plaintext is None:

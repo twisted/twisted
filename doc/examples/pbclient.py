@@ -41,16 +41,12 @@ def preConnected(identity):
                     pbcallback=connected,
                     pberrback=failure)
 
-def couldntConnect():
-    print "Could not connect."
-    main.shutDown()
-
 # run a client
 b = pb.Broker()
 b.requestIdentity("guest",  # username
                   "guest",  # password
                   callback = preConnected,
-                  errback  = couldntConnect)
+                  errback  = failure)
 
 tcp.Client("localhost",pb.portno,b)
 

@@ -71,10 +71,11 @@ class Hose(telnet.Telnet):
             # The identity checks out.
             characters = []
             # XXX REFACTOR: Hmm.  Is this next bit common behavior?
-            for k in identity.getAllKeys():
-                svc = k.getService()
-                if svc is self.factory.reality:
-                    characters.append(k.getPerspective())
+            r = self.factory.reality
+            nm = r.getServiceName()
+            for serviceName, perspectiveName in identity.getAllKeys():
+                if serviceName == nm:
+                    characters.append(r.getPerspectiveNamed(perspectiveName))
             lc = len(characters)
             if lc == 1:
                 p = characters[0]
@@ -84,8 +85,9 @@ class Hose(telnet.Telnet):
             else:
                 raise passport.Unauthorized("that identity has no TR characters")
 
-            p.attached(self, identity)
+            p = p.attached(self, identity)
             self.player = p
+            self.identity = identity
             self.transport.write("Hello "+self.player.name+", welcome to Reality!\r\n"+
                                  telnet.IAC+telnet.WONT+telnet.ECHO)
             self.mode = "Command"
@@ -100,7 +102,7 @@ class Hose(telnet.Telnet):
     def processPending(self, pend):
         self.transport.write("Please hold...\r\n")
         return "Pending"
-    
+
     def processCommand(self, cmd):
         """Execute a command as a player.
         """
@@ -113,8 +115,7 @@ class Hose(telnet.Telnet):
         telnet.Telnet.connectionLost(self)
         if hasattr(self, 'player'):
             if hasattr(self.player, 'intelligence'):
-                self.player.detached(self)
-
+                self.player.detached(self, self.identity)
 
     def seeName(self, name):
         """Display a focused name bracketed, in bold.
@@ -222,7 +223,7 @@ class WebThing(html.Interface):
         session = request.getSession()
         return "Twisted Reality: %s" % self.thing.shortName(
             session.truser)
-    
+
     def descBox(self, request):
         """Display the description in a box.
         """
@@ -264,7 +265,7 @@ class WebThing(html.Interface):
             w('</A>')
         w("</UL>")
         return x.getvalue()
-        
+
 
     def thingInfo(self, request):
         """Display boxes continaing description, items, and exits.
@@ -289,12 +290,12 @@ class WebThing(html.Interface):
             request.code = http.MOVED_PERMANENTLY
             player.location = self.thing
             return "NO CONTENT"
-            
+
         return self.runBox(request,
                            self.thing.shortName(player),
                            self.thingInfo, request)
-        
-    
+
+
 class Web(html.Interface):
     """A web interface to a twisted.reality.reality.Reality.
     """
@@ -303,14 +304,14 @@ class Web(html.Interface):
         """
         html.Interface.__init__(self)
         self.reality = in_reality
-        
+
     def getChild(self, name, request):
         """Get a Thing from this reality.
         """
         if name == '':
             return self
         return WebThing(self.reality.getThingById(int(name)))
-        
+
     def listStuff(self, request):
         """List all availble Things and there IDs
         """
@@ -322,7 +323,7 @@ class Web(html.Interface):
             x.write('<LI><A HREF="%s">%s</a>\n'% (str(thing.thing_id),np))
         x.write('</UL>\n')
         return x.getvalue()
-    
+
     def loginForm(self, request):
         """Display a login form for a character.
         """
@@ -341,6 +342,9 @@ class Web(html.Interface):
             if not request.args:
                 return self.runBox(request, "Log In Please", self.loginForm, request)
             else:
+                # TODO: This class still uses old-skool auth!  I would have
+                # fixed it already, but I think that this should wait until we
+                # have a generalized web-site authentication answer. --glyph
                 u = request.args["UserName"][0]
                 p = request.args["Password"][0]
                 r = self.reality

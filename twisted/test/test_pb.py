@@ -92,7 +92,7 @@ def connectedServerAndClient():
     ident = passport.Identity("guest", app)
     ident.setPassword("guest")
     svc = DummyService("test", app)
-    ident.addKeyFor(svc.getPerspectiveNamed("any"))
+    ident.addKeyForPerspective(svc.getPerspectiveNamed("any"))
     app.authorizer.addIdentity(ident)
     svr = pb.BrokerFactory(app)
     s = svr.buildProtocol(('127.0.0.1',))

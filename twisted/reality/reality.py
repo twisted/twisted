@@ -52,7 +52,7 @@ class Reality(delay.Delayed,
                 print "Adding identity %s" % idname
                 ident = passport.Identity(idname, self.application)
                 ident.setAlreadyHashedPassword(th.password)
-                ident.setKey(self.getServiceName(), th.name)
+                ident.addKeyForPerspective(th)
                 self.application.authorizer.addIdentity(ident)
 
     def getThingById(self, thingid):

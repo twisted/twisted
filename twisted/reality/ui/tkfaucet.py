@@ -237,7 +237,7 @@ class Login(Toplevel):
 
     def gotIdentity(self, identity):
         # he's a man with a happy knack
-        identity.attach(self.worldname.get(), self.m, pbcallback=self.m.loggedIn)
+        identity.attach(self.worldname.get(), self.username.get(), self.m, pbcallback=self.m.loggedIn)
 
 def main():
     global root
