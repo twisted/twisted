@@ -2,6 +2,7 @@
 from twisted.application import internet, service
 from twisted.internet import protocol, reactor, defer
 from twisted.protocols import basic
+
 class FingerProtocol(basic.LineReceiver):
     def lineReceived(self, user):
         self.factory.getUser(user
@@ -32,10 +33,11 @@ class FingerService(service.Service):
     def getFingerFactory(self):
         f = protocol.ServerFactory()
         f.protocol, f.getUser = FingerProtocol, self.getUser,
-        f.startService = self.startService
         return f
 
 application = service.Application('finger', uid=1, gid=1)
 f = FingerService('/etc/users')
 finger = internet.TCPServer(79, f.getFingerFactory())
+
 finger.setServiceParent(service.IServiceCollection(application))
+f.setServiceParent(service.IServiceCollection(application)) 
