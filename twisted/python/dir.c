@@ -584,7 +584,7 @@ DL_EXPORT(void)
 initdir(void)
 {
 	PyObject *m, *d;
-	PyObject *os, *path, *sep;
+	PyObject *os, *sep;
 	PyObject *cur, *par;
 	char *pathsep;
 	
@@ -624,10 +624,7 @@ initdir(void)
 	if (!(os = PyImport_ImportModule("os")))
 		return;
 
-	if (!(path = PyObject_GetAttrString(os, "path")))
-		return;
-
-	if (!(sep = PyObject_GetAttrString(path, "sep")))
+	if (!(sep = PyObject_GetAttrString(os, "sep")))
 		return;
 		
 	if (!(pathsep = PyString_AsString(sep)))
