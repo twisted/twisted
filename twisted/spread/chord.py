@@ -32,7 +32,7 @@ def betweenR(n, a, b):
     elif a < b: return n > a and n <= b
     else: return n > a or n <= b
 
-class Node(pb.Copyable, pb.Perspective) :
+class Node(pb.Copyable, pb.Perspective):
     """A node in a Chord network."""
     def __init__(self, address, perspectiveName, identityName, port=pb.portno):
         global vNodes
@@ -113,8 +113,11 @@ class Node(pb.Copyable, pb.Perspective) :
         return self.address
 
     def getNodeAt(self, address):
-        return pb.connect(address[0], address[1], "chord", "", "chord")
+        return pb.connect(address[0], address[1], "chord", "", "chord").addCallback(lambda n: n.getSelf())
         
+    def getSelf(self):
+        # necessary to produce proper Copyable behaviour
+        return self
     
     def stabilise(self):
         """Verify our immediate successor and tell them about us.
