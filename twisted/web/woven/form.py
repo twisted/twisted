@@ -122,9 +122,17 @@ class FormFillerWidget(widgets.Widget):
                              value=str(self.getValue(request, model)))
 
     def input_submit(self, request, content, model, templateAttributes={}):
+        arguments = {}
+        val = model.getHint("onClick", templateAttributes.get("onClick", None))
+        if val:
+            arguments["onClick"] = val
+        arguments["type"] = "submit"
+        arguments["name"] = model.name
         div = content.div()
         for tag, value, desc in model.choices:
-            div.input(type="submit", name=model.name, value=tag)
+            args = arguments.copy()
+            args["value"] = tag
+            div.input(**args)
             div.text(" ")
         if model.reset:
             div.input(type="reset")
