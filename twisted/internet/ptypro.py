@@ -16,8 +16,9 @@
 
 """UNIX PTY Process management.
 
-This module is not stable, and may be merged into IReactorProcess API
-in the future.
+API Stability: unstable
+
+Future Plans: merge into IReactorProcess API
 
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """

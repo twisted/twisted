@@ -16,7 +16,7 @@
 
 """Main `application' configuration and persistence support.
 
-This module is stable.
+API Stability: stable
 
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """

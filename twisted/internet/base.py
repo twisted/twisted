@@ -16,7 +16,7 @@
 
 """Very basic functionality for a Reactor implementation.
 
-This module is stable.
+API Stability: stable
 
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """

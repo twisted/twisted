@@ -18,7 +18,7 @@
 
 """Support for results that aren't immediately available.
 
-This module is stable.
+API Stability: stable
 
 Maintainer: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """

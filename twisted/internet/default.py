@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.41 2002/09/27 00:44:31 itamarst Exp $
+# $Id: default.py,v 1.42 2002/09/27 15:38:18 itamarst Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -19,7 +19,7 @@
 
 """Default reactor base classes, and a select() based reactor.
 
-This module is stable.
+API Stability: stable
 
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """

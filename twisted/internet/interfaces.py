@@ -16,6 +16,8 @@
 
 """Interface documentation.
 
+API Stability: stable, other than IReactorUDP
+
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 

@@ -25,7 +25,7 @@ To use::
 Use Twisted's APIs for running and stopping the event loop, don't use
 wxPython's methods.
 
-This module is stable.
+API Stability: stable
 
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """

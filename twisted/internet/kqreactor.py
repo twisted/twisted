@@ -22,14 +22,16 @@ listeners or connectors are added)::
     | from twisted.internet import kqreactor
     | kqreactor.install()
 
-This module is stable.
-
-Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
-
 This reactor only works on FreeBSD and requires PyKQueue 1.3, which is
 available at:  U{http://people.freebsd.org/~dwhite/PyKQueue/}
 
-You're going to need to patch PyKqueue as well:
+API Stability: stable
+
+Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
+
+
+
+You're going to need to patch PyKqueue:
 
 =====================================================
 --- PyKQueue-1.3/kqsyscallmodule.c	Sun Jan 28 21:59:50 2001

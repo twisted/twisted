@@ -26,7 +26,7 @@ In order to use this support, simply do the following::
 Then use twisted.internet APIs as usual.  The other methods here are not
 intended to be called directly.
 
-This module is stable.
+API Stability: stable
 
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """

@@ -1,6 +1,5 @@
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2002 Matthew W. Lefkowitz
-# author: Bryce "Zooko" Wilcox-O'Hearn, 2002
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
@@ -17,7 +16,7 @@
 
 """Exceptions and errors for use in twisted.internet modules.
 
-This module is semi-stable.
+API Stability: semi-stable
 
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """

@@ -1,4 +1,3 @@
-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -20,6 +19,8 @@
 This implementation is very incomplete, and is rather buggy. This may be
 inherent in the fact that it uses threads - a java.nio reactor will
 someday hopefully provide better support.
+
+API Stability: stable
 
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
@@ -395,3 +396,6 @@ def install():
     import main
     main.installReactor(reactor)
     return reactor
+
+
+__all__ = ["install"]

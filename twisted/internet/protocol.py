@@ -20,7 +20,7 @@
 Start here if you are looking to write a new protocol implementation for
 Twisted.  The Protocol class contains some introductory material.
 
-This module is stable.
+API Stability: stable
 
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """

@@ -22,7 +22,7 @@ listeners or connectors are added)::
     from twisted.internet import pollreactor
     pollreactor.install()
 
-This module is stable.
+API Stability: stable
 
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """

@@ -18,6 +18,8 @@
 
 This requires win32all or ActivePython to be installed.
 
+API Stability: semi-stable
+
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 
 

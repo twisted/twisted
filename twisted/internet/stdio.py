@@ -16,6 +16,10 @@
 
 """Standard input/out/err support.
 
+API Stability: semi-stable
+
+Future Plans: support for stderr, perhaps
+
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 

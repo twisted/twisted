@@ -21,8 +21,10 @@ End users should only use the ContextFactory classes directly - for SSL
 connections use the reactor.connectSSL/listenSSL and so on, as documented
 in IReactorSSL.
 
-This module is stable, but at some point should be split so reactor-specific
-classes are in a separate module.
+API Stability: stable
+
+Future Plans: split module so reactor-specific classes are in a separate
+              module, support for switching TCP into SSL, more options.
 
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
