@@ -28,9 +28,7 @@ import re
 import struct
 
 # Twisted imports
-from twisted.internet import protocol
-from twisted.internet import defer
-from twisted.internet import interfaces
+from twisted.internet import protocol, defer, interfaces, error
 from twisted.python import log
 
 
@@ -129,6 +127,45 @@ class SafeNetstringReceiver(NetstringReceiver):
     """This class is deprecated, use NetstringReceiver instead.
     """
 
+
+class LineOnlyReceiver(protocol.Protocol):
+    """A protocol that receives only lines.
+    
+    This is purely a speed optimisation over LineReceiver, for the cases that raw mode is known to be unnecessary.
+    """
+    _buffer = ''
+    delimiter = '\r\n'
+    MAX_LENGTH = 16384
+    
+    def dataReceived(self, data):
+        """Protocol.dataReceived.
+        Translates bytes into lines, and calls lineReceived.
+        """
+        
+        lines  = (self._buffer+data).split(self.delimiter)
+        self._buffer = lines[-1]
+        for line in lines[:-1]:
+            if len(line) > self.MAX_LENGTH:
+                return self.lineLengthExceeded(line)                
+            else:
+                self.lineReceived(line)
+
+    def lineReceived(self, line):
+        """Override this for when each line is received.
+        """
+        raise NotImplementedError
+
+    def sendLine(self, line):
+        """Sends a line to the other end of the connection.
+        """
+        return self.transport.writeSequence((line,self.delimiter))
+
+    def lineLengthExceeded(self, line):
+        """Called when the maximum line length has been reached.
+        Override if it needs to be dealt with in some special way.
+        """
+        return error.ConnectionLost('Line length exceeded')
+    
 
 
 class LineReceiver(protocol.Protocol):

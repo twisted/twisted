@@ -55,6 +55,18 @@ class LineTester(basic.LineReceiver):
         if len(line) > self.MAX_LENGTH+1:
             self.setLineMode(line[self.MAX_LENGTH+1:])
 
+
+class LineOnlyTester(basic.LineOnlyReceiver):
+
+    delimiter = '\n'
+    MAX_LENGTH = 64
+
+    def connectionMade(self):
+        self.received = []
+
+    def lineReceived(self, line):
+        self.received.append(line)
+
 class WireTestCase(unittest.TestCase):
 
     def testEcho(self):
@@ -126,7 +138,23 @@ a'''
                 a.dataReceived(s)
             self.failUnlessEqual(self.output, a.received)
 
+class LineOnlyReceiverTestCase(unittest.TestCase):
 
+    buffer = """foo
+    bleakness
+    desolation
+    plastic forks
+    """
+
+    def testBuffer(self):
+        t = StringIOWithoutClosing()
+        a = LineOnlyTester()
+        a.makeConnection(protocol.FileWrapper(t))
+        for c in self.buffer:
+            a.dataReceived(c)
+        self.failUnlessEqual(a.received, self.buffer.split('\n')[:-1])
+            
+                
 class TestMixin:
     
     def connectionMade(self):
