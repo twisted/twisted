@@ -586,5 +586,37 @@ class DeferredModelTestCase(unittest.TestCase):
         for spanElem in spanElems:
             self.failUnlessEqual('The Result', spanElem.childNodes[0].data)
         
+
+class MyMacroPage(page.Page):
+    template = """\
+<html macro='foo'>
+<head fill-slot='head'>
+<script>
+<![CDATA[
+             <>'"&
+]]>
+</script>
+</head>
+</html>
+"""
+    def wvfactory_foo(self, request, node, model):
+        return widgets.ExpandMacro(model, macroFile = 'cdataxtester.html',
+                                   macroFileDirectory = '.',
+                                   macroName = 'foo'
+                                   )
         
+class ExpandMacroTestCase(WovenTC):
+    resourceFactory = MyMacroPage
+    def setUp(self, *args, **kwargs):
+        thepage = """\
+<html>
+<head slot='head' />
+</html>
+"""
+        file('cdatatester.html', 'wb').write(thepage)
+        WovenTC.setUp(self, *args, **kwargs)
+    def testCDATANotQuoted(self):
+        self.failUnless(self.output.find('<>\'"&')>=0)
+
+
 
