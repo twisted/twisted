@@ -70,7 +70,7 @@ Unit Tests
 
   See our unit tests run proving that the software is BugFree(TM)::
 
-   % admin/runtests
+   % trial -R twisted
 
   Some of these tests may fail if you
    * don't have the dependancies required for a particular
@@ -79,12 +79,6 @@ Unit Tests
      Multicast, which Linux NAT has shown itself to do), or
    * run them as root.
 
-
-  If you're feeling more brave, you can try the new "acceptance tests".  These
-  require some setup and are mainly for the developers to decide if it's OK to
-  release, but:
-
-   % admin/accepttests
 
 Basic Servers
 
