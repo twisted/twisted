@@ -199,12 +199,11 @@ def main(options=None):
             factory = ServerFactory()
             factory.protocol = internalProtocols[service.name]
         elif rpc:
-            #factory = RPCFactory(service, rpcConf.services[name], rpcVersions)
             proto = protocolDict[protocol]
-            p = reactor.listenTCP(0, Factory())
+            p = reactor.listenTCP(0, ServerFactory())
             portNo = p.getHost()[2]
-            for version in self.rpcVersions:
-                portmap.set(self.rpcPort, version, proto, portNo)
+            for version in rpcVersions:
+                portmap.set(rpcConf.services[name], version, proto, portNo)
             forkPassingFD(service.program, service.programArgs, os.environ,
                           service.user, service.group, p)
             continue
