@@ -40,7 +40,7 @@ install-base-stamp: build-stamp
 		install -d debian/$$package/DEBIAN/;\
 		install -d debian/$$package/${DOC}/$$package/;\
 		install -m 644 \
-		      debian/copyright debian/$$package/${DOC}/$$packag/;\
+		      debian/copyright debian/$$package/${DOC}/$$package/;\
 		install -m 644 debian/changelog \
 	               debian/$$package/${DOC}/$$package/changelog.Debian;\
 		gzip -9 debian/$$package/${DOC}/$$package/changelog.Debian;\
