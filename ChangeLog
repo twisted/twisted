@@ -1,3 +1,11 @@
+2003-04-13  Bob Ippolito  <bob@redivi.com>
+
+	* twisted/internet/app.py (DependentMultiService): a MultiService
+	to start services in insert order and stop them in reverse.  Uses
+	chained deferreds to ensure that if a startService or stopService
+	returns a deferred, then the next service in the queue will wait
+	until its dependency has finished.
+
 2003-04-12  Brian Warner  <warner@lothar.com>
 
 	* twisted/test/test_process.py (PosixProcessTestCasePTY): skip
