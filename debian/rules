@@ -21,7 +21,8 @@ clean:
 	dh_testdir
 	dh_testroot
 	rm -f build-stamp install-stamp
-
+	rm -rf build
+	rm `find . -name "*.pyc"`
 	# Add here commands to clean up after the build process.
 	dh_clean
 
