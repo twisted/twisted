@@ -104,21 +104,18 @@ class EPollReactor(default.PosixReactorBase):
                log=log):
         """Poll the poller for new events."""
         if timeout is None:
-            timeout = 1000
-        else:
-            timeout = int(timeout * 1000) # convert seconds to milliseconds
+            timeout = 1
+        timeout = int(timeout * 1000) # convert seconds to milliseconds
 
-        try:
-            l = poller.wait(len(selectables), timeout)
-        except select.error, e:
-            if e[0] == errno.EINTR:
-                return
-            else:
-                raise
+        l = poller.wait(len(selectables), timeout)
         _drdw = self._doReadOrWrite
         for fd, event in l:
-            selectable = selectables[fd]
-            log.callWithLogger(selectable, _drdw, selectable, fd, event)
+            try:
+                selectable = selectables[fd]
+            except KeyError:
+                pass
+            else:
+                log.callWithLogger(selectable, _drdw, selectable, fd, event)
 
     doIteration = doPoll
 

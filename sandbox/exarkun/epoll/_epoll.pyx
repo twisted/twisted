@@ -85,7 +85,7 @@ cdef class epoll:
 		evt.data.fd = fd
 		result = epoll_ctl(self.fd, op, fd, &evt)
 		if result == -1:
-			raise IOError(errno, os.strerror(errno))
+			raise IOError(errno, strerror(errno))
 
 	def wait(self, unsigned int maxevents, int timeout):
 		cdef epoll_event *events
@@ -105,7 +105,7 @@ cdef class epoll:
 			PyEval_RestoreThread(_save)
 
 			if result == -1:
-				raise IOError(result, os.strerror(result))
+				raise IOError(result, strerror(result))
 			results = []
 			for i from 0 <= i < result:
 				results.append((events[i].data.fd, <int>events[i].events))
