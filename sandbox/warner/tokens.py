@@ -38,6 +38,8 @@ SIZE_LIMIT = 1000 # default limit on the body length of long tokens (STRING,
 
 class InvalidRemoteInterface(Exception):
     pass
+class UnknownSchemaType(Exception):
+    pass
 
 class Violation(Exception):
     """This exception is raised in response to a schema violation. It
@@ -100,9 +102,16 @@ class UnbananaFailure(Failure):
 class ISlicer(Interface):
     """I know how to slice objects into tokens."""
 
-    sendOpen = Attribute("True if an OPEN/CLOSE token pair should be sent around the Slicer's body tokens. Only special-purpose Slicers (like the RootSlicer) should use False.")
+    sendOpen = Attribute(\
+"""True if an OPEN/CLOSE token pair should be sent around the Slicer's body
+tokens. Only special-purpose Slicers (like the RootSlicer) should use False.
+""")
 
-    trackReferences = Attribute("True if the object we slice is referenceable: i.e. it is useful or necessary to send multiple copies as a single instance and a bunch of References, rather than as separate copies. Instances are referenceable, as are mutable containers like lists.")
+    trackReferences = Attribute(\
+"""True if the object we slice is referenceable: i.e. it is useful or
+necessary to send multiple copies as a single instance and a bunch of
+References, rather than as separate copies. Instances are referenceable, as
+are mutable containers like lists.""")
 
     def slice(streamable, banana):
         """Return an iterator which provides Index Tokens and the Body

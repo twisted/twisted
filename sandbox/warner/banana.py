@@ -626,9 +626,7 @@ class Banana(protocol.Protocol):
             self.handleViolation(v, "doOpen", False)
             return
 
-        if not tokens.IUnslicer.providedBy(child):
-            print "child is", child
-            assert tokens.IUnslicer.providedBy(child)
+        assert tokens.IUnslicer.providedBy(child), "child is %s" % child
         self.objectCounter += 1
         self.inOpen = False
         child.protocol = self

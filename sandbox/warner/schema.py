@@ -45,7 +45,7 @@ from zope.interface import implements, Interface
 from twisted.python import failure
 
 from tokens import Violation, SIZE_LIMIT, STRING, LIST, INT, NEG, \
-     LONGINT, LONGNEG, VOCAB, FLOAT, OPEN, tokenNames
+     LONGINT, LONGNEG, VOCAB, FLOAT, OPEN, tokenNames, UnknownSchemaType
 
 everythingTaster = {
     # he likes everything
@@ -774,8 +774,8 @@ class RemoteReferenceSchema:
         if s:
             return s
         if not self.missingMethods:
-            why = "method '%s' not defined in any RemoteInterface" \
-                  % methodname
+            why = "method '%s' not defined in any RemoteInterface %s" \
+                  % (methodname, self.interfaceNames)
             raise Violation(why)
         return None
 
@@ -851,7 +851,7 @@ def makeConstraint(t):
     if type(t) == types.TupleType:
         return PolyConstraint(*t)
 
-    raise UnknownSchemaType
+    raise UnknownSchemaType("can't make constraint from '%s'" % t)
 
 
 
