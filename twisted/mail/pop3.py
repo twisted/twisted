@@ -662,6 +662,13 @@ class POP3Client(basic.LineOnlyReceiver):
     import re
     welcomeRe = re.compile('<(.*)>')
 
+    def __init__(self):
+        import warnings
+        from twisted.python.reflect import qual
+        warnings.warn("twisted.mail.pop3.POP3Client is deprecated, "
+                      "please use twisted.mail.pop3.AdvancedPOP3Client "
+                      "instead.", DeprecationWarning)
+
     def sendShort(self, command, params):
         self.sendLine('%s %s' % (command, params))
         self.command = command
@@ -729,3 +736,23 @@ class POP3Client(basic.LineOnlyReceiver):
         self.sendShort('PASS', pass_)
     def quit(self):
         self.sendShort('QUIT', '')
+ 
+from twisted.mail.pop3client import POP3Client as AdvancedPOP3Client
+from twisted.mail.pop3client import POP3ClientError
+from twisted.mail.pop3client import InsecureAuthenticationDisallowed
+from twisted.mail.pop3client import ServerErrorResponse
+from twisted.mail.pop3client import LineTooLong
+
+__all__ = [
+    # Interfaces
+    'IMailbox', 'IServerFactory',
+
+    # Exceptions  
+    'POP3Error', 'POP3ClientError', 'InsecureAuthenticationDisallowed',
+    'ServerErrorResponse', 'LineTooLong',
+
+    # Protocol classes
+    'POP3', 'POP3Client', 'AdvancedPOP3Client'
+
+    # Misc
+    'APOPCredentials', 'Mailbox']
