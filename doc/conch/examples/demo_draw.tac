@@ -27,7 +27,7 @@ class Draw(insults.TerminalProtocol):
         self.terminal.resetModes([insults.IRM])
         self.cursor = self.cursors[0]
 
-    def keystrokeReceived(self, keyID):
+    def keystrokeReceived(self, keyID, modifier):
         if keyID == self.terminal.UP_ARROW:
             self.terminal.cursorUp()
         elif keyID == self.terminal.DOWN_ARROW:

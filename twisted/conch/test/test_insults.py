@@ -111,10 +111,32 @@ class ServerArrowKeys(ByteGroupingsMixin, unittest.TestCase):
 
         for arrow in (parser.UP_ARROW, parser.DOWN_ARROW,
                       parser.RIGHT_ARROW, parser.LEFT_ARROW):
-            result = self.assertCall(occurrences(proto).pop(0), "keystrokeReceived", (arrow,))
+            result = self.assertCall(occurrences(proto).pop(0), "keystrokeReceived", (arrow, None))
             self.assertEquals(occurrences(result), [])
         self.failIf(occurrences(proto))
 
+
+class PrintableCharacters(ByteGroupingsMixin, unittest.TestCase):
+    protocolFactory = ServerProtocol
+
+    # Some letters and digits, first on their own, then capitalized,
+    # then modified with alt
+
+    TEST_BYTES = 'abc123ABC!@#\x1ba\x1bb\x1bc\x1b1\x1b2\x1b3'
+
+    def verifyResults(self, transport, proto, parser):
+        ByteGroupingsMixin.verifyResults(self, transport, proto, parser)
+
+        for char in 'abc123ABC!@#':
+            result = self.assertCall(occurrences(proto).pop(0), "keystrokeReceived", (char, None))
+            self.assertEquals(occurrences(result), [])
+
+        for char in 'abc123':
+            result = self.assertCall(occurrences(proto).pop(0), "keystrokeReceived", (char, parser.ALT))
+            self.assertEquals(occurrences(result), [])
+
+        occs = occurrences(proto)
+        self.failIf(occs, "%r should have been []" % (occs,))
 
 class ServerFunctionKeys(ByteGroupingsMixin, unittest.TestCase):
     """Test for parsing and dispatching function keys (F1 - F12)
@@ -133,7 +155,7 @@ class ServerFunctionKeys(ByteGroupingsMixin, unittest.TestCase):
         ByteGroupingsMixin.verifyResults(self, transport, proto, parser)
         for funcNum in range(1, 13):
             funcArg = getattr(parser, 'F%d' % (funcNum,))
-            result = self.assertCall(occurrences(proto).pop(0), "keystrokeReceived", (funcArg,))
+            result = self.assertCall(occurrences(proto).pop(0), "keystrokeReceived", (funcArg, None))
             self.assertEquals(occurrences(result), [])
         self.failIf(occurrences(proto))
 

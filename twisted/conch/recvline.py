@@ -185,7 +185,7 @@ class RecvLine(insults.TerminalProtocol):
     def unhandledControlSequence(self, seq):
         pass
 
-    def keystrokeReceived(self, keyID):
+    def keystrokeReceived(self, keyID, modifier):
         m = self.keyHandlers.get(keyID)
         if m is not None:
             m()

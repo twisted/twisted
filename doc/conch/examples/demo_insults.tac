@@ -196,7 +196,7 @@ class DemoProtocol(insults.TerminalProtocol):
     def unhandledControlSequence(self, seq):
         log.msg("Client sent something weird: %r" % (seq,))
 
-    def keystrokeReceived(self, keyID):
+    def keystrokeReceived(self, keyID, modifier):
         if keyID == '+':
             self.interval /= 1.1
         elif keyID == '-':

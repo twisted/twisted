@@ -21,7 +21,7 @@ class ITerminalProtocol(components.Interface):
         """Called with an ITerminalTransport when a connection is established.
         """
 
-    def keystrokeReceived(self, keyID):
+    def keystrokeReceived(self, keyID, modifier):
         """A keystroke was received.
 
         Each keystroke corresponds to one invocation of this method.
@@ -63,7 +63,7 @@ class TerminalProtocol(object):
         """Called after a connection has been established.
         """
 
-    def keystrokeReceived(self, keyID):
+    def keystrokeReceived(self, keyID, modifier):
         pass
 
     def terminalSize(self, width, height):
@@ -343,7 +343,7 @@ class ServerProtocol(protocol.Protocol):
     for keyID in ('UP_ARROW', 'DOWN_ARROW', 'RIGHT_ARROW', 'LEFT_ARROW',
                   'HOME', 'INSERT', 'DELETE', 'END', 'PGUP', 'PGDN',
                   'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9',
-                  'F10', 'F11', 'F12'):
+                  'F10', 'F11', 'F12', 'ALT'):
         exec '%s = object()' % (keyID,)
 
     TAB = '\t'
@@ -387,14 +387,14 @@ class ServerProtocol(protocol.Protocol):
                 if ch == '\x1b':
                     self.state = 'escaped'
                 else:
-                    self.terminalProtocol.keystrokeReceived(ch)
+                    self.terminalProtocol.keystrokeReceived(ch, None)
             elif self.state == 'escaped':
                 if ch == '[':
                     self.state = 'bracket-escaped'
                     self.escBuf = []
                 else:
-                    self._handleShortControlSequence(ch)
                     self.state = 'data'
+                    self._handleShortControlSequence(ch)
             elif self.state == 'bracket-escaped':
                 if ch == 'O':
                     self.state = 'low-function-escaped'
@@ -411,7 +411,7 @@ class ServerProtocol(protocol.Protocol):
                 raise ValueError("Illegal state")
 
     def _handleShortControlSequence(self, ch):
-        raise NotImplementedError('short', ch)
+        self.terminalProtocol.keystrokeReceived(ch, self.ALT)
 
     def _handleControlSequence(self, buf):
         buf = '\x1b[' + buf
@@ -428,32 +428,32 @@ class ServerProtocol(protocol.Protocol):
         map = {'P': self.F1, 'Q': self.F2, 'R': self.F3, 'S': self.F4}
         keyID = map.get(ch)
         if keyID is not None:
-            self.terminalProtocol.keystrokeReceived(keyID)
+            self.terminalProtocol.keystrokeReceived(keyID, None)
         else:
             self.terminalProtocol.unhandledControlSequence('\x1b[O' + ch)
 
     class ControlSequenceParser:
         def A(self, proto, handler, buf):
             if buf == '\x1b[':
-                handler.keystrokeReceived(proto.UP_ARROW)
+                handler.keystrokeReceived(proto.UP_ARROW, None)
             else:
                 handler.unhandledControlSequence(buf + 'A')
 
         def B(self, proto, handler, buf):
             if buf == '\x1b[':
-                handler.keystrokeReceived(proto.DOWN_ARROW)
+                handler.keystrokeReceived(proto.DOWN_ARROW, None)
             else:
                 handler.unhandledControlSequence(buf + 'B')
 
         def C(self, proto, handler, buf):
             if buf == '\x1b[':
-                handler.keystrokeReceived(proto.RIGHT_ARROW)
+                handler.keystrokeReceived(proto.RIGHT_ARROW, None)
             else:
                 handler.unhandledControlSequence(buf + 'C')
 
         def D(self, proto, handler, buf):
             if buf == '\x1b[':
-                handler.keystrokeReceived(proto.LEFT_ARROW)
+                handler.keystrokeReceived(proto.LEFT_ARROW, None)
             else:
                 handler.unhandledControlSequence(buf + 'D')
 
@@ -494,7 +494,7 @@ class ServerProtocol(protocol.Protocol):
                 else:
                     symbolic = map.get(v)
                     if symbolic is not None:
-                        handler.keystrokeReceived(map[v])
+                        handler.keystrokeReceived(map[v], None)
                     else:
                         handler.unhandledControlSequence(buf + '~')
             else:

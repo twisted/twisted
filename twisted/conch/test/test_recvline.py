@@ -26,14 +26,14 @@ class Arrows(unittest.TestCase):
         # self.p.makeConnection(self.pt)
 
     def testPrintableCharacters(self):
-        self.p.keystrokeReceived('x')
-        self.p.keystrokeReceived('y')
-        self.p.keystrokeReceived('z')
+        self.p.keystrokeReceived('x', None)
+        self.p.keystrokeReceived('y', None)
+        self.p.keystrokeReceived('z', None)
 
         self.assertEquals(self.p.currentLineBuffer(), ('xyz', ''))
 
     def testHorizontalArrows(self):
-        kR = self.p.keystrokeReceived
+        kR = lambda ch: self.p.keystrokeReceived(ch, None)
         for ch in 'xyz':
             kR(ch)
 
@@ -67,7 +67,7 @@ class Arrows(unittest.TestCase):
         self.assertEquals(self.p.currentLineBuffer(), ('xyz', ''))
 
     def testNewline(self):
-        kR = self.p.keystrokeReceived
+        kR = lambda ch: self.p.keystrokeReceived(ch, None)
 
         for ch in 'xyz\nabc\n123\n':
             kR(ch)
@@ -86,7 +86,7 @@ class Arrows(unittest.TestCase):
                           (('xyz', 'abc', '123', 'cba'), ()))
 
     def testVerticalArrows(self):
-        kR = self.p.keystrokeReceived
+        kR = lambda ch: self.p.keystrokeReceived(ch, None)
 
         for ch in 'xyz\nabc\n123\n':
             kR(ch)
@@ -121,7 +121,7 @@ class Arrows(unittest.TestCase):
                           (('xyz', 'abc', '123'), ()))
 
     def testHome(self):
-        kR = self.p.keystrokeReceived
+        kR = lambda ch: self.p.keystrokeReceived(ch, None)
 
         for ch in 'hello, world':
             kR(ch)
@@ -131,7 +131,7 @@ class Arrows(unittest.TestCase):
         self.assertEquals(self.p.currentLineBuffer(), ('', 'hello, world'))
 
     def testEnd(self):
-        kR = self.p.keystrokeReceived
+        kR = lambda ch: self.p.keystrokeReceived(ch, None)
 
         for ch in 'hello, world':
             kR(ch)
@@ -142,7 +142,7 @@ class Arrows(unittest.TestCase):
         self.assertEquals(self.p.currentLineBuffer(), ('hello, world', ''))
 
     def testBackspace(self):
-        kR = self.p.keystrokeReceived
+        kR = lambda ch: self.p.keystrokeReceived(ch, None)
 
         for ch in 'xyz':
             kR(ch)
@@ -159,7 +159,7 @@ class Arrows(unittest.TestCase):
         self.assertEquals(self.p.currentLineBuffer(), ('', 'y'))
 
     def testDelete(self):
-        kR = self.p.keystrokeReceived
+        kR = lambda ch: self.p.keystrokeReceived(ch, None)
 
         for ch in 'xyz':
             kR(ch)
@@ -184,7 +184,7 @@ class Arrows(unittest.TestCase):
         self.assertEquals(self.p.currentLineBuffer(), ('', ''))
 
     def testInsert(self):
-        kR = self.p.keystrokeReceived
+        kR = lambda ch: self.p.keystrokeReceived(ch, None)
 
         for ch in 'xyz':
             kR(ch)
@@ -200,7 +200,7 @@ class Arrows(unittest.TestCase):
         self.assertEquals(self.p.currentLineBuffer(), ('xyB', 'Az'))
 
     def testTypeover(self):
-        kR = self.p.keystrokeReceived
+        kR = lambda ch: self.p.keystrokeReceived(ch, None)
 
         for ch in 'xyz':
             kR(ch)
