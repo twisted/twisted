@@ -24,12 +24,20 @@ import string
 
 
 class IdentityRow(row.RowObject):
-    rowColumns     = ["identity_name", "password"]
+    rowColumns     = [
+        ("identity_name", "varchar"),
+        ("password", "varchar")
+        ]
     rowKeyColumns  = [("identity_name", "varchar")]
     rowTableName   = "twisted_identities"
 
 class PerspectiveRow(row.RowObject):
-    rowColumns     = ["identity_name", "perspective_name", "service_name", "perspective_type"]
+    rowColumns     = [
+        ("identity_name",    "varchar"),
+        ("perspective_name", "varchar"),
+        ("service_name",     "varchar"),
+        ("perspective_type", "varchar")
+        ]
     rowKeyColumns  = [("identity_name", "varchar"),("perspective_name","varchar")]
     rowTableName   = "twisted_perspectives"
     rowForeignKeys = [("twisted_identities", [("identity_name","varchar")],[("identity_name","varchar")], None, 1)]
