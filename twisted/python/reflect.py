@@ -371,6 +371,7 @@ def namedModule(name):
         m = getattr(m, p)
     return m
 
+
 def namedObject(name):
     """Get a fully named module-global object.
     """
@@ -575,6 +576,7 @@ def accumulateClassList(classObj, attr, listObj, baseClass=None):
         accumulateClassList(base, attr, listObj)
     if baseClass is None or baseClass in classObj.__bases__:
         listObj.extend(getattr(classObj, attr, []))
+
 
 def isSame(a, b):
     return (a is b)
