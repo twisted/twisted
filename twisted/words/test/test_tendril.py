@@ -17,7 +17,7 @@
 
 from twisted.words import service, tendril
 from twisted.trial import unittest
-from twisted.protocols import irc
+from twisted.words.protocols import irc
 from twisted.internet import protocol
 import StringIO
 

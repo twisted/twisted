@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_tendril -*-
+# -*- test-case-name: twisted.words.test.test_tendril -*-
 # $Id: tendril.py,v 1.32 2003/01/08 10:34:29 acapnotic Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -52,7 +52,7 @@ from twisted import copyright
 from twisted.cred import authorizer, error
 from twisted.internet import defer, protocol
 from twisted.persisted import styles
-from twisted.protocols import irc
+from twisted.words.protocols import irc
 from twisted.python import log, reflect
 from twisted.words import service
 from twisted.spread.util import LocalAsyncForwarder

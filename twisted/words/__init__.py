@@ -17,5 +17,3 @@
 
 """Twisted Words: a Twisted Chat service."""
 
-import warnings
-warnings.warn("twisted.words will be undergoing a rewrite at some point in the future.")

@@ -1,3 +1,6 @@
 Twisted Words
 
 Words was recently split out of Twisted. This needs more work.
+
+Twisted Words depends on Twisted and, if you want MSN or the web
+interface to work, Twisted Web.

@@ -12,6 +12,10 @@ movedModules = [('twisted.protocols.smtp', 'twisted.mail.smtp'),
                 ('twisted.protocols.raw', 'twisted.pair.raw'),
                 ('twisted.protocols.rawudp', 'twisted.pair.rawudp'),
                 ('twisted.protocols.ip', 'twisted.pair.ip'),
+                ('twisted.protocols.irc', 'twisted.words.protocols.irc'),
+                ('twisted.protocols.msn', 'twisted.words.protocols.msn'),
+                ('twisted.protocols.toc', 'twisted.words.protocols.toc'),
+                ('twisted.protocols.oscar', 'twisted.words.protocols.oscar'),
                 ]
 
 

@@ -17,7 +17,7 @@
 
 from twisted.trial import unittest
 
-from twisted.protocols import toc
+from twisted.words.protocols import toc
 from twisted.internet import protocol, main
 from twisted.python import failure
 

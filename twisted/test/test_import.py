@@ -82,10 +82,7 @@ class AtLeastImportTestCase(unittest.TestCase):
         from twisted.protocols import basic
         from twisted.protocols import ftp
         from twisted.protocols import http
-        from twisted.protocols import irc
         from twisted.protocols import telnet
-        from twisted.protocols import oscar
-        from twisted.protocols import toc
         from twisted.protocols import policies
     
     def test_web(self):
@@ -102,12 +99,6 @@ class AtLeastImportTestCase(unittest.TestCase):
         from twisted.web import guard
         from twisted.web import error
     
-    def test_words(self):
-        """Test importing words
-        """
-        from twisted.words import service
-        from twisted.words import ircservice
-
     def test_enterprise(self):
         from twisted.enterprise import adbapi
         from twisted.enterprise import reflector

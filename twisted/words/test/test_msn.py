@@ -16,11 +16,11 @@
 #
 
 """
-Test cases for twisted.protocols.msn
+Test cases for twisted.words.protocols.msn
 """
 
 # Twisted imports
-from twisted.protocols import msn, loopback
+from twisted.words.protocols import msn, loopback
 from twisted.internet.defer import Deferred
 from twisted.trial import unittest
 

@@ -264,6 +264,8 @@ desktop environments, and your toaster.
         "twisted.web",
         "twisted.web.woven",
         "twisted.words",
+        "twisted.words.protocols",
+        "twisted.words.test",
         "twisted.xish",
     ],
     'scripts' : [

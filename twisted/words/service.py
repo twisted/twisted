@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_words -*-
+# -*- test-case-name: twisted.words.test.test_words -*-
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -94,6 +94,10 @@ Then there's a whole bunch of things that would be nice to have.
   - basically everything OPN wants to be able to do, but better
 
 """
+
+import warnings
+warnings.warn("twisted.words will be undergoing a rewrite at some point in the future.")
+
 
 # System Imports
 import types, time
