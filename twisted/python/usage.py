@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: usage.py,v 1.29 2002/08/19 03:21:59 radix Exp $
+# $Id: usage.py,v 1.30 2002/08/25 10:20:53 tv Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -495,7 +495,15 @@ def docMakeChunks(optList, width=80):
     colFiller1 = " " * colWidth1
 
     optChunks = []
+    seen = {}
     for opt in optList:
+        if seen.has_key(opt.get('short', None)) \
+           or seen.has_key(opt.get('long', None)):
+            continue
+        for x in opt.get('short', None), opt.get('long', None):
+            if x is not None:
+                seen[x]=1
+
         optLines = []
         comma = " "
         if opt.get('short', None):
