@@ -38,6 +38,7 @@ from twisted.persisted import styles
 from twisted.python.runtime import platform
 from twisted.cred.authorizer import DefaultAuthorizer
 from twisted.python.reflect import Accessor
+from twisted.python.util import OrderedDict
 
 # Sibling Imports
 import main, defer, error
@@ -196,12 +197,9 @@ class MultiService(_AbstractServiceCollection, ApplicationService):
         """
         ApplicationService.stopService(self)
         v = self.services.values()
-        l = [svc.stopService() for svc in v]
         # The default stopService returns None, but you can't make that part
         # of a DeferredList.
-        for i in range(len(l)):
-            if l[i] is None:
-                l[i] = defer.succeed(None)
+        l = [svc.stopService() or defer.succeed(None) for svc in v]
         return defer.DeferredList(l).addBoth(self._cbAttachServiceNames, v)
 
     def _cbAttachServiceNames(self, result, services):
@@ -233,6 +231,82 @@ class MultiService(_AbstractServiceCollection, ApplicationService):
             service.stopService()
         _AbstractServiceCollection.removeService(self, service)
 
+class DependentMultiService(MultiService):
+    """
+    I am a MultiService that starts services in insert order,
+    and stops them in the reverse order.  The service starts
+    and stops are chained, so be very careful about services
+    that may fail to start or stop.
+    """
+    def __init__(self, serviceName, serviceParent=None):
+        MultiService.__init__(self, serviceName, serviceParent)
+        # Ensure order
+        self.services = OrderedDict(self.services)
+
+    def _finishStartService(self, res):
+        return ApplicationService.startService(self) or defer.succeed(None)
+        
+    def _rollbackStartedServices(self, failure, service):
+        v = self.services.values()
+        startedServices = v[:v.index(service)]
+        startedServices.reverse()
+        # Warning:  On failure, service stops are not
+        # chained.  However, they will stop in the proper order.
+        for svc in startedServices:
+            svc.stopService()
+        return failure
+        
+    def startService(self):
+        """
+        Start all of my Services.
+
+        I return a Deferred that will callback (with no useful result)
+        when all services are started.  In the event of a failure, all 
+        of the successful services will be stopped (without chained behavior)
+        and I will errback with the first unsuccessful service's failure.
+        """
+        def startServiceDeferred(res, service):
+            return service.startService() or defer.succeed(None)
+
+        d = defer.succeed(None)
+        for svc in self.services.values():
+            d.addCallbacks(startServiceDeferred, callbackArgs=(svc,),
+                errback=self._rollbackStartedServices, errbackArgs=(svc,))
+        return d.addCallback(self._finishStartService)
+
+    def _emergencyStopService(self, failure, service):
+        v = self.services.values()
+        runningServices = v[v.index(service):]
+        runningServices.reverse()
+        for svc in runningServices:
+            svc.stopService()
+        # It is probably desirable that the service collection be 
+        # marked as stopped, even though errors have occurred.
+        self._finishStopService()
+        return failure
+    
+    def _finishStopService(self, res):
+        return ApplicationService.stopService(self) or defer.succeed(None)
+        
+    def stopService(self):
+        """
+        Stop all of my Services.
+
+        I return a Deferred that will callback (with no useful result)
+        when all services are stopped.  In the event of a failure, the 
+        running services will be stopped (without chained behavior) and 
+        I will errback with the first unsuccessful service's failure.
+        """
+        def stopServiceDeferred(res, service):
+            return service.stopService() or defer.succeed(None)
+
+        v = self.services.values()
+        v.reverse()
+        d = defer.succeed(None)
+        for svc in v:
+            d.addCallbacks(stopServiceDeferred, callbackArgs=(svc,),
+                errback=self._emergencyStopService, errbackArgs=(svc,))
+        return d.addCallback(self._finishStopService)
 
 class Application(log.Logger, styles.Versioned,
                   Accessor, _AbstractServiceCollection):
