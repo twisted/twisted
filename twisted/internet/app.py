@@ -271,6 +271,10 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
 
     def connectTCP(self, host, port, factory, timeout=30):
         """Connect a given client protocol factory to a specific TCP server.
+
+        If the client gets disconnected, a new instance will be created
+        and will attempt to reconnect. If you only want a single connection,
+        use twisted.internet.reactor's clientTCP() method instead.
         """
         from twisted.internet import tcp
         self.addConnector(tcp.Connector(host, port, factory, timeout))
