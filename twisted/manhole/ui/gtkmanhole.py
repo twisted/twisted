@@ -170,8 +170,10 @@ class Interaction(gtk.GtkWindow):
     def connected(self, perspective):
         self.loginWindow.hide()
         self.name = self.loginWindow.username.get_text()
+        self.hostname = self.loginWindow.hostname.get_text()
         self.perspective = perspective
         self.show_all()
+        self.set_title("Manhole: %s@%s" % (self.name, self.hostname))
         win = self.get_window()
         blue = win.colormap.alloc(0x0000, 0x0000, 0xffff)
         red = win.colormap.alloc(0xffff, 0x0000, 0x0000)
