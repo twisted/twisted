@@ -16,6 +16,7 @@
 #
 from twisted.protocols import http
 from twisted.internet import defer, protocol, reactor
+from twisted.python import failure
 import urlparse
 
 class HTTPPageGetter(http.HTTPClient):
@@ -25,6 +26,14 @@ class HTTPPageGetter(http.HTTPClient):
         self.sendHeader('Host', self.factory.host)
         self.sendHeader('User-Agent', self.factory.agent)
         self.endHeaders()
+
+    def handleStatus(self, version, status, message):
+        if status != '200':
+            self.factory.noPage(failure.Failure(ValueError(status, message)))
+            self.transport.loseConnection()
+
+    def connectionLost(self, reason):
+        self.factory.noPage(reason)
 
     def handleResponse(self, response):
         self.factory.page(response)
@@ -42,14 +51,19 @@ class HTTPClientFactory(protocol.ClientFactory):
         self.deferred = defer.Deferred()
 
     def page(self, page):
-        self.waiting = 0
-        self.deferred.callback(page)
+        if self.waiting:
+            self.waiting = 0
+            self.deferred.callback(page)
+
+    def noPage(self, reason):
+        if self.waiting:
+            self.waiting = 0
+            self.deferred.errback(reason)
 
     def clientConnectionFailed(self, _, reason):
         if self.waiting:
+            self.waiting = 0
             self.deferred.errback(reason)
-
-    clientConnectionLost = clientConnectionFailed 
 
 
 def getPage(url):
