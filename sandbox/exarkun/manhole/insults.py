@@ -374,7 +374,7 @@ class ServerProtocol(protocol.Protocol):
             else:
                 raise ValueError("Illegal state")
 
-    def _handleShortSequence(self, ch):
+    def _handleShortControlSequence(self, ch):
         raise NotImplementedError('short', ch)
 
     def _handleControlSequence(self, buf):
