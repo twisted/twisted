@@ -129,6 +129,8 @@ class LatexSpitter(BaseLatexSpitter):
         os.system("pngtopnm %s | pnmtops > %s" % (src, target))
 
     def convert_dia(self, src, target):
+        # Silly dia needs an X server, even though it doesn't display anything.
+        # If this is a problem for you, try using Xvfb.
         os.system("dia %s -n -e %s" % (src, target))
 
     def visitNodeHeader(self, node):
