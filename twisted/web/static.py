@@ -465,7 +465,13 @@ class DirectoryListing(widgets.StreamWidget):
             url = urllib.quote(path, "/:")
             if os.path.isdir(os.path.join(self.path, path)):
                 url = url + '/'
-            write('<li><a href="%s">%s</a></li>' % (url, path))
+                write('<li>[D] <a href="%s">%s/</a></li>'
+                      % (url, path))
+        for path in directory:
+            url = urllib.quote(path, "/:")
+            if not os.path.isdir(os.path.join(self.path, path)):
+                write('<li>[F] <a href="%s">%s</a></li>'
+                      % (url, path))
         write("</ul>\n")
 
     def __repr__(self):
