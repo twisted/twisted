@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.test.test_enterprise -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -13,6 +14,7 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
 """
 An asynchronous mapping to U{DB-API 2.0<http://www.python.org/topics/database/DatabaseAPI-2.0.html>}.
 """
@@ -25,9 +27,12 @@ from twisted.python import reflect, log, failure
 
 
 class Transaction:
-    """
-    I am a lightweight wrapper for a DB-API 'cursor' object.  I relay
-    attribute access to the DB cursor.
+    """A lightweight wrapper for a DB-API 'cursor' object.
+
+    Relays attribute access to the DB cursor. That is, you can call
+    execute(), fetchall(), etc., and they will be called on the
+    underlying DB-API cursor object. Attributes will also be
+    retrieved from there.
     """
     _cursor = None
 
@@ -59,8 +64,6 @@ class ConnectionPool:
     running = 0 # true when the pool is operating
 
     def __init__(self, dbapiName, *connargs, **connkw):
-        """See ConnectionPool.__doc__
-        """
         self.dbapiName = dbapiName
         self.dbapi = reflect.namedModule(dbapiName)
 
@@ -179,12 +182,10 @@ class ConnectionPool:
 
         return: a Deferred which will fire None or a Failure.
         """
-
         return self._deferToThread(self._runOperation, *args, **kw)
 
     def close(self):
         """Close all pool connections and shutdown the pool."""
-
         from twisted.internet import reactor
         if self.shutdownID:
             reactor.removeSystemEventTrigger(self.shutdownID)
@@ -196,7 +197,6 @@ class ConnectionPool:
 
     def finalClose(self):
         """This should only be called by the shutdown trigger."""
-
         self.threadpool.stop()
         self.running = 0
         for conn in self.connections.values():
@@ -208,8 +208,9 @@ class ConnectionPool:
         self.connections.clear()
 
     def connect(self):
-        """Return a database connection when one becomes available. This method blocks and should be run in a thread from the internal threadpool.
+        """Return a database connection when one becomes available.
 
+        This method blocks and should be run in a thread from the internal threadpool.
         Don't call this method directly from non-threaded twisted code.
 
         @return: a database connection from the pool.
@@ -312,9 +313,7 @@ class ConnectionPool:
 
 
 class Augmentation:
-    '''A class which augments a database connector with some functionality.
-
-    This class is now deprecated. Just use the ConnectionPool directly.
+    '''This class is now deprecated. Just use the ConnectionPool directly.
 
     Conventional usage of me is to write methods that look like
 
