@@ -86,6 +86,11 @@ register("Twisted SOCKS Automated TAP builder",
          description="automated TAP building",
          type="tap")
 
+register("Twisted SSH Automated TAP builder",
+         "twisted.tap.ssh",
+         descrption="automated TAP building",
+         type="tap")
+
 register("Twisted Telnet Shell Automated TAP builder",
          "twisted.tap.telnet",
          description="automated TAP building",
