@@ -18,6 +18,11 @@
 # System Imports
 from twisted.trial import unittest
 from twisted.application import persist
+from twisted.python import components
+
+class Dummy(components.Componentized):
+    pass
+
 
 objects = [
 1,
@@ -36,6 +41,19 @@ class PersistTestCase(unittest.TestCase):
                 p.save(filename='persisttest.'+style)
                 o1 = persist.load('persisttest.'+style, style)
                 self.failUnlessEqual(o, o1)
+
+    def testStylesBeingSet(self):
+        o = Dummy()
+        o.foo = 5
+        o.setComponent(persist.IPersistable, persist.Persistant(o, 'lala'))
+        for style in 'xml source pickle'.split():
+            persist.IPersistable(o).setStyle(style)
+            persist.IPersistable(o).save(filename='lala.'+style)
+            o1 = persist.load('lala.'+style, style)
+            print o1
+            self.failUnlessEqual(o.foo, o1.foo)
+            self.failUnlessEqual(persist.IPersistable(o1).style, style)
+
 
     def testNames(self):
         o = [1,2,3]
