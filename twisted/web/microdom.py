@@ -260,7 +260,7 @@ class Element(Node):
             stream.write(attr)
             stream.write("=")
             stream.write('"')
-            stream.write(val.replace('"', '&quot;'))
+            stream.write(html.escape(val))
             stream.write('"')
         if self.childNodes or self.tagName.lower() in ('a', 'li', 'div', 'span'):
             stream.write(">"+newl+addindent)
@@ -299,7 +299,12 @@ class Element(Node):
         else:
             rep += " />"
         return rep
-        
+
+def _unescapeDict(d):
+    dd = {}
+    for k, v in d.items():
+        dd[k] = html.unescape(v)
+    return dd
 
 class MicroDOMParser(XMLParser):
     def __init__(self, autoClosedTags=[]):
@@ -335,7 +340,8 @@ class MicroDOMParser(XMLParser):
             name = name.lower()
         if name in self.autoClosedTags:
             self._shouldAutoClose = name
-        el = Element(name, attributes, parent, self.filename, self.saveMark())
+        el = Element(name, _unescapeDict(attributes), parent,
+                     self.filename, self.saveMark())
         self.elementstack.append(el)
         if parent:
             parent.appendChild(el)
