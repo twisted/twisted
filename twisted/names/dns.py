@@ -121,6 +121,8 @@ class SentQuery:
         self.ids = []
         self.done = 0
         self.boss = boss
+        self.name = name
+        self.type = type
         for nameserver in nameservers:
             self.ids.append(boss.queryUDP((nameserver, 53), name, 
                                           self.getAnswer, type=type))
@@ -131,19 +133,37 @@ class SentQuery:
         if not message.answers:
             self.errback("No answers")
             return
-        process = getattr(self, 'processAnswer_%d' % message.answers[0].type, 
-                          None)
+        process = getattr(self, 'processAnswer_%d' % self.type, None)
         if process is None:
-            self.errback("No processor for answer type %s" % message.answers[0].type)
+            self.errback("No processor for answer type %s" % self.type)
             return
-        self.callback(process(message))
+        process(message)
 
     def processAnswer_1(self, message):
         '''looking for name->address resolution
         
         choose one of the IPs at random'''
-        answer = random.choice(message.answers)
-        return string.join(map(str, map(ord, answer.data)), '.')
+        answers, cnames, cnameMap = [], [], {}
+        for answer in message.answers:
+            if answer.type == 1:
+                cnameMap[answer.name.name] = answer
+            if answer.name.name != self.name:
+                continue
+            if answer.type == 1:
+                answers.append(answer)
+            elif answer.type == dns.CNAME:
+                answer.strio.seek(answer.strioOff+2)
+                n = dns.Name()
+                n.decode(answer.strio)
+                cnames.append(n.name)
+        for name in cnames:
+            if cnameMap.has_key(name):
+                answers.append(cnameMap[name])
+        if not answers:
+            self.errback("No answers")
+            return
+        answer = random.choice(answers)
+        self.callback(string.join(map(str, map(ord, answer.data)), '.'))
 
     def processAnswer_15(self, message):
         '''looking for Mail eXchanger for the domain
@@ -161,12 +181,12 @@ class SentQuery:
         ret = []
         for answer in answers:
             ret.append(answer[1])
-        return ret
+        self.callback(ret)
 
     def timeOut(self):
         if not self.done:
             self.removeAll()
-            self.errback()
+            self.errback("Timed out")
         self.done = 1
 
     def removeAll(self):
