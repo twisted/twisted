@@ -9,9 +9,9 @@ from TwistedQuotes import quoters
 
 import cgi
 
-class MQuote(model.WModel):
+class MQuote(model.Model):
     def __init__(self, filename):
-        model.WModel.__init__(self)
+        model.Model.__init__(self)
         self._filename = filename
         self._quoter = quoters.FortuneQuoter([filename])
         self.quote = ""
@@ -37,7 +37,7 @@ class QuoteWidget(widgets.Widget):
         self.add(widgets.Text(cgi.escape(data)))
 
 
-class VQuote(view.WView):
+class VQuote(view.View):
     templateFile = "WovenQuotes.xhtml"
 
     def setUp(self, request, document):
@@ -68,7 +68,7 @@ class NewQuoteHandler(input.SingleValue):
         file.write('\n%\n'  + newQuote)
 
 
-class CQuote(controller.WController):
+class CQuote(controller.Controller):
     def factory_newQuote(self, model):
         """Create a handler which knows how to verify input in a form with the
         name "newQuote"."""

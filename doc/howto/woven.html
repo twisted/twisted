@@ -35,35 +35,17 @@ Model View Controller is simply a development strategy which involves breaking u
 </p>
 
 <p>
-Twisted's implementation of MVC is deliberately simple, and is defined in twisted.python.mvc. twisted.python.mvc takes advantage of twisted.python.components, the interface and component registry, in order to loosely couple the interacting objects. A complete MVC triad definition looks like this:
+Woven's implementation of MVC takes advantage of twisted.python.components, the interface and component registry, in order to loosely couple the interacting objects.
 </p>
 
-<pre class="python">
-from twisted.python import mvc
-from twisted.python import components
-
-class MFoo(mvc.Model): pass
-class VFoo(mvc.View): pass
-class CFoo(mvc.Controller): pass
-
-# Register VFoo as a View for MFoo
-components.registerAdapter(VFoo, MFoo, mvc.IView)
-# Register CFoo as a Controller for MFoo
-components.registerAdapter(CFoo, MFoo, mvc.IController)
-</pre>
+    <h3>View and Controller</h3>
 
 <p>
-Although it is not always necessary to define a complete MVC triad, I recommend doing so initially even if your class bodies are simply 'pass'. This will get you used to thinking about MVC objects as a complete triad of cooperating objects, and make it easy to add functionality to your triad later.
-</p>
-
-    <h3>WView and WController</h3>
-
-<p>
-The View and Controller objects that Twisted defines know nothing about the web; thus, twisted defines subclasses WView and WController for interacting with twisted.web, Twisted's HTTP server. twisted.web defines IResource, the interface that Resource objects must implement in order to support publishing themselves on the web. WView and WController both support this interface, giving you an easy and powerful way to handle incoming web requests and generate template-driven web pages.
+twisted.web defines IResource, the interface that Resource objects must implement in order to support publishing themselves on the web. View and Controller both support this interface, giving you an easy and powerful way to handle incoming web requests and generate template-driven web pages.
 </p>
 
 <p>
-WView is a subclass of DOMTemplate, and much of Woven is based upon the semantics DOMTemplate uses to transform an input XHTML template into the final page which the user sees.
+View is a subclass of DOMTemplate, and much of Woven is based upon the semantics DOMTemplate uses to transform an input XHTML template into the final page which the user sees.
 </p>
 
 <p>
@@ -87,6 +69,10 @@ view.registerViewForModel(VExample, MExample)
 # Register CExample as a Controller for MExample
 controller.registerControllerForModel(CExample, MExample)
 </pre>
+
+<p>
+Although it is not always necessary to define a complete MVC triad, I recommend doing so initially even if your class bodies are simply 'pass'. This will get you used to thinking about MVC objects as a complete triad of cooperating objects, and make it easy to add functionality to your triad later.
+</p>
 
 <p>
 While using Twisted's Woven you will be using all this boilerplate code for every page on your web site. It may seem excessive at first, but it has several advantages. By defining a complete MVC triad to represent a web page, you give your page three separate namespaces for your web page's components; by following the MVC division of labor properly you make it easier to locate and isolate a piece of code based on what it does; and by componentizing your logic your code becomes far easier to reuse in other parts of your application, speeding development time.
