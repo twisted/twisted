@@ -56,7 +56,7 @@ class Data(resource.Resource):
 
 class DirectoryListing(html.Interface):
     def __init__(self, pathname):
-	html.Interface.__init__(self)
+        html.Interface.__init__(self)
         self.path = pathname
 
     def directoryContents(self):
@@ -100,7 +100,7 @@ class File(resource.Resource):
         ".oz": "text/x-oz",
         ".java": "text/plain",
         ".pdf": "application/x-pdf",
-	".exe": "application/x-executable",
+        ".exe": "application/x-executable",
         }
 
     contentEncodings = {
@@ -196,7 +196,16 @@ class File(resource.Resource):
             request.setHeader('content-type', self.type)
         if self.encoding:
             request.setHeader('content-encoding', self.encoding)
-
+        
+        # caching headers support
+        modified_since = request.getHeader('if-modified-since')
+        if modified_since is not None:
+            # check if file has been modified and if not don't return the file
+            modified_since = server.string_date_time(modified_since)
+            if modified_since >= mtime:
+                request.setResponseCode(http.NOT_MODIFIED)
+                return ''
+        
         f = open(self.path,'rb')
         try:
             range = request.getHeader('range')
