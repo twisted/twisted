@@ -15,6 +15,10 @@ Figure out why None doesn't work, and write tests.
 # SOAPpy
 import SOAP
 
+# fix 2.2 issues with SOAP
+SOAP.SOAPBuilder.dump_str = SOAP.SOAPBuilder.dump_string 
+SOAP.SOAPBuilder.dump_dict = SOAP.SOAPBuilder.dump_dictionary
+
 # twisted imports
 from twisted.web import server, resource
 from twisted.internet import defer
@@ -74,6 +78,8 @@ class SOAPPublisher(resource.Resource):
         self._sendResponse(request, response, status=500)
     
     def _gotResult(self, result, request, methodName):
+        if not isinstance(result, SOAP.voidType):
+            result = {"Result": result}
         response = SOAP.buildSOAP(kw={'%sResponse' % methodName: result},
                                   encoding=self.encoding)
         self._sendResponse(request, response)
