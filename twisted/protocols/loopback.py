@@ -100,7 +100,7 @@ class LoopbackClientFactory(protocol.ClientFactory):
         self.disconnected = 1
 
 
-def loopbackTCP(server, client, port=64124):
+def loopbackTCP(server, client, port=0):
     """Run session between server and client protocol instances over TCP."""
     from twisted.internet import reactor
     f = protocol.Factory()
