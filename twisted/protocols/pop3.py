@@ -367,9 +367,9 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
             messages = self.mbox.listMessages()
             lines = []
             for msg in messages:
-                lines.append('%d %d' % (len(lines) + 1, msg))
+                lines.append('%d %d%s' % (len(lines) + 1, msg, self.delimiter))
             self.successResponse(len(lines))
-            map(self.sendLine, lines)
+            self.transport.writeSequence(lines)
             self.sendLine('.')
         else:
             msg = self.mbox.listMessages(int(i) - 1)
@@ -380,10 +380,13 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
             messages = self.mbox.listMessages()
             self.successResponse()
             i = 0
+            lines = []
             for msg in messages:
                 if msg:
-                    self.sendLine('%d %s' % (i + 1, self.mbox.getUidl(i)))
+                    uid = self.mbox.getUidl(i)
+                    lines.append('%d %s%s' % (i + 1, uid, self.delimiter))
                 i += 1
+            self.transport.writeSequence(lines)
             self.sendLine('.')
         else:
             msg = self.mbox.getUidl(int(i) - 1)
@@ -412,7 +415,10 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         s = basic.FileSender()
         self.blocked = []
         s.beginFileTransfer(fp, self.transport, self.transformChunk
-        ).addCallback(self.finishedFileTransfer).addCallback(self._unblock).addErrback(log.err)
+            ).addCallback(self.finishedFileTransfer
+            ).addCallback(self._unblock
+            ).addErrback(log.err
+            )
 
     def do_RETR(self, i):
         self.highest = max(self.highest, i)
@@ -423,7 +429,10 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         s = basic.FileSender()
         self.blocked = []
         s.beginFileTransfer(fp, self.transport, self.transformChunk
-        ).addCallback(self.finishedFileTransfer).addCallback(self._unblock).addErrback(log.err)
+            ).addCallback(self.finishedFileTransfer
+            ).addCallback(self._unblock
+            ).addErrback(log.err
+            )
 
     def transformChunk(self, chunk):
         return chunk.replace('\n', '\r\n').replace('\r\n.', '\r\n..')
