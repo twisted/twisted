@@ -104,7 +104,7 @@ def connectedServerAndClient():
     c = pb.Broker()
     auth = authorizer.DefaultAuthorizer()
     appl = Application("pb-test")
-    auth.setApplication(appl)
+    auth.setServiceCollection(appl)
     ident = identity.Identity("guest", authorizer=auth)
     ident.setPassword("guest")
     svc = DummyService("test", appl, authorizer=auth)

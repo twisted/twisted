@@ -450,7 +450,7 @@ class WriterProtocol(protocol.Protocol):
 class ReaderProtocol(protocol.Protocol):
     def dataReceived(self, data):
         self.factory.data += data
-    def connectionLost(self):
+    def connectionLost(self, reason):
         self.factory.done = 1
 
 class WriterClientFactory(protocol.ClientFactory):
