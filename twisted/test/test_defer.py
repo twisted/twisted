@@ -192,6 +192,17 @@ class DeferredTestCase(unittest.TestCase):
         d.unpause()
         self.assertEquals(str(l[0].value), "fail")
 
+    def testCallbackErrors(self):
+        l = []
+        d = defer.Deferred().addCallback(lambda _: 1/0).addErrback(l.append)
+        d.callback(1)
+        self.assert_(isinstance(l[0].value, ZeroDivisionError))
+        l = []
+        d = defer.Deferred().addCallback(
+            lambda _: failure.Failure(ZeroDivisionError())).addErrback(l.append)
+        d.callback(1)
+        self.assert_(isinstance(l[0].value, ZeroDivisionError))
+        
     def testUnpauseBeforeCallback(self):
         d = defer.Deferred()
         d.pause()
