@@ -125,7 +125,8 @@ class VT100Frame(Tkinter.Frame):
             elif b == 9: # TAB
                 [self._write(' ',fg,bg) for i in range(8)]
             elif b == 10:
-                if self.y == self.height-1: 
+                if self.y == self.height-1:
+                    self._delete(0,0,self.width,0)
                     [self.canvas.move(x,0,-fontHeight) for x in self.canvas.find_all()]
                 else:   
                     self.y+=1
