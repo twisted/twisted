@@ -99,7 +99,7 @@ class ManConverter:
 
     def macro_B(self, line):
         words = line.split()
-        words[0] = '\\fB' + words[0] + '\\fR'
+        words[0] = '\\fB' + words[0] + '\\fR '
         self.text(' '.join(words))
 
     def macro_PP(self, line):
