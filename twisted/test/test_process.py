@@ -405,16 +405,22 @@ class PosixProcessTestCase(unittest.TestCase):
 class PosixProcessTestCasePTY(PosixProcessTestCase):
     """Just like PosixProcessTestCase, but use ptys instead of pipes."""
     usePTY = 1
-    def testStderr(self):
-        # pass-through method to give us something to hang the .todo from
-        PosixProcessTestCase.testStderr(self)
-    testStderr.todo = "still broken"
-    def testProcess(self):
-        PosixProcessTestCase.testProcess(self)
-    testProcess.todo = "still broken"
+    # PTYs are not pipes. What still makes sense?
+    # testProcess, but not without p.transport.closeStdin
+    # testNormalTermination
+    # testAbnormalTermination
+    # testSignal
+    #
+    # others are skipped. I wish I knew of a way to make this "do these N
+    # tests" instead of "skip these other M-N tests".
     def testStdio(self):
-        PosixProcessTestCase.testStdio(self)
-    testStdio.skip = "hangs completely"
+        raise unittest.SkipTest("ptys cannot do closeStdin()")
+    def testStderr(self):
+        raise unittest.SkipTest("ptys don't have a distinct stderr stream")
+
+    def testProcess(self):
+        # might be solveable
+        raise unittest.SkipTest("testProcess requires closeable stdin")
     
 class Win32ProcessTestCase(unittest.TestCase):
     """Test process programs that are packaged with twisted."""
