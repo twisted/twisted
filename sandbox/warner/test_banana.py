@@ -507,6 +507,7 @@ class TestBananaMixin:
             print obj2.failure.getTraceback()
             self.fail("UnbananaFailure at %s" % obj2.where)
         self.failUnlessEqual(obj2, obj)
+        self.failUnlessEqual(type(obj2), type(obj))
 
     def OPEN(self, opentype, count):
         assert count < 128
@@ -595,10 +596,44 @@ class ThereAndBackAgain(TestBananaMixin, unittest.TestCase):
         self.looptest(42)
     def test_string(self):
         self.looptest("biggles")
+    def test_unicode(self):
+        self.looptest(u"biggles")
+        # TODO: put actual non-ascii characters in it
     def test_list(self):
         self.looptest([1,2])
     def test_tuple(self):
         self.looptest((1,2))
+    def test_bool(self):
+        self.looptest(bool(1))
+        self.looptest(not bool(1))
+    def test_float(self):
+        self.looptest(20.3)
+    def test_none(self):
+        n2 = self.loop(None)
+        self.failUnless(n2 is None)
+    def test_dict(self):
+        self.looptest({'a':1})
+
+    def test_func(self):
+        self.looptest(afunc)
+    def test_module(self):
+        self.looptest(unittest)
+    def test_instance(self):
+        a = A()
+        self.looptest(a)
+    def test_module(self):
+        self.looptest(A)
+    def test_boundMethod(self):
+        a = A()
+        m1 = a.amethod
+        m2 = self.loop(m1)
+
+        self.failUnlessEqual(m1.im_class, m2.im_class)
+        self.failUnlessEqual(m1.im_self, m2.im_self)
+        self.failUnlessEqual(m1.im_func, m2.im_func)
+
+    def test_classMethod(self):
+        self.looptest(A.amethod)
 
     # some stuff from test_newjelly
     def testIdentity(self):
@@ -640,18 +675,6 @@ class ThereAndBackAgain(TestBananaMixin, unittest.TestCase):
         z = self.decode(s)
         self.assertIdentical(z[0][0][0], z)
 
-    def testLotsaTypes(self):
-        """
-        test for all types currently supported in jelly
-        """
-        a = A()
-        self.looptest(a)
-        self.looptest(A)
-        self.looptest(a.amethod)
-        items = [afunc, [1, 2, 3], not bool(1), bool(1), 'test', 20.3, (1,2,3), None, A, unittest, {'a':1}, A.amethod]
-        for i in items:
-            self.looptest(i)
-    #testLotsaTypes.skip = "not all types are implemented yet"
 
         
 class VocabTest1(unittest.TestCase):
