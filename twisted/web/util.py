@@ -34,6 +34,131 @@ class Redirect(resource.Resource):
         return redirectTo(self.url, request)
 
 
+stylesheet = """
+<style type="text/css">
+    p.error {
+      color: red;
+      font-family: Verdana, Arial, helvetica, sans-serif;
+      font-weight: bold;
+    }
+
+    div {
+      font-family: Verdana, Arial, helvetica, sans-serif;
+    }
+
+    div.stackTrace {
+    }
+
+    div.frame {
+      padding: 1em;
+      background: white;
+      border-bottom: thin black dashed;
+    }
+
+    div.firstFrame {
+      padding: 1em;
+      background: white;
+      border-top: thin black dashed;
+      border-bottom: thin black dashed;
+    }
+
+    div.location {
+    }
+
+    div.snippet {
+      margin-bottom: 0.5em;
+      margin-left: 1em;
+      background: #FFFFDD;
+    }
+
+    div.snippetHighlightLine {
+      color: red;
+    }
+
+    span.code {
+      font-family: "Courier New", courier, monotype;
+    }
+
+    span.function {
+      font-weight: bold;
+      font-family: "Courier New", courier, monotype;
+    }
+
+    table.variables {
+      border-collapse: collapse;
+      margin-left: 1em;
+    }
+
+    td.varName {
+      vertical-align: top;
+      font-weight: bold;
+      padding-left: 0.5em;
+      padding-right: 0.5em;
+    }
+
+    td.varValue {
+      padding-left: 0.5em;
+      padding-right: 0.5em;
+    }
+
+    div.variables {
+      margin-bottom: 0.5em;
+    }
+
+    span.heading {
+      font-weight: bold;
+    }
+
+    div.dict {
+      background: #cccc99;
+      padding: 2px;
+      float: left;
+    }
+
+    td.dictKey {
+      background: #ffff99;
+      font-weight: bold;
+    }
+
+    td.dictValue {
+      background: #ffff99;
+    }
+
+    div.list {
+      background: #7777cc;
+      padding: 2px;
+      float: left;
+    }
+
+    div.listItem {
+      background: #9999ff;
+    }
+
+    div.instance {
+      background: #cc7777;
+      padding: 2px;
+      float: left;
+    }
+
+    span.instanceName {
+      font-weight: bold;
+      display: block;
+    }
+
+    span.instanceRepr {
+      background: #ff9999;
+      font-family: "Courier New", courier, monotype;
+    }
+
+    div.function {
+      background: orange;
+      font-weight: bold;
+      float: left;
+    }
+</style>
+"""
+
+
 def htmlrepr(x):
     return htmlReprTypes.get(type(x), htmlUnknown)(x)
 
@@ -50,42 +175,43 @@ def htmlUnknown(x):
 def htmlDict(d):
     io = StringIO()
     w = io.write
-    w('<table bgcolor="#cccc99"><tr><th colspan="2" align="left">Dictionary %d</th></tr>' % id(d))
+    w('<div class="dict"><span class="heading">Dictionary %d</span>' % id(d))
+    w('<table class="dict">')
     for k, v in d.items():
+
         if k == '__builtins__':
             v = 'builtin dictionary'
-        w('\n<tr bgcolor="#ffff99"><td valign="top"><b>%s</b></td>\n<td>%s</td></tr>\n' % (htmlrepr(k), htmlrepr(v)))
-    w('</table>')
+        w('<tr><td class="dictKey">%s</td><td class="dictValue">%s</td></tr>' % (htmlrepr(k), htmlrepr(v)))
+    w('</table></div>')
     return io.getvalue()
 
 def htmlList(l):
     io = StringIO()
     w = io.write
-    w('<table bgcolor="#7777cc"><tr><th colspan="2" align="left">List %d</th></tr>' % id(l))
+    w('<div class="list"><span class="heading">List %d</span>' % id(l))
     for i in l:
-        w('<tr bgcolor="#9999ff"><td>%s</td></tr>\n' % htmlrepr(i))
-    w('</table>\n')
+        w('<div class="listItem">%s</div>' % htmlrepr(i))
+    w('</div>')
     return io.getvalue()
 
 def htmlInst(i):
     if hasattr(i, "__html__"):
         s = i.__html__()
     else:
-        s = '<code>'+html.escape(saferepr(i))+'</code>'
-    return '''<table bgcolor="#cc7777"><tr><td><b>%s</b> instance @ 0x%x</td></tr>
-              <tr bgcolor="#ff9999"><td>%s</td></tr>
-              </table>
+        s = html.escape(saferepr(i))
+    return '''<div class="instance"><span class="instanceName">%s instance @ 0x%x</span>
+              <span class="instanceRepr">%s</span></div>
               ''' % (i.__class__, id(i), s)
 
 def htmlString(s):
     return html.escape(saferepr(s))
 
 def htmlFunc(f):
-    return ('<b style="background-color: orange">' +
+    return ('<div class="function">' +
             html.escape("function %s in file %s at line %s" %
                         (f.__name__, f.func_code.co_filename,
                          f.func_code.co_firstlineno))+
-            '</b>')
+            '</div>')
 
 htmlReprTypes = {types.DictType: htmlDict,
                  types.ListType: htmlList,
@@ -94,61 +220,91 @@ htmlReprTypes = {types.DictType: htmlDict,
                  types.FunctionType: htmlFunc}
 
 
+
+def htmlIndent(snippetLine):
+    ret = string.replace(string.replace(html.escape(string.rstrip(snippetLine)),
+                                  '  ', '&nbsp;'),
+                   '\t', '&nbsp; &nbsp; &nbsp; &nbsp; ')
+    return ret
+
 def formatFailure(myFailure):
+
+    exceptionHTML = """
+<p class="error">%s: %s</h2>
+"""
+
+    frameHTML = """
+<div class="location">%s, line %s in <span class="function">%s</span></div>
+"""
+
+    snippetLineHTML = """
+<div class="snippetLine"><span class="lineno">%s</span><span class="code">%s</span></div>
+"""
+
+    snippetHighlightLineHTML = """
+<div class="snippetHighlightLine"><span class="lineno">%s</span><span class="code">%s</span></div>
+"""
+
+    variableHTML = """
+<tr class="varRow"><td class="varName">%s</td><td class="varValue">%s</td></tr>
+"""
+    
     if not isinstance(myFailure, failure.Failure):
         return html.PRE(str(myFailure))
     io = StringIO()
     w = io.write
-    w("<table>")
-    w('<th align="left" colspan="3"><font color="red">%s: %s</font></th>' % (html.escape(str(myFailure.type)), html.escape(str(myFailure.value))))
-    line = 0
+    w(stylesheet)
+
+    w(exceptionHTML % (html.escape(str(myFailure.type)),
+                       html.escape(str(myFailure.value))))
+    w('<div class="stackTrace">')
+    first = 1
     for method, filename, lineno, localVars, globalVars in myFailure.frames:
-        # Cheat to make tracebacks shorter.
         if filename == '<string>':
             continue
-        # file, line number
-        w('<tr bgcolor="#%s"><td colspan="2" valign="top">%s, line %s in <b>%s</b><br /><table width="100%%">' % (["bbbbbb", "cccccc"][line % 2], filename, lineno, method))
-        snippet = ''
+        if first:
+            w('<div class="firstFrame">')
+            first = 0
+        else:
+            w('<div class="frame">')
+        w(frameHTML % (filename, lineno, method))
+
+        w('<div class="snippet">')
+        textSnippet = ''
         for snipLineNo in range(lineno-2, lineno+2):
             snipLine = linecache.getline(filename, snipLineNo)
-            snippet = snippet + snipLine
-            snipLine = string.replace(
-                string.replace(html.escape(string.rstrip(snipLine)),
-                               '  ','&nbsp;'),
-                '\t', '&nbsp; &nbsp; &nbsp; &nbsp; ')
-
-
+            textSnippet += snipLine
+            snipLine = htmlIndent(snipLine)
             if snipLineNo == lineno:
-                color = 'bgcolor="#ffffff"'
+                w(snippetHighlightLineHTML % (snipLineNo, snipLine))
             else:
-                color = ''
-            w('<tr %s><td>%s</td><td><code>%s</code></td></tr>' % (color, snipLineNo,snipLine))
-        w('</table></td></tr>')
-        # Self vars
-        w('<tr bgcolor="#%s">' % (["bbbbbb", "cccccc"][line % 2]))
-        w('<td valign="top" colspan="2"><table><tr><th align="left" colspan="2">'
-              'Self'
-              '</th></tr>')
+                w(snippetLineHTML % (snipLineNo, snipLine))
+        w('</div>')
+
+        # Instance variables
         for name, var in localVars:
             if name == 'self' and hasattr(var, '__dict__'):
-                for key, value in var.__dict__.items():
-                    if re.search(r'\W'+'self.'+key+r'\W', snippet):
-                        w('<tr><td valign="top"><b>%s</b></td>'
-                            '<td>%s</td></tr>' % (key, htmlrepr(value)))
-        w('</table></td></tr>')
-        w('<tr bgcolor="#%s">' % (["bbbbbb", "cccccc"][line % 2]))
+                usedVars = [ (key, value) for (key, value) in var.__dict__.items()
+                             if re.search(r'\W'+'self.'+key+r'\W', textSnippet) ]
+                if usedVars:
+                    w('<div class="variables"><b>Self</b>')
+                    w('<table class="variables">')
+                    for key, value in usedVars:
+                        w(variableHTML % (key, htmlrepr(value)))
+                    w('</table></div>')
+                break
+
         # Local and global vars
         for nm, varList in ('Locals', localVars), ('Globals', globalVars):
-            w('<td valign="top"><table><tr><th align="left" colspan="2">'
-              '%s'
-              '</th></tr>' % nm)
-            for name, var in varList:
-                if re.search(r'\W'+name+r'\W', snippet):
-                    w('<tr><td valign="top"><b>%s</b></td>'
-                      '<td>%s</td></tr>' % (name, htmlrepr(var)))
-            w('</table></td>')
-        w('</tr>')
-        line = line + 1
-    w('<th align="left" colspan="3"><font color="red">%s: %s</font></th>' % (html.escape(str(myFailure.type)), html.escape(str(myFailure.value))))
-    w('</table>')
+            usedVars = [ (name, var) for (name, var) in varList
+                         if re.search(r'\W'+name+r'\W', textSnippet) ]
+            if usedVars:
+                w('<div class="variables"><b>%s</b><table class="variables">' % nm)
+                for name, var in usedVars:
+                    w(variableHTML % (name, htmlrepr(var)))
+                w('</table></div>')
+            
+        w('</div>') # frame
+    w('</div>') # stacktrace
+
     return io.getvalue()
