@@ -90,10 +90,13 @@ class EchoProtocol(protocol.ProcessProtocol):
     def outReceived(self, data):
         self.buffer += data
         if len(self.buffer) == 70070:
-            self.transport.loseConnection()
+            self.transport.closeStdin()
 
     def processEnded(self, reason):
         self.finished = 1
+        if not isinstance(reason.value, error.ProcessDone):
+            print reason
+            raise "process didn't terminate normally"
 
 class SignalProtocol(protocol.ProcessProtocol):
     def __init__(self, sig, testcase):
@@ -153,6 +156,7 @@ class ProcessTestCase(unittest.TestCase):
         reactor.spawnProcess(p, exe, [exe, "-u", scriptPath], env=None)
         while not p.finished:
             reactor.iterate(0.01)
+        self.assert_(hasattr(p, 'buffer'))
         self.assertEquals(len(p.buffer), len(p.s * 10))
 
 class TwoProcessProtocol(protocol.ProcessProtocol):

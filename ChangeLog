@@ -1,5 +1,11 @@
 2003-05-27  Brian Warner  <warner@lothar.com>
 
+	* twisted/test/test_process.py (EchoProtocol): try to close
+	occasional test failure. Do transport.closeStdin() instead of
+	loseConnection() because the child still has data to write (to
+	stderr). Closing all three streams takes away its voice, forces it
+	to exit with an error, and is probably causing problems.
+
 	* twisted/test/test_factories.py (testStopTrying): stop test after
 	5 seconds rather than 2000 iterations. Some reactors iterate at
 	different rates.
