@@ -63,6 +63,7 @@ class Request(pb.RemoteCopy, server.Request):
         self.write            = self.remote.remoteMethod('write')
         self.finish           = self.remote.remoteMethod('finish')
         self.setHeader        = self.remote.remoteMethod('setHeader')
+        self.addCookie        = self.remote.remoteMethod('addCookie')
         self.setETag          = self.remote.remoteMethod('setETag')
         self.setResponseCode  = self.remote.remoteMethod('setResponseCode')
         self.setLastModified  = self.remote.remoteMethod('setLastModified')
