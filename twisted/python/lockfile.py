@@ -17,12 +17,14 @@ class LockFile:
         else:
             data = ""
         open(uniq,'w').write(data)
-        uniqStat = os.stat(uniq)
+        uniqStat = list(os.stat(uniq))
+        del uniqStat[3]
         try:
             os.link(uniq, filename)
         except:
             pass
-        fileStat = os.stat(filename)
+        fileStat = list(os.stat(filename))
+        del fileStat[3]
         if fileStat != uniqStat:
             raise DidNotGetLock()
         self.filename = filename
