@@ -20,49 +20,44 @@
 #
 from __future__ import nested_scopes
 
-""" Flow ... asynchronous data flows
+""" Flow -- asynchronous data flows using generators
 
     This module provides a mechanism for using async data flows through
-    the use of generators.  While this module does not use generators in
-    its implementation, it isn't very useable without them.   A data flow
-    is constructed with a top level generator, which can have three 
-    types of yield statements:  flow.Cooperate, flow.Iterable, or
-    any other return value with exceptions wrapped using Failure
+    the use of generators.  The basic idea of flow is that when ever
+    you require data from a producer, you yield the producer.  If the
+    producer is ready, then you can call producer.next() to fetch the
+    incoming data.  Otherwise, the underlying process will suspend the
+    operation to try again later.
 
-    An example program...
+    Most classes in the flow module an Instruction, either a CallLater
+    or a Stage.   A Stage instruction is used to wrap various sorts of
+    producers, anything from a simple String, to Callback functions.  
+    Stages can yield other stages to build a processing chain, results
+    which are returned to the previous stage, or a CallLater instruction
+    which causes the whole operation to be suspended.   
 
-        from __future__ import generators
-        import flow
+    There is a special CallLater, Cooperate, which simply resumes the 
+    chain of stages at a later time.   However, each one of the 
+    Callback, DeferredWrapper, and Threaded wrappers have their
+    own special CallLater which handles their specific cases.
 
-        def producer():
-            lst = flow.wrap([1,2,3])
-            nam = flow.wrap(['one','two','three'])
-            while True:
-                yield lst
-                yield nam
-                yield flow.Cooperate()
-                yield (lst.next(),nam.next())
+    Instruction
+       CallLater
+          Cooperate
+       Stage
+          String
+          List
+          Iterable
+          Zip
+          Concurrent
+             Merge
+          Block
+          Callback*
+             Protocol
+          DeferredWrapper*
+          Threaded*
+    Deferred
 
-        def consumer():
-            title = flow.wrap(['Title'])
-            prod = flow.wrap(producer())
-            yield title
-            yield title.next()
-            yield prod
-            for data in prod:
-                yield data
-                yield prod
-
-        for x in flow.Block(consumer()):
-            print x
-
-    produces the output:
-
-        Title
-        (1, 'one')
-        (2, 'two')
-        (3, 'three')
-        
 """
 
 import time, types
@@ -83,22 +78,21 @@ def wrap(obj, *trap):
             obj._trap = tuple(trap)
         return obj
 
+    if callable(obj):
+        obj = obj()
+
     typ = type(obj)
     if typ is type([]) or typ is type(tuple()):
         return List(obj)
     if typ is type(''):
         return String(obj)
- 
+     
     if isinstance(obj, defer.Deferred):
         return DeferredWrapper(obj, *trap)
-
-    if callable(obj):
-        obj = obj()
 
     try:
         return Iterable(obj, *trap)
     except TypeError: 
-        # iteration over non-sequence 
         pass
 
     raise ValueError, "A wrapper is not available for %r" % (obj,)
@@ -186,7 +180,6 @@ class Stage(Instruction):
                  for result in results:
                       // handle good result
                  yield iterable
-
 
         For those wishing more control at the cost of a painful experience,
         the following member variables can be used to great effect:
