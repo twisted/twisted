@@ -77,7 +77,7 @@ twisted.web.test in it."""
             '.php3': twcgi.PHP3Script,
             '.php': twcgi.PHPScript,
             '.epy': script.PythonScript,
-            '.py': script.PyCompiler,
+            '.rpy': script.ResourceScript,
             '.trp': trp.ResourceUnpickler,
             }
 
