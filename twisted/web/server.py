@@ -283,14 +283,7 @@ class Request(pb.Copyable, http.Request):
                 self.addCookie(cookiename, self.session.uid, path='/')
         self.session.touch()
         if sessionInterface:
-            if self.session.sessionNamespaces.has_key(sessionInterface):
-                return self.session.sessionNamespaces[sessionInterface]
-            adapted = components.getAdapter(self.session, sessionInterface, None)
-            if adapted:
-                self.session.sessionNamespaces[sessionInterface] = adapted
-                return adapted
-            else:
-                raise NotImplementedError, "A session adapter wasn't registered for interface %s" % sessionInterface
+            return self.session.getComponent(sessionInterface)
         return self.session
 
     def prePathURL(self):
@@ -316,7 +309,7 @@ class _RemoteProducerWrapper:
         self.stopProducing = remote.remoteMethod("stopProducing")
 
 
-class Session:
+class Session(components.Componentized):
     """A user's session with a system.
 
     This utility class contains no functionality, but is used to
@@ -325,6 +318,7 @@ class Session:
     def __init__(self, site, uid):
         """Initialize a session with a unique ID for that session.
         """
+        components.Componentized.__init__(self)
         self.site = site
         self.uid = uid
         self.expireCallbacks = []
@@ -332,11 +326,13 @@ class Session:
         self.sessionNamespaces = {}
 
     def notifyOnExpire(self, callback):
-        """Call this callback when the session expires or logs out."""
+        """Call this callback when the session expires or logs out.
+        """
         self.expireCallbacks.append(callback)
 
     def expire(self):
-        """Expire/logout of the session."""
+        """Expire/logout of the session.
+        """
         log.msg("expired session %s" % self.uid)
         del self.site.sessions[self.uid]
         for c in self.expireCallbacks:
