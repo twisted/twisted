@@ -23,5 +23,5 @@ class One(pb.Root):
 
 two = Two()
 root_obj = One(two)
-reactor.listenTCP(8800, pb.BrokerFactory(root_obj))
+reactor.listenTCP(8800, pb.PBServerFactory(root_obj))
 reactor.run()

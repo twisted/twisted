@@ -9,5 +9,5 @@ class One(pb.Root):
         print "telling it to print(12)"
         two.callRemote("print", 12)
 
-reactor.listenTCP(8800, pb.BrokerFactory(One()))
+reactor.listenTCP(8800, pb.PBServerFactory(One()))
 reactor.run()

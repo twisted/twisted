@@ -22,7 +22,7 @@ class One(pb.Root):
         raise MyError2(msg)
 
 def main():
-    reactor.listenTCP(8800, pb.BrokerFactory(One()))
+    reactor.listenTCP(8800, pb.PBServerFactory(One()))
     reactor.run()
 
 if __name__ == '__main__':

@@ -12,4 +12,4 @@ class One(pb.Root):
         return two
 
 from twisted.internet import reactor
-reactor.listenTCP(8800, pb.BrokerFactory(One()))
+reactor.listenTCP(8800, pb.PBServerFactory(One()))

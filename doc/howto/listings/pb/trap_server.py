@@ -14,5 +14,5 @@ class One(pb.Root):
     def remote_shutdown(self):
         reactor.stop()
 
-reactor.listenTCP(8800, pb.BrokerFactory(One()))
+reactor.listenTCP(8800, pb.PBServerFactory(One()))
 reactor.run()
