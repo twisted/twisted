@@ -10,7 +10,7 @@ from __future__ import nested_scopes
 __version__ = "$Revision: 1.17 $"[11:-2]
 
 from twisted.trial.reporter import SKIP, EXPECTED_FAILURE, FAILURE, ERROR, UNEXPECTED_SUCCESS, SUCCESS
-from twisted.python import reflect, failure, log, procutils, util as pyutil, compat
+from twisted.python import reflect, failure, log, util as pyutil, compat
 from twisted.python.runtime import platformType
 from twisted.internet import defer, reactor, protocol, error, threads
 from twisted.protocols import loopback
