@@ -439,6 +439,7 @@ def connectStream(inputStream, factory):
     # XXX deal better with addresses
     p = factory.buildProtocol(None)
     out = ProducerStream()
+    out.disconnecting = False # XXX for LineReceiver suckage
     p.makeConnection(out)
     readStream(inputStream, lambda _: p.dataReceived(_)).addCallbacks(
         lambda _: p.connectionLost(ti_error.ConnectionDone()), lambda _: p.connectionLost(_))
