@@ -93,17 +93,6 @@ def _deferGenerator(g, deferred=None, result=None):
 def deferredGenerator(f):
     return lambda *args, **kwargs: _deferGenerator(f(*args, **kwargs))
 
-try:
-    from bytecodehacks import macro
-except ImportError:
-    wait = None
-    print "Warning: bytecodehacks not found, not defining wait()"
-else:
-    def wait((d)):
-        yield d
-        d = d.getResult()
-    macro.add_macro(wait)
-
 if __name__ == '__main__':
     from twisted.internet import reactor
     def testIt():
@@ -118,10 +107,6 @@ if __name__ == '__main__':
         x = x.getResult()
 
         assert x == "hi"
-        
-        if wait is not None:
-            x = wait(getThing())
-            assert x == "hi", "%s != 'hi'" % (x,)
 
         def getOwie():
             d = Deferred()
@@ -135,11 +120,10 @@ if __name__ == '__main__':
         try:
             ow.getResult()
         except Exception, e:
-            assert e.args == ('OMG',), repr(e.args)
+            assert str(e) == 'OMG', repr(e.args)
         1/0 # seeing this is good
         return
-    if wait is not None:
-        testIt = macro.expand(testIt)
+
 
     d = _deferGenerator(testIt())
     def _(r):
