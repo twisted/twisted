@@ -95,10 +95,12 @@ class File(resource.Resource, styles.Versioned):
 
     # we don't implement IConfigCollection
     __implements__ = resource.IResource
-
+    
+    #argh, we need a MIME db interface
     contentTypes = {
         ".css": "text/css",
         ".exe": "application/x-executable",
+        ".flac": "audio/x-flac",
         ".gif": "image/gif",
         ".gtar": "application/x-gtar",
         ".html": "text/html",
@@ -109,6 +111,7 @@ class File(resource.Resource, styles.Versioned):
         ".lisp": "text/x-lisp",
         ".mp3":  "audio/mpeg",
         ".oz": "text/x-oz",
+        ".ogg": "application/x-ogg",
         ".pdf": "application/x-pdf",
         ".png": "image/png",
         ".py": "text/x-python",
