@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.139 2003/09/22 01:56:14 exarkun Exp $
+$Id: setup.py,v 1.140 2003/09/22 02:08:24 exarkun Exp $
 """
 
 import distutils, os, sys, string
@@ -207,8 +207,8 @@ int main(int argc, char **argv)
         # opendir/readdir/scandir wrapper
         # Only build it if dirent.h defines "struct dirent" with the fields
         # d_name and d_type.
-        if (self._check_struct_member(["dirent.h", "sys/types.h"], 'dirent', 'd_name')
-            and self._check_struct_member(["dirent.h", "sys/types.h"], 'dirent', 'd_type')):
+        if (self._check_struct_member(["sys/types.h", "dirent.h"], 'dirent', 'd_name')
+            and self._check_struct_member(["sys/types.h", "dirent.h"], 'dirent', 'd_type')):
             exts.append( Extension("twisted.python._c_dir",
                                     ["twisted/python/_c_dir.c"],
                                     define_macros=define_macros) )
