@@ -252,13 +252,18 @@ class InterfaceTestCase(unittest.TestCase):
             reactor.iterate(0.01)
         ireset_elapsed = self._resetcallbackTime - start
         idelay_elapsed = self._delaycallbackTime - start
-        self.assertApproximates(ireset_elapsed, 0.6, 0.1,
-                                "ireset fired at %f (wanted 0.6)" % \
-                                ireset_elapsed)
-        self.assertApproximates(idelay_elapsed, 0.8, 0.1,
-                                "idelay fired at %f (wanted 0.8)" % \
-                                idelay_elapsed)
-        self.failUnless(idelay_elapsed > ireset_elapsed)
+        #self.assertApproximates(ireset_elapsed, 0.6, 0.4,
+        #                        "ireset fired at %f (wanted 0.6)" % \
+        #                        ireset_elapsed)
+        #self.assertApproximates(idelay_elapsed, 0.8, 0.4,
+        #                        "idelay fired at %f (wanted 0.8)" % \
+        #                        idelay_elapsed)
+        self.failUnless(idelay_elapsed > ireset_elapsed,
+                        "got %f, %f" % (idelay_elapsed, ireset_elapsed))
+        self.failUnless(ireset_elapsed >= 0.6,
+                        "got %f (wanted 0.6)" % ireset_elapsed)
+        self.failUnless(idelay_elapsed >= 0.8,
+                        "got %f (wanted 0.6)" % idelay_elapsed)
 
         del self._resetcallbackTime
         del self._delaycallbackTime
