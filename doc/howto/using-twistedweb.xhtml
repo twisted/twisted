@@ -127,7 +127,9 @@ root.putChild('bob', Hello())
 <p><code>.rpy</code> files are very convenient for rapid development and prototyping. Since they are executed on every web request, defining a Resource subclass in an <code>.rpy</code> will make viewing the results of changes to your class visible simply by refreshing the page:</p>
 
 <pre class="python">
-class MyResource(resource.Resource):
+from twisted.web.resource import Resource
+
+class MyResource(Resource):
     def render_GET(self, request):
         return "&lt;html&gt;Hello, world!&lt;/html&gt;"
 
