@@ -64,7 +64,7 @@ class Resolver:
         res = searchFileFor(self.file, name)
         if res:
             return defer.succeed([
-                dns.RRHeader(name, dns.A, dns.IN, self.ttl)
+                [dns.RRHeader(name, dns.A, dns.IN, self.ttl)], (), ()
             ])
         return defer.fail(failure.Failure(dns.DomainError(name)))
 
