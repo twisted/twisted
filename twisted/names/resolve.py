@@ -31,6 +31,19 @@ from twisted.protocols import dns
 
 import common
 
+class FailureHandler:
+    def __init__(self, resolver, name, cls, type, timeout):
+        self.resolver = resolver
+        self.name, self.cls, self.type = name, cls, type
+        self.timeout = timeout
+    
+    
+    def __call__(self, failure):
+        # AuthoritativeDomainErrors should halt resolution attempts
+        failure.trap(dns.DomainError, defer.TimeoutError)
+        return self.resolver(self.name, self.cls, self.type, self.timeout)
+
+
 class ResolverChain(common.ResolverBase):
     """Lookup an address using multiple C{IResolver}s"""
     
@@ -46,6 +59,6 @@ class ResolverChain(common.ResolverBase):
         d = self.resolvers[0]._lookup(name, cls, type, timeout)
         for r in self.resolvers[1:]:
             d = d.addErrback(
-                lambda f, r=r, n=name, c=cls, t=type, i=timeout: r._lookup(n, c, t, i)
+                FailureHandler(r._lookup, name, cls, type, timeout)
             )
         return d

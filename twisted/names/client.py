@@ -28,17 +28,14 @@ Future plans: Proper nameserver acquisition on Windows/MacOS,
 
 from __future__ import nested_scopes
 
-# System imports
-import struct
-
 # Twisted imports
 from twisted.python.runtime import platform
 from twisted.internet import defer, protocol, interfaces
 from twisted.python import log
 from twisted.protocols import dns
 
-
 import common
+
 
 class Resolver(common.ResolverBase):
     __implements__ = (interfaces.IResolver,)
@@ -197,6 +194,7 @@ class ThreadedResolver:
     __implements__ = (interfaces.IResolverSimple,)
 
     def lookupAddress(self, name, timeout = 10):
+        import socket
         return defer.deferToThread(socket.gethostbyname, name)
 
 

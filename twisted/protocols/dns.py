@@ -71,6 +71,13 @@ OP_QUERY, OP_INVERSE, OP_STATUS = range(3)
 # Response Codes
 OK, EFORMAT, ESERVER, ENAME, ENOTIMP, EREFUSED = range(6)
 
+class DomainError(ValueError):
+    pass
+
+
+class AuthoritativeDomainError(ValueError):
+    pass
+
 
 def str2time(s):
     suffixes = (
@@ -806,7 +813,7 @@ class DNSDatagramProtocol(protocol.DatagramProtocol):
     def _reissueQuery(self, message, address, counter, timer):
         d, _ = self.liveMessages[message.id]
         if counter <= 0:
-            d.errback(error.TimeoutError(message.queries))
+            d.errback(defer.TimeoutError(message.queries))
             del self.liveMessages[message.id]
         else:
             from twisted.internet import reactor

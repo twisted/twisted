@@ -48,7 +48,7 @@ class CacheResolver(common.ResolverBase):
         except KeyError:
             if self.verbose > 1:
                 log.msg('Cache miss for ' + repr(name))
-            return defer.fail(ValueError(dns.ENAME))
+            return defer.fail(failure.Failure(dns.DomainError(name)))
     
     
     def lookupAllRecords(self, name, timeout = 10):
@@ -66,7 +66,7 @@ class CacheResolver(common.ResolverBase):
         except KeyError:
             if self.verbose > 1:
                 log.msg('Cache miss for ' + repr(name))
-            return defer.fail(ValueError(dns.ENAME))
+            return defer.fail(failure.Failure(dns.DomainError(name)))
 
 
     def cacheResult(self, name, type, cls, payload):

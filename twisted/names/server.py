@@ -29,13 +29,10 @@ Future plans: Better config file format maybe;
 
 from __future__ import nested_scopes
 
-# System imports
-import struct
-
 # Twisted imports
 from twisted.internet import protocol, defer
 from twisted.protocols import dns
-from twisted.python import log
+from twisted.python import failure, log
 
 import resolve, common
 
@@ -78,7 +75,10 @@ class Authority(common.ResolverBase):
                 rec for rec in self.records[name.lower()] if rec.TYPE == type
             ])
         except KeyError:
-            return defer.fail(ValueError(dns.ENAME))
+            if name.lower().endswith(self.soa[0].lower()):
+                # We are the authority and we didn't find it.  Goodbye.
+                return defer.fail(failure.Failure(dns.AuthoritativeDomainError(name)))
+            return defer.fail(failure.Failure(dns.DomainError(name)))
 
 
 class DNSServerFactory(protocol.ServerFactory):
@@ -153,13 +153,11 @@ class DNSServerFactory(protocol.ServerFactory):
 
 
     def gotResolverError(self, failure, protocol, message, address):
-        if isinstance(failure.value.args[0], int):
-            message.rCode = failure.value.args[0]
+        if isinstance(failure.value, (dns.DomainError, dns.AuthoritativeDomainError)):
+            message.rCode = dns.ENAME
         else:
-            import traceback
-            failure.printTraceback()
-            print 'DOH', repr(failure.value.args[0])
             message.rCode = dns.ESERVER
+            failure.printTraceback()
         self.sendReply(protocol, message, address)
         if self.verbose:
             log.msg("Lookup failed")

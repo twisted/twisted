@@ -15,6 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from twisted.protocols import dns
 from twisted.python import failure
 from twisted.internet import interfaces, defer
 
@@ -48,5 +49,4 @@ class Resolver:
         res = searchFileFor(self.file, name)
         if res is not None:
             return defer.succeed([res])
-        else:
-            return defer.fail(failure.Failure(IOError("address not found")))
+        return defer.fail(failure.Failure(dns.DomainError(name)))

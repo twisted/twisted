@@ -43,7 +43,7 @@ class ResolverBase:
             d = self.typeToMethod[query.type](str(query.name), timeout)
             return d.addCallback(addHeader, str(query.name), query.cls, 10)
         except KeyError:
-            return defer.fail(ValueError(dns.ENOTIMP))
+            return defer.fail(failure.Failure(ValueError(dns.ENOTIMP)))
 
     def _lookup(self, name, cls, type, timeout):
         raise NotImplementedError("ResolverBase._lookup")
