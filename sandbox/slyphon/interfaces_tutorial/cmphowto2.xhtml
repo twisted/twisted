@@ -155,6 +155,13 @@ desired interface, we know that the adapted object will do what we want it to do
 
 <h2>A slight variation on the last example</h2>
 
+<p>Now, one thing that's important to realise is that adapters don't actually have to subclass
+<code class="API" base="twisted.python.components">Adapter</code>, they just have to be callable,
+and take the instance-to-be-adapted as their only argument. In the case of using a function as
+an adapter, we make use of the <code>zope.interface.directlyProvides</code> method.
+</p>
+
+<a href="cmplist3.py" class="py-listing" />
 
 </body>
 </html>
