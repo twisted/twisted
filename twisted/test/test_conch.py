@@ -1,15 +1,15 @@
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -89,7 +89,7 @@ class SSHKeysHandlingTestCase(unittest.TestCase):
         sig = keys.signData(priv, testData)
         self.assert_(keys.verifySignature(priv, sig, testData),
                      'verifying with private %s failed' %
-                         keys.objectType(priv)) 
+                         keys.objectType(priv))
         self.assert_(keys.verifySignature(pub, sig, testData),
                      'verifying with public %s failed' %
                          keys.objectType(pub))
@@ -97,7 +97,7 @@ class SSHKeysHandlingTestCase(unittest.TestCase):
                     'verified bad data with %s' %
                         keys.objectType(priv))
         self.failIf(keys.verifySignature(priv, 'bad sig', testData),
-                    'verified badsign with %s' % 
+                    'verified badsign with %s' %
                         keys.objectType(priv))
 
     def _testKeyFromString(self, privKey, pubKey, privData, pubData):
@@ -118,10 +118,10 @@ class SSHKeysHandlingTestCase(unittest.TestCase):
         self.assertEquals(keys.makePrivateKeyString(privKey, kind=keyType), privData)
         encData = keys.makePrivateKeyString(privKey, passphrase='test', kind=keyType)
         self.assertEquals(
-            keys.getPrivateKeyObject(data = encData, 
+            keys.getPrivateKeyObject(data = encData,
                                      passphrase = 'test').__getstate__(),
             privKey.__getstate__())
-        
+
 
 theTest = None
 
@@ -138,7 +138,7 @@ class ConchTestIdentity(identity.ConchIdentity):
         return defer.succeed(1)
 
 class ConchTestAuthorizer(authorizer.Authorizer):
-    
+
     def addIdentity(self, ident):
         self.ident = ident
 
@@ -174,7 +174,7 @@ class SSHTestServer(SSHTestBase, transport.SSHServerTransport): pass
 
 class SSHTestServerAuth(userauth.SSHUserAuthServer):
 
-    authCount = None # this will be set by each test 
+    authCount = None # this will be set by each test
 
     def areDone(self):
         return len(self.authenticatedWith) == self.authCount
@@ -184,14 +184,14 @@ class SSHTestClientAuth(userauth.SSHUserAuthClient):
     hasTriedNone = 0 # have we tried the 'none' auth yet?
     canSucceedPublicKey = 0 # can we succed with this yet?
     canSucceedPassword = 0
-    
+
     def ssh_USERAUTH_SUCCESS(self, packet):
         if not self.canSucceedPassword and self.canSucceedPublicKey:
             global theTest
             reactor.crash()
             theTest.fail('got USERAUTH_SUCESS before password and publickey')
         userauth.SSHUserAuthClient.ssh_USERAUTH_SUCCESS(self, packet)
- 
+
     def getPassword(self):
         self.canSucceedPassword = 1
         return defer.succeed('testpass')
@@ -209,7 +209,7 @@ class SSHTestClient(SSHTestBase, transport.SSHClientTransport):
         global theTest
         theTest.assertEquals(key, keys.getPublicKeyString(data = publicRSA_openssh))
         theTest.assertEquals(fp,'3d:13:5f:cb:c9:79:8a:93:06:27:65:bc:3d:0b:8f:af')
-        return defer.succeed(1) 
+        return defer.succeed(1)
 
     def connectionSecure(self):
         self.requestService(SSHTestClientAuth('testuser',SSHTestClientConnection()))
@@ -246,7 +246,7 @@ class SSHTestServerSession(channel.SSHChannel):
         reactor.spawnProcess(session.SSHSessionProtocol(self, self.client), \
                              program[0], program, {}, '/tmp')
         return 1
-        
+
 class SSHTestClientConnection(connection.SSHConnection):
 
     name = 'ssh-connection'
@@ -265,8 +265,8 @@ class SSHTestTrueChannel(channel.SSHChannel):
     def openFailed(self, reason):
         global theTest
         theTest.fail('true open failed: %s' % reason)
-        reactor.crash() 
- 
+        reactor.crash()
+
     def channelOpen(self, ignore):
         d = self.conn.sendRequest(self, 'exec', common.NS('true'), 1)
         d.addErrback(self._ebRequestFailed)
@@ -300,7 +300,7 @@ class SSHTestTrueChannel(channel.SSHChannel):
 class SSHTestFalseChannel(channel.SSHChannel):
 
     name = 'session'
-    
+
     def openFailed(self, reason):
         global theTest
         theTest.fail('false open failed: %s' % reason)
@@ -334,7 +334,7 @@ class SSHTestFalseChannel(channel.SSHChannel):
             theTest.fac.proto.expectedLoseConnection = 1
             self.loseConnection()
             reactor.crash()
-        return 1 
+        return 1
 
 class SSHTestEchoChannel(channel.SSHChannel):
 
@@ -420,7 +420,7 @@ class SSHTestFactory(factory.SSHFactory):
 class SSHTestOpenSSHProcess(protocol.ProcessProtocol):
 
     buf = ''
-    done = 0 
+    done = 0
 
     def outReceived(self, data):
         self.buf += data
@@ -484,7 +484,13 @@ class SSHTransportTestCase(unittest.TestCase):
         """test the SSH server against the OpenSSH client
         """
         if os.name != 'posix': return
-        cmdline = 'ssh -v -l testuser -p %i -oUserKnownHostsFile=kh_test -oPasswordAuthentication=no -i dsa_test localhost echo hello'
+        cmdline = ('ssh -v -l testuser -p %i '
+                   '-oUserKnownHostsFile=kh_test '
+                   '-oPasswordAuthentication=no '
+                   '-oStrictHostKeyChecking=no '
+                   '-i dsa_test '
+                   'localhost '
+                   'echo hello')
         global theTest
         theTest = self
         auth = ConchTestAuthorizer()
