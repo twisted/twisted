@@ -223,10 +223,7 @@ class Resolver(common.ResolverBase):
             d.addErrback(self._reissue, address, query, timeout[1:])
             return d
 
-        try:
-            del self.protocol.resends[reason.value.id]
-        except:
-            pass
+        self.protocol.removeResend(reason.value.id)
         return failure.Failure(defer.TimeoutError(query))
 
 

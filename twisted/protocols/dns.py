@@ -1085,26 +1085,35 @@ class DNSDatagramProtocol(protocol.DatagramProtocol):
     def writeMessage(self, message, address):
         if not self.transport:
             # XXX transport might not get created automatically, use callLater?
-            from twisted.internet import reactor
-            reactor.listenUDP(0, self, maxPacketSize=512)
+            self.startListening()
         self.transport.write(message.toStr(), address)
 
-
+    def startListening(self):
+        from twisted.internet import reactor
+        reactor.listenUDP(0, self, maxPacketSize=512)
+    
     def datagramReceived(self, data, addr):
         m = Message()
         m.fromStr(data)
-        try:
+        if self.liveMessages.has_key(m.id):
             d = self.liveMessages[m.id]
-        except KeyError, e:
-            if not self.resends.has_key(m.id):
-                self.controller.messageReceived(m, self, addr)
-        else:
             del self.liveMessages[m.id]
+            # XXX we shouldn't need this hack
             try:
                 d.callback(m)
             except:
                 log.err()
+        else:
+            if not self.resends.has_key(m.id):
+                self.controller.messageReceived(m, self, addr)
 
+
+    def removeResend(self, id):
+        """Mark message ID as no longer having duplication suppression."""
+        try:
+            del self.resends[id]
+        except:
+            pass
 
     def query(self, address, queries, timeout = 10, id = None):
         """
