@@ -415,10 +415,11 @@ class Request:
     
     def registerProducer(self, producer, streaming):
         """Register a producer."""
-        self.producer = producer
+
         self.streamingProducer = streaming
         
         if self.queued:
+            self.producer = producer
             producer.pauseProducing()
         else:
             self.transport.registerProducer(producer, streaming)
