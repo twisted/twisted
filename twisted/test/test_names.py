@@ -52,8 +52,10 @@ class NoFileAuthority(common.ResolverBase):
             l = [r for r in self.records[name.lower()] if type == dns.ALL_RECORDS or r.TYPE == type]
             for r in l:
                 r.ttl = 10
+            print 'results are', l
             return defer.succeed(l)
-        return defer.fail(ValueError(dns.ENAME))
+        return defer.fail(dns.DomainError(name))
+
 
 soa_record = dns.Record_SOA(
                     mname = 'test-domain.com',
@@ -172,7 +174,7 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
         gotResponse = 0
         r = self.resolver
         self.deferredFailUnlessEqual(
-            r.queryUDP([dns.Query('test-domain.com', dns.SOA, dns.IN)]).addCallback(getPayload).addErrback(setDone),
+            r.lookupAuthority('test-domain.com').addBoth(setDone),
             [soa_record]
         )
         while not gotResponse:
@@ -211,7 +213,7 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
         gotResponse = 0
         r = self.resolver
         self.deferredFailUnlessEqual(
-            r.queryUDP([dns.Query('test-domain.com', dns.HINFO, dns.IN)]).addCallback(getPayload).addErrback(setDone),
+            r.lookupHostInfo('test-domain.com').addBoth(setDone),
             [dns.Record_HINFO(os='Linux', cpu='A Fast One, Dontcha know')]
         )
         while not gotResponse:
@@ -224,7 +226,7 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
         gotResponse = 0
         r = self.resolver
         self.deferredFailUnlessEqual(
-            r.queryUDP([dns.Query('123.93.84.28.in-addr.arpa', dns.PTR, dns.IN)]).addCallback(getPayload).addErrback(setDone),
+            r.lookupPointer('123.93.84.28.in-addr.arpa').addBoth(setDone),
             [dns.Record_PTR('test.host-reverse.lookup.com')]
         )
         while not gotResponse:
