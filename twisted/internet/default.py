@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_internet -*-
-# $Id: default.py,v 1.81 2003/06/25 13:58:22 spiv Exp $
+# $Id: default.py,v 1.82 2003/07/01 05:02:50 pahan Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -30,7 +30,7 @@ import os
 import socket
 import sys
 
-from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorUNIX
+from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorUNIX, IReactorUNIXDatagram
 from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorSSL, IReactorArbitrary
 from twisted.internet.interfaces import IReactorProcess, IReactorFDSet, IReactorMulticast
 from twisted.internet import main, error, protocol, interfaces
@@ -79,7 +79,7 @@ class PosixReactorBase(ReactorBase):
     if sslEnabled:
         __implements__ = __implements__ + (IReactorSSL,)
     if unixEnabled:
-        __implements__ = __implements__ + (IReactorUNIX, IReactorProcess)
+        __implements__ = __implements__ + (IReactorUNIX, IReactorUNIXDatagram, IReactorProcess)
 
     def _handleSignals(self):
         """Install the signal handlers for the Twisted event loop."""
@@ -233,6 +233,32 @@ class PosixReactorBase(ReactorBase):
         p = unix.Port(address, factory, backlog, mode, self)
         p.startListening()
         return p
+
+
+    # IReactorUNIXDatagram
+
+    def listenUNIXDatagram(self, address, protocol, maxPacketSize=8192, mode=0666):
+        """Connects a given L{DatagramProtocol} to the given path.
+
+        EXPERIMENTAL.
+
+        @returns: object conforming to L{IListeningPort}.
+        """
+        assert unixEnabled, "UNIX support is not present"
+        p = unix.DatagramPort(address, protocol, maxPacketSize, mode, self)
+        p.startListening()
+        return p
+
+    def connectUNIXDatagram(self, address, protocol, maxPacketSize=8192, mode=0666, bindAddress=None):
+        """Connects a L{ConnectedDatagramProtocol} instance to a path.
+
+        EXPERIMENTAL.
+        """
+        assert unixEnabled, "UNIX support is not present"
+        p = unix.ConnectedDatagramPort(address, protocol, maxPacketSize, mode, bindAddress, self)
+        p.startListening()
+        return p
+
 
     # IReactorTCP
 

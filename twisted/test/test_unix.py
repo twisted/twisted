@@ -14,9 +14,10 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from twisted.internet import interfaces, reactor, protocol
+from twisted.internet import interfaces, reactor, protocol, error
 from twisted.python import components
 from twisted.protocols import loopback
+from twisted.trial import unittest
 import test_smtp
 import stat, os, tempfile
 
@@ -57,5 +58,55 @@ class UnixSocketTestCase(test_smtp.LoopbackSMTPTestCase):
             reactor.iterate()
         l.stopListening()
 
+class ClientProto(protocol.ConnectedDatagramProtocol):
+    def datagramReceived(self, data):
+        self.gotback = data
+
+class ServerProto(protocol.DatagramProtocol):
+    def datagramReceived(self, data, addr):
+        self.gotfrom = addr
+        self.gotwhat = data
+        self.transport.write("hi back", addr)
+
+class DatagramUnixSocketTestCase(unittest.TestCase):
+    """Test datagram UNIX sockets."""
+    def testExchange(self):
+        clientaddr = tempfile.mktemp()
+        serveraddr = tempfile.mktemp()
+        sp = ServerProto()
+        cp = ClientProto()
+        s = reactor.listenUNIXDatagram(serveraddr, sp)
+        c = reactor.connectUNIXDatagram(serveraddr, cp, bindAddress = clientaddr)
+        reactor.iterate()
+        reactor.iterate()
+        reactor.iterate()
+        reactor.iterate()
+        cp.transport.write("hi")
+        reactor.iterate()
+        reactor.iterate()
+        reactor.iterate()
+        reactor.iterate()
+        reactor.iterate()
+        reactor.iterate()
+        s.stopListening()
+        c.stopListening()
+        os.unlink(clientaddr)
+        os.unlink(serveraddr)
+        self.failUnlessEqual("hi", sp.gotwhat)
+        self.failUnlessEqual(clientaddr, sp.gotfrom)
+        self.failUnlessEqual("hi back", cp.gotback)
+
+    def testCannotListen(self):
+        addr = tempfile.mktemp()
+        p = ServerProto()
+        s = reactor.listenUNIXDatagram(addr, p)
+        self.failUnlessRaises(error.CannotListenError, reactor.listenUNIXDatagram, addr, p)
+        s.stopListening()
+        os.unlink(addr)
+    # test connecting to bound and connected (somewhere else) address
+
 if not components.implements(reactor, interfaces.IReactorUNIX):
     del UnixSocketTestCase
+if not components.implements(reactor, interfaces.IReactorUNIXDatagram):
+    del DatagramUnixSocketTestCase
+

@@ -32,7 +32,7 @@ try:
 except ImportError:
     fcntl = None
 
-from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorUNIX, IReactorThreads
+from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorUNIX, IReactorUNIXDatagram, IReactorThreads
 from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorSSL
 from twisted.internet.interfaces import IReactorProcess, IReactorPluggableResolver
 from twisted.internet.interfaces import IConnector, IDelayedCall

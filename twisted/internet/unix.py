@@ -25,14 +25,15 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 
 # System imports
 import os, stat, socket
+from errno import *
 
 if not hasattr(socket, 'AF_UNIX'):
     raise ImportError, "UNIX sockets not supported on this platform"
 
 # Twisted imports
-from twisted.internet import base, tcp, error
+from twisted.internet import base, tcp, udp, error, interfaces, protocol
 from twisted.internet.error import CannotListenError
-from twisted.python import log
+from twisted.python import log, reflect, failure
 
 class Server(tcp.Server):
     def __init__(self, sock, protocol, client, server, sessionno):
@@ -138,3 +139,118 @@ class Connector(base.BaseConnector):
 
     def getDestination(self):
         return ('UNIX', self.address)
+
+class DatagramPort(udp.Port):
+    """Datagram UNIX port, listening for packets."""
+
+    __implements__ = base.BasePort.__implements__, interfaces.IUNIXDatagramTransport
+
+    addressFamily = socket.AF_UNIX
+
+    def __init__(self, addr, proto, maxPacketSize=8192, mode=0666, reactor=None):
+        """Initialize with address to listen on.
+        """
+        udp.Port.__init__(self, addr, proto, maxPacketSize=maxPacketSize, reactor=reactor)
+        self.mode = mode
+
+    def _bindSocket(self):
+        log.msg("%s starting on %s"%(self.protocol.__class__, self.port))
+        try:
+            skt = self.createInternetSocket() # XXX: haha misnamed method
+            if self.port:
+                skt.bind(self.port)
+        except socket.error, le:
+            raise error.CannotListenError, (None, self.port, le)
+        if self.port:
+            os.chmod(self.port, self.mode)
+        self.connected = 1
+        self.socket = skt
+        self.fileno = self.socket.fileno
+
+    def write(self, datagram, address):
+        """Write a datagram."""
+        try:
+            return self.socket.sendto(datagram, address)
+        except socket.error, se:
+            no = se.args[0]
+            if no == EINTR:
+                return self.write(datagram, address)
+            elif no == EMSGSIZE:
+                raise error.MessageLengthError, "message too long"
+            else:
+                raise
+
+    def setLogStr(self):
+        self.logstr = reflect.qual(self.protocol.__class__) + " (UDP)"
+
+    def getHost(self):
+        """
+        Returns a tuple of ('UNIX_DGRAM', address), indicating
+        the servers address
+        """
+        return ('UNIX_DGRAM',)+self.socket.getsockname()
+
+class ConnectedDatagramPort(DatagramPort):
+    """A connected datagram UNIX socket."""
+
+    __implements__ = base.BasePort.__implements__,  interfaces.IUNIXDatagramConnectedTransport
+
+    def __init__(self, addr, proto, maxPacketSize=8192, mode=0666, bindAddress=None, reactor=None):
+        assert isinstance(proto, protocol.ConnectedDatagramProtocol)
+        DatagramPort.__init__(self, bindAddress, proto, maxPacketSize, mode, reactor)
+        self.remoteaddr = addr
+
+    def startListening(self):
+        try:
+            self._bindSocket()
+            self.socket.connect(self.remoteaddr)
+            self._connectToProtocol()
+        except:
+            self.connectionFailed(failure.Failure())
+
+    def connectionFailed(self, reason):
+        self.loseConnection()
+        self.protocol.connectionFailed(reason)
+        del self.protocol
+
+    def doRead(self):
+        """Called when my socket is ready for reading."""
+        read = 0
+        while read < self.maxThroughput:
+            try:
+                data, addr = self.socket.recvfrom(self.maxPacketSize)
+                read += len(data)
+                self.protocol.datagramReceived(data)
+            except socket.error, se:
+                no = se.args[0]
+                if no in (EAGAIN, EINTR, EWOULDBLOCK):
+                    return
+                if (no == ECONNREFUSED) or (platformType == "win32" and no == WSAECONNRESET):
+                    self.protocol.connectionRefused()
+                else:
+                    raise
+            except:
+                log.deferr()
+
+    def write(self, data):
+        """Write a datagram."""
+        try:
+            return self.socket.send(data)
+        except socket.error, se:
+            no = se.args[0]
+            if no == EINTR:
+                return self.write(data)
+            elif no == EMSGSIZE:
+                raise error.MessageLengthError, "message too long"
+            elif no == ECONNREFUSED:
+                self.protocol.connectionRefused()
+            else:
+                raise
+
+    def getPeer(self):
+        """
+        Returns a tuple of ('UNIX_DGRAM', address), indicating
+        the remote address.
+        """
+        return ('UNIX_DGRAM', self.remoteaddr)
+
