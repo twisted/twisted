@@ -1,0 +1,9 @@
+twisted (0.9.1-1) unstable; urgency=low
+
+  * Initial Release. (closes: #105843)
+
+ -- Moshe Zadka <moshez@debian.org>  Sat, 21 Jul 2001 09:35:33 +0300
+
+Local variables:
+mode: debian-changelog
+End:

@@ -1,0 +1,10 @@
+#!/bin/sh
+if [ \( "$1" = "upgrade" -o "$1" = "remove" \) -a -L /usr/doc/plwm ]; then
+	rm -f /usr/doc/plwm
+fi
+
+NAME=twisted
+
+dpkg --listfiles $NAME |
+        awk '$0~/\.py$/ {print $0"c\n" $0"o"}' |
+        xargs rm -f >&2

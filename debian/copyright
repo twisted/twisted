@@ -1,0 +1,29 @@
+This package was debianized by Moshe Zadka <moshez@debian.org> on
+Sat, 21 Jul 2001 09:35:33 +0300
+
+It was downloaded from http://www.twistedmatrix.com
+
+Upstream Author(s): 
+Glyph "Glyph" Lefkowitz <glyph@twistedmatrix.com>
+Sean "Riley" Riley <sean@twistedmatrix.com>
+Allen "Dash" Short <washort@twistedmatrix.com>
+Chris "Radix" Armstrong <carmstro@twistedmatrix.com>
+Jürgen "snibril" Hermann <jh@twistedmatrix.com>
+Moshe "vertical" Zadka <moshez@twistedmatrix.com>
+Benjamin Bruheim <grolgh@online.no>
+Travis B. "Nafai" Hartwell <slt5v@cc.usu.edu>
+
+Copyright:
+
+  Most of the code in this distribution is (C) Twisted Matrix Laboratories.
+  (Twisted Matrix Laboratories is a trademark of Matthew W. Lefkowitz,
+  throughout this archive referred to as "Glyph").  There are 2 exceptions to
+  this: the 'pyunit' directory is a derivative work of PyUnit, which can
+  be found at http://pyunit.sourceforge.net; and the contrib/ directory, which
+  are user-contributed works that may have additional copyright encumbrances,
+  as noted by those files individually.
+
+  Twisted is made available under the GNU Lesser General Public License.  The
+  included LICENSE file describes this in detail.
+
+Note that pyunit and the contents of "contrib" are not packaged.

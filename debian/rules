@@ -1,0 +1,65 @@
+#!/usr/bin/make -f
+#-*- makefile -*-
+# Made with the aid of dh_make, by Craig Small
+# Sample debian/rules that uses debhelper. GNU copyright 1997 by Joey Hess.
+# Some lines taken from debmake, by Christoph Lameter.
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+# This is the debhelper compatability version to use.
+export DH_COMPAT=1
+
+build: build-stamp
+build-stamp:
+	dh_testdir
+	touch build-stamp
+
+clean:
+	dh_testdir
+	dh_testroot
+	rm -f build-stamp install-stamp
+
+	# Add here commands to clean up after the build process.
+	dh_clean
+
+install: install-stamp
+install-stamp: build-stamp
+	dh_testdir
+	dh_testroot
+	dh_clean -k
+	dh_installdirs
+
+	# Add here commands to install the package into debian/tmp.
+	cp -rf twisted debian/tmp/usr/lib/python1.5/site-packages/
+	cp README CREDITS doc/CodingStandard.html debian/tmp/usr/share/doc/twisted
+	cp doc/examples/*.py debian/tmp/usr/share/doc/twisted/examples
+	cp debian/copyright debian/tmp/usr/share/doc/twisted/
+	cp bin/* debian/tmp/usr/bin
+	for file in debian/tmp/usr/bin/*;do sed '1s|.*|#!/usr/bin/python|' $$file > $$file.$$$$;cat $$file.$$$$ > $$file;rm $$file.$$$$;done
+	for file in debian/tmp/usr/bin/*; do ln -s ../man7/undocumented.7.gz debian/tmp/usr/share/man/man1/`basename $${file}`.1.gz; done
+	
+
+	touch install-stamp
+
+binary-arch: build install
+# We have nothing to do by default.
+
+binary-indep: build install
+#	dh_testversion
+	dh_testdir
+	dh_testroot
+	dh_compress
+	dh_installchangelogs
+	dh_fixperms
+	dh_installdeb
+	dh_shlibdeps
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+
+source diff:                                                                  
+	@echo >&2 'source and diff are obsolete - use dpkg-source -b'; false
+
+binary: binary-indep binary-arch
+.PHONY: build clean binary-indep binary-arch binary install

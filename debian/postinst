@@ -1,0 +1,16 @@
+#!/bin/sh
+if [ "$1" = "configure" ]; then
+	if [ -d /usr/doc -a ! -e /usr/doc/plwm -a -d /usr/share/doc/plwm ]; then
+		ln -sf ../share/doc/plwm /usr/doc/plwm
+	fi
+fi
+
+NAME=twisted
+case "$1" in
+        configure|abort-upgrade|abort-remove|abort-deconfigure)
+		dpkg --listfiles $NAME | grep '\.py$' | \
+		     xargs -n 1 /usr/bin/python -c 'import py_compile,sys;py_compile.compile(sys.argv[1])'
+		dpkg --listfiles $NAME | grep '\.py$' | \
+		     xargs -n 1 /usr/bin/python -O -c 'import py_compile,sys;py_compile.compile(sys.argv[1])'
+        ;;
+esac
