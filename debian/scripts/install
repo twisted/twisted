@@ -49,7 +49,7 @@ for file in all(bindir):
     open(file, 'w').writelines(lines)
     system('mv %s %s%s' % (file, file, version))
 
-for file in all('doc/man'):
+for file in glob.glob('doc/man/*.1'):
     target = os.path.splitext(os.path.basename(file))[0]+version+'.1'
     install([file], os.path.join(mandir, target))
     system('gzip -9 %s' % os.path.join(mandir, target))
