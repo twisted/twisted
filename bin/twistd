@@ -61,7 +61,7 @@ class ServerOptions(usage.Options):
                 ['quiet','q'],
                 ['no_save','o']]
     optStrings = [['logfile','l','twistd.log'],
-                  ['file','f','twistd.spl'],
+                  ['file','f','twistd.tap'],
                   ['python','y',''],
                   ['pidfile','','twistd.pid'],
                   ['rundir','d','.']]
