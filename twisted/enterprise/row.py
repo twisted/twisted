@@ -183,9 +183,8 @@ class DBReflector(adbapi.Augmentation):
 
           * dbpool: a database pool.
 
-          * stubs: a set of definitions of classes to construct, of
-            the form [ (StubClass, args, databaseTableName,
-            KeyColumns) ]
+          * stubs: a set of definitions of classes to construct, of the form [
+            (StubClass, databaseTableName, KeyColumns) ]
 
             Each StubClass is a user-defined class that the
             constructed class will be constructed from.  It should be
