@@ -23,10 +23,8 @@ overloaded with stupid features.
 TODO:
 
  * Authorization
-   Anonymous are included
    User / Password is stored in a dict (factory.userdict) in plaintext
    Use cred
-   Filelevel access
    Separate USER / PASS from mainloop
 
  * Ascii-download
@@ -39,17 +37,17 @@ TODO:
    As in READMEs etc
 
  * Testing
-   Test at every ftp-program available
-   And on any platform.
+   Test at every ftp-program available and on any platform.
+   Automated tests
 
  * Security
    PORT needs to reply correctly if it fails
-   The paths are done by os.path; but I should have something more generic
-   (twisted.python.path anyone?)
+   The paths are done by os.path; use the "undocumented" module posixpath
 
  * Etc
    Documentation, Logging, Procedural content, Localization, Telnet PI,
    stop LIST from blocking...
+   Highest priority: Resources.
 
 DOCS:
 
@@ -377,7 +375,7 @@ class FTP(basic.LineReceiver, DTPFactory):
             self.reply('nouser')
             return
         
-        if self.user == self.factory.useranonymous:
+        if self.factory.anonymous and self.user == self.factory.useranonymous:
             self.passwd = params
             self.reply('guestok')
         else:
