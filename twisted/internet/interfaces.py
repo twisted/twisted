@@ -488,15 +488,16 @@ class IReactorThreads(Interface):
         """
 
     def callFromThread(self, callable, *args, **kw):
-        """Call a function from within another thread.
+        """Call a function from within another (i.e. non-reactor) thread.
 
-        This should wake up the main thread (where run() is executing) and run
-        the given function.
+        Use this method when you want to run a function in the reactor's thread
+        from another thread.  Calling callFromThread should wake up the main
+        thread (where reactor.run() is executing) and run the given callable in
+        that thread.
 
-        I hope it is obvious from this description that this method must be
-        thread safe.  (If you want to call a method in the next mainloop
-        iteration, but you're in the same thread, use callLater with a delay of
-        0.)
+        Obviously, the callable must be thread safe.  (If you want to call a
+        function in the next mainloop iteration, but you're in the same thread,
+        use callLater with a delay of 0.)
         """
 
     def suggestThreadPoolSize(self, size):
