@@ -127,6 +127,9 @@ class DemoHandler(insults.TerminalListener):
     interval = 0.1
     rate = 0.05
 
+    def __init__(self, proto):
+        self.run(proto)
+
     def run(self, proto):
         # Clear the screen, matey
         self.proto = proto
@@ -173,21 +176,37 @@ class DemoHandler(insults.TerminalListener):
         self._call.start(self.interval)
 
 
-class SillyProtocol(insults.ServerProtocol):
-    def connectionMade(self):
-        self.handler = DemoHandler()
-        self.handler.run(self)
-
 from telnet import TelnetBootstrapProtocol
+
+class SillyProtocol(insults.ServerProtocol):
+    handlerFactory = DemoHandler
 
 class SillyBootstrap(TelnetBootstrapProtocol):
     protocol = SillyProtocol
 
+from twisted.python import components
+from ssh import session, TerminalUser, TerminalSession, TerminalSessionTransport, ConchFactory
+
+class DemoSessionTransport(TerminalSessionTransport):
+    protocolFactory = SillyProtocol
+
+class DemoSession(TerminalSession):
+    transportFactory = DemoSessionTransport
+
+components.registerAdapter(DemoSession, TerminalUser, session.ISession)
+
 def makeService(args):
     f = protocol.ServerFactory()
     f.protocol = SillyBootstrap
-    s = internet.TCPServer(args['port'], f)
-    return s
+    tsvc = internet.TCPServer(args['telnet'], f)
+
+    f = ConchFactory()
+    csvc = internet.TCPServer(args['ssh'], f)
+
+    m = service.MultiService()
+    tsvc.setServiceParent(m)
+    csvc.setServiceParent(m)
+    return m
 
 application = service.Application("Insults Demo App")
-makeService({'port': 6464}).setServiceParent(application)
+makeService({'telnet': 6023, 'ssh': 6022}).setServiceParent(application)

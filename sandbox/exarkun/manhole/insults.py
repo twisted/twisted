@@ -30,6 +30,8 @@ class ITerminalListener(components.Interface):
         """
 
 class TerminalListener:
+    __implements__ = (ITerminalListener,)
+
     def terminalSize(self, width, height):
         pass
 
@@ -253,7 +255,7 @@ NORMAL = 'NORMAL'
 class ServerProtocol(protocol.Protocol):
     __implements__ = (ITerminal,)
 
-    handler = TerminalListener()
+    handlerFactory = TerminalListener
 
     for keyID in ('UP_ARROW', 'DOWN_ARROW', 'RIGHT_ARROW', 'LEFT_ARROW',
                   'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9',
@@ -262,8 +264,15 @@ class ServerProtocol(protocol.Protocol):
 
     _databuf = ''
 
+    def __init__(self, *a, **kw):
+        self.handlerArgs = a
+        self.handlerKwArgs = kw
+
     def write(self, bytes):
         self.transport.write(bytes)
+
+    def connectionMade(self):
+        self.handler = self.handlerFactory(self, *self.handlerArgs, **self.handlerKwArgs)
 
     def dataReceived(self, data):
         data = self._databuf + data
