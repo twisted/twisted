@@ -34,10 +34,11 @@ def parsetag(tag):
     major, minor, patch = tag[tag.index('-')+1:].split('_')
     try:
         patch = int(patch)
-        patch = str(patch), 'final', 1
     except ValueError:
         m = re.match('(\d+)(.+?)(\d+)', patch)
         patch = m.groups()
+    else:
+        patch = str(patch), 'final', 1
     return tag, (major, minor, patch)
 
 
