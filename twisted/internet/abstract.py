@@ -191,6 +191,11 @@ class FileDescriptor(log.Logger):
         if not streaming:
             producer.resumeProducing()
 
+    def unregisterProducer(self):
+        """Stop consuming data from a producer, without disconnecting.
+        """
+        self.producer = None
+
     def stopConsuming(self):
         """Stop consuming data.
 
