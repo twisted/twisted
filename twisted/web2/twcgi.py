@@ -45,7 +45,7 @@ def createCGIEnvironment(ctx, request=None):
     server_port = (request.host.split(':')+[''])[1]
 
     # See http://hoohoo.ncsa.uiuc.edu/cgi/env.html for CGI interface spec
-    env = os.environ.copy()
+    env = dict(os.environ)
     env.update({
         "SERVER_SOFTWARE":   server.VERSION,
         "SERVER_NAME":       server_name,
