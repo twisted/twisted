@@ -210,16 +210,14 @@ class Application(log.Logger, styles.Versioned,
     def __init__(self, name, uid=None, gid=None, authorizer=None, authorizer_=None):
         """Initialize me.
 
-        Arguments:
-
-          * name: a name
-
-          * uid: (optional) a POSIX user-id.  Only used on POSIX systems.
-
-          * gid: (optional) a POSIX group-id.  Only used on POSIX systems.
-
         If uid and gid arguments are not provided, this application will
         default to having the uid and gid of the user and group who created it.
+
+        @param name: a name
+
+        @param uid: (optional) a POSIX user-id.  Only used on POSIX systems.
+
+        @param gid: (optional) a POSIX group-id.  Only used on POSIX systems.
         """
         _AbstractServiceCollection.__init__(self)
         self.name = name

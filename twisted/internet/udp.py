@@ -211,7 +211,7 @@ class Port(abstract.FileDescriptor):
         assert 0, "doWrite called on a %s" % str(self.__class__)
 
     def loseConnection(self):
-        """ Stop accepting connections on this port.
+        """Stop accepting connections on this port.
 
         This will shut down my socket and call self.connectionLost().
         """

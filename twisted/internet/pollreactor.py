@@ -17,10 +17,10 @@
 """A poll() based implementation of the twisted main loop.
 
 To install the event loop (and you should do this before any connections,
-listeners or connectors are added):
+listeners or connectors are added)::
 
-    | from twisted.internet import pollreactor
-    | pollreactor.install()
+    from twisted.internet import pollreactor
+    pollreactor.install()
 
 """
 
