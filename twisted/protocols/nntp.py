@@ -563,14 +563,19 @@ class NNTPServer(basic.LineReceiver):
                         apply(func, parts)
                     except TypeError:
                         self.sendLine('501 command syntax error')
+                        log.msg("501 command syntax error")
+                        log.msg("command was", line)
+                        log.deferr()
                     except:
                         self.sendLine('503 program fault - command not performed')
+                        log.msg("503 program fault")
+                        log.msg("command was", line)
                         log.deferr()
                 else:
                     self.sendLine('500 command not recognized')
 
 
-    def do_LIST(self, subcmd = ''):
+    def do_LIST(self, subcmd = '', *dummy):
         subcmd = subcmd.strip().lower()
         if subcmd == 'newsgroups':
             # XXX - this could use a real implementation, eh?
