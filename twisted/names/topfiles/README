@@ -2,5 +2,4 @@ Twisted Names SVN-Trunk
 
 Names was recently split out of Twisted.
 
-Twisted Names depends on Twisted and, if you want to use the
-root-server resolver, Twisted Flow.
+Twisted Names depends on Twisted Core.
