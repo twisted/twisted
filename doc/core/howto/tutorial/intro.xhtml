@@ -22,7 +22,7 @@ TCP finger requests on port 1079, and will read data from the web.</p>
 
 <p>This example only runs the reactor. Nothing at all will happen until we
 interrupt the program.  It will consume almost no CPU resources. Not very
-useful, perhaps -- but this is the skeleton inside which the Twisted program
+useful, perhaps &mdash; but this is the skeleton inside which the Twisted program
 will grow.
 </p>
 
@@ -51,7 +51,7 @@ We define a protocol which does not respond to any events. Thus, connections to
 <a href="listings/finger/finger03.py" class="py-listing">finger03.py</a>
 
 <p>Here we add to the protocol the ability to respond to the event of beginning
-a connection -- by terminating it.  Perhaps not an interesting behavior, but
+a connection &mdash; by terminating it.  Perhaps not an interesting behavior, but
 it is already close to behaving according to the letter of the protocol. After
 all, there is no requirement to send any data to the remote connection in the
 standard.  The only problem, as far as the standard is concerned, is that we
@@ -162,9 +162,9 @@ read on to find out how to run this code using the twistd utility.</p>
 
 <h2>twistd</h2>
 
-<p>This is how to run <q>Twisted Applications</q> -- files which define an
+<p>This is how to run <q>Twisted Applications</q> &mdash; files which define an
 'application'. twistd (TWISTed Daemonizer) does everything a daemon
-can be expected to -- shuts down stdin/stdout/stderr, disconnects
+can be expected to &mdash; shuts down stdin/stdout/stderr, disconnects
 from the terminal and can even change runtime directory, or even
 the root filesystems. In short, it does everything so the Twisted
 application developer can concentrate on writing his networking code.
