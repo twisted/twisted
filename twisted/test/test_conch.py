@@ -420,17 +420,11 @@ class SSHTransportTestCase(unittest.TestCase):
         open('dsa_test','w').write(privateDSA)
         os.chmod('dsa_test', 33152)
         os.chmod('rsa_test', 33152)
-        open(os.path.expanduser('~/.ssh/known_hosts'),'a').write('localhost '+publicRSA)
+        open('kh_test','w').write('localhost '+publicRSA)
 
     def tearDown(self):
-        for f in ['rsa_test','rsa_test.pub','dsa_test','dsa_test.pub']:
+        for f in ['rsa_test','rsa_test.pub','dsa_test','dsa_test.pub', 'kh_test']:
             os.remove(f)
-        lines = open(os.path.expanduser('~/.ssh/known_hosts'),'r').readlines()
-        try:
-            lines.remove('localhost ' + publicRSA)
-        except ValueError:
-            lines.remove('localhost ' + publicRSA + '\n')
-        open(os.path.expanduser('~/.ssh/known_hosts'), 'w').writelines(lines)
 
     def testOurServerOurClient(self):
         """test the SSH server against the SSH client
@@ -452,7 +446,7 @@ class SSHTransportTestCase(unittest.TestCase):
     def testOurServerOpenSSHClient(self):
         """test the SSH server against the OpenSSH client
         """
-        cmdline = '/usr/bin/ssh -l testuser -p %i -oPasswordAuthentication=no -i dsa_test localhost echo hello'
+        cmdline = '/usr/bin/ssh -l testuser -p %i -oUserKnownHostsFile=kh_test -oPasswordAuthentication=no -i dsa_test localhost echo hello'
         global theTest
         theTest = self
         auth = ConchTestAuthorizer()
