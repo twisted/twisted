@@ -92,7 +92,7 @@ def startKeepingErrors():
     _keepErrors = 1
     
 
-def flushErrors():
+def flushErrors(*errorTypes):
     """Support function for testing frameworks.
 
     Return a list of errors that occurred since the last call to flushErrors().
@@ -101,6 +101,14 @@ def flushErrors():
     global _keptErrors
     k = _keptErrors
     _keptErrors = []
+    if errorTypes:
+        for erk in k:
+            shouldReLog = 1
+            for errT in errorTypes:
+                if erk.check(errT):
+                    shouldReLog = 0
+            if shouldReLog:
+                err(erk)
     return k
 
 

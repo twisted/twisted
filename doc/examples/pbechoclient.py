@@ -17,16 +17,25 @@
 
 from twisted.internet import reactor
 from twisted.spread import pb
+
+from pbecho import DefinedError
+
 def success(message):
     print "Message received:",message
-    reactor.stop()
+    # reactor.stop()
+
 def failure(error):
-    print "Failure...",error
+    t = error.trap(DefinedError)
+    print "error received:", t
     reactor.stop()
+
 def connected(perspective):
     perspective.callRemote('echo', "hello world").addCallbacks(success, failure)
+    perspective.callRemote('error').addCallbacks(success, failure)
     print "connected."
+
 pb.connect("localhost", pb.portno,
            "guest", "guest",
            "pbecho", "guest", 30).addCallbacks(connected, failure)
+
 reactor.run()

@@ -33,7 +33,8 @@ class FailureTestCase(unittest.TestCase):
             raise NotImplementedError('test')
         except:
             f = failure.Failure()
-        f.trap(SystemExit, RuntimeError)
+        error = f.trap(SystemExit, RuntimeError)
+        self.assert_(error == RuntimeError)
         
         try:
             raise ValueError()

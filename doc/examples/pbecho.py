@@ -17,10 +17,16 @@
 
 from twisted.spread import pb
 from twisted.internet import app
+
+class DefinedError(pb.Error):
+    pass
+
 class SimplePerspective(pb.Perspective):
     def perspective_echo(self, text):
         print 'echoing',text
         return text
+    def perspective_error(self):
+        raise DefinedError("exception!")
 class SimpleService(pb.Service):
     def getPerspectiveNamed(self, name):
         p = SimplePerspective(name)

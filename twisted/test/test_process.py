@@ -28,9 +28,6 @@ from twisted.internet import reactor
 from twisted.protocols import protocol
 from twisted.python import util, runtime
 
-s = "there's no place like home!\n" * 3
-
-
 class TestProcessProtocol(protocol.ProcessProtocol):
 
     finished = 0
@@ -114,6 +111,7 @@ class PosixProcessTestCase(unittest.TestCase):
         if os.path.exists('/bin/gzip'): cmd = '/bin/gzip'
         elif os.path.exists('/usr/bin/gzip'): cmd = '/usr/bin/gzip'
         else: raise "gzip not found in /bin or /usr/bin"
+        s = "there's no place like home!\n" * 3
 	p = Accumulator()
         reactor.spawnProcess(p, cmd, [cmd, "-c"], {}, "/tmp")
         p.transport.write(s)
@@ -130,25 +128,14 @@ class PosixProcessTestCase(unittest.TestCase):
     def testStderr(self):
         # we assume there is no file named ZZXXX..., both in . and in /tmp
         if not os.path.exists('/bin/ls'): raise "/bin/ls not found"
-        err = popen2.popen3("/bin/ls ZZXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")[2].read()
+
 	p = Accumulator()
         reactor.spawnProcess(p, '/bin/ls', ["/bin/ls", "ZZXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"], {}, "/tmp")
         p.transport.loseConnection()
         while not p.closed:
             reactor.iterate()
-        self.assertEquals(err, p.errF.getvalue())
+        self.assertEquals(lsOut, p.errF.getvalue())
     
-##    # XXX
-##    # Python popen has issues on Unix, this is probably not really a Twisted bug
-##    # XXX
-##    #
-##    #def testPopen(self):
-##    #    """Make sure popen isn't broken by our signal handlers."""
-##    #    main.handleSignals() # install signal handlers
-##    #    for i in range(20):
-##    #        f = os.popen("/bin/gzip --help")
-##    #        f.read()
-##    #        f.close()
 
 
 class Win32ProcessTestCase(unittest.TestCase):
@@ -170,5 +157,8 @@ class Win32ProcessTestCase(unittest.TestCase):
 
 if runtime.platform.getType() != 'posix':
     del PosixProcessTestCase
+else:
+    lsOut = popen2.popen3("/bin/ls ZZXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")[2].read()
+
 if runtime.platform.getType() != 'win32':
     del Win32ProcessTestCase

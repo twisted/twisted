@@ -349,7 +349,7 @@ class RemoteCopy(Unjellyable):
     """I am a remote copy of a Copyable object.
 
     When the state from a Copyable object is received, an instance will
-    be created based on the copy tags table (see setCopierForClass) and
+    be created based on the copy tags table (see setUnjellyableForClass) and
     sent the setCopyableState message.  I provide a reasonable default
     implementation of that message; subclass me if you wish to serve as
     a copier for remote data.

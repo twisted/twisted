@@ -376,6 +376,42 @@ class _RemoteCacheDummy:
     """Ignore.
     """
 
+##
+# Failure
+##
+
+class CopyableFailure(failure.Failure, Copyable):
+    """A RemoteCopy and Copyable version of failure.Failure for serialization."""
+
+    def getStateToCopy(self):
+        #state = self.__getstate__()
+        state = self.__dict__.copy()
+        state['frames'] = []
+        if isinstance(self.value, failure.Failure):
+            state['value'] = failure2Copyable(self.value)
+        else:
+            state['value'] = str(self.value) # Exception instance
+        state['type'] = str(self.type) # Exception class
+        io = cStringIO.StringIO()
+        self.printTraceback(io)
+        state['traceback'] = io.getvalue()
+        return state
+
+class CopiedFailure(RemoteCopy, failure.Failure):
+    def printTraceback(self, file=None):
+        if not file: file = sys.stdout
+        file.write(self.traceback)
+
+    printBriefTraceback = printTraceback
+    printDetailedTraceback = printTraceback
+
+setUnjellyableForClass(str(CopyableFailure), CopiedFailure)
+
+def failure2Copyable(fail):
+    log.msg("Converting a Failure to a CopyableFailure")
+    f = CopyableFailure()
+    f.__dict__ = fail.__dict__
+    return f
 
 class Broker(banana.Banana):
     """I am a broker for objects.
@@ -734,12 +770,11 @@ class Broker(banana.Banana):
             netResult = object.remoteMessageReceived(self, message, netArgs, netKw)
         except Error, e:
             if answerRequired:
-                self._sendError(str(e), requestID)
+                self._sendError(CopyableFailure(e), requestID)
         except:
             if answerRequired:
-                io = cStringIO.StringIO()
-                failure.Failure().printBriefTraceback(file=io)
-                self._sendError(io.getvalue(), requestID)
+                f = CopyableFailure()
+                self._sendError(f, requestID)
                 log.msg("Peer Will Receive PB Traceback:")
             else:
                 log.msg("Peer Will Ignore PB Traceback:")
@@ -748,21 +783,20 @@ class Broker(banana.Banana):
             if answerRequired:
                 if isinstance(netResult, defer.Deferred):
                     args = (requestID,)
-                    netResult.addCallbacks(self._sendAnswer, self._sendFormattedFailure,
+                    netResult.addCallbacks(self._sendAnswer, self._sendFailure,
                                            callbackArgs=args, errbackArgs=args)
                     # XXX Should this be done somewhere else?
                     netResult.arm()
                 else:
                     self._sendAnswer(netResult, requestID)
-
+    ##
+    # success
+    ##
 
     def _sendAnswer(self, netResult, requestID):
         """(internal) Send an answer to a previously sent message.
         """
         self.sendCall("answer", requestID, netResult)
-
-    def _sendFormattedFailure(self, error, requestID):
-        self._sendError(repr(error), requestID)
 
     def proto_answer(self, requestID, netResult):
         """(internal) Got an answer to a previously sent message.
@@ -773,27 +807,35 @@ class Broker(banana.Banana):
         del self.waitingForAnswers[requestID]
         d.armAndCallback(self.unserialize(netResult))
 
-    def _sendError(self, descriptiveString, requestID):
+    ##
+    # failure
+    ##
+
+    def _sendFailure(self, fail, requestID):
+        self._sendError(fail, requestID)
+
+    def _sendError(self, fail, requestID):
         """(internal) Send an error for a previously sent message.
         """
-        self.sendCall("error", requestID, descriptiveString)
+        if not isinstance(fail, CopyableFailure) and isinstance(fail, failure.Failure):
+            fail = failure2Copyable(fail)
+        self.sendCall("error", requestID, self.serialize(fail))
 
-    def proto_error(self, requestID, descriptiveString):
+    def proto_error(self, requestID, fail):
         """(internal) Deal with an error.
         """
         d = self.waitingForAnswers[requestID]
         del self.waitingForAnswers[requestID]
-        d.armAndErrback(descriptiveString)
+        d.armAndErrback(self.unserialize(fail))
+
+    ##
+    # refcounts
+    ##
 
     def sendDecRef(self, objectID):
         """(internal) Send a DECREF directive.
         """
         self.sendCall("decref", objectID)
-
-    def decCacheRef(self, objectID):
-        """(internal) Send a DECACHE directive.
-        """
-        self.sendCall("decache", objectID)
 
     def proto_decref(self, objectID):
         """(internal) Decrement the refernce count of an object.
@@ -807,6 +849,15 @@ class Broker(banana.Banana):
             puid = self.localObjects[objectID].object.processUniqueID()
             del self.luids[puid]
             del self.localObjects[objectID]
+
+    ##
+    # caching
+    ##
+
+    def decCacheRef(self, objectID):
+        """(internal) Send a DECACHE directive.
+        """
+        self.sendCall("decache", objectID)
 
     def proto_decache(self, objectID):
         """(internal) Decrement the reference count of a cached object.

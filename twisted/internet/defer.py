@@ -26,10 +26,7 @@ class AlreadyArmedError(Exception):
     pass
 
 def logError(err):
-    if isinstance(err, failure.Failure):
-        err.printTraceback(log)
-    else:
-        log.msg(str(err))
+    log.err(err)
     return err
 
 def _sched(m):
@@ -153,7 +150,7 @@ class Deferred:
         return self._runCallbacks(result, 0)
 
 
-    def errback(self, error):
+    def errback(self, fail=None):
         """Run all error callbacks that have been added to this Deferred.
 
         Each callback will have its result passed as the first
@@ -163,7 +160,9 @@ class Deferred:
         If this deferred has not been armed yet, nothing will happen until it
         is armed.
         """
-        return self._runCallbacks(error, 1)
+        if not fail:
+            fail = failure.Failure()
+        return self._runCallbacks(fail, 1)
 
     def _runCallbacks(self, result, isError):
         self.called = isError + 1

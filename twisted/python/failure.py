@@ -56,6 +56,10 @@ class Failure:
         else:
             self.type = exc_type
             self.value = exc_value
+        if isinstance(self.value, Failure):
+            self.__dict__ = self.value.__dict__
+            #print "not chaining failure"
+            return
         frames = self.frames = []
         while tb is not None:
             f = tb.tb_frame
@@ -79,33 +83,38 @@ class Failure:
         else:
             self.parents = [self.type]
 
-        
-
-    def getErrorMessage(self):
-        if isinstance(self.value, Failure):
-            return self.value.getErrorMessage()
-        return str(self.value)
-
     def trap(self, *errorTypes):
         """Trap this failure if its type is in a predetermined list.
 
         This allows you to trap a Failure in an error callback.  It will be
         automatically re-raised if it is not a type that you expect.
+
+        The reason for having this particular API is because it's very useful
+        in Deferred errback chains:
+
+        | def _ebFoo(self, failure):
+        |     r = failure.trap(Spam, Eggs)
+        |     print 'The Failure is due to either Spam or Eggs!'
+        |     if r == Spam:
+        |         print 'Spam did it!'
+        |     elif r == Eggs:
+        |         print 'Eggs did it!'
+
+        If the failure is not a Spam or an Eggs, then the Failure
+        will be 'passed on' to the next errback.
         """
+        error = apply(self.check, errorTypes)
+        if not error:
+            raise self
+        return error
+
+    def check(self, *errorTypes):
         for error in errorTypes:
             err = error
-            if issubclass(error, Exception):
+            if isinstance(error, types.ClassType) and issubclass(error, Exception):
                 err = reflect.qual(error)
             if err in self.parents:
                 return error
-        else:
-            raise self
-            
-
-    def getBriefTraceback(self):
-        io = StringIO()
-        self.printBriefTraceback(file=io)
-        return io.getvalue()
 
     def __repr__(self):
         return "[Failure instance: %s]" % self.getBriefTraceback()
@@ -120,6 +129,17 @@ class Failure:
             frames.append([m, f, l, map(stringize, lo), map(stringize, gl)])
         c['pickled'] = 1
         return c
+    
+    def getErrorMessage(self):
+        if isinstance(self.value, Failure):
+            return self.value.getErrorMessage()
+        return str(self.value)
+
+    def getBriefTraceback(self):
+        io = StringIO()
+        self.printBriefTraceback(file=io)
+        return io.getvalue()
+
 
     def printTraceback(self, file=None):
         """Emulate Python's standard error reporting mechanism.
