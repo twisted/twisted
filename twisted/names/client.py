@@ -317,13 +317,18 @@ def createResolver(servers = None, resolvconf = None, hosts = None):
     L = [hostResolver, cache.CacheResolver(), theResolver]
     return resolve.ResolverChain(L)
 
-try:
-    theResolver
-except NameError:
-    try:
-        theResolver = createResolver()
-    except ValueError:
-        theResolver = createResolver(servers=[('127.0.0.1', 53)])
+def _makeLookup(method):
+    def lookup(*a, **kw):
+        global theResolver
+        if theResolver is None:
+            try:
+                theResolver = createResolver()
+            except ValueError:
+                theResolver = createResolver(servers=[('127.0.0.1', 53)])
+        
+        return getattr(theResolver, method)(*a, **kw)
+    return lookup
 
-    for (k, v) in common.typeToMethod.items():
-        exec "%s = getattr(theResolver, %r)" % (v, v)
+for method in common.typeToMethod.values():
+    globals()[method] = _makeLookup(method)
+del method

@@ -249,6 +249,8 @@ class SmartHostSMTPRelayingManager:
     
     PORT = 25
 
+    mxcalc = None
+
     def __init__(self, queue, maxConnections=2, maxMessagesPerConnection=10):
         """
         @type queue: Any implementor of C{IQueue}
@@ -271,8 +273,6 @@ class SmartHostSMTPRelayingManager:
         self.queue = queue
         self.fArgs = ()
         self.fKwArgs = {}
-
-        self.mxcalc = MXCalculator()
 
     def _finish(self, relay, message):
         self.managed[relay].remove(os.path.basename(message))
@@ -366,6 +366,9 @@ class SmartHostSMTPRelayingManager:
             if len(exchanges) >= (self.maxConnections - len(self.managed)):
                 break
         
+        if self.mxcalc is None:
+            self.mxcalc = MXCalculator()
+        
         for (domain, msgs) in exchanges.iteritems():
             factory = self.factory(self, msgs, *self.fArgs, **self.fKwArgs)
             self.managed[factory] = map(os.path.basename, msgs)
@@ -423,22 +426,10 @@ class MXCalculator:
     def __init__(self, resolver = None):
         self.badMXs = {}
         if resolver is None:
-            from twisted.names.client import theResolver as resolver
+            import pdb; pdb.Pdb().set_trace()
+            from twisted.names.client import createResolver
+            resolver = createResolver()
         self.resolver = resolver
-
-    def __getstate__(self):
-        from twisted.names.client import theResolver
-
-        d = self.__dict__.copy()
-        if d['resolver'] is theResolver:
-            d['resolver'] = None
-        return d
-    
-    def __setstate__(self, state):
-        self.__dict__.update(state)
-        if self.resolver is None:
-            from twisted.names.client import theResolver
-            self.resolver = theResolver
 
     def markBad(self, mx):
         self.badMXs[mx] = time.time() + self.timeOutBadMX

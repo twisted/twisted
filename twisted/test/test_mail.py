@@ -50,9 +50,6 @@ import twisted.cred.credentials
 import twisted.cred.checkers
 import twisted.cred.portal
 
-# Since mail imports t.names.client, we need its DelayedCall hack here too
-import test_names
-
 # Since we run a couple processes, we need SignalMixin from test_process
 import test_process
 

@@ -29,12 +29,6 @@ from twisted.names import client, server, common, authority
 from twisted.protocols import dns
 from twisted.python import log, failure
 
-# A horrible hack
-try:
-    client.theResolver.resolvers[2]._parseCall.cancel()
-except:
-    pass
-
 # IPv6 support is spotty at best!
 try:
     socket.socket(socket.AF_INET6, socket.SOCK_STREAM)

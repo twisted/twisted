@@ -62,16 +62,6 @@ class DNSServerFactory(protocol.ServerFactory):
             self.cache = caches[-1]
 
 
-    def startFactory(self):
-        pass
-        # self.resolver = client.theResolver
-
-
-    def stopFactory(self):
-        pass
-        # del self.resolver
-
-
     def buildProtocol(self, addr):
         p = dns.DNSProtocol(self)
         p.factory = self

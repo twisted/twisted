@@ -1,3 +1,14 @@
+2003-09-19  Jp Calderone  <exarkun@twistedmatrix.com>
+
+	* twisted/names/client.py: Instantiation of theResolver global made
+	lazy.  As a result importing it directly will now fail if it has not
+	yet been created.  It should not be used directly anymore; instead,
+	use the module-scope lookup methods, or instantiate your own
+	resolver.
+
+	* twisted/mail/relaymanager.py: Instantiation of MXCalculator made
+	lazy.
+
 2003-09-18  Stephen Thorne  <stephen@thorne.id.au>
 
 	* twisted/web/distrib.py: Removed dependancy on twisted.web.widgets, and
