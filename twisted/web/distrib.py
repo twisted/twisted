@@ -1,6 +1,6 @@
 
 # System Imports
-import types, os, copy, string
+import types, os, copy, string, cStringIO
 
 # Twisted Imports
 from twisted.spread import pb
@@ -135,7 +135,7 @@ class UserDirectory(html.Interface):
 
     def listUsers(self, req):
         import pwd
-        x = StringIO.StringIO()
+        x = cStringIO.StringIO()
         x.write('<UL>\n')
         for user in pwd.getpwall():
             pw_name, pw_passwd, pw_uid, pw_gid, pw_gecos, pw_dir, pw_shell \
