@@ -1,5 +1,10 @@
 2002-04-10  Chris Armstrong  <carmstro@twistedmatrix.com>
 
+	* twisted/bugs: Gone. Separate plugin package.
+	* twisted/eco: Gone. The king is dead. Long live the king!
+
+2002-04-10  Chris Armstrong  <carmstro@twistedmatrix.com>
+
 	* twisted/protocols/irc.py: Some fix-ups to IRCClient and
 	DccFileReceive, from Joe Jordan (psy).
 
