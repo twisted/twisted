@@ -185,7 +185,8 @@ else:
         'default': 'twisted.internet.default',
         'win32': 'twisted.internet.win32',
         'win': 'twisted.internet.win32',
-        'poll': 'twisted.internet.poll'
+        'poll': 'twisted.internet.poll',
+        'qt': 'twisted.internet.qternet'
         }
     from twisted.python.reflect import namedModule
     namedModule(reactorTypes[config['reactor']]).install()

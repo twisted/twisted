@@ -86,16 +86,15 @@ class TwistzillaWindow(QMainWindow):
         tcp.Client(host, port, client)
  
 def main(args):
-    qternet.install()
-
-    app = QApplication(args)
+    reactor = qternet.install()
+    app = reactor.qApp
 
     win = TwistzillaWindow()
     win.show()
 
     app.connect(app, SIGNAL("lastWindowClosed()"), app, SLOT("quit()"))
   
-    app.exec_loop()
+    reactor.run()
 
 if __name__ == '__main__':
     main(sys.argv)

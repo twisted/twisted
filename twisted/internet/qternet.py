@@ -29,10 +29,10 @@ intended to be called directly.
 __all__ = ['install']
 
 # System Imports
-from qt import QSocketNotifier, QObject, SIGNAL, QTimer
+from qt import QSocketNotifier, QObject, SIGNAL, QTimer, QApplication
 
 # Twisted Imports
-from twisted.python import log
+from twisted.python import log, threadable
 
 # Sibling Imports
 import main, default
@@ -109,6 +109,10 @@ _timer = None
 class QTReactor(default.PosixReactorBase):
     """Qt based reactor."""
 
+    def __init__(self):
+        default.PosixReactorBase.__init__(self)
+        self.qApp = QApplication([])
+    
     def addReader(self, reader):
         if not hasReader(reader):
             reads[reader] = TwistedSocketNotifier(self, reader, QSocketNotifier.Read)
@@ -126,6 +130,12 @@ class QTReactor(default.PosixReactorBase):
         if hasWriter(writer):
             writes[writer].shutdown()
             del writes[writer]
+
+    def removeAll(self):
+        v = reads.keys()
+        for reader in v:
+            self.removeReader(reader)
+        return v
 
     def simulate(self):
         global _timer
@@ -147,6 +157,21 @@ class QTReactor(default.PosixReactorBase):
         if _timer: 
             _timer.stop()
             _timer = None
+
+    def run(self):
+        threadable.registerAsIOThread()
+        self.fireSystemEvent('startup')
+        if self._installSignalHandlers:
+            self._handleSignals()
+        self.running = 1
+        self.simulate()
+        if self._installSignalHandlers:
+            self._handleSignals()
+
+        self.qApp.exec_loop()
+
+    def crash(self):
+        self.qApp.quit()
 
 
 def install():
