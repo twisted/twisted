@@ -56,6 +56,16 @@ class _NoStateObj:
     pass
 NoStateObj = _NoStateObj()
 
+_SIMPLE_BUILTINS = [
+    types.StringType, types.UnicodeType, types.IntType, types.FloatType,
+    types.ComplexType, types.LongType, types.NoneType, types.SliceType,
+    types.EllipsisType]
+
+try:
+    _SIMPLE_BUILTINS.append(types.BooleanType)
+except AttributeError:
+    pass
+
 class Instance:
     def __init__(self, className, __stateObj__=NoStateObj, **state):
         if not isinstance(className, types.StringType):
@@ -170,10 +180,7 @@ def prettify(obj):
         #basic type
         t = type(obj)
 
-        if t in [types.StringType, types.UnicodeType, types.IntType,
-                 types.FloatType, types.ComplexType, types.LongType,
-                 types.NoneType, types.BooleanType, types.SliceType,
-                 types.EllipsisType]:
+        if t in _SIMPLE_BUILTINS:
             return repr(obj)
 
         elif t is types.DictType:
@@ -379,10 +386,7 @@ class AOTUnjellier:
 
         #Types
                 
-        elif t in [types.NoneType, types.StringType, types.UnicodeType,
-                   types.IntType, types.FloatType, types.ComplexType,
-                   types.LongType, types.BooleanType, types.SliceType,
-                   types.EllipsisType]:
+        elif t in _SIMPLE_BUILTINS:
             return ao
             
         elif t is types.ListType:
@@ -467,10 +471,7 @@ class AOTJellier:
         self.stack.append(repr(obj))
 
         #immutable: We don't care if these have multiple refs!
-        if objType in [types.NoneType, types.StringType, types.UnicodeType,
-                       types.IntType, types.FloatType, types.ComplexType,
-                       types.LongType, types.BooleanType, types.SliceType,
-                       types.EllipsisType]:
+        if objType in _SIMPLE_BUILTINS:
             retval = obj
             
         elif objType is types.MethodType:
