@@ -59,6 +59,8 @@ into the caller's log, after which the connection would be dropped. It would
 help one end distinguish between an intentional disconnect and a BananaError
 dropping the connection.
 
+DONE
+
 * document Unslicer interface: what attributes are set
 
 at the moment: .protocol, .openCount, .parent
