@@ -333,8 +333,14 @@ class VerboseTextReporter(TextReporter):
         self.writeln('[SKIPPED]')
         Reporter.reportSkip(self, testCase, method, exc_info)
 
-def deferredResult(d):
+def deferredResult(d, timeout=None):
+    """Waits for a Deferred to arrive, then returns or throws an exception,
+    based on the result.
+    """
+    
     from twisted.internet import reactor
+    if timeout is not None:
+        d.setTimeout(timeout)
     resultSet = []
     d.addCallbacks(resultSet.append, resultSet.append)
     while not resultSet:
