@@ -18,7 +18,7 @@
 import sys, os
 from twisted.trial import unittest
 
-from twisted.protocols import xmlstream
+from twisted.xish import xmlstream
 from twisted.xish import utility
 
 class AuthStandin(xmlstream.ConnectAuthenticator):
