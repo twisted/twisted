@@ -54,15 +54,6 @@ class _AbstractServer(_VolatileDataService):
         from twisted.internet import reactor
         return getattr(reactor, 'listen'+self.method)(*self.args, **self.kwargs)
 
-
-class GenericServer(_AbstractServer): method = 'With'
-class TCPServer(_AbstractServer): method = 'TCP'
-class UNIXServer(_AbstractServer): method = 'UNIX'
-class SSLServer(_AbstractServer): method = 'SSL'
-class UDPServer(_AbstractServer): method = 'UDP'
-class UNIXDatagramServer(_AbstractServer): method = 'UNIXDatagram'
-class MulticastServer(_AbstractServer): method = 'Multicast'
-
 class _AbstractClient(_VolatileDataService):
 
     volatile = ['_connection']
@@ -85,13 +76,14 @@ class _AbstractClient(_VolatileDataService):
                                                        **self.kwargs)
 
 
-class GenericClient(_AbstractClient): method = 'With'
-class TCPClient(_AbstractClient): method = 'TCP'
-class UNIXClient(_AbstractClient): method = 'UNIX'
-class SSLClient(_AbstractClient): method = 'SSL'
-class UDPClient(_AbstractClient): method = 'UDP'
-class UNIXDatagramClient(_AbstractClient): method = 'UNIXDatagram'
-class MulticastClient(_AbstractClient): method = 'Multicast'
+import new
+for type in 'Generic TCP UNIX SSL UDP UNIXDatagram Multicast'.split():
+    for side in 'Server Client'.split():
+        base = globals()['_Abstract'+side]
+        method = (type=='Generic' and 'With') or type
+        klass = new.classobj(type+side, (base,), {'method': method})
+        globals()[type+side] = klass
+
 
 class TimerService(_VolatileDataService):
 
