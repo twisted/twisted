@@ -76,9 +76,12 @@ class SSHSession(channel.SSHChannel):
         subsystem = common.getNS(data)[0]
         client = self.avatar.lookupSubsystem(subsystem, data)
         if client:
-            client.makeConnection(self)
+            pp = SSHSessionProcessProtocol(self)
+            proto = wrapProcessProtocol(pp)
+            client.makeConnection(proto)
+            pp.makeConnection(wrapProtocol(client))
             log.msg('starting subsystem %s'%subsystem)
-            self.client = client
+            self.client = pp
             return 1
         else:
             log.msg('failed to get subsystem %s'%subsystem)
@@ -176,7 +179,6 @@ class SSHSessionForUnixConchUser:
         if not self.ptyTuple: # we didn't get a pty-req
             log.msg('tried to get shell without pty, failing')
             raise error.ConchError("no pty")
-        #proto = wrapProtocol(proto)
         uid, gid = self.avatar.getUserGroupId()
         homeDir = self.avatar.getHomeDir()
         shell = self.avatar.getShell()
@@ -276,7 +278,7 @@ class SSHSessionForUnixConchUser:
                 self.avatar.conn.transport.sendIgnore('\x00'*(8+len(data)))
         self.oldWrite(data)
 
-class ProtocolWrapper(protocol.ProcessProtocol):
+class _ProtocolWrapper(protocol.ProcessProtocol):
     """
     This class wraps a Protocol instance in a ProcessProtocol instance.
     """
@@ -288,12 +290,32 @@ class ProtocolWrapper(protocol.ProcessProtocol):
     def outReceived(self, data): self.proto.dataReceived(data)
 
     def processEnded(self, reason): self.proto.connectionLost(reason)
+
+class _DummyTransport:
+
+    def __init__(self, proto):
+        self.proto = proto
+
+    def dataReceived(self, data):
+        self.proto.transport.write(data)
+
+    def write(self, data):
+        self.proto.dataReceived(data)
+
+    def writeSequence(self, seq):
+        self.write(''.join(seq))
+
+    def loseConnection(self):
+        self.proto.connectionLost(protocol.connectionDone)
     
-def wrapProtocol(inst):
+def wrapProcessProtocol(inst):
     if isinstance(inst, protocol.Protocol):
         return ProtocolWrapper(inst)
     else:
         return inst
+
+def wrapProtocol(proto):
+    return _DummyTransport(proto)
 
 class SSHSessionProcessProtocol(protocol.ProcessProtocol):
 

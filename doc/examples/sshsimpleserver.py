@@ -58,26 +58,6 @@ class InMemoryPublicKeyChecker(SSHPublicKeyDatabase):
         return credentials.username == 'user' and \
             keys.getPublicKeyString(data=publicKey) == credentials.blob
 
-def wrapProtocol(p):
-    return _DummyTransport(p)
-
-class _DummyTransport:
-
-    def __init__(self, proto):
-        self.proto = proto
-
-    def dataReceived(self, data):
-        self.proto.transport.write(data)
-
-    def write(self, data):
-        self.proto.dataReceived(data)
-
-    def writeSequence(self, seq):
-        self.write(''.join(seq))
-
-    def loseConnection(self):
-        self.proto.connectionLost(protocol.connectionDone)
-
 class ExampleSession:
     
     def __init__(self, avatar):
@@ -95,7 +75,7 @@ class ExampleSession:
     def openShell(self, trans):
         ep = EchoProtocol()
         ep.makeConnection(trans)
-        trans.makeConnection(wrapProtocol(ep))
+        trans.makeConnection(session.wrapProtocol(ep))
 
 from twisted.python import components
 components.registerAdapter(ExampleSession, ExampleAvatar, session.ISession)

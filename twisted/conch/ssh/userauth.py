@@ -24,7 +24,7 @@ Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 """
 
 import struct
-from twisted.conch import error, credentials
+from twisted.conch import error, credentials, realm
 from twisted.internet import defer, reactor
 from twisted.python import failure, log
 from common import NS, getNS, MP
@@ -143,10 +143,11 @@ class SSHUserAuthServer(service.SSHService):
         signature = hasSig and getNS(rest)[0] or None
         c = credentials.SSHPrivateKey(self.user, blob, b, signature)
         if hasSig:
-            return self.portal.login(c, None, None)
+            return self.portal.login(c, None, realm.IConchUser)
         else:
-            return self.portal.login(c, None, None).addErrback(self._ebCheckKey,
-                                                               packet[1:])
+            return self.portal.login(c, None, realm.IConchUser).addErrback(
+                                                        self._ebCheckKey,
+                                                        packet[1:])
 
     def _ebCheckKey(self, reason, packet):
         reason.trap(error.ValidPublicKey)
@@ -157,7 +158,8 @@ class SSHUserAuthServer(service.SSHService):
     def auth_password(self, packet):
         password = getNS(packet[1:])[0]
         c = credentials.UsernamePassword(self.user, password)
-        return self.portal.login(c, None, None).addErrback(self._ebPassword)
+        return self.portal.login(c, None, realm.IConchUser).addErrback(
+                                                        self._ebPassword)
 
     def _ebPassword(self, f):
         d = defer.Deferred()
@@ -169,7 +171,7 @@ class SSHUserAuthServer(service.SSHService):
             self.transport.sendDisconnect(transport.DISCONNECT_PROTOCOL_ERROR, "only one keyboard interactive attempt at a time")
             return failure.Failure(error.IgnoreAuthentication())
         c = credentials.PluggableAuthenticationModules(self.user, self._pamConv)
-        return self.portal.login(c, None, None)
+        return self.portal.login(c, None, realm.IConchUser)
 
     def _pamConv(self, items):
         resp = []
