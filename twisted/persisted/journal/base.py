@@ -47,11 +47,13 @@ class Journal:
         runTime = time.time()
         d = self.log.logCommand(command, runTime)
         d.addCallback(self._reallyExecute, command, runTime)
+        return d
 
     def _reallyExecute(self, index, command, runTime):
         """Callback called when logging command is done."""
-        command.execute(self.journaledService, runTime)
+        result = command.execute(self.journaledService, runTime)
         self.latestIndex = index
+        return result
     
     def getLastSnapshot(self):
         """Return command index of the last snapshot taken."""
