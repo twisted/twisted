@@ -5,6 +5,8 @@ using System.Net.Sockets;
 using System.Collections;
 using csharpReactor;
 using csharpReactor.interfaces;
+using csharpReactor.misc;
+
 // "existential" because "abstract" is a C# keyword ;)
 
 namespace csharpReactor.existential {
@@ -14,7 +16,6 @@ namespace csharpReactor.existential {
 
 	public class FileDescriptor : IReadWriteDescriptor, IConsumer, 
 																IProducer, ITransport {
-
 		private const int _bufferSize = 1024 * 8;
 		protected bool _connected = false;
 		protected bool _producerPaused = false;
@@ -107,7 +108,12 @@ namespace csharpReactor.existential {
 		}
 
 		// -- IConsumer ----
-		public virtual void registerProducer(IProducer producer, bool streaming) {}
+		public virtual void registerProducer(IProducer producer, bool streaming) {
+      if (this._producer != null) {
+
+      }
+    }
+
 		public virtual void unregisterProducer() {}
 
 		public virtual void write(String data) {
@@ -124,6 +130,7 @@ namespace csharpReactor.existential {
 				startWriting();
 			}
 		}
+
 		
 		// -- IReadWriteDescriptor ---
 		public virtual Socket socket { get { return this._socket; } }
@@ -136,13 +143,13 @@ namespace csharpReactor.existential {
 		/// there; a result of 0 implies no write was done, and a result of None
 		/// indicates that a write was done. 
 		/// </summary>
-		/// <returns>A Nullable<int></returns>
+		/// <returns>A >
 		public virtual Nullable<int> doWrite() {
 			_dataBuffer.Append(_tempDataBuffer.ToString());
 			_tempDataBuffer = new StringBuilder();
 			
 			int L = 0;
-			Nullable<int> result = new Nullable<int>();
+      Nullable<int> result = new Nullable<int>();
 
 			if (_offset > 0) {
 				L = writeSomeData(_dataBuffer.ToString(_offset, _dataBuffer.Length));
@@ -150,10 +157,13 @@ namespace csharpReactor.existential {
 				L = writeSomeData(_dataBuffer.ToString());
 			}
 			
-			if (L < 0)  // line 94 of t.i.abstract has a check for an Exception
-				return L;
+			if (L < 0) {  // line 94 of t.i.abstract has a check for an Exception
+				result.Value = L;
+        return result;
+      }
 			if (L == 0 && _dataBuffer.Length > 0) // XXX: this may be wrong
-				result = null;
+              //XXX: WRONG! this should be a nullable
+				result.Value = 0;
 			
 			_offset += L;
 			

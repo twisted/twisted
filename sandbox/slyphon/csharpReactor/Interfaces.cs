@@ -1,78 +1,76 @@
 using System;
 using System.Net;
 using System.Net.Sockets;
+using csharpReactor.misc;
 
 namespace csharpReactor.interfaces {
 
-	/// <summary>
-	/// this is roughly equivalent to t.i.interfaces.ISystemHandle, but
-	/// as Select() only works on WinSock sockets (grumble, grumble), 
-	/// we can drop the charade and admit that we're only gonna be dealing
-	/// with sockets.
-	/// </summary>
-	public interface ISocket {
-		Socket socket { get; }
-	}
+  /// <summary>
+  /// this is roughly equivalent to t.i.interfaces.ISystemHandle, but
+  /// as Select() only works on WinSock sockets (grumble, grumble), 
+  /// we can drop the charade and admit that we're only gonna be dealing
+  /// with sockets.
+  /// </summary>
+  public interface ISocket {
+    Socket socket { get; }
+  }
 
-	public interface IProducer {
-		void stopProducing();
-		void pauseProducing();
-		void resumeProducing();
-	}
+  public interface IProducer {
+    void stopProducing();
+    void pauseProducing();
+    void resumeProducing();
+  }
 	
-	public interface IConsumer {
-		void registerProducer(IProducer producer, bool streaming);
-		void unregisterProducer();
-		void write(String data);
-	}
+  public interface IConsumer {
+    void registerProducer(IProducer producer, bool streaming);
+    void unregisterProducer();
+    void write(String data);
+  }
 
-	// -- To be fleshed out later -----------------
-	public interface IReadDescriptor : ISocket {
-		void doRead();
-	}
+  // -- To be fleshed out later -----------------
+  public interface IReadDescriptor : ISocket {
+    void doRead();
+  }
 
-	public interface IWriteDescriptor : ISocket {
-		Nullable<int> doWrite();
-	}
+  public interface IWriteDescriptor : ISocket {
+    Nullable<int> doWrite();
+  }
 
-	public interface IReadWriteDescriptor : IReadDescriptor, IWriteDescriptor {}
-	// ----------------------------------------
+  public interface IReadWriteDescriptor : IReadDescriptor, IWriteDescriptor {}
+  // ----------------------------------------
 
 	
-	/// <summary>
+  /// <summary>
   /// A transport for bytes
   /// 
-	/// I represent (and wrap) the physical connection and synchronicity
-	/// of the framework which is talking to the network.  I make no
-	///	representations about whether calls to me will happen immediately
-	///	or require returning to a control loop, or whether they will happen
-	///	in the same or another thread.  Consider methods of this class
-	///	(aside from getPeer) to be 'thrown over the wall', to happen at some
-	///	indeterminate time
+  /// I represent (and wrap) the physical connection and synchronicity
+  /// of the framework which is talking to the network.  I make no
+  /// representations about whether calls to me will happen immediately
+  /// or require returning to a control loop, or whether they will happen
+  /// in the same or another thread.  Consider methods of this class
+  /// (aside from getPeer) to be 'thrown over the wall', to happen at some
+  /// indeterminate time
   /// </summary>
   public interface ITransport : ISocket {
     double sessionNum { get; }
     bool connected { get; }
-		void write(String data);
-		void writeSequence(String[] data);
-		void loseConnection();
-		/// <summary>
-		/// returns an IAddress representing the other side of the connection
-		/// it is not reliable (port forwarding, proxying, etc.)
-		/// </summary>
-		IAddress getPeer();
-		/// <summary>
-		/// returns an IAddress representing this side of the connection
-		/// </summary>
-		IAddress getHost();
+	void write(String data);
+	void writeSequence(String[] data);
+	void loseConnection();
+	/// <summary>
+	/// returns an IAddress representing the other side of the connection
+	/// it is not reliable (port forwarding, proxying, etc.)
+	/// </summary>
+	IAddress getPeer();
+	/// <summary>
+	/// returns an IAddress representing this side of the connection
+	/// </summary>
+	IAddress getHost();
   }
 
   public interface IListeningPort : ISocket {
     IPEndPoint localEndPoint { get; }
-//    int backlog { get; set; }
     IAddress address { get; }
-//    IFactory factory { get; set; }
-//    void doRead();
     void startListening();
   }
 
@@ -120,6 +118,4 @@ namespace csharpReactor.interfaces {
     void doStart();
     void doStop();
   }
-  
-
 }
