@@ -1,7 +1,0 @@
-#!/bin/sh
-set -e
-baseurl=http://twistedmatrix.com/documents/TwistedDocs/TwistedDocs-$1/api/%s.html
-templ=doc/howto/template.tpl
-for doc in doc/howto doc/specifications; do
-./bin/generatelore --docsdir $doc -t $templ --baseurl $baseurl -l ../howto/
-done

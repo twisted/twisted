@@ -361,17 +361,9 @@ class GenerateDocs(Transaction):
               cp doc/api/epydoc-index.html doc/api/index.html'''
            % (tdir))
 
-        print "makeDocs: man pages"
-        for file in glob.glob("%s/doc/man/*.1" % tdir):
-            sh("cd %s && ./admin/man2html %s" % (tdir, file))
+        print "makeDocs: process-docs."
+        sh('cd %s && ./admin/process-docs %s' % (tdir, ver))
 
-        print "makeDocs: generate-domdocs."
-        sh('cd %s && ./admin/genarate-domdocs %s' % (tdir, ver))
-
-        print "makeDocs: book"
-        sh('cd %s &&  ./admin/makebook' % tdir)
-
-        #everything after this is atomic (enough).
         #shwack the crap
         print "copyDist: Stripping *.pyc, .cvsignore"
         for x in ['*.pyc', '.cvsignore']:
