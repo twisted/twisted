@@ -1,3 +1,11 @@
+2003-07-23  Jp Calderone  <exarkun@twistedmatrix.com>
+
+	* twisted/protocols/imap4.py: The fetch method of the IMailbox
+	interface has been changed to accept a list of (non-string)
+	objects representing the requested message parts.  Less knowledge
+	of the IMAP4 protocol should be required to properly implement
+	the interface.
+
 2003-07-23  Dave Peticolas  <dave@krondo.com>
 
 	* twisted/test/test_enterprise.py: more tests
