@@ -181,7 +181,9 @@ class DNSServerFactory(protocol.ServerFactory):
             if not len(s):
                 log.msg("Empty query from %r" % ((address or protocol.transport.getPeer()),))
             else:
-                log.msg("%s query from %r" % (s, address or protocol.transport.getPeer()))
+                log.msg("%s query from %r for %s" % (s,
+                                                     address or protocol.transport.getPeer(),
+                                                     ','.join([str(q.name) for q in message.queries])))
 
         message.recAv = self.canRecurse
         message.answer = 1
