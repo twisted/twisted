@@ -785,6 +785,8 @@ class HTTPChannel(basic.LineReceiver):
 class HTTPFactory(protocol.ServerFactory):
     """Factory for HTTP server."""
 
+    protocol = HTTPChannel
+    
     logPath = None
     
     def __init__(self, logPath=None):

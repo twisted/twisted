@@ -445,8 +445,6 @@ class ITransport(Interface):
     indeterminate time.
     """
 
-    disconnecting = 0
-
     def write(self, data):
         '''Write some data to the physical connection, in sequence.
 
@@ -481,7 +479,17 @@ class ITransport(Interface):
         """
 
 
-class ISSLTransport(ITransport):
+class ITCPTransport(ITransport):
+    """A TCP based transport."""
+
+    def getTcpNoDelay(self):
+        """Return if TCP_NODELAY (Nagle's algorithm) is enabled."""
+
+    def setTcpNoDelay(self, enabled):
+        """Enable/disable TCP_NODELAY (Nagle's algorithm)."""
+
+
+class ISSLTransport(ITCPTransport):
     """A SSL/TLS based transport."""
 
     def getPeerCertificate(self):

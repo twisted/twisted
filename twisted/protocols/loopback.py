@@ -18,21 +18,23 @@
 # These class's names should have been based on Onanism, but were
 # censored by the PSU
 
-from twisted.internet import protocol
+from twisted.internet import interfaces, protocol
 from twisted.python import hook
 
 
-class LoopbackRelay(protocol.Transport):
+class LoopbackRelay:
 
+    __implements__ = interfaces.ITransport
+    
     buffer = ''
     shouldLose = 0
-
+    disconnecting = 0
+    
     def __init__(self, target, logFile=None):
         self.target = target
         self.logFile = logFile
 
     def write(self, data):
-        # print "writing", `data`
         self.buffer = self.buffer + data
         if self.logFile:
             self.logFile.write("loopback writing %s\n" % repr(data))
@@ -51,6 +53,9 @@ class LoopbackRelay(protocol.Transport):
         self.shouldLose = 1
 
     def getHost(self):
+        return 'loopback'
+
+    def getPeer(self):
         return 'loopback'
 
 
@@ -96,5 +101,3 @@ def loopbackTCP(server, client, port=64124):
 
     serverPort.stopListening()
     reactor.iterate()
-
-

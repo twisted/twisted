@@ -17,6 +17,8 @@
 
 
 """Various asynchronous TCP/IP classes.
+
+End users shouldn't use this module directly - use the reactor APIs instead.
 """
 
 
@@ -48,25 +50,27 @@ elif os.name != 'java':
     from errno import ENOTCONN
 
 # Twisted Imports
-from twisted.protocols import protocol
+from twisted.internet import protocol
 from twisted.persisted import styles
 from twisted.python import log, defer
 from twisted.python.runtime import platform
-
 from twisted.internet.interfaces import IConnector
+
 # Sibling Imports
 import abstract
 import main
+import interfaces
 
 
-class Connection(abstract.FileDescriptor,
-                 protocol.Transport,
-                 styles.Ephemeral):
+class Connection(abstract.FileDescriptor, styles.Ephemeral):
     """I am the superclass of all socket-based FileDescriptors.
 
     This is an abstract superclass of all objects which represent a TCP/IP
     connection based socket.
     """
+    
+    __implements__ = abstract.FileDescriptor.__implements__, interfaces.ITCPTransport
+    
     def __init__(self, skt, protocol, reactor=None):
         abstract.FileDescriptor.__init__(self, reactor=reactor)
         self.socket = skt
@@ -136,6 +140,12 @@ class Connection(abstract.FileDescriptor,
         """
         return self.logstr
 
+    def getTcpNoDelay(self):
+        return self.socket.getsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY)
+    
+    def setTcpNoDelay(self, enabled):
+        self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, enabled)
+        
 
 class Client(Connection):
     """A client for TCP (and similiar) sockets.

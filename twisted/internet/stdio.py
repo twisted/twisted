@@ -26,12 +26,13 @@ import abstract, fdesc
 
 _stdio_in_use = 0
 
-class StandardIO(abstract.FileDescriptor, protocol.Transport):
+class StandardIO(abstract.FileDescriptor):
     """I can connect Standard IO to a twisted.protocol.
 
     I act as a selectable for sys.stdin, and provide a write method that writes
     to stdout.
     """
+    
     def __init__(self, protocol):
         """Create me with a protocol.
 

@@ -41,7 +41,8 @@ class FileDescriptor(log.Logger):
     disconnected = 0
     disconnecting = 0
 
-    __implements__ = (interfaces.IProducer, interfaces.IReadWriteDescriptor, interfaces.IConsumer)
+    __implements__ = (interfaces.IProducer, interfaces.IReadWriteDescriptor,
+                      interfaces.IConsumer, interfaces.ITransport)
 
     def __init__(self, reactor=None):
         if not reactor:

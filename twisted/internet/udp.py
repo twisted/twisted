@@ -38,7 +38,6 @@ import abstract, main
 
 
 class Connection(abstract.FileDescriptor,
-                 protocol.Transport,
                  styles.Ephemeral):
     """This is a UDP virtual connection
 

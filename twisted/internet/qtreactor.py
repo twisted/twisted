@@ -109,15 +109,18 @@ _timer = None
 class QTReactor(default.PosixReactorBase):
     """Qt based reactor."""
 
-    def __init__(self, installSignalHandlers=1):
+    def __init__(self, installSignalHandlers=1, app=None):
         default.PosixReactorBase.__init__(self, installSignalHandlers)
-        self.qApp = QApplication([])
+        if app is None:
+            app = QApplication([])
+        self.qApp = app
     
     def addReader(self, reader):
         if not hasReader(reader):
             reads[reader] = TwistedSocketNotifier(self, reader, QSocketNotifier.Read)
 
     def addWriter(self, writer):
+        print "addWriter", writer, hasWriter(writer)
         if not hasWriter(writer):
             writes[writer] = TwistedSocketNotifier(self, writer, QSocketNotifier.Write)
 
@@ -174,10 +177,10 @@ class QTReactor(default.PosixReactorBase):
         self.qApp.quit()
 
 
-def install():
+def install(app=None):
     """Configure the twisted mainloop to be run inside the qt mainloop.
     """
-    reactor = QTReactor()
+    reactor = QTReactor(app=app)
     reactor.addSystemEventTrigger('after', 'shutdown', reactor.cleanup )
     reactor.simulate()
     from twisted.internet.main import installReactor

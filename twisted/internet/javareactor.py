@@ -40,7 +40,6 @@ from twisted.internet.base import ReactorBase
 
 
 class JConnection(abstract.FileDescriptor,
-                  protocol.Transport,
                   styles.Ephemeral):
     """A java connection class."""
 
@@ -90,6 +89,13 @@ class JConnection(abstract.FileDescriptor,
     def getPeer(self):
         addr = self.skt.getInetAddress()
         return ('INET', addr.getHostAddress(), self.skt.getPort())
+
+    def getTcpNoDelay(self):
+        return self.skt.getTcpNoDelay()
+
+    def setTcpNoDelay(self, enabled):
+        self.skt.setTcpNoDelay(enabled)
+
 
 class Blocker(threading.Thread):
 

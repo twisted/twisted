@@ -28,7 +28,7 @@ class ClosingFactory(protocol.ServerFactory):
         self.port.loseConnection()
         return
 
-class ClosingProtocol(protocol.Protocol):
+class MyProtocol(protocol.Protocol):
 
     made = 0
     closed = 0
@@ -43,6 +43,13 @@ class ClosingProtocol(protocol.Protocol):
     def connectionFailed(self):
         self.failed = 1
 
+class MyFactory(protocol.ServerFactory):
+
+    def buildProtocol(self, addr):
+        p = MyProtocol()
+        self.protocol = p
+        return p
+
 
 class LoopbackTestCase(unittest.TestCase):
     """Test loopback connections."""
@@ -51,7 +58,7 @@ class LoopbackTestCase(unittest.TestCase):
         f = ClosingFactory()
         port = reactor.listenTCP(10080, f)
         f.port = port
-        client = ClosingProtocol()
+        client = MyProtocol()
         try:
             reactor.clientTCP("localhost", 10080, client)
         except:
@@ -66,8 +73,34 @@ class LoopbackTestCase(unittest.TestCase):
         self.assert_(client.made)
         self.assert_(port.disconnected)
 
+    def testTcpNoDelay(self):
+        f = MyFactory()
+        port = reactor.listenTCP(10080, f)
+        client = MyProtocol()
+        try:
+            reactor.clientTCP("localhost", 10080, client)
+        except:
+            port.stopListening()
+            raise
+
+        reactor.iterate()
+        reactor.iterate()
+        for p in client, f.protocol:
+            transport = p.transport
+            self.assertEquals(transport.getTcpNoDelay(), 0)
+            transport.setTcpNoDelay(1)
+            self.assertEquals(transport.getTcpNoDelay(), 1)
+            transport.setTcpNoDelay(0)
+            reactor.iterate()
+            self.assertEquals(transport.getTcpNoDelay(), 0)
+
+        client.transport.loseConnection()
+        port.stopListening()
+        reactor.iterate()
+        reactor.iterate()
+    
     def testFailing(self):
-        client = ClosingProtocol()
+        client = MyProtocol()
         reactor.clientTCP("localhost", 10081, client, timeout=5)
 
         while not client.failed:

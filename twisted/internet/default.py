@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.18 2002/07/07 15:47:42 itamarst Exp $
+# $Id: default.py,v 1.19 2002/07/14 03:19:49 itamarst Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -17,7 +17,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-"""XXX - twisted.internet.default needs docstring
+"""Default reactor base classes, and a select() based reactor.
 """
 
 from bisect import insort
@@ -183,8 +183,9 @@ class _Win32Waker(log.Logger, styles.Ephemeral):
     def __init__(self):
         """Initialize.
         """
+        print "starting waker"
         # Following select_trigger (from asyncore)'s example;
-        address = ("127.0.0.1",19939)
+        address = ("127.0.0.1", 19939)
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client.setsockopt(socket.IPPROTO_TCP, 1, 1)
@@ -197,7 +198,7 @@ class _Win32Waker(log.Logger, styles.Ephemeral):
         self.r = reader
         self.w = client
         self.fileno = self.r.fileno
-
+        
     def wakeUp(self):
         """Send a byte to my connection.
         """
@@ -237,12 +238,8 @@ class _UnixWaker(log.Logger, styles.Ephemeral):
     def wakeUp(self):
         """Write one byte to the pipe, and flush it.
         """
-        try:
-            self.o.write('x')
-            self.o.flush()
-        except ValueError:
-            # o has been closed
-            pass
+        self.o.write('x')
+        self.o.flush()
 
     def connectionLost(self):
         """Close both ends of my pipe.

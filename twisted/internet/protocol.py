@@ -22,7 +22,7 @@ Twisted Python.  The Protocol class contains some introductory material.
 """
 
 from twisted.python import log
-from twisted.internet.interfaces import IProtocolFactory
+from twisted.internet.interfaces import IProtocolFactory, ITransport
 
 
 class Factory:
@@ -185,52 +185,15 @@ class ProcessProtocol(Protocol):
         """
 
 
-class Transport:
-    """I am a transport for bytes.
-
-    I represent (and wrap) the physical connection and synchronicity
-    of the framework which is talking to the network.  I make no
-    representations about whether calls to me will happen immediately
-    or require returning to a control loop, or whether they will happen
-    in the same or another thread.  Consider methods of this class
-    (aside from getPeer) to be 'thrown over the wall', to happen at some
-    indeterminate time.
-    """
-
-    disconnecting = 0
-
-    def write(self, data):
-        '''Write some data to the physical connection, in sequence.
-
-        If possible, make sure that it is all written.  No data will
-        ever be lost, although (obviously) the connection may be closed
-        before it all gets through.
-        '''
-
-    def loseConnection(self):
-        """Close my connection, after writing all pending data.
-        """
-
-    def getPeer(self):
-        '''Return a tuple of (TYPE, ...).
-
-        This indicates the other end of the connection.  TYPE indicates
-        what sort of connection this is: "INET", "UNIX", or something
-        else.  "INET" tuples have 2 additional elements; hostname and
-        port.
-
-        Treat this method with caution.  It is the unfortunate
-        result of the CGI and Jabber standards, but should not
-        be considered reliable for the usual host of reasons;
-        port forwarding, proxying, firewalls, IP masquerading,
-        etcetera.
-        '''
-
-
-class FileWrapper(Transport):
+class FileWrapper:
     """A wrapper around a file-like object to make it behave as a Transport.
     """
+
+    __implements__ = ITransport
+    
     closed = 0
+    disconnecting = 0
+    
     def __init__(self, file):
         self.file = file
 
