@@ -17,7 +17,7 @@
 from pyunit import unittest
 from twisted.protocols import ftp, loopback
 from twisted.internet import reactor
-from twisted.protocols.protocol import Protocol
+from twisted.protocols.protocol import Protocol, FileWrapper, Factory
 
 try:
     from cStringIO import StringIO
@@ -25,9 +25,63 @@ except ImportError:
     from StringIO import StringIO
 import sys, types, os.path
 
+from twisted.test.test_protocols import StringIOWithoutClosing
+
 FTP_PORT = 2121
 
-class FTPTest(unittest.TestCase):
+
+class FTPClientTests(unittest.TestCase):
+    def testFailedRETR(self):
+        try:
+            # This test data derived from a bug report by ranty on #twisted
+            responses = ['220 ready, dude (vsFTPd 1.0.0: beat me, break me)',
+                         # USER anonymous
+                         '331 Please specify the password.',
+                         # PASS twisted@twistedmatrix.com
+                         '230 Login successful. Have fun.',
+                         # TYPE I
+                         '200 Binary it is, then.',
+                         # PASV
+                         '227 Entering Passive Mode (127,0,0,1,10,0)',
+                         # RETR /file/that/doesnt/exist
+                         '550 Failed to open file.']
+
+            b = StringIOWithoutClosing()
+            client = ftp.FTPClient(passive=1)
+            client.makeConnection(FileWrapper(b))
+            self.writeResponses(client, responses)
+            f = Factory()
+            f.protocol = Protocol
+            port = reactor.listenTCP(10*256 + 0, f)
+            p = Protocol()
+            d = client.retrieveFile('/file/that/doesnt/exist', p)
+            d.addCallback(lambda r, self=self: 
+                            self.fail('Callback incorrectly called: %r' % r))
+            d.addBoth(lambda ignored,r=reactor: r.stop() or r)
+
+            id = reactor.callLater(2, self.timeout)
+            reactor.run()
+            try:
+                reactor.cancelCallLater(id)
+            except:
+                pass
+        finally:
+            try:
+                port.stopListening()
+                reactor.iterate()
+            except:
+                pass
+
+    def timeout(self):
+        reactor.stop()
+        self.fail('Timed out')
+
+    def writeResponses(self, protocol, responses):
+        for response in responses:
+            reactor.callLater(0, protocol.lineReceived, response)
+
+
+class FTPServerTests(unittest.TestCase):
     def setUp(self):
         """Creates an FTP server
         
@@ -41,14 +95,13 @@ class FTPTest(unittest.TestCase):
         self.serverPort = reactor.listenTCP(FTP_PORT, self.serverFactory)
 
     def tearDown(self):
-        #self.serverPort.loseConnection()
         self.serverPort.stopListening()
         # Make sure the port really is closed, to avoid "address already in use"
         # errors.
         reactor.iterate()
 
 
-class FTPClientTests(FTPTest):
+class FTPClientAndServerTests(FTPServerTests):
     """These test the FTP Client against the FTP Server"""
     passive = 0
     
@@ -167,7 +220,7 @@ class FTPClientTests(FTPTest):
             raise ce[0], ce[1], ce[2]
 
 
-class FTPPassiveClientTests(FTPClientTests):
+class FTPPassiveClientAndServerTests(FTPClientAndServerTests):
     """Identical to FTPClientTests, except with passive transfers.
     
     That's right ladies and gentlemen!  I double the number of tests with a
