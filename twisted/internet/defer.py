@@ -386,10 +386,11 @@ class Deferred:
 
 
     def __str__(self):
+        cname = self.__class__.__name__
         if hasattr(self, 'result'):
-            return "<Deferred at %s  current result: %r>" % (hex(id(self)),
-                                                            self.result)
-        return "<Deferred at %s>" % hex(id(self))
+            return "<%s at %s  current result: %r>" % (cname, hex(id(self)),
+                                                       self.result)
+        return "<%s at %s>" % (cname, hex(id(self)))
     __repr__ = __str__
 
 
@@ -415,26 +416,31 @@ class DeferredList(Deferred):
     tuples, 'success' being a boolean.
 
     Note that you can still use a L{Deferred} after putting it in a
-    DeferredList.  In particular, if you want to suppress 'Unhandled error in
-    Deferred' messages, you will still need to add errbacks to the Deferreds
-    *after* putting them in the DeferredList, as a DeferredList won't swallow
-    the errors.
+    DeferredList.  For example, you can suppress 'Unhandled error in Deferred'
+    messages by adding errbacks to the Deferreds *after* putting them in the
+    DeferredList, as a DeferredList won't swallow the errors.  (Although a more
+    convenient way to do this is simply to set the consumeErrors flag)
     """
 
     fireOnOneCallback = 0
     fireOnOneErrback = 0
 
-    def __init__(self, deferredList, fireOnOneCallback=0, fireOnOneErrback=0):
+    def __init__(self, deferredList, fireOnOneCallback=0, fireOnOneErrback=0,
+                 consumeErrors=0):
         """Initialize a DeferredList.
 
         @type deferredList:  C{list} of L{Deferred}s
         @param deferredList: The list of deferreds to track.
         @param fireOnOneCallback: (keyword param) a flag indicating that
-                             only one callback needs to
-                             be fired for me to call my callback
+                             only one callback needs to be fired for me to call
+                             my callback
         @param fireOnOneErrback: (keyword param) a flag indicating that
-                            only one errback needs to be fired for me to
-                            call my errback
+                            only one errback needs to be fired for me to call
+                            my errback
+        @param consumeErrors: (keyword param) a flag indicating that any errors 
+                            raised in the original deferreds should be
+                            consumed by this DeferredList.  This is useful to
+                            prevent spurious warnings being logged.
         """
         self.resultList = [None] * len(deferredList)
         Deferred.__init__(self)
@@ -450,6 +456,7 @@ class DeferredList(Deferred):
 
         self.fireOnOneCallback = fireOnOneCallback
         self.fireOnOneErrback = fireOnOneErrback
+        self.consumeErrors = consumeErrors
 
     def addDeferred(self, deferred):
         """DEPRECATED"""
@@ -474,6 +481,10 @@ class DeferredList(Deferred):
                 self.errback(failure.Failure((result, index)))
             elif None not in self.resultList:
                 self.callback(self.resultList)
+        
+        if succeeded == FAILURE and self.consumeErrors:
+            result = None
+
         return result
 
 
@@ -499,8 +510,8 @@ def gatherResults(deferredList, fireOnOneErrback=0):
 
 # Constants for use with DeferredList
 
-SUCCESS = 1
-FAILURE = 0
+SUCCESS = True
+FAILURE = False
 
 __all__ = ["Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS",
            "AlreadyCalledError", "TimeoutError", "gatherResults",

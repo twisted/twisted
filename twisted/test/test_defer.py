@@ -158,6 +158,36 @@ class DeferredTestCase(unittest.TestCase):
                               str(result[0].value[1])],
                              ["2", "1"])
 
+    def testDeferredListDontConsumeErrors(self):
+        d1 = defer.Deferred()
+        dl = defer.DeferredList([d1])
+
+        errorTrap = []
+        d1.addErrback(errorTrap.append)
+
+        result = []
+        dl.addCallback(result.append)
+        
+        d1.errback(GenericError('Bang'))
+        self.failUnlessEqual('Bang', errorTrap[0].value.args[0])
+        self.failUnlessEqual(1, len(result))
+        self.failUnlessEqual('Bang', result[0][0][1].value.args[0])
+
+    def testDeferredListConsumeErrors(self):
+        d1 = defer.Deferred()
+        dl = defer.DeferredList([d1], consumeErrors=True)
+
+        errorTrap = []
+        d1.addErrback(errorTrap.append)
+
+        result = []
+        dl.addCallback(result.append)
+        
+        d1.errback(GenericError('Bang'))
+        self.failUnlessEqual([], errorTrap)
+        self.failUnlessEqual(1, len(result))
+        self.failUnlessEqual('Bang', result[0][0][1].value.args[0])
+
     def testTimeOut(self):
         d = defer.Deferred()
         d.setTimeout(1.0)

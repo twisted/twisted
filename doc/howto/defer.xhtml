@@ -798,18 +798,28 @@ deferred2.callback("two")
 <h3>Other behaviours</h3>
 
 <p>DeferredList accepts two keywords arguments that modify its behaviour:
-<code>fireOnOneCallback</code> and <code>fireOnOneErrback</code>.  If
-<code>fireOnOneCallback</code> is set, the DeferredList will immediately call
-its callback as soon as any of its Deferreds call their callback.  Similarly,
-<code>fireOnOneErrback</code> will call errback as soon as any of the Deferreds
-call their errback.  Note that DeferredList is still one-shot, like ordinary
-Deferreds, so after a callback or errback has been called the DeferredList will
-do nothing further (it will just silently ignore any other results from its
-Deferreds).</p>
+<code>fireOnOneCallback</code>, <code>fireOnOneErrback</code> and
+<code>consumeErrors</code>.  If <code>fireOnOneCallback</code> is set, the
+DeferredList will immediately call its callback as soon as any of its Deferreds
+call their callback.  Similarly, <code>fireOnOneErrback</code> will call errback
+as soon as any of the Deferreds call their errback.  Note that DeferredList is
+still one-shot, like ordinary Deferreds, so after a callback or errback has been
+called the DeferredList will do nothing further (it will just silently ignore
+any other results from its Deferreds).</p>
 
 <p>The <code>fireOnOneErrback</code> option is particularly useful when you
 want to wait for all the results if everything succeeds, but also want to know
 immediately if something fails.</p>
+
+<p>The <code>consumeErrors</code> argument will stop the DeferredList from
+propagating any errors along the callback chains of any Deferreds it contains
+(usually creating a DeferredList has no effect on the results passed along the
+callbacks and errbacks of their Deferreds).  Stopping errors at the DeferredList
+with this option will prevent <q>Unhandled error in Deferred</q> warnings from
+the Deferreds it contains without needing to add extra errbacks<span
+class="footnote">Unless of course a later callback starts a fresh error &mdash;
+but as we've already noted, adding callbacks to a Deferred after its used in a
+DeferredList is confusing and usually avoided.</span>.</p>
 
 </body>
 </html>

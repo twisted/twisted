@@ -1,3 +1,9 @@
+2004-02-27  Andrew Bennetts  <spiv@twistedmatrix.com>
+
+	* twisted/internet/defer.py: Add consumeErrors flag to DeferredList.
+	This takes care of the most common use-case for the recently
+	deprecated addDeferred method.
+
 2004-02-28  Dave Peticolas <dave@krondo.com>
 
 	* setup.py: install tap2rpm as a bin script
