@@ -5164,3 +5164,6 @@ PHP EQUALITY -- An experiment:
 "" == "0": FALSE.
 'none' == 0: TRUE.
 %
+<arg> i think a significant percentage of twisted apps begin as the logbot example
+<chrchr> Twisted is a fantastic framework for building logbots.
+%
