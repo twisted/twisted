@@ -65,5 +65,5 @@ class Portal:
                     ).addCallback(self.realm.requestAvatar, mind, *interfaces
                     )
         return defer.fail(failure.Failure(error.UnhandledCredentials(
-            "No checker for %s" % ' ,'.join(map(reflect.qual, ifac)))))
+            "No checker for %s" % ', '.join(map(reflect.qual, ifac)))))
 
