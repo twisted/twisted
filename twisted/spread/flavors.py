@@ -66,9 +66,9 @@ class Serializable(Jellyable):
     passed to or returned from a remote method.  Certain basic types
     (dictionaries, lists, tuples, numbers, strings) are serializable by
     default; however, classes need to choose a specific serialization
-    style: Referenceable, Viewable, Copyable or Cacheable.
+    style: L{Referenceable}, L{Viewable}, L{Copyable} or L{Cacheable}.
 
-    You may also pass [lists, dictionaries, tuples] of Serializable
+    You may also pass C{[lists, dictionaries, tuples]} of L{Serializable}
     instances to or return them from remote methods, as many levels deep
     as you like.
     """
@@ -123,40 +123,42 @@ class Referenceable(Serializable):
 
 
 class Root(Referenceable):
-    """I provide a root object to Brokers for a BrokerFactory.
+    """I provide a root object to L{pb.Broker}s for a L{pb.BrokerFactory}.
 
-    When a BrokerFactory produces a Broker, it supplies that Broker
-    with an object named "root".  That object is obtained by calling
-    my rootObject method.
+    When a L{pb.BrokerFactory} produces a L{pb.Broker}, it supplies that
+    L{pb.Broker} with an object named "root".  That object is obtained
+    by calling my rootObject method.
 
-    See also: getObjectAt
+    See also: L{pb.getObjectAt}
     """
 
     def rootObject(self, broker):
-        """A BrokerFactory is requesting to publish me as a root object.
+        """A L{pb.BrokerFactory} is requesting to publish me as a root object.
 
-        When a BrokerFactory is sending me as the root object, this
+        When a L{pb.BrokerFactory} is sending me as the root object, this
         method will be invoked to allow per-broker versions of an
         object.  By default I return myself.
         """
         return self
 
 class ViewPoint(Referenceable):
-    """I act as an indirect reference to an object accessed through a Perspective.
+    """
+    I act as an indirect reference to an object accessed through a
+    L{pb.Perspective}.
 
     Simply put, I combine an object with a perspective so that when a
     peer calls methods on the object I refer to, the method will be
     invoked with that perspective as a first argument, so that it can
     know who is calling it.
 
-    While Viewable objects will be converted to ViewPoints by default
+    While L{Viewable} objects will be converted to ViewPoints by default
     when they are returned from or sent as arguments to a remote
     method, any object may be manually proxied as well. (XXX: Now that
-    this class is no longer named Proxy, this is the only occourance
+    this class is no longer named C{Proxy}, this is the only occourance
     of the term 'proxied' in this docstring, and may be unclear.)
 
-    This can be useful when dealing with Perspectives, Copyables,
-    and Cacheables.  It is legal to implement a method as such on
+    This can be useful when dealing with L{pb.Perspective}s, L{Copyable}s,
+    and L{Cacheable}s.  It is legal to implement a method as such on
     a perspective::
 
      | def perspective_getViewPointForOther(self, name):
@@ -166,16 +168,16 @@ class ViewPoint(Referenceable):
 
     This will allow you to have references to Perspective objects in two
     different ways.  One is through the initial 'attach' call -- each
-    peer will have a RemoteReference to their perspective directly.  The
-    other is through this method; each peer can get a RemoteReference to
-    all other perspectives in the service; but that RemoteReference will
-    be to a ViewPoint, not directly to the object.
+    peer will have a L{pb.RemoteReference} to their perspective directly.  The
+    other is through this method; each peer can get a L{pb.RemoteReference} to
+    all other perspectives in the service; but that L{pb.RemoteReference} will
+    be to a L{ViewPoint}, not directly to the object.
 
     The practical offshoot of this is that you can implement 2 varieties
     of remotely callable methods on this Perspective; view_xxx and
-    perspective_xxx. view_xxx methods will follow the rules for
-    ViewPoint methods (see ViewPoint.remoteMessageReceived), and
-    perspective_xxx methods will follow the rules for Perspective
+    C{perspective_xxx}. C{view_xxx} methods will follow the rules for
+    ViewPoint methods (see ViewPoint.L{remoteMessageReceived}), and
+    C{perspective_xxx} methods will follow the rules for Perspective
     methods.
     """
 
@@ -194,7 +196,7 @@ class ViewPoint(Referenceable):
         """A remote message has been received.  Dispatch it appropriately.
 
         The default implementation is to dispatch to a method called
-        'view_messagename' to my Object and call it on my object with
+        'C{view_messagename}' to my Object and call it on my object with
         the same arguments, modified by inserting my Perspective as
         the first argument.
         """
@@ -211,16 +213,16 @@ class ViewPoint(Referenceable):
 
 
 class Viewable(Serializable):
-    """I will be converted to a ViewPoint when passed to or returned from a remote method.
+    """I will be converted to a L{ViewPoint} when passed to or returned from a remote method.
 
     The beginning of a peer's interaction with a PB Service is always
-    through a perspective.  However, if a perspective_xxx method returns
+    through a perspective.  However, if a C{perspective_xxx} method returns
     a Viewable, it will be serialized to the peer as a response to that
     method.
     """
 
     def jellyFor(self, jellier):
-        """Serialize a ViewPoint for me and the perspective of the given broker.
+        """Serialize a L{ViewPoint} for me and the perspective of the given broker.
         """
         return ViewPoint(jellier.invoker.serializingPerspective, self).jellyFor(jellier)
 
@@ -235,7 +237,7 @@ class Copyable(Serializable):
     the peer.
 
     The peer will then look up the type to represent this with; see
-    RemoteCopy for details.
+    L{RemoteCopy} for details.
     """
 
     def getStateToCopy(self):
@@ -250,7 +252,7 @@ class Copyable(Serializable):
     def getStateToCopyFor(self, perspective):
         """Gather state to send when I am serialized for a particular perspective.
 
-        I will default to calling getStateToCopy.  Override this to
+        I will default to calling L{getStateToCopy}.  Override this to
         customize this behavior.
         """
 
@@ -269,7 +271,7 @@ class Copyable(Serializable):
     def getTypeToCopyFor(self, perspective):
         """Determine what type tag to send for me.
 
-        By default, defer to self.getTypeToCopy() normally this is
+        By default, defer to self.L{getTypeToCopy}() normally this is
         adequate, but you may override this to change it.
         """
 
@@ -278,7 +280,7 @@ class Copyable(Serializable):
     def jellyFor(self, jellier):
         """Assemble type tag and state to copy for this broker.
 
-        This will call getTypeToCopyFor and getStateToCopy, and
+        This will call L{getTypeToCopyFor} and L{getStateToCopy}, and
         return an appropriate s-expression to represent me.
         """
 
@@ -349,14 +351,14 @@ class Cacheable(Copyable):
 class RemoteCopy(Unjellyable):
     """I am a remote copy of a Copyable object.
 
-    When the state from a Copyable object is received, an instance will
+    When the state from a L{Copyable} object is received, an instance will
     be created based on the copy tags table (see setUnjellyableForClass) and
-    sent the setCopyableState message.  I provide a reasonable default
+    sent the L{setCopyableState} message.  I provide a reasonable default
     implementation of that message; subclass me if you wish to serve as
     a copier for remote data.
 
     NOTE: copiers are invoked with no arguments.  Do not implement a
-    constructor which requires args in a subclass of RemoteCopy!
+    constructor which requires args in a subclass of L{RemoteCopy}!
     """
 
     def setCopyableState(self, state):
@@ -379,11 +381,11 @@ class RemoteCopy(Unjellyable):
 
 
 class RemoteCache(RemoteCopy, Serializable):
-    """A cache is a local representation of a remote Cacheable object.
+    """A cache is a local representation of a remote L{Cacheable} object.
 
     This represents the last known state of this object.  It may
     also have methods invoked on it -- in order to update caches,
-    the cached class generates a RemoteReference to this object as
+    the cached class generates a L{pb.RemoteReference} to this object as
     it is originally sent.
 
     Much like copy, I will be invoked with no arguments.  Do not
@@ -395,7 +397,7 @@ class RemoteCache(RemoteCopy, Serializable):
         """A remote message has been received.  Dispatch it appropriately.
 
         The default implementation is to dispatch to a method called
-        'observe_messagename' and call it on my  with the same arguments.
+        'C{observe_messagename}' and call it on my  with the same arguments.
         """
 
         args = broker.unserialize(args)
@@ -495,7 +497,7 @@ def unjellyLocal(unjellier, unjellyList):
 setUnjellyableForClass("local", unjellyLocal)
 
 class RemoteCacheMethod:
-    """A method on a reference to a RemoteCache.
+    """A method on a reference to a L{RemoteCache}.
     """
 
     def __init__(self, name, broker, cached, perspective):
@@ -522,11 +524,11 @@ class RemoteCacheMethod:
         return self.broker._sendMessage('cache', self.perspective, cacheID, self.name, args, kw)
 
 class RemoteCacheObserver:
-    """I am a reverse-reference to the peer's RemoteCache.
+    """I am a reverse-reference to the peer's L{RemoteCache}.
 
     I am generated automatically when a cache is serialized.  I
-    represent a reference to the client's RemoteCache object that
-    will represent a particular Cacheable; I am the additional
+    represent a reference to the client's L{RemoteCache} object that
+    will represent a particular L{Cacheable}; I am the additional
     object passed to getStateToCacheAndObserveFor.
     """
 
@@ -535,9 +537,9 @@ class RemoteCacheObserver:
 
         Arguments:
 
-          * broker: a pb.Broker instance.
+          * broker: a L{pb.Broker} instance.
 
-          * cached: a Cacheable instance that this RemoteCacheObserver
+          * cached: a L{Cacheable} instance that this L{RemoteCacheObserver}
             corresponds to.
 
           * perspective: a reference to the perspective who is observing this.
@@ -553,7 +555,7 @@ class RemoteCacheObserver:
             self.broker, self.cached, self.perspective, id(self))
 
     def __hash__(self):
-        """generate a hash unique to all RemoteCacheObservers for this broker/perspective/cached triplet
+        """Generate a hash unique to all L{RemoteCacheObserver}s for this broker/perspective/cached triplet
         """
 
         return (  (hash(self.broker) % 2**10)
@@ -561,7 +563,7 @@ class RemoteCacheObserver:
                 + (hash(self.cached) % 2**10))
 
     def __cmp__(self, other):
-        """compare me to another RemoteCacheObserver
+        """Compare me to another L{RemoteCacheObserver}.
         """
 
         return cmp((self.broker, self.perspective, self.cached), other)
@@ -578,6 +580,6 @@ class RemoteCacheObserver:
                                         name, args, kw)
 
     def remoteMethod(self, key):
-        """Get a RemoteMethod for this key.
+        """Get a L{pb.RemoteMethod} for this key.
         """
         return RemoteCacheMethod(key, self.broker, self.cached, self.perspective)
