@@ -82,8 +82,18 @@ low end hardware. It can serve static files or dynamically rendered pages.</p>
 <h2>But can Twisted Web do PHP?</h2>
 
 <p>Yes.  It works out-of-the-box, so long as you've got the standalone php
-interpreter installed.  But you might want to take a look at Woven, Twisted's
+interpreter installed.  You might also want to take a look at Woven, Twisted's
 native web templating system.</p>
+
+<h2>And can Twisted Web do virtual hosting?</h2>
+
+<p>Can it ever!</p>
+
+<p>You can decide to go with one big process for all of them, a front server
+and a seperate server for each virtual host (for example, for permission
+reasons), and you can even mix-and-math between Apache and Twisted (for
+example, put Apache in the front and have Twisted handle some subset of the
+virtual host).</p>
 
 <h2>Where can I find out how to write Twisted servers?</h2>
 
