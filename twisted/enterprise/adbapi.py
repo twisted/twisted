@@ -99,9 +99,9 @@ class ConnectionPool(pb.Referenceable):
             result = curs.fetchall()
             curs.close()
             conn.commit()
+            return result
         except:
             conn.rollback()
-        return result
 
     def _runOperation(self, args, kw):
         """This is used for non-query operations that don't want "fetch*" to be called
