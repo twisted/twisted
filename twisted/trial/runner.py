@@ -133,8 +133,12 @@ class PerformanceTestClassRunner(TestClassRunner):
 
 class PerformanceSingletonRunner(SingletonRunner):
 
+    def __init__(self, methodName, stats):
+        SingletonRunner.__init__(self, methodName)
+        self.stats = stats
+
     def runTest(self, method):
-        assert method.__name__ in self.methodNames
+        assert method.__name__ == self.methodName
         method.im_self.recordStat = lambda datum: self.stats.__setitem__(fullName,datum)
         method()
 
