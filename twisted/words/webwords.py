@@ -17,9 +17,12 @@
 
 import time
 
+#Twisted imports
 from twisted.web import html, server, error, widgets
-
 from twisted.internet import passport
+
+#Sibling imports
+import service
 
 class AccountCreationWidget(widgets.Form):
     title = "Account Creation"
@@ -61,7 +64,7 @@ class ParticipantInfoWidget(widgets.Widget):
         Current status: %s<br>
         ''' % (self.part.name,
                map(lambda x: x.name, self.part.groups),
-               {0: "Offline", 1: "Online", 2: "Away"}[self.part.status])]
+               service.statuses[self.part.status])]
 
 
 class ParticipantListWidget(widgets.Gadget, widgets.Widget):
