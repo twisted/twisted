@@ -190,7 +190,7 @@ class Versioned:
     will be made.  If any of these methods are undefined, a warning message
     will be printed.
     """
-    persistenceVersion = 1
+    persistenceVersion = 0
     persistenceForgets = ()
 
     def __setstate__(self, state):
