@@ -30,7 +30,6 @@ from twisted.internet import defer
 from twisted.internet.defer import maybeDeferred
 from twisted.python import log, components, util, failure
 from twisted.python.compat import *
-from twisted.python.compat import StringTypes
 from twisted.cred import identity, error, perspective
 
 import base64, binascii, operator, re, string, time, types, rfc822, random
@@ -524,25 +523,26 @@ class IMAP4Server(basic.LineReceiver):
         self.sendBadResponse(tag, 'STATUS %s failed: %s' % (box, failure))
 
     def auth_APPEND(self, tag, args):
-        parts = parseNestedParens(args)
+        parts = splitQuoted(args)
         if len(parts) == 2:
             flags = ()
             date = rfc822.formatdate()
             size = parts[1]
         elif len(parts) == 3:
-            if isinstance(parts[1], types.StringType):
+            if parts[1].startswith('(') and parts[1].endswith(')'):
+                flags = parseNestedList(parts[1])
+                date = rfc822.formatdate()
+            else:
                 flags = ()
                 date = parts[1]
-            else:
-                flags = parts[1]
-                date = rfc822.formatdate()
             size = parts[2]
         elif len(parts) ==  4:
-            flags = tuple(parts[1])
+            flags = tuple(parseNestedParens(parts[1])[0])
             date = parts[2]
             size = parts[3]
         else:
             raise IllegalClientResponse, args
+
         if not size.startswith('{') or not size.endswith('}'):
             raise IllegalClientResponse, args
         try:
@@ -906,38 +906,38 @@ class IMAP4Client(basic.LineReceiver):
                     octets = int(lastPart[1:-1])
                 except ValueError:
                     raise IllegalServerResponse(line)
-                self._setupForLiteral(line, octets)
-                self._tag = line.split(None, 1)[0]
+                self._tag, parts = line.split(None, 1)
+                self._setupForLiteral(parts, octets)
                 return
             else:
                 # It isn't a literal at all
-                parts = line.split(None, 1)
-                if len(parts) != 2:
-                    raise IllegalServerResponse, line
-                tag, rest = parts
-                self.dispatchCommand(tag, rest)
+                self._regularDispatch(line)
         else:
             if self._parts:
                 # If an expression is in progress, no tag is required here
                 # Since we didn't find a literal indicator, this expression
                 # is done.
                 self._parts.append(line)
-                print ' '.join(self._parts)
-                tag, rest = self._tag, ' '.join(self._parts)
+                tag, rest = self._tag, ''.join(self._parts)
                 self._tag, self._parts = None, []
+                
+                print 'Dispatching with %r %r' % (tag, rest)
                 self.dispatchCommand(tag, rest)
             else:
                 # Otherwise, this line stands alone!
-                parts = line.split(None, 1)
-                if len(parts) != 2:
-                    raise IllegalServerResponse, line
-                tag, rest = parts
-                self.dispatchCommand(tag, rest)
+                self._regularDispatch(line)
+
+    def _regularDispatch(self, line):
+        parts = line.split(None, 1)
+        if len(parts) != 2:
+            raise IllegalServerResponse, line
+        tag, rest = parts
+        self.dispatchCommand(tag, rest)
 
     def _setupForLiteral(self, rest, octets):
         self._pendingBuffer = self.messageFile(octets)
         self._pendingSize = octets
-        self._parts = [rest]
+        self._parts = [rest, '\r\n']
         self.setRawMode()
 
     def messageFile(self, octets):
@@ -1892,7 +1892,11 @@ class IMAP4Client(basic.LineReceiver):
         return d
 
     def __cbFetch(self, (lines, last), lookFor):
+        # Oh, f*ck f*ck f*ck f*ck
+        lookFor = lookFor + ('UID',)
+
         flags = {}
+        print '__cbFetch((%r, %r), %r)' % (lines, last, lookFor)
         for line in lines:
             parts = line.split(None, 2)
             if len(parts) == 3:
@@ -2359,10 +2363,25 @@ def splitQuoted(s):
     return result
 
 
+def splitOn(sequence, predicate, transformers):
+    result = []
+    mode = predicate(sequence[0])
+    tmp = [sequence[0]]
+    for e in sequence[1:]:
+        p = predicate(e)
+        if p != mode:
+            result.extend(transformers[mode](tmp))
+            tmp = [e]
+            mode = p
+        else:
+            tmp.append(e)
+    result.extend(transformers[mode](tmp))
+    return result
+
 def collapseStrings(results):
     """
     Turns a list of length-one strings and lists into a list of longer
-    strings and list.  For example,
+    strings and lists.  For example,
 
     ['a', 'b', ['c', 'd']] is returned as ['ab', ['cd']]
 
@@ -2376,19 +2395,24 @@ def collapseStrings(results):
     begun = None
     listsList = [isinstance(s, types.ListType) for s in results]
 
-    if reduce(operator.add, listsList, 0) == 0:
-        return splitQuoted(''.join(results))
+#    if reduce(operator.add, listsList, 0) == 0:
+#        return splitQuoted(''.join(results))
 
+    pred = lambda e: isinstance(e, types.TupleType)
+    tran = {
+        0: lambda e: splitQuoted(''.join(e)), 
+        1: lambda e: [''.join([i[0] for i in e])]
+    }
     for (i, c, isList) in zip(range(len(results)), results, listsList):
         if isList:
             if begun is not None:
-                copy.extend(splitQuoted(''.join(results[begun:i])))
+                copy.extend(splitOn(results[begun:i], pred, tran))
                 begun = None
             copy.append(collapseStrings(c))
         elif begun is None:
             begun = i
     if begun is not None:
-        copy.extend(splitQuoted(''.join(results[begun:])))
+        copy.extend(splitOn(results[begun:], pred, tran))
     return copy
 
 
@@ -2408,21 +2432,61 @@ def parseNestedParens(s):
     inQuote = 0
     contentStack = [[]]
     try:
-        for c in s:
-            if inQuote or (c not in '()[]'):
-                if c == '"':
+        i = 0
+        L = len(s)
+        while i < L:
+            c = s[i]
+            if inQuote:
+                if c == '\\':
+                    contentStack[-1].append(s[i+1])
+                    i += 2
+                    continue
+                elif c == '"':
                     inQuote = not inQuote
                 contentStack[-1].append(c)
-            elif not inQuote:
-                if c == '(' or c == '[':
+                i += 1
+            else:
+                if c == '"':
+                    contentStack[-1].append(c)
+                    inQuote = not inQuote
+                    i += 1
+                elif c == '{':
+                    end = s.find('}', i)
+                    if end == -1:
+                        raise ValueError, "Malformed literal"
+                    literalSize = int(s[i+1:end])
+                    contentStack[-1].append((s[end+3:end+3+literalSize],))
+                    i = end + 3 + literalSize
+                elif c == '(' or c == '[':
                     contentStack.append([])
+                    i += 1
                 elif c == ')' or c == ']':
                     contentStack[-2].append(contentStack.pop())
+                    i += 1
+                else:
+                    contentStack[-1].append(c)
+                    i += 1
     except IndexError:
         raise MismatchedNesting(s)
     if len(contentStack) != 1:
         raise MismatchedNesting(s)
     return collapseStrings(contentStack[0])
+
+def _quote(s):
+    return '"%s"' % (s.replace('\\', '\\\\').replace('"', '\\"'),)
+
+_ATOM_SPECIALS = '(){ %*"'
+def _needsQuote(s):
+    for c in s:
+        if c < '\x20' or c > '\x7f':
+            return 1
+        if c in _ATOM_SPECIALS:
+            return 1
+    return 0
+
+def _needsLiteral(s):
+    # Change this to "return 1" to wig out stupid clients
+    return '\n' in s or '\r' in s or len(s) > 1000
 
 def collapseNestedLists(items):
     """Turn a nested list structure into an s-exp-like string.
@@ -2440,11 +2504,10 @@ def collapseNestedLists(items):
         if i is None:
             pieces.extend([' ', 'NIL'])
         elif isinstance(i, StringTypes):
-            if '\n' in i or '\r' in i:
-                i = '\r\n'.join(i.splitlines()) + '\r\n'
+            if _needsLiteral(i):
                 pieces.extend([' ', '{', str(len(i)), '}', IMAP4Server.delimiter, i])
-            elif (not i.startswith('BODY')) and (' ' in i or '\t' in i):
-                pieces.extend([' ', '"%s"' % (i,)])
+            elif (not i.startswith('BODY')) and _needsQuote(i):
+                pieces.extend([' ', _quote(i)])
             else:
                 pieces.extend([' ', i])
         elif pieces and pieces[-1].upper() == 'BODY.PEEK':

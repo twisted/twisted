@@ -114,8 +114,9 @@ class IMAP4HelperTestCase(unittest.TestCase):
             self.assertEquals(imap4.collapseStrings(case), expected)
 
     def testParenParser(self):
+        s = '\r\n'.join(['xx'] * 4)    
         cases = [
-            '(BODY.PEEK[HEADER.FIELDS.NOT (subject bcc cc)] {100})',
+            '(BODY.PEEK[HEADER.FIELDS.NOT (subject bcc cc)] {%d}\r\n%s)' % (len(s), s,),
 
 #            '(FLAGS (\Seen) INTERNALDATE "17-Jul-1996 02:44:25 -0700" '
 #            'RFC822.SIZE 4286 ENVELOPE ("Wed, 17 Jul 1996 02:23:25 -0700 (PDT)" '
@@ -143,7 +144,7 @@ class IMAP4HelperTestCase(unittest.TestCase):
         ]
         
         answers = [
-            ['BODY.PEEK', ['HEADER.FIELDS.NOT', ['subject', 'bcc', 'cc']], '{100}'],
+            ['BODY.PEEK', ['HEADER.FIELDS.NOT', ['subject', 'bcc', 'cc']], s],
 
             ['FLAGS', [r'\Seen'], 'INTERNALDATE',
             '17-Jul-1996 02:44:25 -0700', 'RFC822.SIZE', '4286', 'ENVELOPE',
@@ -164,6 +165,14 @@ class IMAP4HelperTestCase(unittest.TestCase):
         
         for (case, expected) in zip(answers, cases):
             self.assertEquals('(' + imap4.collapseNestedLists(case) + ')', expected)
+    
+    def testLiterals(self):
+        cases = [
+            ('({10}\r\n0123456789)', [['0123456789']]),
+        ]
+        
+        for (case, expected) in cases:
+            self.assertEquals(imap4.parseNestedParens(case), expected)
 
     def testQueryBuilder(self):
         inputs = [
