@@ -183,7 +183,7 @@ class Resolver:
 
 class ResolveConfResolver(Resolver):
 
-    def __init__(self, file="/etc/resolve.conf", boss=None):
+    def __init__(self, file="/etc/resolv.conf", boss=None):
         Resolver.__init__(self, [], boss)
         self.file = file
         self._setNameServers()
