@@ -98,10 +98,10 @@ class TestSuite:
         for testClass in testClasses:
             testCase = testClass()
             for method in self.testClasses[testClass]:
+                ok = 0
                 try:
                     testCase.setUp()
                     method(testCase)
-                    testCase.tearDown()
                 except AssertionError, e:
                     output.reportFailure(testClass, method, sys.exc_info())
                 except KeyboardInterrupt:
@@ -109,7 +109,46 @@ class TestSuite:
                 except:
                     output.reportError(testClass, method, sys.exc_info())
                 else:
+                    ok = 1
+
+                try:
+                    testCase.tearDown()
+                except AssertionError, e:
+                    output.reportFailure(testClass, method, sys.exc_info())
+                    ok = 0
+                except KeyboardInterrupt:
+                    pass
+                except:
+                    output.reportError(testClass, method, sys.exc_info())
+                    ok = 0
+
+                try:
+                    from twisted.internet import reactor
+                    reactor.iterate() # flush short-range timers
+                    pending = reactor.getDelayedCalls()
+                    if pending:
+                        msg = "\npendingTimedCalls still pending:\n"
+                        for p in pending:
+                            msg += " %s\n" % p
+                        from warnings import warn
+                        warn(msg)
+                        for p in pending: p.cancel() # delete the rest
+                        reactor.iterate() # flush them
+                        # this will go live someday: tests should not leave
+                        # lingering surprises
+                        #self.fail(msg)
+                except AssertionError, e:
+                    output.reportFailure(testClass, method, sys.exc_info())
+                    ok = 0
+                except KeyboardInterrupt:
+                    pass
+                except:
+                    output.reportError(testClass, method, sys.exc_info())
+                    ok = 0
+                    
+                if ok:
                     output.reportSuccess(testClass, method)
+
         output.stop()
 
 class Reporter:
