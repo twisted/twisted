@@ -94,6 +94,7 @@ class UnsupportedMethod(Exception):
 class Request(pb.Copyable, http.Request, components.Componentized):
 
     site = None
+    appRootURL = None
     __pychecker__ = 'unusednames=issuer'
 
     def __init__(self, *args, **kw):
@@ -156,6 +157,7 @@ class Request(pb.Copyable, http.Request, components.Componentized):
             self.render(resrc)
         except:
             self.processingFailed(failure.Failure())
+
 
     def render(self, resrc):
         try:
@@ -339,6 +341,18 @@ class Request(pb.Copyable, http.Request, components.Componentized):
     def pathRef(self):
         return refpath.PathReferenceAcquisitionContext(self, self.acqpath)
 
+    def rememberRootPath(self):
+        """
+        Remember the currently-processed part of the URL for later
+        recalling.
+        """
+        self.appRootURL = self.pathRef().parentRef().fullURL(self)
+
+    def getRootPath(self):
+        """
+        Get a previously-remembered URL.
+        """
+        return self.appRootURL
 
 class _RemoteProducerWrapper:
     def __init__(self, remote):
