@@ -1696,7 +1696,7 @@ class NewStoreTestCase(unittest.TestCase, IMAP4HelperMixin):
         ).addCallback(self._cbStopClient
         ).addErrback(self._ebGeneral)
 
-        loopback.loopbackTCP(self.server, self.client)
+        loopback.loopbackTCP(self.server, self.client, noisy=False)
         self.assertEquals(self.result, self.expected)
         self.assertEquals(self.storeArgs, self.expectedArgs)
 
@@ -1758,7 +1758,7 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
         ).addCallback(self._cbStopClient
         ).addErrback(self._ebGeneral)
 
-        loopback.loopbackTCP(self.server, self.client)
+        loopback.loopbackTCP(self.server, self.client, noisy=False)
         self.assertEquals(self.result, self.expected)
 
     def testFetchUID(self):
@@ -2081,7 +2081,7 @@ class FetchSearchStoreTestCase(unittest.TestCase, IMAP4HelperMixin):
         ).addCallback(self._cbStopClient
         ).addErrback(self._ebGeneral)
 
-        loopback.loopbackTCP(self.server, self.client)
+        loopback.loopbackTCP(self.server, self.client, noisy=False)
 
         # Ensure no short-circuiting wierdness is going on
         self.failIf(self.result is self.expected)
@@ -2133,7 +2133,7 @@ class FetchSearchStoreTestCase(unittest.TestCase, IMAP4HelperMixin):
         ).addCallback(self._cbStopClient
         ).addErrback(self._ebGeneral)
 
-        loopback.loopbackTCP(self.server, self.client)
+        loopback.loopbackTCP(self.server, self.client, noisy=False)
 
         # Ensure no short-circuiting wierdness is going on
         self.failIf(self.result is self.expected)
@@ -2254,7 +2254,7 @@ class TLSTestCase(IMAP4HelperMixin, unittest.TestCase):
     clientCTX = ClientTLSContext and ClientTLSContext()
 
     def loopback(self):
-        loopback.loopbackTCP(self.server, self.client)
+        loopback.loopbackTCP(self.server, self.client, noisy=False)
 
     def testAPileOfThings(self):
         SimpleServer.theAccount.addMailbox('inbox')

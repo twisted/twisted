@@ -131,6 +131,8 @@ class ESMTPManagedRelayerFactory(SMTPManagedRelayerFactory):
 class Queue:
     """A queue of ougoing emails."""
     
+    noisy = True
+    
     def __init__(self, directory):
         self.directory = directory
         self._init()
@@ -181,7 +183,8 @@ class Queue:
     def addMessage(self, message):
         if message not in self.relayed:
             self.waiting[message] = 1
-            log.msg('Set ' + message + ' waiting')
+            if self.noisy:
+                log.msg('Set ' + message + ' waiting')
 
     def done(self, message):
         """Remove message to from queue."""
@@ -273,12 +276,14 @@ class SmartHostSMTPRelayingManager:
 
         Mark it as sent in our lists
         """
-        log.msg("success sending %s, removing from queue" % message)
+        if self.queue.noisy:
+            log.msg("success sending %s, removing from queue" % message)
         self._finish(relay, message)
 
     def notifyFailure(self, relay, message):
         """Relaying the message has failed."""
-        log.msg("could not relay "+message)
+        if self.queue.noisy:
+            log.msg("could not relay "+message)
         # Moshe - Bounce E-mail here
         # Be careful: if it's a bounced bounce, silently
         # discard it
@@ -302,7 +307,8 @@ class SmartHostSMTPRelayingManager:
         as being relayed, and remove the relay.
         """
         for message in self.managed.get(relay, ()):
-            log.msg("Setting " + message + " waiting")
+            if self.queue.noisy:
+                log.msg("Setting " + message + " waiting")
             self.queue.setWaiting(message)
         try:
             del self.managed[relay]
@@ -321,7 +327,8 @@ class SmartHostSMTPRelayingManager:
             log.msg("notifyNoConnection passed unknown relay!")
             return
 
-        log.msg("Backing off on delivery of " + str(msgs))
+        if self.queue.noisy:
+            log.msg("Backing off on delivery of " + str(msgs))
         def setWaiting(queue, messages):
             map(queue.setWaiting, messages)
         from twisted.internet import reactor

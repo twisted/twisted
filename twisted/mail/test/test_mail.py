@@ -650,6 +650,7 @@ class DirectoryQueueTestCase(unittest.TestCase):
         self.tmpdir = self.mktemp()
         os.mkdir(self.tmpdir)
         self.queue = mail.relaymanager.Queue(self.tmpdir)
+        self.queue.noisy = False
         for m in range(25):
             hdrF, msgF = self.queue.createNewMessage()
             pickle.dump(['header', m], hdrF)
