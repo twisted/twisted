@@ -1,15 +1,15 @@
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -119,7 +119,7 @@ class Application(log.Logger, styles.Versioned, roots.Locked):
         default to having the uid and gid of the user and group who created it.
         """
         roots.Constrained.__init__(self)
-        
+
         self.name = name
         # a list of (tcp, ssl, udp) Ports
         self.ports = []
@@ -150,15 +150,15 @@ class Application(log.Logger, styles.Versioned, roots.Locked):
         l.lock()
         self.putEntity("services", ServiceCollection(self))
         self.lock()
-        
+
 
     persistenceVersion = 4
-    
+
     def upgradeToVersion4(self):
         """Version 4 Persistence Upgrade
         """
         self.connectors = []
-    
+
     def upgradeToVersion3(self):
         """Version 3 Persistence Upgrade
         """
@@ -188,7 +188,7 @@ class Application(log.Logger, styles.Versioned, roots.Locked):
         """Add a service to this application.
         """
         self.services[service.serviceName] = service
-        
+
     def __repr__(self):
         return "<%s app>" % self.name
 
@@ -243,7 +243,7 @@ class Application(log.Logger, styles.Versioned, roots.Locked):
         """Connect a given client protocol factory to a specific TCP server."""
         from twisted.internet import tcp
         self.addConnector(tcp.Connector(host, port, factory))
-    
+
     def connectSSL(self, host, port, factory, ctxFactory=None):
         """Connect a given client protocol factory to a specific SSL server."""
         from twisted.internet import ssl
@@ -251,13 +251,13 @@ class Application(log.Logger, styles.Versioned, roots.Locked):
         if ctxFactory:
             c.contextFactory = ctxFactory
         self.addConnector(c)
-    
+
     def addConnector(self, connector):
         """Add a connector to this Application."""
         self.connectors.append(connector)
         if self.running:
             connector.startConnecting()
-    
+
     def addDelayed(self, delayed):
         """
         Adds an object implementing delay.IDelayed for execution in my event loop.
@@ -283,7 +283,7 @@ class Application(log.Logger, styles.Versioned, roots.Locked):
     def removeDelayed(self, delayed):
         """
         Remove a Delayed previously added to the main event loop with addDelayed.
-        """ 
+        """
         self.delayeds.remove(delayed)
         if main.running and self.running:
             main.removeDelayed(delayed)
