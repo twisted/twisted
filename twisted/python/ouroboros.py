@@ -558,30 +558,31 @@ def instance_add(a, b):
         return aadd(b)
 
 
-def rawthunk(arg):
-    print 'called thunk with', arg
-
-def rawclasstest():
-    class foo:
-        x = 1
-    f = foo()
-
-def dostuff(self):
-##    n = 7
-##    thunk(1)
-##    classtest()
-##    if n:
-##        print 'hi'
-##    else:
-##        print 'bye'
-    class foo:
-        x = 1
-    f = foo()
-    return 1
-dis.dis(dostuff)
-c = Code(dostuff.func_code)
-i = Interpreter(c, {},
-                {'thunk':safe(rawthunk,{}),
-                 'classtest':safe(rawclasstest,{})}
-                )
-print i.run().value
+if __name__ == '__main__':
+    def rawthunk(arg):
+        print 'called thunk with', arg
+    
+    def rawclasstest():
+        class foo:
+            x = 1
+        f = foo()
+    
+    def dostuff(self):
+    ##    n = 7
+    ##    thunk(1)
+    ##    classtest()
+    ##    if n:
+    ##        print 'hi'
+    ##    else:
+    ##        print 'bye'
+        class foo:
+            x = 1
+        f = foo()
+        return 1
+    dis.dis(dostuff)
+    c = Code(dostuff.func_code)
+    i = Interpreter(c, {},
+                    {'thunk':safe(rawthunk,{}),
+                     'classtest':safe(rawclasstest,{})}
+                    )
+    print i.run().value
