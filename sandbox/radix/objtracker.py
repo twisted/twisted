@@ -1,6 +1,5 @@
 import gc, sys, weakref
 
-
 class ObjTracker:
     """
     A debugging aid that shows you how an object is travelling through
@@ -11,12 +10,19 @@ class ObjTracker:
     def install(self):
         """
         Start tracking objects.
+
+        WARNING: NO objects will be collected between a call to
+        L{install} and L{reset}.
         """
         self.reset()
         sys.settrace(self.globalTrace)
 
 
     def reset(self):
+        """
+        Clean everything out. This gives a chance to Python to clean
+        up all of its objects.
+        """
         self.refs = []
         self.objsToFuncs = {}
 
