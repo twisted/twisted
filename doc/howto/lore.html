@@ -194,11 +194,19 @@ easy to indicate a CSS stylesheet in the template.</p>
 document is by:</p>
 
 <pre class="shell">
-% lore --config template=myteplate.tpl mydocument.html
+% lore --config template=mytemplate.tpl mydocument.html
 </pre>
 
 <p>This will create a file called <code class="shell">mydocument.xhtml</code>.
 </p>
+
+<p>For example, to generate the HTML version of the Twisted docs from a CVS
+checkout, do:<span class="footnote">See also the
+<code>admin/process-docs</code> script.</span></p>
+
+<pre class="shell">
+% lore --config template=doc/howto/template.tpl doc/howto/*.html
+</pre>
 
 <h2>Using Lore to Generate LaTex</h2>
 
