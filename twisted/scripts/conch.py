@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.48 2003/03/30 19:46:27 z3p Exp $
+# $Id: conch.py,v 1.49 2003/04/01 00:36:00 z3p Exp $
 
 #""" Implementation module for the `conch` command.
 #"""
@@ -493,7 +493,7 @@ class SSHUnixChannel(channel.SSHChannel):
 
     def closed(self):
         self.unix.sendMessage('closed', self.id)
-        if len(conn.channels) == 1 and not (options['fork'] and options['nocache']): # just us left
+        if len(conn.channels) == 1 and not (options['fork'] and not options['nocache']): # just us left
             reactor.stop()
 
 class SSHClientFactory(protocol.ClientFactory):
@@ -763,10 +763,7 @@ class SSHSession(channel.SSHChannel):
 
     def closed(self):
         log.msg('closed %s' % self)
-        log.msg(str(self.conn.channels))
-        log.msg(str(options['fork']))
-        log.msg(str(options['nocache']))
-        if len(self.conn.channels) == 1 and not (options['fork'] and options['nocache']): # just us left
+        if len(self.conn.channels) == 1 and not (options['fork'] and not options['nocache']): # just us left
             reactor.stop()
 
     def request_exit_status(self, data):
@@ -787,13 +784,13 @@ class SSHListenClientForwardingChannel(forwarding.SSHListenClientForwardingChann
 
     def closed(self):
         forwarding.SSHListenClientForwardingChannel.closed(self)
-        if len(self.conn.channels) == 1 and not (options['fork'] and options['nocache']): # just us left
+        if len(self.conn.channels) == 1 and not (options['fork'] and not options['nocache']): # just us left
             reactor.stop()
 
 class SSHConnectForwardingChannel(forwarding.SSHConnectForwardingChannel):
 
     def closed(self):
         forwarding.SSHConnectForwardingChannel.closed(self)
-        if len(self.conn.channels) == 1 and not (options['fork'] and options['nocache']): # just us left
+        if len(self.conn.channels) == 1 and not (options['fork'] and not options['nocache']): # just us left
             reactor.stop()
 
