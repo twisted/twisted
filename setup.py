@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.84 2002/12/28 15:00:59 z3p Exp $
+$Id: setup.py,v 1.85 2002/12/30 21:35:20 z3p Exp $
 """
 
 import distutils, os, sys, string
@@ -231,7 +231,7 @@ http://starship.python.net/crew/mhammond/win32/Downloads.html
         'bin/coil', 'bin/tapconvert', 'bin/websetroot',
         'bin/generatelore', 'bin/html2latex', 'bin/hlint',
         'bin/tkmktap', 'bin/conch', 'bin/ckeygen', 'bin/tktwistd',
-        'twisted-post-install.py',
+        'bin/tkconch', 'twisted-post-install.py',
     ],
     'cmdclass': {
         'install_scripts': install_scripts_twisted,

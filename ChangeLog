@@ -1,3 +1,7 @@
+2002-12-30  Paul Swartz  <z3p@twistedmatrix.com>
+
+	* twisted/conch/*: added docstrings to most conch classes and functions
+
 2002-12-30  Brian Warner  <warner@lothar.com>
 
 	* twisted/spread/pb.py (Broker.connectionLost): clear localObjects
