@@ -236,7 +236,7 @@ class ConnectionPool:
             return result
         except:
             log.msg('Exception in SQL interaction. Rolling back.')
-            log.deferr()
+            if self.noisy: log.deferr()
             trans._connection.rollback()
             raise
 
@@ -251,7 +251,7 @@ class ConnectionPool:
             return result
         except:
             log.msg('Exception in SQL query. Rolling back.')
-            log.deferr()
+            if self.noisy: log.deferr()
             conn.rollback()
             raise
 
@@ -264,7 +264,7 @@ class ConnectionPool:
             conn.commit()
         except:
             log.msg('Exception in SQL operation. Rolling back.')
-            log.deferr()
+            if self.noisy: log.deferr()
             conn.rollback()
             raise
 
