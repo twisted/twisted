@@ -1,17 +1,22 @@
-def _parseTCP(factory, port, interface=""):
-    return 'TCP', (int(port), factory), {'interface': interface}
+def _parseTCP(factory, port, interface="", backlog=5):
+    return (int(port), factory), {'interface': interface, 'backlog': backlog}
 
-def _parseUNIX(factory, address, mode='666'):
-    return 'UNIX', (address, factory), {'mode': mode}
+def _parseUNIX(factory, address, mode='666', backlog=5):
+    return (address, factory), {'mode': int(mode, 8), 'backlog': backlog}
 
-def _parseSSL(reactor, factory, port, privateKey="server.pem", certKey=None):
+def _parseSSL(reactor, factory, port, privateKey="server.pem", certKey=None
+              sslmethod=None, interface='', backlog=5):
     from twisted.internet import ssl
     if certKey is None:
         certKey = privateKey
-    cf = ssl.DefaultOpenSSLContextFactory(privateKey, certKey)
-    return 'SSL', (port, factory, contextFactory)
+    kw = {}
+    if sslmethod is not None:
+        kw['sslmethod'] = getattr(ssl.SSL, sslmethod)
+    cf = ssl.DefaultOpenSSLContextFactory(privateKey, certKey, **kw)
+    return ((int(port), factory, contextFactory),
+            {'interface': interface, 'backlog': backlog})
 
-funcs = {"tcp": _parseTCP,
+_funcs = {"tcp": _parseTCP,
          "unix": _parseUNIX,
          "ssl": _parseSSL}
 
@@ -19,19 +24,15 @@ def parse(description, factory):
     if ':' not in description:
         description = 'tcp:'+description
     dsplit = description.split(":")
-    args = []
+    args = [arg for arg in dsplit[1:] if '=' not in arg]
     kw = {}
-    for arg in dsplit[1:]:
-        kv = arg.split('=', 1)
-        if len(kv) == 2:
-            kw[kv[0]]=kv[1]
-        else:
-            args.append(arg)
-    return funcs[dsplit[0]](factory, *args, **kw)
+    for (name, val) in [arg.split('=', 1) for arg in dsplit if '=' in arg]:
+        kw[name] = val
+    return dsplit[0].upper(), _funcs[dsplit[0]](factory, *args, **kw)
 
 def service(description, factory):
     from twisted.application import internet
-    name, args, kw = parse(description, factory)
+    name, (args, kw) = parse(description, factory)
     return getattr(internet, name+'Server')(*args, **kw)
 
 def listen(description, factory):
