@@ -168,3 +168,6 @@ class ProcessTerminated(ConnectionLost):
         s = "process ended"
         if exitCode is not None: s = s + " with exit code %s" % exitCode
         Exception.__init__(self, s)
+
+class NotConnectingError(RuntimeError):
+    """The Connector was not connecting when it was asked to stop connecting."""

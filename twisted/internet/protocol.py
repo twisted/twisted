@@ -233,10 +233,13 @@ class ReconnectingClientFactory(ClientFactory):
         # ??? Is this function really stopFactory?
         if self._callID:
             self._callID.cancel()
-        if self.connector and self.connector.state == "connecting":
+        if self.connector:
             # Hopefully this doesn't just make clientConnectionFailed
             # retry again.
-            self.connector.stopConnecting()
+            try:
+                self.connector.stopConnecting()
+            except error.NotConnectingError:
+                pass
 
     def resetDelay(self):
         """Call me after a successful connection to reset.

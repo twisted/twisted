@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.56 2003/01/01 19:23:05 tv Exp $
+# $Id: default.py,v 1.57 2003/01/01 19:32:49 tv Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -107,7 +107,7 @@ class BaseConnector:
     def stopConnecting(self):
         """Stop attempting to connect."""
         if self.state != "connecting":
-            raise RuntimeError, "we're not trying to connect"
+            raise error.NotConnectingError, "we're not trying to connect"
 
         self.state = "disconnected"
         self.transport.failIfNotConnected(error.UserError())
