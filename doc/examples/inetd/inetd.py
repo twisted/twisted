@@ -54,7 +54,7 @@ class InetdProtocol(Protocol):
         else:           # Parent
             reactor.removeReader(self.transport)
             reactor.removeWriter(self.transport)
-        
+
 
 class InetdFactory(ServerFactory):
     protocol = InetdProtocol
@@ -79,7 +79,8 @@ def main(options=None):
     app = Application('tinetd')
     
     for service in conf.services:
-        if (service.protocol, service.socketType) not in [('tcp', 'stream')]:
+        if (service.protocol, service.socketType) not in [('tcp', 'stream'),
+                                                          ('udp', 'dgram')]:
             log.msg('Skipping unsupported type/protocol: %s/%s'
                     % (service.socketType, service.protocol))
             continue
