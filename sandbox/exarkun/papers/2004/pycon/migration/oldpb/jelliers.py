@@ -60,6 +60,44 @@ def ReactorUnjellier(unjellier, jellyList):
 jelly.setUnjellyableForClass('twisted.internet.reactor', ReactorUnjellier)
 
 #
+# Address jelly!
+#
+class AddressJellier(components.Adapter):
+    __implements__ = (ispread.IJellyable,)
+    
+    def getStateFor(self, jellier):
+        return vars(self.original)
+    
+    def jellyFor(self, jellier):
+        sxp = jellier.prepare(self.original)
+        sxp.extend([
+            reflect.qual(self.original.__class__),
+            jellier.jelly(self.getStateFor(jellier))])
+        return jellier.preserve(self.original, sxp)
+
+from twisted.internet import address
+components.registerAdapter(AddressJellier, address.IPv4Address, ispread.IJellyable)
+components.registerAdapter(AddressJellier, address.UNIXAddress, ispread.IJellyable)
+components.registerAdapter(AddressJellier, address._ServerFactoryIPv4Address, ispread.IJellyable)
+
+class _NewStyleDummy(object):
+    pass
+
+def AddressUnjellier(unjellier, jellyList):
+    klass = reflect.namedAny(jellyList[0])
+    inst = _NewStyleDummy()
+    print klass
+    inst.__class__ = klass
+    state = unjellier.unjelly(jellyList[1])
+    inst.__dict__ = state
+    
+    return inst
+
+jelly.setUnjellyableForClass('twisted.internet.address.IPv4Address', AddressUnjellier)
+jelly.setUnjellyableForClass('twisted.internet.address.UNIXAddress', AddressUnjellier)
+jelly.setUnjellyableForClass('twisted.internet.address._ServerFactoryIPv4Address', AddressUnjellier)
+
+#
 # File descriptor jelly!
 #
 class ISocketStorage(components.Interface):

@@ -8,5 +8,5 @@ class ShellFactory(telnet.ShellFactory):
 
     def buildProtocol(self, addr):
         p = telnet.ShellFactory.buildProtocol(self, addr)
-        self.protos[addr] = p
+        self.protos[str(addr)] = p
         return p
