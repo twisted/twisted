@@ -12,6 +12,8 @@ sys.path.insert(0, os.curdir)
 
 import os, sys
 
+# HACK: Don't import stuff that we don't like
+
 def myimport(*args):
     try: 
         return im(*args)
@@ -65,7 +67,7 @@ fakeOut("pygtk")
 fakeOut("gtk")
 fakeOut("wxPython.wx")
 
-# hack the Twisted Interface to not use __metaclass__ =
+# HACK: make Twisted Interfaces not use __metaclass__ =
 # MetaInterface. Epydoc barfs on any classes whose type isn't
 # TypeType.
 
@@ -89,6 +91,8 @@ from epydoc.html import HTMLFormatter
 from epydoc import uid
 import epydoc.html
 
+# HACK: Force everything to be public.
+
 def is_private(self):
     return False
 def is_public(self):
@@ -96,6 +100,9 @@ def is_public(self):
 
 uid.UID.is_private = is_private
 uid.UID.is_public = is_public
+
+# HACK: Don't append -module and -class to the filenames, and generate
+# redirecty-files for all methods.
 
 class TwistedHTMLFormatter(HTMLFormatter):
     def _uid_to_filename(self, uid):
@@ -143,7 +150,23 @@ class TwistedHTMLFormatter(HTMLFormatter):
                 open(filename, 'w').write(s)
 
 epydoc.html.HTMLFormatter = TwistedHTMLFormatter
-        
+
+# HACK: Only document stuff that we _tell_ you to document, you stupid
+# &#@&!#@
+
+from epydoc import objdoc
+
+orig_add = objdoc.DocMap._add
+
+def _add(self, objID):
+    m = objID.module()
+    if m and m.name() not in modnames: # see below for where modnames is defined
+        return
+    return orig_add(self, objID)
+
+objdoc.DocMap._add = _add
+
+# Now, set up the list of modules for epydoc to document
 
 modnames = []
 def addMod(arg, path, files):
@@ -171,7 +194,6 @@ sys.argv = osrv
 from twisted import copyright
 
 sys.argv.extend(['-n', 'Twisted %s' % copyright.version, '-u', 'http://twistedmatrix.com/', '--no-private'])
-
 
 sys.argv.extend(modnames)              # list of modules
 # Make it easy to profile epyrun
