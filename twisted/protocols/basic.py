@@ -405,19 +405,20 @@ class FileSender:
         self.consumer = consumer
         self.transform = transform
         
-        self.consumer.registerProducer(self, 0)
+        self.consumer.registerProducer(self, False)
         self.deferred = defer.Deferred()
         return self.deferred
     
     def resumeProducing(self):
+        chunk = ''
         if self.file:
             chunk = self.file.read(self.CHUNK_SIZE)
-        if not self.file or not chunk:
+        if not chunk:
             self.file = None
+            self.consumer.unregisterProducer()
             if self.deferred:
                 self.deferred.callback(self.lastSent)
                 self.deferred = None
-            self.consumer.unregisterProducer()
             return
         
         if self.transform:

@@ -175,7 +175,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         while commands and self.blocked is None:
             cmd, args = commands.pop(0)
             self.processCommand(cmd, *args)
-        if self.blocked:
+        if self.blocked is not None:
             self.blocked.extend(commands)
 
     def state_COMMAND(self, line):
@@ -404,7 +404,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         s = basic.FileSender()
         self.blocked = []
         s.beginFileTransfer(fp, self.transport, self.transformChunk
-        ).addCallback(self.finishedFileTransfer).addErrback(log.err).addCallback(self._unblock)
+        ).addCallback(self.finishedFileTransfer).addCallback(self._unblock).addErrback(log.err)
     
     def do_RETR(self, i):
         self.highest = max(self.highest, i)
@@ -415,7 +415,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         s = basic.FileSender()
         self.blocked = []
         s.beginFileTransfer(fp, self.transport, self.transformChunk
-        ).addCallback(self.finishedFileTransfer).addCallback(self._unblock)
+        ).addCallback(self.finishedFileTransfer).addCallback(self._unblock).addErrback(log.err)
 
     def transformChunk(self, chunk):
         return chunk.replace('\n', '\r\n').replace('\r\n.', '\r\n..')
