@@ -3,7 +3,7 @@ import os, sys, getopt
 
 run_dch, install = 0, None
 
-for (opt, val) in getopt.getopt(sys.argv[1:], "di:"):
+for (opt, val) in getopt.getopt(sys.argv[1:], "di:")[0]:
 	if opt == "-d":
 		run_dch = 1
 	if opt == "-i":
