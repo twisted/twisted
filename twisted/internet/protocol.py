@@ -169,6 +169,11 @@ class ClientCreator:
         self.reactor.connectTCP(host, port, f, timeout=timeout, bindAddress=bindAddress)
         return d
 
+    def connectUNIX(self, address, timeout = 30):
+        d = defer.Deferred()
+        f = _InstanceFactory(self.reactor, self.protocolClass(*self.args, **self.kwargs), d)
+        self.reactor.connectUNIX(address, f, timeout = timeout)
+        return d
 
 class ReconnectingClientFactory(ClientFactory):
     """My clients auto-reconnect with an exponential back-off.
