@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.50 2002/08/16 07:36:08 spiv Exp $
+$Id: setup.py,v 1.51 2002/08/28 02:17:00 radix Exp $
 """
 
 import distutils, os, sys, string
@@ -67,7 +67,7 @@ class build_scripts_create(build_scripts):
             <packagename>.scripts.<mangled_scriptname>
 
         The mangling of script names replaces '-' and '/' characters
-        with '-' and '.', so that they are valid module paths. 
+        with '_' and '.', so that they are valid module paths. 
     """
     package_name = None
 

@@ -395,7 +395,7 @@ try:
     from xml.dom.minidom import Text, Element, Node, Document, parse, parseString, CDATASection, NodeList
 except ImportError:
     def jellyToXML(object, file=None):
-        raise NotImplementedError
+        raise NotImplementedError("PyXML libraries could not be loaded.")
 
     def unjellyFromXML(stringOrFile):
-        raise NotImplementedError
+        raise NotImplementedError("PyXML libraries could not be loaded.")
