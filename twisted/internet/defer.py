@@ -340,6 +340,8 @@ class Deferred:
         L{TimeoutError}.
         """
 
+        if self.called:
+            return
         assert not self.timeoutCall, "Don't call setTimeout twice on the same Deferred."
 
         from twisted.internet import reactor

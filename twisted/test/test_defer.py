@@ -177,6 +177,14 @@ class DeferredTestCase(unittest.TestCase):
         d.addCallback(l.append)
         self.assertEquals(l, ["success"])
 
+    def testImmediateSuccess2(self):
+        l = []
+        d = defer.succeed("success")
+        # this is how trial.util.deferredResult works
+        d.setTimeout(1.0)
+        d.addCallback(l.append)
+        self.assertEquals(l, ["success"])
+
     def testImmediateFailure(self):
         l = []
         d = defer.fail(GenericError("fail"))

@@ -1,3 +1,12 @@
+2003-12-31  Brian Warner  <warner@lothar.com>
+
+	* twisted/internet/defer.py (Deferred.setTimeout): if the Deferred
+	has already been called, don't bother with the timeout. This
+	happens when trial.util.deferredResult is used with a timeout
+	argument and the Deferred was created by defer.succeed().
+	* twisted/test/test_defer.py
+	(DeferredTestCase.testImmediateSuccess2): test for same
+
 2003-12-31  Jp Calderone  <exarkun@twistedmatrix.com>
 
 	* twisted/protocols/ident.py: Client and server ident implementation
