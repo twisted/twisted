@@ -25,14 +25,15 @@
     
     <h2>DatagramProtocol</h2>
 
-    <p>At the base, the place where you actually implement the protocol parsing
-    and handling, is the DatagramProtocol class. This class will usually be decended
-    from <code class="API">twisted.internet.protocol.DatagramProtocol</code>. Most
+    <p>At the base, the place where you actually implement the protocol
+    parsing and handling, is the DatagramProtocol class. This class will
+    usually be decended from <code
+    class="API">twisted.internet.protocol.DatagramProtocol</code>. Most
     protocol handlers inherit either from this class or from one of its
-    convenience children. The DatagramProtocol class receives datagrams, and can
-    send them out over the network. Received datagrams include the address they
-    were sent from, and when sending datagrams the address to send to must
-    be specified.</p>
+    convenience children. The DatagramProtocol class receives datagrams, and
+    can send them out over the network. Received datagrams include the
+    address they were sent from, and when sending datagrams the address to
+    send to must be specified.</p>
     
     <p>Here is a simple example:</p>
     <pre class="python">
@@ -49,31 +50,35 @@ reactor.listenUDP(9999, Echo())
 reactor.run()
     </pre>
     
-    <p>As you can see, the protocol is registed with the reactor.
-    This means it may be persisted if it's added to an application,
-    and thus it has
-    <code class="API">twisted.internet.protocol.DatagramProtocol.startProtocol</code> and 
-    <code class="API">twisted.internet.protocol.DatagramProtocol.stopProtocol</code> methods that
-    will get called when the protocol is connected and disconnected
-    from a UDP socket.</p>
+    <p>As you can see, the protocol is registed with the reactor. This means
+    it may be persisted if it's added to an application, and thus it has
+    <code
+    class="API">twisted.internet.protocol.DatagramProtocol.startProtocol</code>
+    and <code
+    class="API">twisted.internet.protocol.DatagramProtocol.stopProtocol</code>
+    methods that will get called when the protocol is connected and
+    disconnected from a UDP socket.</p>
 
-    <p>The protocol's <code class="python">transport</code> attribute will implement the
-    <code class="API">twisted.internet.interfaces.IUDPTransport</code>
-    interface. Notice that the <code class="python">host</code> argument should be an IP,
-    not a hostname. If you only have the hostname use <code class="python">reactor.resolve()</code>
-    to resolve the address (see <code class="API">twisted.internet.interfaces.IReactorCore.resolve</code>).</p>
+    <p>The protocol's <code class="python">transport</code> attribute will
+    implement the <code
+    class="API">twisted.internet.interfaces.IUDPTransport</code> interface.
+    Notice that the <code class="python">host</code> argument should be an
+    IP, not a hostname. If you only have the hostname use <code
+    class="python">reactor.resolve()</code> to resolve the address (see <code
+    class="API">twisted.internet.interfaces.IReactorCore.resolve</code>).</p>
 
 
     <h2>Connected UDP</h2>
 
-    <p>A connected UDP socket is slighly different from a standard one - it can
-    only send and receive datagrams to/from a single address, but this does
-    not in any way imply a connection. Datagrams may still arrive in any order,
-    and the port on the other side may have no one listening. The benefit
-    of the connected UDP socket is that it it <strong>may</strong> provide
-    notification of undelivered packages.  This depends on many factors,
-    almost all of which are out of the control of the application, but it
-    still presents certain benefits which occassionally make it useful.</p>
+    <p>A connected UDP socket is slighly different from a standard one - it
+    can only send and receive datagrams to/from a single address, but this
+    does not in any way imply a connection. Datagrams may still arrive in any
+    order, and the port on the other side may have no one listening. The
+    benefit of the connected UDP socket is that it it <strong>may</strong>
+    provide notification of undelivered packages. This depends on many
+    factors, almost all of which are out of the control of the application,
+    but it still presents certain benefits which occassionally make it
+    useful.</p>
 
     <p>Unlike a regular UDP protocol, we do not need to specify where to
     send datagrams to, and are not told where they came from since
