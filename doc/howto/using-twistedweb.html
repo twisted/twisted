@@ -120,6 +120,21 @@ class MyResource(resource.Resource):
 resource = MyResource()
 </pre>
 
+<p> This is assuming you have the <code>SillyWeb.Counter</code> module,
+implemented something like the following:</p>
+
+<pre class="python">
+class Counter:
+
+    def __init__(self):
+        self.value = 0
+
+    def increment(self):
+        self.value += 1
+
+    def getValue(self):
+        return self.value
+</pre>
 
 <h3>DOM Templates</h3>
 
