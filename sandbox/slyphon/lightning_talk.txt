@@ -1,0 +1,55 @@
+Web Unittesting:
+
+    How to do web unittesting without writing XML or .ini files
+    
+In charge of QA for an XP project with rapid development
+
+Needed a test framework that would traverse a web application and ensure
+correct behavior
+
+This went through several iterations before acheiving some kind of sensible,
+stable, trustworthy system.
+
+A proud day when someone asked me how the tests were doing and I said,
+"They're failing *correctly*"
+
+Tests are comprised of stan-tag like objects in a list, which wrapped in an
+interface and called in order.
+
+     - tags for navigation, form posting, and assertions
+
+This allows for highly-readable code, and since the application navigation is
+changing constantly, this is important for making time-critical changes to the
+tests.
+
+
+so, how do we do it?
+
+First, you must do a /tiny/ bit of embedding of attributes in your dom. For
+most web-template based systems, I wouldn't imagine that this is all too
+difficult. This test relies on having a unique 'id' attribute for each element
+you wish to interact with. This is fairly trivial to implement inside nevow,
+which is nice because all of the id attributes are auto-generated, and if an
+element is added or removed, an id tag will be created for that new element.
+
+The only problem I ran into was that our code is freakin complicated. 
+
+Next, write a halfway decent python web client or get Moshe Zadka to write one
+for you.
+
+After you make a request, the client returns the dom, and twisted.web.microdom
+parses the tree into a Page class.
+
+One can then make assertions about the page using the familiar PyUnit syntax
+(which basically amounts to string-comparisons)
+
+When you want to follow another link, the Page class then pulls out the nodes
+that have 'id' attributes into Link and Form classes when a request is made
+for a particular object. I did this at request time so I wasn't creating a
+whole bunch of objects that no one was going to use.
+
+So, in the end, you wind up with a lightweight, pure-python way of performing
+functional testing with an easily-readable test expression syntax.
+
+
+
