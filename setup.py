@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.57 2002/10/02 12:16:31 moshez Exp $
+$Id: setup.py,v 1.58 2002/10/08 02:46:20 spiv Exp $
 """
 
 import distutils, os, sys, string
@@ -275,6 +275,7 @@ your toaster.
         "twisted.cred",
         "twisted.enterprise",
         "twisted.im",
+        "twisted.inetd",
         "twisted.internet",
         "twisted.issues",
         "twisted.issues.ui",
