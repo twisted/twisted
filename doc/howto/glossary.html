@@ -43,6 +43,10 @@ give you control over how a client connection reconnects.  See
 <code class="API">twisted.internet.interfaces.IConnector</code> and 
 <a href="clients.html">Writing Clients</a>.</dd>
 
+<dt>Consumer</dt>
+<dd>An object that consumes data from a Producer.  See 
+<code class="API">twisted.internet.interfaces.IConsumer</code>.</dd>
+
 <dt>Cred</dt>
 <dd>Twisted's authentication API, <code class="API">twisted.cred</code>.  See 
 <a href="cred.html">Introduction to Twisted Cred</a> and 
@@ -106,7 +110,8 @@ standard <code>pickle</code> module, but is more network-friendly.  See
 <dd>A debugging/administration interface to a Twisted application.  See <a href="manhole.html">Debugging with Manhole</a>.</dd>
 
 <dt>Marmalade</dt>
-<dd>An XML-based serialisation module.  See <code class="API">twisted.persisted.marmalade</code>.</dd>
+<dd>An XML-based serialisation module.  See 
+<code class="API">twisted.persisted.marmalade</code>.</dd>
 
 <dt>Microdom</dt>
 <dd>A partial DOM implementation using SUX.  It is simple and pythonic, rather
@@ -127,6 +132,11 @@ perspective is an Identity's view on a Service.</dd>
 <dd>The high-level object layer of Twisted Spread, implementing semantics for
 method calling and object copying, caching, and referencing.  See 
 <code class="API">twisted.spread.pb</code>.</dd>
+
+<dt>Producer</dt>
+<dd>An object that generates data a chunk at a time, usually to be processed by
+a Consumer.  See 
+<code class="API">twisted.internet.interfaces.IProducer</code>.</dd>
 
 <dt>Protocol</dt>
 <dd>A instance of <code class="API">twisted.internet.protocol.Protocol</code>.
@@ -154,8 +164,8 @@ can have dynamically generated content.</dd>
 
 <dt>ROW</dt>
 <dd><em>R</em>elational <em>O</em>bject <em>W</em>rapper, an object-oriented
-interface to a relational database.  See <a href="row.html">Twisted Enterprise Row
-Objects</a>.</dd>
+interface to a relational database.  See <a href="row.html">Twisted Enterprise
+Row Objects</a>.</dd>
 
 <dt>Service</dt>
 <dd>A <code class="API">twisted.cred.service.Service</code>.  See 
@@ -173,17 +183,18 @@ Perspective Broker</a>.</dd>
 <code class="API">twisted.spread.sturdy</code>.</dd>
 
 <dt>SUX</dt>
-<dd><em>S</em>mall <em>U</em>ncomplicated <em>X</em>ML, Twisted's simple XML parser
-written in pure Python.  See 
+<dd><em>S</em>mall <em>U</em>ncomplicated <em>X</em>ML, Twisted's simple XML
+parser written in pure Python.  See 
 <code class="API">twisted.protocols.sux</code>.</dd>
 
 <dt>TAP</dt>
-<dd><em>T</em>wisted <em>A</em>pplication <em>P</em>ickle.  A serialised application
-that created with <code>mktap</code> and runnable by <code>twistd</code>.  See
-<a href="basics.html">Using the Utilities</a>.</dd>
+<dd><em>T</em>wisted <em>A</em>pplication <em>P</em>ickle.  A serialised
+application that created with <code>mktap</code> and runnable by
+<code>twistd</code>.  See <a href="basics.html">Using the Utilities</a>.</dd>
 
 <dt>Tendril</dt>
-<dd>A bridge between Twisted Words and IRC.  See <code class="API">twisted.words.tendril</code>.</dd>
+<dd>A bridge between Twisted Words and IRC.  See 
+<code class="API">twisted.words.tendril</code>.</dd>
 
 <dt>Twisted Matrix Laboratories</dt>
 <dd>The team behind Twisted.  
@@ -200,9 +211,10 @@ Broker protocol as its native communication style.  See
 <code class="API">twisted.words</code>.</dd>
 
 <dt>Woven</dt>
-<dd><em>W</em>eb <em>O</em>bject <em>V</em>isualization <em>En</em>vironment.  A web
-templating system based on XML and the Model-View-Controller design pattern.
-See <a href="woven.html">Developing Componentized Applications using Woven</a>.</dd>
+<dd><em>W</em>eb <em>O</em>bject <em>V</em>isualization <em>En</em>vironment.
+A web templating system based on XML and the Model-View-Controller design
+pattern.  See <a href="woven.html">Developing Componentized Applications using
+Woven</a>.</dd>
 
 <dt>Zoot</dt>
 <dd>Twisted's Gnutella implementation (currently very incomplete).  See 
