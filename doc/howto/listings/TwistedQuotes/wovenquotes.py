@@ -7,6 +7,8 @@ from twisted.python import domhelpers
 from TwistedQuotes import quoters
 
 
+import cgi
+
 class MQuote(model.WModel):
     def __init__(self, filename):
         model.WModel.__init__(self)
@@ -14,6 +16,7 @@ class MQuote(model.WModel):
         self._quoter = quoters.FortuneQuoter([filename])
         self.quote = ""
         self.title = "Quotes Galore!"
+        self.newQuote = ""
     
     def updateQuote(self):
         self.quote = self._quoter.getQuote()
@@ -31,7 +34,7 @@ class QuoteWidget(widgets.Widget):
         Text widget to self. I then rely on Widget.generateDOM to convert
         from Widgets into the Document Object Model.
         """
-        self.add(widgets.Text(data))
+        self.add(widgets.Text(cgi.escape(data)))
 
 
 class VQuote(view.WView):
