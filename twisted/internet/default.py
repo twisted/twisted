@@ -16,11 +16,7 @@ import warnings
 warnings.warn("twisted.internet.default is deprecated. Use posixbase or selectreactor instead.", category=DeprecationWarning)
 
 # Backwards compat
-import posixbase
-PosixReactorBase = posixbase.PosixReactorBase
-
-import selectreactor
-SelectReactor = selectreactor.SelectReactor
-install = selectreactor.install
+from posixbase import PosixReactorBase
+from selectreactor import SelectReactor, install
 
 __all__ = ["install", "PosixReactorBase", "SelectReactor"]
