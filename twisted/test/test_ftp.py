@@ -21,6 +21,7 @@ from twisted.protocols import basic
 from twisted.internet import reactor, protocol, defer, interfaces
 from twisted.cred import error, portal, checkers, credentials
 from twisted.python import log, components, failure
+from twisted.internet.address import IPv4Address
 
 from twisted.protocols import ftp, loopback
 
@@ -405,10 +406,15 @@ class TestFTPServer(FTPTestCase):
     def testPASV(self):
         cli, sr, iop, send = self.cnx.getCSTuple()
         self.cnx.loadAvatar()
+        # Hack getHost to make it look like there's a real TCP connection, even
+        # though there isn't really.
+        self.cnx.s.transport.getHost = lambda: IPv4Address('TCP', '1.2.3.4', 0)
         self.cnx.s.ftp_PASV()
         iop.flush()
         reply = cli.lines[-1]
-        self.assert_(re.search(r'227 =.*,[0-2]?[0-9]?[0-9],[0-2]?[0-9]?[0-9]',cli.lines[-1]))
+        # Make sure the reply has the right response code, and the expected IP
+        # address.
+        self.assert_(reply.startswith('227 =1,2,3,4,'))
         self.cnx.s.cleanupDTP()
 
     def testTYPE(self):

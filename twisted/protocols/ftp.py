@@ -628,7 +628,8 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         if self.dtpTxfrMode == PASV:    
             self.dtpPort = reactor.listenTCP(0, self.dtpFactory)
         elif self.dtpTxfrMode == PORT: 
-            self.dtpPort = reactor.connectTCP(self.dtpHostPort[1], self.dtpHostPort[2])
+            host, port = self.dtpHostPort
+            self.dtpPort = reactor.connectTCP(host, port, self.dtpFactory)
         else:
             log.err('SOMETHING IS SCREWY: _createDTP')
 
@@ -902,17 +903,22 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         if self.dtpFactory:                 # if we have a DTP port set up
             self.cleanupDTP()               # lose it 
         if not self.dtpFactory:             # if we haven't set up a DTP port yet (or just closed one)
+            # XXX: When would "if not self.dtpFactory" ever be false at this
+            #      point?  I suspect this if statement is redundant.  Otherwise,
+            #      the code and comments in this function are very confusing!
+            #        - spiv, 2005-04-02.
             try:
                 self._createDTP()
-            except OSError, (e,):           # we're watching for a could not listen on port error
-                log.msg("CRITICAL BUG!! THIS SHOULD NOT HAVE HAPPENED!!! %s" % e)
-        sockname = self.transport.getHost()                # Use the ip from the PI-connection
-        localip = string.replace(sockname[1], '.', ',')    # format the reply 
-        lport = self.dtpPort.socket.getsockname()[1]
-        lp1 = lport / 256                                  # convert port into two 8-byte values
-        lp2, lp1 = str(lport - lp1*256), str(lp1)
-        self.reply(ENTERING_PASV_MODE, "%s,%s,%s" % (localip, lp1, lp2))
-        log.debug("passive port open on: %s:%s" % (localip, lport), level="debug")
+            except error.CannotListenError:
+                self.reply(CANT_OPEN_DATA_CNX)
+                return
+        # Use the control connection's socket to determine a sensible local IP
+        # address (asking the DTP port might give something useless like
+        # 0.0.0.0).
+        host = self.transport.getHost().host
+        port = self.dtpPort.getHost().port
+        self.reply(ENTERING_PASV_MODE, encodeHostPort(host, port))
+        log.debug("passive port open on: %s:%s" % (host, port), level="debug")
 
     def ftp_PORT(self, params):
         log.debug('ftp_PORT')
@@ -921,10 +927,20 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         if self.dtpFactory:                 # if we have a DTP port set up
             self.cleanupDTP()               # lose it 
         if not self.dtpFactory:             # if we haven't set up a DTP port yet (or just closed one)
+            # XXX: When would "if not self.dtpFactory" ever be false at this
+            #      point?  I suspect this if statement is redundant.  Otherwise,
+            #      the code and comments in this function are very confusing!
+            #        - spiv, 2005-04-02.
             try:
                 self._createDTP()
             except OSError, (e,):           # we're watching for a could not listen on port error
+                # XXX: Eh?  "could not listen on port error"?  PORT commands
+                #      connect to sockets, not make listening ports!  This code
+                #      makes no sense.
+                #        - spiv, 2005-04-02
                 log.msg("CRITICAL BUG!! THIS SHOULD NOT HAVE HAPPENED!!! %s" % e)
+                self.reply(CANT_OPEN_DATA_CNX)
+                return
         self.reply(PORT_MODE_OK)
 
     def ftp_CWD(self, params):
@@ -1581,6 +1597,10 @@ def decodeHostPort(line):
     port = (int(e)<<8) + int(f)
     return host, port
 
+def encodeHostPort(host, port):
+    numbers = host.split('.') + [str(port >> 8), str(port % 256)]
+    return ','.join(numbers)
+
 
 class FTPDataPortFactory(ServerFactory):
     """Factory for data connections that use the PORT command
@@ -1840,8 +1860,7 @@ class FTPClient(basic.LineReceiver):
         # Construct crufty FTP magic numbers that represent host & port
         host = self.transport.getHost()[1]
         port = listener.getHost()[2]
-        numbers = string.split(host, '.') + [str(port >> 8), str(port % 256)]
-        portCmd.text = 'PORT ' + string.join(numbers,',')
+        portCmd.text = 'PORT ' + encodeHostPort(host, port)
 
     def escapePath(self, path):
         """Returns a FTP escaped path (replace newlines with nulls)"""
