@@ -1,7 +1,9 @@
 from Tkinter import *
+import tkFileDialog
+import SimpleDialog
 from twisted.internet import tkinternet #, tcp
 from twisted.spread.ui import tkutil
-from twisted.words.ui import im3, gateways
+from twisted.words.ui import im, gateways
 #from twisted.protocols import telnet
 import time, os, string
 import sys
@@ -86,12 +88,76 @@ class JoinGroup(Toplevel):
             self.destroy()
 
 
+class AskSendFile(Toplevel):
+    def __init__(self,handler,gateway,user,file,numfiles,size,description,addy):
+        Toplevel.__init__(self)
+        self.title("Instance Messenger File Transfer")
+        self.handler=handler
+        self.gateway=gateway
+        self.user=user
+        self.file=file
+        self.numfiles=numfiles
+        text="""User %s wants to send you %s,
+which consists of %s files(s), with a total size of %s bytes.
+"""%(user,file,numfiles,size)
+        if description:
+            text=text+"""Description:
+%s
+"""%description
+        text=text+"Do you wish to accept this transfer?\n"
+        Message(self,text=text,aspect=400).pack(expand=1,fill=BOTH)
+        f=Frame(self)
+        f.pack()
+        Button(f,text="Yes",command=self.yes).pack(side=LEFT, fill=BOTH, expand=1)
+        Button(f,text="No",command=self.no).pack(side=LEFT, fill=BOTH, expand=1)
+        self.protocol('WM_DELETE_WINDOW',self.no)
+        
+    def yes(self):
+        self.destroy()
+        if self.numfiles==1:
+            filename=tkFileDialog.asksaveasfilename(title="Instance Messenger File Transfer",
+                                                initialfile=self.file)
+            if filename:
+                self.handler.gotSendFileName(self.gateway,self.user,self.file,filename)
+        else:
+            directory=tkutil.askdirectory(title="Instance Messenger File Transfer",
+                                          initialdir="/")
+            if directory:
+                self.handler.gotSendFileName(self.gateway,self.user,self.file,directory)
+
+    def no(self):
+        self.destroy()
+        self.handler.im.send(self.gateway,"cancelSendFile",user=self.user,
+                             file=self.file)
+            
+class FileTransfer(Toplevel):
+    def __init__(self,handler,gateway,user,file,**options):
+        Toplevel.__init__(self)
+        self.handler=handler
+        self.gateway=gateway
+        self.user=user
+        self.file=file
+        self.title("%s - %s - %s - Instance Messenger" % (user,file,gateway.name))
+        Label(self,text="%s from %s on %s"%(file,user,gateway.name)).pack()
+        self.var=StringVar()
+        self.label=Label(self,textvariable=self.var,justify=RIGHT)
+        self.label.pack()
+        self.w=apply(tkutil.ProgressBar,(self,),options)
+        self.w.frame.pack()
+        Button(self,text="Cancel",command=self.cancel).pack()
+        self.protocol('WM_DELETE_WINDOW',self.cancel)
+    def update(self,min,max=None):
+        self.var.set("%s / %s" % (min,max))
+        self.w.updateProgress(min,max)
+    def cancel(self):
+        self.handler.cancelFile(self.gateway,self.user,self.file)
+
 class Conversation(Toplevel):
-    def __init__(self, im, gateway, target, **params):
+    def __init__(self, imclient, gateway, target, **params):
         apply(Toplevel.__init__, (self,), params)
 
         self.title("%s - %s - Instance Messenger" % (target, gateway.name))
-        self.im=im
+        self.im=imclient
         self.gateway=gateway
         self.target=target
 
@@ -183,10 +249,12 @@ class Conversation(Toplevel):
         self.out.see(END)
 
 class ContactList(Toplevel):
-    def __init__(self,im,*args,**kw):
+    def __init__(self,imclient,*args,**kw):
         apply(Toplevel.__init__,(self,)+args,kw)
 
-        self.im=im
+        self.im=imclient
+        self.files={}
+        self.directories={}
 
         menu=Menu(self)
         self.config(menu=menu)
@@ -194,7 +262,7 @@ class ContactList(Toplevel):
         menu.add_cascade(label="My IM",menu=myim)
         statuschange=Menu(myim)
         myim.add_cascade(label="Change Status",menu=statuschange)
-        for k in im3.STATUSES:
+        for k in im.STATUSES:
             statuschange.add_command(label=k,command=lambda i=self.im,s=k:i.changeStatus(s))    
         myim.add_command(label="Account Manager...",command=lambda i=self.im:i.am.deiconify())
         myim.add_command(label="Start Conversation...",command=lambda i=self.im:StartConversation(i))
@@ -222,6 +290,9 @@ class ContactList(Toplevel):
         self.columnconfigure(0,weight=1)
         self.columnconfigure(1,weight=0)
         self.rowconfigure(1,weight=0)
+
+        self.im.im.connect(self.event_sendFileRequest,"sendFileRequest")
+        self.im.im.connect(self.event_receiveSendFile,"receiveSendFile")
 
     def close(self):
         self.tk.quit()
@@ -296,6 +367,51 @@ class ContactList(Toplevel):
             user=None
             state=None
         func(self.im,gateway,user,state)
+
+    def event_sendFileRequest(self,gateway,user,file,numfiles,size,description,address):
+        AskSendFile(self,gateway,user,file,numfiles,size,description,address)
+
+    def gotSendFileName(self,gateway,user,file,savename):
+        self.im.im.send(gateway,"acceptSendFile",user=user,file=file)
+        if file[-1]=="*":
+            self.directories[user+file[:-1]]=[savename,None]
+        else:
+            self.files[user+file]=[open(savename,"wb"),
+                               FileTransfer(self,gateway,user,file)]
+
+    def event_receiveSendFile(self,gateway,user,file,chunk,sofar,total):
+        if "*" in file:
+            dir,filename=string.split(file,"*")
+            directory,window=self.directories[user+dir]
+            name=os.path.join(directory,filename)
+            if not window:
+                window=FileTransfer(self,gateway,user,name)
+                self.directories[user+dir][1]=window
+            try:
+                open(name,"ab").write(chunk)
+            except IOError:
+                open(name,"wb").write(chunk)
+            window.update(sofar,total)
+            if sofar==total:
+                window.destroy()
+                self.directories[user+dir][1]=None
+        else:
+            filename=file
+            file,window=self.files[user+filename]
+            file.write(chunk)
+            window.update(sofar,total)
+            if sofar==total:
+                file.close()
+                window.destroy()
+                del self.files[user+filename]
+                return
+
+    def cancelFile(self,gateway,user,filename):
+        self.im.im.send(gateway,"cancelSendFile",user=user,file=filename)
+        file,window=self.files[user+filename]
+        file.close()
+        window.destroy()
+        del self.files[user+filename]
 
 class GroupSession(Toplevel):
     def __init__(self, im, name, gateway, **params):
@@ -443,7 +559,7 @@ class GroupSession(Toplevel):
     def nickComplete(self, e):
         start=self.input.get("1.0",END)[:-1]
         users=self.userlist.get(0,END)
-        result=im3.nickComplete(start,users)
+        result=im.nickComplete(start,users)
         if type(result)==type(""):
             self.input.delete("1.0",END)
             self.input.insert(END,result+": ")
@@ -520,7 +636,7 @@ class AddAccount(Toplevel):
             o[k]=self.options[k].get()
         auto=self.autologon.get()
         savepass=self.savepass.get()
-        self.acctman._addaccount(im3.Account(self.gateway,o,auto,savepass))
+        self.acctman._addaccount(im.Account(self.gateway,o,auto,savepass))
         self.destroy()
 
 class ModifyAccount(Toplevel):
@@ -646,7 +762,7 @@ class AccountManager(Toplevel):
 
     def logonAccount(self,account):
         self._modifyaccount(account,"Attempting")
-        missing=im3.logonAccount(self.im,account)
+        missing=im.logonAccount(self.im,account)
         while missing:
             for foo,key,bar in missing:
                 if key[:4]=="pass":
@@ -657,10 +773,10 @@ class AccountManager(Toplevel):
                     value=tkSimpleDialog.askstring("Enter %s for %s"%(foo, \
                                     account.options["username"]), foo+": ")
                 account.options[key]=value
-            missing=im3.logonAccount(self.im,account)
+            missing=im.logonAccount(self.im,account)
 
     def logoffAccount(self,account):
-        im3.logoffAccount(self.im,account)
+        im.logoffAccount(self.im,account)
 
     def deleteAccount(self):
         index=self.list.index(ACTIVE)
@@ -675,50 +791,50 @@ class AccountManager(Toplevel):
                 self._modifyaccount(account,"True")
 
     def event_detach(self,gateway):
-        global im
-        if im.cl!=None: im.cl.removeGateway(gateway)
+        global imclient
+        if imclient.cl!=None: imclient.cl.removeGateway(gateway)
         for account in self.accounts:
             if account.gatewayname==gateway.protocol and account.options["username"]==gateway.logonUsername:
                 self._modifyaccount(account,"False")
 
 def handleError(gateway,event_name,message):
-    global im
+    global imclient
     strgate=str(gateway)
-    for key,value in im.conversations.items():
+    for key,value in imclient.conversations.items():
         if key[:len(strgate)]==strgate:
             value.destroy()
-            im=endConversation(gateway,value.target)
-    for key,value in im.groups.items():
+            imclient.endConversation(gateway,value.target)
+    for key,value in imclient.groups.items():
         if key[:len(strgate)]==strgate:
             value.destroy()
             del im.groups[strgate+value.name]
 
 def main():
-    global im
+    global imclient
     root=Tk()
     root.withdraw()
     tkinternet.install(root)
-    im=im3.InstanceMessengerGUI(im3.InstanceMessenger(),
+    imclient=im.InstanceMessengerGUI(im.InstanceMessenger(),
             Conversation, ContactList, GroupSession, ErrorWindow)
 #    im.logging=1
-    im.am=AccountManager(im)
+    imclient.am=AccountManager(imclient)
     path=os.path.expanduser("~"+os.sep+".imsaved")
     try:
         f=open(path,"r")
-        im.am.loadState(im3.getState(f))
+        imclient.am.loadState(im.getState(f))
         f.close()
     except IOError:
         pass
-    im.im.connect(handleError,"error")
+    imclient.im.connect(handleError,"error")
 #    t=telnet.ShellFactory()
 #    import __main__
 #    t.namespace=__main__.__dict__
 #    t.namespace['im']=im
 #    tcp.Port(10023,t).startListening()
     mainloop()
-    im3.disconnectGateways(im)
+    im.disconnectGateways(imclient)
     f=open(path,"w")
-    im3.saveState(f,im.am.getState())
+    im.saveState(f,imclient.am.getState())
     tkinternet.stop()
 
 if __name__=="__main__": main()

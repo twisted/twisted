@@ -63,6 +63,7 @@ class TOCGateway(gateway.Gateway,toc.TOCClient):
         self.logonUsername=username
         self._chatmapping={}
         self._roomid={}
+        self._rvous={}
 
     def _debug(self,text):
         pass
@@ -159,6 +160,22 @@ class TOCGateway(gateway.Gateway,toc.TOCClient):
             del self._chatmapping[toc.normalize(roomname)]
         del self._roomid[roomid]
         self.leftGroup(roomname)
+
+    def rvousProposal(self,type,cookie,user,vip,port,**kw):
+        self.updateName(user)
+        if type=="send":
+            file=kw['name']
+            numfiles=kw['files']
+            size=kw['size']
+            desc=dehtml(kw['description'])
+            self._rvous[user+file]=cookie
+            self.im.send(self,"sendFileRequest",user=user,file=file, numfiles=numfiles,
+                         size=size,description=desc,
+                         address=vip+":"+str(port))
+
+    def receiveBytes(self,user,file,chunk,sofar,total):
+        self.im.send(self,"receiveSendFile",user=user,file=file,chunk=chunk,
+                     sofar=sofar,total=total)
     
     def writeNewConfig(self):
         self.set_config(self._savedmode,self._savedlist,self._permitlist,self._denylist)
@@ -219,6 +236,14 @@ class TOCGateway(gateway.Gateway,toc.TOCClient):
                 id=k
         if not id: return
         self.chat_say(id,message)
+
+    def event_acceptSendFile(self,user,file):
+        cookie=self._rvous[user+file]
+        self.rvous_accept(cookie)
+
+    def event_cancelSendFile(self,user,file):
+        cookie=self._rvous[user+file]
+        self.rvous_cancel(cookie)
 
 def warnUser(im,gateway,user,text):
     gateway.evil(user)

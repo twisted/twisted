@@ -964,7 +964,7 @@ class TOCClient(protocol.Protocol):
             description=""
         subtype,numfiles,size=struct.unpack("!HHI",tlvs['10001'][:8])
         name=tlvs['10001'][8:-4]
-        if numfiles>1:
+        while name[-1]=='\000':
             name=name[:-1]
         self._cookies[cookie]=[user,SEND_FILE_UID,pip,port,{'name':name}]
         self.rvousProposal("send",cookie,user,vip,port,description=description,
@@ -1268,11 +1268,16 @@ class TOCClient(protocol.Protocol):
 
     def rvous_accept(self,cookie):
         user,uuid,pip,port,d=self._cookies[cookie]
-        del self._cookies[cookie]
         self.sendFlap(2,"toc_rvous_accept %s %s %s" % (normalize(user),
                                                      cookie,uuid))
         if uuid==SEND_FILE_UID:
-            tcp.Client(pip,port,SendFileTransfer(self,cookie,d["name"],user))
+            tcp.Client(pip,port,SendFileTransfer(self,cookie,user,d["name"]))
+
+    def rvous_cancel(self,cookie):
+        user,uuid,pip,port,d=self._cookies[cookie]
+        self.sendFlap(2,"toc_rvous_accept %s %s %s" % (normalize(user),
+                                                       cookie,uuid))
+        del self._cookies[cookie]
 
 class SendFileTransfer(protocol.Protocol):
     header_fmt="!4s2H8s6H10I32s3c69s16s2H64s"
@@ -1297,6 +1302,8 @@ class SendFileTransfer(protocol.Protocol):
                 self.name=self.filename
             else:
                 self.name=self.filename+self.hdr[-1]
+                while self.name[-1]=="\000":
+                    self.name=self.name[:-1]
         if not data: return
         self.sofar=self.sofar+len(data)
         self.client.receiveBytes(self.user,self.name,data,self.sofar,self.hdr[11])
