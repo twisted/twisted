@@ -64,38 +64,22 @@ def createApplicationDecoder(config):
                 sys.exit()
         filename = os.path.abspath(config['python'])
         mode = 'r'
-    elif config['xml']:
-        def decode(filename, data):
-            from twisted.persisted.marmalade import unjellyFromXML
-            log.msg('<Loading file="%s" />' % (filename,))
-            sys.modules['__main__'] = EverythingEphemeral()
-            application = unjellyFromXML(StringIO.StringIO(data))
-            sys.modules['__main__'] = mainMod
-            styles.doUpgrade()
-            return application
-        filename = config['xml']
-        mode = 'r'
-    elif config['source']:
-        def decode(filename, data):
-            from twisted.persisted.aot import unjellyFromSource
-            log.msg("Loading %s..." % (filename,))
-            sys.modules['__main__'] = EverythingEphemeral()
-            application = unjellyFromSource(StringIO.StringIO(data))
-            sys.modules['__main__'] = mainMod
-            styles.doUpgrade()
-            return application
-        filename = config['source']
-        mode = 'r'
     else:
+        if config['xml']:
+            from twisted.persisted.marmalade import unjellyFromXML as load
+        elif config['source']:
+            from twisted.persisted.aot import unjellyFromSource as load
+        else:
+            load=pickle.load
         def decode(filename, data):
             log.msg("Loading %s..." % (filename,))
             sys.modules['__main__'] = EverythingEphemeral()
-            application = pickle.loads(data)
+            application = load(StringIO.StringIO(data))
             sys.modules['__main__'] = mainMod
             styles.doUpgrade()
             return application
-        filename = config['file']
-        mode = 'rb'
+        filename = config['xml'] or config['source'] or config['file']
+        mode = 'r'+((config['file'] and 'b') or '')
     return filename, decode, mode
 
 
