@@ -30,6 +30,7 @@ import types
 import re
 from cStringIO import StringIO
 from math import floor
+from zope.interface import implements
 
 # Twisted Imports
 from twisted.internet import abstract, reactor, protocol, error, defer
@@ -286,7 +287,7 @@ def _getFPName(fp):
     # stringIO objects have no .name attr
     return getattr(fp, 'name', '<string>')
 
-class IDTPParent(object):
+class IDTPParent(components.Interface):
     """An interface for protocols that wish to use a DTP sub-protocol and
     factory. 
 
@@ -302,7 +303,7 @@ class IDTPParent(object):
         """performs cleanup on the dtpInstance once the transfer is complete"""
         pass
 
-class IDTPFactory(object):
+class IDTPFactory(components.Interface):
     """An interface for protocol.Factories 
 
     @ivar peerCheck: perform checks to make sure the ftp-pi's peer is the same
@@ -380,7 +381,8 @@ class DTP(object, protocol.Protocol):
         self.isConnected = False
 
 class DTPFactory(protocol.Factory): 
-    __implements__ = (IDTPFactory,)
+    implements(IDTPFactory)
+    
     # -- configuration variables --
     peerCheck = True
 
@@ -428,6 +430,8 @@ class DTPFactory(protocol.Factory):
         log.msg('DTPFactory.setTimeout set to %s seconds' % seconds)
         self.delayedCall = reactor.callLater(seconds, self.timeoutFactory)
 
+components.backwardsCompatImplements(DTPFactory)
+
 # -- FTP-PI (Protocol Interpreter) --
 
 
@@ -456,7 +460,8 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
     @ivar dtpInetPort: dtpPort.getHost()
     @ivar dtpHostPort: cluient (address, port) to connect to on a PORT command
     """
-    __implements__ = (IDTPParent,IProtocol,)
+    implements(IDTPParent)
+    
     # FTP is a bit of a misonmer, as this is the PI - Protocol Interpreter
     blockingCommands = ['RETR', 'STOR', 'LIST', 'PORT']
     reTelnetChars = re.compile(r'(\\x[0-9a-f]{2}){1,}')
@@ -984,6 +989,8 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         self.transport.loseConnection()
         log.debug("Client Quit")
 
+components.backwardsCompatImplements(FTP)
+
 
 class FTPFactory(protocol.Factory):
     """A factory for producing ftp protocol instances
@@ -1233,7 +1240,7 @@ def _testPermissions(uid, gid, spath, mode='r'):
 
 class FTPAnonymousShell(object):
     """Only works on POSIX platforms at the moment."""
-    __implements__ = (IFTPShell,)
+    implements(IFTPShell)
 
     uid      = None        # uid of anonymous user for shell
     gid      = None        # gid of anonymous user for shell
@@ -1447,8 +1454,12 @@ We will continue using the user %s.
     def nlist(self, path):
         raise CmdNotImplementedError()
 
+components.backwardsCompatImplements(FTPAnonymousShell)
+
+
 class FTPRealm:
-    __implements__ = (portal.IRealm,)
+    implements(portal.IRealm)
+    
     clientwd = '/'
     user = 'anonymous'
     logout = None
@@ -1476,7 +1487,7 @@ class FTPRealm:
             return IFTPShell, avatar, avatar.logout
         raise NotImplementedError("Only IFTPShell interface is supported by this realm")
 
-
+components.backwardsCompatImplements(FTPRealm)
 
 
 # --- FTP CLIENT  -------------------------------------------------------------
@@ -1544,7 +1555,7 @@ class ProtocolWrapper(Protocol):
 
 
 class SenderProtocol(Protocol):
-    __implements__ = Protocol.__implements__ + (IFinishableConsumer,)
+    implements(IFinishableConsumer)
 
     def __init__(self):
         # Fired upon connection
@@ -1580,6 +1591,8 @@ class SenderProtocol(Protocol):
 
     def finish(self):
         self.transport.loseConnection()
+
+components.backwardsCompatImplements(SenderProtocol)
     
     
 def decodeHostPort(line):

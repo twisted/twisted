@@ -25,6 +25,7 @@ from __future__ import  nested_scopes
 
 import sys, types, os.path, re
 from StringIO import StringIO
+from zope.interface import implements
 
 from twisted import internet
 from twisted.trial import unittest
@@ -254,7 +255,7 @@ bogusDirs = {
 }
 
 class BogusAvatar(object):
-    __implements__ = (ftp.IFTPShell,)
+    implements(ftp.IFTPShell)
 
     filesize = None
     
