@@ -26,6 +26,7 @@ namespace Twisted
 	virtual void resumeProducing() {}
 	virtual void pauseProducing() {}
 	virtual void stopProducing() {}
+	~Producer() {}
     };
 
     // The resulting Python class should be wrapped in to the transports
