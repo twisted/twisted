@@ -478,7 +478,7 @@ class Service(pb.Service, styles.Versioned):
     def deleteBot(self, bot):
         bot.voice.detached(bot, None)
         self.bots.remove(bot)
-        self.perspectives.remove(bot)
+        del self.perspectives[bot]
 
     createParticipant = createPerspective
 
