@@ -85,7 +85,11 @@ class Gtk2Reactor(default.PosixReactorBase):
             self.__run = gtk.main
 
     def initThreads(self):
-        gobject.threads_init()
+        if hasattr(gobject, "threads_init"):
+            # recent versions of python-gtk expose this. python-gtk=2.4.1
+            # (wrapping glib-2.4.7) does. python-gtk=2.0.0 (wrapping
+            # glib-2.2.3) does not.
+            gobject.threads_init()
         default.PosixReactorBase.initThreads(self)
     
     # The input_add function in pygtk1 checks for objects with a
