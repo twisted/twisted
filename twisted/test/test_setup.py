@@ -14,6 +14,8 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from twisted.python.compat import *
+
 import os
 import setup
 from twisted.trial import unittest
@@ -29,18 +31,32 @@ class CheckingPackagesTestCase(unittest.TestCase):
 
     def testPackages(self):
         """Making sure all packages are in setup"""
-        l = []
+        foundPackages = []
         os.chdir(os.path.dirname(setup.__file__))
-        os.path.walk('twisted',
-                     lambda l,d,n:not d.endswith('CVS') and l.append(d),
-                     l)
-        l = [x.replace(os.sep, '.') for x in l]
-        p = setup.setup_args['packages']
+        def visit(dirlist, directory, files):
+            if directory.endswith('CVS'):
+                # Ignore CVS administrative directories.
+                return
+            if '__init__.py' in files:
+                # This directory is a package.
+                dirlist.append(directory)
+            else:
+                # There is a directory, but it's not a package, so it has no
+                # bearing on whether or not setup_args['packages'] is correct
+                # or not.
+                pass
+        os.path.walk('twisted', visit, foundPackages)
+        foundPackages = [x.replace(os.sep, '.') for x in foundPackages]
+        setupPackages = setup.setup_args['packages']
 
-        for package in p:
-            l.remove(package)
-        # special treatment of cReactor
-        l.remove('twisted.internet.cReactor')
-        self.failIf(l, "Directories found which are not in setup.py: %s\n"
-                    "(Make sure you checked out the code with cvs -P option.)"
-                    % (l,))
+        for package in setupPackages:
+            try:
+                foundPackages.remove(package)
+            except ValueError:
+                self.fail("Package %r listed in setup.py but was not found in"
+                          " the source tree." % (package,))
+
+        # Everything in foundPackages should have been removed by its match
+        # in setupPackages, nothing should be left.
+        self.failIf(foundPackages, "Packages found which are not in setup.py: "
+                    "%s\n" % (foundPackages,))
