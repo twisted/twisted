@@ -316,8 +316,8 @@ class TextReporter(Reporter):
         if self.imports:
             self.writeln()
             for name, exc in self.imports:
-                self.writeln('Could not import %s: %s: %s' 
-                             % (name, exc.__class__.__name__, exc))
+                self.writeln('Could not import %s: %s' 
+                             % (name, exc.args[0]))
             self.writeln()
 
 class VerboseTextReporter(TextReporter):
