@@ -24,7 +24,7 @@ be afraid.
 
 <p>
 The application we are looking at is a "finger" service, along the lines of the
-familiar service traditionally provided by UNIX(tm) servers. We will extend
+familiar service traditionally provided by UNIX&trade; servers. We will extend
 this service slightly beyond the standard, in order to demonstrate some of
 Twisted's higher-level features.
 </p>
@@ -64,7 +64,7 @@ We define a protocol which does not respond to any events. Thus, connections to
 <a href="listings/finger03.py" class="py-listing">finger03.py</a>
 
 <p>Here we add to the protocol the ability to respond to the event of beginning
-a connection -- by terminating it.  Perhaps not an interesting behaviour, but
+a connection -- by terminating it.  Perhaps not an interesting behavior, but
 it is already close to behaving according to the letter of the protocol. After
 all, there is no requirement to send any data to the remote connection in the
 standard.  The only problem, as far as the standard is concerned, is that we
@@ -100,11 +100,11 @@ of course.</p>
 
 <a href="listings/finger06.py" class="py-listing">finger06.py</a>
 
-<p>The same behaviour, but finally we see what usefuleness the
+<p>The same behavior, but finally we see what usefulness the
 factory has: as something that does not get constructed for
 every connection, it can be in charge of the user database.
 In particular, we won't have to change the protocol if
-the user database backend changes.</p>
+the user database back-end changes.</p>
 
 
 <h2>Output from Non-empty Factory</h2>
@@ -149,7 +149,7 @@ overflows, as the networking is done safely.</p>
 <p>The web. That invention which has infiltrated homes around the
 world finally gets through to our invention. Here we use the built-in
 Twisted web client, which also returns a deferred. Finally, we manage
-to have examples of three different database backends, which do
+to have examples of three different database back-ends, which do
 not change the protocol class. In fact, we will not have to change
 the protocol again until the end of this talk: we have achieved,
 here, one truly usable class.</p>
@@ -163,7 +163,7 @@ here, one truly usable class.</p>
 who wants to run a finger server with root privileges? Well, the
 common solution is "privilege shedding": after binding to the network,
 become a different, less privileged user. We could have done it ourselves,
-but Twisted has a builtin way to do it. Create a snippet as above,
+but Twisted has a built-in way to do it. Create a snippet as above,
 defining an application object. That object will have uid and gid
 attributes. When running it (later we will see how) it will bind
 to ports, shed privileges and then run.</p>
@@ -198,7 +198,7 @@ application developer can concentrate on writing his networking code.
 <p>Now that port 1079 is free, maybe we can run on it a different
 server, one which will let people set their messages. It does
 no access control, so anyone who can login to the machine can
-set any message. We assume this is the desired behaviour in
+set any message. We assume this is the desired behavior in
 our case. Testing it can be done by simply:
 </p>
 
@@ -253,10 +253,10 @@ and overriding it dynamically is possible with getChild.</p>
 <a href="listings/finger16.py" class="py-listing">finger16.py</a>
 
 <p>This is the first time there is client code. IRC clients often
-act a lot like servers: responding to events form the network.
+act a lot like servers: responding to events from the network.
 The reconnecting client factory will make sure that severed links
 will get re-established, with intelligent tweaked exponential
-backoff algorithms. The irc client itself is simple: the only
+back-off algorithms. The IRC client itself is simple: the only
 real hack is getting the nickname from the factory in connectionMade.</p>
 
 
@@ -349,14 +349,14 @@ application.connectTCP('irc.freenode.org', 6667, i)
 application.listenTCP(1079, IFingerSetterFactory(f), interface='127.0.0.1')
 </pre>
 
-<p>Here we show just how convenient it is to implement new backends
+<p>Here we show just how convenient it is to implement new back-ends
 when we move to a component based architecture. Note that here
 we also use an interface we previously wrote, FingerSetterFactory,
 by supporting one single method. We manage to preserve the service's
 ignorance of the network.</p>
 
 
-<h2>Another Backend</h2>
+<h2>Another Back-end</h2>
 
 <pre class="python">
 class LocalFingerService(app.ApplicationService):
@@ -378,10 +378,10 @@ application.connectTCP('irc.freenode.org', 6667, i)
 </pre>
 
 <p>We have already wrote this, but now we get more for less work:
-the network code is completely separate from the backend.</p>
+the network code is completely separate from the back-end.</p>
 
 
-<h2>Yet Another Backend: Doing the Standard Thing</h2>
+<h2>Yet Another Back-end: Doing the Standard Thing</h2>
 
 <pre class="python">
 import pwd
@@ -415,8 +415,8 @@ application.connectTCP('irc.freenode.org', 6667, i)
 </pre>
 
 <p>Not much to say about that, except to indicate that by now we
-can be churning out backends like crazy. Feel like doing a backend
-for advogato, for example? Dig out the XML-RPC client support Twisted
+can be churning out back-ends like crazy. Feel like doing a back-end
+for Advogato, for example? Dig out the XML-RPC client support Twisted
 has, and get to work!</p>
 
 
@@ -521,8 +521,8 @@ using the factory directly, it is also more convenient.</p>
 
 <h2>Organization</h2>
 
-<p>Now this code, while being quite modularised and well-designed, isn't
-properly organised. Everything above the <code>application=</code> belongs in a
+<p>Now this code, while being quite modularized and well-designed, isn't
+properly organized. Everything above the <code>application=</code> belongs in a
 module, and the HTML templates all belong in separate files.
 </p>
 
@@ -571,7 +571,7 @@ code correctly, it is easy to achieve a good separation of parts.
 <p>We can also supply easy configuration for common cases</p>
 
 <pre class="python">
-# in finger.py moudle
+# in finger.py module
 def updateApplication(app, **kwargs):
      f = FingerService(kwargs['users'], application, 'finger')
      application.listenTCP(79, IFingerFactory(f))
@@ -611,8 +611,8 @@ finger.updateApplication(application,
 
 <p>Note: the finger <em>user</em> still has ultimate power: he can use
 updateApplication, or he can use the lower-level interface if he has
-specific needs (maybe an ircserver on some other port? maybe we
-want the non-ssl webserver to listen only locally? etc. etc.)
+specific needs (maybe an IRC-server on some other port? maybe we
+want the non-SSL webserver to listen only locally? etc. etc.)
 This is an important design principle: never force a layer of abstraction:
 allow usage of layers of abstractions.</p>
 
@@ -624,10 +624,10 @@ allow usage of layers of abstractions.</p>
 <li>Lasagna: code has carefully designed layers. Each layer is, in
     theory independent. However low-level layers usually cannot be
     used easily, and high-level layers depend on low-level layers.</li>
-<li>Raviolli: each part of the code is useful by itself. There is a thin
+<li>Ravioli: each part of the code is useful by itself. There is a thin
     layer of interfaces between various parts [the sauce]. Each part
     can be usefully be used elsewhere.</li>
-<li>...but sometimes, the user just wants to order "Raviolli", so one
+<li>...but sometimes, the user just wants to order "Ravioli", so one
     coarse-grain easily definable layer of abstraction on top of it all
     can be useful.</li>
 </ul>
@@ -695,7 +695,7 @@ integration:</p>
 
 <p>Will properly register configuration files, init.d sripts, etc. etc.</p>
 
-<p>If it doesn't work on your favourite OS: patches accepted!</p>
+<p>If it doesn't work on your favorite OS: patches accepted!</p>
 
 
 
