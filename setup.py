@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.101 2003/03/04 17:21:30 moonfallen Exp $
+$Id: setup.py,v 1.102 2003/03/10 19:31:50 itamarst Exp $
 """
 
 import distutils, os, sys, string
@@ -193,6 +193,7 @@ desktop environments, and your toaster.
         "twisted.conch",
         "twisted.conch.ssh",
         "twisted.conch.ui",
+        "twisted.conch.insults",
         "twisted.cred",
         "twisted.enterprise",
         "twisted.im",
