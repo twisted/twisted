@@ -1,3 +1,8 @@
+2003-01-21  Itamar Shtull-Trauring  <itamar@itamarst.org>
+
+	* twisted/internet/defer.py: added utility method for
+	getting result of list of Deferreds as simple list.
+
 2003-1-20  Jp Calderone <exarkun@twistedmatrix.com>
 
 	* twisted/internet/interfaces.py: type argument removed from

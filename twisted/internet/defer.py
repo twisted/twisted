@@ -296,7 +296,8 @@ class DeferredList(Deferred):
     """I combine a group of deferreds into one callback.
 
     I track a list of L{Deferred}s for their callbacks, and make a single
-    callback when they have all completed.
+    callback when they have all completed, a list of (success, result)
+    tuples, 'success' being a boolean.
     """
 
     fireOnOneCallback = 0
@@ -351,6 +352,26 @@ class DeferredList(Deferred):
         return result
 
 
+def _parseDListResult(l):
+    results = []
+    for success, value in l:
+        if success:
+            results.append(value)
+        else:
+            return failure.Failure(Exception(l))
+    return results
+
+def gatherResults(deferredList):
+    """Returns list with result of given Deferreds.
+
+    This builds on C{DeferredList} but is useful since you don't
+    need to parse the result for success/failure.
+    
+    @type deferredList:  C{list} of L{Deferred}s
+    """
+    d = DeferredList(deferredList)
+    d.addCallback(_parseDListResult)
+    return d
 
 
 # Constants for use with DeferredList
@@ -359,4 +380,4 @@ SUCCESS = 1
 FAILURE = 0
 
 __all__ = ["Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS",
-           "AlreadyCalledError", "TimeoutError"]
+           "AlreadyCalledError", "TimeoutError", "gatherResults"]

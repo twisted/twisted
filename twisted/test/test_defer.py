@@ -175,6 +175,17 @@ class DeferredTestCase(unittest.TestCase):
         d2.unpause()
         assert self.callback_results[0][0] == 2, "Result should have been from second deferred:%s"% (self.callback_results,)
 
+    def testGatherResults(self):
+        # test successful list of deferreds
+        l = []
+        defer.gatherResults([defer.succeed(1), defer.succeed(2)]).addCallback(l.append)
+        self.assertEquals(l, [[1, 2]])
+        # test failing list of deferreds
+        l = []
+        defer.gatherResults([defer.succeed(1), defer.fail(ValueError)]).addCallback(l.append)
+        self.assert_(isinstance(l[0], failure.Failure))
+        self.assertEquals(len(l), 1)
+
 
 class DeferredTestCaseII(unittest.TestCase):
     def setUp(self):
