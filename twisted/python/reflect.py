@@ -22,6 +22,7 @@ metaclasses somehow, but I don't understand them, so nyah :-)
 """
 
 # System Imports
+import sys
 import types
 import cStringIO
 import traceback
@@ -361,4 +362,40 @@ def accumulateClassList(classObj, attr, listObj, baseClass=None):
     if baseClass is None or baseClass in classObj.__bases__:
         listObj.extend(getattr(classObj, attr, []))
 
-# fin
+def isSame(a, b):
+    return (a is b)
+def isLike(a, b):
+    return (a == b)
+
+def modgrep(goal):
+    return objgrep(sys.modules, goal, isLike, 'sys.modules')
+
+def objgrep(start, goal, eq=isLike, path='', paths=None, seen=None):
+    '''An insanely CPU-intensive process for finding stuff.
+    '''
+    if paths is None:
+        paths = []
+    if seen is None:
+        seen = {}
+    if eq(start, goal):
+        paths.append(path)
+    if seen.has_key(id(start)):
+        if seen[id(start)] is start:
+            return
+    seen[id(start)] = start
+    if isinstance(start, types.DictionaryType):
+        r = []
+        for k, v in start.items():
+            objgrep(k, goal, eq, path+'{'+repr(v)+'}', paths, seen)
+            objgrep(v, goal, eq, path+'['+repr(k)+']', paths, seen)
+    elif isinstance(start, types.ListType) or isinstance(start, types.TupleType):
+        for idx in xrange(len(start)):
+            objgrep(start[idx], goal, eq, path+'['+str(idx)+']', paths, seen)
+    elif (isinstance(start, types.InstanceType) or
+          isinstance(start, types.ClassType) or
+          isinstance(start, types.ModuleType)):
+        for k, v in start.__dict__.items():
+            objgrep(v, goal, eq, path+'.'+k, paths, seen)
+        if isinstance(start, types.InstanceType):
+            objgrep(start.__class__, goal, eq, path+'.__class__', paths, seen)
+    return paths
