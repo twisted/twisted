@@ -7,7 +7,11 @@ from twisted.python import reflect, log, failure, components
 from twisted.internet import interfaces
 
 # system imports
-import sys, time, string, traceback, types, os, glob, pdb, gc
+import sys, time, string, traceback, types, os, glob, pdb
+try:
+    import gc # not available in jython
+except ImportError:
+    gc = None
 
 log.startKeepingErrors()
 
@@ -178,7 +182,8 @@ class TestSuite:
         # garbage collect now, to make sure any Deferreds with pending
         # errbacks are caught and counted against this test, not some later
         # one.
-        gc.collect()
+        if gc:
+            gc.collect()
         
         for e in log.flushErrors():
             ok = 0
