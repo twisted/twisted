@@ -221,6 +221,7 @@ class Deferred:
         or raises an Exception, processing will continue on the *error*-
         callback chain.
         """
+        assert not isinstance(result, Deferred)
         self._startRunCallbacks(result)
 
 
