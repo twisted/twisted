@@ -310,7 +310,7 @@ class SmartHostSMTPRelayingManager:
     def notifyDone(self, relay):
         """A relaying SMTP client is disconnected.
 
-        unmark all pending messages under this relay's resposibility
+        unmark all pending messages under this relay's responsibility
         as being relayed, and remove the relay.
         """
         for message in self.managed.get(relay, ()):
