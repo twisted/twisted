@@ -208,8 +208,12 @@ class JabberIQMixin:
         id = str(self.lastID)
         self.lastID += 1
         deferred = defer.Deferred()
-        self.transport.write('<iq from="%s" to="%s" id="%s" type="%s">' %
-                             (from_, to, id, type))
+        attributes = []
+        for k, v in [('from', from_), ('to', to), ('type', type)]:
+            if v:
+                attributes.append('%s="%s"' % (k, v))
+        attributes = " ".join(attributes)
+        self.transport.write('<iq %s>" % attributes)
         query.writexml(self.transport)
         self.transport.write('</iq>')
         self.requests[id] = deferred
@@ -261,5 +265,45 @@ class JabberIQMixin:
         return defer.fail(IQFailure(502, "I am a silly monkey"))
 
 
+class JabberIQLoggingInMixin(JabberIQMixin):
+
+    def notifyConnectionMade_IQ(self):
+        JabberIQMixin.notifyConnectionMade_IQ(self)
+        query = microdom.Element('query', xmlns="jabber:iq:auth")
+        username = microdom.Element('username')
+        username.appendChild(microdom.Text(cgi.escape(self.getUsername())))
+        digest = microdom.Element('digest')
+        digest.appendChild(microdom.Text(cgi.escape(self.getDigest())))
+        resource = microdom.Element('resource')
+        digest.appendChild(microdom.Text(cgi.escape(self.getResource())))
+        self.sendIQ(type='set', query=query).addCallbacks(
+            self.loginSuccess,
+            self.loginFailure,
+        )
+
+    def getDigest(self):
+        import sha
+        return sha.new(self.id+self.getPassword()).hexdigest()
+
+    def getResource(self):
+        return ''
+
+    def getUsername(self):
+        raise NotImplementedError
+
+    def getPassword(self):
+        raise NotImplementedError
+
+    def loginSuccess(self):
+        raise NotImplementedError
+
+    def loginFailure(self):
+        raise NotImplementedError
+
+
 class JabberCoreMixin(JabberMessageMixin, JabberPresenceMixin, JabberIQMixin):
+    pass
+
+class JabberCoreClientMixin(JabberMessageMixin, JabberPresenceMixin,
+                            JabberIQLoggingInMixin):
     pass
