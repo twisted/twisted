@@ -245,7 +245,7 @@ class TestLoading(unittest.TestCase):
                       'services': {}, 'gid': 0, 'tcpConnectors': [],
                       'extraConnectors': [], 'udpPorts': [], 'extraPorts': [],
                       'uid': 0}
-        pickle.dump(a, open("file.tap", 'w'))
+        pickle.dump(a, open("file.tap", 'wb'))
         a1 = service.loadApplication("file.tap", "pickle", None)
         self.assertEqual(service.IService(a1).name, "dummy")
         self.assertEqual(list(service.IServiceCollection(a1)), [])
