@@ -406,9 +406,9 @@ class XMLParser(Protocol):
         print 'entityRef: &%s;' % entityRef
 
     def gotComment(self, comment):
-        '''Encountered mnemonic entity reference
+        '''Encountered comment.
 
-        Default behaviour is to print.'''
+        Default behaviour is to ignore.'''
         pass
 
     def gotCData(self, cdata):
