@@ -1,3 +1,10 @@
+2002-04-17  Chris Armstrong  <carmstro@twistedmatrix.com>
+
+	* twisted/web/static.py, twisted/tap/web.py: Added a new feature
+	that allows requests for /foo to return /foo.extension, which is
+	disabled by default. If you want a --static webserver that
+	uses this feature, use 'mktap web --static <dir> --allow_ignore_ext'.
+
 2002-04-14  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
 
 	* HTTP 1.1 now supports persistent and pipelined connections.
