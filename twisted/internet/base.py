@@ -109,8 +109,9 @@ class DelayedCall(styles.Ephemeral):
                     func = func.func_code # func_code's repr sometimes has more useful info
         except:
             func = reflect.safe_repr(self.func)
-        return "<DelayedCall [%ds] called=%s cancelled=%s %s%s>" % (self.time - time(), self.called, self.cancelled, func,
-                                                                    reflect.safe_repr(self.args))
+        return "<DelayedCall %s [%ss] called=%s cancelled=%s %s%s>" % (
+            id(self), self.time - time(), self.called, self.cancelled, func,
+            reflect.safe_repr(self.args))
 
 
 class ReactorBase:
