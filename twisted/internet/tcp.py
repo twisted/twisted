@@ -1,16 +1,16 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -60,7 +60,7 @@ class Connection(abstract.FileDescriptor,
                  protocol.Transport,
                  styles.Ephemeral):
     """I am the superclass of all socket-based FileDescriptors.
-    
+
     This is an abstract superclass of all objects which represent a TCP/IP
     connection based socket.
     """
@@ -114,7 +114,7 @@ class Connection(abstract.FileDescriptor,
         protocol.connectionLost()
 
     logstr = "Uninitialized"
-    
+
     def logPrefix(self):
         """Return the prefix to log with when I own the logging thread.
         """
@@ -185,7 +185,7 @@ class Client(Connection):
 
     def doConnect(self):
         """I connect the socket.
-        
+
         Then, call the protocol's makeConnection, and start waiting for data.
         """
         try:
@@ -219,16 +219,19 @@ class Client(Connection):
 
     def getPeer(self):
         """Returns a tuple of ('INET', hostname, port).
-        
+
         This indicates the address that I am connected to.  I implement
         twisted.protocols.protocol.Transport.
         """
         return ('INET',)+self.addr
 
+    def __repr__(self):
+        s = '<%s to %s at %x>' % (self.__class__, self.addr, id(self))
+        return s
 
 class Server(Connection):
     """Serverside socket-stream connection class.
-    
+
     I am a serverside network connection transport; a socket which came from an
     accept() on a server.  Programmers for the twisted.net framework should not
     have to use me directly, since I am automatically instantiated in
@@ -238,7 +241,7 @@ class Server(Connection):
 
     def __init__(self, sock, protocol, client, server, sessionno):
         """Server(sock, protocol, client, server, sessionno)
-        
+
         Initialize me with a socket, a protocol, a descriptor for my peer (a
         tuple of host, port describing the other end of the connection), an
         instance of Port, and a session number.
