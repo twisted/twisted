@@ -48,11 +48,19 @@ class InetdProtocol(Protocol):
         sockFD = self.transport.fileno()
         childFDs = {0: sockFD, 1: sockFD}
         if self.factory.stderrFile:
-            childFDs[2] = self.factory.stderrFile
+            childFDs[2] = self.factory.stderrFile.fileno()
 
         service = self.factory.service
+        uid = service.user
+        gid = service.group
+        # don't tell Process to change our UID/GID if it's what we
+        # already are
+        if uid == os.getuid():
+            uid = None
+        if gid == os.getgid():
+            gid = None
         process.Process(None, service.program, service.programArgs, os.environ,
-                        None, None, service.user, service.group, childFDs)
+                        None, None, uid, gid, childFDs)
 
         reactor.removeReader(self.transport)
         reactor.removeWriter(self.transport)
