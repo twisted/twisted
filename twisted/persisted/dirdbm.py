@@ -55,6 +55,8 @@ class DirDBM:
             # only a ".new" exist we assume the program crashed right
             # after deleting the old entry but before renaming the new
             # entry.
+            #
+            # NOTE: '.' is NOT in the base64 alphabet!
             newFiles = glob.glob(os.path.join(self.dname, "*.new"))
             for f in newFiles:
                 old = f[:-4]
@@ -164,12 +166,8 @@ class Shelf(DirDBM):
     def __setitem__(self, k, v):
         """shelf[foo] = bar; create or modify a textfile in this directory
         """
-        assert type(k) == types.StringType
-        k = self._encode(k)
-        f = _open(os.path.join(self.dname, k), "wb")
-        cPickle.Pickler(f, 1).dump(v)
-        f.flush()
-        f.close()
+        v = cPickle.dumps(v)
+        DirDBM.__setitem__(self, k, v)
 
     def __getitem__(self, k):
         """dirdbm[foo]; get the contents of a file in this directory as a pickle
@@ -189,4 +187,4 @@ def open(file, flag = None, mode = None):
     return DirDBM(file)
 
 
-__all__ = ["open", "DirDBM"]
+__all__ = ["open", "DirDBM", "Shelf"]
