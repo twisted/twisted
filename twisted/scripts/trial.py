@@ -123,7 +123,14 @@ def run():
     if config['debug']:
         reporter.debugger = 1
         import pdb
-        pdb.run("suite.run(reporter, config['random'])", globals(), locals())
+        dbg = pdb.Pdb()
+        try:
+            rcFile = open("../.pdbrc")
+        except IOError:
+            pass
+        else:
+            dbg.rcLines.extend(rcFile.readlines())
+        dbg.run("suite.run(reporter, config['random'])", globals(), locals())
     else:
         suite.run(reporter, config['random'])
         sys.exit(not reporter.allPassed())
