@@ -31,6 +31,15 @@ from twisted.test.test_protocols import StringIOWithoutClosing
 
 from twisted.python import log
 
+
+class UtilTestCase(unittest.TestCase):
+    def testDecodeHostPort(self):
+        data = "999 The magic address is (123,234,56,78,11,22)"
+        host, port = ftp.decodeHostPort(data)
+        self.failUnlessEqual(host, '123.234.56.78')
+        self.failUnlessEqual(port, (11*256) + 22)
+
+
 class BufferingProtocol(Protocol):
     def __init__(self):
         self.buf = StringIO()
