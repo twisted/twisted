@@ -4,11 +4,11 @@
 
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-<title>Parallel Data Flows</title>
+<title>Cooperative Data Flows</title>
 </head>
 
 <body>
-<h1>Parallel Data Flows</h1>
+<h1>Cooperative Data Flows</h1>
 
 <h2>Background</h2>
 
@@ -189,16 +189,21 @@ as our producer.
 </p>
 
 <pre class="python">
-from __future__ import generators
+from __future__ import generators 
+
+def Counter(count):
+    while count &gt; 0:
+        yield count
+        count -= 1
 
 def Consumer():
-    for result in [3,2,1]:
+    for result in Counter(3):
         if 2 != result:
             yield result
 
 print list(Consumer())
 
-# prints: [3,2,1]
+# prints: [3, 1]
 </pre>
 
 <p>The problem with this approach, in a cooperative multi-tasking
@@ -220,8 +225,13 @@ underlying cooperative multi-tasking mechanism.</p>
 from __future__ import generators
 import flow
 
+def Counter(count):
+    while count &gt; 0:
+        yield count
+        count -= 1
+
 def Consumer():
-    producer = flow.wrap([3,2,1])
+    producer = flow.wrap(Counter(3))
     yield producer
     for result in producer:
         if 2 != result:
