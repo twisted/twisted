@@ -5,7 +5,7 @@ from twisted.python import log
 import struct, sys, getpass, os
 
 USER = 'z3p'  # replace this with a valid username
-HOST = 'twistedmatrix.com' # and a valid host
+HOST = 'localhost' # and a valid host
 
 class SimpleTransport(transport.SSHClientTransport):
     def verifyHostKey(self, hostKey, fingerprint):
@@ -21,6 +21,18 @@ class SimpleUserAuth(userauth.SSHUserAuthClient):
     def getPassword(self):
         return defer.succeed(getpass.getpass("%s@%s's password: " % (USER, HOST)))
 
+    def getGenericAnswers(self, name, instruction, questions):
+        print name
+        print instruction
+        answers = []
+        for prompt, echo in questions:
+            if echo:
+                answer = raw_input(prompt)
+            else:
+                answer = getpass.getpass(prompt)
+            answers.append(answer)
+        return defer.succeed(answers)
+            
     def getPublicKey(self):
         path = os.path.expanduser('~/.ssh/id_dsa') 
         # this works with rsa too
