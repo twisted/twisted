@@ -12,7 +12,7 @@ import py_compile
 # Scary kludge to work around tk84.dll bug: 
 # https://sourceforge.net/tracker/index.php?func=detail&aid=814654&group_id=5470&atid=105470
 # Without which(): you get a windows missing-dll popup message
-from twisted.runner.procutils import which
+from twisted.python.procutils import which
 if sys.version_info[:2]==(2,2):
     tkdll='tk83.dll'
 else:
