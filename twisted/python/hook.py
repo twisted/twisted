@@ -66,7 +66,7 @@ def addPre(klass, name, func):
 def addPost(klass, name, func):
     """hook.addPost(klass, name, func) -> None
 
-    Add a function to be called before the method klass.name is invoked.
+    Add a function to be called after the method klass.name is invoked.
     """
     _addHook(klass, name, POST, func)
 
