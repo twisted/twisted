@@ -100,9 +100,9 @@ class Progressor:
     def __init__(self, title, *args, **kwargs):
         self.title=title
         self.stopping=0
-        self.remaining=-1
         self.bar=None
         self.iterator=None
+        self.remaining=1000
 
     def setBar(self, bar, max):
         self.bar=bar
@@ -136,6 +136,7 @@ class Progressor:
             self.remaining=self.iterator.next()
         except StopIteration:
             self.stopping=1
+            
         except:
             deferred.errback(failure.Failure())
         
@@ -161,7 +162,7 @@ def compiler(path):
 class TksetupOptions(usage.Options):
     optParameters=[["zipfile", "z", "", "a zipfile"],
                    ["ziptargetdir", "t", ".", "where to extract zipfile"],
-                   ["compiledir", "c", ".", "a directory to compile"],
+                   ["compiledir", "c", "", "a directory to compile"],
                    ]
 
 def countPys(countl, directory, names):
@@ -185,14 +186,17 @@ def run(argv=sys.argv):
         sys.exit(1)
     
     root=Tkinter.Tk()
+    root.title('One Moment.')
+    root.withdraw()
     root.protocol('WM_DELETE_WINDOW', reactor.stop)
     tksupport.install(root)
     
     prog=ProgressBar(root, value=0, labelColor="black", width=200)    
     prog.pack()
+    root.deiconify()
 
-    d=defer.Deferred()
-    d.addErrback(util.println)
+    # callback immediately
+    d=defer.succeed(root)
     
     if opt['zipfile']:
         uz=Progressor('Unzipping...')
@@ -209,8 +213,6 @@ def run(argv=sys.argv):
         d.addCallback(comp.processAll)
 
     d.addCallback(lambda _: reactor.stop)
-
-    d.callback(root)
 
     reactor.run()
 
