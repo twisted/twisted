@@ -307,7 +307,9 @@ class Stage(Instruction):
                 return cr
 
             if self.failure.tb:
-                raise self.failure.value.__class__, self.failure.value, self.failure.tb
+                raise self.failure.value.__class__, \
+                      self.failure.value, self.failure.tb
+
             raise self.failure.value
 
         raise NotReadyError("Must 'yield' this object before calling next()")
