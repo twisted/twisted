@@ -1,20 +1,17 @@
-"""
-Beginnings of an implementation of the NMB protocols.
-
-Features support for name resolution, node status and NetBIOS session
-(establishment and use).
-
-Everything is written (and tested) from a client POV. However the NetBIOS
-session stuff is reasonably symmetric.
-
-Ported from pysmb, http://miketeo.net/projects/pysmb/
-
-@author Jonathan Lange <jml@mumak.net>
-"""
+##Beginnings of an implementation of the NMB protocols.
+#
+##Features support for name resolution, node status and NetBIOS session
+##(establishment and use).
+#
+##Everything is written (and tested) from a client POV. However the NetBIOS
+##session stuff is reasonably symmetric.
+#
+##Ported from pysmb, http://miketeo.net/projects/pysmb/
+#
+##@author Jonathan Lange <jml@mumak.net>
 
 import re, os, random, string, struct
 from twisted.internet import protocol, defer
-
 
 """Default port for NetBIOS name service."""
 NETBIOS_NS_PORT = 137
@@ -54,7 +51,6 @@ class NetBIOSQueryException(NetBIOSException):
         0x04: 'Unsupported request',
         0x05: 'Request refused'
         }
-
 
 class NetBIOSSessionException(NetBIOSException):
     errors = { 0x80: 'Not listening on called name',
@@ -234,6 +230,14 @@ class NetBIOSLookup(NetBIOSBase):
         self.endTransaction(trxID)
         return addresses
 
+
+def lookup(name, server, type=TYPE_WORKSTATION, scope=None,
+           port=137, broadcast=False):
+    from twisted.internet import reactor
+    l = NetBIOSLookup()
+    reactor.listenUDP(0, l)
+    return l.lookupName(name, type, scope, server, port, broadcast)
+    
 
 class NetBIOSNode(NetBIOSBase):
     def getNodeStatus(self, name, type=TYPE_WORKSTATION, scope=None,
