@@ -33,25 +33,13 @@ reactorTypes = {
     }
 
 
-def loadTAC(filename, passphrase):
-    if passphrase:
-        mode = 'rb'
-    else:
-        mode = 'r'
-    data = open(filename, mode).read()
-    if passphrase:
-        data = persist.decrypt(passphrase, data)
-    d = {'__file__': filename}
-    exec data in d, d
-    application = d['application']
-    return application
-
 def loadApplication(config, passphrase):
     filename = os.path.abspath(config['python'] or config['xml'] or
                                config['source'] or config['file'])
     log.msg("Loading %s..." % (filename,))
     if config['python']:
-        application = loadTAC(filename, passphrase):
+        application = persist.loadValueFromFile(filename, 'application',
+                                                passphrase):
     else:
         if config['xml']:
             style = 'xml'

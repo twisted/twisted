@@ -145,3 +145,17 @@ def load(filename, style, passphrase=None):
     styles.doUpgrade()
     ee.initRun = 0
     return value
+
+
+def loadValueFromFile(filename, variable, passphrase=None):
+    if passphrase:
+        mode = 'rb'
+    else:
+        mode = 'r'
+    data = open(filename, mode).read()
+    if passphrase:
+        data = decrypt(passphrase, data)
+    d = {'__file__': filename}
+    exec data in d, d
+    value = d['variable']
+    return value
