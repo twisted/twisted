@@ -252,8 +252,12 @@ class Componentized(styles.Versioned):
     def addAdapter(self, adapterClass, ignoreClass=0):
         """Utility method that calls addComponent.  I take an adapter class and
         instantiate it with myself as the first argument.
+
+        Returns the adapter instantiated.
         """
-        self.addComponent(adapterClass(self), ignoreClass)
+        adapt = adapterClass(self)
+        self.addComponent(adapt, ignoreClass)
+        return adapt
 
     def setComponent(self, interfaceClass, component):
         self._adapterCache[reflect.qual(interfaceClass)] = component
