@@ -659,6 +659,8 @@ class TOCClient(protocol.Protocol):
         self._buddies=[] # the current buddy list
         self._privacymode=PERMITALL # current privacy mode
         self._permitlist=[] # list of users on the permit list
+        self._roomnames={} # the names for each of the rooms we're in
+        self._receivedchatmembers={} # have we gotten who's in our room yet?
         self._denylist=[]
         self._buf='' # current data buffer
         self._isaway=0
@@ -819,15 +821,21 @@ class TOCClient(protocol.Protocol):
         """
         CHAT_JOIN:<room id>:<room name>
         """
-        self.chatJoined(int(data[0]),data[1])
+        #self.chatJoined(int(data[0]),data[1])
+        self._roomnames[int(data[0])]=data[1]
+        self._receivedchatmembers[int(data[0])]=0
     def tocCHAT_UPDATE_BUDDY(self,data):
         """
         CHAT_UPDATE_BUDDY:<room id>:<in room? T/F>:<user 1>:<user 2>...
         """
         roomid=int(data[0])
         inroom=(data[1]=='T')
-        for u in data[2:]:
-            self.chatUpdate(roomid,u,inroom)
+        if self._receivedchatmembers[roomid]:
+            for u in data[2:]:
+                self.chatUpdate(roomid,u,inroom)
+        else:
+            self._receivedchatmembers[roomid]=1
+            self.chatJoined(roomid,self._roomnames[roomid],list(data[2:]))
     def tocCHAT_IN(self,data):
         """
         CHAT_IN:<room id>:<username>:<whisper T/F>:<message>
@@ -848,6 +856,8 @@ class TOCClient(protocol.Protocol):
         CHAT_LEFT:<room id>
         """
         self.chatLeft(int(data[0]))
+        del self._receivedchatmembers[int(data[0])]
+        del self._roomnames[int(data[0])]
     def onLine(self):
         """
         called when we are first online
@@ -896,11 +906,12 @@ class TOCClient(protocol.Protocol):
         userclass := the class of the user (generally " O")
         """
         pass
-    def chatJoined(self,roomid,roomname):
+    def chatJoined(self,roomid,roomname,users):
         """
         we just joined a chat room
         roomid := the AIM id for the room
         roomname := the name for the room
+        users := a list of the users already in the room
         """
         pass
     def chatUpdate(self,roomid,username,inroom):

@@ -47,6 +47,7 @@ class IRCGateway(irc.IRCClient,gateway.Gateway):
         self.name="%s (%s)"%(username,self.protocol)
         self.password=password
         self.realname=realname
+        self._ingroups={}
     
     def connectionMade(self):
 	irc.IRCClient.connectionMade(self)
@@ -108,6 +109,11 @@ class IRCGateway(irc.IRCClient,gateway.Gateway):
 	if not self._namreplies.has_key(channel):
 	    self._namreplies[channel]=[]
 	self._namreplies[channel].extend(users)
+	for nickname in users:
+            try:
+                self._ingroups[nickname].append(channel)
+            except:
+                self._ingroups[nickname]=[channel]
 
     def irc_366(self,prefix,params):
 	group=params[1][1:]
@@ -119,13 +125,26 @@ class IRCGateway(irc.IRCClient,gateway.Gateway):
 
     def irc_JOIN(self,prefix,params):
 	nickname=string.split(prefix,"!")[0]
+	group=params[0][1:]
 	if nickname!=self.nickname:
-	    self.memberJoined(nickname,params[0][1:])
+            try:
+                self._ingroups[nickname].append(group)
+            except:
+                self._ingroups[nickname]=[group]
+	    self.memberJoined(nickname,group)
 
     def irc_PART(self,prefix,params):
 	nickname=string.split(prefix,"!")[0]
+	group=params[0][1:]
 	if nickname!=self.nickname:
-	    self.memberLeft(nickname,params[0][1:])
+            self._ingroups[nickname].remove(group)
+	    self.memberLeft(nickname,group)
+
+    def irc_QUIT(self,prefix,params):
+        nickname=string.split(prefix,"!")[0]
+        for g in self._ingroups[nickname]:
+            self.memberLeft(nickname,g)
+        self._ingroups[nickname]=[]
 
     def irc_PRIVMSG(self,prefix,params):
 	nickname=string.split(prefix,"!")[0]

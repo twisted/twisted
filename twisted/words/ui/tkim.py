@@ -130,6 +130,7 @@ class GroupSession(Toplevel):
         self.input=Text(self,height=1,wrap=WORD,bg="white")
         self.input.grid(column=0,row=1,columnspan=4,sticky=N+E+S+W)
         self.input.bind('<Return>',self.say)
+        self.input.bind('<Tab>',self.autoComplete)
         self.protocol('WM_DELETE_WINDOW',self.close)
         f=Frame(self)
         Button(f,text="Send",command=self.say).grid(column=0,row=0,sticky=N+E+S+W)
@@ -145,6 +146,13 @@ class GroupSession(Toplevel):
     def close(self):
         self.destroy()
         self.im.leaveGroup(self.gateway,self.name)
+
+    def _sortlist(self):
+        l=list(self.list.get(0,END))
+        l.sort(lambda x,y:cmp(string.lower(x),string.lower(y)))
+        self.list.delete(0,END)
+        for u in l:
+            self.list.insert(END,u)
     
     def _out(self,text):
         self.output.config(state=NORMAL)
@@ -156,6 +164,7 @@ class GroupSession(Toplevel):
     def receiveGroupMembers(self,list):
         for m in list:
             self.list.insert(END,m)
+        self._sortlist()
     
     def displayMessage(self,user,message):
         self._out("<%s> %s\n"%(user,message))
@@ -163,6 +172,7 @@ class GroupSession(Toplevel):
     def memberJoined(self,user):
         self._out("%s joined!\n"%user)
         self.list.insert(END,user)
+        self._sortlist()
     
     def memberLeft(self,user):
         self._out("%s left!\n"%user)
@@ -180,6 +190,7 @@ class GroupSession(Toplevel):
             self._out("%s changed nick to %s.\n"%(user,newName))
             self.list.delete(i)
             self.list.insert(i,newName)
+            self._sortlist()
     
     def say(self,*args):
         text=self.input.get("1.0",END)[:-1]
@@ -188,7 +199,44 @@ class GroupSession(Toplevel):
         self.im.groupMessage(self.gateway,self.name,text)
         self._out("<<%s>> %s\n"%(self.gateway.username,text))
         return "break"
-        
+
+    def autoComplete(self,*args):
+        start=self.input.get("1.0",END)[:-1]
+        lstart=string.lower(start)
+        l=list(self.list.get(0,END))
+        ll=map(string.lower,l)
+        if lstart in ll:
+            i=ll.index(lstart)
+            self.input.delete("1.0",END)
+            self.input.insert(END,l[i]+": ")
+            return "break"
+        matches=[]
+        for u in ll:
+            if len(u)>len(lstart) and u[:len(lstart)]==lstart:
+                matches.append(u)
+        if len(matches)==1:
+            i=ll.index(matches[0])
+            self.input.delete("1.0",END)
+            self.input.insert(END,l[i]+": ")
+            return "break"
+        elif matches==[]:
+            return "break"
+        longestmatch=matches[0]
+        for u in matches:
+            if len(u)>len(longestmatch):
+                u=u[:len(longestmatch)]
+            c=0
+            while c<len(longestmatch) and longestmatch[c]==u[c]:
+                c=c+1
+            longestmatch=longestmatch[:c]
+        self.input.delete("1.0",END)
+        self.input.insert(END,longestmatch)
+        for u in matches:
+            i=ll.index(u)
+            self._out("[%s] "%l[i])
+        self._out("\n")
+        return "break"
+
 class Conversation(Toplevel):
     def __init__(self,im,gateway,contact,*args,**kw):
         apply(Toplevel.__init__,(self,)+args,kw)

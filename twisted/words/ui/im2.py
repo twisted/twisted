@@ -406,6 +406,7 @@ class InstanceMessenger:
         gateway := the gateway that failed to connect (class Gateway)
         message := the reason the connection failed (string)
         """
+        
         if self.sendEvent(gateway,"error",CONNECTIONFAILED,message):
             ErrorWindow("Connection Failed!",message)
 

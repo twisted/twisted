@@ -112,16 +112,17 @@ class TOCGateway(gateway.Gateway,toc.TOCClient):
         self.updateName(user)
         self.notifyStatusChanged(user,state)
         
-    def chatJoined(self,roomid,roomname):
+    def chatJoined(self,roomid,roomname,users):
         if self._chatmapping.has_key(toc.normalize(roomname)):roomname=self._chatmapping[toc.normalize(roomname)]
         self._roomid[roomid]=roomname
+        self.receiveGroupMembers(users,roomname)
 
     def chatUpdate(self,roomid,user,inroom):
         self.updateName(user)
         if inroom:
             self.memberJoined(user,self._roomid[roomid])
         else:
-            self.memberLeft(user,self,_roomid[roomid])
+            self.memberLeft(user,self._roomid[roomid])
 
     def chatHearMessage(self,roomid,user,message):
         if user==self.username: return
@@ -173,7 +174,6 @@ class TOCGateway(gateway.Gateway,toc.TOCClient):
                 self.chat_leave(i)
 
     def getGroupMembers(self,groupname):
-        #self.receiveGroupMembers([],groupname)
         pass
         
     def directMessage(self,user,message):
