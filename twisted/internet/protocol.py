@@ -612,6 +612,7 @@ class FileWrapper:
 components.backwardsCompatImplements(FileWrapper)
 
 
-__all__ = ["Factory", "ClientFactory", "ReconnectingClientFactory",
+__all__ = ["Factory", "ClientFactory", "ReconnectingClientFactory", "connectionDone", 
            "Protocol", "ProcessProtocol", "FileWrapper", "ServerFactory",
-           "DatagramProtocol", "ConnectedDatagramProtocol", "ClientCreator"]
+           "AbstractDatagramProtocol", "DatagramProtocol", "ConnectedDatagramProtocol",
+           "ClientCreator"]

@@ -23,7 +23,7 @@ from OpenSSL import SSL
 class ClientTLSContext(ssl.ClientContextFactory):
     isClient = 1
     def getContext(self):
-        return SSL.Context(ssl.SSL.TLSv1_METHOD)
+        return SSL.Context(SSL.TLSv1_METHOD)
 
 class ServerTLSContext:
     isClient = 0

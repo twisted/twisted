@@ -629,4 +629,4 @@ class BasePort(abstract.FileDescriptor):
         raise RuntimeError, "doWrite called on a %s" % reflect.qual(self.__class__)
 
 
-__all__ = ["ReactorBase"]
+__all__ = []

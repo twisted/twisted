@@ -691,10 +691,11 @@ that package.
                   DeprecationWarning, stacklevel=3)
     return
 
+
 __all__ = [
     "uniquify", "padTo", "getPluginDirs", "addPluginDir", "sibpath",
     "getPassword", "dict", "println", "keyed_md5", "makeStatBar",
-    "OrderedDict", "spewer", "searchupwards", "LineLog", "raises",
-    "IntervalDifferential", "FancyStrMixin", "FancyEqMixin", "dsu",
-    "switchUID", "SubclassableCStringIO"
+    "OrderedDict", "InsensitiveDict", "spewer", "searchupwards", "LineLog",
+    "raises", "IntervalDifferential", "FancyStrMixin", "FancyEqMixin", "dsu",
+    "switchUID", "SubclassableCStringIO", "moduleMovedForSplit"
 ]
