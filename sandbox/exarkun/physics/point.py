@@ -1,6 +1,8 @@
 
 import numarray as N
 
+G = 6.667e-11
+
 _V_DIMS = 7
 _MASS = 0
 _POSITION = slice(1, 4)
@@ -23,6 +25,33 @@ class Space(object):
     def freeHandle(self, n):
         self.freelist.append(n)
         self.contents[n] = [-42] * _V_DIMS
+
+    def update(self):
+        self._updatePosition()
+        self._updateVelocity()
+
+    def _updatePosition(self):
+        # Add velocity to position to get new positions
+        # Do it in place for speeeed
+        N.add(self.contents[:,_POSITION], self.contents[:,_VELOCITY], self.contents[:,_POSITION])
+
+    def _updateVelocity(self):
+        # Adjust velocities for gravitational effects
+        for a in self.contents:
+            accel = N.zeros(3)
+            for b in self.contents:
+                mass = a[_MASS]
+                deltas = b[_POSITION] - a[_POSITION]
+                delta2 = deltas * deltas
+                distance2 = N.sum(delta2)
+                if mass and distance2:
+                    distance = distance2 ** 0.5
+                    unit = deltas / distance2
+                    force = G * mass * b[_MASS]
+                    N.add(accel, unit * force / mass, accel)
+            velocity = a[_VELOCITY]
+            N.add(velocity, accel, velocity)
+
 
 class Body(object):
     __slots__ = ["_space", "_handle", "mass", "position", "velocity"]
