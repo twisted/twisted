@@ -242,7 +242,7 @@ def loadPlugins(plugInType, fileList, debugInspection=None, showProgress=None):
         debugInspection("Loading from " + tmlFile)
         pname = os.path.split(os.path.abspath(tmlFile))[-2]
         dropin = DropIn(pname)
-        ns = {'register': dropin.register, '__name__': tmlFile}
+        ns = {'register': dropin.register, '__file__': tmlFile}
         try:
             execfile(tmlFile, ns)
         except (IOError, OSError), e:
