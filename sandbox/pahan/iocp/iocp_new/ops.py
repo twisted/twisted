@@ -72,7 +72,8 @@ class OverlappedOp(defer.Deferred):
 
 class ReadFileOp(OverlappedOp):
     def ovDone(self, ret, bytes):
-#        print "ReadFileOp.ovDone(%(ret)s, %(bytes)s)" % locals()
+        if __debug__:
+            print "ReadFileOp.ovDone(%(ret)s, %(bytes)s)" % locals()
         if not self.handleError(ret, bytes):
             self.callback((bytes, {}))
         self.cleanUp()
@@ -90,7 +91,8 @@ class ReadFileOp(OverlappedOp):
 
 class WriteFileOp(OverlappedOp):
     def ovDone(self, ret, bytes):
-#        print "WriteFileOp.ovDone(%(ret)s, %(bytes)s)" % locals()
+        if __debug__:
+            print "WriteFileOp.ovDone(%(ret)s, %(bytes)s)" % locals()
         if not self.handleError(ret, bytes):
             self.callback(bytes)
         self.cleanUp()
@@ -129,7 +131,8 @@ class AcceptExOp(OverlappedOp):
     acc_sock = None
 
     def ovDone(self, ret, bytes):
-#        print "AcceptExOp.ovDone(%(ret)s, %(bytes)s)" % locals()
+        if __debug__:
+            print "AcceptExOp.ovDone(%(ret)s, %(bytes)s)" % locals()
 #        print "    self.acc_sock.fileno() %s self.handle %s" % (self.acc_sock.fileno(), self.handle)
         if not self.handleError(ret, bytes, False):
             try:
@@ -162,7 +165,8 @@ class AcceptExOp(OverlappedOp):
 
 class ConnectExOp(OverlappedOp):
     def ovDone(self, ret, bytes):
-        print "ConnectExOp.ovDone(%(ret)s, %(bytes)s)" % locals()
+        if __debug__:
+            print "ConnectExOp.ovDone(%(ret)s, %(bytes)s)" % locals()
         if not self.handleError(ret, bytes, False):
             try:
                 self.sock.setsockopt(socket.SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, "")

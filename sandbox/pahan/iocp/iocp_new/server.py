@@ -71,8 +71,9 @@ class SocketPort(styles.Ephemeral):
             sock.close()
 
     def acceptErr(self, err):
-        print "acceptErr", err
-        err.printTraceback()
+        if __debug__:
+            print "acceptErr", err
+            err.printTraceback()
         if isinstance(err, error.NonFatalException):
             self.startAccepting() # delay or just fail?
         else:

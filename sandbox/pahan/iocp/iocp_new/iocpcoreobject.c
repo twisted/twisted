@@ -4,6 +4,7 @@
 #include <windows.h>
 #include "structmember.h"
 
+//#define SPEW
 // compensate for mingw's lack of recent Windows headers
 #ifndef _MSC_VER
 #define WSAID_CONNECTEX {0x25a207b9,0xddf3,0x4660,{0x8e,0xe9,0x76,0xe5,0x8c,0x74,0x06,0x3e}}
@@ -105,12 +106,18 @@ static PyObject *iocpcore_doIteration(iocpcore* self, PyObject *args) {
     Py_BEGIN_ALLOW_THREADS;
     res = GetQueuedCompletionStatus(self->iocp, &bytes, &key, (OVERLAPPED**)&ov, timeout);
     Py_END_ALLOW_THREADS;
+#ifdef SPEW
     printf("gqcs returned res %d, ov 0x%p\n", res, ov);
+#endif
     err = GetLastError();
+#ifdef SPEW
     printf("    GLE returned %d\n", err);
+#endif
     if(!res) {
         if(!ov) {
+#ifdef SPEW
             printf("gqcs returned NULL ov\n");
+#endif
             if(err != WAIT_TIMEOUT) {
                 return PyErr_SetFromWindowsErr(err);
             } else {
@@ -127,7 +134,9 @@ static PyObject *iocpcore_doIteration(iocpcore* self, PyObject *args) {
         if(res) {
             err = 0;
         }
-//        printf("calling callback with err %d, bytes %d\n", err, bytes);
+#ifdef SPEW
+        printf("calling callback with err %d, bytes %d\n", err, bytes);
+#endif
         ret = PyObject_CallFunction(object, "ll", err, bytes);
         if(!ret) {
             Py_DECREF(object);
@@ -169,12 +178,16 @@ static PyObject *iocpcore_WriteFile(iocpcore* self, PyObject *args) {
     Py_INCREF(object);
     ov->callback = object;
     CreateIoCompletionPort(handle, self->iocp, 0, 1);
-//    printf("calling WriteFile(%d, 0x%p, %d, 0x%p, 0x%p)\n", handle, buf, len, &bytes, ov);
+#ifdef SPEW
+    printf("calling WriteFile(%d, 0x%p, %d, 0x%p, 0x%p)\n", handle, buf, len, &bytes, ov);
+#endif
     Py_BEGIN_ALLOW_THREADS;
     res = WriteFile(handle, buf, len, &bytes, (OVERLAPPED *)ov);
     Py_END_ALLOW_THREADS;
     err = GetLastError();
-//    printf("    wf returned %d, err %d\n", res, err);
+#ifdef SPEW
+    printf("    wf returned %d, err %d\n", res, err);
+#endif
     if(!res && err != ERROR_IO_PENDING) {
         return PyErr_SetFromWindowsErr(err);
     }
@@ -212,12 +225,16 @@ static PyObject *iocpcore_ReadFile(iocpcore* self, PyObject *args) {
     Py_INCREF(object);
     ov->callback = object;
     CreateIoCompletionPort(handle, self->iocp, 0, 1);
-//    printf("calling ReadFile(%d, 0x%p, %d, 0x%p, 0x%p)\n", handle, buf, len, &bytes, ov);
+#ifdef SPEW
+    printf("calling ReadFile(%d, 0x%p, %d, 0x%p, 0x%p)\n", handle, buf, len, &bytes, ov);
+#endif
     Py_BEGIN_ALLOW_THREADS;
     res = ReadFile(handle, buf, len, &bytes, (OVERLAPPED *)ov);
     Py_END_ALLOW_THREADS;
     err = GetLastError();
-//    printf("    rf returned %d, err %d\n", res, err);
+#ifdef SPEW
+    printf("    rf returned %d, err %d\n", res, err);
+#endif
     if(!res && err != ERROR_IO_PENDING) {
         return PyErr_SetFromWindowsErr(err);
     }
@@ -345,12 +362,16 @@ static PyObject *iocpcore_AcceptEx(iocpcore* self, PyObject *args) {
     Py_INCREF(object);
     ov->callback = object;
     CreateIoCompletionPort((HANDLE)handle, self->iocp, 0, 1);
+#ifdef SPEW
     printf("calling AcceptEx(%d, %d, 0x%p, %d, %d, %d, 0x%p, 0x%p)\n", handle, acc_sock, buf, 0, buflen/2, buflen/2, &bytes, ov);
+#endif
     Py_BEGIN_ALLOW_THREADS;
     res = gAcceptEx(handle, acc_sock, buf, 0, buflen/2, buflen/2, &bytes, (OVERLAPPED *)ov);
     Py_END_ALLOW_THREADS;
     err = WSAGetLastError();
+#ifdef SPEW
     printf("    ae returned %d, err %d\n", res, err);
+#endif
     if(!res && err != ERROR_IO_PENDING) {
         return PyErr_SetFromWindowsErr(err);
     }
@@ -384,7 +405,9 @@ static int makesockaddr(int sock_family, PyObject *args, struct sockaddr **addr_
             PyErr_SetString(PyExc_ValueError, "Can't parse ip address string");
             return 0;
         }
+#ifdef SPEW
         printf("makesockaddr setting addr, %lu, %d, %hu\n", result, AF_INET, htons((short)port));
+#endif
         addr->sin_addr.s_addr = result;
         addr->sin_family = AF_INET;
         addr->sin_port = htons((short)port);
@@ -423,13 +446,17 @@ static PyObject *iocpcore_ConnectEx(iocpcore* self, PyObject *args) {
     Py_INCREF(object);
     ov->callback = object;
     CreateIoCompletionPort((HANDLE)handle, self->iocp, 0, 1);
+#ifdef SPEW
     printf("calling ConnectEx(%d, 0x%p, %d, 0x%p)\n", handle, addr, addrlen, ov);
+#endif
     Py_BEGIN_ALLOW_THREADS;
     res = gConnectEx(handle, addr, addrlen, NULL, 0, NULL, (OVERLAPPED *)ov);
     Py_END_ALLOW_THREADS;
     PyMem_Free(addr);
     err = WSAGetLastError();
+#ifdef SPEW
     printf("    ce returned %d, err %d\n", res, err);
+#endif
     if(!res && err != ERROR_IO_PENDING) {
         return PyErr_SetFromWindowsErr(err);
     }
