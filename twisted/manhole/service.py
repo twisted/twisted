@@ -18,7 +18,10 @@
 # twisted imports
 from twisted import copyright
 from twisted.spread import pb
-from twisted.python import explorer, log
+from twisted.python import log
+
+# sibling imports
+import explorer
 
 # system imports
 from cStringIO import StringIO

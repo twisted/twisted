@@ -1,6 +1,6 @@
 # -*- Python -*-
 # Twisted, the Framework of Your Internet
-# $Id: gtkmanhole.py,v 1.32 2002/02/22 05:34:27 glyph Exp $
+# $Id: gtkmanhole.py,v 1.33 2002/04/10 12:15:33 itamarst Exp $
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
 # This library is free software; you can redistribute it and/or
@@ -27,10 +27,11 @@
 import code, string, sys, traceback, types
 import gtk
 
-from twisted.python import explorer, rebuild, util
+from twisted.python import rebuild, util
 from twisted.spread.ui import gtkutil
 from twisted.internet import ingtkernet
 from twisted.spread import pb
+from twisted.manhole import explorer
 
 True = gtk.TRUE
 False = gtk.FALSE

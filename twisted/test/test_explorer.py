@@ -21,7 +21,7 @@ Test cases for explorer
 
 from pyunit import unittest
 
-from twisted.python import explorer
+from twisted.manhole import explorer
 
 import types, string
 

@@ -1,6 +1,6 @@
 # -*- Python -*-
 # Twisted, the Framework of Your Internet
-# $Id: spelunk_gnome.py,v 1.7 2002/02/22 05:34:27 glyph Exp $
+# $Id: spelunk_gnome.py,v 1.8 2002/04/10 12:15:33 itamarst Exp $
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
 # This library is free software; you can redistribute it and/or
@@ -51,8 +51,9 @@ gtk = SillyModule(gtk, 'Gtk')
 
 import GDK
 
-from twisted.python import explorer, reflect, text
+from twisted.python import reflect, text
 from twisted.spread import pb
+from twisted.manhole import explorer
 
 import string, sys, types
 import UserList

@@ -1,5 +1,3 @@
-# -*- Python -*-
-# $Id: explorer.py,v 1.11 2002/02/12 10:52:19 moshez Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -28,9 +26,8 @@ import UserDict
 
 # Twisted Imports
 from twisted.spread import pb
+from twisted.python import reflect, text
 
-# Sibling Imports
-import reflect, text
 
 True=(1==1)
 False=not True
