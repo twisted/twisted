@@ -54,7 +54,7 @@ class IConnector(Interface):
 class IReactorTCP(Interface):
     
     def listenTCP(self, port, factory, backlog=5, interface=''):
-       """Connects a given protocol factory to the given numeric TCP/IP port.
+        """Connects a given protocol factory to the given numeric TCP/IP port.
 
         Return:
 
@@ -62,7 +62,9 @@ class IReactorTCP(Interface):
 
         Throws:
 
-          a CannotListenError, as defined in twisted.internet.error, if it cannot listen on this port (e.g., it cannot bind to the required port number)
+          a CannotListenError, as defined in twisted.internet.error, if it
+          cannot listen on this port (e.g., it cannot bind to the required port
+          number)
         """
 
     def connectTCP(self, host, port, factory, timeout=30, bindAddress=None):
@@ -79,11 +81,12 @@ class IReactorTCP(Interface):
           * timeout: number of seconds to wait before assuming the connection
             has failed.
 
-          * bindAddress: a (host, port) tuple of local address to bind to, or None.
+          * bindAddress: a (host, port) tuple of local address to bind to, or
+            None.
 
-        Returns an object implementing IConnector. This connector will call various
-        callbacks on the factory when a connection is made, failed, or lost - see
-        ClientFactory docs for details.
+        Returns an object implementing IConnector. This connector will call
+        various callbacks on the factory when a connection is made, failed, or
+        lost - see ClientFactory docs for details.
         """
 
 
