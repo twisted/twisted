@@ -32,7 +32,7 @@ class GetString(gtk.GtkWindow):
         gtk.GtkWindow.__init__(self, gtk.WINDOW_TOPLEVEL)
         self.set_title(desc)
         self.im = im
-        button = gtkutil.cbutton(desc, self.clicked)
+        button = cbutton(desc, self.clicked)
         self.entry = gtk.GtkEntry()
         hb = gtk.GtkHBox()
         hb.add(self.entry)
