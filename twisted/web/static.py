@@ -1,16 +1,16 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -49,6 +49,9 @@ class Data(resource.Resource):
 
     def render(self, request):
         request.setHeader("content-type", self.type)
+        if request.method == "HEAD":
+            request.setHeader("content-length", len(self.data))
+            return ''
         return self.data
 
 class DirectoryListing(html.Interface):
@@ -218,6 +221,9 @@ class File(resource.Resource):
         except:
             traceback.print_exc(file=log.logfile)
 
+        if request.method == 'HEAD':
+            return ''
+
         # return data
         FileTransfer(f, size, request)
         # and make sure the connection doesn't get closed
@@ -260,7 +266,7 @@ class FileTransfer(pb.Viewable):
 
     def view_stopProducing(self, issuer):
         self.stopProducing()
-    
+
 
     synchronized = ['resumeProducing', 'stopProducing']
 
