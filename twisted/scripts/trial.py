@@ -20,7 +20,7 @@
 # rewritten by slyphon (Jonathan Simms)
 
 import sys, os, inspect, types, errno, pdb, profile, new
-import shutil, random, gc, re, warnings, sets, time
+import shutil, random, gc, re, warnings, time
 import os.path as osp
 from os.path import join as opj
 from cStringIO import StringIO
@@ -28,6 +28,7 @@ from cStringIO import StringIO
 from twisted.application import app
 from twisted.internet import defer
 from twisted.python import usage, reflect, failure, log, plugin
+from twisted.python.compat import sets
 from twisted.python.util import spewer
 from twisted.spread import jelly
 from twisted.trial import runner, util, itrial, registerAdapter, remote
