@@ -18,7 +18,7 @@ clean:
 	rm -rf build
 	find . -name "*.pyc" |xargs -r rm
 	# Add here commands to clean up after the build process.
-	rm -rf debian/python*-twisted debian/python*-twisted-bin debian/twisted-doc debian/twisted-quotes
+	rm -rf debian/python*-twisted debian/python*-twisted-bin debian/twisted-doc debian/twisted-quotes debian/twisted
 	rm -rf debian/files debian/substvars
 
 
