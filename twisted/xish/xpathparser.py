@@ -251,8 +251,9 @@ class XPathParser(Parser):
         return result
 
     def PREDICATE(self):
-        _token_ = self._peek('INDEX', '"\\@"', 'FUNCNAME')
+        _token_ = self._peek('"\\@"', 'INDEX', 'FUNCNAME')
         if _token_ == '"\\@"':
+            self._scan('"\\@"')
             ATTRIB_PREDICATE = self.ATTRIB_PREDICATE()
             return ATTRIB_PREDICATE
         elif _token_ == 'INDEX':
@@ -263,7 +264,6 @@ class XPathParser(Parser):
             return FUNCTION_PREDICATE
 
     def ATTRIB_PREDICATE(self):
-        self._scan('"\\@"')
         IDENTIFIER = self._scan('IDENTIFIER')
         result = xpath._AttribExists(IDENTIFIER)
         if self._peek('CMP_EQ', 'CMP_NE', '"\\]"') != '"\\]"':

@@ -221,15 +221,16 @@ parser XPathParser:
                              ( "\[" PREDICATE {{ result.predicates.append(PREDICATE) }} "\]")*
                             {{ return result }}
 
-        rule PREDICATE: ( ATTRIB_PREDICATE {{ return ATTRIB_PREDICATE }} | 
+        rule PREDICATE: ( "\@" ATTRIB_PREDICATE {{ return ATTRIB_PREDICATE }} | 
                           INDEX {{ return xpath._SpecificChild(INDEX) }} |
                           FUNCTION_PREDICATE {{ return FUNCTION_PREDICATE }} )
 
-        rule ATTRIB_PREDICATE: "\@" IDENTIFIER {{ result = xpath._AttribExists(IDENTIFIER) }}
-                                      [CMP STR {{ result = xpath._AttribValue(IDENTIFIER, CMP, STR[1:len(STR)-1]) }} ] 
-                                      {{ return result }}
+        rule ATTRIB_PREDICATE: IDENTIFIER {{ result = xpath._AttribExists(IDENTIFIER) }}
+                               [CMP STR   {{ result = xpath._AttribValue(IDENTIFIER, CMP, STR[1:len(STR)-1]) }} ] 
+                                          {{ return result }}
 
-        rule FUNCTION_PREDICATE: FUNCNAME "\(\)" CMP STR {{ return xpath._functionFactory(FUNCNAME, CMP, STR[1:len(STR)-1] ) }}
+        rule FUNCTION_PREDICATE: FUNCNAME "\(\)" CMP STR 
+                                 {{ return xpath._functionFactory(FUNCNAME, CMP, STR[1:len(STR)-1] ) }}
 
         rule CMP: (CMP_EQ  {{ return CMP_EQ }} | CMP_NE {{ return CMP_NE }})
         rule STR: (STR_DQ  {{ return STR_DQ }} | STR_SQ {{ return STR_SQ }})
