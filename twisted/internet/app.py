@@ -420,6 +420,9 @@ class Application(log.Logger, styles.Versioned,
             return p
 
     def unlistenWith(self, portType, *args, **kw):
+        """
+        Stop a Port listening with the given parameters.
+        """
         toRemove = []
         for t in self.extraPorts:
             _portType, _args, _kw = t
@@ -449,6 +452,9 @@ class Application(log.Logger, styles.Versioned,
             return reactor.listenTCP(port, factory, backlog, interface)
 
     def unlistenTCP(self, port, interface=''):
+        """
+        Stop a Port listening on the given port and interface.
+        """
         toRemove = []
         for t in self.tcpPorts:
             port_, factory_, backlog_, interface_ = t
@@ -472,6 +478,9 @@ class Application(log.Logger, styles.Versioned,
             return reactor.listenUNIX(filename, factory, backlog, mode)
 
     def unlistenUNIX(self, filename):
+        """
+        Stop a Port listening on the given filename.
+        """
         toRemove = []
         for t in self.unixPorts:
             filename_, factory_, backlog_, mode_ = t
@@ -520,6 +529,21 @@ class Application(log.Logger, styles.Versioned,
         if self.running:
             from twisted.internet import reactor
             return reactor.listenSSL(port, factory, ctxFactory, backlog, interface)
+    
+    def unlistenSSL(self, port, interface=''):
+        """
+        Stop an SSL Port listening on the given interface and port.
+        """
+        toRemove = []
+        for t in self.sslPorts:
+            port_, factory_, ctx_, back_, interface_ = t
+            if port_ == port and interface_ == interface:
+                toRemove.append(t)
+        if toRemove:
+            for t in toRemove:
+                self.sslPorts.remove(t)
+        else:
+            raise error.NotListeningError, (interface, port)
 
     def connectWith(self, connectorType, *args, **kw):
         """
