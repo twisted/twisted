@@ -1,11 +1,9 @@
 #!/usr/bin/env python
 import os, sys, shutil, time
 
+
 def cmd(st):
-    d = os.path.dirname(sys.argv[0])
-    if not d:
-        d = '.'
-    c = os.path.join(d,'') + st
+    c = os.path.join(twistedBinDir,'') + st
     print "Running Command: %s" % repr(c)
     return os.system(c)
 
@@ -47,7 +45,7 @@ def basicWebTest():
 
 def staticWebTest():
     message("Running Static Web Test")
-    cmd("mktap web --static %s/../static" % (os.path.dirname(sys.argv[0]) or '.'))
+    cmd("mktap web --static %s/../static" % twistedBinDir)
     twistd("web")
     message("You should see an 'it worked' page now.",
             "(depending on your browser, you may need to reload)")
@@ -133,6 +131,18 @@ def runRealityTest():
         else:
             message("reality map %s not found, skipping" % mapname)
 
+def runExampleTest():
+    examplesDir = twistedBinDir+'/../doc/examples'
+    os.environ['PYTHONPATH'] = '%s:%s' % (os.environ.get('PYTHONPATH') or '',
+                                          examplesDir)
+    scmd("python %s/pbecho.py" % examplesDir)
+    twistd("pbecho-start")
+    message("You should see a 'hello world'")
+    scmd("python %s/pbclient.py" % examplesDir)
+    pause()
+    killit()
+
+
 def runAllTests():
     message("Starting test.")
     basicWebTest()
@@ -141,9 +151,11 @@ def runAllTests():
     runTelnetTest()
     runWordsTest()
     runRealityTest()
+    runExampleTest()
     message('All tests run.')
 
 
+twistedBinDir = os.path.dirname(sys.argv[0]) or '.'
 try:
     webbrowser = os.environ['WEBBROWSER']
     username = os.environ['USER']

@@ -874,7 +874,6 @@ class Broker(banana.Banana):
         """Evaluate an expression as it's received.
         """
         if isinstance(sexp, types.ListType):
-            print sexp
             command = sexp[0]
             methodName = "proto_%s" % command
             method = getattr(self, methodName, None)
@@ -1410,13 +1409,3 @@ class BrokerFactory(protocol.Factory):
         proto.factory = self
         return proto
 
-
-
-def connect(host, port, username, password, service, perspective, object,
-            callback, errback):
-    """Utility function to connect to a specific PB service.
-
-    This is so that scripts can easily invoke specific functionality on a PB
-    server.
-    """
-    b = Broker()
