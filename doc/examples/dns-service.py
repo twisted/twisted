@@ -6,11 +6,11 @@ from twisted.names import client
 from twisted.internet import reactor
 import sys
 
-def printAnswer(answers):
+def printAnswer((answers, auth, add)):
     if not len(answers):
         print 'No answers'
     else:
-        print '\n'.join(map(str, answers))
+        print '\n'.join([str(x.payload) for x in answers])
     reactor.stop()
 
 def printFailure(arg):
