@@ -843,7 +843,12 @@ class Request:
             return None
 
     def isSecure(self):
-        return self._forceSSL or components.implements(self.channel.transport, interfaces.ISSLTransport)
+        if self._forceSSL:
+            return True
+        transport = getattr(getattr(self, 'channel', None), 'transport', None)
+        if interfaces.ISSLTransport(transport, default=None) is not None:
+            return True
+        return False
 
     def _authorize(self):
         # Authorization, (mostly) per the RFC
