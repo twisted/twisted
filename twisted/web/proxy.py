@@ -83,7 +83,7 @@ class ProxyClientFactory(protocol.ClientFactory):
 
 class ProxyRequest(http.Request):
 
-    protocols = {'http': ProxyClient}
+    protocols = {'http': ProxyClientFactory}
     ports = {'http': 80}
 
     def process(self):
