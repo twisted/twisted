@@ -36,6 +36,7 @@ I've given up, and I will not retry the message again.
     fp.write('From: postmaster@'+failedDomain+'\n')
     fp.write('To: '+failedFrom+'\n')
     fp.write('Subject: Returned Mail: see transcript for details\n')
+    fp.write('Message-ID: %s' % (smtp.messageid(uniq='bounce'),))
     fp.write('Content-Type: multipart/report; report-type=delivery-status; boundary="%s"\n' % boundary)
     fp.write('\n')
     fp.write('--%s\n' % boundary)
