@@ -238,7 +238,8 @@ class IRCProto(basesupport.AbstractClientMixin, irc.IRCClient):
 class IRCAccount(basesupport.AbstractAccount):
     gatewayType = "IRC"
     _isOnline = 0
-    def __init__(self, accountName, autoLogin, nickname, password, channels, host, port):
+    def __init__(self, accountName, autoLogin, nickname, password, host, port,
+                 channels=''):
         self.accountName = accountName
         self.autoLogin = autoLogin
         self.nickname = nickname

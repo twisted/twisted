@@ -153,7 +153,7 @@ class AbstractAccount:
         else:
             print 'already connecting'
 
-    def _startLogOn(self):
+    def _startLogOn(self, chatui):
         """Start the sign on process.
 
         Factored out of L{logOn}.

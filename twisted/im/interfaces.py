@@ -9,7 +9,21 @@ Stability: incendiary, work in progress.
 
 class IAccount(Interface):
     """I represent a user's account with a chat service.
+
+    @cvar gatewayType: Identifies the protocol used by this account.
+    @type gatewayType: string
     """
+
+    def __init__(self, accountName, autoLogin, username, password, host, port):
+        """
+        @type accountName: string
+        @param accountName: A name to refer to the account by locally.
+        @type autoLogin: boolean
+        @type username: string
+        @type password: string
+        @type host: string
+        @type port: integer
+        """
 
     def isOnline(self):
         """Am I online?
@@ -28,7 +42,7 @@ class IAccount(Interface):
         """
 
 class IClient(Interface):
-    def __init__(self, account, logOnDeferred=None):
+    def __init__(self, account, chatui):
         """
         """
         

@@ -192,7 +192,8 @@ class PBAccountForm:
                 self.xml.get_widget("serviceType").get_text(),
                 self.xml.get_widget("serviceName").get_text(),
                 self.xml.get_widget("perspectiveName").get_text()])
-        return PBAccount(accName, autoLogin, host, int(port), user, pasw, services)
+        return PBAccount(accName, autoLogin, user, pasw, host, int(port),
+                         services)
 
 
 class TOCAccountForm:
@@ -219,9 +220,10 @@ class IRCAccountForm:
             accountName, autoLogin,
             self.xml.get_widget("ircNick").get_text(),
             self.xml.get_widget("ircPassword").get_text(),
-            self.xml.get_widget("ircChannels").get_text(),
             self.xml.get_widget("ircServer").get_text(),
-            int(self.xml.get_widget("ircPort").get_text()) )
+            int(self.xml.get_widget("ircPort").get_text()),
+            self.xml.get_widget("ircChannels").get_text(),
+            )
 
 
 

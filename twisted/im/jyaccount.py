@@ -136,16 +136,16 @@ class NewAccountGUI:
         if gwselection == "Twisted":
             sname = gw["service"].text
             perspective = gw["persp"].text
-            self.am.addAccount(PBAccount(acctname, autologin, host, port, name,
-                                         passwd,[[stype, sname, perspective]]))
+            self.am.addAccount(PBAccount(acctname, autologin, name, passwd,
+                                         host, port,
+                                         [[stype, sname, perspective]]))
         elif gwselection == "AIM":
             self.am.addAccount(TOCAccount(acctname, autologin, name, passwd,
                                           host, port))
-
         elif gwselection == "IRC":
             channels = gw["channels"].text
-            self.am.addAccount(IRCAccount(acctname, autologin, name,
-                                          passwd, channels, host, port))
+            self.am.addAccount(IRCAccount(acctname, autologin, name, passwd,
+                                          host, port, channels))
 
         self.amgui.update()
         print "Added new account"

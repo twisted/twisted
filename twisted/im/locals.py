@@ -32,4 +32,4 @@ class StatusEnum(Enum):
 
 OFFLINE = Enum('Offline')
 ONLINE = Enum('Online')
-AWAY = Enum('Away)
+AWAY = Enum('Away')

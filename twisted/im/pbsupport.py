@@ -183,8 +183,8 @@ pbFrontEnds = {
 class PBAccount(basesupport.AbstractAccount):
     _isOnline = 0
     gatewayType = "PB"
-    def __init__(self, accountName, autoLogin,
-                 host, port, identity, password, services):
+    def __init__(self, accountName, autoLogin, identity, password, host, port,
+                 services=None):
         self.accountName = accountName
         self.autoLogin = autoLogin
         self.password = password
@@ -192,6 +192,8 @@ class PBAccount(basesupport.AbstractAccount):
         self.port = port
         self.identity = identity
         self.services = []
+        if not services:
+            services = [('twisted.words', 'twisted.words', identity)]
         for serviceType, serviceName, perspectiveName in services:
             self.services.append([pbFrontEnds[serviceType], serviceName,
                                   perspectiveName])
