@@ -83,8 +83,8 @@ class String(Argument):
     
     def __init__(self, name, default=None, shortDesc=None,
                  longDesc=None, hints=None, allowNone=1, min=0, max=None):
-        Argument.__init__(self, name, default=None, shortDesc=None,
-                          longDesc=None, hints=None, allowNone=1)
+        Argument.__init__(self, name, default=default, shortDesc=shortDesc,
+                          longDesc=longDesc, hints=hints, allowNone=allowNone)
         self.min = min
         self.max = max
     
