@@ -1,0 +1,110 @@
+.TH MKTAP "1" "July 2001" "" ""
+.SH NAME
+mktap \- create twisted.servers
+.SH SYNOPSIS
+.B mktap
+\fIapptype\fR [\fIapplication_option\fR]...
+.B mktap
+--help \fIapptype\fR
+.SH DESCRIPTION
+\fIapptype\fR can be 'web', 'irc', 'reality', 'toc', 'mail' and 'telnet'.
+Each of those support different options.
+.PP
+The \fB\--help\fR prints out a usage message to standard output.
+.PP
+.SH \fBweb\fR options
+.TP
+\fB\-u\fR, \fB\--user\fR
+Makes a server with ~/public_html and
+~/.twistd-web-service support for users.
+.TP
+\fB\--personal\fR
+Instead of generating a webserver, generate a
+ResourcePublisher which listens on ~/.twistd-web-service
+.TP
+\fB\-m\fR, \fB\--module\fR \fI<modulename:classname>\fR
+modulename is a python module without the .py extension.
+This module does not have to be in the PATH or even
+PYTHONPATH. classname is the name of the class inside
+the module that you want to be the root of the web
+server.
+.TP
+\fB\-s\fR, \fB\--static\fR \fI<path>\fR
+<path> is either a specific file or a directory to be
+set as the root of the web server. Use this if you
+have a directory full of HTML, cgi, or php3 files or
+any other files that you want to be served up raw.
+.TP
+\fB\-p\fR, \fB\--port\fR \fI<port>\fR
+<port> is a number representing which port you want to
+start the server on.
+.TP
+\fB\-t\fR, \fB\--telnet\fR \fI<port>\fR
+Run a telnet server on <port>, for additional
+configuration later.
+.TP
+\fB\-i\fR, \fB\--index\fR \fI<name>\fR
+Use an index name other than "index.html"
+.PP
+This creates a web.tap file that can be used by twistd. If you
+specify no arguments, it will be a demo webserver that has the Test
+class from twisted.web.test in it.
+.SH \fBreality\fR options
+.TP
+\fB\-m\fR \fI<map.rpl>\fR
+map.rpl should be a reality pickle.
+.PP
+Reality PickLe files are created using the gnusto(1) utility on a build_map file
+from a Twisted Reality distribution.  Some realities can be found at
+http://twistedmatrix.com/reality.epy.
+.SH \fBtoc\fR options
+.TP
+\fB\-p\fR \fI<port>\fR
+<port> is a number representing which port you want to
+start the server on.
+.SH \fBmail\fR options
+.TP
+\fB\-d\fR, \fB\--domain\fR \fI<domain>\fR=\fI<path>\fR
+generate an SMTP/POP3 virtual maildir domain named "domain" which saves to 
+"path"
+.TP
+\fB\-u\fR, \fB\--username\fR \fI<name>\fR=\fI<password>\fR
+add a user/password to the last specified domains
+.TP
+\fB\-b\fR, \fB\--bounce_to_postmaster\fR
+undelivered mails are sent to the postmaster, instead of being rejected.
+.TP
+\fB\-p\fR, \fB\--pop\fR \fI<port>\fR
+<port> is a number representing which port you want to
+start the pop3 server on.
+.TP
+\fB\-s\fR, \fB\--smtp\fR \fI<port>\fR
+<port> is a number representing which port you want to
+start the smtp server on.
+.TP
+\fB\-t\fR, \fB\--telnet\fR \fI<port>\fR
+Run a telnet server on <port>, for additional
+configuration later.
+.PP
+This creates a mail.tap file that can be used by twistd(1)
+.SH \fBtelnet\fR options
+.TP
+\fB\-p\fR, \fB\--port\fR \fI<port>\fR
+Run the telnet server on <port>
+.TP
+\fB\-u\fR, \fB\--username\fR \fI<name>\fR
+set the username to <name>
+.TP
+\fB\-p\fR, \fB\--password\fR \fI<password>\fR
+set the password to <password>
+.SH AUTHOR
+Written by Moshe Zadka, based on mktap's help messages
+.SH "REPORTING BUGS"
+Report bugs to <twisted-python@twistedmatrix.com>.
+.SH COPYRIGHT
+Copyright \(co 2000 Glyph Lefkowitz
+.br
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.SH "SEE ALSO"
+twistd(1), gnusto(1)
