@@ -194,6 +194,7 @@ class MultiService(_AbstractServiceCollection, ApplicationService):
             svc.stopService()
 
     def addService(self, service):
+        _AbstractServiceCollection.addService(self, service)
         if self.serviceRunning:
             service.startService()
 
