@@ -1207,3 +1207,56 @@ def _cbLogInResponded(identity, d, client, serviceName, perspectiveName):
     else:
         from twisted import cred
         d.errback(cred.error.Unauthorized("invalid username or password"))
+
+class IdentityConnector:
+     def __init__(self, host, port, identityName, password):
+         self.host = host
+         self.port = port
+         self.identityName = identityName
+         self.password = password
+         self._identityWrapper = None
+         self._connectDeferreds = []
+         self._requested = 0
+
+     def _cbGotAuthRoot(self, authroot):
+         authIdentity(authroot, self.identityName,
+                      self.password).addCallbacks(
+             self._cbGotIdentity, self._ebGotIdentity)
+
+     def _cbGotIdentity(self, i):
+         self._identityWrapper = i
+         if i:
+             for d in self._connectDeferreds:
+                 d.callback(i)
+             self._connectDeferreds[:] = []
+         else:
+             from twisted import cred
+             e = cred.error.Unauthorized("invalid username or password")
+             self._ebGotIdentity(e)
+
+     def _ebGotIdentity(self, e):
+         self._requested = 0
+         for d in self._connectDeferreds:
+             d.errback(e)
+         self._connectDeferreds[:] = []
+
+     def requestLogin(self):
+         if not self._identityWrapper:
+             d = defer.Deferred()
+             self._connectDeferreds.append(d)
+             if not self._requested:
+                 self._requested = 1
+                 getObjectAt(self.host, self.port).addCallbacks(
+                     self._cbGotAuthRoot, self._ebGotIdentity)
+             return d
+         else:
+             return defer.succeed(self._identityWrapper)
+
+     def requestService(self, serviceName, perspectiveName=None,
+                        client=None):
+         return self.requestLogin().addCallback(
+             lambda i, self=self: i.callRemote("attach",
+                                               serviceName,
+                                               perspectiveName,
+                                               client))
+
