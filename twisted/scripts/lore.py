@@ -79,7 +79,7 @@ def run():
         klass = process.PlainReportingWalker
     if opt['null']: 
         klass = process.NullReportingWalker
-    w = klass(df, '.html', opt['linkrel'])
+    w = klass(df, '.xhtml', opt['linkrel'])
     if opt['files']:
         for fn in opt['files']:
             w.walked.append(('', fn))

@@ -20,7 +20,7 @@ from twisted.lore import tree, latex, lint, process
 from twisted.web import microdom
 from twisted.protocols import sux
 
-htmlDefault = {'template': 'template.tpl', 'baseurl': '%s', 'ext': '.xhtml'}
+htmlDefault = {'template': 'template.tpl', 'baseurl': '%s', 'ext': '.html'}
 
 class ProcessingFunctionFactory:
 
