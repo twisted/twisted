@@ -222,6 +222,9 @@ class Select(Input):
 
 class Option(Input):
     tagName = 'option'
+    def generateDOM(self, request, node):
+        self.add(Text(self.getData()))
+        return Input.generateDOM(self, request, node)
 
 class Anchor(Widget):
     tagName = 'a'
@@ -240,7 +243,7 @@ class Anchor(Widget):
         params = urllib.urlencode(self.parameters)
         if params:
             href = href + '?' + params
-        self['href'] = href or self.getData()
+        self['href'] = href or self.getData() + '/'
         node = Widget.generateDOM(self, request, node)
         node.appendChild(document.createTextNode(str(self.getData())))
         return node
@@ -319,6 +322,11 @@ class Table(Widget):
 
 class Row(Widget):
     tagName = 'tr'
-    
+
 class Cell(Widget):
     tagName = 'td'
+
+class RawText(Widget):
+    def generateDOM(self, request, node):
+        self.node = domhelpers.RawText(self.getData())
+        return self.node

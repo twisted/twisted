@@ -91,5 +91,5 @@ class RawText(minidom.Text):
     inserted this into the DOM and then later actually tried to mutate
     this node, it would be parsed then.
     """
-    def toxml(self):
-        return self.data
+    def writexml(self, writer, indent="", addindent="", newl=""):
+        writer.write("%s%s%s" % (indent, self.data, newl))
