@@ -61,7 +61,7 @@ class AddChecker(Tk.Frame):
     def addChecker(self):
         url = self.entry.get()
         notified = ChangeNotified(url, self.whereTo)
-        checker = makeChecker(url, notified)
+        checker = self.makeChecker(url, notified)
         checker.start()
         self.entry.delete(0, Tk.END)
 
