@@ -15,6 +15,10 @@ def substitute(request, node, subs):
         substitute(request, child, subs)
 
 def _get(node, nodeId):
+    """
+    (internal) Get a node with the specified C{nodeId} as any of the C{class},
+    C{id} or C{model} attributes.
+    """
     if hasattr(node, 'hasAttributes') and node.hasAttributes() and ((str(node.getAttribute("id")) == nodeId) or (str(node.getAttribute("class")) == nodeId) or (str(node.getAttribute("model")) == nodeId)):
         return node
     if node.hasChildNodes():
@@ -27,11 +31,21 @@ def _get(node, nodeId):
             if result: return result
 
 def get(node, nodeId):
+    """
+    Get a node with the specified C{nodeId} as any of the C{class},
+    C{id} or C{model} attributes. If there is no such node, raise
+    L{NodeLookupError}.
+    """
     result = _get(node, nodeId)
     if result: return result
     raise NodeLookupError, nodeId
 
 def getIfExists(node, nodeId):
+    """
+    Get a node with the specified C{nodeId} as any of the C{class},
+    C{id} or C{model} attributes.  If there is no such node, return
+    C{None}.
+    """
     return _get(node, nodeId)
 
 def getAndClear(node, nodeId):
