@@ -18,6 +18,7 @@
 # DOMWidgets
 
 import urllib
+import warnings
 from twisted.web.microdom import parseString
 from twisted.web import domhelpers
 
@@ -68,10 +69,8 @@ class Widget(view.View):
     tagName = None
     def __init__(self, model = None, submodel = None, setup = None):
         self.errorFactory = Error
-        self.attributes = {}
+        self._reset()
         view.View.__init__(self, model)
-        self.become = None
-        self.children = []
         self.node = None
         self.templateNode = None
         if submodel:
@@ -84,6 +83,12 @@ class Widget(view.View):
             self.setupMethods = []
         self.initialize()
 
+    def _reset(self):
+        self.attributes = {}
+        self.slots = {}
+        self.become = None
+        self._children = []
+    
     def initialize(self):
         """
         Use this method instead of __init__ to initialize your Widget, so you
@@ -142,7 +147,7 @@ class Widget(view.View):
         
         @type item: A DOM node or L{Widget}.
         """
-        self.children.append(item)
+        self._children.append(item)
         
     def insert(self, index, item):
         """
@@ -151,7 +156,7 @@ class Widget(view.View):
         
         @type item: A DOM node or L{Widget}.
         """
-        self.children.insert(index, item)
+        self._children.insert(index, item)
 
     def setNode(self, node):
         """
@@ -183,6 +188,10 @@ class Widget(view.View):
             data.addCallback(self.setDataCallback, request, node)
             data.addErrback(utils.renderFailure, request)
             return data
+        return self._regenerate(request, node, data)
+    
+    def _regenerate(self, request, node, data):
+        self._reset()
         self.setUp(request, node, data)
         for setupMethod in self.setupMethods:
             setupMethod(request, self, data)
@@ -243,12 +252,14 @@ class Widget(view.View):
             new = node.cloneNode(1)
             node.parentNode = parentNode
             node = self.cleanNode(new)
+        #print "NICE CLEAN NODE", node.toxml(), self._children
         for key, value in self.attributes.items():
             node.setAttribute(key, value)
-        for item in self.children:
+        for item in self._children:
             if hasattr(item, 'generateDOM'):
                 item = item.generateDOM(request, node)
             node.appendChild(item)
+        #print "WE GOT A NODE", node.toxml()
         if self.become is None:
             self.node = node
         else:
@@ -265,17 +276,13 @@ class Widget(view.View):
             data = payload[self.submodel]
         else:
             data = self.getData()
-        self.children = []
-        # generateDOM should always get a reference to the
-        # templateNode from the original HTML
-        self.setUp(request, self.templateNode, data)
-        newNode = self.generateDOM(request, self.templateNode)
+        newNode = self._regenerate(request, oldNode, data)
         mutator = template.NodeNodeMutator(newNode)
         mutator.d = request.d
         mutator.generate(request, oldNode)
         self.node = newNode
         return newNode
-    
+
     def __setitem__(self, item, value):
         """
         Convenience syntax for adding attributes to the resultant DOM Node of
@@ -299,6 +306,35 @@ class Widget(view.View):
         """
         self.become = self.errorFactory(self.model, message)
 
+    def getPattern(self, name, default = None):
+        """Get a named slot from the incoming template node. Returns a copy
+        of the node and all it's children. If there was more than one node with
+        the same slot identifier, they will be returned in a round-robin fashion.
+        """
+        #print self.templateNode.toxml()
+        if self.slots.has_key(name):
+            slots = self.slots[name]
+        else:
+            sm = self.submodel.split('/')[-1]
+            slots = domhelpers.locateNodes(self.templateNode, name + 'Of', sm)
+            if not slots:
+                node = domhelpers.getIfExists(self.templateNode, name)
+                if not node:
+                    log.write('WARNING: No template nodes were found '
+                              '(tagged %s="%s"'
+                              ' or slot="%s") for node %s' % (name + "Of", 
+                                            sm, name, self.templateNode))
+                    return default
+                slots = [node]
+            self.slots[name] = slots
+        slot = slots.pop(0)
+        slots.append(slot)
+        parentNode = slot.parentNode
+        slot.parentNode = None
+        clone = slot.cloneNode(1)
+        slot.parentNode = parentNode
+        return clone
+
 
 class DefaultWidget(Widget):
     def generate(self, request, node):
@@ -306,6 +342,10 @@ class DefaultWidget(Widget):
         By default, we just return the node unchanged
         """
         return node
+
+
+#None = DefaultWidget
+
 
 class WidgetNodeMutator(template.NodeMutator):
     """
@@ -326,7 +366,7 @@ class Text(Widget):
     """
     A simple Widget that renders some text.
     """
-    def __init__(self, text, raw=0):
+    def __init__(self, text, raw=0, clear=1):
         """
         @param text: The text to render.
         @type text: A string or L{model.Model}.
@@ -334,6 +374,7 @@ class Text(Widget):
               a L{domhelpers.RawText} or as a DOM TextNode.
         """
         self.raw = raw
+        self.clear = clear
         if isinstance(text, model.Model):
             Widget.__init__(self, text)
         else:
@@ -341,6 +382,8 @@ class Text(Widget):
         self.text = text
     
     def generateDOM(self, request, node):
+        if node and self.clear:
+            domhelpers.clearNode(node)
         if isinstance(self.text, model.Model):
             if self.raw:
                 textNode = domhelpers.RawText(str(self.getData()))
@@ -460,6 +503,7 @@ class Option(Input):
 
 class Anchor(Widget):
     tagName = 'a'
+    trailingSlash = ''
     def initialize(self):
         self.baseHREF = ''
         self.parameters = {}
@@ -484,11 +528,15 @@ class Anchor(Widget):
         if params:
             href = href + '?' + params
         data = self.getData()
-        self['href'] = href or data + '/'
+        self['href'] = href or data + self.trailingSlash
         if data is None:
             data = ""
-        self.add(Text(self.text or data, self.raw))
+        self.add(Text(self.text or data, self.raw, 0))
         return Widget.generateDOM(self, request, node)
+
+
+class DirectoryAnchor(Anchor):
+    trailingSlash = '/'
 
 
 def appendModel(newNode, modelName):
@@ -532,19 +580,13 @@ class List(Widget):
     tagName = None
     def generateDOM(self, request, node):
         node = Widget.generateDOM(self, request, node)
+        domhelpers.clearNode(node)
         listHeader = domhelpers.getIfExists(node, 'listHeader')
         listFooter = domhelpers.getIfExists(node, 'listFooter')
         emptyList = domhelpers.getIfExists(node, 'emptyList')
-        # xxx with this implementation all elements of the list must use the same view widget
-        listItems = domhelpers.locateNodes(node, 'itemOf', self.submodel.split('/')[-1])
-        if not listItems:
-            listItems = [domhelpers.get(node, 'listItem')]
-        domhelpers.clearNode(node)
-        if not listHeader is None:
-            node.appendChild(listHeader)
         data = self.getData()
         if self._has_data(data):
-            self._iterateData(node, listItems, self.submodel, data)
+            self._iterateData(node, self.submodel, data)
         elif not emptyList is None:
             node.appendChild(emptyList)
         if not listFooter is None:
@@ -557,7 +599,7 @@ class List(Widget):
         except (TypeError, AttributeError):
             return 0
 
-    def _iterateData(self, parentNode, listItems, submodel, data):
+    def _iterateData(self, parentNode, submodel, data):
         currentListItem = 0
         for itemNum in range(len(data)):
             # theory: by appending copies of the li node
@@ -565,11 +607,13 @@ class List(Widget):
             # here because handleNode will then recurse into
             # the newly appended nodes
 
-            newNode = listItems[currentListItem].cloneNode(1)
-            if currentListItem >= len(listItems) - 1:
-                currentListItem = 0
-            else:
-                currentListItem += 1
+            newNode = self.getPattern('listItem', default = None)
+            if not newNode:
+                newNode = self.getPattern('item')
+                if newNode:
+                    warnings.warn("itemOf= is deprecated, "
+                                        "please use listItemOf instead",
+                                        DeprecationWarning)
 
             appendModel(newNode, itemNum)
 
@@ -594,16 +638,17 @@ class KeyedList(List):
     def _has_data(self, data):
         return len(data.keys())
 
-    def _iterateData(self, parentNode, listItems, submodel, data):
+    def _iterateData(self, parentNode, submodel, data):
         """
         """
         currentListItem = 0
         for key in data.keys():
-            newNode = listItems[currentListItem].cloneNode(1)
-            if currentListItem >= len(listItems) - 1:
-                currentListItem = 0
-            else:
-                currentListItem += 1
+            if not newNode:
+                newNode = self.getPattern('item')
+                if newNode:
+                    warnings.warn("itemOf= is deprecated, "
+                                        "please use listItemOf instead",
+                                        DeprecationWarning)
             
             appendModel(newNode, key)
 
@@ -627,10 +672,7 @@ class ColumnList(List):
 
     def generateDOM(self, request, node):
         node = Widget.generateDOM(self, request, node)
-        listRow = domhelpers.get(node, 'listRow')
-        listItem = domhelpers.get(listRow, 'listItem')
         domhelpers.clearNode(node)
-        domhelpers.clearNode(listRow)
         
         if self.end:
             listSize = self.end - self.start
@@ -640,15 +682,23 @@ class ColumnList(List):
             listSize = len(self.getData())
         for itemNum in range(listSize):
             if itemNum % self.columns == 0:
-                row = listRow.cloneNode(1)
+                row = self.getPattern('listRow')
+                domhelpers.clearNode(row)
                 node.appendChild(row)
-            newNode = listItem.cloneNode(1)
+
+            if not newNode:
+                newNode = self.getPattern('item')
+                if newNode:
+                    warnings.warn("itemOf= is deprecated, "
+                                        "please use listItemOf instead",
+                                        DeprecationWarning)
 
             appendModel(newNode, itemNum + self.start)
 
             row.appendChild(newNode)
         return node
-        
+
+
 class Bold(Widget):
     tagName = 'b'
     
