@@ -52,7 +52,8 @@ print dir + os.sep + os.path.join("python", "zsh")
 
 function twisted_run () {
     # run completion function for current command
-    eval _$words[1]
+    # the :t modifier strips off any leading pathname components
+    eval _$words[1]:t
 }
 
 function twisted_save_load_run () {
