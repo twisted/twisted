@@ -27,8 +27,8 @@ function recv(stuff) {
 //    output.appendChild(document.createTextNode(unescape(stuff)))
 //    output.appendChild(document.createElement("br"))
 // Works on ie win & mac, and mozilla, but is a bit slower
-    output.innerHTML = output.innerHTML + unescape(stuff) + '<br \>'
-    window.scrollBy(0, window.innerHeight)
+    output.contentDocument.documentElement.innerHTML = output.contentDocument.documentElement.innerHTML + unescape(stuff) + '<br \>'
+    output.contentWindow.scrollBy(0, output.contentWindow.innerHeight)
 }
 
 function focusInput() {

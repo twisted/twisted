@@ -1,3 +1,5 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html;  charset=ISO-8859-1" />
@@ -9,19 +11,19 @@
 </head>
 <body bgcolor="#FFFFFF" onload="focusInput()">
 
-<div id="content" style="border: green solid 1px; width: 100%;">
-</div>
-
+<iframe id="content" src="/blank.html" style="width: 45%; height: 48pt">
+</iframe>
+<br/>
 <input type="text" id="inputText" />
 <input type="button" value="Send" onclick="send('None', document.getElementById('inputText').value)" />
 
-<br />
+<-- <br />
 <span style="width: 45%">Input</span>
-<span style="width: 45%">Output</span>
-<br />
-<iframe id="input" src="/input.html" style="width: 45%; height: 48pt">
+<span style="width: 45%">Output</span> -->
+<br /> 
+<iframe id="input" src="/input.html" style="width:0px; height:0px; border: 0px">
 </iframe>
-<iframe id="output" src="?output=1" style="width: 45%; height: 48pt">
+<iframe id="output" src="?output=1" style="width:0px; height:0px; border: 0px">
 </iframe>
 
 </body>
