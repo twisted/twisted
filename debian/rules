@@ -37,8 +37,9 @@ install-stamp: build-stamp
 	cp TODO README CREDITS doc/*.html debian/tmp/usr/share/doc/twisted
 	cp doc/examples/*.py debian/tmp/usr/share/doc/twisted/examples
 	gzip -9 debian/tmp/usr/share/doc/twisted/examples/*.py
+	gzip -9 debian/tmp/usr/share/doc/twisted/examples/*.tac
 	cp debian/copyright debian/tmp/usr/share/doc/twisted/
-	cp bin/manhole bin/tap2deb bin/mktap bin/gnusto bin/twistd bin/im bin/faucet debian/tmp/usr/bin
+	cp bin/manhole bin/tap2deb bin/mktap bin/gnusto bin/twistd bin/im bin/t-im bin/faucet debian/tmp/usr/bin
 	for file in debian/tmp/usr/bin/*;do sed '1s|.*|#!/usr/bin/python2.1|' $$file > $$file.$$$$;cat $$file.$$$$ > $$file;rm $$file.$$$$;done
 	cp doc/man/*.1 debian/tmp/usr/share/man/man1/
 	gzip -9 debian/tmp/usr/share/man/man1/*

@@ -1,6 +1,17 @@
 twisted (0.15.0) unstable; urgency=low
 
   * New upstream release
+  * IM application: many improvements, new GTK+ client
+  * easier to add error callbacks to deferred
+  * SOCKSv4 support
+  * bugs fixed in t.i.tcp
+  * added approveConnection (again ;-)
+  * All non-blocking methods now return deferreds instead of accepting 
+    callbacks (hopefully)
+  * low-level protocol changes
+  * New t.web applications and features
+  * Perspective retrieval now async
+  * Enterprise now fixed
 
  -- Moshe Zadka <moshez@debian.org>  Wed,  6 Feb 2002 14:38:38 +0200
 
