@@ -59,7 +59,7 @@ class Application(log.Logger, styles.Versioned):
             self.gid = gid or os.getgid()
         self.resolver = DummyResolver()
 
-    persistentVersion = 2
+    persistenceVersion = 2
 
     def upgradeToVersion2(self):
         self.resolver = DummyResolver()
