@@ -378,7 +378,7 @@ def isinst(inst,clazz):
 
 
 def namedModule(name):
-    """Return a module give its name."""
+    """Return a module given its name."""
     topLevel = __import__(name)
     packages = name.split(".")[1:]
     m = topLevel
