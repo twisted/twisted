@@ -283,6 +283,13 @@ def replaceInFile(filename, oldstr, newstr):
 
 class CopyTrunkToWIP(Transaction):
     def doIt(self, opts):
+        try:
+            sh('svn ls %s' % opts['wipurl'])
+        except CommandFailed:
+            pass
+        else:
+            sh('svn rm -m "Removing wip-%s in order to re-copy from trunk" %s' % (opts['base-version'], opts['wipurl']))
+
         sh('svn cp -m "Copying trunk to wip-%s branch." %s %s' % (opts['base-version'], opts['trunkurl'], opts['wipurl']))
 
     def undoIt(self, opts, fail):
