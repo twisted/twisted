@@ -7,7 +7,7 @@ from twisted.web.microdom import lmx
 from twisted.web.domhelpers import RawText
 
 from twisted.python.filepath import FilePath
-# from twisted.web.static import File
+from twisted.web.static import File
 
 class DirectoryLister(page.Page):
     template = '''
@@ -102,5 +102,5 @@ class DirectoryLister(page.Page):
         
     __str__ = __repr__
 
-# File._directoryLister = DirectoryLister
+File._directoryLister = DirectoryLister
 
