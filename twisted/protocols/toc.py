@@ -872,6 +872,9 @@ class TOCClient(protocol.Protocol):
     def modeData(self,flap):
         if not flap[1]:
             return
+        if not ';' in flap[1]:
+            self._debug("bad SNAC:%s"%(flap[1]))
+            return
         command,rest=string.split(flap[1],":",1)
         if MAXARGS.has_key(command):
             maxsplit=MAXARGS[command]
