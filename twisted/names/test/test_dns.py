@@ -99,3 +99,21 @@ class RoundtripDNSTestCase(unittest.TestCase):
             hk1 = hash(k1)
             hk2 = hash(k2)
             self.assertEquals(hk1, hk2, "%s != %s (for %s)" % (hk1,hk2,k))
+
+
+class Encoding(unittest.TestCase):
+    def testNULL(self):
+        bytes = ''.join([chr(i) for i in range(256)])
+        rec = dns.Record_NULL(bytes)
+        rr = dns.RRHeader('testname', dns.NULL, payload=rec)
+        msg1 = dns.Message()
+        msg1.answers.append(rr)
+        s = StringIO()
+        msg1.encode(s)
+        s.seek(0, 0)
+        msg2 = dns.Message()
+        msg2.decode(s)
+
+        self.failUnless(isinstance(msg2.answers[0].payload, dns.Record_NULL))
+        self.assertEquals(msg2.answers[0].payload.payload, bytes)
+

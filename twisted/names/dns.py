@@ -566,11 +566,11 @@ class Record_NULL:                   # EXPERIMENTAL
 
 
     def encode(self, strio, compDict = None):
-        raise NotImplementedError, "Cannot encode or decode NULL records"
+        strio.write(self.payload)
 
 
     def decode(self, strio, length = None):
-        raise NotImplementedError, "Cannot encode or decode NULL records"
+        self.payload = readPrecisely(strio, length)
 
 
     def __hash__(self):
