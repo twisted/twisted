@@ -2,22 +2,24 @@
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001-2002 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-# 
+#
 
 """Some fairly inadequate testcases for Twisted XML support."""
+
+from __future__ import nested_scopes
 
 from twisted.trial.unittest import TestCase
 
@@ -56,13 +58,13 @@ class MicroDOMTest(TestCase):
         self.assertRaises(sux.ParseError, microdom.parseString, "")
 
     def testEatingWhitespace(self):
-        s = """<hello>   
+        s = """<hello>
         </hello>"""
         d = microdom.parseString(s)
         self.failUnless(not d.documentElement.hasChildNodes(),
                         d.documentElement.childNodes)
         self.failUnlessEqual(d, microdom.parseString('<hello></hello>'))
-    
+
     def testTameDocument(self):
         s = """
         <test>
@@ -92,7 +94,7 @@ class MicroDOMTest(TestCase):
         FREE WITH `ENLARGER'</h1>
 
         YES THIS WONDERFUL AWFER IS NOW HERER!!!
-        
+
         </body>
         </HTML>
         """
@@ -161,7 +163,7 @@ class MicroDOMTest(TestCase):
         clone = text.cloneNode()
         self.assert_(clone is not text)
         self.assertEquals(clone.toxml(), "xxxx")
-    
+
     def testEntities(self):
         nodes = microdom.parseString("<b>&amp;&#12AB;</b>").documentElement.childNodes
         self.assertEquals(len(nodes), 2)
@@ -177,7 +179,7 @@ class MicroDOMTest(TestCase):
         self.assert_(isinstance(cdata, microdom.CDATASection))
         self.assertEquals(cdata.data, "</x>\r\n & foo")
         self.assertEquals(cdata.cloneNode().toxml(), "<![CDATA[</x>\r\n & foo]]>")
-    
+
     def testSingletons(self):
         s = "<foo><b/><b /><b\n/></foo>"
         s2 = "<foo><b/><b/><b/></foo>"
@@ -192,14 +194,14 @@ class MicroDOMTest(TestCase):
     def testAttributes(self):
         s = '<foo a="b" />'
         node = microdom.parseString(s).documentElement
-        
+
         self.assertEquals(node.getAttribute("a"), "b")
         self.assertEquals(node.getAttribute("c"), None)
         self.assert_(node.hasAttribute("a"))
         self.assert_(not node.hasAttribute("c"))
         a = node.getAttributeNode("a")
         self.assertEquals(a.value, "b")
-        
+
         node.setAttribute("foo", "bar")
         self.assertEquals(node.getAttribute("foo"), "bar")
 
@@ -225,14 +227,14 @@ class MicroDOMTest(TestCase):
         child = d.childNodes[0]
         self.assertEquals(child.getAttribute("a"), None)
         self.assertEquals(child.nodeName, "foo")
-        
+
         d.insertBefore(microdom.Element("bar"), child)
         self.assertEquals(d.childNodes[0].nodeName, "bar")
         self.assertEquals(d.childNodes[1], child)
         for n in d.childNodes:
             self.assertEquals(n.parentNode, d)
         self.assertEquals(d, d1)
-        
+
         d.removeChild(child)
         self.assertEquals(len(d.childNodes), 1)
         self.assertEquals(d.childNodes[0].nodeName, "bar")
@@ -257,9 +259,9 @@ class MicroDOMTest(TestCase):
         root = d2.documentElement
         self.assertEquals(root.firstChild(), d2.getElementById('me'))
         self.assertEquals(d2.getElementsByTagName('fOo'), [root])
-        self.assertEquals(d2.getElementsByTagName('fOO'), 
+        self.assertEquals(d2.getElementsByTagName('fOO'),
                           [root.lastChild().firstChild()])
-        self.assertEquals(d2.getElementsByTagName('foo'), []) 
+        self.assertEquals(d2.getElementsByTagName('foo'), [])
 
         root = d3.documentElement
         self.assertEquals(root.firstChild(), d3.getElementById('me'))
@@ -285,7 +287,7 @@ class MicroDOMTest(TestCase):
                ("<foo><BAR /></foo>", "<foo><BAR /></foo>"),
                ("<foo>hello there &amp; yoyoy</foo>", "<foo>hello there &amp; yoyoy</foo>"),
                ]
-    
+
     def testOutput(self):
         for s, out in self.samples:
             d = microdom.parseString(s, caseInsensitive=0)
@@ -306,7 +308,7 @@ class MicroDOMTest(TestCase):
         d2 = microdom.parseString(s2)
         d3 = microdom.parseString(s3, caseInsensitive=1)
         out = microdom.parseString(s).documentElement.toxml()
-        self.assertRaises(microdom.MismatchedTags, microdom.parseString, 
+        self.assertRaises(microdom.MismatchedTags, microdom.parseString,
             s, caseInsensitive=0)
         self.assertEquals(out, s2)
         self.failUnlessEqual(d, d2)
@@ -358,6 +360,6 @@ class MicroDOMTest(TestCase):
         b.foo()["z"] = "foo"
         b.foo()
         b.add("bar", c="y")
-        
+
         s = '<p>foo<b a="c"><foo z="foo" /><foo /><bar c="y" /></b></p>'
         self.assertEquals(s, n.toxml())
