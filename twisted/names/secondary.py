@@ -70,6 +70,10 @@ class SecondaryAuthority(common.ResolverBase):
         from twisted.names.authority import FileAuthority
         return FileAuthority.__dict__['_lookup'](self, name, cls, type, timeout)
 
+    #shouldn't we just subclass? :P
+
+    lookupZone = FileAuthority.__dict__['lookupZone']
+
     def _cbZone(self, zone):
         ans, _, _ = zone
         self.records = r = {}
