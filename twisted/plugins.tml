@@ -27,6 +27,11 @@ register("Telnet Shell",
          description="Shell access through telnet.  Warning: This is insecure!",
          type='coil')
 
+register("TCP Port Forwarder",
+         "twisted.coil.plugins.portforward",
+         description="TCP port forwarding.",
+         type='coil')
+
 register("SOCKSv4 Proxy",
          "twisted.coil.plugins.socks",
          description="SOCKSv4 proxy for firewalls.",
@@ -64,6 +69,11 @@ register("Twisted Mail Automated TAP builder",
 
 register("Twisted Manhole Automated TAP builder",
          "twisted.tap.manhole",
+         description="automated TAP building",
+         type="tap")
+
+register("Twisted Port-Forwarding Automated TAP builder",
+         "twisted.tap.portforward",
          description="automated TAP building",
          type="tap")
 
