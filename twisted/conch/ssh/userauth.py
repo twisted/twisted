@@ -197,9 +197,25 @@ class SSHUserAuthClient(service.SSHService):
                             NS(keys.signData(privateKey, b)))
         elif self.lastAuth == 'password':
             prompt, language, rest = getNS(packet, 2)
-            op = getpass('Old Password: ')
-            np = getpass(prompt)
+            self._oldPass = self._newPass = None
+            op = self.getPassword('Old Password: ').addCallback(self._setOldPass)
+            np = self.getPassword(prompt).addCallback(self._setNewPass)
+
+    def _setOldPass(self, op):
+        if self._newPass:
+            np = self._newPass
+            self._newPass = None
             self.askForAuth('password', '\xff'+NS(op)+NS(np))
+        else:
+            self._oldPass = op
+
+    def _setNewPass(self, np):
+        if self._oldPass:
+            op = self._oldPass
+            self._oldPass = None
+            self.askForAuth('password', '\xff'+NS(op)+NS(np))
+        else:
+            self._newPass = np
 
     def auth_publickey(self):
         publicKey = self.getPublicKey()

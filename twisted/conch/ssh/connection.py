@@ -84,6 +84,17 @@ class SSHConnection(service.SSHService):
         self.channelsToRemoteChannel[channel] = remoteChannel
         channel.channelOpen(specificData)
 
+    def ssh_CHANNEL_OPEN_FAILURE(self, packet):
+        localChannel, reasonCode = struct.unpack('>2L', packet[:8])
+        reasonDesc = common.getNS(packet[8:])[0]
+        channel = self.channels[localChannel]
+        del self.channels[localChannel]
+        channel.conn = self
+        reason = error.ConchError(reasonDesc)
+        reason.desc = reasonDesc
+        reason.code = reasonCode
+        channel.openFailed(reason)     
+
     def ssh_CHANNEL_WINDOW_ADJUST(self, packet):
         localChannel, bytesToAdd = struct.unpack('>2L', packet[:8])
         self.channels[localChannel].addWindowBytes(bytesToAdd)
@@ -123,7 +134,8 @@ class SSHConnection(service.SSHService):
         else:
             reply = MSG_CHANNEL_FAILURE
         if wantReply:
-            self.transport.sendPacket(reply, struct.pack('>L', self.localToRemoteChannel[localChannel]))
+            self.transport.sendPacket(reply, struct.pack('>L', 
+                                    self.localToRemoteChannel[localChannel]))
 
     def ssh_CHANNEL_SUCCESS(self, packet):
         localChannel = struct.unpack('>L', packet[:4])[0]
@@ -141,7 +153,7 @@ class SSHConnection(service.SSHService):
     def openChannel(self, channel, extra = ''):
         self.transport.sendPacket(MSG_CHANNEL_OPEN, common.NS(channel.name) 
                 + struct.pack('>3L', self.localChannelID,
-                              channel.windowSize, channel.maxPacket)
+                    channel.windowSize, channel.maxPacket)
                 + extra)
         channel.id = self.localChannelID
         self.channels[self.localChannelID] = channel
@@ -151,9 +163,9 @@ class SSHConnection(service.SSHService):
         log.msg('sending request for channel %s, request %s' % (channel.id, requestType))
         
         self.transport.sendPacket(MSG_CHANNEL_REQUEST, struct.pack('>L',
-                                            self.channelsToRemoteChannel[channel]) + \
-                                            common.NS(requestType)+chr(wantReply) + \
-                                            data)
+                                    self.channelsToRemoteChannel[channel]) + \
+                                    common.NS(requestType)+chr(wantReply) + \
+                                    data)
         d = defer.Deferred()
         if not self.deferreds.has_key(channel.id):
             self.deferreds[channel.id] = []
@@ -162,19 +174,23 @@ class SSHConnection(service.SSHService):
         
     def sendData(self, channel, data):
         self.transport.sendPacket(MSG_CHANNEL_DATA, struct.pack('>L',
-                                            self.channelsToRemoteChannel[channel]) + \
-                                            common.NS(data))
+                                    self.channelsToRemoteChannel[channel]) + \
+                                    common.NS(data))
 
     def sendExtendedData(self, channel, dataType, data):
         self.transport.sendPacket(MSG_CHANNEL_DATA, struct.pack('>2L',
-                                            self.channelsToRemoteChannel[channel]), dataType + \
-                                            common.NS(data))
+                                    self.channelsToRemoteChannel[channel]), 
+                                    dataType + common.NS(data))
+
+    def sendEOF(self, channel):
+        self.transport.sendPacket(MSG_CHANNEL_EOF, struct.pack('>L',
+                                    self.channelsToRemoteChannel[channel]))
 
     def sendClose(self, channel):
         if channel not in self.channelsToRemoteChannel.keys():
             return # we're already closed
         self.transport.sendPacket(MSG_CHANNEL_CLOSE, struct.pack('>L',
-                                            self.channelsToRemoteChannel[channel]))        
+                                    self.channelsToRemoteChannel[channel]))        
         del self.channelsToRemoteChannel[channel]
 
     # methods to override
@@ -217,8 +233,8 @@ class SSHChannel:
     def channelOpen(self):
         log.msg('channel %s open' % self.id)
 
-    def openFailed(self):
-        log.msg('other side refused channel %s' % self.id)
+    def openFailed(self, reason):
+        log.msg('other side refused channel %s\nreason: %s' % (self.id, reason))
 
     def addWindowBytes(self, bytes):
         log.msg('adding bytes to window')

@@ -37,7 +37,7 @@ class SimpleConnection(connection.SSHConnection):
     def serviceStarted(self):
         self.openChannel(TrueChannel(2**16, 2**15, self))
         self.openChannel(FalseChannel(2**16, 2**15, self))
-        self.openChannel(EchoChannel(2**16, 2**15, self))
+        self.openChannel(CatChannel(2**16, 2**15, self))
 
 class TrueChannel(connection.SSHChannel):
     name = 'session' # needed for commands
@@ -67,21 +67,23 @@ class FalseChannel(connection.SSHChannel):
         print 'false status was: %s' % status
         self.loseConnection()
 
-class EchoChannel(connection.SSHChannel):
+class CatChannel(connection.SSHChannel):
     name = 'session'
 
     def openFailed(self, reason):
-        print 'false failed', reason
+        print 'cat failed', reason
 
     def channelOpen(self, ignoredData):
-        self.conn.sendRequest(self, 'exec', common.NS('echo hello conch'))
+        self.conn.sendRequest(self, 'exec', common.NS('cat'))
+        self.write('hello conch\n')
+        self.conn.sendEOF(self)
         self.data = ''
 
     def dataReceived(self, data):
         self.data += data
 
     def closed(self):
-        print 'got data from echo: %s' % repr(self.data)
+        print 'got data from cat: %s' % repr(self.data)
         self.loseConnection()
         reactor.stop()
 

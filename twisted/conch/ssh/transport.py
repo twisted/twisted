@@ -449,7 +449,7 @@ class SSHClientTransport(SSHTransportBase):
             serverKey = keys.getPublicKeyObject(data=pubKey)
             fingerprint = ':'.join(map(lambda c:'%02x'%ord(c),md5.new(pubKey).digest()))
             sharedSecret = MP(pow(f, self.x, DH_PRIME))
-            if not self.checkFingerprint(fingerprint):
+            if not self.verifyHostKey(pubKey, fingerprint):
                 self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED, 'bad fingerprint')
                 return
             h = sha.new()
@@ -480,7 +480,7 @@ class SSHClientTransport(SSHTransportBase):
         serverKey = keys.getPublicKeyObject(data = pubKey)
         sharedSecret = MP(pow(f, self.x, self.p))
         fingerprint = ':'.join(map(lambda c:'%02x'%ord(c),md5.new(pubKey).digest()))
-        if not self.checkFingerprint(fingerprint):
+        if not self.verifyHostKey(pubKey, fingerprint):
             self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED, 'bad fingerprint')
             return
         h = sha.new()
@@ -535,7 +535,7 @@ class SSHClientTransport(SSHTransportBase):
         self.instance = instance
         
     # client methods
-    def checkFingerprint(self, fingerprint):
+    def verifyHostKey(self, hostKey, fingerprint):
         # return 1 if it's good
         log.msg('got server fingerprint %s' % fingerprint)
         return 1
