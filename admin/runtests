@@ -44,6 +44,7 @@ from twisted.test import test_all
 
 class TestProgram:
     value = 0
+    file = None
 
     def __init__(self, argv=None):
         if argv is None:
@@ -112,8 +113,8 @@ class TestProgram:
             from twisted.python.reflect import namedModule
             namedModule(reactorTypes[reactor]).install()
 
-            from twisted.internet import reactor
-            print 'reactor class: %s' % reactor.__class__
+        from twisted.internet import reactor
+        print 'reactor class: %s' % reactor.__class__
 
     def runText(self):
         from pyunit import unittest
