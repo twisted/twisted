@@ -220,8 +220,19 @@ class PerspectiveTestCase(unittest.TestCase):
 
     def test_identityWithNoPassword(self):
         i = self.Identity("id test name")
-        self.assert_(not i.verifyPassword("foo", "bar"))
-        self.assert_(not i.verifyPlainPassword("foo"))
+        pwrq = i.verifyPassword("foo", "bar")
+        pwrq.addErrback(self._identityWithNoPassword_fail)
+
+    def _identityWithNoPassword_fail(self, msg):
+        self.fail("Identity with no password did not authenticate.")
+
+    def test_identityWithNoPassword_plain(self):
+        i = self.Identity("id test name")
+        pwrq = i.verifyPlainPassword("foo")
+        pwrq.addErrback(self._identityWithNoPassword_plain_fail)
+
+    def _identityWithNoPassword_plain_fail(self, msg):
+        self.fail("Identity with no password did not authenticate (plaintext): %s"%msg)
     
     def testsetIdentity_invalid(self):
         self.assertRaises(TypeError,
@@ -231,13 +242,27 @@ class PerspectiveTestCase(unittest.TestCase):
     def testmakeIdentity(self):
         self.ident = ident = self.perspective.makeIdentity("password")
         # simple password verification
-        self.assert_(ident.verifyPlainPassword("password"))
+        pwrq = ident.verifyPlainPassword("password")
+        pwrq.addCallback(self._testmakeIdentity_1)
+        pwrq.addErrback(self._testmakeIdentity_1fail)
+        pwrq.arm()
+
+    def _testmakeIdentity_1fail(self, msg):
+        self.fail("Identity did not verify with plain password")
         
+    def _testmakeIdentity_1(self, msg):
         # complex password verification
         challenge = ident.challenge()
         hashedPassword = util.respond(challenge, "password")
-        self.assert_(ident.verifyPassword(challenge, hashedPassword))
+        pwrq = ident.verifyPassword(challenge, hashedPassword)
+        pwrq.addCallback(self._testmakeIdentity_2)
+        pwrq.addErrback(self._testmakeIdentity_2fail)
+        pwrq.arm()
+
+    def _testmakeIdentity_2fail(self, msg):
+        self.fail("Identity did not verify with hashed password")
         
+    def _testmakeIdentity_2(self, msg):
         d = self.perspective.getIdentityRequest()
         d.addCallback(self._gotIdentity)
         d.arm()
@@ -341,12 +366,54 @@ class IdentityTestCase(unittest.TestCase):
 
     def test_verifyPassword(self):
         self.ident.setPassword("passphrase")
-        self.assert_(not self.ident.verifyPassword("wr", "ong"))
+
+        self._test_verifyPassword_worked = 0
+        pwrq = self.ident.verifyPassword("wr", "ong")
+        pwrq.addCallback(self._test_verifyPassword_false_pos)
+        pwrq.addErrback(self._test_verifyPassword_correct_neg)
+        pwrq.arm()
+        # the following test actually needs the identity in testing
+        # to have sync password checking..
+        self.assert_(self._test_verifyPassword_worked)
+
+    def _test_verifyPassword_false_pos(self, msg):
+        self.fail("Identity accepted invalid hashed password")
+
+    def _test_verifyPassword_correct_neg(self, msg):
+        self.assert_(self._test_verifyPassword_worked==0)
+        self._test_verifyPassword_worked = 1
 
     def test_verifyPlainPassword(self):
         self.ident.setPassword("passphrase")
-        self.assert_(self.ident.verifyPlainPassword("passphrase"))
-        self.assert_(not self.ident.verifyPlainPassword("wrongphrase"))
+
+        self._test_verifyPlainPassword_worked = 0
+
+        pwrq1 = self.ident.verifyPlainPassword("passphrase")
+        pwrq1.addCallback(self._test_verifyPlainPassword_fail)
+        pwrq1.addErrback(self._test_verifyPlainPassword_ok)
+        pwrq1.arm()
+        self.assert_(self._test_verifyPlainPassword_worked==1)
+        
+        pwrq2 = self.ident.verifyPlainPassword("wrongphrase")
+        pwrq2.addCallback(self._test_verifyPlainPassword_false_pos)
+        pwrq2.addErrback(self._test_verifyPlainPassword_correct_neg)
+        pwrq2.arm()
+        self.assert_(self._test_verifyPlainPassword_worked==2)
+
+    def _test_verifyPlainPassword_fail(self, msg):
+        self.fail("Identity did not verify with plain password")
+
+    def _test_verifyPlainPassword_ok(self, msg):
+        self.assert_(self._test_verifyPlainPassword_worked==0)
+        self._test_verifyPlainPassword_worked = 1
+
+    def _test_verifyPlainPassword_false_pos(self, msg):
+        self.fail("Identity accepted invalid plain password")
+
+    def _test_verifyPlainPassword_correct_neg(self, msg):
+        self.assert_(self._test_verifyPlainPassword_worked==1)
+        self._test_verifyPlainPassword_worked = 2
+
 
 
 class AuthorizerTestCase(unittest.TestCase):

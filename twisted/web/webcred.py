@@ -114,20 +114,23 @@ class LogInForm(widgets.Form):
         return [idrq]
 
     def _cbIdentity(self, ident, identityName, password, request):
-        if ident.verifyPlainPassword(password):
-            session = request.getSession()
-            session.identity = ident
-            session.perspectives = {}
-            r = ["Logged in as %s." % repr(identityName)]
-            w = r.append
-            self.format(self.getFormFields(request), w, request)
-            return r
-        else:
-            return self._ebIdentity(
-                failure.Failure(
-                KeyError(
-                "Invalid login.")), request)
+        pwrq = ident.verifyPlainPassword(password)
+        pwrq.addCallback(self._passwordIsOk, ident, identityName, request)
+        pwrq.addErrback(self._passwordIsBad, request)
+        return [pwrq]
 
+    def _passwordIsOk(self, msg, ident, identityName, request):
+        session = request.getSession()
+        session.identity = ident
+        session.perspectives = {}
+        r = ["Logged in as %s: %s" % repr(identityName, msg)]
+        w = r.append
+        self.format(self.getFormFields(request), w, request)
+        return r
+
+    def _passwordIsBad(self, error):
+        self._ebIdentity(failure.Failure(KeyError("Invalid login.")), request)
+    
     def _ebIdentity(self, fail, request):
         fail.trap(KeyError)
         l = []

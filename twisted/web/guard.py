@@ -96,16 +96,21 @@ class AuthForm(widgets.Form):
         return [io.getvalue()]
 
     def gotIdentity(self, ident, password, request, perspectiveName):
-        if ident.verifyPlainPassword(password):
-            ret = ident.requestPerspectiveForKey(self.reqauth.service.serviceName,
-                                                  perspectiveName).addCallbacks(
-                self.gotPerspective, self.didntGetPerspective,
-                callbackArgs=(request,ident),
-                errbackArgs=(request,))
-            ret.needsHeader = 1
-            return [ret]
-        else:
-            return self.didntGetPerspective("no such identity", request)
+        pwrq = ident.verifyPlainPassword(password)
+        pwrq.addCallback(self.passwordIsOk, ident, password,
+                         request, perspectiveName)
+        pwrq.addErrback(self.didntGetPerspective, request)
+        pwrq.needsHeader = 1
+        return [pwrq]
+
+    def passwordIsOk(self, msg, ident, password, request, perspectiveName):
+        ret = ident.requestPerspectiveForKey(self.reqauth.service.serviceName,
+                                             perspectiveName).addCallbacks(
+            self.gotPerspective, self.didntGetPerspective,
+            callbackArgs=(request,ident),
+            errbackArgs=(request,))
+        ret.needsHeader = 1
+        return [ret]
 
     def didntGetIdentity(self, unauth, request):
         io = StringIO()

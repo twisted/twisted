@@ -211,16 +211,24 @@ class IRCChatter(irc.IRC, service.WordsClientInterface):
     def loggedInAs(self, ident):
         """Successfully logged in.
         """
-        if ident.verifyPlainPassword(self.pendingPassword):
-            self.identity = ident
-            self.pendingLogin.attached(self, self.identity)
-            self.participant = self.pendingLogin
-            self.sendMessage('NOTICE', ":Authentication accepted.  "
-                             "Thank you.", prefix='NickServ!services@%s'
-                             % (self.servicename,))
-            self.sendMessage('376', ':No /MOTD.',prefix=self.servicename)
-        else:
-            self.notLoggedIn("unauthorized")
+        pwrq = ident.verifyPlainPassword(self.pendingPassword)
+        pwrq.addCallback(self.successfulLogin, ident)
+        pwrq.addErrback(self.failedLogin)
+        pwrq.arm()
+
+    def successfulLogin(self, msg, ident):
+        self.identity = ident
+        self.pendingLogin.attached(self, self.identity)
+        self.participant = self.pendingLogin
+        self.sendMessage('NOTICE', ":Authentication accepted.  "
+                         "Thank you.", prefix='NickServ!services@%s'
+                         % (self.servicename,))
+        self.sendMessage('376', ':No /MOTD.',prefix=self.servicename)
+        del self.pendingLogin
+        del self.pendingPassword
+
+    def failedLogin(self, error):
+        self.notLoggedIn(error)
         del self.pendingLogin
         del self.pendingPassword
 

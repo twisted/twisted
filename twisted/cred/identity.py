@@ -124,15 +124,20 @@ class Identity:
     def verifyPassword(self, challenge, hashedPassword):
         """Verify a challenge/response password.
         """
+        req = defer.Deferred()
         if self.hashedPassword is None:
             # no password was set, so we can't log in
-            return 0
+            req.errback("account is disabled")
+            return req
         md = md5.new()
         md.update(self.hashedPassword)
         md.update(challenge)
         correct = md.digest()
-        result = (hashedPassword == correct)
-        return result
+        if hashedPassword == correct:
+            req.callback("password verified")
+        else:
+            req.errback("incorrect password")
+        return req
 
     def verifyPlainPassword(self, plaintext):
         """Verify plain text password.
@@ -140,13 +145,20 @@ class Identity:
         This is insecure, but necessary to support legacy protocols such
         as IRC, POP3, HTTP, etc.
         """
+        req = defer.Deferred()
         if self.hashedPassword is None:
             # no password was set, so we can't log in
-            return 0
+            req.errback("account is disabled")
+            return req
         md = md5.new()
         md.update(plaintext)
         userPass = md.digest()
-        return (userPass == self.hashedPassword)
+        if userPass == self.hashedPassword:
+            req.callback("password verified")
+        else:
+            req.errback("incorrect password")
+        return req
+
 
 
 

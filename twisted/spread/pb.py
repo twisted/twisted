@@ -885,9 +885,18 @@ class AuthChallenger(Referenceable):
 
     def remote_respond(self, response):
         if self.ident:
-            if self.ident.verifyPassword(self.challenge, response):
-                return IdentityWrapper(self.serv.broker, self.ident)
+            d = defer.Deferred()
+            pwrq = self.ident.verifyPassword(self.challenge, response)
+            pwrq.addCallback(self._authOk, d)
+            pwrq.addErrback(self._authFail, d)
+            pwrq.arm()
+            return d
 
+    def _authOk(self, result, d):
+        d.callback(IdentityWrapper(self.serv.broker, self.ident))
+
+    def _authFail(self, result, d):
+        d.callback(None)
 
 class AuthServ(Referenceable):
     """XXX
