@@ -176,11 +176,11 @@ class ClientCreator:
         self.reactor.connectTCP(host, port, f, timeout=timeout, bindAddress=bindAddress)
         return d
 
-    def connectUNIX(self, address, timeout = 30, checkPid=0):
+    def connectUNIX(self, address, timeout = 30, checkPID=0):
         """Connect to Unix socket, return Deferred of resulting protocol instance."""
         d = defer.Deferred()
         f = _InstanceFactory(self.reactor, self.protocolClass(*self.args, **self.kwargs), d)
-        self.reactor.connectUNIX(address, f, timeout = timeout, checkPid=checkPid)
+        self.reactor.connectUNIX(address, f, timeout = timeout, checkPID=checkPID)
         return d
     
     def connectSSL(self, host, port, contextFactory, timeout=30, bindAddress=None):
