@@ -59,7 +59,7 @@ def fail(error):
 
 # this connects the protocol to an FTP server running locally
 def run():
-    ftpClient = FTPClient('andrew', 'spOt80',passive=1)
+    ftpClient = FTPClient('andrew', 'XXXX', passive=0)
     ftpClient.debug = 1
     tcp.Client("localhost", 21, ftpClient)
 
@@ -82,6 +82,7 @@ def run():
 
     # Get short listing of current directory, and quit when done
     d = ftpClient.nlst('.', proto)
+    #d.addCallbacks(fail, fail)
     d.addCallbacks(success, fail, callbackArgs=(proto.buffer,))
     d.addCallbacks(lambda result: main.shutDown())
     d.arm()

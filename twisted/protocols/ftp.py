@@ -74,6 +74,7 @@ from twisted.protocols import protocol
 from twisted.protocols.protocol import ServerFactory
 from twisted import internet
 from twisted.python.defer import Deferred
+from twisted.python.failure import Failure
 
 
 # the replies from the ftp server
@@ -701,7 +702,7 @@ class FTPClient(basic.LineReceiver):
     debug = 0
     def __init__(self, username='anonymous', 
                  password='twisted@twistedmatrix.com',
-                 passive=0):
+                 passive=1):
         self.username = username
         self.password = password
 
@@ -717,7 +718,7 @@ class FTPClient(basic.LineReceiver):
         self.transport.loseConnection()
         while self.actionQueue:
             ftpCommand = self.popCommandQueue()
-            ftpCommand.deferred.errback(ConnectionLost('FTP connection lost', error))
+            ftpCommand.deferred.errback(Failure(ConnectionLost('FTP connection lost', error)))
 
     def sendLine(self, line):
         if line is None:
@@ -734,6 +735,8 @@ class FTPClient(basic.LineReceiver):
             internet.main.addTimeout(self.sendNextCommand, 1.0)
             self.nextDeferred = None
             return
+        if ftpCommand.text == 'PORT':
+            self.generatePortCommand(ftpCommand)
         if self.debug:
             print '<--', ftpCommand.text
         self.nextDeferred = ftpCommand.deferred
@@ -802,36 +805,54 @@ class FTPClient(basic.LineReceiver):
 
             return cmd.deferred
         else:
-            # Start listening on a port
-            class FTPDataPortFactory(ServerFactory):
-                pass
-            FTPDataPortFactory.protocol = protocol
-            listener = FTPDataPort(0, FTPDataPortFactory())
-            listener.startListening()
-
-            # Construct crufty FTP magic numbers that represent host & port
-            # FIXME: On windows at least, host comes back as 0.0.0.0!
-            host, port = listener.getHost()[1:]
-
-            # Bleagh: port/256 isn't safe with Python 2.2's
-            # "from __future__ import division", 
-            # so we have to use int(floor(port/256)).  Yuck.  I would use
-            # port//256, but that's not backwards-compatible.  This won't 
-            # actually be a problem until Python 2.3, but it's best to be 
-            # future-proof...
-            numbers = string.split(host, ',') + [str(int(floor(port/256))), 
-                                                 str(port%256)]
-            portCmd = FTPCommand('PORT ' + string.join(numbers,','))
-            portCmd.deferred.addErrback(listener.fail).arm()
+            # We just place a marker command in the queue, and will fill in
+            # the host and port numbers later (see generatePortCommand)
+            portCmd = FTPCommand('PORT')
+            portCmd.protocol = protocol
             self.queueCommand(portCmd)
+
+            # Create dummy functions for the next callback to call.  
+            # These will also be replaced with real functions in 
+            # generatePortCommand.
+            portCmd.loseConnection = lambda result: result
+            portCmd.fail = lambda error: error
             
             cmd = FTPCommand(command)
-            cmd.deferred.addCallbacks(lambda result: 
-                                          listener.loseConnection() or result,
-                                      listener.fail)
+            # Ensure that the connection always gets closed
+            cmd.deferred.addCallbacks(lambda result, portCmd=portCmd: 
+                                          portCmd.loseConnection() or result,
+                                      portCmd.fail)
             self.queueCommand(cmd)
 
             return cmd.deferred
+
+    def generatePortCommand(self, portCmd):
+        # Start listening on a port
+        class FTPDataPortFactory(ServerFactory):
+            def buildProtocol(self, connection):
+                # This is a bit hackish -- we already have Protocol instance,
+                # so just return it instead of making a new one
+                self.protocol.factory = self
+                return self.protocol
+        FTPDataPortFactory.protocol = portCmd.protocol
+        listener = FTPDataPort(0, FTPDataPortFactory())
+        listener.startListening()
+        portCmd.loseConnection = listener.loseConnection
+        portCmd.fail = listener.fail
+
+        # Construct crufty FTP magic numbers that represent host & port
+        host = self.transport.getHost()[1]
+        port = listener.getHost()[2]
+
+        # Bleagh: port/256 isn't safe with Python 2.2's
+        # "from __future__ import division", 
+        # so we have to use int(floor(port/256)).  Yuck.  I would use
+        # port//256, but that's not backwards-compatible.  This won't actually
+        # be a problem until Python 2.3, but it's best to be future-proof...
+        numbers = string.split(host, '.') + [str(int(floor(port/256))), 
+                                             str(port%256)]
+        portCmd.text = 'PORT ' + string.join(numbers,',')
+        portCmd.deferred.addErrback(listener.fail).arm()
 
     def escapePath(self, path):
         # Escape newline characters
@@ -903,11 +924,11 @@ class FTPClient(basic.LineReceiver):
             self.nextDeferred.callback(response)
         elif code[0] in ('4', '5'):
             # Failure
-            self.nextDeferred.errback(CommandFailed(response))
+            self.nextDeferred.errback(Failure(CommandFailed(response)))
         else:
             # This shouldn't happen unless something screwed up.
             print 'Server sent invalid response code %s' % (code,)
-            self.nextDeferred.errback(BadResponse(response))
+            self.nextDeferred.errback(Failure(BadResponse(response)))
             
         # Run the next command
         self.sendNextCommand()
