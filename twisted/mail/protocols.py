@@ -61,7 +61,7 @@ class DomainDeliveryBase:
     def validateFrom(self, helo, origin):
         if not helo:
             raise smtp.SMTPBadSender(origin, 503, "Who are you?  Say HELO first.")
-        if not origin.domain:
+        if origin.local != '' and origin.domain == '':
             raise smtp.SMTPBadSender(origin, 501, "Sender address must contain domain.")
         return origin
 

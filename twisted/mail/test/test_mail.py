@@ -448,6 +448,10 @@ class ServiceDomainTestCase(unittest.TestCase):
         origin = smtp.Address('<user@hostname>')
         self.failUnless(self.D.validateFrom(helo, origin) is origin)
 
+        helo = ('hostname', '1.2.3.4')
+        origin = smtp.Address('<>')
+        self.failUnless(self.D.validateFrom(helo, origin) is origin)
+
         self.assertRaises(
             smtp.SMTPBadSender,
             self.D.validateFrom, None, origin
