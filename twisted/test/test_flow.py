@@ -16,6 +16,9 @@
 #
 # Author: Clark C. Evans
 #
+
+from __future__ import nested_scopes
+
 from twisted.flow import flow
 from twisted.flow.threads import Threaded, QueryIterator
 from twisted.trial import unittest
