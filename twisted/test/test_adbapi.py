@@ -8,7 +8,7 @@ from twisted.trial import unittest
 
 import os, stat, tempfile, types
 
-from twisted.enterprise.adbapi import ConnectionPool
+from twisted.enterprise.adbapi import ConnectionPool, ConnectionLost
 from twisted.internet import defer
 from twisted.trial.util import deferredResult, deferredError
 from twisted.python import log
@@ -67,7 +67,8 @@ class ADBAPITestBase:
         # make sure they were added (runQuery)
         sql = "select x from simple order by x";
         rows = deferredResult(self.dbpool.runQuery(sql))
-        self.failUnless(len(rows) == self.num_iterations, "Wrong number of rows")
+        self.failUnless(len(rows) == self.num_iterations,
+                        "Wrong number of rows")
         for i in range(self.num_iterations):
             self.failUnless(len(rows[i]) == 1, "Wrong size row")
             self.failUnless(rows[i][0] == i, "Values not returned.")
@@ -135,6 +136,42 @@ class ADBAPITestBase:
 
         transaction.execute("select * from NOTABLE")
 
+class ReconnectTestBase:
+    """Test the asynchronous DB-API code with reconnect."""
+
+    def setUp(self):
+        if self.good_sql is None:
+            raise unittest.SkipTest()
+        self.startDB()
+        self.dbpool = self.makePool(cp_max=1, cp_reconnect=True,
+                                    cp_good_sql=self.good_sql)
+        self.dbpool.start()
+        deferredResult(self.dbpool.runOperation(simple_table_schema))
+
+    def tearDown(self):
+        deferredResult(self.dbpool.runOperation('DROP TABLE simple'))
+        self.dbpool.close()
+        self.stopDB()
+
+    def testPool(self):
+        sql = "select count(1) from simple"
+        row = deferredResult(self.dbpool.runQuery(sql))
+        self.failUnless(int(row[0][0]) == 0, "Table not empty")
+
+        # reach in and close the connection manually
+        self.dbpool.connections.values()[0].close()
+
+        if not self.early_reconnect:
+            err = deferredError(self.dbpool.runQuery(sql))
+            self.failUnless(err.check(ConnectionLost))
+
+        row = deferredResult(self.dbpool.runQuery(sql))
+        self.failUnless(int(row[0][0]) == 0, "Table not empty")
+
+        sql = "select * from NOTABLE" # bad sql
+        err = deferredError(self.dbpool.runQuery(sql))
+        self.failIf(err.check(ConnectionLost)) # no connection lost
+
 class DBTestConnector:
     """A class which knows how to test for the presence of
     and establish a connection to a relational database.
@@ -155,6 +192,8 @@ class DBTestConnector:
     can_rollback = True # rollback supported
     test_failures = True # test bad sql?
     escape_slashes = True # escape \ in sql?
+    good_sql = ConnectionPool.good_sql
+    early_reconnect = True # cursor() will fail on closed connection
 
     num_iterations = 100 # number of iterations for test loops
                          # (lower this for slow db's)
@@ -197,6 +236,7 @@ class GadflyConnector(DBTestConnector):
     nulls_ok = False
     can_rollback = False
     escape_slashes = False
+    good_sql = 'select * from simple where 1=0'
 
     num_iterations = 10 # slow
 
@@ -291,6 +331,7 @@ class MySQLConnector(DBTestConnector):
 
     trailing_spaces_ok = False
     can_rollback = False
+    early_reconnect = False
 
     def can_connect(self):
         try: import MySQLdb
@@ -316,6 +357,7 @@ class FirebirdConnector(DBTestConnector):
 
     test_failures = False # failure testing causes problems
     escape_slashes = False
+    good_sql = None # firebird doesn't handle failed sql well
 
     num_iterations = 25 # slow
 
@@ -372,3 +414,7 @@ def makeSQLTests(base, suffix, globals):
 # GadflyADBAPITestCase SQLiteADBAPITestCase PyPgSQLADBAPITestCase
 # PsycopgADBAPITestCase MySQLADBAPITestCase FirebirdADBAPITestCase
 makeSQLTests(ADBAPITestBase, 'ADBAPITestCase', globals())
+
+# GadflyReconnectTestCase SQLiteReconnectTestCase PyPgSQLReconnectTestCase
+# PsycopgReconnectTestCase MySQLReconnectTestCase FirebirdReconnectTestCase
+makeSQLTests(ReconnectTestBase, 'ReconnectTestCase', globals())

@@ -12,6 +12,11 @@ from twisted.python import reflect, log
 from twisted.enterprise.util import safe # backwards compat
 
 
+class ConnectionLost(Exception):
+    """This exception means that a db connection has been lost.
+    Client code may try again."""
+    pass
+
 class Transaction:
     """A lightweight wrapper for a DB-API 'cursor' object.
 
@@ -22,14 +27,41 @@ class Transaction:
     """
     _cursor = None
 
-    def __init__(self, pool, connection):
+    def __init__(self, pool, connection=None):
+        self._pool = pool
         self._connection = connection
         self.reopen()
 
+    def close(self):
+        _cursor = self._cursor
+        self._cursor = None
+        _cursor.close()
+
     def reopen(self):
+        if self._connection is None:
+            self.reconnect()
+
         if self._cursor is not None:
-            self._cursor.close()
+            self.close()
+
+        try:
+            self._cursor = self._connection.cursor()
+            return
+        except:
+            if not self._pool.reconnect:
+                raise
+
+        if self._pool.noisy:
+            log.msg('Connection lost, reconnecting')
+
+        self.reconnect()
         self._cursor = self._connection.cursor()
+
+    def reconnect(self):
+        if self._connection is not None:
+            self._pool.disconnect(self._connection)
+        self._connection = self._pool.connect()
+        self._cursor = None
 
     def __getattr__(self, name):
         return getattr(self._cursor, name)
@@ -39,12 +71,14 @@ class ConnectionPool:
     """I represent a pool of connections to a DB-API 2.0 compliant database.
     """
 
-    CP_ARGS = "min max noisy openfun".split()
+    CP_ARGS = "min max noisy openfun reconnect good_sql".split()
 
     noisy = True # if true, generate informational log messages
     min = 3 # minimum number of connections in pool
     max = 5 # maximum number of connections in pool
     openfun = None # A function to call on new connections
+    reconnect = False # reconnect when connections fail
+    good_sql = 'select 1' # a query which should always succeed
 
     running = False # true when the pool is operating
 
@@ -54,9 +88,9 @@ class ConnectionPool:
         @param dbapiName: an import string to use to obtain a DB-API
                           compatible module (e.g. 'pyPgSQL.PgSQL')
 
-        @param cp_min: the minimum number of connections in pool
+        @param cp_min: the minimum number of connections in pool (default 3)
 
-        @param cp_max: the maximum number of connections in pool
+        @param cp_max: the maximum number of connections in pool (default 5)
 
         @param cp_noisy: generate information log message during
                          operation (default False)
@@ -66,6 +100,15 @@ class ConnectionPool:
                            is passed a new DB-API connection object.
                            This callback can setup per-connection
                            state such as charset, timezone, etc.
+
+        @param cp_reconnect: detect connections which have failed
+                             and reconnect (default False). Failed
+                             connections may result in ConnectionLost
+                             exceptions, which indicate the query should
+                             be re-sent.
+
+        @param cp_good_sql: an sql query which should always succeed
+                            and change no state (default 'select 1')
 
         Any remaining positional and keyword arguments are passed
         to the DB-API object when connecting. Use these arguments
@@ -184,10 +227,12 @@ class ConnectionPool:
 
         return: a Deferred which will fire None or a Failure.
         """
+
         return self.runInteraction(self._runOperation, *args, **kw)
 
     def close(self):
         """Close all pool connections and shutdown the pool."""
+
         from twisted.internet import reactor
         if self.shutdownID:
             reactor.removeSystemEventTrigger(self.shutdownID)
@@ -199,6 +244,7 @@ class ConnectionPool:
 
     def finalClose(self):
         """This should only be called by the shutdown trigger."""
+
         self.threadpool.stop()
         self.running = False
         for conn in self.connections.values():
@@ -234,6 +280,7 @@ class ConnectionPool:
         called connect(). As with connect(), this function is not used
         in normal non-threaded twisted code.
         """
+
         tid = self.threadID()
         if conn is not self.connections.get(tid):
             raise Exception("wrong connection for thread")
@@ -246,17 +293,20 @@ class ConnectionPool:
             log.msg('adbapi closing: %s %s%s' % (self.dbapiName,
                                                  self.connargs or '',
                                                  self.connkw or ''))
-        conn.close()
+        try:
+            conn.close()
+        except:
+            pass
 
     def _runInteraction(self, interaction, *args, **kw):
-        trans = Transaction(self, self.connect())
+        trans = Transaction(self)
         try:
             result = interaction(trans, *args, **kw)
             trans.close()
             trans._connection.commit()
             return result
         except:
-            trans._connection.rollback()
+            self._rollback(trans)
             raise
 
     def _runQuery(self, trans, *args, **kw):
@@ -268,15 +318,39 @@ class ConnectionPool:
 
     def __getstate__(self):
         return {'dbapiName': self.dbapiName,
-                'noisy': self.noisy,
                 'min': self.min,
                 'max': self.max,
+                'noisy': self.noisy,
+                'reconnect': self.reconnect,
+                'good_sql': self.good_sql,
                 'connargs': self.connargs,
                 'connkw': self.connkw}
 
     def __setstate__(self, state):
         self.__dict__ = state
         self.__init__(self.dbapiName, *self.connargs, **self.connkw)
+
+    def _rollback(self, trans):
+        if not self.reconnect:
+            trans._connection.rollback()
+            return
+
+        try:
+            trans._connection.rollback()
+            trans.reopen()
+            trans.execute(self.good_sql)
+            trans.close()
+            trans._connection.commit()
+            return
+        except:
+            pass
+
+        self.disconnect(trans._connection)
+
+        if self.noisy:
+            log.msg('Connection lost.')
+
+        raise ConnectionLost()
 
     def _deferToThread(self, f, *args, **kwargs):
         """Internal function.
