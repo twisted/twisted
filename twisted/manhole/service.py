@@ -387,15 +387,14 @@ class Service(service.Service):
         "on %(host)s.\n"
         "%(longversion)s.\n\n")
 
-    def __init__(self, unsafeTracebacks=False):
+    def __init__(self, unsafeTracebacks=False, namespace=None):
+        self.unsafeTracebacks = unsafeTracebacks
         self.namespace = {
-            # I'd specify __name__ so we don't get it from __builtins__,
-            # but that seems to have the potential for breaking imports.
             '__name__': '__manhole%x__' % (id(self),),
-            # sys, so sys.modules will be readily available
             'sys': sys
             }
-        self.unsafeTracebacks = unsafeTracebacks
+        if namespace:
+            self.namespace.update(namespace)
 
     def __getstate__(self):
         """This returns the persistent state of this shell factory.

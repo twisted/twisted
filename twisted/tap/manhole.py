@@ -56,7 +56,7 @@ class Options(usage.Options):
 def makeService(config):
     port, user, password = config['port'], config['user'], config['password']
     p = portal.Portal(
-        service.Realm(service.Service(config["tracebacks"])),
+        service.Realm(service.Service(config["tracebacks"], config.get('namespace'))),
         [checkers.InMemoryUsernamePasswordDatabaseDontUse(**{user: password})]
     )
     return strports.service(port, pb.PBServerFactory(p, config["tracebacks"]))
