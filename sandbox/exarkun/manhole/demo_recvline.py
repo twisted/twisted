@@ -7,19 +7,11 @@ from twisted.application import service
 application = service.Application("Insults RecvLine Demo")
 
 class DemoRecvLineHandler(recvline.HistoricRecvLineHandler):
-
-    def promptLocation(self):
-        return 0, self.height - 1
-
     def lineReceived(self, line):
         if line == "quit":
             self.proto.disconnect()
-        x, y = self.promptLocation()
-        for n, line in enumerate(self.historyLines[:-5:-1]):
-            self.proto.cursorPosition(x, y - n - 1)
-            self.proto.eraseLine()
-            self.proto.write(line)
-        self.proto.cursorPosition(x, y)
+        self.proto.write(line)
+        self.proto.nextLine()
         self.proto.write(self.ps[self.pn])
 
 from demolib import makeService
