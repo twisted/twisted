@@ -87,7 +87,6 @@ class TestSuite:
                 self.couldNotImport[module] = None
                 return
         names = dir(module)
-        names.sort()
         for name in names:
             obj = getattr(module, name)
             if type(obj) is types.ClassType and isTestClass(obj):
@@ -101,7 +100,6 @@ class TestSuite:
             return
         modGlob = os.path.join(os.path.dirname(package.__file__), self.moduleGlob)
         modules = map(reflect.filenameToModuleName, glob.glob(modGlob))
-        modules.sort()
         for module in modules:
             self.addModule(module)
 
@@ -170,6 +168,8 @@ class TestSuite:
     def run(self, output):
         output.start(self.numTests)
         testClasses = self.testClasses.keys()
+##         testClasses.sort(lambda x,y: cmp((x.__module__, x.__name__),
+##                                          (y.__module__, y.__name__)))
         testClasses.sort(lambda x,y: cmp(x.__name__, y.__name__))
         for testClass in testClasses:
             testCase = testClass()
@@ -333,3 +333,15 @@ class VerboseTextReporter(TextReporter):
     def reportSkip(self, testCase, method, exc_info):
         self.writeln('[SKIPPED]')
         Reporter.reportSkip(self, testCase, method, exc_info)
+
+def deferredResult(d):
+    from twisted.internet import reactor
+    resultSet = []
+    d.addCallbacks(resultSet.append, resultSet.append)
+    while not resultSet:
+        reactor.iterate()
+    if isinstance(resultSet[0], failure.Failure):
+        raise resultSet[0].value
+    else:
+        return resultSet[0]
+    
