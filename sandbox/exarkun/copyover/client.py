@@ -15,7 +15,6 @@ except ImportError:
 
 from twisted.internet import reactor
 from twisted.internet import defer
-from twisted.spread import pb
 from twisted.python import log
 from twisted.cred import credentials
 from twisted.internet import protocol
@@ -24,6 +23,20 @@ from twisted.application import internet
 
 sys.path.append("../../pahan/sendmsg")
 from sendmsg import recvmsg
+
+#############################
+#############################
+#############################
+sys.path.append("../../warner")
+import pb
+
+from twisted.spread.pb import Referenceable, PBClientFactory
+pb.Referenceable = Referenceable
+pb.PBClientFactory = PBClientFactory
+
+#############################
+#############################
+#############################
 
 class Client(unix.Client):
     def doRead(self):
@@ -134,12 +147,16 @@ class UserStateReceiver(pb.Referenceable):
         d.addCallback(self.unproxyFileDescriptors, state)
         return d
 
-def main():
-    log.startLogging(sys.stdout)
-    f = pb.PBClientFactory()
-    reactor.connectTCP("localhost", 10301, f)
-    f.login(credentials.UsernamePassword("username", "password"), UserStateReceiver())
-    reactor.run()
+from gluhgluh import PBClientFactory
 
-if __name__ == '__main__':
-    main()
+def main():
+    f = PBClientFactory()
+    f.login(credentials.UsernamePassword("username", "password"), UserStateReceiver())
+    reactor.connectTCP("localhost", 10301, f)
+
+    from twisted.application import internet
+    return internet.TCPClient("127.0.0.1", 10301, f)
+
+from twisted.application import service
+application = service.Application("Copyover Client")
+main().setServiceParent(application)

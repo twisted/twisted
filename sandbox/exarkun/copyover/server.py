@@ -24,8 +24,6 @@ from twisted.internet import abstract
 from twisted.internet import tcp
 from twisted.internet import unix
 from twisted.persisted import styles
-from twisted.python import log
-from twisted.spread import pb
 from twisted.cred import portal
 from twisted.cred import checkers
 from twisted.protocols import basic
@@ -121,6 +119,7 @@ class FileDescriptorSendingFactory(protocol.ServerFactory):
         p = self.protocol(self.idmap)
         return p
 
+from gluhgluh import pb
 class UserStateSender(pb.Avatar):
     id = 0
     
@@ -162,6 +161,7 @@ class Realm:
     __implements__ = (portal.IRealm,)
 
     def requestAvatar(self, avatarId, mind, *interfaces):
+        print 'saaaaaaaaw'
         if pb.IPerspective not in interfaces:
             raise NotImplementedError
         a = UserStateSender(mind)
@@ -174,15 +174,18 @@ def sendSomeState(avatar):
     port = reactor.listenTCP(19191, server.Site(dirlist.DirectoryLister(".")))
     avatar.sendUserState(port)
 
+from gluhgluh import PBServerFactory
+
 def main():
-    log.startLogging(sys.stdout)
     r = Realm()
     p = portal.Portal(r)
     c = checkers.InMemoryUsernamePasswordDatabaseDontUse(username="password")
     p.registerChecker(c)
-    f = pb.PBServerFactory(p)
-    reactor.listenTCP(10301, f)
-    reactor.run()
+    f = PBServerFactory(p)
+    
+    from twisted.application import internet
+    return internet.TCPServer(10301, f)
 
-if __name__ == '__main__':
-    main()
+from twisted.application import service
+application = service.Application("Copyover Server")
+main().setServiceParent(application)
