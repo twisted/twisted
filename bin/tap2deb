@@ -205,6 +205,7 @@ Public License too
 save_to_file(os.path.join('.build', directory, 'debian', 'dirs'),
 '''\
 etc/init.d
+etc/default
 var/lib/%(deb_file)s
 usr/share/doc/%(deb_file)s
 ''' % vars())
