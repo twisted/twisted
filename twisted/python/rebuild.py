@@ -224,10 +224,11 @@ def rebuild(module, doLog=1):
         if mod == module or mod is None:
             continue
 
-        if hasattr(mod, '__name__') and mod.__name__ != '__main__' and not hasattr(mod, '__file__'):
+        if not hasattr(mod, '__dict__'):
             # It's a builtin module; nothing to replace here.
             continue
         changed = 0
+
         for k, v in mod.__dict__.items():
             try:
                 hash(v)
