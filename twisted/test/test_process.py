@@ -572,6 +572,20 @@ class PosixProcessTestCasePTY(SignalMixin, unittest.TestCase, PosixProcessBase):
     # testSignal
     # testProcess, but not without p.transport.closeStdin
     #  might be solveable: TODO: add test if so
+
+    def testOpeningTTY(self):
+        exe = sys.executable
+        scriptPath = util.sibpath(__file__, "process_tty.py")
+        p = Accumulator()
+        
+        reactor.spawnProcess(p, exe, [exe, "-u", scriptPath], env=None,
+                            path=None, usePTY=self.usePTY)
+        p.transport.write("hello world!\n")
+        timeout = time.time() + 10
+        while not p.closed and not (time.time() > timeout):
+            reactor.iterate(0.01)
+        self.failUnless(p.closed)
+        self.assertEquals(p.outF.getvalue(), "hello world!\r\nhello world!\r\n", "Error message from process_tty follows:\n\n%s\n\n" % p.outF.getvalue())
     
 class Win32ProcessTestCase(SignalMixin, unittest.TestCase):
     """Test process programs that are packaged with twisted."""
@@ -621,13 +635,28 @@ class UtilTestCase(unittest.TestCase):
         
         f = file(j(barfoo, "executable"), "w")
         f.close()
-        
+      
         klass.oldPath = os.environ['PATH']
         os.environ['PATH'] = os.pathsep.join((foobar, foobaz, bazfoo, barfoo))
     
     def tearDownClass(klass):
+        j = os.path.join
         os.environ['PATH'] = klass.oldPath
-    
+        foobar = j("foo", "bar")
+        foobaz = j("foo", "baz")
+        bazfoo = j("baz", "foo")
+        barfoo = j("baz", "bar")
+        
+       
+        os.remove(j(foobaz, "executable"))
+        os.remove(j("foo", "executable"))
+        os.remove(j(bazfoo, "executable"))
+        os.remove(j(bazfoo, "executable.bin"))
+        os.remove(j(barfoo, "executable"))
+
+        for d in foobar, foobaz, bazfoo, barfoo, "foo", "baz":
+            os.rmdir(d)
+     
     def testWhich(self):
         j = os.path.join
         paths = procutils.which("executable")
