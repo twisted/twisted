@@ -603,9 +603,111 @@ class LDAPSearchResultDone(LDAPResult):
     pass
 
 
-#class LDAPModifyResponse(LDAPProtocolResponse):
-#    tag = 0x06
-#    pass
+class LDAPModification(BERSequence):
+    op = None
+
+    def decode(self, encoded, berdecoder):
+        BERSequence.decode(self, encoded, berdecoder)
+        self.op=self.data[0].value
+        self.vals=map(lambda x: x.value, self.data[1:])
+
+    def __init__(self, vals=None, op=None, encoded=None, berdecoder=None, tag=None):
+        BERSequence.__init__(self, [])
+        if encoded!=None:
+            assert vals==None
+            assert op==None
+            assert berdecoder
+            self.decode(encoded, berdecoder)
+        elif vals!=None:
+            self.vals=vals
+            if op:
+                self.op=op
+        else:
+            raise "You must give either value or encoded"
+
+
+    def __str__(self):
+        assert self.op!=None
+        r=[]
+        for x in self.vals:
+            type=x[0]
+            try:
+                v=x[1]
+            except IndexError:
+                v=()
+            r.append(BERSequence([LDAPAttributeDescription(type), BERSet(map(LDAPString, v))]))
+        return str(BERSequence([BEREnumerated(self.op)]+r))
+
+    def __repr__(self):
+        if self.tag==self.__class__.tag:
+            return self.__class__.__name__+"(vals=%s, op=%d)"\
+                   %(repr(self.vals), self.op)
+        else:
+            return self.__class__.__name__+"(vals=%s, op=%d, tag=%d)" \
+                   %(repr(self.vals), self.op, self.tag)
+
+
+
+class LDAPModification_add(LDAPModification):
+    op = 0
+
+class LDAPModification_delete(LDAPModification):
+    op = 1
+
+class LDAPModification_replace(LDAPModification):
+    op = 2
+
+class LDAPBERDecoderContext_LDAPMessage(BERDecoderContext):
+    Identities = {
+        BERSequence.tag: LDAPMessage
+        }
+
+class LDAPModifyRequest(LDAPProtocolRequest, BERSequence):
+    tag=CLASS_APPLICATION|0x06
+
+    def decode(self, encoded, berdecoder):
+        BERSequence.decode(self, encoded, berdecoder) #TODO use special decoder with LDAPModification_*.
+        self.object=self.data[0].value
+        self.modification=self.data[1]
+
+    def __init__(self, object=None, modification=None, encoded=None, berdecoder=None, tag=None):
+        """Initialize the object
+
+l=LDAPModifyRequest(object='cn=foo,dc=example,dc=com',
+                    modification=(LDAPModification_add('attr1', ('value1', 'value2')),
+                                 (LDAPModification_delete('attr2'))))
+"""
+
+        LDAPProtocolRequest.__init__(self)
+        BERSequence.__init__(self, [])
+        if encoded!=None:
+            assert object==None
+            assert modification==None
+            assert berdecoder
+            self.decode(encoded, berdecoder)
+        else:
+            self.object=object
+            self.modification=modification
+
+    def __str__(self):
+        return str(BERSequence([
+            LDAPString(self.object),
+            BERSequence(self.modification)
+            ], tag=self.tag))
+
+    def __repr__(self):
+        if self.tag==self.__class__.tag:
+            return self.__class__.__name__+"(object=%s, modification=%s)"\
+                   %(repr(self.object), repr(self.modification))
+        else:
+            return self.__class__.__name__+"(object=%s, modification=%s, tag=%d)" \
+                   %(repr(self.object), repr(self.modification), self.tag)
+
+
+class LDAPModifyResponse(LDAPResult):
+    tag = CLASS_APPLICATION|0x07
+
+
 #class LDAPAddResponse(LDAPProtocolResponse):
 #    tag = 0x08
 #    pass
@@ -617,9 +719,6 @@ class LDAPSearchResultDone(LDAPResult):
 #    pass
 #class LDAPCompareResponse(LDAPProtocolResponse):
 #    tag = 0x14
-#    pass
-#class LDAPModifyRequest(LDAPProtocolRequest):
-#    tag = 0x05
 #    pass
 #class LDAPAddRequest(LDAPProtocolRequest):
 #    tag = 0x07
@@ -647,6 +746,8 @@ class LDAPBERDecoderContext(BERDecoderContext):
         LDAPSearchResultEntry.tag: LDAPSearchResultEntry,
         LDAPSearchResultDone.tag: LDAPSearchResultDone,
         LDAPReferral.tag: LDAPReferral,
+        LDAPModifyRequest.tag: LDAPModifyRequest,
+        LDAPModifyResponse.tag: LDAPModifyResponse,
     }
 
 
