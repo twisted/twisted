@@ -15,7 +15,6 @@ class IDisplay(zi.Interface):
         """display a verbose view of data"""
 
 
-
 class IListDirItem(zi.Interface):
    def __call__(pathAsString):
       """@param pathAsString: the path to a file"""
@@ -28,7 +27,7 @@ class IListDirItem(zi.Interface):
    gid = zi.Attribute("the group id of the owner")
 
 
-class ListDirItem(components.Adapter):
+class ListDirItem(object):
     """a basic wrapper around the os.lstat object"""
     _stat = None
 
@@ -50,13 +49,14 @@ class ListDirItem(components.Adapter):
 components.registerAdapter(ListDirItem, types.StringType, IListDirItem)
 
 
-
 class IFileLister(components.Interface):
-   dirlist = zi.Attribute("""a file list that can be easily converted into linux-style ls -l command output""")
-   filenames = zi.Attribute("""the filenames this lister has listed (without full path info)""")
-   paths = zi.Attribute("""the full path of the items this lister has listed""")
+    dirlist = zi.Attribute("a file list that can be easily converted into "
+                           "linux-style ls -l command output")
+    filenames = zi.Attribute("the filenames this lister "
+                             "has listed (without full path info)")
+    paths = zi.Attribute("the full path of the items this lister has listed")
 
-class FileLister(components.Adapter):
+class FileLister(object):
     """list all files in a directory"""
     zi.implements(IFileLister)
     _dirlist = None
@@ -81,8 +81,9 @@ class FileLister(components.Adapter):
 
 components.registerAdapter(FileLister, types.StringType, IFileLister)
 
+
     
-class DisplayFileList(components.Adapter):
+class DisplayFileList(object):
     zi.implements(IDisplay)
 
     def simple(self):
@@ -91,17 +92,26 @@ class DisplayFileList(components.Adapter):
     def verbose(self):
 
         def pmask(info):
-            return ''.join([info.stat.st_mode & (256 >> n) and 'rwx'[n % 3] or '-' for n in range(9)])
+            return ''.join([info.stat.st_mode & (256 >> n)
+                            and 'rwx'[n % 3] or '-' for n in range(9)])
 
         def dtype(info):
             fmt = 'pld----'
-            return [fmt[i] for i in range(7) if (info.stat.st_mode >> 12) & (1 << i)][0]
+            return [fmt[i] for i in range(7)
+                    if (info.stat.st_mode >> 12) & (1 << i)][0]
 
         def strmtime(info):
             return time.strftime('%b %d %I:%M', time.gmtime(info.stat.st_mtime))
 
         for info in self.original.dirlist:
-            print "%s%s   %s    %s    %s    %s   %s   %s" % (dtype(info), pmask(info), info.nlinks, info.uid, info.gid, info.size, strmtime(info), info.name)
+            print "%s%s   %s    %s    %s    %s   %s   %s" % (dtype(info),
+                                                             pmask(info),
+                                                             info.nlinks,
+                                                             info.uid,
+                                                             info.gid,
+                                                             info.size,
+                                                             strmtime(info),
+                                                             info.name)
 
 components.registerAdapter(DisplayFileList, IFileLister, IDisplay)
 
@@ -109,7 +119,8 @@ components.registerAdapter(DisplayFileList, IFileLister, IDisplay)
 
 class IFileGrepper(zi.Interface):
    pattern = zi.Attribute('the patern to grep for')
-   matchingLines = zi.Attribute("""a list of (path, num, line) tuples that matched the pattern in path""")
+   matchingLines = zi.Attribute("a list of (path, num, line) tuples "
+                                "that matched the pattern in path")
 
 
 class FileListerGrepper(object):
@@ -142,14 +153,12 @@ class FileListerGrepper(object):
                        l.append((osp.basename(path), num, line))
            self._matchList = l
        return self._matchList
-
    matchingLines = property(_getMatchingLines)
-
 
 components.registerAdapter(FileListerGrepper, FileLister, IFileGrepper)
 
 
-class DisplayFileGrepper(components.Adapter):
+class DisplayFileGrepper(object):
     zi.implements(IDisplay)
 
     def simple(self):
@@ -191,7 +200,8 @@ def main():
 
     print "\n\n"
 
-    print "okay, now let's grep around for the pattern '\<[Tt]wisted\>' in filelist's list of names"
+    print ("okay, now let's grep around for the pattern "
+           "'\<[Tt]wisted\>' in filelist's list of names")
     p = r"[Tt]wisted"
     fg = IFileGrepper(filelister)
 

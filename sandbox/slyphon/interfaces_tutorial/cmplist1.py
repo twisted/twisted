@@ -12,11 +12,13 @@ class IHaveAName(zope.interface.Interface):
 class Foo(object):
     value = 'scrubble'
 
-class GetFoosName(components.Adapter):
+class GetFoosName(object):
     zope.interface.implements(IHaveAName)
 
-    # this is the default constructor for Adapter,
-    # i've included it here for clarity
+    # this is the constructor for an adapter,
+    # if you want a class to act as an adapter, it must take
+    # a single argument, and assign that argument to the
+    # instance attribute self.original
     def __init__(self, original):
         self.original = original
 

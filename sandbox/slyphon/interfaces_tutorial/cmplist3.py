@@ -19,11 +19,11 @@ zope.interface.directlyProvides(modulePath, IFilePath)
 
 def listPath(original):
     return opj(*original)
-zope.interface.directlyProvides(IFilePath)
+zope.interface.directlyProvides(listPath, IFilePath)
 
 def filePath(original):
     return original.name
-zope.interface.directlyProvides(IFilePath)
+zope.interface.directlyProvides(filePath, IFilePath)
 
 
 for _adapter, _original, _interface in [ (modulePath, types.ModuleType, IFilePath),

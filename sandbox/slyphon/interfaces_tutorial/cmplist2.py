@@ -16,23 +16,23 @@ class IFilePath(zope.interface.Interface):
 
 # here are some adapters to IFilePath
 
-class ModulePath(components.Adapter):
+class ModulePath(object):
     zi.implements(IFilePath)
     def getPath(self):
         return os.path.abspath(self.original.__file__)
 
-class ListPath(components.Adapter):
+class ListPath(object):
     zi.implements(IFilePath)
     def getPath(self):
         return os.path.join(*self.original)
 
-class StringPath(components.Adapter):
+class StringPath(object):
     zi.implements(IFilePath)
     def getPath(self):
         return os.path.basename(self.original)
 
 
-class KlassPath(components.Adapter):
+class KlassPath(object):
     zi.implements(IFilePath)
     def getPath(self):
         return os.path.abspath(__import__(self.original.__module__).__file__)
