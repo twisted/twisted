@@ -588,7 +588,7 @@ class Process(styles.Ephemeral):
             exitCode = sig = None
             if self.status != -1:
                 if os.WIFEXITED(self.status):
-                   exitCode = os.WEXITSTATUS(self.status)
+                    exitCode = os.WEXITSTATUS(self.status)
                 else:
                     sig = os.WTERMSIG(self.status)
             else:
