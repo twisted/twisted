@@ -23,7 +23,7 @@ from twisted.trial import unittest
 from twisted.protocols import http, loopback
 from twisted.internet import protocol
 from twisted.test.test_protocols import StringIOWithoutClosing
-import string, random
+import string, random, urllib, cgi
 
 
 class DateTimeTest(unittest.TestCase):
@@ -359,3 +359,32 @@ Content-Type: application/x-www-form-urlencoded
                 self.finish()
 
         self.runRequest(httpRequest, MyRequest)
+
+class QueryArgumentsTestCase(unittest.TestCase):
+    def testUnquote(self):
+        try:
+            from twisted.protocols import _c_urlarg
+        except ImportError:
+            raise unittest.SkipTest
+        # work exactly like urllib.unquote, including stupid things
+        # % followed by a non-hexdigit in the middle and in the end
+        self.failUnlessEqual(urllib.unquote("%notreally%n"),
+            _c_urlarg.unquote("%notreally%n"))
+        # % followed by hexdigit, followed by non-hexdigit
+        self.failUnlessEqual(urllib.unquote("%1quite%1"),
+            _c_urlarg.unquote("%1quite%1"))
+        # unquoted text, followed by some quoted chars, ends in a trailing %
+        self.failUnlessEqual(urllib.unquote("blah%21%40%23blah%"), 
+            _c_urlarg.unquote("blah%21%40%23blah%"))
+
+    def testParseqs(self):
+        self.failUnlessEqual(cgi.parse_qs("a=b&d=c;+=f"),
+            http.parse_qs("a=b&d=c;+=f"))
+        self.failUnlessRaises(ValueError, http.parse_qs, "blah",
+            strict_parsing = 1)
+        self.failUnlessEqual(cgi.parse_qs("a=&b=c", keep_blank_values = 1),
+            http.parse_qs("a=&b=c", keep_blank_values = 1))
+        self.failUnlessEqual(cgi.parse_qs("a=&b=c"),
+            http.parse_qs("a=&b=c"))
+
+

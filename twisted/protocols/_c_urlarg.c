@@ -1,0 +1,158 @@
+/*
+ * Twisted, the Framework of Your Internet
+ * Copyright (C) 2001-2002 Matthew W. Lefkowitz
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of version 2.1 of the GNU Lesser General Public
+ * License as published by the Free Software Foundation.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ */
+/* _c_urlarg.c */
+
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h> /* debugging */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+#include <Python.h>
+#include <cStringIO.h>
+#ifdef __cplusplus
+}
+#endif
+
+#ifdef __GNUC__
+#       define TM_INLINE inline
+#else
+#       define TM_INLINE /* */
+#endif
+
+static PyObject* UrlargError;
+
+#define OUTPUTCHAR(c,n) PycStringIO->cwrite(output, c, n)
+
+#define STATE_INITIAL 0
+#define STATE_PERCENT 1
+#define STATE_HEXDIGIT 2
+
+#define NOT_HEXDIGIT 255
+unsigned char hexdigits[256];
+
+TM_INLINE int ishexdigit(unsigned char c) {
+    return hexdigits[c];
+}
+
+static PyObject *unquote(PyObject *self, PyObject *args)
+{
+    unsigned char *s, *r;
+    unsigned char quotedchar, quotedchartmp, tmp;
+    int state = STATE_INITIAL;
+    PyObject *output, *str;
+    if (!PyArg_ParseTuple(args, "s:unquote", &s)) {
+        return NULL;
+    }
+    // output = cStringIO()
+    output = PycStringIO->NewOutput(strlen(s));
+    if (output == NULL) {
+        return NULL;
+    }
+    s = s - 1;
+    while (*(++s) != '\x00') {
+        switch(state) {
+        case STATE_INITIAL:
+            if (*s == '%') {
+                state = STATE_PERCENT;
+                break;
+            }
+            r = s - 1;
+            while (*(++r) != '%' && *r);
+            OUTPUTCHAR(s, r-s);
+            s = r-1;
+            break;
+        case STATE_PERCENT:
+            if ((quotedchartmp = ishexdigit(*s)) != NOT_HEXDIGIT) {
+                tmp = *s;
+                state = STATE_HEXDIGIT;
+                break;
+            }
+            state = STATE_INITIAL;
+            OUTPUTCHAR("%", 1);
+            s--;
+            break;
+        case STATE_HEXDIGIT:
+            state = STATE_INITIAL;
+            if ((quotedchar = ishexdigit(*s)) != NOT_HEXDIGIT) {
+                quotedchar |= (quotedchartmp << 4);
+                OUTPUTCHAR(&quotedchar, 1);
+                break;
+            }
+            OUTPUTCHAR("%", 1);
+            s -= 2;
+            break;
+        }
+    }
+    switch(state) {
+    case STATE_PERCENT:
+        OUTPUTCHAR("%", 1);
+        break;
+    case STATE_HEXDIGIT:
+        OUTPUTCHAR("%", 1);
+        OUTPUTCHAR(&tmp, 1);
+        break;
+    }
+
+    // return output.getvalue()
+    str = PycStringIO->cgetvalue(output);
+    return str;
+}
+
+static PyMethodDef _c_urlarg_methods[] = {
+    {"unquote",  (PyCFunction)unquote, METH_VARARGS},
+    {NULL, NULL} /* sentinel */
+};
+
+DL_EXPORT(void) init_c_urlarg(void)
+{
+    PyObject* m;
+    PyObject* d;
+    unsigned char i;
+
+    PycString_IMPORT;
+    m = Py_InitModule("_c_urlarg", _c_urlarg_methods);
+    d = PyModule_GetDict(m);
+
+    /* add our base exception class */
+    UrlargError = PyErr_NewException("urlarg.UrlargError", PyExc_Exception, NULL);
+    PyDict_SetItemString(d, "UrlargError", UrlargError);
+
+    /* initialize hexdigits */
+    for(i = 0; i < 255; i++) {
+        hexdigits[i] = NOT_HEXDIGIT;
+    }
+    hexdigits[255] = NOT_HEXDIGIT;
+    for(i = '0'; i <= '9'; i++) {
+        hexdigits[i] = i - '0';
+    }
+    for(i = 'a'; i <= 'f'; i++) {
+        hexdigits[i] = 10 + (i - 'a');
+    }
+    for(i = 'A'; i <= 'F'; i++) {
+        hexdigits[i] = 10 + (i - 'a');
+    }
+    /* Check for errors */
+    if (PyErr_Occurred()) {
+        PyErr_Print();
+        Py_FatalError("can't initialize module _c_urlarg");
+    }
+}
+

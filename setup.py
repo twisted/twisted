@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.118 2003/06/26 05:28:45 cce Exp $
+$Id: setup.py,v 1.119 2003/06/29 05:21:57 pahan Exp $
 """
 
 import distutils, os, sys, string
@@ -166,6 +166,10 @@ class build_ext_twisted(build_ext):
         else:
             self.announce("Sun-RPC portmap support is unavailable on this system (but that's OK, you probably don't need it anyway).")
 
+        # urllib.unquote accelerator
+        exts.append( Extension("twisted.protocols._c_urlarg",
+                                ["twisted/protocols/_c_urlarg.c"],
+                                define_macros=define_macros) )
         self.extensions.extend(exts)
 
 

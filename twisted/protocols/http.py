@@ -49,6 +49,10 @@ import basic
 from twisted.internet import interfaces, reactor, protocol
 from twisted.protocols import policies
 from twisted.python import log
+try: # try importing the fast, C version
+    from twisted.protocols._c_urlarg import unquote
+except ImportError:
+    from urllib import unquote
 
 
 protocol_version = "HTTP/1.1"
@@ -170,6 +174,26 @@ weekdayname = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 monthname = [None,
              'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
              'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+def parse_qs(qs, keep_blank_values=0, strict_parsing=0, unquote=unquote):
+    """like cgi.parse_qs, only with custom unquote function"""
+    d = {}
+    items = [s2 for s1 in qs.split("&") for s2 in s1.split(";")]
+    for item in items:
+        try:
+            k, v = item.split("=", 1)
+        except ValueError:
+            if strict_parsing:
+                raise
+            continue
+        if v or keep_blank_values:
+            k = unquote(k.replace("+", " "))
+            v = unquote(v.replace("+", " "))
+            if k in d:
+                d[k].append(v)
+            else:
+                d[k] = [v]
+    return d
 
 def datetimeToString(msSinceEpoch=None):
     """Convert seconds since epoch to HTTP datetime string."""
@@ -493,7 +517,7 @@ class Request:
                 log.msg("May ignore parts of this invalid URI: %s"
                         % repr(self.uri))
             self.path, argstring = x[0], x[1]
-            self.args = self._parseQueryArguments(argstring, 1)
+            self.args = parse_qs(argstring, 1)
 
         # cache the client and server information, we'll need this later to be
         # serialized and sent with the request so CGIs will work remotely
@@ -508,7 +532,7 @@ class Request:
             key, pdict = cgi.parse_header(ctype)
             if key == 'application/x-www-form-urlencoded':
                 args.update(
-                    self._parseQueryArguments(self.content.read(), 1))
+                    parse_qs(self.content.read(), 1))
             elif key == mfd:
                 args.update(
                     cgi.parse_multipart(self.content, pdict))
@@ -516,10 +540,6 @@ class Request:
                 pass
 
         self.process()
-
-    def _parseQueryArguments(self, qs, keep_blank_values=0, strict_parsing=0):
-        """I parse query arguments like cgi.parse_qs"""
-        return cgi.parse_qs(qs, keep_blank_values, strict_parsing)
 
     def __repr__(self):
         return '<%s %s %s>'% (self.method, self.uri, self.clientproto)

@@ -32,12 +32,15 @@ import string
 import socket
 import types
 import operator
-import urllib
 import cgi
 import copy
 import time
 import os
-
+from urllib import quote
+try:
+    from twisted.protocols._c_urlarg import unquote
+except ImportError:
+    from urllib import unquote
 
 #some useful constants
 NOT_DONE_YET = 1
@@ -151,7 +154,7 @@ class Request(pb.Copyable, http.Request, components.Componentized):
 
         # Resource Identification
         self.prepath = []
-        self.postpath = map(urllib.unquote, string.split(self.path[1:], '/'))
+        self.postpath = map(unquote, string.split(self.path[1:], '/'))
         try:
             resrc = self.site.getResourceFor(self)
             self.render(resrc)
@@ -332,7 +335,7 @@ class Request(pb.Copyable, http.Request, components.Componentized):
             hostport = ''
         else:
             hostport = ':%d' % port
-        return urllib.quote('http%s://%s%s/%s' % (
+        return quote('http%s://%s%s/%s' % (
             self.isSecure() and 's' or '',
             self.getRequestHostname(),
             hostport,
