@@ -633,9 +633,9 @@ class Base(protocol.DatagramProtocol):
         self.parser.dataReceived(data)
         self.parser.dataDone()
         for m in self.messages:
+            self._fixupNAT(m, addr)
             if self.debug:
                 log.msg("Received %r from %r" % (m, addr))
-            self._fixupNAT(m, addr)
             if isinstance(m, Request):
                 self.handle_request(m, addr)
             else:
@@ -647,9 +647,8 @@ class Base(protocol.DatagramProtocol):
         senderVia = parseViaHeader(message.headers["via"][0])
         if senderVia.host != srcHost:
             senderVia.received = srcHost
-        if senderVia.port != srcPort:
-            senderVia.rport = srcPort
-        if senderVia.received is not None or senderVia.rport is not None:
+            if senderVia.port != srcPort:
+                senderVia.rport = srcPort
             message.headers["via"][0] = senderVia.toString()
 
     def deliverResponse(self, responseMessage):
@@ -897,8 +896,8 @@ class DigestedCredentials(cred.credentials.UsernameHashedPassword):
         nonce = self.fields.get('nonce')
         cnonce = self.fields.get('cnonce')
         nc = self.fields.get('nc')
-        algo = self.fields.get('algorithm')
-        qop = self.fields.get('qop-options')
+        algo = self.fields.get('algorithm', 'MD5')
+        qop = self.fields.get('qop-options', 'auth')
         opaque = self.fields.get('opaque')
 
         if opaque not in self.challenges:
@@ -960,7 +959,7 @@ class RegisterProxy(Proxy):
 
     authorizers = {
 #        'basic': BasicAuthorizer(),
-#        'digest': DigestAuthorizer(),
+        'digest': DigestAuthorizer(),
     }
     
     def __init__(self, *args, **kw):
