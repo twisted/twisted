@@ -156,13 +156,16 @@ make_addr(struct sockaddr_in *addr)
 {
     uint32_t ipaddr;
     PyObject *addrobj, *ret;
+    char buf[3*20+3+1+100]; // for good measure
 
     ipaddr = ntohl(addr->sin_addr.s_addr);
-    addrobj = PyString_FromFormat("%d.%d.%d.%d",
-                                  (ipaddr >> 24) & 0xff,
-                                  (ipaddr >> 16) & 0xff,
-                                  (ipaddr >>  8) & 0xff,
-                                  (ipaddr >>  0) & 0xff);
+    /* PyString_FromFormat is not available on python-2.1 */
+    snprintf(buf, sizeof(buf), "%d.%d.%d.%d",
+             (ipaddr >> 24) & 0xff,
+             (ipaddr >> 16) & 0xff,
+             (ipaddr >>  8) & 0xff,
+             (ipaddr >>  0) & 0xff);
+    addrobj = PyString_FromString(buf);
     if (!addrobj)
         return NULL;
     ret = Py_BuildValue("sOi", "INET", addrobj, ntohs(addr->sin_port));
@@ -183,9 +186,7 @@ tcp_get_host(cReactorTransport *transport)
         return NULL;
     }
 
-    //return make_addr(&addr);
-    return Py_BuildValue("(ssi)", "INET", inet_ntoa(addr.sin_addr),
-                         ntohs(addr.sin_port));
+    return make_addr(&addr);
 }
 
 
@@ -202,9 +203,7 @@ tcp_get_peer(cReactorTransport *transport)
         return NULL;
     }
 
-    //return make_addr(&addr);
-    return Py_BuildValue("(ssi)", "INET", inet_ntoa(addr.sin_addr),
-                         ntohs(addr.sin_port));
+    return make_addr(&addr);
 }
 
 /* Implementation of a transport 'do_read' function for a TCP listening
@@ -442,9 +441,14 @@ cReactorListeningPort_stopListening(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-cReactorListeningPort_getHost(PyObject *self)
+cReactorListeningPort_getHost(PyObject *self, PyObject *args)
 {
     cReactorListeningPort *port = (cReactorListeningPort *)self;
+
+    if (!PyArg_ParseTuple(args, ":getHost"))
+    {
+        return NULL;
+    }
 
     return tcp_get_host(port->transport);
 }
@@ -464,8 +468,8 @@ static PyMethodDef cReactorListeningPort_methods[] =
 {
     { "stopListening", cReactorListeningPort_stopListening,
       METH_VARARGS, "stopListening" },
-    { "getHost", (PyCFunction)cReactorListeningPort_getHost,
-      METH_NOARGS, "getHost" },
+    { "getHost", cReactorListeningPort_getHost,
+      METH_VARARGS, "getHost" },
     { NULL, NULL, METH_VARARGS, NULL },
 };
 
