@@ -32,6 +32,7 @@ for the twisted.mail SMTP server
 from twisted.python import log, failure
 from twisted.mail import relay, mail, bounce
 from twisted.internet import protocol, app
+from twisted.protocols import smtp
 import os, string, time
 
 try:
@@ -83,13 +84,13 @@ class SMTPManagedRelayer(relay.SMTPRelayer):
     #    log.msg("managed -- got %s" % line)
     #    relay.SMTPRelayer.lineReceived(self, line)
 
-    def sentMail(self, addresses):
+    def sentMail(self, code, resp, numOk, addresses, log):
         """called when e-mail has been sent
 
         we will always get 0 or 1 addresses.
         """
         message = self.names[0]
-        if addresses: 
+        if code in smtp.SUCCESS:
             self.manager.notifySuccess(self.factory, message)
         else: 
             self.manager.notifyFailure(self.factory, message)
@@ -347,6 +348,6 @@ class MXCalculator:
             t = time.time() - self.badMXs[answer]
             if t > 0:
                 del self.badMXs[answer]
-                deferrd.callback(answer)
+                deferred.callback(answer)
                 return
         deferred.callback(answers[0])

@@ -22,6 +22,7 @@ import stat, os, socket, time, md5, string
 from twisted.protocols import pop3, smtp
 from twisted.persisted import dirdbm
 from twisted.mail import mail
+from twisted.internet import defer
 
 
 _n = 0
@@ -73,7 +74,7 @@ class AbstractMaildirDomain:
         if self.userDirectory(user.dest.local) is not None:
             return defer.succeed(user)
         else:
-            return defer.succeed(None)
+            return defer.fail(smtp.SMTPBadRcpt(user))
 
     def startMessage(self, user):
         """Save a message for a given user

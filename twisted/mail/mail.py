@@ -60,7 +60,7 @@ class BounceDomain:
     def exists(self, user):
         """No user exists in a BounceDomain -- always return 0
         """
-        return defer.succeed(None)
+        return defer.fail(smtp.SMTPBadRcpt(user))
     
     def authenticateUserAPOP(self, user, digest):
         return None

@@ -42,7 +42,7 @@ class DomainQueuer:
         """
         if self.willRelay(user.protocol):
             return defer.succeed(user)
-        return defer.succeed(None)
+        return defer.fail(smtp.SMTPBadRcpt(user))
 
     def willRelay(self, protocol):
         """Check whether we agree to relay
@@ -68,6 +68,7 @@ class DomainQueuer:
 class SMTPRelayer(smtp.SMTPClient):
 
     def __init__(self, messagePaths):
+        smtp.SMTPClient.__init__(self,smtp.DNSNAME)
         self.messages = []
         self.names = []
         for message in messagePaths:
@@ -92,8 +93,13 @@ class SMTPRelayer(smtp.SMTPClient):
     def getMailData(self):
         return self.messages[0][2]
 
-    def sentMail(self, addresses):
-        if addresses:
+    def sentMail(self, code, resp, numOk, addresses, log):
+        """Since we only use one recipient per envelope, this
+        will be called with 0 or 1 addresses. We probably want
+        to do something with the error message if we failed.
+        """
+        if code in smtp.SUCCESS:
+            # At least one, i.e. all, recipients successfully delivered
             os.remove(self.names[0]+'-D')
             os.remove(self.names[0]+'-H')
         del self.messages[0]

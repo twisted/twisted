@@ -18,19 +18,18 @@
 
 # twisted imports
 from twisted.protocols import pop3, smtp
-from twisted.internet import protocol
+from twisted.internet import protocol, defer
 
 # system imports
 import string
-
 
 class DomainSMTP(smtp.SMTP):
     """SMTP server that uses twisted.mail service's domains."""
     
     def validateTo(self, user):
         if not self.service.domains.has_key(user.dest.domain):
-            return defer.succeed(None)
-        return  self.service.domains[user.dest.domain].exists(user)
+            return defer.fail(smtp.SMTPBadRcpt(user))
+        return self.service.domains[user.dest.domain].exists(user)
 
     def startMessage(self, users):
         ret = []
