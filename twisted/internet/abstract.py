@@ -73,11 +73,20 @@ class FileDescriptor(log.Logger):
 
     def doWrite(self):
         """Called when data is available for writing.
+        
+        A result that is true (e.g.) a negtive number implies the connection
+        was lost. A false result implies the connection is still there --
+        a result of 0 implies no write was done. A result of None
+        indicates that a write was done.
         """
         # Send as much data as you can.
         l = self.writeSomeData(self.unsent)
         if l < 0:
             return l
+        if l == 0 and self.unsent:
+            result = 0
+        else:
+            result = None
         self.unsent = self.unsent[l:]
         # If there is nothing left to send,
         if not self.unsent:
@@ -93,6 +102,7 @@ class FileDescriptor(log.Logger):
                 # But if I was previously asked to let the connection die, do
                 # so.
                 return main.CONNECTION_DONE
+        return result
 
     def write(self, data):
         """Reliably write some data.

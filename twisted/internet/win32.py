@@ -80,7 +80,7 @@ def addWriter(writer, writes=writes):
     """Add a socket FileDescriptor for notification of data available to write.
     """
     if not writes.has_key(writer):
-        writes[writer] =_makeSocketEvent(writer, writer.doWrite, FD_WRITE|FD_CLOSE)
+        writes[writer] = 1
 
 def removeReader(reader):
     """Remove a Selectable for notification of data available to read.
@@ -93,7 +93,6 @@ def removeWriter(writer, writes=writes):
     """Remove a Selectable for notification of data available to write.
     """
     if writes.has_key(writer):
-        del events[writes[writer]]
         del writes[writer]
 
 def removeAll():
@@ -118,6 +117,31 @@ def doWaitForMultipleEvents(timeout,
         # sleep so we don't suck up CPU time
         time.sleep(timeout / 1000.0)
         return
+    
+    canDoMoreWrites = 0
+    for fd in writes.keys():
+        log.logOwner.own(fd)
+        closed = 0
+        try:
+            closed = fd.doWrite()
+        except:
+            log.deferr()
+            closed = 1
+
+        if closed:
+            removeReader(fd)
+            removeWriter(fd)
+            try:
+                fd.connectionLost()
+            except:
+                log.deferr()
+        elif closed is None:
+            canDoMoreWrites = 1
+        log.logOwner.disown(fd)
+    
+    if canDoMoreWrites:
+        timeout = 0
+    
     val = WaitForMultipleObjects(handles, 0, timeout)
     if val == WAIT_TIMEOUT:
         return
