@@ -27,32 +27,43 @@ SimpleTokens = (types.IntType, types.LongType, types.FloatType,
 class BaseSlicer:
     opentype = None
     trackReferences = 0
+
     def __init__(self):
         self.openID = None
+
     def describe(self):
         return "??"
+
+    # start/slice/finish are the main "serialize yourself" entry points used
+    # by Banana
+
+    def send(self, obj):
+        # utility function
+        if type(obj) in SimpleTokens:
+            self.banana.sendToken(obj)
+        else:
+            self.banana.slice(obj)
+            # does life stop while we wait for this?
+
     def start(self, obj):
         # refid is for reference tracking
         assert(self.openID == None)
         self.openID = self.banana.sendOpen(self.opentype)
         if self.trackReferences:
             self.banana.setRefID(obj, self.openID)
+
     def slice(self, obj):
         """Tokenize the object and send the tokens via
         self.banana.sendToken(). Will be called after open() and before
         finish().
         """
         raise NotImplementedError
-    def send(self, obj):
-        if type(obj) in SimpleTokens:
-            self.banana.sendToken(obj)
-        else:
-            self.banana.slice(obj)
-            # does life stop while we wait for this?
+
     def finish(self, obj):
         assert(self.openID is not None)
         self.banana.sendClose(self.openID)
         self.openID = None
+
     def abort(self):
         """Stop trying to tokenize the object. Send an ABORT token, then a
         CLOSE. Producers may want to hook this to free up other resources,
@@ -60,6 +71,11 @@ class BaseSlicer:
         """
         self.banana.sendAbort()
         self.banana.sendClose()
+
+
+    # newSlicer/taste/setRefID/getRefID are the other functions of the Slice
+    # stack
+
     def newSlicer(self, obj):
         """Return an IBananaSlicer object based upon the type of the object
         being serialized. This object will be asked to do start(), slice(),
@@ -68,12 +84,14 @@ class BaseSlicer:
         search.
         """
         return None
+
     def taste(self, obj):
         """All Slicers in the stack get to pass judgement upon the outgoing
         object. If they don't like that they see, they should raise an
         InsecureBanana exception.
         """
         pass
+
     def setRefID(self, obj, refid):
         """To pass references to previously-sent objects, the [OPEN,
         'reference', number, CLOSE] sequence is used. The numbers are
@@ -84,16 +102,20 @@ class BaseSlicer:
         SlicerParent, but child slices could do it too if they wished.
         """
         pass
+
     def getRefID(self, obj):
         """'None' means 'ask our parent instead'.
         """
         return None
 
+
 class ListSlicer(BaseSlicer):
     opentype = 'list'
     trackReferences = 1
+
     # it would be useful if this could behave more consumer/producerish.
     # maybe NOT_DONE_YET? Generators?
+
     def slice(self, obj):
         for elem in obj:
             self.send(elem)
@@ -104,6 +126,7 @@ class TupleSlicer(ListSlicer):
 class DictSlicer(BaseSlicer):
     opentype = 'dict'
     trackReferences = 1
+
     def slice(self, obj):
         for key,value in obj.items():
             self.send(key)
@@ -112,6 +135,7 @@ class DictSlicer(BaseSlicer):
 class OrderedDictSlicer(BaseSlicer):
     opentype = 'dict'
     trackReferences = 1
+
     def slice(self, obj):
         keys = obj.keys()
         keys.sort()
@@ -123,31 +147,39 @@ class OrderedDictSlicer(BaseSlicer):
 class InstanceSlicer(OrderedDictSlicer):
     opentype = 'instance'
     trackReferences = 1
+
     def slice(self, obj):
         self.banana.sendToken(reflect.qual(obj.__class__))
         OrderedDictSlicer.slice(self, obj.__dict__) #DictSlicer
-            
+
 class ReferenceSlicer(BaseSlicer):
     opentype = 'reference'
+
     def __init__(self, refid):
         BaseSlicer.__init__(self)
         assert(type(refid) == types.IntType)
         self.refid = refid
+
     def slice(self, obj):
         self.banana.sendToken(self.refid)
-    
+
 class SlicerParent(BaseSlicer):
     # this lives at the bottom of the Slicer stack, at least for our testing
     # purposes
+
     def __init__(self):
         self.references = {}
+
     def start(self, obj):
         self.references = {}
+
     def slice(self, obj):
         self.banana.slice(obj)
+
     def finish(self, obj):
         self.references = {}
-    
+
+
     def newSlicer(self, obj):
         refid = self.banana.getRefID(obj)
         if refid is not None:
@@ -157,10 +189,12 @@ class SlicerParent(BaseSlicer):
         slicer = slicerClass()
         return slicer
 
+
     def setRefID(self, obj, refid):
         if self.banana.debug:
             print "setRefID(%s{%s}) -> %s" % (obj, id(obj), refid)
         self.references[id(obj)] = refid
+
     def getRefID(self, obj):
         refid = self.references.get(id(obj))
         if self.banana.debug:
@@ -183,17 +217,25 @@ class Banana:
         self.openCount = 0
         self.debug = 0
 
+    # sendOpen/sendToken/sendClose/sendAbort are called by Slicers to put
+    # tokens into the stream
+
     def sendOpen(self, opentype):
         openID = self.openCount
         self.openCount += 1
         self.sendToken(("OPEN", opentype, openID))
         return openID
+
     def sendToken(self, token):
         self.tokens.append(token)
+
     def sendClose(self, openID):
         self.sendToken(("CLOSE", openID))
+
     def sendAbort(self):
         self.sendToken(("ABORT",))
+
+
     def slice(self, obj):
         # let everybody taste it
         for i in range(len(self.stack)-1, -1, -1):
@@ -210,11 +252,15 @@ class Banana:
         self.stack.append(child)
         self.doSlice(obj)
         self.stack.pop(-1)
+
     def doSlice(self, obj):
         slicer = self.stack[-1]
         slicer.start(obj)
         slicer.slice(obj)
         slicer.finish(obj)
+
+
+    # setRefID/getRefID are used to walk the stack and handle references
 
     def setRefID(self, obj, refid):
         for i in range(len(self.stack)-1, -1, -1):
@@ -226,7 +272,8 @@ class Banana:
             if obj is not None:
                 return obj
         return None
-        
+
+
     def testSlice(self, obj):
         assert(len(self.stack) == 1)
         assert(isinstance(self.stack[0],SlicerParent))
@@ -239,4 +286,3 @@ class Banana:
 #   Banana.slice(obj)
 #    stack[0].newSlicer() -> stack[1]
 #     stack[1].start, .slice, .finish
-
