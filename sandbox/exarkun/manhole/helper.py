@@ -1,5 +1,6 @@
 
 from twisted.internet import protocol
+from twisted.python import log
 
 import insults
 

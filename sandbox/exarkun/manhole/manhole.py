@@ -100,7 +100,7 @@ class ManholeInterpreter(code.InteractiveInterpreter):
 class Manhole(recvline.HistoricRecvLine):
     namespace = None
 
-    def __init__(self, namespace):
+    def __init__(self, namespace=None):
         recvline.HistoricRecvLine.__init__(self, namespace)
         if namespace is not None:
             self.namespace = namespace.copy()
