@@ -33,6 +33,8 @@ from twisted.mail import protocols, smtp
 
 # System imports
 import os
+from zope.interface import implements
+
 
 class DomainWithDefaultDict:
     '''Simulate a dictionary with a default value for non-existing keys.
@@ -184,7 +186,7 @@ class BounceDomain:
     This can be used to block off certain domains.
     """
 
-    __implements__ = (IDomain,)
+    implements(IDomain)
     
     def exists(self, user):
         raise smtp.SMTPBadRcpt(user)
@@ -201,10 +203,13 @@ class BounceDomain:
     def getCredentialsCheckers(self):
         return []
 
+components.backwardsCompatImplements(BounceDomain)
+
+
 class FileMessage:
     """A file we can write an email too."""
     
-    __implements__ = smtp.IMessage
+    implements(smtp.IMessage)
 
     def __init__(self, fp, name, finalName):
         self.fp = fp
@@ -222,6 +227,9 @@ class FileMessage:
     def connectionLost(self):
         self.fp.close()
         os.remove(self.name)
+
+components.backwardsCompatImplements(FileMessage)
+
 
 class MailService(service.MultiService):
     """An email service."""

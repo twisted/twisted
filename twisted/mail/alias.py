@@ -37,6 +37,8 @@ from twisted.internet import error
 from twisted.python import components
 from twisted.python import failure
 from twisted.python import log
+from zope.interface import implements
+
 
 def handle(result, line, filename, lineNo):
     parts = [p.strip() for p in line.split(':', 1)]
@@ -124,7 +126,7 @@ class AliasBase:
 class AddressAlias(AliasBase):
     """The simplest alias, translating one email address into another."""
 
-    __implements__ = (IAlias,)
+    implements(IAlias)
 
     def __init__(self, alias, *args):
         AliasBase.__init__(self, *args)
@@ -151,7 +153,7 @@ class AddressAlias(AliasBase):
         return None
 
 class FileWrapper:
-    __implements__ = (smtp.IMessage,)
+    implements(smtp.IMessage)
     
     def __init__(self, filename):
         self.fp = tempfile.TemporaryFile()
@@ -183,7 +185,7 @@ class FileWrapper:
 
 class FileAlias(AliasBase):
 
-    __implements__ = (IAlias,)
+    implements(IAlias)
 
     def __init__(self, filename, *args):
         AliasBase.__init__(self, *args)
@@ -196,7 +198,7 @@ class FileAlias(AliasBase):
         return FileWrapper(self.filename)
 
 class MessageWrapper:
-    __implements__ = (smtp.IMessage,)
+    implements(smtp.IMessage)
     
     done = False
     
@@ -240,7 +242,7 @@ class ProcessAliasProtocol(protocol.ProcessProtocol):
 class ProcessAlias(AliasBase):
     """An alias for a program."""
 
-    __implements__ = (IAlias,)
+    implements(IAlias)
 
     def __init__(self, path, *args):
         AliasBase.__init__(self, *args)
@@ -260,7 +262,7 @@ class ProcessAlias(AliasBase):
 class MultiWrapper:
     """Wrapper to deliver a single message to multiple recipients"""
 
-    __implements__ = (smtp.IMessage,)
+    implements(smtp.IMessage)
 
     def __init__(self, objs):
         self.objs = objs
@@ -284,7 +286,7 @@ class MultiWrapper:
 class AliasGroup(AliasBase):
     """An alias which points to more than one recipient"""
 
-    __implements__ = (IAlias,)
+    implements(IAlias)
 
     def __init__(self, items, *args):
         AliasBase.__init__(self, *args)
@@ -325,3 +327,13 @@ class AliasGroup(AliasBase):
         for a in self.aliases:
             r.append(a.resolve(aliasmap, memo))
         return MultiWrapper(filter(None, r))
+
+
+components.backwardsCompatImplements(AddressAlias)
+components.backwardsCompatImplements(FileWrapper)
+components.backwardsCompatImplements(FileAlias)
+components.backwardsCompatImplements(MessageWrapper)
+components.backwardsCompatImplements(ProcessAlias)
+components.backwardsCompatImplements(MultiWrapper)
+components.backwardsCompatImplements(AliasGroup)
+

@@ -23,7 +23,7 @@ from twisted.mail import smtp
 from twisted.internet import protocol
 from twisted.internet import defer
 from twisted.copyright import longversion
-from twisted.python import log
+from twisted.python import log, components
 
 from twisted import cred
 import twisted.cred.error
@@ -31,10 +31,13 @@ import twisted.cred.credentials
 
 from twisted.mail import relay
 
+from zope.interface import implements
+
+
 class DomainDeliveryBase:
     """A server that uses twisted.mail service's domains."""
 
-    __implements__ = (smtp.IMessageDelivery,)
+    implements(smtp.IMessageDelivery)
     
     service = None
     protocolName = None
@@ -79,6 +82,9 @@ class DomainDeliveryBase:
         for user in users:
             ret.append(self.service.domains[user.dest.domain].startMessage(user))
         return ret
+
+components.backwardsCompatImplements(DomainDeliveryBase)
+
 
 class SMTPDomainDelivery(DomainDeliveryBase):
     protocolName = 'smtp'
