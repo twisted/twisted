@@ -16,30 +16,37 @@
 <code>.run</code>) directly, as in the examples in <a
 href="servers.html">Writing Servers</a>, is a good way to immediately
 demonstrate the use of Factories and Protocols. But you would ask for more
-from a fully-fledged, easy-to-run, easy-to-configure Internet Server (with
-capital I and S). To be precise, your users (defined as someone who wants to
-install your server without knowing all the details of how it works) will
-ask for more from it. Twisted provides this for you.</p>
+from a fully-fledged, easy-to-run, easy-to-configure Internet Server. 
+Twisted provides many of these features as a partnership between its 
+Application object and the <code>twistd</code> administrator's program.</p>
 
-<p>What more could we want from our little test program? Well:</p>
+<p>What more could we want? Well:</p>
 
 <ul>
   <li>
+  <em>starting as a daemon</em>:
+
+  <p>One of the important aspects of a server program is that it can
+  be run in the background, with output detached from the terminal,
+  run in a chroot jail or under a different user id.</p>
+ </li>
+
+  <li>
   <em>configuration arguments</em>:
 
-  <p>suppose your QOTD server behaves a bit more like the normal port 17
-  server and pulls a random line from <code>/usr/share/fortunes</code>. Your
-  QOTDFactory() might take a filename to indicate where the QOTD protocols
-  should pull these lines. It would be nice if the person installing your
-  quote server didn't have to modify any Python code to change where this
-  file should be found.</p>
+  <p>suppose your quote of the day ('QOTD') server behaves a bit more 
+  like the normal port 17 server and pulls a random line from 
+  <code>/usr/share/fortunes</code>. Your QOTDFactory() might take a 
+  filename to indicate where the QOTD protocols should pull these lines. 
+  It would be nice if the person installing your quote server didn't have
+  to modify any Python code to change where this file should be found.</p>
 
   <p>Likewise, what if they want it to listen on some other port? That
   shouldn't require editing the code.</p>
   </li>
 
   <li>
-  <em>starting/stopping and persistence</em>:
+  <em>basic persistence</em>:
 
   <p>If your protocol demands that you keep some state from one invocation
   of the server to the next, you'll need to save some information before the
@@ -70,11 +77,13 @@ told the reactor to in the previous example), providing a Factory on each
 one. The difference is that the App won't starting listening on those ports
 right away, but will wait until it starts to run.</p>
 
-<p>When you're done setting up the ports, you have two options: you can
-start running the app immediately, by calling the <code>.run()</code> method, or
-you can save the Application out to a file by calling the <code>.save()</code>
-method. The saved application can then be started later by using the
-<code>twistd</code> utility.</p>
+<p>When you're done setting up an Application object, there are three
+options.  You can run it directly by calling the application's
+<code>.run()</code> method.  You can use <code>twistd -y app.py</code>
+to run your application directly from python source code.  Or you can
+save the Application out to a file by calling the <code>.save()</code>
+method. The saved application can then be started later by using
+<code>twistd -f app-start.tap</code>.</p>
 
 <h2>Example Application</h2>
 
@@ -86,9 +95,40 @@ simply sends the current time to each client.:</p>
 
 <p>This program will start listening to port 8813 in the <code>app.run()</code>
 call, and won't return from that call until the server is terminated
-(probably when you send it SIGINT).</p>
+(probably when you send it SIGINT via ^C on the keyboard).</p>
 
-<p>To use the second option and launch the server later, just use
+<p>To use the second option, the same source file can be used, but
+using the <code>twistd -y</code> command to start the application
+as a daemon.  If persistence is not required, then use the
+<code>--no_save</code> option.   Furthermore, to stop the daemon,
+use <code>stop</code> sub-command.<p>
+
+<pre class="shell">
+$ twistd --no_save --python=app1.py
+$ twistd stop
+$ cat twistd.log
+04/04/2003 23:45 [-] Log opened.
+04/04/2003 23:45 [-] twistd 1.0.4alpha1 (/usr/local/bin/python 2.2.2)
+starting up
+04/04/2003 23:45 [-] license user: Nobody <>
+04/04/2003 23:45 [-] organization: No Organization
+04/04/2003 23:45 [-] reactor class: twisted.internet.default.SelectReactor
+04/04/2003 23:45 [-] Loading
+/home/cce/work/Twisted/doc/howto/listings/application/app1.py...
+04/04/2003 23:45 [-] Loaded.
+04/04/2003 23:45 [*daytimer*] twisted.internet.protocol.Factory starting on
+8813
+04/04/2003 23:45 [*daytimer*] Starting factory
+<twisted.internet.protocol.Factory instance at 0x835dcac>
+04/04/2003 23:45 [-] set uid/gid 1000/0
+04/04/2003 23:45 [twisted.internet.protocol.Factory] (Port 8813 Closed)
+04/04/2003 23:45 [twisted.internet.protocol.Factory] Stopping factory
+<twisted.internet.protocol.Factory instance at 0x835dcac>
+04/04/2003 23:45 [*daytimer*] Main loop terminated.
+04/04/2003 23:45 [-] Server Shut Down.
+</pre>
+
+<p>To use the third option and launch the server later, just use
 <code>.save()</code> instead of <code>.run()</code>. The <code>.save()</code> method
 takes a base name for the generated <code>.tap</code> file:</p>
 
