@@ -5,6 +5,7 @@ from twisted.conch.checkers import SSHPublicKeyDatabase
 from twisted.conch.ssh import factory, userauth, connection, keys, session
 from twisted.internet import reactor, protocol, defer
 from twisted.python import log
+from zope.interface import implements
 import sys
 log.startLogging(sys.stderr)
 
@@ -20,7 +21,7 @@ class ExampleAvatar(avatar.ConchUser):
         self.channelLookup.update({'session':session.SSHSession})
 
 class ExampleRealm:
-    __implements__ = portal.IRealm,
+    implements(portal.IRealm)
 
     def requestAvatar(self, avatarId, mind, *interfaces):
         return interfaces[0], ExampleAvatar(avatarId), lambda: None
