@@ -1,4 +1,5 @@
 #include <unistd.h>
+#include <stdlib.h>
 #include <errno.h>
 #include <boost/python.hpp> 
 using namespace boost::python;
@@ -63,8 +64,30 @@ typedef struct {
     int b_size;
     Deallocator* b_dealloc;
 } DeallocBuffer;
-    
-    
+
+static Twisted::DeleteDeallocator deleteDealloc;
+
+static int Buffer_init(DeallocBuffer *self, PyObject *args)
+{
+    char* buf;
+    int length;
+    if (!PyArg_ParseTuple(args, "s#", &buf, &length)) {
+	return -1;
+    }
+    self->b_ptr = (void*)new char[length];
+    self->b_size = length;
+    memcpy(self->b_ptr, buf, length);
+    self->b_dealloc = &deleteDealloc;
+    return 0;
+}
+
+static PyObject* Buffer_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
+{
+    DeallocBuffer *self;
+    self = (DeallocBuffer *)type->tp_alloc(type, 0);
+    return (PyObject *)self;
+}
+
 static int Buffer_getreadbuf(DeallocBuffer *self, int idx, void **pp)
 {
     *pp = self->b_ptr;
@@ -184,6 +207,23 @@ PyTypeObject BufferType = {
     &buffer_as_buffer,         /*tp_as_buffer*/
     Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,        /*tp_flags*/
     "Buffer with custom deallocator.", /* tp_doc */
+    0,		               /* tp_traverse */
+    0,		               /* tp_clear */
+    0,		               /* tp_richcompare */
+    0,		               /* tp_weaklistoffset */
+    0,		               /* tp_iter */
+    0,		               /* tp_iternext */
+    0,                         /* tp_methods */
+    0,                         /* tp_members */
+    0,                         /* tp_getset */
+    0,                         /* tp_base */
+    0,                         /* tp_dict */
+    0,                         /* tp_descr_get */
+    0,                         /* tp_descr_set */
+    0,                         /* tp_dictoffset */
+    (initproc)Buffer_init,     /* tp_init */
+    0,                         /* tp_alloc */
+    Buffer_new,
 };
 
 static PyObject* createDeallocBuffer(Deallocator* d, void* buf, int size) {
@@ -199,6 +239,8 @@ static PyObject* createDeallocBuffer(Deallocator* d, void* buf, int size) {
 
 void Twisted::TCPTransport::write(Deallocator* d, char* buf, int buflen) 
 {
+    // Commented out until I redo twisted's buffering system.
+    /* 
     PyObject* result;
     PyObject* tup;
     PyObject* b = createDeallocBuffer(d, (void*)buf, buflen);
@@ -212,6 +254,9 @@ void Twisted::TCPTransport::write(Deallocator* d, char* buf, int buflen)
     result = PyObject_CallMethod(self.ptr(), "write", "O", tup);
     Py_XDECREF(result);
     Py_DECREF(tup);
+    */
+    self.attr("write")(str(buf, buflen));
+    d->dealloc(buf);
 }
 
 
