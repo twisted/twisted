@@ -445,8 +445,8 @@ class Request(pb.Copyable, http.HTTP):
         return socket.gethostbyaddr(self.transport.getHost()[1])
 
     def prePathURL(self):
-        return 'http://%s/%s' % (self.getHeader("host"),
-                                 string.join(self.prepath, '/'))
+        return urllib.quote('http://%s/%s' % (self.getHeader("host"),
+                                 string.join(self.prepath, '/')), "/:")
 
     def getClientIP(self):
         if self.client[0] == 'INET':
