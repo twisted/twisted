@@ -232,23 +232,7 @@ class ITerminalTransport(iinternet.ITransport):
         """
 
 CSI = '\x1b'
-CST = {'H': 'H',
-       'r': 'r',
-       'f': 'f',
-       'A': 'A',
-       'B': 'B',
-       'C': 'C',
-       'D': 'D',
-       's': 's',
-       'u': 'u',
-       'J': 'J',
-       'K': 'K',
-       'm': 'm',
-       'h': 'h',
-       'l': 'l',
-       'p': 'p',
-       'R': 'R',
-       '~': 'tilde'}
+CST = {'~': 'tilde'}
 
 # These are nominally public
 # XXX - Put them in a namespace or something
@@ -350,7 +334,7 @@ class ServerProtocol(protocol.Protocol):
             elif self.state == 'bracket-escaped':
                 if ch == 'O':
                     self.state = 'low-function-escaped'
-                elif ch in CST:
+                elif ch.isalpha() or ch == '~':
                     self._handleControlSequence(''.join(self.escBuf) + ch)
                     del self.escBuf
                     self.state = 'data'
@@ -367,7 +351,7 @@ class ServerProtocol(protocol.Protocol):
 
     def _handleControlSequence(self, buf):
         buf = '\x1b[' + buf
-        f = getattr(self.controlSequenceParser, CST[buf[-1]], None)
+        f = getattr(self.controlSequenceParser, CST.get(buf[-1], buf[-1]), None)
         if f is None:
             self.protocol.unhandledControlSequence(buf)
         else:
@@ -736,7 +720,7 @@ class ClientProtocol(protocol.Protocol):
             elif self.state == 'bracket-escape':
                 if self._escBuf is None:
                     self._escBuf = []
-                if b in CST:
+                if b.isalpha() or b == '~':
                     self._handleControlSequence(''.join(self._escBuf), b)
                     del self._escBuf
                     self.state = 'data'
@@ -755,7 +739,7 @@ class ClientProtocol(protocol.Protocol):
                 raise ValueError("Illegal state")
 
     def _handleControlSequence(self, buf, terminal):
-        f = getattr(self.controlSequenceParser, CST[terminal], None)
+        f = getattr(self.controlSequenceParser, CST.get(terminal, terminal), None)
         if f is None:
             self.protocol.unhandledControlSequence('\x1b[' + buf + terminal)
         else:
@@ -820,6 +804,59 @@ class ClientProtocol(protocol.Protocol):
                     handler.setScrollRegion(pt, pb)
             else:
                 handler.unhandledControlSequence('\x1b[' + buf + 'r')
+
+        def K(self, proto, handler, buf):
+            if not buf:
+                handler.eraseToLineEnd()
+            elif buf == '1':
+                handler.eraseToLineBeginning()
+            elif buf == '2':
+                handler.eraseLine()
+            else:
+                handler.unhandledControlSequence('\x1b[' + buf + 'K')
+
+        def J(self, proto, handler, buf):
+            if not buf:
+                handler.eraseToDisplayEnd()
+            elif buf == '1':
+                handler.eraseToDisplayBeginning()
+            elif buf == '2':
+                handler.eraseDisplay()
+            else:
+                handler.unhandledControlSequence('\x1b[' + buf + 'J')
+
+        def P(self, proto, handler, buf):
+            if not buf:
+                handler.deleteCharacter(1)
+            else:
+                try:
+                    n = int(buf)
+                except ValueError:
+                    handler.unhandledControlSequence('\x1b[' + buf + 'P')
+                else:
+                    handler.deleteCharacter(n)
+
+        def L(self, proto, handler, buf):
+            if not buf:
+                handler.insertLine(1)
+            else:
+                try:
+                    n = int(buf)
+                except ValueError:
+                    handler.unhandledControlSequence('\x1b[' + buf + 'L')
+                else:
+                    handler.insertLine(n)
+
+        def M(self, proto, handler, buf):
+            if not buf:
+                handler.deleteLine(1)
+            else:
+                try:
+                    n = int(buf)
+                except ValueError:
+                    handler.unhandledControlSequence('\x1b[' + buf + 'M')
+                else:
+                    handler.deleteLine(n)
 
     controlSequenceParser = ControlSequenceParser()
 

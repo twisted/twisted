@@ -201,3 +201,27 @@ class ClientControlSequences(unittest.TestCase):
 
         self.parser.dataReceived(
             "\x1b[" + ';'.join(map(str, [AUTO_REPEAT, KAM])) + "l")
+
+    def testErasure(self):
+        self.proto.expects(pmock.once()).eraseToLineEnd().id("a")
+        self.proto.expects(pmock.once()).eraseToLineBeginning().id("b").after("a")
+        self.proto.expects(pmock.once()).eraseLine().id("c").after("b")
+        self.proto.expects(pmock.once()).eraseToDisplayEnd().id("d").after("c")
+        self.proto.expects(pmock.once()).eraseToDisplayBeginning().id("e").after("d")
+        self.proto.expects(pmock.once()).eraseDisplay().id("f").after("e")
+        self.proto.expects(pmock.once()).deleteCharacter(pmock.eq(3)).after("f")
+
+        self.parser.dataReceived(
+            "\x1b[K\x1b[1K\x1b[2K\x1b[J\x1b[1J\x1b[2J\x1b[3P")
+
+    def testLineDeletion(self):
+        self.proto.expects(pmock.once()).deleteLine(pmock.eq(1)).id("a")
+        self.proto.expects(pmock.once()).deleteLine(pmock.eq(3)).after("a")
+
+        self.parser.dataReceived("\x1b[M\x1b[3M")
+
+    def testLineInsertion(self):
+        self.proto.expects(pmock.once()).insertLine(pmock.eq(1)).id("a")
+        self.proto.expects(pmock.once()).insertLine(pmock.eq(3)).after("a")
+
+        self.parser.dataReceived("\x1b[L\x1b[3L")
