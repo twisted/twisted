@@ -150,21 +150,21 @@ def format_exception(eType, eValue, tb, limit=None):
     return l
 
 def suppressWarnings(f, *warningz):
-    def _(*args, **kwargs):
-        for warning in warningz:
-            warnings.filterwarnings('ignore', *warning)
-        try:
-            ret = f(*args, **kwargs)
-        finally:
-            for warning in warningz:
-                warnings.filterwarnings('default', *warning)
-                return ret
+    def enclosingScope(warnings, warningz):
+        exec """def %s(*args, **kwargs):
+    for warning in warningz:
+        warnings.filterwarnings('ignore', *warning)
     try:
-        return new.function(_.func_code, _.func_globals, f.func_name,
-                            inspect.getargspec(_), _.func_closure)
-    except TypeError:
-        return new.function(_.func_code, _.func_globals, f.func_name,
-                            inspect.getargspec(_))
+        ret = f(*args, **kwargs)
+    finally:
+        for warning in warningz:
+            warnings.filterwarnings('default', *warning)
+            return ret
+""" % (f.func_name,) in locals()
+        return locals()[f.func_name]
+    return enclosingScope(warnings, warningz)
+
+
     
 # sibling imports, ugh.
 import unittest
