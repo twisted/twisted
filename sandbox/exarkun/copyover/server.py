@@ -116,7 +116,9 @@ class FileDescriptorSendingProtocol(basic.LineReceiver):
         except:
             log.err()
         else:
-            self.transport.sendFileDescriptors(files)
+            files = files.items()
+            files.sort()
+            self.transport.sendFileDescriptors([f[1] for f in files])
             return
         
         self.transport.loseConnection()

@@ -108,18 +108,17 @@ class FileDescriptorRequestFactory(protocol.ClientFactory):
     protocol = FileDescriptorReceivingProtocol
 
     def __init__(self, id, d):
-        print 'request factory'
         self.id = id
         self.gotFDs = d
 
     def buildProtocol(self, addr):
-        print 'buildProtocol'
         p = self.protocol(self.id, self.gotFDs)
         return p
 
 class UserStateReceiver(pb.Referenceable):
     def stateReceived(self, state):
-        print state
+        for f in state:
+            print repr(f.read(80))
 
     def unproxyFileDescriptors(self, fds, state):
         s = StringIO.StringIO(state)
