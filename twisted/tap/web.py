@@ -83,7 +83,7 @@ class Options(usage.Options):
     opt_m = opt_module
 
     def opt_help(self):
-        print __doc__
+        print usage_message
         sys.exit(0)
 
     def opt_user(self):

@@ -88,7 +88,7 @@ class Options(usage.Options):
     opt_b = opt_bounce_to_postmaster
 
     def opt_help(self):
-        print __doc__
+        print usage_message
         sys.exit(0)
 
 
