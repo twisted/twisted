@@ -251,11 +251,16 @@ class Telnet(protocol.Protocol):
             if idx != -1:
                 break
             
-        if idx != -1:
+        while idx != -1:
             buf, self.buffer = self.buffer[:idx], self.buffer[idx+2:]
             self.processLine(buf)
             if self.mode == 'Done':
                 self.transport.loseConnection()
+
+            for delim in self.delimiters:
+                idx = string.find(self.buffer, delim)
+                if idx != -1:
+                    break
 
     def dataReceived(self, data):
         chunk = StringIO()
