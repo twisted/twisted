@@ -194,18 +194,23 @@ def foo2bar(f):
     <p>Classes are to be named in mixed case, with the first letter
     capitalized; each word separated by having its first letter
     capitalized. Acronyms should be capitalized in their entirety.
-    Class names should not include the name of the module they are
-    a part of. Examples:</p>
+    Class names should not be prefixed with the name of the module they are
+    in. Examples of classes meeting this criteria:</p>
 
     <ul>
-      <li>twisted.reality.thing.Thing</li>
-
-      <li>twisted.web.Handler</li>
-
       <li>twisted.spread.pb.ViewPoint</li>
 
       <li>twisted.parser.patterns.Pattern</li>
     </ul>
+
+    <p>Examples of classes <strong>not</strong> meeting this criteria:</p>
+
+    <ul>
+      <li>event.EventHandler</li>
+
+      <li>main.MainGadget</li>
+    </ul>
+    
     An effort should be made to prevent class names from clashing
     with each other between modules, to reduce the need for
     qualification when importing. For example, a Service subclass
