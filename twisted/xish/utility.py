@@ -38,13 +38,53 @@ class CallbackList:
             if onetime:
                 del self.callbacks[key]
 
-from twisted.xish import xpath
+from twisted.xish import xpath, domish
 
 class EventDispatcher:
+    """ Event dispatching service.
+
+    The C{EventDispatcher} allows observers to be registered for certain events
+    that are dispatched. There are two types of events: XPath events and Named
+    events.
+    
+    Every dispatch is triggered by calling L{dispatch} with a data object and,
+    for named events, the name of the event.
+    
+    When an XPath type event is dispatched, the associated object is assumed
+    to be a L{domish.Element} object, which is matched against all registered
+    XPath queries. For every match, the respective observer will be called with
+    the data object.
+
+    A named event will simply call each registered observer for that particular
+    event name, with the data object. Unlike XPath type events, the data object
+    is not restricted to L{domish.Element}, but can be anything.
+
+    When registering observers, the event that is to be observed is specified
+    using an L{xpath.XPathQuery} object or a string. In the latter case, the
+    string can also contain the string representation of an XPath expression.
+    To distinguish these from named events, each named event should start with
+    a special prefix that is stored in C{self.prefix}. It defaults to
+    C{//event/}.
+
+    Observers registered using L{addObserver} are persistent: after the
+    observer has been triggered by a dispatch, it remains registered for a
+    possible next dispatch. If instead L{addOnetimeObserver} was used to
+    observe an event, the observer is removed from the list of observers after
+    the first observed event.
+
+    Obsevers can also prioritized, by providing an optional C{priority}
+    parameter to the L{addObserver} and L{addOnetimeObserver} methods. Higher
+    priority observers are then called before lower priority observers.
+
+    Finally, observers can be unregistered by using L{removeObserver}.
+    
+    """
+ 
     def __init__(self, eventprefix = "//event/"):
         self.prefix = eventprefix
         self._eventObservers = {}
         self._xpathObservers = {}
+        self._orderedEventObserverKeys = []
         self._orderedXpathObserverKeys = []
         self._dispatchDepth = 0  # Flag indicating levels of dispatching in progress
         self._updateQueue = [] # Queued updates for observer ops
@@ -52,15 +92,36 @@ class EventDispatcher:
     def _isEvent(self, event):
         return _isStr(event) and self.prefix == event[0:len(self.prefix)]
 
-    def addOnetimeObserver(self, event, observerfn, priority = None, *args, **kwargs):
+    def addOnetimeObserver(self, event, observerfn, priority=0, *args, **kwargs):
+        """ Register a one-time observer for an event.
+
+        Like L{addObserver}, but is only triggered at most once. See there
+        for a description of the parameters.
+        """
         self._addObserver(True, event, observerfn, priority, *args, **kwargs)
 
-    def addObserver(self, event, observerfn, priority = None, *args, **kwargs):
+    def addObserver(self, event, observerfn, priority=0, *args, **kwargs):
+        """ Register an observer for an event.
+
+        Each observer will be registered with a certain priority. Higher
+        priority observers get called before lower priority observers.
+
+        @param event: Name or XPath query for the event to be monitored.
+        @type event: L{str} or L{xpath.XPathQuery}.
+        @param observerfn: Function to be called when the specified event
+                           has been triggered. This function takes
+                           one parameter: the data object that triggered
+                           the event. When specified, the C{*args} and
+                           C{**kwargs} parameters to addObserver are being used
+                           as additional parameters to the registered observer
+                           function.
+        @param priority: (Optional) priority of this observer in relation to
+                         other observer that match the same event. Defaults to
+                         C{0}.
+        @type priority: L{int}
+        """
         self._addObserver(False, event, observerfn, priority, *args, **kwargs)
 
-    # AddObserver takes several different types of arguments
-    # - xpath (string or object form)
-    # - event designator (string that starts with a known prefix)
     def _addObserver(self, onetime, event, observerfn, priority, *args, **kwargs):
         # If this is happening in the middle of the dispatch, queue
         # it up for processing after the dispatch completes
@@ -77,30 +138,39 @@ class EventDispatcher:
             else:
                 # Treat as xpath
                 event = xpath.internQuery(event)
-                if (priority != None):
-                    event.priority = priority
-                else:
-                    event.priority = 0
                 observers = self._xpathObservers
         else:
             # Treat as xpath
             observers = self._xpathObservers
 
-        if not event in observers:
+        key = (priority, event)
+        if not key in observers:
             cbl = CallbackList()
             cbl.addCallback(onetime, observerfn, *args, **kwargs)
-            observers[event] = cbl
+            observers[key] = cbl
         else:
-            observers[event].addCallback(onetime, observerfn, *args, **kwargs)
+            observers[key].addCallback(onetime, observerfn, *args, **kwargs)
 
         # Update the priority ordered list of xpath keys --
         # This really oughta be rethought for efficiency
+        self._orderedEventObserverKeys = self._eventObservers.keys()
+        self._orderedEventObserverKeys.sort()
+        self._orderedEventObserverKeys.reverse()
         self._orderedXpathObserverKeys = self._xpathObservers.keys()
         self._orderedXpathObserverKeys.sort()
         self._orderedXpathObserverKeys.reverse()
 
-
     def removeObserver(self, event, observerfn):
+        """ Remove function as observer for an event.
+
+        The observer function is removed for all priority levels for the
+        specified event.
+        
+        @param event: Event for which the observer function was registered.
+        @type event: L{str} or L{xpath.XPathQuery}
+        @param observerfn: Observer function to be unregistered.
+        """
+
         # If this is happening in the middle of the dispatch, queue
         # it up for processing after the dispatch completes
         if self._dispatchDepth > 0:
@@ -118,17 +188,32 @@ class EventDispatcher:
         else:
             observers = self._xpathObservers
 
-        assert event in observers
-        observers[event].removeCallback(observerfn)
+        for priority, query in observers:
+            if event == query:
+                observers[(priority, query)].removeCallback(observerfn)
 
         # Update the priority ordered list of xpath keys --
         # This really oughta be rethought for efficiency
+        self._orderedEventObserverKeys = self._eventObservers.keys()
+        self._orderedEventObserverKeys.sort()
+        self._orderedEventObserverKeys.reverse()
         self._orderedXpathObserverKeys = self._xpathObservers.keys()
         self._orderedXpathObserverKeys.sort()
         self._orderedXpathObserverKeys.reverse()
 
-
     def dispatch(self, object, event = None):
+        """ Dispatch an event.
+        
+        When C{event} is C{None}, an XPath type event is triggered, and
+        C{object} is assumed to be an instance of {domish.Element}. Otherwise,
+        C{event} holds the name of the named event being triggered. In the
+        latter case, C{object} can be anything.
+
+        @param object: The object to be dispatched.
+        @param event: Optional event name.
+        @type event: L{str}
+        """
+
         foundTarget = False
         
         # Aiyiyi! If this dispatch occurs within a dispatch
@@ -137,12 +222,13 @@ class EventDispatcher:
         self._dispatchDepth = self._dispatchDepth + 1
             
         if event != None:
-            if event in self._eventObservers:
-                self._eventObservers[event].callback(object)
-                foundTarget = True
+            for priority, query in self._orderedEventObserverKeys:
+                if event == query:
+                    self._eventObservers[(priority, event)].callback(object)
+                    foundTarget = True
         else:
-            for query in self._orderedXpathObserverKeys:
-                callbacklist = self._xpathObservers[query]
+            for priority, query in self._orderedXpathObserverKeys:
+                callbacklist = self._xpathObservers[(priority, query)]
                 if query.matches(object):
                     callbacklist.callback(object)
                     foundTarget = True
