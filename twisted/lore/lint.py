@@ -200,7 +200,7 @@ tags = list2dict(["html", "title", "head", "body", "h1", "h2", "h3", "ol", "ul",
                   "cite", "div", "span", "strong", "em", "pre", "q", "table",
                   "tr", "td", "th", "style", "sub", "sup", "link"])
 
-span = list2dict(['footnote', 'manhole-output'])
+span = list2dict(['footnote', 'manhole-output', 'index'])
 
 div = list2dict(['note', 'boxed', 'doit'])
 

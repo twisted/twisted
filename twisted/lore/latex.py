@@ -284,6 +284,10 @@ class LatexSpitter(BaseLatexSpitter):
         spitter.visitNodeDefault(node)
         self.writer('}')
 
+    def visitNode_span_index(self, node):
+        self.writer('\\index{%s}\n' % node.getAttribute('value'))
+        spitter.visitNodeDefault(node)
+
     visitNode_h2 = visitNode_h3 = visitNode_h4 = visitNodeHeader
 
     start_title = '\\title{'

@@ -57,6 +57,12 @@ header) element, which contains the exact same content as the
 <dt><code>manhole-output</code></dt>
 <dd>This signifies, within a manhole transcript, that the enclosed text is
     the output and not something the user has to input.</dd>
+<dt><code>span</code></dt>
+<dd>This should be an <em>empty</em> element, with an attribute
+    <code>value</code>. That attribute should be an index term, in the
+    format of <code>generic!specific!more specific</code>. Usually,
+    you will only have one level, in which case <code>value="term"</code>
+    works.</dd>
 </dl>
 </p>
 
