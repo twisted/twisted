@@ -167,7 +167,7 @@ class Request(pb.Copyable, http.HTTP):
         self.args = {}
         self.stack = []
         self.headers = {}
-        self.cookies = []
+        self.cookies = [] # outgoing cookies
         
         self.method, self.uri = command, path
         self.clientproto = version
@@ -427,20 +427,13 @@ class Request(pb.Copyable, http.HTTP):
     def getSession(self):
         # Session management
         if not self.session:
-            cookietxt = self.getHeader("cookie")
             cookiename = string.join(['TWISTED_SESSION'] + self.sitepath, "_")
-            if cookietxt:
-                cookie = string.split(cookietxt, '; ')
-                vals = {}
-                for cook in cookie:
-                    k, v = string.split(cook, '=')
-                    vals[k] = v
-                sessionCookie = vals.get(cookiename)
-                if sessionCookie:
-                    try:
-                        self.session = self.site.getSession(sessionCookie)
-                    except KeyError:
-                        pass
+            sessionCookie = self.getCookie(cookiename)
+            if sessionCookie:
+                try:
+                    self.session = self.site.getSession(sessionCookie)
+                except KeyError:
+                    pass
             # if it still hasn't been set, fix it up.
             if not self.session:
                 self.session = self.site.makeSession()

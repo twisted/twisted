@@ -199,7 +199,8 @@ class HTTP(basic.LineReceiver):
 
     def __init__(self):
         self.received = {}
-
+        self.received_cookies = {}
+    
     def sendStatus(self, code, resp=''):
         self.transport.write('HTTP/1.0 %s %s\r\n' % (code, resp))
 
@@ -287,6 +288,7 @@ class HTTP(basic.LineReceiver):
             self.setLineMode(extraneous)
 
     def allHeadersReceived(self):
+        self.parseCookies()
         command = self.__command
         path = self.__path
         version = self.__version
@@ -295,7 +297,16 @@ class HTTP(basic.LineReceiver):
                         command, path, version
         self.__content = StringIO()
 
-
+    def parseCookies(self):
+        cookietxt = self.getHeader("cookie")
+        if cookietxt:
+            for cook in string.split(cookietxt,'; '):
+                try:
+                    k, v = string.split(cook, '=')
+                    self.received_cookies[k] = v
+                except ValueError:
+                    pass
+    
     __content = None
 
     def handleContentChunk(self, data):
@@ -307,3 +318,8 @@ class HTTP(basic.LineReceiver):
         """Get a header that was sent from the network.
         """
         return self.received.get(string.lower(key))
+
+    def getCookie(self, key):
+        """Get a cookie that was sent from the network.
+        """
+        return self.received_cookies.get(key)
