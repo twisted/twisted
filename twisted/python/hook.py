@@ -53,10 +53,6 @@ which they are added.
 # System Imports
 import string
 
-# Sibling Imports
-import reflect
-
-
 ### Public Interface
 
 class HookError(Exception):
@@ -189,3 +185,9 @@ def _dehook(klass, name):
     delattr(klass, ORIG(klass,name))
 
 # fin
+
+# Oh wait!
+
+# Sibling Imports
+import reflect
+

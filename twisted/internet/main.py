@@ -21,7 +21,8 @@ import socket
 
 # Twisted Imports
 
-from twisted.python import threadable, log
+from twisted.python import log
+from twisted.python import threadable
 from twisted.python.runtime import platform
 from twisted.persisted import styles
 from twisted.python.components import implements
