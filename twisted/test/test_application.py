@@ -203,7 +203,7 @@ class TestApplication(unittest.TestCase):
         self.assertEqual(service.IProcess(a).gid, curgid)
         a = service.Application("hello", 5)
         self.assertEqual(service.IProcess(a).uid, 5)
-        self.assertEqual(service.IProcess(a).gid, curuid)
+        self.assertEqual(service.IProcess(a).gid, curgid)
         a = service.Application("hello", 5, 6)
         self.assertEqual(service.IProcess(a).uid, 5)
         self.assertEqual(service.IProcess(a).gid, 6)
