@@ -151,7 +151,7 @@ class HTTPDownloader(HTTPClientFactory):
     def pageStart(self):
         if self.waiting:
             self.waiting = 0
-            self.file = open(self.fileName, 'w')
+            self.file = open(self.fileName, 'wb')
 
     def pageEnd(self):
         if self.file:
