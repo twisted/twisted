@@ -26,6 +26,9 @@ check if object *provides* an interface. Using the Zope3 API directly is thus
 strongly recommended.
 
 TODO: make zope.interface run in 2.2
+
+XXXX Probably going to have to move persistence back into AdapterRegistry
+and special case it in Interface.__call__...
 """
 
 # twisted imports
@@ -77,7 +80,7 @@ class MetaInterface(interface.InterfaceClass):
             if registry != None:
                 raise RuntimeError, "registry argument will be ignored"
             # getComponents backwards compat
-            if hasattr(adaptable, "getComponent") and not hasattr(adaptable, "__conform__"):
+            if hasattr(adaptable, "getComponent") and not hasattr(adaptable, "__conform__") and persist != False:
                 warnings.warn("please use __conform__ instead of getComponent", DeprecationWarning)
                 result = adaptable.getComponent(self)
                 if result != None:
@@ -115,7 +118,7 @@ class MetaInterface(interface.InterfaceClass):
             raise RuntimeError, "registry argument will be ignored"
         warnings.warn("persist argument is deprecated", DeprecationWarning)
         registry = theAdapterRegistry
-        registry.register([to], self, '', using)
+        registry.register([self], to, '', using)
 
 Interface = MetaInterface("Interface", __module__="twisted.python.components")
 
@@ -302,16 +305,21 @@ class Adapter:
         I forward getComponent to self.original if it has it, otherwise I
         simply return default.
         """
-        
+        #if hasattr(self.original, "__conform__"):
+        #    result = self.original.__conform__(interface)
+        #    if result == None:
+        #        result = default
+        #    return result
         try:
             f = self.original.getComponent
         except AttributeError:
             return default
         else:
+            warnings.warn("please use __conform__ instead of getComponent on %r's class" % self.original, DeprecationWarning)            
             return f(interface, registry=registry, default=default)
 
-    def __conform__(self, interface):
-        return self.getComponent(interface)
+    #def __conform__(self, interface):
+    #    return self.getComponent(interface)
     
     def isuper(self, iface, adapter):
         """
@@ -435,8 +443,8 @@ class Componentized(styles.Versioned):
                     self.addComponent(adapter)
             return adapter
 
-    def __conform__(self, interface):
-        return self.getComponent(interface)
+    #def __conform__(self, interface):
+    #    return self.getComponent(interface)
     
     def upgradeToVersion1(self):
         # To let Componentized instances interact correctly with
