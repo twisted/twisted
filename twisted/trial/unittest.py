@@ -98,6 +98,8 @@ class TestCase:
         try:
             if not twisted.python.util.raises(exception, f, *args, **kwargs):
                 raise FailTest, '%s not raised' % exception.__name__
+        except FailTest, e:
+            raise
         except:
             # import traceback; traceback.print_exc()
             raise FailTest, '%s raised instead of %s' % (sys.exc_info()[0],
