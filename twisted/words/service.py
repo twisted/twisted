@@ -241,8 +241,13 @@ class Participant(pb.Perspective, styles.Versioned):
                                                      metadata)
                 #If the client doesn't support metadata, call this function
                 #again with no metadata, so none is sent
-                d.addErrback(self.receiveDirectMessage,
-                               sender.name, message, None)
+                #
+                #note on the 'if d:' - the IRC service is in-process and
+                #won't return a Deferred, but rather it returns None.
+                #silently ignore it. (This is really evil and terrible.)
+                if d:
+                    d.addErrback(self.receiveDirectMessage,
+                                 sender.name, message, None)
             else:
                 self.client.receiveDirectMessage(sender.name, message)
         else:
@@ -254,8 +259,9 @@ class Participant(pb.Perspective, styles.Versioned):
             if metadata:
                 d = self.client.receiveGroupMessage(sender.name, group.name,
                                                     message, metadata)
-                d.addErrback(self.receiveGroupMessage,
-                             sender, group, message, None)
+                if d:
+                    d.addErrback(self.receiveGroupMessage,
+                                 sender, group, message, None)
             else:
                 self.client.receiveGroupMessage(sender.name, group.name,
                                                 message)
