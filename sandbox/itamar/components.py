@@ -319,6 +319,9 @@ if _theAdapterRegistry == None:
         return getAdapter(ob, iface, default=None, persist=False)
     interface.adapter_hooks.append(_hook)
 
+# public zopey registration hook
+register = _theAdapterRegistry.register
+
 
 class Adapter:
     """I am the default implementation of an Adapter for some interface.
@@ -513,4 +516,4 @@ class ReprableComponentized(Componentized):
 
 __all__ = ["Interface", "implements", "getInterfaces", "superInterfaces",
            "registerAdapter", "getAdapterClass", "getAdapter", "Componentized",
-           "Adapter", "ReprableComponentized"]
+           "Adapter", "ReprableComponentized", "register"]
