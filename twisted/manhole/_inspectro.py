@@ -1,3 +1,19 @@
+# Twisted, the Framework of Your Internet
+# Copyright (C) 2004 Matthew W. Lefkowitz
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
 """An input/output window for the glade reactor inspector.
 """
 
@@ -10,8 +26,9 @@ from twisted.python import reflect
 
 from twisted.manhole.ui import gtk2manhole
 from twisted.python.components import Adapter, Interface, registerAdapter
-from twisted.python import log
+from twisted.python import log, components
 from twisted.protocols import policies
+from zope.interface import implements
 
 # the glade file uses stock icons, which requires gnome to be installed
 import gnome
@@ -47,7 +64,8 @@ class INode(Interface):
         return AttributesNode(adaptable)
 
 class InspectorNode(Adapter):
-    __implements__ = INode
+    implements(INode)
+
     def postInit(self, offset, parent, slot):
         self.offset = offset
         self.parent = parent
@@ -73,6 +91,9 @@ class InspectorNode(Adapter):
 
     def format(self):
         return (self.slot, self.origstr())
+
+components.backwardsCompatImplements(InspectorNode)
+
 
 class ConstantNode(InspectorNode):
     def __len__(self):
