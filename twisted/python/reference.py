@@ -87,12 +87,11 @@ class Resolver:
     """
 
     def __init__(self,lookup):
-        """Resolver(lookup)
-        Create a resolver.
+        """Create a resolver.
         
         @param lookup: is an object which responds to the C{__getitem__}
             interface and contains all the keys which can be referred to by
-            the L{Reference}s in the C{'reflist'} argument to my L{'resolve'}
+            the L{Reference}s in the C{'reflist'} argument to my L{resolve}
             method.
         
         """

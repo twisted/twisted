@@ -14,8 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 """
-An asynchronous mapping to U{DB-API 2.0<http://www.python.org/topics/
-database/DatabaseAPI-2.0.html>}.
+An asynchronous mapping to U{DB-API 2.0<http://www.python.org/topics/database/DatabaseAPI-2.0.html>}.
 """
 
 from twisted.spread import pb
@@ -128,17 +127,15 @@ class ConnectionPool(pb.Referenceable):
     def interaction(self, interaction, callback, errback, *args, **kw):
         """Interact with the database.
 
-        Arguments:
-
-          * interaction: a callable object whose first argument is an adbapi.Transaction.
-
-          * *args and **kw: additional arguments to be passed to 'interaction'
-
         The callable object presented here will be executed in a pooled thread.
         'callback' will be made in the main thread upon success and 'errback'
         will be called upon failure.  If 'callback' is called, that means that
         the transaction was committed; if 'errback', it was rolled back.  This
         does not apply in databases which do not support transactions.
+
+        @param interaction: a callable object whose first argument is
+            L{adbapi.Transaction}.
+        @param *args,**kw: additional arguments to be passed to 'interaction'
         """
         apply(threads.deferToThread,
               (self._runInteraction, interaction) + args, kw).addCallbacks(

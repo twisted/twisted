@@ -407,8 +407,8 @@ class DatagramProtocol:
     def datagramReceived(self, datagram, addr):
         """Called when a datagram is received.
 
-        @param datagram the string received from the transport.
-        @param addr tuple of source of datagram.
+        @param datagram: the string received from the transport.
+        @param addr: tuple of source of datagram.
         """
 
 
@@ -418,7 +418,7 @@ class ConnectedDatagramProtocol(DatagramProtocol):
     def datagramReceived(self, datagram):
         """Called when a datagram is received.
 
-        @param datagram the string received from the transport.
+        @param datagram: the string received from the transport.
         """
 
     def connectionFailed(self, failure):

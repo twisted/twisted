@@ -109,10 +109,10 @@ class IView(components.Interface):
         
         view.setSubviewFactory("foo", MyFancyWidgetClass)
         
-        This is equivalent to:
+        This is equivalent to::
         
-        def wvfactory_foo(self, request, node, m):
-            return MyFancyWidgetClass(m)
+            def wvfactory_foo(self, request, node, m):
+                return MyFancyWidgetClass(m)
         
         Which will cause an instance of MyFancyWidgetClass to be
         instanciated when template node <div view="foo" /> is encountered.
@@ -122,10 +122,10 @@ class IView(components.Interface):
         each time the Widget is generated. Setup methods take (request,
         widget, model) as arguments.
         
-        This is equivalent to:
+        This is equivalent to::
         
-        def wvupdate_foo(self, request, widget, model):
-            # whatever you want
+            def wvupdate_foo(self, request, widget, model):
+                # whatever you want
         """
 
 
@@ -158,14 +158,14 @@ class IController(components.Interface):
         return an InputHandler, to be called by the default implementation of
         getSubview when the controllerName "name" is present in the template.
         
-        This would generally be used like this:
+        This would generally be used like this::
         
-        view.setSubcontrollerFactory("foo", MyFancyInputHandlerClass)
+            view.setSubcontrollerFactory("foo", MyFancyInputHandlerClass)
         
-        This is equivalent to:
+        This is equivalent to::
         
-        def wcfactory_foo(self, request, node, m):
-            return MyFancyInputHandlerClass(m)
+            def wcfactory_foo(self, request, node, m):
+                return MyFancyInputHandlerClass(m)
 
         Which will cause an instance of MyFancyInputHandlerClass to be
         instanciated when template node <div controller="foo" /> is

@@ -42,7 +42,7 @@ Test coverage needs to be better.
 <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-__version__ = '$Revision: 1.63 $'[11:-2]
+__version__ = '$Revision: 1.64 $'[11:-2]
 
 from twisted.internet import reactor, protocol
 from twisted.persisted import styles
@@ -97,8 +97,9 @@ def parsemsg(s):
 
 
 def split(str, length = 80):
-    """ Breaks a message into multiple lines,
-    prefering to break at whitespace near str[length].  Also breaks at \n.
+    """I break a message into multiple lines.
+    
+    I prefer to break at whitespace near str[length].  I also break at \n.
 
     @returns: list of strings
     """
@@ -368,13 +369,13 @@ class IRCClient(basic.LineReceiver):
     ### Information from the server.
 
     def receivedMOTD(self, motd):
-        """I recieved a message-of-the-day banner from the server.
-
+        """I received a message-of-the-day banner from the server.
+        
         motd is a list of strings, where each string was sent as a seperate
         message from the server. To display, you might want to use::
-
-            string.join(motd, '\n')
-
+        
+            string.join(motd, '\\n')
+        
         to get a nicely formatted string.
         """
         pass

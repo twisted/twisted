@@ -46,13 +46,11 @@ class _QueryPassword(_QueryString):
 def askpassword(title, prompt, **kw):
     '''get a password from the user
 
-    Arguments:
+    @param title: the dialog title
+    @param prompt: the label text
+    @param **kw: see L{SimpleDialog} class
 
-        title -- the dialog title
-        prompt -- the label text
-        **kw -- see SimpleDialog class
-
-    Return value is a string
+    @returns: a string
     '''
     d = apply(_QueryPassword, (title, prompt), kw)
     return d.result

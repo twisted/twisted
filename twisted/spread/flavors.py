@@ -547,15 +547,12 @@ class RemoteCacheObserver:
     def __init__(self, broker, cached, perspective):
         """(internal) Initialize me.
 
-        Arguments:
+        @param broker: a L{pb.Broker} instance.
 
-          * broker: a L{pb.Broker} instance.
-
-          * cached: a L{Cacheable} instance that this L{RemoteCacheObserver}
+        @param cached: a L{Cacheable} instance that this L{RemoteCacheObserver}
             corresponds to.
 
-          * perspective: a reference to the perspective who is observing this.
-
+        @param perspective: a reference to the perspective who is observing this.
         """
 
         self.broker = broker

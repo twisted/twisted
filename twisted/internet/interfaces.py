@@ -49,9 +49,9 @@ class IConnector(Interface):
         """Return destination this will try to connect to.
 
         This can be one of:
-          TCP -- ('INET', host, port)
-          UNIX -- ('UNIX', address)
-          SSL -- ('SSL', host, port)
+          1. TCP -- ('INET', host, port)
+          2. UNIX -- ('UNIX', address)
+          3. SSL -- ('SSL', host, port)
         """
 
 
@@ -93,21 +93,19 @@ class IReactorSSL(Interface):
     def connectSSL(self, host, port, factory, contextFactory, timeout=30, bindAddress=None):
         """Connect a client Protocol to a remote SSL socket.
 
-        Arguments:
+        @param host: a host name
 
-          * host: a host name
+        @param port: a port number
 
-          * port: a port number
+        @param factory: a L{twisted.internet.protocol.ClientFactory} instance
 
-          * factory: a twisted.internet.protocol.ClientFactory instance
+        @param contextFactory: a L{twisted.internet.ssl.ContextFactory} object.
 
-          * contextFactory: a twisted.internet.ssl.ContextFactory object.
-
-          * timeout: number of seconds to wait before assuming the connection
+        @param timeout: number of seconds to wait before assuming the connection
             has failed.
 
-          * bindAddress: a (host, port) tuple of local address to bind to, or
-            None.
+        @param bindAddress: a (host, port) tuple of local address to bind to, or
+            C{None}.
 
         @returns: an L{IConnector}.
         """
@@ -126,13 +124,11 @@ class IReactorUNIX(Interface):
     def connectUNIX(self, address, factory, timeout=30):
         """Connect a client protocol to a UNIX socket.
 
-        Arguments:
+        @param address: a path to a unix socket on the filesystem.
 
-          * address: a path to a unix socket on the filesystem.
+        @param factory: a L{twisted.internet.protocol.ClientFactory} instance
 
-          * factory: a twisted.internet.protocol.ClientFactory instance
-
-          * timeout: number of seconds to wait before assuming the connection
+        @param timeout: number of seconds to wait before assuming the connection
             has failed.
 
         @returns: an L{IConnector}.
@@ -141,13 +137,11 @@ class IReactorUNIX(Interface):
     def listenUNIX(address, factory, backlog=5):
         """Listen on a UNIX socket.
 
-        Arguments:
+        @param address: a path to a unix socket on the filesystem.
 
-          * address: a path to a unix socket on the filesystem.
+        @param factory: a L{twisted.internet.protocol.Factory} instance.
 
-          * factory: a twisted.internet.protocol.Factory instance.
-
-          * backlog: number of connections to allow in backlog.
+        @param backlog: number of connections to allow in backlog.
         """
 
 
@@ -161,12 +155,12 @@ class IReactorUDP(Interface):
     def listenUDP(self, port, protocol, interface='', maxPacketSize=8192):
         """Connects a given DatagramProtocol to the given numeric UDP port.
 
-        @return object conforming to IListeningPort.
+        @returns: object conforming to L{IListeningPort}.
         """
 
     def connectUDP(self, remotehost, remoteport, protocol, localport=0,
                   interface='', maxPacketSize=8192):
-        """Connects a ConnectedDatagramProtocol instance to a UDP port.
+        """Connects a L{ConnectedDatagramProtocol} instance to a UDP port.
         """
 
 
@@ -175,7 +169,7 @@ class IReactorProcess(Interface):
     def spawnProcess(self, processProtocol, executable, args=(), env={}, path=None, uid=None, gid=None, usePTY=0):
         """Spawn a process, with a process protcol.
 
-        @param processProtocol: a ProcessProtocol instance
+        @param processProtocol: a L{ProcessProtocol} instance
 
         @param executable: the file name to spawn - the full path should be
                            used.
@@ -226,28 +220,27 @@ class IReactorTime(Interface):
         
         Cancel a call that would happen later.
 
-        Arguments:
-
         @param callID: this is an opaque identifier returned from C{callLater}
                        that will be used to cancel a specific call.
 	
-	@raise ValueError: if the callID is not recognized.
+	    @raise ValueError: if the callID is not recognized.
         """
 
 
 class IDelayedCall(Interface):
     """A scheduled call.
 
-    There are probably other useful methods we can add to this interface,
+    There are probably other useful methods we can add to this interface;
     suggestions are welcome.
     """
 
     def cancel(self):
         """Cancel the scheduled call.
 
-        Will raise twisted.internet.error.AlreadyCalled if the call has already
-        happened.  Will raise twisted.internet.error.AlreadyCanceled if the
-        call has already been cancelled.
+        @raises twisted.internet.error.AlreadyCalled: if the call has already
+            happened.
+        @raises twisted.internet.error.AlreadyCancelled: if the call has already
+            been cancelled.
         """
 
 
@@ -283,7 +276,7 @@ class IReactorCore(Interface):
     """
 
     def resolve(self, name, type=1, timeout=10):
-        """Return a Deferred that will resolve a hostname.
+        """Return a L{Deferred} that will resolve a hostname.
         """
 
 

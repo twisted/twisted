@@ -31,10 +31,11 @@ class Reflector:
         """
         Initialize me against a database.
 
-        Arguments:
-          * rowClasses: a list of row class objects that describe the database schema.
+        @param rowClasses: a list of row class objects that describe the
+            database schema.
 
-          * populatedCallback: method to be called when all database initialization is done
+        @param populatedCallback: method to be called when all database
+            initialization is done.
         """
 
         self.rowCache = weakref.WeakValueDictionary() # doesnt hold references to cached rows.
@@ -71,8 +72,8 @@ class Reflector:
     
     def populateSchemaFor(self, tableInfo):
         """This is called once for each registered rowClass to add it
-        and it's foreign key relationships for that rowClass to the
-        schema.  """
+        and its foreign key relationships for that rowClass to the
+        schema."""
         
         self.schema[ tableInfo.rowTableName ] = tableInfo
         
@@ -85,18 +86,13 @@ class Reflector:
     def getTableInfo(self, rowObject):
         """Get a TableInfo record about a particular instance.
 
-        Arguments:
-
-          * rowObject: a RowObject instance of a class previously
-            registered with me.
-
         This record contains various information about the instance's
         class as registered with this reflector.
 
-        Raises:
-
-          * twisted.enterprise.row.DBError: raised if this class was
-            not previously registered.
+        @param rowObject: a L{RowObject} instance of a class previously
+            registered with me.
+        @raises twisted.enterprise.row.DBError: raised if this class was not
+            previously registered.
         """
         try:
             return self.schema[rowObject.rowTableName]
@@ -166,10 +162,13 @@ class Reflector:
 
     ####### Row Operations ########
 
-    def loadObjectsFrom(self, tableName, parent = None, data = None,  whereClause = [], loadChildren = 1):
-        """Implement me to load objects from the database. The whereClause argument is a list of tuples of
-        (columnName, conditional, value) so it can be parsed by all types of reflectors. eg.
-           |  whereClause = [("name", EQUALS, "fred"), ("age", GREATERTHAN, 18)]
+    def loadObjectsFrom(self, tableName, parent=None, data=None,
+                        whereClause=[], loadChildren=1):
+        """Implement me to load objects from the database. 
+        
+        @param whereClause: a list of tuples of (columnName, conditional, value)
+            so it can be parsed by all types of reflectors. eg.::
+              whereClause = [("name", EQUALS, "fred"), ("age", GREATERTHAN, 18)]
         """
         raise DBError("not implemented")
         

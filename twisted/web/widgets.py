@@ -403,25 +403,25 @@ class Form(Widget):
 
         Valid values for 'Input Type' are:
 
-          * 'hidden': a hidden field that contains a string that the user won't change
+          - 'hidden': a hidden field that contains a string that the user won't change
 
-          * 'string': a short string
+          - 'string': a short string
 
-          * 'int': an integer, e.g. 1, 0, 25 or -23
+          - 'int': an integer, e.g. 1, 0, 25 or -23
 
-          * 'float': a float, e.g. 1.0, 2, -3.45, or 28.4324231
+          - 'float': a float, e.g. 1.0, 2, -3.45, or 28.4324231
 
-          * 'text': a longer text field, suitable for entering paragraphs
+          - 'text': a longer text field, suitable for entering paragraphs
 
-          * 'menu': an HTML SELECT input, a list of choices
+          - 'menu': an HTML SELECT input, a list of choices
 
-          * 'multimenu': an HTML SELECT input allowing multiple choices
+          - 'multimenu': an HTML SELECT input allowing multiple choices
 
-          * 'checkgroup': a group of checkboxes
+          - 'checkgroup': a group of checkboxes
 
-          * 'password': a 'string' field where the contents are not visible as the user types
+          - 'password': a 'string' field where the contents are not visible as the user types
 
-          * 'file': a file-upload form (EXPERIMENTAL)
+          - 'file': a file-upload form (EXPERIMENTAL)
 
         'Display Name' is a descriptive string that will be used to
         identify the field to the user.

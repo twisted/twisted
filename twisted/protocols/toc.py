@@ -919,11 +919,11 @@ class TOCClient(protocol.Protocol):
         """
         CONFIG:<config>
         format of config data:
-            g: group.  all users until next g or end of config are in this group
-            b: buddy
-            p: person on the permit list
-            d: person on the deny list
-            m: permit/deny mode (1: permit all, 2: deny all, 3: permit some, 4: deny some)
+            - g: group.  all users until next g or end of config are in this group
+            - b: buddy
+            - p: person on the permit list
+            - d: person on the deny list
+            - m: permit/deny mode (1: permit all, 2: deny all, 3: permit some, 4: deny some)
         """
         data=data[0]
         if data and data[0]=="{":data=data[1:-1]

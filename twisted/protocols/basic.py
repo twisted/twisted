@@ -47,10 +47,10 @@ class NetstringReceiver(protocol.Protocol):
     argument of that string.
 
     Security features:
-    1. Messages are limited in size, useful if you don't want someone
-       sending you a 500MB netstring (change MAX_LENGTH to the maximum
-       length you wish to accept).
-    2. The connection is lost if an illegal message is received.
+        1. Messages are limited in size, useful if you don't want someone
+           sending you a 500MB netstring (change MAX_LENGTH to the maximum
+           length you wish to accept).
+        2. The connection is lost if an illegal message is received.
     """
 
     MAX_LENGTH = 99999
@@ -129,19 +129,20 @@ class SafeNetstringReceiver(NetstringReceiver):
 
 
 class LineReceiver(protocol.Protocol):
-    """A protocol which has a mode where it receives lines, and a mode where it receives raw data.
-
-    Each line that's received becomes a callback to lineReceived.  Each
-    chunk of raw data becomes a callback to rawDataReceived.
-
-    This is useful for line-oriented protocols such as IRC, HTTP, POP,
-    etc.
-
+    """A protocol that receives lines and/or raw data, depending on mode.
+    
+    In line mode, each line that's received becomes a callback to
+    L{lineReceived}.  In raw data mode, each chunk of raw data becomes a
+    callback to L{rawDataReceived}.  The L{setLineMode} and L{setRawMode}
+    methods switch between the two modes.
+    
+    This is useful for line-oriented protocols such as IRC, HTTP, POP, etc.
+    
     @ivar delimiter: The line-ending delimiter to use. By default this is
-                     '\r\n'.
+                     '\\r\\n'.
     @ivar MAX_LENGTH: The maximum length of a line to allow (If a
-                      sent line is longer than this, the connection is
-                      dropped). Default is 16834.
+                      sent line is longer than this, the connection is dropped).
+                      Default is 16834.
     """
     line_mode = 1
     __buffer = ''

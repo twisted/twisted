@@ -79,19 +79,19 @@ class ManholeClientInterface:
         """Takes a list of (type, message) pairs to display.
 
         Types include:
-            \"stdout\" -- string sent to sys.stdout
+            - \"stdout\" -- string sent to sys.stdout
 
-            \"stderr\" -- string sent to sys.stderr
+            - \"stderr\" -- string sent to sys.stderr
 
-            \"result\" -- string repr of the resulting value
+            - \"result\" -- string repr of the resulting value
                  of the expression
 
-            \"exception\" -- a dictionary with two members:
-                \'traceback\' -- traceback.extract_tb output; a list of
+            - \"exception\" -- a dictionary with two members:
+                - \'traceback\' -- traceback.extract_tb output; a list of
                      tuples (filename, line number, function name, text)
                      suitable for feeding to traceback.format_list.
 
-                \'exception\' -- a list of one or more strings, each
+                - \'exception\' -- a list of one or more strings, each
                      ending in a newline.
                      (traceback.format_exception_only output)
         """

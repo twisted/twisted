@@ -24,32 +24,32 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 
 
 LIMITATIONS:
-1. WaitForMultipleObjects and thus the event loop can only handle 64 objects.
-2. Process running has some problems (see Process docstring).
+ 1. WaitForMultipleObjects and thus the event loop can only handle 64 objects.
+ 2. Process running has some problems (see Process docstring).
 
 
 TODO:
-1. Event loop handling of writes is *very* problematic (this is causing failed tests).
-   Switch to doing it the correct way, whatever that means (see below).
-2. Replace icky socket loopback waker with event based waker (use dummyEvent object)
-3. Switch everyone to using Free Software so we don't have to deal with proprietary APIs.
+ 1. Event loop handling of writes is *very* problematic (this is causing failed tests).
+    Switch to doing it the correct way, whatever that means (see below).
+ 2. Replace icky socket loopback waker with event based waker (use dummyEvent object)
+ 3. Switch everyone to using Free Software so we don't have to deal with proprietary APIs.
 
 
 ALTERNATIVE SOLUTIONS:
-* IIRC, sockets can only be registered once. So we switch to a structure
-  like the poll() reactor, thus allowing us to deal with write events in
-  a decent fashion. This should allow us to pass tests, but we're still
-  limited to 64 events.
+ - IIRC, sockets can only be registered once. So we switch to a structure
+   like the poll() reactor, thus allowing us to deal with write events in
+   a decent fashion. This should allow us to pass tests, but we're still
+   limited to 64 events.
 
 Or:
 
-* Instead of doing a reactor, we make this an addon to the default reactor.
-  The WFMO event loop runs in a separate thread. This means no need to maintain
-  separate code for networking, 64 event limit doesn't apply to sockets,
-  we can run processes and other win32 stuff in default event loop. The
-  only problem is that we're stuck with the icky socket based waker.
-  Another benefit is that this could be extended to support >64 events
-  in a simpler manner than the previous solution.
+ - Instead of doing a reactor, we make this an addon to the default reactor.
+   The WFMO event loop runs in a separate thread. This means no need to maintain
+   separate code for networking, 64 event limit doesn't apply to sockets,
+   we can run processes and other win32 stuff in default event loop. The
+   only problem is that we're stuck with the icky socket based waker.
+   Another benefit is that this could be extended to support >64 events
+   in a simpler manner than the previous solution.
 
 The 2nd solution is probably what will get implemented.
 """

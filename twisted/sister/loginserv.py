@@ -62,19 +62,19 @@ class LoginService(pb.Service):
         sister to load the perspective on can be deferred, as well as the loading
         of the perspective itself being deferred.
         
-        example:
+        example::
 
-        def loadLoginPerspective(self, name, identity):
-            d1 = defer.Deferred()
-            sister = choice(self.motherService.sisters)
-            d2 = self.loadIdentityForSister(sister, name, identity)
-            d2.addCallback(self._cbTicket, name, d1)
-            return d1
+            def loadLoginPerspective(self, name, identity):
+                d1 = defer.Deferred()
+                sister = choice(self.motherService.sisters)
+                d2 = self.loadIdentityForSister(sister, name, identity)
+                d2.addCallback(self._cbTicket, name, d1)
+                return d1
 
-        def _cbTicket(self, data, name, d1):
-            newPerspective = MyPerspective(name)
-            p.setTicket(data)
-            d1.callback(newPerspective)
+            def _cbTicket(self, data, name, d1):
+                newPerspective = MyPerspective(name)
+                p.setTicket(data)
+                d1.callback(newPerspective)
 
         In the example, the choosing of sister servers is not asychronous, but
         this framework allows it to be.
