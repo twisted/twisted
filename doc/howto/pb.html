@@ -168,13 +168,16 @@ appropriate prefix.
   <li><code class="api">twisted.spread.pb.Perspective</code>
   
   <p>This is the first class we dealt with.  Perspectives are slightly special
-  because they are the root object that a given user can access from a service.
-  A user should only receive a reference to their Perspective PB works hard to
-  verify, as best it can, that any method that can be called on a perspective
+  because they are the root object that a given user can access from a
+  service.
+  A user should only receive a reference to their <em>own</em>
+  Perspective. PB works hard to verify, as best it can, that any
+  method that can be called on a perspective
   directly is being called on behalf of the user who is represented by that
   perspective.  (Services with unusual requirements for <q>on behalf of</q>,
   such as simulations with the ability to posess another player's avatar, are
   accomplished by providing indirected access to another user's Perspective.)
+
   </p>
 
   <p>Perspectives are not usually serialized as remote references, so do not
@@ -358,5 +361,5 @@ symmetric, but after the connection is fully established, the protocol is
 completely symmetrical.
 
 <address><a href="mailto:glyph@twistedmatrix.com">Glyph Lefkowitz</a></address>
-<!-- hhmts start --> Last modified: Mon Aug  5 19:39:25 CDT 2002 <!-- hhmts end -->
+<!-- hhmts start -->Last modified: Wed Sep 25 04:42:39 CDT 2002 <!-- hhmts end -->
 </body> </html>

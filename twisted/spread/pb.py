@@ -1086,7 +1086,7 @@ class BrokerClientFactory(protocol.ClientFactory):
     def clientConnectionFailed(self, connector, reason):
         self.protocol.connectionFailed()
 
-def getObjectRetreiver():
+def getObjectRetriever():
     """Get a factory which retreives a root object from its client
 
     @returns: A pair: A ClientFactory and a Deferred which will be passed a
@@ -1112,7 +1112,7 @@ def getObjectAt(host, port, timeout=None):
     @returns: A Deferred which will be passed a remote reference to the
       root object of a PB server.x
     """
-    bf, d = getObjectRetreiver()
+    bf, d = getObjectRetriever()
     if host == "unix":
         # every time you use this, God kills a kitten
         reactor.connectUNIX(port, bf, timeout)
@@ -1133,7 +1133,7 @@ def getObjectAtSSL(host, port,  timeout=None):
     @returns: A Deferred which will be passed a remote reference to the
       root object of a PB server.x
     """
-    bf, d = getObjectRetreiver()
+    bf, d = getObjectRetriever()
     reactor.connectSSL(host, port, bf, timeout)
     return d
 
