@@ -7,8 +7,8 @@
 	that implemented.
 
 	2) implemented a custom warning handler; now warnings look sexy.
-	(the hackish overriding of warnings.showwarning is the recommended way to
-	do so, according to the library reference.)
+	(the hackish overriding of warnings.showwarning is the recommended way
+	to do so, according to the library reference.)
 
 2002-10-22  Moshe Zadka <moshez@twistedmatrix.com>
 
