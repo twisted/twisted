@@ -67,63 +67,6 @@ class Options:
     @ivar body: The object from which the message is to be read.
     """
 
-class JointFile:
-    def __init__(self, files, terminateOnPeriod = True):
-        self.files = files
-        self.files.reverse()
-        self.used = []
-    
-    def read(self, bytes=None):
-        r = ''
-        while self.files:
-            r = self.files[-1].read(bytes)
-            if r != '':
-                return self.filter(r)
-            self.used.append(self.files.pop())
-        return ''
-
-    def readline(self):
-        if not self.files:
-            return ''
-        while self.files:
-            r = self.files[-1].readline()
-            if r != '':
-                return self.filter(r)
-            self.used.append(self.files.pop())
-        return ''
-    
-    def readlines(self, bytes=None):
-        if not self.files:
-            return []
-        while self.files:
-            r = self.files[-1].readlines(bytes)
-            if r != []:
-                r[-1] == self.filter(r[-1])
-                if not r[-1]:
-                    del r[-1]
-                return r
-            self.used.append(self.files.pop())
-        return []
-    
-    def filter(self, s):
-        i = s.find('\n.\r')
-        if i == -1:
-            i = s.find('\n.\n')
-        if i == -1:
-            return s
-        while self.files:
-            self.used.append(self.files.pop())
-        return s[:i + 1]
-    
-    def fileno(self):
-        return self.files and self.files[-1].fileno() or self.used[-1].fileno()
-    
-    def close(self):
-        for f in self.used:
-            f.close()
-        for f in self.files:
-            f.close()
-
 def getlogin():
     try:
         return os.getlogin()
@@ -134,7 +77,7 @@ def getlogin():
 def parseOptions(argv):
     o = Options()
     o.to = [e for e in argv if not e.startswith('-')]
-    o.sender = '@'.join((getlogin(), socket.gethostname()))
+    o.sender = getlogin()
     
     # Just be very stupid
 
@@ -155,10 +98,8 @@ def parseOptions(argv):
     
     # -i and -oi makes us ignore lone "."
     if ('-i' in argv) or ('-oi' in argv):
-        o.ignoreDot = True
-    else:
-        o.ignoreDot = False
-    
+        raise ValueError, "Unsupported option"
+
     # -odb is background delivery
     if '-odb' in argv:
         o.background = True
@@ -195,6 +136,14 @@ def parseOptions(argv):
         o.recipientsFromHeaders = False
         o.exludeAddresses = []
     
+    requiredHeaders = {
+        'from': [],
+        'to': [],
+        'cc': [],
+        'bcc': [],
+        'date': [],
+    }
+    
     headers = []
     buffer = StringIO.StringIO()
     while 1:
@@ -215,8 +164,21 @@ def parseOptions(argv):
         elif hdr == 'from':
             o.sender = rfc822.parseaddr(hdrs[1])[1]
         
+        if hdr in requiredHeaders:
+            requiredHeaders[hdr].append(hdrs[1])
+
         if write:
             buffer.write(line)
+
+    if not requiredHeaders['from']:
+        buffer.write('From: %s\r\n' % (o.sender,))
+    if not requiredHeaders['to']:
+        if not o.to:
+            raise ValueError, "No recipients specified"
+        buffer.write('To: %s\r\n' % (', '.join(o.to),))
+    if not requiredHeaders['date']:
+        buffer.write('Date: %s\r\n' % (smtp.rfc822date(),))
+
     buffer.write(line)
 
     if o.recipientsFromHeaders:
@@ -227,7 +189,7 @@ def parseOptions(argv):
                 pass
 
     buffer.seek(0, 0)
-    o.body = JointFile([buffer, sys.stdin], not o.ignoreDot)
+    o.body = StringIO.StringIO(buffer.getvalue() + sys.stdin.read())
     return o
 
 class Configuration:
@@ -288,13 +250,14 @@ def loadConfig(path):
     for (section, a, d) in (('useraccess', au, du), ('groupaccess', ag, dg)):
         if p.has_section(section):
             for (mode, L) in (('allow', a), ('deny', d)):
-                for id in p.get(section, mode).split(','):
-                    try:
-                        id = int(id)
-                    except ValueError:
-                        log("Illegal %sID in [%s] section: %s", section[0].upper(), section, id)
-                    else:
-                        L.append(id)
+                if p.has_option(section, mode) and p.get(section, mode):
+                    for id in p.get(section, mode).split(','):
+                        try:
+                            id = int(id)
+                        except ValueError:
+                            log("Illegal %sID in [%s] section: %s", section[0].upper(), section, id)
+                        else:
+                            L.append(id)
             order = p.get(section, 'order')
             order = map(str.split, map(str.lower, order.split(',')))
             if order[0] == 'allow':
@@ -311,8 +274,10 @@ def loadConfig(path):
             p.identities[host] = parts
 
     if p.has_section('addresses'):
-        c.smarthost = p.get('addresses', 'smarthost')
-        c.domain = p.get('addresses', 'default_domain')
+        if p.has_option('addresses', 'smarthost'):
+            c.smarthost = p.get('addresses', 'smarthost')
+        if p.has_option('addresses', 'default_domain'):
+            c.domain = p.get('addresses', 'default_domain')
 
     return c
 
@@ -333,7 +298,7 @@ def sendmail(host, options, ident):
 
 def senderror(failure, options):
     recipient = [options.sender]
-    sender = 'Internally Generated Message (%s)' % (sys.argv[0],)
+    sender = '"Internally Generated Message" <postmaster> (%s)' % (sys.argv[0],)
     error = StringIO.StringIO()
     failure.printTraceback(file=error)
     body = StringIO.StringIO(ERROR_FMT % error.getvalue())
