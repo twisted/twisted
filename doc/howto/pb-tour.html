@@ -295,7 +295,7 @@ given port.</p>
 <p>Because <code>.getObjectAt()</code> has to make a network connection and
 exchange some data, it may take a while, so it returns a Deferred, to which the
 gotObject() callback is attached. (See the documentation on <a
-href="defer.html">"Deferring Execution"</a> for a complete explanation of
+href="defer.html">Deferring Execution</a> for a complete explanation of
 <code class="API" base="twisted.internet.defer">Deferred</code>s). If and when
 the connection succeeds and a reference to the remote root object is obtained,
 this callback is run. The first argument passed to the callback is a remote
@@ -333,8 +333,9 @@ returns the same string it was given: <q>hello network</q>.</p>
 <code class="API" base="twisted.internet.defer">Deferred</code> object
 instead of that string. <code>callRemote()</code> <em>always</em> returns a
 <code class="API" base="twisted.internet.defer">Deferred</code>. This is why PB
-is described as a system for "translucent" remote method calls instead of
-"transparent" ones: you cannot pretend that the remote object is really local.
+is described as a system for <q>translucent</q> remote method calls instead of
+<q>transparent</q> ones: you cannot pretend that the remote object is really
+local.
 Trying to do so (as some other RPC mechanisms do, coughCORBAcough) breaks down
 when faced with the asynchronous nature of the network. Using Deferreds turns
 out to be a very clean way to deal with the whole thing.</p>
