@@ -18,10 +18,14 @@ What's new in 0.10.1?
   New convention for dealing with Twisted plugins; --plugin option for twistd.
 
   twisted.web.widgets, an integrated presentation framework for use with
-  Twisted.Web.
+  Twisted Web.
 
   Added finger implementation in twisted.protocols.finger, and some less useful
   protocols (such as echo) in twisted.protocols.wire.
+
+  Enhancements to twisted.enterprise.
+
+  More documentation available on the website.
 
 What is this?
 
