@@ -2,6 +2,17 @@ from twisted.internet import tcp, main
 from twisted.spread import pb
 
 
+class clientCollector(pb.Referenced):
+
+    def __init__(self, player):
+        self.player = player
+        self.count = 0
+
+    def remote_gotData(self, data):
+        print "Got some data:" , self.count
+        self.player.request("select * from accounts", self)
+        self.count = self.count + 1
+
 class DbClient:
 
     def __init__(self, host, name, password):
@@ -13,24 +24,29 @@ class DbClient:
 
     def doLogin(self):
         self.client = pb.Broker()
-        self.client.requestPerspective("db", self.name, self.password, None, self.gotConnection)
-        tcp.Client(self.host, 8787, self.client)
+        tcp.Client(self.host, 27777, self.client)
         
+        self.client.requestIdentity("twisted",  # username
+                                    "matrix",  # password
+                                    callback = self.preConnected,
+                                    errback  = self.couldntConnect)
+
+    def couldntConnect(self, arg):
+        print "Could not connect.", arg
+
+    def preConnected(self, identity):
+        identity.attach("twisted.enterprise.db", None, pbcallback=self.gotConnection, pberrback=self.couldntConnect)
+
     def gotConnection(self, player):
         print 'connected:', player
         self.player = player
-        self.player.request("select * from accounts", pbcallback=self.gotData)
+	self.collector = clientCollector(player)
+        self.player.request("select * from accounts", self.collector)
 
 
-    def gotData(self, data):
-        print "got Data back %d  %d rows" % (self.count, len(data))
-        self.count = self.count + 1
-        # do it again!
-        self.player.request("select * from accounts", pbcallback=self.gotData)    
-        
 
 def run():
-    c = DbClient("localhost", "sean", "test")
+    c = DbClient("localhost", "twisted", "matrix")
     c.doLogin()
     main.run()
 
@@ -38,3 +54,5 @@ def run():
 
 if __name__ == '__main__':
     run()
+
+

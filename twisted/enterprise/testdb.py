@@ -3,6 +3,8 @@ import dbservice
 import unittest
 import time
 
+from twisted.internet import task
+
 class DbManagerTestCase(unittest.TestCase):
     def setUp(self):
         self.manager = dbserver.DbManager(
@@ -22,13 +24,6 @@ class DbManagerTestCase(unittest.TestCase):
         assert self.manager.connected == 1, 'not connected'
         assert len(self.manager.connections) == 2, 'wrong number of connections'
 
-    def testUpdate(self):
-        if not self.manager.connect():
-            assert 0, 'failed to connect'
-        for i in range(0,100):
-            self.manager.update()
-        assert self.manager.requests.getSize() == 0, 'requests queue not empty'
-        
 
 class DbServiceTestCase(unittest.TestCase):
     def setUp(self):
@@ -50,14 +45,14 @@ class DbServiceTestCase(unittest.TestCase):
         request = dbservice.AddUserRequest('testuser','testpass', self.gotData)
         self.manager.addRequest(request)
         self.manager.results.waitForSize(1)
-        self.manager.update()
+        task.doAllTasks()
         assert self.data == None, 'no response for addUser result'
 
     def testPassword(self):
         request = dbservice.PasswordRequest('testuser', self.gotData)
         self.manager.addRequest(request)
         self.manager.results.waitForSize(1)
-        self.manager.update()
+        task.doAllTasks()
         assert self.data == 'testpass', 'password retrieved is incorrect <%s>' % self.data
 
     def testBulk(self):
@@ -66,7 +61,7 @@ class DbServiceTestCase(unittest.TestCase):
             request = dbservice.PasswordRequest('testuser', self.gotData)
             self.manager.addRequest(request)
         self.manager.results.waitForSize(NUMREQUESTS)
-        self.manager.update()
+        task.doAllTasks()
         assert self.manager.requests.getSize() == 0, 'bulk failed.'
 
     def tearDown(self):

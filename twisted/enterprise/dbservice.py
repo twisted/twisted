@@ -27,16 +27,31 @@ class DbService(pb.Service):
         pb.Service.__init__(self, name, app)
         self.manager = manager
 
+    def startService(self):
+        print "Starting db service"
+        self.manager.connect()
 
 class DbUser(pb.Perspective):
     """A User that wants to interact with the database.
     """
-    def perspective_request(self, sql):
-        #print "Got SQL request:" , sql
-        data = self.manager.executeNow(sql)
-        return data[0]
+    def perspective_request(self, sql, clientCollector):
+        print "Got SQL request:" , sql
+	newRequest = GenericRequest(sql, clientCollector.gotData) 
+	self.service.manager.addRequest(newRequest)
 
 
+class GenericRequest(dbserver.DbRequest):
+    """Generic sql execution request.
+    """
+    def __init__(self, sql, callback):
+        dbserver.DbRequest.__init__(self, callback)
+        self.sql = sql
+
+    def execute(self, connection):
+        c = connection.cursor()
+        c.execute(self.sql)
+        self.results = c.fetchall()
+	self.status = 1
 
 class AddUserRequest(dbserver.DbRequest):
     """DbRequest to add a user to the accounts table

@@ -7,7 +7,8 @@ This interface is database vendor neutral.
 import threading
 import time
 
-        
+from twisted.internet import task
+
 class DbManager:
     """Manager that handles connections and requests. A DbManager handles connections
     to a particular database. It chooses the apropriate database driver (for a vendor)
@@ -50,13 +51,15 @@ class DbManager:
 	    self.driver = PoPy
         else:
             print "ERROR: Uknown database service"
-    
+   
     def connect(self):
         """Connect all the correct number of connections to the database/server specified.
         NOTE: auto_commit is false by default for sybase...
         """
         count = 0
+	print "Connection %d times:" % self.numConnections
         for i in range(0,self.numConnections):
+	    print "trying..."
             newConnection = DbConnection(self)
             if newConnection.connect():
                 newConnection.start()
@@ -99,23 +102,6 @@ class DbManager:
         """
         self.results.addRequest(request)
         
-    def update(self):
-        """This is called periodically by the server framework to do processing of database requests.
-        """
-        if self.connected == 0:
-            if self.connect() == 0:
-                return
-
-        request = self.results.getRequest()
-        
-        while request:
-            if request.callback:
-                request.callback(request.results)
-            request = self.results.getRequest()
-            
-        return
-
-
 class DbConnection(threading.Thread):
     """A thread that handles a database connection. The 'execute' method of DbRequests
     is run in this thread.
@@ -159,6 +145,7 @@ class DbConnection(threading.Thread):
             print "unable to connect to database: %s" % repr(e)
 	    return 0
         self.running = 1
+	print "Connected to postgres!!!"
         return 1
         
     def run(self):
@@ -186,8 +173,11 @@ class DbConnection(threading.Thread):
 		self.error = e
 		request.status = 0
 
-            self.manager.addResult(request)
-                
+            newTask = task.Task()
+	    newTask.addWork(request.callback, request.results)
+
+	    task.schedule(newTask)
+
     def close(self):
         #print "Thread (%d): Closing" % ( self.id)
         self.running = 0
@@ -202,6 +192,12 @@ class DbRequestQueue:
         self.lock = threading.Lock()
         self.sem = threading.Semaphore(0)
         self.queue = []
+
+    def __getstate__(self):
+    	return None
+
+    def __setstate__(self, state):
+        self.__init__()
 
     def addRequest(self, request):
         self.lock.acquire()            # acquire exclusive access to queue
