@@ -488,8 +488,12 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if passon is not None:
             self.setLineMode(passon)
 
+#    def sendLine(self, line):
+#        print 'C:', repr(line)
+#        return basic.LineReceiver.sendLine(self, line)
+
     def lineReceived(self, line):
-        # print 'S:', repr(line)
+        #print 'S:', repr(line)
         self.resetTimeout()
         if self._pendingLiteral:
             self._pendingLiteral.callback(line)
@@ -1232,10 +1236,13 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             import warnings
             warnings.warn(
                 "Returning a dict from imap4.IMailbox.fetch is deprecated.  "
-                "Return an iterable instead.", DeprecationWarning, stacklevel=2
+                "Return an iterable of IMessage implementors instead.",
+                DeprecationWarning, stacklevel=2
             )
             results = results.iteritems()
-        self._consumeFetchResponse(results, tag, query, uid)
+            self._consumeFetchResponse(results, tag, query, uid)
+        else:
+            self._consumeMessageIterable(results, tag, query, uid)
 
     def _consumeFetchResponse(self, results, tag, query, uid):
         try:
@@ -1263,6 +1270,75 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             )
             from twisted.internet import reactor
             reactor.callLater(0, self._consumeFetchResponse, results, tag, query, uid)
+
+    def _consumeMessageIterable(self, results, tag, query, uid):
+        try:
+            msgId, msg = results.next()
+        except StopIteration:
+            self.sendPositiveResponse(tag, 'FETCH completed')
+        else:
+            self._sendMessageFetchResponse(msgId, msg, query, uid)
+            from twisted.internet import reactor
+            reactor.callLater(0, self._consumeMessageIterable, results, tag, query, uid)
+
+
+    def _sendMessageFetchResponse(self, msgId, msg, query, uid):
+        response = []
+        for part in query:
+            if part.type == 'envelope':
+                response.extend(('ENVELOPE', '(%s)' % collapseNestedLists(getEnvelope(msg))))
+            elif part.type == 'flags':
+                response.extend(('FLAGS', '(%s)' % ' '.join(msg.getFlags())))
+            elif part.type == 'internaldate':
+                response.extend(('INTERNALDATE', msg.getInternalDate()))
+            elif part.type == 'rfc822header':
+                hdrs = msg.getHeaders((), True)
+                hdrs = [': '.join((k, v)) for (k. v) in hdrs.iteritems()]
+                hdrs = '\r\n'.join(hdrs)
+                response.extend(('RFC822.HEADER', hdrs + '\r\n\r\n'))
+            elif part.type == 'rfc822text':
+                response.extend(('RFC822.TEXT', msg.getBodyFile()))
+            elif part.type == 'rfc822size':
+                response.extend(('RFC822.SIZE', str(msg.getSize())))
+            elif part.type == 'rfc822':
+                hdrs = msg.getHeaders((), True)
+                hdrs = [': '.join((k, v)) for (k. v) in hdrs.iteritems()]
+                hdrs = '\r\n'.join(hdrs)
+                response.extend(('RFC822', hdrs + '\r\n\r\n', msg.getBodyFile()))
+            elif part.type == 'uid':
+                if uid:
+                    response.extend(('UID', str(msgId)))
+                else:
+                    response.extend(('UID', str(msg.getUID())))
+            elif part.type == 'bodystructure':
+                response.extend(('BODYSTRUCTURE', collapseNestedLists(getBodyStructure(msg))))
+            elif part.type == 'body':
+                subMsg = msg
+                for p in part.part or ():
+                    subMsg = subMsg.getSubPart(p)
+                if part.header:
+                    if not part.header.fields:
+                        hdrs = msg.getHeaders((), True)
+                        hdrs = [': '.join((k, v)) for (k. v) in hdrs.iteritems()]
+                        hdrs = '\r\n'.join(hdrs)
+                        response.extend((str(part), hdrs + '\r\n\r\n'))
+                    else:
+                        headers = []
+                        for (h, v) in subM.getHeaders().iteritems():
+                            if h.upper() in part.header.fields:
+                                if not self.header.negate:
+                                    headers.append('%s: %s' % (h, v))
+                            elif self.header.negate:
+                                headers.append('%s: %s' % (h, v))
+                        response.extend((str(part), '\r\n'.join(headers) + '\r\n\r\n'))
+                elif part.text:
+                    response.extend((str(part), subMsg.getBodyFile()))
+                elif part.mime:
+                    hdrs = msg.getHeaders((), True)
+                    hdrs = [': '.join((k, v)) for (k. v) in hdrs.iteritems()]
+                    hdrs = '\r\n'.join(hdrs)
+                    response.extend((str(part), hdrs + '\r\n\r\n'))
+        self.sendUntaggedResponse("%d FETCH %s" % (msgId, collapseNestedLists([response])))
 
     def __ebFetch(self, failure, tag):
         log.err(failure)
@@ -3513,6 +3589,110 @@ def statusRequestHelper(mbox, names):
         r[n] = getattr(mbox, _statusRequestDict[n])()
     return r
 
+def getEnvelope(msg):
+    date = msg.getHeaders(False, 'date',).get('date')
+    subject = msg.getHeaders(False, 'subject').get('subject')
+    from_ = msg.getHeaders(False, 'from').get('from')
+    sender = msg.getHeaders(False, 'sender').get('sender', from_)
+    reply_to = msg.getHeaders(False, 'reply-to').get('reply-to', from_)
+    to = msg.getHeaders(False, 'to').get('to')
+    cc = msg.getHeaders(False, 'cc').get('cc')
+    bcc = msg.getHeaders(False, 'bcc').get('bcc')
+    in_reply_to = msg.getHeaders(False, 'in-reply-to').get('in-reply-to')
+    return date, subject, from_, sender, reply_to, to, cc, bcc, in_reply_to
+
+def bodyStructure(msg):
+    # XXX - This does not properly handle multipart messages
+    # BODYSTRUCTURE is obscenely complex and criminally under-documented.
+    
+    charset = 'US-ASCII'
+    mm = msg.getHeaders(False, 'content-type').get('content-type')
+    if mm:
+        mm = ''.join(mm.splitlines())
+        mimetype = mm.split(';')
+        if mimetype:
+            type = mimetype[0].split('/', 1)
+            if len(mimetype) == 1:
+                major = mimetype[0]
+                minor = None
+            else:
+                major, minor = mimtype
+            attrs = dict([x.lower().split('=', 1) for x in mimetype[1:]])
+            try:
+                charset = attrs['charset'].upper()
+            except KeyError:
+                pass
+        else:
+            major = minor = None
+    else:
+        major = minor = None
+    
+    size = str(msg.getSize())
+    lines = 0
+    for _ in msg.getBodyFile():
+        lines += 1
+    return (
+        major, minor,               # Main and Sub MIME types
+        ("CHARSET", charset),       # Character encoding
+        None, None,                 # Hell if I know
+        "7BIT",                     # Content-Transfer-Encoding??  Beats me
+        size,                       # Number of octets total
+        str(lines)                  # number of lines in body
+    )
+
+class IMessage(components.Interface):
+    def getHeaders(self, negate, *names):
+        """Retrieve a group of message headers.
+        
+        @type names: C{tuple} of C{str}
+        @param names: The names of the headers to retrieve or omit.
+        
+        @type negate: C{bool}
+        @param negate: If True, indicates that the headers listed in C{names}
+        should be omitted from the return value, rather than included.
+        
+        @rtype: C{dict}
+        @return: A mapping of header field names to header field values
+        """ 
+
+    def getFlags(self):
+        """Retrieve the flags associated with this message.
+        
+        @rtype: C{iterable}
+        @return: The flags, represented as strings.
+        """
+
+    def getInternalDate(self):
+        """Retrieve the date internally associated with this message.
+        
+        @rtype: C{str}
+        @return: An RFC822-formatted date string.
+        """
+
+    def getBodyFile(self):
+        """Retrieve a file object containing the body of this message.
+        """
+
+    def getSize(self):
+        """Retrieve the total size, in octets, of this message.
+        
+        @rtype: C{int}
+        """
+
+    def getUID(self):
+        """Retrieve the unique identifier associated with this message.
+        """
+
+    def getSubPart(self, part):
+        """Retrieve a MIME sub-message
+        
+        @type part: C{int}
+        @param part: The number of the part to retrieve, indexed from 0.
+        
+        @rtype: Any object implementing C{IMessage}.
+        @return: The specified sub-part.
+        """
+
 class IMailbox(components.Interface):
     def getUIDValidity(self):
         """Return the unique validity identifier for this mailbox.
@@ -3672,43 +3852,19 @@ class IMailbox(components.Interface):
         invoked with such a list.
         """
 
-    def fetch(self, messages, parts, uid):
-        """Retrieve one or more portions of one or more messages.
+    def fetch(self, messages, uid):
+        """Retrieve one or more messages.
 
         @type messages: A MessageSet object with the list of messages requested
         @param messages: The identifiers of messages to retrieve information
         about
 
-        @type parts: C{list}
-        @param parts: The message portions to retrieve.  Each element is an
-        instance of a class with a name like \"RFC822Size\" or \"Text\".  A
-        few of these classes have attributes which modify their meaning:
-        
-            Body instances have a boolean peek attribute.  If it is true, this
-            fetch should not implicitly set the \\Seen flag.  They also have a
-            header attribute which is bound to a \"Header\" instance if the
-            query is for message headers.  They also have a partialBegin and a
-            partialLength attribute if this is a partial query.
-            
-            Header instances have a fields attribute that is bound to a list of
-            capitalized strings naming the header fields named in the query.
-            They also have a boolean negate attribute which is True if the listed
-            headers should be excluded from the result.  They also have a part
-            attribute bound to a tuple of integers specifying which part of the
-            message this instance refers to.
-            
-            Text and MIME instances also have a part attribute with the same meaning
-            as that on Header instances.
-
         @type uid: C{bool}
         @param uid: If true, the IDs specified in the query are UIDs;
         otherwise they are message sequence IDs.
 
-        @return: An iterator that produces two-tuples of message sequence
-        numbers (if uid is False) or message UIDs (if uid is True) and
-        C{dicts} mapping portion identifiers to strings or file objects
-        representing that portion of that message, or a C{Deferred} whose
-        callback will be invoked with such a tuple.
+        @rtype: Any iterable of two-tuples of message IDs and implementors
+        of C{IMessage}.
         """
 
     def store(self, messages, flags, mode, uid):
@@ -3961,7 +4117,7 @@ class _FetchParser:
         dot = s.find('.')
         parts = []
         while dot != -1 and s[last + 1].isdigit():
-            parts.append(int(s[last + 1:dot]))
+            parts.append(int(s[last + 1:dot]) - 1)
             last, dot = dot, s.find('.', dot + 1)
         self.parts = parts
         return last + 1

@@ -313,7 +313,7 @@ class IMAP4HelperTestCase(unittest.TestCase):
         self.failUnless(isinstance(p.result[0], p.Body))
         self.assertEquals(p.result[0].peek, False)
         self.failUnless(isinstance(p.result[0].mime, p.MIME))
-        self.assertEquals(p.result[0].mime.part, (1,))
+        self.assertEquals(p.result[0].mime.part, (0,))
         self.assertEquals(p.result[0].partialBegin, 10)
         self.assertEquals(p.result[0].partialLength, 50)
 
@@ -323,7 +323,7 @@ class IMAP4HelperTestCase(unittest.TestCase):
         self.failUnless(isinstance(p.result[0], p.Body))
         self.assertEquals(p.result[0].peek, True)
         self.failUnless(isinstance(p.result[0].header, p.Header))
-        self.assertEquals(p.result[0].header.part, (1, 3, 9, 11))
+        self.assertEquals(p.result[0].header.part, (0, 2, 8, 10))
         self.assertEquals(p.result[0].header.fields, ['MESSAGE-ID', 'DATE'])
         self.assertEquals(p.result[0].partialBegin, 103)
         self.assertEquals(p.result[0].partialLength, 69)
@@ -1335,7 +1335,7 @@ class FetchSearchStoreCopyTestCase(unittest.TestCase, IMAP4HelperMixin):
 
     def fetch(self, messages, parts, uid):
         self.server_received_uid = uid
-        self.server_received_parts = [p.type.upper() for p in parts]
+        self.server_received_parts = [str(p).upper() for p in parts]
         self.server_received_messages = str(messages)
         return self.expected
     
