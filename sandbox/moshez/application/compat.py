@@ -193,7 +193,7 @@ def convert(oldApp):
         for args in getattr(oldApp, name):
             klass(*args).setServiceParent(service.IServiceCollection(ret))
     for s in service.IServiceCollection(ret):
-        if isinstance(s, internet._AbstractServer):
+        if hasattr(s, 'privileged'):
             s.privileged = 1
     for s in oldApp.services.values():
         s.disownServiceParent()
