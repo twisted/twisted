@@ -1,14 +1,13 @@
 """C++ hooks from inside reactor."""
 
 from twisted.internet import tcp, udp, reactor
-from fusion import tcp as ctcp
-from fusion import udp as cudp
+from fusion import _fusion
 
 
-class CServer(ctcp.TCPTransportMixin, tcp.Server):
+class CServer(_fusion.TCPTransportMixin, tcp.Server):
 
     def __init__(self, *args, **kwargs):
-        ctcp.TCPTransportMixin.__init__(self, self)
+        _fusion.TCPTransportMixin.__init__(self, self)
         tcp.Server.__init__(self, *args, **kwargs)
         self.initProtocol()
 
@@ -18,10 +17,10 @@ class CPort(tcp.Port):
     transport = CServer
 
 
-class CClient(ctcp.TCPTransportMixin, tcp.Client):
+class CClient(_fusion.TCPTransportMixin, tcp.Client):
 
     def __init__(self, *args, **kwargs):
-        ctcp.TCPTransportMixin.__init__(self, self)
+        _fusion.TCPTransportMixin.__init__(self, self)
         tcp.Client.__init__(self, *args, **kwargs)
     
     def _connectDone(self):
@@ -39,24 +38,24 @@ class CConnector(tcp.Connector):
         return CClient(self.host, self.port, self.bindAddress, self, self.reactor)
 
 
-class CUDPPort(cudp.UDPPortMixin, udp.Port):
+class CUDPPort(_fusion.UDPPortMixin, udp.Port):
 
     def __init__(self, *args, **kwargs):
         udp.Port.__init__(self, *args, **kwargs)
 
     def _bindSocket(self):
         udp.Port._bindSocket(self)
-        cudp.UDPPortMixin.__init__(self, self)
+        _fusion.UDPPortMixin.__init__(self, self)
 
 
-class CMulticastPort(cudp.UDPPortMixin, udp.MulticastPort):
+class CMulticastPort(_fusion.UDPPortMixin, udp.MulticastPort):
 
     def __init__(self, *args, **kwargs):
         udp.MulticastPort.__init__(self, *args, **kwargs)
 
     def _bindSocket(self):
         udp.MulticastPort._bindSocket(self)
-        cudp.UDPPortMixin.__init__(self, self)
+        _fusion.UDPPortMixin.__init__(self, self)
 
 
 def _listenWith(portType, *args, **kwargs):

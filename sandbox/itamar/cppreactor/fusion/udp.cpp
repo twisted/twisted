@@ -93,18 +93,3 @@ int Twisted::UDPPort::write(const char* buf, size_t buflen, sockaddr_in sender)
     }
     return 0;
 }
-
-BOOST_PYTHON_MODULE(udp)
-{
-    class_<UDPPort>("UDPPortMixin", init<object>())
-	.def("doRead", &UDPPort::doRead)
-	;
-    class_<DatagramProtocol, bases<>, boost::noncopyable>("DatagramProtocol", no_init)
-	.def("makeConnection", &DatagramProtocol::makeConnection)
-	.def("stopProtocol", &DatagramProtocol::stopProtocol)
-	.def("startProtocol", &DatagramProtocol::startProtocol)
-	.def("doStop", &DatagramProtocol::doStop)
-	.def("connectionRefused", &DatagramProtocol::connectionRefused)
-	.def_readonly("transport", &DatagramProtocol::m_portobj)
-	;
-}
