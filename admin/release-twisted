@@ -235,19 +235,32 @@ def createSubprojectDirectory(proj, version):
     ln -s `pwd`/Twisted.exp/bin/%(proj)s %(sdir)s/bin
     ln -s `pwd`/Twisted.exp/twisted/%(proj)s/topfiles/* %(sdir)s
     ''' % locals())
-    
 
-def makeBallConch(opts):
-    ver = opts['base-version']
-    tdir = "Twisted-%s" % (ver,)
 
-    conchver = '0.1.0'
-    conchdir = 'TwistedConch-%s' % (conchver,)
+def makeMakeBall(proj):
+    def makeBall(opts):
+        ver = opts['base-version']
+        tdir = "Twisted-%s" % (ver,)
+        projver = '0.1.0'
+        projdir = 'Twisted%s-%s' % (proj.capitalize(), projver,)
+        createSubprojectDirectory(proj, projver)
+        sh('''
+        tar cjhf %(projdir)s.tar.bz2 %(projdir)s
+        ''' % locals())
+    return makeBall
 
-    createSubprojectDirectory('conch', conchver)
-    sh('''
-    tar cjhf %(conchdir)s.tar.bz2 %(conchdir)s
-    ''' % locals())
+
+makeBallConch = makeMakeBall('conch')
+makeBallFlow = makeMakeBall('flow')
+makeBallLore = makeMakeBall('lore')
+makeBallMail = makeMakeBall('mail')
+makeBallNames = makeMakeBall('names')
+makeBallNews = makeMakeBall('news')
+makeBallPair = makeMakeBall('pair')
+makeBallRunner = makeMakeBall('runner')
+makeBallWeb = makeMakeBall('web')
+makeBallWeb2 = makeMakeBall('web2')
+makeBallWords = makeMakeBall('words')
 
 
 def makeBalls(opts):
