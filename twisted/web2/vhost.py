@@ -17,6 +17,7 @@ import resource
 import error
 
 from nevow import rend
+from nevow import loaders
 from nevow.stan import directive
 from nevow.tags import *
 from nevow import inevow
@@ -60,7 +61,7 @@ class VirtualHostList(rend.Page):
         host = req.getHeader('host')
         return context.tag[ "Virtual Host Listing for %s://%s" % (proto, host) ]
 
-    docFactory = rend.stan(
+    docFactory = loaders.stan(
         html[
             head[
                 title(render=render_title),

@@ -37,7 +37,7 @@ import resource
 import http
 import iweb
 import responsecode
-from twisted.web2 import util as webutil, http_headers
+from twisted.web2 import http_headers
 
 
 # Support for other methods may be implemented on a per-resource basis.
