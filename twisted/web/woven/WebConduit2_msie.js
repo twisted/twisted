@@ -1,3 +1,20 @@
+var InternetExplorer = navigator.appName.indexOf('Microsoft') != 1
+function FlashConduit_swf_DoFSCommand(command, args) {
+	eval(args)
+}
+
+if (InternetExplorer) {
+	if (navigator.userAgent.indexOf('Windows') != -1) {
+		document.write('<SCRIPT LANGUAGE=VBScript\>\n')
+		document.write('on error resume next\n')
+		document.write('Sub FlashConduit_swf_FSCommand(ByVal command, ByVal args)\n')
+		document.write('call FlashConduit_swf_DoFSCommand(command, args)\n')
+		document.write('end sub\n')
+		document.write('</SCRIPT\>\n')
+	}
+	
+}
+
 var woven_eventQueue = []
 woven_eventQueueBusy = 0
 woven_clientSideEventNum = 0
@@ -57,5 +74,5 @@ function woven_replaceElement(theId, htmlStr) {
     var oldNode = document.getElementById(theId)
     oldNode.outerHTML = htmlStr
     var newNode = document.getElementById(theId)
-    woven_attemptFocus(newNode)
+    //woven_attemptFocus(newNode)
 }
