@@ -31,7 +31,7 @@ def getInstanceState(inst):
     return state
 
 SimpleTokens = (types.IntType, types.LongType, types.FloatType,
-                types.StringType, types.UnicodeType)
+                types.StringType)
 
 class BaseSlicer:
     opentype = None
@@ -123,6 +123,12 @@ class BaseSlicer:
         """
         return None
 
+class UnicodeSlicer(BaseSlicer):
+    opentype = 'unicode'
+    trackReferences = 0
+
+    def slice(self, obj):
+        self.send(obj.encode('UTF-8'))
 
 class ListSlicer(BaseSlicer):
     opentype = 'list'
@@ -216,6 +222,7 @@ class RootSlicer(BaseSlicer):
         return refid
 
 SlicerRegistry = {
+    types.UnicodeType: UnicodeSlicer,
     types.ListType: ListSlicer,
     types.TupleType: TupleSlicer,
     types.DictType: OrderedDictSlicer, #DictSlicer
@@ -391,6 +398,16 @@ class DiscardUnslicer(BaseUnslicer):
         return "discard"
     def doOpen(self, opentype):
         return DiscardUnslicer()
+
+class UnicodeUnslicer(BaseUnslicer):
+    def receiveToken(self, token):
+        self.string = unicode(token, "UTF-8")
+    def receiveChild(self, obj):
+        raise ValueError, "UnicodeUnslicer only accepts a single string"
+    def receiveClose(self):
+        return self.string
+    def describe(self):
+        return "<unicode>"
 
 class ListUnslicer(BaseUnslicer):
     debug = 0
@@ -616,6 +633,7 @@ class ReferenceUnslicer(BaseUnslicer):
 
         
 UnslicerRegistry = {
+    'unicode': UnicodeUnslicer,
     'list': ListUnslicer,
     'tuple': TupleUnslicer,
     'dict': DictUnslicer,

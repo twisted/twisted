@@ -600,7 +600,6 @@ class ThereAndBackAgain(unittest.TestCase):
             y = self.decode(self.encode(x))
             self.assertEquals(x, y)
             self.assertEquals(type(x[0]), type(y[0]))
-    testUnicode.todo = "unicode doesn't work yet"
 
     def testStressReferences(self):
         reref = []
