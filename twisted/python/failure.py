@@ -17,6 +17,10 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+"""Asynchronous-friendly error mechanism.
+
+See L{Failure}.
+"""
 
 # System Imports
 import sys
@@ -87,9 +91,10 @@ class Failure:
     def __init__(self, exc_value=None, exc_type=None, exc_tb=None):
         """Initialize me with an explanation of the error.
 
-        By default, this will use the current exception (sys.exc_info()).
-        However, if you want to specify a particular kind of failure, you can
-        pass an exception as an argument.
+        By default, this will use the current X{exception}
+        (L{sys.exc_info}()).  However, if you want to specify a
+        particular kind of failure, you can pass an exception as an
+        argument.
         """
         global count
         count = count + 1
@@ -217,6 +222,8 @@ class Failure:
 
         If the failure is not a Spam or an Eggs, then the Failure
         will be 'passed on' to the next errback.
+
+        @type errorTypes: L{Exception}
         """
         error = apply(self.check, errorTypes)
         if not error:
