@@ -140,6 +140,10 @@ class IRC(protocol.Protocol):
             else:
                 self.irc_unknown(prefix, command, params)
 
+    def irc_unknown(self, prefix, command, params):
+        """Implement me!"""
+        raise NotImplementedError
+
 
 class IRCClient(basic.LineReceiver):
     """Internet Relay Chat client protocol, with sprinkles.
@@ -167,6 +171,8 @@ class IRCClient(basic.LineReceiver):
     sourceFiles = None
 
     dcc_sessions = None
+
+    __pychecker__ = 'unusednames=params,prefix,channel'
 
     ### Interface level client->user output methods
     ###
