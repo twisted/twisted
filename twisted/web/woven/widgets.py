@@ -62,7 +62,7 @@ class Widget(view.View):
           is None, then the original Node will be cloned.
     @cvar wantsAllNotifications: Indicate that this widget wants to recieve every
           change notification from the main model, not just notifications that affect
-          it's model.
+          its model.
     @ivar model: If the current model is an L{model.Model}, then the result of
           model.getData(). Otherwise the original object itself.
     """
@@ -322,7 +322,7 @@ class Widget(view.View):
 
     def getPattern(self, name, default = None):
         """Get a named slot from the incoming template node. Returns a copy
-        of the node and all it's children. If there was more than one node with
+        of the node and all its children. If there was more than one node with
         the same slot identifier, they will be returned in a round-robin fashion.
         """
         #print self.templateNode.toxml()
