@@ -43,8 +43,6 @@ class ListModel:
         setattr(self.parent, self.name, data)
 
 
-components.registerAdapter(ListModel, types.ListType, IModel)
-
 # pyPgSQL returns "PgResultSet" instances instead of lists, which look, act
 # and breathe just like lists. pyPgSQL really shouldn't do this, but this works
 try:
@@ -75,9 +73,14 @@ class Wrapper:
         self.parent.setSubmodel(self.name, data)
 
 
-components.registerAdapter(Wrapper, types.StringType, IModel)
-components.registerAdapter(Wrapper, types.TupleType, IModel)
-
 from twisted.internet import defer
-components.registerAdapter(Wrapper, defer.Deferred, IModel)
+
+try:
+    components.registerAdapter(ListModel, types.ListType, IModel)
+    components.registerAdapter(Wrapper, types.StringType, IModel)
+    components.registerAdapter(Wrapper, types.TupleType, IModel)
+    components.registerAdapter(Wrapper, defer.Deferred, IModel)
+except ValueError:
+    # The adapters were already registered
+    pass
 
