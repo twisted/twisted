@@ -734,8 +734,8 @@ class TestMethod(MethodInfoBase):
     def _eb(self, f):
         log.msg(f.printTraceback())
         if f.check(unittest.FAILING_EXCEPTION,
-                   unittest.FailTest,
-                   doctest.DocTestTestFailure):
+                   unittest.FailTest):
+                   #doctest.DocTestTestFailure):
             self.failures.append(f)
         elif f.check(KeyboardInterrupt):
             log.msg(iface=ITrialDebug, kbd="KEYBOARD INTERRUPT")

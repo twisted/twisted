@@ -68,7 +68,7 @@ def formatFailureTraceback(fail):
         fail.printTraceback(sio)
         L = []
         for line in sio.getvalue().split('\n'):
-            if failure.EXCEPTION_CAUGHT_HERE in line or L:
+            if (line.find(failure.EXCEPTION_CAUGHT_HERE) != -1) or L:
                 L.append(line)
         return "\n".join(L[1:])
     return fail.getTraceback()
