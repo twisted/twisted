@@ -168,7 +168,7 @@ def loadMimeTypes():
         ".ogg": "application/x-ogg",
         ".pdf": "application/x-pdf",
         ".png": "image/png",
-        ".py": "text/x-python",
+        ".py": "text/plain",
         ".swf": "application/x-shockwave-flash",
         ".tar": "application/x-tar",
         ".tgz": "application/x-gtar",
