@@ -18,6 +18,7 @@
 import pwd, grp
 from twisted.inetd import inetd, inetdconf
 from twisted.python import log, usage
+from twisted.internet.protocol import ServerFactory
 
 
 class Options(usage.Options):
@@ -109,7 +110,7 @@ def updateApplication(app, config):
                 log.msg('Unknown internal service: ' + service.name)
                 continue
             factory = ServerFactory()
-            factory.protocol = internalProtocols[service.name]
+            factory.protocol = inetd.internalProtocols[service.name]
         elif rpc:
             proto = protocolDict[protocol]
             p = reactor.listenTCP(0, ServerFactory())
