@@ -1,4 +1,4 @@
-2002-02-20  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
+2002-02-21  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
 
         * twisted.protocols.ftp: Fixed a lot of serious bugs.
 
