@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes, generators
 
-__version__ = '$Revision: 1.37 $'[11:-2]
+__version__ = '$Revision: 1.38 $'[11:-2]
 
 import os, sys
 from UserDict import UserDict
@@ -235,7 +235,7 @@ def getPluginDirs():
                             os.path.abspath(twisted.__file__))), 'plugins')
     userPlugins = os.path.expanduser("~/TwistedPlugins")
     confPlugins = os.path.expanduser("~/.twisted")
-    allPlugins = [systemPlugins, userPlugins, confPlugins]
+    allPlugins = filter(os.path.isdir, [systemPlugins, userPlugins, confPlugins])
     return allPlugins
 
 def addPluginDir():
