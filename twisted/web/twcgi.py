@@ -158,11 +158,8 @@ class CGIProcess(process.Process, pb.Viewable):
     
     def __init__(self, script, args, env, path, request):
         self.request = request
-        process.Process.__init__(self, script, args, env, os.path.dirname(script))
-
-    def startProcess(self, script, args, env, path):
+        process.Process.__init__(self, script, args, env, path)
         self.request.registerProducer(self, 1)
-        process.Process.startProcess(self, script, args, env, path)
         if self.request.content:
             self.write(self.request.content)
         self.closeStdin()
