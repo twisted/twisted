@@ -11,7 +11,7 @@ import traceback, os.path as osp, warnings
 from twisted.python import reflect, failure, log
 from twisted.python.compat import sets, adict
 from twisted.internet import defer
-from twisted.trial import itrial 
+from twisted.trial import itrial, util
 import zope.interface as zi
 
 try:
