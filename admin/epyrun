@@ -3,7 +3,7 @@
 ### Twisted Preamble
 # This makes sure that users don't have to set up their environment
 # specially in order to run these programs from bin/.
-import sys, os, string
+import sys, os, string, shutil
 if string.find(os.path.abspath(sys.argv[0]), os.sep+'Twisted') != -1:
     sys.path.insert(0, os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]
 ), os.pardir, os.pardir)))
@@ -11,9 +11,10 @@ sys.path.insert(0, os.curdir)
 ### end of preamble
 
 import os, sys
+tmp_dir = '_epyrun_tmp' #only used for partial builds
 
 # HACK: Don't import stuff that we don't like
-
+# this is why we have to convert 
 def myimport(*args):
     try: 
         return im(*args)
@@ -60,7 +61,6 @@ def fakeOut(modname):
             setattr(prevmod, modpath[m], nm)
         sys.modules[mp] = nm
         prevmod = nm
-        print mp
 
 fakeOut("gnome.ui")
 fakeOut("pygtk")
@@ -149,6 +149,20 @@ class TwistedHTMLFormatter(HTMLFormatter):
                 s = self._method_to_html(uid)
                 open(filename, 'w').write(s)
 
+    # when doing non-full builds we need to fake epydoc in to thinking that
+    # all twisted modules are being documented so that the html links
+    # to the modules that aren't being documented get generated correctly
+    def _documented(self, uid):
+        value = HTMLFormatter._documented(self, uid)
+        if not document_all:
+            if not value:
+                try:
+                    if uid._name.startswith('twisted.'): #ha ha sucker
+                        return True
+                except:
+                    pass
+        return value
+
 epydoc.html.HTMLFormatter = TwistedHTMLFormatter
 
 # HACK: Only document stuff that we _tell_ you to document, you stupid
@@ -166,14 +180,14 @@ def _add(self, objID):
 
 objdoc.DocMap._add = _add
 
-# Now, set up the list of modules for epydoc to document
 
+# Now, set up the list of modules for epydoc to document
 modnames = []
 def addMod(arg, path, files):
     for fn in files:
         file = os.path.join(path, fn).replace('%s__init__'%os.sep, '')
         if file[-3:] == '.py' and not file.count('%stest%s' % (os.sep,os.sep)):
-            modName = file[2:-3].replace(os.sep,'.')
+            modName = file[:-3].replace(os.sep,'.')
             try:
                 #print 'pre-loading', modName
                 reflect.namedModule(modName)
@@ -183,23 +197,95 @@ def addMod(arg, path, files):
                 print 'other error:', modName
             else:
                 modnames.append(modName)
+
+document_all = True # are we doing a full build?
+names = ['twisted/'] #default, may be overriden below
+
+#get list of modules/pkgs on cmd-line
+try:
+    i = sys.argv.index("--modules")
+except:
+    pass
+else:
+    names = sys.argv[i+1:]
+    document_all = False
+    sys.argv[i:] = []
+    #sanity check on names
+    for i in range(len(names)):
+        try:
+            j = names[i].rindex('twisted/') 
+        except:
+            raise SystemExit, 'You can only specify twisted modules or packages'
+        else:
+            #strip off any leading directories before the 'twisted/'
+            #dir. this makes it easy to specify full paths, such as
+            #from TwistedEmacs
+            names[i] = names[i][j:]
+
+    old_out_dir = "html"
+    #if -o was specified, we need to change it to point to a tmp dir
+    #otherwise add our own -o option
+    try:
+        i = sys.argv.index('-o')
+        old_out_dir = sys.argv[i+1]
+        try:
+            os.mkdir(tmp_dir)
+        except OSError:
+            pass
+        sys.argv[i+1] = tmp_dir
+    except ValueError:
+        sys.argv[1:1] = ['-o', tmp_dir]
+
 osrv = sys.argv
 sys.argv=["IGNORE"]
 im = __import__
 __builtins__.__import__ = myimport
-os.path.walk('./twisted', addMod, None)
+
+for name in names:
+    if name.endswith(".py"):
+        # turn it in to a python module name
+        name = name[:-3].replace(os.sep, ".")
+        try:
+            reflect.namedModule(name)
+        except ImportError:
+            print 'import error:', name
+        except:
+            print 'other error:', name
+        else:
+            modnames.append(name)
+    else: #assume it's a dir
+        os.path.walk(name, addMod, None)
+
 __builtins__.__import__ = im
 sys.argv = osrv
 
+sys.argv.extend(modnames)
+
 from twisted import copyright
 
-sys.argv.extend(['-n', 'Twisted %s' % copyright.version, '-u', 'http://twistedmatrix.com/', '--no-private'])
+sys.argv[1:1] = ['-n', 'Twisted %s' % copyright.version, '-u', 'http://twistedmatrix.com/', '--no-private']
 
-sys.argv.extend(modnames)              # list of modules
 # Make it easy to profile epyrun
 if 0:
     import profile
     profile.run('cli()', 'epyrun.prof')
 else:
     cli()
+
+# used when doing partial builds to move the new files
+# out of the tmp dir and in to the real output dir.
+# only does "twisted." files since the others (index.html and such)
+# won't be right when not doing full builds.
+def moveFilesOut(arg, dirname, fnames):
+    for fn in fnames:
+        if fn.startswith('twisted.'):
+            shutil.move('%s%s%s' % (tmp_dir, os.sep, fn), old_out_dir)
+        
+if not document_all:
+    print "Updating files in %s" % old_out_dir
+    #move the right html files in to place
+    os.path.walk(tmp_dir, moveFilesOut, None)
+    #clean up
+    shutil.rmtree(tmp_dir)
+
 print 'Done!'
