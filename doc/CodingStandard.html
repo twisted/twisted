@@ -77,6 +77,23 @@
         compatibility if a module is made into a nested package as part of a
         refactoring.
       </p>
+      <p>
+        If you wish to promote code from a module to a package, for
+        example, to break a large module out into several smaller
+        files, the accepted way to do this is to promote from within
+        the module.  For example,
+<pre>
+# parent/
+# --- __init__.py ---
+import child
+
+# --- child.py ---
+import parent
+class Foo:
+    pass
+parent.Foo = Foo
+</pre>
+      </p>
       
       <h3>Docstrings</h3>
       <p>
