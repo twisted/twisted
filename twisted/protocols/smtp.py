@@ -72,7 +72,7 @@ class IMessage:
         """handle end of message
 
         return a deferred. The deferred should be called with either:
-        callback(string) or errback(string)
+        callback(string) or errback(error)
         """
 
     def connectionLost(self):
