@@ -19,6 +19,7 @@ from twisted.protocols.sux import XMLParser
 import os, re
 
 escapingRE = re.compile(r'([#$%&_{}^~])')
+lowerUpperRE = re.compile(r'([a-z])([A-Z])')
 
 class LatexSpitter(XMLParser):
 
@@ -30,7 +31,7 @@ class LatexSpitter(XMLParser):
     escaping = 1
     baseLevel = 0
     raw = 0
-    hyphenateDots = 0
+    hyphenateCode = 0
 
     def __init__(self, writer, currDir='.'):
         self.writer = writer
@@ -52,9 +53,10 @@ class LatexSpitter(XMLParser):
             data = data.replace('\n', ' ')
         if self.escaping:
             data = escapingRE.sub(r'\\\1{}',data.replace('\\', '$\\backslash$'))
-        if self.hyphenateDots:
-            # Add hyphenation points at dots (except not for leading dots)
-            data = data[:1] + data[1:].replace('.', '.\\textrm{\\-}')
+        if self.hyphenateCode:
+            ## Add hyphenation points at dots (except not for leading dots)
+            #data = data[:1] + data[1:].replace('.', '.\\textrm{\\-}')
+            data = lowerUpperRE.sub(r'\1\\textrm{\\-}\2', data)
 
         self.writer(data)
 
@@ -104,10 +106,10 @@ class LatexSpitter(XMLParser):
         self.writer(self.mapEnd_pre)
 
     def start_code(self, _, _1):
-        self.hyphenateDots = 1
+        self.hyphenateCode = 1
 
     def end_code(self, _):
-        self.hyphenateDots = 0
+        self.hyphenateCode = 0
 
     def start_a(self, _, attrs):
         if attrs.get('class') == "py-listing":
