@@ -1063,6 +1063,8 @@ class RegisterProxy(Proxy):
         if message.headers.get("expires", [None])[0] == "0":
             self.unregister(message, toURL, contact)
         else:
+            # XXX Check expires on appropriate URL, and pass it to registry
+            # instead of having registry hardcode it.
             if contact is not None:
                 name, contactURL, params = parseAddress(contact)
                 d = self.registry.registerAddress(message.uri, toURL, contactURL)
