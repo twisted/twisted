@@ -29,7 +29,7 @@ from twisted.protocols import protocol
 from twisted.internet.app import Application
 from twisted.python import defer, failure, log
 from twisted.cred import identity
-from twisted.internet import main
+from twisted.internet import reactor
 
 class Dummy(pb.Viewable):
     def view_doNothing(self, user):
@@ -579,7 +579,7 @@ class DisconnectionTestCase(unittest.TestCase):
         g = c.remoteForName("o")
         l = []
         g.callRemote("setBadCopy", BadCopyable()).addErrback(l.append)
-        main.iterate()
+        reactor.iterate()
         pump.flush()
         self.assertEquals(len(l), 1)
 
@@ -652,7 +652,7 @@ class SpreadUtilTestCase(unittest.TestCase):
         d = o.callRemote("add", 2, y=4)
         self.assert_(isinstance(d, defer.Deferred))
         d.addCallback(l.append)
-        main.iterate()
+        reactor.iterate()
         self.assertEquals(l, [6])
     
     def testAsyncFail(self):
@@ -660,7 +660,7 @@ class SpreadUtilTestCase(unittest.TestCase):
         o = LocalRemoteTest()
         d = o.callRemote("fail")
         d.addErrback(l.append)
-        main.iterate()
+        reactor.iterate()
         self.assertEquals(len(l), 1)
         self.assert_(isinstance(l[0], failure.Failure))
     

@@ -18,7 +18,7 @@ import string, random, copy
 
 from twisted.web import server, resource, widgets, guard
 from twisted.python import defer
-from twisted.internet import app, main
+from twisted.internet import app
 from twisted.cred import service, identity, perspective
 from twisted.protocols import http, loopback
 
