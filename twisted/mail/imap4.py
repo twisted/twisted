@@ -2756,13 +2756,17 @@ class IMAP4Client(basic.LineReceiver):
         @param mailbox: The mailbox to which to add this message.
 
         @type message: Any file-like object
-        @param message: The message to add, in RFC822 format.
+        @param message: The message to add, in RFC822 format.  Newlines
+        in this file should be \r\n-style.
 
         @type flags: Any iterable of C{str}
         @param flags: The flags to associated with this message.
 
         @type date: C{str}
-        @param date: The date to associate with this message.
+        @param date: The date to associate with this message.  This should
+        be of the format DD-MM-YYYY HH:MM:SS +/-HHMM.  For example, in
+        Eastern Standard Time, on July 1st 2004 at half past 1 PM,
+        \"01-07-2004 13:30:00 -0500\".
 
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked when this command
