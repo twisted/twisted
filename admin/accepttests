@@ -36,7 +36,6 @@ def twistdg(g):
 def twistdy(y):
     cmd("twistd -y %s" % (y,))
     time.sleep(0.5)
-    killit()
 
 def killit():
     scmd("kill `cat twistd.pid`")
@@ -58,8 +57,9 @@ def GUITest():
 def basicToolTest():
     message("You will now be connected to an echo server")
     twistdy(twistedBinDir+"/../admin/echo.py")
+    time.sleep(0.5)
     scmd("telnet localhost 18899")
-
+    killit()
 
 def basicWebTest():
     message("Running Basic Web Test")
@@ -242,7 +242,7 @@ def runAllTests():
     runManholeTest()
     runTelnetTest()
     runWordsTest()
-    #runRealityTest()
+    runRealityTest()
     runExampleTest()
     runMailTest()
     message('All tests run.')
