@@ -191,6 +191,31 @@ def setTitle(template, title):
         if nodeList:
             nodeList[0].childNodes.extend(title)
 
+def setAuthors(template, authors):
+    # First, similarly to setTitle, insert text into an <div class="authors">
+    text = ''
+    for name, href in authors:
+        # FIXME: Do proper quoting/escaping (is it ok to use
+        # xml.sax.saxutils.{escape,quoteattr}?)
+        anchor = '<a href="%s">%s</a>' % (href, name)
+        if (name, href) == authors[-1]:
+            text += 'and ' + anchor
+        else:
+            text += anchor + ','
+
+    childNodes = microdom.parseString('<span>' + text +'</span>').childNodes
+
+    for node in domhelpers.findElementsWithAttribute(template, 
+                                                     "class", 'authors'):
+        node.childNodes.extend(childNodes) 
+
+    # Second, add appropriate <link rel="author" ...> tags to the <head>.
+    head = domhelpers.findNodesNamed(template, 'head')[0]
+    authors = [microdom.parseString('<link rel="author" href="%s" title="%s"/>'
+                                    % (href, name)).childNodes[0]
+               for name, href in authors]
+    head.childNodes.extend(authors)
+
 def munge(document, template, linkrel, d, fullpath, ext, url):
     fixRelativeLinks(template, linkrel)
     addMtime(template, fullpath)
@@ -208,6 +233,11 @@ def munge(document, template, linkrel, d, fullpath, ext, url):
     # Insert the document into the template
     title = domhelpers.findNodesNamed(document, 'title')[0].childNodes
     setTitle(template, title)
+
+    authors = domhelpers.findNodesNamed(document, 'link')
+    authors = [(n.getAttribute('title',''), n.getAttribute('href', ''))
+               for n in authors if n.getAttribute('rel', '') == 'author']
+    setAuthors(template, authors)
 
     body = domhelpers.findNodesNamed(document, "body")[0]
     tmplbody = domhelpers.findElementsWithAttribute(template, "class",

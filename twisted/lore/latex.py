@@ -99,6 +99,30 @@ class LatexSpitter(BaseLatexSpitter):
         getLatexText(node, buf.write, latexEscape)
         self.writer(buf.getvalue().replace('<', '$<$').replace('>', '$>$'))
 
+    def visitNode_head(self, node):
+        authorNodes = domhelpers.findElementsWithAttribute(node, 'rel', 'author')
+        authorNodes = [n for n in authorNodes if n.tagName == 'link']
+
+        if authorNodes:
+            self.writer('\\author{')
+            authors = []
+            for aNode in authorNodes:
+                name = aNode.getAttribute('title', '')
+                href = aNode.getAttribute('href', '')
+                if href.startswith('mailto:'):
+                    href = href[7:]
+                if href:
+                    if name:
+                        name += ' '
+                    name += '$<$' + href + '$>$'
+                if name:
+                    authors.append(name)
+            
+            self.writer(' \\and '.join(authors))
+            self.writer('}')
+
+        self.visitNodeDefault(node)
+
     def visitNode_pre(self, node):
         self.writer('\\begin{verbatim}\n')
         buf = StringIO()
