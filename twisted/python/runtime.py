@@ -20,9 +20,9 @@ import os, sys
 
 def shortPythonVersion():
     hv = sys.hexversion
-    major = (hv & 0xff000000) >> 24
-    minor = (hv & 0x00ff0000) >> 16
-    teeny = (hv & 0x0000ff00) >> 8
+    major = (hv & 0xff000000L) >> 24
+    minor = (hv & 0x00ff0000L) >> 16
+    teeny = (hv & 0x0000ff00L) >> 8
     return "%s.%s.%s" % (major,minor,teeny)
 
 class Platform:
