@@ -16,25 +16,14 @@
 #
 from twisted.trial import unittest
 from twisted.application import app, service
+from twisted.internet import utils
 from twisted.persisted import sob
-import os, pickle
+import os, pickle, sys
 
 class Dummy:
     processName = None
 
 class TestAppSupport(unittest.TestCase):
-
-    def testTypeGuesser(self):
-        self.assertRaises(KeyError, app.guessType, "file.blah")
-        self.assertEqual('python', app.guessType("file.py"))
-        self.assertEqual('python', app.guessType("file.tac"))
-        self.assertEqual('python', app.guessType("file.etac"))
-        self.assertEqual('pickle', app.guessType("file.tap"))
-        self.assertEqual('pickle', app.guessType("file.etap"))
-        self.assertEqual('source', app.guessType("file.tas"))
-        self.assertEqual('source', app.guessType("file.etas"))
-        self.assertEqual('xml', app.guessType("file.tax"))
-        self.assertEqual('xml', app.guessType("file.etax"))
 
     def testPassphrase(self):
         self.assertEqual(app.getPassphrase(0), None)

@@ -166,21 +166,6 @@ def initialLog():
     log.msg('reactor class: %s' % reactor.__class__)
 
 
-
-def guessType(filename):
-    ext = os.path.splitext(filename)[1]
-    return {
-        '.tac':  'python',
-        '.etac':  'python',
-        '.py':  'python',
-        '.tap': 'pickle',
-        '.etap': 'pickle',
-        '.tas': 'source',
-        '.etas': 'source',
-        '.tax': 'xml',
-        '.etax': 'xml'
-    }[ext]
-
 def loadOrCreate(name, filename, procname, uid, gid):
     if filename and os.path.exists(filename):
         a = service.loadApplication(filename, 'pickle', None)

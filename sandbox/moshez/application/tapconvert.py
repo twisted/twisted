@@ -15,6 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 from twisted.python import usage
 from twisted.application import app
+from twisted.persisted import sob
 import sys, getpass
 
 class ConvertOptions(usage.Options):
@@ -40,7 +41,7 @@ class ConvertOptions(usage.Options):
                                    % self)
         if self["typein"] == "guess":
             try:
-                self["typein"] = app.guessType(self["in"])
+                self["typein"] = sob.guessType(self["in"])
             except KeyError:
                 raise usage.UsageError("Could not guess type for '%s'" %
                                        self["typein"])
