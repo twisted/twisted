@@ -24,7 +24,7 @@ import traceback
 from twisted.spread import pb
 from twisted.internet import app, reactor
 from twisted.python import log
-
+from twisted.cred import authorizer
 
 
 PORTNO = 54321
@@ -49,9 +49,9 @@ class SimplePerspective(pb.Perspective):
         raise DieError("*gack*")
 
 class SimpleService(pb.Service):
-    def __init__(self, name, app, tester):
+    def __init__(self, name, auth, appl, tester):
         self.tester = tester
-        pb.Service.__init__(self, name, app)
+        pb.Service.__init__(self, name, authorizer=auth, serviceParent=appl)
 
     def startService(self):
         self.tester.runClient()
@@ -69,9 +69,10 @@ class PBFailureTest(unittest.TestCase):
         
 
     def testPBFailures(self):
-        appl = app.Application("pbfailure")
-        SimpleService("pbfailure",appl,self).getPerspectiveNamed("guest").makeIdentity("guest")
-        appl.listenTCP(PORTNO, pb.BrokerFactory(pb.AuthRoot(appl)))
+        auth = authorizer.DefaultAuthorizer()
+        appl = app.Application("pbfailure", authorizer=auth)
+        SimpleService("pbfailure",auth,appl,self).getPerspectiveNamed("guest").makeIdentity("guest")
+        appl.listenTCP(PORTNO, pb.BrokerFactory(pb.AuthRoot(auth)))
         appl.run(save=0)
         log.flushErrors(PoopError, FailError, DieError)
 
