@@ -37,5 +37,5 @@ def service(description, factory):
 
 def listen(description, factory):
     from twisted.internet import reactor
-    name, args, kw = parse(description, factory)
+    name, (args, kw) = parse(description, factory)
     return getattr(reactor, 'listen'+name)(*args, **kw)
