@@ -102,9 +102,14 @@ class LatexSpitter(XMLParser):
             self.writer(open(fileName).read())
             self.writer('\\end{verbatim}')
             self.ignoring = 1
+        elif attrs.has_key('href') and not attrs['href'].startswith('http:'):
+            self.ref = attrs['href']
 
     def end_a(self, _):
         self.ignoring = 0
+        if hasattr(self, 'ref'):
+            self.writer(' (\\S\\ref{%s})' % self.ref)
+            del self.ref
 
     def start_style(self, _, _1):
         self.ignoring = 1
@@ -181,4 +186,6 @@ class SectionLatexSpitter(LatexSpitter):
 
     baseLevel = 1
     mapStart_title = '\\section{'
+    def end_title(self, _):
+        self.writer('\\label{%s}\n' % self.filename)
     mapEnd_body = mapStart_body = mapStart_html = None

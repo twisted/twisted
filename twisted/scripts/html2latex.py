@@ -42,6 +42,7 @@ def run():
         dir = opt['dir'] or os.path.dirname(file)
         spitter = klass(fout.write, dir)
         spitter.makeConnection(None)
+        spitter.filename = os.path.basename(file)
         spitter.dataReceived(fin.read())
         fin.close()
         fout.close()
