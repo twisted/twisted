@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_tendril -*-
-# $Id: tendril.py,v 1.26 2002/09/05 19:49:52 acapnotic Exp $
+# $Id: tendril.py,v 1.27 2002/09/05 23:39:21 acapnotic Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -195,7 +195,7 @@ class TendrilIRC(irc.IRCClient, styles.Ephemeral):
 
     realname = 'Tendril'
     versionName = 'Tendril'
-    versionNum = '$Revision: 1.26 $'[11:-2]
+    versionNum = '$Revision: 1.27 $'[11:-2]
     versionEnv = copyright.longversion
 
     helptext = TendrilFactory.helptext
@@ -217,7 +217,14 @@ class TendrilIRC(irc.IRCClient, styles.Ephemeral):
     ### Protocol LineReceiver-level methods
 
     def lineReceived(self, line):
-        irc.IRCClient.lineReceived(self, line)
+        try:
+            irc.IRCClient.lineReceived(self, line)
+        except:
+            # If you *don't* catch exceptions here, any unhandled exception
+            # raised by anything lineReceived calls (which is most of the
+            # client code) ends up making Connection Lost happen, which
+            # is almost certainly not necessary for us.
+            log.deferr()
 
     def sendLine(self, line):
         """Send a line through my transport, unless my transport isn't up.
@@ -906,8 +913,6 @@ class TendrilWords(wordsService.WordsClient):
             if p.name == sender:
                 return 1
         return 0
-
-
 
 
 def channelToGroupName(channelName):
