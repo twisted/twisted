@@ -48,8 +48,9 @@ from __future__ import nested_scopes
                     print lst.getResult()
             except flow.StopIteration: pass
     
-        flow.Flow(consumer()).execute()
-
+        for x in flow.Flow(consumer()):
+            print x
+    
     produces the output:
 
         Title
@@ -135,7 +136,9 @@ class Flow:
         be made returning either Cooperate or Generate.  If a Generate
         object is returned, then it becomes the current context and
         the process is continued.  Communication from the producer 
-        back to the consumer is done by yield of a non FlowItem
+        back to the consumer is done by yield of a non FlowItem.
+
+        This object effectively groups N flows 
     """
     def __init__(self, iterable, failureAsResult = 0 ):
         """initialize a Flow
@@ -145,15 +148,17 @@ class Flow:
                                 otherwise the first failure results in 
                                 the errback being called with the failure.
         """
-        self.results = []
-        self._stack  = [Generator(iterable)]
+        self._results = []
+        self._stack   = [Generator(iterable)]
         self.failureAsResult = failureAsResult
+    def __iter__(self):
+        return self
     def _addResult(self, result):
         """ private called as top-level results are added"""
         if not self.failureAsResult:
             if isinstance(result, failure.Failure):
                 result.trap()
-        self.results.append(result)
+        self._results.append(result)
     def _execute(self):
         """ private execute, execute flow till a Cooperate is found """
         while self._stack:
@@ -177,14 +182,14 @@ class Flow:
                     else:
                         if self._addResult(result):
                             return
-    def execute(self):
-        """ continually execute, using sleep for Cooperate """
-        from time import sleep
-        while 1:
-            timeout = self._execute()
-            if timeout is None: break
-            sleep(timeout)
-        return self.results
+    def next(self):
+        """ return the next result """
+        if self._results:
+            return self._results.pop(0)
+        if not self._stack:
+            raise StopIteration
+        self._execute()
+        return self.next()    
 
 from twisted.internet import defer
 class DeferredFlow(Flow, defer.Deferred):
@@ -218,12 +223,12 @@ class DeferredFlow(Flow, defer.Deferred):
             if isinstance(result, failure.Failure):
                 self.errback(result)
                 return 1
-        self.results.append(result)
+        self._results.append(result)
     def _execute(self):
         timeout = Flow._execute(self)
         if timeout is None:
             if not self.called:
-                self.callback(self.results)
+                self.callback(self._results)
         else:
             from twisted.internet import reactor
             reactor.callLater(timeout, self._execute)

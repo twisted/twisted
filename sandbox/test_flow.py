@@ -107,20 +107,30 @@ class badgen:
     def next(self):
         return self.state()
 
+def toList(it):
+    from twisted.python.compat import iter, StopIteration
+    ret = []
+    it = iter(it)
+    try:
+       while 1:
+           ret.append(it.next())
+    except StopIteration: pass
+    return ret         
+
 class FlowTest(unittest.TestCase):
     def testBasic(self):
         lhs = [1,2,3]
-        rhs = flow.Flow([1,2,3]).execute()
+        rhs = toList(flow.Flow([1,2,3]))
         self.assertEqual(lhs,rhs)
 
     def testProducer(self):
         lhs = [(1,'one'),(2,'two'),(3,'three')]
-        rhs = flow.Flow(producer()).execute() 
+        rhs = toList(flow.Flow(producer()))
         self.assertEqual(lhs,rhs)
 
     def testConsumer(self):
         lhs = ['Title',(1,'one'),(2,'two'),(3,'three')]
-        rhs = flow.Flow(consumer()).execute() 
+        rhs = toList(flow.Flow(consumer()))
         self.assertEqual(lhs,rhs)
 
     def testDeferred(self):
