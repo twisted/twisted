@@ -42,7 +42,7 @@ Test coverage needs to be better.
 <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-__version__ = '$Revision: 1.69 $'[11:-2]
+__version__ = '$Revision: 1.70 $'[11:-2]
 
 from twisted.internet import reactor, protocol
 from twisted.persisted import styles
@@ -801,19 +801,29 @@ class IRCClient(basic.LineReceiver):
         # XXX Should we bother passing this data?
         self.dccDoSend(user, address, port, filename, size, data)
 
-    def dcc_SEND_ACCEPT(self, user, channel, data):
+    def dcc_ACCEPT(self, user, channel, data):
         data = text.splitQuoted(data)
         if len(data) < 3:
             raise IRCBadMessage, "malformed DCC SEND ACCEPT request: %r" % (data,)
         (filename, port, resumePos) = data[:3]
+        try:
+            port = int(port)
+            resumePos = int(resumePos)
+        except ValueError:
+            return
 
         self.dccDoAcceptResume(user, filename, port, resumePos)
 
-    def dcc_SEND_RESUME(self, user, channel, data):
+    def dcc_RESUME(self, user, channel, data):
         data = text.splitQuoted(data)
         if len(data) < 3:
             raise IRCBadMessage, "malformed DCC SEND RESUME request: %r" % (data,)
         (filename, port, resumePos) = data[:3]
+        try:
+            port = int(port)
+            resumePos = int(resumePos)
+        except ValueError:
+            return
         self.dccDoResume(user, filename, port, resumePos)
 
     def dcc_CHAT(self, user, channel, data):
@@ -1265,7 +1275,7 @@ class DccFileReceive(DccFileReceiveBasic):
 
     def __init__(self, filename, fileSize=-1, queryData=None,
                  destDir='.', resumeOffset=0):
-        DccFileReceiveBasic.__init__(self, resumeOffset)
+        DccFileReceiveBasic.__init__(self, resumeOffset=resumeOffset)
         self.filename = filename
         self.destDir = destDir
         self.fileSize = fileSize
