@@ -4117,7 +4117,8 @@ class IAccount(components.Interface):
 
         @rtype: C{list} of C{tuple}
         @return: A list of C{(mailboxName, mailboxObject)} which meet the
-        given criteria.  A Deferred may also be returned.
+        given criteria.  C{mailboxObject} should implement either
+        C{IMailboxInfo} or C{IMailbox}.  A Deferred may also be returned. 
         """
 
 class INamespacePresenter(components.Interface):
@@ -4490,6 +4491,11 @@ class IMessage(IMessagePart):
         """
 
 class IMessageFile(components.Interface):
+    """Optional message interface for representing messages as files.
+    
+    If provided by message objects, this interface will be used instead
+    the more complex MIME-based interface.
+    """
     def open(self):
         """Return an file-like object opened for reading.
 
