@@ -82,7 +82,7 @@ def getPassword(prompt = ''):
 try:
     dict = dict
 except NameError:
-    def dict(*args):
+    def dict(args):
         r = {}
         for (k, v) in args:
             r[k] = v
