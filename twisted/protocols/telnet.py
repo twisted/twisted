@@ -206,6 +206,7 @@ class Telnet(protocol.Protocol):
         self.transport.write(IAC+WONT+ECHO+"*****\r\n")
         if not self.checkUserAndPass(self.username, paswd):
             return "Done"
+        self.loggedIn()
         return "Command"
 
     def processCommand(self, cmd):
@@ -270,9 +271,24 @@ class Telnet(protocol.Protocol):
             if why:
                 return why
 
+    def loggedIn(self):
+        """Called after the user succesfully logged in.
+        
+        Override in subclasses.
+        """
+        pass
+
 
 class Shell(Telnet):
-
+    """A Python command-line shell."""
+    
+    def connectionMade(self):
+        Telnet.connectionMade(self)
+        self.lineBuffer = []
+    
+    def loggedIn(self):
+        self.transport.write(">>> ")
+    
     def checkUserAndPass(self, username, password):
         return ((self.factory.username == username) and (password == self.factory.password))
 
@@ -287,34 +303,57 @@ class Shell(Telnet):
         self.transport.write(data)
 
     def processCommand(self, cmd):
-        fn = '$telnet$'
-        try:
-            code = compile(cmd,fn,'eval')
-        except:
-            try:
-                code = compile(cmd, fn, 'single')
-            except:
-                io = StringIO()
-                failure.Failure().printTraceback(file=self)
-                log.deferr()
-                self.write('\r\n')
+        if self.lineBuffer:
+            if not cmd:
+                cmd = string.join(self.lineBuffer, '\n') + '\n\n\n'
+                self.doCommand(cmd)
+                self.lineBuffer = []
                 return "Command"
+            else:
+                self.lineBuffer.append(cmd)
+                self.transport.write("... ")
+                return "Command"
+        else:
+            self.doCommand(cmd)
+            return "Command"
+    
+    def doCommand(self, cmd):
+        fn = '$telnet$'
+        result = None
         try:
             out = sys.stdout
             sys.stdout = self
             try:
-                val = eval(code, self.factory.namespace)
-            finally:
-                sys.stdout = out
+                code = compile(cmd,fn,'eval')
+                result = eval(code, self.factory.namespace)
+            except:
+                try:
+                    code = compile(cmd, fn, 'exec')
+                    exec code in self.factory.namespace
+                except SyntaxError, e:
+                    if not self.lineBuffer and str(e)[:14] == "unexpected EOF":
+                        self.lineBuffer.append(cmd)
+                        self.transport.write("... ")
+                        return
+                    else:
+                        failure.Failure().printTraceback(file=self)
+                        log.deferr()
+                        self.write('\r\n>>> ')
+                        return
+                except:
+                    io = StringIO()
+                    failure.Failure().printTraceback(file=self)
+                    log.deferr()
+                    self.write('\r\n>>> ')
+                    return
+        finally:
+            sys.stdout = out
+        
+        if result is not None:
+            self.transport.write(repr(result))
+            self.transport.write('\r\n')
+        self.transport.write(">>> ")
 
-            if val is not None:
-                self.transport.write(repr(val))
-            self.transport.write('\r\n')
-        except:
-            io = StringIO()
-            failure.Failure().printTraceback(file=self)
-            self.transport.write('\r\n')
-        return "Command"
 
 
 class ShellFactory(protocol.Factory, coil.Configurable):
