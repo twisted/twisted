@@ -180,9 +180,7 @@ class IEncodable:
 class Name:
     __implements__ = (IEncodable,)
 
-
     def __init__(self, name=''):
-        import types
         assert isinstance(name, types.StringTypes)
         self.name = name
 
