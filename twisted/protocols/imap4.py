@@ -21,6 +21,14 @@ An IMAP4 protocol implementation
 API Stability: Semi-stable
 
 @author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
+
+To do: 
+  Suspend idle timeout while server is processing
+  Use IProducer/IConsumer
+  Use an async message parser instead of buffering in memory
+  Figure out a way to not queue multi-message client requests (Flow? A simple callback?)
+  Clarify some API docs (Query, etc)
+  Use newcred
 """
 
 from __future__ import nested_scopes
