@@ -17,21 +17,24 @@
 from twisted.internet import reactor
 
 def f(s):
-    print "this will run in 3.5 seconds: %s" % s
+    print "this will run 3.5 seconds after it was scheduled: %s" % s
 
 reactor.callLater(3.5, f, "hello, world")
 </pre>
 
     <p>If we want a task to run every X seconds repeatedly, we can
-    just re-add it every time it's run:</p>
+    use <code
+    class="API">twisted.internet.task.LoopingCall</code>:</p>
 <pre class="python">
-from twisted.internet import reactor
+from twisted.internet import task
 
 def runEverySecond():
     print "a second has passed"
-    reactor.callLater(1, runEverySecond)
 
-reactor.callLater(1, runEverySecond)
+l = task.LoopingCall(runEverySecond)
+l.start(1.0) # call every second
+
+# l.stop() will stop the looping calls
 </pre>
 
     <p>If we want to cancel a task that we've scheduled:</p>
