@@ -34,6 +34,7 @@ import string
 class PortCollection(roots.Homogenous):
     """A collection of Ports; names may only be strings which represent port numbers.
     """
+    
     entityType = protocol.Factory
 
     def __init__(self, app, ptype):
@@ -80,6 +81,8 @@ class PortCollection(roots.Homogenous):
 
 
 class ServiceCollection(roots.Homogenous):
+    """A collection of Service objects."""
+    
     entityType = service.Service
 
     def __init__(self, app):
@@ -96,6 +99,9 @@ class ServiceCollection(roots.Homogenous):
         # No need to put the entity!  It will be automatically
         # registered by the Service's constructor...
         pass
+    
+    def delEntity(self, name):
+        del self.app.services[name]
 
 
 class ApplicationConfig(roots.Locked):
