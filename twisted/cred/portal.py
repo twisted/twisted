@@ -15,6 +15,10 @@ class Portal:
         self.realm = realm
         self.checkers = {}
 
+    def listCheckers(self):
+        """Return list of credentials interfaces that can be used to login."""
+        return self.checkers.keys()
+    
     def registerChecker(self, checker, *credentialInterfaces):
         if not credentialInterfaces:
             credentialInterfaces = checker.credentialInterfaces
@@ -22,8 +26,7 @@ class Portal:
             self.checkers[credentialInterface] = checker
 
     def login(self, credentials, mind, *interfaces):
-        """
-        
+        """    
         @param credentials: an implementor of
         twisted.cred.interfaces.ICredentials
 
