@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: usage.py,v 1.49 2003/09/05 06:59:48 tv Exp $
+# $Id: usage.py,v 1.50 2003/09/05 07:25:50 tv Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -420,7 +420,7 @@ class Options(UserDict.UserDict):
             chunks = docMakeChunks(cmdDicts, width)
             commands = 'Commands:\n' + ''.join(chunks)
         else:
-            commands = '\n'
+            commands = ''
 
         longToShort = {}
         for key, value in self.synonyms.items():
