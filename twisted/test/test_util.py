@@ -234,3 +234,15 @@ class IntervalDifferentialTestCase(unittest.TestCase):
         self.assertEquals(d.next(), (3, 0))
         self.assertEquals(d.next(), (3, 0))
         self.assertEquals(d.next(), (0, 1))
+
+    def testRemove(self):
+        d = iter(util.IntervalDifferential([3, 5], 10))
+        self.assertEquals(d.next(), (3, 0))
+        self.assertEquals(d.next(), (2, 1))
+        self.assertEquals(d.next(), (1, 0))
+        d.removeInterval(3)
+        self.assertEquals(d.next(), (4, 0))
+        self.assertEquals(d.next(), (5, 0))
+        d.removeInterval(5)
+        self.assertEquals(d.next(), (10, None))
+        self.assertRaises(ValueError, d.removeInterval, 10)

@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes, generators
 
-__version__ = '$Revision: 1.40 $'[11:-2]
+__version__ = '$Revision: 1.41 $'[11:-2]
 
 import os, sys
 from UserDict import UserDict
@@ -513,6 +513,17 @@ class _IntervalDifferentialIterator:
             self.intervals.sort()
         else:
             self.intervals.append([i, i, 0])
+    
+    def removeInterval(self, interval):
+        for i in range(len(self.intervals)):
+            if self.intervals[i][1] == interval:
+                index = self.intervals[i][2]
+                del self.intervals[i]
+                for i in self.intervals:
+                    if i[2] > index:
+                        i[2] -= 1
+                return
+        raise ValueError, "Specified interval not in IntervalDifferential"
 
 __all__ = [
     "uniquify", "padTo", "getPluginDirs", "addPluginDir", "sibpath",
