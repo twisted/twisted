@@ -134,7 +134,7 @@ def getPluginFileList(debugInspection=None, showProgress=None):
     result = []
     loaded = {}
     seenNames = {}
-    paths = filter(os.path.isdir, map(os.path.abspath, sys.path))
+    paths = filter(os.path.isdir, map(os.path.realpath, sys.path))
 
     progress = 0.0
     increments = 1.0 / len(paths)
