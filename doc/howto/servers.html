@@ -388,8 +388,8 @@ class Options(usage.Options):
 
 
 def updateApplication(app, config):
-    factory = makeQOTDFactory(config.quote)
-    app.listenTCP(int(config.port), factory)
+    factory = makeQOTDFactory(config.opts['quote'])
+    app.listenTCP(int(config.opts['port']), factory)
 </pre>
 
 <h2>Putting it All Together</h2>

@@ -11,7 +11,7 @@
 <h2>Introduction</h2>
 
 <p>There is frequently a need for programs to parse a UNIX-like
-command line program: options perceded by <code>-</code> or
+command line program: options preceded by <code>-</code> or
 <code>--</code>, sometimes followed by a parameter, followed by a
 list of arguments. The <code class="API">twisted.python.usage</code> provides a
 class, <code>Options</code>, to facilitate such parsing.</p>
@@ -56,8 +56,8 @@ class Options(usage.Options):
 element is the long name, and will be used on the command line as
 <code>--fast</code>. The second one is the short name, and will be
 used on the command line as <code>-f</code>. The long name also
-determines the name of the attribute that will be set on the
-instance. Its value will be 1 if the option was seen, 0 otherwise.
+determines the name of the key that will be set in the
+'opts' dict. Its value will be 1 if the option was seen, 0 otherwise.
 Here is an example for usage: 
 
 <pre class="python">
@@ -69,11 +69,11 @@ command_line = ["-g", "--fast"]
 
 options = Options()
 options.parseOptions(command_line)
-if options.fast:
+if options.opts['fast']:
     print "fast",
-if options.good:
+if options.opts['good']:
     print "good",
-if options.cheap:
+if options.opts['cheap']:
     print "cheap",
 print
 </pre>
@@ -131,15 +131,15 @@ class Options(usage.Options):
     optParameters = [["user", "u", None]]
 
 config.parseOptions() # When given no argument, parses sys.argv[1:]
-if config.user is not None:
-    print "Hello," config.user
+if config.opts['user'] is not None:
+    print "Hello," config.opts['user']
 print "So, you want it:"
 
-if options.fast:
+if config.opts['fast']:
     print "fast",
-if options.good:
+if config.opts['good']:
     print "good",
-if options.cheap:
+if config.opts['cheap']:
     print "cheap",
 print
 </pre>
@@ -165,10 +165,10 @@ class Options(usage.Options):
     verbosity = 0 # default
 
     def opt_verbose(self):
-        self.verbosity = self.verbosity+1
+        self.opts['verbosity'] = self.opts['verbosity']+1
 
     def opt_quiet(self):
-        self.verbosity = self.verbosity-1
+        self.opts['verbosity'] = self.['verbosity']-1
 
     opt_v = opt_verbose
     opt_q = opt_quiet
@@ -176,7 +176,9 @@ class Options(usage.Options):
 
 <p>Command lines that like like "command -v -v -v -v" will increase
 verbosity to 4, while "command -q -q -q" will decrease verbosity to
--3</p>
+-3. Note that while it is not required, it is recommended that you store
+option-related state in the 'self.opts' dict, which is where the rest of 
+the options are stored.</p>
 
 <p>The <code>usage.Options</code> class knows that these are
 parameter-less options, since the methods do not receive an
@@ -189,10 +191,10 @@ class Options(usage.Options):
 
     def __init__(self):
         usage.Options.__init__(self)
-        self.symbols = []
+        self.opts['symbols'] = []
 
     def opt_define(self, symbol):
-        self.symbols.append(symbol)
+        self.opts['symbols'].append(symbol)
 
     opt_D = opt_define
 </pre>
@@ -215,8 +217,8 @@ class Options(usage.Options):
     optParameters = [["max_differences", "d", 1]]
 
     def parseArgs(self, origin, changed):
-        self.origin = origin
-        self.changed = changed
+        self.opts['origin'] = origin
+        self.opts['changed'] = changed
 </pre>
 
 <p>The command should look like <code>command origin
@@ -239,7 +241,7 @@ class Options(usage.Options):
     optFlags = [["fast", "f"], ["good", "g"], ["cheap", "c"]]
 
     def postOptions(self):
-        if self.fast and self.good and self.cheap:
+        if self.opts['fast'] and self.opts['good'] and self.opts['cheap']:
             raise usage.UsageError, "can't have it all, brother"
 </pre>
 
