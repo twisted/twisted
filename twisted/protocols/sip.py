@@ -32,6 +32,7 @@ from twisted.python.components import Interface
 # sibling imports
 import basic
 
+PORT = 5060
 
 # SIP headers have short forms
 shortHeaders = {"call-id": "i",
@@ -66,7 +67,7 @@ statusCodes = {100: "Trying",
 class Via:
     """A SIP Via header."""
 
-    def __init__(self, host, port=5060, transport="UDP", ttl=None, hidden=False,
+    def __init__(self, host, port=PORT, transport="UDP", ttl=None, hidden=False,
                  received=None, branch=None, maddr=None):
         self.transport = transport
         self.host = host
@@ -169,6 +170,12 @@ class URL:
             w("?")
             w("&".join([("%s=%s" % p) for p in self.headers.items()]))
         return "".join(l)
+
+    def __str__(self):
+        return self.toString()
+    
+    def __repr__(self):
+        return '<URL %s:%s@%s:%r/%s>' % (self.username, self.password, self.host, self.port, self.transport)
 
 
 def parseURL(url):
@@ -475,6 +482,8 @@ class MessagesParser(basic.LineReceiver):
 class Base(protocol.DatagramProtocol):
     """Base class for SIP clients and servers."""
     
+    PORT = PORT
+    
     def __init__(self):
         self.messages = []
         self.parser = MessagesParser(self.addMessage)
@@ -503,7 +512,7 @@ class Base(protocol.DatagramProtocol):
         log.msg("Sending %s to %s" % (message, destURL))
         if destURL.transport not in ("udp", None):
             raise RuntimeError, "only UDP currently supported"
-        self.transport.write(message.toString(), (destURL.host, destURL.port))
+        self.transport.write(message.toString(), (destURL.host, destURL.port or self.PORT))
 
     def handle_response(self, message, addr):
         raise NotImplementedError
@@ -549,10 +558,12 @@ class ILocator(Interface):
 
 class Proxy(Base):
     """SIP proxy."""
+    
+    PORT = PORT
 
     locator = None # object implementing ILocator
     
-    def __init__(self, host=None, port=5060):
+    def __init__(self, host=None, port=PORT):
         """Create new instance.
 
         @param host: our hostname/IP as set in Via headers.
@@ -603,7 +614,7 @@ class Proxy(Base):
         Destination is based on topmost Via header."""
         destVia = parseViaHeader(responseMessage.headers["via"][0])
         # XXX we don't do multicast yet
-        port = destVia.port or 5060
+        port = destVia.port or self.PORT
         if destVia.received:
             destAddr = URL(host=destVia.received, port=port)
         else:
@@ -733,5 +744,5 @@ if __name__ == '__main__':
     registry = InMemoryRegistry("192.168.123.128")
     registrar.registry = registry
     registry.locator = registry
-    reactor.listenUDP(5060, registrar)
+    reactor.listenUDP(PORT, registrar)
     reactor.run()
