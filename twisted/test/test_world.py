@@ -379,8 +379,11 @@ class StrToIntThing(Storable):
         }
 
 class TestFixedClasses(unittest.TestCase):
+    tcdir = None
     def setUp(self):
-        self.db = database.Database(self.caseMethodName)
+        if self.tcdir is None:
+            self.tcdir = self.mktemp()
+        self.db = database.Database(self.tcdir)
 
     def tearDown(self):
         self.db.dumpHTML(open(self.db.dirname+"-dump.html",'wb'))

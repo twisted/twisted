@@ -256,6 +256,7 @@ class StorableDictionaryStore(StorableList):
     def __init__(self, db, keyType, valueType):
         typeMapper = getMapper((int, keyType, valueType))
         StorableList.__init__(self, db, typeMapper)
+        self.keyValueCount = 0
         self[:] = [typeMapper.null()] * self.initialPad
 
     def computePosition(self, inKeyHash, offset):
