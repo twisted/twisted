@@ -175,7 +175,7 @@ def getAdapter(obj, interfaceClass, default,
         return default
     else:
         return adapterClass(obj)
-
+    
 class _Nothing:
     pass
 
@@ -200,6 +200,9 @@ class Componentized:
     def locateAdapterClass(self, klass, interfaceClass, default):
         return getAdapterClassWithInheritance(klass, interfaceClass, default)
 
+    def setAdapter(self, interfaceClass, adapterClass):
+        self._adapterCache[interfaceClass] = adapterClass()
+        
     def getComponent(self, interface):
         """Create or retrieve an adapter for the given interface.
 
