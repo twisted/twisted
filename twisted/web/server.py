@@ -172,7 +172,7 @@ class Request(pb.Copyable, http.HTTP):
                         cgi.parse_multipart(StringIO.StringIO(self.content),
                                             pdict))
                 else:
-                    raise 'bad content-type'
+                    pass #raise 'bad content-type'
 
             # Resource Identification
             self.server_port = 80
