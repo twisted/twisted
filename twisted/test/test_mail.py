@@ -695,7 +695,10 @@ def setUpDNS(self):
 def tearDownDNS(self):
     self.port.stopListening()
     self.udpPort.stopListening()
-    self.resolver._parseCall.cancel()
+    try:
+        self.resolver._parseCall.cancel()
+    except:
+        pass
 
 class MXTestCase(unittest.TestCase):
     def setUp(self):
