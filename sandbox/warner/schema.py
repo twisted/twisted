@@ -626,11 +626,14 @@ class RemoteMethodSchema:
         # does nothing but returns the appropriate return type
 
         names, _, _, typeList = inspect.getargspec(method)
-        assert names[0] == "self"
-        names.pop(0)
+        if names and names[0] == 'self':
+            why = "RemoteInterface methods should not have 'self' in their argument list"
+            raise tokens.InvalidRemoteInterface(why)
         if not names:
             typeList = []
-        assert len(names) == len(typeList)
+        if len(names) != len(typeList):
+            why = "RemoteInterface methods must have default values for all theirarguments"
+            raise tokens.InvalidRemoteInterface(why)
         self.argumentNames = names
         self.argConstraints = {}
         self.required = []
@@ -642,7 +645,7 @@ class RemoteMethodSchema:
             self.argConstraints[argname] = makeConstraint(constraint)
 
         # call the method, its 'return' value is the return constraint
-        self.responseConstraint = makeConstraint(method(None))
+        self.responseConstraint = makeConstraint(method())
         self.options = {} # return, wait, reliable, etc
 
 

@@ -166,11 +166,11 @@ class RIMyTarget(pb.RemoteInterface):
     add1 = schema.RemoteMethodSchema(_response=int, a=int, b=int)
 
     # or through their function definitions:
-    def add(self, a=int, b=int): return int
+    def add(a=int, b=int): return int
     #add = schema.callable(add) # the metaclass makes this unnecessary
     # but it could be used for adding options or something
-    def join(self, a=str, b=str, c=int): return str
-    def getName(self): return str
+    def join(a=str, b=str, c=int): return str
+    def getName(): return str
     disputed = schema.RemoteMethodSchema(_response=int, a=int)
 
 class RIMyTarget2(pb.RemoteInterface):
@@ -268,7 +268,7 @@ class TestInterface(unittest.TestCase, TargetMixin):
     def testDuplicateRegistry(self):
         try:
             class RIMyTarget(pb.RemoteInterface):
-                def foo(self, bar=int): return int
+                def foo(bar=int): return int
         except flavors.DuplicateRemoteInterfaceError:
             pass
         else:

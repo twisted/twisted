@@ -36,6 +36,9 @@ tokenNames = {
 SIZE_LIMIT = 1000 # default limit on the body length of long tokens (STRING,
                   # LONGINT, LONGNEG)
 
+class InvalidRemoteInterface(Exception):
+    pass
+
 class Violation(Exception):
     """This exception is raised in response to a schema violation. It
     indicates that the incoming token stream has violated a constraint
