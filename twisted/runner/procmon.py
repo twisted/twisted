@@ -154,7 +154,7 @@ class ProcessMonitor(app.ApplicationService):
     def startService(self):
         self.active = 1
         for name in self.processes.keys():
-            self.startProcess(name)
+            reactor.callLater(0, self.startProcess, name)
         self.consistency = reactor.callLater(self.consistencyDelay,
                                              self._checkConsistency)
 
