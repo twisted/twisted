@@ -59,6 +59,8 @@ class HTTPPageGetter(http.HTTPClient):
     def handleStatus_200(self):
         pass
 
+    handleStatus_202 = handleStatus_200
+
     def handleStatusDefault(self):
         self.failed = 1
 
