@@ -44,7 +44,9 @@ def main():
     print ".".join([pond.__class__.__module__, pond.__class__.__name__])
 
     sender = Sender(pond)
-    deferred = pb.getObjectAt("localhost", 8800, 30)
+    factory = pb.PBClientFactory()
+    reactor.connectTCP("localhost", 8800, factory)
+    deferred = factory.getRootObject()
     deferred.addCallback(sender.got_obj)
     reactor.run()
 

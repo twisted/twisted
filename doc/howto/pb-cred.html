@@ -256,7 +256,7 @@ connects, and survives after they disconnect. <code>.attached()</code> and
 <code>.detached()</code> are invoked to let the Perspective know when the
 user has connected and disconnected.</p>
 
-<p>When the client runs <code>pb.connect</code> to establish the connection,
+<p>When the client runs <code>getPerspective</code> to request the Perspective,
 they can provide it with an optional <code>client</code> argument (which
 must be a <code>pb.Referenceable</code> object). If they do, then a
 reference to that object will be handed to the server-side Perspective's
@@ -551,17 +551,19 @@ adding it to the keyring. We added the <code>Identity</code> objects to the
 <code>Authorizer</code>, and then glued the authorizer to the
 <code>pb.BrokerFactory</code>.</p>
 
-<p>How did that last bit of magic glue work? I won't tell you here, because
-it isn't very useful to override it, but you effectively hang an
-<code>Authorizer</code> off of a TCP port. The combination of the object and
-methods exported by the <code class="API"
-base="twisted.spread">pb.AuthRoot</code> object works together with the code
-inside the <code>pb.connect()</code> function to implement both sides of the
-challenge-response sequence. When you (as the client) use
-<code>pb.connect()</code> to get to a given host/port, you end up talking to
-a single <code>Authorizer</code>. The username/password you give get matched
-against the <code>Identities</code> provided by that authorizer, and then
-the servicename/perspectivename you give are matched against the ones
+<p>How did that last bit of magic glue work? I won't tell you here,
+because it isn't very useful to override it, but you effectively hang
+an <code>Authorizer</code> off of a TCP port. The combination of the
+object and methods exported by the <code class="API"
+base="twisted.spread">pb.AuthRoot</code> object works together with
+the code inside the <code>PBClientFactory.getPerspective()</code>
+function to implement both sides of the challenge-response
+sequence. When you (as the client) use <code>getPerspective()</code>
+(after using e.g. reactor.connectTCP to get to a given host/port), you
+end up talking to a single <code>Authorizer</code>. The
+username/password you give get matched against the
+<code>Identities</code> provided by that authorizer, and then the
+servicename/perspectivename you give are matched against the ones
 authorized by the <code>Identity</code> (in its <code>.keyring</code>
 attribute). You eventually get back a remote reference to a
 <code>Perspective</code> provided by the <code>Service</code> that you
@@ -589,32 +591,33 @@ starts the challenge-response sequence.</p>
 </div>
 
 
-<h2>Code Walkthrough: pb.connect()</h2><a name="walkthrough" />
+<h2>Code Walkthrough: pb.PBClientFactory</h2><a name="walkthrough" />
 
 <p>So, now that you've seen the complete sequence, it's time for a code
 walkthrough. This will give you a chance to see the places where you might
 write subclasses to implement different behaviors. We will look at what
 happens when <code>pb6client1.py</code> meets <code>pb6server.py</code>. We
 tune in just as the client has run the <code
-class="python">pb.connect()</code> call.</p>
+class="python">getPerspective()</code> call.</p>
 
 <p>The client-side code can be summarized by the following sequence of
 function calls, all implemented in twisted/spread/pb.py . <code
-class="python">pb.connect()</code> calls <code
-class="python">getObjectAt()</code> directly, after that each step is
+class="python">getPerspective()</code> calls <code
+class="python">getRootObject()</code> directly, after that each step is
 executed as a callback when the previous step completes.</p>
 
 <pre>
- getObjectAt(host,port,timeout)
- logIn(): authServRef.callRemote('username', username)
- _cbLogInRespond(): challenger.callRemote('respond', f[challenge,password])
- _cbLogInResponded(): identity.callRemote('attach', servicename,
+ getRootObject()
+ _cbAuthIdentity(): authServRef.callRemote('username', username)
+ _cbRespondToChallenge(): challenger.callRemote('respond', f[challenge,password])
+ _cbGetPerspective(): identity.callRemote('attach', servicename,
                                           perspectivename, client)
  usercallback(perspective)
 </pre>
 
-<p>The client does <code class="python">getObjectAt()</code> to connect to
-the given host and port, and retrieve the object named <code>root</code>. On
+<p>The client does <code class="python">reactor.connectTCP()</code> to connect to
+the given host and port, and <code class="python">reactor.connectTCP()</code> to
+retrieve the object named <code>root</code>. On
 the server side, the <code>BrokerFactory</code> accepts the connection, asks
 the <code class="API" base="twisted.spread">pb.AuthRoot</code> object for
 its <code class="python">.rootObject()</code>, getting an <code class="API"
@@ -664,7 +667,7 @@ returned to the client.</p>
 
 <p>The client gives the <code>Perspective</code> reference to the callback
 that was attached to the <code>Deferred</code> that
-<code>pb.connect()</code> returned, which brings us back up to the code
+<code>getPerspective()</code> returned, which brings us back up to the code
 visible in <code>pb6client1.py</code>.</p>
 
 <h2>Viewable</h2>

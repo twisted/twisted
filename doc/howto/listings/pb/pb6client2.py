@@ -4,11 +4,11 @@ from twisted.spread import pb
 from twisted.internet import reactor
 
 def main():
-    def1 = pb.connect("localhost", 8800,
-                      "user2", "pass2",
-                      "myservice", "perspective2",
-                      timeout=30)
-    def1.addCallbacks(connected)
+    factory = pb.PBClientFactory()
+    reactor.connectTCP("localhost", 8800, factory)
+    def1 = factory.getPerspective(
+        "user2", "pass2", "myservice", "perspective2")
+    def1.addCallback(connected)
     reactor.run()
 
 def connected(perspective):

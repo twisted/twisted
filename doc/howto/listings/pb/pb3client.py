@@ -9,7 +9,9 @@ class Two(pb.Referenceable):
 
 def main():
     two = Two()
-    def1 = pb.getObjectAt("localhost", 8800, 30)
+    factory = pb.PBClientFactory()
+    reactor.connectTCP("localhost", 8800, factory)
+    def1 = factory.getRootObject()
     def1.addCallback(got_obj, two) # hands our 'two' to the callback
     reactor.run()
 

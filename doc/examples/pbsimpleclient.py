@@ -26,5 +26,8 @@ def gotEcho(echo):
 def gotNoObject(reason):
     print "no object:",reason
     reactor.stop()
-pb.getObjectAt("localhost", 8789, 30).addCallbacks(gotObject, gotNoObject)
+
+factory = pb.PBClientFactory()
+reactor.connectTCP("localhost", 8789)
+factory.getRootObject().addCallbacks(gotObject, gotNoObject)
 reactor.run()

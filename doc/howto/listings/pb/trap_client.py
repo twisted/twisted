@@ -77,7 +77,9 @@ class One:
         reactor.callLater(4, self.callShutdown)
         reactor.callLater(5, self.callFour)
         reactor.callLater(6, reactor.stop)
-        
-deferred = pb.getObjectAt("localhost", 8800, 30)
+
+factory = pb.PBClientFactory()
+reactor.connectTCP("localhost", 8800, factory)
+deferred = factory.getRootObject()
 deferred.addCallback(One().got_obj)
 reactor.run()

@@ -5,7 +5,9 @@ from twisted.internet import reactor
 
 def main():
     foo = Foo()
-    pb.getObjectAt("localhost", 8800, 30).addCallback(foo.step1)
+    factory = pb.PBClientFactory()
+    reactor.connectTCP("localhost", 8800, factory)
+    factory.getRootObject().addCallback(foo.step1)
     reactor.run()
 
 # keeping globals around is starting to get ugly, so we use a simple class

@@ -11,7 +11,7 @@
 
 <p>The first example to look at is a complete (although somewhat trivial)
 application. It uses <code>BrokerFactory()</code> on the server side, and
-<code>pb.getObjectAt()</code> on the client side.</p>
+<code>PBClientFactory()</code> on the client side.</p>
 
 <a href="../examples/pbsimple.py" class="py-listing" skipLines="16"
 >pbsimple.py</a>
@@ -45,23 +45,23 @@ reference to any other object you might want to give out), the simplest example
 is one where the <code class="API" base="twisted.spread">BrokerFactory</code>
 is given the root object, and the client retrieves it.</p>
 
-<p>The client side calls 
-<code class="API" base="twisted.spread">pb.getObjectAt</code> to make a
-connection to a given port. This is a convenience function (not a method) which
-runs through the PB protocol steps necessary to retrieve the root object from a
-<code class="API" base="twisted.spread.pb">BrokerFactory</code> sitting at the
-given port.</p>
+<p>The client side uses
+<code class="API" base="twisted.spread">pb.PBClientFactory</code> to make a
+connection to a given port. This is a two-step process involving opening
+a TCP connection to a given host and port and requesting the root object
+using <code>.getRootObject()</code>.</p>
 
-<p>Because <code>.getObjectAt()</code> has to make a network connection and
-exchange some data, it may take a while, so it returns a Deferred, to which the
-gotObject() callback is attached. (See the documentation on <a
-href="defer.html">Deferring Execution</a> for a complete explanation of
-<code class="API" base="twisted.internet.defer">Deferred</code>s). If and when
-the connection succeeds and a reference to the remote root object is obtained,
-this callback is run. The first argument passed to the callback is a remote
-reference to the distant root object.  (you can give other arguments to the
-callback too, see the other parameters for <code>.addCallback()</code> and
-<code>.addCallbacks()</code>).</p>
+<p>Because <code>.getRootObject()</code> has to wait until a network
+connection has been made and exchange some data, it may take a while,
+so it returns a Deferred, to which the gotObject() callback is
+attached. (See the documentation on <a href="defer.html">Deferring
+Execution</a> for a complete explanation of <code class="API"
+base="twisted.internet.defer">Deferred</code>s). If and when the
+connection succeeds and a reference to the remote root object is
+obtained, this callback is run. The first argument passed to the
+callback is a remote reference to the distant root object.  (you can
+give other arguments to the callback too, see the other parameters for
+<code>.addCallback()</code> and <code>.addCallbacks()</code>).</p>
 
 <p>The callback does:</p>
 
@@ -100,7 +100,7 @@ Trying to do so (as some other RPC mechanisms do, coughCORBAcough) breaks down
 when faced with the asynchronous nature of the network. Using Deferreds turns
 out to be a very clean way to deal with the whole thing.</p>
 
-<p>The remote reference object (the one given to <code>getObjectAt()</code>'s
+<p>The remote reference object (the one given to <code>getRootObject()</code>'s
 success callback) is an instance the 
 <code class="API" base="twisted.spread.pb">RemoteReference</code> class. This
 means you can use it to invoke methods on the remote object that it refers to.
@@ -193,19 +193,19 @@ that wraps the quoter.  We then create a
 <code class="API" base="twisted.spread.pb">Service</code>.  Finally, we
 register with the <code class="python">QuoteService</code>'s authorizer.</p>
 
-<p>Accessing this through a client is fairly easy, as we can use the
-<code class="API" base="twisted.spread">pb.connect</code> convenience
-function.</p>
+<p>Accessing this through a client is fairly easy, as we use the
+<code class="API" base="twisted.spread">pb.PBClientFactory.getPerspective</code>
+method.</p>
 
 <a href="listings/TwistedQuotes/pbquoteclient.py" class="py-listing">PB Quotes
 Client Code</a>
 
-<p><code class="API" base="twisted.spread">pb.connect</code> will handle all
-the details of creating a
+<p><code class="API" base="twisted.spread">pb.PBClientFactory.getPerspective</code> 
+will handle all the details of waiting for the creation of a
 connection and authenticating.  It returns a 
 <code class="API" base="twisted.internet.defer">Deferred</code>, which will
-have its callback called when 
-<code class="API" base="twisted.spread">pb.connect</code> connects to a
+have its callback called when the reactor connects to the remote server and
+<code class="API" base="twisted.">pb.PBClientFactory</code> connects to a
 perspective, and have its <code class="python">errback</code> called when the
 object-connection fails for any reason, whether it's host lookup failure,
 connection refusal, or incorrect authentication credentials.  </p>
@@ -234,7 +234,7 @@ have one method which is their purpose for being:
 <code class="python">callRemote</code>.  This method allows you to call a
 remote method on the object being referred to by the Reference.  
 <code class="API" base="twisted.spread.pb">RemoteReference.callRemote</code>,
-like <code class="API" base="twisted.spread">pb.connect</code>, returns a
+like <code class="API" base="twisted.spread">pb.PBClientFactory.getPerspective</code>, returns a
 <code class="API" base="twisted.internet.defer">Deferred</code>.  When a
 response to the method-call being sent arrives, the 
 <code class="API" base="twisted.internet.defer">Deferred</code>'s

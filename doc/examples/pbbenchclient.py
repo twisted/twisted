@@ -27,8 +27,9 @@ class PBBenchClient:
         self.callLoop(None)
 
     def runTest(self):
-        pb.connect(self.hostname, self.portno,
-                   "benchmark", "benchmark", "benchmark").addCallback(self._cbPerspective)
+        factory = pb.PBClientFactory()
+        reactor.connectTCP(self.hostname, self.portno, factory)
+        factory.getPerspective("benchmark", "benchmark", "benchmark").addCallback(self._cbPerspective)
 
 PBBenchClient().runTest()
 from twisted.internet import reactor

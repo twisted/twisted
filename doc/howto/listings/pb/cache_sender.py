@@ -37,7 +37,9 @@ def main():
     master.count()
 
     sender = Sender(master)
-    deferred = pb.getObjectAt("localhost", 8800, 30)
+    factory = pb.PBClientFactory()
+    reactor.connectTCP("localhost", 8800, factory)
+    deferred = factory.getRootObject()
     deferred.addCallback(sender.phase1)
     reactor.run()
 

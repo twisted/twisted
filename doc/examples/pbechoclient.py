@@ -34,8 +34,10 @@ def connected(perspective):
     perspective.callRemote('error').addCallbacks(success, failure)
     print "connected."
 
-pb.connect("localhost", pb.portno,
-           "guest", "guest",
-           "pbecho", "guest").addCallbacks(connected, failure)
+
+factory = pb.PBClientFactory()
+reactor.connectTCP("localhost", pb.portno, factory)
+factory.getPerspective(
+    "guest", "guest", "pbecho", "guest").addCallbacks(connected, failure)
 
 reactor.run()

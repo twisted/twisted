@@ -4,7 +4,9 @@ from twisted.spread import pb
 from twisted.internet import reactor
 
 def main():
-    d = pb.getObjectAt("localhost", 8800, 30)
+    factory = pb.PBClientFactory()
+    reactor.connectTCP("localhost", 8800, factory)
+    d = factory.getRootObject()
     d.addCallbacks(got_obj)
     reactor.run()
 

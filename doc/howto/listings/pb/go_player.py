@@ -33,15 +33,18 @@ class Player:
         print " move x,y   (where x and y are 0 .. 18)"
         
     def connect(self, name, passwd, side):
-        self.d = pb.connect("localhost", 8800, name, passwd, "goservice",
-                            side)
+        self.factory = pb.PBClientFactory()
+        reactor.connectTCP("localhost", 8800, self.factory)
+        self.d = self.factory.getPerspective(name, passwd, "goservice", side)
         self.d.addCallback(self.join)
         self.d.addErrback(self.join_failed)
+    
     def join(self, perspective):
         self.p = perspective
         print " game joined"
         #self.p.callRemote('getBoard').addCallback(self.printBoard)
         self.input.printPrompt()
+
     def join_failed(self, why):
         t = why.type
         print "t", t, type(t)
@@ -51,6 +54,7 @@ class Player:
 
     def newBoard(self, board):
         self.board = board
+
     def printBoard(self, board):
         self.board = board
         print " current board:", board
@@ -59,6 +63,7 @@ class Player:
         d = self.p.callRemote('makeMove', x, y)
         d.addCallback(self.moveOk)
         d.addErrback(self.badMove)
+
     def moveOk(self, result):
         if result == "game over":
             print " Game Over"
@@ -66,6 +71,7 @@ class Player:
             return
         print " move ok"
         self.input.printPrompt()
+
     def badMove(self, why):
         print " move failed:", why.getErrorMessage()
         self.input.printPrompt()

@@ -30,7 +30,9 @@ def main():
     print "count %d" % pond.count()
 
     sender = Sender(pond)
-    deferred = pb.getObjectAt("localhost", 8800, 30)
+    factory = pb.PBClientFactory()
+    reactor.connectTCP("localhost", 8800, factory)
+    deferred = factory.getRootObject()
     deferred.addCallback(sender.got_obj)
     reactor.run()
 
