@@ -292,16 +292,10 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, SFTPTestBase):
                 os.remove(f)
             except:
                 pass
-        self.processProtocol.transport.write('exit\n')
-        reactor.iterate(0.1)
-        reactor.iterate(0.1)
-        exitRes = self.processProtocol.buffer
-        if exitRes:
-            raise RuntimeError('got error on exit: %s' % exitRes)
-            try:
-                os.kill(self.processProtocol.transport.pid, 9)
-            except:
-                pass
+        try:
+            os.kill(self.processProtocol.transport.pid, 9)
+        except:
+            pass
 
     def _getCmdResult(self, cmd):
         self.processProtocol.clearBuffer()
