@@ -450,8 +450,12 @@ class _UnixWaker(styles.Ephemeral):
     def wakeUp(self):
         """Write one byte to the pipe, and flush it.
         """
-        self.o.write('x')
-        self.o.flush()
+        try:
+            self.o.write('x')
+            self.o.flush()
+        except ValueError:
+            # o has been closed
+            pass
         
     def connectionLost(self):
         """Close both ends of my pipe.
