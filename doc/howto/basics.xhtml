@@ -89,7 +89,9 @@ For that, we need a program which takes a <q>dead</q> Application and brings
 life to it. For UNIX systems (and, until there are are alternatives,
 for other operating systems too), this program is <code class="shell">twistd(1)</code>.
 Strictly speaking, <code class="shell">twistd</code> is not necessary -- unserializing
-the application and calling its <code>.run</code> method could be
+the application, getting the <code>IService</code> component, calling
+<code>startService</code>, scheduling <code>stopService</code> when
+the reactor shuts down, and then calling <code>reactor.run()</code> could be
 done manually. <code class="shell">twistd(1)</code>, however, supplies many options
 which are highly useful for program set up.</p>
 
