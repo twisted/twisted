@@ -1,3 +1,9 @@
+2003-05-29  Brian Warner  <warner@lothar.com>
+
+	* twisted/internet/process.py (ProcessWriter.writeSomeData):
+	Accomodate Mac OS-X, which sometimes raises OSError(EAGAIN)
+	instead of IOError(EAGAIN) when the pipe is full.
+
 2003-05-27  Brian Warner  <warner@lothar.com>
 
 	* twisted/test/test_process.py (EchoProtocol): try to close

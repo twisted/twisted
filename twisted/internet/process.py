@@ -119,6 +119,8 @@ class ProcessWriter(abstract.FileDescriptor, styles.Ephemeral):
         except OSError, ose:
             if ose.errno == errno.EPIPE:
                 return CONNECTION_LOST
+            if ose.errno == errno.EAGAIN: # MacOS-X does this
+                return 0
             raise
 
     def write(self, data):
