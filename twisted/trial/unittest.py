@@ -97,14 +97,6 @@ class TestSuite:
         self.couldNotImport = {}
         self.testMethods = []
 
-    def getMethods(self, klass, prefix):
-        testMethodNames = [ name for name in dir(klass)
-                            if name[:len(prefix)] == prefix ]
-        testMethodNames.sort()
-        testMethods = [ getattr(klass, name) for name in testMethodNames
-                        if type(getattr(klass, name)) is types.MethodType ]
-        return testMethods
-
     def addMethod(self, method):
         """Add a single method of a test case class to this test suite.
         """
@@ -115,7 +107,8 @@ class TestSuite:
         self.numTests += 1
 
     def addTestClass(self, testClass):
-        methods = self.getMethods(testClass, self.methodPrefix)
+        methods = [getattr(testClass, "%s%s" % (self.methodPrefix, name)) for name in
+                   reflect.prefixedMethodNames(testClass, self.methodPrefix)]
         self.testClasses[testClass] = methods
         self.numTests += len(methods)
 
