@@ -1,3 +1,8 @@
+2002-02-20  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
+
+        * twisted.protocols.telnet: the python shell now supports
+        multi-line commands and can be configured using coil.
+
 2002-02-13  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
 
 	* twisted.lumberjack: a log rotation and viewing service.
