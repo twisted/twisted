@@ -310,6 +310,14 @@ class FootnoteLatexSpitter(LatexSpitter):
         self.start_p = LatexSpitter.start_p
 
 class BookLatexSpitter(LatexSpitter):
+    def visitNode_body(self, node):
+        tocs=domhelpers.locateNodes([node], 'class', 'toc')
+        domhelpers.clearNode(node)
+        if len(tocs):
+            toc=tocs[0]
+            node.appendChild(toc)
+        self.visitNodeDefault(node)
+
     def visitNode_link(self, node):
         if not node.hasAttribute('rel'):
             return self.visitNodeDefault(node)
