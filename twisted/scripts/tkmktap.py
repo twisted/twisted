@@ -356,6 +356,7 @@ class TkConfigFrame(Tkinter.Frame):
 
     def updateConfig(self, options):
         for (opt, var) in self.getOptFlags():
+            var = var.get()
 
             if not var:
                 continue # XXX - this is poor - add a '-' button to remove options 
@@ -435,6 +436,10 @@ class TkConfigFrame(Tkinter.Frame):
             self.paramFrame = Tkinter.Frame(self)
             self.paramLines = []
             for (flag, _, default, desc) in params:
+                try:
+                    default = self.options[flag]
+                except KeyError:
+                    pass
                 self.makeField(flag, default, desc)
             self.paramFrame.grid(row=1, column=2)
 
