@@ -101,7 +101,7 @@ class EPollReactor(default.PosixReactorBase):
                writes=writes,
                selectables=selectables,
                select=select,
-               log=log)
+               log=log):
         """Poll the poller for new events."""
         if timeout is None:
             timeout = 1000
