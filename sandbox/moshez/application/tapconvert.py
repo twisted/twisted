@@ -47,12 +47,7 @@ def run():
         options.parseOptions(sys.argv[1:])
     except usage.UsageError, e:
         print e
-        return
-    passphrase = None
-    if options.opts['decrypt']:
-        passphrase = getpass.getpass('Passphrase: ')
-    app.convertStyle(options["in"], options["typein"], passphrase,
+    else:
+        app.convertStyle(options["in"], options["typein"],
+                     options.opts['decrypt'] or getpass.getpass('Passphrase: '),
                      options["out"], options['typeout'], options["encrypt"])
-
-if __name__ == '__main__':
-    run()
