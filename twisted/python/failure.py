@@ -33,6 +33,36 @@ count = 0
 class DefaultException(Exception):
     pass
 
+def format_frames(frames, write, detail="default"):
+    """Format and write frames.
+
+    'frames' is a list of frames as used by Failure.frames, with each
+    frame being a list of
+    (funcName, fileName, lineNumber, locals.items(), globals.items())
+
+    Three detail levels are available: default, brief, and verbase.
+    """
+    if detail not in ('default', 'brief', 'verbose'):
+        raise ValueError, "Detail must be default, brief, or verbose."
+    w = write
+    if detail == "brief":
+        for method, filename, lineno, localVars, globalVars in frames:
+            w('%s:%s:%s\n' % (filename, lineno, method))
+    elif detail == "default":
+        for method, filename, lineno, localVars, globalVars in frames:
+            w( '  File "%s", line %s, in %s\n' % (filename, lineno, method))
+            w( '    %s\n' % string.strip(linecache.getline(filename, lineno)))
+    elif detail == "verbose":
+        for method, filename, lineno, localVars, globalVars in frames:
+            w("%s:%d: %s(...)\n" % (filename, lineno, method))
+            w(' [ Locals ]\n')
+            # Note: the repr(val) was (self.pickled and val) or repr(val)))
+            for name, val in localVars:
+                w("  %s : %s\n" %  (name, repr(val)))
+            w(' ( Globals )\n')
+            for name, val in globalVars:
+                w("  %s : %s\n" %  (name, repr(val)))
+
 class Failure:
     """A basic abstraction for an error that has occurred.
 
@@ -68,8 +98,10 @@ class Failure:
                 exc_value, DeprecationWarning, stacklevel=2)
             exc_value = DefaultException(exc_value)
 
+        stackOffset = 0
         if exc_value is None:
             self.type, self.value, tb = sys.exc_info()
+            stackOffset = 1
         elif exc_type is None:
             if isinstance(exc_value, Exception):
                 self.type = exc_value.__class__
@@ -82,7 +114,60 @@ class Failure:
         if isinstance(self.value, Failure):
             self.__dict__ = self.value.__dict__
             return
+        if tb is None:
+            if exc_tb:
+                tb = exc_tb
+#             else:
+#                 log.msg("Erf, %r created with no traceback, %s %s." % (
+#                     repr(self), repr(exc_value), repr(exc_type)))
+#                 for s in traceback.format_stack():
+#                     log.msg(s)
+
         frames = self.frames = []
+        stack = self.stack = []
+
+        if tb:
+            f = tb.tb_frame
+        elif not isinstance(self.value, Failure):
+            # Get the stack, unless this is a "chained Failure".
+            try:
+                raise Exception
+            except:
+                junk, junk, uptb = sys.exc_info()
+                del junk
+                f = uptb.tb_frame
+                stackOffset = 1
+                del uptb
+
+        while stackOffset and f:
+            # This excludes this Failure.__init__ frame from the
+            # stack, leaving it to start with our caller instead.
+            f = f.f_back
+            stackOffset -= 1
+
+        # Keeps the *full* stack.  Formerly in spread.pb.print_excFullStack:
+        #
+        #   The need for this function arises from the fact that several
+        #   PB classes have the peculiar habit of discarding exceptions
+        #   with bareword "except:"s.  This premature exception
+        #   catching means tracebacks generated here don't tend to show
+        #   what called upon the PB object.
+
+        while f:
+            localz = f.f_locals.copy()
+            if f.f_locals is f.f_globals:
+                globalz = {}
+            else:
+                globalz = f.f_globals.copy()
+            stack.insert(0, [
+                f.f_code.co_name,
+                f.f_code.co_filename,
+                f.f_lineno,
+                localz.items(),
+                globalz.items(),
+                ])
+            f = f.f_back
+
         while tb is not None:
             f = tb.tb_frame
             localz = f.f_locals.copy()
@@ -137,8 +222,13 @@ class Failure:
                 err = reflect.qual(error)
             if err in self.parents:
                 return error
+            else:
+                return None
 
     def __repr__(self):
+        return "<%s %s>" % (self.__class__, self.type)
+
+    def __str__(self):
         return "[Failure instance: %s]" % self.getBriefTraceback()
 
     def __getstate__(self):
@@ -174,10 +264,11 @@ class Failure:
         if file is None: file = log.logfile
         w = file.write
         w( 'Traceback (most recent call last):\n')
-        for method, filename, lineno, localVars, globalVars in self.frames:
-            w( '  File "%s", line %s, in %s\n' % (filename, lineno, method))
-            w( '    %s\n' % string.strip(linecache.getline(filename, lineno)))
-            # w( '\n')
+        if not self.frames:
+            w("Eek!  %s has no frames in traceback!\n" % (repr(self),))
+        format_frames(self.stack, w)
+        w("--- <exception caught here> ---\n")
+        format_frames(self.frames, w)
         w("%s: %s\n" % (str(self.type), str(self.value)))
         if isinstance(self.value, Failure):
             file.write(" (chained Failure)\n")
@@ -189,8 +280,7 @@ class Failure:
         if file is None: file = log.logfile
         w = file.write
         w("Traceback! %s, %s\n" % (self.type, self.value))
-        for method, filename, lineno, localVars, globalVars in self.frames:
-            w('%s:%s:%s\n' % (filename, lineno, method))
+        format_frames(self.frames, w, "brief")
         if isinstance(self.value, Failure):
             file.write(" (chained Failure)\n")
             self.value.printBriefTraceback(file)
@@ -203,14 +293,9 @@ class Failure:
         w( '*--- Failure #%d%s---\n' %
            (self.count,
             (self.pickled and ' (pickled) ') or ' '))
-        for method, filename, lineno, localVars, globalVars in self.frames:
-            w("%s:%d: %s(...)\n" % (filename, lineno, method))
-            w(' [ Locals ]\n')
-            for name, val in localVars:
-                w("  %s : %s\n" %  (name,(self.pickled and val) or repr(val)))
-            w(' ( Globals )\n')
-            for name, val in globalVars:
-                w("  %s : %s\n" %  (name,(self.pickled and val) or repr(val)))
+        format_frames(self.stack, w, "verbose")
+        w("--- <exception caught here> ---\n")
+        format_frames(self.frames, w, "verbose")
         if isinstance(self.value, Failure):
             w(" (chained Failure)\n")
             self.value.printDetailedTraceback(file)

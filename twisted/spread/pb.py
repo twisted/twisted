@@ -101,33 +101,6 @@ class Error(Exception):
     sent.
     """
 
-def print_excFullStack(file=None):
-    """Print exception traceback with the full stack.
-
-    This is in contrast to traceback.print_exc which only prints
-    the traceback between the frame where the error occoured and
-    the frame where the exception was caught, but not the frames
-    leading up to that one.
-
-    The need for this function arises from the fact that several PB
-    classes have the peculiar habit of discarding exceptions with
-    bareword \"except:\"s.  This premature exception catching means
-    tracebacks generated here don't tend to show what called upon
-    the PB object.
-    """
-    (eType, eVal, tb) = sys.exc_info()
-    s = (["Traceback (most recent call last):\n"]
-         + traceback.format_stack(tb.tb_frame.f_back)
-         + ["--- <exception caught here> ---\n"]
-         + traceback.format_tb(tb)
-         + traceback.format_exception_only(eType, eVal))
-    del tb
-
-    if not file:
-        file = sys.stderr
-    file.write(string.join(s,''))
-
-
 class RemoteMethod:
     """This is a translucent reference to a remote message.
     """
@@ -557,12 +530,12 @@ class Broker(banana.Banana):
                 try:
                     d.errback(PB_CONNECTION_LOST)
                 except:
-                    print_excFullStack(file=log.logfile)
+                    log.deferr()
         for notifier in self.disconnects:
             try:
                 notifier()
             except:
-                print_excFullStack(file=log.logfile)
+                log.deferr()
         self.disconnects = None
         self.waitingForAnswers = None
         self.localSecurity = None
@@ -1288,4 +1261,3 @@ class IdentityConnector:
                                                serviceName,
                                                perspectiveName,
                                                client))
-
