@@ -808,8 +808,10 @@ class BOSConnection(SNACBased):
             charSet = 0
             if 'unicode' in part[1:]:
                 charSet = 2
+                part[0] = part[0].encode('utf-8')
             elif 'iso-8859-1' in part[1:]:
                 charSet = 3
+                part[0] = part[0].encode('iso-8859-1')
             elif 'none' in part[1:]:
                 charSet = 0xffff
             if 'macintosh' in part[1:]:
