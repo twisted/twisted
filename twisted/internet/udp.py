@@ -37,6 +37,7 @@ if platformType == 'win32':
     from errno import WSAEINTR as EINTR
     from errno import WSAEMSGSIZE as EMSGSIZE
     from errno import WSAECONNREFUSED as ECONNREFUSED
+    from errno import WSAECONNRESET
     from errno import EAGAIN
 elif platformType != 'java':
     from errno import EWOULDBLOCK, EINTR, EMSGSIZE, ECONNREFUSED, EAGAIN
@@ -106,8 +107,13 @@ class Port(base.BasePort):
                 read += len(data)
                 self.protocol.datagramReceived(data, addr)
             except socket.error, se:
-                if se.args[0] in (EAGAIN, EINTR, EWOULDBLOCK):
+                no = se.args[0]
+                if no in (EAGAIN, EINTR, EWOULDBLOCK):
                     return
+                if (no == ECONNREFUSED) or (platformType == "win32" and no == WSAECONNRESET):
+                    # XXX for the moment we don't deal with connection refused
+                    # in non-connected UDP sockets.
+                    pass
                 else:
                     raise
             except:
@@ -123,8 +129,6 @@ class Port(base.BasePort):
                 return self.write(datagram, (host, port))
             elif no == EMSGSIZE:
                 raise error.MessageLengthError, "message too long"
-            elif no == ECONNREFUSED:
-                raise error.ConnectionRefusedError
             else:
                 raise
 
@@ -212,8 +216,11 @@ class ConnectedPort(Port):
                 read += len(data)
                 self.protocol.datagramReceived(data)
             except socket.error, se:
-                if se.args[0] in (EAGAIN, EINTR, EWOULDBLOCK):
+                no = se.args[0]
+                if no in (EAGAIN, EINTR, EWOULDBLOCK):
                     return
+                if (no == ECONNREFUSED) or (platformType == "win32" and no == WSAECONNRESET):
+                    self.protocol.connectionRefused()
                 else:
                     raise
             except:
@@ -230,7 +237,7 @@ class ConnectedPort(Port):
             elif no == EMSGSIZE:
                 raise error.MessageLengthError, "message too long"
             elif no == ECONNREFUSED:
-                raise error.ConnectionRefusedError
+                self.protocol.connectionRefused()
             else:
                 raise
 

@@ -1,3 +1,10 @@
+2003-06-10  Itamar Shtull-Trauring  <itamar@itamarst.org>
+
+	* twisted/internet/protocol.py: connection refused errors for
+	connected datagram protocols (connectUDP) are indicated using
+	callback, ConnectedDatagramProtocol.connectionRefused, rather
+	than an exception as before.
+
 2003-06-09  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* twisted/trial/{unittest,runner}.py: Added setUpClass and

@@ -49,6 +49,9 @@ class Client(Mixin, protocol.ConnectedDatagramProtocol):
     def connectionFailed(self, failure):
         self.failure = failure
 
+    def connectionRefused(self):
+        self.refused = 1
+
 
 class UDPTestCase(unittest.TestCase):
 
@@ -115,6 +118,28 @@ class UDPTestCase(unittest.TestCase):
         self.assertEquals(client.packets, ["hello"])
         self.assertEquals(server.packets, [("world", ("127.0.0.1", client.transport.getHost()[2]))])
         port1.stopListening(); port2.stopListening()
+        reactor.iterate(); reactor.iterate()
+
+    def testConnectionRefused(self):
+        # assume no one listening on port 80 UDP
+        client = Client()
+        port = reactor.connectUDP("127.0.0.1", 80, client)
+        server = Server()
+        port2 = reactor.listenUDP(0, server, interface="127.0.0.1")
+        reactor.iterate()
+        reactor.iterate()
+        reactor.iterate()
+        client.transport.write("a")
+        client.transport.write("b")
+        server.transport.write("c", ("127.0.0.1", 80))
+        server.transport.write("d", ("127.0.0.1", 80))
+        server.transport.write("e", ("127.0.0.1", 80))
+        server.transport.write("toserver", port2.getHost()[1:])
+        server.transport.write("toclient", port.getHost()[1:])
+        reactor.iterate(); reactor.iterate()
+        self.assertEquals(client.refused, 1)
+        port.stopListening()
+        port2.stopListening()
         reactor.iterate(); reactor.iterate()
 
 
