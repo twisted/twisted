@@ -211,8 +211,8 @@ class Logger:
 
     def __prefix(self):
         y,mon,d,h,min, i,g,no,re = time.localtime(time.time())
-        return ("%0.2d/%0.2d/%0.4d %0.2d:%0.2d [%s] " %
-                 (d,mon,y,h,min , self.logPrefix()))
+        return ("%0.4d/%0.2d/%0.2d %0.2d:%0.2d [%s] " %
+                 (y,mon,d,h,min , self.logPrefix()))
 
     def logPrefix(self):
         """
