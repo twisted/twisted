@@ -17,7 +17,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.40 $"[11:-2]
+__version__ = "$Revision: 1.41 $"[11:-2]
 
 import os
 import cgi
@@ -318,7 +318,7 @@ class LiveController(Controller):
             sess.sendScript(js)
 
     def wchild_WebConduit2_js(self, request):
-        print "returning js file"
+        #print "returning js file"
         h = request.getHeader("user-agent")
         if h.count("MSIE") or h.count("Safari"):
             fl = "WebConduit2_msie.js"
@@ -328,7 +328,7 @@ class LiveController(Controller):
         return static.File(os.path.join(WOVEN_PATH, fl))
 
     def wchild_FlashConduit_swf(self, request):
-        print "returning flash file"
+        #print "returning flash file"
         h = request.getHeader("user-agent")
         if h.count("MSIE"):
             fl = "FlashConduit.swf"

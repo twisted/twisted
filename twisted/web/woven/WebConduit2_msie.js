@@ -51,8 +51,12 @@ function woven_clientToServerEventComplete() {
         this.woven_eventQueueBusy = 0
     }
     var focus = document.getElementById('woven_firstResponder')
-    if (focus)
+    if (focus) {
         focus.focus()
+        if (focus.getAttribute('clearOnFocus')) {
+            focus.value=''
+        }
+    }
     document.scrollTop = 999999999
 }
 
