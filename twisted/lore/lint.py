@@ -34,8 +34,7 @@ class TagChecker:
         if hlint == 'off':
             return
         pos = getattr(element, '_markpos', None) or (0, 0)
-        t = (filename,)+pos+(error,)
-        print ("%s:%s:%s: %s" % t)
+        print "%s:%s:%s: %s" % ((filename,)+pos+(error,))
 
     def check_disallowedElements(self, dom, filename):
         def m(node, self=self):
@@ -48,9 +47,7 @@ class TagChecker:
         def matcher(element, self=self):
             if not element.hasAttribute('class'):
                 return 0
-            if not self.allowedClasses.has_key(element.tagName):
-                return 1
-            checker = self.allowedClasses[element.tagName]
+            checker = self.allowedClasses.get(element.tagName, lambda x:0)
             return not checker(element.getAttribute('class'))
         for element in domhelpers.findElements(dom, matcher):
             self._reportError(filename, element,
@@ -70,10 +67,7 @@ class TagChecker:
 
     def check_style(self, dom, filename):
         for node in domhelpers.findNodesNamed(dom, 'style'):
-            if not node.childNodes:
-                continue
-            if (len(node.childNodes)==1 and hasattr(node.childNodes[0], 'data')
-                and node.childNodes[0].data == ''):
+            if domhelpers.getNodeText(node) == '':
                 continue
             self._reportError(filename, node, 'hand hacked style')
 
