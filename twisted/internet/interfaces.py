@@ -16,7 +16,8 @@
 
 """Interface documentation.
 
-API Stability: stable, other than IReactorUDP
+API Stability: stable, other than IReactorUDP (semi-stable) and
+IReactorMulticast (unstable).
 
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
