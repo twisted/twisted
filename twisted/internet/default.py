@@ -514,7 +514,7 @@ class SelectReactor(PosixReactorBase):
                 # result) was passed
                 log.err()
                 self._preenDescriptors()
-            except select.error,se:
+            except (select.error, IOError), se:
                 # select(2) encountered an error
                 if se.args[0] in (0, 2):
                     # windows does this if it got an empty list
