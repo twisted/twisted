@@ -2144,7 +2144,7 @@ class IMAP4Client(basic.LineReceiver):
         """Authenticate with the server using a username and password
 
         This command is allowed in the Non-Authenticated state.  If the
-        server supports the STARTTLS capability and our transport support
+        server supports the STARTTLS capability and our transport supports
         TLS, TLS is negotiated before the login command is issued.
 
         @type username: C{str}
@@ -2166,7 +2166,11 @@ class IMAP4Client(basic.LineReceiver):
         return d
 
     def serverGreeting(self, caps):
-        pass
+        """Called when the server has sent us a greeting.
+        
+        @type caps: C{dict}
+        @param caps: Capabilities the server advertised in its greeting.
+        """
 
     def _getContextFactory(self):
         if self.context is not None:
