@@ -42,7 +42,7 @@ Test coverage needs to be better.
 <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-__version__ = '$Revision: 1.71 $'[11:-2]
+__version__ = '$Revision: 1.72 $'[11:-2]
 
 from twisted.internet import reactor, protocol
 from twisted.persisted import styles
@@ -258,12 +258,14 @@ class IRCClient(basic.LineReceiver):
     _queue = None
     _queueEmptying = None
 
+    delimiter = '\n' # '\r\n' will also work (see dataReceived)
+
     __pychecker__ = 'unusednames=params,prefix,channel'
 
 
     def sendLine(self, line):
         if self.lineRate is None:
-            basic.LineReceiver.sendLine(self, lowQuote(line))
+            basic.LineReceiver.sendLine(self, lowQuote(line) + '\r')
         else:
             self._queue.append(line)
             if not self._queueEmptying:
@@ -272,7 +274,7 @@ class IRCClient(basic.LineReceiver):
 
     def _sendLine(self):
         if self._queue:
-            basic.LineReceiver.sendLine(self, lowQuote(self._queue.pop(0)))
+            basic.LineReceiver.sendLine(self, lowQuote(self._queue.pop(0)) + '\r')
             self._queueEmptying = reactor.callLater(self.lineRate,
                                                     self._sendLine)
         else:
@@ -959,6 +961,8 @@ class IRCClient(basic.LineReceiver):
         if self.performLogin:
             self.register(self.nickname)
 
+    def dataReceived(self, data):
+        basic.LineReceiver.dataReceived(self, data.replace('\r', ''))
 
     def lineReceived(self, line):
       line = lowDequote(line)
@@ -1805,3 +1809,4 @@ for k, v in symbolic_to_numeric.items():
 # Local Variables:
 # test-case-name: "twisted.test.test_irc"
 # End:
+
