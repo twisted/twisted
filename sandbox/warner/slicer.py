@@ -5,28 +5,14 @@ from pickle import whichmodule  # used by FunctionSlicer
 from new import instance, instancemethod
 
 from twisted.python.failure import Failure
+from twisted.python.components import registerAdapter
 from twisted.internet.defer import Deferred
 from twisted.python import log, reflect
 
 import tokens
-from tokens import Violation, BananaError, tokenNames, UnbananaFailure
+from tokens import Violation, BananaError, tokenNames, UnbananaFailure, \
+     ISlicer
 import schema
-
-class IBananaSlicer:
-    def sendOpen(self, opentype):
-        """Send an Open(type) token. Must be matched with a sendClose.
-        opentype must be a string."""
-    def sendToken(self, token):
-        """Send a token. Must be a number or a string"""
-    def sendClose(self):
-        """Send a Close token."""
-class IJellying:
-    def JellyYourBadSelf(self, banana):
-        """Send banana tokens to banana by calling IBananaSender methods"""
-    def description(self):
-        """Return a short string describing where in the object tree this
-        jellier is sitting. A list of these strings will be used to describe
-        where any problems occurred."""
 
 def getInstanceState(inst):
     """Utility function to default to 'normal' state rules in serialization.
@@ -37,292 +23,234 @@ def getInstanceState(inst):
         state = inst.__dict__
     return state
 
-SimpleTokens = (types.IntType, types.LongType, types.FloatType,
-                types.StringType)
-
 class BaseSlicer:
-    opentype = None
-    trackReferences = 0
+    __implements__ = ISlicer,
+    parent = None
+    sendOpen = True
+    openindex = ()
+    trackReferences = False
 
-    def __init__(self):
-        self.openID = None
+    def __init__(self, obj):
+        # this simplifies Slicers which are adapters
+        self.obj = obj
+        
+    def registerReference(self, refid, obj):
+        # optimize: most Slicers will delegate this up to the Root
+        return self.parent.registerReference(refid, obj)
+    def slicerForObject(self, obj):
+        # optimize: most Slicers will delegate this up to the Root
+        return self.parent.slicerForObject(obj)
+    def slice(self, streamable, banana):
+        # this is what makes us ISlicer
+        assert self.openindex
+        for o in self.openindex:
+            yield o
+        for t in self.sliceBody(streamable, banana):
+            yield t
+    def sliceBody(self, streamable, banana):
+        raise NotImplementedError
+    def childAborted(self):
+        pass
 
     def describe(self):
         return "??"
 
-    # start/slice/finish are the main "serialize yourself" entry points used
-    # by Banana
-
-    def send(self, obj):
-        # utility function
-        if self.protocol.debug:
-            print "BaseSlicer.send(%s{%s})" % (obj, type(obj))
-        if type(obj) in SimpleTokens:
-            if self.protocol.debug:
-                print " was in SimpleTokens"
-            self.protocol.sendToken(obj)
-        else:
-            if self.protocol.debug:
-                print " not in SimpleTokens"
-            self.protocol.slice(obj)
-            # does life stop while we wait for this?
-
-    def start(self, obj):
-        # refid is for reference tracking
-        assert(self.openID == None)
-        self.openID = self.protocol.sendOpen(self.opentype)
-        if self.trackReferences:
-            self.protocol.setRefID(obj, self.openID)
-
-    def slice(self, obj):
-        """Tokenize the object and send the tokens via
-        self.protocol.sendToken(). Will be called after open() and before
-        finish().
-        """
-        raise NotImplementedError
-
-    def finish(self, obj):
-        assert(self.openID is not None)
-        self.protocol.sendClose(self.openID)
-        self.openID = None
-
-    def abort(self):
-        """Stop trying to tokenize the object. Send an ABORT token, then a
-        CLOSE. Producers may want to hook this to free up other resources,
-        etc.
-        """
-        self.protocol.sendAbort()
-        self.protocol.sendClose()
-
-
-    # newSlicer/taste/setRefID/getRefID are the other functions of the Slice
-    # stack
-
-    def newSlicer(self, obj):
-        """Return an IBananaSlicer object based upon the type of the object
-        being serialized. This object will be asked to do start(), slice(),
-        and finish(). The entire Slicer stack is asked for an object: the
-        first slice that returns something other than None will stop the
-        search.
-        """
-        return None
-
-    def taste(self, obj):
-        """All Slicers in the stack get to pass judgement upon the outgoing
-        object. If they don't like that they see, they should raise an
-        InsecureBanana exception.
-        """
-        pass
-
-    def setRefID(self, obj, refid):
-        """To pass references to previously-sent objects, the [OPEN,
-        'reference', number, CLOSE] sequence is used. The numbers are
-        generated implicitly by the sending Banana, counting from 0 for the
-        object described by the very first OPEN sent over the wire,
-        incrementing for each subsequent one. The objects themselves are
-        stored in any/all Slicers who cares to. Generally this is the
-        RootSlicer, but child slices could do it too if they wished.
-        """
-        pass
-
-    def getRefID(self, obj):
-        """'None' means 'ask our parent instead'.
-        """
-        return None
 
 class UnicodeSlicer(BaseSlicer):
-    opentype = 'unicode'
-    trackReferences = 0
-
-    def slice(self, obj):
-        self.send(obj.encode('UTF-8'))
+    openindex = ("unicode",)
+    def sliceBody(self, streamable, banana):
+        yield self.obj.encode("UTF-8")
+registerAdapter(UnicodeSlicer, unicode, ISlicer)
 
 class ListSlicer(BaseSlicer):
-    opentype = 'list'
-    trackReferences = 1
+    openindex = ("list",)
+    trackReferences = True
 
-    # it would be useful if this could behave more consumer/producerish.
-    # maybe NOT_DONE_YET? Generators?
-
-    def slice(self, obj):
-        for elem in obj:
-            self.send(elem)
+    def sliceBody(self, streamable, banana):
+        for i in self.obj:
+            yield i
+registerAdapter(ListSlicer, list, ISlicer)
 
 class TupleSlicer(ListSlicer):
-    opentype = 'tuple'
+    openindex = ("tuple",)
+registerAdapter(TupleSlicer, tuple, ISlicer)
 
 class DictSlicer(BaseSlicer):
-    opentype = 'dict'
-    trackReferences = 1
+    openindex = ('dict',)
+    trackReferences = True
+    def sliceBody(self, streamable, banana):
+        for key,value in self.obj.items():
+            yield key
+            yield value
 
-    def slice(self, obj):
-        for key,value in obj.items():
-            self.send(key)
-            self.send(value)
 
-class OrderedDictSlicer(BaseSlicer):
-    opentype = 'dict'
-    trackReferences = 1
-
-    def slice(self, obj):
-        keys = obj.keys()
+class OrderedDictSlicer(DictSlicer):
+    def sliceBody(self, streamable, banana):
+        keys = self.obj.keys()
         keys.sort()
         for key in keys:
-            value = obj[key]
-            self.send(key)
-            self.send(value)
-
-class VocabSlicer(OrderedDictSlicer):
-    opentype = 'vocab'
-    trackReferences = 0
-
-class InstanceSlicer(OrderedDictSlicer):
-    opentype = 'instance'
-    trackReferences = 1
-
-    def slice(self, obj):
-        self.protocol.sendToken(reflect.qual(obj.__class__))
-        OrderedDictSlicer.slice(self, getInstanceState(obj)) #DictSlicer
-
-class ModuleSlicer(BaseSlicer):
-    opentype = 'module'
-    trackReferences = 1
-
-    def slice(self, obj):
-        self.send(obj.__name__)
-
-class ClassSlicer(BaseSlicer):
-    opentype = 'class'
-    trackReferences = 1
-
-    def slice(self, obj):
-        self.send(reflect.qual(obj))
-
-class MethodSlicer(BaseSlicer):
-    opentype = 'method'
-    trackReferences = 1
-
-    def slice(self, obj):
-        self.send(obj.im_func.__name__)
-        self.send(obj.im_self)
-        self.send(obj.im_class)
-
-class FunctionSlicer(BaseSlicer):
-    opentype = 'function'
-    trackReferences = 1
-
-    def slice(self, obj):
-        name = obj.__name__
-        fullname = str(whichmodule(obj, obj.__name__)) + '.' + name
-        self.send(fullname)
+            value = self.obj[key]
+            yield key
+            yield value
+registerAdapter(OrderedDictSlicer, dict, ISlicer)
 
 class NoneSlicer(BaseSlicer):
-    opentype = 'none'
-    trackReferences = 0
-
-    def slice(self, obj):
-        pass
+    openindex = ('none',)
+    trackReferences = False
+    def sliceBody(self, streamable, banana):
+        # hmm, we need an empty generator. I think a sequence is the only way
+        # to accomplish this, other than 'if 0: yield' or something silly
+        return []
+registerAdapter(NoneSlicer, types.NoneType, ISlicer)
 
 class BooleanSlicer(BaseSlicer):
-    opentype = 'boolean'
-    trackReferences = 0
-
-    def slice(self, obj):
-        if obj:
-            self.send(1)
+    openindex = ('boolean',)
+    trackReferences = False
+    def sliceBody(self, streamable, banana):
+        if self.obj:
+            yield 1
         else:
-            self.send(0)
-
-
-class ReferenceSlicer(BaseSlicer):
-    opentype = 'reference'
-
-    def __init__(self, refid):
-        BaseSlicer.__init__(self)
-        assert(type(refid) == types.IntType)
-        self.refid = refid
-
-    def slice(self, obj):
-        self.protocol.sendToken(self.refid)
-    
-BaseSlicerRegistry = {
-    types.UnicodeType: UnicodeSlicer,
-    types.ListType: ListSlicer,
-    types.TupleType: TupleSlicer,
-    types.DictType: OrderedDictSlicer, #DictSlicer
-    types.InstanceType: InstanceSlicer,
-    types.NoneType: NoneSlicer,
-    }
+            yield 0
 
 try:
     from types import BooleanType
-    BaseSlicerRegistry[BooleanType] = BooleanSlicer
+    registerAdapter(BooleanSlicer, bool, ISlicer)
 except ImportError:
     pass
 
-BaseSlicerRegistry2 = {}
-BaseSlicerRegistry2.update(BaseSlicerRegistry)
-BaseSlicerRegistry2.update({
+
+class ReferenceSlicer(BaseSlicer):
+    # this is created explicitly, not as an adapter
+    openindex = ('reference',)
+    trackReferences = False
+
+    def __init__(self, refid):
+        assert type(refid) == int
+        self.refid = refid
+    def sliceBody(self, streamable, banana):
+        yield self.refid
+
+class VocabSlicer(OrderedDictSlicer):
+    # this is created explicitly, but otherwise works just like a dictionary
+    openindex = ('vocab',)
+    trackReferences = False
+
+
+# Extended types, not generally safe. The TrustingRoot checks for these with
+# a separate table.
+
+class InstanceSlicer(OrderedDictSlicer):
+    openindex = ('instance',)
+    trackReferences = True
+
+    def sliceBody(self, streamable, banana):
+        yield reflect.qual(self.obj.__class__) # really a second index token
+        self.obj = getInstanceState(self.obj)
+        for t in OrderedDictSlicer.sliceBody(self, streamable, banana):
+            yield t
+
+class ModuleSlicer(BaseSlicer):
+    openindex = ('module',)
+    trackReferences = True
+
+    def sliceBody(self, streamable, banana):
+        yield self.obj.__name__
+
+class ClassSlicer(BaseSlicer):
+    openindex = ('class',)
+    trackReferences = True
+
+    def sliceBody(self, streamable, banana):
+        yield reflect.qual(self.obj)
+
+class MethodSlicer(BaseSlicer):
+    openindex = ('method',)
+    trackReferences = True
+
+    def sliceBody(self, streamable, banana):
+        yield self.obj.im_func.__name__
+        yield self.obj.im_self
+        yield self.obj.im_class
+
+class FunctionSlicer(BaseSlicer):
+    openindex = ('function',)
+    trackReferences = True
+
+    def sliceBody(self, streamable, banana):
+        name = self.obj.__name__
+        fullname = str(whichmodule(self.obj, self.obj.__name__)) + '.' + name
+        yield fullname
+
+ExtendedSlicerRegistry = {}
+ExtendedSlicerRegistry.update({
+    types.InstanceType: InstanceSlicer,
     types.ModuleType: ModuleSlicer,
     types.ClassType: ClassSlicer,
     types.MethodType: MethodSlicer,
     types.FunctionType: FunctionSlicer,
     })
 
-class RootSlicer(BaseSlicer):
-    SlicerRegistry = BaseSlicerRegistry
-    # this lives at the bottom of the Slicer stack, at least for our testing
-    # purposes
 
-    def __init__(self):
+class RootSlicer:
+    __implements__ = ISlicer,
+    deferred = None
+    slicerTable = {}
+
+    def __init__(self, sendbanana):
+        self.sendbanana = sendbanana
+        self.sendQueue = []
         self.references = {}
 
-    def start(self, obj):
-        self.references = {}
-
-    def slice(self, obj):
-        self.protocol.slice(obj)
-
-    def finish(self, obj):
-        self.references = {}
-
-    def slicerFactoryForObject(self, obj):
-        slicerClass = self.SlicerRegistry.get(type(obj))
-        return slicerClass
-
-    def newSlicer(self, obj):
-        refid = self.protocol.getRefID(obj)
-        if refid is not None:
-            slicer = ReferenceSlicer(refid)
-            return slicer
-        slicerFactory = self.slicerFactoryForObject(obj)
-        if not slicerFactory:
-            raise KeyError("I don't know how to slice %s (%s)" \
-                           % (obj, type(obj)))
-        slicer = slicerFactory()
-        return slicer
-
-
-    def setRefID(self, obj, refid):
-        if self.protocol.debug:
-            print "setRefID(%s{%s}) -> %s" % (obj, id(obj), refid)
+    def registerReference(self, refid, obj):
+        if self.sendbanana.debug:
+            print "registerReference[%d]=%s %s 0x%x" % (refid, obj, type(obj),
+                                                        id(obj))
         self.references[id(obj)] = refid
 
-    def getRefID(self, obj):
-        refid = self.references.get(id(obj))
-        if self.protocol.debug:
-            print "getObject(%s{%s}) -> %s" % (obj, id(obj), refid)
-        return refid
+    def slicerForObject(self, obj):
+        if self.sendbanana.debug:
+            print "slicerForObject(0x%x)" % id(obj)
+        # check for an object which was sent previously or has at least
+        # started sending
+        refid = self.references.get(id(obj), None)
+        if refid is not None:
+            if self.sendbanana.debug:
+                print "found Reference[%d]" % refid
+            return ReferenceSlicer(refid)
+        # could use a table here if you think it'd be faster than an
+        # adapter lookup
+        slicerFactory = self.slicerTable.get(type(obj))
+        if slicerFactory:
+            return slicerFactory(obj)
+        return ISlicer(obj)
 
-class RootSlicer2(RootSlicer):
-    SlicerRegistry = BaseSlicerRegistry2
+    def slice(self):
+        return self
+    def __iter__(self):
+        return self # we are our own iterator
+    def next(self):
+        if self.sendQueue:
+            return self.sendQueue.pop()
+        if self.sendbanana.debug:
+            print "LAST BAG"
+        self.deferred = Deferred()
+        return self.deferred
 
-    def slicerFactoryForObject(self, obj):
-        slicerClass = self.SlicerRegistry.get(type(obj))
-        if not slicerClass:
-            if issubclass(type(obj), type):
-                slicerClass = ClassSlicer
-        return slicerClass
+    def send(self, obj):
+        # obj can also be a Slicer, say, a CallSlicer
+        idle = (len(self.sendbanana.slicerStack) == 1) and not self.sendQueue
+        self.sendQueue.append(obj)
+        if idle:
+            # wake up
+            if self.deferred:
+                d = self.deferred
+                self.deferred = None
+                d.callback(None)
+
+class TrustingRootSlicer(RootSlicer):
+    slicerTable = ExtendedSlicerRegistry
+
+
 
 
 class IBananaUnslicer:

@@ -254,11 +254,11 @@ class CreateTest(unittest.TestCase):
 
 # now test unserialization with constraints
 
-from test_banana import UnbananaTestMixin, OPENlist, CLOSE
+from test_banana import UnbananaTestMixin, OPEN, CLOSE
 
 class UnslicerTest(UnbananaTestMixin, unittest.TestCase):
     def test_list(self):
         c = schema.ListConstraint(int, 3)
         self.banana.rootUnslicer.setConstraint(c)
-        res = self.do([OPENlist(0),1,2,3,"a","b",CLOSE(0)])
+        res = self.do([OPEN(0),'list',1,2,3,"a","b",CLOSE(0)])
         self.checkUnbananaFailure(res, "root.[3]")

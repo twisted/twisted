@@ -2,14 +2,15 @@
 
 import types, struct
 
-from twisted.internet import protocol, error
+from twisted.internet import protocol, error, defer
 from twisted.python.failure import Failure
+from twisted.python.components import implements
 from twisted.python import log
 
-from slicer import RootSlicer, RootUnslicer, VocabSlicer, SimpleTokens
+from slicer import RootSlicer, RootUnslicer, VocabSlicer
 from tokens import Violation, SIZE_LIMIT, STRING, LIST, INT, NEG, \
      LONGINT, LONGNEG, VOCAB, FLOAT, OPEN, CLOSE, ABORT, tokenNames, \
-     BananaError, UnbananaFailure
+     BananaError, UnbananaFailure, ISlicer
 
 def int2b128(integer, stream):
     if integer == 0:
@@ -84,21 +85,84 @@ HIGH_BIT_SET = chr(0x80)
 
 class SendBanana:
     slicerClass = RootSlicer
+    paused = False
+    streamable = True
+    debug = False
 
     def __init__(self):
-        self.rootSlicer = self.slicerClass()
-        self.rootSlicer.protocol = self
-        self.slicerStack = [self.rootSlicer]
+        self.rootSlicer = self.slicerClass(self)
+        itr = self.rootSlicer.slice()
+        next = iter(itr).next
+        top = (self.rootSlicer, next, self.streamable, None)
+        self.slicerStack = [top]
         self.openCount = 0
         self.outgoingVocabulary = {}
+        # prime the pump
+        self.produce()
 
     def send(self, obj):
-        assert(len(self.slicerStack) == 1)
-        assert(isinstance(self.slicerStack[0], self.slicerClass))
-        if type(obj) in SimpleTokens:
-            self.sendToken(obj)
-            return
-        self.doSlice(obj)
+        self.rootSlicer.send(obj)
+
+    def produce(self, dummy=None):
+        # optimize: cache 'next' and 'streamable' because we get many more
+        # tokens than stack pushes/pops
+        while self.slicerStack and not self.paused:
+            try:
+                slicer, next, streamable, openID = self.slicerStack[-1]
+                obj = next()
+                if self.debug: print " obj", obj
+                if isinstance(obj, defer.Deferred):
+                    assert streamable
+                    obj.addCallback(self.produce)
+                    # this is the primary exit point
+                    break
+                elif type(obj) in (int, long, float, str):
+                    self.sendToken(obj)
+                else:
+                    slicer = self.newSlicerFor(obj)
+                    self.pushSlicer(slicer, obj)
+            except StopIteration:
+                if self.debug: print "StopIteration"
+                self.popSlicer()
+            except Violation:
+                if self.debug: print "Violation"
+                self.sendAbort()
+                self.popSlicer()
+                topSlicer = self.slicerStack[-1][0]
+                topSlicer.childAborted()
+                # TODO: there should be an easy way to propogate this upwards
+        assert self.slicerStack # should never be empty
+
+    def newSlicerFor(self, obj):
+        if implements(obj, ISlicer):
+            return obj
+        topSlicer = self.slicerStack[-1][0]
+        return topSlicer.slicerForObject(obj)
+
+    def pushSlicer(self, slicer, obj):
+        if self.debug: print "push", slicer
+        topSlicer = self.slicerStack[-1][0]
+        slicer.parent = topSlicer
+        streamable = self.slicerStack[-1][2]
+        openID = None
+        if slicer.sendOpen:
+            openID = self.sendOpen()
+            if slicer.trackReferences:
+                topSlicer.registerReference(openID, obj)
+            # note that the only reason to hold on to the openID here is for
+            # the debug/optional copy in the CLOSE token. Consider ripping
+            # this code out if we decide to stop sending that copy.
+        # now start slicing it
+        itr = slicer.slice(streamable, self)
+        slicertuple = (slicer, iter(itr).next, streamable, openID)
+        self.slicerStack.append(slicertuple)
+
+    def popSlicer(self):
+        slicertuple = self.slicerStack.pop()
+        openID = slicertuple[3]
+        if openID is not None:
+            self.sendClose(openID)
+        if self.debug: print "pop", slicertuple[0]
 
     def setOutgoingVocabulary(self, vocabDict):
         # build a VOCAB message, send it, then set our outgoingVocabulary
@@ -106,63 +170,26 @@ class SendBanana:
         for key,value in vocabDict.items():
             assert(isinstance(key, types.IntType))
             assert(isinstance(value, types.StringType))
-        s = VocabSlicer()
-        s.protocol = self
-        self.slicerStack.append(s)
-        self.doSlice(vocabDict)
-        self.slicerStack.pop(-1)
+        s = VocabSlicer(vocabDict)
+        # insure the VOCAB message does not use vocab tokens itself. This
+        # would be legal (sort of a differential compression), but
+        # confusing, and it would enhance the bugginess of the race
+        # condition.
+        self.outgoingVocabulary = {}
+        self.send(s)
+        # TODO: race condition between this being pushed on the stack and it
+        # taking effect for our own transmission. Don't set
+        # .outgoingVocabulary until it finishes being sent.
         self.outgoingVocabulary = dict(zip(vocabDict.values(),
                                            vocabDict.keys()))
 
-    def doSlice(self, obj):
-        slicer = self.slicerStack[-1]
-        slicer.start(obj)
-        slicer.slice(obj)
-        slicer.finish(obj)
-
-    # slicers require the following methods on their .banana object:
-    #  slice, slice2, setRefID, getRefID
-    # they also require the slicerStack list, which they will manipulate
-
-    def slice(self, obj):
-        # let everybody taste it
-        #for i in range(len(self.stack)-1, -1, -1):
-        #    self.stack[i].taste(obj)
-        # find the Slicer object
-        child = None
-        for i in range(len(self.slicerStack)-1, -1, -1):
-            child = self.slicerStack[i].newSlicer(obj)
-            if child:
-                break
-        if child == None:
-            raise "nothing to send for obj '%s' (type '%s')" % (obj, type(obj))
-        self.slice2(child, obj)
-
-    def slice2(self, child, obj):
-        child.protocol = self
-        self.slicerStack.append(child)
-        self.doSlice(obj)
-        self.slicerStack.pop(-1)
-
-    def setRefID(self, obj, refid):
-        for i in range(len(self.slicerStack)-1, -1, -1):
-            self.slicerStack[i].setRefID(obj, refid)
-    def getRefID(self, refid):
-        # this definitely needs to be optimized
-        for i in range(len(self.slicerStack)-1, -1, -1):
-            obj = self.slicerStack[i].getRefID(refid)
-            if obj is not None:
-                return obj
-        return None
-
     # these methods define how we emit low-level tokens
 
-    def sendOpen(self, opentype):
+    def sendOpen(self):
         openID = self.openCount
         self.openCount += 1
         int2b128(openID, self.transport.write)
         self.transport.write(OPEN)
-        self.sendToken(opentype)
         return openID
 
     def sendToken(self, obj):

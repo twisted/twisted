@@ -94,6 +94,59 @@ class UnbananaFailure(Failure):
         return "[UnbananaFailure in %s: %s]" % (self.where,
                                                 self.getBriefTraceback())
 
+class ISlicer(Interface):
+    """I know how to slice objects into tokens."""
+
+    sendOpen = """True if an OPEN/CLOSE token pair should be sent around the
+    Slicer's body tokens. Only special-purpose Slicers (like the RootSlicer)
+    should use False."""
+
+    trackReferences = """True if the object we slice is referenceable: i.e.
+    it is useful or necessary to send multiple copies as a single instance
+    and a bunch of References, rather than as separate copies. Instances are
+    referenceable, as are mutable containers like lists."""
+
+    def slice(self, streamable, banana):
+        """Return an iterator which provides Index Tokens and the Body
+        Tokens of the object's serialized form. This is frequently
+        implemented with a generator (i.e. 'yield' appears in the body of
+        this function). Do not yield the OPEN or the CLOSE token, those will
+        be handled elsewhere.
+
+        If a Violation exception is raised, slicing will cease. An ABORT
+        token followed by a CLOSE token will be emitted."""
+
+    def registerReference(self, refid, obj):
+        """Register the relationship between 'refid' (a number taken from
+        the cumulative count of OPEN tokens sent over our connection: 0 is
+        the object described by the very first OPEN sent over the wire) and
+        the object. If the object is sent a second time, a Reference may be
+        used in its place.
+
+        Slicers usually delgate this function upwards to the RootSlicer, but
+        it can be handled at any level to allow local scoping of references
+        (they might only be valid within a single RPC invocation, for
+        example)."""
+
+    def childAborted(self):
+        """Notify the Slicer that one of its child tokens (as produced by
+        its .slice iterator) emitted an ABORT token, terminating their token
+        stream. The corresponding Unslicer (receiving this token stream)
+        will get an UnbananaFailure and is likely to ignore any remaining
+        tokens from us, so it may be reasonable to emit an ABORT of our own
+        here.
+        """
+
+    def slicerForObject(self, obj):
+        """Get a new Slicer for some child object. Slicers usually delegate
+        this method up to the RootSlicer. References are handled by
+        producing a ReferenceSlicer here. These references can have various
+        scopes.
+
+        If something on the stack does not want the object to be sent, it can
+        raise a Violation exception. This is the 'taster' function."""
+
+
 class IReferenceable(Interface):
     # TODO: really?
     """This object is remotely referenceable. This means it defines some

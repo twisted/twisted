@@ -169,7 +169,8 @@ being used, and the body is empty.</p>
   stack. It may be impossible or inconvenient for the sender to stop sending
   the tokens associated with the unfortunate object, so the receiver must be
   prepared to silently drop all further tokens up to the matching STOP
-  marker.</p>
+  marker. The STOP token must always follow eventually: this is just a
+  courtesy notice.</p>
 
   <p>The number, if present, will be the same one used by the OPEN
   token.</p>
@@ -218,12 +219,52 @@ different kinds of Slicers and Unslicers for lists, tuples, dictionaries,
 and instances. Classes can provide their own Slicers if they want more
 control over the serialization process.</p>
 
+<p>There is a Slicer object for each act of serialization of a given object.
+This allows the Slicer to contain state about the serialization process.
+While it is not yet implemented, this will allow things like
+producer/consumer -style serialization, and interleaved serialization of
+multiple objects (doing context switching on the wire). Classes which do not
+need this capability can have a Slicer per serialized object. It is also
+valid to have the serialized object be its own Slicer.</p>
+
+<p>For any given object, the Slicer is acquired by finding an
+<code>ISlicer</code> adapter for the object. The Slicer is then told to
+<code>slice</code> the object, which should return a sequence or an iterable
+which yields the Open Index Tokens, followed by the body tokens. Most
+subclasses of <code>BaseSlicer</code> implement a companion method named
+<code>sliceBody</code>, which only provides the body tokens.
+<code>sliceBody</code> is usually just a series of <code>yield</code>
+statements, one per token. However, classes which wish to have more control
+over the process can implement <code>sliceBody</code> or even
+<code>slice</code> differently.</p>
+
+<p>However, if the <q>streamable</q> flag is set, then the slicer is allowed
+to yield a Deferred instead of a regular token. This means that that
+serialization needs to wait for a while (perhaps we are streaming data from
+another source which has run dry, or we are trying to implement some kind of
+rate limiting). Banana will wait until the Deferred fires before attempting
+to retrieve another token. If the <q>streamable</q> flag is <em>not</em>
+set, then a parent Slicer has decided that it is unwilling to allow
+streaming (perhaps it needs to serialize a coherent state, and a pause for
+streaming would allow that state to change before it was completely
+serialized). The Slicer may not return a Deferred when streaming is
+disabled.</p>
+
+<p>The Slicer can also raise a <q>Violation</q> exception, in which case the
+slicer will be aborted: no further tokens will be pulled from it. This
+causes an ABORT token to be sent over the wire, followed immediately by a
+CLOSE token. The dead Slicer's parent is notified with a
+<code>childAborted</code> method, then the Banana continues to extract
+tokens from the parent as if the child had finished normally.</p>
+
+
 <h2>The Banana Stack</h2>
 
 <p>The serialization context is stored in a <q>Banana</q> object (names are
-still being decided). This holds a stack of Banana Slicers, one per object
-currently being serialized (i.e. one per node in the path from the root
-object to the object currently being serialized).</p>
+still being decided), which is a subclass of Protocol. This holds a stack of
+Banana Slicers, one per object currently being serialized (i.e. one per node
+in the path from the root object to the object currently being
+serialized).</p>
 
 <p>For example, suppose a class instance is being serialized, and this class
 chose to use a dictionary to hold its instance state. That dictionary holds
@@ -233,11 +274,11 @@ slicer, an InstanceSlicer, a DictSlicer, and finally a ListSlicer.</p>
 <p>(note: it might be possible to move the functionality of the Banana
 object entirely into the <q>root slice</q> (<q>root slicer</q>?)). </p>
 
-<p>Upon unserialization, the <q>Unbanana</q> object holds this context. A
-stack of <q>Unslicer</q> objects handle incoming tokens. The <q>Unbanana</q>
-is responsible for tracking OPEN and CLOSE tokens, making sure a failure in
-an Unslicer doesn't cause a loss of synchronization. Unslicer methods may
-raise exceptions: these are caught by the Unbanana and cause the object
+<p>The Banana object also holds the unserialization context. A stack of
+<q>Unslicer</q> objects handle incoming tokens. The <q>Banana</q> is
+responsible for tracking OPEN and CLOSE tokens, making sure a failure in an
+Unslicer doesn't cause a loss of synchronization. Unslicer methods may raise
+Violation exceptions: these are caught by the Unbanana and cause the object
 currently being unserialized to fail: its parent gets a UnbananaFailure
 instead of the dict or list or instance that it would normally have
 received.</p>

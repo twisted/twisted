@@ -4,10 +4,11 @@ import weakref, types
 
 from twisted.python import components, failure, log
 from twisted.internet import defer
+registerAdapter = components.registerAdapter
 
 import slicer, schema, tokens, banana
-from tokens import BananaError, Violation
-from slicer import UnbananaFailure, BaseUnslicer
+from tokens import BananaError, Violation, ISlicer
+from slicer import UnbananaFailure, BaseUnslicer, ReferenceSlicer
 
 class Referenceable(object):
     refschema = None
@@ -100,8 +101,6 @@ class RemoteReference(object):
             if _resultConstraint != "none":
                 req.setConstraint(_resultConstraint) # overrides schema
 
-            child = CallSlicer(self.broker)
-
             self.broker.waitingForAnswers[reqID] = req
             # TODO: there is a decidability problem here: if the reqID made
             # it through, the other end will send us an answer (possibly an
@@ -110,9 +109,11 @@ class RemoteReference(object):
             # broker.waitingForAnswers[] entry, we need to know how far the
             # slicing process made it.
 
+            slicer = CallSlicer(reqID, self.refID, _name, argsdict)
+
             # this could fail if any of the arguments (or their children)
             # are unsliceable
-            self.broker.slice2(child, (reqID, self.refID, _name, argsdict))
+            self.broker.send(slicer)
 
         except:
             if req:
@@ -465,25 +466,45 @@ class PBRootUnslicer(slicer.RootUnslicer):
 
 
 
-class BaseSlicer(slicer.BaseSlicer):
-    def __init__(self, broker):
-        slicer.BaseSlicer.__init__(self)
-        self.broker = broker
+class ScopedSlicer(slicer.BaseSlicer):
+    """This Slicer provides a containing scope for things like lists. The
+    same list will not be serialized twice within this scope, but it will
+    not survive outside it."""
 
-class AnswerSlicer(BaseSlicer):
-    opentype = "answer"
+    def registerReference(self, refid, obj):
+        # keep references here, not in the actual PBRootSlicer
+        self.references[id(obj)] = refid
 
-    def slice(self, (reqID, results)):
-        self.send(reqID)
-        self.send(results)
+    def slicerForObject(self, obj):
+        # search for references here before going upstream
+        refid = self.references.get(id(obj), None)
+        if refid is not None:
+            return ReferenceSlicer(refid)
+        # otherwise go upstream
+        return self.parent.slicerForObject(obj)
+
+class AnswerSlicer(ScopedSlicer):
+    openindex = ('answer',)
+
+    def __init__(self, reqID, results):
+        self.reqID = reqID
+        self.results = results
+
+    def sliceBody(self, streamable, banana):
+        yield self.reqID
+        yield self.results
 
 class ErrorSlicer(AnswerSlicer):
-    opentype = "error"
+    openindex = ('error',)
 
-    def slice(self, (reqID, f)):
-        self.send(reqID)
+    def __init__(self, reqID, f):
+        self.reqID = reqID
+        self.f = f
+
+    def sliceBody(self, streamable, banana):
+        yield self.reqID
         # TODO: need CopyableFailures
-        self.send(f.getBriefTraceback())
+        yield self.f.getBriefTraceback()
 
 remoteInterfaceRegistry = {}
 def registerRemoteInterface(iface):
@@ -510,63 +531,62 @@ def getRemoteInterfaceNames(obj):
     """Get the names of all RemoteInterfaces supported by the object."""
     return [i.__remote_name__ or i.__name__ for i in getRemoteInterfaces(obj)]
 
-class ReferenceableSlicer(BaseSlicer):
+class ReferenceableSlicer(slicer.BaseSlicer):
     """I handle pb.Referenceable objects (things with remotely invokable
     methods, which are copied by reference).
     """
-    opentype = "remote"
+    openindex = ('remote',)
 
-    def slice(self, obj):
-        puid = obj.processUniqueID()
+    def sliceBody(self, streamable, banana):
+        puid = self.obj.processUniqueID()
         firstTime = self.broker.luids.has_key(puid)
-        luid = self.broker.registerReference(obj)
-        self.send(luid)
+        luid = self.broker.registerReference(self.obj)
+        yield luid
         if not firstTime:
             # this is the first time the Referenceable has crossed this
             # wire. In addition to the luid, send the interface list to the
             # far end.
-            self.send(getRemoteInterfaceNames(obj))
+            yield getRemoteInterfaceNames(self.obj)
             # TODO: maybe create the RemoteReferenceSchema now
             # obj.getSchema()
+registerAdapter(ReferenceableSlicer, Referenceable, ISlicer)
 
-class DecRefSlicer(BaseSlicer):
-    opentype = "decref"
+class DecRefSlicer(slicer.BaseSlicer):
+    openindex = ('decref',)
+    def __init__(self, refID):
+        self.refID = refID
+    def sliceBody(self, streamable, banana):
+        yield self.refID
 
-    def slice(self, refID):
-        self.send(refID)
-
-class CopyableSlicer(BaseSlicer):
+class CopyableSlicer(slicer.BaseSlicer):
     """I handle pb.Copyable objects (things which are copied by value)."""
 
-    opentype = "instance"
+    openindex = ('instance',)
     # ???
+#registerAdapter(CopyableSlicer, Copyable, ISlicer)
 
-class CallSlicer(BaseSlicer):
-    opentype = "call"
+class CallSlicer(ScopedSlicer):
+    openindex = ('call',)
 
-    def slice(self, (reqID, refID, methodname, args)):
-        self.send(refID)
-        self.send(refID)
-        self.send(methodname)
-        keys = args.keys()
+    def __init__(self, reqID, refID, methodname, args):
+        self.reqID = reqID
+        self.refID = refID
+        self.methodname = methodname
+        self.args = args
+
+    def sliceBody(self, streamable, banana):
+        yield self.refID
+        yield self.refID
+        yield self.methodname
+        keys = self.args.keys()
         keys.sort()
         for argname in keys:
-            self.send(argname)
-            self.send(args[argname])
-
-PBSlicerRegistry = {}
-PBSlicerRegistry.update(slicer.BaseSlicerRegistry)
-del PBSlicerRegistry[types.InstanceType]
+            yield argname
+            yield self.args[argname]
 
 class PBRootSlicer(slicer.RootSlicer):
-    SlicerRegistry = PBSlicerRegistry
-
-    def slicerFactoryForObject(self, obj):
-        if isinstance(obj, Referenceable):
-            return ReferenceableSlicer
-        if isinstance(obj, Copyable):
-            return CopyableSlicer
-        return slicer.RootSlicer.slicerFactoryForObject(self, obj)
+    def registerReference(self, refid, obj):
+        assert 0
 
 
 class Broker(banana.Banana):
@@ -665,19 +685,20 @@ class Broker(banana.Banana):
         assert self.activeLocalCalls[reqID]
         if methodSchema:
             methodSchema.checkResults(res) # may raise Violation
-        child = AnswerSlicer(self)
+        answer = AnswerSlicer(reqID, res)
         # once the answer has started transmitting, any exceptions must be
         # logged and dropped, and not turned into an Error to be sent.
         try:
-            self.slice2(child, (reqID, res))
+            self.send(answer)
+            # TODO: .send should return a Deferred that fires when the last
+            # byte has been queued, and we should delete the local note then
         except:
             log.err()
         del self.activeLocalCalls[reqID]
 
     def sendError(self, f, reqID):
         assert self.activeLocalCalls[reqID]
-        child = ErrorSlicer(self)
-        self.slice2(child, (reqID, f))
+        self.send(ErrorSlicer(reqID, f))
         del self.activeLocalCalls[reqID]
 
     # registerRemoteReference and freeRemoteReference are also run on the
@@ -713,8 +734,7 @@ class Broker(banana.Banana):
         #del self.remoteReferences[refID]
 
         try:
-            child = DecRefSlicer(self)
-            self.slice2(child, refID)
+            self.send(DecRefSlicer(refID))
         except:
             print "failure during freeRemoteReference"
             f = failure.Failure()
