@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: mktap.py,v 1.27 2003/03/04 18:31:57 tv Exp $
+# $Id: mktap.py,v 1.28 2003/03/05 07:08:49 tv Exp $
 
 """ Implementation module for the `mktap` command.
 """
@@ -25,7 +25,7 @@ from twisted.internet import app
 from twisted.python import usage, util
 from twisted.spread import pb
 
-import sys, traceback, os, cPickle, glob, pwd
+import sys, traceback, os, cPickle, glob, pwd, grp
 
 from twisted.python.plugin import getPlugIns
 
@@ -152,7 +152,7 @@ def run():
         try:
             options['gid'] = int(options['gid'])
         except ValueError:
-            options['gid'] = pwd.getpwnam(options['gid'])[3]
+            options['gid'] = grp.getgrnam(options['gid'])[2]
 
     if not options['append']:
         a = app.Application(options.subCommand, options['uid'], options['gid'])
