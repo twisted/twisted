@@ -268,7 +268,7 @@ class TestConnection:
         self.requests = []
         self.client = None
 
-class CoreHTTPTestCase(unittest.TestCase):
+class HTTPTests(unittest.TestCase):
     def connect(self, logFile=None, maxPipeline=4):
         cxn = TestConnection()
 
@@ -308,6 +308,8 @@ class CoreHTTPTestCase(unittest.TestCase):
         self.iterate(cxn)
         self.assertEquals(cxn.client.done, done)
         
+
+class CoreHTTPTestCase(HTTPTests):
     # Note: these tests compare the client output using string
     #       matching. It is acceptable for this to change and break
     #       the test if you know what you are doing.
@@ -498,3 +500,163 @@ class CoreHTTPTestCase(unittest.TestCase):
         cxn.client.loseConnection()
         self.assertDone(cxn)
 
+    def testHTTP1_1_chunking(self):
+        cxn = self.connect()
+        cmds = [[]]
+        data = ""
+        cxn.client.write("GET / HTTP/1.1\r\nTransfer-Encoding: chunked\r\nHost: localhost\r\n\r\n5\r\nInput\r\n")
+        
+        cmds[0] += [('init', 'GET', '/', (1,1),
+                     (('Host', ['localhost']),)),
+                    ('contentChunk', 'Input')]
+        
+        self.compareResult(cxn, cmds, data)
+        
+        cxn.client.write("1; blahblahblah\r\na\r\n10\r\nabcdefghijklmnop\r\n")
+        cmds[0] += [('contentChunk', 'a'),('contentChunk', 'abcdefghijklmnop')]
+        self.compareResult(cxn, cmds, data)
+        
+        cxn.client.write("0\r\nRandom-Ignored-Trailer: foo\r\n\r\n")
+        cmds[0] += [('contentComplete',)]
+        self.compareResult(cxn, cmds, data)
+
+        cxn.requests[0].acceptData()
+        cxn.requests[0].write("Output")
+        data += "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n6\r\nOutput\r\n"
+        self.compareResult(cxn, cmds, data)
+
+        cxn.requests[0].write("blahblahblah")
+        data += "C\r\nblahblahblah\r\n"
+        self.compareResult(cxn, cmds, data)
+
+        cxn.requests[0].finish()
+        data += "0\r\n\r\n"
+        self.compareResult(cxn, cmds, data)
+
+        cxn.client.loseConnection()
+        self.assertDone(cxn)
+
+class ErrorTestCase(HTTPTests):
+    def assertStartsWith(self, first, second, msg=None):
+        self.assert_(first.startswith(second), '%r.startswith(%r)' % (first, second))
+
+    def checkError(self, cxn, code):
+        self.iterate(cxn)
+        self.assertStartsWith(cxn.client.data, "HTTP/1.1 %d "%code)
+        self.assert_(cxn.client.data.find("\r\nConnection: close\r\n") != -1)
+
+        self.assertDone(cxn)
+
+    def testChunkingError1(self):
+        cxn = self.connect()
+        cxn.client.write("GET / HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\nasdf\r\n")
+
+        self.checkError(cxn, 400)
+
+    def testChunkingError2(self):
+        cxn = self.connect()
+        cxn.client.write("GET / HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\n1\r\nblahblah\r\n")
+
+        self.checkError(cxn, 400)
+        
+    def testChunkingError3(self):
+        cxn = self.connect()
+        cxn.client.write("GET / HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\n-1\r\nasdf\r\n")
+
+        self.checkError(cxn, 400)
+        
+    def testTooManyHeaders(self):
+        cxn = self.connect()
+        cxn.client.write("GET / HTTP/1.1\r\n")
+        cxn.client.write("Foo: Bar\r\n"*5000)
+
+        self.checkError(cxn, 400)
+
+    def testLineTooLong(self):
+        cxn = self.connect()
+        cxn.client.write("GET / HTTP/1.1\r\n")
+        cxn.client.write("Foo: "+("Bar"*10000))
+
+        self.checkError(cxn, 400)
+
+    def testNoColon(self):
+        cxn = self.connect()
+        cxn.client.write("GET / HTTP/1.1\r\n")
+        cxn.client.write("Blahblah\r\n\r\n")
+
+        self.checkError(cxn, 400)
+
+    def testBadRequest(self):
+        cxn = self.connect()
+        cxn.client.write("GET / more HTTP/1.1\r\n")
+
+        self.checkError(cxn, 400)
+
+    def testWrongProtocol(self):
+        cxn = self.connect()
+        cxn.client.write("GET / Foobar/1.0\r\n")
+
+        self.checkError(cxn, 400)
+
+    def testBadProtocolVersion(self):
+        cxn = self.connect()
+        cxn.client.write("GET / HTTP/1\r\n")
+
+        self.checkError(cxn, 400)
+
+    def testBadProtocolVersion2(self):
+        cxn = self.connect()
+        cxn.client.write("GET / HTTP/-1.0\r\n")
+
+        self.checkError(cxn, 400)
+
+    def testWrongProtocolVersion(self):
+        cxn = self.connect()
+        cxn.client.write("GET / HTTP/2.0\r\n")
+
+        self.checkError(cxn, 505)
+
+    def testUnsupportedTE(self):
+        cxn = self.connect()
+        cxn.client.write("GET / HTTP/1.1\r\n")
+        cxn.client.write("Transfer-Encoding: blahblahblah, chunked\r\n\r\n")
+        self.checkError(cxn, 501)
+
+    def testTEWithoutChunked(self):
+        cxn = self.connect()
+        cxn.client.write("GET / HTTP/1.1\r\n")
+        cxn.client.write("Transfer-Encoding: gzip\r\n\r\n")
+        self.checkError(cxn, 400)
+
+class PipelinedErrorTestCase(ErrorTestCase):
+    # Make sure that even low level reading errors don't corrupt the data stream,
+    # but always wait until their turn to respond.
+    
+    def connect(self):
+        cxn = ErrorTestCase.connect(self)
+        cxn.client.write("GET / HTTP/1.1\r\nHost: localhost\r\n\r\n")
+        
+        cmds = [[('init', 'GET', '/', (1,1),
+                 (('Host', ['localhost']),)),
+                ('contentComplete', )]]
+        data = ""
+        self.compareResult(cxn, cmds, data)
+        return cxn
+    
+    def checkError(self, cxn, code):
+        self.iterate(cxn)
+        self.assertEquals(cxn.client.data, '')
+        
+        cxn.requests[0].out_headers.setRawHeaders("Content-Length", ("0",))
+        cxn.requests[0].acceptData()
+        cxn.requests[0].write('')
+        
+        data = "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n"
+        self.iterate(cxn)
+        self.assertEquals(cxn.client.data, data)
+
+        # Reset the data so the checkError's startswith test can work right.
+        cxn.client.data = ""
+        
+        cxn.requests[0].finish()
+        ErrorTestCase.checkError(self, cxn, code)

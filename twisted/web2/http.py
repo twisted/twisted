@@ -51,7 +51,10 @@ def parseVersion(strversion):
 
     proto, strversion = strversion.split('/')
     major, minor = strversion.split('.')
-    return (proto.lower(), int(major), int(minor))
+    major, minor = int(major), int(minor)
+    if major < 0 or minor < 0:
+        raise ValueError("negative number")
+    return (proto.lower(), major, minor)
 
 class StringTransport:
     """
@@ -377,7 +380,7 @@ class HTTPChannelRequest:
 
         # Parse the initial request line
         if len(parts) != 3:
-            if len(parts) in (1,2):
+            if len(parts) < 3:
                 if len(parts) < 2:
                     parts.append('/')
                 parts.append('HTTP/0.9')
@@ -397,7 +400,7 @@ class HTTPChannelRequest:
         
         # Ensure HTTP 0 or HTTP 1.
         if self.version[0] > 1:
-            self._abortWithError(responsecode.HTTP_VERSION_NOT_SUPPORTED)
+            self._abortWithError(responsecode.HTTP_VERSION_NOT_SUPPORTED, 'Only HTTP 0.9 and HTTP 1.x are supported.')
 
         if self.version[0] == 0:
             # simulate end of headers, as HTTP 0 doesn't have headers.
@@ -415,6 +418,8 @@ class HTTPChannelRequest:
                     self.length = int(chunksize, 16)
                 except:
                     self._abortWithError(responsecode.BAD_REQUEST, "Invalid chunk size, not a hex number: %s!" % chunksize)
+                if self.length < 0:
+                    self._abortWithError(responsecode.BAD_REQUEST, "Invalid chunk size, negative.")
 
                 if self.length == 0:
                     # We're done, parse the trailers line
@@ -481,6 +486,9 @@ class HTTPChannelRequest:
             
             channel.setLineMode(extraneous)
 
+    def lineLengthExceeded(self, line):
+        self._abortWithError(responsecode.BAD_REQUEST, 'Header line too long.')
+        
     def headerReceived(self, line):
         """Store this header away. Check for too much header data
            (> channel.maxHeaderLength) and abort the connection if so.
@@ -634,7 +642,7 @@ class HTTPChannelRequest:
             if (headers.getHeader('Content-Length') is None and
                 not (code in NO_BODY_CODES)):
                 if self.version >= (1,1):
-                    l.append("%s: %s\r\n" % ('Transfer-encoding', 'chunked'))
+                    l.append("%s: %s\r\n" % ('Transfer-Encoding', 'chunked'))
                     self.chunkedOut = True
                 else:
                     # Cannot use persistent connections if we can't do chunking
@@ -845,8 +853,16 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
                 self.chanRequest.lineReceived(line)
             except AbortedException:
                 pass
+
+    def lineLengthExceeded(self, line):
+        if self._first_line:
+            # Fabricate a request object to respond to the line length violation.
+            self.chanRequest = self.chanRequestFactory(self, "GET fake HTTP/1.0", 0)
+        try:
+            self.chanRequest.lineLengthExceeded(line)
+        except AbortedException:
+            pass
             
-        
     def rawDataReceived(self, data):
         self.resetTimeout()
         try:
