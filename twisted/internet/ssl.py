@@ -192,8 +192,9 @@ class Connection(tcp.Connection):
 class Client(tcp.Client):
     """I am an SSL client."""
     def __init__(self, host, port, bindAddress, ctxFactory, connector, reactor=None):
-        tcp.Client.__init__(self, host, port, bindAddress, connector, reactor)
+        # tcp.Client.__init__ depends on self.ctxFactory being set
         self.ctxFactory = ctxFactory
+        tcp.Client.__init__(self, host, port, bindAddress, connector, reactor)
 
     def createInternetSocket(self):
         """(internal) create an SSL socket
@@ -284,7 +285,7 @@ class Connector(base.BaseConnector):
         self.port = port
         self.bindAddress = bindAddress
         self.contextFactory = contextFactory
-        base.BaseConnector.__init__(self, reactor, factory, timeout)
+        base.BaseConnector.__init__(self, factory, timeout, reactor)
 
     def _makeTransport(self):
         return Client(self.host, self.port, self.bindAddress, self.contextFactory, self, self.reactor)
