@@ -11,7 +11,7 @@ public:
     virtual void connectionMade()
     {
 	transport->setReadBuffer(buf, 16384);
-	cout << "connectionMade\n";
+	cout << "connectionMade" << endl;
     }
 
     virtual void dataReceived(char* buf, int buflen)
@@ -22,7 +22,7 @@ public:
 
     virtual void connectionLost(object reason)
     {
-	cout << "connection lost\n";
+	cout << "connection lost" << endl;
     }
 
     virtual void bufferFull() {;}

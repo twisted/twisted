@@ -51,6 +51,7 @@ namespace Twisted
 	size_t buflen;
     public:
 	TCPTransport(object self);
+	~TCPTransport() {}
 	void setReadBuffer(char* buffer, size_t buflen) {
 	    this->buffer = buffer;
 	    this->buflen = buflen;
@@ -66,16 +67,20 @@ namespace Twisted
 
     class Protocol
     {
+    private:
+	object transportobj; // so that we have INCREF the transport
     public:
 	PyObject* self;
 	TCPTransport* transport;
 
 	Protocol() {};
+	virtual ~Protocol() {}
 	void init(PyObject* s) { 
 	    this->self = s;
 	}
-	void makeConnection(TCPTransport* t) {
-	    this->transport = t;
+	void makeConnection(object t) {
+	    this->transportobj = t;
+	    this->transport = extract<TCPTransport*>(t);
 	    this->connectionMade();
 	}
 	virtual void connectionMade() {
