@@ -598,9 +598,13 @@ def _setUpTestdir():
        try:
            shutil.rmtree(testdir)
        except OSError, e:
-           # XXX Left-over debug print?  This is a pretty-dodgy exception handler,
-           # overall.  Also, this block is also incorrectly indented.
-           os.rename(testdir, os.path.abspath("_trial_temp_old%s" % random.randint(0, 99999999)))
+           print "caught OSError [Errno %s]: %s: could not remove path %s" % (e.errno,e.strerror,e.filename)
+           try:
+               os.rename(testdir, os.path.abspath("_trial_temp_old%s" % random.randint(0, 99999999)))
+           except OSError, e:
+               print "caught OSError [Errno %s]: %s: could not rename path %s" % (e.errno,e.strerror,e.filename)
+               raise
+
     os.mkdir(testdir)
     os.chdir(testdir)
 
