@@ -1,3 +1,8 @@
+2003-03-01  Jp Calderone  <exarkun@twistedmatrix.com>
+
+	* twisted/scripts/twistd.py: Added --report-profile flag to twistd
+	daemon.
+
 2003-02-24  Brian Warner  <warner@lothar.com>
 
 	* twisted/internet/tcp.py, base.py: set FD_CLOEXEC on all new
