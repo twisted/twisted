@@ -11,7 +11,7 @@
 from twisted.python import components
 from zope.interface import implements
 
-from twisted.web2 import iweb, http, http_headers
+from twisted.web2 import iweb, http, http_headers, server
 from twisted.web2.responsecode import *
 
 class Resource(object):

@@ -297,7 +297,7 @@ class Request(object):
 
     def _sendContinue(self):
         self.chanRequest.writeIntermediateResponse(responsecode.CONTINUE)
-            
+    
     def _finished(self, x):
         """We are finished writing data."""
         # log request
@@ -306,7 +306,10 @@ class Request(object):
 
     def _error(self, reason):
         log.err(reason)
-        self.chanRequest.abortConnection()
+        from twisted.internet import main
+        if reason.value is not main.CONNECTION_LOST:
+            # If the connection was lost, don't bother doing extra work.
+            self.chanRequest.abortConnection()
         
     def writeResponse(self, response):
         """
@@ -861,8 +864,8 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin, object):
         self.setTimeout(self.inputTimeOut)
     
     def lineReceived(self, line):
-        self.setTimeout(self.inputTimeOut)
         if self._first_line:
+            self.setTimeout(self.inputTimeOut)
             # if this connection is not persistent, drop any data which
             # the client (illegally) sent after the last request.
             if not self.persistent:
@@ -987,9 +990,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin, object):
         
         # Throw out any incoming data
         self.dataReceived = self.lineReceived = lambda *args: None
-        # (this has to be a callLater because current processing might
-        #  cause input to be paused after this returns)
-        reactor.callLater(0, self.transport.resumeProducing)
+        self.transport.resumeProducing()
 
     def writeConnectionLost(self):
         # Okay, all data has been written

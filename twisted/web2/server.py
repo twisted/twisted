@@ -24,11 +24,11 @@ except ImportError:
 from zope.interface import implements
 # Twisted Imports
 from twisted.internet import reactor, defer
-from twisted.python import log, failure
+from twisted.python import log, components, failure
 from twisted import copyright
 
 # Sibling Imports
-from twisted.web2 import resource, http, iweb
+from twisted.web2 import http, iweb
 from twisted.web2.responsecode import *
 from twisted.web2 import http_headers, context, error, stream
 
@@ -274,6 +274,10 @@ class Request(http.Request):
                 lambda actualRes: self._handleSegment(
                     (actualRes, newpath), path, pageContext))
 
+        # Needs this because IResource is a new interface, and we're
+        # adapting an object with old interfaces.
+        if hasattr(newres, "__class__"):
+            components.fixClassImplements(newres.__class__)
         newres = iweb.IResource(newres)
         if newres is pageContext.tag:
             assert not newpath is path, "URL traversal cycle detected when attempting to locateChild %r from resource %r." % (path, pageContext.tag)
@@ -345,6 +349,8 @@ class Request(http.Request):
             d.addCallback(self.writeResponse)
             return d
         else:
+            if hasattr(result, "__class__"):
+                components.fixClassImplements(result.__class__)
             resource = iweb.IResource(result, None)
             if resource:
                 pageContext = context.PageContext(tag=resource, parent=ctx)

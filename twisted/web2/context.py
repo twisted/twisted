@@ -27,9 +27,11 @@ class WebContext(object):
     tag = None
     _slotData = None
     parent = None
-
-    # XXX: can we get rid of these 4 somehow?
+    locateHook = None
+    
+    # XXX: can we get rid of these 5 somehow?
     isAttrib = property(lambda self: False)
+    inURL = property(lambda self: False)
     precompile = property(lambda self: False)
     def with(self, tag):
         warnings.warn("use WovenContext(parent, tag) instead", DeprecationWarning, stacklevel=2)
@@ -42,8 +44,7 @@ class WebContext(object):
         """
         req = self.locate(iweb.IRequest)
         return req.args.get(get, [default])[0]
-
-        
+    # ^ XXX
     
     def __init__(self, parent=None, tag=None, remembrances=None):
         self.tag = tag
@@ -52,7 +53,7 @@ class WebContext(object):
             self._slotData = sd
         self.parent = parent
         self._remembrances = remembrances
-
+    
     def remember(self, adapter, interface=None):
         """Remember an object that implements some interfaces.
         Later, calls to .locate which are passed an interface implemented
@@ -74,31 +75,47 @@ class WebContext(object):
             self._remembrances[interface] = adapter
         return self
 
-    def locate(self, interface, depth=1):
+    def locate(self, interface, depth=1, _default=object()):
         """Locate an object which implements a given interface.
         Objects will be searched through the context stack top
         down.
         """
         key = qual(interface)
-        if depth < 0:
-            full = []
-            while True:
-                try:
-                    full.append(self.locate(interface, len(full)+1))
-                except KeyError:
-                    break
-            #print "full", full, depth
-            if full:
-                return full[depth]
-            return None
-        if self._remembrances is not None and self._remembrances.has_key(key):
-            depth -= 1
-            if not depth:
-                return self._remembrances[key]
-        if self.parent is None:
-            raise KeyError, "Interface %s was not remembered." % key
-        return self.parent.locate(interface, depth)
+        currentContext = self
+        while True:
+            if depth < 0:
+                full = []
+                while True:
+                    try:
+                        full.append(self.locate(interface, len(full)+1))
+                    except KeyError:
+                        break
+                #print "full", full, depth
+                if full:
+                    return full[depth]
+                return None
 
+            # Hook for FactoryContext and other implementations of complex locating
+            locateHook = currentContext.locateHook
+            if locateHook is not None:
+                result = locateHook(interface)
+                if result is not None:
+                    return result
+
+            _remembrances = currentContext._remembrances
+            if _remembrances is not None:
+                rememberedValue = _remembrances.get(key, _default)
+                if rememberedValue is not _default:
+                    depth -= 1
+                    if not depth:
+                        return rememberedValue
+
+            contextParent = currentContext.parent
+            if contextParent is None:
+                raise KeyError, "Interface %s was not remembered." % key
+
+            currentContext = contextParent
+    
     def chain(self, context):
         """For nevow machinery use only.
 
@@ -179,8 +196,9 @@ class FactoryContext(WebContext):
     cache = None
     inLocate = 0
     
-    def locate(self, interface, depth=1):
-        if self.cache is None: self.cache = {}
+    def locateHook(self, interface):
+        if self.cache is None:
+            self.cache = {}
         else:
             adapter = self.cache.get(interface, None)
             if adapter is not None:
@@ -195,7 +213,7 @@ class FactoryContext(WebContext):
         if adapter is not None:
             self.cache[interface] = adapter
             return adapter
-        return WebContext.locate(self, interface, depth)
+        return None
 
     def __conform__(self, interface):
         if self.inLocate:
@@ -222,14 +240,7 @@ class RequestContext(FactoryContext):
     pass
 
 components.registerAdapter(lambda ctx: ctx.tag, RequestContext, iweb.IRequest)
-# FIXME: Why is this needed, don't we have transitive adaptation?
 components.registerAdapter(lambda ctx: iweb.IOldRequest(ctx.tag), RequestContext, iweb.IOldRequest)
-
-def getRequestContext(self):
-    top = self.parent
-    while not isinstance(top, RequestContext):
-        top = top.parent
-    return top
 
 class PageContext(FactoryContext):
     """A PageContext has adapters for the following interfaces:
@@ -238,4 +249,8 @@ class PageContext(FactoryContext):
     IRendererFactory
     IData
     """
-    context = property(getRequestContext)
+    def __init__(self, *args, **kw):
+        FactoryContext.__init__(self, *args, **kw)
+        if self.tag is not None and hasattr(self.tag, 'toremember'):
+            for i in self.tag.toremember:
+                self.remember(*i)
