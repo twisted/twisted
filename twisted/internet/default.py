@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_internet -*-
-# $Id: default.py,v 1.77 2003/05/02 06:52:40 anthony Exp $
+# $Id: default.py,v 1.78 2003/05/02 21:02:22 itamarst Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -376,11 +376,15 @@ def win32select(r, w, e, timeout=None):
     if not r and not w:
         # windows select() exits immediately when no sockets
         if timeout == None:
-            timeout = 0.1
+            timeout = 0.01
         else:
             timeout = min(timeout, 0.001)
         sleep(timeout)
         return [], [], []
+    # windows doesn't process 'signals' inside select(), so we set a max
+    # time or ctrl-c will never be recognized
+    if timeout == None or timeout > 0.5:
+        timeout = 0.5
     r, w, e = select.select(r, w, w, timeout)
     return r, w+e, []
 
