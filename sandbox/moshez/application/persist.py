@@ -11,16 +11,17 @@ def encrypt(passphrase, data):
         data = data + ' '*(cipher.block_size - leftover)
     return cipher.new(md5.new(passphrase).digest()[:16]).encrypt(data)
 
+
 class IPersistable(Interface):
 
-   def setPassword(self, password):
-       pass
+    def setPassword(self, password):
+        pass
+ 
+    def setStyle(self, style):
+        pass
 
-   def setStyle(self, style):
-       pass
-
-   def save(self, filename):
-       pass
+    def save(self, tag=None, filename=None, passphrase=None):
+        pass
 
 
 class Persistant:

@@ -1,5 +1,5 @@
 from twisted.python import components
-from twisted.application import servers, clients
+from twisted.application import servers, clients, persist
 
 class IOldApplication(components.Interface):
 
@@ -46,6 +46,17 @@ class IOldApplication(components.Interface):
     def connectUNIX(self, address, factory, timeout=30):
         pass
 
+    def bindPorts(self):
+        pass
+
+    def save(self, tag=None, filename=None, passphrase=None):
+        pass
+
+    def logPrefix(self):
+        pass
+
+    def run(self, save=1, installSignalHandlers=1):
+        pass
 
 class ServiceNetwork:
 
@@ -106,6 +117,26 @@ class ServiceNetwork:
     def connectUNIX(self, address, factory, timeout=30):
         s = clients.UNIXClient(address, factory, timeout)
         s.setParent(self.app)
+
+    def bindPorts(self):
+        self.app.preStartService()
+
+    def save(self, tag=None, filename=None, passphrase=None):
+        p = self.app.getComponent(persist.IPersistable)
+        p.save(tag, filename, passphrase)
+
+    def logPrefix(self):
+        return '*%s*' % self.app.name
+
+    def run(self, save=1, installSignalHandlers=1):
+        self.app.startService()
+        from twisted.internet import reactor
+        reactor.addSystemEventTrigger('before', 'shutdown',
+                                      self.app.stopService)
+        if save:
+            self.app.scheduleSave()
+        log.callWithLogger(self, reactor.run,
+                           installSignalHandlers=installSignalHandlers)
 
 
 components.registerAdapter(service.IServiceCollection, ServiceNetwork)
