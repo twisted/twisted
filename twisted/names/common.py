@@ -38,7 +38,7 @@ class ResolverBase:
             return defer.fail(failure.Failure(NotImplementedError(str(self.__class__) + " " + str(query.type))))
 
     def _lookup(self, name, cls, type, timeout):
-        raise NotImplementedError("ResolverBase._lookup")
+        return defer.fail(NotImplementedError("ResolverBase._lookup"))
 
     def lookupAddress(self, name, timeout = None):
         return self._lookup(name, dns.IN, dns.A, timeout)
