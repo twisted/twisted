@@ -24,7 +24,8 @@ What is this?
 
   Twisted currently supports the following protocols, all implemented in pure
   python, most of them as both servers and clients:
-  
+
+    - SSH  
     - FTP
     - HTTP
     - NNTP
