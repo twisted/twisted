@@ -45,6 +45,9 @@ class CUDPPort(cudp.UDPPortMixin, _origUDPPort):
 
     def __init__(self, *args, **kwargs):
         _origUDPPort.__init__(self, *args, **kwargs)
+
+    def _bindPort(self):
+        _origUDPPort._bindPort(self)
         cudp.UDPPortMixin.__init__(self, self)
 
 
