@@ -241,8 +241,9 @@ try:
     from twisted.conch.ssh import userauth, transport, channel, connection, session
     from twisted.conch.manhole_ssh import TerminalUser, TerminalSession, TerminalRealm, TerminalSessionTransport, ConchFactory
 except ImportError:
-    ssh = None
+    ssh = False
 else:
+    ssh = True
     class SessionChannel(channel.SSHChannel):
         name = 'session'
 
@@ -611,7 +612,7 @@ class HistoricRecvlineLoopbackTelnet(_TelnetMixin, unittest.TestCase, HistoricRe
     pass
 
 class HistoricRecvlineLoopbackSSH(_SSHMixin, unittest.TestCase, HistoricRecvlineLoopbackMixin):
-    if ssh is None:
+    if not ssh:
         skip = "Crypto requirements missing, can't run historic recvline tests over ssh"
 
 class HistoricRecvlineLoopbackStdio(_StdioMixin, unittest.TestCase, HistoricRecvlineLoopbackMixin):
