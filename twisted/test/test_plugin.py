@@ -70,7 +70,7 @@ class PluginTestCase(unittest.TestCase):
         try:
             os.remove(sibpath(plugins.__file__, 'dropin.cache'))
         except OSError, ose:
-            if ose.errno == errno.EPERM:
+            if ose.errno in (errno.EACCES, errno.ENOENT):
                 print 'Testing in deployed mode.'
             else:
                 raise
@@ -124,9 +124,9 @@ class PluginTestCase(unittest.TestCase):
         writeFileName = sibpath(plugins.__file__, 'pluginextra.py')
         try:
             wf = file(writeFileName, 'w')
-        except OSError, ose:
-            if ose.errno == errno.EPERM:
-                raise unittest.SkiptTest(
+        except IOError, ioe:
+            if ioe.errno == errno.EACCES:
+                raise unittest.SkipTest(
                     "No permission to add things to twisted.plugins")
             else:
                 raise
@@ -161,7 +161,14 @@ class PluginTestCase(unittest.TestCase):
 
     def _testDetectFilesChanged(self):
         writeFileName = sibpath(plugins.__file__, 'pluginextra.py')
-        writeFile = file(writeFileName, 'w')
+        try:
+            writeFile = file(writeFileName, 'w')
+        except IOError, ioe:
+            if ioe.errno == errno.EACCES:
+                raise unittest.SkipTest(
+                    "No permission to add things to twisted.plugins")
+            else:
+                raise
         try:
             writeFile.write(begintest)
             writeFile.flush()
