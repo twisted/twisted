@@ -242,7 +242,9 @@ class Query:
     
     def __str__(self):
         return '<Query %s %s %d>' % (
-            self.name, QUERY_TYPES.get(self.type, 'UNKNOWN'), self.cls
+            self.name,
+            QUERY_TYPES.get(self.type, 'UNKNOWN (%d)' % self.type),
+            self.cls
         )
 
 
