@@ -7,17 +7,32 @@
 <body>
 <h1>Issue Repository Issues Listing</h1>
 
-<div model="issuelist"  >
-<h1 class="listHeader">Here's a list header.  Hooray!</h1>
-<h2 class="emptyList">(no issues in repository)</h2>
+<table model="issuelist" border="2" >
+<tr class="listHeader">
+  <th>
+    Number
+  </th>
+  <th>
+    Description
+  </th>
+  <th>
+    Status
+  </th>
+</tr>
+<tr class="emptyList"><td colspan="3" align="center"  style="color: red; font-weight: bold">
+  There are no issues in the repository.
+</td></tr>
 
-<div class="listItem">Issue #<span style="color: orange" model="number"  />
-<div model="description"   />
-<div model="status"  />
-</div>
 
-<p class="listFooter">Thank you for using Twisted Issues.</p>
-</div>
+
+<tr class="listItem">
+  <td>#<span style="color: orange" model="number">700</span></td>
+  <td><div style="color: blue" model="description"> I feel fat, and sassy.</div></td>
+  <td><div style="color: green" model="status" >You are fat, and sassy.</div></td>
+</tr>
+
+<tr class="listFooter"><td colspan="3">Thank you for using Twisted Issues.</td></tr>
+</table>
 
 </body>
 </html>
