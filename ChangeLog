@@ -106,7 +106,7 @@
 
 	* twisted.sister: Now featuring distributed login.
 
-2002-07-15  Paul Shwartz  <z3p@twistedmatrix.com>
+2002-07-15  Paul Swartz  <z3p@twistedmatrix.com>
 
 	* twisted.conch: A new implementation of ssh2, bringing Twisted
 	one step closer to being a complete replacement of all unix
@@ -153,7 +153,7 @@
 	supports SetUID: there are new UID/GID arguments to the process
 	spawning methods/constructors.
 	
-2002-06-22  Paul Shwartz  <z3p@twistedmatrix.com>
+2002-06-22  Paul Swartz  <z3p@twistedmatrix.com>
 
 	* twisted.protocols.oscar: totally rewrote OSCAR protocol
 	implementation.
@@ -573,7 +573,7 @@
 
 	* .: Releasing Twisted 0.15.4.
 
-2002-03-02  Paul Shwartz  <z3p@twistedmatrix.com>
+2002-03-02  Paul Swartz  <z3p@twistedmatrix.com>
 
 	* twisted/words/ircservice.py: Send End-Of-MOTD message --
 	some clients rely on this for automatic joining of channels
