@@ -36,7 +36,7 @@ class Mixin:
 
 
 class Server(Mixin, protocol.DatagramProtocol):
-    
+
     def datagramReceived(self, data, addr):
         self.packets.append((data, addr))
 
@@ -175,10 +175,10 @@ class MulticastTestCase(unittest.TestCase):
     def testMulticast(self):
         c = Server()
         p = reactor.listenMulticast(0, c)
-        reactor.iterate(); reactor.iterate()
         self.runUntilSuccess(self.server.transport.joinGroup, "225.0.0.250")
         c.transport.write("hello world", ("225.0.0.250", self.server.transport.getHost()[2]))
-        reactor.iterate(); reactor.iterate()
+        while len(self.server.packets) == 0:
+            reactor.iterate(0.05);
         self.assertEquals(self.server.packets[0][0], "hello world")
         p.stopListening()
 
