@@ -284,7 +284,7 @@ class AdapterTestCase(unittest.TestCase):
     def testParentInterface(self):
         o = Sub()
         adder = components.getAdapter(o, IAdder, None)
-        self.assert_( o is adder )
+        self.assertIdentical(o, adder)
 
     def testBadRegister(self):
         # should fail because we already registered an IMultiply adapter for IntAdder
@@ -425,3 +425,12 @@ class TestInterfaceInterface(unittest.TestCase):
         s21 = Source21()
         d = IIDest1(s21)
         self.failUnless(isinstance(d, Dest1Impl2), str(s21))
+
+
+class TestZIBC(unittest.TestCase):
+    def testAttributes(self):
+        class IFoo(components.Interface):
+            a = 3
+        self.assertEquals(IFoo, 3)
+
+    testAttributes.todo = "Fix this itamar!"
