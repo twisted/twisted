@@ -190,6 +190,16 @@ class IRCClient(basic.LineReceiver):
 
     def noticed(self, user, channel, message):
         """Called when I have a notice from a user to me or a channel.
+
+        By default, this is equivalent to IRCClient.privmsg, but if your
+        client makes any automated replies, you must override this!
+        From the RFC:
+        
+            The difference between NOTICE and PRIVMSG is that
+            automatic replies MUST NEVER be sent in response to a
+            NOTICE message. [...] The object of this rule is to avoid
+            loops between clients automatically sending something in
+            response to something it received.
         """
         self.privmsg(user, channel, message)
 
