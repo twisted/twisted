@@ -175,11 +175,12 @@ PyDirObject_next(PyDirObject *self)
 	lasterrno = errno;
 	errno = 0;
 	if ((next = readdir(self->directory)) == NULL) {
-		if (errno == 0)
-			PyErr_SetObject(PyDirObject_Error, PyExc_StopIteration);
-		else
-			PyErr_SetFromErrno(PyDirObject_Error);
-			errno = lasterrno;
+		if (errno == 0) {
+			PyErr_Clear();
+			return NULL;
+		}
+		PyErr_SetFromErrno(PyDirObject_Error);
+		errno = lasterrno;
 		return NULL;
 	}
 	return PyDirentObject_FromDirent(next);
@@ -259,7 +260,7 @@ static PyMethodDef PyDirObject_methods[] = {
 		"rewind() -> seek to the beginning of this directory"},
 	{"tell", (PyCFunction)PyDirObject_tell, METH_NOARGS,
 		"tell() -> report the current position in this directory"},
-	{"seek", (PyCFunction)PyDirObject_close, METH_NOARGS,
+	{"seek", (PyCFunction)PyDirObject_close, METH_VARARGS,
 		"seek(pos) -> change the current position in this directory"},
 	{NULL,	NULL},
 };
@@ -315,6 +316,10 @@ DL_EXPORT(void)
 initdir(void)
 {
 	PyObject *m, *d;
+
+	PyDirObject_Error = PyErr_NewException("dir.error", PyDirObject_Error, NULL);
+	if (PyDirObject_Error == NULL)
+		return;
 
 	if (PyType_Ready(&PyDirentObject_Type) < 0)
 		return;
