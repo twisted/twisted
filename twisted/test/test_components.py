@@ -460,11 +460,27 @@ class IZope(zinterface.Interface):
 class Zopeable:
     pass
 
+class Zoper:
+    zinterface.implements(IZope, IAdder)
+components.backwardsCompatImplements(Zoper) # add __implements__
+
+components.registerAdapter(lambda o: id(o), Zopeable, IZope)
+
 
 class TestZope(unittest.TestCase):
 
     def testAdapter(self):
-        a = lambda o: id(o)
-        components.registerAdapter(a, Zopeable, IZope)
         x = Zopeable()
         self.assertEquals(id(x), IZope(x))
+
+    def testOldSubclass(self):
+        # someone has third party class that subclasses Zoper,
+        # and expects Zoper to have __implements__ since Zoper
+        # was originally written for twisted 1.3, pre zope.interface
+        class IFoo(components.Interface):
+            pass
+        class ThirdParty(Zoper):
+            __implements__ = Zoper.__implements__, IFoo
+        self.assert_(components.implements(ThirdParty(), IAdder))
+        self.assert_(components.implements(ThirdParty(), IFoo))
+        self.assert_(components.implements(ThirdParty(), IZope))

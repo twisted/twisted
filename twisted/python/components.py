@@ -125,6 +125,29 @@ def _hook(iface, ob, lookup=globalRegistry.lookup1):
 interface.adapter_hooks.append(_hook)
 
 
+def backwardsCompatImplements(klass):
+    """Make a class have __implements__, for backwards compatability.
+
+    This allows you to use new zope.interface APIs for declaring
+    implements on classes, while still allowing subclasses that
+    expect the old API.
+
+       class YourClass:
+           implements(IFoo) # correct zope way
+
+       backwardsCompatImplements(YourClass) # add __implements__
+       ----
+
+       # someone else still hasn't updated their code:
+       
+       class ThirdPartyClass(YourClass):
+           __implements__ = IBar, YourClass.__implements__
+
+    """
+    _fixedClasses[klass] = True # so fixClassImplements will skip it
+    klass.__implements__ = tuple(declarations.implementedBy(klass))
+
+
 # WARNING: EXTREME ICKYNESS FOLLOWS
 #
 # The code beneath this comment is the backwards compatability layer.
@@ -136,7 +159,13 @@ class _Nothing:
 
 _fixedClasses = {}
 def fixClassImplements(klass):
-    """Switch class from __implements__ to zope implementation."""
+    """Switch class from __implements__ to zope implementation.
+
+    This does the opposite of backwardsCompatImplements, takes a class
+    using __implements__ and makes zope.interface know about it. Rather
+    than using this yourself, it's better to port your code to the new
+    API.
+    """
     if _fixedClasses.has_key(klass):
         return
     if hasattr(klass, "__implements__") and isinstance(klass.__implements__, (tuple, MetaInterface)):
@@ -579,4 +608,5 @@ class ReprableComponentized(Componentized):
 
 __all__ = ["Interface", "implements", "getInterfaces", "superInterfaces",
            "registerAdapter", "getAdapterClass", "getAdapter", "Componentized",
-           "Adapter", "ReprableComponentized", "register"]
+           "Adapter", "ReprableComponentized", "backwardsCompatImplements",
+           "fixClassImplements"]
