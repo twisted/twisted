@@ -360,7 +360,9 @@ class Request(pb.Copyable, http.Request, components.Componentized):
         Remember the currently-processed part of the URL for later
         recalling.
         """
-        self.appRootURL = self.prePathURL()
+        url = self.prePathURL()
+        # remove one segment
+        self.appRootURL = url[:url.rindex("/")]
 
     def getRootURL(self):
         """

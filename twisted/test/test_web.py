@@ -412,6 +412,36 @@ class TestRequest(unittest.TestCase):
         request.requestReceived('GET', '/foo/bar', 'HTTP/1.0')
         self.assertEqual(request.prePathURL(), 'https://example.com:81/foo/bar')
 
+class RootResource(resource.Resource):
+    isLeaf=0
+    def getChildWithDefault(self, name, request):
+        request.rememberRootURL()
+        return resource.Resource.getChildWithDefault(self, name, request)
+    def render(self, request):
+        return ''
+
+class RememberURLTest(unittest.TestCase):
+
+    def setUp(self):
+        d = DummyChannel()
+        d.transport = DummyChannel.Baz()
+        r = resource.Resource()
+        r.isLeaf=0
+        rr = RootResource()
+        r.putChild('foo', rr)
+        rr.putChild('', rr)
+        rr.putChild('bar', resource.Resource())
+        d.site = server.Site(r)
+        self.d = d
+
+    def testSimple(self):
+        for url in ['/foo/', '/foo/bar', '/foo/bar/baz', 'foo/bar/']:
+            request = server.Request(self.d, 1)
+            request.setHost('example.com', 81)
+            request.gotLength(0)
+            request.requestReceived('GET', '/foo/bar/baz', 'HTTP/1.0')
+            self.assertEqual(request.getRootURL(), "http://example.com/foo")
+        
 class SDResource(resource.Resource):
     def __init__(self,default):  self.default=default
     def getChildWithDefault(self,name,request):
