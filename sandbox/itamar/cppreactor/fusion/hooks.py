@@ -10,6 +10,7 @@ class CServer(ctcp.TCPTransportMixin, tcp.Server):
     def __init__(self, *args, **kwargs):
         tcp.Server.__init__(self, *args, **kwargs)
         ctcp.TCPTransportMixin.__init__(self, self)
+        self.initProtocol()
 
 
 class CPort(tcp.Port):
@@ -21,10 +22,11 @@ class CClient(ctcp.TCPTransportMixin, tcp.Client):
 
     def __init__(self, *args, **kwargs):
         tcp.Client.__init__(self, *args, **kwargs)
+        ctcp.TCPTransportMixin.__init__(self, self)
     
     def _connectDone(self):
         tcp.Client._connectDone(self)
-        ctcp.TCPTransportMixin.__init__(self, self)
+        self.initProtocol()
 
 
 class CConnector(tcp.Connector):

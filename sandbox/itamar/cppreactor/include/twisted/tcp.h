@@ -20,12 +20,13 @@ namespace Twisted
     {
     private:
 	Protocol* protocol;
-	PyObject* self;
+	object self;
 	int sockfd;
 	char* buffer;
 	size_t buflen;
     public:
 	TCPTransport(object self);
+	void initProtocol(); // call when "self.protocol" exists.
 	~TCPTransport() {}
 	void setReadBuffer(char* buffer, size_t buflen) {
 	    this->buffer = buffer;
@@ -33,7 +34,7 @@ namespace Twisted
 	}
 	object doRead();
 	void write(Deallocator* d, char* buf, int buflen);
-	void loseConnection() { call_method<void>(self, "loseConnection"); }
+	void loseConnection() { self.attr("loseConnection")(); }
     };
 
     class Protocol

@@ -11,10 +11,17 @@ static object None = import("__builtin__").attr("None");
 
 Twisted::TCPTransport::TCPTransport(object self)
 {
-    this->self = self.ptr();
+    this->self = self;
+}
+
+void Twisted::TCPTransport::initProtocol()
+{
     extract<Twisted::Protocol*> pchecker(self.attr("protocol"));
     if (pchecker.check()) {
 	this->protocol = pchecker();
+	if (this->protocol == NULL) {
+	    // XXX throw exception.
+	}
 	this->protocol->init(object(self.attr("protocol")).ptr());
 	this->sockfd = extract<int>(self.attr("fileno")());
     } else {
@@ -24,7 +31,7 @@ Twisted::TCPTransport::TCPTransport(object self)
 
 object Twisted::TCPTransport::doRead()
 {
-    if (protocol) {
+    if (protocol && (! dict(self.attr("__dict__")).has_key("doRead"))) {
 	if (buflen == 0) {
 	    protocol->bufferFull();
 	    return None;
@@ -42,7 +49,7 @@ object Twisted::TCPTransport::doRead()
 	    return import("twisted.internet.main").attr("CONNECTION_LOST");
 	}
     } else {
-	return import("twisted.internet.tcp").attr("Connection").attr("doRead")(object(extract<object>(self)));
+	return import("twisted.internet.tcp").attr("Connection").attr("doRead")(self);
     }
     return None;
 }
@@ -150,7 +157,7 @@ void Twisted::TCPTransport::write(Deallocator* d, char* buf, int buflen)
     if (PyTuple_SetItem(tup, 0, b) < 0) {
 	return;
     }
-    result = PyObject_CallMethod(self, "write", "O", tup);
+    result = PyObject_CallMethod(self.ptr(), "write", "O", tup);
     Py_XDECREF(result);
     Py_DECREF(tup);
 }
@@ -160,6 +167,7 @@ void Twisted::TCPTransport::write(Deallocator* d, char* buf, int buflen)
 BOOST_PYTHON_MODULE(tcp)
 {
     class_<TCPTransport>("TCPTransportMixin", init<object>())
+	.def("initProtocol", &TCPTransport::initProtocol)
 	.def("doRead", &TCPTransport::doRead)
 	;
     class_<Protocol, bases<>, boost::noncopyable>("Protocol", no_init)
