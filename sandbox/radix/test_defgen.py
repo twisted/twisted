@@ -39,10 +39,27 @@ class DefGenTests(unittest.TestCase):
     def testBasics(self):
         self.assertEquals(util.wait(self._genWoosh()), "WOOSH")
 
-    def _genError(self):
-        yield waitForDeferred(getThing())
-        1/0
-    _genError = deferredGenerator(_genError)
 
     def testBuggyGen(self):
-        self.assertRaises(ZeroDivisionError, util.wait, self._genError())
+        def _genError():
+            yield waitForDeferred(getThing())
+            1/0
+        _genError = deferredGenerator(_genError)
+
+        self.assertRaises(ZeroDivisionError, util.wait, _genError())
+
+
+    def testNothing(self):
+        def _genNothing():
+            if 0: yield 1
+        _genNothing = deferredGenerator(_genNothing)
+
+        self.assertEquals(util.wait(_genNothing()), None)
+
+    def testDeferredYielding(self):
+        # See the comment _deferGenerator about d.callback(Deferred).        
+        def _genDeferred():
+            yield getThing()
+        _genDeferred = deferredGenerator(_genDeferred)
+
+        self.assertRaises(TypeError, util.wait, _genDeferred())

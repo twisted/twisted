@@ -3,7 +3,7 @@
 
 from twisted.python import log
 
-from twisted.internet.defer import Deferred
+from twisted.internet.defer import Deferred, fail
 
 class waitForDeferred:
     """
@@ -30,7 +30,14 @@ class waitForDeferred:
     generator functions and converts it into a function that returns a
     Deferred. The result of the Deferred will be the last
     value that your generator yielded (remember that 'return result' won't
-    work; use 'yield result; return' in place of that). The Deferred may also
+    work; use 'yield result; return' in place of that).
+
+    Note that not yielding anything from your generator will make the
+    Deferred result in None. Yielding a Deferred from your generator
+    is also an error condition; always yield waitForDeferred(d)
+    instead.
+
+    The Deferred returned from your deferred generator may also
     errback if your generator raised an exception.
 
         def thingummy():
@@ -52,7 +59,8 @@ class waitForDeferred:
     the 'blocking' style to a Deferred.
     """
     def __init__(self, d):
-        assert isinstance(d, Deferred), "You must give waitForDeferred a Deferred. You gave me %r." % (d,)
+        if not isinstance(d, Deferred):
+            raise TypeError("You must give waitForDeferred a Deferred. You gave it %r." % (d,))
         self.d = d
 
     def getResult(self):
@@ -74,6 +82,14 @@ def _deferGenerator(g, deferred=None, result=None):
     except:
         deferred.errback()
         return deferred
+
+    # Deferred.callback(Deferred) raises an error; we catch this case
+    # early here and give a nicer error message to the user in case
+    # they yield a Deferred. Perhaps eventually these semantics may
+    # change.
+    if isinstance(result, Deferred):
+        return fail(TypeError("Yield waitForDeferred(d), not d!"))
+
     if isinstance(result, waitForDeferred):
         def gotResult(r):
             result.result = r
@@ -82,8 +98,6 @@ def _deferGenerator(g, deferred=None, result=None):
             result.failure = f
             _deferGenerator(g, deferred, f)
         result.d.addCallbacks(gotResult, gotError)
-        # This shouldn't ever really happen
-        result.d.addErrback(log.err)
     else:
         _deferGenerator(g, deferred, result)
     return deferred
