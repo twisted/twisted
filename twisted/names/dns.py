@@ -138,7 +138,7 @@ class SentQuery:
             return
         process = getattr(self, 'processAnswer_%d' % self.type, None)
         if process is None:
-            self.errback(failure.Failure(AttributeError("prcoessAnswer_%s" %
+            self.errback(failure.Failure(AttributeError("processAnswer_%s" %
                                                         self.type)))
             return
         process(message)
