@@ -13,7 +13,7 @@ class FlashConduit(LineReceiver):
 
     def connectionLost(self, reason):
         print "connection lost"
-        self.lp.unhookOutputConduit()
+        #self.lp.unhookOutputConduit()
 
     def lineReceived(self, line):
         session = self.factory.site.getSession(line)
@@ -23,6 +23,9 @@ class FlashConduit(LineReceiver):
     def writeScript(self, data):
         #print "writing javascript", data
         self.transport.write(data + '\0')
+    
+    def finish(self):
+        pass
 
 
 class FlashConduitFactory(Factory):
