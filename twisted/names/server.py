@@ -85,6 +85,7 @@ class DNSServerFactory(protocol.ServerFactory):
     def messageReceived(self, message, protocol, address = None):
         answers = []
         for q in message.queries:
+            print 'Looking up results for query ', q.name, ' : ', dns.QUERY_TYPES[q.type]
             for a in self.authorities:
                 if a.records.has_key(str(q.name).lower()):
                     for r in a.records[str(q.name).lower()]:
@@ -92,7 +93,8 @@ class DNSServerFactory(protocol.ServerFactory):
                             answers.append(dns.RRHeader(str(q.name), q.type, q.cls, 10))
                             answers[-1].payload = r
         message.answers = answers
-        print repr(message.toStr())
+        message.answer = 1
+        message.auth = 1
         try:
             protocol.writeMessage(message)
         except TypeError:
