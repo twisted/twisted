@@ -67,6 +67,8 @@ install-stamp: build-stamp
 	               debian/twisted-doc/usr/share/doc/twisted-doc/howto/
 	install -m 644 doc/howto/*.xhtml \
 	               debian/twisted-doc/usr/share/doc/twisted-doc/howto/
+	install -m 644 doc/howto/stylesheet.css \
+	               debian/twisted-doc/usr/share/doc/twisted-doc/howto/
 	cp -ar doc/howto/listings/ \
 	               debian/twisted-doc/usr/share/doc/twisted-doc/howto/
 	install -m 644 doc/specifications/*.xhtml \
