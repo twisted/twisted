@@ -124,16 +124,16 @@ class SentQuery:
         self.done = 1
         self.removeAll()
         if not message.answers:
-            errback()
+            self.errback()
         else:
             answer = random.choice(message.answers)
             self.callback(string.join(map(str, map(ord, answer.data)), "."))
 
     def timeOut(self):
-        self.done = 1
         if not self.done:
             self.removeAll()
             self.errback()
+        self.done = 1
 
     def removeAll(self):
         for id in self.ids:
