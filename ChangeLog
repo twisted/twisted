@@ -1,3 +1,9 @@
+2002-12-09  Dave Peticolas  <dave@krondo.com>
+
+	* twisted/enterprise/util.py: handle None as null
+
+	* twisted/internet/interfaces.py: add missing 'self' argument
+
 2002-12-08  Dave Peticolas  <dave@krondo.com>
 
 	* pyunit/unittest.py: add missing 'self.' prefix to data member
