@@ -52,11 +52,6 @@ register("Twisted Names",
          description="DNS services for Twisted.",
          type='coil')
 
-## Pending making this realistically work...
-##register("Twisted Forum",
-##         "twisted.forum.service",
-##         description="Web-based threaded forum for Twisted.")
-
 register("Twisted Web Automated TAP builder",
          "twisted.tap.web",
          description="automated TAP building",
