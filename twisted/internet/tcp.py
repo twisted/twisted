@@ -32,6 +32,7 @@ import socket
 import sys
 import string
 import select
+import operator
 
 if os.name == 'nt':
     EINVAL      = 10022
@@ -145,7 +146,7 @@ class Connection(abstract.FileDescriptor, styles.Ephemeral):
         return self.logstr
 
     def getTcpNoDelay(self):
-        return self.socket.getsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY)
+        return operator.truth(self.socket.getsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY))
     
     def setTcpNoDelay(self, enabled):
         self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, enabled)
