@@ -3,7 +3,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.12 $"[11:-2]
+__version__ = "$Revision: 1.13 $"[11:-2]
 
 import random
 import time
@@ -57,7 +57,7 @@ class GuardSession(components.Componentized):
     def setClientForService(self, ident, perspective, client, service):
         if self.services.has_key(service):
             p, c, i = self.services[service]
-            p.detached(c)
+            p.detached(c, ident)
         else:
             self.services[service] = perspective, client, ident
             perspective.attached(client, ident)
