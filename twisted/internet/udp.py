@@ -132,11 +132,7 @@ class Connection(abstract.FileDescriptor,
 
 
 class Port(abstract.FileDescriptor):
-    """I am a UDP server port, listening for packets.
-
-    When a packet is received, I will call my factory's packetReceived
-    with the packet and an address.
-    """
+    """I am a UDP server port, listening for packets."""
 
     sessionno = 0
 
@@ -194,10 +190,7 @@ class Port(abstract.FileDescriptor):
         return transport
 
     def doRead(self):
-        """Called when my socket is ready for reading.
-
-        This reads a packet, calls self.protocol() to handle it.
-        """
+        """Called when my socket is ready for reading."""
         try:
             data, addr = self.socket.recvfrom(self.maxPacketSize)
             transport = self.createConnection(addr)
