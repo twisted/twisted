@@ -488,4 +488,36 @@ class WriteDataTestCase(PortCleanerUpper):
                             "Goodbye", " cruel", " world", "\n"])
         self.failUnless(clientF.data == expected,
                         "client didn't receive all the data it expected")
+
+class ConnectionLosingProtocol(protocol.Protocol):
+    def connectionMade(self):
+        self.transport.loseConnection()
+        self.master._connectionMade()
+
+class ProperlyCloseFilesTestCase(unittest.TestCase):
+
+    def setUp(self):
+        f = protocol.ServerFactory()
+        f.protocol = protocol.Protocol
+        self.listener = reactor.listenTCP(0, f)
         
+        f = protocol.ClientFactory()
+        f.protocol = ConnectionLosingProtocol
+        f.protocol.master = self
+        self.connector = (lambda p=self.listener.getHost()[2]:
+            reactor.connectTCP('localhost', p, f))
+
+        self.totalConnections = 0
+    
+    def testProperlyCloseFiles(self):
+        self.connector()
+        while self.totalConnections < 2048:
+            reactor.iterate(0.01)
+
+    def _connectionMade(self):
+        self.totalConnections += 1
+        self.connector()
+        print 'connection made'
+
+    def tearDown(self):
+        self.listener.stopListening()
