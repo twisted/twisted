@@ -244,6 +244,10 @@ def onConnect():
 
     if isinstance(conn, SSHConnection) and not options['nocache']:
         filename = os.path.expanduser("~/.conch-%(user)s-%(host)s-%(port)s" % options)
+        pidfile = filename + ".pid"
+        if not os.path.exists(pidfile) and os.path.exists(filename):
+            # dead server, unlink the socket
+            os.unlink(filename)
         try:
             reactor.listenUNIX(filename, SSHUnixServerFactory(), mode = 0600)
         except CannotListenError:
@@ -819,7 +823,7 @@ class SSHSession(channel.SSHChannel):
             c.dataReceived = self.handleInput
         else:
             c.dataReceived = self.write
-        c.connectionLost = self.sendEOF
+        c.connectionLost = lambda x=None,s=self:s.sendEOF()
         self.stdio = stdio.StandardIO(c)
         if options['subsystem']:
             self.conn.sendRequest(self, 'subsystem', \
