@@ -278,6 +278,7 @@ class IRCClient(basic.LineReceiver):
     def setNick(self, nickname):
         self.nickname = nickname
         self.sendLine("NICK %s" % nickname)
+        self.sendLine("USER %s foo bar :%s" % (nickname, self.realname))
 
     ### user input commands, client->client
 
