@@ -1,0 +1,58 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<title>Trial: Unittesting in Twisted</title>
+</head>
+
+<body>
+	<h1>Trial: Unittesting in Twisted</h1>
+	
+	<p>Twisted (as you may know), is a distributed software project, and in
+	order to maintain the quality of the library, the core development team has
+	established a policy: &qt;If you check in code, you must provide a test to
+	ensure that it is functioning correctly&qt;. Patches from users must also
+	come with unittests if they are to be applied to the code base. Therefore,
+	it is fairly important that everyone understand how to use the Twisted
+	unittesting framework, <strong>trial</strong>. This is intended to be a
+	guide mainly for people who are familiar with unittesting, and who are
+	interested in using trial to test event-driven software. I'm also going to
+	be going over the new features in the 2.0 release of trial, and I'm going to
+	share some &qt;best practices&qt;, so that you can avoid common errors that
+	lead to test hangups and other confusing nastiness. 
+	</p>
+
+	<p>I will <strong>not</strong> however waste any breath on the importance of
+	unittesting. I will only quote an exchange I had with JP Calderone, on first
+	discovering the power of tests:
+
+	<quote>
+	slyphon%gt; wow, unittests are *awesome*
+	exarkun%gt; yeah, how else would you know when you're *done*?
+	</quote>
+	</p>
+
+	<h1>The Basics</h1>
+	<h2>The unittest Module</h2>
+
+	<h3>setUp/tearDown</h3>
+
+	<p>Any test in twisted begins by importing
+	<code>twisted.trial.unittest</code> and subclassing the
+	<code>TestCase</code> class. This class provides you with several important
+	features for setting up and tearing down your classes and methods as you run
+	through a test. There are two pairs of methods, setUpClass/tearDownClass and
+	setUp/tearDown, all are optional. When trial runs your code, it runs the
+	setUpClass once, setUp before each of your test methods, tearDown after each
+	of your test methods, and then tearDownClass after all test methods have
+	been run.
+	</p>
+
+	<!--
+	changes to global state should go in suc/tdc 
+	-->
+</body>
+</html>
+

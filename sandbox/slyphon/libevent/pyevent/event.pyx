@@ -74,7 +74,7 @@ cdef int __event_sigcb():
 cdef void __event_handler(int fd, short evtype, void *arg):
     (<object>arg).__callback(evtype)
 
-cdef class Event:
+cdef class event:
     """Event(callback, args=None, evtype=0, handle=None) -> event object
     Read(handle, callback, *args) -> event object
     Write(handle, callback, *args) -> event object
@@ -171,25 +171,25 @@ cdef class Event:
         return '<event flags=0x%x, handle=%s, callback=%s, args=%s>' % \
                (self.ev.ev_flags, self.handle, self.callback, self.args)
 
-class Read(Event):
+class read(event):
     def __init__(self, handle, callback, *args):
-        Event.__init__(self, callback, args, EV_READ, handle)
+        event.__init__(self, callback, args, EV_READ, handle)
 
-class Write(Event):
+class write(event):
     def __init__(self, handle, callback, *args):
-        Event.__init__(self, callback, args, EV_WRITE, handle)
+        event.__init__(self, callback, args, EV_WRITE, handle)
 
-class IO(Event):
+class io(event):
     def __init__(self, handle, callback, *args):
-        Event.__init__(self, callback, args, EV_READ|EV_WRITE, handle)
+        event.__init__(self, callback, args, EV_READ|EV_WRITE, handle)
 
-class Signal(Event):
+class signal(event):
     def __init__(self, sig, callback, *args):
-        Event.__init__(self, callback, args, EV_SIGNAL, sig)
+        event.__init__(self, callback, args, EV_SIGNAL, sig)
 
-class Timer(Event):
+class timer(event):
     def __init__(self, callback, *args):
-        Event.__init__(self, callback, args)
+        event.__init__(self, callback, args)
 
 def init():
     """Initialize event queue."""
@@ -197,11 +197,11 @@ def init():
         event_init()
         __event_inited = 1
 
-def add(Event ev, double timeout=0.0):
+def add(event ev, double timeout=0.0):
     """Add the specified event to the event queue, with an optional timeout."""
     ev.add(timeout)
 
-def delete(Event ev):
+def delete(event ev):
     """Delete the specified event."""
     ev.delete()
 
