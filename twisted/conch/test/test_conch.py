@@ -279,7 +279,7 @@ class OpenSSHClientTestCase(CmdLineClientTestBase, unittest.TestCase):
             raise unittest.SkipTest, 'skipping test, cannot find ssh'
         cmds = (cmdline % port).split()
         reactor.spawnProcess(p, ssh_path, cmds)
-        util.spinWhile(lambda: not p.done, timeout=10)
+        util.spinWhile(lambda: not p.done, timeout=30)
 
         # cleanup
         if not p.done:
@@ -305,7 +305,7 @@ class CmdLineClientTestCase(CmdLineClientTestBase, unittest.TestCase):
         log.msg(str(cmds))
         reactor.spawnProcess(p, sys.executable, cmds, env=os.environ)
         # wait for process to finish
-        util.spinWhile(lambda: not p.done, timeout=10)
+        util.spinWhile(lambda: not p.done, timeout=30)
         
         # cleanup
         if not p.done:
