@@ -14,7 +14,7 @@ from twisted.python.runtime import platformType
 from twisted.internet import defer, reactor, protocol, error, threads
 from twisted.protocols import loopback
 from twisted.trial import unittest, reporter, util, runner, itrial
-from twisted.trial.test import trialtest1, pyunit, trialtest3, trialtest4, common
+from twisted.trial.test import trialtest1, pyunit, timeoutAttr, suppression, trialtest4, common
 
 # this is ok, the module has been designed for this usage
 from twisted.trial.assertions import *
@@ -151,7 +151,6 @@ class FunctionalTest(common.RegistryBaseMixin, unittest.TestCase):
 
 #:    testBrokenTearDownClass.todo = "should tearDownClass failure fail the test method?"
 
-
     def testHiddenException(self):
         self.suite.addMethod(trialtest1.DemoTest.testHiddenException)
         self.suite.run()
@@ -179,10 +178,10 @@ class FunctionalTest(common.RegistryBaseMixin, unittest.TestCase):
 
     def testClassTimeoutAttribute(self):
         """test to make sure that class-attribute timeout works"""
-        self.suite.addTestClass(trialtest3.TestClassTimeoutAttribute)
+        self.suite.addTestClass(timeoutAttr.TestClassTimeoutAttribute)
         self.suite.run()
         assert_(self.tm.errors)
-        assert_(isinstance(self.tm.errors[0].value, trialtest3.ClassTimeout))
+        assert_(isinstance(self.tm.errors[0].value, timeoutAttr.ClassTimeout))
 
     def testCorrectNumberTestReporting(self):
         """make sure trial reports the correct number of tests run (issue 770)"""
@@ -192,35 +191,35 @@ class FunctionalTest(common.RegistryBaseMixin, unittest.TestCase):
 
     def testSuppressMethod(self):
         """please ignore the following warnings, we're testing method-level warning suppression"""
-        self.suite.addMethod(trialtest3.TestSuppression.testSuppressMethod)
+        self.suite.addMethod(suppression.TestSuppression.testSuppressMethod)
         self.suite.run()
-        assertNotSubstring(trialtest3.METHOD_WARNING_MSG, self.stdio)
-        assertSubstring(trialtest3.CLASS_WARNING_MSG, self.stdio)
-        assertSubstring(trialtest3.MODULE_WARNING_MSG, self.stdio)
+        assertNotSubstring(suppression.METHOD_WARNING_MSG, self.stdio)
+        assertSubstring(suppression.CLASS_WARNING_MSG, self.stdio)
+        assertSubstring(suppression.MODULE_WARNING_MSG, self.stdio)
 
     def testSuppressClass(self):
         """please ignore the following warnings, we're testing class-level warning suppression"""
-        self.suite.addMethod(trialtest3.TestSuppression.testSuppressClass)
+        self.suite.addMethod(suppression.TestSuppression.testSuppressClass)
         self.suite.run()
-        assertSubstring(trialtest3.METHOD_WARNING_MSG, self.stdio)
-        assertNotSubstring(trialtest3.CLASS_WARNING_MSG, self.stdio)
-        assertSubstring(trialtest3.MODULE_WARNING_MSG, self.stdio)
+        assertSubstring(suppression.METHOD_WARNING_MSG, self.stdio)
+        assertNotSubstring(suppression.CLASS_WARNING_MSG, self.stdio)
+        assertSubstring(suppression.MODULE_WARNING_MSG, self.stdio)
 
     def testSuppressModule(self):
         """please ignore the following warnings, we're testing module-level warning suppression"""
-        self.suite.addMethod(trialtest3.TestSuppression2.testSuppressModule)
+        self.suite.addMethod(suppression.TestSuppression2.testSuppressModule)
         self.suite.run()
-        assertSubstring(trialtest3.METHOD_WARNING_MSG, self.stdio)
-        assertSubstring(trialtest3.CLASS_WARNING_MSG, self.stdio)
-        assertNotSubstring(trialtest3.MODULE_WARNING_MSG, self.stdio)
+        assertSubstring(suppression.METHOD_WARNING_MSG, self.stdio)
+        assertSubstring(suppression.CLASS_WARNING_MSG, self.stdio)
+        assertNotSubstring(suppression.MODULE_WARNING_MSG, self.stdio)
 
     def testOverrideSuppressClass(self):
         """please ignore the following warnings, we're testing override of warning suppression"""
-        self.suite.addMethod(trialtest3.TestSuppression.testOverrideSuppressClass)
+        self.suite.addMethod(suppression.TestSuppression.testOverrideSuppressClass)
         self.suite.run()
-        assertSubstring(trialtest3.CLASS_WARNING_MSG, self.stdio)
-        assertSubstring(trialtest3.MODULE_WARNING_MSG, self.stdio)
-        assertSubstring(trialtest3.METHOD_WARNING_MSG, self.stdio)
+        assertSubstring(suppression.CLASS_WARNING_MSG, self.stdio)
+        assertSubstring(suppression.MODULE_WARNING_MSG, self.stdio)
+        assertSubstring(suppression.METHOD_WARNING_MSG, self.stdio)
 
     def testImportErrorsFailRun(self):
         self.suite.addModule('twisted.trial.test.importErrors')

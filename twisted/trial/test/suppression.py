@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.trial.test.test_trial -*-
 
 import cPickle as pickle
 import warnings
@@ -11,9 +12,9 @@ from twisted.python import log, failure
 from twisted.internet import defer, reactor
 
 
-
-# test to make sure that warning supression works at the module, -------------
-# method, and class levels
+""" 
+test to make sure that warning supression works at the module, method, and class levels
+"""
 
 METHOD_WARNING_MSG = "method warning message"
 CLASS_WARNING_MSG = "class warning message"
@@ -59,19 +60,4 @@ class TestSuppression2(unittest.TestCase, EmitMixin):
 
 suppress = [util.suppress(message=MODULE_WARNING_MSG)]
 
-
-# -------------------------------
-
-class ClassTimeout(Exception):
-    pass
-
-class TestClassTimeoutAttribute(common.BaseTest, unittest.TestCase):
-    def setUp(self):
-        self.d = defer.Deferred()
-
-    def testMethod(self):
-        self.methodCalled = True
-        return self.d
-
-TestClassTimeoutAttribute.timeout = 0.2, "the class attribute has reigned supreme", ClassTimeout
 
