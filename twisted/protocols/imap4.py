@@ -39,6 +39,33 @@ def maybeDeferred(obj, cb, eb, cbArgs, ebArgs):
     else:
         cb(obj, *cbArgs)
 
+class Command:
+    _1_RESPONSES = ('CAPABILITY', 'LIST', 'LSUB', 'STATUS', 'SEARCH')
+    _2_RESPONSES = ('EXISTS', 'EXPUNGE', 'FETCH')
+    defer = None
+    
+    def __init__(self, command, args='', continuation=None, wantResponse=()):
+        self.command = command
+        self.args = args
+        self.continuation = continuation
+        self.wantResponse = wantResponse
+        self.lines = []
+    
+    def finish(self, lastLine, unusedCallback):
+        send = []
+        unuse = []
+        for L in self.lines:
+            names = L.split()
+            N = len(names)
+            if (N >= 1 and names[0] in self._1_RESPONSES or
+                N >= 2 and names[1] in self._2_RESPONSES):
+                send.append(L)
+            else:
+                unuse.append(L)
+        self.defer.callback((send, lastLine))
+        if unuse:
+            unusedCallback(unuse)
+
 class IMAP4Exception(Exception):
     def __init__(self, *args):
         Exception.__init__(self, *args)
@@ -48,7 +75,6 @@ class IllegalClientResponse(IMAP4Exception): pass
 class IllegalOperation(IMAP4Exception): pass
 
 class IMAP4Server(basic.LineReceiver):
-
     """
     Protocol implementation for an IMAP4rev1 server.
 
@@ -801,15 +827,14 @@ class IMAP4Client(basic.LineReceiver):
                 self.transport.loseConnection()
                 raise IllegalServerResponse(tag + ' ' + rest)
             else:
+                cmd = self.tags[self.waiting]
                 if tag == '+':
-                    d, lines, continuation = self.tags[self.waiting]
-                    continuation.callback(rest)
-                    self.tags[self.waiting] = (d, lines, None)
+                    cmd.continuation.callback(rest)
                 else:
-                    self.tags[self.waiting][1].append(rest)
+                    cmd.lines.append(rest)
         else:
             try:
-                d, lines, _ = self.tags[tag]
+                cmd = self.tags[tag]
             except KeyError:
                 # XXX - This is rude.
                 self.transport.loseConnection()
@@ -818,7 +843,7 @@ class IMAP4Client(basic.LineReceiver):
                 status, line = rest.split(None, 1)
                 if status == 'OK':
                     # Give them this last line, too
-                    d.callback((lines, rest))
+                    cmd.finish(line, self._extraInfo)
                 else:
                     d.errback(IMAP4Exception(line))
                 del self.tags[tag]
@@ -827,21 +852,24 @@ class IMAP4Client(basic.LineReceiver):
 
     def _flushQueue(self):
         if self.queued:
-            d, t, command, args, continuation = self.queued.pop(0)
-            self.tags[t] = (d, [], continuation)
+            d, t, command, args, continuation, wantResp = self.queued.pop(0)
+            self.tags[t] = (d, [], continuation, wantResp)
             self.sendLine(' '.join((t, command, args)))
             self.waiting = t
+    
+    def _extraInfo(self, lines):
+        print 'Extra crap', lines
 
-    def sendCommand(self, command, args = '', continuation=None):
-        d = defer.Deferred()
+    def sendCommand(self, cmd):
+        cmd.defer = defer.Deferred()
         t = self.makeTag()
         if self.waiting:
-            self.queued.append((d, t, command, args, continuation))
-            return d
-        self.tags[t] = (d, [], continuation)
-        self.sendLine(' '.join((t, command, args)))
+            self.queued.append(cmd)
+            return cmd.defer
+        self.tags[t] = cmd
+        self.sendLine(' '.join((t, cmd.command, cmd.args)))
         self.waiting = t
-        return d
+        return cmd.defer
 
     def getCapabilities(self):
         """Request the capabilities available on this server.
@@ -855,7 +883,10 @@ class IMAP4Client(basic.LineReceiver):
         """
         if self._capCache is not None:
             return defer.succeed(self._capCache)
-        d = self.sendCommand('CAPABILITY')
+        cmd = 'CAPABILITY'
+        args = ''
+        resp = ('CAPABILITY',)
+        d = self.sendCommand(Command(cmd, args, wantResponse=resp))
         d.addCallback(self._cbCapabilities)
         return d
 
@@ -881,7 +912,7 @@ class IMAP4Client(basic.LineReceiver):
         @return: A deferred whose callback will be invoked with None
         when the proper server acknowledgement has been received.
         """
-        d = self.sendCommand('LOGOUT')
+        d = self.sendCommand(Command('LOGOUT', wantResponse=('BYE',)))
         d.addCallback(self._cbLogout)
         return d
 
@@ -899,7 +930,7 @@ class IMAP4Client(basic.LineReceiver):
         @return: A deferred whose callback will be invoked with a list
         of untagged status updates the server responds with.
         """
-        d = self.sendCommand('NOOP')
+        d = self.sendCommand(Command('NOOP'))
         d.addCallback(self._cbNoop)
         return d
 
@@ -936,7 +967,7 @@ class IMAP4Client(basic.LineReceiver):
 
         continuation = defer.Deferred()
         continuation.addCallback(self._cbContinueAuth, scheme, secret)
-        d = self.sendCommand('AUTHENTICATE', scheme, continuation)
+        d = self.sendCommand(Command('AUTHENTICATE', scheme, continuation))
         d.addCallback(self._cbAuth)
         return d
 
@@ -962,7 +993,9 @@ class IMAP4Client(basic.LineReceiver):
         @return: A deferred whose callback is invoked if login is successful
         and whose errback is invoked otherwise.
         """
-        return self.sendCommand('LOGIN', ' '.join((username, password)))
+        cmd = 'LOGIN'
+        args = ' '.join((username, password))
+        return self.sendCommand(Command(cmd, args))
 
     def select(self, mailbox):
         """Select a mailbox
@@ -977,7 +1010,10 @@ class IMAP4Client(basic.LineReceiver):
         information if the select is successful and whose errback is
         invoked otherwise.
         """
-        d = self.sendCommand('SELECT', mailbox)
+        cmd = 'SELECT'
+        args = mailbox
+        resp = ('FLAGS', 'EXISTS', 'RECENT', 'UNSEEN', 'PERMANENTFLAGS')
+        d = self.sendCommand(Command(cmd, args, wantResponse=resp))
         d.addCallback(self._cbSelect)
         return d
 
@@ -994,7 +1030,10 @@ class IMAP4Client(basic.LineReceiver):
         information if the examine is successful and whose errback
         is invoked otherwise.
         """
-        d = self.sendCommand('EXAMINE', mailbox)
+        cmd = 'EXAMINE'
+        args = mailbox
+        resp = 'FLAGS', 'EXISTS', 'RECENT', 'UNSEEN', 'PERMANENTFLAGS'
+        d = self.sendCommand(Command(cmd, args, wantResponse=resp))
         d.addCallback(self._cbSelect)
         return d
 
@@ -1066,7 +1105,7 @@ class IMAP4Client(basic.LineReceiver):
         @return: A deferred whose callback is invoked if the mailbox creation
         is successful and whose errback is invoked otherwise.
         """
-        return self.sendCommand('CREATE', name)
+        return self.sendCommand(Command('CREATE', name))
 
     def delete(self, name):
         """Delete a mailbox
@@ -1080,7 +1119,7 @@ class IMAP4Client(basic.LineReceiver):
         @return: A deferred whose calblack is invoked if the mailbox is
         deleted successfully and whose errback is invoked otherwise.
         """
-        return self.sendCommand('DELETE', name)
+        return self.sendCommand(Command('DELETE', name))
 
     def rename(self, oldname, newname):
         """Rename a mailbox
@@ -1097,7 +1136,7 @@ class IMAP4Client(basic.LineReceiver):
         @return: A deferred whose callback is invoked if the rename is
         successful and whose errback is invoked otherwise.
         """
-        return self.sendCommand('RENAME', ' '.join((oldname, newname)))
+        return self.sendCommand(Command('RENAME', ' '.join((oldname, newname))))
 
     def subscribe(self, name):
         """Add a mailbox to the subscription list
@@ -1111,7 +1150,7 @@ class IMAP4Client(basic.LineReceiver):
         @return: A deferred whose callback is invoked if the subscription
         is successful and whose errback is invoked otherwise.
         """
-        return self.sendCommand('SUBSCRIBE', name)
+        return self.sendCommand(Command('SUBSCRIBE', name))
 
     def unsubscribe(self, name):
         """Remove a mailbox from the subscription list
@@ -1125,7 +1164,7 @@ class IMAP4Client(basic.LineReceiver):
         @return: A deferred whose callback is invoked if the unsubscription
         is successful and whose errback is invoked otherwise.
         """
-        return self.sendCommand('UNSUBSCRIBE', name)
+        return self.sendCommand(Command('UNSUBSCRIBE', name))
 
     def list(self, reference, wildcard):
         """List a subset of the available mailboxes
@@ -1149,7 +1188,10 @@ class IMAP4Client(basic.LineReceiver):
         third of which is the mailbox name; if the command is unsuccessful,
         the deferred's errback is invoked instead.
         """
-        d = self.sendCommand('LIST', '"%s" "%s"' % (reference, wildcard))
+        cmd = 'LIST'
+        args = '"%s" "%s"' % (reference, wildcard)
+        resp = ('LIST',)
+        d = self.sendCommand(Command(cmd, args, wantResponse=resp))
         d.addCallback(self._cbList, 'LIST')
         return d
 
@@ -1162,7 +1204,10 @@ class IMAP4Client(basic.LineReceiver):
         method, with one slight difference: Only mailboxes which have been
         subscribed can be included in the resulting list.
         """
-        d = self.sendCommand('LSUB', '"%s" "%s"' % (reference, wildcard))
+        cmd = 'LSUB'
+        args = '"%s" "%s"' % (reference, wildcard)
+        resp = ('LSUB',)
+        d = self.sendCommand(Command(cmd, args, wantResponse=resp))
         d.addCallback(self._cbList, 'LSUB')
         return d
 
@@ -1193,7 +1238,10 @@ class IMAP4Client(basic.LineReceiver):
         @return: A deferred whose callback is invoked with the status information
         if the command is successful and whose errback is invoked otherwise.
         """
-        d = self.sendCommand('STATUS', "%s (%s)" % (mailbox, ' '.join(names)))
+        cmd = 'STATUS'
+        args = "%s (%s)" % (mailbox, ' '.join(names))
+        resp = ('STATUS',)
+        d = self.sendCommand(Command(cmd, args, resp))
         d.addCallback(self._cbStatus)
         return d
 
@@ -1242,7 +1290,7 @@ class IMAP4Client(basic.LineReceiver):
         cmd = fmt % (mailbox, ' '.join(flags), date and ' ' or '', date, L)
         continuation = defer.Deferred()
         continuation.addCallback(self._cbContinueAppend, message)
-        d = self.sendCommand('APPEND', cmd, continuation)
+        d = self.sendCommand(Command('APPEND', cmd, continuation))
         d.addCallback(self._cbAppend)
         return d
 
@@ -1261,7 +1309,7 @@ class IMAP4Client(basic.LineReceiver):
         @return: A deferred whose callback is invoked when this command
         succeeds or whose errback is invoked if it fails.
         """
-        return self.sendCommand('CHECK')
+        return self.sendCommand(Command('CHECK'))
 
     def close(self):
         """Return the connection to the Authenticated state.
@@ -1276,7 +1324,7 @@ class IMAP4Client(basic.LineReceiver):
         @return: A deferred whose callback is invoked when the command
         completes successfully or whose errback is invoked if it fails.
         """
-        return self.sendCommand('CLOSE')
+        return self.sendCommand(Command('CLOSE'))
 
     def expunge(self):
         """Return the connection to the Authenticate state.
@@ -1292,7 +1340,9 @@ class IMAP4Client(basic.LineReceiver):
         'expunge' responses when this command is successful or whose errback
         is invoked otherwise.
         """
-        d = self.sendCommand('EXPUNGE')
+        cmd = 'EXPUNGE'
+        resp = ('EXPUNGE',)
+        d = self.sendCommand(Command(cmd, wantResponse=resp))
         d.addCallback(self._cbExpunge)
         return d
 
@@ -1321,7 +1371,9 @@ class IMAP4Client(basic.LineReceiver):
         the message sequence numbers return by the search, or whose errback
         will be invoked if there is an error.
         """
-        d = self.sendCommand('SEARCH', ' '.join(queries))
+        cmd = 'SEARCH'
+        args = ' '.join(queries)
+        d = self.sendCommand(Command(cmd, args, wantResponse=(cmd,)))
         d.addCallback(self._cbSearch)
         return d
 
@@ -1675,7 +1727,7 @@ class IMAP4Client(basic.LineReceiver):
         else:
             extra = '<%d.%d>' % (offset, length)
         cmd = fmt % (peek and '.PEEK' or '', number, header, payload, extra)
-        d = self.sendCommand('FETCH', cmd)
+        d = self.sendCommand(Command('FETCH', cmd, wantResponse=('FETCH',)))
         d.addCallback(self._cbFetchSpecific)
         return d
 
@@ -1695,7 +1747,7 @@ class IMAP4Client(basic.LineReceiver):
 
     def _fetch(self, messages, **terms):
         cmd = ' '.join([s.upper() for s in terms.keys()])
-        d = self.sendCommand('FETCH', cmd)
+        d = self.sendCommand(Command('FETCH', cmd, wantResponse=('FETCH',)))
         return d
 
     def setFlags(self, messages, flags, silent=1):
@@ -1765,7 +1817,8 @@ class IMAP4Client(basic.LineReceiver):
         return self._store(messages, silent and '-FLAGS.SILENT' or '-FLAGS', flags)
 
     def _store(self, messages, cmd, flags):
-        d = self.sendCommand('STORE', ' '.join((messages, cmd, '(%s)' % ' '.join(flags))))
+        args = ' '.join((messages, cmd, '(%s)' % ' '.join(flags)))
+        d = self.sendCommand(Command('STORE', args, wantResponse=('FETCH',)))
         d.addCallback(self._cbFetch, lookFor='FLAGS')
         return d
 
@@ -1807,9 +1860,6 @@ def Query(sorted=0, **kwarg):
 
     Among the accepted keywords are:
 
-        message_ids : An iterable of the sequence numbers of messages to
-                      include in the search
-
         all         : If set to a true value, search all messages in the
                       current mailbox
 
@@ -1819,7 +1869,8 @@ def Query(sorted=0, **kwarg):
         bcc         : A substring to search the BCC header field for
 
         before      : Search messages with an internal date before this
-                      value
+                      value.  The given date should be a string in the format
+                      of 'DD-Mon-YYYY'.  For example, '03-Mar-2003'.
 
         body        : A substring to search the body of the messages for
 
@@ -1850,7 +1901,8 @@ def Query(sorted=0, **kwarg):
                       \\Recent
 
         on          : Search messages with an internal date which is on this
-                      date
+                      date.  The given date should be a string in the format
+                      of 'DD-Mon-YYYY'.  For example, '03-Mar-2003'.
 
         recent      : If set to a true value, search for messages flagged with
                       \\Recent
@@ -1859,16 +1911,20 @@ def Query(sorted=0, **kwarg):
                       \\Seen
 
         sentbefore  : Search for messages with an RFC822 'Date' header before
-                      this date
+                      this date.  The given date should be a string in the format
+                      of 'DD-Mon-YYYY'.  For example, '03-Mar-2003'.
 
         senton      : Search for messages with an RFC822 'Date' header which is
-                      on this date
+                      on this date  The given date should be a string in the format
+                      of 'DD-Mon-YYYY'.  For example, '03-Mar-2003'.
 
         sentsince   : Search for messages with an RFC822 'Date' header which is
-                      after this date
+                      after this date.  The given date should be a string in the format
+                      of 'DD-Mon-YYYY'.  For example, '03-Mar-2003'.
 
         since       : Search for messages with an internal date that is after
-                      this date
+                      this date..  The given date should be a string in the format
+                      of 'DD-Mon-YYYY'.  For example, '03-Mar-2003'.
 
         smaller     : Search for messages smaller than this number of octets
 
@@ -1915,10 +1971,10 @@ def Query(sorted=0, **kwarg):
         k = k.upper()
         if k in _SIMPLE_BOOL and v:
            cmd.append(k)
-        elif k not in _NO_QUOTES:
-           cmd.extend([k, '"%s"' % (v,)])
         elif k == 'HEADER':
             cmd.extend([k, v[0], '"%s"' % (v[1],)])
+        elif k not in _NO_QUOTES:
+           cmd.extend([k, '"%s"' % (v,)])
         else:
            cmd.extend([k, '%s' % (v,)])
     if len(cmd) > 1:
@@ -2181,21 +2237,26 @@ class ReadOnlyMailbox(MailboxException):
         return 'Mailbox open in read-only state'
 
 class Account:
-    mboxType = None
-
     mailboxes = None
     subscriptions = None
+    top_id = 0
 
     def __init__(self):
         self.mailboxes = {}
         self.subscriptions = []
+        self.addMailbox('INBOX')
+
+    def allocateID(self):
+        id = self.top_id
+        self.top_id += 1
+        return id
 
     def addMailbox(self, name, mbox = None):
         name = name.upper()
-        if name == 'INBOX' or self.mailboxes.has_key(name):
+        if self.mailboxes.has_key(name):
             raise MailboxCollision, name
         if mbox is None:
-            mbox = self._emptyMailbox()
+            mbox = self._emptyMailbox(name, self.allocateID())
         self.mailboxes[name] = mbox
 
     def create(self, pathspec):
@@ -2211,8 +2272,8 @@ class Account:
             if not pathspec.endswith('/'):
                 raise
 
-    def _emptyMailbox(self):
-        return self.mboxType()
+    def _emptyMailbox(self, name, id):
+        raise NotImplementedError
 
     def select(self, name, readwrite=1):
         return self.mailboxes.get(name.upper())
@@ -2349,7 +2410,7 @@ class IMailbox(components.Interface):
         eventually be passed this dictionary is returned instead.
         """
 
-    def addMessage(self, message, flags, date = None):
+    def addMessage(self, message, flags = (), date = None):
         """Add the given message to this mailbox.
 
         @type message: C{str}
