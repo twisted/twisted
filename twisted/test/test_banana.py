@@ -21,7 +21,7 @@ import cStringIO
 import sys
 # Twisted Imports
 from twisted.spread import banana
-from twisted.protocols import protocol
+from twisted.internet import protocol
 
 class MathTestCase(unittest.TestCase):
     def testInt2b128(self):

@@ -21,7 +21,7 @@ An example of using the FTP client
 
 # Twisted imports
 from twisted.protocols.ftp import FTPClient, FTPFileListProtocol
-from twisted.protocols.protocol import Protocol
+from twisted.internet.protocol import Protocol
 from twisted.python import usage
 
 # Standard library imports

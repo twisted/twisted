@@ -17,7 +17,8 @@
 
 from twisted.words import service, tendril
 from pyunit import unittest
-from twisted.protocols import irc, protocol
+from twisted.protocols import irc
+from twisted.internet import protocol
 import StringIO
 
 tendril._LOGALL = 0
@@ -84,7 +85,7 @@ class DummyGroup:
 class DummyService:
     def __init__(self, name):
         self.serviceName = name
-        self.participants = {}
+        self.perspectives = {}
         self.groups = {}
 
     def getGroup(self, name):
@@ -96,15 +97,15 @@ class DummyService:
 
     def getPerspectiveNamed(self, name):
         try:
-            p = self.participants[name]
+            p = self.perspectives[name]
         except KeyError:
             raise service.UserNonexistantError(name)
         else:
             return p
 
     def createParticipant(self, name):
-        self.participants[name] = DummyPerspective(name, self)
-        return self.participants[name]
+        self.perspectives[name] = DummyPerspective(name, self)
+        return self.perspectives[name]
 
 class StringIOWithoutClosing(StringIO.StringIO):
     zeroAt = 0

@@ -26,7 +26,8 @@ from twisted.web import widgets
 from twisted.python import roots, components, reflect
 from twisted.python.plugin import getPlugIns
 from twisted.web import widgets, html
-from twisted.protocols import protocol, http
+from twisted.protocols import http
+from twisted.internet import protocol
 
 # Sibling Imports
 import coil, app

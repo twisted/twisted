@@ -25,7 +25,7 @@ from cStringIO import StringIO
 from pyunit import unittest
 
 from twisted.spread import pb, util
-from twisted.protocols import protocol
+from twisted.internet import protocol
 from twisted.internet.app import Application
 from twisted.python import failure, log
 from twisted.cred import identity

@@ -18,7 +18,8 @@
 """Test HTTP support."""
 
 from pyunit import unittest
-from twisted.protocols import http, protocol, loopback
+from twisted.protocols import http, loopback
+from twisted.internet import protocol
 from twisted.test.test_protocols import StringIOWithoutClosing
 import string, random
 

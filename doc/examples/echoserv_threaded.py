@@ -42,7 +42,7 @@ import threading, Queue
 from twisted.python import threadable
 threadable.init()
 
-from twisted.protocols.protocol import Protocol, Factory
+from twisted.internet.protocol import Protocol, Factory
 from twisted.internet import reactor
 
 ### Threaded Protocol Implementation

@@ -24,7 +24,8 @@ from twisted import mail
 import twisted.mail.protocols
 import twisted.protocols.pop3, twisted.protocols.protocol
 from twisted import protocols
-from twisted.protocols import pop3, protocol
+from twisted.protocols import pop3
+from twisted.internet import protocol
 from twisted.test.test_protocols import StringIOWithoutClosing
 from twisted.protocols import loopback
 import StringIO, string

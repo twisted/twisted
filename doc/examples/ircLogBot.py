@@ -18,8 +18,8 @@
 
 
 # twisted imports
-from twisted.protocols import irc, protocol
-from twisted.internet import main, app
+from twisted.protocols import irc
+from twisted.internet import main, app, protocol
 
 # system imports
 import string, time

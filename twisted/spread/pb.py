@@ -48,8 +48,7 @@ import types
 
 # Twisted Imports
 from twisted.python import log, failure
-from twisted.protocols import protocol
-from twisted.internet import reactor, defer
+from twisted.internet import reactor, defer, protocol
 from twisted.cred import authorizer, service, perspective, identity
 from twisted.persisted import styles
 

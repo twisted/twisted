@@ -17,7 +17,8 @@
 """Telnet-based shell."""
 
 # twisted imports
-from twisted.protocols import telnet, protocol
+from twisted.protocols import telnet
+from twisted.internet import protocol
 from twisted.python import log, failure
 
 # system imports

@@ -3,7 +3,7 @@
 
 from locals import ONLINE, OFFLINE
 
-from twisted.protocols.protocol import Protocol
+from twisted.internet.protocol import Protocol
 
 from twisted.python.reflect import prefixedMethods
 

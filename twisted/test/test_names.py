@@ -24,8 +24,7 @@ import socket
 from pyunit import unittest
 
 from twisted.names import dns
-from twisted.internet import reactor
-from twisted.protocols import protocol
+from twisted.internet import reactor, protocol
 from twisted.python import log
 
 

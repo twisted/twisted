@@ -5,8 +5,8 @@ import string
 from Zope.Publisher.Publish import publish
 from Zope.Publisher.Browser.BrowserRequest import BrowserRequest
 
-from twisted.protocols import protocol, http
-from twisted.internet import reactor
+from twisted.protocols import http
+from twisted.internet import reactor, protocol
 from twisted.python import log
 
 

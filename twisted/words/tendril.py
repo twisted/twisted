@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: tendril.py,v 1.18 2002/07/13 23:46:54 glyph Exp $
+# $Id: tendril.py,v 1.19 2002/07/20 13:30:38 glyph Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -78,7 +78,7 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
 
     realname = 'Tendril'
     versionName = 'Tendril'
-    versionNum = '$Revision: 1.18 $'[11:-2]
+    versionNum = '$Revision: 1.19 $'[11:-2]
     versionEnv = copyright.longversion
 
     helptext = (
@@ -745,7 +745,7 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
         # XXX: This must change if we ever start giving people 'real'
         #    perspectives!
         if not p.identityName:
-            del self.service.participants[p.name]
+            self.service.uncachePerspective(p)
         del self.participants[nick]
 
     def isThisMine(self, sender):

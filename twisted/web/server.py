@@ -41,8 +41,8 @@ NOT_DONE_YET = 1
 
 # Twisted Imports
 from twisted.spread import pb, refpath
-from twisted.internet import reactor
-from twisted.protocols import http, protocol
+from twisted.internet import reactor, protocol
+from twisted.protocols import http
 from twisted.python import log, reflect, roots, failure, components
 from twisted import copyright
 from twisted.cred import util

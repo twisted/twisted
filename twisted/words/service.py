@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.test.test_words -*-
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -17,7 +18,7 @@
 
 
 # System Imports
-import types
+import types, time
 
 # Twisted Imports
 from twisted.spread import pb
@@ -132,6 +133,17 @@ class WordsClientInterface:
         """Tells me a member has left a group.
         """
 
+class Transcript:
+    """I am a transcript of a conversation between multiple parties.
+    """
+    def __init__(self, voice, name):
+        self.chat = []
+        self.voice = voice
+        self.name = name
+    def logMessage(self, voiceName, message, metadata):
+        self.chat.append((time.time(), voiceName, message, metadata))
+    def end(self):
+        self.voice.stopTranscribing(self.name)
 
 class Participant(pb.Perspective, styles.Versioned):
     def __init__(self, name):
@@ -142,20 +154,21 @@ class Participant(pb.Perspective, styles.Versioned):
         self.reverseContacts = []
         self.groups = []
         self.client = None
-        self.info = ""
-
-    persistenceVersion = 1
+        self.loggedNames = {}
+        
+    persistenceVersion = 1 # XXX persistence upgrade for logging!!
 
     def __getstate__(self):
         state = styles.Versioned.__getstate__(self)
         # Assumptions:
         # * self.client is a RemoteReference, or otherwise represents
         #   a transient presence.
-        state["client"] = None
-        # * Because we have no client, we are not online.
-        state["status"] = OFFLINE
-        # * Because we are not online, we are in no groups.
-        state["groups"] = []
+        if isinstance(state["client"], styles.Ephemeral):
+            state["client"] = None
+            # * Because we have no client, we are not online.
+            state["status"] = OFFLINE
+            # * Because we are not online, we are in no groups.
+            state["groups"] = []
 
         return state
 
@@ -173,6 +186,14 @@ class Participant(pb.Perspective, styles.Versioned):
         self.changeStatus(ONLINE)
         return self
 
+    def transcribeConversationWith(self, voiceName):
+        t  = Transcript(self, voiceName)
+        self.loggedNames[voiceName] = t
+        return t
+
+    def stopTranscribing(self, voiceName):
+        del self.loggedNames[voiceName]
+        
     def changeStatus(self, newStatus):
         self.status = newStatus
         for contact in self.reverseContacts:
@@ -240,8 +261,11 @@ class Participant(pb.Perspective, styles.Versioned):
                 if group.name == groupName:
                     self.client.callRemote('setGroupMetadata', group.metadata, group.name)
 
-    def receiveDirectMessage(self, sender, message, metadata):
+    def receiveDirectMessage(self, sender, message, metadata):        
         if self.client:
+            if self.loggedNames.has_key(sender.name):
+                self.loggedNames[sender.name].logMessage(sender.name, message, metadata)
+                
             if metadata:
                 d = self.client.callRemote('receiveDirectMessage', sender.name, message,
                                            metadata)
@@ -283,10 +307,13 @@ class Participant(pb.Perspective, styles.Versioned):
     def directMessage(self, recipientName, message, metadata=None):
         # XXX getPerspectiveNamed is misleading here -- this ought to look up
         # the user to make sure they're *online*, and if they're not, it may
-        # need to query a database.
-        recipient = self.service.getPerspectiveNamed(recipientName)
+        # need to query a database.        
+        recipient = self.service.getPerspectiveNamed(recipientName)        
         recipient.receiveDirectMessage(self, message, metadata or {})
-
+        if self.loggedNames.has_key(recipientName):
+            self.loggedNames[recipientName].logMessage(self.name, message, metadata)
+            
+        
     def groupMessage(self, groupName, message, metadata=None):
         for group in self.groups:
             if group.name == groupName:
@@ -385,21 +412,24 @@ class Group(styles.Versioned):
 class Service(pb.Service, styles.Versioned):
     """I am a chat service.
     """
+
+    perspectiveClass = Participant
+    
     def __init__(self, name, app):
         pb.Service.__init__(self, name, app)
-        self.participants = {}
         self.groups = {}
 
     ## Persistence versioning.
-    persistenceVersion = 2
+    persistenceVersion = 3
 
     def upgradeToVersion1(self):
         from twisted.internet.app import theApplication
         styles.requireUpgrade(theApplication)
         pb.Service.__init__(self, 'twisted.words', theApplication)
 
-    def upgradeToVersion2(self):
-        self._setConfigDispensers()
+    def upgradeToVersion3(self):
+        self.perspectives = self.participants
+        del self.participants
 
     ## Service functionality.
 
@@ -410,21 +440,13 @@ class Service(pb.Service, styles.Versioned):
             self.groups[name] = group
         return group
 
-    def createParticipant(self, name):
-        if not self.participants.has_key(name):
-            log.msg("Created New Participant: %s" % name)
-            p = Participant(name)
-            p.setService(self)
-            self.participants[name] = p
-            return p
+    def createPerspective(self, name):
+        if self.perspectives.has_key(name):
+            raise KeyError("Pariticpant already exists: %s." % name)
+        log.msg("Creating New Participant: %s" % name)
+        return pb.Service.createPerspective(self, name)
 
-    def getPerspectiveNamed(self, name):
-        try:
-            p = self.participants[name]
-        except KeyError:
-            raise UserNonexistantError(name)
-        else:
-            return p
+    createParticipant = createPerspective
 
     def __str__(self):
         s = "<%s in app '%s' at %x>" % (self.serviceName,

@@ -22,14 +22,14 @@ import string
 import socket
 
 # Twisted Imports
-from twisted.protocols import protocol
-from twisted.python import log, defer
+from twisted.internet import protocol
+from twisted.python import log
 from twisted.persisted import styles, marmalade
 from twisted.python.runtime import platform
 from twisted.cred.authorizer import DefaultAuthorizer
 
 # Sibling Imports
-import main
+import main, defer
 
 class _SSLlistener:
     """persistence utility; ignore me

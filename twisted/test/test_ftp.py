@@ -17,7 +17,7 @@
 from pyunit import unittest
 from twisted.protocols import ftp, loopback
 from twisted.internet import reactor
-from twisted.protocols.protocol import Protocol, FileWrapper, Factory
+from twisted.internet.protocol import Protocol, FileWrapper, Factory
 
 try:
     from cStringIO import StringIO

@@ -1,7 +1,7 @@
 
 from twisted.protocols.irc import IRC
 from twisted.python import log
-from twisted.protocols.protocol import Factory
+from twisted.internet.protocol import Factory
 
 class IRCUserInterface(IRC):
     def connectionLost(self):

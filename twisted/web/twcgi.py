@@ -24,8 +24,8 @@ import os
 import sys
 
 # Twisted Imports
-from twisted.protocols import http, protocol
-from twisted.internet import reactor
+from twisted.protocols import http
+from twisted.internet import reactor, protocol
 from twisted.spread import pb
 from twisted.python import log
 

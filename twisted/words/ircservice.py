@@ -25,7 +25,8 @@ import string
 import time
 
 # Twisted Imports
-from twisted.protocols import irc, protocol
+from twisted.protocols import irc
+from twisted.internet import protocol
 from twisted.spread import pb
 from twisted.python import log
 from twisted import copyright

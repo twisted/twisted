@@ -20,7 +20,7 @@ import time
 
 # Twisted Imports
 from twisted.spread import banana
-from twisted.protocols import protocol
+from twisted.internet import protocol
 
 iterationCount = 10000
 

@@ -19,7 +19,7 @@
 """
 
 # Twisted Imports
-from twisted.protocols import protocol
+from twisted.internet import protocol
 from twisted.persisted import styles
 from twisted.python import timeoutqueue, log
 

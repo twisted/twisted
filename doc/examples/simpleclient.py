@@ -19,7 +19,7 @@
 An example client. Run simpleserv.py first before running this.
 """
 
-from twisted.protocols.protocol import Protocol, Factory
+from twisted.internet.protocol import Protocol, Factory
 
 
 # a client protocol

@@ -1,5 +1,5 @@
 from cStringIO import StringIO
-from twisted.protocols.protocol import FileWrapper
+from twisted.internet.protocol import FileWrapper
 
 class IOPump:
     """Utility to pump data between clients and servers for protocol testing.

@@ -16,7 +16,7 @@
 
 from pyunit import unittest
 from twisted.internet import reactor, protocol
-from twisted.python.defer import Deferred
+from twisted.internet.defer import Deferred
 from twisted.python import threadable
 threadable.init(1)
 

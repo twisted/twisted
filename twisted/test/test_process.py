@@ -24,8 +24,7 @@ from pyunit import unittest
 import cStringIO, gzip, os, popen2, time, sys
 
 # Twisted Imports
-from twisted.internet import reactor
-from twisted.protocols import protocol
+from twisted.internet import reactor, protocol
 from twisted.python import util, runtime
 
 class TestProcessProtocol(protocol.ProcessProtocol):

@@ -29,9 +29,10 @@ elif os.name != 'java':
     from errno import EWOULDBLOCK
 
 # Twisted Imports
-from twisted.protocols import protocol
+from twisted.internet import protocol
 from twisted.persisted import styles
-from twisted.python import log, defer
+from twisted.python import log
+from twisted.internet import defer
 
 # Sibling Imports
 import abstract, main

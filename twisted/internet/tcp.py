@@ -52,10 +52,10 @@ elif os.name != 'java':
 # Twisted Imports
 from twisted.internet import protocol
 from twisted.persisted import styles
-from twisted.python import log, defer
+from twisted.python import log
 from twisted.python.runtime import platform
 from twisted.internet.interfaces import IConnector
-
+from twisted.internet import defer
 # Sibling Imports
 import abstract
 import main

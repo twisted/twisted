@@ -45,7 +45,11 @@ def succeed(result):
     d.callback(result)
     return d
 
-def fail(result):
+class _nothing: pass
+
+def fail(result=_nothing):
+    if result is _nothing:
+        result = failure.Failure()
     d = Deferred()
     d.errback(result)
     return d

@@ -18,8 +18,7 @@ import os, string
 from pyunit import unittest
 from twisted.news import news, database
 from twisted.protocols import nntp, loopback
-from twisted.protocols import protocol
-from twisted.internet import reactor
+from twisted.internet import reactor, protocol
 
 ALL_GROUPS = ('alt.test.nntp', 0, 0, 'y')
 GROUP = ('0', '0', '0', 'alt.test.nntp', 'group', 'selected')

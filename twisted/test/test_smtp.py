@@ -22,8 +22,8 @@ Test cases for twisted.smtp module.
 from pyunit import unittest
 import twisted.protocols.protocol, twisted.protocols.smtp
 from twisted import protocols
-from twisted.protocols import loopback, smtp, protocol
-from twisted.internet import defer
+from twisted.protocols import loopback, smtp
+from twisted.internet import defer, protocol
 from twisted.test.test_protocols import StringIOWithoutClosing
 import string
 from cStringIO import StringIO

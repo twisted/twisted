@@ -35,7 +35,7 @@ class ServerContextFactory:
 
 if __name__ == '__main__':
     import echoserv
-    from twisted.protocols.protocol import Factory
+    from twisted.internet.protocol import Factory
     from twisted.internet.app import Application
     from twisted.internet import ssl
     from echoserv_ssl import ServerContextFactory

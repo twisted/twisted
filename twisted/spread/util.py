@@ -34,6 +34,7 @@ class LocalAsRemote:
     """
     A class useful for emulating the effects of remote behavior locally.
     """
+    reportAllTracebacks = 1
     def callRemote(self, name, *args, **kw):
         """Call a specially-designated local method.
 
@@ -41,15 +42,18 @@ class LocalAsRemote:
         sync_x and return its result (which should probably be a
         Deferred).  Second, it will look for a method called async_x,
         which will be called and then have its result (or Failure)
-        automatically wrapped in a Deferred
+        automatically wrapped in a Deferred.
         """
         if hasattr(self, 'sync_'+name):
             return apply(getattr(self, 'sync_'+name), args, kw)
         try:
-            return defer.succeed(apply(getattr(self, "async_" + name),
-                                       args, kw))
+            method = getattr(self, "async_" + name)
+            return defer.succeed(apply(method, args, kw))
         except:
-            return defer.fail(Failure())
+            f = Failure()
+            if self.reportAllTracebacks:
+                f.printTraceback()
+            return defer.fail(f)
 
     def remoteMethod(self, name):
         return LocalMethod(self, name)

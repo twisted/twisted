@@ -17,7 +17,7 @@
 
 from pyunit import unittest
 from twisted.protocols import irc
-from twisted.protocols import protocol
+from twisted.internet import protocol
 import StringIO
 
 

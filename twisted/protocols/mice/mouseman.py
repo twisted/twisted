@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 # 
-from twisted.protocols import protocol
+from twisted.internet import protocol
 
 # http://www.softnco.demon.co.uk/SerialMouse.txt
 

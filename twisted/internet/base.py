@@ -28,7 +28,7 @@ from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorSSL
 from twisted.internet.interfaces import IReactorProcess
 from twisted.internet import main, threads
 from twisted.python import threadable, log
-from twisted.python.defer import Deferred, DeferredList
+from twisted.internet.defer import Deferred, DeferredList
 
 
 def _nmin(a, b):
@@ -109,7 +109,7 @@ class ReactorBase:
         """Return a Deferred that will resolve a hostname.
         """
         # XXX TODO: alternative resolver implementations
-        from twisted.python.defer import Deferred
+        from twisted.internet.defer import Deferred
         deferred = Deferred()
         if type == 1:
             try:
