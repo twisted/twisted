@@ -8,6 +8,33 @@ This includes building all the class-marshalling registration framework, and
 creating some kind of configurable PBErrorResponseConstraint, and making the
 response constraint accept both good results and size-limited failures.
 
+** implement/test CopiedFailure
+
+constrain ('failure',..) sequences to use it
+
+* create UnslicerRegistry, registerUnslicer
+
+consider adopting the existing collection API (getChild, putChild) for this,
+or maybe allow registerUnslicer() to take a callable which behaves kind of
+like a twisted.web isLeaf=1 resource (stop walking the tree, give all index
+tokens to the isLeaf=1 node)
+
+also some APIs to get a list of everything in the registry
+
+* use metaclass to auto-register RemoteCopy classes
+
+** use metaclass to auto-register Unslicer classes
+
+** and maybe Slicer classes too
+
+ class FailureSlicer(slicer.BaseSlicer):
+     classname = "twisted.python.failure.Failure"
+     slicerForClasses = (failure.Failure,) # triggers auto-register
+
+* RemoteInterface instances should have an "RI-" prefix instead of "I-"
+
+* test failure-handing during callRemote argument serialization
+
 * make ISliceable and some adapters to match
 
 This can be used in lieu of subclassing from pb.Referenceable or pb.Copyable.
@@ -37,4 +64,158 @@ requested!) by value, so you can ask a remote peer exactly what their
 objects will respond to (the method names, the argument values, the return
 value). This also requires that constraints be serializable.
 
+do this, should be referenceable (round-trip should return the same object),
+should use the same registration lookup that RemoteReference(interfacelist)
+uses
+
+* implement named Referenceables
+
+the Factory should hold named refs, the Broker should hold numbered
+(implicit) refs. ReferenceUnslicer and CallUnslicer should look in both
+tables (one for numerical ids, the other for string ids). The Factory should
+have an API to let you register pb.Referenceables (by name, the 'pathname'
+part of the URL).
+
+* implement pb.callRemoteURL
+
+a URL defines an endpoint: a pb.Referenceable, with methods
+
+URL = f("pb:", host, port, pathname)
+d = pb.callRemoteURL(URL, ifacename, methodname, args)
+
+probably give an actual RemoteInterface instead of just its name
+
+This involves synthesizing RemoteReferences with string ids.
+
+** more URLs
+
+relative URLs (those without a host part) refer to objects on the same
+Broker. Absolute URLs (those with a host part) refer to objects on other
+Brokers.
+
 * build/port the .rootObject framework, then pb.login
+
+Leave this for Glyph.
+
+URL = pb.parseURL("pb://lothar.com:8789/users/warner/services/petmail",
+                  IAuthorization)
+URL = doFullLogin(URL, "warner", "x8yzzy")
+URL.callRemote(methodname, args)
+
+* change the method-call syntax to include an interfacename
+
+Scope the method name to the interface.
+
+* move from VocabSlicer sequence to ADDVOCAB/DELVOCAB tokens
+
+Requires a .wantVocabString flag in the parser, which is kind of icky but
+fixes the annoying asymmetry between set (vocab sequence) and get (VOCAB
+token). Might want a CLEARVOCAB token too.
+
+** VOCABize interface/method names
+
+One possibility is to make a list of all strings used by all known
+RemoteInterfaces and all their methods, then send it at broker connection
+time as the initial vocab map. A better one (maybe) is to somehow track what
+we send and add a word to the vocab once we've sent it more than three
+times.
+
+Maybe vocabize the pairs, as "ri/name1","ri/name2", etc, or maybe do them
+separately. Should do some handwaving math to figure out which is better.
+
+* sketch out how to implement glyph's crazy non-compressed sexpr encoding
+
+* consider a smaller scope for OPEN-counter reference numbers
+
+For newpb, we moved to implicit reference numbers (counting OPEN tags
+instead of putting a number in the OPEN tag) because we didn't want to burn
+so much bandwidth: it isn't feasible to predict whether your object will
+need to be referenced in the future, so you always have to be prepared to
+reference it, so we always burn the memory to keep track of them (generally
+in a ScopedSlicer subclass). If we used explicit refids then we'd have to
+burn the bandwidth too.
+
+The sorta-problem is that these numbers will grow without bound as long as
+the connection remains open. After a few hours of sending 100-byte objects
+over a 100MB connection, you'll hit 1G-references and will have to start
+sending them as LONGINT tokens, which is annoying and slightly verbose (say
+3 or 4 bytes of number instead of 1 or 2). You never keep track of that many
+actual objects, because the references do not outlive their parent
+ScopedSlicer.
+
+The fact that the references themselves are scoped to the ScopedSlicer
+suggests that the reference numbers could be too. Each ScopedSlicer would
+track the number of OPEN tokens emitted (actually the number of
+slicerForObject calls made, except you'd want to use a different method to
+make sure that children who return a Slicer themselves don't corrupt the
+OPEN count).
+
+This requires careful synchronization between the ScopedSlicers on one end
+and the ScopedUnslicers on the other. I suspect it would be slightly
+fragile.
+
+One sorta-benefit would be that a somewhat human-readable sexpr-based
+encoding would be even more human readable if the reference numbers stayed
+small (you could visually correlate objects and references more easily). The
+ScopedSlicer's open-parenthesis could be represented with a curly brace or
+something, then the refNN number would refer to the NN'th left-paren from
+the last left-brace. It would also make it clear that the recipient will not
+care about objects outside that scope.
+
+* merge my RemoteInterface syntax with zope.interface's
+
+I hacked up a syntax for how method definitions are parsed in
+RemoteInterface objects. That syntax isn't compatible with the one
+zope.interface uses for local methods, so I just delete them from the
+attribute dictionary to avoid causing z.i indigestion. It would be nice if
+they were compatible so I didn't have to do that. This basically translates
+into identifying the nifty extra flags (like priority classes, no-response)
+that we want on these methods and finding a z.i-compatible way to implement
+them. It also means thinking of SOAP/XML-RPC schemas and having a syntax
+that can represent everything at once.
+
+* various registry approaches
+
+There are currently three kinds of registries used in banana/newpb:
+
+ RemoteInterface <-> interface name
+ class/type -> Slicer (-> opentype) -> Unslicer (-> class/type)
+ Copyable subclass -> copyable-opentype -> RemoteCopy subclass
+
+There are two basic approaches to representing the mappings that these
+registries implement. The first is implicit, where the local objects are
+subclassed from Sliceable or Copyable or RemoteInterface and have attributes
+to define the wire-side strings that represent them. On the receiving side,
+we make extensive use of metaclasses to perform automatic registration
+(taking names from class attributes and mapping them to the factory or
+RemoteInterface used to create the remote version).
+
+The second approach is explicit, where pb.registerRemoteInterface,
+pb.registerRemoteCopy, and pb.registerUnslicer are used to establish the
+receiving-side mapping. There isn't a clean way to do it explicitly on the
+sending side, since we already have instances whose classes can give us
+whatever information we want.
+
+The advantage of implicit is simplicity: no more questions about why my
+pb.RemoteCopy is giving "not unserializable" errors. The mere act of
+importing a module is enough to let PB create instances of its classes.
+
+The advantage of doing it explicitly is to remind the user about the
+existence of those maps, because the factory classes in the receiving map is
+precisely equal to the user's exposure (from a security point of view). See
+the E paper on secure-serialization for some useful concepts.
+
+A disadvantage of implicit is that you can't quite be sure what, exactly,
+you're exposed to: the registrations take place all over the place.
+
+To make explicit not so painful, we can use quotient's .wsv files
+(whitespace-separated values) which map from class to string and back again.
+The file could list fully-qualified classname, wire-side string, and
+receiving factory class on each line. The Broker (or rather the RootSlicer
+and RootUnslicer) would be given a set of .wsv files to define their
+mapping. It would get all the registrations at once (instead of having them
+scattered about). They could also demand-load the receive-side factory
+classes.
+
+For now, go implicit. Put off the decision until we have some more
+experience with using newpb.
