@@ -30,6 +30,27 @@ export PYTHONPATH=$PYTHONPATH:/home/bob/Twisted-0.18.0/
 
 <p> Be sure to run <code>setup.py</code> with appropriate privileges (root under Unix).  </p>
 
+<h2>Optional Compilation</h2>
+
+<p>There are a couple of small optional alternative implementations of pieces of Twisted that are in C for increased performance.  If you don't run the installer, and you need these modules, you'll need to perform a couple of extra steps:  </p>
+
+<pre class="shell">
+$ python ./setup.py build_ext
+</pre>
+
+<p> This will (eventually) generate some shared libraries (cBanana.so, cReactor.so) within a directory tree called 'build' under the Twisted directory. </p>
+
+<p> If you don't go on to install the build results into a directory on the <code>$PYTHONPATH</code>, then you will need to create a couple of symlinks:  </p>
+
+<pre class="shell">
+$ cd twisted/spread
+$ ln -s ../../build/lib.linux-i686-2.1/twisted/spread/cBanana.so cBanana.so
+$ cd ../internet
+$ ln -s ../../build/lib.linux-i686-2.1/twisted/internet/cReactor.so cReactor.so
+</pre>
+
+<p>The exact details of the symlinks may vary based on your system.  </p>
+
 <h2>Running Tests</h2>
 
 <p> See our unit tests run in a lovely Tkinter GUI, proving that the software is BugFree(TM):  </p>
@@ -38,7 +59,7 @@ export PYTHONPATH=$PYTHONPATH:/home/bob/Twisted-0.18.0/
 % admin/runtests
 </pre>
 
-<p> Some of these tests may fail if you don't have the Python XML packages installed on your system.  </p>
+<p> Some of these tests will fail if you don't have the Python XML packages installed on your system.  </p>
 
 </body>
 </html>
