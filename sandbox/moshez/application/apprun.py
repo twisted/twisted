@@ -14,8 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 from twisted.python import runtime, log, usage
-from twisted.persisted import styles
-from twisted.application import persist
+from twisted.persisted import styles, sob
 from twisted import copyright
 import sys, os, pdb, profile, getpass, md5, traceback
 
@@ -38,8 +37,8 @@ def loadApplication(config, passphrase):
                                config['source'] or config['file'])
     log.msg("Loading %s..." % (filename,))
     if config['python']:
-        application = persist.loadValueFromFile(filename, 'application',
-                                                passphrase)
+        application = sob.loadValueFromFile(filename, 'application',
+                                            passphrase)
     else:
         if config['xml']:
             style = 'xml'
@@ -47,7 +46,7 @@ def loadApplication(config, passphrase):
             style = 'source'
         elif config['file']:
             style = 'pickle'
-        application = persist.load(filename, style, passphrase)
+        application = sob.load(filename, style, passphrase)
     log.msg("Loaded.")
     return application
 

@@ -15,7 +15,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 from twisted.python import components, runtime, log
-from twisted.application import service, persist
+from twisted.application import service
+from twisted.persisted import sob
 import os
 
 class Application(service.MultiService, components.Componentized):
@@ -26,8 +27,8 @@ class Application(service.MultiService, components.Componentized):
         service.MultiService.__init__(self)
         components.Componentized.__init__(self)
         self.setName(name)
-        self.setComponent(persist.IPersistable,
-                          persist.Persistant(self, self.name))
+        self.setComponent(sob.IPersistable,
+                          sob.Persistant(self, self.name))
         if runtime.platformType == "posix":
             if uid is None:
                 uid = os.getuid()
@@ -41,5 +42,5 @@ class Application(service.MultiService, components.Componentized):
 
     def scheduleSave(self):
         from twisted.internet import reactor
-        p = persist.IPersistable(self)
+        p = sob.IPersistable(self)
         reactor.addSystemEventTrigger('after', 'shutdown', p.save, 'shutdown')

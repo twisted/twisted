@@ -15,7 +15,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 from twisted.python import components, log
-from twisted.application import servers, clients, persist, service
+from twisted.application import servers, clients, service
+from twisted.persisted import sob
 
 class IOldApplication(components.Interface):
 
@@ -139,7 +140,7 @@ class ServiceNetwork:
         self.app.privilegedStartService()
 
     def save(self, tag=None, filename=None, passphrase=None):
-        persist.IPersistable(self.app).save(tag, filename, passphrase)
+        sob.IPersistable(self.app).save(tag, filename, passphrase)
 
     def logPrefix(self):
         return '*%s*' % self.app.name
