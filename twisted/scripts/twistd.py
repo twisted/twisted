@@ -433,7 +433,11 @@ directory, or use my --pidfile and --logfile parameters to avoid clashes.
         traceback.print_exc(file=file)
         file.flush()
     if usepid:
-        os.unlink(config['pidfile'])
+        try:
+            os.unlink(config['pidfile'])
+        except:
+            log.msg("Failed to unlink PID file:")
+            log.deferr()
     log.msg("Server Shut Down.")
 
 
