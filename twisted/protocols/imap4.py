@@ -1569,6 +1569,12 @@ class IMAP4Client(basic.LineReceiver):
 #        print 'S:', repr(line)
 #        return basic.LineReceiver.sendLine(self, line)
 
+    def _setupForLiteral(self, rest, octets):
+        self._pendingBuffer = self.messageFile(octets)
+        self._pendingSize = octets
+        self._parts = [rest, '\r\n']
+        self.setRawMode()
+
     def lineReceived(self, line):
 #        print 'C: ' + repr(line)
         if self._parts is None:
@@ -1604,12 +1610,6 @@ class IMAP4Client(basic.LineReceiver):
             raise IllegalServerResponse, line
         tag, rest = parts
         self.dispatchCommand(tag, rest)
-
-    def _setupForLiteral(self, rest, octets):
-        self._pendingBuffer = self.messageFile(octets)
-        self._pendingSize = octets
-        self._parts = [rest, '\r\n']
-        self.setRawMode()
 
     def messageFile(self, octets):
         """Create a file to which an incoming message may be written.
@@ -2545,8 +2545,8 @@ class IMAP4Client(basic.LineReceiver):
 
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
-        message numbers to message objects, or whose errback is invoked
-        if there is an error.
+        message objects (as returned by self.messageFile(), file objects by
+        default), or whose errback is invoked if there is an error.
         """
         d = self._fetch(messages, useUID=uid, rfc822=1)
         d.addCallback(self.__cbFetch)
