@@ -21,7 +21,7 @@ Copyright information for Twisted.
 """
 
 
-version="1.0.7"
+version="1.0.8alpha1"
 longversion="Twisted %s" % version
 copyright="Copyright (c) 2000-2003 Matthew William Lefkowitz, all rights reserved."
 
