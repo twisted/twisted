@@ -315,6 +315,9 @@ class InputText(Input):
         self['type'] = 'text'
 
 class PasswordText(Input):
+    """
+    I render a password input field.
+    """
     def initialize(self):
         self['type'] = 'password'
 
