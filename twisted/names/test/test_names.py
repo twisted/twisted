@@ -535,3 +535,18 @@ class RetryLogic(unittest.TestCase):
                 self.assertEquals(timeout, t)
 
         self.failIf(fakeProto.queries)
+
+class ResolvConfHandling(unittest.TestCase):
+    def testMissing(self):
+        resolvConf = self.mktemp()
+        r = client.Resolver(resolv=resolvConf)
+        self.assertEquals(r.dynServers, [('127.0.0.1', 53)])
+        r._parseCall.cancel()
+    
+    def testEmpty(self):
+        resolvConf = self.mktemp()
+        fObj = file(resolvConf, 'w')
+        fObj.close()
+        r = client.Resolver(resolv=resolvConf)
+        self.assertEquals(r.dynServers, [('127.0.0.1', 53)])
+        r._parseCall.cancel()

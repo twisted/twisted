@@ -110,7 +110,8 @@ class Resolver(common.ResolverBase):
             resolvConf = file(self.resolv)
         except IOError, e:
             if e.errno == errno.ENOENT:
-                pass
+                # Missing resolv.conf is treated the same as an empty resolv.conf 
+                self.parseConfig(())
             else:
                 raise
         else:
@@ -120,7 +121,7 @@ class Resolver(common.ResolverBase):
                 self._lastResolvTime = mtime
                 self.parseConfig(resolvConf)
 
-        # Check the mtime again in a little while
+        # Check again in a little while
         from twisted.internet import reactor
         self._parseCall = reactor.callLater(self._resolvReadInterval, self.maybeParseConfig)
 
@@ -145,6 +146,8 @@ class Resolver(common.ResolverBase):
                 except IndexError:
                     self.search = ''
                 self.domain = None
+        if not servers:
+            servers.append(('127.0.0.1', dns.PORT))
         self.dynServers = servers
 
 
