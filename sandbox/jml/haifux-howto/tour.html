@@ -80,6 +80,7 @@ send() of the username result in an error.</p>
 base="twisted.protocols.basic">LineReceiver</code>, so that we get data-based
 events on a line-by-line basis. We respond to the event of receiving the line
 with shutting down the connection.
+</p>
 
 <p>Congratulations, this is the first standard-compliant version of the code.
 However, usually people actually expect some data about users to be
@@ -611,7 +612,7 @@ finger.updateApplication(application,
 
 <p>Note: the finger <em>user</em> still has ultimate power: he can use
 updateApplication, or he can use the lower-level interface if he has
-specific needs (maybe an IRC-server on some other port? maybe we
+specific needs (maybe an IRC server on some other port? maybe we
 want the non-SSL webserver to listen only locally? etc. etc.)
 This is an important design principle: never force a layer of abstraction:
 allow usage of layers of abstractions.</p>
