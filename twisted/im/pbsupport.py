@@ -1,6 +1,7 @@
 
 from libglade import GladeXML
 
+from twisted.python.failure import Failure
 from twisted.spread import pb
 
 from twisted.im.locals import GLADE_FILE, autoConnectMethods, ONLINE, OFFLINE, AWAY
@@ -185,6 +186,9 @@ class PBAccount:
             self._cbIdent, self._ebConnected)
 
     def _cbIdent(self, ident):
+        if not ident:
+            print 'falsely identified.'
+            return self._ebConnected(Failure(Exception("username or password incorrect")))
         print 'Identified!'
         for handlerClass, sname, pname in self.services:
             handler = handlerClass(self, sname, pname)
