@@ -28,7 +28,7 @@ from twisted.python.reflect import qual
 from twisted.web import domhelpers
 from twisted.web.woven import template, controller, utils
 
-__version__ = "$Revision: 1.33 $"[11:-2]
+__version__ = "$Revision: 1.34 $"[11:-2]
 
 controllerFactory = controller.controllerFactory
 
@@ -65,6 +65,7 @@ class InputHandler(controller.Controller):
         controller.Controller.__init__(self, model)
         self._check = check
         self._commit = commit
+        self._errback = None
         self._parent = parent
         if invalidErrorText is not None:
             self.invalidErrorText = invalidErrorText
@@ -259,9 +260,15 @@ class DictAggregator(Anything):
                 return input.FormAggregator(m, commit=theCommitFunction)
     """
     def aggregateValid(self, request, inputhandler, data):
-        """Aggregate valid input from inputhandlers below us until
-        we have enough input to pass to the commit function that
-        was passed to the constructor.
+        """Aggregate valid input from inputhandlers below us, into a dictionary.
+        """
+        self._valid[inputhandler] = data
+
+    def aggregateInvalid(self, request, inputhandler, data):
+        self._invalid[inputhandler] = data
+
+    def exit(self, request):
+        """This is the node complete message
         """
         if self._commit:
             # Introspect the commit function to see what 
@@ -270,31 +277,14 @@ class DictAggregator(Anything):
             if hasattr(func, 'im_func'):
                 func = func.im_func
             args, varargs, varkw, defaults = inspect.getargspec(
-                                                            func)
-            subcontrollerNames = args[-len(defaults):]
-            wantsRequest = args[1] == 'request'
-        else:
-            # Introspect the template to see if we still have
-            # controllers that will be giving us input
-            subcontrollerNodes = domhelpers.findElementsWithAttributeShallow(
-                    self.view.node, "controller")
-            if len(subcontrollerNodes) != 1:
-                # Evil hack. We don't really know what the subcontroller names
-                # are, so just set subcontrollerNames to a list of impossible
-                # to satisfy names until there's only one controller left
-                # directly below our node
-                subcontrollerNames = ['']
-            else:
-                subcontrollerNames = []
+                func)
+            wantsRequest = len(args) > 1 and args[1] == 'request'
 
-        self._valid[inputhandler] = data
-        gathered = [x.model.name for x in self._valid.keys()]
-        
-        for required in subcontrollerNames:
-            if required not in gathered:
-                # We're still missing some input
-                break
-        else:
+        if self._invalid:
+            # whoops error!!!1
+            if self._errback:
+                self._errback(request, self._invalid)
+        elif self._valid:
             # We've got all the input
             # Gather it into a dict and call the commit function
             results = {}
@@ -309,6 +299,7 @@ class DictAggregator(Anything):
                 self._parent.aggregateValid(request, self, results)
             return results
 
+
 class ListAggregator(Anything):
     def aggregateValid(self, request, inputhandler, data):
         """Aggregate valid input from inputhandlers below us into a 
@@ -316,9 +307,19 @@ class ListAggregator(Anything):
         to the commit function that was passed to the constructor or
         our parent's aggregateValid.
         """
+        if not hasattr(self, '_validList'):
+            self._validList = []
+        self._validList.append(data)
+
+    def aggregateInvalid(self, request, inputhandler, data):
+        if not hasattr(self, '_invalidList'):
+            self._invalidList = []
+        self._invalidList.append(data)
+
+    def exit(self, request):
         if self._commit:
             # Introspect the commit function to see what 
-            # keyword arguments it takes
+            #arguments it takes
             func = self._commit
             if hasattr(func, 'im_func'):
                 func = func.im_func
@@ -338,22 +339,16 @@ class ListAggregator(Anything):
                 self.numArgs = len(domhelpers.findElementsWithAttributeShallow(
                     self.view.node, "controller"))
 
-        if not hasattr(self, '_validList'):
-            self._validList = []
-        self._validList.append(data)
-        
-        if len(self._validList) == self.numArgs:
-            # We've got all the input
-            # Gather it into a dict and call the commit function
+        if self._invalidList:
+            self._parent.aggregateInvalid(request, self, self._invalidList)
+        else:
             if self._commit:
                 if wantsRequest:
                     self._commit(request, *self._validList)
                 else:
                     self._commit(*self._validList)
-            else:
-                self._parent.aggregateValid(request, self, self._validList)
-            return self._validList
-
+            self._parent.aggregateValid(request, self, self._invalidList)
+        
     def commit(self, request, node, data):
         """If we're using the ListAggregator, we don't want the list of items
         to be rerendered
@@ -361,3 +356,4 @@ class ListAggregator(Anything):
         so we can reset state, so controllers can be re-run or ignore input the second time
         """
         pass
+

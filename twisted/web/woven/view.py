@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.82 $"[11:-2]
+__version__ = "$Revision: 1.83 $"[11:-2]
 
 # Sibling imports
 import interfaces
@@ -252,6 +252,9 @@ class View:
                 self.modelStack = self.modelStack[1]
                 self.viewStack = self.viewStack[1]
                 if self.controllerStack is not None:
+                    controller = self.controllerStack[0]
+                    if controller is not None:
+                        controller.exit(request)
                     self.controllerStack = self.controllerStack[1]
             if (hasattr(node, 'getAttribute') and 
             (node.getAttribute('model') or node.getAttribute('view') or node.getAttribute('controller'))):
