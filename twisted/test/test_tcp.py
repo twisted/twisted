@@ -719,13 +719,22 @@ class LargeBufferTestCase(PortCleanerUpper):
         clientF = LargeBufferReaderClientFactory()
         reactor.connectTCP("localhost", n, clientF)
 
-        spinUntil(lambda :f.done and clientF.done)
+        while 1:
+            rxlen = clientF.len
+            try:
+                spinUntil(lambda :f.done and clientF.done)
+            except defer.TimeoutError:
+                if clientF.len == rxlen:
+                    raise
+                # if we're still making progress, keep trying
+                continue
+            break
 
         self.failUnless(f.done, "writer didn't finish, it probably died")
-        self.failUnless(clientF.done, "client didn't see connection dropped")
         self.failUnless(clientF.len == self.datalen,
-                        "client didn't receive all the data it expected (%d != %d)" %
-                        (clientF.len, self.datalen))
+                        "client didn't receive all the data it expected "
+                        "(%d != %d)" % (clientF.len, self.datalen))
+        self.failUnless(clientF.done, "client didn't see connection dropped")
 
 
 class MyHCProtocol(MyProtocol):
