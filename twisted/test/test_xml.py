@@ -110,14 +110,17 @@ alert("I hate you");
 
     def testScriptLeniency(self):
         s = """
-        <script>foo < bar</script>
+        <script>(foo < bar) and (bar > foo)</script>
         <script language="javascript">foo </scrip bar </script>
         <script src="foo">
         <script src="foo">baz</script>
         """
         d = microdom.parseString(s, beExtremelyLenient=1)
-
-
+        self.assertEquals(d.firstChild().firstChild().firstChild().data,
+                          "(foo < bar) and (bar > foo)")
+        self.assertEquals(d.firstChild().childNodes[1].firstChild().data,
+                          "foo </scrip bar ")
+    
     def testPreserveCase(self):
         s = '<eNcApSuLaTe><sUxor></sUxor><bOrk><w00T>TeXt</W00t></BoRk></EnCaPsUlAtE>'
         s2 = s.lower().replace('text', 'TeXt')

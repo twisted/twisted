@@ -135,6 +135,10 @@ class XMLParser(Protocol):
 
         if (self.tagName == 'script'
             and not self.tagAttributes.has_key('src')):
+            # we do this ourselves rather than having begin_waitforendscript
+            # becuase that can get called multiple times and we don't want
+            # bodydata to get reset other than the first time.
+            self.begin_bodydata(None)
             return 'waitforendscript'
         return 'bodydata'
 
@@ -470,8 +474,6 @@ class XMLParser(Protocol):
         self.gotText(self.bodydata)
         self.bodydata = ''
 
-    begin_waitforendscript = begin_bodydata
-
     def do_waitforendscript(self, byte):
         if byte == '<':
             return 'waitscriptendtag'
@@ -501,13 +503,13 @@ class XMLParser(Protocol):
         if byte == '/':
             self.endtag = True
         elif not self.endtag:
-            self.bodydata += self.temptagdata
+            self.bodydata += "<" + self.temptagdata
             return 'waitforendscript'
         # 2
         elif byte.isalnum() or byte in identChars:
             self.tagName += byte
             if not 'script'.startswith(self.tagName):
-                self.bodydata += self.temptagdata
+                self.bodydata += "<" + self.temptagdata
                 return 'waitforendscript'
             elif self.tagName == 'script':
                 self.gotText(self.bodydata)
@@ -518,7 +520,7 @@ class XMLParser(Protocol):
             return 'waitscriptendtag'
         # 4
         else:
-            self.bodydata += self.temptagdata
+            self.bodydata += "<" + self.temptagdata
             return 'waitforendscript'
 
 
