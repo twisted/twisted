@@ -103,10 +103,12 @@ class _Dereference(NotKnown):
         self.id = id
 
 
-class _Defer(NotKnown):
-    def __init__(self, d):
+from twisted.internet.defer import Deferred
+
+class _Defer(Deferred, NotKnown):
+    def __init__(self):
+        Deferred.__init__(self)
         NotKnown.__init__(self)
-        self.deferred = d
 
     def __setitem__(self, n, obj):
-        self.deferred.callback(obj)
+        self.resolveDependants(self.callback(obj))

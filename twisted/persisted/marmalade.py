@@ -37,6 +37,7 @@ except:
 
 import types
 import pickle
+import copy_reg
 
 def getValueElement(node):
     """Get the one child element of a given element.
@@ -52,6 +53,9 @@ def getValueElement(node):
             else:
                 raise ValueError("Only one value node allowed per instance!")
     return valueNode
+
+def fullFuncName(func):
+    return (str(pickle.whichmodule(func, func.__name__)) + '.' + func.__name__)
 
 
 class DOMJellyable:
@@ -87,9 +91,8 @@ class DOMUnjellier:
     def unjellyLater(self, node):
         """Unjelly a node, later.
         """
-        from twisted.internet.defer import Deferred
-        d = Deferred()
-        self.unjellyInto(_Defer(d), 0, node)
+        d = _Defer()
+        self.unjellyInto(d, 0, node)
         return d
 
     def unjellyInto(self, obj, loc, node):
@@ -110,12 +113,12 @@ class DOMUnjellier:
         Alternatively, you can use unjellyInto on your instance's __dict__.
         """
         self.unjellyInto(instance.__dict__, attrName, valueNode)
-        
+
     def unjellyNode(self, node):
         if node.tagName == "None":
             retval = None
         elif node.tagName == "string":
-            retval = str(node.getAttribute("value").replace("\\n", "\n").replace("\\t", "\t"))
+            retval = str(eval('"%s"' % node.getAttribute("value")))
         elif node.tagName == "int":
             retval = int(node.getAttribute("value"))
         elif node.tagName == "float":
@@ -197,6 +200,10 @@ class DOMUnjellier:
                 der = _Dereference(refkey)
                 self.references[refkey] = der
                 retval = der
+        elif node.tagName == "copyreg":
+            nodefunc = namedObject(node.getAttribute("loadfunc"))
+            return self.unjellyLater(getValueElement(node)).addCallback(
+                lambda result, _l: apply(_l, result), nodefunc)
         else:
             raise "Unsupported Node Type: %s" % str(node.tagName)
         if node.hasAttribute("reference"):
@@ -233,7 +240,12 @@ class DOMJellier:
             node = self.document.createElement("None")
         elif objType is types.StringType:
             node = self.document.createElement("string")
-            node.setAttribute("value", obj.replace("\n", "\\n").replace("\t", "\\t"))
+            r = repr(obj)
+            if r[0] == '"':
+                r = r.replace("'", "\\'")
+            else:
+                r = r.replace('"', '\\"')
+            node.setAttribute("value", r[1:-1])
             # node.appendChild(CDATASection(obj))
         elif objType is types.IntType:
             node = self.document.createElement("int")
@@ -268,7 +280,7 @@ class DOMJellier:
             node.setAttribute("value", s)
         elif objType is types.FunctionType:
             node = self.document.createElement("function")
-            node.setAttribute("name", str(pickle.whichmodule(obj, obj.__name__)) + '.' + obj.__name__)
+            node.setAttribute("name", fullFuncName(obj))
         else:
             if self.prepared.has_key(id(obj)):
                 oldNode = self.prepared[id(obj)][1]
@@ -314,6 +326,12 @@ class DOMJellier:
                         state = obj.__dict__
                     n = self.jellyToNode(state)
                     node.appendChild(n)
+            elif copy_reg.dispatch_table.has_key(objType):
+                unpickleFunc, state = copy_reg.dispatch_table[objType](obj)
+                node = self.document.createElement("copyreg")
+                # node.setAttribute("type", objType.__name__)
+                node.setAttribute("loadfunc", fullFuncName(unpickleFunc))
+                node.appendChild(self.jellyToNode(state))
             else:
                 raise "Unsupported type: %s" % objType.__name__
         return node

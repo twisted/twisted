@@ -125,6 +125,7 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
         self.name = node.getAttribute("name")
         self.udpPorts = []
         self.sslPorts = []
+        self.asXML = 1
         for subnode in node.childNodes:
             if isinstance(subnode, Element):
                 if subnode.tagName == 'tcp':
@@ -149,14 +150,16 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
                 elif subnode.tagName == 'services':
                     self.services = {}
                     for svcnode in subnode.childNodes:
-                        unjellier.unjellyLater(svcnode).addCallback(self.addService).arm()
+                        if isinstance(svcnode, Element):
+                            unjellier.unjellyLater(svcnode).addCallback(self.addService).arm()
                 elif subnode.tagName == 'authorizer':
                     authnode = marmalade.getValueElement(subnode)
                     unjellier.unjellyAttribute(self, "authorizer", authnode)
                 elif subnode.tagName == 'delayeds':
                     self.delayeds = []
                     for delnode in subnode.childNodes:
-                        unjellier.unjellyLater(delnode).addCallback(self.addDelayed).arm()
+                        if isinstance(delnode, Element):
+                            unjellier.unjellyLater(delnode).addCallback(self.addDelayed).arm()
 
     persistenceVersion = 7
 
