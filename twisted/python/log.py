@@ -294,11 +294,18 @@ except NameError:
     logfile = StdioOnnaStick(0)
     logerr = StdioOnnaStick(1)
 
+class NullFile:
+    softspace = 0
+    def read(self): pass
+    def write(self, bytes): pass
+    def flush(self): pass
+    def close(self): pass
+
 def discardLogs():
     """Throw away all logs.
     """
     global logfile
-    logfile = Log(NullFile(), logOwner)
+    logfile = NullFile()
 
 
 __all__ = ["Log", "Logger", "startLogging", "msg", "write"]
