@@ -22,7 +22,7 @@ network server services or to directly listen on them.
 
 Here are some examples::
  >>> s=service("80", server.Site())
- >>> s=service("tcp:80", server.site())
+ >>> s=service("tcp:80", server.Site())
  >>> s=service("tcp:80:interface=127.0.0.1", server.Site())
  >>> s=service("ssl:443", server.Site())
  >>> s=service("ssl:443:privateKey=mykey.pem", server.Site())
@@ -30,7 +30,7 @@ Here are some examples::
  >>> s=service("unix:/var/run/finger", FingerFactory())
  >>> s=service("unix:/var/run/finger:mode=660", FingerFactory())
  >>> p=listen("80", server.Site())
- >>> p=listen("tcp:80", server.site())
+ >>> p=listen("tcp:80", server.Site())
  >>> p=listen("tcp:80:interface=127.0.0.1", server.Site())
  >>> p=listen("ssl:443", server.Site())
  >>> p=listen("ssl:443:privateKey=mykey.pem", server.Site())
@@ -61,7 +61,7 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
     if sslmethod is not None:
         kw['sslmethod'] = getattr(ssl.SSL, sslmethod)
     cf = ssl.DefaultOpenSSLContextFactory(privateKey, certKey, **kw)
-    return ((int(port), factory, contextFactory),
+    return ((int(port), factory, cf),
             {'interface': interface, 'backlog': backlog})
 
 _funcs = {"tcp": _parseTCP,
@@ -185,6 +185,14 @@ def _test():
     from twisted.internet import protocol, reactor
     f = protocol.ServerFactory()
     f.protocol = wire.Echo
+    print parse("80", f)
+    print parse("tcp:80", f)
+    print parse("tcp:80:interface=127.0.0.1", f)
+    print parse("unix:/var/run/finger", f)
+    print parse("unix:/var/run/finger:mode=660", f)
+    print parse("ssl:443", f)
+    print parse("ssl:443:privateKey=mykey.pem", f)
+    print parse("ssl:443:privateKey=mykey.pem:certKey=cert.pem", f)
     listen("unix:lala", f)
     s = service("unix:lolo", f)
     s.startService()
