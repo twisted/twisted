@@ -42,7 +42,7 @@ class Discard(protocol.Protocol):
 
 class Chargen(protocol.Protocol):
     """Generate repeating noise (RFC 864)"""
-    noise = "abcdefghijklmnopqrstuvwxyz"
+    noise = r'@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~ !"#$%&?'
 
     def connectionMade(self):
         self.transport.registerProducer(self, 0)
