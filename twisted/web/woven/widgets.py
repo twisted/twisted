@@ -216,17 +216,15 @@ class Widget(view.View):
             data.addCallback(self.setDataCallback, request, node)
             data.addErrback(utils.renderFailure, request)
             return data
-        # generateDOM should always get a reference to the
-        # templateNode from the original HTML
-        newNode = self._regenerate(request, node, data)
+
+        newNode = self._regenerate(request, node, result)
         returnNode = self.dispatchResult(request, node, newNode)
+        returnNode.setAttribute('id', self.outgoingId)
         self.handleNewNode(request, returnNode)
         self.handleOutstanding(request)
         if self.subviews:
-            top = self
-            while hasattr(top, 'parent'):
-                top = top.parent
-            top.subviews.update(self.subviews)
+            self.getTopModel().subviews.update(self.subviews)
+        self.controller.domChanged(request, self, returnNode)
         return returnNode
 
     def setUp(self, request, node, data):

@@ -67,8 +67,8 @@ class WovenLivePage:
         as soon as the output conduit is connected.
         """
         if self.output is None:
-            print "CACHING",
             self.cached.append(text)
+            print "CACHING", `self.cached`
         else:
             if isinstance(text, Script):
                 if hasattr(self.output, 'writeScript'):
@@ -82,17 +82,25 @@ class WovenLivePage:
 
     def sendScript(self, js):
         self.write(Script(js))
+        if self.output is not None:
+            print "## woot, teh connection was open"
+            ## Close the connection; the javascript will have to open it again to get the next event.
+            self.output.finish()
+            self.output = None
 
     def hookupOutputConduit(self, request):
         """Hook up the given request as the output conduit for this
         session.
         """
-        print "TOOT! WE HOOKED UP OUTPUT!"
+        print "TOOT! WE HOOKED UP OUTPUT!", `self.cached`
         self.output = request
         for text in self.cached:
             self.write(text)
-        self.cached = []
-        # xxx start some sort of keepalive timer.
+        if self.cached:
+            self.cached = []
+            ## Close the connection; the javascript will have to open it again to get the next event.
+            request.finish()
+            self.output = None
 
     def unhookOutputConduit(self):
         self.output = None

@@ -17,7 +17,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.67 $"[11:-2]
+__version__ = "$Revision: 1.68 $"[11:-2]
 
 # Sibling imports
 import interfaces
@@ -512,6 +512,7 @@ class View:
                 theId = "woven_id_" + str(curId)
                 request.currentId = curId + 1
                 view.setupMethods.append(utils.createSetIdFunction(theId))
+                view.outgoingId = theId
                 #print "SET AN ID", theId
             self.subviews[theId] = view
             view.parent = peek(self.viewStack)
@@ -685,6 +686,10 @@ class ViewNodeMutator(template.NodeMutator):
         newNode = self.data.generate(request, node)
         assert newNode is not None
         if isinstance(newNode, defer.Deferred):
+            if hasattr(self.data, 'outgoingId'):
+                # Let dispatchResult know what ID we want to insert into 
+                # the outgoing document, so we can replace it later
+                newNode.outgoingId = self.data.outgoingId
             return newNode
         nodeMutator = template.NodeNodeMutator(newNode)
         return nodeMutator.generate(request, node)

@@ -1,6 +1,7 @@
 var woven_eventQueue = []
 woven_eventQueueBusy = 0
 woven_clientSideEventNum = 0
+woven_requestingEvent = 0
 
 function woven_eventHandler(eventName, node) {
     var eventTarget = node.getAttribute('id')
@@ -26,11 +27,19 @@ function woven_sendTopEvent() {
     input.src = url
 }
 
+function woven_requestNextEvent() {
+    var output = document.getElementById('woven_outputConduit')
+
+    output.src = '?woven_hookupOutputConduitToThisFrame=1&woven_clientSideEventNum=' + woven_clientSideEventNum.toString()
+}
+
 function woven_clientToServerEventComplete() {
-    if (this.woven_eventQueue.length) {
-        this.woven_sendTopEvent()
+    woven_requestNextEvent()
+
+    if (woven_eventQueue.length) {
+        woven_sendTopEvent()
     } else {
-        this.woven_eventQueueBusy = 0
+        woven_eventQueueBusy = 0
     }
     var focus = document.getElementById('woven_firstResponder')
     focus.focus()
@@ -52,22 +61,21 @@ function woven_attemptFocus(theNode) {
 }
 
 function woven_replaceElement(theId, htmlStr) {
+    woven_requestNextEvent()
+
     var oldNode = document.getElementById(theId)
-    var r = oldNode.ownerDocument.createRange();
-    r.setStartBefore(oldNode);
-    var parsedHTML = r.createContextualFragment(htmlStr);
-    oldNode.parentNode.replaceChild(parsedHTML, oldNode);
-    var newNode = document.getElementById(theId)
+    var container = document.getElementById(theId)
+    var newNode = document.createElement('span')
+    newNode.innerHTML = htmlStr
+    oldNode.parentNode.replaceChild(newNode.firstChild, oldNode)
     woven_attemptFocus(newNode)
 }
 
 function woven_appendChild(theId, htmlStr) {
+    woven_requestNextEvent()
+
     var container = document.getElementById(theId)
     var newNode = document.createElement('span')
     newNode.innerHTML = htmlStr
     container.appendChild(newNode.firstChild)
-}
-
-function FlashConduit_swf_DoFScommand(cmd, arg) {
-    alert("ha")
 }

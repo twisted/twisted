@@ -17,7 +17,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.41 $"[11:-2]
+__version__ = "$Revision: 1.42 $"[11:-2]
 
 import os
 import cgi
@@ -282,7 +282,7 @@ class LiveController(Controller):
         #request.d = self.view.d
         target = self.view.subviews[eventTarget]
         target.onEvent(request, eventName, *eventArgs)
-        sess.sendScript('woven_clientToServerEventComplete()')
+        sess.sendScript('top.woven_clientToServerEventComplete()')
         return '''<html>
 <body>
     %s event sent to %s with arguments %s.
@@ -320,7 +320,7 @@ class LiveController(Controller):
     def wchild_WebConduit2_js(self, request):
         #print "returning js file"
         h = request.getHeader("user-agent")
-        if h.count("MSIE") or h.count("Safari"):
+        if h.count("MSIE"):
             fl = "WebConduit2_msie.js"
         else:
             fl = "WebConduit2_mozilla.js"
