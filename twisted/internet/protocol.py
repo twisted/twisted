@@ -20,7 +20,7 @@
 Start here if you are looking to write a new protocol implementation for
 Twisted.  The Protocol class contains some introductory material.
 
-API Stability: stable
+API Stability: stable, other than ClientCreator.
 
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
@@ -153,6 +153,8 @@ class ClientCreator:
 
     Mainly this is when there is no shared state between protocol instances
     (e.g. protocols that work in a way similar to httplib or smtplib).
+
+    The API for this class is not stable.
     """
 
     def __init__(self, reactor, protocolClass, *args, **kwargs):
