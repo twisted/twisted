@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-__version__ = "$Revision: 1.44 $"[11:-2]
+__version__ = "$Revision: 1.45 $"[11:-2]
 
 import types
 import weakref
@@ -505,7 +505,7 @@ class UnsafeObjectWrapper(ObjectWrapper):
 class DeferredWrapper(Wrapper):
     def setData(self, request=None, data=None):
         if data is None:
-            warnings.warn("Warning!")
+            warnings.warn("setData should be called with request as first arg")
             data = request
             request = None
         if isinstance(data, defer.Deferred):
