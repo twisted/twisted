@@ -80,23 +80,28 @@ class Options(usage.Options):
             self['pop3'] = int(self['pop3'])
             assert 0 <= self['pop3'] < 2 ** 16, ValueError
         except ValueError:
-            raise usage.UsageError('Invalid port specified to --pop3: %s' % self['pop3'])
+            raise usage.UsageError('Invalid port specified to --pop3: %s' %
+                                   self['pop3'])
         try:
             self['smtp'] = int(self['smtp'])
             assert 0 <= self['smtp'] < 2 ** 16, ValueError
         except ValueError:
-            raise usage.UsageError('Invalid port specified to --smtp: %s' % self['smtp'])
+            raise usage.UsageError('Invalid port specified to --smtp: %s' %
+                                   self['smtp'])
         try:
             self['pop3s'] = int(self['pop3s'])
             assert 0 <= self['pop3s'] < 2 ** 16, ValueError
         except ValueError:
-            raise usage.UsageError('Invalid port specified to --pop3s: %s' % self['pop3s'])
+            raise usage.UsageError('Invalid port specified to --pop3s: %s' %
+                                   self['pop3s'])
         else:
-            if not self['certificate']:
-                raise usage.UsageError("Cannot specify --pop3s without --certificate")
-            elif not os.path.exists(self['certificate']):
-                raise usage.UsageError("Certificate file %r does not exist." % self['certificate'])
-
+            if self['pop3s']:
+                if not self['certificate']:
+                    raise usage.UsageError("Cannot specify --pop3s without "
+                                           "--certificate")
+                elif not os.path.exists(self['certificate']):
+                    raise usage.UsageError("Certificate file %r does not exist."
+                                           % self['certificate'])
         if not (self['pop3'] or self['smtp'] or self['pop3s']):
             raise usage.UsageError("You cannot disable all protocols")
 
