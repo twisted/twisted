@@ -131,6 +131,11 @@ class TestCase:
         if first is not second:
             raise FailTest, (msg or '%r is not %r' % (first, second))
 
+    def failIfIdentical(self, first, second, msg=None):
+        self._assertions += 1
+        if first is second:
+            raise FailTest, (msg or '%r is %r' % (first, second))
+
     def failIfEqual(self, first, second, msg=None):
         self._assertions += 1
         if not first != second:
@@ -152,6 +157,7 @@ class TestCase:
     assert_ = failUnless
     failIfEquals = failIfEqual
     assertIdentical = failUnlessIdentical
+    assertNotIdentical = failIfIdentical
     assertIn = failUnlessIn
     assertNotIn = failIfIn
 
