@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.42 2003/02/27 23:36:19 z3p Exp $
+# $Id: conch.py,v 1.43 2003/03/04 20:43:47 z3p Exp $
 
 #""" Implementation module for the `conch` command.
 #"""
@@ -45,6 +45,7 @@ class GeneralOptions(usage.Options):
                     ]
     
     optFlags = [['null', 'n', 'Redirect input from /dev/null.'],
+                ['fork', 'f', 'Fork to background after authentication.'],
                 ['tty', 't', 'Tty; allocate a tty even if command is given.'],
                 ['notty', 'T', 'Do not allocate a tty.'],
                 ['version', 'V', 'Display version number only.'],
@@ -184,7 +185,7 @@ def handleError():
     raise
 
 def onConnect():
-    if not options['noshell']:
+    if not options['noshell'] and not options['fork']:
         conn.openChannel(SSHSession())
     if options.localForwards:
         for localPort, hostport in options.localForwards:
@@ -200,6 +201,9 @@ def onConnect():
                 ('0.0.0.0', remotePort))
             d = conn.sendGlobalRequest('tcpip-forward', data)
             conn.remoteForwards[remotePort] = hostport
+    if options['fork']:
+        if os.fork():
+            os._exit(0)
 
     if isinstance(conn, SSHConnection) and not options['nocache']:
         filename = os.path.expanduser("~/.conch-%(user)s-%(host)s-%(port)s" % options)
