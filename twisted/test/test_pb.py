@@ -670,6 +670,7 @@ class BadCopySet(pb.Referenceable):
         return None
 
 class LocalRemoteTest(util.LocalAsRemote):
+    reportAllTracebacks = 0
 
     def sync_add1(self, x):
         return x + 1
