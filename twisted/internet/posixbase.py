@@ -63,7 +63,6 @@ class _Win32Waker(log.Logger, styles.Ephemeral):
     def __init__(self, reactor):
         """Initialize.
         """
-        log.msg("starting waker")
         self.reactor = reactor
         # Following select_trigger (from asyncore)'s example;
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
