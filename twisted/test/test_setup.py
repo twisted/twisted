@@ -41,6 +41,6 @@ class CheckingPackagesTestCase(unittest.TestCase):
             l.remove(package)
         # special treatment of cReactor
         l.remove('twisted.internet.cReactor')
-        if l != []:
-            print "Make sure you checked out the code with cvs -P option"
-            self.failUnlessEqual(l, [])
+        self.failIf(l, "Directories found which are not in setup.py: %s\n"
+                    "(Make sure you checked out the code with cvs -P option.)"
+                    % (l,))
