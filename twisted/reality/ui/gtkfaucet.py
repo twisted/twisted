@@ -14,14 +14,6 @@ ingtkernet.install()
 from twisted.spread import pb
 from twisted.spread.ui import gtkutil
 
-def scrollify(widget):
-    widget.set_word_wrap(gtk.TRUE)
-    scrl=gtk.GtkScrolledWindow()
-    scrl.add(widget)
-    scrl.set_policy(gtk.POLICY_NEVER, gtk.POLICY_ALWAYS)
-    # scrl.set_update_policy(gtk.POLICY_AUTOMATIC)
-    return scrl
-
 def defocusify(widget):
     widget.unset_flags(gtk.CAN_FOCUS)
 
@@ -39,7 +31,7 @@ class ResponseWindow(gtk.GtkWindow):
         self.set_title(question)
         self.text.set_editable(gtk.TRUE)
         self.text.insert_defaults(default)
-        scrl=scrollify(self.text)
+        scrl=gtkutil.scrolltxt(self.text)
         vb=gtk.GtkVBox()
         bb=gtk.GtkHButtonBox()
         vb.pack_start(scrl)
@@ -108,15 +100,15 @@ class GameWindow(gtk.GtkWindow, pb.Referenced):
 
         self.descbox=gtk.GtkText()
         self.descbox.set_usize(370,255)
-        self.descscrl=scrollify(self.descbox)
+        self.descscrl=gtkutil.scrolltxt(self.descbox)
         defocusify(self.descbox)
         
         self.itembox=gtk.GtkText()
-        self.itemscrl=scrollify(self.itembox)
+        self.itemscrl=gtkutil.scrolltxt(self.itembox)
         defocusify(self.itembox)
         
         self.happenings=gtk.GtkText()
-        self.happscrl=scrollify(self.happenings)
+        self.happscrl=gtkutil.scrolltxt(self.happenings)
         defocusify(self.happenings)
         self.cmdarea=gtk.GtkEntry()
 
