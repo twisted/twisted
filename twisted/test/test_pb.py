@@ -585,7 +585,7 @@ class BrokerTestCase(unittest.TestCase):
         pump.pump()
         assert self.thunkResult == ID, "ID not correct on factory object %s" % self.thunkResult
 
-from twisted.spread.util import Pager, StringPager, getAllPages
+from twisted.spread.util import Pager, StringPager, FilePager, getAllPages
 
 bigString = "helloworld" * 50
 
@@ -605,7 +605,26 @@ class Pagerizer(pb.Referenceable):
         StringPager(collector, bigString, 100, self.callback, *self.args, **self.kw)
         self.args = self.kw = None
 
+class FilePagerizer(pb.Referenceable):
+    def __init__(self, filename, callback, *args, **kw):
+        self.filename = filename
+        self.callback, self.args, self.kw = callback, args, kw
+
+    def remote_getPages(self, collector):
+        FilePager(collector, file(self.filename), self.callback, *self.args, **self.kw)
+        self.args = self.kw = None
+        
+
 class PagingTestCase(unittest.TestCase):
+    def setUpClass(self):
+        self.filename = self.mktemp()
+        fd = file(self.filename, 'w')
+        fd.write(bigString)
+        fd.close()
+
+    def tearDownClass(self):
+        os.remove(self.filename)
+
     def testPagingWithCallback(self):
         c, s, pump = connectedServerAndClient()
         s.setNameForLocal("foo", Pagerizer(finishedCallback, 'hello', value = 10))
@@ -627,6 +646,30 @@ class PagingTestCase(unittest.TestCase):
         while not l:
             pump.pump()
         assert ''.join(l[0]) == bigString, "Pages received not equal to pages sent!"
+
+    def testFilePagingWithCallback(self):
+        c, s, pump = connectedServerAndClient()
+        s.setNameForLocal("bar", FilePagerizer(self.filename, finishedCallback,
+                                               'frodo', value = 9))
+        x = c.remoteForName("bar")
+        l = []
+        getAllPages(x, "getPages").addCallback(l.append)
+        while not l:
+            pump.pump()
+        assert ''.join(l[0]) == bigString, "Pages received not equal to pages sent!"
+        assert callbackArgs == ('frodo',), "Completed callback not invoked"
+        assert callbackKeyword == {'value': 9}, "Completed callback not invoked"
+
+    def testFilePagingWithoutCallback(self):
+        c, s, pump = connectedServerAndClient()
+        s.setNameForLocal("bar", FilePagerizer(self.filename, None))
+        x = c.remoteForName("bar")
+        l = []
+        getAllPages(x, "getPages").addCallback(l.append)
+        while not l:
+            pump.pump()
+        assert ''.join(l[0]) == bigString, "Pages received not equal to pages sent!"
+
 
 from twisted.spread import publish
 

@@ -145,6 +145,46 @@ class StringPager(Pager):
             self.stopPaging()
         return val
 
+
+from twisted.protocols import basic
+from twisted.internet import interfaces
+
+class FilePager(Pager):
+    """Reads a file in chunks and sends the chunks as they come.
+    """
+    __implements__ = interfaces.IConsumer
+    
+    def __init__(self, collector, fd, callback=None, *args, **kw):
+        self.chunks = []
+        self.pointer = 0
+        self.startProducing(fd)
+        Pager.__init__(self, collector, callback, *args, **kw)
+
+    def startProducing(self, fd):
+        self.deferred = basic.FileSender().beginFileTransfer(fd, self)
+        self.deferred.addBoth(lambda x : self.stopPaging())
+
+    def registerProducer(self, producer, streaming):
+        self.producer = producer
+        if not streaming:
+            self.producer.resumeProducing()
+
+    def unregisterProducer(self):
+        self.producer = None
+
+    def write(self, chunk):
+        self.chunks.append(chunk)
+
+    def sendNextPage(self):
+        if self.pointer >= len(self.chunks):
+            return
+        val = self.chunks[self.pointer]
+        self.pointer += 1
+        self.producer.resumeProducing()
+        self.collector.callRemote("gotPage", val)
+            
+            
+
 ### Utility paging stuff.
 from twisted.spread import pb
 class CallbackPageCollector(pb.Referenceable):
