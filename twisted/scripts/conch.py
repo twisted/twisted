@@ -14,15 +14,16 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.37 2003/02/17 20:27:04 z3p Exp $
+# $Id: conch.py,v 1.38 2003/02/18 21:19:17 z3p Exp $
 
 #""" Implementation module for the `conch` command.
 #"""
 
-from twisted.conch import error
+from twisted.conch.error import ConchError
 from twisted.conch.ssh import transport, userauth, connection, common, keys
 from twisted.conch.ssh import session, forwarding, channel
 from twisted.internet import reactor, stdio, defer, protocol
+from twisted.internet.error import CannotListenError
 from twisted.python import usage, log
 from twisted.spread import banana
 
@@ -203,7 +204,10 @@ def onConnect():
 
     if isinstance(conn, SSHConnection) and not options['nocache']:
         filename = os.path.expanduser("~/.conch-%(user)s-%(host)s-%(port)s" % options)
-        reactor.listenUNIX(filename, SSHUnixServerFactory()).numberAccepts = 1
+        try:
+            reactor.listenUNIX(filename, SSHUnixServerFactory()).numberAccepts = 1
+        except CannotListenError:
+            pass # we'll just not listen, not a big deal
 
 class SSHUnixClientFactory(protocol.ClientFactory):
     noisy = 1
@@ -388,7 +392,7 @@ class SSHUnixServerProtocol(banana.Banana):
     def getChannel(self, channelID):
         channel = conn.channels[channelID]
         if not isinstance(channel, SSHUnixChannel):
-            raise error.ConchError('nice try bub')
+            raise ConchError('nice try bub')
         return channel
 
     def server_sendGlobalRequest(self, lst):
@@ -493,7 +497,7 @@ class SSHClientTransport(transport.SSHClientTransport):
         if goodKey == 1: # good key
             return defer.succeed(1) 
         elif goodKey == 2: # AAHHHHH changed
-            return defer.fail(error.ConchError('changed host key'))
+            return defer.fail(ConchError('changed host key'))
         else:
             oldout, oldin = sys.stdout, sys.stdin
             sys.stdin = sys.stdout = open('/dev/tty','r+')
@@ -516,7 +520,7 @@ class SSHClientTransport(transport.SSHClientTransport):
             sys.stdout,sys.stdin=oldout,oldin
             if ans == 'no':
                 print 'Host key verification failed.'
-                return defer.fail(error.ConchError('bad host key'))
+                return defer.fail(ConchError('bad host key'))
             print "Warning: Permanently added '%s' (%s) to the list of known hosts." % (khHost, {'ssh-dss':'DSA', 'ssh-rsa':'RSA'}[keyType])
             known_hosts = open(os.path.expanduser('~/.ssh/known_hosts'), 'a')
             encodedKey = base64.encodestring(pubKey).replace('\n', '')
@@ -610,7 +614,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
                         return defer.succeed(keys.getPrivateKeyObject(file, password = p))
                     except keys.BadKeyError:
                         pass
-                return defer.fail(error.ConchError('bad password'))
+                return defer.fail(ConchError('bad password'))
             raise
 
 class SSHConnection(connection.SSHConnection):
