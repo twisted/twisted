@@ -13,8 +13,9 @@ Options:
                         (default twistd.pid)
      -r --rundir      change to a supplied directory before running
                         (default .)
-     -f --file        read the given .spl file
-                        (default twistd.spl)
+     -f --file        read the given .tap file
+                        (default twistd.tap)
+     -y --python      read an application from within a Python file
      
 This reads an twisted.internet.main.Application out of a file and runs it.
 """
@@ -32,6 +33,7 @@ if string.find(os.path.abspath(sys.argv[0]),'Twisted') != -1:
 import traceback
 from twisted.python import usage, threadable, log
 from twisted.persisted import styles
+from cPickle import load
 
 class ServerOptions(usage.Options):
     optFlags = [['nodaemon','n'],
@@ -40,6 +42,7 @@ class ServerOptions(usage.Options):
                 ['quiet','q']]
     optStrings = [['logfile','l','twistd.log'],
                   ['file','f','twistd.spl'],
+                  ['python','y',''],
                   ['pidfile','','twistd.pid'],
                   ['rundir','d','.']]
 
@@ -69,7 +72,7 @@ if os.path.exists(config.pidfile):
             print 'Removing stale pidfile %s' % config.pidfile
         os.remove(config.pidfile)
     else:
-        sys.exit('A server is already running, PID %s' % open(config.pidfile).read())
+        sys.exit('A server is already running, PID %s' %  pid)
 
 if config.logfile == '-':
     if not config.nodaemon:
@@ -83,10 +86,8 @@ oldstdout = sys.stdout
 oldstderr = sys.stderr
 log.startLogging(logFile)
 # Load the servers.
-from cPickle import load
-print "Loading %s..." % config.file
-# This will fix up accidental function definitions in evaluation spaces and the
-# like.
+# This will fix up accidental function definitions in evaluation spaces 
+# and the like.
 class EverythingEphemeral:
     def __getattr__(self, key):
         print "Warning!  Loading from __main__: %s" % key
@@ -94,10 +95,19 @@ class EverythingEphemeral:
 mainMod = sys.modules['__main__']
 sys.modules['__main__'] = EverythingEphemeral()
 sys.stdout.flush()
-application = load(open(config.file,'rb'))
-sys.modules['__main__'] = mainMod
-print "Loaded."
 
+if not config.python:
+    print "Loading %s..." % config.file
+    application = load(open(config.file,'rb'))
+else:
+    print "Loading %s..." % config.python
+    dict = {}
+    execfile(config.python, dict, dict)
+    application = dict['application']
+
+print "Loaded."
+sys.modules['__main__'] = mainMod
+    
 
 if not config.nodaemon:
     # Turn into a daemon.
