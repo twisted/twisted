@@ -101,6 +101,133 @@ $ Twisted/admin/runtests
     conventions, <code class="shell">runtests</code> will be smart
     enough to pick up any new tests you write.</p>
 
+<h2>Skipping tests, TODO items</h2>
+
+<p>Trial, the Twisted unit test framework, has some extensions which are
+designed to encourage developers to add new tests. One common situation is
+that a test exercises some optional functionality: maybe it depends upon
+certain external libraries being available, maybe it only works on certain
+operating systems. The important common factor is that nobody considers
+these limitations to be a bug.</p>
+
+<p>To make it easy to test as much as possible, some tests may be skipped in
+certain situations. Individual test cases can raise the
+<code>SkipTest</code> exception to indicate that they should be skipped, and
+the remainder of the test is not run. In the summary (the very last thing
+printed, at the bottom of the test output) the test is counted as a
+<q>skip</q> instead of a <q>success</q> or <q>fail</q>. This should be used
+inside a conditional which looks for the necessary prerequisites:</p>
+
+<pre class="python">
+def testSSHClient(self):
+    if not ssh_path:
+        raise unittest.SkipTest, "cannot find ssh, nothing to test"
+    foo() # do actual test after the SkipTest
+</pre>
+
+<p>You can also set the .skip attribute on the method, with a string to
+indicate why the test is being skipped. This is convenient for temporarily
+turning off a test case, but it can also be set conditionally (by
+manipulating the class attributes after they've been defined):</p>
+
+<pre class="python">
+def testThing(self):
+    dotest()
+testThing.skip = "disabled locally"
+</pre>
+
+<pre class="python">
+class MyTestCase(unittest.TestCase):
+    def testOne(self):
+        ...
+    def testThing(self):
+        dotest()
+
+if not haveThing:
+    MyTestCase.testThing.skip = "cannot test without Thing"
+    # but testOne() will still run
+</pre>
+
+<p>Finally, you can turn off an entire TestCase at once by setting the .skip
+attribute on the class. If you organize your tests by the functionality they
+depend upon, this is a convenient way to disable just the tests which cannot
+be run.</p>
+
+<pre class="python">
+class SSLTestCase(unittest.TestCase):
+   ...
+class TCPTestCase(unittest.TestCase):
+   ...
+
+if not haveSSL:
+    SSLTestCase.skip = "cannot test without SSL support"
+    # but TCPTestCase will still run
+</pre>
+
+<h3>.todo and Testing New Functionality </h3>
+
+<p>Two good practices which arise from the <q>XP</q> development process are
+sometimes at odds with each other:</p>
+
+<ul>
+  <li>Unit tests are a good thing. Good developers recoil in horror when
+  they see a failing unit test. They should drop everything until the test
+  has been fixed.</li>
+
+  <li>Good developers write the unit tests first. Once tests are done, they
+  write implementation code until the unit tests pass. Then they stop.</li>
+</ul>
+
+<p>These two goals will sometimes conflict. The unit tests that are written
+first, before any implementation has been done, are certain to fail. We want
+developers to commit their code frequently, for reliability and to improve
+coordination between multiple people working on the same problem together.
+While the code is being written, other developers (those not involved in the
+new feature) should not have to pay attention to failures in the new code.
+We should not dilute our well-indoctrinated Failing Test Horror Syndrome by
+crying wolf when an incomplete module has not yet started passing its unit
+tests. To do so would either teach the module author to put off writing or
+committing their unit tests until <em>after</em> all the functionality is
+working, or it would teach the other developers to ignore failing test
+cases. Both are bad things.</p>
+
+<p><q>.todo</q> is intended to solve this problem. When a developer first
+starts writing the unit tests for functionality that has not yet been
+implemented, they can set the <code>.todo</code> attribute on the test
+methods that are expected to fail. These methods will still be run, but
+their failure will not be counted the same as normal failures: they will go
+into an <q>expected failures</q> category. Developers should learn to treat
+this category as a second-priority queue, behind actual test failures.</p>
+
+<p>As the developer implements the feature, the tests will eventually start
+passing. This is surprising: after all those tests are marked as being
+expected to fail. The .todo tests which nevertheless pass are put into a
+<q>unexpected success</q> category. The developer should remove the .todo
+tag from these tests. At that point, they become normal tests, and their
+failure is once again cause for immediate action by the entire development
+team.</p>
+
+<p>The life cycle of a test is thus:</p>
+
+<ol>
+  <li>Test is created, marked <code>.todo</code>. Test fails: <q>expected
+  failure</q>.</li>
+
+  <li>Code is written, test starts to pass. <q>unexpected success</q>.</li>
+
+  <li><code>.todo</code> tag is removed. Test passes. <q>success</q>.</li>
+
+  <li>Code is broken, test starts to fail. <q>failure</q>. Developers spring
+  into action.</li>
+
+  <li>Code is fixed, test passes once more. <q>success</q>.</li>
+</ol>
+
+<p>Any test which remains marked with <code>.todo</code> for too long should
+be examined. Either it represents functionality which nobody is working on,
+or the test is broken in some fashion and needs to be fixed.</p>
+
+
 <h2>Associating Test Cases With Source Files</h2>
 
 <p>Please add a <code>test-case-name</code> tag to the source file that is
