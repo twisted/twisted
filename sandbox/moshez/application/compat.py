@@ -15,7 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 from twisted.python import components, log
-from twisted.application import servers, clients, service
+from twisted.application import internet
 from twisted.persisted import sob
 
 class IOldApplication(components.Interface):
@@ -83,41 +83,41 @@ class ServiceNetwork:
         self.app = app
 
     def listenWith(self, portType, *args, **kw):
-        servers.GenericServer(portType, *args, **kw).setServiceParent(self.app)
+        internet.GenericServer(portType, *args, **kw).setServiceParent(self.app)
 
     def unlistenWith(self, portType, *args, **kw):
         raise NotImplementedError()
 
     def listenTCP(self, port, factory, backlog=5, interface=''):
-        s = servers.TCPServer(port, factory, backlog, interface)
+        s = internet.TCPServer(port, factory, backlog, interface)
         s.setServiceParent(self.app)
 
     def unlistenTCP(self, port, interface=''):
         raise NotImplementedError()
 
     def listenUNIX(self, filename, factory, backlog=5, mode=0666):
-        s = servers.UNIXServer(filename, factory, backlog, mode)
+        s = internet.UNIXServer(filename, factory, backlog, mode)
         s.setServiceParent(self.app)
 
     def unlistenUNIX(self, filename):
         raise NotImplementedError()
 
     def listenUDP(self, port, proto, interface='', maxPacketSize=8192):
-        s = servers.UDPServer(port, proto, interface, maxPacketSize)
+        s = internet.UDPServer(port, proto, interface, maxPacketSize)
         s.setServiceParent(self.app)
 
     def unlistenUDP(self, port, interface=''):
         raise NotImplementedError()
 
     def listenSSL(self, port, factory, ctxFactory, backlog=5, interface=''):
-        s = servers.SSLServer(port, factory, ctxFactory, backlog, interface)
+        s = internet.SSLServer(port, factory, ctxFactory, backlog, interface)
         s.setServiceParent(self.app)
 
     def unlistenSSL(self, port, interface=''):
         raise NotImplementedError()
 
     def connectWith(self, connectorType, *args, **kw):
-        s = clients.GenericClient(connectorType,  *args, **kw)
+        s = internet.GenericClient(connectorType,  *args, **kw)
         s.setServiceParent(self.app)
 
     def unlistenSSL(self, port, interface=''):
@@ -125,15 +125,15 @@ class ServiceNetwork:
 
     def connectUDP(self, remotehost, remoteport, protocol, localport=0,
                   interface='', maxPacketSize=8192):
-        s = clients.GenericClient(connectorType,  *args, **kw)
+        s = internet.GenericClient(connectorType,  *args, **kw)
         s.setServiceParent(self.app)
 
     def connectTCP(self, host, port, factory, timeout=30, bindAddress=None):
-        s = clients.TCPClient(host, port, factory, timeout, bindAddress)
+        s = internet.TCPClient(host, port, factory, timeout, bindAddress)
         s.setServiceParent(self.app)
 
     def connectUNIX(self, address, factory, timeout=30):
-        s = clients.UNIXClient(address, factory, timeout)
+        s = internet.UNIXClient(address, factory, timeout)
         s.setServiceParent(self.app)
 
     def bindPorts(self):
@@ -184,8 +184,8 @@ components.registerAdapter(ServiceNetwork,
 
 mapping = []
 for tran in 'tcp unix udp ssl'.split():
-    mapping.append((tran+'Ports', getattr(servers, tran.upper()+'Server')))
-    mapping.append((tran+'Connectors', getattr(clients, tran.upper()+'Client')))
+    mapping.append((tran+'Ports', getattr(internet, tran.upper()+'Server')))
+    mapping.append((tran+'Connectors',getattr(internet, tran.upper()+'Client')))
 
 def convert(oldApp):
     '''
@@ -197,15 +197,15 @@ def convert(oldApp):
     '''
     ret = service.Application(oldApp.name, oldApp.uid, oldApp.gid)
     ret.processName = oldApp.processName
-    for (pList, klass) in [(oldApp.extraPorts, servers.GenericServer),
-                           (oldApp.extraConnectors, clients.GenericClient),]:
+    for (pList, klass) in [(oldApp.extraPorts, internet.GenericServer),
+                           (oldApp.extraConnectors, internet.GenericClient),]:
         for (portType, args, kw) in pList:
             klass(portType, *args, **kw).setServiceParent(ret)
     for (name, klass) in mapping:
         for args in getattr(oldApp, name):
             klass(*args).setServiceParent(ret)
     for service in ret:
-        if isinstance(service, servers._AbstractServer):
+        if isinstance(service, internet._AbstractServer):
             service.privileged = 1
     for service in oldApp.services.values():
         service.disownServiceParent()
