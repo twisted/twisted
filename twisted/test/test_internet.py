@@ -499,7 +499,7 @@ class callFromThreadTestCase(unittest.TestCase):
 
     def schedule(self, *args, **kwargs):
         """Override in subclasses."""
-        apply(reactor.callFromThread, args, kwargs)
+        reactor.callFromThread(*args, **kwargs)
 
     def testScheduling(self):
         c = Counter()

@@ -91,7 +91,8 @@ class XMLReflector(reflector.Reflector):
             # find the row in the cache or add it
             resultObject = self.findInCache(tableInfo.rowClass, proxy.kw)
             if not resultObject:
-                resultObject = apply(tableInfo.rowFactoryMethod[0], (tableInfo.rowClass, data, proxy.kw) )
+                resultObject = tableInfo.rowFactoryMethod[0](
+                                       tableInfo.rowClass, data, proxy.kw)
                 self.addToCache(resultObject)
                 newRows.append(resultObject)
             results.append(resultObject)

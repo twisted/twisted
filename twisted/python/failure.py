@@ -227,7 +227,7 @@ class Failure:
 
         @type errorTypes: L{Exception}
         """
-        error = apply(self.check, errorTypes)
+        error = self.check(*errorTypes)
         if not error:
             raise self
         return error
