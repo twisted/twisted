@@ -259,13 +259,3 @@ class DeferredTestCaseII(unittest.TestCase):
 
     def tearDown(self):
         self.failUnless(self.callbackRan, "Callback was never run.")
-
-class DeferredTestCaseIII(unittest.TestCase):
-
-    def testMakeBlocking(self):
-        def foo():
-            from twisted.internet import reactor
-            d = defer.Deferred()
-            reactor.callLater(1, d.callback, "hello")
-            return d
-        self.failUnlessEqual(defer.makeBlocking(foo()), "hello")
