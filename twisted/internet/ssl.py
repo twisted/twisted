@@ -17,7 +17,7 @@
 
 """SSL transport. Requires PyOpenSSL (http://pyopenssl.sf.net).
 
-Most servers will likely want to overide the Port class's createContext()
+Most servers will likely want to overide the Port class's getContext()
 method with their own.
 """
 
@@ -25,12 +25,53 @@ method with their own.
 from OpenSSL import SSL
 
 # sibling imports
-import tcp
+import tcp, main
 
 
-class Client(tcp.Client):
+class Connection(tcp.Connection):
+    """I am an SSL connection.
+    """
+    
+    def doRead(self):
+        """See tcp.Connection.doRead for details.
+        """
+        try:
+            return tcp.Connection.doRead(self)
+        except SSL.WantReadError:
+            # redo command with same arguments
+            return self.doRead()
+        except (SSL.ZeroReturnError, SSL.SysCallError):
+            return main.CONNECTION_LOST
+    
+    def writeSomeData(self, data):
+        """See tcp.Connection.writeSomeData for details.
+        """
+        try:
+            return tcp.Connection.writeSomeData(self, data)
+        except SSL.WantWriteError:
+            # redo command with same arguments
+            return self.writeSomeData(data)
+        except (SSL.ZeroReturnError, SSL.SysCallError):
+            return main.CONNECTION_LOST
+
+    def connectionLost(self):
+        """See tcp.Connection.connectionLost for details.
+        """
+        # do the SSL shutdown exchange, before we close the underlying socket
+        try:
+            self.socket.shutdown()
+        except SSL.Error:
+            pass
+        tcp.Connection.connectionLost(self)
+
+
+class Client(Connection, tcp.Client):
     """I am an SSL client.
     """
+    
+    def __init__(*args, **kwargs):
+        # we need those so we don't use ssl.Connection's __init__
+        apply(tcp.Client.__init__, args, kwargs)
     
     def getContext(self):
         """Get an SSL context. Override in subclasses."""
@@ -43,10 +84,21 @@ class Client(tcp.Client):
         return SSL.Connection(self.getContext(), sock)
 
 
-class Port(tcp.Port):
+class Server(Connection, tcp.Server):
     """I am an SSL server.
     """
+    
+    def __init__(*args, **kwargs):
+        # we need those so we don't use ssl.Connection's __init__
+        apply(tcp.Server.__init__, args, kwargs)
 
+
+class Port(tcp.Port):
+    """I am an SSL port.
+    """
+    
+    transport = Server
+    
     def getContext(self):
         """Create an SSL context. Override in subclasses.
         
