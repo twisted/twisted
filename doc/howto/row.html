@@ -35,17 +35,21 @@ table that class corresponds to. The required class attributes
 are:</P>
 
 <UL>
-  <LI>rowColumns - list of the columns in the table with the correct case</LI>
-  <LI>rowKeyColumns - list of key columns in form: [(columnName, typeName)]</LI>
-  <LI>rowTableName - the name of the database table</LI>
+  <LI>rowColumns - list of the columns in the table with the correct
+  case
+  <LI>rowKeyColumns - list of key columns in form: [(columnName,
+  typeName)]
+  <LI>rowTableName - the name of the database table
 </UL>
 
 <P>There are also two optional class attributes that can be specified:</P>
 
 <UL>
   <LI>rowForeignKeys - list of foreign keys to other database tables
-  in the form: [(tableName, [(columnName, columnType)]]</LI>
-  <LI>rowFactoryMethod - a method that creates instances of this class</LI>
+  in the form: [(tableName, [(columnName, columnType)], containerMethodName,
+  autoLoad]
+  <LI>rowFactoryMethod - a method that creates instances of this
+  class
 </UL>
 
 <P>For example:</P>
@@ -75,28 +79,26 @@ def runTests(result):
     print &quot;Done initializing&quot;
 
 dbpool = adbapi.ConnectionPool(&quot;pyPgSQL.PgSQL&quot;)
-reflector = row.DBReflector( dbpool, [RoomRow], runTests )
-</PRE>
+reflector = row.DBReflector( dbpool, [RoomRow], runTests )</PRE>
 
 <H2>Creating Row Objects</H2>
 
-<P>There are three methods of creating RowObjects - batch loading
-from the database, single object selection from the database,
-and creating a new instance ready to be inserted.</P>
+<P>There are two methods of creating RowObjects - loading from
+the database, and creating a new instance ready to be inserted.</P>
 
-<P>To load a set of rows from the database and create RowObject
-instances for each of the rows, use the loadObjectsFrom method
-of the DBReflector. This takes a tableName, an optional &quot;user
-data&quot; parameter, and an optional SQL &quot;where clause&quot;.
-The where clause may be omitted which will retrieve all the rows
-from the table. For example:</P>
+<P>To load rows from the database and create RowObject instances
+for each of the rows, use the loadObjectsFrom method of the Reflector.
+This takes a tableName, an optional &quot;user data&quot; parameter,
+and an optional &quot;where clause&quot;. The where clause may
+be omitted which will retrieve all the rows from the table. For
+example:</P>
 
 <PRE>
 def gotRooms(rooms):
     for room in rooms:
         print &quot;Got room:&quot;, room.id
 
-refector.loadObjectsFrom(&quot;testrooms&quot;, whereClause=&quot;id &gt; 5&quot;, ).addCallback(gotRooms)</PRE>
+refector.loadObjectsFrom(&quot;testrooms&quot;, whereClause=[(&quot;id&quot;, reflector.EQUAL, 5)]).addCallback(gotRooms)</PRE>
 
 <P>For more advanced RowObject construction, loadObjectsFrom may
 use a factoryMethod that was specified as a class attribute for
@@ -112,24 +114,6 @@ def testRoomFactory(roomClass, userData, kw):
     newRoom = roomClass(userData)
     newRoom.__dict__.update(kw)
     return newRoom</PRE>
-
-<P>To load a single RowObject from the database, create an instance
-and assign a key value to it, then use the &quot;selectRow&quot;
-method of the DBReflector to populate it with data the database.
-This assumes that a row exists in the corresponding database table
-with a key value that matches the assigned primary key attributes
-of the row object instance. For example:</P>
-
-<PRE>
-    newRoom = RoomRow()
-    newRoom.assignKeyAttr(&quot;roomId&quot;, 10)
-    reflector.selectRow(newRoom).addCallback(onSelected)</PRE>
-
-<P>Note that the &quot;assignKeyAttr&quot; method must be used
-to set primary key attributes - regular attribute assignment of
-a primary key attribute of a rowObject will raise an exception.
-This prevents the database identity of RowObject from being changed
-by mistake.</P>
 
 <P>The last method of creating a row object is for new instances
 that do not already exist in the database table. In this case,
@@ -150,24 +134,36 @@ method of the DBReflector. For example:</P>
     reflector.insertRow(newRoom).addCallback(onInsert)</PRE>
 
 <P>This will insert a new row into the database table for this
-new RowObject instance.</P>
+new RowObject instance. Note that the &quot;assignKeyAttr&quot;
+method must be used to set primary key attributes - regular attribute
+assignment of a primary key attribute of a rowObject will raise
+an exception. This prevents the database identity of RowObject
+from being changed by mistake.</P>
+
+<P>&nbsp;</P>
 
 <H2>Relationships Between Tables</H2>
 
 <P>Specifying a foreign key for a RowClass creates a relationship
-between database tables. When <i>loadObjectsFrom</i> is called for a
+between database tables. When <I>loadObjectsFrom</I> is called for a
 table, it will automatically load all the children rows for the rows
 from the specified table. The child rows will be put into a list
-member variable of the rowObject instance with the same name as the
-child table.</P>
+member variable of the rowObject instance with the name "childRows" or
+if a <i>containerMethod</i> is specified for the foreign key
+relationship, that method will be called on the parent row object for
+each row that is being added to it as a child.</P>
 
-<H2> Duplicate Row Objects </H2>
+<P>The <i>autoLoad</i> member of the foreign key definition is a flag
+that specifies whether child rows should be auto-loaded for that
+relationship when a parent row is loaded.
 
-<P>If a reflector tries to load an instance of a rowObject that is
-already loaded, it will return a reference to the existing rowObject
-rather than creating a new instance.  The reflector maintains a cache
-of weak references to all loaded row objects by their unique keys for
-this purpose.</P>
+<H2>Duplicate Row Objects</H2>
+
+<P>If a reflector tries to load an instance of a rowObject that
+is already loaded, it will return a reference to the existing
+rowObject rather than creating a new instance. The reflector maintains
+a cache of weak references to all loaded row objects by their
+unique keys for this purpose.</P>
 
 <H2>Updating Row Objects</H2>
 

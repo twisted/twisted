@@ -22,13 +22,19 @@ from twisted.enterprise.row import RowObject
 from twisted.enterprise.xmlreflector import XMLReflector
 
 tableName = "testTable"
+childTableName = "childTable"
 
 class TestRow(RowObject):
-
     rowColumns    = ["key_string", "col2", "another_column", "Column4", "column_5_"]
     rowKeyColumns = [("key_string", "varchar")]
     rowTableName  = tableName
 
+class ChildRow(RowObject):
+    rowColumns    = ["childId", "foo", "test_key","stuff", "gogogo", "data"]
+    rowKeyColumns = [("childId", "int")]
+    rowTableName  = childTableName
+    rowForeignKeys = [(tableName, [("test_key","varchar")], [("key_string","varchar")], None, 1)]
+    
 class EnterpriseTestCase(unittest.TestCase):
     """Enterprise test cases. These will only work with the XML reflector for now. real database
     access requires there to be a database  :) and asynchronous tests (which these are not).
@@ -38,7 +44,7 @@ class EnterpriseTestCase(unittest.TestCase):
     
     def setUp(self):
         # creates XML db in file system
-        self.reflector = XMLReflector(EnterpriseTestCase.DB, [TestRow])
+        self.reflector = XMLReflector(EnterpriseTestCase.DB, [TestRow, ChildRow])
         self.reflector._really_populate()
 
         # create one row to work with
@@ -50,16 +56,34 @@ class EnterpriseTestCase(unittest.TestCase):
         self.newRow.column_5_ = 444
         self.data = None
         self.reflector.insertRow(self.newRow)        
-        
+
+        # create some child rows
+        self.childRows = []
+        for i in range(0,10):
+            row = ChildRow()
+            row.assignKeyAttr("childId", i)
+            row.foo = "foo foo "
+            row.test_key = "first"
+            row.stuff = "d"
+            row.gogogo = 101
+            row.data = "some data"
+            self.reflector.insertRow(row)
+            self.childRows.append(row)
+            
     def tearDown(self):
         # cleans up the XML db from the file system
-        self.reflector.deleteRow(self.newRow)        
+        self.reflector.deleteRow(self.newRow)
+        for row in self.childRows:
+            self.reflector.deleteRow(row)
         os.rmdir(self.DB + "/" + tableName)
+        os.rmdir(self.DB + "/" + childTableName)
+        os.rmdir(self.DB)
     
     def testQuery(self):
         self.reflector.insertRow(self.newRow)
         self.reflector.loadObjectsFrom(tableName).addCallback(self.gotData)
         assert len(self.data) == 1, "no rows on query"
+        assert len(self.data[0].childRows) == 10, "didnt load child rows"
         
     def testUpdate(self):
         self.reflector.insertRow(self.newRow)
@@ -67,7 +91,7 @@ class EnterpriseTestCase(unittest.TestCase):
 
     def testBulk(self):
         rows = []
-        num = 40
+        num = 10
         for i in range(0,num):
             newRow = TestRow()
             newRow.assignKeyAttr("key_string", "bulk%d"%i)

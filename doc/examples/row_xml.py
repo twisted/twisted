@@ -96,11 +96,17 @@ class RoomRow(row.RowObject):
     def __repr__(self):
         return "<Room #%d: %s (%s) (%d,%d)>" % (self.roomId, self.name, self.owner, self.posx, self.posy)
 
+    def __init__(self):
+        self.furniture = []
+
+    def addStuff(self, stuff):
+        self.furniture.append(stuff)
+
 class FurnitureRow(row.RowObject):
     rowColumns      = ["furnId", "roomId", "name", "posx", "posy"]
     rowKeyColumns   = [("furnId","int4")]
     rowTableName    = "furniture"
-    rowForeignKeys  = [("testrooms", [("roomId","int4")], [("roomId","int4")]) ]
+    rowForeignKeys  = [("testrooms", [("roomId","int4")], [("roomId","int4")], "addStuff", 1) ]
     def __repr__(self):
         return "Furniture #%d: room #%d (%s) (%d,%d)" % (self.furnId, self.roomId, self.name, self.posx, self.posy)
 
@@ -108,7 +114,7 @@ class RugRow(row.RowObject):
     rowColumns       = ["rugId", "roomId", "name"]
     rowKeyColumns    = [("rugId","int4")]
     rowTableName     = "rugs"
-    rowForeignKeys   = [( "testrooms", [("roomId","int4")],[("roomId","int4")]) ]
+    rowForeignKeys   = [( "testrooms", [("roomId","int4")],[("roomId","int4")], "addStuff", 1) ]
     def __repr__(self):
         return "Rug %#d: room #%d, (%s)" % (self.rugId, self.roomId, self.name)
 
@@ -117,7 +123,7 @@ class LampRow(row.RowObject):
     rowKeyColumns   = [("lampId","int4")]
     rowTableName    = "lamps"
     rowForeignKeys  = [("furniture", [("furnId","int4"),("furnName", "varchar")],
-                      [("furnId","int4"),("name", "varchar")]) ]
+                      [("furnId","int4"),("name", "varchar")], None, 1) ]
     def __repr__(self):
         return "Lamp #%d" % self.lampId
 
@@ -135,15 +141,14 @@ def dumpRooms(rooms):
         print "no rooms found!"
         main.shutDown()
 
+
     for room in rooms:
         print "  ", room
-        if hasattr(room,"container"):
-            for child in room.container:
-                print "     ", child
-                if hasattr(child, "container"):
-                    for inner in child.container:
-                        print "        ", inner
-
+        for child in room.furniture:
+            print "     ", child            
+            if hasattr(child, "childRows"):
+                for inner in child.childRows:
+                    print "        ", inner
     
 def gotDBRooms(rooms):
     print "------------ got rooms from database ------------"

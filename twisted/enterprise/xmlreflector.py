@@ -69,11 +69,12 @@ class XMLReflector(reflector.Reflector):
         if self.populatedCallback:
             self.populatedCallback()
         
-    def _loader(self, tableName, data, whereClause, parent):
+    def _rowLoader(self, tableName, parentRow, data, whereClause, forceChildren):
         d = self.tableDirs[ tableName]
         tableInfo = self.schema[tableName]
         filenames = os.listdir(d)
         results = []
+        
         for filename in filenames:
             if filename.find(self.extension) != len(filename) - len(self.extension):
                 continue
@@ -84,7 +85,6 @@ class XMLReflector(reflector.Reflector):
             # every object in the directory is loaded and checked!
             stop = 0            
             if whereClause:
-
                 for item in whereClause:
                     (columnName, cond, value) = item
                     #TODO: just do EQUAL for now
@@ -99,18 +99,19 @@ class XMLReflector(reflector.Reflector):
                 self.addToCache(resultObject)                
             results.append(resultObject)
 
-        if parent:
-            if hasattr(parent, "container"):
-                parent.container.extend(results)
-            else:
-                setattr(parent, "container", results)
+        # add these rows to the parentRow if required
+        if parentRow:
+            self.addToParent(parentRow, results, tableName)
 
-        # load any child rows
-        for newRow in results:
-            for relationship in self.schema[ newRow.rowTableName ].childTables:
-                # build whereClause
-                w = [ (relationship.childColumns[0][0], reflector.EQUAL, getattr(newRow, relationship.parentColumns[0][0]) )]
-                self._loader(relationship.childTableName, data, w, newRow)
+        # load children or each of these rows if required
+        for relationship in tableInfo.relationships:
+            if not forceChildren and not relationship.autoLoad:
+                continue
+            for row in results:
+                # build where clause
+                childWhereClause = self.buildWhereClause(relationship, row)             
+                # load the children immediately, but do nothing with them
+                self._rowLoader(relationship.childTableName, row, data, childWhereClause, forceChildren)
 
         return results
 
@@ -123,10 +124,20 @@ class XMLReflector(reflector.Reflector):
 
     ############### public interface  ######################
 
-    def loadObjectsFrom(self, tableName, data = None, whereClause = None, parent = None):
-        """The whereClause for XML loading is (columnName, value) tuple
+    def loadObjectsFrom(self, tableName, parentRow = None, data = None, whereClause = None, forceChildren = 1):
+        """The whereClause for XML loading is [(columnName, operation, value)] list of tuples
         """
-        results = self._loader(tableName, data, whereClause, parent)
+        if parentRow and whereClause:
+            raise DBError("Must specify one of parentRow _OR_ whereClause")
+        if parentRow:
+            info = self.getTableInfo(parentRow)
+            relationship = info.getRelationshipFor(tableName)
+            whereClause = self.buildWhereClause(relationship, parentRow)
+        elif whereClause:
+            pass
+        else:
+            whereClause = []
+        results = self._rowLoader(tableName, parentRow, data, whereClause, forceChildren)
         return defer.succeed(results)
     
     def updateRow(self, rowObject):

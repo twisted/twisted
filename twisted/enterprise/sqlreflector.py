@@ -102,15 +102,12 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
 
         self.populateSchemaFor(tableInfo)
         
-    def loadObjectsFrom(self, tableName, data = None, whereClause = [], parent = None):
-
+    def loadObjectsFrom(self, tableName, parentRow=None, data=None, whereClause=None, forceChildren=0):
         """Load a set of RowObjects from a database.
 
         Create a set of python objects of <rowClass> from the contents
-        of a table populated with appropriate data members. The
-        constructor for <rowClass> must take no args. Example to use
-        this:
-
+        of a table populated with appropriate data members.
+        Example:
           |  class EmployeeRow(row.RowObject):
           |      pass
           |
@@ -120,18 +117,32 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
           |          manager.updateRow(emp)
           |
           |  reflector.loadObjectsFrom("employee",
-          |                          userData,
-          |                          "employee_name like 'm%%'"
+          |                          data = userData,
+          |                          whereClause = [("manager" , EQUAL, "fred smith")]
           |                          ).addCallback(gotEmployees)
 
+        NOTE: the objects and all children should be loaded in a single transaction.
+        NOTE: can specify a parentRow _OR_ a whereClause.
+        
         """
-        return self.runInteraction(self._objectLoader, tableName, data, whereClause, parent)
+        if parentRow and whereClause:
+            raise DBError("Must specify one of parentRow _OR_ whereClause")
+        if parentRow:
+            info = self.getTableInfo(parentRow)
+            relationship = info.getRelationshipFor(tableName)
+            whereClause = self.buildWhereClause(relationship, parentRow)
+        elif whereClause:
+            pass
+        else:
+            whereClause = []
+        return self.runInteraction(self._rowLoader, tableName, parentRow, data, whereClause, forceChildren)
 
-    def _objectLoader(self, transaction, tableName, data, whereClause, parent):
-        """worker method to load objects from a table. NOTE: works, but needs to be make more readable!
+    
+    def _rowLoader(self, transaction, tableName, parentRow, data, whereClause, forceChildren):
+        """immediate loading of rowobjects from the table with the whereClause.
         """
         tableInfo = self.schema[tableName]
-        # get the data from the table
+        # Build the SQL for the query
         sql = "SELECT "
         first = 1
         for column, type, typeid in tableInfo.dbColumns:
@@ -154,9 +165,11 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
                 quotedValue = quote(value, t)
                 sql += "%s %s %s" % (columnName, self.conditionalLabels[cond], quotedValue)
 
+        # execute the query
         transaction.execute(sql)
         rows = transaction.fetchall()
-        # construct the objects
+        
+        # construct the row objects
         results = []
         for args in rows:
             kw = {}
@@ -173,36 +186,23 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
                 self.addToCache(resultObject)                
             results.append(resultObject)
 
-        if self.schema[ tableName ]:
-            self.loadChildRows(tableInfo.rowClass, results, transaction, data)
+        # add these rows to the parentRow if required
+        if parentRow:
+            self.addToParent(parentRow, results, tableName)
+            
+        # load children or each of these rows if required
+        for relationship in tableInfo.relationships:
+            if not forceChildren and not relationship.autoLoad:
+                continue
+            for row in results:
+                # build where clause
+                childWhereClause = self.buildWhereClause(relationship, row)             
+                # load the children immediately, but do nothing with them
+                self._rowLoader(transaction, relationship.childTableName, row, data, childWhereClause, forceChildren)
 
-        # NOTE: using the "container" variable as the container is a temporary measure until containment is figured out.
-        if parent:
-            if hasattr(parent, "container"):
-                parent.container.extend(results)
-            else:
-                setattr(parent, "container", results)
         return results
 
-    def loadChildRows(self, rowClass, rows, transaction, data):
-        """Load the child rows for each row in the set.
-        """
-        for newRow in rows:
-            for relationship in self.schema[ rowClass.rowTableName ].childTables:
-                whereClause = []
-                first = 1
-                for i in range(0,len(relationship.childColumns)):
-                    value = getattr(newRow, relationship.parentColumns[i][0])
-                    #value = quote(getattr(newRow, relationship.parentColumns[i][0]), relationship.parentColumns[i][1])                    
-
-                    whereClause.append( [relationship.childColumns[i][0], reflector.EQUAL, value] )
-                    
-                self._objectLoader(transaction,
-                                   relationship.childTableName,
-                                   data,
-                                   whereClause,
-                                   newRow)
-
+        
     def findTypeFor(self, tableName, columnName):
         tableInfo = self.schema[tableName]
         for column, type, typeid in tableInfo.dbColumns:

@@ -61,19 +61,14 @@ class Reflector:
         """
         raise DBError("not implemented")
     
-    def loadObjectsFrom(self, tableName, data = None, whereClause = [], parent = None):
-        """Implement me to load objects from the database. The whereClause argument is a list of tuples of
-        (columnName, conditional, value) so it can be parsed by all types of reflectors. eg.
-           |  whereClause = [("name", EQUALS, "fred"), ("age", GREATERTHAN, 18)]
-        """
-        raise DBError("not implemented")
-
     def populateSchemaFor(self, tableInfo):
         self.schema[ tableInfo.rowTableName ] = tableInfo
         
         # add the foreign key to the parent table.
-        for foreignTableName, localColumns, foreignColumns in tableInfo.rowForeignKeys:
-            self.schema[foreignTableName].addForeignKey(tableInfo.rowTableName, localColumns, foreignColumns, tableInfo.rowClass)
+        for foreignTableName, localColumns, foreignColumns, containerMethod, autoLoad in tableInfo.rowForeignKeys:
+            self.schema[foreignTableName].addForeignKey(tableInfo.rowTableName, localColumns,
+                                                        foreignColumns, tableInfo.rowClass,
+                                                        containerMethod, autoLoad)
 
     def getTableInfo(self, rowObject):
         """Get a TableInfo record about a particular instance.
@@ -97,6 +92,39 @@ class Reflector:
             raise DBError("class %s was not registered with %s" % (
                 rowObject.__class__, self))
 
+    def buildWhereClause(self, relationship, row):
+        """util method used by reflectors. builds a where clause to link a row to another table.
+        """
+        whereClause = []                
+        for i in range(0,len(relationship.childColumns)):                
+            value = getattr(row, relationship.parentColumns[i][0])
+            whereClause.append( [relationship.childColumns[i][0], EQUAL, value] )
+        return whereClause
+
+    def addToParent(self, parentRow, rows, tableName):
+        """util method used by reflectors. adds these rows to the parent row object.
+        If a rowClass doesnt have a containerMethod, then a list attribute "childRows"
+        will be used.
+        """
+        parentInfo = self.getTableInfo(parentRow)
+        relationship = parentInfo.getRelationshipFor(tableName)
+        if not relationship:
+            raise DBError("no relationship from %s to %s" % ( parentRow.rowTableName, tableName) )
+        
+        if not relationship.containerMethod:
+            if hasattr(parentRow, "childRows"):
+                parentRow.childRows.extend(rows)
+            else:
+                parentRow.childRows = rows
+            return
+        
+        if not hasattr(parentRow, relationship.containerMethod):
+            raise DBError("parent row doesnt have container method <%s>!" % relationship.containerMethod)
+        
+        meth = getattr(parentRow, relationship.containerMethod)
+        for row in rows:
+            meth(row)
+        
     ####### Row Cache ########
     
     def addToCache(self, rowObject):
@@ -123,6 +151,13 @@ class Reflector:
         del self.rowCache[key]
 
     ####### Row Operations ########
+
+    def loadObjectsFrom(self, tableName, parent = None, data = None,  whereClause = [], loadChildren = 1):
+        """Implement me to load objects from the database. The whereClause argument is a list of tuples of
+        (columnName, conditional, value) so it can be parsed by all types of reflectors. eg.
+           |  whereClause = [("name", EQUALS, "fred"), ("age", GREATERTHAN, 18)]
+        """
+        raise DBError("not implemented")
         
     def updateRow(self, rowObject):
         """update this rowObject to the database.
@@ -138,7 +173,7 @@ class Reflector:
         """delete the row for this object from the database.
         """
         raise DBError("not implemented")        
-
+    
 # conditionals
 EQUAL       = 0
 LESSTHAN    = 1

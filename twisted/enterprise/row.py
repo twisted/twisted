@@ -37,14 +37,14 @@ from twisted.enterprise.util import DBError, NOQUOTE, getKeyColumn
 class RowObject:
     """I represent a row in a table in a relational database.
 
-    My class is "populated" by a DBReflector object. After I am
+    My class is "populated" by a Reflector object. After I am
     populated, instances of me are able to interact with a particular
     database table.
 
     You should use a class derived from this class for each database
     table.
 
-    enterprise.Augentation.loadObjectsFrom() is used to create sets of
+    reflector.loadObjectsFrom() is used to create sets of
     instance of objects of this class from database tables.
 
     Once created, the "key column" attributes cannot be changed.

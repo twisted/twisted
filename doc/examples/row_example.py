@@ -98,7 +98,14 @@ class RoomRow(row.RowObject):
     rowKeyColumns    = [("roomId","int4")]
     rowTableName     = "testrooms"
     rowFactoryMethod = [myRowFactory]
-    
+
+    def __init__(self):
+        self.furniture = []
+
+    def addStuff(self, stuff):
+        #print "%s adding child %s" % (self, stuff)
+        self.furniture.append(stuff)
+        
     def moveTo(self, x, y):
         self.posx = x
         self.posy = y
@@ -110,8 +117,8 @@ class FurnitureRow(row.RowObject):
     rowColumns      = ["furnId", "roomId", "name", "posx", "posy"]
     rowKeyColumns   = [("furnId","int4")]
     rowTableName    = "furniture"
-    rowForeignKeys  = [("testrooms", [("roomId","int4")], [("roomId","int4")]) ]
-
+    rowForeignKeys  = [("testrooms", [("roomId","int4")], [("roomId","int4")], "addStuff", 1) ]
+    
     def __repr__(self):
         return "Furniture #%d: room #%d (%s) (%d,%d)" % (self.furnId, self.roomId, self.name, self.posx, self.posy)
 
@@ -120,7 +127,7 @@ class RugRow(row.RowObject):
     rowKeyColumns    = [("rugId","int4")]
     rowTableName     = "rugs"
     rowFactoryMethod = [myRowFactory]
-    rowForeignKeys   = [( "testrooms", [("roomId","int4")],[("roomId","int4")]) ]
+    rowForeignKeys   = [( "testrooms", [("roomId","int4")],[("roomId","int4")], "addStuff", 1) ]
     
     def __repr__(self):
         return "Rug %#d: room #%d, (%s)" % (self.rugId, self.roomId, self.name)
@@ -130,7 +137,8 @@ class LampRow(row.RowObject):
     rowKeyColumns   = [("lampId","int4")]
     rowTableName    = "lamps"
     rowForeignKeys  = [("furniture", [("furnId","int4"),("furnName", "varchar")],
-                      [("furnId","int4"),("name", "varchar")]) ]
+                      [("furnId","int4"),("name", "varchar")], None, 1) ]
+                      # NOTE: this has no containerMethod so children will be added to "childRows"
     
     def __repr__(self):
         return "Lamp #%d" % self.lampId
@@ -155,12 +163,11 @@ def gotRooms(rooms):
 
     for room in rooms:
         print "  ", room
-        if hasattr(room,"container"):
-            for child in room.container:
-                print "     ", child
-                if hasattr(child, "container"):
-                    for inner in child.container:
-                        print "        ", inner
+        for child in room.furniture:
+            print "     ", child            
+            if hasattr(child, "childRows"):
+                for inner in child.childRows:
+                    print "        ", inner
 
     room.moveTo( int(random.random() * 100) , int(random.random() * 100) )
     manager.updateRow(room).addCallback(onUpdate)
@@ -198,10 +205,13 @@ def onInsert(data):
 
 def onDelete(data):
     print "row deleted."
-    return manager.loadObjectsFrom("testrooms", whereClause=[("roomId",reflector.EQUAL,10)] ).addCallback(onSelected)
+    return manager.loadObjectsFrom("furniture", whereClause=[("furnId",reflector.EQUAL,53)] ).addCallback(onSelected)
 
-def onSelected(rooms):
-    print "\ngot Room:", rooms
+def onSelected(furn):
+    for f in furn:
+        print "\ngot Furn:", f
+        for l in f.childRows:
+            print "   ", l
     main.shutDown()    
 
 def gotRooms2(rooms):

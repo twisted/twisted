@@ -106,12 +106,18 @@ class _TableInfo:
         self.updateSQL = None
         self.deleteSQL = None
         self.insertSQL = None
-        self.childTables = []
+        self.relationships = []
         self.dbColumns = []
 
-    def addForeignKey(self, childTableName, childColumns, localColumns, childRowClass):
-        self.childTables.append( _TableRelationship(childTableName, localColumns, childColumns, childRowClass) )
+    def addForeignKey(self, childTableName, childColumns, localColumns, childRowClass, containerMethod, autoLoad):
+        self.relationships.append( _TableRelationship(childTableName, localColumns, childColumns, childRowClass, containerMethod, autoLoad) )
 
+    def getRelationshipFor(self, tableName):
+        for relationship in self.relationships:
+            if relationship.childTableName == tableName:
+                return relationship
+        return None
+    
 class _TableRelationship:
     """(Internal)
     
@@ -120,8 +126,12 @@ class _TableRelationship:
     def __init__(self, childTableName,
                  parentColumns,
                  childColumns,
-                 childRowClass):
+                 childRowClass,
+                 containerMethod,
+                 autoLoad):
         self.childTableName = childTableName            
         self.parentColumns = parentColumns
         self.childColumns = childColumns
         self.childRowClass = childRowClass
+        self.containerMethod = containerMethod
+        self.autoLoad = autoLoad
