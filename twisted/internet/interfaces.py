@@ -59,3 +59,47 @@ class IProducer:
         """
         pass
 
+
+class ISelectable:
+    """An object that can be registered with the networking event loop.
+    
+    Selectables more or less correspond to object that can be passed to select().
+    This is platform dependant, and not totally accurate, since the main event loop
+    may not be using select().
+    
+    Selectables may be registered as readable by passing them to t.i.main.addReader(),
+    and they may be registered as writable by passing them to t.i.main.addWriter().
+    
+    In general, selectables are expected to inherit from twisted.python.log.Logger.
+    """
+    
+    def doWrite(self):
+        """Called when data is available for writing.
+        
+        This will only be called if this object has been registered as a writer in
+        the event loop.
+        """
+        pass
+    
+    def doRead(self):
+        """Called when data is available for reading.
+        
+        This will only be called if this object has been registered as a reader in
+        the event loop.
+        """
+        pass
+    
+    def fileno(self):
+        """Return a file descriptor number for select().
+
+        This method must return an integer, the object's file descriptor.
+        """
+        pass
+    
+    def connectionLost(self):
+        """Called if an error has occured or the object's connection was closed.
+        
+        This may be called even if the connection was never opened in the first place.
+        """
+        pass
+

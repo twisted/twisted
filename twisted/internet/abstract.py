@@ -41,7 +41,7 @@ class FileDescriptor(log.Logger):
     disconnected = 0
     disconnecting = 0
 
-    __implements__ = (interfaces.IProducer,)
+    __implements__ = (interfaces.IProducer, interfaces.ISelectable)
 
     def connectionLost(self):
         """The connection was lost.
