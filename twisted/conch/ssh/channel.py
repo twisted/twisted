@@ -219,7 +219,6 @@ class SSHChannel(log.Logger):
         Close the channel.
         """
         self.closing = 1
-        log.msg(repr((self.buf, self.extBuf)))
         if not self.buf and not self.extBuf:
             self.conn.sendClose(self)
 

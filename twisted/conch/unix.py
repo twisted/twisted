@@ -228,12 +228,16 @@ class SSHSessionForUnixConchUser:
             self.pty.closeStdin()
 
     def closed(self):
+        if self.ptyTuple and os.path.exists(self.ptyTuple[2]):
+            ttyGID = os.stat(self.ptyTuple[2])[5]
+            os.chown(self.ptyTuple[2], 0, ttyGID)
         if self.pty:
+            try:
+                self.pty.signalProcess('HUP')
+            except OSError:
+                pass
             self.pty.loseConnection()
-            self.pty.signalProcess('HUP')
-            if self.ptyTuple:
-                ttyGID = os.stat(self.ptyTuple[2])[5]
-                os.chown(self.ptyTuple[2], 0, ttyGID)
+        log.msg('shell closed')
 
     def windowChanged(self, winSize):
         self.winSize = winSize
