@@ -30,6 +30,7 @@ if string.find(os.path.abspath(sys.argv[0]),'Twisted') != -1:
 
 import traceback
 from twisted.python import usage, threadable, log
+from twisted.persisted import styles
 
 class ServerOptions(usage.Options):
     optFlags = [['nodaemon','n'],
@@ -81,8 +82,17 @@ log.startLogging(logFile)
 # Load the servers.
 from cPickle import load
 print "Loading %s..." % config.file
+# This will fix up accidental function definitions in evaluation spaces and the
+# like.
+class EverythingEphemeral:
+    def __getattr__(self, key):
+        print "Warning!  Loading from __main__: %s" % key
+        return styles.Ephemeral()
+mainMod = sys.modules['__main__']
+sys.modules['__main__'] = EverythingEphemeral()
 sys.stdout.flush()
 application = load(open(config.file,'rb'))
+sys.modules['__main__'] = mainMod
 print "Loaded."
 
 
