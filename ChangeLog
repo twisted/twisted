@@ -1,3 +1,11 @@
+2002-12-05  Dave Peticolas  <dave@krondo.com>
+
+	* twisted/enterprise/sqlreflector.py: fix some sql escaping
+	bugs. allow subclasses to override escaping semantics.
+
+	* twisted/enterprise/util.py: allow quote function's string escape
+	routine to be overridden with a keyword argument.
+
 2002-12-5  Moshe Zadka <moshez@twistedmatrix.com>
 
 	* twisted/python/plugin.py: fixed a bug that got the wrong plugins.tml

@@ -68,13 +68,29 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
         for att in attributes:
             if not hasattr(rc, att):
                 raise DBError("RowClass %s must have class variable: %s" % (rc, att))
-            
+
         tableInfo = _TableInfo(rc)
         tableInfo.updateSQL = self.buildUpdateSQL(tableInfo)
         tableInfo.insertSQL = self.buildInsertSQL(tableInfo)
         tableInfo.deleteSQL = self.buildDeleteSQL(tableInfo)
         self.populateSchemaFor(tableInfo)
-        
+
+    def escape_string(self, text):
+        """Escape a string for use in an SQL statement. The default
+        implementation escapes ' with '' and \ with \\. Redefine this
+        function in a subclass if your database server uses different
+        escaping rules.
+        """
+        return adbapi.safe(text)
+
+    def quote_value(self, value, type):
+        """Format a value for use in an SQL statement.
+
+        @param value: a value to format as data in SQL.
+        @param type: a key in util.dbTypeMap.
+        """
+        return quote(value, type, string_escaper=self.escape_string)
+
     def loadObjectsFrom(self, tableName, parentRow=None, data=None, whereClause=None, forceChildren=0):
         """Load a set of RowObjects from a database.
 
@@ -125,7 +141,7 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
             else:
                 sql = sql + ","
             sql = sql + " %s" % column
-        sql = sql + " FROM %s """ % (tableName)
+        sql = sql + " FROM %s " % (tableName)
         if whereClause:
             sql += " WHERE "
             first = 1
@@ -136,7 +152,7 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
                     sql += " AND "
                 (columnName, cond, value) = wItem
                 t = self.findTypeFor(tableName, columnName)
-                quotedValue = quote(value, t)
+                quotedValue = self.quote_value(value, t)
                 sql += "%s %s %s" % (columnName, self.conditionalLabels[cond], quotedValue)
 
         # execute the query
@@ -198,16 +214,16 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
                 continue
             if not first:
                 sql = sql + ", "
-            sql = sql + "  %s = %s" % (column, quote("%s", type))
+            sql = sql + " %s = %s" % (column, "%s")
             first = 0
 
         # build where clause
         first = 1
-        sql = sql + "  WHERE "
+        sql = sql + " WHERE "
         for keyColumn, type in tableInfo.rowKeyColumns:
             if not first:
                 sql = sql + " AND "
-            sql = sql + "   %s = %s " % (keyColumn, quote("%s", type) )
+            sql = sql + " %s = %s " % (keyColumn, "%s")
             first = 0
         return sql
 
@@ -233,7 +249,7 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
         for column, type in tableInfo.rowColumns:
             if not first:
                 sql = sql + ", "
-            sql = sql + quote("%s", type)
+            sql = sql + "%s"
             first = 0
 
         sql = sql + ")"
@@ -245,11 +261,11 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
         sql = "DELETE FROM %s " % tableInfo.rowTableName
         # build where clause
         first = 1
-        sql = sql + "  WHERE "
+        sql = sql + " WHERE "
         for keyColumn, type in tableInfo.rowKeyColumns:
             if not first:
                 sql = sql + " AND "
-            sql = sql + "   %s = %s " % (keyColumn, quote("%s", type) )
+            sql = sql + " %s = %s " % (keyColumn, "%s")
             first = 0
         return sql
 
@@ -262,10 +278,10 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
         # build update attributes
         for column, type in tableInfo.rowColumns:
             if not getKeyColumn(rowObject.__class__, column):
-                args.append(rowObject.findAttribute(column))
+                args.append(self.quote_value(rowObject.findAttribute(column), type))
         # build where clause
         for keyColumn, type in tableInfo.rowKeyColumns:
-            args.append( rowObject.findAttribute(keyColumn))
+            args.append(self.quote_value(rowObject.findAttribute(keyColumn), type))
 
         return self.getTableInfo(rowObject).updateSQL % tuple(args)
 
@@ -284,7 +300,7 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
         tableInfo = self.schema[rowObject.rowTableName]        
         # build values
         for column, type in tableInfo.rowColumns:
-            args.append(rowObject.findAttribute(column))
+            args.append(self.quote_value(rowObject.findAttribute(column), type))
         return self.getTableInfo(rowObject).insertSQL % tuple(args)
 
     def insertRow(self, rowObject):
@@ -302,7 +318,7 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
         tableInfo = self.schema[rowObject.rowTableName]        
         # build where clause
         for keyColumn, type in tableInfo.rowKeyColumns:
-            args.append(rowObject.findAttribute(keyColumn))
+            args.append(self.quote_value(rowObject.findAttribute(keyColumn), type))
 
         return self.getTableInfo(rowObject).deleteSQL % tuple(args)
 
@@ -312,4 +328,3 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
         sql = self.deleteRowSQL(rowObject)
         self.removeFromCache(rowObject)
         return self.runOperation(sql)
-
