@@ -49,10 +49,6 @@ register("Twisted Mail",
          description="Email services for Twisted.",
          type='coil')
 
-register("Twisted Names",
-         "twisted.coil.plugins.names",
-         description="DNS services for Twisted.",
-         type='coil')
 
 # TAP Builder modules
 
