@@ -172,10 +172,10 @@ myFactory.protocol = wire.Echo
 # Create the (sole) server
 # Normally, the echo protocol lives on port 7, but since that
 # is a privileged port, for this example we'll use port 7001
-myServer = internet.TCPServer(7001, f)
+myServer = internet.TCPServer(7001, myFactory)
 
 # Tie the service to the application
-myServer.setServiceParent(s)
+myServer.setServiceParent(myService)
 </pre>
  
 <p>TAC files are run with <code>twistd -y</code> or
