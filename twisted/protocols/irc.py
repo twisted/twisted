@@ -59,6 +59,9 @@ SPC = chr(040)
 class IRCBadMessage(Exception):
     pass
 
+class IRCPasswordMismatch(Exception):
+    pass
+
 def parsemsg(s):
     """Breaks a message from an IRC server into its prefix, command, and arguments.
     """
@@ -75,7 +78,7 @@ def parsemsg(s):
     command = args.pop(0)
     return prefix, command, args
 
-# THIS VERSION IS LAME.  RADEEX DID NOT LIKE THE OTHER VERSION
+
 def split(str, length = 80):
     """split(str, length = 80) -> list of strs
 
@@ -186,6 +189,7 @@ class IRCClient(basic.LineReceiver):
     """
 
     nickname = 'irc'
+    password = None
     realname = None
     ### Responses to various CTCP queries.
 
@@ -200,6 +204,7 @@ class IRCClient(basic.LineReceiver):
     sourceDir = "/downloads"
     sourceFiles = None
 
+    dcc_destdir = '.'
     dcc_sessions = None
 
     __pychecker__ = 'unusednames=params,prefix,channel'
@@ -253,22 +258,15 @@ class IRCClient(basic.LineReceiver):
     ### user input commands, client->server
     ### Your client will want to invoke these.
 
-    # i have tried to keep backward compatibility with the 0.16
-    # way of doings (join('channel') when you really want #channel),
-    # however trying to join channels like ##foo and ###foo will
-    # work differently now. leave, say and me all have the same issue
-    # the old way made it impossible to join &channel's (and IMHO
-    # was a little bit annoying :))
-
     def join(self, channel, key=None):
-        if channel[0] not in '&#': channel = '#' + channel
+        if channel[0] not in '&#!+': channel = '#' + channel
         if key:
             self.sendLine("JOIN %s %s" (channel, key))
         else:
             self.sendLine("JOIN %s" % (channel,))
 
     def leave(self, channel, reason=None):
-        if channel[0] not in '&#': channel = '#' + channel
+        if channel[0] not in '&#!+': channel = '#' + channel
         if reason:
             self.sendLine("PART %s :%s" % (channel, reason))
         else:
@@ -278,11 +276,11 @@ class IRCClient(basic.LineReceiver):
 
     def topic(self, channel, topic):
         # << TOPIC #xtestx :fff
-        if channel[0] not in '&#': channel = '#' + channel
+        if channel[0] not in '&#!+': channel = '#' + channel
         self.sendLine("TOPIC %s :%s" % (channel, topic))
 
     def say(self, channel, message, length = None):
-        if channel[0] not in '&#': channel = '#' + channel
+        if channel[0] not in '&#!+': channel = '#' + channel
         self.msg(channel, message, length)
 
     def msg(self, user, message, length = None):
@@ -305,17 +303,22 @@ class IRCClient(basic.LineReceiver):
     def away(self, message=''):
         self.sendLine("AWAY :%s" % message)
 
+    def register(self, nickname, hostname='foo', servername='bar'):
+        if self.password is not None:
+            self.sendLine("PASS %s" % self.password)
+        self.setNick(nickname)
+        self.sendLine("USER %s foo bar :%s" % (nickname, self.realname))
+
     def setNick(self, nickname):
         self.nickname = nickname
         self.sendLine("NICK %s" % nickname)
-        self.sendLine("USER %s foo bar :%s" % (nickname, self.realname))
 
     ### user input commands, client->client
 
     def me(self, channel, action):
         """Strike a pose.
         """
-        if channel[0] not in '&#': channel = '#' + channel
+        if channel[0] not in '&#!+': channel = '#' + channel
         self.ctcpMakeQuery(channel, [('ACTION', action)])
 
     _pings = None
@@ -375,14 +378,18 @@ class IRCClient(basic.LineReceiver):
     ### but it is safe to leave them alone.
 
     def irc_ERR_NICKNAMEINUSE(self, prefix, params):
-        self.setNick(self.nickname+'_')
+        self.register(self.nickname+'_')
+
+    def irc_ERR_PASSWDMISMATCH(self, prefix, params):
+        raise IRCPasswordMismatch("Password Incorrect.")
 
     def irc_RPL_WELCOME(self, prefix, params):
         self.signedOn()
 
     def irc_JOIN(self, prefix, params):
         nick = string.split(prefix,'!')[0]
-        if nick == self.nickname: self.joined(params[-1]) # whoops! :)
+        if nick == self.nickname:
+            self.joined(params[-1]) 
 
     def irc_PING(self, prefix, params):
         self.sendLine("PONG %s" % params[-1])
@@ -601,7 +608,7 @@ class IRCClient(basic.LineReceiver):
 
             filename = path.basename(arg)
             protocol = DccFileReceive(filename, size,
-                                      queryData=(user,channel,data))
+                                      (user,channel,data),self.dcc_destdir)
 
             reactor.clientTCP(address, port, protocol)
             self.dcc_sessions.append(protocol)
@@ -712,9 +719,7 @@ class IRCClient(basic.LineReceiver):
     ### Protocool methods
 
     def connectionMade(self):
-        self.sendLine("NICK %s" % (self.nickname,))
-        self.sendLine("USER %s %s * :%s" % (self.nickname,
-                                            '0', self.realname))
+        self.register(self.nickname)
 
     def lineReceived(self, line):
         # some servers (dalnet!) break RFC and send their first few lines just delimited by \n
@@ -971,10 +976,9 @@ def dccDescribe(data):
 class DccFileReceive(DccFileReceiveBasic):
     """Higher-level coverage for getting a file from DCC SEND.
 
-    I write the data to a temporary file as it comes in.  I I allow you
-    to change the file's name and destination directory.  I move the
-    file into place when it's done, but I won't overwrite an existing
-    file unless I've been told it's okay to do so.
+    I allow you to change the file's name and destination directory.
+    I won't overwrite an existing file unless I've been told it's okay
+    to do so.
 
     XXX: I need to let the client know when I am finished.
     XXX: I need to decide how to keep a progress indicator updated.
@@ -989,9 +993,10 @@ class DccFileReceive(DccFileReceiveBasic):
     fromUser = None
     queryData = None
 
-    def __init__(self, filename, fileSize=-1, queryData=None):
+    def __init__(self, filename, fileSize=-1, queryData=None,destDir='.'):
         DccFileReceiveBasic.__init__(self)
         self.filename = filename
+        self.destDir = destDir
         self.fileSize = fileSize
 
         if queryData:
@@ -1028,35 +1033,20 @@ class DccFileReceive(DccFileReceiveBasic):
         """
         self.overwrite = boolean
 
-    def moveFileIn(self):
-        """Move the file from its temporary location to its proper name and path.
 
-        Called once the connetion is closed, but you may want to call
-        it again in case it does not succeed the first time.
 
-        Will raise OSError with ETXTBSY if called before the file is
-        closed.
-        """
-
-        if not self.file.closed:
-            raise OSError(errno.ETXTBSY,
-                          "The receiving socket is still eating.",
-                          self.file.name)
-
-        dst = path.abspath(path.join(self.destDir, self.filename))
-
-        if self.overwrite or not path.exists(dst):
-            fileMove(self.file.name, dst)
-        else:
-            raise OSError(errno.EEXIST,
-                          "There's a file in the way.  "
-                          "Perhaps that's why you cannot move it.",
-                          dst)
 
     # Protocol-level methods.
 
     def connectionMade(self):
-        self.file = open(tempfile.mktemp('DCC-%s' % self.filename), 'w')
+        dst = path.abspath(path.join(self.destDir,self.filename))
+        if self.overwrite or not path.exists(dst):
+            self.file = open(dst, 'wb')
+        else:
+            raise OSError(errno.EEXIST,
+                          "There's a file in the way.  "
+                          "Perhaps that's why you cannot open it.",
+                          dst)
 
     def dataReceived(self, data):
         self.file.write(data)
@@ -1066,8 +1056,6 @@ class DccFileReceive(DccFileReceiveBasic):
 
     def connectionLost(self):
         """When the connection is lost, I close the file.
-
-        and then I moveFileIn().
         """
         self.connected = 0
         logmsg = ("%s closed." % (self,))
@@ -1089,9 +1077,7 @@ class DccFileReceive(DccFileReceiveBasic):
         logmsg = "%s and written to %s.\n" % (logmsg, self.file.name)
 
         self.transport.log(logmsg)
-
         self.file.close()
-        self.moveFileIn()
 
     def __str__(self):
         from_ = self.transport.getPeer()
@@ -1106,26 +1092,6 @@ class DccFileReceive(DccFileReceiveBasic):
              % (self.__class__, id(self), self.filename))
         return s
 
-
-def fileMove(src, dst):
-    """Move a file.
-
-    Unlike os.rename, this works even if the source and destination
-    paths are on different filesystems.  It does so by falling back to
-    copy & remove if a rename fails.
-    """
-    try:
-        os.rename(src, dst)
-    except OSError, e:
-        if e.errno != errno.EXDEV:
-            raise
-
-        try:
-            shutil.copy(src, dst)
-        except:
-            raise
-        else:
-            os.unlink(src)
 
 # CTCP constants and helper functions
 
