@@ -50,13 +50,13 @@ class Options(usage.Options):
 
     optFlags = [["fast", "f"], ["safe", "s"]]
 </pre>
-    <code>optFlags</code> should be a list of 2-lists. The first
+    <p><code>optFlags</code> should be a list of 2-lists. The first
     element is the long name, and will be used on the command line
     as <code>--fast</code>. The second one is the short name, and
     will be used on the command line as <code>-f</code>. The long
     name also determines the name of the key that will be set on
     the Options instance. Its value will be 1 if the option was seen, 0
-    otherwise. Here is an example for usage: 
+    otherwise. Here is an example for usage:</p>
 <pre class="python">
 class Options(usage.Options):
 
@@ -108,7 +108,7 @@ class SpecificOptions(BaseOptions):
 
     optFlags = [["fast", "f"], ["good", "g"], ["cheap", "c"]]
 </pre>
-    Is the same as: 
+    <p>Is the same as: </p>
 <pre class="python">
 class SpecificOptions(BaseOptions):
 
