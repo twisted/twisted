@@ -271,7 +271,14 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
             self.sendLine(cap)
         self.sendLine(".")
 
-    def do_AUTH(self, args):
+    def do_AUTH(self, args=None):
+        if args is None:
+            self.successResponse("Supported authentication methods:")
+            for a in self.factory.challengers:
+                self.sendLine(a.upper())
+            self.sendLine(".")
+            return
+
         auth = self.factory.challengers.get(args.strip().upper())
         if not self.portal or not auth:
             self.failResponse("Unsupported SASL selected")

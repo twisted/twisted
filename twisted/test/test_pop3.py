@@ -241,6 +241,19 @@ QUIT''', '\n')
         lines = ['APOP spiv dummy', 'NOOP', 'QUIT']
         expected_output = '+OK <moshez>\r\n+OK Authentication succeeded\r\n+OK \r\n+OK \r\n'
         self.runTest(lines, expected_output)
+
+    def testAuthListing(self):
+        p = DummyPOP3()
+        p.factory = internet.protocol.Factory()
+        p.factory.challengers = {'Auth1': None, 'secondAuth': None, 'authLast': None}
+        client = LineSendingProtocol([
+            "AUTH",
+            "QUIT",
+        ])
+        
+        loopback.loopback(p, client)
+        self.failUnless(client.response[1].startswith('+OK'))
+        self.assertEquals(client.response[2:6], ["AUTH1", "SECONDAUTH", "AUTHLAST", "."])
     
     def testIllegalPASS(self):
         dummy = DummyPOP3()
