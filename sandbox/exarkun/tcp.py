@@ -214,11 +214,14 @@ class _IOVecFlushMixin:
             else:
                 log.msg("writev() failed with errno = %d" % (errno,))
                 return main.CONNECTION_LOST
-        
+
         w = written
-        while vector and w >= len(vector[0]):
-            w -= len(vector[0])
-            del vector[0]
+        i = 0
+        L = len(vector)
+        while i < L and w >= len(vector[i]):
+            w -= len(vector[i])
+            i += 1
+        del vector[:i]
         if w:
             vector[0] = vector[0][w:]
         return written

@@ -139,6 +139,8 @@ class _IOVecBufferMixin:
         raise NotImplementedError()
 
     def doWrite(self):
+        if not self.vector:
+            return 0
         l = self.writeVector(self.vector)
         if l < 0 or isinstance(l, Exception):
             return l
