@@ -9,23 +9,31 @@ _POSITION = slice(1, 4)
 _VELOCITY = slice(4, 7)
 
 class Space(object):
+    topHandle = -1
     def __init__(self):
         self.contents = N.array((), type='d')
-        self.freelist = []
-        self._accel = N.zeros(3, typecode='d')
+        self.handleMap = {}
+
+    def __getitem__(self, h):
+        return self.contents[self.handleMap[h]]
 
     def getNewHandle(self):
-        if self.freelist:
-            return self.freelist.pop()
-        n = len(self.contents)
-        m = int((n * 1.1) + 10)
-        self.contents.resize((m, _V_DIMS))
-        self.freelist.extend(range(m - 1, n, -1))
-        return n
+        x = len(self.contents)
+        if self.topHandle == x - 1:
+            m = int((x * 1.1) + 10)
+            self.contents.resize((m, _V_DIMS))
+        self.topHandle += 1
+        self.handleMap[self.topHandle] = self.topHandle
+        return self.topHandle
 
     def freeHandle(self, n):
-        self.freelist.append(n)
-        self.contents[n] = [0] * _V_DIMS
+        topHandle = self.topHandle
+        j = self.handleMap.pop(n)
+        if n != topHandle:
+            i = self.handleMap[topHandle]
+            self.contents[j] = self.contents[i]
+            self.handleMap[topHandle] = j
+        self.topHandle = max(self.handleMap)
 
     def update(self):
         self._updatePosition()
@@ -41,12 +49,13 @@ class Space(object):
 
         # XXX This loop can probably be pushed into numeric, but I'm not sure
         # how yet.
-        for i, a in enumerate(self.contents):
+        contents = N.array(self.contents[:self.topHandle + 1])
+        for i, a in enumerate(contents):
             mass = a[_M]
             if not mass:
                 continue
 
-            deltas = self.contents[:,_P] - a[_P]
+            deltas = contents[:,_P] - a[_P]
             deltas2 = deltas * deltas
             distances2 = sum(deltas2, 1)
             distances = distances2 ** 0.5
@@ -57,41 +66,41 @@ class Space(object):
             # @!NaN
 
             units = deltas / distances[:,NewAxis]
-            forces = G * mass * self.contents[:,_M] / distances2
+            forces = G * mass * contents[:,_M] / distances2
             deltaAs = units * forces[:,NewAxis] / mass
 
             # NaN!@
             deltaAs[i][:] = [0]
             # @!NaN
 
-            add(a[_V], sum(deltaAs), a[_V])
+            add(self.contents[i][_V], sum(deltaAs), self.contents[i][_V])
 
 class Body(object):
     __slots__ = ["_space", "_handle", "mass", "position", "velocity"]
 
     def mass():
         def get(self):
-            return self._space.contents[self._handle][_MASS]
+            return self._space[self._handle][_MASS]
         def set(self, value):
-            self._space.contents[self._handle][_MASS] = value
+            self._space[self._handle][_MASS] = value
         doc = "Mass, in kilograms, of this body"
         return (get, set, None, doc)
     mass = property(*mass())
 
     def position():
         def get(self):
-            return tuple(self._space.contents[self._handle][_POSITION])
+            return tuple(self._space[self._handle][_POSITION])
         def set(self, pos):
-            self._space.contents[self._handle][_POSITION] = pos
+            self._space[self._handle][_POSITION] = pos
         doc = "XYZ coordinates of this body"
         return (get, set, None, doc)
     position = property(*position())
 
     def velocity():
         def get(self):
-            return tuple(self._space.contents[self._handle][_VELOCITY])
+            return tuple(self._space[self._handle][_VELOCITY])
         def set(self, vel):
-            self._space.contents[self._handle][_VELOCITY] = vel
+            self._space[self._handle][_VELOCITY] = vel
         doc = "XYZ velocity, in kilometers/second, of this body"
         return (get, set, None, doc)
     velocity = property(*velocity())

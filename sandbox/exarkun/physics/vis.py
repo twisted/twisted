@@ -8,7 +8,7 @@ BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 
 # Get a configuration
-from rosette4 import config, width as WIDTH, height as HEIGHT
+from rosetten import config, width as WIDTH, height as HEIGHT
 
 # PyGame's clock sucks nuts
 class Clock:
