@@ -599,7 +599,6 @@ class DecimalSorter:
 
     def comparePathFragments(self, path1, path2):
         result = LenientIntCompare()(path1, path2)
-        print [result, path1, path2]
         return result
 
 
