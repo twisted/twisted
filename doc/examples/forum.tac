@@ -12,7 +12,7 @@ import service
 application = main.Application("forum")
 
 # Connect to a database.
-dbpool = adbapi.ConnectionPool("pyPgSQL.PgSQL", database="twisted")
+dbpool = adbapi.ConnectionPool("pyPgSQL.PgSQL", "localhost:5432", database="sean")
 
 # Create the service
 forumService = service.ForumService("posting", application, dbpool)

@@ -17,6 +17,8 @@ class ForumService(pb.Service):
     def __init__(self, name, app, dbpool):
         pb.Service.__init__(self, name, app)
         self.dbpool = dbpool
-        self.manager = manager.ForumManager(dbpool)
+        self.manager = manager.ForumDB(dbpool)
+
+        
         
 

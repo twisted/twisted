@@ -41,16 +41,17 @@ class ForumGadget(widgets.Gadget, widgets.StreamWidget):
 
     def gotForums(self, data):
         l = []
-        l.extend( '<table cellpadding=4 cellspacing=1 border=0 width="95%">')
-        l.extend( '<tr bgcolor="#ff9900">' )
-        l.extend( '<td COLOR="#000000"><b> Forum Name </b> </td>' )
-        l.extend( '<td COLOR="#000000"><b> Posts </b> </td>' )        
-        l.extend( '</tr>\n' )
+        l.append( '<table cellpadding=4 cellspacing=1 border=0 width="95%">')
+        l.append( '<tr bgcolor="#ff9900">' )
+        l.append( '<td COLOR="#000000"><b> Forum Name </b> </td>' )
+        l.append( '<td COLOR="#000000"><b> Posts </b> </td>' )
+        l.append( '<td COLOR="#000000"><b> Description </b> </td>' )        
+        l.append( '</tr>\n' )
 
-        for (id, name, posts) in data:
-            l.extend( "<tr> <td> <a href='/threads/?forum_id=%d'>%s</a></td><td> %d posts </td> </tr>\n" % (id,name, posts) )
-        l.extend("</table>")
-        l.extend( '<hr> <i> Twisted Forums </i>' )        
+        for (id, name, desc, posts) in data:
+            l.append( "<tr> <td> <a href='/threads/?forum_id=%d'>%s</a></td><td> %d </td> <td> %s</d></tr>\n" % (id,name, posts, desc) )
+        l.append("</table>")
+        l.append( '<hr> <i> Twisted Forums </i>' )        
         return l
             
 
@@ -78,22 +79,22 @@ class ThreadsGadget(widgets.Gadget, widgets.StreamWidget):
 
     def onThreadData(self, data):
         l = []
-        l.extend( '<table cellpadding=4 cellspacing=1 border=0 width="95%">')
-        l.extend( '<tr bgcolor="#ff9900">' )
-        l.extend( '<td COLOR="#000000"><b> Thread Subject </b> </td>' )
-        l.extend( '<td COLOR="#000000"><b> Thread Starter </b> </td>' )
-        l.extend( '<td COLOR="#000000"><b> Replies </b> </td>' )
-        l.extend( '</tr>\n' )
+        l.append( '<table cellpadding=4 cellspacing=1 border=0 width="95%">')
+        l.append( '<tr bgcolor="#ff9900">' )
+        l.append( '<td COLOR="#000000"><b> Thread Subject </b> </td>' )
+        l.append( '<td COLOR="#000000"><b> Thread Starter </b> </td>' )
+        l.append( '<td COLOR="#000000"><b> Replies </b> </td>' )
+        l.append( '</tr>\n' )
         
         for (id, subject, postdate, username, replies) in data:
-            l.extend("<tr> <td> <a href='/full/?forum_id=%d&amp;post_id=%d'> %s </a> </td>" % (self.forum_id, int(id), subject))
-            l.extend("<td> <i> %s </i> </td>" % username)
-            l.extend("<td> %d replies </td>" % replies)
-            l.extend("</tr>\n")
+            l.append("<tr> <td> <a href='/full/?forum_id=%d&amp;post_id=%d'> %s </a> </td>" % (self.forum_id, int(id), subject))
+            l.append("<td> <i> %s </i> </td>" % username)
+            l.append("<td> %d replies </td>" % replies)
+            l.append("</tr>\n")
 
-        l.extend( '</table><br>' )
-        l.extend( '[<a href="/new/?forum_id=%d">Start a new thread</a>]' % (self.forum_id) )        
-        l.extend( '<hr> <i> Twisted Forums </i>' )        
+        l.append( '</table><br>' )
+        l.append( '[<a href="/new/?forum_id=%d">Start a new thread</a>]' % (self.forum_id) )        
+        l.append( '<hr> <i> Twisted Forums </i>' )        
         return l
 
     def onThreadError(self, error):
@@ -126,30 +127,30 @@ class FullGadget(widgets.Gadget, widgets.StreamWidget):
 
         first = -1
         l = []
-        l.extend( '<table cellpadding=4 cellspacing=1 border=0 width="95%">')
+        l.append( '<table cellpadding=4 cellspacing=1 border=0 width="95%">')
 
         for (post_id, parent_id, subject, posted, username, body) in data:
             if first == -1:
                 first = post_id
-                l.extend( '<tr bgcolor="#ff9900">' )
-                l.extend( '<td COLOR="#000000" width=30%><b> Author </b> </td>' )
-                l.extend( '<td COLOR="#000000"><b> Topic: %s </b> </td>'%subject )        
-                l.extend( '</tr>\n' )
+                l.append( '<tr bgcolor="#ff9900">' )
+                l.append( '<td COLOR="#000000" width=30%><b> Author </b> </td>' )
+                l.append( '<td COLOR="#000000"><b> Topic: %s </b> </td>'%subject )        
+                l.append( '</tr>\n' )
 
             body = string.replace(body, "\n", "<p>")
-            l.extend( '<tr> <td valign=top > <b> %s </b> <br> </td>' % (username) )
-            l.extend( '<td> <i> %s </i> (%s) <hr> %s <br></td> </tr>\n' % ( subject, posted, body) )
+            l.append( '<tr> <td valign=top > <b> %s </b> <br> </td>' % (username) )
+            l.append( '<td> <i> %s </i> (%s) <hr> %s <br></td> </tr>\n' % ( subject, posted, body) )
 
-        l.extend( '<tr bgcolor="#ff9900">' )
-        l.extend( '<td COLOR="#000000" width=30%> </td>' )
-        l.extend( '<td COLOR="#000000"> </td>' )        
-        l.extend( '</tr>\n' )
+        l.append( '<tr bgcolor="#ff9900">' )
+        l.append( '<td COLOR="#000000" width=30%> </td>' )
+        l.append( '<td COLOR="#000000"> </td>' )        
+        l.append( '</tr>\n' )
 
-        l.extend( '</table>' )
+        l.append( '</table>' )
 
-        l.extend( '[<a href="/threads/?forum_id=%d">Back to forum</a> ]' % self.forum_id)
-        l.extend( '[<a href="/reply/?post_id=%d&amp;forum_id=%d&amp;thread_id=%d">Reply</a>]' % (post_id, self.forum_id, first) )
-        l.extend( '<hr> <i> Twisted Forums </i>' )        
+        l.append( '[<a href="/threads/?forum_id=%d">Back to forum</a> ]' % self.forum_id)
+        l.append( '[<a href="/reply/?post_id=%d&amp;forum_id=%d&amp;thread_id=%d">Reply</a>]' % (post_id, self.forum_id, first) )
+        l.append( '<hr> <i> Twisted Forums </i>' )        
         return l
 
     
@@ -193,22 +194,22 @@ class PostsGadget(widgets.Gadget, widgets.StreamWidget):
         posted = tmp[0][2]
         
         l = []
-        l.extend( '<table cellpadding=4 cellspacing=1 border=0 width="95%">')
-        l.extend( '<tr bgcolor="#ff9900">' )
-        l.extend( '<td COLOR="#000000"><b> Posts for Thread "%s" posted at %s </b> </td>' % (subject, posted) )
-        l.extend( '</tr></table>\n<BR>' )
+        l.append( '<table cellpadding=4 cellspacing=1 border=0 width="95%">')
+        l.append( '<tr bgcolor="#ff9900">' )
+        l.append( '<td COLOR="#000000"><b> Posts for Thread "%s" posted at %s </b> </td>' % (subject, posted) )
+        l.append( '</tr></table>\n<BR>' )
 
-        l.extend( self.formatList(0) )
-        l.extend( '<hr> <i> Twisted Forums </i>' )        
+        l.append( self.formatList(0) )
+        l.append( '<hr> <i> Twisted Forums </i>' )        
         return l
 
     def formatList(self, idIn):
         l = ["<UL>"]
         postList = self.byParent.get(idIn,[])
         for (post_id, subject, posted, username) in postList:
-            l.extend( self.formatPost(post_id, subject, posted, username) )
-            l.extend( self.formatList(post_id) )
-        l.extend( "</UL>" )
+            l.append( self.formatPost(post_id, subject, posted, username) )
+            l.append( self.formatList(post_id) )
+        l.append( "</UL>" )
         return l
     
         
@@ -238,10 +239,10 @@ class DetailsGadget(widgets.Gadget, widgets.StreamWidget):
     def onDetailData(self, data):
         (post_id, parent_id, forum_id, thread_id, subject, posted, user, body) = data[0]
         l = []
-        l.extend( ActionsWidget(post_id, parent_id, forum_id, thread_id).display(self.request) + ("<H2> %s </H2>\n" % subject) )
-        l.extend( '(#%d)Posted on <i>%s</i> by <i>%s</i> <HR>' % (post_id,posted, user) )
-        l.extend( '<PRE>' + body  + '</PRE>')
-        l.extend( '<hr> <i> Twisted Forums </i>' )    
+        l.append( ActionsWidget(post_id, parent_id, forum_id, thread_id).display(self.request) + ("<H2> %s </H2>\n" % subject) )
+        l.append( '(#%d)Posted on <i>%s</i> by <i>%s</i> <HR>' % (post_id,posted, user) )
+        l.append( '<PRE>' + body  + '</PRE>')
+        l.append( '<hr> <i> Twisted Forums </i>' )    
         return l
 
 
