@@ -2,8 +2,12 @@ Twisted 0.13.0
 
 Quote of the Release:
 
-<Intention> Twisted did raise me from the dead after two weeks. It is a 
-miracle of software engineering.
+    "You wrote a 'manifesto'?"
+    "I don't see what all the fuss is about, it's standard mad scientist
+    protocol; all I did was threaten to unleash giant mutant gerbils upon
+    Washington D.C. unless the U.S. government agrees to my demands."
+    
+        -- Narbonic, http://www.narbonic.com
 
 What is this?
 
@@ -41,6 +45,11 @@ What's new in 0.13.0?
   twisted.metrics, a database-backed performance and stats system.
   
   experimental wxPython event loop support.
+  
+  Delayed docs in doc/delayeds.html now give correct information.
+  
+  Initial, experimental support for connectTCP and connectSSL, allowing client
+  protocols such as IRC bots to (re)connect to remote servers automatically.
 
 What can I do with it?
 
