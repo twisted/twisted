@@ -555,6 +555,7 @@ class Process(styles.Ephemeral):
         self.closeStdin()
         self.closeStderr()
         self.closeStdout()
+
     def write(self,data):
         """Call this to write to standard input on this process.
         
@@ -562,6 +563,30 @@ class Process(styles.Ephemeral):
         """
         if self.pipes.has_key(0):
             self.pipes[0].write(data)
+
+    def registerProducer(self, producer, streaming):
+        """Call this to register producer for standard input.
+
+        If there is no standard input producer.stopProducing() will
+        be called immediately.
+        """
+        if self.pipes.has_key(0):
+            self.pipes[0].registerProducer(producer, streaming)
+        else:
+            producer.stopProducing()
+
+    def unregisterProducer(self):
+        """Call this to unregister producer for standard input."""
+        if self.pipes.has_key(0):
+            self.pipes[0].unregisterProducer()
+    
+    def writeSequence(self, seq):
+        """Call this to write to standard input on this process.
+
+        NOTE: This will silently lose data if there is no standard input.
+        """
+        if self.pipes.has_key(0):
+            self.pipes[0].writeSequence(seq)
 
     def signalProcess(self, signalID):
         if signalID in ('HUP', 'STOP', 'INT', 'KILL', 'TERM'):
