@@ -29,6 +29,10 @@ Installation
 
   FreeBSD and Gentoo both have Twisted in their package repositories.
 
+  Mac OS X packages and dependences can be obtained from:
+
+    http://undefined.org/python/pimp/darwin-6.6-Power_Macintosh.html
+  
   Win32 EXEs are available from http://twisted.sf.net, as well as tarballs
   for other platforms. As with other Python packages, the standard way of
   installing from source is: 
