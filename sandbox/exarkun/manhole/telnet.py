@@ -545,13 +545,13 @@ class Telnet(protocol.Protocol):
             self._wont(option)
 
     def do_no_true(self, state, option):
-        # Peer agreed to enable an option at our request.
+        # Peer agreed to allow us to enable an option at our request.
         state.us.state = 'yes'
         state.us.negotiating = False
         d = state.us.onResult
         state.us.onResult = None
         d.callback(True)
-        assert self.enableRemote(option), "enableRemote must return True in this context"
+        self.enableLocal(option)
 
     def do_yes_false(self, state, option):
         # Peer is unilaterally requesting us to enable an already-enabled option.
@@ -703,13 +703,22 @@ class TelnetBootstrapProtocol(TelnetProtocol, ProtocolTransportMixin):
         self.protocol = self.protocolFactory(*self.protocolArgs, **self.protocolKwArgs)
         self.protocol.makeConnection(self)
 
-    def enable(self, opt):
+    def enableLocal(self, opt):
+        if opt == ECHO:
+            return True
+        else:
+            return False
+
+    def enableRemote(self, opt):
         if opt == LINEMODE:
             self.transport.requestNegotiation(LINEMODE, MODE + chr(TRAPSIG))
+            return True
         elif opt == NAWS:
-            pass
+            return True
+        elif opt == SGA:
+            return True
         else:
-            pass
+            return False
 
     def telnet_NAWS(self, bytes):
         if len(bytes) == 4:
