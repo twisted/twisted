@@ -349,7 +349,12 @@ def signData_dsa(obj, data):
     sigData = sha.new(data).digest()
     randData = common.entropy.get_bytes(19)
     sig = obj.sign(sigData, randData)
-    return common.NS(''.join(map(Util.number.long_to_bytes, sig)))
+    # SSH insists that the DSS signature blob be two 160-bit integers
+    # concatenated together. The sig[0], [1] numbers from obj.sign are just
+    # numbers, and could be any length from 0 to 160 bits. Make sure they
+    # are padded out to 160 bits (20 bytes each)
+    return common.NS(Util.number.long_to_bytes(sig[0], 20) +
+                     Util.number.long_to_bytes(sig[1], 20))
 
 def verifySignature(obj, sig, data):
     """
@@ -376,6 +381,7 @@ def verifySignature_rsa(obj, sig, data):
 
 def verifySignature_dsa(obj, sig, data):
     sig = common.getNS(sig)[0]
+    assert(len(sig) == 40)
     l = len(sig)/2
     sigTuple = map(Util.number.bytes_to_long, [sig[: l], sig[l:]])
     return obj.verify(sha.new(data).digest(), sigTuple)

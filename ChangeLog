@@ -1,3 +1,12 @@
+2003-05-30  Brian Warner  <warner@lothar.com>
+
+	* twisted/conch/ssh/keys.py (signData_dsa): Force DSS signature
+	blobs to be 20 bytes long. About 1% of the time, the sig numbers
+	would come out small and fit into 19 bytes, which would result in
+	an invalid signature.
+	* twisted/test/test_conch.py: remove special hacked test case used
+	to find that invalid-signature problem.
+
 2003-05-29  Brian Warner  <warner@lothar.com>
 
 	* twisted/python/formmethod.py: this module needs False from compat
