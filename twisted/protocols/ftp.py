@@ -19,7 +19,7 @@
 
 This module is unstable.
 
-Maintainer: Andrew Bennetts <spiv@twistedmatrix.com>
+Maintainer: U{Andrew Bennetts<mailto:spiv@twistedmatrix.com>}
 
 The goal for the server is that it should be secure, high-performance, and
 overloaded with stupid features.

@@ -45,6 +45,11 @@ internalProtocols = {
 protocolDict = {'tcp': socket.IPPROTO_TCP, 'udp': socket.IPPROTO_UDP}
 
 def forkPassingFD(exe, args, env, user, group, fdesc):
+    """Run exe as a child process, passing fdesc as fd 0.
+    
+    This will also make sure that fdesc is removed from the parent's reactor.
+    """
+    # This is half-cannibalised from twisted.internet.process.Process
     pid = os.fork()
     if pid == 0:    # Child
         try:
@@ -89,8 +94,8 @@ def forkPassingFD(exe, args, env, user, group, fdesc):
     
 
 class InetdProtocol(Protocol):
+    """Forks a child process on connectionMade, passing the socket as fd 0."""
     def connectionMade(self):
-        # This is half-cannibalised from twisted.internet.process.Process
         service = self.factory.service
         forkPassingFD(service.program, service.programArgs, os.environ,
                       service.user, service.group, self.transport)

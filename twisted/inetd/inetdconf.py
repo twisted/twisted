@@ -14,7 +14,10 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 # 
-"""Parser for inetd.conf files"""
+"""Parser for inetd.conf files
+
+Maintainer: U{Andrew Bennetts<mailto:spiv@twistedmatrix.com>}
+"""
 
 # Various exceptions
 class InvalidConfError(Exception):
@@ -89,6 +92,7 @@ class SimpleConfFile:
 
 
 class InetdService:
+    """A simple description of an inetd service."""
     name = None
     port = None
     socketType = None
