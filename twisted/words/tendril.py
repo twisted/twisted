@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: tendril.py,v 1.16 2002/05/26 06:48:36 acapnotic Exp $
+# $Id: tendril.py,v 1.17 2002/05/30 10:47:57 itamarst Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -18,7 +18,7 @@
 
 from twisted import copyright
 from twisted.cred import authorizer
-from twisted.internet import protocol, tcp
+from twisted.internet import protocol
 from twisted.persisted import styles
 from twisted.protocols import irc
 from twisted.python import log, reflect
@@ -78,7 +78,7 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
 
     realname = 'Tendril'
     versionName = 'Tendril'
-    versionNum = '$Revision: 1.16 $'[11:-2]
+    versionNum = '$Revision: 1.17 $'[11:-2]
     versionEnv = copyright.longversion
 
     helptext = (

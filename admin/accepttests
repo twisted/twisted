@@ -214,15 +214,15 @@ All your dependents are belong to us
 
 def runAllTests():
     message("Starting test.")
-    GUITest()
-    basicWebTest()
-    staticWebTest()
-    distWebTest()
-    runManholeTest()
-    runTelnetTest()
-    runWordsTest()
+    #GUITest()
+    #basicWebTest()
+    #staticWebTest()
+    #distWebTest()
+    #runManholeTest()
+    #runTelnetTest()
+    #runWordsTest()
     #runRealityTest()
-    runExampleTest()
+    #runExampleTest()
     runMailTest()
     message('All tests run.')
 
