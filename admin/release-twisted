@@ -120,9 +120,12 @@ class Options(usage.Options):
         self['commands'].append(InstallDebs)
 
     def opt_sourceforge(self):
-        """Copies a debian mini-repository in ~/Releases/debian-ver/ to /twisted/Debian/.
-        Reqs: debs and existence of skeleton in /twisted/Debian"""
+        """Copies everything from /twisted/Releases to sourceforge"""
         self['commands'].append(Sourceforge)
+
+    def opt_upgrade(self):
+        """Upgrade Debian packages"""
+        self['commands'].append(UpgradeDebian)
 
     def opt_debug(self):
         """Enable debug-mode: ask before running *every* shell command."""        
@@ -608,6 +611,16 @@ class Sourceforge(Transaction):
            "cd /home/groups/t/tw/twisted/htdocs&&"
            "tar xzf TwistedDocs-%(ver)s.tar.gz'"
            "|ssh %(name)s@shell.sf.net newgrp twisted" % vars())
+
+
+class UpgradeDebian(Transaction):
+
+    def doIt(self, opts):
+        rel = opts['release']
+        ver = opts['version']
+        path = "%(release)s/debian-%(ver)s/woody/" % vars()
+        sh("sudo dpkg -i %(path)s/*.deb" % vars())
+
 
 if __name__=='__main__':
     main()
