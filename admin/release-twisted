@@ -248,7 +248,7 @@ def makeBalls(opts):
 
 
     if not os.path.exists('doc/api/tree.html'):#we didn't do the docs
-        print "makeBalls: Not continuing: `doc/api/tree.html' not found." % tdir
+        print "makeBalls: Not continuing: `doc/api/tree.html' not found."
         return
     
 
