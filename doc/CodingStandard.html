@@ -1,101 +1,120 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<html>
-  <head>
-    <title>Twisted Python Coding Standard</title>
-  </head>
-
-  <body>
-    <h1>Twisted Python Coding Standard</h1>
-    <h3>Whitespace</h3>
-    <p>
-      Indentation is 4 spaces per indent.  Tabs are not allowed.  It is
-      preferred that every block appear on a new line, so that control
-      structure indentation is always visible.
-    </p>
-    <h3>Modules</h3>
-    <p>
-      Modules must be named in all lower-case, preferably short, single words.
-      If a module name contains multiple words, they may be separated by
-      underscores or not separated at all.
-    </p>
-    <p>
-      In most cases, modules should contain more than one class, function, or
-      method; if a module contains only one object, consider refactoring to
-      include more related functionality in that module.
-    </p>
-    <p>
-      I realize that different ways to import a module have different
-      semantics, so this rule is flexible, but: it is preferred that modules be
-      imported directly into the namespace of the referencing module, and
-      references to functionality in that module be prefixed with the module
-      name.
-    </p>
-    <p>
-      For example, <code>from twisted import reality; reality.Thing()</code>,
-      not <code> import twisted.reality; twisted.reality.Thing()</code> or
-      <code> from twisted.reality import Thing; Thing()</code>.
-    </p>
-    <p>
-      Unfortunately, sibling imports within a package may be required when
-      circular module imports exist. Only use them in that case, and make sure
-      module names are not ambiguous with other modules.
-    </p>
-    <h3>Packages</h3>
-    <p>
-      Package names should follow the same conventions as module names.  All
-      modules must be encapsulated in some package.  Nested packages may be
-      used to further organize related modules.
-    </p>
-    <p>
-      __init__.py must never contain anything other than a docstring and
-      (optionally) an __all__ attribute.  Packages are not modules and should
-      be treated differently.  This rule may be broken to preserve backwards
-      compatibility if a module is made into a nested package as part of a
-      refactoring.
-    </p>
+  <html>
+    <head>
+      <title>Twisted Python Coding Standard</title>
+    </head>
     
-    <h3>Docstrings</h3>
-    <p>
-      Wherever possible, docstrings should be used to describe the purpose of
-      methods, functions, classes, and modules.  In cases where it's desirable
-      to avoid documenting thoroughly -- for example, and evolving interface --
-      insert a placeholder docstring ("UNDOCUMENTED" is preferred), so that the
-      auto-generated API documentation will not pick up an extraneous comment
-      as the documentation for that module/class/function.
-    </p>
-    <p>
-      Docstrings are <em>never</em> to be used to provide semantic information
-      about an object; this rule may be violated if the code in question is to
-      be used in a system where this is a requirement (such as Zope).
-    </p>
-    <p>
-      Docstrings should be indented to the level of the code they are
-      documenting.
-    </p>
-    <p>
-      Docstrings should be triple-quoted.
-    </p>
-    <p>
-      Docstrings should be written in StructuredText format; more documentation
-      is available on the <a href="http://happydoc.sourceforge.net">HappyDoc
-      website</a>.
-    </p>
-    <p>
-      Additionally, to accommodate emacs users:
+    <body>
+      <h1>Twisted Python Coding Standard</h1>
+      <h3>In General</h3>
+      <p>
+        Try to choose names which are both easy to remember and meaningful.
+        Some silliness is OK at the module naming level (see twisted.spread...)
+        but when choosing class names, be as precise as possible.  Write code
+        with a dictionary and thesaurus open on the table next to you.
+      </p>
+      <p>
+        Try to avoid overloaded terms.  This rule is often broken, since it is
+        incredibly difficult, as most normal words have already been taken by
+        some other software.  More importantly, try to avoid meaningless words.
+        In particular, words like "handler", "processor", "engine", "manager",
+        and "component" don't really indicate what something does, only that it
+        does <b>something</b>.
+      </p>
+      <h3>Whitespace</h3>
+      <p>
+        Indentation is 4 spaces per indent.  Tabs are not allowed.  It is
+        preferred that every block appear on a new line, so that control
+        structure indentation is always visible.
+      </p>
+      <h3>Modules</h3>
+      <p>
+        Modules must be named in all lower-case, preferably short, single
+        words.  If a module name contains multiple words, they may be separated
+        by underscores or not separated at all.
+      </p>
+      <p>
+        In most cases, modules should contain more than one class, function, or
+        method; if a module contains only one object, consider refactoring to
+        include more related functionality in that module.
+      </p>
+      <p>
+        I realize that different ways to import a module have different
+        semantics, so this rule is flexible, but: it is preferred that modules
+        be imported directly into the namespace of the referencing module, and
+        references to functionality in that module be prefixed with the module
+        name.
+      </p>
+      <p>
+        For example, <code>from twisted import reality; reality.Thing()</code>,
+        not <code> import twisted.reality; twisted.reality.Thing()</code> or
+        <code> from twisted.reality import Thing; Thing()</code>.
+      </p>
+      <p>
+        Unfortunately, sibling imports within a package may be required when
+        circular module imports exist. Only use them in that case, and make
+        sure module names are not ambiguous with other modules.
+      </p>
+      <h3>Packages</h3>
+      <p>
+        Package names should follow the same conventions as module names.  All
+        modules must be encapsulated in some package.  Nested packages may be
+        used to further organize related modules.
+      </p>
+      <p>
+        __init__.py must never contain anything other than a docstring and
+        (optionally) an __all__ attribute.  Packages are not modules and should
+        be treated differently.  This rule may be broken to preserve backwards
+        compatibility if a module is made into a nested package as part of a
+        refactoring.
+      </p>
       
-    <ul>
-      <li>Single quotes of the type of the docstring's triple-quote should be
-      escaped.  This will prevent font-lock from accidentally fontifying large
-      portions of the file as a string.
-
-      <li>Code examples in docstrings should be prefixed by the | character.
-      This will prevent IM-Python from 
-
-    </ul>
-  </p>
-    <p>
-    For example,
-    <pre>
+      <h3>Docstrings</h3>
+      <p>
+        Wherever possible, docstrings should be used to describe the purpose of
+        methods, functions, classes, and modules.  In cases where it's
+        desirable to avoid documenting thoroughly -- for example, and evolving
+        interface -- insert a placeholder docstring ("UNDOCUMENTED" is
+        preferred), so that the auto-generated API documentation will not pick
+        up an extraneous comment as the documentation for that
+        module/class/function.
+      </p>
+      <p>
+        Docstrings are <em>never</em> to be used to provide semantic
+        information about an object; this rule may be violated if the code in
+        question is to be used in a system where this is a requirement (such as
+        Zope).
+      </p>
+      <p>
+        Docstrings should be indented to the level of the code they are
+        documenting.
+      </p>
+      <p>
+        Docstrings should be triple-quoted.
+      </p>
+      <p>
+        Docstrings should be written in StructuredText format; more
+        documentation is available on the <a
+        href="http://happydoc.sourceforge.net">HappyDoc website</a>.
+      </p>
+      <p>
+        Additionally, to accommodate emacs users:
+        
+        <ul>
+          <li>
+            Single quotes of the type of the docstring's triple-quote should be
+            escaped.  This will prevent font-lock from accidentally fontifying
+            large portions of the file as a string.
+          </li>
+          <li>
+            Code examples in docstrings should be prefixed by the | character.
+            This will prevent IM-Python from regarding sample code as real
+            functions, methods, and classes.
+          </li>
+        </ul>
+      </p>
+      <p>
+        For example,
+        <pre>
 def foo2bar(f):
     """I am a function to convert foos to bars.
 
@@ -115,49 +134,64 @@ def foo2bar(f):
 
     """
     # Optionally, actual code can go here.
-</pre>
-  </p>
-    
-    <h3>Classes</h3>
-    <p>
-      Classes are to be named in mixed case, with the first letter capitalized;
-      each word separated by having its first letter capitalized.  Acronyms
-      should be capitalized in their entirety.  Class names should not include
-      the name of the module they are a part of.  Examples:
-    <ul>
-      <li> twisted.reality.Thing
-      <li> twisted.web.HTTPClient
-      <li> twisted.web.Handler
-      <li> twisted.gloop.Handler
-      <li> twisted.parser.Pattern
-    </ul>
-    </p>
+        </pre>
+      </p>
+      
+      <h3>Classes</h3>
+      <p>
+        Classes are to be named in mixed case, with the first letter
+        capitalized; each word separated by having its first letter
+        capitalized.  Acronyms should be capitalized in their entirety.  Class
+        names should not include the name of the module they are a part of.
+        Examples:
+        <ul>
+          <li> twisted.reality.thing.Thing </li>
+          <li> twisted.web.Handler </li>
+          <li> twisted.spread.pb.ViewPoint </li>
+          <li> twisted.parser.patterns.Pattern </li>
+        </ul>
+      </p>
 
-    <h3>Methods</h3>
-    <p>
-      Methods should be in mixed case, with the first letter lower case, each
-      word separated by having its first letter capitalized.  For example,
-      "someMethodName", "method".
-    </p>
-    <p>
-      Sometimes, a class will dispatch to a specialized sort of method using
-      its name; for example, twisted.reflect.Accessor.  In those cases, the
-      type of method should be a prefix in all lower-case with a trailing
-      underscore, so method names will have an underscore in them.  For
-      example, "get_someAttribute".  Underscores in method names in twisted
-      code are therefore expected to have some semantic associated with them.
-    </p>
-    
-    <h3>Functions</h3>
-    <p>
-      Functions should be named similiarly to methods.
-    </p>
-
+      <h3>Methods</h3>
+      <p>
+        Methods should be in mixed case, with the first letter lower case, each
+        word separated by having its first letter capitalized.  For example,
+        "someMethodName", "method".
+      </p>
+      <p>
+        Sometimes, a class will dispatch to a specialized sort of method using
+        its name; for example, twisted.reflect.Accessor.  In those cases, the
+        type of method should be a prefix in all lower-case with a trailing
+        underscore, so method names will have an underscore in them.  For
+        example, "get_someAttribute".  Underscores in method names in twisted
+        code are therefore expected to have some semantic associated with them.
+      </p>
+      
+      <h3>Functions</h3>
+      <p>
+        Functions should be named similiarly to methods.
+      </p>
+      
+      <h3>C Code</h3>
+      <p>
+        Wherever possible, C code should be optional, and the default python
+        implementation should be maintained in tandem with it.  C code should
+        be strict ANSI C, and <strong>must</strong> build using GCC as well as
+        Visual Studio for Windows, and really shouldn't have any problems with
+        other compilers either.  Don't do anything tricky.
+      </p>
+      <p>
+        C code should only be used for efficiency, not for binding to external
+        libraries.  If your particular code is not frequently run, write it in
+        Python.  If you require the use of an external library, develop a
+        separate, external bindings package and make your twisted code depend
+        on it.
+      </p>
     <hr>
     <address><a href="mailto:glyph@helix.twistedmatrix.com">Glyph Lefkowitz</a></address>
 <!-- Created: Thu Apr 26 07:53:26 CDT 2001 -->
 <!-- hhmts start -->
-Last modified: Tue Aug 28 17:13:54 CDT 2001
+Last modified: Mon Sep  3 21:34:28 CDT 2001
 <!-- hhmts end -->
   </body>
 </html>
