@@ -78,7 +78,7 @@ class LatexSpitter:
         self.writer('\\begin{verbatim}\n')
         buf = StringIO()
         getLatexText(node, buf.write)
-        self.writer(LeadingTrailingBlankLineFilter()(buf.getvalue()))
+        self.writer(removeLeadingTrailingBlanks(buf.getvalue()))
         self.writer('\\end{verbatim}\n')
 
     def visitNode_code(self, node):
@@ -243,32 +243,19 @@ class SectionLatexSpitter(LatexSpitter):
     mapStart_html = None
 
 
-class LeadingTrailingBlankLineFilter:
-    leadingBlanks = 1
-    def __call__(self, data):
-        # Trim leading blank lines
-        lines = data.split('\n')
-        lines = map(self.lineReceived, lines)
-        lines = filter(lambda x: x is not None, lines)
+def removeLeadingBlanks(lines):
+    ret = []
+    for line in lines:
+        if ret or line.strip():
+            ret.append(line)
+    return ret
 
-        # Trim trailing blank lines
-        self.leadingBlanks = 1
-        lines.reverse()
-        lines = map(self.lineReceived, lines)
-        lines = filter(lambda x: x is not None, lines)
-        
-        lines.reverse()
-        return '\n'.join(lines)
-
-    def lineReceived(self, line):
-        if self.leadingBlanks:
-            if line and line.strip():
-                self.leadingBlanks = 0
-            else:
-                return None
-        return line
-
-
+def removeLeadingTrailingBlanks(s):
+    lines = removeLeadingBlanks(s.split('\n'))
+    lines.reverse()
+    lines = removeLeadingBlanks(lines)
+    lines.reverse()
+    return '\n'.join(lines)+'\n'
 
 def processFile(spitter, fin):
     dom = microdom.parse(fin).documentElement
