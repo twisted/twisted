@@ -198,14 +198,16 @@ directory inside your <code class="shell">Twisted-X.X.X</code>
 directory, which will already be in your <code
 class="python">sys.path</code>.  If you want to put it elsewhere, make
 sure that your TwistedQuotes directory is a package on your python
-path.  <em>Note</em> that the directory you add to your PYTHONPATH
+path.</p>
+
+<div class="note"><p>The directory you add to your PYTHONPATH
 needs to be the directory <em>containing</em> your package's
 directory! For example, if your TwistedQuotes directory is
 /my/stuff/TwistedQuotes, you can <code class="shell">export
 PYTHONPATH=/my/stuff:$PYTHONPATH</code> in UNIX, or edit the <code
 class="shell">PYTHONPATH</code> environment variable to add <code
 class="shell">/my/stuff;</code> at the beginning through the System
-Properties dialog on Windows.</p>
+Properties dialog on Windows.</p></div>
 
 <div style="float: right"><pre class="python-interpreter">
 Python 2.1.3 (#1, Apr 20 2002, 22:45:31) 
