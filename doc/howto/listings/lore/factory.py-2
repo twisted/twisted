@@ -1,8 +1,8 @@
 from twisted.lore import default
-from spitters import MyLatexSpitter
+import spitters
 
 class MyProcessingFunctionFactory(default.ProcessingFunctionFactory):
-    latexSpitters={None: MyLatexSpitter,
+    latexSpitters={None: spitters.MyLatexSpitter,
                    }
 
     # redefine getLintChecker to validate our classes

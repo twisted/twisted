@@ -109,17 +109,17 @@ what new class will be generating LaTeX from your input format.  We redefine
 because this
 class knows what to do with the new input we have already defined.  Last, you
 must define the module-level variable <code
-    class="py-identifier">factory</code>.  It should an instance with the same
-interface as <code class="py-identifier">ProcessingFunctionFactory</code>
+    class="py-src-identifier">factory</code>.  It should an instance with the same
+interface as <code class="py-src-identifier">ProcessingFunctionFactory</code>
 (e.g. an instance of a subclass, in this case, <code
-    class="py-identifier">MyProcessingFunctionFactory</code>).</p>
+    class="py-src-identifier">MyProcessingFunctionFactory</code>).</p>
 
 <p>Now let's actually write some code to generate the LaTeX.  Doing this
 requires at least a familiarity with the LaTeX language.  Search Google for
 <q>latex tutorial</q> and you will find any number of useful LaTeX
 resources.</p>
 
-<a href="listings/lore/spitters.py" class="py-listing">Listing 3:
+<a href="listings/lore/spitters.py-1" class="py-listing">Listing 3:
   spitters.py</a>
 
 <p>The method <code>visitNode_span_productname</code> is
@@ -167,7 +167,7 @@ Transcript written on 1st_example.log.
 
 <pre class="shell">
 $ lore --input myhtml --output lint 1st_example.html
-1st_example.html:7:47: unknown class productnameexample
+1st_example.html:7:47: unknown class productname
 1st_example.html:8:38: unknown class marketinglie
 [########################################] (*Done*)
 </pre>
@@ -179,16 +179,32 @@ process them.  To fix this problem, we must add to <code
 <a href="listings/lore/factory.py-2" class="py-listing">Listing 5: Input
     Factory with Lint Support</a>
 
-<p>The method <code class="py-identifier">getLintChecker</code> is called by
-Lore to produce the lint output.  This modification adds our classes to the
+<p>The method <code class="py-src-identifier">getLintChecker</code> is called
+by Lore to produce the lint output.  This modification adds our classes to the
 list of classes lint ignores:</p>
 
 <pre class="shell">
 $ lore --input myhtml --output lint 1st_example.html
 [########################################] (*Done*)
+$ # Hooray!
 </pre>
 
-<p>Hooray!</p>
+<p>Finally, there are two other sub-outputs of LaTeX, for a total of three
+different ways that Lore can produce LaTeX: the default way, which produces as
+output an entire, self-contained LaTeX document; with <code
+  class="shell">--config section</code> on the command line, which produces a
+LaTeX \section; and with <code class="shell">--config chapter</code>, which
+produces a LaTeX \chapter.  To support these options as well, the solution is
+to make the new spitter class a mixin, and use it with the <code
+  class="py-src-identifier">SectionLatexSpitter</code> and <code
+  class="py-src-identifier">ChapterLatexSpitter</code>, respectively.
+Comments in the following listings tell you everything you need to know about
+making these simple changes:</p>
+
+<ul>
+  <li><a href="listings/lore/factory.py-3">factory.py</a></li>
+  <li><a href="listings/lore/spitters.py-2">spitters.py</a></li>
+</ul>
 
 <h3>Creating New Outputs</h3>
 <p><div class="doit">write some stuff</div></p>
