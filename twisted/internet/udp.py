@@ -147,8 +147,7 @@ class Port(base.BasePort):
 
     def stopListening(self):
         if self.connected:
-            self.d = defer.Deferred()
-            result = d
+            result = self.d = defer.Deferred()
         else:
             result = None
         self.loseConnection()
