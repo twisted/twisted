@@ -17,6 +17,11 @@
 from twisted.scripts import twistd
 from twisted.python import usage
 
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+
 class Options(usage.Options):
     optFlags = [
                 ['encrypted', 'e' ,
@@ -47,7 +52,7 @@ class Options(usage.Options):
     def opt_pickle(self, picklename):
         """Set the root resource of the web server to the resource saved in 
         this pickle."""
-        self['root'] = cPickle.load(open(picklename))
+        self['root'] = pickle.load(open(picklename))
  
 
 def getFactory(app, port):

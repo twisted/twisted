@@ -14,7 +14,10 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import cPickle
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 
 import gtk
 
@@ -38,7 +41,7 @@ class AccountManager:
         self.widget.show_all()
         try:
             f = open(SETTINGS_FILE)
-            self.accounts = cPickle.load(f)
+            self.accounts = pickle.load(f)
             print 'loaded!'
             self.refreshAccounts()
         except IOError:
@@ -72,7 +75,7 @@ class AccountManager:
 
     def on_MainIMWindow_destroy(self, w):
         print 'Saving...'
-        cPickle.dump(self.accounts, open(SETTINGS_FILE,'wb'))
+        pickle.dump(self.accounts, open(SETTINGS_FILE,'wb'))
         print 'Saved.'
         gtk.mainquit()
 

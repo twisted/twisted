@@ -32,7 +32,12 @@ for the twisted.mail SMTP server
 from twisted.python import log, failure
 from twisted.mail import relay, mail, bounce
 from twisted.internet import protocol, app
-import os, string, time, cPickle
+import os, string, time
+
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 
 class SMTPManagedRelayerFactory(protocol.ClientFactory):
 
@@ -229,11 +234,11 @@ class SmartHostSMTPRelayingManager:
         # discard it
         message = os.path.basename(message)
         fp = self.queue.getEnvelopeFile(message)
-        from_, to = cPickle.load(fp)
+        from_, to = pickle.load(fp)
         fp.close()
-	from_, to, bounceMessage = bounce.generateBounce(open(self.queue.getPath(message)+'-D'), from_, to)
+        from_, to, bounceMessage = bounce.generateBounce(open(self.queue.getPath(message)+'-D'), from_, to)
         fp, outgoingMessage = self.queue.createNewMessage()
-        cPickle.dump([from_, to], fp)
+        pickle.dump([from_, to], fp)
         fp.close()
         for line in string.split(bounceMessage, '\n')[:-1]:
              outgoingMessage.lineReceived(line)

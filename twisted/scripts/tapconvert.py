@@ -19,8 +19,16 @@ from twisted.persisted import styles
 
 # System imports
 import os, sys
-from cPickle import load
-from cStringIO import StringIO
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+
+try:
+    import cStringIO as StringIO
+except ImportError:
+    import StringIO
+
 
 mainMod = sys.modules['__main__']
 
@@ -77,7 +85,7 @@ class LoaderXML(LoaderCommon):
     def decode(self):
         from twisted.persisted.marmalade import unjellyFromXML
         sys.modules['__main__'] = EverythingEphemeral()
-        application = unjellyFromXML(StringIO(self.data))
+        application = unjellyFromXML(StringIO.StringIO(self.data))
         sys.modules['__main__'] = mainMod
         styles.doUpgrade()
         return application
@@ -108,7 +116,7 @@ class LoaderSource(LoaderCommon):
     def decode(self):
         from twisted.persisted.aot import unjellyFromSource
         sys.modules['__main__'] = EverythingEphemeral()
-        application = unjellyFromSource(StringIO(self.data))
+        application = unjellyFromSource(StringIO.StringIO(self.data))
         application.persistStyle = "aot"
         sys.modules['__main__'] = mainMod
         styles.doUpgrade()
@@ -119,7 +127,7 @@ class LoaderTap(LoaderCommon):
 
     def decode(self):
         sys.modules['__main__'] = EverythingEphemeral()
-        application = load(StringIO(self.data))
+        application = pickle.load(StringIO.StringIO(self.data))
         sys.modules['__main__'] = mainMod
         styles.doUpgrade()
         return application

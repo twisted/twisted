@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.54 2003/04/19 03:24:41 acapnotic Exp $
+# $Id: conch.py,v 1.55 2003/04/28 03:53:27 exarkun Exp $
 
 #""" Implementation module for the `conch` command.
 #"""
@@ -27,7 +27,12 @@ from twisted.internet.error import CannotListenError
 from twisted.python import usage, log, util
 from twisted.spread import banana
 
-import os, sys, getpass, struct, tty, fcntl, base64, signal, stat, cPickle
+import os, sys, getpass, struct, tty, fcntl, base64, signal, stat
+
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 
 class GeneralOptions(usage.Options):
     synopsis = """Usage:    conch [options] host [command]
@@ -328,13 +333,13 @@ class SSHUnixClientProtocol(banana.Banana):
         deferredID, result = lst
         d = self.deferreds[deferredID]
         del self.deferreds[deferredID]
-        d.callback(cPickle.loads(result))
+        d.callback(pickle.loads(result))
 
     def client_errbackDeferred(self, lst):
         deferredID, result = lst
         d = self.deferreds[deferredID]
         del self.deferreds[deferredID]
-        d.errback(cPickle.loads(result))
+        d.errback(pickle.loads(result))
 
     def client_channelID(self, lst):
         channelID = lst[0]
@@ -350,7 +355,7 @@ class SSHUnixClientProtocol(banana.Banana):
 
     def client_openFailed(self, lst):
         channelID, reason = lst
-        self.channels[channelID].openFailed(cPickle.loads(reason))
+        self.channels[channelID].openFailed(pickle.loads(reason))
         del self.channels[channelID]
 
     def client_addWindowBytes(self, lst):
@@ -405,7 +410,7 @@ class SSHUnixServerProtocol(banana.Banana):
         self.sendMessage('callbackDeferred', di, result)
 
     def _ebDeferred(self, reason, di):
-        self.sendMessage('errbackDeferred', di, cPickle.dumps(reason))
+        self.sendMessage('errbackDeferred', di, pickle.dumps(reason))
 
     def haveChannel(self, channelID):
         return conn.channels.has_key(channelID)
@@ -477,7 +482,7 @@ class SSHUnixChannel(channel.SSHChannel):
                                              self.remoteMaxPacket, specificData)
 
     def openFailed(self, reason):
-        self.unix.sendMessage('openFailed', self.id, cPickle.dumps(reason))
+        self.unix.sendMessage('openFailed', self.id, pickle.dumps(reason))
 
     def addWindowBytes(self, bytes):
         self.unix.sendMessage('addWindowBytes', self.id, bytes)

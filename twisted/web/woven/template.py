@@ -68,7 +68,11 @@ A short example::
 
 import warnings
 
-from cStringIO import StringIO
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+
 import string, os, sys, stat, types
 from twisted.web import microdom
 
@@ -244,13 +248,11 @@ class DOMTemplate(Resource):
         if (not os.path.exists(compiledTemplatePath) or
         os.stat(compiledTemplatePath)[stat.ST_MTIME] < os.stat(templatePath)[stat.ST_MTIME]):
             compiledTemplate = microdom.parse(templatePath)
-            from cPickle import dump
-            dump(compiledTemplate, open(compiledTemplatePath, 'wb'), 1)
+            pickle.dump(compiledTemplate, open(compiledTemplatePath, 'wb'), 1)
 #            parent = templateRef.parentRef().getObject()
 #            parent.savePickleChild(compiledTemplatePath, compiledTemplate)
         else:
-            from cPickle import load
-            compiledTemplate = load(open(compiledTemplatePath, "rb"))
+            compiledTemplate = pickle.load(open(compiledTemplatePath, "rb"))
         return compiledTemplate
 
     def setUp(self, request, document):

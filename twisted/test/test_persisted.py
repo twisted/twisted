@@ -17,8 +17,16 @@
 
 # System Imports
 from twisted.trial import unittest
-import cPickle
-import cStringIO
+
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+
+try:
+    import cStringIO as StringIO
+except ImportError:
+    import StringIO
 
 # Twisted Imports
 from twisted.persisted import styles, marmalade, aot
@@ -29,11 +37,11 @@ class VersionTestCase(unittest.TestCase):
         global NullVersioned
         class NullVersioned:
             ok = 0
-        pkcl = cPickle.dumps(NullVersioned())
+        pkcl = pickle.dumps(NullVersioned())
         class NullVersioned(styles.Versioned):
             def upgradeToVersion1(self):
                 self.ok = 1
-        mnv = cPickle.loads(pkcl)
+        mnv = pickle.loads(pkcl)
         styles.doUpgrade()
         assert mnv.ok, "initial upgrade not run!"
 
@@ -54,14 +62,14 @@ class VersionTestCase(unittest.TestCase):
                 self.v4 = self.v4 + 1
         mv = MyVersioned()
         assert not (mv.v3 or mv.v4), "hasn't been upgraded yet"
-        pickl = cPickle.dumps(mv)
+        pickl = pickle.dumps(mv)
         MyVersioned.persistenceVersion = 4
-        obj = cPickle.loads(pickl)
+        obj = pickle.loads(pickl)
         styles.doUpgrade()
         assert obj.v3, "didn't do version 3 upgrade"
         assert obj.v4, "didn't do version 4 upgrade"
-        pickl = cPickle.dumps(obj)
-        obj = cPickle.loads(pickl)
+        pickl = pickle.dumps(obj)
+        obj = pickle.loads(pickl)
         styles.doUpgrade()
         assert obj.v3 == 1, "upgraded unnecessarily"
         assert obj.v4 == 1, "upgraded unnecessarily"
@@ -80,8 +88,8 @@ class EphemeralTestCase(unittest.TestCase):
         self.assertEquals(o.__class__, MyEphemeral)
         self.assertEquals(o.x, 3)
         
-        pickl = cPickle.dumps(o)
-        o = cPickle.loads(pickl)
+        pickl = pickle.dumps(o)
+        o = pickle.loads(pickl)
         
         self.assertEquals(o.__class__, styles.Ephemeral)
         self.assert_(not hasattr(o, 'x'))
@@ -194,7 +202,7 @@ class MarmaladeTestCase(unittest.TestCase):
 
     def testCopyReg(self):
         s = "foo_bar"
-        sio = cStringIO.StringIO()
+        sio = StringIO.StringIO()
         sio.write(s)
         assert marmalade.unjellyFromXML(marmalade.jellyToXML({1:sio}))[1].getvalue() == s
 
@@ -229,27 +237,27 @@ class PicklingTestCase(unittest.TestCase):
     """Test pickling of extra object types."""
     
     def testModule(self):
-        pickl = cPickle.dumps(styles)
-        o = cPickle.loads(pickl)
+        pickl = pickle.dumps(styles)
+        o = pickle.loads(pickl)
         self.assertEquals(o, styles)
     
     def testClassMethod(self):
-        pickl = cPickle.dumps(Pickleable.getX)
-        o = cPickle.loads(pickl)
+        pickl = pickle.dumps(Pickleable.getX)
+        o = pickle.loads(pickl)
         self.assertEquals(o, Pickleable.getX)
     
     def testInstanceMethod(self):
         obj = Pickleable(4)
-        pickl = cPickle.dumps(obj.getX)
-        o = cPickle.loads(pickl)
+        pickl = pickle.dumps(obj.getX)
+        o = pickle.loads(pickl)
         self.assertEquals(o(), 4)
         self.assertEquals(type(o), type(obj.getX))
     
     def testcStringIO(self):
-        f = cStringIO.StringIO()
+        f = StringIO.StringIO()
         f.write("abc")
-        pickl = cPickle.dumps(f)
-        o = cPickle.loads(pickl)
+        pickl = pickle.dumps(f)
+        o = pickle.loads(pickl)
         self.assertEquals(type(o), type(f))
         self.assertEquals(f.getvalue(), "abc")
 
@@ -302,7 +310,7 @@ class AOTTestCase(unittest.TestCase):
 
     def testCopyReg(self):
         s = "foo_bar"
-        sio = cStringIO.StringIO()
+        sio = StringIO.StringIO()
         sio.write(s)
         uj = aot.unjellyFromSource(aot.jellyToSource(sio))
         # print repr(uj.__dict__)

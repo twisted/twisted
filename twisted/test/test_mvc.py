@@ -18,6 +18,11 @@
 
 import random
 
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+
 from twisted.trial import unittest
 
 from twisted.web.woven import model, view, controller, interfaces
@@ -84,8 +89,7 @@ class MyController(controller.Controller):
         """
         global persisted_model
         
-        from cPickle import dumps
-        persisted_model = dumps(self.model)
+        persisted_model = pickle.dumps(self.model)
 
 # Register MyController as the controller for instances of type MyModel
 components.registerAdapter(MyController, MyModel, interfaces.IController)

@@ -24,6 +24,11 @@ This is code and support for
 # System Imports
 import os
 
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+
 # Twisted Imports
 from twisted.internet import defer
 
@@ -57,9 +62,8 @@ class Picklesicle(DirectoryRepository):
         # don't send multiple requests to the DB for the same OID in the same
         # actual request.
         
-        import cPickle
         f = open(os.path.join(self.dirname, str(oid)))
-        up = cPickle.Unpickler(f)
+        up = pickle.Unpickler(f)
         up.persistent_load = self.persistentLoad
         obj = up.load()
         # cheating...
@@ -91,9 +95,8 @@ class Picklesicle(DirectoryRepository):
                     return "S:"+str(oid)
 
     def saveOID(self, oid, obj):
-        import cPickle
         f = open(os.path.join(self.dirname, str(oid)), 'wb')
-        pl = cPickle.Pickler(f)
+        pl = pickle.Pickler(f)
         self._savingOID = oid
         pl.persistent_id = self.persistentID
         pl.dump(obj)

@@ -23,7 +23,12 @@
 from __future__ import nested_scopes
 
 # system imports
-import os, cPickle, time
+import os, time
+
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 
 # twisted imports
 from twisted.python.components import Interface
@@ -85,8 +90,8 @@ class MemoryJournal(Journal):
         self.path = path
         if os.path.exists(path):
             try:
-                self.lastSync, obj = cPickle.load(open(path, "rb"))
-            except (IOError, OSError, cPickle.UnpicklingError):
+                self.lastSync, obj = pickle.load(open(path, "rb"))
+            except (IOError, OSError, pickle.UnpicklingError):
                 self.lastSync, obj = 0, None
             loadedCallback(obj)
         else:
@@ -100,7 +105,7 @@ class MemoryJournal(Journal):
     def sync(self, obj):
         # make this more reliable at some point
         f = open(self.path, "wb")
-        cPickle.dump((self.latestIndex, obj), f, 1)
+        pickle.dump((self.latestIndex, obj), f, 1)
         f.close()
         self.lastSync = self.latestIndex
 
@@ -166,7 +171,7 @@ class WrapperCommand:
             obj = svc.loadObject(self.objType, self.objId)
         else:
             obj = self.obj
-        return apply(getattr(obj, self.methodName), self.args, self.kwargs)
+        return getattr(obj, self.methodName)(*self.args, **self.kwargs)
 
     def __getstate__(self):
         d = self.__dict__.copy()
@@ -209,7 +214,7 @@ class ServiceWrapperCommand:
         self.kwargs = kwargs
 
     def execute(self, svc, commandTime):
-        return apply(getattr(svc, self.methodName), self.args, self.kwargs)
+        return getattr(svc, self.methodName)(*self.args, **self.kwargs)
 
     def __repr__(self):
         return "<ServiceWrapperCommand: %s, %s, %s>" % (self.methodName, self.args, self.kwargs)

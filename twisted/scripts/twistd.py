@@ -19,12 +19,21 @@ from __future__ import nested_scopes
 from twisted import copyright
 from twisted.python import usage, util, runtime, plugin
 from twisted.python import log, logfile
+
 from twisted.persisted import styles
 util.addPluginDir()
 
 # System Imports
-from cPickle import load, loads
-from cStringIO import StringIO
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+
+try:
+    import cStringIO as StringIO
+except ImportError:
+    import StringIO
+
 import traceback
 import imp
 import sys, os, errno
@@ -158,7 +167,7 @@ def createApplicationDecoder(config):
             from twisted.persisted.marmalade import unjellyFromXML
             log.msg('<Loading file="%s" />' % (filename,))
             sys.modules['__main__'] = EverythingEphemeral()
-            application = unjellyFromXML(StringIO(data))
+            application = unjellyFromXML(StringIO.StringIO(data))
             application.persistStyle = 'xml'
             sys.modules['__main__'] = mainMod
             styles.doUpgrade()
@@ -170,7 +179,7 @@ def createApplicationDecoder(config):
             from twisted.persisted.aot import unjellyFromSource
             log.msg("Loading %s..." % (filename,))
             sys.modules['__main__'] = EverythingEphemeral()
-            application = unjellyFromSource(StringIO(data))
+            application = unjellyFromSource(StringIO.StringIO(data))
             application.persistStyle = 'aot'
             sys.modules['__main__'] = mainMod
             styles.doUpgrade()
@@ -181,7 +190,7 @@ def createApplicationDecoder(config):
         def decode(filename, data):
             log.msg("Loading %s..." % (filename,))
             sys.modules['__main__'] = EverythingEphemeral()
-            application = loads(data)
+            application = pickle.loads(data)
             sys.modules['__main__'] = mainMod
             styles.doUpgrade()
             return application

@@ -29,7 +29,16 @@ import string
 import socket
 import types
 import warnings
-from cStringIO import StringIO
+
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+
+try:
+    import cStringIO as StringIO
+except ImportError:
+    import StringIO
 
 # Twisted Imports
 from twisted.internet import interfaces
@@ -715,8 +724,7 @@ class Application(log.Logger, styles.Versioned,
             dumpFunc = jellyToSource
             ext = "tas"
         else:
-            from cPickle import dump
-            def dumpFunc(obj, file, _dump=dump):
+            def dumpFunc(obj, file, _dump=pickle.dump):
                 _dump(obj, file, 1)
             ext = "tap"
         if filename:
@@ -739,7 +747,7 @@ class Application(log.Logger, styles.Versioned,
             f.flush()
             f.close()
         else:
-            f = StringIO()
+            f = StringIO.StringIO()
             dumpFunc(self, f)
             s = encrypt(passphrase, f.getvalue())
             f = open(filename, 'wb')

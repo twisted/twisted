@@ -36,7 +36,11 @@ import types
 import base64
 import string
 import glob
-import cPickle
+
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 
 try:
     _open
@@ -333,7 +337,7 @@ class Shelf(DirDBM):
 
         @param v: The value to associate with C{key}
         """
-        v = cPickle.dumps(v)
+        v = pickle.dumps(v)
         DirDBM.__setitem__(self, k, v)
 
     def __getitem__(self, k):
@@ -347,7 +351,7 @@ class Shelf(DirDBM):
         @return: The value associated with the given key
         @raise KeyError: Raised if the given key does not exist
         """
-        return cPickle.loads(DirDBM.__getitem__(self, k))
+        return pickle.loads(DirDBM.__getitem__(self, k))
 
 
 def open(file, flag = None, mode = None):

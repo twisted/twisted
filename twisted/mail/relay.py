@@ -20,7 +20,12 @@
 from twisted.protocols import smtp
 from twisted.mail import mail
 
-import os, time, cPickle
+import os, time
+
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 
 
 class DomainQueuer:
@@ -54,7 +59,7 @@ class DomainQueuer:
         queue = self.service.queue
         envelopeFile, smtpMessage = queue.createNewMessage()
         try:
-            cPickle.dump([str(user.orig), str(user.dest)], envelopeFile)
+            pickle.dump([str(user.orig), str(user.dest)], envelopeFile)
         finally:
             envelopeFile.close()
         return smtpMessage
@@ -68,7 +73,7 @@ class SMTPRelayer(smtp.SMTPClient):
         for message in messagePaths:
             fp = open(message+'-H')
             try:
-                messageContents = cPickle.load(fp)
+                messageContents = pickle.load(fp)
             finally:
                 fp.close()
             fp = open(message+'-D')

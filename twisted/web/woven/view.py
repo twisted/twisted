@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.74 $"[11:-2]
+__version__ = "$Revision: 1.75 $"[11:-2]
 
 # Sibling imports
 import interfaces
@@ -35,6 +35,10 @@ from twisted.python import log
 from twisted.web import resource, microdom, html, error
 from twisted.web.server import NOT_DONE_YET
 
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 
 import os
 import sys
@@ -216,13 +220,11 @@ class View:
         if (not os.path.exists(compiledTemplatePath) or
         os.stat(compiledTemplatePath)[stat.ST_MTIME] < os.stat(templatePath)[stat.ST_MTIME]):
             compiledTemplate = microdom.parse(templatePath)
-            from cPickle import dump
-            dump(compiledTemplate, open(compiledTemplatePath, 'wb'), 1)
+            pickle.dump(compiledTemplate, open(compiledTemplatePath, 'wb'), 1)
 #            parent = templateRef.parentRef().getObject()
 #            parent.savePickleChild(compiledTemplatePath, compiledTemplate)
         else:
-            from cPickle import load
-            compiledTemplate = load(open(compiledTemplatePath, "rb"))
+            compiledTemplate = pickle.load(open(compiledTemplatePath, "rb"))
         return compiledTemplate
 
     def handleDocument(self, request, document):
@@ -304,7 +306,7 @@ class View:
         for name in changed.keys():
             handler = getattr(self, 'update_' + name, None)
             if handler:
-                apply(handler, (changed[name],))
+                handler(changed[name])
 
     def generate(self, request, node):
         """Allow a view to be used like a widget. Will look up the template
