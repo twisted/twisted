@@ -61,7 +61,7 @@ try:
    StopIteration = StopIteration
    iter = iter
 except:
-   StopIteration = IndexError
+   class StopIteration(Exception): pass
    class _ListIterator:
        def __init__(self,lst):
            self.idx = 0
@@ -70,7 +70,10 @@ except:
        def next(self):
            idx = self.idx
            self.idx += 1
-           return self.lst[idx]
+           try:
+               return self.lst[idx]
+           except IndexError: 
+               raise StopIteration
    def iter(lst): 
        if hasattr(lst,'__iter__'):
            return lst.__iter__()
