@@ -1,11 +1,21 @@
 #run twistd -y on me
-from twisted.application import app, compat, servers
+from twisted.application import app, compat, servers, timer, clients
 from twisted.protocols import wire
 from twisted.internet import protocol
+from twisted.python import util
 
 appl = app.Application('test')
 factory = protocol.ServerFactory()
 factory.protocol = wire.Echo
 compat.IOldApplication(appl).listenTCP(8080, factory)
 servers.TCPServer(8081, factory).setParent(appl)
+timer.TimerService(5, util.println, "--MARK--").setParent(appl)
+class Foo(protocol.Protocol):
+    def connectionMade(self):
+        self.transport.write('lalala\n')
+    def dataReceived(self, data):
+        print `data`
+factory = protocol.ClientFactory()
+factory.protocol = Foo
+clients.TCPClient('localhost', 8081, factory).setParent(appl)
 application = compat.IOldApplication(appl)
