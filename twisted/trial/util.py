@@ -185,7 +185,7 @@ def spinUntil(f, timeout=4.0, msg="condition not met before timeout"):
     now = time.time()
     stop = now + timeout
     while not f():
-        if time.time() == stop:
+        if time.time() >= stop:
             raise defer.TimeoutError, msg
         reactor.iterate(0.1)
 
@@ -198,7 +198,7 @@ def spinWhile(f, timeout=4.0, msg="f did not return false before timeout"):
     now = time.time()
     stop = now + timeout
     while f():
-        if time.time() == stop:
+        if time.time() >= stop:
             raise defer.TimeoutError, msg
         reactor.iterate(0.1)
 
