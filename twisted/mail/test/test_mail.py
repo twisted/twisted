@@ -17,7 +17,7 @@ import tempfile
 
 from zope.interface import providedBy
 
-from twisted.trial import unittest
+from twisted.trial import unittest, util as tutil
 from twisted.mail import smtp
 from twisted.mail import pop3
 from twisted.names import dns
@@ -1068,6 +1068,12 @@ class AliasTestCase(unittest.TestCase):
         lines = file(tmpfile).readlines()
         self.assertEquals([L[:-1] for L in lines], self.lines)
 
+
+class PProtocol(protocol.ProcessProtocol):
+    ended = 0
+    def processEnded(self, reason):
+        self.ended = 1
+
 class ProcessAliasTestCase(test_process.SignalMixin, unittest.TestCase):
     lines = [
         'First line',
@@ -1162,17 +1168,16 @@ class ProcessAliasTestCase(test_process.SignalMixin, unittest.TestCase):
 
         A4 = mail.alias.AliasGroup(['|echo', 'alias1'], domain, 'alias4')
         aliases['alias4'] = A4
-
-        p = reactor.spawnProcess(protocol.ProcessProtocol(), "process_reader.py")
+        
+        pproto = PProtocol()
+        p = reactor.spawnProcess(pproto, "process_reader.py")
         r = map(str, A4.resolve(aliases).objs)
         r.sort()
         expected = map(str, [
             mail.alias.MessageWrapper(p, 'echo')
         ])
-        self.assertEquals(r, expected)
-        reactor.iterate()
-        reactor.iterate()
-        reactor.iterate()
+        tutil.spinUntil(lambda :r == expected)
+        tutil.spinUntil(lambda :pproto.ended)
 
 if interfaces.IReactorProcess(reactor, default=None) is None:
     ProcessAliasTestCase = "IReactorProcess not supported"
