@@ -962,6 +962,18 @@ class NewCredTestCase(unittest.TestCase):
         reactor.iterate()
         self.assertEquals(self.realm.p.loggedOut, 1)
 
+    def testBadLogin(self):
+        factory = pb.PBClientFactory()
+        for username, password in [("nosuchuser", "pass"), ("user", "wrongpass")]:
+            d = factory.login(credentials.UsernamePassword("user1", "pass"), "BRAINS!")
+            c = reactor.connectTCP("127.0.0.1", self.portno, factory)
+            p = unittest.deferredError(d)
+            self.assert_(p.check("twisted.cred.error.UnauthorizedLogin"))
+            c.disconnect()
+            reactor.iterate()
+        from twisted.cred.error import UnauthorizedLogin
+        log.flushErrors(UnauthorizedLogin)
+    
     def testView(self):
         factory = pb.PBClientFactory()
         d = factory.login(credentials.UsernamePassword("user", "pass"), "BRAINS!")
