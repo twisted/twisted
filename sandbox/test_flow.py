@@ -21,6 +21,7 @@ from __future__ import nested_scopes
 import flow
 from twisted.trial import unittest
 from twisted.python import failure
+from twisted.internet import defer, reactor, protocol
 
 class producer:
     """ iterator version of the following generator... 
@@ -153,6 +154,52 @@ class testconcur:
         stage = self.both.next()
         return (stage.name, stage.result) 
 
+class echoServer:
+    """ a simple echo protocol, server side
+
+        def echoServer(conn):
+            yield conn
+            for data in conn:
+                yield data
+                yield conn
+    """
+    def __init__(self, conn):
+        self.conn = conn
+    def __iter__(self):
+        self.next = self.yield_conn
+        return self
+    def yield_conn(self):
+        self.next = self.yield_data
+        return self.conn
+    def yield_data(self):
+        self.next = self.yield_conn
+        return self.conn.next()
+
+class echoClient:
+    """ a simple echo client tester
+
+        def echoClient(conn):
+            yield "testing"
+            yield conn
+            # signal that we are done
+            conn.factory.d.callback(conn.next())
+    """
+    def __init__(self, conn):
+        self.conn = conn
+    def __iter__(self):
+        self.next = self.yield_testing
+        return self
+    def yield_testing(self):
+        self.next = self.yield_conn
+        return "testing"
+    def yield_conn(self):
+        self.next = self.yield_stop
+        return self.conn
+    def yield_stop(self):
+        # signal that we are done
+        self.conn.factory.d.callback(self.conn.next())
+        raise flow.StopIteration()
+ 
 class FlowTest(unittest.TestCase):
     def testNotReady(self):
         lhs = [1,2,3]
@@ -180,8 +227,6 @@ class FlowTest(unittest.TestCase):
                          list(flow.Block(badgen(),ZeroDivisionError)))
         self.assertEqual(['x',ZeroDivisionError],
                          list(flow.Block(flow.wrap(badgen()),ZeroDivisionError)))
-        #self.assertEqual(list(flow.Block(badgen(),ZeroDivisionError)),['a'])
-        # self.assertRaises(ZeroDivisionError,flow.Block(badgen()))
 
     def testMerge(self):
         lhs = [1,'a',2,'b','c',3]
@@ -241,12 +286,6 @@ class FlowTest(unittest.TestCase):
         self.failUnless(isinstance(r.value, IOError))
 
     def testDeferredFailure(self):
-        #
-        # By default, the first time an error is encountered, it is
-        # wrapped as a Failure and send to the errback
-        #
-        #    Failure(ZeroDivisionError)
-        #
         d = flow.Deferred(badgen())
         r = unittest.deferredError(d) 
         self.failUnless(isinstance(r, failure.Failure))
@@ -260,19 +299,10 @@ class FlowTest(unittest.TestCase):
         self.failUnless(isinstance(r, failure.Failure))
         self.failUnless(isinstance(r.value, ZeroDivisionError))
 
-    def testFailureAsResult(self):
-        #
-        # If failures are to be expected, then they can be
-        # returned in the list of results.
-        #
-        #   ['x',Failure(ZeroDivisionError)]
-        #
-        d = flow.Deferred(badgen(), failureAsResult = 1)
+    def testDeferredTrap(self):
+        d = flow.Deferred(badgen(), ZeroDivisionError)
         r = unittest.deferredResult(d)
-        self.assertEqual(len(r),2)   
-        self.assertEqual(r[0],'x')   
-        self.failUnless(isinstance(r[1], failure.Failure))
-        self.failUnless(isinstance(r[1].value,ZeroDivisionError))
+        self.assertEqual(r, ['x',ZeroDivisionError])
 
     def testDeferredWrapper(self):
         from twisted.internet import defer
@@ -293,6 +323,17 @@ class FlowTest(unittest.TestCase):
         self.failUnless(isinstance(r, failure.Failure))
         self.failUnless(isinstance(r.value, IOError))
 
+    def testProtocol(self):
+        PORT = 8392
+        server = protocol.ServerFactory()
+        server.protocol = flow.buildProtocol(echoServer)
+        reactor.listenTCP(PORT,server)
+        client = protocol.ClientFactory()
+        client.protocol = flow.buildProtocol(echoClient)
+        client.d = defer.Deferred()
+        reactor.connectTCP("localhost", PORT, client)
+        self.assertEquals('testing', unittest.deferredResult(client.d))
+
     def testThreaded(self):
         class CountIterator:
             def __init__(self, count):
@@ -308,7 +349,6 @@ class FlowTest(unittest.TestCase):
                 self.count -= 1
                 return val
         result = [5,4,3,2,1]
-        #f = flow.Threaded(CountIterator(5))
-        #self.assertEquals(result, list(flow.Block(f)))
         d = flow.Deferred(flow.Threaded(CountIterator(5)))
         self.assertEquals(result, unittest.deferredResult(d))
+

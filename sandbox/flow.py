@@ -15,10 +15,12 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307
 # USA
 #
+# Author: Clark Evans  (cce@clarkevans.com)
+# 
+#
 from __future__ import nested_scopes
 
-""" 
-Flow ... asynchronous data flows
+""" Flow ... asynchronous data flows
 
     This module provides a mechanism for using async data flows through
     the use of generators.  While this module does not use generators in
@@ -69,8 +71,8 @@ Flow ... asynchronous data flows
 import time, types
 from twisted.python.failure import Failure
 from twisted.python.compat import StopIteration, iter, isinstance, True, False
-from twisted.internet import defer, reactor
-
+from twisted.internet import defer, reactor, protocol
+from twisted.internet.error import ConnectionLost
 
 def wrap(obj, *trap):
     """ Wraps various objects for use within a flow """
@@ -85,7 +87,7 @@ def wrap(obj, *trap):
         return obj
 
     if isinstance(obj, defer.Deferred):
-        return DeferredWrapper(obj)
+        return DeferredWrapper(obj, *trap)
 
     try:
         # wrap all sequences (except strings) as iterable objects
@@ -441,11 +443,11 @@ class Callback(Stage):
         Stage.__init__(self, *trap)
         self._fail       = False
         self._finished   = False
-        self._results    = []
+        self._buffer    = []
         self._cooperate  = Callback.Instruction()
     def callback(self,result):
         """ called by the producer to indicate a successful result """
-        self._results.append(result)
+        self._buffer.append(result)
         self._cooperate.flow()
     def finish(self):
         """ called by producer to indicate successful stream completion """
@@ -464,13 +466,15 @@ class Callback(Stage):
         if self.fail or self.stop:
             self.stop = 1
             return
-        if not self._results: 
+        if not self._buffer: 
             if self._finished:
                 self.result = None
                 self.stop = 1
                 return
             return self._cooperate
-        self.result = self._results.pop(0)
+        len(self._buffer)  # strange contatination bug happens without this!
+        self.result = self._buffer.pop(0)
+    __call__ = callback
 
 class DeferredWrapper(Stage):
     """ Wraps a Deferred object into a stage
@@ -593,18 +597,10 @@ class Deferred(defer.Deferred):
             reactor.iterate()
 
     """
-    def __init__(self, stage, failureAsResult = False):
-        """initialize a DeferredFlow
-        @param stage:           a flow stage, iterator or generator
-        @param failureAsResult  if true, then failures will be added to 
-                                the result list provided to the callback,
-                                otherwise the first failure results in 
-                                the errback being called with the failure.
-        """
+    def __init__(self, stage, *trap):
         defer.Deferred.__init__(self)
-        self.failureAsResult = failureAsResult
         self._results = []
-        self._stage = wrap(stage)
+        self._stage = wrap(stage, *trap)
         self._execute()
 
     def _execute(self, dummy = None):
@@ -620,12 +616,94 @@ class Deferred(defer.Deferred):
                     result.callLater(self._execute)
                     return
                 raise Unsupported(result)
-            if not self.failureAsResult: 
-                if cmd.fail:
-                    self.errback(cmd.result)
-                    return
+            if cmd.fail:
+                if cmd._trap:
+                    error = cmd.result.check(*cmd._trap)
+                    if error:
+                        self._results.append(error)
+                        continue
+                self.errback(cmd.result)
+                return
             self._results.append(cmd.result)
 
+def buildProtocol(controller, baseClass = protocol.Protocol, 
+                  *callbacks, **kwargs):
+    """ Construct a flow based protocol
+
+        This takes a base protocol class, and a set of callbacks and
+        creates a connection flow based on the two.   For example, 
+        the following would build a simple 'echo' protocol.
+
+            PORT = 8392
+            def echoServer(conn):
+                yield conn
+                for data in conn:
+                    yield data
+                    yield conn
+            
+            def echoClient(conn):
+                yield "hello, world!"
+                yield conn
+                print "server said: ", conn.next()
+                reactor.callLater(0,reactor.stop)
+            
+            server = protocol.ServerFactory()
+            server.protocol = flow.buildProtocol(echoServer)
+            reactor.listenTCP(PORT,server)
+            client = protocol.ClientFactory()
+            client.protocol = flow.buildProtocol(echoClient)
+            reactor.connectTCP("localhost", PORT, client)
+            reactor.run()
+
+    """
+    if not callbacks:
+        callbacks = ('dataReceived',)
+    if not kwargs:
+        kwargs = {"finishOnConnectionLost": True }
+    class FlowProtocol(baseClass):
+        def __init__(self):
+            cbs = []
+            for callback in callbacks:
+                cb = Callback()
+                setattr(self, callback, cb)
+                cbs.append(cb)
+            if len(cbs) > 1:
+                self.input = Concurrent(*cbs)
+            else:
+                self.input = cbs[0]
+            self.controller = controller
+            self.finishOnConnectionLost = kwargs["finishOnConnectionLost"]
+        def _execute(self, dummy = None):
+            cmd = self._controller
+            while True:
+                result = cmd._yield()
+                if cmd.fail:
+                    print "flow.py: TODO: Help! Any ideas on reporting faliures?"
+                    cmd.result.trap()
+                    return
+                if cmd.stop:
+                    self.transport.loseConnection()
+                    return
+                if result:
+                    if isinstance(result, CallLater):
+                        result.callLater(self._execute)
+                        return
+                    raise Unsupported(result)
+                self.transport.write(cmd.result)
+        def connectionMade(self):
+            self._controller = wrap(self.controller(self.input))
+            self.input.transport = self.transport
+            self.input.factory   = self.factory
+            self._execute()
+        def connectionLost(self, reason=protocol.connectionDone):
+            if protocol.connectionDone is reason or \
+               ( self.finishOnConnectionLost and \
+                 isinstance(reason.value, ConnectionLost)):
+                self.input.finish()
+            else:
+                self.input.errback(reason)
+            self._execute()
+    return FlowProtocol
 
 class QueryIterator:
     """ Converts a database query into a result iterator """
@@ -665,3 +743,4 @@ class QueryIterator:
         if not ret: 
             raise StopIteration
         return ret
+
