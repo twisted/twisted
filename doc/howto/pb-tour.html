@@ -12,21 +12,27 @@
 <h1>Using Perspective Broker: the walking tour</h1>
 
 <ol>
+
   <li> <a href="#foreword">Foreword</a> </li>
   <br />
+
   <li> <a href="#pb">Introduction: why use PB?</a> </li>
   <li> <a href="#roadmap">Class roadmap</a> </li>
   <li> <a href="#pb/refactored">Why are there so many classes?</a> </li>
   <li> <a href="#pb/subclassing">Which ones am I supposed to subclass?</a></li>
   <br />
+
   <li> <a href="#pb/basic">Basic remote method invocation</a> </li>
   <ul>
     <li> <a href="#pb/more_refs">Passing more references</a> </li>
     <li> <a href="#pb/refs_come_back">References can come back to you</a> </li>
     <li> <a href="#pb/beyond_root">Beyond a single "root" object</a> </li>
     <li> <a href="#pb/flavors">Flavors of remotely-accessible objects</a> </li>
-    <li> <a href="#pb/LAST_SF_EXIT">Wrapup before twisted.cred</a> </li>
   </ul>
+  <li> <a href="#pb/exceptions">Returning Exceptions</a> </li>
+  <br />
+
+  <li> <a href="#pb/LAST_SF_EXIT">Wrapup before twisted.cred</a> </li>
 
 </ol>
 
@@ -129,65 +135,106 @@ to figure them out through their interaction than explaining them one at a
 time.</p>
 
 <ul>
- <li> <b>Application</b>: <tt>internet/app.py</tt> </li>
- <li> <b>Authorizer</b>: <tt>cred/authorizer.py</tt> </li>
- <li> <b>Identity</b>: <tt>cred/identity.py</tt> </li>
- <li> <b>Service</b>: <tt>cred/service.py</tt> </li>
- <li> <b>MultiService</b>: <tt>internet/app.py</tt> </li>
- <li> <b>Factory</b>: <tt>internet/protocol.py</tt> </li>
- <li> <b>BrokerFactory</b>: <tt>spread/pb.py</tt> </li>
- <li> <b>Broker</b>: <tt>spread/pb.py</tt> </li>
- <li> <b>AuthRoot</b>: <tt>spread/pb.py</tt> </li>
- <li> <b>Perspective</b>: <tt>spread/pb.py</tt>, subclassed from Perspective
-  in <tt>cred/perspective.py</tt> </li>
+
+  <li><b><code class="API" base="twisted.internet.app">Application</code></b>
+  : <tt>internet/app.py</tt></li>
+
+  <li><b><code class="API" base="twisted.spread.pb">Service</code></b>
+  : <tt>spread/pb.py</tt>, subclassed from
+  <code class="API" base="twisted.cred.service">Service</code>
+  in <tt>cred/service.py</tt></li>
+
+  <li><b><code class="API" base="twisted.internet.app">MultiService</code></b>
+  : <tt>internet/app.py</tt></li>
+
+  <li><b><code class="API" base="twisted.internet.protocol">Factory</code></b>
+  : <tt>internet/protocol.py</tt></li>
+
+  <li><b><code class="API" base="twisted.spread.pb">BrokerFactory</code></b>
+  : <tt>spread/pb.py</tt></li>
+
+  <li><b><code class="API" base="twisted.spread.pb">Broker</code></b>
+  : <tt>spread/pb.py</tt></li>
+
+  <li><b><code class="API" base="twisted.spread.pb">AuthRoot</code></b>
+  : <tt>spread/pb.py</tt></li>
+
 </ul>
 
 <p>Other classes that are involved at some point:</p>
 
 <ul>
- <li> <b>RemoteReference</b>: <tt>spread/pb.py</tt> </li>
- <li> <b>pb.Root</b>: <tt>spread/pb.py</tt>, actually defined in
-  <tt>spread/flavors.py</tt> </li>
- <li> <b>pb.Referenceable</b>: <tt>spread/pb.py</tt>, actually defined in
-  <tt>spread/flavors.py</tt> </li>
+
+  <li> <b><code class="API" base="twisted.spread.pb">RemoteReference</code></b>
+  : <tt>spread/pb.py</tt> </li>
+
+  <li> <b><code class="API" base="twisted.spread">pb.Root</code></b>
+  : <tt>spread/pb.py</tt>, actually defined as
+  <code class="API" base="twisted.spread.flavors">Root</code>
+  in <tt>spread/flavors.py</tt> </li>
+
+  <li> <b><code class="API" base="twisted.spread">pb.Referenceable</code></b>
+  : <tt>spread/pb.py</tt>, actually defined as
+  <code class="API" base="twisted.spread.flavors">Referenceable</code>
+  in <tt>spread/flavors.py</tt> </li>
+
 </ul>
 
-<a name="pb/refactored"><h3>Why are there so many classes?</h3></a>
+<p>Classes that get involved when you start to care about authorization and
+security:</p>
 
+<ul>
+  <li><b><code class="API" base="twisted.cred.authorizer">Authorizer</code></b>
+  : <tt>cred/authorizer.py</tt></li>
+  
+  <li><b><code class="API" base="twisted.cred.identity">Identity</code></b>
+  : <tt>cred/identity.py</tt></li>
+
+  <li><b><code class="API" base="twisted.spread.pb">Perspective</code></b>
+  : <tt>spread/pb.py</tt>, subclassed from
+  <code class="API" base="twisted.cred.perspective">Perspective</code>
+  in <tt>cred/perspective.py</tt></li>
+
+</ul>
+
+
+<a name="pb/refactored"><h3>Why are there so many classes?</h3></a>
 
 <p>It's easy to get confused by the large variety of classes, especially
 when you see that certain functionality has been distributed up among
 several small classes instead of being lumped into one. What you're seeing
-is the result of several code refactorings, where highly skilled engineers
-kept undistracted in their locked cells (in the Engineering Sub-Basement
-deep below Twisted Matrix Laboratories), using precision machinery and the
-very latest technology, have painstakingly arranged and rearranged the class
-structure to the point that that common cases are handled by the standard
-code, but yet the classes are arranged just right, so that you and other
-developers can make useful changes by only modifying one or two methods in
-your subclass.</p>
+is the result of several code refactorings by the highly trained engineers
+of Twisted Matrix Laboratories. Kept undistracted in their cells, these
+clever developers use precision machinery and the very latest technology to
+painstakingly arrange and rearrange the Twisted class structure. They've
+slaved away in the Engineering Sub-Basement, deep below the earth, until the
+Twisted classes are to the point that that common cases are handled
+completely by the default code, but yet the classes are arranged just right,
+so that you and other developers can make useful changes by only modifying
+one or two methods in your subclass.</p>
 
 <p>Basically: the Twisted developers looked at the set of problems they were
 trying to solve, and put together a scheme that took care of it. Then
 someone else came along and said "great, but how do I use your framework to
-solve this other problem too?". Code gets added. Then someone looks at the
-code and realizes that the needs imposed by the new problems can be
+solve this other problem too?". Code gets added. Eventually someone looks at
+the code and realizes that the needs imposed by the new problems can be
 generalized, that a clean solution is to break up the functionality into two
 parts: one that remains the same for both problems, and another that can be
 changed (probably subclassed) to handle the unique needs of the second. The
 imaginary dotted lines that break up the problem into smaller subproblems
 have been rearranged to minimize the number of components that need to be
-changed: when it is done without changing the overall behavior, this is
-called Refactoring. (When it does change the behavior, it is called
+changed. When this is done without changing the overall behavior, it is
+called Refactoring. (When it does change the behavior, it's called
 Rewriting, and isn't nearly as cool). Repeat this cycle many times and you
 get a collection of classes that can solve a wide variety of distributed
 computing problems with a minimum of new code. </p>
+
 
 <a name="pb/subclassing"><h3>So which ones am I supposed to subclass?</h3></a>
 
 <p>That's a tricky one. Technically you can subclass anything you want, but
 techically you could also write a whole new framework, which would just
-waste a lot of time.. Knowing which classes are useful to change (by making
+waste a lot of time. Knowing which classes are useful to change (by making
 subclasses) is one of the bits of knowledge you pick up after using Twisted
 for a few weeks. Here are some hints to get started:</p>
 
@@ -252,13 +299,13 @@ sitting at the given port.</p>
 
 <p>Because .getObjectAt() has to make a network connection and exchange some
 data, it may take a while, so it returns a Deferred, to which the
-gotObject() callback is attached. (See the documentation on "Deferring
-Execution" for a complete explanation of Deferreds). If and when the
-connection succeeds and a reference to the remote root object is obtained,
-this callback is run. The first argument passed to the callback is a remote
-reference to the distant root object. (you can give other arguments to the
-callback too, see the other parameters for .addCallback() and
-.addCallbacks()).</p>
+gotObject() callback is attached. (See the documentation on <a
+href="defer.html">"Deferring Execution"</a> for a complete explanation of
+Deferreds). If and when the connection succeeds and a reference to the
+remote root object is obtained, this callback is run. The first argument
+passed to the callback is a remote reference to the distant root object.
+(you can give other arguments to the callback too, see the other parameters
+for .addCallback() and .addCallbacks()).</p>
 
 <p>The callback does:</p>
 
@@ -435,7 +482,7 @@ a new version of getObjectAt.</p>
 <p>How do pb.Broker and pb.BrokerFactory work? Well, pb.Broker objects
 (which are Protocols, so they are created by a Factory when a new connection
 is accepted) have a dict that maps object names to the objects themselves.
-The objects are registerd with pb.Broker's .setNameForLocal method, which
+The objects are registered with pb.Broker's .setNameForLocal method, which
 accepts a name and the corresponding object.</p>
 
 <p>pb.BrokerFactory objects have an attribute named .objectToBroker. When
@@ -454,15 +501,14 @@ resulting Broker.</p>
 
 <p>Now, what about the client? To make this work, we have to look into the
 implementation of the convenience function getObjectAt(). As you learned in
-the 'writing twisted clients' document, clients are built out of Protocols
-just like servers are, but those Protocols are created with ClientFactories
-instead of normal Factory objects. The Protocol that implements the client
-side of a PB connection is the same Broker class as used on the server side,
-but it gets an extra flag to indicate it is a client. Let's look at the code
-behind getObjectAt (stripped down to ignore the UNIX-domain socket
-case):</p>
-
-<p>XXX: this is out of date</p>
+the <a href="clients.html">'writing twisted clients'</a> document, clients
+are built out of Protocols just like servers are, but those Protocols are
+created with ClientFactories instead of normal Factory objects. The Protocol
+that implements the client side of a PB connection is the same Broker class
+as used on the server side, but it gets an extra flag to indicate it is a
+client. Let's look at the code behind getObjectAt (stripped down to ignore
+the UNIX-domain socket case, and inlining the <tt>getObjectRetriever</tt>
+utility function):</p>
 
 <pre class="python">
 def getObjectAt(host, port, timeout=None):
@@ -596,12 +642,93 @@ and some other perspective doing the same method. pb.Referenceable
 subclasses have no way to find out who is invoking their methods, but
 pb.Viewable derivatives can.</p>
 
-<p>Again, Perspectives will make much more sense after the next section. My
+<p>Again, Perspectives will make much more sense after the next chapter. My
 advice is to pronouce Perspective as <b>u-s-e-r</b> until you've read that
 part.</p>
 
 
-<a name="pb/LAST_SF_EXIT"><h3>Wrapup before touching twisted.cred</h3></a>
+<a name="pb/exceptions"><h3>Returning Exceptions</h3></a>
+
+<p>Everything so far has covered what happens when things go right. What
+about when they go wrong? The Python Way is to raise an exception of some
+sort. The Twisted Way is the same.</p>
+
+<p>The only special thing you do is to define your Exception subclass by
+deriving it from <code class="API" base="twisted.spread">pb.Error</code>.
+(You do define Exception subclasses, right? String exceptions are, like,
+<b>so</b> 5 minutes ago. Get with the new century, ok?). When any
+remotely-invokable method (like <tt>remote_*</tt> or <tt>perspective_*</tt>)
+raises a <tt>pb.Error</tt>-derived exception, a serialized form of that
+Exception object will be sent back over the wire <a name="F5"><a href="#f5"
+>[5]</a></a> . The other side (which did <tt>callRemote</tt>) will have the
+"<tt>errBack</tt>" callback run with a <code class="API"
+base="twisted.python.failure">Failure</code> object that contains a copy of
+the exception object. This <tt>Failure</tt> object can be queried to
+retrieve the error message and a stack traceback.</p>
+
+<p> <code class="API" base="twisted.python.failure">Failure</code> is a
+special class, defined in <tt>twisted/python/failure.py</tt>, created to
+make it easier to handle asynchronous exceptions. Just as exception handlers
+can be nested, <tt>errBack</tt> functions can be chained. If one errback
+can't handle the particular type of failure, it can be "passed along" to a
+errback handler further down the chain.</p>
+
+<p>For simple purposes, think of the <tt>Failure</tt> as just a container
+for remotely-thrown <tt>Exception</tt> objects. To extract the string that
+was put into the exception, use its <code>.getErrorMessage()</code> method.
+To get the type of the exception (as a string), look at its
+<code>.type</code> attribute. The stack traceback is available too. The
+intent is to let the errback function get just as much information about the
+exception as Python's normal <tt>try:</tt> clauses do, even though the
+exception occurred in somebody else's memory space at some unknown time in
+the past.</p>
+
+<p>To implement the equivalent of the Python try/except blocks (which can
+trap particular kinds of exceptions and pass others "up" to higher-level
+try/except blocks), you can use the <code>.trap()</code> method in
+conjunction with multiple <tt>errback</tt> handlers on the
+<code>Deferred</code>. Raising an exception in an <tt>errback</tt> handler
+serves to pass that new exception to the next handler in the chain. Check
+the <tt>Failure.trap</tt> docstring for details. XXX: add a working example
+of this.</p>
+
+<a href="listings/pb/exc_server.py" class="py-listing">exc_server.py</a>
+<a href="listings/pb/exc_client.py" class="py-listing">exc_client.py</a>
+
+<pre class="shell">
+% ./exc_client.py 
+got remote Exception
+ .__class__ = twisted.spread.pb.CopiedFailure
+ .getErrorMessage() = fall down go boom
+ .type = __main__.MyError
+Main loop terminated.
+</pre>
+
+<p>Oh, and what happens if you raise some other kind of exception? Something
+that <b>isn't</b> subclassed from <tt>pb.Error</tt>? Well, those are called
+"unexpected exceptions", which make Twisted think that something has
+<b>really</b> gone wrong. These will raise an exception on the <b>server</b>
+side. This won't break the connection (XXX: verify this), but it will print
+out an unsightly stack trace on the server's stderr (XXX: if logging is
+turned on, does it go into the log instead?), just as if the exception had
+happened outside a remotely-invokable method. The client will get the same
+<tt>Failure</tt> object in either case, but subclassing your exception from
+<tt>pb.Error</tt> is the way to tell Twisted that you expect this sort of
+exception, and that it is ok to just let the client handle it. Look at
+<tt>exc_client.py</tt> and change it to invoke <tt>broken2()</tt> instead of
+<tt>broken()</tt> to see the change in the server's behavior.</p>
+
+<p>If you don't add an <tt>errback</tt> function to the <code class="API"
+base="twisted.internet.defer">Deferred</code>, then a remote exception will
+still send a <tt>Failure</tt> object back over, but the side that did
+<tt>callRemote</tt> will emit a message about an "<tt>Unhandled error in
+Deferred</tt>", along with an ugly stack trace. It can't raise an exception
+(after all, the <tt>callRemote</tt> that triggered the problem is long
+gone), but it will emit a traceback. So be a good programmer and <b>always
+add <tt>errback</tt> handlers</b>.</p>
+
+
+<a name="pb/LAST_SF_EXIT"><h2>Wrapup before touching twisted.cred</h2></a>
 
 <p>So now you've got all of PB at your feet (except the P part, that's
 waiting for the next chapter). Once you architect your system around the
@@ -662,14 +789,14 @@ on the others.</p>
 
 <a name="f2"><a href="#F2">[2]</a></a>
 
-<p>Footnote: this can be overridden, by subclassing one of the Serializable
-flavors and defining custom serialization code for your class. See XXX for
+<p>This can be overridden, by subclassing one of the Serializable flavors
+and defining custom serialization code for your class. See XXX for
 details.</p>
 
 <a name="f3"><a href="#F3">[3]</a></a>
 
-<p>Footnote: The binary nature of this local vs. remote scheme works because
-you cannot give RemoteReferences to a third party. If you could, then your
+<p>The binary nature of this local vs. remote scheme works because you
+cannot give RemoteReferences to a third party. If you could, then your
 object A could go to B, B could give it to C, C might give it back to you,
 and you would be hard pressed to tell if the object lived in C's memory
 space, in B's, or if it was really your own object, tarnished and sullied
@@ -680,9 +807,8 @@ really like that, but you get the idea.</p>
 
 <a  name="f4"><a href="#F4">[4]</a></a>
 
-<p>Footnote Actually, it gives the .objectToBroker a chance to
-substitute a different object in its place, by calling the .rootObject()
-method:</p>
+<p>Actually, it gives the .objectToBroker a chance to substitute a different
+object in its place, by calling the .rootObject() method:</p>
 
 <pre class="python">
     proto.setNameForLocal("root", self.objectToBroker.rootObject(proto))
@@ -702,11 +828,19 @@ object, which starts the challenge-response authentication sequence
 described in detail in the section on pb.cred.</p>
 
 
+<a  name="f5"><a href="#F5">[5]</a></a>
+
+<p>To be precise, the <tt>Failure</tt> will be sent if <b>any</b> exception
+is raised, not just <tt>pb.Error</tt>-derived ones. But the server will
+print ugly error messages if you raise ones that aren't derived from
+<tt>pb.Error</tt>.</p>
+
+
 <hr />
 <address>
  <a href="http://www.lothar.com">Brian Warner</a> &lt;warner@lothar.com&gt;
 </address>
 <!-- hhmts start -->
-Last modified: Mon Oct  7 23:40:26 PDT 2002 
+Last modified: Tue Oct 15 22:48:40 PDT 2002 
 <!-- hhmts end -->
 </body> </html>
