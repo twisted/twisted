@@ -2,6 +2,8 @@ from twisted.internet import protocol
 
 class InsultsClient(protocol.Protocol):
 
+    escapeTimeout = 0.2
+
     def __init__(self):
         self.width = self.height = None
         self.xpos = self.ypos = 0
@@ -18,12 +20,19 @@ class InsultsClient(protocol.Protocol):
             self.windowSizeChanged()
 
     def dataReceived(self, data):
+        from twisted.internet import reactor
         for ch in data:
             if ch == '\x1b':
-                assert not self.inEscape
-                self.inEscape = ch
+                if self.inEscape:
+                    self.keyReceived(ch)
+                    self.inEscape = ''
+                else:
+                    self.inEscape = ch
+                    self.escapeCall = reactor.callLater(self.escapeTimeout,
+                                                        self.endEscape)
             elif ch in 'ABCD' and self.inEscape:
                 self.inEscape = ''
+                self.escapeCall.cancel()
                 if ch == 'A':
                     self.keyReceived('<Up>')
                 elif ch == 'B':
@@ -36,6 +45,11 @@ class InsultsClient(protocol.Protocol):
                 self.inEscape += ch
             else:
                 self.keyReceived(ch)
+
+    def endEscape(self):
+        ch = self.inEscape
+        self.inEscape = ''
+        self.keyReceived(ch)
 
     def initScreen(self):
         self.transport.write('\x1b=\x1b[?1h')
