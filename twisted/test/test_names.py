@@ -56,6 +56,15 @@ soa_record = dns.Record_SOA(
                     retry = 15
                 )
 
+reverse_soa = dns.Record_SOA(
+                     mname = '93.84.28.in-addr.arpa',
+                     rname = '93.84.28.in-addr.arpa',
+                     serial = 120,
+                     refresh = 54321,
+                     minimum = 382,
+                     expire = 11193983,
+                     retry = 30
+                )
 
 class ServerDNSTestCase(unittest.DeferredTestCase):
     """Test cases for DNS server and client."""
@@ -84,6 +93,10 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
                         dns.Record_A('255.255.255.254'),
                         dns.Record_A('0.0.0.0')
                     ],
+                }
+            ), NoFileAuthority(
+                soa = ('93.84.28.in-addr.arpa', reverse_soa),
+                records = {
                     '123.93.84.28.in-addr.arpa': [
                         dns.Record_PTR('test.host-reverse.lookup.com')
                     ]
