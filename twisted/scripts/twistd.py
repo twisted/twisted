@@ -329,9 +329,13 @@ def run():
             os._exit(0) # kill off parent
         os.setsid()
         os.umask(077)
-        oldstdin.close()
-        oldstdout.close()
-        oldstderr.close()
+        for i in range(3):
+            try:
+                os.close(i)
+            except OSError, e:
+                import errno
+                if e.errno != errno.EBADF:
+                    raise
 
     # Load any view plugins which have been registered in plugins.tml file
     # This needs to be moved to an event which occurs on web server startup
