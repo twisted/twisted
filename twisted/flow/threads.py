@@ -64,13 +64,17 @@ class Threaded(Stage):
     class Instruction(CallLater):
         def __init__(self):
             self.flow = None
+            self.final = False
         def callLater(self, callable):
-            self.flow = callable
-        def __call__(self):
+            if self.final:
+                reactor.callLater(0,callable)
+            else:
+                self.flow = callable
+        def __call__(self, final = False):
             if self.flow:
                 reactor.callFromThread(self.flow)
                 self.flow = None
-                return True
+            self.final = final
 
     def __init__(self, iterable, *trap):
         Stage.__init__(self, trap)
@@ -85,8 +89,6 @@ class Threaded(Stage):
             self._iterable = iter(self._iterable)
         except: 
             self.failure = Failure()
-            self._cooperate()
-            return
         else:
             try:
                 while True:
@@ -97,12 +99,10 @@ class Threaded(Stage):
                         self.results.append(val)
                     self._cooperate()
             except StopIteration:
-                pass
+                self.stop = True
             except: 
                 self.failure = Failure()
-        self.stop = True
-        while not self._cooperate():
-            sleep(.1)
+        self._cooperate(final=True)
 
     def _yield(self):
         if self.results or self.stop or self.failure:

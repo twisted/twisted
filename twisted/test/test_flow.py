@@ -359,7 +359,7 @@ class FlowTest(unittest.TestCase):
         rhs = unittest.deferredResult(d)
         self.assertEquals([('a',1),('b',2),('a',3),('a',4),('b',5)],rhs)
 
-    def _testProtocolLocalhost(self):
+    def testProtocolLocalhost(self):
         PORT = 8392
         server = protocol.ServerFactory()
         server.protocol = flow.Protocol
@@ -382,14 +382,14 @@ class FlowTest(unittest.TestCase):
         self.assertEquals('testing', unittest.deferredResult(client.factory.d))
 
     def testThreaded(self):
-        self.fail("This test freezes and consumes 100% CPU.")
+        from time import sleep
+        #self.fail("This test freezes and consumes 100% CPU.")
         class CountIterator:
             def __init__(self, count):
                 self.count = count
             def __iter__(self):
                 return self
             def next(self): # this is run in a separate thread
-                from time import sleep
                 sleep(.1)
                 val = self.count
                 if not(val):
@@ -398,7 +398,11 @@ class FlowTest(unittest.TestCase):
                 return val
         result = [5,4,3,2,1]
         d = flow.Deferred(flow.Threaded(CountIterator(5)))
-        from time import sleep
-        sleep(3)
+        self.assertEquals(result, unittest.deferredResult(d))
+        d = flow.Deferred(flow.Threaded(CountIterator(5)))
+        sleep(.6)
+        self.assertEquals(result, unittest.deferredResult(d))
+        d = flow.Deferred(flow.Threaded(CountIterator(5)))
+        sleep(.3)
         self.assertEquals(result, unittest.deferredResult(d))
 
