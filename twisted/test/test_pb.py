@@ -916,7 +916,7 @@ class MyRealm:
         self.p.loggedIn = 1
         return pb.IPerspective, self.p, self.p.logout
 
-class MyPerspective(pb.Perspective):
+class MyPerspective(pb.Avatar):
 
     __implements__ = pb.IPerspective,
 

@@ -45,6 +45,9 @@ although the protocol is compatible on the binary level. When we
 switch to pluggable credentials this will introduce another change,
 although the current change will still be supported.
 
+The Perspective class is now deprecated, and has been replaced with
+Avatar, which does not rely on the old cred APIs.
+
 
 Introduction
 ============
@@ -64,7 +67,7 @@ applied when serializing arguments.
 @author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
 
-__version__ = "$Revision: 1.147 $"[11:-2]
+__version__ = "$Revision: 1.148 $"[11:-2]
 
 
 # System Imports
@@ -169,28 +172,92 @@ def printTraceback(tb):
     log.msg('Perspective Broker Traceback:' )
     log.msg(tb)
 
-class Perspective(perspective.Perspective):
-    """A perspective on a service.
-
+class IPerspective(Interface):
+    """
     per*spec*tive, n. : The relationship of aspects of a subject to each
     other and to a whole: 'a perspective of history'; 'a need to view
     the problem in the proper perspective'.
 
-    A service represents a collection of state, plus a collection of
-    perspectives.  Perspectives are the way that networked clients have
-    a 'view' onto an object, or collection of objects on the server.
+    This is a Perspective Broker-specific wrapper for an avatar. That
+    is to say, a PB-published view on to the business logic for the
+    system's concept of a 'user'.
 
-    Although you may have a service onto which there is only one
-    perspective, the common case is that a Perspective will be
-    analagous to (or the same as) a "user"; if you are creating a
-    PB-enabled service, your User (or equivalent) class should subclass
-    Perspective.
+    The concept of attached/detached is no longer implemented by the
+    framework. The realm is expected to implement such semantics if
+    needed.
+    """
 
-    Initially, a peer requesting a perspective will receive only a
-    L{RemoteReference} to a Perspective.  When a method is called on
-    that L{RemoteReference}, it will translate to a method on the remote
-    perspective named 'perspective_methodname'.  (For more information
-    on invoking methods on other objects, see L{flavors.ViewPoint}.)
+    def perspectiveMessageReceived(self, broker, message, args, kwargs):
+        """
+        This method is called when a network message is received.
+
+        @arg broker: The Perspective Broker.
+
+        @type message: str
+        @arg message: The name of the method called by the other end.
+
+        @type args: list in jelly format
+        @arg args: The arguments that were passed by the other end. It
+                   is recommend that you use the `unserialize' method of the
+                   broker to decode this.
+
+        @type kwargs: dict in jelly format
+        @arg kwargs: The keyword arguments that were passed by the
+                     other end.  It is recommended that you use the
+                     `unserialize' method of the broker to decode this.
+
+        @rtype: A jelly list.
+        @return: It is recommended that you use the `serialize' method
+                 of the broker on whatever object you need to return to
+                 generate the return value.
+        """
+
+
+
+class Avatar:
+    """A default IPerspective implementor.
+
+    This class is intended to be subclassed, and a realm should return
+    an instance of such a subclass when IPerspective is requested of
+    it.
+
+    A peer requesting a perspective will receive only a
+    L{RemoteReference} to a pb.Avatar.  When a method is called on
+    that L{RemoteReference}, it will translate to a method on the
+    remote perspective named 'perspective_methodname'.  (For more
+    information on invoking methods on other objects, see
+    L{flavors.ViewPoint}.)
+    """
+
+    __implements__ = IPerspective
+
+    def perspectiveMessageReceived(self, broker, message, args, kw):
+        """This method is called when a network message is received.
+
+        I will call::
+
+          |  self.perspective_%(message)s(*broker.unserialize(args),
+          |                               **broker.unserialize(kw))
+
+        to handle the method; subclasses of Avatar are expected to
+        implement methods of this naming convention.
+        """
+
+        args = broker.unserialize(args, self)
+        kw = broker.unserialize(kw, self)
+        method = getattr(self, "perspective_%s" % message)
+        try:
+            state = method(*args, **kw)
+        except TypeError:
+            log.msg("%s didn't accept %s and %s" % (method, args, kw))
+            raise
+        return broker.serialize(state, self, method, args, kw)
+
+
+class Perspective(perspective.Perspective, Avatar):
+    """
+    This class is DEPRECATED, because it relies on old cred
+    APIs. Please use L{Avatar}.
     """
 
     def brokerAttached(self, reference, identity, broker):
@@ -206,6 +273,7 @@ class Perspective(perspective.Perspective):
         method, other, non-PB protocols will not notify you of being attached
         or detached.
         """
+        warnings.warn("pb.Perspective is deprecated, please use pb.Avatar.", DeprecationWarning, 2)
         return self.attached(reference, identity)
 
     def brokerDetached(self, reference, identity, broker):
@@ -213,31 +281,11 @@ class Perspective(perspective.Perspective):
         """
         return self.detached(reference, identity)
 
-    def perspectiveMessageReceived(self, broker, message, args, kw):
-        """This method is called when a network message is received.
-
-        I will call::
-
-          |  self.perspective_%(message)s(*broker.unserialize(args),
-          |                               **broker.unserialize(kw))
-
-        to handle the method; subclasses of Perspective are expected to
-        implement methods of this naming convention.
-        """
-
-        args = broker.unserialize(args, self)
-        kw = broker.unserialize(kw, self)
-        method = getattr(self, "perspective_%s" % message)
-        try:
-            state = method(*args, **kw)
-        except TypeError:
-            log.msg("%s didn't accept %s and %s" % (method, args, kw))
-            raise
-        return broker.serialize(state, self, method, args, kw)
-
 
 class Service(service.Service):
     """A service for Perspective Broker.
+
+    This class is DEPRECATED, because it relies on old cred APIs.
 
     On this Service, the result of a perspective request must be a
     L{pb.Perspective} rather than a L{twisted.cred.perspective.Perspective}.
@@ -259,9 +307,9 @@ class RemoteReference(Serializable, styles.Ephemeral):
     """This is a translucent reference to a remote object.
 
     I may be a reference to a L{flavors.ViewPoint}, a
-    L{flavors.Referenceable}, or a L{Perspective}.  From the
-    client's perspective, it is not possible to tell which
-    except by convention.
+    L{flavors.Referenceable}, or an L{IPerspective} implementor (e.g.,
+    pb.Avatar).  From the client's perspective, it is not possible to
+    tell which except by convention.
 
     I am a \"translucent\" reference because although no additional
     bookkeeping overhead is given to the application programmer for
@@ -1622,41 +1670,6 @@ class IUsernameMD5Password(ICredentials):
         """
 
 
-class IPerspective(Interface):
-    """A perspective object.
-
-    This is a Perspective Broker specific wrapper for an avatar. That
-    is to say, a PB-published view on to the business logic for the
-    system's concept of a 'user'.
-
-    The concept of attached/detached is no longer implemented by
-    the framework. The realm is expected to do so if relevant.
-    """
-
-    def perspectiveMessageReceived(self, broker, message, args, kwargs):
-        """
-        This method is called when a network message is received.
-
-        @arg broker: The Perspective Broker.
-
-        @type message: str
-        @arg message: The name of the method called by the other end.
-
-        @type args: list in jelly format
-        @arg args: The arguments that were passed by the other end. It
-                   is recommend that you use the `unserialize' method of the
-                   broker to decode this.
-
-        @type kwargs: dict in jelly format
-        @arg kwargs: The keyword arguments that were passed by the
-                     other end.  It is recommended that you use the
-                     `unserialize' method of the broker to decode this.
-
-        @rtype: A jelly list.
-        @return: It is recommended that you use the `serialize' method
-                 of the broker on whatever object you need to return to
-                 generate the return value.
-        """
 
 
 class _PortalRoot:

@@ -22,7 +22,7 @@ class DefinedError(pb.Error):
     pass
 
 
-class SimplePerspective(pb.Perspective):
+class SimplePerspective(pb.Avatar):
 
     def perspective_echo(self, text):
         print 'echoing',text

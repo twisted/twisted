@@ -20,7 +20,7 @@ from twisted.spread import pb
 from twisted.internet import reactor
 from twisted.cred.portal import IRealm
 
-class PBBenchPerspective(pb.Perspective):
+class PBBenchPerspective(pb.Avatar):
     callsPerSec = 0
     def __init__(self):
         pass
