@@ -82,45 +82,11 @@ might have trailing empty lines.</p>
     consider refactoring to include more related functionality in
     that module.</p>
 
-    <p><em>Note that this rule is a change from previous versions
-    of Twisted, so a lot of code does not yet adhere to
-    it.</em></p>
-
-    <p>By default, objects from modules in Twisted ought to be
-    imported directly into the namespace of the module that uses
-    them, like this: <code class="python">from twisted.internet.defer
-    import Deferred</code></p>
-
-    <p>In some cases, however, Twisted takes advantage of the
-    dynamic binding of Python in order to provide an interface
-    through a module that may be imported -- we call these
-    <q>volatile</q> modules, because their internals are subject to
-    change without warning. In these cases, it is desireable to
-    import the module itself into the user's namespace, so that
-    things bound to it will be looked up on each call. For obvious
-    reasons, classes in volatile modules should never be
-    subclassed.</p>
-
-    <p>Volatile modules will have a <code>__volatile__</code> attribute set to
-    1, and should always have a docstring snippet like the one that
-    follows:</p>
-<pre class="python">
-"""
-NOTE: this is a __volatile__ module.  This means that if you are using it
-externally, you should know that its contents may change at any time.  In
-general, all this means is that you must not use it like this::
-
-    from twisted.package.module import Class
-    Class()
-
-but instead like this::
-
-    from twisted.package import module
-    module.Class()
-"""
-         
-</pre>
-     
+<p>Depending on the situation, it is acceptable to have imports look like this:
+<pre class="python">from twisted.internet.defer import Deferred</pre> or like
+this: <pre class="python">from twisted.internet import defer</pre> That is,
+modules should import <em>modules</em> or <em>classes and functions</em>, but
+not <em>packages</em>.  </p>
 
     <h2>Packages</h2>
 
