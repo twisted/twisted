@@ -1,3 +1,8 @@
+2004-09-30  Brian Warner  <warner@lothar.com>
+
+	* gtk2reactor.py: import gobject *after* pygtk.require, to make
+	sure we get the same versions of both
+
 2004-09-18  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* twisted/internet/defer.py: Add deferredGenerator and

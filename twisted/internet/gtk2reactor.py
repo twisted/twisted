@@ -26,7 +26,6 @@ __all__ = ['install']
 
 # System Imports
 import sys
-import gobject
 from zope.interface import implements
 try:
     if not hasattr(sys, 'frozen'):
@@ -35,6 +34,7 @@ try:
         pygtk.require('2.0')
 except (ImportError, AttributeError):
     pass # maybe we're using pygtk before this hack existed.
+import gobject
 
 # Twisted Imports
 from twisted.python import log, threadable, runtime, failure, components
