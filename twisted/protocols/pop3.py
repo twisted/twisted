@@ -29,7 +29,7 @@ import string
 import operator
 import md5
 
-from twisted.copyright import longversion
+from twisted.protocols import smtp
 from twisted.protocols import basic
 from twisted.protocols import policies
 from twisted.internet import protocol
@@ -120,14 +120,19 @@ class POP3(basic.LineReceiver, policies.TimeoutMixin):
     # through.
     portal = None
     
+    # Who created us
+    factory = None
+    
+    # The mailbox we're serving
+    mbox = None
+    
     # Set this pretty low -- POP3 clients are expected to log in, download
     # everything, and log out.
     timeOut = 300
     
     def connectionMade(self):
         if self.magic is None:
-            self.magic = '<%s>' % time.time()
-        self.mbox = None
+            self.magic = self.generateMagic()
         self.successResponse(self.magic)
         self.setTimeout(self.timeOut)
         log.msg("New connection from " + str(self.transport.getPeer()))
@@ -137,6 +142,9 @@ class POP3(basic.LineReceiver, policies.TimeoutMixin):
             self._onLogout()
             self._onLogout = None
         self.setTimeout(None)
+
+    def generateMagic(self):
+        return smtp.messageid()
 
     def successResponse(self, message=''):
         self.sendLine('+OK ' + str(message))
@@ -258,8 +266,11 @@ class POP3(basic.LineReceiver, policies.TimeoutMixin):
         log.msg("Authenticated login for " + user)
     
     def _ebMailbox(self, failure):
-        failure.trap(cred.error.LoginFailed)
-        self.failResponse('Authentication failed')
+        failure = failure.trap(cred.error.LoginDenied, cred.error.LoginFailed)
+        if failure is cred.error.LoginDenied:
+            self.failResponse("Access denied: " + str(failure))
+        elif failure is cred.error.LoginFailed:
+            self.failResponse('Authentication failed')
         log.msg("Denied login attempt from " + str(self.transport.getPeer()))
     
     def _ebUnexpected(self, failure):
