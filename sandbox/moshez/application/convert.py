@@ -38,6 +38,9 @@ def convert(oldApp):
     for (name, klass) in mapping:
         for args in getattr(oldApp, name):
             klass(*args).setServiceParent(ret)
+    for service in ret:
+        if isinstance(service, servers._AbstractServer):
+            service.privileged = 1
     for service in oldApp.services.values():
         service.disownServiceParent()
         service.setServiceParent(ret)
