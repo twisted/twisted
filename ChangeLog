@@ -2,6 +2,9 @@
 
 	* .: Releasing 1.0.2rc1.
 
+	* .: Releasing 1.0.2rc2 (rc1 was dead in the water; hlint bug now
+	fixed).
+
 2003-01-26  Kevin Turner  <acapnotic@twistedmatrix.com>
 
 	* twisted/im/interfaces.py (IClient.__init__): 1.3 Accept a
