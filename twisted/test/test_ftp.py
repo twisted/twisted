@@ -186,7 +186,6 @@ class ConnectedFTPServer(object):
         log.debug('flushing pi buffer')
         self.iop.flush()
         log.debug('hooked up dtp')
-        return
 
     def getDtpCSTuple(self):
         if not self.s.shell:
