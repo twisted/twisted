@@ -1,4 +1,8 @@
-#Stolen from _Python Standard Library_, by Fredrik Lundh, chapter 5.
+#
+# Copyright (c) 2001 Fredrik Lundh
+#
+# This snippet is from _The Python Standard Library_, 5th chapter.
+#
 
 import sgmllib
 import cgi, string, sys
