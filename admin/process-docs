@@ -44,5 +44,3 @@ latex book.tex </dev/null | sed '/^LaTeX Warning:/s/^/WARNING: /'
 dvips -o book.ps book.dvi
 ps2pdf13 book.ps book.pdf
 
-rm *.eps *.tex *.aux *.log book.dvi book.toc ../man/*.tex \
-   ../specifications/*.tex ../man/*-man.xhtml ../vision/*.tex ../*.tex
