@@ -45,7 +45,7 @@ class Options(usage.Options):
                 ["thirdparty", "3"]]
 
 def getPorts(app, config):
-    t = ftp.ShellFactory()
+    t = ftp.FTPFactory()
     # setting the config
     t.anonymous = config.anonymous
     t.thirdparty = config.thirdparty
@@ -54,7 +54,6 @@ def getPorts(app, config):
     # adding a default user
     t.userdict = {}
     t.userdict["twisted"] = "twisted"
-    t.config = config
     try:
         portno = config.portno
     except AttributeError:
