@@ -1,6 +1,7 @@
-import quoteproto
-import quoters
-from twisted.python import usage
+import quoteproto                       # Protocol and Factory
+import quoters                          # "give me a quote" code
+from twisted.python import usage        # twisted command-line processing
+
 class Options(usage.Options):
     optParameters = [["port", "p", 8007,
                       "Port number to listen on for QOTD protocol."],
@@ -10,9 +11,14 @@ class Options(usage.Options):
                       "A fortune-format text file to read quotes from."]]
 
 def updateApplication(app, config):
-    port = int(config["port"])
-    if config["file"]:
-        quoter = quoters.FortuneQuoter([config['file']])
-    else:
-        quoter = quoters.StaticQuoter(config['static'])
-    app.listenTCP(port, quoteproto.QOTDFactory(quoter))
+    if config["file"]:                  # If I was given a "file" option...
+        # Read quotes from a file, selecting a random one each time,
+        quoter = quoters.FortuneQuoter([config['file']]) 
+    else:                               # otherwise,
+        # read a single quote from the command line (or use the default).
+        quoter = quoters.StaticQuoter(config['static']) 
+    port = int(config["port"])          # TCP port to listen on
+    factory = quoteproto.QOTDFactory(quoter) # here we create a QOTDFactory
+    # Finally, set up our factory, with its custom quoter, to create QOTD
+    # protocol instances when events arrive on the specified port.
+    app.listenTCP(port, factory)
