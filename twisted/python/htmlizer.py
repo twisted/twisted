@@ -18,10 +18,11 @@ import tokenize, cgi, keyword
 
 class TokenPrinter:
 
+    currentCol, currentLine = 0, 1
+    lastIdentifier = parameters = 0
+
     def __init__(self, writer):
-        self.currentCol, self.currentLine = 0, 1
         self.writer = writer
-        self.lastIdentifier = 0
  
     def printtoken(self, type, token, (srow, scol), (erow, ecol), line):
         if self.currentLine < srow:
@@ -30,12 +31,25 @@ class TokenPrinter:
         self.writer(' '*(scol-self.currentCol))
         if self.lastIdentifier:
             type = "identifier"
+            self.parameters = 1
+        elif type == tokenize.NAME:
+             if keyword.kwdict.has_key(token):
+                 type = 'keyword'
+             else:
+                 if self.parameters:
+                     type = 'parameter'
+                 else:
+                     type = 'variable'
+        else:
+            type = tokenize.tok_name.get(type).lower()
         self.writer(token, type)
         self.currentCol = ecol
         self.currentLine += token.count('\n')
         if token.count('\n'):
             self.currentCol = 0
         self.lastIdentifier = token in ('def', 'class')
+        if token == ':':
+            self.parameters = 0
        
 
 class HTMLWriter:
@@ -48,13 +62,6 @@ class HTMLWriter:
         if type is None:
             self.writer(token)
         else:
-            if type == tokenize.NAME:
-                if keyword.kwdict.has_key(token):
-                    type = 'keyword'
-                else:
-                    type = 'parameter'
-            else:
-                type = tokenize.tok_name.get(type, type).lower()
             self.writer('<span class="py-src-%s">%s</span>' %
                         (type, token))
        
