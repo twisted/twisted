@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: mktap.py,v 1.28 2003/03/05 07:08:49 tv Exp $
+# $Id: mktap.py,v 1.29 2003/03/05 17:11:23 itamarst Exp $
 
 """ Implementation module for the `mktap` command.
 """
@@ -25,7 +25,16 @@ from twisted.internet import app
 from twisted.python import usage, util
 from twisted.spread import pb
 
-import sys, traceback, os, cPickle, glob, pwd, grp
+import sys, traceback, os, cPickle, glob
+try:
+    import pwd
+except ImportError:
+    pwd = None
+try:
+    import grp
+except ImportError:
+    grp = None
+
 
 from twisted.python.plugin import getPlugIns
 
@@ -147,11 +156,15 @@ def run():
         try:
             options['uid'] = int(options['uid'])
         except ValueError:
+            if not pwd:
+                raise
             options['uid'] = pwd.getpwnam(options['uid'])[2]
     if options['gid'] is not None:
         try:
             options['gid'] = int(options['gid'])
         except ValueError:
+            if not grp:
+                raise
             options['gid'] = grp.getgrnam(options['gid'])[2]
 
     if not options['append']:
