@@ -58,14 +58,18 @@ class LoopTestCase(unittest.TestCase):
 
     def testFailAndStop(self):
         def foo(x):
-            self.lc.stop()
+            lc.stop()
             raise TestException(x)
 
-        self.lc = lc = task.LoopingCall(foo, "bar")
+        lc = task.LoopingCall(foo, "bar")
         d = lc.start(0.1)
         err = unittest.deferredError(d)
         err.trap(TestException)
-        reactor.iterate() # catch any issues from scheduled stop()
+
+        # catch any possibly lingering issues
+        reactor.iterate()
+        reactor.iterate()
+        reactor.iterate()
 
     def testBadDelay(self):
         lc = task.LoopingCall(lambda: None)
@@ -103,7 +107,7 @@ class LoopTestCase(unittest.TestCase):
             ran.append(None)
 
         lc = task.LoopingCall(foo)
-        lc.start(0)
+        lc.start(0, now=False)
         lc.stop()
 
         # Just to be extra certain
@@ -112,7 +116,6 @@ class LoopTestCase(unittest.TestCase):
         reactor.iterate()
 
         self.failUnless(len(ran) == 0)
-    testStopAtOnce.todo = "I need to fix this"
 
     def testStopAtOnceLater(self):
         # Ensure that even when LoopingCall.stop() is called from a

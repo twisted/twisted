@@ -10,6 +10,8 @@ API Stability: Unstable
 @author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
 """
 
+__metaclass__ = type
+
 from twisted.python.runtime import seconds
 from twisted.python import reflect
 
@@ -38,16 +40,16 @@ class LoopingCall:
     def start(self, interval, now=True):
         """Start running function every interval seconds.
 
-        @param interval: The number of seconds between calls.  May be less than
-        one.  Precision will depend on the underlying platform, the available
-        hardware, and the load on the system.
-        
-        @param now: If True, run this call right now.  Otherwise, wait until the
-        interval has elapsed before beginning.
+        @param interval: The number of seconds between calls.  May be
+        less than one.  Precision will depend on the underlying
+        platform, the available hardware, and the load on the system.
 
-        @return: A Deferred whose callback will be invoked with C{self} when
-        C{self.stop} is called, or whose errback will be invoked if the function
-        raises an exception.
+        @param now: If True, run this call right now.  Otherwise, wait
+        until the interval has elapsed before beginning.
+
+        @return: A Deferred whose callback will be invoked with
+        C{self} when C{self.stop} is called, or whose errback will be
+        invoked if the function raises an exception.
         """
         assert not self.running
         if interval < 0:
@@ -64,19 +66,16 @@ class LoopingCall:
         return d
 
     def stop(self):
-        """Stop running function."""
-        assert self.running
-        reactor.callLater(0, self._reallyStop)
-    
-    def _reallyStop(self):
-        if not self.running:
-            return
+        """Stop running function.
+        """
+        assert self.running, ("Tried to stop an LoopingCall that was "
+                              "not running.")
         self.running = False
         if self.call is not None:
             self.call.cancel()
             self.call = None
-        d, self.deferred = self.deferred, None
-        d.callback(self)
+            d, self.deferred = self.deferred, None
+            d.callback(self)
 
     def __call__(self):
         self.call = None
@@ -87,8 +86,12 @@ class LoopingCall:
             d, self.deferred = self.deferred, None
             d.errback()
         else:
-            self._reschedule()
-    
+            if self.running:
+                self._reschedule()
+            else:
+                d, self.deferred = self.deferred, None
+                d.callback(self)
+
     def _reschedule(self):
         if self.interval == 0:
             self.call = reactor.callLater(0, self)
