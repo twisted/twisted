@@ -37,6 +37,7 @@ except ImportError:
 # Twisted Imports
 from twisted.internet import reactor, protocol, error, interfaces
 from twisted.python import util, runtime, components
+from twisted.runner import procutils
 
 class TrivialProcessProtocol(protocol.ProcessProtocol):
     finished = 0
@@ -460,6 +461,45 @@ class Win32ProcessTestCase(SignalMixin, unittest.TestCase):
             reactor.iterate()
         self.assertEquals(p.errF.getvalue(), "err\nerr\n")
         self.assertEquals(p.outF.getvalue(), "out\nhello, world\nout\n")
+
+class UtilTestCase(unittest.TestCase):
+    def setUpClass(klass):
+        j = os.path.join
+        foobar = j("foo", "bar")
+        foobaz = j("foo", "baz")
+        bazfoo = j("baz", "foo")
+        barfoo = j("baz", "bar")
+        
+        for d in "foo", foobar, foobaz, "baz", bazfoo, barfoo:
+            os.mkdir(d)
+        
+        f = file(j(foobaz, "executable"), "w")
+        f.close()
+        os.chmod(j(foobaz, "executable"), 0700)
+        
+        f = file(j("foo", "executable"), "w")
+        f.close()
+        os.chmod(j("foo", "executable"), 0700)
+        
+        f = file(j(bazfoo, "executable"), "w")
+        f.close()
+        os.chmod(j(bazfoo, "executable"), 0700)
+        
+        f = file(j(barfoo, "executable"), "w")
+        f.close()
+        
+        klass.oldPath = os.environ['PATH']
+        os.environ['PATH'] = os.pathsep.join((foobar, foobaz, bazfoo, barfoo))
+    
+    def tearDownClass(klass):
+        os.environ['PATH'] = klass.oldPath
+    
+    def testWhich(self):
+        j = os.path.join
+        paths = procutils.which("executable")
+        self.assertEquals(paths, [
+            j("foo", "baz", "executable"), j("baz", "foo", "executable")
+        ])
 
 
 skipMessage = "wrong platform or reactor doesn't support IReactorProcess"
