@@ -918,15 +918,16 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
                 self.dataReceived = self.lineReceived = lambda *args: None
                 return
 
-            # create a new Request object
-            request = self.requestFactory(self, len(self.requests))
-            self.requests.append(request)
-
             # IE sends an extraneous empty line (\r\n) after a POST request;
             # eat up such a line, but only ONCE
             if not line and self.__first_line == 1:
                 self.__first_line = 2
                 return
+
+            # create a new Request object
+            request = self.requestFactory(self, len(self.requests))
+            self.requests.append(request)
+            
             self.__first_line = 0
             parts = line.split()
             if len(parts) != 3:
