@@ -12,7 +12,7 @@ def isIPv6Address(ip):
     return 1
 
 class IPv6Client(tcp.TCPClient):
-    def createInternalSocket(self):
+    def createInternetSocket(self):
         return socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
 
     def resolveAddress(self):
@@ -38,13 +38,16 @@ class IPv6Connector(default.TCPConnector):
         return ('INET6', self.host, self.port)
 
 class IPv6Port(tcp.Port):
-    def createInternalSocket(self):
+    def createInternetSocket(self):
         s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_RESUSEADDR, 1)
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         return s
     
     def getHost(self):
         return ('INET6',) + self.socket.getsockname()
+    
+    def getPeer(self):
+        return ('INET6',) + self.socket.getpeername()
 
 def connectTCP6(host, port, factory, timeout=30, bindAddress=None, reactor=None):
     if reactor is None:
@@ -55,7 +58,7 @@ def connectTCP6(host, port, factory, timeout=30, bindAddress=None, reactor=None)
     return c
 
 
-def listenTCP6(port, factory, backlog=5, interface=''):
+def listenTCP6(port, factory, backlog=5, interface='::'):
     p = IPv6Port(port, factory, backlog, interface)
     p.startListening()
     return p
@@ -77,7 +80,7 @@ def main():
         protocol = TrivialProtocol
     
     p = listenTCP6(6666, TrivialServerFactory())
-    c = connectTCP6('', 6666, TrivialClientFactory())
+    c = connectTCP6('::1', 6666, TrivialClientFactory())
     
     reactor.run()
 
