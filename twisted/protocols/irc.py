@@ -75,6 +75,25 @@ def parsemsg(s):
     command = args.pop(0)
     return prefix, command, args
 
+# THIS VERSION IS LAME.  RADEEX DID NOT LIKE THE OTHER VERSION
+def split(str, length = 80):
+    """split(str, length = 80) -> list of strs
+
+    Breaks a message into multiple lines, prefering to break at
+    whitespace near str[length].  Also breaks at \n.
+    """
+    r = []
+    while len(str) > length:
+        w, n = str[:length].rfind(' '), str[:length].find('\n')
+        if w == -1 and n == -1:
+            line, str = str[:length], str[length:]
+        else:
+            i = n == -1 and w or n
+            line, str = str[:i], str[i+1:]
+        r.append(line)
+    if len(str):
+        r.extend(str.split('\n'))
+    return r
 
 class IRC(protocol.Protocol):
     """Internet Relay Chat server protocol.
@@ -262,27 +281,23 @@ class IRCClient(basic.LineReceiver):
         if channel[0] not in '&#': channel = '#' + channel
         self.sendLine("TOPIC %s :%s" % (channel, topic))
 
-    def say(self, channel, message, split = None):
+    def say(self, channel, message, length = None):
         if channel[0] not in '&#': channel = '#' + channel
-        self.msg(channel, message, split)
+        self.msg(channel, message, length)
 
-    def msg(self, user, message, split = None):
+    def msg(self, user, message, length = None):
         fmt = "PRIVMSG %s :%%s" % (user,)
 
-        if split is None:
+        if length is None:
             self.sendLine(fmt % (message,))
-            print fmt
         else:
-            i = split - len(fmt) - 2
-            if i <= 0:
-                print fmt
-                self.sendLine(fmt % (message,))
-                return
-            while len(message):
-                s = fmt % message[:i]
-                message = message[i:]
-                print s
-                self.sendLine(s)
+            lines = split(message, length - len(fmt) - 2)
+            reactor.callLater(2, self.reducingMsg, (fmt, lines))
+
+    def reducingMsg(self, fmt, lines):
+        self.sendLine(fmt % lines[0])
+        if len(lines) > 1:
+            reactor.callLater(2, self.reducingMsg, (fmt, lines[1:]))
 
     def notice(self, user, message):
         self.sendLine("NOTICE %s :%s" % (user, message))
