@@ -134,7 +134,6 @@ class File(resource.Resource, styles.Versioned):
             p, ext = os.path.splitext(p)
         self.defaultType = defaultType
         self.type = self.contentTypes.get(string.lower(ext), defaultType)
-        self.processors = {}
 
 
     def getChild(self, path, request):

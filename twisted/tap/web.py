@@ -47,6 +47,7 @@ twisted.web.test in it."""
     def __init__(self):
         usage.Options.__init__(self)
         self.indexes = []
+        self.root = None
 
     def opt_index(self, indexName):
         """Add the name of a file used to check for directory indexes.
@@ -79,17 +80,26 @@ twisted.web.test in it."""
 
     opt_s = opt_static
 
+    def opt_mime_type(self, defaultType):
+        if not isinstance(self.root, static.File):
+            print "You can only use --static_mime after --static."
+            sys.exit(2)
+        self.root.defaultType = defaultType
+
+    opt_m = opt_mime_type
+
+
 
 def updateApplication(app, config):
     if config.telnet:
         from twisted.protocols import telnet
         factory = telnet.ShellFactory()
         app.listenTCP(int(config.telnet), factory)
-    try:
+    if config.root:
         root = config.root
         if config.indexes:
             config.root.indexNames = config.indexes
-    except AttributeError:
+    else:
         # This really ought to be web.Admin or something
         root = test.Test()
 
