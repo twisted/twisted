@@ -113,7 +113,7 @@ class ApplicationService(Accessor, styles.Versioned):
 
         Arguments: application, a twisted.internet.app.Application instance.
         """
-        if not isinstance(serviceName, types.StringType):
+        if not isinstance(serviceName, types.StringTypes):
             raise TypeError("%s is not a string." % serviceName)
         self.serviceName = serviceName
         if application:
@@ -412,7 +412,7 @@ class Application(log.Logger, styles.Versioned,
         toRemove = []
         for t in self.tcpPorts:
             port, factory, backlog, interface = t
-            if isinstance(port, StringTypes):
+            if isinstance(port, types.StringTypes):
                 self.unixPorts.append((port, factory, backlog))
                 toRemove.append(t)
         for t in toRemove:
