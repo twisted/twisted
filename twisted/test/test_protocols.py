@@ -267,6 +267,9 @@ To: moshe
 How are you, friend?
 ''']
 
+    def __init__(self):
+        self.messages = DummyMailbox.messages[:]
+
     def listMessages(self):
         return map(len, self.messages)
 
@@ -297,8 +300,9 @@ QUIT''', '\n')
         expected_output = '+OK <moshez>\r\n+OK \r\n+OK 1\r\n1 44\r\n.\r\n+OK \r\n1 0\r\n.\r\n+OK 44\r\nFrom: moshe\r\nTo: moshe\r\n\r\nHow are you, friend?\r\n.\r\n-ERR index out of range\r\n+OK \r\n-ERR message deleted\r\n+OK \r\n'
         for line in lines:
             dummy.lineReceived(line)
-        if a.getvalue() != expected_output:
-           raise AssertionError('\n'+`expected_output`+'\n'+`a.getvalue()`)
+        self.failUnlessEqual(expected_output, a.getvalue(),
+                             "\nExpected:\n%s\nResults:\n%s\n"
+                             % (expected_output, a.getvalue()))
 
 ##class ObjectAccumulator(netexprs.PseudoSexprsReceiver):
 

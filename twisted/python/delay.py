@@ -1,16 +1,16 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -110,7 +110,7 @@ class Steps(Looping):
         self.func2=func
 
     def rebuildUpdate(self, updater):
-        Looping.rebuild(self)
+        Looping.rebuildUpdate(self, updater)
         self.func2 = updater(self.func2)
 
     def step(self):
@@ -267,7 +267,7 @@ class Delayed(rebuild.Sensitive):
                 func.im_self.rebuildUpdate(self.latestVersionOf)
             self.rebuildUpToDate()
             log.msg( "Rebuilt." )
-            
+
         self.last_tick = time()
         sticks = self.ticks - 1
         self.ticks = sticks
