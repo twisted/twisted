@@ -6,6 +6,8 @@ def deferredTasklet(func):
     I'm a function decorator that makes a stacklessy-function (one
     that might 'block', etc) into one that returns a Deferred for
     integrating with Twisted.
+
+    XXX: Do a hack so the name of 'replacement' is the name of 'func'.
     """
     def replacement(*args, **kwargs):
         d = defer.Deferred()
