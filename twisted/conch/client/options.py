@@ -36,7 +36,7 @@ class ConchOptions(usage.Options):
                 ['nocache', 'I', 'Do not use an already existing connection if it exists.'],
                 ['nox11', 'x', 'Disable X11 connection forwarding (default)'],
                 ['agent', 'A', 'Enable authentication agent forwarding.'],
-                ['noagent' 'a', 'Disable authentication agent forwarding (default.'],
+                ['noagent', 'a', 'Disable authentication agent forwarding (default.'],
                ]
 
     identitys = []
