@@ -166,7 +166,7 @@ def getPluginFileList(debugInspection=None, showProgress=None):
                 raise
         else:
             # filter out files we obviously don't need to check - ones with '.' in them
-            subDirs = filter(lambda s: "." not in s, subDirs)
+            subDirs = [s for s in subDirs if "." not in s]
             if not subDirs:
                 continue
             incr = increments * (1.0 / len(subDirs))
