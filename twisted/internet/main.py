@@ -242,11 +242,8 @@ def run(installSignalHandlers=1):
             log.msg('Select loop terminated.')
 
     finally:
-        for reader in reads.keys():
-            if reads.has_key(reader):
-                del reads[reader]
-            if writes.has_key(reader):
-                del writes[reader]
+        selectables = removeAll()
+        for reader in selectables:
             log.logOwner.own(reader)
             try:
                 reader.connectionLost()
@@ -297,6 +294,17 @@ def removeWriter(writer):
     if writes.has_key(writer):
         del writes[writer]
 
+def removeAll():
+    """Remove all readers and writers, and return list of Selectables."""
+    readers = reads.keys()
+    for reader in readers:
+        if reads.has_key(reader):
+            del reads[reader]
+        if writes.has_key(reader):
+            del writes[reader]
+    return readers
+    
+    
 class _Win32Waker(styles.Ephemeral):
     """I am a workaround for the lack of pipes on win32.
 

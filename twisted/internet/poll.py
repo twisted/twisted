@@ -87,6 +87,15 @@ def removeWriter(writer, writes=writes):
         del writes[fd]
         _updateRegisteration(fd)
 
+def removeAll():
+    """Remove all selectables, and return a list of them."""
+    global reads, writes, selectables, poller
+    result = selectables.values()
+    reads = {}
+    writes = {}
+    selectables = {}
+    poller = select.poll()
+    return result
 
 def doPoll(timeout,
            reads=reads,
@@ -138,6 +147,7 @@ def install():
     main.removeReader = removeReader
     main.removeWriter = removeWriter
     main.doSelect = doPoll
+    main.removeAll = removeAll
 
 
 def initThreads():
