@@ -60,11 +60,62 @@ class DomainWithDefaultDict:
     def has_key(self, name):
         return 1
 
+    def __contains__(self, name):
+        return 1
+
     def __getitem__(self, name):
         return self.domains.get(name, self.default)
 
     def __setitem__(self, name, value):
         self.domains[name] = value
+    
+    def __delitem__(self, name):
+        del self.domains[name]
+    
+    def __iter__(self):
+        return iter(self.domains)
+    
+    def __len__(self):
+        return len(self.domains)
+    
+    def __str__(self):
+        return '<DomainWithDefaultsDict %s>' % (self.domains,)
+    
+    def __repr__(self):
+        return 'DomainWithDefaultsDict(%s)>' % (self.domains,)
+    
+    def get(self, key, default=None):
+        return self.domains.get(key, default)
+    
+    def copy(self):
+        return DomainWithDefaultsDict(self.domains.copy(), self.default)
+    
+    def iteritems(self):
+        return self.domains.iteritems()
+    
+    def iterkeys(self):
+        return self.domains.iterkeys()
+    
+    def itervalues(self):
+        return self.domains.itervalues()
+    
+    def keys(self):
+        return self.domains.keys()
+    
+    def values(self):
+        return self.domains.values()
+
+    def popitem(self):
+        return self.domains.popitem()
+    
+    def update(self, other):
+        return self.domains.update(other)
+    
+    def clear(self):
+        return self.domains.clear()
+    
+    def setdefault(self, key, default):
+        return self.domains.setdefault(key, default)
 
 class BounceDomain:
     """A domain in which no user exists. 
