@@ -24,7 +24,7 @@ This is mainly for use of internal Twisted code. We encourage you to use
 the latest version of Python directly from your code, if possible.
 """
 
-import types, socket, struct, __builtin__
+import sys, types, socket, struct, __builtin__, exceptions
 
 _dict_doc = (
     """dict() -> new empty dictionary.
@@ -37,13 +37,7 @@ _dict_doc = (
     dict(**kwargs) -> new dictionary initialized with the name=value pairs
         in the keyword argument list.  For example:  dict(one=1, two=2)
     """)
-
-# Python 2.1 forward-compatibility hacks
-try:
-    _dict = dict
-    d = dict((('a','b'),), c='d')
-except NameError:
-    # Python 2.1
+if sys.version_info[:2] == (2, 1):
     def dict(*arg, **kwargs):
         r = {}
         if arg:
@@ -58,27 +52,32 @@ except NameError:
             r[k] = v
         return r
     dict.__doc__ = _dict_doc
-except TypeError:
-    def dict(*arg, **kwargs):
-        d = _dict(*arg)
-        d.update(kwargs)
-        return d
-    dict.__doc__ = _dict_doc
-else:
-    # Python 2.3+
-    dict = dict
+    __builtin__.dict = dict
+#elif sys.version_info[:2] == (2, 2):
+#    def dict(*arg, **kwargs):
+#        d = types.DictType(*arg)
+#        d.update(kwargs)
+#        return d
+#    dict.__doc__ = _dict_doc
+#    __builtin__.dict = dict
 
 
-try:
-    StringTypes = types.StringTypes
-except AttributeError:
-    StringTypes = (types.StringType, types.UnicodeType)
+if sys.version_info[:2] == (2, 1):
+    types.StringTypes = types.StringType, types.UnicodeType
 
-try:
-    bool = bool
-    True = True
-    False = False
-except NameError:
+    def isinstance(object, class_or_type_or_tuple, _f = __builtin__.isinstance):
+        if type(class_or_type_or_tuple) == types.TupleType:
+            for t in class_or_type_or_tuple:
+                if _f(object, t):
+                    return 1
+            return 0
+        else:
+            return _f(object, class_or_type_or_tuple)
+    __builtin__.isinstance = isinstance
+
+if sys.version_info[:3] == (2, 2, 0):
+    __builtin__.True = (1 == 1)
+    __builtin__.False = (1 == 0)
     def bool(value):
         """Demote a value to 0 or 1, depending on its truth value
 
@@ -86,13 +85,10 @@ except NameError:
         way too hard to duplicate in 2.1 to be worth the trouble.
         """
         return not not value
-    True = 1==1
-    False = not True
+    __builtin__.bool = bool
+    del bool
 
-try:
-    StopIteration = StopIteration
-    iter = iter
-except:
+if sys.version_info[:2] == (2, 1):
     class StopIteration(Exception):
         """Signal the end from iterator.next()."""
         pass
@@ -178,10 +174,12 @@ except:
             return _iter_sentinel(*args)
         raise TypeError, "iter() takes at most 2 arguments (%d given)" % (len(args),)
 
+    exceptions.StopIteration = __builtin__.StopIteration = StopIteration
+    __builtin__.iter = iter
 
-try:
-    from socket import inet_pton, inet_ntop
-except ImportError:
+
+
+if not hasattr(socket, 'inet_pton'):
     def inet_pton(af, addr):
         if af == socket.AF_INET:
             parts = map(int, addr.split('.'))
@@ -202,7 +200,6 @@ except ImportError:
         else:
             raise ValueError, "unsupported address family"
 
-
     def inet_ntop(af, addr):
         if af == socket.AF_INET:
             parts = struct.unpack('!BBBB', addr)
@@ -213,33 +210,27 @@ except ImportError:
         else:
             raise ValueError, "unsupported address family"
 
-try:
-    assert isinstance('foo', StringTypes)
-except TypeError:
-    def isinstance(object, class_or_type_or_tuple):
-        if type(class_or_type_or_tuple) == types.TupleType:
-            for t in class_or_type_or_tuple:
-                if __builtin__.isinstance(object, t):
-                    return 1
-            return 0
-        else:
-            return __builtin__.isinstance(object, class_or_type_or_tuple)
-    assert isinstance('foo', StringTypes)
-else:
-    isinstance = isinstance
+    socket.inet_pton = inet_pton
+    socket.inet_ntop = inet_ntop
 
-__all__ = ['dict', 'inet_pton', 'inet_ntop', 'isinstance', 
-           'True', 'False', 'bool', 'StopIteration', 'iter', 'StringTypes']
+if sys.version_info[:3] in ((2, 2, 0), (2, 2, 1)):
+    import string
+    def lstrip(s, c=string.whitespace):
+        while s and s[0] in c:
+            s = s[1:]
+        return s
+    def rstrip(s, c=string.whitespace):
+        while s and s[0] in c:
+            s = s[:-1]
+    def strip(s, c=string.whitespace):
+        return lstrip(rstrip(s, c), c)
+    
+    object.__setattr__(str, 'lstrip', lstrip)
+    object.__setattr__(str, 'rstrip', rstrip)
+    object.__setattr__(str, 'strip', strip)
 
-#if __name__ == '__main__':
-#    print repr(inet_pton(socket.AF_INET, '1.2.3.4'))
-#    print repr(inet_pton(socket.AF_INET6, '::'))
-#    print repr(inet_pton(socket.AF_INET6, '1:5::2'))
-#    print repr(inet_pton(socket.AF_INET6, '::3af:ab45'))
-#    print repr(inet_pton(socket.AF_INET6, '1bf0::3af:ab45'))
+for k in locals().keys():
+    exec "del " + k
+del k
 
-#    print inet_ntop(socket.AF_INET, inet_pton(socket.AF_INET, '1.2.3.4'))
-#    print inet_ntop(socket.AF_INET6, inet_pton(socket.AF_INET6, '::'))
-#    print inet_ntop(socket.AF_INET6, inet_pton(socket.AF_INET6, '1:5::2'))
-#    print inet_ntop(socket.AF_INET6, inet_pton(socket.AF_INET6, '::3af:ab45'))
-#    print inet_ntop(socket.AF_INET6, inet_pton(socket.AF_INET6, '1bf0::3af:ab45'))
+import types, socket, struct
