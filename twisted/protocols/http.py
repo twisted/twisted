@@ -329,13 +329,20 @@ class FieldStorage(cgi.FieldStorage):
             fixedResult.append(i)
         return fixedResult
 
+    def values(self):
+        return map(self.__getitem__, self.keys())
+
+    def items(self):
+        return [(k, self[k]) for k in self.keys()]
+
 
 class Request:
     """A HTTP request.
 
     @ivar args: a mapping between field names and a list of values. These
                 values can be strings (for form fields) or C{cgi.FieldStorage} instances
-                when HTTP client uploaded a file in this request.
+                when HTTP client uploaded a file in this request. Don't assume this is
+                a dictionary, in some cases it may be a FieldStorage instance.
                 
     """
 
