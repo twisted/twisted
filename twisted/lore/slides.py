@@ -1,3 +1,19 @@
+# Twisted, the Framework of Your Internet
+# Copyright (C) 2001-2002 Matthew W. Lefkowitz
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+#
 """Rudimentary slide support for Lore.
 
 TODO:
@@ -61,17 +77,19 @@ class MagicpointOutput(BaseLatexSpitter):
         self.title = domhelpers.getNodeText(node)
 
     def visitNode_body(self, node):
+        # Adapted from tree.generateToC
         self.fontStack = [('standard', None)]
 
         self.writer(self.start_h2)
         self.writer(self.title)
         self.writer(self.end_h2)
-        # Adapted from tree.generateToC
+
         for element in getHeaders(node):
             level = int(element.tagName[1])-1
             self.writer(level * '\t')
             self.writer(domhelpers.getNodeText(element))
             self.writer('\n')
+
         self.visitNodeDefault(node)
 
     def visitNode_pre(self, node):
@@ -90,6 +108,9 @@ class MagicpointOutput(BaseLatexSpitter):
 
     def visitNode_em(self, node):
         self.doFont(node, 'italic')
+
+    def visitNode_code(self, node):
+        self.doFont(node, 'typewriter')
 
     def doFont(self, node, style):
         self.fontStack.append((style, None))
