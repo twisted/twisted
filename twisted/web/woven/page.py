@@ -2,7 +2,7 @@
 #
 # page.py
 
-__version__ = "$Revision: 1.19 $"[11:-2]
+__version__ = "$Revision: 1.20 $"[11:-2]
 
 from twisted.python import reflect
 from twisted.python.compat import *
@@ -68,6 +68,9 @@ class Page(model.MethodModel, controller.Controller, view.View):
                                 doneCallback=self.gatheredControllers)
 
 class LivePage(model.MethodModel, controller.LiveController, view.LiveView):
+
+    appRoot = False
+
     # M.I. sucks.
     __implements__ = (model.Model.__implements__, view.View.__implements__,
                       controller.Controller.__implements__)
@@ -86,7 +89,16 @@ class LivePage(model.MethodModel, controller.LiveController, view.LiveView):
                            templateFile=templateFile, templateDirectory=templateDirectory)
         self.controller = self
         self.controllerRendered = 0
-    
+
+    def getChild(self, name, request):
+        # Don't call the rememberPath if we already did once; That way
+        # we can support an idiom of setting appName as a class
+        # attribue *even if* the same class is used more than once in
+        # a hierarchy of Pages.
+        if self.appRoot and not request.getRootURL():
+            request.rememberRootURL()
+        return controller.Controller.getChild(self, name, request)
+
     def renderView(self, request):
         return view.View.render(self, request,
                                 doneCallback=self.gatheredControllers)
