@@ -5,8 +5,7 @@ from urllib import quote, string
 import UserDict, math
 from cStringIO import StringIO
 
-from twisted.web2 import http_headers, iweb, http, stream, responsecode
-from twisted.web import http as old_http
+from twisted.web2 import http_headers, iweb, stream, responsecode
 from twisted.internet import defer
 from twisted.python import components
 
@@ -108,6 +107,7 @@ class OldRequestAdapter(components.Componentized, object):
     # host = ####
     
     def __init__(self, request):
+        from twisted.web2 import http
         components.Componentized.__init__(self)
         self.request = request
         self.response = http.Response(stream=stream.ProducerStream())
@@ -168,7 +168,10 @@ class OldRequestAdapter(components.Componentized, object):
             expires=max_age-time.time()
         cookie = http_headers.Cookie(k,v, expires=expires, domain=domain, path=path, comment=comment, secure=secure)
         self.response.headers.setHeader('Set-Cookie', self.request.headers.getHeader('Set-Cookie', ())+(cookie,))
-        
+
+    def notifyFinish(self):
+        return self.request.notifyFinish()
+    
 ### TODO:
     def getHost(self):
         # FIXME, need a real API to acccess this.

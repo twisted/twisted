@@ -1268,3 +1268,9 @@ class HTTPFactory(protocol.ServerFactory):
 #     def isSecure(self):
 #         return self._forceSSL or components.implements(self.chanRequest.transport, interfaces.ISSLTransport)
 
+
+from twisted.web2 import compat
+components.registerAdapter(compat.makeOldRequestAdapter, iweb.IRequest, iweb.IOldRequest)
+components.registerAdapter(compat.OldResourceAdapter, iweb.IOldResource, iweb.IResource)
+components.registerAdapter(Response, int, iweb.IResponse)
+
