@@ -402,6 +402,7 @@ class FileTransfer(pb.Viewable):
     A class to represent the transfer of a file over the network.
     """
     request = None
+
     def __init__(self, file, size, request):
         self.file = file
         self.size = size
@@ -415,8 +416,10 @@ class FileTransfer(pb.Viewable):
         data = self.file.read(min(abstract.FileDescriptor.bufferSize, self.size - self.written))
         if data:
             self.written += len(data)
+            # this .write will spin the reactor, calling .doWrite and then
+            # .resumeProducing again, so be prepared for a re-entrant call
             self.request.write(data)
-        if self.file.tell() == self.size:
+        if self.request and self.file.tell() == self.size:
             self.request.unregisterProducer()
             self.request.finish()
             self.request = None
