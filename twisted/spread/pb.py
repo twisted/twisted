@@ -59,7 +59,7 @@ applied when serializing arguments.
 @author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
 
-__version__ = "$Revision: 1.141 $"[11:-2]
+__version__ = "$Revision: 1.142 $"[11:-2]
 
 
 # System Imports
@@ -445,7 +445,29 @@ class Broker(banana.Banana):
         self.localObjects = {}
         self.security = security
         self.pageProducers = []
-
+        self.currentRequestID = 0
+        self.currentLocalID = 0
+        # Some terms:
+        #  PUID: process unique ID; return value of id() function.  type "int".
+        #  LUID: locally unique ID; an ID unique to an object mapped over this
+        #        connection. type "int"
+        #  GUID: (not used yet) globally unique ID; an ID for an object which
+        #        may be on a redirected or meta server.  Type as yet undecided.
+        # Dictionary mapping LUIDs to local objects.
+        # set above to allow root object to be assigned before connection is made
+        # self.localObjects = {}
+        # Dictionary mapping PUIDs to LUIDs.
+        self.luids = {}
+        # Dictionary mapping LUIDs to local (remotely cached) objects. Remotely
+        # cached means that they're objects which originate here, and were
+        # copied remotely.
+        self.remotelyCachedObjects = {}
+        # Dictionary mapping PUIDs to (cached) LUIDs
+        self.remotelyCachedLUIDs = {}
+        # Dictionary mapping (remote) LUIDs to (locally cached) objects.
+        self.locallyCachedObjects = {}
+        self.waitingForAnswers = {}
+        
     def resumeProducing(self):
         """Called when the consumer attached to me runs out of buffer.
         """
@@ -511,32 +533,9 @@ class Broker(banana.Banana):
         log.msg("Didn't understand command: %r" % command)
 
     def connectionReady(self):
-        """Initialize.
+        """Initialize. Called after Banana negotiation is done.
         """
-
-        # Some terms:
-        #  PUID: process unique ID; return value of id() function.  type "int".
-        #  LUID: locally unique ID; an ID unique to an object mapped over this
-        #        connection. type "int"
-        #  GUID: (not used yet) globally unique ID; an ID for an object which
-        #        may be on a redirected or meta server.  Type as yet undecided.
         self.sendCall("version", self.version)
-        self.currentRequestID = 0
-        self.currentLocalID = 0
-        # Dictionary mapping LUIDs to local objects.
-        # set above to allow root object to be assigned before connection is made
-        # self.localObjects = {}
-        # Dictionary mapping PUIDs to LUIDs.
-        self.luids = {}
-        # Dictionary mapping LUIDs to local (remotely cached) objects. Remotely
-        # cached means that they're objects which originate here, and were
-        # copied remotely.
-        self.remotelyCachedObjects = {}
-        # Dictionary mapping PUIDs to (cached) LUIDs
-        self.remotelyCachedLUIDs = {}
-        # Dictionary mapping (remote) LUIDs to (locally cached) objects.
-        self.locallyCachedObjects = {}
-        self.waitingForAnswers = {}
         for notifier in self.connects:
             try:
                 notifier()
@@ -547,6 +546,7 @@ class Broker(banana.Banana):
             self.factory.clientConnectionMade(self)
     
     def connectionFailed(self):
+        # XXX should never get called anymore? check!
         for notifier in self.failures:
             try:
                 notifier()
@@ -559,7 +559,6 @@ class Broker(banana.Banana):
     def connectionLost(self, reason):
         """The connection was lost.
         """
-
         self.disconnected = 1
         # nuke potential circular references.
         self.luids = None

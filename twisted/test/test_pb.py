@@ -801,7 +801,7 @@ class ConnectionTestCase(unittest.TestCase):
         self.assertEquals(len(challenge), 2)
         self.assert_(isinstance(challenge[1], pb.RemoteReference))
     
-    # tests for deprecated APIs:
+    # tests for *really* deprecated APIs:
     def testGetObjectAt(self):
         root = dR(pb.getObjectAt("127.0.0.1", self.portno))
         self._checkRootObject(root)
@@ -821,7 +821,7 @@ class ConnectionTestCase(unittest.TestCase):
         self.assert_(isinstance(p2, pb.RemoteReference))
         iConnector.disconnect()
 
-    # tests for new, shiny API:
+    # tests for new, shiny API, although getPerspective stuff is also deprecated:
     def testGoodGetObject(self):
         # we test getting both before and after connection
         factory = pb.PBClientFactory()
@@ -888,7 +888,14 @@ class ConnectionTestCase(unittest.TestCase):
         p = dR(l[0])
         self.assert_(isinstance(p, pb.RemoteReference))
         factory.disconnect()
-        
+
+    def testImmediateClose(self):
+        from twisted.internet import protocol
+        p = dR(protocol.ClientCreator(reactor, protocol.Protocol
+                                      ).connectTCP("127.0.0.1", self.portno))
+        p.transport.loseConnection()
+        reactor.iterate(); reactor.iterate()
+
 
 # yay new cred, everyone use this:
 
