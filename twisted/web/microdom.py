@@ -60,11 +60,11 @@ class MismatchedTags(Exception):
 
 
 class Node:
-    
+    nodeName = "Node"
+
     def __init__(self, parentNode=None):
         self.parentNode = parentNode
         self.childNodes = []
-        self.nodeName = reflect.qual(self.__class__)
 
     def writexml(self, stream, indent='', addindent='', newl=''):
         raise NotImplementedError()
@@ -78,15 +78,8 @@ class Node:
     def toprettyxml(self, indent='', addindent=' ', newl='\n', strip=1):
         return self.toxml(indent, addindent, newl, strip)
 
-    def cloneNode(self, deep=0):
-        if deep:
-            pn = self.parentNode
-            self.parentNode = None
-            cp = copy.deepcopy(self)
-            self.parentNode = pn
-            return cp
-        else:
-            return copy.copy(self)
+    def cloneNode(self, deep=0, parent=None):
+        raise NotImplementedError()
 
     def hasChildNodes(self):
         if self.childNodes:
@@ -113,9 +106,9 @@ class Node:
 
     def replaceChild(self, newChild, oldChild):
         assert isinstance(newChild, Node)
-        if newChild.parentNode:
-            newChild.parentNode.removeChild(newChild)
-        assert oldChild.parentNode is self
+        #if newChild.parentNode:
+        #    newChild.parentNode.removeChild(newChild)
+        assert oldChild.parentNode is self, 'oldChild (%s): oldChild.parentNode (%s) != self (%s)' % (oldChild, oldChild.parentNode, self)
         self.childNodes[self.childNodes.index(oldChild)] = newChild
         oldChild.parentNode = None
         newChild.parentNode = self
@@ -135,6 +128,15 @@ class Document(Node, Accessor):
         Node.__init__(self)
         if documentElement:
             self.appendChild(documentElement)
+
+    def cloneNode(self, deep=0, parent=None):
+        d = Document()
+        if deep:
+            newEl = self.documentElement.cloneNode(1, self)
+        else:
+            newEl = self.documentElement
+        d.appendChild(newEl)
+        return d
 
     doctype = None
 
@@ -203,6 +205,9 @@ class Text(CharacterData):
         CharacterData.__init__(self, data, parentNode)
         self.raw = raw
 
+    def cloneNode(self, deep=0, parent=None):
+        return Text(self.nodeValue, parent, self.raw)
+
     def writexml(self, stream, indent='', addindent='', newl='', strip=0):
         if self.raw:
             val = str(self.nodeValue)
@@ -215,6 +220,9 @@ class Text(CharacterData):
 
 
 class CDATASection(CharacterData):
+    def cloneNode(self, deep=0, parent=None):
+        return CDATASection(self.nodeValue, parent)
+
     def writexml(self, stream, indent='', addindent='', newl='', strip=0):
         stream.write("<![CDATA[")
         stream.write(self.nodeValue)
@@ -224,6 +232,7 @@ class CDATASection(CharacterData):
 class _Attr(CharacterData):
     "Support class for getAttributeNode."
 
+import new
 
 class Element(Node):
 
@@ -238,6 +247,12 @@ class Element(Node):
         self.nodeName = self.tagName = tagName
         self._filename = filename
         self._markpos = markpos
+
+    def cloneNode(self, deep=0, parent=None):
+        clone = Element(self.tagName, parentNode=parent)
+        clone.attributes.update(self.attributes)
+        clone.childNodes = [child.cloneNode(1, clone) for child in self.childNodes]
+        return clone
 
     def getElementsByTagName(self, name):
         return [n for n in self.childNodes if n.nodeName == name]
