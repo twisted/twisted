@@ -19,8 +19,8 @@ This module provides support for Twisted to interact with the PyQt mainloop.
 
 In order to use this support, simply do the following::
 
-    |  from twisted.internet import qternet
-    |  qternet.install()
+    |  from twisted.internet import qtreactor
+    |  qtreactor.install()
 
 Then use twisted.internet APIs as usual.  The other methods here are not
 intended to be called directly.
