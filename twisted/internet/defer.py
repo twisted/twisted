@@ -158,7 +158,8 @@ class Deferred:
         """Process all callbacks made since pause() was called.
         """
         self.paused = 0
-        self._runCallbacks()
+        if self.called:
+            self._runCallbacks()
 
 
     def _startRunCallbacks(self, result, isError):
