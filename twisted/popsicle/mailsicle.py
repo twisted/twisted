@@ -102,10 +102,21 @@ def writeHeader(f, k, v):
     f.write(v.replace("\n", "\n\t"))
     f.write("\n")
 
-poidl = re.compile(r'(?:"((?:\"|.)*?)" |)<([^>]*)>')
+psl = r'"((?:\"|.)*?)"'
+poidl = r'(?:%s |)<([^>]*)>' % psl
+
+psl = re.compile(psl)
+poidl = re.compile(poidl)
+
 
 def parseOIDList(s):
     return poidl.findall(s)
+
+def parseStringList(s):
+    return psl.findall(s)
+
+def makeStringList(l):
+    return ', '.join(map(quotify, l))
 
 def quotify(s):
     return '"'+s.replace('\\','\\\\').replace('"','\\"')+'"'
@@ -160,7 +171,11 @@ class QueryResults:
 class Mailsicle(repos.DirectoryRepository):
 
     def loadOIDNow(self, oid):
-        f = open(os.path.join(self.dirname, str(oid)))
+        try:
+            f = open(os.path.join(self.dirname, str(oid)))
+        except (OSError, IOError):
+            raise repos.OIDNotFound(str(oid))
+        
         llt = f.read().split("\n-\n")
         ll = []
         for lt in llt:
@@ -264,7 +279,7 @@ class Mailsicle(repos.DirectoryRepository):
 
     def loadOIDList(self, s):
         l = []
-        for descript, oidx in parseOIDList(s):
+        for descript, oid in parseOIDList(s):
             l.append(self.loadNow(oid))
         return l
 
@@ -454,6 +469,10 @@ class MailsicleService(service.Service):
         self.__dict__ = dct
         self.perspectives = weakref.WeakValueDictionary()
 
+
+    def stopService(self):
+        freezer.clean()
+
     def createPerspective(self, name):
         p = self.perspectiveClass(name)
         p.setService(self)
@@ -464,6 +483,10 @@ class MailsicleService(service.Service):
     def getPerspectiveNamed(self, name):
         if self.perspectives.has_key(name):
             return self.perspectives[name]
-        return self.msicle.queryIndex("perspective-name-"+self.serviceName,
-                                      name).fetchNow(0,1)[0]
+        l = self.msicle.queryIndex("perspective-name-"+self.serviceName,
+                                      name).fetchNow(0,1)
+        try:
+            return l[0]
+        except IndexError:
+            raise KeyError("%s doesn't exist." % name)
 

@@ -31,6 +31,9 @@ from twisted.persisted.styles import instance
 # Sibling Imports
 from twisted.popsicle.freezer import theFreezer, ISaver, PersistentReference, ref
 
+class OIDNotFound(Exception):
+    pass
+
 class Repository:
     """A data storage that can be loaded from.  A repository of objects.
 

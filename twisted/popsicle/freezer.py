@@ -80,8 +80,9 @@ class Freezer:
         self.dirtySet[obj] = dirt
 
     def register(self, obj, repo):
-        self.getPersistentReference(obj, repo)
+        pr = self.getPersistentReference(obj, repo)
         self.dirty(obj)
+        return pr
 
     def delete(self, obj):
         return self.dirty(obj, Freezer.DELETE)
@@ -118,14 +119,14 @@ class Freezer:
                         except:
                             # TODO: more error handling: backout transactions?
                             # restore state of objects?  what else?
-                            log.err()
+                            log.deferr()
         finally:
             self.cleaning = False
             for saver in savers.keys():
                 try:
                     saver.cleaned()
                 except:
-                    log.err()
+                    log.deferr()
             
 
 try:
@@ -196,6 +197,7 @@ class PersistentReference:
             theFreezer.addSaver(o, repo)
             # use internal API to avoid warning: we *really really* want to dirty
             theFreezer._dirty(o)
+            repo.cache(self.oid, o)
             return self.oid
         elif ((self.repo is repo) or
               repo is None and self.repo is theFreezer._savingRepo):
