@@ -126,16 +126,16 @@ class DefaultHandler(Controller):
         """
         return (None, None)
 
-    def setId(self, id):
-        self.id = id
+    def setSubmodel(self, submodel):
+        self.submodel = submodel
 
 
 class DefaultWidget(domwidgets.Widget):
     def generateDOM(self, request, node):
         return node
 
-    def setId(self, id):
-        self.id = id
+    def setSubmodel(self, submodel):
+        self.submodel = submodel
 
 class DOMTemplate(Resource, View):
     """A resource that renders pages using DOM."""
@@ -360,14 +360,14 @@ class DOMTemplate(Resource, View):
                         viewMethod = view.generateDOM
 
         controller.setView(view)
-        controller.setId(id)
+        controller.setSubmodel(id)
         # xxx refactor this into a widget interface and check to see if the object implements IWidget
         # the view may be a deferred; this is why this check is required
         if hasattr(view, 'setController'):
             view.setController(controller)
             view.setNode(node)
             if id:
-                view.setId(id)
+                view.setSubmodel(id)
         
         success, data = controller.handle(request)
         if success is not None:
@@ -376,6 +376,7 @@ class DOMTemplate(Resource, View):
         result = viewMethod(request, node)
         returnNode = self.dispatchResult(request, node, result)
         if not isinstance(returnNode, Deferred):
+            returnNode.toxml()
             self.recurseChildren(request, returnNode)
 
     def sendPage(self, request):
@@ -391,7 +392,7 @@ class DOMTemplate(Resource, View):
             if successes:
                 self.handleSuccesses(request, successes)
 
-        page = str(self.d.toprettyxml())
+        page = str(self.d.toxml())
         request.write(page)
         request.finish()
         return page

@@ -22,7 +22,11 @@ class InputHandler(Controller):
         page to display next, etc
     """
     def setId(self, id):
-        self.id = id
+        print "setId is deprecated; please use setSubmodel."
+        self.submodel = id
+        
+    def setSubmodel(self, submodel):
+        self.submodel = submodel
 
     def getInput(self, request):
         """
