@@ -55,7 +55,7 @@ class PBFailureTest(unittest.TestCase):
             self._tearDownClient()])
 
     def _tearDownServer(self):
-        return self.serverPort.stopListening()
+        return defer.maybeDeferred(self.serverPort.stopListening)
 
     def _tearDownClient(self):
         self.clientConnector.disconnect()
