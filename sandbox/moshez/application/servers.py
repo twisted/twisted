@@ -1,7 +1,7 @@
 from twisted.application import service
 
 
-class _AbstracrServer(service.Service):
+class _AbstractServer(service.Service):
 
     privileged = 0
 
