@@ -50,8 +50,8 @@ class SSHListenForwardingChannel(channel.SSHChannel):
         log.msg('opened forwarding channel %s' % self.id)
         if len(self.client.buf)>1:
             b = self.client.buf[1:]
-            self.client.buf = ''
             self.write(b)
+        self.client.buf = ''
 
     def openFailed(self, reason):
         self.closed()
