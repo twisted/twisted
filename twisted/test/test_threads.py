@@ -68,7 +68,7 @@ class ThreadsTestCase(unittest.TestCase):
         # we call the non-thread safe method, but because they should
         # all be called in same thread, this is ok.
         commands = [(c.add, (), {})] * 1000
-        threads.callMultipleInThread(commands)
+        reactor.callMultipleInThread(commands)
 
         oldIndex = 0
         while c.index < 1000:
@@ -83,7 +83,7 @@ class ThreadsTestCase(unittest.TestCase):
     gotResult = 0
     
     def testDeferredResult(self):
-        d = threads.deferToThread(lambda x, y=5: x + y, 3, y=4)
+        d = reactor.deferToThread(lambda x, y=5: x + y, 3, y=4)
         d.addCallback(self._resultCallback)
         while not self.gotResult:
             reactor.iterate()
@@ -95,7 +95,7 @@ class ThreadsTestCase(unittest.TestCase):
 
     def testDeferredFailure(self):
         def raiseError(): raise TypeError
-        d = threads.deferToThread(raiseError)
+        d = reactor.deferToThread(raiseError)
         d.addErrback(self._resultErrback)
         while not self.gotResult:
             reactor.iterate()
