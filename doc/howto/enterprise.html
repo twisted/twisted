@@ -61,7 +61,8 @@ resultset = cursor.query('SELECT * FROM table WHERE ...')
     with the <a href="http://pypgsql.sourceforge.net/">pyPgSQL</a>
     module for <a href="http://www.postgresql.org/">PostgreSQL</a>.</p>
 
-    <p><code class="API">enterprise.adbapi</code> will do blocking
+    <p><code base="twisted" class="API">enterprise.adbapi</code> will do
+    blocking
     database operations in seperate threads, which trigger
     callbacks in the originating thread when they complete. In the
     meantime, the original thread can continue doing normal work,
@@ -70,9 +71,10 @@ resultset = cursor.query('SELECT * FROM table WHERE ...')
     <h2>How do I use adbapi?</h2>
 
     <p>Rather than creating a database connection directly, use the
-    <code class="API">adbapi.ConnectionPool</code> class to manage
+    <code base="twisted.enterprise" class="API">adbapi.ConnectionPool</code>
+    class to manage
     a connections for you. This allows <code
-    class="API">enterprise.adbapi</code> to use multiple
+    base="twisted" class="API">enterprise.adbapi</code> to use multiple
     connections, one per thread. This is easy:</p>
 <pre class="python">
 # Using the "dbmodule" from the previous example, create a ConnectionPool 
@@ -84,11 +86,11 @@ dbpool = adbapi.ConnectionPool("dbmodule", 'mydb', 'andrew', 'password')
 
     <ul>
       <li>There is no need to import dbmodule directly. You just
-      pass the name to <code
+      pass the name to <code base="twisted.enterprise"
       class="API">adbapi.ConnectionPool</code>'s constructor.</li>
 
       <li>The parameters you would pass to dbmodule.connect are
-      passed as extra arguments to <code
+      passed as extra arguments to <code base="twisted.enterprise"
       class="API">adbapi.ConnectionPool</code>'s constructor.
       Keyword parameters work as well.</li>
 
@@ -99,7 +101,7 @@ dbpool = adbapi.ConnectionPool("dbmodule", 'mydb', 'andrew', 'password')
     </ul>
 
     <p>So, now you need to be able to dispatch queries to your
-    ConnectionPool. We do this by subclassing <code
+    ConnectionPool. We do this by subclassing <code base="twisted.enterprise"
     class="API">adbapi.Augmentation</code>. Here's an example:</p>
 <pre class="python">
 class AgeDatabase(adbapi.Augmentation): 
