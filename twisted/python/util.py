@@ -18,11 +18,12 @@
 
 from __future__ import nested_scopes, generators
 
-__version__ = '$Revision: 1.50 $'[11:-2]
+__version__ = '$Revision: 1.51 $'[11:-2]
 
 import os
 import sys
 import hmac
+import errno
 
 from UserDict import UserDict
 
@@ -268,7 +269,6 @@ def _getpass(prompt):
     try:
         return getpass.getpass(prompt)
     except IOError, e:
-        import errno
         if e.errno == errno.EINTR:
             raise KeyboardInterrupt
         raise
@@ -574,7 +574,12 @@ try:
         for groupname, password, gid, userlist in grp.getgrall():
             if username in userlist:
                 l.append(gid)
-        setgroups(l)
+        try:
+            setgroups(l)
+        except OSError, e:
+            if e.errno != errno.EPERM:
+                raise
+
 except:
     def initgroups(uid, primaryGid):
         pass
