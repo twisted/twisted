@@ -194,7 +194,7 @@ How are you, friend?
 
 class AnotherPOP3TestCase(unittest.TestCase):
 
-    def testBuffer(self):
+    def runTest(self, lines, expected):
         a = StringIOWithoutClosing()
         dummy = DummyPOP3()
         dummy.makeConnection(protocol.FileWrapper(a))
@@ -214,18 +214,20 @@ QUIT''', '\n')
                              "\nExpected:\n%s\nResults:\n%s\n"
                              % (expected_output, a.getvalue()))
 
+    def testBuffer(self):
+        lines = string.split('''\
+APOP moshez dummy
+LIST
+UIDL
+RETR 1
+RETR 2
+DELE 1
+RETR 1
+QUIT''', '\n')
+        expected_output = '+OK <moshez>\r\n+OK Authentication succeeded\r\n+OK 1\r\n1 44\r\n.\r\n+OK \r\n1 0\r\n.\r\n+OK 44\r\nFrom: moshe\r\nTo: moshe\r\n\r\nHow are you, friend?\r\n.\r\n-ERR index out of range\r\n+OK \r\n-ERR message deleted\r\n+OK \r\n'
+        self.runTest(lines, expected_output)
+
     def testNoop(self):
-        a = StringIOWithoutClosing()
-        dummy = DummyPOP3()
-        dummy.makeConnection(protocol.FileWrapper(a))
         lines = ['APOP spiv dummy', 'NOOP', 'QUIT']
         expected_output = '+OK <moshez>\r\n+OK Authentication succeeded\r\n+OK \r\n+OK \r\n'
-        for line in lines:
-            dummy.lineReceived(line)
-        self.failUnlessEqual(expected_output, a.getvalue(),
-                             "\nExpected:\n%s\nResults:\n%s\n"
-                             % (expected_output, a.getvalue()))
-
-
-
-testCases = [POP3TestCase, AnotherPOP3TestCase]
+        self.runTest(lines, expected_output)
