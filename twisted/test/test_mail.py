@@ -1041,7 +1041,7 @@ class ProcessAliasTestCase(test_process.SignalMixin, unittest.TestCase):
 
         r1 = map(str, A1.resolve(aliases).objs)
         r1.sort()
-        p = reactor.spawnProcess(protocol.ProcessProtocol(), "/bin/ls")
+        p = reactor.spawnProcess(protocol.ProcessProtocol(), "echo")
         expected = map(str, [
             mail.alias.AddressAlias('user1', None, None),
             mail.alias.MessageWrapper(p, 'process'),
@@ -1088,7 +1088,7 @@ class ProcessAliasTestCase(test_process.SignalMixin, unittest.TestCase):
         A4 = mail.alias.AliasGroup(['|process', 'alias1'], domain, 'alias4')
         aliases['alias4'] = A4
         
-        p = reactor.spawnProcess(protocol.ProcessProtocol(), "/bin/ls")
+        p = reactor.spawnProcess(protocol.ProcessProtocol(), "echo")
         r = map(str, A4.resolve(aliases).objs)
         r.sort()
         expected = map(str, [
