@@ -1,7 +1,7 @@
 # -*- test-case-name: twisted.test.test_trial -*-
 #
 # Twisted, the Framework of Your Internet
-# Copyright (C) 2001-2002 Matthew W. Lefkowitz
+# Copyright (C) 2001-2003 Matthew W. Lefkowitz
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
@@ -26,7 +26,7 @@ from __future__ import nested_scopes
 
 from twisted.python.compat import *
 
-import unittest
+import reporter
 
 from twisted.internet import protocol
 from twisted.python import components, failure, reflect
@@ -46,7 +46,7 @@ class OneWayBanana(banana.Banana):
         # now.
         self._selectDialect("none")
 
-class JellyReporter(unittest.Reporter):
+class JellyReporter(reporter.Reporter):
     """I report results as a Banana-encoded Jelly stream.
 
     This reporting format is machine-readable.  It might make more sense
@@ -64,12 +64,12 @@ class JellyReporter(unittest.Reporter):
         self.banana = OneWayBanana(isClient=0)
         if stream is not None:
             self.makeConnection(stream)
-        unittest.Reporter.__init__(self)
+        reporter.Reporter.__init__(self)
 
     def reportImportError(self, name, exc):
         f = failure.Failure(exc)
         self.jellyMethodCall("reportImportError", name, f)
-        unittest.Reporter.reportImportError(self, name, exc)
+        reporter.Reporter.reportImportError(self, name, exc)
 
     def jellyMethodCall(self, methodName, *args):
         if self.doSendTimes:
@@ -103,11 +103,11 @@ class JellyReporter(unittest.Reporter):
 
     def start(self, *args):
         self.jellyMethodCall("start", *args)
-        unittest.Reporter.start(self, *args)
+        reporter.Reporter.start(self, *args)
         
     def stop(self, *args):
         self.jellyMethodCall("stop", *args)
-        unittest.Reporter.stop(self, *args)
+        reporter.Reporter.stop(self, *args)
         
     def cleanResults(self, testClass, method):
         if type(testClass) == types.ClassType:
@@ -119,7 +119,7 @@ class JellyReporter(unittest.Reporter):
     def reportStart(self, testClass, method):
         testClassName, methodName = self.cleanResults(testClass, method)
         self.jellyMethodCall("reportStart", testClassName, methodName)
-        unittest.Reporter.reportStart(self, testClass, method)
+        reporter.Reporter.reportStart(self, testClass, method)
         
     def reportResults(self, testClass, method, resultType, results=None):
         jresults = results
@@ -136,7 +136,7 @@ class JellyReporter(unittest.Reporter):
                              testClassName, methodName,
                              resultType,
                              jresults)
-        unittest.Reporter.reportResults(self, testClass, method, resultType,
+        reporter.Reporter.reportResults(self, testClass, method, resultType,
                                         results)
 
 class NullTransport:
@@ -147,7 +147,7 @@ class NullTransport:
 class IRemoteReporter(components.Interface):
     """I am reporting results from a test suite running someplace else.
 
-    The interface is mostly identical to unittest.Runner, the main difference
+    The interface is mostly identical to reporter.Reporter, the main difference
     being that where it uses exc_info tuples, I use L{failure.Failure}s.
     """
 

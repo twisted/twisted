@@ -20,7 +20,7 @@
 # - Hangs.
 
 from twisted.python import usage, reflect
-from twisted.trial import unittest
+from twisted.trial import unittest, util, reporter as reps
 import sys, os, types, inspect
 
 class Options(usage.Options):
@@ -161,7 +161,7 @@ def run():
             case = reflect.namedObject(testcase)
         else:
             case = testcase
-        if type(case) is types.ClassType and unittest.isTestClass(case):
+        if type(case) is types.ClassType and util.isTestClass(case):
             suite.addTestClass(case)
     for testmethod in config['methods']:
         suite.addMethod(testmethod)
@@ -178,16 +178,16 @@ def run():
        log.startLogging(open(config['logfile'], 'a'), 0)
 
     if config['verbose']:
-        reporter = unittest.TreeReporter(sys.stdout)
+        reporter = reps.TreeReporter(sys.stdout)
     elif config['bwverbose']:
-        reporter = unittest.VerboseTextReporter(sys.stdout)
+        reporter = reps.VerboseTextReporter(sys.stdout)
     elif config['summary']:
-        reporter = unittest.MinimalReporter(sys.stdout)
+        reporter = reps.MinimalReporter(sys.stdout)
     elif config['jelly']:
         import twisted.trial.remote
         reporter = twisted.trial.remote.JellyReporter(sys.stdout)
     else:
-        reporter = unittest.TextReporter(sys.stdout)
+        reporter = reps.TextReporter(sys.stdout)
 
     if config['debug']:
         reporter.debugger = 1

@@ -2,11 +2,11 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.11 $"[11:-2]
+__version__ = "$Revision: 1.12 $"[11:-2]
 
 from twisted.python.compat import *
 from twisted.python import reflect
-from twisted.trial import unittest
+from twisted.trial import unittest, reporter
 from StringIO import StringIO
 import sys
 
@@ -53,8 +53,8 @@ class RemoteReporter:
 
     def remote_reportResults(self, testClass, methodName, resultType,
                              results, times=None):
-        assert resultType == unittest.ERROR
-        if resultType == unittest.ERROR:
+        assert resultType == reporter.ERROR
+        if resultType == reporter.ERROR:
             self.errors.append((testClass, methodName, results))
 
     def remote_reportImportError(self, name, failure, times=None):
@@ -86,7 +86,7 @@ class TestJellyReporter(unittest.TestCase):
             monkey / 0
         except Exception:
             self.reporter.reportResults("aTestClass", "aMethod",
-                                        unittest.ERROR,
+                                        reporter.ERROR,
                                         sys.exc_info())
 
 
@@ -119,7 +119,7 @@ class LoopbackTests(unittest.TestCase):
         except Exception:
             self.sendReporter._runHook = lambda : (
                 self.sendReporter.reportResults("aTestClass", "aMethod",
-                                                unittest.ERROR,
+                                                reporter.ERROR,
                                                 sys.exc_info()))            
         loopback.loopback(self.sendReporter, self.decoder)
         self.failUnlessEqual(len(self.reporter.errors), 1)
@@ -228,56 +228,56 @@ class TestTests(unittest.TestCase):
         
             
             
-    def checkResults(self, reporter, method):
-        self.failIf(reporter.imports, "%s caused import error" % method)
-        self.failUnless(reporter.numTests == 1,
+    def checkResults(self, rep, method):
+        self.failIf(rep.imports, "%s caused import error" % method)
+        self.failUnless(rep.numTests == 1,
                         "%s had multiple tests" % method)
         if method[-5:] == "_pass":
-            self.failIf(reporter.errors)
-            self.failIf(reporter.failures)
-            self.failIf(reporter.skips)
-            self.failIf(reporter.expectedFailures)
-            self.failIf(reporter.unexpectedSuccesses)
+            self.failIf(rep.errors)
+            self.failIf(rep.failures)
+            self.failIf(rep.skips)
+            self.failIf(rep.expectedFailures)
+            self.failIf(rep.unexpectedSuccesses)
         if method[-5:] == "_fail":
-            self.failIf(reporter.errors)
-            self.failUnless(len(reporter.failures) == 1,
+            self.failIf(rep.errors)
+            self.failUnless(len(rep.failures) == 1,
                             "%s had %d failures" % (method,
-                                                    len(reporter.failures)))
-            self.failIf(reporter.skips)
-            self.failIf(reporter.expectedFailures)
-            self.failIf(reporter.unexpectedSuccesses)
+                                                    len(rep.failures)))
+            self.failIf(rep.skips)
+            self.failIf(rep.expectedFailures)
+            self.failIf(rep.unexpectedSuccesses)
         if method[-6:] == "_error":
-            self.failUnless(len(reporter.errors) == 1,
+            self.failUnless(len(rep.errors) == 1,
                             "%s had %d errors" % (method,
-                                                  len(reporter.errors)))
-            self.failIf(reporter.failures)
-            self.failIf(reporter.skips)
-            self.failIf(reporter.expectedFailures)
-            self.failIf(reporter.unexpectedSuccesses)
+                                                  len(rep.errors)))
+            self.failIf(rep.failures)
+            self.failIf(rep.skips)
+            self.failIf(rep.expectedFailures)
+            self.failIf(rep.unexpectedSuccesses)
         if method[-5:] == "_skip":
-            self.failIf(reporter.errors)
-            self.failIf(reporter.failures)
-            self.failUnless(len(reporter.skips) == 1,
+            self.failIf(rep.errors)
+            self.failIf(rep.failures)
+            self.failUnless(len(rep.skips) == 1,
                             "%s had %d skips" % (method,
-                                                 len(reporter.skips)))
-            self.failIf(reporter.expectedFailures)
-            self.failIf(reporter.unexpectedSuccesses)
+                                                 len(rep.skips)))
+            self.failIf(rep.expectedFailures)
+            self.failIf(rep.unexpectedSuccesses)
         if method[-7:] == "_exfail":
-            self.failIf(reporter.errors)
-            self.failIf(reporter.failures)
-            self.failIf(reporter.skips)
-            self.failUnless(len(reporter.expectedFailures) == 1,
+            self.failIf(rep.errors)
+            self.failIf(rep.failures)
+            self.failIf(rep.skips)
+            self.failUnless(len(rep.expectedFailures) == 1,
                             "%s had %d expectedFailures" % \
-                            (method, len(reporter.expectedFailures)))
-            self.failIf(reporter.unexpectedSuccesses)
+                            (method, len(rep.expectedFailures)))
+            self.failIf(rep.unexpectedSuccesses)
         if method[-9:] == "_unexpass":
-            self.failIf(reporter.errors)
-            self.failIf(reporter.failures)
-            self.failIf(reporter.skips)
-            self.failIf(reporter.expectedFailures)
-            self.failUnless(len(reporter.unexpectedSuccesses) == 1,
+            self.failIf(rep.errors)
+            self.failIf(rep.failures)
+            self.failIf(rep.skips)
+            self.failIf(rep.expectedFailures)
+            self.failUnless(len(rep.unexpectedSuccesses) == 1,
                             "%s had %d unexpectedSuccesses" % \
-                            (method, len(reporter.unexpectedSuccesses)))
+                            (method, len(rep.unexpectedSuccesses)))
         
     def testTests(self):
         suite = unittest.TestSuite()
@@ -289,20 +289,20 @@ class TestTests(unittest.TestCase):
             # if one of these test cases fails, switch to TextReporter to
             # see what happened
 
-            reporter = unittest.Reporter()
-            #reporter = unittest.TextReporter()
+            rep = reporter.Reporter()
+            #reporter = reporter.TextReporter()
             #print "running '%s'" % method
 
-            reporter.start(1)
+            rep.start(1)
 
             result = unittest.Tester(testCase.__class__, testCase,
                                      getattr(testCase, method),
                                      lambda x: x()).run()
-            reporter.reportResults(testCase.__class__, getattr(self.Tests, method),
-                                   *result)
+            rep.reportResults(testCase.__class__, getattr(self.Tests, method),
+                              *result)
             # TODO: verify that case.setUp == 1 and case.tearDown == 1
             try:
-                self.checkResults(reporter, method)
+                self.checkResults(rep, method)
             except unittest.FailTest:
                 # with TextReporter, this will show the traceback
                 print
