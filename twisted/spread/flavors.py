@@ -24,6 +24,11 @@ hopefully encompass all forms of remote access which can emulate subsets of PB
 
 """
 
+# NOTE: this module should NOT import pb; it is supposed to be a module which
+# abstractly defines remotely accessible types.  Many of these types expect to
+# be serialized by Jelly, but they ought to be accessible through other
+# mechanisms (like XMLRPC)
+
 # system imports
 import types
 
@@ -34,6 +39,7 @@ from twisted.python import log
 from jelly import setUnjellyableForClass, setUnjellyableForClassTree, unjellyableRegistry
 from jelly import Jellyable, Unjellyable, _Dummy
 from jelly import setInstanceState, getInstanceState
+
 # compatibility
 setCopierForClass = setUnjellyableForClass
 setCopierForClassTree = setUnjellyableForClassTree
