@@ -1448,12 +1448,18 @@ class NotificationClient(MSNEventBase):
         A default callback is added to the returned
         Deferred which updates the contacts attribute of
         the factory with the new contact information.
+        If you are adding a contact to the forward list
+        and you want to associate this contact with multiple
+        groups then you will need to call this method for each
+        group you would like to add them to, changing the groupID
+        parameter. The default callback will take care of updating
+        the group information on the factory's contact list.
 
         @param listType: (as defined by the *_LIST constants)
         @param userHandle: the user handle (passport) of the contact
                            that is being added
         @param groupID: the group ID for which to associate this contact
-                        with. (default 0 - no group). Groups are only
+                        with. (default 0 - default group). Groups are only
                         valid for FORWARD_LIST.
 
         @return: A Deferred, the callback for which will be called when
@@ -1486,7 +1492,12 @@ class NotificationClient(MSNEventBase):
         Used to remove a contact from the desired list.
         A default callback is added to the returned deferred
         which updates the contacts attribute of the factory
-        to reflect the new contact information.
+        to reflect the new contact information. If you are
+        removing from the forward list then you will need to
+        supply a groupID, if the contact is in more than one
+        group then they will only be removed from this group
+        and not the entire forward list, but if this is their
+        only group they will be removed from the whole list.
 
         @param listType: (as defined by the *_LIST constants)
         @param userHandle: the user handle (passport) of the
@@ -1514,8 +1525,14 @@ class NotificationClient(MSNEventBase):
             l = self.factory.contacts
             l.version = r[2]
             c = l.getContact(r[1])
-            c.removeFromList(r[0])
-            if c.lists == 0: l.remContact(c.userHandle)
+            group = r[3]
+            shouldRemove = 1
+            if group: # they may not have been removed from the list
+                c.groups.remove(group)
+                if c.groups: shouldRemove = 0
+            if shouldRemove:
+                c.removeFromList(r[0])
+                if c.lists == 0: l.remContact(c.userHandle)
             return r
         return d.addCallback(_cb)
 
