@@ -269,6 +269,12 @@ class _Wait(object):
             itimeout = itrial.ITimeout(timeout)
 
             resultSet = []
+            interrupted = []
+            def noticeInterrupt(failure):
+                failure.trap(KeyboardInterrupt)
+                interrupted.append(failure)
+                return failure
+            d.addErrback(noticeInterrupt)
             d.addBoth(resultSet.append)
 
             # TODO: refactor following to use spinWhile
@@ -283,6 +289,8 @@ class _Wait(object):
                         e = itimeout.excClass(itimeout.excArg)
                         raise e
                     reactor.iterate(0.01)
+            if interrupted:
+                interrupted[0].raiseException()
             return resultSet[0]
         finally:
             cls._active -= 1
@@ -317,19 +325,21 @@ def wait(d, timeout=DEFAULT_TIMEOUT, useWaitError=False):
         passing this flag (see below).  
 
     @param timeout: None indicates that we will wait indefinately, the default
-    is to wait 4.0 seconds.  
+        is to wait 4.0 seconds.  
     @type timeout: types.FloatType 
 
     @param useWaitError: The exception thrown is a
-    L{twisted.trial.util.WaitError}, which saves the original failure object or
-    objects in a list .failures, to aid in the retrieval of the original stack
-    traces.  The tradeoff is between wait() raising the original exception
-    *type* or being able to retrieve the original traceback reliably. (see
-    issue 769) 
+        L{twisted.trial.util.WaitError}, which saves the original failure object
+        or objects in a list .failures, to aid in the retrieval of the original
+        stack traces.  The tradeoff is between wait() raising the original
+        exception *type* or being able to retrieve the original traceback
+        reliably. (see issue 769) 
     @type useWaitError: boolean
     """
     try:
         r = _Wait.wait(d, timeout)
+    except KeyboardInterrupt:
+        raise
     except:
         #  it would be nice if i didn't have to armor this call like
         # this (with a blank except:, but we *are* calling user code 

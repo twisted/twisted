@@ -135,6 +135,25 @@ class TestMktemp(unittest.TestCase):
         failIf(os.path.exists(exp))
 
 
+class TestWaitInterrupt(unittest.TestCase):
+    def testKeyboardInterrupt(self):
+        # Test the KeyboardInterrupt is *not* caught by wait -- we want to allow
+        # users to Ctrl-C test runs.  And the use of the useWaitError should not
+        # matter in this case.
+        def raiseKeyInt(ignored):
+            raise KeyboardInterrupt, "Simulate user hitting Ctrl-C"
+
+        d = defer.Deferred()
+        d.addCallback(raiseKeyInt)
+        reactor.callLater(0, d.callback, True)
+        self.assertRaises(KeyboardInterrupt, util.wait, d, useWaitError=False)
+
+        d = defer.Deferred()
+        d.addCallback(raiseKeyInt)
+        reactor.callLater(0, d.callback, True)
+        self.assertRaises(KeyboardInterrupt, util.wait, d, useWaitError=True)
+        
+
 # glyph's contributed test
 # http://twistedmatrix.com/bugs/file317/failing.py
 
