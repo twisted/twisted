@@ -3,6 +3,10 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+"""
+The point of integration of application and authentication.
+"""
+
 
 from twisted.internet import defer
 from twisted.internet.defer import maybeDeferred
@@ -12,7 +16,10 @@ from zope import interface
 
 
 class IRealm(components.Interface):
-
+    """
+    The realm connects application-specific objects to the
+    authentication system.
+    """
     def requestAvatar(self, avatarId, mind, *interfaces):
         """Return avatar implementing one of the given interfaces.
 

@@ -10,6 +10,26 @@
 Here are services to run clients, servers and periodic services using
 the reactor.
 
+This module (dynamically) defines various Service subclasses that let
+you represent clients and servers in a Service hierarchy.
+
+They are as follows::
+
+  TCPServer, TCPClient,
+  UNIXServer, UNIXClient,
+  SSLServer, SSLClient,
+  UDPServer, UDPClient,
+  UNIXDatagramServer, UNIXDatagramClient,
+  MulticastServer
+
+These classes take arbitrary arguments in their constructors and pass
+them straight on to their respective reactor.listenXXX or
+reactor.connectXXX calls.
+
+For example, the following service starts a web server on port 8080:
+TCPServer(8080, server.Site(r)).  See the documentation for the
+reactor.listen/connect* methods for more information.
+
 API Stability: unstable
 
 Maintainer: U{Moshe Zadka<mailto:moshez@twistedmatrix.com>}
@@ -101,12 +121,6 @@ stop listening. See twisted.internet.interfaces for documentation
 on arguments to the reactor method.
 """,
 }
-
-# TCPServer TCPClient UNIXServer UNIXClient SSLServer SSLClient
-# UDPServer UDPClient UNIXDatagramServer UNIXDatagramClient
-# MulticastServer
-#
-# This message brought to you by the Twisted Committee for Better Grepping
 
 import new
 for tran in 'Generic TCP UNIX SSL UDP UNIXDatagram Multicast'.split():
