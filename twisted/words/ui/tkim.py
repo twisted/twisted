@@ -2,7 +2,7 @@ from Tkinter import *
 import tkFileDialog
 import SimpleDialog
 from twisted.internet import tkinternet #, tcp
-from twisted.spread.ui import tkutil
+from twisted.spread.ui import tkutil, tktree
 from twisted.words.ui import im, gateways
 #from twisted.protocols import telnet
 import time, os, string
@@ -255,6 +255,7 @@ class ContactList(Toplevel):
         self.im=imclient
         self.files={}
         self.directories={}
+        self.gateways={}
 
         menu=Menu(self)
         self.config(menu=menu)
@@ -269,10 +270,12 @@ class ContactList(Toplevel):
 #        myim.add_command(label="__reload__",command=self.reload)
 
         sb=Scrollbar(self)
-        self.list=tkutil.CList(self,["Gateway","Username","Status"],height=2,yscrollcommand=sb.set)
-        self.list.grid(column=0,row=0,sticky=N+E+S+W)
+        #self.list=tkutil.CList(self,["Gateway","Username","Status"],height=2,yscrollcommand=sb.set)
+        #self.list.grid(column=0,row=0,sticky=N+E+S+W)
+        self.box=tktree.ListboxTree(self,yscrollcommand=sb.set)
+        self.box.grid(column=0,row=0,sticky=N+E+S+W)
         sb.grid(column=1,row=0,sticky=N+S)
-        sb.config(command=self.list.yview)
+        sb.config(command=self.box.yview)
 
         f=Frame(self)
         Button(f,text="Add Contact",command=self.addContact).grid(column=0,row=1)
@@ -313,38 +316,41 @@ class ContactList(Toplevel):
         self.list.delete(ACTIVE)
         self.im.removeContact(self.im.gateways[gatewayname],contact)
 
+    def getGateway(self,gateway):
+        g=self.gateways.get(gateway)
+        if g==None:
+            g=GatewayNode(gateway)
+            self.gateways[gateway]=g
+            self.box.addRoot(g)
+        return g
+
     def removeGateway(self,gateway):
-        users=self.list.get(0,END)
-        d=[]
-        for u in range(len(users)):
-            if users[u][0]==gateway.name:
-                d.insert(0,u)
-        for u in d:
-            self.list.delete(u)
+        g=self.getGateway(gateway)
+        self.box.remove(g.item)
 
     def changeContactStatus(self,gateway,contact,status):
-        users=self.list.get(0,END)
-        row=END
-        for u in range(len(users)):
-            if users[u][0]==gateway.name and users[u][1]==contact:
-                row=u
-                self.list.delete(row)
-                break
-        self.list.insert(row,[gateway.name,contact,status])
+        g=self.getGateway(gateway)
+        if status=="Offline":
+            g.online.delUser(contact)
+            g.offline.addUser(contact,status)
+        else:
+            if g.offline.hasUser(contact):
+                g.offline.delUser(contact)
+                g.online.addUser(contact,status)
+            else:
+                g.online.updateStatus(contact,status)
 
     def changeContactName(self,gateway,contact,newName):
-        users=self.list.get(0,END)
-        row=END
-        for u in range(len(users)):
-            if users[u][0]==gateway.name and users[u][1]==contact:
-                row=u
-                self.list.delete(row)
-                self.list.insert(row,[gateway.name,newName,users[u][2]])
+        g=self.getGateway(gateway)
+        g.online.updateName(contact,newName)
 
     def sendMessage(self):
-        gatewayname,user,state=self.list.get(ACTIVE)
+        user=self.box.curselection()
+        if not user: return
+        username=user.node.user
+        gateway=user.parent.parent.node.gateway
         try:
-            self.im.conversationWith(self.im.gateways[gatewayname],user)
+            self.im.conversationWith(gateway,username)
         except KeyError:
             pass
 
@@ -413,6 +419,65 @@ class ContactList(Toplevel):
         window.destroy()
         del self.files[user+filename]
 
+class GatewayNode(tktree.Node):
+    def __init__(self,gateway):
+        tktree.Node.__init__(self)
+        self.gateway=gateway
+        self.online=StatusNode("Online")
+        self.offline=StatusNode("Offline")
+    def getName(self): return self.gateway.name
+    def isExpandable(self): return 1
+    def getSubNodes(self):
+        return [self.online,self.offline]
+
+class StatusNode(tktree.Node):
+    def __init__(self,type):
+        tktree.Node.__init__(self)
+        self.type=type
+        self.users=[]
+    def getName(self): return self.type
+    def isExpandable(self): return 1
+    def getSubNodes(self):
+        u=[]
+        for user,status in self.users:
+            u.append(UserNode(user,status))
+        return u
+    def hasUser(self,user):
+        for u,s in self.users:
+            if u==user: return 1
+        return 0
+    def addUser(self,user,status):
+        self.users.append([user,status])
+        self.updateMe()
+    def delUser(self,user):
+        for u,s in self.users:
+            if u==user:
+                del self.users[self.users.index([u,s])]
+                self.updateMe()
+    def updateStatus(self,user,status):
+        for i in range(len(self.users)):
+            u,s=self.users[i]
+            if u==user:
+                self.users[i]=[user,status]
+                self.updateMe()
+    def updateName(self,olduser,newuser):
+        for i in range(len(self.users)):
+            u,s=self.users[i]
+            if u==olduser:
+                self.users[i]=[newuser,s]
+                self.updateMe()
+
+class UserNode(tktree.Node):
+    def __init__(self,user,status):
+        tktree.Node.__init__(self)
+        self.user=user
+        if status!="Offline" and status!="Online":
+            self.name="%s (%s)"%(user,status)
+        else:
+            self.name=user
+    def getName(self): return self.name
+    def isExpandable(self): return 0
+            
 class GroupSession(Toplevel):
     def __init__(self, im, name, gateway, **params):
         apply(Toplevel.__init__, (self,), params)
