@@ -3,6 +3,9 @@ from twisted.internet import protocol
 
 import insults
 
+class CharacterAttribute:
+    pass
+
 # XXX - need to support scroll regions and scroll history
 class TerminalBuffer(protocol.Protocol):
     width = 80
@@ -17,6 +20,9 @@ class TerminalBuffer(protocol.Protocol):
         for b in bytes:
             self.insertAtCursor(b)
 
+    def _currentCharacterAttributes(self):
+        return CharacterAttribute()
+
     def insertAtCursor(self, b):
         if b == '\r':
             self.x = 0
@@ -24,22 +30,25 @@ class TerminalBuffer(protocol.Protocol):
             self.x = 0
             self._scrollDown()
         if b != '\r' and b != '\n':
-            self.lines[self.y][self.x] = b
+            self.lines[self.y][self.x] = (b, self._currentCharacterAttributes())
             self.x += 1
+
+    def _emptyLine(self, width):
+        return [(self.fill, CharacterAttribute()) for i in xrange(width)]
 
     def _scrollDown(self):
         self.y += 1
         if self.y >= self.height:
             self.y -= 1
             del self.lines[0]
-            self.lines.append(list(self.fill * self.width))
+            self.lines.append(self._emptyLine(self.width))
 
     def _scrollUp(self):
         self.y -= 1
         if self.y < 0:
             self.y = 0
             del self.lines[-1]
-            self.lines.insert(0, list(self.fill * self.width))
+            self.lines.insert(0, self._emptyLine(self.width))
 
     def cursorUp(self, n=1):
         self.y = max(0, self.y - n)
@@ -131,45 +140,45 @@ class TerminalBuffer(protocol.Protocol):
             print 'setting attr', a
 
     def eraseLine(self):
-        self.lines[self.y] = list(self.fill * self.width)
+        self.lines[self.y] = self._emptyLine(self.width)
 
     def eraseToLineEnd(self):
         width = self.width - self.x
-        self.lines[self.y][self.x:] = list(self.fill * width)
+        self.lines[self.y][self.x:] = self._emptyLine(width)
 
     def eraseToLineBeginning(self):
-        self.lines[self.y][:self.x + 1] = list(self.fill * (self.x + 1))
+        self.lines[self.y][:self.x + 1] = self._emptyLine(self.x + 1)
 
     def eraseDisplay(self):
-        self.lines = [[self.fill] * self.width for i in xrange(self.height)]
+        self.lines = [self._emptyLine(self.width) for i in xrange(self.height)]
 
     def eraseToDisplayEnd(self):
         self.eraseToLineEnd()
         height = self.height - self.y
-        self.lines[self.y + 1:] = [list(self.fill * self.width) for i in range(height)]
+        self.lines[self.y + 1:] = [self._emptyLine(self.width) for i in range(height)]
 
     def eraseToDisplayBeginning(self):
         self.eraseToLineBeginning()
-        self.lines[:self.y] = [list(self.fill * self.width) for i in range(self.y)]
+        self.lines[:self.y] = [self._emptyLine(self.width) for i in range(self.y)]
 
     def deleteCharacter(self, n=1):
         del self.lines[self.y][self.x:self.x+n]
-        self.lines[self.y].extend(self.fill * min(self.width - self.x, n))
+        self.lines[self.y].extend(self._emptyLine(min(self.width - self.x, n)))
 
     def insertLine(self, n=1):
-        self.lines[self.y:self.y] = [list(self.fill * self.width) for i in range(n)]
+        self.lines[self.y:self.y] = [self._emptyLine(self.width) for i in range(n)]
         del self.lines[self.height:]
 
     def deleteLine(self, n=1):
         del self.lines[self.y:self.y+n]
-        self.lines.extend([list(self.fill * self.width) for i in range(n)])
+        self.lines.extend([self._emptyLine(self.width) for i in range(n)])
 
     def reportCursorPosition(self):
         return (self.x, self.y)
 
     def reset(self):
+        self.eraseDisplay()
         self.home = insults.Vector(0, 0)
-        self.lines = [[self.fill] * self.width for i in xrange(self.height)]
         self.modes = {}
         self.numericKeypad = 'app'
         self.activeCharset = insults.G0
@@ -181,4 +190,4 @@ class TerminalBuffer(protocol.Protocol):
             insults.G3: insults.CS_ALTERNATE_SPECIAL}
 
     def __str__(self):
-        return '\n'.join([''.join(L) for L in self.lines])
+        return '\n'.join([''.join([ch for (ch, attr) in L]) for L in self.lines])

@@ -57,6 +57,10 @@ class BufferTestCase(unittest.TestCase):
         self.term.cursorBackward(1)
         self.assertEquals(self.term.reportCursorPosition(), (0, 0))
 
+    def testCursorPositioning(self):
+        self.term.cursorPosition(3, 9)
+        self.assertEquals(self.term.reportCursorPosition(), (3, 9))
+
     def testSimpleWriting(self):
         s = "Hello, world."
         self.term.write(s)
@@ -101,6 +105,30 @@ class BufferTestCase(unittest.TestCase):
         self.assertEquals(self.term.reportCursorPosition(), (0, 2))
         self.term.reverseIndex()
         self.assertEquals(self.term.reportCursorPosition(), (0, 1))
+
+    def testNextLine(self):
+        self.term.nextLine()
+        self.assertEquals(self.term.reportCursorPosition(), (0, 1))
+        self.term.cursorForward(5)
+        self.assertEquals(self.term.reportCursorPosition(), (5, 1))
+        self.term.nextLine()
+        self.assertEquals(self.term.reportCursorPosition(), (0, 2))
+
+    def testSaveCursor(self):
+        self.term.cursorDown(5)
+        self.term.cursorForward(7)
+        self.assertEquals(self.term.reportCursorPosition(), (7, 5))
+        self.term.saveCursor()
+        self.term.cursorDown(7)
+        self.term.cursorBackward(3)
+        self.assertEquals(self.term.reportCursorPosition(), (4, 12))
+        self.term.restoreCursor()
+        self.assertEquals(self.term.reportCursorPosition(), (7, 5))
+
+    def testSingleShifts(self):
+        self.term.singleShift2()
+        self.term.write('Hello')
+
 
 class Loopback(unittest.TestCase):
     def setUp(self):
