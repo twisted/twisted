@@ -162,7 +162,7 @@ class PosixReactorBase(ReactorBase):
         try:
             import signal
         except ImportError:
-            log.msg("Warning: signal module unavailabe -- not installing signal handlers.")
+            log.msg("Warning: signal module unavailable -- not installing signal handlers.")
             return
 
         if signal.getsignal(signal.SIGINT) == signal.default_int_handler:
