@@ -296,6 +296,7 @@ class Request:
     producer = None
     finished = 0
     code = OK
+    code_message = RESPONSES[OK]
     method = "(no method yet)"
     clientproto = "(no clientproto yet)"
     uri = "(no uri yet)"
@@ -498,8 +499,7 @@ class Request:
             version = self.clientproto
             if version != "HTTP/0.9":
                 l = []
-                message = RESPONSES.get(self.code, "Unknown Status")
-                l.append('%s %s %s\r\n' % (version, self.code, message))
+                l.append('%s %s %s\r\n' % (version, self.code, self.code_message))
                 # if we don't have a content length, we sent data in chunked mode,
                 # so that we can support pipelining in persistent connections.
                 if version == "HTTP/1.1" and self.headers.get('content-length', None) is None:
@@ -549,10 +549,14 @@ class Request:
             cookie = cookie +"; Secure"
         self.cookies.append(cookie)
 
-    def setResponseCode(self, code):
+    def setResponseCode(self, code, message=None):
         """Set the HTTP response code.
         """
         self.code = code
+        if message:
+            self.code_message = message
+        else:
+            self.code_message = RESPONSES.get(code, "Unknown Status")
     
     def setHeader(self, k, v):
         """Set an outgoing HTTP header.
