@@ -15,6 +15,24 @@
 to Twisted's Deferred abstraction, which symbolises a 'promised' result and
 which can pass an eventual result to handler functions.</p>
 
+<p>
+Many computing tasks take some time to complete, and there are two reasons
+why a task might take some time:
+</p>
+
+<ol>
+<li>it is computationally intensive (for example factorising large numbers)
+and requires a certain amount of CPU time to calculate the answer; or</li>
+<li>it is not computationally intensive but has to wait for data to be
+available to produce a result.</li>
+</ol>
+
+<p>
+It is the second class of problem &mdash; non-computationally intensive tasks
+that involve an appreciable delay &mdash; that Deferreds are designed to help solve.
+Functions that wait on hard drive access, database access,
+and network access all fall into this class, although the time delay varies.
+</p>
 <h3>Waiting for answers</h3>
 
 <p>A fundamental feature of network programming is that of waiting for data.
@@ -80,6 +98,28 @@ sequence? The advantage is that while the email sending function can't do the
 next part of its job until the connection is open, the rest of the program can
 do other tasks, like begin the opening sequence for other email connections.
 Hence, the entire program is not waiting for the connection.</p>
+
+<h2>The Problem that Deferreds Solve</h2>
+
+<p>
+Deferreds are designed to enable Twisted programs to wait for data without
+hanging until that data arrives.
+</p>
+
+<p>
+The basic idea behind Deferreds, and other solutions to this
+problem, is to keep the CPU as active as possible.
+If one task is waiting on data, rather than have the CPU (and the program!)
+idle waiting for that data (a process normally called &quot;blocking&quot;), the program performs other operations in the
+meantime, and waits for some signal that data is ready to be processed before
+returning to that process.
+</p>
+
+<p>
+In Twisted, a function signals to the calling function that it is waiting by
+returning a Deferred. When the data is available, the program activates
+the callbacks on that Deferred to process the data.
+</p>
 
 <h2>Deferreds - a signal that data is yet to come</h2>
 
@@ -225,83 +265,14 @@ deferred.addErrback(errorHandler)
 reactor.run()
 </pre>
 
-<h3>What Deferreds don't do</h3>
 
-<p><em>Deferreds do not make the code magically not block.</em></p>
-
-<p>Let's take this function as an example:</p>
-
-<pre class="python">
-from twisted.internet import defer
-    
-TARGET = 10000
-
-def largeFibonnaciNumber():
-    # create a Deferred object to return:
-    d = defer.Deferred()
-
-    # calculate the ten thousandth Fibonnaci number
-
-    first = 0
-    second = 1
-
-    for i in xrange(TARGET - 1):
-        new = first + second
-        first = second
-        second = new
-        if i % 100 == 0:
-            print "Progress: calculating the %dth Fibonnaci number" % i
-
-    # give the Deferred the answer to pass to the callbacks:
-    d.callback(second)
-
-    # return the Deferred with the answer:
-    return d
-
-import time
-
-timeBefore = time.time()
-
-# call the function and get our Deferred
-d = largeFibonnaciNumber()
-
-timeAfter = time.time()
-
-print "Total time taken for largeFibonnaciNumber call: %0.3f seconds" % (timeAfter - timeBefore)
-
-# add a callback to it to print the number
-
-def printNumber(number):
-    print "The %dth Fibonacci number is %d" % (TARGET, number)
-
-print "Adding the callback now."
-
-d.addCallback(printNumber)
-</pre>
-
-<p>You will notice that despite creating a Deferred in the
-<code>largeFibonnaciNumber</code> function, these things happened:</p>
-<ul>
-<li>the &quot;Total time taken for largeFibonnaciNumber call&quot; output
-shows that the function did not return immediately as asynchronous functions
-are expected to do; and</li>
-<li>rather than the callback being added before the result was available and
-called after the result is available, it isn't even added until after the
-calculation has been completed.</li>
-</ul>
-
-<p> The function completed its calculation before returning, blocking the
-process until it had finished, which is exactly what asynchronous functions
-are not meant to do.  Deferreds are not a non-blocking talisman: they are a
-signal for asynchronous functions to <em>use</em> to pass results onto
-callbacks, but using them does not guarantee that you have an asynchronous
-function.</p>
-
-<h2>Further reading</h2>
+<h2>See also</h2>
 
 <ol>
-<li><a href="defer.xhtml">Deferred Reference</a>, a more complete guide to
+<li><a href="defer.xhtml">Using Deferreds</a>, a more complete guide to
 using Deferreds, including Deferred chaining.</li>
+<li><a href="gendefer.xhtml">Generating Deferreds</a>, a guide to creating
+Deferreds and firing their callback chains</li>
 </ol>
 
 </body></html>

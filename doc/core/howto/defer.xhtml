@@ -4,132 +4,35 @@
 
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-<title>Deferreds</title>
+<title>Deferred Reference</title>
 </head>
 
 <body>
 
-<h1>Deferreds</h1>
+<h1>Deferred Reference</h1>
+
+<h2>Assumed knowledge</h2>
+
+<p>This document assumes that you are familiar with the basic principle that
+the Twisted framework is structured around: asynchronous, callback-based
+programming, where instead of having blocking code in your program or using
+threads to run blocking code, you have functions that return immediately and
+then begin a callback chain when data is available.</p>
+
+<p>See these documents for more information:</p>
+
+<ul>
+<li><a href="async.xhtml">Asynchronous Programming with Twisted</a></li>
+</ul>
 
 <h2>Introduction</h2>
 
-<p>
-Twisted is a framework that allows programmers to develop <a
-href="async.xhtml">asynchronous</a> networked programs. <code
-class="API">twisted.internet.defer.Deferred</code> objects are one of the key
-concepts that you should understand in order to develop asynchronous code that
-uses the Twisted framework: they are a signal to the calling function that a
-result is pending.
-</p>
+<p>This document is a guide to the behviour of the <code
+class="API">twisted.internet.defer.Deferred</code> object, and to various
+ways you can use them when they are returned by functions.</p>
 
-<p>
-This HOWTO first describes the problem that Deferreds solve: that of managing
-tasks that are waiting for data without blocking. It then illustrates the
-difference between blocking Python code, and non-blocking code which returns a
-Deferred; describes Deferreds in more details; describes the details of the
-class interfaces; and finally describes DeferredList.
-</p>
 
-<h2>The Problem that Deferreds Solve</h2>
-
-<p>
-Deferreds are designed to enable Twisted programs to wait for data without
-hanging until that data arrives.
-</p>
-
-<p>
-Many computing tasks take some time to complete, and there are two reasons
-why a task might take some time:
-</p>
-
-<ol>
-<li>it is computationally intensive (for example factorising large numbers)
-and requires a certain amount of CPU time to calculate the answer; or</li>
-<li>it is not computationally intensive but has to wait for data to be
-available to produce a result.</li>
-</ol>
-
-<p>
-It is the second class of problem &mdash; non-computationally intensive tasks
-that involve an appreciable delay &mdash; that Deferreds are designed to help solve.
-Functions that wait on hard drive access, database access,
-and network access all fall into this class, although the time delay varies.
-</p>
-
-<p>
-The basic idea behind Deferreds, and other solutions to this
-problem, is to keep the CPU as active as possible.
-If one task is waiting on data, rather than have the CPU (and the program!)
-idle waiting for that data (a process normally called &quot;blocking&quot;), the program performs other operations in the
-meantime, and waits for some signal that data is ready to be processed before
-returning to that process.
-</p>
-
-<p>
-In Twisted, a function signals to the calling function that it is waiting by
-returning a Deferred. When the data is available, the program activates
-the callbacks on that Deferred to process the data.
-</p>
-
-<h2>The Context</h2>
-
-<h3>Dealing with Blocking Code</h3>
-
-<p>When coding I/O based programs - networking code, databases,
-file access - there are many APIs that are blocking, and many
-methods where the common idiom is to block until a result is
-gotten.</p>
-
-<pre class="python">
-class Getter:
-    def getData(self, x):
-        # imagine I/O blocking code here
-        print "blocking"
-        import time
-        time.sleep(4)
-        return x * 3
-
-g = Getter()
-print g.getData(3)
-</pre>
-
-<h3>Don't Call Us, We'll Call You</h3>
-
-<p>Twisted cannot support blocking calls in most of its code, since it is
-single threaded, and event based.  The solution for this issue is to refactor
-the code, so that instead of blocking until data is available, we return
-immediately, and use a callback to notify the requester once the data
-eventually arrives.</p>
-
-<pre class="python">
-from twisted.internet import reactor
-
-class Getter:
-    def getData(self, x, callback):
-        # this won't block
-        reactor.callLater(2, callback, x * 3)
-
-def printData(d):
-    print d
-
-g = Getter()
-g.getData(3, printData)
-
-# startup the event loop, exiting after 4 seconds
-reactor.callLater(4, reactor.stop);
-reactor.run()
-</pre>
-
-<p>There are several things missing in this simple example.  There is no way
-to know if the data never comes back; no mechanism for handling errors.  The
-example does not handle multiple callback functions, nor does it give a
-method to merge arguments before and after execution.  Further, there is no
-way to distinguish between different calls to gotData from different
-producer objects. <code>Deferred</code> solves these problems, by creating 
-a single, unified way to handle callbacks and errors from deferred
-execution.</p>
-
-<h2>Deferreds</h2>
+<h2>Callbacks</h2>
 
 <p>A <code class="API">twisted.internet.defer.Deferred</code> is a promise that
 a function will at some point have a result.  We can attach callback functions
@@ -159,18 +62,16 @@ d.addCallback(printData)
 reactor.callLater(4, reactor.stop); reactor.run()
 </pre>
 
-<p><em>Deferreds do not make the code magically not block.</em> Once you have
-rewritten your code to not block, Deferreds give you a nice way to build
-an interface to that code.</p>
+<h3>Multiple callbacks</h3>
 
-<p>As we said, multiple callbacks can be added to a Deferred.  The first
-callback in the Deferred's callback chain will be called with the result, the
-second with the result of the first callback, and so on. Why do we need this?
-Well, consider a Deferred returned by twisted.enterprise.adbapi - the result of
-a SQL query. A web widget might add a callback that converts this result into
-HTML, and pass the Deferred onwards, where the callback will be used by twisted
-to return the result to the HTTP client. The callback chain will be bypassed
-in case of errors or exceptions.</p>
+<p>Multiple callbacks can be added to a Deferred.  The first callback in the
+Deferred's callback chain will be called with the result, the second with the
+result of the first callback, and so on. Why do we need this?  Well, consider
+a Deferred returned by twisted.enterprise.adbapi - the result of a SQL query.
+A web widget might add a callback that converts this result into HTML, and
+pass the Deferred onwards, where the callback will be used by twisted to
+return the result to the HTTP client. The callback chain will be bypassed in
+case of errors or exceptions.</p>
 
 <pre class="python">
 from twisted.internet import reactor, defer
@@ -269,26 +170,7 @@ reactor.callLater(4, reactor.stop); reactor.run()
 </ol>
 <br hlint="off" clear="all" />
 
-
-<h3>More about callbacks</h3>
-
-<p>You add multiple callbacks to a Deferred:</p>
-<pre class="python">
-g = Getter()
-d = g.getResult(3)
-d.addCallback(processResult)
-d.addCallback(printResult)
-</pre>
-
-<p>Each callback feeds its return value into the next callback (callbacks will
-be called in the order you add them). Thus in the previous example, <code
-class="python">processResult</code>'s return value will be passed to <code
-class="python">printResult</code>, instead of the value initially passed into
-the callback. This gives you a flexible way to chain results together, possibly
-modifying values along the way (for example, you may wish to pre-process
-database query results).</p>
-
-<h3>More about errbacks</h3>
+<h2>Errbacks</h2>
 
 <p>Deferred's error handling is modeled after Python's
 exception handling. In the case that no errors occur, all the
@@ -396,202 +278,6 @@ from twisted.python import log
 d.addErrback(log.err)
 </pre>
 
-<h2>Class Overview</h2>
-
-<p>This is the overview API reference for Deferred. It is not meant to be a
-substitute for the docstrings in the Deferred class, but can provide guidelines
-for its use.</p>
-
-<h3>Basic Callback Functions</h3>
-
-<ul>
-  <li>
-  <code class="py-prototype">addCallbacks(self, callback[, errback, callbackArgs,
-  errbackArgs, errbackKeywords, asDefaults])</code> 
-  
-  <p>This is the method you will use to interact
-  with Deferred. It adds a pair of callbacks <q>parallel</q> to
-  each other (see diagram above) in the list of callbacks
-  made when the Deferred is called back to. The signature of
-  a method added using addCallbacks should be
-  <code>myMethod(result, *methodArgs,
-  **methodKeywords)</code>. If your method is passed in the
-  callback slot, for example, all arguments in the tuple
-  <code>callbackArgs</code> will be passed as
-  <code>*methodArgs</code> to your method.</p>
-  
-  <p>There are various convenience methods that are
-  derivative of addCallbacks. I will not cover them in detail
-  here, but it is important to know about them in order to
-  create concise code.</p>
-  
-  <ul>
-    <li>
-    <code class="py-prototype">addCallback(callback, *callbackArgs,
-    **callbackKeywords)</code> 
-    
-    <p>Adds your callback at the next point in the
-    processing chain, while adding an errback that will
-    re-raise its first argument, not affecting further
-    processing in the error case.</p>
-
-    <p>Note that, while addCallbacks (plural) requires the arguments to be
-    passed in a tuple, addCallback (singular) takes all its remaining
-    arguments as things to be passed to the callback function. The reason is
-    obvious: addCallbacks (plural) cannot tell whether the arguments are
-    meant for the callback or the errback, so they must be specifically
-    marked by putting them into a tuple. addCallback (singular) knows that
-    everything is destined to go to the callback, so it can use Python's
-    <q>*</q> and <q>**</q> syntax to collect the remaining arguments.</p>
-    
-    </li>
-    
-    <li>
-    <code class="py-prototype">addErrback(errback, *errbackArgs,
-    **errbackKeywords)</code> 
-    
-    <p>Adds your errback at the next point in the
-    processing chain, while adding a callback that will
-    return its first argument, not affecting further
-    processing in the success case.</p>
-    </li>
-    
-    <li>
-    <code class="py-prototype">addBoth(callbackOrErrback,
-    *callbackOrErrbackArgs,
-    **callbackOrErrbackKeywords)</code> 
-    
-    <p>This method adds the same callback into both sides
-    of the processing chain at both points. Keep in mind
-    that the type of the first argument is indeterminate if
-    you use this method! Use it for <code>finally:</code>
-    style blocks.</p>
-    </li>
-  </ul> </li>
-  
-  <li>
-  <code class="py-prototype">callback(result)</code> 
-  
-  <p>Run success callbacks with the given result. <em>This
-  can only be run once.</em> Later calls to this or
-  <code>errback</code> will raise <code
-  class="API">twisted.internet.defer.AlreadyCalledError</code>.
-  If further callbacks or errbacks are added after this
-  point, addCallbacks will run the callbacks immediately.</p>
-  </li>
-  
-  <li>
-  <code class="py-prototype">errback(failure)</code> 
-  
-  <p>Run error callbacks with the given failure. <em>This can
-  only be run once.</em> Later calls to this or
-  <code>callback</code> will raise <code
-  class="API">twisted.internet.defer.AlreadyCalledError</code>.
-  If further callbacks or errbacks are added after this
-  point, addCallbacks will run the callbacks immediately.</p>
-  </li>
-</ul>
-
-
-
-<h3>Chaining Deferreds</h3>
-
-<p>If you need one Deferred to wait on another, all you need to do is return a
-Deferred from a method added to addCallbacks.  Specifically, if you return
-Deferred B from a method added to Deferred A using A.addCallbacks, Deferred A's
-processing chain will stop until Deferred B's .callback() method is called; at
-that point, the next callback in A will be passed the result of the last
-callback in Deferred B's processing chain at the time.</p>
-
-<p>If this seems confusing, don't worry about it right now -- when you run into
-a situation where you need this behavior, you will probably recognize it
-immediately and realize why this happens.  If you want to chain deferreds
-manually, there is also a convenience method to help you.</p>
-
-<ul>
-  <li>
-  <code class="py-prototype">chainDeferred(otherDeferred)</code> 
-  
-  <p>Add <code>otherDeferred</code> to the end of this
-  Deferred's processing chain. When self.callback is called,
-  the result of my processing chain up to this point will be
-  passed to <code>otherDeferred.callback</code>. Further
-  additions to my callback chain do not affect
-  <code>otherDeferred</code></p>
-  <p>This is the same as <code
-  class="python">self.addCallbacks(otherDeferred.callback,
-  otherDeferred.errback)</code></p>
-  </li>
-</ul>
-    
-<h3>Automatic Error Conditions</h3>
-
-<ul>
-  <li>
-  <code class="py-prototype">setTimeout(seconds[, timeoutFunc])</code> 
-  
-  <p>Set a timeout function to be triggered if this Deferred
-  is not called within that time period. By default, this
-  will raise a TimeoutError after <code>seconds</code>.</p>
-  </li>
-</ul>
-
-<h3>A Brief Interlude: Technical Details</h3>
-
-<p>Deferreds greatly simplify the process of writing asynchronous code by
-providing a standard for registering callbacks, but there are some subtle and
-sometimes confusing rules that you need to follow if you are going to use
-them. This mostly applies to people who are writing new systems that use
-Deferreds internally, and not writers of applications that just add callbacks
-to Deferreds produced and processed by other systems. Nevertheless, it is good
-to know.</p>
-
-<p>Deferreds are one-shot. A generalization of the Deferred API to generic
-event-sources is in progress -- watch this space for updates! -- but Deferred
-itself is only for events that occur once. You can only call
-<code>Deferred.callback</code> or <code>Deferred.errback</code> once. The
-processing chain continues each time you add new callbacks to an
-already-called-back-to Deferred.</p>
-
-<p>The important consequence of this is that <strong>sometimes, addCallbacks
-will call its argument synchronously, and sometimes it will not</strong>. In
-situations where callbacks modify state, it is highly desirable for the chain
-of processing to halt until all callbacks are added. For this, it is possible
-to <code>pause</code> and <code>unpause</code>
-a Deferred's processing chain while you are adding lots of callbacks.</p>
-
-<p>Be careful when you use these methods! If you <code>pause</code> a Deferred,
-it is <em>your</em> responsibility to make sure that you unpause it; code that
-calls <code>callback</code> or <code>errback</code> should
-<strong>never</strong> call <code>unpause</code>, as this would negate its
-usefulness!</p>
-
-<h3>Advanced Processing Chain Control</h3>
-
-<ul>
-  <li>
-  <code class="py-prototype">pause()</code> 
-  
-  <p>Cease calling any methods as they are added, and do not
-  respond to <code>callback</code>, until
-  <code>self.unpause()</code> is called.</p>
-  </li>
-  
-  <li>
-  <code class="py-prototype">unpause()</code> 
-  
-  <p>If <code>callback</code> has been called on this
-  Deferred already, call all the callbacks that have been
-  added to this Deferred since <code>pause</code> was
-  called.</p>
-  
-  <p>Whether it was called or not, this will put this
-  Deferred in a state where further calls to
-  <code>addCallbacks</code> or <code>callback</code> will
-  work as normal.</p>
-  </li>
-</ul>
-
 <h2>Handling either synchronous or asynchronous results</h2>
 <p>
 In some applications, there are functions that might be either asynchronous or
@@ -638,10 +324,8 @@ Here is an example of a synchronous user authentication function that might be
 passed to <code>authenticateUser</code>:
 </p>
 
-<pre class="python">
-def synchronousIsValidUser(d, user):
-    return user in ["Alice", "Angus", "Agnes"]
-</pre>
+<a href="listings/deferred/synch-validation.py"
+class="py-listing">synch-validation.py</a>
 
 <p>
 However, here's an <code>asynchronousIsValidUser</code> function that returns
@@ -684,40 +368,9 @@ Now <code>isValidUser</code> could be either <code>synchronousIsValidUser</code>
 <code>asynchronousIsValidUser</code>.
 </p>
 
-<h3>Returning a Deferred from synchronous functions</h3>
-
-<p>
-An alternative is for
-<code>authenticateUser</code> to require that the
-implementation of <code>isValidUser</code> return a Deferred:
-</p>
-
-<pre class="python">
-def printResult(result):
-    if result:
-        print "User is authenticated"
-    else:
-        print "User is not authenticated"
-
-def authenticateUser(isValidUser, user):
-    d = isValidUser(user)
-    d.addCallback(printResult)
-</pre>
-<p>
-In this case, the author
-of <code>synchronousIsValidUser</code> would use <code class="API"
-base="twisted.internet">defer.succeed</code> to return a fired Deferred which
-will call the first callback with <code>result</code>, rather than returning
-the result itself:
-</p>
-
-<pre class="python">
-from twisted.internet import defer
-
-def immediateIsValidUser(d, user):
-    result = user in ["Alice", "Angus", "Agnes"]
-    return defer.succeed(result)
-</pre>
+<p>It is also possible to modify <code>synchronousIsValidUser</code> to return
+a Deferred, see <a href="gendefer.xhtml">Generating Deferreds</a> for more
+information.</p>
 
 <h2>DeferredList</h2>
 
@@ -830,6 +483,126 @@ the Deferreds it contains without needing to add extra errbacks<span
 class="footnote">Unless of course a later callback starts a fresh error &mdash;
 but as we've already noted, adding callbacks to a Deferred after its used in a
 DeferredList is confusing and usually avoided.</span>.</p>
+
+<a name="class"></a>
+
+<h2>Class Overview</h2>
+
+<p>This is an overview API reference for Deferred from the point of using a
+Deferred returned by a function. It is not meant to be a
+substitute for the docstrings in the Deferred class, but can provide guidelines
+for its use.</p>
+
+<p>There is a parallel overview of functions used by the Deferred's
+<em>creator</em> in <a href="gendefer.xhtml#class">Generating Deferreds</a>.</p>
+
+<h3>Basic Callback Functions</h3>
+
+<ul>
+  <li>
+  <code class="py-prototype">addCallbacks(self, callback[, errback, callbackArgs,
+  errbackArgs, errbackKeywords, asDefaults])</code> 
+  
+  <p>This is the method you will use to interact
+  with Deferred. It adds a pair of callbacks <q>parallel</q> to
+  each other (see diagram above) in the list of callbacks
+  made when the Deferred is called back to. The signature of
+  a method added using addCallbacks should be
+  <code>myMethod(result, *methodArgs,
+  **methodKeywords)</code>. If your method is passed in the
+  callback slot, for example, all arguments in the tuple
+  <code>callbackArgs</code> will be passed as
+  <code>*methodArgs</code> to your method.</p>
+  
+  <p>There are various convenience methods that are
+  derivative of addCallbacks. I will not cover them in detail
+  here, but it is important to know about them in order to
+  create concise code.</p>
+  
+  <ul>
+    <li>
+    <code class="py-prototype">addCallback(callback, *callbackArgs,
+    **callbackKeywords)</code> 
+    
+    <p>Adds your callback at the next point in the
+    processing chain, while adding an errback that will
+    re-raise its first argument, not affecting further
+    processing in the error case.</p>
+
+    <p>Note that, while addCallbacks (plural) requires the arguments to be
+    passed in a tuple, addCallback (singular) takes all its remaining
+    arguments as things to be passed to the callback function. The reason is
+    obvious: addCallbacks (plural) cannot tell whether the arguments are
+    meant for the callback or the errback, so they must be specifically
+    marked by putting them into a tuple. addCallback (singular) knows that
+    everything is destined to go to the callback, so it can use Python's
+    <q>*</q> and <q>**</q> syntax to collect the remaining arguments.</p>
+    
+    </li>
+    
+    <li>
+    <code class="py-prototype">addErrback(errback, *errbackArgs,
+    **errbackKeywords)</code> 
+    
+    <p>Adds your errback at the next point in the
+    processing chain, while adding a callback that will
+    return its first argument, not affecting further
+    processing in the success case.</p>
+    </li>
+    
+    <li>
+    <code class="py-prototype">addBoth(callbackOrErrback,
+    *callbackOrErrbackArgs,
+    **callbackOrErrbackKeywords)</code> 
+    
+    <p>This method adds the same callback into both sides
+    of the processing chain at both points. Keep in mind
+    that the type of the first argument is indeterminate if
+    you use this method! Use it for <code>finally:</code>
+    style blocks.</p>
+    </li>
+  </ul> </li>
+  
+</ul>
+
+
+
+<h3>Chaining Deferreds</h3>
+
+<p>If you need one Deferred to wait on another, all you need to do is return a
+Deferred from a method added to addCallbacks.  Specifically, if you return
+Deferred B from a method added to Deferred A using A.addCallbacks, Deferred A's
+processing chain will stop until Deferred B's .callback() method is called; at
+that point, the next callback in A will be passed the result of the last
+callback in Deferred B's processing chain at the time.</p>
+
+<p>If this seems confusing, don't worry about it right now -- when you run into
+a situation where you need this behavior, you will probably recognize it
+immediately and realize why this happens.  If you want to chain deferreds
+manually, there is also a convenience method to help you.</p>
+
+<ul>
+  <li>
+  <code class="py-prototype">chainDeferred(otherDeferred)</code> 
+  
+  <p>Add <code>otherDeferred</code> to the end of this
+  Deferred's processing chain. When self.callback is called,
+  the result of my processing chain up to this point will be
+  passed to <code>otherDeferred.callback</code>. Further
+  additions to my callback chain do not affect
+  <code>otherDeferred</code></p>
+  <p>This is the same as <code
+  class="python">self.addCallbacks(otherDeferred.callback,
+  otherDeferred.errback)</code></p>
+  </li>
+</ul>
+    
+<h2>See also</h2>
+
+<ol>
+<li><a href="gendefer.xhtml">Generating Deferreds</a>, an introduction to
+writing asynchronous functions that return Deferreds.</li>
+</ol>
 
 </body>
 </html>
