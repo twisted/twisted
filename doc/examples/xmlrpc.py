@@ -1,5 +1,10 @@
-"""Hook up an object to XML-RPC. An example session:
+"""Example of an XML-RPC server in Twisted.
+
+To run the server, just run this file ("python xmlrpc.py").
+
+An example session (assuming the server is running)::
     
+    >>> import xmlrpclib
     >>> s = xmlrpclib.Server('http://localhost:7080/')
     >>> s.echo("lala")
     ['lala']
@@ -15,6 +20,9 @@
 
 from twisted.web import xmlrpc
 from twisted.internet import defer
+
+# This module is standard in Python 2.2, otherwise get it from
+#   http://www.pythonware.com/products/xmlrpc/
 import xmlrpclib
 
 
