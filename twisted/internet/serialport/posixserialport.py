@@ -56,7 +56,7 @@ class SerialPort(BaseSerialPort, abstract.FileDescriptor):
         """Write some data to the serial device.
         """
         try:
-            return os.write(self.fileno(), self.unsent)
+            return os.write(self.fileno(), data)
         except IOError, io:
             if io.args[0] == errno.EAGAIN:
                 return 0
