@@ -1,4 +1,3 @@
-
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -67,7 +66,7 @@ my_soa = dns.Record_SOA(
     expire = 999999,
     retry = 100,
     )
-    
+
 
 test_domain_com = NoFileAuthority(
     soa = ('test-domain.com', soa_record),
@@ -138,14 +137,14 @@ my_domain_com = NoFileAuthority(
 
 class ServerDNSTestCase(unittest.TestCase):
     """Test cases for DNS server and client."""
-    
+
     def setUp(self):
         self.factory = server.DNSServerFactory([
             test_domain_com, reverse_domain, my_domain_com
         ], verbose=2)
-        
+
         p = dns.DNSDatagramProtocol(self.factory)
-        
+
         while 1:
             self.listenerTCP = reactor.listenTCP(0, self.factory, interface="127.0.0.1")
             port = self.listenerTCP.getHost().port
@@ -170,13 +169,13 @@ class ServerDNSTestCase(unittest.TestCase):
         def setDone(response):
             self.response = response
         d.addBoth(setDone)
-        
+
         while not self.response:
             reactor.iterate(0.1)
 
         if isinstance(self.response, failure.Failure):
             raise self.response
-        
+
         results = justPayload(self.response)
         assert len(results) == len(r), "%s != %s" % (map(str, results), map(str, r))
         for rec in results:
@@ -252,7 +251,7 @@ class ServerDNSTestCase(unittest.TestCase):
             self.resolver.lookupCanonicalName('test-domain.com'),
             [dns.Record_CNAME('canonical.name.com', ttl=19283784)]
         )
- 
+
 
     def testMB(self):
         """Test DNS 'MB' record queries"""
@@ -347,7 +346,7 @@ class ServerDNSTestCase(unittest.TestCase):
                 self.resolver.lookupIPV6Address('test-domain.com'),
                 [dns.Record_AAAA('AF43:5634:1294:AFCB:56AC:48EF:34C3:01FF', ttl=19283784)]
             )
-        
+
         def testA6(self):
             """Test DNS 'A6' record queries (IPv6)"""
             self.namesTest(
@@ -365,7 +364,7 @@ class ServerDNSTestCase(unittest.TestCase):
         results = [copy.copy(r) for r in reduce(operator.add, test_domain_com.records.values())]
         for r in results:
             if r.ttl is None:
-                r.ttl = default_ttl            
+                r.ttl = default_ttl
         self.namesTest(
             self.resolver.lookupZone('test-domain.com').addCallback(lambda r: (r[0][:-1],)),
             results
@@ -452,7 +451,7 @@ class HostsTestCase(unittest.TestCase):
                 ('EXAMPLE.EXAMPLETHING', '1.1.1.1'),
                 ('HOOJY', '1.1.1.2'),
                 ]
-        
+
         for name, ip in data:
             self.assertEquals(
                 wait(self.resolver.getHostByName(name)),
