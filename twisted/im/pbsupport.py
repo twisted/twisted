@@ -59,7 +59,7 @@ class TwistedWordsGroup:
         #for backwards compatibility with older twisted.words servers.
         if metadata:
             d=self.account.perspective.callRemote('groupMessage', self.name,
-                                                    text, metadata)
+                                                  text, metadata)
             d.addErrback(self.metadataFailed,
                          "* "+text)
             return d
@@ -127,7 +127,7 @@ class TwistedWordsClient(pb.Referenceable):
 
     def remote_setGroupMetadata(self, dict_, groupName):
         if dict_.has_key("topic"):
-            self.getGroupConversation(groupName).setTopic(dict_["topic"], dict_.get("topic_author", None))            
+            self.getGroupConversation(groupName).setTopic(dict_["topic"], dict_.get("topic_author", None))
 
     def joinGroup(self, name):
         self.getGroup(name).joining()
@@ -156,7 +156,7 @@ class TwistedWordsClient(pb.Referenceable):
 
 
 pbGtkFrontEnds = {
-    "twisted.words": TwistedWordsClient, 
+    "twisted.words": TwistedWordsClient,
     "twisted.reality": None
     }
 
