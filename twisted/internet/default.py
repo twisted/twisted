@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.9 2002/05/22 08:54:38 itamarst Exp $
+# $Id: default.py,v 1.10 2002/05/22 09:26:09 itamarst Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -152,7 +152,10 @@ class PosixReactorBase(ReactorBase):
 
 
     def spawnProcess(self, processProtocol, executable, args=(), env={}, path=None):
-        return process.Process(executable, args, env, path, processProtocol)
+        if platform.getType() == 'posix':
+            return process.Process(executable, args, env, path, processProtocol)
+        else:
+            raise NotImplementedError, "process only available in this reactor on POSIX"
 
     # IReactorSSL (sometimes, not implemented)
 
