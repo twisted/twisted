@@ -325,7 +325,6 @@ class SFTPServerForUnixConchUser:
         return self.avatar._runAsUser(os.symlink, targetPath, linkPath)
 
     def realPath(self, path):
-        log.msg('real path for %s is %s' % (path, self._absPath(path)))
         return self._absPath(path)
 
 class UnixSFTPFile:
@@ -382,7 +381,6 @@ class UnixSFTPDirectory:
     def __init__(self, server, directory):
         self.server = server
         self.files = server.avatar._runAsUser(os.listdir, directory)
-        log.msg("%s %i" % (directory, len(self.files)))
         self.dir = directory
 
     def __iter__(self):
