@@ -295,7 +295,7 @@ class %(name)s_ServiceControl(win32serviceutil.ServiceFramework):
     def SvcStop(self):
         self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING)
         from twisted.internet import reactor
-        reactor.stop()
+        reactor.callFromThread(reactor.stop)
 
 
 if __name__ == \'__main__\':
