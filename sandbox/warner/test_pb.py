@@ -701,6 +701,12 @@ class TestCopyable(unittest.TestCase, TargetMixin):
         self.failUnless("STRING token rejected by IntegerConstraint" \
                         in str(why))
 
+        obj.foo = 12
+        obj.bar = "very long " * 1000
+        why = self.failToSend(obj)
+        self.failUnless(why.check(Violation))
+        self.failUnless("token too large" in str(why))
+
 
 # test how a Referenceable gets transformed into a RemoteReference as it
 # crosses the wire, then verify that it gets transformed back into the
