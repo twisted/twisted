@@ -29,7 +29,7 @@ import string
 import sha, md5
 
 # external library imports
-from Crypto.Cipher import DES
+from Crypto.Cipher import DES3
 from Crypto.PublicKey import RSA, DSA
 from Crypto import Util
 
@@ -128,8 +128,10 @@ def makePublicKeyString_openssh(obj, comment):
     if keyType == 'ssh-rsa':
         keyData = common.MP(obj.e) + common.MP(obj.n)
     elif keyType == 'ssh-dss':
-        keyData = common.MP(obj.p) + common.MP(obj.q) + common.MP(obj.g) + \
-                  common.MP(obj.y)
+        keyData = common.MP(obj.p) 
+        keyData += common.MP(obj.q) 
+        keyData += common.MP(obj.g)
+        keyData += common.MP(obj.y)
     else:
         raise BadKeyError('unknown key type %s' % keyType)
     b64Data = base64.encodestring(common.NS(keyType)+keyData).replace('\n', '')
@@ -208,7 +210,7 @@ def getPrivateKeyObject_openssh(data, passphrase):
         bb = md5.new(ba + passphrase + iv).digest()
         decKey = (ba + bb)[:24]
         b64Data = base64.decodestring(''.join(data[4:-1]))
-        keyData = des_cbc3_decrypt(b64Data, decKey, iv)
+        keyData = DES3.new(decKey, DES3.MODE_CBC, iv).decrypt(b64Data)
         removeLen = ord(keyData[-1])
         keyData = keyData[:-removeLen]
     else:
@@ -297,7 +299,7 @@ def makePrivateKeyString_openssh(obj, passphrase):
     if passphrase:
         padLen = 8 - (len(asn1Data) % 8)
         asn1Data += (chr(padLen) * padLen)
-        asn1Data = des_cbc3_encrypt(asn1Data, encKey, iv)
+        asn1Data = DES3.new(encKey, DES3.MODE_CBC, iv).encrypt(asn1Data)
     b64Data = base64.encodestring(asn1Data).replace('\n','')
     b64Data = '\n'.join([b64Data[i:i+64] for i in range(0,len(b64Data),64)])
     keyData += b64Data + '\n'
@@ -306,6 +308,17 @@ def makePrivateKeyString_openssh(obj, passphrase):
     elif keyType == 'ssh-dss':
         keyData += '-----END DSA PRIVATE KEY-----'
     return keyData
+
+def makePublicKeyBlob(obj):
+    keyType = objectType(obj) 
+    if keyType == 'ssh-rsa':
+        keyData = common.MP(obj.e) + common.MP(obj.n)
+    elif keyType == 'ssh-dss':
+        keyData = common.MP(obj.p) 
+        keyData += common.MP(obj.q) 
+        keyData += common.MP(obj.g)
+        keyData += common.MP(obj.y)
+    return common.NS(keyType)+keyData
 
 def makePrivateKeyBlob(obj):
     keyType = objectType(obj)
@@ -430,44 +443,3 @@ def printKey(obj):
                 print '\t'+o
 
 ID_SHA1 = '\x30\x21\x30\x09\x06\x05\x2b\x0e\x03\x02\x1a\x05\x00\x04\x14'
-
-def des_cbc3_decrypt(src, key, iv):
-    scheds = [key[i:i+8] for i in range(0,24,8)]
-    e1,e2,e3 = map(lambda x:DES.new(x,DES.MODE_ECB), scheds)
-    i = 0
-    out = ''
-    prev = iv
-    while src:
-        enc, src = src[:8], src[8:]
-        t1 = e3.decrypt(enc)
-        t2 = e2.encrypt(t1)
-        t3 = e1.decrypt(t2)
-        out += _strxor(t3, prev)
-        prev = enc
-    return out
-
-def des_cbc3_encrypt(src, key, iv):
-    scheds = [key[i:i+8] for i in range(0,24,8)]
-    e1,e2,e3 = map(lambda x:DES.new(x,DES.MODE_ECB), scheds)
-    i = 0
-    out = ''
-    prev = iv
-    while src:
-        enc, src = src[:8], src[8:]
-        t1 = e1.encrypt(_strxor(enc, prev))
-        t2 = e2.decrypt(t1)
-        t3 = e3.encrypt(t2)
-        out += t3
-        prev = t3 
-    return out
-
-def _strxor(s1,s2):
-    return "".join(map(lambda x, y: chr(ord(x) ^ ord(y)), s1, s2))
-
-
-iv = 'iv'*4
-key = 'key' * 8
-data = 'data'*4
-enc = des_cbc3_encrypt(data, key, iv)
-data2 = des_cbc3_decrypt(enc, key, iv)
-assert data == data2, '%s %s' % (repr(data), repr(data2))
