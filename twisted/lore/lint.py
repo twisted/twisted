@@ -99,7 +99,7 @@ class DefaultTagChecker(TagChecker):
 
     def check_80_columns(self, dom, filename):
         for node in domhelpers.findNodesNamed(dom, 'pre'):
-            for line in domhelpers.getNodeText(node).split('\n'):
+            for line in domhelpers.gatherTextNodes(node, 1).split('\n'):
                 if len(line.rstrip()) > 80:
                     self._reportError(filename, node, 
                                       'text wider than 80 columns in pre')
