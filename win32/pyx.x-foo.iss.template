@@ -7,17 +7,17 @@ AppPublisher=Twisted Matrix Laboratories
 AppPublisherURL=http://twistedmatrix.com/
 AppSupportURL=http://twistedmatrix.com/
 AppUpdatesURL=http://twistedmatrix.com/
-DefaultDirName=%(pykey)s\lib\site-packages
+DefaultDirName={code:pythonRegKey}\lib\site-packages
 DisableDirPage=yes
 DefaultGroupName=Twisted (Python %(pyversion)s)
 DisableProgramGroupPage=yes
 PrivilegesRequired=admin
-UninstallFilesDir=%(pykey)s
+UninstallFilesDir={code:pythonRegKey}
 
 [Files]
 Source: "%(twhome)s\build\lib.win32-%(pyversion)s\*.*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs
 %(docfile)s
-Source: "%(twhome)s\build\scripts-%(pyversion)s\*.*"; DestDir: "%(pykey)s\scripts"; Flags: ignoreversion recursesubdirs
+Source: "%(twhome)s\build\scripts-%(pyversion)s\*.*"; DestDir: "{code:pythonRegKey}\scripts"; Flags: ignoreversion recursesubdirs
 Source: "win32\twistenv.bat"; DestDir: "{app}\twisted"; Flags: ignoreversion
 %(datafiles)s
 
@@ -29,10 +29,30 @@ Type: filesandordirs; Name: "{app}\TwistedDocs"
 [Icons]
 Name: "{group}\Manual"; Filename: "{app}\TwistedDocs\howto\index.xhtml"
 Name: "{group}\API Documentation"; Filename: "{app}\TwistedDocs\api\index.html"
-Name: "{group}\Twisted Command Prompt"; Filename: "{cmd}"; Parameters: "/k {app}\twisted\twistenv.bat %(pykey)s\scripts"; WorkingDir: "{sd}\"
-Name: "{group}\Application Maker"; Filename: "%(pykey)s\scripts\tktwistd.py"
-Name: "{group}\TkConch (ssh)"; Filename: "%(pykey)s\scripts\tkconch.py"
+Name: "{group}\Twisted Command Prompt"; Filename: "{cmd}"; Parameters: "/k {app}\twisted\twistenv.bat {code:pythonRegKey}\scripts"; WorkingDir: "{sd}\"
+Name: "{group}\Application Maker"; Filename: "{code:pythonRegKey}\scripts\tktwistd.py"
+Name: "{group}\TkConch (ssh)"; Filename: "{code:pythonRegKey}\scripts\tkconch.py"
 Name: "{group}\Uninstall {groupname}"; Filename: "{uninstallexe}"
 
 [Run]
-Filename: "%(pykey)s\pythonw.exe"; Parameters: "%(pykey)s\scripts\twisted_postinstall.py"
+Filename: "{code:pythonRegKey}\pythonw.exe"; Parameters: "{code:pythonRegKey}\scripts\twisted_postinstall.py"
+
+[Code]
+function pythonRegKey(Default : String): String;
+begin
+   {try HKLM first and then fall back to HKCU for location of Python}
+   Result := ExpandConstant('{reg:HKLM\Software\Python\PythonCore\%(pyversion)s\InstallPath,|ACK}')
+   if CompareStr(Result, 'ACK')=0 then
+      Result := ExpandConstant('{reg:HKCU\Software\Python\PythonCore\%(pyversion)s\InstallPath,|ACK}');
+end;
+
+
+function InitializeSetup(): Boolean;
+begin
+   Result := True;
+   if CompareStr(pythonRegKey('ACK'), 'ACK')=0 then
+   begin
+      MsgBox('Python does not appear to be installed.' #13#13 'Please install Python before attempting to install Twisted.', mbCriticalError, MB_OK);
+      Result:=False;
+   end;
+end; { InitializeSetup }

@@ -39,7 +39,6 @@ HERE=`os.getcwd()`
 
         docdct=quickdict(pyversion=_top.pyversion, twversion=_top.Version, 
                          twhome=_recipe.HERE, 
-                         pykey=r"{reg:HKLM\Software\Python\PythonCore\%s\InstallPath,|ACK}" % _top.pyversion,
                          docfile=r'Source: "%s\doc\twisteddoc.zip"; DestDir: "{app}"' % _recipe.HERE,
                          outputbasefilename=template,
                          datafiles=data_files,
@@ -53,10 +52,10 @@ HERE=`os.getcwd()`
 
         return iss_template % dct
 
-    def getValueFromReg(key, valuename, default):
+    def getValueFromReg(key, valuename, default, hive=winreg.HKLM):
         """Pass valuename=None to get the (default) value."""
         try:
-            key=winreg.Key(winreg.HKLM, key)
+            key=winreg.Key(hive, key)
         except winreg.KeyNotFound:
             return default
         if valuename is None:
@@ -79,8 +78,12 @@ HERE=`os.getcwd()`
         return version
 
     def getPythonHomeForVersion(ver):
-        return getValueFromReg(r'Software\Python\PythonCore\%s\InstallPath' %
+        res=getValueFromReg(r'Software\Python\PythonCore\%s\InstallPath' %
                                ver, None, r'C:\pythonxx')
+        if res==r'C:\pythonxx':
+            res=getValueFromReg(r'Software\Python\PythonCore\%s\InstallPath' %
+                               ver, None, r'C:\pythonxx', hive=winreg.HKCU)
+        return res
 
 # get the version of twisted from the tree being built, not sys.path
 Version=`getBuildingTwistedVersion(_recipe.HERE)`
@@ -103,9 +106,9 @@ Version=`getBuildingTwistedVersion(_recipe.HERE)`
     withdocs
         setupbase=Twisted
 
-innohome=`getValueFromReg(r'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Inno Setup 3_',
+innohome=`getValueFromReg(r'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Inno Setup 4_is1',
                           "Inno Setup: App Path",
-                          r'C:\Program Files\Inno Setup 3')`
+                          r'C:\Program Files\Inno Setup 4')`
 iscc='$innohome\ISCC.exe'
 
 all: dist/$(setupbase)-$(Version).win32-py$(pyversion).exe
@@ -133,7 +136,7 @@ TwSources+=twisted/plugins.tml
 
 # only run setup.py when needed
 build/scripts-$(pyversion) build/lib.win32-$(pyversion): $TwSources
-    :sys $(pyexe) setup.py -q clean --all build --compiler=mingw32
+    :sys $(pyexe) setup.py -q  clean --all build --compiler=mingw32
 
 # build with inno
 ExeDeps=py$(pyversion)-$(DoDocs).iss

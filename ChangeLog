@@ -1,3 +1,8 @@
+2003-09-27  Cory Dodt <corydodt@yahoo.com>
+
+	* win32/main.aap win32/pyx.x-foo.iss.template win32/README.win32:
+	Be nice to people who don't install Python for "All Users" on win32.
+
 2003-9-18  Moshe Zadka <moshez@twistedmatrix.com>
 
 	* twisted/application/strports.py twisted/test/test_strports.py: 

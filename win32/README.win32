@@ -75,6 +75,7 @@ http://cygwin.com
 * Inno Setup ***
 This creates nice self-installers with uninstall functionality:
 http://www.jrsoftware.org/isinfo.php
+You need version 4.0.8 or above.
 
 
 * Bootstrap Twisted ***
