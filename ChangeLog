@@ -1,3 +1,11 @@
+2003-04-09  Bob Ippolito  <bob@redivi.com>
+
+	* twisted/python/util.py (OrderedDict): added a UserDict subclass
+	that preserves insert order (for __repr__, items, values, keys).
+
+	* twisted/internet/app.py (Application, _AbstractServiceCollection):
+	Preserve service order, start services in order, stop them in reverse.
+
 2003-04-09  Andrew Bennetts  <spiv@twistedmatrix.com>
 
 	* twisted/protocols/ftp.py (FTPClient):

@@ -18,6 +18,55 @@
 from __future__ import nested_scopes
 
 import os, sys
+from UserDict import UserDict
+
+class OrderedDict(UserDict):
+    """A UserDict that preserves insert order whenever possible."""
+    def __init__(self, d=None):
+        UserDict.__init__(self, d)
+        if d is not None:
+            self._order = d.keys()
+        else:
+            self._order = []
+
+    def __repr__(self):
+        return '{'+', '.join([('%r: %r' % item) for item in self.items()])+'}'
+        
+    def __setitem__(self, key, value):
+        if key not in self:
+            self._order.append(key)
+        UserDict.__setitem__(self, key, value)
+
+    def copy(self):
+        return self.__class__(self)
+
+    def __delitem__(self, key):
+        UserDict.__delitem__(self, key)
+        self._order.remove(key)
+
+    def items(self):
+        return [(item, self[item]) for item in self._order]
+
+    def values(self):
+        return [self[item] for item in self._order]
+
+    def keys(self):
+        return list(self._order)
+
+    def popitem(self):
+        item = self[self._order[-1]]
+        del self[item[0]]
+        return item
+
+    def setdefault(self, item, default):
+        if self.has_key(item):
+            return self[item]
+        self[item] = default
+        return default
+
+    def update(self, d):
+        for k, v in d.items():
+            self[k] = v
 
 def uniquify(lst):
     """Make the elements of a list unique by inserting them into a dictionary.
