@@ -5,7 +5,7 @@ LOGFILE = '/tmp/filter.log'
 
 # Setup log file
 from twisted.python import log
-log.logfile = log.Log(open(LOGFILE, 'a'), log.logOwner)
+log.startLogging(open(LOGFILE, 'a'))
 import sys
 sys.stderr = log.logfile
 
