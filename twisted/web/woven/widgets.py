@@ -219,7 +219,8 @@ class Widget(view.View):
 
         newNode = self._regenerate(request, node, result)
         returnNode = self.dispatchResult(request, node, newNode)
-        returnNode.setAttribute('id', self.outgoingId)
+        if hasattr(self, 'outgoingId'):
+            returnNode.setAttribute('id', self.outgoingId)
         self.handleNewNode(request, returnNode)
         self.handleOutstanding(request)
         if self.subviews:
