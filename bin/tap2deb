@@ -146,12 +146,6 @@ os.chmod(os.path.join('.build', directory, 'debian', 'init.d'), 0755)
 save_to_file(os.path.join('.build', directory, 'debian', 'postinst'),
 '''\
 #!/bin/sh
-if [ "$1" = "configure" ]; then
-	if [ -d /usr/doc -a ! -e /usr/doc/%(deb_file)s -a -d /usr/share/doc/%(deb_file)s ]; then
-		ln -sf ../share/doc/%(deb_file)s /usr/doc/%(deb_file)s
-	fi
-fi
-
 update-rc.d %(deb_file)s defaults >/dev/null
 invoke-rc.d %(deb_file)s start
 ''' % vars())
@@ -159,12 +153,7 @@ invoke-rc.d %(deb_file)s start
 save_to_file(os.path.join('.build', directory, 'debian', 'prerm'),
 '''\
 #!/bin/sh
-if [ \( "$1" = "upgrade" -o "$1" = "remove" \) -a -L /usr/doc/%(deb_file)s ]; then
-	rm -f /usr/doc/%(deb_file)s
-fi
-
 invoke-rc.d %(deb_file)s stop
-update-rc.d %(deb_file)s remove >/dev/null
 ''' % vars())
 
 save_to_file(os.path.join('.build', directory, 'debian', 'postrm'),
@@ -182,10 +171,6 @@ save_to_file(os.path.join('.build', directory, 'debian', 'changelog'),
   * Created by tap2deb
 
  -- %(maintainer)s  %(date)s
-
-Local variables:
-mode: debian-changelog
-End:
 ''' % vars())
 
 save_to_file(os.path.join('.build', directory, 'debian', 'control'),
