@@ -394,7 +394,7 @@ class Site(protocol.Factory):
         """Emulate a resource's getChild method.
         """
         request.site = self
-        return self.resource.getChildWithDefault(self, pathEl, request)
+        return self.resource.getChildWithDefault(pathEl, request)
 
     def getResourceFor(self, request):
         """Get a resource for a request.
