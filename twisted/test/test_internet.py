@@ -468,9 +468,9 @@ class DelayedTestCase(unittest.TestCase):
 
     def testActive(self):
         dcall = reactor.callLater(0, lambda: None)
-        self.assertEquals(dcall.active(), True)
+        self.assertEquals(dcall.active(), 1)
         reactor.iterate()
-        self.assertEquals(dcall.active(), False)
+        self.assertEquals(dcall.active(), 0)
 
 
 class Counter:
