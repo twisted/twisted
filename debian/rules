@@ -135,9 +135,9 @@ install-indep-stamp: install-base-stamp
 	set -e;for subdir in examples howto specifications img api;\
 		do install -d $(docdir)/$$subdir;\
 	done
-	install -d debian/twisted-doc/usr/share/doc/doc-base/
+	install -d debian/twisted-doc/usr/share/doc-base/
 	install -m 644 debian/twisted-api debian/twisted-book \
-	               debian/twisted-doc/usr/share/doc/doc-base/
+	               debian/twisted-doc/usr/share/doc-base/
 	install -m 644 doc/howto/*.xhtml doc/howto/book.* $(docdir)/howto/
 	cp -ar doc/howto/listings/ $(docdir)/howto/
 	install -m 644 doc/specifications/*.xhtml $(docdir)/specifications/
@@ -146,7 +146,7 @@ install-indep-stamp: install-base-stamp
 	install -m 644  doc/examples/*.* $(docdir)/examples/
 	set -e;for maint in postinst prerm;\
 		do install -m 755 debian/twisted-doc.$$maint \
-	                          debian/twisted-doc/DEBIAN;\
+	                          debian/twisted-doc/DEBIAN/$$maint;\
 	done
 
 	install -m 644 debian/python-twisted.README.Debian \

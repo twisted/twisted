@@ -6,5 +6,5 @@ Abstract: This book describes how to use Twisted for any use --
 Section: Apps/Programming
 
 Format: HTML
-Index: /usr/doc/twisted-doc/howto/index.html
-Files: /usr/doc/twisted-doc/howto/*.html
+Index: /usr/share/doc/twisted-doc/howto/index.xhtml
+Files: /usr/share/doc/twisted-doc/howto/*.xhtml
