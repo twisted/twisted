@@ -1,3 +1,8 @@
+2003-06-27  Christopher Armstrong  <radix@twistedmatrix.com>
+
+	* .: Releasing Twisted 1.0.6rc3. Fixed a security bug in
+	twisted.web.
+
 2003-06-26  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* .: Releasing Twisted 1.0.6rc1.
