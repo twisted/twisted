@@ -16,6 +16,17 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
+"""
+Dynamic pseudo-scoping for Python.
+
+Call functions with context.call({key: value}, func) and 'func' and
+function that it calls will be able to use 'context.get(key)' to
+retrieve 'value'.
+
+This is thread-safe.
+"""
+
+
 defaultContextDict = {}
 
 setDefault = defaultContextDict.__setitem__
