@@ -445,6 +445,7 @@ class SSHTransportTestCase(unittest.TestCase):
     def testOurServerOurClient(self):
         """test the SSH server against the SSH client
         """
+        if os.name != 'posix': return
         global theTest
         theTest = self
         auth = ConchTestAuthorizer()
@@ -476,6 +477,7 @@ class SSHTransportTestCase(unittest.TestCase):
     def testOurServerOpenSSHClient(self):
         """test the SSH server against the OpenSSH client
         """
+        if os.name != 'posix': return
         cmdline = 'ssh -v -l testuser -p %i -oUserKnownHostsFile=kh_test -oPasswordAuthentication=no -i dsa_test localhost echo hello'
         global theTest
         theTest = self
