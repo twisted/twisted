@@ -302,7 +302,8 @@ from demolib import TerminalForwardingProtocol
 from twisted.python import components
 
 class TestSessionTransport(TerminalSessionTransport):
-    protocolFactory = staticmethod(lambda: TerminalForwardingProtocol(EchoServer))
+    def protocolFactory(self):
+        return TerminalForwardingProtocol(self.avatar.conn.transport.factory.serverProtocol)
 
 class TestSession(TerminalSession):
     transportFactory = TestSessionTransport
@@ -325,6 +326,7 @@ class _SSHMixin(_BaseMixin):
     def setUp(self):
         u, p = 'testuser', 'testpass'
         sshFactory = ConchFactory([checkers.InMemoryUsernamePasswordDatabaseDontUse(**{u: p})])
+        sshFactory.serverProtocol = self.serverProtocol
         sshFactory.startFactory()
 
         recvlineServer = self.serverProtocol()

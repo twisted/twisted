@@ -25,8 +25,6 @@ class CharacterAttribute:
 
         self._subtracting = _subtracting
 
-        # print 'Made', vars(self)
-
     def __eq__(self, other):
         return vars(self) == vars(other)
 
