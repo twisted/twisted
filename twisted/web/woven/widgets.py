@@ -301,7 +301,12 @@ class Widget(view.View):
         mutator.d = request.d
         mutator.generate(request, oldNode)
         self.node = newNode
-        parent = self.parent; viewStack = self.viewStack; modelStack = self.model.modelStack; controllerStack = self.controller.controllerStack
+        parent = self.parent
+
+        viewStack = self.viewStack
+        modelStack = self.model.modelStack
+        controllerStack = self.controller.controllerStack
+
         self.recurseChildren(request, newNode)
         return newNode
 
