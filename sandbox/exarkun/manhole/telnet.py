@@ -647,7 +647,7 @@ class TelnetBootstrapProtocol(TelnetProtocol, ProtocolTransportMixin):
             pass
 
     def disable(self, opt):
-        print 'disabling', repr(opt)
+        pass
 
     def telnet_NAWS(self, bytes):
         if len(bytes) == 4:

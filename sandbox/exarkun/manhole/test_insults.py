@@ -57,3 +57,10 @@ class ControlCharacters(unittest.TestCase):
     for testName, byte in [('Up', 'A'), ('Down', 'B'), ('Right', 'C'), ('Left', 'D')]:
         exec tmpl % (testName, testName.upper(), byte)
 
+    tmpl = "def testF%d(self): self._simpleKeystrokeTest(self.parser.F%d, '\x1b[%s')"
+    for testName, bytes in [(1, 'OP'), (2, 'OQ'), (3, 'OR'), (4, 'OS'),
+                            (5, '15~'), (6, '17~'), (7, '18~'), (8, '19~'),
+                            (9, '20~'), (10, '21~'), (11, '23~'), (12, '24~')]:
+        exec tmpl % (testName, testName, bytes)
+
+    del testName, byte, bytes

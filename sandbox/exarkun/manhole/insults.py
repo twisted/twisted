@@ -425,8 +425,13 @@ class ServerProtocol(protocol.Protocol):
                 handler.unhandledControlSequence(buf + 'R')
 
         def tilde(self, proto, handler, buf):
-            map = (proto.HOME, proto.INSERT, proto.DELETE,
-                   proto.END, proto.PGUP, proto.PGDN)
+            map = {1: proto.HOME, 2: proto.INSERT, 3: proto.DELETE,
+                   4: proto.END,  5: proto.PGUP,   6: proto.PGDN,
+
+                   15: proto.F5,  17: proto.F6, 18: proto.F7,
+                   19: proto.F8,  20: proto.F9, 21: proto.F10,
+                   23: proto.F11, 24: proto.F12}
+
             if buf.startswith('\x1b['):
                 ch = buf[2:]
                 try:
@@ -434,8 +439,9 @@ class ServerProtocol(protocol.Protocol):
                 except ValueError:
                     handler.unhandledControlSequence(buf + '~')
                 else:
-                    if v > 0 and v <= len(map):
-                        handler.keystrokeReceived(map[v - 1])
+                    symbolic = map.get(v)
+                    if symbolic is not None:
+                        handler.keystrokeReceived(map[v])
                     else:
                         handler.unhandledControlSequence(buf + '~')
             else:
