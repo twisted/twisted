@@ -18,7 +18,7 @@ import string, random, copy
 
 from twisted.web import server, resource, widgets, guard
 from twisted.python import defer
-from twisted.internet import app
+from twisted.internet import app, main, tcp
 from twisted.cred import service, identity, perspective
 from twisted.protocols import http, loopback
 
@@ -83,6 +83,7 @@ class ArgProcessingResource(resource.Resource):
 class TestHTTPClient(http.HTTPClient):
     
     expected_result = "args: {'bleh': 'foo'}"
+    finished = 0
     
     def connectionMade(self):
         self.sendCommand("GET", "/")
@@ -98,6 +99,8 @@ class TestHTTPClient(http.HTTPClient):
             print "-- RECEIVED --"
             print data
             raise ValueError("data != %s. see STDOUT." % self.expected_result)
+        else:
+            self.finished = 1
 
     def handleHeader(self, key, value):
         pass
@@ -132,6 +135,26 @@ class LoopbackSiteTestCase(unittest.TestCase):
             clientToServer.clearBuffer()
             if serverToClient.shouldLose or clientToServer.shouldLose:
                 break
+
+    def testMultipleTCPClients(self):
+        # setup site
+        res = resource.Resource()
+        argRes = ArgProcessingResource()
+        res.putChild("", argRes)
+        site = server.Site(res)
+        p = tcp.Port(10080, site)
+        p.startListening()
+        main.iterate()
+        main.iterate()
+        
+        for i in range(10):
+            client = TestHTTPClient()
+            tcp.Client("localhost", 10080, client)
+            while not client.finished:
+                main.iterate()
+        
+        # clean up
+        p.loseConnection()
 
 
 class SimpleWidget(widgets.Widget):
