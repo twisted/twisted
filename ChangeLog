@@ -1,3 +1,10 @@
+2002-03-11  Glyph Lefkowitz  <glyph@janus.twistedmatrix.com>
+
+	* More robust shutdown sequence for default mainloop (other
+	mainloops should follow suit, but they didn't implement shutdown
+	callbacks properly before anyway...).  This allows for shutdown
+	callbacks to continue using the main loop.
+
 2002-03-09  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
 
 	* Automatic log rotation for twistd. In addition, sending SIGUSR1
