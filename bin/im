@@ -16,10 +16,6 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-
-"""This script runs Instance Messenger, a client for Twisted.Words
-"""
-
 ### Twisted Preamble
 # This makes sure that users don't have to set up their environment
 # specially in order to run these programs from bin/.
@@ -29,14 +25,16 @@ if string.find(os.path.abspath(sys.argv[0]), os.sep+'Twisted') != -1:
 sys.path.insert(0, os.curdir)
 ### end of preamble
 
-from twisted.python import usage
+if os.name == 'java':
+    from twisted.internet import javareactor
+    javareactor.install()
+    from twisted.im.jyaccount import AccountManager
+    AccountManager()
+else:
+    from twisted.internet import gtkreactor
+    gtkreactor.install()
+    from twisted.im.gtkaccount import AccountManager
+    AccountManager()
 
-class Options(usage.Options):
-    synopsis = "Usage: im"
-    
-config = Options()
-config.parseOptions()
-from twisted.internet import default
-default.install()
-from twisted.words.ui import tkim
-tkim.main()
+from twisted.internet import reactor
+reactor.run()
