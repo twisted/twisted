@@ -4,314 +4,182 @@
 
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-<title>Using app.Application</title>
+<title>Using Application</title>
 </head>
 
 <body>
-<h1>Using app.Application</h1>
+<h1>Using Application</h1>
 
 <h2>Motivation</h2>
 
-<p>Calling reactor methods (like <code>.listenTCP</code> and
-<code>.run</code>) directly, as in the examples in <a
-href="servers.xhtml">Writing Servers</a>, is a good way to immediately
-demonstrate the use of Factories and Protocols. But you would ask for more
-from a fully-fledged, easy-to-run, easy-to-configure Internet Server. 
-Twisted provides many of these features as a partnership between its 
-Application object and the <code>twistd</code> administrator's program.</p>
-
-<p>What more could we want? Well:</p>
+<p>What happens when you want to write a Twisted application? Well,
+if you come into Twisted thinking of it as a library, you may
+decide a useful way is to write a Python script. This Python
+script would probably take the following actions:</p>
 
 <ul>
-  <li>
-  <em>starting as a daemon</em>:
-
-  <p>One of the important aspects of a server program is that it can
-  be run in the background, with output detached from the terminal,
-  run in a chroot jail or under a different user id.</p>
- </li>
-
-  <li>
-  <em>configuration arguments</em>:
-
-  <p>suppose your quote of the day ('QOTD') server behaves a bit more 
-  like the normal port 17 server and pulls a random line from 
-  <code>/usr/share/fortunes</code>. Your QOTDFactory() might take a 
-  filename to indicate where the QOTD protocols should pull these lines. 
-  It would be nice if the person installing your quote server didn't have
-  to modify any Python code to change where this file should be found.</p>
-
-  <p>Likewise, what if they want it to listen on some other port? That
-  shouldn't require editing the code.</p>
-  </li>
-
-  <li>
-  <em>basic persistence</em>:
-
-  <p>If your protocol demands that you keep some state from one invocation
-  of the server to the next, you'll need to save some information before the
-  server shuts down, and to restore it again when you start back up.</p>
-
-  <p>Suppose your protocol's purpose in life is to generate one-time keys,
-  and that people can connect to it to retrieve a single-use key. (Don't ask
-  me why they might want to do this. Security is such a weird big thing that
-  chances are somebody out there will want to do something that's probably
-  pretty dumb when you think about it carefully). The important thing is
-  that you never give out the same key twice. So you have to remember a
-  sequence number, and each time you give out a key, you bump up the number.
-  Before you shut down, you save the number to a file somewhere; at start
-  up, if the file exists you read the number from it, if it doesn't exist,
-  you start at 0. (an example is included below)</p>
-
-  <p>This kind of persistent data is a common need, and many kinds of
-  servers require it. Hence Twisted provides an easy way to record and
-  reload this data.</p>
-</li>
-
+<li>Install the reactor you want (or skip this step if you
+    want the default reactor.</li>
+<li>Perform initialization options -- open data files, start
+<code>reactor.callLater</code> loops, etc.</li>
+<li>Call <code>reactor.run()</code></li>
+<li>Perform deinitalization options</li>
 </ul>
 
-<p>This functionality is provided by the Application class (defined in
-twisted/internet/app.py). You create an Application with a constructor like
-any other object. Then you tell the app to listen to ports (just like you
-told the reactor to in the previous example), providing a Factory on each
-one. The difference is that the App won't starting listening on those ports
-right away, but will wait until it starts to run.</p>
+<p>There are two problems with this methodology. It has a lot
+of boiler-plate code, and it introduces an inflexibility into
+the design. The usual way to solve this kind of problem is
+to write <em>configuration files</em>, and it is no different
+in Twisted.</p>
 
-<p>When you're done setting up an Application object, there are three
-options.  You can run it directly by calling the application's
-<code>.run()</code> method.  You can use <code>twistd -y app.py</code>
-to run your application directly from python source code.  Or you can
-save the Application out to a file by calling the <code>.save()</code>
-method. The saved application can then be started later by using
-<code>twistd -f app-start.tap</code>.</p>
+<p>At this point, the standard thing to do would be to write
+a long, tedious and subtly wrong manual describing the configuration
+language. Rest assured, like every other project, Twisted
+has those. But the language is secondary, and will be described
+later -- more important are the configuration <em>objects</em>.</p>
 
-<h2>Example Application</h2>
+<h2>Services, Persistence and Security, Oh My!</h2>
 
-<p>Here is a short example of the first option, running the server
-immediately. This example uses the pre-defined Daytime protocol, which
-simply sends the current time to each client.:</p>
+<p>It is possible to think of any configuration language as a
+specially designed language to build a configuration object,
+which is then queried and acted upon by the program runtime.
+In Twisted, this is literally true internally -- and the
+master configuration object is
+<code>twisted.application.service.Application</code>.
+However, there is virtually nothing you can do with this
+object directly. This object is <code>Componentized</code> --
+it has different, orthogonal, aspects. Access to this aspects
+is done by using <em>interfaces</em>. Interfaces, for our purposes,
+are just callables which return different aspects of the 
+<code>Application</code>.<p>
 
-<a href="listings/application/app1.py" class="py-listing">app1.py</a>
-
-<p>This program will start listening to port 8813 in the <code>app.run()</code>
-call, and won't return from that call until the server is terminated
-(probably when you send it SIGINT via ^C on the keyboard).</p>
-
-<p>To use the second option, the same source file can be used, but
-using the <code>twistd -y</code> command to start the application
-as a daemon.  If persistence is not required, then use the
-<code>--no_save</code> option.</p>
-
-<pre class="shell">
-$ twistd --no_save --python=app1.py
-$ tail -f twistd.log
-04/04/2003 23:45 [-] Log opened.
-04/04/2003 23:45 [-] twistd 1.0.4alpha1 (/usr/local/bin/python 2.2.2)
-starting up
-04/04/2003 23:45 [-] license user: Nobody &lt;&gt;
-04/04/2003 23:45 [-] organization: No Organization
-04/04/2003 23:45 [-] reactor class: twisted.internet.default.SelectReactor
-04/04/2003 23:45 [-] Loading
-/home/cce/work/Twisted/doc/howto/listings/application/app1.py...
-04/04/2003 23:45 [-] Loaded.
-04/04/2003 23:45 [*daytimer*] twisted.internet.protocol.Factory starting on
-8813
-04/04/2003 23:45 [*daytimer*] Starting factory
-&lt;twisted.internet.protocol.Factory instance at 0x835dcac&gt;
-</pre>
-
-<p>To use the third option and launch the server later, just use
-<code>.save()</code> instead of <code>.run()</code>. The <code>.save()</code> method
-takes a base name for the generated <code>.tap</code> file:</p>
-
-<pre class="python">
-...
-app.listenTCP(8813, f)
-
-app.save("start")
-</pre>
-
-<p>When you run this program, it will create a file called
-<code>daytime-start.tap</code>, and then exit. (The name is obtained by
-combining the application name with the argument to <code>.save()</code>). To
-start the server from the <q>freeze-dried</q> <code>.tap</code> file, use
-<code>twistd</code> (text wrapped to be more readable):</p>
-
-<pre class="shell">
-% ./app2.py 
-Saving daytimer application to daytimer-start.tap...
-Saved.
-% twistd -f daytimer-start.tap 
-% tail twistd.log 
-30/09/2002 01:38 [-] Log opened.
-30/09/2002 01:38 [-] twistd 0.99.2 (/usr/bin/python2.2 2.2.1) starting up
-30/09/2002 01:38 [-] license user: Nobody &lt;&gt;
-30/09/2002 01:38 [-] organization: No Organization
-30/09/2002 01:38 [-] reactor class: twisted.internet.default.SelectReactor
-30/09/2002 01:38 [-] Loading daytimer-start.tap...
-30/09/2002 01:38 [-] Loaded.
-30/09/2002 01:38 [*daytimer*] twisted.internet.protocol.Factory starting on 8813
-30/09/2002 01:38 [*daytimer*] Starting factory
-&lt;twisted.internet.protocol.Factory instance at 0x81ac9fc&gt;
-% 
-</pre>
-
-<p>That will <q>thaw out</q> the <code>.tap</code> file, create the
-Application, and
-then run it just as if you'd invoked app.run() yourself. It forks the new
-server off into the background (so twistd itself completes instead of
-waiting for the server to die), writes the server's process ID to a file
-called <code>twistd.pid</code>, and directs all the server's stdout messages
-to a file
-called <code>twistd.log</code> (these file names can be changed by appropriate
-arguments to <code>twistd</code>: see <code>twistd -h</code> for a list).</p>
-
-<p>When you try this example, be aware that <code>twistd</code> returns right
-away, but it takes a second or two for the server to actually start. The
-<code>twistd.pid</code> file won't be created until it does. Wait a moment
-before doing <code>ls</code> or <code>netstat</code>, or you'll think that the
-server failed to start. If it persists in failing, look in
-<code>twistd.log</code> for details. Remember that trying to bind to a reserved
-port will fail unless you're root, and the exception will be listed at the
-end of the log file.</p>
-
-<p>To kill the server, just do:</p>
-
-<pre class="shell">
-% kill `cat twistd.pid`
-</pre>
-
-<p>When the server is shut down, you'll notice that it creates a file called
-<code>daytimer-shutdown.tap</code> in the directory it was run from
-(again, the name is
-derived from the application name and the word <q>shutdown</q>). This
-<code>.tap</code> file is just like the <code>daytimer-start.tap</code>
-created by your
-original setup program, except that it represents the state of the
-Application object as it existed just before shutdown, rather than when it
-was freshly created by your code.</p>
-
-<p>Also note that the <code>twistd.pid</code> file is automatically deleted when
-the application shuts down.</p>
-
-
-<h2>Saving State Across Sessions: Adding Persistent Data</h2>
-
-<p>You can add persistent data (like that
-sequence number described above) to the protocol Factory object, and it will
-get saved in the <code>-shutdown.tap</code> file. Then, if you restart the
-server with <code>twistd -f daytimer-shutdown.tap</code>, the new server will
-get the data saved by the old server, and it can pick up where the old one
-left off, as if the server had been running continuously the whole time.</p>
-
-<p>To take advantage of this, simply add the attributes you want to the
-Factory, or to your subclass of Service (see the docs on Perspective Broker
-for details about Services). When the application terminates, it simply
-pickles up the whole Application (and everything it references, including
-Factories and Services). Any attributes or objects you have added will be
-saved and later restored.</p>
-
-<p>Here is an example:</p>
-
-<a href="listings/application/app3.py" class="py-listing">app3.py</a>
-
-<p>To demonstrate this, do the following:</p>
-
-<pre class="shell">
-% ./app3.py 
-Saving otk application to otk-start.tap...
-Saved.
-% twistd -f otk-start.tap 
-%
-% nc localhost 8123
-0
-% nc localhost 8123
-1
-% nc localhost 8123
-2
-%
-</pre>
-
-<p>Note that the stdout of the process is being directed into the log file,
-contained in <code>twistd.log</code>. Now stop the server, verify that it is no
-longer running, then restart it from the saved-at-shutdown <code>.tap</code>
-file:</p>
-
-<pre class="shell">
-% kill `cat twistd.pid `
-% nc localhost 8123
-localhost [127.0.0.1] 8123 (?) : Connection refused
-% twistd -f otk-shutdown.tap 
-% nc localhost 8123
-3
-%
-</pre>
-
-<p>Notice how the saved <code>.nextkey</code> attribute was restored, and the
-application picks up where it left off.</p>
-
-
-<h2>Configuration arguments</h2>
-
-<p>To do this right, you'll want to follow the sequence described by the
-<a href="plugin.xhtml">writing plugins</a> document. Instead of writing a short
-program that creates
-a <code>.tap</code> file (by creating an Application, doing various .listenTCPs
-on it, then calling .save), you will write a subroutine called
-updateApplication(). This subroutine should take a bunch of config arguments
-(using the usage.Options class described in the plugins document) and use
-them to create Factories and feed them to .listenTCP on an <em>existing</em>
-Application instance.</p>
-
-<p>With that in place, and a few files to register this new server you've
-created, a utility program called '<code>mktap</code>' can relieve you of the
-business of gathering user arguments and creating the app instance.
-<code>mktap</code> can use the Options subclass you define in your build-a-tap
-class to figure out what arguments are legal (<code>--port</code> taking a
-number, <code>--quotes</code> taking a filename, etc), provide <code>--help</code>
-with a list of valid arguments, and parse everything the user passes in
-<code>argv[]</code>. It creates the Application, then passes the app and the
-parsed options to your <code>updateApplication()</code> method, where you do the
-server-specific creation of a Factory and the various <code>listenTCP</code>
-calls. Then <code>mktap</code> saves out the <code>.tap</code> file, ready for
-starting by <code>twistd</code>.</p>
-
-<p>The end result is that installing your new server is simplified to the
-following steps:</p>
+<p>There are four interfaces supported, three of which are defined in
+<code>twisted.application.service</code>:</p>
 
 <ul>
-
-  <li>Unpack your server module (including the classes and plugin glue
-  files) into somewhere on your PYTHONPATH, perhaps
-  <code>/usr/local/lib/python</code>.</li>
-
-  <li>Run the standard <code>mktap</code> program, giving it the name of your
-  module and whatever configuration arguments it requires. Watch it create a
-  <code>.tap</code> file.</li>
-
-  <li>Use <code>twistd</code> to start the server contained in the <code>.tap</code>
-  file. </li>
+<li><code>IService</code></li>
+<li><code>IServiceCollection</code></li>
+<li><code>IProcess</code></li>
+<li><code>twisted.persisted.sob.IPersistable</code></li>
 </ul>
 
-<p>Pretty easy. At least your users will think so.</p>
+<p>Constructing an application is done by calling it with a single
+argument -- its name. The name influences some things, among them
+the default file it will persist to (which is why it is mandatory).</p>
 
-<p><em>And</em>, once your application is defined by the <code>.tap</code> file,
-there are other tools that can be used to configure it.
-<code>tap2deb</code> is a tool that creates installable Debian <code>.deb</code>
-packages from your <code>.tap</code> file, making installation even easier.</p>
+<pre>
+from twisted.application import service
+from twisted.persisted import sob
+application = service.Application("myapplication")
+s = service.IService(application)
+sc = service.IServiceCollection(application)
+proc = service.IProcess(application)
+proc = service.IProcess(application)
+per = sob.IPersistable(application)
+</pre>
 
-<p>The Application object has some other features designed to solve common
-server needs:</p>
+<h2>Services</h2>
 
-<ul>
-  <li> logging is controlled, through the log.Logger class </li>
-  <li> the process can switch to a different uid/gid after binding reserved
-   ports </li>
-  <li>styles.Versioned allows old saved copies of an object to be
-   upgraded when new versions of the class are available </li>
-  <li> Applications have Authorizers, used to authenticate client
-   connections </li>
-  <li> Applications have Services, which can be accessed by PB clients </li>
-</ul>
+<p>There are two interfaces relevant to services -- <code>IService</code>
+and <code>IServiceCollection</code>. <code>IService</code> represents
+a <em>state-aware</em> container. That means the service is ready to be
+notified of application start-ups and shutdowns. Services can be named
+or unnamed. <code>IServiceCollection</code> holds other services. It
+is possible to get named services from it by name. All services can be
+gotten from it via either indexing or iteration.</p>
+
+<p>Services can have a parent. Parents are set using
+<code>setServiceParent</code>. The parent must always be something
+that complies with the <code>IServiceCollection</code> interface.</p>
+
+<p>Most services will inherit from <code>Service</code>. This class
+will set an attribute <code>running</code> to a true value
+in <code>startService</code> and to a false value in <code>stopService</code>.
+This attribute will always be false in just-unpersisted <code>Service</code>s,
+without regards to its value at the time the <code>Service</code> was
+persisted.</p>
+
+<p><code>MultiService</code> implements both <code>IService</code> and
+<code>IServiceCollection</code>. It is used to keep the services in
+a hierarchy.</p>
+
+<p>It is, of course, possible to write one's own services, but Twisted
+comes out of the box with several services which are useful in writing
+network applications. Those are in
+<code>twisted.application.internet</code>.</p>
+
+<p>To each <code>reactor.listenFoo</code> method corresponds a service
+named <code>FooServer</code>. The arguments to its constructor are the
+same as the arguments to the method. It calls the method on application
+start-up, and stops listening on application shut-down.</p>
+
+<p>To each <code>reactor.connectFoo</code> methods corresponds a service
+named <code>FooClient</code>. The arguments to its constructor are the
+same as the arguments to the method. It calls the method on application
+start-up. It might, or might not, stop the connection no application
+shut-down. (This limitation will be removed at some point, and guaranteed
+disconnection will be implemnted.)</p>
+
+<p>The last time of service in <code>twisted.application.internet</code>
+is <code>TimerService</code>. The constructor takes a period, a callable
+and optionally arguments and keyword arguments. The service, when
+it is running, will make sure the callable will be called every time
+the period elapses.</p>
+
+<h2>String Ports</h2>
+
+<p>In Twisted, a <code>ServerFactory</code> does not care what kind
+of virtual reliable circuit it listens too -- SSL, UNIX domain
+sockets, TCP sockets or something else. However, the APIs for constructing
+the various <code>*Server</code> classes are different. When it is
+necessary for a less sophisticated user to direct construction of such
+a class, the <code>twisted.application.strports</code> module comes
+in handy. It contains a function <code>service</code> which accepts
+a <em>description</em> and a factory, and returns a service. The
+description is a string in a mini-language designed to specify
+ports. Full specifications are in the module docstrings.</p>
+
+<h2>Configuration</h2>
+
+<p>At some point, the objects for the configuration actually have
+to be constructed. The easiest and simplest way to do it is to
+use Python as the configuration mini-language. This format is called
+<code>TAC</code> and traditionally files with this format have the extension
+<code>.tac</code>.</p>
+
+<p>TAC files expect a valid Python file, which constructs a variable
+named <code>application</code>. This variable will be taken the configuration
+object. The full power of Python is available, of course.</p>
+
+<p>Here's an example:</p>
+
+<pre>
+# Import modules
+from twisted.application import service, internet
+from twisted.protocols import wire
+from twisted.internet import protocol
+
+# Construct the application
+application = service.Application("echo")
+
+# Get the IServiceCollection interface
+s = service.IServiceCollection(application)
+
+# Create the protocol factory
+f = protocol.ServerFactory()
+f.protocol = wire.Echo
+
+# Create the (sole) service
+i = internet.TCPService(7, f)
+
+# Tie the service to the application
+i.setServiceParent(s)
+</p>
+ 
+<p>TAC files are run with <code>twistd -y</code> or
+<code>twistd --python</code>. The <code>twistd</code> manpage
+has more information, but a common way to run is
+<code>twistd -noy echo.tac</code>. This tells <code>twistd</code>
+to not daemonize and not to try and save application on shutdown.</p>
 
 </body> </html>
