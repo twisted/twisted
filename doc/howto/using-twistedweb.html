@@ -180,7 +180,7 @@ in case the internal web server is Twisted.Web is to use VHostMonster.</p>
 <p>From the Twisted side, using VHostMonster is easy: just drop a file named
 (for example) <code>vhost.rpy</code> containing the following:</p>
 
-<pre>
+<pre class="python">
 from twisted.web import vhost
 resource = vhost.VHostMonsterResource()
 </pre>
@@ -210,7 +210,7 @@ ServerName example.com
 
 <p>Here is an example for Twisted.Web's reverse proxy:</p>
 
-<pre>
+<pre class="python">
 from twisted.internet import app
 from twisted.web import proxy, server, vhost
 vhostName = 'example.com'
@@ -241,7 +241,7 @@ was the child.</p>
 <p>Here is an example, using the only rule currently supplied by Twisted
 itself:</p>
 
-<pre>
+<pre class="python">
 default_root = rewrite.RewriterResource(default, rewrite.tildeToUsers)
 </pre>
 
