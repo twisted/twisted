@@ -9,7 +9,7 @@ TEST, TEST.
      * start a new --personal server from the latest codebase, make sure it's working (yes, 
        we've actually had a release once where a newer --user worked with older --personals but *not*
        new --personals, and I never tested new --personals!)
-     * run the main webserver's .tap on a different port (use mungetap.py) <-- DO *NOT* SKIP THIS STEP
+     * Run the test.tas from Twisted/admin/ with the latest `twistd'; this tests upgrading code.
  * Also make sure that the words .tap remained compatible; start the words server's .tap on some out-of-the-way port
        (same as above, I've gotta automate this)
 
@@ -22,11 +22,17 @@ TEST, TEST.
  * ChangeLog: Add an entry: * .: Releasing Twisted <version>
  * twisted/copyright.py: Update the version number.
 
- * CVS tag release-X_X_X. switch to a new tmp directory and cvs export the newly-tagged version.
+
+ * After ensuring we're really ready to dist:
  * When going from one RC to the next (or to final release):
    * cvs co -r release-X_X_XrcN
    * cvs up -A <files-that-you-want-to-merge>
    * cvs tag -c release-X_X_XrcN+1
+
+ * When doing an `rc1':
+   * `cvs tag release-X_X_Xrc1'.
+
+ * switch to a new tmp directory and `cvs export release-X_X_X'.
 
  * Alright, we're ready to pack it up!
  * from one directory above "Twisted" CVS repos, run './Twisted/admin/release-twisted -v <version>'
