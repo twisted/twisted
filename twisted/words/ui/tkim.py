@@ -322,7 +322,7 @@ class Conversation(Toplevel):
     def changeStatus(self,newState):
         self._addtext("\n%s is now %s."%(self.contact,newState))
     
-    def say(self,event):
+    def say(self,event=None):
         message=self.input.get('1.0',END)[:-1]
         self.input.delete('1.0',END)
         if message:
@@ -562,6 +562,7 @@ class AccountManager(Toplevel):
 
         self.im.addCallback(None,"attached",self.handleAttached)
         self.im.addCallback(None,"detached",self.handleDetached)
+        self.im.addCallback(None,"error",self.handleError)
 
     def close(self):
         self.withdraw()
@@ -647,6 +648,12 @@ class AccountManager(Toplevel):
         for account in self.accounts:
             if account.gatewayname==gateway.protocol and account.options["username"]==gateway.logonUsername:
                 self._modifyaccount(account,"False")
+
+    def handleError(self,im,gateway,event,code,message):
+        if code==im2.CONNECTIONFAILED:
+            for account in self.accounts:
+                if account.gatewayname==gateway.protocol and account.options["username"]==gateway.logonUsername:
+                    self._modifyaccount(account,"False")
 
 im2.Conversation=Conversation
 im2.ContactList=ContactList
