@@ -188,7 +188,7 @@ Architecture: all
 Depends: python%(python_version)s-twisted
 Description: %(description)s
  %(long_description)s
-    ''' % vars())
+''' % vars())
 
     save_to_file(os.path.join('.build', directory, 'debian', 'copyright'),
     '''\
@@ -225,48 +225,48 @@ export DH_COMPAT=1
 
 build: build-stamp
 build-stamp:
-        dh_testdir
-        touch build-stamp
+	dh_testdir
+	touch build-stamp
 
 clean:
-        dh_testdir
-        dh_testroot
-        rm -f build-stamp install-stamp
-        dh_clean
+	dh_testdir
+	dh_testroot
+	rm -f build-stamp install-stamp
+	dh_clean
 
 install: install-stamp
 install-stamp: build-stamp
-        dh_testdir
-        dh_testroot
-        dh_clean -k
-        dh_installdirs
+	dh_testdir
+	dh_testroot
+	dh_clean -k
+	dh_installdirs
 
-        # Add here commands to install the package into debian/tmp.
-        cp %(tap_file)s debian/tmp/etc/
-        cp debian/init.d debian/tmp/etc/init.d/%(deb_file)s
-        cp debian/default debian/tmp/etc/default/%(deb_file)s
-        cp debian/copyright debian/tmp/usr/share/doc/%(deb_file)s/
-        cp debian/README.Debian debian/tmp/usr/share/doc/%(deb_file)s/
-        touch debian/tmp/usr/share/%(deb_file)s/package-installed
-        touch install-stamp
+	# Add here commands to install the package into debian/tmp.
+	cp %(tap_file)s debian/tmp/etc/
+	cp debian/init.d debian/tmp/etc/init.d/%(deb_file)s
+	cp debian/default debian/tmp/etc/default/%(deb_file)s
+	cp debian/copyright debian/tmp/usr/share/doc/%(deb_file)s/
+	cp debian/README.Debian debian/tmp/usr/share/doc/%(deb_file)s/
+	touch debian/tmp/usr/share/%(deb_file)s/package-installed
+	touch install-stamp
 
 binary-arch: build install
 
 binary-indep: build install
-        dh_testdir
-        dh_testroot
-        dh_strip
-        dh_compress
-        dh_installchangelogs
-        dh_fixperms
-        dh_installdeb
-        dh_shlibdeps
-        dh_gencontrol
-        dh_md5sums
-        dh_builddeb
+	dh_testdir
+	dh_testroot
+	dh_strip
+	dh_compress
+	dh_installchangelogs
+	dh_fixperms
+	dh_installdeb
+	dh_shlibdeps
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
 
 source diff:                                                                  
-        @echo >&2 'source and diff are obsolete - use dpkg-source -b'; false
+	@echo >&2 'source and diff are obsolete - use dpkg-source -b'; false
 
 binary: binary-indep binary-arch
 .PHONY: build clean binary-indep binary-arch binary install
