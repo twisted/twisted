@@ -57,6 +57,9 @@ class ConnectedSocket(log.Logger, styles.Ephemeral, object):
 
     handle_disconnecting_write = handle_connected_write
 
+    def handle_disconnected_write(self, data):
+        pass # blarf
+
     def writeSequence(self, iovec):
         self.write("".join(iovec))
 
@@ -73,6 +76,11 @@ class ConnectedSocket(log.Logger, styles.Ephemeral, object):
             self.state = "disconnecting"
         else:
             self.connectionLost(failure.Failure(main.CONNECTION_DONE))
+
+    def handle_disconnecting_loseConnection(self):
+        pass
+
+    handle_disconnected_loseConnection = handle_disconnecting_loseConnection
 
     def _cbWriteShutdown(self):
         self.removeBufferCallback(self._cbWriteShutdown, "buffer empty")

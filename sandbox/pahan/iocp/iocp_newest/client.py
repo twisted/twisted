@@ -71,6 +71,7 @@ class SocketConnector(styles.Ephemeral, object):
     events = ["stopConnecting", "disconnect", "connect"]
     sockinfo = None
     factoryStarted = False
+    timeoutID = None
     def __init__(self, addr, factory, timeout, bindAddress):
         from twisted.internet import reactor
         self.state = "disconnected"
@@ -82,6 +83,11 @@ class SocketConnector(styles.Ephemeral, object):
 
     def handle_connecting_stopConnecting(self):
         self.connectionFailed(failure.Failure(error.UserError()))
+
+    def handle_disconnected_stopConnecting(self):
+        raise error.NotConnectingError
+
+    handle_connected_stopConnecting = handle_disconnected_stopConnecting
 
     handle_connecting_disconnect = handle_connecting_stopConnecting
 

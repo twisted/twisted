@@ -84,6 +84,9 @@ class ListeningPort(log.Logger, styles.Ephemeral, object):
 
     handle_listening_loseConnection = handle_listening_stopListening
 
+    def handle_disconnected_stopListening(self):
+        raise error.NotListeningError
+
     def logPrefix(self):
         """Returns the name of my class, to prefix log entries with.
         """
