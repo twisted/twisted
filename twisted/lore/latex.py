@@ -65,12 +65,10 @@ class LatexSpitter:
         getattr(self, 'visitNode_'+node.tagName, self.visitNodeDefault)(node)
 
     def visitNodeDefault(self, node):
-        s = getattr(self, 'mapStart_'+node.tagName, None) or ''
-        self.writer(s)
+        self.writer(getattr(self, 'start_'+node.tagName, None) or '')
         for child in node.childNodes:
             self.visitNode(child)
-        s = getattr(self, 'mapEnd_'+node.tagName, None) or ''
-        self.writer(s)
+        self.writer(getattr(self, 'end_'+node.tagName, None) or '')
 
     def visitNode_pre(self, node):
         self.writer('\\begin{verbatim}\n')
@@ -182,44 +180,44 @@ class LatexSpitter:
 
     visitNode_h2 = visitNode_h3 = visitNode_h4 = visitNodeHeader
 
-    mapStart_title = '\\title{'
-    mapEnd_title = '}\n'
+    start_title = '\\title{'
+    end_title = '}\n'
 
-    mapStart_html = '\\documentclass{article}\n'
-    mapStart_body = '\\begin{document}\n\\maketitle\n'
-    mapEnd_body = '\\end{document}'
+    start_html = '\\documentclass{article}\n'
+    start_body = '\\begin{document}\n\\maketitle\n'
+    end_body = '\\end{document}'
 
-    mapStart_dl = '\\begin{description}\n'
-    mapEnd_dl = '\\end{description}\n'
-    mapStart_ul = '\\begin{itemize}\n'
-    mapEnd_ul = '\\end{itemize}\n'
+    start_dl = '\\begin{description}\n'
+    end_dl = '\\end{description}\n'
+    start_ul = '\\begin{itemize}\n'
+    end_ul = '\\end{itemize}\n'
 
-    mapStart_ol = '\\begin{enumerate}\n'
-    mapEnd_ol = '\\end{enumerate}\n'
+    start_ol = '\\begin{enumerate}\n'
+    end_ol = '\\end{enumerate}\n'
 
-    mapStart_li = '\\item '
-    mapEnd_li = '\n'
+    start_li = '\\item '
+    end_li = '\n'
 
-    mapStart_dt = '\\item['
-    mapEnd_dt = ']'
-    mapEnd_dd = '\n'
+    start_dt = '\\item['
+    end_dt = ']'
+    end_dd = '\n'
 
-    mapStart_p = '\n\n'
+    start_p = '\n\n'
 
-    mapStart_strong = mapStart_em = '\\begin{em}'
-    mapEnd_strong = mapEnd_em = '\\end{em}'
+    start_strong = start_em = '\\begin{em}'
+    end_strong = end_em = '\\end{em}'
 
-    mapStart_q = "``"
-    mapEnd_q = "''"
+    start_q = "``"
+    end_q = "''"
 
-    mapStart_span_footnote = '\\footnote{'
-    mapEnd_span_footnote = '}'
+    start_span_footnote = '\\footnote{'
+    end_span_footnote = '}'
 
-    mapStart_div_note = '\\begin{quotation}\\textbf{Note:}'
-    mapEnd_div_note = '\\end{quotation}'
+    start_div_note = '\\begin{quotation}\\textbf{Note:}'
+    end_div_note = '\\end{quotation}'
 
-    mapStart_th = '\\textbf{'
-    mapEnd_th = '}'
+    start_th = '\\textbf{'
+    end_th = '}'
 
 
 class SectionLatexSpitter(LatexSpitter):
@@ -231,8 +229,7 @@ class SectionLatexSpitter(LatexSpitter):
         self.visitNodeDefault(node)
         self.writer('\\label{%s}}\n' % self.filename)
 
-    mapStart_title = mapEnd_title = mapEnd_body = mapStart_body = None
-    mapStart_html = None
+    start_title = end_title = end_body = start_body = start_html = None
 
 
 def processFile(spitter, fin):
