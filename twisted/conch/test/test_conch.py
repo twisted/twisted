@@ -165,8 +165,19 @@ if Crypto:
         
 
 def _makeArgs(args, mod="conch"):
-    start = [sys.executable, '-c', 
-            "from twisted.conch.scripts.%s import run; run()" % mod]
+    start = [sys.executable, '-c'
+"""
+### Twisted Preamble
+import sys, os
+path = os.path.abspath(sys.argv[0])
+while os.path.dirname(path) != path:
+    if os.path.basename(path).startswith('Twisted'):
+        sys.path.insert(0, path)
+        break
+    path = os.path.dirname(path)
+
+from twisted.conch.scripts.%s import run
+run()""" % mod]
     return start + list(args)
 
 class CmdLineClientTestBase(SignalMixin):
