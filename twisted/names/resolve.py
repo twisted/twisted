@@ -65,7 +65,7 @@ class ResolverChain(common.ResolverBase):
         return d
 
 
-    def lookupAllRecords(self, name, timeout = 10):
+    def lookupAllRecords(self, name, timeout = None):
         d = self.resolvers[0].lookupAllRecords(name, timeout)
         for r in self.resolvers[1:]:
             d = d.addErrback(
