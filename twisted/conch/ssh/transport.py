@@ -768,8 +768,7 @@ DISCONNECT_NO_MORE_AUTH_METHODS_AVAILABLE = 14
 DISCONNECT_ILLEGAL_USER_NAME = 15
 
 messages = {}
-import transport
-for v in dir(transport):
-    if v[: 4] == 'MSG_':
-        messages[getattr(transport, v)] = v # doesn't handle doubles
+for name, value in globals().items():
+    if name.startswith('MSG_'):
+        messages[value] = name
 
