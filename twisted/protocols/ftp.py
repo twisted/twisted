@@ -464,7 +464,7 @@ class Ftp(protocol.Protocol, protocol.Factory):
             self.dtp.loseConnection()
         self.reply('abort')
                   
-class Shell(Ftp):
+class ShellFactory(Ftp):
     command = ''
     done = None
     parent = None
