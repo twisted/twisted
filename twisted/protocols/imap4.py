@@ -1372,9 +1372,9 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         addedIDs = []
         failures = []
         for (id, msg) in messages.iteritems():
-            body = msg['BODY']
-            flags = msg['FLAGS']
-            date = msg['INTERNALDATE']
+            body = msg.getBodyFile()
+            flags = msg.getFlags()
+            date = msg.getInternalDate()
             try:
                 d = mbox.addMessage(body, flags, date)
             except Exception, e:
