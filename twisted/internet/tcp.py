@@ -451,8 +451,8 @@ class Port(abstract.FileDescriptor):
             os.chmod(self.port, 0666)
             self.unixsocket = 1
         else:
-            skt = self.createInternetSocket()
             try:
+                skt = self.createInternetSocket()
                 skt.bind((self.interface, self.port))
             except socket.error, le:
                 raise CannotListenError, (self.interface, self.port, le)

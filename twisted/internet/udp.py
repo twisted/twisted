@@ -90,8 +90,8 @@ class Port(abstract.FileDescriptor):
     
     def _bindSocket(self):
         log.msg("%s starting on %s"%(self.protocol.__class__, self.port))
-        skt = self.createInternetSocket()
         try:
+            skt = self.createInternetSocket()
             skt.bind((self.interface, self.port))
         except socket.error, le:
             raise error.CannotListenError, (self.interface, self.port, le)
