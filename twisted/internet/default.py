@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.64 2003/02/19 22:23:54 z3p Exp $
+# $Id: default.py,v 1.65 2003/02/21 19:30:18 exarkun Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -212,6 +212,7 @@ class PosixReactorBase(ReactorBase):
     def connectUNIX(self, address, factory, timeout=30):
         """@see: twisted.internet.interfaces.IReactorUNIX.connectUNIX
         """
+        assert unixEnabled, "UNIX support is not present"
         c = unix.Connector(address, factory, timeout, self)
         c.connect()
         return c
@@ -219,6 +220,7 @@ class PosixReactorBase(ReactorBase):
     def listenUNIX(self, address, factory, backlog=5, mode=0666):
         """@see: twisted.internet.interfaces.IReactorUNIX.listenUNIX
         """
+        assert unixEnabled, "UNIX support is not present"
         p = unix.Port(address, factory, backlog, mode, self)
         p.startListening()
         return p
@@ -244,6 +246,7 @@ class PosixReactorBase(ReactorBase):
     def connectSSL(self, host, port, factory, contextFactory, timeout=30, bindAddress=None):
         """@see: twisted.internet.interfaces.IReactorSSL.connectSSL
         """
+        assert sslEnabled, "SSL support is not present"
         c = ssl.Connector(host, port, factory, contextFactory, timeout, bindAddress, self)
         c.connect()
         return c
@@ -251,6 +254,7 @@ class PosixReactorBase(ReactorBase):
     def listenSSL(self, port, factory, contextFactory, backlog=5, interface=''):
         """@see: twisted.internet.interfaces.IReactorSSL.listenSSL
         """
+        assert sslEnabled, "SSL support is not present"
         p = ssl.Port(port, factory, contextFactory, backlog, interface, self)
         p.startListening()
         return p
