@@ -112,10 +112,10 @@ class InterfacesTestCase(unittest.TestCase):
 
     def testClasses(self):
         # is this a right thing to do?
-        self.assert_( components.implements(MultiplyAndAdd, IMultiply) )
-        self.assert_( components.implements(MultiplyAndAdd, IAdder) )
-        self.assert_( components.implements(Sub, IAdder) )
-        self.assert_( components.implements(Sub, ISub) )
+        self.assert_( IMultiply.implementedBy(MultiplyAndAdd) )
+        self.assert_( IAdder.implementedBy(MultiplyAndAdd) )
+        self.assert_( IAdder.implementedBy(Sub) )
+        self.assert_( ISub.implementedBy(Sub) )
 
     def testInstances(self):
         o = MultiplyAndAdd()
@@ -125,12 +125,6 @@ class InterfacesTestCase(unittest.TestCase):
         o = Sub()
         self.assert_( components.implements(o, IAdder) )
         self.assert_( components.implements(o, ISub) )
-
-    def testInstanceOnlyImplements(self):
-        class Blah: pass
-        o = Blah()
-        o.__implements__ = IAdder
-        self.assert_( components.implements(o, IAdder) )
 
     def testOther(self):
         self.assert_( not components.implements(3, ISub) )
