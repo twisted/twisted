@@ -110,11 +110,12 @@ class Resolver(common.ResolverBase):
 
     def maybeParseConfig(self):
         exists = self.resolv and os.path.exists(self.resolv)
-        mtime = os.path.getmtime(self.resolv)
-        if exists and mtime != self._lastResolvTime:
-            log.msg('%s changed, reparsing' % (self.resolv,))
-            self._lastResolvTime = mtime
-            self.parseConfig()
+        if exists:
+            mtime = os.path.getmtime(self.resolv)
+            if mtime != self._lastResolvTime:
+                log.msg('%s changed, reparsing' % (self.resolv,))
+                self._lastResolvTime = mtime
+                self.parseConfig()
         from twisted.internet import reactor
         self._parseCall = reactor.callLater(self._resolvReadInterval, self.maybeParseConfig)
 
