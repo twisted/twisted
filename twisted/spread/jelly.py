@@ -79,16 +79,21 @@ from types import NoneType
 from types import ClassType
 import copy
 
-try:
-    from new import instance
-    from new import instancemethod
-except:
-    from org.python.core import PyMethod
-    instancemethod = PyMethod
+from new import instance
+from new import instancemethod
+
 
 # Twisted Imports
 from twisted.python.reflect import namedObject, namedModule
 from twisted.persisted.crefutil import NotKnown, _Tuple, _InstanceMethod, _DictKeyAndValue, _Dereference
+from twisted.python import runtime
+
+if runtime.platform.getType() == "java":
+    from org.python.core import PyStringMap
+    DictTypes = (DictionaryType, PyStringMap)
+else:
+    DictTypes = (DictionaryType,)
+
 
 None_atom = "None"                  # N
 # code
@@ -385,7 +390,7 @@ class _Jellier:
                     sxp.append(tuple_atom)
                     for item in obj:
                         sxp.append(self.jelly(item))
-                elif objType is DictionaryType:
+                elif objType in DictTypes:
                     sxp.append(dictionary_atom)
                     for key, val in obj.items():
                         sxp.append([self.jelly(key), self.jelly(val)])
