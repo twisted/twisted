@@ -38,13 +38,30 @@ class Controller(resource.Resource):
     def setView(self, view):
         self.view = view
         
-    
     def setUp(self, request):
         """
         @type request: L{twisted.web.server.Request}
         """
         pass
 
+    def getChild(self, name, request):
+        """
+        Look for a factory method to create the object to handle the
+        next segment of the URL. If a wchild_* method is found, it will
+        be called to produce the Resource object to handle the next
+        segment of the path.
+        """
+        if not request.postpath:
+            method = "index"
+        else:
+            method = request.postpath[0]
+        f = getattr(self, "wchild_%s" % method, None)
+        if f:
+            request.prepath.append(request.postpath.pop(0))
+            return f(request)
+        else:
+            return resource.Resource.getChild(self, name, request)
+    
     def render(self, request, block=0):
         """
         This passes responsibility on to the view class registered for
@@ -62,6 +79,12 @@ class Controller(resource.Resource):
 
     def setSubmodel(self, submodel):
         self.submodel = submodel
+
+    def handle(self, request):
+        """
+        By default, we don't do anything
+        """
+        return (None, None)
 
 WController = Controller
 
