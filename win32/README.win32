@@ -24,7 +24,7 @@ is the Official method.
 BARE MINIMUM
 ------------
 This method is only necessary if you are trying to install Twisted
-from e.g. the CVS repository, and you don't want to acquire all the
+from e.g. the Subversion repository, and you don't want to acquire all the
 tools necessary to do the Official build.
 
 * With MSVC ***
