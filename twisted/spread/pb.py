@@ -47,7 +47,7 @@ import types
 import new
 
 # Twisted Imports
-from twisted.python import log, defer
+from twisted.python import log, defer, failure
 from twisted.protocols import protocol
 from twisted.internet import passport, tcp
 from twisted.persisted import styles
