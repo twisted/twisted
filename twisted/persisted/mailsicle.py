@@ -253,10 +253,8 @@ class Mailsicle(popsicle.DirectoryRepository):
         l = []
         for descript, oidx in parseOIDList(s):
             oid = oidx[1:-1]
-            l.append(self.load(oid))
-        dl = defer.DeferredList(l)
-        dl.addCallback(lambda x: [y[1] for y in x])
-        return dl
+            l.append(self.loadNow(oid))
+        return l
 
     def makeOIDList(self,l):
         return ', '.join(map(self.addressOID, l))
