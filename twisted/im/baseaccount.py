@@ -12,8 +12,14 @@ class AccountManager:
                          account.autoLogin, account.gatewayType])
         return data
 
-    def isEmpty():
+    def isEmpty(self):
         return len(self.accounts) == 0
+
+    def getConnectionInfo(self):
+        connectioninfo = []
+        for account in self.accounts.values():
+            connectioninfo.append(account.isOnline())
+        return connectioninfo
 
     def addAccount(self, account):
         self.accounts[account.accountName] = account
@@ -21,8 +27,8 @@ class AccountManager:
     def delAccount(self, accountName):
         del self.accounts[accountName]
 
-    def connect(self, accountName):
-        self.accounts[accountName].logOn()
+    def connect(self, accountName, chatui):
+        self.accounts[accountName].logOn(chatui)
 
     def disconnect(self, accountName):
         pass 

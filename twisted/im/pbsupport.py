@@ -104,6 +104,7 @@ class TwistedWordsClient(pb.Referenceable, basesupport.AbstractClientMixin):
         self.name = perspectiveName
         print "HELLO I AM A PB SERVICE", serviceName, perspectiveName
         self.chat = chatui
+        self.account = acct
 
     def getPerson(self, name):
         return self.chat.getPerson(name, self, TwistedWordsPerson)

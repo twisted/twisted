@@ -2,6 +2,7 @@ from twisted.im.baseaccount import AccountManager
 from twisted.im.pbsupport import PBAccount
 from twisted.im.tocsupport import TOCAccount
 from twisted.im.ircsupport import IRCAccount
+import twisted.im.jychat
 
 from java.awt import GridLayout, FlowLayout, BorderLayout, Container
 import sys
@@ -207,7 +208,7 @@ class AccountManagementGUI:
             print "Trying to connect to an account but no account selected"
         else:
             acctname = self.data.getValueAt(row, 0)
-            self.acctmanager.connect(acctname)
+            self.acctmanager.connect(acctname, twisted.im.jychat.JyChatUI())
             self.update()
 
     def disconnect(self, ae):
