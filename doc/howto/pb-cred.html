@@ -30,12 +30,12 @@ references thrown around from one process to another. You've written a chat
 server, and see the power of easy remote method calls.</p>
 
 <p>But there were some problems. You had to trust the user when they said
-their name was 'bob': no passwords or anything. If you wanted a direct-send
+their name was <q>bob</q>: no passwords or anything. If you wanted a direct-send
 one-to-one message feature, you might have implemented it by handing a User
 reference directly off to another User. (so they could invoke
 <code>.remote_sendMessage()</code> on the receiving User): but that lets them do
 anything else to that user too, things that should probably be restricted to
-the "owner" user, like <code>.remote_joinGroup()</code> or
+the <q>owner</q> user, like <code>.remote_joinGroup()</code> or
 <code>.remote_quit()</code>.</p>
 
 <p>And there were probably places where the easiest implementation was to
@@ -61,7 +61,8 @@ remotegroup.callRemote("sendMessage", "bob", "i like pork")
 
 <p>much to the horror of Bob's vegetarian friends.</p>
 
-<p>(In general, learn to get suspicious if you see "groupName" or "userName"
+<p>(In general, learn to get suspicious if you see
+<code>groupName</code> or <code>userName</code>
 in the argument list of a remotely-invokable method).</p>
 
 <p>You could fix this by adding more classes (with fewer remotely-invokable
@@ -98,7 +99,8 @@ don't trust them, don't give them that reference.</p>
 
 <p>Also note that the design of the serialization mechanism (implemented in
 <code class="API">twisted.spread.jelly</code>: pb, jelly, spread.. get it?
-Also look for "banana" and "marmalade". What other networking framework can
+Also look for <q>banana</q> and <q>marmalade</q>.
+What other networking framework can
 claim API names based on sandwich ingredients?) makes it impossible for the
 client to obtain a reference that they weren't explicitly given. References
 passed over the wire are given id numbers and recorded in a per-connection
@@ -140,8 +142,8 @@ Right??).</p>
 
 
 <p>So we have a security problem. We need a way to ask for and verify a
-password, so we know that Bob is really Bob and not Alice wearing her "Hi,
-my name is Bob" t-shirt. And it would make the code cleaner (i.e.: fewer
+password, so we know that Bob is really Bob and not Alice wearing her <q>Hi,
+my name is Bob</q> t-shirt. And it would make the code cleaner (i.e.: fewer
 classes) if some methods could know reliably <em>who</em> is calling them. You
 could add that layer of password checking to your application, but once
 again the basement denizens at Twisted Matrix Laboratories have beaten you
@@ -177,8 +179,8 @@ class Game(pb.Referenceable):
     self.board[x,y] = playerName
 </pre>
 
-<p>"But Wait", you say, yes that method takes a playerName, which means they
-could cheat and move for the other player. So instead, do this:</p>
+<p><q>But Wait</q>, you say, yes that method takes a playerName, which means
+they could cheat and move for the other player. So instead, do this:</p>
 
 <pre class="python">
 class Game(pb.Referenceable):
@@ -266,15 +268,15 @@ connects, and survives after they disconnect. <code>.attached()</code> and
 has connected and disconnected.</p>
 
 <p> When the client runs <code>pb.connect</code> to establish the connection,
-they can provide it with an optional '<code>client</code>' argument (which must
+they can provide it with an optional <code>client</code> argument (which must
 be a <code>pb.Referenceable</code> object). If they do, then a reference to that
 object will be handed to the server-side Perspective's <code>.attached</code>
-method, in the '<code>clientref</code>' argument. </p>
+method, in the <code>clientref</code> argument. </p>
 
 <p> The server-side Perspective can use it to invoke remote methods on
 something in the client, so that the client doesn't always have to drive the
 interaction. In a chat server, the client object would be the one to which
-"display text" messages were sent. In a game, this would provide a way to
+<q>display text</q> messages were sent. In a game, this would provide a way to
 tell the clients that someone has made a move, so they can update their game
 boards. To actually use it, you'd probably want to subclass Perspective and
 change the .attached method to stash the clientref somewhere, because the
@@ -318,7 +320,8 @@ You can see how each client logs into a different Perspective.</p>
 <a name="overview"><h2>Class Overview</h2></a>
 
 <p>Now that we've seen some of the motivation behind the Perspective class,
-let's start to de-mystify some of the parts labeled "magic" in pb6server.py.
+let's start to de-mystify some of the parts labeled <q>magic</q> in
+<code>pb6server.py</code>.
 Here are the major classes involved:</p>
 
 <ul>
@@ -383,19 +386,19 @@ class implements MD5-hashed challenge-response password authorization, much
 like the HTTP MD5-Authentication method: the server sends a random challenge
 string, the client concatenates a hash of their password with the challenge
 string, and sends back a hash of the result. At this point the client is
-said to be "authorized" for access to that <code>Identity</code>, and they
+said to be <q>authorized</q> for access to that <code>Identity</code>, and they
 are given a remote reference to the <code>Identity</code> (actually a
 wrapper around it), giving them all the privileges of that
 <code>Identity</code>.</p>
 
 <p>Those privileges are limited to requesting <code>Perspective</code>s. The
-<code>Identity</code> object also has a "keyring", which is a list of
+<code>Identity</code> object also has a <q>keyring</q>, which is a list of
 (serviceName, perspectiveName) pairs that the corresponding authorized user
 is allowed to access. Once the user has been authenticated, the
 <code>Identity</code>'s job is to implement
-<code>.requestPerspectiveForKey()</code>, which it does by verifying the "key"
-exists on the keyring, then asking the matching <code>Service</code> to do
-<code>.getPerspectiveForIdentity()</code>.</p>
+<code>.requestPerspectiveForKey()</code>, which it does by verifying the
+<q>key</q> exists on the keyring, then asking the matching
+<code>Service</code> to do <code>.getPerspectiveForIdentity()</code>.</p>
 
 <p>Finally, the <code>Perspective</code> is the subclass of pb.Perspective
 that implements whatever <code>perspective_*</code> methods you wish to expose to an
@@ -496,7 +499,7 @@ in the Service's <code>.getPerspectiveForIdentity</code> method instead. The
 Identity simply passes all requests for Perspectives off to the Service.</p>
 
 <p>The default <code>Identity</code> objects are created with a username and
-password, and a "keyring" of valid service/perspective name pairs. They are
+password, and a <q>keyring</q> of valid service/perspective name pairs. They are
 children of an <code>Authorizer</code> object. The best way to create them
 is to have the <code>Authorizer</code> do it for you, then fill in the
 details, by doing the following:</p>
@@ -615,7 +618,8 @@ executed as a callback when the previous step completes.</p>
 </pre>
 
 <p>The client does <code class="python">getObjectAt()</code> to connect to
-the given host and port, and retrieve the object named "root". On the server
+the given host and port, and retrieve the object named <code>root</code>.
+On the server
 side, the <code>BrokerFactory</code> accepts the connection, asks the <code
 class="API" base="twisted.spread">pb.AuthRoot</code> object for its <code
 class="python">.rootObject()</code>, getting an <code class="API"
@@ -641,11 +645,11 @@ class="API" base="twisted.spread.pb">IdentityWrapper</code>, which contains
 an internal reference to the <code>Identity</code> that we now know matches
 the user at the other end of the connection.</p>
 
-<p>The client then invokes the '<code>.remote_attach</code>' method on that
+<p>The client then invokes the <code>.remote_attach</code> method on that
 <code>IdentityWrapper</code>, passing in a serviceName, perspectiveName, and
 remoteRef. The wrapper asks the <code>Identity</code> to get a perspective
-using <code>identity.requestPerspectiveForKey</code>, which does the "is
-this user allowed to get this service/perspective" check by looking at the
+using <code>identity.requestPerspectiveForKey</code>, which does the <q>is
+this user allowed to get this service/perspective</q> check by looking at the
 tuples on its <code>.keyring</code>, and if that is allowed then it gets the
 <code class="API" base="twisted.spread.pb">Service</code> (by giving
 serviceName to the authorizer), then asks the <code>Service</code> to
