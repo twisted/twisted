@@ -1,3 +1,8 @@
+2002-12-27  Paul Swartz <z3p@twistedmatrix.com>
+
+	* bin/tkconch: initial commit of tkconch, a SSH client using Tkinter
+	as a terminal emulator.
+
 2002-12-25  Christmas Armstrong  <radix@twistedmatrix.com>
 
 	* .: Releasing 1.0.2alpha1 - Merry Christmas!

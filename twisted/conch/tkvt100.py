@@ -103,14 +103,12 @@ class VT100Frame(Tkinter.Frame):
     def write(self, data):
         #print self.x,self.y,repr(data)
         #if len(data)>5: raw_input()
-        oldx,oldy=self.x,self.y
         self.ansiParser.parseString(data)
-        if (oldx,oldy)!=(self.x,self.y):
-            self.canvas.delete(self.cursor)
-            canvasX = self.x*fontWidth + 1
-            canvasY = self.y*fontHeight + 1
-            self.cursor = self.canvas.create_rectangle(canvasX,canvasY,canvasX+fontWidth-1,canvasY+fontHeight-1, fill='green', outline='green')
-            self.canvas.lower(self.cursor)
+        self.canvas.delete(self.cursor)
+        canvasX = self.x*fontWidth + 1
+        canvasY = self.y*fontHeight + 1
+        self.cursor = self.canvas.create_rectangle(canvasX,canvasY,canvasX+fontWidth-1,canvasY+fontHeight-1, fill='green', outline='green')
+        self.canvas.lower(self.cursor)
 
     def writeString(self, i):
         if not i.display:
