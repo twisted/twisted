@@ -132,7 +132,7 @@ def makePrivateKeyString(obj, passphrase = None):
     else:
         raise BadKeyError('unknown key type %s' % keyType)
     if passphrase:
-        iv = open('/dev/random').read(8)
+        iv = common.entropy.get_bytes(8)
         hexiv = ''.join(['%02X' % ord(x) for x in iv])
         keyData += 'Proc-Type: 4,ENCRYPTED\n'
         keyData += 'DEK-Info: DES-EDE3-CBC,%s\n\n' % hexiv

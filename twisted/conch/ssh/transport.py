@@ -76,8 +76,7 @@ class SSHTransportBase(protocol.Protocol):
         log.msg('connection lost')
 
     def connectionMade(self):
-        self.transport.write('%s\r\n'%(self.ourVersionString)
-        )
+        self.transport.write('%s\r\n'%(self.ourVersionString))
         self.sendKexInit()
 
     def sendKexInit(self):

@@ -23,19 +23,19 @@ This module is unstable.
 Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 """
 
-import struct, fcntl, tty, os, pty
+import struct, os
 
 from twisted.internet import protocol, reactor
 from twisted.python import log
 
-import common, connection, ttymodes
+import common, connection
 
 class SSHSession(connection.SSHChannel):
 
     name = 'session'
     def __init__(self, *args, **kw):
         connection.SSHChannel.__init__(self, *args, **kw)
-        self. environ = {}
+        self.environ = {}
         self.buf = ''
         self.ptyTuple = 0
 
@@ -57,6 +57,7 @@ class SSHSession(connection.SSHChannel):
         return 0
 
     def request_shell(self, data):
+        import fcntl, tty
         if not self.ptyTuple: # we didn't get a pty-req
             log.msg('tried to get shell without pty, failing')
             return 0
@@ -128,8 +129,9 @@ class SSHSession(connection.SSHChannel):
         return 0
 
     def request_pty_req(self, data):
+        import pty
         self.environ['TERM'], self.winSize, self.modes =  \
-                             parseRequest_pty_req(data)
+                              parseRequest_pty_req(data)
         master, slave = pty.openpty()
         ttyname = os.ttyname(slave)
         self.environ['SSH_TTY'] = ttyname 
@@ -137,6 +139,7 @@ class SSHSession(connection.SSHChannel):
         return 1
 
     def request_window_change(self, data):
+        import fcntl, tty
         self.winSize = parseRequest_window_change(data)
         fcntl.ioctl(self.pty.fileno(), tty.TIOCSWINSZ, 
                     struct.pack('4H', *self.winSize))
@@ -167,6 +170,7 @@ class SSHSession(connection.SSHChannel):
         return pyshell
 
     def setModes(self):
+        import ttymodes
         pty = self.pty
         attr = tty.tcgetattr(pty.fileno())
         for mode, modeValue in self.modes:

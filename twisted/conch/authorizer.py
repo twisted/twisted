@@ -22,8 +22,6 @@ This module is unstable.
 Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 """
 
-
-import pwd
 from twisted.cred import authorizer
 from twisted.cred.error import Unauthorized
 from twisted.internet import defer
