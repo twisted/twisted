@@ -1,6 +1,8 @@
 # -*- test-case-name: twisted.test.test_woven -*-
 # Resource protection for Woven.
 
+from __future__ import nested_scopes
+
 import random
 import time
 import md5
