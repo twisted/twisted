@@ -20,7 +20,9 @@
 from twisted.trial import unittest
 
 import os
+import stat
 import random
+import tempfile
 
 from twisted.enterprise.row import RowObject
 from twisted.enterprise.reflector import *
@@ -46,6 +48,9 @@ except: MySQLdb = None
 
 try: import psycopg
 except: psycopg = None
+
+try: import kinterbasdb
+except: kinterbasedb = None
 
 tableName = "testTable"
 childTableName = "childTable"
@@ -320,6 +325,7 @@ class SQLReflectorTestCase(ReflectorTestCase):
     DB_PASS = 'twisted_test'
 
     can_rollback = 1
+    test_failures = 1
 
     reflectorClass = SQLReflector
 
@@ -340,11 +346,12 @@ class SQLReflectorTestCase(ReflectorTestCase):
         self.stopDB()
 
     def testPool(self):
-        # make sure failures are raised correctly
-        deferredError(self.dbpool.runQuery("select * from NOTABLE"))
-        deferredError(self.dbpool.runOperation("delete from * from NOTABLE"))
-        deferredError(self.dbpool.runInteraction(self.bad_interaction))
-        log.flushErrors()
+        if self.test_failures:
+            # make sure failures are raised correctly
+            deferredError(self.dbpool.runQuery("select * from NOTABLE"))
+            deferredError(self.dbpool.runOperation("deletexxx from NOTABLE"))
+            deferredError(self.dbpool.runInteraction(self.bad_interaction))
+            log.flushErrors()
 
         # verify simple table is empty
         sql = "select count(1) from simple"
@@ -400,7 +407,7 @@ class SQLReflectorTestCase(ReflectorTestCase):
         # should test this, but gadfly throws an exception instead
         #self.failUnless(transaction.fetchone() is None, "Too many rows")
         return "done"
-    
+
     def bad_interaction(self, transaction):
         if self.can_rollback:
             transaction.execute("insert into simple(x) values(0)")
@@ -488,6 +495,35 @@ class MySQLTestCase(SQLReflectorTestCase, unittest.TestCase):
                               user=self.DB_USER, passwd=self.DB_PASS)
 
 
+class FirebirdTestCase(SQLReflectorTestCase, unittest.TestCase):
+    """Test cases for the SQL reflector using Firebird/Interbase."""
+
+    count = 2 # CHANGEME
+    test_failures = 0 # failure testing causes problems
+    reflectorClass = NoSlashSQLReflector
+    DB_DIR = tempfile.mkdtemp()
+    DB_NAME = os.path.join(DB_DIR, SQLReflectorTestCase.DB_NAME)
+
+    def startDB(self):
+        os.chmod(self.DB_DIR, stat.S_IRWXU + stat.S_IRWXG + stat.S_IRWXO)
+        sql = 'create database "%s" user "%s" password "%s"'
+        sql %= (self.DB_NAME, self.DB_USER, self.DB_PASS);
+        conn = kinterbasdb.create_database(sql)
+        conn.close()
+        os.chmod(self.DB_NAME, stat.S_IRWXU + stat.S_IRWXG + stat.S_IRWXO)
+
+    def makePool(self):
+        return ConnectionPool('kinterbasdb', database=self.DB_NAME,
+                              host='localhost', user=self.DB_USER,
+                              password=self.DB_PASS)
+
+    def stopDB(self):
+        conn = kinterbasdb.connect(database=self.DB_NAME,
+                                   host='localhost', user=self.DB_USER,
+                                   password=self.DB_PASS)
+        conn.drop_database()
+        conn.close()
+
 class QuotingTestCase(unittest.TestCase):
 
     def testQuoting(self):
@@ -517,9 +553,9 @@ else:
 if psycopg is None: PsycopgTestCase.skip = "psycopg module not available"
 else:
     try:
-        conn = psycopg.connect(database=PostgresTestCase.DB_NAME,
-                               user=PostgresTestCase.DB_USER,
-                               password=PostgresTestCase.DB_PASS)
+        conn = psycopg.connect(database=PsycopgTestCase.DB_NAME,
+                               user=PsycopgTestCase.DB_USER,
+                               password=PsycopgTestCase.DB_PASS)
         conn.close()
     except Exception, e:
         PsycopgTestCase.skip = "Connection to PostgreSQL using psycopg failed: " + str(e)
@@ -533,3 +569,13 @@ else:
         conn.close()
     except Exception, e:
         MySQLTestCase.skip = "Connection to MySQL server failed: " + str(e)
+
+if kinterbasdb is None:
+    FirebirdTestCase.skip = "kinterbasdb module not available"
+else:
+    try:
+        testcase = FirebirdTestCase()
+        testcase.startDB()
+        testcase.stopDB()
+    except Exception, e:
+        FirebirdTestCase.skip = "Connection to Firebase server failed: " + str(e)

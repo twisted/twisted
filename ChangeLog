@@ -1,3 +1,7 @@
+2004-02-28  Dave Peticolas <dave@krondo.com>
+
+	* twisted/test/test_enterprise.py: Test Firebird db. Fix typos.
+
 2004-02-27  Andrew Bennetts  <spiv@twistedmatrix.com>
 
 	* twisted/internet/defer.py: Deprecated DeferredList.addDeferred.  It
