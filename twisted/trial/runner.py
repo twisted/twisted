@@ -42,7 +42,7 @@ class SingletonRunner:
     def __init__(self, methodName):
         if type(methodName) is types.StringType:
             self.testClass = reflect.namedObject('.'.join(methodName.split('.')[:-1]))
-            methodName = methodName.split('.')[-1]
+            self.methodName = methodName.split('.')[-1]
         else:
             self.testClass = methodName.im_class
             self.methodName = methodName.__name__
