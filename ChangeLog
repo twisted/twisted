@@ -1,3 +1,7 @@
+2003-2-9  Christopher Armstrong  <radix@twistedmatrix.com>
+
+	* .: Releasing 1.0.3rc1.
+
 2003-2-8  Moshe Zadka <moshez@twistedmatrix.com>
 
 	* twisted/tap/mail.py twisted/mail/tap.py twisted/plugins.tml: 
