@@ -355,6 +355,8 @@ def run():
             profile.run("application.run(%d)" % (not config.opts['no_save']))
         elif config.opts['debug']:
             import pdb
+            sys.stdout = oldstdout
+            sys.stderr = oldstderr
             pdb.run("application.run(%d)" % (not config.opts['no_save']))
         else:
             application.run(not config.opts['no_save'])
