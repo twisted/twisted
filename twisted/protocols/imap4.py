@@ -1800,8 +1800,8 @@ class IMAP4Client(basic.LineReceiver):
 
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
-        message numbers to message identifiers, or whose errback is invoked
-        if there is an error.
+        message sequence numbers to unique message identifiers, or whose
+        errback is invoked if there is an error.
         """
         d = self._fetch(messages, useUID=0, uid=1)
         d.addCallback(self.__cbFetch)
@@ -1812,9 +1812,9 @@ class IMAP4Client(basic.LineReceiver):
 
         This command is allowed in the Selected state.
 
-        @type messages: C{str}
-        @param messages: A message sequence set (e.g., '1,3,4' or '2:5,11')
-        
+        @type messages: C{MessageSet}
+        @param messages: The messages for which to retrieve flags.
+
         @type uid: C{bool}
         @param uid: Indicates whether the message sequence set is of message
         numbers or of unique message IDs.
@@ -1824,7 +1824,7 @@ class IMAP4Client(basic.LineReceiver):
         message numbers to lists of flags, or whose errback is invoked if
         there is an error.
         """
-        d = self._fetch(messages, useUID=uid, flags=1)
+        d = self._fetch(str(messages), useUID=uid, flags=1)
         d.addCallback(self.__cbFetch)
         return d
 
@@ -1833,8 +1833,8 @@ class IMAP4Client(basic.LineReceiver):
 
         This command is allowed in the Selected state.
 
-        @type messages: C{str}
-        @param messages: A message sequence set
+        @type messages: C{MessageSet}
+        @param messages: The messages for which to retrieve the internal date.
 
         @type uid: C{bool}
         @param uid: Indicates whether the message sequence set is of message
@@ -1844,9 +1844,9 @@ class IMAP4Client(basic.LineReceiver):
         @return: A deferred whose callback is invoked with a dict mapping
         message numbers to date strings, or whose errback is invoked
         if there is an error.  Date strings take the format of 
-        \"<day-month-year time timezone\", quotes included.
+        \"<day-month-year time timezone\".
         """
-        d = self._fetch(messages, useUID=uid, internaldate=1)
+        d = self._fetch(str(messages), useUID=uid, internaldate=1)
         d.addCallback(self.__cbFetch)
         return d
 
@@ -1855,8 +1855,8 @@ class IMAP4Client(basic.LineReceiver):
 
         This command is allowed in the Selected state.
 
-        @type messages: C{str}
-        @param messages: A message sequence set
+        @type messages: C{MessageSet}
+        @param messages: The messages for which to retrieve envelope data.
 
         @type uid: C{bool}
         @param uid: Indicates whether the message sequence set is of message
@@ -1865,9 +1865,15 @@ class IMAP4Client(basic.LineReceiver):
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
         message numbers to envelope data, or whose errback is invoked
-        if there is an error.
+        if there is an error.  Envelope data consists of a sequence of the
+        date, subject, from, sender, reply-to, to, cc, bcc, in-reply-to,
+        and message-id header fields.  The date, subject, in-reply-to, and
+        message-id fields are strings, while the from, sender, reply-to,
+        to, cc, and bcc fields contain address data.  Address data consists
+        of a sequence of name, source route, mailbox name, and hostname.
+        Fields which are not present for a particular address may be C{None}.
         """
-        d = self._fetch(messages, useUID=uid, envelope=1)
+        d = self._fetch(str(messages), useUID=uid, envelope=1)
         d.addCallback(self.__cbFetch)
         return d
 
@@ -1876,8 +1882,9 @@ class IMAP4Client(basic.LineReceiver):
 
         This command is allowed in the Selected state.
 
-        @type messages: C{str}
-        @param messages: A message sequence set
+        @type messages: C{MessageSet}
+        @param messages: The messages for which to retrieve body structure
+        data.
 
         @type uid: C{bool}
         @param uid: Indicates whether the message sequence set is of message
@@ -1885,8 +1892,16 @@ class IMAP4Client(basic.LineReceiver):
 
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
-        message numbers to structure data, or whose errback is invoked
-        if there is an error.
+        message numbers to body structure data, or whose errback is invoked
+        if there is an error.  Body structure data describes the MIME-IMB
+        format of a message and consists of a sequence of mime type, mime
+        subtype, parameters, content id, description, encoding, and size. 
+        The fields following the size field are variable: if the mime
+        type/subtype is message/rfc822, the contained message's envelope
+        information, body structure data, and number of lines of text; if
+        the mime type is text, the number of lines of text.  Extension fields
+        may also be included; if present, they are: the MD5 hash of the body,
+        body disposition, body language.
         """
         d = self._fetch(messages, useUID=uid, bodystructure=1)
         d.addCallback(self.__cbFetch)
@@ -1907,7 +1922,9 @@ class IMAP4Client(basic.LineReceiver):
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
         message numbers to body data, or whose errback is invoked
-        if there is an error.
+        if there is an error.  The simplified body structure is the same
+        as the body structure, except that extension fields will never be
+        present.
         """
         d = self._fetch(messages, useUID=uid, body=1)
         d.addCallback(self.__cbFetch)
@@ -1927,7 +1944,7 @@ class IMAP4Client(basic.LineReceiver):
 
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
-        message numbers to messages objects, or whose errback is invoked
+        message numbers to message objects, or whose errback is invoked
         if there is an error.
         """
         d = self._fetch(messages, useUID=uid, rfc822=1)
