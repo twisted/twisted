@@ -27,7 +27,8 @@ class Error(Exception):
         message = message or http.responses.get(code)
         Exception.__init__(self, code, message, response)
         self.status = code
-
+        self.response = response
+    
     def __str__(self):
         return '%s %s' % (self[0], self[1])
 

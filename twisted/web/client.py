@@ -31,6 +31,13 @@ from twisted.python.util import InsensitiveDict
 from twisted.web import error
 
 
+class PartialDownloadError(error.Error):
+    """Page was only partially downloaded, we got disconnected in middle.
+
+    The bit that was downloaded is in the response attribute.
+    """
+
+
 class HTTPPageGetter(http.HTTPClient):
 
     quietLoss = 0
@@ -129,9 +136,15 @@ class HTTPPageGetter(http.HTTPClient):
                 failure.Failure(
                     error.Error(
                         self.status, self.message, response)))
-            self.transport.loseConnection()
+        elif self.length != None and self.length != 0:
+            self.factory.noPage(failure.Failure(
+                PartialDownloadError(self.status, self.message, response)))
         else:
             self.factory.page(response)
+        # server might be stupid and not close connection. admittedly
+        # the fact we do only one request per connection is also
+        # stupid...
+        self.transport.loseConnection()
 
     def timeout(self):
         self.quietLoss = True
@@ -213,6 +226,8 @@ class HTTPClientFactory(protocol.ClientFactory):
             self.headers = InsensitiveDict()
         if postdata is not None:
             self.headers.setdefault('Content-Length', len(postdata))
+            # just in case a broken http/1.1 decides to keep connection alive
+            self.headers.setdefault("connection", "close")
         self.postdata = postdata
         self.method = method
 

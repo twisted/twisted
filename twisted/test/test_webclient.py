@@ -77,6 +77,13 @@ class PayloadResource(resource.Resource):
             return "ERROR"
         return data
 
+class BrokenDownloadResource(resource.Resource):
+
+    def render(self, request):
+        # only sends 3 bytes even though it claims to send 5
+        request.setHeader("content-length", "5")
+        request.write('abc')
+        return ''
 
 class WebClientTestCase(unittest.TestCase):
     def _listen(self, site):
@@ -96,6 +103,7 @@ class WebClientTestCase(unittest.TestCase):
         r.putChild("nolength", NoLengthResource())
         r.putChild("host", HostHeaderResource())
         r.putChild("payload", PayloadResource())
+        r.putChild("broken", BrokenDownloadResource())
         site = server.Site(r, timeout=None)
         self.port = self._listen(site)
         reactor.iterate(); reactor.iterate()
@@ -115,7 +123,13 @@ class WebClientTestCase(unittest.TestCase):
         s = "0123456789" * 10
         self.assertEquals(unittest.deferredResult(client.getPage(self.getURL("payload"), postdata=s)),
                           s)
-        
+
+    def testBrokenDownload(self):
+        # test what happens when download gets disconnected in the middle
+        f = unittest.deferredError(client.getPage(self.getURL("broken")))
+        f.trap(client.PartialDownloadError)
+        self.assertEquals(f.value.response, "abc")
+    
     def testHostHeader(self):
         # if we pass Host header explicitly, it should be used, otherwise
         # it should extract from url
