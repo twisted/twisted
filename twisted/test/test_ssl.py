@@ -172,216 +172,222 @@ if SSL is not None:
             ssl.DefaultOpenSSLContextFactory.__init__(self, *args, **kw)
 
 
-    class StolenTCPTestCase(test_tcp.ProperlyCloseFilesTestCase, test_tcp.WriteDataTestCase):
-        def setUp(self):
-            self._setUp()
-            f = protocol.ServerFactory()
-            f.protocol = protocol.Protocol
-            self.listener = reactor.listenSSL(
-                0, f, ssl.DefaultOpenSSLContextFactory(certPath, certPath), interface="127.0.0.1",
-            )
-            self.ports.append(self.listener)
-            f = protocol.ClientFactory()
-            f.protocol = test_tcp.ConnectionLosingProtocol
+class StolenTCPTestCase(test_tcp.ProperlyCloseFilesTestCase, test_tcp.WriteDataTestCase):
+    def setUp(self):
+        self._setUp()
+        f = protocol.ServerFactory()
+        f.protocol = protocol.Protocol
+        self.listener = reactor.listenSSL(
+            0, f, ssl.DefaultOpenSSLContextFactory(certPath, certPath), interface="127.0.0.1",
+        )
+        self.ports.append(self.listener)
+        f = protocol.ClientFactory()
+        f.protocol = test_tcp.ConnectionLosingProtocol
 
-            f.protocol.master = self
+        f.protocol.master = self
 
-            L = []
-            def connector():
-                p = self.listener.getHost().port
-                ctx = ssl.ClientContextFactory()
-                return reactor.connectSSL('127.0.0.1', p, f, ctx)
-            self.connector = connector
+        L = []
+        def connector():
+            p = self.listener.getHost().port
+            ctx = ssl.ClientContextFactory()
+            return reactor.connectSSL('127.0.0.1', p, f, ctx)
+        self.connector = connector
 
-            self.totalConnections = 0
-
-
-    class TLSTestCase(unittest.TestCase):
-        fillBuffer = 0
-
-        def testTLS(self):
-            cf = protocol.ClientFactory()
-            cf.protocol = UnintelligentProtocol
-            cf.client = 1
-
-            sf = protocol.ServerFactory()
-            sf.protocol = lambda: LineCollector(1, self.fillBuffer)
-            sf.done = 0
-            sf.server = 1
-
-            port = reactor.listenTCP(0, sf, interface="127.0.0.1")
-            portNo = port.getHost().port
-
-            reactor.connectTCP('127.0.0.1', portNo, cf)
-
-            i = 0
-            while i < 1000 and not sf.done:
-                reactor.iterate(0.01)
-                i += 1
-
-            self.failUnless(sf.done, "Never finished reading all lines: %s" % sf.lines)
-            self.assertEquals(
-                sf.lines,
-                UnintelligentProtocol.pretext + UnintelligentProtocol.posttext
-            )
-
-        def testUnTLS(self):
-            cf = protocol.ClientFactory()
-            cf.protocol = UnintelligentProtocol
-            cf.client = 1
-
-            sf = protocol.ServerFactory()
-            sf.protocol = lambda: LineCollector(0, self.fillBuffer)
-            sf.done = 0
-            sf.server = 1
-
-            port = reactor.listenTCP(0, sf, interface="127.0.0.1")
-            portNo = port.getHost().port
-
-            reactor.connectTCP('127.0.0.1', portNo, cf)
-
-            i = 0
-            while i < 1000 and not sf.done:
-                reactor.iterate(0.01)
-                i += 1
-
-            self.failUnless(sf.done, "Never finished reading all lines")
-            self.assertEquals(
-                sf.lines,
-                UnintelligentProtocol.pretext
-            )
-            self.failUnless(sf.rawdata, "No encrypted bytes received")
-
-        def testBackwardsTLS(self):
-            cf = protocol.ClientFactory()
-            cf.protocol = lambda: LineCollector(1, self.fillBuffer)
-            cf.server = 0
-            cf.done = 0
-
-            sf = protocol.ServerFactory()
-            sf.protocol = UnintelligentProtocol
-            sf.client = 0
-
-            port = reactor.listenTCP(0, sf, interface="127.0.0.1")
-            portNo = port.getHost().port
-
-            reactor.connectTCP('127.0.0.1', portNo, cf)
-
-            i = 0
-            while i < 1000 and not cf.done:
-                reactor.iterate(0.01)
-                i += 1
-
-            self.failUnless(cf.done, "Never finished reading all lines")
-            self.assertEquals(
-                cf.lines,
-                UnintelligentProtocol.pretext + UnintelligentProtocol.posttext
-            )
+        self.totalConnections = 0
 
 
-    class SpammyTLSTestCase(TLSTestCase):
-        fillBuffer = 1
-        def testTLS(self):
-            TLSTestCase.testTLS(self)
-        def testBackwardsTLS(self):
-            TLSTestCase.testBackwardsTLS(self)
+class TLSTestCase(unittest.TestCase):
+    fillBuffer = 0
 
-        testTLS.todo = "startTLS doesn't empty buffer before starting TLS. :("
-        testBackwardsTLS.todo = "startTLS doesn't empty buffer before starting TLS. :("
+    def testTLS(self):
+        cf = protocol.ClientFactory()
+        cf.protocol = UnintelligentProtocol
+        cf.client = 1
 
+        sf = protocol.ServerFactory()
+        sf.protocol = lambda: LineCollector(1, self.fillBuffer)
+        sf.done = 0
+        sf.server = 1
 
-    class BufferingTestCase(unittest.TestCase):
-        def testOpenSSLBuffering(self):
-            server = protocol.ServerFactory()
-            client = protocol.ClientFactory()
+        port = reactor.listenTCP(0, sf, interface="127.0.0.1")
+        portNo = port.getHost().port
 
-            server.protocol = SingleLineServerProtocol
-            client.protocol = RecordingClientProtocol
-            client.buffer = []
+        reactor.connectTCP('127.0.0.1', portNo, cf)
 
-            sCTX = ssl.DefaultOpenSSLContextFactory(certPath, certPath)
-            cCTX = ssl.ClientContextFactory()
+        i = 0
+        while i < 1000 and not sf.done:
+            reactor.iterate(0.01)
+            i += 1
 
-            port = reactor.listenSSL(0, server, sCTX, interface='127.0.0.1')
-            reactor.connectSSL('127.0.0.1', port.getHost().port, client, cCTX)
+        self.failUnless(sf.done, "Never finished reading all lines: %s" % sf.lines)
+        self.assertEquals(
+            sf.lines,
+            UnintelligentProtocol.pretext + UnintelligentProtocol.posttext
+        )
 
-            i = 0
-            while i < 5000 and not client.buffer:
-                i += 1
-                reactor.iterate()
+    def testUnTLS(self):
+        cf = protocol.ClientFactory()
+        cf.protocol = UnintelligentProtocol
+        cf.client = 1
 
-            self.assertEquals(client.buffer, ["+OK <some crap>\r\n"])
+        sf = protocol.ServerFactory()
+        sf.protocol = lambda: LineCollector(0, self.fillBuffer)
+        sf.done = 0
+        sf.server = 1
 
+        port = reactor.listenTCP(0, sf, interface="127.0.0.1")
+        portNo = port.getHost().port
 
-    class ImmediateDisconnectTestCase(unittest.TestCase, ContextGeneratingMixin):
+        reactor.connectTCP('127.0.0.1', portNo, cf)
 
-        todo = "Logged SSL.Error - [('SSL routines', 'SSL23_READ', 'ssl handshake failure')]"
+        i = 0
+        while i < 1000 and not sf.done:
+            reactor.iterate(0.01)
+            i += 1
 
-        def testImmediateDisconnect(self):
-            org = "twisted.test.test_ssl"
-            self.setupServerAndClient(
-                (org, org + ", client"), {},
-                (org, org + ", server"), {})
-            
-            # Set up a server, connect to it with a client, which should work since our verifiers
-            # allow anything, then disconnect.
-            serverProtocolFactory = protocol.ServerFactory()
-            serverProtocolFactory.protocol = protocol.Protocol
-            self.serverPort = serverPort = reactor.listenSSL(0, 
-                serverProtocolFactory, self.serverCtxFactory)
+        self.failUnless(sf.done, "Never finished reading all lines")
+        self.assertEquals(
+            sf.lines,
+            UnintelligentProtocol.pretext
+        )
+        self.failUnless(sf.rawdata, "No encrypted bytes received")
 
-            clientProtocolFactory = protocol.ClientFactory()
-            clientProtocolFactory.protocol = ImmediatelyDisconnectingProtocol
-            clientProtocolFactory.connectionDisconnected = defer.Deferred()
-            clientConnector = reactor.connectSSL('127.0.0.1', 
-                serverPort.getHost().port, clientProtocolFactory, self.clientCtxFactory)
-            
-            return clientProtocolFactory.connectionDisconnected.addCallback(
-                lambda ignoredResult: self.serverPort.stopListening())
+    def testBackwardsTLS(self):
+        cf = protocol.ClientFactory()
+        cf.protocol = lambda: LineCollector(1, self.fillBuffer)
+        cf.server = 0
+        cf.done = 0
 
+        sf = protocol.ServerFactory()
+        sf.protocol = UnintelligentProtocol
+        sf.client = 0
 
-    class CertificateVerificationCallback(unittest.TestCase, ContextGeneratingMixin):
-        def testVerificationCallback(self):
+        port = reactor.listenTCP(0, sf, interface="127.0.0.1")
+        portNo = port.getHost().port
 
-            self.calls = {}
-            def serverCallback(*args):
-                self.calls['server'] = args
-                return True
+        reactor.connectTCP('127.0.0.1', portNo, cf)
 
-            def clientCallback(*args):
-                self.calls['client'] = args
-                return True
+        i = 0
+        while i < 1000 and not cf.done:
+            reactor.iterate(0.01)
+            i += 1
 
-            org = "twisted.test.test_ssl"
-            self.setupServerAndClient(
-                (org, org + ", client"), {"verifyCallback": clientCallback},
-                (org, org + ", server"), {"verifyCallback": serverCallback})
-
-            # Set up a server, connect to it with a client, which should work since our verifiers
-            # allow anything, then disconnect.
-            serverProtocolFactory = protocol.ServerFactory()
-            serverProtocolFactory.protocol = protocol.Protocol
-            self.serverPort = serverPort = reactor.listenSSL(0, 
-                serverProtocolFactory, self.serverCtxFactory)
-
-            clientProtocolFactory = protocol.ClientFactory()
-            clientProtocolFactory.protocol = AlmostImmediatelyDisconnectingProtocol
-            clientProtocolFactory.connectionDisconnected = defer.Deferred()
-            clientConnector = reactor.connectSSL('127.0.0.1', 
-                serverPort.getHost().port, clientProtocolFactory, self.clientCtxFactory)
-
-            # Go go go go
-            return clientProtocolFactory.connectionDisconnected.addCallback(
-                self._cbVerificationCallback)
-
-        def _cbVerificationCallback(self, ignoredResult):
-            self.assertEquals(len(self.calls), 2)
-            self.assertEquals(
-                crypto.dump_certificate(crypto.FILETYPE_PEM, self.calls['client'][1]),
-                file(os.extsep.join((self.serverBase, 'cert'))).read())
-            self.assertEquals(
-                crypto.dump_certificate(crypto.FILETYPE_PEM, self.calls['server'][1]),
-                file(os.extsep.join((self.clientBase, 'cert'))).read())
+        self.failUnless(cf.done, "Never finished reading all lines")
+        self.assertEquals(
+            cf.lines,
+            UnintelligentProtocol.pretext + UnintelligentProtocol.posttext
+        )
 
 
-            return self.serverPort.stopListening()
+class SpammyTLSTestCase(TLSTestCase):
+    fillBuffer = 1
+    def testTLS(self):
+        TLSTestCase.testTLS(self)
+    def testBackwardsTLS(self):
+        TLSTestCase.testBackwardsTLS(self)
+
+    testTLS.todo = "startTLS doesn't empty buffer before starting TLS. :("
+    testBackwardsTLS.todo = "startTLS doesn't empty buffer before starting TLS. :("
+
+
+class BufferingTestCase(unittest.TestCase):
+    def testOpenSSLBuffering(self):
+        server = protocol.ServerFactory()
+        client = protocol.ClientFactory()
+
+        server.protocol = SingleLineServerProtocol
+        client.protocol = RecordingClientProtocol
+        client.buffer = []
+
+        sCTX = ssl.DefaultOpenSSLContextFactory(certPath, certPath)
+        cCTX = ssl.ClientContextFactory()
+
+        port = reactor.listenSSL(0, server, sCTX, interface='127.0.0.1')
+        reactor.connectSSL('127.0.0.1', port.getHost().port, client, cCTX)
+
+        i = 0
+        while i < 5000 and not client.buffer:
+            i += 1
+            reactor.iterate()
+
+        self.assertEquals(client.buffer, ["+OK <some crap>\r\n"])
+
+
+class ImmediateDisconnectTestCase(unittest.TestCase, ContextGeneratingMixin):
+
+    todo = "Logged SSL.Error - [('SSL routines', 'SSL23_READ', 'ssl handshake failure')]"
+
+    def testImmediateDisconnect(self):
+        org = "twisted.test.test_ssl"
+        self.setupServerAndClient(
+            (org, org + ", client"), {},
+            (org, org + ", server"), {})
+        
+        # Set up a server, connect to it with a client, which should work since our verifiers
+        # allow anything, then disconnect.
+        serverProtocolFactory = protocol.ServerFactory()
+        serverProtocolFactory.protocol = protocol.Protocol
+        self.serverPort = serverPort = reactor.listenSSL(0, 
+            serverProtocolFactory, self.serverCtxFactory)
+
+        clientProtocolFactory = protocol.ClientFactory()
+        clientProtocolFactory.protocol = ImmediatelyDisconnectingProtocol
+        clientProtocolFactory.connectionDisconnected = defer.Deferred()
+        clientConnector = reactor.connectSSL('127.0.0.1', 
+            serverPort.getHost().port, clientProtocolFactory, self.clientCtxFactory)
+        
+        return clientProtocolFactory.connectionDisconnected.addCallback(
+            lambda ignoredResult: self.serverPort.stopListening())
+
+
+class CertificateVerificationCallback(unittest.TestCase, ContextGeneratingMixin):
+    def testVerificationCallback(self):
+
+        self.calls = {}
+        def serverCallback(*args):
+            self.calls['server'] = args
+            return True
+
+        def clientCallback(*args):
+            self.calls['client'] = args
+            return True
+
+        org = "twisted.test.test_ssl"
+        self.setupServerAndClient(
+            (org, org + ", client"), {"verifyCallback": clientCallback},
+            (org, org + ", server"), {"verifyCallback": serverCallback})
+
+        # Set up a server, connect to it with a client, which should work since our verifiers
+        # allow anything, then disconnect.
+        serverProtocolFactory = protocol.ServerFactory()
+        serverProtocolFactory.protocol = protocol.Protocol
+        self.serverPort = serverPort = reactor.listenSSL(0, 
+            serverProtocolFactory, self.serverCtxFactory)
+
+        clientProtocolFactory = protocol.ClientFactory()
+        clientProtocolFactory.protocol = AlmostImmediatelyDisconnectingProtocol
+        clientProtocolFactory.connectionDisconnected = defer.Deferred()
+        clientConnector = reactor.connectSSL('127.0.0.1', 
+            serverPort.getHost().port, clientProtocolFactory, self.clientCtxFactory)
+
+        # Go go go go
+        return clientProtocolFactory.connectionDisconnected.addCallback(
+            self._cbVerificationCallback)
+
+    def _cbVerificationCallback(self, ignoredResult):
+        self.assertEquals(len(self.calls), 2)
+        self.assertEquals(
+            crypto.dump_certificate(crypto.FILETYPE_PEM, self.calls['client'][1]),
+            file(os.extsep.join((self.serverBase, 'cert'))).read())
+        self.assertEquals(
+            crypto.dump_certificate(crypto.FILETYPE_PEM, self.calls['server'][1]),
+            file(os.extsep.join((self.clientBase, 'cert'))).read())
+
+
+        return self.serverPort.stopListening()
+
+if SSL is None:
+    for tCase in [StolenTCPTestCase, TLSTestCase, SpammyTLSTestCase, 
+                  BufferingTestCase, ImmediateDisconnectTestCase,
+                  CertificateVerificationCallback]:
+        tCase.skip = "OpenSSL not present, cannot run SSL tests"
