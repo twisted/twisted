@@ -261,10 +261,17 @@ class Server(Connection):
         """
         return self.repstr
 
+    def getHost(self):
+        """Returns a tuple of ('INET', hostname, port).
+
+        This indicates the servers address.
+        """
+        return ('INET',)+self.socket.getsockname()
+
     def getPeer(self):
         """
         Returns a tuple of ('INET', hostname, port), indicating the connected
-        client's address
+        client's address.
         """
         return ('INET',)+self.client
 
