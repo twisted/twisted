@@ -66,7 +66,9 @@ class FileDescriptor(log.Logger, styles.Ephemeral):
         if self.producer is not None:
             self.producer.stopProducing()
             self.producer = None
-
+        self.stopReading()
+        self.stopWriting()
+    
     def writeSomeData(self, data):
         """Write as much as possible of the given data, immediately.
 
