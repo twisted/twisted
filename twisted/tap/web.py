@@ -160,7 +160,11 @@ def updateApplication(app, config):
                       pb.BrokerFactory(distrib.ResourcePublisher(site)))
     else:
         if config['https']:
-            from twisted.internet.ssl import DefaultOpenSSLContextFactory
+            try:
+                from twisted.internet.ssl import DefaultOpenSSLContextFactory
+            except ImportError:
+                print "SSL support not installed. "
+                sys.exit(2)
             app.listenSSL(int(config['https']),
                           site,
                           DefaultOpenSSLContextFactory(config['privkey'],
