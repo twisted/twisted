@@ -95,12 +95,28 @@ class MicroDOMTest(TestCase):
 
         YES THIS WONDERFUL AWFER IS NOW HERER!!!
 
+        <script LANGUAGE="javascript">
+function give_answers() {
+if (score < 70) {
+alert("I hate you");
+}}
+        </script>
         </body>
         </HTML>
         """
         d = microdom.parseString(s, beExtremelyLenient=1)
         l = domhelpers.findNodesNamed(d.documentElement, 'blink')
         self.assertEquals(len(l), 1)
+
+    def testScriptLeniency(self):
+        s = """
+        <script>foo < bar</script>
+        <script language="javascript">foo </scrip bar </script>
+        <script src="foo">
+        <script src="foo">baz</script>
+        """
+        d = microdom.parseString(s, beExtremelyLenient=1)
+
 
     def testPreserveCase(self):
         s = '<eNcApSuLaTe><sUxor></sUxor><bOrk><w00T>TeXt</W00t></BoRk></EnCaPsUlAtE>'
