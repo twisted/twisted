@@ -305,6 +305,6 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
     def testZoneTransfer(self):
         """Test DNS 'AXFR' queries (Zone transfer)"""
         self.namesTest(
-            self.resolver.lookupZone('test-domain.com'),
+            self.resolver.lookupZone('test-domain.com').addCallback(lambda r: r[:-1]),
             reduce(operator.add, test_domain_com.records.values())
         )
