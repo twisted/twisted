@@ -22,7 +22,7 @@
 import sys, os, string
 if string.find(os.path.abspath(sys.argv[0]), os.sep+'Twisted') != -1:
     sys.path.insert(0, os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]), os.pardir, os.pardir)))
-sys.path.insert(0, os.curdir)
+#sys.path.insert(0, os.curdir)
 ### end of preamble
 
 from twisted.scripts import trial
