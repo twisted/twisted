@@ -1,155 +1,10 @@
 -*- outline -*-
 
-non-independent things left to do on newpb
+non-independent things left to do on newpb. These require deeper magic or
+can not otherwise be done casually. Many of these involve fundamental
+protocol issues, and therefore need to be decided sooner rather than later.
 
-* connection setup
 
-PBServerFactory, PBClientFactory, pb.getRemoteURL, pb.callRemoteURL
-
-DONE, need glyph to do URL parsing
-
-* thoroughly test failure-handling at all points of in/out serialization
-
-places where BananaError or Violation might be raised
-
-sending side:
- Slicer creation (schema pre-validation? no): no no
-  pre-validation is done before sending the object, Broker.callFinished,
-  RemoteReference.doCall
-  slicer creation is done in newSlicerFor
-
- .slice (called in pushSlicer) ?
- .slice.next raising Violation
- .slice.next returning Deferrable when streaming isn't allowed
- .sendToken (non-primitive token, can't happen)
- .newSlicerFor (no ISlicer adapter)
- top.childAborted
-
-receiving side:
- long header (>64 bytes)
- checkToken (top.openerCheckToken)
- checkToken (top.checkToken)
- typebyte == LIST (oldbanana)
- bad VOCAB key
- too-long vocab key
- bad FLOAT encoding
- top.receiveClose
- top.finish
- top.reportViolation
- oldtop.finish (in from handleViolation)
- top.doOpen
- top.start
-plus all of these when discardCount != 0
-OPENOPEN
-
-send-side uses:
- f = top.reportViolation(f)
-receive-side should use it too (instead of f.raiseException)
-
-** add connection-shutdown checking?
-
-A BananaError on the receiving end (like sending a URL-based RR in a
-your-reference sequence) will drop the connection, which turns (somewhere, I
-can't figure out quite where) into a regular ConnectionDone error. It would
-be nice to know why the far end hung up on us. For most PB things I'd think
-you could just error-back the request (if the error occurs after the req-id
-is sent). But sometimes you can't, or it isn't convenient. It might be nice
-to add a banana-error sequence which allowed a short text message to be put
-into the caller's log, after which the connection would be dropped. It would
-help one end distinguish between an intentional disconnect and a BananaError
-dropping the connection.
-
-DONE
-
-* document Unslicer interface: what attributes are set
-
-at the moment: .protocol, .openCount, .parent
-
-maybe use constructor instead of start()? Or would that make adaptation
-harder?
-
-* implement Slicer schema pre-validation
-
-* implement/test CopiedFailureConstraint
-
-* test failure-handing during callRemote argument serialization
-
-* implement/test some streaming Slicers
-
-* test producer Banana
-
-* implement named Referenceables
-
-the Factory should hold named refs, the Broker should hold numbered
-(implicit) refs. ReferenceUnslicer and CallUnslicer should look in both
-tables (one for numerical ids, the other for string ids). The Factory should
-have an API to let you register pb.Referenceables (by name, the 'pathname'
-part of the URL).
-
-DONE
-
-* implement pb.callRemoteURL
-
-a URL defines an endpoint: a pb.Referenceable, with methods
-
-URL = f("pb:", host, port, pathname)
-d = pb.callRemoteURL(URL, ifacename, methodname, args)
-
-probably give an actual RemoteInterface instead of just its name
-
-This involves synthesizing RemoteReferences with string ids.
-
-DONE, with simple URL types (callRemoteURL_TCP)
-
-** more URLs
-
-relative URLs (those without a host part) refer to objects on the same
-Broker. Absolute URLs (those with a host part) refer to objects on other
-Brokers.
-
-* build/port the .rootObject framework, then pb.login
-
-Leave cred work for Glyph.
-
-URL = pb.parseURL("pb://lothar.com:8789/users/warner/services/petmail",
-                  IAuthorization)
-URL = doFullLogin(URL, "warner", "x8yzzy")
-URL.callRemote(methodname, args)
-
-DONE: PBServerFactory, PBClientFactory.
-
-* move from VocabSlicer sequence to ADDVOCAB/DELVOCAB tokens
-
-Requires a .wantVocabString flag in the parser, which is kind of icky but
-fixes the annoying asymmetry between set (vocab sequence) and get (VOCAB
-token). Might want a CLEARVOCAB token too.
-
-** VOCABize interface/method names
-
-One possibility is to make a list of all strings used by all known
-RemoteInterfaces and all their methods, then send it at broker connection
-time as the initial vocab map. A better one (maybe) is to somehow track what
-we send and add a word to the vocab once we've sent it more than three
-times.
-
-Maybe vocabize the pairs, as "ri/name1","ri/name2", etc, or maybe do them
-separately. Should do some handwaving math to figure out which is better.
-
-* version negotiation
-
-Should be able to telnet into a PB server and find out that it is a PB
-server. Pointing a PB client at an HTTP server (or an HTTP client at a PB
-server) should result in an error, not a timeout.
-
-desiderata:
-
- negotiation should take place with regular banana sequences: don't invent a
- new protocol that is only used at the start of the connection
-
- banana should be useable one-way, for storage or high-latency RPC
-
- negotiation should be flexible enough to be extended but still allow old code
- to talk with new code
 
 * create UnslicerRegistry, registerUnslicer
 
@@ -169,6 +24,106 @@ also some APIs to get a list of everything in the registry
  class FailureSlicer(slicer.BaseSlicer):
      classname = "twisted.python.failure.Failure"
      slicerForClasses = (failure.Failure,) # triggers auto-register
+
+** various registry approaches
+
+There are currently three kinds of registries used in banana/newpb:
+
+ RemoteInterface <-> interface name
+ class/type -> Slicer (-> opentype) -> Unslicer (-> class/type)
+ Copyable subclass -> copyable-opentype -> RemoteCopy subclass
+
+There are two basic approaches to representing the mappings that these
+registries implement. The first is implicit, where the local objects are
+subclassed from Sliceable or Copyable or RemoteInterface and have attributes
+to define the wire-side strings that represent them. On the receiving side,
+we make extensive use of metaclasses to perform automatic registration
+(taking names from class attributes and mapping them to the factory or
+RemoteInterface used to create the remote version).
+
+The second approach is explicit, where pb.registerRemoteInterface,
+pb.registerRemoteCopy, and pb.registerUnslicer are used to establish the
+receiving-side mapping. There isn't a clean way to do it explicitly on the
+sending side, since we already have instances whose classes can give us
+whatever information we want.
+
+The advantage of implicit is simplicity: no more questions about why my
+pb.RemoteCopy is giving "not unserializable" errors. The mere act of
+importing a module is enough to let PB create instances of its classes.
+
+The advantage of doing it explicitly is to remind the user about the
+existence of those maps, because the factory classes in the receiving map is
+precisely equal to the user's exposure (from a security point of view). See
+the E paper on secure-serialization for some useful concepts.
+
+A disadvantage of implicit is that you can't quite be sure what, exactly,
+you're exposed to: the registrations take place all over the place.
+
+To make explicit not so painful, we can use quotient's .wsv files
+(whitespace-separated values) which map from class to string and back again.
+The file could list fully-qualified classname, wire-side string, and
+receiving factory class on each line. The Broker (or rather the RootSlicer
+and RootUnslicer) would be given a set of .wsv files to define their
+mapping. It would get all the registrations at once (instead of having them
+scattered about). They could also demand-load the receive-side factory
+classes.
+
+For now, go implicit. Put off the decision until we have some more
+experience with using newpb.
+
+* move from VocabSlicer sequence to ADDVOCAB/DELVOCAB tokens
+
+Requires a .wantVocabString flag in the parser, which is kind of icky but
+fixes the annoying asymmetry between set (vocab sequence) and get (VOCAB
+token). Might want a CLEARVOCAB token too.
+
+** VOCABize interface/method names
+
+One possibility is to make a list of all strings used by all known
+RemoteInterfaces and all their methods, then send it at broker connection
+time as the initial vocab map. A better one (maybe) is to somehow track what
+we send and add a word to the vocab once we've sent it more than three
+times.
+
+Maybe vocabize the pairs, as "ri/name1","ri/name2", etc, or maybe do them
+separately. Should do some handwaving math to figure out which is better.
+
+* nail down some useful schema syntaxes
+
+This has two parts: parsing something like a __schema__ class attribute (see
+the sketches in schema.xhtml) into a tree of FooConstraint objects, and
+deciding how to retrieve schemas at runtime from things like the object being
+serialized or the object being called from afar. To be most useful, the
+syntax needs to mesh nicely (read "is identical to") things like formless and
+(maybe?) atop or whatever has replaced the high-density highly-structured
+save-to-disk scheme that twisted.world used to do.
+
+Some lingering questions in this area:
+
+ When an object has a remotely-invokable method, where does the appropriate
+ MethodConstraint come from? Some possibilities:
+
+  an attribute of the method itself: obj.method.__schema__
+
+  from inside a __schema__ attribute of the object's class
+
+  from inside a __schema__ attribute of an Interface (which?) that the object
+  implements
+
+ Likewise, when a caller holding a RemoteReference invokes a method on it, it
+ would be nice to enforce a schema on the arguments they are sending to the
+ far end ("be conservative in what you send"). Where should this schema come
+ from? It is likely that the sender only knows an Interface for their
+ RemoteReference.
+
+ When PB determines that an object wants to be copied by value instead of by
+ reference (pb.Copyable subclass, Copyable(obj), schema says so), where
+ should it find a schema to define what exactly gets copied over? A class
+ attribute of the object's class would make sense: most objects would do
+ this, some could override jellyFor to get more control, and others could
+ override something else to push a new Slicer on the stack and do streaming
+ serialization. Whatever the approach, it needs to be paralleled by the
+ receiving side's unjellyableRegistry.
 
 * RemoteInterface instances should have an "RI-" prefix instead of "I-"
 
@@ -218,45 +173,6 @@ From glyph:
 
 http://svn.twistedmatrix.com/cvs/trunk/pynfo/admin.py?view=markup&rev=44&root=pynfo
 
-* consider a smaller scope for OPEN-counter reference numbers
-
-For newpb, we moved to implicit reference numbers (counting OPEN tags
-instead of putting a number in the OPEN tag) because we didn't want to burn
-so much bandwidth: it isn't feasible to predict whether your object will
-need to be referenced in the future, so you always have to be prepared to
-reference it, so we always burn the memory to keep track of them (generally
-in a ScopedSlicer subclass). If we used explicit refids then we'd have to
-burn the bandwidth too.
-
-The sorta-problem is that these numbers will grow without bound as long as
-the connection remains open. After a few hours of sending 100-byte objects
-over a 100MB connection, you'll hit 1G-references and will have to start
-sending them as LONGINT tokens, which is annoying and slightly verbose (say
-3 or 4 bytes of number instead of 1 or 2). You never keep track of that many
-actual objects, because the references do not outlive their parent
-ScopedSlicer.
-
-The fact that the references themselves are scoped to the ScopedSlicer
-suggests that the reference numbers could be too. Each ScopedSlicer would
-track the number of OPEN tokens emitted (actually the number of
-slicerForObject calls made, except you'd want to use a different method to
-make sure that children who return a Slicer themselves don't corrupt the
-OPEN count).
-
-This requires careful synchronization between the ScopedSlicers on one end
-and the ScopedUnslicers on the other. I suspect it would be slightly
-fragile.
-
-One sorta-benefit would be that a somewhat human-readable sexpr-based
-encoding would be even more human readable if the reference numbers stayed
-small (you could visually correlate objects and references more easily). The
-ScopedSlicer's open-parenthesis could be represented with a curly brace or
-something, then the refNN number would refer to the NN'th left-paren from
-the last left-brace. It would also make it clear that the recipient will not
-care about objects outside that scope.
-
-* sketch out how to implement glyph's crazy non-compressed sexpr encoding
-
 * merge my RemoteInterface syntax with zope.interface's
 
 I hacked up a syntax for how method definitions are parsed in
@@ -268,52 +184,6 @@ into identifying the nifty extra flags (like priority classes, no-response)
 that we want on these methods and finding a z.i-compatible way to implement
 them. It also means thinking of SOAP/XML-RPC schemas and having a syntax
 that can represent everything at once.
-
-* various registry approaches
-
-There are currently three kinds of registries used in banana/newpb:
-
- RemoteInterface <-> interface name
- class/type -> Slicer (-> opentype) -> Unslicer (-> class/type)
- Copyable subclass -> copyable-opentype -> RemoteCopy subclass
-
-There are two basic approaches to representing the mappings that these
-registries implement. The first is implicit, where the local objects are
-subclassed from Sliceable or Copyable or RemoteInterface and have attributes
-to define the wire-side strings that represent them. On the receiving side,
-we make extensive use of metaclasses to perform automatic registration
-(taking names from class attributes and mapping them to the factory or
-RemoteInterface used to create the remote version).
-
-The second approach is explicit, where pb.registerRemoteInterface,
-pb.registerRemoteCopy, and pb.registerUnslicer are used to establish the
-receiving-side mapping. There isn't a clean way to do it explicitly on the
-sending side, since we already have instances whose classes can give us
-whatever information we want.
-
-The advantage of implicit is simplicity: no more questions about why my
-pb.RemoteCopy is giving "not unserializable" errors. The mere act of
-importing a module is enough to let PB create instances of its classes.
-
-The advantage of doing it explicitly is to remind the user about the
-existence of those maps, because the factory classes in the receiving map is
-precisely equal to the user's exposure (from a security point of view). See
-the E paper on secure-serialization for some useful concepts.
-
-A disadvantage of implicit is that you can't quite be sure what, exactly,
-you're exposed to: the registrations take place all over the place.
-
-To make explicit not so painful, we can use quotient's .wsv files
-(whitespace-separated values) which map from class to string and back again.
-The file could list fully-qualified classname, wire-side string, and
-receiving factory class on each line. The Broker (or rather the RootSlicer
-and RootUnslicer) would be given a set of .wsv files to define their
-mapping. It would get all the registrations at once (instead of having them
-scattered about). They could also demand-load the receive-side factory
-classes.
-
-For now, go implicit. Put off the decision until we have some more
-experience with using newpb.
 
 
 * make ISliceable and some adapters to match
@@ -336,18 +206,6 @@ value. The slicing process should be:
 
 The adapter returned by IReferenceable or ICopyable should implement
 ISliceable, so no further adaptation will be done.
-
-* make slicer/unslicers for pb.RemoteInterfaces
-
-exarkun's use case requires these Interfaces to be passable by reference
-(i.e. by name). It would also be interesting to let them be passed (and
-requested!) by value, so you can ask a remote peer exactly what their
-objects will respond to (the method names, the argument values, the return
-value). This also requires that constraints be serializable.
-
-do this, should be referenceable (round-trip should return the same object),
-should use the same registration lookup that RemoteReference(interfacelist)
-uses
 
 * remove 'copy' prefix from remotecopy banana type names?
 
@@ -404,6 +262,18 @@ with people I don't like
 <moshez> glyph: I meant, "what specific types"
 <moshez> I'd appreciate a blog on that
 
+* make slicer/unslicers for pb.RemoteInterfaces
+
+exarkun's use case requires these Interfaces to be passable by reference
+(i.e. by name). It would also be interesting to let them be passed (and
+requested!) by value, so you can ask a remote peer exactly what their
+objects will respond to (the method names, the argument values, the return
+value). This also requires that constraints be serializable.
+
+do this, should be referenceable (round-trip should return the same object),
+should use the same registration lookup that RemoteReference(interfacelist)
+uses
+
 * investigate decref/Referenceable race
 
 Any object that includes some state when it is first sent across the wire
@@ -418,22 +288,41 @@ might be a reasonable way to deal with it (maybe request the state if it
 wasn't sent and the recipient needs it, and delay delivery of the object
 until the state arrives).
 
-* serialize remotely-callable methods?
+* sketch out how to implement glyph's crazy non-compressed sexpr encoding
 
-It might be useful be able to do something like:
+* consider a smaller scope for OPEN-counter reference numbers
 
- class Watcher(pb.Referenceable):
-     def remote_foo(self, args): blah
+For newpb, we moved to implicit reference numbers (counting OPEN tags
+instead of putting a number in the OPEN tag) because we didn't want to burn
+so much bandwidth: it isn't feasible to predict whether your object will
+need to be referenced in the future, so you always have to be prepared to
+reference it, so we always burn the memory to keep track of them (generally
+in a ScopedSlicer subclass). If we used explicit refids then we'd have to
+burn the bandwidth too.
 
- w = Watcher()
- ref.callRemote("subscribe", w.remote_foo)
+The sorta-problem is that these numbers will grow without bound as long as
+the connection remains open. After a few hours of sending 100-byte objects
+over a 100MB connection, you'll hit 1G-references and will have to start
+sending them as LONGINT tokens, which is annoying and slightly verbose (say
+3 or 4 bytes of number instead of 1 or 2). You never keep track of that many
+actual objects, because the references do not outlive their parent
+ScopedSlicer.
 
-That would involve looking up the method and its parent object, reversing
-the remote_*->* transformation, then sending a sequence which contained both
-the object's RemoteReference and the appropriate method name.
+The fact that the references themselves are scoped to the ScopedSlicer
+suggests that the reference numbers could be too. Each ScopedSlicer would
+track the number of OPEN tokens emitted (actually the number of
+slicerForObject calls made, except you'd want to use a different method to
+make sure that children who return a Slicer themselves don't corrupt the
+OPEN count).
 
-It might also be useful to generalize this: passing a lambda expression to
-the remote end could stash the callable in a local table and send a Callable
-Reference to the other side. I can smell a good general-purpose object
-classification framework here, but I haven't quite been able to nail it down
-exactly.
+This requires careful synchronization between the ScopedSlicers on one end
+and the ScopedUnslicers on the other. I suspect it would be slightly
+fragile.
+
+One sorta-benefit would be that a somewhat human-readable sexpr-based
+encoding would be even more human readable if the reference numbers stayed
+small (you could visually correlate objects and references more easily). The
+ScopedSlicer's open-parenthesis could be represented with a curly brace or
+something, then the refNN number would refer to the NN'th left-paren from
+the last left-brace. It would also make it clear that the recipient will not
+care about objects outside that scope.

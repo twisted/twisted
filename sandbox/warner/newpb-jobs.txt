@@ -1,6 +1,113 @@
 -*- outline -*-
 
-Reasonably independent newpb sub-tasks that need doing.
+Reasonably independent newpb sub-tasks that need doing. Most important come
+first.
+
+* decide on a version negotiation scheme
+
+Should be able to telnet into a PB server and find out that it is a PB
+server. Pointing a PB client at an HTTP server (or an HTTP client at a PB
+server) should result in an error, not a timeout.
+
+desiderata:
+
+ negotiation should take place with regular banana sequences: don't invent a
+ new protocol that is only used at the start of the connection
+
+ Banana should be useable one-way, for storage or high-latency RPC. It
+ should be easy for the layer above Banana to feed it the results of what
+ its negotiation would have been (if it had actually used an interactive
+ connection to its peer). Feeding the same results to both sides should have
+ them proceed as if they'd agreed to those results.
+
+ negotiation should be flexible enough to be extended but still allow old
+ code to talk with new code. Magically predict every conceivable extension
+ and provide for it from the very first release :).
+
+* connection initiation
+
+** define PB URLs
+
+[newcred is the most important part of this, the URL stuff can wait]
+
+A URL defines an endpoint: a pb.Referenceable, with methods. Somewhere along
+the way it defines a transport (tcp+host+port, or unix+path) and an object
+reference (pathname). It might also define a RemoteInterface, or that might
+be put off until we actually invoke a method.
+
+ URL = f("pb:", host, port, pathname)
+ d = pb.callRemoteURL(URL, ifacename, methodname, args)
+
+probably give an actual RemoteInterface instead of just its name
+
+a pb.RemoteReference claims to provide access to zero-or-more
+RemoteInterfaces. You may choose which one you want to use when invoking
+callRemote.
+
+TODO: decide upon a syntax for URLs that refer to non-TCP transports
+
+TODO: write the URL parser, implementing pb.getRemoteURL and pb.callRemoteURL
+
+TODO: decide upon a calling convention for callRemote when specifying which
+RemoteInterface is being used.
+
+** more URLs
+
+relative URLs (those without a host part) refer to objects on the same
+Broker. Absolute URLs (those with a host part) refer to objects on other
+Brokers.
+
+** build/port pb.login: newcred for newpb
+
+Leave cred work for Glyph.
+
+URL = pb.parseURL("pb://lothar.com:8789/users/warner/services/petmail",
+                  IAuthorization)
+URL = doFullLogin(URL, "warner", "x8yzzy")
+URL.callRemote(methodname, args)
+
+
+* implement/test CopiedFailureConstraint
+
+* add constraints to Slicers (outbound constraints)
+
+This is much easier than the inbound side. Each constraint just gets a single
+checkObject() call with the candidate object before it is sent.
+
+* constrain ReferenceUnslicer properly
+
+The schema can use a ReferenceConstraint to indicate that the object must be
+a RemoteReference, and can also require that the remote object be capable of
+handling a particular Interface.
+
+This needs to be implemented. slicer.ReferenceUnslicer must somehow actually
+ask the constraint about the incoming tokens.
+
+An outstanding question is "what counts". The general idea is that
+RemoteReferences come over the wire as a connection-scoped ID number and an
+optional list of Interface names (strings and version numbers). In this case
+it is the far end which asserts that its object can implement any given
+Interface, and the receiving end just checks to see if the schema-imposed
+required Interface is in the list.
+
+This becomes more interesting when applied to local objects, or if a
+constraint is created which asserts that its object is *something* (maybe a
+RemoteReference, maybe a RemoteCopy) which implements a given Interface. In
+this case, the incoming object could be an actual instance, but the class
+name must be looked up in the unjellyableRegistry (and the class located, and
+the __implements__ list consulted) before any of the object's tokens are
+accepted.
+
+* document Unslicer interface: what attributes are set
+
+at the moment: .protocol, .openCount, .parent
+
+maybe use constructor instead of start()? Or would that make adaptation
+harder?
+
+* security TODOs:
+
+** size constraints on the set-vocab sequence
 
 * implement schema.maxSize()
 
@@ -169,52 +276,6 @@ in test_schema.py for this code: those tests assert specific values for
 maxSize. Those values are probably wrong, so they must be updated to match
 however maxSize actually works.
 
-* finish testing of LONGINT/LONGNEG
-
-test_banana.InboundByteStream.testConstrainedInt needs implementation
-
-* add constraints to Slicers (outbound constraints)
-
-This is much easier than the inbound side. Each constraint just gets a single
-checkObject() call with the candidate object before it is sent.
-
-* nail down some useful schema syntaxes
-
-This has two parts: parsing something like a __schema__ class attribute (see
-the sketches in schema.xhtml) into a tree of FooConstraint objects, and
-deciding how to retrieve schemas at runtime from things like the object being
-serialized or the object being called from afar. To be most useful, the
-syntax needs to mesh nicely (read "is identical to") things like formless and
-(maybe?) atop or whatever has replaced the high-density highly-structured
-save-to-disk scheme that twisted.world used to do.
-
-Some lingering questions in this area:
-
- When an object has a remotely-invokable method, where does the appropriate
- MethodConstraint come from? Some possibilities:
-
-  an attribute of the method itself: obj.method.__schema__
-
-  from inside a __schema__ attribute of the object's class
-
-  from inside a __schema__ attribute of an Interface (which?) that the object
-  implements
-
- Likewise, when a caller holding a RemoteReference invokes a method on it, it
- would be nice to enforce a schema on the arguments they are sending to the
- far end ("be conservative in what you send"). Where should this schema come
- from? It is likely that the sender only knows an Interface for their
- RemoteReference.
-
- When PB determines that an object wants to be copied by value instead of by
- reference (pb.Copyable subclass, Copyable(obj), schema says so), where
- should it find a schema to define what exactly gets copied over? A class
- attribute of the object's class would make sense: most objects would do
- this, some could override jellyFor to get more control, and others could
- override something else to push a new Slicer on the stack and do streaming
- serialization. Whatever the approach, it needs to be paralleled by the
- receiving side's unjellyableRegistry.
-
 * decide upon what the "Shared" constraint should mean
 
 The idea of this one was to avoid some vulnerabilities by rejecting arbitrary
@@ -313,43 +374,85 @@ if the problem were caught synchronously. This may involve discarding an
 otherwise complete object graph and blaming the problem on a node much closer
 to the root than the one which really caused the failure.
 
-* constrain ReferenceUnslicer properly
-
-The schema can use a ReferenceConstraint to indicate that the object must be
-a RemoteReference, and can also require that the remote object be capable of
-handling a particular Interface.
-
-This needs to be implemented. slicer.ReferenceUnslicer must somehow actually
-ask the constraint about the incoming tokens.
-
-An outstanding question is "what counts". The general idea is that
-RemoteReferences come over the wire as a connection-scoped ID number and an
-optional list of Interface names (strings and version numbers). In this case
-it is the far end which asserts that its object can implement any given
-Interface, and the receiving end just checks to see if the schema-imposed
-required Interface is in the list.
-
-This becomes more interesting when applied to local objects, or if a
-constraint is created which asserts that its object is *something* (maybe a
-RemoteReference, maybe a RemoteCopy) which implements a given Interface. In
-this case, the incoming object could be an actual instance, but the class
-name must be looked up in the unjellyableRegistry (and the class located, and
-the __implements__ list consulted) before any of the object's tokens are
-accepted.
-
-* decide on a version negotiation scheme
-
 * write oldbanana compatibility code?
 
 An oldbanana peer can be detected because the server side sends its dialect
 list from connectionMade, and oldbanana lists are sent with OLDLIST tokens
 (the explicit-length kind).
 
+
 * add .describe methods to all Slicers
 
 This involves setting an attribute between each yield call, to indicate what
 part is about to be serialized.
 
-* security TODOs:
 
-** size constraints on the set-vocab sequence
+* serialize remotely-callable methods?
+
+It might be useful be able to do something like:
+
+ class Watcher(pb.Referenceable):
+     def remote_foo(self, args): blah
+
+ w = Watcher()
+ ref.callRemote("subscribe", w.remote_foo)
+
+That would involve looking up the method and its parent object, reversing
+the remote_*->* transformation, then sending a sequence which contained both
+the object's RemoteReference and the appropriate method name.
+
+It might also be useful to generalize this: passing a lambda expression to
+the remote end could stash the callable in a local table and send a Callable
+Reference to the other side. I can smell a good general-purpose object
+classification framework here, but I haven't quite been able to nail it down
+exactly.
+
+* testing
+
+** finish testing of LONGINT/LONGNEG
+
+test_banana.InboundByteStream.testConstrainedInt needs implementation
+
+** thoroughly test failure-handling at all points of in/out serialization
+
+places where BananaError or Violation might be raised
+
+sending side:
+ Slicer creation (schema pre-validation? no): no no
+  pre-validation is done before sending the object, Broker.callFinished,
+  RemoteReference.doCall
+  slicer creation is done in newSlicerFor
+
+ .slice (called in pushSlicer) ?
+ .slice.next raising Violation
+ .slice.next returning Deferrable when streaming isn't allowed
+ .sendToken (non-primitive token, can't happen)
+ .newSlicerFor (no ISlicer adapter)
+ top.childAborted
+
+receiving side:
+ long header (>64 bytes)
+ checkToken (top.openerCheckToken)
+ checkToken (top.checkToken)
+ typebyte == LIST (oldbanana)
+ bad VOCAB key
+ too-long vocab key
+ bad FLOAT encoding
+ top.receiveClose
+ top.finish
+ top.reportViolation
+ oldtop.finish (in from handleViolation)
+ top.doOpen
+ top.start
+plus all of these when discardCount != 0
+OPENOPEN
+
+send-side uses:
+ f = top.reportViolation(f)
+receive-side should use it too (instead of f.raiseException)
+
+** test failure-handing during callRemote argument serialization
+
+** implement/test some streaming Slicers
+
+** test producer Banana
