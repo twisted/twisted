@@ -249,7 +249,7 @@ def namedModule(name):
 
 def namedClass(name):
     classSplit = string.split(name, '.')
-    module = namedModule(string.join(classSplit[:-1]))
+    module = namedModule(string.join(classSplit[:-1], '.'))
     return getattr(module, classSplit[-1])
 
 def _reclass(clazz):
