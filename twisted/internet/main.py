@@ -290,6 +290,7 @@ def run(installSignalHandlers=1):
                 callback()
             except:
                 log.deferr()
+        disconnectAll()
 
 
 def disconnectAll():
