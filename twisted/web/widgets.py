@@ -589,7 +589,7 @@ class Form(Widget):
 
         By default, this will make the message appear in red, bold italics.
         """
-        return '<font COLOR=RED><B><I>%s</i></b></font><br />\n' % error
+        return '<font color="#f00"><b><i>%s</i></b></font><br />\n' % error
 
     def shouldProcess(self, request):
         args = request.args
@@ -847,40 +847,41 @@ class WidgetPage(Page):
     Widget wrapped up in a simple HTML template.
     """
     stylesheet = '''
-    A
+    a
     {
-        font-family: Lucida, Verdana, Helvetica, Arial;
-        color: #336699;
+        font-family: Lucida, Verdana, Helvetica, Arial, sans-serif;
+        color: #369;
         text-decoration: none;
     }
 
-    TH
+    th
     {
-        font-family: Lucida, Verdana, Helvetica, Arial;
+        font-family: Lucida, Verdana, Helvetica, Arial, sans-serif;
         font-weight: bold;
         text-decoration: none;
     }
 
-    PRE, CODE
+    pre, code
     {
-        font-family: Courier New, Courier;
+        font-family: "Courier New", Courier, monospace;
     }
 
-    P, BODY, TD, OL, UL, MENU, BLOCKQUOTE, DIV
+    p, body, td, ol, ul, menu, blockquote, div
     {
-        font-family: Lucida, Verdana, Helvetica, Arial;
-        color: #000000;
+        font-family: Lucida, Verdana, Helvetica, Arial, sans-serif;
+        color: #000;
     }
     '''
 
     template = '''<html>
+    <head>
+    <title>%%%%self.title%%%%</title>
     <style>
     %%%%self.stylesheet%%%%
     </style>
-    <head>
-    <title>%%%%self.title%%%%</title>
     <base href="%%%%request.prePathURL()%%%%">
     </head>
+
     <body>
     <h1>%%%%self.title%%%%</h1>
     %%%%self.widget%%%%
@@ -1009,10 +1010,10 @@ class TitleBox(Presentation):
 </tr></table></td></tr></table>\
 '''
 
-    borderColor = '#000000'
-    titleTextColor = '#ffffff'
-    boxTextColor = '#000000'
-    boxColor = '#ffffff'
+    borderColor = '#000'
+    titleTextColor = '#fff'
+    boxTextColor = '#000'
+    boxColor = '#fff'
     widthOption = 'width="100%"'
 
     title = 'No Title'
@@ -1044,7 +1045,7 @@ class Reloader(Presentation):
         write = x.append
         for module in self.modules:
             rebuild.rebuild(module)
-            write('<li>reloaded %s<br>' % module.__name__)
+            write('<li>reloaded %s<br>' % module.__name__)`
         return x
 
 class Sidebar(StreamWidget):
@@ -1072,7 +1073,7 @@ class Sidebar(StreamWidget):
         return self.bar
 
     def stream(self, write, request):
-        write("<TABLE width=120 cellspacing=1 cellpadding=1 border=0>")
+        write("<table width=120 cellspacing=1 cellpadding=1 border=0>")
         for each in self.getList():
             if each[0] == self.highlightHeading:
                 headingColor = self.activeHeadingColor
@@ -1082,7 +1083,8 @@ class Sidebar(StreamWidget):
                 headingColor = self.headingColor
                 headingTextColor = self.headingTextColor
                 canHighlight = 0
-            write('<TR><TD colspan=2 bgcolor="#%s"><FONT COLOR="%s"><b>%s</b>'
+            write('<tr><td colspan=2 bgcolor="#%s"><font color="%s">'
+                  '<strong>%s</strong>'
                   '</font></td></td></tr>\n' % (headingColor, headingTextColor, each[0]))
             for name, link in each[1:]:
                 if canHighlight and (name == self.highlightSection):
@@ -1091,8 +1093,8 @@ class Sidebar(StreamWidget):
                 else:
                     sectionColor = self.sectionColor
                     sectionTextColor = self.sectionTextColor
-                write('<TR><td align=right bgcolor="#%s" width=6>-</td>'
-                      '<TD bgcolor="#%s"><A HREF="%s"><FONT COLOR="#%s">%s'
+                write('<tr><td align=right bgcolor="#%s" width=6>-</td>'
+                      '<td bgcolor="#%s"><a href="%s"><font color="#%s">%s'
                       '</font></a></td></tr>'
                        % (sectionColor, sectionColor, request.sibLink(link), sectionTextColor, name))
         write("</table>")
