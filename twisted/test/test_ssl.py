@@ -30,7 +30,7 @@ class StolenTCPTestCase(test_tcp.ProperlyCloseFilesTestCase, test_tcp.WriteDataT
         self.listener = reactor.listenSSL(
             0, f, ssl.DefaultOpenSSLContextFactory(certPath, certPath), interface="127.0.0.1",
         )
-        
+        self.ports.append(self.listener)
         f = protocol.ClientFactory()
         f.protocol = test_tcp.ConnectionLosingProtocol
 
