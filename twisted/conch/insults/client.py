@@ -1,7 +1,5 @@
 from twisted.internet import protocol
 
-import virtual
-
 class InsultsClient(protocol.Protocol):
 
     def __init__(self):
@@ -104,7 +102,7 @@ class InsultsClient(protocol.Protocol):
             elif command[0] == 'eraseeos':
                 redraw += '\x1b[OJ'
             elif command[0] == 'cls':
-                redraw += '\x1b[2J\x1b[1;1;H'
+                redraw += '\x1b[H\x1b[J'
             elif command[0] == 'attributes':
                 redraw += '\x1b[%sm' % ';'.join(map(str, command[1]))
             else:
