@@ -2678,3 +2678,9 @@ in DX.  In the lab are a bunch of display screens.
 <glyph> I'm not kidding.
 <glyph> they are engineering the whitespace eating nanovirus _right here_
 %
+<exarkun> this server rebooted, now freshcvs is raising exceptions, the webserver doesn't run, and mailman's permission
+wrapper refuses to acknowledge setuid bits
+<exarkun> It's enough to make a guy buy a rifle and start shooting people.
+<glyph> exarkun: what kind of rifle
+%
+
