@@ -301,18 +301,26 @@ class MicroDOMTest(TestCase):
             self.assertRaises(Exception, microdom.parseString, s)
 
     def testCaseInsensitive(self):
-        s = "<foo a='b'><BAx>x</bax></FOO>"
+        s  = "<foo a='b'><BAx>x</bax></FOO>"
         s2 = '<foo a="b"><bax>x</bax></foo>'
         s3 = "<FOO a='b'><BAx>x</BAx></FOO>"
+        s4 = "<foo A='b'>x</foo>"
         d = microdom.parseString(s)
         d2 = microdom.parseString(s2)
         d3 = microdom.parseString(s3, caseInsensitive=1)
+        d4 = microdom.parseString(s4, caseInsensitive=1, preserveCase=1)
+        d5 = microdom.parseString(s4, caseInsensitive=1, preserveCase=0)
+        d6 = microdom.parseString(s4, caseInsensitive=0, preserveCase=0)
         out = microdom.parseString(s).documentElement.toxml()
         self.assertRaises(microdom.MismatchedTags, microdom.parseString,
             s, caseInsensitive=0)
         self.assertEquals(out, s2)
         self.failUnlessEqual(d, d2)
         self.failUnlessEqual(d, d3)
+        self.failUnless(d4.documentElement.hasAttribute('a'))
+        self.failIf(d6.documentElement.hasAttribute('a'))
+        self.assertEquals(d4.documentElement.toxml(), '<foo A="b">x</foo>')
+        self.assertEquals(d5.documentElement.toxml(), '<foo a="b">x</foo>')
 
     def testUnicodeTolerance(self):
         import struct

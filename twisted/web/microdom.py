@@ -41,6 +41,7 @@ from cStringIO import StringIO
 # Twisted Imports
 from twisted.protocols.sux import XMLParser, ParseError
 from twisted.python import reflect
+from twisted.python.util import InsensitiveDict
 
 # create NodeList class
 from types import ListType as NodeList
@@ -351,7 +352,14 @@ class CDATASection(CharacterData):
 class _Attr(CharacterData):
     "Support class for getAttributeNode."
 
-import new
+def _selectDict(dct, caseInsensitive, preserveCase):
+    """Return a copy of the dct with case sensitivity/preserving 
+    turned on as appropriate.
+    """
+    if caseInsensitive:
+        return InsensitiveDict(dct, preserve=preserveCase)
+    else:
+        return dct
 
 class Element(Node):
 
@@ -372,6 +380,10 @@ class Element(Node):
             self.attributes = attributes
             for k, v in self.attributes.items():
                 self.attributes[k] = unescape(v)
+
+        self.attributes=_selectDict(self.attributes, caseInsensitive, 
+                                    preserveCase)
+
         self.endTagName = self.nodeName = self.tagName = tagName
         self._filename = filename
         self._markpos = markpos

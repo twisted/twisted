@@ -59,6 +59,37 @@ class OrderedDictTest(unittest.TestCase):
                               'apple': 'red'})
         self.failUnless(d._order)
 
+class InsensitiveDictTest(unittest.TestCase):
+    def testPreserve(self):
+        InsensitiveDict=util.InsensitiveDict
+        dct=InsensitiveDict({'Foo':'bar', 1:2, 'fnz':{1:2}}, preserve=1)
+        self.assertEquals(dct['fnz'], {1:2})
+        self.assertEquals(dct['foo'], 'bar')
+        self.assertEquals(dct.copy(), dct)
+        self.assertEquals(dct['foo'], dct.get('Foo'))
+        assert 1 in dct and 'foo' in dct
+        self.assertEquals(eval(repr(dct)), dct)
+        keys=['Foo', 'fnz', 1]
+        for x in keys:
+            assert x in dct.keys()
+            assert (x, dct[x]) in dct.items()
+        self.assertEquals(len(keys), len(dct))
+        del dct[1]
+        del dct['foo']
+
+    def testNoPreserve(self):
+        InsensitiveDict=util.InsensitiveDict
+        dct=InsensitiveDict({'Foo':'bar', 1:2, 'fnz':{1:2}}, preserve=0)
+        keys=['foo', 'fnz', 1]
+        for x in keys:
+            assert x in dct.keys()
+            assert (x, dct[x]) in dct.items()
+        self.assertEquals(len(keys), len(dct))
+        del dct[1]
+        del dct['foo']
+
+
+
 
 def reversePassword():
     password = util.getPassword()
