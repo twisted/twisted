@@ -95,6 +95,8 @@ def split(str, length = 80):
 
     @returns: list of strings
     """
+    if length <= 0:
+        raise ValueError("Length must be a number greater than zero")
     r = []
     while len(str) > length:
         w, n = str[:length].rfind(' '), str[:length].find('\n')
@@ -702,7 +704,14 @@ class IRCClient(basic.LineReceiver):
         if length is None:
             self.sendLine(fmt % (message,))
         else:
-            lines = split(message, length - len(fmt) - 2)
+            # NOTE: minimumLength really equals len(fmt) - 2 (for '%s') + n
+            # where n is how many bytes sendLine sends to end the line.
+            # n was magic numbered to 2, I think incorrectly
+            minimumLength = len(fmt)
+            if length <= minimumLength:
+                raise ValueError("Maximum length must exceed %d for message "
+                                 "to %s" % (minimumLength, user))
+            lines = split(message, length - minimumLength)
             map(lambda line, self=self, fmt=fmt: self.sendLine(fmt % line),
                 lines)
 
