@@ -3,7 +3,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.19 $"[11:-2]
+__version__ = "$Revision: 1.20 $"[11:-2]
 
 import random
 import time
@@ -324,15 +324,11 @@ from twisted.cred.credentials import UsernamePassword, Anonymous
 import tapestry
 
 class UsernamePasswordWrapper(Resource):
-    def __init__(self, portal):
+    def __init__(self, portal, callback=None, errback=None):
         Resource.__init__(self)
         self.portal = portal
-
-    def startLoggingIn(self, username, password, session):
-        return self.portal.login(UsernamePassword(username, password),
-                                 None, IResource).addCallback(
-            lambda (interface, avatarAspect, logout):
-            session.setResourceForPortal(avatarAspect, self.portal, logout))
+        self.callback = callback
+        self.errback = errback
 
     def _ebFilter(self, f):
         f.trap(LoginFailed, UnauthorizedLogin)
@@ -343,12 +339,28 @@ class UsernamePasswordWrapper(Resource):
         if s is None:
             return request.setupSession()
         if path == INIT_PERSPECTIVE:
+            def loginSuccess(result):
+                interface, avatarAspect, logout = result
+                s.setResourceForPortal(avatarAspect, self.portal, logout)
+
+            def triggerLogin(username, password):
+                deferred = self.portal.login(
+                    UsernamePassword(username, password),
+                    None, 
+                    IResource
+                ).addCallback(
+                    loginSuccess
+                ).addErrback(
+                    self._ebFilter
+                )
+
             return form.FormProcessor(
                 newLoginSignature.method(
-                lambda username, password:
-                self.startLoggingIn(username, password, s).addErrback(
-                self._ebFilter
-                )))
+                    triggerLogin
+                ),
+                callback=self.callback,
+                errback=self.errback
+            )
         elif path == DESTROY_PERSPECTIVE:
             s.portalLogout(self.portal)
             return Redirect(".")
