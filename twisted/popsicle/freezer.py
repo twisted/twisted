@@ -96,7 +96,7 @@ class Freezer:
         """Persistence tick.  Clean out the fridge, persist everything that
         wants to be saved.
         """
-        log.msg("cleaning popsicle")
+        #log.msg("cleaning popsicle")
         self.cleaning = True
         savers = {}
         try:
@@ -197,7 +197,7 @@ class PersistentReference:
             theFreezer.addSaver(o, repo)
             # use internal API to avoid warning: we *really really* want to dirty
             theFreezer._dirty(o)
-            repo.cache(self.oid, o)
+            repo.cache(self.oid, o, finished=0)
             return self.oid
         elif ((self.repo is repo) or
               repo is None and self.repo is theFreezer._savingRepo):
