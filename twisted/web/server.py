@@ -183,7 +183,7 @@ class Request(pb.Copied, http.HTTP):
         except:
             io = StringIO.StringIO()
             traceback.print_exc(file=io)
-            body = "<HTML><BODY><br>web.Server Traceback \n\n" + html.PRE(io.getvalue()) + "\n\n</body></html>"
+            body = "<HTML><BODY><br>web.Server Traceback \n\n" + html.PRE(io.getvalue()) + "\n\n</body></html>\n"
             print "Traceback Follows:"
             print io.getvalue()
             self.setResponseCode(http.INTERNAL_SERVER_ERROR)
