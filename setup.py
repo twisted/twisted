@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.53 2002/09/17 17:30:58 glyph Exp $
+$Id: setup.py,v 1.54 2002/09/25 18:00:05 itamarst Exp $
 """
 
 import distutils, os, sys, string
@@ -312,7 +312,7 @@ if os.name == 'posix':
     setup_args['scripts'] = [
         'bin/manhole', 'bin/mktap', 'bin/twistd',
         'bin/im', 'bin/t-im', 'bin/tap2deb',
-        'bin/coil',
+        'bin/coil', 'bin/tapconvert',
     ]
 else:
     # new script schema only for win32, for now
