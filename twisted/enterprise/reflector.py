@@ -125,7 +125,7 @@ class Reflector:
             return
         
         if not hasattr(parentRow, relationship.containerMethod):
-            raise DBError("parent row doesnt have container method <%s>!" % relationship.containerMethod)
+            raise DBError("parent row (%s) doesnt have container method <%s>!" % (parentRow, relationship.containerMethod))
         
         meth = getattr(parentRow, relationship.containerMethod)
         for row in rows:
