@@ -2,7 +2,7 @@
 
 import os, sys
 
-debug = False
+debug = 0
 
 if debug: stderr = os.fdopen(2, "w")
 
