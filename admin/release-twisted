@@ -49,7 +49,7 @@ defaultOptions = '--upver --tag --exp --dist --docs --balls --rel --deb' # --deb
 debug = 0
 
 class Options(usage.Options):
-    optParameters = [['version', 'v', None,
+    optParameters = [['release-version', 'V', None,
                       "The version of this release."],
 
                      ['oldver', 'o', copyright.version,
@@ -180,7 +180,7 @@ def main():
         print "%s: %s" % (sys.argv[0], ue)
         sys.exit(2)
 
-    if not opts['version']:
+    if not opts['release-version']:
         print "Please specify a version."
         sys.exit(2)
 
@@ -283,7 +283,7 @@ class UpdateVersion(Transaction):
     def doIt(self, opts):
         print "UpdateVersion"
         oldver = opts['oldver']
-        newver = opts['version']
+        newver = opts['release-version']
 
         r = opts['root']
         self.files = ('README', 'doc/howto/installing-twisted.html', 'twisted/copyright.py')
@@ -305,7 +305,7 @@ class UpdateVersion(Transaction):
 class Tag(Transaction):
     def doIt(self, opts):
         print "Tag"
-        ver = opts['version']
+        ver = opts['release-version']
         sh('cd %s &&  cvs tag -c release-%s' % (opts['root'], ver.replace('.', '_')), 1)
 
     def undoIt(self, opts, fail):
@@ -318,7 +318,7 @@ class Export(Transaction):
     def doIt(self, opts):
         print "Export"
         root = opts['cvsroot']
-        ver = opts['version']
+        ver = opts['release-version']
         sh('cvs -d%s export -r release-%s Twisted' % (root, ver.replace('.', '_')))
 
     def undoIt(self, opts, fail):
@@ -327,7 +327,7 @@ class Export(Transaction):
 class PrepareDist(Transaction):
     def doIt(self, opts):
         print "PrepareDist"
-        ver = opts['version']
+        ver = opts['release-version']
         tdir = "Twisted-%s" % ver
 
         if os.path.exists(tdir):
@@ -338,7 +338,7 @@ class PrepareDist(Transaction):
     def undoIt(self, opts, fail):
         #don't delete the directory if we didn't create it!
         if not fail.check(DirectoryExists):
-            ver = opts['version']
+            ver = opts['release-version']
             tdir = "Twisted-%s" % ver
             
             sh('rm -rf %s' % tdir)
@@ -349,7 +349,7 @@ class GenerateDocs(Transaction):
     def doIt(self, opts):
         print "GenerateDocs"
         
-        ver = opts['version']
+        ver = opts['release-version']
         tdir = "Twisted-%s" % ver
         
         if not os.path.exists('%s' % tdir):
@@ -378,7 +378,7 @@ class GenerateDocs(Transaction):
             #no state change here
             return
 
-        ver = opts['version']
+        ver = opts['release-version']
         tdir = "Twisted-%s" % ver
 
         #first shwack the epydocs
@@ -401,7 +401,7 @@ class CreateTarballs(Transaction):
     def doIt(self, opts):
         print "CreateTarballs"
 
-        ver = opts['version']
+        ver = opts['release-version']
         tdir = "Twisted-%s" % ver
 
         if not os.path.exists(tdir):
@@ -433,7 +433,7 @@ class CreateTarballs(Transaction):
              ''' % locals())
 
     def undoIt(self, opts, fail):
-        ver = opts['version']
+        ver = opts['release-version']
         for ext in ['tar.gz', 'tar.bz2']:
             for prefix in ['Twisted_NoDocs', 'TwistedDocs', 'Twisted']:
                 try:
@@ -446,7 +446,7 @@ class Release(Transaction):
         print "Release"
         
         rel = opts['release']
-        ver = opts['version']
+        ver = opts['release-version']
         tdir = "Twisted-%s" % ver
 
         if not os.path.exists(rel):
@@ -480,7 +480,7 @@ class Release(Transaction):
            ''' % locals())
 
     def undoIt(self, opts, fail):
-        ver = opts['version']
+        ver = opts['release-version']
         rel = opts['release']
 
         for ext in ['zip', 'tar.gz', 'tar.bz2']:
@@ -496,7 +496,7 @@ class MakeDebs(Transaction):
     def doIt(self, opts):
         print "MakeDebs"
         rel = opts['release']
-        ver = opts['version']
+        ver = opts['release-version']
         tgz = os.path.join(rel, 'Twisted-%s.tar.gz' % ver)
         unique = '%s.%s' % (time.time(), os.getpid())
         os.mkdir('/sid-chroot/tmp/%s' % unique)
@@ -538,7 +538,7 @@ class MakeDebs(Transaction):
 
     def undoIt(self, opts, fail):
         rel = opts['release']
-        ver = opts['version']
+        ver = opts['release-version']
         sh("rm -rf %(rel)s/debian-%(ver)s" % vars())
     
 
@@ -548,7 +548,7 @@ class InstallDebs(Transaction):
 
     def doIt(self, opts):
         rel = opts['release']
-        ver = opts['version']
+        ver = opts['release-version']
         target = self.target
         for file in ('Packages.gz', 'Sources.gz', 'override'):
             if os.path.isfile('%(target)s/%(file)s' % vars()):
@@ -565,7 +565,7 @@ class InstallDebs(Transaction):
 
     def undoIt(self, opts, fail):
         rel = opts['release']
-        ver = opts['version']
+        ver = opts['release-version']
         target = self.target
         for dir in (target, target+'/woody'):
             for file in glob.glob('%(dir)s/*.old' % vars()):
@@ -580,7 +580,7 @@ class Sourceforge(Transaction):
     def doIt(self, opts):
         name = opts['sfname']
         rel = opts['release']
-        ver = opts['version']
+        ver = opts['release-version']
         path = '/home/users/'+name[0]+'/'+name[:2]+'/'+name 
         sh("ssh %(name)s@shell.sf.net mkdir Twisted-%(ver)s || true" % vars())
         sh("scp -r %(rel)s/Twisted*%(ver)s* %(rel)s/debian-%(ver)s "
@@ -609,7 +609,7 @@ class UpgradeDebian(Transaction):
 
     def doIt(self, opts):
         rel = opts['release']
-        ver = opts['version']
+        ver = opts['release-version']
         path = "%(release)s/debian-%(ver)s/woody/" % vars()
         sh("sudo dpkg -i %(path)s/*.deb" % vars())
 
