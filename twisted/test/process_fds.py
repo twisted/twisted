@@ -1,4 +1,7 @@
-#! /usr/bin/python
+
+"""Write to a handful of file descriptors, to test the childFDs= argument of
+reactor.spawnProcess()
+"""
 
 import os, sys
 
