@@ -21,6 +21,9 @@ import os, re
 escapingRE = re.compile(r'([#$%&_{}^~])')
 lowerUpperRE = re.compile(r'([a-z])([A-Z])')
 
+def latexEscape(text):
+    return escapingRE.sub(r'\\\1{}', text.replace('\\', '$\\backslash$'))
+
 class LatexSpitter(XMLParser):
 
     entities = { 'amp': '&', 'gt': '>', 'lt': '<', 'quot': '"',
@@ -52,7 +55,7 @@ class LatexSpitter(XMLParser):
         if self.normalizing:
             data = data.replace('\n', ' ')
         if self.escaping:
-            data = escapingRE.sub(r'\\\1{}',data.replace('\\', '$\\backslash$'))
+            data = latexEscape(data)
         if self.hyphenateCode:
             olddata = data
             data = lowerUpperRE.sub(r'\1\\textrm{\\-}\2', data)
@@ -120,6 +123,10 @@ class LatexSpitter(XMLParser):
             self.writer('\\begin{verbatim}')
             self.writer(open(fileName).read())
             self.writer('\\end{verbatim}')
+            # Write a caption for this source listing
+            self.writer('\\begin{center}\\raisebox{1ex}[1ex]{Source listing for '
+                        '\\begin{em}%s\\end{em}}\\end{center}' 
+                        % latexEscape(fileName))
             self.ignoring = 1
         elif attrs.has_key('href'):
             if attrs.get('class', '').find('listing') != -1:
