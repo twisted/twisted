@@ -360,7 +360,10 @@ class MulticastPort(MulticastMixin, Port):
     def createInternetSocket(self):
         skt = Port.createInternetSocket(self)
         if self.listenMultiple:
-            skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            if hasattr(socket, "SO_REUSEPORT"):
+                skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+            else:
+                skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         return skt
 
 
