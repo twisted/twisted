@@ -98,6 +98,9 @@ class TwistedWordsClient(pb.Referenceable):
     def getGroupConversation(self, name):
         return getGroupConversation(self.getGroup(name))
 
+    def addContact(self, name):
+        self.perspective.callRemote('addContact', name)
+
     def remote_receiveGroupMembers(self, names, group):
         print 'received group members:', names, group
         self.getGroupConversation(group).setGroupMembers(names)

@@ -183,7 +183,7 @@ class GroupConversation(InputOutputWindow):
         lw = self.xml.get_widget("ParticipantList")
 
         if lw.selection:
-            self.group.account.perspective.callRemote('addContact', self.members[lw.selection[0]])
+            self.group.account.addContact(self.members[lw.selection[0]])
 
     def on_TopicEntry_activate(self, e):
         print "ACTIVATING TOPIC!!"
