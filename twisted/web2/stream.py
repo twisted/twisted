@@ -37,10 +37,12 @@ ProducerStream
  - when read() is called, returns a deferred, and calls producer.resumeProducing() and waits for a write() call.
 """
 
-import copy
+import copy,os
 from zope.interface import Interface, Attribute, implements
 from twisted.internet.defer import Deferred
 from twisted.internet import interfaces as ti_interfaces, defer
+
+import mmap
 
 class IStream(Interface):
     length = Attribute("""How much data is in this stream. Can be None if unknown.""")
@@ -100,49 +102,82 @@ MMAP_LIMIT = 4*1024*1024
 # minimum mmap size
 MMAP_THRESHOLD = 8*1024
 
+# maximum sendfile length
+SENDFILE_LIMIT = 16777216
+# minimum sendfile size
+SENDFILE_THRESHOLD = 256
+
+def mmapwrapper(*args, **kwargs):
+    """
+    Python's mmap call sucks and ommitted the "offset" argument for no
+    discernable reason. Replace this with a mmap module that has offset.
+    """
+    
+    offset = kwargs.get('offset', None)
+    if offset == 0:
+        del kwargs['offset']
+    else:
+        raise mmap.error("mmap: Python sucks and does not support offset.")
+    return mmap.mmap(*args, **kwargs)
+
 class FileStream(SimpleStream):
     implements(ISendfileableStream)
-    """A producer that produces data from a file"""
+    """A producer that produces data from a file. File must be a normal
+    file that supports seek or this won't work."""
     # 65K, minus some slack
     CHUNK_SIZE = 2 ** 2 ** 2 ** 2 - 32
 
     f = None
-    def __init__(self, f, start=0, length=None):
+    def __init__(self, f, start=0, length=None, useMMap=True):
         self.f = f
         self.start = start
-        self.length = length
+        if length is None:
+            self.length = os.fstat(f.fileno()).st_size
+        else:
+            self.length = length
+        self.useMMap = useMMap
         
     def read(self, sendfile=False):
         if self.f is None:
             return None
 
-        if self.length == 0:
+        length = self.length
+        if length == 0:
             self.f = None
             return None
 
-        readSize = self.CHUNK_SIZE
-        if self.length is not None:
-            readSize = min(self.length, readSize)
-
-        if sendfile and self.length is not None:
+        if sendfile and length > SENDFILE_THRESHOLD:
             # XXX: Yay using non-existent sendfile support!
+            # XXX: if we return a SendfileBuffer, and then sendfile
+            #      fails, then what? Or, what if file is too short?
+            readSize = min(length, SENDFILE_LIMIT)
             res = SendfileBuffer(self.f, self.start, readSize)
             self.length -= readSize
             self.start += readSize
             return res
-        
+
+        if self.useMMap and length > MMAP_THRESHOLD:
+            readSize = min(length, MMAP_LIMIT)
+            try:
+                res = mmapwrapper(self.f.fileno(), readSize,
+                                  access=mmap.ACCESS_READ, offset=self.start)
+                #madvise(res, MADV_SEQUENTIAL)
+                self.length -= readSize
+                self.start += readSize
+                return res
+            except mmap.error:
+                pass
+
+        # Fall back to standard read.
+        readSize = min(length, self.CHUNK_SIZE)
+
         self.f.seek(self.start)
         b = self.f.read(readSize)
         bytesRead = len(b)
         if not bytesRead:
-            if self.length is not None:
-                raise RuntimeError("Ran out of data reading file %r, expected %d more bytes" % (self.f, self.length))
-            else:
-                self.f = None
-                return None
+            raise RuntimeError("Ran out of data reading file %r, expected %d more bytes" % (self.f, length))
         else:
-            if self.length is not None:
-                self.length -= bytesRead
+            self.length -= bytesRead
             self.start += bytesRead
             return b
 
@@ -294,7 +329,9 @@ class TruncaterStream:
     def read(self):
         if self.length == 0:
             if self.postTruncater is not None:
-                self.postTruncater.sendInitialSegment('')
+                postTruncater = self.postTruncater
+                self.postTruncater = None
+                postTruncater.sendInitialSegment(self.stream.read())
             self.stream = None
             return None
         
@@ -307,7 +344,7 @@ class TruncaterStream:
     def _gotRead(self, data):
         if data is None:
             raise ValueError("Ran out of data for a split of a indeterminate length source")
-        if self.length > len(data):
+        if self.length >= len(data):
             self.length -= len(data)
             return data
         else:
@@ -315,19 +352,21 @@ class TruncaterStream:
             after = buffer(data, self.length)
             self.length = 0
             if self.postTruncater is not None:
-                self.postTruncater.sendInitialSegment(after)
+                postTruncater = self.postTruncater
                 self.postTruncater = None
+                postTruncater.sendInitialSegment(after)
                 self.stream = None
             return before
     
     def split(self, point):
         if point > self.length:
             raise ValueError("split point (%d) > length (%d)" % (point, self.length))
-        
-        post = PostTruncaterStream(TruncaterStream(stream, self.length - point, self.postTruncater))
+
+        post = PostTruncaterStream(self.stream, point)
+        trunc = TruncaterStream(post, self.length - point, self.postTruncater)
         self.length = point
         self.postTruncater = post
-        return self, post
+        return self, trunc
     
     def close(self):
         if self.postTruncater is not None:
@@ -375,19 +414,25 @@ class PostTruncaterStream:
             # first half already finished up
             self.stream.close()
             
-        self.stream = None
         self.deferred = None
     
     # Callbacks from TruncaterStream
     def sendInitialSegment(self, data):
+        if self.closed:
+            # First half finished, we don't want data.
+            self.stream.close()
+            self.stream = None
         if self.deferred is not None:
-            self.deferred.callback(data)
+            if isinstance(data, Deferred):
+                data.chainDeferred(self.deferred)
+            else:
+                self.deferred.callback(data)
         
     def notifyClosed(self, truncater):
         if self.closed:
             # we are closed, have first half really close
-            self.truncater.postTruncater = None
-            self.truncater.close()
+            truncater.postTruncater = None
+            truncater.close()
         elif self.sentInitialSegment:
             # We are trying to read, read up first half
             readAndDiscard(self, truncater)
