@@ -7,28 +7,27 @@ the authentication scheme for a client.
 OTP is a password container for an user on a server.
 
 NOTE: Does not take care of transmitting the shared secret password.
-Does not dechiper hex responses. 
 
 At the end there's a dict called dict which is dictionary contain 2048
 words for storing pronouncable 11-bit values. Taken from RFC 1760.
 
 Uses the MD5- and SHA-algorithms for hashing
 
-Todo: RFC2444, SASL (perhaps)
+Todo: RFC2444, SASL (perhaps), parsing hex-responses
 """
 
 import string
 import random
 
 def stringToLong(s):
-    """ Convert bytes to long integer """
+    """ Convert digest to long """
     result = 0L
     for byte in s:
         result = (256 * result) + ord(byte)
     return result
 
 def stringToDWords(s):
-    """ Convert bytes to a list of four 32-bits words """
+    """ Convert digest to a list of four 32-bits words """
     result = []
     for a in xrange(len(s) / 4):
         tmp = 0L
@@ -197,7 +196,7 @@ class OTP(OTPAuthenticator):
         self.sequence = sequence
 
     def challenge(self):
-        """Return a challenge string, and reduce sequence by one"""
+        """Return a challenge string"""
         result = OTPAuthenticator.challenge(self, self.seed, self.sequence)
         return result
 
@@ -215,32 +214,6 @@ class OTP(OTPAuthenticator):
                 raise Unauthorized("Failed")
         except Unauthorized, msg:
             raise Unauthorized(msg)
-
-def test():
-    A = StaticAuthenticator('password',1000, md5)
-    try:
-        a = A.challenge()
-        print 'challenge:', a
-        a = string.split(a)
-        response = A.makeReadable(A.generateOTP(a[1], "password", int(a[2])))
-        print 'response:', response
-        print 'authenticator says:', A.authenticate(response)
-    except:
-        print 'this shouldn''t happen'
-        pass
-    try:
-        a = A.challenge()
-        print 'challenge:', a
-        a = string.split(a)
-        response = A.makeReadable(A.generateOTP(a[1], "monkey", int(a[2])))
-        print 'response:', response
-        print 'authenticator says:', A.authenticate(response)
-    except Unauthorized, msg:
-        print msg, ' <- this is because I wrote the wrong password :)'
-        pass
-
-if __name__ == '__main__':
-    test()
 
 #
 # The 2048 word standard dictionary from RFC 1760
