@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_imap -*-
+# -*- Test-case-name: twisted.test.test_imap -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -3801,7 +3801,7 @@ class IAccount(components.Interface):
         returned.
         """
 
-    def select(self, name, rw=1):
+    def select(self, name, rw=True):
         """Acquire a mailbox, given its name.
 
         @type name: C{str}
