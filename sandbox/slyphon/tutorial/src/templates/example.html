@@ -1,0 +1,106 @@
+<html>
+    <body>
+<form name="everything">                   <!-- A one-of-everything HTML form... -->
+ <table border="border" cellpadding="5">   <!-- in a big HTML table -->
+   <tr>
+     <td>Username:<br>[1]<input type="text" name="username" size="15"></td>
+     <td>Password:<br>[2]<input type="password" name="password" size="15"></td>
+     <td rowspan="4">Input Events[3]<br>
+       <textarea name="textarea" rows="20" cols="28"></textarea></td>
+     <td rowspan="4" align="center" valign="center">
+       [9]<input type="button" value="Clear" name="clearbutton"><br>
+       [10]<input type="submit" name="submitbutton" value="Submit"><br>
+       [11]<input type="reset" name="resetbutton" value="Reset"></td></tr>
+   <tr>
+     <td colspan="2">
+       Filename: [4]<input type="file" name="file" size="15"></td></tr>
+   <tr>
+     <td>My Computer Peripherals:<br>
+       [5]<input type="checkbox" name="peripherals" value="modem">56K Modem<br>
+       [5]<input type="checkbox" name="peripherals" value="printer">Printer<br>
+       [5]<input type="checkbox" name="peripherals" value="tape">Tape Backup</td>
+     <td>My Web Browser:<br>
+       [6]<input type="radio" name="browser" value="nn">Netscape<br>
+       [6]<input type="radio" name="browser" value="ie">Internet Explorer<br>
+       [6]<input type="radio" name="browser" value="other">Other</td></tr>
+   <tr>
+     <td>My Hobbies:[7]<br>
+       <select multiple="multiple" name="hobbies" size="4">
+         <option value="programming">Hacking JavaScript
+         <option value="surfing">Surfing the Web
+         <option value="caffeine">Drinking Coffee
+         <option value="annoying">Annoying my Friends
+       </select></td>
+     <td align="center" valign="center">My Favorite Color:<br>[8]
+       <select name="color">
+         <option value="red">Red        <option value="green">Green
+         <option value="blue">Blue      <option value="white">White
+         <option value="violet">Violet  <option value="peach">Peach
+       </select></td></tr>
+ </table>
+</form>
+
+<div align="center">        <!-- Another table the key to the one above -->
+  <table border="4" bgcolor="pink" cellspacing="1" cellpadding="4">
+    <tr>
+      <td align="center"><b>Form Elements</b></td>
+      <td>[1] Text</td>  <td>[2] Password</td>  <td>[3] Textarea</td>
+      <td>[4] FileUpload</td> <td>[5] Checkbox</td></tr>
+    <tr>
+      <td>[6] Radio</td>  <td>[7] Select (list)</td>
+      <td>[8] Select (menu)</td>  <td>[9] Button</td>
+      <td>[10] Submit</td>  <td>[11] Reset</td></tr>
+  </table>
+</div>
+
+<script>
+// This generic function appends details of an event to the big Textarea
+// element in the form above. It is called from various event handlers.
+function report(element, event) {
+    var elmtname = element.name;
+    if ((element.type == "select-one") || (element.type == "select-multiple")){
+        value = " ";
+        for(var i = 0; i < element.options.length; i++)
+            if (element.options[i].selected) 
+                value += element.options[i].value + " ";
+    }
+    else if (element.type == "textarea") value = "...";
+    else value = element.value;
+    var msg = event + ": " + elmtname + ' (' + value + ')\n';
+    var t = element.form.textarea;
+    t.value = t.value + msg;
+}
+
+// This function adds a bunch of event handlers to every element in a form.
+// It doesn't bother checking to see if the element supports the event handler,
+// it just adds them all. Note that the event handlers call report( ) above.
+// Note that we're defining event handlers by assigning functions to the
+// properties of JavaScript objects rather than by assigning strings to
+// the attributes of HTML elements.
+function addhandlers(f) {
+    // Loop through all the elements in the form
+    for(var i = 0; i < f.elements.length; i++) {
+        var e = f.elements[i];
+        e.onclick = function( ) { report(this, 'Click'); }
+        e.onchange = function( ) { report(this, 'Change'); }
+        e.onfocus = function( ) { report(this, 'Focus'); }
+        e.onblur = function( ) { report(this, 'Blur'); }
+        e.onselect = function( ) { report(this, 'Select'); }
+    }
+
+    // Define some special-case event handlers for the three buttons:
+    f.clearbutton.onclick = function( ) {
+        this.form.textarea.value=''; report(this,'Click');
+    }
+    f.submitbutton.onclick = function ( ) {
+        report(this, 'Click'); return false;
+    }
+    f.resetbutton.onclick = function( ) {
+        this.form.reset( ); report(this, 'Click'); return false;
+    }
+}
+// Finally, activate our form by adding all possible event handlers!
+addhandlers(document.everything);
+</script>
+</body>
+</html>

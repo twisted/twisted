@@ -1,0 +1,184 @@
+
+A
+{
+  font-family: sans-serif;
+  color: #0000ff;
+  }
+
+/*
+A:link {  }
+A:visited { }
+A:active {  }
+A:hover {  }
+*/
+
+TH
+{
+  font-family: sans-serif;
+  font-weight: bold;
+  }
+
+PRE, CODE
+{
+  font-family: Neep Alt, Courier New, Courier;
+  font-size: 12pt;
+  }
+
+PRE.code 
+{ 
+  color: blue;
+  margin: 1em;
+  padding: 1em;
+  background-color: #ccf;
+  border: thin blue solid;
+  }
+
+PRE.shell
+{ 
+  color: white;
+  background-color: blue;
+  margin: 1em;
+  padding: 1em;
+  border: thin black solid;
+  }
+
+H1, H2, H3, H4, H5, H6
+{
+  /* font-variant: small-caps; */
+  font-weight: normal;
+  }
+
+HR
+{
+  display: inline;
+  }
+
+P, BODY, TD, OL, UL, MENU, BLOCKQUOTE, DIV
+{
+  font-family: sans-serif;
+/*  color: #000000; */
+  }
+
+BODY
+{
+  margin-left: 2em;
+  margin-right: 2em;
+  border: 0px;
+  padding: 0px;
+  }
+
+UL
+{
+  /* border: thin red solid; */
+  padding: 0px;
+  margin: 0px;
+  margin-left: 1em;
+  /*  padding-left: 1em;
+     border-left: 1em; */
+  }
+
+LI
+{
+  padding: 2px;
+  }
+
+.warning
+{
+  font-style:	normal;
+  font-weight:	bolder;
+  background:	white;
+  color:	red;
+  }
+
+.prod, .prod A, .prod-text A, .prod-text H1, .prod-text H1, .prod-text H2, .prod-text H3, .prod-text H4, .prod-text H5, .prod-text H6 { color: red; }
+.serv, .serv A, .serv-text A, .serv-text H1, .serv-text H1, .serv-text H2, .serv-text H3, .serv-text H4, .serv-text H5, .serv-text H6 { color: green; }
+.doc, .doc A, .doc-text A, .doc-text H1, .doc-text H1, .doc-text H2, .doc-text H3, .doc-text H4, .doc-text H5, .doc-text H6 { color: blue; }
+.dev, .dev A, .dev-text A, .dev-text H1, .dev-text H1, .dev-text H2, .dev-text H3, .dev-text H4, .dev-text H5, .dev-text H6 { color: gray; }
+
+/* .prod, .serv, .dev, .doc { float: left; display: inline;} */
+.prod, .serv, .dev, .doc { font-size: smaller; }
+.prod H4, .prod H2, .serv H2, .doc H2, .dev H2 { margin: 0px; margin-top: 8px; }
+/* DIV.prod, DIV.serv, DIV.doc, DIV.dev { } */
+
+.menu
+{ 
+  /* position: fixed; */
+  display: block;
+  float: right;
+  padding: 0.5em;
+  border: thin gray solid;
+  margin: 1em;
+  }
+
+.footer 
+{ 
+  display: inline;
+  border:thin red solid;
+  margin-top:2px;
+  padding-top:2px;
+ }
+
+.content H1
+{ 
+  /* border: thick green dashed; */
+  /* clear: both; */
+  padding-top: 0px;
+  }
+
+
+/* .content UL { display: inline; } */
+
+.python
+{
+  background-color: #dddddd;
+  padding: 1em;
+  border: thin black solid;
+}
+
+.py-src-comment
+{
+  color: #1111CC
+}
+
+.py-src-keyword
+{
+  color: #3333CC;
+  font-weight: bold;
+}
+
+.py-src-parameter
+{
+  color: #000066;
+  font-weight: bold;
+}
+
+.py-src-identifier
+{
+  color: #CC0000
+}
+
+.py-src-string
+{
+
+  color: #115511
+}
+.py-listing
+{
+  border: thin solid black;
+  background-color: #eee;
+}
+.py-listing .python
+{
+  margin-top: 0;
+  margin-bottom: 0;
+  border: none;
+  border-bottom: thin solid black;
+  }
+
+.happy {
+  color: green;
+}
+
+.sad {
+  color: red;
+}

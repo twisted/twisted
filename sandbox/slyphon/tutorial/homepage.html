@@ -1,0 +1,98 @@
+<html>
+    <head>
+        <title>HomePage - Where the action is!</title>
+    </head>
+    <body bgcolor="white">
+
+<H1>HomePage- Where the action is!</H1>
+<H2>Overview</H2>
+<p>
+The main page in this application is HomePage, which pulls double-duty, it's the
+main Controller for the application, and it renders the main page for viewing, by 
+subclassing SuperPage (which we'll see in the next chapter). For now, we're going
+to look at how this Page handles the flow of the program, as this Page is the glue
+that holds all of the pieces of the application together.
+</p>
+
+<H2>Handling requests for child Resources</H2>
+<H3>God Bless the wchilds</H3>
+<p>
+Woven is a framework that makes use of methods with pre-defined signatures that
+you write to customize your application, and that the framework knows how to
+locate. In woven there is a convention of prefixing these methods with the
+letter 'w' (...you can probably guess why). In this code we can see that most
+of the action takes place inside of <q>wchild_</q> prefixed methods. When this
+application is started, by running twistd -y 
+<a href="application.html">RunHome.py</a>, it's given a HomePage instance
+that's used as the root of the Resource (document) tree.  When a request is
+made for a child document of this application, say 
+<a href="http://localhost:7000/edit">http://localhost:7000/edit</a>, woven
+looks in HomePage to fill the request. First it looks for a method named
+wchild_edit, and if one is not found, it calls the getDynamicChild method to
+see if the developer has added some logic to find the appropriate Resource in
+there.  </p>
+<a href="src/HomePage.py" class="py-listing"></a>
+
+<p>
+On the HomePage you can see that we have defined child pages for all of the 
+child Resources we wish to make available from this root page. 
+</p>
+
+<H3>getDynamicChild() and the default Page</H3>
+<p>
+When Woven calls getDynamicChild(), the requested page has not been found in 
+any of the wchild_'s and it is giving you a chance to make some decisions as to
+where you want the user to go to next, and what you wish to accomplish. If we
+look at the last statement of the method, we'll see that if the user has requested
+a child page below /home that we don't know anything about, we will return an 
+error telling them so. 
+</p>
+
+<h3>Handling requests and performing tasks using getDynamicChild()</h3>
+<p>
+One of the goals of this site is to not just to provide access to the bookmarks 
+stored in our database, but also to provide us with an interface to manage them with.
+The main difficulty anyone faces when writing a web application is that http
+is, by definition, a stateless protocol. The server doesn't know anything (without
+programmatic help) about who is connecting at any given time. It simply recieves a 
+request, checks to make sure it can fill the request, and takes appropriate action. 
+This presents us with a bit of a problem when the processing done on one page needs
+to hand off a value to the next part of the program. For instance, when someone uses
+the <a href="editpage.xhtml">EditPage</a> to select a link they wish to change the 
+attributes of, we need some kind of way of passing the user's selection to the 
+<a href="editlinkpage.xhtml">EditLinkPage</a>. We're not going to go into the full details
+of this here, but rather I just wanted to introduce the idea and explain a little
+bit about why these two pages were handled specially.
+</p>
+
+<h3>Where to go from here?</h3>
+<p>
+Now, I realize that people have different styles of learning and absorbing information,
+so I'm going to give you an option or two on how to proceed from here. If you're dying
+to understand how this web page renders it's information, you can skip ahead to
+<a href="superpage.xhtml">The Superpage</a>. If you'd like to understand where
+the data comes from and how it is modeled, then the 
+<a href="datastore.xhtml">next section</a> will describe the data storage
+object interface IDataStore, and it's main implementing class CSVStorage. I'll
+also be discussing the related middle-tier objects that encapsulate the rows
+returned by the data storage object, and provide us with a more
+application-friendly approach to interacting with our data.  </p>
+
+        <!-- Navigation Links ------------------------ -->
+        <p>
+        <table cellpadding="" cellspacing="5" border="0">
+            <tr>
+                <td>
+                    <a href="datastore.xhtml">next</a>  
+                </td>
+                <td>
+                   <a href="application.xhtml">prev</a>  
+                </td>
+                <td>
+                    <a href="toc.xhtml">toc</a>
+                </td>
+            </tr>  
+        </table>
+        </p>
+    </body>
+</html>

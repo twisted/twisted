@@ -1,0 +1,118 @@
+<html>
+<head>
+<title>EditLinkPage</title>
+</head>
+<body bgcolor="white">
+<h1>EditLinkPage, AddLinkPage, and DeleteLinkPage</h1>
+<h2>Overview</h2>
+
+<p>EditLinkPage, AddLinkPage, and DeleteLinkPage are all very similar
+in their design. We'll be examining EditLinkPage closely, and I'll mention
+any differences between it and the others at the end.
+</p>
+
+<h3>Forms Processing</h3>
+<p>
+Here's where we get to see how the forms processing is done (or at least
+one method that works). When this page is requested, a child resource is given
+that doesn't correspond to a page. Instead, it is an integer that corresponds
+to a bookmark's id, and that is how we know what bookmark the user wishes to 
+edit.
+</p>
+<p>
+One difference in this page is that I chose to do the layout of the 
+components in the template, instead of generating the majority of the
+HTML using lmx (just to show how it's done). I'm lead to understand that in
+a production environment, this is more likely to be the way it's done (but
+either way is still correct).
+</p>
+<p>
+The page itself is straightforward, one combo box for the user to select the
+category they wish to add the bookmark under, a Name and a URL textbox, a
+submit button that causes the edit to be committed, and a cancel link (because
+I couldn't quite figure out how to make it a button :-/) that brings the user
+back to the EditLink page.
+</p>
+<a href="src/EditLinkPage.py" class="py-listing"></a>
+<h2>Details</h2>
+
+<h3>getDynamicChild()</h3>
+<p>
+As in the previous example, we set up a form that posts to the originating page
+This allows us to handle form validation and redirection from getDynamicChild() 
+(not that there's much validation here, but if you wanted to...). 
+</p>
+
+<p>
+getDynamicChild has the signature getDynamicChild(self, name, request). 
+The name argument is the path of the child page in the request (AFAICT). Here, 
+I've renamed it to bmark_id, as that is what we are using this path to represent,
+the id of the bookmark we wish to edit. So we call the storage object and tell
+it to give us all the bookmark objects with id=bmark_id (which should be only
+one object), we set this to an instance attribute to save for later, and then
+return this instance of EditLinkPage.
+</p>
+
+<p>
+When the user clicks the submit button, it posts back to itself (it's originating
+page), and getDynamicChild is called (again). This time, however, because we
+have placed an invisible submit element in the form, we know that if this key
+is present in request.args, that this is not the first time that we're going 
+through this, and now we have to store the data. Because each key in request.args
+is a list, and we know there's only going to be one value in each list,
+we can safely take [0] for each of our attributes, tell the storage object to
+update it and return the user to the EditPage.
+</p>
+
+<h3>The wvupdates and wmfactories</h3>
+<p>
+First, we get the combo box data from our storage object. This is simply a
+list of category names culled from the data source. We create a list of 
+Option objects, and we set the bookmark's category as the default selected 
+combobox selection item. Here I use a convenience method add_opts to render the
+Option list on a node.
+</p>
+
+<p>
+Since the two textboxes are basically the same, I chose to mark the tags
+with model=<q>linkname</q> and model=<q>url</q> and let the appropriate wmfactory
+return the correct name attribute to the view. I did this because the view
+of these two elements is the same (a textbox) and their only differences are 
+the default value they're filled in with and the value they'll represent upon
+submittal. This is to show that the same view can be used with different
+models to achieve different results, and save typing.
+</p>
+
+<h2>AddLinkPage</h2>
+<p>
+The AddLinkPage is almost identical to the EditLinkPage, the only difference
+being that there are no default values inserted, and a different method
+is called on the storage object. It uses the exact same strategy to handle
+the form.
+</p>
+
+<H2>DeleteLinkPage</H2>
+<p>
+The DeleteLinkPage is even simpler still, as it doesn't have a view. All
+this page does is call the storage object's delete_Bookmark method with the
+argument passed to it as the <q>name</q> parameter.
+</p>
+
+        <!-- Navigation Links ------------------------ -->
+        <p>
+        <table cellpadding="" cellspacing="5" border="0">
+            <tr>
+                <td>
+                   <a href="intro.xhtml">next</a>  
+                </td>
+                <td>
+                    <a href="editpage.xhtml">prev</a>  
+                </td>
+                <td>
+                    <a href="toc.xhtml">toc</a>
+                </td>
+            </tr>  
+        </table>
+        </p>
+    </body>
+</html>
