@@ -4,7 +4,7 @@ from twisted.internet import protocol, reactor, defer
 from twisted.protocols import basic, irc
 from twisted.python import components
 from twisted.web import resource, server, static, xmlrpc, microdom
-from twisted.web.woven import page, model, interfaces #,widgets
+from twisted.web.woven import page, model, interfaces
 import cgi
 
 class IFingerService(components.Interface):
@@ -19,10 +19,9 @@ class IFingerSetterService(components.Interface):
 
     def setUser(self, user, status):
         """Set the user's status to something"""
-    
+
 def catchError(err):
     return "Internal error in server"
-
 
 class FingerProtocol(basic.LineReceiver):
 
@@ -30,7 +29,7 @@ class FingerProtocol(basic.LineReceiver):
         d = self.factory.getUser(user)
         d.addErrback(catchError)
         def writeValue(value):
-            self.transport.write(value+"\n")
+            self.transport.write(value+'\n')
             self.transport.loseConnection()
         d.addCallback(writeValue)
 
@@ -56,21 +55,21 @@ class FingerFactoryFromService(protocol.ServerFactory):
     def getUser(self, user):
         return self.service.getUser(user)
 
-components.registerAdapter(FingerFactoryFromService, IFingerService,
+components.registerAdapter(FingerFactoryFromService,
+                           IFingerService,
                            IFingerFactory)
-
 
 class FingerSetterProtocol(basic.LineReceiver):
 
-      def connectionMade(self):
-          self.lines = []
+    def connectionMade(self):
+        self.lines = []
 
-      def lineReceived(self, line):
-          self.lines.append(line)
+    def lineReceived(self, line):
+        self.lines.append(line)
 
-      def connectionLost(self, reason):
-          if len(self.lines) == 2:
-              self.factory.setUser(*self.lines)
+    def connectionLost(self, reason):
+        if len(self.lines) == 2:
+            self.factory.setUser(*self.lines)
 
 
 class IFingerSetterFactory(components.Interface):
@@ -98,7 +97,7 @@ class FingerSetterFactoryFromService(protocol.ServerFactory):
 components.registerAdapter(FingerSetterFactoryFromService,
                            IFingerSetterService,
                            IFingerSetterFactory)
-    
+
 class IRCReplyBot(irc.IRCClient):
 
     def connectionMade(self):
@@ -110,7 +109,7 @@ class IRCReplyBot(irc.IRCClient):
         if self.nickname.lower() == channel.lower():
             d = self.factory.getUser(msg)
             d.addErrback(catchError)
-            d.addCallback(lambda m: "Status of %s: %s " % (msg, m))
+            d.addCallback(lambda m: "Status of %s: %s" % (msg, m))
             d.addCallback(lambda m: self.msg(user, m))
 
 
@@ -129,21 +128,20 @@ class IIRCClientFactory(components.Interface):
 
 class IRCClientFactoryFromService(protocol.ClientFactory):
 
-   __implements__ = IIRCClientFactory,
+    __implements__ = IIRCClientFactory,
 
-   protocol = IRCReplyBot
-   nickname = None
+    protocol = IRCReplyBot
+    nickname = None
 
-   def __init__(self, service):
-       self.service = service
-       
+    def __init__(self, service):
+        self.service = service
 
-   def getUser(self, user):
+    def getUser(self, user):
         return self.service.getUser(user)
 
-components.registerAdapter(IRCClientFactoryFromService, IFingerService,
+components.registerAdapter(IRCClientFactoryFromService,
+                           IFingerService,
                            IIRCClientFactory)
-
 
 class UsersModel(model.MethodModel):
 
@@ -162,7 +160,6 @@ class UserStatusTree(page.Page):
     <ul model="users" view="List">
     <li pattern="listItem"><a view="Anchor" /></li>
     </ul></body></html>"""
-                                                              
 
     def initialize(self, *args, **kwargs):
         self.service=args[0]
@@ -172,7 +169,6 @@ class UserStatusTree(page.Page):
 
     def wchild_RPC2 (self, request):
         return UserStatusXR(self.service)
-
 
 components.registerAdapter(UserStatusTree, IFingerService, resource.IResource)
 
@@ -215,7 +211,7 @@ class FingerService(service.Service):
     def __init__(self, filename):
         self.filename = filename
         self._read()
-        
+
     def _read(self):
         self.users = {}
         for line in file(self.filename):

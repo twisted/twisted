@@ -9,7 +9,8 @@ class FingerProtocol(basic.LineReceiver):
         self.factory.getUser(user
         ).addErrback(lambda _: "Internal error in server"
         ).addCallback(lambda m:
-         (self.transport.write(m+"\r\n"),self.transport.loseConnection()))
+                      (self.transport.write(m+"\r\n"),
+                       self.transport.loseConnection()))
 class FingerSetterProtocol(basic.LineReceiver):
     def connectionMade(self): self.lines = []
     def lineReceived(self, line): self.lines.append(line)
@@ -24,15 +25,14 @@ class IRCReplyBot(irc.IRCClient):
             self.factory.getUser(msg
             ).addErrback(lambda _: "Internal error in server"
             ).addCallback(lambda m: irc.IRCClient.msg(self, user, msg+': '+m))
-              
-            
+
 class FingerService(service.Service):
-    def __init__(self, file):
-        self.file = file
+    def __init__(self, filename):
+        self.filename = filename
         self._read()
     def _read(self):
         self.users = {}
-        for line in file(self.file):
+        for line in file(self.filename):
             user, status = line.split(':', 1)
             user = user.strip()
             status = status.strip()
@@ -62,9 +62,9 @@ class FingerService(service.Service):
 application = service.Application('finger', uid=1, gid=1)
 f = FingerService('/etc/users')
 serviceCollection = service.IServiceCollection(application)
-internet.TCPServer(79,f.getFingerFactory()
+internet.TCPServer(79, f.getFingerFactory()
                    ).setServiceParent(serviceCollection)
-internet.TCPServer(8000,server.Site(f.getResource())
+internet.TCPServer(8000, server.Site(f.getResource())
                    ).setServiceParent(serviceCollection)
 internet.TCPClient('irc.freenode.org', 6667, f.getIRCBot('fingerbot')
                    ).setServiceParent(serviceCollection)

@@ -18,8 +18,8 @@ class FingerService(service.Service):
     def _read(self):
         for line in file(self.filename):
             user, status = line.split(':', 1)
-            user=user.strip()
-            status=status.strip()
+            user = user.strip()
+            status = status.strip()
             self.users[user] = status
         self.call = reactor.callLater(30, self._read)
     def startService(self):
@@ -32,7 +32,7 @@ class FingerService(service.Service):
         return defer.succeed(self.users.get(user, "No such user"))
     def getFingerFactory(self):
         f = protocol.ServerFactory()
-        f.protocol, f.getUser = FingerProtocol, self.getUser,
+        f.protocol, f.getUser = FingerProtocol, self.getUser
         return f
 
 application = service.Application('finger', uid=1, gid=1)

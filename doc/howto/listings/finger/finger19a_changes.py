@@ -4,7 +4,6 @@ class IFingerSetterService(components.Interface):
     def setUser(self, user, status):
         """Set the user's status to something"""
 
-        
 # Advantages of latest version
 
 class MemoryFingerService(service.Service):
@@ -22,7 +21,7 @@ class MemoryFingerService(service.Service):
 
     def setUser(self, user, status):
         self.users[user] = status
-                
+
 
 f = MemoryFingerService(moshez='Happy and well')
 serviceCollection = service.IServiceCollection(application)

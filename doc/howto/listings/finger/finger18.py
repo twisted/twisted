@@ -27,7 +27,7 @@ class FingerSetterProtocol(basic.LineReceiver):
     def lineReceived(self, line):
         self.lines.append(line)
 
-    def connectionLost(self,reason):
+    def connectionLost(self, reason):
         self.factory.setUser(*self.lines[:2])
 
 
@@ -43,7 +43,7 @@ class IRCReplyBot(irc.IRCClient):
             d = self.factory.getUser(msg)
             d.addErrback(catchError)
             d.addCallback(lambda m: "Status of %s: %s" % (msg, m))
-            d.addCallback(lambda m: self.msg(user,m))
+            d.addCallback(lambda m: self.msg(user, m))
 
 
 class UserStatusTree(resource.Resource):
@@ -96,7 +96,7 @@ class UserStatusXR(xmlrpc.XMLRPC):
 
 
 class FingerService(service.Service):
-    
+
     def __init__(self, filename):
         self.filename = filename
         self._read()

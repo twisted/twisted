@@ -7,8 +7,8 @@ class FingerProtocol(basic.LineReceiver):
         self.factory.getUser(user
         ).addErrback(lambda _: "Internal error in server"
         ).addCallback(lambda m:
-            (self.transport.write(m+"\r\n"),
-             self.transport.loseConnection()))
+                      (self.transport.write(m+"\r\n"),
+                       self.transport.loseConnection()))
 class FingerFactory(protocol.ServerFactory):
     protocol = FingerProtocol
     def __init__(self, prefix): self.prefix=prefix

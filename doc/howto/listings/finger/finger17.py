@@ -7,9 +7,10 @@ import cgi
 class FingerProtocol(basic.LineReceiver):
     def lineReceived(self, user):
         self.factory.getUser(user
-         ).addErrback(lambda _: "Internal error in server"
-         ).addCallback(lambda m:
-          (self.transport.write(m+"\r\n"),self.transport.loseConnection()))
+        ).addErrback(lambda _: "Internal error in server"
+        ).addCallback(lambda m:
+                      (self.transport.write(m+"\r\n"),
+                       self.transport.loseConnection()))
 class FingerSetterProtocol(basic.LineReceiver):
     def connectionMade(self): self.lines = []
     def lineReceived(self, line): self.lines.append(line)
@@ -24,6 +25,7 @@ class IRCReplyBot(irc.IRCClient):
             self.factory.getUser(msg
             ).addErrback(lambda _: "Internal error in server"
             ).addCallback(lambda m: irc.IRCClient.msg(self, user, msg+': '+m))
+
 class FingerService(service.Service):
     def __init__(self, filename):
         self.filename = filename

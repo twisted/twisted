@@ -4,7 +4,7 @@ from twisted.internet import protocol, reactor, defer
 from twisted.protocols import basic, irc
 from twisted.python import components
 from twisted.web import resource, server, static, xmlrpc, microdom
-from twisted.web.woven import page, model, interfaces 
+from twisted.web.woven import page, model, interfaces
 from twisted.spread import pb
 import cgi
 
@@ -20,10 +20,9 @@ class IFingerSetterService(components.Interface):
 
     def setUser(self, user, status):
         """Set the user's status to something"""
-    
+
 def catchError(err):
     return "Internal error in server"
-
 
 class FingerProtocol(basic.LineReceiver):
 
@@ -31,8 +30,7 @@ class FingerProtocol(basic.LineReceiver):
         d = self.factory.getUser(user)
         d.addErrback(catchError)
         def writeValue(value):
-            self.transport.write(value)
-            self.transport.write('\n\n')
+            self.transport.write(value+'\n')
             self.transport.loseConnection()
         d.addCallback(writeValue)
 
@@ -61,7 +59,6 @@ class FingerFactoryFromService(protocol.ServerFactory):
 components.registerAdapter(FingerFactoryFromService,
                            IFingerService,
                            IFingerFactory)
-
 
 class FingerSetterProtocol(basic.LineReceiver):
 
@@ -101,7 +98,7 @@ class FingerSetterFactoryFromService(protocol.ServerFactory):
 components.registerAdapter(FingerSetterFactoryFromService,
                            IFingerSetterService,
                            IFingerSetterFactory)
-    
+
 class IRCReplyBot(irc.IRCClient):
 
     def connectionMade(self):
@@ -131,7 +128,7 @@ class IIRCClientFactory(components.Interface):
 
 
 class IRCClientFactoryFromService(protocol.ClientFactory):
-    
+
     __implements__ = IIRCClientFactory,
 
     protocol = IRCReplyBot
@@ -148,6 +145,7 @@ components.registerAdapter(IRCClientFactoryFromService,
                            IIRCClientFactory)
 
 class UsersModel(model.MethodModel):
+
     def initialize(self, *args, **kwargs):
         self.service=args[0]
 
@@ -155,7 +153,6 @@ class UsersModel(model.MethodModel):
         return self.service.getUsers()
 
 components.registerAdapter(UsersModel, IFingerService, interfaces.IModel)
-
 
 class UserStatusTree(page.Page):
 
@@ -173,9 +170,9 @@ class UserStatusTree(page.Page):
 
     def wchild_RPC2 (self, request):
         return UserStatusXR(self.service)
-        
+
 components.registerAdapter(UserStatusTree, IFingerService, resource.IResource)
-    
+
 
 class UserStatus(page.Page):
 
@@ -193,7 +190,7 @@ class UserStatus(page.Page):
 
     def wmfactory_status(self, request):
         return self.service.getUser(self.user)
-                                                        
+
 
 class UserStatusXR(xmlrpc.XMLRPC):
 
@@ -220,8 +217,8 @@ class PerspectiveFingerFromService(pb.Root):
 
     __implements__ = pb.Root.__implements__, IPerspectiveFinger
 
-    def __init__ (self, *args):
-        self.service = args[0]
+    def __init__(self, service):
+        self.service = service
 
     def remote_getUser(self, username):
         return self.service.getUser(username)
@@ -258,13 +255,12 @@ class FingerService(service.Service):
         return defer.succeed(self.users.keys())
 
 
-
 application = service.Application('finger', uid=1, gid=1)
 f = FingerService('/etc/users')
 serviceCollection = service.IServiceCollection(application)
 internet.TCPServer(79, IFingerFactory(f)
                    ).setServiceParent(serviceCollection)
-internet.TCPServer(8000,server.Site(resource.IResource(f))
+internet.TCPServer(8000, server.Site(resource.IResource(f))
                    ).setServiceParent(serviceCollection)
 i = IIRCClientFactory(f)
 i.nickname = 'fingerbot'

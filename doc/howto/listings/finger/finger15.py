@@ -10,7 +10,8 @@ class FingerProtocol(basic.LineReceiver):
         self.factory.getUser(user
         ).addErrback(lambda _: "Internal error in server"
         ).addCallback(lambda m:
-         (self.transport.write(m+"\r\n"),self.transport.loseConnection()))
+                      (self.transport.write(m+"\r\n"),
+                       self.transport.loseConnection()))
 
 class MotdResource(resource.Resource):
     
@@ -30,15 +31,15 @@ class MotdResource(resource.Resource):
         return static.Data(text, 'text/html')
 
 class FingerService(service.Service):
-    def __init__(self, file):
-        self.file = file
+    def __init__(self, filename):
+        self.filename = filename
         self._read()
     def _read(self):
         self.users = {}
-        for line in file(self.file):
+        for line in file(self.filename):
             user, status = line.split(':', 1)
-            user=user.strip()
-            status=status.strip()
+            user = user.strip()
+            status = status.strip()
             self.users[user] = status
         self.call = reactor.callLater(30, self._read)
     def getUser(self, user):
@@ -56,9 +57,9 @@ class FingerService(service.Service):
 application = service.Application('finger', uid=1, gid=1)
 f = FingerService('/etc/users')
 serviceCollection = service.IServiceCollection(application)
-internet.TCPServer(79,f.getFingerFactory()
+internet.TCPServer(79, f.getFingerFactory()
                    ).setServiceParent(serviceCollection)
-internet.TCPServer(8000,server.Site(f.getResource())
+internet.TCPServer(8000, server.Site(f.getResource())
                    ).setServiceParent(serviceCollection)
 
 

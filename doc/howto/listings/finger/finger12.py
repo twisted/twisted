@@ -4,10 +4,10 @@ from twisted.internet import protocol, reactor, defer
 from twisted.protocols import basic
 class FingerProtocol(basic.LineReceiver):
     def lineReceived(self, user):
-        self.factory.getUser(user).addErrback(
-            lambda _:"Internal error in server"
-            ).addCallback(
-            lambda m: (self.transport.write(m+"\r\n"),
+        self.factory.getUser(user
+        ).addErrback(lambda _: "Internal error in server"
+        ).addCallback(lambda m:
+                      (self.transport.write(m+"\r\n"),
                        self.transport.loseConnection()))
 
 class FingerFactory(protocol.ServerFactory):

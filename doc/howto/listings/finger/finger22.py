@@ -6,10 +6,11 @@ from twisted.python import components
 from twisted.web import resource, server, static, xmlrpc, microdom
 from twisted.web.woven import page, model, interfaces
 from twisted.spread import pb
-#from OpenSSL import SSL
+from OpenSSL import SSL
 import cgi
 
 class IFingerService(components.Interface):
+
     def getUser(self, user):
         """Return a deferred returning a string"""
 
@@ -20,10 +21,9 @@ class IFingerSetterService(components.Interface):
 
     def setUser(self, user, status):
         """Set the user's status to something"""
-    
+
 def catchError(err):
     return "Internal error in server"
-
 
 class FingerProtocol(basic.LineReceiver):
 
@@ -31,13 +31,13 @@ class FingerProtocol(basic.LineReceiver):
         d = self.factory.getUser(user)
         d.addErrback(catchError)
         def writeValue(value):
-            self.transport.write(value)
-            self.transport.write('\n\n')
+            self.transport.write(value+'\n')
             self.transport.loseConnection()
         d.addCallback(writeValue)
 
 
 class IFingerFactory(components.Interface):
+
     def getUser(self, user):
         """Return a deferred returning a string"""
 
@@ -46,6 +46,7 @@ class IFingerFactory(components.Interface):
 
 
 class FingerFactoryFromService(protocol.ServerFactory):
+
     __implements__ = IFingerFactory,
 
     protocol = FingerProtocol
@@ -94,10 +95,11 @@ class FingerSetterFactoryFromService(protocol.ServerFactory):
     def setUser(self, user, status):
         self.service.setUser(user, status)
 
+
 components.registerAdapter(FingerSetterFactoryFromService,
                            IFingerSetterService,
                            IFingerSetterFactory)
-    
+
 class IRCReplyBot(irc.IRCClient):
 
     def connectionMade(self):
@@ -143,12 +145,11 @@ components.registerAdapter(IRCClientFactoryFromService,
                            IFingerService,
                            IIRCClientFactory)
 
-
 class UsersModel(model.MethodModel):
 
     def initialize(self, *args, **kwargs):
         self.service=args[0]
-                
+
     def wmfactory_users(self, request):
         return self.service.getUsers()
 
@@ -161,7 +162,7 @@ class UserStatusTree(page.Page):
     <ul model="users" view="List">
     <li pattern="listItem"><a view="Anchor" /></li>
     </ul></body></html>"""
-    
+
     def initialize(self, *args, **kwargs):
         self.service=args[0]
 
@@ -172,6 +173,7 @@ class UserStatusTree(page.Page):
         return UserStatusXR(self.service)
 
 components.registerAdapter(UserStatusTree, IFingerService, resource.IResource)
+
 
 class UserStatus(page.Page):
 
@@ -190,6 +192,7 @@ class UserStatus(page.Page):
     def wmfactory_status(self, request):
         return self.service.getUser(self.user)
 
+
 class UserStatusXR(xmlrpc.XMLRPC):
 
     def __init__(self, service):
@@ -202,7 +205,7 @@ class UserStatusXR(xmlrpc.XMLRPC):
     def xmlrpc_getUsers(self):
         return self.service.getUsers()
 
-            
+
 class IPerspectiveFinger(components.Interface):
 
     def remote_getUser(self, username):
@@ -210,7 +213,6 @@ class IPerspectiveFinger(components.Interface):
 
     def remote_getUsers(self):
         """return a user's status"""
-
 
 class PerspectiveFingerFromService(pb.Root):
 
@@ -237,7 +239,7 @@ class FingerService(service.Service):
     def __init__(self, filename):
         self.filename = filename
         self._read()
-        
+
     def _read(self):
         self.users = {}
         for line in file(self.filename):

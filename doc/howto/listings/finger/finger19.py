@@ -18,10 +18,9 @@ class IFingerSetterService(components.Interface):
 
     def setUser(self, user, status):
         """Set the user's status to something"""
-    
+
 def catchError(err):
     return "Internal error in server"
-
 
 class FingerProtocol(basic.LineReceiver):
 
@@ -59,19 +58,17 @@ components.registerAdapter(FingerFactoryFromService,
                            IFingerService,
                            IFingerFactory)
 
-
-
 class FingerSetterProtocol(basic.LineReceiver):
 
-      def connectionMade(self):
-          self.lines = []
+    def connectionMade(self):
+        self.lines = []
 
-      def lineReceived(self, line):
-          self.lines.append(line)
+    def lineReceived(self, line):
+        self.lines.append(line)
 
-      def connectionLost(self,reason):
-          if len(self.lines) == 2:
-              self.factory.setUser(*self.lines)
+    def connectionLost(self, reason):
+        if len(self.lines) == 2:
+            self.factory.setUser(*self.lines)
 
 
 class IFingerSetterFactory(components.Interface):
@@ -95,12 +92,11 @@ class FingerSetterFactoryFromService(protocol.ServerFactory):
     def setUser(self, user, status):
         self.service.setUser(user, status)
 
-        
 
 components.registerAdapter(FingerSetterFactoryFromService,
                            IFingerSetterService,
                            IFingerSetterFactory)
-    
+
 class IRCReplyBot(irc.IRCClient):
 
     def connectionMade(self):
@@ -118,9 +114,9 @@ class IRCReplyBot(irc.IRCClient):
 
 class IIRCClientFactory(components.Interface):
 
-    '''
+    """
     @ivar nickname
-    '''
+    """
 
     def getUser(self, user):
         """Return a deferred returning a string"""
@@ -138,11 +134,12 @@ class IRCClientFactoryFromService(protocol.ClientFactory):
 
     def __init__(self, service):
         self.service = service
-       
+
     def getUser(self, user):
         return self.service.getUser(user)
 
-components.registerAdapter(IRCClientFactoryFromService, IFingerService,
+components.registerAdapter(IRCClientFactoryFromService,
+                           IFingerService,
                            IIRCClientFactory)
 
 class UserStatusTree(resource.Resource):
@@ -154,7 +151,6 @@ class UserStatusTree(resource.Resource):
         self.service = service
         self.putChild('RPC2', UserStatusXR(self.service))
 
-        
     def render_GET(self, request):
         d = self.service.getUsers()
         def formatUsers(users):
@@ -209,7 +205,7 @@ class FingerService(service.Service):
     def __init__(self, filename):
         self.filename = filename
         self._read()
-        
+
     def _read(self):
         self.users = {}
         for line in file(self.filename):
