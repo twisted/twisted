@@ -564,7 +564,7 @@ def dsu(list, key):
 
 try:
     import pwd, grp
-    from os import setgroups
+    from os import setgroups, getgroups
     
     def _setgroups_until_success(l):
         while(1):
@@ -614,7 +614,6 @@ try:
             # We might be able to remove this code now that we
             # don't try to setgid/setuid even when not asked to.
             if e.errno == errno.EPERM:
-                groups = getgroups()
                 for g in getgroups():
                     if g not in l:
                         raise
