@@ -51,7 +51,7 @@ class VQuote(view.WView):
     def factory_title(self, request, node):
         """Create a widget which knows how to render my model's title."""
         domhelpers.clearNode(node)
-        return domwidgets.Text(self.model)
+        return widgets.Text(self.model)
 
 
 class NewQuoteHandler(input.SingleValue):

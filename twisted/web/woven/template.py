@@ -272,141 +272,40 @@ class DOMTemplate(Resource, View):
                 oldnode.parentNode.replaceChild(newnode, oldnode)
         return newnode
     
-    def getNodeController(self, request, node):
-        # Most specific
-        controllerName = node.getAttribute('controller')
-        
-        # Look up a handler
-        controllerFactory = DefaultHandler
-        if controllerName:
-            controllerFactory = getattr(self.controller, 'factory_' + controllerName, DefaultHandler)
-            if controllerFactory is DefaultHandler:
-                controllerFactory = getattr(dominput, controllerName, DefaultHandler)
-        if controllerName and controllerFactory is DefaultHandler:
-            nodeText = node.toxml()
-            raise NotImplementedError, "You specified controller name %s on a node, but no factory_%s method was found." % (controllerName, controllerName)
-
-        return controllerFactory(self.model)
-    
-    def getNodeView(self, request, node):
-        result = None
-        
-        # Most specific
-        viewName = node.getAttribute('view')
-
-        # Look up either a widget factory, or a dom-mutating method
-        defaultViewMethod = None
-        view = DefaultWidget(self.model)
-        viewMethod = view.generate
-        defaultViewMethod = viewMethod
-        if viewName:
-            viewMethod = getattr(self, 'factory_' + viewName, defaultViewMethod)
-            if viewMethod is defaultViewMethod:
-                widget = getattr(domwidgets, viewName, None)
-                if widget is not None:
-                    view = widget(self.model)
-                    viewMethod = view.generate
-            else:
-                # Check to see if the viewMethod returns a widget. (Use IWidget instead?)
-                maybeWidget = viewMethod(request, node)
-                if isinstance(maybeWidget, domwidgets.Widget):
-                    view = maybeWidget
-                    viewMethod = view.generate
-                else:
-                    result = maybeWidget
-                    viewMethod = None
-        
-        if viewName and viewMethod is defaultViewMethod:
-            del defaultViewMethod
-            del viewMethod
-            del view
-            del result
-            nodeText = node.toxml()
-            raise NotImplementedError, "You specified view name %s on a node, but no factory_%s method was found." % (viewName, viewName)
-        return view, viewMethod, result
-
     def handleNode(self, request, node):
+        """
+        Handle a single node by looking up a method for it, calling the method
+        and dispatching the result.
+        
+        Also, handle all childNodes of this node using recursion.
+        """
+        print "handling"
         if not hasattr(node, 'getAttribute'): # text node?
             return node
-
-        id = node.getAttribute('model')
         
-        controller = self.getNodeController(request, node)
-        view, viewMethod, result = self.getNodeView(request, node)
-
-        submodel_prefix = node.getAttribute("_submodel_prefix")
-        if submodel_prefix and id:
-            submodel = "/".join([submodel_prefix, id])
-        elif id:
-            submodel = id
-        elif submodel_prefix:
-            submodel = submodel_prefix
-        else:
-            submodel = ""
-
-        controller.setView(view)
-        if not getattr(controller, 'submodel', None):
-            controller.setSubmodel(submodel)
-        # xxx refactor this into a widget interface and check to see if the object implements IWidget
-        # the view may be a deferred; this is why this check is required
-        if hasattr(view, 'setController'):
-            view.setController(controller)
-            view.setNode(node)
-            if not getattr(view, 'submodel', None):
-                view.setSubmodel(submodel)
+        viewName = node.getAttribute('view')
+        if viewName:        
+            method = getattr(self, "factory_" + viewName, None)
+            print "method", method
+            if not method:
+                nodeText = node.toxml()
+                raise NotImplementedError, "You specified view name %s on a node, but no factory_%s method was found." % (viewName, viewName)
         
-        success, data = controller.handle(request)
-        if success is not None:
-            self.handlerResults[success].append((controller, data, node))
-
-        if viewMethod is not None:
-            result = viewMethod(request, node)
-        returnNode = self.dispatchResult(request, node, result)
-        if not isinstance(returnNode, Deferred):
-            self.recurseChildren(request, returnNode)
+            result = method(request, node)
+            node = self.dispatchResult(request, node, result)
+        
+        if not isinstance(node, defer.Deferred):
+            self.recurseChildren(request, node)
 
     def sendPage(self, request):
         """
-        Check to see if handlers recorded any errors before sending the page
+        Send the results of the DOM mutation to the browser.
         """
-        failures = self.handlerResults.get(0, None)
-        stop = 0
-        if failures:
-            stop = self.handleFailures(request, failures)
-        if not stop:
-            successes = self.handlerResults.get(1, None)
-            if successes:
-                process = self.handleSuccesses(request, successes)
-                stop = self.controller.process(request, **process)
+        page = str(self.d.toxml())
+        request.write(page)
+        request.finish()
+        return page
 
-        if not stop:
-            page = str(self.d.toxml())
-            request.write(page)
-            request.finish()
-            return page
-        elif stop == RESTART_RENDERING:
-            # Start the whole damn thing again with fresh state
-            selfRef = request.pathRef()
-            otherSelf = selfRef.getObject()
-            otherSelf.render(request)
-
-    def handleFailures(self, request, failures):
-        log.msg("There were failures: ", failures)
-        return 0
-
-    def handleSuccesses(self, request, successes):
-        log.msg("There were successes: ", successes)
-        process = {}
-        for controller, data, node in successes:
-            process[str(node.getAttribute('name'))] = data
-            if request.args.has_key(node.getAttribute('name')):
-                del request.args[node.getAttribute('name')]
-            controller.commit(request, node, data)
-        return process
-
-    def process(self, request, **kwargs):
-        log.msg("Processing results: ", kwargs)
-        return RESTART_RENDERING
 
 # DOMView is now deprecated since the functionality was merged into domtemplate
 DOMView = DOMTemplate
@@ -437,26 +336,3 @@ class DOMController(mvc.Controller, Resource):
     def process(self, request, **kwargs):
         log.msg("Processing results: ", kwargs)
         return RESTART_RENDERING
-
-
-# If no widget/handler was found in the container controller or view, these modules will be searched.
-from twisted.web.woven import input
-from twisted.web.woven import widgets as domwidgets
-
-class DefaultHandler(Controller):
-    def handle(self, request):
-        """
-        By default, we don't do anything
-        """
-        return (None, None)
-
-    def setSubmodel(self, submodel):
-        self.submodel = submodel
-
-
-class DefaultWidget(domwidgets.Widget):
-    def generate(self, request, node):
-        return node
-
-    def setSubmodel(self, submodel):
-        self.submodel = submodel
