@@ -81,14 +81,8 @@ class GtkReactor(default.PosixReactorBase):
         gtk.mainquit()
 
     def run(self):
-        threadable.registerAsIOThread()
-        self.fireSystemEvent('startup')
-        if self._installSignalHandlers:
-            self._handleSignals()
-        self.running = 1
+        self.startRunning()
         self.simulate()
-        if self._installSignalHandlers:
-            self._handleSignals()
         gtk.mainloop()
 
     def callback(self, source, condition):

@@ -109,8 +109,8 @@ _timer = None
 class QTReactor(default.PosixReactorBase):
     """Qt based reactor."""
 
-    def __init__(self):
-        default.PosixReactorBase.__init__(self)
+    def __init__(self, installSignalHandlers=1):
+        default.PosixReactorBase.__init__(self, installSignalHandlers)
         self.qApp = QApplication([])
     
     def addReader(self, reader):
@@ -159,15 +159,8 @@ class QTReactor(default.PosixReactorBase):
             _timer = None
 
     def run(self):
-        threadable.registerAsIOThread()
-        self.fireSystemEvent('startup')
-        if self._installSignalHandlers:
-            self._handleSignals()
-        self.running = 1
+        self.startRunning()
         self.simulate()
-        if self._installSignalHandlers:
-            self._handleSignals()
-
         self.qApp.exec_loop()
 
     def crash(self):
