@@ -533,6 +533,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             if cmbx is not None:
                 maybeDeferred(cmbx.close).addErrback(log.err)
             self.mbox = None
+        self.state = 'timeout'
 
     def rawDataReceived(self, data):
         self.resetTimeout()
