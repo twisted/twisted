@@ -328,13 +328,18 @@ def makeDebs(opts):
     unique = '%s.%s' % (time.time(), os.getpid())
     os.mkdir('/sid-chroot/tmp/%s' % unique)
     os.chdir('/sid-chroot/tmp/%s' % unique)
-    os.system('tar xzf %s' % tgz)
-    os.system("ssh -p 9022 localhost "
+    sh('tar xzf %s' % tgz)
+    sh("ssh -p 9022 localhost "
               "'cd /tmp/%(unique)s;./Twisted-%(ver)s/admin/make-deb -a'"%vars())
     os.mkdir(os.path.join(rel, 'debian-%s' % ver))
     for file in glob.glob('/tmp/%s/*' % unique):
-        os.system('mv $(file)s $(rel)s' % vars())
-    os.system('rm -rf /sid-chroot/tmp/%s' % unique)
+        sh('mv $(file)s $(rel)s' % vars())
+    os.chdir("%(rel)s/debian-%(ver)s" % vars())
+    sh('tar xzf %(tgz)s admin/override admin/createpackages')
+    sh('mv admin/override .')
+    sh('./admin/createpackages')
+    sh('rm -rf admin')
+    sh('rm -rf /sid-chroot/tmp/%s' % unique)
     
 
 if __name__=='__main__':
