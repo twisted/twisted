@@ -309,7 +309,7 @@ manuiPath = os.path.join(baremanPath, 'ui')
 lorePath = os.path.join("twisted", 'lore')
 
 testPath = os.path.join("twisted", 'test')
-testFiles = ['server.pem', 'rfc822.message']
+testFiles = ['server.pem', 'rfc822.message', 'template.tpl']
 
 wovenPath = os.path.join('twisted', 'web', 'woven')
 wovenFiles = ['FlashConduitGlue.html', 'WebConduitGlue.html',
