@@ -55,6 +55,7 @@ class Request(pb.RemoteCopy, server.Request):
     def setCopyableState(self, state):
         pb.RemoteCopy.setCopyableState(self, state)
         # Emulate the local request interface --
+        self.content = cStringIO.StringIO(self.content_data)
         self.write            = self.remote.remoteMethod('write')
         self.finish           = self.remote.remoteMethod('finish')
         self.setHeader        = self.remote.remoteMethod('setHeader')

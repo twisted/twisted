@@ -97,10 +97,14 @@ class Request(pb.Copyable, http.Request):
 
     def getStateToCopyFor(self, issuer):
         x = copy.copy(self.__dict__)
+        print x.keys()
         del x['transport']
         # XXX refactor this attribute out; it's from protocol
-        del x['server']
+        # del x['server']
+        del x['channel']
+        del x['content']
         del x['site']
+        x['content_data'] = self.content.read()
         x['remote'] = pb.ViewPoint(issuer, self)
         return x
 
