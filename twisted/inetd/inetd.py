@@ -44,51 +44,56 @@ internalProtocols = {
 # Protocol map
 protocolDict = {'tcp': socket.IPPROTO_TCP, 'udp': socket.IPPROTO_UDP}
 
+def forkPassingFD(exe, args, env, user, group, fdesc):
+    pid = os.fork()
+    if pid == 0:    # Child
+        try:
+            # Close stdin/stdout (we keep stderr from the parent to report
+            # errors with)
+            for fd in range(2):
+                os.close(fd)
+            
+            # Make the socket be fd 0 
+            # (and fd 1, although I'm not sure if that matters)
+            os.dup(fdesc.fileno())
+            os.dup(fdesc.fileno())
+
+            # Close unused file descriptors
+            for fd in range(3, 256):
+                try: os.close(fd)
+                except: pass
+            
+            # Set uid/gid
+            os.setgid(group)
+            os.setuid(user)
+            
+            # Start the new process
+            os.execvpe(exe, args, env)
+        except:
+            # If anything goes wrong, just die.
+            stderr = os.fdopen(2, 'w')
+            stderr.write('Unable to spawn child:\n')
+            traceback.print_exc(file=stderr)
+
+            # Close the socket so the client doesn't think it's still
+            # connected to a server
+            try:
+                s = socket.fromfd(0, socket.AF_INET, socket.SOCK_STREAM)
+                s.shutdown(2)
+            except:
+                pass
+        os._exit(1)
+    else:           # Parent
+        reactor.removeReader(fdesc)
+        reactor.removeWriter(fdesc)
+    
+
 class InetdProtocol(Protocol):
     def connectionMade(self):
         # This is half-cannibalised from twisted.internet.process.Process
         service = self.factory.service
-        pid = os.fork()
-        if pid == 0:    # Child
-            try:
-                # Close stdin/stdout (we keep stderr from the parent to report
-                # errors with)
-                for fd in range(2):
-                    os.close(fd)
-                
-                # Make the socket be fd 0 
-                # (and fd 1, although I'm not sure if that matters)
-                os.dup(self.transport.fileno())
-                os.dup(self.transport.fileno())
-
-                # Close unused file descriptors
-                for fd in range(3, 256):
-                    try: os.close(fd)
-                    except: pass
-                
-                # Set uid/gid
-                os.setgid(service.group)
-                os.setuid(service.user)
-                
-                # Start the new process
-                os.execvpe(service.program, service.programArgs, os.environ)
-            except:
-                # If anything goes wrong, just die.
-                stderr = os.fdopen(2, 'w')
-                stderr.write('Unable to spawn child:\n')
-                traceback.print_exc(file=stderr)
-
-                # Close the socket so the client doesn't think it's still
-                # connected to a server
-                try:
-                    s = socket.fromfd(0, socket.AF_INET, socket.SOCK_STREAM)
-                    s.shutdown(2)
-                except:
-                    pass
-            os._exit(1)
-        else:           # Parent
-            reactor.removeReader(self.transport)
-            reactor.removeWriter(self.transport)
+        forkPassingFD(service.program, service.programArgs, os.environ,
+                      service.user, service.group, self.transport)
 
 
 class InetdFactory(ServerFactory):
@@ -97,22 +102,6 @@ class InetdFactory(ServerFactory):
     def __init__(self, service):
         self.service = service
 
-
-class RPCFactory(ServerFactory):
-    protocol = InetdProtocol
-
-    def __init__(self, service, rpcPort, rpcVersions):
-        self.service = service
-        self.rpcPort = rpcPort
-        self.rpcVersions = rpcVersions
-
-    def setPort(self, portNo):
-        """Inform the portmapper daemon where this service is listening"""
-        # FIXME: ignores any errors
-        proto = protocolDict[self.service.protocol[4:]]
-        for version in self.rpcVersions:
-            portmap.set(self.rpcPort, version, proto, portNo)
-        
 
 class InetdOptions(usage.Options):
     optParameters = [['file', 'f', '/etc/inetd.conf'],]
@@ -145,8 +134,6 @@ def main(options=None):
             continue
 
         if rpc:
-            service.port = 0            # listen on a random ephemeral port
-
             # RPC has extra options, so extract that
             protocol = protocol[4:]     # trim 'rpc/'
             if not protocolDict.has_key(protocol):
@@ -212,19 +199,24 @@ def main(options=None):
             factory = ServerFactory()
             factory.protocol = internalProtocols[service.name]
         elif rpc:
-            factory = RPCFactory(service, rpcConf.services[name], rpcVersions)
+            #factory = RPCFactory(service, rpcConf.services[name], rpcVersions)
+            proto = protocolDict[protocol]
+            p = reactor.listenTCP(0, Factory())
+            portNo = p.getHost()[2]
+            for version in self.rpcVersions:
+                portmap.set(self.rpcPort, version, proto, portNo)
+            forkPassingFD(service.program, service.programArgs, os.environ,
+                          service.user, service.group, p)
+            continue
         else:
             # Non-internal non-rpc services use InetdFactory
             factory = InetdFactory(service)
 
         if protocol == 'tcp':
-            p = reactor.listenTCP(service.port, factory)
+            app.listenTCP(service.port, factory)
         elif protocol == 'udp':
-            p = reactor.listenUDP(service.port, factory)
+            app.listenUDP(service.port, factory)
     
-        if rpc:
-            factory.setPort(p.getHost()[2])
-            
     app.run(save=0)
 
 
