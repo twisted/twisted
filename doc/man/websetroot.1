@@ -1,0 +1,36 @@
+.TH WEBSETROOT "1" "July 2001" "" ""
+.SH NAME
+websetroot \- set the root of a Twisted web server
+.SH SYNOPSIS
+.B websetroot {-f \fItapfile\fR | -y \fIcodefile\fR | -x \fIXML\fR | -s \fIAOT\fR } {--pickle \fIpickle\fR | --script \fIscript\fR } [ -e ] [--port \fIport\fR]
+.B websetroot --help
+.SH DESCRIPTION
+.PP
+The \fB\--help\fR prints out a usage message to standard output.
+.TP \fB-e\fR, \fB--encrypted\fR
+The specified tap/aos/xml file is encrypted.
+.TP \fB-p\fR, \fB--port\fR <port>
+The port the web server is running on [default: 80]
+.TP \fB-f\fR, \fB--file\fR <file>
+read the given .tap file [default: twistd.tap]
+.TP \fB-y\fR, \fB--python\fR <file>
+read an application from within a Python file
+.TP \fB-x\fR, \fB--xml\fR <file>
+Read an application from a .tax file (Marmalade format).
+.TP \fB-s\fR, \fB--source\fR <file>
+Read an application from a .tas file (AOT format).
+.TP \fB--script\fR <file>
+Read the root resource from the given resource script file
+.TP \fB--pickle\fR <file>
+Read the root resource from the given resource pickle file
+.SH AUTHOR
+Written by Moshe Zadka, based on websetroot's help messages
+.SH "REPORTING BUGS"
+Report bugs to <twisted-python@twistedmatrix.com>.
+.SH COPYRIGHT
+Copyright \(co 2000 Matthew W. Lefkowitz
+.br
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.SH "SEE ALSO"
+mktap(1)
