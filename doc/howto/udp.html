@@ -1,0 +1,88 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>UDP Networking</title>
+  </head>
+  
+  <body>
+    <h1>UDP Networking</h1>
+    
+    <h2>Overview</h2>
+    
+    <p>Unlike TCP, UDP has no notion of connections. A UDP socket can receive
+    datagrams from any server on the network, and send datagrams to any host
+    on the network. In addition, datagrams may arrive in any order, never
+    arrive at all, or be duplicated in transit.</p>
+
+    <p>Since there are no multiple connections, we only use a single object,
+    a protocol, for each UDP socket. We then use the reactor to connect
+    this protocol to a UDP transport, using the 
+    <code class="API">twisted.internet.interfaces.IReactorUDP</code>
+    reactor API.</p>
+    
+    <h2>DatagramProtocol</h2>
+
+    <p>At the base, the place where you actually implement the protocol parsing
+    and handling, is the DatagramProtocol class. This class will usually be decended
+    from <code class="API">twisted.internet.protocol.DatagramProtocol</code>. Most
+    protocol handlers inherit either from this class or from one of its
+    convenience children. The DatagramProtocol class receives datagrams, and can
+    send them out over the network. Received datagrams include the address they
+    were sent from, and when sending datagrams the address to send to must
+    be specified.</p>
+    
+    <p>Here is a simple example:</p>
+    <pre class="python">
+from twisted.internet.protocol import DatagramProtocol
+from twisted.internet import reactor
+
+class Echo(Protocol):
+    
+    def datagramReceived(self, data, (host, port)):
+        print "received %r from %s:%d" % (data, host, port)
+        self.transport.write(data, (host, port))
+
+reactor.listenUDP(9999, Echo())
+reactor.start()
+    </pre>
+    
+    <p>As you can see, the protocol is registed with the reactor.
+    This means it may be persisted if it's added to an application,
+    and thus it has
+    <code class="API">twisted.internet.protocol.DatagramProtocol.startProtocol</code> and 
+    <code class="API">twisted.internet.protocol.DatagramProtocol.stopProtocol</code> methods that
+    will get called when the protocol is connected and disconnected
+    from a UDP socket.</p>
+
+
+    <h2>Connected UDP</h2>
+
+    <p>A connected UDP socket is slighly different from a standard one - it can
+    only send and receive datagramss to/from a single address, but this does
+    not in any way imply a connection. Datagrams may still arrive in any order,
+    and the port on the other side may have no one listening. The benefit
+    of the connected UDP socket is that it is faster.</p>
+
+    <p>Unlike a regular UDP protocol, we do not need to specify where to
+    send datagrams to, and are not told where they came from since
+    they can only come from address the socket is 'connected' to.</p>
+
+    <pre class="python">
+from twisted.internet.protocol import ConnectedDatagramProtocol
+from twisted.internet import reactor
+
+class Echo(ConnectedDatagramProtocol):
+    
+    def datagramReceived(self, data):
+        self.transport.write(data)
+
+reactor.connectUDP("www.example.com", 9999, Echo())
+reactor.start()
+    </pre>
+
+    
+  </body>
+</html>
