@@ -144,13 +144,20 @@ def savePersisted(app, filename, encrypted):
         app.save(filename=filename)
 
 class ConvertOptions(usage.Options):
-    synopsis = "Usage: tapconvert in-file [options]"
-    optParameters = [['in', 'i', None, "The filename of the tap to read from"],
-                     ['out', 'o', None, "A filename to write the tap to"],
-                     ['typein', 'f', 'pickle', "The  format to use; this can be 'python', 'pickle', 'xml', or 'source'."],
-                     ['typeout', 't', 'source', "The output format to use; this can be 'pickle', 'xml', or 'source'."],
-                     ['decrypt', 'd', None, "The specified tap/aos/xml file is encrypted."],
-                     ['encrypt', 'e', None, "Encrypt file before writing"]]
+    synopsis = "Usage: tapconvert [options]"
+    optParameters = [
+        ['in',      'i', None,     "The filename of the tap to read from"],
+        ['out',     'o', None,     "A filename to write the tap to"],
+        ['typein',  'f', 'guess',  "The  format to use; this can be 'guess', 'python', 'pickle', 'xml', or 'source'."],
+        ['typeout', 't', 'source', "The output format to use; this can be 'pickle', 'xml', or 'source'."],
+        ['decrypt', 'd', None,     "The specified tap/aos/xml file is encrypted."],
+        ['encrypt', 'e', None,     "Encrypt file before writing"]]
+    
+    
+    def postOptions(self):
+        if self['in'] is None:
+            raise usage.UsageError("You must specify the input filename.")
+
 
 def run():
     options = ConvertOptions()
@@ -160,6 +167,18 @@ def run():
     if options.opts['decrypt']:
         import getpass
         passphrase = getpass.getpass('Passphrase: ')
+
+    if options["typein"] == "guess":
+        if options["in"][-3:] == '.py':
+            options["typein"] = 'python'
+        else:
+            try:
+                options["typein"] = ({ '.tap': 'pickle',
+                                       '.tas': 'source',
+                                       '.tax': 'xml' }[options["in"][-4:]])
+            except KeyError:
+                print "Error: Could not guess the type."
+                return
 
     if None in [options['in']]:
         options.opt_help()
