@@ -669,6 +669,12 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
                 self.sendCode(e.code, e.resp)
                 self.mode = COMMAND
                 return
+            except:
+                log.err()
+                self.sendCode(550, "Internal server error")
+                self.mode = COMMAND
+                return
+
             rcvdhdr = self.delivery.receivedHeader(
                 helo, origin, [u for (u, f) in recipients])
 
