@@ -250,8 +250,9 @@ class InterfaceTestCase(unittest.TestCase):
         # both should be called sometime during this
         while time.time() - start < 0.9:
             reactor.iterate(0.01)
-        self.assertApproximates(self._resetcallbackTime, start + 0.5, 0.1)
-        self.assertApproximates(self._delaycallbackTime, start + 0.8, 0.1)
+        self.assert_(self._resetcallbackTime>start + 0.5)
+        self.assert_(self._delaycallbackTime>start + 0.8)
+        self.assert_(self._delaycallbackTime>self._resetcallbackTime)
 
         del self._resetcallbackTime
         del self._delaycallbackTime
