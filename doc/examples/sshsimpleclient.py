@@ -9,7 +9,7 @@ HOST = 'twistedmatrix.com' # and a valid host
 class SimpleTransport(transport.SSHClientTransport):
     def verifyHostKey(self, hostKey, fingerprint):
         print 'host key fingerprint: %s' % fingerprint
-        return 1
+        return defer.succeed(1) 
 
     def connectionSecure(self):
         self.requestService(
@@ -31,7 +31,7 @@ class SimpleUserAuth(userauth.SSHUserAuthClient):
 
     def getPrivateKey(self):
         path = os.path.expanduser('~/.ssh/id_dsa')
-        return keys.getPrivateKeyObject(path)
+        return defer.succeed(keys.getPrivateKeyObject(path))
 
 class SimpleConnection(connection.SSHConnection):
     def serviceStarted(self):
@@ -71,13 +71,16 @@ class CatChannel(connection.SSHChannel):
     name = 'session'
 
     def openFailed(self, reason):
-        print 'cat failed', reason
+        print 'echo failed', reason
 
     def channelOpen(self, ignoredData):
-        self.conn.sendRequest(self, 'exec', common.NS('cat'))
+        self.data = ''
+        d = self.conn.sendRequest(self, 'exec', common.NS('cat'), wantReply = 1)
+        d.addCallback(self._cbRequest)
+
+    def _cbRequest(self, ignored):
         self.write('hello conch\n')
         self.conn.sendEOF(self)
-        self.data = ''
 
     def dataReceived(self, data):
         self.data += data
