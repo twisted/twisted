@@ -16,6 +16,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
+
 """Reactor-based Services
 
 Here are services to run clients, servers and periodic services using
@@ -25,7 +26,9 @@ API Stability: unstable
 
 Maintainer: U{Moshe Zadka<mailto:moshez@twistedmatrix.com>}
 """
+
 from twisted.application import service
+
 
 class _VolatileDataService(service.Service):
 
@@ -125,28 +128,28 @@ class TimerService(_VolatileDataService):
 
     """Service to periodically call a function
 
-    Every C{step} call the given function with the given arguments.
+    Every C{step} seconds call the given function with the given arguments.
     The service starts the calls when it starts, and cancels them
     when it stops.
     """
 
     def __init__(self, step, callable, *args, **kwargs):
         self.step = step
-        self.callable = callable
-        self.args = args
-        self.kwargs = kwargs
+        from twisted.internet.task import LoopingCall
+        self.loop = LoopingCall(callable, *args, **kwargs)
 
     def startService(self):
         from twisted.internet import reactor
         service.Service.startService(self)
-        def setupCall():
-            self.callable(*self.args, **self.kwargs)
-            self._call = reactor.callLater(self.step, setupCall)
-        self._call = reactor.callLater(self.step, setupCall)
+        self._call = reactor.callLater(self.step, self.loop.start, self.step)
 
     def stopService(self):
         service.Service.stopService(self)
-        self._call.cancel()
+        if self._call.active():
+            self._call.cancel()
+        else:
+            self.loop.stop()
+
 
 __all__ = (['TimerService']+
            [tran+side
