@@ -209,24 +209,6 @@ class IReactorProcess(Interface):
         @see: C{twisted.protocols.protocol.ProcessProtocol}
         """
 
-    def getProcessOutput(self, executable, args=(), env={}, path='.'):
-        """Spawn a process and return its output as a single string.
-
-        @param executable: The file name to run and get the output of - the
-                           full path should be used.
-
-        @param args: the command line arguments to pass to the process; a
-                     sequence of strings. The first string should be the
-                     executable's name.
-
-        @param env: the environment variables to pass to the processs; a
-                    dictionary of strings.
-
-        @param path: the path to run the subprocess in - defaults to the
-                     current directory.
-        """
-
-
 class IReactorTime(Interface):
     """Time methods that a Reactor should implement.
     """

@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.45 2002/10/12 18:31:00 radix Exp $
+# $Id: default.py,v 1.46 2002/10/13 09:08:50 moshez Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -268,12 +268,6 @@ class PosixReactorBase(ReactorBase):
         #        raise NotImplementedError, "process not available since win32all is not installed"
         else:
             raise NotImplementedError, "process only available in this reactor on POSIX"
-
-    def getProcessOutput(self, executable, args=(), env={}, path='.'):
-        d = defer.Deferred() 
-        p = process.BackRelay(d)
-        self.spawnProcess(p, executable, (executable,)+args, env, path)
-        return d
 
 
     # IReactorUDP

@@ -255,11 +255,17 @@ Main loop terminated.
 <h2>Doing it the Easy Way</h2>
 
 <p>Frequently, one just need a simple way to get all the output from a
-program. For those cases, the <code class="api">reactor</code>'s method
-<code class="api">getProcessOutput</code> can be used. Here is a simply
-example:</p>
+program. For those cases, the 
+<code class="api">twisted.internet.utils.getProcessOutput</code>
+function can be used. Here is a simple example:</p>
 
 <a href="listings/process/quotes.py" class="py-listing">quotes.py</a>
+
+<p>If you need to get just the final exit code, the 
+<code class="api">twisted.internet.utils.getProcessValue</code>
+function is useful. Here is an example:</p>
+
+<a href="listings/process/quotes.py" class="py-listing">trueandfalse.py</a>
 
   </body>
 </html>

@@ -72,29 +72,6 @@ def unregisterReapProccessHandler(pid, process):
     del reapProcessHandlers[pid]
 
 
-class BackRelay(protocol.ProcessProtocol):
-    """
-    Used in twisted.internet.default.PosixReactorBase.getProcessOutput.
-    """
-
-    def __init__(self, deferred):
-        self.deferred = deferred
-        self.s = cStringIO.StringIO()
-
-    def errReceived(self, text):
-        self.deferred.errback(failure.Failure(IOError("got stderr")))
-        self.deferred = None
-        self.transport.loseConnection()
-
-    def outReceived(self, text):
-        self.s.write(text)
-
-    def processEnded(self, reason):
-        if self.deferred is not None:
-            self.deferred.callback(self.s.getvalue())
-
-
-
 class ProcessWriter(abstract.FileDescriptor, styles.Ephemeral):
     """(Internal) Helper class to write to Process's stdin.
 
