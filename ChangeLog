@@ -1,3 +1,31 @@
+2003-08-06  Donovan Preston <dp@twistedmatrix.com>
+
+	* Major woven optimizations.
+
+	* Removal of inspect-based hacks allowing backwards compatibility
+	with the old IModel interface. All your IModel methods should take
+	the request as the first argument now.
+
+	* Default to non-case-preserving when importing Woven templates,
+	and case-insensitive microdom. If you are using getPattern or
+	getAttribute in any of your woven code, you will have to make sure
+	to pass all lowercase strings.
+
+	* Removal of __eq__ magic methods in microdom. This was just
+	slowing woven down far too much, since without it python can
+	use identity when looking for a node in replaceChild. This means
+	you will have to explicitly use the isEqualToDocument or
+	isEqualToNode call if you are testing for the equality of microdom
+	nodes.
+
+	* Removal of usage of hasAttribute, getAttribute, removeAttribute
+	from woven for a speed gain at the expense of tying woven slightly
+	closer to microdom. Nobody will notice.
+
+	* Improved getPattern semantics thanks to a patch by Rich
+	Cavenaugh. getPattern will now not look for a pattern below any
+	nodes which have model= or view= directives on them.
+
 2003-08-04  Dave Peticolas  <dave@krondo.com>
 
 	* twisted/python/usage.py: use parameter docs if handler

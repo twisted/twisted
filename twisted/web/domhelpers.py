@@ -191,6 +191,19 @@ def findNodes(parent, matcher, accum=None):
     return accum
 
 
+def findNodesShallowOnMatch(parent, matcher, recurseMatcher, accum=None):
+    if accum is None:
+        accum = []
+    if not parent.hasChildNodes():
+        return accum
+    for child in parent.childNodes:
+        # print child, child.nodeType, child.nodeName
+        if matcher(child):
+            accum.append(child)
+        if recurseMatcher(child):
+            findNodesShallowOnMatch(child, matcher, recurseMatcher, accum)
+    return accum
+
 def findNodesShallow(parent, matcher, accum=None):
     if accum is None:
         accum = []

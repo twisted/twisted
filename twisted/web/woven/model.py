@@ -15,12 +15,11 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-__version__ = "$Revision: 1.47 $"[11:-2]
+__version__ = "$Revision: 1.48 $"[11:-2]
 
 import types
 import weakref
 import warnings
-import inspect
 
 from twisted.python import components, reflect
 from twisted.internet import defer
@@ -199,26 +198,17 @@ class Model:
         else:
             return None
 
-    def getSubmodel(self, request=None, name=None):
+    def getSubmodel(self, request, name):
         """
         Get the submodel `name' of this model. If I ever return a
         Deferred, then I ought to check for cached values (created by
         L{setSubmodel}) before doing a regular Deferred lookup.
         """
-        if name is None and type(request) is type(""):
-            warnings.warn("Warning, getSubmodel methods should now take the request as the first argument")
-            name = request
-            request = None
         if self.submodels.has_key(name):
             return self.submodels[name]
         if not self.submodelCheck(request, name):
             return None
-        args, varargs, varkw, defaults = inspect.getargspec(self.submodelFactory.im_func)
-        if len(args) == 2:
-            warnings.warn("Warning, submodelFactory methods now should take the request as the first argument")
-            m = self.submodelFactory(name)
-        else:
-            m = self.submodelFactory(request, name)
+        m = self.submodelFactory(request, name)
         if m is None:
             return None
         sm = adaptToIModel(m, self, name)
@@ -246,38 +236,17 @@ class Model:
     def dataWillChange(self):
         pass
 
-    def getData(self, request=None):
+    def getData(self, request):
         if self.cachedFor != id(request) and self._getter is not None:
-            func = self._getter
-            num = 1
-            if hasattr(func, 'im_func'):
-                num = 2
-                func = func.im_func
-            args, varargs, varkw, defaults = inspect.getargspec(func)
             self.cachedFor = id(request)
             self.dataWillChange()
-            if len(args) == num:
-                self.orig = self.original = self._getter(request)
-            else:
-                self.orig = self.original = self._getter()
+            self.orig = self.original = self._getter(request)
         return self.original
 
-    def setData(self, request=None, data=_Nothing):
-        if data is _Nothing:
-            warnings.warn("Warning! setData should now take the request as the first argument")
-            data = request
-            request = None
+    def setData(self, request, data):
         if self._setter is not None:
-            func = self._setter
-            num = 2
-            if hasattr(func, 'im_func'):
-                num = 3
-                func = func.im_func
-            args, varargs, varkw, defaults = inspect.getargspec(func)
             self.cachedFor = None
-            if len(args) == num:
-                return self._setter(request, data)
-            return self._setter(data)
+            return self._setter(request, data)
         else:
             if hasattr(self, 'parent') and self.parent:
                 self.parent.setSubmodel(request, self.name, data)
@@ -297,10 +266,6 @@ class MethodModel(Model):
         """Call a wmfactory_name method on this model.
         """
         meth = getattr(self, "wmfactory_"+name)
-        args, varargs, varkw, defaults = inspect.getargspec(meth.im_func)
-        if len(args) == 1:
-            warnings.warn("Warning, wmfactory methods now should take the request as the first argument")
-            return meth()
         return meth(request)
     
     def getSubmodel(self, request=None, name=None):

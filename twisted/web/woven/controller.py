@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.66 $"[11:-2]
+__version__ = "$Revision: 1.67 $"[11:-2]
 
 import os
 import cgi
@@ -293,7 +293,7 @@ class LiveController(Controller):
             return server.NOT_DONE_YET
         if request.args.has_key('woven_clientSideEventName'):
             try:
-                request.d = microdom.parseString('<xml/>')
+                request.d = microdom.parseString('<xml/>', caseInsensitive=0, preserveCase=0)
                 eventName = request.args['woven_clientSideEventName'][0]
                 eventTarget = request.args['woven_clientSideEventTarget'][0]
                 eventArgs = request.args.get('woven_clientSideEventArguments', [])

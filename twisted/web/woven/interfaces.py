@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.test.test_woven -*-
 
-__version__ = "$Revision: 1.12 $"[11:-2]
+__version__ = "$Revision: 1.13 $"[11:-2]
 
 from twisted.python import components
 
@@ -8,11 +8,6 @@ class IModel(components.Interface):
     """A MVC Model."""
     def addView(view):
         """Add a view for the model to keep track of.
-        """
-
-    def addSubview(view, subviewName):
-        """Add a view for the model to keep track of. This model will only
-        be notified if "subviewName"'s data has changed.
         """
 
     def removeView(view):
@@ -33,14 +28,14 @@ class IModel(components.Interface):
         wrapper. If not, return self.
         """
 
-    def setData(self, data):
+    def setData(self, request, data):
         """Set the raw data referenced by this Model object, if it is a
         wrapper. This is done by telling our Parent model to setSubmodel
         the new data. If this object is not a wrapper, keep the data
         around and return it for subsequent getData calls.
         """
 
-    def lookupSubmodel(self, submodelPath):
+    def lookupSubmodel(self, request, submodelPath):
         """Return an IModel implementor for the given submodel path
         string. This path may be any number of elements separated
         by /. The default implementation splits on "/" and calls
@@ -48,14 +43,14 @@ class IModel(components.Interface):
         need to override this behavior.
         """
 
-    def getSubmodel(self, submodelName):
+    def getSubmodel(self, request, submodelName):
         """Return an IModel implementor for the submodel named
         "submodelName". If this object contains simple data types,
         they can be adapted to IModel using
         model.adaptToIModel(m, parent, name) before returning.
         """
 
-    def setSubmodel(self, submodelName, data):
+    def setSubmodel(self, request, submodelName, data):
         """Set the given data as a submodel of this model. The data
         need not implement IModel, since getSubmodel should adapt
         the data to IModel before returning it.

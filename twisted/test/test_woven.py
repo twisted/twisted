@@ -291,9 +291,9 @@ class InventoryUpdater(input.Anything):
     def commit(self, request, node, data):
         invmodel = self.model.getSubmodel(request,  "inventory")
         log = self.model.getSubmodel(request, "log")
-        inv = invmodel.getData()
+        inv = invmodel.getData(request)
         inv.append(data) # just add a string to the list
-        log.setData(request, log.getData() + ("%s added to servers\n" % data))
+        log.setData(request, log.getData(request) + ("%s added to servers\n" % data))
         invmodel.setData(request, inv)
         invmodel.notify({'request': request})
 

@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.84 $"[11:-2]
+__version__ = "$Revision: 1.85 $"[11:-2]
 
 # Sibling imports
 import interfaces
@@ -172,7 +172,7 @@ class View:
         self.setupAllStacks()
         template = self.getTemplate(request)
         if template:
-            self.d = microdom.parseString(template)
+            self.d = microdom.parseString(template, caseInsensitive=0, preserveCase=0)
         else:
             if not self.templateFile:
                 raise AttributeError, "%s does not define self.templateFile to operate on" % self.__class__
@@ -196,7 +196,7 @@ class View:
         for speed.
         """
         if self.template:
-            return microdom.parseString(self.template)
+            return microdom.parseString(self.template, caseInsensitive=0, preserveCase=0)
         if not self.templateDirectory:
             mod = sys.modules[self.__module__]
             if hasattr(mod, '__file__'):
@@ -215,7 +215,7 @@ class View:
                 compiledTemplate = templateCache[templatePath][1].cloneNode(deep=1)
                 
         if compiledTemplate is None:
-            compiledTemplate = microdom.parse(templatePath)
+            compiledTemplate = microdom.parse(templatePath, caseInsensitive=0, preserveCase=0)
             templateCache[templatePath] = (mtime, compiledTemplate.cloneNode(deep=1))
         return compiledTemplate
 
@@ -254,16 +254,17 @@ class View:
                     controller, self.controllerStack = self.controllerStack
                     if controller is not None:
                         controller.exit(request)
-            if (hasattr(node, 'getAttribute') and 
-            (node.getAttribute('model') or node.getAttribute('view') or node.getAttribute('controller'))):
+            attrs = getattr(node, 'attributes', None)
+            if (attrs is not None and 
+            (attrs.get('model') or attrs.get('view') or attrs.get('controller'))):
                 self.outstandingNodes.append(1)
                 self.handleNode(request, node)
             else:
-                if hasattr(node, 'getAttribute') and (node.getAttribute('view') or node.getAttribute('controller')):
+                if attrs is not None and (attrs.get('view') or attrs.get('controller')):
                     self.outstandingNodes.append(node)
                 if hasattr(node, 'childNodes') and node.childNodes:
                     self.recurseChildren(request, node)
-        
+
     def recurseChildren(self, request, node):
         """If this node has children, handle them.
         """
@@ -360,7 +361,7 @@ class View:
         controller= attribute, first check to see if there is an IController
         adapter for our model.
         """
-        controllerName = node.getAttribute('controller')
+        controllerName = node.attributes.get('controller')
         controller = None
 
         if model is None:
@@ -386,7 +387,7 @@ class View:
                                         controllerName,
                                         filterStack(self.controllerStack)
                                         ))
-        elif node.getAttribute("model"):
+        elif node.attributes.get("model"):
             # If no "controller" attribute was specified on the node, see if
             # there is a IController adapter registerred for the model.
             controller = components.getAdapter(
@@ -433,7 +434,7 @@ class View:
 
     def getNodeView(self, request, node, submodel, model):
         view = None
-        viewName = node.getAttribute('view')
+        viewName = node.attributes.get('view')
 
         if model is None:
             model = peek(self.modelStack)
@@ -466,7 +467,7 @@ class View:
                     "found but they returned None.)" % (
                     viewName, node, viewName,
                     filterStack(self.viewStack)))
-        elif node.getAttribute("model"):
+        elif node.attributes.get("model"):
             # If no "view" attribute was specified on the node, see if there
             # is a IView adapter registerred for the model.
             # First, see if the model is Componentized.
@@ -481,7 +482,7 @@ class View:
         return view
 
     def handleNode(self, request, node):
-        submodelName = node.getAttribute('model')
+        submodelName = node.attributes.get('model')
         if submodelName is None:
             submodelName = ""
         model = self.getNodeModel(request, node, submodelName)
@@ -504,7 +505,7 @@ class View:
             if not getattr(view, 'submodel', None):
                 view.submodel = submodelName
 
-            theId = node.getAttribute("id")
+            theId = node.attributes.get("id")
             if self.livePage and not theId:
                 #curId = getattr(request, 'currentId', 0)
                 curId = id(view)
@@ -657,10 +658,10 @@ class LiveView(View):
         #print "updating flash thingie"
         uid = request.getSession().uid
         n = wid.templateNode
-        if n.hasAttribute('src'):
-            n.setAttribute('src', n.getAttribute('src') + '?twisted_session=' + str(uid))
+        if n.attributes.has_key('src'):
+            n['src'] = n.attributes.get('src') + '?twisted_session=' + str(uid)
         else:
-            n.setAttribute('value', n.getAttribute('value') + '?twisted_session=' + str(uid))
+            n['value'] = n.attributes.get('value') + '?twisted_session=' + str(uid)
         #print wid.templateNode.toxml()
 
 

@@ -37,9 +37,9 @@ from twisted.python import log
 from twisted.internet import defer
 
 viewFactory = view.viewFactory
-document = parseString("<xml />")
+document = parseString("<xml />", caseInsensitive=0, preserveCase=0)
 
-missingPattern = document.createElement("div")
+missingPattern = Element("div", caseInsensitive=0, preserveCase=0)
 missingPattern.setAttribute("style", "border: dashed red 1px; margin: 4px")
 
 """
@@ -187,12 +187,12 @@ class Widget(view.View):
         """
         Do your part, prevent infinite recursion!
         """
-        if node.hasAttribute('model'):
-            node.removeAttribute('model')
-        if node.hasAttribute('controller'):
-            node.removeAttribute('controller')
-        if node.hasAttribute('view'):
-            node.removeAttribute('view')
+        if node.attributes.has_key('model'):
+            del node.attributes['model']
+        if node.attributes.has_key('view'):
+            del node.attributes['view']
+        if node.attributes.has_key('controller'):
+            del node.attributes['controller']
         return node
 
     def generate(self, request, node):
@@ -231,7 +231,7 @@ class Widget(view.View):
         # isinstance(Element) added because I was having problems with
         # this code trying to call setAttribute on my RawTexts -radix 2003-5-28
         if hasattr(self, 'outgoingId') and isinstance(returnNode, Element):
-            returnNode.setAttribute('id', self.outgoingId)
+            returnNode.attributes['id'] = self.outgoingId
         self.handleNewNode(request, returnNode)
         self.handleOutstanding(request)
         if self.subviews:
@@ -276,7 +276,7 @@ class Widget(view.View):
             gen = become.generateDOM(request, node)
             if old.attributes.has_key('model'):
                 del old.attributes['model']
-            old.removeAttribute('controller')
+            del old.attributes['controller']
             gen.appendChild(old)
             self.node = gen
             return gen
@@ -287,7 +287,7 @@ class Widget(view.View):
             self.tagName = self.templateNode.tagName
         if node is not self.templateNode or self.tagName != self.templateNode.tagName:
             parent = node.parentNode
-            node = document.createElement(self.tagName)
+            node = document.createElement(self.tagName, caseInsensitive=0, preserveCase=0)
             node.parentNode = parent
         else:
             parentNode = node.parentNode
@@ -299,8 +299,7 @@ class Widget(view.View):
             node.parentNode = parentNode
             node = self.cleanNode(new)
         #print "NICE CLEAN NODE", node.toxml(), self._children
-        for key, value in self.attributes.items():
-            node.setAttribute(key, value)
+        node.attributes.update(self.attributes)
         for item in self._children:
             if hasattr(item, 'generate'):
                 parentNode = node.parentNode
@@ -386,7 +385,11 @@ class Widget(view.View):
             sm = self.submodel.split('/')[-1]
             slots = domhelpers.locateNodes(self.templateNode, name + 'Of', sm)
             if not slots:
-                slots = domhelpers.locateNodes(self.templateNode, "pattern", name, noNesting=1)
+#                slots = domhelpers.locateNodes(self.templateNode, "pattern", name, noNesting=1)
+                matcher = lambda n, name=name: isinstance(n, Element) and \
+                            n.attributes.has_key("pattern") and n.attributes["pattern"] == name
+                recurseMatcher = lambda n: isinstance(n, Element) and not n.attributes.has_key("view") and not n.attributes.has_key('model')
+                slots = domhelpers.findNodesShallowOnMatch(self.templateNode, matcher, recurseMatcher)
                 if not slots:
                     msg = 'WARNING: No template nodes were found '\
                               '(tagged %s="%s"'\
@@ -408,10 +411,10 @@ class Widget(view.View):
             parentNode = slot.parentNode
             slot.parentNode = None
             clone = slot.cloneNode(deep)
-            if clone.hasAttribute('pattern'):
-                clone.removeAttribute('pattern')
-            elif clone.hasAttribute(name + 'Of'):
-                clone.removeAttribute(name + 'Of')
+            if clone.attributes.has_key('pattern'):
+                del clone.attributes['pattern']
+            elif clone.attributes.has_key(name + 'Of'):
+                del clone.attributes[name + 'Of']
             slot.parentNode = parentNode
             return clone
         return slot
@@ -525,16 +528,11 @@ class ParagraphText(Widget):
     """
     def setUp(self, request, node, data):
         nSplit = data.split('\n')
-        para = request.d.createElement('p')
         for line in nSplit:
             if line.strip():
+                para = request.d.createElement('p', caseInsensitive=0, preserveCase=0)
                 para.appendChild(request.d.createTextNode(line))
-            else:
                 self.add(para)
-                para = request.d.createElement('p')
-        if para.hasChildNodes():
-            self.add(para)
-
 
 class Image(Widget):
     """
@@ -543,8 +541,8 @@ class Image(Widget):
     tagName = 'img'
     border = '0'
     def setUp(self, request, node, data):
-        self.setAttribute('border', self.border)
-        node.setAttribute('src', data)
+        self['border'] = self.border
+        self['src'] = data
 
 
 class Error(Widget):
@@ -578,11 +576,11 @@ class Input(Widget):
         self['name'] = submodel
 
     def setUp(self, request, node, data):
-        if not self.attributes.has_key('name') and not node.getAttribute('name'):
+        if not self.attributes.has_key('name') and not node.attributes.get('name'):
             if self.submodel:
                 id = self.submodel
             else:
-                id = self.attributes.get('id', node.getAttribute('id'))
+                id = self.attributes.get('id', node.attributes.get('id'))
             self['name'] = id
         if data is None:
             data = ''
@@ -705,12 +703,12 @@ class DirectoryAnchor(Anchor):
 
 def appendModel(newNode, modelName):
     if newNode is None: return
-    curModel = newNode.getAttribute('model')
+    curModel = newNode.attributes.get('model')
     if curModel is None:
         newModel = str(modelName)
     else:
         newModel = str(modelName) + '/' + curModel
-    newNode.setAttribute('model', newModel)
+    newNode.attributes['model'] = newModel
 
 
 class List(Widget):
@@ -773,8 +771,8 @@ class List(Widget):
             newNode = self.getPattern('listItem')
             if newNode.getAttribute('model') == '.':
                 newNode.removeAttribute('model')
-            elif not newNode.getAttribute("view"):
-                newNode.setAttribute("view", self.defaultItemView)
+            elif not newNode.attributes.get("view"):
+                newNode.attributes["view"] = self.defaultItemView
             appendModel(newNode, itemNum)
             retVal[itemNum] = newNode
             newNode.parentNode = parentNode
@@ -816,8 +814,8 @@ class KeyedList(List):
                                         DeprecationWarning)
 
             appendModel(newNode, key)
-            if not newNode.getAttribute("view"):
-                newNode.setAttribute("view", "DefaultWidget")
+            if not newNode.attributes.get("view"):
+                newNode.attributes["view"] = "DefaultWidget"
             parentNode.appendChild(newNode)
 
 
@@ -854,8 +852,8 @@ class ColumnList(Widget):
             newNode = self.getPattern('columnListItem')
 
             appendModel(newNode, itemNum + self.start)
-            if not newNode.getAttribute("view"):
-                newNode.setAttribute("view", "DefaultWidget")
+            if not newNode.attributes.get("view"):
+                newNode.attributes["view"] = "DefaultWidget"
             row.appendChild(newNode)
         node.removeChild(pattern)
         return node
@@ -892,7 +890,7 @@ class Link(Widget):
         # TODO: we ought to support Deferreds here for both text and href!
         if isinstance(data, StringType):
             node.tagName = self.tagName
-            node.setAttribute("href", data)
+            node.attributes["href"] = data
         else:
             data = self.model
             txt = data.getSubmodel("text").getData(request)
@@ -971,19 +969,18 @@ class ExpandMacro(Widget):
             "one macro named %s found." % self.macroName)
 
         macro = macrolist[0]
-        macro.removeAttribute('macro')
+        del macro.attributes['macro']
         slots = domhelpers.findElementsWithAttributeShallow(macro, "slot")
         for slot in slots:
-            slotName = slot.getAttribute("slot")
+            slotName = slot.attributes.get("slot")
             fillerlist = domhelpers.locateNodes(node.childNodes, "fill-slot", slotName)
             assert len(fillerlist) <= 1, "More than one fill-slot found with name %s" % slotName
             if len(fillerlist):
                 filler = fillerlist[0]
                 filler.tagName = filler.endTagName = slot.tagName
-                filler.removeAttribute('fill-slot')
-                slot.removeAttribute('slot')
-                for k, v in slot.attributes.items():
-                    filler.setAttribute(k, v)
+                del filler.attributes['fill-slot']
+                del slot.attributes['slot']
+                filler.attributes.update(slot.attributes)
                 slot.parentNode.replaceChild(filler, slot)
 
         return macro

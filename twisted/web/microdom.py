@@ -114,17 +114,12 @@ class Node(object):
         self.parentNode = parentNode
         self.childNodes = []
 
-    def __eq__(self, n):
-        if not isinstance(n, Node):
-            return 0
-        return self.isEqualToNode(n)
-
     def __hash__(self):
         return id(self)
 
     def isEqualToNode(self, n):
         for a, b in zip(self.childNodes, n.childNodes):
-            if not a == b:
+            if not a.isEqualToNode(b):
                 return 0
         return 1
 
@@ -217,13 +212,8 @@ class Document(Node):
 
     doctype = None
 
-    def __eq__(self, n):
-        if not isinstance(n, Document):
-            return 0
-        return self.isEqualToDocument(n) and self.isEqualToNode(n)
-
     def isEqualToDocument(self, n):
-        return (self.doctype == n.doctype)
+        return (self.doctype == n.doctype) and self.isEqualToNode(n)
 
     def get_documentElement(self):
         return self.childNodes[0]
@@ -240,8 +230,8 @@ class Document(Node):
         self.documentElement.writexml(stream, indent, addindent, newl, strip, nsprefixes, namespace)
 
     # of dubious utility (?)
-    def createElement(self, name):
-        return Element(name)
+    def createElement(self, name, **kw):
+        return Element(name, **kw)
 
     def createTextNode(self, text):
         return Text(text)
@@ -271,9 +261,6 @@ class EntityReference(Node):
         self.eref = eref
         self.nodeValue = self.data = "&" + eref + ";"
 
-    def __eq__(self, n):
-        return self.isEqualToEntityReference(n) and self.isEqualToNode(n)
-
     def isEqualToEntityReference(self, n):
         if not isinstance(n, EntityReference):
             return 0
@@ -291,11 +278,6 @@ class CharacterData(Node):
     def __init__(self, data, parentNode=None):
         Node.__init__(self, parentNode)
         self.value = self.data = self.nodeValue = data
-
-    def __eq__(self, n):
-        if not isinstance(n, CharacterData):
-            return 0
-        return self.isEqualToCharacterData(n) and self.isEqualToNode(n)
 
     def isEqualToCharacterData(self, n):
         return self.value == n.value
@@ -406,11 +388,6 @@ class Element(Node):
         else:
             self.nsprefixes.update(kw)
 
-    def __eq__(self, n):
-        if not isinstance(n, Element):
-            return 0
-        return self.isEqualToElement(n) and self.isEqualToNode(n)
-
     def endTag(self, endTagName):
         if not self.preserveCase:
             endTagName = endTagName.lower()
@@ -422,7 +399,9 @@ class Element(Node):
         return (self.attributes == n.attributes) and (self.nodeName == n.nodeName)
 
     def cloneNode(self, deep=0, parent=None):
-        clone = Element(self.tagName, parentNode=parent, namespace=self.namespace)
+        clone = Element(
+            self.tagName, parentNode=parent, namespace=self.namespace,
+            preserveCase=self.preserveCase, caseInsensitive=self.caseInsensitive)
         clone.attributes.update(self.attributes)
         if deep:
             clone.childNodes = [child.cloneNode(1, clone) for child in self.childNodes]
@@ -860,7 +839,7 @@ class lmx:
         return self
 
     def add(self, tagName, **kw):
-        newNode = Element(tagName)
+        newNode = Element(tagName, caseInsensitive=0, preserveCase=0)
         self.node.appendChild(newNode)
         xf = lmx(newNode)
         for k, v in kw.items():
