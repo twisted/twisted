@@ -32,6 +32,8 @@ class DirDbmTestCase(unittest.TestCase):
     
     def tearDown(self):
         shutil.rmtree(self.path)
+        if os.path.isdir('dirdbm.rebuild.test'):
+            shutil.rmtree('dirdbm.rebuild.test')
         
     def testRebuildInteraction(self):
         from twisted.persisted import dirdbm
