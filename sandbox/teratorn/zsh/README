@@ -10,6 +10,10 @@ fpath=(~/.fpath $fpath)
 
 Make sure the above line is before your call to compinit
 
+Also consider getting zsh 4.1.x which has a lot nicer completion formatting
+for one thing. (add it to /etc/shells and run chsh)
+"apt-get install zsh-beta" or be square :)
+
 I also like the following zstyles for more verbose completion info
 
 zstyle ':completion:*' verbose yes
