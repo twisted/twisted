@@ -55,6 +55,7 @@ import re
 import tempfile
 import string
 import time
+import random
 import types
 import sys
 
@@ -1098,14 +1099,17 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def do_CREATE(self, tag, name):
         name = self._parseMbox(name)
         try:
-            self.account.create(name)
+            result = self.account.create(name)
         except MailboxException, c:
             self.sendNegativeResponse(tag, str(c))
         except:
             self.sendBadResponse(tag, "Server error encountered while creating mailbox")
             log.err()
         else:
-            self.sendPositiveResponse(tag, 'Mailbox created')
+            if result:
+                self.sendPositiveResponse(tag, 'Mailbox created')
+            else:
+                self.sendNegativeResponse(tag, 'Mailbox not created')
 
     auth_CREATE = (do_CREATE, arg_astring)
     select_CREATE = auth_CREATE
@@ -1341,7 +1345,6 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if searchResults is None:
             searchResults = []
         for (i, (id, msg)) in zip(range(5), result):
-            print i, id, msg
             if self.searchFilter(query, id, msg):
                 if uid:
                     searchResults.append(str(msg.getUID()))
@@ -1519,88 +1522,110 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         log.err(failure)
 
     def do_FETCH(self, tag, messages, query, uid=0):
-        maybeDeferred(self.mbox.fetch, messages, uid=uid).addCallbacks(
-            self.__cbFetch, self.__ebFetch,
-            (tag, query, uid), None, (tag,), None
-        )
+        if query:
+            maybeDeferred(self.mbox.fetch, messages, uid=uid).addCallbacks(
+                self.__cbFetch, self.__ebFetch,
+                (tag, query, uid), None, (tag,), None
+            )
+        else:
+            self.sendPositiveResponse(tag, 'FETCH complete')
 
     select_FETCH = (do_FETCH, arg_seqset, arg_fetchatt)
 
     def __cbFetch(self, results, tag, query, uid):
-        return self._consumeMessageIterable(results, tag, query, uid
-            ).addErrback(self.__ebFetch, tag
-            )
-
-    def _consumeMessageIterable(self, results, tag, query, uid, d=None):
-        def next():
-            return deferToFuture(0, self._consumeMessageIterable, results, tag, query, uid)
+        if self.blocked is None:
+            self.blocked = []
         try:
-            msgId, msg = results.next()
+            id, msg = results.next()
         except StopIteration:
             self.sendPositiveResponse(tag, 'FETCH completed')
             self._unblock()
-            return defer.succeed(None)
         else:
-            return self._sendMessageFetchResponse(msgId, msg, query, uid
-                ).addCallback(lambda _: next()
+            self.spewMessage(id, msg, query, uid
+                ).addCallback(lambda _: self.__cbFetch(results, tag, query, uid)
                 )
 
-    def _sendMessageFetchResponse(self, msgId, msg, query, uid):
-        D = DontQuoteMe
-        seenUID = False
-        response = []
-        for part in query:
-            if part.type == 'envelope':
-                response.extend((D('ENVELOPE'), getEnvelope(msg)))
-            elif part.type == 'flags':
-                response.extend((D('FLAGS'), map(D, msg.getFlags())))
-            elif part.type == 'internaldate':
-                response.extend((D('INTERNALDATE'), msg.getInternalDate()))
-            elif part.type == 'rfc822header':
-                hdrs = _formatHeaders(msg.getHeaders(True))
-                response.extend((D('RFC822.HEADER'), hdrs))
-            elif part.type == 'rfc822text':
-                response.extend((D('RFC822.TEXT'), msg.getBodyFile()))
-            elif part.type == 'rfc822size':
-                response.extend((D('RFC822.SIZE'), msg.getSize()))
-            elif part.type == 'rfc822':
-                response.append(D('RFC822'))
-                response.append(_wholeMessage(msg))
-            elif part.type == 'uid':
-                seenUID = True
-                response.extend((D('UID'), msg.getUID()))
-            elif part.type == 'bodystructure':
-                response.extend((D('BODYSTRUCTURE'), getBodyStructure(msg, True)))
-            elif part.type == 'body':
-                subMsg = msg
-                for p in part.part or ():
-                    subMsg = subMsg.getSubPart(p)
-                if part.header:
-                    if not part.header.fields:
-                        response.extend((D(part), _formatHeaders(subMsg.getHeaders(True))))
-                    else:
-                        hdrs = subMsg.getHeaders(part.header.negate, *part.header.fields)
-                        response.extend((D(part), _formatHeaders(hdrs, part.header.fields)))
-                elif part.text:
-                    response.extend((D(part), subMsg.getBodyFile()))
-                elif part.mime:
-                    response.extend((D(part), _formatHeaders(subMsg.getHeaders(True))))
-                elif part.empty:
-                    response.append(D(part))
-                    response.append(_wholeMessage(subMsg))
-                else:
-                    # Simplified bodystructure request
-                    response.extend((D('BODY'), getBodyStructure(subMsg, False)))
+    def spew_envelope(self, id, msg):
+        self.transport.write('ENVELOPE ' + collapseNestedLists([getEnvelope(msg)]))
+    
+    def spew_flags(self, id, msg):
+        self.transport.write('FLAGS ' + '(%s)' % (' '.join(msg.getFlags())))
+    
+    def spew_internaldate(self, id, msg):
+        self.transport.write('INTERNALDATE ' + _quote(msg.getInternalDate()))
 
-        if uid and not seenUID:
-            response[:0] = [D('UID'), msg.getUID()]
-        
-        L = [D('* %d FETCH' % msgId), response]
-        self.blocked = []
-        return ProducerChain(
-            ).beginProducing(self.transport, produceNestedLists(L)
-            ).addCallback(lambda r: (self.transport.write('\r\n'), r)[1]
+    def spew_rfc822header(self, id, msg):
+        hdrs = _formatHeaders(msg.getHeaders(True))
+        self.transport.write('RFC822.HEADER ' + _literal(hdrs))
+    
+    def spew_rfc822text(self, id, msg):
+        self.transport.write('RFC822.TEXT ')
+        return FileProducer(msg.getBodyFile()
+            ).beginProducing(self.transport
             )
+    
+    def spew_rfc822size(self, id, msg):
+        self.transport.write('RFC822.SIZE ' + str(msg.getSize()))
+    
+    def spew_rfc822(self, id, msg):
+        self.transport.write('RFC822 ')
+        return MessageProducer(msg
+            ).beginProducing(self.transport
+            )
+
+    def spew_uid(self, id, msg):
+        self.transport.write('UID ' + str(msg.getUID()))
+    
+    def spew_bodystructure(self, id, msg):
+        self.transport.write('BODYSTRUCTURE ' + collapseNestedLists([getBodyStructure(msg, True)]))
+
+    def spew_body(self, part, id, msg):
+        for p in part.part or ():
+            msg = msg.getSubPart(p)
+        if part.header:
+            hdrs = msg.getHeaders(part.header.negate, *part.header.fields)
+            hdrs = _formatHeaders(hdrs)
+            self.transport.write(str(part) + ' ' + _literal(hdrs))
+        elif part.text:
+            self.transport.write(str(part) + ' ')
+            return FileProducer(msg.getBodyFile()
+                ).beginProducing(self.transport
+                )
+        elif part.mime:
+            hdrs = _formatHeaders(msg.getHeaders(True))
+            self.transport.write(str(part) + ' ' + _literal(hdrs))
+        elif part.empty:
+            self.transport.write(str(part) + ' ')
+            return MessageProducer(msg).beginProducing(self.transport)
+        else:
+            self.transport.write('BODY ' + collapseNestedLists([getBodyStructure(msg)]))
+
+    def spewMessage(self, id, msg, query, uid):
+        def start():
+            self.transport.write('* %d FETCH (' % (id,))
+        def finish():
+            self.transport.write(')\r\n')
+        def space():
+            self.transport.write(' ')
+
+        def spew():
+            seenUID = False
+            start()
+            for part in query:
+                if part.type == 'uid':
+                    seenUID = True
+                if part.type == 'body':
+                    yield self.spew_body(part, id, msg)
+                else:
+                    f = getattr(self, 'spew_' + part.type)
+                    yield f(id, msg)
+                if part is not query[-1]:
+                    space()
+            if uid and not seenUID:
+                space()
+                yield self.spew_uid(id, msg)
+            finish()
+        return iterateInReactor(spew())
 
     def __ebFetch(self, failure, tag):
         log.err(failure)
@@ -1803,9 +1828,9 @@ class IMAP4Client(basic.LineReceiver):
             self._parts.append(rest.read())
             self.setLineMode(passon.lstrip('\r\n'))
 
-    def sendLine(self, line):
-        print 'S:', repr(line)
-        return basic.LineReceiver.sendLine(self, line)
+#    def sendLine(self, line):
+#        print 'S:', repr(line)
+#        return basic.LineReceiver.sendLine(self, line)
 
     def _setupForLiteral(self, rest, octets):
         self._pendingBuffer = self.messageFile(octets)
@@ -1814,7 +1839,7 @@ class IMAP4Client(basic.LineReceiver):
         self.setRawMode()
 
     def lineReceived(self, line):
-        print 'C: ' + repr(line)
+#        print 'C: ' + repr(line)
         if self._parts is None:
             lastPart = line.rfind(' ')
             if lastPart != -1:
@@ -1897,7 +1922,9 @@ class IMAP4Client(basic.LineReceiver):
                 self.transport.loseConnection()
                 raise IllegalServerResponse(tag + ' ' + rest)
             
-            self.serverGreeting(self.__cbCapabilities(([rest], None)))
+            b, e = rest.find('['), rest.find(']')
+            if b != -1 and e != -1:
+                self.serverGreeting(self.__cbCapabilities(([rest[b:e]], None)))
         else:
             self._defaultHandler(tag, rest)
 
@@ -3590,16 +3617,15 @@ def parseNestedParens(s, handleLiteral = 1):
 def _quote(s):
     return '"%s"' % (s.replace('\\', '\\\\').replace('"', '\\"'),)
 
+def _literal(s):
+    return '{%d}\r\n%s' % (len(s), s)
+
 class DontQuoteMe:
     def __init__(self, value):
         self.value = value
     
     def __str__(self):
         return str(self.value)
-
-class Coalesce:
-    def __init__(self, value):
-        self.value = value
 
 _ATOM_SPECIALS = '(){ %*"'
 def _needsQuote(s):
@@ -3654,88 +3680,6 @@ def collapseNestedLists(items):
         else:
             pieces.extend([' ', '(%s)' % (collapseNestedLists(i),)])
     return ''.join(pieces[1:])
-
-def produceNestedLists(items):
-    """Turn a nested list structure into a producer.
-
-    Strings in C{items} will be sent as literals if they contain CR or LF,
-    otherwise they will be quoted.  References to None in C{items} will be
-    translated to the atom NIL.  Objects with a 'read' attribute will have
-    it called on them with no arguments and the returned string will be
-    inserted into the output as a literal.  Integers will be converted to
-    strings and inserted into the output unquoted.  Instances of
-    C{DontQuoteMe} will be converted to strings and inserted into the output
-    unquoted.  Instances of C{Coalesce} will be treated as single entities
-    which must be sent as literals.
-    
-    This function used to be much nicer, and only quote things that really
-    needed to be quoted (and C{DontQuoteMe} did not exist), however, many
-    broken IMAP4 clients were unable to deal with this level of sophistication,
-    forcing the current behavior to be adopted for practical reasons.
-
-    @type items: Any iterable
-
-    @rtype: C{str}
-    """
-    top = True
-    pieces = []
-    for i in items:
-        if i is None:
-            pieces.extend([' ', 'NIL'])
-        elif isinstance(i, (DontQuoteMe, int, long)):
-            pieces.extend([' ', str(i)])
-        elif isinstance(i, types.StringTypes):
-            if _needsLiteral(i):
-                pieces.extend([' ', '{', str(len(i)), '}', IMAP4Server.delimiter, i])
-            else:
-                pieces.extend([' ', _quote(i)])
-        elif hasattr(i, 'read'):
-            b = i.tell()
-            i.seek(0, 2)
-            e = i.tell()
-            i.seek(b, 0)
-            pieces.extend([' ', '{', str(e - b), '}', IMAP4Server.delimiter])
-            if top:
-                top = False
-                pieces.pop(0)
-            yield StringProducer(''.join(pieces))
-            pieces = []
-            yield FileProducer(i)
-        elif isinstance(i, Coalesce):
-            L = 0
-            for e in i.value:
-                if isinstance(e, types.StringType): 
-                    L += len(e)
-                else:
-                    B = e.tell()
-                    e.seek(0, 2)
-                    E = e.tell()
-                    e.seek(B, 0)
-                    L += (E - B)
-            pieces.extend((' ', '{%d}%s' % (L, IMAP4Server.delimiter)))
-            if top:
-                top = False
-                pieces.pop(0)
-            yield StringProducer(''.join(pieces))
-            pieces = []
-            for e in i.value:
-                if isinstance(e, types.StringType): 
-                    yield StringProducer(e)
-                else:
-                    yield FileProducer(e)
-        else:
-            if pieces and top:
-                top = False
-                pieces.pop(0)
-            yield StringProducer(''.join(pieces) + ' (')
-            pieces = []
-            for p in produceNestedLists(i):
-                yield p
-            yield StringProducer(')')
-    if pieces and top:
-        top = False
-        pieces.pop(0)
-    yield StringProducer(''.join(pieces))
 
 class IClientAuthentication(components.Interface):
     def getName(self):
@@ -4036,7 +3980,8 @@ class MemoryAccount(perspective.Perspective):
             self.addMailbox('/'.join(paths))
         except MailboxCollision:
             if not pathspec.endswith('/'):
-                raise
+                return False
+        return True
 
     def _emptyMailbox(self, name, id):
         raise NotImplementedError
@@ -4277,6 +4222,12 @@ class IMessagePart(components.Interface):
         """Retrieve the total size, in octets, of this message.
         
         @rtype: C{int}
+        """
+
+    def isMultipart(self):
+        """Indicate whether this message has subparts.
+        
+        @rtype: C{bool}
         """
 
     def getSubPart(self, part):
@@ -4525,22 +4476,98 @@ def _formatHeaders(headers, order=None):
     hdrs = '\r\n'.join(hdrs) + '\r\n'
     return hdrs
 
-def _wholeMessage(msg):
-    parts = [_formatHeaders(msg.getHeaders(True)) + '\r\n']
+def subparts(m):
+    i = 0
     try:
-        i = 0
         while True:
-            submsg = msg.getSubPart(i)
-            parts.extend(_wholeMessage(submsg))
+            yield m.getSubPart(i)
             i += 1
-    except TypeError:
-        # Not multipart
-        parts.append(msg.getBodyFile())
     except IndexError:
-        # Got all the parts
         pass
-    return Coalesce(parts)
 
+def iterateInReactor(i):
+    """Consume an interator at most a single iteration per reactor iteration.
+    
+    If the iterator produces a Deferred, the next iteration will not occur
+    until the Deferred fires, otherwise the next iteration will be taken
+    in the next reactor iteration.
+    
+    @rtype: C{Deferred}
+    @return: A deferred which fires (with None) when the iterator is
+    exhausted or whose errback is called if there is an exception.
+    """
+    from twisted.internet import reactor
+    d = defer.Deferred()
+    def go(last):
+        try:
+            r = i.next()
+        except StopIteration:
+            d.callback(last)
+        except:
+            d.errback()
+        else:
+            if isinstance(r, defer.Deferred):
+                r.addCallback(go)
+            else:
+                reactor.callLater(0, go, r)
+    go(None)
+    return d
+
+class MessageProducer:
+    CHUNK_SIZE = 2 ** 2 ** 2 ** 2
+
+    def __init__(self, msg, buffer = None):
+        self.msg = msg
+        if buffer is None:
+            buffer = tempfile.TemporaryFile()
+        self.buffer = buffer
+        self.write = self.buffer.write
+    
+    def beginProducing(self, consumer):
+        self.consumer = consumer
+        return iterateInReactor(self._produce())
+
+    def _produce(self):
+        headers = self.msg.getHeaders(True)
+        boundary = None
+        if self.msg.isMultipart():
+            content = headers.get('content-type')
+            parts = [x.split('=', 1) for x in content.split(';')[1:]]
+            parts = dict([(k.lower().strip(), v) for (k, v) in parts])
+            boundary = parts.get('boundary')
+            if boundary is None:
+                # Bastards
+                boundary = '----=_%f_boundary_%f' % (time.time(), random.random())
+                headers['content-type'] += '; boundary="%s"' % (boundary,)
+            else:
+                if boundary.startswith('"') and boundary.endswith('"'):
+                    boundary = boundary[1:-1]
+
+        self.write(_formatHeaders(headers))
+        self.write('\r\n')
+        if self.msg.isMultipart():
+            for p in subparts(self.msg):
+                self.write('\r\n--%s\r\n' % (boundary,))
+                yield MessageProducer(p, self.buffer
+                    ).beginProducing(None
+                    )
+            self.write('\r\n--%s--\r\n' % (boundary,))
+        else:
+            f = self.msg.getBodyFile()
+            while True:
+                b = f.read(self.CHUNK_SIZE)
+                if b:
+                    self.buffer.write(b)
+                    yield None
+                else:
+                    break
+        if self.consumer:
+            self.buffer.seek(0, 0)
+            yield FileProducer(self.buffer
+                ).beginProducing(self.consumer
+                ).addCallback(lambda _: self
+                )
+    
 class _FetchParser:
     class Envelope:
         # Response should be a list of fields from the message:
@@ -4848,82 +4875,48 @@ class _FetchParser:
         
         return end + 1
 
-class ProducerChain:
-    """Jam a pile of producers down a consumer's throat.
+class FileProducer:
+    CHUNK_SIZE = 2 ** 2 ** 2 ** 2
     
-    Producers must have a "finishedProducing" attribute that is true
-    once they have no more data to produce.
-    """
-    __implements__ = (interfaces.IProducer,)
+    firstWrite = True
 
-    _onDone = None
-
-    def beginProducing(self, consumer, producers):
-        assert not self._onDone
+    def __init__(self, f):
+        self.f = f
+    
+    def beginProducing(self, consumer):
         self.consumer = consumer
-        self.producers = iter(producers)
-        
-        self.prod = self.producers.next()
-        self.prod.produce = lambda s: self.consumer.write(s)
+        self.produce = consumer.write
         d = self._onDone = defer.Deferred()
         self.consumer.registerProducer(self, False)
         return d
 
     def resumeProducing(self):
-        while True:
-            self.prod.resumeProducing()
-            if getattr(self.prod, 'finishedProducing', False):
-                try:
-                    self.prod = self.producers.next()
-                except StopIteration:
-                    self.consumer.unregisterProducer()
-                    self._onDone.callback(self)
-                    self._onDone = self.consumer = self.prod = None
-                    break
-                else:
-                    self.prod.produce = self.consumer.write
-
-    def pauseProducing(self):
-        pass
-
-    def stopProducing(self):
-        if self._onDone:
-            self._onDone.errback(Exception())
-            self._onDone = None
-
-class StringProducer:
-    finishedProducing = False
-    
-    def __init__(self, s):
-        self.s = s
-    
-    def resumeProducing(self):
-        self.finishedProducing = True
-        self.produce(self.s)
-        self.s = None
-
-class FileProducer:
-    CHUNK_SIZE = 2 ** 2 ** 2 ** 2
-    finishedProducing = False
-    
-    def __init__(self, f):
-        self.f = f
-    
-    def resumeProducing(self):
-        b = self.f.read(self.CHUNK_SIZE)
+        b = ''
+        if self.firstWrite:
+            b = '{%d}\r\n' % self._size()
+            self.firstWrite = False
+        if not self.f:
+            return
+        b = b + self.f.read(self.CHUNK_SIZE)
         if not b:
-            self.finishedProducing = True
-            self.f = None
+            self.consumer.unregisterProducer()
+            self._onDone.callback(self)
+            self._onDone = self.f = self.consumer = None
         else:
             self.produce(b)
 
-def deferToFuture(delay, f, *a, **k):
-    d = defer.Deferred()
-    def go():
-        d.callback(f(*a, **k))
-    from twisted.internet import reactor
-    reactor.callLater(delay, go)
-    return d
+    def pauseProducing(self):
+        pass
+    
+    def stopProducing(self):
+        pass
+
+    def _size(self):
+        b = self.f.tell()
+        self.f.seek(0, 2)
+        e = self.f.tell()
+        self.f.seek(b, 0)
+        return e - b
 
 def parseTime(s):
     # XXX - This may require localization :(

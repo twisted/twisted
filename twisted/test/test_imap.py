@@ -81,7 +81,140 @@ class IMAP4UTF7TestCase(unittest.TestCase):
             # XXX - Piece of *crap* 2.1
             self.assertEquals(input, imap4.decoder(output)[0])
 
+class BufferingConsumer:
+    def __init__(self):
+        self.buffer = []
+    
+    def write(self, bytes):
+        self.buffer.append(bytes)
+        if self.consumer:
+            self.consumer.resumeProducing()
+    
+    def registerProducer(self, consumer, streaming):
+        self.consumer = consumer
+        self.consumer.resumeProducing()
+    
+    def unregisterProducer(self):
+        self.consumer = None
+
+class MessageProducerTestCase(unittest.TestCase):
+    def testSinglePart(self):
+        body = 'This is body text.  Rar.'
+        msg = FakeyMessage({
+                'content-type': 'text/plain',
+                'from': 'sender@host',
+                'to': 'recipient@domain',
+                'subject': 'booga booga boo',
+            }, (), None, body, 123, None
+        )
+        
+        c = BufferingConsumer()
+        p = imap4.MessageProducer(msg)
+        r = unittest.deferredResult(p.beginProducing(c))
+        self.failUnlessIdentical(r, p)
+        self.assertEquals(''.join(c.buffer),
+            '{119}\r\n'
+            'From: sender@host\r\n'
+            'Subject: booga booga boo\r\n'
+            'Content-Type: text/plain\r\n'
+            'To: recipient@domain\r\n'
+            '\r\n'
+            + body
+        )
+    testSinglePart.todo = "Fix header ordering issues"
+
+    def testSingleMultiPart(self):
+        outerBody = ''
+        innerBody = 'Contained body message text.  Squarge.'
+        msg = FakeyMessage({
+                'content-type': 'multipart/alternative; boundary="xyz"',
+                'from': 'sender@host',
+                'to': 'recipient@domain',
+                'subject': 'booga booga boo',
+            }, (), None, outerBody, 123, [FakeyMessage({
+                    'content-type': 'text/plain',
+                    'subject': 'this is subject text',
+                }, (), None, innerBody, None, None
+            )],
+        )
+        
+        c = BufferingConsumer()
+        p = imap4.MessageProducer(msg)
+        r = unittest.deferredResult(p.beginProducing(c))
+        self.failUnlessIdentical(r, p)
+        self.assertEquals(''.join(c.buffer),
+            '{239}\r\n'
+            'From: sender@host\r\n'
+            'Subject: booga booga boo\r\n'
+            'Content-Type: multipart/alternative; boundary="xyz"\r\n'
+            'To: recipient@domain\r\n'
+            '\r\n'
+            '\r\n'
+            '--xyz\r\n'
+            'Content-Type: text/plain\r\n'
+            'Subject: this is subject text\r\n'
+            '\r\n'
+            + innerBody
+            + '\r\n--xyz--\r\n'
+        )
+    testSingleMultiPart.todo = "Fix header ordering issues"
+    
+    def testMultipleMultiPart(self):
+        outerBody = ''
+        innerBody1 = 'Contained body message text.  Squarge.'
+        innerBody2 = 'Secondary <i>message</i> text of squarge body.'
+        msg = FakeyMessage({
+                'content-type': 'multipart/alternative; boundary="xyz"',
+                'from': 'sender@host',
+                'to': 'recipient@domain',
+                'subject': 'booga booga boo',
+            }, (), None, outerBody, 123, [FakeyMessage({
+                    'content-type': 'text/plain',
+                    'subject': 'this is subject text',
+                }, (), None, innerBody1, None, None
+            ), FakeyMessage({
+                    'content-type': 'text/html',
+                    'subject': '<b>this is subject</b>',
+                }, (), None, innerBody2, None, None
+            )],
+        )
+        
+        c = BufferingConsumer()
+        p = imap4.MessageProducer(msg)
+        r = unittest.deferredResult(p.beginProducing(c))
+        self.failUnlessIdentical(r, p)
+        self.assertEquals(''.join(c.buffer),
+            '{354}\r\n'
+            'From: sender@host\r\n'
+            'Subject: booga booga boo\r\n'
+            'Content-Type: multipart/alternative; boundary="xyz"\r\n'
+            'To: recipient@domain\r\n'
+            '\r\n'
+            '\r\n'
+            '--xyz\r\n'
+            'Content-Type: text/plain\r\n'
+            'Subject: this is subject text\r\n'
+            '\r\n'
+            + innerBody1
+            + '\r\n--xyz\r\n'
+            'Content-Type: text/html\r\n'
+            'Subject: <b>this is subject</b>\r\n'
+            '\r\n'
+            + innerBody2
+            + '\r\n--xyz--\r\n'
+        )
+    testMultipleMultiPart.todo = "Fix header ordering issues"
+
 class IMAP4HelperTestCase(unittest.TestCase):
+    def testFileProducer(self):
+        b = (('x' * 1) + ('y' * 1) + ('z' * 1)) * 10
+        c = BufferingConsumer()
+        f = StringIO(b)
+        p = imap4.FileProducer(f)
+        r = unittest.deferredResult(p.beginProducing(c))
+        self.failUnlessIdentical(r, p)
+        self.assertEquals(('{%d}\r\n' % len(b))+ b, ''.join(c.buffer))
+
     def testWildcard(self):
         cases = [
             ['foo/%gum/bar',
@@ -420,17 +553,6 @@ class IMAP4HelperTestCase(unittest.TestCase):
         
         self.assertEquals(imap4.collapseNestedLists(inputStructure), output)
 
-    def testProducerChain(self):
-        g = imap4.produceNestedLists([
-            'foo', 'bar', 'baz', StringIO('this is a file\r\n'), 'buz'
-        ])
-        
-        self.assertEquals(g.next().s, '"foo" "bar" "baz" {16}\r\n')
-        self.assertEquals(g.next().f.read(), 'this is a file\r\n')
-        self.assertEquals(g.next().s, ' "buz"')
-        self.assertRaises(StopIteration, g.next)
-        
-        
     def testQuoteAvoider(self):
         input = [
             'foo', imap4.DontQuoteMe('bar'), "baz", StringIO('this is a file\r\n'),
@@ -637,7 +759,7 @@ class SimpleClient(imap4.IMAP4Client):
         self.deferred = deferred
         self.events = []
 
-    def connectionMade(self):
+    def serverGreeting(self, caps):
         self.deferred.callback(None)
     
     def modeChanged(self, writeable):
@@ -1522,8 +1644,6 @@ class FakeyServer(imap4.IMAP4Server):
 class FakeyMessage:
     __implements__ = (imap4.IMessage,)
 
-    subpart = None
-    
     def __init__(self, headers, flags, date, body, uid, subpart):
         self.headers = headers
         self.flags = flags
@@ -1531,8 +1651,7 @@ class FakeyMessage:
         self.size = len(body)
         self.date = date
         self.uid = uid
-        if subpart:
-            self.subpart = [subpart]
+        self.subpart = subpart
         
     def getHeaders(self, negate, *names):
         self.got_headers = negate, names
@@ -1553,10 +1672,11 @@ class FakeyMessage:
     def getUID(self):
         return self.uid
     
+    def isMultipart(self):
+        return self.subpart is not None
+    
     def getSubPart(self, part):
         self.got_subpart = part
-        if self.subpart is None:
-            raise TypeError
         return self.subpart[part]
 
 class NewStoreTestCase(unittest.TestCase, IMAP4HelperMixin):
@@ -1756,9 +1876,9 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
         self.function = self.client.fetchSimplifiedBody
         self.messages = '21'
         self.msgObjs = [FakeyMessage({}, (), '', 'Yea whatever', 91825,
-            FakeyMessage({'content-type': 'image/jpg'}, (), '',
+            [FakeyMessage({'content-type': 'image/jpg'}, (), '',
                 'Body Body Body', None, None
-            )
+            )]
         )]
         self.expected = {0:
             {'BODY': 
@@ -1796,9 +1916,9 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
         self.messages = '21'
         self.msgObjs = [FakeyMessage({'content-type': 'message/rfc822'},
             (), '', 'Yea whatever', 91825, 
-            FakeyMessage({'content-type': 'image/jpg'}, (), '',
+            [FakeyMessage({'content-type': 'image/jpg'}, (), '',
                 'Body Body Body', None, None
-            )
+            )]
         )]
         self.expected = {0: 
             {'BODY': 
