@@ -1,3 +1,8 @@
+2002-12-09  Paul Swartz  <z3p@twistedmatrix.com>
+
+    * twisted/conch/ssh/transport.py: don't accept host keys by default
+    because it's a huge security hole.
+
 2002-12-09  Dave Peticolas  <dave@krondo.com>
 
 	* twisted/enterprise/util.py: handle None as null
