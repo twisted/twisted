@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.70 2003/03/30 22:55:09 acapnotic Exp $
+# $Id: default.py,v 1.71 2003/04/04 06:22:28 exarkun Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -271,12 +271,14 @@ class PosixReactorBase(ReactorBase):
 
     # IReactorArbitrary
     def listenWith(self, portType, *args, **kw):
-        p = portType(reactor=self, *args, **kw)
+        kw['reactor'] = self
+        p = portType(*args, **kw)
         p.startListening()
         return p
 
     def connectWith(self, connectorType, *args, **kw):
-        c = connectorType(reactor=self, *args, **kw)
+        kw['reactor'] = self
+        c = connectorType(*args, **kw)
         c.connect()
         return c
 
