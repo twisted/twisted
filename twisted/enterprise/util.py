@@ -22,14 +22,19 @@ USEQUOTE = 2
 
 dbTypeMap = {
     "bool": NOQUOTE,
+    "boolean": NOQUOTE,
     "int2": NOQUOTE,
     "int4": NOQUOTE,
     "int": NOQUOTE,
+    "integer": NOQUOTE,
+    "float4": NOQUOTE,
     "float8": NOQUOTE,
+    "real": NOQUOTE,
+    "smallint": NOQUOTE,
     "char": USEQUOTE,
-    "varchar": USEQUOTE,
     "text": USEQUOTE,
-    "timestamp": USEQUOTE
+    "timestamp": USEQUOTE,
+    "varchar": USEQUOTE
     }
 
 class DBError(Exception):
@@ -54,7 +59,6 @@ def quote(value, typeCode):
         return value
     elif q == USEQUOTE:
         return "'%s'" % adbapi.safe(value)
-
 
 def makeKW(rowClass, args):
     """Utility method to construct a dictionary for the attributes
