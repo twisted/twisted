@@ -403,6 +403,7 @@ class DelayedTestCase(unittest.TestCase):
         for t in reactor.getDelayedCalls():
             t.cancel()
         reactor.iterate() # flush timers
+
     def tearDown(self):
         for t in self.timers.values():
             t.cancel()
@@ -459,9 +460,9 @@ class DelayedTestCase(unittest.TestCase):
         self.addTimer(20, self.callback)
         self.addTimer(30, self.callback)
         which = self.counter
-        self.addTimer(30, self.callback)
+        self.addTimer(29, self.callback)
         self.addTimer(25, self.addCallback)
-        self.addTimer(25, self.callback)
+        self.addTimer(26, self.callback)
 
         self.addTimer(50, self.failsafe)
 
