@@ -70,7 +70,10 @@ reactor.run()
     only send and receive datagrams to/from a single address, but this does
     not in any way imply a connection. Datagrams may still arrive in any order,
     and the port on the other side may have no one listening. The benefit
-    of the connected UDP socket is that it is faster.</p>
+    of the connected UDP socket is that it it <strong>may</strong> provide
+    notification of undelivered packages.  This depends on many factors,
+    almost all of which are out of the control of the application, but it
+    still presents certain benefits which occassionally make it useful.</p>
 
     <p>Unlike a regular UDP protocol, we do not need to specify where to
     send datagrams to, and are not told where they came from since
@@ -89,6 +92,11 @@ class Helloer(DatagramProtocol):
         
     def datagramReceived(self, data, (host, port)):
         print "received %r from %s:%d" % (data, host, port)
+
+    # Possibly invoked if there is no server listening on the
+    # address to which we are sending.
+    def connectionRefused(self):
+        print "Noone listening"
 
 # 0 means any port, we don't care in this case
 reactor.listenUDP(0, Helloer())
