@@ -62,6 +62,12 @@ class _List(Stage):
             self.results.append(result)
         self.stop = True
 
+class _DeferredInstruction(CallLater):
+    def __init__(self, deferred):
+        self.deferred = deferred
+    def callLater(self, callable):
+        self.deferred.addBoth(callable)
+
 class _Iterable(Stage):
     """ Wrapper for iterable objects, pass in a next() function
 
@@ -103,6 +109,10 @@ class _Iterable(Stage):
                         self._next = result
                         continue
                     return result
+                if isinstance(result, Deferred):
+                    if result.called:
+                        continue
+                    return _DeferredInstruction(result)
                 self.results.append(result)
             except StopIteration:
                 self.stop = True
@@ -121,16 +131,11 @@ class _Deferred(Stage):
         as the producer for this deferred.
 
     """
-    class Instruction(CallLater):
-        def __init__(self, deferred):
-            self.deferred = deferred
-        def callLater(self, callable):
-            self.deferred.addBoth(callable)
     def __init__(self, deferred, *trap):
         Stage.__init__(self, *trap)
         self._called     = False
         deferred.addCallbacks(self._callback, self._errback)
-        self._cooperate  = _Deferred.Instruction(deferred)
+        self._cooperate  = _DeferredInstruction(deferred)
 
     def _callback(self, res):
         self._called = True
