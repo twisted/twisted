@@ -76,6 +76,7 @@ class SelectableSocketWrapper(object):
         self.wouldRead = False
         self.wouldWrite = False
         self.cf = cf.PyCFSocket(obj.fileno(), self.doRead, self.doWrite, self.doConnect)
+        self.cf.stopWriting()
         reactor.getRunLoop().addSocket(self.cf)
        
     def __repr__(self):
@@ -112,6 +113,7 @@ class SelectableSocketWrapper(object):
         self.cf.stopReading()
         self.reading = False
         self.wouldRead = False
+        return self
 
     def startWriting(self):
         self.cf.startWriting()

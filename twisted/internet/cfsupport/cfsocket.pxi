@@ -3,6 +3,7 @@ cdef class PyCFSocket
 cdef void socketCallBack(CFSocketRef s, CFSocketCallBackType _type, CFDataRef address, void *data, void *info):
     cdef PyCFSocket socket
     cdef int res
+    cdef int mask
     socket = (<PyCFSocket>info)
     #print "fileno = %r" % (socket.fileno,)
     if _type == kCFSocketReadCallBack:
@@ -18,11 +19,14 @@ cdef void socketCallBack(CFSocketRef s, CFSocketCallBackType _type, CFDataRef ad
             res = (<int*>data)[0]
         if socket.connectcallback:
             socket.connectcallback(res)
+    
 
 cdef class PyCFSocket:
     cdef public object readcallback
     cdef public object writecallback
     cdef public object connectcallback
+    cdef public object reading
+    cdef public object writing
     cdef CFSocketRef cf
     cdef CFRunLoopSourceRef source
     cdef readonly CFSocketNativeHandle fileno
@@ -39,27 +43,53 @@ cdef class PyCFSocket:
         self.context.retain = NULL
         self.context.release = NULL
         self.context.copyDescription = NULL
-        self.cf = CFSocketCreateWithNative(kCFAllocatorDefault, fileno, kCFSocketReadCallBack|kCFSocketWriteCallBack|kCFSocketConnectCallBack, <CFSocketCallBack>&socketCallBack, &self.context)
+        self.reading = False
+        self.writing = False
+        self.cf = CFSocketCreateWithNative(kCFAllocatorDefault, fileno, kCFSocketConnectCallBack | kCFSocketReadCallBack | kCFSocketWriteCallBack, <CFSocketCallBack>&socketCallBack, &self.context)
         if self.cf == NULL:
             raise ValueError("Invalid Socket")
-        CFSocketSetSocketFlags(self.cf, kCFSocketAutomaticallyReenableReadCallBack|kCFSocketAutomaticallyReenableWriteCallBack)
-
         self.source = CFSocketCreateRunLoopSource(kCFAllocatorDefault, self.cf, 10000)
         if self.source == NULL:
             raise ValueError("Couldn't create runloop source")
         #print "made new socket"
         
+    def update(self):
+        cdef int mask
+        cdef int offmask
+        cdef int automask
+        mask = kCFSocketConnectCallBack | kCFSocketAcceptCallBack
+        offmask = 0
+        automask = kCFSocketAutomaticallyReenableAcceptCallBack
+        if self.reading:
+            mask = mask | kCFSocketReadCallBack
+            automask = automask | kCFSocketAutomaticallyReenableReadCallBack
+        else:
+            offmask = offmask | kCFSocketReadCallBack
+        if self.writing:
+            mask = mask | kCFSocketWriteCallBack
+            automask = automask | kCFSocketAutomaticallyReenableWriteCallBack
+        else:
+            offmask = offmask | kCFSocketWriteCallBack
+        CFSocketDisableCallBacks(self.cf, offmask)
+        CFSocketEnableCallBacks(self.cf, mask)
+        CFSocketSetSocketFlags(self.cf, automask)
+        
+    
     def startReading(self):
-        CFSocketEnableCallBacks(self.cf, kCFSocketReadCallBack)
+        self.reading = True
+        self.update()
 
     def stopReading(self):
-        CFSocketDisableCallBacks(self.cf, kCFSocketReadCallBack)
+        self.reading = False
+        self.update()
         
     def startWriting(self):
-        CFSocketEnableCallBacks(self.cf, kCFSocketWriteCallBack)
+        self.writing = True
+        self.update()
 
     def stopWriting(self):
-        CFSocketDisableCallBacks(self.cf, kCFSocketWriteCallBack)
+        self.writing = False
+        self.update()
 
     def __dealloc__(self):
         #print "PyCFSocket(%r).__dealloc__()" % (self.fileno,)
