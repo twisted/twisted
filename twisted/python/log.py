@@ -81,6 +81,29 @@ def msg(*stuff):
         logfile.write(str(stuff[0]) + os.linesep)
     logfile.flush()
 
+
+def indent(s):
+    return '    ' + str(s).replace('\n', '\n    ')
+
+def debug(*stuff):
+    """
+    Write some data to the log, indented, so it's easier to
+    distinguish from 'normal' output.
+    """
+    for x in stuff:
+        msg('debug:', indent(x))
+
+def showwarning(message, category, filename, lineno, file=None):
+    msg('''\
+WARNING: %s::
+%s
+file: %s; line: %s
+''' % (category, indent(message), filename, lineno))
+   
+    
+import warnings
+warnings.showwarning = showwarning
+
 _keepErrors = 0
 _keptErrors = []
 _ignoreErrors = []
