@@ -70,9 +70,20 @@ class WizardThing:
                (tvc0, 'max-width'): 200,
                }
         for o,p in dct: o.set_property(p, dct[(o,p)])
+        renderer0.connect('edited', self.on_sourcefile_edited)
+        renderer1.connect('edited', self.on_installdest_edited)
         self.gw_datalist.append_column(tvc0)
         self.gw_datalist.append_column(tvc1)
-        
+
+    def on_sourcefile_edited(self, widget, path, newtext):
+        datafiles = self.gw_datalist.get_model()
+        iter = datafiles[path].iter
+        datafiles.set(iter, 0, newtext)
+
+    def on_installdest_edited(self, widget, path, newtext):
+        datafiles = self.gw_datalist.get_model()
+        iter = datafiles[path].iter
+        datafiles.set(iter, 1, newtext)
 
     def on_ntsvcwizard_destroy(self, widget):
         log.msg("Goodbye.")
