@@ -14,14 +14,16 @@
 
     <p>Please try to restrict your HTML usage to the following tags (all only for the original logical purpose, and not whatever visual effect you see): <code>&lt;html&gt;</code>, <code>&lt;title&gt;</code>, <code>&lt;head&gt;</code>, <code>&lt;body&gt;</code>, <code>&lt;h1&gt;</code>, <code>&lt;h2</code>, <code>&lt;h3&gt;</code>, <code>&lt;ol&gt;</code>, <code>&lt;ul&gt;</code>, <code>&lt;dl&gt;</code>, <code>&lt;li&gt;</code>,   <code>&lt;dt&gt;</code>, <code>&lt;dd&gt;</code>, <code>&lt;p&gt;</code>, <code>&lt;code&gt;</code>,  <code>&lt;img&gt;</code>,  <code>&lt;blockquote&gt;</code>,  <code>&lt;a&gt;</code>,  <code>&lt;cite&gt;</code>, <code>&lt;div&gt;</code>, <code>&lt;span&gt;</code>, <code>&lt;strong&gt;</code>, <code>&lt;em&gt;</code>, <code>&lt;pre&gt;</code>, <code>&lt;q&gt;</code>, <code>&lt;table&gt;</code>,<code>&lt;tr&gt;</code>, <code>&lt;td&gt;</code> and <code>&lt;th&gt;</code>.</p>
 
+    <p>Please avoid using the quote sign (<code>"</code>) for quoting, and use the relevant html tags (<code>&lt;q&gt;&lt;/q&gt;</code>) -- it is impossible to distinguish right and left quotes with the quote sign, and some more sophisticated output methods work better with that distinction.</p>
+
     <h2>Multi-line Code Snippets</h2>
 
     <p>Multi-line code snippets should be delimited with a
-    &lt;pre&gt; tag, with a mandatory 'class' attribute. The
-    conventionalized classes are "python", "python-interpreter",
-    and "shell". For example:</p>
+    &lt;pre&gt; tag, with a mandatory <q>class<q> attribute. The
+    conventionalized classes are <q>python</q>, <q>python-interpreter</q>,
+    and <q>shell</q>. For example:</p>
 
-    <h3>"python"</h3>
+    <h3><q>python</q></h3>
 <pre>
     &lt;p&gt;
     For example, this is how one defines a Resource:
@@ -50,7 +52,7 @@ class MyResource(resource.Resource):
     &lt;pre&gt; block -- this makes it hard for readers to
     copy/paste the code.</p>
 
-    <h3>"python-interpreter"</h3>
+    <h3><q>python-interpreter</q></h3>
 <pre>
     &lt;pre class="python-interpreter"&gt;
     &amp;gt;&amp;gt;&amp;gt; from twisted.web import resource
@@ -73,7 +75,7 @@ class MyResource(resource.Resource):
 "Hello, world!"
 </pre>
 
-    <h3>"shell"</h3>
+    <h3><q>shell</q></h3>
 <pre>
     &lt;pre class="shell"&gt;
     $ mktap web --path /var/www
@@ -88,8 +90,8 @@ $ mktap web --path /var/www
 
     <p>For single-line code-snippets and attribute, method, class,
     and module names, use the &lt;code&gt; tag, with a class of
-    "API" or "python". During processing, module or class-names
-    with class "API" will automatically be looked up in the API
+    <q>API</q> or <q>python</q>. During processing, module or class-names
+    with class <q>API</q> will automatically be looked up in the API
     reference and have a link placed around it referencing the
     actual API documents for that module/classname. If you wish to
     reference an API document, then make sure you at least have a
@@ -97,7 +99,7 @@ $ mktap web --path /var/www
     figure out which module or class you're referring to.</p>
 
     <p>You may also use the <code>base</code> attribute in conjuction
-    with a class of "API" to indicate the module that should be prepended
+    with a class of <q>API</q> to indicate the module that should be prepended
     to the module or classname.  This is to help keep the documentation
     clearer and less cluttered by allowing links to API docs that don't
     need the module name.</p>
@@ -145,8 +147,8 @@ $ mktap web --path /var/www
     <h2>XHTML</h2>
 
     <p>XHTML is mandatory. That means tags that don't have a
-    closing tag need a '/'; for example, <code>&lt;hr /&gt;</code>
-    . Also, tags which have "optional" closing tags in HTML
+    closing tag need a <q>/</q>; for example, <code>&lt;hr /&gt;</code>
+    . Also, tags which have <q>optional</q> closing tags in HTML
     <em>need</em> to be closed in XHTML; for example,
     <code>&lt;li&gt;foo&lt;/li&gt;</code></p>
 
@@ -166,7 +168,8 @@ $ mktap web --path /var/www
 <p>(Tidy seems to be causing more harm than good right now, so this next
 suggestion is on hold for the time being...)</p>
 
-    <p style="color: grey">Use 'tidy -e -xml foo.html' before every commit!
+    <p style="color: grey">Use <code class="shell">tidy -e -xml foo.html</code>
+    before every commit!
     Also, tidy can be utilized in other ways to auto-correct your XHTML (or
     convert HTML to XHTML), but can sometimes cause undesirable
     effects, like converting some <code>&lt;/p&gt;</code>s to
