@@ -42,7 +42,7 @@ Test coverage needs to be better.
 <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-__version__ = '$Revision: 1.81 $'[11:-2]
+__version__ = '$Revision: 1.82 $'[11:-2]
 
 from twisted.internet import reactor, protocol
 from twisted.persisted import styles
@@ -444,6 +444,13 @@ class IRCClient(basic.LineReceiver):
         else:
             self.sendLine("PART %s" % (channel,))
 
+    def kick(self, channel, user, reason=None):
+        if channel[0] not in '&#!+': channel = '#' + channel
+        if reason:
+            self.sendLine("KICK %s %s :%s" % (channel, user, reason))
+        else:
+            self.sendLine("KICK %s %s" % (channel, user))
+
     part = leave
 
     def topic(self, channel, topic=None):
@@ -516,23 +523,23 @@ class IRCClient(basic.LineReceiver):
     _pings = None
     _MAX_PINGRING = 12
 
-    def ping(self, user):
+    def ping(self, user, text = None):
         """Measure round-trip delay to another IRC client.
         """
         if self._pings is None:
             self._pings = {}
 
-        key = []
-        for i in xrange(12):
-            key.append(random.choice(xrange(33,91)))
-        key = string.join(map(chr, key),'')
-        self._pings[key] = time.time()
+        if text is None:
+            chars = string.letters + string.digits + string.punctuation
+            key = ''.join([random.choice(chars) for i in range(12)])
+        else:
+            key = str(text)
+        self._pings[(user, key)] = time.time()
         self.ctcpMakeQuery(user, [('PING', key)])
 
         if len(self._pings) > self._MAX_PINGRING:
             # Remove some of the oldest entries.
-            byValue = map(lambda a: (a[-1], a[0]),
-                          self._pings.items())
+            byValue = [(v, k) for (k, v) in self._pings.items()]
             byValue.sort()
             excess = self._MAX_PINGRING - len(self._pings)
             for i in xrange(excess):
@@ -983,11 +990,12 @@ class IRCClient(basic.LineReceiver):
                 self.ctcpUnknownReply(user, channel, m[0], m[1])
 
     def ctcpReply_PING(self, user, channel, data):
-        if (not self._pings) or (not self._pings.has_key(data)):
+        nick = user.split('!', 1)[0]
+        if (not self._pings) or (not self._pings.has_key((nick, data))):
             raise IRCBadMessage,\
                   "Bogus PING response from %s: %s" % (user, data)
 
-        t0 = self._pings[data]
+        t0 = self._pings[(nick, data)]
         self.pong(user, time.time() - t0)
 
     def ctcpUnknownReply(self, user, channel, tag, data):
@@ -1035,7 +1043,7 @@ class IRCClient(basic.LineReceiver):
               command = numeric_to_symbolic[command]
           self.handleCommand(command, prefix, params)
       except IRCBadMessage:
-          apply(self.badMessage, (line,) + sys.exc_info())
+          self.badMessage(line, *sys.exc_info())
 
 
     def handleCommand(self, command, prefix, params):
