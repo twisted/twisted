@@ -21,10 +21,7 @@ from twisted.internet.defer import Deferred, DeferredList, FAILURE
 from twisted.python.failure import Failure
 from twisted.python import log, components
 
-from twisted.cred import error
-from twisted.cred import portal
-from twisted.cred import checkers
-from twisted.cred import credentials
+from twisted.cred import error, portal, checkers, credentials
 
 #-------------------------------------------------------------------------------
 # TODO:
@@ -105,7 +102,7 @@ EXCEEDED_STORAGE_ALLOC                  = 552
 FILENAME_NOT_ALLOWED                    = 553
 
 
-RESPONSES = {
+RESPONSE = {
     # -- 100's --
     RESTART_MARKER_REPLY:               '110 MARK yyyy-mmmm', # TODO: this must be fixed
     SERVICE_READY_IN_N_MINUTES:         '120 service ready in %s minutes',
@@ -298,7 +295,7 @@ class FTP(basic.LineReceiver):
     debug       = True      # turn on extra logging
     dtpTxfrMode = ACTV      # PASV or ACTV, default ACTV
 
-    DEBUG_AUTO_ANON_LOGIN = True
+    DEBUG_AUTO_ANON_LOGIN = False
     
     def connectionMade(self):
         self.reply(WELCOME_MSG)
@@ -318,6 +315,8 @@ class FTP(basic.LineReceiver):
 
     def lineReceived(self, line):
         "Process the input from the client"
+        if self.debug:
+            print 'pi got line'
         line = string.strip(line)
         if self.debug:
             log.msg(repr(line))
@@ -351,14 +350,14 @@ class FTP(basic.LineReceiver):
             self.reply(CMD_NOT_IMPLMNTD, string.upper(command))
 
     def reply(self, key, s = ''):
-        if string.find(RESPONSES[key], '%s') > -1:
+        if string.find(RESPONSE[key], '%s') > -1:
             if self.debug:
-                log.msg(RESPONSES[key] % s + '\r\n')
-            self.transport.write(RESPONSES[key] % s + '\r\n')
+                log.msg(RESPONSE[key] % s + '\r\n')
+            self.transport.write(RESPONSE[key] % s + '\r\n')
         else:
             if self.debug:
-                log.msg(RESPONSES[key] + '\r\n')
-            self.transport.write(RESPONSES[key] + '\r\n')
+                log.msg(RESPONSE[key] + '\r\n')
+            self.transport.write(RESPONSE[key] + '\r\n')
 
     def _createActiveDTP(self):
         raise NotImplementedError()
@@ -475,8 +474,8 @@ class FTP(basic.LineReceiver):
         '''anonymous login'''
         assert interface is IFTPShell
         peer = self.transport.getPeer()
-        if self.debug:
-            log.msg("Anonymous login from %s:%s" % (peer[1], peer[2]))
+#        if self.debug:
+#            log.msg("Anonymous login from %s:%s" % (peer[1], peer[2]))
         self.shell = avatar
         self.logout = logout
         self.reply(GUEST_LOGGED_IN_PROCEED)
@@ -558,8 +557,6 @@ class FTPFactory(protocol.Factory):
     
     def __init__(self, portal=None):
         self.portal = portal
-        import warnings
-        warnings.warn("The FTP server is INSECURE, please don't run it on the internet")
 
     def buildProtocol(self, addr):
         pi = protocol.Factory.buildProtocol(self, addr)
@@ -702,8 +699,13 @@ class FTPAnonymousShell(object):
         path = re.sub(r'[\\]{2,}?', '/', path)
         path = re.sub(r'[/]{2,}?','/', path)
 
+        # since '/'.split('/') will return ['','']
+        # we want to make sure that leading and trailing slashes
+        
         # list of items in the requested path
-        return path.split('/')          
+        alist = path.split('/')          
+        import pdb;pdb.set_trace() 
+        return alist
 
     def _getclientwd(self):
         return '/' + os.sep.join(self.clientwdList)
@@ -731,10 +733,10 @@ class FTPAnonymousShell(object):
         reqpathlist = self._pathToElementList(path)
 
         # TODO: this has to check for the leading '/'
-        if reqpathlist[0] == '':                        # if this is a client absolute path
-            del reqpathlist[0]                          # remove the ''
+        if reqpathlist[0] != '':                        # if this is a client absolute path
+            reqpathlist = self.clientwdList + reqpathlist    # put clientwd path items in front of the requested path list
         else:                                           # if this is a client relative path
-            reqpathlist = clientwdlist + reqpathlist    # put clientwd path items in front of the requested path list
+            del reqpathlist[0]                          # remove the ''
  
         rqCliAbsPath = []                           # the requested client-absolute path 
         while len(reqpathlist) != 0:                # while there are still elements to pop
@@ -760,8 +762,9 @@ class FTPAnonymousShell(object):
 
     def cwd(self, path):
         # that's requested-server-absolute-path-list of elements
-        rqCliAbsPathList = self._getClientNormAbsPathList(path)
-        rqSrvAbsPathList = self.tldList + rqCliAbsPathList
+        rqCPList = self._getClientNormAbsPathList(path)
+        rqSrvAbsPathList = self.tldList + rqCPList
+        import pdb;pdb.set_trace() 
 
         # convert rqSrvAbsPathList into a path we can hand to os.path.isdir 
         # and test to see that it exists
@@ -831,6 +834,23 @@ class FTPAnonymousShell(object):
 
     def nlist(self, path):
         pass
+
+
+class FTPRealm:
+    __implements__ = (portal.IRealm,)
+    ANONYMOUS_DIR = '/home/jonathan'
+
+    def requestAvatar(self, avatarId, mind, *interfaces):
+        if IFTPShell in interfaces:
+            if avatarId == checkers.ANONYMOUS:
+                avatar = FTPAnonymousShell()
+                avatar.tld = self.ANONYMOUS_DIR
+                avatar.clientwdList = ['']
+                avatar.user = 'anonymous'
+                avatar.logout = None
+            return IFTPShell, avatar, avatar.logout
+        raise NotImplementedError("Only IFTPShell interface is supported by this realm")
+
 
 
 
