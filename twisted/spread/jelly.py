@@ -65,7 +65,7 @@ Instance Method: s.center, where s is an instance of UserString.UserString:
 @author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
 
-__version__ = "$Revision: 1.45 $"[11:-2]
+__version__ = "$Revision: 1.46 $"[11:-2]
 
 # System Imports
 import string
@@ -527,7 +527,7 @@ class _Unjellier:
             nameSplit = string.split(jelType, '.')
             modName = string.join(nameSplit[:-1], '.')
             if not self.taster.isModuleAllowed(modName):
-                raise InsecureJelly("Module %s not allowed." % modName)
+                raise InsecureJelly("Module %s not allowed (in type %s)." % (modName, jelType))
             clz = namedObject(jelType)
             if not self.taster.isClassAllowed(clz):
                 raise InsecureJelly("Class %s not allowed." % jelType)
