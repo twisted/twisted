@@ -139,7 +139,7 @@ class Screen(CursesStdIO):
     def doRead(self):
         """ Input is ready! """
         curses.noecho()
-	self.timer = self.timer + 1
+        self.timer = self.timer + 1
         c = self.stdscr.getch() # read a character
 
         if c == curses.KEY_BACKSPACE:
