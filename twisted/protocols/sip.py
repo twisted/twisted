@@ -203,7 +203,9 @@ class Via:
             s += ";hidden"
         for n in "ttl", "received", "branch", "maddr", "rport":
             value = getattr(self, n)
-            if value != None:
+            if value == True:
+                s += ";" + n
+            elif value != None:
                 s += ";%s=%s" % (n, value)
         return s
 
@@ -234,9 +236,13 @@ def parseViaHeader(value):
         if p == "hidden":
             result["hidden"] = True
             continue
-        name, value = p.split("=")
-        if name in ("rport", "ttl"):
-            value = int(value)
+        parts = p.split("=", 1)
+        if len(parts) == 1:
+            name, value = parts[0], True
+        else:
+            name, value = parts
+            if name in ("rport", "ttl"):
+                value = int(value)
         result[name] = value
     return Via(**result)
 
@@ -643,12 +649,16 @@ class Base(protocol.DatagramProtocol):
         self.messages[:] = []
 
     def _fixupNAT(self, message, (srcHost, srcPort)):
-        # RFC 2543 6.40.2
+        # RFC 2543 6.40.2, 
         senderVia = parseViaHeader(message.headers["via"][0])
         if senderVia.host != srcHost:
             senderVia.received = srcHost
             if senderVia.port != srcPort:
                 senderVia.rport = srcPort
+            message.headers["via"][0] = senderVia.toString()
+        elif senderVia.rport == True:
+            senderVia.received = srcHost
+            senderVia.rport = srcPort
             message.headers["via"][0] = senderVia.toString()
 
     def deliverResponse(self, responseMessage):

@@ -89,7 +89,7 @@ abcd""".replace("\n", "\r\n")
 
 request_natted = """\
 INVITE sip:foo SIP/2.0
-Via: SIP/2.0/UDP 10.0.0.1:5060;received=5.7.1.4;rport=12345
+Via: SIP/2.0/UDP 10.0.0.1:5060;rport
 
 """.replace("\n", "\r\n")
 
@@ -243,6 +243,10 @@ class ViaTestCase(unittest.TestCase):
         v = sip.Via("example.com")
         self.checkRoundtrip(v)
 
+    def testRPort(self):
+        v = sip.Via("foo.bar", rport=True)
+        self.assertEquals(v.toString(), "SIP/2.0/UDP foo.bar:5060;rport")
+
     def testNAT(self):
         s = "SIP/2.0/UDP 10.0.0.1:5060;received=22.13.1.5;rport=12345"
         v = sip.parseViaHeader(s)
@@ -253,7 +257,6 @@ class ViaTestCase(unittest.TestCase):
         self.assertEquals(v.rport, 12345)
         
         self.assertNotEquals(v.toString().find("rport=12345"), -1)
-
 
 class URLTestCase(unittest.TestCase):
 
@@ -584,6 +587,28 @@ class LiveTest(unittest.TestCase):
         self.assertEquals(len(self.client.received), 1)
         r = self.client.received[0]
         self.assertEquals(r.code, 200)
+
+    def testAmoralRPort(self):
+        # rport is allowed without a value, apparently because server
+        # implementors might be too stupid to check the received port
+        # against 5060 and see if they're equal, and because client
+        # implementors might be too stupid to bind to port 5060, or set a
+        # value on the rport parameter they send if they bind to another
+        # port.
+        p = self.clientPort.getHost()[-1]
+        r = sip.Request("REGISTER", "sip:bell.example.com")
+        r.addHeader("to", "sip:joe@bell.example.com")
+        r.addHeader("contact", "sip:joe@127.0.0.1:%d" % p)
+        r.addHeader("via", sip.Via("127.0.0.1", port=p, rport=True).toString())
+        self.client.sendMessage(sip.URL(host="127.0.0.1", port=self.serverAddress[1]),
+                                r)
+        while not len(self.client.received):
+            reactor.iterate()
+        self.assertEquals(len(self.client.received), 1)
+        r = self.client.received[0]
+        self.assertEquals(r.code, 200)
+        print r.headers
+        
 
 registerRequest = """
 REGISTER sip:intarweb.us SIP/2.0\r
